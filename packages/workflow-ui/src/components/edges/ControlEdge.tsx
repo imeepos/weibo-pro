@@ -5,7 +5,7 @@ import type { WorkflowEdge } from '../../types'
 import { EdgeLabel } from './EdgeLabel'
 
 export const ControlEdge = memo((props: EdgeProps<WorkflowEdge>) => {
-  const { sourceX, sourceY, targetX, targetY, data, selected } = props
+  const { sourceX, sourceY, targetX, targetY, data } = props
   const [edgePath] = getBezierPath({
     sourceX,
     sourceY,
@@ -20,10 +20,7 @@ export const ControlEdge = memo((props: EdgeProps<WorkflowEdge>) => {
       <BaseEdge
         path={edgePath}
         style={{
-          stroke: selected ? '#6366f1' : '#8b5cf6',
-          strokeWidth: selected ? 2.5 : 2,
-          strokeDasharray: '5,5',
-          transition: 'all 200ms ease',
+          zIndex: 9
         }}
         {...props}
       />
