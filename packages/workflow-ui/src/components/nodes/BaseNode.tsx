@@ -25,7 +25,7 @@ const NodeStatus = ({ state, error }: { state?: string; error?: Error }) => {
 };
 
 const handleBaseClass =
-  '!w-3 !h-3 !border-2 rounded-full transition-colors duration-150 shadow-[0_0_0_2px_rgba(15,23,42,0.4)]';
+  '!w-3 !h-3 !border-2 rounded-full';
 
 const handleColorClass = (type: 'source' | 'target') =>
   type === 'target'
@@ -40,18 +40,23 @@ const HandleWrapper = ({
   type: 'source' | 'target';
 }) => {
   if (!port) {
-    return <div className="w-6" />;
+    return null;
   }
 
+  const isTarget = type === 'target';
+
   return (
-    <div className="w-6 h-6 flex items-center justify-center nodrag">
-      <Handle
-        type={type}
-        id={port.property}
-        position={type === 'target' ? Position.Left : Position.Right}
-        className={cn(handleBaseClass, handleColorClass(type))}
-      />
-    </div>
+    <Handle
+      type={type}
+      id={port.property}
+      position={isTarget ? Position.Left : Position.Right}
+      className={cn(
+        handleBaseClass,
+        handleColorClass(type),
+        '!absolute !top-1/2 !-translate-y-1/2',
+        isTarget ? '!left-0' : '!right-0'
+      )}
+    />
   );
 };
 
@@ -64,9 +69,11 @@ const PortRow = ({
   output?: { property: string; label?: string; isMulti?: boolean };
   offsetTop?: number;
 }) => (
-  <div className="flex items-center gap-2 h-6">
-    <div className="flex items-center gap-2 flex-1">
-      <HandleWrapper port={input} type="target" />
+  <div className="relative flex items-center gap-2 h-6">
+    <HandleWrapper port={input} type="target" />
+    <HandleWrapper port={output} type="source" />
+
+    <div className="flex items-center gap-2 flex-1 pl-3">
       {input && (
         <div className="flex items-center gap-1 text-xs text-slate-200">
           <span className="truncate">{input.label || input.property}</span>
@@ -75,14 +82,13 @@ const PortRow = ({
       )}
     </div>
 
-    <div className="flex items-center gap-2 flex-1 justify-end">
+    <div className="flex items-center gap-2 flex-1 justify-end pr-3">
       {output && (
         <div className="flex items-center gap-1 text-xs text-slate-200">
           <span className="truncate">{output.label || output.property}</span>
           {output.isMulti && <span className="text-[10px] text-slate-400 font-mono">[]</span>}
         </div>
       )}
-      <HandleWrapper port={output} type="source" />
     </div>
   </div>
 );
