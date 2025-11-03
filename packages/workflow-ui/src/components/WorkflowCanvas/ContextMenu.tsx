@@ -8,6 +8,7 @@ import {
   Maximize2,
   RotateCcw,
   Trash2,
+  Play,
   type LucideIcon,
 } from 'lucide-react'
 import type { ContextMenuState } from './useContextMenu'
@@ -19,6 +20,9 @@ export interface ContextMenuProps {
   onResetZoom: () => void
   onSelectAll: () => void
   onClearCanvas: () => void
+  onDeleteNode?: (nodeId: string) => void
+  onRunNode?: (nodeId: string) => void
+  onDeleteEdge?: (edgeId: string) => void
   onClose: () => void
 }
 
@@ -29,6 +33,9 @@ export function ContextMenu({
   onResetZoom,
   onSelectAll,
   onClearCanvas,
+  onDeleteNode,
+  onRunNode,
+  onDeleteEdge,
   onClose,
 }: ContextMenuProps) {
   if (!menu.visible) {
@@ -50,23 +57,74 @@ export function ContextMenu({
     }>
   }
 
-  const sections: MenuSection[] = [
-    {
-      title: '视图控制',
-      items: [
-        { label: '适应窗口', icon: Maximize2, action: onFitView },
-        { label: '居中显示', icon: Crosshair, action: onCenterView },
-        { label: '重置缩放', icon: RotateCcw, action: onResetZoom },
-      ],
-    },
-    {
-      title: '画布操作',
-      items: [
-        { label: '全选', icon: CheckSquare, action: onSelectAll },
-        { label: '清空画布', icon: Trash2, action: onClearCanvas, danger: true },
-      ],
-    },
-  ]
+  let sections: MenuSection[] = []
+
+  if (menu.contextType === 'canvas') {
+    sections = [
+      {
+        title: '视图控制',
+        items: [
+          { label: '适应窗口', icon: Maximize2, action: onFitView },
+          { label: '居中显示', icon: Crosshair, action: onCenterView },
+          { label: '重置缩放', icon: RotateCcw, action: onResetZoom },
+        ],
+      },
+      {
+        title: '画布操作',
+        items: [
+          { label: '全选', icon: CheckSquare, action: onSelectAll },
+          { label: '清空画布', icon: Trash2, action: onClearCanvas, danger: true },
+        ],
+      },
+    ]
+  } else if (menu.contextType === 'node' && menu.targetId) {
+    const nodeId = menu.targetId
+    sections = [
+      {
+        title: '节点操作',
+        items: [
+          ...(onRunNode
+            ? [
+                {
+                  label: '运行节点',
+                  icon: Play,
+                  action: () => onRunNode(nodeId),
+                },
+              ]
+            : []),
+          ...(onDeleteNode
+            ? [
+                {
+                  label: '删除节点',
+                  icon: Trash2,
+                  action: () => onDeleteNode(nodeId),
+                  danger: true,
+                },
+              ]
+            : []),
+        ],
+      },
+    ]
+  } else if (menu.contextType === 'edge' && menu.targetId) {
+    const edgeId = menu.targetId
+    sections = [
+      {
+        title: '连接操作',
+        items: [
+          ...(onDeleteEdge
+            ? [
+                {
+                  label: '删除连接',
+                  icon: Trash2,
+                  action: () => onDeleteEdge(edgeId),
+                  danger: true,
+                },
+              ]
+            : []),
+        ],
+      },
+    ]
+  }
 
   const menuContent = (
     <div

@@ -29,6 +29,8 @@ import { nodeTypes } from '../nodes'
 import { edgeTypes } from '../edges'
 import { getAllNodeTypes } from '../../adapters'
 import { useWorkflow } from '../../hooks/useWorkflow'
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
+import { useClipboard } from '../../hooks/useClipboard'
 import { useCanvasControls } from './useCanvasControls'
 import { ContextMenu } from './ContextMenu'
 import { NodeSelector } from './NodeSelector'
@@ -88,9 +90,93 @@ export function WorkflowCanvas({
     handleSelectAll,
     handleZoomIn,
     handleZoomOut,
+    handleDeleteNode,
+    handleDeleteEdge,
+    handleRunNode,
   } = useCanvasControls()
 
+  const clipboard = useClipboard()
+
   const panOnDrag = [1, 2]
+
+  // 获取选中的节点
+  const getSelectedNodes = useCallback(() => {
+    return nodes.filter((node) => node.selected)
+  }, [nodes])
+
+  // 获取选中节点相关的边
+  const getSelectedNodesEdges = useCallback(() => {
+    const selectedNodeIds = new Set(
+      nodes.filter((node) => node.selected).map((node) => node.id)
+    )
+    return edges.filter(
+      (edge) => selectedNodeIds.has(edge.source) && selectedNodeIds.has(edge.target)
+    )
+  }, [nodes, edges])
+
+  // 复制选中的节点
+  const handleCopy = useCallback(() => {
+    const selectedNodes = getSelectedNodes()
+    if (selectedNodes.length > 0) {
+      const selectedEdges = getSelectedNodesEdges()
+      clipboard.copyNodes(selectedNodes, selectedEdges)
+      console.log(`已复制 ${selectedNodes.length} 个节点`)
+    }
+  }, [getSelectedNodes, getSelectedNodesEdges, clipboard])
+
+  // 剪切选中的节点
+  const handleCut = useCallback(() => {
+    const selectedNodes = getSelectedNodes()
+    if (selectedNodes.length > 0) {
+      const selectedEdges = getSelectedNodesEdges()
+      clipboard.cutNodes(selectedNodes, selectedEdges)
+      // 删除原节点
+      selectedNodes.forEach((node) => workflow.removeNode(node.id))
+      console.log(`已剪切 ${selectedNodes.length} 个节点`)
+    }
+  }, [getSelectedNodes, getSelectedNodesEdges, clipboard, workflow])
+
+  // 粘贴节点
+  const handlePaste = useCallback(() => {
+    if (!clipboard.hasClipboard) return
+
+    // 获取画布中心位置作为粘贴位置
+    const viewportCenter = { x: window.innerWidth / 2, y: window.innerHeight / 2 }
+    const flowPosition = { x: 100, y: 100 } // 默认位置，实际应该用 screenToFlowPosition
+
+    clipboard.pasteNodes(flowPosition, (newNodes, newEdges) => {
+      // 将新节点添加到工作流
+      newNodes.forEach((node) => {
+        workflow.addNode(node.data.nodeClass, node.position, node.data.label)
+      })
+      console.log(`已粘贴 ${newNodes.length} 个节点`)
+    })
+  }, [clipboard, workflow])
+
+  // 删除选中的节点和边
+  const handleDelete = useCallback(() => {
+    const selectedNodes = getSelectedNodes()
+    const selectedEdges = edges.filter((edge) => edge.selected)
+
+    selectedNodes.forEach((node) => workflow.removeNode(node.id))
+    selectedEdges.forEach((edge) => workflow.removeEdge(edge.id))
+
+    if (selectedNodes.length > 0 || selectedEdges.length > 0) {
+      console.log(
+        `已删除 ${selectedNodes.length} 个节点和 ${selectedEdges.length} 条边`
+      )
+    }
+  }, [getSelectedNodes, edges, workflow])
+
+  // 集成键盘快捷键
+  useKeyboardShortcuts({
+    enabled: true,
+    onCopy: handleCopy,
+    onCut: handleCut,
+    onPaste: handlePaste,
+    onDelete: handleDelete,
+    onSelectAll: handleSelectAll,
+  })
 
   const handleNodesChangeInternal = useCallback(
     (changes: NodeChange[]) => {
@@ -299,6 +385,9 @@ export function WorkflowCanvas({
         onResetZoom={handleResetZoom}
         onSelectAll={handleSelectAll}
         onClearCanvas={handleClearCanvas}
+        onDeleteNode={handleDeleteNode}
+        onRunNode={handleRunNode}
+        onDeleteEdge={handleDeleteEdge}
         onClose={closeMenu}
       />
 

@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useRef, useEffect } from 'react'
 import { useReactFlow, type Connection, type XYPosition } from '@xyflow/react'
 import { useSelectionStore } from '../../store'
 import { getAllNodeTypes } from '../../adapters'
@@ -24,10 +24,56 @@ export function useCanvasControls() {
     addEdges,
   } = useReactFlow()
   const { selectNode, clearSelection } = useSelectionStore()
-  const { menu, openMenu, closeMenu, nodeSelector, openNodeSelector, closeNodeSelector } = useContextMenu()
+  const { menu, openMenu, openNodeMenu, openEdgeMenu, closeMenu, nodeSelector, openNodeSelector, closeNodeSelector } = useContextMenu()
 
   const lastClickTimeRef = useRef<number>(0)
   const DOUBLE_CLICK_DELAY = 300
+
+  /**
+   * 监听节点右键菜单事件
+   */
+  useEffect(() => {
+    const handleNodeContextMenu = (e: Event) => {
+      const customEvent = e as CustomEvent
+      const { nodeId, event, nodeData } = customEvent.detail
+      const screenPosition = { x: event.clientX, y: event.clientY }
+      const flowPosition = screenToFlowPosition(screenPosition)
+      openNodeMenu(screenPosition, flowPosition, nodeId, nodeData)
+    }
+
+    window.addEventListener('node-context-menu', handleNodeContextMenu)
+    return () => window.removeEventListener('node-context-menu', handleNodeContextMenu)
+  }, [openNodeMenu, screenToFlowPosition])
+
+  /**
+   * 监听边右键菜单事件
+   */
+  useEffect(() => {
+    const handleEdgeContextMenu = (e: Event) => {
+      const customEvent = e as CustomEvent
+      const { edgeId, event } = customEvent.detail
+      const screenPosition = { x: event.clientX, y: event.clientY }
+      const flowPosition = screenToFlowPosition(screenPosition)
+      openEdgeMenu(screenPosition, flowPosition, edgeId)
+    }
+
+    window.addEventListener('edge-context-menu', handleEdgeContextMenu)
+    return () => window.removeEventListener('edge-context-menu', handleEdgeContextMenu)
+  }, [openEdgeMenu, screenToFlowPosition])
+
+  /**
+   * 监听边双击删除事件
+   */
+  useEffect(() => {
+    const handleEdgeDelete = (e: Event) => {
+      const customEvent = e as CustomEvent
+      const { edgeId } = customEvent.detail
+      setEdges((edges) => edges.filter((edge) => edge.id !== edgeId))
+    }
+
+    window.addEventListener('edge-delete', handleEdgeDelete)
+    return () => window.removeEventListener('edge-delete', handleEdgeDelete)
+  }, [setEdges])
 
   /**
    * 处理连接事件
@@ -280,6 +326,37 @@ export function useCanvasControls() {
     }
   }, [getNodes, setNodes, setEdges])
 
+  /**
+   * 删除节点
+   */
+  const handleDeleteNode = useCallback(
+    (nodeId: string) => {
+      setNodes((nodes) => nodes.filter((node) => node.id !== nodeId))
+      setEdges((edges) =>
+        edges.filter((edge) => edge.source !== nodeId && edge.target !== nodeId)
+      )
+    },
+    [setNodes, setEdges]
+  )
+
+  /**
+   * 删除边
+   */
+  const handleDeleteEdge = useCallback(
+    (edgeId: string) => {
+      setEdges((edges) => edges.filter((edge) => edge.id !== edgeId))
+    },
+    [setEdges]
+  )
+
+  /**
+   * 运行节点（暂时留空，后续实现）
+   */
+  const handleRunNode = useCallback((nodeId: string) => {
+    console.log('Run node:', nodeId)
+    // TODO: 实现节点运行逻辑
+  }, [])
+
   return {
     onConnect,
     onNodeClick,
@@ -300,5 +377,8 @@ export function useCanvasControls() {
     handleZoomOut,
     handleSelectAll,
     handleClearCanvas,
+    handleDeleteNode,
+    handleDeleteEdge,
+    handleRunNode,
   }
 }

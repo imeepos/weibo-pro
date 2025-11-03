@@ -1,0 +1,141 @@
+import { useState, useCallback } from 'react'
+import { generateId } from '@sker/workflow'
+import type { WorkflowNode, WorkflowEdge } from '../types'
+import type { XYPosition } from '@xyflow/react'
+
+interface ClipboardState {
+  nodes: WorkflowNode[]
+  edges: WorkflowEdge[]
+  operation: 'copy' | 'cut' | null
+}
+
+export interface UseClipboardReturn {
+  copyNodes: (nodes: WorkflowNode[], edges: WorkflowEdge[]) => void
+  cutNodes: (nodes: WorkflowNode[], edges: WorkflowEdge[]) => void
+  pasteNodes: (
+    position: XYPosition,
+    onPaste: (nodes: WorkflowNode[], edges: WorkflowEdge[]) => void
+  ) => void
+  clearClipboard: () => void
+  hasClipboard: boolean
+  clipboardCount: number
+  isCutOperation: boolean
+}
+
+export function useClipboard(): UseClipboardReturn {
+  const [clipboard, setClipboard] = useState<ClipboardState>({
+    nodes: [],
+    edges: [],
+    operation: null,
+  })
+
+  const copyNodes = useCallback((nodes: WorkflowNode[], edges: WorkflowEdge[]) => {
+    if (nodes.length === 0) return
+
+    // 只保留选中节点之间的边
+    const nodeIds = new Set(nodes.map((n) => n.id))
+    const relevantEdges = edges.filter(
+      (edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target)
+    )
+
+    setClipboard({
+      nodes: structuredClone(nodes),
+      edges: structuredClone(relevantEdges),
+      operation: 'copy',
+    })
+  }, [])
+
+  const cutNodes = useCallback((nodes: WorkflowNode[], edges: WorkflowEdge[]) => {
+    if (nodes.length === 0) return
+
+    const nodeIds = new Set(nodes.map((n) => n.id))
+    const relevantEdges = edges.filter(
+      (edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target)
+    )
+
+    setClipboard({
+      nodes: structuredClone(nodes),
+      edges: structuredClone(relevantEdges),
+      operation: 'cut',
+    })
+  }, [])
+
+  const pasteNodes = useCallback(
+    (
+      position: XYPosition,
+      onPaste: (nodes: WorkflowNode[], edges: WorkflowEdge[]) => void
+    ) => {
+      if (clipboard.nodes.length === 0) return
+
+      // 计算原始节点的中心点
+      const originalCenter = clipboard.nodes.reduce(
+        (acc, node) => ({
+          x: acc.x + node.position.x / clipboard.nodes.length,
+          y: acc.y + node.position.y / clipboard.nodes.length,
+        }),
+        { x: 0, y: 0 }
+      )
+
+      // 创建旧ID到新ID的映射
+      const idMap = new Map<string, string>()
+      clipboard.nodes.forEach((node) => {
+        idMap.set(node.id, generateId())
+      })
+
+      // 克隆节点，生成新ID，调整位置
+      const newNodes: WorkflowNode[] = clipboard.nodes.map((node) => {
+        const newId = idMap.get(node.id)!
+        const offsetX = node.position.x - originalCenter.x
+        const offsetY = node.position.y - originalCenter.y
+
+        return {
+          ...node,
+          id: newId,
+          position: {
+            x: position.x + offsetX,
+            y: position.y + offsetY,
+          },
+          data: {
+            ...node.data,
+            ast: {
+              ...node.data.ast,
+              id: newId,
+            },
+          },
+          selected: false,
+        }
+      })
+
+      // 克隆边，更新节点引用
+      const newEdges: WorkflowEdge[] = clipboard.edges.map((edge) => ({
+        ...edge,
+        id: `edge-${generateId()}`,
+        source: idMap.get(edge.source) || edge.source,
+        target: idMap.get(edge.target) || edge.target,
+        selected: false,
+      }))
+
+      onPaste(newNodes, newEdges)
+
+      // 如果是剪切操作，清空剪贴板
+      if (clipboard.operation === 'cut') {
+        setClipboard({ nodes: [], edges: [], operation: null })
+      }
+    },
+    [clipboard]
+  )
+
+  const clearClipboard = useCallback(() => {
+    setClipboard({ nodes: [], edges: [], operation: null })
+  }, [])
+
+  return {
+    copyNodes,
+    cutNodes,
+    pasteNodes,
+    clearClipboard,
+    hasClipboard: clipboard.nodes.length > 0,
+    clipboardCount: clipboard.nodes.length,
+    isCutOperation: clipboard.operation === 'cut',
+  }
+}

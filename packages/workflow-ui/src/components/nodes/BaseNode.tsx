@@ -92,6 +92,16 @@ export const BaseNode = memo(({ id, data, selected }: WorkflowNodeProps) => {
     updateNodeInternals(id);
   }, [id, maxPorts, updateNodeInternals]);
 
+  const handleContextMenu = (event: React.MouseEvent) => {
+    event.preventDefault()
+    event.stopPropagation()
+    // 触发自定义事件，让 WorkflowCanvas 处理
+    const customEvent = new CustomEvent('node-context-menu', {
+      detail: { nodeId: id, event, nodeData: data },
+    })
+    window.dispatchEvent(customEvent)
+  }
+
   return (
     <div
       className={cn(
@@ -103,6 +113,7 @@ export const BaseNode = memo(({ id, data, selected }: WorkflowNodeProps) => {
       style={{
         minWidth: '180px'
       }}
+      onContextMenu={handleContextMenu}
     >
       {/* 节点标题 */}
       <div className="mb-2 pb-1.5 border-b border-slate-600 flex">
