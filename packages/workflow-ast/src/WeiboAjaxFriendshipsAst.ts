@@ -1,4 +1,4 @@
-import { Ast, Input, Node } from "@sker/workflow";
+import { Ast, Input, Node, Output } from "@sker/workflow";
 
 @Node({ title: "微博关注" })
 export class WeiboAjaxFriendshipsAst extends Ast {
@@ -8,4 +8,7 @@ export class WeiboAjaxFriendshipsAst extends Ast {
 
     @Input({ title: "页码" })
     page?: number = 1;
+
+    @Output({ title: '是否结束' })
+    isEnd: boolean = false;
 }

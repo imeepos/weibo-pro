@@ -14,12 +14,20 @@ export abstract class Ast implements INode {
 
 @Node({ title: "工作流图" })
 export class WorkflowGraphAst extends Ast {
-    @Input({ title: "名称" })
+    @Input({ title: "名称", type: 'text' })
     name: string | undefined;
+
     @Input({ title: "节点列表" })
     nodes: INode[] = [];
     @Input({ title: "边列表" })
     edges: IEdge[] = [];
+
+    @Input({ title: '上下文' })
+    ctx: any = {};
+
+    @Output({ title: '执行结果' })
+    results: any[] = [];
+
     type: `WorkflowGraphAst` = `WorkflowGraphAst`
     addNode(node: INode) {
         this.nodes.push(node)

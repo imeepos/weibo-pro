@@ -1,4 +1,4 @@
-import { Ast, Input, Node } from "@sker/workflow";
+import { Ast, Input, Node, Output } from "@sker/workflow";
 
 
 @Node({ title: "微博热门" })
@@ -24,6 +24,9 @@ export class WeiboAjaxFeedHotTimelineAst extends Ast {
 
     @Input({ title: "刷新" })
     refresh: number = 1;
+
+    @Output({ title: '是否结束' })
+    isEnd: boolean = false;
 
     type: 'WeiboAjaxFeedHotTimelineAst' = 'WeiboAjaxFeedHotTimelineAst';
 }

@@ -33,5 +33,8 @@ export class WeiboAjaxStatusesCommentAst extends Ast {
     @Output({ title: "评论实体" })
     entities: WeiboCommentEntity[] = [];
 
+    @Output({ title: '是否结束' })
+    isEnd: boolean = false;
+
     type: `WeiboAjaxStatusesCommentAst` = `WeiboAjaxStatusesCommentAst`
 }

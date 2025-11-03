@@ -1,4 +1,4 @@
-import { Ast, Input, Node } from "@sker/workflow";
+import { Ast, Input, Node, Output } from "@sker/workflow";
 
 @Node({ title: "微博点赞" })
 export class WeiboAjaxStatusesLikeShowAst extends Ast {
@@ -16,6 +16,9 @@ export class WeiboAjaxStatusesLikeShowAst extends Ast {
     attitude_type: number = 0;
     @Input({ title: "态度启用" })
     attitude_enable: number = 1;
+
+    @Output({ title: '是否结束' })
+    isEnd: boolean = false;
 
     type: `WeiboAjaxStatusesLikeShowAst` = `WeiboAjaxStatusesLikeShowAst`
 }

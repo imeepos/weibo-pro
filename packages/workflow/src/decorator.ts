@@ -59,6 +59,7 @@ export interface InputOptions {
      */
     isMulti?: boolean;
     title?: string;
+    type?: string;
 }
 
 export interface InputMetadata {

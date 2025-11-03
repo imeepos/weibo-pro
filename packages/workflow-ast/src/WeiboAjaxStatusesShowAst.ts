@@ -12,5 +12,8 @@ export class WeiboAjaxStatusesShowAst extends Ast {
     @Output({ title: "消息ID" })
     mid: string = '';
 
+    @Output({ title: '是否结束' })
+    isEnd: boolean = false;
+
     type: `WeiboAjaxStatusesShowAst` = `WeiboAjaxStatusesShowAst`
 }
