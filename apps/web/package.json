@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@sker/workflow": "workspace:*",
+    "@sker/workflow-ast": "workspace:*",
     "@sker/workflow-ui": "workspace:*",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

@@ -24,14 +24,6 @@ const NodeStatus = ({ state, error }: { state?: string; error?: Error }) => {
   );
 };
 
-const handleBaseClass =
-  '!w-3 !h-3 !border-2 rounded-full';
-
-const handleColorClass = (type: 'source' | 'target') =>
-  type === 'target'
-    ? 'hover:!bg-blue-400/80 !bg-blue-500 !border-blue-300'
-    : 'hover:!bg-green-400/80 !bg-green-500 !border-green-300';
-
 const HandleWrapper = ({
   port,
   type,
@@ -50,12 +42,6 @@ const HandleWrapper = ({
       type={type}
       id={port.property}
       position={isTarget ? Position.Left : Position.Right}
-      className={cn(
-        handleBaseClass,
-        handleColorClass(type),
-        '!absolute !top-1/2 !-translate-y-1/2',
-        isTarget ? '!left-0' : '!right-0'
-      )}
     />
   );
 };

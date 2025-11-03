@@ -1,9 +1,20 @@
 import { useState, useCallback, useEffect } from 'react'
 import type { XYPosition } from '@xyflow/react'
 
+export interface Position {
+  x: number
+  y: number
+}
+
 export interface ContextMenuState {
   visible: boolean
-  screenPosition: { x: number; y: number }
+  screenPosition: Position
+  flowPosition: XYPosition
+}
+
+export interface NodeSelectorState {
+  visible: boolean
+  screenPosition: Position
   flowPosition: XYPosition
 }
 
@@ -14,8 +25,14 @@ export function useContextMenu() {
     flowPosition: { x: 0, y: 0 },
   })
 
+  const [nodeSelector, setNodeSelector] = useState<NodeSelectorState>({
+    visible: false,
+    screenPosition: { x: 0, y: 0 },
+    flowPosition: { x: 0, y: 0 },
+  })
+
   const openMenu = useCallback(
-    (screenPosition: { x: number; y: number }, flowPosition: XYPosition) => {
+    (screenPosition: Position, flowPosition: XYPosition) => {
       console.log('[useContextMenu] openMenu called', {
         screenPosition,
         flowPosition,
@@ -27,6 +44,17 @@ export function useContextMenu() {
 
   const closeMenu = useCallback(() => {
     setMenu((prev) => ({ ...prev, visible: false }))
+  }, [])
+
+  const openNodeSelector = useCallback(
+    (screenPosition: Position, flowPosition: XYPosition) => {
+      setNodeSelector({ visible: true, screenPosition, flowPosition })
+    },
+    []
+  )
+
+  const closeNodeSelector = useCallback(() => {
+    setNodeSelector((prev) => ({ ...prev, visible: false }))
   }, [])
 
   useEffect(() => {
@@ -58,5 +86,8 @@ export function useContextMenu() {
     menu,
     openMenu,
     closeMenu,
+    nodeSelector,
+    openNodeSelector,
+    closeNodeSelector,
   }
 }

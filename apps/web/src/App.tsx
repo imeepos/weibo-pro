@@ -1,7 +1,7 @@
 import { ReactFlowProvider } from '@xyflow/react'
 import { WorkflowCanvas, PropertyPanel } from '@sker/workflow-ui'
 import React, { useEffect, Component, ErrorInfo, ReactNode } from 'react'
-
+import "@sker/workflow-ast";
 class ErrorBoundary extends Component<
   { children: ReactNode },
   { hasError: boolean; error?: Error }
@@ -43,11 +43,6 @@ export default function App() {
           <main className="flex-1">
             <WorkflowCanvas />
           </main>
-
-          {/* 右侧属性面板 */}
-          <aside className="w-80 border-l border-slate-800 bg-slate-900">
-            <PropertyPanel />
-          </aside>
         </div>
       </ReactFlowProvider>
     </ErrorBoundary>

@@ -1,10 +1,9 @@
 import { useState, useCallback, useMemo, useRef } from 'react'
 import { WorkflowGraphAst, generateId } from '@sker/workflow'
 import type { INode, IEdge } from '@sker/workflow'
-import { useNodesState, useEdgesState, addEdge, type Connection, type NodeChange } from '@xyflow/react'
+import { useNodesState, useEdgesState, addEdge, type Connection } from '@xyflow/react'
 import type { WorkflowNode, WorkflowEdge } from '../types'
 import { astToFlowNodes, astToFlowEdges } from '../adapters/ast-to-flow'
-import { getAllNodeTypes } from '../adapters'
 
 export interface UseWorkflowReturn {
   workflowAst: WorkflowGraphAst

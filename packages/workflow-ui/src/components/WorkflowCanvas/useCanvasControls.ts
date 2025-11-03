@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useRef } from 'react'
 import { useReactFlow, type Connection, type XYPosition } from '@xyflow/react'
 import { useSelectionStore } from '../../store'
 import { getAllNodeTypes } from '../../adapters'
@@ -10,9 +10,24 @@ import { useContextMenu } from './useContextMenu'
  * 画布交互控制 Hook
  */
 export function useCanvasControls() {
-  const { getNode, screenToFlowPosition, fitView, setCenter, zoomTo, getNodes, setNodes, setEdges, addEdges } = useReactFlow()
+  const {
+    getNode,
+    screenToFlowPosition,
+    fitView,
+    setCenter,
+    zoomTo,
+    zoomIn,
+    zoomOut,
+    getNodes,
+    setNodes,
+    setEdges,
+    addEdges,
+  } = useReactFlow()
   const { selectNode, clearSelection } = useSelectionStore()
-  const { menu, openMenu, closeMenu } = useContextMenu()
+  const { menu, openMenu, closeMenu, nodeSelector, openNodeSelector, closeNodeSelector } = useContextMenu()
+
+  const lastClickTimeRef = useRef<number>(0)
+  const DOUBLE_CLICK_DELAY = 300
 
   /**
    * 处理连接事件
@@ -55,11 +70,25 @@ export function useCanvasControls() {
   )
 
   /**
-   * 处理画布点击（清空选择）
+   * 处理画布点击（清空选择 + 双击检测）
    */
-  const onPaneClick = useCallback(() => {
-    clearSelection()
-  }, [clearSelection])
+  const onPaneClick = useCallback(
+    (event: React.MouseEvent) => {
+      const now = Date.now()
+      const timeSinceLastClick = now - lastClickTimeRef.current
+
+      if (timeSinceLastClick < DOUBLE_CLICK_DELAY) {
+        const screenPosition = { x: event.clientX, y: event.clientY }
+        const flowPosition = screenToFlowPosition(screenPosition)
+        openNodeSelector(screenPosition, flowPosition)
+        lastClickTimeRef.current = 0
+      } else {
+        lastClickTimeRef.current = now
+        clearSelection()
+      }
+    },
+    [clearSelection, openNodeSelector, screenToFlowPosition]
+  )
 
   /**
    * 处理节点删除
@@ -115,6 +144,7 @@ export function useCanvasControls() {
     [openMenu, screenToFlowPosition]
   )
 
+
   /**
    * 从上下文菜单添加节点
    */
@@ -149,6 +179,39 @@ export function useCanvasControls() {
   )
 
   /**
+   * 从节点选择器添加节点
+   */
+  const handleAddNodeFromSelector = useCallback(
+    (metadata: NodeMetadata) => {
+      const nodeTypes = getAllNodeTypes()
+      const NodeClass = nodeTypes.find((type) => type.name === metadata.type)
+
+      if (!NodeClass) {
+        console.error(`Node class not found for type: ${metadata.type}`)
+        return
+      }
+
+      const ast = new NodeClass()
+      ast.id = generateId()
+
+      const node: WorkflowNode = {
+        id: ast.id,
+        type: 'workflow-node',
+        position: nodeSelector.flowPosition,
+        data: {
+          ast,
+          nodeClass: NodeClass,
+          label: metadata.label,
+          state: 'pending',
+        },
+      }
+
+      setNodes((nodes) => [...nodes, node])
+    },
+    [setNodes, nodeSelector.flowPosition]
+  )
+
+  /**
    * 适应窗口
    */
   const handleFitView = useCallback(() => {
@@ -176,6 +239,20 @@ export function useCanvasControls() {
   const handleResetZoom = useCallback(() => {
     zoomTo(1, { duration: 300 })
   }, [zoomTo])
+
+  /**
+   * 放大
+   */
+  const handleZoomIn = useCallback(() => {
+    zoomIn({ duration: 200 })
+  }, [zoomIn])
+
+  /**
+   * 缩小
+   */
+  const handleZoomOut = useCallback(() => {
+    zoomOut({ duration: 200 })
+  }, [zoomOut])
 
   /**
    * 全选节点
@@ -212,10 +289,15 @@ export function useCanvasControls() {
     onPaneContextMenu,
     menu,
     closeMenu,
+    nodeSelector,
+    closeNodeSelector,
     handleAddNodeFromMenu,
+    handleAddNodeFromSelector,
     handleFitView,
     handleCenterView,
     handleResetZoom,
+    handleZoomIn,
+    handleZoomOut,
     handleSelectAll,
     handleClearCanvas,
   }

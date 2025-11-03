@@ -26,6 +26,9 @@ importers:
       '@sker/workflow':
         specifier: workspace:*
         version: link:../../packages/workflow
+      '@sker/workflow-ast':
+        specifier: workspace:*
+        version: link:../../packages/workflow-ast
       '@sker/workflow-ui':
         specifier: workspace:*
         version: link:../../packages/workflow-ui

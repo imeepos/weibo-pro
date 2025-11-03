@@ -2,13 +2,18 @@
 
 import React from 'react'
 import { createPortal } from 'react-dom'
-import { useNodeRegistry } from '../NodePalette/useNodeRegistry'
-import type { NodeMetadata } from '../../types'
+import {
+  CheckSquare,
+  Crosshair,
+  Maximize2,
+  RotateCcw,
+  Trash2,
+  type LucideIcon,
+} from 'lucide-react'
 import type { ContextMenuState } from './useContextMenu'
 
 export interface ContextMenuProps {
   menu: ContextMenuState
-  onAddNode: (metadata: NodeMetadata) => void
   onFitView: () => void
   onCenterView: () => void
   onResetZoom: () => void
@@ -19,7 +24,6 @@ export interface ContextMenuProps {
 
 export function ContextMenu({
   menu,
-  onAddNode,
   onFitView,
   onCenterView,
   onResetZoom,
@@ -27,20 +31,8 @@ export function ContextMenu({
   onClearCanvas,
   onClose,
 }: ContextMenuProps) {
-  console.log('[ContextMenu] Rendering', { visible: menu.visible, position: menu.screenPosition })
-
   if (!menu.visible) {
-    console.log('[ContextMenu] Menu not visible, returning null')
     return null
-  }
-
-  console.log('[ContextMenu] Menu is visible, rendering')
-
-  const nodeRegistry = useNodeRegistry()
-
-  const handleNodeClick = (metadata: NodeMetadata) => {
-    onAddNode(metadata)
-    onClose()
   }
 
   const handleActionClick = (action: () => void) => {
@@ -48,102 +40,77 @@ export function ContextMenu({
     onClose()
   }
 
+  interface MenuSection {
+    title: string
+    items: Array<{
+      label: string
+      icon: LucideIcon
+      action: () => void
+      danger?: boolean
+    }>
+  }
+
+  const sections: MenuSection[] = [
+    {
+      title: '视图控制',
+      items: [
+        { label: '适应窗口', icon: Maximize2, action: onFitView },
+        { label: '居中显示', icon: Crosshair, action: onCenterView },
+        { label: '重置缩放', icon: RotateCcw, action: onResetZoom },
+      ],
+    },
+    {
+      title: '画布操作',
+      items: [
+        { label: '全选', icon: CheckSquare, action: onSelectAll },
+        { label: '清空画布', icon: Trash2, action: onClearCanvas, danger: true },
+      ],
+    },
+  ]
+
   const menuContent = (
     <div
-      className="context-menu min-w-64 rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800"
+      className="context-menu min-w-56 rounded-xl border border-[#2f3543] bg-[#111318] p-2 shadow-2xl shadow-black/40 backdrop-blur-xl"
       style={{
         position: 'fixed',
         left: menu.screenPosition.x,
         top: menu.screenPosition.y,
         zIndex: 1000,
       }}
+      role="menu"
     >
-      <div className="context-menu-section py-2">
-        <div className="context-menu-section-header px-3 pb-1 text-xs font-semibold text-gray-500 dark:text-gray-400">
-          添加节点
-        </div>
-        <div className="context-menu-items max-h-96 overflow-y-auto">
-          {nodeRegistry.length === 0 ? (
-            <div className="context-menu-empty px-3 py-2 text-sm text-gray-400">
-              暂无可用节点
-            </div>
-          ) : (
-            nodeRegistry.map((metadata) => (
-              <div
-                key={metadata.type}
-                className="context-menu-item cursor-pointer px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
-                onClick={() => handleNodeClick(metadata)}
+      {sections.map((section, sectionIndex) => (
+        <div
+          className={sectionIndex === 0 ? 'py-2' : 'border-t border-[#2f3543] py-2'}
+          key={section.title}
+        >
+          <div className="px-3 pb-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#6c7a91]">
+            {section.title}
+          </div>
+          <div className="flex flex-col gap-1 px-1">
+            {section.items.map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition focus:outline-none ${
+                  item.danger
+                    ? 'text-[#f87171] hover:bg-[#3b1f28]'
+                    : 'text-[#e5e9f5] hover:bg-[#1f2531]'
+                }`}
+                onClick={() => handleActionClick(item.action)}
               >
-                <span className="context-menu-item-label block text-sm font-medium text-gray-900 dark:text-gray-100">
-                  {metadata.label}
-                </span>
-                <div className="context-menu-item-details mt-1 flex gap-2 text-xs text-gray-500 dark:text-gray-400">
-                  {metadata.inputs.length > 0 && (
-                    <span className="context-menu-item-meta">
-                      输入: {metadata.inputs.length}
-                    </span>
-                  )}
-                  {metadata.outputs.length > 0 && (
-                    <span className="context-menu-item-meta">
-                      输出: {metadata.outputs.length}
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-
-      <div className="context-menu-divider border-t border-gray-200 dark:border-gray-700" />
-
-      <div className="context-menu-section py-2">
-        <div className="context-menu-section-header px-3 pb-1 text-xs font-semibold text-gray-500 dark:text-gray-400">
-          视图控制
-        </div>
-        <div className="context-menu-items">
-          <div
-            className="context-menu-item cursor-pointer px-3 py-2 text-sm text-gray-900 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-700"
-            onClick={() => handleActionClick(onFitView)}
-          >
-            <span className="context-menu-item-label">适应窗口</span>
-          </div>
-          <div
-            className="context-menu-item cursor-pointer px-3 py-2 text-sm text-gray-900 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-700"
-            onClick={() => handleActionClick(onCenterView)}
-          >
-            <span className="context-menu-item-label">居中显示</span>
-          </div>
-          <div
-            className="context-menu-item cursor-pointer px-3 py-2 text-sm text-gray-900 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-700"
-            onClick={() => handleActionClick(onResetZoom)}
-          >
-            <span className="context-menu-item-label">重置缩放</span>
+                <item.icon
+                  className={`h-4 w-4 ${
+                    item.danger ? 'text-[#f87171]' : 'text-[#135bec]'
+                  }`}
+                  strokeWidth={1.8}
+                />
+                <span>{item.label}</span>
+              </button>
+            ))}
           </div>
         </div>
-      </div>
-
-      <div className="context-menu-divider border-t border-gray-200 dark:border-gray-700" />
-
-      <div className="context-menu-section py-2">
-        <div className="context-menu-section-header px-3 pb-1 text-xs font-semibold text-gray-500 dark:text-gray-400">
-          画布操作
-        </div>
-        <div className="context-menu-items">
-          <div
-            className="context-menu-item cursor-pointer px-3 py-2 text-sm text-gray-900 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-700"
-            onClick={() => handleActionClick(onSelectAll)}
-          >
-            <span className="context-menu-item-label">全选</span>
-          </div>
-          <div
-            className="context-menu-item context-menu-item-danger cursor-pointer px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
-            onClick={() => handleActionClick(onClearCanvas)}
-          >
-            <span className="context-menu-item-label">清空画布</span>
-          </div>
-        </div>
-      </div>
+      ))}
     </div>
   )
 
