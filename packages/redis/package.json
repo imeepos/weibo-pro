@@ -1,9 +1,9 @@
 {
-  "name": "@sker/workflow-run",
+  "name": "@sker/redis",
   "version": "0.0.0",
   "private": true,
-  "description": "Backend runtime execution for workflow nodes.",
-  "keywords": ["workflow", "runtime", "backend", "execution", "sker"],
+  "description": "Redis client wrapper with dependency injection support for Sker applications.",
+  "keywords": ["redis", "ioredis", "cache", "sker"],
   "exports": {
     ".": {
       "types": "./src/index.ts",
@@ -25,10 +25,7 @@
   },
   "dependencies": {
     "@sker/core": "workspace:*",
-    "@sker/redis": "workspace:*",
-    "@sker/entities": "workspace:*",
-    "@sker/workflow": "workspace:*",
-    "@sker/workflow-ast": "workspace:*"
+    "ioredis": "^5.8.1"
   },
   "devDependencies": {
     "@sker/eslint-config": "workspace:*",

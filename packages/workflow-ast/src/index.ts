@@ -1,1 +1,8 @@
+export { WeiboAjaxFeedHotTimelineAst } from './WeiboAjaxFeedHotTimelineAst'
+export { WeiboAjaxFriendshipsAst } from './WeiboAjaxFriendshipsAst'
+export { WeiboAjaxProfileInfoAst } from './WeiboAjaxProfileInfoAst'
+export { WeiboAjaxStatusesCommentAst } from './WeiboAjaxStatusesCommentAst'
+export { WeiboAjaxStatusesLikeShowAst } from './WeiboAjaxStatusesLikeShowAst'
+export { WeiboAjaxStatusesMymblogAst } from './WeiboAjaxStatusesMymblogAst'
+export { WeiboAjaxStatusesRepostTimelineAst } from './WeiboAjaxStatusesRepostTimelineAst'
 export { WeiboAjaxStatusesShowAst } from './WeiboAjaxStatusesShowAst'

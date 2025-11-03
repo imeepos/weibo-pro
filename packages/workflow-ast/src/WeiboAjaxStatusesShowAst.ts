@@ -1,22 +1,16 @@
-import { Ast, Input, Node, Output } from "@pro/workflow";
-import type { WeiboPostEntity } from "@pro/entities";
-
-
-export interface WeiboAjaxStatusesShowAstReponse extends WeiboPostEntity {
-    ok: number;
-}
+import { Ast, Input, Node, Output } from "@sker/workflow";
 
 @Node()
 export class WeiboAjaxStatusesShowAst extends Ast {
     @Input()
-    mblogid: string;
+    mblogid: string = '';
 
     @Output()
     @Input()
-    uid: string;
+    uid: string = '';
 
     @Output()
-    mid: string;
+    mid: string = '';
 
     type: `WeiboAjaxStatusesShowAst` = `WeiboAjaxStatusesShowAst`
 }

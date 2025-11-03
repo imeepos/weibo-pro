@@ -36,7 +36,7 @@ const HandleWrapper = ({
   port,
   type,
 }: {
-  port?: { property: string };
+  port?: { property: string; label?: string; isMulti?: boolean };
   type: 'source' | 'target';
 }) => {
   if (!port) {
@@ -66,7 +66,7 @@ const PortRow = ({
 }) => (
   <div className="flex items-center gap-2 h-6">
     <div className="flex items-center gap-2 flex-1">
-      <HandleWrapper port={input} type="target" offsetTop={offsetTop} />
+      <HandleWrapper port={input} type="target" />
       {input && (
         <div className="flex items-center gap-1 text-xs text-slate-200">
           <span className="truncate">{input.label || input.property}</span>
@@ -82,7 +82,7 @@ const PortRow = ({
           {output.isMulti && <span className="text-[10px] text-slate-400 font-mono">[]</span>}
         </div>
       )}
-      <HandleWrapper port={output} type="source" offsetTop={offsetTop} />
+      <HandleWrapper port={output} type="source" />
     </div>
   </div>
 );
