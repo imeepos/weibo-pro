@@ -6,3 +6,4 @@ export { WeiboAjaxStatusesLikeShowAstVisitor } from './WeiboAjaxStatusesLikeShow
 export { WeiboAjaxStatusesMymblogAstVisitor } from './WeiboAjaxStatusesMymblogAstVisitor'
 export { WeiboAjaxStatusesRepostTimelineAstVisitor } from './WeiboAjaxStatusesRepostTimelineAstVisitor'
 export { WeiboAjaxStatusesShowAstVisitor } from './WeiboAjaxStatusesShowAstVisitor'
+export { WeiboKeywordSearchAstVisitor } from './WeiboKeywordSearchAstVisitor'

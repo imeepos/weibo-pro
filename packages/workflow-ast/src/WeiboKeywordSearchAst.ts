@@ -13,6 +13,9 @@ export class WeiboKeywordSearchAst extends Ast {
     @Input({ title: '结束日志' })
     endDate: Date = new Date();
 
+    @Input({ title: '页码'})
+    page: number = 1;
+
     @Output({ title: '博文列表' })
     items: { uid: string, mblogid: string }[] = [];
 

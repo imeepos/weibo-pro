@@ -3,7 +3,13 @@
   "version": "0.0.0",
   "private": true,
   "description": "Backend runtime execution for workflow nodes.",
-  "keywords": ["workflow", "runtime", "backend", "execution", "sker"],
+  "keywords": [
+    "workflow",
+    "runtime",
+    "backend",
+    "execution",
+    "sker"
+  ],
   "exports": {
     ".": {
       "types": "./src/index.ts",
@@ -25,10 +31,12 @@
   },
   "dependencies": {
     "@sker/core": "workspace:*",
-    "@sker/redis": "workspace:*",
     "@sker/entities": "workspace:*",
+    "@sker/redis": "workspace:*",
     "@sker/workflow": "workspace:*",
-    "@sker/workflow-ast": "workspace:*"
+    "@sker/workflow-ast": "workspace:*",
+    "cheerio": "^1.1.2",
+    "playwright": "^1.56.1"
   },
   "devDependencies": {
     "@sker/eslint-config": "workspace:*",

@@ -1,6 +1,6 @@
 import { ReactFlowProvider } from '@xyflow/react'
-import { WorkflowCanvas, PropertyPanel } from '@sker/workflow-ui'
-import React, { useEffect, Component, ErrorInfo, ReactNode } from 'react'
+import { WorkflowCanvas } from '@sker/workflow-ui'
+import React, { Component, ErrorInfo, ReactNode } from 'react'
 import "@sker/workflow-ast";
 class ErrorBoundary extends Component<
   { children: ReactNode },
