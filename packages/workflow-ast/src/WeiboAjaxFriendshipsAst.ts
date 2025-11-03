@@ -1,10 +1,11 @@
-import { Ast, Input } from "@sker/workflow";
+import { Ast, Input, Node } from "@sker/workflow";
 
+@Node({ title: "微博关注" })
 export class WeiboAjaxFriendshipsAst extends Ast {
 
-    @Input()
+    @Input({ title: "用户ID" })
     uid: string = ``;
 
-    @Input()
+    @Input({ title: "页码" })
     page?: number = 1;
 }

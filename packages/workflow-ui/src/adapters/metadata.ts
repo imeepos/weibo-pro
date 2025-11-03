@@ -6,17 +6,51 @@ import type { NodeMetadata, PortMetadata } from '../types'
  * 获取节点的输入/输出元数据
  */
 export function getNodeMetadata(nodeClass: Type<any>): NodeMetadata {
-  const inputs = root.get(INPUT, []).filter(it => it.target === nodeClass)
-  const outputs = root.get(OUTPUT, []).filter(it => it.target === nodeClass)
+  const inputMetadata = root.get(INPUT, []).filter(it => it.target === nodeClass)
+  const outputMetadata = root.get(OUTPUT, []).filter(it => it.target === nodeClass)
+  const nodeMetadatas = root.get(NODE, []).filter(it => it.target === nodeClass)
 
   const instance = new nodeClass()
   const nodeType = instance.type || nodeClass.name
+  const nodeMetadata = nodeMetadatas[0] // 取第一个匹配的节点元数据
+  const customTitle = nodeMetadata?.title
+
+  const inputs = inputMetadata.map(toPortMetadata)
+
+  let outputs = outputMetadata.map(toPortMetadata)
+
+  if (outputs.length === 0) {
+    const reservedKeys = new Set(['id', 'state', 'error', 'type'])
+    const inputKeys = new Set(inputs.map((item) => item.property))
+
+    const fallbackOutputs: PortMetadata[] = []
+
+    for (const key of Object.keys(instance)) {
+      if (reservedKeys.has(key) || inputKeys.has(key)) continue
+
+      const value = (instance as Record<string, unknown>)[key]
+      if (typeof value === 'function') continue
+
+      fallbackOutputs.push({
+        property: key,
+        type: 'any',
+        isMulti: false,
+        label: formatPortLabel(key),
+        title: undefined,
+      })
+    }
+
+    if (fallbackOutputs.length > 0) {
+      outputs = fallbackOutputs
+    }
+  }
 
   return {
     type: nodeType,
-    label: formatNodeLabel(nodeType),
-    inputs: inputs.map(toPortMetadata),
-    outputs: outputs.map(toPortMetadata),
+    label: customTitle || formatNodeLabel(nodeType),
+    title: customTitle,
+    inputs,
+    outputs,
   }
 }
 
@@ -24,21 +58,25 @@ export function getNodeMetadata(nodeClass: Type<any>): NodeMetadata {
  * 获取所有已注册的节点类型
  */
 export function getAllNodeTypes(): Type<any>[] {
-  return root.get(NODE, [])
+  const nodeMetadatas = root.get(NODE, [])
+  return nodeMetadatas.map(metadata => metadata.target)
 }
 
 /**
  * 转换为端口元数据
  */
 function toPortMetadata(
-  metadata: { propertyKey: string | symbol; isMulti?: boolean }
+  metadata: { propertyKey: string | symbol; isMulti?: boolean; title?: string }
 ): PortMetadata {
   const property = String(metadata.propertyKey)
+  const customTitle = metadata.title
+
   return {
     property,
     type: 'any', // TypeScript 运行时无法获取类型，需要通过其他方式推断
     isMulti: metadata.isMulti,
-    label: formatPortLabel(property),
+    label: customTitle || formatPortLabel(property),
+    title: customTitle,
   }
 }
 

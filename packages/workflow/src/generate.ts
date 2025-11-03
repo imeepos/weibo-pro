@@ -77,7 +77,8 @@ function snapshotNode(instance: object): NodeSnapshot {
 export function fromJson<T extends object = any>(json: any): T {
     const { type, id, state, ...rest } = json;
     const registry = root.get(NODE);
-    const ctor = registry.find(node => node.name === type);
+    const nodeMetadata = registry.find(node => node.target.name === type);
+    const ctor = nodeMetadata?.target;
 
     if (!ctor) {
         throw new Error(`Unknown workflow node type "${json.type}".`);

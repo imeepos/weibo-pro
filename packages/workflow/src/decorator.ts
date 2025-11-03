@@ -10,11 +10,20 @@ export function resolveConstructor(target: object | Type<any>): Type<any> {
     throw new Error('Workflow decorators expect to receive a class constructor or instance.');
 }
 
-export const NODE = new InjectionToken<Type<any>[]>(`NODE`)
-export function Node(): ClassDecorator {
+export interface NodeOptions {
+    title?: string;
+}
+
+export interface NodeMetadata {
+    target: Type<any>;
+    title?: string;
+}
+
+export const NODE = new InjectionToken<NodeMetadata[]>(`NODE`)
+export function Node(options?: NodeOptions): ClassDecorator {
     return (target) => {
         const ctor = resolveConstructor(target as object);
-        root.set([{ provide: NODE, useValue: ctor, multi: true }])
+        root.set([{ provide: NODE, useValue: { target: ctor, title: options?.title }, multi: true }])
     };
 }
 export const HANDLER = new InjectionToken<{ ast: Type<any>, target: Type<any> }[]>(`HANDLER`)
@@ -49,12 +58,14 @@ export interface InputOptions {
      * @default false
      */
     isMulti?: boolean;
+    title?: string;
 }
 
 export interface InputMetadata {
     target: Type<any>;
     propertyKey: string | symbol;
     isMulti?: boolean;
+    title?: string;
 }
 
 export const INPUT = new InjectionToken<InputMetadata[]>(`INPUT`)
@@ -67,7 +78,8 @@ export function Input(options?: InputOptions): PropertyDecorator {
             useValue: {
                 target: ctor,
                 propertyKey,
-                isMulti: options?.isMulti ?? false
+                isMulti: options?.isMulti ?? false,
+                title: options?.title
             }
         }])
     };
@@ -85,11 +97,21 @@ export function getInputMetadata(target: Type<any> | object, propertyKey?: strin
 
     return targetInputs;
 }
-export const OUTPUT = new InjectionToken<{ target: Type<any>, propertyKey: string | symbol }[]>(`OUTPUT`)
-export function Output(): PropertyDecorator {
+export interface OutputOptions {
+    title?: string;
+}
+
+export interface OutputMetadata {
+    target: Type<any>;
+    propertyKey: string | symbol;
+    title?: string;
+}
+
+export const OUTPUT = new InjectionToken<OutputMetadata[]>(`OUTPUT`)
+export function Output(options?: OutputOptions): PropertyDecorator {
     return (target, propertyKey) => {
         const ctor = resolveConstructor(target);
-        root.set([{ provide: OUTPUT, multi: true, useValue: { target: ctor, propertyKey } }])
+        root.set([{ provide: OUTPUT, multi: true, useValue: { target: ctor, propertyKey, title: options?.title } }])
     };
 }
 

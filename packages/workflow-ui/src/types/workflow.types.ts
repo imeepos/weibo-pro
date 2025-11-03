@@ -55,6 +55,8 @@ export interface NodeMetadata {
   type: string
   /** 节点显示标签 */
   label: string
+  /** 节点自定义标题（用于显示中文） */
+  title?: string
   /** 输入端口定义 */
   inputs: PortMetadata[]
   /** 输出端口定义 */
@@ -73,6 +75,8 @@ export interface PortMetadata {
   isMulti?: boolean
   /** 显示标签 */
   label?: string
+  /** 端口自定义标题（用于显示中文） */
+  title?: string
 }
 
 /**
