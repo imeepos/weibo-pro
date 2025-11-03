@@ -128,9 +128,9 @@ export function getInjectMetadata(target: any): any[] | undefined {
     if (
       unifiedMetadata &&
       unifiedMetadata[i] &&
-      unifiedMetadata[i].token !== undefined
+      unifiedMetadata[i]?.token !== undefined
     ) {
-      result[i] = unifiedMetadata[i].token;
+      result[i] = unifiedMetadata[i]!.token;
     }
     // 向后兼容：使用旧的分离元数据
     else if (legacyTokens && legacyTokens[i] !== undefined) {

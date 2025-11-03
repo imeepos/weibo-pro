@@ -317,7 +317,11 @@ export class EnvironmentInjector extends Injector {
     }
 
     // 对于非多值注入，使用最后注册的提供者（后面的覆盖前面的）
-    return this.createSingleInstance(providers[providers.length - 1]);
+    const lastProvider = providers[providers.length - 1];
+    if (!lastProvider) {
+      throw new Error(`No provider found for token: ${String(_token)}`);
+    }
+    return this.createSingleInstance(lastProvider);
   }
 
   /**
