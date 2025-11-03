@@ -193,7 +193,7 @@ body {
   padding: var(--spacing-panel-padding);
 }
 
-.property-panel-content > * + * {
+.property-panel-content>*+* {
   margin-top: var(--spacing-panel-gap);
 }
 
@@ -231,4 +231,9 @@ body {
   background-color: #450a0a;
   border-color: #7f1d1d;
   color: var(--workflow-error);
+}
+
+
+.react-flow__edges {
+  z-index: 9;
 }

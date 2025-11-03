@@ -47,7 +47,7 @@ export const DataEdge = memo((props: EdgeProps<WorkflowEdge>) => {
         d={edgePath}
         fill="none"
         stroke="transparent"
-        strokeWidth={20}
+        strokeWidth={2}
         onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
         style={{ cursor: 'pointer' }}
