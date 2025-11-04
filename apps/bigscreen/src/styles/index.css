@@ -293,112 +293,6 @@
     background-color: rgb(var(--color-warning));
   }
 
-  .select-wrapper {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    max-width: 100%;
-  }
-
-  .select-field {
-    appearance: none;
-    width: 100%;
-    padding: 0.55rem 2.5rem 0.55rem 0.95rem;
-    border-radius: 0.75rem;
-    border: 1px solid rgb(var(--color-border) / 0.9);
-    background: linear-gradient(
-      135deg,
-      rgb(var(--color-card) / 0.95) 0%,
-      rgb(var(--color-card) / 0.85) 100%
-    );
-    box-shadow: 0 10px 25px rgb(var(--color-foreground) / 0.06);
-    color: rgb(var(--color-foreground));
-    font-weight: 500;
-    cursor: pointer;
-    transition: box-shadow var(--default-transition-duration),
-      border-color var(--default-transition-duration),
-      transform var(--default-transition-duration),
-      background var(--default-transition-duration);
-  }
-
-  .select-field:hover {
-    border-color: rgb(var(--color-primary) / 0.5);
-    box-shadow: 0 14px 30px rgb(var(--color-foreground) / 0.12);
-    transform: translateY(-1px);
-  }
-
-  .select-field:focus,
-  .select-field:focus-visible {
-    outline: none;
-    border-color: rgb(var(--color-primary));
-    box-shadow: 0 0 0 3px rgb(var(--color-primary) / 0.2);
-  }
-
-  .select-field:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    box-shadow: none;
-  }
-
-  .select-wrapper::after {
-    content: '';
-    position: absolute;
-    right: 0.85rem;
-    width: 0.55rem;
-    height: 0.55rem;
-    pointer-events: none;
-    background: rgb(var(--color-foreground));
-    clip-path: polygon(50% 70%, 0% 20%, 100% 20%);
-    opacity: 0.7;
-    transition: opacity var(--default-transition-duration);
-  }
-
-  .select-wrapper:focus-within::after {
-    opacity: 1;
-  }
-
-  .select-field option {
-    background-color: rgb(var(--color-card));
-    color: rgb(var(--color-foreground));
-    border: none;
-  }
-
-  .select-field optgroup {
-    background-color: rgb(var(--color-muted));
-    color: rgb(var(--color-muted-foreground));
-    font-weight: 600;
-  }
-
-  .dark .select-field {
-    border-color: rgb(var(--color-border) / 0.6);
-    background: linear-gradient(
-      135deg,
-      rgb(var(--color-card) / 0.55) 0%,
-      rgb(var(--color-card) / 0.4) 100%
-    );
-    box-shadow: 0 10px 30px rgb(0 0 0 / 0.35);
-    color-scheme: dark;
-  }
-
-  .dark .select-field:hover {
-    border-color: rgb(var(--color-primary) / 0.6);
-    box-shadow: 0 14px 34px rgb(0 0 0 / 0.45);
-  }
-
-  .dark .select-field:focus {
-    box-shadow: 0 0 0 3px rgb(var(--color-primary) / 0.25);
-  }
-
-  .dark .select-wrapper::after {
-    background: rgb(var(--color-foreground));
-  }
-
-  .dark .select-field option {
-    background-color: rgb(var(--color-card));
-    color: rgb(var(--color-foreground));
-    border: none;
-  }
-
   .select-container {
     position: relative;
     display: inline-flex;
@@ -588,20 +482,6 @@
     color: rgb(var(--color-primary));
   }
 
-  .select-field::-ms-expand {
-    display: none;
-  }
-
-  .select-field:-moz-focusring {
-    color: transparent;
-    text-shadow: 0 0 0 rgb(var(--color-foreground));
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .select-field {
-      transition: none;
-    }
-  }
 }
 
 @layer utilities {
