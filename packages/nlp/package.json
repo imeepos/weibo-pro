@@ -2,8 +2,13 @@
   "name": "@sker/nlp",
   "version": "0.0.0",
   "private": true,
-  "description": "Baidu NLP API client for sentiment analysis and text processing.",
-  "keywords": ["nlp", "baidu", "sentiment", "sker"],
+  "description": "LLM client library with OpenAI-compatible API support.",
+  "keywords": [
+    "llm",
+    "openai",
+    "nlp",
+    "sker"
+  ],
   "exports": {
     ".": {
       "types": "./src/index.ts",
@@ -25,7 +30,7 @@
   },
   "dependencies": {
     "@sker/core": "workspace:*",
-    "axios": "^1.7.9"
+    "openai": "^4.73.1"
   },
   "devDependencies": {
     "@sker/eslint-config": "workspace:*",
