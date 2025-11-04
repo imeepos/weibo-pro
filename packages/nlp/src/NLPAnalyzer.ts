@@ -9,11 +9,19 @@ import { Injectable } from '@sker/core';
 export class NLPAnalyzer {
 
   /**
-   * 一次性分析：返回情感、关键词、事件分类
+   * 一次性分析：返回情感、关键词、事件分类、标签
+   *
+   * @param context 帖子上下文
+   * @param availableCategories 可选，可用的事件类别列表
+   * @param availableTags 可选，可用的标签列表
    */
-  async analyze(context: PostContext): Promise<CompleteAnalysisResult> {
+  async analyze(
+    context: PostContext,
+    availableCategories?: string[],
+    availableTags?: string[]
+  ): Promise<CompleteAnalysisResult> {
     const mergedText = this.buildContext(context);
-    const prompt = this.buildPrompt(mergedText);
+    const prompt = this.buildPrompt(mergedText, availableCategories, availableTags);
     const client = useOpenAi()
     const response = await client.chat.completions.create({
       model: 'deepseek-ai/DeepSeek-V3.2-Exp',
@@ -55,13 +63,28 @@ export class NLPAnalyzer {
   /**
    * 构建提示词：一次性获取所有数据
    */
-  private buildPrompt(text: string): string {
+  private buildPrompt(
+    text: string,
+    availableCategories?: string[],
+    availableTags?: string[]
+  ): string {
+    const categoriesHint = availableCategories?.length
+      ? availableCategories.join('|')
+      : '社会热点|科技创新|政策法规|经济财经|文体娱乐';
+
+    const tagsHint = availableTags?.length
+      ? `已有标签：${availableTags.join('、')}`
+      : '可自由创建新标签';
+
     return `你是一个社交媒体舆情分析专家。请分析以下微博帖子及其互动内容，返回 JSON 格式的完整分析结果。
 
 要求：
 1. **情感分析**：综合帖子和所有互动内容，判断整体情感倾向
 2. **关键词提取**：提取最重要的 30 个关键词，包含权重、情感、词性、频次
-3. **事件分类**：将内容归类到五大类别之一
+3. **事件分类**：优先从已有类别中选择；如果都不合适，可提议新分类（设置 isNewCategory: true）
+4. **事件标题**：为该事件生成一个简明扼要的标题（10-30字）
+5. **事件简介**：生成一段客观、全面的事件描述（50-200字），概括事件的核心内容、背景和关键点
+6. **事件标签**：提取 3-10 个标签，优先使用已有标签；如确实需要，可创建新标签（设置 isNew: true）
 
 返回格式（严格 JSON）：
 {
@@ -82,23 +105,56 @@ export class NLPAnalyzer {
     }
   ],
   "event": {
-    "type": "社会热点|科技创新|政策法规|经济财经|文体娱乐",
-    "confidence": 0.88
-  }
+    "type": "${categoriesHint}",
+    "confidence": 0.88,
+    "isNewCategory": false
+  },
+  "eventTitle": "简明扼要的事件标题",
+  "eventDescription": "客观全面的事件描述，概括核心内容、背景和关键点（50-200字）",
+  "tags": [
+    {
+      "name": "标签名",
+      "type": "keyword|topic|entity",
+      "isNew": false
+    }
+  ]
 }
 
 说明：
-- sentiment.overall: 整体情感倾向
-- sentiment.confidence: 判断的置信度（0-1）
-- sentiment.*_prob: 各情感的概率（总和为 1）
+- sentiment: 情感分析
+  - overall: 整体情感倾向
+  - confidence: 判断的置信度（0-1）
+  - *_prob: 各情感的概率（总和为 1）
+
 - keywords: 按 weight 降序排列，最多 30 个
   - keyword: 关键词文本
   - weight: 重要性权重（0-1）
   - sentiment: 该关键词的情感色彩
   - pos: 词性（noun/verb/adj）
   - count: 在原文中出现的次数
-- event.type: 必须是五个类别之一
-- event.confidence: 分类的置信度
+
+- event: 事件分类
+  - type: 优先从以下类别中选择：${categoriesHint}
+    如果都不合适，可以提议一个新的类别名称，并设置 isNewCategory: true
+  - confidence: 分类的置信度
+  - isNewCategory: 是否为新建议的分类（默认 false）
+
+- eventTitle: 事件标题（10-30字），应该是连贯的叙事性描述，说明发生了什么事情，而不是关键词列表
+
+- eventDescription: 事件简介（50-200字）
+  - 客观描述事件的核心内容
+  - 包含必要的背景信息
+  - 突出关键观点和争议点
+  - 语言简洁专业，避免情绪化表达
+
+- tags: 事件标签（3-10个）
+  ${tagsHint}
+  - name: 标签名称（简短精炼，2-6个字）
+  - type: 标签类型
+    - keyword: 关键概念或术语
+    - topic: 话题或领域
+    - entity: 实体（人物、组织、地点等）
+  - isNew: 是否为新建议的标签（如果该标签不在已有列表中，设为 true）
 
 内容：
 ${text}`;

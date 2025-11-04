@@ -7,3 +7,7 @@ export { WeiboAjaxStatusesMymblogAstVisitor } from './WeiboAjaxStatusesMymblogAs
 export { WeiboAjaxStatusesRepostTimelineAstVisitor } from './WeiboAjaxStatusesRepostTimelineAstVisitor'
 export { WeiboAjaxStatusesShowAstVisitor } from './WeiboAjaxStatusesShowAstVisitor'
 export { WeiboKeywordSearchAstVisitor } from './WeiboKeywordSearchAstVisitor'
+export { PostContextCollectorVisitor } from './PostContextCollectorVisitor'
+export { PostNLPAnalyzerVisitor } from './PostNLPAnalyzerVisitor'
+export { EventAutoCreatorVisitor } from './EventAutoCreatorVisitor'
+export { startPostNLPConsumer, type PostNLPTask } from './post-nlp-agent.consumer'

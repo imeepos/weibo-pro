@@ -24,9 +24,23 @@ export interface CompleteAnalysisResult {
 
   // 事件分类
   event: {
-    type: '社会热点' | '科技创新' | '政策法规' | '经济财经' | '文体娱乐';
+    type: string; // 从已有分类中选择，或提议新分类
     confidence: number;
+    isNewCategory?: boolean; // 是否为新建议的分类
   };
+
+  // 事件标题（10-30字的简明描述）
+  eventTitle: string;
+
+  // 事件简介（50-200字的详细描述）
+  eventDescription: string;
+
+  // 事件标签（3-10个）
+  tags: Array<{
+    name: string; // 标签名称
+    type: 'keyword' | 'topic' | 'entity'; // 标签类型
+    isNew?: boolean; // 是否为新建议的标签
+  }>;
 }
 
 /** 输入的合并文本上下文 */

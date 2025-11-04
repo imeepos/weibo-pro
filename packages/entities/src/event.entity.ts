@@ -76,17 +76,4 @@ export class EventEntity {
     nullable: true,
   })
   deleted_at!: Date | null;
-
-  get source_platform(): string | null {
-    if (!this.seed_url) return null;
-    try {
-      const hostname = new URL(this.seed_url).hostname;
-      if (hostname.includes('weibo.com')) return 'weibo';
-      if (hostname.includes('twitter.com')) return 'twitter';
-      if (hostname.includes('news')) return 'news';
-      return 'other';
-    } catch {
-      return null;
-    }
-  }
 }

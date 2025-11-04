@@ -3,6 +3,8 @@ import { DataSourceOptions, EntityManager } from 'typeorm';
 import { ENTITY } from "./decorator";
 import { DataSource } from 'typeorm'
 import { root } from '@sker/core'
+import { WeiboPostSubscriber } from './weibo-post.subscriber';
+
 export const createDatabaseConfig = (): DataSourceOptions => {
   const databaseUrl = process.env.DATABASE_URL;
   const entities = root.get(ENTITY, [])
@@ -11,6 +13,7 @@ export const createDatabaseConfig = (): DataSourceOptions => {
       type: 'postgres',
       url: databaseUrl,
       entities,
+      subscribers: [WeiboPostSubscriber],
       synchronize: true,
       logging: false,
       poolSize: 10,

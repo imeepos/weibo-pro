@@ -509,6 +509,9 @@ importers:
       '@sker/core':
         specifier: workspace:*
         version: link:../core
+      '@sker/nlp':
+        specifier: workspace:*
+        version: link:../nlp
       '@sker/workflow':
         specifier: workspace:*
         version: link:../workflow
@@ -568,6 +571,9 @@ importers:
       '@sker/entities':
         specifier: workspace:*
         version: link:../entities
+      '@sker/nlp':
+        specifier: workspace:*
+        version: link:../nlp
       '@sker/redis':
         specifier: workspace:*
         version: link:../redis

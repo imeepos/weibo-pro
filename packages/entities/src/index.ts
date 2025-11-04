@@ -1,7 +1,10 @@
 export * from './utils';
+export * from './types/sentiment';
 export * from './weibo-comment.entity'
 export * from './weibo-like.entity'
 export * from './weibo-post.entity'
+export * from './weibo-post-snapshot.entity'
+export * from './weibo-post.subscriber'
 export * from './weibo-user.entity'
 export * from './weibo-account.entity'
 export * from './weibo-repost.entity'
@@ -14,3 +17,4 @@ export * from './event-category.entity'
 export * from './event-tag.entity'
 export * from './event-tag-relation.entity'
 export * from './event-statistics.entity'
+export * from './post-nlp-result.entity'

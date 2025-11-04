@@ -30,6 +30,7 @@
   },
   "dependencies": {
     "@sker/core": "workspace:*",
+    "@sker/nlp": "workspace:*",
     "@sker/workflow": "workspace:*"
   },
   "devDependencies": {

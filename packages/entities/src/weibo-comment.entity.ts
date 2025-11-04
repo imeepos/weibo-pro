@@ -112,6 +112,9 @@ export class WeiboCommentEntity {
   topic_struct!: unknown[];
 
   @Column({ type: 'jsonb', nullable: true })
+  reply_comment!: unknown[];
+
+  @Column({ type: 'jsonb', nullable: true })
   comment_bubble!: Record<string, unknown>;
 
   @Column({ type: 'integer', nullable: true })
