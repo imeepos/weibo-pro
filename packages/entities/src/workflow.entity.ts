@@ -24,8 +24,11 @@ export class WorkflowEntity {
   @PrimaryGeneratedColumn('increment')
   id!: number;
 
+  @Column({ type: 'varchar', length: 100, unique: true })
+  code!: string;
+
   @Column({ type: 'varchar', length: 100 })
-  name!: string;
+  title!: string;
 
   @Column({ type: 'jsonb', name: 'graph_definition' })
   graphDefinition!: GraphDefinition;
