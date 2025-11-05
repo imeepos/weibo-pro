@@ -11,7 +11,7 @@ import {
   createNLPAnalyzeTool,
 } from './tools';
 import type { ResearchTask, ResearchReport } from './types';
-import { InMemoryStore } from '@langchain/langgraph';
+import { InMemoryStore, MemorySaver } from '@langchain/langgraph';
 
 /**
  * ResearchAgent - 自主研究型智能体
@@ -48,7 +48,8 @@ export class ResearchAgent {
     this.agent = createAgent({
       model,
       tools,
-      store: new InMemoryStore()
+      store: new InMemoryStore(),
+      checkpointer: new MemorySaver()
     });
   }
 

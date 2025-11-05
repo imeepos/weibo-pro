@@ -2,26 +2,20 @@
   "name": "@sker/agent",
   "version": "0.1.0",
   "description": "自主研究与舆情分析 Agent",
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./src/index.ts",
-      "import": "./src/index.ts",
-      "require": "./src/index.ts",
-      "default": "./src/index.ts"
-    },
-    "./*": {
-      "types": "./src/*.ts",
-      "import": "./src/*.ts",
-      "require": "./src/*.ts",
-      "default": "./src/*.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "default": "./dist/index.mjs"
     },
     "./package.json": "./package.json"
   },
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
+    "build": "tsup",
+    "dev": "tsup --watch",
     "lint": "eslint src --ext .ts",
     "check-types": "tsc --noEmit",
     "test": "ts-node -r tsconfig-paths/register src/main.ts"
@@ -43,6 +37,7 @@
     "@types/node": "^20.0.0",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
+    "tsup": "^8.4.0",
     "typescript": "5.9.2"
   }
 }

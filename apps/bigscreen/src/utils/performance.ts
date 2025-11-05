@@ -501,12 +501,6 @@ class PerformanceMonitor {
       recommendations.push('优化API性能: 考虑添加缓存、数据分页或后端优化');
     }
 
-    // 检查内存使用
-    const memory = this.getMemoryUsage();
-    if (memory.percentage > 80) {
-      recommendations.push('内存使用率较高，检查是否存在内存泄漏');
-    }
-
     return recommendations;
   }
 

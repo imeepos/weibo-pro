@@ -11,7 +11,15 @@
       "Bash(tree:*)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "WebFetch(domain:www.npmjs.com)",
-      "Bash(npm view:*)"
+      "Bash(npm view:*)",
+      "Bash(tsx:*)",
+      "Bash(node --version)",
+      "Bash(npm:*)",
+      "Bash(pnpm --version:*)",
+      "Bash(pnpm run build:*)",
+      "Bash(pnpm run dev:*)",
+      "Bash(node:*)",
+      "Bash(pnpm run start:*)"
     ],
     "deny": [],
     "ask": []

@@ -1,7 +1,7 @@
 import { Column, Index, PrimaryColumn, OneToMany } from 'typeorm';
 import { Entity } from './decorator';
 import { booleanToSmallintTransformer } from './transformers/boolean-to-smallint.transformer';
-import type { WeiboUserCategoryRelationEntity } from './weibo-user-category-relation.entity';
+import { WeiboUserCategoryRelationEntity } from './weibo-user-category-relation.entity';
 
 @Entity('weibo_users')
 @Index(['id'], { unique: true })
