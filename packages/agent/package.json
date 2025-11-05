@@ -1,0 +1,48 @@
+{
+  "name": "@sker/agent",
+  "version": "0.1.0",
+  "description": "自主研究与舆情分析 Agent",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "require": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "types": "./src/*.ts",
+      "import": "./src/*.ts",
+      "require": "./src/*.ts",
+      "default": "./src/*.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "eslint src --ext .ts",
+    "check-types": "tsc --noEmit",
+    "test": "ts-node -r tsconfig-paths/register src/main.ts"
+  },
+  "dependencies": {
+    "@langchain/core": "^1.0.2",
+    "@langchain/langgraph": "^1.0.1",
+    "@langchain/openai": "^1.0.0",
+    "@sker/core": "workspace:*",
+    "@sker/entities": "workspace:*",
+    "@sker/nlp": "workspace:*",
+    "@sker/workflow-run": "workspace:*",
+    "langchain": "^1.0.2",
+    "typeorm": "^0.3.20",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@sker/typescript-config": "workspace:*",
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "5.9.2"
+  }
+}

@@ -1,9 +1,6 @@
 {
   "extends": "@sker/typescript-config/base.json",
-  "compilerOptions": {
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
-  },
+  "compilerOptions": {},
   "include": [
     "src"
   ],
