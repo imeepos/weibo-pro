@@ -1,9 +1,10 @@
-import { Inject, Injectable } from "@sker/core";
+import { Injectable } from "@sker/core";
 import { useEntityManager, WeiboCommentEntity, WeiboUserEntity } from "@sker/entities";
 import { WeiboAccountService } from "./weibo-account.service";
 import { Handler } from "@sker/workflow";
 import { WeiboAjaxStatusesCommentAst } from "@sker/workflow-ast";
 import { delay } from "./utils";
+import { WeiboApiClient } from "./weibo-api-client.base";
 
 export interface WeiboAjaxStatusesComponentAstResponse {
     readonly ok: number
@@ -16,122 +17,106 @@ export interface WeiboAjaxStatusesComponentAstResponse {
 }
 
 @Injectable()
-export class WeiboAjaxStatusesCommentAstVisitor {
-    constructor(
-        @Inject(WeiboAccountService) private account: WeiboAccountService,
-    ) { }
+export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
+    constructor(accountService: WeiboAccountService) {
+        super(accountService);
+    }
+
     @Handler(WeiboAjaxStatusesCommentAst)
     async visit(ast: WeiboAjaxStatusesCommentAst, _ctx: any) {
-        ast.state = 'running';
-        while (ast.state === 'running') {
-            ast = await this.fetch(ast, _ctx)
-            ast.max_id = ast.next_max_id;
-            await delay()
-            if (ast.entities && ast.entities.length > 0) {
-                for (let child of ast.entities) {
-                    if (child.more_info) {
-                        let childAst = new WeiboAjaxStatusesCommentAst()
-                        childAst.mid = `${child.id}`;
-                        childAst.is_show_bulletin = 2;
-                        childAst.is_mix = 1;
-                        childAst.fetch_level = 1;
-                        childAst.max_id = 0;
-                        childAst.count = 20;
-                        childAst.uid = ast.uid;
-                        await this.visitChildren(childAst, _ctx)
+        try {
+            while (true) {
+                const body = await this.fetchComments(ast);
+
+                const entities = await this.saveComments(body);
+                ast.entities = entities;
+
+                console.log(`[WeiboAjaxStatusesCommentAstVisitor] 共${entities.length}个`);
+
+                if (entities.length > 0) {
+                    for (let child of entities) {
+                        if (child.more_info) {
+                            const childAst = new WeiboAjaxStatusesCommentAst();
+                            childAst.mid = `${child.id}`;
+                            childAst.is_show_bulletin = 2;
+                            childAst.is_mix = 1;
+                            childAst.fetch_level = 1;
+                            childAst.max_id = 0;
+                            childAst.count = 20;
+                            childAst.uid = ast.uid;
+                            await this.visitChildren(childAst, _ctx);
+                        }
                     }
                 }
+
+                if (!body.max_id) {
+                    break;
+                }
+
+                ast.max_id = body.max_id;
+                ast.next_max_id = body.max_id;
+                await delay();
             }
+
+            ast.state = 'success';
+        } catch (error) {
+            console.error(`[WeiboAjaxStatusesCommentAstVisitor] mid: ${ast.mid}`, error);
+            ast.state = 'fail';
+            ast.error = error instanceof Error ? error : new Error(String(error));
         }
         return ast;
     }
 
     async visitChildren(ast: WeiboAjaxStatusesCommentAst, _ctx: any) {
-        ast.state = 'running';
-        while (ast.state === 'running') {
-            ast = await this.fetch(ast, _ctx)
-            ast.max_id = ast.next_max_id;
-            await delay()
+        try {
+            while (true) {
+                const body = await this.fetchComments(ast);
+                await this.saveComments(body);
+
+                if (!body.max_id) {
+                    break;
+                }
+
+                ast.max_id = body.max_id;
+                ast.next_max_id = body.max_id;
+                await delay();
+            }
+        } catch (error) {
+            console.error(`[WeiboAjaxStatusesCommentAstVisitor] 子评论 mid: ${ast.mid}`, error);
         }
-        return ast;
     }
 
-    async fetch(ast: WeiboAjaxStatusesCommentAst, _ctx: any) {
-        const selection = await this.account.selectBestAccount();
-        if (!selection) {
-            ast.state = 'fail';
-            console.error(`[WeiboAjaxStatusesCommentAstVisitor] 没有可用账号`)
-            return ast;
-        }
-        const cookies = selection.cookieHeader.split(';').map(it => it.split('=').map(it => it.trim()))
-        const token = cookies.map(([name, value]) => {
-            return { name, value }
-        }).find((it) => {
-            return it.name === `XSRF-TOKEN`
-        })
-        // https://weibo.com/ajax/statuses/buildComments?is_reload=1&id=5227379271401937&is_show_bulletin=3&is_mix=0&count=10&uid=2744950651&fetch_level=0&locale=zh-CN
-        // https://weibo.com/ajax/statuses/buildComments?is_reload=1&id=5227379397493201&is_show_bulletin=3&is_mix=0&count=20&uid=2744950651&fetch_level=0&locale=zh-CN
-        let url = `https://weibo.com/ajax/statuses/buildComments?is_reload=1&id=${ast.mid}&is_show_bulletin=${ast.is_show_bulletin}&is_mix=${ast.is_mix}&count=${ast.count}&uid=${ast.uid}&fetch_level=${ast.fetch_level}&locale=zh-CN`
-        if (ast.max_id) url += `&max_id=${ast.max_id}`
-        console.log(`url is: ${url}`)
-        const response = await fetch(url, {
-            headers: {
-                'accept': 'application/json, text/plain, */*',
-                'accept-language': 'zh-CN,zh;q=0.9',
-                'client-version': 'v2.47.129',
-                'priority': 'u=1, i',
-                'referer': `https://weibo.com/${ast.uid}/${ast.mid}`,
-                'sec-ch-ua': '"Chromium";v="142", "Google Chrome";v="142", "Not_A Brand";v="99"',
-                'sec-ch-ua-mobile': '?0',
-                'sec-ch-ua-platform': '"Windows"',
-                'sec-fetch-dest': 'empty',
-                'sec-fetch-mode': 'cors',
-                'sec-fetch-site': 'same-origin',
-                'server-version': 'v2025.10.24.3',
-                'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36',
-                'x-requested-with': 'XMLHttpRequest',
-                'x-xsrf-token': token?.value!,
-                'cookie': selection.cookieHeader
-            }
+    private async fetchComments(ast: WeiboAjaxStatusesCommentAst): Promise<WeiboAjaxStatusesComponentAstResponse> {
+        let url = `https://weibo.com/ajax/statuses/buildComments?is_reload=1&id=${ast.mid}&is_show_bulletin=${ast.is_show_bulletin}&is_mix=${ast.is_mix}&count=${ast.count}&uid=${ast.uid}&fetch_level=${ast.fetch_level}&locale=zh-CN`;
+        if (ast.max_id) url += `&max_id=${ast.max_id}`;
+
+        console.log(`url is: ${url}`);
+
+        return await this.fetchApi<WeiboAjaxStatusesComponentAstResponse>({
+            url,
+            refererOptions: { uid: ast.uid, mid: ast.mid }
         });
+    }
 
-        if (response.status === 200) {
-            const body = await response.json() as WeiboAjaxStatusesComponentAstResponse;
-            try {
-                const entities = await useEntityManager(async m => {
-                    const userMap = new Map<number, WeiboUserEntity>();
-                    body.data.forEach(item => {
-                        if (item.user?.id) {
-                            userMap.set(item.user.id as number, m.create(WeiboUserEntity, item.user));
-                        }
-                    });
-                    const users = Array.from(userMap.values());
-                    if (users.length > 0) {
-                        const BATCH_SIZE = 5;
-                        for (let i = 0; i < users.length; i += BATCH_SIZE) {
-                            const batch = users.slice(i, i + BATCH_SIZE);
-                            await m.upsert(WeiboUserEntity, batch as any, ['id']);
-                        }
-                    }
-                    const entities = body.data.map(item => m.create(WeiboCommentEntity, item))
-                    await m.upsert(WeiboCommentEntity, entities as any[], ['id'])
-                    return entities;
-                });
-                ast.entities = entities;
-                console.log(`[WeiboAjaxStatusesCommentAstVisitor] 共${entities.length}个`)
-                ast.next_max_id = body.max_id;
-                ast.state = body.max_id ? 'running' : 'success'
-                return ast;
-            } catch (error) {
-                console.error(`[WeiboAjaxStatusesCommentAstVisitor] mid: ${ast.mid}`, error);
-                ast.state = 'fail';
-                ast.error = error instanceof Error ? error : new Error(String(error));
-                return ast;
+    private async saveComments(body: WeiboAjaxStatusesComponentAstResponse): Promise<WeiboCommentEntity[]> {
+        return await useEntityManager(async m => {
+            const userMap = new Map<number, WeiboUserEntity>();
+            body.data.forEach(item => {
+                if (item.user?.id) {
+                    userMap.set(item.user.id as number, m.create(WeiboUserEntity, item.user));
+                }
+            });
+            const users = Array.from(userMap.values());
+            if (users.length > 0) {
+                const BATCH_SIZE = 5;
+                for (let i = 0; i < users.length; i += BATCH_SIZE) {
+                    const batch = users.slice(i, i + BATCH_SIZE);
+                    await m.upsert(WeiboUserEntity, batch as any, ['id']);
+                }
             }
-        }
-        ast.state = 'fail'
-        console.error(response.statusText)
-
-        return ast;
+            const entities = body.data.map(item => m.create(WeiboCommentEntity, item));
+            await m.upsert(WeiboCommentEntity, entities as any[], ['id']);
+            return entities;
+        });
     }
 }

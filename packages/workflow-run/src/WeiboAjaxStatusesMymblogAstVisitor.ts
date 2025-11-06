@@ -1,9 +1,9 @@
-import { Inject, Injectable } from "@sker/core";
+import { Injectable } from "@sker/core";
 import { WeiboAccountService } from "./weibo-account.service";
 import { WeiboAjaxStatusesMymblogAst } from "@sker/workflow-ast";
 import { Handler } from "@sker/workflow";
-import { delay } from "./utils";
 import { useEntityManager, WeiboPostEntity } from "@sker/entities";
+import { WeiboApiClient } from "./weibo-api-client.base";
 
 export interface WeiboAjaxStatusesMymblogAstResponse {
     ok: number;
@@ -13,71 +13,30 @@ export interface WeiboAjaxStatusesMymblogAstResponse {
 }
 
 @Injectable()
-export class WeiboAjaxStatusesMymblogAstVisitor {
-    constructor(
-        @Inject(WeiboAccountService) private account: WeiboAccountService,
-    ) { }
+export class WeiboAjaxStatusesMymblogAstVisitor extends WeiboApiClient {
+    constructor(accountService: WeiboAccountService) {
+        super(accountService);
+    }
 
     @Handler(WeiboAjaxStatusesMymblogAst)
     async visit(ast: WeiboAjaxStatusesMymblogAst, _ctx: any) {
-        ast.state = 'running';
-        while (ast.state === 'running') {
-            ast = await this.fetch(ast, _ctx)
-            ast.page = ast.page + 1;
-            await delay()
-        }
-        return ast;
-    }
-
-    async fetch(ast: WeiboAjaxStatusesMymblogAst, _ctx: any) {
-        const selection = await this.account.selectBestAccount();
-        if (!selection) {
-            ast.state = 'fail';
-            console.error(`[WeiboAjaxStatusesMymblogAstVisitor] 没有可用账号`)
-            return ast;
-        }
-        const cookies = selection.cookieHeader.split(';').map(it => it.split('=').map(it => it.trim()))
-        const token = cookies.map(([name, value]) => {
-            return { name, value }
-        }).find((it) => {
-            return it.name === `XSRF-TOKEN`
-        })
-        const response = await fetch(`https://weibo.com/ajax/statuses/mymblog?uid=${ast.uid}&page=${ast.page}&feature=0`, {
-            headers: {
-                'accept': 'application/json, text/plain, */*',
-                'accept-language': 'zh-CN,zh;q=0.9',
-                'client-version': 'v2.47.129',
-                'priority': 'u=1, i',
-                'referer': `https://weibo.com/u/${ast.uid}`,
-                'sec-ch-ua': '"Chromium";v="142", "Google Chrome";v="142", "Not_A Brand";v="99"',
-                'sec-ch-ua-mobile': '?0',
-                'sec-ch-ua-platform': '"Windows"',
-                'sec-fetch-dest': 'empty',
-                'sec-fetch-mode': 'cors',
-                'sec-fetch-site': 'same-origin',
-                'server-version': 'v2025.10.24.3',
-                'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36',
-                'x-requested-with': 'XMLHttpRequest',
-                'x-xsrf-token': token?.value!,
-                'cookie': selection.cookieHeader
-            }
-        });
-
-        if (response.status === 200) {
-            const body = await response.json() as WeiboAjaxStatusesMymblogAstResponse;
-            try {
+        try {
+            for await (const body of this.fetchWithPagination<WeiboAjaxStatusesMymblogAstResponse>({
+                buildUrl: (page) => `https://weibo.com/ajax/statuses/mymblog?uid=${ast.uid}&page=${page}&feature=0`,
+                refererOptions: { uid: ast.uid },
+                shouldContinue: (data) => data.data.list.length > 0
+            })) {
                 await useEntityManager(async m => {
-                    const posts = body.data.list.map(item => m.create(WeiboPostEntity, item))
-                    await m.upsert(WeiboPostEntity, posts as any, ['id'])
-                })
-            } catch (error) {
-                console.error(`[WeiboAjaxStatusesMymblogAstVisitor] uid: ${ast.uid}`, error);
+                    const posts = body.data.list.map(item => m.create(WeiboPostEntity, item));
+                    await m.upsert(WeiboPostEntity, posts as any, ['id']);
+                });
             }
-            ast.state = body.data.list.length > 0 ? 'running' : 'success'
-            return ast;
+            ast.state = 'success';
+        } catch (error) {
+            console.error(`[WeiboAjaxStatusesMymblogAstVisitor] uid: ${ast.uid}`, error);
+            ast.state = 'fail';
+            ast.error = error instanceof Error ? error : new Error(String(error));
         }
-        ast.state = 'fail'
-        console.error(response.statusText)
         return ast;
     }
 }
