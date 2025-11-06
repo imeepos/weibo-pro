@@ -1,9 +1,7 @@
 import { mergeMap, retry, tap } from 'rxjs';
 import { root } from '@sker/core';
 import { execute } from '@sker/workflow';
-
-declare function registerMqQueueConfig(config: any): void;
-declare function useQueue<T>(name: string): any;
+import { registerMqQueueConfig, useQueue } from '@sker/mq';
 import {
   PostContextCollectorAst,
   PostNLPAnalyzerAst,

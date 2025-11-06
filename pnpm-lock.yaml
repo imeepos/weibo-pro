@@ -45,9 +45,21 @@ importers:
       '@sker/entities':
         specifier: workspace:*
         version: link:../../packages/entities
+      '@sker/mq':
+        specifier: workspace:*
+        version: link:../../packages/mq
       '@sker/redis':
         specifier: workspace:*
         version: link:../../packages/redis
+      '@sker/workflow':
+        specifier: workspace:*
+        version: link:../../packages/workflow
+      '@sker/workflow-ast':
+        specifier: workspace:*
+        version: link:../../packages/workflow-ast
+      '@sker/workflow-run':
+        specifier: workspace:*
+        version: link:../../packages/workflow-run
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
