@@ -4,12 +4,16 @@
   "scripts": {
     "claude": "claude --dangerously-skip-permissions",
     "build": "turbo run build",
-    "dev": "turbo run dev --concurrency=12",
+    "build:force": "turbo run build --force --no-cache",
+    "build:deps": "pnpm run -r --filter=\"./packages/*\" build",
+    "dev": "turbo run dev --concurrency=20",
+    "dev:robust": "./scripts/ensure-deps-built.sh && turbo run dev --concurrency=20",
     "dev:clean": "./scripts/dev-with-port-guardian.sh",
     "port:guardian": "./scripts/port-guardian.sh",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "check-types": "turbo run check-types"
+    "check-types": "turbo run check-types",
+    "ensure-deps": "./scripts/ensure-deps-built.sh"
   },
   "devDependencies": {
     "prettier": "^3.6.2",
