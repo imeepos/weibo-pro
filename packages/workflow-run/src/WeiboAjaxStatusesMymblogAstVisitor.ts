@@ -33,7 +33,7 @@ export class WeiboAjaxStatusesMymblogAstVisitor {
         const selection = await this.account.selectBestAccount();
         if (!selection) {
             ast.state = 'fail';
-            console.error(`[WeiboAjaxStatusesRepostTimelineAstVisitor] 没有可用账号`)
+            console.error(`[WeiboAjaxStatusesMymblogAstVisitor] 没有可用账号`)
             return ast;
         }
         const cookies = selection.cookieHeader.split(';').map(it => it.split('=').map(it => it.trim()))
@@ -71,7 +71,7 @@ export class WeiboAjaxStatusesMymblogAstVisitor {
                     await m.upsert(WeiboPostEntity, posts as any, ['id'])
                 })
             } catch (error) {
-                console.error(`[WeiboAjaxProfileInfoAstVisitor] postId: ${ast.id}`, error);
+                console.error(`[WeiboAjaxStatusesMymblogAstVisitor] uid: ${ast.uid}`, error);
             }
             ast.state = body.data.list.length > 0 ? 'running' : 'success'
             return ast;

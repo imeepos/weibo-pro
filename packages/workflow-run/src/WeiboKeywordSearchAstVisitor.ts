@@ -4,10 +4,13 @@ import { WeiboKeywordSearchAst } from "@sker/workflow-ast";
 import { WeiboHtmlParser } from "./ParsedSearchResult";
 import { PlaywrightService } from "./PlaywrightService";
 import { WeiboAccountService } from "./weibo-account.service";
+import { useQueue } from "@sker/mq";
+import type { PostNLPTask } from "./post-nlp-agent.consumer";
 
 
 @Injectable()
 export class WeiboKeywordSearchAstVisitor {
+    private queue = useQueue<PostNLPTask>('post_nlp_queue');
 
     constructor(
         @Inject(WeiboHtmlParser) private parser: WeiboHtmlParser,
@@ -20,7 +23,7 @@ export class WeiboKeywordSearchAstVisitor {
         const selection = await this.account.selectBestAccount();
         if (!selection) {
             ast.state = 'fail';
-            console.error(`[WeiboAjaxStatusesRepostTimelineAstVisitor] 没有可用账号`)
+            console.error(`[WeiboKeywordSearchAstVisitor] 没有可用账号`)
             return ast;
         }
         const { keyword, startDate, endDate, page = 1 } = ast;
@@ -58,7 +61,8 @@ export class WeiboKeywordSearchAstVisitor {
     }
 
     private async pushMq(post: { mid: string, uid: string }) {
-        
+        this.queue.producer.next({ postId: post.mid });
+        console.log(`[WeiboKeywordSearch] 推送帖子到 NLP 队列: mid=${post.mid}`);
     }
 }
 

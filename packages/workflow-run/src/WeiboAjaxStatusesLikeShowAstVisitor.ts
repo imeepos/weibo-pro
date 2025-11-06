@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@sker/core";
-import { useEntityManager, WeiboUserEntity } from "@sker/entities";
+import { useEntityManager, WeiboUserEntity, WeiboLikeEntity } from "@sker/entities";
 import { WeiboAccountService } from "./weibo-account.service";
 import { Handler } from "@sker/workflow";
 import { WeiboAjaxStatusesLikeShowAst } from "@sker/workflow-ast";
@@ -48,13 +48,17 @@ export class WeiboAjaxStatusesLikeShowAstVisitor {
         })
         const url = `https://weibo.com/ajax/statuses/likeShow?id=${ast.mid}&attitude_type=${ast.attitude_type}&attitude_enable=${ast.attitude_enable}&page=${ast.page}&count=${ast.count}`
         console.log(`fetch url: ${url}`)
+        const referer = ast.uid
+            ? `https://weibo.com/${ast.uid}/${ast.mid}`
+            : `https://weibo.com/detail/${ast.mid}`;
+
         const response = await fetch(url, {
             headers: {
                 'accept': 'application/json, text/plain, */*',
                 'accept-language': 'zh-CN,zh;q=0.9',
                 'client-version': 'v2.47.129',
                 'priority': 'u=1, i',
-                'referer': 'https://weibo.com/2744950651/Qbug75SHT',
+                'referer': referer,
                 'sec-ch-ua': '"Chromium";v="142", "Google Chrome";v="142", "Not_A Brand";v="99"',
                 'sec-ch-ua-mobile': '?0',
                 'sec-ch-ua-platform': '"Windows"',
@@ -78,7 +82,16 @@ export class WeiboAjaxStatusesLikeShowAstVisitor {
                     });
                     console.log(`[${ast.page}]处理${userEntities.length}个用户`)
                     await m.upsert(WeiboUserEntity, userEntities as any[], ['id'])
-                    // 插入点赞表
+
+                    const likeEntities = body.data.map(item =>
+                        m.create(WeiboLikeEntity, {
+                            userWeiboId: String(item.user.id),
+                            targetWeiboId: ast.mid
+                        })
+                    );
+                    await m.upsert(WeiboLikeEntity, likeEntities as any[], ['userWeiboId', 'targetWeiboId']);
+                    console.log(`[${ast.page}]保存${likeEntities.length}条点赞记录`)
+
                     return userEntities;
                 })
             } catch (error) {

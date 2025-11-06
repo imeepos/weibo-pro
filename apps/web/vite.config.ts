@@ -27,10 +27,6 @@ export default defineConfig({
     }),
   ],
 
-  server: {
-    port: 3001,
-  },
-
   optimizeDeps: {
     exclude: [
       '@sker/workflow',

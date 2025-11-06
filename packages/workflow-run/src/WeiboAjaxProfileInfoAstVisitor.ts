@@ -33,7 +33,7 @@ export class WeiboAjaxProfileInfoAstVisitor {
         const selection = await this.account.selectBestAccount();
         if (!selection) {
             ast.state = 'fail';
-            console.error(`[WeiboAjaxStatusesRepostTimelineAstVisitor] 没有可用账号`)
+            console.error(`[WeiboAjaxProfileInfoAstVisitor] 没有可用账号`)
             return ast;
         }
         const cookies = selection.cookieHeader.split(';').map(it => it.split('=').map(it => it.trim()))
@@ -85,7 +85,7 @@ export class WeiboAjaxProfileInfoAstVisitor {
         const selection = await this.account.selectBestAccount();
         if (!selection) {
             ast.state = 'fail';
-            console.error(`[WeiboAjaxStatusesRepostTimelineAstVisitor] 没有可用账号`)
+            console.error(`[WeiboAjaxProfileInfoAstVisitor] 没有可用账号`)
             return ast;
         }
         const cookies = selection.cookieHeader.split(';').map(it => it.split('=').map(it => it.trim()))

@@ -60,7 +60,7 @@ export class WeiboAjaxStatusesCommentAstVisitor {
         const selection = await this.account.selectBestAccount();
         if (!selection) {
             ast.state = 'fail';
-            console.error(`[WeiboAjaxStatusesRepostTimelineAstVisitor] 没有可用账号`)
+            console.error(`[WeiboAjaxStatusesCommentAstVisitor] 没有可用账号`)
             return ast;
         }
         const cookies = selection.cookieHeader.split(';').map(it => it.split('=').map(it => it.trim()))
@@ -80,7 +80,7 @@ export class WeiboAjaxStatusesCommentAstVisitor {
                 'accept-language': 'zh-CN,zh;q=0.9',
                 'client-version': 'v2.47.129',
                 'priority': 'u=1, i',
-                'referer': 'https://weibo.com/2744950651/Qbug75SHT',
+                'referer': `https://weibo.com/${ast.uid}/${ast.mid}`,
                 'sec-ch-ua': '"Chromium";v="142", "Google Chrome";v="142", "Not_A Brand";v="99"',
                 'sec-ch-ua-mobile': '?0',
                 'sec-ch-ua-platform': '"Windows"',
@@ -89,8 +89,8 @@ export class WeiboAjaxStatusesCommentAstVisitor {
                 'sec-fetch-site': 'same-origin',
                 'server-version': 'v2025.10.24.3',
                 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36',
-                'x-requested-with': token?.value!,
-                'x-xsrf-token': 'uxoLsKgLvU34CDxltszyRlnq',
+                'x-requested-with': 'XMLHttpRequest',
+                'x-xsrf-token': token?.value!,
                 'cookie': selection.cookieHeader
             }
         });
@@ -118,15 +118,16 @@ export class WeiboAjaxStatusesCommentAstVisitor {
                     return entities;
                 });
                 ast.entities = entities;
-                console.log(`[WeiboAjaxStatusesComponentAstVisitor] 共${entities.length}个`)
+                console.log(`[WeiboAjaxStatusesCommentAstVisitor] 共${entities.length}个`)
                 ast.next_max_id = body.max_id;
                 ast.state = body.max_id ? 'running' : 'success'
                 return ast;
             } catch (error) {
-                console.error(`[WeiboAjaxStatusesRepostTimelineAstVisitor] mid: ${ast.mid}`, error);
+                console.error(`[WeiboAjaxStatusesCommentAstVisitor] mid: ${ast.mid}`, error);
+                ast.state = 'fail';
+                ast.error = error instanceof Error ? error : new Error(String(error));
+                return ast;
             }
-            ast.state = body.data.length > 0 ? 'running' : 'success'
-            return ast;
         }
         ast.state = 'fail'
         console.error(response.statusText)

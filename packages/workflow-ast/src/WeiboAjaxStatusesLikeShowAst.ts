@@ -5,6 +5,8 @@ export class WeiboAjaxStatusesLikeShowAst extends Ast {
 
     @Input({ title: "消息ID" })
     mid: string = ``;
+    @Input({ title: "用户ID" })
+    uid: string = ``;
     @Input({ title: "页码" })
     page: number = 1;
     @Input({ title: "数量" })

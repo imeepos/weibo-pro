@@ -47,8 +47,8 @@ function requestInterceptor(config: InternalAxiosRequestConfig): InternalAxiosRe
 
 // 响应拦截器 - 统一错误处理
 function responseInterceptor(response: AxiosResponse): AxiosResponse {
-  // 检查业务状态码
-  if (response.data && !response.data.success) {
+  // 检查业务状态码 - 只有当有明确的错误信息时才抛出错误
+  if (response.data && !response.data.success && response.data.error) {
     const errorMessage = response.data.error?.message || '请求失败';
     const apiError = isApiErrorEnvelope(response.data) ? response.data.error : undefined;
     const enhancedError: ExtendedAxiosError = Object.assign(
@@ -155,26 +155,26 @@ export const apiClient = createApiClient();
 export const apiUtils = {
   // GET请求
   async get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
-    const response = await apiClient.get<T>(url, config);
-    return response.data;
+    const response = await apiClient.get<{ success: boolean; data: T }>(url, config);
+    return response.data.data;
   },
 
   // POST请求
   async post<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
-    const response = await apiClient.post<T>(url, data, config);
-    return response.data;
+    const response = await apiClient.post<{ success: boolean; data: T }>(url, data, config);
+    return response.data.data;
   },
 
   // PUT请求
   async put<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
-    const response = await apiClient.put<T>(url, data, config);
-    return response.data;
+    const response = await apiClient.put<{ success: boolean; data: T }>(url, data, config);
+    return response.data.data;
   },
 
   // DELETE请求
   async delete<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
-    const response = await apiClient.delete<T>(url, config);
-    return response.data;
+    const response = await apiClient.delete<{ success: boolean; data: T }>(url, config);
+    return response.data.data;
   },
 
   // 取消请求

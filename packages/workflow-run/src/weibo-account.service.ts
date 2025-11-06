@@ -20,6 +20,10 @@ export interface WeiboAccountSelection {
     cookieHeader: string;
 }
 
+export interface WeiboAccountSelectionWithToken extends WeiboAccountSelection {
+    xsrfToken: string;
+}
+
 @Injectable()
 export class WeiboAccountService {
     private readonly healthKey = 'weibo:account:health';
@@ -114,6 +118,31 @@ export class WeiboAccountService {
             };
         }
 
+        return null;
+    }
+
+    async selectBestAccountWithToken(): Promise<WeiboAccountSelectionWithToken | null> {
+        const selection = await this.selectBestAccount();
+        if (!selection) {
+            return null;
+        }
+
+        const xsrfToken = this.extractXsrfToken(selection.cookieHeader);
+        if (!xsrfToken) {
+            return null;
+        }
+
+        return { ...selection, xsrfToken };
+    }
+
+    private extractXsrfToken(cookieHeader: string): string | null {
+        const cookies = cookieHeader.split(';').map(it => it.trim());
+        for (const cookie of cookies) {
+            const [name, value] = cookie.split('=').map(it => it.trim());
+            if (name === 'XSRF-TOKEN' && value) {
+                return value;
+            }
+        }
         return null;
     }
 

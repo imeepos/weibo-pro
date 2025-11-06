@@ -109,7 +109,7 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
 
       {/* 中间：时间范围选择 */}
       <div className="flex items-center space-x-3">
-        <span className="text-sm text-muted-foreground">时间区间:</span>
+        <span className="text-sm text-muted-foreground w-full">时间区间:</span>
         <Select
           className="min-w-[160px]"
           triggerClassName="text-sm"

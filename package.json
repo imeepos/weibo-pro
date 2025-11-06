@@ -5,6 +5,8 @@
     "claude": "claude --dangerously-skip-permissions",
     "build": "turbo run build",
     "dev": "turbo run dev --concurrency=12",
+    "dev:clean": "./scripts/dev-with-port-guardian.sh",
+    "port:guardian": "./scripts/port-guardian.sh",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types"

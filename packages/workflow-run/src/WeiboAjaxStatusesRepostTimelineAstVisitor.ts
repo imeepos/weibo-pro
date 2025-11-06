@@ -43,13 +43,17 @@ export class WeiboAjaxStatusesRepostTimelineAstVisitor {
         }).find((it) => {
             return it.name === `XSRF-TOKEN`
         })
+        const referer = ast.uid
+            ? `https://weibo.com/${ast.uid}/${ast.mid}`
+            : `https://weibo.com/detail/${ast.mid}`;
+
         const response = await fetch(`https://weibo.com/ajax/statuses/repostTimeline?id=${ast.mid}&page=${ast.page}&moduleID=feed&count=10`, {
             headers: {
                 'accept': 'application/json, text/plain, */*',
                 'accept-language': 'zh-CN,zh;q=0.9',
                 'client-version': 'v2.47.129',
                 'priority': 'u=1, i',
-                'referer': 'https://weibo.com/2744950651/Qbug75SHT',
+                'referer': referer,
                 'sec-ch-ua': '"Chromium";v="142", "Google Chrome";v="142", "Not_A Brand";v="99"',
                 'sec-ch-ua-mobile': '?0',
                 'sec-ch-ua-platform': '"Windows"',

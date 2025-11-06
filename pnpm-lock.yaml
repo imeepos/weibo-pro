@@ -711,6 +711,9 @@ importers:
       '@sker/entities':
         specifier: workspace:*
         version: link:../entities
+      '@sker/mq':
+        specifier: workspace:*
+        version: link:../mq
       '@sker/nlp':
         specifier: workspace:*
         version: link:../nlp

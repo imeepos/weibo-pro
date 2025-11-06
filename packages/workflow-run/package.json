@@ -30,6 +30,7 @@
   "dependencies": {
     "@sker/core": "workspace:*",
     "@sker/entities": "workspace:*",
+    "@sker/mq": "workspace:*",
     "@sker/nlp": "workspace:*",
     "@sker/redis": "workspace:*",
     "@sker/workflow": "workspace:*",
