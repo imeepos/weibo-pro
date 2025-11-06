@@ -25,7 +25,7 @@ export class WeiboPostSnapshotEntity {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ type: 'varchar', length: 64, name: 'post_id' })
+  @Column({ type: 'varchar', name: 'post_id' })
   post_id!: string;
 
   @ManyToOne(() => WeiboPostEntity)

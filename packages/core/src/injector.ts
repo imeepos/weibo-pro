@@ -48,8 +48,4 @@ export abstract class Injector {
   abstract set(providers: (Provider | Type<any>)[]): void;
   abstract destroy(): Promise<void>;
   abstract init(): Promise<void>;
-  setParent(p: Injector): void {
-    this.parent = p;
-  }
-  abstract use(providers:  (Provider | Type<any>)[]): void;
 }

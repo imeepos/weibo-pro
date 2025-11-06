@@ -65,6 +65,10 @@ export {
   isForwardRef,
   resolveForwardRef,
 } from './forward-ref';
+export {
+  APP_INITIALIZER,
+  type Initializer,
+} from './app-initializer';
 
 // 循环依赖检测功能已内置在 EnvironmentInjector 中
 

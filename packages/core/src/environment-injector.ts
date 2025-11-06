@@ -15,6 +15,8 @@ import {
   resolveForwardRefsInDeps,
 } from './forward-ref';
 import { hasOnInitMetadata, isOnInit } from './on-init';
+import { APP_INITIALIZER, type Initializer } from './app-initializer';
+import { InitializerGraph } from './initializer-graph';
 
 import { EnvironmentInjectorUtils } from './environment-injector-utils';
 
@@ -538,24 +540,46 @@ export class EnvironmentInjector extends Injector {
     // 如果宿主注入器不是 EnvironmentInjector，委托给其 get 方法
     return hostInjector.get(token);
   }
-
-  use(_providers: (Provider | Type<any>)[]): void { }
   /**
    * 初始化注入器，调用所有标记 @OnInit() 的服务的 onModelInit() 方法
    *
    * 策略：
-   * 1. 先初始化已实例化的服务（快速路径）
-   * 2. 扫描 providers 元数据，按需实例化标记 @OnInit() 的服务
+   * 1. 执行所有 APP_INITIALIZER（按依赖顺序）
+   * 2. 初始化所有 @OnInit 服务
    *
    * 优势：
+   * - 支持初始化顺序控制
+   * - 严格的错误处理
    * - 避免过早实例化：只创建标记 @OnInit() 的服务
    * - 零运行时开销：基于编译时元数据
    */
   async init(): Promise<void> {
-    // 初始化搜集器
+    await this.runAppInitializers();
+    await this.runOnInitServices();
+  }
+
+  private async runAppInitializers(): Promise<void> {
+    const initializers: Initializer[] = this.get(APP_INITIALIZER, []) || [];
+    if (initializers.length === 0) {
+      return;
+    }
+
+    const graph = new InitializerGraph();
+
+    for (const initializer of initializers) {
+      const token = initializer.provide || initializer;
+      const initFn = () => initializer.init();
+      const dependencies = new Set(initializer.deps || []);
+
+      graph.addNode(token, initFn, { dependencies });
+    }
+
+    await graph.execute();
+  }
+
+  private async runOnInitServices(): Promise<void> {
     const initializedInstances = new Set<any>();
 
-    // 第一步：初始化已有实例
     for (const instance of this.instances.values()) {
       if (isOnInit(instance)) {
         await this.initInstance(instance);
@@ -563,15 +587,12 @@ export class EnvironmentInjector extends Injector {
       }
     }
 
-    // 第二步：扫描 providers，按需实例化标记 @OnInit() 的服务
     for (const [token, providers] of this.providers.entries()) {
       for (const provider of providers) {
         const targetClass = this.extractClassFromProvider(provider);
         if (targetClass && hasOnInitMetadata(targetClass)) {
-          // 按需实例化（利用缓存机制避免重复创建）
           const instance = this.get(token);
 
-          // 避免重复初始化同一个实例
           if (!initializedInstances.has(instance) && isOnInit(instance)) {
             await this.initInstance(instance);
             initializedInstances.add(instance);
@@ -608,15 +629,18 @@ export class EnvironmentInjector extends Injector {
   }
 
   /**
-   * 初始化单个实例
+   * 初始化单个实例（严格模式）
    */
   private async initInstance(instance: any): Promise<void> {
     try {
       await instance.onInit();
     } catch (error) {
-      // 静默处理错误，不影响其他实例初始化
-      // 生产环境可记录日志
-      console.error('Error during instance initialization:', error);
+      const instanceName = instance.constructor?.name || 'Unknown';
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      throw new Error(
+        `@OnInit 服务初始化失败 [${instanceName}]: ${errorMsg}`,
+        { cause: error }
+      );
     }
   }
 

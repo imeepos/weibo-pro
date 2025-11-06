@@ -73,11 +73,9 @@ const DataOverview: React.FC = () => {
   }
 
   return (
-    <div className="dashboard-no-scroll flex flex-col gap-2 xl:gap-3 h-screen max-h-screen overflow-hidden">
+    <div className="dashboard-no-scroll">
       {/* 主要布局：左中右结构 - 自适应高度 */}
-      <div className="grid grid-cols-12 gap-3 lg:gap-4 xl:gap-5 flex-1 min-h-0
-                      sm:grid-cols-1 md:grid-cols-6 lg:grid-cols-12
-                      overflow-hidden">
+      <div className="dashboard-main-content">
         {/* 左侧区域：占4列 - 指标和热点事件 */}
         <div className="col-span-12 md:col-span-6 lg:col-span-4
                         flex flex-col gap-3 lg:gap-4 xl:gap-5
@@ -120,10 +118,7 @@ const DataOverview: React.FC = () => {
       </div>
 
       {/* 底部区域：3个模块 - 固定比例高度 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3
-                      gap-3 lg:gap-4 xl:gap-5
-                      flex-shrink-0 overflow-hidden"
-        style={{ height: 'clamp(240px, 35vh, 320px)' }}>
+      <div className="dashboard-bottom-content">
         {/* 热词分析 */}
         <div className="glass-card sentiment-overview-card min-h-0 overflow-hidden">
           <h3 className="text-foreground p-2 lg:p-3 xl:p-4 text-sm lg:text-base xl:text-lg">热词分析</h3>

@@ -4,9 +4,13 @@ import { config } from "dotenv";
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { root } from '@sker/core';
+import { entitiesProviders } from "@sker/entities";
 
 async function bootstrap() {
     config();
+    root.set([
+        ...entitiesProviders
+    ])
     await root.init();
     const app = await NestFactory.create(AppModule);
 

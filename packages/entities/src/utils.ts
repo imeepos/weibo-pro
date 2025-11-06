@@ -2,7 +2,7 @@
 import { DataSourceOptions, EntityManager } from 'typeorm';
 import { ENTITY } from "./decorator";
 import { DataSource } from 'typeorm'
-import { root } from '@sker/core'
+import { APP_INITIALIZER, Initializer, Provider, root } from '@sker/core'
 import { WeiboPostSubscriber } from './weibo-post.subscriber';
 
 export const createDatabaseConfig = (): DataSourceOptions => {
@@ -28,7 +28,6 @@ export const createDatabaseConfig = (): DataSourceOptions => {
   }
   throw new Error(`not found DATABASE_URL`)
 };
-
 
 export const createDataSource = () => {
   return new DataSource(createDatabaseConfig())
@@ -61,3 +60,31 @@ export const useTranslation = async <T>(h: (m: EntityManager) => Promise<T>) => 
     return m.transaction(h)
   })
 }
+
+export const entitiesProviders: Provider[] = [
+  {
+    provide: APP_INITIALIZER,
+    useFactory: () => {
+      return {
+        init: async () => {
+          await useDataSource()
+        }
+      } as Initializer
+    },
+    multi: true
+  },
+  {
+    provide: DataSource,
+    useFactory: () => {
+      return ds
+    },
+    deps: []
+  },
+  {
+    provide: EntityManager,
+    useFactory: (ds: DataSource) => {
+      return ds.createEntityManager()
+    },
+    deps: [DataSource]
+  }
+]

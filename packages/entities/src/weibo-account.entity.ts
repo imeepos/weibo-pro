@@ -24,7 +24,7 @@ export enum WeiboAccountStatus {
  * 用于存储用户绑定的微博账号信息和登录凭证
  */
 @Entity('weibo_accounts')
-@Index(['userId', 'weiboUid'], { unique: true }) // 同一用户不能重复绑定同一微博账号
+@Index(['weiboUid'], { unique: true }) // 确保微博账号唯一性
 export class WeiboAccountEntity {
   @PrimaryGeneratedColumn('increment')
   id!: number;
