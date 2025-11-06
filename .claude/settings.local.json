@@ -19,7 +19,9 @@
       "Bash(pnpm run build:*)",
       "Bash(pnpm run dev:*)",
       "Bash(node:*)",
-      "Bash(pnpm run start:*)"
+      "Bash(pnpm run start:*)",
+      "Bash(echo:*)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []

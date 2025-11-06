@@ -1,5 +1,14 @@
 {
   "$schema": "https://turborepo.com/schema.json",
+  "globalDependencies": [
+    ".env.local"
+  ],
+  "pipeline": {
+    "dev": {
+      "cache": false,
+      "persistent": true
+    }
+  },
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
@@ -11,10 +20,6 @@
     },
     "check-types": {
       "dependsOn": ["^check-types"]
-    },
-    "dev": {
-      "cache": false,
-      "persistent": true
     }
   }
 }

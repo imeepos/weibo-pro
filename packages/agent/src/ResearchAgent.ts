@@ -13,6 +13,18 @@ import {
 import type { ResearchTask, ResearchReport } from './types';
 import { InMemoryStore, MemorySaver } from '@langchain/langgraph';
 
+// 创建agent专用的日志记录器
+const logger = {
+  info: (message: string, data?: any) => console.log(`[ResearchAgent] ${message}`, data || ''),
+  warn: (message: string, data?: any) => console.warn(`[ResearchAgent] ${message}`, data || ''),
+  error: (message: string, error?: any) => console.error(`[ResearchAgent] ${message}`, error || ''),
+  debug: (message: string, data?: any) => {
+    if (process.env.NODE_ENV === 'development') {
+      console.debug(`[ResearchAgent] ${message}`, data || '');
+    }
+  }
+};
+
 /**
  * ResearchAgent - 自主研究型智能体
  *
@@ -28,9 +40,23 @@ export class ResearchAgent {
   private agent: ReturnType<typeof createAgent>;
 
   constructor(@Inject(NLPAnalyzer) private analyzer: NLPAnalyzer) {
+    logger.info('ResearchAgent 初始化开始');
+
+    // 验证环境变量
+    if (!process.env.OPENAI_API_KEY) {
+      const error = new Error('OPENAI_API_KEY 环境变量未设置。请检查 .env 文件或环境变量配置。');
+      logger.error('环境变量验证失败', error);
+      throw error;
+    }
+
+    if (!process.env.OPENAI_BASE_URL) {
+      logger.warn('OPENAI_BASE_URL 环境变量未设置，使用默认值: https://api.deepseek.com/v1');
+    }
+
     const model = new ChatOpenAI({
       modelName: 'deepseek-ai/DeepSeek-V3',
       temperature: 0.3,
+      apiKey: process.env.OPENAI_API_KEY,
       configuration: {
         baseURL: process.env.OPENAI_BASE_URL || 'https://api.deepseek.com/v1',
       },
@@ -45,51 +71,74 @@ export class ResearchAgent {
       createNLPAnalyzeTool(this.analyzer),
     ];
 
+    logger.debug('Agent 工具注册完成', { toolCount: tools.length });
+
     this.agent = createAgent({
       model,
       tools,
       store: new InMemoryStore(),
       checkpointer: new MemorySaver()
     });
+
+    logger.info('ResearchAgent 初始化完成');
   }
 
   async research(task: ResearchTask): Promise<ResearchReport> {
+    logger.info('研究任务开始执行', { taskId: task.id, query: task.query });
+
     const systemPrompt = this.buildSystemPrompt(task);
+    logger.debug('系统提示构建完成', { promptLength: systemPrompt.length });
 
-    const result = await this.agent.invoke(
-      {
-        messages: [
-          {
-            role: 'system',
-            content: systemPrompt,
-          },
-          {
-            role: 'user',
-            content: task.query,
-          },
-        ],
-      },
-      {
-        configurable: {
-          thread_id: task.id,
+    try {
+      logger.info('Agent 调用开始');
+      const result = await this.agent.invoke(
+        {
+          messages: [
+            {
+              role: 'system',
+              content: systemPrompt,
+            },
+            {
+              role: 'user',
+              content: task.query,
+            },
+          ],
         },
-      }
-    );
+        {
+          configurable: {
+            thread_id: task.id,
+          },
+        }
+      );
 
-    const lastMessage = result.messages[result.messages.length - 1];
-    const report = lastMessage?.content || '分析失败';
+      logger.info('Agent 调用完成', { messageCount: result.messages.length });
 
-    return {
-      taskId: task.id,
-      query: task.query,
-      report: typeof report === 'string' ? report : JSON.stringify(report),
-      rawData: result.messages.map((msg: any, idx: number) => ({
-        stepId: `msg-${idx}`,
-        data: msg,
+      const lastMessage = result.messages[result.messages.length - 1];
+      const report = lastMessage?.content || '分析失败';
+
+      const researchReport = {
+        taskId: task.id,
+        query: task.query,
+        report: typeof report === 'string' ? report : JSON.stringify(report),
+        rawData: result.messages.map((msg: any, idx: number) => ({
+          stepId: `msg-${idx}`,
+          data: msg,
+          timestamp: Date.now(),
+        })),
         timestamp: Date.now(),
-      })),
-      timestamp: Date.now(),
-    };
+      };
+
+      logger.info('研究任务完成', {
+        taskId: task.id,
+        reportLength: researchReport.report.length,
+        rawDataCount: researchReport.rawData.length
+      });
+
+      return researchReport;
+    } catch (error) {
+      logger.error('研究任务执行失败', { taskId: task.id, error });
+      throw error;
+    }
   }
 
   private buildSystemPrompt(task: ResearchTask): string {

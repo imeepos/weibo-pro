@@ -20,21 +20,42 @@ export class NLPAnalyzer {
     availableCategories?: string[],
     availableTags?: string[]
   ): Promise<CompleteAnalysisResult> {
-    const mergedText = this.buildContext(context);
-    const prompt = this.buildPrompt(mergedText, availableCategories, availableTags);
-    const client = useOpenAi()
-    const response = await client.chat.completions.create({
-      model: 'deepseek-ai/DeepSeek-V3.2-Exp',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.2,
-      response_format: { type: 'json_object' },
-    });
+    try {
+      const mergedText = this.buildContext(context);
+      const prompt = this.buildPrompt(mergedText, availableCategories, availableTags);
+      const client = useOpenAi();
 
-    const content = response.choices[0]?.message?.content;
-    if (!content) {
-      throw new Error('No response content from LLM');
+      console.log('开始 NLP 分析，文本长度:', mergedText.length);
+
+      const response = await client.chat.completions.create({
+        model: 'deepseek-ai/DeepSeek-V3',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.2,
+        response_format: { type: 'json_object' },
+      });
+
+      console.log('NLP 分析完成，响应状态:', response.choices.length > 0 ? '成功' : '无响应');
+
+      const content = response.choices[0]?.message?.content;
+      if (!content) {
+        throw new Error('LLM 未返回有效内容');
+      }
+
+      const result = JSON.parse(content);
+      console.log('NLP 分析结果:', {
+        sentiment: result.sentiment?.overall,
+        keywordsCount: result.keywords?.length || 0,
+        eventType: result.event?.type
+      });
+
+      return result;
+    } catch (error) {
+      console.error('NLP 分析失败:', {
+        error: error instanceof Error ? error.message : '未知错误',
+        contextLength: context.content?.length || 0
+      });
+      throw new Error(`NLP 分析失败: ${error instanceof Error ? error.message : '未知错误'}`);
     }
-    return JSON.parse(content);
   }
 
   /**

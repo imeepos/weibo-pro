@@ -2,6 +2,18 @@ import { Injectable } from '@sker/core';
 import { NLPAnalyzer } from '@sker/nlp';
 import type { OpinionTask, OpinionReport } from './types';
 
+// 创建OpinionAgent专用的日志记录器
+const logger = {
+  info: (message: string, data?: any) => console.log(`[OpinionAgent] ${message}`, data || ''),
+  warn: (message: string, data?: any) => console.warn(`[OpinionAgent] ${message}`, data || ''),
+  error: (message: string, error?: any) => console.error(`[OpinionAgent] ${message}`, error || ''),
+  debug: (message: string, data?: any) => {
+    if (process.env.NODE_ENV === 'development') {
+      console.debug(`[OpinionAgent] ${message}`, data || '');
+    }
+  }
+};
+
 @Injectable()
 export class OpinionAgent {
   private static readonly SENSITIVE_KEYWORDS = ['投诉', '欺诈', '违法', '诈骗', '造假'];
@@ -9,19 +21,43 @@ export class OpinionAgent {
   constructor(private nlp: NLPAnalyzer) {}
 
   async analyze(task: OpinionTask): Promise<OpinionReport> {
-    const analysis = await this.nlp.analyze(task.context);
+    logger.info('舆情分析任务开始', { taskId: task.id });
 
-    const trend = this.calculateTrend(task.history, analysis.sentiment);
+    try {
+      logger.debug('开始NLP分析');
+      const analysis = await this.nlp.analyze(task.context);
+      logger.debug('NLP分析完成', {
+        sentiment: analysis.sentiment,
+        keywordCount: analysis.keywords.length
+      });
 
-    const risk = this.assessRisk(analysis, trend);
+      logger.debug('计算情感趋势');
+      const trend = this.calculateTrend(task.history, analysis.sentiment);
+      logger.debug('情感趋势计算完成', { direction: trend.direction, magnitude: trend.magnitude });
 
-    return {
-      taskId: task.id,
-      analysis,
-      trend,
-      risk,
-      timestamp: Date.now(),
-    };
+      logger.debug('评估风险等级');
+      const risk = this.assessRisk(analysis, trend);
+      logger.debug('风险评估完成', { level: risk.level, score: risk.score });
+
+      const report = {
+        taskId: task.id,
+        analysis,
+        trend,
+        risk,
+        timestamp: Date.now(),
+      };
+
+      logger.info('舆情分析任务完成', {
+        taskId: task.id,
+        riskLevel: risk.level,
+        trendDirection: trend.direction
+      });
+
+      return report;
+    } catch (error) {
+      logger.error('舆情分析任务失败', { taskId: task.id, error });
+      throw error;
+    }
   }
 
   private calculateTrend(history: any[], current: any) {
