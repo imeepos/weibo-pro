@@ -41,6 +41,9 @@ importers:
       '@sker/entities':
         specifier: workspace:*
         version: link:../../packages/entities
+      '@sker/redis':
+        specifier: workspace:*
+        version: link:../../packages/redis
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -579,6 +582,9 @@ importers:
       eslint:
         specifier: ^9.38.0
         version: 9.38.0(jiti@2.6.1)
+      tsup:
+        specifier: ^8.4.0
+        version: 8.5.0(@swc/core@1.14.0(@swc/helpers@0.5.17))(jiti@2.6.1)(postcss@8.5.6)(tsx@4.20.6)(typescript@5.9.2)(yaml@2.8.1)
       typescript:
         specifier: 5.9.2
         version: 5.9.2

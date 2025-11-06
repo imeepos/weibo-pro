@@ -17,6 +17,7 @@
     "@sker/agent": "workspace:*",
     "@sker/entities": "workspace:*",
     "@sker/core": "workspace:*",
+    "@sker/redis": "workspace:*",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },
