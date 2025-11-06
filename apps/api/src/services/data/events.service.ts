@@ -1,10 +1,14 @@
-import { Injectable } from '@sker/core';
+import { Injectable, Inject } from '@sker/core';
 import { HotEvent, TimeRange } from './types';
 import { useEntityManager } from '@sker/entities';
 import { EventRepository } from './repositories/event.repository';
+import { CacheService, CACHE_KEYS, CACHE_TTL } from '../cache.service';
 
 @Injectable({ providedIn: 'root' })
 export class EventsService {
+  constructor(
+    @Inject(CacheService) private readonly cacheService: CacheService
+  ) {}
 
   async getEventList(timeRange: TimeRange) {
     // Mock数据 - 事件列表
@@ -77,10 +81,18 @@ export class EventsService {
   }
 
   async getHotList(timeRange: TimeRange): Promise<HotEvent[]> {
-    return await useEntityManager(async entityManager => {
-      const eventRepository = new EventRepository(entityManager);
-      return await eventRepository.findHotEvents(timeRange);
-    });
+    const cacheKey = CacheService.buildKey(CACHE_KEYS.HOT_EVENTS, timeRange);
+
+    return await this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        return await useEntityManager(async entityManager => {
+          const eventRepository = new EventRepository(entityManager);
+          return await eventRepository.findHotEvents(timeRange);
+        });
+      },
+      CACHE_TTL.SHORT // 热门事件实时性要求高，1分钟缓存
+    );
   }
 
   async getEventDetail(id: string) {

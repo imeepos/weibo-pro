@@ -1,4 +1,4 @@
-import { Injectable } from '@sker/core';
+import { Injectable, Inject } from '@sker/core';
 import {
   EventEntity,
   WeiboPostEntity,
@@ -18,20 +18,34 @@ import {
   getYesterdayBoundaries,
 } from './time-range.utils';
 import { getCoordinatesFromProvinceCity } from './location-coordinates';
+import { CacheService, CACHE_KEYS, CACHE_TTL } from '../cache.service';
 
 @Injectable({ providedIn: 'root' })
 export class OverviewService {
+  constructor(
+    @Inject(CacheService) private readonly cacheService: CacheService
+  ) {}
 
   async getStatistics(timeRange: TimeRange): Promise<OverviewStatisticsData> {
+    const cacheKey = CacheService.buildKey(CACHE_KEYS.OVERVIEW_STATS, timeRange);
+
+    return await this.cacheService.getOrSet(
+      cacheKey,
+      () => this.fetchStatistics(timeRange),
+      CACHE_TTL.SHORT // 统计数据实时性要求高，1分钟缓存
+    );
+  }
+
+  private async fetchStatistics(timeRange: TimeRange): Promise<OverviewStatisticsData> {
     return useEntityManager(async (manager) => {
       const current = getTimeRangeBoundaries(timeRange);
       const previous = getPreviousTimeRangeBoundaries(timeRange);
 
       // 查询当前时间范围的统计数据
-      const currentStats = await this.fetchStatistics(manager, current.start, current.end);
+      const currentStats = await this.fetchStatisticsData(manager, current.start, current.end);
 
       // 查询上一个时间范围的统计数据（用于计算变化率）
-      const previousStats = await this.fetchStatistics(manager, previous.start, previous.end);
+      const previousStats = await this.fetchStatisticsData(manager, previous.start, previous.end);
 
       return {
         eventCount: currentStats.eventCount,
@@ -46,7 +60,7 @@ export class OverviewService {
     });
   }
 
-  private async fetchStatistics(manager: any, start: Date, end: Date) {
+  private async fetchStatisticsData(manager: any, start: Date, end: Date) {
     // 查询事件数量
     const eventCount = await manager
       .getRepository(EventEntity)
@@ -77,6 +91,16 @@ export class OverviewService {
   }
 
   async getSentiment(timeRange: TimeRange): Promise<OverviewSentiment> {
+    const cacheKey = CacheService.buildKey(CACHE_KEYS.SENTIMENT_DATA, timeRange);
+
+    return await this.cacheService.getOrSet(
+      cacheKey,
+      () => this.fetchSentimentData(timeRange),
+      CACHE_TTL.MEDIUM // 情感数据5分钟缓存
+    );
+  }
+
+  private async fetchSentimentData(timeRange: TimeRange): Promise<OverviewSentiment> {
     return useEntityManager(async (manager) => {
       const current = getTimeRangeBoundaries(timeRange);
       const previous = getPreviousTimeRangeBoundaries(timeRange);
@@ -146,6 +170,16 @@ export class OverviewService {
   }
 
   async getLocations(timeRange: TimeRange): Promise<OverviewLocation[]> {
+    const cacheKey = CacheService.buildKey('overview:locations', timeRange);
+
+    return await this.cacheService.getOrSet(
+      cacheKey,
+      () => this.fetchLocationsData(timeRange),
+      CACHE_TTL.MEDIUM // 地域数据5分钟缓存
+    );
+  }
+
+  private async fetchLocationsData(timeRange: TimeRange): Promise<OverviewLocation[]> {
     return useEntityManager(async (manager) => {
       const current = getTimeRangeBoundaries(timeRange);
       const yesterday = getYesterdayBoundaries();

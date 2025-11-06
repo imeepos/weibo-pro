@@ -1,12 +1,26 @@
-import { Injectable } from '@sker/core';
+import { Injectable, Inject } from '@sker/core';
 import { useEntityManager } from '@sker/entities';
 import { PostNLPResultEntity } from '@sker/entities';
 import { KeywordData } from './types';
+import { CacheService, CACHE_KEYS, CACHE_TTL } from '../cache.service';
 
 @Injectable({ providedIn: 'root' })
 export class KeywordsService {
+  constructor(
+    @Inject(CacheService) private readonly cacheService: CacheService
+  ) {}
 
   async getWordCloud(maxWords: number): Promise<KeywordData[]> {
+    const cacheKey = CacheService.buildKey(CACHE_KEYS.HOT_KEYWORDS, maxWords);
+
+    return await this.cacheService.getOrSet(
+      cacheKey,
+      () => this.fetchWordCloud(maxWords),
+      CACHE_TTL.MEDIUM // 关键词词云5分钟缓存
+    );
+  }
+
+  private async fetchWordCloud(maxWords: number): Promise<KeywordData[]> {
     return useEntityManager(async (manager) => {
       const results = await manager
         .getRepository(PostNLPResultEntity)
