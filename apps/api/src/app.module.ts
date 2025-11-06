@@ -8,6 +8,7 @@ import { ChartsController } from './controllers/charts.controller';
 import { UsersController } from './controllers/users.controller';
 import { SystemController } from './controllers/system.controller';
 import { SentimentController } from './controllers/sentiment.controller';
+import { WorkflowController } from './controllers/workflow.controller';
 import { CacheService } from './services/cache.service';
 import { OverviewService } from './services/data/overview.service';
 import { EventsService } from './services/data/events.service';
@@ -26,7 +27,8 @@ import { SentimentService } from './services/data/sentiment.service';
     ChartsController,
     UsersController,
     SystemController,
-    SentimentController
+    SentimentController,
+    WorkflowController
   ],
   providers: [
     {

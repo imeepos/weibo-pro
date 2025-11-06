@@ -5,6 +5,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { root } from '@sker/core';
 import { entitiesProviders } from "@sker/entities";
+import { startPostNLPConsumer } from "@sker/workflow-run";
 
 async function bootstrap() {
     config();
@@ -12,6 +13,12 @@ async function bootstrap() {
         ...entitiesProviders
     ])
     await root.init();
+
+    // 优雅地启动爬虫工作流消费者
+    console.log('🚀 启动爬虫工作流消费者...');
+    const nlpConsumer = startPostNLPConsumer();
+    console.log('✅ 爬虫工作流消费者已启动');
+
     const app = await NestFactory.create(AppModule);
 
     // 跨域配置：优雅而必要的安全边界
