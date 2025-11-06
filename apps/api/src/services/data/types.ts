@@ -12,9 +12,15 @@ export interface OverviewStatisticsData {
 }
 
 export interface OverviewSentiment {
-  positive: { value: number; change: number };
-  negative: { value: number; change: number };
-  neutral: { value: number; change: number };
+  positive: number;
+  negative: number;
+  neutral: number;
+  total: number;
+  positivePercentage: number;
+  negativePercentage: number;
+  neutralPercentage: number;
+  trend: 'rising' | 'stable' | 'falling';
+  avgScore: number;
 }
 
 export interface OverviewLocation {

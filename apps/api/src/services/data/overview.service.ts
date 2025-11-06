@@ -111,21 +111,50 @@ export class OverviewService {
       // 查询上一个时间范围的情感数据
       const previousSentiment = await this.fetchSentiment(manager, previous.start, previous.end);
 
+      // 计算总数
+      const total = currentSentiment.positive + currentSentiment.negative + currentSentiment.neutral;
+
+      // 计算百分比
+      const positivePercentage = total > 0 ? Math.round((currentSentiment.positive / total) * 100 * 100) / 100 : 0;
+      const negativePercentage = total > 0 ? Math.round((currentSentiment.negative / total) * 100 * 100) / 100 : 0;
+      const neutralPercentage = total > 0 ? Math.round((currentSentiment.neutral / total) * 100 * 100) / 100 : 0;
+
+      // 计算趋势
+      const trend = this.calculateSentimentTrend(currentSentiment, previousSentiment);
+
+      // 计算平均情感分数 (-1 到 1)
+      const avgScore = total > 0
+        ? Math.round(((currentSentiment.positive - currentSentiment.negative) / total) * 100) / 100
+        : 0;
+
       return {
-        positive: {
-          value: currentSentiment.positive,
-          change: calculateChangeRate(currentSentiment.positive, previousSentiment.positive),
-        },
-        negative: {
-          value: currentSentiment.negative,
-          change: calculateChangeRate(currentSentiment.negative, previousSentiment.negative),
-        },
-        neutral: {
-          value: currentSentiment.neutral,
-          change: calculateChangeRate(currentSentiment.neutral, previousSentiment.neutral),
-        },
+        positive: currentSentiment.positive,
+        negative: currentSentiment.negative,
+        neutral: currentSentiment.neutral,
+        total,
+        positivePercentage,
+        negativePercentage,
+        neutralPercentage,
+        trend,
+        avgScore
       };
     });
+  }
+
+  private calculateSentimentTrend(
+    current: { positive: number; negative: number; neutral: number },
+    previous: { positive: number; negative: number; neutral: number }
+  ): 'rising' | 'stable' | 'falling' {
+    const currentScore = current.positive - current.negative;
+    const previousScore = previous.positive - previous.negative;
+
+    const changeRate = previousScore !== 0
+      ? (currentScore - previousScore) / previousScore
+      : (currentScore > 0 ? 1 : currentScore < 0 ? -1 : 0);
+
+    if (changeRate > 0.05) return 'rising';
+    if (changeRate < -0.05) return 'falling';
+    return 'stable';
   }
 
   private async fetchSentiment(manager: any, start: Date, end: Date) {

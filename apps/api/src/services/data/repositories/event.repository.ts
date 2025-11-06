@@ -131,9 +131,76 @@ export class EventRepository {
   }
 
   /**
+   * 查询事件列表(支持分类、搜索、分页)
+   */
+  async findEventList(
+    timeRange: TimeRange,
+    options?: { category?: string; search?: string; limit?: number }
+  ): Promise<EventEntity[]> {
+    const dateRange = this.getDateRangeByTimeRange(timeRange);
+    let query = this.entityManager
+      .createQueryBuilder(EventEntity, 'event')
+      .leftJoinAndSelect('event.category', 'category')
+      .where('event.deleted_at IS NULL')
+      .andWhere('event.status = :status', { status: 'active' });
+
+    // 时间范围过滤
+    if (timeRange !== 'all') {
+      query = query
+        .andWhere('event.occurred_at >= :start', { start: dateRange.start })
+        .andWhere('event.occurred_at <= :end', { end: dateRange.end });
+    }
+
+    // 分类过滤
+    if (options?.category) {
+      query = query.andWhere('category.name = :category', { category: options.category });
+    }
+
+    // 搜索过滤
+    if (options?.search) {
+      query = query.andWhere(
+        '(event.title ILIKE :search OR event.description ILIKE :search)',
+        { search: `%${options.search}%` }
+      );
+    }
+
+    // 排序和分页
+    return await query
+      .orderBy('event.hotness', 'DESC')
+      .addOrderBy('event.occurred_at', 'DESC')
+      .limit(options?.limit || 20)
+      .getMany();
+  }
+
+  /**
+   * 获取事件分类统计
+   */
+  async getEventCategoryStats(timeRange: TimeRange) {
+    const dateRange = this.getDateRangeByTimeRange(timeRange);
+
+    const query = this.entityManager
+      .createQueryBuilder(EventEntity, 'event')
+      .leftJoin('event.category', 'category')
+      .select('category.name', 'name')
+      .addSelect('COUNT(event.id)', 'count')
+      .where('event.deleted_at IS NULL')
+      .andWhere('event.status = :status', { status: 'active' })
+      .groupBy('category.name')
+      .orderBy('count', 'DESC');
+
+    if (timeRange !== 'all') {
+      query
+        .andWhere('event.occurred_at >= :start', { start: dateRange.start })
+        .andWhere('event.occurred_at <= :end', { end: dateRange.end });
+    }
+
+    return await query.getRawMany();
+  }
+
+  /**
    * 根据时间范围计算日期范围
    */
-  private getDateRangeByTimeRange(timeRange: TimeRange): { start: Date; end: Date } {
+  public getDateRangeByTimeRange(timeRange: TimeRange): { start: Date; end: Date } {
     const now = new Date();
     const end = new Date(now);
     let start = new Date(now);
