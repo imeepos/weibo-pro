@@ -15,8 +15,8 @@ class WebSocketManager {
   
   constructor() {
     this.isMockMode = import.meta.env.VITE_ENABLE_MOCK === 'true';
-    this.url = import.meta.env.VITE_WS_URL || 'ws://localhost:8080';
-    
+    this.url = import.meta.env.VITE_WS_URL || 'ws://localhost:3000';
+
     logger.debug('WebSocket Configuration:', {
       mockMode: this.isMockMode,
       url: this.url,
@@ -37,71 +37,98 @@ class WebSocketManager {
         }, 100);
         return;
       }
-      
-      try {
-        this.socket = io(this.url, {
-          transports: ['websocket'],
-          autoConnect: true,
-          reconnection: true,
-          reconnectionAttempts: this.maxReconnectAttempts,
-          reconnectionDelay: this.reconnectDelay,
-        });
 
-        this.socket.on('connect', () => {
-          // Connection established
-          this.reconnectAttempts = 0;
-          this.emit('connected', true);
-          resolve();
-        });
-
-        this.socket.on('disconnect', (reason) => {
-          // Disconnected
-          this.emit('connected', false);
-
-          if (reason === 'io server disconnect') {
-            // 服务器主动断开连接，需要手动重连
-            this.reconnect();
+      // 优雅的降级处理：如果无法连接到WebSocket，自动启用Mock模式
+      const checkConnection = async () => {
+        try {
+          // 检查服务器是否支持WebSocket
+          const response = await fetch(`${this.url.replace('ws://', 'http://').replace('wss://', 'https://')}/socket.io/?EIO=4&transport=polling`);
+          if (response.ok) {
+            return true;
           }
-        });
+        } catch {
+          // 连接失败
+        }
+        return false;
+      };
 
-        this.socket.on('connect_error', (error) => {
-          logger.error('WebSocket connection error:', error);
-          this.emit('error', error);
+      // 检查连接可用性
+      checkConnection().then((available) => {
+        if (!available) {
+          logger.warn('WebSocket server not available, falling back to mock mode');
+          this.isMockMode = true;
+          setTimeout(() => {
+            this.emit('connected', true);
+            resolve();
+          }, 100);
+          return;
+        }
+
+        try {
+          this.socket = io(this.url, {
+            transports: ['websocket'],
+            autoConnect: true,
+            reconnection: true,
+            reconnectionAttempts: this.maxReconnectAttempts,
+            reconnectionDelay: this.reconnectDelay,
+          });
+
+          this.socket.on('connect', () => {
+            // Connection established
+            this.reconnectAttempts = 0;
+            this.emit('connected', true);
+            resolve();
+          });
+
+          this.socket.on('disconnect', (reason) => {
+            // Disconnected
+            this.emit('connected', false);
+
+            if (reason === 'io server disconnect') {
+              // 服务器主动断开连接，需要手动重连
+              this.reconnect();
+            }
+          });
+
+          this.socket.on('connect_error', (error) => {
+            logger.error('WebSocket connection error:', error);
+            this.emit('error', error);
+            reject(error);
+          });
+
+          this.socket.on('reconnect', (attemptNumber) => {
+            // Reconnected successfully
+            this.emit('reconnected', attemptNumber);
+          });
+
+          this.socket.on('reconnect_error', (error) => {
+            logger.error('WebSocket reconnection error:', error);
+            this.emit('reconnectError', error);
+          });
+
+          this.socket.on('reconnect_failed', () => {
+            logger.error('WebSocket reconnection failed');
+            this.emit('reconnectFailed');
+          });
+
+          // 监听数据更新
+          this.socket.on('data:update', (data: WebSocketMessage) => {
+            this.emit('dataUpdate', data);
+          });
+
+          this.socket.on('data:alert', (data: WebSocketMessage) => {
+            this.emit('alert', data);
+          });
+
+          this.socket.on('data:heartbeat', (data: WebSocketMessage) => {
+            this.emit('heartbeat', data);
+          });
+
+        } catch (error) {
+          logger.error('Failed to create WebSocket connection:', error);
           reject(error);
-        });
-
-        this.socket.on('reconnect', (attemptNumber) => {
-          // Reconnected successfully
-          this.emit('reconnected', attemptNumber);
-        });
-
-        this.socket.on('reconnect_error', (error) => {
-          logger.error('WebSocket reconnection error:', error);
-          this.emit('reconnectError', error);
-        });
-
-        this.socket.on('reconnect_failed', () => {
-          logger.error('WebSocket reconnection failed');
-          this.emit('reconnectFailed');
-        });
-
-        // 监听数据更新
-        this.socket.on('data:update', (data: WebSocketMessage) => {
-          this.emit('dataUpdate', data);
-        });
-
-        this.socket.on('data:alert', (data: WebSocketMessage) => {
-          this.emit('alert', data);
-        });
-
-        this.socket.on('data:heartbeat', (data: WebSocketMessage) => {
-          this.emit('heartbeat', data);
-        });
-
-      } catch (error) {
-        logger.error('Failed to create WebSocket connection:', error);
-        reject(error);
-      }
+        }
+      });
     });
   }
 

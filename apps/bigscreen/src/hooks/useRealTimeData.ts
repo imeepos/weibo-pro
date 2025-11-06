@@ -75,28 +75,28 @@ export const useRealTimeData = (options: UseRealTimeDataOptions = {}) => {
 
       // 转换数据格式以匹配 RealTimeData 类型
       const statistics: StatisticsData = {
-        total: sentimentStats.totalAnalyzed,
-        positive: sentimentStats.positive.count,
-        negative: sentimentStats.negative.count,
-        neutral: sentimentStats.neutral.count,
+        total: sentimentStats?.totalAnalyzed ?? 0,
+        positive: sentimentStats?.positive?.count ?? 0,
+        negative: sentimentStats?.negative?.count ?? 0,
+        neutral: sentimentStats?.neutral?.count ?? 0,
         growth: 0, // Mock data
         growthRate: 0 // Mock data
       };
 
-      const convertedKeywords: KeywordData[] = keywords.map(k => ({
+      const convertedKeywords: KeywordData[] = (keywords || []).map(k => ({
         name: k.keyword,
         value: k.count,
         sentiment: k.sentiment
       }));
 
-      const convertedLocations: LocationData[] = locationData.map(l => ({
+      const convertedLocations: LocationData[] = (locationData || []).map(l => ({
         name: l.region,
         value: l.total,
         sentiment: l.dominantSentiment,
         coordinates: l.coordinates || [0, 0]
       }));
 
-      const convertedPosts: SentimentData[] = recentPosts.map(p => ({
+      const convertedPosts: SentimentData[] = (recentPosts || []).map(p => ({
         id: p.id,
         createdAt: p.publishTime,
         updatedAt: p.publishTime,
@@ -104,11 +104,11 @@ export const useRealTimeData = (options: UseRealTimeDataOptions = {}) => {
         sentiment: p.sentiment,
         score: p.sentimentScore,
         source: 'weibo' as const,
-        author: p.author.username,
+        author: p.author?.username ?? '未知用户',
         platform: 'weibo',
         url: '',
-        tags: p.tags,
-        location: p.location,
+        tags: p.tags || [],
+        location: p.location || '',
         timestamp: p.publishTime
       }));
 
@@ -150,9 +150,9 @@ export const useRealTimeData = (options: UseRealTimeDataOptions = {}) => {
       const systemStatus: SystemStatus = {
         ...status,
         performance: {
-          cpu: performance.cpu.usage,
-          memory: performance.memory.percentage,
-          network: performance.network.incoming
+          cpu: performance?.cpu?.usage ?? 0,
+          memory: performance?.memory?.percentage ?? 0,
+          network: performance?.network?.incoming ?? 0
         },
         lastUpdate: new Date().toISOString(),
       };

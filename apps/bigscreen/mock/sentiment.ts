@@ -71,9 +71,12 @@ const generateKeywords = (limit: number = 50) => {
   ];
   
   return keywords.slice(0, limit).map((keyword, _index) => ({
-    name: keyword,
-    value: Math.floor(Math.random() * 500) + 100,
-    sentiment: ['positive', 'negative', 'neutral'][Math.floor(Math.random() * 3)] as 'positive' | 'negative' | 'neutral'
+    keyword: keyword,
+    count: Math.floor(Math.random() * 500) + 100,
+    sentiment: ['positive', 'negative', 'neutral'][Math.floor(Math.random() * 3)] as 'positive' | 'negative' | 'neutral',
+    weight: Math.random(),
+    associatedTopics: ['相关话题1', '相关话题2'],
+    frequency: Math.floor(Math.random() * 100) + 10
   }));
 };
 
@@ -158,26 +161,33 @@ export default [
     method: 'get',
     response: ({ query }: any) => {
       const timeRange = query?.range || '24h';
-      
-      const positive = Math.floor(Math.random() * 1000) + 2000;
-      const negative = Math.floor(Math.random() * 500) + 300;
-      const neutral = Math.floor(Math.random() * 800) + 1000;
-      const total = positive + negative + neutral;
-      
+
+      const positiveCount = Math.floor(Math.random() * 1000) + 2000;
+      const negativeCount = Math.floor(Math.random() * 500) + 300;
+      const neutralCount = Math.floor(Math.random() * 800) + 1000;
+      const totalAnalyzed = positiveCount + negativeCount + neutralCount;
+
       return {
         success: true,
         data: {
-          positive,
-          negative,
-          neutral,
-          total,
-          growthRate: (Math.random() - 0.5) * 0.4, // -20% 到 20% 之间
-          timeRange,
-          breakdown: {
-            positive_percentage: Math.round((positive / total) * 100),
-            negative_percentage: Math.round((negative / total) * 100),
-            neutral_percentage: Math.round((neutral / total) * 100)
-          }
+          totalAnalyzed,
+          positive: {
+            count: positiveCount,
+            percentage: Math.round((positiveCount / totalAnalyzed) * 100),
+            avgScore: Math.random() * 0.5 + 0.5 // 0.5-1.0
+          },
+          negative: {
+            count: negativeCount,
+            percentage: Math.round((negativeCount / totalAnalyzed) * 100),
+            avgScore: Math.random() * 0.5 // 0-0.5
+          },
+          neutral: {
+            count: neutralCount,
+            percentage: Math.round((neutralCount / totalAnalyzed) * 100),
+            avgScore: Math.random() * 0.2 + 0.4 // 0.4-0.6
+          },
+          overallScore: Math.random() * 0.4 + 0.3, // 0.3-0.7
+          confidenceLevel: Math.random() * 0.3 + 0.7 // 0.7-1.0
         },
         timestamp: Date.now(),
       };

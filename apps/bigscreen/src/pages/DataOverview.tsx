@@ -30,7 +30,9 @@ const DataOverview: React.FC = () => {
           OverviewAPI.getSentiment(selectedTimeRange),
           OverviewAPI.getLocations(selectedTimeRange)
         ]);
-        
+        console.log({
+          statisticsResult, sentimentResult, locationsResult
+        })
         setStatsData(statisticsResult || null);
         setSentimentData(sentimentResult || null);
         // 转换 OverviewLocation 为 LocationData 格式
@@ -71,67 +73,61 @@ const DataOverview: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col gap-3 xl:gap-4 overflow-visible xl:overflow-hidden xl:h-[calc(100vh-120px)]">
-      {/* 主要布局：左中右结构 */}
-      <div className="grid grid-cols-12 gap-3 lg:gap-4 xl:gap-6 flex-1 min-h-0
+    <div className="dashboard-no-scroll flex flex-col gap-2 xl:gap-3 h-screen max-h-screen overflow-hidden">
+      {/* 主要布局：左中右结构 - 自适应高度 */}
+      <div className="grid grid-cols-12 gap-3 lg:gap-4 xl:gap-5 flex-1 min-h-0
                       sm:grid-cols-1 md:grid-cols-6 lg:grid-cols-12
-                      overflow-visible xl:overflow-hidden">
-        {/* 左侧区域：占4列 */}
-        <div className="col-span-12 md:col-span-6 lg:col-span-4 
-                        space-y-3 lg:space-y-4 xl:space-y-5
-                        overflow-visible xl:overflow-hidden">
-          {/* 顶部4个指标卡片 */}
-          <div className="glass-card sentiment-overview-card">
-            <h3 className="text-foreground p-2 lg:p-3 xl:p-4 text-sm lg:text-base">数据概览</h3>
-            <div className="card-content">
-              <StatsOverview data={statsOverviewData!} />
-            </div>
+                      overflow-hidden">
+        {/* 左侧区域：占4列 - 指标和热点事件 */}
+        <div className="col-span-12 md:col-span-6 lg:col-span-4
+                        flex flex-col gap-3 lg:gap-4 xl:gap-5
+                        overflow-hidden">
+          {/* 指标概览 - 自适应高度 */}
+          <div className="glass-card flex-1 min-h-0 overflow-hidden">
+            <StatsOverview data={statsOverviewData!} />
           </div>
-          <div className="glass-card sentiment-overview-card">
-            <h3 className="text-foreground p-2 lg:p-3 xl:p-4 text-sm lg:text-base">事件榜单</h3>
-            <div className="card-content">
-              <HotEventsList />
-            </div>
+          {/* 热点事件 - 自适应高度 */}
+          <div className="glass-card sentiment-overview-card flex-1 min-h-0 overflow-hidden">
+            <HotEventsList />
           </div>
         </div>
 
         {/* 中间区域：占5列 - 主要地图区域 */}
-        <div className="col-span-12 md:col-span-6 lg:col-span-5 
+        <div className="col-span-12 md:col-span-6 lg:col-span-5
                         glass-card p-2 lg:p-3 xl:p-4 sentiment-overview-card
-                        overflow-visible xl:overflow-hidden">
-          <h3 className="text-foreground p-2 lg:p-3 xl:p-4 text-sm lg:text-base">舆情地域分布</h3>
-          <div className="card-content-lg" style={{ minHeight: "400px" }}>
-            <LocationHeatMap 
-              data={locationData} 
-              title="" 
-              height="100%" 
+                        overflow-hidden">
+          <div className="card-content-lg h-full">
+            <LocationHeatMap
+              data={locationData}
+              title=""
+              height="100%"
             />
           </div>
         </div>
 
         {/* 右侧区域：占3列 - 情感分析 */}
-        <div className="col-span-12 md:col-span-6 lg:col-span-3 
-                        space-y-3 lg:space-y-4 xl:space-y-5
-                        overflow-visible xl:overflow-hidden">
-          <div className="glass-card sentiment-overview-card">
-            <h3 className="text-foreground p-2 lg:p-3 xl:p-4 text-sm lg:text-base">情感分析</h3>
-            <div className="card-content">
+        <div className="col-span-12 md:col-span-6 lg:col-span-3
+                        flex flex-col gap-3 lg:gap-4 xl:gap-5
+                        overflow-hidden">
+          <div className="glass-card sentiment-overview-card flex-1 min-h-0 overflow-hidden">
+            <h3 className="text-foreground p-2 lg:p-3 xl:p-4 text-sm lg:text-base xl:text-lg">情感分析</h3>
+            <div className="card-content h-full">
               <SentimentOverview data={sentimentData!} />
-              <EmotionCurveChart height={218} />
+              <EmotionCurveChart height="100%" />
             </div>
           </div>
         </div>
       </div>
 
-      {/* 底部区域：3个模块 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 
-                      gap-3 lg:gap-4 xl:gap-6 
-                      flex-shrink-0 overflow-visible xl:overflow-hidden"
-                      style={{ height: 'clamp(260px, 38vh, 360px)' }}>
+      {/* 底部区域：3个模块 - 固定比例高度 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3
+                      gap-3 lg:gap-4 xl:gap-5
+                      flex-shrink-0 overflow-hidden"
+        style={{ height: 'clamp(240px, 35vh, 320px)' }}>
         {/* 热词分析 */}
-        <div className="glass-card sentiment-overview-card min-h-0 overflow-visible xl:overflow-hidden">
-          <h3 className="text-foreground p-2 lg:p-3 xl:p-4 text-sm lg:text-base">热词分析</h3>
-          <div className="card-content-lg">
+        <div className="glass-card sentiment-overview-card min-h-0 overflow-hidden">
+          <h3 className="text-foreground p-2 lg:p-3 xl:p-4 text-sm lg:text-base xl:text-lg">热词分析</h3>
+          <div className="card-content-lg h-full">
             <WordCloudChart
               title=""
               maxWords={50}
@@ -140,17 +136,17 @@ const DataOverview: React.FC = () => {
         </div>
 
         {/* 事件分析 */}
-        <div className="glass-card sentiment-overview-card min-h-0 overflow-visible xl:overflow-hidden">
-          <h3 className="text-foreground p-2 lg:p-3 xl:p-4 text-sm lg:text-base">事件分析</h3>
-          <div className="card-content-lg">
+        <div className="glass-card sentiment-overview-card min-h-0 overflow-hidden">
+          <h3 className="text-foreground p-2 lg:p-3 xl:p-4 text-sm lg:text-base xl:text-lg">事件分析</h3>
+          <div className="card-content-lg h-full">
             <HotEventsList />
           </div>
         </div>
 
         {/* 事件类型分布 */}
-        <div className="glass-card sentiment-overview-card min-h-0 overflow-visible xl:overflow-hidden">
-          <h3 className="text-foreground p-2 lg:p-3 xl:p-4 text-sm lg:text-base">事件类型</h3>
-          <div className="card-content-lg">
+        <div className="glass-card sentiment-overview-card min-h-0 overflow-hidden">
+          <h3 className="text-foreground p-2 lg:p-3 xl:p-4 text-sm lg:text-base xl:text-lg">事件类型</h3>
+          <div className="card-content-lg h-full">
             <EventTypeBarChart />
           </div>
         </div>

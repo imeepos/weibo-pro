@@ -11,6 +11,7 @@ import axios, {
   InternalAxiosRequestConfig,
 } from 'axios';
 import { createLogger } from '@/utils/logger';
+import { ApiResponse } from '@/types';
 
 // API错误类型
 export interface ApiError {
@@ -155,8 +156,12 @@ export const apiClient = createApiClient();
 export const apiUtils = {
   // GET请求
   async get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
-    const response = await apiClient.get<{ success: boolean; data: T }>(url, config);
-    return response.data.data;
+    try {
+      const response = await apiClient.get<ApiResponse<T>>(url, config);
+      return response.data.data;
+    } catch (error) {
+      throw error;
+    }
   },
 
   // POST请求

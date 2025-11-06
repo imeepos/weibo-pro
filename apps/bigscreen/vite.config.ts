@@ -34,7 +34,7 @@ export default defineConfig(({ command }) => {
       tailwindcss(),
       viteMockServe({
         mockPath: 'mock',
-        enable: true, // 强制启用
+        enable: process.env.VITE_ENABLE_MOCK === 'true', // 条件启用
         watchFiles: true,
         logger: true,
       }),

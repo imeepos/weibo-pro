@@ -152,6 +152,11 @@ class APIClient {
       return Promise.reject(error);
     }
 
+    // 检查是否需要降级到 Mock 数据
+    if (this.shouldFallbackToMock(error)) {
+      return this.fallbackToMockData(config as RequestConfig);
+    }
+
     let appError;
 
     if (response) {
@@ -261,6 +266,124 @@ class APIClient {
    */
   private generateRequestId(): string {
     return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  /**
+   * 检查是否需要降级到 Mock 数据
+   */
+  private shouldFallbackToMock(error: AxiosError): boolean {
+    // 检查环境变量配置
+    const fallbackToMock = import.meta.env.VITE_FALLBACK_TO_MOCK === 'true';
+    if (!fallbackToMock) return false;
+
+    const { response, request } = error;
+
+    // 网络错误或服务器不可达时降级
+    if (!response && request) {
+      logger.warn('Network error detected, falling back to mock data');
+      return true;
+    }
+
+    // 服务器错误时降级
+    if (response && response.status >= 500) {
+      logger.warn(`Server error ${response.status}, falling back to mock data`);
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * 降级到 Mock 数据
+   */
+  private async fallbackToMockData(config: RequestConfig): Promise<never> {
+    const { method, url } = config;
+
+    logger.info(`Falling back to mock data for ${method?.toUpperCase()} ${url}`);
+
+    try {
+      // 模拟网络延迟
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      // 根据 URL 提供不同的 Mock 数据
+      const mockData = this.generateMockData(url);
+
+      const mockResponse: APIResponse = {
+        success: true,
+        data: mockData,
+        message: 'Using mock data due to backend unavailability',
+        timestamp: Date.now(),
+      };
+
+      // 抛出一个特殊错误，让上层知道这是 Mock 数据
+      const mockError = new Error('MOCK_DATA_FALLBACK');
+      (mockError as any).mockData = mockResponse;
+      throw mockError;
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  }
+
+  /**
+   * 根据 URL 生成 Mock 数据
+   */
+  private generateMockData(url?: string): any {
+    if (!url) return null;
+
+    // 概览统计数据
+    if (url.includes('/api/overview/statistics')) {
+      return {
+        eventCount: 12543,
+        postCount: 89234,
+        userCount: 15678,
+        interactionCount: 234567,
+        eventCountChange: 12.5,
+        postCountChange: 8.3,
+        userCountChange: 5.2,
+        interactionCountChange: 15.7,
+      };
+    }
+
+    // 情感数据
+    if (url.includes('/api/overview/sentiment')) {
+      return {
+        positive: 4567,
+        negative: 2345,
+        neutral: 5632,
+        total: 12544,
+        positivePercentage: 36.4,
+        negativePercentage: 18.7,
+        neutralPercentage: 44.9,
+        trend: 'rising' as const,
+        avgScore: 0.65,
+      };
+    }
+
+    // 地理位置数据
+    if (url.includes('/api/overview/locations')) {
+      return [
+        { region: '北京', count: 2345, percentage: 18.7, coordinates: [116.4, 39.9], trend: 'up' as const },
+        { region: '上海', count: 1987, percentage: 15.8, coordinates: [121.4, 31.2], trend: 'stable' as const },
+        { region: '广东', count: 1876, percentage: 15.0, coordinates: [113.2, 23.1], trend: 'up' as const },
+        { region: '江苏', count: 1567, percentage: 12.5, coordinates: [118.8, 32.1], trend: 'down' as const },
+        { region: '浙江', count: 1345, percentage: 10.7, coordinates: [120.2, 30.3], trend: 'stable' as const },
+      ];
+    }
+
+    // 情感分析实时数据
+    if (url.includes('/api/sentiment/statistics')) {
+      return {
+        totalAnalyzed: 12543,
+        positive: { count: 4567, percentage: 36.4, avgScore: 0.78 },
+        negative: { count: 2345, percentage: 18.7, avgScore: 0.32 },
+        neutral: { count: 5632, percentage: 44.9, avgScore: 0.55 },
+        overallScore: 0.65,
+        confidenceLevel: 0.89,
+      };
+    }
+
+    // 默认返回空数据
+    return null;
   }
 
   /**
