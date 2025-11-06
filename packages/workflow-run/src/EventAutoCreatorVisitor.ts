@@ -11,7 +11,7 @@ import {
   WeiboPostSnapshotEntity,
   useEntityManager,
 } from '@sker/entities';
-import type { SentimentScore } from '@sker/entities';
+import type { EntityManager, SentimentScore } from '@sker/entities';
 
 @Injectable()
 export class EventAutoCreatorVisitor {
@@ -34,7 +34,7 @@ export class EventAutoCreatorVisitor {
    * - 增量 = 990条评论，计入 2025-01-01 的统计 ✓
    */
   private async updateEventStatistics(
-    m: any,
+    m: EntityManager,
     event: EventEntity,
     post: any,
     sentiment: SentimentScore

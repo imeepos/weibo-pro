@@ -33,34 +33,11 @@ export interface OverviewLocation {
   trend: 'up' | 'down' | 'stable';
 }
 
-export interface HotEvent {
-  id: string;
-  title: string;
-  postCount: number;
-  sentiment: { positive: number; negative: number; neutral: number };
-  hotness: number;
-  trend: 'up' | 'down' | 'stable';
-  trendData: number[];
-}
-
 export interface KeywordData {
   keyword: string;
   weight: number;
   sentiment?: 'positive' | 'negative' | 'neutral';
 }
 
-// 时间范围类型
-export type TimeRange =
-  | 'today'
-  | 'yesterday'
-  | 'thisWeek'
-  | 'lastWeek'
-  | 'thisMonth'
-  | 'lastMonth'
-  | 'thisQuarter'
-  | 'lastQuarter'
-  | 'halfYear'
-  | 'lastHalfYear'
-  | 'thisYear'
-  | 'lastYear'
-  | 'all';
+// 从 entities 导出类型，避免重复定义
+export type { HotEvent, TimeRange } from '@sker/entities';

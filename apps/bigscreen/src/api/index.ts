@@ -14,6 +14,7 @@ export { UsersAPI } from '@/services/api/users';
 export { SystemAPI, SystemAPI as systemAPI } from '@/services/api/system';
 export { SentimentAPI, SentimentAPI as sentimentAPI } from '@/services/api/sentiment';
 export { ChartsAPI } from '@/services/api/charts';
+export { WorkflowAPI } from '@/services/api/workflow';
 
 // 导入API模块用于默认导出
 import { CommonAPI } from '@/services/api/common';
@@ -23,6 +24,7 @@ import { UsersAPI } from '@/services/api/users';
 import { SystemAPI } from '@/services/api/system';
 import { SentimentAPI } from '@/services/api/sentiment';
 import { ChartsAPI } from '@/services/api/charts';
+import { WorkflowAPI } from '@/services/api/workflow';
 
 // 向后兼容的默认导出
 export default {
@@ -33,4 +35,5 @@ export default {
   system: SystemAPI,
   sentiment: SentimentAPI,
   charts: ChartsAPI,
+  workflow: WorkflowAPI,
 };

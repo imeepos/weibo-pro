@@ -12,6 +12,8 @@ import BleMeshTopology from '@/pages/BleMeshTopology';
 import NetworkTopology from '@/pages/NetworkTopology';
 import WorkflowEditor from '@/pages/WorkflowEditor';
 import WorkflowDemo from '@/pages/WorkflowDemo';
+import CrawlerControl from '@/pages/CrawlerControl';
+import HeroDemo from '@/pages/HeroDemo';
 import { useTheme } from '@/hooks/useTheme';
 import { cn, createLogger } from '@/utils';
 import { useWebSocket, useRealTimeData, useAutoRefresh } from '@/hooks';
@@ -263,6 +265,34 @@ const App: React.FC = () => {
                     transition={{ duration: 0.3 }}
                   >
                     <WorkflowDemo />
+                  </motion.div>
+                }
+              />
+              <Route
+                path="/crawler-control"
+                element={
+                  <motion.div
+                    key="crawler-control"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 1.05 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <CrawlerControl />
+                  </motion.div>
+                }
+              />
+              <Route
+                path="/hero-demo"
+                element={
+                  <motion.div
+                    key="hero-demo"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 1.05 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <HeroDemo />
                   </motion.div>
                 }
               />

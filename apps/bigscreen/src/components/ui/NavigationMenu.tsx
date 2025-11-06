@@ -9,6 +9,8 @@ import {
   Grid3X3,
   Network,
   Share2,
+  Bot,
+  Sparkles,
 } from 'lucide-react';
 import { cn } from '@/utils';
 
@@ -73,6 +75,20 @@ const navigationItems: NavigationItem[] = [
     path: '/network-topology',
     icon: Share2,
     description: '智能家居网络拓扑图'
+  },
+  {
+    id: 'crawler-control',
+    label: '爬虫任务控制',
+    path: '/crawler-control',
+    icon: Bot,
+    description: '手动触发爬虫任务与监控'
+  },
+  {
+    id: 'hero-demo',
+    label: 'Hero 布局演示',
+    path: '/hero-demo',
+    icon: Sparkles,
+    description: 'Hero 区域组件示例展示'
   }
 ];
 

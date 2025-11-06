@@ -19,8 +19,7 @@ const Layout: React.FC<LayoutProps> = ({ children, className }) => {
   return (
     <div className={cn(
       'relative min-h-screen flex flex-col transition-colors duration-300',
-      'bg-background text-foreground overflow-x-hidden',
-      'xl:overflow-hidden'
+      'bg-background text-foreground overflow-hidden'
     )}>
       {/* 背景装饰 */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
@@ -48,7 +47,7 @@ const Layout: React.FC<LayoutProps> = ({ children, className }) => {
       </motion.div>
 
       {/* 主要内容区域 */}
-      <div className="relative flex flex-1 overflow-visible xl:overflow-hidden">
+      <div className="relative flex flex-1 overflow-hidden">
         {/* 侧边栏 - 全屏时隐藏 */}
         {!isFullscreen && (
           <motion.div
@@ -69,15 +68,15 @@ const Layout: React.FC<LayoutProps> = ({ children, className }) => {
           transition={{ duration: 0.5, delay: 0.2 }}
           className={cn(
             'flex-1 relative transition-all duration-300',
-            'overflow-visible xl:overflow-hidden',
+            'overflow-hidden',
             className
           )}
         >
           <div className={cn(
             'h-full transition-all duration-300',
             isFullscreen
-              ? 'p-1 xl:overflow-auto xl:scrollbar-hide'
-              : 'px-3 py-3 sm:px-4 md:px-6 md:py-4 xl:p-6 xl:overflow-auto xl:scrollbar-hide'
+              ? 'p-1 overflow-hidden'
+              : 'px-3 py-3 sm:px-4 md:px-6 md:py-4 xl:p-6 overflow-hidden'
           )}>
             {children}
           </div>

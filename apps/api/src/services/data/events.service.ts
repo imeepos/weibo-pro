@@ -1,7 +1,16 @@
 import { Injectable, Inject } from '@sker/core';
 import { HotEvent, TimeRange } from './types';
-import { useEntityManager, EventStatisticsEntity, WeiboPostEntity, WeiboUserEntity } from '@sker/entities';
-import { EventRepository } from './repositories/event.repository';
+import {
+  useEntityManager,
+  EventStatisticsEntity,
+  WeiboPostEntity,
+  WeiboUserEntity,
+  findHotEvents,
+  findEventList,
+  findLatestEventStatistics,
+  getEventCategoryStats,
+  getDateRangeByTimeRange
+} from '@sker/entities';
 import { CacheService, CACHE_KEYS, CACHE_TTL } from '../cache.service';
 import { getCoordinatesFromProvinceCity } from './location-coordinates';
 
@@ -17,24 +26,21 @@ export class EventsService {
     return await this.cacheService.getOrSet(
       cacheKey,
       async () => {
-        return await useEntityManager(async entityManager => {
-          const eventRepository = new EventRepository(entityManager);
-          const events = await eventRepository.findEventList(timeRange, params);
+        const events = await findEventList(timeRange, params);
 
-          // 为每个事件获取统计数据
-          const eventsWithStats = await Promise.all(
-            events.map(async event => {
-              const statistics = await eventRepository.findLatestEventStatistics(event.id, timeRange);
-              return this.mapEventToEventItem(event, statistics);
-            })
-          );
+        // 为每个事件获取统计数据
+        const eventsWithStats = await Promise.all(
+          events.map(async event => {
+            const statistics = await findLatestEventStatistics(event.id, timeRange);
+            return this.mapEventToEventItem(event, statistics);
+          })
+        );
 
-          return {
-            success: true,
-            data: eventsWithStats,
-            message: '获取事件列表成功'
-          };
-        });
+        return {
+          success: true,
+          data: eventsWithStats,
+          message: '获取事件列表成功'
+        };
       },
       CACHE_TTL.SHORT
     );
@@ -78,19 +84,16 @@ export class EventsService {
     return await this.cacheService.getOrSet(
       cacheKey,
       async () => {
-        return await useEntityManager(async entityManager => {
-          const eventRepository = new EventRepository(entityManager);
-          const stats = await eventRepository.getEventCategoryStats(timeRange);
+        const stats = await getEventCategoryStats(timeRange);
 
-          return {
-            success: true,
-            data: {
-              categories: stats.map((s: any) => s.name),
-              counts: stats.map((s: any) => parseInt(s.count, 10))
-            },
-            message: '获取事件分类数据成功'
-          };
-        });
+        return {
+          success: true,
+          data: {
+            categories: stats.map((s: any) => s.name),
+            counts: stats.map((s: any) => parseInt(s.count, 10))
+          },
+          message: '获取事件分类数据成功'
+        };
       },
       CACHE_TTL.MEDIUM
     );
@@ -103,8 +106,7 @@ export class EventsService {
       cacheKey,
       async () => {
         return await useEntityManager(async entityManager => {
-          const eventRepository = new EventRepository(entityManager);
-          const dateRange = eventRepository.getDateRangeByTimeRange(timeRange);
+          const dateRange = getDateRangeByTimeRange(timeRange);
 
           // 使用 DATE_TRUNC 聚合时间序列数据
           const granularity = this.determineGranularity(timeRange);
@@ -181,10 +183,7 @@ export class EventsService {
     return await this.cacheService.getOrSet(
       cacheKey,
       async () => {
-        return await useEntityManager(async entityManager => {
-          const eventRepository = new EventRepository(entityManager);
-          return await eventRepository.findHotEvents(timeRange);
-        });
+        return await findHotEvents(timeRange);
       },
       CACHE_TTL.SHORT // 热门事件实时性要求高，1分钟缓存
     );
@@ -197,8 +196,6 @@ export class EventsService {
       cacheKey,
       async () => {
         return await useEntityManager(async entityManager => {
-          const eventRepository = new EventRepository(entityManager);
-
           // 查询事件基本信息
           const event = await entityManager
             .createQueryBuilder('events', 'event')
