@@ -10,7 +10,6 @@ import * as echarts from 'echarts';
 interface LocationHeatMapProps {
   data: LocationData[];
   title?: string;
-  height?: number | string;
   className?: string;
 }
 
@@ -19,7 +18,6 @@ const logger = createLogger('LocationHeatMap');
 const LocationHeatMap: React.FC<LocationHeatMapProps> = ({
   data,
   title = '地理位置分布',
-  height = 0,
   className,
 }) => {
   const { isDark } = useTheme();
@@ -129,19 +127,9 @@ const LocationHeatMap: React.FC<LocationHeatMapProps> = ({
   }, []);
 
   const option = React.useMemo(() => {
-    // 只有在地图准备好且有数据时才生成配置
-    if (!mapReady || !data.length) {
-      return {
-        title: {
-          text: '暂无数据',
-          left: 'center',
-          top: 'middle',
-          textStyle: {
-            color: isDark ? '#9ca3af' : '#6b7280',
-            fontSize: 14,
-          },
-        },
-      };
+    // 地图未准备好时不渲染
+    if (!mapReady) {
+      return {};
     }
 
     // 处理数据，转换为 ECharts 需要的格式
@@ -225,36 +213,38 @@ const LocationHeatMap: React.FC<LocationHeatMapProps> = ({
           color: isDark ? '#ffffff' : '#111827',
         },
       },
-      visualMap: {
-        min: 0,
-        max: maxValue,
-        left: 'left',
-        top: 'bottom',
-        text: ['高', '低'],
-        textStyle: {
-          color: isDark ? '#ffffff' : '#111827',
+      ...(data.length > 0 ? {
+        visualMap: {
+          min: 0,
+          max: maxValue,
+          left: 'left',
+          top: 'bottom',
+          text: ['高', '低'],
+          textStyle: {
+            color: isDark ? '#ffffff' : '#111827',
+          },
+          backgroundColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(255, 255, 255, 0.8)',
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+          borderWidth: 1,
+          borderRadius: 6,
+          padding: [8, 12],
+          inRange: {
+            color: [
+              '#bbf7d0',
+              '#86efac',
+              '#4ade80',
+              '#22c55e',
+              '#16a34a',
+              '#15803d',
+              '#166534',
+              '#1e40af',
+              '#1d4ed8',
+              '#1e3a8a',
+            ],
+          },
+          calculable: true,
         },
-        backgroundColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(255, 255, 255, 0.8)',
-        borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-        borderWidth: 1,
-        borderRadius: 6,
-        padding: [8, 12],
-        inRange: {
-          color: [
-            '#bbf7d0',
-            '#86efac',
-            '#4ade80',
-            '#22c55e',
-            '#16a34a',
-            '#15803d',
-            '#166534',
-            '#1e40af',
-            '#1d4ed8',
-            '#1e3a8a',
-          ],
-        },
-        calculable: true,
-      },
+      } : {}),
       series: [
         {
           name: '散点分布',
@@ -310,10 +300,9 @@ const LocationHeatMap: React.FC<LocationHeatMapProps> = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         className={cn(
-          'chart-container flex items-center justify-center bg-card/50 rounded-lg',
+          'h-full w-full flex items-center justify-center bg-card/50 rounded-lg',
           className
         )}
-        style={{ height: height ? `${height}px` : `100%` }}
       >
         <div className="text-center">
           <div className="relative mb-4">
@@ -334,12 +323,12 @@ const LocationHeatMap: React.FC<LocationHeatMapProps> = ({
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.5, delay: 0.3 }}
-      className={cn('chart-container relative overflow-hidden rounded-lg bg-card/30', className)}
+      className={cn('relative overflow-hidden rounded-lg bg-card/30 h-full w-full', className)}
     >
       <ReactECharts
         option={option}
         style={{
-          height: height ? `${height}px` : `100%`,
+          height: '100%',
           width: '100%',
         }}
         opts={{ renderer: 'canvas' }}

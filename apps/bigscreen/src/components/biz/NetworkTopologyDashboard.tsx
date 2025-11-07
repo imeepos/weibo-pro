@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { DataSet, Network, Node, Edge } from 'vis-network/standalone';
 import { apiClient } from '@/services/api/apiClient';
 import { createLogger } from '@/utils/logger';
+import { RefreshCw } from 'lucide-react';
 
 const logger = createLogger('NetworkTopologyDashboard');
 
@@ -193,7 +194,7 @@ const NetworkTopologyDashboard: React.FC<NetworkTopologyDashboardProps> = ({
 
       if (response.success && response.data) {
         // 处理数据格式：如果response.data是数组，包装成期望的格式
-        const processedData = Array.isArray(response.data) 
+        const processedData = Array.isArray(response.data)
           ? { data: response.data }
           : response.data;
         await processTopologyData(processedData);
@@ -204,7 +205,7 @@ const NetworkTopologyDashboard: React.FC<NetworkTopologyDashboardProps> = ({
       const errorMessage = err instanceof Error ? err.message : '获取拓扑数据失败';
       logger.error('Failed to fetch topology data:', err);
       setError(errorMessage);
-      
+
       // 使用模拟数据作为后备
       await processTopologyData(getMockTopologyData());
     } finally {
@@ -220,7 +221,7 @@ const NetworkTopologyDashboard: React.FC<NetworkTopologyDashboardProps> = ({
       logger.debug('Processing topology data:', data);
       const nodes = await buildNodesArray(data);
       const edges = await buildEdgesArray(data);
-      
+
       logger.debug('Generated nodes:', nodes.length);
       logger.debug('Generated edges:', edges.length);
       logger.debug('Nodes array:', nodes);
@@ -242,17 +243,17 @@ const NetworkTopologyDashboard: React.FC<NetworkTopologyDashboardProps> = ({
 
         // 创建新的网络实例
         networkRef.current = new Network(containerRef.current, networkData, networkOptions);
-        
+
         // 绑定事件处理器
         bindNetworkEvents();
-        
+
         // 保持物理引擎启用
         networkRef.current.on('stabilizationIterationsDone', () => {
           if (networkRef.current) {
             logger.debug('Physics stabilization complete, keeping physics enabled');
           }
         });
-        
+
         logger.debug('Network topology created successfully');
       } else if (nodes.length === 0) {
         logger.warn('No nodes generated from topology data');
@@ -274,24 +275,24 @@ const NetworkTopologyDashboard: React.FC<NetworkTopologyDashboardProps> = ({
 
     // 处理数据中的所有节点，确保Source和target都被添加
     const dataArray = data.data && Array.isArray(data.data) ? data.data : [];
-    
+
     if (dataArray.length > 0) {
       logger.debug('Processing data items:', dataArray.length);
-      
+
       dataArray.forEach((item, index) => {
         logger.debug(`Processing item ${index}:`, item);
-        
+
         // 添加Source节点
         if (item.Source && !nodeMap.has(item.Source)) {
           const size = typeof item.size === 'number' ? item.size : 0.1;
           const nodeSize = item.Source === "Pompeo" ? 260 : Math.max(15, size * 50);
           nodeMap.set(item.Source, true);
-          
+
           const node = {
             id: item.Source,
-            label: '', 
+            label: '',
             type: item.Source,
-            color: item.Source === "Pompeo" 
+            color: item.Source === "Pompeo"
               ? { background: "#010E45" }
               : { background: "#1A4999" },
             shape: 'dot' as const,
@@ -308,13 +309,13 @@ const NetworkTopologyDashboard: React.FC<NetworkTopologyDashboardProps> = ({
           nodes.push(node);
           logger.debug('Added Source node:', node);
         }
-        
+
         // 添加target节点
         if (item.target && !nodeMap.has(item.target)) {
           const size = typeof item.size === 'number' ? item.size : 0.1;
           const nodeSize = Math.max(15, size * 50);
           nodeMap.set(item.target, true);
-          
+
           const node = {
             id: item.target,
             label: '',
@@ -386,7 +387,7 @@ const NetworkTopologyDashboard: React.FC<NetworkTopologyDashboardProps> = ({
 
     networkRef.current.on("click", (params) => {
       logger.debug('Network click event:', params);
-      
+
       if (params.nodes.length > 0 && previousNodeId !== params.nodes[0]) {
         const nodeId = params.nodes[0] as string;
         fetchNodeDetails(nodeId);
@@ -423,10 +424,10 @@ const NetworkTopologyDashboard: React.FC<NetworkTopologyDashboardProps> = ({
         nodeType: 'UNKNOWN',
         friendlyName: `Node ${nodeId}`
       };
-      
+
       // 移除setNodeInfo，直接调用回调
       onNodeClick?.(basicNodeInfo);
-      
+
       logger.debug('Using fallback node info for:', nodeId);
     }
   }, [customerId, onNodeClick]);
@@ -442,7 +443,7 @@ const NetworkTopologyDashboard: React.FC<NetworkTopologyDashboardProps> = ({
       { Source: "Pompeo", target: "Hub3", size: 0.3 },
       { Source: "Pompeo", target: "Hub4", size: 0.25 },
       { Source: "Pompeo", target: "Hub5", size: 0.2 },
-      
+
       // 第二层：Hub的扩展连接
       { Source: "Hub1", target: "Node1A", size: 0.18 },
       { Source: "Hub1", target: "Node1B", size: 0.16 },
@@ -455,7 +456,7 @@ const NetworkTopologyDashboard: React.FC<NetworkTopologyDashboardProps> = ({
       { Source: "Hub4", target: "Node4A", size: 0.12 },
       { Source: "Hub4", target: "Node4B", size: 0.10 },
       { Source: "Hub5", target: "Node5A", size: 0.14 },
-      
+
       // 第三层：叶子节点
       { Source: "Node1A", target: "Leaf1A", size: 0.08 },
       { Source: "Node1A", target: "Leaf1B", size: 0.07 },
@@ -467,7 +468,7 @@ const NetworkTopologyDashboard: React.FC<NetworkTopologyDashboardProps> = ({
       { Source: "Node3B", target: "Leaf3B", size: 0.05 },
       { Source: "Node4A", target: "Leaf4A", size: 0.05 },
       { Source: "Node5A", target: "Leaf5A", size: 0.06 },
-      
+
       // 跨层连接 (会生成绿色特殊连线)
       { Source: "Node1A", target: "Node2B", size: 0.05 },
       { Source: "Node2A", target: "Node3A", size: 0.04 },
@@ -475,7 +476,7 @@ const NetworkTopologyDashboard: React.FC<NetworkTopologyDashboardProps> = ({
       { Source: "Hub1", target: "Node3A", size: 0.06 },
       { Source: "Hub2", target: "Node4B", size: 0.05 },
     ];
-    
+
     logger.debug('Enhanced mock topology data generated:', mockData.length);
     return { data: mockData };
   };
@@ -484,7 +485,7 @@ const NetworkTopologyDashboard: React.FC<NetworkTopologyDashboardProps> = ({
 
   useEffect(() => {
     fetchTopologyData();
-    
+
     // 清理函数
     return () => {
       if (networkRef.current) {
@@ -503,10 +504,11 @@ const NetworkTopologyDashboard: React.FC<NetworkTopologyDashboardProps> = ({
           <p className="text-red-500 mb-2">加载失败</p>
           <p className="text-gray-500 text-sm mb-4">{error}</p>
           <button
-            onClick={() => fetchTopologyData()}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            onClick={() => fetchTopologyData}
+            className="flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            重试
+            <RefreshCw className="w-4 h-4" />
+            <span>重试</span>
           </button>
         </div>
       </div>
@@ -526,10 +528,10 @@ const NetworkTopologyDashboard: React.FC<NetworkTopologyDashboardProps> = ({
       )}
 
       {/* 网络容器 */}
-      <div 
-        ref={containerRef} 
+      <div
+        ref={containerRef}
         className="w-full"
-        style={{ 
+        style={{
           height: '500px',
           minHeight: '500px',
           maxHeight: '500px',
@@ -542,28 +544,28 @@ const NetworkTopologyDashboard: React.FC<NetworkTopologyDashboardProps> = ({
         <div className="text-sm font-medium text-gray-700 mb-2" style={{ fontFamily: 'Microsoft YaHei' }}>节点类型</div>
         <div className="space-y-2 text-xs" style={{ fontFamily: 'Microsoft YaHei' }}>
           <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 rounded-full" style={{ 
+            <div className="w-4 h-4 rounded-full" style={{
               background: "#1e3a8a",
               border: "2px solid #1e40af"
             }}></div>
             <span className="text-gray-700 font-medium">核心节点 (MainHub)</span>
           </div>
           <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 rounded-full" style={{ 
+            <div className="w-3 h-3 rounded-full" style={{
               background: "#1d4ed8",
               border: "1px solid #1e40af"
             }}></div>
             <span className="text-gray-600">高重要性节点</span>
           </div>
           <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 rounded-full" style={{ 
+            <div className="w-3 h-3 rounded-full" style={{
               background: "#2563eb",
               border: "1px solid #3b82f6"
             }}></div>
             <span className="text-gray-600">中等重要性节点 (0.15-0.3)</span>
           </div>
           <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 rounded-full" style={{ 
+            <div className="w-3 h-3 rounded-full" style={{
               background: "#3b82f6",
               border: "1px solid #60a5fa"
             }}></div>

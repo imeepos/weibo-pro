@@ -116,7 +116,7 @@ const EventAnalysis: React.FC = () => {
     <div className="space-y-8 p-6">
       {/* 页面标题 */}
       <div className="flex items-center justify-between">
-        <h1 className="dashboard-title text-foreground flex items-center">
+        <h1 className="text-2xl font-bold text-foreground flex items-center">
           <div className="w-1 h-10 bg-gradient-to-b from-primary via-primary to-primary/30 rounded-full mr-4"></div>
           事件分析
         </h1>
@@ -175,7 +175,7 @@ const EventAnalysis: React.FC = () => {
 
       {/* 搜索和筛选区域 */}
       <div className="glass-card p-6 sentiment-overview-card">
-        <h3 className="text-foreground mb-4 flex items-center">
+        <h3 className="text-lg font-medium text-foreground mb-4 flex items-center">
           <Search className="w-5 h-5 mr-2" />
           事件筛选
         </h3>
@@ -193,7 +193,7 @@ const EventAnalysis: React.FC = () => {
               placeholder="搜索事件或关键词..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 bg-input border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+              className="pl-10 pr-4 py-2 bg-muted rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
             />
           </div>
 
@@ -226,7 +226,7 @@ const EventAnalysis: React.FC = () => {
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center space-x-3 mb-3">
-                  <h3 className="text-xl font-bold text-foreground">{event.title}</h3>
+                  <h3 className="text-lg font-bold text-foreground">{event.title}</h3>
                   <span className="px-3 py-1 bg-primary/20 text-primary text-sm rounded-full font-medium">
                     {event.category}
                   </span>
@@ -240,9 +240,9 @@ const EventAnalysis: React.FC = () => {
                   )}
                 </div>
 
-                <p className="text-muted-foreground mb-6 text-base">{event.description}</p>
+                <p className="text-muted-foreground mb-6 text-sm">{event.description}</p>
 
-                <div className="flex items-center space-x-8 text-base">
+                <div className="flex items-center space-x-8 text-sm">
                   <div className="flex items-center space-x-2">
                     <MessageSquare className="w-5 h-5 text-muted-foreground" />
                     <span className="text-foreground font-semibold">{formatNumber(event.postCount)}</span>
@@ -299,7 +299,7 @@ const EventAnalysis: React.FC = () => {
 
               <div className="ml-8 flex flex-col items-end space-y-4">
                 <div className="text-right">
-                  <div className="text-4xl font-bold text-foreground">{event.hotness}</div>
+                  <div className="text-3xl font-bold text-foreground">{event.hotness}</div>
                   <div className="text-sm text-muted-foreground">热度指数</div>
                 </div>
 
@@ -350,7 +350,7 @@ const EventAnalysis: React.FC = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-foreground">{selectedEvent.title}</h2>
+              <h2 className="text-lg font-bold text-foreground">{selectedEvent.title}</h2>
               <button
                 onClick={() => setSelectedEvent(null)}
                 className="text-muted-foreground hover:text-foreground transition-colors"
@@ -358,7 +358,7 @@ const EventAnalysis: React.FC = () => {
                 ✕
               </button>
             </div>
-            
+
             <div className="space-y-4">
               <p className="text-muted-foreground">{selectedEvent.description}</p>
 
@@ -366,11 +366,11 @@ const EventAnalysis: React.FC = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-muted rounded-lg p-4">
                   <div className="text-sm text-muted-foreground mb-1">贴子数量</div>
-                  <div className="text-xl font-bold text-foreground">{formatNumber(selectedEvent.postCount)}</div>
+                  <div className="text-lg font-bold text-foreground">{formatNumber(selectedEvent.postCount)}</div>
                 </div>
                 <div className="bg-muted rounded-lg p-4">
                   <div className="text-sm text-muted-foreground mb-1">参与用户</div>
-                  <div className="text-xl font-bold text-foreground">{formatNumber(selectedEvent.userCount)}</div>
+                  <div className="text-lg font-bold text-foreground">{formatNumber(selectedEvent.userCount)}</div>
                 </div>
               </div>
 

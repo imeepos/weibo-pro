@@ -1,8 +1,12 @@
-import { Controller, Post, Body, Get, Query } from '@nestjs/common';
-import { root } from '@sker/core';
+import { Controller, Post, Body, Get } from '@nestjs/common';
 import { useQueue } from '@sker/mq';
 import type { PostNLPTask } from '@sker/workflow-run';
-import { WeiboKeywordSearchAst } from '@sker/workflow-ast';
+import {
+  WeiboKeywordSearchAst,
+  WeiboAjaxStatusesShowAst,
+  WeiboAjaxStatusesCommentAst,
+  WeiboAjaxStatusesRepostTimelineAst,
+} from '@sker/workflow-ast';
 import { execute } from '@sker/workflow';
 
 /**
@@ -211,6 +215,116 @@ export class WorkflowController {
       return {
         success: false,
         message: '批量触发NLP分析失败',
+        error: error.message,
+        timestamp: new Date().toISOString(),
+      };
+    }
+  }
+
+  /**
+   * 爬取微博帖子详情（包括评论和转发）
+   *
+   * 优雅设计：
+   * - 完整爬取帖子的所有上下文信息
+   * - 爬取完成后数据自动保存到数据库
+   * - 为后续NLP分析做好数据准备
+   * - 提供清晰的爬取状态反馈
+   */
+  @Post('crawl-post')
+  async crawlPost(@Body() body: { postId: string }) {
+    try {
+      const { postId } = body;
+
+      if (!postId || postId.trim().length === 0) {
+        return {
+          success: false,
+          message: '帖子ID不能为空',
+          timestamp: new Date().toISOString(),
+        };
+      }
+
+      console.log(`[WorkflowController] 开始爬取帖子: postId=${postId}`);
+
+      // 创建爬取帖子详情的AST节点
+      const showAst = new WeiboAjaxStatusesShowAst();
+      showAst.mblogid = postId;
+
+      // 创建爬取评论的AST节点
+      const commentAst = new WeiboAjaxStatusesCommentAst();
+
+      // 创建爬取转发的AST节点
+      const repostAst = new WeiboAjaxStatusesRepostTimelineAst();
+
+      // 构建工作流：帖子详情 -> 评论 & 转发
+      const workflow = {
+        nodes: [showAst, commentAst, repostAst],
+        edges: [
+          {
+            from: showAst.id,
+            fromProperty: 'uid',
+            to: commentAst.id,
+            toProperty: 'uid',
+          },
+          {
+            from: showAst.id,
+            fromProperty: 'mid',
+            to: commentAst.id,
+            toProperty: 'mid',
+          },
+          {
+            from: showAst.id,
+            fromProperty: 'uid',
+            to: repostAst.id,
+            toProperty: 'uid',
+          },
+          {
+            from: showAst.id,
+            fromProperty: 'mid',
+            to: repostAst.id,
+            toProperty: 'mid',
+          },
+        ],
+      };
+
+      // 执行爬取工作流
+      await execute(workflow as any, {});
+
+      // 检查爬取结果
+      if (showAst.state === 'success') {
+        const crawlResult = {
+          postId,
+          mid: showAst.mid,
+          uid: showAst.uid,
+          commentsCount: commentAst.entities?.length || 0,
+          repostsCount: repostAst.entities?.length || 0,
+          commentsCrawled: commentAst.state === 'success',
+          repostsCrawled: repostAst.state === 'success',
+        };
+
+        console.log('[WorkflowController] 帖子爬取成功:', crawlResult);
+
+        return {
+          success: true,
+          message: '帖子爬取成功',
+          data: crawlResult,
+          timestamp: new Date().toISOString(),
+        };
+      } else {
+        console.error(`[WorkflowController] 帖子爬取失败: postId=${postId}`, showAst.error);
+
+        return {
+          success: false,
+          message: '帖子爬取失败',
+          error: showAst.error?.message || '未知错误',
+          timestamp: new Date().toISOString(),
+        };
+      }
+    } catch (error) {
+      console.error('[WorkflowController] 爬取帖子异常:', error);
+
+      return {
+        success: false,
+        message: '爬取帖子失败',
         error: error.message,
         timestamp: new Date().toISOString(),
       };

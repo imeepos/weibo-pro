@@ -2,8 +2,13 @@
 
 @source "./";
 
+/* 配置 dark 模式为 class 策略而不是 media query */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Tailwind v4 主题配置 - 替代原 tailwind.config.js */
 @theme {
+  --color-white: 255 255 255;
+  --color-black: 0 0 0;
   --color-primary: 59 130 246;
   --color-primary-foreground: 255 255 255;
   --color-secondary: 156 163 175;
@@ -38,28 +43,7 @@
   --color-alert-danger: 255 99 72;
   --color-alert-critical: 255 184 184;
 
-  /* 保留原有颜色以兼容现有代码 */
-  --color-blue-50: #eff6ff;
-  --color-blue-100: #dbeafe;
-  --color-blue-200: #bfdbfe;
-  --color-blue-300: #93c5fd;
-  --color-blue-400: #60a5fa;
-  --color-blue-500: #3b82f6;
-  --color-blue-600: #2563eb;
-  --color-blue-700: #1d4ed8;
-  --color-blue-800: #1e40af;
-  --color-blue-900: #1e3a8a;
-
-  --color-gray-50: #f9fafb;
-  --color-gray-100: #f3f4f6;
-  --color-gray-200: #e5e7eb;
-  --color-gray-300: #d1d5db;
-  --color-gray-400: #9ca3af;
-  --color-gray-500: #6b7280;
-  --color-gray-600: #4b5563;
-  --color-gray-700: #374151;
-  --color-gray-800: #1f2937;
-  --color-gray-900: #111827;
+  /* 使用 Tailwind v4 默认的 gray 颜色（OKLCH 格式）*/
 
   /* 动画配置 */
   --animate-fade-in: fadeIn 0.5s ease-in-out;
@@ -81,96 +65,59 @@
 @layer base {
   /* CSS变量定义 - 亮色主题 */
   :root {
-    --color-primary: 59 130 246; /* blue-500 */
-    --color-primary-foreground: 255 255 255;
-    --color-secondary: 156 163 175; /* gray-400 */
-    --color-secondary-foreground: 17 24 39; /* gray-900 */
-    --color-background: 249 250 251; /* gray-50 */
-    --color-foreground: 17 24 39; /* gray-900 */
-    --color-card: 255 255 255;
-    --color-card-foreground: 17 24 39; /* gray-900 */
-    --color-border: 229 231 235; /* gray-200 */
-    --color-input: 255 255 255;
-    --color-ring: 59 130 246; /* blue-500 */
-    --color-muted: 243 244 246; /* gray-100 */
-    --color-muted-foreground: 107 114 128; /* gray-500 */
-    --color-accent: 243 244 246; /* gray-100 */
-    --color-accent-foreground: 17 24 39; /* gray-900 */
-    --color-destructive: 239 68 68; /* red-500 */
-    --color-destructive-foreground: 255 255 255;
-    --color-success: 34 197 94; /* green-500 */
-    --color-warning: 245 158 11; /* amber-500 */
-
-    /* 舆情专用色彩变量 - 亮色主题(优化对比度) */
-    --sentiment-negative-primary: 220 38 38; /* #DC2626 darker red */
-    --sentiment-negative-dark: 185 28 28; /* #B91C1C even darker */
-    --sentiment-negative-light: 239 68 68; /* #EF4444 lighter variant */
-    --sentiment-positive-primary: 22 163 74; /* #16A34A darker green */
-    --sentiment-positive-dark: 21 128 61; /* #15803D even darker */
-    --sentiment-positive-light: 34 197 94; /* #22C55E lighter variant */
-    --sentiment-neutral-primary: 37 99 235; /* #2563EB darker blue */
-    --sentiment-neutral-dark: 29 78 216; /* #1D4ED8 even darker */
-    --sentiment-neutral-light: 59 130 246; /* #3B82F6 lighter variant */
-    --alert-warning: 217 119 6; /* #D97706 darker amber */
-    --alert-danger: 220 38 38; /* #DC2626 darker red */
-    --alert-critical: 185 28 28; /* #B91C1C darkest red */
+    /* 舆情专用色彩变量 - 亮色主题 */
+    --sentiment-negative-primary: 220 38 38;
+    --sentiment-negative-dark: 185 28 28;
+    --sentiment-negative-light: 239 68 68;
+    --sentiment-positive-primary: 22 163 74;
+    --sentiment-positive-dark: 21 128 61;
+    --sentiment-positive-light: 34 197 94;
+    --sentiment-neutral-primary: 37 99 235;
+    --sentiment-neutral-dark: 29 78 216;
+    --sentiment-neutral-light: 59 130 246;
+    --alert-warning: 217 119 6;
+    --alert-danger: 220 38 38;
+    --alert-critical: 185 28 28;
   }
 
   /* CSS变量定义 - 暗色主题 */
   .dark {
-    --color-primary: 59 130 246; /* blue-500 */
-    --color-primary-foreground: 255 255 255;
-    --color-secondary: 75 85 99; /* gray-600 */
-    --color-secondary-foreground: 243 244 246; /* gray-100 */
-    --color-background: 17 24 39; /* gray-900 */
-    --color-foreground: 243 244 246; /* gray-100 */
-    --color-card: 31 41 55; /* gray-800 */
+    /* 主题核心颜色 - 暗色主题 */
+    --color-background: 17 24 39;        /* gray-900 */
+    --color-foreground: 243 244 246;      /* gray-100 - 亮色文字 */
+    --color-card: 31 41 55;               /* gray-800 */
     --color-card-foreground: 243 244 246; /* gray-100 */
-    --color-border: 55 65 81; /* gray-700 */
-    --color-input: 31 41 55; /* gray-800 */
-    --color-ring: 59 130 246; /* blue-500 */
-    --color-muted: 55 65 81; /* gray-700 */
+    --color-border: 55 65 81;             /* gray-700 */
+    --color-muted: 55 65 81;              /* gray-700 */
     --color-muted-foreground: 156 163 175; /* gray-400 */
-    --color-accent: 55 65 81; /* gray-700 */
-    --color-accent-foreground: 243 244 246; /* gray-100 */
-    --color-destructive: 239 68 68; /* red-500 */
-    --color-destructive-foreground: 255 255 255;
-    --color-success: 34 197 94; /* green-500 */
-    --color-warning: 245 158 11; /* amber-500 */
 
-    /* 舆情专用色彩变量 - 暗色主题(保持明亮) */
-    --sentiment-negative-primary: 248 113 113; /* #F87171 brighter red */
-    --sentiment-negative-dark: 239 68 68; /* #EF4444 medium bright */
-    --sentiment-negative-light: 252 165 165; /* #FCA5A5 lightest */
-    --sentiment-positive-primary: 74 222 128; /* #4ADE80 brighter green */
-    --sentiment-positive-dark: 34 197 94; /* #22C55E medium bright */
-    --sentiment-positive-light: 134 239 172; /* #86EFAC lightest */
-    --sentiment-neutral-primary: 96 165 250; /* #60A5FA brighter blue */
-    --sentiment-neutral-dark: 59 130 246; /* #3B82F6 medium bright */
-    --sentiment-neutral-light: 147 197 253; /* #93C5FD lightest */
-    --alert-warning: 251 191 36; /* #FBBF24 brighter amber */
-    --alert-danger: 248 113 113; /* #F87171 brighter red */
-    --alert-critical: 252 165 165; /* #FCA5A5 brightest red */
-  }
-
-  * {
-    border-color: rgb(var(--color-border));
+    /* 舆情专用色彩变量 - 暗色主题 */
+    --sentiment-negative-primary: 248 113 113;
+    --sentiment-negative-dark: 239 68 68;
+    --sentiment-negative-light: 252 165 165;
+    --sentiment-positive-primary: 74 222 128;
+    --sentiment-positive-dark: 34 197 94;
+    --sentiment-positive-light: 134 239 172;
+    --sentiment-neutral-primary: 96 165 250;
+    --sentiment-neutral-dark: 59 130 246;
+    --sentiment-neutral-light: 147 197 253;
+    --alert-warning: 251 191 36;
+    --alert-danger: 248 113 113;
+    --alert-critical: 252 165 165;
   }
 
   body {
-    background-color: rgb(var(--color-background));
-    background-image:
-      radial-gradient(circle at 20% 20%, rgb(var(--color-card) / 0.55), transparent 55%),
-      radial-gradient(circle at 80% 0%, rgb(var(--color-primary) / 0.18), transparent 60%),
-      linear-gradient(180deg, rgb(var(--color-background)), rgb(var(--color-muted)));
+    background:
+      radial-gradient(circle at 20% 20%, rgb(255 255 255 / 0.6), transparent 50%),
+      radial-gradient(circle at 80% 0%, rgb(59 130 246 / 0.15), transparent 55%),
+      linear-gradient(180deg, rgb(249 250 251), rgb(243 244 246));
     background-attachment: fixed;
-    color: rgb(var(--color-foreground));
     font-family: var(--font-sans);
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
   .dark body {
-    background-image: linear-gradient(180deg, rgb(17 24 39), rgb(15 23 42));
+    background: linear-gradient(180deg, rgb(17 24 39), rgb(15 23 42));
   }
 
   html,
@@ -194,47 +141,77 @@
 
 @layer components {
   .glass-card {
+    /* 亮色主题：高不透明度，强边框 - 确保与背景有明显区分 */
     background: linear-gradient(
-      180deg,
-      rgb(var(--color-card) / 0.96) 0%,
-      rgb(var(--color-card) / 0.9) 100%
+      135deg,
+      rgb(255 255 255 / 1) 0%,
+      rgb(255 255 255 / 0.98) 100%
     );
-    backdrop-filter: blur(12px);
-    border: 1px solid rgb(var(--color-border) / 0.65);
+    backdrop-filter: blur(12px) saturate(120%);
+    border: 1px solid rgb(229 231 235 / 0.8);
     border-radius: 0.75rem;
-    box-shadow: 0 12px 32px rgb(var(--color-foreground) / 0.08);
-    transition: transform var(--default-transition-duration),
-      box-shadow var(--default-transition-duration),
-      background var(--default-transition-duration);
+    box-shadow:
+      0 2px 4px rgb(0 0 0 / 0.08),
+      0 8px 16px rgb(17 24 39 / 0.1),
+      inset 0 1px 0 rgb(255 255 255 / 0.9);
+    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .glass-card:hover {
-    background: linear-gradient(
-      180deg,
-      rgb(var(--color-card) / 0.98) 0%,
-      rgb(var(--color-card) / 0.92) 100%
-    );
-    box-shadow: 0 18px 38px rgb(var(--color-foreground) / 0.12);
+    background: rgb(255 255 255);
+    border-color: rgb(229 231 235);
+    box-shadow:
+      0 4px 6px rgb(0 0 0 / 0.1),
+      0 12px 24px rgb(17 24 39 / 0.12),
+      inset 0 1px 0 rgb(255 255 255);
     transform: translateY(-2px);
   }
 
+  /* Header 和 Sidebar 专用：扁平玻璃态 - 亮色主题强化边界 */
+  .glass-card-flat {
+    background: rgb(255 255 255);
+    backdrop-filter: blur(16px) saturate(120%);
+    border-bottom: 1px solid rgb(229 231 235 / 0.6);
+    box-shadow:
+      0 2px 4px rgb(0 0 0 / 0.05),
+      inset 0 1px 0 rgb(255 255 255);
+  }
+
   .dark .glass-card {
+    /* 暗色主题：保持优雅的透明度和模糊效果 */
     background: linear-gradient(
-      180deg,
-      rgb(var(--color-card) / 0.65) 0%,
-      rgb(var(--color-card) / 0.45) 100%
+      135deg,
+      rgb(31 41 55 / 0.85) 0%,
+      rgb(31 41 55 / 0.7) 100%
     );
-    border-color: rgb(var(--color-border) / 0.5);
-    box-shadow: 0 10px 30px rgb(0 0 0 / 0.35);
+    backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid rgb(55 65 81 / 0.5);
+    box-shadow:
+      0 1px 3px rgb(0 0 0 / 0.3),
+      0 12px 32px rgb(0 0 0 / 0.4),
+      inset 0 1px 0 rgb(255 255 255 / 0.08);
   }
 
   .dark .glass-card:hover {
     background: linear-gradient(
-      180deg,
-      rgb(var(--color-card) / 0.75) 0%,
-      rgb(var(--color-card) / 0.55) 100%
+      135deg,
+      rgb(31 41 55 / 0.92) 0%,
+      rgb(31 41 55 / 0.78) 100%
     );
-    box-shadow: 0 16px 36px rgb(0 0 0 / 0.45);
+    box-shadow:
+      0 1px 3px rgb(0 0 0 / 0.3),
+      0 18px 40px rgb(0 0 0 / 0.5),
+      inset 0 1px 0 rgb(255 255 255 / 0.1);
+  }
+
+  .dark .glass-card-flat {
+    /* 暗色主题：保持透明度和模糊美感 */
+    background: rgb(31 41 55 / 1);
+    backdrop-filter: blur(20px) saturate(180%);
+    border-bottom: 1px solid rgb(55 65 81 / 0.4);
+    box-shadow:
+      0 1px 3px rgb(0 0 0 / 0.2),
+      inset 0 1px 0 rgb(255 255 255 / 0.06);
   }
 
   .gradient-border {
@@ -308,31 +285,23 @@
     width: 100%;
     padding: 0.6rem 0.95rem;
     border-radius: 0.75rem;
-    border: 1px solid rgb(var(--color-border) / 0.85);
-    background: linear-gradient(
-      135deg,
-      rgb(var(--color-card) / 0.95) 0%,
-      rgb(var(--color-card) / 0.85) 100%
-    );
-    box-shadow: 0 12px 30px rgb(var(--color-foreground) / 0.08);
+    background: rgb(var(--color-muted) / 0.15);
+    backdrop-filter: blur(8px);
     color: rgb(var(--color-foreground));
     font-weight: 500;
-    transition: box-shadow var(--default-transition-duration),
-      border-color var(--default-transition-duration),
+    transition: background var(--default-transition-duration),
       transform var(--default-transition-duration);
   }
 
   .select-trigger:hover {
-    border-color: rgb(var(--color-primary) / 0.5);
-    box-shadow: 0 16px 36px rgb(var(--color-foreground) / 0.12);
+    background: rgb(var(--color-muted) / 0.25);
     transform: translateY(-1px);
   }
 
   .select-trigger:focus-visible,
   .select-trigger[aria-expanded="true"] {
     outline: none;
-    border-color: rgb(var(--color-primary));
-    box-shadow: 0 0 0 3px rgb(var(--color-primary) / 0.2);
+    background: rgb(var(--color-muted) / 0.3);
   }
 
   .select-trigger-placeholder {
@@ -367,15 +336,12 @@
     width: 100%;
     background: linear-gradient(
       180deg,
-      rgb(var(--color-card) / 0.98) 0%,
+      rgb(var(--color-card) / 0.95) 0%,
       rgb(var(--color-card) / 0.9) 100%
     );
-    border: 1px solid rgb(var(--color-border) / 0.7);
     border-radius: 0.85rem;
-    box-shadow:
-      0 18px 40px rgb(var(--color-foreground) / 0.14),
-      0 2px 4px rgb(var(--color-foreground) / 0.08);
-    backdrop-filter: blur(18px);
+    box-shadow: 0 12px 32px rgb(var(--color-foreground) / 0.12);
+    backdrop-filter: blur(20px);
     padding: 0.35rem;
     max-height: 16rem;
     overflow-y: auto;
@@ -392,25 +358,27 @@
     padding: 0.55rem 0.75rem;
     border-radius: 0.65rem;
     background: transparent;
-    border: none;
     color: rgb(var(--color-foreground));
     cursor: pointer;
     transition: background var(--default-transition-duration),
-      color var(--default-transition-duration),
-      transform var(--default-transition-duration);
+      color var(--default-transition-duration);
   }
 
   .select-option:hover {
-    transform: translateY(-1px);
+    background: rgb(var(--color-muted) / 0.3);
   }
 
   .select-option-highlighted {
-    background: rgb(var(--color-primary) / 0.12);
+    background: rgb(var(--color-primary) / 0.1);
     color: rgb(var(--color-primary));
   }
 
   .select-option-selected {
-    background: rgb(var(--color-primary) / 0.18);
+    background: linear-gradient(
+      to right,
+      rgb(var(--color-primary) / 0.15),
+      rgb(var(--color-primary) / 0.1)
+    );
     color: rgb(var(--color-primary));
     font-weight: 600;
   }
@@ -438,48 +406,36 @@
   }
 
   .dark .select-trigger {
-    border-color: rgb(var(--color-border) / 0.55);
-    background: linear-gradient(
-      135deg,
-      rgb(var(--color-card) / 0.6) 0%,
-      rgb(var(--color-card) / 0.45) 100%
-    );
-    box-shadow: 0 14px 40px rgb(0 0 0 / 0.35);
+    background: rgb(var(--color-muted) / 0.2);
   }
 
   .dark .select-trigger:hover {
-    border-color: rgb(var(--color-primary) / 0.6);
-    box-shadow: 0 18px 46px rgb(0 0 0 / 0.45);
+    background: rgb(var(--color-muted) / 0.3);
   }
 
   .dark .select-menu {
     background: linear-gradient(
       180deg,
-      rgb(var(--color-card) / 0.75) 0%,
-      rgb(var(--color-card) / 0.6) 100%
+      rgb(var(--color-card) / 0.8) 0%,
+      rgb(var(--color-card) / 0.7) 100%
     );
-    border-color: rgb(var(--color-border) / 0.5);
-    box-shadow:
-      0 18px 48px rgb(0 0 0 / 0.45),
-      inset 0 1px 0 rgb(255 255 255 / 0.04);
+    box-shadow: 0 12px 40px rgb(0 0 0 / 0.5);
   }
 
-  .dark .select-option {
-    color: rgb(var(--color-foreground));
-  }
-
-  .dark .select-option-description {
-    color: rgb(var(--color-muted-foreground));
+  .dark .select-option:hover {
+    background: rgb(var(--color-muted) / 0.4);
   }
 
   .dark .select-option-highlighted {
-    background: rgb(var(--color-primary) / 0.2);
-    color: rgb(var(--color-primary));
+    background: rgb(var(--color-primary) / 0.15);
   }
 
   .dark .select-option-selected {
-    background: rgb(var(--color-primary) / 0.18);
-    color: rgb(var(--color-primary));
+    background: linear-gradient(
+      to right,
+      rgb(var(--color-primary) / 0.2),
+      rgb(var(--color-primary) / 0.15)
+    );
   }
 
   /* Hero Section 玻璃态按钮 */
@@ -636,9 +592,28 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
-  
+
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+
+  /* 径向渐变背景工具类 */
+  .bg-gradient-radial {
+    background-image: radial-gradient(circle, var(--tw-gradient-stops));
+  }
+
+  /* 简化动画 */
+  .animate-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
 
   .card-content {
@@ -715,43 +690,26 @@
   min-height: 100vh;
 }
 
-/* 大屏字体层级 */
-.dashboard-title {
-  font-size: 48px;
-  font-weight: 700;
-  line-height: 1.1;
-}
+/* ============================================
+   字体规范体系 - Typography System
+   ============================================
+   统一使用 Tailwind 字体类，确保全站字体一致性
 
-.section-title {
-  font-size: 36px;
-  font-weight: 600;
-  line-height: 1.2;
-}
+   层级定义：
+   - text-xs (12px)   辅助文字：标签、时间戳、次要说明
+   - text-sm (14px)   正文/UI：主要正文、按钮、表单、列表
+   - text-base (16px) 强调正文：重要说明、强调段落
+   - text-lg (18px)   小标题：卡片标题、区域小标题
+   - text-xl (20px)   中标题：页面二级标题、logo
+   - text-2xl (24px)  大标题：页面主标题
+   - text-3xl (30px)  指标数字：数据可视化的大数字
 
-.chart-title {
-  font-size: 28px;
-  font-weight: 500;
-  line-height: 1.3;
-}
-
-.data-label {
-  font-size: 24px;
-  font-weight: 400;
-  line-height: 1.4;
-}
-
-.description-text {
-  font-size: 20px;
-  font-weight: 300;
-  line-height: 1.5;
-}
-
-.metric-value-large {
-  font-size: 64px;
-  font-weight: 800;
-  line-height: 1.1;
-  font-family: 'JetBrains Mono', monospace;
-}
+   字重建议：
+   - font-normal (400)   正文
+   - font-medium (500)   强调
+   - font-semibold (600) 标题
+   - font-bold (700)     主标题
+   ============================================ */
 
 /* 无滚动条大屏布局 */
 .dashboard-no-scroll {
@@ -1007,25 +965,9 @@
 .intensity-9 { background-color: rgb(var(--sentiment-negative-primary) / 0.9); }
 .intensity-10 { background-color: rgb(var(--sentiment-negative-primary) / 1.0); }
 
-/* 舆情总览区域专用样式 */
+/* 舆情总览区域专用样式 - 统一使用 glass-card */
 .sentiment-overview-card {
-  background: linear-gradient(135deg,
-    rgb(var(--color-card) / 0.95) 0%,
-    rgb(var(--color-card) / 0.85) 100%);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgb(var(--color-border) / 0.5);
-  box-shadow:
-    0 8px 32px rgb(var(--color-foreground) / 0.1),
-    inset 0 1px 0 rgb(var(--color-foreground) / 0.1);
-}
-
-.dark .sentiment-overview-card {
-  background: linear-gradient(135deg,
-    rgb(var(--color-card) / 0.8) 0%,
-    rgb(var(--color-card) / 0.6) 100%);
-  box-shadow:
-    0 8px 32px rgb(0 0 0 / 0.3),
-    inset 0 1px 0 rgb(255 255 255 / 0.1);
+  /* 继承 glass-card 样式即可 */
 }
 
 /* 状态指示器增强 */
@@ -1035,50 +977,49 @@
 
 /* 数据卡片悬停效果 */
 .data-summary-card {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .data-summary-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgb(var(--color-foreground) / 0.15);
+  box-shadow: 0 8px 25px rgb(17 24 39 / 0.12);
 }
 
-/* 响应式字体大小 */
-@media (max-width: 1920px) {
-  .metric-value {
-    font-size: 1.5rem;
-    line-height: 2rem;
-  }
-  .metric-value-large {
-    font-size: 48px;
-  }
-  .dashboard-title {
-    font-size: 36px;
-  }
-  .section-title {
-    font-size: 28px;
-  }
+.dark .data-summary-card:hover {
+  box-shadow: 0 8px 25px rgb(0 0 0 / 0.5);
 }
 
-@media (max-width: 1366px) {
-  .metric-value {
-    font-size: 1.25rem;
-    line-height: 1.75rem;
-  }
-  .metric-value-large {
-    font-size: 32px;
-  }
-  .dashboard-title {
-    font-size: 28px;
-  }
-  .section-title {
-    font-size: 24px;
-  }
-  .data-card {
-    padding: 1rem;
-  }
-  .dashboard-grid {
-    padding: 40px;
-    gap: 16px;
-  }
+/* StatsOverview 容器 - 由内部 grid 自动撑开高度 */
+.stats-overview-container {
+  height: auto !important;
+  flex: 0 0 auto !important;
+  display: block !important;
+}
+
+/* CrawlerControl 页面右侧滚动容器修复 - 覆盖全局 glass-card 的 height: 100% */
+.crawler-control-scroll-wrapper .glass-card {
+  height: auto !important;
+  flex: 0 0 auto !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+}
+
+/* 显示 crawler-control 滚动容器的滚动条 */
+.crawler-control-scroll-wrapper::-webkit-scrollbar {
+  display: block !important;
+  width: 8px !important;
+}
+
+.crawler-control-scroll-wrapper::-webkit-scrollbar-track {
+  background-color: rgb(var(--color-muted) / 0.3) !important;
+  border-radius: 4px !important;
+}
+
+.crawler-control-scroll-wrapper::-webkit-scrollbar-thumb {
+  background-color: rgb(var(--color-border)) !important;
+  border-radius: 4px !important;
+}
+
+.crawler-control-scroll-wrapper::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(var(--color-accent)) !important;
 }

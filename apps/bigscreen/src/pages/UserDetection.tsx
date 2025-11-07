@@ -116,7 +116,7 @@ const UserDetection: React.FC = () => {
               placeholder="搜索用户名或昵称..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 bg-input border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+              className="pl-10 pr-4 py-2 bg-muted rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
             />
           </div>
 
@@ -142,7 +142,7 @@ const UserDetection: React.FC = () => {
               <Users className="w-5 h-5 text-white" />
             </div>
             <div>
-              <div className="text-2xl font-bold text-foreground">{formatNumber((users || []).length)}</div>
+              <div className="text-3xl font-bold text-foreground">{formatNumber((users || []).length)}</div>
               <div className="text-sm text-muted-foreground">总用户数</div>
             </div>
           </div>
@@ -154,7 +154,7 @@ const UserDetection: React.FC = () => {
               <AlertTriangle className="w-5 h-5 text-white" />
             </div>
             <div>
-              <div className="text-2xl font-bold text-foreground">
+              <div className="text-3xl font-bold text-foreground">
                 {formatNumber((users || []).filter(u => u.riskLevel === 'high').length)}
               </div>
               <div className="text-sm text-muted-foreground">高风险用户</div>
@@ -168,7 +168,7 @@ const UserDetection: React.FC = () => {
               <Eye className="w-5 h-5 text-white" />
             </div>
             <div>
-              <div className="text-2xl font-bold text-foreground">
+              <div className="text-3xl font-bold text-foreground">
                 {formatNumber((users || []).filter(u => u.riskLevel === 'medium').length)}
               </div>
               <div className="text-sm text-muted-foreground">中风险用户</div>
@@ -182,7 +182,7 @@ const UserDetection: React.FC = () => {
               <Shield className="w-5 h-5 text-white" />
             </div>
             <div>
-              <div className="text-2xl font-bold text-foreground">
+              <div className="text-3xl font-bold text-foreground">
                 {formatNumber((users || []).filter(u => u.riskLevel === 'low').length)}
               </div>
               <div className="text-sm text-muted-foreground">低风险用户</div>
@@ -303,7 +303,7 @@ const UserDetection: React.FC = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-foreground">用户详情</h2>
+              <h2 className="text-lg font-bold text-foreground">用户详情</h2>
               <button
                 onClick={() => setSelectedUser(null)}
                 className="text-muted-foreground hover:text-foreground transition-colors"
@@ -311,7 +311,7 @@ const UserDetection: React.FC = () => {
                 ✕
               </button>
             </div>
-            
+
             <div className="space-y-6">
               {/* 基本信息 */}
               <div className="flex items-start space-x-4">
@@ -320,7 +320,7 @@ const UserDetection: React.FC = () => {
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center space-x-2 mb-2">
-                    <h3 className="text-xl font-bold text-foreground">{selectedUser.nickname}</h3>
+                    <h3 className="text-lg font-bold text-foreground">{selectedUser.nickname}</h3>
                     {selectedUser.verified && <UserCheck className="w-5 h-5 text-blue-400" />}
                   </div>
                   <p className="text-muted-foreground">@{selectedUser.username}</p>
@@ -334,24 +334,24 @@ const UserDetection: React.FC = () => {
                   <span>{riskLevelLabels[selectedUser.riskLevel]}</span>
                 </div>
               </div>
-              
+
               {/* 统计数据 */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-muted rounded-lg p-4">
                   <div className="text-sm text-muted-foreground mb-1">粉丝数量</div>
-                  <div className="text-xl font-bold text-foreground">{formatNumber(selectedUser.followers)}</div>
+                  <div className="text-lg font-bold text-foreground">{formatNumber(selectedUser.followers)}</div>
                 </div>
                 <div className="bg-muted rounded-lg p-4">
                   <div className="text-sm text-muted-foreground mb-1">关注数量</div>
-                  <div className="text-xl font-bold text-foreground">{formatNumber(selectedUser.following)}</div>
+                  <div className="text-lg font-bold text-foreground">{formatNumber(selectedUser.following)}</div>
                 </div>
                 <div className="bg-muted rounded-lg p-4">
                   <div className="text-sm text-muted-foreground mb-1">发布贴子</div>
-                  <div className="text-xl font-bold text-foreground">{formatNumber(selectedUser.posts)}</div>
+                  <div className="text-lg font-bold text-foreground">{formatNumber(selectedUser.posts)}</div>
                 </div>
                 <div className="bg-muted rounded-lg p-4">
                   <div className="text-sm text-muted-foreground mb-1">活跃度</div>
-                  <div className="text-xl font-bold text-foreground">
+                  <div className="text-lg font-bold text-foreground">
                     {formatNumber(selectedUser.activities.posts + selectedUser.activities.comments)}
                   </div>
                 </div>

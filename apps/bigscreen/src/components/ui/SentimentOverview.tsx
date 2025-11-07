@@ -9,7 +9,7 @@ interface SentimentData {
 }
 
 interface SentimentOverviewProps {
-  data: SentimentData;
+  data: SentimentData | null;
   loading?: boolean;
   className?: string;
 }

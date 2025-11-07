@@ -1,7 +1,7 @@
 import { mergeMap, retry, tap } from 'rxjs';
 import { root } from '@sker/core';
 import { execute } from '@sker/workflow';
-import { registerMqQueueConfig, useQueue } from '@sker/mq';
+import { useQueue } from '@sker/mq';
 import {
   PostContextCollectorAst,
   PostNLPAnalyzerAst,
@@ -14,15 +14,6 @@ import { EventAutoCreatorVisitor } from './EventAutoCreatorVisitor';
 export interface PostNLPTask {
   postId: string;
 }
-
-registerMqQueueConfig({
-  queue: 'post_nlp_queue',
-  dlq: 'post_nlp_queue_dlq',
-  queueOptions: {
-    durable: true,
-    messageTtl: 1800000,
-  },
-});
 
 root.set([
   { provide: PostContextCollectorVisitor, useClass: PostContextCollectorVisitor },

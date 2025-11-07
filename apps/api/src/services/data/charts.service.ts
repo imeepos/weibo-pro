@@ -96,20 +96,25 @@ export class ChartsService {
   }
 
   async getWordCloud(timeRange?: string) {
-    // Mock数据 - 词云
+    // 词云数据 - 符合 HotTopicData 接口
     return {
       success: true,
       data: [
-        { name: '人工智能', value: 100 },
-        { name: '机器学习', value: 85 },
-        { name: '深度学习', value: 75 },
-        { name: '神经网络', value: 65 },
-        { name: '大数据', value: 60 },
-        { name: '云计算', value: 55 },
-        { name: '区块链', value: 50 },
-        { name: '物联网', value: 45 },
-        { name: '5G', value: 40 },
-        { name: '元宇宙', value: 35 }
+        { keyword: '人工智能', count: 245, weight: 100, sentiment: 'positive' as const },
+        { keyword: '机器学习', count: 198, weight: 85, sentiment: 'positive' as const },
+        { keyword: '深度学习', count: 167, weight: 75, sentiment: 'positive' as const },
+        { keyword: '神经网络', count: 145, weight: 65, sentiment: 'neutral' as const },
+        { keyword: '大数据', count: 132, weight: 60, sentiment: 'positive' as const },
+        { keyword: '云计算', count: 120, weight: 55, sentiment: 'neutral' as const },
+        { keyword: '区块链', count: 108, weight: 50, sentiment: 'neutral' as const },
+        { keyword: '物联网', count: 95, weight: 45, sentiment: 'positive' as const },
+        { keyword: '5G', count: 82, weight: 40, sentiment: 'neutral' as const },
+        { keyword: '元宇宙', count: 70, weight: 35, sentiment: 'positive' as const },
+        { keyword: '量子计算', count: 65, weight: 32, sentiment: 'positive' as const },
+        { keyword: '边缘计算', count: 58, weight: 28, sentiment: 'neutral' as const },
+        { keyword: '数字孪生', count: 52, weight: 25, sentiment: 'positive' as const },
+        { keyword: '自动驾驶', count: 48, weight: 22, sentiment: 'neutral' as const },
+        { keyword: '智能制造', count: 45, weight: 20, sentiment: 'positive' as const }
       ],
       message: '获取词云数据成功'
     };

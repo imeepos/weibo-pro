@@ -132,17 +132,17 @@ const MetricCard: React.FC<MetricCardProps> = ({
       case 'large':
         return {
           card: 'p-8',
-          title: 'section-title',
-          value: 'text-5xl',
-          change: 'text-lg',
+          title: 'text-lg font-medium',
+          value: 'text-3xl',
+          change: 'text-sm',
           icon: 'w-8 h-8'
         };
       case 'xlarge':
         return {
           card: 'p-10',
-          title: 'dashboard-title',
-          value: 'metric-value-large',
-          change: 'text-xl',
+          title: 'text-xl font-bold',
+          value: 'text-3xl font-bold',
+          change: 'text-base',
           icon: 'w-12 h-12'
         };
       case 'small':
@@ -156,16 +156,16 @@ const MetricCard: React.FC<MetricCardProps> = ({
       case 'tiny':
         return {
           card: 'p-3',
-          title: 'text-sm',
-          value: 'text-[12px]',
-          change: 'text-[10px]',
+          title: 'text-xs',
+          value: 'text-sm',
+          change: 'text-xs',
           icon: 'w-3 h-3'
         };
       default:
         return {
           card: 'p-6',
-          title: 'text-lg',
-          value: 'text-2xl',
+          title: 'text-sm',
+          value: 'text-3xl',
           change: 'text-sm',
           icon: 'w-6 h-6'
         };

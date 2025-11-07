@@ -39,13 +39,13 @@ const CountUp: React.FC<CountUpProps> = ({
       case 'sm':
         return 'text-lg';
       case 'md':
-        return 'text-2xl';
+        return 'text-3xl';
       case 'lg':
-        return 'text-4xl';
+        return 'text-3xl';
       case 'xl':
-        return 'text-6xl metric-value-large';
+        return 'text-3xl font-bold';
       default:
-        return 'text-2xl';
+        return 'text-3xl';
     }
   };
 

@@ -12,7 +12,7 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 const logger = createLogger('CrawlerControl');
 
 // 任务类型枚举
-type TaskType = 'nlp' | 'batch-nlp' | 'search';
+type TaskType = 'crawl' | 'nlp' | 'crawl-and-analyze' | 'batch-nlp' | 'search';
 
 // 任务执行记录
 interface TaskExecution {
@@ -75,6 +75,29 @@ const CrawlerControl: React.FC = () => {
   };
 
   // ========== 任务触发函数 ==========
+  const handleCrawlPost = async () => {
+    if (!nlpPostId.trim()) {
+      alert('请输入帖子 ID');
+      return;
+    }
+
+    setNlpLoading(true);
+    addExecution('crawl', { postId: nlpPostId }, 'pending');
+
+    try {
+      const response = await WorkflowAPI.crawlPost({ postId: nlpPostId.trim() });
+      const crawlData = response?.data;
+      const message = `爬取成功 - 评论:${crawlData?.commentsCount || 0} 转发:${crawlData?.repostsCount || 0}`;
+      addExecution('crawl', { postId: nlpPostId }, 'success', message);
+      logger.info('Post crawled', response);
+    } catch (error: any) {
+      addExecution('crawl', { postId: nlpPostId }, 'error', error?.message || '爬取失败');
+      logger.error('Failed to crawl post', error);
+    } finally {
+      setNlpLoading(false);
+    }
+  };
+
   const handleTriggerNLP = async () => {
     if (!nlpPostId.trim()) {
       alert('请输入帖子 ID');
@@ -86,12 +109,52 @@ const CrawlerControl: React.FC = () => {
 
     try {
       const response = await WorkflowAPI.triggerNLP({ postId: nlpPostId.trim() });
-      addExecution('nlp', { postId: nlpPostId }, 'success', response.message);
-      setNlpPostId('');
+      addExecution('nlp', { postId: nlpPostId }, 'success', response?.message || 'NLP 任务已触发');
       logger.info('NLP task triggered', response);
     } catch (error: any) {
-      addExecution('nlp', { postId: nlpPostId }, 'error', error.message);
+      addExecution('nlp', { postId: nlpPostId }, 'error', error?.message || '触发失败');
       logger.error('Failed to trigger NLP task', error);
+    } finally {
+      setNlpLoading(false);
+    }
+  };
+
+  const handleCrawlAndAnalyze = async () => {
+    if (!nlpPostId.trim()) {
+      alert('请输入帖子 ID');
+      return;
+    }
+
+    setNlpLoading(true);
+    addExecution('crawl-and-analyze', { postId: nlpPostId }, 'pending');
+
+    try {
+      // 第一阶段：爬取
+      logger.info('Step 1: Crawling post', { postId: nlpPostId });
+      const crawlResponse = await WorkflowAPI.crawlPost({ postId: nlpPostId.trim() });
+
+      if (!crawlResponse?.success) {
+        throw new Error(crawlResponse?.message || '爬取失败');
+      }
+
+      const crawlData = crawlResponse?.data;
+      logger.info('Step 1 completed: Post crawled', crawlData);
+
+      // 第二阶段：NLP分析
+      logger.info('Step 2: Triggering NLP analysis', { postId: nlpPostId });
+      const nlpResponse = await WorkflowAPI.triggerNLP({ postId: nlpPostId.trim() });
+
+      if (!nlpResponse?.success) {
+        throw new Error(nlpResponse?.message || 'NLP触发失败');
+      }
+
+      const message = `完整流程成功 - 评论:${crawlData?.commentsCount || 0} 转发:${crawlData?.repostsCount || 0} - NLP已触发`;
+      addExecution('crawl-and-analyze', { postId: nlpPostId }, 'success', message);
+      setNlpPostId('');
+      logger.info('Complete workflow finished', { crawlData, nlpResponse });
+    } catch (error: any) {
+      addExecution('crawl-and-analyze', { postId: nlpPostId }, 'error', error?.message || '流程失败');
+      logger.error('Failed to execute crawl-and-analyze workflow', error);
     } finally {
       setNlpLoading(false);
     }
@@ -113,11 +176,11 @@ const CrawlerControl: React.FC = () => {
 
     try {
       const response = await WorkflowAPI.batchNLP({ postIds });
-      addExecution('batch-nlp', { postIds }, 'success', response.message);
+      addExecution('batch-nlp', { postIds }, 'success', response?.message || '批量 NLP 任务已触发');
       setBatchPostIds('');
       logger.info('Batch NLP task triggered', response);
     } catch (error: any) {
-      addExecution('batch-nlp', { postIds }, 'error', error.message);
+      addExecution('batch-nlp', { postIds }, 'error', error?.message || '批量触发失败');
       logger.error('Failed to trigger batch NLP task', error);
     } finally {
       setBatchLoading(false);
@@ -142,10 +205,10 @@ const CrawlerControl: React.FC = () => {
 
     try {
       const response = await WorkflowAPI.searchWeibo(params);
-      addExecution('search', params, 'success', response.message);
+      addExecution('search', params, 'success', response?.message || '微博搜索已完成');
       logger.info('Weibo search completed', response);
     } catch (error: any) {
-      addExecution('search', params, 'error', error.message);
+      addExecution('search', params, 'error', error?.message || '搜索失败');
       logger.error('Failed to search Weibo', error);
     } finally {
       setSearchLoading(false);
@@ -172,7 +235,9 @@ const CrawlerControl: React.FC = () => {
 
   const getTaskTypeLabel = (type: TaskType) => {
     const labels = {
+      crawl: '爬取详情',
       nlp: 'NLP 分析',
+      'crawl-and-analyze': '爬取+分析',
       'batch-nlp': '批量 NLP',
       search: '微博搜索',
     };
@@ -181,13 +246,13 @@ const CrawlerControl: React.FC = () => {
 
   // ========== 渲染 ==========
   return (
-    <div className="dashboard-no-scroll">
-      <div className="dashboard-main-content">
+    <div className="dashboard-no-scroll relative h-full">
+      <div className="absolute top-0 left-0 right-0 bottom-0 dashboard-main-content">
         {/* 左侧：工作流状态和执行记录 */}
         <div className="col-span-12 lg:col-span-4 flex flex-col gap-4 overflow-hidden">
           {/* 工作流状态卡片 */}
           <motion.div
-            className="glass-card p-4"
+            className="glass-card p-4 !h-auto flex-shrink-0"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
@@ -236,7 +301,7 @@ const CrawlerControl: React.FC = () => {
                 <p className="text-sm text-muted-foreground text-center py-8">暂无执行记录</p>
               ) : (
                 executions.map((exec) => (
-                  <div key={exec.id} className="bg-background/50 rounded p-3 border border-border/50">
+                  <div key={exec.id} className="bg-muted/30 rounded p-3 transition-colors">
                     <div className="flex justify-between items-start mb-2">
                       <span className="text-sm font-medium text-foreground">{getTaskTypeLabel(exec.type)}</span>
                       {getStatusBadge(exec.status)}
@@ -254,135 +319,163 @@ const CrawlerControl: React.FC = () => {
         </div>
 
         {/* 右侧：任务触发面板 */}
-        <div className="col-span-12 lg:col-span-8 flex flex-col gap-4 overflow-auto">
-          {/* NLP 单任务触发 */}
-          <motion.div
-            className="glass-card p-4"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.2 }}
-          >
-            <h2 className="text-lg font-bold mb-4 text-foreground">触发 NLP 分析（单个）</h2>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-2">帖子 ID</label>
-                <input
-                  type="text"
-                  value={nlpPostId}
-                  onChange={(e) => setNlpPostId(e.target.value)}
-                  placeholder="例如: 5095814444178803"
-                  className="w-full px-3 py-2 bg-background/50 border border-border rounded focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground"
-                  disabled={nlpLoading}
-                />
-              </div>
-              <button
-                onClick={handleTriggerNLP}
-                disabled={nlpLoading}
-                className="w-full px-4 py-2 bg-primary text-primary-foreground rounded font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        <div className="col-span-12 lg:col-span-8 h-full min-h-0 relative overflow-hidden">
+          <div className="absolute left-0 right-0 top-0 bottom-0 overflow-y-auto overflow-x-hidden crawler-control-scroll-wrapper">
+            <div className="flex flex-col gap-4 py-1">
+              {/* 单任务爬取与分析 */}
+              <motion.div
+                className="glass-card p-4 crawler-control-scrollable"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.2 }}
               >
-                {nlpLoading ? '触发中...' : '触发 NLP 分析'}
-              </button>
-            </div>
-          </motion.div>
+                <h2 className="text-lg font-bold mb-4 text-foreground">微博帖子爬取与分析</h2>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-2">帖子 ID</label>
+                    <input
+                      type="text"
+                      value={nlpPostId}
+                      onChange={(e) => setNlpPostId(e.target.value)}
+                      placeholder="例如: 5095814444178803"
+                      className="w-full px-3 py-2 !bg-gray-100 dark:!bg-gray-800 rounded focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground transition-colors"
+                      disabled={nlpLoading}
+                    />
+                  </div>
 
-          {/* NLP 批量任务触发 */}
-          <motion.div
-            className="glass-card p-4"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.3 }}
-          >
-            <h2 className="text-lg font-bold mb-4 text-foreground">批量触发 NLP 分析</h2>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-2">
-                  帖子 ID 列表（用逗号或换行分隔）
-                </label>
-                <textarea
-                  value={batchPostIds}
-                  onChange={(e) => setBatchPostIds(e.target.value)}
-                  placeholder="例如:&#10;5095814444178803&#10;5095814444178804&#10;5095814444178805"
-                  rows={5}
-                  className="w-full px-3 py-2 bg-background/50 border border-border rounded focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground resize-none"
-                  disabled={batchLoading}
-                />
-              </div>
-              <button
-                onClick={handleBatchNLP}
-                disabled={batchLoading}
-                className="w-full px-4 py-2 bg-primary text-primary-foreground rounded font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {batchLoading ? '触发中...' : '批量触发 NLP 分析'}
-              </button>
-            </div>
-          </motion.div>
+                  {/* 主要操作：爬取+分析 */}
+                  <button
+                    onClick={handleCrawlAndAnalyze}
+                    disabled={nlpLoading}
+                    className="w-full px-4 py-2 bg-primary text-primary-foreground rounded font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {nlpLoading ? '执行中...' : '🚀 爬取并分析（推荐）'}
+                  </button>
 
-          {/* 微博搜索触发 */}
-          <motion.div
-            className="glass-card p-4"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.4 }}
-          >
-            <h2 className="text-lg font-bold mb-4 text-foreground">触发微博关键词搜索</h2>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-2">关键词</label>
-                <input
-                  type="text"
-                  value={searchKeyword}
-                  onChange={(e) => setSearchKeyword(e.target.value)}
-                  placeholder="例如: 人工智能"
-                  className="w-full px-3 py-2 bg-background/50 border border-border rounded focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground"
-                  disabled={searchLoading}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-2">开始日期</label>
-                  <input
-                    type="date"
-                    value={searchStartDate}
-                    onChange={(e) => setSearchStartDate(e.target.value)}
-                    className="w-full px-3 py-2 bg-background/50 border border-border rounded focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground"
-                    disabled={searchLoading}
-                  />
+                  {/* 分步操作 */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={handleCrawlPost}
+                      disabled={nlpLoading}
+                      className="px-3 py-2 bg-muted hover:bg-muted/80 text-foreground rounded text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {nlpLoading ? '...' : '📥 仅爬取'}
+                    </button>
+                    <button
+                      onClick={handleTriggerNLP}
+                      disabled={nlpLoading}
+                      className="px-3 py-2 bg-muted hover:bg-muted/80 text-foreground rounded text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {nlpLoading ? '...' : '🧠 仅分析'}
+                    </button>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground">
+                    💡 提示："爬取并分析"会先从微博爬取帖子详情（含评论、转发），然后自动触发 NLP 分析
+                  </p>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-2">结束日期</label>
-                  <input
-                    type="date"
-                    value={searchEndDate}
-                    onChange={(e) => setSearchEndDate(e.target.value)}
-                    className="w-full px-3 py-2 bg-background/50 border border-border rounded focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground"
-                    disabled={searchLoading}
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-2">页码（可选）</label>
-                <input
-                  type="number"
-                  value={searchPage}
-                  onChange={(e) => setSearchPage(e.target.value)}
-                  placeholder="1"
-                  min="1"
-                  className="w-full px-3 py-2 bg-background/50 border border-border rounded focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground"
-                  disabled={searchLoading}
-                />
-              </div>
-              <button
-                onClick={handleSearchWeibo}
-                disabled={searchLoading}
-                className="w-full px-4 py-2 bg-primary text-primary-foreground rounded font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              </motion.div>
+
+              {/* NLP 批量任务触发 */}
+              <motion.div
+                className="glass-card p-4 crawler-control-scrollable"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.3 }}
               >
-                {searchLoading ? '搜索中...' : '开始搜索'}
-              </button>
-              <p className="text-xs text-muted-foreground">
-                注意：微博搜索会自动将找到的帖子推送到 NLP 队列进行分析
-              </p>
+                <h2 className="text-lg font-bold mb-4 text-foreground">批量触发 NLP 分析</h2>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-2">
+                      帖子 ID 列表（用逗号或换行分隔）
+                    </label>
+                    <textarea
+                      value={batchPostIds}
+                      onChange={(e) => setBatchPostIds(e.target.value)}
+                      placeholder="例如:&#10;5095814444178803&#10;5095814444178804&#10;5095814444178805"
+                      rows={5}
+                      className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground resize-none transition-colors"
+                      disabled={batchLoading}
+                    />
+                  </div>
+                  <button
+                    onClick={handleBatchNLP}
+                    disabled={batchLoading}
+                    className="w-full px-4 py-2 bg-primary text-primary-foreground rounded font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {batchLoading ? '触发中...' : '批量触发 NLP 分析'}
+                  </button>
+                </div>
+              </motion.div>
+
+              {/* 微博搜索触发 */}
+              <motion.div
+                className="glass-card p-4 crawler-control-scrollable"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.4 }}
+              >
+                <h2 className="text-lg font-bold mb-4 text-foreground">触发微博关键词搜索</h2>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-2">关键词</label>
+                    <input
+                      type="text"
+                      value={searchKeyword}
+                      onChange={(e) => setSearchKeyword(e.target.value)}
+                      placeholder="例如: 人工智能"
+                      className="w-full px-3 py-2 !bg-gray-100 dark:!bg-gray-800 rounded focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground transition-colors"
+                      disabled={searchLoading}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-muted-foreground mb-2">开始日期</label>
+                      <input
+                        type="date"
+                        value={searchStartDate}
+                        onChange={(e) => setSearchStartDate(e.target.value)}
+                        className="w-full px-3 py-2 !bg-gray-100 dark:!bg-gray-800 rounded focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground transition-colors"
+                        disabled={searchLoading}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-muted-foreground mb-2">结束日期</label>
+                      <input
+                        type="date"
+                        value={searchEndDate}
+                        onChange={(e) => setSearchEndDate(e.target.value)}
+                        className="w-full px-3 py-2 !bg-gray-100 dark:!bg-gray-800 rounded focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground transition-colors"
+                        disabled={searchLoading}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-2">页码（可选）</label>
+                    <input
+                      type="number"
+                      value={searchPage}
+                      onChange={(e) => setSearchPage(e.target.value)}
+                      placeholder="1"
+                      min="1"
+                      className="w-full px-3 py-2 !bg-gray-100 dark:!bg-gray-800 rounded focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground transition-colors"
+                      disabled={searchLoading}
+                    />
+                  </div>
+                  <button
+                    onClick={handleSearchWeibo}
+                    disabled={searchLoading}
+                    className="w-full px-4 py-2 bg-primary text-primary-foreground rounded font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {searchLoading ? '搜索中...' : '开始搜索'}
+                  </button>
+                  <p className="text-xs text-muted-foreground">
+                    注意：微博搜索会自动将找到的帖子推送到 NLP 队列进行分析
+                  </p>
+                </div>
+              </motion.div>
             </div>
-          </motion.div>
+          </div>
         </div>
       </div>
     </div>

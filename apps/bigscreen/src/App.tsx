@@ -119,6 +119,7 @@ const App: React.FC = () => {
                 element={
                   <motion.div
                     key="data-overview"
+                    className="h-full"
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 1.05 }}
@@ -133,6 +134,7 @@ const App: React.FC = () => {
                 element={
                   <motion.div
                     key="data-overview"
+                    className="h-full"
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 1.05 }}
@@ -147,6 +149,7 @@ const App: React.FC = () => {
                 element={
                   <motion.div
                     key="event-analysis"
+                    className="h-full"
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 1.05 }}
@@ -161,6 +164,7 @@ const App: React.FC = () => {
                 element={
                   <motion.div
                     key="event-detail"
+                    className="h-full"
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 1.05 }}
@@ -175,6 +179,7 @@ const App: React.FC = () => {
                 element={
                   <motion.div
                     key="user-detection"
+                    className="h-full"
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 1.05 }}
@@ -189,6 +194,7 @@ const App: React.FC = () => {
                 element={
                   <motion.div
                     key="custom-overview"
+                    className="h-full"
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 1.05 }}
@@ -203,6 +209,7 @@ const App: React.FC = () => {
                 element={
                   <motion.div
                     key="layout-editor"
+                    className="h-full"
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 1.05 }}
@@ -217,6 +224,7 @@ const App: React.FC = () => {
                 element={
                   <motion.div
                     key="ble-mesh-topology"
+                    className="h-full"
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 1.05 }}
@@ -231,6 +239,7 @@ const App: React.FC = () => {
                 element={
                   <motion.div
                     key="network-topology"
+                    className="h-full"
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 1.05 }}
@@ -245,6 +254,7 @@ const App: React.FC = () => {
                 element={
                   <motion.div
                     key="workflow-editor"
+                    className="h-full"
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 1.05 }}
@@ -259,6 +269,7 @@ const App: React.FC = () => {
                 element={
                   <motion.div
                     key="workflow-demo"
+                    className="h-full"
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 1.05 }}
@@ -273,6 +284,7 @@ const App: React.FC = () => {
                 element={
                   <motion.div
                     key="crawler-control"
+                    className="h-full"
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 1.05 }}
@@ -287,6 +299,7 @@ const App: React.FC = () => {
                 element={
                   <motion.div
                     key="hero-demo"
+                    className="h-full"
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 1.05 }}

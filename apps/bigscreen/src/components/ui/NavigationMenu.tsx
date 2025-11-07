@@ -114,10 +114,10 @@ const NavigationMenu: React.FC<NavigationMenuProps> = ({ className }) => {
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: (startIndex + index) * 0.1 }}
             className={cn(
-              'w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-all duration-200 group',
+              'w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-left transition-all duration-300 group',
               isActive
-                ? 'bg-primary/20 text-primary border border-primary/30'
-                : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                ? 'bg-gradient-to-r from-primary/15 to-primary/10 text-primary shadow-sm'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted/20'
             )}
           >
             <Icon className={cn(

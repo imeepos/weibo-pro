@@ -4,7 +4,6 @@ import tailwindcss from '@tailwindcss/vite'
 import path, { join, resolve } from 'path'
 import { homedir } from 'os'
 import { cpSync, existsSync, mkdirSync, rmSync } from 'fs'
-import { viteMockServe } from 'vite-plugin-mock'
 
 // https://vitejs.dev/config/
 export default defineConfig(({ command }) => {
@@ -32,12 +31,6 @@ export default defineConfig(({ command }) => {
         // React优化配置
       }),
       tailwindcss(),
-      viteMockServe({
-        mockPath: 'mock',
-        enable: process.env.VITE_ENABLE_MOCK === 'true', // 条件启用
-        watchFiles: true,
-        logger: true,
-      }),
       ...(isBuild ? [mirrorOutputPlugin] : []),
     ],
     resolve: {

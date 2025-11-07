@@ -229,7 +229,7 @@ export const ComponentSelector: React.FC<ComponentSelectorProps> = ({
     try {
       // 尝试渲染真实组件的缩略图版本
       return (
-        <div className="w-full h-20 bg-gray-50 rounded border overflow-hidden">
+        <div className="w-full h-20 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 overflow-hidden">
           <div className="transform scale-50 origin-top-left w-[200%] h-[200%] pointer-events-none">
             {renderComponent(component.id)}
           </div>
@@ -238,9 +238,9 @@ export const ComponentSelector: React.FC<ComponentSelectorProps> = ({
     } catch (error) {
       // 如果组件渲染失败，回退到原始预览
       return (
-        <div className="w-full h-20 bg-gray-50 rounded border flex items-center justify-center">
+        <div className="w-full h-20 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 flex items-center justify-center">
           {component.icon}
-          <span className="ml-2 text-xs text-gray-600">{component.name}</span>
+          <span className="ml-2 text-xs text-gray-600 dark:text-gray-400">{component.name}</span>
         </div>
       );
     }
@@ -254,7 +254,7 @@ export const ComponentSelector: React.FC<ComponentSelectorProps> = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+        className="fixed inset-0 bg-black/50 dark:bg-black/70 z-50 flex items-center justify-center p-4"
         onClick={onClose}
       >
         <motion.div
@@ -262,20 +262,20 @@ export const ComponentSelector: React.FC<ComponentSelectorProps> = ({
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
           className={twMerge(
-            'bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[80vh] overflow-hidden',
+            'glass-card w-full max-w-4xl max-h-[80vh] overflow-hidden',
             className
           )}
           onClick={(e) => e.stopPropagation()}
         >
           {/* 头部 */}
-          <div className="p-6 border-b border-gray-200">
+          <div className="p-6 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-xl font-semibold text-gray-800">选择组件</h2>
-                <p className="text-sm text-gray-600 mt-1">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">选择组件</h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                   为当前区域选择合适的可视化组件
                   {areaSize && (
-                    <span className="ml-2 text-blue-600">
+                    <span className="ml-2 text-primary">
                       (区域大小: {areaSize.w}×{areaSize.h})
                     </span>
                   )}
@@ -283,9 +283,9 @@ export const ComponentSelector: React.FC<ComponentSelectorProps> = ({
               </div>
               <button
                 onClick={onClose}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
               >
-                <X className="w-5 h-5 text-gray-500" />
+                <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
               </button>
             </div>
 
@@ -293,13 +293,13 @@ export const ComponentSelector: React.FC<ComponentSelectorProps> = ({
             <div className="space-y-3">
               {/* 搜索框 */}
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
                 <input
                   type="text"
                   placeholder="搜索组件..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-transparent transition-colors"
                 />
               </div>
 
@@ -310,8 +310,8 @@ export const ComponentSelector: React.FC<ComponentSelectorProps> = ({
                   className={twMerge(
                     'px-3 py-1 rounded-full text-sm font-medium transition-colors',
                     selectedCategory === 'all'
-                      ? 'bg-gray-800 text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                   )}
                 >
                   全部
@@ -324,7 +324,7 @@ export const ComponentSelector: React.FC<ComponentSelectorProps> = ({
                       'px-3 py-1 rounded-full text-sm font-medium transition-colors capitalize',
                       selectedCategory === category
                         ? categoryColors[category]
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                     )}
                   >
                     {category}
@@ -345,8 +345,8 @@ export const ComponentSelector: React.FC<ComponentSelectorProps> = ({
                   className={twMerge(
                     'border rounded-lg p-4 cursor-pointer transition-all duration-200',
                     selectedComponent === component.id
-                      ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
-                      : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                      ? 'border-primary bg-primary/5 dark:bg-primary/10 ring-2 ring-primary/20'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm'
                   )}
                   onClick={() => handleSelect(component)}
                 >
@@ -356,16 +356,16 @@ export const ComponentSelector: React.FC<ComponentSelectorProps> = ({
                   {/* 组件信息 */}
                   <div className="mt-3 space-y-2">
                     <div className="flex items-center justify-between">
-                      <h3 className="font-medium text-gray-800 flex items-center">
+                      <h3 className="font-medium text-gray-800 dark:text-gray-200 flex items-center">
                         {component.icon}
                         <span className="ml-2">{component.name}</span>
                       </h3>
                       {selectedComponent === component.id && (
-                        <Check className="w-4 h-4 text-blue-600" />
+                        <Check className="w-4 h-4 text-primary" />
                       )}
                     </div>
 
-                    <p className="text-sm text-gray-600 line-clamp-2">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
                       {component.description}
                     </p>
 
@@ -385,9 +385,9 @@ export const ComponentSelector: React.FC<ComponentSelectorProps> = ({
                     {/* 标签 */}
                     <div className="flex flex-wrap gap-1">
                       {component.tags.slice(0, 3).map(tag => (
-                        <span 
+                        <span
                           key={tag}
-                          className="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-xs"
+                          className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded text-xs"
                         >
                           {tag}
                         </span>
@@ -400,11 +400,11 @@ export const ComponentSelector: React.FC<ComponentSelectorProps> = ({
 
             {filteredComponents.length === 0 && (
               <div className="text-center py-8">
-                <div className="text-gray-400 mb-2">
+                <div className="text-gray-400 dark:text-gray-600 mb-2">
                   <Search className="w-8 h-8 mx-auto" />
                 </div>
-                <p className="text-gray-500">未找到匹配的组件</p>
-                <p className="text-sm text-gray-400 mt-1">
+                <p className="text-gray-500 dark:text-gray-400">未找到匹配的组件</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
                   尝试调整搜索条件或分类筛选
                 </p>
               </div>
@@ -412,15 +412,15 @@ export const ComponentSelector: React.FC<ComponentSelectorProps> = ({
           </div>
 
           {/* 底部操作 */}
-          <div className="p-6 border-t border-gray-200 bg-gray-50">
+          <div className="p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
             <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-gray-600 dark:text-gray-400">
                 找到 {filteredComponents.length} 个组件
               </div>
               <div className="flex space-x-3">
                 <button
                   onClick={onClose}
-                  className="px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
+                  className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
                 >
                   取消
                 </button>
@@ -435,7 +435,7 @@ export const ComponentSelector: React.FC<ComponentSelectorProps> = ({
                     }
                   }}
                   disabled={!selectedComponent}
-                  className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed rounded-lg transition-colors"
+                  className="px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed rounded-lg transition-colors"
                 >
                   确认选择
                 </button>

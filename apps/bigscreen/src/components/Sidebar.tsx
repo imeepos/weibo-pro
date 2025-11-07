@@ -31,18 +31,21 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
 
   return (
     <aside className={cn(
-      'glass-card border-r flex flex-col overflow-y-auto scrollbar-hide',
+      'glass-card-flat flex flex-col overflow-y-auto scrollbar-hide',
       className
     )}>
       {/* 导航菜单 */}
-      <div className="p-6 border-b">
+      <div className="p-6">
         <NavigationMenu />
       </div>
+
+      {/* 柔和分隔线 */}
+      <div className="mx-6 h-px bg-gradient-to-r from-transparent via-muted/20 to-transparent" />
 
       {/* 舆情态势总览 */}
       <div className="p-6 space-y-4 flex-1">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-foreground flex items-center">
+          <h2 className="text-xl font-semibold text-foreground flex items-center">
             <Eye className="w-5 h-5 mr-2" />
             舆情态势实时感知
           </h2>
@@ -67,7 +70,7 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
         </div>
 
         {/* 今日数据统计 */}
-        <div className="data-summary-card bg-muted/30 rounded-lg p-4 border border-border/50">
+        <div className="data-summary-card bg-muted/20 rounded-xl p-4 backdrop-blur-sm">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-medium text-muted-foreground flex items-center">
               <div className="w-2 h-2 bg-primary rounded-full mr-2"></div>
@@ -95,7 +98,7 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
         </div>
 
         {/* 情感分布 */}
-        <div className="data-summary-card bg-muted/30 rounded-lg p-4 border border-border/50">
+        <div className="data-summary-card bg-muted/20 rounded-xl p-4 backdrop-blur-sm">
           <div className="text-sm font-medium text-muted-foreground mb-3 flex items-center">
             <div className="w-2 h-2 bg-gradient-to-r from-sentiment-positive via-sentiment-neutral to-sentiment-negative rounded-full mr-2"></div>
             情感分布

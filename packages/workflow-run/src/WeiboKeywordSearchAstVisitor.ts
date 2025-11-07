@@ -7,7 +7,6 @@ import { WeiboAccountService } from "./weibo-account.service";
 import { useQueue } from "@sker/mq";
 import type { PostNLPTask } from "./post-nlp-agent.consumer";
 
-
 @Injectable()
 export class WeiboKeywordSearchAstVisitor {
     private queue = useQueue<PostNLPTask>('post_nlp_queue');

@@ -287,11 +287,11 @@ const EventDetail: React.FC = () => {
             <ArrowLeft className="w-6 h-6 text-foreground" />
           </button>
           <div>
-            <h1 className="dashboard-title text-foreground flex items-center">
+            <h1 className="text-2xl font-bold text-foreground flex items-center">
               <div className="w-1 h-10 bg-gradient-to-b from-primary via-primary to-primary/30 rounded-full mr-4"></div>
               事件详情分析
             </h1>
-            <p className="text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               深度分析事件发展轨迹和传播路径
             </p>
           </div>
@@ -328,7 +328,7 @@ const EventDetail: React.FC = () => {
             </div>
           </div>
           <div className="text-right">
-            <div className="text-5xl font-bold text-foreground mb-2">{eventData.hotness}</div>
+            <div className="text-3xl font-bold text-foreground mb-2">{eventData.hotness}</div>
             <div className="text-muted-foreground">热度指数</div>
           </div>
         </div>

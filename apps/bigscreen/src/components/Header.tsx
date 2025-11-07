@@ -80,39 +80,58 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
 
   return (
     <header className={cn(
-      'glass-card px-6 py-2 flex items-center justify-between border-b',
+      'relative isolate',
+      'glass-card-flat px-6 py-3 flex items-center justify-between',
+      'backdrop-blur-xl',
       className
     )}>
+      {/* 底部柔和分隔线 */}
+      <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-border/15 to-transparent" />
+
       {/* 左侧：标题和状态 */}
       <div className="flex items-center space-x-6">
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <Activity className="w-5 h-5 text-primary-foreground" />
+        <div className="flex items-center space-x-3 group">
+          {/* Logo 图标 - 添加渐变和光晕效果 */}
+          <div className="relative">
+            <div className="absolute inset-0 bg-primary/20 rounded-lg blur-md group-hover:blur-lg transition-all duration-300" />
+            <div className="relative w-10 h-10 bg-gradient-to-br from-primary via-primary to-primary/80 rounded-lg flex items-center justify-center shadow-lg shadow-primary/25 group-hover:shadow-primary/40 transition-all duration-300">
+              <Activity className="w-5 h-5 text-primary-foreground drop-shadow-sm" />
+            </div>
           </div>
+
+          {/* 标题文字 */}
           <div>
-            <h1 className="text-xl font-bold text-foreground">舆情监控大屏幕</h1>
-            <p className="text-sm text-muted-foreground">实时数据分析与展示</p>
+            <h1 className="text-2xl font-bold text-foreground">
+              舆情监控大屏幕
+            </h1>
+            <p className="text-xs text-muted-foreground tracking-wide">实时数据分析与展示</p>
           </div>
         </div>
 
-        {/* 数据源状态 */}
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-1">
+        {/* 数据源状态 - 清爽的状态指示器 */}
+        <div className="flex items-center space-x-4 pl-4">
+          <div className="flex items-center space-x-2 px-3 py-1.5 rounded-full bg-muted/20 backdrop-blur-sm">
             <div className={cn(
-              'w-2 h-2 rounded-full',
+              'w-2 h-2 rounded-full relative',
               systemStatus.dataSource?.weibo ? 'status-online' : 'status-offline'
-            )}></div>
-            <span className="text-xs text-muted-foreground">微博</span>
+            )}>
+              {systemStatus.dataSource?.weibo && (
+                <div className="absolute inset-0 rounded-full bg-success animate-ping opacity-75" />
+              )}
+            </div>
+            <span className="text-xs font-medium text-muted-foreground">微博数据源</span>
           </div>
         </div>
       </div>
 
-      {/* 中间：时间范围选择 */}
-      <div className="flex items-center space-x-3">
-        <span className="text-sm text-muted-foreground w-full">时间区间:</span>
+      {/* 中间：时间范围选择 - 清爽的玻璃态容器 */}
+      <div className="flex items-center space-x-3 px-4 py-2 rounded-xl bg-muted/10 backdrop-blur-sm">
+        <Clock className="w-4 h-4 text-primary/70" />
+        <span className="text-sm font-medium text-muted-foreground">时间区间</span>
+        <div className="w-px h-4 bg-muted/30" />
         <Select
-          className="min-w-[160px]"
-          triggerClassName="text-sm"
+          className="min-w-[140px]"
+          triggerClassName="text-sm font-medium"
           value={selectedTimeRange}
           onChange={(nextValue) => {
             if (isTimeRangeValue(nextValue)) {
@@ -127,91 +146,116 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
         />
       </div>
 
-      {/* 右侧：顶部右侧菜单 */}
-      <div className="flex items-center space-x-4">
-        {/* 当前时间 */}
-        <div className="flex items-center space-x-2">
-          <Clock className="w-4 h-4 text-muted-foreground" />
+      {/* 右侧：顶部右侧菜单 - 美化操作按钮组 */}
+      <div className="flex items-center space-x-3">
+        {/* 当前时间 - 清爽的玻璃态卡片 */}
+        <div className="flex items-center space-x-3 px-4 py-2 rounded-xl bg-muted/10 backdrop-blur-sm">
+          <div className="relative">
+            <Clock className="w-4 h-4 text-primary/70" />
+          </div>
           <div className="text-right">
-            <div className="text-sm font-mono text-foreground">
+            <div className="text-sm font-mono font-semibold text-foreground tabular-nums">
               {formatTime(currentTime)}
             </div>
             <div className="text-xs text-muted-foreground">
-              最后更新: {formatTime(systemStatus.lastUpdate)}
+              更新: {formatTime(systemStatus.lastUpdate)}
             </div>
           </div>
         </div>
 
         {/* 分隔线 */}
-        <div className="h-6 w-px bg-border"></div>
+        <div className="h-8 w-px bg-gradient-to-b from-transparent via-muted/30 to-transparent" />
 
-        {/* 主题切换 */}
+        {/* 主题切换 - 简洁悬停效果 */}
         <button
           onClick={toggleTheme}
-          className="p-2 rounded-lg hover:bg-accent transition-colors group"
+          className="relative p-2.5 rounded-xl hover:bg-muted/20 transition-all duration-300 group"
           title={isDark ? '切换到亮色主题' : '切换到暗黑主题'}
         >
           {isDark ? (
-            <Sun className="w-5 h-5 text-muted-foreground group-hover:text-warning transition-colors" />
+            <Sun className="w-5 h-5 text-muted-foreground group-hover:text-warning group-hover:rotate-45 transition-all duration-300" />
           ) : (
-            <Moon className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+            <Moon className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:-rotate-12 transition-all duration-300" />
           )}
         </button>
 
-        {/* 布局设置 */}
+        {/* 布局设置 - 简洁按钮 */}
         <div className="relative layout-menu">
           <button
             onClick={() => setIsLayoutMenuOpen(!isLayoutMenuOpen)}
-            className="flex items-center space-x-2 p-2 rounded-lg hover:bg-accent transition-colors group"
+            className="flex items-center space-x-2 px-3 py-2.5 rounded-xl hover:bg-muted/20 transition-all duration-300 group"
             title="布局设置"
           >
-            <Settings className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
-            <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+            <Settings className="w-5 h-5 text-muted-foreground group-hover:text-foreground group-hover:rotate-90 transition-all duration-300" />
+            <ChevronDown className={cn(
+              "w-4 h-4 text-muted-foreground group-hover:text-foreground transition-all duration-300",
+              isLayoutMenuOpen && "rotate-180"
+            )} />
           </button>
           
-          {/* 布局选择下拉菜单 */}
+          {/* 布局选择下拉菜单 - 清爽弹出框 */}
           {isLayoutMenuOpen && (
-            <div className="absolute right-0 mt-2 w-64 bg-card border border-border rounded-lg shadow-lg z-50">
-              <div className="p-4">
-                <h3 className="font-medium text-foreground mb-3">选择布局</h3>
+            <div className="absolute right-0 mt-3 w-72 glass-card rounded-xl shadow-xl z-50 overflow-hidden">
+              {/* 顶部轻微渐变 */}
+              <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-primary/3 to-transparent pointer-events-none" />
+
+              <div className="relative p-5">
+                <h3 className="font-semibold text-foreground mb-4 flex items-center">
+                  <Layout className="w-4 h-4 mr-2 text-primary" />
+                  选择布局方案
+                </h3>
                 <div className="space-y-2">
-                  {savedLayouts.map((layout) => (
+                  {savedLayouts.map((layout, index) => (
                     <button
                       key={layout.id}
                       onClick={() => {
                         setCurrentLayout(layout);
                         setIsLayoutMenuOpen(false);
                       }}
+                      style={{ animationDelay: `${index * 50}ms` }}
                       className={cn(
-                        'w-full text-left p-3 rounded-lg transition-colors',
+                        'w-full text-left p-3.5 rounded-xl transition-all duration-300 group relative overflow-hidden',
                         currentLayout?.id === layout.id
-                          ? 'bg-primary text-primary-foreground'
-                          : 'hover:bg-accent text-foreground'
+                          ? 'bg-gradient-to-br from-primary to-primary/90 text-primary-foreground shadow-lg shadow-primary/20'
+                          : 'hover:bg-muted/30 text-foreground'
                       )}
                     >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="font-medium">{layout.name}</div>
+                      {/* 活动状态渐变装饰 */}
+                      {currentLayout?.id === layout.id && (
+                        <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-events-none" />
+                      )}
+
+                      <div className="relative flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="font-medium flex items-center">
+                            {layout.name}
+                            {currentLayout?.id === layout.id && (
+                              <div className="ml-2 w-1.5 h-1.5 bg-current rounded-full animate-pulse" />
+                            )}
+                          </div>
                           {layout.description && (
-                            <div className="text-sm opacity-70">{layout.description}</div>
+                            <div className="text-xs opacity-70 mt-0.5">{layout.description}</div>
                           )}
                         </div>
-                        <Layout className="w-4 h-4" />
+                        <Layout className={cn(
+                          "w-4 h-4 transition-all duration-300",
+                          currentLayout?.id === layout.id ? "" : "group-hover:scale-110 group-hover:rotate-12"
+                        )} />
                       </div>
                     </button>
                   ))}
                 </div>
                 
-                <div className="border-t mt-3 pt-3">
+                <div className="mt-4 pt-4">
                   <button
                     onClick={() => {
                       toggleEditMode();
                       setIsLayoutMenuOpen(false);
                     }}
-                    className="w-full flex items-center justify-center space-x-2 p-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors"
+                    className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30 rounded-xl transition-all duration-300 group"
                   >
-                    <Settings className="w-4 h-4" />
-                    <span>{isEditMode ? '退出编辑' : '编辑布局'}</span>
+                    <Settings className="w-4 h-4 group-hover:rotate-90 transition-transform duration-300" />
+                    <span>{isEditMode ? '退出编辑模式' : '进入编辑模式'}</span>
                   </button>
                 </div>
               </div>
@@ -219,23 +263,28 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
           )}
         </div>
 
-        {/* 当前用户 */}
-        <div className="flex items-center space-x-2 px-3 py-2 bg-muted rounded-lg hover:bg-accent transition-colors cursor-pointer">
-          <User className="w-4 h-4 text-muted-foreground" />
-          <span className="text-sm text-foreground">管理员</span>
+        {/* 当前用户 - 清爽用户信息 */}
+        <div className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-muted/10 hover:bg-muted/20 backdrop-blur-sm transition-all duration-300 cursor-pointer group">
+          <div className="relative">
+            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-sm">
+              <User className="w-3.5 h-3.5 text-primary-foreground" />
+            </div>
+            <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-success rounded-full" />
+          </div>
+          <span className="text-sm font-medium text-foreground">管理员</span>
         </div>
 
-        {/* 全屏按钮 */}
+        {/* 全屏按钮 - 简洁全屏控制 */}
         {isSupported && (
           <button
             onClick={() => toggleFullscreen()}
-            className="p-2 rounded-lg hover:bg-accent transition-colors group"
-            title={isFullscreen ? '退出全屏' : '进入全屏'}
+            className="p-2.5 rounded-xl hover:bg-muted/20 transition-all duration-300 group"
+            title={isFullscreen ? '退出全屏 (F11)' : '进入全屏 (F11)'}
           >
             {isFullscreen ? (
-              <Minimize className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+              <Minimize className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-all duration-300" />
             ) : (
-              <Maximize className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+              <Maximize className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-all duration-300" />
             )}
           </button>
         )}

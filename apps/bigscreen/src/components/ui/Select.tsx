@@ -46,6 +46,7 @@ export const Select: React.FC<SelectProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const listboxId = useId();
+  const shouldScrollRef = useRef(false);
 
   const selectedOption = useMemo(
     () => options.find(option => option.value === value) ?? null,
@@ -68,7 +69,7 @@ export const Select: React.FC<SelectProps> = ({
   }, [isOpen]);
 
   useEffect(() => {
-    if (!isOpen || highlightedIndex < 0) {
+    if (!isOpen || highlightedIndex < 0 || !shouldScrollRef.current) {
       return;
     }
 
@@ -92,6 +93,8 @@ export const Select: React.FC<SelectProps> = ({
     } else if (itemBottom > viewBottom) {
       list.scrollTop = itemBottom - list.clientHeight;
     }
+
+    shouldScrollRef.current = false;
   }, [highlightedIndex, isOpen]);
 
   useEffect(() => {
@@ -137,6 +140,7 @@ export const Select: React.FC<SelectProps> = ({
       return;
     }
 
+    shouldScrollRef.current = true;
     setHighlightedIndex(current => {
       const fallback = direction === 1 ? 0 : options.length - 1;
       if (current < 0 || current >= options.length) {
@@ -166,6 +170,7 @@ export const Select: React.FC<SelectProps> = ({
       case 'ArrowDown':
         event.preventDefault();
         if (!isOpen) {
+          shouldScrollRef.current = true;
           setIsOpen(true);
           setHighlightedIndex(prev => {
             if (prev >= 0 && prev < options.length) {
@@ -180,6 +185,7 @@ export const Select: React.FC<SelectProps> = ({
       case 'ArrowUp':
         event.preventDefault();
         if (!isOpen) {
+          shouldScrollRef.current = true;
           setIsOpen(true);
           setHighlightedIndex(prev => {
             if (prev >= 0 && prev < options.length) {
@@ -195,6 +201,7 @@ export const Select: React.FC<SelectProps> = ({
       case ' ': {
         if (!isOpen) {
           event.preventDefault();
+          shouldScrollRef.current = true;
           setIsOpen(true);
           setHighlightedIndex(prev => {
             if (prev >= 0 && prev < options.length) {

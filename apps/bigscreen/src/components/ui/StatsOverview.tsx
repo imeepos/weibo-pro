@@ -11,7 +11,7 @@ interface StatsData {
 }
 
 interface StatsOverviewProps {
-  data: StatsData;
+  data: StatsData | null;
   loading?: boolean;
   className?: string;
 }
@@ -21,6 +21,15 @@ const StatsOverview: React.FC<StatsOverviewProps> = ({
   loading = false,
   className = ''
 }) => {
+  // 数据为空时的默认值
+  const defaultData: StatsData = {
+    events: { value: 0, change: 0 },
+    posts: { value: 0, change: 0 },
+    users: { value: 0, change: 0 },
+    interactions: { value: 0, change: 0 }
+  };
+
+  const statsData = data || defaultData;
   const formatValue = (value: number): number => {
     if (value >= 1000) {
       return Math.round(value / 100) / 10; // 转换为 K 单位，保留一位小数
@@ -40,7 +49,7 @@ const StatsOverview: React.FC<StatsOverviewProps> = ({
 
 
   return (
-    <div className={`grid grid-cols-2 grid-rows-2 h-full w-full gap-2 ${className}`}>
+    <div className={`grid grid-cols-2 gap-2 w-full ${className}`}>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -48,15 +57,15 @@ const StatsOverview: React.FC<StatsOverviewProps> = ({
       >
         <MetricCard
           title="事件数"
-          value={formatValue(data.events.value)}
-          change={data.events.change}
+          value={formatValue(statsData.events.value)}
+          change={statsData.events.change}
           icon="FileText"
           color="blue"
           loading={loading}
           size="tiny"
           showChart={true}
           chartComponent={<MiniTrendChart data={eventTrendData} color="#3b82f6" type="line" height={20} />}
-          className="relative h-full"
+          className="relative"
         />
       </motion.div>
 
@@ -67,15 +76,15 @@ const StatsOverview: React.FC<StatsOverviewProps> = ({
       >
         <MetricCard
           title="贴子数"
-          value={formatValue(data.posts.value)}
-          change={data.posts.change}
+          value={formatValue(statsData.posts.value)}
+          change={statsData.posts.change}
           icon="MessageCircle"
           color="green"
           loading={loading}
           size="tiny"
           showChart={true}
           chartComponent={<MiniTrendChart data={postTrendData} color="#10b981" type="line" height={20} />}
-          className="relative h-full"
+          className="relative"
         />
       </motion.div>
 
@@ -86,15 +95,15 @@ const StatsOverview: React.FC<StatsOverviewProps> = ({
       >
         <MetricCard
           title="用户数量"
-          value={data.users.value}
-          change={data.users.change}
+          value={statsData.users.value}
+          change={statsData.users.change}
           icon="Users"
           color="purple"
           loading={loading}
           size="tiny"
           showChart={true}
           chartComponent={<MiniTrendChart data={userTrendData} color="#8b5cf6" type="line" height={20} />}
-          className="relative h-full"
+          className="relative"
         />
       </motion.div>
 
@@ -105,15 +114,15 @@ const StatsOverview: React.FC<StatsOverviewProps> = ({
       >
         <MetricCard
           title="互动数"
-          value={formatValue(data.interactions.value)}
-          change={data.interactions.change}
+          value={formatValue(statsData.interactions.value)}
+          change={statsData.interactions.change}
           icon="ThumbsUp"
           color="red"
           loading={loading}
           size="tiny"
           showChart={true}
           chartComponent={<MiniTrendChart data={interactionTrendData} color="#ef4444" type="line" height={20} />}
-          className="relative h-full"
+          className="relative"
         />
       </motion.div>
     </div>

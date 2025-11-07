@@ -15,6 +15,22 @@ export interface TriggerNLPRequest {
   postId: string;
 }
 
+/** 爬取帖子请求 */
+export interface CrawlPostRequest {
+  postId: string;
+}
+
+/** 爬取帖子响应数据 */
+export interface CrawlPostData {
+  postId: string;
+  mid: string;
+  uid: string;
+  commentsCount: number;
+  repostsCount: number;
+  commentsCrawled: boolean;
+  repostsCrawled: boolean;
+}
+
 /** 批量触发 NLP 分析请求 */
 export interface BatchNLPRequest {
   postIds: string[];
@@ -48,6 +64,27 @@ export interface WorkflowApiResponse<T = any> {
 
 export class WorkflowAPI {
   private static readonly BASE_PATH = '/api/workflow';
+
+  /**
+   * 爬取单个帖子的详情（包括评论和转发）
+   * @param request 包含 postId 的请求对象
+   */
+  static async crawlPost(request: CrawlPostRequest): Promise<WorkflowApiResponse<CrawlPostData>> {
+    logger.info('Crawling post details', request);
+
+    try {
+      const response = await apiUtils.post<WorkflowApiResponse<CrawlPostData>>(
+        `${this.BASE_PATH}/crawl-post`,
+        request
+      );
+
+      logger.info('Post crawled successfully', response.data);
+      return response.data;
+    } catch (error) {
+      logger.error('Failed to crawl post', error);
+      throw error;
+    }
+  }
 
   /**
    * 触发单个帖子的 NLP 分析
@@ -125,10 +162,10 @@ export class WorkflowAPI {
         `${this.BASE_PATH}/status`
       );
 
-      const statusData = response.data.data || {
-        nlpQueue: 'inactive',
-        workflowEngine: 'stopped',
-      } as WorkflowStatusResponse;
+      const statusData = response?.data?.data || {
+        nlpQueue: 'inactive' as const,
+        workflowEngine: 'stopped' as const,
+      };
 
       logger.info('Workflow status fetched', statusData);
       return statusData;
