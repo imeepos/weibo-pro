@@ -30,7 +30,7 @@ export const MQ_QUEUE_CONFIG = new InjectionToken<MqQueueConfig[]>('MQ_QUEUE_CON
  */
 export function getMqQueueConfigs(): MqQueueConfig[] {
     try {
-        return root.get(MQ_QUEUE_CONFIG);
+        return root.get(MQ_QUEUE_CONFIG, []);
     } catch {
         // 容器中未注册，返回空数组
         return [];

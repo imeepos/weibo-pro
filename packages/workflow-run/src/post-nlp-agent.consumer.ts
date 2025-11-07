@@ -1,6 +1,6 @@
 import { mergeMap, retry, tap } from 'rxjs';
 import { root } from '@sker/core';
-import { execute } from '@sker/workflow';
+import { execute, createWorkflowGraphAst } from '@sker/workflow';
 import { useQueue } from '@sker/mq';
 import {
   PostContextCollectorAst,
@@ -43,7 +43,8 @@ export function startPostNLPConsumer() {
           const analyzerAst = new PostNLPAnalyzerAst();
           const creatorAst = new EventAutoCreatorAst();
 
-          const workflow = {
+          const workflow = createWorkflowGraphAst({
+            name: 'PostNLPWorkflow',
             nodes: [collectorAst, analyzerAst, creatorAst],
             edges: [
               {
@@ -77,19 +78,33 @@ export function startPostNLPConsumer() {
                 toProperty: 'post',
               },
             ],
-          };
+          });
 
-          const result = await execute(workflow as any, {});
+          const result = await execute(workflow, {});
 
-          if (creatorAst.state === 'success') {
+          // 从执行结果中获取更新后的节点状态
+          const executedCollector = result.nodes.find((n: any) => n.id === collectorAst.id);
+          const executedAnalyzer = result.nodes.find((n: any) => n.id === analyzerAst.id);
+          const executedCreator = result.nodes.find((n: any) => n.id === creatorAst.id);
+
+          console.log(`[PostNLPAgent] 工作流执行完成，检查状态:`);
+          console.log(`  - PostContextCollector: ${executedCollector?.state}`, executedCollector?.error?.message || '');
+          console.log(`  - PostNLPAnalyzer: ${executedAnalyzer?.state}`, executedAnalyzer?.error?.message || '');
+          console.log(`  - EventAutoCreator: ${executedCreator?.state}`, executedCreator?.error?.message || '');
+
+          if (executedCreator?.state === 'success') {
             console.log(
-              `[PostNLPAgent] 处理成功: postId=${postId}, eventId=${creatorAst.event.id}, nlpResultId=${creatorAst.nlpResultId}`
+              `[PostNLPAgent] 处理成功: postId=${postId}, eventId=${executedCreator.event.id}, nlpResultId=${executedCreator.nlpResultId}`
             );
             envelope.ack();
           } else {
             console.error(
               `[PostNLPAgent] 处理失败: postId=${postId}`,
-              creatorAst.error
+              {
+                collectorError: executedCollector?.error,
+                analyzerError: executedAnalyzer?.error,
+                creatorError: executedCreator?.error,
+              }
             );
             envelope.nack(false);
           }

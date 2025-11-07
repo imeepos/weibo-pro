@@ -18,7 +18,7 @@ export class PostNLPAnalyzerVisitor {
     ast.state = 'running';
 
     try {
-      const { availableCategories, availableTags } = await useEntityManager(async (m) => {
+      const { availableCategories, availableTags, recentEvents } = await useEntityManager(async (m) => {
         const categories = await m.find(EventCategoryEntity, {
           where: { status: 'active' },
           order: { sort: 'ASC' },
@@ -31,9 +31,27 @@ export class PostNLPAnalyzerVisitor {
           LIMIT 200
         `);
 
+        // 查询最近30天内的活跃事件，按热度和时间排序
+        const events = await m.query(`
+          SELECT
+            e.title,
+            e.description,
+            e.hotness,
+            e.occurred_at
+          FROM events e
+          WHERE e.status = 'active'
+            AND e.occurred_at >= NOW() - INTERVAL '30 days'
+          ORDER BY e.hotness DESC, e.occurred_at DESC
+          LIMIT 100
+        `);
+
         return {
           availableCategories: categories.map((c) => c.name),
           availableTags: tags.map((t: any) => t.name),
+          recentEvents: events.map((e: any) => ({
+            title: e.title,
+            description: e.description,
+          })),
         };
       });
 
@@ -50,10 +68,21 @@ export class PostNLPAnalyzerVisitor {
         reposts: ast.reposts.map((r) => r.text),
       };
 
+      console.log(`[PostNLPAnalyzer] postId=${ast.post.id}, 内容统计:`, {
+        postLength: context.content?.length || 0,
+        commentsCount: context.comments.length,
+        commentsChars: context.comments.join('').length,
+        subCommentsCount: context.subComments.length,
+        subCommentsChars: context.subComments.join('').length,
+        repostsCount: context.reposts.length,
+        repostsChars: context.reposts.join('').length,
+      });
+
       ast.nlpResult = await this.analyzer.analyze(
         context,
         availableCategories,
-        availableTags
+        availableTags,
+        recentEvents
       );
       ast.state = 'success';
     } catch (error) {

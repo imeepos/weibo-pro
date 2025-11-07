@@ -152,13 +152,23 @@ function createApiClient(): AxiosInstance {
 // 导出API客户端实例
 export const apiClient = createApiClient();
 
+// 解包多层嵌套的data结构
+function unwrapNestedData<T>(data: any): T {
+  // 如果data本身有success和data属性,继续解包
+  while (data && typeof data === 'object' && 'success' in data && 'data' in data) {
+    data = data.data;
+  }
+  return data as T;
+}
+
 // 请求工具函数
 export const apiUtils = {
   // GET请求
   async get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
     try {
       const response = await apiClient.get<ApiResponse<T>>(url, config);
-      return response.data.data;
+      // 解包可能的多层嵌套
+      return unwrapNestedData<T>(response.data.data);
     } catch (error) {
       throw error;
     }

@@ -45,8 +45,6 @@ export class WorkflowController {
       // 优雅地推送任务到消息队列
       this.nlpQueue.producer.next({ postId });
 
-      console.log(`[WorkflowController] NLP分析任务已触发: postId=${postId}`);
-
       return {
         success: true,
         message: 'NLP分析任务已成功触发',
@@ -197,8 +195,6 @@ export class WorkflowController {
         this.nlpQueue.producer.next({ postId });
         return { postId, status: 'queued' };
       });
-
-      console.log(`[WorkflowController] 批量NLP分析任务已触发: count=${postIds.length}`);
 
       return {
         success: true,

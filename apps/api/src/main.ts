@@ -6,6 +6,7 @@ import { AppModule } from './app.module';
 import { root } from '@sker/core';
 import { entitiesProviders } from "@sker/entities";
 import { startPostNLPConsumer } from "@sker/workflow-run";
+import { ResponseInterceptor } from './interceptors/response.interceptor';
 
 async function bootstrap() {
     config();
@@ -16,10 +17,13 @@ async function bootstrap() {
 
     // 优雅地启动爬虫工作流消费者
     console.log('🚀 启动爬虫工作流消费者...');
-    const nlpConsumer = startPostNLPConsumer();
+    startPostNLPConsumer();
     console.log('✅ 爬虫工作流消费者已启动');
 
     const app = await NestFactory.create(AppModule);
+
+    // 全局响应拦截器：统一 API 响应格式
+    app.useGlobalInterceptors(new ResponseInterceptor());
 
     // 跨域配置：优雅而必要的安全边界
     app.enableCors({
@@ -35,6 +39,7 @@ async function bootstrap() {
             'Content-Type',
             'Authorization',
             'X-Requested-With',
+            'X-Request-ID',
             'Accept',
             'Origin'
         ],

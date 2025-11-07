@@ -91,7 +91,25 @@ export const CACHE_KEYS = {
     HOT_KEYWORDS: 'keywords:hot',
     TREND_DATA: 'overview:trend',
     EVENT_DETAIL: 'events:detail',
-    SENTIMENT_DATA: 'sentiment:data'
+    SENTIMENT_DATA: 'sentiment:data',
+    SENTIMENT_STATS: 'sentiment:stats',
+    SENTIMENT_REALTIME: 'sentiment:realtime',
+    SENTIMENT_KEYWORDS: 'sentiment:keywords',
+    SENTIMENT_HOT_TOPICS: 'sentiment:hot-topics',
+    SENTIMENT_TIME_SERIES: 'sentiment:time-series',
+    SENTIMENT_LOCATIONS: 'sentiment:locations',
+    SENTIMENT_RECENT_POSTS: 'sentiment:recent-posts',
+    SENTIMENT_SEARCH: 'sentiment:search',
+    CHART_AGE: 'chart:age',
+    CHART_GENDER: 'chart:gender',
+    CHART_SENTIMENT_TREND: 'chart:sentiment-trend',
+    CHART_GEOGRAPHIC: 'chart:geographic',
+    CHART_EVENT_TYPES: 'chart:event-types',
+    CHART_WORDCLOUD: 'chart:wordcloud',
+    CHART_EVENT_COUNT: 'chart:event-count',
+    CHART_POST_COUNT: 'chart:post-count',
+    CHART_SENTIMENT_DATA: 'chart:sentiment-data',
+    CHART_BATCH: 'chart:batch'
 } as const;
 
 /**

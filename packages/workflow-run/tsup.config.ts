@@ -6,7 +6,7 @@ export default defineConfig({
   dts: {
     resolve: true,
   },
-  clean: true,
+  clean: false,
   splitting: false,
   sourcemap: true,
   target: 'node18',

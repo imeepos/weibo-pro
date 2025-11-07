@@ -44,14 +44,24 @@ const EventAnalysis: React.FC = () => {
           EventsAPI.getCategories(),
           EventsAPI.getTrendData()
         ]);
-        
-        setEvents(eventsResult || []);
+
+        // 确保数据为数组
+        const eventsArray = Array.isArray(eventsResult) ? eventsResult : [];
+        const categoriesArray = Array.isArray(categoriesResult) ? categoriesResult : [];
+
+        setEvents(eventsArray);
+
         // 转换 EventCategory[] 为 string[]
-        const categoryNames = ['all', ...(categoriesResult || []).map(cat => cat.name)];
+        const categoryNames = ['all', ...categoriesArray.map(cat => cat.name)];
         setCategories(categoryNames);
-        setTrendData(trendsResult || null);
+
+        setTrendData(trendsResult);
       } catch (error) {
         logger.error('Failed to load events data:', error);
+        // 设置默认值以防止UI崩溃
+        setEvents([]);
+        setCategories(['all']);
+        setTrendData(null);
       } finally {
         setLoading(false);
       }
@@ -60,12 +70,12 @@ const EventAnalysis: React.FC = () => {
     loadData();
   }, []);
 
-  const filteredEvents = (events || []).filter(event => {
+  const filteredEvents = Array.isArray(events) ? events.filter(event => {
     const matchesSearch = event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          event.keywords.some(keyword => keyword.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesCategory = selectedCategory === 'all' || event.category === selectedCategory;
     return matchesSearch && matchesCategory;
-  });
+  }) : [];
 
   const getSentimentColor = (sentiment: EventItem['sentiment']) => {
     if (sentiment.positive > sentiment.negative && sentiment.positive > sentiment.neutral) {

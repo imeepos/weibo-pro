@@ -14,15 +14,17 @@ export class NLPAnalyzer {
    * @param context 帖子上下文
    * @param availableCategories 可选，可用的事件类别列表
    * @param availableTags 可选，可用的标签列表
+   * @param recentEvents 可选，最近的事件列表（用于去重）
    */
   async analyze(
     context: PostContext,
     availableCategories?: string[],
-    availableTags?: string[]
+    availableTags?: string[],
+    recentEvents?: Array<{ title: string; description?: string }>
   ): Promise<CompleteAnalysisResult> {
     try {
       const mergedText = this.buildContext(context);
-      const prompt = this.buildPrompt(mergedText, availableCategories, availableTags);
+      const prompt = this.buildPrompt(mergedText, availableCategories, availableTags, recentEvents);
       const client = useOpenAi();
 
       console.log('开始 NLP 分析，文本长度:', mergedText.length);
@@ -87,7 +89,8 @@ export class NLPAnalyzer {
   private buildPrompt(
     text: string,
     availableCategories?: string[],
-    availableTags?: string[]
+    availableTags?: string[],
+    recentEvents?: Array<{ title: string; description?: string }>
   ): string {
     const categoriesHint = availableCategories?.length
       ? availableCategories.join('|')
@@ -97,7 +100,22 @@ export class NLPAnalyzer {
       ? `已有标签：${availableTags.join('、')}`
       : '可自由创建新标签';
 
+    // 构建最近事件的提示
+    const recentEventsHint = recentEvents?.length
+      ? `\n**重要：已有事件列表（最近30天）**
+请仔细检查以下已有事件，如果当前内容与某个事件描述的是同一件事，**必须使用相同或高度相似的标题**，避免创建重复事件：
+
+${recentEvents.slice(0, 50).map((e, i) => `${i + 1}. ${e.title}${e.description ? `\n   简介：${e.description}` : ''}`).join('\n')}
+
+**去重规则：**
+- 如果当前内容与已有事件属于同一事件（相同的人物、地点、主题），请使用已有事件的标题或稍作调整
+- 示例：如果已有"杨幂成为享界S9T品牌大使"，新内容讨论杨幂的代言活动，应使用相同标题
+- 只有在确实是完全不同的事件时，才创建新标题
+`
+      : '';
+
     return `你是一个社交媒体舆情分析专家。请分析以下微博帖子及其互动内容，返回 JSON 格式的完整分析结果。
+${recentEventsHint}
 
 要求：
 1. **情感分析**：综合帖子和所有互动内容，判断整体情感倾向

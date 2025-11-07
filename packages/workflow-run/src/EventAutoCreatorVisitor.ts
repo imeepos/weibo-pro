@@ -16,6 +16,34 @@ import type { EntityManager, SentimentScore } from '@sker/entities';
 @Injectable()
 export class EventAutoCreatorVisitor {
   /**
+   * 生成分类 code
+   * 基于分类名称生成唯一标识符
+   * 策略：拼音首字母 + 时间戳后4位，确保唯一性
+   */
+  private generateCategoryCode(name: string): string {
+    // 简单的中文字符映射到拼音首字母（常见分类）
+    const pinyinMap: Record<string, string> = {
+      '政治': 'zz',
+      '经济': 'jj',
+      '社会': 'sh',
+      '科技': 'kj',
+      '文化': 'wh',
+      '体育': 'ty',
+      '娱乐': 'yl',
+      '教育': 'jy',
+      '医疗': 'yl',
+      '环境': 'hj',
+      '军事': 'js',
+      '国际': 'gj',
+      '文体娱乐': 'wtyl',
+    };
+
+    const base = pinyinMap[name] || name.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const timestamp = Date.now().toString().slice(-4);
+    return `${base}_${timestamp}`;
+  }
+
+  /**
    * 更新事件统计信息（快照增量法）
    *
    * 核心思路：
@@ -180,24 +208,27 @@ export class EventAutoCreatorVisitor {
           where: { name: ast.nlpResult.event.type, status: 'active' },
         });
 
-        if (!category && ast.nlpResult.event.isNewCategory) {
+        // 宽容式处理：如果分类不存在，自动创建（即使 isNewCategory 为 false）
+        // 这样可以容忍 LLM 的误判或数据库状态不一致
+        if (!category) {
           const maxSort = await m
             .createQueryBuilder(EventCategoryEntity, 'c')
             .select('MAX(c.sort)', 'max')
             .getRawOne();
 
+          const code = this.generateCategoryCode(ast.nlpResult.event.type);
+
           category = m.create(EventCategoryEntity, {
+            code,
             name: ast.nlpResult.event.type,
             description: `由 NLP 自动创建的分类`,
             status: 'active',
             sort: (maxSort?.max || 0) + 1,
           });
           category = await m.save(EventCategoryEntity, category);
-          console.log(`[EventAutoCreatorVisitor] 创建新分类: ${category.name}`);
-        }
-
-        if (!category) {
-          throw new Error(`Category not found: ${ast.nlpResult.event.type}`);
+          console.log(
+            `[EventAutoCreatorVisitor] 自动创建分类: ${category.name} (code=${code}, isNewCategory=${ast.nlpResult.event.isNewCategory})`
+          );
         }
 
         const sentiment: SentimentScore = {
