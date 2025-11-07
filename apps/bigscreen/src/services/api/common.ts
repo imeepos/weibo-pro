@@ -43,42 +43,123 @@ export interface PostCountHistoryData {
 export class CommonAPI {
   // 获取日期序列数据
   static async getDateSeries(days: number = 7): Promise<DateSeriesData[]> {
-    const response = await apiClient.get<ApiResponse<DateSeriesData[]>>(
-      `/api/common/date-series?days=${days}`
-    );
-    return response.data;
+    try {
+      // 调用 charts 接口的 event-count-series
+      const response = await apiClient.get<{
+        categories: string[];
+        series: Array<{ name: string; data: number[] }>;
+      }>('/api/charts/event-count-series', {
+        params: { timeRange: days > 7 ? 'month' : 'week' }
+      });
+
+      const chartData = response.data;
+      if (chartData.categories && chartData.series?.[0]?.data) {
+        return chartData.categories.map((date, index) => ({
+          date,
+          count: chartData.series[0].data[index] || 0
+        }));
+      }
+      return [];
+    } catch (error) {
+      console.error('获取日期序列数据失败:', error);
+      return [];
+    }
   }
 
   // 获取情感曲线数据
   static async getEmotionCurve(points: number = 7): Promise<EmotionCurveData> {
-    const response = await apiClient.get<ApiResponse<EmotionCurveData>>(
-      `/api/common/emotion-curve?points=${points}`
-    );
-    return response.data;
+    try {
+      // 调用 charts 接口的 sentiment-trend，该接口提供相同的功能
+      const response = await apiClient.get<{
+        categories: string[];
+        series: Array<{ name: string; data: number[] }>;
+      }>(
+        '/api/charts/sentiment-trend',
+        {
+          params: {
+            timeRange: points > 7 ? 'month' : 'week'
+          }
+        }
+      );
+
+      // 将后端的 ChartData 格式转换为前端期望的 EmotionCurveData 格式
+      const chartData = response.data;
+      const positiveIndex = chartData.series.findIndex(s => s.name === '正面');
+      const negativeIndex = chartData.series.findIndex(s => s.name === '负面');
+      const neutralIndex = chartData.series.findIndex(s => s.name === '中性');
+
+      return {
+        hours: chartData.categories || [],
+        positiveData: positiveIndex >= 0 ? chartData.series[positiveIndex].data : [],
+        negativeData: negativeIndex >= 0 ? chartData.series[negativeIndex].data : [],
+        neutralData: neutralIndex >= 0 ? chartData.series[neutralIndex].data : []
+      };
+    } catch (error) {
+      console.error('获取情感曲线数据失败:', error);
+      // 返回默认空数据
+      return {
+        hours: [],
+        positiveData: [],
+        negativeData: [],
+        neutralData: []
+      };
+    }
   }
 
   // 获取情感饼图数据
   static async getSentimentPie(): Promise<SentimentPieData[]> {
-    const response = await apiClient.get<ApiResponse<SentimentPieData[]>>(
-      '/api/common/sentiment-pie'
-    );
-    return response.data;
+    try {
+      // 调用 sentiment 接口获取情感统计数据
+      const response = await apiClient.get<{
+        positive: number;
+        negative: number;
+        neutral: number;
+        total: number;
+      }>('/api/charts/sentiment-data');
+
+      const sentimentData = response.data;
+      return [
+        { name: '正面', value: sentimentData.positive, color: '#10b981' },
+        { name: '负面', value: sentimentData.negative, color: '#ef4444' },
+        { name: '中性', value: sentimentData.neutral, color: '#6b7280' }
+      ];
+    } catch (error) {
+      console.error('获取情感饼图数据失败:', error);
+      return [];
+    }
   }
 
   // 获取事件类型统计
   static async getEventTypes(): Promise<EventTypeData[]> {
     const response = await apiClient.get<ApiResponse<EventTypeData[]>>(
-      '/api/common/event-types'
+      '/api/charts/event-types'
     );
     return response.data;
   }
 
   // 获取帖子数量历史数据
   static async getPostCountHistory(days: number = 7): Promise<PostCountHistoryData[]> {
-    const response = await apiClient.get<ApiResponse<PostCountHistoryData[]>>(
-      `/api/common/post-count-history?days=${days}`
-    );
-    return response.data;
+    try {
+      // 调用 charts 接口的 post-count-series
+      const response = await apiClient.get<{
+        categories: string[];
+        series: Array<{ name: string; data: number[] }>;
+      }>('/api/charts/post-count-series', {
+        params: { timeRange: days > 7 ? 'month' : 'week' }
+      });
+
+      const chartData = response.data;
+      if (chartData.categories && chartData.series?.[0]?.data) {
+        return chartData.categories.map((date, index) => ({
+          date,
+          count: chartData.series[0].data[index] || 0
+        }));
+      }
+      return [];
+    } catch (error) {
+      console.error('获取帖子数量历史数据失败:', error);
+      return [];
+    }
   }
 }
 

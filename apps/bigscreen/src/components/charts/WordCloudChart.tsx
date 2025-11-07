@@ -41,7 +41,7 @@ const WordCloudChart: React.FC<WordCloudChartProps> = ({
     }
     
     // 处理数据，限制词数量并按权重排序
-    const processedData = data.slice(0, maxWords).map((item) => ({
+    const processedData = (data || []).slice(0, maxWords).map((item) => ({
       name: item.keyword,
       value: item.weight,
       textStyle: {

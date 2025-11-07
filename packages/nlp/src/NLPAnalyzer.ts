@@ -30,7 +30,7 @@ export class NLPAnalyzer {
       console.log('开始 NLP 分析，文本长度:', mergedText.length);
 
       const response = await client.chat.completions.create({
-        model: 'deepseek-ai/DeepSeek-V3',
+        model: 'deepseek-ai/DeepSeek-V3.2-Exp',
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.2,
         response_format: { type: 'json_object' },

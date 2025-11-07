@@ -255,18 +255,11 @@ export class OverviewService {
   }
 
   private async fetchLocationData(manager: any, start: Date, end: Date) {
-    // 从 WeiboPostEntity 和 WeiboUserEntity 聚合地域数据
-    // 优先使用 post.region_name，其次使用 user.city 和 user.province
+    // 从 WeiboPostEntity 聚合地域数据
+    // 使用 post.region_name 字段
     const locationData = await manager
       .createQueryBuilder()
-      .select([
-        `COALESCE(
-          NULLIF(post.region_name, ''),
-          NULLIF(jsonb_extract_path_text(post.user, 'location'), ''),
-          '未知'
-        )`,
-        'location'
-      ])
+      .select('COALESCE(NULLIF(post.region_name, \'\'), \'未知\')', 'location')
       .addSelect('COUNT(*)', 'count')
       .from(WeiboPostEntity, 'post')
       .where('post.ingested_at >= :start', { start })
@@ -274,7 +267,7 @@ export class OverviewService {
       .andWhere('post.deleted_at IS NULL')
       .groupBy('location')
       .orderBy('count', 'DESC')
-      .limit(20) // 限制返回前 20 个地域
+      .limit(20)
       .getRawMany();
 
     return locationData.map((item: any) => {

@@ -2,20 +2,7 @@ import { useEntityManager } from '../utils';
 import { EventEntity } from '../event.entity'
 import { EventStatisticsEntity } from '../event-statistics.entity'
 import { SentimentScore } from '../types/sentiment';
-export type TimeRange =
-  | 'today'
-  | 'yesterday'
-  | 'thisWeek'
-  | 'lastWeek'
-  | 'thisMonth'
-  | 'lastMonth'
-  | 'thisQuarter'
-  | 'lastQuarter'
-  | 'halfYear'
-  | 'lastHalfYear'
-  | 'thisYear'
-  | 'lastYear'
-  | 'all';
+export type TimeRange = '1h' | '6h' | '12h' | '24h' | '7d' | '30d' | '90d' | '180d' | '365d';
 
 export interface HotEvent {
   id: string;
@@ -28,74 +15,28 @@ export interface HotEvent {
 }
 
 /** 根据时间范围计算日期范围 */
-export const getDateRangeByTimeRange = (timeRange: TimeRange): { start: Date; end: Date } => {
+export const getDateRangeByTimeRange = (timeRange: TimeRange = '24h'): { start: Date; end: Date } => {
   const now = new Date();
   const end = new Date(now);
-  let start = new Date(now);
+  const start = new Date(now);
 
-  switch (timeRange) {
-    case 'today':
-      start.setHours(0, 0, 0, 0);
-      break;
-    case 'yesterday':
-      start.setDate(start.getDate() - 1);
-      start.setHours(0, 0, 0, 0);
-      end.setDate(end.getDate() - 1);
-      end.setHours(23, 59, 59, 999);
-      break;
-    case 'thisWeek':
-      start.setDate(start.getDate() - start.getDay());
-      start.setHours(0, 0, 0, 0);
-      break;
-    case 'lastWeek':
-      start.setDate(start.getDate() - start.getDay() - 7);
-      start.setHours(0, 0, 0, 0);
-      end.setDate(end.getDate() - end.getDay() - 1);
-      end.setHours(23, 59, 59, 999);
-      break;
-    case 'thisMonth':
-      start.setDate(1);
-      start.setHours(0, 0, 0, 0);
-      break;
-    case 'lastMonth':
-      start.setMonth(start.getMonth() - 1, 1);
-      start.setHours(0, 0, 0, 0);
-      end.setMonth(end.getMonth(), 0);
-      end.setHours(23, 59, 59, 999);
-      break;
-    case 'thisQuarter':
-      const quarterStartMonth = Math.floor(start.getMonth() / 3) * 3;
-      start.setMonth(quarterStartMonth, 1);
-      start.setHours(0, 0, 0, 0);
-      break;
-    case 'lastQuarter':
-      const lastQuarterStartMonth = Math.floor((start.getMonth() - 3) / 3) * 3;
-      start.setMonth(lastQuarterStartMonth, 1);
-      start.setHours(0, 0, 0, 0);
-      end.setMonth(lastQuarterStartMonth + 2, 0);
-      end.setHours(23, 59, 59, 999);
-      break;
-    case 'halfYear':
-      start.setMonth(start.getMonth() - 6);
-      break;
-    case 'lastHalfYear':
-      start.setMonth(start.getMonth() - 12);
-      end.setMonth(end.getMonth() - 6);
-      break;
-    case 'thisYear':
-      start.setMonth(0, 1);
-      start.setHours(0, 0, 0, 0);
-      break;
-    case 'lastYear':
-      start.setFullYear(start.getFullYear() - 1, 0, 1);
-      start.setHours(0, 0, 0, 0);
-      end.setFullYear(end.getFullYear() - 1, 11, 31);
-      end.setHours(23, 59, 59, 999);
-      break;
-    case 'all':
-    default:
-      start = new Date(0); // 从1970年开始
-      break;
+  // 解析时间范围字符串 (格式: '1h' | '6h' | '12h' | '24h' | '7d' | '30d' | '90d' | '180d' | '365d')
+  const match = timeRange.match(/^(\d+)([hd])$/);
+  if (!match) {
+    // 默认返回最近24小时
+    start.setHours(now.getHours() - 24);
+    return { start, end };
+  }
+
+  const value = parseInt(match[1]!, 10);
+  const unit = match[2];
+
+  if (unit === 'h') {
+    // 小时
+    start.setHours(now.getHours() - value);
+  } else if (unit === 'd') {
+    // 天
+    start.setDate(now.getDate() - value);
   }
 
   return { start, end };
@@ -203,7 +144,7 @@ export const findHotEvents = (timeRange: TimeRange, limit: number = 20) =>
 
 /** 查询事件列表(支持分类、搜索、分页) */
 export const findEventList = (
-  timeRange: TimeRange,
+  timeRange: TimeRange = '24h',
   options?: { category?: string; search?: string; limit?: number }
 ) =>
   useEntityManager(async m => {
@@ -212,13 +153,9 @@ export const findEventList = (
       .createQueryBuilder(EventEntity, 'event')
       .leftJoinAndSelect('event.category', 'category')
       .where('event.deleted_at IS NULL')
-      .andWhere('event.status = :status', { status: 'active' });
-
-    if (timeRange !== 'all') {
-      query = query
-        .andWhere('event.occurred_at >= :start', { start: dateRange.start })
-        .andWhere('event.occurred_at <= :end', { end: dateRange.end });
-    }
+      .andWhere('event.status = :status', { status: 'active' })
+      .andWhere('event.occurred_at >= :start', { start: dateRange.start })
+      .andWhere('event.occurred_at <= :end', { end: dateRange.end });
 
     if (options?.category) {
       query = query.andWhere('category.name = :category', { category: options.category });
@@ -239,7 +176,7 @@ export const findEventList = (
   });
 
 /** 获取事件分类统计 */
-export const getEventCategoryStats = (timeRange: TimeRange) =>
+export const getEventCategoryStats = (timeRange: TimeRange = '24h') =>
   useEntityManager(async m => {
     const dateRange = getDateRangeByTimeRange(timeRange);
 
@@ -250,14 +187,10 @@ export const getEventCategoryStats = (timeRange: TimeRange) =>
       .addSelect('COUNT(event.id)', 'count')
       .where('event.deleted_at IS NULL')
       .andWhere('event.status = :status', { status: 'active' })
+      .andWhere('event.occurred_at >= :start', { start: dateRange.start })
+      .andWhere('event.occurred_at <= :end', { end: dateRange.end })
       .groupBy('category.name')
       .orderBy('count', 'DESC');
-
-    if (timeRange !== 'all') {
-      query
-        .andWhere('event.occurred_at >= :start', { start: dateRange.start })
-        .andWhere('event.occurred_at <= :end', { end: dateRange.end });
-    }
 
     return await query.getRawMany();
   });

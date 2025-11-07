@@ -26,7 +26,7 @@ export class ChartsAPI {
       logger.debug('Fetching age distribution data');
       const params = timeRange ? `?timeRange=${timeRange}` : '';
       const response = await apiClient.get<AgeDistributionData[]>(
-        `/charts/age-distribution${params}`,
+        `/api/charts/age-distribution${params}`,
         {
           retry: { count: 2, delay: 1000 },
           timeout: 8000,
@@ -43,7 +43,7 @@ export class ChartsAPI {
       logger.debug('Fetching gender distribution data');
       const params = timeRange ? `?timeRange=${timeRange}` : '';
       const response = await apiClient.get<GenderDistributionData[]>(
-        `/charts/gender-distribution${params}`,
+        `/api/charts/gender-distribution${params}`,
         {
           retry: { count: 2, delay: 1000 },
           timeout: 8000,
@@ -59,7 +59,7 @@ export class ChartsAPI {
     async (hours: number = 24): Promise<SentimentTrendData[]> => {
       logger.debug('Fetching sentiment trend data', { hours });
       const response = await apiClient.get<SentimentTrendData[]>(
-        '/charts/sentiment-trend',
+        '/api/charts/sentiment-trend',
         {
           params: { hours },
           retry: { count: 3, delay: 1000 },
@@ -77,7 +77,7 @@ export class ChartsAPI {
       logger.debug('Fetching geographic data');
       const params = timeRange ? `?timeRange=${timeRange}` : '';
       const response = await apiClient.get<GeographicData[]>(
-        `/charts/geographic${params}`,
+        `/api/charts/geographic${params}`,
         {
           retry: { count: 2, delay: 1000 },
           timeout: 12000, // 地理数据可能较大，给更长超时时间
@@ -94,7 +94,7 @@ export class ChartsAPI {
       logger.debug('Fetching event types data');
       const params = timeRange ? `?timeRange=${timeRange}` : '';
       const response = await apiClient.get<EventTypeData[]>(
-        `/charts/event-types${params}`,
+        `/api/charts/event-types${params}`,
         {
           retry: { count: 2, delay: 1000 },
           timeout: 8000,
@@ -110,7 +110,7 @@ export class ChartsAPI {
     async (count: number = 50): Promise<HotTopicData[]> => {
       logger.debug('Fetching word cloud data', { count });
       const response = await apiClient.get<HotTopicData[]>(
-        '/charts/word-cloud',
+        '/api/charts/word-cloud',
         {
           params: { count },
           retry: { count: 2, delay: 1000 },
@@ -127,7 +127,7 @@ export class ChartsAPI {
     async (days: number = 7): Promise<TimeSeriesDataPoint[]> => {
       logger.debug('Fetching event count series', { days });
       const response = await apiClient.get<TimeSeriesDataPoint[]>(
-        '/charts/event-count-series',
+        '/api/charts/event-count-series',
         {
           params: { days },
           retry: { count: 2, delay: 1000 },
@@ -144,7 +144,7 @@ export class ChartsAPI {
     async (days: number = 7): Promise<TimeSeriesDataPoint[]> => {
       logger.debug('Fetching post count series', { days });
       const response = await apiClient.get<TimeSeriesDataPoint[]>(
-        '/charts/post-count-series',
+        '/api/charts/post-count-series',
         {
           params: { days },
           retry: { count: 2, delay: 1000 },
@@ -161,7 +161,7 @@ export class ChartsAPI {
     async (): Promise<{ positive: number; negative: number; neutral: number; total: number }> => {
       logger.debug('Fetching sentiment data');
       const response = await apiClient.get<{ positive: number; negative: number; neutral: number; total: number }>(
-        '/charts/sentiment-data',
+        '/api/charts/sentiment-data',
         {
           retry: { count: 2, delay: 1000 },
           timeout: 8000,
@@ -177,7 +177,7 @@ export class ChartsAPI {
     async (chartTypes: string[]): Promise<Record<string, unknown>> => {
       logger.debug('Fetching batch chart data', { chartTypes });
       const response = await apiClient.get<Record<string, unknown>>(
-        '/charts/batch',
+        '/api/charts/batch',
         {
           params: { types: chartTypes.join(',') },
           retry: { count: 1, delay: 1000 },

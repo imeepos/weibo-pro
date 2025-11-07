@@ -17,6 +17,7 @@ import { ChartsService } from './services/data/charts.service';
 import { UsersService } from './services/data/users.service';
 import { SystemService } from './services/data/system.service';
 import { SentimentService } from './services/data/sentiment.service';
+import { root } from '@sker/core';
 
 @Module({
   controllers: [
@@ -33,7 +34,7 @@ import { SentimentService } from './services/data/sentiment.service';
   providers: [
     {
       provide: RedisClient,
-      useFactory: () => new RedisClient(redisConfigFactory())
+      useFactory: () => root.get(RedisClient)
     },
     CacheService,
     OverviewService,

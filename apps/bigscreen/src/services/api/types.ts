@@ -26,8 +26,8 @@ export type {
   AppError
 } from '../../types';
 
-// 时间范围类型
-export type TimeRange = '1h' | '6h' | '12h' | '24h' | '7d' | '30d';
+// 时间范围类型 - 从 entities 包导入统一定义
+export type { TimeRange } from '@sker/entities';
 
 // 分页参数类型
 export interface PaginationParams {
