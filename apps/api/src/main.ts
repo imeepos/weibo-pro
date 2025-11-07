@@ -51,4 +51,15 @@ async function bootstrap() {
     console.log(`API服务已启动: http://localhost:3000`);
 }
 
+// 优雅关闭处理：确保端口完全释放
+process.on('SIGTERM', () => {
+  console.log('🛑 收到 SIGTERM 信号，优雅关闭中...');
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  console.log('🛑 收到 SIGINT 信号，优雅关闭中...');
+  process.exit(0);
+});
+
 bootstrap();

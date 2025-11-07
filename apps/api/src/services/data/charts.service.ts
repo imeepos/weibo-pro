@@ -13,16 +13,12 @@ import {
 import { CacheService, CACHE_KEYS, CACHE_TTL } from '../cache.service';
 import type { TimeRange } from './types';
 
-interface ChartDataResponse {
-  success: boolean;
-  data: {
-    categories: string[];
-    series: Array<{
-      name: string;
-      data: number[];
-    }>;
-  };
-  message: string;
+export interface ChartData {
+  categories: string[];
+  series: Array<{
+    name: string;
+    data: number[];
+  }>;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -31,7 +27,7 @@ export class ChartsService {
     @Inject(CacheService) private readonly cacheService: CacheService
   ) {}
 
-  async getAgeDistribution(timeRange: TimeRange = 'today'): Promise<ChartDataResponse> {
+  async getAgeDistribution(timeRange: TimeRange = '12h'): Promise<ChartData> {
     const cacheKey = CacheService.buildKey(CACHE_KEYS.CHART_AGE, timeRange);
     return await this.cacheService.getOrSet(
       cacheKey,
@@ -40,7 +36,7 @@ export class ChartsService {
     );
   }
 
-  private async fetchAgeDistribution(timeRange: TimeRange): Promise<ChartDataResponse> {
+  private async fetchAgeDistribution(timeRange: TimeRange): Promise<ChartData> {
     return useEntityManager(async (manager) => {
       const { start, end } = getTimeRangeBoundaries(timeRange);
 
@@ -48,12 +44,12 @@ export class ChartsService {
       // 根据微博用户注册时间估算账号年龄
       const results = await manager.query(`
         WITH user_posts AS (
-          SELECT DISTINCT post.uid::bigint as uid
+          SELECT DISTINCT (post.user->>'id')::bigint as uid
           FROM weibo_posts post
           WHERE post.ingested_at >= $1
             AND post.ingested_at <= $2
             AND post.deleted_at IS NULL
-            AND post.uid IS NOT NULL
+            AND post.user->>'id' IS NOT NULL
         ),
         user_ages AS (
           SELECT
@@ -88,22 +84,18 @@ export class ChartsService {
       const data = results.map((r: any) => parseInt(r.count));
 
       return {
-        success: true,
-        data: {
-          categories,
-          series: [
-            {
-              name: '用户数量',
-              data
-            }
-          ]
-        },
-        message: '获取年龄分布数据成功'
+        categories,
+        series: [
+          {
+            name: '用户数量',
+            data
+          }
+        ]
       };
     });
   }
 
-  async getGenderDistribution(timeRange: TimeRange = 'today'): Promise<ChartDataResponse> {
+  async getGenderDistribution(timeRange: TimeRange = '12h'): Promise<ChartData> {
     const cacheKey = CacheService.buildKey(CACHE_KEYS.CHART_GENDER, timeRange);
     return await this.cacheService.getOrSet(
       cacheKey,
@@ -112,19 +104,19 @@ export class ChartsService {
     );
   }
 
-  private async fetchGenderDistribution(timeRange: TimeRange): Promise<ChartDataResponse> {
+  private async fetchGenderDistribution(timeRange: TimeRange): Promise<ChartData> {
     return useEntityManager(async (manager) => {
       const { start, end } = getTimeRangeBoundaries(timeRange);
 
       // 查询发帖用户的性别分布
       const results = await manager.query(`
         WITH user_posts AS (
-          SELECT DISTINCT post.uid::bigint as uid
+          SELECT DISTINCT (post.user->>'id')::bigint as uid
           FROM weibo_posts post
           WHERE post.ingested_at >= $1
             AND post.ingested_at <= $2
             AND post.deleted_at IS NULL
-            AND post.uid IS NOT NULL
+            AND post.user->>'id' IS NOT NULL
         )
         SELECT
           CASE
@@ -140,28 +132,24 @@ export class ChartsService {
       `, [start, end]);
 
       const genderOrder = ['男性', '女性', '未知'];
-      const genderMap = new Map(results.map((r: any) => [r.gender, parseInt(r.count)]));
+      const genderMap = new Map<string, number>(results.map((r: any) => [r.gender, parseInt(r.count)]));
 
       const categories = genderOrder;
-      const data = genderOrder.map(g => genderMap.get(g) || 0);
+      const data: number[] = genderOrder.map(g => genderMap.get(g) ?? 0);
 
       return {
-        success: true,
-        data: {
-          categories,
-          series: [
-            {
-              name: '用户数量',
-              data
-            }
-          ]
-        },
-        message: '获取性别分布数据成功'
+        categories,
+        series: [
+          {
+            name: '用户数量',
+            data
+          }
+        ]
       };
     });
   }
 
-  async getSentimentTrend(timeRange: TimeRange = 'week'): Promise<ChartDataResponse> {
+  async getSentimentTrend(timeRange: TimeRange = '12h'): Promise<ChartData> {
     const cacheKey = CacheService.buildKey(CACHE_KEYS.CHART_SENTIMENT_TREND, timeRange);
     return await this.cacheService.getOrSet(
       cacheKey,
@@ -170,7 +158,7 @@ export class ChartsService {
     );
   }
 
-  private async fetchSentimentTrend(timeRange: TimeRange): Promise<ChartDataResponse> {
+  private async fetchSentimentTrend(timeRange: TimeRange): Promise<ChartData> {
     return useEntityManager(async (manager) => {
       const { start, end } = getTimeRangeBoundaries(timeRange);
       const granularity = this.getTimeGranularity(timeRange);
@@ -196,21 +184,17 @@ export class ChartsService {
       const neutralData = results.map((r: any) => parseInt(r.neutral));
 
       return {
-        success: true,
-        data: {
-          categories,
-          series: [
-            { name: '正面', data: positiveData },
-            { name: '负面', data: negativeData },
-            { name: '中性', data: neutralData }
-          ]
-        },
-        message: '获取情感趋势数据成功'
+        categories,
+        series: [
+          { name: '正面', data: positiveData },
+          { name: '负面', data: negativeData },
+          { name: '中性', data: neutralData }
+        ]
       };
     });
   }
 
-  async getGeographic(timeRange: TimeRange = 'today'): Promise<ChartDataResponse> {
+  async getGeographic(timeRange: TimeRange = '12h'): Promise<ChartData> {
     const cacheKey = CacheService.buildKey(CACHE_KEYS.CHART_GEOGRAPHIC, timeRange);
     return await this.cacheService.getOrSet(
       cacheKey,
@@ -219,19 +203,19 @@ export class ChartsService {
     );
   }
 
-  private async fetchGeographic(timeRange: TimeRange): Promise<ChartDataResponse> {
+  private async fetchGeographic(timeRange: TimeRange): Promise<ChartData> {
     return useEntityManager(async (manager) => {
       const { start, end } = getTimeRangeBoundaries(timeRange);
 
       // 查询发帖用户的地理位置分布
       const results = await manager.query(`
         WITH user_posts AS (
-          SELECT DISTINCT post.uid::bigint as uid
+          SELECT DISTINCT (post.user->>'id')::bigint as uid
           FROM weibo_posts post
           WHERE post.ingested_at >= $1
             AND post.ingested_at <= $2
             AND post.deleted_at IS NULL
-            AND post.uid IS NOT NULL
+            AND post.user->>'id' IS NOT NULL
         )
         SELECT
           COALESCE(NULLIF(u.province, ''), NULLIF(u.city, ''), NULLIF(u.location, ''), '未知') as location,
@@ -248,22 +232,18 @@ export class ChartsService {
       const data = results.map((r: any) => parseInt(r.count));
 
       return {
-        success: true,
-        data: {
-          categories,
-          series: [
-            {
-              name: '用户数量',
-              data
-            }
-          ]
-        },
-        message: '获取地理分布数据成功'
+        categories,
+        series: [
+          {
+            name: '用户数量',
+            data
+          }
+        ]
       };
     });
   }
 
-  async getEventTypes(timeRange: TimeRange = 'today'): Promise<ChartDataResponse> {
+  async getEventTypes(timeRange: TimeRange = '12h'): Promise<ChartData> {
     const cacheKey = CacheService.buildKey(CACHE_KEYS.CHART_EVENT_TYPES, timeRange);
     return await this.cacheService.getOrSet(
       cacheKey,
@@ -272,7 +252,7 @@ export class ChartsService {
     );
   }
 
-  private async fetchEventTypes(timeRange: TimeRange): Promise<ChartDataResponse> {
+  private async fetchEventTypes(timeRange: TimeRange): Promise<ChartData> {
     return useEntityManager(async (manager) => {
       const { start, end } = getTimeRangeBoundaries(timeRange);
 
@@ -294,22 +274,18 @@ export class ChartsService {
       const data = results.map((r: any) => parseInt(r.count));
 
       return {
-        success: true,
-        data: {
-          categories,
-          series: [
-            {
-              name: '事件数量',
-              data
-            }
-          ]
-        },
-        message: '获取事件类型分布数据成功'
+        categories,
+        series: [
+          {
+            name: '事件数量',
+            data
+          }
+        ]
       };
     });
   }
 
-  async getWordCloud(timeRange: TimeRange = 'today', limit: number = 50) {
+  async getWordCloud(timeRange: TimeRange = '12h', limit: number = 50) {
     const cacheKey = CacheService.buildKey(CACHE_KEYS.CHART_WORDCLOUD, timeRange, limit);
     return await this.cacheService.getOrSet(
       cacheKey,
@@ -340,22 +316,16 @@ export class ChartsService {
         LIMIT $3
       `, [start, end, limit]);
 
-      const data = results.map((row: any) => ({
+      return results.map((row: any) => ({
         keyword: row.keyword,
         count: parseInt(row.count),
         sentiment: row.sentiment,
         weight: parseFloat(row.weight || '0'),
       }));
-
-      return {
-        success: true,
-        data,
-        message: '获取词云数据成功'
-      };
     });
   }
 
-  async getEventCountSeries(timeRange: TimeRange = 'week'): Promise<ChartDataResponse> {
+  async getEventCountSeries(timeRange: TimeRange = '12h'): Promise<ChartData> {
     const cacheKey = CacheService.buildKey(CACHE_KEYS.CHART_EVENT_COUNT, timeRange);
     return await this.cacheService.getOrSet(
       cacheKey,
@@ -364,7 +334,7 @@ export class ChartsService {
     );
   }
 
-  private async fetchEventCountSeries(timeRange: TimeRange): Promise<ChartDataResponse> {
+  private async fetchEventCountSeries(timeRange: TimeRange): Promise<ChartData> {
     return useEntityManager(async (manager) => {
       const { start, end } = getTimeRangeBoundaries(timeRange);
       const granularity = this.getTimeGranularity(timeRange);
@@ -385,17 +355,13 @@ export class ChartsService {
       const data = results.map((r: any) => parseInt(r.count));
 
       return {
-        success: true,
-        data: {
-          categories,
-          series: [{ name: '事件数量', data }]
-        },
-        message: '获取事件计数时间序列数据成功'
+        categories,
+        series: [{ name: '事件数量', data }]
       };
     });
   }
 
-  async getPostCountSeries(timeRange: TimeRange = 'week'): Promise<ChartDataResponse> {
+  async getPostCountSeries(timeRange: TimeRange = '12h'): Promise<ChartData> {
     const cacheKey = CacheService.buildKey(CACHE_KEYS.CHART_POST_COUNT, timeRange);
     return await this.cacheService.getOrSet(
       cacheKey,
@@ -404,7 +370,7 @@ export class ChartsService {
     );
   }
 
-  private async fetchPostCountSeries(timeRange: TimeRange): Promise<ChartDataResponse> {
+  private async fetchPostCountSeries(timeRange: TimeRange): Promise<ChartData> {
     return useEntityManager(async (manager) => {
       const { start, end } = getTimeRangeBoundaries(timeRange);
       const granularity = this.getTimeGranularity(timeRange);
@@ -425,17 +391,13 @@ export class ChartsService {
       const data = results.map((r: any) => parseInt(r.count));
 
       return {
-        success: true,
-        data: {
-          categories,
-          series: [{ name: '帖子数量', data }]
-        },
-        message: '获取帖子计数时间序列数据成功'
+        categories,
+        series: [{ name: '帖子数量', data }]
       };
     });
   }
 
-  async getSentimentData(timeRange: TimeRange = 'today') {
+  async getSentimentData(timeRange: TimeRange = '12h') {
     const cacheKey = CacheService.buildKey(CACHE_KEYS.CHART_SENTIMENT_DATA, timeRange);
     return await this.cacheService.getOrSet(
       cacheKey,
@@ -468,19 +430,15 @@ export class ChartsService {
       const neutral = parseInt(row.neutral) || 0;
 
       return {
-        success: true,
-        data: {
-          positive,
-          negative,
-          neutral,
-          total
-        },
-        message: '获取情感分析数据成功'
+        positive,
+        negative,
+        neutral,
+        total
       };
     });
   }
 
-  async getBatchCharts(timeRange: TimeRange = 'today') {
+  async getBatchCharts(timeRange: TimeRange = '12h') {
     const cacheKey = CacheService.buildKey(CACHE_KEYS.CHART_BATCH, timeRange);
     return await this.cacheService.getOrSet(
       cacheKey,
@@ -502,16 +460,12 @@ export class ChartsService {
         ]);
 
         return {
-          success: true,
-          data: {
-            ageDistribution,
-            genderDistribution,
-            sentimentTrend,
-            geographic,
-            eventTypes,
-            wordCloud
-          },
-          message: '获取批量图表数据成功'
+          ageDistribution,
+          genderDistribution,
+          sentimentTrend,
+          geographic,
+          eventTypes,
+          wordCloud
         };
       },
       CACHE_TTL.MEDIUM
@@ -521,14 +475,15 @@ export class ChartsService {
   // Helper methods
   private getTimeGranularity(timeRange: TimeRange): string {
     const granularityMap: Record<TimeRange, string> = {
-      'today': 'hour',
-      'yesterday': 'hour',
-      'week': 'day',
-      'month': 'day',
-      'quarter': 'week',
-      'halfYear': 'week',
-      'year': 'month',
-      'all': 'month',
+      '1h': 'hour',
+      '6h': 'hour',
+      '12h': 'hour',
+      '24h': 'hour',
+      '7d': 'day',
+      '30d': 'day',
+      '90d': 'week',
+      '180d': 'week',
+      '365d': 'month',
     };
     return granularityMap[timeRange] || 'day';
   }
@@ -546,7 +501,7 @@ export class ChartsService {
       case 'month':
         return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
       default:
-        return date.toISOString().split('T')[0];
+        return date.toISOString().split('T')[0]!;
     }
   }
 }

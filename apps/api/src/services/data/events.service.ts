@@ -36,11 +36,7 @@ export class EventsService {
           })
         );
 
-        return {
-          success: true,
-          data: eventsWithStats,
-          message: '获取事件列表成功'
-        };
+        return eventsWithStats;
       },
       CACHE_TTL.SHORT
     );
@@ -87,12 +83,8 @@ export class EventsService {
         const stats = await getEventCategoryStats(timeRange);
 
         return {
-          success: true,
-          data: {
-            categories: stats.map((s: any) => s.name),
-            counts: stats.map((s: any) => parseInt(s.count, 10))
-          },
-          message: '获取事件分类数据成功'
+          categories: stats.map((s: any) => s.name),
+          counts: stats.map((s: any) => parseInt(s.count, 10))
         };
       },
       CACHE_TTL.MEDIUM
@@ -144,14 +136,14 @@ export class EventsService {
 
   private determineGranularity(timeRange: TimeRange): 'hour' | 'day' | 'week' | 'month' {
     switch (timeRange) {
-      case 'today':
-      case 'yesterday':
+      case '1h':
+      case '6h':
+      case '12h':
+      case '24h':
         return 'hour';
-      case 'thisWeek':
-      case 'lastWeek':
+      case '7d':
         return 'day';
-      case 'thisMonth':
-      case 'lastMonth':
+      case '30d':
         return 'week';
       default:
         return 'month';
@@ -249,8 +241,7 @@ export class EventsService {
       cacheKey,
       async () => {
         return await useEntityManager(async entityManager => {
-          const eventRepository = new EventRepository(entityManager);
-          const statistics = await eventRepository.findLatestEventStatistics(id, timeRange);
+          const statistics = await findLatestEventStatistics(id, timeRange);
 
           const categories = statistics.map((s: any) =>
             this.formatDate(s.snapshot_at, this.determineGranularity(timeRange))
@@ -283,8 +274,7 @@ export class EventsService {
       cacheKey,
       async () => {
         return await useEntityManager(async entityManager => {
-          const eventRepository = new EventRepository(entityManager);
-          const statistics = await eventRepository.findLatestEventStatistics(id, timeRange);
+          const statistics = await findLatestEventStatistics(id, timeRange);
 
           const categories = statistics.map((s: any) =>
             this.formatDate(s.snapshot_at, this.determineGranularity(timeRange))

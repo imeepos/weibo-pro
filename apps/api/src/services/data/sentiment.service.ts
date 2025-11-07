@@ -13,7 +13,7 @@ import { CacheService, CACHE_KEYS, CACHE_TTL } from '../cache.service';
 import type { TimeRange } from './types';
 
 // 情感统计数据接口
-interface SentimentStatistics {
+export interface SentimentStatistics {
   totalAnalyzed: number;
   positive: {
     count: number;
@@ -35,7 +35,7 @@ interface SentimentStatistics {
 }
 
 // 实时情感数据接口
-interface SentimentRealTimeData {
+export interface SentimentRealTimeData {
   timestamp: string;
   positive: number;
   negative: number;
@@ -55,7 +55,7 @@ export class SentimentService {
   ) {}
 
   // 获取实时情感数据
-  async getRealtimeData(timeRange: TimeRange = 'today'): Promise<SentimentRealTimeData> {
+  async getRealtimeData(timeRange: TimeRange = '12h'): Promise<SentimentRealTimeData> {
     const cacheKey = CacheService.buildKey(CACHE_KEYS.SENTIMENT_REALTIME, timeRange);
 
     return await this.cacheService.getOrSet(
@@ -92,7 +92,7 @@ export class SentimentService {
   }
 
   // 获取情感统计数据
-  async getStatistics(timeRange: TimeRange = 'today'): Promise<SentimentStatistics> {
+  async getStatistics(timeRange: TimeRange = '12h'): Promise<SentimentStatistics> {
     const cacheKey = CacheService.buildKey(CACHE_KEYS.SENTIMENT_STATS, timeRange);
 
     return await this.cacheService.getOrSet(
@@ -224,7 +224,7 @@ export class SentimentService {
   }
 
   // 获取关键词云数据
-  async getKeywords(timeRange: TimeRange = 'today', limit: number = 50) {
+  async getKeywords(timeRange: TimeRange = '12h', limit: number = 50) {
     const cacheKey = CacheService.buildKey(CACHE_KEYS.SENTIMENT_KEYWORDS, timeRange, limit);
 
     return await this.cacheService.getOrSet(
@@ -266,7 +266,7 @@ export class SentimentService {
   }
 
   // 获取热点话题
-  async getHotTopics(timeRange: TimeRange = 'today', limit: number = 10) {
+  async getHotTopics(timeRange: TimeRange = '12h', limit: number = 10) {
     const cacheKey = CacheService.buildKey(CACHE_KEYS.SENTIMENT_HOT_TOPICS, timeRange, limit);
 
     return await this.cacheService.getOrSet(
@@ -311,7 +311,7 @@ export class SentimentService {
   }
 
   // 获取时间序列数据
-  async getTimeSeries(timeRange: TimeRange = 'week') {
+  async getTimeSeries(timeRange: TimeRange = '12h') {
     const cacheKey = CacheService.buildKey(CACHE_KEYS.SENTIMENT_TIME_SERIES, timeRange);
 
     return await this.cacheService.getOrSet(
@@ -355,7 +355,7 @@ export class SentimentService {
   }
 
   // 获取地理位置分布
-  async getLocations(timeRange: TimeRange = 'today') {
+  async getLocations(timeRange: TimeRange = '12h') {
     const cacheKey = CacheService.buildKey(CACHE_KEYS.SENTIMENT_LOCATIONS, timeRange);
 
     return await this.cacheService.getOrSet(
@@ -401,7 +401,7 @@ export class SentimentService {
   }
 
   // 获取最新帖子
-  async getRecentPosts(timeRange: TimeRange = 'today', limit: number = 20) {
+  async getRecentPosts(timeRange: TimeRange = '12h', limit: number = 20) {
     const cacheKey = CacheService.buildKey(CACHE_KEYS.SENTIMENT_RECENT_POSTS, timeRange, limit);
 
     return await this.cacheService.getOrSet(
@@ -448,7 +448,7 @@ export class SentimentService {
   }
 
   // 搜索功能
-  async search(keyword: string, timeRange: TimeRange = 'week') {
+  async search(keyword: string, timeRange: TimeRange = '12h') {
     const cacheKey = CacheService.buildKey(CACHE_KEYS.SENTIMENT_SEARCH, keyword, timeRange);
 
     return await this.cacheService.getOrSet(
@@ -520,17 +520,22 @@ export class SentimentService {
 
   // 辅助方法：根据时间范围选择时间粒度
   private getTimeGranularity(timeRange: TimeRange): string {
-    const granularityMap: Record<TimeRange, string> = {
-      'today': 'hour',
-      'yesterday': 'hour',
-      'week': 'day',
-      'month': 'day',
-      'quarter': 'week',
-      'halfYear': 'week',
-      'year': 'month',
-      'all': 'month',
-    };
+    // 解析时间范围
+    const match = timeRange.match(/^(\d+)([hd])$/);
+    if (!match) return 'hour';
 
-    return granularityMap[timeRange] || 'day';
+    const value = parseInt(match[1]!, 10);
+    const unit = match[2];
+
+    if (unit === 'h') {
+      // 小时级别：按小时或分钟
+      return value <= 6 ? 'hour' : 'hour';
+    } else {
+      // 天级别
+      if (value <= 7) return 'hour';      // 7天内按小时
+      if (value <= 30) return 'day';      // 30天内按天
+      if (value <= 90) return 'day';      // 90天内按天
+      return 'week';                       // 更长时间按周
+    }
   }
 }
