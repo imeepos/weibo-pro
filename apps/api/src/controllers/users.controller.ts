@@ -1,6 +1,7 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { root } from '@sker/core';
 import { UsersService } from '../services/data/users.service';
+import type { TimeRange } from '@sker/entities';
 
 @Controller('api/users')
 export class UsersController {
@@ -11,17 +12,17 @@ export class UsersController {
   }
 
   @Get('list')
-  async getUserList(@Query('timeRange') timeRange?: string) {
+  async getUserList(@Query('timeRange') timeRange?: TimeRange) {
     return this.usersService.getUserList(timeRange);
   }
 
   @Get('risk-levels')
-  async getRiskLevels(@Query('timeRange') timeRange?: string) {
+  async getRiskLevels(@Query('timeRange') timeRange?: TimeRange) {
     return this.usersService.getRiskLevels(timeRange);
   }
 
   @Get('statistics')
-  async getStatistics(@Query('timeRange') timeRange?: string) {
+  async getStatistics(@Query('timeRange') timeRange?: TimeRange) {
     return this.usersService.getStatistics(timeRange);
   }
 }

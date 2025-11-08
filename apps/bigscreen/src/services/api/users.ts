@@ -4,12 +4,13 @@
 
 import { apiUtils as apiClient } from './client';
 import type { ApiResponse, UserProfile } from '../../types';
-import type { BaseQueryParams } from './types';
+import type { BaseQueryParams, TimeRange } from './types';
 
 // 用户列表查询参数
 export interface UsersListParams extends BaseQueryParams {
   riskLevel?: 'low' | 'medium' | 'high' | 'critical';
   sortBy?: 'username' | 'riskScore' | 'lastActive' | 'followerCount';
+  timeRange?: TimeRange;
 }
 
 // 使用统一的 UserProfile 类型
@@ -72,27 +73,34 @@ export const UsersAPI = {
   // 获取用户列表
   getUsersList: async (params?: UsersListParams): Promise<UsersListResponse> => {
     const queryParams = new URLSearchParams();
+    if (params?.timeRange) queryParams.append('timeRange', params.timeRange);
     if (params?.riskLevel) queryParams.append('riskLevel', params.riskLevel);
     if (params?.search) queryParams.append('search', params.search);
     if (params?.limit) queryParams.append('limit', params.limit.toString());
     if (params?.page) queryParams.append('page', params.page.toString());
     if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
     if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
-    
+
     const url = `/api/users/list${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     const response = await apiClient.get<UsersListResponse>(url);
     return response;
   },
 
   // 获取风险等级配置
-  getRiskLevels: async (): Promise<RiskLevel[]> => {
-    const response = await apiClient.get<RiskLevel[]>('/api/users/risk-levels');
+  getRiskLevels: async (params?: { timeRange?: TimeRange }): Promise<RiskLevel[]> => {
+    const queryParams = new URLSearchParams();
+    if (params?.timeRange) queryParams.append('timeRange', params.timeRange);
+    const url = `/api/users/risk-levels${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const response = await apiClient.get<RiskLevel[]>(url);
     return response;
   },
 
   // 获取用户统计数据
-  getStatistics: async (): Promise<UserStatistics> => {
-    const response = await apiClient.get<UserStatistics>('/api/users/statistics');
+  getStatistics: async (params?: { timeRange?: TimeRange }): Promise<UserStatistics> => {
+    const queryParams = new URLSearchParams();
+    if (params?.timeRange) queryParams.append('timeRange', params.timeRange);
+    const url = `/api/users/statistics${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const response = await apiClient.get<UserStatistics>(url);
     return response;
   },
 };

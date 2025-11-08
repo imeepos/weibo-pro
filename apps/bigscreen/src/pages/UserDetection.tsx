@@ -37,12 +37,14 @@ const UserDetection: React.FC = () => {
       try {
         setLoading(true);
         const [usersResult, riskLevelsResult] = await Promise.all([
-          UsersAPI.getUsersList(),
-          UsersAPI.getRiskLevels()
+          UsersAPI.getUsersList({ timeRange: selectedTimeRange }),
+          UsersAPI.getRiskLevels({ timeRange: selectedTimeRange })
         ]);
-        
+        console.log({
+          usersResult, riskLevelsResult
+        })
         // 转换用户数据格式
-        const users = Array.isArray(usersResult) ? usersResult : 
+        const users = Array.isArray(usersResult) ? usersResult :
                      (usersResult && usersResult.users) ? usersResult.users : [];
         setUsers(users);
         // 转换风险等级数据
@@ -61,7 +63,7 @@ const UserDetection: React.FC = () => {
     };
 
     loadData();
-  }, []);
+  }, [selectedTimeRange]);
 
   const filteredUsers = (users || []).filter(user => {
     const matchesSearch = user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||

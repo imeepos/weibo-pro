@@ -7,6 +7,7 @@ import { useFullscreen } from '@/hooks/useFullscreen';
 import { useFullscreenShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { formatTime, cn } from '@/utils';
 import Select from './ui/Select';
+import { useNavigate } from 'react-router-dom';
 
 interface HeaderProps {
   className?: string;
@@ -18,12 +19,13 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
     selectedTimeRange,
     setSelectedTimeRange
   } = useAppStore();
-  const { 
-    currentLayout, 
-    savedLayouts, 
-    setCurrentLayout, 
-    isEditMode, 
-    toggleEditMode 
+  const navigate = useNavigate()
+  const {
+    currentLayout,
+    savedLayouts,
+    setCurrentLayout,
+    isEditMode,
+    toggleEditMode
   } = useLayoutStore();
   const { toggleTheme, isDark } = useTheme();
   const { isFullscreen, isSupported, toggleFullscreen, exitFullscreen } = useFullscreen();
@@ -96,7 +98,9 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
           </div>
 
           {/* 标题文字 */}
-          <div>
+          <div onClick={() => {
+            navigate('/')
+          }}>
             <h1 className="text-2xl font-bold text-foreground">
               舆情监控大屏幕
             </h1>
@@ -188,7 +192,7 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
               isLayoutMenuOpen && "rotate-180"
             )} />
           </button>
-          
+
           {/* 布局选择下拉菜单 - 清爽弹出框 */}
           {isLayoutMenuOpen && (
             <div className="absolute right-0 mt-3 w-72 glass-card rounded-xl shadow-xl z-50 overflow-hidden">
@@ -241,7 +245,7 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
                     </button>
                   ))}
                 </div>
-                
+
                 <div className="mt-4 pt-4">
                   <button
                     onClick={() => {

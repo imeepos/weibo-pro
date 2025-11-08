@@ -1,132 +1,110 @@
-import { HeroSection } from '../components/Hero';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { motion, useScroll, useTransform } from 'framer-motion';
+import { ArrowRight, CheckCircle2 } from 'lucide-react';
+import { useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export default function HeroDemo() {
+  const navigate = useNavigate();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ['start start', 'end start']
+  });
+
+  const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
+  const scale = useTransform(scrollYProgress, [0, 0.5], [1, 0.95]);
+
   return (
-    <div className="min-h-screen">
-      {/* 示例 1：完整功能 Hero */}
-      <HeroSection
-        title={
-          <h1
-            className="
-              mx-auto max-w-4xl text-balance
-              text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl
-              font-bold tracking-tight
-              bg-gradient-to-r from-primary via-sentiment-positive-primary to-sentiment-neutral-primary
-              bg-clip-text text-transparent
-              drop-shadow-[0_2px_10px_rgba(59,130,246,0.3)]
-            "
-            style={{
-              WebkitTextStroke: '0.5px rgba(59, 130, 246, 0.1)',
-            }}
+    <div ref={containerRef} className="h-full overflow-y-hidden overflow-x-hidden bg-background">
+      {/* Hero Section - 极简大标题风格 */}
+      <motion.section
+        style={{ opacity, scale }}
+        className="min-h-screen flex items-center justify-center relative px-6"
+      >
+        {/* 背景网格 */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]" />
+
+        {/* 未来感渐变光晕 - 多层叠加 */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-gradient-to-br from-cyan/30 via-primary/20 to-transparent blur-3xl rounded-full animate-pulse-slow" />
+        <div className="absolute top-40 left-1/4 w-[400px] h-[400px] bg-gradient-to-br from-violet/20 to-transparent blur-3xl rounded-full" />
+        <div className="absolute top-40 right-1/4 w-[400px] h-[400px] bg-gradient-to-br from-fuchsia/20 to-transparent blur-3xl rounded-full" />
+
+        <div className="max-w-7xl mx-auto text-center relative z-10">
+          {/* 徽章 */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 dark:bg-primary/20 border border-primary/20 mb-8"
           >
-            社交媒体舆情监控系统
-          </h1>
-        }
-        description={
-          <p className="
-            mx-auto max-w-2xl
-            text-lg sm:text-xl md:text-2xl
-            leading-relaxed text-foreground/90
-            drop-shadow-sm
-          ">
-            实时监控社交媒体动态，智能分析舆情趋势，为您的品牌保驾护航
-          </p>
-        }
-        actions={
-          <>
-            <button className="glass-button" aria-label="开始使用系统">
-              开始使用
-              <ArrowRight className="w-4 h-4" />
-            </button>
-            <button className="glass-button glass-button-secondary" aria-label="查看演示">
-              <Sparkles className="w-4 h-4" />
-              查看演示
-            </button>
-          </>
-        }
-        showAnimation
-        showBackground
-      />
+            <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+            <span className="text-sm font-medium text-primary">新一代舆情监控平台</span>
+          </motion.div>
 
-      {/* 示例 2：简洁版本（无背景动画） */}
-      <HeroSection
-        title="简洁版 Hero 区域"
-        description="适用于内容页面的轻量级 Hero 区域，不包含背景装饰和动画效果"
-        showAnimation={false}
-        showBackground={false}
-        className="py-16"
-      />
-
-      {/* 示例 3：自定义样式 */}
-      <HeroSection
-        title={
-          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold">
-            <span className="block text-foreground drop-shadow-lg">数据驱动决策</span>
-            <span className="block text-primary mt-2 drop-shadow-[0_2px_20px_rgba(59,130,246,0.5)]">
-              洞察引领未来
+          {/* 主标题 - 未来感霓虹渐变 */}
+          <motion.h1
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.1 }}
+            className="text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-bold tracking-tight mb-6"
+          >
+            <span className="block text-foreground">实时洞察</span>
+            <span className="block bg-gradient-to-r from-cyan via-primary to-violet bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,217,255,0.3)] dark:drop-shadow-[0_0_50px_rgba(0,217,255,0.5)]">
+              舆情态势
             </span>
-          </h1>
-        }
-        description={
-          <div className="space-y-6">
-            <p className="text-lg sm:text-xl md:text-2xl text-foreground/85 max-w-3xl mx-auto leading-relaxed drop-shadow-sm">
-              通过 AI 驱动的舆情分析引擎，实时捕捉网络动态
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-8 text-sm sm:text-base text-muted-foreground">
-              <div className="flex items-center gap-2 group transition-all hover:scale-110">
-                <div className="w-2.5 h-2.5 rounded-full bg-sentiment-positive-primary shadow-lg shadow-sentiment-positive-primary/50 animate-pulse" />
-                <span className="group-hover:text-foreground transition-colors">实时监控</span>
-              </div>
-              <div className="flex items-center gap-2 group transition-all hover:scale-110">
-                <div className="w-2.5 h-2.5 rounded-full bg-sentiment-neutral-primary shadow-lg shadow-sentiment-neutral-primary/50 animate-pulse" />
-                <span className="group-hover:text-foreground transition-colors">智能分析</span>
-              </div>
-              <div className="flex items-center gap-2 group transition-all hover:scale-110">
-                <div className="w-2.5 h-2.5 rounded-full bg-sentiment-negative-primary shadow-lg shadow-sentiment-negative-primary/50 animate-pulse" />
-                <span className="group-hover:text-foreground transition-colors">预警系统</span>
-              </div>
-            </div>
-          </div>
-        }
-        actions={
-          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
-            <button className="glass-button text-base px-8 py-4" aria-label="免费试用">
-              免费试用
-            </button>
-            <button className="glass-button glass-button-secondary text-base px-8 py-4" aria-label="联系销售">
-              联系销售
-            </button>
-          </div>
-        }
-        showAnimation
-        showBackground
-        className="py-24 sm:py-32 md:py-40"
-      />
+          </motion.h1>
 
-      {/* 内容区域示例 */}
-      <section className="max-w-7xl mx-auto px-6 py-20">
-        <div className="grid md:grid-cols-3 gap-8">
-          <div className="glass-card p-6">
-            <h3 className="text-xl font-semibold mb-3 text-foreground">实时监控</h3>
-            <p className="text-muted-foreground">
-              24/7 全天候监控社交媒体平台，第一时间捕捉关键信息
-            </p>
-          </div>
-          <div className="glass-card p-6">
-            <h3 className="text-xl font-semibold mb-3 text-foreground">智能分析</h3>
-            <p className="text-muted-foreground">
-              基于 NLP 的情感分析引擎，精准识别舆情倾向和趋势
-            </p>
-          </div>
-          <div className="glass-card p-6">
-            <h3 className="text-xl font-semibold mb-3 text-foreground">预警系统</h3>
-            <p className="text-muted-foreground">
-              多级预警机制，及时发现并应对潜在舆情危机
-            </p>
-          </div>
+          {/* 副标题 */}
+          <motion.p
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="text-xl sm:text-2xl md:text-3xl text-muted-foreground max-w-3xl mx-auto mb-12 leading-relaxed"
+          >
+            通过 AI 驱动的智能分析，让每一个决策都有数据支撑
+          </motion.p>
+
+          {/* CTA 按钮 */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.3 }}
+            className="flex flex-col sm:flex-row items-center justify-center gap-4"
+          >
+            <button
+              onClick={() => navigate('/index')}
+              className="group relative px-8 py-4 bg-foreground text-background rounded-full font-semibold text-lg overflow-hidden transition-all hover:scale-105 active:scale-95 shadow-[0_0_20px_rgba(0,217,255,0.3)] hover:shadow-[0_0_40px_rgba(0,217,255,0.6)]"
+            >
+              <span className="relative z-10 flex items-center gap-2">
+                开始体验
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </span>
+              <div className="absolute inset-0 bg-gradient-to-r from-cyan via-primary to-violet opacity-0 group-hover:opacity-100 transition-opacity" />
+            </button>
+          </motion.div>
+
+          {/* 社会认证 */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1, delay: 0.5 }}
+            className="mt-16 flex items-center justify-center gap-8 text-sm text-muted-foreground"
+          >
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-sentiment-positive-primary" />
+              <span>500+ 企业信赖</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-sentiment-positive-primary" />
+              <span>99.9% 系统可用性</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-sentiment-positive-primary" />
+              <span>千万级日处理量</span>
+            </div>
+          </motion.div>
         </div>
-      </section>
+      </motion.section>
     </div>
   );
 }

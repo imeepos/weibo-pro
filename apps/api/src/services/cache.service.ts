@@ -109,7 +109,13 @@ export const CACHE_KEYS = {
     CHART_EVENT_COUNT: 'chart:event-count',
     CHART_POST_COUNT: 'chart:post-count',
     CHART_SENTIMENT_DATA: 'chart:sentiment-data',
-    CHART_BATCH: 'chart:batch'
+    CHART_BATCH: 'chart:batch',
+    USERS_LIST: 'users:list',
+    USERS_RISK_LEVELS: 'users:risk-levels',
+    USERS_STATS: 'users:stats',
+    SYSTEM_STATUS: 'system:status',
+    SYSTEM_PERFORMANCE: 'system:performance',
+    SYSTEM_HEALTH: 'system:health'
 } as const;
 
 /**

@@ -114,6 +114,25 @@ const App: React.FC = () => {
             <Route
               path="/"
               element={
+                <FullscreenLayout>
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key="hero-demo"
+                      className="h-full"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 1.05 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <HeroDemo />
+                    </motion.div>
+                  </AnimatePresence>
+                </FullscreenLayout>
+              }
+            />
+            <Route
+              path="/index"
+              element={
                 <Layout>
                   <AnimatePresence mode="wait">
                     <motion.div
@@ -339,25 +358,7 @@ const App: React.FC = () => {
                 </Layout>
               }
             />
-            <Route
-              path="/hero-demo"
-              element={
-                <FullscreenLayout>
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key="hero-demo"
-                      className="h-full"
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 1.05 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <HeroDemo />
-                    </motion.div>
-                  </AnimatePresence>
-                </FullscreenLayout>
-              }
-            />
+            
           </Routes>
         </div>
       </Router>

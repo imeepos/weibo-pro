@@ -77,7 +77,7 @@ const DataOverview: React.FC = () => {
             <StatsOverview data={statsOverviewData} />
           </div>
           {/* 热点事件 - 自适应高度 */}
-          <div className="sentiment-overview-card flex-1 min-h-0 overflow-hidden">
+          <div className="glass-card sentiment-overview-card flex-1 min-h-0 overflow-hidden px-4">
             <HotEventsList />
           </div>
         </div>
@@ -96,11 +96,11 @@ const DataOverview: React.FC = () => {
         <div className="col-span-12 md:col-span-6 lg:col-span-3
                         flex flex-col gap-3 lg:gap-4 xl:gap-5
                         overflow-hidden">
-          <div className="glass-card sentiment-overview-card flex-1 min-h-0 overflow-hidden">
+          <div className="glass-card sentiment-overview-card flex-1 min-h-0 overflow-hidden flex flex-col">
             <h3 className="text-lg font-medium text-foreground p-2 lg:p-3 xl:p-4">情感分析</h3>
-            <div className="card-content h-full">
+            <div className="card-content flex-1 min-h-0 flex flex-col overflow-hidden">
               <SentimentOverview data={sentimentData} />
-              <EmotionCurveChart />
+              <EmotionCurveChart className="flex-1 min-h-0"/>
             </div>
           </div>
         </div>
@@ -122,16 +122,16 @@ const DataOverview: React.FC = () => {
         {/* 事件分析 */}
         <div className="glass-card sentiment-overview-card min-h-0 overflow-hidden">
           <h3 className="text-lg font-medium text-foreground p-2 lg:p-3 xl:p-4">事件分析</h3>
-          <div className="card-content-lg h-full">
+          <div className="card-content-lg h-full px-4">
             <HotEventsList />
           </div>
         </div>
 
         {/* 事件类型分布 */}
-        <div className="glass-card sentiment-overview-card min-h-0 overflow-hidden">
+        <div className="glass-card sentiment-overview-card min-h-0 overflow-hidden flex flex-col">
           <h3 className="text-lg font-medium text-foreground p-2 lg:p-3 xl:p-4">事件类型</h3>
-          <div className="card-content-lg h-full">
-            <EventTypeBarChart />
+          <div className="card-content-lg flex-1 min-h-0">
+            <EventTypeBarChart className="h-full"/>
           </div>
         </div>
       </div>

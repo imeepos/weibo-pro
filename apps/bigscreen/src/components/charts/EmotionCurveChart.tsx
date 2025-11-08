@@ -286,10 +286,10 @@ const EmotionCurveChart: React.FC<EmotionCurveChartProps> = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className={className}
+      className={`flex flex-col ${className}`}
     >
       {/* 情感类型选择按钮 */}
-      <div className="flex space-x-3 mb-4 justify-center">
+      <div className="flex space-x-3 mb-2 justify-center flex-shrink-0">
         {emotionTypes.map((type) => (
           <button
             key={type.key}
@@ -303,9 +303,9 @@ const EmotionCurveChart: React.FC<EmotionCurveChartProps> = ({
               color: type.color || '#6b7280'
             }}
           >
-            <span 
+            <span
               className="text-sm"
-              style={{ 
+              style={{
                 color: type.color || '#6b7280',
                 filter: selectedType === type.key ? 'none' : 'grayscale(50%)'
               }}
@@ -318,17 +318,19 @@ const EmotionCurveChart: React.FC<EmotionCurveChartProps> = ({
       </div>
 
       {/* 图表 */}
-      {option ? (
-        <ReactECharts
-          option={option}
-          style={{ height: `100%`, width: '100%' }}
-          opts={{ renderer: 'canvas' }}
-        />
-      ) : (
-        <div className="flex items-center justify-center h-full text-muted-foreground">
-          加载中...
-        </div>
-      )}
+      <div className="flex-1 min-h-0">
+        {option ? (
+          <ReactECharts
+            option={option}
+            style={{ height: '100%', width: '100%' }}
+            opts={{ renderer: 'canvas' }}
+          />
+        ) : (
+          <div className="flex items-center justify-center h-full text-muted-foreground">
+            加载中...
+          </div>
+        )}
+      </div>
     </motion.div>
   );
 };

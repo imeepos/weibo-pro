@@ -76,7 +76,7 @@ const EventTypeBarChart: React.FC<EventTypeBarChartProps> = ({
           color: "#ffffff",
         },
         formatter: (params: EChartsFormatterParams[]) => {
-          const data = params[0];
+          const data = params[0]!;
           return `${data.name}: ${data.value}`;
         },
       },
@@ -169,12 +169,12 @@ const EventTypeBarChart: React.FC<EventTypeBarChartProps> = ({
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.5 }}
-      className={className}
+      className={`${className}`}
     >
       {option ? (
         <ReactECharts
           option={option}
-          style={{ height: height ? `${height}px` : `100%`, width: "100%" }}
+          style={{ height: height ? `${height}px` : '100%', width: '100%' }}
           opts={{ renderer: "canvas" }}
         />
       ) : (

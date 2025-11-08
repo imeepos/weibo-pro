@@ -30,7 +30,7 @@ const navigationItems: NavigationItem[] = [
   {
     id: 'data-overview',
     label: '数据总览',
-    path: '/',
+    path: '/index',
     icon: BarChart3,
     description: '全面数据概览与统计'
   },
@@ -82,13 +82,6 @@ const navigationItems: NavigationItem[] = [
     path: '/crawler-control',
     icon: Bot,
     description: '手动触发爬虫任务与监控'
-  },
-  {
-    id: 'hero-demo',
-    label: 'Hero 布局演示',
-    path: '/hero-demo',
-    icon: Sparkles,
-    description: 'Hero 区域组件示例展示'
   }
 ];
 
