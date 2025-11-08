@@ -79,7 +79,7 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
   return (
     <header className={cn(
       'relative isolate',
-      'glass-card-flat px-6 py-3 flex items-center justify-between',
+      'glass-card-flat px-6 py-2 flex items-center justify-between',
       'backdrop-blur-xl',
       className
     )}>
@@ -107,28 +107,11 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
             <p className="text-xs text-muted-foreground tracking-wide">实时数据分析与展示</p>
           </div>
         </div>
-
-        {/* 数据源状态 - 清爽的状态指示器 */}
-        <div className="flex items-center space-x-4 pl-4">
-          <div className="flex items-center space-x-2 px-3 py-1.5 rounded-full bg-muted/20 backdrop-blur-sm">
-            <div className={cn(
-              'w-2 h-2 rounded-full relative',
-              systemStatus.dataSource?.weibo ? 'status-online' : 'status-offline'
-            )}>
-              {systemStatus.dataSource?.weibo && (
-                <div className="absolute inset-0 rounded-full bg-success animate-ping opacity-75" />
-              )}
-            </div>
-            <span className="text-xs font-medium text-muted-foreground">微博数据源</span>
-          </div>
-        </div>
       </div>
 
       {/* 中间：时间范围选择 - 清爽的玻璃态容器 */}
       <div className="flex items-center space-x-3 px-4 py-2 rounded-xl bg-muted/10 backdrop-blur-sm">
-        <Clock className="w-4 h-4 text-primary/70" />
-        <span className="text-sm font-medium text-muted-foreground">时间区间</span>
-        <div className="w-px h-4 bg-muted/30" />
+        <Clock className="w-6 h-6 text-primary/70" />
         <Select
           className="min-w-[140px]"
           triggerClassName="text-sm font-medium"

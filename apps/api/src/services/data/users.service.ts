@@ -27,6 +27,7 @@ export interface UserListItem {
   };
   tags: string[];
   lastActive: string;
+  avatar?: string;
 }
 
 export interface RiskLevelConfig {
@@ -128,7 +129,8 @@ export class UsersService {
             WHEN ua.analyzed_count > 0 AND (ua.negative_count::float / ua.analyzed_count) > 0.6 THEN 'high'
             WHEN ua.analyzed_count > 0 AND (ua.negative_count::float / ua.analyzed_count) > 0.3 THEN 'medium'
             ELSE 'low'
-          END as risk_level
+          END as risk_level,
+          COALESCE(u.avatar_hd, u.avatar_large, u.profile_image_url) as avatar
         FROM weibo_users u
         INNER JOIN user_activity ua ON ua.user_id = u.id
         ORDER BY ua.post_count DESC, u.followers_count DESC
@@ -172,7 +174,8 @@ export class UsersService {
               WHEN ua.analyzed_count > 0 AND (ua.negative_count::float / ua.analyzed_count) > 0.6 THEN 'high'
               WHEN ua.analyzed_count > 0 AND (ua.negative_count::float / ua.analyzed_count) > 0.3 THEN 'medium'
               ELSE 'low'
-            END as risk_level
+            END as risk_level,
+            COALESCE(u.avatar_hd, u.avatar_large, u.profile_image_url) as avatar
           FROM weibo_users u
           INNER JOIN user_activity ua ON ua.user_id = u.id
           ORDER BY ua.last_active DESC, u.followers_count DESC
@@ -217,7 +220,8 @@ export class UsersService {
             neutral: neutralPercent
           },
           tags,
-          lastActive: row.last_active
+          lastActive: row.last_active,
+          avatar: row.avatar
         };
       });
 

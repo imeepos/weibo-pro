@@ -35,13 +35,6 @@ const navigationItems: NavigationItem[] = [
     description: '全面数据概览与统计'
   },
   {
-    id: 'custom-overview',
-    label: '自定义总览',
-    path: '/custom-overview',
-    icon: Grid3X3,
-    description: '自定义布局数据总览'
-  },
-  {
     id: 'event-analysis',
     label: '事件分析',
     path: '/event-analysis',
@@ -50,38 +43,10 @@ const navigationItems: NavigationItem[] = [
   },
   {
     id: 'user-detection',
-    label: '用户检测面板',
+    label: '媒体检测面板',
     path: '/user-detection',
     icon: Users,
     description: '用户行为监测分析'
-  },
-  {
-    id: 'layout-editor',
-    label: '布局编辑器',
-    path: '/layout-editor',
-    icon: Layout,
-    description: '自定义可视化布局'
-  },
-  {
-    id: 'ble-mesh-topology',
-    label: 'BLE Mesh拓扑',
-    path: '/ble-mesh-topology',
-    icon: Network,
-    description: 'BLE Mesh网络拓扑可视化'
-  },
-  {
-    id: 'network-topology',
-    label: '智能家居拓扑',
-    path: '/network-topology',
-    icon: Share2,
-    description: '智能家居网络拓扑图'
-  },
-  {
-    id: 'crawler-control',
-    label: '爬虫任务控制',
-    path: '/crawler-control',
-    icon: Bot,
-    description: '手动触发爬虫任务与监控'
   }
 ];
 

@@ -85,7 +85,7 @@ const Layout: React.FC<LayoutProps> = ({ children, className }) => {
             'bg-gray-50 dark:bg-gray-900',
             isFullscreen
               ? 'p-1'
-              : 'px-3 py-3 sm:px-4 md:px-6 md:py-4 xl:p-6',
+              : 'px-3 py-1 sm:px-4 md:px-6 md:py-4 xl:p-6',
             className
           )}
         >

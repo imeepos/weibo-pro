@@ -69,23 +69,19 @@ const DataOverview: React.FC = () => {
       {/* 主要布局：左中右结构 - 自适应高度 */}
       <div className="dashboard-main-content">
         {/* 左侧区域：占4列 - 指标和热点事件 */}
-        <div className="col-span-12 md:col-span-4 lg:col-span-4
-                        flex flex-col gap-2 lg:gap-4 xl:gap-5
-                        overflow-hidden">
+        <div className="col-span-12 md:col-span-4 lg:col-span-4 flex flex-col gap-2 lg:gap-4 xl:gap-5 overflow-hidden">
           {/* 指标概览 - 由内部元素撑开高度 */}
           <div className="stats-overview-container overflow-hidden">
             <StatsOverview data={statsOverviewData} />
           </div>
           {/* 热点事件 - 自适应高度 */}
-          <div className="glass-card sentiment-overview-card flex-1 min-h-0 overflow-hidden px-4">
+          <div className="glass-card sentiment-overview-card flex-1 min-h-0 overflow-hidden px-4 py-4">
             <HotEventsList />
           </div>
         </div>
 
         {/* 中间区域：占5列 - 主要地图区域 */}
-        <div className="col-span-12 md:col-span-6 lg:col-span-5
-                        glass-card p-2 lg:p-3 xl:p-4 sentiment-overview-card
-                        overflow-hidden flex flex-col">
+        <div className="col-span-12 md:col-span-6 lg:col-span-5 glass-card p-2 lg:p-3 xl:p-4 sentiment-overview-card overflow-hidden flex flex-col">
           <LocationHeatMap
             data={locationData}
             title=""
@@ -93,15 +89,10 @@ const DataOverview: React.FC = () => {
         </div>
 
         {/* 右侧区域：占3列 - 情感分析 */}
-        <div className="col-span-12 md:col-span-6 lg:col-span-3
-                        flex flex-col gap-3 lg:gap-4 xl:gap-5
-                        overflow-hidden">
-          <div className="glass-card sentiment-overview-card flex-1 min-h-0 overflow-hidden flex flex-col">
-            <h3 className="text-lg font-medium text-foreground p-2 lg:p-3 xl:p-4">情感分析</h3>
-            <div className="card-content flex-1 min-h-0 flex flex-col overflow-hidden">
-              <SentimentOverview data={sentimentData} />
-              <EmotionCurveChart className="flex-1 min-h-0"/>
-            </div>
+        <div className="col-span-12 glass-card md:col-span-6 lg:col-span-3 flex flex-col gap-3 lg:gap-4 xl:gap-5 overflow-hidden py-4">
+          <div className="card-content flex-1 min-h-0 flex flex-col overflow-hidden">
+            <SentimentOverview data={sentimentData} />
+            <EmotionCurveChart className="flex-1 min-h-0" />
           </div>
         </div>
       </div>
@@ -109,8 +100,7 @@ const DataOverview: React.FC = () => {
       {/* 底部区域：3个模块 - 固定比例高度 */}
       <div className="dashboard-bottom-content">
         {/* 热词分析 */}
-        <div className="glass-card sentiment-overview-card min-h-0 overflow-hidden">
-          <h3 className="text-lg font-medium text-foreground p-2 lg:p-3 xl:p-4">热词分析</h3>
+        <div className="glass-card sentiment-overview-card min-h-0 overflow-hidden py-4">
           <div className="card-content-lg h-full">
             <WordCloudChart
               title=""
@@ -120,18 +110,16 @@ const DataOverview: React.FC = () => {
         </div>
 
         {/* 事件分析 */}
-        <div className="glass-card sentiment-overview-card min-h-0 overflow-hidden">
-          <h3 className="text-lg font-medium text-foreground p-2 lg:p-3 xl:p-4">事件分析</h3>
+        <div className="glass-card sentiment-overview-card min-h-0 overflow-hidden py-4">
           <div className="card-content-lg h-full px-4">
             <HotEventsList />
           </div>
         </div>
 
         {/* 事件类型分布 */}
-        <div className="glass-card sentiment-overview-card min-h-0 overflow-hidden flex flex-col">
-          <h3 className="text-lg font-medium text-foreground p-2 lg:p-3 xl:p-4">事件类型</h3>
+        <div className="glass-card sentiment-overview-card min-h-0 overflow-hidden flex flex-col py-4">
           <div className="card-content-lg flex-1 min-h-0">
-            <EventTypeBarChart className="h-full"/>
+            <EventTypeBarChart className="h-full" />
           </div>
         </div>
       </div>

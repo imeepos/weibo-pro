@@ -143,7 +143,7 @@ const EventDetail: React.FC = () => {
   const toSentimentLevel = (value: number) => {
     const normalized = Math.round(value / 10);
     const index = Math.min(sentimentLevels.length - 1, Math.max(0, normalized - 1));
-    return sentimentLevels[index];
+    return sentimentLevels[index]!;
   };
   const tabs: ReadonlyArray<{ id: EventTab; label: string; icon: typeof BarChart3 }> = [
     { id: 'overview', label: '概览分析', icon: BarChart3 },
@@ -189,12 +189,12 @@ const EventDetail: React.FC = () => {
         // 转换为 TimeSeriesDataPoint 格式，添加防御性检查
         const convertedTimeSeries: TimeSeriesDataPoint[] = Array.isArray(timeSeriesData)
           ? timeSeriesData.map(item => ({
-              timestamp: item.timestamp,
-              value: item.posts + item.users + item.interactions,
-              positive: 0, // Mock data
-              negative: 0, // Mock data
-              neutral: 0 // Mock data
-            }))
+            timestamp: item.timestamp,
+            value: item.posts + item.users + item.interactions,
+            positive: 0, // Mock data
+            negative: 0, // Mock data
+            neutral: 0 // Mock data
+          }))
           : [];
         setTimeSeriesData(convertedTimeSeries);
 
@@ -268,10 +268,10 @@ const EventDetail: React.FC = () => {
     }
     return trendData;
   }, [trendData]);
-  
+
   const { hotnessData, sentimentData, postData, userData } = trendChartData;
 
-  
+
   if (!eventData) {
     return (
       <div className="flex items-center justify-center h-64">

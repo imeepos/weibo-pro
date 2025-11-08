@@ -125,6 +125,7 @@ export interface UserProfile {
   };
   tags: string[];
   lastActive: string;
+  avatar?: string;
 }
 
 // 趋势数据类型

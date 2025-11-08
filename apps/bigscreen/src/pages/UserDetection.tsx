@@ -141,7 +141,7 @@ const UserDetection: React.FC = () => {
         <div className="glass-card p-6">
           <div className="flex items-center space-x-3">
             <div className="p-2 bg-blue-500 rounded-lg">
-              <Users className="w-5 h-5 text-white" />
+              <Users className="w-5 h-5 icon-on-colored-bg" />
             </div>
             <div>
               <div className="text-3xl font-bold text-foreground">{formatNumber((users || []).length)}</div>
@@ -153,7 +153,7 @@ const UserDetection: React.FC = () => {
         <div className="glass-card p-6">
           <div className="flex items-center space-x-3">
             <div className="p-2 bg-red-500 rounded-lg">
-              <AlertTriangle className="w-5 h-5 text-white" />
+              <AlertTriangle className="w-5 h-5 icon-on-colored-bg" />
             </div>
             <div>
               <div className="text-3xl font-bold text-foreground">
@@ -167,7 +167,7 @@ const UserDetection: React.FC = () => {
         <div className="glass-card p-6">
           <div className="flex items-center space-x-3">
             <div className="p-2 bg-yellow-500 rounded-lg">
-              <Eye className="w-5 h-5 text-white" />
+              <Eye className="w-5 h-5 icon-on-colored-bg" />
             </div>
             <div>
               <div className="text-3xl font-bold text-foreground">
@@ -181,7 +181,7 @@ const UserDetection: React.FC = () => {
         <div className="glass-card p-6">
           <div className="flex items-center space-x-3">
             <div className="p-2 bg-green-500 rounded-lg">
-              <Shield className="w-5 h-5 text-white" />
+              <Shield className="w-5 h-5 icon-on-colored-bg" />
             </div>
             <div>
               <div className="text-3xl font-bold text-foreground">
@@ -212,8 +212,22 @@ const UserDetection: React.FC = () => {
             <div className="flex items-start justify-between">
               <div className="flex items-start space-x-4">
                 {/* 用户头像 */}
-                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-                  <Users className="w-6 h-6 text-white" />
+                {user.avatar ? (
+                  <img
+                    src={user.avatar}
+                    alt={user.nickname}
+                    className="w-12 h-12 rounded-full object-cover border-2 border-border"
+                    onError={(e) => {
+                      // 头像加载失败时显示默认图标
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      const fallback = target.nextElementSibling as HTMLElement;
+                      if (fallback) fallback.style.display = 'flex';
+                    }}
+                  />
+                ) : null}
+                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center" style={{ display: user.avatar ? 'none' : 'flex' }}>
+                  <Users className="w-6 h-6 icon-on-colored-bg" />
                 </div>
                 
                 <div className="flex-1">
@@ -295,13 +309,14 @@ const UserDetection: React.FC = () => {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
           onClick={() => setSelectedUser(null)}
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="bg-card border border-border rounded-xl p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto"
+            className="glass-card-modal p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
@@ -317,8 +332,22 @@ const UserDetection: React.FC = () => {
             <div className="space-y-6">
               {/* 基本信息 */}
               <div className="flex items-start space-x-4">
-                <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-                  <Users className="w-8 h-8 text-white" />
+                {selectedUser.avatar ? (
+                  <img
+                    src={selectedUser.avatar}
+                    alt={selectedUser.nickname}
+                    className="w-16 h-16 rounded-full object-cover border-2 border-border"
+                    onError={(e) => {
+                      // 头像加载失败时显示默认图标
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      const fallback = target.nextElementSibling as HTMLElement;
+                      if (fallback) fallback.style.display = 'flex';
+                    }}
+                  />
+                ) : null}
+                <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center" style={{ display: selectedUser.avatar ? 'none' : 'flex' }}>
+                  <Users className="w-8 h-8 icon-on-colored-bg" />
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center space-x-2 mb-2">

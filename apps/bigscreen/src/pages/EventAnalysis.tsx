@@ -129,20 +129,45 @@ const EventAnalysis: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full space-y-8 p-2">
-      {/* 页面标题 */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-foreground flex items-center">
-          <div className="w-1 h-auto bg-gradient-to-b from-primary via-primary to-primary/30 rounded-full mr-4"></div>
-          事件分析
-        </h1>
-        <div className="text-sm text-muted-foreground">
-          实时更新 · {new Date().toLocaleTimeString()}
+    <div className="flex flex-col h-full space-y-6">
+      {/* 页面标题和筛选区域 - 参考 UserDetection 布局 */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">事件分析面板</h1>
+          <p className="text-muted-foreground mt-1">
+            当前时间区间: {selectedTimeRange} | 事件监测与趋势分析
+          </p>
+        </div>
+
+        <div className="flex items-center space-x-4">
+          {/* 搜索框 */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="搜索事件或关键词..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-4 py-2 bg-muted rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
+            />
+          </div>
+
+          {/* 分类筛选 */}
+          <Select
+            className="min-w-[150px]"
+            value={selectedCategory}
+            onChange={(nextValue) => setSelectedCategory(nextValue)}
+            options={(categories.length ? categories : ['all']).map(category => ({
+              value: category,
+              label: category === 'all' ? '全部分类' : category,
+            }))}
+            placeholder="选择分类"
+          />
         </div>
       </div>
 
       {/* 统计概览卡片 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
           title="事件总数"
           className='sentiment-overview-card'
@@ -187,45 +212,6 @@ const EventAnalysis: React.FC = () => {
           showChart={true}
           chartComponent={<MiniTrendChart data={hotnessTrendData} color="#ef4444" type="bar" />}
         />
-      </div>
-
-      {/* 搜索和筛选区域 */}
-      <div className="glass-card p-6 sentiment-overview-card">
-        <h3 className="text-lg font-medium text-foreground mb-4 flex items-center">
-          <Search className="w-5 h-5 mr-2" />
-          事件筛选
-        </h3>
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div className="text-muted-foreground">
-            当前时间区间: {selectedTimeRange} | 共找到 {filteredEvents.length} 个事件
-          </div>
-
-          <div className="flex items-center space-x-4">
-          {/* 搜索框 */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="搜索事件或关键词..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 bg-muted rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
-            />
-          </div>
-
-          {/* 分类筛选 */}
-          <Select
-            className="min-w-[150px]"
-            value={selectedCategory}
-            onChange={(nextValue) => setSelectedCategory(nextValue)}
-            options={(categories.length ? categories : ['all']).map(category => ({
-              value: category,
-              label: category === 'all' ? '全部分类' : category,
-            }))}
-            placeholder="选择分类"
-          />
-          </div>
-        </div>
       </div>
 
       {/* 事件列表 - 优雅的滚动容器 */}
