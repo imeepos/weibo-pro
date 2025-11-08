@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import { ArrowUp, ArrowDown } from 'lucide-react';
 import { cn } from '@/utils';
 
 interface SentimentData {
-  positive: { value: number; change: number };
-  negative: { value: number; change: number };
-  neutral: { value: number; change: number };
+  positive: number;
+  negative: number;
+  neutral: number;
 }
 
 interface SentimentOverviewProps {
@@ -34,7 +33,7 @@ const SentimentOverview: React.FC<SentimentOverviewProps> = ({
   const neutralColor = getThemeColor('--sentiment-neutral-primary');
 
   // 检查数据有效性
-  if (!data || !data.positive || !data.negative || !data.neutral) {
+  if (!data || typeof data.positive !== 'number' || typeof data.negative !== 'number' || typeof data.neutral !== 'number') {
     return (
       <div className={cn('p-4 space-y-4', className)}>
         <div className="text-center text-muted-foreground">暂无数据</div>
@@ -43,10 +42,10 @@ const SentimentOverview: React.FC<SentimentOverviewProps> = ({
   }
 
   // 计算百分比
-  const total = data.positive.value + data.negative.value + data.neutral.value;
-  const positivePercent = Math.round((data.positive.value / total) * 100);
-  const negativePercent = Math.round((data.negative.value / total) * 100);
-  const neutralPercent = Math.round((data.neutral.value / total) * 100);
+  const total = data.positive + data.negative + data.neutral;
+  const positivePercent = total > 0 ? Math.round((data.positive / total) * 100) : 0;
+  const negativePercent = total > 0 ? Math.round((data.negative / total) * 100) : 0;
+  const neutralPercent = total > 0 ? Math.round((data.neutral / total) * 100) : 0;
 
   // 计算角度
   const positiveAngle = positivePercent * 3.6;
@@ -76,22 +75,17 @@ const SentimentOverview: React.FC<SentimentOverviewProps> = ({
     }
   };
 
-  const SentimentItem = ({ 
-    label, 
-    value, 
-    change, 
+  const SentimentItem = ({
+    label,
+    value,
     color,
     segmentType
-  }: { 
-    label: string; 
-    value: number; 
-    change: number; 
+  }: {
+    label: string;
+    value: number;
     color: string;
     segmentType: string;
   }) => {
-    const isPositiveChange = change >= 0;
-    const ChangeIcon = isPositiveChange ? ArrowUp : ArrowDown;
-    
     // 获取对应的背景色
     const getHoverBgColor = () => {
       if (segmentType === 'positive') return 'hover:bg-sentiment-positive/10';
@@ -99,9 +93,9 @@ const SentimentOverview: React.FC<SentimentOverviewProps> = ({
       if (segmentType === 'neutral') return 'hover:bg-sentiment-neutral/10';
       return '';
     };
-    
+
     return (
-      <div 
+      <div
         className={cn(
           "flex flex-col space-y-1 cursor-pointer rounded p-2 transition-all duration-200 hover:scale-105",
           getHoverBgColor()
@@ -114,19 +108,6 @@ const SentimentOverview: React.FC<SentimentOverviewProps> = ({
         </div>
         <div className={cn('text-lg font-bold', color)}>
           {value}
-        </div>
-        <div className="flex items-center space-x-1">
-          <ChangeIcon className={cn(
-            'w-3 h-3',
-            isPositiveChange ? 'text-sentiment-positive' : 'text-sentiment-negative'
-          )} />
-          <span className={cn(
-            'text-xs font-medium',
-            isPositiveChange ? 'text-sentiment-positive' : 'text-sentiment-negative'
-          )}>
-            {Math.abs(change).toFixed(1)}%
-          </span>
-          <span className="text-xs text-muted-foreground">vs 上期</span>
         </div>
       </div>
     );
@@ -156,24 +137,21 @@ const SentimentOverview: React.FC<SentimentOverviewProps> = ({
         <SentimentItem
           key="positive"
           label="正面情绪"
-          value={data.positive.value}
-          change={data.positive.change}
+          value={data.positive}
           color="text-sentiment-positive"
           segmentType="positive"
         />
         <SentimentItem
           key="negative"
           label="负面情绪"
-          value={data.negative.value}
-          change={data.negative.change}
+          value={data.negative}
           color="text-sentiment-negative"
           segmentType="negative"
         />
         <SentimentItem
           key="neutral"
           label="中性情绪"
-          value={data.neutral.value}
-          change={data.neutral.change}
+          value={data.neutral}
           color="text-sentiment-neutral"
           segmentType="neutral"
         />

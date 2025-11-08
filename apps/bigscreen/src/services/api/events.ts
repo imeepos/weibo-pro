@@ -10,6 +10,7 @@ export interface EventsListParams {
   category?: string;
   search?: string;
   limit?: number;
+  timeRange?: string;
 }
 
 // 使用统一的 EventItem 类型
@@ -101,15 +102,17 @@ export const EventsAPI = {
     if (params?.category) queryParams.append('category', params.category);
     if (params?.search) queryParams.append('search', params.search);
     if (params?.limit) queryParams.append('limit', params.limit.toString());
-    
+    if (params?.timeRange) queryParams.append('timeRange', params.timeRange);
+
     const url = `/api/events/list${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-    const response = await apiClient.get<ApiResponse<EventInfo[]>>(url);
-    return response.data;
+    const response = await apiClient.get<EventInfo[]>(url);
+    return response;
   },
 
   // 获取事件分类
-  getCategories: async (): Promise<EventCategory[]> => {
-    const response = await apiClient.get<{ categories: string[]; counts: number[] }>('/api/events/categories');
+  getCategories: async (timeRange?: string): Promise<EventCategory[]> => {
+    const params = timeRange ? `?timeRange=${timeRange}` : '';
+    const response = await apiClient.get<{ categories: string[]; counts: number[] }>(`/api/events/categories${params}`);
     // 转换API返回格式为 EventCategory[]
     const categories = response.categories || [];
     const counts = response.counts || [];
@@ -121,17 +124,18 @@ export const EventsAPI = {
   },
 
   // 获取事件趋势数据(返回图表用的聚合数据)
-  getTrendData: async (): Promise<{
+  getTrendData: async (timeRange?: string): Promise<{
     eventTrendData: number[];
     postTrendData: number[];
     userTrendData: number[];
     hotnessData: number[];
   } | null> => {
     try {
+      const params = timeRange ? `?timeRange=${timeRange}` : '';
       const response = await apiClient.get<{
         categories: string[];
         series: Array<{ name: string; data: number[] }>;
-      }>('/api/events/trend-data');
+      }>(`/api/events/trend-data${params}`);
 
       // 转换API返回格式为组件需要的格式
       const seriesMap: Record<string, number[]> = {};
@@ -154,38 +158,38 @@ export const EventsAPI = {
   },
 
   // 获取热门事件列表
-  getHotList: async (): Promise<HotEvent[]> => {
-    const response = await apiClient.get<ApiResponse<HotEvent[]>>('/api/events/hot-list');
-    return response.data;
+  getHotList: async (timeRange?: string): Promise<HotEvent[]> => {
+    const params = timeRange ? `?timeRange=${timeRange}` : '';
+    return await apiClient.get<HotEvent[]>(`/api/events/hot-list${params}`);
   },
 
   // 获取事件详情
   getEventDetail: async (eventId: string): Promise<EventDetail> => {
-    const response = await apiClient.get<ApiResponse<EventDetail>>(`/api/events/${eventId}`);
-    return response.data;
+    const response = await apiClient.get<EventDetail>(`/api/events/${eventId}`);
+    return response;
   },
 
   // 获取事件时间序列数据
   getEventTimeSeries: async (eventId: string): Promise<EventTimeSeriesData[]> => {
-    const response = await apiClient.get<ApiResponse<EventTimeSeriesData[]>>(`/api/events/${eventId}/timeseries`);
-    return response.data;
+    const response = await apiClient.get<EventTimeSeriesData[]>(`/api/events/${eventId}/timeseries`);
+    return response;
   },
 
   // 获取事件趋势图表数据
   getEventTrends: async (eventId: string): Promise<EventTrendsChart> => {
-    const response = await apiClient.get<ApiResponse<EventTrendsChart>>(`/api/events/${eventId}/trends`);
-    return response.data;
+    const response = await apiClient.get<EventTrendsChart>(`/api/events/${eventId}/trends`);
+    return response;
   },
 
   // 获取影响力用户
   getInfluenceUsers: async (eventId: string): Promise<InfluenceUser[]> => {
-    const response = await apiClient.get<ApiResponse<InfluenceUser[]>>(`/api/events/${eventId}/influence-users`);
-    return response.data;
+    const response = await apiClient.get<InfluenceUser[]>(`/api/events/${eventId}/influence-users`);
+    return response;
   },
 
   // 获取地理分布数据
   getGeographic: async (eventId: string): Promise<EventGeographicData[]> => {
-    const response = await apiClient.get<ApiResponse<EventGeographicData[]>>(`/api/events/${eventId}/geographic`);
-    return response.data;
+    const response = await apiClient.get<EventGeographicData[]>(`/api/events/${eventId}/geographic`);
+    return response;
   },
 };

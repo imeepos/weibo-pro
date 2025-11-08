@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { useTheme } from "@/hooks/useTheme";
 import { createLogger } from '@/utils/logger';
 import { CommonAPI } from "@/services/api";
+import { useAppStore } from "@/stores/useAppStore";
 
 interface SimpleSentimentPieChartProps {
   height?: number;
@@ -17,6 +18,7 @@ const SimpleSentimentPieChart: React.FC<SimpleSentimentPieChartProps> = ({
   className = "",
 }) => {
   const { isDark } = useTheme();
+  const { selectedTimeRange } = useAppStore();
   const [mockData, setMockData] = useState<Array<{name: string, value: number, color: string}>>([]);
 
   useEffect(() => {
@@ -24,9 +26,9 @@ const SimpleSentimentPieChart: React.FC<SimpleSentimentPieChartProps> = ({
     
     const fetchData = async () => {
       try {
-        const data = await CommonAPI.getSentimentPie();
+        const data = await CommonAPI.getSentimentPie(selectedTimeRange);
         if (cancelled) return;
-        
+
         if (Array.isArray(data)) {
           setMockData(data);
         } else {
@@ -39,13 +41,13 @@ const SimpleSentimentPieChart: React.FC<SimpleSentimentPieChartProps> = ({
         setMockData([]);
       }
     };
-    
+
     fetchData();
-    
+
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [selectedTimeRange]);
 
   const total = Array.isArray(mockData) ? mockData.reduce((sum, item) => sum + item.value, 0) : 0;
 

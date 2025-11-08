@@ -163,6 +163,13 @@ export class ChartsService {
       const { start, end } = getTimeRangeBoundaries(timeRange);
       const granularity = this.getTimeGranularity(timeRange);
 
+      console.log('[ChartsService.fetchSentimentTrend] 🔍 查询参数', {
+        timeRange,
+        start,
+        end,
+        granularity
+      });
+
       const results = await manager.query(`
         SELECT
           DATE_TRUNC($1, post.ingested_at) as time_bucket,
@@ -178,12 +185,17 @@ export class ChartsService {
         ORDER BY time_bucket ASC
       `, [granularity, start, end]);
 
+      console.log('[ChartsService.fetchSentimentTrend] 📊 数据库查询结果', {
+        结果数量: results.length,
+        原始数据: JSON.stringify(results, null, 2)
+      });
+
       const categories = results.map((r: any) => this.formatTimeLabel(r.time_bucket, granularity));
       const positiveData = results.map((r: any) => parseInt(r.positive));
       const negativeData = results.map((r: any) => parseInt(r.negative));
       const neutralData = results.map((r: any) => parseInt(r.neutral));
 
-      return {
+      const chartData = {
         categories,
         series: [
           { name: '正面', data: positiveData },
@@ -191,6 +203,10 @@ export class ChartsService {
           { name: '中性', data: neutralData }
         ]
       };
+
+      console.log('[ChartsService.fetchSentimentTrend] ✅ 返回数据', JSON.stringify(chartData, null, 2));
+
+      return chartData;
     });
   }
 
@@ -222,7 +238,7 @@ export class ChartsService {
           COUNT(*) as count
         FROM weibo_users u
         INNER JOIN user_posts up ON up.uid = u.id
-        GROUP BY location
+        GROUP BY COALESCE(NULLIF(u.province, ''), NULLIF(u.city, ''), NULLIF(u.location, ''), '未知')
         HAVING COUNT(*) > 0
         ORDER BY count DESC
         LIMIT 20

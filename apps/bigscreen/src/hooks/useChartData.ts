@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createLogger } from '@/utils/logger';
-import { ChartsAPI } from '@/services/api';
+import { ChartsAPI, CommonAPI } from '@/services/api';
 import { useAppStore } from '@/stores/useAppStore';
 
 // 通用数据状态类型
@@ -187,9 +187,11 @@ export function useEventTypes() {
 
 // 词云数据Hook
 export function useWordCloudData(count: number = 50) {
+  const { selectedTimeRange } = useAppStore();
+
   return useAsyncData(
-    () => ChartsAPI.getWordCloudData(count),
-    [count],
+    () => ChartsAPI.getWordCloudData(count, selectedTimeRange),
+    [count, selectedTimeRange],
     { cacheTime: 3 * 60 * 1000 }
   );
 }
@@ -214,9 +216,11 @@ export function usePostCountSeries(days: number = 7) {
 
 // 简单情感分析数据Hook
 export function useSentimentData() {
+  const { selectedTimeRange } = useAppStore();
+
   return useAsyncData(
-    () => ChartsAPI.getSentimentData(),
-    [],
+    () => ChartsAPI.getSentimentData(selectedTimeRange),
+    [selectedTimeRange],
     { cacheTime: 5 * 60 * 1000 }
   );
 }
@@ -333,4 +337,13 @@ export function useRealTimeChartData(
     loading: sentimentTrend.loading || eventCountSeries.loading || postCountSeries.loading,
     errors: [sentimentTrend.error, eventCountSeries.error, postCountSeries.error].filter(Boolean),
   };
+}
+
+// 情感曲线数据Hook
+export function useEmotionCurve(points: number = 7) {
+  return useAsyncData(
+    () => CommonAPI.getEmotionCurve(points),
+    [points],
+    { cacheTime: 2 * 60 * 1000 } // 2分钟缓存，与 useSentimentTrend 一致
+  );
 }

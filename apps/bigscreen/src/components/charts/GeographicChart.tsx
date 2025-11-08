@@ -22,8 +22,8 @@ const GeographicChart: React.FC<GeographicChartProps> = ({
     if (!data || data.length === 0) {
       return null;
     }
-    // 按值排序
-    const sortedData = [...data].sort((a, b) => b.value - a.value);
+    // 按值排序 - 添加防御性检查
+    const sortedData = Array.isArray(data) ? [...data].sort((a, b) => b.value - a.value) : [];
 
     return {
       tooltip: {

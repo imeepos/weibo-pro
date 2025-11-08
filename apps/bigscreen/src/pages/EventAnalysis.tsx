@@ -40,10 +40,16 @@ const EventAnalysis: React.FC = () => {
       try {
         setLoading(true);
         const [eventsResult, categoriesResult, trendsResult] = await Promise.all([
-          EventsAPI.getEventsList(),
-          EventsAPI.getCategories(),
-          EventsAPI.getTrendData()
+          EventsAPI.getEventsList({ timeRange: selectedTimeRange }),
+          EventsAPI.getCategories(selectedTimeRange),
+          EventsAPI.getTrendData(selectedTimeRange)
         ]);
+
+        console.log({
+          eventsResult,
+          categoriesResult,
+          trendsResult
+        })
 
         // 确保数据为数组
         const eventsArray = Array.isArray(eventsResult) ? eventsResult : [];
@@ -68,7 +74,7 @@ const EventAnalysis: React.FC = () => {
     };
 
     loadData();
-  }, []);
+  }, [selectedTimeRange]);
 
   const filteredEvents = Array.isArray(events) ? events.filter(event => {
     const matchesSearch = event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -96,7 +102,7 @@ const EventAnalysis: React.FC = () => {
         return <div className="w-4 h-4 bg-gray-400 rounded-full"></div>;
     }
   };
-
+  console.log({filteredEvents})
   // 计算统计数据
   const totalEvents = filteredEvents.length;
   const totalPosts = filteredEvents.reduce((sum, event) => sum + event.postCount, 0);
@@ -123,11 +129,11 @@ const EventAnalysis: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8 p-6">
+    <div className="flex flex-col h-full space-y-8 p-2">
       {/* 页面标题 */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground flex items-center">
-          <div className="w-1 h-10 bg-gradient-to-b from-primary via-primary to-primary/30 rounded-full mr-4"></div>
+          <div className="w-1 h-auto bg-gradient-to-b from-primary via-primary to-primary/30 rounded-full mr-4"></div>
           事件分析
         </h1>
         <div className="text-sm text-muted-foreground">
@@ -222,8 +228,10 @@ const EventAnalysis: React.FC = () => {
         </div>
       </div>
 
-      {/* 事件列表 */}
-      <div className="grid grid-cols-1 gap-6">
+      {/* 事件列表 - 优雅的滚动容器 */}
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <div className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent hover:scrollbar-thumb-primary/30 transition-colors">
+          <div className="grid grid-cols-1 gap-6">
         {filteredEvents.map((event, index) => (
           <motion.div
             key={event.id}
@@ -343,6 +351,8 @@ const EventAnalysis: React.FC = () => {
             </div>
           </motion.div>
         ))}
+          </div>
+        </div>
       </div>
 
       {/* 事件详情模态框 */}

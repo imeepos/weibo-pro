@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { useTheme } from "@/hooks/useTheme";
 import { createLogger } from '@/utils/logger';
 import { CommonAPI } from "@/services/api";
+import { useAppStore } from "@/stores/useAppStore";
 import type { EChartsFormatterParams } from '@/types/charts';
 
 interface EventTypeBarChartProps {
@@ -18,6 +19,7 @@ const EventTypeBarChart: React.FC<EventTypeBarChartProps> = ({
   className = "",
 }) => {
   const { isDark } = useTheme();
+  const { selectedTimeRange } = useAppStore();
   const [mockData, setMockData] = useState<Array<{name: string, value: number, color: string}>>([]);
 
   useEffect(() => {
@@ -25,9 +27,9 @@ const EventTypeBarChart: React.FC<EventTypeBarChartProps> = ({
     
     const fetchData = async () => {
       try {
-        const data = await CommonAPI.getEventTypes();
+        const data = await CommonAPI.getEventTypes(selectedTimeRange);
         if (cancelled) return;
-        
+
         // 确保数据是数组格式
         if (Array.isArray(data)) {
           setMockData(data);
@@ -41,13 +43,13 @@ const EventTypeBarChart: React.FC<EventTypeBarChartProps> = ({
         setMockData([]);
       }
     };
-    
+
     fetchData();
-    
+
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [selectedTimeRange]);
 
   const option = React.useMemo(() => {
     // Return null if no valid data to prevent gradient rendering errors

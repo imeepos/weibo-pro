@@ -186,14 +186,16 @@ const EventDetail: React.FC = () => {
 
         // 获取时间序列数据
         const timeSeriesData = await EventsAPI.getEventTimeSeries(eventId);
-        // 转换为 TimeSeriesDataPoint 格式
-        const convertedTimeSeries: TimeSeriesDataPoint[] = timeSeriesData.map(item => ({
-          timestamp: item.timestamp,
-          value: item.posts + item.users + item.interactions,
-          positive: 0, // Mock data
-          negative: 0, // Mock data
-          neutral: 0 // Mock data
-        }));
+        // 转换为 TimeSeriesDataPoint 格式，添加防御性检查
+        const convertedTimeSeries: TimeSeriesDataPoint[] = Array.isArray(timeSeriesData)
+          ? timeSeriesData.map(item => ({
+              timestamp: item.timestamp,
+              value: item.posts + item.users + item.interactions,
+              positive: 0, // Mock data
+              negative: 0, // Mock data
+              neutral: 0 // Mock data
+            }))
+          : [];
         setTimeSeriesData(convertedTimeSeries);
 
         // 获取趋势数据
@@ -209,16 +211,18 @@ const EventDetail: React.FC = () => {
 
         // 获取影响力用户数据
         const influenceUsersData = await EventsAPI.getInfluenceUsers(eventId);
-        // 转换为页面期望的 InfluenceUser 格式
-        const convertedInfluenceUsers: InfluenceUser[] = influenceUsersData.map(user => ({
-          id: user.userId,
-          name: user.username,
-          type: 'user', // 默认值
-          influence: user.influence,
-          followers: user.followers.toString(),
-          posts: user.postCount,
-          engagement: user.interactionCount.toString()
-        }));
+        // 转换为页面期望的 InfluenceUser 格式，添加防御性检查
+        const convertedInfluenceUsers: InfluenceUser[] = influenceUsersData
+          .filter(user => user?.userId && user?.username) // 过滤掉无效数据
+          .map(user => ({
+            id: user.userId,
+            name: user.username,
+            type: 'user',
+            influence: user.influence ?? 0,
+            followers: (user.followers ?? 0).toString(),
+            posts: user.postCount ?? 0,
+            engagement: (user.interactionCount ?? 0).toString()
+          }));
         setInfluenceUsers(convertedInfluenceUsers);
 
         // 获取地理分布数据

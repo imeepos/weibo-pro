@@ -1,9 +1,9 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
-import { 
-  RealTimeData, 
-  SystemStatus, 
-  DashboardConfig, 
+import {
+  RealTimeData,
+  SystemStatus,
+  DashboardConfig,
   AppError,
   StatisticsData,
   HotTopic,
@@ -12,6 +12,7 @@ import {
   LocationData,
   SentimentData
 } from '@/types';
+import type { TimeRange } from '@sker/entities';
 
 interface AppState {
   // 数据状态
@@ -22,7 +23,7 @@ interface AppState {
   // UI 状态
   isLoading: boolean;
   error: AppError | null;
-  selectedTimeRange: 'today' | 'yesterday' | 'thisWeek' | 'lastWeek' | 'thisMonth' | 'lastMonth' | 'thisQuarter' | 'lastQuarter' | 'halfYear' | 'lastHalfYear' | 'thisYear' | 'lastYear' | 'all';
+  selectedTimeRange: TimeRange;
   
   // WebSocket 状态
   isConnected: boolean;
@@ -41,7 +42,7 @@ interface AppState {
   setDashboardConfig: (config: Partial<DashboardConfig>) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: AppError | null) => void;
-  setSelectedTimeRange: (range: 'today' | 'yesterday' | 'thisWeek' | 'lastWeek' | 'thisMonth' | 'lastMonth' | 'thisQuarter' | 'lastQuarter' | 'halfYear' | 'lastHalfYear' | 'thisYear' | 'lastYear' | 'all') => void;
+  setSelectedTimeRange: (range: TimeRange) => void;
   setConnectionStatus: (connected: boolean) => void;
   incrementRetries: () => void;
   resetRetries: () => void;
@@ -82,7 +83,7 @@ export const useAppStore = create<AppState>()(
     dashboardConfig: initialDashboardConfig,
     isLoading: false,
     error: null,
-    selectedTimeRange: 'today',
+    selectedTimeRange: '24h',
     isConnected: false,
     connectionRetries: 0,
 
@@ -154,7 +155,7 @@ export const useAppStore = create<AppState>()(
       dashboardConfig: initialDashboardConfig,
       isLoading: false,
       error: null,
-      selectedTimeRange: 'today',
+      selectedTimeRange: '24h',
       isConnected: false,
       connectionRetries: 0,
     }),

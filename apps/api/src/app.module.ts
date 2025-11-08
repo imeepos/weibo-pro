@@ -9,6 +9,7 @@ import { UsersController } from './controllers/users.controller';
 import { SystemController } from './controllers/system.controller';
 import { SentimentController } from './controllers/sentiment.controller';
 import { WorkflowController } from './controllers/workflow.controller';
+import { LayoutController } from './controllers/layout.controller';
 import { CacheService } from './services/cache.service';
 import { OverviewService } from './services/data/overview.service';
 import { EventsService } from './services/data/events.service';
@@ -17,6 +18,7 @@ import { ChartsService } from './services/data/charts.service';
 import { UsersService } from './services/data/users.service';
 import { SystemService } from './services/data/system.service';
 import { SentimentService } from './services/data/sentiment.service';
+import { LayoutService } from './services/data/layout.service';
 import { root } from '@sker/core';
 
 @Module({
@@ -29,7 +31,8 @@ import { root } from '@sker/core';
     UsersController,
     SystemController,
     SentimentController,
-    WorkflowController
+    WorkflowController,
+    LayoutController
   ],
   providers: [
     {
@@ -43,7 +46,8 @@ import { root } from '@sker/core';
     ChartsService,
     UsersService,
     SystemService,
-    SentimentService
+    SentimentService,
+    LayoutService
   ],
 })
 export class AppModule {}

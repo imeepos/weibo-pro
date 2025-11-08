@@ -16,7 +16,6 @@ interface SentimentPieChartProps {
 
 const SentimentPieChart: React.FC<SentimentPieChartProps> = ({
   title = "情感分析分布",
-  height = 0,
   className,
   showPercentage = true,
 }) => {
@@ -252,7 +251,7 @@ const SentimentPieChart: React.FC<SentimentPieChartProps> = ({
       {option && (
         <ReactECharts
           option={option}
-          style={{ height: height ? `${height}px` : `100%`, width: "100%" }}
+          style={{ height: `100%`, width: "100%" }}
           opts={{ renderer: "canvas" }}
           notMerge={true}
           lazyUpdate={true}

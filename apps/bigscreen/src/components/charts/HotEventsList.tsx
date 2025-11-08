@@ -31,6 +31,7 @@ const HotEventsList: React.FC<HotEventsListProps> = ({ className = '' }) => {
       try {
         setLoading(true);
         const result = await EventsAPI.getHotList();
+        console.log(`EventsAPI.getHotList`, {result})
         // 确保返回的是数组
         if (Array.isArray(result)) {
           setEvents(result);
@@ -120,7 +121,7 @@ const HotEventsList: React.FC<HotEventsListProps> = ({ className = '' }) => {
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: index * 0.1 }}
-          className="bg-muted/30 hover:bg-muted/50 border border-border rounded-lg p-2 cursor-pointer transition-all duration-300 hover:border-primary/50"
+          className="bg-muted/30 hover:bg-muted/50 rounded-lg p-2 cursor-pointer transition-all duration-300"
           onClick={() => handleEventClick(event.id)}
         >
           <div className="flex items-start justify-between">

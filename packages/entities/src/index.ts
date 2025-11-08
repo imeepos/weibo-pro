@@ -20,6 +20,7 @@ export * from './event-tag.entity'
 export * from './event-tag-relation.entity'
 export * from './event-statistics.entity'
 export * from './post-nlp-result.entity'
+export * from './layout-configuration.entity'
 export * from './queries'
 
 export { DataSource, EntityManager } from 'typeorm'

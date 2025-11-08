@@ -5,6 +5,7 @@ import {
   EventStatisticsEntity,
   WeiboPostEntity,
   WeiboUserEntity,
+  PostNLPResultEntity,
   findHotEvents,
   findEventList,
   findLatestEventStatistics,
@@ -105,8 +106,10 @@ export class EventsService {
           const trendData = await entityManager
             .createQueryBuilder(EventStatisticsEntity, 'stats')
             .select(`DATE_TRUNC('${granularity}', stats.snapshot_at)`, 'date')
-            .addSelect('COUNT(DISTINCT stats.event_id)', 'eventCount')
-            .addSelect('SUM(stats.user_count)', 'userCount')
+            .addSelect('COUNT(DISTINCT stats.event_id)', 'eventcount')
+            .addSelect('SUM(stats.user_count)', 'usercount')
+            .addSelect('SUM(stats.post_count)', 'postcount')
+            .addSelect('AVG(stats.hotness)', 'hotness')
             .where('stats.snapshot_at >= :start', { start: dateRange.start })
             .andWhere('stats.snapshot_at <= :end', { end: dateRange.end })
             .groupBy('date')
@@ -114,8 +117,10 @@ export class EventsService {
             .getRawMany();
 
           const categories = trendData.map((d: any) => this.formatDate(d.date, granularity));
-          const eventCounts = trendData.map((d: any) => parseInt(d.eventCount || '0', 10));
-          const userCounts = trendData.map((d: any) => parseInt(d.userCount || '0', 10));
+          const eventCounts = trendData.map((d: any) => parseInt(d.eventcount || '0', 10));
+          const userCounts = trendData.map((d: any) => parseInt(d.usercount || '0', 10));
+          const postCounts = trendData.map((d: any) => parseInt(d.postcount || '0', 10));
+          const hotness = trendData.map((d: any) => Math.round(parseFloat(d.hotness || '0')));
 
           return {
             success: true,
@@ -123,7 +128,9 @@ export class EventsService {
               categories,
               series: [
                 { name: '事件数量', data: eventCounts },
-                { name: '参与用户', data: userCounts }
+                { name: '贴子数量', data: postCounts },
+                { name: '参与用户', data: userCounts },
+                { name: '热度指数', data: hotness }
               ]
             },
             message: '获取趋势数据成功'
@@ -311,23 +318,24 @@ export class EventsService {
         return await useEntityManager(async entityManager => {
           // 查询该事件相关的微博及其用户,按互动数排序
           const topUsers = await entityManager
-            .createQueryBuilder(WeiboPostEntity, 'post')
-            .select('jsonb_extract_path_text(post.user, \'id\')', 'userId')
+            .createQueryBuilder(PostNLPResultEntity, 'nlp')
+            .innerJoin('nlp.post', 'post')
+            .select('jsonb_extract_path_text(post.user, \'id\')', 'userid')
             .addSelect('jsonb_extract_path_text(post.user, \'screen_name\')', 'name')
             .addSelect('jsonb_extract_path_text(post.user, \'followers_count\')', 'followers')
-            .addSelect('COUNT(post.id)', 'postCount')
-            .addSelect('SUM(post.attitudes_count + post.comments_count + post.reposts_count)', 'totalInteractions')
-            .where('post.event_id = :eventId', { eventId: id })
+            .addSelect('COUNT(post.id)', 'postcount')
+            .addSelect('SUM(post.attitudes_count + post.comments_count + post.reposts_count)', 'totalinteractions')
+            .where('nlp.event_id = :eventId', { eventId: id })
             .andWhere('post.deleted_at IS NULL')
-            .groupBy('userId, name, followers')
-            .orderBy('totalInteractions', 'DESC')
+            .groupBy('userid, name, followers')
+            .orderBy('totalinteractions', 'DESC')
             .limit(10)
             .getRawMany();
 
           const users = topUsers.map((user: any) => {
-            const totalInteractions = parseInt(user.totalInteractions || '0', 10);
+            const totalInteractions = parseInt(user.totalinteractions || '0', 10);
             const followers = parseInt(user.followers || '0', 10);
-            const postCount = parseInt(user.postCount || '0', 10);
+            const postCount = parseInt(user.postcount || '0', 10);
 
             // 计算影响力分数: 互动数 * 0.6 + 粉丝数/1000 * 0.3 + 帖子数 * 0.1
             const influence = Math.min(
@@ -336,11 +344,13 @@ export class EventsService {
             );
 
             return {
-              id: user.userId,
-              name: user.name,
+              userId: user.userid || '',
+              username: user.name || '未知用户',
               influence,
-              posts: postCount,
-              followers
+              postCount,
+              followers,
+              interactionCount: totalInteractions,
+              sentimentScore: 0.5 // 默认值，后续可以从 NLP 结果计算
             };
           });
 
@@ -362,19 +372,20 @@ export class EventsService {
       cacheKey,
       async () => {
         return await useEntityManager(async entityManager => {
-          // 查询该事件相关微博的地域分布
+          // 通过 NLP 结果表关联查询事件相关微博的地域分布
           const locationData = await entityManager
             .createQueryBuilder(WeiboPostEntity, 'post')
-            .select([
+            .innerJoin(PostNLPResultEntity, 'nlp', 'nlp.post_id = post.id')
+            .select(
               `COALESCE(
                 NULLIF(post.region_name, ''),
                 NULLIF(jsonb_extract_path_text(post.user, 'location'), ''),
                 '未知'
               )`,
               'location'
-            ])
+            )
             .addSelect('COUNT(*)', 'count')
-            .where('post.event_id = :eventId', { eventId: id })
+            .where('nlp.event_id = :eventId', { eventId: id })
             .andWhere('post.deleted_at IS NULL')
             .groupBy('location')
             .orderBy('count', 'DESC')

@@ -45,10 +45,9 @@ export const useRealTimeData = (options: UseRealTimeDataOptions = {}) => {
       setLoading(true);
       setError(null);
 
-      // 转换时间范围格式
-      const timeRange: TimeRange = selectedTimeRange === 'today' ? '24h' : 
-                                  selectedTimeRange === 'thisWeek' ? '7d' : '24h';
-      
+      // 使用统一的 TimeRange 格式
+      const timeRange: TimeRange = selectedTimeRange;
+
       // 并行获取所有数据
       const [
         sentimentStats,
@@ -66,11 +65,11 @@ export const useRealTimeData = (options: UseRealTimeDataOptions = {}) => {
         RecentPost[]
       ] = await Promise.all([
         SentimentAPI.getStatistics(timeRange),
-        SentimentAPI.getHotTopics(10),
-        SentimentAPI.getKeywords(50),
+        SentimentAPI.getHotTopics(timeRange, 10),
+        SentimentAPI.getKeywords(timeRange, 50),
         SentimentAPI.getTimeSeries(timeRange),
-        SentimentAPI.getLocationData(),
-        SentimentAPI.getRecentPosts(20),
+        SentimentAPI.getLocationData(timeRange),
+        SentimentAPI.getRecentPosts(timeRange, 20),
       ]);
 
       // 转换数据格式以匹配 RealTimeData 类型

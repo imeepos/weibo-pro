@@ -58,7 +58,12 @@ export class ChartsAPI {
   static getSentimentTrend = withErrorBoundary(
     async (hours: number = 24): Promise<SentimentTrendData[]> => {
       logger.debug('Fetching sentiment trend data', { hours });
-      const response = await apiClient.get<SentimentTrendData[]>(
+
+      // 后端返回 ChartData 格式，需要转换为 SentimentTrendData[]
+      const response = await apiClient.get<{
+        categories: string[];
+        series: Array<{ name: string; data: number[] }>;
+      }>(
         '/api/charts/sentiment-trend',
         {
           params: { hours },
@@ -66,7 +71,29 @@ export class ChartsAPI {
           timeout: 10000,
         }
       );
-      return response.data;
+
+      const chartData = response.data;
+
+      console.log({ chartData })
+
+      // 数据转换：ChartData → SentimentTrendData[]
+      if (!chartData?.categories || !chartData?.series) {
+        return [];
+      }
+
+      const positiveIndex = chartData.series.findIndex(s => s.name === '正面');
+      const negativeIndex = chartData.series.findIndex(s => s.name === '负面');
+      const neutralIndex = chartData.series.findIndex(s => s.name === '中性');
+
+      return chartData.categories.map((timestamp, index) => ({
+        timestamp,
+        positive: positiveIndex >= 0 ? chartData.series[positiveIndex]?.data[index] || 0 : 0,
+        negative: negativeIndex >= 0 ? chartData.series[negativeIndex]?.data[index] || 0 : 0,
+        neutral: neutralIndex >= 0 ? chartData.series[neutralIndex]?.data[index] || 0 : 0,
+        total: (positiveIndex >= 0 ? chartData.series[positiveIndex]?.data[index] || 0 : 0) +
+          (negativeIndex >= 0 ? chartData.series[negativeIndex]?.data[index] || 0 : 0) +
+          (neutralIndex >= 0 ? chartData.series[neutralIndex]?.data[index] || 0 : 0),
+      }));
     },
     { component: 'ChartsAPI', action: 'getSentimentTrend' }
   );
@@ -107,12 +134,12 @@ export class ChartsAPI {
 
   // 获取词云数据
   static getWordCloudData = withErrorBoundary(
-    async (count: number = 50): Promise<HotTopicData[]> => {
-      logger.debug('Fetching word cloud data', { count });
+    async (count: number = 50, timeRange?: string): Promise<HotTopicData[]> => {
+      logger.debug('Fetching word cloud data', { count, timeRange });
       const response = await apiClient.get<HotTopicData[]>(
         '/api/charts/word-cloud',
         {
-          params: { count },
+          params: { count, timeRange },
           retry: { count: 2, delay: 1000 },
           timeout: 8000,
         }
@@ -158,10 +185,11 @@ export class ChartsAPI {
 
   // 获取简单情感分析数据
   static getSentimentData = withErrorBoundary(
-    async (): Promise<{ positive: number; negative: number; neutral: number; total: number }> => {
+    async (timeRange?: string): Promise<{ positive: number; negative: number; neutral: number; total: number }> => {
       logger.debug('Fetching sentiment data');
+      const params = timeRange ? `?timeRange=${timeRange}` : '';
       const response = await apiClient.get<{ positive: number; negative: number; neutral: number; total: number }>(
-        '/api/charts/sentiment-data',
+        `/api/charts/sentiment-data${params}`,
         {
           retry: { count: 2, delay: 1000 },
           timeout: 8000,
@@ -190,7 +218,7 @@ export class ChartsAPI {
   );
 
   // ================== 兼容性方法 ==================
-  
+
   // Legacy methods for backward compatibility
   static async getOverviewStats() {
     return this.getSentimentData();
@@ -205,8 +233,8 @@ export class ChartsAPI {
     return this.getEventCountSeries(days);
   }
 
-  static async getHotEvents(limit: number = 10) {
-    return this.getWordCloudData(limit);
+  static async getHotEvents(limit: number = 10, timeRange?: string) {
+    return this.getWordCloudData(limit, timeRange);
   }
 
   static async getPostCount(range?: string) {
@@ -218,8 +246,8 @@ export class ChartsAPI {
     return this.getEventTypes();
   }
 
-  static async getWordCloud(limit: number = 100) {
-    return this.getWordCloudData(limit);
+  static async getWordCloud(limit: number = 100, timeRange?: string) {
+    return this.getWordCloudData(limit, timeRange);
   }
 
   static async getHeatmapData() {

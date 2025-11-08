@@ -81,7 +81,7 @@ const Layout: React.FC<LayoutProps> = ({ children, className }) => {
           transition={{ duration: 0.5, delay: 0.2 }}
           className={cn(
             'flex-1 relative transition-all duration-300 h-full',
-            'overflow-hidden',
+            'overflow-y-auto',
             'bg-gray-50 dark:bg-gray-900',
             isFullscreen
               ? 'p-1'

@@ -5,3 +5,4 @@ export { default as Footer } from './Footer';
 
 export * from './charts';
 export * from './ui';
+export { default as FullscreenLayout } from './FullscreenLayout'

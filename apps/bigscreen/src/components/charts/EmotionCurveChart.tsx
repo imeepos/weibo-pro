@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/hooks/useTheme';
+import { useAppStore } from '@/stores/useAppStore';
 
 import { CommonAPI } from '@/services/api';
 import { createLogger } from '@/utils';
@@ -10,15 +11,14 @@ import type { EChartsFormatterParams } from '@/types/charts';
 const logger = createLogger('EmotionCurveChart');
 
 interface EmotionCurveChartProps {
-  height?: number;
   className?: string;
 }
 
 const EmotionCurveChart: React.FC<EmotionCurveChartProps> = ({
-  height = 0,
   className = ''
 }) => {
   const { isDark } = useTheme();
+  const { selectedTimeRange } = useAppStore();
   const [selectedType, setSelectedType] = useState<'all' | 'positive' | 'negative' | 'neutral'>('all');
   const [emotionData, setEmotionData] = useState<{
     hours: string[];
@@ -34,24 +34,27 @@ const EmotionCurveChart: React.FC<EmotionCurveChartProps> = ({
 
   useEffect(() => {
     let cancelled = false;
-    
+
     const fetchData = async () => {
       try {
-        const data = await CommonAPI.getEmotionCurve(7);
+        console.log('[EmotionCurveChart] 🚀 开始获取数据', { selectedTimeRange });
+        const data = await CommonAPI.getEmotionCurve(selectedTimeRange);
         if (cancelled) return;
+        console.log('[EmotionCurveChart] ✅ 收到数据', data);
         setEmotionData(data);
       } catch (error) {
         if (cancelled) return;
+        console.error('[EmotionCurveChart] ❌ 获取数据失败', error);
         logger.error('Failed to fetch emotion curve data', error);
       }
     };
-    
+
     fetchData();
-    
+
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [selectedTimeRange]);
 
   const { hours, positiveData, negativeData, neutralData } = emotionData;
 
@@ -175,8 +178,20 @@ const EmotionCurveChart: React.FC<EmotionCurveChartProps> = ({
   };
 
   const option = React.useMemo(() => {
+    console.log('[EmotionCurveChart] 📊 渲染判断', {
+      hours_length: hours.length,
+      positiveData_length: positiveData.length,
+      negativeData_length: negativeData.length,
+      neutralData_length: neutralData.length,
+      hours,
+      positiveData,
+      negativeData,
+      neutralData
+    });
+
     // Return null if no valid data to prevent gradient rendering errors
     if (!hours.length || (!positiveData.length && !negativeData.length && !neutralData.length)) {
+      console.log('[EmotionCurveChart] ⚠️ 显示"暂无数据"');
       return {
         title: {
           text: '暂无数据',
@@ -189,6 +204,9 @@ const EmotionCurveChart: React.FC<EmotionCurveChartProps> = ({
         }
       };
     }
+
+    console.log('[EmotionCurveChart] ✅ 显示图表');
+
 
     return {
     tooltip: {
@@ -205,7 +223,7 @@ const EmotionCurveChart: React.FC<EmotionCurveChartProps> = ({
         }
       },
       formatter: (params: EChartsFormatterParams[]) => {
-        let result = `${params[0].name}<br/>`;
+        let result = `${params[0]?.name}<br/>`;
         params.forEach((param) => {
           result += `<span style="color: ${param.color};">●</span> ${param.seriesName}: ${param.value}<br/>`;
         });
@@ -303,7 +321,7 @@ const EmotionCurveChart: React.FC<EmotionCurveChartProps> = ({
       {option ? (
         <ReactECharts
           option={option}
-          style={{ height: height ? `${height}px`: `100%`, width: '100%' }}
+          style={{ height: `100%`, width: '100%' }}
           opts={{ renderer: 'canvas' }}
         />
       ) : (

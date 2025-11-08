@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Layout } from '@/components';
+import { Layout, FullscreenLayout } from '@/components';
 import DataOverview from '@/pages/DataOverview';
 import CustomDataOverview from '@/pages/CustomDataOverview';
 import EventAnalysis from '@/pages/EventAnalysis';
@@ -110,208 +110,255 @@ const App: React.FC = () => {
           'min-h-screen transition-colors duration-300',
           theme === 'dark' ? 'dark' : ''
         )}>
-          <Layout>
-            <AnimatePresence mode="wait">
-              <Routes>
-              {/* 新的主要功能页面 */}
-              <Route
-                path="/"
-                element={
-                  <motion.div
-                    key="data-overview"
-                    className="h-full"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 1.05 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <DataOverview />
-                  </motion.div>
-                }
-              />
-              <Route
-                path="/data-overview"
-                element={
-                  <motion.div
-                    key="data-overview"
-                    className="h-full"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 1.05 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <DataOverview />
-                  </motion.div>
-                }
-              />
-              <Route
-                path="/event-analysis"
-                element={
-                  <motion.div
-                    key="event-analysis"
-                    className="h-full"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 1.05 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <EventAnalysis />
-                  </motion.div>
-                }
-              />
-              <Route
-                path="/event-analysis/:eventId"
-                element={
-                  <motion.div
-                    key="event-detail"
-                    className="h-full"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 1.05 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <EventDetail />
-                  </motion.div>
-                }
-              />
-              <Route
-                path="/user-detection"
-                element={
-                  <motion.div
-                    key="user-detection"
-                    className="h-full"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 1.05 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <UserDetection />
-                  </motion.div>
-                }
-              />
-              <Route
-                path="/custom-overview"
-                element={
-                  <motion.div
-                    key="custom-overview"
-                    className="h-full"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 1.05 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <CustomDataOverview />
-                  </motion.div>
-                }
-              />
-              <Route
-                path="/layout-editor"
-                element={
-                  <motion.div
-                    key="layout-editor"
-                    className="h-full"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 1.05 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <LayoutDemo />
-                  </motion.div>
-                }
-              />
-              <Route
-                path="/ble-mesh-topology"
-                element={
-                  <motion.div
-                    key="ble-mesh-topology"
-                    className="h-full"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 1.05 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <BleMeshTopology />
-                  </motion.div>
-                }
-              />
-              <Route
-                path="/network-topology"
-                element={
-                  <motion.div
-                    key="network-topology"
-                    className="h-full"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 1.05 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <NetworkTopology />
-                  </motion.div>
-                }
-              />
-              <Route
-                path="/workflow-editor"
-                element={
-                  <motion.div
-                    key="workflow-editor"
-                    className="h-full"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 1.05 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <WorkflowEditor />
-                  </motion.div>
-                }
-              />
-              <Route
-                path="/workflow-demo"
-                element={
-                  <motion.div
-                    key="workflow-demo"
-                    className="h-full"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 1.05 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <WorkflowDemo />
-                  </motion.div>
-                }
-              />
-              <Route
-                path="/crawler-control"
-                element={
-                  <motion.div
-                    key="crawler-control"
-                    className="h-full"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 1.05 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <CrawlerControl />
-                  </motion.div>
-                }
-              />
-              <Route
-                path="/hero-demo"
-                element={
-                  <motion.div
-                    key="hero-demo"
-                    className="h-full"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 1.05 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <HeroDemo />
-                  </motion.div>
-                }
-              />
-              </Routes>
-            </AnimatePresence>
-          </Layout>
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <Layout>
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key="data-overview"
+                      className="h-full"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 1.05 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <DataOverview />
+                    </motion.div>
+                  </AnimatePresence>
+                </Layout>
+              }
+            />
+            <Route
+              path="/data-overview"
+              element={
+                <Layout>
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key="data-overview"
+                      className="h-full"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 1.05 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <DataOverview />
+                    </motion.div>
+                  </AnimatePresence>
+                </Layout>
+              }
+            />
+            <Route
+              path="/event-analysis"
+              element={
+                <Layout>
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key="event-analysis"
+                      className="h-full"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 1.05 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <EventAnalysis />
+                    </motion.div>
+                  </AnimatePresence>
+                </Layout>
+              }
+            />
+            <Route
+              path="/event-analysis/:eventId"
+              element={
+                <FullscreenLayout>
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key="event-detail"
+                      className="h-full"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 1.05 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <EventDetail />
+                    </motion.div>
+                  </AnimatePresence>
+                </FullscreenLayout>
+              }
+            />
+            <Route
+              path="/user-detection"
+              element={
+                <Layout>
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key="user-detection"
+                      className="h-full"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 1.05 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <UserDetection />
+                    </motion.div>
+                  </AnimatePresence>
+                </Layout>
+              }
+            />
+            <Route
+              path="/custom-overview"
+              element={
+                <Layout>
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key="custom-overview"
+                      className="h-full"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 1.05 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <CustomDataOverview />
+                    </motion.div>
+                  </AnimatePresence>
+                </Layout>
+              }
+            />
+            <Route
+              path="/layout-editor"
+              element={
+                <Layout>
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key="layout-editor"
+                      className="h-full"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 1.05 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <LayoutDemo />
+                    </motion.div>
+                  </AnimatePresence>
+                </Layout>
+              }
+            />
+            <Route
+              path="/ble-mesh-topology"
+              element={
+                <Layout>
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key="ble-mesh-topology"
+                      className="h-full"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 1.05 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <BleMeshTopology />
+                    </motion.div>
+                  </AnimatePresence>
+                </Layout>
+              }
+            />
+            <Route
+              path="/network-topology"
+              element={
+                <Layout>
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key="network-topology"
+                      className="h-full"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 1.05 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <NetworkTopology />
+                    </motion.div>
+                  </AnimatePresence>
+                </Layout>
+              }
+            />
+            <Route
+              path="/workflow-editor"
+              element={
+                <Layout>
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key="workflow-editor"
+                      className="h-full"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 1.05 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <WorkflowEditor />
+                    </motion.div>
+                  </AnimatePresence>
+                </Layout>
+              }
+            />
+            <Route
+              path="/workflow-demo"
+              element={
+                <Layout>
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key="workflow-demo"
+                      className="h-full"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 1.05 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <WorkflowDemo />
+                    </motion.div>
+                  </AnimatePresence>
+                </Layout>
+              }
+            />
+            <Route
+              path="/crawler-control"
+              element={
+                <Layout>
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key="crawler-control"
+                      className="h-full"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 1.05 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <CrawlerControl />
+                    </motion.div>
+                  </AnimatePresence>
+                </Layout>
+              }
+            />
+            <Route
+              path="/hero-demo"
+              element={
+                <FullscreenLayout>
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key="hero-demo"
+                      className="h-full"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 1.05 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <HeroDemo />
+                    </motion.div>
+                  </AnimatePresence>
+                </FullscreenLayout>
+              }
+            />
+          </Routes>
         </div>
       </Router>
     </ToastProvider>

@@ -54,21 +54,17 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isLayoutMenuOpen]);
 
-  // 时间区间选项 - 根据您的需求更新
+  // 时间区间选项 - 与后端 @sker/entities TimeRange 保持一致
   const timeRangeOptions = [
-    { value: 'today', label: '今日' },
-    { value: 'yesterday', label: '昨日' },
-    { value: 'thisWeek', label: '本周' },
-    { value: 'lastWeek', label: '上周' },
-    { value: 'thisMonth', label: '本月' },
-    { value: 'lastMonth', label: '上月' },
-    { value: 'thisQuarter', label: '本季度' },
-    { value: 'lastQuarter', label: '上季度' },
-    { value: 'halfYear', label: '半年' },
-    { value: 'lastHalfYear', label: '上半年' },
-    { value: 'thisYear', label: '今年' },
-    { value: 'lastYear', label: '去年' },
-    { value: 'all', label: '所有' },
+    { value: '1h', label: '近1小时' },
+    { value: '6h', label: '近6小时' },
+    { value: '12h', label: '近12小时' },
+    { value: '24h', label: '近24小时' },
+    { value: '7d', label: '近7天' },
+    { value: '30d', label: '近30天' },
+    { value: '90d', label: '近90天' },
+    { value: '180d', label: '近180天' },
+    { value: '365d', label: '近365天' },
   ] as const;
 
   type TimeRangeValue = typeof timeRangeOptions[number]['value'];

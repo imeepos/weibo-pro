@@ -126,49 +126,49 @@ export interface SentimentSearchResult {
 export const SentimentAPI = {
   // 获取实时数据
   getRealTimeData: async (timeRange: TimeRange = '24h'): Promise<SentimentRealTimeData> => {
-    const response = await apiClient.get<ApiResponse<SentimentRealTimeData>>(`/api/sentiment/realtime?timeRange=${timeRange}`);
-    return response.data;
+    const response = await apiClient.get<SentimentRealTimeData>(`/api/sentiment/realtime?timeRange=${timeRange}`);
+    return response;
   },
 
   // 获取统计数据
   getStatistics: async (timeRange: TimeRange = '24h'): Promise<SentimentStatistics> => {
-    const response = await apiClient.get<ApiResponse<SentimentStatistics>>(`/api/sentiment/statistics?timeRange=${timeRange}`);
-    return response.data;
+    const response = await apiClient.get<SentimentStatistics>(`/api/sentiment/statistics?timeRange=${timeRange}`);
+    return response;
   },
 
   // 获取热点话题
   getHotTopics: async (timeRange: TimeRange = '24h', limit: number = 10): Promise<HotTopic[]> => {
-    const response = await apiClient.get<ApiResponse<HotTopic[]>>(`/api/sentiment/hot-topics?timeRange=${timeRange}&limit=${limit}`);
-    return response.data;
+    const response = await apiClient.get<HotTopic[]>(`/api/sentiment/hot-topics?timeRange=${timeRange}&limit=${limit}`);
+    return response;
   },
 
   // 获取关键词
   getKeywords: async (timeRange: TimeRange = '24h', limit: number = 50): Promise<SentimentKeyword[]> => {
-    const response = await apiClient.get<ApiResponse<SentimentKeyword[]>>(`/api/sentiment/keywords?timeRange=${timeRange}&limit=${limit}`);
-    return response.data;
+    const response = await apiClient.get<SentimentKeyword[]>(`/api/sentiment/keywords?timeRange=${timeRange}&limit=${limit}`);
+    return response;
   },
 
   // 获取时间序列数据
   getTimeSeries: async (timeRange: TimeRange = '24h'): Promise<SentimentTimeSeries[]> => {
-    const response = await apiClient.get<ApiResponse<SentimentTimeSeries[]>>(`/api/sentiment/time-series?timeRange=${timeRange}`);
-    return response.data;
+    const response = await apiClient.get<SentimentTimeSeries[]>(`/api/sentiment/time-series?timeRange=${timeRange}`);
+    return response;
   },
 
   // 获取地理位置数据
   getLocationData: async (timeRange: TimeRange = '24h'): Promise<SentimentLocationData[]> => {
-    const response = await apiClient.get<ApiResponse<SentimentLocationData[]>>(`/api/sentiment/locations?timeRange=${timeRange}`);
-    return response.data;
+    const response = await apiClient.get<SentimentLocationData[]>(`/api/sentiment/locations?timeRange=${timeRange}`);
+    return response;
   },
 
   // 获取最新帖子
   getRecentPosts: async (timeRange: TimeRange = '24h', limit: number = 20): Promise<RecentPost[]> => {
-    const response = await apiClient.get<ApiResponse<RecentPost[]>>(`/api/sentiment/recent-posts?timeRange=${timeRange}&limit=${limit}`);
-    return response.data;
+    const response = await apiClient.get<RecentPost[]>(`/api/sentiment/recent-posts?timeRange=${timeRange}&limit=${limit}`);
+    return response;
   },
 
   // 搜索相关内容
   search: async (query: string, filters?: SentimentSearchFilters): Promise<SentimentSearchResult> => {
-    const response = await apiClient.post<ApiResponse<SentimentSearchResult>>('/api/sentiment/search', { query, filters });
-    return response.data;
+    const response = await apiClient.post<SentimentSearchResult>('/api/sentiment/search', { query, filters });
+    return response;
   },
 };

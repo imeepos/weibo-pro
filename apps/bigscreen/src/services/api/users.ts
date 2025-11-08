@@ -80,19 +80,19 @@ export const UsersAPI = {
     if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
     
     const url = `/api/users/list${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-    const response = await apiClient.get<ApiResponse<UsersListResponse>>(url);
-    return response.data;
+    const response = await apiClient.get<UsersListResponse>(url);
+    return response;
   },
 
   // 获取风险等级配置
   getRiskLevels: async (): Promise<RiskLevel[]> => {
-    const response = await apiClient.get<ApiResponse<RiskLevel[]>>('/api/users/risk-levels');
-    return response.data;
+    const response = await apiClient.get<RiskLevel[]>('/api/users/risk-levels');
+    return response;
   },
 
   // 获取用户统计数据
   getStatistics: async (): Promise<UserStatistics> => {
-    const response = await apiClient.get<ApiResponse<UserStatistics>>('/api/users/statistics');
-    return response.data;
+    const response = await apiClient.get<UserStatistics>('/api/users/statistics');
+    return response;
   },
 };
