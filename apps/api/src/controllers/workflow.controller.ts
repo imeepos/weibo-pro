@@ -8,6 +8,7 @@ import {
   WeiboAjaxStatusesRepostTimelineAst,
 } from '@sker/workflow-ast';
 import { execute } from '@sker/workflow';
+import { logger } from '../utils/logger';
 
 /**
  * 爬虫工作流触发控制器
@@ -76,7 +77,7 @@ export class WorkflowController {
     searchAst.endDate = new Date(endDate);
     searchAst.page = page;
 
-    console.log(`[WorkflowController] 开始微博搜索: keyword=${keyword}, dateRange=${startDate}~${endDate}`);
+    logger.info('Starting Weibo search', { keyword, dateRange: `${startDate}~${endDate}` });
 
     const result = await execute(searchAst, {});
 
@@ -152,7 +153,7 @@ export class WorkflowController {
       throw new BadRequestException('帖子ID不能为空');
     }
 
-    console.log(`[WorkflowController] 开始爬取帖子: postId=${postId}`);
+    logger.info('Starting post crawl', { postId });
 
     const showAst = new WeiboAjaxStatusesShowAst();
     showAst.mblogid = postId;
@@ -193,7 +194,7 @@ export class WorkflowController {
     await execute(workflow as any, {});
 
     if (showAst.state !== 'success') {
-      console.error(`[WorkflowController] 帖子爬取失败: postId=${postId}`, showAst.error);
+      logger.error('Post crawl failed', { postId, error: showAst.error?.message });
       throw new Error(showAst.error?.message || '帖子爬取失败');
     }
 
@@ -207,7 +208,7 @@ export class WorkflowController {
       repostsCrawled: repostAst.state === 'success',
     };
 
-    console.log('[WorkflowController] 帖子爬取成功:', crawlResult);
+    logger.info('Post crawl successful', crawlResult);
 
     return crawlResult;
   }

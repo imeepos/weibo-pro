@@ -12,6 +12,7 @@ import {
 } from './time-range.utils';
 import { CacheService, CACHE_KEYS, CACHE_TTL } from '../cache.service';
 import type { TimeRange } from './types';
+import { logger } from '../../utils/logger';
 
 export interface ChartData {
   categories: string[];
@@ -163,12 +164,7 @@ export class ChartsService {
       const { start, end } = getTimeRangeBoundaries(timeRange);
       const granularity = this.getTimeGranularity(timeRange);
 
-      console.log('[ChartsService.fetchSentimentTrend] 🔍 查询参数', {
-        timeRange,
-        start,
-        end,
-        granularity
-      });
+      logger.info('Fetching sentiment trend', { timeRange, start, end, granularity });
 
       const results = await manager.query(`
         SELECT
@@ -185,10 +181,7 @@ export class ChartsService {
         ORDER BY time_bucket ASC
       `, [granularity, start, end]);
 
-      console.log('[ChartsService.fetchSentimentTrend] 📊 数据库查询结果', {
-        结果数量: results.length,
-        原始数据: JSON.stringify(results, null, 2)
-      });
+      logger.info('Sentiment trend query completed', { resultCount: results.length });
 
       const categories = results.map((r: any) => this.formatTimeLabel(r.time_bucket, granularity));
       const positiveData = results.map((r: any) => parseInt(r.positive));
@@ -203,8 +196,6 @@ export class ChartsService {
           { name: '中性', data: neutralData }
         ]
       };
-
-      console.log('[ChartsService.fetchSentimentTrend] ✅ 返回数据', JSON.stringify(chartData, null, 2));
 
       return chartData;
     });
