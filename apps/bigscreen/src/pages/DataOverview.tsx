@@ -100,27 +100,21 @@ const DataOverview: React.FC = () => {
       {/* 底部区域：3个模块 - 固定比例高度 */}
       <div className="dashboard-bottom-content">
         {/* 热词分析 */}
-        <div className="glass-card sentiment-overview-card min-h-0 overflow-hidden py-4">
-          <div className="card-content-lg h-full">
-            <WordCloudChart
-              title=""
-              maxWords={50}
-            />
-          </div>
+        <div className="glass-card sentiment-overview-card min-h-0 overflow-hidden p-4">
+          <WordCloudChart
+            title=""
+            maxWords={50}
+          />
         </div>
 
         {/* 事件分析 */}
-        <div className="glass-card sentiment-overview-card min-h-0 overflow-hidden py-4">
-          <div className="card-content-lg h-full px-4">
-            <HotEventsList />
-          </div>
+        <div className="glass-card sentiment-overview-card min-h-0 overflow-hidden p-4">
+          <HotEventsList />
         </div>
 
         {/* 事件类型分布 */}
-        <div className="glass-card sentiment-overview-card min-h-0 overflow-hidden flex flex-col py-4">
-          <div className="card-content-lg flex-1 min-h-0">
-            <EventTypeBarChart className="h-full" />
-          </div>
+        <div className="glass-card sentiment-overview-card min-h-0 overflow-hidden flex flex-col p-4">
+          <EventTypeBarChart className="h-full" />
         </div>
       </div>
     </div>
