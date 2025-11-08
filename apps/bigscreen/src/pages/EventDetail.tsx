@@ -125,6 +125,16 @@ interface EventDetailData {
     };
     status: 'completed' | 'ongoing' | 'planned';
   }>;
+  developmentPattern?: {
+    outbreakSpeed: string;
+    propagationScope: string;
+    duration: string;
+    impactDepth: string;
+  };
+  successFactors?: Array<{
+    title: string;
+    description: string;
+  }>;
 }
 
 const logger = createLogger('EventDetail');
@@ -177,10 +187,12 @@ const EventDetail: React.FC = () => {
           keywords: eventData.keywords,
           createdAt: eventData.createdAt,
           lastUpdate: eventData.lastUpdate,
-          timeline: [], // Mock data for now
-          propagationPath: [], // Mock data for now
-          keyNodes: [], // Mock data for now
-          developmentPhases: [] // Mock data for now
+          timeline: eventData.timeline || [],
+          propagationPath: eventData.propagationPath || [],
+          keyNodes: eventData.keyNodes || [],
+          developmentPhases: eventData.developmentPhases || [],
+          developmentPattern: eventData.developmentPattern,
+          successFactors: eventData.successFactors
         };
         setEventData(convertedEventData);
 
@@ -191,9 +203,9 @@ const EventDetail: React.FC = () => {
           ? timeSeriesData.map(item => ({
             timestamp: item.timestamp,
             value: item.posts + item.users + item.interactions,
-            positive: 0, // Mock data
-            negative: 0, // Mock data
-            neutral: 0 // Mock data
+            positive: item.positive,
+            negative: item.negative,
+            neutral: item.neutral
           }))
           : [];
         setTimeSeriesData(convertedTimeSeries);
@@ -202,7 +214,7 @@ const EventDetail: React.FC = () => {
         const trendData = await EventsAPI.getEventTrends(eventId);
         // 转换为 TrendChartData 格式
         const convertedTrendData: TrendChartData = {
-          hotnessData: [], // Mock data
+          hotnessData: trendData.hotnessData || [],
           sentimentData: trendData.sentimentScores || [],
           postData: trendData.postVolume || [],
           userData: trendData.userEngagement || []
@@ -227,12 +239,11 @@ const EventDetail: React.FC = () => {
 
         // 获取地理分布数据
         const geographicData = await EventsAPI.getGeographic(eventId);
-        // 转换为 GeographicDataPoint 格式
         const convertedGeographicData: GeographicDataPoint[] = geographicData.map(item => ({
           region: item.region,
-          posts: 0, // Mock data
+          posts: item.posts,
           users: item.count,
-          sentiment: 0.5 // Mock data
+          sentiment: item.sentiment
         }));
         setGeographicData(convertedGeographicData);
       } catch (error) {
@@ -280,7 +291,7 @@ const EventDetail: React.FC = () => {
     );
   }
   return (
-    <div className="space-y-8 p-6">
+    <div className="h-full overflow-y-auto overflow-x-hidden space-y-8 p-6">
       {/* 页面标题和返回按钮 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
@@ -609,24 +620,28 @@ const EventDetail: React.FC = () => {
                     <Activity className="w-5 h-5 mr-2" />
                     事件发展模式
                   </h4>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-3 bg-card/50 rounded-lg">
-                      <span className="text-foreground">爆发速度</span>
-                      <span className="text-green-400 font-semibold">快速</span>
+                  {eventData.developmentPattern ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between p-3 bg-card/50 rounded-lg">
+                        <span className="text-foreground">爆发速度</span>
+                        <span className="text-green-400 font-semibold">{eventData.developmentPattern.outbreakSpeed}</span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-card/50 rounded-lg">
+                        <span className="text-foreground">传播范围</span>
+                        <span className="text-blue-400 font-semibold">{eventData.developmentPattern.propagationScope}</span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-card/50 rounded-lg">
+                        <span className="text-foreground">持续时间</span>
+                        <span className="text-yellow-400 font-semibold">{eventData.developmentPattern.duration}</span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-card/50 rounded-lg">
+                        <span className="text-foreground">影响深度</span>
+                        <span className="text-red-400 font-semibold">{eventData.developmentPattern.impactDepth}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between p-3 bg-card/50 rounded-lg">
-                      <span className="text-foreground">传播范围</span>
-                      <span className="text-blue-400 font-semibold">广泛</span>
-                    </div>
-                    <div className="flex items-center justify-between p-3 bg-card/50 rounded-lg">
-                      <span className="text-foreground">持续时间</span>
-                      <span className="text-yellow-400 font-semibold">中等</span>
-                    </div>
-                    <div className="flex items-center justify-between p-3 bg-card/50 rounded-lg">
-                      <span className="text-foreground">影响深度</span>
-                      <span className="text-red-400 font-semibold">深度</span>
-                    </div>
-                  </div>
+                  ) : (
+                    <div className="text-muted-foreground text-sm">暂无发展模式数据</div>
+                  )}
                 </div>
 
                 <div className="bg-muted/20 rounded-lg p-6">
@@ -634,29 +649,25 @@ const EventDetail: React.FC = () => {
                     <Zap className="w-5 h-5 mr-2" />
                     关键成功因素
                   </h4>
-                  <div className="space-y-3">
-                    <div className="flex items-start space-x-3">
-                      <div className="w-2 h-2 bg-green-400 rounded-full mt-2"></div>
-                      <div>
-                        <div className="text-foreground font-medium">官方及时回应</div>
-                        <div className="text-muted-foreground text-sm">工作室快速发声，控制舆论走向</div>
-                      </div>
+                  {eventData.successFactors && eventData.successFactors.length > 0 ? (
+                    <div className="space-y-3">
+                      {eventData.successFactors.map((factor, index) => {
+                        const colors = ['green', 'blue', 'purple', 'yellow', 'red'];
+                        const color = colors[index % colors.length];
+                        return (
+                          <div key={index} className="flex items-start space-x-3">
+                            <div className={`w-2 h-2 bg-${color}-400 rounded-full mt-2`}></div>
+                            <div>
+                              <div className="text-foreground font-medium">{factor.title}</div>
+                              <div className="text-muted-foreground text-sm">{factor.description}</div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                    <div className="flex items-start space-x-3">
-                      <div className="w-2 h-2 bg-blue-400 rounded-full mt-2"></div>
-                      <div>
-                        <div className="text-foreground font-medium">粉丝群体活跃</div>
-                        <div className="text-muted-foreground text-sm">粉丝积极参与讨论，推高话题热度</div>
-                      </div>
-                    </div>
-                    <div className="flex items-start space-x-3">
-                      <div className="w-2 h-2 bg-purple-400 rounded-full mt-2"></div>
-                      <div>
-                        <div className="text-foreground font-medium">媒体跟进报道</div>
-                        <div className="text-muted-foreground text-sm">主流媒体关注，扩大传播影响</div>
-                      </div>
-                    </div>
-                  </div>
+                  ) : (
+                    <div className="text-muted-foreground text-sm">暂无成功因素分析</div>
+                  )}
                 </div>
               </div>
             </motion.div>

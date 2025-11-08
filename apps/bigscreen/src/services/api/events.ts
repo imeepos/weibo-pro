@@ -18,16 +18,64 @@ export type EventInfo = EventItem;
 
 // 事件详情 - 扩展 EventItem
 export interface EventDetail extends EventItem {
-  content: string;
-  relatedUsers: string[];
-  relatedPosts: string[];
-  statistics: {
+  content?: string;
+  relatedUsers?: string[];
+  relatedPosts?: string[];
+  statistics?: {
     totalPosts: number;
     totalUsers: number;
     totalInteractions: number;
     peakTime: string;
   };
-  timeline: EventTimelineItem[];
+  timeline?: Array<{
+    time: string;
+    event: string;
+    type: 'start' | 'peak' | 'decline' | 'key_event' | 'milestone';
+    impact: number;
+    description: string;
+    metrics: { posts: number; users: number; sentiment: number };
+  }>;
+  propagationPath?: Array<{
+    userType: string;
+    userCount: number;
+    postCount: number;
+    influence: number;
+  }>;
+  keyNodes?: Array<{
+    time: string;
+    description: string;
+    impact: 'high' | 'medium' | 'low';
+    metrics: {
+      posts: number;
+      users: number;
+      sentiment: number;
+    };
+  }>;
+  developmentPhases?: Array<{
+    phase: string;
+    timeRange: string;
+    description: string;
+    keyEvents: string[];
+    keyTasks: string[];
+    keyMeasures: string[];
+    metrics: {
+      hotness: number;
+      posts: number;
+      users: number;
+      sentiment: number;
+    };
+    status: 'completed' | 'ongoing' | 'planned';
+  }>;
+  developmentPattern?: {
+    outbreakSpeed: string;
+    propagationScope: string;
+    duration: string;
+    impactDepth: string;
+  };
+  successFactors?: Array<{
+    title: string;
+    description: string;
+  }>;
 }
 
 // 事件时间线项
@@ -63,6 +111,9 @@ export interface EventTimeSeriesData {
   posts: number;
   users: number;
   interactions: number;
+  positive: number;
+  negative: number;
+  neutral: number;
 }
 
 // 事件趋势图表数据
@@ -71,6 +122,7 @@ export interface EventTrendsChart {
   postVolume: number[];
   sentimentScores: number[];
   userEngagement: number[];
+  hotnessData: number[];
 }
 
 // 影响力用户
@@ -93,6 +145,8 @@ export interface EventGeographicData {
   count: number;
   coordinates?: [number, number];
   percentage: number;
+  posts: number;
+  sentiment: number;
 }
 
 export const EventsAPI = {
@@ -171,8 +225,26 @@ export const EventsAPI = {
 
   // 获取事件时间序列数据
   getEventTimeSeries: async (eventId: string): Promise<EventTimeSeriesData[]> => {
-    const response = await apiClient.get<EventTimeSeriesData[]>(`/api/events/${eventId}/timeseries`);
-    return response;
+    const response = await apiClient.get<{
+      categories: string[];
+      series: Array<{ name: string; data: number[] }>;
+    }>(`/api/events/${eventId}/timeseries`);
+
+    const { categories, series } = response;
+    const seriesMap: Record<string, number[]> = {};
+    series.forEach(s => {
+      seriesMap[s.name] = s.data;
+    });
+
+    return categories.map((timestamp, index) => ({
+      timestamp,
+      posts: seriesMap['帖子数量']?.[index] || 0,
+      users: seriesMap['用户参与']?.[index] || 0,
+      interactions: 0,
+      positive: seriesMap['正面情绪']?.[index] || 0,
+      negative: seriesMap['负面情绪']?.[index] || 0,
+      neutral: seriesMap['中性情绪']?.[index] || 0
+    }));
   },
 
   // 获取事件趋势图表数据
