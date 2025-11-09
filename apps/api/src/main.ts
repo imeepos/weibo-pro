@@ -1,5 +1,8 @@
 import "reflect-metadata";
 import { config } from "dotenv";
+import "@sker/workflow";
+import "@sker/workflow-ast";
+import "@sker/workflow-run";
 
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
@@ -8,6 +11,9 @@ import { entitiesProviders } from "@sker/entities";
 import { startPostNLPConsumer } from "@sker/workflow-run";
 import { ResponseInterceptor } from './interceptors/response.interceptor';
 import { logger } from './utils/logger';
+import { useQueue } from "@sker/mq";
+import { AppWebSocketGateway } from './gateways/websocket.gateway';
+import { tap } from 'rxjs';
 
 async function bootstrap() {
     config();
@@ -47,6 +53,35 @@ async function bootstrap() {
 
     await app.listen(3000);
     logger.info('API server started', { url: 'http://localhost:3000' });
+
+    // 监听 websocket 频道，将消息群发到前端
+    const wsGateway = app.get(AppWebSocketGateway);
+    const mq = useQueue(`websocket`)
+
+    logger.info('Starting WebSocket message consumer', { queue: mq.queueName });
+
+    mq.consumer$.pipe(
+        tap(envelope => {
+            const message = envelope.message;
+
+            // 广播消息到所有 WebSocket 客户端
+            wsGateway.broadcast(message);
+
+            // 确认消息已处理
+            envelope.ack();
+
+            logger.debug('WebSocket message processed', {
+                messageType: message.type,
+                clientCount: wsGateway.clientCount
+            });
+        })
+    ).subscribe({
+        error: (err) => {
+            logger.error('WebSocket consumer error', { error: err });
+        }
+    });
+
+    logger.info('WebSocket message consumer started successfully');
 }
 
 process.on('SIGTERM', () => {

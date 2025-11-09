@@ -19,6 +19,7 @@ import { UsersService } from './services/data/users.service';
 import { SystemService } from './services/data/system.service';
 import { SentimentService } from './services/data/sentiment.service';
 import { LayoutService } from './services/data/layout.service';
+import { AppWebSocketGateway } from './gateways/websocket.gateway';
 import { root } from '@sker/core';
 
 @Module({
@@ -47,7 +48,8 @@ import { root } from '@sker/core';
     UsersService,
     SystemService,
     SentimentService,
-    LayoutService
+    LayoutService,
+    AppWebSocketGateway
   ],
 })
 export class AppModule {}

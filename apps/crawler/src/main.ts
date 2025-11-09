@@ -1,5 +1,8 @@
 import { config } from 'dotenv';
-config();
+import { join } from 'path';
+
+// 加载项目根目录的 .env 文件
+config({ path: join(__dirname, '../../../.env') });
 import 'reflect-metadata';
 import "@sker/workflow-ast";
 import "@sker/workflow-run";
@@ -15,7 +18,6 @@ async function bootstrap() {
       console.log(`[Crawler] ${message.name}:${message.id}`)
     }),
     switchMap(msg => {
-      msg.ack()
       const message = msg.message
       const execute = async () => {
         const result: WorkflowGraphAst = await executeAst(message, {})
@@ -27,7 +29,11 @@ async function bootstrap() {
         }
         mq.producer.next(result)
       }
-      return from(execute())
+      const res = from(execute().then(async () => {
+        await new Promise(resolve => setTimeout(resolve, 1000 * Math.random() * 5))
+        msg.ack()
+      }))
+      return res;
     })
   ).subscribe()
 

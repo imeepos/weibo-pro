@@ -18,6 +18,10 @@ class Logger {
     this.log('info', message, meta);
   }
 
+  debug(message: string, meta?: Record<string, unknown>): void {
+    this.log('info', message, meta);
+  }
+
   warn(message: string, meta?: Record<string, unknown>): void {
     this.log('warn', message, meta);
   }
