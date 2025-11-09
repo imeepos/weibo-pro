@@ -1,10 +1,9 @@
 import { config } from 'dotenv';
 config();
-
 import 'reflect-metadata';
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
-
+import { WeiboAjaxFeedHotTimelineAst } from '@sker/workflow-ast'
+import { WorkflowGraphAst } from '@sker/workflow';
+import { useQueue } from '@sker/mq';
 /**
  * Broker应用主入口
  *
@@ -14,19 +13,14 @@ import { AppModule } from './app.module';
  * - 清晰的启动过程
  */
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-
-  // 配置全局前缀
-  app.setGlobalPrefix('api/broker');
-
-  // 启用CORS
-  app.enableCors();
-
-  const port = process.env.PORT || 3001;
-  await app.listen(port);
-
-  console.log(`🚀 Broker应用已启动，端口: ${port}`);
-  console.log(`📊 API文档: http://localhost:${port}/api/broker`);
+  while (true) {
+    const graphql = new WorkflowGraphAst()
+    const hottimeline = new WeiboAjaxFeedHotTimelineAst()
+    graphql.addNode(hottimeline)
+    const mq = useQueue(`workflow`)
+    mq.producer.next(graphql)
+    await new Promise(resolve => setTimeout(resolve, 1000 * Math.random() * 5))
+  }
 }
 
 bootstrap().catch(error => {

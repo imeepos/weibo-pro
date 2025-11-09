@@ -1,32 +1,43 @@
 import { config } from 'dotenv';
 config();
-
 import 'reflect-metadata';
-import { registerMqQueueConfig } from '@sker/mq';
-import { startWeiboSearchConsumer, startWeiboDetailConsumer } from './consumers';
-import { queueConfigs } from './config/queues';
-
+import "@sker/workflow-ast";
+import "@sker/workflow-run";
+import { useQueue } from '@sker/mq'
+import { from, switchMap, tap } from 'rxjs';
+import { executeAst, WorkflowGraphAst } from '@sker/workflow';
 async function bootstrap() {
   console.log('[Crawler] 启动爬虫服务...');
-
-  queueConfigs.forEach(registerMqQueueConfig);
-
-  const consumers = [
-    startWeiboSearchConsumer(),
-    startWeiboDetailConsumer(),
-  ];
-
-  console.log(`[Crawler] ${consumers.length} 个消费者已启动`);
+  const mq = useQueue<WorkflowGraphAst>(`workflow`)
+  const sub = mq.consumer$.pipe(
+    tap(msg => {
+      const message = msg.message
+      console.log(`[Crawler] ${message.name}:${message.id}`)
+    }),
+    switchMap(msg => {
+      msg.ack()
+      const message = msg.message
+      const execute = async () => {
+        const result: WorkflowGraphAst = await executeAst(message, {})
+        if (result.state === 'success') {
+          return;
+        }
+        if (result.state === 'fail') {
+          return;
+        }
+        mq.producer.next(result)
+      }
+      return from(execute())
+    })
+  ).subscribe()
 
   process.on('SIGTERM', () => {
-    console.log('[Crawler] 收到终止信号，优雅关闭...');
-    consumers.forEach(c => c.stop());
+    sub.unsubscribe()
     process.exit(0);
   });
 
   process.on('SIGINT', () => {
-    console.log('[Crawler] 收到中断信号，优雅关闭...');
-    consumers.forEach(c => c.stop());
+    sub.unsubscribe()
     process.exit(0);
   });
 }
