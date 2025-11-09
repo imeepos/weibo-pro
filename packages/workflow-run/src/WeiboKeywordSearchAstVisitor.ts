@@ -1,15 +1,16 @@
 import { Inject, Injectable, NoRetryError } from "@sker/core";
-import { Handler } from "@sker/workflow";
+import { Handler, WorkflowGraphAst } from "@sker/workflow";
 import { WeiboKeywordSearchAst } from "@sker/workflow-ast";
 import { WeiboHtmlParser } from "./ParsedSearchResult";
 import { PlaywrightService } from "./PlaywrightService";
 import { WeiboAccountService } from "./weibo-account.service";
 import { useQueue } from "@sker/mq";
-import type { PostNLPTask } from "./post-nlp-agent.consumer";
+import { delay } from "./utils";
+import { createWeiboDetailGraphAst } from "./createWeiboDetailGraphAst";
 
 @Injectable()
 export class WeiboKeywordSearchAstVisitor {
-    private queue = useQueue<PostNLPTask>('post_nlp_queue');
+    private queue = useQueue<WorkflowGraphAst>('workflow');
 
     constructor(
         @Inject(WeiboHtmlParser) private parser: WeiboHtmlParser,
@@ -50,6 +51,7 @@ export class WeiboKeywordSearchAstVisitor {
             if (result.totalCount) {
                 break;
             }
+            await delay()
         }
         if (result.totalCount && result.currentPage === result.totalPage && result.totalPage === 50) {
             if (result.lastPostTime) {
@@ -60,7 +62,7 @@ export class WeiboKeywordSearchAstVisitor {
     }
 
     private async pushMq(post: { mid: string, uid: string }) {
-        this.queue.producer.next({ postId: post.mid });
+        this.queue.producer.next(createWeiboDetailGraphAst(post.mid, post.uid));
         console.log(`[WeiboKeywordSearch] 推送帖子到 NLP 队列: mid=${post.mid}`);
     }
 }

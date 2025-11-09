@@ -12,4 +12,6 @@ export class WeiboAjaxStatusesMymblogAst extends Ast {
 
     @Output({ title: '是否结束' })
     isEnd: boolean = false;
+
+    type: `WeiboAjaxStatusesMymblogAst` = `WeiboAjaxStatusesMymblogAst`
 }

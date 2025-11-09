@@ -23,7 +23,7 @@ function getOrCreateConnectionPool(): ConnectionPool {
 
         globalConnectionPool = new ConnectionPool({ url: rabbitUrl });
 
-        // 初始化连接
+        // 主动发起连接，但不阻塞（生产者会在发送时等待）
         globalConnectionPool.connect().catch(err => {
             console.error('[MQ] 连接池初始化失败:', err);
         });

@@ -8,4 +8,6 @@ export class WeiboAjaxProfileInfoAst extends Ast {
 
     @Output({ title: '是否结束' })
     isEnd: boolean = false;
+
+    type: `WeiboAjaxProfileInfoAst` = `WeiboAjaxProfileInfoAst`
 }

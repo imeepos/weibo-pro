@@ -21,4 +21,6 @@ export class WeiboKeywordSearchAst extends Ast {
 
     @Output({ title: '是否结束' })
     isEnd: boolean = false;
+
+    type: `WeiboKeywordSearchAst` = `WeiboKeywordSearchAst`
 }

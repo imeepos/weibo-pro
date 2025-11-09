@@ -42,6 +42,8 @@ export class RxQueueProducer<T> implements QueueProducer<T> {
             throw new Error(`生产者已关闭: ${this.queueName}`);
         }
 
+        await this.connectionPool.waitForConnection();
+
         const startTime = Date.now();
         let successCount = 0;
         let failureCount = 0;
@@ -93,6 +95,8 @@ export class RxQueueProducer<T> implements QueueProducer<T> {
     }
 
     private async publishMessage(message: T, options?: PublishOptions): Promise<boolean> {
+        await this.connectionPool.waitForConnection();
+
         const channel = this.connectionPool.getChannel();
 
         await this.ensureQueue();

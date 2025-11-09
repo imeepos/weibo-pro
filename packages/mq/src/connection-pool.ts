@@ -23,6 +23,7 @@ export class ConnectionPool {
   private reconnectTimer: NodeJS.Timeout | null = null;
   private reconnectAttempts: number = 0;
   private reconnectStartedAt: number = 0;
+  private connectionPromise: Promise<void> | null = null;
 
   // 简化的回调机制
   private onReconnectedCallback?: () => void;
@@ -41,39 +42,49 @@ export class ConnectionPool {
       return;
     }
 
+    if (this.connectionPromise) {
+      return this.connectionPromise;
+    }
+
     this.setState(ConnectionState.CONNECTING);
 
-    try {
-      this.connection = await amqp.connect(this.config.url, {
-        heartbeat: this.config.heartbeat ?? 30,
-      });
+    this.connectionPromise = (async () => {
+      try {
+        this.connection = await amqp.connect(this.config.url, {
+          heartbeat: this.config.heartbeat ?? 30,
+        });
 
-      this.setupConnectionHandlers();
+        this.setupConnectionHandlers();
 
-      this.channel = await this.connection.createConfirmChannel();
-      this.setupChannelHandlers();
+        this.channel = await this.connection.createConfirmChannel();
+        this.setupChannelHandlers();
 
-      this.setState(ConnectionState.CONNECTED);
+        this.setState(ConnectionState.CONNECTED);
 
-      const wasReconnecting = this.reconnectAttempts > 0;
-      if (wasReconnecting) {
-        const reconnectDuration = Date.now() - this.reconnectStartedAt;
-        console.log(
-          `[ConnectionPool] 重连成功，尝试次数: ${this.reconnectAttempts}, 耗时: ${reconnectDuration}ms`
-        );
+        const wasReconnecting = this.reconnectAttempts > 0;
+        if (wasReconnecting) {
+          const reconnectDuration = Date.now() - this.reconnectStartedAt;
+          console.log(
+            `[ConnectionPool] 重连成功，尝试次数: ${this.reconnectAttempts}, 耗时: ${reconnectDuration}ms`
+          );
 
-        // 触发重连回调
-        this.onReconnectedCallback?.();
+          // 触发重连回调
+          this.onReconnectedCallback?.();
+        }
+
+        this.reconnectAttempts = 0;
+        this.reconnectStartedAt = 0;
+        this.connectionPromise = null;
+      } catch (error) {
+        this.connectionPromise = null;
+        await this.cleanup();
+        this.setState(ConnectionState.ERROR);
+        this.scheduleReconnect();
+        throw error;
       }
+    })();
 
-      this.reconnectAttempts = 0;
-      this.reconnectStartedAt = 0;
-    } catch (error) {
-      await this.cleanup();
-      this.setState(ConnectionState.ERROR);
-      this.scheduleReconnect();
-      throw error;
-    }
+    return this.connectionPromise;
   }
 
   private async cleanup(): Promise<void> {
@@ -157,6 +168,28 @@ export class ConnectionPool {
 
   private setState(state: ConnectionState): void {
     this.state = state;
+  }
+
+  async waitForConnection(timeoutMs: number = 30000): Promise<void> {
+    const startTime = Date.now();
+
+    while (!this.isConnected()) {
+      if (Date.now() - startTime > timeoutMs) {
+        throw new Error(`等待连接超时: ${timeoutMs}ms`);
+      }
+
+      if (this.connectionPromise) {
+        await this.connectionPromise;
+        continue;
+      }
+
+      if (this.state === ConnectionState.DISCONNECTED || this.state === ConnectionState.ERROR) {
+        await this.connect();
+        continue;
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
   }
 
   getChannel(): any {

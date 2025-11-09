@@ -11,4 +11,6 @@ export class WeiboAjaxFriendshipsAst extends Ast {
 
     @Output({ title: '是否结束' })
     isEnd: boolean = false;
+
+    type: `WeiboAjaxFriendshipsAst` = `WeiboAjaxFriendshipsAst`
 }
