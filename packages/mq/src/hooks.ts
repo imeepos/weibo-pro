@@ -85,7 +85,7 @@ function getOrCreateConnectionPool(): ConnectionPool {
  */
 export function useQueue<T = any>(
     name: string,
-    options?: RxConsumerOptions
+    options: RxConsumerOptions = { manualAck: true }
 ): QueueManager<T> {
     const config = getMqQueueConfig(name);
     const connectionPool = getOrCreateConnectionPool();

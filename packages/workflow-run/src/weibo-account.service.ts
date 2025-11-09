@@ -24,6 +24,28 @@ export interface WeiboAccountSelectionWithToken extends WeiboAccountSelection {
     xsrfToken: string;
 }
 
+export interface WeiboLoginSuccessMessage {
+    id: number;
+    cookies: Array<{
+        name: string;
+        value: string;
+        domain?: string;
+        path?: string;
+        secure?: boolean;
+        httpOnly?: boolean;
+        sameSite?: string;
+        expirationDate?: number;
+    }>;
+    userInfo: {
+        id: number;
+        screen_name: string;
+        profile_image_url: string;
+        [key: string]: any;
+    };
+    timestamp: number;
+    isValid: boolean;
+}
+
 @Injectable()
 export class WeiboAccountService {
     private readonly healthKey = 'weibo:account:health';
@@ -178,5 +200,49 @@ export class WeiboAccountService {
         }
 
         return trimmed.includes('=') ? trimmed : null;
+    }
+
+    async saveOrUpdateAccount(message: WeiboLoginSuccessMessage): Promise<WeiboAccountEntity | null> {
+        if (!message.isValid || !message.cookies?.length) {
+            return null;
+        }
+
+        const weiboUid = message.id.toString();
+        const cookiesJson = JSON.stringify(message.cookies);
+
+        const account = await useEntityManager(async m => {
+            let existing = await m.findOne(WeiboAccountEntity, {
+                where: { weiboUid }
+            });
+
+            if (existing) {
+                existing.cookies = cookiesJson;
+                existing.weiboNickname = message.userInfo.screen_name;
+                existing.weiboAvatar = message.userInfo.profile_image_url;
+                existing.status = WeiboAccountStatus.ACTIVE;
+                existing.lastCheckAt = new Date();
+                return await m.save(existing);
+            }
+
+            const newAccount = m.create(WeiboAccountEntity, {
+                weiboUid,
+                weiboNickname: message.userInfo.screen_name,
+                weiboAvatar: message.userInfo.profile_image_url,
+                cookies: cookiesJson,
+                status: WeiboAccountStatus.ACTIVE,
+                lastCheckAt: new Date(),
+            });
+
+            return await m.save(newAccount);
+        });
+
+        if (account) {
+            const currentScore = await this.redis.zscore(this.healthKey, account.id.toString());
+            if (currentScore === null) {
+                await this.redis.zadd(this.healthKey, 100, account.id.toString());
+            }
+        }
+
+        return account;
     }
 }

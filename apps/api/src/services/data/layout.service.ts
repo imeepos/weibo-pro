@@ -246,10 +246,10 @@ export class LayoutService {
   }
 
   private async clearLayoutCache(type: string, id?: string) {
-    await this.cacheService.delete(CacheService.buildKey('layout:list', type));
-    await this.cacheService.delete(CacheService.buildKey('layout:default', type));
+    await this.cacheService.del(CacheService.buildKey('layout:list', type));
+    await this.cacheService.del(CacheService.buildKey('layout:default', type));
     if (id) {
-      await this.cacheService.delete(CacheService.buildKey('layout:detail', id));
+      await this.cacheService.del(CacheService.buildKey('layout:detail', id));
     }
   }
 }

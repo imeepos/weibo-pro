@@ -1,6 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { root } from '@sker/core';
-import { SystemService } from '../services/data/system.service';
+import { SystemService, type SystemStatus, type SystemPerformance, type SystemHealth } from '../services/data/system.service';
 
 @Controller('api/system')
 export class SystemController {
@@ -11,17 +11,17 @@ export class SystemController {
   }
 
   @Get('status')
-  async getSystemStatus() {
+  async getSystemStatus(): Promise<SystemStatus> {
     return this.systemService.getSystemStatus();
   }
 
   @Get('performance')
-  async getPerformance() {
+  async getPerformance(): Promise<SystemPerformance> {
     return this.systemService.getPerformance();
   }
 
   @Get('health')
-  async getHealth() {
+  async getHealth(): Promise<SystemHealth> {
     return this.systemService.getHealth();
   }
 }

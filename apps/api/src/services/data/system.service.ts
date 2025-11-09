@@ -8,14 +8,14 @@ interface ComponentStatus {
   uptime: string;
 }
 
-interface SystemStatus {
+export interface SystemStatus {
   status: string;
   uptime: string;
   lastUpdate: string;
   components: ComponentStatus[];
 }
 
-interface SystemPerformance {
+export interface SystemPerformance {
   cpuUsage: number;
   memoryUsage: number;
   diskUsage: number;
@@ -25,13 +25,13 @@ interface SystemPerformance {
   errorRate: number;
 }
 
-interface HealthCheck {
+export interface HealthCheck {
   name: string;
   status: string;
   message: string;
 }
 
-interface SystemHealth {
+export interface SystemHealth {
   overall: string;
   checks: HealthCheck[];
   timestamp: string;

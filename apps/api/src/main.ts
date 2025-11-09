@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { config } from "dotenv";
+import "dotenv/config";
 import "@sker/workflow";
 import "@sker/workflow-ast";
 import "@sker/workflow-run";
@@ -16,7 +16,6 @@ import { AppWebSocketGateway } from './gateways/websocket.gateway';
 import { tap } from 'rxjs';
 
 async function bootstrap() {
-    config();
     root.set([
         ...entitiesProviders
     ])
