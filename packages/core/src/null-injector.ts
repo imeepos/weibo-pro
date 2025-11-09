@@ -1,5 +1,5 @@
 import { Injector, InjectionTokenType, Type } from './injector';
-import { Provider } from './provider';
+import type { Provider } from './provider';
 
 /**
  * 空注入器，作为注入器链的终点

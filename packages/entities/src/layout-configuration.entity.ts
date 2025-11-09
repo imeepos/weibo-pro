@@ -3,7 +3,7 @@ import {
   CreateDateColumn,
   DeleteDateColumn,
   Index,
-  PrimaryGeneratedColumn,
+  PrimaryColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { Entity } from './decorator';
@@ -13,7 +13,7 @@ import { Entity } from './decorator';
 @Index(['isDefault'])
 @Index(['createdAt'])
 export class LayoutConfigurationEntity {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn('uuid')
   id!: string;
 
   @Column({ type: 'varchar', length: 255 })

@@ -1,4 +1,4 @@
-import { root } from ".";
+import { root } from "./environment-injector";
 
 /**
  * 注入器作用域类型

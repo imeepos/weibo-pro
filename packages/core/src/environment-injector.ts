@@ -741,3 +741,6 @@ export class EnvironmentInjector extends Injector {
     return providedIn === 'auto' || this.scope === providedIn;
   }
 }
+
+
+export const root = EnvironmentInjector.createRootInjector([]);
