@@ -22,7 +22,8 @@
   },
   "dependencies": {
     "@sker/core": "workspace:*",
-    "@sker/entities": "workspace:*"
+    "@sker/entities": "workspace:*",
+    "axios": "1.7.9"
   },
   "devDependencies": {
     "@sker/typescript-config": "workspace:*",

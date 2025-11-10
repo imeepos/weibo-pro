@@ -8,3 +8,5 @@ export * from './controllers/system.controller'
 export * from './controllers/users.controller'
 export * from './controllers/workflow.controller'
 export * from './types';
+export * from './tokens';
+export * from './client';
