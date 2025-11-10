@@ -48,9 +48,9 @@ class APIClient {
   private instance: AxiosInstance;
   private baseTimeout = 10000; // 10秒默认超时
 
-  constructor(baseURL?: string) {
+  constructor() {
     this.instance = axios.create({
-      baseURL: baseURL || (import.meta.env.VITE_API_BASE_URL as string) || '/api',
+      baseURL: '/api',
       timeout: this.baseTimeout,
       headers: {
         'Content-Type': 'application/json',

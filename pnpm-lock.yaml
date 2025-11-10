@@ -69,6 +69,9 @@ importers:
       '@sker/workflow-run':
         specifier: workspace:*
         version: link:../../packages/workflow-run
+      dotenv:
+        specifier: ^16.4.7
+        version: 16.6.1
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -124,6 +127,15 @@ importers:
 
   apps/bigscreen:
     dependencies:
+      '@sker/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@sker/workflow':
+        specifier: workspace:*
+        version: link:../../packages/workflow
+      '@sker/workflow-ast':
+        specifier: workspace:*
+        version: link:../../packages/workflow-ast
       '@sker/workflow-ui':
         specifier: workspace:*
         version: link:../../packages/workflow-ui
@@ -8631,7 +8643,7 @@ snapshots:
 
   '@types/node-fetch@2.6.13':
     dependencies:
-      '@types/node': 20.19.24
+      '@types/node': 22.15.3
       form-data: 4.0.4
 
   '@types/node@18.19.130':

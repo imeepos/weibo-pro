@@ -63,7 +63,7 @@ export interface WorkflowApiResponse<T = any> {
 // ================ API 服务类 ================
 
 export class WorkflowAPI {
-  private static readonly BASE_PATH = '/api/workflow';
+  private static readonly BASE_PATH = '/workflow';
 
   /**
    * 爬取单个帖子的详情（包括评论和转发）

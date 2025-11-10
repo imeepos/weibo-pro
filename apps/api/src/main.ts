@@ -10,6 +10,7 @@ import { root } from '@sker/core';
 import { entitiesProviders } from "@sker/entities";
 import { startPostNLPConsumer } from "@sker/workflow-run";
 import { ResponseInterceptor } from './interceptors/response.interceptor';
+import { NotFoundExceptionFilter } from './filters/not-found.filter';
 import { logger } from './utils/logger';
 import { useQueue } from "@sker/mq";
 import { AppWebSocketGateway } from './gateways/websocket.gateway';
@@ -28,6 +29,7 @@ async function bootstrap() {
     const app = await NestFactory.create(AppModule);
 
     app.useGlobalInterceptors(new ResponseInterceptor());
+    app.useGlobalFilters(new NotFoundExceptionFilter());
 
     app.enableCors({
         origin: [
@@ -36,6 +38,7 @@ async function bootstrap() {
             'http://localhost:3002',
             'http://localhost:3003',
             'http://localhost:5173',
+            'http://localhost:80',
         ],
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
         allowedHeaders: [
@@ -50,11 +53,11 @@ async function bootstrap() {
         maxAge: 86400,
     });
 
-    await app.listen(3000);
-    logger.info('API server started', { url: 'http://localhost:3000' });
-
     // 监听 websocket 频道，将消息群发到前端
     const wsGateway = app.get(AppWebSocketGateway);
+
+    await app.listen(3000, '0.0.0.0');
+    logger.info('API server started', { url: 'http://localhost:3000' });
     const mq = useQueue(`websocket`)
 
     logger.info('Starting WebSocket message consumer', { queue: mq.queueName });

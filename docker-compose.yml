@@ -5,11 +5,27 @@ services:
       dockerfile: apps/api/Dockerfile
     container_name: weibo-pro-api
     ports:
-      - "3000:3000"
+      - "3004:3000"
     environment:
       - NODE_ENV=production
     env_file:
       - .env
+    # 资源限制和健康检查
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/system/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   bigscreen:
     build:
@@ -17,8 +33,25 @@ services:
       dockerfile: apps/bigscreen/Dockerfile
     container_name: weibo-pro-bigscreen
     ports:
-      - "80:80"
+      - "8085:80"
     environment:
       - NODE_ENV=production
     depends_on:
-      - api
+      api:
+        condition: service_healthy
+    # 资源限制和健康检查
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+        reservations:
+          memory: 128M
+          cpus: '0.1'
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

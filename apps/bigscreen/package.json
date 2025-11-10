@@ -19,6 +19,9 @@
   },
   "dependencies": {
     "@sker/workflow-ui": "workspace:*",
+    "@sker/core": "workspace:*",
+    "@sker/workflow": "workspace:*",
+    "@sker/workflow-ast": "workspace:*",
     "axios": "1.7.9",
     "clsx": "^2.0.0",
     "dayjs": "^1.11.10",

@@ -50,7 +50,7 @@ describe('ChartsAPI', () => {
 
       const result = await ChartsAPI.getEmotionCurve();
 
-      expect(apiClient.get).toHaveBeenCalledWith('/api/charts/emotion-curve?points=7');
+      expect(apiClient.get).toHaveBeenCalledWith('/charts/emotion-curve?points=7');
       expect(result).toEqual(mockResponse);
     });
 
@@ -63,7 +63,7 @@ describe('ChartsAPI', () => {
 
       const result = await ChartsAPI.getEmotionCurve(30);
 
-      expect(apiClient.get).toHaveBeenCalledWith('/api/charts/emotion-curve?points=30');
+      expect(apiClient.get).toHaveBeenCalledWith('/charts/emotion-curve?points=30');
       expect(result).toEqual(mockResponse);
     });
   });
@@ -219,7 +219,7 @@ describe('ChartsAPI', () => {
 
       const result = await ChartsAPI.getWordCloud();
 
-      expect(apiClient.get).toHaveBeenCalledWith('/api/charts/word-cloud?limit=100');
+      expect(apiClient.get).toHaveBeenCalledWith('/charts/word-cloud?limit=100');
       expect(result).toEqual(mockResponse);
     });
 
@@ -232,7 +232,7 @@ describe('ChartsAPI', () => {
 
       const result = await ChartsAPI.getWordCloud(50);
 
-      expect(apiClient.get).toHaveBeenCalledWith('/api/charts/word-cloud?limit=50');
+      expect(apiClient.get).toHaveBeenCalledWith('/charts/word-cloud?limit=50');
       expect(result).toEqual(mockResponse);
     });
   });

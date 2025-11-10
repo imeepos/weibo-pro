@@ -13,7 +13,7 @@ export const getBleMeshTopologyData = async (
   params: BleMeshQueryParams
 ): Promise<BleMeshApiResponse<BleMeshTopologyData[]>> => {
   try {
-    const response = await apiClient.get('/api/ble-mesh/topology', {
+    const response = await apiClient.get('/ble-mesh/topology', {
       params: {
         customerId: params.customerId,
         type: params.type,
@@ -35,7 +35,7 @@ export const getDeviceDetails = async (
   deviceId: string
 ): Promise<BleMeshApiResponse<DeviceInfo>> => {
   try {
-    const response = await apiClient.get(`/api/ble-mesh/device/${deviceId}`);
+    const response = await apiClient.get(`/ble-mesh/device/${deviceId}`);
     return response.data;
   } catch (error) {
     console.error('获取设备详细信息失败:', error);
@@ -51,7 +51,7 @@ export const refreshTopologyData = async (
   type: 'reachability' | 'assignment'
 ): Promise<BleMeshApiResponse<BleMeshTopologyData[]>> => {
   try {
-    const response = await apiClient.post('/api/ble-mesh/refresh', {
+    const response = await apiClient.post('/ble-mesh/refresh', {
       customerId,
       type
     });
@@ -69,7 +69,7 @@ export const searchCustomerDevices = async (
   customerId: string
 ): Promise<BleMeshApiResponse<{ reachability: BleMeshTopologyData[]; assignment: BleMeshTopologyData[] }>> => {
   try {
-    const response = await apiClient.get(`/api/ble-mesh/customer/${customerId}`);
+    const response = await apiClient.get(`/ble-mesh/customer/${customerId}`);
     return response.data;
   } catch (error) {
     console.error('搜索客户设备失败:', error);

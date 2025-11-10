@@ -26,7 +26,7 @@ export class ChartsAPI {
       logger.debug('Fetching age distribution data');
       const params = timeRange ? `?timeRange=${timeRange}` : '';
       const response = await apiClient.get<AgeDistributionData[]>(
-        `/api/charts/age-distribution${params}`,
+        `/charts/age-distribution${params}`,
         {
           retry: { count: 2, delay: 1000 },
           timeout: 8000,
@@ -43,7 +43,7 @@ export class ChartsAPI {
       logger.debug('Fetching gender distribution data');
       const params = timeRange ? `?timeRange=${timeRange}` : '';
       const response = await apiClient.get<GenderDistributionData[]>(
-        `/api/charts/gender-distribution${params}`,
+        `/charts/gender-distribution${params}`,
         {
           retry: { count: 2, delay: 1000 },
           timeout: 8000,
@@ -64,7 +64,7 @@ export class ChartsAPI {
         categories: string[];
         series: Array<{ name: string; data: number[] }>;
       }>(
-        '/api/charts/sentiment-trend',
+        '/charts/sentiment-trend',
         {
           params: { hours },
           retry: { count: 3, delay: 1000 },
@@ -104,7 +104,7 @@ export class ChartsAPI {
       logger.debug('Fetching geographic data');
       const params = timeRange ? `?timeRange=${timeRange}` : '';
       const response = await apiClient.get<GeographicData[]>(
-        `/api/charts/geographic${params}`,
+        `/charts/geographic${params}`,
         {
           retry: { count: 2, delay: 1000 },
           timeout: 12000, // 地理数据可能较大，给更长超时时间
@@ -121,7 +121,7 @@ export class ChartsAPI {
       logger.debug('Fetching event types data');
       const params = timeRange ? `?timeRange=${timeRange}` : '';
       const response = await apiClient.get<EventTypeData[]>(
-        `/api/charts/event-types${params}`,
+        `/charts/event-types${params}`,
         {
           retry: { count: 2, delay: 1000 },
           timeout: 8000,
@@ -137,7 +137,7 @@ export class ChartsAPI {
     async (count: number = 50, timeRange?: string): Promise<HotTopicData[]> => {
       logger.debug('Fetching word cloud data', { count, timeRange });
       const response = await apiClient.get<HotTopicData[]>(
-        '/api/charts/word-cloud',
+        '/charts/word-cloud',
         {
           params: { count, timeRange },
           retry: { count: 2, delay: 1000 },
@@ -154,7 +154,7 @@ export class ChartsAPI {
     async (days: number = 7): Promise<TimeSeriesDataPoint[]> => {
       logger.debug('Fetching event count series', { days });
       const response = await apiClient.get<TimeSeriesDataPoint[]>(
-        '/api/charts/event-count-series',
+        '/charts/event-count-series',
         {
           params: { days },
           retry: { count: 2, delay: 1000 },
@@ -171,7 +171,7 @@ export class ChartsAPI {
     async (days: number = 7): Promise<TimeSeriesDataPoint[]> => {
       logger.debug('Fetching post count series', { days });
       const response = await apiClient.get<TimeSeriesDataPoint[]>(
-        '/api/charts/post-count-series',
+        '/charts/post-count-series',
         {
           params: { days },
           retry: { count: 2, delay: 1000 },
@@ -189,7 +189,7 @@ export class ChartsAPI {
       logger.debug('Fetching sentiment data');
       const params = timeRange ? `?timeRange=${timeRange}` : '';
       const response = await apiClient.get<{ positive: number; negative: number; neutral: number; total: number }>(
-        `/api/charts/sentiment-data${params}`,
+        `/charts/sentiment-data${params}`,
         {
           retry: { count: 2, delay: 1000 },
           timeout: 8000,
@@ -205,7 +205,7 @@ export class ChartsAPI {
     async (chartTypes: string[]): Promise<Record<string, unknown>> => {
       logger.debug('Fetching batch chart data', { chartTypes });
       const response = await apiClient.get<Record<string, unknown>>(
-        '/api/charts/batch',
+        '/charts/batch',
         {
           params: { types: chartTypes.join(',') },
           retry: { count: 1, delay: 1000 },

@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { RedisClient, redisConfigFactory } from '@sker/redis';
+import { RedisClient } from '@sker/redis';
 import { HelloController } from './hello.controller';
 import { OverviewController } from './controllers/overview.controller';
 import { EventsController } from './controllers/events.controller';
@@ -20,6 +20,10 @@ import { SystemService } from './services/data/system.service';
 import { SentimentService } from './services/data/sentiment.service';
 import { LayoutService } from './services/data/layout.service';
 import { AppWebSocketGateway } from './gateways/websocket.gateway';
+import { EventQueryService } from './services/data/events/event-query.service';
+import { EventAnalyticsService } from './services/data/events/event-analytics.service';
+import { EventTimelineBuilder } from './services/data/events/event-timeline.builder';
+import { DataMockService } from './services/data/events/data-mock.service';
 import { root } from '@sker/core';
 
 @Module({
@@ -40,16 +44,20 @@ import { root } from '@sker/core';
       provide: RedisClient,
       useFactory: () => root.get(RedisClient)
     },
-    CacheService,
-    OverviewService,
-    EventsService,
-    KeywordsService,
-    ChartsService,
-    UsersService,
-    SystemService,
-    SentimentService,
-    LayoutService,
-    AppWebSocketGateway
+    { provide: CacheService, useFactory: () => root.get(CacheService) },
+    { provide: OverviewService, useFactory: () => root.get(OverviewService) },
+    { provide: EventsService, useFactory: () => root.get(EventsService) },
+    { provide: KeywordsService, useFactory: () => root.get(KeywordsService) },
+    { provide: ChartsService, useFactory: () => root.get(ChartsService) },
+    { provide: UsersService, useFactory: () => root.get(UsersService) },
+    { provide: SystemService, useFactory: () => root.get(SystemService) },
+    { provide: SentimentService, useFactory: () => root.get(SentimentService) },
+    { provide: LayoutService, useFactory: () => root.get(LayoutService) },
+    AppWebSocketGateway,
+    { provide: EventQueryService, useFactory: () => root.get(EventQueryService) },
+    { provide: EventAnalyticsService, useFactory: () => root.get(EventAnalyticsService) },
+    { provide: EventTimelineBuilder, useFactory: () => root.get(EventTimelineBuilder) },
+    { provide: DataMockService, useFactory: () => root.get(DataMockService) },
   ],
 })
-export class AppModule {}
+export class AppModule { }

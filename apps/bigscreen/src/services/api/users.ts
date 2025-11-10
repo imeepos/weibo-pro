@@ -81,7 +81,7 @@ export const UsersAPI = {
     if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
     if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
 
-    const url = `/api/users/list${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const url = `/users/list${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     const response = await apiClient.get<UsersListResponse>(url);
     return response;
   },
@@ -90,7 +90,7 @@ export const UsersAPI = {
   getRiskLevels: async (params?: { timeRange?: TimeRange }): Promise<RiskLevel[]> => {
     const queryParams = new URLSearchParams();
     if (params?.timeRange) queryParams.append('timeRange', params.timeRange);
-    const url = `/api/users/risk-levels${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const url = `/users/risk-levels${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     const response = await apiClient.get<RiskLevel[]>(url);
     return response;
   },
@@ -99,7 +99,7 @@ export const UsersAPI = {
   getStatistics: async (params?: { timeRange?: TimeRange }): Promise<UserStatistics> => {
     const queryParams = new URLSearchParams();
     if (params?.timeRange) queryParams.append('timeRange', params.timeRange);
-    const url = `/api/users/statistics${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const url = `/users/statistics${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     const response = await apiClient.get<UserStatistics>(url);
     return response;
   },

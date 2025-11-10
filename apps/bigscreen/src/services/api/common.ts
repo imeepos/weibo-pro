@@ -48,7 +48,7 @@ export class CommonAPI {
       const chartData = await apiClient.get<{
         categories: string[];
         series: Array<{ name: string; data: number[] }>;
-      }>('/api/charts/event-count-series', {
+      }>('/charts/event-count-series', {
         params: { timeRange: days > 7 ? 'month' : 'week' }
       });
 
@@ -87,7 +87,7 @@ export class CommonAPI {
         categories: string[];
         series: Array<{ name: string; data: number[] }>;
       }>(
-        '/api/charts/sentiment-trend',
+        '/charts/sentiment-trend',
         {
           params: {
             timeRange: timeRange
@@ -136,7 +136,7 @@ export class CommonAPI {
         negative: number;
         neutral: number;
         total: number;
-      }>(`/api/charts/sentiment-data${params}`);
+      }>(`/charts/sentiment-data${params}`);
 
       return [
         { name: '正面', value: sentimentData.positive, color: '#10b981' },
@@ -156,7 +156,7 @@ export class CommonAPI {
       const chartData = await apiClient.get<{
         categories: string[];
         series: Array<{ name: string; data: number[] }>;
-      }>(`/api/charts/event-types${params}`);
+      }>(`/charts/event-types${params}`);
 
       // 格式转换：ChartData → EventTypeData[]
       if (chartData?.categories && chartData.series?.[0]?.data) {
@@ -180,7 +180,7 @@ export class CommonAPI {
       const chartData = await apiClient.get<{
         categories: string[];
         series: Array<{ name: string; data: number[] }>;
-      }>('/api/charts/post-count-series', {
+      }>('/charts/post-count-series', {
         params: { timeRange: days > 7 ? 'month' : 'week' }
       });
 

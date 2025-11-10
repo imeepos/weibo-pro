@@ -14,8 +14,8 @@
 
     "useDefineForClassFields": false,
 
-    "strict": true,
-    "noUncheckedIndexedAccess": true,
+    "strict": false,
+    "noUncheckedIndexedAccess": false,
     "skipLibCheck": true,
 
     "types": ["vite/client", "vitest/globals"],

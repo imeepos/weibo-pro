@@ -41,12 +41,29 @@ export default defineConfig(({ command }) => {
     server: {
       port: 3000,
       host: true,
-      // Mock模式下完全禁用代理
+      // 配置代理
+      proxy: {
+        // API请求代理
+        '/api': {
+          target: 'http://localhost:3000',
+          changeOrigin: true,
+          secure: false,
+          rewrite: (path) => path.replace(/^\/api/, '')
+        },
+        // WebSocket代理
+        '/ws': {
+          target: 'ws://localhost:3000',
+          changeOrigin: true,
+          secure: false,
+          ws: true,
+          rewrite: (path) => path.replace(/^\/ws/, '')
+        }
+      }
     },
     build: {
       outDir: projectOutDir,
       target: 'es2020',
-      sourcemap: false, // 生产环境禁用源码映射以减小体积
+      sourcemap: 'hidden', // 生产环境启用隐藏的源码映射，便于调试但不暴露给用户
       cssCodeSplit: true, // 启用CSS代码分割
       assetsInlineLimit: 4096, // 小于4KB的资源内联
 
@@ -70,6 +87,7 @@ export default defineConfig(({ command }) => {
 
       chunkSizeWarningLimit: 1000, // 提高警告阈值到 1MB
       rollupOptions: {
+        // 移除外部依赖配置，让所有依赖都打包到bundle中
         output: {
           // 使用自动代码分割
 
@@ -99,17 +117,17 @@ export default defineConfig(({ command }) => {
 
         // Tree shaking优化
         treeshake: {
-          moduleSideEffects: false,
-          propertyReadSideEffects: false,
-          tryCatchDeoptimization: false,
+          moduleSideEffects: true,
+          propertyReadSideEffects: true,
+          tryCatchDeoptimization: true,
         },
       },
     },
 
     // 优化依赖预构建
     optimizeDeps: {
-      include: ['react', 'react-dom', 'react-router-dom', 'axios', 'dayjs', 'clsx', 'tailwind-merge', 'zustand', 'lucide-react', '@pro/workflow-react'],
-      exclude: ['echarts', 'web-vitals'],
+      include: ['react', 'react-dom', 'react-router-dom', 'axios', 'dayjs', 'clsx', 'tailwind-merge', 'zustand', 'lucide-react'],
+      exclude: ['echarts', 'web-vitals', '@sker/core', '@sker/workflow', '@sker/workflow-ui'],
       esbuildOptions: {
         target: 'es2020',
       },

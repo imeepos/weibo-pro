@@ -10,34 +10,20 @@ class WebSocketManager {
   private maxReconnectAttempts = 5;
   private reconnectDelay = 1000;
   private listeners: Map<string, ((...args: unknown[]) => void)[]> = new Map();
-  private url: string = 'ws://localhost:8080'
-  private isMockMode: boolean = false;
-  
+  private url: string = ''
+
   constructor() {
-    this.isMockMode = import.meta.env.VITE_ENABLE_MOCK === 'true';
-    this.url = import.meta.env.VITE_WS_URL || 'ws://localhost:3000';
+    const url = new URL(window.location.href)
+    this.url = `${url.protocol === 'https://' ? 'wss://' : 'ws://'}${url.hostname}${url.port ? `:${url.port}` : ''}/ws`
 
     logger.debug('WebSocket Configuration:', {
-      mockMode: this.isMockMode,
       url: this.url,
-      enabled: !this.isMockMode
     });
   }
 
   // 连接 WebSocket
   connect(): Promise<void> {
     return new Promise((resolve, reject) => {
-      // 在Mock模式下跳过真实的WebSocket连接
-      if (this.isMockMode) {
-        logger.debug('WebSocket disabled in mock mode');
-        // 模拟连接成功
-        setTimeout(() => {
-          this.emit('connected', true);
-          resolve();
-        }, 100);
-        return;
-      }
-
       // 优雅的降级处理：如果无法连接到WebSocket，自动启用Mock模式
       const checkConnection = async () => {
         try {
@@ -56,7 +42,6 @@ class WebSocketManager {
       checkConnection().then((available) => {
         if (!available) {
           logger.warn('WebSocket server not available, falling back to mock mode');
-          this.isMockMode = true;
           setTimeout(() => {
             this.emit('connected', true);
             resolve();
@@ -160,11 +145,6 @@ class WebSocketManager {
 
   // 发送消息
   send(event: string, data: unknown): void {
-    if (this.isMockMode) {
-      logger.debug('WebSocket send (mock mode):', { event, data });
-      return;
-    }
-    
     if (this.socket && this.socket.connected) {
       this.socket.emit(event, data);
     } else {
@@ -210,9 +190,6 @@ class WebSocketManager {
 
   // 获取连接状态
   get isConnected(): boolean {
-    if (this.isMockMode) {
-      return true; // Mock模式下始终返回已连接
-    }
     return this.socket?.connected || false;
   }
 

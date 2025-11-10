@@ -158,7 +158,7 @@ export const EventsAPI = {
     if (params?.limit) queryParams.append('limit', params.limit.toString());
     if (params?.timeRange) queryParams.append('timeRange', params.timeRange);
 
-    const url = `/api/events/list${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const url = `/events/list${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     const response = await apiClient.get<EventInfo[]>(url);
     return response;
   },
@@ -166,7 +166,7 @@ export const EventsAPI = {
   // 获取事件分类
   getCategories: async (timeRange?: string): Promise<EventCategory[]> => {
     const params = timeRange ? `?timeRange=${timeRange}` : '';
-    const response = await apiClient.get<{ categories: string[]; counts: number[] }>(`/api/events/categories${params}`);
+    const response = await apiClient.get<{ categories: string[]; counts: number[] }>(`/events/categories${params}`);
     // 转换API返回格式为 EventCategory[]
     const categories = response.categories || [];
     const counts = response.counts || [];
@@ -189,7 +189,7 @@ export const EventsAPI = {
       const response = await apiClient.get<{
         categories: string[];
         series: Array<{ name: string; data: number[] }>;
-      }>(`/api/events/trend-data${params}`);
+      }>(`/events/trend-data${params}`);
 
       // 转换API返回格式为组件需要的格式
       const seriesMap: Record<string, number[]> = {};
@@ -214,12 +214,12 @@ export const EventsAPI = {
   // 获取热门事件列表
   getHotList: async (timeRange?: string): Promise<HotEvent[]> => {
     const params = timeRange ? `?timeRange=${timeRange}` : '';
-    return await apiClient.get<HotEvent[]>(`/api/events/hot-list${params}`);
+    return await apiClient.get<HotEvent[]>(`/events/hot-list${params}`);
   },
 
   // 获取事件详情
   getEventDetail: async (eventId: string): Promise<EventDetail> => {
-    const response = await apiClient.get<EventDetail>(`/api/events/${eventId}`);
+    const response = await apiClient.get<EventDetail>(`/events/${eventId}`);
     return response;
   },
 
@@ -228,7 +228,7 @@ export const EventsAPI = {
     const response = await apiClient.get<{
       categories: string[];
       series: Array<{ name: string; data: number[] }>;
-    }>(`/api/events/${eventId}/timeseries`);
+    }>(`/events/${eventId}/timeseries`);
 
     const { categories, series } = response;
     const seriesMap: Record<string, number[]> = {};
@@ -249,19 +249,19 @@ export const EventsAPI = {
 
   // 获取事件趋势图表数据
   getEventTrends: async (eventId: string): Promise<EventTrendsChart> => {
-    const response = await apiClient.get<EventTrendsChart>(`/api/events/${eventId}/trends`);
+    const response = await apiClient.get<EventTrendsChart>(`/events/${eventId}/trends`);
     return response;
   },
 
   // 获取影响力用户
   getInfluenceUsers: async (eventId: string): Promise<InfluenceUser[]> => {
-    const response = await apiClient.get<InfluenceUser[]>(`/api/events/${eventId}/influence-users`);
+    const response = await apiClient.get<InfluenceUser[]>(`/events/${eventId}/influence-users`);
     return response;
   },
 
   // 获取地理分布数据
   getGeographic: async (eventId: string): Promise<EventGeographicData[]> => {
-    const response = await apiClient.get<EventGeographicData[]>(`/api/events/${eventId}/geographic`);
+    const response = await apiClient.get<EventGeographicData[]>(`/events/${eventId}/geographic`);
     return response;
   },
 };

@@ -36,21 +36,21 @@ export const OverviewAPI = {
   // 获取统计数据
   getStatistics: async (timeRange?: string): Promise<OverviewStatistics> => {
     const params = timeRange ? `?timeRange=${timeRange}` : '';
-    const response = await apiClient.get<OverviewStatistics>(`/api/overview/statistics${params}`);
+    const response = await apiClient.get<OverviewStatistics>(`/overview/statistics${params}`);
     return response;
   },
 
   // 获取情感数据
   getSentiment: async (timeRange?: string): Promise<OverviewSentiment> => {
     const params = timeRange ? `?timeRange=${timeRange}` : '';
-    const response = await apiClient.get<OverviewSentiment>(`/api/overview/sentiment${params}`);
+    const response = await apiClient.get<OverviewSentiment>(`/overview/sentiment${params}`);
     return response;
   },
 
   // 获取地理位置数据
   getLocations: async (timeRange?: string): Promise<OverviewLocation[]> => {
     const params = timeRange ? `?timeRange=${timeRange}` : '';
-    const response = await apiClient.get<OverviewLocation[]>(`/api/overview/locations${params}`);
+    const response = await apiClient.get<OverviewLocation[]>(`/overview/locations${params}`);
     return response;
   },
 };

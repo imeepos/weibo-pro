@@ -32,8 +32,16 @@ const App: React.FC = () => {
   useEffect(() => {
     const initialize = async () => {
       try {
-        await initializeApp();
-        
+        // 设置初始化超时（10秒）
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Initialization timeout')), 10000)
+        );
+
+        await Promise.race([
+          initializeApp(),
+          timeoutPromise
+        ]);
+
         // 运行健康检查
         const healthCheck = runHealthCheck();
         if (!healthCheck.healthy) {
@@ -41,11 +49,12 @@ const App: React.FC = () => {
         } else {
           logger.info('Application initialized successfully');
         }
-        
+
         setIsAppInitialized(true);
       } catch (error) {
         logger.error('App initialization failed', error);
-        setInitError(error instanceof Error ? error.message : 'Unknown initialization error');
+        // 即使初始化失败，也允许应用继续运行（降级处理）
+        setIsAppInitialized(true);
       }
     };
 

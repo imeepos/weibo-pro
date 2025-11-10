@@ -70,19 +70,19 @@ export interface HealthCheckItem {
 export const SystemAPI = {
   // 获取系统状态
   getStatus: async (): Promise<SystemStatus> => {
-    const response = await apiClient.get<ApiResponse<SystemStatus>>('/api/system/status');
+    const response = await apiClient.get<ApiResponse<SystemStatus>>('/system/status');
     return response.data;
   },
 
   // 获取性能指标
   getPerformance: async (): Promise<SystemPerformance> => {
-    const response = await apiClient.get<ApiResponse<SystemPerformance>>('/api/system/performance');
+    const response = await apiClient.get<ApiResponse<SystemPerformance>>('/system/performance');
     return response.data;
   },
 
   // 健康检查
   healthCheck: async (): Promise<HealthCheck> => {
-    const response = await apiClient.get<ApiResponse<HealthCheck>>('/api/system/health');
+    const response = await apiClient.get<ApiResponse<HealthCheck>>('/system/health');
     return response.data;
   },
 };

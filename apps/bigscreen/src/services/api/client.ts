@@ -133,8 +133,7 @@ function errorInterceptor(error: ExtendedAxiosError): Promise<never> {
 // 创建API客户端实例
 function createApiClient(): AxiosInstance {
   // 在Mock模式下使用空的baseURL，让vite-plugin-mock处理
-  const isMockMode = import.meta.env.VITE_ENABLE_MOCK === 'true';
-  const baseURL = isMockMode ? '' : (import.meta.env.VITE_API_BASE_URL || '');
+  const baseURL = '/api';
   
   const client = axios.create({
     baseURL,
