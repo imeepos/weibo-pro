@@ -20,6 +20,7 @@ export class WeiboHtmlParser {
     try {
       // 检测登录失效：多特征检测（兼容新旧版本登录页面）
       const isLoginPage =
+        html.includes(`Sina Visitor System`) || 
         html.includes('passport.weibo.com/sso/signin') ||  // 旧版登录页
         html.includes('h5.sinaimg.cn/m/login/') ||          // 新版登录页资源
         html.includes('<title>登录 - 微博</title>') ||      // 登录页标题

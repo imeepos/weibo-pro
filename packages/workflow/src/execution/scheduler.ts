@@ -20,6 +20,7 @@ export class WorkflowScheduler {
         if (state === 'pending' && ctx) {
             this.dataFlowManager.initializeInputNodes(ast.nodes, ast.edges, ctx);
         }
+        // 这里的逻辑不对 
 
         ast.state = 'running';
 
@@ -53,29 +54,42 @@ export class WorkflowScheduler {
         const promises = nodes.map(async (node) => {
             this.dataFlowManager.assignInputsToNode(node, allOutputs, edges, workflowNodes);
 
-            const resultNode = await executeAst(node, ctx);
-            const outputs = this.dataFlowManager.extractNodeOutputs(resultNode);
+            try {
+                const resultNode = await executeAst(node, ctx);
+                const outputs = this.dataFlowManager.extractNodeOutputs(resultNode);
 
-            const outgoingEdges = edges.filter(e => e.from === node.id);
+                const outgoingEdges = edges.filter(e => e.from === node.id);
 
-            outgoingEdges.forEach(edge => {
-                if (isControlEdge(edge) && edge.condition) {
-                    const actualValue = (resultNode as any)[edge.condition.property];
-                    if (actualValue !== edge.condition.value) {
-                        return;
+                outgoingEdges.forEach(edge => {
+                    if (isControlEdge(edge) && edge.condition) {
+                        const actualValue = (resultNode as any)[edge.condition.property];
+                        if (actualValue !== edge.condition.value) {
+                            return;
+                        }
                     }
-                }
 
-                const downstream = workflowNodes.find(n => n.id === edge.to);
-                if (downstream) {
-                    downstream.state = 'pending';
-                }
-            });
+                    const downstream = workflowNodes.find(n => n.id === edge.to);
+                    if (downstream) {
+                        downstream.state = 'pending';
+                    }
+                });
 
-            return {
-                node: resultNode,
-                outputs: outputs
-            };
+                return {
+                    node: resultNode,
+                    outputs: outputs,
+                    success: true
+                };
+            } catch (error) {
+                // 捕获并设置节点错误状态
+                node.state = 'fail';
+                node.error = error instanceof Error ? error : new Error(String(error));
+                console.error(`[WorkflowScheduler] 节点执行失败: ${node.id}`, error);
+                return {
+                    node: node,
+                    outputs: null,
+                    success: false
+                };
+            }
         });
 
         const results = await Promise.all(promises);

@@ -92,10 +92,11 @@ export class WeiboAccountService {
     }
 
     async selectBestAccount(): Promise<WeiboAccountSelection | null> {
+        // 首先尝试从Redis选择健康评分最高的账号
         for (let attempt = 0; attempt < this.maxAttempts; attempt++) {
             const picked = await this.redis.zpopmax(this.healthKey);
             if (!picked) {
-                return null;
+                break; // Redis中没有账号，进入回退逻辑
             }
 
             const accountId = Number.parseInt(picked.member, 10);
@@ -136,6 +137,31 @@ export class WeiboAccountService {
                 weiboUid: account.weiboUid,
                 nickname: account.weiboNickname,
                 healthScore: newScore,
+                cookieHeader,
+            };
+        }
+
+        // Redis中没有可用账号，从数据库查询活跃账号
+        const activeAccounts = await useEntityManager(async m => {
+            return m.find(WeiboAccountEntity, {
+                where: { status: WeiboAccountStatus.ACTIVE }
+            })
+        });
+
+        for (const account of activeAccounts) {
+            const cookieHeader = this.composeCookieHeader(account.cookies);
+            if (!cookieHeader) {
+                continue;
+            }
+
+            // 为从数据库查询到的账号初始化健康评分
+            await this.redis.zadd(this.healthKey, 100, account.id.toString());
+
+            return {
+                id: account.id,
+                weiboUid: account.weiboUid,
+                nickname: account.weiboNickname,
+                healthScore: 100,
                 cookieHeader,
             };
         }

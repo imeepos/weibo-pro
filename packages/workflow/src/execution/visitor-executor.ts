@@ -32,9 +32,16 @@ export class VisitorExecutor implements Visitor {
             throw new Error(`not found handler for ${ast.type}`);
         } catch (error) {
             if (error instanceof NoRetryError) {
-                throw error;
+                // 对于不可重试错误，设置节点状态并返回
+                ast.state = 'fail';
+                ast.error = error;
+                return ast;
             }
-            throw error;
+
+            // 对于其他错误，设置节点状态并返回
+            ast.state = 'fail';
+            ast.error = error instanceof Error ? error : new Error(String(error));
+            return ast;
         }
     }
 }

@@ -5,7 +5,7 @@ import "@sker/workflow-ast";
 import "@sker/workflow-run";
 import { useQueue } from '@sker/mq'
 import { from, switchMap, tap } from 'rxjs';
-import { executeAst, fromJson, WorkflowGraphAst } from '@sker/workflow';
+import { execute, executeAst, fromJson, WorkflowGraphAst } from '@sker/workflow';
 import { root } from '@sker/core';
 import { entitiesProviders } from '@sker/entities';
 import { WeiboAccountService, WeiboLoginSuccessMessage, createWeiboKeywordSearchGraphAst } from '@sker/workflow-run';
@@ -18,7 +18,7 @@ async function bootstrap() {
   const accountService = root.get(WeiboAccountService);
 
   // 登录成功事件
-  const weiboLoginSuccess = useQueue<{body: WeiboLoginSuccessMessage}>(`weibo_login_success`)
+  const weiboLoginSuccess = useQueue<{ body: WeiboLoginSuccessMessage }>(`weibo_login_success`)
   const weiboLogin$ = weiboLoginSuccess.consumer$.pipe(
     switchMap(envelope => {
       const message = envelope.message;
@@ -48,33 +48,41 @@ async function bootstrap() {
     }),
     switchMap(msg => {
       const message = msg.message
-      const execute = async () => {
+      const executeOnce = async () => {
         try {
           const ast = fromJson(message)
-          const result: WorkflowGraphAst = await executeAst(ast, {})
+          const result: WorkflowGraphAst = await execute(ast, {})
           if (result.state === 'success') {
             console.log(`[Crawler] 工作流执行成功: ${message.name}:${message.id}`)
             msg.ack()
-            return;
+            return result;
           }
           if (result.state === 'fail') {
             console.warn(`[Crawler] 工作流执行失败: ${message.name}:${message.id}`)
             msg.ack()
-            return;
+            return result;
           }
           console.log(`[Crawler] 工作流继续执行: ${message.name}:${message.id}`, result)
-          workflow.producer.next(result)
           msg.ack()
+          return result;
         } catch (e) {
           console.error(`[Crawler] 工作流执行异常: ${message.name}:${message.id}`, e)
+          const error = (e as Error).message
+          if (error.includes(`workflow node type`)) {
+            msg.ack()
+            return;
+          }
           msg.nack()
         }
       }
-      return from(execute())
+      return from(executeOnce().then(res=>{
+        console.log(res)
+        return res;
+      }))
     })
   ).subscribe()
-  const startDate = new Date(`2025-11-09 00:00:00`)
-  workflow.producer.next(createWeiboKeywordSearchGraphAst(`国庆`, startDate))
+  const startDate = new Date(`2025-11-08 00:00:00`)
+  workflow.producer.next(createWeiboKeywordSearchGraphAst(`江浙沪3000元人情的婚礼`, startDate))
   // 微博账号
   process.on('SIGTERM', () => {
     weiboLogin$.unsubscribe()
