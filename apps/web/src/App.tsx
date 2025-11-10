@@ -1,6 +1,6 @@
 import { ReactFlowProvider } from '@xyflow/react'
 import { WorkflowCanvas } from '@sker/workflow-ui'
-import React, { Component, ErrorInfo, ReactNode } from 'react'
+import React, { Component, ErrorInfo, ReactNode, useEffect } from 'react'
 import "@sker/workflow-ast";
 class ErrorBoundary extends Component<
   { children: ReactNode },
@@ -28,9 +28,21 @@ class ErrorBoundary extends Component<
         </div>
       )
     }
-
     return this.props.children
   }
+}
+
+function WorkflowCanvasWrapper() {
+  const [workflowName, setWorkflowName] = React.useState<string>('')
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const name = urlParams.get('name') || ''
+    setWorkflowName(name)
+    console.log({ workflowName: name })
+  }, [])
+
+  return <WorkflowCanvas name={workflowName} />
 }
 
 export default function App() {
@@ -38,10 +50,8 @@ export default function App() {
     <ErrorBoundary>
       <ReactFlowProvider>
         <div className="flex h-screen bg-black">
-
-          {/* 中间画布区域 */}
           <main className="flex-1">
-            <WorkflowCanvas />
+            <WorkflowCanvasWrapper />
           </main>
         </div>
       </ReactFlowProvider>

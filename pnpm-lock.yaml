@@ -315,6 +315,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@sker/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@sker/workflow':
         specifier: workspace:*
         version: link:../../packages/workflow

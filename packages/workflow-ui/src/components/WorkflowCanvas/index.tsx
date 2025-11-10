@@ -1,5 +1,4 @@
 'use client'
-
 import React, { useCallback } from 'react'
 import {
   ReactFlow,
@@ -35,6 +34,8 @@ import { useCanvasControls } from './useCanvasControls'
 import { ContextMenu } from './ContextMenu'
 import { NodeSelector } from './NodeSelector'
 import { cn } from '../../utils/cn'
+import { root } from '@sker/core'
+import { WorkflowService } from './WorkflowService'
 
 export interface WorkflowCanvasProps {
   /** 工作流 AST 实例 */
@@ -50,7 +51,9 @@ export interface WorkflowCanvasProps {
   /** 自定义类名 */
   className?: string
   /** 顶部标题 */
-  title?: string
+  title?: string;
+  /** 名称 */
+  name?: string;
   /** 运行全部节点回调 */
   onRunAll?: () => void
   /** 保存工作流回调 */
@@ -67,10 +70,12 @@ export function WorkflowCanvas({
   snapToGrid = false,
   className = '',
   title = '工作流',
+  name = '',
   onRunAll,
   onSave,
   onShare,
 }: WorkflowCanvasProps) {
+  const service = root.get(WorkflowService)
   const workflow = useWorkflow(workflowAst)
   const nodes = workflow.nodes
   const edges = workflow.edges
@@ -351,7 +356,7 @@ export function WorkflowCanvas({
           )}
 
           {showControls && (
-            <div className="absolute bottom-4 right-4 z-[5] flex flex-col gap-2 rounded-xl border border-[#282e39] bg-[#111318] p-1.5 shadow-lg shadow-black/30">
+            <div className="absolute bottom-4 left-4 z-[5] flex flex-col gap-2 rounded-xl border border-[#282e39] bg-[#111318] p-1.5 shadow-lg shadow-black/30">
               <button
                 type="button"
                 onClick={handleZoomIn}

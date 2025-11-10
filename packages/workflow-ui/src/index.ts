@@ -1,6 +1,6 @@
 // 导出样式
 import './styles/globals.css'
-
+export { WorkflowService } from './components/WorkflowCanvas/WorkflowService'
 // 导出组件
 export { WorkflowCanvas } from './components/WorkflowCanvas'
 export type { WorkflowCanvasProps } from './components/WorkflowCanvas'
