@@ -1,9 +1,10 @@
 import { Controller, Get, Post, Put, Delete, Query, Param, Body } from '@nestjs/common';
 import { root } from '@sker/core';
 import { LayoutService, type CreateLayoutPayload, type UpdateLayoutPayload } from '../services/data/layout.service';
+import * as sdk from '@sker/sdk';
 
 @Controller('api/layout')
-export class LayoutController {
+export class LayoutController implements sdk.LayoutController{
   private layoutService: LayoutService;
 
   constructor() {

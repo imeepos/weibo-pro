@@ -16,7 +16,6 @@
     "ensure-deps": "./scripts/ensure-deps-built.sh"
   },
   "devDependencies": {
-    "@types/uuid": "^11.0.0",
     "prettier": "^3.6.2",
     "tsx": "^4.20.6",
     "turbo": "^2.6.0",

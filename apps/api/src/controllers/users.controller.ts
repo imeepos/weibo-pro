@@ -2,9 +2,10 @@ import { Controller, Get, Query } from '@nestjs/common';
 import { root } from '@sker/core';
 import { UsersService } from '../services/data/users.service';
 import type { TimeRange } from '@sker/entities';
+import * as sdk from '@sker/sdk';
 
 @Controller('api/users')
-export class UsersController {
+export class UsersController implements sdk.UsersController {
   private usersService: UsersService;
 
   constructor() {

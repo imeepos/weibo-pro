@@ -12,9 +12,6 @@ importers:
         specifier: ^8.16.3
         version: 8.16.3
     devDependencies:
-      '@types/uuid':
-        specifier: ^11.0.0
-        version: 11.0.0
       prettier:
         specifier: ^3.6.2
         version: 3.6.2
@@ -60,6 +57,9 @@ importers:
       '@sker/redis':
         specifier: workspace:*
         version: link:../../packages/redis
+      '@sker/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
       '@sker/workflow':
         specifier: workspace:*
         version: link:../../packages/workflow
@@ -527,9 +527,6 @@ importers:
       '@types/node':
         specifier: ^22.15.3
         version: 22.15.3
-      '@types/uuid':
-        specifier: ^11.0.0
-        version: 11.0.0
       eslint:
         specifier: ^9.38.0
         version: 9.38.0(jiti@2.6.1)
@@ -2888,10 +2885,6 @@ packages:
 
   '@types/uuid@10.0.0':
     resolution: {integrity: sha512-7gqG38EyHgyP1S+7+xomFtL+ZNHcKv6DwNaCZmJmo1vgMugyF3TCnXVg4t1uk89mLNwnLtnY3TpOpCOyp1/xHQ==}
-
-  '@types/uuid@11.0.0':
-    resolution: {integrity: sha512-HVyk8nj2m+jcFRNazzqyVKiZezyhDKrGUA3jlEcg/nZ6Ms+qHwocba1Y/AaVaznJTAM9xpdFSh+ptbNrhOGvZA==}
-    deprecated: This is a stub types definition. uuid provides its own type definitions, so you do not need this installed.
 
   '@typescript-eslint/eslint-plugin@8.40.0':
     resolution: {integrity: sha512-w/EboPlBwnmOBtRbiOvzjD+wdiZdgFeo17lkltrtn7X37vagKKWJABvyfsJXTlHe6XBzugmYgd4A4nW+k8Mixw==}
@@ -8717,10 +8710,6 @@ snapshots:
   '@types/retry@0.12.0': {}
 
   '@types/uuid@10.0.0': {}
-
-  '@types/uuid@11.0.0':
-    dependencies:
-      uuid: 13.0.0
 
   '@typescript-eslint/eslint-plugin@8.40.0(@typescript-eslint/parser@8.40.0(eslint@9.38.0(jiti@2.6.1))(typescript@5.8.3))(eslint@9.38.0(jiti@2.6.1))(typescript@5.8.3)':
     dependencies:

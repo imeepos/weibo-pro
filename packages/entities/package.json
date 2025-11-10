@@ -36,7 +36,6 @@
     "@sker/eslint-config": "workspace:*",
     "@sker/typescript-config": "workspace:*",
     "@types/node": "^22.15.3",
-    "@types/uuid": "^11.0.0",
     "eslint": "^9.38.0",
     "tsup": "^8.4.0",
     "typescript": "5.9.2"

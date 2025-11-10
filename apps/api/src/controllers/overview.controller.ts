@@ -2,9 +2,10 @@ import { Controller, Get, Query } from '@nestjs/common';
 import { root } from '@sker/core';
 import { OverviewService } from '../services/data/overview.service';
 import { TimeRange } from '../services/data/types';
+import * as sdk from '@sker/sdk';
 
 @Controller('api/overview')
-export class OverviewController {
+export class OverviewController implements sdk.OverviewController{
   private overviewService: OverviewService;
 
   constructor() {

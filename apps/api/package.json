@@ -20,6 +20,7 @@
     "@sker/agent": "workspace:*",
     "@sker/core": "workspace:*",
     "@sker/entities": "workspace:*",
+    "@sker/sdk": "workspace:*",
     "@sker/mq": "workspace:*",
     "@sker/redis": "workspace:*",
     "@sker/workflow": "workspace:*",

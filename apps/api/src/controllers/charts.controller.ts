@@ -2,9 +2,9 @@ import { Controller, Get, Query } from '@nestjs/common';
 import { root } from '@sker/core';
 import { ChartsService } from '../services/data/charts.service';
 import type { TimeRange } from '../services/data/types';
-
+import * as sdk from '@sker/sdk';
 @Controller('api/charts')
-export class ChartsController {
+export class ChartsController implements sdk.ChartsController{
   private chartsService: ChartsService;
 
   constructor() {

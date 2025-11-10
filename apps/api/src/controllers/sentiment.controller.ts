@@ -2,9 +2,10 @@ import { Controller, Get, Post, Query, Body } from '@nestjs/common';
 import { root } from '@sker/core';
 import { SentimentService } from '../services/data/sentiment.service';
 import type { TimeRange } from '@sker/entities';
+import * as sdk from '@sker/sdk';
 
 @Controller('api/sentiment')
-export class SentimentController {
+export class SentimentController implements sdk.SentimentController {
   private sentimentService: SentimentService;
 
   constructor() {

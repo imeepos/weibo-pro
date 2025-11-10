@@ -21,7 +21,7 @@ export interface UpdateLayoutPayload {
 export class LayoutService {
   constructor(
     @Inject(CacheService) private readonly cacheService: CacheService
-  ) {}
+  ) { }
 
   async getLayoutConfigurations(type: 'bigscreen' | 'frontend' | 'admin') {
     const cacheKey = CacheService.buildKey('layout:list', type);
@@ -37,11 +37,7 @@ export class LayoutService {
             .addOrderBy('layout.created_at', 'DESC')
             .getMany();
 
-          return {
-            success: true,
-            data: layouts.map(this.mapLayoutToResponse),
-            message: '获取布局列表成功'
-          };
+          return layouts.map(this.mapLayoutToResponse);
         });
       },
       CACHE_TTL.MEDIUM
@@ -60,12 +56,8 @@ export class LayoutService {
             .where('layout.type = :type', { type })
             .andWhere('layout.is_default = :isDefault', { isDefault: true })
             .getOne();
-
-          return {
-            success: true,
-            data: layout ? this.mapLayoutToResponse(layout) : null,
-            message: layout ? '获取默认布局成功' : '暂无默认布局'
-          };
+          if (!layout) throw new Error(`暂无默认布局`)
+          return this.mapLayoutToResponse(layout);
         });
       },
       CACHE_TTL.MEDIUM
@@ -85,18 +77,10 @@ export class LayoutService {
             .getOne();
 
           if (!layout) {
-            return {
-              success: false,
-              data: null,
-              message: '布局配置不存在'
-            };
+            return new Error(`布局配置不存在`);
           }
 
-          return {
-            success: true,
-            data: this.mapLayoutToResponse(layout),
-            message: '获取布局详情成功'
-          };
+          return this.mapLayoutToResponse(layout);
         });
       },
       CACHE_TTL.MEDIUM
@@ -119,11 +103,7 @@ export class LayoutService {
       // 清除缓存
       await this.clearLayoutCache(payload.type);
 
-      return {
-        success: true,
-        data: this.mapLayoutToResponse(layout),
-        message: '创建布局成功'
-      };
+      return this.mapLayoutToResponse(layout);
     });
   }
 
@@ -134,11 +114,7 @@ export class LayoutService {
       });
 
       if (!layout) {
-        return {
-          success: false,
-          data: null,
-          message: '布局配置不存在'
-        };
+        throw new Error('布局配置不存在');
       }
 
       if (payload.name !== undefined) layout.name = payload.name;
@@ -151,11 +127,7 @@ export class LayoutService {
       // 清除缓存
       await this.clearLayoutCache(layout.type, id);
 
-      return {
-        success: true,
-        data: this.mapLayoutToResponse(layout),
-        message: '更新布局成功'
-      };
+      return this.mapLayoutToResponse(layout);
     });
   }
 
@@ -166,19 +138,11 @@ export class LayoutService {
       });
 
       if (!layout) {
-        return {
-          success: false,
-          data: null,
-          message: '布局配置不存在'
-        };
+        throw new Error('布局配置不存在');
       }
 
       if (layout.isDefault) {
-        return {
-          success: false,
-          data: null,
-          message: '无法删除默认布局，请先设置其他布局为默认'
-        };
+        throw new Error('无法删除默认布局，请先设置其他布局为默认');
       }
 
       await entityManager.softDelete(LayoutConfigurationEntity, id);
@@ -186,11 +150,7 @@ export class LayoutService {
       // 清除缓存
       await this.clearLayoutCache(layout.type, id);
 
-      return {
-        success: true,
-        data: null,
-        message: '删除布局成功'
-      };
+      return;
     });
   }
 
@@ -201,11 +161,7 @@ export class LayoutService {
       });
 
       if (!layout) {
-        return {
-          success: false,
-          data: null,
-          message: '布局配置不存在'
-        };
+        throw new Error('布局配置不存在');
       }
 
       // 取消该类型下所有布局的默认状态
@@ -223,11 +179,7 @@ export class LayoutService {
       // 清除缓存
       await this.clearLayoutCache(type, id);
 
-      return {
-        success: true,
-        data: this.mapLayoutToResponse(layout),
-        message: '设置默认布局成功'
-      };
+      return this.mapLayoutToResponse(layout);
     });
   }
 

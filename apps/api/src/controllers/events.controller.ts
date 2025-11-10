@@ -2,9 +2,10 @@ import { Controller, Get, Query, Param } from '@nestjs/common';
 import { root } from '@sker/core';
 import { EventsService } from '../services/data/events.service';
 import { TimeRange } from '../services/data/types';
+import * as sdk from '@sker/sdk';
 
 @Controller('api/events')
-export class EventsController {
+export class EventsController implements sdk.EventsController{
   private eventsService: EventsService;
 
   constructor() {

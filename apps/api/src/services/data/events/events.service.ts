@@ -24,7 +24,7 @@ export class EventsService {
     private readonly analyticsService: EventAnalyticsService,
     @Inject(EventTimelineBuilder)
     private readonly timelineBuilder: EventTimelineBuilder
-  ) {}
+  ) { }
 
   async getEventList(
     timeRange: TimeRange,
@@ -43,32 +43,15 @@ export class EventsService {
     return this.queryService.getEventCategories(timeRange);
   }
 
-  async getTrendData(timeRange: TimeRange): Promise<{
-    success: boolean;
-    data: TrendDataSeries;
-    message: string;
-  }> {
-    const data = await this.analyticsService.getTrendData(timeRange);
-    return {
-      success: true,
-      data,
-      message: '获取趋势数据成功',
-    };
+  async getTrendData(timeRange: TimeRange): Promise<TrendDataSeries> {
+    return await this.analyticsService.getTrendData(timeRange);
   }
 
-  async getEventDetail(id: string): Promise<{
-    success: boolean;
-    data: EventDetail | null;
-    message: string;
-  }> {
+  async getEventDetail(id: string): Promise<EventDetail> {
     const event = await this.queryService.getEventById(id);
 
     if (!event) {
-      return {
-        success: false,
-        data: null,
-        message: '事件不存在',
-      };
+      throw new Error(`事件不存在`)
     }
 
     const latestStats = await this.queryService.getLatestStatistics(id);
@@ -97,41 +80,33 @@ export class EventsService {
         : ('stable' as const);
 
     return {
-      success: true,
-      data: {
-        id: event.id,
-        title: event.title,
-        description: event.description || '',
-        postCount: latestStats?.post_count || 0,
-        userCount: latestStats?.user_count || 0,
-        sentiment:
-          latestStats?.sentiment ||
-          event.sentiment || { positive: 0, negative: 0, neutral: 0 },
-        hotness: event.hotness,
-        trend,
-        category: event.category?.name || '未分类',
-        keywords: [],
-        createdAt: event.created_at.toISOString(),
-        lastUpdate: event.updated_at.toISOString(),
-        timeline,
-        propagationPath,
-        keyNodes,
-        developmentPhases,
-        developmentPattern,
-        successFactors,
-      },
-      message: '获取事件详情成功',
+      id: event.id,
+      title: event.title,
+      description: event.description || '',
+      postCount: latestStats?.post_count || 0,
+      userCount: latestStats?.user_count || 0,
+      sentiment:
+        latestStats?.sentiment ||
+        event.sentiment || { positive: 0, negative: 0, neutral: 0 },
+      hotness: event.hotness,
+      trend,
+      category: event.category?.name || '未分类',
+      keywords: [],
+      createdAt: event.created_at.toISOString(),
+      lastUpdate: event.updated_at.toISOString(),
+      timeline,
+      propagationPath,
+      keyNodes,
+      developmentPhases,
+      developmentPattern,
+      successFactors,
     };
   }
 
   async getEventTimeSeries(
     id: string,
     timeRange: TimeRange
-  ): Promise<{
-    success: boolean;
-    data: TimeSeriesData;
-    message: string;
-  }> {
+  ): Promise<TimeSeriesData> {
     const statistics = await this.queryService.getEventStatistics(
       id,
       timeRange
@@ -142,21 +117,13 @@ export class EventsService {
       statistics
     );
 
-    return {
-      success: true,
-      data,
-      message: '获取事件时间序列数据成功',
-    };
+    return data
   }
 
   async getEventTrends(
     id: string,
     timeRange: TimeRange
-  ): Promise<{
-    success: boolean;
-    data: TrendAnalysis;
-    message: string;
-  }> {
+  ): Promise<TrendAnalysis> {
     const statistics = await this.queryService.getEventStatistics(
       id,
       timeRange
@@ -167,38 +134,14 @@ export class EventsService {
       statistics
     );
 
-    return {
-      success: true,
-      data,
-      message: '获取事件趋势数据成功',
-    };
+    return data;
   }
 
-  async getInfluenceUsers(id: string): Promise<{
-    success: boolean;
-    data: InfluenceUser[];
-    message: string;
-  }> {
-    const data = await this.queryService.getInfluenceUsers(id);
-
-    return {
-      success: true,
-      data,
-      message: '获取影响力用户数据成功',
-    };
+  async getInfluenceUsers(id: string): Promise<InfluenceUser[]> {
+    return await this.queryService.getInfluenceUsers(id);
   }
 
-  async getEventGeographic(id: string): Promise<{
-    success: boolean;
-    data: GeographicDistribution[];
-    message: string;
-  }> {
-    const data = await this.queryService.getGeographicDistribution(id);
-
-    return {
-      success: true,
-      data,
-      message: '获取事件地理分布数据成功',
-    };
+  async getEventGeographic(id: string): Promise<GeographicDistribution[]> {
+    return await this.queryService.getGeographicDistribution(id);
   }
 }

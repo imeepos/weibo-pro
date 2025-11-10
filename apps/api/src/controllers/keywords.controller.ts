@@ -1,9 +1,10 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { root } from '@sker/core';
 import { KeywordsService } from '../services/data/keywords.service';
+import * as sdk from '@sker/sdk';
 
 @Controller('api/keywords')
-export class KeywordsController {
+export class KeywordsController implements sdk.KeywordsController{
   private keywordsService: KeywordsService;
 
   constructor() {

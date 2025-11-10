@@ -7,3 +7,4 @@ export * from './controllers/sentiment.controller'
 export * from './controllers/system.controller'
 export * from './controllers/users.controller'
 export * from './controllers/workflow.controller'
+export * from './types';

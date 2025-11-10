@@ -9,6 +9,7 @@ import {
 } from '@sker/workflow-ast';
 import { execute } from '@sker/workflow';
 import { logger } from '../utils/logger';
+import * as sdk from '@sker/sdk';
 
 /**
  * 爬虫工作流触发控制器
@@ -19,7 +20,7 @@ import { logger } from '../utils/logger';
  * - 集成消息队列，确保任务可靠执行
  */
 @Controller('api/workflow')
-export class WorkflowController {
+export class WorkflowController implements sdk.WorkflowController {
   private nlpQueue = useQueue<PostNLPTask>('post_nlp_queue');
 
   /**
