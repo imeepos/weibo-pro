@@ -70,5 +70,3 @@ export {
 export { NoRetryError } from './errors';
 export * from './root';
 export * from './controller';
-export * from './http-client';
-export * from './sdk-client';
