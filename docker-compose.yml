@@ -1,0 +1,24 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: weibo-pro-api
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    env_file:
+      - .env
+
+  bigscreen:
+    build:
+      context: .
+      dockerfile: apps/bigscreen/Dockerfile
+    container_name: weibo-pro-bigscreen
+    ports:
+      - "80:80"
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - api
