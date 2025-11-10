@@ -33,7 +33,7 @@ export const useRealTimeData = (options: UseRealTimeDataOptions = {}) => {
     dashboardConfig,
   } = useAppStore();
 
-  const intervalRef = useRef<NodeJS.Timeout>();
+  const intervalRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const isLoadingRef = useRef(false);
 
   // 获取实时数据

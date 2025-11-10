@@ -5,6 +5,9 @@
 
 import { lazy, ComponentType, LazyExoticComponent } from 'react';
 
+// 通用懒加载组件类型
+type LazyComponent<T = any> = LazyExoticComponent<ComponentType<T>>;
+
 // ================== 页面级懒加载 ==================
 
 export const DataOverviewPage = lazy(() => 
@@ -25,55 +28,55 @@ export const UserDetectionPage = lazy(() =>
 
 // ================== 图表组件懒加载 ==================
 
-export const SentimentTrendChart = lazy(() => 
+export const SentimentTrendChart: LazyComponent = lazy(() =>
   import('./charts/SentimentTrendChart').then(module => ({ default: module.default }))
 );
 
-export const WordCloudChart = lazy(() => 
+export const WordCloudChart: LazyComponent = lazy(() =>
   import('./charts/WordCloudChart').then(module => ({ default: module.default }))
 );
 
-export const GeographicChart = lazy(() => 
+export const GeographicChart: LazyComponent = lazy(() =>
   import('./charts/GeographicChart').then(module => ({ default: module.default }))
 );
 
-export const HotTopicsChart = lazy(() => 
+export const HotTopicsChart: LazyComponent = lazy(() =>
   import('./charts/HotTopicsChart').then(module => ({ default: module.default }))
 );
 
-export const EventTypeBarChart = lazy(() => 
+export const EventTypeBarChart: LazyComponent = lazy(() =>
   import('./charts/EventTypeBarChart').then(module => ({ default: module.default }))
 );
 
-export const TimeSeriesChart = lazy(() => 
+export const TimeSeriesChart: LazyComponent = lazy(() =>
   import('./charts/TimeSeriesChart').then(module => ({ default: module.default }))
 );
 
-export const LocationHeatMap = lazy(() => 
+export const LocationHeatMap: LazyComponent = lazy(() =>
   import('./charts/LocationHeatMap').then(module => ({ default: module.default }))
 );
 
-export const SentimentPieChart = lazy(() => 
+export const SentimentPieChart: LazyComponent = lazy(() =>
   import('./charts/SentimentPieChart').then(module => ({ default: module.default }))
 );
 
-export const SimpleSentimentPieChart = lazy(() => 
+export const SimpleSentimentPieChart: LazyComponent = lazy(() =>
   import('./charts/SimpleSentimentPieChart').then(module => ({ default: module.default }))
 );
 
-export const EmotionCurveChart = lazy(() => 
+export const EmotionCurveChart: LazyComponent = lazy(() =>
   import('./charts/EmotionCurveChart').then(module => ({ default: module.default }))
 );
 
-export const EventCountChart = lazy(() => 
+export const EventCountChart: LazyComponent = lazy(() =>
   import('./charts/EventCountChart').then(module => ({ default: module.default }))
 );
 
-export const PostCountChart = lazy(() => 
+export const PostCountChart: LazyComponent = lazy(() =>
   import('./charts/PostCountChart').then(module => ({ default: module.default }))
 );
 
-export const HotEventsList = lazy(() => 
+export const HotEventsList: LazyComponent = lazy(() =>
   import('./charts/HotEventsList').then(module => ({ default: module.default }))
 );
 
@@ -185,7 +188,7 @@ export function preloadPageComponents(): Promise<any[]> {
  * 懒加载组件注册表
  * 用于动态加载组件
  */
-export const LAZY_COMPONENT_MAP = {
+export const LAZY_COMPONENT_MAP: Record<string, LazyComponent> = {
   // 页面组件
   'DataOverview': DataOverviewPage,
   'EventAnalysis': EventAnalysisPage,

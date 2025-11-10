@@ -23,8 +23,8 @@ export const useAutoRefresh = (options: UseAutoRefreshOptions) => {
   const [countdown, setCountdown] = useState(0);
   const [isActive, setIsActive] = useState(false);
   
-  const intervalRef = useRef<NodeJS.Timeout>();
-  const countdownRef = useRef<NodeJS.Timeout>();
+  const intervalRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  const countdownRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const isRefreshingRef = useRef(false);
 
   // 获取实际的刷新间隔

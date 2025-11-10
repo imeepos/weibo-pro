@@ -26,13 +26,8 @@ interface LayoutSelectorProps {
 
 // 辅助函数：获取组件名称
 const getComponentName = (item: GridItem | LayoutArea): string => {
-  if ('component' in item) {
-    if (typeof item.component === 'string') {
-      return item.component;
-    }
-    if (item.component && typeof item.component === 'object' && 'name' in item.component) {
-      return (item.component as { name: string }).name;
-    }
+  if ('component' in item && item.component && typeof item.component === 'string') {
+    return item.component;
   }
   if ('name' in item && item.name) {
     return item.name;

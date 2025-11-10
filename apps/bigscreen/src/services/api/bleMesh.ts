@@ -5,7 +5,8 @@ import {
   BleMeshQueryParams,
   DeviceInfo 
 } from '../../types/bleMesh';
-
+import { root } from '@sker/core'
+import { OverviewController} from '@sker/sdk'
 /**
  * 获取BLE Mesh拓扑数据
  */
@@ -13,6 +14,7 @@ export const getBleMeshTopologyData = async (
   params: BleMeshQueryParams
 ): Promise<BleMeshApiResponse<BleMeshTopologyData[]>> => {
   try {
+    // const c = root.get()
     const response = await apiClient.get('/ble-mesh/topology', {
       params: {
         customerId: params.customerId,

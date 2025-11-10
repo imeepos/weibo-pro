@@ -49,7 +49,7 @@ export const useWebSocket = (options: UseWebSocketOptions = {}) => {
     resetRetries,
   } = useAppStore();
 
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const reconnectAttemptsRef = useRef(0);
 
   // 连接 WebSocket

@@ -19,8 +19,8 @@ import MetricCard from '@/components/ui/MetricCard';
 import Select from '@/components/ui/Select';
 import MiniTrendChart from '@/components/charts/MiniTrendChart';
 import { EventItem, TrendData } from '@/types';
-import { EventsAPI } from '@/services/api';
-
+import { EventsController } from '@sker/sdk'
+import { root } from '@sker/core'
 
 const logger = createLogger('EventAnalysis');
 
@@ -39,10 +39,11 @@ const EventAnalysis: React.FC = () => {
     const loadData = async () => {
       try {
         setLoading(true);
+        const c = root.get(EventsController)
         const [eventsResult, categoriesResult, trendsResult] = await Promise.all([
-          EventsAPI.getEventsList({ timeRange: selectedTimeRange }),
-          EventsAPI.getCategories(selectedTimeRange),
-          EventsAPI.getTrendData(selectedTimeRange)
+          c.getEventList(selectedTimeRange),
+          c.getEventCategories(selectedTimeRange),
+          c.getTrendData(selectedTimeRange)
         ]);
 
         console.log({

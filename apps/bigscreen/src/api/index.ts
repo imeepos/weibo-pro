@@ -8,7 +8,6 @@ export { apiUtils as apiClient } from '@/services/api/client';
 
 // 导出所有API服务
 export { CommonAPI } from '@/services/api/common';
-export { EventsAPI } from '@/services/api/events';
 export { OverviewAPI } from '@/services/api/overview';
 export { UsersAPI } from '@/services/api/users';
 export { SystemAPI, SystemAPI as systemAPI } from '@/services/api/system';
@@ -18,7 +17,6 @@ export { WorkflowAPI } from '@/services/api/workflow';
 
 // 导入API模块用于默认导出
 import { CommonAPI } from '@/services/api/common';
-import { EventsAPI } from '@/services/api/events';
 import { OverviewAPI } from '@/services/api/overview';
 import { UsersAPI } from '@/services/api/users';
 import { SystemAPI } from '@/services/api/system';
@@ -29,7 +27,6 @@ import { WorkflowAPI } from '@/services/api/workflow';
 // 向后兼容的默认导出
 export default {
   common: CommonAPI,
-  events: EventsAPI,
   overview: OverviewAPI,
   users: UsersAPI,
   system: SystemAPI,

@@ -5,6 +5,14 @@
  * import { PieCharts } from '@/components/charts';
  */
 
+import { ComponentType } from 'react';
+
+// 通用组件类型
+type ChartComponent = ComponentType<any>;
+
+// 图表组件映射类型
+type ChartComponentsMap = Record<string, ChartComponent>;
+
 // =========================== 分类导出 ===========================
 
 // 时间序列和趋势图表
@@ -13,7 +21,7 @@ import SentimentTrendChart from './SentimentTrendChart';
 import MiniTrendChart from './MiniTrendChart';
 import EmotionCurveChart from './EmotionCurveChart';
 
-export const TimeSeriesCharts = {
+export const TimeSeriesCharts: ChartComponentsMap = {
   TimeSeriesChart,
   SentimentTrendChart,
   MiniTrendChart,
@@ -27,7 +35,7 @@ import EventTypePieChart from './EventTypePieChart';
 import AgeDistributionChart from './AgeDistributionChart';
 import GenderDistributionChart from './GenderDistributionChart';
 
-export const PieCharts = {
+export const PieCharts: ChartComponentsMap = {
   SentimentPieChart,
   SimpleSentimentPieChart,
   EventTypePieChart,
@@ -40,7 +48,7 @@ import EventTypeBarChart from './EventTypeBarChart';
 import EventCountChart from './EventCountChart';
 import PostCountChart from './PostCountChart';
 
-export const BarCharts = {
+export const BarCharts: ChartComponentsMap = {
   EventTypeBarChart,
   EventCountChart,
   PostCountChart
@@ -51,7 +59,7 @@ import WordCloudChart from './WordCloudChart';
 import SimpleWordCloudChart from './SimpleWordCloudChart';
 import HotTopicsChart from './HotTopicsChart';
 
-export const AnalysisCharts = {
+export const AnalysisCharts: ChartComponentsMap = {
   WordCloudChart,
   SimpleWordCloudChart,
   HotTopicsChart
@@ -61,7 +69,7 @@ export const AnalysisCharts = {
 import LocationHeatMap from './LocationHeatMap';
 import GeographicChart from './GeographicChart';
 
-export const GeographicCharts = {
+export const GeographicCharts: ChartComponentsMap = {
   LocationHeatMap,
   GeographicChart
 };
@@ -71,7 +79,7 @@ import InfluenceNetworkFlow from './InfluenceNetworkFlow';
 import SimpleNetworkFlow from './SimpleNetworkFlow';
 import PropagationPathChart from './PropagationPathChart';
 
-export const NetworkCharts = {
+export const NetworkCharts: ChartComponentsMap = {
   InfluenceNetworkFlow,
   SimpleNetworkFlow,
   PropagationPathChart
@@ -82,7 +90,7 @@ import HotEventsList from './HotEventsList';
 import EventDevelopmentChart from './EventDevelopmentChart';
 import EventTimelineChart from './EventTimelineChart';
 
-export const EventCharts = {
+export const EventCharts: ChartComponentsMap = {
   HotEventsList,
   EventDevelopmentChart,
   EventTimelineChart

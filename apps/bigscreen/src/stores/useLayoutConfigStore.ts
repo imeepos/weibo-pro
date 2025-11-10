@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
-import { LayoutAPI, LayoutConfiguration, CreateLayoutPayload, UpdateLayoutPayload } from '@/services/api/layout';
-
+import { LayoutConfiguration, CreateLayoutPayload, UpdateLayoutPayload } from '@/services/api/layout';
+import { root } from '@sker/core'
+import { LayoutController } from '@sker/sdk'
 interface LayoutConfigState {
   serverLayouts: LayoutConfiguration[];
   defaultLayout: LayoutConfiguration | null;
@@ -31,7 +32,8 @@ export const useLayoutConfigStore = create<LayoutConfigState>()(
     fetchServerLayouts: async (type = 'bigscreen') => {
       set({ loading: true, error: null });
       try {
-        const layouts = await LayoutAPI.getLayouts(type);
+        const c = root.get(LayoutController)
+        const layouts = await c.getLayouts(type);
         set({ serverLayouts: layouts, loading: false });
       } catch (error) {
         set({
@@ -44,7 +46,8 @@ export const useLayoutConfigStore = create<LayoutConfigState>()(
     fetchDefaultLayout: async (type = 'bigscreen') => {
       set({ loading: true, error: null });
       try {
-        const defaultLayout = await LayoutAPI.getDefault(type);
+        const c = root.get(LayoutController)
+        const defaultLayout = await c.getDefaultLayout(type);
         set({
           defaultLayout,
           selectedLayout: defaultLayout || get().selectedLayout,
@@ -65,7 +68,8 @@ export const useLayoutConfigStore = create<LayoutConfigState>()(
     createServerLayout: async (payload) => {
       set({ loading: true, error: null });
       try {
-        const newLayout = await LayoutAPI.create(payload);
+        const c = root.get(LayoutController)
+        const newLayout = await c.createLayout(payload);
         const { serverLayouts } = get();
         set({
           serverLayouts: [newLayout, ...serverLayouts],
@@ -84,7 +88,8 @@ export const useLayoutConfigStore = create<LayoutConfigState>()(
     updateServerLayout: async (id, payload) => {
       set({ loading: true, error: null });
       try {
-        const updatedLayout = await LayoutAPI.update(id, payload);
+        const c = root.get(LayoutController)
+        const updatedLayout = await c.updateLayout(id, payload);
         const { serverLayouts, selectedLayout } = get();
         set({
           serverLayouts: serverLayouts.map(l => l.id === id ? updatedLayout : l),
@@ -104,7 +109,8 @@ export const useLayoutConfigStore = create<LayoutConfigState>()(
     deleteServerLayout: async (id) => {
       set({ loading: true, error: null });
       try {
-        await LayoutAPI.delete(id);
+        const c = root.get(LayoutController)
+        await c.deleteLayout(id);
         const { serverLayouts, selectedLayout } = get();
         set({
           serverLayouts: serverLayouts.filter(l => l.id !== id),
@@ -124,7 +130,8 @@ export const useLayoutConfigStore = create<LayoutConfigState>()(
     setAsDefaultLayout: async (id, type = 'bigscreen') => {
       set({ loading: true, error: null });
       try {
-        const updatedLayout = await LayoutAPI.setAsDefault(id, type);
+        const c = root.get(LayoutController)
+        const updatedLayout = await c.setDefaultLayout(id, type);
         const { serverLayouts } = get();
         set({
           serverLayouts: serverLayouts.map(l => ({

@@ -62,7 +62,7 @@ const MemoizedChart: React.FC<MemoizedChartProps> = ({
   onEvents,
   style,
 }) => {
-  const previousOption = useRef<EChartsOption>();
+  const previousOption = useRef<EChartsOption | undefined>(undefined);
   
   // 使用更智能的选项记忆化
   const memoizedOption = useMemo(() => {

@@ -353,9 +353,9 @@ export const componentWrappers = {
   "sentiment-overview": () => {
     // 创建默认情感数据
     const sentimentData = {
-      positive: { value: 1234, change: 8.5 },
-      negative: { value: 456, change: -2.3 },
-      neutral: { value: 890, change: 1.2 }
+      positive: 1234,
+      negative: 456,
+      neutral: 890
     };
     return <SentimentOverview data={sentimentData} className="w-full h-full flex-1" />;
   },

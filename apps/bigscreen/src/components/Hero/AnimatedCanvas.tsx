@@ -25,7 +25,7 @@ export const AnimatedCanvas = memo<AnimatedCanvasProps>(({
   pathCount = 6
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animationRef = useRef<number>();
+  const animationRef = useRef<number | undefined>(undefined);
   const pathsRef = useRef<CircuitPath[]>([]);
 
   // 预计算颜色，避免每帧字符串操作

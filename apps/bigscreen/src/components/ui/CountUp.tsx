@@ -31,8 +31,8 @@ const CountUp: React.FC<CountUpProps> = ({
 }) => {
   const [count, setCount] = useState(start);
   const [isAnimating, setIsAnimating] = useState(false);
-  const animationRef = useRef<number>();
-  const startTimeRef = useRef<number>();
+  const animationRef = useRef<number | undefined>(undefined);
+  const startTimeRef = useRef<number | undefined>(undefined);
 
   const getSizeClasses = () => {
     switch (size) {

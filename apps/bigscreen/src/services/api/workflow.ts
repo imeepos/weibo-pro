@@ -79,7 +79,10 @@ export class WorkflowAPI {
       );
 
       logger.info('Post crawled successfully', response.data);
-      return response.data;
+      return {
+        success: true,
+        data: response.data,
+      };
     } catch (error) {
       logger.error('Failed to crawl post', error);
       throw error;
@@ -162,7 +165,7 @@ export class WorkflowAPI {
         `${this.BASE_PATH}/status`
       );
 
-      const statusData = response?.data?.data || {
+      const statusData = response?.data || {
         nlpQueue: 'inactive' as const,
         workflowEngine: 'stopped' as const,
       };

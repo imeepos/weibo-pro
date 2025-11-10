@@ -1,11 +1,18 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import "@sker/sdk";
+import { providers } from '@sker/sdk'
+import { root } from '@sker/core'
+
 import App from './App';
 import './styles/index.css';
 import { createLogger } from './utils';
 
 const logger = createLogger('main');
 
+root.set([
+  ...providers()
+])
 
 // Mock服务现在由vite-plugin-mock处理
 

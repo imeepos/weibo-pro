@@ -3,7 +3,6 @@
  */
 
 import { apiUtils as apiClient } from './client';
-import type { ApiResponse } from '../../types';
 
 // 日期序列数据类型
 export interface DateSeriesData {

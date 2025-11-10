@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
-import { EventsAPI } from '@/services/api';
+import { EventsController } from '@sker/sdk'
+import { root } from '@sker/core'
 import {
   ArrowLeft,
   TrendingUp,
@@ -172,7 +173,8 @@ const EventDetail: React.FC = () => {
 
       try {
         // 获取事件详情数据
-        const eventData = await EventsAPI.getEventDetail(eventId);
+        const c = root.get(EventsController)
+        const eventData = await c.getEventDetail(eventId);
         // 转换为 EventDetailData 格式
         const convertedEventData: EventDetailData = {
           id: eventData.id,
@@ -197,7 +199,7 @@ const EventDetail: React.FC = () => {
         setEventData(convertedEventData);
 
         // 获取时间序列数据
-        const timeSeriesData = await EventsAPI.getEventTimeSeries(eventId);
+        const timeSeriesData = await c.getEventTimeSeries(eventId);
         // 转换为 TimeSeriesDataPoint 格式，添加防御性检查
         const convertedTimeSeries: TimeSeriesDataPoint[] = Array.isArray(timeSeriesData)
           ? timeSeriesData.map(item => ({
@@ -211,7 +213,7 @@ const EventDetail: React.FC = () => {
         setTimeSeriesData(convertedTimeSeries);
 
         // 获取趋势数据
-        const trendData = await EventsAPI.getEventTrends(eventId);
+        const trendData = await c.getEventTrends(eventId);
         // 转换为 TrendChartData 格式
         const convertedTrendData: TrendChartData = {
           hotnessData: trendData.hotnessData || [],
@@ -222,7 +224,7 @@ const EventDetail: React.FC = () => {
         setTrendData(convertedTrendData);
 
         // 获取影响力用户数据
-        const influenceUsersData = await EventsAPI.getInfluenceUsers(eventId);
+        const influenceUsersData = await c.getInfluenceUsers(eventId);
         // 转换为页面期望的 InfluenceUser 格式，添加防御性检查
         const convertedInfluenceUsers: InfluenceUser[] = influenceUsersData
           .filter(user => user?.userId && user?.username) // 过滤掉无效数据
@@ -238,7 +240,7 @@ const EventDetail: React.FC = () => {
         setInfluenceUsers(convertedInfluenceUsers);
 
         // 获取地理分布数据
-        const geographicData = await EventsAPI.getGeographic(eventId);
+        const geographicData = await c.getEventGeographic(eventId);
         const convertedGeographicData: GeographicDataPoint[] = geographicData.map(item => ({
           region: item.region,
           posts: item.posts,

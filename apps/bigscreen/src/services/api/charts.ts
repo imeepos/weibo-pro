@@ -6,7 +6,8 @@
 import { apiClient } from './apiClient';
 import { withErrorBoundary } from '@/utils/errorHandler';
 import { createLogger } from '@/utils/logger';
-
+import { root } from '@sker/core'
+import { EventsController } from '@sker/sdk'
 const logger = createLogger('ChartsAPI');
 import type {
   AgeDistributionData,

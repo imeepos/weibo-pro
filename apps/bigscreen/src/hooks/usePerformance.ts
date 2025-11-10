@@ -38,8 +38,8 @@ export function usePerformance(options: UsePerformanceOptions = {}) {
 
   const renderCountRef = useRef(0);
   const renderTimesRef = useRef<number[]>([]);
-  const lastRenderStartRef = useRef<number>();
-  const mountTimeRef = useRef<number>();
+  const lastRenderStartRef = useRef<number | undefined>(undefined);
+  const mountTimeRef = useRef<number | undefined>(undefined);
 
   const [stats, setStats] = useState<PerformanceStats>({
     renderCount: 0,

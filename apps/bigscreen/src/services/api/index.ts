@@ -9,7 +9,6 @@ export { apiClient, apiUtils } from './client';
 // 导出所有API模块
 export { ChartsAPI } from './charts';
 export * from './common';
-export * from './events';
 export * from './overview';
 export * from './users';
 export * from './system';

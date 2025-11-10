@@ -13,8 +13,8 @@ import {
 import { cn, formatNumber } from '@/utils';
 import { createLogger } from '@/utils/logger';
 import { HotEvent } from '@/types';
-import { EventsAPI } from '@/services/api';
-
+import { EventsController } from '@sker/sdk'
+import { root } from '@sker/core'
 interface HotEventsListProps {
   className?: string;
 }
@@ -30,7 +30,8 @@ const HotEventsList: React.FC<HotEventsListProps> = ({ className = '' }) => {
     const fetchHotEvents = async () => {
       try {
         setLoading(true);
-        const result = await EventsAPI.getHotList();
+        const c = root.get(EventsController)
+        const result = await c.getHotList();
         console.log(`EventsAPI.getHotList`, {result})
         // 确保返回的是数组
         if (Array.isArray(result)) {
