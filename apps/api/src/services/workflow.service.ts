@@ -3,7 +3,7 @@ import { WorkflowEntity, WorkflowShareEntity, useEntityManager, WorkflowStatus }
 import { logger } from '../utils/logger';
 import { randomBytes } from 'crypto';
 import { WorkflowGraphAst } from '@sker/workflow';
-
+import * as sdk from '@sker/sdk'
 /**
  * 工作流服务
  *
@@ -84,7 +84,7 @@ export class WorkflowService {
   /**
    * 列出所有工作流
    */
-  async listWorkflows(): Promise<WorkflowSummary[]> {
+  async listWorkflows(): Promise<sdk.WorkflowSummary[]> {
     return useEntityManager(async (manager) => {
       const repository = manager.getRepository(WorkflowEntity);
 

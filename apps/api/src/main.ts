@@ -12,9 +12,6 @@ import { startPostNLPConsumer } from "@sker/workflow-run";
 import { ResponseInterceptor } from './interceptors/response.interceptor';
 import { NotFoundExceptionFilter } from './filters/not-found.filter';
 import { logger } from './utils/logger';
-import { useQueue } from "@sker/mq";
-import { AppWebSocketGateway } from './gateways/websocket.gateway';
-import { tap } from 'rxjs';
 
 async function bootstrap() {
     root.set([
@@ -52,43 +49,9 @@ async function bootstrap() {
         credentials: true,
         maxAge: 86400,
     });
-
-    // 监听 websocket 频道，将消息群发到前端
-    const wsGateway = app.get(AppWebSocketGateway);
-
     await app.listen(3000, '0.0.0.0');
     logger.info('API server started', { url: 'http://localhost:3000' });
-    const mq = useQueue(`websocket`)
 
-    logger.info('Starting WebSocket message consumer', { queue: mq.queueName });
-
-    mq.consumer$.pipe(
-        tap(envelope => {
-            try {
-                const message = envelope.message;
-
-                // 广播消息到所有 WebSocket 客户端
-                wsGateway.broadcast(message);
-
-                // 确认消息已处理
-                envelope.ack();
-
-                logger.debug('WebSocket message processed', {
-                    messageType: message.type,
-                    clientCount: wsGateway.clientCount
-                });
-            } catch (err) {
-                logger.error('Failed to process WebSocket message', { error: err });
-                envelope.nack(false);
-            }
-        })
-    ).subscribe({
-        error: (err) => {
-            logger.error('WebSocket consumer error', { error: err });
-        }
-    });
-
-    logger.info('WebSocket message consumer started successfully');
 }
 
 process.on('SIGTERM', () => {
