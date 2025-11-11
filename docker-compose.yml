@@ -8,6 +8,14 @@ services:
       - "3004:3000"
     environment:
       - NODE_ENV=production
+      - OPENAI_BASE_URL=https://api.siliconflow.cn/v1
+      - OPENAI_API_KEY=sk-smyexxqrjjkstwhrkcijnimvadoaghvomzhtvsdbssarvyjx
+      - DATABASE_URL=postgresql://postgres:Postgres2025Secure@43.240.223.138:5432/vectordb
+      - AMAP_API_KEY=f258d6ebbd01893de8af65f89f488e28
+      - REDIS_URL=redis://:Redis2025Complex@43.240.223.138:6379
+      - RABBITMQ_URL=amqp://admin:RabbitMQ2025Secure@43.240.223.138:5672
+      - MONGODB_URL=mongodb://admin:MongoDB2025Secure@43.240.223.138:27017/appdb?authSource=admin
+
     env_file:
       - .env
     # 资源限制和健康检查
