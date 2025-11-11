@@ -16,7 +16,7 @@ export const providers: () => Provider[] = () => {
         {
             provide: AXIOS_CONFIG,
             useValue: {
-                baseURL: 'http://localhost:3004/'
+                baseURL: '/'
             }
         },
         ...controllers.map(controller => {
