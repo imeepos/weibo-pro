@@ -317,28 +317,6 @@ export function useCanvasControls() {
     }
   }, [getNodes, setNodes, setEdges])
 
-  /**
-   * 删除节点
-   */
-  const handleDeleteNode = useCallback(
-    (nodeId: string) => {
-      setNodes((nodes) => nodes.filter((node) => node.id !== nodeId))
-      setEdges((edges) =>
-        edges.filter((edge) => edge.source !== nodeId && edge.target !== nodeId)
-      )
-    },
-    [setNodes, setEdges]
-  )
-
-  /**
-   * 删除边
-   */
-  const handleDeleteEdge = useCallback(
-    (edgeId: string) => {
-      setEdges((edges) => edges.filter((edge) => edge.id !== edgeId))
-    },
-    [setEdges]
-  )
 
   /**
    * 运行节点（暂时留空，后续实现）
@@ -368,8 +346,6 @@ export function useCanvasControls() {
     handleZoomOut,
     handleSelectAll,
     handleClearCanvas,
-    handleDeleteNode,
-    handleDeleteEdge,
     handleRunNode,
   }
 }

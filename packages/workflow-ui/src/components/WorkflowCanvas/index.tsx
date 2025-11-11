@@ -148,8 +148,6 @@ export function WorkflowCanvas({
     handleSelectAll,
     handleZoomIn,
     handleZoomOut,
-    handleDeleteNode,
-    handleDeleteEdge,
     handleRunNode,
   } = useCanvasControls()
 
@@ -225,6 +223,30 @@ export function WorkflowCanvas({
       )
     }
   }, [getSelectedNodes, edges, workflow])
+
+  /**
+   * 删除单个节点（右键菜单）
+   *
+   * 确保同步更新 AST 和 UI
+   */
+  const handleDeleteNode = useCallback(
+    (nodeId: string) => {
+      workflow.removeNode(nodeId)
+    },
+    [workflow]
+  )
+
+  /**
+   * 删除单个边（右键菜单）
+   *
+   * 确保同步更新 AST 和 UI
+   */
+  const handleDeleteEdge = useCallback(
+    (edgeId: string) => {
+      workflow.removeEdge(edgeId)
+    },
+    [workflow]
+  )
 
   // 集成键盘快捷键
   useKeyboardShortcuts({

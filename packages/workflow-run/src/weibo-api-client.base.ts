@@ -45,7 +45,7 @@ export abstract class WeiboApiClient {
         if (!selection) {
             throw new WeiboError(
                 WeiboErrorType.UNKNOWN_ERROR,
-                '没有可用账号'
+                '没有可用的微博账号。请确保至少有一个状态为 ACTIVE 的账号，并且包含有效的 cookies 和 XSRF-TOKEN。'
             );
         }
 

@@ -15,6 +15,11 @@ export class PostContextCollectorVisitor {
     ast.state = 'running';
 
     try {
+      // 验证 postId
+      if (!ast.postId || ast.postId.trim().length === 0) {
+        throw new Error('postId 不能为空');
+      }
+
       await useEntityManager(async (m) => {
         const isNumeric = /^\d+$/.test(ast.postId);
         const post = await m.findOne(WeiboPostEntity, {
