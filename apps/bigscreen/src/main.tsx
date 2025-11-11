@@ -11,7 +11,7 @@ import { createLogger } from './utils';
 const logger = createLogger('main');
 
 root.set([
-  ...providers()
+  ...providers(true)
 ])
 
 // Mock服务现在由vite-plugin-mock处理

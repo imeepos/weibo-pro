@@ -29,13 +29,18 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: 'http://43.240.223.138:3004/',
         changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/api/, '')
       },
+      // WebSocket代理
       '/ws': {
-        target: 'ws://localhost:3000',
+        target: 'ws://43.240.223.138:3004/',
         changeOrigin: true,
+        secure: false,
         ws: true,
+        rewrite: (path) => path.replace(/^\/ws/, '')
       }
     }
   },

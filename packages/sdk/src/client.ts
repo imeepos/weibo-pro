@@ -2,7 +2,7 @@ import { CONTROLLES, Provider, root, PATH_METADATA, METHOD_METADATA, ROUTE_ARGS_
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios'
 import { AXIOS, AXIOS_CONFIG } from "./tokens";
 
-export const providers: () => Provider[] = () => {
+export const providers: (isProd?: boolean) => Provider[] = (isProd = true) => {
     const controllers = root.get(CONTROLLES, [])
 
     return [
@@ -16,7 +16,7 @@ export const providers: () => Provider[] = () => {
         {
             provide: AXIOS_CONFIG,
             useValue: {
-                baseURL: '/'
+                baseURL: isProd ? 'http://43.240.223.138:3004/' : 'http://localhost:3004'
             }
         },
         ...controllers.map(controller => {
