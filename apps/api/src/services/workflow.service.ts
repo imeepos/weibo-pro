@@ -143,19 +143,22 @@ export class WorkflowService {
       let workflow: WorkflowEntity | null = null;
 
       if (Number.isInteger(numericId)) {
+        logger.debug('Searching workflow by ID', { id: numericId });
         workflow = await workflowRepository.findOne({
           where: { id: numericId },
         });
       }
 
       if (!workflow) {
+        logger.debug('Searching workflow by code', { code: params.workflowId });
         workflow = await workflowRepository.findOne({
           where: { code: params.workflowId },
         });
       }
 
       if (!workflow) {
-        throw new Error('工作流不存在');
+        logger.error('Workflow not found', { workflowId: params.workflowId });
+        throw new Error(`工作流不存在: ${params.workflowId}`);
       }
 
       // 创建分享记录
