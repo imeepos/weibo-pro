@@ -335,6 +335,7 @@ export class WorkflowController implements sdk.WorkflowController {
    * - 从工作流数据中反序列化节点
    * - 执行指定节点
    * - 返回执行结果和状态
+   * - 妥善处理所有错误，确保服务稳定
    */
   @Post('execute-node')
   async executeNode(@Body() body: WorkflowGraphAst): Promise<WorkflowGraphAst> {
@@ -355,12 +356,31 @@ export class WorkflowController implements sdk.WorkflowController {
       // 执行节点
       const result = await execute(ast, ctx);
 
+      logger.info('Node execution completed', {
+        nodeId,
+        state: result.state,
+        nodesExecuted: result.nodes?.length
+      });
+
       return result;
     } catch (error: any) {
-      logger.error('Node execution failed', { nodeId, error: error.message });
-      body.state = `fail`
-      body.error = error.message;
-      return body;
+      logger.error('Node execution failed', {
+        nodeId,
+        error: error.message,
+        type: error.type || error.name,
+        stack: error.stack
+      });
+
+      // 构造失败响应，确保前端能够正确显示错误
+      const failedResult = fromJson(body);
+      failedResult.state = 'fail';
+      failedResult.error = {
+        message: error.message || '执行失败',
+        type: error.type || 'UNKNOWN_ERROR',
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      };
+
+      return failedResult;
     }
   }
 }

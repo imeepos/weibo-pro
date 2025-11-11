@@ -128,6 +128,7 @@ export class WorkflowService {
    * - 生成安全的随机 token
    * - 支持可选的过期时间
    * - 使用独立的分享表
+   * - 支持通过 ID 或 code 查找工作流
    */
   async createShare(params: {
     workflowId: string;
@@ -137,10 +138,21 @@ export class WorkflowService {
       const workflowRepository = manager.getRepository(WorkflowEntity);
       const shareRepository = manager.getRepository(WorkflowShareEntity);
 
-      // 验证工作流存在
-      const workflow = await workflowRepository.findOne({
-        where: { id: Number(params.workflowId) },
-      });
+      // 尝试通过 ID 或 code 查找工作流
+      const numericId = Number(params.workflowId);
+      let workflow: WorkflowEntity | null = null;
+
+      if (Number.isInteger(numericId)) {
+        workflow = await workflowRepository.findOne({
+          where: { id: numericId },
+        });
+      }
+
+      if (!workflow) {
+        workflow = await workflowRepository.findOne({
+          where: { code: params.workflowId },
+        });
+      }
 
       if (!workflow) {
         throw new Error('工作流不存在');
@@ -150,7 +162,7 @@ export class WorkflowService {
       const shareToken = this.generateShareToken();
       const share = shareRepository.create({
         token: shareToken,
-        workflowId: Number(params.workflowId),
+        workflowId: workflow.id,
         expiresAt: params.expiresAt ? new Date(params.expiresAt) : undefined,
       });
 

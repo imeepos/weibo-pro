@@ -64,18 +64,23 @@ async function bootstrap() {
 
     mq.consumer$.pipe(
         tap(envelope => {
-            const message = envelope.message;
+            try {
+                const message = envelope.message;
 
-            // 广播消息到所有 WebSocket 客户端
-            wsGateway.broadcast(message);
+                // 广播消息到所有 WebSocket 客户端
+                wsGateway.broadcast(message);
 
-            // 确认消息已处理
-            envelope.ack();
+                // 确认消息已处理
+                envelope.ack();
 
-            logger.debug('WebSocket message processed', {
-                messageType: message.type,
-                clientCount: wsGateway.clientCount
-            });
+                logger.debug('WebSocket message processed', {
+                    messageType: message.type,
+                    clientCount: wsGateway.clientCount
+                });
+            } catch (err) {
+                logger.error('Failed to process WebSocket message', { error: err });
+                envelope.nack(false);
+            }
         })
     ).subscribe({
         error: (err) => {
@@ -94,6 +99,22 @@ process.on('SIGTERM', () => {
 process.on('SIGINT', () => {
   logger.info('Received SIGINT signal, shutting down gracefully');
   process.exit(0);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('Unhandled Promise Rejection', {
+    reason: reason instanceof Error ? reason.message : String(reason),
+    stack: reason instanceof Error ? reason.stack : undefined,
+    promise
+  });
+});
+
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught Exception', {
+    error: error.message,
+    stack: error.stack
+  });
+  // 不退出进程，让服务继续运行
 });
 
 bootstrap();
