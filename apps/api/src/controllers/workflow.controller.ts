@@ -12,6 +12,9 @@ import { type Ast, WorkflowGraphAst } from '@sker/workflow';
 import { logger } from '../utils/logger';
 import * as sdk from '@sker/sdk';
 import { WorkflowService } from '../services/workflow.service';
+import { root } from '@sker/core';
+import { randomUUID } from 'crypto';
+import { WorkflowEntity } from '@sker/entities';
 
 /**
  * 爬虫工作流触发控制器
@@ -25,8 +28,10 @@ import { WorkflowService } from '../services/workflow.service';
 @Controller('api/workflow')
 export class WorkflowController implements sdk.WorkflowController {
   private nlpQueue = useQueue<PostNLPTask>('post_nlp_queue');
-
-  constructor(private readonly workflowService: WorkflowService) { }
+  private readonly workflowService: WorkflowService
+  constructor() {
+    this.workflowService = root.get(WorkflowService)
+  }
 
   /**
    * 触发单个微博帖子的NLP分析工作流
@@ -227,14 +232,14 @@ export class WorkflowController implements sdk.WorkflowController {
    * - 统一的参数验证和异常处理
    */
   @Post('save')
-  async saveWorkflow(@Body() body: sdk.SaveWorkflowPayload): Promise<sdk.SaveWorkflowResult> {
-    const { name, workflowData } = body;
+  async saveWorkflow(@Body() body: WorkflowGraphAst): Promise<WorkflowEntity> {
+    const { name, id, edges, nodes } = body;
 
     if (!name || name.trim().length === 0) {
       throw new BadRequestException('工作流名称不能为空');
     }
 
-    if (!workflowData || !workflowData.nodes || !workflowData.edges) {
+    if (!nodes || !edges) {
       throw new BadRequestException('工作流数据格式错误');
     }
 
@@ -245,14 +250,20 @@ export class WorkflowController implements sdk.WorkflowController {
    * 根据 name 获取工作流
    */
   @Get('get')
-  async getWorkflow(@Query() params: { name: string }): Promise<sdk.WorkflowData | null> {
+  async getWorkflow(@Query() params: { name: string }): Promise<WorkflowGraphAst | null> {
     const { name } = params;
 
     if (!name || name.trim().length === 0) {
       throw new BadRequestException('工作流名称不能为空');
     }
 
-    return await this.workflowService.getWorkflowByName(name);
+    const workflow = await this.workflowService.getWorkflowByName(name);
+
+    if (workflow) return workflow
+    const workflowAst = new WorkflowGraphAst()
+    workflowAst.name = name;
+    await this.saveWorkflow(workflowAst)
+    return workflowAst
   }
 
   /**

@@ -683,6 +683,12 @@ importers:
       '@sker/entities':
         specifier: workspace:*
         version: link:../entities
+      '@sker/workflow':
+        specifier: workspace:*
+        version: link:../workflow
+      '@sker/workflow-ast':
+        specifier: workspace:*
+        version: link:../workflow-ast
       axios:
         specifier: 1.7.9
         version: 1.7.9

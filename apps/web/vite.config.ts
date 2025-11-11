@@ -2,7 +2,6 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react-swc'
 import tailwindcss from '@tailwindcss/vite'
 import swc from 'vite-plugin-swc-transform'
-import path from 'node:path'
 
 export default defineConfig({
   plugins: [
@@ -27,24 +26,16 @@ export default defineConfig({
     }),
   ],
   server: {
-    port: 3000,
     host: true,
-    // 配置代理
     proxy: {
-      // API请求代理
       '/api': {
         target: 'http://localhost:3000',
         changeOrigin: true,
-        secure: false,
-        rewrite: (path) => path.replace(/^\/api/, '')
       },
-      // WebSocket代理
       '/ws': {
         target: 'ws://localhost:3000',
         changeOrigin: true,
-        secure: false,
         ws: true,
-        rewrite: (path) => path.replace(/^\/ws/, '')
       }
     }
   },

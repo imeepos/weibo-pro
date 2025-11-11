@@ -16,7 +16,7 @@ export const providers: () => Provider[] = () => {
         {
             provide: AXIOS_CONFIG,
             useValue: {
-                baseURL: '/api'
+                baseURL: 'http://localhost:3004/'
             }
         },
         ...controllers.map(controller => {
@@ -74,7 +74,9 @@ function createControllerInstance<T>(controllerClass: new () => T, axiosInstance
                 // 发送请求
                 try {
                     const response = await axiosInstance.request(config);
-                    return response.data;
+                    const data = response.data;
+                    if (data.success) return data.data;
+                    throw new Error(`api error: ${JSON.stringify(data)}`)
                 } catch (error) {
                     throw error;
                 }

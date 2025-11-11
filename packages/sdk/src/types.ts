@@ -509,11 +509,6 @@ export interface SaveWorkflowPayload {
   }
 }
 
-export interface SaveWorkflowResult {
-  id: string
-  name: string
-  savedAt: string
-}
 
 export interface WorkflowData {
   id: string

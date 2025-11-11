@@ -2,6 +2,7 @@ import { Injectable } from '@sker/core';
 import { WorkflowEntity, WorkflowShareEntity, useEntityManager, WorkflowStatus } from '@sker/entities';
 import { logger } from '../utils/logger';
 import { randomBytes } from 'crypto';
+import { WorkflowGraphAst } from '@sker/workflow';
 
 /**
  * 工作流服务
@@ -26,14 +27,7 @@ export class WorkflowService {
    * - 使用数据库事务保证一致性
    * - 自动记录时间戳
    */
-  async saveWorkflow(params: {
-    id?: string;
-    name: string;
-    workflowData: {
-      nodes: any[];
-      edges: any[];
-    };
-  }): Promise<{ id: string; name: string; savedAt: string }> {
+  async saveWorkflow(params: WorkflowGraphAst): Promise<WorkflowEntity> {
     return useEntityManager(async (manager) => {
       const repository = manager.getRepository(WorkflowEntity);
 
@@ -44,15 +38,15 @@ export class WorkflowService {
 
       if (workflow) {
         // 更新现有工作流
-        workflow.title = params.name;
-        workflow.graphDefinition = params.workflowData;
+        workflow.title = params.name!;
+        workflow.graphDefinition = params;
         workflow.status = WorkflowStatus.ACTIVE;
       } else {
         // 创建新工作流
         workflow = repository.create({
           code: params.name,
           title: params.name,
-          graphDefinition: params.workflowData,
+          graphDefinition: params,
           defaultInputs: {},
           status: WorkflowStatus.ACTIVE,
         });
@@ -62,18 +56,14 @@ export class WorkflowService {
 
       logger.info('Workflow saved', { id: workflow.id, name: params.name });
 
-      return {
-        id: String(workflow.id),
-        name: workflow.title,
-        savedAt: workflow.updatedAt.toISOString(),
-      };
+      return workflow;
     });
   }
 
   /**
    * 根据 name 获取工作流
    */
-  async getWorkflowByName(name: string): Promise<WorkflowData | null> {
+  async getWorkflowByName(name: string): Promise<WorkflowGraphAst | null> {
     return useEntityManager(async (manager) => {
       const repository = manager.getRepository(WorkflowEntity);
 
@@ -87,13 +77,7 @@ export class WorkflowService {
 
       logger.info('Workflow retrieved', { id: workflow.id, name });
 
-      return {
-        id: String(workflow.id),
-        name: workflow.title,
-        data: workflow.graphDefinition as { nodes: any[]; edges: any[] },
-        createdAt: workflow.createdAt.toISOString(),
-        updatedAt: workflow.updatedAt.toISOString(),
-      };
+      return workflow.graphDefinition as WorkflowGraphAst;
     });
   }
 

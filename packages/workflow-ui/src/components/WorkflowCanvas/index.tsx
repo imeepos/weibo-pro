@@ -319,24 +319,13 @@ export function WorkflowCanvas({
     setIsSaving(true)
 
     try {
-      // 序列化工作流
-      const workflowData = {
-        nodes: workflow.workflowAst.nodes.map(node => toJson(node as Ast)),
-        edges: workflow.workflowAst.edges,
-      }
-
       // 调用 API 保存
       const controller = root.get<WorkflowController>(WorkflowController)
-      const result = await controller.saveWorkflow({
-        name: name || workflow.workflowAst.name || '未命名工作流',
-        workflowData,
-      })
+      const result = await controller.saveWorkflow(workflow.workflowAst)
 
       console.log('工作流保存成功', result)
-      alert(`工作流已保存：${result.name}`)
     } catch (error: any) {
       console.error('工作流保存失败', error)
-      alert(`工作流保存失败：${error.message || '未知错误'}`)
     } finally {
       setIsSaving(false)
     }
@@ -362,23 +351,12 @@ export function WorkflowCanvas({
     }
 
     try {
-      // 先保存工作流
-      const workflowData = {
-        nodes: workflow.workflowAst.nodes.map(node => toJson(node as Ast)),
-        edges: workflow.workflowAst.edges,
-      }
-
       const controller = root.get<WorkflowController>(WorkflowController)
-
       // 保存工作流
-      const saveResult = await controller.saveWorkflow({
-        name: name || workflow.workflowAst.name || '未命名工作流',
-        workflowData,
-      })
-
+      const saveResult = await controller.saveWorkflow(workflow.workflowAst)
       // 创建分享链接
       const shareResult = await controller.createShare({
-        workflowId: saveResult.id,
+        workflowId: saveResult.code,
       })
 
       // 生成完整的分享 URL

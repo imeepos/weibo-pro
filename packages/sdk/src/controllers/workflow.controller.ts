@@ -5,14 +5,14 @@ import type {
   BatchNlpResult,
   CrawlPostResult,
   SaveWorkflowPayload,
-  SaveWorkflowResult,
   WorkflowData,
   WorkflowSummary,
   CreateShareResult,
   ExecuteNodePayload,
   ExecuteNodeResult
 } from '../types'
-
+import type { WorkflowGraphAst } from '@sker/workflow';
+import type { WorkflowEntity } from '@sker/entities';
 @Controller('api/workflow')
 export class WorkflowController {
 
@@ -47,12 +47,12 @@ export class WorkflowController {
   }
 
   @Post('save')
-  saveWorkflow(@Body() body: SaveWorkflowPayload): Promise<SaveWorkflowResult> {
+  saveWorkflow(@Body() body: WorkflowGraphAst): Promise<WorkflowEntity> {
     throw new Error('method saveWorkflow not implements')
   }
 
   @Get('get')
-  getWorkflow(@Query() params: { name: string }): Promise<WorkflowData | null> {
+  getWorkflow(@Query() params: { name: string }): Promise<WorkflowGraphAst | null> {
     throw new Error('method getWorkflow not implements')
   }
 

@@ -19,6 +19,7 @@ import { UsersService } from './services/data/users.service';
 import { SystemService } from './services/data/system.service';
 import { SentimentService } from './services/data/sentiment.service';
 import { LayoutService } from './services/data/layout.service';
+import { WorkflowService } from './services/workflow.service';
 import { AppWebSocketGateway } from './gateways/websocket.gateway';
 import { EventQueryService } from './services/data/events/event-query.service';
 import { EventAnalyticsService } from './services/data/events/event-analytics.service';
@@ -53,6 +54,7 @@ import { root } from '@sker/core';
     { provide: SystemService, useFactory: () => root.get(SystemService) },
     { provide: SentimentService, useFactory: () => root.get(SentimentService) },
     { provide: LayoutService, useFactory: () => root.get(LayoutService) },
+    { provide: WorkflowService, useFactory: () => root.get(WorkflowService) },
     AppWebSocketGateway,
     { provide: EventQueryService, useFactory: () => root.get(EventQueryService) },
     { provide: EventAnalyticsService, useFactory: () => root.get(EventAnalyticsService) },
