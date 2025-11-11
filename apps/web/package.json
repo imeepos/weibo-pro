@@ -13,10 +13,11 @@
   "dependencies": {
     "@sker/core": "workspace:*",
     "@sker/workflow": "workspace:*",
+    "@sker/sdk": "workspace:*",
     "@sker/workflow-ast": "workspace:*",
     "@sker/workflow-ui": "workspace:*",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "reflect-metadata": "^0.2.2"
   },
   "devDependencies": {
@@ -24,8 +25,8 @@
     "@sker/typescript-config": "workspace:*",
     "@swc/helpers": "^0.5.16",
     "@tailwindcss/vite": "^4.1.5",
-    "@types/react": "19.1.0",
-    "@types/react-dom": "19.1.1",
+    "@types/react": "18.3.26",
+    "@types/react-dom": "18.3.7",
     "@vitejs/plugin-react-swc": "^4.0.2",
     "eslint": "^9.38.0",
     "tailwindcss": "^4.1.5",

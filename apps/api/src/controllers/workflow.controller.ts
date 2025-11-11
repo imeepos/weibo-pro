@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Body, Get, BadRequestException, Query, Delete, NotFoundException } from '@nestjs/common';
 import { useQueue } from '@sker/mq';
 import type { PostNLPTask } from '@sker/workflow-run';
 import {
@@ -7,9 +7,11 @@ import {
   WeiboAjaxStatusesCommentAst,
   WeiboAjaxStatusesRepostTimelineAst,
 } from '@sker/workflow-ast';
-import { execute } from '@sker/workflow';
+import { execute, toJson, fromJson } from '@sker/workflow';
+import { type Ast, WorkflowGraphAst } from '@sker/workflow';
 import { logger } from '../utils/logger';
 import * as sdk from '@sker/sdk';
+import { WorkflowService } from '../services/workflow.service';
 
 /**
  * 爬虫工作流触发控制器
@@ -18,10 +20,13 @@ import * as sdk from '@sker/sdk';
  * - 提供优雅的API端点触发爬虫工作流
  * - 支持多种触发方式：NLP分析、微博搜索
  * - 集成消息队列，确保任务可靠执行
+ * - 管理工作流的持久化和分享
  */
 @Controller('api/workflow')
 export class WorkflowController implements sdk.WorkflowController {
   private nlpQueue = useQueue<PostNLPTask>('post_nlp_queue');
+
+  constructor(private readonly workflowService: WorkflowService) { }
 
   /**
    * 触发单个微博帖子的NLP分析工作流
@@ -212,5 +217,157 @@ export class WorkflowController implements sdk.WorkflowController {
     logger.info('Post crawl successful', crawlResult);
 
     return crawlResult;
+  }
+
+  /**
+   * 保存工作流
+   *
+   * 优雅设计：
+   * - 委托给 WorkflowService 处理业务逻辑
+   * - 统一的参数验证和异常处理
+   */
+  @Post('save')
+  async saveWorkflow(@Body() body: sdk.SaveWorkflowPayload): Promise<sdk.SaveWorkflowResult> {
+    const { name, workflowData } = body;
+
+    if (!name || name.trim().length === 0) {
+      throw new BadRequestException('工作流名称不能为空');
+    }
+
+    if (!workflowData || !workflowData.nodes || !workflowData.edges) {
+      throw new BadRequestException('工作流数据格式错误');
+    }
+
+    return await this.workflowService.saveWorkflow(body);
+  }
+
+  /**
+   * 根据 name 获取工作流
+   */
+  @Get('get')
+  async getWorkflow(@Query() params: { name: string }): Promise<sdk.WorkflowData | null> {
+    const { name } = params;
+
+    if (!name || name.trim().length === 0) {
+      throw new BadRequestException('工作流名称不能为空');
+    }
+
+    return await this.workflowService.getWorkflowByName(name);
+  }
+
+  /**
+   * 列出所有工作流
+   */
+  @Get('list')
+  async listWorkflows(): Promise<sdk.WorkflowSummary[]> {
+    return await this.workflowService.listWorkflows();
+  }
+
+  /**
+   * 删除工作流
+   */
+  @Delete('delete/:id')
+  async deleteWorkflow(@Query() params: { id: string }): Promise<{ success: boolean }> {
+    const { id } = params;
+
+    if (!id || id.trim().length === 0) {
+      throw new BadRequestException('工作流ID不能为空');
+    }
+
+    const success = await this.workflowService.deleteWorkflow(id);
+
+    if (!success) {
+      throw new NotFoundException('工作流不存在');
+    }
+
+    return { success };
+  }
+
+  /**
+   * 创建分享链接
+   */
+  @Post('share')
+  async createShare(@Body() body: { workflowId: string; expiresAt?: string }): Promise<sdk.CreateShareResult> {
+    const { workflowId } = body;
+
+    if (!workflowId || workflowId.trim().length === 0) {
+      throw new BadRequestException('工作流ID不能为空');
+    }
+
+    return await this.workflowService.createShare(body);
+  }
+
+  /**
+   * 获取分享的工作流
+   */
+  @Get('shared/:token')
+  async getSharedWorkflow(@Query() params: { token: string }): Promise<sdk.WorkflowData | null> {
+    const { token } = params;
+
+    if (!token || token.trim().length === 0) {
+      throw new BadRequestException('分享令牌不能为空');
+    }
+
+    const workflow = await this.workflowService.getSharedWorkflow(token);
+
+    if (!workflow) {
+      throw new NotFoundException('分享链接不存在或已过期');
+    }
+
+    return workflow;
+  }
+
+  /**
+   * 执行单个节点
+   *
+   * 优雅设计：
+   * - 从工作流数据中反序列化节点
+   * - 执行指定节点
+   * - 返回执行结果和状态
+   */
+  @Post('execute-node')
+  async executeNode(@Body() body: sdk.ExecuteNodePayload): Promise<sdk.ExecuteNodeResult> {
+    const { nodeId, workflowData, context = {} } = body;
+
+    if (!nodeId || nodeId.trim().length === 0) {
+      throw new BadRequestException('节点ID不能为空');
+    }
+
+    if (!workflowData || !workflowData.nodes || !workflowData.edges) {
+      throw new BadRequestException('工作流数据格式错误');
+    }
+
+    try {
+      // 重建工作流 AST
+      const ast = new WorkflowGraphAst();
+      ast.nodes = workflowData.nodes.map(nodeJson => fromJson(nodeJson) as Ast);
+      ast.edges = workflowData.edges;
+
+      // 找到目标节点
+      const targetNode = ast.nodes.find(n => n.id === nodeId);
+
+      if (!targetNode) {
+        throw new NotFoundException(`节点 ${nodeId} 不存在`);
+      }
+
+      logger.info('Executing node', { nodeId });
+
+      // 执行节点
+      const result = await execute(targetNode, context);
+
+      return {
+        nodeId,
+        state: targetNode.state || 'success',
+        result,
+      };
+    } catch (error: any) {
+      logger.error('Node execution failed', { nodeId, error: error.message });
+
+      return {
+        nodeId,
+        state: 'fail',
+        error: error.message,
+      };
+    }
   }
 }

@@ -1,5 +1,5 @@
 'use client'
-import React, { useCallback } from 'react'
+import React, { useCallback, useState } from 'react'
 import {
   ReactFlow,
   Background,
@@ -23,7 +23,8 @@ import {
   PlusSquare,
 } from 'lucide-react'
 
-import { WorkflowGraphAst } from '@sker/workflow'
+import { WorkflowGraphAst, toJson, execute } from '@sker/workflow'
+import type { Ast } from '@sker/workflow'
 import { nodeTypes } from '../nodes'
 import { edgeTypes } from '../edges'
 import { getAllNodeTypes } from '../../adapters'
@@ -35,7 +36,7 @@ import { ContextMenu } from './ContextMenu'
 import { NodeSelector } from './NodeSelector'
 import { cn } from '../../utils/cn'
 import { root } from '@sker/core'
-import { WorkflowService } from './WorkflowService'
+import { WorkflowController } from '@sker/sdk'
 
 export interface WorkflowCanvasProps {
   /** 工作流 AST 实例 */
@@ -75,11 +76,12 @@ export function WorkflowCanvas({
   onSave,
   onShare,
 }: WorkflowCanvasProps) {
-  const service = root.get(WorkflowService)
   const workflow = useWorkflow(workflowAst)
   const nodes = workflow.nodes
   const edges = workflow.edges
   const isCanvasEmpty = nodes.length === 0
+  const [isRunning, setIsRunning] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
 
   const {
     onNodeClick,
@@ -235,17 +237,163 @@ export function WorkflowCanvas({
     }
   }, [nodes.length, workflow])
 
-  const handleRunAll = useCallback(() => {
-    onRunAll?.()
-  }, [onRunAll])
+  /**
+   * 运行全部节点
+   *
+   * 优雅设计：
+   * - 直接使用 execute 函数在前端执行
+   * - 实时更新节点状态
+   * - 提供用户反馈
+   */
+  const handleRunAll = useCallback(async () => {
+    if (onRunAll) {
+      onRunAll()
+      return
+    }
 
-  const handleSave = useCallback(() => {
-    onSave?.()
-  }, [onSave])
+    if (!workflow.workflowAst) {
+      console.error('工作流 AST 不存在')
+      return
+    }
 
-  const handleShare = useCallback(() => {
-    onShare?.()
-  }, [onShare])
+    if (isRunning) {
+      console.warn('工作流正在运行中')
+      return
+    }
+
+    setIsRunning(true)
+
+    try {
+      console.log('开始执行工作流', { name: workflow.workflowAst.name })
+
+      // 执行整个工作流
+      const result = await execute(workflow.workflowAst, {})
+
+      // 同步状态到 UI
+      workflow.syncFromAst()
+
+      console.log('工作流执行完成', {
+        name: workflow.workflowAst.name,
+        state: workflow.workflowAst.state,
+        result,
+      })
+
+      // 显示成功提示
+      if (workflow.workflowAst.state === 'success') {
+        alert('工作流执行成功！')
+      } else {
+        alert(`工作流执行失败：${workflow.workflowAst.error?.message || '未知错误'}`)
+      }
+    } catch (error: any) {
+      console.error('工作流执行失败', error)
+      alert(`工作流执行失败：${error.message}`)
+    } finally {
+      setIsRunning(false)
+    }
+  }, [workflow, onRunAll, isRunning])
+
+  /**
+   * 保存工作流
+   *
+   * 优雅设计：
+   * - 序列化工作流数据
+   * - 调用后端 API 保存
+   * - 提供保存反馈
+   */
+  const handleSave = useCallback(async () => {
+    if (onSave) {
+      onSave()
+      return
+    }
+
+    if (!workflow.workflowAst) {
+      console.error('工作流 AST 不存在')
+      return
+    }
+
+    if (isSaving) {
+      console.warn('工作流正在保存中')
+      return
+    }
+
+    setIsSaving(true)
+
+    try {
+      // 序列化工作流
+      const workflowData = {
+        nodes: workflow.workflowAst.nodes.map(node => toJson(node as Ast)),
+        edges: workflow.workflowAst.edges,
+      }
+
+      // 调用 API 保存
+      const controller = root.get<WorkflowController>(WorkflowController)
+      const result = await controller.saveWorkflow({
+        name: name || workflow.workflowAst.name || '未命名工作流',
+        workflowData,
+      })
+
+      console.log('工作流保存成功', result)
+      alert(`工作流已保存：${result.name}`)
+    } catch (error: any) {
+      console.error('工作流保存失败', error)
+      alert(`工作流保存失败：${error.message || '未知错误'}`)
+    } finally {
+      setIsSaving(false)
+    }
+  }, [workflow, name, onSave, isSaving])
+
+  /**
+   * 分享工作流
+   *
+   * 优雅设计：
+   * - 先保存工作流
+   * - 生成分享链接
+   * - 复制到剪贴板
+   */
+  const handleShare = useCallback(async () => {
+    if (onShare) {
+      onShare()
+      return
+    }
+
+    if (!workflow.workflowAst) {
+      console.error('工作流 AST 不存在')
+      return
+    }
+
+    try {
+      // 先保存工作流
+      const workflowData = {
+        nodes: workflow.workflowAst.nodes.map(node => toJson(node as Ast)),
+        edges: workflow.workflowAst.edges,
+      }
+
+      const controller = root.get<WorkflowController>(WorkflowController)
+
+      // 保存工作流
+      const saveResult = await controller.saveWorkflow({
+        name: name || workflow.workflowAst.name || '未命名工作流',
+        workflowData,
+      })
+
+      // 创建分享链接
+      const shareResult = await controller.createShare({
+        workflowId: saveResult.id,
+      })
+
+      // 生成完整的分享 URL
+      const shareUrl = `${window.location.origin}${shareResult.shareUrl}`
+
+      // 复制到剪贴板
+      await navigator.clipboard.writeText(shareUrl)
+
+      console.log('分享链接已生成', { shareUrl })
+      alert(`分享链接已复制到剪贴板：\n${shareUrl}`)
+    } catch (error: any) {
+      console.error('创建分享链接失败', error)
+      alert(`创建分享链接失败：${error.message || '未知错误'}`)
+    }
+  }, [workflow, name, onShare])
 
   return (
     <div
@@ -269,23 +417,26 @@ export function WorkflowCanvas({
           <button
             type="button"
             onClick={handleRunAll}
-            className="inline-flex items-center gap-2 rounded-lg bg-[#135bec] px-4 py-2 text-sm font-semibold tracking-[0.015em] text-white shadow-lg shadow-blue-500/20 transition hover:bg-[#1b6aff] hover:shadow-blue-500/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500 focus-visible:ring-offset-[#111318]"
+            disabled={isRunning || isCanvasEmpty}
+            className="inline-flex items-center gap-2 rounded-lg bg-[#135bec] px-4 py-2 text-sm font-semibold tracking-[0.015em] text-white shadow-lg shadow-blue-500/20 transition hover:bg-[#1b6aff] hover:shadow-blue-500/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500 focus-visible:ring-offset-[#111318] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Play className="h-4 w-4" strokeWidth={2.2} />
-            <span>运行全部</span>
+            <span>{isRunning ? '运行中...' : '运行全部'}</span>
           </button>
           <button
             type="button"
             onClick={handleSave}
-            className="inline-flex items-center gap-2 rounded-lg border border-[#282e39] bg-[#1a1d24] px-4 py-2 text-sm font-semibold tracking-[0.015em] text-white transition hover:border-[#354057] hover:bg-[#212530] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500 focus-visible:ring-offset-[#111318]"
+            disabled={isSaving || isCanvasEmpty}
+            className="inline-flex items-center gap-2 rounded-lg border border-[#282e39] bg-[#1a1d24] px-4 py-2 text-sm font-semibold tracking-[0.015em] text-white transition hover:border-[#354057] hover:bg-[#212530] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500 focus-visible:ring-offset-[#111318] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Save className="h-4 w-4" strokeWidth={1.8} />
-            <span>保存工作流</span>
+            <span>{isSaving ? '保存中...' : '保存工作流'}</span>
           </button>
           <button
             type="button"
             onClick={handleShare}
-            className="inline-flex items-center gap-2 rounded-lg border border-[#282e39] bg-[#1a1d24] px-3 py-2 text-sm font-semibold tracking-[0.015em] text-white transition hover:border-[#354057] hover:bg-[#212530] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500 focus-visible:ring-offset-[#111318]"
+            disabled={isCanvasEmpty}
+            className="inline-flex items-center gap-2 rounded-lg border border-[#282e39] bg-[#1a1d24] px-3 py-2 text-sm font-semibold tracking-[0.015em] text-white transition hover:border-[#354057] hover:bg-[#212530] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500 focus-visible:ring-offset-[#111318] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Share2 className="h-4 w-4" strokeWidth={1.8} />
             <span className="hidden sm:inline">分享</span>

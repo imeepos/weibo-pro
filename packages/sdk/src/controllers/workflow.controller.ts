@@ -1,9 +1,16 @@
-import { Controller, Post, Body, Get } from '@sker/core'
+import { Controller, Post, Body, Get, Query, Delete } from '@sker/core'
 import type {
   WorkflowStatus,
   SearchWeiboResult,
   BatchNlpResult,
-  CrawlPostResult
+  CrawlPostResult,
+  SaveWorkflowPayload,
+  SaveWorkflowResult,
+  WorkflowData,
+  WorkflowSummary,
+  CreateShareResult,
+  ExecuteNodePayload,
+  ExecuteNodeResult
 } from '../types'
 
 @Controller('api/workflow')
@@ -37,5 +44,40 @@ export class WorkflowController {
   @Post('crawl-post')
   crawlPost(@Body() body: { postId: string }): Promise<CrawlPostResult> {
     throw new Error('method crawlPost not implements')
+  }
+
+  @Post('save')
+  saveWorkflow(@Body() body: SaveWorkflowPayload): Promise<SaveWorkflowResult> {
+    throw new Error('method saveWorkflow not implements')
+  }
+
+  @Get('get')
+  getWorkflow(@Query() params: { name: string }): Promise<WorkflowData | null> {
+    throw new Error('method getWorkflow not implements')
+  }
+
+  @Get('list')
+  listWorkflows(): Promise<WorkflowSummary[]> {
+    throw new Error('method listWorkflows not implements')
+  }
+
+  @Delete('delete/:id')
+  deleteWorkflow(@Query() params: { id: string }): Promise<{ success: boolean }> {
+    throw new Error('method deleteWorkflow not implements')
+  }
+
+  @Post('share')
+  createShare(@Body() body: { workflowId: string; expiresAt?: string }): Promise<CreateShareResult> {
+    throw new Error('method createShare not implements')
+  }
+
+  @Get('shared/:token')
+  getSharedWorkflow(@Query() params: { token: string }): Promise<WorkflowData | null> {
+    throw new Error('method getSharedWorkflow not implements')
+  }
+
+  @Post('execute-node')
+  executeNode(@Body() body: ExecuteNodePayload): Promise<ExecuteNodeResult> {
+    throw new Error('method executeNode not implements')
   }
 }

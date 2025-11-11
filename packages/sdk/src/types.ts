@@ -498,3 +498,58 @@ export interface CrawlPostResult {
   commentsCrawled: boolean
   repostsCrawled: boolean
 }
+
+// 工作流管理相关类型
+export interface SaveWorkflowPayload {
+  id?: string
+  name: string
+  workflowData: {
+    nodes: any[]
+    edges: any[]
+  }
+}
+
+export interface SaveWorkflowResult {
+  id: string
+  name: string
+  savedAt: string
+}
+
+export interface WorkflowData {
+  id: string
+  name: string
+  data: {
+    nodes: any[]
+    edges: any[]
+  }
+  createdAt: string
+  updatedAt: string
+}
+
+export interface WorkflowSummary {
+  id: string
+  name: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateShareResult {
+  shareToken: string
+  shareUrl: string
+}
+
+export interface ExecuteNodePayload {
+  nodeId: string
+  workflowData: {
+    nodes: any[]
+    edges: any[]
+  }
+  context?: any
+}
+
+export interface ExecuteNodeResult {
+  nodeId: string
+  state: 'pending' | 'running' | 'success' | 'fail'
+  result?: any
+  error?: string
+}

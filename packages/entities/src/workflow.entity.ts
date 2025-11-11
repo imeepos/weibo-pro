@@ -53,3 +53,30 @@ export class WorkflowEntity {
   @DeleteDateColumn({ type: 'timestamptz', name: 'deleted_at', nullable: true })
   deletedAt?: Date;
 }
+
+/**
+ * 工作流分享实体
+ *
+ * 存在即合理：
+ * - 管理工作流的分享链接
+ * - 支持过期时间
+ */
+@Entity('workflow_shares')
+export class WorkflowShareEntity {
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
+
+  @Index({ unique: true })
+  @Column({ type: 'varchar', length: 64 })
+  token!: string;
+
+  @Index()
+  @Column({ type: 'int', name: 'workflow_id' })
+  workflowId!: number;
+
+  @Column({ type: 'timestamptz', name: 'expires_at', nullable: true })
+  expiresAt?: Date;
+
+  @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
+  createdAt!: Date;
+}
