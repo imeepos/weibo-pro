@@ -337,48 +337,30 @@ export class WorkflowController implements sdk.WorkflowController {
    * - 返回执行结果和状态
    */
   @Post('execute-node')
-  async executeNode(@Body() body: sdk.ExecuteNodePayload): Promise<sdk.ExecuteNodeResult> {
-    const { nodeId, workflowData, context = {} } = body;
+  async executeNode(@Body() body: WorkflowGraphAst): Promise<WorkflowGraphAst> {
+    const { id: nodeId, nodes, edges, ctx = {} } = body;
 
     if (!nodeId || nodeId.trim().length === 0) {
       throw new BadRequestException('节点ID不能为空');
     }
 
-    if (!workflowData || !workflowData.nodes || !workflowData.edges) {
+    if (!nodes || !edges) {
       throw new BadRequestException('工作流数据格式错误');
     }
 
     try {
       // 重建工作流 AST
-      const ast = new WorkflowGraphAst();
-      ast.nodes = workflowData.nodes.map(nodeJson => fromJson(nodeJson) as Ast);
-      ast.edges = workflowData.edges;
-
-      // 找到目标节点
-      const targetNode = ast.nodes.find(n => n.id === nodeId);
-
-      if (!targetNode) {
-        throw new NotFoundException(`节点 ${nodeId} 不存在`);
-      }
-
-      logger.info('Executing node', { nodeId });
+      const ast = fromJson(body);
 
       // 执行节点
-      const result = await execute(targetNode, context);
+      const result = await execute(ast, ctx);
 
-      return {
-        nodeId,
-        state: targetNode.state || 'success',
-        result,
-      };
+      return result;
     } catch (error: any) {
       logger.error('Node execution failed', { nodeId, error: error.message });
-
-      return {
-        nodeId,
-        state: 'fail',
-        error: error.message,
-      };
+      body.state = `fail`
+      body.error = error.message;
+      return body;
     }
   }
 }

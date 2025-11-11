@@ -41,13 +41,13 @@ function toFlowNode(node: INode): WorkflowNode {
   return {
     id: node.id,
     type: 'workflow-node',
-    position: { x: 0, y: 0 }, // 需要布局算法或从持久化位置加载
+    position: node.position || { x: 0, y: 0 },
     data: {
       ast: node as Ast,
       nodeClass,
       label: metadata.label,
       state: node.state,
-      error: (node as any).error,
+      error: node.error,
     },
   }
 }
@@ -57,10 +57,10 @@ function toFlowNode(node: INode): WorkflowNode {
  */
 function toFlowEdge(edge: IEdge, index: number): WorkflowEdge {
   if (isDataEdge(edge)) {
-    return toDataEdge(edge, index)
+    return toDataEdge(edge)
   }
   if (isControlEdge(edge)) {
-    return toControlEdge(edge, index)
+    return toControlEdge(edge)
   }
   throw new Error('Unknown edge type')
 }
@@ -68,9 +68,19 @@ function toFlowEdge(edge: IEdge, index: number): WorkflowEdge {
 /**
  * 转换数据边
  */
-function toDataEdge(edge: IDataEdge, index: number): WorkflowEdge {
+function toDataEdge(edge: IDataEdge): WorkflowEdge {
+  // 使用源节点、目标节点和连接属性生成稳定的唯一 id
+  const idParts = [
+    edge.from,
+    edge.to,
+    edge.fromProperty || '',
+    edge.toProperty || '',
+    edge.weight || ''
+  ].filter(Boolean)
+  const stableId = idParts.join('-')
+
   return {
-    id: `data-${index}-${edge.from}-${edge.to}`,
+    id: `data-${stableId}`,
     source: edge.from,
     target: edge.to,
     sourceHandle: edge.fromProperty || null,
@@ -89,9 +99,17 @@ function toDataEdge(edge: IDataEdge, index: number): WorkflowEdge {
 /**
  * 转换控制边
  */
-function toControlEdge(edge: IControlEdge, index: number): WorkflowEdge {
+function toControlEdge(edge: IControlEdge): WorkflowEdge {
+  // 使用源节点、目标节点和条件生成稳定的唯一 id
+  const idParts = [
+    edge.from,
+    edge.to,
+    edge.condition || ''
+  ].filter(Boolean)
+  const stableId = idParts.join('-')
+
   return {
-    id: `control-${index}-${edge.from}-${edge.to}`,
+    id: `control-${stableId}`,
     source: edge.from,
     target: edge.to,
     type: 'workflow-control-edge',

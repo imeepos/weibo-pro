@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from 'react'
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { WorkflowGraphAst, generateId } from '@sker/workflow'
 import type { INode, IEdge } from '@sker/workflow'
 import { useNodesState, useEdgesState, addEdge, type Connection } from '@xyflow/react'
@@ -17,7 +17,7 @@ export interface UseWorkflowReturn {
   removeNode: (nodeId: string) => void
   updateNode: (nodeId: string, updates: Partial<INode>) => void
   connectNodes: (connection: Connection) => void
-  removeEdge: (edgeId: string) => void
+  removeEdge: (edgeOrId: string | WorkflowEdge) => void
   clearWorkflow: () => void
   syncFromAst: () => void
 }
@@ -48,8 +48,21 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
 
-  // 存储节点位置的映射，避免重复更新
-  const nodePositionsRef = useRef<Map<string, { x: number; y: number }>>(new Map())
+  // 监听节点位置变化，同步到 AST
+  useEffect(() => {
+    nodes.forEach((node) => {
+      const astNode = workflowAst.nodes.find((n) => n.id === node.id)
+      if (astNode) {
+        const currentPos = (astNode as any).position
+        const newPos = node.position
+
+        // 只有位置真正改变时才更新
+        if (!currentPos || currentPos.x !== newPos.x || currentPos.y !== newPos.y) {
+          (astNode as any).position = newPos
+        }
+      }
+    })
+  }, [nodes, workflowAst])
 
   /**
    * 从 AST 同步到 React Flow
@@ -68,6 +81,7 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
     (nodeClass: any, position: { x: number; y: number }, label?: string) => {
       const ast = new nodeClass()
       ast.id = generateId()
+      ast.position = position
 
       workflowAst.addNode(ast)
 
@@ -80,6 +94,7 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
           nodeClass,
           label: label || nodeClass.name,
           state: ast.state || 'pending',
+          error: ast.error,
         },
       }
 
@@ -170,15 +185,25 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
 
   /**
    * 删除连接
+   *
+   * 优雅设计：
+   * - 支持通过 edgeId 或完整 edge 对象删除
+   * - 自动同步 AST 和 UI 状态
+   * - 健壮的边匹配逻辑
    */
   const removeEdge = useCallback(
-    (edgeId: string) => {
-      const edgeIndex = edges.findIndex((edge) => edge.id === edgeId)
-      if (edgeIndex === -1) return
+    (edgeOrId: string | WorkflowEdge) => {
+      // 支持传入 edge.id 或完整的 edge 对象
+      const edge = typeof edgeOrId === 'string'
+        ? edges.find((e) => e.id === edgeOrId)
+        : edgeOrId
 
-      const edge = edges[edgeIndex]
-      if (!edge) return
+      if (!edge) {
+        console.warn('Edge not found:', edgeOrId)
+        return
+      }
 
+      // 从 AST 中删除对应的边
       const astEdgeIndex = workflowAst.edges.findIndex((e) => {
         const isDataEdge = 'fromProperty' in e && 'toProperty' in e
         if (!isDataEdge) return false
@@ -193,9 +218,13 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
 
       if (astEdgeIndex !== -1) {
         workflowAst.edges.splice(astEdgeIndex, 1)
+        console.log('Edge removed from AST:', edge.id, 'AST edges count:', workflowAst.edges.length)
+      } else {
+        console.warn('Edge not found in AST:', edge)
       }
 
-      setEdges((edges) => edges.filter((e) => e.id !== edgeId))
+      // 更新 UI 状态
+      setEdges((currentEdges) => currentEdges.filter((e) => e.id !== edge.id))
     },
     [workflowAst, edges, setEdges]
   )

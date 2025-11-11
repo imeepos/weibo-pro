@@ -6,6 +6,8 @@ export interface INode extends Record<string, any> {
     state: IAstStates;
     id: string;
     type: string;
+    error: Error | undefined;
+    position: { x: number; y: number };
 }
 // 数据流边 - 纯粹的数据传递
 export interface IDataEdge {

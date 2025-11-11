@@ -9,6 +9,7 @@ import {
   type Connection,
   type NodeChange,
   type EdgeChange,
+  useReactFlow,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 
@@ -23,9 +24,8 @@ import {
   PlusSquare,
 } from 'lucide-react'
 
-import { WorkflowGraphAst, toJson, execute } from '@sker/workflow'
-import type { Ast } from '@sker/workflow'
-import { nodeTypes } from '../nodes'
+import { WorkflowGraphAst } from '@sker/workflow'
+import { createNodeTypes } from '../nodes'
 import { edgeTypes } from '../edges'
 import { getAllNodeTypes } from '../../adapters'
 import { useWorkflow } from '../../hooks/useWorkflow'
@@ -82,6 +82,57 @@ export function WorkflowCanvas({
   const isCanvasEmpty = nodes.length === 0
   const [isRunning, setIsRunning] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+
+  // 获取 ReactFlow 实例以访问 viewport API
+  const { getViewport, setViewport } = useReactFlow()
+
+  /**
+   * 恢复视图窗口状态
+   *
+   * 优雅设计：
+   * - 如果 AST 中有保存的 viewport，恢复到该位置
+   * - 如果没有，使用 fitView 自动适应
+   * - 确保用户体验的连续性
+   */
+  React.useEffect(() => {
+    if (workflow.workflowAst.viewport) {
+      // 恢复保存的 viewport
+      const { x, y, zoom } = workflow.workflowAst.viewport
+      setViewport({ x, y, zoom }, { duration: 0 })
+      console.log('恢复 viewport:', workflow.workflowAst.viewport)
+    }
+    // 注意：如果没有保存的 viewport，ReactFlow 的 fitView prop 会自动适应
+  }, [workflow.workflowAst, setViewport])
+
+  /**
+   * 监听边双击删除事件
+   *
+   * 优雅设计：
+   * - 边组件通过自定义事件触发删除
+   * - 在这里统一处理，同步到 AST 和 UI
+   * - 确保数据一致性
+   */
+  React.useEffect(() => {
+    const handleEdgeDelete = (e: Event) => {
+      const customEvent = e as CustomEvent
+      const { edgeId } = customEvent.detail
+
+      console.log('监听到 edge-delete 事件:', edgeId)
+
+      // 查找完整的 edge 对象
+      const edge = edges.find((e) => e.id === edgeId)
+      if (edge) {
+        console.log('删除边:', edge.id, 'source:', edge.source, 'target:', edge.target)
+        workflow.removeEdge(edge)
+        console.log('删除后 AST edges:', workflow.workflowAst.edges.length)
+      } else {
+        console.warn('Edge not found:', edgeId)
+      }
+    }
+
+    window.addEventListener('edge-delete', handleEdgeDelete)
+    return () => window.removeEventListener('edge-delete', handleEdgeDelete)
+  }, [workflow, edges])
 
   const {
     onNodeClick,
@@ -215,7 +266,12 @@ export function WorkflowCanvas({
 
   const handleEdgesDelete = useCallback(
     (edgesToDelete: any[]) => {
-      edgesToDelete.forEach((edge) => workflow.removeEdge(edge.id))
+      console.log('删除边:', edgesToDelete.length, '条')
+      edgesToDelete.forEach((edge) => {
+        console.log('删除边:', edge.id, 'source:', edge.source, 'target:', edge.target)
+        workflow.removeEdge(edge)  // 传入完整的 edge 对象
+      })
+      console.log('删除后 AST edges:', workflow.workflowAst.edges.length)
     },
     [workflow]
   )
@@ -238,12 +294,46 @@ export function WorkflowCanvas({
   }, [nodes.length, workflow])
 
   /**
+   * 运行单个节点
+   */
+  const handleRunNodeInternal = useCallback(async (nodeId: string) => {
+    if (!workflow.workflowAst) {
+      console.error('工作流 AST 不存在')
+      return
+    }
+
+    try {
+      console.log('开始执行节点', { nodeId })
+
+      const controller = root.get<WorkflowController>(WorkflowController)
+
+      // 传入完整的 WorkflowGraphAst，后端会执行对应的节点并返回状态更新
+      const result = await controller.executeNode(workflow.workflowAst)
+
+      console.log('节点执行完成', { nodeId, result })
+
+      // 同步状态到 UI
+      workflow.syncFromAst()
+
+      // 显示执行结果
+      if (result.state === 'success') {
+        console.log(`节点执行成功`)
+      } else if (result.state === 'fail') {
+        console.error(`节点执行失败：${result.error || '未知错误'}`)
+      }
+    } catch (error: any) {
+      console.error('节点执行失败', error)
+    }
+  }, [workflow])
+
+  /**
    * 运行全部节点
    *
    * 优雅设计：
-   * - 直接使用 execute 函数在前端执行
-   * - 实时更新节点状态
-   * - 提供用户反馈
+   * - WorkflowGraphAst 是状态机
+   * - 每次调用接口执行一步
+   * - 后端返回状态更新
+   * - 循环直到所有节点完成
    */
   const handleRunAll = useCallback(async () => {
     if (onRunAll) {
@@ -261,42 +351,75 @@ export function WorkflowCanvas({
       return
     }
 
+    if (nodes.length === 0) {
+      console.warn('没有节点可执行')
+      return
+    }
+
     setIsRunning(true)
 
     try {
-      console.log('开始执行工作流', { name: workflow.workflowAst.name })
+      console.log('开始执行工作流', {
+        name: workflow.workflowAst.name,
+        nodeCount: nodes.length
+      })
 
-      // 执行整个工作流
-      const result = await execute(workflow.workflowAst, {})
+      const controller = root.get<WorkflowController>(WorkflowController)
 
-      // 同步状态到 UI
-      workflow.syncFromAst()
+      let successCount = 0
+      let failCount = 0
+      let stepCount = 0
+      const maxSteps = nodes.length * 2 // 防止死循环
+
+      // 循环执行，每次执行一步
+      while (stepCount < maxSteps) {
+        stepCount++
+
+        // 传入完整的 WorkflowGraphAst 状态机
+        const result = await controller.executeNode(workflow.workflowAst)
+
+        console.log(`执行步骤 ${stepCount}:`, result)
+
+        // 同步状态到 UI
+        workflow.syncFromAst()
+
+        // 统计结果
+        if (result.state === 'success') {
+          successCount++
+        } else if (result.state === 'fail') {
+          failCount++
+          console.error(`执行失败:`, result.error)
+        }
+
+        // 检查是否所有节点都已完成
+        const allCompleted = workflow.workflowAst.nodes.every(node =>
+          node.state === 'success' || node.state === 'fail'
+        )
+
+        if (allCompleted || workflow.workflowAst.state === 'success' || workflow.workflowAst.state === 'fail') {
+          console.log('工作流执行完成')
+          break
+        }
+      }
 
       console.log('工作流执行完成', {
         name: workflow.workflowAst.name,
-        state: workflow.workflowAst.state,
-        result,
+        steps: stepCount,
+        success: successCount,
+        fail: failCount
       })
-
-      // 显示成功提示
-      if (workflow.workflowAst.state === 'success') {
-        alert('工作流执行成功！')
-      } else {
-        alert(`工作流执行失败：${workflow.workflowAst.error?.message || '未知错误'}`)
-      }
     } catch (error: any) {
       console.error('工作流执行失败', error)
-      alert(`工作流执行失败：${error.message}`)
     } finally {
       setIsRunning(false)
     }
-  }, [workflow, onRunAll, isRunning])
+  }, [workflow, onRunAll, isRunning, nodes])
 
   /**
    * 保存工作流
    *
    * 优雅设计：
-   * - 序列化工作流数据
+   * - 序列化工作流数据（包括 viewport 状态）
    * - 调用后端 API 保存
    * - 提供保存反馈
    */
@@ -319,6 +442,23 @@ export function WorkflowCanvas({
     setIsSaving(true)
 
     try {
+      // 保存当前的 viewport 状态
+      const currentViewport = getViewport()
+      workflow.workflowAst.viewport = currentViewport
+
+      console.log('准备保存工作流:', {
+        name: workflow.workflowAst.name,
+        nodes: workflow.workflowAst.nodes.length,
+        edges: workflow.workflowAst.edges.length,
+        viewport: currentViewport,
+        edgesDetail: workflow.workflowAst.edges.map(e => ({
+          from: e.from,
+          to: e.to,
+          fromProperty: (e as any).fromProperty,
+          toProperty: (e as any).toProperty
+        }))
+      })
+
       // 调用 API 保存
       const controller = root.get<WorkflowController>(WorkflowController)
       const result = await controller.saveWorkflow(workflow.workflowAst)
@@ -329,7 +469,7 @@ export function WorkflowCanvas({
     } finally {
       setIsSaving(false)
     }
-  }, [workflow, name, onSave, isSaving])
+  }, [workflow, name, onSave, isSaving, getViewport])
 
   /**
    * 分享工作流
@@ -365,11 +505,9 @@ export function WorkflowCanvas({
       // 复制到剪贴板
       await navigator.clipboard.writeText(shareUrl)
 
-      console.log('分享链接已生成', { shareUrl })
-      alert(`分享链接已复制到剪贴板：\n${shareUrl}`)
+      console.log('分享链接已生成并复制到剪贴板', { shareUrl })
     } catch (error: any) {
       console.error('创建分享链接失败', error)
-      alert(`创建分享链接失败：${error.message || '未知错误'}`)
     }
   }, [workflow, name, onShare])
 
@@ -435,18 +573,20 @@ export function WorkflowCanvas({
             onNodesDelete={handleNodesDelete}
             onEdgesDelete={handleEdgesDelete}
             onPaneContextMenu={onPaneContextMenu}
-            nodeTypes={nodeTypes}
+            nodeTypes={createNodeTypes()}
             edgeTypes={edgeTypes}
             panOnScroll
             selectionOnDrag={false}
             panOnDrag={panOnDrag}
             selectionMode={SelectionMode.Partial}
-            fitView
+            fitView={!workflow.workflowAst.viewport}  // 只有在没有保存的 viewport 时才自动适应
             deleteKeyCode="Delete"
             snapToGrid={snapToGrid}
             nodesDraggable={true}
             nodesConnectable={true}
             elementsSelectable={true}
+            minZoom={0.1}
+            maxZoom={4}
             className="workflow-canvas__reactflow"
             style={{ background: '#1a1d24' }}
           >
@@ -520,7 +660,7 @@ export function WorkflowCanvas({
         onSelectAll={handleSelectAll}
         onClearCanvas={handleClearCanvas}
         onDeleteNode={handleDeleteNode}
-        onRunNode={handleRunNode}
+        onRunNode={handleRunNodeInternal}
         onDeleteEdge={handleDeleteEdge}
         onClose={closeMenu}
       />

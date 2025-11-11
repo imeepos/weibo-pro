@@ -4,12 +4,9 @@ import type {
   SearchWeiboResult,
   BatchNlpResult,
   CrawlPostResult,
-  SaveWorkflowPayload,
   WorkflowData,
   WorkflowSummary,
   CreateShareResult,
-  ExecuteNodePayload,
-  ExecuteNodeResult
 } from '../types'
 import type { WorkflowGraphAst } from '@sker/workflow';
 import type { WorkflowEntity } from '@sker/entities';
@@ -77,7 +74,7 @@ export class WorkflowController {
   }
 
   @Post('execute-node')
-  executeNode(@Body() body: ExecuteNodePayload): Promise<ExecuteNodeResult> {
+  executeNode(@Body() body: WorkflowGraphAst): Promise<WorkflowGraphAst> {
     throw new Error('method executeNode not implements')
   }
 }

@@ -14,7 +14,7 @@ export type { NodePaletteProps } from './components/NodePalette'
 export { PropertyPanel } from './components/PropertyPanel'
 export type { PropertyPanelProps } from './components/PropertyPanel'
 
-export { BaseNode, nodeTypes } from './components/nodes'
+export { BaseNode, createNodeTypes } from './components/nodes'
 export { DataEdge, ControlEdge, EdgeLabel, edgeTypes } from './components/edges'
 
 // 导出 Hooks

@@ -2,10 +2,9 @@ import React, { memo } from 'react'
 import { BaseEdge, getBezierPath } from '@xyflow/react'
 import type { EdgeProps } from '@xyflow/react'
 import type { WorkflowEdge } from '../../types'
-import { EdgeLabel } from './EdgeLabel'
+// import { EdgeLabel } from './EdgeLabel'  // 标签已禁用
 
 export const DataEdge = memo((props: EdgeProps<WorkflowEdge>) => {
-  console.log({ props })
   const { id, sourceX, sourceY, targetX, targetY, data, selected } = props
   const [edgePath] = getBezierPath({
     sourceX,
@@ -14,7 +13,8 @@ export const DataEdge = memo((props: EdgeProps<WorkflowEdge>) => {
     targetY,
   })
 
-  const label = data ? buildDataEdgeLabel(data) : null
+  // 注意：标签已禁用，因为技术性的属性映射（mid → mid）对用户意义不大
+  // const label = data ? buildDataEdgeLabel(data) : null
 
   const handleDoubleClick = (event: React.MouseEvent) => {
     event.stopPropagation()
@@ -52,33 +52,9 @@ export const DataEdge = memo((props: EdgeProps<WorkflowEdge>) => {
         onContextMenu={handleContextMenu}
         style={{ cursor: 'pointer' }}
       />
-      {label && (
-        <EdgeLabel
-          label={label}
-          sourceX={sourceX}
-          sourceY={sourceY}
-          targetX={targetX}
-          targetY={targetY}
-        />
-      )}
+      {/* 标签已禁用 - 技术性的属性映射对用户意义不大 */}
     </>
   )
 })
 
 DataEdge.displayName = 'DataEdge'
-
-function buildDataEdgeLabel(data: NonNullable<WorkflowEdge['data']>): string {
-  const parts: string[] = []
-
-  if (data.fromProperty) {
-    parts.push(data.fromProperty)
-  }
-  if (data.toProperty) {
-    parts.push(`→ ${data.toProperty}`)
-  }
-  if (data.weight !== undefined) {
-    parts.push(`[${data.weight}]`)
-  }
-
-  return parts.join(' ')
-}

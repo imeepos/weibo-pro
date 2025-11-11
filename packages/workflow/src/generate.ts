@@ -75,7 +75,7 @@ function snapshotNode(instance: object): NodeSnapshot {
 }
 
 export function fromJson<T extends object = any>(json: any): T {
-    const { type, id, state, ...rest } = json;
+    const { type, id, state, error, position, ...rest } = json;
     const registry = root.get(NODE);
     const nodeMetadata = registry.find(node => node.target.name === type);
     const ctor = nodeMetadata?.target;
@@ -84,21 +84,18 @@ export function fromJson<T extends object = any>(json: any): T {
         throw new Error(`Unknown workflow node type "${json.type}".`);
     }
 
-    const instance = new ctor() as T & { id?: string; state?: string };
+    const instance = new ctor() as T;
 
     const source = coerceRecord(rest);
 
     applyInputData(instance, source);
     applyOutputData(instance, source);
 
-
-    if (typeof id === 'string') {
-        instance.id = id;
-    }
-
-    if (typeof state === 'string') {
-        instance.state = state;
-    }
+    if (type) Reflect.set(instance, 'type', type);
+    if (id) Reflect.set(instance, 'id', id);
+    if (state) Reflect.set(instance, 'state', state);
+    if (error) Reflect.set(instance, 'error', error);
+    if (position) Reflect.set(instance, 'position', position);
 
     return instance;
 }
@@ -110,6 +107,8 @@ export function toJson(ast: Ast): NodeJsonPayload {
         ...outputs,
         type: ast.type,
         id: ast.id,
-        state: ast.state
+        state: ast.state,
+        error: ast.error,
+        position: ast.position
     };
 }

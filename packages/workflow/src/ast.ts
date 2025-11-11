@@ -10,6 +10,7 @@ export abstract class Ast implements INode {
     state: IAstStates = 'pending';
     error: Error | undefined;
     type!: string;
+    position: { x: number; y: number } = { x: 0, y: 0 }
 }
 
 @Node({ title: "工作流图" })
@@ -27,6 +28,17 @@ export class WorkflowGraphAst extends Ast {
 
     @Output({ title: '执行结果' })
     results: any[] = [];
+
+    /**
+     * 视图窗口状态
+     *
+     * 优雅设计：
+     * - 保存用户的缩放级别和视图位置
+     * - 恢复工作流时用户回到之前的视图
+     * - 提升用户体验的连续性
+     */
+    @Input({ title: '视图状态' })
+    viewport?: { x: number; y: number; zoom: number };
 
     type: `WorkflowGraphAst` = `WorkflowGraphAst`
     addNode(node: INode) {

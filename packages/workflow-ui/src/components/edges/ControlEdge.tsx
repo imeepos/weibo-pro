@@ -2,7 +2,7 @@ import React, { memo } from 'react'
 import { BaseEdge, getBezierPath } from '@xyflow/react'
 import type { EdgeProps } from '@xyflow/react'
 import type { WorkflowEdge } from '../../types'
-import { EdgeLabel } from './EdgeLabel'
+// import { EdgeLabel } from './EdgeLabel'  // 标签已禁用
 
 export const ControlEdge = memo((props: EdgeProps<WorkflowEdge>) => {
   const { id, sourceX, sourceY, targetX, targetY, data } = props
@@ -13,7 +13,8 @@ export const ControlEdge = memo((props: EdgeProps<WorkflowEdge>) => {
     targetY,
   })
 
-  const label = data ? buildControlEdgeLabel(data) : null
+  // 注意：标签已禁用，保持界面简洁
+  // const label = data ? buildControlEdgeLabel(data) : null
 
   const handleDoubleClick = (event: React.MouseEvent) => {
     event.stopPropagation()
@@ -51,15 +52,7 @@ export const ControlEdge = memo((props: EdgeProps<WorkflowEdge>) => {
         onContextMenu={handleContextMenu}
         style={{ cursor: 'pointer' }}
       />
-      {label && (
-        <EdgeLabel
-          label={label}
-          sourceX={sourceX}
-          sourceY={sourceY}
-          targetX={targetX}
-          targetY={targetY}
-        />
-      )}
+      {/* 标签已禁用 - 保持界面简洁 */}
     </>
   )
 })

@@ -62,18 +62,9 @@ export function useCanvasControls() {
   }, [openEdgeMenu, screenToFlowPosition])
 
   /**
-   * 监听边双击删除事件
+   * 注意：边的双击删除事件现在由 WorkflowCanvas 统一处理
+   * 以确保同时更新 AST 和 UI 状态
    */
-  useEffect(() => {
-    const handleEdgeDelete = (e: Event) => {
-      const customEvent = e as CustomEvent
-      const { edgeId } = customEvent.detail
-      setEdges((edges) => edges.filter((edge) => edge.id !== edgeId))
-    }
-
-    window.addEventListener('edge-delete', handleEdgeDelete)
-    return () => window.removeEventListener('edge-delete', handleEdgeDelete)
-  }, [setEdges])
 
   /**
    * 处理连接事件

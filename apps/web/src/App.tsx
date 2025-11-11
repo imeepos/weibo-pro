@@ -71,8 +71,9 @@ function WorkflowCanvasWrapper() {
           const ast = new WorkflowGraphAst()
           ast.id = workflowData.id
           ast.name = workflowData.name
-          ast.nodes = workflowData.data.nodes.map(nodeJson => fromJson(nodeJson) as Ast)
-          ast.edges = workflowData.data.edges
+          ast.nodes = workflowData.nodes.map(nodeJson => fromJson(nodeJson) as Ast)
+          ast.edges = workflowData.edges
+          ast.viewport = workflowData.viewport  // ← 恢复 viewport 状态
 
           setWorkflowAst(ast)
         } else {
@@ -124,7 +125,11 @@ function WorkflowCanvasWrapper() {
     )
   }
 
-  return <WorkflowCanvas workflowAst={workflowAst} name={workflowName} title={workflowName} />
+  return <WorkflowCanvas
+    workflowAst={workflowAst}
+    name={workflowName}
+    title={workflowName}
+  />
 }
 
 export default function App() {
