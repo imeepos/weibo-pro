@@ -549,14 +549,46 @@ export interface ExecuteNodeResult {
   error?: string
 }
 
+// 工作流运行状态枚举（前端专用）
+export enum RunStatus {
+  PENDING = 'pending',
+  RUNNING = 'running',
+  SUCCESS = 'success',
+  FAILED = 'failed',
+  CANCELLED = 'cancelled',
+  TIMEOUT = 'timeout',
+}
+
+// 工作流运行实例类型（前端专用）
+export interface WorkflowRunEntity {
+  id: number
+  workflowId: number
+  scheduleId?: number
+  status: RunStatus
+  graphSnapshot: unknown
+  inputs: Record<string, unknown>
+  outputs?: Record<string, unknown>
+  nodeStates: Record<string, unknown>
+  error?: {
+    message: string
+    stack?: string
+    nodeId?: string
+  }
+  startedAt?: Date
+  completedAt?: Date
+  durationMs?: number
+  createdAt: Date
+  updatedAt: Date
+}
+
 // 工作流运行实例相关类型
 export interface CreateRunResult {
   runId: number
-  run: import('@sker/entities').WorkflowRunEntity
+  run: WorkflowRunEntity
 }
 
 export interface ListRunsResult {
-  runs: import('@sker/entities').WorkflowRunEntity[]
+  runs: WorkflowRunEntity[]
   total: number
   page: number
   pageSize: number

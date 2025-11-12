@@ -15,7 +15,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react'
-import { type WorkflowRunEntity, RunStatus } from '@sker/entities'
+import { type WorkflowRunEntity, RunStatus } from '@sker/sdk'
 import { root } from '@sker/core'
 import { WorkflowController } from '@sker/sdk'
 

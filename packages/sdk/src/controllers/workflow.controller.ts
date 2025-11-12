@@ -9,9 +9,10 @@ import type {
   CreateShareResult,
   CreateRunResult,
   ListRunsResult,
+  WorkflowRunEntity,
+  RunStatus,
 } from '../types'
 import type { WorkflowGraphAst } from '@sker/workflow';
-import type { WorkflowEntity, WorkflowRunEntity, RunStatus } from '@sker/entities';
 @Controller('api/workflow')
 export class WorkflowController {
 
@@ -46,7 +47,7 @@ export class WorkflowController {
   }
 
   @Post('save')
-  saveWorkflow(@Body() body: WorkflowGraphAst): Promise<WorkflowEntity> {
+  saveWorkflow(@Body() body: WorkflowGraphAst): Promise<{ id: string; name: string; createdAt: string; updatedAt: string }> {
     throw new Error('method saveWorkflow not implements')
   }
 
