@@ -1,0 +1,15 @@
+{
+  "name": "@weibo-pro/deploy",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "description": "Webhook server for automated deployment",
+  "scripts": {
+    "start": "node webhook-server.js",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:stop": "pm2 stop weibo-webhook",
+    "pm2:restart": "pm2 restart weibo-webhook",
+    "pm2:logs": "pm2 logs weibo-webhook",
+    "pm2:delete": "pm2 delete weibo-webhook"
+  }
+}
