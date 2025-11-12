@@ -115,6 +115,10 @@ export function useCanvasControls() {
       const timeSinceLastClick = now - lastClickTimeRef.current
 
       if (timeSinceLastClick < DOUBLE_CLICK_DELAY) {
+        // 阻止双击事件的默认行为（如自动放大）
+        event.preventDefault()
+        event.stopPropagation()
+
         const screenPosition = { x: event.clientX, y: event.clientY }
         const flowPosition = screenToFlowPosition(screenPosition)
         openNodeSelector(screenPosition, flowPosition)

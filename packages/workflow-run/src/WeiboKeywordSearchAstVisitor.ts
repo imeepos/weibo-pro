@@ -1,17 +1,13 @@
 import { Inject, Injectable, NoRetryError } from "@sker/core";
-import { Handler, WorkflowGraphAst } from "@sker/workflow";
+import { Handler } from "@sker/workflow";
 import { WeiboKeywordSearchAst } from "@sker/workflow-ast";
 import { WeiboHtmlParser } from "./ParsedSearchResult";
 import { PlaywrightService } from "./PlaywrightService";
 import { WeiboAccountService } from "./weibo-account.service";
-import { useQueue } from "@sker/mq";
 import { delay } from "./utils";
-import { createWeiboDetailGraphAst } from "./createWeiboDetailGraphAst";
 
 @Injectable()
 export class WeiboKeywordSearchAstVisitor {
-    private queue = useQueue<WorkflowGraphAst>('workflow');
-
     constructor(
         @Inject(WeiboHtmlParser) private parser: WeiboHtmlParser,
         @Inject(PlaywrightService) private playwright: PlaywrightService,
@@ -37,20 +33,29 @@ export class WeiboKeywordSearchAstVisitor {
         const url = `${base}?${params.toString()}`;
 
         try {
+            // 初始化 items 数组
+            ast.items = [];
+
             let html = await this.playwright.getHtml(url, selection.cookieHeader, `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36`)
             let result = this.parser.parseSearchResultHtml(html)
-            // 判断是否继续
-            await Promise.all(result.posts.map(async post => {
-                await this.pushMq(post)
-            }))
+
+            // 收集搜索结果到 items 数组
+            ast.items.push(...result.posts.map(post => ({
+                uid: post.uid,
+                mblogid: post.mid
+            })));
+
             while (result.hasNextPage && result.nextPageLink) {
                 try {
                     html = await this.playwright.getHtml(result.nextPageLink, selection.cookieHeader, `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36`)
                     result = this.parser.parseSearchResultHtml(html)
-                    // 判断是否继续
-                    await Promise.all(result.posts.map(async post => {
-                        await this.pushMq(post)
-                    }))
+
+                    // 收集分页结果到 items 数组
+                    ast.items.push(...result.posts.map(post => ({
+                        uid: post.uid,
+                        mblogid: post.mid
+                    })));
+
                     if (result.totalCount) {
                         break;
                     }
@@ -67,6 +72,8 @@ export class WeiboKeywordSearchAstVisitor {
                     return await this.handler(ast, ctx)
                 }
             }
+
+            console.log(`[WeiboKeywordSearchAst] 搜索完成，共找到 ${ast.items.length} 条微博`);
             ast.state = 'success';
             return ast;
         } catch (error) {
@@ -84,11 +91,6 @@ export class WeiboKeywordSearchAstVisitor {
             console.error(`[WeiboKeywordSearchAstVisitor] 搜索失败: ${ast.keyword}`, error);
             return ast;
         }
-    }
-
-    private async pushMq(post: { mid: string, uid: string }) {
-        this.queue.producer.next(createWeiboDetailGraphAst(post.mid, post.uid));
-        console.log(`[WeiboKeywordSearch] 推送帖子到 NLP 队列: mid=${post.mid}`);
     }
 
     private async handleLoginExpired(accountId: number): Promise<void> {
