@@ -15,8 +15,6 @@ import { killPortProcess } from 'kill-port-process';
 
 async function bootstrap() {
     const PORT = 9001;
-
-    // 使用开源 npm 包清理端口占用
     try {
         await killPortProcess(PORT);
         logger.info(`端口 ${PORT} 清理完成`);
@@ -74,7 +72,6 @@ process.on('uncaughtException', (error) => {
     error: error.message,
     stack: error.stack
   });
-  // 不退出进程，让服务继续运行
 });
 
 bootstrap();
