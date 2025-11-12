@@ -548,3 +548,16 @@ export interface ExecuteNodeResult {
   result?: any
   error?: string
 }
+
+// 工作流运行实例相关类型
+export interface CreateRunResult {
+  runId: number
+  run: import('@sker/entities').WorkflowRunEntity
+}
+
+export interface ListRunsResult {
+  runs: import('@sker/entities').WorkflowRunEntity[]
+  total: number
+  page: number
+  pageSize: number
+}

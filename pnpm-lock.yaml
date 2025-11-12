@@ -898,12 +898,18 @@ importers:
       '@sker/core':
         specifier: workspace:*
         version: link:../core
+      '@sker/entities':
+        specifier: workspace:*
+        version: link:../entities
       '@sker/sdk':
         specifier: workspace:*
         version: link:../sdk
       '@sker/workflow':
         specifier: workspace:*
         version: link:../workflow
+      '@sker/workflow-ast':
+        specifier: workspace:*
+        version: link:../workflow-ast
       '@xyflow/react':
         specifier: ^12.9.2
         version: 12.9.2(@types/react@18.3.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)

@@ -7,9 +7,11 @@ import type {
   WorkflowData,
   WorkflowSummary,
   CreateShareResult,
+  CreateRunResult,
+  ListRunsResult,
 } from '../types'
 import type { WorkflowGraphAst } from '@sker/workflow';
-import type { WorkflowEntity } from '@sker/entities';
+import type { WorkflowEntity, WorkflowRunEntity, RunStatus } from '@sker/entities';
 @Controller('api/workflow')
 export class WorkflowController {
 
@@ -76,5 +78,52 @@ export class WorkflowController {
   @Post('execute-node')
   executeNode(@Body() body: WorkflowGraphAst): Promise<WorkflowGraphAst> {
     throw new Error('method executeNode not implements')
+  }
+
+  /**
+   * 创建工作流运行实例
+   */
+  @Post(':id/runs')
+  createRun(@Body() body: { workflowId: number; inputs?: Record<string, unknown> }): Promise<CreateRunResult> {
+    throw new Error('method createRun not implements')
+  }
+
+  /**
+   * 执行工作流运行实例
+   */
+  @Post('runs/:runId/execute')
+  executeRun(@Body() body: { runId: number }): Promise<WorkflowRunEntity> {
+    throw new Error('method executeRun not implements')
+  }
+
+  /**
+   * 获取运行实例详情
+   */
+  @Get('runs/:runId')
+  getRun(@Body() body: { runId: number }): Promise<WorkflowRunEntity> {
+    throw new Error('method getRun not implements')
+  }
+
+  /**
+   * 列出工作流的运行历史
+   */
+  @Get(':id/runs')
+  listRuns(
+    @Query() query: {
+      workflowId: number;
+      page?: number;
+      pageSize?: number;
+      status?: RunStatus;
+    },
+  ): Promise<ListRunsResult> {
+    throw new Error('method listRuns not implements')
+  }
+
+  /**
+   * 取消运行实例
+   */
+  @Post('runs/:runId/cancel')
+  cancelRun(@Body() body: { runId: number }): Promise<{ success: boolean }> {
+    throw new Error('method cancelRun not implements')
   }
 }

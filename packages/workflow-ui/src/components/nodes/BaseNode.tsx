@@ -15,11 +15,13 @@ const NodeStatus = ({ state, error }: { state?: string; error?: unknown }) => {
 
   const config = statusConfig[state as keyof typeof statusConfig] || statusConfig.pending;
 
+  const errorMessage = error ? (typeof error === 'string' ? error : JSON.stringify(error)) : undefined;
+
   return (
     <div className="flex items-center gap-1">
       <div className={`w-2 h-2 rounded-full ${config.color}`} />
       <span className="text-xs text-gray-300">{config.label}</span>
-      {error && <span className="text-xs text-red-400" title={JSON.stringify(error)}>⚠</span>}
+      {errorMessage && <span className="text-xs text-red-400" title={errorMessage}>⚠</span>}
     </div>
   );
 };
