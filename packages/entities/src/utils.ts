@@ -17,12 +17,14 @@ export const createDatabaseConfig = (): DataSourceOptions => {
       synchronize: true,
       logging: false,
       poolSize: 10,
+      connectTimeoutMS: 10000, // 10秒连接超时
       extra: {
         timezone: 'UTC',
         max: 10,
         min: 2,
         idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 5000,
+        connectionTimeoutMillis: 10000, // 增加到10秒
+        statement_timeout: 30000, // 30秒语句超时
       },
     };
   }
@@ -37,15 +39,25 @@ export const useDataSource = async () => {
   if (ds) {
     if (ds.isInitialized) return ds;
     const start = Date.now();
-    await ds.initialize();
-    console.log(`[DataSource] initialized in ${Date.now() - start}ms`);
-    return ds;
+    try {
+      await ds.initialize();
+      console.log(`[DataSource] initialized in ${Date.now() - start}ms`);
+      return ds;
+    } catch (error) {
+      console.error(`[DataSource] initialization failed:`, error);
+      throw error;
+    }
   }
   const start = Date.now();
   ds = createDataSource()
-  await ds.initialize();
-  console.log(`[DataSource] created and initialized in ${Date.now() - start}ms`);
-  return ds;
+  try {
+    await ds.initialize();
+    console.log(`[DataSource] created and initialized in ${Date.now() - start}ms`);
+    return ds;
+  } catch (error) {
+    console.error(`[DataSource] creation and initialization failed:`, error);
+    throw error;
+  }
 }
 
 export const useEntityManager = async <T>(h: (m: EntityManager) => Promise<T>): Promise<T> => {

@@ -41,14 +41,6 @@ export const DataEdge = memo((props: EdgeProps<WorkflowEdge>) => {
           zIndex: 9
         }}
         id={id}
-        sourceX={sourceX}
-        sourceY={sourceY}
-        targetX={targetX}
-        targetY={targetY}
-        sourcePosition={props.sourcePosition}
-        targetPosition={props.targetPosition}
-        data={data}
-        selected={selected}
         interactionWidth={20}
       />
       <path
