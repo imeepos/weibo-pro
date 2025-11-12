@@ -148,6 +148,8 @@ export class WeiboAccountService {
             })
         });
 
+        console.log({ activeAccounts })
+
         for (const account of activeAccounts) {
             const cookieHeader = this.composeCookieHeader(account.cookies);
             if (!cookieHeader) {
