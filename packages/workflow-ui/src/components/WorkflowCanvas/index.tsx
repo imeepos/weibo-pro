@@ -34,6 +34,8 @@ import { useClipboard } from '../../hooks/useClipboard'
 import { useCanvasControls } from './useCanvasControls'
 import { ContextMenu } from './ContextMenu'
 import { NodeSelector } from './NodeSelector'
+import { ShareDialog } from './ShareDialog'
+import { Toast, type ToastType } from './Toast'
 import { cn } from '../../utils/cn'
 import { root } from '@sker/core'
 import { WorkflowController } from '@sker/sdk'
@@ -82,9 +84,20 @@ export function WorkflowCanvas({
   const isCanvasEmpty = nodes.length === 0
   const [isRunning, setIsRunning] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [shareDialog, setShareDialog] = useState({ visible: false, url: '' })
+  const [toast, setToast] = useState<{
+    visible: boolean
+    type: ToastType
+    title: string
+    message?: string
+  }>({ visible: false, type: 'info', title: '' })
 
   // 获取 ReactFlow 实例以访问 viewport API
   const { getViewport, setViewport } = useReactFlow()
+
+  const showToast = useCallback((type: ToastType, title: string, message?: string) => {
+    setToast({ visible: true, type, title, message })
+  }, [])
 
   /**
    * 恢复视图窗口状态
@@ -348,15 +361,6 @@ export function WorkflowCanvas({
     }
   }, [workflow])
 
-  /**
-   * 运行全部节点
-   *
-   * 优雅设计：
-   * - WorkflowGraphAst 是状态机
-   * - 每次调用接口执行一步
-   * - 后端返回状态更新
-   * - 循环直到所有节点完成
-   */
   const handleRunAll = useCallback(async () => {
     if (onRunAll) {
       onRunAll()
@@ -364,17 +368,17 @@ export function WorkflowCanvas({
     }
 
     if (!workflow.workflowAst) {
-      console.error('工作流 AST 不存在')
+      showToast('error', '工作流不存在', '无法执行空工作流')
       return
     }
 
     if (isRunning) {
-      console.warn('工作流正在运行中')
+      showToast('info', '工作流正在运行中', '请等待当前执行完成')
       return
     }
 
     if (nodes.length === 0) {
-      console.warn('没有节点可执行')
+      showToast('info', '没有节点可执行', '请先添加节点到画布')
       return
     }
 
@@ -391,29 +395,33 @@ export function WorkflowCanvas({
       let successCount = 0
       let failCount = 0
       let stepCount = 0
-      const maxSteps = nodes.length * 2 // 防止死循环
+      const maxSteps = nodes.length * 2
 
-      // 循环执行，每次执行一步
       while (stepCount < maxSteps) {
         stepCount++
 
-        // 传入完整的 WorkflowGraphAst 状态机
         const result = await controller.executeNode(workflow.workflowAst)
 
         console.log(`执行步骤 ${stepCount}:`, result)
 
-        // 同步状态到 UI
         workflow.syncFromAst()
 
-        // 统计结果
         if (result.state === 'success') {
           successCount++
         } else if (result.state === 'fail') {
           failCount++
           console.error(`执行失败:`, result.error)
+
+          // 显示第一个失败的错误
+          if (failCount === 1 && result.error) {
+            showToast(
+              'error',
+              '工作流执行失败',
+              result.error.message || '未知错误'
+            )
+          }
         }
 
-        // 检查是否所有节点都已完成
         const allCompleted = workflow.workflowAst.nodes.every(node =>
           node.state === 'success' || node.state === 'fail'
         )
@@ -430,21 +438,24 @@ export function WorkflowCanvas({
         success: successCount,
         fail: failCount
       })
+
+      if (failCount === 0) {
+        showToast('success', '工作流执行成功', `共执行 ${successCount} 个节点`)
+      } else if (successCount > 0) {
+        showToast('error', '工作流部分失败', `成功: ${successCount}, 失败: ${failCount}`)
+      }
     } catch (error: any) {
       console.error('工作流执行失败', error)
+      showToast(
+        'error',
+        '工作流执行异常',
+        error.message || '未知错误'
+      )
     } finally {
       setIsRunning(false)
     }
-  }, [workflow, onRunAll, isRunning, nodes])
+  }, [workflow, onRunAll, isRunning, nodes, showToast])
 
-  /**
-   * 保存工作流
-   *
-   * 优雅设计：
-   * - 序列化工作流数据（包括 viewport 状态）
-   * - 调用后端 API 保存
-   * - 提供保存反馈
-   */
   const handleSave = useCallback(async () => {
     if (onSave) {
       onSave()
@@ -452,19 +463,18 @@ export function WorkflowCanvas({
     }
 
     if (!workflow.workflowAst) {
-      console.error('工作流 AST 不存在')
+      showToast('error', '保存失败', '工作流不存在')
       return
     }
 
     if (isSaving) {
-      console.warn('工作流正在保存中')
+      showToast('info', '正在保存中', '请稍候')
       return
     }
 
     setIsSaving(true)
 
     try {
-      // 保存当前的 viewport 状态
       const currentViewport = getViewport()
       workflow.workflowAst.viewport = currentViewport
 
@@ -481,26 +491,19 @@ export function WorkflowCanvas({
         }))
       })
 
-      // 调用 API 保存
       const controller = root.get<WorkflowController>(WorkflowController)
       const result = await controller.saveWorkflow(workflow.workflowAst)
 
       console.log('工作流保存成功', result)
+      showToast('success', '保存成功', '工作流已保存')
     } catch (error: any) {
       console.error('工作流保存失败', error)
+      showToast('error', '保存失败', error.message || '未知错误')
     } finally {
       setIsSaving(false)
     }
-  }, [workflow, name, onSave, isSaving, getViewport])
+  }, [workflow, name, onSave, isSaving, getViewport, showToast])
 
-  /**
-   * 分享工作流
-   *
-   * 优雅设计：
-   * - 先保存工作流
-   * - 生成分享链接
-   * - 复制到剪贴板
-   */
   const handleShare = useCallback(async () => {
     if (onShare) {
       onShare()
@@ -508,30 +511,28 @@ export function WorkflowCanvas({
     }
 
     if (!workflow.workflowAst) {
-      console.error('工作流 AST 不存在')
+      showToast('error', '分享失败', '工作流不存在')
       return
     }
 
     try {
       const controller = root.get<WorkflowController>(WorkflowController)
-      // 保存工作流
       const saveResult = await controller.saveWorkflow(workflow.workflowAst)
-      // 创建分享链接
       const shareResult = await controller.createShare({
         workflowId: saveResult.code,
       })
 
-      // 生成完整的分享 URL
       const shareUrl = `${window.location.origin}${shareResult.shareUrl}`
 
-      // 复制到剪贴板
-      await navigator.clipboard.writeText(shareUrl)
+      setShareDialog({ visible: true, url: shareUrl })
+      showToast('success', '分享链接已生成', '可以复制链接分享给他人')
 
-      console.log('分享链接已生成并复制到剪贴板', { shareUrl })
+      console.log('分享链接已生成', { shareUrl })
     } catch (error: any) {
       console.error('创建分享链接失败', error)
+      showToast('error', '分享失败', error.message || '未知错误')
     }
-  }, [workflow, name, onShare])
+  }, [workflow, name, onShare, showToast])
 
   return (
     <div
@@ -692,6 +693,20 @@ export function WorkflowCanvas({
         position={nodeSelector.screenPosition}
         onSelect={handleAddNodeFromSelector}
         onClose={closeNodeSelector}
+      />
+
+      <ShareDialog
+        visible={shareDialog.visible}
+        shareUrl={shareDialog.url}
+        onClose={() => setShareDialog({ visible: false, url: '' })}
+      />
+
+      <Toast
+        visible={toast.visible}
+        type={toast.type}
+        title={toast.title}
+        message={toast.message}
+        onClose={() => setToast({ visible: false, type: 'info', title: '' })}
       />
     </div>
   )
