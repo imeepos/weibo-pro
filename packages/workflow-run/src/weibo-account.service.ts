@@ -96,6 +96,7 @@ export class WeiboAccountService {
         for (let attempt = 0; attempt < this.maxAttempts; attempt++) {
             const picked = await this.redis.zpopmax(this.healthKey);
             if (!picked) {
+                console.log('[WeiboAccountService] Redis zpopmax 返回 null，尝试回退到数据库查询');
                 break; // Redis中没有账号，进入回退逻辑
             }
 
@@ -148,7 +149,7 @@ export class WeiboAccountService {
             })
         });
 
-        console.log({ activeAccounts })
+        console.log('[WeiboAccountService] 从数据库查询到的活跃账号:', { activeAccounts });
 
         for (const account of activeAccounts) {
             const cookieHeader = this.composeCookieHeader(account.cookies);
@@ -174,13 +175,28 @@ export class WeiboAccountService {
     async selectBestAccountWithToken(): Promise<WeiboAccountSelectionWithToken | null> {
         const selection = await this.selectBestAccount();
         if (!selection) {
+            console.warn('[WeiboAccountService] selectBestAccount 返回 null，没有找到可用账号');
             return null;
         }
 
         const xsrfToken = this.extractXsrfToken(selection.cookieHeader);
         if (!xsrfToken) {
+            console.warn('[WeiboAccountService] 无法从 cookieHeader 中提取 XSRF-TOKEN，更新账号状态', {
+                accountId: selection.id,
+                cookieHeader: selection.cookieHeader.substring(0, 100) + '...'
+            });
+
+            // 当缺少 XSRF-TOKEN 时，降低账号健康评分并更新状态
+            await this.markAccountAsInvalid(selection.id);
             return null;
         }
+
+        console.log('[WeiboAccountService] 成功选择账号', {
+            accountId: selection.id,
+            weiboUid: selection.weiboUid,
+            nickname: selection.nickname,
+            healthScore: selection.healthScore
+        });
 
         return { ...selection, xsrfToken };
     }
@@ -198,6 +214,7 @@ export class WeiboAccountService {
 
     private composeCookieHeader(raw: string | null | undefined): string | null {
         if (!raw || !raw.trim()) {
+            console.warn('[WeiboAccountService] composeCookieHeader: raw cookie 为空或无效');
             return null;
         }
 
@@ -272,5 +289,28 @@ export class WeiboAccountService {
         }
 
         return account;
+    }
+
+    private async markAccountAsInvalid(accountId: number): Promise<void> {
+        try {
+            // 大幅降低健康评分，使其在后续选择中优先级降低
+            await this.decreaseHealthScore(accountId, 50);
+
+            // 更新账号状态为需要检查
+            await useEntityManager(async m => {
+                const account = await m.findOne(WeiboAccountEntity, {
+                    where: { id: accountId }
+                });
+
+                if (account) {
+                    account.status = WeiboAccountStatus.INACTIVE;
+                    account.lastCheckAt = new Date();
+                    await m.save(account);
+                    console.log(`[WeiboAccountService] 账号 ${accountId} 因缺少 XSRF-TOKEN 被标记为 INACTIVE`);
+                }
+            });
+        } catch (error) {
+            console.error(`[WeiboAccountService] 更新账号 ${accountId} 状态失败:`, error);
+        }
     }
 }
