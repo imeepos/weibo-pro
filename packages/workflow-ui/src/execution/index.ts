@@ -12,6 +12,3 @@ export { WeiboLoginExecutor, RealtimeStatusExecutor } from './special-executors'
 
 // 导出初始化函数和状态获取
 export { initializeFrontendExecutors, getExecutorSystemStatus } from './initialize'
-
-// 导出演示函数
-export { demonstrateExecutorSystem, demonstrateBatchExecution } from './demo'
