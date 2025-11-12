@@ -5,8 +5,9 @@
   "private": true,
   "description": "Webhook server for automated deployment",
   "scripts": {
+    "dev": "node --env-file=.env webhook-server.js",
     "start": "node webhook-server.js",
-    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:start": "pm2 start ecosystem.config.cjs",
     "pm2:stop": "pm2 stop weibo-webhook",
     "pm2:restart": "pm2 restart weibo-webhook",
     "pm2:logs": "pm2 logs weibo-webhook",

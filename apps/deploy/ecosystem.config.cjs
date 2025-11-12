@@ -3,7 +3,7 @@ module.exports = {
     {
       name: 'weibo-webhook',
       script: './webhook-server.js',
-      cwd: '/home/weibo-pro/deploy',
+      cwd: '/root/weibo-pro/apps/deploy',
       instances: 1,
       autorestart: true,
       watch: false,
@@ -11,9 +11,9 @@ module.exports = {
       env: {
         NODE_ENV: 'production'
       },
-      env_file: '.env.deploy',
-      error_file: '/home/weibo-pro/logs/webhook-error.log',
-      out_file: '/home/weibo-pro/logs/webhook-out.log',
+      env_file: '.env',
+      error_file: '/root/weibo-pro/logs/webhook-error.log',
+      out_file: '/root/weibo-pro/logs/webhook-out.log',
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
       merge_logs: true,
       time: true
