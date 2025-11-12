@@ -19,3 +19,6 @@ export { createWeiboKeywordSearchGraphAst } from './createWeiboKeywordSearchGrap
 export { WeiboAuthService } from './weibo-auth.service'
 export { WeiboLoginAstVisitor } from './WeiboLoginAstVisitor'
 export type { WeiboLoginEvent, WeiboLoginEventType, WeiboLoginSessionSnapshot } from './weibo-login.types'
+
+// 批量推送到 MQ
+export { BatchPushToMQAstVisitor, registerWorkflowFactory, getRegisteredFactories } from './BatchPushToMQAstVisitor'
