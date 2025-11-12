@@ -19,6 +19,7 @@ export class WeiboAjaxStatusesShowAstVisitor extends WeiboApiClient {
     async visit(ast: WeiboAjaxStatusesShowAst, _ctx: any) {
         try {
             const url = `https://weibo.com/ajax/statuses/show?id=${ast.mblogid}&locale=zh-CN&isGetLongText=true`;
+            console.log(ast)
             const body = await this.fetchApi<WeiboAjaxStatusesShowAstReponse>({
                 url,
                 refererOptions: { uid: ast.uid, mid: ast.mblogid }

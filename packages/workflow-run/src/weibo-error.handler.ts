@@ -106,6 +106,7 @@ export class WeiboErrorHandler {
         // 检查 JSON 响应的 ok 字段
         if (data && typeof data === 'object') {
             if ('ok' in data && data.ok !== 1 && data.ok !== undefined) {
+                console.log(data)
                 return new WeiboError(
                     WeiboErrorType.API_ERROR,
                     `API 返回错误: ok=${data.ok}`,

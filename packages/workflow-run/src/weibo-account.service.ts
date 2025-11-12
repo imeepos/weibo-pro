@@ -180,28 +180,11 @@ export class WeiboAccountService {
         }
 
         const xsrfToken = this.extractXsrfToken(selection.cookieHeader);
-        if (!xsrfToken) {
-            console.warn('[WeiboAccountService] 无法从 cookieHeader 中提取 XSRF-TOKEN，更新账号状态', {
-                accountId: selection.id,
-                cookieHeader: selection.cookieHeader.substring(0, 100) + '...'
-            });
-
-            // 当缺少 XSRF-TOKEN 时，降低账号健康评分并更新状态
-            await this.markAccountAsInvalid(selection.id);
-            return null;
-        }
-
-        console.log('[WeiboAccountService] 成功选择账号', {
-            accountId: selection.id,
-            weiboUid: selection.weiboUid,
-            nickname: selection.nickname,
-            healthScore: selection.healthScore
-        });
 
         return { ...selection, xsrfToken };
     }
 
-    private extractXsrfToken(cookieHeader: string): string | null {
+    private extractXsrfToken(cookieHeader: string): string {
         const cookies = cookieHeader.split(';').map(it => it.trim());
         for (const cookie of cookies) {
             const [name, value] = cookie.split('=').map(it => it.trim());
@@ -209,7 +192,7 @@ export class WeiboAccountService {
                 return value;
             }
         }
-        return null;
+        return ``;
     }
 
     private composeCookieHeader(raw: string | null | undefined): string | null {

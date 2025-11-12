@@ -14,39 +14,40 @@ import { logger } from './utils/logger';
 import { killPortProcess } from 'kill-port-process';
 
 async function bootstrap() {
-    const PORT = 9001;
-    try {
-        await killPortProcess(PORT);
-        logger.info(`端口 ${PORT} 清理完成`);
-    } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        logger.warn(`端口 ${PORT} 清理失败: ${errorMessage}`);
-    }
+  const PORT = 9001;
+  try {
+
     root.set([
-        ...entitiesProviders
+      ...entitiesProviders
     ])
     await root.init();
-    const app = await NestFactory.create(AppModule);
+    await killPortProcess(PORT);
+    logger.info(`端口 ${PORT} 清理完成`);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.warn(`端口 ${PORT} 清理失败: ${errorMessage}`);
+  }
+  const app = await NestFactory.create(AppModule);
 
-    app.useGlobalInterceptors(new ResponseInterceptor());
-    app.useGlobalFilters(new NotFoundExceptionFilter());
+  app.useGlobalInterceptors(new ResponseInterceptor());
+  app.useGlobalFilters(new NotFoundExceptionFilter());
 
-    app.enableCors({
-        origin: true,
-        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-        allowedHeaders: [
-            'Content-Type',
-            'Authorization',
-            'X-Requested-With',
-            'X-Request-ID',
-            'Accept',
-            'Origin'
-        ],
-        credentials: true,
-        maxAge: 86400,
-    });
-    await app.listen(PORT, '0.0.0.0');
-    console.log(`app start at http://localhost:${PORT}`)
+  app.enableCors({
+    origin: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Requested-With',
+      'X-Request-ID',
+      'Accept',
+      'Origin'
+    ],
+    credentials: true,
+    maxAge: 86400,
+  });
+  await app.listen(PORT, '0.0.0.0');
+  console.log(`app start at http://localhost:${PORT}`)
 }
 
 process.on('SIGTERM', () => {

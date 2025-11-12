@@ -60,6 +60,7 @@ export abstract class WeiboApiClient {
         const response = await fetch(options.url, { headers });
 
         if (!response.ok) {
+            console.log(response)
             const error = await WeiboErrorHandler.checkResponse(response);
             if (error) {
                 await this.handleWeiboError(error, selection.id);
