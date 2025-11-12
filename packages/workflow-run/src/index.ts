@@ -14,3 +14,8 @@ export { startPostNLPConsumer, type PostNLPTask } from './post-nlp-agent.consume
 export { WeiboAccountService, type WeiboLoginSuccessMessage } from './weibo-account.service'
 export { createWeiboDetailGraphAst } from './createWeiboDetailGraphAst'
 export { createWeiboKeywordSearchGraphAst } from './createWeiboKeywordSearchGraphAst'
+
+// 微博登录相关导出
+export { WeiboAuthService } from './weibo-auth.service'
+export { WeiboLoginAstVisitor } from './WeiboLoginAstVisitor'
+export type { WeiboLoginEvent, WeiboLoginEventType, WeiboLoginSessionSnapshot } from './weibo-login.types'

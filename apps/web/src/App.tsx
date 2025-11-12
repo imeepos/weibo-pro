@@ -5,6 +5,7 @@ import type { Ast } from '@sker/workflow'
 import { root } from '@sker/core'
 import { WorkflowController } from '@sker/sdk'
 import "@sker/workflow-ast";
+import { ExecutorTest } from './pages/ExecutorTest';
 
 class ErrorBoundary extends Component<
   { children: ReactNode },
@@ -132,16 +133,39 @@ function WorkflowCanvasWrapper() {
   />
 }
 
+function Router() {
+  const [currentPath, setCurrentPath] = useState(window.location.pathname)
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentPath(window.location.pathname)
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
+
+  // 简单的路由匹配
+  if (currentPath === '/executor-test') {
+    return <ExecutorTest />
+  }
+
+  // 默认路由 - 工作流画布
+  return (
+    <ReactFlowProvider>
+      <div className="flex h-screen bg-black">
+        <main className="flex-1">
+          <WorkflowCanvasWrapper />
+        </main>
+      </div>
+    </ReactFlowProvider>
+  )
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
-      <ReactFlowProvider>
-        <div className="flex h-screen bg-black">
-          <main className="flex-1">
-            <WorkflowCanvasWrapper />
-          </main>
-        </div>
-      </ReactFlowProvider>
+      <Router />
     </ErrorBoundary>
   )
 }

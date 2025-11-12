@@ -10,3 +10,6 @@ export { WeiboKeywordSearchAst } from './WeiboKeywordSearchAst'
 export { PostContextCollectorAst } from './PostContextCollectorAst'
 export { PostNLPAnalyzerAst } from './PostNLPAnalyzerAst'
 export { EventAutoCreatorAst } from './EventAutoCreatorAst'
+
+// 微博登录 AST
+export { WeiboLoginAst } from './WeiboLoginAst'

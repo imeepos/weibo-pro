@@ -561,3 +561,105 @@ export interface ListRunsResult {
   page: number
   pageSize: number
 }
+
+// 用户关系网络可视化相关类型
+export type UserRelationType = 'like' | 'comment' | 'repost' | 'comprehensive'
+
+export interface UserRelationNode {
+  id: string
+  name: string
+  avatar?: string
+  followers: number
+  influence: number
+  postCount: number
+  verified: boolean
+  userType: 'official' | 'media' | 'kol' | 'normal'
+  location?: string
+}
+
+export interface UserRelationEdge {
+  source: string
+  target: string
+  weight: number
+  type: UserRelationType
+  interactions: {
+    likes?: number
+    comments?: number
+    reposts?: number
+  }
+}
+
+export interface UserRelationNetwork {
+  nodes: UserRelationNode[]
+  edges: UserRelationEdge[]
+  statistics: {
+    totalUsers: number
+    totalRelations: number
+    avgDegree: number
+    density: number
+    communities?: number
+  }
+}
+
+export interface UserRelationQueryParams {
+  type?: UserRelationType
+  timeRange?: TimeRange
+  minWeight?: number
+  limit?: number
+}
+
+// SSE相关类型
+export interface SSEEvent {
+  type: 'progress' | 'qr_code' | 'login_success' | 'login_failed' | 'error' | 'complete' | 'health'
+  data?: any
+  message?: string
+}
+
+export interface WeiboLoginSSEQuery {
+  nodeId?: string
+}
+
+export interface WorkflowStatusSSEQuery {
+  nodeId?: string
+  runId?: string
+}
+
+export interface NodeExecutionSSEQuery {
+  nodeId: string
+}
+
+export interface WeiboLoginSuccessData {
+  accountId: string
+  username: string
+  cookie: string
+}
+
+export interface ProgressData {
+  progress: number
+  nodeId?: string
+  runId?: string
+  timestamp?: string
+  step?: string
+}
+
+export interface QRCodeData {
+  qrUrl: string
+}
+
+export interface ExecutionCompleteData {
+  nodeId: string
+  result: {
+    success: boolean
+    message: string
+  }
+}
+
+export interface HealthData {
+  status: string
+  timestamp: string
+  services: {
+    database: string
+    redis: string
+    rabbitmq: string
+  }
+}

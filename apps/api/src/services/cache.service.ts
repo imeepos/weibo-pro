@@ -113,6 +113,7 @@ export const CACHE_KEYS = {
     USERS_LIST: 'users:list',
     USERS_RISK_LEVELS: 'users:risk-levels',
     USERS_STATS: 'users:stats',
+    USER_RELATIONS: 'users:relations',
     SYSTEM_STATUS: 'system:status',
     SYSTEM_PERFORMANCE: 'system:performance',
     SYSTEM_HEALTH: 'system:health'

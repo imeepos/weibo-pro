@@ -10,6 +10,8 @@ import { SystemController } from './controllers/system.controller';
 import { SentimentController } from './controllers/sentiment.controller';
 import { WorkflowController } from './controllers/workflow.controller';
 import { LayoutController } from './controllers/layout.controller';
+import { UserRelationController } from './controllers/user-relation.controller';
+import { SseController } from './controllers/sse.controller';
 import { CacheService } from './services/cache.service';
 import { OverviewService } from './services/data/overview.service';
 import { EventsService } from './services/data/events.service';
@@ -19,6 +21,7 @@ import { UsersService } from './services/data/users.service';
 import { SystemService } from './services/data/system.service';
 import { SentimentService } from './services/data/sentiment.service';
 import { LayoutService } from './services/data/layout.service';
+import { UserRelationService } from './services/data/user-relation.service';
 import { WorkflowService } from './services/workflow.service';
 import { AppWebSocketGateway } from './gateways/websocket.gateway';
 import { EventQueryService } from './services/data/events/event-query.service';
@@ -38,7 +41,9 @@ import { root } from '@sker/core';
     SystemController,
     SentimentController,
     WorkflowController,
-    LayoutController
+    LayoutController,
+    UserRelationController,
+    SseController
   ],
   providers: [
     {
@@ -51,6 +56,7 @@ import { root } from '@sker/core';
     { provide: KeywordsService, useFactory: () => root.get(KeywordsService) },
     { provide: ChartsService, useFactory: () => root.get(ChartsService) },
     { provide: UsersService, useFactory: () => root.get(UsersService) },
+    { provide: UserRelationService, useFactory: () => root.get(UserRelationService) },
     { provide: SystemService, useFactory: () => root.get(SystemService) },
     { provide: SentimentService, useFactory: () => root.get(SentimentService) },
     { provide: LayoutService, useFactory: () => root.get(LayoutService) },
