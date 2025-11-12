@@ -252,6 +252,18 @@ export class WorkflowController implements sdk.WorkflowController {
     return await this.workflowService.saveWorkflow(body);
   }
 
+  @Get('init')
+  async initWorkflow(@Query() params: { name: string }) {
+    const { name } = params;
+    // 2. 检查是否有对应的模板
+    const template = this.workflowTemplateService.createFromTemplate(name);
+
+    if (template) {
+      await this.saveWorkflow(template);
+      return template;
+    }
+  }
+
   /**
    * 根据 name 获取工作流
    *
@@ -263,13 +275,8 @@ export class WorkflowController implements sdk.WorkflowController {
   @Get('get')
   async getWorkflow(@Query() params: { name: string }): Promise<WorkflowGraphAst | null> {
     const { name } = params;
-    console.log({ name })
     if (!name || name.trim().length === 0) {
       throw new BadRequestException('工作流名称不能为空');
-    }
-    if (name === 'kindergarten-closure-event') {
-      const template = this.workflowTemplateService.createFromTemplate(name);
-      if(template) await this.saveWorkflow(template);
     }
     // 1. 尝试从数据库获取现有工作流
     const workflow = await this.workflowService.getWorkflowByName(name);
@@ -278,20 +285,7 @@ export class WorkflowController implements sdk.WorkflowController {
       return workflow;
     }
 
-    // 2. 检查是否有对应的模板
-    console.log({ name })
-    const template = this.workflowTemplateService.createFromTemplate(name);
 
-    if (template) {
-      // 使用模板创建工作流
-      logger.info('使用模板创建工作流', {
-        name,
-        description: this.workflowTemplateService.getTemplateDescription(name)
-      });
-
-      await this.saveWorkflow(template);
-      return template;
-    }
 
     // 3. 无模板，创建空工作流
     logger.info('创建空工作流', { name });
