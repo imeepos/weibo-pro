@@ -35,9 +35,23 @@ export function astToFlowEdges(ast: { edges: IEdge[] }): WorkflowEdge[] {
  * 转换单个节点
  */
 function toFlowNode(node: INode): WorkflowNode {
+  console.log(`toFlowNode`, {node})
   const nodeClass = resolveNodeClass(node)
   const metadata = getNodeMetadata(nodeClass)
-
+  if(node.type === 'WorkflowGraphAst'){
+    return {
+      id: node.id,
+      type: `WorkflowGraphAst`,
+      position: node.position,
+      data: {
+        ast: node as Ast,
+        nodeClass,
+        label: metadata.label,
+        state: node.state,
+        error: node.error
+      }
+    }
+  }
   return {
     id: node.id,
     type: 'workflow-node',

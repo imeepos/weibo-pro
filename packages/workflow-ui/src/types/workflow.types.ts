@@ -20,7 +20,7 @@ export interface WorkflowNodeData extends Record<string, unknown> {
 /**
  * React Flow 节点类型
  */
-export type WorkflowNode = Node<WorkflowNodeData, 'workflow-node'>
+export type WorkflowNode = Node<WorkflowNodeData, 'workflow-node' | `WorkflowGraphAst`>
 
 /**
  * React Flow 边数据结构
