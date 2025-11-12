@@ -11,8 +11,24 @@ import { entitiesProviders } from "@sker/entities";
 import { ResponseInterceptor } from './interceptors/response.interceptor';
 import { NotFoundExceptionFilter } from './filters/not-found.filter';
 import { logger } from './utils/logger';
+import { execSync } from 'child_process';
+
+async function killPortProcess(port: number): Promise<void> {
+    try {
+        const pid = execSync(`lsof -ti:${port}`, { encoding: 'utf-8' }).trim();
+        if (pid) {
+            execSync(`kill -9 ${pid}`);
+            logger.info(`已清理端口 ${port} 占用进程 (PID: ${pid})`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+    } catch (error) {
+        // 端口未被占用或清理失败，继续执行
+    }
+}
 
 async function bootstrap() {
+    const PORT = 9001;
+    await killPortProcess(PORT);
     root.set([
         ...entitiesProviders
     ])
@@ -36,8 +52,8 @@ async function bootstrap() {
         credentials: true,
         maxAge: 86400,
     });
-    await app.listen(9001, '0.0.0.0');
-    console.log(`app start at http://localhost:9001`)
+    await app.listen(PORT, '0.0.0.0');
+    console.log(`app start at http://localhost:${PORT}`)
 }
 
 process.on('SIGTERM', () => {
