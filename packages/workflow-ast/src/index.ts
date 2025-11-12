@@ -16,3 +16,4 @@ export { WeiboLoginAst } from './WeiboLoginAst'
 
 // 批量推送到 MQ
 export { BatchPushToMQAst, BatchPushMode } from './BatchPushToMQAst'
+export { WorkflowGraphAst, ArrayIteratorAst } from '@sker/workflow'
