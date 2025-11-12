@@ -35,6 +35,7 @@ import { ContextMenu } from './ContextMenu'
 import { NodeSelector } from './NodeSelector'
 import { ShareDialog } from './ShareDialog'
 import { Toast, type ToastType } from './Toast'
+import { SubWorkflowModal } from '../SubWorkflowModal'
 import { cn } from '../../utils/cn'
 import { root } from '@sker/core'
 import { WorkflowController } from '@sker/sdk'
@@ -84,6 +85,11 @@ export function WorkflowCanvas({
   const [isRunning, setIsRunning] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [shareDialog, setShareDialog] = useState({ visible: false, url: '' })
+  const [subWorkflowModal, setSubWorkflowModal] = useState<{
+    visible: boolean
+    nodeId?: string
+    workflowAst?: WorkflowGraphAst
+  }>({ visible: false })
   const [toast, setToast] = useState<{
     visible: boolean
     type: ToastType
@@ -145,6 +151,32 @@ export function WorkflowCanvas({
     window.addEventListener('edge-delete', handleEdgeDelete)
     return () => window.removeEventListener('edge-delete', handleEdgeDelete)
   }, [workflow, edges])
+
+  /**
+   * 监听打开子工作流事件
+   *
+   * 优雅设计：
+   * - WorkflowGraphAstRender 组件通过自定义事件触发
+   * - 在这里统一处理子工作流弹框的打开
+   * - 确保父子工作流状态的一致性
+   */
+  React.useEffect(() => {
+    const handleOpenSubWorkflow = (e: Event) => {
+      const customEvent = e as CustomEvent
+      const { nodeId, workflowAst } = customEvent.detail
+
+      console.log('监听到 open-sub-workflow 事件:', { nodeId })
+
+      setSubWorkflowModal({
+        visible: true,
+        nodeId,
+        workflowAst
+      })
+    }
+
+    window.addEventListener('open-sub-workflow', handleOpenSubWorkflow)
+    return () => window.removeEventListener('open-sub-workflow', handleOpenSubWorkflow)
+  }, [])
 
   const {
     onNodeClick,
@@ -507,6 +539,48 @@ export function WorkflowCanvas({
     }
   }, [workflow, name, onSave, isSaving, getViewport, showToast])
 
+  /**
+   * 保存子工作流
+   *
+   * 优雅设计：
+   * - 更新父工作流中对应节点的 AST 实例
+   * - 同步状态到 UI，确保缩略图实时更新
+   * - 保持父子工作流数据的一致性
+   */
+  const handleSaveSubWorkflow = useCallback((parentNodeId: string, updatedAst: WorkflowGraphAst) => {
+    if (!workflow.workflowAst) return
+
+    try {
+      // 查找父工作流中的对应节点
+      const parentNode = workflow.workflowAst.nodes.find(node => node.id === parentNodeId)
+      if (parentNode && parentNode.type === 'WorkflowGraphAst') {
+        // 更新节点的 AST 实例
+        Object.assign(parentNode, updatedAst)
+
+        // 同步状态到 UI
+        workflow.syncFromAst()
+
+        console.log('子工作流保存成功', {
+          parentNodeId,
+          nodeCount: updatedAst.nodes.length,
+          edgeCount: updatedAst.edges.length
+        })
+
+        showToast('success', '子工作流已保存', '更改已同步到父工作流')
+      }
+    } catch (error) {
+      console.error('保存子工作流失败', error)
+      showToast('error', '保存失败', '无法更新子工作流')
+    }
+  }, [workflow, showToast])
+
+  /**
+   * 关闭子工作流弹框
+   */
+  const handleCloseSubWorkflowModal = useCallback(() => {
+    setSubWorkflowModal({ visible: false })
+  }, [])
+
   const handleShare = useCallback(async () => {
     if (onShare) {
       onShare()
@@ -710,6 +784,14 @@ export function WorkflowCanvas({
         title={toast.title}
         message={toast.message}
         onClose={() => setToast({ visible: false, type: 'info', title: '' })}
+      />
+
+      <SubWorkflowModal
+        visible={subWorkflowModal.visible}
+        workflowAst={subWorkflowModal.workflowAst}
+        parentNodeId={subWorkflowModal.nodeId}
+        onClose={handleCloseSubWorkflowModal}
+        onSave={handleSaveSubWorkflow}
       />
     </div>
   )
