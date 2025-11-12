@@ -1,11 +1,13 @@
 services:
   api:
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
+    image: node:20-alpine
     container_name: weibo-pro-api
+    working_dir: /workspace
+    command: node apps/api/dist/main.js
     ports:
       - "3004:3000"
+    volumes:
+      - .:/workspace:ro
     environment:
       - NODE_ENV=production
       - OPENAI_BASE_URL=https://api.siliconflow.cn/v1
@@ -15,10 +17,8 @@ services:
       - REDIS_URL=redis://:Redis2025Complex@43.240.223.138:6379
       - RABBITMQ_URL=amqp://admin:RabbitMQ2025Secure@43.240.223.138:5672
       - MONGODB_URL=mongodb://admin:MongoDB2025Secure@43.240.223.138:27017/appdb?authSource=admin
-
     env_file:
       - .env
-    # 资源限制和健康检查
     deploy:
       resources:
         limits:
