@@ -1,5 +1,6 @@
 import 'reflect-metadata'
 import '@sker/workflow'
+import '@sker/workflow-ast'
 import '@sker/workflow-ui/styles'
 import './index.css'
 import React, { StrictMode } from 'react'
