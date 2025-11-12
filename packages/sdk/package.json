@@ -22,7 +22,6 @@
   },
   "dependencies": {
     "@sker/core": "workspace:*",
-    "@sker/entities": "workspace:*",
     "@sker/workflow": "workspace:*",
     "@sker/workflow-ast": "workspace:*",
     "axios": "1.7.9"

@@ -1,4 +1,4 @@
-import { TimeRange } from '@sker/entities'
+export type TimeRange = '1h' | '6h' | '12h' | '24h' | '7d' | '30d' | '90d' | '180d' | '365d'
 
 export interface ChartData {
   categories: string[];
@@ -92,7 +92,15 @@ export interface HotListItem {
   sentiment: 'positive' | 'negative' | 'neutral'
   trend: 'rising' | 'stable' | 'falling'
 }
-export type { HotEvent } from '@sker/entities'
+export interface HotEvent {
+  id: string
+  title: string
+  heat: number
+  posts: number
+  users: number
+  sentiment: 'positive' | 'negative' | 'neutral'
+  trend: 'rising' | 'stable' | 'falling'
+}
 
 export interface GeographicDistribution {
   region: string
