@@ -519,7 +519,7 @@ export function WorkflowCanvas({
       const controller = root.get<WorkflowController>(WorkflowController)
       const saveResult = await controller.saveWorkflow(workflow.workflowAst)
       const shareResult = await controller.createShare({
-        workflowId: saveResult.code,
+        workflowId: saveResult.id,
       })
 
       const shareUrl = `${window.location.origin}${shareResult.shareUrl}`

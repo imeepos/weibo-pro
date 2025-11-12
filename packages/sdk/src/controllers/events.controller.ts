@@ -1,5 +1,4 @@
 import { Controller, Get, Query, Param } from '@sker/core'
-import type { TimeRange } from '@sker/entities';
 import type {
   EventListItem,
   EventCategoryStats,
@@ -9,7 +8,8 @@ import type {
   InfluenceUser,
   GeographicDistribution,
   TimeSeriesData,
-  TrendAnalysis
+  TrendAnalysis,
+  TimeRange
 } from '../types'
 
 @Controller('api/events')
