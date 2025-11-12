@@ -20,7 +20,7 @@
   "types": "./dist/index.d.ts",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
-  "sideEffects": false,
+  "sideEffects": true,
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
