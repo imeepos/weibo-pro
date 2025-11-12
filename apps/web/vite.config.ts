@@ -29,12 +29,12 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: 'http://43.240.223.138:3004/',
+        target: 'http://localhost:9001',
         changeOrigin: true,
-        secure: false,
+        secure: false
       },
       '/ws': {
-        target: 'ws://43.240.223.138:3004/',
+        target: 'ws://localhost:9001',
         changeOrigin: true,
         secure: false,
         ws: true,

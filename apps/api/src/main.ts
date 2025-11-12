@@ -8,7 +8,6 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { root } from '@sker/core';
 import { entitiesProviders } from "@sker/entities";
-import { startPostNLPConsumer } from "@sker/workflow-run";
 import { ResponseInterceptor } from './interceptors/response.interceptor';
 import { NotFoundExceptionFilter } from './filters/not-found.filter';
 import { logger } from './utils/logger';
@@ -18,11 +17,6 @@ async function bootstrap() {
         ...entitiesProviders
     ])
     await root.init();
-
-    logger.info('Starting post NLP consumer');
-    startPostNLPConsumer();
-    logger.info('Post NLP consumer started successfully');
-
     const app = await NestFactory.create(AppModule);
 
     app.useGlobalInterceptors(new ResponseInterceptor());
@@ -42,9 +36,8 @@ async function bootstrap() {
         credentials: true,
         maxAge: 86400,
     });
-    await app.listen(3000, '0.0.0.0');
-    logger.info('API server started', { url: 'http://localhost:3000' });
-
+    await app.listen(9001, '0.0.0.0');
+    console.log(`app start at http://localhost:9001`)
 }
 
 process.on('SIGTERM', () => {
