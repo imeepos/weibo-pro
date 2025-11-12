@@ -29,7 +29,7 @@ async function bootstrap() {
     app.useGlobalFilters(new NotFoundExceptionFilter());
 
     app.enableCors({
-        origin: ["*"],
+        origin: true,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
         allowedHeaders: [
             'Content-Type',
