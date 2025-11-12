@@ -40,59 +40,59 @@ async function bootstrap() {
     })
   ).subscribe()
   // workflow 爬取过程 每次只执行一个步骤
-  const workflow = useQueue<WorkflowGraphAst>(`workflow`)
-  const workflow$ = workflow.consumer$.pipe(
-    tap(msg => {
-      const message = msg.message
-      console.log(`[Crawler] ${message.name}:${message.id}`)
-    }),
-    switchMap(msg => {
-      const message = msg.message
-      const executeOnce = async () => {
-        try {
-          const ast = fromJson(message)
-          const result: WorkflowGraphAst = await execute(ast, {})
-          if (result.state === 'success') {
-            console.log(`[Crawler] 工作流执行成功: ${message.name}:${message.id}`)
-            msg.ack()
-            return result;
-          }
-          if (result.state === 'fail') {
-            console.warn(`[Crawler] 工作流执行失败: ${message.name}:${message.id}`)
-            msg.ack()
-            return result;
-          }
-          console.log(`[Crawler] 工作流继续执行: ${message.name}:${message.id}`, result)
-          msg.ack()
-          return result;
-        } catch (e) {
-          console.error(`[Crawler] 工作流执行异常: ${message.name}:${message.id}`, e)
-          const error = (e as Error).message
-          if (error.includes(`workflow node type`)) {
-            msg.ack()
-            return;
-          }
-          msg.nack()
-        }
-      }
-      return from(executeOnce().then(res=>{
-        console.log(res)
-        return res;
-      }))
-    })
-  ).subscribe()
-  const startDate = new Date(`2025-11-08 00:00:00`)
-  workflow.producer.next(createWeiboKeywordSearchGraphAst(`江浙沪3000元人情的婚礼`, startDate))
+  // const workflow = useQueue<WorkflowGraphAst>(`workflow`)
+  // const workflow$ = workflow.consumer$.pipe(
+  //   tap(msg => {
+  //     const message = msg.message
+  //     console.log(`[Crawler] ${message.name}:${message.id}`)
+  //   }),
+  //   switchMap(msg => {
+  //     const message = msg.message
+  //     const executeOnce = async () => {
+  //       try {
+  //         const ast = fromJson(message)
+  //         const result: WorkflowGraphAst = await execute(ast, {})
+  //         if (result.state === 'success') {
+  //           console.log(`[Crawler] 工作流执行成功: ${message.name}:${message.id}`)
+  //           msg.ack()
+  //           return result;
+  //         }
+  //         if (result.state === 'fail') {
+  //           console.warn(`[Crawler] 工作流执行失败: ${message.name}:${message.id}`)
+  //           msg.ack()
+  //           return result;
+  //         }
+  //         console.log(`[Crawler] 工作流继续执行: ${message.name}:${message.id}`, result)
+  //         msg.ack()
+  //         return result;
+  //       } catch (e) {
+  //         console.error(`[Crawler] 工作流执行异常: ${message.name}:${message.id}`, e)
+  //         const error = (e as Error).message
+  //         if (error.includes(`workflow node type`)) {
+  //           msg.ack()
+  //           return;
+  //         }
+  //         msg.nack()
+  //       }
+  //     }
+  //     return from(executeOnce().then(res=>{
+  //       console.log(res)
+  //       return res;
+  //     }))
+  //   })
+  // ).subscribe()
+  // const startDate = new Date(`2025-11-08 00:00:00`)
+  // workflow.producer.next(createWeiboKeywordSearchGraphAst(`江浙沪3000元人情的婚礼`, startDate))
   // 微博账号
   process.on('SIGTERM', () => {
     weiboLogin$.unsubscribe()
-    workflow$.unsubscribe()
+    // workflow$.unsubscribe()
     process.exit(0);
   });
 
   process.on('SIGINT', () => {
     weiboLogin$.unsubscribe()
-    workflow$.unsubscribe()
+    // workflow$.unsubscribe()
     process.exit(0);
   });
 }
