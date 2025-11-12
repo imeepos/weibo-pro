@@ -8,6 +8,12 @@
     "build": "nest build",
     "start": "node dist/main.js",
     "start:prod": "node dist/main",
+    "pm2:start": "pm2 start ecosystem.config.js --env production",
+    "pm2:stop": "pm2 stop sker-api",
+    "pm2:restart": "pm2 restart sker-api",
+    "pm2:delete": "pm2 delete sker-api",
+    "pm2:logs": "pm2 logs sker-api",
+    "pm2:monit": "pm2 monit",
     "lint": "eslint . --max-warnings 0",
     "check-types": "tsc --noEmit"
   },
