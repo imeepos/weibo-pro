@@ -7,6 +7,7 @@ import CustomDataOverview from '@/pages/CustomDataOverview';
 import EventAnalysis from '@/pages/EventAnalysis';
 import EventDetail from '@/pages/EventDetail';
 import UserDetection from '@/pages/UserDetection';
+import UserRelationTopology from '@/pages/UserRelationTopology';
 import { LayoutDemo } from '@/pages/LayoutDemo';
 import BleMeshTopology from '@/pages/BleMeshTopology';
 import NetworkTopology from '@/pages/NetworkTopology';
@@ -367,7 +368,26 @@ const App: React.FC = () => {
                 </Layout>
               }
             />
-            
+            <Route
+              path="/user-relation-topology"
+              element={
+                <FullscreenLayout>
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key="user-relation-topology"
+                      className="h-full"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 1.05 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <UserRelationTopology />
+                    </motion.div>
+                  </AnimatePresence>
+                </FullscreenLayout>
+              }
+            />
+
           </Routes>
         </div>
       </Router>

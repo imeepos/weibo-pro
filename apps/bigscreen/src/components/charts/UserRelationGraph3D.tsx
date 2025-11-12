@@ -1,0 +1,286 @@
+import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
+import ForceGraph3D from 'react-force-graph-3d';
+import * as THREE from 'three';
+import type {
+  UserRelationNetwork,
+  UserRelationNode,
+  UserRelationEdge,
+} from '@sker/sdk';
+
+interface UserRelationGraph3DProps {
+  network: UserRelationNetwork;
+  className?: string;
+  onNodeClick?: (node: UserRelationNode) => void;
+  onNodeHover?: (node: UserRelationNode | null) => void;
+}
+
+const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
+  network,
+  className = '',
+  onNodeClick,
+  onNodeHover,
+}) => {
+  const fgRef = useRef<any>();
+  const [highlightNodes, setHighlightNodes] = useState(new Set());
+  const [highlightLinks, setHighlightLinks] = useState(new Set());
+  const [hoverNode, setHoverNode] = useState<UserRelationNode | null>(null);
+
+  const graphData = useMemo(() => ({
+    nodes: network.nodes.map(node => ({
+      ...node,
+      val: Math.sqrt(node.influence) / 2 + 3,
+      color: getUserTypeColor(node.userType),
+    })),
+    links: network.edges.map(edge => ({
+      source: edge.source,
+      target: edge.target,
+      value: edge.weight,
+      type: edge.type,
+    })),
+  }), [network]);
+
+  useEffect(() => {
+    if (fgRef.current) {
+      fgRef.current.d3Force('charge').strength(-200);
+      fgRef.current.d3Force('link').distance(100);
+    }
+  }, []);
+
+  const handleNodeClick = useCallback((node: any) => {
+    if (onNodeClick) {
+      onNodeClick(node as UserRelationNode);
+    }
+
+    if (fgRef.current) {
+      const distance = 300;
+      const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
+      fgRef.current.cameraPosition(
+        { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio },
+        node,
+        3000
+      );
+    }
+  }, [onNodeClick]);
+
+  const handleNodeHover = useCallback((node: any) => {
+    const typedNode = node as UserRelationNode | null;
+    setHoverNode(typedNode);
+
+    if (onNodeHover) {
+      onNodeHover(typedNode);
+    }
+
+    if (node) {
+      const neighbors = new Set<string>();
+      const links = new Set<string>();
+
+      graphData.links.forEach(link => {
+        if (link.source === node.id || (typeof link.source === 'object' && (link.source as any).id === node.id)) {
+          const targetId = typeof link.target === 'string' ? link.target : (link.target as any).id;
+          neighbors.add(targetId);
+          links.add(`${node.id}-${targetId}`);
+        }
+        if (link.target === node.id || (typeof link.target === 'object' && (link.target as any).id === node.id)) {
+          const sourceId = typeof link.source === 'string' ? link.source : (link.source as any).id;
+          neighbors.add(sourceId);
+          links.add(`${sourceId}-${node.id}`);
+        }
+      });
+
+      neighbors.add(node.id);
+      setHighlightNodes(neighbors);
+      setHighlightLinks(links);
+    } else {
+      setHighlightNodes(new Set());
+      setHighlightLinks(new Set());
+    }
+  }, [graphData.links, onNodeHover]);
+
+  const paintNode = useCallback((node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
+    const label = node.name;
+    const fontSize = 12 / globalScale;
+    ctx.font = `${fontSize}px Sans-Serif`;
+
+    const isHighlight = highlightNodes.has(node.id);
+
+    ctx.fillStyle = isHighlight ? '#ffffff' : node.color;
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, node.val * 1.4, 0, 2 * Math.PI);
+    ctx.fill();
+
+    if (isHighlight || hoverNode?.id === node.id) {
+      ctx.strokeStyle = '#ffeb3b';
+      ctx.lineWidth = 2 / globalScale;
+      ctx.stroke();
+    }
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = isHighlight ? '#000000' : '#ffffff';
+    ctx.fillText(label, node.x, node.y + node.val * 1.4 + fontSize);
+
+    if (node.verified) {
+      ctx.fillStyle = '#2196f3';
+      ctx.beginPath();
+      ctx.arc(node.x + node.val, node.y - node.val, 3 / globalScale, 0, 2 * Math.PI);
+      ctx.fill();
+    }
+  }, [highlightNodes, hoverNode]);
+
+  const paintLink = useCallback((link: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
+    const start = link.source;
+    const end = link.target;
+
+    if (typeof start !== 'object' || typeof end !== 'object') return;
+
+    const linkId = `${start.id}-${end.id}`;
+    const isHighlight = highlightLinks.has(linkId) || highlightLinks.has(`${end.id}-${start.id}`);
+
+    ctx.strokeStyle = isHighlight ? '#ffeb3b' : getEdgeColor(link.type);
+    ctx.lineWidth = (isHighlight ? link.value / 5 + 2 : link.value / 10 + 0.5) / globalScale;
+    ctx.globalAlpha = isHighlight ? 0.8 : 0.3;
+
+    ctx.beginPath();
+    ctx.moveTo(start.x, start.y, start.z);
+    ctx.lineTo(end.x, end.y, end.z);
+    ctx.stroke();
+    ctx.globalAlpha = 1.0;
+  }, [highlightLinks]);
+
+  return (
+    <div className={`relative ${className}`}>
+      <ForceGraph3D
+        ref={fgRef}
+        graphData={graphData}
+        nodeLabel={(node: any) => `
+          <div style="background: rgba(0,0,0,0.9); color: white; padding: 12px; border-radius: 8px; font-size: 14px;">
+            <div style="font-weight: bold; margin-bottom: 8px; font-size: 16px;">${node.name}</div>
+            <div>类型: ${getUserTypeLabel(node.userType)}</div>
+            <div>粉丝: ${formatNumber(node.followers)}</div>
+            <div>发帖: ${formatNumber(node.postCount)}</div>
+            <div>影响力: ${node.influence}/100</div>
+            ${node.verified ? '<div style="color: #2196f3;">✓ 已认证</div>' : ''}
+          </div>
+        `}
+        nodeVal={(node: any) => node.val}
+        nodeColor={(node: any) => node.color}
+        nodeOpacity={0.9}
+        nodeResolution={16}
+        linkWidth={(link: any) => link.value / 10 + 0.5}
+        linkColor={(link: any) => getEdgeColor(link.type)}
+        linkOpacity={0.3}
+        linkDirectionalParticles={4}
+        linkDirectionalParticleWidth={(link: any) => link.value / 20 + 1}
+        linkDirectionalParticleSpeed={0.005}
+        onNodeClick={handleNodeClick}
+        onNodeHover={handleNodeHover}
+        nodeCanvasObject={paintNode}
+        linkCanvasObject={paintLink}
+        backgroundColor="#0a0a0f"
+        showNavInfo={false}
+        controlType="orbit"
+        enableNodeDrag={true}
+        enableNavigationControls={true}
+        enablePointerInteraction={true}
+      />
+
+      {hoverNode && (
+        <div className="absolute top-4 right-4 bg-black/90 text-white p-4 rounded-lg shadow-2xl max-w-xs border border-white/20">
+          <div className="font-bold text-lg mb-2">{hoverNode.name}</div>
+          <div className="text-sm space-y-1">
+            <div>类型: {getUserTypeLabel(hoverNode.userType)}</div>
+            <div>粉丝: {formatNumber(hoverNode.followers)}</div>
+            <div>发帖: {formatNumber(hoverNode.postCount)}</div>
+            <div>影响力: {hoverNode.influence}/100</div>
+            {hoverNode.location && <div>位置: {hoverNode.location}</div>}
+            {hoverNode.verified && <div className="text-blue-400">✓ 已认证</div>}
+          </div>
+        </div>
+      )}
+
+      <div className="absolute bottom-4 left-4 bg-black/80 text-white px-4 py-3 rounded-lg text-sm space-y-1">
+        <div>节点数: {network.statistics.totalUsers}</div>
+        <div>关系数: {network.statistics.totalRelations}</div>
+        <div>平均度: {network.statistics.avgDegree}</div>
+        <div>密度: {(network.statistics.density * 100).toFixed(2)}%</div>
+      </div>
+
+      <div className="absolute bottom-4 right-4 bg-black/80 text-white px-4 py-3 rounded-lg text-xs space-y-2">
+        <div className="font-bold mb-2">节点类型</div>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-full" style={{ background: getUserTypeColor('official') }} />
+          <span>官方账号</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-full" style={{ background: getUserTypeColor('media') }} />
+          <span>媒体账号</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-full" style={{ background: getUserTypeColor('kol') }} />
+          <span>KOL账号</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-full" style={{ background: getUserTypeColor('normal') }} />
+          <span>普通用户</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+function getUserTypeColor(userType: string): string {
+  switch (userType) {
+    case 'official':
+      return '#ef4444';
+    case 'media':
+      return '#3b82f6';
+    case 'kol':
+      return '#a855f7';
+    case 'normal':
+      return '#10b981';
+    default:
+      return '#6b7280';
+  }
+}
+
+function getUserTypeLabel(userType: string): string {
+  switch (userType) {
+    case 'official':
+      return '官方账号';
+    case 'media':
+      return '媒体账号';
+    case 'kol':
+      return 'KOL账号';
+    case 'normal':
+      return '普通用户';
+    default:
+      return '未知';
+  }
+}
+
+function getEdgeColor(type: string): string {
+  switch (type) {
+    case 'like':
+      return '#ec4899';
+    case 'comment':
+      return '#3b82f6';
+    case 'repost':
+      return '#8b5cf6';
+    case 'comprehensive':
+      return '#f59e0b';
+    default:
+      return '#6b7280';
+  }
+}
+
+function formatNumber(num: number): string {
+  if (num >= 1000000) {
+    return `${(num / 1000000).toFixed(1)}M`;
+  }
+  if (num >= 1000) {
+    return `${(num / 1000).toFixed(1)}K`;
+  }
+  return num.toString();
+}
+
+export default UserRelationGraph3D;

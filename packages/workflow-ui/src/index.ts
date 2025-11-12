@@ -61,3 +61,14 @@ export {
 
 // 导出工具函数
 export { cn } from './utils/cn'
+
+// 导出执行器系统
+export {
+  ExecutorManager,
+  ExecutorFinder,
+  initializeFrontendExecutors,
+  getExecutorSystemStatus
+} from './execution'
+
+// 导出执行器组件
+export { InlineExecutor, WeiboLoginExecutor } from './components/execution/InlineExecutor'
