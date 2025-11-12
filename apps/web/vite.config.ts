@@ -1,12 +1,13 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type PluginOption } from 'vite'
 import react from '@vitejs/plugin-react-swc'
 import tailwindcss from '@tailwindcss/vite'
 import swc from 'vite-plugin-swc-transform'
 
+// 类型安全的插件配置，避免版本冲突
 export default defineConfig({
   plugins: [
-    react(),
-    tailwindcss(),
+    react() as PluginOption,
+    tailwindcss() as PluginOption,
     swc({
       swcOptions: {
         jsc: {
@@ -23,7 +24,7 @@ export default defineConfig({
           },
         },
       },
-    }),
+    }) as PluginOption,
   ],
   server: {
     host: true,
