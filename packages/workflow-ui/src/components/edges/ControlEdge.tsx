@@ -40,7 +40,15 @@ export const ControlEdge = memo((props: EdgeProps<WorkflowEdge>) => {
         style={{
           zIndex: 9
         }}
-        {...props}
+        id={id}
+        sourceX={sourceX}
+        sourceY={sourceY}
+        targetX={targetX}
+        targetY={targetY}
+        sourcePosition={props.sourcePosition}
+        targetPosition={props.targetPosition}
+        data={data}
+        selected={props.selected}
         interactionWidth={20}
       />
       <path
