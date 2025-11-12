@@ -346,6 +346,8 @@ export function WorkflowCanvas({
 
       console.log('节点执行完成', { nodeId, result })
 
+      // 更新本地 AST 状态
+      Object.assign(workflow.workflowAst, result)
       // 同步状态到 UI
       workflow.syncFromAst()
 
@@ -403,6 +405,8 @@ export function WorkflowCanvas({
 
         console.log(`执行步骤 ${stepCount}:`, result)
 
+        // 更新本地 AST 状态
+        Object.assign(workflow.workflowAst, result)
         workflow.syncFromAst()
 
         if (result.state === 'success') {
