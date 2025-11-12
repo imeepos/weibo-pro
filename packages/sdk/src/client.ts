@@ -16,7 +16,7 @@ export const providers: (isProd?: boolean) => Provider[] = (isProd = true) => {
         {
             provide: AXIOS_CONFIG,
             useValue: {
-                baseURL: isProd ? 'http://43.240.223.138:3004/' : 'http://localhost:3004'
+                baseURL: '/'
             }
         },
         ...controllers.map(controller => {

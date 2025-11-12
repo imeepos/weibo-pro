@@ -263,11 +263,14 @@ export class WorkflowController implements sdk.WorkflowController {
   @Get('get')
   async getWorkflow(@Query() params: { name: string }): Promise<WorkflowGraphAst | null> {
     const { name } = params;
-
+    console.log({ name })
     if (!name || name.trim().length === 0) {
       throw new BadRequestException('工作流名称不能为空');
     }
-
+    if (name === 'kindergarten-closure-event') {
+      const template = this.workflowTemplateService.createFromTemplate(name);
+      if(template) await this.saveWorkflow(template);
+    }
     // 1. 尝试从数据库获取现有工作流
     const workflow = await this.workflowService.getWorkflowByName(name);
     if (workflow) {
@@ -276,6 +279,7 @@ export class WorkflowController implements sdk.WorkflowController {
     }
 
     // 2. 检查是否有对应的模板
+    console.log({ name })
     const template = this.workflowTemplateService.createFromTemplate(name);
 
     if (template) {
@@ -529,9 +533,9 @@ export class WorkflowController implements sdk.WorkflowController {
         nodeStates,
         error: result.error
           ? {
-              message: result.error.message,
-              stack: result.error.stack,
-            }
+            message: result.error.message,
+            stack: result.error.stack,
+          }
           : undefined,
       });
 
