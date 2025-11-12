@@ -13,6 +13,7 @@ import { logger } from '../utils/logger';
 import * as sdk from '@sker/sdk';
 import { WorkflowService } from '../services/workflow.service';
 import { WorkflowRunService } from '../services/workflow-run.service';
+import { WorkflowTemplateService } from '../services/workflow-template.service';
 import { root } from '@sker/core';
 import { WorkflowEntity, WorkflowRunEntity, RunStatus } from '@sker/entities';
 
@@ -30,10 +31,12 @@ export class WorkflowController implements sdk.WorkflowController {
   private nlpQueue = useQueue<PostNLPTask>('post_nlp_queue');
   private readonly workflowService: WorkflowService;
   private readonly workflowRunService: WorkflowRunService;
+  private readonly workflowTemplateService: WorkflowTemplateService;
 
   constructor() {
     this.workflowService = root.get(WorkflowService);
     this.workflowRunService = root.get(WorkflowRunService);
+    this.workflowTemplateService = root.get(WorkflowTemplateService);
   }
 
   /**
@@ -251,6 +254,11 @@ export class WorkflowController implements sdk.WorkflowController {
 
   /**
    * 根据 name 获取工作流
+   *
+   * 优雅设计：
+   * - 支持从模板自动创建工作流
+   * - 如果存在则返回，不存在则检查是否有模板
+   * - 有模板则使用模板初始化，无模板则创建空工作流
    */
   @Get('get')
   async getWorkflow(@Query() params: { name: string }): Promise<WorkflowGraphAst | null> {
@@ -260,13 +268,50 @@ export class WorkflowController implements sdk.WorkflowController {
       throw new BadRequestException('工作流名称不能为空');
     }
 
+    // 1. 尝试从数据库获取现有工作流
     const workflow = await this.workflowService.getWorkflowByName(name);
+    if (workflow) {
+      logger.info('工作流已存在', { name });
+      return workflow;
+    }
 
-    if (workflow) return workflow
-    const workflowAst = new WorkflowGraphAst()
+    // 2. 检查是否有对应的模板
+    const template = this.workflowTemplateService.createFromTemplate(name);
+
+    if (template) {
+      // 使用模板创建工作流
+      logger.info('使用模板创建工作流', {
+        name,
+        description: this.workflowTemplateService.getTemplateDescription(name)
+      });
+
+      await this.saveWorkflow(template);
+      return template;
+    }
+
+    // 3. 无模板，创建空工作流
+    logger.info('创建空工作流', { name });
+    const workflowAst = new WorkflowGraphAst();
     workflowAst.name = name;
-    await this.saveWorkflow(workflowAst)
-    return workflowAst
+    await this.saveWorkflow(workflowAst);
+    return workflowAst;
+  }
+
+  /**
+   * 列出所有可用的工作流模板
+   *
+   * 优雅设计：
+   * - 让用户知道有哪些预定义模板可以使用
+   * - 提供模板描述，帮助用户选择合适的模板
+   */
+  @Get('templates')
+  async listTemplates(): Promise<{ name: string; description: string }[]> {
+    const templates = this.workflowTemplateService.getAvailableTemplates();
+
+    return templates.map(name => ({
+      name,
+      description: this.workflowTemplateService.getTemplateDescription(name)
+    }));
   }
 
   /**
