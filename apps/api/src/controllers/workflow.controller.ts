@@ -346,8 +346,11 @@ export class WorkflowController implements sdk.WorkflowController {
   @Post('share')
   async createShare(@Body() body: { workflowId: string; expiresAt?: string }): Promise<sdk.CreateShareResult> {
     const { workflowId } = body;
+    if(!workflowId){
+      throw new BadRequestException('工作流ID不能为空');
+    }
 
-    if (!workflowId || workflowId.trim().length === 0) {
+    if (workflowId.trim().length === 0) {
       throw new BadRequestException('工作流ID不能为空');
     }
 

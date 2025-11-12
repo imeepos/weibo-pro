@@ -13,6 +13,7 @@ import type {
   RunStatus,
 } from '../types'
 import type { WorkflowGraphAst } from '@sker/workflow';
+import type { WorkflowEntity } from '@sker/entities';
 @Controller('api/workflow')
 export class WorkflowController {
 
@@ -47,7 +48,7 @@ export class WorkflowController {
   }
 
   @Post('save')
-  saveWorkflow(@Body() body: WorkflowGraphAst): Promise<{ id: string; name: string; createdAt: string; updatedAt: string }> {
+  saveWorkflow(@Body() body: WorkflowGraphAst): Promise<WorkflowEntity> {
     throw new Error('method saveWorkflow not implements')
   }
 
