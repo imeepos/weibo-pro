@@ -1,6 +1,6 @@
 import { Ast, Input, Node, Output } from "@sker/workflow";
 import { Observable } from "rxjs";
-import { WeiboAccountEntity } from "@sker/entities";
+import type { WeiboAccountEntity } from "@sker/entities";
 
 
 @Node({ title: '微博登录' })
