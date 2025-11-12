@@ -5,10 +5,10 @@ import { getNodeMetadata } from '../../adapters'
 import { cn } from '../../utils/cn'
 
 // 简单的状态指示器
-const NodeStatus = ({ state, error }: { state?: string; error?: Error }) => {
+const NodeStatus = ({ state, error }: { state?: string; error?: unknown }) => {
   const statusConfig = {
     pending: { color: 'bg-gray-500', label: '待执行' },
-    running: { color: 'bg-blue-500', label: '执行中' },
+    running: { color: 'bg-blue-500 animate-pulse', label: '执行中' },
     success: { color: 'bg-green-500', label: '成功' },
     fail: { color: 'bg-red-500', label: '失败' },
   };
@@ -19,7 +19,7 @@ const NodeStatus = ({ state, error }: { state?: string; error?: Error }) => {
     <div className="flex items-center gap-1">
       <div className={`w-2 h-2 rounded-full ${config.color}`} />
       <span className="text-xs text-gray-300">{config.label}</span>
-      {error && <span className="text-xs text-red-400">!</span>}
+      {error && <span className="text-xs text-red-400" title={JSON.stringify(error)}>⚠</span>}
     </div>
   );
 };
