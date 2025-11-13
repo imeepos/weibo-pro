@@ -69,21 +69,37 @@ const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
 
     if (fgRef.current) {
       const distance = 300;
-      const nodeDistance = Math.hypot(node.x, node.y, node.z);
 
-      // 如果节点太近，直接偏移；否则在节点后方固定距离
-      if (nodeDistance < 10) {
+      // 获取当前相机位置
+      const cameraPosition = fgRef.current.cameraPosition();
+      const currentCamera = {
+        x: cameraPosition.x,
+        y: cameraPosition.y,
+        z: cameraPosition.z
+      };
+
+      // 计算从节点到当前相机的方向向量
+      const direction = {
+        x: currentCamera.x - node.x,
+        y: currentCamera.y - node.y,
+        z: currentCamera.z - node.z
+      };
+
+      // 归一化方向向量
+      const dirLength = Math.hypot(direction.x, direction.y, direction.z);
+
+      if (dirLength > 0) {
+        // 在从节点到相机的方向上，向相机方向后退一定距离
+        // 这样节点会保持在屏幕中央
+        const ratio = distance / dirLength;
+
         fgRef.current.cameraPosition(
-          { x: node.x + distance * 0.5, y: node.y + distance * 0.3, z: node.z + distance },
-          node,
-          3000
-        );
-      } else {
-        // 从原点到节点的方向向量，在节点后方固定距离
-        const ratio = (nodeDistance + distance) / nodeDistance;
-        fgRef.current.cameraPosition(
-          { x: node.x * ratio, y: node.y * ratio, z: node.z * ratio },
-          node,
+          {
+            x: node.x + direction.x * ratio,
+            y: node.y + direction.y * ratio,
+            z: node.z + direction.z * ratio
+          },
+          node, // 节点作为焦点，保持在屏幕中央
           3000
         );
       }
