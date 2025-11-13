@@ -211,13 +211,6 @@ const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
           </div>
         </div>
       )}
-
-      <div className="absolute bottom-4 left-4 backdrop-blur-sm bg-background/80 text-foreground px-3 py-2 rounded-md text-xs space-y-0.5">
-        <div>节点数: {network.statistics.totalUsers}</div>
-        <div>关系数: {network.statistics.totalRelations}</div>
-        <div>平均度: {network.statistics.avgDegree}</div>
-        <div>密度: {(network.statistics.density * 100).toFixed(2)}%</div>
-      </div>
     </div>
   );
 };
