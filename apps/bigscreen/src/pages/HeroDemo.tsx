@@ -2,7 +2,7 @@ import { motion, useScroll, useTransform } from 'framer-motion';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-
+import React from 'react'
 export default function HeroDemo() {
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);

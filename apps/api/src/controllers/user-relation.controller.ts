@@ -3,9 +3,10 @@ import { root } from '@sker/core';
 import { UserRelationService } from '../services/data/user-relation.service';
 import type { TimeRange } from '@sker/entities';
 import type { UserRelationType } from '@sker/sdk';
+import * as sdk from '@sker/sdk';
 
 @Controller('api/user-relations')
-export class UserRelationController {
+export class UserRelationController implements sdk.UserRelationController {
   private userRelationService: UserRelationService;
 
   constructor() {
@@ -16,14 +17,14 @@ export class UserRelationController {
   async getNetwork(
     @Query('type') type?: UserRelationType,
     @Query('timeRange') timeRange?: TimeRange,
-    @Query('minWeight') minWeight?: string,
-    @Query('limit') limit?: string
-  ) {
+    @Query('minWeight') minWeight?: number,
+    @Query('limit') limit?: number
+  ): Promise<sdk.UserRelationNetwork> {
     return this.userRelationService.getNetwork({
       type,
       timeRange,
-      minWeight: minWeight ? parseInt(minWeight, 10) : undefined,
-      limit: limit ? parseInt(limit, 10) : undefined,
+      minWeight: minWeight,
+      limit: limit,
     });
   }
 }

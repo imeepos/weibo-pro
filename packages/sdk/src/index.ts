@@ -6,6 +6,7 @@ export * from './controllers/overview.controller'
 export * from './controllers/sentiment.controller'
 export * from './controllers/sse.controller'
 export * from './controllers/system.controller'
+export * from './controllers/user-relation.controller'
 export * from './controllers/users.controller'
 export * from './controllers/workflow.controller'
 export * from './types';

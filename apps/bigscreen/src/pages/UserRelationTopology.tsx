@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
+import { root } from '@sker/core';
 import UserRelationGraph3D from '../components/charts/UserRelationGraph3D';
 import UserRelationControls from '../components/charts/UserRelationControls';
 import type {
@@ -8,6 +9,7 @@ import type {
   TimeRange,
   UserRelationNode,
 } from '@sker/sdk';
+import { UserRelationController } from '@sker/sdk';
 
 const UserRelationTopology: React.FC = () => {
   const [relationType, setRelationType] = useState<UserRelationType>('comprehensive');
@@ -24,20 +26,13 @@ const UserRelationTopology: React.FC = () => {
     setError(null);
 
     try {
-      const params = new URLSearchParams({
-        type: relationType,
+      const controller = root.get(UserRelationController);
+      const data = await controller.getNetwork(
+        relationType,
         timeRange,
-        minWeight: minWeight.toString(),
-        limit: limit.toString(),
-      });
-
-      const response = await fetch(`http://localhost:3004/api/user-relations?${params}`);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data: UserRelationNetwork = await response.json();
+        minWeight,
+        limit
+      );
       setNetwork(data);
     } catch (err) {
       const message = err instanceof Error ? err.message : '未知错误';

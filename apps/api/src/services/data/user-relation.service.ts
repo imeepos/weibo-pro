@@ -71,15 +71,15 @@ export class UserRelationService {
       const edgesData = await manager.query(
         `
         SELECT
-          l.userWeiboId as source_user_id,
+          l.user_weibo_id as source_user_id,
           p.user->>'id' as target_user_id,
           COUNT(*) as weight
         FROM weibo_likes l
-        JOIN weibo_posts p ON l.targetWeiboId = p.id::text
-        WHERE l.createdAt >= $1
-          AND l.createdAt <= $2
-          AND l.userWeiboId != p.user->>'id'
-        GROUP BY l.userWeiboId, p.user->>'id'
+        JOIN weibo_posts p ON l.target_weibo_id = p.id
+        WHERE l.created_at >= $1
+          AND l.created_at <= $2
+          AND l.user_weibo_id != p.user->>'id'
+        GROUP BY l.user_weibo_id, p.user->>'id'
         HAVING COUNT(*) >= $3
         ORDER BY COUNT(*) DESC
         LIMIT $4
@@ -169,17 +169,17 @@ export class UserRelationService {
         `
         WITH like_relations AS (
           SELECT
-            l.userWeiboId as source_user_id,
+            l.user_weibo_id as source_user_id,
             p.user->>'id' as target_user_id,
             COUNT(*) as like_count,
             0 as comment_count,
             0 as repost_count
           FROM weibo_likes l
-          JOIN weibo_posts p ON l.targetWeiboId = p.id::text
-          WHERE l.createdAt >= $1
-            AND l.createdAt <= $2
-            AND l.userWeiboId != p.user->>'id'
-          GROUP BY l.userWeiboId, p.user->>'id'
+          JOIN weibo_posts p ON l.target_weibo_id = p.id
+          WHERE l.created_at >= $1
+            AND l.created_at <= $2
+            AND l.user_weibo_id != p.user->>'id'
+          GROUP BY l.user_weibo_id, p.user->>'id'
         ),
         comment_relations AS (
           SELECT
@@ -287,7 +287,7 @@ export class UserRelationService {
           ELSE 'normal'
         END as user_type
       FROM weibo_users u
-      WHERE u.id::text IN (${placeholders})
+      WHERE u.id IN (${placeholders})
     `,
       userIdsArray
     );

@@ -22,6 +22,7 @@ import { Server, Socket } from 'socket.io';
 import { logger } from '../utils/logger';
 
 @WebSocketGateway({
+  path: '/ws',
   cors: {
     origin: [
       'http://localhost:3000',
