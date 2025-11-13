@@ -25,7 +25,7 @@ export function PropertyPanel({ className = '' }: PropertyPanelProps) {
     )
   }
 
-  const metadata = getNodeMetadata(resolveConstructor(selectedNode.data.nodeClass))
+  const metadata = getNodeMetadata(resolveConstructor(selectedNode.data))
   const ast = selectedNode.data
 
   const handlePropertyChange = (property: string, value: any) => {
