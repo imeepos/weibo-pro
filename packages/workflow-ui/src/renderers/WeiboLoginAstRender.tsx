@@ -22,7 +22,7 @@ const WeiboLoginPreview = ({ ast }: { ast: WeiboLoginAst }) => {
 };
 
 // 设置表单组件
-const WeiboLoginSetting = ({ ast }: { ast: WeiboLoginAst }) => {
+export const WeiboLoginSetting = ({ ast }: { ast: WeiboLoginAst }) => {
   const [userId, setUserId] = useState(ast.userId || '')
   const [sessionId, setSessionId] = useState(ast.sessionId || '')
 

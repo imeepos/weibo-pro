@@ -77,7 +77,7 @@ export const WeiboLoginSettingPanel: React.FC<WeiboLoginSettingPanelProps> = ({
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
           {/* 配置表单 */}
           <div className="mb-6">
-            <WeiboLoginSetting ast={ast} onUpdate={handleAstUpdate} />
+            <WeiboLoginSetting ast={ast} />
           </div>
 
           {/* 执行器 */}

@@ -13,10 +13,6 @@ import {
 } from '@xyflow/react'
 
 import {
-  Play,
-  Save,
-  Share2,
-  Workflow,
   ZoomIn,
   ZoomOut,
   Maximize2,

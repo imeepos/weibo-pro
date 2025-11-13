@@ -2,7 +2,6 @@ import React, { memo } from 'react'
 import { BaseEdge, getBezierPath } from '@xyflow/react'
 import type { EdgeProps } from '@xyflow/react'
 import type { WorkflowEdge } from '../../types'
-// import { EdgeLabel } from './EdgeLabel'  // 标签已禁用
 
 export const ControlEdge = memo((props: EdgeProps<WorkflowEdge>) => {
   const { id, sourceX, sourceY, targetX, targetY, data } = props
@@ -12,10 +11,6 @@ export const ControlEdge = memo((props: EdgeProps<WorkflowEdge>) => {
     targetX,
     targetY,
   })
-
-  // 注意：标签已禁用，保持界面简洁
-  // const label = data ? buildControlEdgeLabel(data) : null
-
   const handleDoubleClick = (event: React.MouseEvent) => {
     event.stopPropagation()
     const customEvent = new CustomEvent('edge-delete', {
@@ -52,16 +47,8 @@ export const ControlEdge = memo((props: EdgeProps<WorkflowEdge>) => {
         onContextMenu={handleContextMenu}
         style={{ cursor: 'pointer' }}
       />
-      {/* 标签已禁用 - 保持界面简洁 */}
     </>
   )
 })
 
 ControlEdge.displayName = 'ControlEdge'
-
-function buildControlEdgeLabel(data: NonNullable<WorkflowEdge['data']>): string {
-  if (!data.condition) return ''
-
-  const { property, value } = data.condition
-  return `${property} = ${JSON.stringify(value)}`
-}
