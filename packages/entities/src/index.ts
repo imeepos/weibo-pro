@@ -22,5 +22,6 @@ export * from './event-statistics.entity'
 export * from './post-nlp-result.entity'
 export * from './layout-configuration.entity'
 export * from './queries'
+export * from './user-relation.view'
 
 export { DataSource, EntityManager } from 'typeorm'

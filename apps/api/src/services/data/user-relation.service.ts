@@ -71,17 +71,14 @@ export class UserRelationService {
       const edgesData = await manager.query(
         `
         SELECT
-          l.user_weibo_id as source_user_id,
-          p.user->>'id' as target_user_id,
-          COUNT(*) as weight
-        FROM weibo_likes l
-        JOIN weibo_posts p ON l.target_weibo_id = p.id
-        WHERE l.created_at >= $1
-          AND l.created_at <= $2
-          AND l.user_weibo_id != p.user->>'id'
-        GROUP BY l.user_weibo_id, p.user->>'id'
-        HAVING COUNT(*) >= $3
-        ORDER BY COUNT(*) DESC
+          source_user_id,
+          target_user_id,
+          weight
+        FROM user_like_relations_view
+        WHERE last_interaction_at >= $1
+          AND last_interaction_at <= $2
+          AND weight >= $3
+        ORDER BY weight DESC
         LIMIT $4
       `,
         [start, end, minWeight, limit]
@@ -102,19 +99,14 @@ export class UserRelationService {
       const edgesData = await manager.query(
         `
         SELECT
-          c.user->>'id' as source_user_id,
-          p.user->>'id' as target_user_id,
-          COUNT(*) as weight
-        FROM weibo_comments c
-        JOIN weibo_posts p ON c.rootid = p.id
-        WHERE c.ingestedAt >= $1
-          AND c.ingestedAt <= $2
-          AND c.user->>'id' IS NOT NULL
-          AND p.user->>'id' IS NOT NULL
-          AND c.user->>'id' != p.user->>'id'
-        GROUP BY c.user->>'id', p.user->>'id'
-        HAVING COUNT(*) >= $3
-        ORDER BY COUNT(*) DESC
+          source_user_id,
+          target_user_id,
+          weight
+        FROM user_comment_relations_view
+        WHERE last_interaction_at >= $1
+          AND last_interaction_at <= $2
+          AND weight >= $3
+        ORDER BY weight DESC
         LIMIT $4
       `,
         [start, end, minWeight, limit]
@@ -135,19 +127,14 @@ export class UserRelationService {
       const edgesData = await manager.query(
         `
         SELECT
-          r.user->>'id' as source_user_id,
-          r.retweeted_status->'user'->>'id' as target_user_id,
-          COUNT(*) as weight
-        FROM weibo_reposts r
-        WHERE r.ingested_at >= $1
-          AND r.ingested_at <= $2
-          AND r.retweeted_status IS NOT NULL
-          AND r.user->>'id' IS NOT NULL
-          AND r.retweeted_status->'user'->>'id' IS NOT NULL
-          AND r.user->>'id' != r.retweeted_status->'user'->>'id'
-        GROUP BY r.user->>'id', r.retweeted_status->'user'->>'id'
-        HAVING COUNT(*) >= $3
-        ORDER BY COUNT(*) DESC
+          source_user_id,
+          target_user_id,
+          weight
+        FROM user_repost_relations_view
+        WHERE last_interaction_at >= $1
+          AND last_interaction_at <= $2
+          AND weight >= $3
+        ORDER BY weight DESC
         LIMIT $4
       `,
         [start, end, minWeight, limit]
@@ -167,58 +154,43 @@ export class UserRelationService {
 
       const edgesData = await manager.query(
         `
-        WITH like_relations AS (
+        WITH all_relations AS (
           SELECT
-            l.user_weibo_id as source_user_id,
-            p.user->>'id' as target_user_id,
-            COUNT(*) as like_count,
+            source_user_id,
+            target_user_id,
+            weight,
+            weight as like_count,
             0 as comment_count,
             0 as repost_count
-          FROM weibo_likes l
-          JOIN weibo_posts p ON l.target_weibo_id = p.id
-          WHERE l.created_at >= $1
-            AND l.created_at <= $2
-            AND l.user_weibo_id != p.user->>'id'
-          GROUP BY l.user_weibo_id, p.user->>'id'
-        ),
-        comment_relations AS (
+          FROM user_like_relations_view
+          WHERE last_interaction_at >= $1
+            AND last_interaction_at <= $2
+
+          UNION ALL
+
           SELECT
-            c.user->>'id' as source_user_id,
-            p.user->>'id' as target_user_id,
+            source_user_id,
+            target_user_id,
+            weight,
             0 as like_count,
-            COUNT(*) as comment_count,
+            weight as comment_count,
             0 as repost_count
-          FROM weibo_comments c
-          JOIN weibo_posts p ON c.rootid = p.id
-          WHERE c.ingestedAt >= $1
-            AND c.ingestedAt <= $2
-            AND c.user->>'id' IS NOT NULL
-            AND p.user->>'id' IS NOT NULL
-            AND c.user->>'id' != p.user->>'id'
-          GROUP BY c.user->>'id', p.user->>'id'
-        ),
-        repost_relations AS (
+          FROM user_comment_relations_view
+          WHERE last_interaction_at >= $1
+            AND last_interaction_at <= $2
+
+          UNION ALL
+
           SELECT
-            r.user->>'id' as source_user_id,
-            r.retweeted_status->'user'->>'id' as target_user_id,
+            source_user_id,
+            target_user_id,
+            weight,
             0 as like_count,
             0 as comment_count,
-            COUNT(*) as repost_count
-          FROM weibo_reposts r
-          WHERE r.ingested_at >= $1
-            AND r.ingested_at <= $2
-            AND r.retweeted_status IS NOT NULL
-            AND r.user->>'id' IS NOT NULL
-            AND r.retweeted_status->'user'->>'id' IS NOT NULL
-            AND r.user->>'id' != r.retweeted_status->'user'->>'id'
-          GROUP BY r.user->>'id', r.retweeted_status->'user'->>'id'
-        ),
-        all_relations AS (
-          SELECT * FROM like_relations
-          UNION ALL
-          SELECT * FROM comment_relations
-          UNION ALL
-          SELECT * FROM repost_relations
+            weight as repost_count
+          FROM user_repost_relations_view
+          WHERE last_interaction_at >= $1
+            AND last_interaction_at <= $2
         )
         SELECT
           source_user_id,
@@ -226,10 +198,10 @@ export class UserRelationService {
           SUM(like_count) as like_count,
           SUM(comment_count) as comment_count,
           SUM(repost_count) as repost_count,
-          (SUM(like_count) + SUM(comment_count) * 2 + SUM(repost_count) * 3) as weight
+          SUM(weight) as weight
         FROM all_relations
         GROUP BY source_user_id, target_user_id
-        HAVING (SUM(like_count) + SUM(comment_count) * 2 + SUM(repost_count) * 3) >= $3
+        HAVING SUM(weight) >= $3
         ORDER BY weight DESC
         LIMIT $4
       `,

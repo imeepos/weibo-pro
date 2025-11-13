@@ -32,6 +32,7 @@ import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { useClipboard } from '../../hooks/useClipboard'
 import { useCanvasControls } from './useCanvasControls'
 import { useCanvasState } from './useCanvasState'
+import { useWorkflowOperations } from './useWorkflowOperations'
 import { ContextMenu } from './ContextMenu'
 import { NodeSelector } from './NodeSelector'
 import { ShareDialog } from './ShareDialog'
@@ -111,6 +112,14 @@ export function WorkflowCanvas({
     openDrawer,
     closeDrawer,
   } = useCanvasState()
+
+  // 使用 WorkflowOperations 管理业务逻辑
+  const { runNode, runWorkflow, saveWorkflow, saveSubWorkflow } = useWorkflowOperations(workflow, {
+    onShowToast: showToast,
+    onSetRunning: setIsRunning,
+    onSetSaving: setIsSaving,
+    getViewport,
+  })
 
   /**
    * 恢复视图窗口状态
@@ -431,221 +440,6 @@ export function WorkflowCanvas({
   }, [nodes.length, workflow])
 
   /**
-   * 运行单个节点
-   */
-  const handleRunNodeInternal = useCallback(async (nodeId: string) => {
-    if (!workflow.workflowAst) {
-      console.error('工作流 AST 不存在')
-      return
-    }
-
-    try {
-      console.log('开始执行节点', { nodeId })
-
-      const controller = root.get<WorkflowController>(WorkflowController)
-
-      // 传入完整的 WorkflowGraphAst，后端会执行对应的节点并返回状态更新
-      const result = await controller.executeNode(workflow.workflowAst)
-
-      console.log('节点执行完成', { nodeId, result })
-
-      // 更新本地 AST 状态
-      Object.assign(workflow.workflowAst, result)
-      // 同步状态到 UI
-      workflow.syncFromAst()
-
-      // 显示执行结果
-      if (result.state === 'success') {
-        console.log(`节点执行成功`)
-      } else if (result.state === 'fail') {
-        console.error(`节点执行失败：${result.error || '未知错误'}`)
-      }
-    } catch (error: any) {
-      console.error('节点执行失败', error)
-    }
-  }, [workflow])
-
-  const handleRunAll = useCallback(async () => {
-    if (onRunAll) {
-      onRunAll()
-      return
-    }
-
-    if (!workflow.workflowAst) {
-      showToast('error', '工作流不存在', '无法执行空工作流')
-      return
-    }
-
-    if (isRunning) {
-      showToast('info', '工作流正在运行中', '请等待当前执行完成')
-      return
-    }
-
-    if (nodes.length === 0) {
-      showToast('info', '没有节点可执行', '请先添加节点到画布')
-      return
-    }
-
-    setIsRunning(true)
-
-    try {
-      console.log('开始执行工作流', {
-        name: workflow.workflowAst.name,
-        nodeCount: nodes.length
-      })
-
-      const controller = root.get<WorkflowController>(WorkflowController)
-
-      let successCount = 0
-      let failCount = 0
-      let stepCount = 0
-      const maxSteps = nodes.length * 2
-
-      while (stepCount < maxSteps) {
-        stepCount++
-
-        const result = await controller.executeNode(workflow.workflowAst)
-
-        console.log(`执行步骤 ${stepCount}:`, result)
-
-        // 更新本地 AST 状态
-        Object.assign(workflow.workflowAst, result)
-        workflow.syncFromAst()
-
-        if (result.state === 'success') {
-          successCount++
-        } else if (result.state === 'fail') {
-          failCount++
-          console.error(`执行失败:`, result.error)
-
-          // 显示第一个失败的错误
-          if (failCount === 1 && result.error) {
-            showToast(
-              'error',
-              '工作流执行失败',
-              result.error.message || '未知错误'
-            )
-          }
-        }
-
-        const allCompleted = workflow.workflowAst.nodes.every(node =>
-          node.state === 'success' || node.state === 'fail'
-        )
-
-        if (allCompleted || workflow.workflowAst.state === 'success' || workflow.workflowAst.state === 'fail') {
-          console.log('工作流执行完成')
-          break
-        }
-      }
-
-      console.log('工作流执行完成', {
-        name: workflow.workflowAst.name,
-        steps: stepCount,
-        success: successCount,
-        fail: failCount
-      })
-
-      if (failCount === 0) {
-        showToast('success', '工作流执行成功', `共执行 ${successCount} 个节点`)
-      } else if (successCount > 0) {
-        showToast('error', '工作流部分失败', `成功: ${successCount}, 失败: ${failCount}`)
-      }
-    } catch (error: any) {
-      console.error('工作流执行失败', error)
-      showToast(
-        'error',
-        '工作流执行异常',
-        error.message || '未知错误'
-      )
-    } finally {
-      setIsRunning(false)
-    }
-  }, [workflow, onRunAll, isRunning, nodes, showToast])
-
-  const handleSave = useCallback(async () => {
-    if (onSave) {
-      onSave()
-      return
-    }
-
-    if (!workflow.workflowAst) {
-      showToast('error', '保存失败', '工作流不存在')
-      return
-    }
-
-    if (isSaving) {
-      showToast('info', '正在保存中', '请稍候')
-      return
-    }
-
-    setIsSaving(true)
-
-    try {
-      const currentViewport = getViewport()
-      workflow.workflowAst.viewport = currentViewport
-
-      console.log('准备保存工作流:', {
-        name: workflow.workflowAst.name,
-        nodes: workflow.workflowAst.nodes.length,
-        edges: workflow.workflowAst.edges.length,
-        viewport: currentViewport,
-        edgesDetail: workflow.workflowAst.edges.map(e => ({
-          from: e.from,
-          to: e.to,
-          fromProperty: (e as any).fromProperty,
-          toProperty: (e as any).toProperty
-        }))
-      })
-
-      const controller = root.get<WorkflowController>(WorkflowController)
-      const result = await controller.saveWorkflow(workflow.workflowAst)
-
-      console.log('工作流保存成功', result)
-      showToast('success', '保存成功', '工作流已保存')
-    } catch (error: any) {
-      console.error('工作流保存失败', error)
-      showToast('error', '保存失败', error.message || '未知错误')
-    } finally {
-      setIsSaving(false)
-    }
-  }, [workflow, name, onSave, isSaving, getViewport, showToast])
-
-  /**
-   * 保存子工作流
-   *
-   * 优雅设计：
-   * - 更新父工作流中对应节点的 AST 实例
-   * - 同步状态到 UI，确保缩略图实时更新
-   * - 保持父子工作流数据的一致性
-   */
-  const handleSaveSubWorkflow = useCallback((parentNodeId: string, updatedAst: WorkflowGraphAst) => {
-    if (!workflow.workflowAst) return
-
-    try {
-      // 查找父工作流中的对应节点
-      const parentNode = workflow.workflowAst.nodes.find(node => node.id === parentNodeId)
-      if (parentNode && parentNode.type === 'WorkflowGraphAst') {
-        // 更新节点的 AST 实例
-        Object.assign(parentNode, updatedAst)
-
-        // 同步状态到 UI
-        workflow.syncFromAst()
-
-        console.log('子工作流保存成功', {
-          parentNodeId,
-          nodeCount: updatedAst.nodes.length,
-          edgeCount: updatedAst.edges.length
-        })
-
-        showToast('success', '子工作流已保存', '更改已同步到父工作流')
-      }
-    } catch (error) {
-      console.error('保存子工作流失败', error)
-      showToast('error', '保存失败', '无法更新子工作流')
-    }
-  }, [workflow, showToast])
-
-  /**
    * 关闭子工作流弹框
    */
   const handleCloseSubWorkflowModal = useCallback(() => {
@@ -767,7 +561,7 @@ export function WorkflowCanvas({
         onSelectAll={handleSelectAll}
         onClearCanvas={handleClearCanvas}
         onDeleteNode={handleDeleteNode}
-        onRunNode={handleRunNodeInternal}
+        onRunNode={runNode}
         onDeleteEdge={handleDeleteEdge}
         onClose={closeMenu}
       />
@@ -798,7 +592,7 @@ export function WorkflowCanvas({
         workflowAst={subWorkflowModal.workflowAst}
         parentNodeId={subWorkflowModal.nodeId}
         onClose={handleCloseSubWorkflowModal}
-        onSave={handleSaveSubWorkflow}
+        onSave={saveSubWorkflow}
       />
 
       {settingPanel.visible && (
