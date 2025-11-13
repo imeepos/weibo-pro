@@ -14,9 +14,9 @@ import { UserRelationController } from '@sker/sdk';
 
 const UserRelationTopology: React.FC = () => {
   const [relationType, setRelationType] = useState<UserRelationType>('comprehensive');
-  const [timeRange, setTimeRange] = useState<TimeRange>('7d');
+  const [timeRange, setTimeRange] = useState<TimeRange>('90d');
   const [minWeight, setMinWeight] = useState(2);
-  const [limit, setLimit] = useState(100);
+  const [limit, setLimit] = useState(200);
   const [network, setNetwork] = useState<UserRelationNetwork | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
