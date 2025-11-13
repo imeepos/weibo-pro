@@ -7,6 +7,8 @@ import type {
   UserRelationEdge,
 } from '@sker/sdk';
 
+const imageCache = new Map<string, THREE.Texture>();
+
 interface UserRelationGraph3DProps {
   network: UserRelationNetwork;
   className?: string;
@@ -96,56 +98,82 @@ const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
     }
   }, [graphData.links, onNodeHover]);
 
-  const paintNode = useCallback((node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
-    const label = node.name;
-    const fontSize = 12 / globalScale;
-    ctx.font = `${fontSize}px Sans-Serif`;
+  const nodeThreeObject = useCallback((node: any) => {
+    const typedNode = node as UserRelationNode;
+    const group = new THREE.Group();
 
-    const isHighlight = highlightNodes.has(node.id);
+    const radius = Math.sqrt(typedNode.influence) / 2 + 3;
 
-    ctx.fillStyle = isHighlight ? '#ffffff' : node.color;
-    ctx.beginPath();
-    ctx.arc(node.x, node.y, node.val * 1.4, 0, 2 * Math.PI);
-    ctx.fill();
+    if (typedNode.avatar) {
+      const textureLoader = new THREE.TextureLoader();
 
-    if (isHighlight || hoverNode?.id === node.id) {
-      ctx.strokeStyle = '#ffeb3b';
-      ctx.lineWidth = 2 / globalScale;
-      ctx.stroke();
+      const avatarTexture = imageCache.has(typedNode.avatar)
+        ? imageCache.get(typedNode.avatar)!
+        : textureLoader.load(
+            typedNode.avatar,
+            (texture) => {
+              imageCache.set(typedNode.avatar!, texture);
+            },
+            undefined,
+            () => {
+              const backupGeometry = new THREE.SphereGeometry(radius, 16, 16);
+              const backupMaterial = new THREE.MeshLambertMaterial({
+                color: getUserTypeColor(typedNode.userType),
+              });
+              const backupSphere = new THREE.Mesh(backupGeometry, backupMaterial);
+
+              if (highlightNodes.has(typedNode.id) || hoverNode?.id === typedNode.id) {
+                const ringGeometry = new THREE.TorusGeometry(radius + 0.5, 0.2, 8, 32);
+                const ringMaterial = new THREE.MeshBasicMaterial({ color: 0xffeb3b });
+                const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+                group.add(ring);
+              }
+
+              group.add(backupSphere);
+            }
+          );
+
+      if (avatarTexture) {
+        avatarTexture.minFilter = THREE.LinearFilter;
+        const material = new THREE.SpriteMaterial({ map: avatarTexture });
+        const sprite = new THREE.Sprite(material);
+
+        const imageRatio = avatarTexture.image
+          ? avatarTexture.image.width / avatarTexture.image.height
+          : 1;
+        const spriteScale = radius * 2;
+        sprite.scale.set(spriteScale * imageRatio, spriteScale, 1);
+
+        if (highlightNodes.has(typedNode.id) || hoverNode?.id === typedNode.id) {
+          const ringGeometry = new THREE.TorusGeometry(radius + 0.5, 0.2, 8, 32);
+          const ringMaterial = new THREE.MeshBasicMaterial({ color: 0xffeb3b });
+          const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+          group.add(ring);
+        }
+
+        group.add(sprite);
+        return group;
+      }
     }
 
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = isHighlight ? '#000000' : '#ffffff';
-    ctx.fillText(label, node.x, node.y + node.val * 1.4 + fontSize);
+    const geometry = new THREE.SphereGeometry(radius, 16, 16);
+    const material = new THREE.MeshLambertMaterial({
+      color: getUserTypeColor(typedNode.userType),
+    });
+    const sphere = new THREE.Mesh(geometry, material);
 
-    if (node.verified) {
-      ctx.fillStyle = '#2196f3';
-      ctx.beginPath();
-      ctx.arc(node.x + node.val, node.y - node.val, 3 / globalScale, 0, 2 * Math.PI);
-      ctx.fill();
+    if (highlightNodes.has(typedNode.id) || hoverNode?.id === typedNode.id) {
+      const ringGeometry = new THREE.TorusGeometry(radius + 0.5, 0.2, 8, 32);
+      const ringMaterial = new THREE.MeshBasicMaterial({ color: 0xffeb3b });
+      const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+      group.add(ring);
     }
+
+    group.add(sphere);
+
+    return group;
   }, [highlightNodes, hoverNode]);
 
-  const paintLink = useCallback((link: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
-    const start = link.source;
-    const end = link.target;
-
-    if (typeof start !== 'object' || typeof end !== 'object') return;
-
-    const linkId = `${start.id}-${end.id}`;
-    const isHighlight = highlightLinks.has(linkId) || highlightLinks.has(`${end.id}-${start.id}`);
-
-    ctx.strokeStyle = isHighlight ? '#ffeb3b' : getEdgeColor(link.type);
-    ctx.lineWidth = (isHighlight ? link.value / 5 + 2 : link.value / 10 + 0.5) / globalScale;
-    ctx.globalAlpha = isHighlight ? 0.8 : 0.3;
-
-    ctx.beginPath();
-    ctx.moveTo(start.x, start.y, start.z);
-    ctx.lineTo(end.x, end.y, end.z);
-    ctx.stroke();
-    ctx.globalAlpha = 1.0;
-  }, [highlightLinks]);
 
   return (
     <div className={`relative ${className}`}>
@@ -162,10 +190,7 @@ const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
             ${node.verified ? '<div style="color: #2196f3;">✓ 已认证</div>' : ''}
           </div>
         `}
-        nodeVal={(node: any) => node.val}
-        nodeColor={(node: any) => node.color}
-        nodeOpacity={0.9}
-        nodeResolution={16}
+        nodeThreeObject={nodeThreeObject}
         linkWidth={(link: any) => link.value / 10 + 0.5}
         linkColor={(link: any) => getEdgeColor(link.type)}
         linkOpacity={0.3}
@@ -174,8 +199,6 @@ const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
         linkDirectionalParticleSpeed={0.005}
         onNodeClick={handleNodeClick}
         onNodeHover={handleNodeHover}
-        nodeCanvasObject={paintNode}
-        linkCanvasObject={paintLink}
         backgroundColor="#0a0a0f"
         showNavInfo={false}
         controlType="orbit"
