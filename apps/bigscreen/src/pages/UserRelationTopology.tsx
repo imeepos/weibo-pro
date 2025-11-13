@@ -242,31 +242,31 @@ const UserRelationTopology: React.FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-            className="absolute bottom-4 right-4 grid grid-cols-4 gap-2"
+            className="absolute bottom-4 right-4 grid grid-cols-4 gap-1.5"
           >
-            <div className="backdrop-blur-sm bg-background/50 rounded-lg p-3">
-              <div className="text-xl font-bold text-primary">
+            <div className="backdrop-blur-sm bg-background/50 rounded-lg p-2">
+              <div className="text-lg font-bold text-primary">
                 {network.statistics.totalUsers}
               </div>
-              <div className="text-xs text-muted-foreground">用户节点</div>
+              <div className="text-[10px] text-muted-foreground">用户节点</div>
             </div>
-            <div className="backdrop-blur-sm bg-background/50 rounded-lg p-3">
-              <div className="text-xl font-bold text-violet">
+            <div className="backdrop-blur-sm bg-background/50 rounded-lg p-2">
+              <div className="text-lg font-bold text-violet">
                 {network.statistics.totalRelations}
               </div>
-              <div className="text-xs text-muted-foreground">关系连接</div>
+              <div className="text-[10px] text-muted-foreground">关系连接</div>
             </div>
-            <div className="backdrop-blur-sm bg-background/50 rounded-lg p-3">
-              <div className="text-xl font-bold text-cyan">
+            <div className="backdrop-blur-sm bg-background/50 rounded-lg p-2">
+              <div className="text-lg font-bold text-cyan">
                 {network.statistics.avgDegree}
               </div>
-              <div className="text-xs text-muted-foreground">平均度数</div>
+              <div className="text-[10px] text-muted-foreground">平均度数</div>
             </div>
-            <div className="backdrop-blur-sm bg-background/50 rounded-lg p-3">
-              <div className="text-xl font-bold text-fuchsia">
+            <div className="backdrop-blur-sm bg-background/50 rounded-lg p-2">
+              <div className="text-lg font-bold text-fuchsia">
                 {(network.statistics.density * 100).toFixed(2)}%
               </div>
-              <div className="text-xs text-muted-foreground">网络密度</div>
+              <div className="text-[10px] text-muted-foreground">网络密度</div>
             </div>
           </motion.div>
         )}
