@@ -1,4 +1,5 @@
 import React from 'react';
+import { RefreshCw, Link, ThumbsUp, MessageCircle, Share2, Lightbulb, Info } from 'lucide-react';
 import type { UserRelationType, TimeRange } from '@sker/sdk';
 
 interface UserRelationControlsProps {
@@ -26,11 +27,11 @@ const UserRelationControls: React.FC<UserRelationControlsProps> = ({
   onRefresh,
   isLoading = false,
 }) => {
-  const relationTypes: Array<{ value: UserRelationType; label: string; icon: string }> = [
-    { value: 'comprehensive', label: '综合关系', icon: '🔗' },
-    { value: 'like', label: '点赞', icon: '❤️' },
-    { value: 'comment', label: '评论', icon: '💬' },
-    { value: 'repost', label: '转发', icon: '🔄' },
+  const relationTypes: Array<{ value: UserRelationType; label: string; icon: React.ReactNode }> = [
+    { value: 'comprehensive', label: '综合关系', icon: <Link className="w-4 h-4" /> },
+    { value: 'like', label: '点赞', icon: <ThumbsUp className="w-4 h-4" /> },
+    { value: 'comment', label: '评论', icon: <MessageCircle className="w-4 h-4" /> },
+    { value: 'repost', label: '转发', icon: <Share2 className="w-4 h-4" /> },
   ];
 
   const timeRanges: Array<{ value: TimeRange; label: string }> = [
@@ -41,29 +42,29 @@ const UserRelationControls: React.FC<UserRelationControlsProps> = ({
   ];
 
   return (
-    <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-lg p-6 shadow-2xl border border-gray-700">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-xl font-bold text-white">控制面板</h3>
+    <div className="backdrop-blur-sm bg-background/50 rounded-lg p-4 shadow-lg">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-base font-semibold text-foreground">控制面板</h3>
         <button
           onClick={onRefresh}
           disabled={isLoading}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded-lg transition-colors duration-200 flex items-center gap-2"
+          className="px-3 py-1.5 bg-primary hover:bg-primary/90 disabled:bg-secondary text-primary-foreground rounded-md transition-colors duration-200 flex items-center gap-2 text-sm"
         >
           {isLoading ? (
             <>
-              <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <span className="inline-block w-3 h-3 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
               加载中...
             </>
           ) : (
             <>
-              <span>🔄</span>
+              <RefreshCw className="w-3 h-3" />
               刷新数据
             </>
           )}
         </button>
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-4">
         {/* 关系类型选择 */}
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-3">
