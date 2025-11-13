@@ -31,13 +31,20 @@ export function astToFlowEdges(ast: { edges: IEdge[] }): WorkflowEdge[] {
 
 /**
  * 转换单个节点
+ * @param node - AST 节点实例
+ * @returns React Flow 节点（类型安全，直接引用 AST 实例）
+ *
+ * 优雅设计：
+ * - data 属性直接引用 AST 实例，而非深拷贝
+ * - 保持引用透明性，修改 AST 立即反映到 UI
+ * - 类型安全，无需 any 断言
  */
-function toFlowNode(node: INode): WorkflowNode {
+function toFlowNode<T extends INode>(node: T): WorkflowNode<T> {
   return {
     id: node.id,
     type: node.type,
     position: node.position || { x: 0, y: 0 },
-    data: node
+    data: node // 直接引用，保持引用透明性
   }
 }
 

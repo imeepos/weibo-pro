@@ -37,6 +37,7 @@ import { ShareDialog } from './ShareDialog'
 import { Toast, type ToastType } from './Toast'
 import { SubWorkflowModal } from '../SubWorkflowModal'
 import { LeftDrawer } from '../LeftDrawer'
+import { SettingPanel } from '../SettingPanel'
 import { cn } from '../../utils/cn'
 import { root } from '@sker/core'
 import { WorkflowController } from '@sker/sdk'
@@ -97,6 +98,13 @@ export function WorkflowCanvas({
     title: string
     message?: string
   }>({ visible: false, type: 'info', title: '' })
+
+  // 设置面板状态
+  const [settingPanel, setSettingPanel] = useState<{
+    visible: boolean
+    nodeId?: string
+    nodeData?: any
+  }>({ visible: false })
 
   // 左侧抽屉状态
   const [drawer, setDrawer] = useState<{ visible: boolean; nodeId?: string }>({
@@ -182,6 +190,32 @@ export function WorkflowCanvas({
 
     window.addEventListener('open-sub-workflow', handleOpenSubWorkflow)
     return () => window.removeEventListener('open-sub-workflow', handleOpenSubWorkflow)
+  }, [])
+
+  /**
+   * 监听打开设置面板事件
+   *
+   * 优雅设计：
+   * - 节点渲染器通过自定义事件触发
+   * - 在这里统一处理设置面板的打开
+   * - 支持双击节点展开配置表单
+   */
+  React.useEffect(() => {
+    const handleOpenSettingPanel = (e: Event) => {
+      const customEvent = e as CustomEvent
+      const { nodeId, nodeData } = customEvent.detail
+
+      console.log('监听到 open-setting-panel 事件:', { nodeId })
+
+      setSettingPanel({
+        visible: true,
+        nodeId,
+        nodeData
+      })
+    }
+
+    window.addEventListener('open-setting-panel', handleOpenSettingPanel)
+    return () => window.removeEventListener('open-setting-panel', handleOpenSettingPanel)
   }, [])
 
   const {
@@ -633,6 +667,13 @@ export function WorkflowCanvas({
     setSubWorkflowModal({ visible: false })
   }, [])
 
+  /**
+   * 关闭设置面板
+   */
+  const handleCloseSettingPanel = useCallback(() => {
+    setSettingPanel({ visible: false })
+  }, [])
+
   return (
     <div
       className={cn(
@@ -774,6 +815,14 @@ export function WorkflowCanvas({
         onClose={handleCloseSubWorkflowModal}
         onSave={handleSaveSubWorkflow}
       />
+
+      {settingPanel.visible && (
+        <SettingPanel
+          nodeId={settingPanel.nodeId || null}
+          nodeData={settingPanel.nodeData}
+          onClose={handleCloseSettingPanel}
+        />
+      )}
 
       <LeftDrawer
         visible={drawer.visible}

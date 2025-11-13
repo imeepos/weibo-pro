@@ -7,8 +7,9 @@ import type { IDataEdge, IControlEdge, INode } from '@sker/workflow'
  * 优雅设计：
  * - 支持动态节点类型，每个 AST 类都可以有自己的渲染器
  * - type 属性与 AST 实例的 type 属性对应
+ * - 使用泛型提供类型安全的节点数据访问
  */
-export type WorkflowNode = Node<INode, string>
+export type WorkflowNode<T extends INode = INode> = Node<T, string>
 
 /**
  * React Flow 边数据结构

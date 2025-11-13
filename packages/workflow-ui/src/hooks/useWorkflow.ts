@@ -50,16 +50,20 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
 
   // 监听节点位置变化，同步到 AST
+  // 优雅设计：
+  // - 细粒度同步，仅更新位置属性
+  // - 引用透明性，React Flow 节点 data 直接引用 AST 实例
+  // - 类型安全，无需 any 断言
   useEffect(() => {
     nodes.forEach((node) => {
       const astNode = workflowAst.nodes.find((n) => n.id === node.id)
       if (astNode) {
-        const currentPos = (astNode as any).position
+        const currentPos = astNode.position
         const newPos = node.position
 
         // 只有位置真正改变时才更新
         if (!currentPos || currentPos.x !== newPos.x || currentPos.y !== newPos.y) {
-          (astNode as any).position = newPos
+          astNode.position = newPos
         }
       }
     })
