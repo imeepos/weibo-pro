@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { useSelectedNode } from './useSelectedNode'
-import { PropertyField } from './PropertyField'
+import { SmartFormField } from './SmartFormField'
 import { useReactFlow } from '@xyflow/react'
 import { getNodeMetadata } from '../../adapters'
 import { resolveConstructor } from '@sker/workflow'
@@ -66,10 +66,11 @@ export function PropertyPanel({ className = '' }: PropertyPanelProps) {
           <div className="property-panel-section">
             <h4 className="property-panel-section-title">输入属性</h4>
             {editableProperties.map((prop) => (
-              <PropertyField
+              <SmartFormField
                 key={prop.property}
                 label={prop.label || prop.property}
                 value={prop.value}
+                type={prop.type}
                 onChange={(value) => handlePropertyChange(prop.property, value)}
               />
             ))}

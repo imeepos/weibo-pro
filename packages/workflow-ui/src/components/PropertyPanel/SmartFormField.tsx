@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import './SmartFormField.css'
 
 export interface SmartFormFieldProps {
   label: string

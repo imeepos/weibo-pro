@@ -21,3 +21,6 @@ export { BatchPushToMQAst, BatchPushMode } from './BatchPushToMQAst'
 export { CodeExecutorAst, type CodeLanguage, type ExecutionLog } from './CodeExecutorAst'
 
 export { WorkflowGraphAst, ArrayIteratorAst } from '@sker/workflow'
+
+// 表单测试 AST
+export { TestFormAst } from './TestFormAst'
