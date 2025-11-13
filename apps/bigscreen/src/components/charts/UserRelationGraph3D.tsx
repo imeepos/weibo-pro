@@ -7,8 +7,6 @@ import type {
   UserRelationEdge,
 } from '@sker/sdk';
 
-const imageCache = new Map<string, THREE.Texture>();
-
 interface UserRelationGraph3DProps {
   network: UserRelationNetwork;
   className?: string;
@@ -103,58 +101,6 @@ const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
     const group = new THREE.Group();
 
     const radius = Math.sqrt(typedNode.influence) / 2 + 3;
-
-    if (typedNode.avatar) {
-      const textureLoader = new THREE.TextureLoader();
-
-      const avatarTexture = imageCache.has(typedNode.avatar)
-        ? imageCache.get(typedNode.avatar)!
-        : textureLoader.load(
-            typedNode.avatar,
-            (texture) => {
-              imageCache.set(typedNode.avatar!, texture);
-            },
-            undefined,
-            () => {
-              const backupGeometry = new THREE.SphereGeometry(radius, 16, 16);
-              const backupMaterial = new THREE.MeshLambertMaterial({
-                color: getUserTypeColor(typedNode.userType),
-              });
-              const backupSphere = new THREE.Mesh(backupGeometry, backupMaterial);
-
-              if (highlightNodes.has(typedNode.id) || hoverNode?.id === typedNode.id) {
-                const ringGeometry = new THREE.TorusGeometry(radius + 0.5, 0.2, 8, 32);
-                const ringMaterial = new THREE.MeshBasicMaterial({ color: 0xffeb3b });
-                const ring = new THREE.Mesh(ringGeometry, ringMaterial);
-                group.add(ring);
-              }
-
-              group.add(backupSphere);
-            }
-          );
-
-      if (avatarTexture) {
-        avatarTexture.minFilter = THREE.LinearFilter;
-        const material = new THREE.SpriteMaterial({ map: avatarTexture });
-        const sprite = new THREE.Sprite(material);
-
-        const imageRatio = avatarTexture.image
-          ? avatarTexture.image.width / avatarTexture.image.height
-          : 1;
-        const spriteScale = radius * 2;
-        sprite.scale.set(spriteScale * imageRatio, spriteScale, 1);
-
-        if (highlightNodes.has(typedNode.id) || hoverNode?.id === typedNode.id) {
-          const ringGeometry = new THREE.TorusGeometry(radius + 0.5, 0.2, 8, 32);
-          const ringMaterial = new THREE.MeshBasicMaterial({ color: 0xffeb3b });
-          const ring = new THREE.Mesh(ringGeometry, ringMaterial);
-          group.add(ring);
-        }
-
-        group.add(sprite);
-        return group;
-      }
-    }
 
     const geometry = new THREE.SphereGeometry(radius, 16, 16);
     const material = new THREE.MeshLambertMaterial({
