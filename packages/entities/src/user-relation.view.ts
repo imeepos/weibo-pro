@@ -14,7 +14,7 @@ import { ViewEntity } from './decorator';
     JOIN weibo_posts p ON l.target_weibo_id = p.id
     WHERE l.user_weibo_id != (p.user->>'id')::numeric
       AND p.user->>'id' IS NOT NULL
-    GROUP BY l.user_weibo_id, p.user->>'id'
+    GROUP BY l.user_weibo_id, (p.user->>'id')::numeric
   `,
 })
 export class UserLikeRelationView {
@@ -48,7 +48,7 @@ export class UserLikeRelationView {
     WHERE c.user->>'id' IS NOT NULL
       AND p.user->>'id' IS NOT NULL
       AND c.user->>'id' != p.user->>'id'
-    GROUP BY c.user->>'id', p.user->>'id'
+    GROUP BY (c.user->>'id')::numeric, (p.user->>'id')::numeric
   `,
 })
 export class UserCommentRelationView {
@@ -82,7 +82,7 @@ export class UserCommentRelationView {
       AND r.user->>'id' IS NOT NULL
       AND r.retweeted_status->'user'->>'id' IS NOT NULL
       AND r.user->>'id' != r.retweeted_status->'user'->>'id'
-    GROUP BY r.user->>'id', r.retweeted_status->'user'->>'id'
+    GROUP BY (r.user->>'id')::numeric, (r.retweeted_status->'user'->>'id')::numeric
   `,
 })
 export class UserRepostRelationView {
