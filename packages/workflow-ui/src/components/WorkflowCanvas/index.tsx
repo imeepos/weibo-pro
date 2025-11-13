@@ -1,5 +1,5 @@
 'use client'
-import React, { useCallback, useState } from 'react'
+import React, { useCallback } from 'react'
 import {
   ReactFlow,
   Background,
@@ -31,6 +31,7 @@ import { useWorkflow } from '../../hooks/useWorkflow'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { useClipboard } from '../../hooks/useClipboard'
 import { useCanvasControls } from './useCanvasControls'
+import { useCanvasState } from './useCanvasState'
 import { ContextMenu } from './ContextMenu'
 import { NodeSelector } from './NodeSelector'
 import { ShareDialog } from './ShareDialog'
@@ -84,39 +85,32 @@ export function WorkflowCanvas({
   const nodes = workflow.nodes
   const edges = workflow.edges
   const isCanvasEmpty = nodes.length === 0
-  const [isRunning, setIsRunning] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
-  const [shareDialog, setShareDialog] = useState({ visible: false, url: '' })
-  const [subWorkflowModal, setSubWorkflowModal] = useState<{
-    visible: boolean
-    nodeId?: string
-    workflowAst?: WorkflowGraphAst
-  }>({ visible: false })
-  const [toast, setToast] = useState<{
-    visible: boolean
-    type: ToastType
-    title: string
-    message?: string
-  }>({ visible: false, type: 'info', title: '' })
-
-  // 设置面板状态
-  const [settingPanel, setSettingPanel] = useState<{
-    visible: boolean
-    nodeId?: string
-    nodeData?: any
-  }>({ visible: false })
-
-  // 左侧抽屉状态
-  const [drawer, setDrawer] = useState<{ visible: boolean; nodeId?: string }>({
-    visible: false,
-  })
 
   // 获取 ReactFlow 实例以访问 viewport API
   const { getViewport, setViewport } = useReactFlow()
 
-  const showToast = useCallback((type: ToastType, title: string, message?: string) => {
-    setToast({ visible: true, type, title, message })
-  }, [])
+  // 使用 CanvasState 集中管理所有状态
+  const {
+    isRunning,
+    setIsRunning,
+    isSaving,
+    setIsSaving,
+    shareDialog,
+    openShareDialog,
+    closeShareDialog,
+    subWorkflowModal,
+    openSubWorkflowModal,
+    closeSubWorkflowModal,
+    toast,
+    showToast,
+    hideToast,
+    settingPanel,
+    openSettingPanel,
+    closeSettingPanel,
+    drawer,
+    openDrawer,
+    closeDrawer,
+  } = useCanvasState()
 
   /**
    * 恢复视图窗口状态
@@ -181,11 +175,7 @@ export function WorkflowCanvas({
 
       console.log('监听到 open-sub-workflow 事件:', { nodeId })
 
-      setSubWorkflowModal({
-        visible: true,
-        nodeId,
-        workflowAst
-      })
+      openSubWorkflowModal({ nodeId, workflowAst })
     }
 
     window.addEventListener('open-sub-workflow', handleOpenSubWorkflow)
@@ -206,12 +196,7 @@ export function WorkflowCanvas({
       const { nodeId, nodeData } = customEvent.detail
 
       console.log('监听到 open-setting-panel 事件:', { nodeId })
-
-      setSettingPanel({
-        visible: true,
-        nodeId,
-        nodeData
-      })
+      openSettingPanel({ nodeId, nodeData })
     }
 
     window.addEventListener('open-setting-panel', handleOpenSettingPanel)
@@ -338,15 +323,15 @@ export function WorkflowCanvas({
    * 打开左侧抽屉显示节点属性
    */
   const handleNodeDoubleClick = useCallback((nodeId: string) => {
-    setDrawer({ visible: true, nodeId })
-  }, [])
+    openDrawer(nodeId)
+  }, [openDrawer])
 
   /**
    * 关闭左侧抽屉
    */
   const handleCloseDrawer = useCallback(() => {
-    setDrawer({ visible: false, nodeId: undefined })
-  }, [])
+    closeDrawer()
+  }, [closeDrawer])
 
   /**
    * 监听节点双点击查看节点事件
@@ -664,15 +649,15 @@ export function WorkflowCanvas({
    * 关闭子工作流弹框
    */
   const handleCloseSubWorkflowModal = useCallback(() => {
-    setSubWorkflowModal({ visible: false })
-  }, [])
+    closeSubWorkflowModal()
+  }, [closeSubWorkflowModal])
 
   /**
    * 关闭设置面板
    */
   const handleCloseSettingPanel = useCallback(() => {
-    setSettingPanel({ visible: false })
-  }, [])
+    closeSettingPanel()
+  }, [closeSettingPanel])
 
   return (
     <div
@@ -797,7 +782,7 @@ export function WorkflowCanvas({
       <ShareDialog
         visible={shareDialog.visible}
         shareUrl={shareDialog.url}
-        onClose={() => setShareDialog({ visible: false, url: '' })}
+        onClose={closeShareDialog}
       />
 
       <Toast
@@ -805,7 +790,7 @@ export function WorkflowCanvas({
         type={toast.type}
         title={toast.title}
         message={toast.message}
-        onClose={() => setToast({ visible: false, type: 'info', title: '' })}
+        onClose={hideToast}
       />
 
       <SubWorkflowModal
