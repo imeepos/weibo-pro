@@ -36,7 +36,7 @@ function toFlowNode(node: INode): WorkflowNode {
   return {
     id: node.id,
     type: node.type,
-    position: node.position,
+    position: node.position || { x: 0, y: 0 },
     data: node
   }
 }

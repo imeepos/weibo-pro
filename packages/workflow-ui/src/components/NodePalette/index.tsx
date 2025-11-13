@@ -44,7 +44,7 @@ export function NodePalette({ className = '' }: NodePaletteProps) {
 
       const node: WorkflowNode = {
         id: ast.id,
-        type: ast.type,
+        type: metadata.type,
         position,
         data: ast,
       }

@@ -20,8 +20,12 @@ export interface WorkflowNodeData extends Record<string, unknown> {
 
 /**
  * React Flow 节点类型
+ *
+ * 优雅设计：
+ * - 支持动态节点类型，每个 AST 类都可以有自己的渲染器
+ * - type 属性与 AST 实例的 type 属性对应
  */
-export type WorkflowNode = Node<INode, string>
+export type WorkflowNode = Node<WorkflowNodeData, string>
 
 /**
  * React Flow 边数据结构

@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from 'react'
 import { useReactFlow, type Connection, } from '@xyflow/react'
 import { useSelectionStore } from '../../store'
-import { getAllNodeTypes } from '../../adapters'
+import { getAllNodeTypes, getNodeMetadata } from '../../adapters'
 import { generateId } from '@sker/workflow'
 import type { WorkflowEdge, WorkflowNode, NodeMetadata } from '../../types'
 import { useContextMenu } from './useContextMenu'
@@ -172,9 +172,10 @@ export function useCanvasControls() {
       const ast = new NodeClass()
       ast.id = generateId()
 
+      const nodeMetadata = getNodeMetadata(NodeClass)
       const node: WorkflowNode = {
         id: ast.id,
-        type: ast.type,
+        type: nodeMetadata.type,
         position: menu.flowPosition,
         data: ast,
       }
@@ -200,9 +201,10 @@ export function useCanvasControls() {
       const ast = new NodeClass()
       ast.id = generateId()
 
+      const nodeMetadata = getNodeMetadata(NodeClass)
       const node: WorkflowNode = {
         id: ast.id,
-        type: ast.type,
+        type: nodeMetadata.type,
         position: nodeSelector.flowPosition,
         data: ast,
       }

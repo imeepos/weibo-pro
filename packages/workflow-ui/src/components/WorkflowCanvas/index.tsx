@@ -667,6 +667,7 @@ export function WorkflowCanvas({
             elementsSelectable={true}
             minZoom={0.1}
             maxZoom={4}
+            zoomOnDoubleClick={false}  // 禁用双击缩放，确保双击空白区域只打开节点选择器
             className="workflow-canvas__reactflow"
             style={{ background: '#1a1d24' }}
           >

@@ -4,6 +4,7 @@ import type { INode, IEdge } from '@sker/workflow'
 import { useNodesState, useEdgesState, addEdge, type Connection } from '@xyflow/react'
 import type { WorkflowNode, WorkflowEdge } from '../types'
 import { astToFlowNodes, astToFlowEdges } from '../adapters/ast-to-flow'
+import { getNodeMetadata } from '../adapters/metadata'
 
 export interface UseWorkflowReturn {
   workflowAst: WorkflowGraphAst
@@ -85,9 +86,10 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
 
       workflowAst.addNode(ast)
 
+      const metadata = getNodeMetadata(nodeClass)
       const node: WorkflowNode = {
         id: ast.id,
-        type: ast.type,
+        type: metadata.type,
         position,
         data: ast,
       }
