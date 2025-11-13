@@ -61,14 +61,14 @@ export function SmartFormField({ label, value, type = 'any', onChange }: SmartFo
     switch (type) {
       case 'boolean':
         return (
-          <label className="smart-form-checkbox">
+          <label className="flex items-center cursor-pointer select-none">
             <input
               type="checkbox"
               checked={Boolean(value)}
               onChange={(e) => onChange(e.target.checked)}
-              className="smart-form-checkbox-input"
+              className="w-4 h-4 mr-2 cursor-pointer accent-blue-600"
             />
-            <span className="smart-form-checkbox-label">{label}</span>
+            <span className="text-sm text-gray-800 cursor-pointer">{label}</span>
           </label>
         )
 
@@ -76,7 +76,7 @@ export function SmartFormField({ label, value, type = 'any', onChange }: SmartFo
         return (
           <input
             type="number"
-            className={`smart-form-input ${error ? 'smart-form-input-error' : ''}`}
+            className={`w-full px-3 py-2 text-sm border rounded-md bg-white text-gray-800 transition-all duration-200 box-border focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 focus:ring-opacity-50 hover:border-gray-400 ${error ? 'border-red-500 bg-red-50 focus:border-red-500 focus:ring-red-100' : 'border-gray-300'}`}
             value={localValue}
             onChange={(e) => handleChange(e.target.value)}
             onBlur={handleBlur}
@@ -89,7 +89,7 @@ export function SmartFormField({ label, value, type = 'any', onChange }: SmartFo
         return (
           <input
             type="date"
-            className="smart-form-input"
+            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md bg-white text-gray-800 transition-all duration-200 box-border focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 focus:ring-opacity-50 hover:border-gray-400"
             value={formatDateForInput(value)}
             onChange={(e) => onChange(new Date(e.target.value))}
           />
@@ -99,7 +99,7 @@ export function SmartFormField({ label, value, type = 'any', onChange }: SmartFo
         return (
           <input
             type="datetime-local"
-            className="smart-form-input"
+            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md bg-white text-gray-800 transition-all duration-200 box-border focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 focus:ring-opacity-50 hover:border-gray-400"
             value={formatDateTimeForInput(value)}
             onChange={(e) => onChange(new Date(e.target.value))}
           />
@@ -108,7 +108,7 @@ export function SmartFormField({ label, value, type = 'any', onChange }: SmartFo
       case 'textarea':
         return (
           <textarea
-            className={`smart-form-textarea ${error ? 'smart-form-textarea-error' : ''}`}
+            className={`w-full px-3 py-2 text-sm border rounded-md bg-white text-gray-800 transition-all duration-200 box-border resize-y min-h-20 font-inherit focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 focus:ring-opacity-50 hover:border-gray-400 ${error ? 'border-red-500 bg-red-50 focus:border-red-500 focus:ring-red-100' : 'border-gray-300'}`}
             value={localValue}
             onChange={(e) => handleChange(e.target.value)}
             onBlur={handleBlur}
@@ -124,7 +124,7 @@ export function SmartFormField({ label, value, type = 'any', onChange }: SmartFo
         return (
           <input
             type="text"
-            className={`smart-form-input ${error ? 'smart-form-input-error' : ''}`}
+            className={`w-full px-3 py-2 text-sm border rounded-md bg-white text-gray-800 transition-all duration-200 box-border focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 focus:ring-opacity-50 hover:border-gray-400 ${error ? 'border-red-500 bg-red-50 focus:border-red-500 focus:ring-red-100' : 'border-gray-300'}`}
             value={localValue}
             onChange={(e) => handleChange(e.target.value)}
             onBlur={handleBlur}
@@ -139,7 +139,7 @@ export function SmartFormField({ label, value, type = 'any', onChange }: SmartFo
         return (
           <input
             type="text"
-            className={`smart-form-input ${error ? 'smart-form-input-error' : ''}`}
+            className={`w-full px-3 py-2 text-sm border rounded-md bg-white text-gray-800 transition-all duration-200 box-border focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 focus:ring-opacity-50 hover:border-gray-400 ${error ? 'border-red-500 bg-red-50 focus:border-red-500 focus:ring-red-100' : 'border-gray-300'}`}
             value={localValue}
             onChange={(e) => handleChange(e.target.value)}
             onBlur={handleBlur}
@@ -152,19 +152,15 @@ export function SmartFormField({ label, value, type = 'any', onChange }: SmartFo
 
   // 布尔类型使用特殊的布局
   if (type === 'boolean') {
-    return (
-      <div className="smart-form-field smart-form-field-boolean">
-        {renderInput()}
-      </div>
-    )
+    return <div className="mb-3">{renderInput()}</div>
   }
 
   // 其他类型使用标准布局
   return (
-    <div className="smart-form-field">
-      <label className="smart-form-label">{label}</label>
+    <div className="mb-4">
+      <label className="block mb-1.5 text-xs font-medium text-gray-800 leading-snug">{label}</label>
       {renderInput()}
-      {error && <div className="smart-form-error">{error}</div>}
+      {error && <div className="mt-1 text-[11px] text-red-500 leading-snug">{error}</div>}
     </div>
   )
 }
