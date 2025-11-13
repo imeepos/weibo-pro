@@ -25,19 +25,35 @@ const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
   const [highlightLinks, setHighlightLinks] = useState(new Set());
   const [hoverNode, setHoverNode] = useState<UserRelationNode | null>(null);
 
-  const graphData = useMemo(() => ({
-    nodes: network.nodes.map(node => ({
-      ...node,
-      val: Math.sqrt(node.influence) / 2 + 3,
-      color: getUserTypeColor(node.userType),
-    })),
-    links: network.edges.map(edge => ({
-      source: edge.source,
-      target: edge.target,
-      value: edge.weight,
-      type: edge.type,
-    })),
-  }), [network]);
+  const graphData = useMemo(() => {
+    // 计算每个节点的连接数
+    const connectionCountMap = new Map<string, number>();
+
+    network.edges.forEach(edge => {
+      const source = edge.source.toString();
+      const target = edge.target.toString();
+      connectionCountMap.set(source, (connectionCountMap.get(source) || 0) + 1);
+      connectionCountMap.set(target, (connectionCountMap.get(target) || 0) + 1);
+    });
+
+    return {
+      nodes: network.nodes.map(node => {
+        const connectionCount = connectionCountMap.get(node.id.toString()) || 0;
+        return {
+          ...node,
+          connectionCount,
+          val: Math.sqrt(connectionCount) * 2 + 3,
+          color: getUserTypeColor(node.userType),
+        };
+      }),
+      links: network.edges.map(edge => ({
+        source: edge.source,
+        target: edge.target,
+        value: edge.weight,
+        type: edge.type,
+      })),
+    };
+  }, [network]);
 
   useEffect(() => {
     if (fgRef.current) {
@@ -97,18 +113,19 @@ const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
   }, [graphData.links, onNodeHover]);
 
   const nodeThreeObject = useCallback((node: any) => {
-    const typedNode = node as UserRelationNode;
+    const nodeWithConnections = node as any;
+    const connectionCount = nodeWithConnections.connectionCount || 0;
     const group = new THREE.Group();
 
-    const radius = Math.sqrt(typedNode.influence) / 2 + 3;
+    const radius = Math.sqrt(connectionCount) * 2 + 3;
 
     const geometry = new THREE.SphereGeometry(radius, 16, 16);
     const material = new THREE.MeshLambertMaterial({
-      color: getUserTypeColor(typedNode.userType),
+      color: getUserTypeColor(node.userType),
     });
     const sphere = new THREE.Mesh(geometry, material);
 
-    if (highlightNodes.has(typedNode.id) || hoverNode?.id === typedNode.id) {
+    if (highlightNodes.has(node.id) || hoverNode?.id === node.id) {
       const ringGeometry = new THREE.TorusGeometry(radius + 0.5, 0.2, 8, 32);
       const ringMaterial = new THREE.MeshBasicMaterial({ color: 0xffeb3b });
       const ring = new THREE.Mesh(ringGeometry, ringMaterial);
