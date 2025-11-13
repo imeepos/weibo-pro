@@ -2,7 +2,6 @@ import React, { memo } from 'react'
 import { BaseEdge, getBezierPath } from '@xyflow/react'
 import type { EdgeProps } from '@xyflow/react'
 import type { WorkflowEdge } from '../../types'
-// import { EdgeLabel } from './EdgeLabel'  // 标签已禁用
 
 export const DataEdge = memo((props: EdgeProps<WorkflowEdge>) => {
   const { id, sourceX, sourceY, targetX, targetY, data, selected } = props
@@ -12,10 +11,6 @@ export const DataEdge = memo((props: EdgeProps<WorkflowEdge>) => {
     targetX,
     targetY,
   })
-
-  // 注意：标签已禁用，因为技术性的属性映射（mid → mid）对用户意义不大
-  // const label = data ? buildDataEdgeLabel(data) : null
-
   const handleDoubleClick = (event: React.MouseEvent) => {
     event.stopPropagation()
     const customEvent = new CustomEvent('edge-delete', {
@@ -52,7 +47,6 @@ export const DataEdge = memo((props: EdgeProps<WorkflowEdge>) => {
         onContextMenu={handleContextMenu}
         style={{ cursor: 'pointer' }}
       />
-      {/* 标签已禁用 - 技术性的属性映射对用户意义不大 */}
     </>
   )
 })

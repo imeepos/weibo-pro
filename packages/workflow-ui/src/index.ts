@@ -20,7 +20,7 @@ export { PropertyPanel } from './components/PropertyPanel'
 export type { PropertyPanelProps } from './components/PropertyPanel'
 
 export { BaseNode, createNodeTypes } from './components/nodes'
-export { DataEdge, ControlEdge, EdgeLabel, edgeTypes } from './components/edges'
+export { DataEdge, ControlEdge, edgeTypes } from './components/edges'
 
 // 导出 Hooks
 export { useWorkflow } from './hooks'
@@ -45,7 +45,6 @@ export {
 export type {
   WorkflowNode,
   WorkflowEdge,
-  WorkflowNodeData,
   WorkflowEdgeData,
   WorkflowNodeProps,
   WorkflowCanvasState,
