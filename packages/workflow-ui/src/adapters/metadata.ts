@@ -6,6 +6,7 @@ import type { NodeMetadata, PortMetadata } from '../types'
  * 获取节点的输入/输出元数据
  */
 export function getNodeMetadata(nodeClass: Type<any>): NodeMetadata {
+  if(!nodeClass) throw new Error(`node class is null`)
   const inputMetadata = root.get(INPUT, []).filter(it => it.target === nodeClass)
   const outputMetadata = root.get(OUTPUT, []).filter(it => it.target === nodeClass)
   const nodeMetadatas = root.get(NODE, []).filter(it => it.target === nodeClass)

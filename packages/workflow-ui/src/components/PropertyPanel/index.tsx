@@ -5,7 +5,7 @@ import { useSelectedNode } from './useSelectedNode'
 import { PropertyField } from './PropertyField'
 import { useReactFlow } from '@xyflow/react'
 import { getNodeMetadata } from '../../adapters'
-
+import { resolveConstructor } from '@sker/workflow'
 export interface PropertyPanelProps {
   className?: string
 }
@@ -25,8 +25,8 @@ export function PropertyPanel({ className = '' }: PropertyPanelProps) {
     )
   }
 
-  const metadata = getNodeMetadata(selectedNode.data.nodeClass)
-  const ast = selectedNode.data.ast
+  const metadata = getNodeMetadata(resolveConstructor(selectedNode.data.nodeClass))
+  const ast = selectedNode.data
 
   const handlePropertyChange = (property: string, value: any) => {
     // 更新 Ast 实例

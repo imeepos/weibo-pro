@@ -86,13 +86,12 @@ const PortRow = ({
 
 export const BaseNode = memo(({ id, data, selected }: WorkflowNodeProps) => {
   const metadata = getNodeMetadata(data.nodeClass);
-  const maxPorts = Math.max(metadata.inputs.length, metadata.outputs.length);
   const updateNodeInternals = useUpdateNodeInternals();
 
   // 通知 React Flow 更新节点内部状态（Handle 位置）
   useEffect(() => {
     updateNodeInternals(id);
-  }, [id, maxPorts, updateNodeInternals]);
+  }, [id, metadata.inputs.length, metadata.outputs.length, updateNodeInternals]);
 
   const handleContextMenu = (event: React.MouseEvent) => {
     event.preventDefault()
@@ -100,6 +99,15 @@ export const BaseNode = memo(({ id, data, selected }: WorkflowNodeProps) => {
     // 触发自定义事件，让 WorkflowCanvas 处理
     const customEvent = new CustomEvent('node-context-menu', {
       detail: { nodeId: id, event, nodeData: data },
+    })
+    window.dispatchEvent(customEvent)
+  }
+
+  const handleDoubleClick = (event: React.MouseEvent) => {
+    event.stopPropagation()
+    // 触发自定义事件，打开左侧抽屉
+    const customEvent = new CustomEvent('node-double-click', {
+      detail: { nodeId: id, nodeData: data },
     })
     window.dispatchEvent(customEvent)
   }
@@ -113,35 +121,18 @@ export const BaseNode = memo(({ id, data, selected }: WorkflowNodeProps) => {
         'select-none'
       )}
       style={{
-        minWidth: '180px'
+        minWidth: '120px'
       }}
       onContextMenu={handleContextMenu}
+      onDoubleClick={handleDoubleClick}
     >
-      {/* 节点标题 */}
-      <div className="mb-2 pb-1.5 border-b border-slate-600 flex">
-        <div className="text-sm font-medium text-white text-center">
+      {/* 简洁的节点标题 */}
+      <div className="flex items-center gap-2">
+        <div className="text-sm font-medium text-white">
           {data.label}
         </div>
-        <div className="flex-1"></div>
         <NodeStatus state={data.state} error={data.error} />
       </div>
-
-      {/* 端口区域 */}
-      {maxPorts > 0 && (
-        <div className="space-y-0">
-          {Array.from({ length: maxPorts }).map((_, index) => (
-            <PortRow
-              key={
-                metadata.inputs[index]?.property ??
-                metadata.outputs[index]?.property ??
-                `port-${index}`
-              }
-              input={metadata.inputs[index]}
-              output={metadata.outputs[index]}
-            />
-          ))}
-        </div>
-      )}
     </div>
   )
 })

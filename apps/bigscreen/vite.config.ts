@@ -1,6 +1,7 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig, type PluginOption } from 'vite'
+import react from '@vitejs/plugin-react-swc'
 import tailwindcss from '@tailwindcss/vite'
+import swc from 'vite-plugin-swc-transform'
 import path, { join, resolve } from 'path'
 import { homedir } from 'os'
 import { cpSync, existsSync, mkdirSync, rmSync } from 'fs'
@@ -27,10 +28,25 @@ export default defineConfig(({ command }) => {
 
   return {
     plugins: [
-      react({
-        // React优化配置
-      }),
-      tailwindcss(),
+      react() as PluginOption,
+      tailwindcss() as PluginOption,
+      swc({
+        swcOptions: {
+          jsc: {
+            target: 'es2022',
+            parser: {
+              syntax: 'typescript',
+              tsx: true,
+              decorators: true,
+            },
+            transform: {
+              legacyDecorator: true,
+              decoratorMetadata: true,
+              useDefineForClassFields: false,
+            },
+          },
+        },
+      }) as PluginOption,
       ...(isBuild ? [mirrorOutputPlugin] : []),
     ],
     resolve: {
@@ -44,12 +60,12 @@ export default defineConfig(({ command }) => {
       // 配置代理
       proxy: {
         '/api': {
-          target: 'http://localhost:3004',
+          target: 'http://localhost:9001',
           changeOrigin: true,
           secure: false,
         },
         '/ws': {
-          target: 'ws://localhost:3004',
+          target: 'ws://localhost:9001',
           changeOrigin: true,
           secure: false,
           ws: true,

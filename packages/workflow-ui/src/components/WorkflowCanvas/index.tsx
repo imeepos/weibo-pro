@@ -36,6 +36,7 @@ import { NodeSelector } from './NodeSelector'
 import { ShareDialog } from './ShareDialog'
 import { Toast, type ToastType } from './Toast'
 import { SubWorkflowModal } from '../SubWorkflowModal'
+import { LeftDrawer } from '../LeftDrawer'
 import { cn } from '../../utils/cn'
 import { root } from '@sker/core'
 import { WorkflowController } from '@sker/sdk'
@@ -96,6 +97,11 @@ export function WorkflowCanvas({
     title: string
     message?: string
   }>({ visible: false, type: 'info', title: '' })
+
+  // 左侧抽屉状态
+  const [drawer, setDrawer] = useState<{ visible: boolean; nodeId?: string }>({
+    visible: false,
+  })
 
   // 获取 ReactFlow 实例以访问 viewport API
   const { getViewport, setViewport } = useReactFlow()
@@ -291,6 +297,52 @@ export function WorkflowCanvas({
     },
     [workflow]
   )
+
+  /**
+   * 处理节点双击事件
+   *
+   * 打开左侧抽屉显示节点属性
+   */
+  const handleNodeDoubleClick = useCallback((nodeId: string) => {
+    setDrawer({ visible: true, nodeId })
+  }, [])
+
+  /**
+   * 关闭左侧抽屉
+   */
+  const handleCloseDrawer = useCallback(() => {
+    setDrawer({ visible: false, nodeId: undefined })
+  }, [])
+
+  /**
+   * 监听节点双点击查看节点事件
+   */
+  React.useEffect(() => {
+    const handleDoubleClick = (e: Event) => {
+      const customEvent = e as CustomEvent
+      const { nodeId } = customEvent.detail
+      handleNodeDoubleClick(nodeId)
+    }
+
+    window.addEventListener('node-double-click', handleDoubleClick)
+    return () => window.removeEventListener('node-double-click', handleDoubleClick)
+  }, [])
+
+  /**
+   * 监听节点选择变化事件
+   *
+   * 单击节点时选中（高亮），但不自动打开抽屉
+   */
+  React.useEffect(() => {
+    const handleNodeClick = (e: Event) => {
+      const customEvent = e as CustomEvent
+      const { nodeId } = customEvent.detail
+      console.log('节点被选中:', nodeId)
+    }
+
+    window.addEventListener('node-selected', handleNodeClick)
+    return () => window.removeEventListener('node-selected', handleNodeClick)
+  }, [])
 
   // 集成键盘快捷键
   useKeyboardShortcuts({
@@ -720,6 +772,11 @@ export function WorkflowCanvas({
         parentNodeId={subWorkflowModal.nodeId}
         onClose={handleCloseSubWorkflowModal}
         onSave={handleSaveSubWorkflow}
+      />
+
+      <LeftDrawer
+        visible={drawer.visible}
+        onClose={handleCloseDrawer}
       />
     </div>
   )
