@@ -100,7 +100,7 @@ export function fromJson<T extends object = any>(json: any): T {
     return instance;
 }
 
-export function toJson(ast: Ast): NodeJsonPayload {
+export function toJson(ast: Ast): INode {
     const { inputs, outputs } = snapshotNode(ast);
     return {
         ...inputs,

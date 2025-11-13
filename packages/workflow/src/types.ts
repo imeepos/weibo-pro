@@ -10,7 +10,9 @@ export interface INode extends Record<string, any> {
     position: { x: number; y: number };
 }
 // 数据流边 - 纯粹的数据传递
-export interface IDataEdge {
+export interface IDataEdge extends Record<string, any> {
+    id: string;
+    type: 'data',
     from: string;
     fromProperty?: string;  // 支持嵌套属性路径,如 'currentItem.username' 或 'data.user.profile.name'
     to: string;
@@ -19,7 +21,9 @@ export interface IDataEdge {
 }
 
 // 控制流边 - 纯粹的执行依赖
-export interface IControlEdge {
+export interface IControlEdge extends Record<string, any> {
+    id: string;
+    type: 'control',
     from: string;
     to: string;
     condition?: {

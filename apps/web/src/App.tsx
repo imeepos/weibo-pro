@@ -1,7 +1,7 @@
-import { ReactFlowProvider, WorkflowCanvas } from '@sker/workflow-ui'
+import { CoreFlow, ReactFlowProvider, WorkflowCanvas } from '@sker/workflow-ui'
 import React, { Component, ErrorInfo, ReactNode, useEffect, useState } from 'react'
-import { WorkflowGraphAst, fromJson } from '@sker/workflow'
-import type { Ast } from '@sker/workflow'
+import { WorkflowGraphAst, fromJson, toJson } from '@sker/workflow'
+import type { Ast, INode } from '@sker/workflow'
 import { root } from '@sker/core'
 import { WorkflowController } from '@sker/sdk'
 import "@sker/workflow-ast";
@@ -47,7 +47,7 @@ class ErrorBoundary extends Component<
  */
 function WorkflowCanvasWrapper() {
   const [workflowName, setWorkflowName] = useState<string>('')
-  const [workflowAst, setWorkflowAst] = useState<WorkflowGraphAst | undefined>(undefined)
+  const [node, setNode] = useState<INode | undefined>(undefined)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -76,7 +76,7 @@ function WorkflowCanvasWrapper() {
           ast.edges = workflowData.edges
           ast.viewport = workflowData.viewport  // ← 恢复 viewport 状态
 
-          setWorkflowAst(ast)
+          setNode(toJson(ast))
         } else {
           // 工作流不存在，创建新的空白工作流
           console.log('工作流不存在，创建新的空白工作流', { name })
@@ -84,7 +84,7 @@ function WorkflowCanvasWrapper() {
           const ast = new WorkflowGraphAst()
           ast.name = name
 
-          setWorkflowAst(ast)
+          setNode(toJson(ast))
         }
       } catch (err: any) {
         console.error('初始化工作流失败', err)
@@ -93,7 +93,7 @@ function WorkflowCanvasWrapper() {
         // 即使加载失败，也创建一个空白工作流
         const ast = new WorkflowGraphAst()
         ast.name = workflowName || '未命名工作流'
-        setWorkflowAst(ast)
+        setNode(toJson(ast))
       } finally {
         setIsLoading(false)
       }
@@ -126,10 +126,8 @@ function WorkflowCanvasWrapper() {
     )
   }
 
-  return <WorkflowCanvas
-    workflowAst={workflowAst}
-    name={workflowName}
-    title={workflowName}
+  return <CoreFlow
+    node={node!}
   />
 }
 
