@@ -80,6 +80,7 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
    */
   const addNode = useCallback(
     (nodeClass: any, position: { x: number; y: number }, label?: string) => {
+      console.log({nodeClass, position, label})
       const ast = new nodeClass()
       ast.id = generateId()
       ast.position = position
