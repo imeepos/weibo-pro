@@ -5,7 +5,6 @@ import { useSelectedNode } from './useSelectedNode'
 import { PropertyField } from './PropertyField'
 import { useReactFlow } from '@xyflow/react'
 import { getNodeMetadata } from '../../adapters'
-import type { WorkflowNode } from '../../types'
 
 export interface PropertyPanelProps {
   className?: string

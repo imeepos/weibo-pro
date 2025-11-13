@@ -22,3 +22,6 @@ export type { WeiboLoginEvent, WeiboLoginEventType, WeiboLoginSessionSnapshot } 
 
 // 批量推送到 MQ
 export { BatchPushToMQAstVisitor, registerWorkflowFactory, getRegisteredFactories } from './BatchPushToMQAstVisitor'
+
+// 代码执行器
+export { CodeExecutorVisitor } from './CodeExecutorVisitor'

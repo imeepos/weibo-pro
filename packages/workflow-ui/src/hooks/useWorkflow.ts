@@ -87,15 +87,9 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
 
       const node: WorkflowNode = {
         id: ast.id,
-        type: 'workflow-node',
+        type: ast.type,
         position,
-        data: {
-          ast,
-          nodeClass,
-          label: label || nodeClass.name,
-          state: ast.state || 'pending',
-          error: ast.error,
-        },
+        data: ast,
       }
 
       setNodes((nodes) => [...nodes, node])
@@ -135,13 +129,13 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
         nodes.map((node) =>
           node.id === nodeId
             ? {
-                ...node,
-                data: {
-                  ...node.data,
-                  ast: { ...node.data.ast, ...updates },
-                  state: updates.state || node.data.state,
-                },
-              }
+              ...node,
+              data: {
+                ...node.data,
+                ast: { ...node.data.ast, ...updates },
+                state: updates.state || node.data.state,
+              },
+            }
             : node
         )
       )

@@ -581,36 +581,6 @@ export function WorkflowCanvas({
     setSubWorkflowModal({ visible: false })
   }, [])
 
-  const handleShare = useCallback(async () => {
-    if (onShare) {
-      onShare()
-      return
-    }
-
-    if (!workflow.workflowAst) {
-      showToast('error', '分享失败', '工作流不存在')
-      return
-    }
-
-    try {
-      const controller = root.get<WorkflowController>(WorkflowController)
-      const saveResult = await controller.saveWorkflow(workflow.workflowAst)
-      const shareResult = await controller.createShare({
-        workflowId: saveResult.code.toString(),
-      })
-
-      const shareUrl = `${window.location.origin}${shareResult.shareUrl}`
-
-      setShareDialog({ visible: true, url: shareUrl })
-      showToast('success', '分享链接已生成', '可以复制链接分享给他人')
-
-      console.log('分享链接已生成', { shareUrl })
-    } catch (error: any) {
-      console.error('创建分享链接失败', error)
-      showToast('error', '分享失败', error.message || '未知错误')
-    }
-  }, [workflow, name, onShare, showToast])
-
   return (
     <div
       className={cn(
@@ -618,48 +588,6 @@ export function WorkflowCanvas({
         className
       )}
     >
-      <header className="flex items-center justify-between border-b border-[#282e39] bg-[#111318] px-6 py-3">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1f2531] text-[#135bec]">
-            <Workflow className="h-5 w-5" strokeWidth={1.8} />
-          </div>
-          <div className="flex flex-col">
-            <h2 className="text-base font-semibold leading-tight tracking-[-0.015em]">{title}</h2>
-            <p className="text-xs text-[#9da6b9]">双击画布空白区域以搜索并添加新节点。</p>
-          </div>
-        </div>
-
-        <div className="flex flex-1 justify-end gap-3">
-          <button
-            type="button"
-            onClick={handleRunAll}
-            disabled={isRunning || isCanvasEmpty}
-            className="inline-flex items-center gap-2 rounded-lg bg-[#135bec] px-4 py-2 text-sm font-semibold tracking-[0.015em] text-white shadow-lg shadow-blue-500/20 transition hover:bg-[#1b6aff] hover:shadow-blue-500/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500 focus-visible:ring-offset-[#111318] disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Play className="h-4 w-4" strokeWidth={2.2} />
-            <span>{isRunning ? '运行中...' : '运行全部'}</span>
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={isSaving || isCanvasEmpty}
-            className="inline-flex items-center gap-2 rounded-lg border border-[#282e39] bg-[#1a1d24] px-4 py-2 text-sm font-semibold tracking-[0.015em] text-white transition hover:border-[#354057] hover:bg-[#212530] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500 focus-visible:ring-offset-[#111318] disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Save className="h-4 w-4" strokeWidth={1.8} />
-            <span>{isSaving ? '保存中...' : '保存工作流'}</span>
-          </button>
-          <button
-            type="button"
-            onClick={handleShare}
-            disabled={isCanvasEmpty}
-            className="inline-flex items-center gap-2 rounded-lg border border-[#282e39] bg-[#1a1d24] px-3 py-2 text-sm font-semibold tracking-[0.015em] text-white transition hover:border-[#354057] hover:bg-[#212530] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500 focus-visible:ring-offset-[#111318] disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Share2 className="h-4 w-4" strokeWidth={1.8} />
-            <span className="hidden sm:inline">分享</span>
-          </button>
-        </div>
-      </header>
-
       <div className="relative flex flex-1 overflow-hidden">
         <div className="relative flex flex-1">
           <ReactFlow

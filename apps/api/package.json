@@ -17,7 +17,7 @@
     "pm2:monit": "pm2 monit",
     "lint": "eslint . --max-warnings 0",
     "check-types": "tsc --noEmit",
-    "postinstall": "pnpm exec playwright install"
+    "postinstall": "pnpx playwright install"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",

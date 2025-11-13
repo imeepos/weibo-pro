@@ -1,5 +1,5 @@
-import { useCallback, useRef, useEffect } from 'react'
-import { useReactFlow, type Connection, type XYPosition } from '@xyflow/react'
+import { useCallback, useEffect } from 'react'
+import { useReactFlow, type Connection, } from '@xyflow/react'
 import { useSelectionStore } from '../../store'
 import { getAllNodeTypes } from '../../adapters'
 import { generateId } from '@sker/workflow'
@@ -25,9 +25,6 @@ export function useCanvasControls() {
   } = useReactFlow()
   const { selectNode, clearSelection } = useSelectionStore()
   const { menu, openMenu, openNodeMenu, openEdgeMenu, closeMenu, nodeSelector, openNodeSelector, closeNodeSelector } = useContextMenu()
-
-  const lastClickTimeRef = useRef<number>(0)
-  const DOUBLE_CLICK_DELAY = 300
 
   /**
    * 监听节点右键菜单事件
@@ -107,28 +104,13 @@ export function useCanvasControls() {
   )
 
   /**
-   * 处理画布点击（清空选择 + 双击检测）
+   * 处理画布点击（清空选择）
    */
   const onPaneClick = useCallback(
-    (event: React.MouseEvent) => {
-      const now = Date.now()
-      const timeSinceLastClick = now - lastClickTimeRef.current
-
-      if (timeSinceLastClick < DOUBLE_CLICK_DELAY) {
-        // 阻止双击事件的默认行为（如自动放大）
-        event.preventDefault()
-        event.stopPropagation()
-
-        const screenPosition = { x: event.clientX, y: event.clientY }
-        const flowPosition = screenToFlowPosition(screenPosition)
-        openNodeSelector(screenPosition, flowPosition)
-        lastClickTimeRef.current = 0
-      } else {
-        lastClickTimeRef.current = now
-        clearSelection()
-      }
+    (_event: React.MouseEvent) => {
+      clearSelection()
     },
-    [clearSelection, openNodeSelector, screenToFlowPosition]
+    [clearSelection]
   )
 
   /**
@@ -159,32 +141,20 @@ export function useCanvasControls() {
   )
 
   /**
-   * 处理右键菜单
+   * 处理右键菜单（空白画布：打开节点选择器）
    */
   const onPaneContextMenu = useCallback(
     (event: MouseEvent | React.MouseEvent) => {
-      console.log('[useCanvasControls] onPaneContextMenu triggered', {
-        clientX: event.clientX,
-        clientY: event.clientY,
-        type: event.type,
-      })
-
       event.preventDefault()
       event.stopPropagation()
 
       const screenPosition = { x: event.clientX, y: event.clientY }
       const flowPosition = screenToFlowPosition(screenPosition)
 
-      console.log('[useCanvasControls] Opening menu at', {
-        screenPosition,
-        flowPosition,
-      })
-
-      openMenu(screenPosition, flowPosition)
+      openNodeSelector(screenPosition, flowPosition)
     },
-    [openMenu, screenToFlowPosition]
+    [openNodeSelector, screenToFlowPosition]
   )
-
 
   /**
    * 从上下文菜单添加节点
@@ -204,14 +174,9 @@ export function useCanvasControls() {
 
       const node: WorkflowNode = {
         id: ast.id,
-        type: 'workflow-node',
+        type: ast.type,
         position: menu.flowPosition,
-        data: {
-          ast,
-          nodeClass: NodeClass,
-          label: metadata.label,
-          state: 'pending',
-        },
+        data: ast,
       }
 
       setNodes((nodes) => [...nodes, node])
@@ -237,14 +202,9 @@ export function useCanvasControls() {
 
       const node: WorkflowNode = {
         id: ast.id,
-        type: 'workflow-node',
+        type: ast.type,
         position: nodeSelector.flowPosition,
-        data: {
-          ast,
-          nodeClass: NodeClass,
-          label: metadata.label,
-          state: 'pending',
-        },
+        data: ast,
       }
 
       setNodes((nodes) => [...nodes, node])

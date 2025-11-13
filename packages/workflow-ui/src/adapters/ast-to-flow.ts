@@ -1,8 +1,6 @@
-import type { Ast, IDataEdge, IControlEdge, INode, IEdge } from '@sker/workflow'
+import type { IDataEdge, IControlEdge, INode, IEdge } from '@sker/workflow'
 import { isDataEdge, isControlEdge } from '@sker/workflow'
 import type { WorkflowNode, WorkflowEdge } from '../types'
-import { getNodeMetadata } from './metadata'
-import { Type } from '@sker/core'
 
 /**
  * 将 WorkflowGraphAst 转换为 React Flow 格式
@@ -35,34 +33,11 @@ export function astToFlowEdges(ast: { edges: IEdge[] }): WorkflowEdge[] {
  * 转换单个节点
  */
 function toFlowNode(node: INode): WorkflowNode {
-  console.log(`toFlowNode`, {node})
-  const nodeClass = resolveNodeClass(node)
-  const metadata = getNodeMetadata(nodeClass)
-  if(node.type === 'WorkflowGraphAst'){
-    return {
-      id: node.id,
-      type: `WorkflowGraphAst`,
-      position: node.position,
-      data: {
-        ast: node as Ast,
-        nodeClass,
-        label: metadata.label,
-        state: node.state,
-        error: node.error
-      }
-    }
-  }
   return {
     id: node.id,
-    type: 'workflow-node',
-    position: node.position || { x: 0, y: 0 },
-    data: {
-      ast: node as Ast,
-      nodeClass,
-      label: metadata.label,
-      state: node.state,
-      error: node.error,
-    },
+    type: node.type,
+    position: node.position,
+    data: node
   }
 }
 
@@ -133,25 +108,4 @@ function toControlEdge(edge: IControlEdge): WorkflowEdge {
       condition: edge.condition,
     },
   }
-}
-
-/**
- * 解析节点类构造器
- *
- * 通过节点实例的 type 属性匹配对应的类构造器
- */
-function resolveNodeClass(node: INode): Type<any> {
-  // 从 node.type 推断节点类
-  // 这里需要一个注册表来维护 type → class 的映射
-  // 暂时返回一个通用的构造器标记
-  const constructor = (node as any).constructor
-  if (constructor && constructor !== Object) {
-    return constructor
-  }
-
-  // 如果无法从实例获取构造器，需要通过类型查找
-  throw new Error(
-    `Cannot resolve node class for type "${node.type}". ` +
-    `Node must be instantiated from a registered @Node() class.`
-  )
 }
