@@ -1,22 +1,5 @@
 import type { Node, Edge, NodeProps as FlowNodeProps } from '@xyflow/react'
-import type { Ast, IAstStates, IDataEdge, IControlEdge, INode } from '@sker/workflow'
-import { Type } from '@sker/core'
-
-/**
- * React Flow 节点数据结构
- */
-export interface WorkflowNodeData extends Record<string, unknown> {
-  /** 节点实例 */
-  ast: Ast
-  /** 节点类型构造器 */
-  nodeClass: Type<any>;
-  /** 节点显示标签 */
-  label: string
-  /** 当前执行状态 */
-  state: IAstStates
-  /** 错误信息 */
-  error?: Error
-}
+import type { IDataEdge, IControlEdge, INode } from '@sker/workflow'
 
 /**
  * React Flow 节点类型
@@ -25,7 +8,7 @@ export interface WorkflowNodeData extends Record<string, unknown> {
  * - 支持动态节点类型，每个 AST 类都可以有自己的渲染器
  * - type 属性与 AST 实例的 type 属性对应
  */
-export type WorkflowNode = Node<WorkflowNodeData, string>
+export type WorkflowNode = Node<INode, string>
 
 /**
  * React Flow 边数据结构
