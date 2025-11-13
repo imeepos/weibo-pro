@@ -208,28 +208,28 @@ const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
       />
 
       {hoverNode && (
-        <div className="absolute top-4 right-4 bg-black/90 text-white p-4 rounded-lg shadow-2xl max-w-xs border border-white/20">
-          <div className="font-bold text-lg mb-2">{hoverNode.name}</div>
-          <div className="text-sm space-y-1">
+        <div className="absolute top-4 right-4 backdrop-blur-sm bg-background/80 text-foreground p-3 rounded-md shadow-lg max-w-xs border border-border">
+          <div className="font-semibold text-base mb-1">{hoverNode.name}</div>
+          <div className="text-xs space-y-0.5">
             <div>类型: {getUserTypeLabel(hoverNode.userType)}</div>
             <div>粉丝: {formatNumber(hoverNode.followers)}</div>
             <div>发帖: {formatNumber(hoverNode.postCount)}</div>
             <div>影响力: {hoverNode.influence}/100</div>
             {hoverNode.location && <div>位置: {hoverNode.location}</div>}
-            {hoverNode.verified && <div className="text-blue-400">✓ 已认证</div>}
+            {hoverNode.verified && <div className="text-primary">已认证</div>}
           </div>
         </div>
       )}
 
-      <div className="absolute bottom-4 left-4 bg-black/80 text-white px-4 py-3 rounded-lg text-sm space-y-1">
+      <div className="absolute bottom-4 left-4 backdrop-blur-sm bg-background/80 text-foreground px-3 py-2 rounded-md text-xs space-y-0.5">
         <div>节点数: {network.statistics.totalUsers}</div>
         <div>关系数: {network.statistics.totalRelations}</div>
         <div>平均度: {network.statistics.avgDegree}</div>
         <div>密度: {(network.statistics.density * 100).toFixed(2)}%</div>
       </div>
 
-      <div className="absolute bottom-4 right-4 bg-black/80 text-white px-4 py-3 rounded-lg text-xs space-y-2">
-        <div className="font-bold mb-2">节点类型</div>
+      <div className="absolute bottom-4 right-4 backdrop-blur-sm bg-background/80 text-foreground px-3 py-2 rounded-md text-xs space-y-1">
+        <div className="font-semibold mb-1">节点类型</div>
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full" style={{ background: getUserTypeColor('official') }} />
           <span>官方账号</span>

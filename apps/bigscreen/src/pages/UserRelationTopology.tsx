@@ -204,7 +204,7 @@ const UserRelationTopology: React.FC = () => {
               {error && (
                 <div className="flex items-center justify-center h-[calc(100vh-12rem)]">
                   <div className="text-center max-w-md p-6">
-                    <div className="text-5xl mb-3 text-destructive">!</div>
+                    <div className="text-2xl font-bold mb-1 text-destructive">错误</div>
                     <div className="text-lg text-destructive mb-2">加载失败</div>
                     <div className="text-muted-foreground mb-4 text-sm">{error}</div>
                     <button
