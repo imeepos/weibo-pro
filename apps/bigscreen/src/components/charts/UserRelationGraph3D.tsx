@@ -190,26 +190,6 @@ const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
         <div>平均度: {network.statistics.avgDegree}</div>
         <div>密度: {(network.statistics.density * 100).toFixed(2)}%</div>
       </div>
-
-      <div className="absolute bottom-4 right-4 backdrop-blur-sm bg-background/80 text-foreground px-3 py-2 rounded-md text-xs space-y-1">
-        <div className="font-semibold mb-1">节点类型</div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full" style={{ background: getUserTypeColor('official') }} />
-          <span>官方账号</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full" style={{ background: getUserTypeColor('media') }} />
-          <span>媒体账号</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full" style={{ background: getUserTypeColor('kol') }} />
-          <span>KOL账号</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full" style={{ background: getUserTypeColor('normal') }} />
-          <span>普通用户</span>
-        </div>
-      </div>
     </div>
   );
 };
