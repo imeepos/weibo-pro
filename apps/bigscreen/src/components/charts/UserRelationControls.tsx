@@ -133,7 +133,7 @@ const UserRelationControls: React.FC<UserRelationControlsProps> = ({
           <input
             type="range"
             min="20"
-            max="200"
+            max="2000"
             step="20"
             value={limit}
             onChange={(e) => onLimitChange(parseInt(e.target.value))}
@@ -141,48 +141,7 @@ const UserRelationControls: React.FC<UserRelationControlsProps> = ({
           />
           <div className="flex justify-between text-xs text-muted-foreground mt-1">
             <span>20个</span>
-            <span>200个</span>
-          </div>
-        </div>
-
-        {/* 使用说明 */}
-        <div className="bg-secondary rounded-md p-3">
-          <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
-            <Lightbulb className="w-3 h-3" />
-            使用提示
-          </h4>
-          <ul className="text-xs text-muted-foreground space-y-0.5">
-            <li>• 点击节点：聚焦并查看详情</li>
-            <li>• 悬停节点：高亮关联关系</li>
-            <li>• 拖拽节点：调整布局</li>
-            <li>• 滚轮：缩放视图</li>
-            <li>• 右键拖拽：旋转视角</li>
-          </ul>
-        </div>
-
-        {/* 关系类型说明 */}
-        <div className="bg-secondary rounded-md p-3">
-          <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
-            <Info className="w-3 h-3" />
-            关系说明
-          </h4>
-          <div className="text-xs text-muted-foreground space-y-0.5">
-            <div className="flex items-center gap-2">
-              <div className="w-2.5 h-2.5 rounded-full bg-pink-500" />
-              <span>点赞关系</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-              <span>评论关系</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2.5 h-2.5 rounded-full bg-purple-500" />
-              <span>转发关系</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-              <span>综合关系</span>
-            </div>
+            <span>2000个</span>
           </div>
         </div>
       </div>
