@@ -69,12 +69,24 @@ const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
 
     if (fgRef.current) {
       const distance = 300;
-      const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
-      fgRef.current.cameraPosition(
-        { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio },
-        node,
-        3000
-      );
+      const nodeDistance = Math.hypot(node.x, node.y, node.z);
+
+      // 如果节点太近，直接偏移；否则在节点后方固定距离
+      if (nodeDistance < 10) {
+        fgRef.current.cameraPosition(
+          { x: node.x + distance * 0.5, y: node.y + distance * 0.3, z: node.z + distance },
+          node,
+          3000
+        );
+      } else {
+        // 从原点到节点的方向向量，在节点后方固定距离
+        const ratio = (nodeDistance + distance) / nodeDistance;
+        fgRef.current.cameraPosition(
+          { x: node.x * ratio, y: node.y * ratio, z: node.z * ratio },
+          node,
+          3000
+        );
+      }
     }
   }, [onNodeClick]);
 
@@ -194,7 +206,7 @@ const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
   );
 };
 
-function getUserTypeColor(userType: string): string {
+export function getUserTypeColor(userType: string): string {
   switch (userType) {
     case 'official':
       return '#ef4444';
