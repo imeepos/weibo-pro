@@ -121,6 +121,7 @@ export interface InputMetadata {
     propertyKey: string | symbol;
     isMulti?: boolean;
     title?: string;
+    type?: string;
 }
 
 export const INPUT = new InjectionToken<InputMetadata[]>(`INPUT`)
@@ -134,7 +135,8 @@ export function Input(options?: InputOptions): PropertyDecorator {
                 target: ctor,
                 propertyKey,
                 isMulti: options?.isMulti ?? false,
-                title: options?.title
+                title: options?.title,
+                type: options?.type
             }
         }])
     };

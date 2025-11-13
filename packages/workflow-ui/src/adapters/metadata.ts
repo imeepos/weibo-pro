@@ -67,14 +67,14 @@ export function getAllNodeTypes(): Type<any>[] {
  * 转换为端口元数据
  */
 function toPortMetadata(
-  metadata: { propertyKey: string | symbol; isMulti?: boolean; title?: string }
+  metadata: { propertyKey: string | symbol; isMulti?: boolean; title?: string; type?: string }
 ): PortMetadata {
   const property = String(metadata.propertyKey)
   const customTitle = metadata.title
 
   return {
     property,
-    type: 'any', // TypeScript 运行时无法获取类型，需要通过其他方式推断
+    type: metadata.type || 'any', // 使用装饰器中指定的类型，默认为 'any'
     isMulti: metadata.isMulti,
     label: customTitle || formatPortLabel(property),
     title: customTitle,
