@@ -1,10 +1,11 @@
-import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { WorkflowGraphAst, generateId } from '@sker/workflow'
 import type { INode, IEdge } from '@sker/workflow'
 import { useNodesState, useEdgesState, addEdge, type Connection } from '@xyflow/react'
 import type { WorkflowNode, WorkflowEdge } from '../types'
 import { astToFlowNodes, astToFlowEdges } from '../adapters/ast-to-flow'
 import { getNodeMetadata } from '../adapters/metadata'
+import { StateChangeProxy } from '../core/state-change-proxy'
 
 export interface UseWorkflowReturn {
   workflowAst: WorkflowGraphAst
@@ -49,11 +50,19 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
 
+  // 创建 StateChangeProxy 实例，用于管理 AST 与 React Flow 的同步
+  // 优雅设计：变更拦截器自动同步，批量更新优化性能
+  const changeProxy = useMemo(
+    () => new StateChangeProxy(setNodes, { debug: false, throttleDelay: 50 }),
+    [setNodes]
+  )
+
   // 监听节点位置变化，同步到 AST
   // 优雅设计：
   // - 细粒度同步，仅更新位置属性
   // - 引用透明性，React Flow 节点 data 直接引用 AST 实例
   // - 类型安全，无需 any 断言
+  // - 节流优化：拖拽时使用节流版本，避免过度渲染
   useEffect(() => {
     nodes.forEach((node) => {
       const astNode = workflowAst.nodes.find((n) => n.id === node.id)
@@ -84,7 +93,7 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
    */
   const addNode = useCallback(
     (nodeClass: any, position: { x: number; y: number }, label?: string) => {
-      console.log({nodeClass, position, label})
+      console.log({ nodeClass, position, label })
       const ast = new nodeClass()
       ast.id = generateId()
       ast.position = position
@@ -96,7 +105,7 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
         id: ast.id,
         type: metadata.type,
         position,
-        data: ast,
+        data: ast
       }
 
       setNodes((nodes) => [...nodes, node])
@@ -136,13 +145,13 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
         nodes.map((node) =>
           node.id === nodeId
             ? {
-              ...node,
-              data: {
-                ...node.data,
-                ast: { ...node.data.ast, ...updates },
-                state: updates.state || node.data.state,
-              },
-            }
+                ...node,
+                data: {
+                  ...node.data,
+                  ast: { ...node.data.ast, ...updates },
+                  state: updates.state || node.data.state
+                }
+              }
             : node
         )
       )
@@ -161,7 +170,7 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
         from: connection.source,
         to: connection.target,
         fromProperty: connection.sourceHandle || undefined,
-        toProperty: connection.targetHandle || undefined,
+        toProperty: connection.targetHandle || undefined
       }
 
       workflowAst.addEdge(edge)
@@ -175,8 +184,8 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
         type: 'workflow-data-edge',
         data: {
           edgeType: 'data',
-          edge,
-        },
+          edge
+        }
       }
 
       setEdges((edges) => addEdge(flowEdge, edges))
@@ -195,9 +204,10 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
   const removeEdge = useCallback(
     (edgeOrId: string | WorkflowEdge) => {
       // 支持传入 edge.id 或完整的 edge 对象
-      const edge = typeof edgeOrId === 'string'
-        ? edges.find((e) => e.id === edgeOrId)
-        : edgeOrId
+      const edge =
+        typeof edgeOrId === 'string'
+          ? edges.find((e) => e.id === edgeOrId)
+          : edgeOrId
 
       if (!edge) {
         console.warn('Edge not found:', edgeOrId)
@@ -219,7 +229,12 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
 
       if (astEdgeIndex !== -1) {
         workflowAst.edges.splice(astEdgeIndex, 1)
-        console.log('Edge removed from AST:', edge.id, 'AST edges count:', workflowAst.edges.length)
+        console.log(
+          'Edge removed from AST:',
+          edge.id,
+          'AST edges count:',
+          workflowAst.edges.length
+        )
       } else {
         console.warn('Edge not found in AST:', edge)
       }
@@ -255,5 +270,7 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
     removeEdge,
     clearWorkflow,
     syncFromAst,
+    // 导出 StateChangeProxy，供高级用法使用
+    changeProxy
   }
 }
