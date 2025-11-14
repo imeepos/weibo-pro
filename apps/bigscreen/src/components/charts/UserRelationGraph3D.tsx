@@ -12,6 +12,7 @@ interface UserRelationGraph3DProps {
   className?: string;
   onNodeClick?: (node: UserRelationNode) => void;
   onNodeHover?: (node: UserRelationNode | null) => void;
+  showDebugHud?: boolean;
 }
 
 const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
@@ -19,11 +20,17 @@ const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
   className = '',
   onNodeClick,
   onNodeHover,
+  showDebugHud = false,
 }) => {
   const fgRef = useRef<any>();
   const [highlightNodes, setHighlightNodes] = useState(new Set());
   const [highlightLinks, setHighlightLinks] = useState(new Set());
   const [hoverNode, setHoverNode] = useState<UserRelationNode | null>(null);
+  const [fps, setFps] = useState(60);
+  const [frameTime, setFrameTime] = useState(16.67);
+  const frameCountRef = useRef(0);
+  const lastTimeRef = useRef(performance.now());
+  const fpsUpdateIntervalRef = useRef<any>(null);
 
   const graphData = useMemo(() => {
     // 计算每个节点的连接数
@@ -263,6 +270,7 @@ const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
         linkCurvature={0.1}
         onNodeClick={handleNodeClick}
         onNodeHover={handleNodeHover}
+        onRenderFramePre={handleRenderFramePre}
         backgroundColor='rgba(0, 0, 0, 0)'
         showNavInfo={false}
         controlType="orbit"
@@ -282,6 +290,16 @@ const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
             {hoverNode.location && <div>位置: {hoverNode.location}</div>}
             {hoverNode.verified && <div className="text-primary">已认证</div>}
           </div>
+        </div>
+      )}
+
+      {showDebugHud && (
+        <div className="absolute top-20 left-4 backdrop-blur-sm bg-background/50 text-foreground rounded-md p-2 text-xs font-mono">
+          <div className="font-bold mb-1">⚡ 性能监控</div>
+          <div>FPS: <span className={fps >= 50 ? 'text-green-400' : fps >= 30 ? 'text-yellow-400' : 'text-red-400'}>{fps}</span></div>
+          <div>帧时间: {frameTime}ms</div>
+          <div>节点: {graphData.nodes.length}</div>
+          <div>边: {graphData.links.length}</div>
         </div>
       )}
     </div>
