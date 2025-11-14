@@ -25,7 +25,6 @@ const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
   const fgRef = useRef<any>();
   const [highlightNodes, setHighlightNodes] = useState(new Set());
   const [highlightLinks, setHighlightLinks] = useState(new Set());
-  const [hoverNode, setHoverNode] = useState<UserRelationNode | null>(null);
   const [fps, setFps] = useState(60);
   const [frameTime, setFrameTime] = useState(16.67);
   const frameCountRef = useRef(0);
@@ -76,6 +75,44 @@ const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
       }, { x: 0, y: 0, z: 0 }, 0); // 看向中心点
     }
   }, []);
+
+  useEffect(() => {
+    if (!showDebugHud) return;
+
+    // 清理旧的计时器
+    if (fpsUpdateIntervalRef.current) {
+      clearInterval(fpsUpdateIntervalRef.current);
+    }
+
+    // 每500ms更新一次FPS显示
+    fpsUpdateIntervalRef.current = setInterval(() => {
+      const currentTime = performance.now();
+      const deltaTime = currentTime - lastTimeRef.current;
+
+      if (deltaTime > 0 && frameCountRef.current > 0) {
+        const avgFrameTime = deltaTime / frameCountRef.current;
+        const currentFps = Math.round(1000 / avgFrameTime);
+
+        setFps(currentFps);
+        setFrameTime(parseFloat(avgFrameTime.toFixed(2)));
+      }
+
+      // 重置计数器
+      frameCountRef.current = 0;
+      lastTimeRef.current = currentTime;
+    }, 500);
+
+    return () => {
+      if (fpsUpdateIntervalRef.current) {
+        clearInterval(fpsUpdateIntervalRef.current);
+      }
+    };
+  }, [showDebugHud]);
+
+  const handleRenderFramePre = useCallback(() => {
+    if (!showDebugHud) return;
+    frameCountRef.current++;
+  }, [showDebugHud]);
 
   const handleNodeClick = useCallback((node: any) => {
     if (onNodeClick) {
