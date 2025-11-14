@@ -160,7 +160,6 @@ const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
 
   const handleNodeHover = useCallback((node: any) => {
     const typedNode = node as UserRelationNode | null;
-    setHoverNode(typedNode);
 
     if (onNodeHover) {
       onNodeHover(typedNode);
@@ -314,6 +313,52 @@ const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
         enableNodeDrag={true}
         enableNavigationControls={true}
         enablePointerInteraction={true}
+        onNodeFrame={(node: any, obj: THREE.Group) => {
+          if (!obj) return;
+
+          // 为所有节点添加脉冲动画（呼吸效果）
+          const pulseSpeed = 0.0015;
+          const pulseIntensity = 0.12;
+          const time = Date.now() * pulseSpeed;
+
+          const pulseScale = 1.0 + Math.sin(time) * pulseIntensity;
+
+          // 主节点几何体（第一个 mesh）应用脉冲
+          if (obj.children && obj.children.length > 0) {
+            const sphere = obj.children.find((child: any) =>
+              child instanceof THREE.Mesh && !child.material.wireframe
+            ) as THREE.Mesh | undefined;
+
+            if (sphere) {
+              sphere.scale.setScalar(pulseScale);
+            }
+
+            // 线框层也跟随脉冲
+            const wireframe = obj.children.find((child: any) =>
+              child instanceof THREE.Mesh && child.material.wireframe
+            ) as THREE.Mesh | undefined;
+
+            if (wireframe) {
+              wireframe.scale.setScalar(pulseScale * 1.01);
+            }
+
+            // 发光层稍微延迟（创造层次感）
+            const glow = obj.children.find((child: any) =>
+              child instanceof THREE.Mesh && child.material.transparent && !child.material.wireframe
+            ) as THREE.Mesh | undefined;
+
+            if (glow) {
+              glow.scale.setScalar(pulseScale * 1.15);
+            }
+          }
+
+          // 悬停时放大效果
+          if (hoverNode?.id === node.id && obj) {
+            obj.scale.setScalar(1.2);
+          } else if (obj && !obj.scale.equals(new THREE.Vector3(1, 1, 1))) {
+            obj.scale.setScalar(1.0);
+          }
+        }}
       />
 
       {hoverNode && (
