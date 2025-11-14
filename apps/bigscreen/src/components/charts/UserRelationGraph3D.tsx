@@ -59,6 +59,14 @@ const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
     if (fgRef.current) {
       fgRef.current.d3Force('charge').strength(-200);
       fgRef.current.d3Force('link').distance(100);
+
+      // 设置初始相机位置，让关系图居中展示
+      const bounds = 500; // 根据图的范围估算
+      fgRef.current.cameraPosition({
+        x: bounds * 0.7,
+        y: bounds * 0.5,
+        z: bounds
+      }, { x: 0, y: 0, z: 0 }, 0); // 看向中心点
     }
   }, []);
 
@@ -140,6 +148,21 @@ const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
     }
   }, [graphData.links, onNodeHover]);
 
+  const linkMaterial = useCallback((link: any) => {
+    const edgeColor = new THREE.Color(getEdgeColor(link.type));
+    const value = link.value || 1;
+
+    // 创建渐变色材质
+    const material = new THREE.LineBasicMaterial({
+      color: edgeColor,
+      transparent: true,
+      opacity: Math.min(0.8, 0.3 + (value / 100) * 0.5),
+      linewidth: Math.max(1, value / 5),
+    });
+
+    return material;
+  }, []);
+
   const nodeThreeObject = useCallback((node: any) => {
     const nodeWithConnections = node as any;
     const connectionCount = nodeWithConnections.connectionCount || 0;
@@ -147,20 +170,69 @@ const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
 
     const radius = Math.sqrt(connectionCount) * 2 + 3;
 
-    const geometry = new THREE.SphereGeometry(radius, 16, 16);
-    const material = new THREE.MeshLambertMaterial({
-      color: getUserTypeColor(node.userType),
+    // 节点几何体
+    const geometry = new THREE.SphereGeometry(radius, 32, 32);
+
+    // 创建发光材质
+    const mainColor = new THREE.Color(getUserTypeColor(node.userType));
+    const material = new THREE.MeshStandardMaterial({
+      color: mainColor,
+      metalness: 0.3,
+      roughness: 0.2,
+      emissive: mainColor,
+      emissiveIntensity: 0.1,
     });
     const sphere = new THREE.Mesh(geometry, material);
 
+    // 添加WIRED线框效果
+    const wireframeGeometry = new THREE.SphereGeometry(radius * 1.01, 16, 16);
+    const wireframeMaterial = new THREE.MeshStandardMaterial({
+      color: mainColor,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.3,
+      emissive: mainColor,
+      emissiveIntensity: 0.2,
+    });
+    const wireframe = new THREE.Mesh(wireframeGeometry, wireframeMaterial);
+
+    // 内发光光晕
+    const glowGeometry = new THREE.SphereGeometry(radius * 1.15, 32, 32);
+    const glowMaterial = new THREE.MeshBasicMaterial({
+      color: mainColor,
+      transparent: true,
+      opacity: 0.1,
+    });
+    const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+
+    // 悬停或高亮时的外发光环
     if (highlightNodes.has(node.id) || hoverNode?.id === node.id) {
-      const ringGeometry = new THREE.TorusGeometry(radius + 0.5, 0.2, 8, 32);
-      const ringMaterial = new THREE.MeshBasicMaterial({ color: 0xffeb3b });
-      const ring = new THREE.Mesh(ringGeometry, ringMaterial);
-      group.add(ring);
+      const ringGeometry = new THREE.TorusGeometry(radius * 1.3, 0.3, 16, 100);
+      const ringMaterial = new THREE.MeshStandardMaterial({
+        color: 0x00ffff,
+        emissive: 0x00ffff,
+        emissiveIntensity: 0.5,
+        transparent: true,
+        opacity: 0.8,
+      });
+      const outerRing = new THREE.Mesh(ringGeometry, ringMaterial);
+
+      // 内部光环
+      const innerRingGeometry = new THREE.TorusGeometry(radius * 1.2, 0.1, 8, 100);
+      const innerRingMaterial = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.9,
+      });
+      const innerRing = new THREE.Mesh(innerRingGeometry, innerRingMaterial);
+
+      group.add(outerRing);
+      group.add(innerRing);
     }
 
+    group.add(glow);
     group.add(sphere);
+    group.add(wireframe);
 
     return group;
   }, [highlightNodes, hoverNode]);
@@ -182,12 +254,13 @@ const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
           </div>
         `}
         nodeThreeObject={nodeThreeObject}
-        linkWidth={(link: any) => link.value / 10 + 0.5}
-        linkColor={(link: any) => getEdgeColor(link.type)}
-        linkOpacity={0.3}
-        linkDirectionalParticles={4}
-        linkDirectionalParticleWidth={(link: any) => link.value / 20 + 1}
-        linkDirectionalParticleSpeed={0.005}
+        linkMaterial={linkMaterial}
+        linkWidth={(link: any) => Math.max(1, link.value / 8)}
+        linkOpacity={0.4}
+        linkDirectionalParticles={(link: any) => Math.min(10, Math.max(3, link.value / 10))}
+        linkDirectionalParticleWidth={(link: any) => Math.max(2, link.value / 15 + 1)}
+        linkDirectionalParticleSpeed={(link: any) => Math.max(0.003, Math.min(0.02, 0.005 + link.value / 5000))}
+        linkCurvature={0.1}
         onNodeClick={handleNodeClick}
         onNodeHover={handleNodeHover}
         backgroundColor='rgba(0, 0, 0, 0)'

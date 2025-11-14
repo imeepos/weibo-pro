@@ -152,9 +152,9 @@ const UserRelationTopology: React.FC = () => {
           initial={{ opacity: 0, x: -50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.2 }}
-          className="absolute top-4 left-4 w-80 max-h-[calc(100vh-144px)] overflow-y-auto"
+          className="absolute top-12 left-6 w-72 max-h-[calc(100vh-160px)] overflow-y-auto"
         >
-          <div className="backdrop-blur-sm bg-background/50 rounded-lg p-4">
+          <div className="backdrop-blur-sm bg-background/50 rounded-lg p-3">
             <UserRelationControls
               relationType={relationType}
               onRelationTypeChange={setRelationType}
@@ -175,39 +175,41 @@ const UserRelationTopology: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, x: 50 }}
             animate={{ opacity: 1, x: 0 }}
-            className="absolute top-4 right-4 w-80"
+            className="absolute top-12 right-6 w-72"
           >
-            <div className="backdrop-blur-sm bg-background/50 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-3">
+            <div className="backdrop-blur-sm bg-background/50 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-2">
                 <Activity className="w-4 h-4 text-primary" />
-                <h3 className="text-base font-semibold">节点详情</h3>
+                <h3 className="text-sm font-semibold">节点详情</h3>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5 text-xs">
                 <div>
-                  <div className="text-xs text-muted-foreground">用户名</div>
-                  <div className="font-medium text-sm">{selectedNode.name}</div>
+                  <div className="text-[10px] text-muted-foreground">用户名</div>
+                  <div className="font-medium">{selectedNode.name}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-muted-foreground">用户类型</div>
-                  <div className="font-medium text-sm">
+                  <div className="text-[10px] text-muted-foreground">用户类型</div>
+                  <div className="font-medium">
                     {getUserTypeLabel(selectedNode.userType)}
                   </div>
                 </div>
-                <div>
-                  <div className="text-xs text-muted-foreground">粉丝数</div>
-                  <div className="font-medium text-sm text-primary">
-                    {formatNumber(selectedNode.followers)}
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <div className="text-[10px] text-muted-foreground">粉丝数</div>
+                    <div className="font-medium text-primary">
+                      {formatNumber(selectedNode.followers)}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-muted-foreground">发帖数</div>
+                    <div className="font-medium text-sentiment-positive">
+                      {formatNumber(selectedNode.postCount)}
+                    </div>
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs text-muted-foreground">发帖数</div>
-                  <div className="font-medium text-sm text-sentiment-positive">
-                    {formatNumber(selectedNode.postCount)}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground">影响力</div>
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="text-[10px] text-muted-foreground">影响力</div>
+                  <div className="flex items-center gap-2 mt-0.5">
                     <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
                       <motion.div
                         className="h-full bg-gradient-to-r from-cyan via-primary to-violet"
@@ -216,19 +218,19 @@ const UserRelationTopology: React.FC = () => {
                         transition={{ duration: 0.5 }}
                       />
                     </div>
-                    <span className="text-xs font-medium">{selectedNode.influence}/100</span>
+                    <span className="text-[10px] font-medium">{selectedNode.influence}/100</span>
                   </div>
                 </div>
                 {selectedNode.location && (
                   <div>
-                    <div className="text-xs text-muted-foreground">位置</div>
-                    <div className="font-medium text-sm">{selectedNode.location}</div>
+                    <div className="text-[10px] text-muted-foreground">位置</div>
+                    <div className="font-medium">{selectedNode.location}</div>
                   </div>
                 )}
                 {selectedNode.verified && (
-                  <div className="flex items-center gap-2 text-primary text-sm">
+                  <div className="flex items-center gap-2 text-primary text-xs">
                     <Users className="w-3 h-3" />
-                    <span>已认证账号</span>
+                    <span>已认证</span>
                   </div>
                 )}
               </div>
@@ -242,31 +244,31 @@ const UserRelationTopology: React.FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-            className="absolute bottom-4 right-4 grid grid-cols-4 gap-1.5"
+            className="absolute bottom-6 right-8 grid grid-cols-4 gap-1"
           >
-            <div className="backdrop-blur-sm bg-background/50 rounded-lg p-2">
-              <div className="text-lg font-bold text-primary">
+            <div className="backdrop-blur-sm bg-background/50 rounded-md p-1.5">
+              <div className="text-base font-bold text-primary leading-tight">
                 {network.statistics.totalUsers}
               </div>
-              <div className="text-[10px] text-muted-foreground">用户节点</div>
+              <div className="text-[9px] text-muted-foreground leading-tight">节点</div>
             </div>
-            <div className="backdrop-blur-sm bg-background/50 rounded-lg p-2">
-              <div className="text-lg font-bold text-violet">
+            <div className="backdrop-blur-sm bg-background/50 rounded-md p-1.5">
+              <div className="text-base font-bold text-violet leading-tight">
                 {network.statistics.totalRelations}
               </div>
-              <div className="text-[10px] text-muted-foreground">关系连接</div>
+              <div className="text-[9px] text-muted-foreground leading-tight">连接</div>
             </div>
-            <div className="backdrop-blur-sm bg-background/50 rounded-lg p-2">
-              <div className="text-lg font-bold text-cyan">
-                {network.statistics.avgDegree}
+            <div className="backdrop-blur-sm bg-background/50 rounded-md p-1.5">
+              <div className="text-base font-bold text-cyan leading-tight">
+                {network.statistics.avgDegree.toFixed(0)}
               </div>
-              <div className="text-[10px] text-muted-foreground">平均度数</div>
+              <div className="text-[9px] text-muted-foreground leading-tight">平均度</div>
             </div>
-            <div className="backdrop-blur-sm bg-background/50 rounded-lg p-2">
-              <div className="text-lg font-bold text-fuchsia">
-                {(network.statistics.density * 100).toFixed(2)}%
+            <div className="backdrop-blur-sm bg-background/50 rounded-md p-1.5">
+              <div className="text-base font-bold text-fuchsia leading-tight">
+                {(network.statistics.density * 100).toFixed(0)}%
               </div>
-              <div className="text-[10px] text-muted-foreground">网络密度</div>
+              <div className="text-[9px] text-muted-foreground leading-tight">密度</div>
             </div>
           </motion.div>
         )}
@@ -276,24 +278,26 @@ const UserRelationTopology: React.FC = () => {
           initial={{ opacity: 0, x: -50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.4 }}
-          className="absolute bottom-4 left-4 backdrop-blur-sm bg-background/50 rounded-lg px-3 py-2 text-xs"
+          className="absolute bottom-6 left-8 backdrop-blur-sm bg-background/50 rounded-md px-2 py-1.5 text-[10px]"
         >
-          <div className="font-semibold mb-1">节点类型</div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full" style={{ background: getUserTypeColor('official') }} />
-            <span>官方</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full" style={{ background: getUserTypeColor('media') }} />
-            <span>媒体</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full" style={{ background: getUserTypeColor('kol') }} />
-            <span>KOL</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full" style={{ background: getUserTypeColor('normal') }} />
-            <span>普通</span>
+          <div className="font-semibold mb-0.5">节点类型</div>
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full" style={{ background: getUserTypeColor('official') }} />
+              <span>官方</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full" style={{ background: getUserTypeColor('media') }} />
+              <span>媒体</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full" style={{ background: getUserTypeColor('kol') }} />
+              <span>KOL</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full" style={{ background: getUserTypeColor('normal') }} />
+              <span>普通</span>
+            </div>
           </div>
         </motion.div>
       </div>
