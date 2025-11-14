@@ -249,7 +249,7 @@ const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
     const glow = new THREE.Mesh(glowGeometry, glowMaterial);
 
     // 悬停或高亮时的外发光环
-    if (highlightNodes.has(node.id) || hoverNode?.id === node.id) {
+    if (highlightNodes.has(node.id)) {
       const ringGeometry = new THREE.TorusGeometry(radius * 1.3, 0.3, 16, 100);
       const ringMaterial = new THREE.MeshStandardMaterial({
         color: 0x00ffff,
@@ -278,7 +278,7 @@ const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
     group.add(wireframe);
 
     return group;
-  }, [highlightNodes, hoverNode]);
+  }, [highlightNodes]);
 
 
   return (
@@ -353,7 +353,7 @@ const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
           }
 
           // 悬停时放大效果
-          if (hoverNode?.id === node.id && obj) {
+          if (highlightNodes.has(node.id) && obj) {
             obj.scale.setScalar(1.2);
           } else if (obj && !obj.scale.equals(new THREE.Vector3(1, 1, 1))) {
             obj.scale.setScalar(1.0);
