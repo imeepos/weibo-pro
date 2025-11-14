@@ -19,7 +19,7 @@ import {
   PlusSquare,
 } from 'lucide-react'
 
-import { WorkflowGraphAst } from '@sker/workflow'
+import { fromJson, INode, WorkflowGraphAst } from '@sker/workflow'
 import { createNodeTypes } from '../nodes'
 import { edgeTypes } from '../edges'
 import { getAllNodeTypes } from '../../adapters'
@@ -37,12 +37,10 @@ import { SubWorkflowModal } from '../SubWorkflowModal'
 import { LeftDrawer } from '../LeftDrawer'
 import { SettingPanel } from '../SettingPanel'
 import { cn } from '../../utils/cn'
-import { root } from '@sker/core'
-import { WorkflowController } from '@sker/sdk'
 
 export interface WorkflowCanvasProps {
   /** 工作流 AST 实例 */
-  workflowAst?: WorkflowGraphAst
+  workflowAst?: INode
   /** 是否显示小地图 */
   showMiniMap?: boolean
   /** 是否显示控制面板 */
@@ -71,14 +69,9 @@ export function WorkflowCanvas({
   showControls = true,
   showBackground = true,
   snapToGrid = false,
-  className = '',
-  title = '工作流',
-  name = '',
-  onRunAll,
-  onSave,
-  onShare,
+  className = ''
 }: WorkflowCanvasProps) {
-  const workflow = useWorkflow(workflowAst)
+  const workflow = useWorkflow(fromJson<WorkflowGraphAst>(workflowAst))
   const nodes = workflow.nodes
   const edges = workflow.edges
   const isCanvasEmpty = nodes.length === 0

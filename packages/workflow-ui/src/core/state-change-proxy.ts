@@ -42,7 +42,7 @@ export class StateChangeProxy {
    * 变更批处理队列
    * 使用函数数组存储待执行的同步操作
    */
-  private batch: Array<() => void> = []
+  private _batch: Array<() => void> = []
 
   /**
    * 节流定时器
@@ -211,7 +211,7 @@ export class StateChangeProxy {
     }
 
     // 添加到批处理队列
-    this.batch.push(() => {
+    this._batch.push(() => {
       // 触发 React Flow 重渲染
       this.setNodes((prev) => [...prev])
     })
@@ -236,8 +236,8 @@ export class StateChangeProxy {
     if (this.batch.length === 0) return
 
     // 执行所有变更
-    const operations = [...this.batch]
-    this.batch = []
+    const operations = [...this._batch]
+    this._batch = []
 
     // 合并所有操作，减少 React 重渲染次数
     // 使用函数式更新确保拿到最新状态
@@ -269,7 +269,7 @@ export class StateChangeProxy {
     this.throttleTimers.clear()
 
     // 清空批处理队列
-    this.batch = []
+    this._batch = []
 
     // 清空拖拽状态
     this.draggingNodes.clear()
@@ -298,7 +298,7 @@ export class StateChangeProxy {
  */
 export function useStateChangeProxy(
   setNodes: (nodes: WorkflowNode[] | ((nodes: WorkflowNode[]) => WorkflowNode[])) => void,
-  options?: Parameters<typeof StateChangeProxy>[1]
+  options?: ConstructorParameters<typeof StateChangeProxy>[1]
 ): StateChangeProxy {
   const proxyRef = useRef<StateChangeProxy>()
 

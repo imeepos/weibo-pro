@@ -65,7 +65,7 @@ export class FlowAstConverter {
       targetHandle: edge.toProperty || null,
       type: 'workflow-data-edge',
       data: {
-        edge,
+        edgeType: edge.type,
         fromProperty: edge.fromProperty,
         toProperty: edge.toProperty,
         weight: (edge as any).weight

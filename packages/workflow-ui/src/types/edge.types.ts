@@ -4,32 +4,32 @@
 export const EDGE_TYPE_STYLES = {
   data: {
     strokeWidth: 2,
-    stroke: '#64748b',      // slate-500
+    stroke: '#64748b',
     strokeDasharray: 'none',
   },
   control: {
     strokeWidth: 2,
-    stroke: '#8b5cf6',      // violet-500
+    stroke: '#8b5cf6',
     strokeDasharray: '5,5',
+  },
+  conditional: {
+    strokeWidth: 3,
+    stroke: '#f59e0b',
+    strokeDasharray: '10,5',
+  },
+  error: {
+    strokeWidth: 2,
+    stroke: '#ef4444',
+    strokeDasharray: 'none',
+  },
+  success: {
+    strokeWidth: 2,
+    stroke: '#10b981',
+    strokeDasharray: 'none',
   },
 } as const
 
 /**
  * 边验证结果
  */
-export interface EdgeValidationResult {
-  /** 是否有效 */
-  valid: boolean
-  /** 错误原因 */
-  reason?: string
-}
-
-/**
- * 连接参数（React Flow onConnect 事件）
- */
-export interface ConnectionParams {
-  source: string
-  sourceHandle: string | null
-  target: string
-  targetHandle: string | null
-}
+export type EdgeValidation = { valid: boolean; reason?: string }

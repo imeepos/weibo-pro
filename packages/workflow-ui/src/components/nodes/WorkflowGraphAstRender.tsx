@@ -1,6 +1,7 @@
 import React, { memo, useCallback } from 'react'
 import { useReactFlow } from '@xyflow/react'
-import type { WorkflowNodeProps } from '../../types'
+import type { NodeProps } from '@xyflow/react'
+import type { WorkflowNode } from '../../types'
 import { getNodeMetadata } from '../../adapters'
 import { cn } from '../../utils/cn'
 import { WorkflowGraphAst } from '@sker/workflow'
@@ -132,7 +133,7 @@ const WorkflowThumbnail = ({ workflowAst }: { workflowAst?: WorkflowGraphAst }) 
   );
 };
 
-export const WorkflowGraphAstRender = memo(({ id, data, selected }: WorkflowNodeProps) => {
+export const WorkflowGraphAstRender = memo(({ id, data, selected }: NodeProps<WorkflowNode>) => {
   const metadata = getNodeMetadata(data.nodeClass);
   const maxPorts = Math.max(metadata.inputs.length, metadata.outputs.length);
   const { getNodes } = useReactFlow();

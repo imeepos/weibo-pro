@@ -84,6 +84,7 @@ function toDataEdge(edge: IDataEdge): WorkflowEdge {
     type: 'workflow-data-edge',
     data: {
       edgeType: 'data',
+      styleType: (edge as any).styleType || 'data',
       edge,
       fromProperty: edge.fromProperty,
       toProperty: edge.toProperty,
@@ -111,6 +112,7 @@ function toControlEdge(edge: IControlEdge): WorkflowEdge {
     type: 'workflow-control-edge',
     data: {
       edgeType: 'control',
+      styleType: (edge as any).styleType || 'control',
       edge,
       condition: edge.condition,
     },

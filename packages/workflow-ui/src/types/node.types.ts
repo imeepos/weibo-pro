@@ -1,4 +1,5 @@
 import type { IAstStates } from '@sker/workflow'
+import type { Position } from '@xyflow/react'
 
 /**
  * 节点状态视觉映射
@@ -21,27 +22,12 @@ export const NODE_STATE_LABELS: Record<IAstStates, string> = {
 }
 
 /**
- * 端口位置类型
- */
-export type HandlePosition = 'top' | 'right' | 'bottom' | 'left'
-
-/**
- * 端口类型
- */
-export type HandleType = 'source' | 'target'
-
-/**
  * 节点句柄配置
  */
 export interface NodeHandleConfig {
-  /** 句柄 ID（对应属性名） */
-  id: string
-  /** 句柄类型 */
-  type: HandleType
-  /** 句柄位置 */
-  position: HandlePosition
-  /** 显示标签 */
+  property: string
+  type: 'source' | 'target'
+  position: Position
   label: string
-  /** 是否为多输入 */
   isMulti?: boolean
 }

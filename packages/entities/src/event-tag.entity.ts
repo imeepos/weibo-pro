@@ -3,6 +3,7 @@ import {
   CreateDateColumn,
   DeleteDateColumn,
   Index,
+  OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -12,8 +13,13 @@ import { Entity } from './decorator';
 @Index(['name'], { unique: true })
 @Index(['type'])
 export class EventTagEntity {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn('uuid', {
+  })
   id!: string;
+
+  @OneToOne('', {
+    createForeignKeyConstraints: false
+  })
 
   @Column({ type: 'varchar', length: 100, unique: true })
   name!: string;
@@ -40,6 +46,7 @@ export class EventTagEntity {
     default: () => 'CURRENT_TIMESTAMP',
   })
   created_at!: Date;
+
 
   @UpdateDateColumn({
     type: 'timestamptz',

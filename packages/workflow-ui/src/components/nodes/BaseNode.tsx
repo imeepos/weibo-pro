@@ -1,8 +1,10 @@
 import React, { memo, useEffect } from 'react'
 import { Handle, Position, useUpdateNodeInternals } from '@xyflow/react'
-import type { WorkflowNodeProps } from '../../types'
-import { getNodeMetadata } from '../../adapters'
+import type { NodeProps } from '@xyflow/react'
+import type { WorkflowNode } from '../../types'
+import { findNodeType, getNodeMetadata } from '../../adapters'
 import { cn } from '../../utils/cn'
+import { useRender } from './hook'
 
 // 简单的状态指示器
 const NodeStatus = ({ state, error }: { state?: string; error?: unknown }) => {
@@ -84,9 +86,11 @@ const PortRow = ({
   </div>
 );
 
-export const BaseNode = memo(({ id, data, selected }: WorkflowNodeProps) => {
-  const metadata = getNodeMetadata(data.nodeClass);
+export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNode>) => {
+  const nodeClass = findNodeType(data.type)!;
+  const metadata = getNodeMetadata(nodeClass);
   const updateNodeInternals = useUpdateNodeInternals();
+  const CustomRender = useRender(data);
 
   // 通知 React Flow 更新节点内部状态（Handle 位置）
   useEffect(() => {
@@ -133,6 +137,13 @@ export const BaseNode = memo(({ id, data, selected }: WorkflowNodeProps) => {
         </div>
         <NodeStatus state={data.state} error={data.error} />
       </div>
+
+      {/* 自定义渲染内容 */}
+      {CustomRender && (
+        <div className="mt-2 pt-2 border-t border-slate-700">
+          {CustomRender}
+        </div>
+      )}
     </div>
   )
 })

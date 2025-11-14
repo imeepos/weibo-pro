@@ -126,8 +126,8 @@ function WorkflowCanvasWrapper() {
     )
   }
 
-  return <CoreFlow
-    node={node!}
+  return <WorkflowCanvas
+    workflowAst={node!}
   />
 }
 
