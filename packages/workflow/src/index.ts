@@ -1,5 +1,5 @@
-export { Node, Input, Output, Handler, getInputMetadata, NODE, INPUT, OUTPUT, Render, HANDLER_METHOD, RENDER_METHOD, SETTING_METHOD, Preview, Setting, PREVIEW_METHOD, resolveConstructor } from './decorator';
-export type { InputOptions, InputMetadata } from './decorator';
+export { Node, Input, Output, State, Handler, getInputMetadata, getStateMetadata, NODE, INPUT, OUTPUT, STATE, Render, HANDLER_METHOD, RENDER_METHOD, SETTING_METHOD, Preview, Setting, PREVIEW_METHOD, resolveConstructor } from './decorator';
+export type { InputOptions, InputMetadata, StateOptions, StateMetadata } from './decorator';
 export { Ast, WorkflowGraphAst, ArrayIteratorAst, createWorkflowGraphAst } from './ast'
 export type { Visitor } from './ast'
 export { fromJson, toJson } from './generate'
