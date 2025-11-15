@@ -23,8 +23,9 @@ const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
   showDebugHud = false,
 }) => {
   const fgRef = useRef<any>();
-  const [highlightNodes, setHighlightNodes] = useState(new Set());
-  const [highlightLinks, setHighlightLinks] = useState(new Set());
+  const [hoverNode, setHoverNode] = useState<UserRelationNode | null>(null);
+  const [highlightNodes, setHighlightNodes] = useState<Set<string>>(new Set());
+  const [highlightLinks, setHighlightLinks] = useState<Set<string>>(new Set());
   const [fps, setFps] = useState(60);
   const [frameTime, setFrameTime] = useState(16.67);
   const frameCountRef = useRef(0);
@@ -160,6 +161,8 @@ const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
 
   const handleNodeHover = useCallback((node: any) => {
     const typedNode = node as UserRelationNode | null;
+
+    setHoverNode(typedNode);
 
     if (onNodeHover) {
       onNodeHover(typedNode);
@@ -358,22 +361,8 @@ const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
           } else if (obj && !obj.scale.equals(new THREE.Vector3(1, 1, 1))) {
             obj.scale.setScalar(1.0);
           }
-        }}
+        },
       />
-
-      {hoverNode && (
-        <div className="absolute top-4 right-4 backdrop-blur-sm bg-background/80 text-foreground p-3 rounded-md shadow-lg max-w-xs border border-border">
-          <div className="font-semibold text-base mb-1">{hoverNode.name}</div>
-          <div className="text-xs space-y-0.5">
-            <div>类型: {getUserTypeLabel(hoverNode.userType)}</div>
-            <div>粉丝: {formatNumber(hoverNode.followers)}</div>
-            <div>发帖: {formatNumber(hoverNode.postCount)}</div>
-            <div>影响力: {hoverNode.influence}/100</div>
-            {hoverNode.location && <div>位置: {hoverNode.location}</div>}
-            {hoverNode.verified && <div className="text-primary">已认证</div>}
-          </div>
-        </div>
-      )}
 
       {showDebugHud && (
         <div className="absolute top-20 left-4 backdrop-blur-sm bg-background/50 text-foreground rounded-md p-2 text-xs font-mono">
