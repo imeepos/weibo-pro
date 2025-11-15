@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Users, Network, Activity } from 'lucide-react';
 import { root } from '@sker/core';
-import UserRelationGraph3D, { getUserTypeColor } from '../components/charts/UserRelationGraph3D';
+import UserRelationGraph3D from '../components/charts/UserRelationGraph3D';
+import { getUserTypeColor } from '../components/charts/UserRelationGraph3D.utils';
 import UserRelationControls from '../components/charts/UserRelationControls';
 import type {
   UserRelationNetwork,
