@@ -1,18 +1,19 @@
-import type { EdgeValidationResult, ConnectionParams } from '../types'
+import type { EdgeValidation } from '../types'
+import type { Connection } from '@xyflow/react'
 
 /**
  * 验证连线是否有效
  *
  * 规则：
- * 1. 只能从输出端口（source）连接到输入端口（target）
- * 2. 不能自己连接自己
+ * 1. 不能自己连接自己
+ * 2. 必须指定具体的端口
  * 3. 输入端口只能有一条入边（除非标记为 isMulti）
  */
 export function validateConnection(
-  connection: ConnectionParams,
+  connection: Connection,
   existingEdges: any[],
   nodes: any[]
-): EdgeValidationResult {
+): EdgeValidation {
   // 规则 1: 不能自己连接自己
   if (connection.source === connection.target) {
     return {
@@ -36,8 +37,7 @@ export function validateConnection(
   }
 
   // 检查该输入端口是否为 isMulti
-  const targetMetadata = targetNode.data
-  // 这里需要通过元数据判断 isMulti，暂时简化处理
+  // TODO: 通过元数据判断 isMulti
 
   const existingConnection = existingEdges.find(
     (edge: any) =>
@@ -47,7 +47,6 @@ export function validateConnection(
 
   if (existingConnection) {
     // TODO: 检查 isMulti 元数据
-    // 暂时允许多连接
   }
 
   return { valid: true }
@@ -80,7 +79,6 @@ export function detectCycle(
     return false
   }
 
-  // 模拟添加新边后检测
   const testEdges = [...edges, { source: sourceId, target: targetId }]
   return dfs(sourceId)
 }

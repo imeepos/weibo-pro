@@ -7,7 +7,7 @@ import {
   WeiboAjaxStatusesCommentAst,
   WeiboAjaxStatusesRepostTimelineAst,
 } from '@sker/workflow-ast';
-import { execute, fromJson } from '@sker/workflow';
+import { Ast, execute, fromJson } from '@sker/workflow';
 import { WorkflowGraphAst } from '@sker/workflow';
 import { logger } from '../utils/logger';
 import * as sdk from '@sker/sdk';
@@ -346,7 +346,7 @@ export class WorkflowController implements sdk.WorkflowController {
   @Post('share')
   async createShare(@Body() body: { workflowId: string; expiresAt?: string }): Promise<sdk.CreateShareResult> {
     const { workflowId } = body;
-    if(!workflowId){
+    if (!workflowId) {
       throw new BadRequestException('工作流ID不能为空');
     }
 
@@ -387,30 +387,16 @@ export class WorkflowController implements sdk.WorkflowController {
    * - 妥善处理所有错误，确保服务稳定
    */
   @Post('execute-node')
-  async executeNode(@Body() body: WorkflowGraphAst): Promise<WorkflowGraphAst> {
-    const { id: nodeId, nodes, edges, ctx = {} } = body;
-
+  async executeNode(@Body() body: Ast): Promise<WorkflowGraphAst> {
+    const { id: nodeId } = body;
     if (!nodeId || nodeId.trim().length === 0) {
       throw new BadRequestException('节点ID不能为空');
     }
-
-    if (!nodes || !edges) {
-      throw new BadRequestException('工作流数据格式错误');
-    }
-
     try {
       // 重建工作流 AST
       const ast = fromJson(body);
-
       // 执行节点
-      const result = await execute(ast, ctx);
-
-      logger.info('Node execution completed', {
-        nodeId,
-        state: result.state,
-        nodesExecuted: result.nodes?.length
-      });
-
+      const result = await execute(ast, ast);
       return result;
     } catch (error: any) {
       logger.error('Node execution failed', {

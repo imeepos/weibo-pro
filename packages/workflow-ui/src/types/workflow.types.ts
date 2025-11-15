@@ -17,15 +17,15 @@ export type WorkflowNode<T extends INode = INode> = Node<T, string>
 export interface WorkflowEdgeData extends Record<string, unknown> {
   /** 边类型：数据边或控制边 */
   edgeType: 'data' | 'control'
-  /** 原始边定义 */
-  edge: IDataEdge | IControlEdge
+  /** 视觉样式类型 */
+  styleType?: keyof typeof import('./edge.types').EDGE_TYPE_STYLES
   /** 数据边属性路径 */
   fromProperty?: string
   toProperty?: string
   /** 控制边条件 */
   condition?: {
     property: string
-    value: any
+    value: unknown
   }
   /** 多输入权重 */
   weight?: number
@@ -44,7 +44,7 @@ export interface NodeMetadata {
   type: string
   /** 节点显示标签 */
   label: string
-  /** 节点自定义标题（用于显示中文） */
+  /** 节点原始标题（装饰器定义的中文标题） */
   title?: string
   /** 输入端口定义 */
   inputs: PortMetadata[]
@@ -64,8 +64,6 @@ export interface PortMetadata {
   isMulti?: boolean
   /** 显示标签 */
   label?: string
-  /** 端口自定义标题（用于显示中文） */
-  title?: string
 }
 
 /**
@@ -81,8 +79,3 @@ export interface WorkflowCanvasState {
   /** 执行错误 */
   executionError?: Error
 }
-
-/**
- * 节点组件 Props
- */
-export type WorkflowNodeProps = FlowNodeProps<WorkflowNode>

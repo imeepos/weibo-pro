@@ -84,6 +84,9 @@ importers:
       socket.io:
         specifier: ^4.8.1
         version: 4.8.1
+      typeorm:
+        specifier: ^0.3.20
+        version: 0.3.27(ioredis@5.8.2)(pg@8.16.3)(reflect-metadata@0.2.2)(ts-node@10.9.2(@swc/core@1.15.1(@swc/helpers@0.5.17))(@types/node@22.19.0)(typescript@5.9.2))
     devDependencies:
       '@nestjs/cli':
         specifier: ^10.0.0

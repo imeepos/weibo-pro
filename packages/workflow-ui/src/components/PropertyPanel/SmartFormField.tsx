@@ -10,7 +10,7 @@ export interface SmartFormFieldProps {
 }
 
 /**
- * 智能表单字段组件
+ * 智能表单字段组件 - 数字时代的交互诗篇
  *
  * 根据类型自动选择合适的输入控件：
  * - text: 文本输入框
@@ -25,12 +25,14 @@ export interface SmartFormFieldProps {
 export function SmartFormField({ label, value, type = 'any', onChange }: SmartFormFieldProps) {
   const [localValue, setLocalValue] = useState(formatValueForInput(value, type))
   const [error, setError] = useState<string | null>(null)
+  const [isFocused, setIsFocused] = useState(false)
 
   useEffect(() => {
     setLocalValue(formatValueForInput(value, type))
   }, [value, type])
 
   const handleBlur = () => {
+    setIsFocused(false)
     try {
       const parsedValue = parseValue(localValue, type)
       setError(null)
@@ -38,6 +40,10 @@ export function SmartFormField({ label, value, type = 'any', onChange }: SmartFo
     } catch (err) {
       setError(err instanceof Error ? err.message : '输入格式错误')
     }
+  }
+
+  const handleFocus = () => {
+    setIsFocused(true)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -58,40 +64,67 @@ export function SmartFormField({ label, value, type = 'any', onChange }: SmartFo
   }
 
   const renderInput = () => {
+    const baseInputClass = `w-full px-3 py-2 text-sm border rounded-lg transition-all duration-200 box-border focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
+      isFocused ? 'border-indigo-500 shadow-sm' : 'border-slate-700/50 hover:border-slate-600'
+    } ${error ? 'border-red-500/50 bg-red-500/10 focus:border-red-500 focus:ring-red-500' : 'bg-slate-800/50 text-slate-200'}`
+
     switch (type) {
       case 'boolean':
         return (
-          <label className="flex items-center cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={Boolean(value)}
-              onChange={(e) => onChange(e.target.checked)}
-              className="w-4 h-4 mr-2 cursor-pointer accent-blue-600"
-            />
-            <span className="text-sm text-gray-800 cursor-pointer">{label}</span>
+          <label className="flex items-center cursor-pointer select-none p-2 rounded-lg hover:bg-slate-800/30 transition-colors duration-200">
+            <div className="relative">
+              <input
+                type="checkbox"
+                checked={Boolean(value)}
+                onChange={(e) => onChange(e.target.checked)}
+                className="sr-only"
+              />
+              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-200 ${
+                Boolean(value)
+                  ? 'bg-indigo-500 border-indigo-500'
+                  : 'bg-slate-800/50 border-slate-700/50'
+              }`}>
+                {Boolean(value) && (
+                  <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </div>
+            </div>
+            <span className="ml-3 text-sm font-medium text-slate-300 cursor-pointer">{label}</span>
           </label>
         )
 
       case 'number':
         return (
-          <input
-            type="number"
-            className={`w-full px-3 py-2 text-sm border rounded-md bg-white text-gray-800 transition-all duration-200 box-border focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 focus:ring-opacity-50 hover:border-gray-400 ${error ? 'border-red-500 bg-red-50 focus:border-red-500 focus:ring-red-100' : 'border-gray-300'}`}
-            value={localValue}
-            onChange={(e) => handleChange(e.target.value)}
-            onBlur={handleBlur}
-            onKeyDown={handleKeyDown}
-            placeholder="输入数字"
-          />
+          <div className="relative">
+            <input
+              type="number"
+              className={baseInputClass}
+              value={localValue}
+              onChange={(e) => handleChange(e.target.value)}
+              onBlur={handleBlur}
+              onFocus={handleFocus}
+              onKeyDown={handleKeyDown}
+              placeholder="0"
+            />
+            <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-500">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+              </svg>
+            </div>
+          </div>
         )
 
       case 'date':
         return (
           <input
             type="date"
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md bg-white text-gray-800 transition-all duration-200 box-border focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 focus:ring-opacity-50 hover:border-gray-400"
+            className={baseInputClass}
             value={formatDateForInput(value)}
             onChange={(e) => onChange(new Date(e.target.value))}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
           />
         )
 
@@ -99,37 +132,39 @@ export function SmartFormField({ label, value, type = 'any', onChange }: SmartFo
         return (
           <input
             type="datetime-local"
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md bg-white text-gray-800 transition-all duration-200 box-border focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 focus:ring-opacity-50 hover:border-gray-400"
+            className={baseInputClass}
             value={formatDateTimeForInput(value)}
             onChange={(e) => onChange(new Date(e.target.value))}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
           />
         )
 
       case 'textarea':
         return (
           <textarea
-            className={`w-full px-3 py-2 text-sm border rounded-md bg-white text-gray-800 transition-all duration-200 box-border resize-y min-h-20 font-inherit focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 focus:ring-opacity-50 hover:border-gray-400 ${error ? 'border-red-500 bg-red-50 focus:border-red-500 focus:ring-red-100' : 'border-gray-300'}`}
+            className={`${baseInputClass} resize-y min-h-[80px] font-mono`}
             value={localValue}
             onChange={(e) => handleChange(e.target.value)}
             onBlur={handleBlur}
+            onFocus={handleFocus}
             onKeyDown={handleKeyDown}
             rows={4}
-            placeholder="输入多行文本..."
+            placeholder="在此输入多行文本..."
           />
         )
 
       case 'select':
-        // 对于 select 类型，需要在装饰器中定义 options
-        // 这里使用文本输入作为后备方案
         return (
           <input
             type="text"
-            className={`w-full px-3 py-2 text-sm border rounded-md bg-white text-gray-800 transition-all duration-200 box-border focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 focus:ring-opacity-50 hover:border-gray-400 ${error ? 'border-red-500 bg-red-50 focus:border-red-500 focus:ring-red-100' : 'border-gray-300'}`}
+            className={baseInputClass}
             value={localValue}
             onChange={(e) => handleChange(e.target.value)}
             onBlur={handleBlur}
+            onFocus={handleFocus}
             onKeyDown={handleKeyDown}
-            placeholder="输入选项值"
+            placeholder="选择或输入..."
           />
         )
 
@@ -139,10 +174,11 @@ export function SmartFormField({ label, value, type = 'any', onChange }: SmartFo
         return (
           <input
             type="text"
-            className={`w-full px-3 py-2 text-sm border rounded-md bg-white text-gray-800 transition-all duration-200 box-border focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 focus:ring-opacity-50 hover:border-gray-400 ${error ? 'border-red-500 bg-red-50 focus:border-red-500 focus:ring-red-100' : 'border-gray-300'}`}
+            className={baseInputClass}
             value={localValue}
             onChange={(e) => handleChange(e.target.value)}
             onBlur={handleBlur}
+            onFocus={handleFocus}
             onKeyDown={handleKeyDown}
             placeholder={getPlaceholder(type)}
           />
@@ -150,17 +186,15 @@ export function SmartFormField({ label, value, type = 'any', onChange }: SmartFo
     }
   }
 
-  // 布尔类型使用特殊的布局
   if (type === 'boolean') {
-    return <div className="mb-3">{renderInput()}</div>
+    return <div className="mb-4">{renderInput()}</div>
   }
 
-  // 其他类型使用标准布局
   return (
     <div className="mb-4">
-      <label className="block mb-1.5 text-xs font-medium text-gray-800 leading-snug">{label}</label>
+      <label className="block mb-2 text-xs font-medium text-slate-400 leading-tight">{label}</label>
       {renderInput()}
-      {error && <div className="mt-1 text-[11px] text-red-500 leading-snug">{error}</div>}
+      {error && <div className="mt-2 text-xs text-red-400 font-medium animate-pulse">{error}</div>}
     </div>
   )
 }

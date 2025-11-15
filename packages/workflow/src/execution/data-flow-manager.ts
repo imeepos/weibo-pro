@@ -1,5 +1,5 @@
 import { root } from '@sker/core';
-import { INPUT, OUTPUT, resolveConstructor, getInputMetadata, InputMetadata } from '../decorator';
+import { INPUT, OUTPUT, STATE, resolveConstructor, getInputMetadata, InputMetadata } from '../decorator';
 import { fromJson } from '../generate';
 import { IEdge, INode, isControlEdge, isDataEdge } from '../types';
 
@@ -15,20 +15,36 @@ export class DataFlowManager {
             const ast = fromJson(node);
             const ctor = resolveConstructor(ast);
             const outputs = root.get(OUTPUT);
+            const states = root.get(STATE);
             const outputData: any = {};
 
+            // 处理 @Output 装饰的属性
             if (outputs && outputs.length > 0) {
                 outputs.filter(it => it.target === ctor).map(it => {
                     if ((node as any)[it.propertyKey] !== undefined) {
                         outputData[it.propertyKey] = (node as any)[it.propertyKey];
                     }
                 });
+            }
+
+            // 处理 @State 装饰的属性 - 可以作为输出传递但不作为最终结果
+            if (states && states.length > 0) {
+                states.filter(it => it.target === ctor).map(it => {
+                    if ((node as any)[it.propertyKey] !== undefined) {
+                        outputData[it.propertyKey] = (node as any)[it.propertyKey];
+                    }
+                });
+            }
+
+            // 如果有装饰器定义，只返回装饰器标记的属性
+            if ((outputs && outputs.length > 0) || (states && states.length > 0)) {
                 return outputData;
             }
         } catch {
             // 装饰器元数据不可用，使用回退方案
         }
 
+        // 回退方案：排除系统属性
         const outputData: any = {};
         const systemProperties = ['id', 'state', 'type'];
 

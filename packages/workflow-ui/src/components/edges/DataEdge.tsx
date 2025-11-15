@@ -2,6 +2,7 @@ import React, { memo } from 'react'
 import { BaseEdge, getBezierPath } from '@xyflow/react'
 import type { EdgeProps } from '@xyflow/react'
 import type { WorkflowEdge } from '../../types'
+import { EDGE_TYPE_STYLES } from '../../types/edge.types'
 
 export const DataEdge = memo((props: EdgeProps<WorkflowEdge>) => {
   const { id, sourceX, sourceY, targetX, targetY, data, selected } = props
@@ -28,11 +29,15 @@ export const DataEdge = memo((props: EdgeProps<WorkflowEdge>) => {
     window.dispatchEvent(customEvent)
   }
 
+  const baseStyleType = data?.styleType || 'data'
+  const style = EDGE_TYPE_STYLES[baseStyleType]
+
   return (
     <>
       <BaseEdge
         path={edgePath}
         style={{
+          ...style,
           zIndex: 9
         }}
         id={id}
@@ -42,7 +47,7 @@ export const DataEdge = memo((props: EdgeProps<WorkflowEdge>) => {
         d={edgePath}
         fill="none"
         stroke="transparent"
-        strokeWidth={2}
+        strokeWidth={style.strokeWidth}
         onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
         style={{ cursor: 'pointer' }}

@@ -6,14 +6,14 @@ import type { NodeMetadata, PortMetadata } from '../types'
  * 获取节点的输入/输出元数据
  */
 export function getNodeMetadata(nodeClass: Type<any>): NodeMetadata {
-  if(!nodeClass) throw new Error(`node class is null`)
+  if (!nodeClass) throw new Error(`node class is null`)
   const inputMetadata = root.get(INPUT, []).filter(it => it.target === nodeClass)
   const outputMetadata = root.get(OUTPUT, []).filter(it => it.target === nodeClass)
   const nodeMetadatas = root.get(NODE, []).filter(it => it.target === nodeClass)
 
   const instance = new nodeClass()
   const nodeType = instance.type || nodeClass.name
-  const nodeMetadata = nodeMetadatas[0] // 取第一个匹配的节点元数据
+  const nodeMetadata = nodeMetadatas[0]
   const customTitle = nodeMetadata?.title
 
   const inputs = inputMetadata.map(toPortMetadata)
@@ -37,7 +37,6 @@ export function getNodeMetadata(nodeClass: Type<any>): NodeMetadata {
         type: 'any',
         isMulti: false,
         label: formatPortLabel(key),
-        title: undefined,
       })
     }
 
@@ -63,6 +62,10 @@ export function getAllNodeTypes(): Type<any>[] {
   return nodeMetadatas.map(metadata => metadata.target)
 }
 
+export function findNodeType<T = any>(name: string): Type<T> | undefined {
+  return getAllNodeTypes().find((type: any) => type.name === name)
+}
+
 /**
  * 转换为端口元数据
  */
@@ -74,10 +77,9 @@ function toPortMetadata(
 
   return {
     property,
-    type: metadata.type || 'any', // 使用装饰器中指定的类型，默认为 'any'
+    type: metadata.type || 'any',
     isMulti: metadata.isMulti,
     label: customTitle || formatPortLabel(property),
-    title: customTitle,
   }
 }
 
@@ -86,8 +88,8 @@ function toPortMetadata(
  */
 function formatNodeLabel(name: string): string {
   return name
-    .replace(/Node$/, '') // 移除 Node 后缀
-    .replace(/([A-Z])/g, ' $1') // 在大写字母前添加空格
+    .replace(/Node$/, '')
+    .replace(/([A-Z])/g, ' $1')
     .trim()
 }
 
@@ -96,7 +98,7 @@ function formatNodeLabel(name: string): string {
  */
 function formatPortLabel(property: string): string {
   return property
-    .replace(/([A-Z])/g, ' $1') // 在大写字母前添加空格
-    .replace(/^./, str => str.toUpperCase()) // 首字母大写
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/^./, str => str.toUpperCase())
     .trim()
 }

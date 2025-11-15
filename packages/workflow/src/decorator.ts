@@ -173,3 +173,35 @@ export function Output(options?: OutputOptions): PropertyDecorator {
     };
 }
 
+export interface StateOptions {
+    title?: string;
+    type?: string;
+}
+
+export interface StateMetadata {
+    target: Type<any>;
+    propertyKey: string | symbol;
+    title?: string;
+}
+
+export const STATE = new InjectionToken<StateMetadata[]>(`STATE`)
+export function State(options?: StateOptions): PropertyDecorator {
+    return (target, propertyKey) => {
+        const ctor = resolveConstructor(target);
+        root.set([{ provide: STATE, multi: true, useValue: { target: ctor, propertyKey, title: options?.title } }])
+    };
+}
+
+export function getStateMetadata(target: Type<any> | object, propertyKey?: string | symbol): StateMetadata | StateMetadata[] {
+    const ctor = resolveConstructor(target);
+    const allStates = root.get(STATE, []);
+    const targetStates = allStates.filter(it => it.target === ctor);
+
+    if (propertyKey !== undefined) {
+        const metadata = targetStates.find(it => it.propertyKey === propertyKey);
+        return metadata || { target: ctor, propertyKey };
+    }
+
+    return targetStates;
+}
+
