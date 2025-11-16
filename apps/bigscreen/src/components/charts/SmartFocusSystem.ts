@@ -55,11 +55,11 @@ export const smartFocusAlgorithm = (
   });
 
   // 合并所有高亮节点
-  const highlightNodes = new Set([...focusLevels[1], ...focusLevels[2]]);
+  const highlightNodes = new Set<string>([...focusLevels[1], ...focusLevels[2]]);
 
   // 计算需要暗淡的节点
-  const allNodeIds = new Set(graphData.nodes.map((n: any) => n.id));
-  const dimmedNodes = new Set([...allNodeIds].filter(id => !highlightNodes.has(id)));
+  const allNodeIds = new Set<string>(graphData.nodes.map((n: any) => n.id.toString()));
+  const dimmedNodes = new Set<string>([...allNodeIds].filter(id => !highlightNodes.has(id.toString())));
 
   // 计算最佳相机位置
   const { cameraPosition, cameraTarget } = calculateOptimalCamera(selectedNode, focusLevels, graphData);
