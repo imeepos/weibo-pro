@@ -78,11 +78,15 @@ export const GeographicCharts: ChartComponentsMap = {
 import InfluenceNetworkFlow from './InfluenceNetworkFlow';
 import SimpleNetworkFlow from './SimpleNetworkFlow';
 import PropagationPathChart from './PropagationPathChart';
+import UserRelationGraph3D from './UserRelationGraph3D';
+import UserRelationOverview from './UserRelationOverview';
 
 export const NetworkCharts: ChartComponentsMap = {
   InfluenceNetworkFlow,
   SimpleNetworkFlow,
-  PropagationPathChart
+  PropagationPathChart,
+  UserRelationGraph3D,
+  UserRelationOverview
 };
 
 // 事件分析
@@ -129,6 +133,8 @@ export { default as GeographicChart } from './GeographicChart';
 export { default as InfluenceNetworkFlow } from './InfluenceNetworkFlow';
 export { default as SimpleNetworkFlow } from './SimpleNetworkFlow';
 export { default as PropagationPathChart } from './PropagationPathChart';
+export { default as UserRelationGraph3D } from './UserRelationGraph3D';
+export { default as UserRelationOverview } from './UserRelationOverview';
 
 // 事件分析
 export { default as HotEventsList } from './HotEventsList';
