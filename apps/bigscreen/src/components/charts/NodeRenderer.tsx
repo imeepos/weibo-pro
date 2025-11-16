@@ -1,49 +1,88 @@
 import React, { useCallback } from 'react';
 import * as THREE from 'three';
 import { getUserTypeColor } from './UserRelationGraph3D.utils';
+import {
+  getUserNodeShape,
+  createShapeGeometry,
+  calculateNodeOpacity,
+  createPulseAnimation,
+  getCommunityColor,
+  detectCommunity
+} from './NodeShapeUtils';
 
 interface NodeRendererProps {
   highlightNodes: Set<string>;
+  enableShapes?: boolean;
+  enableOpacity?: boolean;
+  enablePulse?: boolean;
+  enableCommunities?: boolean;
+  edges?: any[];
 }
 
-export const useNodeRenderer = ({ highlightNodes }: NodeRendererProps) => {
+export const useNodeRenderer = ({
+  highlightNodes,
+  enableShapes = true,
+  enableOpacity = true,
+  enablePulse = false,
+  enableCommunities = false,
+  edges = []
+}: NodeRendererProps) => {
   const nodeThreeObject = useCallback((node: any) => {
     const nodeWithConnections = node as any;
-    const connectionCount = nodeWithConnections.connectionCount || 0;
     const group = new THREE.Group();
 
-    const radius = Math.sqrt(connectionCount) * 2 + 3;
+    // 使用 val 属性作为节点半径（已在父组件中计算）
+    let radius = nodeWithConnections.val || 3;
 
-    // 节点几何体
-    const geometry = new THREE.SphereGeometry(radius, 32, 32);
+    // 应用脉动动画
+    if (enablePulse) {
+      radius = createPulseAnimation(radius, Date.now() / 1000);
+    }
+
+    // 确定节点形状
+    const shape = enableShapes ? getUserNodeShape(node.userType) : 'sphere';
+    const geometry = createShapeGeometry(shape, radius);
+
+    // 确定节点颜色
+    let nodeColor;
+    if (enableCommunities) {
+      const communityId = detectCommunity(node.id, edges);
+      nodeColor = new THREE.Color(getCommunityColor(communityId));
+    } else {
+      nodeColor = new THREE.Color(getUserTypeColor(node.userType));
+    }
+
+    // 计算透明度
+    const opacity = enableOpacity ? calculateNodeOpacity(node.lastActive) : 1.0;
 
     // 创建发光材质
-    const mainColor = new THREE.Color(getUserTypeColor(node.userType));
     const material = new THREE.MeshStandardMaterial({
-      color: mainColor,
+      color: nodeColor,
       metalness: 0.3,
       roughness: 0.2,
-      emissive: mainColor,
+      emissive: nodeColor,
       emissiveIntensity: 0.1,
+      transparent: opacity < 1.0,
+      opacity: opacity,
     });
     const sphere = new THREE.Mesh(geometry, material);
 
     // 添加WIRED线框效果
-    const wireframeGeometry = new THREE.SphereGeometry(radius * 1.01, 16, 16);
+    const wireframeGeometry = createShapeGeometry(shape, radius * 1.01);
     const wireframeMaterial = new THREE.MeshStandardMaterial({
-      color: mainColor,
+      color: nodeColor,
       wireframe: true,
       transparent: true,
       opacity: 0.3,
-      emissive: mainColor,
+      emissive: nodeColor,
       emissiveIntensity: 0.2,
     });
     const wireframe = new THREE.Mesh(wireframeGeometry, wireframeMaterial);
 
     // 内发光光晕
-    const glowGeometry = new THREE.SphereGeometry(radius * 1.15, 32, 32);
+    const glowGeometry = createShapeGeometry(shape, radius * 1.15);
     const glowMaterial = new THREE.MeshBasicMaterial({
-      color: mainColor,
+      color: nodeColor,
       transparent: true,
       opacity: 0.1,
     });
@@ -79,7 +118,7 @@ export const useNodeRenderer = ({ highlightNodes }: NodeRendererProps) => {
     group.add(wireframe);
 
     return group;
-  }, [highlightNodes]);
+  }, [highlightNodes, enableShapes, enableOpacity, enablePulse, enableCommunities, edges]);
 
   return { nodeThreeObject };
 };

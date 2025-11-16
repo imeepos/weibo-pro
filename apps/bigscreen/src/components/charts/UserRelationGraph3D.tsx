@@ -11,6 +11,28 @@ import { useNodeRenderer } from './NodeRenderer';
 import { useLinkRenderer } from './LinkRenderer';
 import { PerformanceMonitor } from './PerformanceMonitor';
 import { getNodeLabel } from './UserRelationGraph3D.utils';
+import {
+  calculateCompositeScore,
+  calculateNodeSize,
+  calculateConnectionCounts,
+  DEFAULT_WEIGHTS,
+  type NodeSizeWeights
+} from './NodeSizeCalculator';
+import {
+  calculateAllLinkDistances,
+  DEFAULT_LINK_CONFIG,
+  type LinkDistanceConfig
+} from './LinkDistanceCalculator';
+import { smartFocusAlgorithm } from './SmartFocusSystem';
+import { EnhancedControls } from './EnhancedControls';
+import {
+  DEFAULT_PERFORMANCE_CONFIG,
+  type PerformanceConfig,
+  createSamplingStrategy,
+  FrameRateMonitor,
+  MemoryMonitor,
+  getAdaptivePerformanceConfig
+} from './PerformanceOptimizer';
 
 interface UserRelationGraph3DProps {
   network: UserRelationNetwork;
@@ -18,6 +40,12 @@ interface UserRelationGraph3DProps {
   onNodeClick?: (node: UserRelationNode) => void;
   onNodeHover?: (node: UserRelationNode | null) => void;
   showDebugHud?: boolean;
+  nodeSizeWeights?: NodeSizeWeights;
+  linkDistanceConfig?: LinkDistanceConfig;
+  enableNodeShapes?: boolean;
+  enableNodeOpacity?: boolean;
+  enableNodePulse?: boolean;
+  enableCommunities?: boolean;
 }
 
 export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
@@ -26,6 +54,12 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
   onNodeClick,
   onNodeHover,
   showDebugHud = false,
+  nodeSizeWeights = DEFAULT_WEIGHTS,
+  linkDistanceConfig = DEFAULT_LINK_CONFIG,
+  enableNodeShapes = true,
+  enableNodeOpacity = true,
+  enableNodePulse = false,
+  enableCommunities = false,
 }) => {
   const fgRef = useRef<any>();
   const [hoverNode, setHoverNode] = useState<UserRelationNode | null>(null);
@@ -37,7 +71,31 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
   const lastTimeRef = useRef(performance.now());
   const fpsUpdateIntervalRef = useRef<any>(null);
 
-  const { nodeThreeObject } = useNodeRenderer({ highlightNodes });
+  // 交互增强状态
+  const [currentWeights, setCurrentWeights] = useState<NodeSizeWeights>(nodeSizeWeights);
+  const [currentLinkConfig, setCurrentLinkConfig] = useState<LinkDistanceConfig>(linkDistanceConfig);
+  const [currentVisualization, setCurrentVisualization] = useState({
+    enableNodeShapes,
+    enableNodeOpacity,
+    enableNodePulse,
+    enableCommunities
+  });
+  const [dimmedNodes, setDimmedNodes] = useState<Set<string>>(new Set());
+
+  // 性能优化状态
+  const [performanceConfig, setPerformanceConfig] = useState<PerformanceConfig>(DEFAULT_PERFORMANCE_CONFIG);
+  const frameRateMonitorRef = useRef(new FrameRateMonitor());
+  const memoryMonitorRef = useRef(new MemoryMonitor());
+  const [sampledData, setSampledData] = useState<{ nodes: any[]; edges: any[] } | null>(null);
+
+  const { nodeThreeObject } = useNodeRenderer({
+    highlightNodes,
+    enableShapes: currentVisualization.enableNodeShapes,
+    enableOpacity: currentVisualization.enableNodeOpacity,
+    enablePulse: currentVisualization.enableNodePulse,
+    enableCommunities: currentVisualization.enableCommunities,
+    edges: network.edges
+  });
   const {
     linkMaterial,
     linkWidth,
@@ -47,38 +105,63 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
   } = useLinkRenderer();
 
   const graphData = useMemo(() => {
-    // 计算每个节点的连接数
-    const connectionCountMap = new Map<string, number>();
+    // 应用性能优化采样
+    let processedNodes = network.nodes;
+    let processedEdges = network.edges;
 
-    network.edges.forEach(edge => {
-      const source = edge.source.toString();
-      const target = edge.target.toString();
-      connectionCountMap.set(source, (connectionCountMap.get(source) || 0) + 1);
-      connectionCountMap.set(target, (connectionCountMap.get(target) || 0) + 1);
-    });
+    if (performanceConfig.enableSampling) {
+      const sampled = createSamplingStrategy(network.nodes, network.edges, performanceConfig);
+      processedNodes = sampled.nodes;
+      processedEdges = sampled.edges;
+      setSampledData({ nodes: processedNodes, edges: processedEdges });
+    } else {
+      setSampledData(null);
+    }
+
+    // 计算每个节点的连接数
+    const connectionCountMap = calculateConnectionCounts(processedEdges);
 
     return {
-      nodes: network.nodes.map(node => {
+      nodes: processedNodes.map(node => {
         const connectionCount = connectionCountMap.get(node.id.toString()) || 0;
+        const compositeScore = calculateCompositeScore(node, connectionCount, currentWeights);
+        const nodeSize = calculateNodeSize(compositeScore);
+
         return {
           ...node,
           connectionCount,
-          val: Math.sqrt(connectionCount) * 2 + 3,
+          compositeScore,
+          val: nodeSize,
         };
       }),
-      links: network.edges.map(edge => ({
+      links: processedEdges.map(edge => ({
         source: edge.source,
         target: edge.target,
         value: edge.weight,
         type: edge.type,
       })),
     };
-  }, [network]);
+  }, [network, currentWeights, performanceConfig]);
 
   useEffect(() => {
     if (fgRef.current) {
       fgRef.current.d3Force('charge').strength(-200);
-      fgRef.current.d3Force('link').distance(100);
+
+      // 使用动态连线长度
+      if (currentLinkConfig.useDynamicDistance) {
+        const linkDistances = calculateAllLinkDistances(
+          network.edges,
+          network.nodes,
+          currentLinkConfig
+        );
+
+        fgRef.current.d3Force('link').distance((link: any) => {
+          const linkId = `${link.source}-${link.target}`;
+          return linkDistances.get(linkId) || 100;
+        });
+      } else {
+        fgRef.current.d3Force('link').distance(100);
+      }
 
       // 设置初始相机位置，让关系图居中展示
       const bounds = 500; // 根据图的范围估算
@@ -88,7 +171,34 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
         z: bounds
       }, { x: 0, y: 0, z: 0 }, 0); // 看向中心点
     }
-  }, []);
+  }, [network.edges, network.nodes, currentLinkConfig]);
+
+  // 性能监控和自适应优化
+  useEffect(() => {
+    if (!showDebugHud) return;
+
+    const monitorInterval = setInterval(() => {
+      // 记录帧率
+      frameRateMonitorRef.current.recordFrame();
+
+      // 记录内存使用
+      memoryMonitorRef.current.recordMemoryUsage();
+
+      // 自适应性能调整
+      const currentFPS = frameRateMonitorRef.current.getFPS();
+      const memoryStats = memoryMonitorRef.current.getMemoryStats();
+      const memoryUsageMB = memoryStats ? memoryStats.current / (1024 * 1024) : 0;
+
+      if (currentFPS < 25 || memoryUsageMB > 400) {
+        const newConfig = getAdaptivePerformanceConfig(performanceConfig, currentFPS, memoryUsageMB);
+        setPerformanceConfig(newConfig);
+      }
+    }, 1000);
+
+    return () => {
+      clearInterval(monitorInterval);
+    };
+  }, [showDebugHud, performanceConfig]);
 
   useEffect(() => {
     if (!showDebugHud) return;
@@ -129,44 +239,19 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
       onNodeClick(node as UserRelationNode);
     }
 
+    // 应用智能聚焦
+    const focusResult = smartFocusAlgorithm(node, graphData);
+    setHighlightNodes(focusResult.highlightNodes);
+    setDimmedNodes(focusResult.dimmedNodes);
+
     if (fgRef.current) {
-      const distance = 300;
-
-      // 获取当前相机位置
-      const cameraPosition = fgRef.current.cameraPosition();
-      const currentCamera = {
-        x: cameraPosition.x,
-        y: cameraPosition.y,
-        z: cameraPosition.z
-      };
-
-      // 计算从节点到当前相机的方向向量
-      const direction = {
-        x: currentCamera.x - node.x,
-        y: currentCamera.y - node.y,
-        z: currentCamera.z - node.z
-      };
-
-      // 归一化方向向量
-      const dirLength = Math.hypot(direction.x, direction.y, direction.z);
-
-      if (dirLength > 0) {
-        // 在从节点到相机的方向上，向相机方向后退一定距离
-        // 这样节点会保持在屏幕中央
-        const ratio = distance / dirLength;
-
-        fgRef.current.cameraPosition(
-          {
-            x: node.x + direction.x * ratio,
-            y: node.y + direction.y * ratio,
-            z: node.z + direction.z * ratio
-          },
-          node, // 节点作为焦点，保持在屏幕中央
-          3000
-        );
-      }
+      fgRef.current.cameraPosition(
+        focusResult.cameraPosition,
+        focusResult.cameraTarget,
+        2000
+      );
     }
-  }, [onNodeClick]);
+  }, [onNodeClick, graphData]);
 
   const handleNodeHover = useCallback((node: any) => {
     const typedNode = node as UserRelationNode | null;
@@ -228,12 +313,28 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
         enablePointerInteraction={true}
       />
 
+      {/* 增强控制面板 */}
+      <EnhancedControls
+        nodeSizeWeights={currentWeights}
+        linkDistanceConfig={currentLinkConfig}
+        enableNodeShapes={currentVisualization.enableNodeShapes}
+        enableNodeOpacity={currentVisualization.enableNodeOpacity}
+        enableNodePulse={currentVisualization.enableNodePulse}
+        enableCommunities={currentVisualization.enableCommunities}
+        onWeightsChange={setCurrentWeights}
+        onLinkConfigChange={setCurrentLinkConfig}
+        onVisualizationChange={setCurrentVisualization}
+      />
+
       <PerformanceMonitor
         showDebugHud={showDebugHud}
         fps={fps}
         frameTime={frameTime}
         nodesCount={graphData.nodes.length}
         linksCount={graphData.links.length}
+        originalNodesCount={network.nodes.length}
+        originalLinksCount={network.edges.length}
+        performanceLevel={frameRateMonitorRef.current.getPerformanceLevel()}
       />
     </div>
   );
