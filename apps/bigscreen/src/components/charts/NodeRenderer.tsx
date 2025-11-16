@@ -7,7 +7,8 @@ import {
   calculateNodeOpacity,
   createPulseAnimation,
   getCommunityColor,
-  detectCommunity
+  detectCommunity,
+  type CommunityMapping
 } from './NodeShapeUtils';
 
 interface NodeRendererProps {
@@ -17,6 +18,7 @@ interface NodeRendererProps {
   enablePulse?: boolean;
   enableCommunities?: boolean;
   edges?: any[];
+  communityMapping?: CommunityMapping;
 }
 
 export const useNodeRenderer = ({
@@ -25,7 +27,8 @@ export const useNodeRenderer = ({
   enableOpacity = true,
   enablePulse = false,
   enableCommunities = false,
-  edges = []
+  edges = [],
+  communityMapping
 }: NodeRendererProps) => {
   const nodeThreeObject = useCallback((node: any) => {
     const nodeWithConnections = node as any;
@@ -46,8 +49,9 @@ export const useNodeRenderer = ({
     // 确定节点颜色
     let nodeColor;
     if (enableCommunities) {
-      const communityId = detectCommunity(node.id, edges);
-      nodeColor = new THREE.Color(getCommunityColor(communityId));
+      const communityId = detectCommunity(node.id, edges, communityMapping);
+      const communities = communityMapping?.communities;
+      nodeColor = new THREE.Color(getCommunityColor(communityId, communities));
     } else {
       nodeColor = new THREE.Color(getUserTypeColor(node.userType));
     }
@@ -118,7 +122,7 @@ export const useNodeRenderer = ({
     group.add(wireframe);
 
     return group;
-  }, [highlightNodes, enableShapes, enableOpacity, enablePulse, enableCommunities, edges]);
+  }, [highlightNodes, enableShapes, enableOpacity, enablePulse, enableCommunities, edges, communityMapping]);
 
   return { nodeThreeObject };
 };

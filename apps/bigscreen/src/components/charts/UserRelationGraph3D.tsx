@@ -33,6 +33,9 @@ import {
   MemoryMonitor,
   getAdaptivePerformanceConfig
 } from './PerformanceOptimizer';
+import { LouvainCommunityDetector, analyzeInterCommunityRelations } from './CommunityDetector';
+import type { CommunityMapping } from './NodeShapeUtils';
+import { CommunityInfoPanel } from './CommunityInfoPanel';
 
 interface UserRelationGraph3DProps {
   network: UserRelationNetwork;
@@ -88,13 +91,19 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
   const memoryMonitorRef = useRef(new MemoryMonitor());
   const [sampledData, setSampledData] = useState<{ nodes: any[]; edges: any[] } | null>(null);
 
+  // 社群检测状态
+  const [communityMapping, setCommunityMapping] = useState<CommunityMapping | null>(null);
+  const [interCommunityRelations, setInterCommunityRelations] = useState<any[]>([]);
+  const [showCommunityInfo, setShowCommunityInfo] = useState(false);
+
   const { nodeThreeObject } = useNodeRenderer({
     highlightNodes,
     enableShapes: currentVisualization.enableNodeShapes,
     enableOpacity: currentVisualization.enableNodeOpacity,
     enablePulse: currentVisualization.enableNodePulse,
     enableCommunities: currentVisualization.enableCommunities,
-    edges: network.edges
+    edges: network.edges,
+    communityMapping
   });
   const {
     linkMaterial,
@@ -199,6 +208,45 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
       clearInterval(monitorInterval);
     };
   }, [showDebugHud, performanceConfig]);
+
+  // 社群检测
+  useEffect(() => {
+    if (currentVisualization.enableCommunities && network.nodes.length > 0 && network.edges.length > 0) {
+      // 使用 Web Worker 或 setTimeout 避免阻塞主线程
+      setTimeout(() => {
+        try {
+          const detector = new LouvainCommunityDetector(network.nodes, network.edges);
+          const communities = detector.detectCommunities();
+
+          // 构建社群映射
+          const nodeToCommunity = new Map<string, number>();
+          for (const community of communities) {
+            for (const nodeId of community.nodes) {
+              nodeToCommunity.set(nodeId, community.id);
+            }
+          }
+
+          const mapping: CommunityMapping = {
+            nodeToCommunity,
+            communities
+          };
+
+          setCommunityMapping(mapping);
+
+          // 分析社群间关系
+          const relations = analyzeInterCommunityRelations(communities, network.edges);
+          setInterCommunityRelations(relations);
+
+          console.log(`检测到 ${communities.length} 个社群，最大社群包含 ${communities[0]?.size || 0} 个节点`);
+        } catch (error) {
+          console.warn('社群检测失败:', error);
+        }
+      }, 0);
+    } else {
+      setCommunityMapping(null);
+      setInterCommunityRelations([]);
+    }
+  }, [network.nodes, network.edges, currentVisualization.enableCommunities]);
 
   useEffect(() => {
     if (!showDebugHud) return;
@@ -336,6 +384,29 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
         originalLinksCount={network.edges.length}
         performanceLevel={frameRateMonitorRef.current.getPerformanceLevel()}
       />
+
+      {/* 社群信息面板 */}
+      {currentVisualization.enableCommunities && communityMapping && (
+        <CommunityInfoPanel
+          communities={communityMapping.communities}
+          interCommunityRelations={interCommunityRelations}
+          isOpen={showCommunityInfo}
+          onClose={() => setShowCommunityInfo(false)}
+        />
+      )}
+
+      {/* 社群信息开关 */}
+      {currentVisualization.enableCommunities && communityMapping && (
+        <button
+          onClick={() => setShowCommunityInfo(!showCommunityInfo)}
+          className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg p-2 shadow-lg border border-gray-200 hover:bg-white transition-colors"
+          title="显示社群信息"
+        >
+          <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 };

@@ -1,7 +1,13 @@
 // 节点形状工具函数
 import * as THREE from 'three';
+import type { Community } from './CommunityDetector';
 
 export type NodeShape = 'sphere' | 'cube' | 'cylinder' | 'dodecahedron';
+
+export interface CommunityMapping {
+  nodeToCommunity: Map<string, number>;
+  communities: Community[];
+}
 
 /**
  * 根据用户类型获取节点形状
@@ -61,25 +67,42 @@ export const createPulseAnimation = (
 };
 
 /**
- * 社群颜色编码
+ * 检测节点是否属于某个社群（基于真实社群检测）
  */
-export const getCommunityColor = (communityId: number): string => {
-  const communityColors = [
-    '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
-    '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9'
-  ];
-  return communityColors[communityId % communityColors.length];
-};
+export const detectCommunity = (
+  nodeId: string,
+  edges: any[],
+  communityMapping?: CommunityMapping
+): number => {
+  // 如果有真实的社群检测结果，使用它
+  if (communityMapping && communityMapping.nodeToCommunity.has(nodeId)) {
+    return communityMapping.nodeToCommunity.get(nodeId)!;
+  }
 
-/**
- * 检测节点是否属于某个社群（简化版）
- */
-export const detectCommunity = (nodeId: string, edges: any[]): number => {
-  // 简化的社群检测算法
-  // 在实际应用中，应该使用更复杂的社群检测算法如 Louvain
+  // 否则使用简化的回退算法
   const hash = nodeId.split('').reduce((acc, char) => {
     return acc + char.charCodeAt(0);
   }, 0);
 
   return hash % 10; // 返回0-9的社群ID
+};
+
+/**
+ * 获取社群颜色
+ */
+export const getCommunityColor = (communityId: number, communities?: Community[]): string => {
+  // 如果有真实的社群信息，使用社群的颜色
+  if (communities) {
+    const community = communities.find(c => c.id === communityId);
+    if (community) {
+      return community.color;
+    }
+  }
+
+  // 否则使用默认颜色
+  const communityColors = [
+    '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
+    '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9'
+  ];
+  return communityColors[communityId % communityColors.length];
 };
