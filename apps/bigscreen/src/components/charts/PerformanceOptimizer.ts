@@ -235,6 +235,7 @@ export const getAdaptivePerformanceConfig = (
     newConfig.maxLinks = Math.max(2000, Math.floor(currentConfig.maxLinks * 0.7));
     newConfig.enableLod = true;
     newConfig.enableSampling = true;
+    newConfig.samplingStrategy = 'importance'; // 确保使用重要性采样
   } else if (frameRate < 40) {
     // 性能中等，适度优化
     newConfig.maxNodes = Math.max(800, Math.floor(currentConfig.maxNodes * 0.9));
@@ -245,6 +246,8 @@ export const getAdaptivePerformanceConfig = (
   if (memoryUsageMB > 400) {
     newConfig.maxNodes = Math.max(500, Math.floor(newConfig.maxNodes * 0.8));
     newConfig.maxLinks = Math.max(2000, Math.floor(newConfig.maxLinks * 0.8));
+    newConfig.enableSampling = true;
+    newConfig.samplingStrategy = 'hybrid'; // 内存压力大时使用混合采样
   }
 
   return newConfig;

@@ -30,49 +30,64 @@ describe('PerformanceOptimizer', () => {
     it('should downgrade config when FPS is low', () => {
       const currentConfig = {
         enableSampling: false,
-        sampleRate: 1.0,
+        samplingStrategy: 'importance',
         maxNodes: 1000,
         maxLinks: 5000,
-        lodLevel: 'high'
+        enableLod: false,
+        lodThresholds: {
+          highDetail: 300,
+          mediumDetail: 600,
+          lowDetail: 900
+        }
       };
 
       const newConfig = getAdaptivePerformanceConfig(currentConfig, 20, 100); // Low FPS
 
       expect(newConfig.enableSampling).toBe(true);
-      expect(newConfig.sampleRate).toBeLessThan(1.0);
-      expect(newConfig.lodLevel).toBe('medium');
+      expect(newConfig.maxNodes).toBeLessThan(1000);
+      expect(newConfig.enableLod).toBe(true);
     });
 
     it('should downgrade config when memory usage is high', () => {
       const currentConfig = {
         enableSampling: false,
-        sampleRate: 1.0,
+        samplingStrategy: 'importance',
         maxNodes: 1000,
         maxLinks: 5000,
-        lodLevel: 'high'
+        enableLod: true,
+        lodThresholds: {
+          highDetail: 300,
+          mediumDetail: 600,
+          lowDetail: 900
+        }
       };
 
       const newConfig = getAdaptivePerformanceConfig(currentConfig, 60, 500); // High memory
 
       expect(newConfig.enableSampling).toBe(true);
       expect(newConfig.maxNodes).toBeLessThan(1000);
-      expect(newConfig.lodLevel).toBe('medium');
+      expect(newConfig.maxLinks).toBeLessThan(5000);
     });
 
     it('should maintain high config when performance is good', () => {
       const currentConfig = {
         enableSampling: false,
-        sampleRate: 1.0,
+        samplingStrategy: 'importance',
         maxNodes: 1000,
         maxLinks: 5000,
-        lodLevel: 'high'
+        enableLod: true,
+        lodThresholds: {
+          highDetail: 300,
+          mediumDetail: 600,
+          lowDetail: 900
+        }
       };
 
       const newConfig = getAdaptivePerformanceConfig(currentConfig, 60, 100); // Good performance
 
       expect(newConfig.enableSampling).toBe(false);
-      expect(newConfig.sampleRate).toBe(1.0);
-      expect(newConfig.lodLevel).toBe('high');
+      expect(newConfig.maxNodes).toBe(1000);
+      expect(newConfig.maxLinks).toBe(5000);
     });
   });
 });
