@@ -1,5 +1,5 @@
 import { Inject, Injectable, NoRetryError } from "@sker/core";
-import { Handler } from "@sker/workflow";
+import { generateId, Handler } from "@sker/workflow";
 import { WeiboLoginAst } from "@sker/workflow-ast";
 import { WeiboAuthService } from "./weibo-auth.service";
 
@@ -16,16 +16,12 @@ export class WeiboLoginAstVisitor {
 
   @Handler(WeiboLoginAst)
   async handler(ast: WeiboLoginAst, ctx: any): Promise<WeiboLoginAst> {
-    const { userId, sessionId } = ast;
-
-    if (!userId) {
-      ast.state = 'fail';
-      throw new NoRetryError('WeiboLoginAst 缺少必要参数: userId');
-    }
-
     try {
+      // 自动生成匿名用户ID，不依赖外部输入
+      const anonymousUserId = generateId();
+
       // 启动登录流程，获取事件流 Observable
-      ast.events$ = await this.authService.startLogin(userId);
+      ast.events$ = await this.authService.startLogin(anonymousUserId);
       ast.state = 'pending';
 
       // 订阅事件流，更新 AST 状态

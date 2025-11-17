@@ -7,6 +7,7 @@ import { useReactFlow } from '@xyflow/react'
 import { getNodeMetadata } from '../../adapters'
 import { resolveConstructor } from '@sker/workflow'
 import { ErrorDetailPanel } from '../ErrorDetail'
+import { SerializedError } from '@sker/core'
 export interface PropertyPanelProps {
   className?: string
 }
@@ -125,7 +126,7 @@ export function PropertyPanel({ className = '' }: PropertyPanelProps) {
                 <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                   selectedNode.data.state === 'running' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' :
                   selectedNode.data.state === 'success' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
-                  selectedNode.data.state === 'error' ? 'bg-red-500/20 text-red-300 border border-red-500/30' :
+                  selectedNode.data.state === 'fail' ? 'bg-red-500/20 text-red-300 border border-red-500/30' :
                   'bg-slate-500/20 text-slate-300 border border-slate-500/30'
                 }`}>
                   {selectedNode.data.state}
@@ -136,7 +137,7 @@ export function PropertyPanel({ className = '' }: PropertyPanelProps) {
               <div className="property-field property-field-readonly">
                 <label className="property-field-label text-xs font-medium text-slate-400 mb-1 block">错误信息</label>
                 <div className="property-field-value bg-red-500/10 px-3 py-2 rounded-lg border border-red-500/30">
-                  <ErrorDetailPanel error={selectedNode.data.error} />
+                  <ErrorDetailPanel error={selectedNode.data.error as SerializedError} />
                 </div>
               </div>
             )}

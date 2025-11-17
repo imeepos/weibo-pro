@@ -5,28 +5,9 @@ import type { WorkflowNode } from '../../types'
 import { findNodeType, getNodeMetadata } from '../../adapters'
 import { cn } from '../../utils/cn'
 import { useRender } from './hook'
+import { fromJson } from '@sker/workflow'
+import { NODE_STATE_COLORS } from '../../types/node.types'
 
-// 简单的状态指示器
-const NodeStatus = ({ state, error }: { state?: string; error?: unknown }) => {
-  const statusConfig = {
-    pending: { color: 'bg-gray-500', label: '待执行' },
-    running: { color: 'bg-blue-500 animate-pulse', label: '执行中' },
-    success: { color: 'bg-green-500', label: '成功' },
-    fail: { color: 'bg-red-500', label: '失败' },
-  };
-
-  const config = statusConfig[state as keyof typeof statusConfig] || statusConfig.pending;
-
-  const errorMessage = error ? (typeof error === 'string' ? error : JSON.stringify(error)) : undefined;
-
-  return (
-    <div className="flex items-center gap-1">
-      <div className={`w-2 h-2 rounded-full ${config.color}`} />
-      <span className="text-xs text-gray-300">{config.label}</span>
-      {errorMessage && <span className="text-xs text-red-400" title={errorMessage}>⚠</span>}
-    </div>
-  );
-};
 
 const HandleWrapper = ({
   port,
@@ -90,8 +71,7 @@ export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNode>) =
   const nodeClass = findNodeType(data.type)!;
   const metadata = getNodeMetadata(nodeClass);
   const updateNodeInternals = useUpdateNodeInternals();
-  const CustomRender = useRender(data);
-
+  const CustomRender = useRender(fromJson(data));
   // 通知 React Flow 更新节点内部状态（Handle 位置）
   useEffect(() => {
     updateNodeInternals(id);
@@ -116,34 +96,71 @@ export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNode>) =
     window.dispatchEvent(customEvent)
   }
 
+  // 根据节点状态获取边框颜色
+  const getBorderColor = () => {
+    if (selected) return '#818cf6'; // workflow-primary
+    if (data.state) return NODE_STATE_COLORS[data.state as keyof typeof NODE_STATE_COLORS] || NODE_STATE_COLORS.pending;
+    return 'transparent';
+  };
+
   return (
     <div
       className={cn(
-        'px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg cursor-move',
-        'hover:bg-slate-700 hover:border-slate-500',
-        selected && 'bg-blue-900 border-blue-500',
-        'select-none'
+        'flex rounded-2xl border-[2px]',
+        'group relative pb-1 shadow-xs rounded-[15px] w-[240px] bg-workflow-block-bg hover:shadow-lg',
+        'cursor-move select-none'
       )}
       style={{
-        minWidth: '120px'
+        borderColor: getBorderColor(),
+        transition: 'border-color 0.15s ease, box-shadow 0.15s ease'
       }}
       onContextMenu={handleContextMenu}
       onDoubleClick={handleDoubleClick}
     >
-      {/* 简洁的节点标题 */}
-      <div className="flex items-center gap-2">
-        <div className="text-sm font-medium text-white">
-          {data.label}
-        </div>
-        <NodeStatus state={data.state} error={data.error} />
-      </div>
+      {/* 输入端口 */}
+      {metadata.inputs.map((input, index) => (
+        <Handle
+          key={`input-${input.property}`}
+          type="target"
+          id={input.property}
+          position={Position.Left}
+          className={cn(
+            '!h-4 !w-4 !rounded-none !border-none !bg-transparent !outline-none',
+            'after:absolute after:left-1.5 after:top-1 after:h-2 after:w-0.5 after:bg-workflow-link-line-handle',
+            'transition-all hover:scale-125 after:opacity-0 opacity-0',
+            '!top-4 !-left-[9px] !translate-y-0'
+          )}
+          style={{ top: 32 + index * 24 }}
+        />
+      ))}
 
-      {/* 自定义渲染内容 */}
-      {CustomRender && (
-        <div className="mt-2 pt-2 border-t border-slate-700">
-          {CustomRender}
+      {/* 输出端口 */}
+      {metadata.outputs.map((output, index) => (
+        <Handle
+          key={`output-${output.property}`}
+          type="source"
+          id={output.property}
+          position={Position.Right}
+          className={cn(
+            '!h-4 !w-4 !rounded-none !border-none !bg-transparent !outline-none',
+            'after:absolute after:right-1.5 after:top-1 after:h-2 after:w-0.5 after:bg-workflow-link-line-handle',
+            'transition-all hover:scale-125',
+            '!top-4 !-right-[9px] !translate-y-0'
+          )}
+          style={{ top: 32 + index * 24 }}
+        />
+      ))}
+
+      {/* 节点标题区域 */}
+      <div className="flex items-center rounded-t-2xl px-3 pb-2 pt-3">
+        <div className="flex items-center justify-center w-6 h-6 rounded-lg bg-blue-500 mr-2 shrink-0">
+          <div className="w-3 h-3 bg-white rounded-sm"></div>
         </div>
-      )}
+        <div className="text-sm font-medium text-white truncate">
+          {metadata.title || data.type}
+        </div>
+      </div>
+      {CustomRender}
     </div>
   )
 })

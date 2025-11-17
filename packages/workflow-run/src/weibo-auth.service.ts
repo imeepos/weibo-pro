@@ -12,6 +12,7 @@ import {
   SessionStorage,
   WeiboLoginConfig
 } from "./weibo-login.types";
+import { generateId } from "@sker/workflow";
 
 /**
  * 微博登录认证服务
@@ -514,7 +515,7 @@ export class WeiboAuthService implements OnDestroy {
    * Redis 会话存储方法
    */
   private async createSessionInRedis(userId: string): Promise<{ sessionId: string; expiresAt: Date }> {
-    const sessionId = `weibo_login_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const sessionId = generateId();
     const expiresAt = new Date(Date.now() + this.config.sessionTimeout);
 
     const sessionData = {

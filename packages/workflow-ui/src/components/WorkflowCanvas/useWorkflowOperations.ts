@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import { root } from '@sker/core'
 import { WorkflowController } from '@sker/sdk'
-import type { WorkflowGraphAst } from '@sker/workflow'
+import { fromJson, toJson, type WorkflowGraphAst } from '@sker/workflow'
 import type { useWorkflow } from '../../hooks/useWorkflow'
 import type { ToastType } from './Toast'
 
@@ -52,7 +52,7 @@ export function useWorkflowOperations(
         const controller = root.get<WorkflowController>(WorkflowController)
 
         const result = await controller.executeSingleNode({
-          node: targetNode,
+          node: fromJson(targetNode),
           context: workflow.workflowAst.ctx || {}
         })
 

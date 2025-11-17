@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useEffect } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import { WeiboLoginAst } from '@sker/workflow-ast'
 import { WeiboLoginSetting } from '../../renderers/WeiboLoginAstRender'
@@ -97,17 +97,15 @@ export const WeiboLoginSettingPanel: React.FC<WeiboLoginSettingPanelProps> = ({
 
           {/* 当前配置预览 */}
           <div className="mt-6 bg-slate-700/30 rounded-lg p-4 border border-slate-600">
-            <h3 className="text-md font-medium text-white mb-3">当前配置</h3>
+            <h3 className="text-md font-medium text-white mb-3">节点信息</h3>
             <div className="text-sm text-slate-300 space-y-2">
               <div className="flex justify-between">
-                <span>用户ID:</span>
-                <span className="font-mono">{ast.userId || '未设置'}</span>
+                <span>节点类型:</span>
+                <span className="font-mono">{ast.type}</span>
               </div>
               <div className="flex justify-between">
-                <span>会话ID:</span>
-                <span className="font-mono">
-                  {ast.sessionId ? `${ast.sessionId.substring(0, 12)}...` : '未设置'}
-                </span>
+                <span>执行状态:</span>
+                <span className="font-mono">{ast.state || '未执行'}</span>
               </div>
             </div>
           </div>

@@ -56,9 +56,6 @@ export function LeftDrawer({ visible, onClose, onRunNode, onLocateNode, classNam
     <div
       className={cn(
         'absolute bottom-4 right-4 top-16 z-10',
-        'bg-slate-900/95 backdrop-blur-sm',
-        'border-[0.5px] border-slate-700/50',
-        'rounded-2xl shadow-2xl',
         'flex flex-col overflow-hidden',
         'transition-opacity duration-300',
         className

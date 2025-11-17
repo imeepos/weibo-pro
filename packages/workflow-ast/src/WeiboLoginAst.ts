@@ -6,12 +6,6 @@ import type { WeiboAccountEntity } from "@sker/entities";
 @Node({ title: '微博登录' })
 export class WeiboLoginAst extends Ast {
 
-    @Input({ title: '用户ID' })
-    userId: string = ``
-
-    @Input({ title: '会话ID' })
-    sessionId?: string;
-
     @Output({ title: '登录事件流' })
     events$?: Observable<any>;
 

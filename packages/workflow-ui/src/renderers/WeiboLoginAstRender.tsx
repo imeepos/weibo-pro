@@ -10,25 +10,19 @@ const WeiboLoginPreview = ({ ast }: { ast: WeiboLoginAst }) => {
     <div className="flex flex-col items-center justify-center h-16 bg-slate-700/50 rounded border border-slate-600 p-2">
       <div className="text-lg">🔐</div>
       <div className="text-xs text-slate-300 mt-1">
-        {ast.userId ? `用户: ${ast.userId}` : '未配置'}
+        微博扫码登录
       </div>
-      {ast.sessionId && (
-        <div className="text-[10px] text-slate-400 mt-1">
-          会话: {ast.sessionId.substring(0, 8)}...
-        </div>
-      )}
+      <div className="text-[10px] text-slate-400 mt-1">
+        自动生成匿名会话
+      </div>
     </div>
   );
 };
 
 // 设置表单组件
 export const WeiboLoginSetting = ({ ast }: { ast: WeiboLoginAst }) => {
-  const [userId, setUserId] = useState(ast.userId || '')
-  const [sessionId, setSessionId] = useState(ast.sessionId || '')
-
   const handleSave = () => {
-    ast.userId = userId
-    ast.sessionId = sessionId || undefined
+    // 微博登录节点不再需要任何配置，自动生成匿名会话
   }
 
   return (
@@ -36,54 +30,27 @@ export const WeiboLoginSetting = ({ ast }: { ast: WeiboLoginAst }) => {
       <h3 className="text-lg font-medium text-white mb-4">微博登录配置</h3>
 
       <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-slate-300 mb-2">
-            用户ID
-          </label>
-          <input
-            type="text"
-            value={userId}
-            onChange={(e) => setUserId(e.target.value)}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="请输入微博用户ID"
-          />
-          <p className="mt-1 text-xs text-slate-400">
-            微博用户的唯一标识符
+        <div className="bg-slate-700/50 p-4 rounded-lg border border-slate-600">
+          <div className="flex items-center mb-2">
+            <div className="text-blue-400 mr-2">ℹ️</div>
+            <h4 className="text-sm font-medium text-slate-200">节点说明</h4>
+          </div>
+          <p className="text-xs text-slate-300 leading-relaxed">
+            微博登录节点会自动生成匿名会话，无需配置任何参数。执行时会弹出二维码，用户扫码即可完成登录。
           </p>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-slate-300 mb-2">
-            会话ID (可选)
-          </label>
-          <input
-            type="text"
-            value={sessionId}
-            onChange={(e) => setSessionId(e.target.value)}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="请输入会话ID"
-          />
-          <p className="mt-1 text-xs text-slate-400">
-            已有会话ID，留空则创建新会话
-          </p>
-        </div>
-
-        <div className="flex gap-2">
-          <button
-            onClick={handleSave}
-            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            保存配置
-          </button>
-          <button
-            onClick={() => {
-              setUserId('')
-              setSessionId('')
-            }}
-            className="px-4 py-2 bg-slate-600 text-white rounded-md hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500"
-          >
-            重置
-          </button>
+        <div className="bg-yellow-900/30 p-4 rounded-lg border border-yellow-600/50">
+          <div className="flex items-center mb-2">
+            <div className="text-yellow-400 mr-2">⚠️</div>
+            <h4 className="text-sm font-medium text-slate-200">注意事项</h4>
+          </div>
+          <ul className="text-xs text-slate-300 space-y-1">
+            <li>• 确保网络环境可以正常访问微博</li>
+            <li>• 二维码有效期为5分钟，超时需重新执行</li>
+            <li>• 登录成功后会自动保存账号信息</li>
+            <li>• 每个匿名会话都是独立的登录流程</li>
+          </ul>
         </div>
       </div>
 
@@ -106,7 +73,7 @@ export const WeiboLoginSetting = ({ ast }: { ast: WeiboLoginAst }) => {
 };
 
 const WeiboLoginRender: React.FC<{ ast: WeiboLoginAst }> = (ast) => {
-  return <div>微博登录</div>
+  return <div></div>
 }
 
 @Injectable()
