@@ -45,8 +45,9 @@ export class ErrorSerializer {
     }
 
     if (error instanceof Error) {
+      const rawMessage = error.message || error.toString()
       const serialized: SerializedError = {
-        message: error.message || error.toString(),
+        message: typeof rawMessage === 'string' ? rawMessage : JSON.stringify(rawMessage),
         name: error.name || 'Error',
         ...(includeStack && error.stack && { stack: error.stack }),
       }
@@ -66,8 +67,9 @@ export class ErrorSerializer {
 
     if (typeof error === 'object') {
       const obj = error as Record<string, any>
+      const rawMessage = obj.message || String(error)
       return {
-        message: obj.message || String(error),
+        message: typeof rawMessage === 'string' ? rawMessage : JSON.stringify(rawMessage),
         name: obj.name || 'Error',
         type: obj.type,
         statusCode: obj.statusCode,

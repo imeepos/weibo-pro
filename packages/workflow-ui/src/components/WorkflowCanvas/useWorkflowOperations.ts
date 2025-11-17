@@ -88,7 +88,10 @@ export function useWorkflowOperations(
     if (typeof error === 'object' && 'message' in error) {
       const err = error as any
       const deepError = err.cause ? extractDeepestError(err.cause) : err
-      let message = deepError?.message || err.message || '执行失败'
+      const rawMessage = deepError?.message || err.message || '执行失败'
+
+      // 确保 message 始终是字符串
+      let message = typeof rawMessage === 'string' ? rawMessage : JSON.stringify(rawMessage)
 
       // Special handling for login expired errors
       if (message.includes('登录') || message.includes('LOGIN')) {
@@ -152,7 +155,8 @@ export function useWorkflowOperations(
           } else if (result.state === 'fail') {
             failCount++
             if (failCount === 1 && result.error) {
-              onShowToast?.('error', '工作流执行失败', result.error.message || '未知错误')
+              const errorInfo = extractErrorInfo(result.error)
+              onShowToast?.('error', '工作流执行失败', errorInfo.message)
             }
           }
 

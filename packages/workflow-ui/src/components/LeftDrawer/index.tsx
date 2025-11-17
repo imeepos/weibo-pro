@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { PropertyPanel } from '../PropertyPanel'
 import { cn } from '../../utils/cn'
 import { X, Workflow, Settings, History, Play, Crosshair } from 'lucide-react'
@@ -23,6 +23,13 @@ export function LeftDrawer({ visible, onClose, onRunNode, onLocateNode, classNam
   const [width, setWidth] = useState(420)
   const selectedNode = useSelectedNode()
   const metadata = selectedNode ? getNodeMetadata(resolveConstructor(selectedNode.data)) : null
+
+  // 当未选中任何节点时，自动关闭抽屉
+  useEffect(() => {
+    if (visible && !selectedNode) {
+      onClose()
+    }
+  }, [selectedNode, visible, onClose])
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault()

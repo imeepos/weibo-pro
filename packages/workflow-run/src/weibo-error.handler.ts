@@ -48,13 +48,20 @@ export class WeiboError extends Error {
  */
 export class WeiboErrorHandler {
     /**
-     * 检测 HTML 内容是否包含登录页特征
+     * 检测 HTML 内容或 URL 是否包含登录页特征
      *
      * @param html HTML 响应内容
+     * @param url 响应 URL（可选）
      * @returns true 表示登录已过期
      */
-    static isLoginExpired(html: string): boolean {
-        return html.includes('v6/login/loginLayer.js') || html.includes('登录');
+    static isLoginExpired(html: string, url?: string): boolean {
+        // 检测 HTML 内容中的登录特征
+        const htmlHasLoginFeature = html.includes('v6/login/loginLayer.js') || html.includes('登录');
+
+        // 检测 URL 中的登录特征
+        const urlHasLoginFeature = url ? url.includes('login.php') : false;
+
+        return htmlHasLoginFeature || urlHasLoginFeature;
     }
 
     /**
@@ -93,12 +100,12 @@ export class WeiboErrorHandler {
         // 如果返回 HTML，可能是登录页
         if (contentType.includes('text/html')) {
             const html = await response.text();
-            if (this.isLoginExpired(html)) {
+            if (this.isLoginExpired(html, response.url)) {
                 return new WeiboError(
                     WeiboErrorType.LOGIN_EXPIRED,
                     '登录态已过期，需要更换账号',
                     response.status,
-                    { html: html.substring(0, 500) }, // 只保留前 500 字符
+                    { html: html.substring(0, 500), url: response.url }, // 保留 URL 和前 500 字符
                 );
             }
         }
@@ -168,7 +175,7 @@ export class WeiboErrorHandler {
      */
     static toNoRetryErrorIfNeeded(error: WeiboError | Error): Error {
         if (!this.shouldRetry(error)) {
-            return new NoRetryError(error.message, { cause: error });
+            return new NoRetryError(error.message, error);
         }
         return error;
     }

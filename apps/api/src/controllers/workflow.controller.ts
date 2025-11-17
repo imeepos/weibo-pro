@@ -455,7 +455,9 @@ export class WorkflowController implements sdk.WorkflowController {
         failedNode.setError(error, process.env.NODE_ENV === 'development');
       } else {
         failedNode.error = {
-          message: error.message || '执行失败',
+          message: typeof error.message === 'string'
+            ? error.message || '执行失败'
+            : JSON.stringify(error.message || error || '执行失败'),
           name: error.name || 'Error',
           type: error.type,
         };
@@ -562,7 +564,9 @@ export class WorkflowController implements sdk.WorkflowController {
         nodeStates,
         error: result.error
           ? {
-            message: result.error.message,
+            message: typeof result.error.message === 'string'
+              ? result.error.message
+              : JSON.stringify(result.error.message || result.error),
             stack: result.error.stack,
           }
           : undefined,

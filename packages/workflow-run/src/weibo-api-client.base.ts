@@ -85,38 +85,13 @@ export abstract class WeiboApiClient {
      * @param accountId 账号 ID
      */
     private async handleWeiboError(error: WeiboError, accountId: number): Promise<void> {
-        // 只处理登录失效错误
+        // 处理登录失效错误
         if (error.type === WeiboErrorType.LOGIN_EXPIRED) {
             console.warn(`[WeiboApiClient] 检测到账号 ${accountId} 登录失效，标记为过期状态`);
-            await this.markAccountAsExpired(accountId);
-        }
-    }
-
-    /**
-     * 标记账号为过期状态
-     *
-     * @param accountId 账号 ID
-     */
-    private async markAccountAsExpired(accountId: number): Promise<void> {
-        try {
-            // 从 Redis 健康评分中移除失效账号
-            await this.accountService.decreaseHealthScore(accountId, 100);
-
-            // 更新数据库中的账号状态为 EXPIRED
-            const { useEntityManager, WeiboAccountEntity, WeiboAccountStatus } = await import('@sker/entities');
-            await useEntityManager(async m => {
-                const account = await m.findOne(WeiboAccountEntity, {
-                    where: { id: accountId }
-                });
-                if (account) {
-                    account.status = WeiboAccountStatus.EXPIRED;
-                    account.lastCheckAt = new Date();
-                    await m.save(account);
-                    console.log(`[WeiboApiClient] 账号 ${accountId} 已标记为过期状态`);
-                }
-            });
-        } catch (error) {
-            console.error(`[WeiboApiClient] 更新账号 ${accountId} 状态失败:`, error);
+            await this.accountService.markAccountAsExpired(accountId);
+        } else {
+            // 其他错误：降低健康评分
+            await this.accountService.decreaseHealthScore(accountId, 1);
         }
     }
 

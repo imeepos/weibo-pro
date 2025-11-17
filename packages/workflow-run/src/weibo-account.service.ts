@@ -296,4 +296,32 @@ export class WeiboAccountService {
             console.error(`[WeiboAccountService] 更新账号 ${accountId} 状态失败:`, error);
         }
     }
+
+    /**
+     * 标记账户为已过期（登录失效）
+     *
+     * @param accountId 账户 ID
+     */
+    async markAccountAsExpired(accountId: number): Promise<void> {
+        try {
+            // 从 Redis 中移除该账户
+            await this.redis.zrem(this.healthKey, accountId.toString());
+
+            // 更新账号状态为 EXPIRED
+            await useEntityManager(async m => {
+                const account = await m.findOne(WeiboAccountEntity, {
+                    where: { id: accountId }
+                });
+
+                if (account) {
+                    account.status = WeiboAccountStatus.EXPIRED;
+                    account.lastCheckAt = new Date();
+                    await m.save(account);
+                    console.log(`[WeiboAccountService] 账号 ${accountId} (${account.weiboNickname}) 登录已过期，已标记为 EXPIRED`);
+                }
+            });
+        } catch (error) {
+            console.error(`[WeiboAccountService] 标记账号 ${accountId} 为 EXPIRED 失败:`, error);
+        }
+    }
 }
