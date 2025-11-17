@@ -1,16 +1,47 @@
 import { Input, Node, Output } from "./decorator";
 import { IAstStates, IEdge, INode, IControlEdge, isControlEdge } from "./types";
 import { generateId } from "./utils";
+import { ErrorSerializer, SerializedError } from "@sker/core";
+
 export interface Visitor {
     visit(ast: Ast, ctx: any): Promise<any>;
 }
+
 // 抽象语法树的核心表达 - 状态与数据的统一
 export abstract class Ast implements INode {
     id: string = generateId();
     state: IAstStates = 'pending';
-    error: Error | undefined;
+    error: SerializedError | undefined;
     type!: string;
     position: { x: number; y: number } = { x: 0, y: 0 }
+
+    /**
+     * 优雅的错误赋值方法
+     *
+     * 优雅设计：
+     * - 自动序列化任何类型的错误对象
+     * - 保留完整的错误上下文
+     * - 统一的错误处理接口
+     */
+    setError(error: unknown, includeStack = false): void {
+      this.error = ErrorSerializer.serialize(error, includeStack);
+    }
+
+    /**
+     * 提取最有用的错误信息（深层错误）
+     */
+    getDeepError(): SerializedError | undefined {
+      return this.error
+        ? ErrorSerializer.extractDeepestError(this.error)
+        : undefined;
+    }
+
+    /**
+     * 获取完整的错误描述
+     */
+    getErrorDescription(): string | undefined {
+      return this.error ? ErrorSerializer.getFullDescription(this.error) : undefined;
+    }
 }
 
 @Node({ title: "工作流图" })

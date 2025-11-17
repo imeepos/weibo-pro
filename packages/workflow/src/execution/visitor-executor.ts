@@ -34,13 +34,13 @@ export class VisitorExecutor implements Visitor {
             if (error instanceof NoRetryError) {
                 // 对于不可重试错误，设置节点状态并返回
                 ast.state = 'fail';
-                ast.error = error;
+                ast.setError(error);
                 return ast;
             }
 
             // 对于其他错误，设置节点状态并返回
             ast.state = 'fail';
-            ast.error = error instanceof Error ? error : new Error(String(error));
+            ast.setError(error);
             return ast;
         }
     }

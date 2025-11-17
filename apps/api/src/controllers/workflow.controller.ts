@@ -7,7 +7,7 @@ import {
   WeiboAjaxStatusesCommentAst,
   WeiboAjaxStatusesRepostTimelineAst,
 } from '@sker/workflow-ast';
-import { Ast, execute, fromJson } from '@sker/workflow';
+import { Ast, execute, executeAst, fromJson } from '@sker/workflow';
 import { WorkflowGraphAst } from '@sker/workflow';
 import { logger } from '../utils/logger';
 import * as sdk from '@sker/sdk';
@@ -416,6 +416,52 @@ export class WorkflowController implements sdk.WorkflowController {
       };
 
       return failedResult;
+    }
+  }
+
+  /**
+   * 执行单个节点（不触发工作流调度器）
+   *
+   * 优雅设计：
+   * - 只执行指定节点，不涉及工作流调度
+   * - 直接调用 executeAst，绕过调度器逻辑
+   * - 适合单节点测试和调试
+   * - 返回节点执行结果，不影响工作流状态
+   */
+  @Post('execute-single-node')
+  async executeSingleNode(@Body() body: { node: Ast; context?: any }): Promise<Ast> {
+    const { node, context = {} } = body;
+
+    if (!node.id || node.id.trim().length === 0) {
+      throw new BadRequestException('节点ID不能为空');
+    }
+
+    try {
+      const ast = fromJson(node);
+      const result = await executeAst(ast, context);
+      return result;
+    } catch (error: any) {
+      logger.error('Single node execution failed', {
+        nodeId: node.id,
+        error: error.message,
+        type: error.type || error.name,
+        stack: error.stack
+      });
+
+      const failedNode = fromJson(node);
+      failedNode.state = 'fail';
+
+      if (typeof failedNode.setError === 'function') {
+        failedNode.setError(error, process.env.NODE_ENV === 'development');
+      } else {
+        failedNode.error = {
+          message: error.message || '执行失败',
+          name: error.name || 'Error',
+          type: error.type,
+        };
+      }
+
+      return failedNode;
     }
   }
 

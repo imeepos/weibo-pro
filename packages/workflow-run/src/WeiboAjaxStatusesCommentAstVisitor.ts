@@ -62,7 +62,7 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
         } catch (error) {
             console.error(`[WeiboAjaxStatusesCommentAstVisitor] mid: ${ast.mid}`, error);
             ast.state = 'fail';
-            ast.error = error instanceof Error ? error : new Error(String(error));
+            ast.setError(error, process.env.NODE_ENV === 'development');
         }
         return ast;
     }

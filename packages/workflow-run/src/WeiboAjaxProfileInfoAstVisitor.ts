@@ -44,7 +44,7 @@ export class WeiboAjaxProfileInfoAstVisitor extends WeiboApiClient {
         } catch (error) {
             console.error(`[WeiboAjaxProfileInfoAstVisitor] uid: ${ast.uid}`, error);
             ast.state = 'fail';
-            ast.error = error instanceof Error ? error : new Error(String(error));
+            ast.setError(error);
         }
         return ast;
     }

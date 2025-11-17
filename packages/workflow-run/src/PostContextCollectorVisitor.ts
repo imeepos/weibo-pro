@@ -54,7 +54,7 @@ export class PostContextCollectorVisitor {
       ast.state = 'success';
     } catch (error) {
       ast.state = 'fail';
-      ast.error = error as Error;
+      ast.setError(error, process.env.NODE_ENV === 'development');
       console.error(`[PostContextCollectorVisitor] postId: ${ast.postId}`, error);
     }
 

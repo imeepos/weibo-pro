@@ -26,6 +26,12 @@ export function useWorkflowOperations(
 
   /**
    * 运行单个节点
+   *
+   * 优雅设计：
+   * - 只执行选中的节点，不触发工作流调度
+   * - 使用 executeSingleNode API，避免执行整个工作流
+   * - 执行后更新工作流中对应节点的状态
+   * - 独立的错误处理和状态管理
    */
   const runNode = useCallback(
     async (nodeId: string) => {
@@ -34,25 +40,78 @@ export function useWorkflowOperations(
         return
       }
 
+      const targetNode = workflow.workflowAst.nodes.find(n => n.id === nodeId)
+      if (!targetNode) {
+        onShowToast?.('error', '节点不存在', `节点ID: ${nodeId}`)
+        return
+      }
+
+      onSetRunning?.(true)
+
       try {
         const controller = root.get<WorkflowController>(WorkflowController)
-        const result = await controller.executeNode(workflow.workflowAst)
 
-        Object.assign(workflow.workflowAst, result)
+        const result = await controller.executeSingleNode({
+          node: targetNode,
+          context: workflow.workflowAst.ctx || {}
+        })
+
+        const astNode = workflow.workflowAst.nodes.find(n => n.id === nodeId)
+        if (astNode) {
+          Object.assign(astNode, result)
+        }
+
         workflow.syncFromAst()
 
         if (result.state === 'success') {
           onShowToast?.('success', '节点执行成功')
         } else if (result.state === 'fail') {
-          const errorMessage = typeof result.error === 'string' ? result.error : result.error?.message || '未知错误'
-          onShowToast?.('error', '节点执行失败', errorMessage)
+          const errorInfo = extractErrorInfo(result.error)
+          onShowToast?.('error', '节点执行失败', errorInfo.message)
         }
       } catch (error: any) {
-        onShowToast?.('error', '节点执行失败', error.message || '未知错误')
+        const errorInfo = extractErrorInfo(error)
+        onShowToast?.('error', '节点执行失败', errorInfo.message)
+      } finally {
+        onSetRunning?.(false)
       }
     },
-    [workflow, onShowToast]
+    [workflow, onShowToast, onSetRunning]
   )
+
+  /**
+   * 提取错误信息的辅助函数
+   */
+  function extractErrorInfo(error: unknown): { message: string; type?: string } {
+    if (!error) return { message: '未知错误' }
+
+    if (typeof error === 'object' && 'message' in error) {
+      const err = error as any
+      const deepError = err.cause ? extractDeepestError(err.cause) : err
+      let message = deepError?.message || err.message || '执行失败'
+
+      // Special handling for login expired errors
+      if (message.includes('登录') || message.includes('LOGIN')) {
+        return { message: '登录态已过期，需要更换账号', type: 'LOGIN_EXPIRED' }
+      }
+
+      return { message, type: err.type }
+    }
+
+    if (typeof error === 'string') {
+      return { message: error }
+    }
+
+    return { message: String(error) }
+  }
+
+  function extractDeepestError(error: any): any {
+    if (!error) return null
+    if (error.cause) {
+      return extractDeepestError(error.cause)
+    }
+    return error
+  }
 
   /**
    * 运行整个工作流

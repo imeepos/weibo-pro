@@ -1,9 +1,22 @@
 import { InjectionToken, root, Type } from '@sker/core'
+/**
+ * 获取所有已注册的节点类型
+ */
+export function getAllNodeTypes(): Type<any>[] {
+    const nodeMetadatas = root.get(NODE, [])
+    return nodeMetadatas.map(metadata => metadata.target)
+}
 
+export function findNodeType<T = any>(name: string): Type<T> | undefined {
+    return getAllNodeTypes().find((type: any) => type.name === name)
+}
 export function resolveConstructor(target: object | Type<any>): Type<any> {
     if (typeof target === 'function') {
         return target as Type<any>;
     }
+    const typeName = Reflect.get(target, 'type')
+    const type = findNodeType(typeName)
+    if (type) return type;
     if (target && typeof target === 'object' && typeof (target as { constructor?: unknown }).constructor === 'function') {
         return (target as { constructor: Type<any> }).constructor;
     }

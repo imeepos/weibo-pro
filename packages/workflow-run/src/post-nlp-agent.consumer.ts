@@ -1,6 +1,6 @@
 import { mergeMap, retry, tap } from 'rxjs';
 import { root } from '@sker/core';
-import { execute, createWorkflowGraphAst } from '@sker/workflow';
+import { execute, createWorkflowGraphAst, generateId } from '@sker/workflow';
 import { useQueue } from '@sker/mq';
 import {
   PostContextCollectorAst,
@@ -49,30 +49,40 @@ export function startPostNLPConsumer() {
               nodes: [collectorAst, analyzerAst, creatorAst],
               edges: [
                 {
+                  id: generateId(),
+                  type: 'data' as const,
                   from: collectorAst.id,
                   fromProperty: 'post',
                   to: analyzerAst.id,
                   toProperty: 'post',
                 },
                 {
+                  id: generateId(),
+                  type: 'data' as const,
                   from: collectorAst.id,
                   fromProperty: 'comments',
                   to: analyzerAst.id,
                   toProperty: 'comments',
                 },
                 {
+                  id: generateId(),
+                  type: 'data' as const,
                   from: collectorAst.id,
                   fromProperty: 'reposts',
                   to: analyzerAst.id,
                   toProperty: 'reposts',
                 },
                 {
+                  id: generateId(),
+                  type: 'data' as const,
                   from: analyzerAst.id,
                   fromProperty: 'nlpResult',
                   to: creatorAst.id,
                   toProperty: 'nlpResult',
                 },
                 {
+                  id: generateId(),
+                  type: 'data' as const,
                   from: collectorAst.id,
                   fromProperty: 'post',
                   to: creatorAst.id,

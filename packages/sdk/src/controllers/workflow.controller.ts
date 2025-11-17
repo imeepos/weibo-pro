@@ -12,7 +12,7 @@ import type {
   WorkflowRunEntity,
   RunStatus,
 } from '../types'
-import type { WorkflowGraphAst } from '@sker/workflow';
+import type { WorkflowGraphAst, Ast } from '@sker/workflow';
 import type { WorkflowEntity } from '@sker/entities';
 @Controller('api/workflow')
 export class WorkflowController {
@@ -80,6 +80,14 @@ export class WorkflowController {
   @Post('execute-node')
   executeNode(@Body() body: WorkflowGraphAst): Promise<WorkflowGraphAst> {
     throw new Error('method executeNode not implements')
+  }
+
+  /**
+   * 执行单个节点（不触发工作流调度器）
+   */
+  @Post('execute-single-node')
+  executeSingleNode(@Body() body: { node: Ast; context?: any }): Promise<Ast> {
+    throw new Error('method executeSingleNode not implements')
   }
 
   /**

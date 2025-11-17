@@ -39,7 +39,7 @@ export class WeiboAjaxStatusesShowAstVisitor extends WeiboApiClient {
         } catch (error) {
             console.error(`[WeiboAjaxStatusesShowAstVisitor] postId: ${ast.id}`, error);
             ast.state = 'fail';
-            ast.error = error instanceof Error ? error : new Error(String(error));
+            ast.setError(error, process.env.NODE_ENV === 'development');
         }
         return ast;
     }

@@ -42,7 +42,7 @@ const AgeDistributionChart: React.FC<AgeDistributionChartProps> = ({
         }
       };
     }
-    
+
     return {
       backgroundColor: isDark ? "#1f2937" : "#ffffff",
       tooltip: {

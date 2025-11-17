@@ -53,7 +53,7 @@ export class WeiboLoginAstVisitor {
         },
         error: (error) => {
           ast.state = `fail`;
-          ast.error = error instanceof Error ? error : new Error(String(error));
+          ast.setError(error, process.env.NODE_ENV === 'development');
         },
         complete: () => {
           // 事件流完成，如果状态还是 pending 则标记为完成
@@ -66,7 +66,7 @@ export class WeiboLoginAstVisitor {
       return ast;
     } catch (error) {
       ast.state = 'fail';
-      ast.error = error instanceof Error ? error : new Error(String(error));
+      ast.setError(error, process.env.NODE_ENV === 'development');
       return ast;
     }
   }

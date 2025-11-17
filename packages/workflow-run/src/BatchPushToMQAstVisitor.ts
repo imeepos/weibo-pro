@@ -69,10 +69,11 @@ export class BatchPushToMQAstVisitor {
         const factory = workflowFactories[workflowFactoryName];
         if (!factory) {
             ast.state = 'fail';
-            ast.error = new Error(
+            const error = new Error(
                 `工作流工厂函数 "${workflowFactoryName}" 未注册。请使用 registerWorkflowFactory() 注册。`
             );
-            console.error(`[BatchPushToMQAst] ${ast.error.message}`);
+            ast.setError(error);
+            console.error(`[BatchPushToMQAst] ${error.message}`);
             console.error(`[BatchPushToMQAst] 可用的工厂函数: ${Object.keys(workflowFactories).join(', ') || '(无)'}`);
             return ast;
         }
@@ -123,7 +124,7 @@ export class BatchPushToMQAstVisitor {
             ast.state = 'success';
         } catch (error) {
             ast.state = 'fail';
-            ast.error = error instanceof Error ? error : new Error(String(error));
+            ast.setError(error, process.env.NODE_ENV === 'development');
             console.error(`[BatchPushToMQAst] 推送失败:`, error);
         }
 

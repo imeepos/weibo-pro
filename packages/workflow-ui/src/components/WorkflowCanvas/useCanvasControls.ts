@@ -292,6 +292,30 @@ export function useCanvasControls() {
     // TODO: 实现节点运行逻辑
   }, [])
 
+  /**
+   * 定位到指定节点
+   */
+  const handleLocateNode = useCallback((nodeId: string) => {
+    const node = getNode(nodeId)
+
+    if (!node) {
+      console.warn(`Node not found: ${nodeId}`)
+      return
+    }
+
+    const centerX = node.position.x + (node.width || 0) / 2
+    const centerY = node.position.y + (node.height || 0) / 2
+
+    setCenter(centerX, centerY, { zoom: 1.2, duration: 300 })
+
+    const updatedNodes = getNodes().map(n => ({
+      ...n,
+      selected: n.id === nodeId,
+    }))
+    setNodes(updatedNodes)
+    selectNode(nodeId)
+  }, [getNode, setCenter, getNodes, setNodes, selectNode])
+
   return {
     onConnect,
     onNodeClick,
@@ -313,5 +337,6 @@ export function useCanvasControls() {
     handleSelectAll,
     handleClearCanvas,
     handleRunNode,
+    handleLocateNode,
   }
 }

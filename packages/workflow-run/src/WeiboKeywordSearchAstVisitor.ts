@@ -85,9 +85,9 @@ export class WeiboKeywordSearchAstVisitor {
                 return await this.handler(ast, ctx);
             }
 
-            // 设置错误状态，确保错误信息不会丢失
+            // 设置错误状态，使用统一的错误序列化
             ast.state = 'fail';
-            ast.error = error instanceof Error ? error : new Error(String(error));
+            ast.setError(error, process.env.NODE_ENV === 'development');
             console.error(`[WeiboKeywordSearchAstVisitor] 搜索失败: ${ast.keyword}`, error);
             return ast;
         }

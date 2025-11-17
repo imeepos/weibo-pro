@@ -6,6 +6,7 @@ import { SmartFormField } from './SmartFormField'
 import { useReactFlow } from '@xyflow/react'
 import { getNodeMetadata } from '../../adapters'
 import { resolveConstructor } from '@sker/workflow'
+import { ErrorDetailPanel } from '../ErrorDetail'
 export interface PropertyPanelProps {
   className?: string
 }
@@ -134,8 +135,8 @@ export function PropertyPanel({ className = '' }: PropertyPanelProps) {
             {selectedNode.data.error && (
               <div className="property-field property-field-readonly">
                 <label className="property-field-label text-xs font-medium text-slate-400 mb-1 block">错误信息</label>
-                <div className="property-field-value text-xs text-red-300 bg-red-500/10 px-3 py-2 rounded-lg border border-red-500/30">
-                  {selectedNode.data.error.message}
+                <div className="property-field-value bg-red-500/10 px-3 py-2 rounded-lg border border-red-500/30">
+                  <ErrorDetailPanel error={selectedNode.data.error} />
                 </div>
               </div>
             )}

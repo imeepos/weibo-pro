@@ -53,7 +53,7 @@ export class WeiboAjaxStatusesLikeShowAstVisitor extends WeiboApiClient {
         } catch (error) {
             console.error(`[WeiboAjaxStatusesLikeShowAstVisitor] mid: ${ast.mid}`, error);
             ast.state = 'fail';
-            ast.error = error instanceof Error ? error : new Error(String(error));
+            ast.setError(error);
         }
         return ast;
     }

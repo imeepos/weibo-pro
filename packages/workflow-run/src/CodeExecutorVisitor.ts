@@ -48,17 +48,17 @@ export class CodeExecutorVisitor {
       ast.state = 'success';
     } catch (error) {
       ast.state = 'fail';
-      ast.error = error instanceof Error ? error : new Error(String(error));
+      ast.setError(error, process.env.NODE_ENV === 'development');
 
       ast.logs.push({
         level: 'error',
-        message: ast.error.message,
+        message: ast.error?.message || '未知错误',
         timestamp: new Date(),
       });
 
       console.error(`[CodeExecutorVisitor] 代码执行失败`, {
         language: ast.language,
-        error: ast.error.message,
+        error: ast.error?.message || '未知错误',
       });
     }
 

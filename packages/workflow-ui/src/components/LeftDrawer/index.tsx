@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { PropertyPanel } from '../PropertyPanel'
 import { cn } from '../../utils/cn'
-import { X, Workflow, Settings, History } from 'lucide-react'
+import { X, Workflow, Settings, History, Play, Crosshair } from 'lucide-react'
 import { useSelectedNode } from '../PropertyPanel/useSelectedNode'
 import { getNodeMetadata } from '../../adapters'
 import { resolveConstructor } from '@sker/workflow'
@@ -11,16 +11,17 @@ import { resolveConstructor } from '@sker/workflow'
 export interface LeftDrawerProps {
   visible: boolean
   onClose: () => void
+  onRunNode?: (nodeId: string) => void
+  onLocateNode?: (nodeId: string) => void
   className?: string
 }
 
 type TabType = 'settings' | 'history'
 
-export function LeftDrawer({ visible, onClose, className = '' }: LeftDrawerProps) {
+export function LeftDrawer({ visible, onClose, onRunNode, onLocateNode, className = '' }: LeftDrawerProps) {
   const [activeTab, setActiveTab] = useState<TabType>('settings')
   const [width, setWidth] = useState(420)
   const selectedNode = useSelectedNode()
-
   const metadata = selectedNode ? getNodeMetadata(resolveConstructor(selectedNode.data)) : null
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -66,7 +67,7 @@ export function LeftDrawer({ visible, onClose, className = '' }: LeftDrawerProps
       </div>
 
       {/* 头部 */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700/50">
+      <div className="flex items-center justify-between px-4 py-4 border-b border-slate-700/50">
         <div className="flex items-center gap-3 flex-1 min-w-0">
           {/* 图标 */}
           <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
@@ -86,23 +87,64 @@ export function LeftDrawer({ visible, onClose, className = '' }: LeftDrawerProps
           </div>
         </div>
 
-        {/* 关闭按钮 */}
-        <button
-          onClick={onClose}
-          className={cn(
-            'flex-shrink-0 w-8 h-8 rounded-lg',
-            'flex items-center justify-center',
-            'text-slate-400 hover:text-slate-100',
-            'hover:bg-slate-800/50 active:bg-slate-700/50',
-            'transition-colors'
-          )}
-        >
-          <X className="w-4 h-4" />
-        </button>
+        {/* 操作按钮组 */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {/* 运行节点按钮 */}
+          <button
+            onClick={() => selectedNode && onRunNode?.(selectedNode.id)}
+            disabled={!selectedNode || !onRunNode}
+            className={cn(
+              'w-8 h-8 rounded-lg',
+              'flex items-center justify-center',
+              'transition-colors',
+              selectedNode && onRunNode
+                ? 'text-slate-400 hover:text-green-400 hover:bg-slate-800/50 active:bg-slate-700/50'
+                : 'text-slate-600 cursor-not-allowed'
+            )}
+            title="运行此节点"
+          >
+            <Play className="w-4 h-4" />
+          </button>
+
+          {/* 定位节点按钮 */}
+          <button
+            onClick={() => selectedNode && onLocateNode?.(selectedNode.id)}
+            disabled={!selectedNode || !onLocateNode}
+            className={cn(
+              'w-8 h-8 rounded-lg',
+              'flex items-center justify-center',
+              'transition-colors',
+              selectedNode && onLocateNode
+                ? 'text-slate-400 hover:text-blue-400 hover:bg-slate-800/50 active:bg-slate-700/50'
+                : 'text-slate-600 cursor-not-allowed'
+            )}
+            title="定位到此节点"
+          >
+            <Crosshair className="w-4 h-4" />
+          </button>
+
+          {/* 分隔线 */}
+          <div className="h-6 w-px bg-slate-700/50" />
+
+          {/* 关闭按钮 */}
+          <button
+            onClick={onClose}
+            className={cn(
+              'w-8 h-8 rounded-lg',
+              'flex items-center justify-center',
+              'text-slate-400 hover:text-slate-100',
+              'hover:bg-slate-800/50 active:bg-slate-700/50',
+              'transition-colors'
+            )}
+            title="关闭"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* 标签页导航 */}
-      <div className="flex items-center gap-1 px-6 py-3 border-b border-slate-700/50">
+      <div className="flex items-center gap-1 px-0 py-3">
         <button
           onClick={() => setActiveTab('settings')}
           className={cn(
@@ -110,7 +152,7 @@ export function LeftDrawer({ visible, onClose, className = '' }: LeftDrawerProps
             'transition-all duration-200',
             'flex items-center gap-2',
             activeTab === 'settings'
-              ? 'bg-slate-800/50 text-slate-100 border-b-2 border-indigo-500'
+              ? 'bg-slate-800/50 text-slate-100'
               : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/30'
           )}
         >
@@ -124,7 +166,7 @@ export function LeftDrawer({ visible, onClose, className = '' }: LeftDrawerProps
             'transition-all duration-200',
             'flex items-center gap-2',
             activeTab === 'history'
-              ? 'bg-slate-800/50 text-slate-100 border-b-2 border-indigo-500'
+              ? 'bg-slate-800/50 text-slate-100'
               : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/30'
           )}
         >
@@ -134,7 +176,7 @@ export function LeftDrawer({ visible, onClose, className = '' }: LeftDrawerProps
       </div>
 
       {/* 内容区域 */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-0">
         {activeTab === 'settings' ? (
           <PropertyPanel />
         ) : (

@@ -69,7 +69,7 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
         } catch (error) {
             console.error(`[WeiboAjaxFeedHotTimelineAstVisitor] 抓取失败`, error);
             ast.state = 'fail';
-            ast.error = error instanceof Error ? error : new Error(String(error));
+            ast.setError(error);
         }
         return ast;
     }

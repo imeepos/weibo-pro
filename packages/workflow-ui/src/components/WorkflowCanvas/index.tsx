@@ -216,6 +216,7 @@ export function WorkflowCanvas({
     handleZoomIn,
     handleZoomOut,
     handleRunNode,
+    handleLocateNode,
   } = useCanvasControls()
 
   const clipboard = useClipboard()
@@ -595,6 +596,8 @@ export function WorkflowCanvas({
       <LeftDrawer
         visible={drawer.visible}
         onClose={handleCloseDrawer}
+        onRunNode={runNode}
+        onLocateNode={handleLocateNode}
       />
     </div>
   )
