@@ -22,6 +22,7 @@ export interface UseWorkflowReturn {
   removeEdge: (edgeOrId: string | WorkflowEdge) => void
   clearWorkflow: () => void
   syncFromAst: () => void
+  changeProxy: any
 }
 
 /**
@@ -167,6 +168,8 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
       if (!connection.source || !connection.target) return
 
       const edge: IEdge = {
+        id: `edge-${generateId()}`,
+        type: 'data',
         from: connection.source,
         to: connection.target,
         fromProperty: connection.sourceHandle || undefined,
@@ -176,7 +179,7 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
       workflowAst.addEdge(edge)
 
       const flowEdge: WorkflowEdge = {
-        id: `edge-${generateId()}`,
+        id: edge.id,
         source: connection.source,
         target: connection.target,
         sourceHandle: connection.sourceHandle,

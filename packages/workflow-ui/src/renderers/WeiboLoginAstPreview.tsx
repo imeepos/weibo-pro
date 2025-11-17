@@ -85,11 +85,11 @@ export const WeiboLoginAstPreview: React.FC<WeiboLoginAstPreviewProps> = ({ ast 
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div className="flex justify-between">
                 <span className="text-slate-400">用户名</span>
-                <span className="text-white font-mono">{ast.account.screenName || '未知'}</span>
+                <span className="text-white font-mono">{ast.account.weiboNickname || '未知'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">用户ID</span>
-                <span className="text-white font-mono">{ast.account.userId || '未知'}</span>
+                <span className="text-white font-mono">{ast.account.weiboUid || '未知'}</span>
               </div>
             </div>
           </div>

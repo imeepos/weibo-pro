@@ -32,6 +32,8 @@ function fromFlowEdge(edge: WorkflowEdge): IEdge {
 
   if (edgeType === 'data') {
     const dataEdge: IDataEdge = {
+      id: edge.id,
+      type: 'data',
       from: edge.source,
       to: edge.target,
     }
@@ -43,6 +45,8 @@ function fromFlowEdge(edge: WorkflowEdge): IEdge {
 
   if (edgeType === 'control') {
     const controlEdge: IControlEdge = {
+      id: edge.id,
+      type: 'control',
       from: edge.source,
       to: edge.target,
     }
