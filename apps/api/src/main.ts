@@ -14,7 +14,7 @@ import { logger } from './utils/logger';
 import { killPortProcess } from 'kill-port-process';
 
 async function bootstrap() {
-  const PORT = 9001;
+  const PORT = 3000;
   try {
 
     root.set([

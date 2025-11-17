@@ -4,8 +4,10 @@ FROM mcr.microsoft.com/playwright:v1.56.1-noble
 # 设置工作目录
 WORKDIR /workspace
 
-# 复制 package.json 和 pnpm-lock.yaml
-COPY package.json pnpm-lock.yaml* ./
+# 复制包管理文件
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
+COPY apps/api/package.json ./apps/api/
+COPY packages/ ./packages/
 
 # 安装 pnpm
 RUN npm install -g pnpm@9
