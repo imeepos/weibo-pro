@@ -1,6 +1,8 @@
 services:
   api:
-    image: node:20-alpine
+    build:
+      context: .
+      dockerfile: Dockerfile.api
     container_name: weibo-pro-api
     working_dir: /workspace
     command: node apps/api/dist/main.js
@@ -22,18 +24,18 @@ services:
     deploy:
       resources:
         limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
           memory: 512M
           cpus: '0.5'
-        reservations:
-          memory: 256M
-          cpus: '0.25'
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/system/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1))"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 60s
 
   bigscreen:
     image: nginx:alpine
