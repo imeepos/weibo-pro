@@ -1,6 +1,7 @@
 import 'reflect-metadata'
 import '@sker/workflow'
 import '@sker/workflow-ast'
+import '@sker/workflow-browser'  // 导入即自动注册
 import '@sker/workflow-ui/styles'
 import './index.css'
 import React, { StrictMode } from 'react'

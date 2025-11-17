@@ -1,9 +1,9 @@
 import { useCallback } from 'react'
-import { root } from '@sker/core'
-import { WorkflowController } from '@sker/sdk'
-import { fromJson, toJson, type WorkflowGraphAst } from '@sker/workflow'
+import { executeAst, fromJson, type WorkflowGraphAst } from '@sker/workflow'
 import type { useWorkflow } from '../../hooks/useWorkflow'
 import type { ToastType } from './Toast'
+import { WorkflowController } from '@sker/sdk'
+import { root } from '@sker/core'
 
 /**
  * 工作流操作 Hook
@@ -28,20 +28,23 @@ export function useWorkflowOperations(
    * 运行单个节点
    *
    * 优雅设计：
-   * - 只执行选中的节点，不触发工作流调度
-   * - 使用 executeSingleNode API，避免执行整个工作流
-   * - 执行后更新工作流中对应节点的状态
-   * - 独立的错误处理和状态管理
+   * - 直接调用 executeAst，装饰器系统自动查找 Handler
+   * - 有本地 Handler 则本地执行（如微博登录 SSE）
+   * - 无本地 Handler 则调用远程 API（如 Playwright 采集）
+   * - 无需额外判断，代码即文档
    */
   const runNode = useCallback(
     async (nodeId: string) => {
+      console.log(`run node ${nodeId}`);
       if (!workflow.workflowAst) {
+        console.error(`工作流 AST 不存在`)
         onShowToast?.('error', '工作流 AST 不存在')
         return
       }
 
       const targetNode = workflow.workflowAst.nodes.find(n => n.id === nodeId)
       if (!targetNode) {
+        console.error(`节点不存在`)
         onShowToast?.('error', '节点不存在', `节点ID: ${nodeId}`)
         return
       }
@@ -49,13 +52,13 @@ export function useWorkflowOperations(
       onSetRunning?.(true)
 
       try {
-        const controller = root.get<WorkflowController>(WorkflowController)
+        const ast = fromJson(targetNode)
+        const ctx = workflow.workflowAst.ctx || {}
 
-        const result = await controller.executeSingleNode({
-          node: fromJson(targetNode),
-          context: workflow.workflowAst.ctx || {}
-        })
-
+        // executeAst 会通过装饰器系统自动查找 @Handler 执行器
+        console.log(`run ast`, { ast, ctx })
+        const result = await executeAst(ast, ctx)
+        console.log(`run ast success`, result)
         const astNode = workflow.workflowAst.nodes.find(n => n.id === nodeId)
         if (astNode) {
           Object.assign(astNode, result)
@@ -64,13 +67,16 @@ export function useWorkflowOperations(
         workflow.syncFromAst()
 
         if (result.state === 'success') {
+          console.info(`节点执行成功`)
           onShowToast?.('success', '节点执行成功')
         } else if (result.state === 'fail') {
           const errorInfo = extractErrorInfo(result.error)
+          console.error(`节点执行失败`)
           onShowToast?.('error', '节点执行失败', errorInfo.message)
         }
       } catch (error: any) {
         const errorInfo = extractErrorInfo(error)
+        console.error(`节点执行失败`)
         onShowToast?.('error', '节点执行失败', errorInfo.message)
       } finally {
         onSetRunning?.(false)
@@ -135,53 +141,34 @@ export function useWorkflowOperations(
       onSetRunning?.(true)
 
       try {
-        const controller = root.get<WorkflowController>(WorkflowController)
+        let currentState = workflow.workflowAst
+        const ctx = workflow.workflowAst.ctx || {}
 
-        let successCount = 0
-        let failCount = 0
-        let stepCount = 0
-        const maxSteps = nodes.length * 2
+        // 参考 execute 函数的实现，循环执行直到完成
+        while (currentState.state === 'pending' || currentState.state === 'running') {
+          currentState = await executeAst(currentState, ctx)
 
-        while (stepCount < maxSteps) {
-          stepCount++
-
-          const result = await controller.executeNode(workflow.workflowAst)
-
-          Object.assign(workflow.workflowAst, result)
+          // 每执行一步后更新状态
+          Object.assign(workflow.workflowAst, currentState)
           workflow.syncFromAst()
-
-          if (result.state === 'success') {
-            successCount++
-          } else if (result.state === 'fail') {
-            failCount++
-            if (failCount === 1 && result.error) {
-              const errorInfo = extractErrorInfo(result.error)
-              onShowToast?.('error', '工作流执行失败', errorInfo.message)
-            }
-          }
-
-          const allCompleted = workflow.workflowAst.nodes.every(
-            (node) => node.state === 'success' || node.state === 'fail'
-          )
-
-          if (
-            allCompleted ||
-            workflow.workflowAst.state === 'success' ||
-            workflow.workflowAst.state === 'fail'
-          ) {
-            break
-          }
         }
+
+        // 统计执行结果
+        const successCount = workflow.workflowAst.nodes.filter(n => n.state === 'success').length
+        const failCount = workflow.workflowAst.nodes.filter(n => n.state === 'fail').length
 
         if (failCount === 0) {
           onShowToast?.('success', '工作流执行成功', `共执行 ${successCount} 个节点`)
         } else if (successCount > 0) {
           onShowToast?.('error', '工作流部分失败', `成功: ${successCount}, 失败: ${failCount}`)
+        } else {
+          onShowToast?.('error', '工作流执行失败', `所有节点均失败`)
         }
 
         onComplete?.()
       } catch (error: any) {
-        onShowToast?.('error', '工作流执行异常', error.message || '未知错误')
+        const errorInfo = extractErrorInfo(error)
+        onShowToast?.('error', '工作流执行异常', errorInfo.message)
       } finally {
         onSetRunning?.(false)
       }
@@ -207,7 +194,7 @@ export function useWorkflowOperations(
         }
 
         const controller = root.get<WorkflowController>(WorkflowController)
-        const result = await controller.saveWorkflow(workflow.workflowAst)
+        await controller.saveWorkflow(workflow.workflowAst)
 
         onShowToast?.('success', '保存成功', '工作流已保存')
         onComplete?.()

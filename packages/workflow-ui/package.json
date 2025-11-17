@@ -38,6 +38,7 @@
     "@sker/core": "workspace:*",
     "@sker/workflow": "workspace:*",
     "@sker/workflow-ast": "workspace:*",
+    "@sker/workflow-browser": "workspace:*",
     "@sker/sdk": "workspace:*",
     "@xyflow/react": "^12.9.2",
     "clsx": "^2.1.1",

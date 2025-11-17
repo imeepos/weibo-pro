@@ -2,6 +2,8 @@ import { Controller, Get, Query, Res, Sse, MessageEvent } from '@nestjs/common'
 import { Response } from 'express'
 import { Observable, interval, map } from 'rxjs'
 import { logger } from '../utils/logger'
+import { root } from '@sker/core'
+import { WeiboAuthService, WeiboLoginEvent as WeiboLoginEventType } from '@sker/workflow-run'
 
 /**
  * SSE控制器 - 提供实时事件推送
@@ -14,90 +16,86 @@ import { logger } from '../utils/logger'
  */
 @Controller('api/sse')
 export class SseController {
+  private readonly weiboAuthService: WeiboAuthService;
+
+  constructor() {
+    this.weiboAuthService = root.get(WeiboAuthService);
+  }
 
   /**
    * 微博登录SSE流
    *
    * 优雅设计：
-   * - 支持微博登录的实时状态推送
-   * - 推送二维码URL和登录状态
-   * - 支持长连接保持
+   * - 连接真实的 WeiboAuthService
+   * - 订阅 Observable 事件流并转发到 SSE
+   * - 支持二维码推送、扫码状态、登录成功等实时事件
+   * - 自动管理会话生命周期和清理
    */
   @Sse('weibo-login')
-  weiboLoginSse(@Query() query: { nodeId?: string }): Observable<MessageEvent> {
-    const { nodeId } = query
+  weiboLoginSse(@Query() query: { userId?: string }): Observable<MessageEvent> {
+    const { userId } = query;
 
-    logger.info('微博登录SSE连接已建立', { nodeId })
+    if (!userId) {
+      logger.error('微博登录SSE: userId 参数缺失');
+      return new Observable<MessageEvent>(subscriber => {
+        subscriber.next({
+          type: 'error',
+          data: { message: 'userId 参数不能为空' },
+        } as MessageEvent);
+        subscriber.complete();
+      });
+    }
+
+    logger.info('微博登录SSE连接已建立', { userId });
 
     return new Observable<MessageEvent>(subscriber => {
-      // 模拟微博登录流程
-      const simulateWeiboLogin = async () => {
-        try {
-          // 1. 推送进度
-          subscriber.next({
-            type: 'progress',
-            data: { progress: 10 },
-            message: '开始微博登录流程'
-          } as MessageEvent)
+      // 启动微博登录流程
+      this.weiboAuthService.startLogin(userId).then(events$ => {
+        // 订阅登录事件流
+        const subscription = events$.subscribe({
+          next: (event: WeiboLoginEventType) => {
+            logger.debug('微博登录事件', { type: event.type, userId });
 
-          // 等待1秒
-          await this.delay(1000)
+            // 将后端事件转换为 SSE MessageEvent
+            subscriber.next({
+              type: event.type,
+              data: event.data,
+            } as MessageEvent);
 
-          // 2. 推送二维码
-          const qrUrl = await this.generateWeiboQRCode()
-          subscriber.next({
-            type: 'qr_code',
-            data: { qrUrl },
-            message: '请扫描二维码登录'
-          } as MessageEvent)
+            // 登录成功或失败后完成流
+            if (event.type === 'success' || event.type === 'error' || event.type === 'expired') {
+              logger.info('微博登录流程结束', { type: event.type, userId });
+              subscriber.complete();
+            }
+          },
+          error: (err) => {
+            logger.error('微博登录流程错误', { userId, error: err.message });
+            subscriber.next({
+              type: 'error',
+              data: { message: err.message || '登录失败' },
+            } as MessageEvent);
+            subscriber.complete();
+          },
+          complete: () => {
+            logger.info('微博登录流程完成', { userId });
+            subscriber.complete();
+          }
+        });
 
-          subscriber.next({
-            type: 'progress',
-            data: { progress: 30 },
-            message: '等待扫码...'
-          } as MessageEvent)
-
-          // 3. 模拟等待扫码（实际应该监听微博登录状态）
-          await this.delay(5000)
-
-          // 4. 推送登录成功
-          subscriber.next({
-            type: 'login_success',
-            data: {
-              accountId: '123456',
-              username: 'test_user',
-              cookie: 'mock_cookie_data'
-            },
-            message: '登录成功'
-          } as MessageEvent)
-
-          subscriber.next({
-            type: 'progress',
-            data: { progress: 100 },
-            message: '登录流程完成'
-          } as MessageEvent)
-
-          // 完成
-          subscriber.complete()
-
-        } catch (error) {
-          logger.error('微博登录SSE流程错误', { error })
-          subscriber.next({
-            type: 'error',
-            data: { error: error.message },
-            message: '登录失败'
-          } as MessageEvent)
-          subscriber.complete()
-        }
-      }
-
-      simulateWeiboLogin()
-
-      // 清理函数
-      return () => {
-        logger.info('微博登录SSE连接已关闭', { nodeId })
-      }
-    })
+        // 返回清理函数
+        return () => {
+          logger.info('微博登录SSE连接已关闭', { userId });
+          subscription.unsubscribe();
+        };
+      }).catch(err => {
+        logger.error('启动微博登录失败', { userId, error: err.message });
+        subscriber.next({
+          type: 'error',
+          data: { message: err.message || '启动登录失败' },
+        } as MessageEvent);
+        subscriber.complete();
+      });
+    });
   }
 
   /**
@@ -249,21 +247,5 @@ export class SseController {
         message: '系统运行正常'
       } as MessageEvent))
     )
-  }
-
-  /**
-   * 生成微博二维码URL
-   */
-  private async generateWeiboQRCode(): Promise<string> {
-    // 模拟生成二维码URL
-    // 实际应该调用微博API获取真实的二维码
-    return 'https://example.com/weibo-qr-code.png'
-  }
-
-  /**
-   * 延迟函数
-   */
-  private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms))
   }
 }

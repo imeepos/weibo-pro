@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { WeiboLoginAst } from '@sker/workflow-ast'
 import { InlineExecutor } from '../components/execution/InlineExecutor'
 import { Preview, Render, Setting } from '@sker/workflow'
@@ -72,8 +72,121 @@ export const WeiboLoginSetting = ({ ast }: { ast: WeiboLoginAst }) => {
   );
 };
 
-const WeiboLoginRender: React.FC<{ ast: WeiboLoginAst }> = (ast) => {
-  return <div></div>
+/**
+ * 微博登录二维码渲染组件
+ *
+ * 优雅设计：
+ * - 监听 Handler 触发的自定义事件
+ * - 自动显示/隐藏二维码
+ * - 显示登录状态消息
+ */
+const WeiboLoginRender: React.FC<{ ast: WeiboLoginAst }> = ({ ast }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [qrImage, setQrImage] = useState<string | null>(null);
+  const [statusMessage, setStatusMessage] = useState<string>('');
+
+  useEffect(() => {
+    // 监听二维码显示事件
+    const handleQRCodeShow = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { image } = customEvent.detail;
+
+      setQrImage(image);
+      setIsOpen(true);
+      setStatusMessage('请使用微博 App 扫描二维码');
+    };
+
+    // 监听登录状态更新事件
+    const handleStatusUpdate = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { message } = customEvent.detail;
+
+      setStatusMessage(message);
+
+      // 如果登录成功或失败，3秒后自动关闭对话框
+      if (message.includes('成功') || message.includes('失败') || message.includes('过期')) {
+        setTimeout(() => {
+          setIsOpen(false);
+          setQrImage(null);
+          setStatusMessage('');
+        }, 3000);
+      }
+    };
+
+    window.addEventListener('weibo-qrcode-show', handleQRCodeShow);
+    window.addEventListener('weibo-login-status', handleStatusUpdate);
+
+    return () => {
+      window.removeEventListener('weibo-qrcode-show', handleQRCodeShow);
+      window.removeEventListener('weibo-login-status', handleStatusUpdate);
+    };
+  }, []);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="relative max-w-md rounded-lg bg-[#1a1d24] p-6 shadow-xl border border-[#282e39]">
+        {/* 关闭按钮 */}
+        <button
+          onClick={() => {
+            setIsOpen(false);
+            setQrImage(null);
+            setStatusMessage('');
+          }}
+          className="absolute right-4 top-4 text-[#9da6b9] hover:text-white transition-colors"
+        >
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+
+        {/* 标题 */}
+        <h2 className="mb-4 text-xl font-semibold text-white">微博扫码登录</h2>
+
+        {/* 二维码 */}
+        {qrImage && (
+          <div className="mb-4 flex justify-center">
+            <div className="rounded-lg bg-white p-4">
+              <img
+                src={`data:image/png;base64,${qrImage}`}
+                alt="微博登录二维码"
+                className="h-64 w-64"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* 状态消息 */}
+        {statusMessage && (
+          <div className="text-center">
+            <p className="text-sm text-[#9da6b9]">{statusMessage}</p>
+          </div>
+        )}
+
+        {/* 加载动画（当有状态消息但不是完成状态时显示） */}
+        {statusMessage &&
+         !statusMessage.includes('成功') &&
+         !statusMessage.includes('失败') &&
+         !statusMessage.includes('过期') && (
+          <div className="mt-4 flex justify-center">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#282e39] border-t-[#135bec]"></div>
+          </div>
+        )}
+
+        {/* 提示信息 */}
+        {!statusMessage.includes('成功') &&
+         !statusMessage.includes('失败') &&
+         !statusMessage.includes('过期') && (
+          <div className="mt-4 rounded-md bg-[#282e39] p-3">
+            <p className="text-xs text-[#6b7280]">
+              💡 打开微博 App，扫描上方二维码即可登录
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 @Injectable()

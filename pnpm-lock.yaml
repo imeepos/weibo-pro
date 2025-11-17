@@ -353,6 +353,9 @@ importers:
       '@sker/workflow-ast':
         specifier: workspace:*
         version: link:../../packages/workflow-ast
+      '@sker/workflow-browser':
+        specifier: workspace:*
+        version: link:../../packages/workflow-browser
       '@sker/workflow-ui':
         specifier: workspace:*
         version: link:../../packages/workflow-ui
@@ -368,6 +371,9 @@ importers:
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
+      rxjs:
+        specifier: ^7.8.1
+        version: 7.8.2
     devDependencies:
       '@sker/eslint-config':
         specifier: workspace:*
@@ -838,6 +844,9 @@ importers:
       '@sker/workflow-ast':
         specifier: workspace:*
         version: link:../workflow-ast
+      rxjs:
+        specifier: ^7.8.1
+        version: 7.8.2
     devDependencies:
       '@sker/eslint-config':
         specifier: workspace:*
@@ -936,6 +945,9 @@ importers:
       '@sker/workflow-ast':
         specifier: workspace:*
         version: link:../workflow-ast
+      '@sker/workflow-browser':
+        specifier: workspace:*
+        version: link:../workflow-browser
       '@xyflow/react':
         specifier: ^12.9.2
         version: 12.9.2(@types/react@18.3.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
