@@ -20,31 +20,6 @@ export function getNodeMetadata(nodeClass: Type<any>): NodeMetadata {
 
   let outputs = outputMetadata.map(toPortMetadata)
 
-  if (outputs.length === 0) {
-    const reservedKeys = new Set(['id', 'state', 'error', 'type'])
-    const inputKeys = new Set(inputs.map((item) => item.property))
-
-    const fallbackOutputs: PortMetadata[] = []
-
-    for (const key of Object.keys(instance)) {
-      if (reservedKeys.has(key) || inputKeys.has(key)) continue
-
-      const value = (instance as Record<string, unknown>)[key]
-      if (typeof value === 'function') continue
-
-      fallbackOutputs.push({
-        property: key,
-        type: 'any',
-        isMulti: false,
-        label: formatPortLabel(key),
-      })
-    }
-
-    if (fallbackOutputs.length > 0) {
-      outputs = fallbackOutputs
-    }
-  }
-
   return {
     type: nodeType,
     label: customTitle || formatNodeLabel(nodeType),

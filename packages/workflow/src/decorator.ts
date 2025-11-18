@@ -163,20 +163,21 @@ export function getInputMetadata(target: Type<any> | object, propertyKey?: strin
 export interface OutputOptions {
     title?: string;
     type?: string;
-    isStream?: boolean;
+    properties?: {
+        [key: string]: OutputOptions;
+    }
 }
 
-export interface OutputMetadata {
+export interface OutputMetadata extends OutputOptions {
     target: Type<any>;
     propertyKey: string | symbol;
-    title?: string;
 }
 
 export const OUTPUT = new InjectionToken<OutputMetadata[]>(`OUTPUT`)
-export function Output(options?: OutputOptions): PropertyDecorator {
+export function Output(options: OutputOptions = {}): PropertyDecorator {
     return (target, propertyKey) => {
         const ctor = resolveConstructor(target);
-        root.set([{ provide: OUTPUT, multi: true, useValue: { target: ctor, propertyKey, isStream: options?.isStream, title: options?.title } }])
+        root.set([{ provide: OUTPUT, multi: true, useValue: { target: ctor, propertyKey, ...options } }])
     };
 }
 
