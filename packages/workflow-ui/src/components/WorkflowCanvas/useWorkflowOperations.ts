@@ -29,12 +29,12 @@ export function useWorkflowOperations(
    *
    * 优雅设计：
    * - 直接调用 executeAst，装饰器系统自动查找 Handler
-   * - 有本地 Handler 则本地执行（如微博登录 SSE）
-   * - 无本地 Handler 则调用远程 API（如 Playwright 采集）
+   * - 利用 Observable 流式特性，实时更新节点状态
+   * - 每次 next 事件触发状态同步，提供流畅执行体验
    * - 无需额外判断，代码即文档
    */
   const runNode = useCallback(
-    async (nodeId: string) => {
+    (nodeId: string) => {
       console.log(`run node ${nodeId}`);
       if (!workflow.workflowAst) {
         console.error(`工作流 AST 不存在`)
@@ -51,36 +51,46 @@ export function useWorkflowOperations(
 
       onSetRunning?.(true)
 
-      try {
-        const ast = fromJson(targetNode)
-        const ctx = workflow.workflowAst.ctx || {}
+      const ast = fromJson(targetNode)
+      const ctx = workflow.workflowAst.ctx || {}
 
-        // executeAst 会通过装饰器系统自动查找 @Handler 执行器
-        console.log(`run ast`, { ast, ctx })
-        const result = await executeAst(ast, ctx)
-        console.log(`run ast success`, result)
-        const astNode = workflow.workflowAst.nodes.find(n => n.id === nodeId)
-        if (astNode) {
-          Object.assign(astNode, result)
+      // executeAst 返回 Observable，利用流式特性实时更新状态
+      console.log(`run ast`, { ast, ctx })
+      const subscription = executeAst(ast, ctx).subscribe({
+        next: (updatedNode) => {
+          console.log(`节点状态更新`, updatedNode)
+
+          // 每次 next 事件实时更新节点状态
+          const astNode = workflow.workflowAst?.nodes.find(n => n.id === nodeId)
+          if (astNode) {
+            Object.assign(astNode, updatedNode)
+            workflow.syncFromAst()
+          }
+
+          // 根据最终状态显示提示
+          if (updatedNode.state === 'success') {
+            console.info(`节点执行成功`)
+            onShowToast?.('success', '节点执行成功')
+          } else if (updatedNode.state === 'fail') {
+            const errorInfo = extractErrorInfo(updatedNode.error)
+            console.error(`节点执行失败`)
+            onShowToast?.('error', '节点执行失败', errorInfo.message)
+          }
+        },
+        error: (error) => {
+          const errorInfo = extractErrorInfo(error)
+          console.error(`节点执行异常`)
+          onShowToast?.('error', '节点执行异常', errorInfo.message)
+          onSetRunning?.(false)
+        },
+        complete: () => {
+          console.log(`节点执行完成`)
+          onSetRunning?.(false)
         }
+      })
 
-        workflow.syncFromAst()
-
-        if (result.state === 'success') {
-          console.info(`节点执行成功`)
-          onShowToast?.('success', '节点执行成功')
-        } else if (result.state === 'fail') {
-          const errorInfo = extractErrorInfo(result.error)
-          console.error(`节点执行失败`)
-          onShowToast?.('error', '节点执行失败', errorInfo.message)
-        }
-      } catch (error: any) {
-        const errorInfo = extractErrorInfo(error)
-        console.error(`节点执行失败`)
-        onShowToast?.('error', '节点执行失败', errorInfo.message)
-      } finally {
-        onSetRunning?.(false)
-      }
+      // 返回取消订阅函数，便于外部管理
+      return () => subscription.unsubscribe()
     },
     [workflow, onShowToast, onSetRunning]
   )
@@ -124,9 +134,14 @@ export function useWorkflowOperations(
 
   /**
    * 运行整个工作流
+   *
+   * 优雅设计：
+   * - 利用 Observable 流式特性，实时更新工作流状态
+   * - 每次 next 事件触发状态同步，提供流畅执行体验
+   * - 自动统计执行结果，提供清晰反馈
    */
   const runWorkflow = useCallback(
-    async (onComplete?: () => void) => {
+    (onComplete?: () => void) => {
       if (!workflow.workflowAst) {
         onShowToast?.('error', '工作流不存在', '无法执行空工作流')
         return
@@ -140,38 +155,45 @@ export function useWorkflowOperations(
 
       onSetRunning?.(true)
 
-      try {
-        let currentState = workflow.workflowAst
-        const ctx = workflow.workflowAst.ctx || {}
+      const ctx = workflow.workflowAst.ctx || {}
 
-        // 参考 execute 函数的实现，循环执行直到完成
-        while (currentState.state === 'pending' || currentState.state === 'running') {
-          currentState = await executeAst(currentState, ctx)
+      // executeAst 返回 Observable，利用流式特性实时更新状态
+      const subscription = executeAst(workflow.workflowAst, ctx).subscribe({
+        next: (updatedWorkflow) => {
+          console.log(`工作流状态更新`, updatedWorkflow)
 
-          // 每执行一步后更新状态
-          Object.assign(workflow.workflowAst, currentState)
+          // 每次 next 事件实时更新工作流状态
+          Object.assign(workflow.workflowAst!, updatedWorkflow)
           workflow.syncFromAst()
+        },
+        error: (error) => {
+          const errorInfo = extractErrorInfo(error)
+          console.error(`工作流执行异常`)
+          onShowToast?.('error', '工作流执行异常', errorInfo.message)
+          onSetRunning?.(false)
+        },
+        complete: () => {
+          console.log(`工作流执行完成`)
+
+          // 统计执行结果
+          const successCount = workflow.workflowAst!.nodes.filter(n => n.state === 'success').length
+          const failCount = workflow.workflowAst!.nodes.filter(n => n.state === 'fail').length
+
+          if (failCount === 0) {
+            onShowToast?.('success', '工作流执行成功', `共执行 ${successCount} 个节点`)
+          } else if (successCount > 0) {
+            onShowToast?.('error', '工作流部分失败', `成功: ${successCount}, 失败: ${failCount}`)
+          } else {
+            onShowToast?.('error', '工作流执行失败', `所有节点均失败`)
+          }
+
+          onComplete?.()
+          onSetRunning?.(false)
         }
+      })
 
-        // 统计执行结果
-        const successCount = workflow.workflowAst.nodes.filter(n => n.state === 'success').length
-        const failCount = workflow.workflowAst.nodes.filter(n => n.state === 'fail').length
-
-        if (failCount === 0) {
-          onShowToast?.('success', '工作流执行成功', `共执行 ${successCount} 个节点`)
-        } else if (successCount > 0) {
-          onShowToast?.('error', '工作流部分失败', `成功: ${successCount}, 失败: ${failCount}`)
-        } else {
-          onShowToast?.('error', '工作流执行失败', `所有节点均失败`)
-        }
-
-        onComplete?.()
-      } catch (error: any) {
-        const errorInfo = extractErrorInfo(error)
-        onShowToast?.('error', '工作流执行异常', errorInfo.message)
-      } finally {
-        onSetRunning?.(false)
-      }
+      // 返回取消订阅函数，便于外部管理
+      return () => subscription.unsubscribe()
     },
     [workflow, onShowToast, onSetRunning]
   )
