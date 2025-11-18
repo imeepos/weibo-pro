@@ -22,6 +22,7 @@ import { generateId } from "@sker/workflow";
 @Injectable()
 export class WeiboAuthService implements OnDestroy {
   private browser: Browser | null = null;
+  private browserInitPromise: Promise<void> | null = null;
   private loginSessions = new Map<string, LoginSession>();
 
   // 登录会话配置
@@ -36,7 +37,33 @@ export class WeiboAuthService implements OnDestroy {
 
   constructor(
     @Inject(RedisClient) private redis: RedisClient
-  ) {}
+  ) {
+    this.browserInitPromise = this.initBrowser();
+  }
+
+  /**
+   * 初始化 Playwright 浏览器实例
+   *
+   * 优雅设计：
+   * - 延迟初始化，避免阻塞服务启动
+   * - 失败时不影响整体应用启动
+   * - 记录详细日志便于诊断
+   */
+  private async initBrowser(): Promise<void> {
+    try {
+      this.browser = await chromium.launch({
+        headless: this.config.headless,
+        args: [
+          '--disable-blink-features=AutomationControlled',
+          '--disable-dev-shm-usage',
+          '--no-sandbox',
+        ],
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.warn(`Playwright 浏览器初始化失败: ${errorMessage}. 微博登录功能将不可用。`);
+    }
+  }
 
   /**
    * 启动微博登录流程
@@ -44,6 +71,11 @@ export class WeiboAuthService implements OnDestroy {
    * @returns Observable 事件流
    */
   async startLogin(userId: string): Promise<Observable<WeiboLoginEvent>> {
+    // 确保浏览器已初始化
+    if (this.browserInitPromise) {
+      await this.browserInitPromise;
+    }
+
     try {
       const { events$ } = await this.createLoginSession(userId);
       return events$;
@@ -532,23 +564,21 @@ export class WeiboAuthService implements OnDestroy {
 
   private async updateSessionEventInRedis(sessionId: string, event: WeiboLoginEvent): Promise<void> {
     const key = `weibo_session:${sessionId}`;
-    const sessionDataStr = await this.redis.get(key);
+    const sessionData = await this.redis.get<any>(key);
 
-    if (sessionDataStr) {
-      const sessionData = JSON.parse(sessionDataStr);
+    if (sessionData) {
       sessionData.lastEvent = event;
-      await this.redis.set(key, JSON.stringify(sessionData));
+      await this.redis.set(key, sessionData);
     }
   }
 
   private async updateSessionStatusInRedis(sessionId: string, status: string): Promise<void> {
     const key = `weibo_session:${sessionId}`;
-    const sessionDataStr = await this.redis.get(key);
+    const sessionData = await this.redis.get<any>(key);
 
-    if (sessionDataStr) {
-      const sessionData = JSON.parse(sessionDataStr);
+    if (sessionData) {
       sessionData.status = status;
-      await this.redis.set(key, JSON.stringify(sessionData));
+      await this.redis.set(key, sessionData);
     }
   }
 }

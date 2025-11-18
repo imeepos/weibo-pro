@@ -4,6 +4,7 @@ import { fromJson } from "./generate";
 import { INode } from "./types";
 import { WorkflowScheduler } from './execution/scheduler';
 import { defaultVisitorExecutor } from './execution/visitor-executor';
+import { Observable } from 'rxjs'
 
 export type NodeHandler = (ast: Ast, ctx: Visitor) => Promise<any>;
 export type DispatchTable = Map<string, NodeHandler>;
@@ -47,8 +48,7 @@ export class ArrayIteratorVisitor {
         return ast;
     }
 }
-
-export function executeAst<S extends INode>(state: S, context: any, visitor: Visitor = defaultVisitorExecutor) {
+export function executeAst<S extends INode>(state: S, context: any, visitor: Visitor = defaultVisitorExecutor): Observable<S> {
     const ast = fromJson(state);
     return visitor.visit(ast, context);
 }

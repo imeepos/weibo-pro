@@ -3,6 +3,7 @@ import { WeiboLoginAst } from '@sker/workflow-ast'
 import { InlineExecutor } from '../components/execution/InlineExecutor'
 import { Preview, Render, Setting } from '@sker/workflow'
 import { Injectable } from '@sker/core'
+import type { WeiboAccountEntity } from '@sker/entities'
 
 // 微博登录预览组件
 const WeiboLoginPreview = ({ ast }: { ast: WeiboLoginAst }) => {
@@ -84,41 +85,39 @@ const WeiboLoginRender: React.FC<{ ast: WeiboLoginAst }> = ({ ast }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [qrImage, setQrImage] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string>('');
+  const [account, setAccount] = useState<WeiboAccountEntity | undefined>(ast.account)
 
   useEffect(() => {
     // 监听二维码显示事件
-    const handleQRCodeShow = (event: Event) => {
+    const onEvent = (event: Event) => {
       const customEvent = event as CustomEvent;
-      const { image } = customEvent.detail;
-
-      setQrImage(image);
-      setIsOpen(true);
-      setStatusMessage('请使用微博 App 扫描二维码');
-    };
-
-    // 监听登录状态更新事件
-    const handleStatusUpdate = (event: Event) => {
-      const customEvent = event as CustomEvent;
-      const { message } = customEvent.detail;
-
-      setStatusMessage(message);
-
-      // 如果登录成功或失败，3秒后自动关闭对话框
-      if (message.includes('成功') || message.includes('失败') || message.includes('过期')) {
-        setTimeout(() => {
-          setIsOpen(false);
-          setQrImage(null);
-          setStatusMessage('');
-        }, 3000);
+      const detail = customEvent.detail;
+      switch (detail.type) {
+        case 'qrcode':
+          setQrImage(detail.data.image)
+          setIsOpen(true)
+          break;
+        case 'scanned':
+          setStatusMessage(detail.data.message || ``)
+          break;
+        case 'success':
+          setQrImage(null)
+          setStatusMessage(``)
+          setAccount(detail.data)
+          break;
+        case 'fail':
+          setStatusMessage(detail.data.message || ``)
+          setQrImage(null)
+          setAccount(undefined)
+          break;
+        default:
+          break;
       }
+      console.log({ detail })
     };
-
-    window.addEventListener('weibo-qrcode-show', handleQRCodeShow);
-    window.addEventListener('weibo-login-status', handleStatusUpdate);
-
+    window.addEventListener(ast.id, onEvent);
     return () => {
-      window.removeEventListener('weibo-qrcode-show', handleQRCodeShow);
-      window.removeEventListener('weibo-login-status', handleStatusUpdate);
+      window.removeEventListener(ast.id, onEvent);
     };
   }, []);
 
@@ -149,10 +148,30 @@ const WeiboLoginRender: React.FC<{ ast: WeiboLoginAst }> = ({ ast }) => {
           <div className="mb-4 flex justify-center">
             <div className="rounded-lg bg-white p-4">
               <img
-                src={`data:image/png;base64,${qrImage}`}
+                src={
+                  qrImage.startsWith('http://') || qrImage.startsWith('https://')
+                    ? qrImage
+                    : `data:image/png;base64,${qrImage}`
+                }
                 alt="微博登录二维码"
-                className="h-64 w-64"
+                className="h-full w-full"
               />
+            </div>
+          </div>
+        )}
+
+        {account && (
+          <div className="flex flex-col items-center gap-3 py-4">
+            <div className="relative">
+              <img
+                src={account.weiboAvatar}
+                alt={account.weiboNickname}
+                className="h-20 w-20 rounded-full border-2 border-white shadow-lg object-cover"
+              />
+            </div>
+            <div className="text-center">
+              <p className="text-base font-medium text-white">{account.weiboNickname}</p>
+              <p className="text-xs text-green-400 mt-1">✓ 登录成功</p>
             </div>
           </div>
         )}
@@ -161,27 +180,6 @@ const WeiboLoginRender: React.FC<{ ast: WeiboLoginAst }> = ({ ast }) => {
         {statusMessage && (
           <div className="text-center">
             <p className="text-sm text-[#9da6b9]">{statusMessage}</p>
-          </div>
-        )}
-
-        {/* 加载动画（当有状态消息但不是完成状态时显示） */}
-        {statusMessage &&
-         !statusMessage.includes('成功') &&
-         !statusMessage.includes('失败') &&
-         !statusMessage.includes('过期') && (
-          <div className="mt-4 flex justify-center">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#282e39] border-t-[#135bec]"></div>
-          </div>
-        )}
-
-        {/* 提示信息 */}
-        {!statusMessage.includes('成功') &&
-         !statusMessage.includes('失败') &&
-         !statusMessage.includes('过期') && (
-          <div className="mt-4 rounded-md bg-[#282e39] p-3">
-            <p className="text-xs text-[#6b7280]">
-              💡 打开微博 App，扫描上方二维码即可登录
-            </p>
           </div>
         )}
       </div>

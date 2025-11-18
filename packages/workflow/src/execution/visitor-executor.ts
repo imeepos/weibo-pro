@@ -2,9 +2,9 @@ import { root } from '@sker/core';
 import { Ast, Visitor } from '../ast';
 import { HANDLER, HANDLER_METHOD, resolveConstructor } from '../decorator';
 import { NoRetryError } from '../errors';
-
+import { Observable } from 'rxjs'
 export class VisitorExecutor implements Visitor {
-    async visit(ast: Ast, ctx: any): Promise<any> {
+    visit(ast: Ast, ctx: any): Observable<any> {
         const type = resolveConstructor(ast);
 
         try {
@@ -14,7 +14,7 @@ export class VisitorExecutor implements Visitor {
                 if (method) {
                     const instance = root.get(method.target);
                     if (method.property && typeof (instance as any)[method.property] === 'function') {
-                        return await (instance as any)[method.property](ast, ctx);
+                        return (instance as any)[method.property](ast, ctx);
                     }
                 }
             }
@@ -24,7 +24,7 @@ export class VisitorExecutor implements Visitor {
             if (handler) {
                 const instance = root.get(handler.target);
                 if (typeof (instance as any).visit === 'function') {
-                    return await instance.visit(ast, ctx);
+                    return instance.visit(ast, ctx);
                 }
                 throw new Error(`Handler ${handler.target.name} has no visit method or @Handler decorated method`);
             }

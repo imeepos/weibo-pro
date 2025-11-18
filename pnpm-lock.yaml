@@ -776,6 +776,9 @@ importers:
       '@sker/core':
         specifier: workspace:*
         version: link:../core
+      rxjs:
+        specifier: ^7.8.1
+        version: 7.8.2
     devDependencies:
       '@sker/eslint-config':
         specifier: workspace:*
@@ -970,6 +973,9 @@ importers:
         specifier: ^5.0.8
         version: 5.0.8(@types/react@18.3.26)(react@18.3.1)(use-sync-external-store@1.6.0(react@18.3.1))
     devDependencies:
+      '@sker/entities':
+        specifier: workspace:*
+        version: link:../entities
       '@sker/eslint-config':
         specifier: workspace:*
         version: link:../eslint-config

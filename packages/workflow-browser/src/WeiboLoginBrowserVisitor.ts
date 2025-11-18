@@ -2,6 +2,7 @@ import { Injectable } from '@sker/core';
 import { Handler } from '@sker/workflow';
 import { WeiboLoginAst } from '@sker/workflow-ast';
 import { Observable } from 'rxjs';
+import { shareReplay } from 'rxjs/operators';
 import { generateId } from '@sker/workflow';
 
 /**
@@ -38,123 +39,123 @@ export interface WeiboLoginEvent {
 export class WeiboLoginBrowserVisitor {
   @Handler(WeiboLoginAst)
   async handler(ast: WeiboLoginAst, ctx: any): Promise<WeiboLoginAst> {
-    return new Promise((resolve, reject) => {
-      const userId = generateId();
+    // 创建共享的 Observable 事件流
+    // shareReplay(1) 确保：
+    // 1. 多个订阅者共享同一个 SSE 连接
+    // 2. 新订阅者可以获取最后一个事件
+    // 3. 即使第一个订阅者取消订阅，连接仍然保持
+    const events$ = new Observable<WeiboLoginAst>(subscriber => {
+      // 建立 SSE 连接
+      const eventSource = new EventSource(
+        `/api/sse/weibo-login?userId=${ast.id}`,
+        { withCredentials: true }
+      );
 
-      // 创建 Observable 事件流
-      ast.events$ = new Observable(subscriber => {
-        // 建立 SSE 连接
-        const eventSource = new EventSource(
-          `/api/sse/weibo-login?userId=${userId}`,
-          { withCredentials: true }
-        );
+      const dispatchEvent = (detail: any) => window.dispatchEvent(new CustomEvent(ast.id, {
+        detail: detail
+      }));
 
-        // 处理 SSE 消息
-        eventSource.onmessage = (event) => {
-          try {
-            const eventData: WeiboLoginEvent = JSON.parse(event.data);
+      // 处理 SSE 消息
+      eventSource.onmessage = (event) => {
+        try {
+          const eventData: WeiboLoginEvent = JSON.parse(event.data);
 
-            // 推送到事件流
-            subscriber.next(eventData);
+          // 根据事件类型更新 AST 状态
+          switch (eventData.type) {
+            case 'qrcode':
+              // 触发显示二维码的自定义事件
+              dispatchEvent(eventData)
+              ast.state = 'running'
+              subscriber.next(ast)
+              break;
 
-            // 根据事件类型更新 AST 状态
-            switch (eventData.type) {
-              case 'qrcode':
-                // 触发显示二维码的自定义事件
-                this.dispatchQRCodeEvent(eventData.data.image, userId);
-                break;
+            case 'scanned':
+              // 用户已扫码，等待确认
+              dispatchEvent(eventData)
+              ast.state = 'running'
+              subscriber.next(ast)
+              break;
 
-              case 'scanned':
-                // 用户已扫码，等待确认
-                this.dispatchStatusEvent('已扫码，请在手机上确认');
-                break;
+            case 'success':
+              // 登录成功
+              dispatchEvent(eventData)
+              ast.account = eventData.data;
+              ast.state = 'success';
+              subscriber.next(ast)
+              eventSource.close();
+              subscriber.complete();
+              break;
 
-              case 'success':
-                // 登录成功
-                ast.account = eventData.data;
-                ast.state = 'success';
-                this.dispatchStatusEvent('登录成功');
-                eventSource.close();
-                subscriber.complete();
-                break;
+            case 'expired':
+              // 二维码过期
+              ast.state = 'fail';
+              subscriber.next(ast)
+              ast.setError(new Error('二维码已过期'), true);
+              dispatchEvent(eventData)
+              eventSource.close();
+              break;
 
-              case 'expired':
-                // 二维码过期
-                ast.state = 'fail';
-                ast.setError(new Error('二维码已过期'), true);
-                this.dispatchStatusEvent('二维码已过期');
-                eventSource.close();
-                subscriber.error(new Error('二维码已过期'));
-                break;
-
-              case 'error':
-                // 登录失败
-                const errorMsg = eventData.data?.message || '登录失败';
-                ast.state = 'fail';
-                ast.setError(new Error(errorMsg), true);
-                this.dispatchStatusEvent(errorMsg);
-                eventSource.close();
-                subscriber.error(new Error(errorMsg));
-                break;
-            }
-          } catch (error) {
-            console.error('处理 SSE 事件失败:', error);
+            case 'error':
+              // 登录失败
+              const errorMsg = eventData.data?.message || '登录失败';
+              ast.state = 'fail';
+              subscriber.next(ast)
+              ast.setError(new Error(errorMsg), true);
+              dispatchEvent(eventData)
+              eventSource.close();
+              break;
           }
-        };
+        } catch (error) {
+          console.error('处理 SSE 事件失败:', error);
+        }
+      };
 
-        // 处理 SSE 错误
-        eventSource.onerror = (error) => {
-          console.error('SSE 连接错误:', error);
+      // 处理 SSE 错误
+      eventSource.onerror = (error) => {
+        console.error('SSE 连接错误:', error);
 
-          // 检查连接状态
-          if (eventSource.readyState === EventSource.CLOSED) {
-            ast.state = 'fail';
-            ast.setError(new Error('SSE 连接已关闭'), true);
-            this.dispatchStatusEvent('连接已断开');
-            subscriber.error(new Error('SSE 连接已关闭'));
-          }
+        // 检查连接状态
+        if (eventSource.readyState === EventSource.CLOSED) {
+          ast.state = 'fail';
+          subscriber.next(ast)
+          ast.setError(new Error('SSE 连接已关闭'), true);
+        }
 
+        eventSource.close();
+      };
+
+      // 返回清理函数
+      return () => {
+        if (eventSource.readyState !== EventSource.CLOSED) {
           eventSource.close();
-        };
+        }
+      };
+    }).pipe(
+      shareReplay(1) // 共享订阅，允许多个订阅者
+    );
 
-        // 返回清理函数
-        return () => {
-          if (eventSource.readyState !== EventSource.CLOSED) {
-            eventSource.close();
-          }
-        };
-      });
+    // 保存到 AST，供其他地方订阅
+    ast.events$ = events$;
 
-      // 设置节点为 pending 状态，等待 SSE 事件更新
-      ast.state = 'pending';
-      return ast;
-    })
-  }
-
-  /**
-   * 触发二维码显示事件
-   * UI 组件监听此事件以显示二维码对话框
-   */
-  private dispatchQRCodeEvent(imageBase64: string, sessionId: string): void {
-    window.dispatchEvent(new CustomEvent('weibo-qrcode-show', {
-      detail: {
-        image: imageBase64,
-        sessionId,
-        timestamp: new Date()
+    // 立即订阅以触发 SSE 连接
+    // 这是关键：Observable 是惰性的，只有订阅时才会执行
+    events$.subscribe({
+      next: (event) => {
+        console.log('微博登录事件:', event.type);
+      },
+      error: (err) => {
+        console.error('微博登录流程错误:', err);
+      },
+      complete: () => {
+        console.log('微博登录流程完成');
       }
-    }));
+    });
+
+    // 设置节点为 pending 状态，等待 SSE 事件更新
+    ast.state = 'pending';
+
+    // 返回 AST（pending 状态），SSE 事件会异步更新状态
+    return ast;
   }
 
-  /**
-   * 触发状态更新事件
-   * 用于更新 UI 显示的登录状态信息
-   */
-  private dispatchStatusEvent(message: string): void {
-    window.dispatchEvent(new CustomEvent('weibo-login-status', {
-      detail: {
-        message,
-        timestamp: new Date()
-      }
-    }));
-  }
 }

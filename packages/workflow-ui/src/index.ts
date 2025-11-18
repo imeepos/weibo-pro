@@ -1,9 +1,6 @@
 // 导入渲染器（确保装饰器注册）
 import './renderers'
 
-// 导出样式
-import './styles/globals.css'
-
 export * from './core';
 
 // 导出 ReactFlow 核心组件

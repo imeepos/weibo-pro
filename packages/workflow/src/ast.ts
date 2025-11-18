@@ -2,9 +2,9 @@ import { Input, Node, Output } from "./decorator";
 import { IAstStates, IEdge, INode, IControlEdge, isControlEdge } from "./types";
 import { generateId } from "./utils";
 import { ErrorSerializer, SerializedError } from "@sker/core";
-
+import { Observable } from 'rxjs'
 export interface Visitor {
-    visit(ast: Ast, ctx: any): Promise<any>;
+    visit(ast: Ast, ctx: any): Observable<any>;
 }
 
 // 抽象语法树的核心表达 - 状态与数据的统一

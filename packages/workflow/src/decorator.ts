@@ -170,6 +170,7 @@ export function getInputMetadata(target: Type<any> | object, propertyKey?: strin
 export interface OutputOptions {
     title?: string;
     type?: string;
+    isStream?: boolean;
 }
 
 export interface OutputMetadata {
@@ -182,7 +183,7 @@ export const OUTPUT = new InjectionToken<OutputMetadata[]>(`OUTPUT`)
 export function Output(options?: OutputOptions): PropertyDecorator {
     return (target, propertyKey) => {
         const ctor = resolveConstructor(target);
-        root.set([{ provide: OUTPUT, multi: true, useValue: { target: ctor, propertyKey, title: options?.title } }])
+        root.set([{ provide: OUTPUT, multi: true, useValue: { target: ctor, propertyKey, isStream: options?.isStream, title: options?.title } }])
     };
 }
 
