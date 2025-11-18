@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Query, Delete } from '@sker/core'
+import { Controller, Post, Sse, Body, Get, Query, Delete } from '@sker/core'
 import type {
   WorkflowSummary,
   CreateRunResult,
@@ -37,7 +37,7 @@ export class WorkflowController {
     throw new Error('method deleteWorkflow not implements')
   }
 
-  @Post('execute')
+  @Sse('execute')
   execute(@Body() body: INode): Observable<INode> {
     throw new Error('method executeNode not implements')
   }
