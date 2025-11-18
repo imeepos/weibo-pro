@@ -12,41 +12,11 @@ import type {
   WorkflowRunEntity,
   RunStatus,
 } from '../types'
-import type { WorkflowGraphAst, Ast } from '@sker/workflow';
+import { Observable } from 'rxjs'
+import type { WorkflowGraphAst, Ast, INode } from '@sker/workflow';
 import type { WorkflowEntity } from '@sker/entities';
 @Controller('api/workflow')
 export class WorkflowController {
-
-  @Post('trigger-nlp')
-  triggerNlpAnalysis(@Body() body: { postId: string }): Promise<{ message: string; postId: string }> {
-    throw new Error('method triggerNlpAnalysis not implements')
-  }
-
-  @Post('search-weibo')
-  searchWeibo(@Body() body: {
-    keyword: string;
-    startDate: string;
-    endDate: string;
-    page?: number;
-  }): Promise<SearchWeiboResult> {
-    throw new Error('method searchWeibo not implements')
-  }
-
-  @Get('status')
-  getWorkflowStatus(): Promise<WorkflowStatus> {
-    throw new Error('method getWorkflowStatus not implements')
-  }
-
-  @Post('batch-nlp')
-  batchTriggerNlp(@Body() body: { postIds: string[] }): Promise<BatchNlpResult> {
-    throw new Error('method batchTriggerNlp not implements')
-  }
-
-  @Post('crawl-post')
-  crawlPost(@Body() body: { postId: string }): Promise<CrawlPostResult> {
-    throw new Error('method crawlPost not implements')
-  }
-
   @Post('save')
   saveWorkflow(@Body() body: WorkflowGraphAst): Promise<WorkflowEntity> {
     throw new Error('method saveWorkflow not implements')
@@ -67,27 +37,9 @@ export class WorkflowController {
     throw new Error('method deleteWorkflow not implements')
   }
 
-  @Post('share')
-  createShare(@Body() body: { workflowId: string; expiresAt?: string }): Promise<CreateShareResult> {
-    throw new Error('method createShare not implements')
-  }
-
-  @Get('shared/:token')
-  getSharedWorkflow(@Query() params: { token: string }): Promise<WorkflowData | null> {
-    throw new Error('method getSharedWorkflow not implements')
-  }
-
-  @Post('execute-node')
-  executeNode(@Body() body: WorkflowGraphAst): Promise<WorkflowGraphAst> {
+  @Post('execute')
+  execute(@Body() body: INode): Observable<INode> {
     throw new Error('method executeNode not implements')
-  }
-
-  /**
-   * 执行单个节点（不触发工作流调度器）
-   */
-  @Post('execute-single-node')
-  executeSingleNode(@Body() body: { node: Ast; context?: any }): Promise<Ast> {
-    throw new Error('method executeSingleNode not implements')
   }
 
   /**
