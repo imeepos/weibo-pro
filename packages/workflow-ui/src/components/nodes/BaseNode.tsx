@@ -106,7 +106,7 @@ export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNode>) =
   return (
     <div
       className={cn(
-        'flex rounded-2xl border-[2px]',
+        'flex flex-col rounded-2xl border-[2px]',
         'group relative pb-1 shadow-xs rounded-[15px] w-[240px] bg-workflow-block-bg hover:shadow-lg',
         'cursor-move select-none'
       )}
@@ -117,7 +117,6 @@ export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNode>) =
       onContextMenu={handleContextMenu}
       onDoubleClick={handleDoubleClick}
     >
-      {/* 输入端口 */}
       {metadata.inputs.map((input, index) => (
         <Handle
           key={`input-${input.property}`}
@@ -133,8 +132,6 @@ export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNode>) =
           style={{ top: 32 + index * 24 }}
         />
       ))}
-
-      {/* 输出端口 */}
       {metadata.outputs.map((output, index) => (
         <Handle
           key={`output-${output.property}`}
@@ -150,9 +147,7 @@ export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNode>) =
           style={{ top: 32 + index * 24 }}
         />
       ))}
-
-      {/* 节点标题区域 */}
-      <div className="flex items-center rounded-t-2xl px-3 pb-2 pt-3">
+      <div className="flex items-center rounded-t-2xl px-3 py-4 border-b">
         <div className="flex items-center justify-center w-6 h-6 rounded-lg bg-blue-500 mr-2 shrink-0">
           <div className="w-3 h-3 bg-white rounded-sm"></div>
         </div>

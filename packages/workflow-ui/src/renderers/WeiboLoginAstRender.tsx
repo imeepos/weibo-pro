@@ -78,76 +78,20 @@ export const WeiboLoginSetting = ({ ast }: { ast: WeiboLoginAst }) => {
  * - 显示登录状态消息
  */
 const WeiboLoginRender: React.FC<{ ast: WeiboLoginAst }> = ({ ast }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [qrImage, setQrImage] = useState<string | null>(null);
-  const [statusMessage, setStatusMessage] = useState<string>('');
-  const [account, setAccount] = useState<WeiboAccountEntity | undefined>(ast.account)
 
-  useEffect(() => {
-    // 监听二维码显示事件
-    const onEvent = (event: Event) => {
-      const customEvent = event as CustomEvent;
-      const detail = customEvent.detail;
-      switch (detail.type) {
-        case 'qrcode':
-          setQrImage(detail.data.image)
-          setIsOpen(true)
-          break;
-        case 'scanned':
-          setStatusMessage(detail.data.message || ``)
-          break;
-        case 'success':
-          setQrImage(null)
-          setStatusMessage(``)
-          setAccount(detail.data)
-          break;
-        case 'fail':
-          setStatusMessage(detail.data.message || ``)
-          setQrImage(null)
-          setAccount(undefined)
-          break;
-        default:
-          break;
-      }
-      console.log({ detail })
-    };
-    window.addEventListener(ast.id, onEvent);
-    return () => {
-      window.removeEventListener(ast.id, onEvent);
-    };
-  }, []);
-
-  if (!isOpen) return null;
+  if (ast.state === 'pending') return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="relative max-w-md rounded-lg bg-[#1a1d24] p-6 shadow-xl border border-[#282e39]">
-        {/* 关闭按钮 */}
-        <button
-          onClick={() => {
-            setIsOpen(false);
-            setQrImage(null);
-            setStatusMessage('');
-          }}
-          className="absolute right-4 top-4 text-[#9da6b9] hover:text-white transition-colors"
-        >
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-
-        {/* 标题 */}
-        <h2 className="mb-4 text-xl font-semibold text-white">微博扫码登录</h2>
-
-        {/* 二维码 */}
-        {qrImage && (
-          <div className="mb-4 flex justify-center">
-            <div className="rounded-lg bg-white p-4">
+    <div className="z-50 flex items-center justify-center">
+      <div className="relative max-w-md rounded-lg py-4">
+        {(ast.qrcode && !ast.account) && (
+          <div className="flex justify-center">
+            <div className="rounded-lg">
               <img
                 src={
-                  qrImage.startsWith('http://') || qrImage.startsWith('https://')
-                    ? qrImage
-                    : `data:image/png;base64,${qrImage}`
+                  ast.qrcode.startsWith('http://') || ast.qrcode.startsWith('https://')
+                    ? ast.qrcode
+                    : `data:image/png;base64,${ast.qrcode}`
                 }
                 alt="微博登录二维码"
                 className="h-full w-full"
@@ -156,26 +100,21 @@ const WeiboLoginRender: React.FC<{ ast: WeiboLoginAst }> = ({ ast }) => {
           </div>
         )}
 
-        {account && (
-          <div className="flex flex-col items-center gap-3 py-4">
-            <div className="relative">
-              <img
-                src={account.weiboAvatar}
-                alt={account.weiboNickname}
-                className="h-20 w-20 rounded-full border-2 border-white shadow-lg object-cover"
-              />
-            </div>
-            <div className="text-center">
-              <p className="text-base font-medium text-white">{account.weiboNickname}</p>
-              <p className="text-xs text-green-400 mt-1">✓ 登录成功</p>
-            </div>
+        {ast.account && (
+          <div className="flex flex-row items-center">
+            <img
+              src={ast.account.weiboAvatar}
+              alt={ast.account.weiboNickname}
+              className="h-8 w-8 rounded-full border-2 border-white shadow-lg object-cover"
+            />
+            <div className="ml-4">{ast.account.weiboNickname}</div>
           </div>
         )}
 
         {/* 状态消息 */}
-        {statusMessage && (
-          <div className="text-center">
-            <p className="text-sm text-[#9da6b9]">{statusMessage}</p>
+        {(ast.message && !ast.account) && (
+          <div className="text-center mt-2">
+            <p className="text-sm text-[#9da6b9]">{ast.message}</p>
           </div>
         )}
       </div>

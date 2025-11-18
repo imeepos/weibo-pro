@@ -1,6 +1,4 @@
-import { Controller, Post, Body, Get, BadRequestException, Query, Delete, NotFoundException, Sse } from '@nestjs/common';
-import { useQueue } from '@sker/mq';
-import type { PostNLPTask } from '@sker/workflow-run';
+import { Controller, Post, Body, Get, BadRequestException, Query, Delete, NotFoundException, Sse, Res } from '@nestjs/common';
 import { Observable, tap } from 'rxjs';
 import { Ast, executeAst, fromJson, INode } from '@sker/workflow';
 import { WorkflowGraphAst } from '@sker/workflow';
@@ -151,7 +149,7 @@ export class WorkflowController implements sdk.WorkflowController {
    * - 妥善处理所有错误，确保服务稳定
    */
   @Post('execute')
-  async execute(@Body() body: Ast, @Res() res: any) {
+  execute(@Body() body: Ast, @Res() res?: any): Observable<INode> {
     // 设置 SSE 响应头
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
@@ -162,46 +160,25 @@ export class WorkflowController implements sdk.WorkflowController {
     });
 
     try {
-      const ast = fromJson(body);
-
+      const ast = fromJson(body) as Ast;
+      ast.state = 'running';
       // 发送开始事件
-      res.write(`data: ${JSON.stringify({
-        type: 'start',
-        data: { message: '执行开始' },
-        timestamp: new Date().toISOString()
-      })}\n\n`);
+      res.write(`data: ${JSON.stringify(ast)}\n\n`);
 
       // 执行工作流并发送实时事件
-      const subscription = executeAst(ast, {}).pipe(
+      const subscription$ = executeAst(ast, {}).pipe(
         tap(console.log)
-      ).subscribe({
+      )
+
+      const subscription = subscription$.subscribe({
         next: (node: INode) => {
           // 发送节点执行事件
-          res.write(`data: ${JSON.stringify({
-            type: 'node_execution',
-            data: node,
-            timestamp: new Date().toISOString()
-          })}\n\n`);
+          res.write(`data: ${JSON.stringify(node)}\n\n`);
         },
         error: (error: any) => {
-          // 发送错误事件
-          res.write(`data: ${JSON.stringify({
-            type: 'error',
-            data: {
-              message: error.message,
-              stack: error.stack
-            },
-            timestamp: new Date().toISOString()
-          })}\n\n`);
           res.end();
         },
         complete: () => {
-          // 发送完成事件
-          res.write(`data: ${JSON.stringify({
-            type: 'complete',
-            data: { message: '执行完成' },
-            timestamp: new Date().toISOString()
-          })}\n\n`);
           res.end();
         }
       });
@@ -211,18 +188,11 @@ export class WorkflowController implements sdk.WorkflowController {
         subscription.unsubscribe();
       });
 
+      return subscription$;
     } catch (error: any) {
       console.error(`execute error: `, { error, body });
-      // 发送初始化错误
-      res.write(`data: ${JSON.stringify({
-        type: 'error',
-        data: {
-          message: error.message,
-          stack: error.stack
-        },
-        timestamp: new Date().toISOString()
-      })}\n\n`);
       res.end();
+      throw error;
     }
   }
 
