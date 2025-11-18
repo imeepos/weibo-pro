@@ -117,36 +117,6 @@ export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNode>) =
       onContextMenu={handleContextMenu}
       onDoubleClick={handleDoubleClick}
     >
-      {metadata.inputs.map((input, index) => (
-        <Handle
-          key={`input-${input.property}`}
-          type="target"
-          id={input.property}
-          position={Position.Left}
-          className={cn(
-            '!h-4 !w-4 !rounded-none !border-none !bg-transparent !outline-none',
-            'after:absolute after:left-1.5 after:top-1 after:h-2 after:w-0.5 after:bg-workflow-link-line-handle',
-            'transition-all hover:scale-125 after:opacity-0 opacity-0',
-            '!top-4 !-left-[9px] !translate-y-0'
-          )}
-          style={{ top: 32 + index * 24 }}
-        />
-      ))}
-      {metadata.outputs.map((output, index) => (
-        <Handle
-          key={`output-${output.property}`}
-          type="source"
-          id={output.property}
-          position={Position.Right}
-          className={cn(
-            '!h-4 !w-4 !rounded-none !border-none !bg-transparent !outline-none',
-            'after:absolute after:right-1.5 after:top-1 after:h-2 after:w-0.5 after:bg-workflow-link-line-handle',
-            'transition-all hover:scale-125',
-            '!top-4 !-right-[9px] !translate-y-0'
-          )}
-          style={{ top: 32 + index * 24 }}
-        />
-      ))}
       <div className="flex items-center rounded-t-2xl px-3 py-4 border-b">
         <div className="flex items-center justify-center w-6 h-6 rounded-lg bg-blue-500 mr-2 shrink-0">
           <div className="w-3 h-3 bg-white rounded-sm"></div>
@@ -156,6 +126,23 @@ export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNode>) =
         </div>
       </div>
       {CustomRender}
+      {/* 渲染输入输出端口 */}
+      <div className="flex flex-col gap-1 mt-2">
+        {metadata.inputs.map((input, index) => (
+          <PortRow
+            key={`input-${input.property}`}
+            input={input}
+            offsetTop={index * 24}
+          />
+        ))}
+        {metadata.outputs.map((output, index) => (
+          <PortRow
+            key={`output-${output.property}`}
+            output={output}
+            offsetTop={index * 24}
+          />
+        ))}
+      </div>
     </div>
   )
 })
