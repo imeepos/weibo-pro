@@ -2,6 +2,7 @@ import { Injectable } from '@sker/core';
 import { Handler } from '@sker/workflow';
 import { WeiboKeywordSearchAst } from '@sker/workflow-ast';
 import { root } from '@sker/core';
+import { WorkflowController } from '@sker/sdk';
 
 /**
  * 微博关键词搜索浏览器端执行器
@@ -22,15 +23,15 @@ export class WeiboKeywordSearchBrowserVisitor {
   async handler(ast: WeiboKeywordSearchAst, ctx: any): Promise<WeiboKeywordSearchAst> {
     try {
       // 获取WorkflowController
-      const controller = root.get<any>('WorkflowController');
+      const controller = root.get(WorkflowController);
       if (!controller) {
         throw new Error('WorkflowController 未找到');
       }
 
       // 调用后端通用执行接口
-      const result = await controller.executeSingleNode(ast);
+      const result = await controller.executeSingleNode({node: ast, context: ctx});
 
-      return result;
+      return result as WeiboKeywordSearchAst;
     } catch (error) {
       // 设置错误状态
       ast.state = 'fail';

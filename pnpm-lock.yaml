@@ -838,6 +838,9 @@ importers:
       '@sker/core':
         specifier: workspace:*
         version: link:../core
+      '@sker/sdk':
+        specifier: workspace:*
+        version: link:../sdk
       '@sker/workflow':
         specifier: workspace:*
         version: link:../workflow
