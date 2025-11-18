@@ -15,6 +15,9 @@ RUN npm install -g pnpm@9
 # 安装依赖
 RUN pnpm install --frozen-lockfile
 
+# 构建 workspace 包（确保 Playwright 依赖被安装）
+RUN pnpm run build:deps
+
 # 安装 Playwright 浏览器
 RUN npx playwright install
 
