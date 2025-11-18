@@ -54,6 +54,7 @@ export function useWorkflowOperations(
       const ast = fromJson(targetNode)
       const ctx = workflow.workflowAst.ctx || {}
 
+<<<<<<< HEAD
       // executeAst 返回 Observable，利用流式特性实时更新状态
       console.log(`run ast`, { ast, ctx })
       const subscription = executeAst(ast, ctx).subscribe({
@@ -86,6 +87,15 @@ export function useWorkflowOperations(
         complete: () => {
           console.log(`节点执行完成`)
           onSetRunning?.(false)
+=======
+        // executeAst 会通过装饰器系统自动查找 @Handler 执行器
+        console.log(`run ast`, { ast, ctx })
+        const result = executeAst(ast, ctx)
+        console.log(`run ast success`, result)
+        const astNode = workflow.workflowAst.nodes.find(n => n.id === nodeId)
+        if (astNode) {
+          Object.assign(astNode, result)
+>>>>>>> fe283c8d3afee2cb9dc8fd0c8cd8b32f90ff0e07
         }
       })
 

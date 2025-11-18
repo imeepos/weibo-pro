@@ -22,10 +22,6 @@ const WeiboLoginPreview = ({ ast }: { ast: WeiboLoginAst }) => {
 
 // 设置表单组件
 export const WeiboLoginSetting = ({ ast }: { ast: WeiboLoginAst }) => {
-  const handleSave = () => {
-    // 微博登录节点不再需要任何配置，自动生成匿名会话
-  }
-
   return (
     <div className="p-4 bg-slate-800 border border-slate-600 rounded-lg">
       <h3 className="text-lg font-medium text-white mb-4">微博登录配置</h3>
