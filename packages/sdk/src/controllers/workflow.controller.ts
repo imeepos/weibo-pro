@@ -38,7 +38,7 @@ export class WorkflowController {
   }
 
   @Sse('execute')
-  execute(@Body() body: INode): Observable<INode> {
+  execute(@Body() body: INode): Observable<any> {
     throw new Error('method executeNode not implements')
   }
 
