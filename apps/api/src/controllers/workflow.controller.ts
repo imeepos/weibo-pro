@@ -141,30 +141,89 @@ export class WorkflowController implements sdk.WorkflowController {
   }
 
   /**
-   * 执行单个节点 - SSE版本
+   * 执行单个节点 - POST SSE版本
    *
    * 优雅设计：
-   * - 支持Server-Sent Events实时推送节点执行状态
+   * - 支持POST方法传递复杂JSON数据
+   * - 手动返回text/event-stream SSE实时推送
    * - 从工作流数据中反序列化节点
    * - 执行指定节点，实时推送执行进度
    * - 妥善处理所有错误，确保服务稳定
    */
-  @Sse('execute')
-  execute(@Body() body: Ast): Observable<INode> {
-    return new Observable<INode>(subscriber => {
-      try {
-        const ast = fromJson(body);
-        const subscription = executeAst(ast, {}).pipe(
-          tap(console.log)
-        ).subscribe(subscriber);
-        return () => {
-          subscription.unsubscribe();
-        };
-      } catch (error: any) {
-        console.error(`execute error: `, { error, body })
-        subscriber.complete();
-      }
+  @Post('execute')
+  async execute(@Body() body: Ast, @Res() res: any) {
+    // 设置 SSE 响应头
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Cache-Control'
     });
+
+    try {
+      const ast = fromJson(body);
+
+      // 发送开始事件
+      res.write(`data: ${JSON.stringify({
+        type: 'start',
+        data: { message: '执行开始' },
+        timestamp: new Date().toISOString()
+      })}\n\n`);
+
+      // 执行工作流并发送实时事件
+      const subscription = executeAst(ast, {}).pipe(
+        tap(console.log)
+      ).subscribe({
+        next: (node: INode) => {
+          // 发送节点执行事件
+          res.write(`data: ${JSON.stringify({
+            type: 'node_execution',
+            data: node,
+            timestamp: new Date().toISOString()
+          })}\n\n`);
+        },
+        error: (error: any) => {
+          // 发送错误事件
+          res.write(`data: ${JSON.stringify({
+            type: 'error',
+            data: {
+              message: error.message,
+              stack: error.stack
+            },
+            timestamp: new Date().toISOString()
+          })}\n\n`);
+          res.end();
+        },
+        complete: () => {
+          // 发送完成事件
+          res.write(`data: ${JSON.stringify({
+            type: 'complete',
+            data: { message: '执行完成' },
+            timestamp: new Date().toISOString()
+          })}\n\n`);
+          res.end();
+        }
+      });
+
+      // 处理客户端断开连接
+      res.on('close', () => {
+        subscription.unsubscribe();
+      });
+
+    } catch (error: any) {
+      console.error(`execute error: `, { error, body });
+      // 发送初始化错误
+      res.write(`data: ${JSON.stringify({
+        type: 'error',
+        data: {
+          message: error.message,
+          stack: error.stack
+        },
+        timestamp: new Date().toISOString()
+      })}\n\n`);
+      res.end();
+    }
   }
 
   /**
