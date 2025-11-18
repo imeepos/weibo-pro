@@ -2,7 +2,7 @@ import { Controller, Post, Body, Get, BadRequestException, Query, Delete, NotFou
 import { useQueue } from '@sker/mq';
 import type { PostNLPTask } from '@sker/workflow-run';
 import { Observable } from 'rxjs';
-import { Ast, executeAst, fromJson } from '@sker/workflow';
+import { Ast, executeAst, fromJson, INode } from '@sker/workflow';
 import { WorkflowGraphAst } from '@sker/workflow';
 import { logger } from '../utils/logger';
 import * as sdk from '@sker/sdk';
@@ -23,7 +23,6 @@ import { WorkflowEntity, WorkflowRunEntity, RunStatus } from '@sker/entities';
  */
 @Controller('api/workflow')
 export class WorkflowController implements sdk.WorkflowController {
-  private nlpQueue = useQueue<PostNLPTask>('post_nlp_queue');
   private readonly workflowService: WorkflowService;
   private readonly workflowRunService: WorkflowRunService;
   private readonly workflowTemplateService: WorkflowTemplateService;
@@ -151,26 +150,11 @@ export class WorkflowController implements sdk.WorkflowController {
    * - 妥善处理所有错误，确保服务稳定
    */
   @Sse('execute')
-  execute(@Body() body: Ast): Observable<sdk.MessageEvent> {
-    const { id: nodeId } = body;
-
-    if (!nodeId || nodeId.trim().length === 0) {
-      return new Observable<MessageEvent>(subscriber => {
-        subscriber.next({
-          type: 'error',
-          data: { message: '节点ID不能为空' },
-        } as MessageEvent);
-        subscriber.complete();
-      });
-    }
-
-    return new Observable<MessageEvent>(subscriber => {
+  execute(@Body() body: Ast): Observable<INode> {
+    return new Observable<INode>(subscriber => {
       try {
-        // 重建工作流 AST
         const ast = fromJson(body);
-        // 订阅executeAst返回的Observable
-        const subscription = executeAst(ast, ast).subscribe(subscriber);
-        // 返回清理函数
+        const subscription = executeAst(ast, {}).subscribe(subscriber);
         return () => {
           subscription.unsubscribe();
         };

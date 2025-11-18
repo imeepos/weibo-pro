@@ -38,7 +38,7 @@ export class WorkflowController {
   }
 
   @Post('execute')
-  execute(@Body() body: INode): Observable<MessageEvent> {
+  execute(@Body() body: INode): Observable<INode> {
     throw new Error('method executeNode not implements')
   }
 
