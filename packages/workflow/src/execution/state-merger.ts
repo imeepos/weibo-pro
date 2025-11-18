@@ -1,5 +1,7 @@
+import { Injectable } from '@sker/core';
 import { INode } from '../types';
 
+@Injectable()
 export class StateMerger {
     mergeNodeStates(
         originalNodes: INode[],

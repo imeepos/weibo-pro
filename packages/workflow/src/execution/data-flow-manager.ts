@@ -1,8 +1,9 @@
-import { root } from '@sker/core';
+import { Injectable, root } from '@sker/core';
 import { INPUT, OUTPUT, STATE, resolveConstructor, getInputMetadata, InputMetadata } from '../decorator';
 import { fromJson } from '../generate';
 import { IEdge, INode, isControlEdge, isDataEdge } from '../types';
 
+@Injectable()
 export class DataFlowManager {
     private resolveNestedProperty(obj: any, path: string): any {
         if (!path.includes('.')) {

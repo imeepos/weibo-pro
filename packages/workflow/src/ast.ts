@@ -4,7 +4,8 @@ import { generateId } from "./utils";
 import { ErrorSerializer, SerializedError } from "@sker/core";
 import { Observable } from 'rxjs'
 export interface Visitor {
-    visit(ast: Ast, ctx: any): Observable<any>;
+    // 每一次执行 返回最新的 Ast
+    visit(ast: INode, ctx: any): Observable<INode>;
 }
 
 // 抽象语法树的核心表达 - 状态与数据的统一
@@ -24,23 +25,23 @@ export abstract class Ast implements INode {
      * - 统一的错误处理接口
      */
     setError(error: unknown, includeStack = false): void {
-      this.error = ErrorSerializer.serialize(error, includeStack);
+        this.error = ErrorSerializer.serialize(error, includeStack);
     }
 
     /**
      * 提取最有用的错误信息（深层错误）
      */
     getDeepError(): SerializedError | undefined {
-      return this.error
-        ? ErrorSerializer.extractDeepestError(this.error)
-        : undefined;
+        return this.error
+            ? ErrorSerializer.extractDeepestError(this.error)
+            : undefined;
     }
 
     /**
      * 获取完整的错误描述
      */
     getErrorDescription(): string | undefined {
-      return this.error ? ErrorSerializer.getFullDescription(this.error) : undefined;
+        return this.error ? ErrorSerializer.getFullDescription(this.error) : undefined;
     }
 }
 

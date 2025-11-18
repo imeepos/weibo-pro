@@ -1,5 +1,7 @@
+import { Injectable } from '@sker/core';
 import { INode, IEdge, isControlEdge } from '../types';
 
+@Injectable()
 export class DependencyAnalyzer {
     findExecutableNodes(nodes: INode[], edges: IEdge[]): INode[] {
         return nodes.filter(node => {

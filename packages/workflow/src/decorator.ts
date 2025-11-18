@@ -39,28 +39,21 @@ export function Node(options?: NodeOptions): ClassDecorator {
         root.set([{ provide: NODE, useValue: { target: ctor, title: options?.title }, multi: true }])
     };
 }
-export const HANDLER = new InjectionToken<{ ast: Type<any>, target: Type<any> }[]>(`HANDLER`)
 export const HANDLER_METHOD = new InjectionToken<{ ast: Type<any>, target: Type<any>, property: string | symbol }[]>(`HANDLER_METHOD`)
-export function Handler(ast: Type<any>): any {
-    return (target: any, propertyKey?: string | symbol, descriptor?: PropertyDescriptor): any => {
-        if (propertyKey !== undefined && descriptor !== undefined) {
-            const ctor = resolveConstructor(target);
-            root.set([{
-                provide: HANDLER_METHOD,
-                multi: true,
-                useValue: {
-                    ast: ast, target: ctor, property: propertyKey
-                }
-            }, {
-                provide: ctor,
-                useClass: ctor
-            }])
-            return descriptor;
-        } else {
-            const ctor = resolveConstructor(target as object);
-            root.set([{ provide: ctor, useClass: ctor }, { provide: HANDLER, useValue: { ast, target: ctor }, multi: true }])
-            return target;
-        }
+export function Handler(ast: Type<any>): MethodDecorator {
+    return (target: any, propertyKey: string | symbol, descriptor?: PropertyDescriptor): any => {
+        const ctor = resolveConstructor(target);
+        root.set([{
+            provide: HANDLER_METHOD,
+            multi: true,
+            useValue: {
+                ast: ast, target: ctor, property: propertyKey
+            }
+        }, {
+            provide: ctor,
+            useClass: ctor
+        }])
+        return descriptor;
     };
 }
 

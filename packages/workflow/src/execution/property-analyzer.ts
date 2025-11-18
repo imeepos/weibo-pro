@@ -1,5 +1,7 @@
+import { Injectable } from '@sker/core';
 import { INode, IEdge, isDataEdge, isControlEdge } from '../types';
 
+@Injectable()
 export class PropertyAnalyzer {
     /**
      * 判断节点的某个属性是否是"输入属性"
