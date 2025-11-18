@@ -1,7 +1,7 @@
 import { Controller, Post, Body, Get, BadRequestException, Query, Delete, NotFoundException, Sse } from '@nestjs/common';
 import { useQueue } from '@sker/mq';
 import type { PostNLPTask } from '@sker/workflow-run';
-import { Observable } from 'rxjs';
+import { Observable, tap } from 'rxjs';
 import { Ast, executeAst, fromJson, INode } from '@sker/workflow';
 import { WorkflowGraphAst } from '@sker/workflow';
 import { logger } from '../utils/logger';
@@ -154,11 +154,14 @@ export class WorkflowController implements sdk.WorkflowController {
     return new Observable<INode>(subscriber => {
       try {
         const ast = fromJson(body);
-        const subscription = executeAst(ast, {}).subscribe(subscriber);
+        const subscription = executeAst(ast, {}).pipe(
+          tap(console.log)
+        ).subscribe(subscriber);
         return () => {
           subscription.unsubscribe();
         };
       } catch (error: any) {
+        console.error(`execute error: `, { error, body })
         subscriber.complete();
       }
     });

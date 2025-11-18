@@ -3,7 +3,7 @@ import { Visitor } from '../ast';
 import { findNodeType, HANDLER_METHOD } from '../decorator';
 import { NoRetryError } from '../errors';
 import { Observable, of, from } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { catchError, switchMap } from 'rxjs/operators';
 import { INode } from '../types';
 
 /**
@@ -58,13 +58,12 @@ export class VisitorExecutor implements Visitor {
                 catchError(error => this.handleError(error, ast))
             );
         }
-
         if (result && typeof result.then === 'function') {
             return from(result as Promise<INode>).pipe(
+                switchMap(res => this.normalizeResult(res, ast)),
                 catchError(error => this.handleError(error, ast))
             );
         }
-
         return of(result as INode).pipe(
             catchError(error => this.handleError(error, ast))
         );
@@ -79,6 +78,11 @@ export class VisitorExecutor implements Visitor {
      * - 返回失败状态的节点（作为 Observable 完成）
      */
     private handleError(error: unknown, ast: INode): Observable<INode> {
+        if (error instanceof Event) {
+            ast.state = 'fail';
+            ast.setError(error);
+            return of(ast)
+        }
         if (error instanceof NoRetryError) {
             ast.state = 'fail';
             ast.setError(error);

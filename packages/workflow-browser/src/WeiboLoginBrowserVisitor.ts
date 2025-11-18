@@ -2,8 +2,7 @@ import { Injectable, root } from '@sker/core';
 import { Handler } from '@sker/workflow';
 import { WeiboLoginAst } from '@sker/workflow-ast';
 import { Observable } from 'rxjs';
-import { shareReplay } from 'rxjs/operators';
-import { generateId, INode } from '@sker/workflow';
+import { INode } from '@sker/workflow';
 import { WorkflowController } from '@sker/sdk';
 
 /**

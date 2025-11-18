@@ -81,6 +81,7 @@ export function fromJson<T extends object = any>(json: any): T {
     const ctor = nodeMetadata?.target;
 
     if (!ctor) {
+        console.error(`from json error: `, { json })
         throw new Error(`Unknown workflow node type "${json.type}".`);
     }
 

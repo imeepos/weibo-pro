@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { executeAst, fromJson, type WorkflowGraphAst } from '@sker/workflow'
+import { executeAst, fromJson, toJson, type WorkflowGraphAst } from '@sker/workflow'
 import type { useWorkflow } from '../../hooks/useWorkflow'
 import type { ToastType } from './Toast'
 import { WorkflowController } from '@sker/sdk'
@@ -56,10 +56,9 @@ export function useWorkflowOperations(
 
       // executeAst 返回 Observable，利用流式特性实时更新状态
       console.log(`run ast`, { ast, ctx })
-      const subscription = executeAst(ast, ctx).subscribe({
+      const subscription = executeAst(toJson(ast), ctx).subscribe({
         next: (updatedNode) => {
           console.log(`节点状态更新`, updatedNode)
-
           // 每次 next 事件实时更新节点状态
           const astNode = workflow.workflowAst?.nodes.find(n => n.id === nodeId)
           if (astNode) {
@@ -73,7 +72,7 @@ export function useWorkflowOperations(
             onShowToast?.('success', '节点执行成功')
           } else if (updatedNode.state === 'fail') {
             const errorInfo = extractErrorInfo(updatedNode.error)
-            console.error(`节点执行失败`)
+            console.error({errorInfo, updatedNode})
             onShowToast?.('error', '节点执行失败', errorInfo.message)
           }
         },
