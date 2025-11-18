@@ -1,4 +1,5 @@
-import { Controller, Get, Query } from '@sker/core'
+import { Controller, Sse, Query } from '@sker/core'
+import { Observable } from 'rxjs'
 import type {
   SSEEvent,
   WeiboLoginSSEQuery,
@@ -25,8 +26,8 @@ export class SseController {
    * - 推送二维码URL和登录状态
    * - 支持长连接保持
    */
-  @Get('weibo-login')
-  weiboLoginSse(@Query() query: WeiboLoginSSEQuery): Promise<SSEEvent> {
+  @Sse('weibo-login')
+  weiboLoginSse(@Query() query: WeiboLoginSSEQuery): Observable<SSEEvent> {
     throw new Error('method weiboLoginSse not implements')
   }
 
@@ -38,8 +39,8 @@ export class SseController {
    * - 支持节点执行进度推送
    * - 支持执行状态更新
    */
-  @Get('workflow-status')
-  workflowStatusSse(@Query() query: WorkflowStatusSSEQuery): Promise<SSEEvent> {
+  @Sse('workflow-status')
+  workflowStatusSse(@Query() query: WorkflowStatusSSEQuery): Observable<SSEEvent> {
     throw new Error('method workflowStatusSse not implements')
   }
 
@@ -51,8 +52,8 @@ export class SseController {
    * - 支持详细的执行进度信息
    * - 支持错误状态推送
    */
-  @Get('node-execution')
-  nodeExecutionSse(@Query() query: NodeExecutionSSEQuery): Promise<SSEEvent> {
+  @Sse('node-execution')
+  nodeExecutionSse(@Query() query: NodeExecutionSSEQuery): Observable<SSEEvent> {
     throw new Error('method nodeExecutionSse not implements')
   }
 
@@ -64,8 +65,8 @@ export class SseController {
    * - 支持前端健康状态显示
    * - 轻量级心跳检测
    */
-  @Get('health')
-  healthSse(): Promise<SSEEvent> {
+  @Sse('health')
+  healthSse(): Observable<SSEEvent> {
     throw new Error('method healthSse not implements')
   }
 }

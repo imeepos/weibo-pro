@@ -1,6 +1,7 @@
 import { CONTROLLES, Provider, root, PATH_METADATA, METHOD_METADATA, ROUTE_ARGS_METADATA, RequestMethod, ParamType } from "@sker/core";
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios'
 import { AXIOS, AXIOS_CONFIG } from "./tokens";
+import { Observable } from 'rxjs';
 
 export const providers: (isProd?: boolean) => Provider[] = (isProd = true) => {
     const controllers = root.get(CONTROLLES, [])
@@ -62,7 +63,40 @@ function createControllerInstance<T>(controllerClass: new () => T, axiosInstance
                 // 替换URL中的参数
                 const finalUrl = replaceUrlParams(fullPath, urlParams);
 
-                // 构建请求配置
+                // SSE 方法特殊处理
+                if (httpMethod === RequestMethod.SSE) {
+                    // 返回 Observable 流，让调用方订阅 SSE 事件
+                    const sseUrl = buildSSEUrl(finalUrl, queryParams);
+
+                    return new Observable<any>(subscriber => {
+                        if (typeof window === 'undefined' || !window.EventSource) {
+                            subscriber.error(new Error('EventSource is not available in this environment. Please use a compatible SSE library.'));
+                            return;
+                        }
+
+                        const eventSource = new EventSource(sseUrl);
+
+                        eventSource.onmessage = (event) => {
+                            try {
+                                const data = JSON.parse(event.data);
+                                subscriber.next(data);
+                            } catch (error) {
+                                subscriber.error(new Error(`Failed to parse SSE data: ${error}`));
+                            }
+                        };
+
+                        eventSource.onerror = (error) => {
+                            subscriber.error(error);
+                        };
+
+                        // 返回清理函数
+                        return () => {
+                            eventSource.close();
+                        };
+                    });
+                }
+
+                // 普通 HTTP 请求处理
                 const config: AxiosRequestConfig = {
                     method: getHttpMethodString(httpMethod),
                     url: finalUrl,
@@ -154,4 +188,21 @@ function getHttpMethodString(method: RequestMethod): string {
         case RequestMethod.SSE: return 'GET';  // SSE 使用 GET 方法
         default: return 'GET';
     }
+}
+
+/**
+ * 构建 SSE URL
+ */
+function buildSSEUrl(baseUrl: string, queryParams: Record<string, any>): string {
+    const params = new URLSearchParams();
+
+    // 添加查询参数
+    for (const [key, value] of Object.entries(queryParams)) {
+        if (value !== undefined && value !== null) {
+            params.append(key, String(value));
+        }
+    }
+
+    const queryString = params.toString();
+    return queryString ? `${baseUrl}?${queryString}` : baseUrl;
 }
