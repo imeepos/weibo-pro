@@ -12,7 +12,9 @@ import {
   SessionStorage,
   WeiboLoginConfig
 } from "./weibo-login.types";
+import { Subscriber } from 'rxjs'
 import { generateId } from "@sker/workflow";
+import { WeiboLoginAst } from "@sker/workflow-ast";
 
 /**
  * 微博登录认证服务
@@ -70,40 +72,26 @@ export class WeiboAuthService implements OnDestroy {
    * @param userId 用户 ID
    * @returns Observable 事件流
    */
-  async startLogin(userId: string): Promise<Observable<WeiboLoginEvent>> {
+  async startLogin(ast: WeiboLoginAst, obs: Subscriber<WeiboLoginAst>): Promise<void> {
     // 确保浏览器已初始化
     if (this.browserInitPromise) {
       await this.browserInitPromise;
     }
-
-    try {
-      const { events$ } = await this.createLoginSession(userId);
-      return events$;
-    } catch (error) {
-      const subject = new Subject<WeiboLoginEvent>();
-      subject.next({
-        type: 'error',
-        data: { message: (error as any)?.message || '微博登录暂时不可用' },
-        sessionId: '',
-        timestamp: new Date()
-      });
-      subject.complete();
-      return subject.asObservable();
-    }
+    await this.createLoginSession(ast, obs)
   }
 
   /**
    * 创建登录会话
    */
   async createLoginSession(
-    userId: string,
-  ): Promise<{ sessionId: string; expiresAt: Date; events$: Observable<WeiboLoginEvent> }> {
+    ast: WeiboLoginAst, obs: Subscriber<WeiboLoginAst>
+  ): Promise<void> {
     if (!this.browser) {
       throw new Error('Playwright浏览器未就绪，微博登录功能暂时不可用');
     }
 
     // 首先在 Redis 中创建会话记录
-    const sessionData = await this.createSessionInRedis(userId);
+    const sessionData = await this.createSessionInRedis(ast.id);
     const { sessionId, expiresAt } = sessionData;
 
     const context = await this.browser.newContext({
@@ -111,80 +99,50 @@ export class WeiboAuthService implements OnDestroy {
     });
 
     const page = await context.newPage();
-    const subject = new Subject<WeiboLoginEvent>();
     const createdAt = new Date();
 
     const session: LoginSession = {
       sessionId,
-      userId,
-      subject,
+      userId: ast.id,
+      subject: obs,
       context,
       page,
       createdAt,
       expiresAt,
     };
 
-    // 订阅事件并同步到 Redis
-    session.eventsSubscription = subject.subscribe({
-      next: async (event) => {
-        session.lastEvent = event;
-        await this.updateSessionEventInRedis(sessionId, event);
-      },
-      error: async (error) => {
-        await this.updateSessionStatusInRedis(sessionId, 'expired');
-      },
-      complete: async () => {
-        await this.updateSessionStatusInRedis(sessionId, 'completed');
-      }
-    });
-
     this.loginSessions.set(sessionId, session);
 
     // 设置超时定时器
     const timer = setTimeout(() => {
-      subject.next({
-        type: 'error',
-        data: { message: '登录超时,请重新尝试' },
-        sessionId,
-        timestamp: new Date()
-      });
-      subject.complete();
+      ast.message = `登录超时,请重新尝试`
+      ast.state = 'fail'
+      obs.next(ast)
       this.cleanupSession(sessionId);
     }, this.config.sessionTimeout);
 
     session.timer = timer;
 
     // 设置事件监听器
-    this.setupResponseListeners(page, subject, sessionId, userId);
-    this.setupNavigationListeners(page, context, subject, sessionId, userId);
+    this.setupResponseListeners(page, ast, obs);
+    this.setupNavigationListeners(page, context, ast, obs);
 
     // 启动登录流程
     setImmediate(async () => {
       try {
         await page.goto(this.config.loginUrl, { waitUntil: 'networkidle' });
-
         try {
           await page.waitForSelector('img[src*="qrcode"]', { timeout: 10000 });
         } catch (e) {
           // 二维码元素加载超时，继续流程
         }
       } catch (error) {
-        subject.next({
-          type: 'error',
-          data: { message: '打开登录页面失败' },
-          sessionId,
-          timestamp: new Date()
-        });
-        subject.complete();
+        ast.state = 'fail'
+        ast.message = `打开登录页面失败`
+        obs.next(ast)
         await this.cleanupSession(sessionId);
       }
     });
-
-    return {
-      sessionId,
-      expiresAt,
-      events$: subject.asObservable(),
-    };
   }
 
   /**
@@ -193,9 +151,8 @@ export class WeiboAuthService implements OnDestroy {
    */
   private setupResponseListeners(
     page: Page,
-    subject: Subject<WeiboLoginEvent>,
-    sessionId: string,
-    userId: string,
+    ast: WeiboLoginAst,
+    obs: Subscriber<WeiboLoginAst>
   ) {
     page.on('response', async (response) => {
       const url = response.url();
@@ -206,15 +163,8 @@ export class WeiboAuthService implements OnDestroy {
           const data = await response.json();
 
           if (data.data?.image) {
-            subject.next({
-              type: 'qrcode',
-              data: {
-                qrid: data.data.qrid,
-                image: data.data.image,
-              },
-              sessionId,
-              timestamp: new Date()
-            });
+            ast.qrcode = data.data.image;
+            obs.next(ast)
           }
         }
 
@@ -222,44 +172,22 @@ export class WeiboAuthService implements OnDestroy {
         if (url.includes('qrcode/check')) {
           try {
             const data = await response.json();
-
-            // 推送状态事件
-            subject.next({
-              type: 'status',
-              data: {
-                retcode: data.retcode,
-                msg: data.msg,
-                data: data.data,
-              },
-              sessionId,
-              timestamp: new Date()
-            });
-
             // 50114001: 未使用 (等待扫码)
             if (data.retcode === 50114001) {
               // 等待扫码状态
             }
-
             // 50114002: 已扫码,等待手机确认
             else if (data.retcode === 50114002) {
-              subject.next({
-                type: 'scanned',
-                data: { message: '成功扫描,请在手机点击确认以登录' },
-                sessionId,
-                timestamp: new Date()
-              });
+              ast.message = `请在手机点击确认以登录`
+              obs.next(ast)
             }
-
             // 50114003: 二维码过期
             else if (data.retcode === 50114003) {
-              subject.next({
-                type: 'expired',
-                data: { message: '该二维码已过期,请重新扫描' },
-                sessionId,
-                timestamp: new Date()
-              });
-              subject.complete();
-              await this.cleanupSession(sessionId);
+              ast.state = 'fail';
+              ast.message = `该二维码已过期`
+              obs.next(ast)
+              obs.complete()
+              await this.cleanupSession(ast.id);
             }
           } catch (e) {
             // 响应为空或无法解析，可能是登录成功后的空响应
@@ -278,9 +206,8 @@ export class WeiboAuthService implements OnDestroy {
   private setupNavigationListeners(
     page: Page,
     context: BrowserContext,
-    subject: Subject<WeiboLoginEvent>,
-    sessionId: string,
-    userId: string,
+    ast: WeiboLoginAst,
+    obs: Subscriber<WeiboLoginAst>
   ) {
     page.on('framenavigated', async (frame) => {
       if (frame !== page.mainFrame()) return;
@@ -297,32 +224,19 @@ export class WeiboAuthService implements OnDestroy {
           const userInfo = await this.extractUserInfo(page);
 
           // 保存到数据库
-          const account = await this.saveAccount(userId, cookies, userInfo);
+          const account = await this.saveAccount(ast.id, cookies, userInfo);
 
-          // 推送成功事件
-          subject.next({
-            type: 'success',
-            data: {
-              accountId: account.id,
-              weiboUid: account.weiboUid,
-              weiboNickname: account.weiboNickname,
-              weiboAvatar: account.weiboAvatar,
-            },
-            sessionId,
-            timestamp: new Date()
-          });
-
-          subject.complete();
-          await this.cleanupSession(sessionId);
+          ast.account = account;
+          ast.state = 'success'
+          obs.next(ast)
+          obs.complete()
+          await this.cleanupSession(ast.id);
         } catch (error) {
-          subject.next({
-            type: 'error',
-            data: { message: '保存账号信息失败' },
-            sessionId,
-            timestamp: new Date()
-          });
-          subject.complete();
-          await this.cleanupSession(sessionId);
+          ast.state = 'fail';
+          ast.message = `保存账号信息失败`
+          obs.next(ast)
+          obs.complete();
+          await this.cleanupSession(ast.id);
         }
       }
     });
@@ -396,7 +310,7 @@ export class WeiboAuthService implements OnDestroy {
             };
           }
         }
-      } catch (e) {}
+      } catch (e) { }
 
       // 方式4: 从页面元素提取
       const avatarImg = document.querySelector('[class*="AvatarImg"]') as HTMLImageElement;
@@ -483,24 +397,9 @@ export class WeiboAuthService implements OnDestroy {
       session.timer = undefined;
     }
 
-    // 清理内部事件订阅
-    try {
-      session.eventsSubscription?.unsubscribe();
-    } catch (error) {
-      // 忽略清理错误
-    }
-
     // 最后才关闭Subject，确保所有事件都能推送完
     try {
       if (!session.subject.closed) {
-        // 推送一个会话结束事件
-        session.subject.next({
-          type: 'expired',
-          data: { message: '登录会话已结束' },
-          sessionId,
-          timestamp: new Date()
-        });
-
         // 延迟一点时间再关闭，确保事件被推送
         setTimeout(() => {
           if (!session.subject.closed) {

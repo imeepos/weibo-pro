@@ -1,6 +1,6 @@
-import { Subject, Observable } from "rxjs";
+import { Subscriber } from "rxjs";
 import { BrowserContext, Page, Cookie } from "playwright";
-import { WeiboAccountEntity } from "@sker/entities";
+import { WeiboLoginAst } from "@sker/workflow-ast";
 
 /**
  * 微博登录事件类型
@@ -32,14 +32,13 @@ export interface WeiboUserInfo {
 export interface LoginSession {
   sessionId: string;
   userId: string;
-  subject: Subject<WeiboLoginEvent>;
+  subject: Subscriber<WeiboLoginAst>
   context: BrowserContext;
   page: Page;
   timer?: NodeJS.Timeout;
   createdAt: Date;
   expiresAt: Date;
   lastEvent?: WeiboLoginEvent;
-  eventsSubscription?: any;
 }
 
 /**
