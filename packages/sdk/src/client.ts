@@ -151,6 +151,7 @@ function getHttpMethodString(method: RequestMethod): string {
         case RequestMethod.PUT: return 'PUT';
         case RequestMethod.DELETE: return 'DELETE';
         case RequestMethod.PATCH: return 'PATCH';
+        case RequestMethod.SSE: return 'GET';  // SSE 使用 GET 方法
         default: return 'GET';
     }
 }
