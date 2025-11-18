@@ -57,7 +57,7 @@ export function useWorkflowOperations(
 
         // executeAst 会通过装饰器系统自动查找 @Handler 执行器
         console.log(`run ast`, { ast, ctx })
-        const result = await executeAst(ast, ctx)
+        const result = executeAst(ast, ctx)
         console.log(`run ast success`, result)
         const astNode = workflow.workflowAst.nodes.find(n => n.id === nodeId)
         if (astNode) {
