@@ -1,6 +1,6 @@
-import { mergeMap, retry, tap } from 'rxjs';
+import { mergeMap, retry, tap, lastValueFrom } from 'rxjs';
 import { root } from '@sker/core';
-import { execute, createWorkflowGraphAst, generateId } from '@sker/workflow';
+import { executeAst, createWorkflowGraphAst, generateId, WorkflowExecutorVisitor } from '@sker/workflow';
 import { useQueue } from '@sker/mq';
 import {
   PostContextCollectorAst,
@@ -91,7 +91,8 @@ export function startPostNLPConsumer() {
               ],
             });
 
-            const result = await execute(workflow, {});
+            // 使用 executeAst 执行工作流，获取最终状态
+            const result = await lastValueFrom(executeAst(workflow, {}));
 
             // 从执行结果中获取更新后的节点状态
             const executedCollector = result.nodes.find((n: any) => n.id === collectorAst.id);

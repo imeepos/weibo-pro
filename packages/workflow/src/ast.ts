@@ -4,7 +4,8 @@ import { generateId } from "./utils";
 import { ErrorSerializer, SerializedError } from "@sker/core";
 import { Observable } from 'rxjs'
 export interface Visitor {
-    // 每一次执行 返回最新的 Ast
+    // 每一次执行 返回最新的 Ast 
+    // 一定要遵守： 每一次状态变更都需要发射一个新的 INode 给外部
     visit(ast: INode, ctx: any): Observable<INode>;
 }
 
@@ -45,13 +46,14 @@ export abstract class Ast implements INode {
     }
 }
 
-@Node({ title: "工作流图" })
+@Node({ title: "工作流" })
 export class WorkflowGraphAst extends Ast {
     @Input({ title: "名称", type: 'text' })
     name: string | undefined;
 
     @Input({ title: "节点列表" })
     nodes: INode[] = [];
+
     @Input({ title: "边列表" })
     edges: IEdge[] = [];
 
@@ -60,6 +62,12 @@ export class WorkflowGraphAst extends Ast {
 
     @Output({ title: '执行结果' })
     results: any[] = [];
+
+    @Output({ title: '正在执行的节点' })
+    currentNodes: INode[] = [];
+
+    @Output({ title: '下一步执行的节点' })
+    nextNodes: INode[] = [];
 
     /**
      * 视图窗口状态
@@ -493,19 +501,6 @@ export function createWorkflowGraphAst({ nodes, edges, id, state, name }: { name
     if (state) ast.state = state;
     return ast;
 }
-
 export function isWorkflowGraphAst(ast: any): ast is WorkflowGraphAst {
     return ast?.type === `WorkflowGraphAst`;
-}
-
-@Node({ title: "数组迭代器" })
-export class ArrayIteratorAst extends Ast {
-    @Input({ title: "数组" }) array: any[] = [];
-    @Input({ title: "当前索引" }) currentIndex: number = 0;
-
-    @Output({ title: "当前项" }) currentItem: any;
-    @Output({ title: "是否有下一项" }) hasNext: boolean = false;
-    @Output({ title: "是否完成" }) isDone: boolean = true;
-
-    type: `ArrayIteratorAst` = 'ArrayIteratorAst' as const;
 }

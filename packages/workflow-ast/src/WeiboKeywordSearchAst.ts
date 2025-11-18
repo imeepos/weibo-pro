@@ -1,4 +1,4 @@
-import { Ast, Input, Node, Output } from "@sker/workflow";
+import { Ast, Input, Node, Output, State } from "@sker/workflow";
 
 
 @Node({ title: '微博检索' })
@@ -21,6 +21,12 @@ export class WeiboKeywordSearchAst extends Ast {
 
     @Output({ title: '是否结束' })
     isEnd: boolean = false;
+
+    @State({ title: '当前页码' })
+    currentPage: number = 1;
+
+    @State({ title: '总页数' })
+    totalPages: number = 1;
 
     type: `WeiboKeywordSearchAst` = `WeiboKeywordSearchAst`
 }

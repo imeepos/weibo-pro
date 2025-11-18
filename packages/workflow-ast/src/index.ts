@@ -20,7 +20,7 @@ export { BatchPushToMQAst, BatchPushMode } from './BatchPushToMQAst'
 // 代码执行器
 export { CodeExecutorAst, type CodeLanguage, type ExecutionLog } from './CodeExecutorAst'
 
-export { WorkflowGraphAst, ArrayIteratorAst } from '@sker/workflow'
+export { WorkflowGraphAst } from '@sker/workflow'
 
 // 表单测试 AST
 export { TestFormAst } from './TestFormAst'
