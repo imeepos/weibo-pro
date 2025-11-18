@@ -1,13 +1,14 @@
-import { Controller, Post, Body, Get, BadRequestException, Query, Delete, NotFoundException } from '@nestjs/common';
+import { Controller, Post, Body, Get, BadRequestException, Query, Delete, NotFoundException, Sse, MessageEvent } from '@nestjs/common';
 import { useQueue } from '@sker/mq';
 import type { PostNLPTask } from '@sker/workflow-run';
+import { Observable } from 'rxjs';
 import {
   WeiboKeywordSearchAst,
   WeiboAjaxStatusesShowAst,
   WeiboAjaxStatusesCommentAst,
   WeiboAjaxStatusesRepostTimelineAst,
 } from '@sker/workflow-ast';
-import { Ast, execute, executeAst, fromJson } from '@sker/workflow';
+import { Ast, executeAst, fromJson } from '@sker/workflow';
 import { WorkflowGraphAst } from '@sker/workflow';
 import { logger } from '../utils/logger';
 import * as sdk from '@sker/sdk';
@@ -96,7 +97,7 @@ export class WorkflowController implements sdk.WorkflowController {
 
     logger.info('Starting Weibo search', { keyword, dateRange: `${startDate}~${endDate}` });
 
-    const result = await execute(searchAst, {});
+    const result = await executeAst(searchAst, {}).toPromise();
 
     return {
       message: '微博搜索任务已成功执行',
@@ -208,7 +209,7 @@ export class WorkflowController implements sdk.WorkflowController {
       ],
     };
 
-    await execute(workflow as any, {});
+    await executeAst(workflow as any, {}).toPromise();
 
     if (showAst.state !== 'success') {
       logger.error('Post crawl failed', { postId, error: showAst.error?.message });
@@ -378,52 +379,257 @@ export class WorkflowController implements sdk.WorkflowController {
   }
 
   /**
-   * 执行单个节点
+   * 执行单个节点 - SSE版本
    *
    * 优雅设计：
+   * - 支持Server-Sent Events实时推送节点执行状态
    * - 从工作流数据中反序列化节点
-   * - 执行指定节点
-   * - 返回执行结果和状态
+   * - 执行指定节点，实时推送执行进度
    * - 妥善处理所有错误，确保服务稳定
    */
-  @Post('execute-node')
-  async executeNode(@Body() body: Ast): Promise<WorkflowGraphAst> {
+  @Sse('execute-node')
+  executeNodeSse(@Body() body: Ast): Observable<MessageEvent> {
     const { id: nodeId } = body;
+
     if (!nodeId || nodeId.trim().length === 0) {
-      throw new BadRequestException('节点ID不能为空');
-    }
-    try {
-      // 重建工作流 AST
-      const ast = fromJson(body);
-      // 执行节点
-      const result = await execute(ast, ast);
-      return result;
-    } catch (error: any) {
-      logger.error('Node execution failed', {
-        nodeId,
-        error: error.message,
-        type: error.type || error.name,
-        stack: error.stack
+      return new Observable<MessageEvent>(subscriber => {
+        subscriber.next({
+          type: 'error',
+          data: { message: '节点ID不能为空' },
+        } as MessageEvent);
+        subscriber.complete();
       });
-
-      // 构造失败响应，确保前端能够正确显示错误
-      const failedResult = fromJson(body);
-      failedResult.state = 'fail';
-      failedResult.error = {
-        message: error.message || '执行失败',
-        type: error.type || 'UNKNOWN_ERROR',
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
-      };
-
-      return failedResult;
     }
+
+    logger.info('开始执行节点SSE', { nodeId });
+
+    return new Observable<MessageEvent>(subscriber => {
+      try {
+        // 重建工作流 AST
+        const ast = fromJson(body);
+
+        // 订阅executeAst返回的Observable
+        const subscription = executeAst(ast, ast).subscribe({
+          next: (result) => {
+            logger.debug('节点执行状态更新', {
+              nodeId,
+              state: result.state
+            });
+
+            // 推送状态更新
+            subscriber.next({
+              type: 'progress',
+              data: {
+                nodeId,
+                state: result.state,
+                result: result,
+                timestamp: new Date().toISOString()
+              },
+            } as MessageEvent);
+
+            // 如果执行完成（成功或失败），完成流
+            if (result.state === 'success' || result.state === 'fail') {
+              logger.info('节点执行完成', {
+                nodeId,
+                state: result.state
+              });
+
+              // 推送最终结果
+              subscriber.next({
+                type: 'complete',
+                data: {
+                  nodeId,
+                  state: result.state,
+                  result: result,
+                  timestamp: new Date().toISOString()
+                },
+              } as MessageEvent);
+
+              subscriber.complete();
+            }
+          },
+          error: (error) => {
+            logger.error('节点执行失败', {
+              nodeId,
+              error: error.message,
+              type: error.type || error.name,
+              stack: error.stack
+            });
+
+            // 推送错误信息
+            subscriber.next({
+              type: 'error',
+              data: {
+                nodeId,
+                message: error.message || '执行失败',
+                type: error.type || 'UNKNOWN_ERROR',
+                stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+                timestamp: new Date().toISOString()
+              },
+            } as MessageEvent);
+
+            subscriber.complete();
+          },
+          complete: () => {
+            logger.info('节点执行流完成', { nodeId });
+            subscriber.complete();
+          }
+        });
+
+        // 返回清理函数
+        return () => {
+          logger.info('节点执行SSE连接已关闭', { nodeId });
+          subscription.unsubscribe();
+        };
+      } catch (error: any) {
+        logger.error('节点执行初始化失败', {
+          nodeId,
+          error: error.message,
+          stack: error.stack
+        });
+
+        subscriber.next({
+          type: 'error',
+          data: {
+            nodeId,
+            message: error.message || '初始化失败',
+            timestamp: new Date().toISOString()
+          },
+        } as MessageEvent);
+
+        subscriber.complete();
+      }
+    });
   }
 
   /**
-   * 执行单个节点（不触发工作流调度器）
+   * 执行单个节点（不触发工作流调度器）- SSE版本
    *
    * 优雅设计：
-   * - 只执行指定节点，不涉及工作流调度
+   * - 支持Server-Sent Events实时推送节点执行状态
+   * - 利用Observable流式返回执行进度
+   * - 适合前端实时监控节点执行过程
+   * - 返回节点执行结果，不影响工作流状态
+   */
+  @Sse('execute-single-node')
+  executeSingleNodeSse(@Body() body: { node: Ast; context?: any }): Observable<MessageEvent> {
+    const { node, context = {} } = body;
+
+    if (!node.id || node.id.trim().length === 0) {
+      return new Observable<MessageEvent>(subscriber => {
+        subscriber.next({
+          type: 'error',
+          data: { message: '节点ID不能为空' },
+        } as MessageEvent);
+        subscriber.complete();
+      });
+    }
+
+    logger.info('开始执行单个节点SSE', { nodeId: node.id });
+
+    return new Observable<MessageEvent>(subscriber => {
+      try {
+        const ast = fromJson(node);
+
+        // 订阅executeAst返回的Observable
+        const subscription = executeAst(ast, context).subscribe({
+          next: (result) => {
+            logger.debug('节点执行状态更新', {
+              nodeId: node.id,
+              state: result.state
+            });
+
+            // 推送状态更新
+            subscriber.next({
+              type: 'progress',
+              data: {
+                nodeId: node.id,
+                state: result.state,
+                result: result,
+                timestamp: new Date().toISOString()
+              },
+            } as MessageEvent);
+
+            // 如果执行完成（成功或失败），完成流
+            if (result.state === 'success' || result.state === 'fail') {
+              logger.info('节点执行完成', {
+                nodeId: node.id,
+                state: result.state
+              });
+
+              // 推送最终结果
+              subscriber.next({
+                type: 'complete',
+                data: {
+                  nodeId: node.id,
+                  state: result.state,
+                  result: result,
+                  timestamp: new Date().toISOString()
+                },
+              } as MessageEvent);
+
+              subscriber.complete();
+            }
+          },
+          error: (error) => {
+            logger.error('节点执行失败', {
+              nodeId: node.id,
+              error: error.message,
+              type: error.type || error.name,
+              stack: error.stack
+            });
+
+            // 推送错误信息
+            subscriber.next({
+              type: 'error',
+              data: {
+                nodeId: node.id,
+                message: error.message || '执行失败',
+                type: error.type || 'UNKNOWN_ERROR',
+                stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+                timestamp: new Date().toISOString()
+              },
+            } as MessageEvent);
+
+            subscriber.complete();
+          },
+          complete: () => {
+            logger.info('节点执行流完成', { nodeId: node.id });
+            subscriber.complete();
+          }
+        });
+
+        // 返回清理函数
+        return () => {
+          logger.info('节点执行SSE连接已关闭', { nodeId: node.id });
+          subscription.unsubscribe();
+        };
+      } catch (error: any) {
+        logger.error('节点执行初始化失败', {
+          nodeId: node.id,
+          error: error.message,
+          stack: error.stack
+        });
+
+        subscriber.next({
+          type: 'error',
+          data: {
+            nodeId: node.id,
+            message: error.message || '初始化失败',
+            timestamp: new Date().toISOString()
+          },
+        } as MessageEvent);
+
+        subscriber.complete();
+      }
+    });
+  }
+
+  /**
+   * 执行单个节点（不触发工作流调度器）- 兼容版本
+   *
+   * 优雅设计：
+   * - 保持向后兼容性，等待Observable完成
    * - 直接调用 executeAst，绕过调度器逻辑
    * - 适合单节点测试和调试
    * - 返回节点执行结果，不影响工作流状态
@@ -438,8 +644,63 @@ export class WorkflowController implements sdk.WorkflowController {
 
     try {
       const ast = fromJson(node);
-      const result = await executeAst(ast, context);
-      return result;
+
+      // 等待Observable完成并返回最终结果
+      return new Promise<Ast>((resolve, reject) => {
+        let finalResult: Ast | null = null;
+
+        const subscription = executeAst(ast, context).subscribe({
+          next: (result) => {
+            finalResult = result;
+
+            // 如果执行完成（成功或失败），解析Promise
+            if (result.state === 'success' || result.state === 'fail') {
+              resolve(result);
+              subscription.unsubscribe();
+            }
+          },
+          error: (error) => {
+            logger.error('Single node execution failed', {
+              nodeId: node.id,
+              error: error.message,
+              type: error.type || error.name,
+              stack: error.stack
+            });
+
+            const failedNode = fromJson(node);
+            failedNode.state = 'fail';
+
+            if (typeof failedNode.setError === 'function') {
+              failedNode.setError(error, process.env.NODE_ENV === 'development');
+            } else {
+              failedNode.error = {
+                message: typeof error.message === 'string'
+                  ? error.message || '执行失败'
+                  : JSON.stringify(error.message || error || '执行失败'),
+                name: error.name || 'Error',
+                type: error.type,
+              };
+            }
+
+            resolve(failedNode);
+          },
+          complete: () => {
+            // 如果流完成但没有最终结果，返回最后一个状态
+            if (finalResult) {
+              resolve(finalResult);
+            } else {
+              // 这种情况不应该发生，但为了安全起见
+              const unknownNode = fromJson(node);
+              unknownNode.state = 'fail';
+              unknownNode.error = {
+                message: '执行状态未知',
+                name: 'UnknownStateError',
+              };
+              resolve(unknownNode);
+            }
+          }
+        });
+      });
     } catch (error: any) {
       logger.error('Single node execution failed', {
         nodeId: node.id,
@@ -539,7 +800,7 @@ export class WorkflowController implements sdk.WorkflowController {
       });
 
       // 执行工作流（传入 inputs 作为上下文）
-      const result = await execute(ast, run.inputs);
+      const result = await executeAst(ast, run.inputs).toPromise();
 
       // 提取节点状态
       const nodeStates: Record<string, unknown> = {};

@@ -3,7 +3,7 @@ import { Handler } from '@sker/workflow';
 import { WeiboLoginAst } from '@sker/workflow-ast';
 import { Observable } from 'rxjs';
 import { shareReplay } from 'rxjs/operators';
-import { generateId } from '@sker/workflow';
+import { generateId, INode } from '@sker/workflow';
 
 /**
  * 微博登录事件类型 (浏览器端定义)
@@ -38,13 +38,13 @@ export interface WeiboLoginEvent {
 @Injectable()
 export class WeiboLoginBrowserVisitor {
   @Handler(WeiboLoginAst)
-  handler(ast: WeiboLoginAst, ctx: any): Observable<WeiboLoginAst> {
+  handler(ast: WeiboLoginAst, ctx: any): Observable<INode> {
     // 创建共享的 Observable 事件流
     // shareReplay(1) 确保：
     // 1. 多个订阅者共享同一个 SSE 连接
     // 2. 新订阅者可以获取最后一个事件
     // 3. 即使第一个订阅者取消订阅，连接仍然保持
-    const events$ = new Observable<WeiboLoginAst>(subscriber => {
+    const events$ = new Observable<INode>(subscriber => {
       // 建立 SSE 连接
       const eventSource = new EventSource(
         `/api/sse/weibo-login?userId=${ast.id}`,
