@@ -503,6 +503,49 @@ export class WorkflowController implements sdk.WorkflowController {
   }
 
   /**
+   * 执行单个节点 - 兼容版本
+   *
+   * 优雅设计：
+   * - 保持向后兼容性，等待Observable完成
+   * - 从工作流数据中反序列化节点
+   * - 执行指定节点
+   * - 返回执行结果和状态
+   * - 妥善处理所有错误，确保服务稳定
+   */
+  @Post('execute-node')
+  async executeNode(@Body() body: Ast): Promise<WorkflowGraphAst> {
+    const { id: nodeId } = body;
+    if (!nodeId || nodeId.trim().length === 0) {
+      throw new BadRequestException('节点ID不能为空');
+    }
+    try {
+      // 重建工作流 AST
+      const ast = fromJson(body);
+      // 执行节点
+      const result = await executeAst(ast, ast).toPromise();
+      return result;
+    } catch (error: any) {
+      logger.error('Node execution failed', {
+        nodeId,
+        error: error.message,
+        type: error.type || error.name,
+        stack: error.stack
+      });
+
+      // 构造失败响应，确保前端能够正确显示错误
+      const failedResult = fromJson(body);
+      failedResult.state = 'fail';
+      failedResult.error = {
+        message: error.message || '执行失败',
+        type: error.type || 'UNKNOWN_ERROR',
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      };
+
+      return failedResult;
+    }
+  }
+
+  /**
    * 执行单个节点（不触发工作流调度器）- SSE版本
    *
    * 优雅设计：
