@@ -18,8 +18,8 @@ RUN pnpm install --frozen-lockfile
 # 构建 workspace 包（确保 Playwright 依赖被安装）
 RUN pnpm run build:deps
 
-# 安装 Playwright 浏览器
-RUN npx playwright install
+# 安装 Playwright 浏览器（使用完整路径确保能找到 playwright）
+RUN ./node_modules/.bin/playwright install
 
 # 复制源代码
 COPY . .
