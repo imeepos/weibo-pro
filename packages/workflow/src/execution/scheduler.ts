@@ -4,18 +4,19 @@ import { DependencyAnalyzer } from './dependency-analyzer';
 import { DataFlowManager } from './data-flow-manager';
 import { StateMerger } from './state-merger';
 import { executeAst } from '../executor';
-import { Observable, of, forkJoin } from 'rxjs';
-import { map, catchError, defaultIfEmpty } from 'rxjs/operators';
+import { Observable, of, EMPTY, forkJoin } from 'rxjs';
+import { expand, map, catchError, takeWhile, last, defaultIfEmpty } from 'rxjs/operators';
 import { Injectable, root } from '@sker/core';
 
 /**
- * 工作流调度器 - 管理节点执行顺序和并发
+ * 工作流调度器 - 使用 RxJS expand 自动递归调度
  *
- * 优雅设计：
+ * 核心设计：
  * - 依赖分析：自动识别可并发执行的节点
  * - 数据流管理：自动传递节点间的数据
  * - 状态合并：跟踪所有节点的执行状态
- * - Observable 流式输出：支持实时监控执行进度
+ * - 声明式调度：使用 RxJS expand 操作符实现自动递归调度
+ * - 流式输出：支持实时监控执行进度
  */
 @Injectable()
 export class WorkflowScheduler {
@@ -30,14 +31,17 @@ export class WorkflowScheduler {
     }
 
     /**
-     * 调度工作流执行
+     * 使用 RxJS expand 自动递归调度工作流
      *
-     * 优雅设计：
-     * - 返回 Observable 支持流式监控
-     * - 自动跳过已完成的工作流
-     * - 初始化输入节点数据
-     * - 批量并发执行可执行节点
-     * - 判断最终状态（success/fail/running）
+     * 执行流程：
+     * 1. 初始化输入节点（如果是 pending 状态）
+     * 2. 使用 expand 自动递归：
+     *    - 找到可执行节点
+     *    - 并发执行当前批次
+     *    - 更新节点状态
+     *    - 判断是否完成（所有可达节点都已完成）
+     *    - 如果未完成且有可执行节点，继续递归
+     * 3. 返回最终状态
      */
     schedule(ast: WorkflowGraphAst, ctx: any): Observable<INode> {
         const { state } = ast;
@@ -54,27 +58,57 @@ export class WorkflowScheduler {
 
         ast.state = 'running';
 
-        // 找到可执行节点并批量执行
-        const executableNodes = this.dependencyAnalyzer.findExecutableNodes(ast.nodes, ast.edges);
+        // 使用 expand 自动递归调度
+        return of(ast).pipe(
+            expand(currentAst => {
+                // 找到可执行节点
+                const executableNodes = this.dependencyAnalyzer.findExecutableNodes(
+                    currentAst.nodes,
+                    currentAst.edges
+                );
 
-        return this.executeCurrentBatch(executableNodes, ctx, ast.edges, ast.nodes).pipe(
-            map(({ nodes: newlyExecutedNodes }) => {
-                // 合并节点状态
-                const updatedNodes = this.stateMerger.mergeNodeStates(ast.nodes, newlyExecutedNodes);
+                // 如果没有可执行节点，停止递归
+                if (executableNodes.length === 0) {
+                    return EMPTY;
+                }
 
-                // 判断是否所有可达节点都已完成
-                const allReachableCompleted = this.dependencyAnalyzer.areAllReachableNodesCompleted(updatedNodes, ast.edges);
-                const hasFailures = updatedNodes.some(node => node.state === 'fail');
+                // 并发执行当前批次
+                return this.executeCurrentBatch(
+                    executableNodes,
+                    ctx,
+                    currentAst.edges,
+                    currentAst.nodes
+                ).pipe(
+                    map(({ nodes: newlyExecutedNodes }) => {
+                        // 合并节点状态
+                        const updatedNodes = this.stateMerger.mergeNodeStates(
+                            currentAst.nodes,
+                            newlyExecutedNodes
+                        );
 
-                // 确定最终状态
-                const finalState: IAstStates = allReachableCompleted
-                    ? (hasFailures ? 'fail' : 'success')
-                    : 'running';
+                        // 判断是否所有可达节点都已完成
+                        const allReachableCompleted = this.dependencyAnalyzer.areAllReachableNodesCompleted(
+                            updatedNodes,
+                            currentAst.edges
+                        );
+                        const hasFailures = updatedNodes.some(node => node.state === 'fail');
 
-                ast.nodes = updatedNodes;
-                ast.state = finalState;
-                return ast;
+                        // 确定当前状态
+                        const currentState: IAstStates = allReachableCompleted
+                            ? (hasFailures ? 'fail' : 'success')
+                            : 'running';
+
+                        currentAst.nodes = updatedNodes;
+                        currentAst.state = currentState;
+
+                        return currentAst;
+                    })
+                );
             }),
+            // 持续执行直到状态不再是 running
+            takeWhile(currentAst => currentAst.state === 'running', true),
+            // 获取最后一个状态（即最终状态）
+            last(),
             catchError(error => {
                 // 调度失败，设置工作流为失败状态
                 ast.state = 'fail';
@@ -86,13 +120,6 @@ export class WorkflowScheduler {
 
     /**
      * 并发执行当前批次的节点
-     *
-     * 优雅设计：
-     * - 使用 forkJoin 并发执行多个节点
-     * - 自动提取已完成节点的输出
-     * - 为每个节点分配输入数据
-     * - 处理控制流边的条件判断
-     * - 统一错误处理
      */
     private executeCurrentBatch(
         nodes: INode[],
@@ -143,13 +170,6 @@ export class WorkflowScheduler {
 
     /**
      * 执行单个节点
-     *
-     * 优雅设计：
-     * - 分配输入数据
-     * - 执行节点逻辑
-     * - 提取输出数据
-     * - 处理控制流边
-     * - 激活下游节点
      */
     private executeNode(
         node: INode,
