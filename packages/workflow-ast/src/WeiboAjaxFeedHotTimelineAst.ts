@@ -11,7 +11,7 @@ export class WeiboAjaxFeedHotTimelineAst extends Ast {
     containerid: string = '102803_ctg1_600343_-_ctg1_600343';
 
     @State({ title: "扩展参数" })
-    extparam: string = 'discover%7Cnew_feed';
+    extparam: string = 'discover|new_feed';
 
     @State({ title: "最大ID" })
     max_id: string = '0';
@@ -24,6 +24,16 @@ export class WeiboAjaxFeedHotTimelineAst extends Ast {
 
     @State({ title: "刷新" })
     refresh: number = 1;
+
+    @Output({
+        title: '帖子',
+        type: 'object',
+        properties: {
+            mid: { type: 'string' },
+            uid: { type: 'string' }
+        }
+    })
+    output?: { mid: string, uid: string }
 
     type: 'WeiboAjaxFeedHotTimelineAst' = 'WeiboAjaxFeedHotTimelineAst';
 }

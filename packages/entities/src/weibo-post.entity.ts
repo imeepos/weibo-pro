@@ -444,7 +444,7 @@ export class WeiboPostEntity {
   @Column({ type: 'boolean', name: 'can_edit' })
   can_edit!: boolean;
 
-  @Column({ type: 'integer', name: 'textLength' })
+  @Column({ type: 'integer', name: 'textLength', default: 0 })
   textLength!: number;
 
   @Column({ type: 'jsonb', name: 'annotations' })
@@ -462,7 +462,7 @@ export class WeiboPostEntity {
   @Column({ type: 'varchar', length: 255, name: 'rid' })
   rid!: string;
 
-  @Column({ type: 'varchar', length: 255, name: 'cardid' })
+  @Column({ type: 'varchar', length: 255, name: 'cardid', default: '' })
   cardid!: string;
 
   @Column({ type: 'jsonb', name: 'pic_ids' })
@@ -513,67 +513,67 @@ export class WeiboPostEntity {
   @Column({ type: 'jsonb', name: 'comment_manage_info' })
   comment_manage_info!: CommentManageInfo;
 
-  @Column({ type: 'jsonb', name: 'screen_name_suffix_new' })
-  screen_name_suffix_new!: ScreenNameSuffixNew[];
+  @Column({ type: 'jsonb', name: 'screen_name_suffix_new', nullable: true })
+  screen_name_suffix_new: ScreenNameSuffixNew[] = [];
 
-  @Column({ type: 'integer', name: 'share_repost_type' })
+  @Column({ type: 'integer', name: 'share_repost_type', default: 0 })
   share_repost_type!: number;
 
-  @Column({ type: 'jsonb', name: 'topic_struct' })
+  @Column({ type: 'jsonb', name: 'topic_struct', nullable: true })
   topic_struct!: TopicStructItem[];
 
-  @Column({ type: 'jsonb', name: 'url_struct' })
+  @Column({ type: 'jsonb', name: 'url_struct', nullable: true })
   url_struct!: UrlStructItem[];
 
   @Column({ type: 'jsonb', name: 'title', nullable: true })
   title!: Title | null;
 
-  @Column({ type: 'integer', name: 'mblogtype' })
+  @Column({ type: 'integer', name: 'mblogtype', default: 0 })
   mblogtype!: number;
 
-  @Column({ type: 'boolean', name: 'showFeedRepost' })
+  @Column({ type: 'boolean', name: 'showFeedRepost', default: false })
   showFeedRepost!: boolean;
 
-  @Column({ type: 'boolean', name: 'showFeedComment' })
+  @Column({ type: 'boolean', name: 'showFeedComment', default: false })
   showFeedComment!: boolean;
 
-  @Column({ type: 'boolean', name: 'pictureViewerSign' })
+  @Column({ type: 'boolean', name: 'pictureViewerSign', default: false })
   pictureViewerSign!: boolean;
 
-  @Column({ type: 'boolean', name: 'showPictureViewer' })
+  @Column({ type: 'boolean', name: 'showPictureViewer', default: false })
   showPictureViewer!: boolean;
 
-  @Column({ type: 'jsonb', name: 'rcList' })
+  @Column({ type: 'jsonb', name: 'rcList', nullable: true })
   rcList!: unknown[];
 
-  @Column({ type: 'jsonb', name: 'common_struct' })
+  @Column({ type: 'jsonb', name: 'common_struct', nullable: true })
   common_struct!: CommonStructItem[];
 
-  @Column({ type: 'text', name: 'analysis_extra' })
+  @Column({ type: 'text', name: 'analysis_extra', default: `` })
   analysis_extra!: string;
 
-  @Column({ type: 'varchar', length: 255, name: 'readtimetype' })
+  @Column({ type: 'varchar', length: 255, name: 'readtimetype', default: `` })
   readtimetype!: string;
 
-  @Column({ type: 'integer', name: 'mixed_count' })
+  @Column({ type: 'integer', name: 'mixed_count', default: 0 })
   mixed_count!: number;
 
-  @Column({ type: 'boolean', name: 'is_show_mixed' })
+  @Column({ type: 'boolean', name: 'is_show_mixed', default: false })
   is_show_mixed!: boolean;
 
-  @Column({ type: 'jsonb', name: 'mblog_feed_back_menus_format' })
+  @Column({ type: 'jsonb', name: 'mblog_feed_back_menus_format', nullable: true })
   mblog_feed_back_menus_format!: unknown[];
 
-  @Column({ type: 'boolean', name: 'isAd' })
+  @Column({ type: 'boolean', name: 'isAd', default: false })
   isAd!: boolean;
 
-  @Column({ type: 'boolean', name: 'isSinglePayAudio' })
+  @Column({ type: 'boolean', name: 'isSinglePayAudio', default: false })
   isSinglePayAudio!: boolean;
 
-  @Column({ type: 'text', name: 'text' })
+  @Column({ type: 'text', name: 'text', default: `` })
   text!: string;
 
-  @Column({ type: 'text', name: 'text_raw' })
+  @Column({ type: 'text', name: 'text_raw', default: `` })
   text_raw!: string;
 
   @Column({ type: 'varchar', length: 255, name: 'region_name', nullable: true })
@@ -582,7 +582,7 @@ export class WeiboPostEntity {
   @Column({ type: 'jsonb', name: 'page_info', nullable: true })
   page_info!: PageInfo | null;
 
-  @Column({ type: 'integer', name: 'ok' })
+  @Column({ type: 'integer', name: 'ok', default: 1 })
   ok!: number;
 
   @CreateDateColumn({

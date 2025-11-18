@@ -40,9 +40,6 @@ const UserDetection: React.FC = () => {
           UsersAPI.getUsersList({ timeRange: selectedTimeRange }),
           UsersAPI.getRiskLevels({ timeRange: selectedTimeRange })
         ]);
-        console.log({
-          usersResult, riskLevelsResult
-        })
         // 转换用户数据格式
         const users = Array.isArray(usersResult) ? usersResult :
                      (usersResult && usersResult.users) ? usersResult.users : [];

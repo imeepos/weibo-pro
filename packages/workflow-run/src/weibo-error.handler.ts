@@ -81,7 +81,7 @@ export class WeiboErrorHandler {
             if (response.status >= 400 && response.status < 500) {
                 return new WeiboError(
                     WeiboErrorType.HTTP_ERROR,
-                    `HTTP ${response.status}: ${response.statusText}`,
+                    `HTTP ${response.status}: ${response.statusText} url: ${response.url}`,
                     response.status,
                 );
             }
@@ -112,8 +112,15 @@ export class WeiboErrorHandler {
 
         // 检查 JSON 响应的 ok 字段
         if (data && typeof data === 'object') {
+            if (data && data.url && (data.url as string).includes('login.php')) {
+                return new WeiboError(
+                    WeiboErrorType.LOGIN_EXPIRED,
+                    '登录态已过期，需要更换账号',
+                    response.status,
+                    data
+                );
+            }
             if ('ok' in data && data.ok !== 1 && data.ok !== undefined) {
-                console.log(data)
                 return new WeiboError(
                     WeiboErrorType.API_ERROR,
                     `API 返回错误: ok=${data.ok}`,

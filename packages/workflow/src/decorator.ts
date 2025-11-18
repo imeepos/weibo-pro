@@ -25,18 +25,18 @@ export function resolveConstructor(target: object | Type<any>): Type<any> {
 
 export interface NodeOptions {
     title?: string;
+    outputs?: OutputOptions;
 }
 
-export interface NodeMetadata {
+export interface NodeMetadata extends NodeOptions {
     target: Type<any>;
-    title?: string;
 }
 
 export const NODE = new InjectionToken<NodeMetadata[]>(`NODE`)
-export function Node(options?: NodeOptions): ClassDecorator {
+export function Node(options: NodeOptions = {}): ClassDecorator {
     return (target) => {
         const ctor = resolveConstructor(target as object);
-        root.set([{ provide: NODE, useValue: { target: ctor, title: options?.title }, multi: true }])
+        root.set([{ provide: NODE, useValue: { target: ctor, ...options }, multi: true }])
     };
 }
 export const HANDLER_METHOD = new InjectionToken<{ ast: Type<any>, target: Type<any>, property: string | symbol }[]>(`HANDLER_METHOD`)

@@ -166,10 +166,7 @@ export class WorkflowController implements sdk.WorkflowController {
       res.write(`data: ${JSON.stringify(ast)}\n\n`);
 
       // 执行工作流并发送实时事件
-      const subscription$ = executeAst(ast, {}).pipe(
-        tap(console.log)
-      )
-
+      const subscription$ = executeAst(ast, {})
       const subscription = subscription$.subscribe({
         next: (node: INode) => {
           // 发送节点执行事件
