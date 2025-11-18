@@ -1,12 +1,6 @@
 import { Controller, Post, Body, Get, Query, Delete } from '@sker/core'
 import type {
-  WorkflowStatus,
-  SearchWeiboResult,
-  BatchNlpResult,
-  CrawlPostResult,
-  WorkflowData,
   WorkflowSummary,
-  CreateShareResult,
   CreateRunResult,
   ListRunsResult,
   WorkflowRunEntity,
@@ -15,6 +9,12 @@ import type {
 import { Observable } from 'rxjs'
 import type { WorkflowGraphAst, Ast, INode } from '@sker/workflow';
 import type { WorkflowEntity } from '@sker/entities';
+export interface MessageEvent {
+    data: string | object;
+    id?: string;
+    type?: string;
+    retry?: number;
+}
 @Controller('api/workflow')
 export class WorkflowController {
   @Post('save')
@@ -38,7 +38,7 @@ export class WorkflowController {
   }
 
   @Post('execute')
-  execute(@Body() body: INode): Observable<INode> {
+  execute(@Body() body: INode): Observable<MessageEvent> {
     throw new Error('method executeNode not implements')
   }
 
