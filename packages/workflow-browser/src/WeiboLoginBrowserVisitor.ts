@@ -38,7 +38,7 @@ export interface WeiboLoginEvent {
 @Injectable()
 export class WeiboLoginBrowserVisitor {
   @Handler(WeiboLoginAst)
-  async handler(ast: WeiboLoginAst, ctx: any): Promise<WeiboLoginAst> {
+  handler(ast: WeiboLoginAst, ctx: any): Observable<WeiboLoginAst> {
     // 创建共享的 Observable 事件流
     // shareReplay(1) 确保：
     // 1. 多个订阅者共享同一个 SSE 连接
@@ -51,10 +51,6 @@ export class WeiboLoginBrowserVisitor {
         { withCredentials: true }
       );
 
-      const dispatchEvent = (detail: any) => window.dispatchEvent(new CustomEvent(ast.id, {
-        detail: detail
-      }));
-
       // 处理 SSE 消息
       eventSource.onmessage = (event) => {
         try {
@@ -64,21 +60,19 @@ export class WeiboLoginBrowserVisitor {
           switch (eventData.type) {
             case 'qrcode':
               // 触发显示二维码的自定义事件
-              dispatchEvent(eventData)
               ast.state = 'running'
+              ast.qrcode = eventData.data.image
               subscriber.next(ast)
               break;
 
             case 'scanned':
               // 用户已扫码，等待确认
-              dispatchEvent(eventData)
               ast.state = 'running'
               subscriber.next(ast)
               break;
 
             case 'success':
               // 登录成功
-              dispatchEvent(eventData)
               ast.account = eventData.data;
               ast.state = 'success';
               subscriber.next(ast)
@@ -91,7 +85,6 @@ export class WeiboLoginBrowserVisitor {
               ast.state = 'fail';
               subscriber.next(ast)
               ast.setError(new Error('二维码已过期'), true);
-              dispatchEvent(eventData)
               eventSource.close();
               break;
 
@@ -101,7 +94,6 @@ export class WeiboLoginBrowserVisitor {
               ast.state = 'fail';
               subscriber.next(ast)
               ast.setError(new Error(errorMsg), true);
-              dispatchEvent(eventData)
               eventSource.close();
               break;
           }
@@ -133,29 +125,7 @@ export class WeiboLoginBrowserVisitor {
     }).pipe(
       shareReplay(1) // 共享订阅，允许多个订阅者
     );
-
-    // 保存到 AST，供其他地方订阅
-    ast.events$ = events$;
-
-    // 立即订阅以触发 SSE 连接
-    // 这是关键：Observable 是惰性的，只有订阅时才会执行
-    events$.subscribe({
-      next: (event) => {
-        console.log('微博登录事件:', event.type);
-      },
-      error: (err) => {
-        console.error('微博登录流程错误:', err);
-      },
-      complete: () => {
-        console.log('微博登录流程完成');
-      }
-    });
-
-    // 设置节点为 pending 状态，等待 SSE 事件更新
-    ast.state = 'pending';
-
-    // 返回 AST（pending 状态），SSE 事件会异步更新状态
-    return ast;
+    return events$
   }
 
 }
