@@ -57,7 +57,7 @@ export class ResourcesController implements sdk.ResourcesController {
 ```typescript
 import { Injectable } from '@sker/core';
 import { useEntityManager, MyEntity } from '@sker/entities';
-import { logger } from '../utils/logger';
+import { logger } from '@sker/core';
 
 @Injectable({ providedIn: 'root' })
 export class MyService {

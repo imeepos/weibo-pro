@@ -21,7 +21,7 @@ import {
   Clock
 } from 'lucide-react';
 import { cn, formatNumber, formatRelativeTime } from '@/utils';
-import { createLogger } from '@/utils/logger';
+import { createLogger } from '@sker/core';
 // import { generateTrendData } from '@/mock/mockData'; // 移除直接导入
 import MetricCard from '@/components/ui/MetricCard';
 import MiniTrendChart from '@/components/charts/MiniTrendChart';

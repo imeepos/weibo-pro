@@ -10,7 +10,7 @@ import axios, {
   AxiosError,
   InternalAxiosRequestConfig,
 } from 'axios';
-import { createLogger } from '@/utils/logger';
+import { createLogger } from '@sker/core';
 import { ApiResponse } from '@/types';
 
 // API错误类型

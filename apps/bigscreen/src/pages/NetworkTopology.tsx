@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { NetworkTopologyDashboard } from '@/components/biz';
 import { RefreshCw, Settings, Search, Info } from 'lucide-react';
-import { createLogger } from '@/utils/logger';
+import { createLogger } from '@sker/core';
 
 const logger = createLogger('NetworkTopology');
 

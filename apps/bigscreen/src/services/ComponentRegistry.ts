@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { ComponentRegistry, RegisteredComponent, ComponentConfig } from '../types/layout';
-import { createLogger } from '@/utils/logger';
+import { createLogger } from '@sker/core';
 
 const logger = createLogger('ComponentRegistry');
 

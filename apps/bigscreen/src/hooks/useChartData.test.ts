@@ -21,7 +21,7 @@ vi.mock('@/services/api/charts', () => ({
 }));
 
 // Mock the logger
-vi.mock('@/utils/logger', () => ({
+vi.mock('@sker/core', () => ({
   createLogger: () => ({
     error: vi.fn(),
     debug: vi.fn(),

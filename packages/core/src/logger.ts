@@ -12,8 +12,9 @@ export enum LoggerLevel {
 export const LOGGER_LEVEL = new InjectionToken<LoggerLevel>(`LOGGER_LEVEL`)
 @Injectable()
 export class Logger {
+    name: string = `default`
     constructor(@Inject(LOGGER_LEVEL, { optional: true }) private level: LoggerLevel = LoggerLevel.info) { }
-    log(level: LoggerLevel, ...args: any[]) {
+    _log(level: LoggerLevel, ...args: any[]) {
         if (level >= this.level) {
             switch (level) {
                 case LoggerLevel.trace:
@@ -38,22 +39,36 @@ export class Logger {
         }
     }
     trace(...args: any[]) {
-        this.trace(LoggerLevel.trace, ...args)
+        this._log(LoggerLevel.trace, ...args)
+    }
+
+    verbose(...args: any[]) {
+        this._log(LoggerLevel.trace, ...args)
     }
 
     debug(...args: any[]) {
-        this.trace(LoggerLevel.debug, ...args)
+        this._log(LoggerLevel.debug, ...args)
     }
 
     info(...args: any[]) {
-        this.trace(LoggerLevel.info, ...args)
+        this._log(LoggerLevel.info, ...args)
     }
-
+    log(...args: any[]) {
+        this._log(LoggerLevel.info, ...args)
+    }
     warn(...args: any[]) {
-        this.trace(LoggerLevel.warn, ...args)
+        this._log(LoggerLevel.warn, ...args)
     }
 
     error(...args: any[]) {
-        this.trace(LoggerLevel.error, ...args)
+        this._log(LoggerLevel.error, ...args)
     }
+}
+
+export const logger = new Logger(LoggerLevel.info)
+
+export function createLogger(name: string, level: LoggerLevel = LoggerLevel.info) {
+    const logger = new Logger(level)
+    logger.name = name;
+    return logger;
 }

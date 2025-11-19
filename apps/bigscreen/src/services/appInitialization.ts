@@ -5,7 +5,7 @@
 
 import { initializeDefaultComponents } from './defaultComponents';
 import { componentRegistry } from './ComponentRegistry';
-import { createLogger } from '@/utils/logger';
+import { createLogger } from '@sker/core';
 
 const logger = createLogger('AppInitialization');
 

@@ -1,6 +1,6 @@
 import { Controller, Get, Query, Res, Sse, MessageEvent } from '@nestjs/common'
 import { Observable, interval, map } from 'rxjs'
-import { logger } from '../utils/logger'
+import { logger } from '@sker/core'
 import { root } from '@sker/core'
 import { WeiboAuthService, WeiboLoginAstVisitor, WeiboLoginEvent as WeiboLoginEventType } from '@sker/workflow-run'
 

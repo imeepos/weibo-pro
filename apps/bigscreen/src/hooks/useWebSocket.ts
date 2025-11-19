@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { useAppStore } from '@/stores/useAppStore';
-import { createLogger } from '@/utils/logger';
+import { createLogger } from '@sker/core';
 import { wsManager } from '@/utils/websocket';
 import { RealTimeData } from '@/types';
 import { 

@@ -11,7 +11,7 @@ import {
   Eye
 } from 'lucide-react';
 import { cn, formatNumber } from '@/utils';
-import { createLogger } from '@/utils/logger';
+import { createLogger } from '@sker/core';
 import { HotEvent } from '@/types';
 import { EventsController } from '@sker/sdk'
 import { root } from '@sker/core'

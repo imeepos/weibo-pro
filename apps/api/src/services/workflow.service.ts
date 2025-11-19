@@ -1,6 +1,6 @@
 import { Injectable } from '@sker/core';
 import { WorkflowEntity, WorkflowShareEntity, useEntityManager, WorkflowStatus } from '@sker/entities';
-import { logger } from '../utils/logger';
+import { logger } from '@sker/core';
 import { randomBytes } from 'crypto';
 import { WorkflowGraphAst } from '@sker/workflow';
 import * as sdk from '@sker/sdk'

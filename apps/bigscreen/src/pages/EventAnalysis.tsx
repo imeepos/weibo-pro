@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { useAppStore } from '@/stores/useAppStore';
 import { cn, formatNumber, formatRelativeTime } from '@/utils';
-import { createLogger } from '@/utils/logger';
+import { createLogger } from '@sker/core';
 import MetricCard from '@/components/ui/MetricCard';
 import Select from '@/components/ui/Select';
 import MiniTrendChart from '@/components/charts/MiniTrendChart';

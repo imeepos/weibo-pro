@@ -5,7 +5,7 @@ import {
   useEntityManager,
   RunStatus,
 } from '@sker/entities';
-import { logger } from '../utils/logger';
+import { logger } from '@sker/core';
 import { FindOptionsWhere, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
 
 /**

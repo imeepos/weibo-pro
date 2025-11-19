@@ -3,7 +3,7 @@ import ReactECharts from 'echarts-for-react';
 import { motion } from 'framer-motion';
 import { LocationData } from '@/types';
 import { cn, formatNumber } from '@/utils';
-import { createLogger } from '@/utils/logger';
+import { createLogger } from '@sker/core';
 import { useTheme } from '@/hooks/useTheme';
 import * as echarts from 'echarts';
 

@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { useAppStore } from '@/stores/useAppStore';
-import { createLogger } from '@/utils/logger';
+import { createLogger } from '@sker/core';
 import { SentimentAPI, SystemAPI } from '@/services/api';
 import { RealTimeData, SystemStatus, StatisticsData, KeywordData, LocationData, SentimentData } from '@/types';
 import type { TimeRange } from '@/services/api';

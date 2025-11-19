@@ -5,7 +5,7 @@
 
 import { useEffect, useCallback, useRef, useState } from 'react';
 import { performanceMonitor, PerformanceReport, PerformanceMetric } from '@/utils/performance';
-import { createLogger } from '@/utils/logger';
+import { createLogger } from '@sker/core';
 
 const logger = createLogger('usePerformance');
 

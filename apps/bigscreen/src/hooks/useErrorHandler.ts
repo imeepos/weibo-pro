@@ -5,7 +5,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { errorHandler, AppError, ErrorSeverity } from '@/utils/errorHandler';
-import { createLogger } from '@/utils/logger';
+import { createLogger } from '@sker/core';
 
 const logger = createLogger('useErrorHandler');
 

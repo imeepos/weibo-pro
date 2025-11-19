@@ -18,7 +18,7 @@ vi.mock('socket.io-client', () => ({
 }));
 
 // Mock logger
-vi.mock('@/utils/logger', () => ({
+vi.mock('@sker/core', () => ({
   createLogger: () => ({
     debug: vi.fn(),
     error: vi.fn(),

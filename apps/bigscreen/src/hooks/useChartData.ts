@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { createLogger } from '@/utils/logger';
+import { createLogger } from '@sker/core';
 import { ChartsAPI, CommonAPI } from '@/services/api';
 import { useAppStore } from '@/stores/useAppStore';
 

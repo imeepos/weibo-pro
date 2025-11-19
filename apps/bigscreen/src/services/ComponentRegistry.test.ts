@@ -11,7 +11,7 @@ import {
 } from './ComponentRegistry';
 
 // Mock logger
-vi.mock('@/utils/logger', () => ({
+vi.mock('@sker/core', () => ({
   createLogger: () => ({
     debug: vi.fn(),
     warn: vi.fn(),

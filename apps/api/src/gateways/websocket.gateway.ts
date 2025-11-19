@@ -19,7 +19,7 @@ import {
   OnGatewayInit,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { logger } from '../utils/logger';
+import { logger } from '@sker/core';
 
 @WebSocketGateway({
   path: '/ws',

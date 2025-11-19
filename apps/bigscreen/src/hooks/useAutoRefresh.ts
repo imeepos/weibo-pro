@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useRef, useState } from 'react';
 import { useAppStore } from '@/stores/useAppStore';
-import { createLogger } from '@/utils/logger';
+import { createLogger } from '@sker/core';
 
 interface UseAutoRefreshOptions {
   onRefresh: () => void | Promise<void>;

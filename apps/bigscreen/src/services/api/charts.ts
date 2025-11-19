@@ -5,7 +5,7 @@
 
 import { apiClient } from './apiClient';
 import { withErrorBoundary } from '@/utils/errorHandler';
-import { createLogger } from '@/utils/logger';
+import { createLogger } from '@sker/core';
 import { root } from '@sker/core'
 import { EventsController } from '@sker/sdk'
 const logger = createLogger('ChartsAPI');

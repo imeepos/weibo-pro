@@ -1,5 +1,5 @@
 import { io, Socket } from 'socket.io-client';
-import { createLogger } from '@/utils/logger';
+import { createLogger } from '@sker/core';
 import { WebSocketMessage } from '@/types';
 
 const logger = createLogger('WebSocketManager');

@@ -10,7 +10,7 @@ import axios, {
   AxiosError,
   InternalAxiosRequestConfig 
 } from 'axios';
-import { createLogger } from '@/utils/logger';
+import { createLogger } from '@sker/core';
 import { errorHandler, ErrorCode, ErrorSeverity, withRetry } from '@/utils/errorHandler';
 
 const logger = createLogger('APIClient');

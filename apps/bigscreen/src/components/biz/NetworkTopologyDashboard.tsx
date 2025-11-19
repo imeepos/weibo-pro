@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { DataSet, Network, Node, Edge } from 'vis-network/standalone';
 import { apiClient } from '@/services/api/apiClient';
-import { createLogger } from '@/utils/logger';
+import { createLogger } from '@sker/core';
 import { RefreshCw } from 'lucide-react';
 
 const logger = createLogger('NetworkTopologyDashboard');

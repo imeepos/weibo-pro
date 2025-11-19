@@ -1,18 +1,12 @@
-import { Injectable, Inject } from '@sker/core';
+import { Injectable, Inject, Logger, Optional } from '@sker/core';
 import {
-  PostNLPResultEntity,
-  WeiboPostEntity,
-  WeiboUserEntity,
-  EventEntity,
   useEntityManager,
 } from '@sker/entities';
 import {
   getTimeRangeBoundaries,
-  getPreviousTimeRangeBoundaries,
 } from './time-range.utils';
 import { CacheService, CACHE_KEYS, CACHE_TTL } from '../cache.service';
 import type { TimeRange } from './types';
-import { logger } from '../../utils/logger';
 
 export interface ChartData {
   categories: string[];
@@ -25,7 +19,9 @@ export interface ChartData {
 @Injectable({ providedIn: 'root' })
 export class ChartsService {
   constructor(
-    @Inject(CacheService) private readonly cacheService: CacheService
+    @Inject(CacheService) private readonly cacheService: CacheService,
+    @Inject(Logger, {optional: true}) 
+    private readonly logger: Logger
   ) {}
 
   async getAgeDistribution(timeRange: TimeRange = '12h'): Promise<ChartData> {
@@ -164,7 +160,7 @@ export class ChartsService {
       const { start, end } = getTimeRangeBoundaries(timeRange);
       const granularity = this.getTimeGranularity(timeRange);
 
-      logger.info('Fetching sentiment trend', { timeRange, start, end, granularity });
+      this.logger.info('Fetching sentiment trend', { timeRange, start, end, granularity });
 
       const results = await manager.query(`
         SELECT
@@ -181,7 +177,7 @@ export class ChartsService {
         ORDER BY time_bucket ASC
       `, [granularity, start, end]);
 
-      logger.info('Sentiment trend query completed', { resultCount: results.length });
+      this.logger.info('Sentiment trend query completed', { resultCount: results.length });
 
       const categories = results.map((r: any) => this.formatTimeLabel(r.time_bucket, granularity));
       const positiveData = results.map((r: any) => parseInt(r.positive));

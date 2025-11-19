@@ -2,7 +2,7 @@ import { Controller, Post, Body, Get, BadRequestException, Query, Delete, NotFou
 import { Observable, tap } from 'rxjs';
 import { Ast, executeAst, fromJson, INode } from '@sker/workflow';
 import { WorkflowGraphAst } from '@sker/workflow';
-import { logger } from '../utils/logger';
+import { logger } from '@sker/core';
 import * as sdk from '@sker/sdk';
 import { WorkflowService } from '../services/workflow.service';
 import { WorkflowRunService } from '../services/workflow-run.service';

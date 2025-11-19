@@ -6,7 +6,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
-import { logger } from '../utils/logger';
+import { logger } from '@sker/core';
 
 /**
  * 404 异常过滤器：记录所有未找到的路由请求

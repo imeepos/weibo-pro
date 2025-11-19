@@ -4,7 +4,7 @@
  */
 
 import { RealTimeData, StatisticsData, HotTopic, KeywordData, TimeSeriesData, LocationData, SentimentData } from './index';
-import { createLogger } from '@/utils/logger';
+import { createLogger } from '@sker/core';
 
 // ================== 消息数据类型 ==================
 

@@ -1,7 +1,7 @@
 import React, { Component, ReactNode, ErrorInfo } from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { createLogger } from '@/utils/logger';
+import { createLogger } from '@sker/core';
 
 interface Props {
   children: ReactNode;

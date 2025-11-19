@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { registerComponents, componentRegistry } from './ComponentRegistry';
-import { createLogger } from '@/utils/logger';
+import { createLogger } from '@sker/core';
 import { ComponentConfig } from '../types/layout';
 
 // 使用静态导入以避免动态导入警告

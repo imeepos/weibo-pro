@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { useAppStore } from '@/stores/useAppStore';
 import { cn, formatNumber, formatRelativeTime } from '@/utils';
-import { createLogger } from '@/utils/logger';
+import { createLogger } from '@sker/core';
 import Select from '@/components/ui/Select';
 import { UserProfile } from '@/types';
 import { UsersAPI } from '@/services/api';

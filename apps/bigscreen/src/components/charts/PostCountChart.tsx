@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import ReactECharts from "echarts-for-react";
 import { motion } from "framer-motion";
 import { useTheme } from "@/hooks/useTheme";
-import { createLogger } from '@/utils/logger';
+import { createLogger } from '@sker/core';
 import { CommonAPI } from "@/services/api";
 
 interface PostCountChartProps {
