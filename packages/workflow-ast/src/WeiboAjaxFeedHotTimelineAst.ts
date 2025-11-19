@@ -4,6 +4,9 @@ import { Ast, Input, Node, Output, State } from "@sker/workflow";
 @Node({ title: "微博热门" })
 export class WeiboAjaxFeedHotTimelineAst extends Ast {
 
+    @Input({ isMulti: true, title: '开始' })
+    next: boolean[] = [];
+
     @State({ title: "组ID" })
     group_id: string = '102803600343';
 

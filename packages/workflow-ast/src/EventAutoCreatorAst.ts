@@ -10,11 +10,8 @@ export class EventAutoCreatorAst extends Ast {
   @Input({ title: '帖子实体' })
   post!: WeiboPostEntity;
 
-  @Output({ title: '关联的事件' })
-  event!: EventEntity;
-
-  @Output({ title: 'NLP 结果 ID' })
-  nlpResultId!: string;
+  @Output({ title: '结束' })
+  is_end: boolean = false;
 
   type: 'EventAutoCreatorAst' = 'EventAutoCreatorAst';
 }
