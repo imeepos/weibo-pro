@@ -1,8 +1,8 @@
 import { Injectable } from "@sker/core";
 import { WeiboAccountService } from "./weibo-account.service";
 import { Handler, INode } from '@sker/workflow'
-import { WeiboAjaxFeedHotTimelineAst } from '@sker/workflow-ast'
-import { useEntityManager, WeiboAccountEntity, WeiboPostEntity, WeiboUserEntity } from "@sker/entities";
+import { WeiboAjaxFeedHotTimelineAst, WeiboAjaxStatusesShowAst } from '@sker/workflow-ast'
+import { useEntityManager, WeiboPostEntity, WeiboUserEntity } from "@sker/entities";
 import { WeiboApiClient } from "./weibo-api-client.base";
 import { delay } from "./utils";
 import { Observable, Subscriber } from 'rxjs'
@@ -55,11 +55,16 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
                     }
                     const posts = statuses.map(item => m.create(WeiboPostEntity, item as any));
                     await m.upsert(WeiboPostEntity, posts as any[], ['id']);
+                    posts.map(post => {
+                        const ast = new WeiboAjaxStatusesShowAst()
+                        ast.mblogid = post.mblogid;
+                        ast.uid = post.user.
+                    })
                     console.log(`[WeiboAjaxFeedHotTimelineAstVisitor] 成功入库 ${posts.length} 条微博，${users.length} 个用户`);
                 });
 
-                if(body.max_id) ast.max_id = body.max_id;
-                if(body.since_id) ast.since_id = body.since_id;
+                if (body.max_id) ast.max_id = body.max_id;
+                if (body.since_id) ast.since_id = body.since_id;
                 obs.next(ast)
 
                 await delay();
