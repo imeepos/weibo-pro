@@ -1,4 +1,3 @@
-import { root } from "./environment-injector";
 import { Inject } from "./inject";
 import { Injectable } from "./injectable";
 import { InjectionToken } from "./injection-token";
@@ -66,7 +65,6 @@ export class Logger {
 }
 
 export const logger = new Logger(LoggerLevel.info)
-
 export function createLogger(name: string, level: LoggerLevel = LoggerLevel.info) {
     const logger = new Logger(level)
     logger.name = name;
