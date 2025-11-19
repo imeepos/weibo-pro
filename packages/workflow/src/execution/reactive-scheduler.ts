@@ -165,7 +165,11 @@ export class ReactiveScheduler {
 
         // 单输入：直接返回
         if (streams.length === 1) {
-            return streams[0].pipe(
+            const stream = streams[0];
+            if (!stream) {
+                return EMPTY;
+            }
+            return stream.pipe(
                 map(({ value }) => value)
             );
         }
@@ -249,6 +253,11 @@ export class ReactiveScheduler {
         }
 
         const primaryStream = streams[primaryIndex];
+        if (!primaryStream) {
+            // 主流不存在，回退到 combineLatest
+            return this.combineByCombineLatest(streams);
+        }
+
         const otherStreams = streams.filter((_, i) => i !== primaryIndex);
 
         return primaryStream.pipe(
