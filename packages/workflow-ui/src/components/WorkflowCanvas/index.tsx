@@ -362,6 +362,11 @@ export function WorkflowCanvas({
     return () => window.removeEventListener('node-selected', handleNodeClick)
   }, [])
 
+  // 处理保存快捷键
+  const handleSave = useCallback(() => {
+    saveWorkflow(workflow.workflowAst?.name || 'Untitled')
+  }, [saveWorkflow, workflow.workflowAst])
+
   // 集成键盘快捷键
   useKeyboardShortcuts({
     enabled: true,
@@ -370,6 +375,7 @@ export function WorkflowCanvas({
     onPaste: handlePaste,
     onDelete: handleDelete,
     onSelectAll: handleSelectAll,
+    onSave: handleSave,
   })
 
   const handleNodesChangeInternal = useCallback(

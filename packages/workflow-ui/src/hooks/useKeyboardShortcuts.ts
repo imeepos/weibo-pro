@@ -7,6 +7,7 @@ export interface KeyboardShortcutsOptions {
   onPaste?: () => void
   onDelete?: () => void
   onSelectAll?: () => void
+  onSave?: () => void
 }
 
 const isInputElement = (target: EventTarget | null): boolean => {
@@ -27,6 +28,7 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
     onPaste,
     onDelete,
     onSelectAll,
+    onSave,
   } = options
 
   const handleKeyDown = useCallback(
@@ -50,11 +52,14 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
       } else if (isMod && event.key.toLowerCase() === 'a') {
         event.preventDefault()
         onSelectAll?.()
+      } else if (isMod && event.key.toLowerCase() === 's') {
+        event.preventDefault()
+        onSave?.()
       } else if (event.key === 'Escape') {
         // Escape 由其他部分处理（如关闭菜单）
       }
     },
-    [enabled, onCopy, onCut, onPaste, onDelete, onSelectAll]
+    [enabled, onCopy, onCut, onPaste, onDelete, onSelectAll, onSave]
   )
 
   useEffect(() => {

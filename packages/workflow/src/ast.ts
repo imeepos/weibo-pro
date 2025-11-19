@@ -1,5 +1,5 @@
 import { Input, Node, Output } from "./decorator";
-import { IAstStates, IEdge, INode, IControlEdge, isControlEdge } from "./types";
+import { IAstStates, IEdge, INode, IControlEdge, isControlEdge, IDataEdge } from "./types";
 import { generateId } from "./utils";
 import { ErrorSerializer, SerializedError } from "@sker/core";
 import { Observable } from 'rxjs'
@@ -240,9 +240,19 @@ export class WorkflowGraphAst extends Ast {
             throw new Error(`边的目标节点不存在: ${edge.to}`)
         }
 
-        // 检查重复边（简化版本：检查相同from-to对）
-        if (this.hasEdge(edge.from, edge.to)) {
-            throw new Error(`边已存在: ${edge.from} -> ${edge.to}`)
+        // 根据边类型检查重复
+        if (edge.type === 'data') {
+            const dataEdge = edge as IDataEdge
+            if (this.hasEdge(edge.from, edge.to, dataEdge.fromProperty, dataEdge.toProperty)) {
+                throw new Error(
+                    `边已存在: ${edge.from}.${dataEdge.fromProperty} -> ${edge.to}.${dataEdge.toProperty}`
+                )
+            }
+        } else {
+            // 控制流边只检查节点
+            if (this.hasEdge(edge.from, edge.to)) {
+                throw new Error(`边已存在: ${edge.from} -> ${edge.to}`)
+            }
         }
 
         this.edges.push(edge)
@@ -310,17 +320,30 @@ export class WorkflowGraphAst extends Ast {
     /**
      * 检查边是否存在
      *
-     * 支持两种检查方式：
+     * 支持三种检查方式：
      * - 根据ID检查：hasEdge(edgeId)
-     * - 根据端点检查：hasEdge(fromNodeId, toNodeId)
+     * - 根据节点检查：hasEdge(fromNodeId, toNodeId)
+     * - 根据端口检查：hasEdge(fromNodeId, toNodeId, fromProperty, toProperty)
      */
-    hasEdge(fromOrId: string, to?: string): boolean {
+    hasEdge(fromOrId: string, to?: string, fromProperty?: string, toProperty?: string): boolean {
         if (to === undefined) {
             // 根据ID检查
             return this.edges.some(edge => edge.id === fromOrId)
         }
-        // 根据端点检查
-        return this.edges.some(edge => edge.from === fromOrId && edge.to === to)
+
+        return this.edges.some(edge => {
+            if (edge.from !== fromOrId || edge.to !== to) return false
+
+            // 如果指定了端口，检查端口匹配
+            if (fromProperty !== undefined || toProperty !== undefined) {
+                const dataEdge = edge as IDataEdge
+                return dataEdge.fromProperty === fromProperty &&
+                       dataEdge.toProperty === toProperty
+            }
+
+            // 未指定端口时，只检查节点
+            return true
+        })
     }
 
     /**

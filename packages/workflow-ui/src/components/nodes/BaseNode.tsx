@@ -44,26 +44,25 @@ const PortRow = ({
   output?: { property: string; label?: string; isMulti?: boolean };
   offsetTop?: number;
 }) => (
-  <div className="relative flex items-center gap-2 h-6">
-    <HandleWrapper port={input} type="target" />
-    <HandleWrapper port={output} type="source" />
-    <div className="flex items-center flex-1 pl-2">
-      {input && (
+  <div className="relative flex items-center gap-2 h-6" style={{ top: offsetTop }}>
+    {input && (
+      <div className="flex items-center flex-1 pl-2">
+        <HandleWrapper port={input} type="target" />
         <div className="flex items-center gap-1 text-xs text-slate-200">
           <span className="truncate">{input.label || input.property}</span>
           {input.isMulti && <span className="text-[10px] text-slate-400 font-mono">[]</span>}
         </div>
-      )}
-    </div>
-
-    <div className="flex items-center gap-2 flex-1 justify-end pr-2">
-      {output && (
+      </div>
+    )}
+    {output &&
+      <div className="flex items-center gap-2 flex-1 justify-end pr-2">
+        <HandleWrapper port={output} type="source" />
         <div className="flex items-center gap-1 text-xs text-slate-200">
           <span className="truncate">{output.label || output.property}</span>
           {output.isMulti && <span className="text-[10px] text-slate-400 font-mono">[]</span>}
         </div>
-      )}
-    </div>
+      </div>
+    }
   </div>
 );
 
@@ -128,18 +127,20 @@ export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNode>) =
       {CustomRender}
       {/* 渲染输入输出端口 */}
       <div className="flex flex-col gap-1 mt-2">
+        {/* 左侧部分 显示输入端口 */}
         {metadata.inputs.map((input, index) => (
           <PortRow
             key={`input-${input.property}`}
             input={input}
-            offsetTop={index * 24}
+            offsetTop={0}
           />
         ))}
+        {/* 右侧部分显示输出端口 */}
         {metadata.outputs.map((output, index) => (
           <PortRow
             key={`output-${output.property}`}
             output={output}
-            offsetTop={index * 24}
+            offsetTop={0}
           />
         ))}
       </div>
