@@ -3,7 +3,7 @@ import { INode, IEdge, IAstStates, EdgeMode, isDataEdge, isControlEdge } from '.
 import { DataFlowManager } from './data-flow-manager';
 import { executeAst } from '../executor';
 import { Observable, of, EMPTY, merge, combineLatest, zip } from 'rxjs';
-import { map, catchError, takeWhile, concatMap, mergeMap, withLatestFrom, shareReplay } from 'rxjs/operators';
+import { map, catchError, takeWhile, concatMap, filter, withLatestFrom, shareReplay } from 'rxjs/operators';
 import { Injectable, root } from '@sker/core';
 
 /**
@@ -54,47 +54,79 @@ export class ReactiveScheduler {
     }
 
     /**
-     * 为每个节点构建 Observable 流
+     * 构建流网络 - 使用拓扑排序保证依赖顺序
+     *
+     * 优雅设计:
+     * - 递归构建：先构建上游，再构建下游
+     * - 去重保护：使用 Map 防止重复构建
+     * - 循环检测：抛出明确错误而非死锁
      */
     private buildStreamNetwork(
         ast: WorkflowGraphAst,
         ctx: any
     ): Map<string, Observable<INode>> {
         const network = new Map<string, Observable<INode>>();
+        const building = new Set<string>(); // 正在构建的节点（循环检测）
 
-        // 第一步：为入口节点创建流
-        ast.nodes.forEach(node => {
-            const incomingEdges = ast.edges.filter(e => e.to === node.id);
+        /**
+         * 递归构建单个节点流
+         */
+        const buildNode = (nodeId: string): Observable<INode> => {
+            // 已构建：直接返回
+            if (network.has(nodeId)) {
+                return network.get(nodeId)!;
+            }
+
+            // 正在构建：检测到循环依赖
+            if (building.has(nodeId)) {
+                const cycle = Array.from(building).join(' → ') + ' → ' + nodeId;
+                throw new Error(`检测到循环依赖: ${cycle}`);
+            }
+
+            building.add(nodeId);
+
+            const node = ast.nodes.find(n => n.id === nodeId);
+            if (!node) {
+                throw new Error(`节点不存在: ${nodeId}`);
+            }
+
+            const incomingEdges = ast.edges.filter(e => e.to === nodeId);
+
+            let stream$: Observable<INode>;
 
             if (incomingEdges.length === 0) {
                 // 入口节点：直接执行
-                network.set(node.id, this.createEntryNodeStream(node, ctx));
-            }
-        });
+                stream$ = this.createEntryNodeStream(node, ctx);
+            } else {
+                // 先递归构建所有上游节点
+                incomingEdges.forEach(edge => buildNode(edge.from));
 
-        // 第二步：为下游节点创建流（依赖上游）
-        ast.nodes.forEach(node => {
-            const incomingEdges = ast.edges.filter(e => e.to === node.id);
-
-            if (incomingEdges.length > 0 && !network.has(node.id)) {
-                network.set(node.id, this.buildDependentStream(
-                    node,
-                    incomingEdges,
-                    network,
-                    ctx
-                ));
+                // 再构建当前节点
+                stream$ = this.buildDependentStream(node, incomingEdges, network, ctx);
             }
-        });
+
+            network.set(nodeId, stream$);
+            building.delete(nodeId);
+
+            return stream$;
+        };
+
+        // 为所有节点构建流
+        ast.nodes.forEach(node => buildNode(node.id));
 
         return network;
     }
 
     /**
      * 创建入口节点流（无上游依赖）
+     *
+     * 优雅设计:
+     * - 使用 refCount 防止内存泄漏
+     * - 多个下游订阅时共享执行结果
      */
     private createEntryNodeStream(node: INode, ctx: any): Observable<INode> {
         return this.executeNode(node, ctx).pipe(
-            shareReplay(1) // 多个下游订阅时，共享执行结果
+            shareReplay({ bufferSize: 1, refCount: true })
         );
     }
 
@@ -103,8 +135,9 @@ export class ReactiveScheduler {
      *
      * 核心逻辑：
      * 1. 收集上游流
-     * 2. 根据边的 mode 组合上游流（zip/combineLatest/withLatestFrom）
-     * 3. 每次上游发射 → 创建新节点实例执行
+     * 2. 区分数据边和控制边，应用不同的操作符
+     * 3. 根据边的 mode 组合上游流（zip/combineLatest/withLatestFrom/merge）
+     * 4. 每次上游发射 → 创建新节点实例执行
      */
     private buildDependentStream(
         node: INode,
@@ -119,11 +152,27 @@ export class ReactiveScheduler {
                 throw new Error(`上游节点流未找到: ${edge.from} → ${node.id}`);
             }
 
-            // 应用边操作符（fromProperty/condition/toProperty）
-            return sourceStream.pipe(
-                this.dataFlowManager.createEdgeOperator(edge),
-                map(value => ({ edge, value })) // 携带边信息
-            );
+            // 区分数据边和控制边
+            if (isControlEdge(edge)) {
+                // 控制边：只传递执行信号（void）
+                return sourceStream.pipe(
+                    filter(ast => ast.state === 'success'),
+                    // 如果有条件，检查条件
+                    filter(ast => {
+                        if (!edge.condition) return true;
+                        const value = (ast as any)[edge.condition.property];
+                        return value === edge.condition.value;
+                    }),
+                    map(() => ({ edge, value: void 0 })) // 传递 void 信号
+                );
+            } else {
+                // 数据边：应用数据操作符（fromProperty/toProperty）
+                return sourceStream.pipe(
+                    filter(ast => ast.state === 'success'),
+                    this.dataFlowManager.createEdgeOperator(edge),
+                    map(value => ({ edge, value }))
+                );
+            }
         });
 
         // 根据边模式组合上游流
@@ -148,12 +197,18 @@ export class ReactiveScheduler {
                 failedNode.error = error;
                 return of(failedNode);
             }),
-            shareReplay(1) // 多个下游订阅时，共享执行结果
+            shareReplay({ bufferSize: 1, refCount: true })
         );
     }
 
     /**
      * 根据边模式组合上游流
+     *
+     * 优雅设计:
+     * - MERGE: 任一上游发射立即触发（并发场景）
+     * - ZIP: 配对执行，按索引一一对应
+     * - COMBINE_LATEST: 任一变化触发，使用所有最新值
+     * - WITH_LATEST_FROM: 主流触发，携带其他流的最新值
      */
     private combineUpstreamByMode(
         streams: Observable<{ edge: IEdge; value: any }>[],
@@ -191,8 +246,11 @@ export class ReactiveScheduler {
                 return this.combineByWithLatestFrom(streams, edges);
 
             case EdgeMode.MERGE:
+                // MERGE：任一上游发射立即触发（真正的 merge 语义）
+                return this.combineByMerge(streams);
+
             default:
-                // 默认：等待所有上游至少发射一次（使用 combineLatest）
+                // 默认：等待所有上游至少发射一次
                 return this.combineByCombineLatest(streams);
         }
     }
@@ -210,8 +268,30 @@ export class ReactiveScheduler {
             }
         }
 
-        // 默认 MERGE
-        return EdgeMode.MERGE;
+        // 默认 COMBINE_LATEST（等待所有上游就绪）
+        return EdgeMode.COMBINE_LATEST;
+    }
+
+    /**
+     * MERGE 模式：任一上游发射立即触发
+     *
+     * 优雅设计:
+     * - 真正的 RxJS merge 语义：不等待其他上游
+     * - 适合并发场景：多个数据源独立触发
+     * - 单个输入：直接传递值
+     */
+    private combineByMerge(
+        streams: Observable<{ edge: IEdge; value: any }>[]
+    ): Observable<any> {
+        return merge(...streams).pipe(
+            map(({ edge, value }) => {
+                // 单个输入时，根据边配置决定数据结构
+                if (isDataEdge(edge) && edge.toProperty) {
+                    return { [edge.toProperty]: value };
+                }
+                return value;
+            })
+        );
     }
 
     /**
@@ -228,7 +308,7 @@ export class ReactiveScheduler {
     }
 
     /**
-     * COMBINE_LATEST 模式：任一变化触发
+     * COMBINE_LATEST 模式：任一变化触发，使用所有最新值
      */
     private combineByCombineLatest(
         streams: Observable<{ edge: IEdge; value: any }>[]
@@ -239,7 +319,7 @@ export class ReactiveScheduler {
     }
 
     /**
-     * WITH_LATEST_FROM 模式：主流触发
+     * WITH_LATEST_FROM 模式：主流触发，携带其他流的最新值
      */
     private combineByWithLatestFrom(
         streams: Observable<{ edge: IEdge; value: any }>[],
@@ -260,6 +340,13 @@ export class ReactiveScheduler {
 
         const otherStreams = streams.filter((_, i) => i !== primaryIndex);
 
+        if (otherStreams.length === 0) {
+            // 只有主流，直接返回
+            return primaryStream.pipe(
+                map(({ value }) => value)
+            );
+        }
+
         return primaryStream.pipe(
             withLatestFrom(...otherStreams),
             map(([primary, ...others]) => this.mergeEdgeValues([primary, ...others]))
@@ -268,6 +355,11 @@ export class ReactiveScheduler {
 
     /**
      * 合并边值数据
+     *
+     * 优雅设计:
+     * - 有 toProperty：使用指定的属性名
+     * - 无 toProperty 且值是对象：直接合并（展开）
+     * - 其他情况：使用 fromProperty 或默认 key
      */
     private mergeEdgeValues(edgeValues: { edge: IEdge; value: any }[]): any {
         const merged: any = {};
@@ -303,19 +395,42 @@ export class ReactiveScheduler {
     }
 
     /**
-     * 克隆节点（支持多次执行）
+     * 深度克隆节点 - 支持多次执行的隔离性
+     *
+     * 优雅设计:
+     * - 使用 structuredClone 确保完全隔离
+     * - 保留原始 ID（用于工作流图更新）
+     * - 重置执行状态
+     * - 兼容旧环境（回退到 JSON 序列化）
      */
     private cloneNode(node: INode): INode {
-        return {
-            ...node,
-            id: node.id, // 保持原 ID（用于工作流图更新）
-            state: 'pending' as IAstStates,
-            error: undefined
-        };
+        try {
+            // 优先使用 structuredClone（现代浏览器/Node.js 17+）
+            if (typeof structuredClone !== 'undefined') {
+                const cloned = structuredClone(node);
+                cloned.state = 'pending';
+                cloned.error = undefined;
+                return cloned;
+            }
+        } catch {
+            // structuredClone 不可用或失败，回退到 JSON
+        }
+
+        // 回退方案：JSON 序列化（简单但有性能开销，且不支持 Date、Map、Set 等）
+        const cloned = JSON.parse(JSON.stringify(node));
+        cloned.state = 'pending';
+        cloned.error = undefined;
+        return cloned;
     }
 
     /**
      * 订阅所有节点流，合并状态变化
+     *
+     * 优雅设计:
+     * - 使用 merge 合并所有节点流
+     * - 每次节点状态变化，更新工作流图
+     * - 自动判断完成状态
+     * - 持续发射直到完成
      */
     private subscribeAndMerge(
         network: Map<string, Observable<INode>>,
@@ -353,7 +468,7 @@ export class ReactiveScheduler {
             takeWhile(graph => graph.state === 'running', true),
             catchError(error => {
                 ast.state = 'fail';
-                ast.error = error;
+                ast.setError(error);
                 return of(ast);
             })
         );
