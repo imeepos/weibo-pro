@@ -4,8 +4,8 @@ import { DependencyAnalyzer } from './dependency-analyzer';
 import { DataFlowManager } from './data-flow-manager';
 import { StateMerger } from './state-merger';
 import { executeAst } from '../executor';
-import { Observable, of, EMPTY, forkJoin, merge } from 'rxjs';
-import { expand, map, catchError, takeWhile, last, defaultIfEmpty, tap, switchMap } from 'rxjs/operators';
+import { Observable, of, EMPTY, merge } from 'rxjs';
+import { expand, map, catchError, takeWhile } from 'rxjs/operators';
 import { Injectable, root } from '@sker/core';
 
 /**
@@ -50,7 +50,7 @@ export class WorkflowScheduler {
      */
     schedule(ast: WorkflowGraphAst, ctx: any): Observable<WorkflowGraphAst> {
         const { state } = ast;
-
+        debugger;
         // 已完成的工作流直接返回
         if (state === 'success' || state === 'fail') {
             return of(ast);

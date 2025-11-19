@@ -62,12 +62,14 @@ function applyStateData<T extends object>(instance: T, source: Record<string, un
 interface NodeSnapshot {
     inputs: Record<string, unknown>;
     outputs: Record<string, unknown>;
+    states: Record<string, unknown>;
 }
 
 function snapshotNode(instance: object): NodeSnapshot {
     const ctor = (instance as any).constructor as Type<any>;
     const inputs = root.get(INPUT);
     const outputs = root.get(OUTPUT);
+    const states = root.get(STATE)
     const host = instance as Record<string | symbol, unknown>;
 
     const inputData: Record<string, unknown> = {};
@@ -86,7 +88,15 @@ function snapshotNode(instance: object): NodeSnapshot {
         }
     });
 
-    return { inputs: inputData, outputs: outputData };
+    const stateData: Record<string, unknown> = {}
+    states.filter(it => it.target === ctor).forEach(field => {
+        const value = host[field.propertyKey];
+        if (value !== undefined) {
+            stateData[field.propertyKey as string] = value;
+        }
+    })
+
+    return { inputs: inputData, outputs: outputData, states: stateData };
 }
 
 export function fromJson<T extends object = any>(json: any): T {
@@ -118,10 +128,11 @@ export function fromJson<T extends object = any>(json: any): T {
 }
 
 export function toJson(ast: Ast): INode {
-    const { inputs, outputs } = snapshotNode(ast);
+    const { inputs, outputs, states } = snapshotNode(ast);
     return {
         ...inputs,
         ...outputs,
+        ...states,
         type: ast.type,
         id: ast.id,
         state: ast.state,

@@ -100,7 +100,7 @@ export function WorkflowCanvas({
   } = useCanvasState()
 
   // 使用 WorkflowOperations 管理业务逻辑
-  const { runNode, saveWorkflow, saveSubWorkflow } = useWorkflowOperations(workflow, {
+  const { runNode, saveWorkflow, saveSubWorkflow, runWorkflow } = useWorkflowOperations(workflow, {
     onShowToast: showToast,
     onSetRunning: setIsRunning,
     onSetSaving: setIsSaving,
@@ -212,7 +212,6 @@ export function WorkflowCanvas({
     handleSelectAll,
     handleZoomIn,
     handleZoomOut,
-    handleRunNode,
     handleLocateNode,
   } = useCanvasControls()
 
@@ -519,6 +518,11 @@ export function WorkflowCanvas({
 
           {showControls && (
             <div className="absolute bottom-4 left-4 z-[5] flex flex-col gap-2 rounded-xl border border-[#282e39] bg-[#111318] p-1.5 shadow-lg shadow-black/30">
+
+              <button onClick={() => runWorkflow()}>
+                运行
+              </button>
+
               <button
                 type="button"
                 onClick={handleZoomIn}
