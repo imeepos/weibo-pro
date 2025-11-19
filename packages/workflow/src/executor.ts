@@ -2,7 +2,8 @@ import { WorkflowGraphAst } from "./ast";
 import { Handler } from "./decorator";
 import { fromJson } from "./generate";
 import { INode } from "./types";
-import { WorkflowScheduler } from './execution/scheduler';
+import { LegacyScheduler } from './execution/scheduler';
+import { ReactiveScheduler } from './execution/reactive-scheduler';
 import { VisitorExecutor } from './execution/visitor-executor';
 import { Observable } from 'rxjs';
 import { Injectable, root } from "@sker/core";
@@ -11,11 +12,25 @@ import { Injectable, root } from "@sker/core";
 export class WorkflowExecutorVisitor {
     /**
      * 执行工作流图
+     *
+     * 特性标志：
+     * - ctx.useReactiveScheduler: true  → 使用新的响应式调度器（推荐）
+     * - ctx.useReactiveScheduler: false → 使用传统调度器（默认，向后兼容）
      */
     @Handler(WorkflowGraphAst)
     visit(ast: WorkflowGraphAst, ctx: any): Observable<INode> {
-        const scheduler = root.get(WorkflowScheduler)
-        return scheduler.schedule(ast, ctx);
+        // 检查是否启用响应式调度器
+        const useReactive = ctx?.useReactiveScheduler ?? false;
+
+        if (useReactive) {
+            // 使用新的响应式调度器
+            const scheduler = root.get(ReactiveScheduler);
+            return scheduler.schedule(ast, ctx);
+        } else {
+            // 使用传统调度器（默认，向后兼容）
+            const scheduler = root.get(LegacyScheduler);
+            return scheduler.schedule(ast, ctx);
+        }
     }
 }
 

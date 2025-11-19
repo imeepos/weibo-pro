@@ -9,7 +9,7 @@ import { expand, map, catchError, takeWhile } from 'rxjs/operators';
 import { Injectable, root } from '@sker/core';
 
 /**
- * 工作流调度器 - 使用 RxJS expand 自动递归调度
+ * 传统工作流调度器（Legacy） - 使用 RxJS expand 自动递归调度
  *
  * 核心设计：
  * - 依赖分析：自动识别可并发执行的节点
@@ -17,9 +17,11 @@ import { Injectable, root } from '@sker/core';
  * - 状态合并：跟踪所有节点的执行状态
  * - 声明式调度：使用 RxJS expand 操作符实现自动递归调度
  * - 流式输出：支持实时监控执行进度
+ *
+ * 注意：此调度器已被 ReactiveScheduler 替代，保留用于向后兼容
  */
 @Injectable()
-export class WorkflowScheduler {
+export class LegacyScheduler {
     private dependencyAnalyzer: DependencyAnalyzer;
     private dataFlowManager: DataFlowManager;
     private stateMerger: StateMerger;
