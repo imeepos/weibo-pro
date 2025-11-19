@@ -24,11 +24,6 @@ export class WorkflowScheduler {
     private dataFlowManager: DataFlowManager;
     private stateMerger: StateMerger;
 
-    /**
-     * AST 实例管理 - 跟踪所有 AST 实例，用于区分状态变更和新建 AST
-     */
-    private astInstances = new Map<string, INode>();
-
     constructor() {
         this.dependencyAnalyzer = root.get(DependencyAnalyzer)
         this.dataFlowManager = root.get(DataFlowManager)
@@ -50,16 +45,16 @@ export class WorkflowScheduler {
      */
     schedule(ast: WorkflowGraphAst, ctx: any): Observable<WorkflowGraphAst> {
         const { state } = ast;
-        debugger;
+
         // 已完成的工作流直接返回
         if (state === 'success' || state === 'fail') {
             return of(ast);
         }
 
-        // 清空并初始化 AST 实例管理
-        this.astInstances.clear();
+        // ✅ 创建局部 AST 实例管理，避免并发工作流互相污染
+        const astInstances = new Map<string, INode>();
         ast.nodes.forEach(node => {
-            this.astInstances.set(node.id, node);
+            astInstances.set(node.id, node);
         });
 
         // 初始化输入节点
@@ -88,7 +83,8 @@ export class WorkflowScheduler {
                     executableNodes,
                     ctx,
                     currentAst.edges,
-                    currentAst.nodes
+                    currentAst.nodes,
+                    astInstances
                 ).pipe(
                     map(updatedNode => {
                         // 每次单个节点状态变化，立即更新工作流图并发射
@@ -140,7 +136,8 @@ export class WorkflowScheduler {
         nodes: INode[],
         ctx: any,
         edges: IEdge[],
-        workflowNodes: INode[]
+        workflowNodes: INode[],
+        astInstances: Map<string, INode>
     ): Observable<INode> {
         const allOutputs = new Map<string, any>();
         const completedNodes = workflowNodes.filter(n => n.state === 'success');
@@ -161,7 +158,7 @@ export class WorkflowScheduler {
         // ✅ 关键改造：使用 merge 而非 forkJoin
         // merge 会在任何一个节点发射状态时立即发射
         const nodeExecutions = nodes.map(node =>
-            this.executeNodeStreaming(node, ctx, edges, workflowNodes, allOutputs)
+            this.executeNodeStreaming(node, ctx, edges, workflowNodes, allOutputs, astInstances)
         );
 
         return merge(...nodeExecutions);
@@ -181,7 +178,8 @@ export class WorkflowScheduler {
         ctx: any,
         edges: IEdge[],
         workflowNodes: INode[],
-        allOutputs: Map<string, any>
+        allOutputs: Map<string, any>,
+        astInstances: Map<string, INode>
     ): Observable<INode> {
         // 为节点分配输入
         this.dataFlowManager.assignInputsToNode(node, allOutputs, edges, workflowNodes);
@@ -191,12 +189,12 @@ export class WorkflowScheduler {
             // 使用 expand 处理多个 AST 发射
             expand(emittedAst => {
                 // 判断是状态变更还是新建 AST
-                if (this.astInstances.has(emittedAst.id)) {
+                if (astInstances.has(emittedAst.id)) {
                     // 状态变更：更新现有 AST
-                    return this.handleStateChange(emittedAst, edges, workflowNodes, allOutputs);
+                    return this.handleStateChange(emittedAst, edges, workflowNodes, allOutputs, astInstances);
                 } else {
                     // 新建 AST：创建新实例并触发下游
-                    return this.handleNewAst(emittedAst, ctx, edges, workflowNodes, allOutputs);
+                    return this.handleNewAst(emittedAst, ctx, edges, workflowNodes, allOutputs, astInstances);
                 }
             }),
             catchError(error => {
@@ -222,10 +220,11 @@ export class WorkflowScheduler {
         updatedAst: INode,
         edges: IEdge[],
         workflowNodes: INode[],
-        allOutputs: Map<string, any>
+        allOutputs: Map<string, any>,
+        astInstances: Map<string, INode>
     ): Observable<INode> {
         // 更新现有 AST 实例
-        this.astInstances.set(updatedAst.id, updatedAst);
+        astInstances.set(updatedAst.id, updatedAst);
 
         // 提取输出（如果是成功状态）
         if (updatedAst.state === 'success') {
@@ -246,10 +245,11 @@ export class WorkflowScheduler {
         ctx: any,
         edges: IEdge[],
         workflowNodes: INode[],
-        allOutputs: Map<string, any>
+        allOutputs: Map<string, any>,
+        astInstances: Map<string, INode>
     ): Observable<INode> {
         // 注册新 AST 实例
-        this.astInstances.set(newAst.id, newAst);
+        astInstances.set(newAst.id, newAst);
 
         // 提取输出（如果是成功状态）
         if (newAst.state === 'success') {
@@ -259,7 +259,7 @@ export class WorkflowScheduler {
             }
 
             // 触发下游节点执行
-            return this.triggerDownstreamNodes(newAst, ctx, edges, workflowNodes, allOutputs);
+            return this.triggerDownstreamNodes(newAst, ctx, edges, workflowNodes, allOutputs, astInstances);
         }
 
         return of(newAst);
@@ -273,21 +273,30 @@ export class WorkflowScheduler {
         ctx: any,
         edges: IEdge[],
         workflowNodes: INode[],
-        allOutputs: Map<string, any>
+        allOutputs: Map<string, any>,
+        astInstances: Map<string, INode>
     ): Observable<INode> {
         const outgoingEdges = edges.filter(e => e.from === sourceAst.id);
         const downstreamExecutions: Observable<INode>[] = [];
 
         outgoingEdges.forEach(edge => {
-            // 检查控制流边的条件
+            // ✅ 改进：检查控制流边的条件（增强类型安全）
             if (isControlEdge(edge) && edge.condition) {
-                const actualValue = (sourceAst as any)[edge.condition.property];
+                const property = edge.condition.property;
+
+                // 检查属性是否存在
+                if (!(property in sourceAst)) {
+                    console.warn(`[WorkflowScheduler] 控制流边条件属性不存在: ${property}`);
+                    return;
+                }
+
+                const actualValue = (sourceAst as any)[property];
                 if (actualValue !== edge.condition.value) {
                     return; // 条件不满足，跳过此边
                 }
             }
 
-            // 激活下游节点
+            // ✅ 改进：从 workflowNodes 查找最新的节点状态
             const downstream = workflowNodes.find(n => n.id === edge.to);
             if (downstream && downstream.state === 'pending') {
                 // 为下游节点分配输入
@@ -295,7 +304,7 @@ export class WorkflowScheduler {
 
                 // 执行下游节点
                 downstreamExecutions.push(
-                    this.executeNodeStreaming(downstream, ctx, edges, workflowNodes, allOutputs)
+                    this.executeNodeStreaming(downstream, ctx, edges, workflowNodes, allOutputs, astInstances)
                 );
             }
         });
