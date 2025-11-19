@@ -31,7 +31,8 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
     private async handler(ast: WeiboAjaxFeedHotTimelineAst, obs: Subscriber<INode>) {
         try {
             let pageCount = 0;
-
+            ast.state = 'running';
+            obs.next({ ...ast })
             while (true) {
                 pageCount++;
 
@@ -56,17 +57,15 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
                     const posts = statuses.map(item => m.create(WeiboPostEntity, item as any));
                     await m.upsert(WeiboPostEntity, posts as any[], ['id']);
                     posts.map(post => {
-                        const json = toJson(ast) as WeiboAjaxFeedHotTimelineAst
-                        json.mblogid = post.mblogid;
-                        json.uid = post.user.idstr;
-                        obs.next(json)
+                        ast.mblogid = post.mblogid;
+                        ast.uid = post.user.idstr;
+                        obs.next({ ...ast })
                     });
                     console.log(`[WeiboAjaxFeedHotTimelineAstVisitor] 成功入库 ${posts.length} 条微博，${users.length} 个用户`);
                 });
 
                 if (body.max_id) ast.max_id = body.max_id;
                 if (body.since_id) ast.since_id = body.since_id;
-                obs.next(ast)
 
                 await delay();
             }
