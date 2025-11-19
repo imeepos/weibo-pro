@@ -34,6 +34,4 @@ export class NullInjector extends Injector {
   async destroy(): Promise<void> {
     // NullInjector 无需销毁
   }
-
-  use(_providers: (Provider | Type<any>)[]): void {}
 }

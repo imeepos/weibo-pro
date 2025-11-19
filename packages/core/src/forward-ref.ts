@@ -15,7 +15,7 @@ export class ForwardRef<T = any> {
    */
   readonly __forward_ref__ = true;
 
-  constructor(public readonly forwardRefFn: () => T) {}
+  constructor(public readonly forwardRefFn: () => T) { }
 
   /**
    * 解析ForwardRef，执行包装的函数获取实际的令牌

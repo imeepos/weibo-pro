@@ -138,7 +138,7 @@ export function validateInjectOptionsConflicts(options: InjectOptions): void {
     if (typeof console !== 'undefined' && console.warn) {
       console.warn(
         'InjectOptions 警告: 同时使用 "skipSelf" 和 "host" 可能不是预期的行为。' +
-          '"skipSelf" 会被 "host" 的行为覆盖。',
+        '"skipSelf" 会被 "host" 的行为覆盖。',
       );
     }
   }
@@ -153,7 +153,7 @@ export function validateInjectOptionsConflicts(options: InjectOptions): void {
 
     throw new Error(
       `InjectOptions 选项冲突:\n${errorMessages}\n\n` +
-        '请检查注入选项的组合是否正确。',
+      '请检查注入选项的组合是否正确。',
     );
   }
 }

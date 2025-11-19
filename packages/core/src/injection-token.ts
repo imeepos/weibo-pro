@@ -10,7 +10,7 @@ export class InjectionToken<T> {
   constructor(
     private readonly description: string,
     private readonly options?: InjectionTokenOptions<T>,
-  ) {}
+  ) { }
 
   /**
    * 返回令牌的字符串表示，用于调试

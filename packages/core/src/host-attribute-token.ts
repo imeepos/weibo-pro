@@ -18,7 +18,7 @@ export class HostAttributeToken<T = string> {
   constructor(
     public readonly attribute: string,
     public readonly defaultValue?: T,
-  ) {}
+  ) { }
 
   /**
    * 返回令牌的字符串表示
