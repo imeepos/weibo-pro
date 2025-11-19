@@ -75,8 +75,6 @@ export class ChartsAPI {
 
       const chartData = response.data;
 
-      console.log({ chartData })
-
       // 数据转换：ChartData → SentimentTrendData[]
       if (!chartData?.categories || !chartData?.series) {
         return [];

@@ -4,22 +4,17 @@ FROM mcr.microsoft.com/playwright:v1.56.1-noble
 # 设置工作目录
 WORKDIR /workspace
 
-# 复制包管理文件
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
-COPY apps/api/package.json ./apps/api/
-COPY packages/ ./packages/
+# 复制所有源代码
+COPY . .
 
 # 安装 pnpm
 RUN npm install -g pnpm@9
 
 # 安装依赖
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --no-frozen-lockfile
 
-# 安装 Playwright 浏览器
-RUN npx playwright install
-
-# 复制源代码
-COPY . .
+# 构建 workspace 包（确保 Playwright 依赖被安装）
+RUN pnpm run build:deps
 
 # 构建项目
 RUN pnpm run build

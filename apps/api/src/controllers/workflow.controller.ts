@@ -1,13 +1,6 @@
-import { Controller, Post, Body, Get, BadRequestException, Query, Delete, NotFoundException } from '@nestjs/common';
-import { useQueue } from '@sker/mq';
-import type { PostNLPTask } from '@sker/workflow-run';
-import {
-  WeiboKeywordSearchAst,
-  WeiboAjaxStatusesShowAst,
-  WeiboAjaxStatusesCommentAst,
-  WeiboAjaxStatusesRepostTimelineAst,
-} from '@sker/workflow-ast';
-import { Ast, execute, executeAst, fromJson } from '@sker/workflow';
+import { Controller, Post, Body, Get, BadRequestException, Query, Delete, NotFoundException, Sse, Res } from '@nestjs/common';
+import { Observable, tap } from 'rxjs';
+import { Ast, executeAst, fromJson, INode } from '@sker/workflow';
 import { WorkflowGraphAst } from '@sker/workflow';
 import { logger } from '../utils/logger';
 import * as sdk from '@sker/sdk';
@@ -28,7 +21,6 @@ import { WorkflowEntity, WorkflowRunEntity, RunStatus } from '@sker/entities';
  */
 @Controller('api/workflow')
 export class WorkflowController implements sdk.WorkflowController {
-  private nlpQueue = useQueue<PostNLPTask>('post_nlp_queue');
   private readonly workflowService: WorkflowService;
   private readonly workflowRunService: WorkflowRunService;
   private readonly workflowTemplateService: WorkflowTemplateService;
@@ -37,197 +29,6 @@ export class WorkflowController implements sdk.WorkflowController {
     this.workflowService = root.get(WorkflowService);
     this.workflowRunService = root.get(WorkflowRunService);
     this.workflowTemplateService = root.get(WorkflowTemplateService);
-  }
-
-  /**
-   * 触发单个微博帖子的NLP分析工作流
-   *
-   * 优雅设计：
-   * - 通过消息队列解耦触发和执行
-   * - 支持异步处理，立即返回响应
-   * - 统一的异常处理机制
-   */
-  @Post('trigger-nlp')
-  async triggerNlpAnalysis(@Body() body: { postId: string }) {
-    const { postId } = body;
-
-    if (!postId || postId.trim().length === 0) {
-      throw new BadRequestException('帖子ID不能为空');
-    }
-
-    this.nlpQueue.producer.next({ postId });
-
-    return {
-      message: 'NLP分析任务已成功触发',
-      postId,
-    };
-  }
-
-  /**
-   * 触发微博关键词搜索工作流
-   *
-   * 优雅设计：
-   * - 支持完整的关键词搜索流程
-   * - 自动推送发现的帖子到NLP队列
-   * - 统一的参数验证和异常处理
-   */
-  @Post('search-weibo')
-  async searchWeibo(@Body() body: {
-    keyword: string;
-    startDate: string;
-    endDate: string;
-    page?: number;
-  }) {
-    const { keyword, startDate, endDate, page = 1 } = body;
-
-    if (!keyword || keyword.trim().length === 0) {
-      throw new BadRequestException('搜索关键词不能为空');
-    }
-
-    if (!startDate || !endDate) {
-      throw new BadRequestException('开始日期和结束日期不能为空');
-    }
-
-    const searchAst = new WeiboKeywordSearchAst();
-    searchAst.keyword = keyword.trim();
-    searchAst.startDate = new Date(startDate);
-    searchAst.endDate = new Date(endDate);
-    searchAst.page = page;
-
-    logger.info('Starting Weibo search', { keyword, dateRange: `${startDate}~${endDate}` });
-
-    const result = await execute(searchAst, {});
-
-    return {
-      message: '微博搜索任务已成功执行',
-      keyword,
-      startDate,
-      endDate,
-      page,
-      searchResult: result,
-    };
-  }
-
-  /**
-   * 获取工作流状态
-   *
-   * 优雅设计：
-   * - 提供工作流执行状态查询
-   * - 支持队列状态监控
-   * - 返回系统健康状态
-   */
-  @Get('status')
-  async getWorkflowStatus() {
-    return {
-      nlpQueue: 'active',
-      workflowEngine: 'running',
-      lastExecution: new Date().toISOString(),
-    };
-  }
-
-  /**
-   * 批量触发NLP分析
-   *
-   * 优雅设计：
-   * - 支持批量处理多个帖子
-   * - 统一的参数验证
-   * - 提供进度跟踪
-   */
-  @Post('batch-nlp')
-  async batchTriggerNlp(@Body() body: { postIds: string[] }) {
-    const { postIds } = body;
-
-    if (!postIds || !Array.isArray(postIds) || postIds.length === 0) {
-      throw new BadRequestException('帖子ID列表不能为空');
-    }
-
-    const results = postIds.map(postId => {
-      this.nlpQueue.producer.next({ postId });
-      return { postId, status: 'queued' };
-    });
-
-    return {
-      message: `批量NLP分析任务已成功触发，共 ${postIds.length} 个任务`,
-      total: postIds.length,
-      results,
-    };
-  }
-
-  /**
-   * 爬取微博帖子详情（包括评论和转发）
-   *
-   * 优雅设计：
-   * - 完整爬取帖子的所有上下文信息
-   * - 爬取完成后数据自动保存到数据库
-   * - 为后续NLP分析做好数据准备
-   * - 统一的异常处理机制
-   */
-  @Post('crawl-post')
-  async crawlPost(@Body() body: { postId: string }) {
-    const { postId } = body;
-
-    if (!postId || postId.trim().length === 0) {
-      throw new BadRequestException('帖子ID不能为空');
-    }
-
-    logger.info('Starting post crawl', { postId });
-
-    const showAst = new WeiboAjaxStatusesShowAst();
-    showAst.mblogid = postId;
-
-    const commentAst = new WeiboAjaxStatusesCommentAst();
-    const repostAst = new WeiboAjaxStatusesRepostTimelineAst();
-
-    const workflow = {
-      nodes: [showAst, commentAst, repostAst],
-      edges: [
-        {
-          from: showAst.id,
-          fromProperty: 'uid',
-          to: commentAst.id,
-          toProperty: 'uid',
-        },
-        {
-          from: showAst.id,
-          fromProperty: 'mid',
-          to: commentAst.id,
-          toProperty: 'mid',
-        },
-        {
-          from: showAst.id,
-          fromProperty: 'uid',
-          to: repostAst.id,
-          toProperty: 'uid',
-        },
-        {
-          from: showAst.id,
-          fromProperty: 'mid',
-          to: repostAst.id,
-          toProperty: 'mid',
-        },
-      ],
-    };
-
-    await execute(workflow as any, {});
-
-    if (showAst.state !== 'success') {
-      logger.error('Post crawl failed', { postId, error: showAst.error?.message });
-      throw new Error(showAst.error?.message || '帖子爬取失败');
-    }
-
-    const crawlResult = {
-      message: '帖子爬取成功',
-      postId,
-      mid: showAst.mid,
-      uid: showAst.uid,
-      commentsCount: commentAst.entities?.length || 0,
-      commentsCrawled: commentAst.state === 'success',
-      repostsCrawled: repostAst.state === 'success',
-    };
-
-    logger.info('Post crawl successful', crawlResult);
-
-    return crawlResult;
   }
 
   /**
@@ -284,9 +85,6 @@ export class WorkflowController implements sdk.WorkflowController {
       logger.info('工作流已存在', { name });
       return workflow;
     }
-
-
-
     // 3. 无模板，创建空工作流
     logger.info('创建空工作流', { name });
     const workflowAst = new WorkflowGraphAst();
@@ -341,129 +139,57 @@ export class WorkflowController implements sdk.WorkflowController {
   }
 
   /**
-   * 创建分享链接
-   */
-  @Post('share')
-  async createShare(@Body() body: { workflowId: string; expiresAt?: string }): Promise<sdk.CreateShareResult> {
-    const { workflowId } = body;
-    if (!workflowId) {
-      throw new BadRequestException('工作流ID不能为空');
-    }
-
-    if (workflowId.trim().length === 0) {
-      throw new BadRequestException('工作流ID不能为空');
-    }
-
-    return await this.workflowService.createShare(body);
-  }
-
-  /**
-   * 获取分享的工作流
-   */
-  @Get('shared/:token')
-  async getSharedWorkflow(@Query() params: { token: string }): Promise<sdk.WorkflowData | null> {
-    const { token } = params;
-
-    if (!token || token.trim().length === 0) {
-      throw new BadRequestException('分享令牌不能为空');
-    }
-
-    const workflow = await this.workflowService.getSharedWorkflow(token);
-
-    if (!workflow) {
-      throw new NotFoundException('分享链接不存在或已过期');
-    }
-
-    return workflow;
-  }
-
-  /**
-   * 执行单个节点
+   * 执行单个节点 - POST SSE版本
    *
    * 优雅设计：
+   * - 支持POST方法传递复杂JSON数据
+   * - 手动返回text/event-stream SSE实时推送
    * - 从工作流数据中反序列化节点
-   * - 执行指定节点
-   * - 返回执行结果和状态
+   * - 执行指定节点，实时推送执行进度
    * - 妥善处理所有错误，确保服务稳定
    */
-  @Post('execute-node')
-  async executeNode(@Body() body: Ast): Promise<WorkflowGraphAst> {
-    const { id: nodeId } = body;
-    if (!nodeId || nodeId.trim().length === 0) {
-      throw new BadRequestException('节点ID不能为空');
-    }
-    try {
-      // 重建工作流 AST
-      const ast = fromJson(body);
-      // 执行节点
-      const result = await execute(ast, ast);
-      return result;
-    } catch (error: any) {
-      logger.error('Node execution failed', {
-        nodeId,
-        error: error.message,
-        type: error.type || error.name,
-        stack: error.stack
-      });
-
-      // 构造失败响应，确保前端能够正确显示错误
-      const failedResult = fromJson(body);
-      failedResult.state = 'fail';
-      failedResult.error = {
-        message: error.message || '执行失败',
-        type: error.type || 'UNKNOWN_ERROR',
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
-      };
-
-      return failedResult;
-    }
-  }
-
-  /**
-   * 执行单个节点（不触发工作流调度器）
-   *
-   * 优雅设计：
-   * - 只执行指定节点，不涉及工作流调度
-   * - 直接调用 executeAst，绕过调度器逻辑
-   * - 适合单节点测试和调试
-   * - 返回节点执行结果，不影响工作流状态
-   */
-  @Post('execute-single-node')
-  async executeSingleNode(@Body() body: { node: Ast; context?: any }): Promise<Ast> {
-    const { node, context = {} } = body;
-
-    if (!node.id || node.id.trim().length === 0) {
-      throw new BadRequestException('节点ID不能为空');
-    }
+  @Post('execute')
+  execute(@Body() body: Ast, @Res() res?: any): Observable<INode> {
+    // 设置 SSE 响应头
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Cache-Control'
+    });
 
     try {
-      const ast = fromJson(node);
-      const result = await executeAst(ast, context);
-      return result;
-    } catch (error: any) {
-      logger.error('Single node execution failed', {
-        nodeId: node.id,
-        error: error.message,
-        type: error.type || error.name,
-        stack: error.stack
+      const ast = fromJson(body) as Ast;
+      ast.state = 'running';
+      // 发送开始事件
+      res.write(`data: ${JSON.stringify(ast)}\n\n`);
+
+      // 执行工作流并发送实时事件
+      const subscription$ = executeAst(ast, {})
+      const subscription = subscription$.subscribe({
+        next: (node: INode) => {
+          // 发送节点执行事件
+          res.write(`data: ${JSON.stringify(node)}\n\n`);
+        },
+        error: (error: any) => {
+          res.end();
+        },
+        complete: () => {
+          res.end();
+        }
       });
 
-      const failedNode = fromJson(node);
-      failedNode.state = 'fail';
+      // 处理客户端断开连接
+      res.on('close', () => {
+        subscription.unsubscribe();
+      });
 
-      if (typeof failedNode.setError === 'function') {
-        failedNode.setError(error, process.env.NODE_ENV === 'development');
-      } else {
-        failedNode.error = {
-          message: typeof error.message === 'string'
-            ? error.message || '执行失败'
-            : JSON.stringify(error.message || error || '执行失败'),
-          name: error.name || 'Error',
-          type: error.type,
-        };
-      }
-
-      return failedNode;
+      return subscription$;
+    } catch (error: any) {
+      console.error(`execute error: `, { error, body });
+      res.end();
+      throw error;
     }
   }
 
@@ -539,7 +265,7 @@ export class WorkflowController implements sdk.WorkflowController {
       });
 
       // 执行工作流（传入 inputs 作为上下文）
-      const result = await execute(ast, run.inputs);
+      const result = await executeAst(ast, run.inputs).toPromise();
 
       // 提取节点状态
       const nodeStates: Record<string, unknown> = {};

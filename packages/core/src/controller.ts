@@ -19,6 +19,7 @@ export enum RequestMethod {
   PUT = 2,
   DELETE = 3,
   PATCH = 4,
+  SSE = 5
 }
 
 /**
@@ -64,6 +65,7 @@ function createHttpMethodDecorator(method: RequestMethod): (path?: string) => Me
  */
 export const Get = createHttpMethodDecorator(RequestMethod.GET);
 export const Post = createHttpMethodDecorator(RequestMethod.POST);
+export const Sse = createHttpMethodDecorator(RequestMethod.SSE);
 export const Put = createHttpMethodDecorator(RequestMethod.PUT);
 export const Delete = createHttpMethodDecorator(RequestMethod.DELETE);
 export const Patch = createHttpMethodDecorator(RequestMethod.PATCH);

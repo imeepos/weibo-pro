@@ -14,9 +14,8 @@ interface WeiboLoginAstPreviewProps {
  * - 视觉叙事：通过状态指示讲述登录流程的故事
  */
 export const WeiboLoginAstPreview: React.FC<WeiboLoginAstPreviewProps> = ({ ast }) => {
-  const hasEventStream = !!ast.events$
   const hasAccount = !!ast.account
-  const isReady = hasEventStream || hasAccount
+  const isReady = hasAccount
 
   return (
     <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 rounded-xl shadow-lg overflow-hidden">
@@ -52,13 +51,7 @@ export const WeiboLoginAstPreview: React.FC<WeiboLoginAstPreviewProps> = ({ ast 
                 <span className="w-2 h-2 bg-blue-400 rounded-full mr-2"></span>
                 登录事件流
               </h3>
-              <div className={`w-3 h-3 rounded-full ${
-                hasEventStream ? 'bg-green-400 animate-pulse' : 'bg-gray-400'
-              }`}></div>
             </div>
-            <p className="text-xs text-slate-400">
-              {hasEventStream ? '实时监听登录过程中的所有事件' : '等待登录流程启动'}
-            </p>
           </div>
 
           {/* 微博账号 */}

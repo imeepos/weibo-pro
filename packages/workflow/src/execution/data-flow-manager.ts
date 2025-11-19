@@ -152,7 +152,6 @@ export class DataFlowManager {
 
             for (const input of inputs) {
                 const propertyKey = String(input.propertyKey);
-
                 if (this.isInputProperty(node, propertyKey, edges)) {
                     const value = this.resolveContextValue(node.id, propertyKey, context);
                     if (value !== undefined) {
@@ -168,11 +167,9 @@ export class DataFlowManager {
         if (exactKey in context) {
             return context[exactKey];
         }
-
         if (propertyKey in context) {
             return context[propertyKey];
         }
-
         return undefined;
     }
 

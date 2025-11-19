@@ -5,7 +5,7 @@ import "@sker/workflow-ast";
 import "@sker/workflow-run";
 import { useQueue } from '@sker/mq'
 import { from, switchMap, tap } from 'rxjs';
-import { execute, executeAst, fromJson, WorkflowGraphAst } from '@sker/workflow';
+import { executeAst, fromJson, WorkflowGraphAst } from '@sker/workflow';
 import { root } from '@sker/core';
 import { entitiesProviders } from '@sker/entities';
 import { WeiboAccountService, WeiboLoginSuccessMessage, createWeiboKeywordSearchGraphAst } from '@sker/workflow-run';

@@ -5,7 +5,7 @@ import { DataFlowManager } from './data-flow-manager';
 import { StateMerger } from './state-merger';
 import { executeAst } from '../executor';
 import { Observable, of, EMPTY, forkJoin, merge } from 'rxjs';
-import { expand, map, catchError, takeWhile, last, defaultIfEmpty, tap } from 'rxjs/operators';
+import { expand, map, catchError, takeWhile, last, defaultIfEmpty, tap, switchMap } from 'rxjs/operators';
 import { Injectable, root } from '@sker/core';
 
 /**
@@ -23,6 +23,11 @@ export class WorkflowScheduler {
     private dependencyAnalyzer: DependencyAnalyzer;
     private dataFlowManager: DataFlowManager;
     private stateMerger: StateMerger;
+
+    /**
+     * AST 实例管理 - 跟踪所有 AST 实例，用于区分状态变更和新建 AST
+     */
+    private astInstances = new Map<string, INode>();
 
     constructor() {
         this.dependencyAnalyzer = root.get(DependencyAnalyzer)
@@ -50,6 +55,12 @@ export class WorkflowScheduler {
         if (state === 'success' || state === 'fail') {
             return of(ast);
         }
+
+        // 清空并初始化 AST 实例管理
+        this.astInstances.clear();
+        ast.nodes.forEach(node => {
+            this.astInstances.set(node.id, node);
+        });
 
         // 初始化输入节点
         if (state === 'pending' && ctx) {
@@ -157,13 +168,13 @@ export class WorkflowScheduler {
     }
 
     /**
-     * ✅ 新增：流式执行单个节点，发射所有状态变化
+     * ✅ 增强：流式执行单个节点，支持多 AST 触发
      *
      * 核心设计：
-     * - executeAst 返回 Observable，会发射多个中间状态
-     * - 使用 tap 操作符在每次状态变化时提取输出
-     * - 在成功状态时激活下游节点
-     * - 失败时设置节点状态并继续传递
+     * - 区分状态变更和新建 AST
+     * - 状态变更：更新现有 AST 实例
+     * - 新建 AST：注册新实例并触发下游节点
+     * - 每个新建 AST 独立触发下游执行
      */
     private executeNodeStreaming(
         node: INode,
@@ -175,33 +186,17 @@ export class WorkflowScheduler {
         // 为节点分配输入
         this.dataFlowManager.assignInputsToNode(node, allOutputs, edges, workflowNodes);
 
-        // ✅ 关键改造：监听 executeAst 的所有状态变化
+        // ✅ 关键改造：支持多 AST 触发
         return executeAst(node, ctx).pipe(
-            tap(updatedNode => {
-                // 每次状态变化，提取输出并激活下游节点
-                if (updatedNode.state === 'success') {
-                    const outputs = this.dataFlowManager.extractNodeOutputs(updatedNode);
-                    if (outputs) {
-                        allOutputs.set(updatedNode.id, outputs);
-                    }
-
-                    // 处理出边：激活下游节点
-                    const outgoingEdges = edges.filter(e => e.from === node.id);
-                    outgoingEdges.forEach(edge => {
-                        // 检查控制流边的条件
-                        if (isControlEdge(edge) && edge.condition) {
-                            const actualValue = (updatedNode as any)[edge.condition.property];
-                            if (actualValue !== edge.condition.value) {
-                                return; // 条件不满足，跳过此边
-                            }
-                        }
-
-                        // 激活下游节点
-                        const downstream = workflowNodes.find(n => n.id === edge.to);
-                        if (downstream) {
-                            downstream.state = 'pending';
-                        }
-                    });
+            // 使用 expand 处理多个 AST 发射
+            expand(emittedAst => {
+                // 判断是状态变更还是新建 AST
+                if (this.astInstances.has(emittedAst.id)) {
+                    // 状态变更：更新现有 AST
+                    return this.handleStateChange(emittedAst, edges, workflowNodes, allOutputs);
+                } else {
+                    // 新建 AST：创建新实例并触发下游
+                    return this.handleNewAst(emittedAst, ctx, edges, workflowNodes, allOutputs);
                 }
             }),
             catchError(error => {
@@ -218,5 +213,99 @@ export class WorkflowScheduler {
                 return of(node);
             })
         );
+    }
+
+    /**
+     * 处理状态变更：更新现有 AST 实例
+     */
+    private handleStateChange(
+        updatedAst: INode,
+        edges: IEdge[],
+        workflowNodes: INode[],
+        allOutputs: Map<string, any>
+    ): Observable<INode> {
+        // 更新现有 AST 实例
+        this.astInstances.set(updatedAst.id, updatedAst);
+
+        // 提取输出（如果是成功状态）
+        if (updatedAst.state === 'success') {
+            const outputs = this.dataFlowManager.extractNodeOutputs(updatedAst);
+            if (outputs) {
+                allOutputs.set(updatedAst.id, outputs);
+            }
+        }
+
+        return of(updatedAst);
+    }
+
+    /**
+     * 处理新建 AST：注册新实例并触发下游节点
+     */
+    private handleNewAst(
+        newAst: INode,
+        ctx: any,
+        edges: IEdge[],
+        workflowNodes: INode[],
+        allOutputs: Map<string, any>
+    ): Observable<INode> {
+        // 注册新 AST 实例
+        this.astInstances.set(newAst.id, newAst);
+
+        // 提取输出（如果是成功状态）
+        if (newAst.state === 'success') {
+            const outputs = this.dataFlowManager.extractNodeOutputs(newAst);
+            if (outputs) {
+                allOutputs.set(newAst.id, outputs);
+            }
+
+            // 触发下游节点执行
+            return this.triggerDownstreamNodes(newAst, ctx, edges, workflowNodes, allOutputs);
+        }
+
+        return of(newAst);
+    }
+
+    /**
+     * 触发下游节点执行：为每个新建 AST 独立触发下游节点
+     */
+    private triggerDownstreamNodes(
+        sourceAst: INode,
+        ctx: any,
+        edges: IEdge[],
+        workflowNodes: INode[],
+        allOutputs: Map<string, any>
+    ): Observable<INode> {
+        const outgoingEdges = edges.filter(e => e.from === sourceAst.id);
+        const downstreamExecutions: Observable<INode>[] = [];
+
+        outgoingEdges.forEach(edge => {
+            // 检查控制流边的条件
+            if (isControlEdge(edge) && edge.condition) {
+                const actualValue = (sourceAst as any)[edge.condition.property];
+                if (actualValue !== edge.condition.value) {
+                    return; // 条件不满足，跳过此边
+                }
+            }
+
+            // 激活下游节点
+            const downstream = workflowNodes.find(n => n.id === edge.to);
+            if (downstream && downstream.state === 'pending') {
+                // 为下游节点分配输入
+                this.dataFlowManager.assignInputsToNode(downstream, allOutputs, edges, workflowNodes);
+
+                // 执行下游节点
+                downstreamExecutions.push(
+                    this.executeNodeStreaming(downstream, ctx, edges, workflowNodes, allOutputs)
+                );
+            }
+        });
+
+        // 如果没有任何下游执行，返回源 AST
+        if (downstreamExecutions.length === 0) {
+            return of(sourceAst);
+        }
+
+        // 并发执行所有下游节点
+        return merge(...downstreamExecutions);
     }
 }

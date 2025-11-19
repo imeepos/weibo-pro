@@ -1,6 +1,7 @@
 import { CONTROLLES, Provider, root, PATH_METADATA, METHOD_METADATA, ROUTE_ARGS_METADATA, RequestMethod, ParamType } from "@sker/core";
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios'
 import { AXIOS, AXIOS_CONFIG } from "./tokens";
+import { Observable } from 'rxjs';
 
 export const providers: (isProd?: boolean) => Provider[] = (isProd = true) => {
     const controllers = root.get(CONTROLLES, [])
@@ -62,7 +63,110 @@ function createControllerInstance<T>(controllerClass: new () => T, axiosInstance
                 // 替换URL中的参数
                 const finalUrl = replaceUrlParams(fullPath, urlParams);
 
-                // 构建请求配置
+                // SSE 方法特殊处理
+                if (httpMethod === RequestMethod.SSE) {
+                    // 检查是否有 body 数据，如果有则使用 POST SSE，否则使用 GET SSE
+                    if (bodyData !== undefined) {
+                        // POST SSE：支持复杂 JSON 传输
+                        return new Observable<any>(subscriber => {
+                            if (typeof window === 'undefined') {
+                                subscriber.error(new Error('POST SSE is only supported in browser environment'));
+                                return;
+                            }
+
+                            // 使用 fetch API 处理 POST SSE
+                            fetch(finalUrl, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Accept': 'text/event-stream',
+                                    'Cache-Control': 'no-cache'
+                                },
+                                body: JSON.stringify(bodyData)
+                            })
+                            .then(response => {
+                                if (!response.ok) {
+                                    throw new Error(`HTTP error! status: ${response.status}`);
+                                }
+
+                                const reader = response.body?.getReader();
+                                if (!reader) {
+                                    throw new Error('Response body is not readable');
+                                }
+
+                                const decoder = new TextDecoder();
+
+                                function read() {
+                                    reader!.read().then(({ done, value }) => {
+                                        if (done) {
+                                            subscriber.complete();
+                                            return;
+                                        }
+
+                                        const chunk = decoder.decode(value);
+                                        const lines = chunk.split('\n');
+
+                                        for (const line of lines) {
+                                            if (line.startsWith('data: ')) {
+                                                try {
+                                                    const data = JSON.parse(line.slice(6));
+                                                    subscriber.next(data);
+                                                } catch (error) {
+                                                    subscriber.error(new Error(`Failed to parse SSE data: ${error}`));
+                                                }
+                                            }
+                                        }
+
+                                        read();
+                                    }).catch(error => {
+                                        subscriber.error(error);
+                                    });
+                                }
+
+                                read();
+                            })
+                            .catch(error => {
+                                subscriber.error(error);
+                            });
+
+                            return () => {
+                                // 清理函数
+                            };
+                        });
+                    } else {
+                        // GET SSE：传统 EventSource 方式
+                        const sseUrl = buildSSEUrl(finalUrl, queryParams);
+
+                        return new Observable<any>(subscriber => {
+                            if (typeof window === 'undefined' || !window.EventSource) {
+                                subscriber.error(new Error('EventSource is not available in this environment. Please use a compatible SSE library.'));
+                                return;
+                            }
+
+                            const eventSource = new EventSource(sseUrl);
+
+                            eventSource.onmessage = (event) => {
+                                try {
+                                    const data = JSON.parse(event.data);
+                                    subscriber.next(data);
+                                } catch (error) {
+                                    subscriber.error(new Error(`Failed to parse SSE data: ${error}`));
+                                }
+                            };
+
+                            eventSource.onerror = (error) => {
+                                subscriber.error(error);
+                            };
+
+                            // 返回清理函数
+                            return () => {
+                                eventSource.close();
+                            };
+                        });
+                    }
+                }
+
+                // 普通 HTTP 请求处理
                 const config: AxiosRequestConfig = {
                     method: getHttpMethodString(httpMethod),
                     url: finalUrl,
@@ -151,6 +255,24 @@ function getHttpMethodString(method: RequestMethod): string {
         case RequestMethod.PUT: return 'PUT';
         case RequestMethod.DELETE: return 'DELETE';
         case RequestMethod.PATCH: return 'PATCH';
+        case RequestMethod.SSE: return 'GET';  // SSE 使用 GET 方法
         default: return 'GET';
     }
+}
+
+/**
+ * 构建 SSE URL
+ */
+function buildSSEUrl(baseUrl: string, queryParams: Record<string, any>): string {
+    const params = new URLSearchParams();
+
+    // 添加查询参数
+    for (const [key, value] of Object.entries(queryParams)) {
+        if (value !== undefined && value !== null) {
+            params.append(key, String(value));
+        }
+    }
+
+    const queryString = params.toString();
+    return queryString ? `${baseUrl}?${queryString}` : baseUrl;
 }

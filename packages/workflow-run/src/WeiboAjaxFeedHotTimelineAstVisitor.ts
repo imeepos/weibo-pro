@@ -1,19 +1,17 @@
 import { Injectable } from "@sker/core";
 import { WeiboAccountService } from "./weibo-account.service";
-import { Handler } from '@sker/workflow'
+import { Handler, INode } from '@sker/workflow'
 import { WeiboAjaxFeedHotTimelineAst } from '@sker/workflow-ast'
-import { useEntityManager, WeiboPostEntity, WeiboUserEntity } from "@sker/entities";
+import { useEntityManager, WeiboAccountEntity, WeiboPostEntity, WeiboUserEntity } from "@sker/entities";
 import { WeiboApiClient } from "./weibo-api-client.base";
 import { delay } from "./utils";
-
+import { Observable, Subscriber } from 'rxjs'
 export interface WeiboAjaxFeedHotTimelineResponse {
     readonly ok: number;
-    readonly data: {
-        statuses: WeiboPostEntity[];
-        since_id: string;
-        max_id: string;
-        total_number: number;
-    };
+    statuses: WeiboPostEntity[];
+    since_id: string;
+    max_id: string;
+    total_number: number;
 }
 
 @Injectable()
@@ -23,7 +21,14 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
     }
 
     @Handler(WeiboAjaxFeedHotTimelineAst)
-    async visit(ast: WeiboAjaxFeedHotTimelineAst, _ctx: any) {
+    visit(ast: WeiboAjaxFeedHotTimelineAst, _ctx: any): Observable<INode> {
+        return new Observable<INode>(obs => {
+            this.handler(ast, obs)
+            return () => obs.complete()
+        })
+    }
+
+    private async handler(ast: WeiboAjaxFeedHotTimelineAst, obs: Subscriber<INode>) {
         try {
             let pageCount = 0;
 
@@ -35,14 +40,11 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
                     url,
                     refererOptions: {}
                 });
-
-                const statuses = body.data?.statuses || [];
-
+                const statuses = body?.statuses || [];
                 if (statuses.length === 0) {
                     console.log(`[WeiboAjaxFeedHotTimelineAstVisitor] 没有更多数据，抓取完成`);
                     break;
                 }
-
                 await useEntityManager(async m => {
                     const users = statuses
                         .filter(item => item.user)
@@ -51,25 +53,28 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
                     if (users.length > 0) {
                         await m.upsert(WeiboUserEntity, users as any[], ['id']);
                     }
-
                     const posts = statuses.map(item => m.create(WeiboPostEntity, item as any));
                     await m.upsert(WeiboPostEntity, posts as any[], ['id']);
-
                     console.log(`[WeiboAjaxFeedHotTimelineAstVisitor] 成功入库 ${posts.length} 条微博，${users.length} 个用户`);
                 });
 
-                ast.max_id = body.data.max_id;
-                ast.since_id = body.data.since_id;
+                if(body.max_id) ast.max_id = body.max_id;
+                if(body.since_id) ast.since_id = body.since_id;
+                obs.next(ast)
 
                 await delay();
             }
 
             console.log(`[WeiboAjaxFeedHotTimelineAstVisitor] 完成，共抓取 ${pageCount} 页数据`);
             ast.state = 'success';
+            obs.next(ast)
+            obs.complete()
         } catch (error) {
             console.error(`[WeiboAjaxFeedHotTimelineAstVisitor] 抓取失败`, error);
             ast.state = 'fail';
             ast.setError(error);
+            obs.next(ast)
+            obs.complete()
         }
         return ast;
     }
