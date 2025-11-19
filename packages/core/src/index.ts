@@ -71,3 +71,4 @@ export { NoRetryError } from './errors';
 export { ErrorSerializer, type SerializedError } from './error-serializer';
 export * from './root';
 export * from './controller';
+export * from './logger';
