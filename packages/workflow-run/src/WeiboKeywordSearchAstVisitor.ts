@@ -74,20 +74,11 @@ export class WeiboKeywordSearchAstVisitor {
             ast.currentPage = 1;  // 当前页码
             observer.next({ ...ast });
 
-            // 初始化 items 数组
-            ast.items = [];
-
             // 第一步：获取首页结果
             let html = await this.playwright.getHtml(url, selection.cookieHeader, `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36`);
             let result = this.parser.parseSearchResultHtml(html);
 
-            // 收集搜索结果到 items 数组
-            ast.items.push(...result.posts.map(post => ({
-                uid: post.uid,
-                mblogid: post.mid
-            })));
 
-            console.log(`[WeiboKeywordSearchAst] 采集第 1 页，已找到 ${ast.items.length} 条`);
             observer.next({ ...ast });  // 发射进度
 
             // 第二步：分页采集
@@ -98,14 +89,6 @@ export class WeiboKeywordSearchAstVisitor {
 
                     html = await this.playwright.getHtml(result.nextPageLink, selection.cookieHeader, `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36`);
                     result = this.parser.parseSearchResultHtml(html);
-
-                    // 收集分页结果到 items 数组
-                    ast.items.push(...result.posts.map(post => ({
-                        uid: post.uid,
-                        mblogid: post.mid
-                    })));
-
-                    console.log(`[WeiboKeywordSearchAst] 采集第 ${currentPageNum} 页，已找到 ${ast.items.length} 条`);
 
                     // 2️⃣ 发射分页进度
                     ast.currentPage = currentPageNum;
@@ -132,7 +115,6 @@ export class WeiboKeywordSearchAstVisitor {
             }
 
             // 第四步：完成采集
-            console.log(`[WeiboKeywordSearchAst] 搜索完成，共找到 ${ast.items.length} 条微博`);
             ast.state = 'success';
             observer.next(ast);  // 发射最终状态
 
