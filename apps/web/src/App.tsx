@@ -55,34 +55,20 @@ function WorkflowCanvasWrapper() {
       try {
         // 获取 URL 参数
         const urlParams = new URLSearchParams(window.location.search)
-        const name = urlParams.get('name') || '未命名工作流'
+        const name = urlParams.get('name') || 'default'
         setWorkflowName(name)
-
-        console.log('初始化工作流', { name })
 
         // 尝试从后端加载工作流
         const controller = root.get<WorkflowController>(WorkflowController)
         const workflowData = await controller.getWorkflow({ name })
 
         if (workflowData) {
-          // 工作流存在，反序列化
-          console.log('找到已存在的工作流', workflowData)
-
-          const ast = new WorkflowGraphAst()
-          ast.id = workflowData.id
-          ast.name = workflowData.name
-          ast.nodes = workflowData.nodes.map(nodeJson => fromJson(nodeJson) as Ast)
-          ast.edges = workflowData.edges
-          ast.viewport = workflowData.viewport  // ← 恢复 viewport 状态
-
-          setNode(toJson(ast))
+          setNode(fromJson<WorkflowGraphAst>(workflowData))
         } else {
           // 工作流不存在，创建新的空白工作流
           console.log('工作流不存在，创建新的空白工作流', { name })
-
           const ast = new WorkflowGraphAst()
           ast.name = name
-
           setNode(toJson(ast))
         }
       } catch (err: any) {

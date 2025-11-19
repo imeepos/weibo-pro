@@ -81,12 +81,9 @@ export function WorkflowCanvas({
 
   // 使用 CanvasState 集中管理所有状态
   const {
-    isRunning,
     setIsRunning,
-    isSaving,
     setIsSaving,
     shareDialog,
-    openShareDialog,
     closeShareDialog,
     subWorkflowModal,
     openSubWorkflowModal,
@@ -103,7 +100,7 @@ export function WorkflowCanvas({
   } = useCanvasState()
 
   // 使用 WorkflowOperations 管理业务逻辑
-  const { runNode, runWorkflow, saveWorkflow, saveSubWorkflow } = useWorkflowOperations(workflow, {
+  const { runNode, saveWorkflow, saveSubWorkflow } = useWorkflowOperations(workflow, {
     onShowToast: showToast,
     onSetRunning: setIsRunning,
     onSetSaving: setIsSaving,
@@ -265,7 +262,6 @@ export function WorkflowCanvas({
     if (!clipboard.hasClipboard) return
 
     // 获取画布中心位置作为粘贴位置
-    const viewportCenter = { x: window.innerWidth / 2, y: window.innerHeight / 2 }
     const flowPosition = { x: 100, y: 100 } // 默认位置，实际应该用 screenToFlowPosition
 
     clipboard.pasteNodes(flowPosition, (newNodes, newEdges) => {

@@ -1,7 +1,7 @@
 import { root, Type } from "@sker/core";
 import { Ast } from "./ast";
 import { INode } from "./types";
-import { NODE, INPUT, OUTPUT } from "./decorator";
+import { NODE, INPUT, OUTPUT, STATE } from "./decorator";
 
 export type NodeJsonPayload = Omit<Partial<INode>, 'type'> & Record<string, unknown> & {
     type: string;
@@ -32,6 +32,21 @@ function applyInputData<T extends object>(instance: T, source: Record<string, un
 function applyOutputData<T extends object>(instance: T, source: Record<string, unknown>): T {
     const ctor = (instance as any).constructor as Type<any>;
     const outputs = root.get(OUTPUT);
+    const host = instance as Record<string | symbol, unknown>;
+
+    outputs.filter(it => it.target === ctor).forEach(field => {
+        const value = source[field.propertyKey as string];
+        if (value !== undefined) {
+            host[field.propertyKey] = value;
+        }
+    });
+
+    return instance;
+}
+
+function applyStateData<T extends object>(instance: T, source: Record<string, unknown>): T {
+    const ctor = (instance as any).constructor as Type<any>;
+    const outputs = root.get(STATE);
     const host = instance as Record<string | symbol, unknown>;
 
     outputs.filter(it => it.target === ctor).forEach(field => {
@@ -91,6 +106,7 @@ export function fromJson<T extends object = any>(json: any): T {
 
     applyInputData(instance, source);
     applyOutputData(instance, source);
+    applyStateData(instance, source);
 
     if (type) Reflect.set(instance, 'type', type);
     if (id) Reflect.set(instance, 'id', id);
