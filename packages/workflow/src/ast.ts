@@ -1,4 +1,4 @@
-import { Input, Node, Output } from "./decorator";
+import { Input, Node, Output, State } from "./decorator";
 import { IAstStates, IEdge, INode, IControlEdge, isControlEdge, IDataEdge } from "./types";
 import { generateId } from "./utils";
 import { ErrorSerializer, SerializedError } from "@sker/core";
@@ -51,10 +51,13 @@ export class WorkflowGraphAst extends Ast {
     @Input({ title: "名称", type: 'text' })
     name: string | undefined;
 
-    @Input({ title: "节点列表" })
+    @State({ title: "节点列表" })
     nodes: INode[] = [];
 
-    @Input({ title: "边列表" })
+    @Input()
+    start: INode[] = [];
+
+    @State({ title: "边列表" })
     edges: IEdge[] = [];
 
     @Input({ title: '上下文' })
@@ -63,10 +66,10 @@ export class WorkflowGraphAst extends Ast {
     @Output({ title: '执行结果' })
     results: any[] = [];
 
-    @Output({ title: '正在执行的节点' })
+    @State({ title: '正在执行的节点' })
     currentNodes: INode[] = [];
 
-    @Output({ title: '下一步执行的节点' })
+    @State({ title: '下一步执行的节点' })
     nextNodes: INode[] = [];
 
     /**
