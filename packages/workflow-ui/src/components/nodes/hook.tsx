@@ -11,5 +11,7 @@ export function useRender(ast: Ast) {
             const render = Reflect.get(instance, method.property)
             return render(ast);
         }
+
+        return <div>not found</div>
     }, [ast])
 }

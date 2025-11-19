@@ -1,71 +1,8 @@
 import { Injectable } from "@sker/core";
 import { Render, WorkflowGraphAst, INode, IEdge } from "@sker/workflow";
-import React, { useMemo, useState, useRef, useEffect } from "react";
-import { Edit, Workflow } from "lucide-react";
+import React, { useMemo } from "react";
+import { Workflow } from "lucide-react";
 
-const EditableName = ({ value, onChange }: { value: string; onChange: (name: string) => void }) => {
-    const [isEditing, setIsEditing] = useState(false);
-    const [localValue, setLocalValue] = useState(value);
-    const inputRef = useRef<HTMLInputElement>(null);
-
-    useEffect(() => {
-        if (isEditing && inputRef.current) {
-            inputRef.current.focus();
-            inputRef.current.select();
-        }
-    }, [isEditing]);
-
-    const handleSave = () => {
-        const trimmed = localValue.trim();
-        if (trimmed && trimmed !== value) {
-            onChange(trimmed);
-        }
-        setIsEditing(false);
-    };
-
-    const handleCancel = () => {
-        setLocalValue(value);
-        setIsEditing(false);
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            handleSave();
-        } else if (e.key === 'Escape') {
-            e.preventDefault();
-            handleCancel();
-        }
-    };
-
-    if (isEditing) {
-        return (
-            <input
-                ref={inputRef}
-                type="text"
-                value={localValue}
-                onChange={(e) => setLocalValue(e.target.value)}
-                onBlur={handleSave}
-                onKeyDown={handleKeyDown}
-                className="w-full px-1 py-0.5 text-slate-200 font-medium text-xs bg-slate-700 border border-slate-500 rounded outline-none"
-                onClick={(e) => e.stopPropagation()}
-            />
-        );
-    }
-
-    return (
-        <div
-            className="text-slate-200 font-medium truncate cursor-text hover:text-slate-100"
-            onClick={(e) => {
-                e.stopPropagation();
-                setIsEditing(true);
-            }}
-            title="点击编辑名称"
-        >
-            {value || '未命名工作流'}
-        </div>
-    );
-};
 
 const Thumbnail = ({ nodes, edges }: { nodes: INode[]; edges: IEdge[] }) => {
     const bounds = useMemo(() => {
@@ -158,28 +95,9 @@ const WorkflowGraphComponent: React.FC<{ ast: WorkflowGraphAst }> = ({ ast }) =>
         );
     };
 
-    const handleNameChange = (newName: string) => {
-        ast.name = newName;
-    };
-
     return (
-        <div className="space-y-2 text-xs">
-            {/* 名称 */}
-            <EditableName
-                value={ast.name || ''}
-                onChange={handleNameChange}
-            />
-
-            {/* 缩略图 */}
+        <div className="space-y-2 text-xs" onClick={handleEdit}>
             <Thumbnail nodes={ast.nodes} edges={ast.edges} />
-
-            <button
-                onClick={handleEdit}
-                className="flex items-center gap-1.5 px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-200 text-[11px] transition w-full justify-center"
-            >
-                <Edit className="h-3 w-3" />
-                <span>编辑工作流</span>
-            </button>
         </div>
     );
 };

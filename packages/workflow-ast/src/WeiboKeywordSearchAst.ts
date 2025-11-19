@@ -10,14 +10,17 @@ export class WeiboKeywordSearchAst extends Ast {
     @Input({ title: '开始日期', type: 'date' })
     startDate: Date = new Date()
 
-    @Input({ title: '结束日期', type: 'date' })
+    @State({ title: '结束日期', type: 'date' })
     endDate: Date = new Date();
 
-    @Input({ title: '页码', type: 'number' })
+    @State({ title: '页码', type: 'number' })
     page: number = 1;
 
-    @Output({ title: '博文列表' })
-    items: { uid: string, mblogid: string }[] = [];
+    @Output({ title: '用户id' })
+    uid: string = ``
+
+    @Output({ title: '帖子id' })
+    mblogid: string = ``
 
     @Output({ title: '是否结束' })
     isEnd: boolean = false;

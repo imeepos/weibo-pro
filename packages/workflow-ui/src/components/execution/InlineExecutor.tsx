@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { Ast } from '@sker/workflow'
-import { ExecutorManager } from '../../execution/executor-registry'
 import { cn } from '../../utils/cn'
 
 interface InlineExecutorProps {
@@ -52,24 +51,10 @@ export const InlineExecutor: React.FC<InlineExecutorProps> = ({
     setError(null)
 
     try {
-      const executionResult = await ExecutorManager.executeNode(ast, {
-        onStateChange: (state, error) => {
-          if (state === 'fail' && error) {
-            setError(error)
-            onError?.(error)
-          }
-        },
-        onProgress: (currentProgress, message) => {
-          setProgress(currentProgress)
-          setStatusMessage(message || '')
-        },
-        onResult: (resultData) => {
-          setResult(ast) // AST本身会被更新
-        }
-      })
+      
 
-      setResult(executionResult)
-      onComplete?.(executionResult)
+      // setResult(executionResult)
+      // onComplete?.(executionResult)
 
     } catch (err) {
       const executionError = err instanceof Error ? err : new Error(String(err))

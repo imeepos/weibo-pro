@@ -10,6 +10,9 @@ export class PostContextCollectorAst extends Ast {
   @Input({ title: '帖子ID' })
   postId: string = '';
 
+  @Input({ isMulti: true, title: '开始' })
+  canStart: boolean[] = [];
+
   @Output({ title: '帖子实体' })
   post!: WeiboPostEntity;
 

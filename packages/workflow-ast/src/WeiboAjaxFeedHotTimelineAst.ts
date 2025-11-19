@@ -31,5 +31,8 @@ export class WeiboAjaxFeedHotTimelineAst extends Ast {
     @Output({ title: '用户id' })
     uid: string = ``;
 
+    @Output({ title: '结束' })
+    is_end: boolean = false;
+
     type: 'WeiboAjaxFeedHotTimelineAst' = 'WeiboAjaxFeedHotTimelineAst';
 }

@@ -29,7 +29,6 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
                 const body = await this.fetchComments(ast);
 
                 const entities = await this.saveComments(body);
-                ast.entities = entities;
 
                 console.log(`[WeiboAjaxStatusesCommentAstVisitor] 共${entities.length}个`);
 

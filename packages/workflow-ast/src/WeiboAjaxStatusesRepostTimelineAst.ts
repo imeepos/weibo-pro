@@ -12,6 +12,9 @@ export class WeiboAjaxStatusesRepostTimelineAst extends Ast {
     @State({ title: "页码" })
     page: number = 1;
 
+    @Output({ title: '结束' })
+    is_end: boolean = false;
+
     type: `WeiboAjaxStatusesRepostTimelineAst` = `WeiboAjaxStatusesRepostTimelineAst`
 
 }

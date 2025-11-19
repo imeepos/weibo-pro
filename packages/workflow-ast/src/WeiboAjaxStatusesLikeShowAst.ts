@@ -20,5 +20,8 @@ export class WeiboAjaxStatusesLikeShowAst extends Ast {
     @State({ title: "态度启用" })
     attitude_enable: number = 1;
 
+    @Output({ title: '结束' })
+    is_end: boolean = false;
+
     type: `WeiboAjaxStatusesLikeShowAst` = `WeiboAjaxStatusesLikeShowAst`
 }

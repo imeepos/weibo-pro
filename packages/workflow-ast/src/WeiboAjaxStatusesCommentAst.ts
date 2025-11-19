@@ -1,5 +1,5 @@
 import { Ast, Input, Node, Output, State } from "@sker/workflow";
-import type {WeiboCommentEntity} from '@sker/entities'
+import type { WeiboCommentEntity } from '@sker/entities'
 
 
 @Node({ title: "微博评论" })
@@ -29,6 +29,9 @@ export class WeiboAjaxStatusesCommentAst extends Ast {
 
     @State({ title: "下一最大ID" })
     next_max_id: number = 0;
+
+    @Output({ title: '结束' })
+    is_end: boolean = false;
 
     type: `WeiboAjaxStatusesCommentAst` = `WeiboAjaxStatusesCommentAst`
 }

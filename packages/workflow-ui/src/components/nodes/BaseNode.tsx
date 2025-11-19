@@ -105,7 +105,7 @@ export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNode>) =
   return (
     <div
       className={cn(
-        'flex flex-col rounded-2xl border-[2px]',
+        'flex flex-col rounded-2xl border-[2px] relative',
         'group relative pb-1 shadow-xs rounded-[15px] w-[240px] bg-workflow-block-bg hover:shadow-lg',
         'cursor-move select-none'
       )}
@@ -124,7 +124,6 @@ export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNode>) =
           {metadata.title || data.type}
         </div>
       </div>
-      {CustomRender}
       {/* 渲染输入输出端口 */}
       <div className="flex flex-col gap-1 mt-2">
         {/* 左侧部分 显示输入端口 */}
@@ -143,6 +142,8 @@ export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNode>) =
             offsetTop={0}
           />
         ))}
+
+        {CustomRender}
       </div>
     </div>
   )
