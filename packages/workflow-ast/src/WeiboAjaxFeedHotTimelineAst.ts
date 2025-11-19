@@ -25,15 +25,11 @@ export class WeiboAjaxFeedHotTimelineAst extends Ast {
     @State({ title: "刷新" })
     refresh: number = 1;
 
-    @Output({
-        title: '帖子',
-        type: 'object',
-        properties: {
-            mid: { type: 'string' },
-            uid: { type: 'string' }
-        }
-    })
-    output?: { mid: string, uid: string }
+    @Output({ title: '帖子短id' })
+    mblogid: string = ``;
+
+    @Output({ title: '用户id' })
+    uid: string = ``;
 
     type: 'WeiboAjaxFeedHotTimelineAst' = 'WeiboAjaxFeedHotTimelineAst';
 }

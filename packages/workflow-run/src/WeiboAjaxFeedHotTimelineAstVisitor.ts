@@ -1,6 +1,6 @@
 import { Injectable } from "@sker/core";
 import { WeiboAccountService } from "./weibo-account.service";
-import { Handler, INode } from '@sker/workflow'
+import { Handler, INode, toJson } from '@sker/workflow'
 import { WeiboAjaxFeedHotTimelineAst, WeiboAjaxStatusesShowAst } from '@sker/workflow-ast'
 import { useEntityManager, WeiboPostEntity, WeiboUserEntity } from "@sker/entities";
 import { WeiboApiClient } from "./weibo-api-client.base";
@@ -56,10 +56,11 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
                     const posts = statuses.map(item => m.create(WeiboPostEntity, item as any));
                     await m.upsert(WeiboPostEntity, posts as any[], ['id']);
                     posts.map(post => {
-                        const ast = new WeiboAjaxStatusesShowAst()
-                        ast.mblogid = post.mblogid;
-                        ast.uid = post.user.
-                    })
+                        const json = toJson(ast) as WeiboAjaxFeedHotTimelineAst
+                        json.mblogid = post.mblogid;
+                        json.uid = post.user.idstr;
+                        obs.next(json)
+                    });
                     console.log(`[WeiboAjaxFeedHotTimelineAstVisitor] 成功入库 ${posts.length} 条微博，${users.length} 个用户`);
                 });
 
