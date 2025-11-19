@@ -72,3 +72,4 @@ export { ErrorSerializer, type SerializedError } from './error-serializer';
 export * from './root';
 export * from './controller';
 export * from './logger';
+export * from './error-handler';
