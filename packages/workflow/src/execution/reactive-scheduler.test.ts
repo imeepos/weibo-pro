@@ -10,8 +10,16 @@ import { map } from 'rxjs/operators';
 // Mock executeAst
 vi.mock('../executor', () => ({
     executeAst: vi.fn((node: INode, ctx: any) => {
-        node.state = 'success';
-        return of(node);
+        // 统一流式输出模式：先发射 emitting，再发射 success
+        return new Observable(obs => {
+            // 克隆对象避免引用问题
+            const emittingNode = { ...node, state: 'emitting' as const };
+            obs.next(emittingNode);
+
+            const successNode = { ...node, state: 'success' as const };
+            obs.next(successNode);
+            obs.complete();
+        });
     })
 }));
 
@@ -79,8 +87,14 @@ describe('ReactiveScheduler', () => {
 
         // Reset executeAst mock
         vi.mocked(executeAst).mockImplementation((node: INode, ctx: any) => {
-            node.state = 'success';
-            return of(node);
+            return new Observable(obs => {
+                const emittingNode = { ...node, state: 'emitting' as const };
+                obs.next(emittingNode);
+
+                const successNode = { ...node, state: 'success' as const };
+                obs.next(successNode);
+                obs.complete();
+            });
         });
     });
 
@@ -354,13 +368,18 @@ describe('ReactiveScheduler', () => {
 
             // 让 B 节点执行失败
             vi.mocked(executeAst).mockImplementation((node: INode, ctx: any) => {
-                if (node.id === 'B') {
-                    node.state = 'fail';
-                    node.error = new Error('Test error');
-                } else {
-                    node.state = 'success';
-                }
-                return of(node);
+                return new Observable(obs => {
+                    if (node.id === 'B') {
+                        const failNode = { ...node, state: 'fail' as const, error: new Error('Test error') };
+                        obs.next(failNode);
+                    } else {
+                        const emittingNode = { ...node, state: 'emitting' as const };
+                        obs.next(emittingNode);
+                        const successNode = { ...node, state: 'success' as const };
+                        obs.next(successNode);
+                    }
+                    obs.complete();
+                });
             });
 
             const ast = createWorkflowGraphAst({
@@ -415,11 +434,20 @@ describe('ReactiveScheduler', () => {
 
             // Mock executeAst 返回带有 hasNext 属性的节点
             vi.mocked(executeAst).mockImplementation((node: INode, ctx: any) => {
-                node.state = 'success';
-                if (node.id === 'A') {
-                    (node as any).hasNext = true;
-                }
-                return of(node);
+                return new Observable(obs => {
+                    const emittingNode = { ...node, state: 'emitting' as const };
+                    if (node.id === 'A') {
+                        (emittingNode as any).hasNext = true;
+                    }
+                    obs.next(emittingNode);
+
+                    const successNode = { ...node, state: 'success' as const };
+                    if (node.id === 'A') {
+                        (successNode as any).hasNext = true;
+                    }
+                    obs.next(successNode);
+                    obs.complete();
+                });
             });
 
             const ast = createWorkflowGraphAst({
@@ -446,11 +474,20 @@ describe('ReactiveScheduler', () => {
 
             // A 节点的 hasNext 为 false
             vi.mocked(executeAst).mockImplementation((node: INode, ctx: any) => {
-                node.state = 'success';
-                if (node.id === 'A') {
-                    (node as any).hasNext = false;
-                }
-                return of(node);
+                return new Observable(obs => {
+                    const emittingNode = { ...node, state: 'emitting' as const };
+                    if (node.id === 'A') {
+                        (emittingNode as any).hasNext = false;
+                    }
+                    obs.next(emittingNode);
+
+                    const successNode = { ...node, state: 'success' as const };
+                    if (node.id === 'A') {
+                        (successNode as any).hasNext = false;
+                    }
+                    obs.next(successNode);
+                    obs.complete();
+                });
             });
 
             const ast = createWorkflowGraphAst({
@@ -682,9 +719,11 @@ describe('ReactiveScheduler', () => {
             const nodes = [createTestNode('A')];
 
             vi.mocked(executeAst).mockImplementation((node: INode, ctx: any) => {
-                node.state = 'fail';
-                node.error = new Error('Test error');
-                return of(node);
+                return new Observable(obs => {
+                    const failNode = { ...node, state: 'fail' as const, error: new Error('Test error') };
+                    obs.next(failNode);
+                    obs.complete();
+                });
             });
 
             const ast = createWorkflowGraphAst({
@@ -850,13 +889,18 @@ describe('ReactiveScheduler', () => {
             const edges: IEdge[] = [];
 
             vi.mocked(executeAst).mockImplementation((node: INode, ctx: any) => {
-                if (node.id === 'A') {
-                    node.state = 'fail';
-                    node.error = new Error('A failed');
-                } else {
-                    node.state = 'success';
-                }
-                return of(node);
+                return new Observable(obs => {
+                    if (node.id === 'A') {
+                        const failNode = { ...node, state: 'fail' as const, error: new Error('A failed') };
+                        obs.next(failNode);
+                    } else {
+                        const emittingNode = { ...node, state: 'emitting' as const };
+                        obs.next(emittingNode);
+                        const successNode = { ...node, state: 'success' as const };
+                        obs.next(successNode);
+                    }
+                    obs.complete();
+                });
             });
 
             const ast = createWorkflowGraphAst({

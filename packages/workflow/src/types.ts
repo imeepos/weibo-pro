@@ -1,5 +1,10 @@
 // 抽象语法树的核心表达 - 万物皆为状态
-export type IAstStates = `pending` | `running` | `success` | `fail`;
+// - pending: 等待执行
+// - running: 执行中但未产生输出
+// - emitting: 正在发射数据（触发下游）
+// - success: 执行完成（不触发下游）
+// - fail: 执行失败
+export type IAstStates = `pending` | `running` | `emitting` | `success` | `fail`;
 
 // 状态数据的基础约束
 export interface INode extends Record<string, any> {

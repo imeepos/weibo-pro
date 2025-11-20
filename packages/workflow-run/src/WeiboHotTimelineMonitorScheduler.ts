@@ -1,6 +1,6 @@
 import { Injectable } from "@sker/core";
 import { WeiboAjaxFeedHotTimelineAst } from "@sker/workflow-ast";
-import { execute } from "@sker/workflow";
+import { executeAst } from "@sker/workflow";
 import { IncrementalPostDetector } from "./IncrementalPostDetector";
 import { RealTimePostPublisher } from "./RealTimePostPublisher";
 
@@ -123,7 +123,7 @@ export class WeiboHotTimelineMonitorScheduler {
       ast.refresh = 1; // 强制刷新
 
       // 执行抓取
-      const result = await execute(ast, {});
+      const result = await executeAst(ast, {});
 
       if (result.state === 'success') {
         await this.processMonitoringResult(result);

@@ -57,6 +57,7 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
                     const posts = statuses.map(item => m.create(WeiboPostEntity, item as any));
                     await m.upsert(WeiboPostEntity, posts as any[], ['id']);
                     posts.map(post => {
+                        ast.state = 'emitting';  // 流式输出：每条数据发射触发下游
                         ast.mblogid = post.mblogid;
                         ast.uid = post.user.idstr;
                         obs.next({ ...ast })
@@ -71,7 +72,7 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
             }
 
             console.log(`[WeiboAjaxFeedHotTimelineAstVisitor] 完成，共抓取 ${pageCount} 页数据`);
-            ast.state = 'success';
+            ast.state = 'success';  // 完成信号：不触发下游，仅更新工作流状态
             obs.next(ast)
             obs.complete()
         } catch (error) {

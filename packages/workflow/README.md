@@ -111,7 +111,6 @@ console.log(result.state); // 'success'
 ```
 Ast（基类）
 ├── WorkflowGraphAst     工作流图的容器节点
-├── ArrayIteratorAst     数组迭代协助节点
 └── CustomAst（用户定义）自定义业务节点
 ```
 

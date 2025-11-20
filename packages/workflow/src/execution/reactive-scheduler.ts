@@ -121,12 +121,13 @@ export class ReactiveScheduler {
      * 创建入口节点流（无上游依赖）
      *
      * 优雅设计:
-     * - 使用 refCount 防止内存泄漏
+     * - 使用 shareReplay 缓存发射值（emitting + success）
      * - 多个下游订阅时共享执行结果
+     * - bufferSize: 2 确保 emitting 和 success 都能被重播
      */
     private createEntryNodeStream(node: INode, ctx: any): Observable<INode> {
         return this.executeNode(node, ctx).pipe(
-            shareReplay({ bufferSize: 1, refCount: true })
+            shareReplay({ bufferSize: 2, refCount: true })
         );
     }
 
@@ -154,7 +155,8 @@ export class ReactiveScheduler {
 
             // 统一边处理：条件检查 + 数据映射
             return sourceStream.pipe(
-                filter(ast => ast.state === 'success'),
+                // 【流式输出】只有 emitting 状态触发下游，success 不触发
+                filter(ast => ast.state === 'emitting'),
                 // 如果有条件，检查条件
                 filter(ast => {
                     if (!edge.condition) return true;
@@ -191,7 +193,7 @@ export class ReactiveScheduler {
                 failedNode.error = error;
                 return of(failedNode);
             }),
-            shareReplay({ bufferSize: 1, refCount: true })
+            shareReplay({ bufferSize: 2, refCount: true })  // 缓存 emitting + success
         );
     }
 
@@ -445,6 +447,7 @@ export class ReactiveScheduler {
                 }
 
                 // 判断完成状态
+                // 注意：emitting/running 状态视为未完成，工作流保持 running
                 const allCompleted = ast.nodes.every(n =>
                     n.state === 'success' || n.state === 'fail'
                 );
