@@ -7,6 +7,7 @@ import type { Position } from '@xyflow/react'
 export const NODE_STATE_COLORS: Record<IAstStates, string> = {
   pending: '#94a3b8',   // slate-400
   running: '#3b82f6',   // blue-500
+  emitting: '#a855f7',  // purple-500
   success: '#22c55e',   // green-500
   fail: '#ef4444',      // red-500
 }
@@ -17,6 +18,7 @@ export const NODE_STATE_COLORS: Record<IAstStates, string> = {
 export const NODE_STATE_LABELS: Record<IAstStates, string> = {
   pending: '待执行',
   running: '执行中',
+  emitting: '发送中',
   success: '成功',
   fail: '失败',
 }

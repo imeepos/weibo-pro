@@ -1,3 +1,5 @@
+import { WeiboAccountService, WeiboLoginSuccessMessage } from './services/weibo-account.service'
+
 export { WeiboAjaxFeedHotTimelineAstVisitor } from './WeiboAjaxFeedHotTimelineAstVisitor'
 export { WeiboAjaxFriendshipsAstVisitor } from './WeiboAjaxFriendshipsAstVisitor'
 export { WeiboAjaxProfileInfoAstVisitor } from './WeiboAjaxProfileInfoAstVisitor'
@@ -11,3 +13,9 @@ export { PostContextCollectorVisitor } from './PostContextCollectorVisitor'
 export { PostNLPAnalyzerVisitor } from './PostNLPAnalyzerVisitor'
 export { EventAutoCreatorVisitor } from './EventAutoCreatorVisitor'
 export { WeiboLoginAstVisitor } from './WeiboLoginAstVisitor'
+
+
+export {
+    WeiboAccountService,
+    type WeiboLoginSuccessMessage
+}

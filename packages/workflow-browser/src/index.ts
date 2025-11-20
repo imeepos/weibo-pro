@@ -12,8 +12,6 @@ import './WeiboAjaxFeedHotTimelineBrowserVisitor';
 import './PostContextCollectorBrowserVisitor';
 import './PostNLPAnalyzerBrowserVisitor';
 import './EventAutoCreatorBrowserVisitor';
-import './BatchPushToMQBrowserVisitor';
-import './CodeExecutorBrowserVisitor';
 import './WorkflowGraphBrowserVisitor';
 import "./WeiboUserDetectionAstVisitor";
 
@@ -33,10 +31,8 @@ export { WeiboAjaxFeedHotTimelineBrowserVisitor } from './WeiboAjaxFeedHotTimeli
 export { PostContextCollectorBrowserVisitor } from './PostContextCollectorBrowserVisitor';
 export { PostNLPAnalyzerBrowserVisitor } from './PostNLPAnalyzerBrowserVisitor';
 export { EventAutoCreatorBrowserVisitor } from './EventAutoCreatorBrowserVisitor';
-export { BatchPushToMQBrowserVisitor } from './BatchPushToMQBrowserVisitor';
 
 // 基础节点浏览器端执行器
-export { CodeExecutorBrowserVisitor } from './CodeExecutorBrowserVisitor';
 export { WorkflowGraphBrowserVisitor } from './WorkflowGraphBrowserVisitor';
 // 类型导出
 export type { WeiboLoginEvent, WeiboLoginEventType } from './WeiboLoginBrowserVisitor';
