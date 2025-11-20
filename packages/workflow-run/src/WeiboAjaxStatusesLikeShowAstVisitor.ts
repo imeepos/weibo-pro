@@ -62,11 +62,13 @@ export class WeiboAjaxStatusesLikeShowAstVisitor extends WeiboApiClient {
 
                     ast.state = 'success';
                     obs.next({ ...ast });
+                    obs.complete()
                 } catch (error) {
                     console.error(`[WeiboAjaxStatusesLikeShowAstVisitor] mid: ${ast.mid}`, error);
                     ast.state = 'fail';
                     ast.setError(error);
                     obs.next({ ...ast });
+                    obs.complete()
                 }
             };
             handle();

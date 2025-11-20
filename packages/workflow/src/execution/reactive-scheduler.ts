@@ -3,7 +3,7 @@ import { INode, IEdge, EdgeMode, hasDataMapping } from '../types';
 import { DataFlowManager } from './data-flow-manager';
 import { executeAst } from '../executor';
 import { Observable, of, EMPTY, merge, combineLatest, zip, asyncScheduler } from 'rxjs';
-import { map, catchError, takeWhile, concatMap, filter, withLatestFrom, shareReplay, subscribeOn, switchMap } from 'rxjs/operators';
+import { map, catchError, takeWhile, concatMap, filter, withLatestFrom, shareReplay, subscribeOn, switchMap, finalize } from 'rxjs/operators';
 import { Injectable, root } from '@sker/core';
 import { findNodeType, INPUT } from '../decorator';
 
@@ -225,6 +225,8 @@ export class ReactiveScheduler {
         }
 
         return sourceStream.pipe(
+            // 持续接收直到上游完成
+            takeWhile(ast => ast.state !== 'success' && ast.state !== 'fail'),
             // 只响应 emitting 状态
             filter(ast => ast.state === 'emitting'),
             // 一次性处理该源的所有边
@@ -579,22 +581,15 @@ export class ReactiveScheduler {
                 if (nodeIndex !== -1) {
                     ast.nodes[nodeIndex] = updatedNode;
                 }
-
-                // 判断完成状态
-                // 注意：emitting/running 状态视为未完成，工作流保持 running
-                const allCompleted = ast.nodes.every(n =>
-                    n.state === 'success' || n.state === 'fail'
-                );
-                const hasFailures = ast.nodes.some(n => n.state === 'fail');
-
-                ast.state = allCompleted
-                    ? (hasFailures ? 'fail' : 'success')
-                    : 'running';
-
+                // 保持 running 状态直到所有流完成
+                ast.state = 'running';
                 return ast;
             }),
-            // 持续发射直到完成
-            takeWhile(graph => graph.state === 'running', true),
+            // 所有流完成后判定最终状态
+            finalize(() => {
+                const hasFailures = ast.nodes.some(n => n.state === 'fail');
+                ast.state = hasFailures ? 'fail' : 'success';
+            }),
             catchError(error => {
                 ast.state = 'fail';
                 ast.setError(error);

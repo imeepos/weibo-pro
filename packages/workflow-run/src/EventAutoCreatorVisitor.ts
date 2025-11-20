@@ -355,11 +355,13 @@ export class EventAutoCreatorVisitor {
 
           ast.state = 'success';
           obs.next(ast);
+          obs.complete()
         } catch (error) {
           ast.state = 'fail';
           ast.setError(error, process.env.NODE_ENV === 'development');
           console.error(`[EventAutoCreatorVisitor] postId: ${ast.post.id}`, error);
           obs.next(ast);
+          obs.complete()
         }
       };
       handler();

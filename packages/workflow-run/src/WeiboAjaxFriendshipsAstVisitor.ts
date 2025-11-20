@@ -36,11 +36,13 @@ export class WeiboAjaxFriendshipsAstVisitor extends WeiboApiClient {
 
                     ast.state = 'success';
                     obs.next({ ...ast });
+                    obs.complete()
                 } catch (error) {
                     console.error(`[WeiboAjaxFriendshipsAstVisitor] uid: ${ast.uid}`, error);
                     ast.state = 'fail';
                     ast.setError(error);
                     obs.next({ ...ast });
+                    obs.complete()
                 }
             };
             handler();

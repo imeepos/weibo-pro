@@ -110,6 +110,7 @@ export class WeiboKeywordSearchAstVisitor {
             // 第四步：完成采集
             ast.state = 'success';
             obs.next({ ...ast });
+            obs.complete()
         } catch (error) {
             // 处理登录失效错误
             if (error instanceof Error && error.message === 'LOGIN_EXPIRED') {
@@ -130,6 +131,7 @@ export class WeiboKeywordSearchAstVisitor {
                 ast.setError(new Error(String(error)));
             }
             obs.next({ ...ast });
+            obs.complete()
         }
     }
 

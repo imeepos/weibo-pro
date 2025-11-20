@@ -94,11 +94,13 @@ export class PostNLPAnalyzerVisitor {
 
           ast.state = 'success';
           obs.next({ ...ast });
+          obs.complete()
         } catch (error) {
           ast.state = 'fail';
           ast.setError(error, process.env.NODE_ENV === 'development');
           console.error(`[PostNLPAnalyzerVisitor] postId: ${ast.post.id}`, error);
           obs.next({ ...ast });
+          obs.complete()
         }
       };
       handler();

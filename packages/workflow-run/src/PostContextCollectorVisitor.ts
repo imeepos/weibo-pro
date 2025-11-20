@@ -60,11 +60,13 @@ export class PostContextCollectorVisitor {
 
           ast.state = 'success';
           obs.next({ ...ast });
+          obs.complete()
         } catch (error) {
           ast.state = 'fail';
           ast.setError(error, process.env.NODE_ENV === 'development');
           console.error(`[PostContextCollectorVisitor] postId: ${ast.postId}`, error);
           obs.next({ ...ast });
+          obs.complete()
         }
       };
       handler();
