@@ -1,6 +1,7 @@
 import { Injectable } from '@sker/core';
-import { Handler } from '@sker/workflow';
+import { Handler, INode } from '@sker/workflow';
 import { EventAutoCreatorAst } from '@sker/workflow-ast';
+import { Observable } from 'rxjs';
 import {
   EventCategoryEntity,
   EventEntity,
@@ -199,161 +200,170 @@ export class EventAutoCreatorVisitor {
   }
 
   @Handler(EventAutoCreatorAst)
-  async visit(ast: EventAutoCreatorAst, _ctx: any) {
-    ast.state = 'running';
+  visit(ast: EventAutoCreatorAst, _ctx: any): Observable<INode> {
+    return new Observable<INode>(obs => {
+      const handler = async () => {
+        try {
+          ast.state = 'running';
+          obs.next(ast);
 
-    try {
-      await useEntityManager(async (m) => {
-        let category = await m.findOne(EventCategoryEntity, {
-          where: { name: ast.nlpResult.event.type, status: 'active' },
-        });
-
-        // 宽容式处理：如果分类不存在，自动创建（即使 isNewCategory 为 false）
-        // 这样可以容忍 LLM 的误判或数据库状态不一致
-        if (!category) {
-          const maxSort = await m
-            .createQueryBuilder(EventCategoryEntity, 'c')
-            .select('MAX(c.sort)', 'max')
-            .getRawOne();
-
-          const code = this.generateCategoryCode(ast.nlpResult.event.type);
-
-          category = m.create(EventCategoryEntity, {
-            code,
-            name: ast.nlpResult.event.type,
-            description: `由 NLP 自动创建的分类`,
-            status: 'active',
-            sort: (maxSort?.max || 0) + 1,
-          });
-          category = await m.save(EventCategoryEntity, category);
-          console.log(
-            `[EventAutoCreatorVisitor] 自动创建分类: ${category.name} (code=${code}, isNewCategory=${ast.nlpResult.event.isNewCategory})`
-          );
-        }
-
-        const sentiment: SentimentScore = {
-          positive: ast.nlpResult.sentiment.positive_prob,
-          negative: ast.nlpResult.sentiment.negative_prob,
-          neutral: ast.nlpResult.sentiment.neutral_prob,
-        };
-
-        const eventTitle = ast.nlpResult.eventTitle ||
-          ast.post.text_raw.substring(0, 50).trim();
-
-        const eventDescription = ast.nlpResult.eventDescription ||
-          ast.post.text_raw.substring(0, 200).trim();
-
-        const existingEvent = await m.findOne(EventEntity, {
-          where: {
-            title: eventTitle,
-            category_id: category.id,
-          },
-        });
-
-        let event: EventEntity;
-
-        if (existingEvent) {
-          const updatedSentiment: SentimentScore = {
-            positive:
-              (existingEvent.sentiment.positive + sentiment.positive) / 2,
-            negative:
-              (existingEvent.sentiment.negative + sentiment.negative) / 2,
-            neutral: (existingEvent.sentiment.neutral + sentiment.neutral) / 2,
-          };
-
-          existingEvent.sentiment = updatedSentiment;
-          existingEvent.hotness = Number(existingEvent.hotness) + 1;
-
-          // 如果新的描述更详细，则更新描述
-          if (eventDescription.length > (existingEvent.description?.length || 0)) {
-            existingEvent.description = eventDescription;
-          }
-
-          // peak_at 将在统计信息更新后根据实际热度峰值确定
-          // 此处暂不更新，留给统计分析任务处理
-
-          event = await m.save(EventEntity, existingEvent);
-        } else {
-          const newEvent = m.create(EventEntity, {
-            title: eventTitle,
-            description: eventDescription,
-            category_id: category.id,
-            sentiment,
-            hotness: 1,
-            status: 'active',
-            seed_url: `https://weibo.com/${ast.post.user.id}/${ast.post.mblogid}`,
-            occurred_at: new Date(ast.post.created_at),
-            peak_at: new Date(ast.post.created_at), // 初始峰值时间即发生时间
-          });
-          event = await m.save(EventEntity, newEvent);
-        }
-
-        const nlpResult = m.create(PostNLPResultEntity, {
-          post_id: ast.post.id,
-          event_id: event.id,
-          sentiment: {
-            overall: ast.nlpResult.sentiment.overall,
-            confidence: ast.nlpResult.sentiment.confidence,
-            positive_prob: ast.nlpResult.sentiment.positive_prob,
-            negative_prob: ast.nlpResult.sentiment.negative_prob,
-            neutral_prob: ast.nlpResult.sentiment.neutral_prob,
-          },
-          keywords: ast.nlpResult.keywords,
-          event_type: ast.nlpResult.event,
-        });
-
-        const savedNlpResult = await m.save(PostNLPResultEntity, nlpResult);
-
-        // 处理标签
-        if (ast.nlpResult.tags && ast.nlpResult.tags.length > 0) {
-          for (const tagData of ast.nlpResult.tags) {
-            let tag = await m.findOne(EventTagEntity, {
-              where: { name: tagData.name },
+          await useEntityManager(async (m) => {
+            let category = await m.findOne(EventCategoryEntity, {
+              where: { name: ast.nlpResult.event.type, status: 'active' },
             });
 
-            if (!tag && tagData.isNew) {
-              tag = m.create(EventTagEntity, {
-                name: tagData.name,
-                type: tagData.type,
-                description: `由 NLP 自动创建的标签`,
-                usage_count: 0,
+            // 宽容式处理：如果分类不存在，自动创建（即使 isNewCategory 为 false）
+            // 这样可以容忍 LLM 的误判或数据库状态不一致
+            if (!category) {
+              const maxSort = await m
+                .createQueryBuilder(EventCategoryEntity, 'c')
+                .select('MAX(c.sort)', 'max')
+                .getRawOne();
+
+              const code = this.generateCategoryCode(ast.nlpResult.event.type);
+
+              category = m.create(EventCategoryEntity, {
+                code,
+                name: ast.nlpResult.event.type,
+                description: `由 NLP 自动创建的分类`,
+                status: 'active',
+                sort: (maxSort?.max || 0) + 1,
               });
-              tag = await m.save(EventTagEntity, tag);
-              console.log(`[EventAutoCreatorVisitor] 创建新标签: ${tag.name} (${tag.type})`);
+              category = await m.save(EventCategoryEntity, category);
+              console.log(
+                `[EventAutoCreatorVisitor] 自动创建分类: ${category.name} (code=${code}, isNewCategory=${ast.nlpResult.event.isNewCategory})`
+              );
             }
 
-            if (tag) {
-              const existingRelation = await m.findOne(EventTagRelationEntity, {
-                where: { event_id: event.id, tag_id: tag.id },
+            const sentiment: SentimentScore = {
+              positive: ast.nlpResult.sentiment.positive_prob,
+              negative: ast.nlpResult.sentiment.negative_prob,
+              neutral: ast.nlpResult.sentiment.neutral_prob,
+            };
+
+            const eventTitle = ast.nlpResult.eventTitle ||
+              ast.post.text_raw.substring(0, 50).trim();
+
+            const eventDescription = ast.nlpResult.eventDescription ||
+              ast.post.text_raw.substring(0, 200).trim();
+
+            const existingEvent = await m.findOne(EventEntity, {
+              where: {
+                title: eventTitle,
+                category_id: category.id,
+              },
+            });
+
+            let event: EventEntity;
+
+            if (existingEvent) {
+              const updatedSentiment: SentimentScore = {
+                positive:
+                  (existingEvent.sentiment.positive + sentiment.positive) / 2,
+                negative:
+                  (existingEvent.sentiment.negative + sentiment.negative) / 2,
+                neutral: (existingEvent.sentiment.neutral + sentiment.neutral) / 2,
+              };
+
+              existingEvent.sentiment = updatedSentiment;
+              existingEvent.hotness = Number(existingEvent.hotness) + 1;
+
+              // 如果新的描述更详细，则更新描述
+              if (eventDescription.length > (existingEvent.description?.length || 0)) {
+                existingEvent.description = eventDescription;
+              }
+
+              // peak_at 将在统计信息更新后根据实际热度峰值确定
+              // 此处暂不更新，留给统计分析任务处理
+
+              event = await m.save(EventEntity, existingEvent);
+            } else {
+              const newEvent = m.create(EventEntity, {
+                title: eventTitle,
+                description: eventDescription,
+                category_id: category.id,
+                sentiment,
+                hotness: 1,
+                status: 'active',
+                seed_url: `https://weibo.com/${ast.post.user.id}/${ast.post.mblogid}`,
+                occurred_at: new Date(ast.post.created_at),
+                peak_at: new Date(ast.post.created_at), // 初始峰值时间即发生时间
               });
+              event = await m.save(EventEntity, newEvent);
+            }
 
-              if (!existingRelation) {
-                const relation = m.create(EventTagRelationEntity, {
-                  event_id: event.id,
-                  tag_id: tag.id,
-                  relevance_score: 1.0,
-                  source: 'nlp',
+            const nlpResult = m.create(PostNLPResultEntity, {
+              post_id: ast.post.id,
+              event_id: event.id,
+              sentiment: {
+                overall: ast.nlpResult.sentiment.overall,
+                confidence: ast.nlpResult.sentiment.confidence,
+                positive_prob: ast.nlpResult.sentiment.positive_prob,
+                negative_prob: ast.nlpResult.sentiment.negative_prob,
+                neutral_prob: ast.nlpResult.sentiment.neutral_prob,
+              },
+              keywords: ast.nlpResult.keywords,
+              event_type: ast.nlpResult.event,
+            });
+
+            await m.save(PostNLPResultEntity, nlpResult);
+
+            // 处理标签
+            if (ast.nlpResult.tags && ast.nlpResult.tags.length > 0) {
+              for (const tagData of ast.nlpResult.tags) {
+                let tag = await m.findOne(EventTagEntity, {
+                  where: { name: tagData.name },
                 });
-                await m.save(EventTagRelationEntity, relation);
 
-                tag.usage_count += 1;
-                await m.save(EventTagEntity, tag);
+                if (!tag && tagData.isNew) {
+                  tag = m.create(EventTagEntity, {
+                    name: tagData.name,
+                    type: tagData.type,
+                    description: `由 NLP 自动创建的标签`,
+                    usage_count: 0,
+                  });
+                  tag = await m.save(EventTagEntity, tag);
+                  console.log(`[EventAutoCreatorVisitor] 创建新标签: ${tag.name} (${tag.type})`);
+                }
+
+                if (tag) {
+                  const existingRelation = await m.findOne(EventTagRelationEntity, {
+                    where: { event_id: event.id, tag_id: tag.id },
+                  });
+
+                  if (!existingRelation) {
+                    const relation = m.create(EventTagRelationEntity, {
+                      event_id: event.id,
+                      tag_id: tag.id,
+                      relevance_score: 1.0,
+                      source: 'nlp',
+                    });
+                    await m.save(EventTagRelationEntity, relation);
+
+                    tag.usage_count += 1;
+                    await m.save(EventTagEntity, tag);
+                  }
+                }
               }
             }
-          }
+            // 更新事件统计信息（hourly 粒度）
+            await this.updateEventStatistics(m, event, ast.post, sentiment);
+          });
+
+          ast.state = 'emitting';
+          obs.next(ast);
+
+          ast.state = 'success';
+          obs.next(ast);
+        } catch (error) {
+          ast.state = 'fail';
+          ast.setError(error, process.env.NODE_ENV === 'development');
+          console.error(`[EventAutoCreatorVisitor] postId: ${ast.post.id}`, error);
+          obs.next(ast);
         }
-
-        // 更新事件统计信息（hourly 粒度）
-        await this.updateEventStatistics(m, event, ast.post, sentiment);
-      });
-
-      ast.state = 'success';
-    } catch (error) {
-      ast.state = 'fail';
-      ast.setError(error, process.env.NODE_ENV === 'development');
-      console.error(`[EventAutoCreatorVisitor] postId: ${ast.post.id}`, error);
-    }
-
-    return ast;
+      };
+      handler();
+      return () => obs.complete();
+    });
   }
 }

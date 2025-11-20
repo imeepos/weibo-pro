@@ -1,5 +1,5 @@
 import { Subscriber } from "rxjs";
-import { BrowserContext, Page, Cookie } from "playwright";
+import { BrowserContext, Page } from "playwright";
 import { WeiboLoginAst } from "@sker/workflow-ast";
 
 /**

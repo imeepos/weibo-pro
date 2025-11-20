@@ -1,9 +1,9 @@
 import { Injectable } from "@sker/core";
 import { useEntityManager, WeiboUserEntity } from "@sker/entities";
-import { WeiboAccountService } from "./weibo-account.service";
+import { WeiboAccountService } from "./services/weibo-account.service";
 import { Handler } from "@sker/workflow";
 import { WeiboAjaxProfileInfoAst } from "@sker/workflow-ast";
-import { WeiboApiClient } from "./weibo-api-client.base";
+import { WeiboApiClient } from "./services/weibo-api-client.base";
 
 export interface WeiboAjaxProfileInfoAstResponse {
     ok: number;

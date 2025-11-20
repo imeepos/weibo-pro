@@ -1,10 +1,10 @@
 import { Injectable } from "@sker/core";
 import { useEntityManager, WeiboCommentEntity, WeiboUserEntity } from "@sker/entities";
-import { WeiboAccountService } from "./weibo-account.service";
+import { WeiboAccountService } from "./services/weibo-account.service";
 import { Handler } from "@sker/workflow";
 import { WeiboAjaxStatusesCommentAst } from "@sker/workflow-ast";
-import { delay } from "./utils";
-import { WeiboApiClient } from "./weibo-api-client.base";
+import { delay } from "./services/utils";
+import { WeiboApiClient } from "./services/weibo-api-client.base";
 
 export interface WeiboAjaxStatusesComponentAstResponse {
     readonly ok: number

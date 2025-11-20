@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@sker/core";
-import { generateId, Handler } from "@sker/workflow";
+import { Handler } from "@sker/workflow";
 import { WeiboLoginAst } from "@sker/workflow-ast";
-import { WeiboAuthService } from "./weibo-auth.service";
+import { WeiboAuthService } from "./services/weibo-auth.service";
 import { Observable } from 'rxjs'
 
 /**

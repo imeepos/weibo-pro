@@ -1,9 +1,9 @@
 import { Injectable } from "@sker/core";
 import { useEntityManager, WeiboPostEntity, WeiboUserEntity } from "@sker/entities";
-import { WeiboAccountService } from "./weibo-account.service";
+import { WeiboAccountService } from "./services/weibo-account.service";
 import { Handler, INode } from "@sker/workflow";
 import { WeiboAjaxStatusesShowAst } from "@sker/workflow-ast";
-import { WeiboApiClient } from "./weibo-api-client.base";
+import { WeiboApiClient } from "./services/weibo-api-client.base";
 import { Observable } from "rxjs";
 
 export interface WeiboAjaxStatusesShowAstReponse extends WeiboPostEntity {
