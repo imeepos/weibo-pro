@@ -194,7 +194,7 @@ export class DataFlowManager {
      * - fromProperty: 'results' → map(ast => ast.results)
      * - fromProperty: 'currentItem.username' → map(ast => ast.currentItem.username)
      * - condition: { property: 'hasNext', value: true } → filter(ast => ast.hasNext === true)
-     * - toProperty: 'array' → map(value => ({ array: value }))
+     * - toProperty 由调用者处理，这里只提取值不包装
      */
     createEdgeOperator(edge: IEdge): OperatorFunction<any, any> {
         const operators: OperatorFunction<any, any>[] = [];
@@ -227,13 +227,8 @@ export class DataFlowManager {
             );
         }
 
-        // 3. toProperty: 数据包装
-        if (edge.toProperty) {
-            const toProperty = edge.toProperty;
-            operators.push(
-                map((value: any) => ({ [toProperty]: value }))
-            );
-        }
+        // 注意：toProperty 由 reactive-scheduler 的 mergeEdgeValues 处理
+        // 这里只负责提取值，不包装
 
         // 如果没有任何操作符，返回原值
         if (operators.length === 0) {
