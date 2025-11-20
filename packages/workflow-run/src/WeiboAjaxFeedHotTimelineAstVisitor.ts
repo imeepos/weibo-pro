@@ -69,6 +69,7 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
                 if (body.since_id) ast.since_id = body.since_id;
 
                 await delay();
+                break;
             }
 
             console.log(`[WeiboAjaxFeedHotTimelineAstVisitor] 完成，共抓取 ${pageCount} 页数据`);

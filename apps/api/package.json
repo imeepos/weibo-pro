@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
+    "main": "tsx src/dev.ts",
     "dev": "nest start --watch",
     "dev:debug": "nest start --watch --debug",
     "dev:legacy": "nest start --watch --preserveWatchOutput",
