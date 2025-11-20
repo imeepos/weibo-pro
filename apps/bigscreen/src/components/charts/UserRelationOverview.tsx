@@ -72,7 +72,7 @@ export const UserRelationOverview: React.FC<UserRelationOverviewProps> = ({
   if (loading) {
     return (
       <div
-        className={`glass-card flex items-center justify-center ${className}`}
+        className={`flex items-center justify-center ${className}`}
         style={{ height: `${height}px` }}
       >
         <div className="text-center">
@@ -87,7 +87,7 @@ export const UserRelationOverview: React.FC<UserRelationOverviewProps> = ({
   if (error) {
     return (
       <div
-        className={`glass-card flex items-center justify-center ${className}`}
+        className={`flex items-center justify-center ${className}`}
         style={{ height: `${height}px` }}
       >
         <div className="text-center text-muted-foreground">
@@ -107,7 +107,7 @@ export const UserRelationOverview: React.FC<UserRelationOverviewProps> = ({
   if (!networkData || networkData.nodes.length === 0) {
     return (
       <div
-        className={`glass-card flex items-center justify-center ${className}`}
+        className={`flex items-center justify-center ${className}`}
         style={{ height: `${height}px` }}
       >
         <div className="text-center text-muted-foreground">
@@ -120,7 +120,7 @@ export const UserRelationOverview: React.FC<UserRelationOverviewProps> = ({
 
   return (
     <div
-      className={`glass-card overflow-hidden ${className}`}
+      className={`overflow-hidden ${className}`}
       style={{ height: `${height}px` }}
     >
       {/* 纯可视化区域 - 无标题、无边框、无统计信息 */}

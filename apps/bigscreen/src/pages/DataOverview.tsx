@@ -69,31 +69,33 @@ const DataOverview: React.FC = () => {
       {/* 主要布局：两列结构 - 自适应高度 */}
       <div className="dashboard-main-content">
         {/* 左侧区域：占4列 - 指标和热点事件 */}
-        <div className="col-span-12 md:col-span-4 lg:col-span-4 flex flex-col gap-2 lg:gap-4 xl:gap-5 overflow-hidden">
+        <div className="col-span-4 flex flex-col gap-2 lg:gap-4 xl:gap-5 overflow-hidden">
           {/* 指标概览 - 由内部元素撑开高度 */}
           <div className="stats-overview-container overflow-hidden">
             <StatsOverview data={statsOverviewData} />
           </div>
           {/* 热点事件 - 自适应高度 */}
-          <div className="glass-card sentiment-overview-card flex-1 min-h-0 overflow-hidden px-4 py-4">
+          <div className="glass-card sentiment-overview-card flex-1 min-h-0 overflow-hidden px-4 py-4" style={{
+            height: "100% !important",
+            overflowY: "auto",
+          }}>
             <HotEventsList />
           </div>
         </div>
 
         {/* 右侧区域：占8列 - 地图和用户关系图 */}
-        <div className="col-span-12 md:col-span-4 lg:col-span-8 flex gap-2 lg:gap-4 xl:gap-5 overflow-hidden">
-          {/* 地图区域 */}
-          <div className="flex-1 glass-card p-2 lg:p-3 xl:p-4 sentiment-overview-card overflow-hidden flex flex-col" style={{ height: '400px' }}>
+        <div className="col-span-4 gap-2 lg:gap-4 xl:gap-5 overflow-hidden">
+          <div className="glass-card">
             <LocationHeatMap
               data={locationData}
-              title=""
             />
           </div>
+        </div>
 
-          {/* 用户关系概览区域 */}
-          <div className="glass-card w-[420px]">
+        <div className="col-span-4 gap-2 lg:gap-4 xl:gap-5 overflow-hidden flex flex-col">
+          <div className="glass-card">
             <SentimentOverview data={sentimentData} />
-            <EmotionCurveChart className="flex-1 min-h-0" />
+            <EmotionCurveChart className="flex-1 min-h-0 " />
           </div>
         </div>
       </div>
@@ -110,12 +112,7 @@ const DataOverview: React.FC = () => {
 
         {/* 情感分析 */}
         <div className="glass-card sentiment-overview-card min-h-0 overflow-hidden flex flex-col p-4">
-          <div className="card-content flex-1 min-h-0 flex flex-col overflow-hidden">
-            <UserRelationOverview
-              className="h-full"
-              height={400}
-            />
-          </div>
+          <UserRelationOverview />
         </div>
 
         {/* 事件类型分布 */}
