@@ -1,5 +1,5 @@
 import { WorkflowGraphAst } from '../ast';
-import { INode, IEdge, IAstStates, EdgeMode, isDataEdge, isControlEdge } from '../types';
+import { INode, IEdge, IAstStates, EdgeMode, hasCondition, hasDataMapping } from '../types';
 import { DataFlowManager } from './data-flow-manager';
 import { executeAst } from '../executor';
 import { Observable, of, EMPTY, merge, combineLatest, zip } from 'rxjs';
@@ -152,27 +152,21 @@ export class ReactiveScheduler {
                 throw new Error(`上游节点流未找到: ${edge.from} → ${node.id}`);
             }
 
-            // 区分数据边和控制边
-            if (isControlEdge(edge)) {
-                // 控制边：只传递执行信号（void）
-                return sourceStream.pipe(
-                    filter(ast => ast.state === 'success'),
-                    // 如果有条件，检查条件
-                    filter(ast => {
-                        if (!edge.condition) return true;
-                        const value = (ast as any)[edge.condition.property];
-                        return value === edge.condition.value;
-                    }),
-                    map(() => ({ edge, value: void 0 })) // 传递 void 信号
-                );
-            } else {
-                // 数据边：应用数据操作符（fromProperty/toProperty）
-                return sourceStream.pipe(
-                    filter(ast => ast.state === 'success'),
-                    this.dataFlowManager.createEdgeOperator(edge),
-                    map(value => ({ edge, value }))
-                );
-            }
+            // 统一边处理：条件检查 + 数据映射
+            return sourceStream.pipe(
+                filter(ast => ast.state === 'success'),
+                // 如果有条件，检查条件
+                filter(ast => {
+                    if (!edge.condition) return true;
+                    const value = (ast as any)[edge.condition.property];
+                    return value === edge.condition.value;
+                }),
+                // 如果有数据映射，应用数据操作符；否则传递空对象
+                hasDataMapping(edge)
+                    ? this.dataFlowManager.createEdgeOperator(edge)
+                    : map(() => ({})),
+                map(value => ({ edge, value }))
+            );
         });
 
         // 根据边模式组合上游流
@@ -259,10 +253,8 @@ export class ReactiveScheduler {
      * 检测边模式（优先级：ZIP > WITH_LATEST_FROM > COMBINE_LATEST > MERGE）
      */
     private detectEdgeMode(edges: IEdge[]): EdgeMode {
-        const dataEdges = edges.filter(isDataEdge);
-
         // 检查是否有明确的 mode 配置
-        for (const edge of dataEdges) {
+        for (const edge of edges) {
             if (edge.mode) {
                 return edge.mode;
             }
@@ -286,7 +278,7 @@ export class ReactiveScheduler {
         return merge(...streams).pipe(
             map(({ edge, value }) => {
                 // 单个输入时，根据边配置决定数据结构
-                if (isDataEdge(edge) && edge.toProperty) {
+                if (edge.toProperty) {
                     return { [edge.toProperty]: value };
                 }
                 return value;
@@ -326,7 +318,7 @@ export class ReactiveScheduler {
         edges: IEdge[]
     ): Observable<any> {
         // 找到主流（isPrimary: true）
-        const primaryIndex = edges.findIndex(e => isDataEdge(e) && e.isPrimary);
+        const primaryIndex = edges.findIndex(e => e.isPrimary);
         if (primaryIndex === -1) {
             // 没有主流标记，回退到 combineLatest
             return this.combineByCombineLatest(streams);
@@ -365,7 +357,7 @@ export class ReactiveScheduler {
         const merged: any = {};
 
         edgeValues.forEach(({ edge, value }) => {
-            if (isDataEdge(edge) && edge.toProperty) {
+            if (edge.toProperty) {
                 // 有 toProperty：使用指定的属性名
                 merged[edge.toProperty] = value;
             } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
@@ -373,7 +365,7 @@ export class ReactiveScheduler {
                 Object.assign(merged, value);
             } else {
                 // 其他情况：使用 fromProperty 作为 key（如果有）
-                const key = isDataEdge(edge) && edge.fromProperty ? edge.fromProperty : 'value';
+                const key = edge.fromProperty ? edge.fromProperty : 'value';
                 merged[key] = value;
             }
         });

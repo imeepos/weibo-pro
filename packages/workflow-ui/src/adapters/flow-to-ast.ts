@@ -1,4 +1,4 @@
-import type { INode, IEdge, IDataEdge, IControlEdge } from '@sker/workflow'
+import type { INode, IEdge } from '@sker/workflow'
 import type { WorkflowNode, WorkflowEdge } from '../types'
 
 /**
@@ -28,31 +28,18 @@ function fromFlowEdge(edge: WorkflowEdge): IEdge {
   if (!edge.data) {
     throw new Error('Edge data is required')
   }
-  const { edgeType, fromProperty, toProperty, condition, weight } = edge.data
+  const { fromProperty, toProperty, condition, weight } = edge.data
 
-  if (edgeType === 'data') {
-    const dataEdge: IDataEdge = {
-      id: edge.id,
-      type: 'data',
-      from: edge.source,
-      to: edge.target,
-    }
-    if (fromProperty) dataEdge.fromProperty = fromProperty
-    if (toProperty) dataEdge.toProperty = toProperty
-    if (weight !== undefined) dataEdge.weight = weight
-    return dataEdge
+  const astEdge: IEdge = {
+    id: edge.id,
+    from: edge.source,
+    to: edge.target,
   }
 
-  if (edgeType === 'control') {
-    const controlEdge: IControlEdge = {
-      id: edge.id,
-      type: 'control',
-      from: edge.source,
-      to: edge.target,
-    }
-    if (condition) controlEdge.condition = condition
-    return controlEdge
-  }
+  if (fromProperty) astEdge.fromProperty = fromProperty
+  if (toProperty) astEdge.toProperty = toProperty
+  if (weight !== undefined) astEdge.weight = weight
+  if (condition) astEdge.condition = condition
 
-  throw new Error(`Unknown edge type: ${edgeType}`)
+  return astEdge
 }

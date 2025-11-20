@@ -1,5 +1,5 @@
 import { Injectable } from '@sker/core';
-import { INode, IEdge, isControlEdge } from '../types';
+import { INode, IEdge, hasCondition } from '../types';
 
 @Injectable()
 export class DependencyAnalyzer {
@@ -11,8 +11,8 @@ export class DependencyAnalyzer {
 
             if (incomingEdges.length === 0) return true;
 
-            const unconditionalEdges = incomingEdges.filter(e => !isControlEdge(e) || !e.condition);
-            const conditionalEdges = incomingEdges.filter(isControlEdge).filter(e => e.condition);
+            const unconditionalEdges = incomingEdges.filter(e => !hasCondition(e));
+            const conditionalEdges = incomingEdges.filter(e => hasCondition(e));
 
             // Multi-input convergence guarantee: For nodes with multiple data sources (e.g., A|B|C → D),
             // ALL unconditional sources must reach success state before execution is allowed.
@@ -64,12 +64,12 @@ export class DependencyAnalyzer {
             const outgoingEdges = edges.filter(edge => edge.from === currentId);
 
             for (const edge of outgoingEdges) {
-                if (isControlEdge(edge) && edge.condition && currentNode?.state === 'success') {
-                    const actualValue = (currentNode as any)[edge.condition.property];
-                    if (actualValue === edge.condition.value) {
+                if (hasCondition(edge) && currentNode?.state === 'success') {
+                    const actualValue = (currentNode as any)[edge.condition!.property];
+                    if (actualValue === edge.condition!.value) {
                         queue.push(edge.to);
                     }
-                } else if (!isControlEdge(edge) || !edge.condition) {
+                } else if (!hasCondition(edge)) {
                     queue.push(edge.to);
                 }
             }

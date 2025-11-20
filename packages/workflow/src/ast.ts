@@ -1,5 +1,5 @@
 import { Input, Node, Output, State } from "./decorator";
-import { IAstStates, IEdge, INode, IControlEdge, isControlEdge, IDataEdge } from "./types";
+import { IAstStates, IEdge, INode } from "./types";
 import { generateId } from "./utils";
 import { ErrorSerializer, SerializedError } from "@sker/core";
 import { Observable } from 'rxjs'
@@ -232,7 +232,6 @@ export class WorkflowGraphAst extends Ast {
      * 优雅设计：
      * - 自动验证边的端点节点存在性
      * - 防止重复添加相同边
-     * - 支持数据流边和控制流边
      */
     addEdge(edge: IEdge): this {
         // 验证边的端点节点存在
@@ -243,19 +242,11 @@ export class WorkflowGraphAst extends Ast {
             throw new Error(`边的目标节点不存在: ${edge.to}`)
         }
 
-        // 根据边类型检查重复
-        if (edge.type === 'data') {
-            const dataEdge = edge as IDataEdge
-            if (this.hasEdge(edge.from, edge.to, dataEdge.fromProperty, dataEdge.toProperty)) {
-                throw new Error(
-                    `边已存在: ${edge.from}.${dataEdge.fromProperty} -> ${edge.to}.${dataEdge.toProperty}`
-                )
-            }
-        } else {
-            // 控制流边只检查节点
-            if (this.hasEdge(edge.from, edge.to)) {
-                throw new Error(`边已存在: ${edge.from} -> ${edge.to}`)
-            }
+        // 检查重复
+        if (this.hasEdge(edge.from, edge.to, edge.fromProperty, edge.toProperty)) {
+            throw new Error(
+                `边已存在: ${edge.from}.${edge.fromProperty || '*'} -> ${edge.to}.${edge.toProperty || '*'}`
+            )
         }
 
         this.edges.push(edge)
@@ -291,7 +282,7 @@ export class WorkflowGraphAst extends Ast {
      * - 专门的条件边添加方法，语义清晰
      * - 自动验证条件格式
      */
-    addConditionalEdge(edge: IControlEdge): this {
+    addConditionalEdge(edge: IEdge): this {
         if (!edge.condition) {
             throw new Error('条件边必须包含condition属性')
         }
@@ -339,9 +330,8 @@ export class WorkflowGraphAst extends Ast {
 
             // 如果指定了端口，检查端口匹配
             if (fromProperty !== undefined || toProperty !== undefined) {
-                const dataEdge = edge as IDataEdge
-                return dataEdge.fromProperty === fromProperty &&
-                       dataEdge.toProperty === toProperty
+                return edge.fromProperty === fromProperty &&
+                       edge.toProperty === toProperty
             }
 
             // 未指定端口时，只检查节点
@@ -375,17 +365,14 @@ export class WorkflowGraphAst extends Ast {
     }
 
     /**
-     * 更新条件边的条件
+     * 更新边的条件
      *
-     * 专门用于更新条件边的条件，语义清晰
+     * 专门用于更新边的条件，语义清晰
      */
-    updateEdgeCondition(id: string, condition: IControlEdge['condition']): IEdge {
+    updateEdgeCondition(id: string, condition: IEdge['condition']): IEdge {
         const edge = this.getEdgeById(id)
         if (!edge) {
             throw new Error(`边不存在: ${id}`)
-        }
-        if (!isControlEdge(edge)) {
-            throw new Error(`边不是条件边: ${id}`)
         }
         edge.condition = condition
         return edge

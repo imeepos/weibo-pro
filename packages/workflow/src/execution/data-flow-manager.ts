@@ -1,7 +1,7 @@
 import { Injectable, root } from '@sker/core';
 import { INPUT, OUTPUT, STATE, resolveConstructor, getInputMetadata, InputMetadata } from '../decorator';
 import { fromJson } from '../generate';
-import { IEdge, INode, isControlEdge, isDataEdge } from '../types';
+import { IEdge, INode, hasCondition } from '../types';
 import { Observable, OperatorFunction, pipe, map, filter, combineLatest } from 'rxjs';
 
 /**
@@ -73,13 +73,13 @@ export class DataFlowManager {
         const incomingEdges = edges.filter(edge => edge.to === targetNode.id);
 
         const sortedEdges = [...incomingEdges].sort((a, b) => {
-            const aPriority = (isControlEdge(a) && a.condition) ? 1 : 0;
-            const bPriority = (isControlEdge(b) && b.condition) ? 1 : 0;
+            const aPriority = a.condition ? 1 : 0;
+            const bPriority = b.condition ? 1 : 0;
             if (aPriority !== bPriority) {
                 return aPriority - bPriority;
             }
-            const aWeight = isDataEdge(a) ? (a.weight ?? Infinity) : Infinity;
-            const bWeight = isDataEdge(b) ? (b.weight ?? Infinity) : Infinity;
+            const aWeight = a.weight ?? Infinity;
+            const bWeight = b.weight ?? Infinity;
             return aWeight - bWeight;
         });
 
@@ -104,7 +104,8 @@ export class DataFlowManager {
 
             const sourceNode = allNodes.find(n => n.id === edge.from);
 
-            if (isControlEdge(edge) && edge.condition) {
+            // 条件检查
+            if (edge.condition) {
                 if (!sourceNode || sourceNode.state !== 'success') return;
                 const actualValue = (sourceNode as any)[edge.condition.property];
                 if (actualValue !== edge.condition.value) {
@@ -112,7 +113,8 @@ export class DataFlowManager {
                 }
             }
 
-            if (isDataEdge(edge) && edge.fromProperty && edge.toProperty) {
+            // 数据映射
+            if (edge.fromProperty && edge.toProperty) {
                 const sourceValue = this.resolveNestedProperty(sourceOutputs, edge.fromProperty);
                 if (sourceValue !== undefined) {
                     this.assignValueToProperty(targetNode, edge.toProperty, sourceValue, inputMetadataMap);
@@ -177,13 +179,10 @@ export class DataFlowManager {
         const incomingEdges = edges.filter(edge => edge.to === node.id);
 
         const relevantEdges = incomingEdges.filter(edge => {
-            if (isDataEdge(edge)) {
-                return !edge.toProperty || edge.toProperty === propertyKey;
-            }
-            return true;
+            return !edge.toProperty || edge.toProperty === propertyKey;
         });
 
-        const hasUnconditionalEdge = relevantEdges.some(edge => !isControlEdge(edge) || !edge.condition);
+        const hasUnconditionalEdge = relevantEdges.some(edge => !edge.condition);
 
         return !hasUnconditionalEdge;
     }
@@ -205,7 +204,7 @@ export class DataFlowManager {
         let hasFromProperty = false;
 
         // 1. fromProperty: 提取嵌套属性
-        if (isDataEdge(edge) && edge.fromProperty) {
+        if (edge.fromProperty) {
             fromProperty = edge.fromProperty;
             hasFromProperty = true;
             operators.push(
@@ -213,8 +212,8 @@ export class DataFlowManager {
             );
         }
 
-        // 2. condition: 条件过滤（IControlEdge）
-        if (isControlEdge(edge) && edge.condition) {
+        // 2. condition: 条件过滤
+        if (edge.condition) {
             const condition = edge.condition;
             operators.push(
                 filter((data: any) => {
@@ -229,7 +228,7 @@ export class DataFlowManager {
         }
 
         // 3. toProperty: 数据包装
-        if (isDataEdge(edge) && edge.toProperty) {
+        if (edge.toProperty) {
             const toProperty = edge.toProperty;
             operators.push(
                 map((value: any) => ({ [toProperty]: value }))

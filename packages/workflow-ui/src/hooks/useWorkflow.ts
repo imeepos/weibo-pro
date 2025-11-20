@@ -219,14 +219,14 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
 
       // 从 AST 中删除对应的边
       const astEdgeIndex = workflowAst.edges.findIndex((e) => {
-        const isDataEdge = 'fromProperty' in e && 'toProperty' in e
-        if (!isDataEdge) return false
+        // 检查是否有数据映射属性
+        if (!e.fromProperty || !e.toProperty) return false
 
         return (
           e.from === edge.source &&
           e.to === edge.target &&
-          (e as any).fromProperty === edge.sourceHandle &&
-          (e as any).toProperty === edge.targetHandle
+          e.fromProperty === edge.sourceHandle &&
+          e.toProperty === edge.targetHandle
         )
       })
 

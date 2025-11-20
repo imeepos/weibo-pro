@@ -1,5 +1,4 @@
-import type { IDataEdge, IControlEdge, INode, IEdge } from '@sker/workflow'
-import { isDataEdge, isControlEdge } from '@sker/workflow'
+import type { INode, IEdge } from '@sker/workflow'
 import type { WorkflowNode, WorkflowEdge } from '../types'
 
 /**
@@ -11,7 +10,7 @@ export function astToFlow(
 ): { nodes: WorkflowNode[]; edges: WorkflowEdge[] } {
   return {
     nodes: nodes.map(toFlowNode),
-    edges: edges.map((edge, index) => toFlowEdge(edge, index)),
+    edges: edges.map(toFlowEdge),
   }
 }
 
@@ -26,7 +25,7 @@ export function astToFlowNodes(ast: { nodes: INode[] }): WorkflowNode[] {
  * 转换边数组
  */
 export function astToFlowEdges(ast: { edges: IEdge[] }): WorkflowEdge[] {
-  return ast.edges.map((edge, index) => toFlowEdge(edge, index))
+  return ast.edges.map(toFlowEdge)
 }
 
 /**
@@ -51,69 +50,37 @@ function toFlowNode<T extends INode>(node: T): WorkflowNode<T> {
 /**
  * 转换单个边
  */
-function toFlowEdge(edge: IEdge, index: number): WorkflowEdge {
-  if (isDataEdge(edge)) {
-    return toDataEdge(edge)
-  }
-  if (isControlEdge(edge)) {
-    return toControlEdge(edge)
-  }
-  throw new Error('Unknown edge type')
-}
-
-/**
- * 转换数据边
- */
-function toDataEdge(edge: IDataEdge): WorkflowEdge {
+function toFlowEdge(edge: IEdge): WorkflowEdge {
   // 使用源节点、目标节点和连接属性生成稳定的唯一 id
   const idParts = [
     edge.from,
     edge.to,
     edge.fromProperty || '',
     edge.toProperty || '',
-    edge.weight || ''
+    edge.weight || '',
+    edge.condition ? JSON.stringify(edge.condition) : ''
   ].filter(Boolean)
   const stableId = idParts.join('-')
 
+  // 根据边的属性决定类型
+  const hasDataMapping = edge.fromProperty || edge.toProperty
+  const edgeType = hasDataMapping ? 'data' : 'default'
+  const flowEdgeType = hasDataMapping ? 'workflow-data-edge' : 'workflow-edge'
+
   return {
-    id: `data-${stableId}`,
+    id: edge.id || `edge-${stableId}`,
     source: edge.from,
     target: edge.to,
     sourceHandle: edge.fromProperty || null,
     targetHandle: edge.toProperty || null,
-    type: 'workflow-data-edge',
+    type: flowEdgeType,
     data: {
-      edgeType: 'data',
-      styleType: (edge as any).styleType || 'data',
+      edgeType,
+      styleType: (edge as any).styleType || edgeType,
       edge,
       fromProperty: edge.fromProperty,
       toProperty: edge.toProperty,
       weight: edge.weight,
-    },
-  }
-}
-
-/**
- * 转换控制边
- */
-function toControlEdge(edge: IControlEdge): WorkflowEdge {
-  // 使用源节点、目标节点和条件生成稳定的唯一 id
-  const idParts = [
-    edge.from,
-    edge.to,
-    edge.condition || ''
-  ].filter(Boolean)
-  const stableId = idParts.join('-')
-
-  return {
-    id: `control-${stableId}`,
-    source: edge.from,
-    target: edge.to,
-    type: 'workflow-control-edge',
-    data: {
-      edgeType: 'control',
-      styleType: (edge as any).styleType || 'control',
-      edge,
       condition: edge.condition,
     },
   }

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ReactiveScheduler } from './reactive-scheduler';
 import { WorkflowGraphAst, createWorkflowGraphAst } from '../ast';
-import { INode, IDataEdge, IControlEdge, EdgeMode } from '../types';
+import { INode, IEdge, EdgeMode } from '../types';
 import { Observable, of, Subject, BehaviorSubject, delay, firstValueFrom, toArray, lastValueFrom, pipe, throwError } from 'rxjs';
 import { root } from '@sker/core';
 import { DataFlowManager } from './data-flow-manager';
@@ -42,33 +42,17 @@ function createTestNode(id: string, overrides: Partial<INode> = {}): INode {
     };
 }
 
-// 创建数据边
-function createDataEdge(
+// 创建边
+function createEdge(
     from: string,
     to: string,
-    options: Partial<IDataEdge> = {}
-): IDataEdge {
+    options: Partial<IEdge> = {}
+): IEdge {
     return {
         id: `${from}->${to}`,
-        type: 'data',
         from,
         to,
         ...options
-    };
-}
-
-// 创建控制边
-function createControlEdge(
-    from: string,
-    to: string,
-    condition?: { property: string; value: any }
-): IControlEdge {
-    return {
-        id: `${from}->${to}`,
-        type: 'control',
-        from,
-        to,
-        condition
     };
 }
 
@@ -188,8 +172,8 @@ describe('ReactiveScheduler', () => {
                 createTestNode('B')
             ];
             const edges = [
-                createDataEdge('A', 'B'),
-                createDataEdge('B', 'A')  // 循环
+                createEdge('A', 'B'),
+                createEdge('B', 'A')  // 循环
             ];
 
             const ast = createWorkflowGraphAst({
@@ -211,9 +195,9 @@ describe('ReactiveScheduler', () => {
                 createTestNode('C')
             ];
             const edges = [
-                createDataEdge('A', 'B'),
-                createDataEdge('B', 'C'),
-                createDataEdge('C', 'A')  // 循环
+                createEdge('A', 'B'),
+                createEdge('B', 'C'),
+                createEdge('C', 'A')  // 循环
             ];
 
             const ast = createWorkflowGraphAst({
@@ -231,7 +215,7 @@ describe('ReactiveScheduler', () => {
         it('边来自不存在的节点时抛出错误', () => {
             const nodes = [createTestNode('B')];
             const edges = [
-                createDataEdge('NonExistent', 'B')  // 从不存在的节点
+                createEdge('NonExistent', 'B')  // 从不存在的节点
             ];
 
             const ast = createWorkflowGraphAst({
@@ -263,7 +247,7 @@ describe('ReactiveScheduler', () => {
             const result = await lastValueFrom(scheduler.schedule(ast, {}));
 
             expect(executeAst).toHaveBeenCalled();
-            expect(result.nodes[0].state).toBe('success');
+            expect(result.nodes[0]!.state).toBe('success');
         });
 
         it('多个入口节点并行执行', async () => {
@@ -294,8 +278,8 @@ describe('ReactiveScheduler', () => {
                 createTestNode('C')
             ];
             const edges = [
-                createDataEdge('A', 'B'),
-                createDataEdge('B', 'C')
+                createEdge('A', 'B'),
+                createEdge('B', 'C')
             ];
 
             const ast = createWorkflowGraphAst({
@@ -318,8 +302,8 @@ describe('ReactiveScheduler', () => {
                 createTestNode('C')
             ];
             const edges = [
-                createDataEdge('A', 'B'),
-                createDataEdge('A', 'C')
+                createEdge('A', 'B'),
+                createEdge('A', 'C')
             ];
 
             const ast = createWorkflowGraphAst({
@@ -341,8 +325,8 @@ describe('ReactiveScheduler', () => {
                 createTestNode('C')
             ];
             const edges = [
-                createDataEdge('A', 'C'),
-                createDataEdge('B', 'C')
+                createEdge('A', 'C'),
+                createEdge('B', 'C')
             ];
 
             const ast = createWorkflowGraphAst({
@@ -364,8 +348,8 @@ describe('ReactiveScheduler', () => {
                 createTestNode('C')
             ];
             const edges = [
-                createDataEdge('A', 'B'),
-                createDataEdge('A', 'C')
+                createEdge('A', 'B'),
+                createEdge('A', 'C')
             ];
 
             // 让 B 节点执行失败
@@ -394,16 +378,15 @@ describe('ReactiveScheduler', () => {
         });
     });
 
-    describe('控制边', () => {
-        it('控制边：无条件等待上游成功', async () => {
+    describe('条件边', () => {
+        it('无条件边：等待上游成功', async () => {
             const nodes = [
                 createTestNode('A'),
                 createTestNode('B')
             ];
-            const edges: (IDataEdge | IControlEdge)[] = [
+            const edges: IEdge[] = [
                 {
                     id: 'A->B',
-                    type: 'control',
                     from: 'A',
                     to: 'B'
                 }
@@ -421,13 +404,13 @@ describe('ReactiveScheduler', () => {
             expect(result.state).toBe('success');
         });
 
-        it('控制边：条件满足时执行', async () => {
+        it('条件边：条件满足时执行', async () => {
             const nodeA = createTestNode('A');
             (nodeA as any).hasNext = true;
 
             const nodes = [nodeA, createTestNode('B')];
-            const edges: (IDataEdge | IControlEdge)[] = [
-                createControlEdge('A', 'B', { property: 'hasNext', value: true })
+            const edges: IEdge[] = [
+                createEdge('A', 'B', { condition: { property: 'hasNext', value: true } })
             ];
 
             // Mock executeAst 返回带有 hasNext 属性的节点
@@ -452,13 +435,13 @@ describe('ReactiveScheduler', () => {
             expect(result.nodes.every(n => n.state === 'success')).toBe(true);
         });
 
-        it('控制边：条件不满足时不执行', async () => {
+        it('条件边：条件不满足时不执行', async () => {
             const nodes = [
                 createTestNode('A'),
                 createTestNode('B')
             ];
-            const edges: (IDataEdge | IControlEdge)[] = [
-                createControlEdge('A', 'B', { property: 'hasNext', value: true })
+            const edges: IEdge[] = [
+                createEdge('A', 'B', { condition: { property: 'hasNext', value: true } })
             ];
 
             // A 节点的 hasNext 为 false
@@ -495,8 +478,8 @@ describe('ReactiveScheduler', () => {
                     createTestNode('C')
                 ];
                 const edges = [
-                    createDataEdge('A', 'C', { mode: EdgeMode.COMBINE_LATEST }),
-                    createDataEdge('B', 'C', { mode: EdgeMode.COMBINE_LATEST })
+                    createEdge('A', 'C', { mode: EdgeMode.COMBINE_LATEST }),
+                    createEdge('B', 'C', { mode: EdgeMode.COMBINE_LATEST })
                 ];
 
                 const ast = createWorkflowGraphAst({
@@ -520,8 +503,8 @@ describe('ReactiveScheduler', () => {
                     createTestNode('C')
                 ];
                 const edges = [
-                    createDataEdge('A', 'C', { mode: EdgeMode.ZIP }),
-                    createDataEdge('B', 'C', { mode: EdgeMode.ZIP })
+                    createEdge('A', 'C', { mode: EdgeMode.ZIP }),
+                    createEdge('B', 'C', { mode: EdgeMode.ZIP })
                 ];
 
                 const ast = createWorkflowGraphAst({
@@ -545,8 +528,8 @@ describe('ReactiveScheduler', () => {
                     createTestNode('C')
                 ];
                 const edges = [
-                    createDataEdge('A', 'C', { mode: EdgeMode.MERGE }),
-                    createDataEdge('B', 'C', { mode: EdgeMode.MERGE })
+                    createEdge('A', 'C', { mode: EdgeMode.MERGE }),
+                    createEdge('B', 'C', { mode: EdgeMode.MERGE })
                 ];
 
                 const ast = createWorkflowGraphAst({
@@ -571,8 +554,8 @@ describe('ReactiveScheduler', () => {
                     createTestNode('C')
                 ];
                 const edges = [
-                    createDataEdge('A', 'C', { mode: EdgeMode.WITH_LATEST_FROM, isPrimary: true }),
-                    createDataEdge('B', 'C', { mode: EdgeMode.WITH_LATEST_FROM })
+                    createEdge('A', 'C', { mode: EdgeMode.WITH_LATEST_FROM, isPrimary: true }),
+                    createEdge('B', 'C', { mode: EdgeMode.WITH_LATEST_FROM })
                 ];
 
                 const ast = createWorkflowGraphAst({
@@ -594,8 +577,8 @@ describe('ReactiveScheduler', () => {
                     createTestNode('C')
                 ];
                 const edges = [
-                    createDataEdge('A', 'C', { mode: EdgeMode.WITH_LATEST_FROM }),
-                    createDataEdge('B', 'C', { mode: EdgeMode.WITH_LATEST_FROM })
+                    createEdge('A', 'C', { mode: EdgeMode.WITH_LATEST_FROM }),
+                    createEdge('B', 'C', { mode: EdgeMode.WITH_LATEST_FROM })
                 ];
 
                 const ast = createWorkflowGraphAst({
@@ -619,7 +602,7 @@ describe('ReactiveScheduler', () => {
                 createTestNode('B')
             ];
             const edges = [
-                createDataEdge('A', 'B', {
+                createEdge('A', 'B', {
                     fromProperty: 'output',
                     toProperty: 'input'
                 })
@@ -658,7 +641,7 @@ describe('ReactiveScheduler', () => {
             const result = await lastValueFrom(scheduler.schedule(ast, {}));
 
             // 原始节点状态应该被重置
-            expect(result.nodes[0].state).toBe('success');
+            expect(result.nodes[0]!.state).toBe('success');
         });
     });
 
@@ -670,8 +653,8 @@ describe('ReactiveScheduler', () => {
                 createTestNode('C')
             ];
             const edges = [
-                createDataEdge('A', 'C'),
-                createDataEdge('B', 'C')
+                createEdge('A', 'C'),
+                createEdge('B', 'C')
             ];
 
             const ast = createWorkflowGraphAst({
@@ -692,7 +675,7 @@ describe('ReactiveScheduler', () => {
             // 应该收到多次状态更新
             expect(results.length).toBeGreaterThanOrEqual(1);
             // 最终状态应该是 success
-            expect(results[results.length - 1].state).toBe('success');
+            expect(results[results.length - 1]!.state).toBe('success');
         });
 
         it('有失败节点时整体状态为 fail', async () => {
@@ -721,7 +704,7 @@ describe('ReactiveScheduler', () => {
                 createTestNode('A'),
                 createTestNode('B')
             ];
-            const edges = [createDataEdge('A', 'B')];
+            const edges = [createEdge('A', 'B')];
 
             const ast = createWorkflowGraphAst({
                 name: 'test',
@@ -752,10 +735,10 @@ describe('ReactiveScheduler', () => {
                 createTestNode('D')
             ];
             const edges = [
-                createDataEdge('A', 'B'),
-                createDataEdge('A', 'C'),
-                createDataEdge('B', 'D'),
-                createDataEdge('C', 'D')
+                createEdge('A', 'B'),
+                createEdge('A', 'C'),
+                createEdge('B', 'D'),
+                createEdge('C', 'D')
             ];
 
             const ast = createWorkflowGraphAst({
@@ -771,17 +754,16 @@ describe('ReactiveScheduler', () => {
             expect(result.nodes.every(n => n.state === 'success')).toBe(true);
         });
 
-        it('混合边类型：数据边 + 控制边', async () => {
+        it('混合边类型：数据映射边 + 无数据映射边', async () => {
             const nodes = [
                 createTestNode('A'),
                 createTestNode('B'),
                 createTestNode('C')
             ];
-            const edges: (IDataEdge | IControlEdge)[] = [
-                createDataEdge('A', 'B'),
+            const edges: IEdge[] = [
+                createEdge('A', 'B', { fromProperty: 'output', toProperty: 'input' }),
                 {
                     id: 'A->C',
-                    type: 'control',
                     from: 'A',
                     to: 'C'
                 }
@@ -807,8 +789,8 @@ describe('ReactiveScheduler', () => {
                 createTestNode('D')
             ];
             const edges = [
-                createDataEdge('A', 'C'),
-                createDataEdge('B', 'D')
+                createEdge('A', 'C'),
+                createEdge('B', 'D')
             ];
 
             const ast = createWorkflowGraphAst({
@@ -825,7 +807,7 @@ describe('ReactiveScheduler', () => {
 
         it('深度嵌套依赖链', async () => {
             const nodes = Array.from({ length: 5 }, (_, i) => createTestNode(`N${i}`));
-            const edges = Array.from({ length: 4 }, (_, i) => createDataEdge(`N${i}`, `N${i + 1}`));
+            const edges = Array.from({ length: 4 }, (_, i) => createEdge(`N${i}`, `N${i + 1}`));
 
             const ast = createWorkflowGraphAst({
                 name: 'test',
@@ -865,7 +847,7 @@ describe('ReactiveScheduler', () => {
                 createTestNode('A'),
                 createTestNode('B')
             ];
-            const edges: (IDataEdge | IControlEdge)[] = [];
+            const edges: IEdge[] = [];
 
             vi.mocked(executeAst).mockImplementation((node: INode, ctx: any) => {
                 if (node.id === 'A') {
@@ -901,7 +883,7 @@ describe('ReactiveScheduler', () => {
                 createTestNode('B')
             ];
             const edges = [
-                createDataEdge('A', 'B', {
+                createEdge('A', 'B', {
                     fromProperty: 'output',
                     toProperty: 'myInput'
                 })
@@ -935,8 +917,8 @@ describe('ReactiveScheduler', () => {
                 createTestNode('C')
             ];
             const edges = [
-                createDataEdge('A', 'C', { mode: EdgeMode.ZIP }),
-                createDataEdge('B', 'C')
+                createEdge('A', 'C', { mode: EdgeMode.ZIP }),
+                createEdge('B', 'C')
             ];
 
             const ast = createWorkflowGraphAst({
@@ -958,8 +940,8 @@ describe('ReactiveScheduler', () => {
                 createTestNode('C')
             ];
             const edges = [
-                createDataEdge('A', 'C'),
-                createDataEdge('B', 'C')
+                createEdge('A', 'C'),
+                createEdge('B', 'C')
             ];
 
             const ast = createWorkflowGraphAst({
@@ -981,7 +963,7 @@ describe('ReactiveScheduler', () => {
                 createTestNode('A'),
                 createTestNode('B')
             ];
-            const edges = [createDataEdge('A', 'B')];
+            const edges = [createEdge('A', 'B')];
 
             const ast = createWorkflowGraphAst({
                 name: 'test',
@@ -1004,8 +986,8 @@ describe('ReactiveScheduler', () => {
                 createTestNode('C')
             ];
             const edges = [
-                createDataEdge('A', 'B'),
-                createDataEdge('A', 'C')
+                createEdge('A', 'B'),
+                createEdge('A', 'C')
             ];
 
             const ast = createWorkflowGraphAst({

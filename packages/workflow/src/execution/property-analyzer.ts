@@ -1,5 +1,5 @@
 import { Injectable } from '@sker/core';
-import { INode, IEdge, isDataEdge, isControlEdge } from '../types';
+import { INode, IEdge } from '../types';
 
 @Injectable()
 export class PropertyAnalyzer {
@@ -11,13 +11,10 @@ export class PropertyAnalyzer {
         const incomingEdges = edges.filter(edge => edge.to === node.id);
 
         const relevantEdges = incomingEdges.filter(edge => {
-            if (isDataEdge(edge)) {
-                return !edge.toProperty || edge.toProperty === propertyKey;
-            }
-            return true;
+            return !edge.toProperty || edge.toProperty === propertyKey;
         });
 
-        const hasUnconditionalEdge = relevantEdges.some(edge => !isControlEdge(edge) || !edge.condition);
+        const hasUnconditionalEdge = relevantEdges.some(edge => !edge.condition);
 
         return !hasUnconditionalEdge;
     }

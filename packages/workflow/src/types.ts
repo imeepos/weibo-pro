@@ -24,41 +24,35 @@ export enum EdgeMode {
     /** 主流触发，携带其他流的最新值（适合主从依赖场景） */
     WITH_LATEST_FROM = 'withLatestFrom'
 }
-// 数据流边 - 纯粹的数据传递
-export interface IDataEdge extends Record<string, any> {
+
+// 统一的边类型
+export interface IEdge extends Record<string, any> {
     id: string;
-    type: 'data',
     from: string;
-    fromProperty?: string;  // 支持嵌套属性路径,如 'currentItem.username' 或 'data.user.profile.name'
     to: string;
+
+    // 数据映射
+    fromProperty?: string;  // 支持嵌套属性路径,如 'currentItem.username'
     toProperty?: string;
-    weight?: number;  // 多输入汇聚时的排序权重,值越小优先级越高,未指定时按边定义顺序排列
+    weight?: number;  // 多输入汇聚时的排序权重
 
-    // 流式合并模式
-    mode?: EdgeMode;  // 上游如何触发下游执行（默认 MERGE）
-    isPrimary?: boolean;  // 标记主流（用于 WITH_LATEST_FROM 模式）
-}
-
-// 控制流边 - 纯粹的执行依赖
-export interface IControlEdge extends Record<string, any> {
-    id: string;
-    type: 'control',
-    from: string;
-    to: string;
+    // 条件执行
     condition?: {
         property: string;
         value: any;
     };
+
+    // 流式合并模式
+    mode?: EdgeMode;
+    isPrimary?: boolean;  // 标记主流（用于 WITH_LATEST_FROM 模式）
 }
 
-// 统一边类型
-export type IEdge = IDataEdge | IControlEdge;
-
-// 类型守卫函数
-export function isDataEdge(edge: IEdge): edge is IDataEdge {
-    return 'fromProperty' in edge || 'toProperty' in edge || !('condition' in edge);
+// 辅助函数：检查边是否有条件
+export function hasCondition(edge: IEdge): boolean {
+    return edge.condition !== undefined;
 }
 
-export function isControlEdge(edge: IEdge): edge is IControlEdge {
-    return 'condition' in edge && edge.condition !== undefined;
+// 辅助函数：检查边是否传递数据
+export function hasDataMapping(edge: IEdge): boolean {
+    return edge.fromProperty !== undefined || edge.toProperty !== undefined;
 }
