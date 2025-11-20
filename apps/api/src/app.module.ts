@@ -11,7 +11,6 @@ import { SentimentController } from './controllers/sentiment.controller';
 import { WorkflowController } from './controllers/workflow.controller';
 import { LayoutController } from './controllers/layout.controller';
 import { UserRelationController } from './controllers/user-relation.controller';
-import { SseController } from './controllers/sse.controller';
 import { CacheService } from './services/cache.service';
 import { OverviewService } from './services/data/overview.service';
 import { EventsService } from './services/data/events.service';
@@ -43,7 +42,6 @@ import { root } from '@sker/core';
     WorkflowController,
     LayoutController,
     UserRelationController,
-    SseController
   ],
   providers: [
     {
