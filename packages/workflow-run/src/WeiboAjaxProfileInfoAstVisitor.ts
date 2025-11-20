@@ -1,9 +1,10 @@
 import { Injectable } from "@sker/core";
 import { useEntityManager, WeiboUserEntity } from "@sker/entities";
 import { WeiboAccountService } from "./services/weibo-account.service";
-import { Handler } from "@sker/workflow";
+import { Handler, INode } from "@sker/workflow";
 import { WeiboAjaxProfileInfoAst } from "@sker/workflow-ast";
 import { WeiboApiClient } from "./services/weibo-api-client.base";
+import { Observable } from "rxjs";
 
 export interface WeiboAjaxProfileInfoAstResponse {
     ok: number;
@@ -24,29 +25,43 @@ export class WeiboAjaxProfileInfoAstVisitor extends WeiboApiClient {
     }
 
     @Handler(WeiboAjaxProfileInfoAst)
-    async visit(ast: WeiboAjaxProfileInfoAst, _ctx: any) {
-        try {
-            const url = `https://weibo.com/ajax/profile/info?uid=${ast.uid}`;
-            const body = await this.fetchApi<WeiboAjaxProfileInfoAstResponse>({
-                url,
-                refererOptions: { uid: ast.uid }
-            });
+    visit(ast: WeiboAjaxProfileInfoAst, _ctx: any): Observable<INode> {
+        return new Observable<INode>(obs => {
+            const handler = async () => {
+                try {
+                    ast.state = 'running';
+                    obs.next({ ...ast });
 
-            await useEntityManager(async m => {
-                const user = m.create(WeiboUserEntity, body.data.user as any);
-                ast.uid = `${user.id}`;
-                await m.upsert(WeiboUserEntity, user as any, ['id']);
-            });
+                    const url = `https://weibo.com/ajax/profile/info?uid=${ast.uid}`;
+                    const body = await this.fetchApi<WeiboAjaxProfileInfoAstResponse>({
+                        url,
+                        refererOptions: { uid: ast.uid }
+                    });
 
-            await this.fetchDetail(ast, _ctx);
+                    await useEntityManager(async m => {
+                        const user = m.create(WeiboUserEntity, body.data.user as any);
+                        ast.uid = `${user.id}`;
+                        await m.upsert(WeiboUserEntity, user as any, ['id']);
+                    });
 
-            ast.state = 'success';
-        } catch (error) {
-            console.error(`[WeiboAjaxProfileInfoAstVisitor] uid: ${ast.uid}`, error);
-            ast.state = 'fail';
-            ast.setError(error);
-        }
-        return ast;
+                    await this.fetchDetail(ast, _ctx);
+
+                    ast.state = 'emitting';
+                    ast.isEnd = true;
+                    obs.next({ ...ast });
+
+                    ast.state = 'success';
+                    obs.next({ ...ast });
+                } catch (error) {
+                    console.error(`[WeiboAjaxProfileInfoAstVisitor] uid: ${ast.uid}`, error);
+                    ast.state = 'fail';
+                    ast.setError(error);
+                    obs.next({ ...ast });
+                }
+            };
+            handler();
+            return () => obs.complete();
+        });
     }
 
     private async fetchDetail(ast: WeiboAjaxProfileInfoAst, _ctx: any) {

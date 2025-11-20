@@ -1,9 +1,10 @@
 import { Injectable } from "@sker/core";
 import { WeiboAccountService } from "./services/weibo-account.service";
 import { WeiboAjaxStatusesMymblogAst } from "@sker/workflow-ast";
-import { Handler } from "@sker/workflow";
+import { Handler, INode } from "@sker/workflow";
 import { useEntityManager, WeiboPostEntity } from "@sker/entities";
 import { WeiboApiClient } from "./services/weibo-api-client.base";
+import { Observable } from "rxjs";
 
 export interface WeiboAjaxStatusesMymblogAstResponse {
     ok: number;
@@ -19,24 +20,39 @@ export class WeiboAjaxStatusesMymblogAstVisitor extends WeiboApiClient {
     }
 
     @Handler(WeiboAjaxStatusesMymblogAst)
-    async visit(ast: WeiboAjaxStatusesMymblogAst, _ctx: any) {
-        try {
-            for await (const body of this.fetchWithPagination<WeiboAjaxStatusesMymblogAstResponse>({
-                buildUrl: (page) => `https://weibo.com/ajax/statuses/mymblog?uid=${ast.uid}&page=${page}&feature=0`,
-                refererOptions: { uid: ast.uid },
-                shouldContinue: (data) => data.data.list.length > 0
-            })) {
-                await useEntityManager(async m => {
-                    const posts = body.data.list.map(item => m.create(WeiboPostEntity, item));
-                    await m.upsert(WeiboPostEntity, posts as any, ['id']);
-                });
-            }
-            ast.state = 'success';
-        } catch (error) {
-            console.error(`[WeiboAjaxStatusesMymblogAstVisitor] uid: ${ast.uid}`, error);
-            ast.state = 'fail';
-            ast.setError(error);
-        }
-        return ast;
+    visit(ast: WeiboAjaxStatusesMymblogAst, _ctx: any): Observable<INode> {
+        return new Observable<INode>(obs => {
+            const handler = async () => {
+                try {
+                    ast.state = 'running';
+                    obs.next({ ...ast });
+
+                    for await (const body of this.fetchWithPagination<WeiboAjaxStatusesMymblogAstResponse>({
+                        buildUrl: (page) => `https://weibo.com/ajax/statuses/mymblog?uid=${ast.uid}&page=${page}&feature=0`,
+                        refererOptions: { uid: ast.uid },
+                        shouldContinue: (data) => data.data.list.length > 0
+                    })) {
+                        await useEntityManager(async m => {
+                            const posts = body.data.list.map(item => m.create(WeiboPostEntity, item));
+                            await m.upsert(WeiboPostEntity, posts as any, ['id']);
+                        });
+                    }
+
+                    ast.state = 'emitting';
+                    ast.isEnd = true;
+                    obs.next({ ...ast });
+
+                    ast.state = 'success';
+                    obs.next({ ...ast });
+                } catch (error) {
+                    console.error(`[WeiboAjaxStatusesMymblogAstVisitor] uid: ${ast.uid}`, error);
+                    ast.state = 'fail';
+                    ast.setError(error);
+                    obs.next({ ...ast });
+                }
+            };
+            handler();
+            return () => obs.complete();
+        });
     }
 }

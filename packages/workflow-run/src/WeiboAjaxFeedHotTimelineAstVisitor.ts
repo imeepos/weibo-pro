@@ -73,13 +73,13 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
 
             console.log(`[WeiboAjaxFeedHotTimelineAstVisitor] 完成，共抓取 ${pageCount} 页数据`);
             ast.state = 'success';  // 完成信号：不触发下游，仅更新工作流状态
-            obs.next(ast)
+            obs.next({...ast})
             obs.complete()
         } catch (error) {
             console.error(`[WeiboAjaxFeedHotTimelineAstVisitor] 抓取失败`, error);
             ast.state = 'fail';
             ast.setError(error);
-            obs.next(ast)
+            obs.next({...ast})
             obs.complete()
         }
         return ast;

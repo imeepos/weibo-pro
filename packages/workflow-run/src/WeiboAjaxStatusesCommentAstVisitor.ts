@@ -1,10 +1,11 @@
 import { Injectable } from "@sker/core";
 import { useEntityManager, WeiboCommentEntity, WeiboUserEntity } from "@sker/entities";
 import { WeiboAccountService } from "./services/weibo-account.service";
-import { Handler } from "@sker/workflow";
+import { Handler, INode } from "@sker/workflow";
 import { WeiboAjaxStatusesCommentAst } from "@sker/workflow-ast";
 import { delay } from "./services/utils";
 import { WeiboApiClient } from "./services/weibo-api-client.base";
+import { Observable } from "rxjs";
 
 export interface WeiboAjaxStatusesComponentAstResponse {
     readonly ok: number
@@ -23,47 +24,61 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
     }
 
     @Handler(WeiboAjaxStatusesCommentAst)
-    async visit(ast: WeiboAjaxStatusesCommentAst, _ctx: any) {
-        try {
-            while (true) {
-                const body = await this.fetchComments(ast);
+    visit(ast: WeiboAjaxStatusesCommentAst, _ctx: any): Observable<INode> {
+        return new Observable<INode>(obs => {
+            const handler = async () => {
+                try {
+                    ast.state = 'running';
+                    obs.next({ ...ast });
 
-                const entities = await this.saveComments(body);
+                    while (true) {
+                        const body = await this.fetchComments(ast);
 
-                console.log(`[WeiboAjaxStatusesCommentAstVisitor] 共${entities.length}个`);
+                        const entities = await this.saveComments(body);
 
-                if (entities.length > 0) {
-                    for (let child of entities) {
-                        if (child.more_info) {
-                            const childAst = new WeiboAjaxStatusesCommentAst();
-                            childAst.mid = `${child.id}`;
-                            childAst.is_show_bulletin = 2;
-                            childAst.is_mix = 1;
-                            childAst.fetch_level = 1;
-                            childAst.max_id = 0;
-                            childAst.count = 20;
-                            childAst.uid = ast.uid;
-                            await this.visitChildren(childAst, _ctx);
+                        console.log(`[WeiboAjaxStatusesCommentAstVisitor] 共${entities.length}个`);
+
+                        if (entities.length > 0) {
+                            for (let child of entities) {
+                                if (child.more_info) {
+                                    const childAst = new WeiboAjaxStatusesCommentAst();
+                                    childAst.mid = `${child.id}`;
+                                    childAst.is_show_bulletin = 2;
+                                    childAst.is_mix = 1;
+                                    childAst.fetch_level = 1;
+                                    childAst.max_id = 0;
+                                    childAst.count = 20;
+                                    childAst.uid = ast.uid;
+                                    await this.visitChildren(childAst, _ctx);
+                                }
+                            }
                         }
+
+                        if (!body.max_id) {
+                            break;
+                        }
+
+                        ast.max_id = body.max_id;
+                        ast.next_max_id = body.max_id;
+                        await delay();
                     }
+
+                    ast.state = 'emitting';
+                    ast.is_end = true;
+                    obs.next({ ...ast });
+
+                    ast.state = 'success';
+                    obs.next({ ...ast });
+                } catch (error) {
+                    console.error(`[WeiboAjaxStatusesCommentAstVisitor] mid: ${ast.mid}`, error);
+                    ast.state = 'fail';
+                    ast.setError(error, process.env.NODE_ENV === 'development');
+                    obs.next({ ...ast });
                 }
-
-                if (!body.max_id) {
-                    break;
-                }
-
-                ast.max_id = body.max_id;
-                ast.next_max_id = body.max_id;
-                await delay();
-            }
-
-            ast.state = 'success';
-        } catch (error) {
-            console.error(`[WeiboAjaxStatusesCommentAstVisitor] mid: ${ast.mid}`, error);
-            ast.state = 'fail';
-            ast.setError(error, process.env.NODE_ENV === 'development');
-        }
-        return ast;
+            };
+            handler();
+            return () => obs.complete();
+        });
     }
 
     async visitChildren(ast: WeiboAjaxStatusesCommentAst, _ctx: any) {

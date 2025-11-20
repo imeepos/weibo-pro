@@ -1,9 +1,10 @@
 import { Injectable } from "@sker/core";
 import { useEntityManager, WeiboUserEntity, WeiboLikeEntity } from "@sker/entities";
 import { WeiboAccountService } from "./services/weibo-account.service";
-import { Handler } from "@sker/workflow";
+import { Handler, INode } from "@sker/workflow";
 import { WeiboAjaxStatusesLikeShowAst } from "@sker/workflow-ast";
 import { WeiboApiClient } from "./services/weibo-api-client.base";
+import { Observable } from "rxjs";
 
 export interface WeiboStatusAttitude {
     readonly user: WeiboUserEntity;
@@ -23,38 +24,53 @@ export class WeiboAjaxStatusesLikeShowAstVisitor extends WeiboApiClient {
     }
 
     @Handler(WeiboAjaxStatusesLikeShowAst)
-    async handler(ast: WeiboAjaxStatusesLikeShowAst, _ctx: any) {
-        try {
-            let page = 1;
-            for await (const body of this.fetchWithPagination<WeiboStatusLikeShowResponse>({
-                buildUrl: (p) => {
-                    page = p;
-                    return `https://weibo.com/ajax/statuses/likeShow?id=${ast.mid}&attitude_type=${ast.attitude_type}&attitude_enable=${ast.attitude_enable}&page=${p}&count=${ast.count}`;
-                },
-                refererOptions: { uid: ast.uid, mid: ast.mid },
-                shouldContinue: (data) => data.data.length > 0
-            })) {
-                await useEntityManager(async m => {
-                    const userEntities = body.data.map(item => m.create(WeiboUserEntity, item.user));
-                    console.log(`[${page}]处理${userEntities.length}个用户`);
-                    await m.upsert(WeiboUserEntity, userEntities as any[], ['id']);
+    handler(ast: WeiboAjaxStatusesLikeShowAst, _ctx: any): Observable<INode> {
+        return new Observable<INode>(obs => {
+            const handle = async () => {
+                try {
+                    ast.state = 'running';
+                    obs.next({ ...ast });
 
-                    const likeEntities = body.data.map(item =>
-                        m.create(WeiboLikeEntity, {
-                            userWeiboId: String(item.user.id),
-                            targetWeiboId: ast.mid
-                        })
-                    );
-                    await m.upsert(WeiboLikeEntity, likeEntities as any[], ['userWeiboId', 'targetWeiboId']);
-                    console.log(`[${page}]保存${likeEntities.length}条点赞记录`);
-                });
-            }
-            ast.state = 'success';
-        } catch (error) {
-            console.error(`[WeiboAjaxStatusesLikeShowAstVisitor] mid: ${ast.mid}`, error);
-            ast.state = 'fail';
-            ast.setError(error);
-        }
-        return ast;
+                    let page = 1;
+                    for await (const body of this.fetchWithPagination<WeiboStatusLikeShowResponse>({
+                        buildUrl: (p) => {
+                            page = p;
+                            return `https://weibo.com/ajax/statuses/likeShow?id=${ast.mid}&attitude_type=${ast.attitude_type}&attitude_enable=${ast.attitude_enable}&page=${p}&count=${ast.count}`;
+                        },
+                        refererOptions: { uid: ast.uid, mid: ast.mid },
+                        shouldContinue: (data) => data.data.length > 0
+                    })) {
+                        await useEntityManager(async m => {
+                            const userEntities = body.data.map(item => m.create(WeiboUserEntity, item.user));
+                            console.log(`[${page}]处理${userEntities.length}个用户`);
+                            await m.upsert(WeiboUserEntity, userEntities as any[], ['id']);
+
+                            const likeEntities = body.data.map(item =>
+                                m.create(WeiboLikeEntity, {
+                                    userWeiboId: String(item.user.id),
+                                    targetWeiboId: ast.mid
+                                })
+                            );
+                            await m.upsert(WeiboLikeEntity, likeEntities as any[], ['userWeiboId', 'targetWeiboId']);
+                            console.log(`[${page}]保存${likeEntities.length}条点赞记录`);
+                        });
+                    }
+
+                    ast.state = 'emitting';
+                    ast.is_end = true;
+                    obs.next({ ...ast });
+
+                    ast.state = 'success';
+                    obs.next({ ...ast });
+                } catch (error) {
+                    console.error(`[WeiboAjaxStatusesLikeShowAstVisitor] mid: ${ast.mid}`, error);
+                    ast.state = 'fail';
+                    ast.setError(error);
+                    obs.next({ ...ast });
+                }
+            };
+            handle();
+            return () => obs.complete();
+        });
     }
 }
