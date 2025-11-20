@@ -2,7 +2,6 @@ import { WorkflowGraphAst } from "./ast";
 import { Handler } from "./decorator";
 import { fromJson } from "./generate";
 import { INode } from "./types";
-import { LegacyScheduler } from './execution/scheduler';
 import { ReactiveScheduler } from './execution/reactive-scheduler';
 import { VisitorExecutor } from './execution/visitor-executor';
 import { Observable } from 'rxjs';
@@ -19,18 +18,8 @@ export class WorkflowExecutorVisitor {
      */
     @Handler(WorkflowGraphAst)
     visit(ast: WorkflowGraphAst, ctx: any): Observable<INode> {
-        // 检查是否启用响应式调度器
-        const useReactive = ctx?.useReactiveScheduler ?? false;
-
-        if (useReactive) {
-            // 使用新的响应式调度器
-            const scheduler = root.get(ReactiveScheduler);
-            return scheduler.schedule(ast, ctx);
-        } else {
-            // 使用传统调度器（默认，向后兼容）
-            const scheduler = root.get(LegacyScheduler);
-            return scheduler.schedule(ast, ctx);
-        }
+        const scheduler = root.get(ReactiveScheduler);
+        return scheduler.schedule(ast, ctx);
     }
 }
 
