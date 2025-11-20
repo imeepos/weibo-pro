@@ -81,9 +81,9 @@ const DataOverview: React.FC = () => {
         </div>
 
         {/* 右侧区域：占8列 - 地图和用户关系图 */}
-        <div className="col-span-12 md:col-span-8 lg:col-span-8 flex flex-col gap-2 lg:gap-4 xl:gap-5 overflow-hidden">
+        <div className="col-span-12 md:col-span-4 lg:col-span-8 flex gap-2 lg:gap-4 xl:gap-5 overflow-hidden">
           {/* 地图区域 */}
-          <div className="glass-card p-2 lg:p-3 xl:p-4 sentiment-overview-card overflow-hidden flex flex-col" style={{ height: '400px' }}>
+          <div className="flex-1 glass-card p-2 lg:p-3 xl:p-4 sentiment-overview-card overflow-hidden flex flex-col" style={{ height: '400px' }}>
             <LocationHeatMap
               data={locationData}
               title=""
@@ -91,11 +91,9 @@ const DataOverview: React.FC = () => {
           </div>
 
           {/* 用户关系概览区域 */}
-          <div className="flex-1 min-h-0">
-            <UserRelationOverview
-              className="h-full"
-              height={400}
-            />
+          <div className="glass-card w-[420px]">
+            <SentimentOverview data={sentimentData} />
+            <EmotionCurveChart className="flex-1 min-h-0" />
           </div>
         </div>
       </div>
@@ -113,8 +111,10 @@ const DataOverview: React.FC = () => {
         {/* 情感分析 */}
         <div className="glass-card sentiment-overview-card min-h-0 overflow-hidden flex flex-col p-4">
           <div className="card-content flex-1 min-h-0 flex flex-col overflow-hidden">
-            <SentimentOverview data={sentimentData} />
-            <EmotionCurveChart className="flex-1 min-h-0" />
+            <UserRelationOverview
+              className="h-full"
+              height={400}
+            />
           </div>
         </div>
 

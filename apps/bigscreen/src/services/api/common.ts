@@ -94,14 +94,10 @@ export class CommonAPI {
         }
       );
 
-      console.log('[CommonAPI.getEmotionCurve] 📦 收到原始数据', JSON.stringify(chartData, null, 2));
-
       // 将后端的 ChartData 格式转换为前端期望的 EmotionCurveData 格式
       const positiveIndex = chartData.series?.findIndex(s => s.name === '正面') ?? -1;
       const negativeIndex = chartData.series?.findIndex(s => s.name === '负面') ?? -1;
       const neutralIndex = chartData.series?.findIndex(s => s.name === '中性') ?? -1;
-
-      console.log('[CommonAPI.getEmotionCurve] 🔍 索引查找', { positiveIndex, negativeIndex, neutralIndex });
 
       const result = {
         hours: chartData.categories || [],
@@ -110,7 +106,6 @@ export class CommonAPI {
         neutralData: neutralIndex >= 0 ? chartData.series[neutralIndex].data : []
       };
 
-      console.log('[CommonAPI.getEmotionCurve] ✅ 转换后数据', JSON.stringify(result, null, 2));
 
       return result;
     } catch (error) {

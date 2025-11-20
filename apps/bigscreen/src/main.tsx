@@ -10,8 +10,17 @@ import { createLogger } from './utils';
 
 const logger = createLogger('main');
 
+function getBaseUrl(){
+  const url = new URL(window.location.href)
+  if(url.port){
+    return `${url.protocol}//${url.hostname}:${url.port}`
+  }
+  return `${url.protocol}//${url.hostname}`
+}
+
+
 root.set([
-  ...providers(true)
+  ...providers({ baseURL: getBaseUrl() })
 ])
 
 // Mock服务现在由vite-plugin-mock处理

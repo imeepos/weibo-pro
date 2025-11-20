@@ -215,7 +215,6 @@ export class OverviewService {
 
       // 查询当前时间范围的地域分布
       const currentLocations = await this.fetchLocationData(manager, current.start, current.end);
-
       // 查询昨天的地域分布（用于计算趋势）
       const yesterdayLocations = await this.fetchLocationData(manager, yesterday.start, yesterday.end);
 
@@ -242,9 +241,10 @@ export class OverviewService {
             trend = 'down';
           }
         }
-
+        let region: string = (location.region || '');
+        
         return {
-          region: location.region,
+          region: region.replace(`发布于`, '').trim(),
           count: location.count,
           percentage: total > 0 ? Math.round((location.count / total) * 100 * 100) / 100 : 0,
           coordinates: location.coordinates,
@@ -271,7 +271,7 @@ export class OverviewService {
       .getRawMany();
 
     return locationData.map((item: any) => {
-      const region = item.location || '未知';
+      const region = (item.location || '未知').replace('发布于', '').trim();
       const count = parseInt(item.count || '0', 10);
 
       // 从地域名称提取坐标

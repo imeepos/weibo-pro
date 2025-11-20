@@ -103,7 +103,6 @@ const EventAnalysis: React.FC = () => {
         return <div className="w-4 h-4 bg-gray-400 rounded-full"></div>;
     }
   };
-  console.log({ filteredEvents })
   // 计算统计数据
   const totalEvents = filteredEvents.length;
   const totalPosts = filteredEvents.reduce((sum, event) => sum + event.postCount, 0);
