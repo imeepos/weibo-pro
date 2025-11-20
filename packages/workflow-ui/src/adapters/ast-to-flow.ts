@@ -64,8 +64,8 @@ function toFlowEdge(edge: IEdge): WorkflowEdge {
 
   // 根据边的属性决定类型
   const hasDataMapping = edge.fromProperty || edge.toProperty
-  const edgeType = hasDataMapping ? 'data' : 'default'
-  const flowEdgeType = hasDataMapping ? 'workflow-data-edge' : 'workflow-edge'
+  const edgeType = hasDataMapping ? 'data' : 'control'
+  const flowEdgeType = hasDataMapping ? 'workflow-data-edge' : 'workflow-control-edge'
 
   return {
     id: edge.id || `edge-${stableId}`,

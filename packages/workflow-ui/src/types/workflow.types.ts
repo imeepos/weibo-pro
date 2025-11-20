@@ -1,5 +1,5 @@
 import type { Node, Edge, NodeProps as FlowNodeProps } from '@xyflow/react'
-import type { IDataEdge, IControlEdge, INode } from '@sker/workflow'
+import type { IEdge, INode } from '@sker/workflow'
 
 /**
  * React Flow 节点类型
