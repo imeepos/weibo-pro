@@ -21,8 +21,9 @@ export class WeiboAjaxStatusesShowAstVisitor extends WeiboApiClient {
         return new Observable<INode>(obs => {
             const handler = async () => {
                 try {
-                    ast.state = 'running'
-                    obs.next(ast)
+                    ast.state = 'running';
+                    obs.next({ ...ast });
+
                     const url = `https://weibo.com/ajax/statuses/show?id=${ast.mblogid}&locale=zh-CN&isGetLongText=true`;
                     const body = await this.fetchApi<WeiboAjaxStatusesShowAstReponse>({
                         url,
@@ -39,21 +40,20 @@ export class WeiboAjaxStatusesShowAstVisitor extends WeiboApiClient {
                         await m.upsert(WeiboPostEntity, post as any, ['id']);
                     });
 
+                    ast.state = 'emitting';
+                    obs.next({ ...ast });
+
                     ast.state = 'success';
-                    obs.next(ast)
+                    obs.next({ ...ast });
                 } catch (error) {
                     console.error(`[WeiboAjaxStatusesShowAstVisitor] postId: ${ast.id}`, error);
                     ast.state = 'fail';
                     ast.setError(error, process.env.NODE_ENV === 'development');
-                    obs.next(ast)
+                    obs.next({ ...ast });
                 }
-                return ast;
-            }
-            handler()
-            return () => obs.complete()
-        })
-
+            };
+            handler();
+            return () => obs.complete();
+        });
     }
-
-
 }

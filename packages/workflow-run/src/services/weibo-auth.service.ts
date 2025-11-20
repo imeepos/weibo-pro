@@ -1,19 +1,15 @@
 import { Inject, Injectable, OnDestroy } from "@sker/core";
-import { Subject, Observable } from "rxjs";
 import { chromium, Browser, BrowserContext, Page, Cookie } from "playwright";
 import { RedisClient } from "@sker/redis";
 import { WeiboAccountEntity, WeiboAccountStatus, useEntityManager } from "@sker/entities";
 import {
   WeiboLoginEvent,
-  WeiboLoginEventType,
   LoginSession,
   WeiboUserInfo,
-  WeiboLoginSessionSnapshot,
-  SessionStorage,
   WeiboLoginConfig
 } from "./weibo-login.types";
 import { Subscriber } from 'rxjs'
-import { generateId } from "@sker/workflow";
+import { generateId, INode } from "@sker/workflow";
 import { WeiboLoginAst } from "@sker/workflow-ast";
 
 /**
@@ -84,7 +80,7 @@ export class WeiboAuthService implements OnDestroy {
    * 创建登录会话
    */
   async createLoginSession(
-    ast: WeiboLoginAst, obs: Subscriber<WeiboLoginAst>
+    ast: WeiboLoginAst, obs: Subscriber<INode>
   ): Promise<void> {
     if (!this.browser) {
       throw new Error('Playwright浏览器未就绪，微博登录功能暂时不可用');
@@ -117,7 +113,7 @@ export class WeiboAuthService implements OnDestroy {
     const timer = setTimeout(() => {
       ast.message = `登录超时,请重新尝试`
       ast.state = 'fail'
-      obs.next(ast)
+      obs.next({ ...ast })
       this.cleanupSession(sessionId);
     }, this.config.sessionTimeout);
 
@@ -139,7 +135,7 @@ export class WeiboAuthService implements OnDestroy {
       } catch (error) {
         ast.state = 'fail'
         ast.message = `打开登录页面失败`
-        obs.next(ast)
+        obs.next({ ...ast })
         await this.cleanupSession(sessionId);
       }
     });
@@ -152,7 +148,7 @@ export class WeiboAuthService implements OnDestroy {
   private setupResponseListeners(
     page: Page,
     ast: WeiboLoginAst,
-    obs: Subscriber<WeiboLoginAst>
+    obs: Subscriber<INode>
   ) {
     page.on('response', async (response) => {
       const url = response.url();
@@ -164,7 +160,8 @@ export class WeiboAuthService implements OnDestroy {
 
           if (data.data?.image) {
             ast.qrcode = data.data.image;
-            obs.next(ast)
+            ast.state = "emitting"
+            obs.next({ ...ast })
           }
         }
 
@@ -179,13 +176,14 @@ export class WeiboAuthService implements OnDestroy {
             // 50114002: 已扫码,等待手机确认
             else if (data.retcode === 50114002) {
               ast.message = `请在手机点击确认以登录`
-              obs.next(ast)
+              ast.state = "emitting"
+              obs.next({ ...ast })
             }
             // 50114003: 二维码过期
             else if (data.retcode === 50114003) {
               ast.state = 'fail';
               ast.message = `该二维码已过期`
-              obs.next(ast)
+              obs.next({ ...ast })
               obs.complete()
               await this.cleanupSession(ast.id);
             }
@@ -207,13 +205,11 @@ export class WeiboAuthService implements OnDestroy {
     page: Page,
     context: BrowserContext,
     ast: WeiboLoginAst,
-    obs: Subscriber<WeiboLoginAst>
+    obs: Subscriber<INode>
   ) {
     page.on('framenavigated', async (frame) => {
       if (frame !== page.mainFrame()) return;
-
       const url = frame.url();
-
       // 检测登录成功: 页面跳转到微博首页
       if (url.startsWith('https://weibo.com/')) {
         try {
@@ -228,13 +224,13 @@ export class WeiboAuthService implements OnDestroy {
 
           ast.account = account;
           ast.state = 'success'
-          obs.next(ast)
+          obs.next({ ...ast })
           obs.complete()
           await this.cleanupSession(ast.id);
         } catch (error) {
           ast.state = 'fail';
           ast.message = `保存账号信息失败`
-          obs.next(ast)
+          obs.next({ ...ast })
           obs.complete();
           await this.cleanupSession(ast.id);
         }
