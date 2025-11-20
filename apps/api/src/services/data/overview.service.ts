@@ -201,11 +201,7 @@ export class OverviewService {
   async getLocations(timeRange: TimeRange): Promise<OverviewLocation[]> {
     const cacheKey = CacheService.buildKey('overview:locations', timeRange);
 
-    return await this.cacheService.getOrSet(
-      cacheKey,
-      () => this.fetchLocationsData(timeRange),
-      CACHE_TTL.MEDIUM // 地域数据5分钟缓存
-    );
+    return await this.fetchLocationsData(timeRange)
   }
 
   private async fetchLocationsData(timeRange: TimeRange): Promise<OverviewLocation[]> {

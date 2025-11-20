@@ -358,11 +358,7 @@ export class SentimentService {
   async getLocations(timeRange: TimeRange = '12h') {
     const cacheKey = CacheService.buildKey(CACHE_KEYS.SENTIMENT_LOCATIONS, timeRange);
 
-    return await this.cacheService.getOrSet(
-      cacheKey,
-      () => this.fetchLocations(timeRange),
-      CACHE_TTL.LONG
-    );
+    return await this.fetchLocations(timeRange)
   }
 
   private async fetchLocations(timeRange: TimeRange) {
@@ -391,7 +387,7 @@ export class SentimentService {
       `, [start, end]);
 
       return results.map((row: any) => ({
-        region: row.region,
+        region: (row.region || '').replace('发布于', '').trim(),
         positive: parseInt(row.positive),
         negative: parseInt(row.negative),
         neutral: parseInt(row.neutral),
