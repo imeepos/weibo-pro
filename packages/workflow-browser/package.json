@@ -21,7 +21,8 @@
   "scripts": {
     "claude": "claude --dangerously-skip-permissions",
     "lint": "eslint . --max-warnings 0",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "main": "tsx src/main.ts"
   },
   "dependencies": {
     "@sker/core": "workspace:*",

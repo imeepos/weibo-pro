@@ -11,7 +11,7 @@ import { root } from '@sker/core'
 import { providers } from '@sker/sdk'
 
 // 初始化 SDK providers
-root.set(providers(true))
+root.set(providers({ baseURL: '/' }))
 
 const rootElement = document.getElementById('root')
 if (!rootElement) throw new Error('Root element not found')

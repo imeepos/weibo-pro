@@ -2,12 +2,16 @@ import "reflect-metadata";
 import "dotenv/config";
 import "@sker/workflow";
 import "@sker/workflow-ast";
-import "@sker/workflow-run";
+import "./index";
 import { DataFlowManager, EdgeMode, executeAst, generateId, WorkflowGraphAst } from "@sker/workflow";
 import { EventAutoCreatorAst, PostContextCollectorAst, PostNLPAnalyzerAst, WeiboAjaxFeedHotTimelineAst, WeiboAjaxStatusesCommentAst, WeiboAjaxStatusesLikeShowAst, WeiboAjaxStatusesRepostTimelineAst, WeiboAjaxStatusesShowAst } from "@sker/workflow-ast";
 import { root } from "@sker/core";
+import { providers } from '@sker/sdk'
 
 async function bootstrap() {
+
+    // 初始化 SDK providers
+    root.set(providers({ baseURL: 'http://localhost:8089' }))
     const aataFlowManager = root.get(DataFlowManager)
     const hot = new WeiboAjaxFeedHotTimelineAst()
     const detail = new WeiboAjaxStatusesShowAst()
@@ -51,11 +55,12 @@ async function bootstrap() {
     ast.addEdge({ id: generateId(), mode: EdgeMode.ZIP, from: context.id, to: auto.id, fromProperty: 'post', toProperty: 'post' })
     executeAst(ast, {}).subscribe({
         next(value) {
+            console.log(`--------------\n`)
             console.log(`工作流状态: ${value.state}`)
             console.log(value.nodes.map(it => [it.type, it.state, JSON.stringify(aataFlowManager.extractNodeOutputs(it))].join(' ')).join('\n'))
         },
         error(err) {
-            console.error(err)
+            console.error('工作流运行失败', err)
         },
         complete() {
             console.log(`工作流运行结束`)

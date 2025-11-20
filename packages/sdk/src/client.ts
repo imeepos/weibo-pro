@@ -3,7 +3,7 @@ import axios, { AxiosInstance, AxiosRequestConfig } from 'axios'
 import { AXIOS, AXIOS_CONFIG } from "./tokens";
 import { Observable } from 'rxjs';
 
-export const providers: (isProd?: boolean) => Provider[] = (isProd = true) => {
+export const providers: (config?: AxiosRequestConfig) => Provider[] = (config = { baseURL: '/' }) => {
     const controllers = root.get(CONTROLLES, [])
 
     return [
@@ -16,9 +16,7 @@ export const providers: (isProd?: boolean) => Provider[] = (isProd = true) => {
         },
         {
             provide: AXIOS_CONFIG,
-            useValue: {
-                baseURL: '/'
-            }
+            useValue: config
         },
         ...controllers.map(controller => {
             return {
@@ -61,19 +59,17 @@ function createControllerInstance<T>(controllerClass: new () => T, axiosInstance
                 const { urlParams, queryParams, bodyData, headers } = extractParameters(args, routeArgs);
 
                 // 替换URL中的参数
-                const finalUrl = replaceUrlParams(fullPath, urlParams);
-
+                let finalUrl = replaceUrlParams(fullPath, urlParams);
+                const axiosConfig = root.get(AXIOS_CONFIG, {})
+                if (axiosConfig && axiosConfig.baseURL) {
+                    finalUrl = axiosConfig.baseURL + finalUrl
+                }
                 // SSE 方法特殊处理
                 if (httpMethod === RequestMethod.SSE) {
                     // 检查是否有 body 数据，如果有则使用 POST SSE，否则使用 GET SSE
                     if (bodyData !== undefined) {
                         // POST SSE：支持复杂 JSON 传输
                         return new Observable<any>(subscriber => {
-                            if (typeof window === 'undefined') {
-                                subscriber.error(new Error('POST SSE is only supported in browser environment'));
-                                return;
-                            }
-
                             // 使用 fetch API 处理 POST SSE
                             fetch(finalUrl, {
                                 method: 'POST',
@@ -84,50 +80,56 @@ function createControllerInstance<T>(controllerClass: new () => T, axiosInstance
                                 },
                                 body: JSON.stringify(bodyData)
                             })
-                            .then(response => {
-                                if (!response.ok) {
-                                    throw new Error(`HTTP error! status: ${response.status}`);
-                                }
+                                .then(response => {
+                                    const ok = response.ok;
+                                    const status = response.status;
+                                    if (!ok) {
+                                        throw new Error(`HTTP error! status: ${status}`);
+                                    }
 
-                                const reader = response.body?.getReader();
-                                if (!reader) {
-                                    throw new Error('Response body is not readable');
-                                }
+                                    const reader = response.body?.getReader();
+                                    if (!reader) {
+                                        throw new Error('Response body is not readable');
+                                    }
 
-                                const decoder = new TextDecoder();
+                                    const decoder = new TextDecoder();
 
-                                function read() {
-                                    reader!.read().then(({ done, value }) => {
-                                        if (done) {
-                                            subscriber.complete();
-                                            return;
-                                        }
+                                    function read() {
+                                        reader!.read().then(({ done, value }) => {
+                                            if (done) {
+                                                subscriber.complete();
+                                                return;
+                                            }
 
-                                        const chunk = decoder.decode(value);
-                                        const lines = chunk.split('\n');
+                                            const chunk = decoder.decode(value);
+                                            const lines = chunk.split('\n');
 
-                                        for (const line of lines) {
-                                            if (line.startsWith('data: ')) {
-                                                try {
-                                                    const data = JSON.parse(line.slice(6));
-                                                    subscriber.next(data);
-                                                } catch (error) {
-                                                    subscriber.error(new Error(`Failed to parse SSE data: ${error}`));
+                                            for (const line of lines) {
+                                                if (line.startsWith('data: ')) {
+                                                    try {
+                                                        const data = JSON.parse(line.slice(6));
+                                                        subscriber.next(data);
+                                                    } catch (error) {
+                                                        bodyData.state = 'fail'
+                                                        subscriber.next({ ...bodyData })
+                                                        subscriber.complete()
+                                                    }
                                                 }
                                             }
-                                        }
 
-                                        read();
-                                    }).catch(error => {
-                                        subscriber.error(error);
-                                    });
-                                }
+                                            read();
+                                        }).catch(error => {
+                                            bodyData.state = 'fail'
+                                            subscriber.next({ ...bodyData })
+                                            subscriber.complete()
+                                        });
+                                    }
 
-                                read();
-                            })
-                            .catch(error => {
-                                subscriber.error(error);
-                            });
+                                    read();
+                                })
+                                .catch(error => {
+                                    subscriber.error(error);
+                                });
 
                             return () => {
                                 // 清理函数

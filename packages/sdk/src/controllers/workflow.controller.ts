@@ -37,7 +37,7 @@ export class WorkflowController {
     throw new Error('method deleteWorkflow not implements')
   }
 
-  @Post('execute')
+  @Sse('execute')
   execute(@Body() body: INode, res?: any): Observable<INode> {
     throw new Error('method execute not implements')
   }

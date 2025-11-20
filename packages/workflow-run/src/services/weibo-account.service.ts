@@ -149,8 +149,6 @@ export class WeiboAccountService {
             })
         });
 
-        console.log('[WeiboAccountService] 从数据库查询到的活跃账号:', { activeAccounts });
-
         for (const account of activeAccounts) {
             const cookieHeader = this.composeCookieHeader(account.cookies);
             if (!cookieHeader) {
