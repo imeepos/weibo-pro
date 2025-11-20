@@ -223,7 +223,10 @@ export class EventQueryService {
               'usercount'
             )
             .addSelect('COUNT(post.id)', 'postcount')
-            .addSelect('AVG(nlp.sentiment_score)', 'avgsentiment')
+            .addSelect(
+              'AVG((nlp.sentiment->>\'positive_prob\')::numeric - (nlp.sentiment->>\'negative_prob\')::numeric)',
+              'avgsentiment'
+            )
             .where('nlp.event_id = :eventId', { eventId })
             .andWhere('post.deleted_at IS NULL')
             .groupBy('location')
