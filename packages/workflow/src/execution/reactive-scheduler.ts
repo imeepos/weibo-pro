@@ -2,8 +2,8 @@ import { WorkflowGraphAst } from '../ast';
 import { INode, IEdge, IAstStates, EdgeMode, hasCondition, hasDataMapping } from '../types';
 import { DataFlowManager } from './data-flow-manager';
 import { executeAst } from '../executor';
-import { Observable, of, EMPTY, merge, combineLatest, zip } from 'rxjs';
-import { map, catchError, takeWhile, concatMap, filter, withLatestFrom, shareReplay } from 'rxjs/operators';
+import { Observable, of, EMPTY, merge, combineLatest, zip, asyncScheduler } from 'rxjs';
+import { map, catchError, takeWhile, concatMap, filter, withLatestFrom, shareReplay, subscribeOn } from 'rxjs/operators';
 import { Injectable, root } from '@sker/core';
 
 /**
@@ -127,6 +127,7 @@ export class ReactiveScheduler {
      */
     private createEntryNodeStream(node: INode, ctx: any): Observable<INode> {
         return this.executeNode(node, ctx).pipe(
+            subscribeOn(asyncScheduler),
             shareReplay({ bufferSize: 2, refCount: true })
         );
     }

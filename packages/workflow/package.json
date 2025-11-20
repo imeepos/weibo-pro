@@ -23,7 +23,8 @@
     "lint": "eslint . --max-warnings 0",
     "check-types": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "main": "tsx src/main.ts"
   },
   "dependencies": {
     "rxjs": "^7.8.1",
