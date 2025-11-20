@@ -21,7 +21,9 @@
     "dev": "tsup --watch",
     "claude": "claude --dangerously-skip-permissions",
     "lint": "eslint . --max-warnings 0",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "rxjs": "^7.8.1",
@@ -33,6 +35,7 @@
     "@types/node": "^22.15.3",
     "eslint": "^9.38.0",
     "tsup": "^8.4.0",
-    "typescript": "5.9.2"
+    "typescript": "5.9.2",
+    "vitest": "^3.0.0"
   }
 }
