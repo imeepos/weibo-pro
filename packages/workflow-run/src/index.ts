@@ -14,7 +14,7 @@ export { PostNLPAnalyzerVisitor } from './PostNLPAnalyzerVisitor'
 export { EventAutoCreatorVisitor } from './EventAutoCreatorVisitor'
 export { WeiboLoginAstVisitor } from './WeiboLoginAstVisitor'
 export { LlmTextAgentAstVisitor } from './LlmTextAgentAstVisitor'
-
+export { TextAreaAstVisitor } from './TextAreaAstVisitor'
 export {
     WeiboAccountService,
     type WeiboLoginSuccessMessage

@@ -57,17 +57,16 @@ export function LeftDrawer({ visible, onClose, onRunNode, onLocateNode, classNam
       className={cn(
         'absolute bottom-4 right-4 top-16 z-10',
         'flex flex-col overflow-hidden',
-        'transition-opacity duration-300',
         className
       )}
       style={{ width: `${width}px` }}
     >
       {/* 调整大小控制柄 */}
       <div
-        className="absolute left-0 top-0 bottom-0 w-1.5 cursor-ew-resize group hover:bg-indigo-500/30 transition-colors"
+        className="absolute left-0 top-0 bottom-0 w-1.5 cursor-ew-resize group "
         onMouseDown={handleMouseDown}
       >
-        <div className="absolute inset-y-0 left-0 w-0.5 bg-slate-700/50 group-hover:bg-indigo-500 transition-colors" />
+        <div className="absolute inset-y-0 left-0 w-0.5" />
       </div>
 
       {/* 头部 */}

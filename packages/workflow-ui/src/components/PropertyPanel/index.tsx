@@ -1,6 +1,8 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
+import { Subject } from 'rxjs'
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators'
 import { useSelectedNode } from './useSelectedNode'
 import { SmartFormField } from './SmartFormField'
 import { useReactFlow } from '@xyflow/react'
@@ -8,10 +10,15 @@ import { getNodeMetadata } from '../../adapters'
 import { resolveConstructor } from '@sker/workflow'
 import { ErrorDetailPanel } from '../ErrorDetail'
 import { SerializedError } from '@sker/core'
-import { Save, X } from 'lucide-react'
+import { RotateCcw } from 'lucide-react'
 
 export interface PropertyPanelProps {
   className?: string
+}
+
+interface FormChangeEvent {
+  nodeId: string
+  formData: Record<string, any>
 }
 
 export function PropertyPanel({ className = '' }: PropertyPanelProps) {
@@ -21,6 +28,10 @@ export function PropertyPanel({ className = '' }: PropertyPanelProps) {
   // 表单状态管理
   const [formData, setFormData] = useState<Record<string, any>>({})
   const [hasChanges, setHasChanges] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+
+  // RxJS Subject 用于去噪
+  const formChange$ = useRef(new Subject<FormChangeEvent>())
 
   // 当选中节点变化时，重置表单数据
   useEffect(() => {
@@ -36,6 +47,45 @@ export function PropertyPanel({ className = '' }: PropertyPanelProps) {
       setHasChanges(false)
     }
   }, [selectedNode?.id])
+
+  // RxJS 订阅：去噪 + 自动保存
+  useEffect(() => {
+    const subscription = formChange$.current
+      .pipe(
+        debounceTime(600), // 600ms 去噪
+        distinctUntilChanged((prev, curr) =>
+          JSON.stringify(prev.formData) === JSON.stringify(curr.formData)
+        )
+      )
+      .subscribe((event) => {
+        if (!selectedNode || selectedNode.id !== event.nodeId) return
+
+        setIsSaving(true)
+
+        // 更新 AST 实例
+        const ast = selectedNode.data
+        Object.entries(event.formData).forEach(([property, value]) => {
+          ;(ast as any)[property] = value
+        })
+
+        // 更新节点数据，触发画布重新渲染
+        setNodes((nodes) =>
+          nodes.map((node) =>
+            node.id === selectedNode.id
+              ? { ...node, data: { ...node.data } }
+              : node
+          )
+        )
+
+        // 保存完成
+        setTimeout(() => {
+          setIsSaving(false)
+          setHasChanges(false)
+        }, 200)
+      })
+
+    return () => subscription.unsubscribe()
+  }, [selectedNode, setNodes])
 
   if (!selectedNode) {
     return (
@@ -56,36 +106,25 @@ export function PropertyPanel({ className = '' }: PropertyPanelProps) {
   const metadata = getNodeMetadata(resolveConstructor(selectedNode.data))
   const ast = selectedNode.data
 
-  // 修改属性时只更新本地状态
+  // 修改属性时更新本地状态 + 触发 RxJS 流
   const handlePropertyChange = (property: string, value: any) => {
-    setFormData((prev) => ({
-      ...prev,
+    const newFormData = {
+      ...formData,
       [property]: value,
-    }))
+    }
+
+    setFormData(newFormData)
     setHasChanges(true)
-  }
 
-  // 保存表单数据到节点
-  const handleSave = () => {
-    // 更新 AST 实例
-    Object.entries(formData).forEach(([property, value]) => {
-      ;(ast as any)[property] = value
+    // 发送到 RxJS 流进行去噪处理
+    formChange$.current.next({
+      nodeId: selectedNode.id,
+      formData: newFormData,
     })
-
-    // 更新节点数据，触发画布重新渲染
-    setNodes((nodes) =>
-      nodes.map((node) =>
-        node.id === selectedNode.id
-          ? { ...node, data: { ...node.data } }
-          : node
-      )
-    )
-
-    setHasChanges(false)
   }
 
-  // 取消修改，恢复原始值
-  const handleCancel = () => {
+  // 重置：恢复原始值
+  const handleReset = () => {
     const initialData: Record<string, any> = {}
 
     metadata.inputs.forEach((input) => {
@@ -114,10 +153,35 @@ export function PropertyPanel({ className = '' }: PropertyPanelProps) {
         {/* 输入属性 */}
         {editableProperties.length > 0 && (
           <div className="property-panel-section">
-            <h4 className="property-panel-section-title text-sm font-semibold text-slate-300 mb-3 flex items-center">
-              <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full mr-2"></div>
-              输入参数
-            </h4>
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="property-panel-section-title text-sm font-semibold text-slate-300 flex items-center">
+                <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full mr-2"></div>
+                输入参数
+              </h4>
+
+              {/* 保存状态指示器 */}
+              <div className="flex items-center gap-2">
+                {isSaving && (
+                  <div className="flex items-center gap-1.5 text-xs text-indigo-400">
+                    <div className="w-1 h-1 bg-indigo-400 rounded-full animate-pulse"></div>
+                    保存中...
+                  </div>
+                )}
+                {!isSaving && hasChanges && (
+                  <div className="flex items-center gap-1.5 text-xs text-amber-400">
+                    <div className="w-1 h-1 bg-amber-400 rounded-full"></div>
+                    未保存
+                  </div>
+                )}
+                {!isSaving && !hasChanges && formData && Object.keys(formData).length > 0 && (
+                  <div className="flex items-center gap-1.5 text-xs text-emerald-400">
+                    <div className="w-1 h-1 bg-emerald-400 rounded-full"></div>
+                    已同步
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div className="space-y-3">
               {editableProperties.map((prop) => (
                 <SmartFormField
@@ -130,22 +194,15 @@ export function PropertyPanel({ className = '' }: PropertyPanelProps) {
               ))}
             </div>
 
-            {/* 保存和取消按钮 */}
+            {/* 重置按钮 */}
             {hasChanges && (
               <div className="flex gap-2 mt-4 pt-4 border-t border-slate-700/50">
                 <button
-                  onClick={handleSave}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-900 transition-colors duration-200"
-                >
-                  <Save className="h-4 w-4" />
-                  保存
-                </button>
-                <button
-                  onClick={handleCancel}
+                  onClick={handleReset}
                   className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-slate-300 bg-slate-800/50 rounded-lg hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 focus:ring-offset-slate-900 transition-colors duration-200 border border-slate-700/50"
                 >
-                  <X className="h-4 w-4" />
-                  取消
+                  <RotateCcw className="h-4 w-4" />
+                  重置
                 </button>
               </div>
             )}
