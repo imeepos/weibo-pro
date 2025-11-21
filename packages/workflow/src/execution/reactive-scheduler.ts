@@ -265,6 +265,15 @@ export class ReactiveScheduler {
         const combinations: string[][] = [];
         const incompleteSources: string[] = [];
 
+        // 🔧 修复：当无必填属性但有多个源时，强制多源组合（等待所有源发射）
+        // 场景：LlmTextAgentAst { system: '', prompt: '' } 两个输入都有默认值
+        // 期望：等待两个 TextArea 都发射后再执行（使用 combineLatest）
+        // 错误：若不修复，会用 merge，导致每个源发射时单独触发（执行2次）
+        if (requiredProperties.size === 0 && edgesBySource.size > 1) {
+            const allSourceIds = Array.from(edgesBySource.keys());
+            return [allSourceIds];
+        }
+
         // 1. 检查每个单源是否完整
         for (const [sourceId, edges] of edgesBySource) {
             const providedProps = new Set(

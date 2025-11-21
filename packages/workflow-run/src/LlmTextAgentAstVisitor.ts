@@ -25,6 +25,7 @@ export class LlmTextAgentAstVisitor {
                 obs.next({ ...ast })
 
                 ast.state = 'success';
+                obs.next({ ...ast })
                 obs.complete()
             }
             run().catch(e => {
