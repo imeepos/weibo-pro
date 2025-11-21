@@ -68,6 +68,7 @@ export function useWorkflowOperations(
 
           // 当节点状态为 emitting 时,派发事件触发边动画
           if (updatedNode.state === 'emitting') {
+            console.log('🔥 派发 node-emitting 事件', { nodeId: updatedNode.id })
             window.dispatchEvent(new CustomEvent('node-emitting', {
               detail: { nodeId: updatedNode.id }
             }))
