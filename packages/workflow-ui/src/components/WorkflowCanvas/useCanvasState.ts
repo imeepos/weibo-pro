@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import type { WorkflowGraphAst } from '@sker/workflow'
+import type { WorkflowGraphAst, IEdge } from '@sker/workflow'
 import type { ToastType } from './Toast'
 
 /**
@@ -49,6 +49,12 @@ export function useCanvasState() {
   const [drawer, setDrawer] = useState<{ visible: boolean; nodeId?: string }>({
     visible: false,
   })
+
+  // 边配置对话框状态
+  const [edgeConfigDialog, setEdgeConfigDialog] = useState<{
+    visible: boolean
+    edge: IEdge | null
+  }>({ visible: false, edge: null })
 
   /**
    * 显示 Toast 提示
@@ -123,6 +129,20 @@ export function useCanvasState() {
     setDrawer({ visible: false, nodeId: undefined })
   }, [])
 
+  /**
+   * 打开边配置对话框
+   */
+  const openEdgeConfigDialog = useCallback((edge: IEdge) => {
+    setEdgeConfigDialog({ visible: true, edge })
+  }, [])
+
+  /**
+   * 关闭边配置对话框
+   */
+  const closeEdgeConfigDialog = useCallback(() => {
+    setEdgeConfigDialog({ visible: false, edge: null })
+  }, [])
+
   return {
     // 执行状态
     isRunning,
@@ -156,5 +176,10 @@ export function useCanvasState() {
     drawer,
     openDrawer,
     closeDrawer,
+
+    // 边配置对话框
+    edgeConfigDialog,
+    openEdgeConfigDialog,
+    closeEdgeConfigDialog,
   }
 }

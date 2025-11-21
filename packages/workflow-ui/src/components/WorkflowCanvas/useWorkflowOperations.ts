@@ -66,6 +66,13 @@ export function useWorkflowOperations(
             workflow.syncFromAst()
           }
 
+          // 当节点状态为 emitting 时,派发事件触发边动画
+          if (updatedNode.state === 'emitting') {
+            window.dispatchEvent(new CustomEvent('node-emitting', {
+              detail: { nodeId: updatedNode.id }
+            }))
+          }
+
           // 根据最终状态显示提示
           if (updatedNode.state === 'success') {
             console.info(`节点执行成功`)
@@ -159,11 +166,18 @@ export function useWorkflowOperations(
       // executeAst 返回 Observable，利用流式特性实时更新状态
       const subscription = executeAst(workflow.workflowAst, ctx).subscribe({
         next: (updatedWorkflow) => {
-          console.log(`工作流状态更新`, updatedWorkflow)
-
           // 每次 next 事件实时更新工作流状态
           Object.assign(workflow.workflowAst!, updatedWorkflow)
           workflow.syncFromAst()
+
+          // 遍历所有节点,派发 emitting 事件
+          updatedWorkflow.nodes?.forEach((node) => {
+            if (node.state === 'emitting') {
+              window.dispatchEvent(new CustomEvent('node-emitting', {
+                detail: { nodeId: node.id }
+              }))
+            }
+          })
         },
         error: (error) => {
           const errorInfo = extractErrorInfo(error)

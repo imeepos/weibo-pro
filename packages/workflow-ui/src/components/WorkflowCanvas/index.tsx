@@ -24,7 +24,7 @@ import {
   UploadIcon,
 } from 'lucide-react'
 
-import { fromJson, toJson, INode, WorkflowGraphAst, findNodeType } from '@sker/workflow'
+import { fromJson, toJson, INode, WorkflowGraphAst, findNodeType, IEdge } from '@sker/workflow'
 import { createNodeTypes } from '../nodes'
 import { edgeTypes } from '../edges'
 import { getAllNodeTypes } from '../../adapters'
@@ -41,6 +41,7 @@ import { Toast, type ToastType } from './Toast'
 import { SubWorkflowModal } from '../SubWorkflowModal'
 import { LeftDrawer } from '../LeftDrawer'
 import { SettingPanel } from '../SettingPanel'
+import { EdgeConfigDialog } from './EdgeConfigDialog'
 import { cn } from '../../utils/cn'
 
 export interface WorkflowCanvasProps {
@@ -102,6 +103,9 @@ export function WorkflowCanvas({
     drawer,
     openDrawer,
     closeDrawer,
+    edgeConfigDialog,
+    openEdgeConfigDialog,
+    closeEdgeConfigDialog,
   } = useCanvasState()
 
   // 使用 WorkflowOperations 管理业务逻辑
@@ -202,6 +206,31 @@ export function WorkflowCanvas({
     window.addEventListener('open-setting-panel', handleOpenSettingPanel)
     return () => window.removeEventListener('open-setting-panel', handleOpenSettingPanel)
   }, [])
+
+  /**
+   * 监听打开边配置对话框事件
+   *
+   * 优雅设计：
+   * - 右键菜单通过自定义事件触发
+   * - 在这里统一处理边配置对话框的打开
+   */
+  React.useEffect(() => {
+    const handleOpenEdgeConfig = (e: Event) => {
+      const customEvent = e as CustomEvent
+      const { edgeId } = customEvent.detail
+
+      console.log('监听到 open-edge-config 事件:', { edgeId })
+
+      // 查找完整的 edge 对象
+      const edge = edges.find((e) => e.id === edgeId)
+      if (edge?.data?.edge) {
+        openEdgeConfigDialog(edge.data.edge)
+      }
+    }
+
+    window.addEventListener('open-edge-config', handleOpenEdgeConfig)
+    return () => window.removeEventListener('open-edge-config', handleOpenEdgeConfig)
+  }, [edges, openEdgeConfigDialog])
 
   const {
     onNodeClick,
@@ -304,6 +333,67 @@ export function WorkflowCanvas({
     }
   }, [getSelectedNodes, edges, workflow])
 
+  const handleToggleCollapse = useCallback(() => {
+    const selectedNodes = getSelectedNodes()
+    if (selectedNodes.length === 0) return
+
+    workflow.setNodes((nodes) =>
+      nodes.map((node) =>
+        node.selected
+          ? { ...node, data: { ...node.data, collapsed: !node.data.collapsed } }
+          : node
+      )
+    )
+  }, [getSelectedNodes, workflow])
+
+  /**
+   * 创建分组
+   *
+   * 将选中的节点组织为一个分组（WorkflowGraphAst）
+   */
+  const handleCreateGroup = useCallback(() => {
+    const selectedNodes = getSelectedNodes()
+    if (selectedNodes.length === 0) {
+      showToast('error', '请先选择节点', '至少选择一个节点才能创建分组')
+      return
+    }
+
+    const selectedNodeIds = selectedNodes.map(n => n.id)
+    const groupId = workflow.createGroup(selectedNodeIds)
+
+    if (groupId) {
+      showToast('success', '分组创建成功', `已将 ${selectedNodes.length} 个节点组织为分组`)
+    }
+  }, [getSelectedNodes, workflow, showToast])
+
+  /**
+   * 解散分组
+   *
+   * 如果选中的节点是分组，则解散它
+   */
+  const handleUngroupNodes = useCallback(() => {
+    const selectedNodes = getSelectedNodes()
+    if (selectedNodes.length === 0) {
+      showToast('error', '请先选择分组', '请选择要解散的分组节点')
+      return
+    }
+
+    const groupNodes = selectedNodes.filter(
+      node => node.data instanceof WorkflowGraphAst && node.data.isGroup
+    )
+
+    if (groupNodes.length === 0) {
+      showToast('error', '未选中分组', '选中的节点中没有分组')
+      return
+    }
+
+    groupNodes.forEach(groupNode => {
+      workflow.ungroupNodes(groupNode.id)
+    })
+
+    showToast('success', '分组已解散', `已解散 ${groupNodes.length} 个分组`)
+  }, [getSelectedNodes, workflow, showToast])
+
   /**
    * 删除单个节点（右键菜单）
    *
@@ -312,6 +402,19 @@ export function WorkflowCanvas({
   const handleDeleteNode = useCallback(
     (nodeId: string) => {
       workflow.removeNode(nodeId)
+    },
+    [workflow]
+  )
+
+  const handleToggleNodeCollapse = useCallback(
+    (nodeId: string) => {
+      workflow.setNodes((nodes) =>
+        nodes.map((node) =>
+          node.id === nodeId
+            ? { ...node, data: { ...node.data, collapsed: !node.data.collapsed } }
+            : node
+        )
+      )
     },
     [workflow]
   )
@@ -638,6 +741,9 @@ export function WorkflowCanvas({
     onDelete: handleDelete,
     onSelectAll: handleSelectAll,
     onSave: handleSave,
+    onToggleCollapse: handleToggleCollapse,
+    onCreateGroup: handleCreateGroup,
+    onUngroupNodes: handleUngroupNodes,
   })
 
   const handleNodesChangeInternal = useCallback(
@@ -710,6 +816,57 @@ export function WorkflowCanvas({
   const handleCloseSettingPanel = useCallback(() => {
     closeSettingPanel()
   }, [closeSettingPanel])
+
+  /**
+   * 保存边配置
+   *
+   * 优雅设计：
+   * - 同步更新 AST 和 UI
+   * - 确保数据一致性
+   */
+  const handleSaveEdgeConfig = useCallback((edgeConfig: Partial<IEdge>) => {
+    if (!edgeConfigDialog.edge) return
+
+    const edgeId = edgeConfigDialog.edge.id
+    console.log('保存边配置:', edgeId, edgeConfig)
+
+    // 更新 AST 中的边
+    const astEdge = workflow.workflowAst.edges.find((e: IEdge) => e.id === edgeId)
+    if (astEdge) {
+      Object.assign(astEdge, edgeConfig)
+    }
+
+    // 更新 UI 中的边
+    workflow.setEdges((currentEdges) =>
+      currentEdges.map((edge) => {
+        if (edge.id === edgeId && edge.data?.edge) {
+          return {
+            ...edge,
+            data: {
+              ...edge.data,
+              edge: { ...edge.data.edge, ...edgeConfig }
+            }
+          }
+        }
+        return edge
+      })
+    )
+
+    showToast('success', '边配置已更新')
+  }, [edgeConfigDialog.edge, workflow, showToast])
+
+  /**
+   * 配置边（右键菜单触发）
+   *
+   * 优雅设计：
+   * - 触发自定义事件，统一处理边配置对话框的打开
+   */
+  const handleConfigEdge = useCallback((edgeId: string) => {
+    const customEvent = new CustomEvent('open-edge-config', {
+      detail: { edgeId },
+    })
+    window.dispatchEvent(customEvent)
+  }, [])
 
   return (
     <div
@@ -858,8 +1015,19 @@ export function WorkflowCanvas({
         onClearCanvas={handleClearCanvas}
         onDeleteNode={handleDeleteNode}
         onRunNode={runNode}
+        onToggleNodeCollapse={handleToggleNodeCollapse}
         onDeleteEdge={handleDeleteEdge}
+        onConfigEdge={handleConfigEdge}
+        onCreateGroup={handleCreateGroup}
+        onUngroupNodes={handleUngroupNodes}
         onClose={closeMenu}
+        nodeData={menu.contextType === 'node' && menu.targetId ? nodes.find(n => n.id === menu.targetId)?.data : undefined}
+        hasMultipleSelectedNodes={getSelectedNodes().length > 1}
+        isGroupNode={
+          menu.contextType === 'node' && menu.targetId
+            ? nodes.find(n => n.id === menu.targetId)?.data instanceof WorkflowGraphAst && nodes.find(n => n.id === menu.targetId)?.data.isGroup
+            : false
+        }
       />
 
       <NodeSelector
@@ -904,6 +1072,13 @@ export function WorkflowCanvas({
         onClose={handleCloseDrawer}
         onRunNode={runNode}
         onLocateNode={handleLocateNode}
+      />
+
+      <EdgeConfigDialog
+        visible={edgeConfigDialog.visible}
+        edge={edgeConfigDialog.edge}
+        onClose={closeEdgeConfigDialog}
+        onSave={handleSaveEdgeConfig}
       />
     </div>
   )

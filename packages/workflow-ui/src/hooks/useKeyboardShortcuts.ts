@@ -8,6 +8,9 @@ export interface KeyboardShortcutsOptions {
   onDelete?: () => void
   onSelectAll?: () => void
   onSave?: () => void
+  onToggleCollapse?: () => void
+  onCreateGroup?: () => void
+  onUngroupNodes?: () => void
 }
 
 const isInputElement = (target: EventTarget | null): boolean => {
@@ -29,6 +32,9 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
     onDelete,
     onSelectAll,
     onSave,
+    onToggleCollapse,
+    onCreateGroup,
+    onUngroupNodes,
   } = options
 
   const handleKeyDown = useCallback(
@@ -36,10 +42,21 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
       if (!enabled || isInputElement(event.target)) return
 
       const isMod = event.ctrlKey || event.metaKey
+      const isShift = event.shiftKey
 
       if (event.key === 'Delete' || event.key === 'Backspace') {
         event.preventDefault()
         onDelete?.()
+      } else if (event.key === ' ' || event.key === 'Spacebar') {
+        event.preventDefault()
+        onToggleCollapse?.()
+      } else if (isMod && event.key.toLowerCase() === 'g') {
+        event.preventDefault()
+        if (isShift) {
+          onUngroupNodes?.()
+        } else {
+          onCreateGroup?.()
+        }
       } else if (isMod && event.key.toLowerCase() === 'c') {
         event.preventDefault()
         onCopy?.()
@@ -59,7 +76,7 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
         // Escape 由其他部分处理（如关闭菜单）
       }
     },
-    [enabled, onCopy, onCut, onPaste, onDelete, onSelectAll, onSave]
+    [enabled, onCopy, onCut, onPaste, onDelete, onSelectAll, onSave, onToggleCollapse, onCreateGroup, onUngroupNodes]
   )
 
   useEffect(() => {

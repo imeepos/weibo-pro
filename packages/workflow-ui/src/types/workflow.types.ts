@@ -9,7 +9,7 @@ import type { IEdge, INode } from '@sker/workflow'
  * - type 属性与 AST 实例的 type 属性对应
  * - 使用泛型提供类型安全的节点数据访问
  */
-export type WorkflowNode<T extends INode = INode> = Node<T, string>
+export type WorkflowNode<T extends INode = INode> = Node<T & { collapsed?: boolean }, string>
 
 /**
  * React Flow 边数据结构

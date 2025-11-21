@@ -16,7 +16,9 @@ export abstract class Ast implements INode {
     name?: string;
     // 简介
     description?: string;
-
+    // 自定义颜色
+    color?: string;
+    collapsed?: boolean;
     state: IAstStates = 'pending';
     error: SerializedError | undefined;
     type!: string;
@@ -53,13 +55,13 @@ export abstract class Ast implements INode {
 
 @Node({ title: "工作流" })
 export class WorkflowGraphAst extends Ast {
-    @Input({ title: "名称", type: 'text' })
+    @State({ title: "名称", type: 'text' })
     name: string | undefined;
 
     @State({ title: "节点列表" })
     nodes: INode[] = [];
 
-    @Input()
+    @State()
     start: INode[] = [];
 
     @State({ title: "边列表" })
@@ -85,8 +87,20 @@ export class WorkflowGraphAst extends Ast {
      * - 恢复工作流时用户回到之前的视图
      * - 提升用户体验的连续性
      */
-    @Input({ title: '视图状态' })
+    @State({ title: '视图状态' })
     viewport?: { x: number; y: number; zoom: number };
+
+    @State({ title: '是否为分组' })
+    isGroup?: boolean = false;
+
+    @State({ title: '分组标题' })
+    groupTitle?: string;
+
+    @State({ title: '分组颜色' })
+    groupColor?: string = '#3b82f6';
+
+    @State({ title: '折叠状态' })
+    collapsed?: boolean = false;
 
     type: `WorkflowGraphAst` = `WorkflowGraphAst`
 

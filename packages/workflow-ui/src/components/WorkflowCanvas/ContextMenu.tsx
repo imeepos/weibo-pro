@@ -9,6 +9,10 @@ import {
   RotateCcw,
   Trash2,
   Play,
+  Settings,
+  Minimize2,
+  FolderPlus,
+  FolderMinus,
   type LucideIcon,
 } from 'lucide-react'
 import type { ContextMenuState } from './useContextMenu'
@@ -22,8 +26,15 @@ export interface ContextMenuProps {
   onClearCanvas: () => void
   onDeleteNode?: (nodeId: string) => void
   onRunNode?: (nodeId: string) => void
+  onToggleNodeCollapse?: (nodeId: string) => void
   onDeleteEdge?: (edgeId: string) => void
+  onConfigEdge?: (edgeId: string) => void
+  onCreateGroup?: () => void
+  onUngroupNodes?: () => void
   onClose: () => void
+  nodeData?: any
+  hasMultipleSelectedNodes?: boolean
+  isGroupNode?: boolean
 }
 interface MenuSection {
   title: string
@@ -43,8 +54,15 @@ export function ContextMenu({
   onClearCanvas,
   onDeleteNode,
   onRunNode,
+  onToggleNodeCollapse,
   onDeleteEdge,
+  onConfigEdge,
+  onCreateGroup,
+  onUngroupNodes,
   onClose,
+  nodeData,
+  hasMultipleSelectedNodes = false,
+  isGroupNode = false,
 }: ContextMenuProps) {
   if (!menu.visible) {
     return null
@@ -77,6 +95,7 @@ export function ContextMenu({
     ]
   } else if (menu.contextType === 'node' && menu.targetId) {
     const nodeId = menu.targetId
+    const isCollapsed = nodeData?.collapsed ?? false
     sections = [
       {
         title: '节点操作',
@@ -87,6 +106,15 @@ export function ContextMenu({
                 label: '运行节点',
                 icon: Play,
                 action: () => onRunNode(nodeId),
+              },
+            ]
+            : []),
+          ...(onToggleNodeCollapse
+            ? [
+              {
+                label: isCollapsed ? '展开节点' : '折叠节点',
+                icon: isCollapsed ? Maximize2 : Minimize2,
+                action: () => onToggleNodeCollapse(nodeId),
               },
             ]
             : []),
@@ -102,6 +130,34 @@ export function ContextMenu({
             : []),
         ],
       },
+      // 分组操作（仅在多选或分组节点时显示）
+      ...(hasMultipleSelectedNodes || isGroupNode
+        ? [
+          {
+            title: '分组操作',
+            items: [
+              ...(hasMultipleSelectedNodes && onCreateGroup
+                ? [
+                  {
+                    label: '创建分组 (Ctrl+G)',
+                    icon: FolderPlus,
+                    action: onCreateGroup,
+                  },
+                ]
+                : []),
+              ...(isGroupNode && onUngroupNodes
+                ? [
+                  {
+                    label: '解散分组 (Ctrl+Shift+G)',
+                    icon: FolderMinus,
+                    action: onUngroupNodes,
+                  },
+                ]
+                : []),
+            ],
+          },
+        ]
+        : []),
       {
         title: '视图控制',
         items: [
@@ -121,6 +177,20 @@ export function ContextMenu({
   } else if (menu.contextType === 'edge' && menu.targetId) {
     const edgeId = menu.targetId
     sections = [
+      {
+        title: '边配置',
+        items: [
+          ...(onConfigEdge
+            ? [
+              {
+                label: '配置边模式',
+                icon: Settings,
+                action: () => onConfigEdge(edgeId),
+              },
+            ]
+            : []),
+        ],
+      },
       {
         title: '连接操作',
         items: [

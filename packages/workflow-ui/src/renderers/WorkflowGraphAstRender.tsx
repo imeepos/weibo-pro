@@ -1,105 +1,72 @@
 import { Injectable } from "@sker/core";
-import { Render, WorkflowGraphAst, INode, IEdge } from "@sker/workflow";
-import React, { useMemo } from "react";
-import { Workflow } from "lucide-react";
+import { Render, WorkflowGraphAst } from "@sker/workflow";
+import React from "react";
+import { Folder, FolderOpen, ChevronDown, ChevronUp } from 'lucide-react';
 
-
-const Thumbnail = ({ nodes, edges }: { nodes: INode[]; edges: IEdge[] }) => {
-    const bounds = useMemo(() => {
-        if (nodes.length === 0) return null;
-
-        let minX = Infinity, minY = Infinity;
-        let maxX = -Infinity, maxY = -Infinity;
-
-        nodes.forEach(node => {
-            minX = Math.min(minX, node.position.x);
-            minY = Math.min(minY, node.position.y);
-            maxX = Math.max(maxX, node.position.x);
-            maxY = Math.max(maxY, node.position.y);
-        });
-
-        return { minX, minY, maxX, maxY };
-    }, [nodes]);
-
-    if (!bounds || nodes.length === 0) {
-        return (
-            <div className="flex items-center justify-center w-full h-20 bg-slate-900 rounded border border-slate-700">
-                <Workflow className="h-6 w-6 text-slate-600" />
-            </div>
-        );
-    }
-
-    const width = 160;
-    const height = 80;
-    const padding = 10;
-
-    const scaleX = (width - padding * 2) / (bounds.maxX - bounds.minX || 1);
-    const scaleY = (height - padding * 2) / (bounds.maxY - bounds.minY || 1);
-    const scale = Math.min(scaleX, scaleY);
-
-    const transform = (x: number, y: number) => ({
-        x: (x - bounds.minX) * scale + padding,
-        y: (y - bounds.minY) * scale + padding,
-    });
+const GroupCollapsedCard: React.FC<{ ast: WorkflowGraphAst }> = ({ ast }) => {
+    const nodeCount = ast.nodes.length;
+    const edgeCount = ast.edges.length;
+    const title = ast.name || '未命名分组';
+    const color = ast.color || '#3b82f6';
 
     return (
-        <svg
-            width={width}
-            height={height}
-            className="bg-slate-900 rounded border border-slate-700"
+        <div
+            className="px-3 py-2 space-y-1 min-w-[180px]"
+            style={{
+                borderLeft: `3px solid ${color}`,
+            }}
         >
-            {edges.map((edge, index) => {
-                const source = nodes.find(n => n.id === edge.from);
-                const target = nodes.find(n => n.id === edge.to);
-                if (!source || !target) return null;
+            <div className="flex items-center gap-2">
+                <Folder size={14} style={{ color }} className="shrink-0" />
+                <span className="text-xs font-medium text-slate-200 truncate">
+                    {title}
+                </span>
+            </div>
+            <div className="flex items-center gap-3 text-[10px] text-slate-400">
+                <span>{nodeCount} 节点</span>
+                <span>{edgeCount} 连接</span>
+            </div>
+            <div className="flex items-center gap-1 text-[10px] text-slate-500">
+                <ChevronDown size={10} />
+                <span>双击展开</span>
+            </div>
+        </div>
+    );
+};
 
-                const sourcePos = transform(source.position.x, source.position.y);
-                const targetPos = transform(target.position.x, target.position.y);
+const GroupExpandedContainer: React.FC<{ ast: WorkflowGraphAst }> = ({ ast }) => {
+    const title = ast.name || '未命名分组';
+    const color = ast.color || '#3b82f6';
 
-                return (
-                    <line
-                        key={`${edge.from}-${edge.to}-${index}`}
-                        x1={sourcePos.x}
-                        y1={sourcePos.y}
-                        x2={targetPos.x}
-                        y2={targetPos.y}
-                        stroke="#475569"
-                        strokeWidth="1"
-                    />
-                );
-            })}
-
-            {nodes.map(node => {
-                const pos = transform(node.position.x, node.position.y);
-                return (
-                    <circle
-                        key={node.id}
-                        cx={pos.x}
-                        cy={pos.y}
-                        r="3"
-                        fill="#60a5fa"
-                    />
-                );
-            })}
-        </svg>
+    return (
+        <div className="px-3 py-2 space-y-1 min-w-[200px]">
+            <div className="flex items-center gap-2 pb-1 border-b border-slate-700">
+                <FolderOpen size={14} style={{ color }} className="shrink-0" />
+                <span className="text-xs font-medium text-slate-200 truncate">
+                    {title}
+                </span>
+            </div>
+            <div className="text-[10px] text-slate-400 text-center py-2">
+                展开视图（嵌套工作流）
+            </div>
+            <div className="flex items-center gap-1 text-[10px] text-slate-500 justify-center">
+                <ChevronUp size={10} />
+                <span>双击折叠</span>
+            </div>
+        </div>
     );
 };
 
 const WorkflowGraphComponent: React.FC<{ ast: WorkflowGraphAst }> = ({ ast }) => {
-    const handleEdit = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        window.dispatchEvent(
-            new CustomEvent('open-sub-workflow', {
-                detail: { nodeId: ast.id, workflowAst: ast }
-            })
-        );
-    };
+    if (!ast.isGroup) {
+        return null;
+    }
 
-    return (
-        <div className="space-y-2 text-xs" onClick={handleEdit}>
-            <Thumbnail nodes={ast.nodes} edges={ast.edges} />
-        </div>
-    );
+    if (ast.collapsed) {
+        return <GroupCollapsedCard ast={ast} />;
+    }
+
+    return <GroupExpandedContainer ast={ast} />;
 };
 
 @Injectable()

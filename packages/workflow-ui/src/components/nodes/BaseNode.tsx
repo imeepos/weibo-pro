@@ -1,20 +1,80 @@
 import React, { memo, useEffect } from 'react'
-import { Handle, Position, useUpdateNodeInternals } from '@xyflow/react'
+import { Handle, Position, useUpdateNodeInternals, useReactFlow } from '@xyflow/react'
 import type { NodeProps } from '@xyflow/react'
 import type { WorkflowNode } from '../../types'
 import { findNodeType, getNodeMetadata } from '../../adapters'
 import { cn } from '../../utils/cn'
 import { useRender } from './hook'
-import { fromJson } from '@sker/workflow'
-import { NODE_STATE_COLORS } from '../../types/node.types'
+import { fromJson, type IAstStates } from '@sker/workflow'
+import { NODE_STATE_COLORS, NODE_STATE_LABELS } from '../../types/node.types'
+import { Clock, Play, TrendingUp, Check, X, ChevronDown, ChevronUp } from 'lucide-react'
+
+/**
+ * 状态图标组件
+ */
+const StateIcon = ({ state }: { state: IAstStates }) => {
+  const iconProps = {
+    size: 12,
+    strokeWidth: 2,
+    className: 'shrink-0'
+  }
+
+  switch (state) {
+    case 'pending':
+      return <Clock {...iconProps} />
+    case 'running':
+      return <Play {...iconProps} fill="currentColor" />
+    case 'emitting':
+      return <TrendingUp {...iconProps} />
+    case 'success':
+      return <Check {...iconProps} />
+    case 'fail':
+      return <X {...iconProps} />
+  }
+}
+
+/**
+ * 状态徽章组件
+ */
+const StatusBadge = ({ state }: { state?: IAstStates }) => {
+  if (!state || state === 'pending') return null
+
+  const stateColor = NODE_STATE_COLORS[state]
+  const stateLabel = NODE_STATE_LABELS[state]
+
+  // 动画效果样式
+  const getAnimationClass = () => {
+    if (state === 'running') return 'animate-pulse'
+    if (state === 'emitting') return 'animate-bounce'
+    return ''
+  }
+
+  return (
+    <div
+      className={cn(
+        'absolute -top-2 -right-2 z-10',
+        'flex items-center gap-1 px-2 py-0.5 rounded-full',
+        'text-[10px] font-medium text-white shadow-lg',
+        getAnimationClass()
+      )}
+      style={{ backgroundColor: stateColor }}
+      title={stateLabel}
+    >
+      <StateIcon state={state} />
+      <span>{stateLabel}</span>
+    </div>
+  )
+}
 
 
 const HandleWrapper = ({
   port,
   type,
+  isCollapsed,
 }: {
   port?: { property: string; label?: string; isMulti?: boolean };
   type: 'source' | 'target';
+  isCollapsed?: boolean;
 }) => {
   if (!port) {
     return null;
@@ -34,7 +94,8 @@ const HandleWrapper = ({
         '!z-50 !cursor-crosshair',
         isTarget
           ? '!bg-blue-500 !border-blue-300 hover:!bg-blue-400'
-          : '!bg-green-500 !border-green-300 hover:!bg-green-400'
+          : '!bg-green-500 !border-green-300 hover:!bg-green-400',
+        isCollapsed && '!opacity-0 !pointer-events-none !w-0 !h-0'
       )}
     />
   );
@@ -43,36 +104,43 @@ const HandleWrapper = ({
 const PortRow = ({
   input,
   output,
+  isCollapsed,
 }: {
   input?: { property: string; label?: string; isMulti?: boolean };
   output?: { property: string; label?: string; isMulti?: boolean };
+  isCollapsed?: boolean;
 }) => (
-  <div className="relative flex items-center justify-between h-6 px-2">
-    {/* 输入端口：Handle 在左边缘，文字紧随其后 */}
+  <div className={cn(
+    "relative flex items-center justify-between h-6 px-2",
+    isCollapsed && "h-0 overflow-hidden opacity-0"
+  )}>
     <div className="flex items-center gap-1 relative">
       {input && (
         <>
-          <HandleWrapper port={input} type="target" />
-          <div className="absolute flex right-4">
-            <span className="text-xs text-slate-200 truncate ml-1">
-              {input.label || input.property}
-            </span>
-            {input.isMulti && <span className="text-[10px] text-slate-400 font-mono">[]</span>}
-          </div>
+          <HandleWrapper port={input} type="target" isCollapsed={isCollapsed} />
+          {!isCollapsed && (
+            <>
+              <span className="text-xs text-slate-200 truncate ml-2">
+                {input.label || input.property}
+              </span>
+              {input.isMulti && <span className="text-[10px] text-slate-400 font-mono">[]</span>}
+            </>
+          )}
         </>
       )}
     </div>
-    {/* 输出端口：文字在左，Handle 在右边缘 */}
     <div className="flex items-center gap-1 relative">
       {output && (
         <>
-          <div className="absolute left-4">
-            {output.isMulti && <span className="text-[10px] text-slate-400 font-mono">[]</span>}
-            <span className="text-xs text-slate-200 truncate mr-1">
-              {output.label || output.property}
-            </span>
-          </div>
-          <HandleWrapper port={output} type="source" />
+          {!isCollapsed && (
+            <>
+              {output.isMulti && <span className="text-[10px] text-slate-400 font-mono">[]</span>}
+              <span className="text-xs text-slate-200 truncate mr-2">
+                {output.label || output.property}
+              </span>
+            </>
+          )}
+          <HandleWrapper port={output} type="source" isCollapsed={isCollapsed} />
         </>
       )}
     </div>
@@ -84,15 +152,27 @@ export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNode>) =
   const metadata = getNodeMetadata(nodeClass);
   const updateNodeInternals = useUpdateNodeInternals();
   const CustomRender = useRender(fromJson(data));
-  // 通知 React Flow 更新节点内部状态（Handle 位置）
+  const { setNodes } = useReactFlow();
+  const isCollapsed = data.collapsed ?? false;
+
   useEffect(() => {
     updateNodeInternals(id);
-  }, [id, metadata.inputs.length, metadata.outputs.length, updateNodeInternals]);
+  }, [id, metadata.inputs.length, metadata.outputs.length, isCollapsed, updateNodeInternals]);
+
+  const toggleCollapse = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    setNodes((nodes) =>
+      nodes.map((node) =>
+        node.id === id
+          ? { ...node, data: { ...node.data, collapsed: !isCollapsed } }
+          : node
+      )
+    );
+  };
 
   const handleContextMenu = (event: React.MouseEvent) => {
     event.preventDefault()
     event.stopPropagation()
-    // 触发自定义事件，让 WorkflowCanvas 处理
     const customEvent = new CustomEvent('node-context-menu', {
       detail: { nodeId: id, event, nodeData: data },
     })
@@ -101,16 +181,14 @@ export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNode>) =
 
   const handleDoubleClick = (event: React.MouseEvent) => {
     event.stopPropagation()
-    // 触发自定义事件，打开左侧抽屉
     const customEvent = new CustomEvent('node-double-click', {
       detail: { nodeId: id, nodeData: data },
     })
     window.dispatchEvent(customEvent)
   }
 
-  // 根据节点状态获取边框颜色
   const getBorderColor = () => {
-    if (selected) return '#818cf6'; // workflow-primary
+    if (selected) return '#818cf6';
     if (data.state) return NODE_STATE_COLORS[data.state as keyof typeof NODE_STATE_COLORS] || NODE_STATE_COLORS.pending;
     return 'transparent';
   };
@@ -119,34 +197,52 @@ export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNode>) =
     <div
       className={cn(
         'flex flex-col rounded-2xl border-[2px] relative',
-        'group pb-1 shadow-xs rounded-[15px] w-[240px] bg-workflow-block-bg hover:shadow-lg',
-        'cursor-move select-none'
+        'group pb-1 shadow-xs rounded-[15px] bg-workflow-block-bg hover:shadow-lg',
+        'cursor-move select-none transition-all duration-200',
+        isCollapsed ? 'w-[180px]' : 'w-[240px]'
       )}
       style={{
         borderColor: getBorderColor(),
-        transition: 'border-color 0.15s ease, box-shadow 0.15s ease'
+        transition: 'border-color 0.15s ease, box-shadow 0.15s ease, width 0.2s ease'
       }}
       onContextMenu={handleContextMenu}
       onDoubleClick={handleDoubleClick}
     >
+      <StatusBadge state={data.state as IAstStates} />
+
       <div className="flex items-center rounded-t-2xl px-3 py-4 border-b">
         <div className="flex items-center justify-center w-6 h-6 rounded-lg bg-blue-500 mr-2 shrink-0">
           <div className="w-3 h-3 bg-white rounded-sm"></div>
         </div>
-        <div className="text-sm font-medium text-white truncate">
+        <div className="text-sm font-medium text-white truncate flex-1">
           {metadata.title || data.type}
         </div>
+        <button
+          onClick={toggleCollapse}
+          className="ml-2 shrink-0 w-5 h-5 flex items-center justify-center rounded hover:bg-white/10 transition-colors"
+          title={isCollapsed ? '展开节点' : '折叠节点'}
+        >
+          {isCollapsed ? (
+            <ChevronDown size={14} className="text-white" />
+          ) : (
+            <ChevronUp size={14} className="text-white" />
+          )}
+        </button>
       </div>
-      {/* 渲染输入输出端口 - 配对显示 */}
-      <div className="flex flex-col gap-1 mt-2 relative">
+
+      <div className={cn(
+        "flex flex-col gap-1 relative transition-all duration-200",
+        isCollapsed ? "mt-0" : "mt-2"
+      )}>
         {Array.from({ length: Math.max(metadata.inputs.length, metadata.outputs.length) }).map((_, index) => (
           <PortRow
             key={`port-${index}`}
             input={metadata.inputs[index]}
             output={metadata.outputs[index]}
+            isCollapsed={isCollapsed}
           />
         ))}
-        {CustomRender}
+        {!isCollapsed && CustomRender}
       </div>
     </div>
   )
