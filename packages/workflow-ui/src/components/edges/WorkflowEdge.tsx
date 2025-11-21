@@ -24,23 +24,10 @@ export const WorkflowEdge = (props: EdgeProps<IWorkflowEdge>) => {
     return EDGE_TYPE_STYLES[styleType]
   }, [data?.edge?.mode, data?.styleType, data?.edgeType])
 
-  const [count, setCount] = useState<number>(0)
-
-  useEffect(() => {
-    const handleNodeEmitting = (e: Event) => {
-      const { nodeId } = (e as CustomEvent).detail
-      if (nodeId === source) {
-        setCount(c => c + 1)
-      }
-    }
-    window.addEventListener('node-emitting', handleNodeEmitting)
-    return () => window.removeEventListener('node-emitting', handleNodeEmitting)
-  }, [source])
-
   const handleDoubleClick = (event: React.MouseEvent) => {
     event.stopPropagation()
-    const customEvent = new CustomEvent('edge-delete', {
-      detail: { edgeId: id },
+    const customEvent = new CustomEvent('edge-context-menu', {
+      detail: { edgeId: id, event },
     })
     window.dispatchEvent(customEvent)
   }
@@ -65,7 +52,7 @@ export const WorkflowEdge = (props: EdgeProps<IWorkflowEdge>) => {
           zIndex: 9,
         }}
         id={id}
-        label={count > 0 ? `${count}` : undefined}
+        label={undefined}
         labelStyle={{ fill: '#fff', fontWeight: 600, fontSize: 12 }}
         labelBgStyle={{ fill: '#3b82f6' }}
         labelBgPadding={[4, 6] as [number, number]}

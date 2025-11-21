@@ -170,16 +170,6 @@ export function useWorkflowOperations(
           // 每次 next 事件实时更新工作流状态
           Object.assign(workflow.workflowAst!, updatedWorkflow)
           workflow.syncFromAst()
-
-          // 遍历所有节点,派发 emitting 事件
-          updatedWorkflow.nodes?.forEach((node) => {
-            if (node.state === 'emitting') {
-              console.log(`${node.type}:${node.state}`)
-              window.dispatchEvent(new CustomEvent('node-emitting', {
-                detail: { nodeId: node.id }
-              }))
-            }
-          })
         },
         error: (error) => {
           const errorInfo = extractErrorInfo(error)
