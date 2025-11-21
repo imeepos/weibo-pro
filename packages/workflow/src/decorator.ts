@@ -118,6 +118,18 @@ export interface InputOptions {
      * @default false
      */
     isMulti?: boolean;
+    /**
+     * Marks this input as required. If true, the node will not execute unless this input is connected.
+     * If false or undefined, the input is optional and will use defaultValue if not connected.
+     * @default undefined (auto-detect from property initializer)
+     */
+    required?: boolean;
+    /**
+     * Default value to use when this input is not connected.
+     * If not specified, will attempt to read the property's initial value from the class.
+     * @default undefined
+     */
+    defaultValue?: any;
     title?: string;
     type?: string;
 }
@@ -126,6 +138,8 @@ export interface InputMetadata {
     target: Type<any>;
     propertyKey: string | symbol;
     isMulti?: boolean;
+    required?: boolean;
+    defaultValue?: any;
     title?: string;
     type?: string;
 }
@@ -141,6 +155,8 @@ export function Input(options?: InputOptions): PropertyDecorator {
                 target: ctor,
                 propertyKey,
                 isMulti: options?.isMulti ?? false,
+                required: options?.required,
+                defaultValue: options?.defaultValue,
                 title: options?.title,
                 type: options?.type
             }

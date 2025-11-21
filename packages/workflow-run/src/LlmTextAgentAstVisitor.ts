@@ -18,12 +18,13 @@ export class LlmTextAgentAstVisitor {
                         { role: 'system', content: ast.system },
                         { role: 'user', content: ast.prompt }
                     ],
-                    temperature: 0.2,
-                    response_format: { type: 'json_object' },
+                    temperature: 0.6
                 });
                 ast.text = response.choices[0]?.message.content || ``;
                 ast.state = 'emitting'
                 obs.next({ ...ast })
+
+                ast.state = 'success';
                 obs.complete()
             }
             run().catch(e => {

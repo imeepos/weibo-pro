@@ -59,14 +59,16 @@ export class ReactiveScheduler {
      *
      * 优雅设计:
      * - 入口节点：返回空对象流（立即发射）
-     * - 依赖节点：找到所有能提供完整输入的源组合
+     * - 依赖节点：找到所有能提供完整必填输入的源组合
      * - 每个完整组合独立触发执行
      * - 使用 MERGE 合并所有组合流 → 实现多次触发
      *
+     * 变更：现在只检查必填且无默认值的属性，可选属性不影响执行
+     *
      * 示例：
-     * - C需要{a,b}, A提供{a}, B提供{b}, D提供{a,b}
-     * - 完整组合：[[A,B], [D]]
-     * - 结果：merge(zip(A,B), D) → A+B配对3次 + D独立3次 = 6次
+     * - C需要{a(必填), b(可选), c(默认值10)}，A提供{a}, B提供{b}
+     * - 完整组合：[[A]] → 只需 A 即可执行，b 和 c 使用默认值
+     * - 结果：A 发射 N 次 → C 执行 N 次
      */
     private _createNodeInputObservable(
         node: INode,
@@ -79,8 +81,8 @@ export class ReactiveScheduler {
             return of({});
         }
 
-        // 1. 获取节点所需的输入属性
-        const requiredProperties = this.getNodeInputProperties(node);
+        // 1. 获取节点必填的输入属性（无默认值）
+        const requiredProperties = this.getRequiredInputProperties(node);
 
         // 2. 按源节点分组边
         const edgesBySource = new Map<string, IEdge[]>();
@@ -130,23 +132,123 @@ export class ReactiveScheduler {
     }
 
     /**
-     * 获取节点所需的输入属性
+     * 获取节点所需的必填输入属性（无默认值）
+     *
+     * 逻辑：
+     * 1. 如果装饰器明确指定 required: true 且无 defaultValue → 必填
+     * 2. 如果装饰器明确指定 required: false → 非必填
+     * 3. 如果装饰器提供了 defaultValue → 非必填
+     * 4. 如果未指定 required，尝试从类实例读取默认值：
+     *    - 有默认值 → 非必填
+     *    - 无默认值（undefined）→ 必填
      */
-    private getNodeInputProperties(node: INode): Set<string> {
+    private getRequiredInputProperties(node: INode): Set<string> {
         const properties = new Set<string>();
 
         try {
             const ctor = findNodeType(node.type);
+            if (!ctor) return properties;
+
             const inputs = root.get(INPUT, []).filter(it => it.target === ctor);
 
+            // 尝试实例化以读取默认值
+            let instance: any;
+            try {
+                instance = new ctor();
+            } catch {
+                // 实例化失败（可能需要构造参数），保守处理：所有输入都视为必填
+                inputs.forEach(input => {
+                    if (input.required !== false && input.defaultValue === undefined) {
+                        properties.add(String(input.propertyKey));
+                    }
+                });
+                return properties;
+            }
+
             inputs.forEach(input => {
-                properties.add(String(input.propertyKey));
+                const propKey = String(input.propertyKey);
+
+                // 明确标记为非必填
+                if (input.required === false) {
+                    return;
+                }
+
+                // 装饰器提供了默认值
+                if (input.defaultValue !== undefined) {
+                    return;
+                }
+
+                // 明确标记为必填
+                if (input.required === true) {
+                    properties.add(propKey);
+                    return;
+                }
+
+                // 未明确指定：检查类属性初始值
+                const initialValue = instance[propKey];
+                if (initialValue === undefined) {
+                    // 无默认值 → 必填
+                    properties.add(propKey);
+                }
+                // 有默认值 → 非必填（不添加到 properties）
             });
         } catch {
             // 无装饰器元数据，返回空集合
         }
 
         return properties;
+    }
+
+    /**
+     * 获取节点输入属性的默认值
+     *
+     * 优先级：
+     * 1. 装饰器的 defaultValue
+     * 2. 类属性的初始值
+     * 3. undefined
+     */
+    private getInputDefaultValues(node: INode): Record<string, any> {
+        const defaults: Record<string, any> = {};
+
+        try {
+            const ctor = findNodeType(node.type);
+            if (!ctor) return defaults;
+
+            const inputs = root.get(INPUT, []).filter(it => it.target === ctor);
+
+            // 尝试实例化以读取默认值
+            let instance: any;
+            try {
+                instance = new ctor();
+            } catch {
+                // 实例化失败，只使用装饰器提供的默认值
+                inputs.forEach(input => {
+                    if (input.defaultValue !== undefined) {
+                        defaults[String(input.propertyKey)] = input.defaultValue;
+                    }
+                });
+                return defaults;
+            }
+
+            inputs.forEach(input => {
+                const propKey = String(input.propertyKey);
+
+                // 优先使用装饰器的 defaultValue
+                if (input.defaultValue !== undefined) {
+                    defaults[propKey] = input.defaultValue;
+                } else {
+                    // 尝试读取类属性的初始值
+                    const initialValue = instance[propKey];
+                    if (initialValue !== undefined) {
+                        defaults[propKey] = initialValue;
+                    }
+                }
+            });
+        } catch {
+            // 忽略错误
+        }
+
+        return defaults;
     }
 
     /**
@@ -260,6 +362,8 @@ export class ReactiveScheduler {
 
     /**
      * 为节点创建执行流（使用 _createNodeInputObservable）
+     *
+     * 变更：合并输入数据时，为缺失的属性填充默认值
      */
     private _createNode(
         node: INode,
@@ -269,11 +373,17 @@ export class ReactiveScheduler {
     ): Observable<INode> {
         const input$ = this._createNodeInputObservable(node, incomingEdges, network, ctx);
 
+        // 获取节点的默认值
+        const defaults = this.getInputDefaultValues(node);
+
         return input$.pipe(
             // 每次输入变化 → 创建新节点实例执行
             concatMap(inputs => {
                 const nodeInstance = this.cloneNode(node);
-                Object.assign(nodeInstance, inputs);
+
+                // 先填充默认值，再应用连线数据（连线数据优先级更高）
+                Object.assign(nodeInstance, defaults, inputs);
+
                 return this.executeNode(nodeInstance, ctx);
             }),
             catchError(error => {
