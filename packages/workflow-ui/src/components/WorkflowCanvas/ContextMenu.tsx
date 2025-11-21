@@ -13,6 +13,7 @@ import {
   Minimize2,
   FolderPlus,
   FolderMinus,
+  LayoutGrid,
   type LucideIcon,
 } from 'lucide-react'
 import type { ContextMenuState } from './useContextMenu'
@@ -31,10 +32,14 @@ export interface ContextMenuProps {
   onConfigEdge?: (edgeId: string) => void
   onCreateGroup?: () => void
   onUngroupNodes?: () => void
+  onCollapseNodes?: () => void
+  onExpandNodes?: () => void
+  onAutoLayout?: () => void
   onClose: () => void
   nodeData?: any
   hasMultipleSelectedNodes?: boolean
   isGroupNode?: boolean
+  selectedNodesCount?: number
 }
 interface MenuSection {
   title: string
@@ -59,10 +64,14 @@ export function ContextMenu({
   onConfigEdge,
   onCreateGroup,
   onUngroupNodes,
+  onCollapseNodes,
+  onExpandNodes,
+  onAutoLayout,
   onClose,
   nodeData,
   hasMultipleSelectedNodes = false,
   isGroupNode = false,
+  selectedNodesCount = 0,
 }: ContextMenuProps) {
   if (!menu.visible) {
     return null
@@ -77,6 +86,47 @@ export function ContextMenu({
 
   if (menu.contextType === 'canvas') {
     sections = [
+      {
+        title: '节点操作',
+        items: [
+          ...(onCollapseNodes
+            ? [
+                {
+                  label: selectedNodesCount > 0
+                    ? `折叠选中 (${selectedNodesCount})`
+                    : '折叠全部',
+                  icon: Minimize2,
+                  action: onCollapseNodes,
+                },
+              ]
+            : []),
+          ...(onExpandNodes
+            ? [
+                {
+                  label: selectedNodesCount > 0
+                    ? `展开选中 (${selectedNodesCount})`
+                    : '展开全部',
+                  icon: Maximize2,
+                  action: onExpandNodes,
+                },
+              ]
+            : []),
+        ],
+      },
+      {
+        title: '布局',
+        items: [
+          ...(onAutoLayout
+            ? [
+                {
+                  label: '自动布局',
+                  icon: LayoutGrid,
+                  action: onAutoLayout,
+                },
+              ]
+            : []),
+        ],
+      },
       {
         title: '视图控制',
         items: [

@@ -328,6 +328,7 @@ export function useCanvasControls() {
     menu,
     closeMenu,
     nodeSelector,
+    openNodeSelector,
     closeNodeSelector,
     handleAddNodeFromMenu,
     handleAddNodeFromSelector,
@@ -340,5 +341,6 @@ export function useCanvasControls() {
     handleClearCanvas,
     handleRunNode,
     handleLocateNode,
+    screenToFlowPosition,
   }
 }

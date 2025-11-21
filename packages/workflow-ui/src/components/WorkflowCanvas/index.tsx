@@ -1,5 +1,5 @@
 'use client'
-import React, { useCallback } from 'react'
+import React, { useCallback, useState } from 'react'
 import {
   ReactFlow,
   Background,
@@ -16,12 +16,14 @@ import {
   ZoomIn,
   ZoomOut,
   Maximize2,
+  Minimize2,
   PlusSquare,
   PlayIcon,
   SaveIcon,
   SettingsIcon,
   Download,
   UploadIcon,
+  LayoutGrid,
 } from 'lucide-react'
 
 import { fromJson, toJson, INode, WorkflowGraphAst, findNodeType, IEdge } from '@sker/workflow'
@@ -111,6 +113,19 @@ export function WorkflowCanvas({
     openWorkflowSettingsDialog,
     closeWorkflowSettingsDialog,
   } = useCanvasState()
+
+  /**
+   * 连线状态追踪
+   *
+   * 优雅设计：
+   * - 追踪从哪个节点的哪个 output 开始拖拽连线
+   * - 用于在连线未成功连接时自动打开节点选择器
+   */
+  const [connectingInfo, setConnectingInfo] = useState<{
+    nodeId: string | null
+    handleId: string | null
+    handleType: 'source' | 'target' | null
+  } | null>(null)
 
   // 使用 WorkflowOperations 管理业务逻辑
   const { runNode, saveWorkflow, saveSubWorkflow, runWorkflow } = useWorkflowOperations(workflow, {
@@ -242,7 +257,9 @@ export function WorkflowCanvas({
     menu,
     closeMenu,
     nodeSelector,
+    openNodeSelector,
     closeNodeSelector,
+    screenToFlowPosition,
     handleFitView,
     handleCenterView,
     handleResetZoom,
@@ -421,6 +438,68 @@ export function WorkflowCanvas({
     },
     [workflow]
   )
+
+  /**
+   * 折叠节点（智能模式）
+   *
+   * - 有选中：仅折叠选中的
+   * - 无选中：折叠全部
+   */
+  const handleCollapseNodes = useCallback(() => {
+    const selectedNodes = getSelectedNodes()
+    const targetNodeIds = selectedNodes.length > 0
+      ? selectedNodes.map(n => n.id)
+      : undefined
+
+    workflow.collapseNodes(targetNodeIds)
+
+    showToast(
+      'success',
+      '折叠完成',
+      selectedNodes.length > 0
+        ? `已折叠 ${selectedNodes.length} 个节点`
+        : '已折叠所有节点'
+    )
+  }, [getSelectedNodes, workflow, showToast])
+
+  /**
+   * 展开节点（智能模式）
+   *
+   * - 有选中：仅展开选中的
+   * - 无选中：展开全部
+   */
+  const handleExpandNodes = useCallback(() => {
+    const selectedNodes = getSelectedNodes()
+    const targetNodeIds = selectedNodes.length > 0
+      ? selectedNodes.map(n => n.id)
+      : undefined
+
+    workflow.expandNodes(targetNodeIds)
+
+    showToast(
+      'success',
+      '展开完成',
+      selectedNodes.length > 0
+        ? `已展开 ${selectedNodes.length} 个节点`
+        : '已展开所有节点'
+    )
+  }, [getSelectedNodes, workflow, showToast])
+
+  /**
+   * 自动布局
+   *
+   * 使用 Dagre 算法重新排列节点
+   */
+  const handleAutoLayout = useCallback(() => {
+    workflow.autoLayout()
+
+    // 布局后自动适应视图
+    setTimeout(() => {
+      handleFitView()
+    }, 100)
+
+    showToast('success', '布局完成', '已根据拓扑结构重新排列节点')
+  }, [workflow, handleFitView, showToast])
 
   /**
    * 删除单个边（右键菜单）
@@ -747,6 +826,9 @@ export function WorkflowCanvas({
     onToggleCollapse: handleToggleCollapse,
     onCreateGroup: handleCreateGroup,
     onUngroupNodes: handleUngroupNodes,
+    onCollapseNodes: handleCollapseNodes,
+    onExpandNodes: handleExpandNodes,
+    onAutoLayout: handleAutoLayout,
   })
 
   const handleNodesChangeInternal = useCallback(
@@ -768,6 +850,62 @@ export function WorkflowCanvas({
       workflow.connectNodes(connection)
     },
     [workflow]
+  )
+
+  /**
+   * 连线开始时保存起始节点信息
+   *
+   * 优雅设计：
+   * - 保存连线起始节点、handle 和类型
+   * - 为后续自动连接提供必要信息
+   */
+  const handleConnectStart = useCallback(
+    (
+      _event: MouseEvent | TouchEvent,
+      params: { nodeId: string | null; handleId: string | null; handleType: 'source' | 'target' | null }
+    ) => {
+      setConnectingInfo({
+        nodeId: params.nodeId,
+        handleId: params.handleId,
+        handleType: params.handleType,
+      })
+    },
+    []
+  )
+
+  /**
+   * 连线结束时判断是否成功连接
+   *
+   * 优雅设计：
+   * - 如果未成功连接到目标节点，打开节点选择器
+   * - 在鼠标松开位置创建新节点
+   * - 自动连接到新节点
+   */
+  const handleConnectEnd = useCallback(
+    (event: MouseEvent | TouchEvent) => {
+      // 如果有连线起始信息（说明正在拖拽连线）
+      if (connectingInfo && connectingInfo.nodeId) {
+        // 获取鼠标位置
+        const clientX = 'touches' in event ? event.touches[0]?.clientX ?? 0 : event.clientX
+        const clientY = 'touches' in event ? event.touches[0]?.clientY ?? 0 : event.clientY
+
+        const screenPosition = { x: clientX, y: clientY }
+        const flowPosition = screenToFlowPosition(screenPosition)
+
+        // 打开节点选择器
+        openNodeSelector(screenPosition, flowPosition)
+
+        console.log('连线未连接，打开节点选择器', {
+          起始节点: connectingInfo.nodeId,
+          输出端口: connectingInfo.handleId,
+          位置: flowPosition,
+        })
+      }
+
+      // 清除连线状态
+      setConnectingInfo(null)
+    },
+    [connectingInfo, screenToFlowPosition, openNodeSelector]
   )
 
   const handleNodesDelete = useCallback(
@@ -794,10 +932,27 @@ export function WorkflowCanvas({
       const registeredNodeTypes = getAllNodeTypes()
       const NodeClass = registeredNodeTypes.find((type: any) => type.name === metadata.type)
       if (NodeClass) {
-        workflow.addNode(NodeClass, nodeSelector.flowPosition, metadata.label)
+        const newNode = workflow.addNode(NodeClass, nodeSelector.flowPosition, metadata.label)
+
+        // 如果有连线起始信息，自动连接到新节点
+        if (connectingInfo && connectingInfo.nodeId && newNode) {
+          const connection: Connection = {
+            source: connectingInfo.handleType === 'source' ? connectingInfo.nodeId : newNode.id,
+            target: connectingInfo.handleType === 'source' ? newNode.id : connectingInfo.nodeId,
+            sourceHandle: connectingInfo.handleType === 'source' ? connectingInfo.handleId : null,
+            targetHandle: connectingInfo.handleType === 'source' ? null : connectingInfo.handleId,
+          }
+          workflow.connectNodes(connection)
+
+          console.log('自动连接节点', {
+            起始节点: connectingInfo.nodeId,
+            新节点: newNode.id,
+            连接: connection,
+          })
+        }
       }
     },
-    [workflow, nodeSelector.flowPosition]
+    [workflow, nodeSelector.flowPosition, connectingInfo]
   )
 
   const handleClearCanvas = useCallback(() => {
@@ -907,6 +1062,8 @@ export function WorkflowCanvas({
             onNodesChange={handleNodesChangeInternal}
             onEdgesChange={handleEdgesChangeInternal}
             onConnect={handleConnectInternal}
+            onConnectStart={handleConnectStart}
+            onConnectEnd={handleConnectEnd}
             onNodeClick={onNodeClick}
             onPaneClick={onPaneClick}
             onNodesDelete={handleNodesDelete}
@@ -1028,12 +1185,36 @@ export function WorkflowCanvas({
                 <Download className="h-4 w-4" strokeWidth={2} />
               </button>
 
-              <button>
-                折叠所选
+              {/* 分隔线 */}
+              <div className="my-1 h-px bg-[#282e39]" />
+
+              {/* 折叠/展开按钮组 */}
+              <button
+                onClick={handleCollapseNodes}
+                className="flex h-9 w-9 items-center justify-center rounded-md text-[#9da6b9] transition hover:bg-[#282e39] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111318]"
+                title="折叠节点（有选中时仅折叠选中的，无选中时折叠全部）&#10;快捷键: Ctrl+Shift+C"
+              >
+                <Minimize2 className="h-4 w-4" strokeWidth={2} />
               </button>
 
-              <button>
-                展开所选, 自动计算布局
+              <button
+                onClick={handleExpandNodes}
+                className="flex h-9 w-9 items-center justify-center rounded-md text-[#9da6b9] transition hover:bg-[#282e39] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111318]"
+                title="展开节点（有选中时仅展开选中的，无选中时展开全部）&#10;快捷键: Ctrl+Shift+E"
+              >
+                <Maximize2 className="h-4 w-4" strokeWidth={2} />
+              </button>
+
+              {/* 分隔线 */}
+              <div className="my-1 h-px bg-[#282e39]" />
+
+              {/* 自动布局按钮 */}
+              <button
+                onClick={handleAutoLayout}
+                className="flex h-9 w-9 items-center justify-center rounded-md text-[#9da6b9] transition hover:bg-[#282e39] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111318]"
+                title="自动布局（基于拓扑结构重新排列节点）&#10;快捷键: Ctrl+Shift+L"
+              >
+                <LayoutGrid className="h-4 w-4" strokeWidth={2} />
               </button>
             </div>
           )}
@@ -1054,6 +1235,9 @@ export function WorkflowCanvas({
         onConfigEdge={handleConfigEdge}
         onCreateGroup={handleCreateGroup}
         onUngroupNodes={handleUngroupNodes}
+        onCollapseNodes={handleCollapseNodes}
+        onExpandNodes={handleExpandNodes}
+        onAutoLayout={handleAutoLayout}
         onClose={closeMenu}
         nodeData={menu.contextType === 'node' && menu.targetId ? nodes.find(n => n.id === menu.targetId)?.data : undefined}
         hasMultipleSelectedNodes={getSelectedNodes().length > 1}
@@ -1062,6 +1246,7 @@ export function WorkflowCanvas({
             ? nodes.find(n => n.id === menu.targetId)?.data instanceof WorkflowGraphAst && nodes.find(n => n.id === menu.targetId)?.data.isGroup
             : false
         }
+        selectedNodesCount={getSelectedNodes().length}
       />
 
       <NodeSelector

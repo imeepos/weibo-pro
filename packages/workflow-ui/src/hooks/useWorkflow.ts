@@ -6,6 +6,7 @@ import type { WorkflowNode, WorkflowEdge } from '../types'
 import { astToFlowNodes, astToFlowEdges } from '../adapters/ast-to-flow'
 import { getNodeMetadata } from '../adapters/metadata'
 import { StateChangeProxy } from '../core/state-change-proxy'
+import { calculateDagreLayout } from '../utils/layout'
 
 export interface UseWorkflowReturn {
   workflowAst: WorkflowGraphAst
@@ -15,7 +16,7 @@ export interface UseWorkflowReturn {
   setEdges: (edges: WorkflowEdge[] | ((edges: WorkflowEdge[]) => WorkflowEdge[])) => void
   onNodesChange: (changes: any) => void
   onEdgesChange: (changes: any) => void
-  addNode: (nodeClass: any, position: { x: number; y: number }, label?: string) => void
+  addNode: (nodeClass: any, position: { x: number; y: number }, label?: string) => WorkflowNode
   removeNode: (nodeId: string) => void
   updateNode: (nodeId: string, updates: Partial<INode>) => void
   connectNodes: (connection: Connection) => void
@@ -25,6 +26,9 @@ export interface UseWorkflowReturn {
   createGroup: (selectedNodeIds: string[], title?: string) => string | undefined
   ungroupNodes: (groupId: string) => void
   toggleGroupCollapse: (groupId: string) => void
+  collapseNodes: (nodeIds?: string[]) => void
+  expandNodes: (nodeIds?: string[]) => void
+  autoLayout: () => void
   changeProxy: any
 }
 
@@ -132,6 +136,9 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
       }
 
       setNodes((nodes) => [...nodes, node])
+
+      // 返回创建的节点
+      return node
     },
     [workflowAst, setNodes]
   )
@@ -404,6 +411,79 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
     [workflowAst, syncFromAst]
   )
 
+  /**
+   * 折叠节点（智能模式）
+   *
+   * - 有指定节点：仅折叠指定的节点
+   * - 无指定节点：折叠所有节点
+   */
+  const collapseNodes = useCallback((nodeIds?: string[]) => {
+    setNodes(nodes =>
+      nodes.map(node => {
+        const shouldCollapse = !nodeIds || nodeIds.includes(node.id)
+        if (shouldCollapse) {
+          // 同步到 AST
+          const astNode = workflowAst.nodes.find(n => n.id === node.id)
+          if (astNode) {
+            astNode.collapsed = true
+          }
+          return { ...node, data: { ...node.data, collapsed: true } }
+        }
+        return node
+      })
+    )
+  }, [setNodes, workflowAst])
+
+  /**
+   * 展开节点（智能模式）
+   *
+   * - 有指定节点：仅展开指定的节点
+   * - 无指定节点：展开所有节点
+   */
+  const expandNodes = useCallback((nodeIds?: string[]) => {
+    setNodes(nodes =>
+      nodes.map(node => {
+        const shouldExpand = !nodeIds || nodeIds.includes(node.id)
+        if (shouldExpand) {
+          // 同步到 AST
+          const astNode = workflowAst.nodes.find(n => n.id === node.id)
+          if (astNode) {
+            astNode.collapsed = false
+          }
+          return { ...node, data: { ...node.data, collapsed: false } }
+        }
+        return node
+      })
+    )
+  }, [setNodes, workflowAst])
+
+  /**
+   * 自动布局
+   *
+   * 使用 Dagre 算法重新排列节点，保持拓扑结构
+   */
+  const autoLayout = useCallback(() => {
+    const positions = calculateDagreLayout(nodes, edges)
+
+    setNodes(nodes =>
+      nodes.map(node => {
+        const newPosition = positions.get(node.id)
+        if (newPosition) {
+          // 同步到 AST
+          const astNode = workflowAst.nodes.find(n => n.id === node.id)
+          if (astNode) {
+            astNode.position = newPosition
+          }
+          return {
+            ...node,
+            position: newPosition
+          }
+        }
+        return node
+      })
+    )
+  }, [nodes, edges, workflowAst, setNodes])
+
   return {
     workflowAst,
     nodes,
@@ -422,6 +502,9 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
     createGroup,
     ungroupNodes,
     toggleGroupCollapse,
+    collapseNodes,
+    expandNodes,
+    autoLayout,
     // 导出 StateChangeProxy，供高级用法使用
     changeProxy
   }
