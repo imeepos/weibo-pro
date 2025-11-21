@@ -24,7 +24,7 @@ export function useCanvasControls() {
     addEdges,
   } = useReactFlow()
   const { selectNode, clearSelection } = useSelectionStore()
-  const { menu, openMenu, openNodeMenu, openEdgeMenu, closeMenu, nodeSelector, openNodeSelector, closeNodeSelector } = useContextMenu()
+  const { menu, openNodeMenu, openEdgeMenu, closeMenu, nodeSelector, openNodeSelector, closeNodeSelector } = useContextMenu()
 
   /**
    * 监听节点右键菜单事件
@@ -80,6 +80,8 @@ export function useCanvasControls() {
         data: {
           edgeType: 'data',
           edge: {
+            id: `edge-${Date.now()}`,
+            type: 'data',
             from: connection.source,
             to: connection.target,
             fromProperty: connection.sourceHandle || undefined,

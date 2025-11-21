@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { useSelectedNode } from './useSelectedNode'
 import { SmartFormField } from './SmartFormField'
 import { useReactFlow } from '@xyflow/react'
@@ -8,6 +8,8 @@ import { getNodeMetadata } from '../../adapters'
 import { resolveConstructor } from '@sker/workflow'
 import { ErrorDetailPanel } from '../ErrorDetail'
 import { SerializedError } from '@sker/core'
+import { Save, X } from 'lucide-react'
+
 export interface PropertyPanelProps {
   className?: string
 }
@@ -15,6 +17,25 @@ export interface PropertyPanelProps {
 export function PropertyPanel({ className = '' }: PropertyPanelProps) {
   const selectedNode = useSelectedNode()
   const { setNodes } = useReactFlow()
+
+  // 表单状态管理
+  const [formData, setFormData] = useState<Record<string, any>>({})
+  const [hasChanges, setHasChanges] = useState(false)
+
+  // 当选中节点变化时，重置表单数据
+  useEffect(() => {
+    if (selectedNode) {
+      const metadata = getNodeMetadata(resolveConstructor(selectedNode.data))
+      const initialData: Record<string, any> = {}
+
+      metadata.inputs.forEach((input) => {
+        initialData[input.property] = (selectedNode.data as any)[input.property]
+      })
+
+      setFormData(initialData)
+      setHasChanges(false)
+    }
+  }, [selectedNode?.id])
 
   if (!selectedNode) {
     return (
@@ -35,24 +56,50 @@ export function PropertyPanel({ className = '' }: PropertyPanelProps) {
   const metadata = getNodeMetadata(resolveConstructor(selectedNode.data))
   const ast = selectedNode.data
 
+  // 修改属性时只更新本地状态
   const handlePropertyChange = (property: string, value: any) => {
-    // 更新 Ast 实例
-    ;(ast as any)[property] = value
+    setFormData((prev) => ({
+      ...prev,
+      [property]: value,
+    }))
+    setHasChanges(true)
+  }
 
-    // 更新节点数据
+  // 保存表单数据到节点
+  const handleSave = () => {
+    // 更新 AST 实例
+    Object.entries(formData).forEach(([property, value]) => {
+      ;(ast as any)[property] = value
+    })
+
+    // 更新节点数据，触发画布重新渲染
     setNodes((nodes) =>
       nodes.map((node) =>
         node.id === selectedNode.id
-          ? { ...node, data: { ...node.data, ast } }
+          ? { ...node, data: { ...node.data } }
           : node
       )
     )
+
+    setHasChanges(false)
+  }
+
+  // 取消修改，恢复原始值
+  const handleCancel = () => {
+    const initialData: Record<string, any> = {}
+
+    metadata.inputs.forEach((input) => {
+      initialData[input.property] = (ast as any)[input.property]
+    })
+
+    setFormData(initialData)
+    setHasChanges(false)
   }
 
   // 获取可编辑的属性（输入属性）
   const editableProperties = metadata.inputs.map((input) => ({
     ...input,
-    value: (ast as any)[input.property],
+    value: formData[input.property] ?? (ast as any)[input.property],
   }))
 
   // 获取只读属性（输出属性）
@@ -82,6 +129,26 @@ export function PropertyPanel({ className = '' }: PropertyPanelProps) {
                 />
               ))}
             </div>
+
+            {/* 保存和取消按钮 */}
+            {hasChanges && (
+              <div className="flex gap-2 mt-4 pt-4 border-t border-slate-700/50">
+                <button
+                  onClick={handleSave}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-900 transition-colors duration-200"
+                >
+                  <Save className="h-4 w-4" />
+                  保存
+                </button>
+                <button
+                  onClick={handleCancel}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-slate-300 bg-slate-800/50 rounded-lg hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 focus:ring-offset-slate-900 transition-colors duration-200 border border-slate-700/50"
+                >
+                  <X className="h-4 w-4" />
+                  取消
+                </button>
+              </div>
+            )}
           </div>
         )}
 

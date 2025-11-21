@@ -17,6 +17,8 @@ export type WorkflowNode<T extends INode = INode> = Node<T, string>
 export interface WorkflowEdgeData extends Record<string, unknown> {
   /** 边类型：数据边或控制边 */
   edgeType: 'data' | 'control'
+  /** AST 边对象引用 */
+  edge?: IEdge
   /** 视觉样式类型 */
   styleType?: keyof typeof import('./edge.types').EDGE_TYPE_STYLES
   /** 数据边属性路径 */

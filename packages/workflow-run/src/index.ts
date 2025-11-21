@@ -13,7 +13,7 @@ export { PostContextCollectorVisitor } from './PostContextCollectorVisitor'
 export { PostNLPAnalyzerVisitor } from './PostNLPAnalyzerVisitor'
 export { EventAutoCreatorVisitor } from './EventAutoCreatorVisitor'
 export { WeiboLoginAstVisitor } from './WeiboLoginAstVisitor'
-
+export { LlmTextAgentAstVisitor } from './LlmTextAgentAstVisitor'
 
 export {
     WeiboAccountService,

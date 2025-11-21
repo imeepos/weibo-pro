@@ -17,9 +17,14 @@ import {
   ZoomOut,
   Maximize2,
   PlusSquare,
+  PlayIcon,
+  SaveIcon,
+  SettingsIcon,
+  ChartBarIcon,
+  ChartBar,
 } from 'lucide-react'
 
-import { fromJson, INode, WorkflowGraphAst } from '@sker/workflow'
+import { fromJson, INode, WorkflowGraphAst, findNodeType } from '@sker/workflow'
 import { createNodeTypes } from '../nodes'
 import { edgeTypes } from '../edges'
 import { getAllNodeTypes } from '../../adapters'
@@ -266,9 +271,21 @@ export function WorkflowCanvas({
     clipboard.pasteNodes(flowPosition, (newNodes, newEdges) => {
       // 将新节点添加到工作流
       newNodes.forEach((node) => {
-        workflow.addNode(node.data.nodeClass, node.position, node.data.label)
+        workflow.addNode(findNodeType(node.data.type), node.position, node.data.label)
       })
-      console.log(`已粘贴 ${newNodes.length} 个节点`)
+
+      // 将新边添加到工作流（AST + UI）
+      newEdges.forEach((edge) => {
+        if (edge.data?.edge) {
+          // 同步到 AST
+          workflow.workflowAst.addEdge(edge.data.edge)
+        }
+      })
+
+      // 同步到 UI
+      workflow.setEdges((currentEdges) => [...currentEdges, ...newEdges])
+
+      console.log(`已粘贴 ${newNodes.length} 个节点和 ${newEdges.length} 条边`)
     })
   }, [clipboard, workflow])
 
@@ -467,7 +484,7 @@ export function WorkflowCanvas({
             nodeTypes={createNodeTypes()}
             edgeTypes={edgeTypes}
             panOnScroll
-            selectionOnDrag={false}
+            selectionOnDrag={true}
             panOnDrag={panOnDrag}
             selectionMode={SelectionMode.Partial}
             fitView={!workflow.workflowAst.viewport}  // 只有在没有保存的 viewport 时才自动适应
@@ -517,10 +534,25 @@ export function WorkflowCanvas({
           )}
 
           {showControls && (
-            <div className="absolute bottom-4 left-4 z-[5] flex flex-col gap-2 rounded-xl border border-[#282e39] bg-[#111318] p-1.5 shadow-lg shadow-black/30">
+            <div className="absolute bottom-60 right-4 z-[5] flex flex-col gap-2 rounded-xl border border-[#282e39] bg-[#111318] p-1.5 shadow-lg shadow-black/30">
+              <button
+                onClick={() => runWorkflow()}
+                className="flex h-9 w-9 items-center justify-center rounded-md text-[#9da6b9] transition hover:bg-[#282e39] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111318]"
+              >
+                <PlayIcon className="h-4 w-4" strokeWidth={2} />
+              </button>
 
-              <button onClick={() => runWorkflow()}>
-                运行
+              <button
+                className="flex h-9 w-9 items-center justify-center rounded-md text-[#9da6b9] transition hover:bg-[#282e39] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111318]"
+              >
+                <SettingsIcon className="h-4 w-4" strokeWidth={2} />
+              </button>
+
+              <button
+                onClick={() => handleSave()}
+                className="flex h-9 w-9 items-center justify-center rounded-md text-[#9da6b9] transition hover:bg-[#282e39] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111318]"
+              >
+                <SaveIcon className="h-4 w-4" strokeWidth={2} />
               </button>
 
               <button
@@ -543,6 +575,12 @@ export function WorkflowCanvas({
                 className="flex h-9 w-9 items-center justify-center rounded-md text-[#9da6b9] transition hover:bg-[#282e39] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111318]"
               >
                 <Maximize2 className="h-4 w-4" strokeWidth={2} />
+              </button>
+
+              <button
+                className="flex h-9 w-9 items-center justify-center rounded-md text-[#9da6b9] transition hover:bg-[#282e39] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111318]"
+              >
+                <ChartBar />
               </button>
             </div>
           )}

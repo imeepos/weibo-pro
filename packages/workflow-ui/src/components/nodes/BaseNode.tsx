@@ -27,9 +27,14 @@ const HandleWrapper = ({
       type={type}
       id={port.property}
       position={isTarget ? Position.Left : Position.Right}
+      isConnectable={true}
       className={cn(
-        '!w-3 !h-3 !border-2 rounded-full',
-        isTarget ? '!bg-blue-500 !border-blue-300' : '!bg-green-500 !border-green-300'
+        '!w-3 !h-3 !border-2 rounded-full transition-all duration-150',
+        'hover:!w-4 hover:!h-4 hover:shadow-lg',
+        '!z-50 !cursor-crosshair',
+        isTarget
+          ? '!bg-blue-500 !border-blue-300 hover:!bg-blue-400'
+          : '!bg-green-500 !border-green-300 hover:!bg-green-400'
       )}
     />
   );
@@ -38,31 +43,39 @@ const HandleWrapper = ({
 const PortRow = ({
   input,
   output,
-  offsetTop,
 }: {
   input?: { property: string; label?: string; isMulti?: boolean };
   output?: { property: string; label?: string; isMulti?: boolean };
-  offsetTop?: number;
 }) => (
-  <div className="relative flex items-center gap-2 h-6" style={{ top: offsetTop }}>
-    {input && (
-      <div className="flex items-center flex-1 pl-2">
-        <HandleWrapper port={input} type="target" />
-        <div className="flex items-center gap-1 text-xs text-slate-200">
-          <span className="truncate">{input.label || input.property}</span>
-          {input.isMulti && <span className="text-[10px] text-slate-400 font-mono">[]</span>}
-        </div>
-      </div>
-    )}
-    {output &&
-      <div className="flex items-center gap-2 flex-1 justify-end pr-2">
-        <HandleWrapper port={output} type="source" />
-        <div className="flex items-center gap-1 text-xs text-slate-200">
-          <span className="truncate">{output.label || output.property}</span>
-          {output.isMulti && <span className="text-[10px] text-slate-400 font-mono">[]</span>}
-        </div>
-      </div>
-    }
+  <div className="relative flex items-center justify-between h-6 px-2">
+    {/* 输入端口：Handle 在左边缘，文字紧随其后 */}
+    <div className="flex items-center gap-1 relative">
+      {input && (
+        <>
+          <HandleWrapper port={input} type="target" />
+          <div className="absolute flex right-4">
+            <span className="text-xs text-slate-200 truncate ml-1">
+              {input.label || input.property}
+            </span>
+            {input.isMulti && <span className="text-[10px] text-slate-400 font-mono">[]</span>}
+          </div>
+        </>
+      )}
+    </div>
+    {/* 输出端口：文字在左，Handle 在右边缘 */}
+    <div className="flex items-center gap-1 relative">
+      {output && (
+        <>
+          <div className="absolute left-4">
+            {output.isMulti && <span className="text-[10px] text-slate-400 font-mono">[]</span>}
+            <span className="text-xs text-slate-200 truncate mr-1">
+              {output.label || output.property}
+            </span>
+          </div>
+          <HandleWrapper port={output} type="source" />
+        </>
+      )}
+    </div>
   </div>
 );
 
@@ -106,7 +119,7 @@ export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNode>) =
     <div
       className={cn(
         'flex flex-col rounded-2xl border-[2px] relative',
-        'group relative pb-1 shadow-xs rounded-[15px] w-[240px] bg-workflow-block-bg hover:shadow-lg',
+        'group pb-1 shadow-xs rounded-[15px] w-[240px] bg-workflow-block-bg hover:shadow-lg',
         'cursor-move select-none'
       )}
       style={{
@@ -124,25 +137,15 @@ export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNode>) =
           {metadata.title || data.type}
         </div>
       </div>
-      {/* 渲染输入输出端口 */}
-      <div className="flex flex-col gap-1 mt-2">
-        {/* 左侧部分 显示输入端口 */}
-        {metadata.inputs.map((input, index) => (
+      {/* 渲染输入输出端口 - 配对显示 */}
+      <div className="flex flex-col gap-1 mt-2 relative">
+        {Array.from({ length: Math.max(metadata.inputs.length, metadata.outputs.length) }).map((_, index) => (
           <PortRow
-            key={`input-${input.property}`}
-            input={input}
-            offsetTop={0}
+            key={`port-${index}`}
+            input={metadata.inputs[index]}
+            output={metadata.outputs[index]}
           />
         ))}
-        {/* 右侧部分显示输出端口 */}
-        {metadata.outputs.map((output, index) => (
-          <PortRow
-            key={`output-${output.property}`}
-            output={output}
-            offsetTop={0}
-          />
-        ))}
-
         {CustomRender}
       </div>
     </div>

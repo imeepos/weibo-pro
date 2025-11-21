@@ -13,7 +13,6 @@ export { EventAutoCreatorAst } from './EventAutoCreatorAst'
 
 // 微博登录 AST
 export { WeiboLoginAst } from './WeiboLoginAst'
-
 export { WorkflowGraphAst } from '@sker/workflow'
-
 export { WeiboUserDetectionAst } from './WeiboUserDetectionAst';
+export { LlmTextAgentAst } from './LlmTextAgentAst';

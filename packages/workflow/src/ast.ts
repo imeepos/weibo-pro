@@ -12,6 +12,11 @@ export interface Visitor {
 // 抽象语法树的核心表达 - 状态与数据的统一
 export abstract class Ast implements INode {
     id: string = generateId();
+    // 标题
+    name?: string;
+    // 简介
+    description?: string;
+
     state: IAstStates = 'pending';
     error: SerializedError | undefined;
     type!: string;
@@ -331,7 +336,7 @@ export class WorkflowGraphAst extends Ast {
             // 如果指定了端口，检查端口匹配
             if (fromProperty !== undefined || toProperty !== undefined) {
                 return edge.fromProperty === fromProperty &&
-                       edge.toProperty === toProperty
+                    edge.toProperty === toProperty
             }
 
             // 未指定端口时，只检查节点

@@ -25,7 +25,15 @@ export interface ContextMenuProps {
   onDeleteEdge?: (edgeId: string) => void
   onClose: () => void
 }
-
+interface MenuSection {
+  title: string
+  items: Array<{
+    label: string
+    icon: LucideIcon
+    action: () => void
+    danger?: boolean
+  }>
+}
 export function ContextMenu({
   menu,
   onFitView,
@@ -45,16 +53,6 @@ export function ContextMenu({
   const handleActionClick = (action: () => void) => {
     action()
     onClose()
-  }
-
-  interface MenuSection {
-    title: string
-    items: Array<{
-      label: string
-      icon: LucideIcon
-      action: () => void
-      danger?: boolean
-    }>
   }
 
   let sections: MenuSection[] = []
@@ -85,23 +83,38 @@ export function ContextMenu({
         items: [
           ...(onRunNode
             ? [
-                {
-                  label: '运行节点',
-                  icon: Play,
-                  action: () => onRunNode(nodeId),
-                },
-              ]
+              {
+                label: '运行节点',
+                icon: Play,
+                action: () => onRunNode(nodeId),
+              },
+            ]
             : []),
           ...(onDeleteNode
             ? [
-                {
-                  label: '删除节点',
-                  icon: Trash2,
-                  action: () => onDeleteNode(nodeId),
-                  danger: true,
-                },
-              ]
+              {
+                label: '删除节点',
+                icon: Trash2,
+                action: () => onDeleteNode(nodeId),
+                danger: true,
+              },
+            ]
             : []),
+        ],
+      },
+      {
+        title: '视图控制',
+        items: [
+          { label: '适应窗口', icon: Maximize2, action: onFitView },
+          { label: '居中显示', icon: Crosshair, action: onCenterView },
+          { label: '重置缩放', icon: RotateCcw, action: onResetZoom },
+        ],
+      },
+      {
+        title: '画布操作',
+        items: [
+          { label: '全选', icon: CheckSquare, action: onSelectAll },
+          { label: '清空画布', icon: Trash2, action: onClearCanvas, danger: true },
         ],
       },
     ]
@@ -113,14 +126,29 @@ export function ContextMenu({
         items: [
           ...(onDeleteEdge
             ? [
-                {
-                  label: '删除连接',
-                  icon: Trash2,
-                  action: () => onDeleteEdge(edgeId),
-                  danger: true,
-                },
-              ]
+              {
+                label: '删除连接',
+                icon: Trash2,
+                action: () => onDeleteEdge(edgeId),
+                danger: true,
+              },
+            ]
             : []),
+        ],
+      },
+      {
+        title: '视图控制',
+        items: [
+          { label: '适应窗口', icon: Maximize2, action: onFitView },
+          { label: '居中显示', icon: Crosshair, action: onCenterView },
+          { label: '重置缩放', icon: RotateCcw, action: onResetZoom },
+        ],
+      },
+      {
+        title: '画布操作',
+        items: [
+          { label: '全选', icon: CheckSquare, action: onSelectAll },
+          { label: '清空画布', icon: Trash2, action: onClearCanvas, danger: true },
         ],
       },
     ]
@@ -150,17 +178,15 @@ export function ContextMenu({
               <button
                 key={item.label}
                 type="button"
-                className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition focus:outline-none ${
-                  item.danger
-                    ? 'text-[#f87171] hover:bg-[#3b1f28]'
-                    : 'text-[#e5e9f5] hover:bg-[#1f2531]'
-                }`}
+                className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition focus:outline-none ${item.danger
+                  ? 'text-[#f87171] hover:bg-[#3b1f28]'
+                  : 'text-[#e5e9f5] hover:bg-[#1f2531]'
+                  }`}
                 onClick={() => handleActionClick(item.action)}
               >
                 <item.icon
-                  className={`h-4 w-4 ${
-                    item.danger ? 'text-[#f87171]' : 'text-[#135bec]'
-                  }`}
+                  className={`h-4 w-4 ${item.danger ? 'text-[#f87171]' : 'text-[#135bec]'
+                    }`}
                   strokeWidth={1.8}
                 />
                 <span>{item.label}</span>
