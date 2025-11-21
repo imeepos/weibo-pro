@@ -92,6 +92,11 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
             })
           }
         }
+
+        // 同步折叠状态（保护 UI 状态）
+        if (astNode.collapsed !== node.data.collapsed) {
+          astNode.collapsed = node.data.collapsed
+        }
       }
     })
   }, [nodes, workflowAst])

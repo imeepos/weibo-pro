@@ -211,11 +211,21 @@ export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNode>) =
       <StatusBadge state={data.state as IAstStates} />
 
       <div className="flex items-center rounded-t-2xl px-3 py-4 border-b">
-        <div className="flex items-center justify-center w-6 h-6 rounded-lg bg-blue-500 mr-2 shrink-0">
+        <div
+          className="flex items-center justify-center w-6 h-6 rounded-lg mr-2 shrink-0"
+          style={{ backgroundColor: data.color || '#3b82f6' }}
+        >
           <div className="w-3 h-3 bg-white rounded-sm"></div>
         </div>
-        <div className="text-sm font-medium text-white truncate flex-1">
-          {metadata.title || data.type}
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-medium text-white truncate">
+            {data.name || metadata.title || data.type}
+          </div>
+          {data.description && !isCollapsed && (
+            <div className="text-xs text-slate-400 truncate mt-0.5">
+              {data.description}
+            </div>
+          )}
         </div>
         <button
           onClick={toggleCollapse}

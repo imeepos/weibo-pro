@@ -100,7 +100,7 @@ function snapshotNode(instance: object): NodeSnapshot {
 }
 
 export function fromJson<T extends object = any>(json: any): T {
-    const { type, id, state, error, position, ...rest } = json;
+    const { type, id, state, error, position, name, description, color, collapsed, width, ...rest } = json;
     const registry = root.get(NODE);
     const nodeMetadata = registry.find(node => node.target.name === type);
     const ctor = nodeMetadata?.target;
@@ -123,13 +123,20 @@ export function fromJson<T extends object = any>(json: any): T {
     if (state) Reflect.set(instance, 'state', state);
     if (error) Reflect.set(instance, 'error', error);
     if (position) Reflect.set(instance, 'position', position);
+    Reflect.set(instance, 'collapsed', !!collapsed)
+    if (width) Reflect.set(instance, 'width', width)
+
+    // 恢复节点的扩展属性（用于 UI 自定义）
+    if (name !== undefined) Reflect.set(instance, 'name', name);
+    if (description !== undefined) Reflect.set(instance, 'description', description);
+    if (color !== undefined) Reflect.set(instance, 'color', color);
 
     return instance;
 }
 
 export function toJson(ast: Ast): INode {
     const { inputs, outputs, states } = snapshotNode(ast);
-    return {
+    const node: INode = {
         ...inputs,
         ...outputs,
         ...states,
@@ -139,4 +146,12 @@ export function toJson(ast: Ast): INode {
         error: ast.error,
         position: ast.position
     };
+
+    // 保存节点的扩展属性（用于 UI 自定义）
+    const extendedAst = ast as any;
+    if (extendedAst.name !== undefined) node.name = extendedAst.name;
+    if (extendedAst.description !== undefined) node.description = extendedAst.description;
+    if (extendedAst.color !== undefined) node.color = extendedAst.color;
+
+    return node;
 }

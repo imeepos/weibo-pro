@@ -138,6 +138,72 @@ export function PropertyPanel({ className = '' }: PropertyPanelProps) {
   return (
     <div className={`property-panel ${className}`}>
       <div className="property-panel-content space-y-6">
+        {/* 节点基础信息 */}
+        <div className="property-panel-section">
+          <h4 className="property-panel-section-title text-sm font-semibold text-slate-300 mb-3 flex items-center">
+            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></div>
+            基础信息
+          </h4>
+          <div className="space-y-3">
+            <SmartFormField
+              label="节点名称"
+              value={selectedNode.data.name || metadata.title}
+              type="string"
+              onChange={(value) => {
+                // 直接修改 AST 实例
+                selectedNode.data.name = value;
+                // 触发 React Flow 重新渲染
+                setNodes((nodes) =>
+                  nodes.map((node) =>
+                    node.id === selectedNode.id
+                      ? { ...node, data: node.data }
+                      : node
+                  )
+                )
+              }}
+            />
+            <SmartFormField
+              label="节点描述"
+              value={selectedNode.data.description || ''}
+              type="string"
+              onChange={(value) => {
+                // 直接修改 AST 实例
+                selectedNode.data.description = value;
+                // 触发 React Flow 重新渲染
+                setNodes((nodes) =>
+                  nodes.map((node) =>
+                    node.id === selectedNode.id
+                      ? { ...node, data: node.data }
+                      : node
+                  )
+                )
+              }}
+            />
+            <div className="property-field">
+              <label className="property-field-label text-xs font-medium text-slate-400 mb-1 block">
+                节点颜色
+              </label>
+              <input
+                type="color"
+                value={selectedNode.data.color || '#3b82f6'}
+                onChange={(e) => {
+                  // 直接修改 AST 实例
+                  selectedNode.data.color = e.target.value;
+                  // 触发 React Flow 重新渲染
+                  setNodes((nodes) =>
+                    nodes.map((node) =>
+                      node.id === selectedNode.id
+                        ? { ...node, data: node.data }
+                        : node
+                    )
+                  )
+                }}
+                className="w-full h-10 rounded-lg border border-slate-700 bg-slate-800 cursor-pointer"
+              />
+            </div>
+          </div>
+        </div>
+
         {/* 输入属性 */}
         {editableProperties.length > 0 && (
           <div className="property-panel-section">

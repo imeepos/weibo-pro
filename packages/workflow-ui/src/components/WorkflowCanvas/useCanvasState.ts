@@ -56,6 +56,11 @@ export function useCanvasState() {
     edge: IEdge | null
   }>({ visible: false, edge: null })
 
+  // 工作流设置对话框状态
+  const [workflowSettingsDialog, setWorkflowSettingsDialog] = useState<{
+    visible: boolean
+  }>({ visible: false })
+
   /**
    * 显示 Toast 提示
    */
@@ -143,6 +148,20 @@ export function useCanvasState() {
     setEdgeConfigDialog({ visible: false, edge: null })
   }, [])
 
+  /**
+   * 打开工作流设置对话框
+   */
+  const openWorkflowSettingsDialog = useCallback(() => {
+    setWorkflowSettingsDialog({ visible: true })
+  }, [])
+
+  /**
+   * 关闭工作流设置对话框
+   */
+  const closeWorkflowSettingsDialog = useCallback(() => {
+    setWorkflowSettingsDialog({ visible: false })
+  }, [])
+
   return {
     // 执行状态
     isRunning,
@@ -181,5 +200,10 @@ export function useCanvasState() {
     edgeConfigDialog,
     openEdgeConfigDialog,
     closeEdgeConfigDialog,
+
+    // 工作流设置对话框
+    workflowSettingsDialog,
+    openWorkflowSettingsDialog,
+    closeWorkflowSettingsDialog,
   }
 }

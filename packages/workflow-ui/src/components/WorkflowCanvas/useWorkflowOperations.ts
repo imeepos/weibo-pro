@@ -62,7 +62,10 @@ export function useWorkflowOperations(
           // 每次 next 事件实时更新节点状态
           const astNode = workflow.workflowAst?.nodes.find(n => n.id === nodeId)
           if (astNode) {
+            // 保护 UI 状态：保存 collapsed 状态再覆盖
+            const collapsedState = astNode.collapsed
             Object.assign(astNode, updatedNode)
+            astNode.collapsed = collapsedState
             workflow.syncFromAst()
           }
 
@@ -167,8 +170,21 @@ export function useWorkflowOperations(
       // executeAst 返回 Observable，利用流式特性实时更新状态
       const subscription = executeAst(workflow.workflowAst, ctx).subscribe({
         next: (updatedWorkflow) => {
+          // 保护 UI 状态：保存所有节点的 collapsed 状态
+          const collapsedStates = new Map(
+            workflow.workflowAst!.nodes.map(node => [node.id, node.collapsed])
+          )
+
           // 每次 next 事件实时更新工作流状态
           Object.assign(workflow.workflowAst!, updatedWorkflow)
+
+          // 恢复 collapsed 状态
+          workflow.workflowAst!.nodes.forEach(node => {
+            if (collapsedStates.has(node.id)) {
+              node.collapsed = collapsedStates.get(node.id)
+            }
+          })
+
           workflow.syncFromAst()
         },
         error: (error) => {

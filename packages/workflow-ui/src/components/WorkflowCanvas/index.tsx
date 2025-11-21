@@ -42,6 +42,7 @@ import { SubWorkflowModal } from '../SubWorkflowModal'
 import { LeftDrawer } from '../LeftDrawer'
 import { SettingPanel } from '../SettingPanel'
 import { EdgeConfigDialog } from './EdgeConfigDialog'
+import { WorkflowSettingsDialog } from './WorkflowSettingsDialog'
 import { cn } from '../../utils/cn'
 
 export interface WorkflowCanvasProps {
@@ -106,6 +107,9 @@ export function WorkflowCanvas({
     edgeConfigDialog,
     openEdgeConfigDialog,
     closeEdgeConfigDialog,
+    workflowSettingsDialog,
+    openWorkflowSettingsDialog,
+    closeWorkflowSettingsDialog,
   } = useCanvasState()
 
   // 使用 WorkflowOperations 管理业务逻辑
@@ -867,6 +871,27 @@ export function WorkflowCanvas({
     window.dispatchEvent(customEvent)
   }, [])
 
+  /**
+   * 保存工作流设置
+   *
+   * 优雅设计：
+   * - 直接更新 AST 实例，确保数据一致性
+   * - 触发 Toast 提示，给用户反馈
+   */
+  const handleSaveWorkflowSettings = useCallback((settings: any) => {
+    if (settings.name) {
+      workflow.workflowAst.name = settings.name
+    }
+    if (settings.description !== undefined) {
+      workflow.workflowAst.description = settings.description
+    }
+    if (settings.color) {
+      workflow.workflowAst.groupColor = settings.color
+    }
+
+    showToast('success', '工作流设置已保存', `已更新工作流 "${settings.name || '未命名'}" 的属性`)
+  }, [workflow, showToast])
+
   return (
     <div
       className={cn(
@@ -951,7 +976,9 @@ export function WorkflowCanvas({
               </button>
 
               <button
+                onClick={() => openWorkflowSettingsDialog()}
                 className="flex h-9 w-9 items-center justify-center rounded-md text-[#9da6b9] transition hover:bg-[#282e39] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111318]"
+                title="工作流设置"
               >
                 <SettingsIcon className="h-4 w-4" strokeWidth={2} />
               </button>
@@ -999,6 +1026,14 @@ export function WorkflowCanvas({
                 title="导出工作流"
               >
                 <Download className="h-4 w-4" strokeWidth={2} />
+              </button>
+
+              <button>
+                折叠所选
+              </button>
+
+              <button>
+                展开所选, 自动计算布局
               </button>
             </div>
           )}
@@ -1078,6 +1113,13 @@ export function WorkflowCanvas({
         edge={edgeConfigDialog.edge}
         onClose={closeEdgeConfigDialog}
         onSave={handleSaveEdgeConfig}
+      />
+
+      <WorkflowSettingsDialog
+        visible={workflowSettingsDialog.visible}
+        workflow={workflow.workflowAst}
+        onClose={closeWorkflowSettingsDialog}
+        onSave={handleSaveWorkflowSettings}
       />
     </div>
   )

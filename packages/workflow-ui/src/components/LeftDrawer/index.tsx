@@ -57,6 +57,8 @@ export function LeftDrawer({ visible, onClose, onRunNode, onLocateNode, classNam
       className={cn(
         'absolute bottom-4 right-4 top-16 z-10',
         'flex flex-col overflow-hidden',
+        'bg-slate-900/95 backdrop-blur-xl',
+        'rounded-2xl shadow-2xl border border-slate-700/50',
         className
       )}
       style={{ width: `${width}px` }}

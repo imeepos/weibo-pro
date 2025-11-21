@@ -19,6 +19,7 @@ export abstract class Ast implements INode {
     // 自定义颜色
     color?: string;
     collapsed?: boolean;
+    width?: number;
     state: IAstStates = 'pending';
     error: SerializedError | undefined;
     type!: string;

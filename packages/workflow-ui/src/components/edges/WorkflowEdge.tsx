@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useRef, useState } from 'react'
+import React, { useMemo, useRef } from 'react'
 import { BaseEdge, getBezierPath } from '@xyflow/react'
 import type { EdgeProps } from '@xyflow/react'
 import type { WorkflowEdge as IWorkflowEdge } from '../../types'
@@ -6,12 +6,13 @@ import { EDGE_TYPE_STYLES, EDGE_MODE_STYLES } from '../../types/edge.types'
 import { EdgeMode } from '@sker/workflow'
 
 export const WorkflowEdge = (props: EdgeProps<IWorkflowEdge>) => {
-  const { id, source, sourceX, sourceY, targetX, targetY, data } = props
+  const { id, sourceX, sourceY, targetX, targetY, data } = props
   const [edgePath] = getBezierPath({
     sourceX,
     sourceY,
     targetX,
     targetY,
+    curvature: 0.3
   })
 
   const pathRef = useRef<SVGPathElement>(null)
