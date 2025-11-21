@@ -65,8 +65,11 @@ export const WorkflowEdge = (props: EdgeProps<IWorkflowEdge>) => {
           zIndex: 9,
         }}
         id={id}
-        label={<span>{count}个</span>}
-        labelBgStyle={{ backgroundColor: 'red', color: '#ffffff' }}
+        label={count > 0 ? `${count}` : undefined}
+        labelStyle={{ fill: '#fff', fontWeight: 600, fontSize: 12 }}
+        labelBgStyle={{ fill: '#3b82f6' }}
+        labelBgPadding={[4, 6] as [number, number]}
+        labelBgBorderRadius={4}
         interactionWidth={20}
       />
       <path

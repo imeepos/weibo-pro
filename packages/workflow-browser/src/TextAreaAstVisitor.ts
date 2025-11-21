@@ -6,7 +6,6 @@ import { Observable } from "rxjs";
 export class TextAreaAstVisitor {
     @Handler(TextAreaAst)
     handler(ast: TextAreaAst, ctx: any) {
-        console.log({ast})
         return new Observable(obs => {
             ast.state = 'emitting';
             ast.output = ast.input;

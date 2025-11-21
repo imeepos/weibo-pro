@@ -80,7 +80,7 @@ export function useWorkflowOperations(
             onShowToast?.('success', '节点执行成功')
           } else if (updatedNode.state === 'fail') {
             const errorInfo = extractErrorInfo(updatedNode.error)
-            console.error({errorInfo, updatedNode})
+            console.error({ errorInfo, updatedNode })
             onShowToast?.('error', '节点执行失败', errorInfo.message)
           }
         },
@@ -174,6 +174,7 @@ export function useWorkflowOperations(
           // 遍历所有节点,派发 emitting 事件
           updatedWorkflow.nodes?.forEach((node) => {
             if (node.state === 'emitting') {
+              console.log(`${node.type}:${node.state}`)
               window.dispatchEvent(new CustomEvent('node-emitting', {
                 detail: { nodeId: node.id }
               }))

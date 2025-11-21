@@ -129,7 +129,6 @@ export function WorkflowCanvas({
       // 恢复保存的 viewport
       const { x, y, zoom } = workflow.workflowAst.viewport
       setViewport({ x, y, zoom }, { duration: 0 })
-      console.log('恢复 viewport:', workflow.workflowAst.viewport)
     }
     // 注意：如果没有保存的 viewport，ReactFlow 的 fitView prop 会自动适应
   }, [workflow.workflowAst, setViewport])
