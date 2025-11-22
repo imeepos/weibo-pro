@@ -139,6 +139,7 @@ export function WorkflowSettingsDialog({
     }
   }, [visible, workflow])
 
+<<<<<<< HEAD
   // 订阅 RxJS 流
   useEffect(() => {
     const subscriptions = [
@@ -159,6 +160,8 @@ export function WorkflowSettingsDialog({
   }, [])
 
   if (!visible) return null
+=======
+>>>>>>> 56548102dddd72b2233141ff3417f155e0743e99
 
   const handleSave = useCallback(() => {
     // 最终验证
@@ -237,7 +240,7 @@ export function WorkflowSettingsDialog({
       }
     }
   }, [visible, name, onClose, handleSave])
-
+  if (!visible) return null
   return (
     <>
       <div
