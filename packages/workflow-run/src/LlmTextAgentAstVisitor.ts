@@ -11,6 +11,12 @@ export class LlmTextAgentAstVisitor {
     handler(ast: LlmTextAgentAst, ctx: any) {
         return new Observable((obs) => {
             const run = async () => {
+                if(!ast.prompt){
+                    ast.state = 'fail';
+                    obs.next({...ast})
+                    obs.complete()
+                    return;
+                }
                 const client = useOpenAi()
                 const response = await client.chat.completions.create({
                     model: 'deepseek-ai/DeepSeek-V3.2-Exp',

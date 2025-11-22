@@ -8,7 +8,8 @@ export class TextAreaAstVisitor {
     handler(ast: TextAreaAst, ctx: any) {
         return new Observable(obs => {
             ast.state = 'emitting';
-            ast.output = ast.input;
+            ast.output = Array.isArray(ast.input) ? ast.input.join('\n') : ast.input;
+
             obs.next({ ...ast })
 
             ast.state = 'success';
