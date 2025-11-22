@@ -103,6 +103,9 @@ export class WorkflowGraphAst extends Ast {
     @State({ title: '折叠状态' })
     collapsed?: boolean = false;
 
+    @State({ title: '标签' })
+    tags?: string[] = [];
+
     type: `WorkflowGraphAst` = `WorkflowGraphAst`
 
     /**

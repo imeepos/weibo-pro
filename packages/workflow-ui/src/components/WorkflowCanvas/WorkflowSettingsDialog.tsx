@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { X, Workflow, Palette, FileText, Tag } from 'lucide-react'
 import { cn } from '../../utils/cn'
 import type { WorkflowGraphAst } from '@sker/workflow'
@@ -40,8 +40,9 @@ export function WorkflowSettingsDialog({
   const [description, setDescription] = useState(workflow.description || '')
   const [color, setColor] = useState(workflow.groupColor || '#3b82f6')
   const [customColor, setCustomColor] = useState('')
-  const [tags, setTags] = useState<string[]>([])
+  const [tags, setTags] = useState<string[]>(workflow.tags || [])
   const [newTag, setNewTag] = useState('')
+  const [nameError, setNameError] = useState('')
 
   useEffect(() => {
     if (visible) {
@@ -49,14 +50,25 @@ export function WorkflowSettingsDialog({
       setDescription(workflow.description || '')
       setColor(workflow.groupColor || '#3b82f6')
       setCustomColor('')
-      setTags([])
+      setTags(workflow.tags || [])
       setNewTag('')
     }
   }, [visible, workflow])
 
   if (!visible) return null
 
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
+    // 验证名称
+    if (!name.trim()) {
+      setNameError('工作流名称不能为空')
+      return
+    }
+    if (name.length > 50) {
+      setNameError('工作流名称不能超过50个字符')
+      return
+    }
+
+    setNameError('')
     onSave({
       name,
       description,
@@ -64,7 +76,7 @@ export function WorkflowSettingsDialog({
       tags,
     })
     onClose()
-  }
+  }, [name, description, customColor, color, tags, onSave, onClose])
 
   const handleAddTag = () => {
     if (newTag.trim() && !tags.includes(newTag.trim())) {
@@ -83,6 +95,27 @@ export function WorkflowSettingsDialog({
       handleAddTag()
     }
   }
+
+  // 处理全局键盘事件
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && visible) {
+        e.preventDefault()
+        onClose()
+      }
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && visible && name.trim()) {
+        e.preventDefault()
+        handleSave()
+      }
+    }
+
+    if (visible) {
+      document.addEventListener('keydown', handleGlobalKeyDown)
+      return () => {
+        document.removeEventListener('keydown', handleGlobalKeyDown)
+      }
+    }
+  }, [visible, name, onClose, handleSave])
 
   return (
     <>

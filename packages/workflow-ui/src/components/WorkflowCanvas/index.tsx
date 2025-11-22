@@ -1043,6 +1043,9 @@ export function WorkflowCanvas({
     if (settings.color) {
       workflow.workflowAst.groupColor = settings.color
     }
+    if (settings.tags !== undefined) {
+      workflow.workflowAst.tags = settings.tags
+    }
 
     showToast('success', '工作流设置已保存', `已更新工作流 "${settings.name || '未命名'}" 的属性`)
   }, [workflow, showToast])
