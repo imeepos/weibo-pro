@@ -55,7 +55,6 @@ export function WorkflowSettingsDialog({
     }
   }, [visible, workflow])
 
-  if (!visible) return null
 
   const handleSave = useCallback(() => {
     // 验证名称
@@ -138,7 +137,7 @@ export function WorkflowSettingsDialog({
       }
     }
   }, [visible, name, onClose, handleSave])
-
+  if (!visible) return null
   return (
     <>
       <div
