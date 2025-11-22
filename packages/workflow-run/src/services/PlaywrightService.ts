@@ -17,118 +17,73 @@ export interface CookieData {
 export class PlaywrightService {
     private static sharedBrowser: Browser | null = null;
     private static sharedContext: BrowserContext | null = null;
-    private static isInitializing = false;
     private static initializationPromise: Promise<void> | null = null;
 
     private page: Page | null = null;
 
     async getHtml(url: string, cookies: string, ua: string): Promise<string> {
-        const maxRetries = 3; // 增加重试次数，提高稳定性
-        let lastError: Error | null = null;
+        // 为每个请求创建独立的页面和cookies上下文
+        await this.ensureBrowserReady(ua);
+        if (!this.page) throw new Error(`创建页面失败`)
 
-        for (let attempt = 1; attempt <= maxRetries; attempt++) {
-            try {
-                // 为每个请求创建独立的页面和cookies上下文
-                await this.ensureBrowserReady(ua);
-                if (!this.page) throw new Error(`创建页面失败`)
+        // 在页面导航之前设置cookies
+        await this.setCookiesForPage(cookies, url);
 
-                // 在页面导航之前设置cookies
-                await this.setCookiesForPage(cookies, url);
-
-                console.log(`[PlaywrightService] 导航到页面: ${url} (第${attempt}次尝试)`);
-
-                // 使用更可靠的等待策略 - 针对微博搜索页面优化
-                if (!this.page) {
-                    throw new Error('页面意外关闭，无法导航');
-                }
-                await this.page.goto(url, {
-                    waitUntil: 'domcontentloaded', // 先等待DOM加载完成
-                    timeout: 45000 // 增加超时时间
-                });
-
-                // 等待关键元素出现，确保页面真正加载完成
-                if (!this.page) {
-                    throw new Error('页面意外关闭，无法等待元素');
-                }
-                await this.page.waitForSelector('div.card, div.m-page, div[action-type="feed_list_item"]', {
-                    timeout: 30000
-                }).catch(() => {
-                    console.warn(`[PlaywrightService] 等待关键元素超时，但继续处理`);
-                });
-
-                // 等待页面完全加载（但不等待网络空闲，避免无限等待）
-                if (!this.page) {
-                    throw new Error('页面意外关闭，无法等待加载状态');
-                }
-                await this.page.waitForLoadState('load', { timeout: 10000 }).catch(() => {
-                    console.warn(`[PlaywrightService] 等待页面完全加载超时，但继续处理`);
-                });
-
-                // 额外的稳定性等待
-                await delay();
-
-                // 检查页面是否真正稳定
-                if (!this.page) {
-                    throw new Error('页面意外关闭，无法执行 evaluate');
-                }
-                const pageState = await this.page.evaluate(() => ({
-                    readyState: document.readyState,
-                    hasContent: document.body?.innerText?.length > 0,
-                    title: document.title
-                }));
-
-                console.log(`[PlaywrightService] 页面状态: readyState=${pageState.readyState}, hasContent=${pageState.hasContent}, title=${pageState.title}`);
-
-                // 检查页面内容，检测登录失效
-                if (!this.page) {
-                    throw new Error('页面意外关闭，无法获取URL');
-                }
-                const currentUrl = this.page.url();
-                console.log(`[PlaywrightService] 当前页面URL: ${currentUrl}`);
-
-                if (!this.page) {
-                    throw new Error('页面意外关闭，无法获取内容');
-                }
-                const html = await this.page.content();
-                console.log(`[PlaywrightService] 成功获取页面内容，长度: ${html.length}`);
-                return html;
-            } catch (error) {
-                lastError = error as Error;
-                console.error(`[PlaywrightService] 第${attempt}次尝试失败:`, error);
-
-                // 更精确的重试条件：只在特定错误时重试
-                const shouldRetry = error instanceof Error && (
-                    // 页面导航相关错误
-                    error.message.includes('Target page, context or browser has been closed') ||
-                    error.message.includes('Execution context was destroyed') ||
-                    error.message.includes('Protocol error') ||
-                    // 网络相关错误
-                    (error.message.includes('net::') && !error.message.includes('net::ERR_ABORTED')) ||
-                    // 超时错误
-                    error.message.includes('Timeout')
-                );
-
-                if (shouldRetry && attempt < maxRetries) {
-                    console.warn(`[PlaywrightService] 检测到可重试错误，第${attempt}次重试: ${error.message}`);
-                    // 在重试前完全清理浏览器状态，确保重新初始化
-                    await this.closePage();
-                    await this.cleanupSharedBrowser();
-                    PlaywrightService.initializationPromise = null;
-                    await delay();
-                    continue;
-                }
-
-                // 其他错误直接抛出
-                throw error;
-            } finally {
-                // 只在成功或最终失败时关闭页面，不在重试时关闭
-                if (lastError && attempt === maxRetries) {
-                    await this.closePage();
-                }
-            }
+        // 使用更可靠的等待策略 - 针对微博搜索页面优化
+        if (!this.page) {
+            throw new Error('页面意外关闭，无法导航');
         }
+        await this.page.goto(url, {
+            waitUntil: 'domcontentloaded', // 先等待DOM加载完成
+            timeout: 45000 // 增加超时时间
+        });
 
-        throw new Error(`获取页面内容失败，重试${maxRetries}次后仍然失败: ${lastError?.message}`);
+        // 等待关键元素出现，确保页面真正加载完成
+        if (!this.page) {
+            throw new Error('页面意外关闭，无法等待元素');
+        }
+        await this.page.waitForSelector('div.card, div.m-page, div[action-type="feed_list_item"]', {
+            timeout: 30000
+        }).catch(() => {
+            console.warn(`[PlaywrightService] 等待关键元素超时，但继续处理`);
+        });
+
+        // 等待页面完全加载（但不等待网络空闲，避免无限等待）
+        if (!this.page) {
+            throw new Error('页面意外关闭，无法等待加载状态');
+        }
+        await this.page.waitForLoadState('load', { timeout: 10000 }).catch(() => {
+            console.warn(`[PlaywrightService] 等待页面完全加载超时，但继续处理`);
+        });
+
+        // 额外的稳定性等待
+        await delay();
+
+        // 检查页面是否真正稳定
+        if (!this.page) {
+            throw new Error('页面意外关闭，无法执行 evaluate');
+        }
+        const pageState = await this.page.evaluate(() => ({
+            readyState: document.readyState,
+            hasContent: document.body?.innerText?.length > 0,
+            title: document.title
+        }));
+
+        console.log(`[PlaywrightService] 页面状态: readyState=${pageState.readyState}, hasContent=${pageState.hasContent}, title=${pageState.title}`);
+
+        // 检查页面内容，检测登录失效
+        if (!this.page) {
+            throw new Error('页面意外关闭，无法获取URL');
+        }
+        const currentUrl = this.page.url();
+        console.log(`[PlaywrightService] 当前页面URL: ${currentUrl}`);
+
+        if (!this.page) {
+            throw new Error('页面意外关闭，无法获取内容');
+        }
+        const html = await this.page.content();
+        console.log(`[PlaywrightService] 成功获取页面内容，长度: ${html.length}`);
+        return html;
     }
     private async setCookiesForPage(cookiesInput: string, url: string): Promise<void> {
         if (!cookiesInput || !this.page) {
@@ -141,8 +96,6 @@ export class PlaywrightService {
             const parsedCookies = this.parseCookieString(cookiesInput);
 
             if (parsedCookies.length > 0) {
-                console.log(`[PlaywrightService] 准备为页面设置 ${parsedCookies.length} 个cookies`);
-
                 // 为页面设置cookies - 使用页面级别的cookies设置
                 const playwrightCookies = parsedCookies.map(cookie => ({
                     name: cookie.name,
@@ -157,11 +110,7 @@ export class PlaywrightService {
 
                 // 使用页面上下文设置cookies，避免影响其他页面
                 await this.page.context().addCookies(playwrightCookies);
-                console.log(`[PlaywrightService] 成功为页面设置 ${playwrightCookies.length} 个cookies`);
-            } else {
-                console.warn('[PlaywrightService] 解析后没有有效的cookies');
             }
-
         } catch (error) {
             console.error('[PlaywrightService] 设置页面cookies失败:', error);
             throw new Error(`设置页面cookies失败: ${(error as Error).message}`);
@@ -275,26 +224,12 @@ export class PlaywrightService {
     }
 
     private async initializeBrowserWithRetry(ua: string): Promise<void> {
-        const maxRetries = 3;
-
-        for (let attempt = 1; attempt <= maxRetries; attempt++) {
-            try {
-                PlaywrightService.isInitializing = true;
-                await this.cleanupSharedBrowser();
-                await this.initializeBrowser(ua);
-                PlaywrightService.isInitializing = false;
-                return;
-            } catch (error) {
-                console.error(`[PlaywrightService] 浏览器初始化第${attempt}次尝试失败:`, error);
-                PlaywrightService.isInitializing = false;
-
-                if (attempt < maxRetries) {
-                    await this.sleep(2000); // 重试前等待更长时间
-                    continue;
-                }
-
-                throw error;
-            }
+        try {
+            await this.cleanupSharedBrowser();
+            await this.initializeBrowser(ua);
+            return;
+        } catch (error) {
+            throw error;
         }
     }
 
@@ -401,10 +336,6 @@ export class PlaywrightService {
         } catch (error) {
             console.error('清理浏览器失败:', (error as Error).message);
         }
-    }
-
-    private sleep(ms: number): Promise<void> {
-        return new Promise(resolve => setTimeout(resolve, ms));
     }
 
     static async cleanup(): Promise<void> {
