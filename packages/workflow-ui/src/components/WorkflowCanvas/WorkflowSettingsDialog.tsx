@@ -1,9 +1,10 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { X, Workflow, Palette, FileText, Tag } from 'lucide-react'
 import { cn } from '../../utils/cn'
 import type { WorkflowGraphAst } from '@sker/workflow'
+import { Subject, merge, fromEvent, debounceTime, distinctUntilChanged, filter, map, startWith, tap } from 'rxjs'
 
 export interface WorkflowSettingsDialogProps {
   visible: boolean
@@ -36,6 +37,16 @@ export function WorkflowSettingsDialog({
   onClose,
   onSave,
 }: WorkflowSettingsDialogProps) {
+  // RxJS Subjects 用于处理用户输入
+  const nameInput$ = useRef(new Subject<string>()).current
+  const descriptionInput$ = useRef(new Subject<string>()).current
+  const colorChange$ = useRef(new Subject<string>()).current
+  const customColorChange$ = useRef(new Subject<string>()).current
+  const tagInput$ = useRef(new Subject<string>()).current
+  const addTag$ = useRef(new Subject<void>()).current
+  const removeTag$ = useRef(new Subject<string>()).current
+
+  // React 状态
   const [name, setName] = useState(workflow.name || '')
   const [description, setDescription] = useState(workflow.description || '')
   const [color, setColor] = useState(workflow.groupColor || '#3b82f6')
@@ -44,6 +55,78 @@ export function WorkflowSettingsDialog({
   const [newTag, setNewTag] = useState('')
   const [nameError, setNameError] = useState('')
 
+  // 表单验证流
+  const nameValidation$ = nameInput$.pipe(
+    debounceTime(300), // 防抖 300ms
+    distinctUntilChanged(), // 避免重复值
+    map(value => {
+      if (!value.trim()) {
+        return { value, error: '工作流名称不能为空' }
+      }
+      if (value.length > 50) {
+        return { value, error: '工作流名称不能超过50个字符' }
+      }
+      return { value, error: '' }
+    })
+  )
+
+  // 表单状态流 - 用于实时监控表单状态
+  const formState$ = merge(
+    nameInput$.pipe(map(value => ({ type: 'name', value }))),
+    descriptionInput$.pipe(map(value => ({ type: 'description', value }))),
+    colorChange$.pipe(map(value => ({ type: 'color', value }))),
+    customColorChange$.pipe(map(value => ({ type: 'customColor', value }))),
+    tagInput$.pipe(map(value => ({ type: 'tagInput', value }))),
+    addTag$.pipe(map(() => ({ type: 'addTag' }))),
+    removeTag$.pipe(map(tag => ({ type: 'removeTag', value: tag })))
+  ).pipe(
+    debounceTime(100), // 轻微防抖，避免过于频繁的更新
+    tap(state => {
+      // 可以在这里添加调试日志或性能监控
+      // console.log('Form state change:', state)
+    })
+  )
+
+  // 标签管理流
+  const tagManagement$ = merge(
+    // 添加标签
+    addTag$.pipe(
+      map(() => newTag.trim()),
+      filter(tag => tag.length > 0),
+      filter(tag => !tags.includes(tag)),
+      filter(() => tags.length < 10),
+      tap(tag => {
+        setTags(prev => [...prev, tag])
+        setNewTag('')
+      })
+    ),
+    // 删除标签
+    removeTag$.pipe(
+      tap(tag => {
+        setTags(prev => prev.filter(t => t !== tag))
+      })
+    )
+  )
+
+  // 标签输入流
+  const tagInputChange$ = tagInput$.pipe(
+    tap(value => setNewTag(value))
+  )
+
+  // 颜色选择流
+  const colorSelection$ = merge(
+    colorChange$.pipe(
+      tap(color => {
+        setColor(color)
+        setCustomColor('')
+      })
+    ),
+    customColorChange$.pipe(
+      tap(color => setCustomColor(color))
+    )
+  )
+
+  // 初始化表单状态
   useEffect(() => {
     if (visible) {
       setName(workflow.name || '')
@@ -52,13 +135,33 @@ export function WorkflowSettingsDialog({
       setCustomColor('')
       setTags(workflow.tags || [])
       setNewTag('')
+      setNameError('')
     }
   }, [visible, workflow])
+
+  // 订阅 RxJS 流
+  useEffect(() => {
+    const subscriptions = [
+      nameValidation$.subscribe(({ value, error }) => {
+        setName(value)
+        setNameError(error)
+      }),
+      descriptionInput$.subscribe(setDescription),
+      colorSelection$.subscribe(),
+      tagInputChange$.subscribe(),
+      tagManagement$.subscribe(),
+      formState$.subscribe() // 监控表单状态变化
+    ]
+
+    return () => {
+      subscriptions.forEach(sub => sub.unsubscribe())
+    }
+  }, [])
 
   if (!visible) return null
 
   const handleSave = useCallback(() => {
-    // 验证名称
+    // 最终验证
     if (!name.trim()) {
       setNameError('工作流名称不能为空')
       return
@@ -78,37 +181,33 @@ export function WorkflowSettingsDialog({
     onClose()
   }, [name, description, customColor, color, tags, onSave, onClose])
 
+  // 事件处理函数
   const handleNameChange = (value: string) => {
-    setName(value)
-    // 实时验证
-    if (!value.trim()) {
-      setNameError('工作流名称不能为空')
-    } else if (value.length > 50) {
-      setNameError('工作流名称不能超过50个字符')
-    } else {
-      setNameError('')
-    }
+    nameInput$.next(value)
+  }
+
+  const handleDescriptionChange = (value: string) => {
+    descriptionInput$.next(value)
+  }
+
+  const handleColorChange = (value: string) => {
+    colorChange$.next(value)
+  }
+
+  const handleCustomColorChange = (value: string) => {
+    customColorChange$.next(value)
+  }
+
+  const handleTagInputChange = (value: string) => {
+    tagInput$.next(value)
   }
 
   const handleAddTag = () => {
-    const trimmedTag = newTag.trim()
-    if (!trimmedTag) {
-      return
-    }
-    if (tags.includes(trimmedTag)) {
-      // 可以添加一个短暂的提示，但这里为了简洁暂时不实现
-      return
-    }
-    if (tags.length >= 10) {
-      // 限制标签数量
-      return
-    }
-    setTags([...tags, trimmedTag])
-    setNewTag('')
+    addTag$.next()
   }
 
   const handleRemoveTag = (tag: string) => {
-    setTags(tags.filter((t) => t !== tag))
+    removeTag$.next(tag)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -206,7 +305,7 @@ export function WorkflowSettingsDialog({
               </label>
               <textarea
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={(e) => handleDescriptionChange(e.target.value)}
                 placeholder="请输入工作流简介（可选）"
                 rows={4}
                 className={cn(
@@ -230,10 +329,7 @@ export function WorkflowSettingsDialog({
                 {PRESET_COLORS.map((presetColor) => (
                   <button
                     key={presetColor}
-                    onClick={() => {
-                      setColor(presetColor)
-                      setCustomColor('')
-                    }}
+                    onClick={() => handleColorChange(presetColor)}
                     className={cn(
                       'h-10 w-10 rounded-lg transition-all',
                       color === presetColor && !customColor
@@ -251,7 +347,7 @@ export function WorkflowSettingsDialog({
                 <input
                   type="color"
                   value={customColor || color}
-                  onChange={(e) => setCustomColor(e.target.value)}
+                  onChange={(e) => handleCustomColorChange(e.target.value)}
                   className="h-10 w-20 cursor-pointer rounded-lg border border-slate-700 bg-slate-800"
                 />
                 <span className="text-xs text-slate-400">
@@ -292,7 +388,7 @@ export function WorkflowSettingsDialog({
                 <input
                   type="text"
                   value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
+                  onChange={(e) => handleTagInputChange(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="输入标签后按回车添加"
                   className={cn(
