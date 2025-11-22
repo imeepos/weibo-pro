@@ -43,24 +43,18 @@ export class WeiboPostSubscriber implements EntitySubscriberInterface<WeiboPostE
   private async createSnapshot(post: WeiboPostEntity, manager: EntityManager) {
     if (!post) return;
 
-    // 检查是否已存在相同的快照（避免重复）
+    // 检查是否已存在相同时间戳的快照（避免重复）
     const now = new Date();
-    const recentSnapshot = await manager.findOne(WeiboPostSnapshotEntity, {
-      where: { post_id: post.id },
-      order: { snapshot_at: 'DESC' },
+    const existingSnapshot = await manager.findOne(WeiboPostSnapshotEntity, {
+      where: {
+        post_id: post.id,
+        snapshot_at: now
+      },
     });
 
-    // 如果最近的快照是 1 分钟内创建的，且数据一致，则跳过
-    if (recentSnapshot) {
-      const timeDiff = now.getTime() - recentSnapshot.snapshot_at.getTime();
-      if (
-        timeDiff < 60000 && // 1分钟内
-        recentSnapshot.comments_count === post.comments_count &&
-        recentSnapshot.reposts_count === post.reposts_count &&
-        recentSnapshot.attitudes_count === post.attitudes_count
-      ) {
-        return; // 跳过重复快照
-      }
+    // 如果已存在相同时间戳的快照，则跳过
+    if (existingSnapshot) {
+      return;
     }
 
     // 创建新快照

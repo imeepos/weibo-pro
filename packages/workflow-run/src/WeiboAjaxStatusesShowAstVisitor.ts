@@ -37,7 +37,24 @@ export class WeiboAjaxStatusesShowAstVisitor extends WeiboApiClient {
 
                         const post = m.create(WeiboPostEntity, body);
                         ast.mid = post.mid;
-                        await m.upsert(WeiboPostEntity, post as any, ['id']);
+
+                        // 使用安全的 upsert 方式，处理可能的重复插入
+                        try {
+                            await m.upsert(WeiboPostEntity, post as any, ['id']);
+                        } catch (error) {
+                            // 如果 upsert 失败，尝试查找现有记录
+                            const existingPost = await m.findOne(WeiboPostEntity, {
+                                where: { id: post.id }
+                            });
+
+                            if (existingPost) {
+                                // 如果记录已存在，更新它
+                                await m.update(WeiboPostEntity, { id: post.id }, post as any);
+                            } else {
+                                // 如果记录不存在，重新抛出错误
+                                throw error;
+                            }
+                        }
                     });
 
                     ast.state = 'emitting';
