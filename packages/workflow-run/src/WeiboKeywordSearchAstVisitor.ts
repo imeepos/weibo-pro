@@ -80,6 +80,7 @@ export class WeiboKeywordSearchAstVisitor {
 
                 while (pageRetryCount < maxPageRetries && !pageSuccess) {
                     try {
+                        if (!result.nextPageLink) return;
                         currentPageNum++;
 
                         html = await this.playwright.getHtml(result.nextPageLink, selection.cookieHeader, `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36`);
