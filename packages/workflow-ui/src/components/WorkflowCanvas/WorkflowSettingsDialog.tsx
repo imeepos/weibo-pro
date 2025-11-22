@@ -78,11 +78,33 @@ export function WorkflowSettingsDialog({
     onClose()
   }, [name, description, customColor, color, tags, onSave, onClose])
 
-  const handleAddTag = () => {
-    if (newTag.trim() && !tags.includes(newTag.trim())) {
-      setTags([...tags, newTag.trim()])
-      setNewTag('')
+  const handleNameChange = (value: string) => {
+    setName(value)
+    // 实时验证
+    if (!value.trim()) {
+      setNameError('工作流名称不能为空')
+    } else if (value.length > 50) {
+      setNameError('工作流名称不能超过50个字符')
+    } else {
+      setNameError('')
     }
+  }
+
+  const handleAddTag = () => {
+    const trimmedTag = newTag.trim()
+    if (!trimmedTag) {
+      return
+    }
+    if (tags.includes(trimmedTag)) {
+      // 可以添加一个短暂的提示，但这里为了简洁暂时不实现
+      return
+    }
+    if (tags.length >= 10) {
+      // 限制标签数量
+      return
+    }
+    setTags([...tags, trimmedTag])
+    setNewTag('')
   }
 
   const handleRemoveTag = (tag: string) => {
@@ -160,15 +182,20 @@ export function WorkflowSettingsDialog({
               <input
                 type="text"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => handleNameChange(e.target.value)}
                 placeholder="请输入工作流名称"
                 className={cn(
-                  'w-full rounded-lg border border-slate-700 bg-slate-800/50 px-4 py-2.5',
+                  'w-full rounded-lg border bg-slate-800/50 px-4 py-2.5',
                   'text-sm text-slate-100 placeholder-slate-500',
-                  'focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20',
-                  'transition-colors'
+                  'focus:outline-none focus:ring-2 transition-colors',
+                  nameError
+                    ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20'
+                    : 'border-slate-700 focus:border-blue-500 focus:ring-blue-500/20'
                 )}
               />
+              {nameError && (
+                <p className="text-xs text-red-400">{nameError}</p>
+              )}
             </div>
 
             {/* 简介 */}
@@ -305,10 +332,10 @@ export function WorkflowSettingsDialog({
             </button>
             <button
               onClick={handleSave}
-              disabled={!name.trim()}
+              disabled={!name.trim() || !!nameError}
               className={cn(
                 'rounded-lg px-6 py-2 text-sm font-medium transition-colors',
-                name.trim()
+                name.trim() && !nameError
                   ? 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
                   : 'cursor-not-allowed bg-slate-800 text-slate-600'
               )}
