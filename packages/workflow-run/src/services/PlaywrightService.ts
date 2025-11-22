@@ -18,6 +18,7 @@ export class PlaywrightService {
     private static sharedBrowser: Browser | null = null;
     private static sharedContext: BrowserContext | null = null;
     private static isInitializing = false;
+    private static initializationPromise: Promise<void> | null = null;
 
     private page: Page | null = null;
 
@@ -109,8 +110,10 @@ export class PlaywrightService {
 
                 if (shouldRetry && attempt < maxRetries) {
                     console.warn(`[PlaywrightService] 检测到可重试错误，第${attempt}次重试: ${error.message}`);
-                    // 在重试前清理整个浏览器上下文，确保重新初始化
+                    // 在重试前完全清理浏览器状态，确保重新初始化
+                    await this.closePage();
                     await this.cleanupSharedBrowser();
+                    PlaywrightService.initializationPromise = null;
                     await delay();
                     continue;
                 }
@@ -241,33 +244,52 @@ export class PlaywrightService {
     }
 
     private async ensureBrowserReady(ua: string): Promise<void> {
-        const maxBrowserRetries = 2;
+        // 如果浏览器健康，直接创建页面
+        if (await this.isBrowserHealthy()) {
+            await this.createPage();
+            return;
+        }
 
-        for (let attempt = 1; attempt <= maxBrowserRetries; attempt++) {
+        // 如果正在初始化，等待初始化完成
+        if (PlaywrightService.initializationPromise) {
+            await PlaywrightService.initializationPromise;
+            if (await this.isBrowserHealthy()) {
+                await this.createPage();
+                return;
+            }
+        }
+
+        // 开始新的初始化
+        PlaywrightService.initializationPromise = this.initializeBrowserWithRetry(ua);
+        await PlaywrightService.initializationPromise;
+
+        // 初始化完成后清理 promise
+        PlaywrightService.initializationPromise = null;
+
+        if (await this.isBrowserHealthy()) {
+            await this.createPage();
+            return;
+        }
+
+        throw new Error('浏览器初始化失败');
+    }
+
+    private async initializeBrowserWithRetry(ua: string): Promise<void> {
+        const maxRetries = 3;
+
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
-                if (await this.isBrowserHealthy()) {
-                    await this.createPage();
-                    return;
-                }
-
-                while (PlaywrightService.isInitializing) {
-                    await this.sleep(100);
-                }
-
-                if (await this.isBrowserHealthy()) {
-                    await this.createPage();
-                    return;
-                }
-
+                PlaywrightService.isInitializing = true;
+                await this.cleanupSharedBrowser();
                 await this.initializeBrowser(ua);
+                PlaywrightService.isInitializing = false;
                 return;
             } catch (error) {
                 console.error(`[PlaywrightService] 浏览器初始化第${attempt}次尝试失败:`, error);
+                PlaywrightService.isInitializing = false;
 
-                if (attempt < maxBrowserRetries) {
-                    // 清理浏览器状态并重试
-                    await this.cleanupSharedBrowser();
-                    await this.sleep(1000);
+                if (attempt < maxRetries) {
+                    await this.sleep(2000); // 重试前等待更长时间
                     continue;
                 }
 
@@ -301,14 +323,21 @@ export class PlaywrightService {
     }
 
     private async initializeBrowser(ua: string): Promise<void> {
-        PlaywrightService.isInitializing = true;
-
         try {
             await this.cleanupSharedBrowser();
 
             PlaywrightService.sharedBrowser = await chromium.launch({
                 headless: true,
-                args: ['--no-sandbox', '--disable-setuid-sandbox']
+                args: [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-accelerated-2d-canvas',
+                    '--no-first-run',
+                    '--no-zygote',
+                    '--disable-gpu'
+                ],
+                timeout: 30000
             });
 
             const userAgent = typeof ua === 'string' ? ua : '';
@@ -316,11 +345,20 @@ export class PlaywrightService {
             PlaywrightService.sharedContext = await PlaywrightService.sharedBrowser.newContext({
                 viewport: { width: 1920, height: 1080 },
                 userAgent,
+                ignoreHTTPSErrors: true,
+                javaScriptEnabled: true,
+                acceptDownloads: false,
+                bypassCSP: true
             });
 
+            // 设置更宽松的默认超时
+            PlaywrightService.sharedContext.setDefaultTimeout(60000);
+            PlaywrightService.sharedContext.setDefaultNavigationTimeout(60000);
+
             await this.createPage();
-        } finally {
-            PlaywrightService.isInitializing = false;
+        } catch (error) {
+            await this.cleanupSharedBrowser();
+            throw error;
         }
     }
 
@@ -328,8 +366,26 @@ export class PlaywrightService {
         const context = PlaywrightService.sharedContext;
         if (!context) throw new Error('Browser context not initialized');
 
-        this.page = await context.newPage();
-        this.page.setDefaultTimeout(30000);
+        try {
+            this.page = await context.newPage();
+            this.page.setDefaultTimeout(60000);
+            this.page.setDefaultNavigationTimeout(60000);
+
+            // 添加页面事件监听，检测页面意外关闭
+            this.page.on('close', () => {
+                console.warn('[PlaywrightService] 页面意外关闭');
+                this.page = null;
+            });
+
+            this.page.on('crash', () => {
+                console.error('[PlaywrightService] 页面崩溃');
+                this.page = null;
+            });
+        } catch (error) {
+            console.error('[PlaywrightService] 创建页面失败:', error);
+            this.page = null;
+            throw error;
+        }
     }
 
     private async cleanupSharedBrowser(): Promise<void> {

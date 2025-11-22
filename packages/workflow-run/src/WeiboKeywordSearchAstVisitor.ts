@@ -83,6 +83,10 @@ export class WeiboKeywordSearchAstVisitor {
                         if (!result.nextPageLink) return;
                         currentPageNum++;
 
+                        if (!result.nextPageLink) {
+                            throw new Error('下一页链接为空');
+                        }
+
                         html = await this.playwright.getHtml(result.nextPageLink, selection.cookieHeader, `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36`);
                         result = this.parser.parseSearchResultHtml(html);
 
