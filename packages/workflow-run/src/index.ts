@@ -15,6 +15,7 @@ export { EventAutoCreatorVisitor } from './EventAutoCreatorVisitor'
 export { WeiboLoginAstVisitor } from './WeiboLoginAstVisitor'
 export { LlmTextAgentAstVisitor } from './LlmTextAgentAstVisitor'
 export { TextAreaAstVisitor } from './TextAreaAstVisitor'
+export { DateAstVisitor } from './DateAstVisitor'
 export {
     WeiboAccountService,
     type WeiboLoginSuccessMessage
