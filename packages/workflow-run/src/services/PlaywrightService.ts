@@ -37,12 +37,18 @@ export class PlaywrightService {
                 console.log(`[PlaywrightService] 导航到页面: ${url} (第${attempt}次尝试)`);
 
                 // 使用更可靠的等待策略 - 针对微博搜索页面优化
+                if (!this.page) {
+                    throw new Error('页面意外关闭，无法导航');
+                }
                 await this.page.goto(url, {
                     waitUntil: 'domcontentloaded', // 先等待DOM加载完成
                     timeout: 45000 // 增加超时时间
                 });
 
                 // 等待关键元素出现，确保页面真正加载完成
+                if (!this.page) {
+                    throw new Error('页面意外关闭，无法等待元素');
+                }
                 await this.page.waitForSelector('div.card, div.m-page, div[action-type="feed_list_item"]', {
                     timeout: 30000
                 }).catch(() => {
@@ -50,6 +56,9 @@ export class PlaywrightService {
                 });
 
                 // 等待页面完全加载（但不等待网络空闲，避免无限等待）
+                if (!this.page) {
+                    throw new Error('页面意外关闭，无法等待加载状态');
+                }
                 await this.page.waitForLoadState('load', { timeout: 10000 }).catch(() => {
                     console.warn(`[PlaywrightService] 等待页面完全加载超时，但继续处理`);
                 });
@@ -58,6 +67,9 @@ export class PlaywrightService {
                 await delay();
 
                 // 检查页面是否真正稳定
+                if (!this.page) {
+                    throw new Error('页面意外关闭，无法执行 evaluate');
+                }
                 const pageState = await this.page.evaluate(() => ({
                     readyState: document.readyState,
                     hasContent: document.body?.innerText?.length > 0,
@@ -67,9 +79,15 @@ export class PlaywrightService {
                 console.log(`[PlaywrightService] 页面状态: readyState=${pageState.readyState}, hasContent=${pageState.hasContent}, title=${pageState.title}`);
 
                 // 检查页面内容，检测登录失效
+                if (!this.page) {
+                    throw new Error('页面意外关闭，无法获取URL');
+                }
                 const currentUrl = this.page.url();
                 console.log(`[PlaywrightService] 当前页面URL: ${currentUrl}`);
 
+                if (!this.page) {
+                    throw new Error('页面意外关闭，无法获取内容');
+                }
                 const html = await this.page.content();
                 console.log(`[PlaywrightService] 成功获取页面内容，长度: ${html.length}`);
                 return html;
