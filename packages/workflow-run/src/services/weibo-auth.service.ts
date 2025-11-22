@@ -159,8 +159,10 @@ export class WeiboAuthService implements OnDestroy {
           const data = await response.json();
 
           if (data.data?.image) {
+            ast.account = undefined;
             ast.qrcode = data.data.image;
             ast.state = "emitting"
+            ast.message = ``
             obs.next({ ...ast })
           }
         }
