@@ -3,7 +3,11 @@
   "version": "0.0.0",
   "private": true,
   "description": "Workflow engine and orchestration utilities for Sker applications.",
-  "keywords": ["workflow", "orchestration", "sker"],
+  "keywords": [
+    "workflow",
+    "orchestration",
+    "sker"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -27,8 +31,9 @@
     "main": "tsx src/main.ts"
   },
   "dependencies": {
-    "rxjs": "^7.8.1",
-    "@sker/core": "workspace:*"
+    "@sker/core": "workspace:*",
+    "dayjs": "^1.11.19",
+    "rxjs": "^7.8.1"
   },
   "devDependencies": {
     "@sker/eslint-config": "workspace:*",

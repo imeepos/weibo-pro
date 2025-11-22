@@ -465,7 +465,7 @@ export class WeiboPostEntity {
   @Column({ type: 'varchar', length: 255, name: 'cardid', default: '' })
   cardid!: string;
 
-  @Column({ type: 'jsonb', name: 'pic_ids' })
+  @Column({ type: 'jsonb', name: 'pic_ids', nullable: true })
   pic_ids!: string[];
 
   @Column({ type: 'integer', name: 'pic_num' })

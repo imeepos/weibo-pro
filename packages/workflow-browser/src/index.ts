@@ -41,3 +41,4 @@ export type { WeiboLoginEvent, WeiboLoginEventType } from './WeiboLoginBrowserVi
 export { WeiboUserDetectionAstVisitor } from './WeiboUserDetectionAstVisitor'
 export { LlmTextAgentAstVisitor } from './LlmTextAgentAstVisitor';
 export { TextAreaAstVisitor } from './TextAreaAstVisitor'
+export { DateAstVisitor } from './DateAstVisitor'

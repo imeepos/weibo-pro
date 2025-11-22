@@ -16,3 +16,4 @@ export * from './WorkflowGraphAstRender'
 export * from './WeiboUserDetectionAstRender';
 export * from './LlmTextAgentAstRender';
 export * from './TextAreaAstRender';
+export * from './DateAstRender';
