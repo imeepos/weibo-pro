@@ -22,7 +22,7 @@ export class PlaywrightService {
     private page: Page | null = null;
 
     async getHtml(url: string, cookies: string, ua: string): Promise<string> {
-        const maxRetries = 2; // 减少重试次数，避免过度重试
+        const maxRetries = 3; // 增加重试次数，提高稳定性
         let lastError: Error | null = null;
 
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -109,7 +109,8 @@ export class PlaywrightService {
 
                 if (shouldRetry && attempt < maxRetries) {
                     console.warn(`[PlaywrightService] 检测到可重试错误，第${attempt}次重试: ${error.message}`);
-                    await this.closePage();
+                    // 在重试前清理整个浏览器上下文，确保重新初始化
+                    await this.cleanupSharedBrowser();
                     await delay();
                     continue;
                 }
@@ -117,7 +118,10 @@ export class PlaywrightService {
                 // 其他错误直接抛出
                 throw error;
             } finally {
-                await this.closePage();
+                // 只在成功或最终失败时关闭页面，不在重试时关闭
+                if (lastError && attempt === maxRetries) {
+                    await this.closePage();
+                }
             }
         }
 
@@ -237,21 +241,39 @@ export class PlaywrightService {
     }
 
     private async ensureBrowserReady(ua: string): Promise<void> {
-        if (await this.isBrowserHealthy()) {
-            await this.createPage();
-            return;
-        }
+        const maxBrowserRetries = 2;
 
-        while (PlaywrightService.isInitializing) {
-            await this.sleep(100);
-        }
+        for (let attempt = 1; attempt <= maxBrowserRetries; attempt++) {
+            try {
+                if (await this.isBrowserHealthy()) {
+                    await this.createPage();
+                    return;
+                }
 
-        if (await this.isBrowserHealthy()) {
-            await this.createPage();
-            return;
-        }
+                while (PlaywrightService.isInitializing) {
+                    await this.sleep(100);
+                }
 
-        await this.initializeBrowser(ua);
+                if (await this.isBrowserHealthy()) {
+                    await this.createPage();
+                    return;
+                }
+
+                await this.initializeBrowser(ua);
+                return;
+            } catch (error) {
+                console.error(`[PlaywrightService] 浏览器初始化第${attempt}次尝试失败:`, error);
+
+                if (attempt < maxBrowserRetries) {
+                    // 清理浏览器状态并重试
+                    await this.cleanupSharedBrowser();
+                    await this.sleep(1000);
+                    continue;
+                }
+
+                throw error;
+            }
+        }
     }
 
     private async isBrowserHealthy(): Promise<boolean> {
@@ -261,7 +283,18 @@ export class PlaywrightService {
 
             if (!browser || !context) return false;
 
-            return browser.isConnected();
+            // 检查浏览器是否连接且上下文有效
+            const isBrowserConnected = browser.isConnected();
+            if (!isBrowserConnected) return false;
+
+            // 检查上下文是否有效（通过创建测试页面）
+            try {
+                const testPage = await context.newPage();
+                await testPage.close();
+                return true;
+            } catch {
+                return false;
+            }
         } catch {
             return false;
         }

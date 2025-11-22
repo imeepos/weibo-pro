@@ -72,28 +72,50 @@ export class WeiboKeywordSearchAstVisitor {
 
             // 第二步：分页采集
             let currentPageNum = 1;
+            const maxPageRetries = 2; // 每页最大重试次数
+
             while (result.hasNextPage && result.nextPageLink) {
-                try {
-                    currentPageNum++;
+                let pageRetryCount = 0;
+                let pageSuccess = false;
 
-                    html = await this.playwright.getHtml(result.nextPageLink, selection.cookieHeader, `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36`);
-                    result = this.parser.parseSearchResultHtml(html);
+                while (pageRetryCount < maxPageRetries && !pageSuccess) {
+                    try {
+                        currentPageNum++;
 
-                    // 3️⃣ 发射分页进度
-                    ast.currentPage = currentPageNum;
-                    result.posts.map(post => {
-                        ast.state = 'emitting';
-                        ast.mblogid = post.mid;
-                        ast.uid = post.uid;
-                        obs.next({ ...ast });
-                    })
+                        html = await this.playwright.getHtml(result.nextPageLink, selection.cookieHeader, `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36`);
+                        result = this.parser.parseSearchResultHtml(html);
 
-                    if (result.totalCount) {
-                        break;
+                        // 3️⃣ 发射分页进度
+                        ast.currentPage = currentPageNum;
+                        result.posts.map(post => {
+                            ast.state = 'emitting';
+                            ast.mblogid = post.mid;
+                            ast.uid = post.uid;
+                            obs.next({ ...ast });
+                        })
+
+                        pageSuccess = true;
+
+                        if (result.totalCount) {
+                            break;
+                        }
+                        await delay();
+                    } catch (error) {
+                        pageRetryCount++;
+                        console.warn(`[WeiboKeywordSearchAstVisitor] 分页搜索失败，第${pageRetryCount}次重试: ${result.nextPageLink}`, error);
+
+                        if (pageRetryCount >= maxPageRetries) {
+                            console.warn(`[WeiboKeywordSearchAstVisitor] 分页搜索失败，跳过当前页: ${result.nextPageLink}`);
+                            break;
+                        }
+
+                        // 重试前等待一段时间
+                        await delay();
                     }
-                    await delay();
-                } catch (error) {
-                    console.warn(`[WeiboKeywordSearchAstVisitor] 分页搜索失败，跳过当前页: ${result.nextPageLink}`, error);
+                }
+
+                // 如果当前页重试失败，跳出分页循环
+                if (!pageSuccess) {
                     break;
                 }
             }
