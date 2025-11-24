@@ -55,7 +55,6 @@ export class WeiboKeywordSearchAstVisitor {
 
             // 1️⃣ 发射初始状态
             ast.state = 'running';
-            ast.count += 1;
             ast.currentPage = 1;
             obs.next({ ...ast });
 
@@ -64,12 +63,13 @@ export class WeiboKeywordSearchAstVisitor {
             let result = this.parser.parseSearchResultHtml(html);
 
             // 2️⃣ 发射首页进度
-            result.posts.map(post => {
+            await Promise.all(result.posts.map(async post => {
                 ast.state = 'emitting';
                 ast.mblogid = post.mid;
                 ast.uid = post.uid;
                 obs.next({ ...ast });
-            })
+                await delay();
+            }))
 
             // 第二步：分页采集
             let currentPageNum = 1;
@@ -93,12 +93,13 @@ export class WeiboKeywordSearchAstVisitor {
 
                         // 3️⃣ 发射分页进度
                         ast.currentPage = currentPageNum;
-                        result.posts.map(post => {
+                        await Promise.all(result.posts.map(async post => {
                             ast.state = 'emitting';
                             ast.mblogid = post.mid;
                             ast.uid = post.uid;
                             obs.next({ ...ast });
-                        })
+                            await delay();
+                        }))
 
                         pageSuccess = true;
 
@@ -140,17 +141,6 @@ export class WeiboKeywordSearchAstVisitor {
             obs.next({ ...ast });
             obs.complete()
         } catch (error) {
-            // 处理登录失效错误
-            if (error instanceof Error && error.message === 'LOGIN_EXPIRED') {
-                const selection = await this.account.selectBestAccount();
-                if (selection) {
-                    console.warn(`[WeiboKeywordSearchAstVisitor] 检测到账号 ${selection.id} 登录失效，标记为过期状态`);
-                    await this.handleLoginExpired(selection.id);
-                }
-                await this.executeSearch(ast, ctx, obs);
-                return;
-            }
-
             console.error(`[WeiboKeywordSearchAstVisitor] 搜索失败: ${ast.keyword}`, error);
             ast.state = 'fail';
             if (error instanceof Error) {

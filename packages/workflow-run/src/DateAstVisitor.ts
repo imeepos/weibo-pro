@@ -7,7 +7,9 @@ export class DateAstVisitor {
     @Handler(DateAst)
     handler(ast: DateAst, ctx: any) {
         return new Observable(obs => {
-            ast.count +=1;
+            ast.state = 'running'
+            obs.next({ ...ast })
+
             ast.state = 'emitting';
             ast.date = new Date(ast.dateStr);
 

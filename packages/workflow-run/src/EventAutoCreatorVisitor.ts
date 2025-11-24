@@ -328,22 +328,20 @@ export class EventAutoCreatorVisitor {
                 }
 
                 if (tag) {
-                  const existingRelation = await m.findOne(EventTagRelationEntity, {
-                    where: { event_id: event.id, tag_id: tag.id },
-                  });
-
-                  if (!existingRelation) {
-                    const relation = m.create(EventTagRelationEntity, {
+                  await m
+                    .createQueryBuilder()
+                    .insert()
+                    .into(EventTagRelationEntity)
+                    .values({
                       event_id: event.id,
                       tag_id: tag.id,
                       relevance_score: 1.0,
                       source: 'nlp',
-                    });
-                    await m.save(EventTagRelationEntity, relation);
+                    })
+                    .orIgnore()
+                    .execute();
 
-                    tag.usage_count += 1;
-                    await m.save(EventTagEntity, tag);
-                  }
+                  await m.increment(EventTagEntity, { id: tag.id }, 'usage_count', 1);
                 }
               }
             }

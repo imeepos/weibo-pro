@@ -1050,4 +1050,303 @@ describe('ReactiveScheduler', () => {
             expect(aExecutions.length).toBe(1);
         });
     });
+
+    describe('count 和 emitCount 自动追踪', () => {
+        it('入口节点：count=1, emitCount=1', async () => {
+            const nodes = [createTestNode('A')];
+            const ast = createWorkflowGraphAst({
+                name: 'test',
+                nodes,
+                edges: [],
+                state: 'pending'
+            });
+
+            const result = await lastValueFrom(scheduler.schedule(ast, {}));
+
+            // 入口节点执行一次
+            expect(result.nodes[0]!.count).toBe(1);
+            // 发射一次 emitting 状态
+            expect(result.nodes[0]!.emitCount).toBe(1);
+        });
+
+        it('线性链路：A -> B，两节点各执行一次', async () => {
+            const nodes = [
+                createTestNode('A'),
+                createTestNode('B')
+            ];
+            const edges = [createEdge('A', 'B')];
+            const ast = createWorkflowGraphAst({
+                name: 'test',
+                nodes,
+                edges,
+                state: 'pending'
+            });
+
+            const result = await lastValueFrom(scheduler.schedule(ast, {}));
+
+            // A: 执行1次，发射1次
+            expect(result.nodes.find(n => n.id === 'A')!.count).toBe(1);
+            expect(result.nodes.find(n => n.id === 'A')!.emitCount).toBe(1);
+
+            // B: 执行1次，发射1次
+            expect(result.nodes.find(n => n.id === 'B')!.count).toBe(1);
+            expect(result.nodes.find(n => n.id === 'B')!.emitCount).toBe(1);
+        });
+
+        it('上游多次 emitting 触发下游多次执行', async () => {
+            const nodes = [
+                createTestNode('A'),
+                createTestNode('B')
+            ];
+            const edges = [createEdge('A', 'B')];
+
+            // Mock A 节点发射多次 emitting
+            vi.mocked(executeAst).mockImplementation((node: INode, ctx: any) => {
+                return new Observable(obs => {
+                    if (node.id === 'A') {
+                        // A 发射 3 次 emitting
+                        obs.next({ ...node, state: 'running' as const });
+                        obs.next({ ...node, state: 'emitting' as const });
+                        obs.next({ ...node, state: 'emitting' as const });
+                        obs.next({ ...node, state: 'emitting' as const });
+                        obs.next({ ...node, state: 'success' as const });
+                    } else {
+                        // B 正常执行
+                        obs.next({ ...node, state: 'running' as const });
+                        obs.next({ ...node, state: 'emitting' as const });
+                        obs.next({ ...node, state: 'success' as const });
+                    }
+                    obs.complete();
+                });
+            });
+
+            const ast = createWorkflowGraphAst({
+                name: 'test',
+                nodes,
+                edges,
+                state: 'pending'
+            });
+
+            const result = await lastValueFrom(scheduler.schedule(ast, {}));
+
+            // A: 执行1次，发射3次 emitting
+            expect(result.nodes.find(n => n.id === 'A')!.count).toBe(1);
+            expect(result.nodes.find(n => n.id === 'A')!.emitCount).toBe(3);
+
+            // B: 被 A 的 3 次 emitting 触发，执行3次，发射3次
+            expect(result.nodes.find(n => n.id === 'B')!.count).toBe(3);
+            expect(result.nodes.find(n => n.id === 'B')!.emitCount).toBe(3);
+        });
+
+        it('上游无 emitting 则下游不执行', async () => {
+            const nodes = [
+                createTestNode('A'),
+                createTestNode('B')
+            ];
+            const edges = [createEdge('A', 'B')];
+
+            // Mock A 节点不发射 emitting
+            vi.mocked(executeAst).mockImplementation((node: INode, ctx: any) => {
+                return new Observable(obs => {
+                    if (node.id === 'A') {
+                        // A 只发射 running 和 success，不发射 emitting
+                        obs.next({ ...node, state: 'running' as const });
+                        obs.next({ ...node, state: 'success' as const });
+                    } else {
+                        // B 正常执行（但不应该被触发）
+                        obs.next({ ...node, state: 'running' as const });
+                        obs.next({ ...node, state: 'emitting' as const });
+                        obs.next({ ...node, state: 'success' as const });
+                    }
+                    obs.complete();
+                });
+            });
+
+            const ast = createWorkflowGraphAst({
+                name: 'test',
+                nodes,
+                edges,
+                state: 'pending'
+            });
+
+            const result = await lastValueFrom(scheduler.schedule(ast, {}));
+
+            // A: 执行1次，发射0次 emitting
+            expect(result.nodes.find(n => n.id === 'A')!.count).toBe(1);
+            expect(result.nodes.find(n => n.id === 'A')!.emitCount).toBe(0);
+
+            // B: 因为 A 没有 emitting，B 不会被触发，保持 pending
+            const nodeB = result.nodes.find(n => n.id === 'B')!;
+            expect(nodeB.count).toBe(0);
+            expect(nodeB.emitCount).toBe(0);
+            expect(nodeB.state).toBe('pending');
+        });
+
+        it('分支场景：A -> B, A -> C', async () => {
+            const nodes = [
+                createTestNode('A'),
+                createTestNode('B'),
+                createTestNode('C')
+            ];
+            const edges = [
+                createEdge('A', 'B'),
+                createEdge('A', 'C')
+            ];
+
+            // Mock A 发射 2 次 emitting
+            vi.mocked(executeAst).mockImplementation((node: INode, ctx: any) => {
+                return new Observable(obs => {
+                    if (node.id === 'A') {
+                        obs.next({ ...node, state: 'running' as const });
+                        obs.next({ ...node, state: 'emitting' as const });
+                        obs.next({ ...node, state: 'emitting' as const });
+                        obs.next({ ...node, state: 'success' as const });
+                    } else {
+                        obs.next({ ...node, state: 'running' as const });
+                        obs.next({ ...node, state: 'emitting' as const });
+                        obs.next({ ...node, state: 'success' as const });
+                    }
+                    obs.complete();
+                });
+            });
+
+            const ast = createWorkflowGraphAst({
+                name: 'test',
+                nodes,
+                edges,
+                state: 'pending'
+            });
+
+            const result = await lastValueFrom(scheduler.schedule(ast, {}));
+
+            // A: 执行1次，发射2次
+            expect(result.nodes.find(n => n.id === 'A')!.count).toBe(1);
+            expect(result.nodes.find(n => n.id === 'A')!.emitCount).toBe(2);
+
+            // B: 被 A 触发2次
+            expect(result.nodes.find(n => n.id === 'B')!.count).toBe(2);
+            expect(result.nodes.find(n => n.id === 'B')!.emitCount).toBe(2);
+
+            // C: 被 A 触发2次
+            expect(result.nodes.find(n => n.id === 'C')!.count).toBe(2);
+            expect(result.nodes.find(n => n.id === 'C')!.emitCount).toBe(2);
+        });
+
+        it('汇聚场景：A -> C, B -> C（等待两个上游）', async () => {
+            const nodes = [
+                createTestNode('A'),
+                createTestNode('B'),
+                createTestNode('C')
+            ];
+            const edges = [
+                createEdge('A', 'C'),
+                createEdge('B', 'C')
+            ];
+
+            const ast = createWorkflowGraphAst({
+                name: 'test',
+                nodes,
+                edges,
+                state: 'pending'
+            });
+
+            const result = await lastValueFrom(scheduler.schedule(ast, {}));
+
+            // A 和 B 各执行1次
+            expect(result.nodes.find(n => n.id === 'A')!.count).toBe(1);
+            expect(result.nodes.find(n => n.id === 'B')!.count).toBe(1);
+
+            // C 等待 A 和 B 都发射后执行1次（combineLatest 语义）
+            expect(result.nodes.find(n => n.id === 'C')!.count).toBe(1);
+            expect(result.nodes.find(n => n.id === 'C')!.emitCount).toBe(1);
+        });
+
+        it('count 不应该累加同一执行内的多次状态更新', async () => {
+            const nodes = [createTestNode('A')];
+
+            // Mock A 节点发射多次状态更新（同一次执行）
+            vi.mocked(executeAst).mockImplementation((node: INode, ctx: any) => {
+                return new Observable(obs => {
+                    obs.next({ ...node, state: 'running' as const });
+                    obs.next({ ...node, state: 'emitting' as const });
+                    obs.next({ ...node, state: 'emitting' as const });
+                    obs.next({ ...node, state: 'success' as const });
+                    obs.complete();
+                });
+            });
+
+            const ast = createWorkflowGraphAst({
+                name: 'test',
+                nodes,
+                edges: [],
+                state: 'pending'
+            });
+
+            const result = await lastValueFrom(scheduler.schedule(ast, {}));
+
+            // count 只在 pending -> running 时 +1，不累加后续状态更新
+            expect(result.nodes[0]!.count).toBe(1);
+            // emitCount 累加所有 emitting 状态
+            expect(result.nodes[0]!.emitCount).toBe(2);
+        });
+
+        it('模拟真实工作流：微博搜索场景', async () => {
+            // 模拟：TextArea(A) + DateAst(B) -> WeiboSearch(C) -> TextArea(D)
+            const nodes = [
+                createTestNode('TextArea_Keyword'),
+                createTestNode('DateAst_Start'),
+                createTestNode('WeiboSearch'),
+                createTestNode('TextArea_Output')
+            ];
+            const edges = [
+                createEdge('TextArea_Keyword', 'WeiboSearch'),
+                createEdge('DateAst_Start', 'WeiboSearch'),
+                createEdge('WeiboSearch', 'TextArea_Output')
+            ];
+
+            // Mock WeiboSearch 发射 58 次 emitting（找到58条微博）
+            vi.mocked(executeAst).mockImplementation((node: INode, ctx: any) => {
+                return new Observable(obs => {
+                    if (node.id === 'WeiboSearch') {
+                        obs.next({ ...node, state: 'running' as const });
+                        // 发射58次 emitting
+                        for (let i = 0; i < 58; i++) {
+                            obs.next({ ...node, state: 'emitting' as const });
+                        }
+                        obs.next({ ...node, state: 'success' as const });
+                    } else {
+                        obs.next({ ...node, state: 'running' as const });
+                        obs.next({ ...node, state: 'emitting' as const });
+                        obs.next({ ...node, state: 'success' as const });
+                    }
+                    obs.complete();
+                });
+            });
+
+            const ast = createWorkflowGraphAst({
+                name: 'test',
+                nodes,
+                edges,
+                state: 'pending'
+            });
+
+            const result = await lastValueFrom(scheduler.schedule(ast, {}));
+
+            // TextArea_Keyword: count=1, emitCount=1
+            expect(result.nodes.find(n => n.id === 'TextArea_Keyword')!.count).toBe(1);
+            expect(result.nodes.find(n => n.id === 'TextArea_Keyword')!.emitCount).toBe(1);
+
+            // DateAst_Start: count=1, emitCount=1
+            expect(result.nodes.find(n => n.id === 'DateAst_Start')!.count).toBe(1);
+            expect(result.nodes.find(n => n.id === 'DateAst_Start')!.emitCount).toBe(1);
+
+            // WeiboSearch: count=1（执行1次），emitCount=58（发射58次）
+            expect(result.nodes.find(n => n.id === 'WeiboSearch')!.count).toBe(1);
+            expect(result.nodes.find(n => n.id === 'WeiboSearch')!.emitCount).toBe(58);
+
+            // TextArea_Output: count=58（被触发58次），emitCount=58（发射58次）
+            expect(result.nodes.find(n => n.id === 'TextArea_Output')!.count).toBe(58);
+            expect(result.nodes.find(n => n.id === 'TextArea_Output')!.emitCount).toBe(58);
+        });
+    });
 });

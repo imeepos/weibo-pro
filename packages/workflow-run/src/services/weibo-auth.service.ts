@@ -378,7 +378,7 @@ export class WeiboAuthService implements OnDestroy {
       return savedAccount;
     });
 
-    await this.redis.zadd('weibo:account:health', 100, savedAccount.id.toString());
+    await this.redis.zadd('weibo:account:health', 1000, savedAccount.id.toString());
 
     return savedAccount;
   }

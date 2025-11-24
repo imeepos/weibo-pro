@@ -12,6 +12,7 @@ export interface Visitor {
 // 抽象语法树的核心表达 - 状态与数据的统一
 export abstract class Ast implements INode {
     count: number = 0;
+    emitCount: number = 0;
     id: string = generateId();
     // 标题
     name?: string;

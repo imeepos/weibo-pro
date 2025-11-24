@@ -2,7 +2,7 @@ import { WorkflowGraphAst } from '../ast';
 import { INode, IEdge, EdgeMode, hasDataMapping } from '../types';
 import { DataFlowManager } from './data-flow-manager';
 import { executeAst } from '../executor';
-import { Observable, of, EMPTY, merge, combineLatest, zip, asyncScheduler } from 'rxjs';
+import { Observable, of, EMPTY, merge, combineLatest, zip, asyncScheduler, concat } from 'rxjs';
 import { map, catchError, takeWhile, concatMap, filter, withLatestFrom, shareReplay, subscribeOn, finalize } from 'rxjs/operators';
 import { Injectable, root } from '@sker/core';
 import { findNodeType, INPUT } from '../decorator';
@@ -37,6 +37,7 @@ export class ReactiveScheduler {
         ast.nodes = ast.nodes.map(node => {
             node.state = 'pending';
             node.count = 0;
+            node.emitCount = 0;
             return node;
         })
         return ast;
@@ -641,8 +642,8 @@ export class ReactiveScheduler {
 
                 return this.mergeEdgeValues(edgeValues);
             }),
-            // 过滤掉空结果
-            filter(result => Object.keys(result).length > 0)
+            // 过滤掉空结果 - 但允许空字符串等有效值
+            filter(result => result !== null && result !== undefined)
         );
     }
 
@@ -751,7 +752,7 @@ export class ReactiveScheduler {
     private createEntryNodeStream(node: INode, ctx: WorkflowGraphAst): Observable<INode> {
         return this.executeNode(node, ctx).pipe(
             subscribeOn(asyncScheduler),
-            shareReplay({ bufferSize: 2, refCount: true })
+            shareReplay({ bufferSize: 2, refCount: false })
         );
     }
 
@@ -988,32 +989,71 @@ export class ReactiveScheduler {
         }
 
         // 合并要订阅的节点流
-        return merge(...streamsToSubscribe).pipe(
+        const allStreams$ = merge(...streamsToSubscribe).pipe(
             // 每次节点状态变化，更新工作流图
             map(updatedNode => {
-                console.log('[subscribeAndMerge] 节点状态更新:', {
-                    nodeId: updatedNode.id,
-                    state: updatedNode.state
-                });
                 const nodeIndex = ast.nodes.findIndex(n => n.id === updatedNode.id);
                 if (nodeIndex !== -1) {
-                    ast.nodes[nodeIndex] = updatedNode;
+                    const existingNode = ast.nodes[nodeIndex]!;
+
+                    // 自动追踪执行次数和发射次数（Visitor 不再手动累加）
+                    // count: 每次节点从 pending 状态变化时 +1（表示新的执行）
+                    // emitCount: 每次状态变为 emitting 时 +1
+                    let newCount = existingNode.count;
+                    let newEmitCount = existingNode.emitCount;
+
+                    const stateTransition = `${existingNode.state} → ${updatedNode.state}`;
+                    // count: 只要从 pending 变化到其他状态，就算一次执行
+                    const shouldIncrementCount = existingNode.state === 'pending' && updatedNode.state !== 'pending';
+                    const shouldIncrementEmitCount = updatedNode.state === 'emitting';
+
+                    if (shouldIncrementCount) {
+                        newCount += 1;
+                    }
+
+                    if (shouldIncrementEmitCount) {
+                        newEmitCount += 1;
+                    }
+
+                    console.log('[subscribeAndMerge] 节点状态更新:', {
+                        nodeId: updatedNode.id,
+                        stateTransition,
+                        shouldIncrementCount,
+                        shouldIncrementEmitCount,
+                        oldCount: existingNode.count,
+                        newCount,
+                        oldEmitCount: existingNode.emitCount,
+                        newEmitCount
+                    });
+
+                    ast.nodes[nodeIndex] = {
+                        ...updatedNode,
+                        count: newCount,
+                        emitCount: newEmitCount
+                    };
                 }
                 // 保持 running 状态直到所有流完成
                 ast.state = 'running';
                 return ast;
-            }),
-            // 所有流完成后判定最终状态
-            finalize(() => {
-                console.log('[subscribeAndMerge] 所有流完成，判定最终状态');
-                const hasFailures = ast.nodes.some(n => n.state === 'fail');
-                ast.state = hasFailures ? 'fail' : 'success';
             }),
             catchError(error => {
                 console.error('[subscribeAndMerge] 执行错误:', error);
                 ast.state = 'fail';
                 ast.setError(error);
                 return of(ast);
+            })
+        );
+
+        // 在流完成后发射最终状态（包含 finalize 的修改）
+        return concat(
+            allStreams$,
+            new Observable<WorkflowGraphAst>(obs => {
+                // finalize 已经修改了 ast.state，现在发射它
+                const hasFailures = ast.nodes.some(n => n.state === 'fail');
+                ast.state = hasFailures ? 'fail' : 'success';
+                console.log('[subscribeAndMerge] 所有流完成，判定最终状态:', ast.state);
+                obs.next(ast);
+                obs.complete();
             })
         );
     }

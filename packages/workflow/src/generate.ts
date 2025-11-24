@@ -100,7 +100,7 @@ function snapshotNode(instance: object): NodeSnapshot {
 }
 
 export function fromJson<T extends object = any>(json: any): T {
-    const { type, id, state, error, position, name, description, color, collapsed, width, ...rest } = json;
+    const { type, id, state, error, position, name, description, color, collapsed, width, count, emitCount, ...rest } = json;
     const registry = root.get(NODE);
     const nodeMetadata = registry.find(node => node.target.name === type);
     const ctor = nodeMetadata?.target;
@@ -125,6 +125,8 @@ export function fromJson<T extends object = any>(json: any): T {
     if (position) Reflect.set(instance, 'position', position);
     Reflect.set(instance, 'collapsed', !!collapsed)
     if (width) Reflect.set(instance, 'width', width)
+    Reflect.set(instance, 'count', count)
+    Reflect.set(instance, 'emitCount', emitCount)
 
     // 恢复节点的扩展属性（用于 UI 自定义）
     if (name !== undefined) Reflect.set(instance, 'name', name);
@@ -140,7 +142,8 @@ export function toJson(ast: Ast): INode {
         ...inputs,
         ...outputs,
         ...states,
-        count: ast.count,
+        emitCount: ast.emitCount || 0,
+        count: ast.count || 0,
         type: ast.type,
         id: ast.id,
         state: ast.state,
