@@ -2,19 +2,10 @@ import { WorkflowGraphAst } from '../ast';
 import { INode, IEdge, EdgeMode, hasDataMapping } from '../types';
 import { DataFlowManager } from './data-flow-manager';
 import { executeAst } from '../executor';
-import { Observable, of, EMPTY, merge, combineLatest, zip, asyncScheduler, BehaviorSubject } from 'rxjs';
-import { map, catchError, takeWhile, concatMap, filter, withLatestFrom, shareReplay, subscribeOn, switchMap, finalize } from 'rxjs/operators';
+import { Observable, of, EMPTY, merge, combineLatest, zip, asyncScheduler } from 'rxjs';
+import { map, catchError, takeWhile, concatMap, filter, withLatestFrom, shareReplay, subscribeOn, finalize } from 'rxjs/operators';
 import { Injectable, root } from '@sker/core';
 import { findNodeType, INPUT } from '../decorator';
-
-/**
- * 节点微调事件
- */
-interface FineTuneEvent {
-    nodeId: string;
-    config: any;
-    type: 'config_changed' | 'execute';
-}
 
 /**
  * 响应式工作流调度器 - 基于 RxJS Observable 流式调度
@@ -67,42 +58,40 @@ export class ReactiveScheduler {
      * 节点微调执行 - 基于响应式流的智能重放
      *
      * 核心机制：
-     * 1. 利用 BehaviorSubject 创建配置变更流
+     * 1. 从 ctx 获取目标节点（配置已更新）
      * 2. 识别受影响的节点及其下游依赖
      * 3. 重用未受影响节点的 shareReplay 缓存
      * 4. 重新执行受影响节点流
      * 5. 合并结果并更新工作流状态
+     *
+     * @param ctx 工作流执行上下文（节点配置已在其中更新）
+     * @param nodeId 目标节点ID
      */
     fineTuneNode(
-        originalAst: WorkflowGraphAst,
-        nodeId: string,
-        newConfig: any,
-        ctx: WorkflowGraphAst
+        ctx: WorkflowGraphAst,
+        nodeId: string
     ): Observable<WorkflowGraphAst> {
-        // 1. 创建配置变更流（BehaviorSubject 保留最新状态）
-        const configChange$ = new BehaviorSubject<FineTuneEvent>({
-            nodeId,
-            config: newConfig,
-            type: 'config_changed'
-        });
+        // 1. 验证目标节点存在
+        const targetNode = ctx.nodes.find(n => n.id === nodeId);
+        if (!targetNode) {
+            throw new Error(`节点不存在: ${nodeId}`);
+        }
 
         // 2. 构建原始的完整流网络（用于获取缓存结果）
-        const originalNetwork = this.buildStreamNetwork(originalAst, ctx);
+        const originalNetwork = this.buildStreamNetwork(ctx, ctx);
 
         // 3. 分析受影响的节点
-        const affectedNodes = this.findAffectedNodes(originalAst, nodeId);
+        const affectedNodes = this.findAffectedNodes(ctx, nodeId);
 
         // 4. 构建增量执行网络
-        const incrementalNetwork = this.buildIncrementalNetwork(
-            originalAst,
+        const incrementalNetwork = this.buildIncrementalNetworkDirect(
+            ctx,
             originalNetwork,
-            affectedNodes,
-            configChange$,
-            ctx
+            affectedNodes
         );
 
         // 5. 合并原始结果与新执行结果
-        return this.mergeIncrementalResults(originalAst, incrementalNetwork, affectedNodes);
+        return this.mergeIncrementalResults(ctx, incrementalNetwork, affectedNodes);
     }
 
     /**
@@ -131,86 +120,39 @@ export class ReactiveScheduler {
     }
 
     /**
-     * 构建增量执行网络
+     * 构建增量执行网络（直接重执行版本）
      *
      * 策略：
-     * - 受影响节点：创建新的响应式流，监听配置变更
+     * - 受影响节点：重新构建流并执行
      * - 未受影响节点：复用原始网络中的 shareReplay 缓存
      */
-    private buildIncrementalNetwork(
-        ast: WorkflowGraphAst,
+    private buildIncrementalNetworkDirect(
+        ctx: WorkflowGraphAst,
         originalNetwork: Map<string, Observable<INode>>,
-        affectedNodes: Set<string>,
-        configChange$: BehaviorSubject<FineTuneEvent>,
-        ctx: WorkflowGraphAst
+        affectedNodes: Set<string>
     ): Map<string, Observable<INode>> {
         const incrementalNetwork = new Map<string, Observable<INode>>();
 
-        ast.nodes.forEach(node => {
-            const originalStream = originalNetwork.get(node.id);
-            if (!originalStream) {
-                throw new Error(`节点流未找到: ${node.id}`);
-            }
-
+        ctx.nodes.forEach(node => {
             if (affectedNodes.has(node.id)) {
-                // 受影响节点：创建新的响应式流
-                const newStream = this.createFineTunedNodeStream(
-                    node,
-                    configChange$,
-                    ctx,
-                    ast
-                );
+                // 受影响节点：重新构建流
+                const incomingEdges = ctx.edges.filter(e => e.to === node.id);
+
+                const newStream = incomingEdges.length === 0
+                    ? this.createEntryNodeStream(node, ctx)
+                    : this._createNode(node, incomingEdges, incrementalNetwork, ctx);
+
                 incrementalNetwork.set(node.id, newStream);
             } else {
                 // 未受影响节点：复用原始流（利用 shareReplay 缓存）
-                incrementalNetwork.set(node.id, originalStream);
+                const originalStream = originalNetwork.get(node.id);
+                if (originalStream) {
+                    incrementalNetwork.set(node.id, originalStream);
+                }
             }
         });
 
         return incrementalNetwork;
-    }
-
-    /**
-     * 创建微调节点的响应式流
-     */
-    private createFineTunedNodeStream(
-        node: INode,
-        configChange$: BehaviorSubject<FineTuneEvent>,
-        ctx: WorkflowGraphAst,
-        ast: WorkflowGraphAst
-    ): Observable<INode> {
-        return configChange$.pipe(
-            // 只关心目标节点的配置变更
-            filter(event => event.nodeId === node.id),
-            // 使用 switchMap 实现配置变更的响应式重执行
-            switchMap(event => {
-                // 克隆节点并应用新配置
-                const fineTunedNode = this.applyNodeConfig(node, event.config);
-
-                // 重新执行节点
-                return this.executeNode(fineTunedNode, ctx);
-            }),
-            // 共享执行结果，支持多个下游订阅
-            shareReplay({ bufferSize: 2, refCount: true })
-        );
-    }
-
-    /**
-     * 应用节点配置变更
-     */
-    private applyNodeConfig(node: INode, newConfig: any): INode {
-        const clonedNode = this.cloneNode(node);
-
-        // 应用配置变更
-        Object.keys(newConfig).forEach(key => {
-            (clonedNode as any)[key] = newConfig[key];
-        });
-
-        // 重置执行状态
-        clonedNode.state = 'pending';
-        clonedNode.error = undefined;
-
-        return clonedNode;
     }
 
     /**

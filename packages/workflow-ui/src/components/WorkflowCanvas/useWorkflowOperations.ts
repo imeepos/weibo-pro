@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { executeAst, fromJson, toJson, type WorkflowGraphAst } from '@sker/workflow'
+import { executeAstWithWorkflowGraph, executeAst, fromJson, toJson, type WorkflowGraphAst } from '@sker/workflow'
 import type { useWorkflow } from '../../hooks/useWorkflow'
 import type { ToastType } from './Toast'
 import { WorkflowController } from '@sker/sdk'
@@ -52,49 +52,48 @@ export function useWorkflowOperations(
       onSetRunning?.(true)
 
       const ast = fromJson(targetNode)
-      const ctx = workflow.workflowAst.ctx || {}
 
       // executeAst 返回 Observable，利用流式特性实时更新状态
-      console.log(`run ast`, { ast, ctx })
-      const subscription = executeAst(toJson(ast), ctx).subscribe({
-        next: (updatedNode) => {
-          console.log(`节点状态更新`, updatedNode)
-          // 每次 next 事件实时更新节点状态
-          const astNode = workflow.workflowAst?.nodes.find(n => n.id === nodeId)
-          if (astNode) {
-            // 保护 UI 状态：保存 collapsed 状态再覆盖
-            const collapsedState = astNode.collapsed
-            Object.assign(astNode, updatedNode)
-            astNode.collapsed = collapsedState
-            workflow.syncFromAst()
-          }
+      console.log(workflow.workflowAst)
+      const subscription = executeAstWithWorkflowGraph(ast.id, workflow.workflowAst).subscribe({
+        next: (updatedWorkflow) => {
+          // 保护 UI 状态：保存所有节点的 collapsed 状态
+          const collapsedStates = new Map(
+            workflow.workflowAst!.nodes.map(node => [node.id, node.collapsed])
+          )
 
-          // 当节点状态为 emitting 时,派发事件触发边动画
-          if (updatedNode.state === 'emitting') {
-            console.log('🔥 派发 node-emitting 事件', { nodeId: updatedNode.id })
-            window.dispatchEvent(new CustomEvent('node-emitting', {
-              detail: { nodeId: updatedNode.id }
-            }))
-          }
+          // 每次 next 事件实时更新工作流状态
+          Object.assign(workflow.workflowAst!, updatedWorkflow)
 
-          // 根据最终状态显示提示
-          if (updatedNode.state === 'success') {
-            console.info(`节点执行成功`)
-            onShowToast?.('success', '节点执行成功')
-          } else if (updatedNode.state === 'fail') {
-            const errorInfo = extractErrorInfo(updatedNode.error)
-            console.error({ errorInfo, updatedNode })
-            onShowToast?.('error', '节点执行失败', errorInfo.message)
-          }
+          // 恢复 collapsed 状态
+          workflow.workflowAst!.nodes.forEach(node => {
+            if (collapsedStates.has(node.id)) {
+              node.collapsed = collapsedStates.get(node.id)
+            }
+          })
+
+          workflow.syncFromAst()
         },
         error: (error) => {
           const errorInfo = extractErrorInfo(error)
-          console.error(`节点执行异常`)
-          onShowToast?.('error', '节点执行异常', errorInfo.message)
+          console.error(`工作流执行异常`)
+          onShowToast?.('error', '工作流执行异常', errorInfo.message)
           onSetRunning?.(false)
         },
         complete: () => {
-          console.log(`节点执行完成`)
+          console.log(`工作流执行完成`)
+
+          // 统计执行结果
+          const successCount = workflow.workflowAst!.nodes.filter(n => n.state === 'success').length
+          const failCount = workflow.workflowAst!.nodes.filter(n => n.state === 'fail').length
+
+          if (failCount === 0) {
+            onShowToast?.('success', '工作流执行成功', `共执行 ${successCount} 个节点`)
+          } else if (successCount > 0) {
+            onShowToast?.('error', '工作流部分失败', `成功: ${successCount}, 失败: ${failCount}`)
+          } else {
+            onShowToast?.('error', '工作流执行失败', `所有节点均失败`)
+          }
           onSetRunning?.(false)
         }
       })

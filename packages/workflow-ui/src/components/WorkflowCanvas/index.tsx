@@ -41,6 +41,7 @@ import { SettingPanel } from '../SettingPanel'
 import { EdgeConfigDialog } from './EdgeConfigDialog'
 import { WorkflowSettingsDialog } from './WorkflowSettingsDialog'
 import { cn } from '../../utils/cn'
+import { getAllNodeTypes } from '../../adapters'
 
 export interface WorkflowCanvasProps {
   /** 工作流 AST 实例 */
@@ -276,7 +277,6 @@ export function WorkflowCanvas({
   }, [workflow])
 
   const handleAddNodeFromSelector = useCallback((metadata: any) => {
-    const { getAllNodeTypes } = require('../../adapters')
     const registeredNodeTypes = getAllNodeTypes()
     const NodeClass = registeredNodeTypes.find((type: any) => type.name === metadata.type)
 

@@ -37,3 +37,9 @@ export function executeAst<S extends INode>(state: S, context: WorkflowGraphAst)
     // 单步执行 每次返回单步执行后的 结果
     return visitor.visit(ast, context) as Observable<S>;
 }
+
+
+export function executeAstWithWorkflowGraph(nodeId: string, context: WorkflowGraphAst) {
+    const scheduler = root.get(ReactiveScheduler);
+    return scheduler.fineTuneNode(context, nodeId);
+}

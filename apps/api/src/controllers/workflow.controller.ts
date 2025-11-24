@@ -151,7 +151,7 @@ export class WorkflowController implements sdk.WorkflowController {
    * - 妥善处理所有错误，确保服务稳定
    */
   @Post('execute')
-  execute(@Body() body: Ast, @Res() res?: any): Observable<INode> {
+  execute(@Body() body: Ast, @Res() res?: any): Observable<WorkflowGraphAst> {
     // 设置 SSE 响应头
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
@@ -170,9 +170,9 @@ export class WorkflowController implements sdk.WorkflowController {
       // 执行工作流并发送实时事件
       const subscription$ = executeAst(ast, ast as WorkflowGraphAst)
       const subscription = subscription$.subscribe({
-        next: (node: INode) => {
-          // 发送节点执行事件
-          res.write(`data: ${JSON.stringify(node)}\n\n`);
+        next: (workflow: WorkflowGraphAst) => {
+          // 发送工作流状态更新事件
+          res.write(`data: ${JSON.stringify(workflow)}\n\n`);
         },
         error: (error: any) => {
           res.end();
@@ -209,7 +209,7 @@ export class WorkflowController implements sdk.WorkflowController {
   executeNode(
     @Body() body: { workflow: INode, nodeId: string, config?: any },
     @Res() res?: any
-  ): Observable<INode> {
+  ): Observable<WorkflowGraphAst> {
     // 设置 SSE 响应头
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
@@ -235,20 +235,26 @@ export class WorkflowController implements sdk.WorkflowController {
         timestamp: new Date().toISOString()
       })}\n\n`);
 
-      // 反序列化工作流节点
-      const node = fromJson(workflow) as INode;
+      // 反序列化工作流图
+      const workflowAst = fromJson(workflow) as WorkflowGraphAst;
+
+      // 找到要执行的节点
+      const targetNode = workflowAst.nodes.find(n => n.id === nodeId);
+      if (!targetNode) {
+        throw new BadRequestException(`节点不存在: ${nodeId}`);
+      }
 
       // 如果提供了配置，应用到节点上
       if (config) {
         Object.keys(config).forEach(key => {
-          (node as any)[key] = config[key];
+          (targetNode as any)[key] = config[key];
         });
         logger.info('应用节点配置', { nodeId, config });
       }
 
       // 设置节点初始状态
-      node.state = 'running';
-      node.error = undefined;
+      targetNode.state = 'running';
+      targetNode.error = undefined;
 
       // 发送状态更新
       res.write(`data: ${JSON.stringify({
@@ -257,19 +263,26 @@ export class WorkflowController implements sdk.WorkflowController {
         state: 'running'
       })}\n\n`);
 
-      // 执行单个节点
-      const nodeExecution$ = executeAst(node, workflow as WorkflowGraphAst);
+      // 使用 fineTuneNode 进行智能微调 - 只需传入工作流和节点ID
+      const nodeExecution$ = this.reactiveScheduler.fineTuneNode(
+        workflowAst,
+        nodeId
+      );
 
       const subscription = nodeExecution$.subscribe({
-        next: (executedNode: INode) => {
+        next: (updatedWorkflow: WorkflowGraphAst) => {
+          // 找到执行后的节点状态
+          const executedNode = updatedWorkflow.nodes.find(n => n.id === nodeId);
+
           logger.debug('节点执行状态更新', {
-            nodeId: executedNode.id,
-            state: executedNode.state
+            nodeId: nodeId,
+            state: executedNode?.state
           });
 
-          // 发送执行进度
+          // 发送执行进度 - 包含完整的工作流状态
           res.write(`data: ${JSON.stringify({
             type: 'progress',
+            workflow: updatedWorkflow,
             node: executedNode,
             timestamp: new Date().toISOString()
           })}\n\n`);
@@ -609,13 +622,24 @@ export class WorkflowController implements sdk.WorkflowController {
           // 反序列化工作流 AST
           const ast = fromJson(run.graphSnapshot) as WorkflowGraphAst;
 
+          // 如果提供了配置，应用到目标节点
+          if (body.config) {
+            const targetNode = ast.nodes.find(n => n.id === nodeId);
+            if (targetNode) {
+              Object.keys(body.config).forEach(key => {
+                (targetNode as any)[key] = body.config[key];
+              });
+              logger.info('应用节点配置', { nodeId, config: body.config });
+            }
+          }
+
           // 发送开始事件
           res.write(`data: ${JSON.stringify({ type: 'fine_tune_started', nodeId, config: body.config })}
 
 `);
 
-          // 执行节点微调
-          const fineTune$ = this.reactiveScheduler.fineTuneNode(ast, nodeId, body.config, ast);
+          // 执行节点微调 - 只需传入 AST 和节点ID
+          const fineTune$ = this.reactiveScheduler.fineTuneNode(ast, nodeId);
 
           const subscription = fineTune$.subscribe({
             next: (updatedAst: WorkflowGraphAst) => {
@@ -730,5 +754,26 @@ export class WorkflowController implements sdk.WorkflowController {
     }
 
     return outputs;
+  }
+
+  /**
+   * 提取节点配置 - 从节点对象中提取可配置的属性
+   *
+   * 智能提取：
+   * - 排除系统属性（id, type, state, error, position 等）
+   * - 提取业务相关的配置属性
+   * - 支持嵌套对象配置
+   */
+  private extractNodeConfig(node: INode): Record<string, any> {
+    const systemKeys = ['id', 'type', 'state', 'error', 'position', 'name', 'description'];
+    const config: Record<string, any> = {};
+
+    Object.keys(node).forEach(key => {
+      if (!systemKeys.includes(key) && node[key] !== undefined) {
+        config[key] = node[key];
+      }
+    });
+
+    return config;
   }
 }
