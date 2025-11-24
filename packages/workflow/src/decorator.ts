@@ -39,6 +39,17 @@ export function Node(options: NodeOptions = {}): ClassDecorator {
         root.set([{ provide: NODE, useValue: { target: ctor, ...options }, multi: true }])
     };
 }
+export interface EdgeOptions { }
+export interface EdgeMetadata extends EdgeOptions {
+    target: Type<any>;
+}
+export const EDGE = new InjectionToken<EdgeMetadata[]>(`EDGE`)
+export const Edge = (options: EdgeOptions = {}): ClassDecorator => {
+    return (target) => {
+        const ctor = resolveConstructor(target as object);
+        root.set([{ provide: EDGE, useValue: { target: ctor, ...options }, multi: true }])
+    };
+}
 export const HANDLER_METHOD = new InjectionToken<{ ast: Type<any>, target: Type<any>, property: string | symbol }[]>(`HANDLER_METHOD`)
 export function Handler(ast: Type<any>): MethodDecorator {
     return (target: any, propertyKey: string | symbol, descriptor?: PropertyDescriptor): any => {

@@ -2,10 +2,19 @@ import { WorkflowGraphAst } from '../ast';
 import { INode, IEdge, EdgeMode, hasDataMapping } from '../types';
 import { DataFlowManager } from './data-flow-manager';
 import { executeAst } from '../executor';
-import { Observable, of, EMPTY, merge, combineLatest, zip, asyncScheduler } from 'rxjs';
+import { Observable, of, EMPTY, merge, combineLatest, zip, asyncScheduler, BehaviorSubject } from 'rxjs';
 import { map, catchError, takeWhile, concatMap, filter, withLatestFrom, shareReplay, subscribeOn, switchMap, finalize } from 'rxjs/operators';
 import { Injectable, root } from '@sker/core';
 import { findNodeType, INPUT } from '../decorator';
+
+/**
+ * 节点微调事件
+ */
+interface FineTuneEvent {
+    nodeId: string;
+    config: any;
+    type: 'config_changed' | 'execute';
+}
 
 /**
  * 响应式工作流调度器 - 基于 RxJS Observable 流式调度
@@ -55,6 +64,205 @@ export class ReactiveScheduler {
     }
 
     /**
+     * 节点微调执行 - 基于响应式流的智能重放
+     *
+     * 核心机制：
+     * 1. 利用 BehaviorSubject 创建配置变更流
+     * 2. 识别受影响的节点及其下游依赖
+     * 3. 重用未受影响节点的 shareReplay 缓存
+     * 4. 重新执行受影响节点流
+     * 5. 合并结果并更新工作流状态
+     */
+    fineTuneNode(
+        originalAst: WorkflowGraphAst,
+        nodeId: string,
+        newConfig: any,
+        ctx: WorkflowGraphAst
+    ): Observable<WorkflowGraphAst> {
+        // 1. 创建配置变更流（BehaviorSubject 保留最新状态）
+        const configChange$ = new BehaviorSubject<FineTuneEvent>({
+            nodeId,
+            config: newConfig,
+            type: 'config_changed'
+        });
+
+        // 2. 构建原始的完整流网络（用于获取缓存结果）
+        const originalNetwork = this.buildStreamNetwork(originalAst, ctx);
+
+        // 3. 分析受影响的节点
+        const affectedNodes = this.findAffectedNodes(originalAst, nodeId);
+
+        // 4. 构建增量执行网络
+        const incrementalNetwork = this.buildIncrementalNetwork(
+            originalAst,
+            originalNetwork,
+            affectedNodes,
+            configChange$,
+            ctx
+        );
+
+        // 5. 合并原始结果与新执行结果
+        return this.mergeIncrementalResults(originalAst, incrementalNetwork, affectedNodes);
+    }
+
+    /**
+     * 查找受影响的节点（包括目标节点及其所有下游节点）
+     */
+    private findAffectedNodes(ast: WorkflowGraphAst, changedNodeId: string): Set<string> {
+        const affected = new Set<string>();
+        const visited = new Set<string>();
+
+        const findDownstream = (nodeId: string) => {
+            if (visited.has(nodeId)) return;
+            visited.add(nodeId);
+
+            // 添加当前节点到受影响集合
+            affected.add(nodeId);
+
+            // 查找所有下游节点
+            const downstreamEdges = ast.edges.filter(edge => edge.from === nodeId);
+            for (const edge of downstreamEdges) {
+                findDownstream(edge.to);
+            }
+        };
+
+        findDownstream(changedNodeId);
+        return affected;
+    }
+
+    /**
+     * 构建增量执行网络
+     *
+     * 策略：
+     * - 受影响节点：创建新的响应式流，监听配置变更
+     * - 未受影响节点：复用原始网络中的 shareReplay 缓存
+     */
+    private buildIncrementalNetwork(
+        ast: WorkflowGraphAst,
+        originalNetwork: Map<string, Observable<INode>>,
+        affectedNodes: Set<string>,
+        configChange$: BehaviorSubject<FineTuneEvent>,
+        ctx: WorkflowGraphAst
+    ): Map<string, Observable<INode>> {
+        const incrementalNetwork = new Map<string, Observable<INode>>();
+
+        ast.nodes.forEach(node => {
+            const originalStream = originalNetwork.get(node.id);
+            if (!originalStream) {
+                throw new Error(`节点流未找到: ${node.id}`);
+            }
+
+            if (affectedNodes.has(node.id)) {
+                // 受影响节点：创建新的响应式流
+                const newStream = this.createFineTunedNodeStream(
+                    node,
+                    configChange$,
+                    ctx,
+                    ast
+                );
+                incrementalNetwork.set(node.id, newStream);
+            } else {
+                // 未受影响节点：复用原始流（利用 shareReplay 缓存）
+                incrementalNetwork.set(node.id, originalStream);
+            }
+        });
+
+        return incrementalNetwork;
+    }
+
+    /**
+     * 创建微调节点的响应式流
+     */
+    private createFineTunedNodeStream(
+        node: INode,
+        configChange$: BehaviorSubject<FineTuneEvent>,
+        ctx: WorkflowGraphAst,
+        ast: WorkflowGraphAst
+    ): Observable<INode> {
+        return configChange$.pipe(
+            // 只关心目标节点的配置变更
+            filter(event => event.nodeId === node.id),
+            // 使用 switchMap 实现配置变更的响应式重执行
+            switchMap(event => {
+                // 克隆节点并应用新配置
+                const fineTunedNode = this.applyNodeConfig(node, event.config);
+
+                // 重新执行节点
+                return this.executeNode(fineTunedNode, ctx);
+            }),
+            // 共享执行结果，支持多个下游订阅
+            shareReplay({ bufferSize: 2, refCount: true })
+        );
+    }
+
+    /**
+     * 应用节点配置变更
+     */
+    private applyNodeConfig(node: INode, newConfig: any): INode {
+        const clonedNode = this.cloneNode(node);
+
+        // 应用配置变更
+        Object.keys(newConfig).forEach(key => {
+            (clonedNode as any)[key] = newConfig[key];
+        });
+
+        // 重置执行状态
+        clonedNode.state = 'pending';
+        clonedNode.error = undefined;
+
+        return clonedNode;
+    }
+
+    /**
+     * 合并增量执行结果
+     */
+    private mergeIncrementalResults(
+        ast: WorkflowGraphAst,
+        incrementalNetwork: Map<string, Observable<INode>>,
+        affectedNodes: Set<string>
+    ): Observable<WorkflowGraphAst> {
+        // 使用 subscribeAndMerge 的变体，只关注受影响节点的变化
+        const affectedStreams = Array.from(incrementalNetwork.entries())
+            .filter(([nodeId]) => affectedNodes.has(nodeId))
+            .map(([, stream]) => stream);
+
+        if (affectedStreams.length === 0) {
+            return of(ast);
+        }
+
+        return merge(...affectedStreams).pipe(
+            map(updatedNode => {
+                // 更新工作流图中的对应节点
+                const nodeIndex = ast.nodes.findIndex(n => n.id === updatedNode.id);
+                if (nodeIndex !== -1) {
+                    ast.nodes[nodeIndex] = updatedNode;
+                }
+
+                // 保持运行状态
+                ast.state = 'running';
+                return ast;
+            }),
+            // 所有受影响节点完成后，检查整体状态
+            finalize(() => {
+                const hasFailures = ast.nodes.some(n => n.state === 'fail');
+                const allAffectedComplete = Array.from(affectedNodes).every(nodeId => {
+                    const node = ast.nodes.find(n => n.id === nodeId);
+                    return node && (node.state === 'success' || node.state === 'fail');
+                });
+
+                if (allAffectedComplete) {
+                    ast.state = hasFailures ? 'fail' : 'success';
+                }
+            }),
+            catchError(error => {
+                ast.state = 'fail';
+                ast.setError(error);
+                return of(ast);
+            })
+        );
+    }
+
+    /**
      * 为节点创建输入流（核心方法 - 按数据完整性分组）
      *
      * 优雅设计:
@@ -74,7 +282,7 @@ export class ReactiveScheduler {
         node: INode,
         incomingEdges: IEdge[],
         network: Map<string, Observable<INode>>,
-        ctx: any
+        ctx: WorkflowGraphAst
     ): Observable<any> {
         // 入口节点：返回空对象流（立即触发执行）
         if (incomingEdges.length === 0) {

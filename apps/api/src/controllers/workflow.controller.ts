@@ -1,7 +1,7 @@
-import { Controller, Post, Body, Get, BadRequestException, Query, Delete, NotFoundException, Sse, Res } from '@nestjs/common';
+import { Controller, Post, Body, Get, BadRequestException, Query, Delete, NotFoundException, Sse, Res, Param } from '@nestjs/common';
 import { Observable, tap } from 'rxjs';
 import { Ast, executeAst, fromJson, INode } from '@sker/workflow';
-import { WorkflowGraphAst } from '@sker/workflow';
+import { WorkflowGraphAst, ReactiveScheduler } from '@sker/workflow';
 import { logger } from '@sker/core';
 import * as sdk from '@sker/sdk';
 import { WorkflowService } from '../services/workflow.service';
@@ -24,11 +24,13 @@ export class WorkflowController implements sdk.WorkflowController {
   private readonly workflowService: WorkflowService;
   private readonly workflowRunService: WorkflowRunService;
   private readonly workflowTemplateService: WorkflowTemplateService;
+  private readonly reactiveScheduler: ReactiveScheduler;
 
   constructor() {
     this.workflowService = root.get(WorkflowService);
     this.workflowRunService = root.get(WorkflowRunService);
     this.workflowTemplateService = root.get(WorkflowTemplateService);
+    this.reactiveScheduler = root.get(ReactiveScheduler);
   }
 
   /**
@@ -188,6 +190,141 @@ export class WorkflowController implements sdk.WorkflowController {
       return subscription$;
     } catch (error: any) {
       console.error(`execute error: `, { error, body });
+      res.end();
+      throw error;
+    }
+  }
+  /**
+   * 微调执行工作流的一个节点 - 轻量级单节点执行
+   *
+   * 优雅设计：
+   * - 支持直接执行工作流中的单个节点
+   * - 使用 SSE 实时推送执行状态和结果
+   * - 智能处理节点输入数据
+   * - 支持节点配置微调
+   * - 错误隔离，不影响其他节点
+   */
+  @Post('executeNode')
+  @Sse()
+  executeNode(
+    @Body() body: { workflow: INode, nodeId: string, config?: any },
+    @Res() res?: any
+  ): Observable<INode> {
+    // 设置 SSE 响应头
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Cache-Control'
+    });
+
+    try {
+      const { workflow, nodeId, config } = body;
+
+      if (!workflow || !nodeId) {
+        throw new BadRequestException('工作流数据和节点ID不能为空');
+      }
+
+      logger.info('开始执行单个节点', { nodeId, config });
+
+      // 发送开始事件
+      res.write(`data: ${JSON.stringify({
+        type: 'node_execution_started',
+        nodeId,
+        timestamp: new Date().toISOString()
+      })}\n\n`);
+
+      // 反序列化工作流节点
+      const node = fromJson(workflow) as INode;
+
+      // 如果提供了配置，应用到节点上
+      if (config) {
+        Object.keys(config).forEach(key => {
+          (node as any)[key] = config[key];
+        });
+        logger.info('应用节点配置', { nodeId, config });
+      }
+
+      // 设置节点初始状态
+      node.state = 'running';
+      node.error = undefined;
+
+      // 发送状态更新
+      res.write(`data: ${JSON.stringify({
+        type: 'state_changed',
+        nodeId,
+        state: 'running'
+      })}\n\n`);
+
+      // 执行单个节点
+      const nodeExecution$ = executeAst(node, workflow as WorkflowGraphAst);
+
+      const subscription = nodeExecution$.subscribe({
+        next: (executedNode: INode) => {
+          logger.debug('节点执行状态更新', {
+            nodeId: executedNode.id,
+            state: executedNode.state
+          });
+
+          // 发送执行进度
+          res.write(`data: ${JSON.stringify({
+            type: 'progress',
+            node: executedNode,
+            timestamp: new Date().toISOString()
+          })}\n\n`);
+        },
+        error: (error: any) => {
+          logger.error('节点执行失败', { nodeId, error: error.message });
+
+          // 发送错误事件
+          res.write(`data: ${JSON.stringify({
+            type: 'error',
+            nodeId,
+            error: {
+              message: error.message,
+              stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+            },
+            timestamp: new Date().toISOString()
+          })}\n\n`);
+
+          res.end();
+        },
+        complete: () => {
+          logger.info('节点执行完成', { nodeId });
+
+          // 发送完成事件
+          res.write(`data: ${JSON.stringify({
+            type: 'complete',
+            nodeId,
+            timestamp: new Date().toISOString()
+          })}\n\n`);
+
+          res.end();
+        }
+      });
+
+      // 处理客户端断开连接
+      res.on('close', () => {
+        logger.info('客户端断开连接', { nodeId });
+        subscription.unsubscribe();
+      });
+
+      return nodeExecution$;
+
+    } catch (error: any) {
+      logger.error('执行单个节点失败', { nodeId: body?.nodeId, error: error.message });
+
+      // 发送错误事件
+      res.write(`data: ${JSON.stringify({
+        type: 'error',
+        error: {
+          message: error.message,
+          stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        },
+        timestamp: new Date().toISOString()
+      })}\n\n`);
+
       res.end();
       throw error;
     }
@@ -419,6 +556,139 @@ export class WorkflowController implements sdk.WorkflowController {
 
       throw new BadRequestException(error.message);
     }
+  }
+
+  /**
+   * 节点微调 - 基于响应式流的智能重放
+   *
+   * 核心机制：
+   * - 利用 BehaviorSubject 创建配置变更流
+   * - 识别受影响的节点及其下游依赖
+   * - 重用未受影响节点的 shareReplay 缓存
+   * - 重新执行受影响节点流
+   * - 合并结果并更新工作流状态
+   *
+   * 优雅设计：
+   * - 支持实时 SSE 推送执行进度
+   * - 智能依赖分析，只重执行必要节点
+   * - 流式缓存复用，避免重复计算
+   * - 错误隔离，单个节点失败不影响整体
+   */
+  @Post('runs/:runId/fine-tune/:nodeId')
+  @Sse()
+  fineTuneNode(
+    @Param('runId') runId: string,
+    @Param('nodeId') nodeId: string,
+    @Body() body: { config: any },
+    @Res() res?: any
+  ): Observable<WorkflowGraphAst> {
+    // 设置 SSE 响应头
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Cache-Control'
+    });
+
+    try {
+      logger.info('开始节点微调', { runId, nodeId, config: body.config });
+
+      // 获取运行实例
+      const runPromise = this.workflowRunService.getRun(parseInt(runId));
+
+      return new Observable(observer => {
+        runPromise.then(run => {
+          if (!run) {
+            const error = new NotFoundException(`运行实例不存在: ${runId}`);
+            observer.error(error);
+            res.end();
+            return;
+          }
+
+          // 反序列化工作流 AST
+          const ast = fromJson(run.graphSnapshot) as WorkflowGraphAst;
+
+          // 发送开始事件
+          res.write(`data: ${JSON.stringify({ type: 'fine_tune_started', nodeId, config: body.config })}
+
+`);
+
+          // 执行节点微调
+          const fineTune$ = this.reactiveScheduler.fineTuneNode(ast, nodeId, body.config, ast);
+
+          const subscription = fineTune$.subscribe({
+            next: (updatedAst: WorkflowGraphAst) => {
+              // 发送进度更新
+              res.write(`data: ${JSON.stringify({
+                type: 'progress',
+                workflow: updatedAst,
+                affectedNodes: Array.from(this.findAffectedNodesIds(ast, nodeId))
+              })}
+
+`);
+            },
+            error: (error: any) => {
+              logger.error('节点微调失败', { runId, nodeId, error: error.message });
+              res.write(`data: ${JSON.stringify({ type: 'error', error: error.message })}
+
+`);
+              res.end();
+              observer.error(error);
+            },
+            complete: () => {
+              logger.info('节点微调完成', { runId, nodeId });
+              res.write(`data: ${JSON.stringify({ type: 'complete' })}
+
+`);
+              res.end();
+              observer.complete();
+            }
+          });
+
+          // 处理客户端断开连接
+          res.on('close', () => {
+            subscription.unsubscribe();
+          });
+        }).catch(error => {
+          logger.error('获取运行实例失败', { runId, error: error.message });
+          res.write(`data: ${JSON.stringify({ type: 'error', error: error.message })}
+
+`);
+          res.end();
+          observer.error(error);
+        });
+      });
+    } catch (error: any) {
+      logger.error('节点微调初始化失败', { runId, nodeId, error: error.message });
+      res.write(`data: ${JSON.stringify({ type: 'error', error: error.message })}
+
+`);
+      res.end();
+      throw error;
+    }
+  }
+
+  /**
+   * 查找受影响节点的辅助方法
+   */
+  private findAffectedNodesIds(ast: WorkflowGraphAst, changedNodeId: string): Set<string> {
+    const affected = new Set<string>();
+    const visited = new Set<string>();
+
+    const findDownstream = (nodeId: string) => {
+      if (visited.has(nodeId)) return;
+      visited.add(nodeId);
+
+      affected.add(nodeId);
+      const downstreamEdges = ast.edges.filter(edge => edge.from === nodeId);
+      for (const edge of downstreamEdges) {
+        findDownstream(edge.to);
+      }
+    };
+
+    findDownstream(changedNodeId);
+    return affected;
   }
 
   /**

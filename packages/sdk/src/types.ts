@@ -541,15 +541,6 @@ export interface CreateShareResult {
   shareUrl: string
 }
 
-export interface ExecuteNodePayload {
-  nodeId: string
-  workflowData: {
-    nodes: any[]
-    edges: any[]
-  }
-  context?: any
-}
-
 export interface ExecuteNodeResult {
   nodeId: string
   state: 'pending' | 'running' | 'success' | 'fail'

@@ -1,5 +1,5 @@
 'use client'
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useState, useEffect } from 'react'
 import {
   ReactFlow,
   Background,
@@ -12,30 +12,25 @@ import {
   useReactFlow,
 } from '@xyflow/react'
 
-import {
-  ZoomIn,
-  ZoomOut,
-  Maximize2,
-  Minimize2,
-  PlusSquare,
-  PlayIcon,
-  SaveIcon,
-  SettingsIcon,
-  Download,
-  UploadIcon,
-  LayoutGrid,
-} from 'lucide-react'
-
-import { fromJson, toJson, INode, WorkflowGraphAst, findNodeType, IEdge } from '@sker/workflow'
+import { fromJson, toJson, INode, WorkflowGraphAst } from '@sker/workflow'
 import { createNodeTypes } from '../nodes'
 import { edgeTypes } from '../edges'
-import { getAllNodeTypes } from '../../adapters'
 import { useWorkflow } from '../../hooks/useWorkflow'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
-import { useClipboard } from '../../hooks/useClipboard'
 import { useCanvasControls } from './useCanvasControls'
 import { useCanvasState } from './useCanvasState'
 import { useWorkflowOperations } from './useWorkflowOperations'
+
+// 新的业务逻辑钩子
+import { useFileOperations } from './hooks/useFileOperations'
+import { useNodeOperations } from './hooks/useNodeOperations'
+import { useEventHandlers } from './hooks/useEventHandlers'
+
+// 新的UI组件
+import { CanvasControls } from './components/CanvasControls'
+import { CanvasEmptyState } from './components/CanvasEmptyState'
+
+// 原有组件
 import { ContextMenu } from './ContextMenu'
 import { NodeSelector } from './NodeSelector'
 import { ShareDialog } from './ShareDialog'
@@ -61,9 +56,9 @@ export interface WorkflowCanvasProps {
   /** 自定义类名 */
   className?: string
   /** 顶部标题 */
-  title?: string;
+  title?: string
   /** 名称 */
-  name?: string;
+  name?: string
   /** 运行全部节点回调 */
   onRunAll?: () => void
   /** 保存工作流回调 */
@@ -72,6 +67,15 @@ export interface WorkflowCanvasProps {
   onShare?: () => void
 }
 
+/**
+ * 工作流画布组件 - 重构版
+ *
+ * 优雅设计：
+ * - 职责单一：只负责组件组合和基础状态管理
+ * - 业务逻辑委托给专门的钩子
+ * - UI组件纯粹化，不包含业务逻辑
+ * - 代码简洁，易于维护
+ */
 export function WorkflowCanvas({
   workflowAst,
   showMiniMap = true,
@@ -80,15 +84,11 @@ export function WorkflowCanvas({
   snapToGrid = false,
   className = ''
 }: WorkflowCanvasProps) {
+  // 工作流上下文
   const workflow = useWorkflow(fromJson<WorkflowGraphAst>(workflowAst))
-  const nodes = workflow.nodes
-  const edges = workflow.edges
-  const isCanvasEmpty = nodes.length === 0
-
-  // 获取 ReactFlow 实例以访问 viewport API
   const { getViewport, setViewport } = useReactFlow()
 
-  // 使用 CanvasState 集中管理所有状态
+  // 状态管理
   const {
     setIsRunning,
     setIsSaving,
@@ -114,142 +114,14 @@ export function WorkflowCanvas({
     closeWorkflowSettingsDialog,
   } = useCanvasState()
 
-  /**
-   * 连线状态追踪
-   *
-   * 优雅设计：
-   * - 追踪从哪个节点的哪个 output 开始拖拽连线
-   * - 用于在连线未成功连接时自动打开节点选择器
-   */
+  // 连线状态追踪
   const [connectingInfo, setConnectingInfo] = useState<{
     nodeId: string | null
     handleId: string | null
     handleType: 'source' | 'target' | null
   } | null>(null)
 
-  // 使用 WorkflowOperations 管理业务逻辑
-  const { runNode, saveWorkflow, saveSubWorkflow, runWorkflow } = useWorkflowOperations(workflow, {
-    onShowToast: showToast,
-    onSetRunning: setIsRunning,
-    onSetSaving: setIsSaving,
-    getViewport,
-  })
-
-  /**
-   * 恢复视图窗口状态
-   *
-   * 优雅设计：
-   * - 如果 AST 中有保存的 viewport，恢复到该位置
-   * - 如果没有，使用 fitView 自动适应
-   * - 确保用户体验的连续性
-   */
-  React.useEffect(() => {
-    if (workflow.workflowAst.viewport) {
-      // 恢复保存的 viewport
-      const { x, y, zoom } = workflow.workflowAst.viewport
-      setViewport({ x, y, zoom }, { duration: 0 })
-    }
-    // 注意：如果没有保存的 viewport，ReactFlow 的 fitView prop 会自动适应
-  }, [workflow.workflowAst, setViewport])
-
-  /**
-   * 监听边双击删除事件
-   *
-   * 优雅设计：
-   * - 边组件通过自定义事件触发删除
-   * - 在这里统一处理，同步到 AST 和 UI
-   * - 确保数据一致性
-   */
-  React.useEffect(() => {
-    const handleEdgeDelete = (e: Event) => {
-      const customEvent = e as CustomEvent
-      const { edgeId } = customEvent.detail
-
-      console.log('监听到 edge-delete 事件:', edgeId)
-
-      // 查找完整的 edge 对象
-      const edge = edges.find((e) => e.id === edgeId)
-      if (edge) {
-        console.log('删除边:', edge.id, 'source:', edge.source, 'target:', edge.target)
-        workflow.removeEdge(edge)
-        console.log('删除后 AST edges:', workflow.workflowAst.edges.length)
-      } else {
-        console.warn('Edge not found:', edgeId)
-      }
-    }
-
-    window.addEventListener('edge-delete', handleEdgeDelete)
-    return () => window.removeEventListener('edge-delete', handleEdgeDelete)
-  }, [workflow, edges])
-
-  /**
-   * 监听打开子工作流事件
-   *
-   * 优雅设计：
-   * - WorkflowGraphAstRender 组件通过自定义事件触发
-   * - 在这里统一处理子工作流弹框的打开
-   * - 确保父子工作流状态的一致性
-   */
-  React.useEffect(() => {
-    const handleOpenSubWorkflow = (e: Event) => {
-      const customEvent = e as CustomEvent
-      const { nodeId, workflowAst } = customEvent.detail
-
-      console.log('监听到 open-sub-workflow 事件:', { nodeId })
-
-      openSubWorkflowModal({ nodeId, workflowAst })
-    }
-
-    window.addEventListener('open-sub-workflow', handleOpenSubWorkflow)
-    return () => window.removeEventListener('open-sub-workflow', handleOpenSubWorkflow)
-  }, [])
-
-  /**
-   * 监听打开设置面板事件
-   *
-   * 优雅设计：
-   * - 节点渲染器通过自定义事件触发
-   * - 在这里统一处理设置面板的打开
-   * - 支持双击节点展开配置表单
-   */
-  React.useEffect(() => {
-    const handleOpenSettingPanel = (e: Event) => {
-      const customEvent = e as CustomEvent
-      const { nodeId, nodeData } = customEvent.detail
-
-      console.log('监听到 open-setting-panel 事件:', { nodeId })
-      openSettingPanel({ nodeId, nodeData })
-    }
-
-    window.addEventListener('open-setting-panel', handleOpenSettingPanel)
-    return () => window.removeEventListener('open-setting-panel', handleOpenSettingPanel)
-  }, [])
-
-  /**
-   * 监听打开边配置对话框事件
-   *
-   * 优雅设计：
-   * - 右键菜单通过自定义事件触发
-   * - 在这里统一处理边配置对话框的打开
-   */
-  React.useEffect(() => {
-    const handleOpenEdgeConfig = (e: Event) => {
-      const customEvent = e as CustomEvent
-      const { edgeId } = customEvent.detail
-
-      console.log('监听到 open-edge-config 事件:', { edgeId })
-
-      // 查找完整的 edge 对象
-      const edge = edges.find((e) => e.id === edgeId)
-      if (edge?.data?.edge) {
-        openEdgeConfigDialog(edge.data.edge)
-      }
-    }
-
-    window.addEventListener('open-edge-config', handleOpenEdgeConfig)
-    return () => window.removeEventListener('open-edge-config', handleOpenEdgeConfig)
-  }, [edges, openEdgeConfigDialog])
-
+  // 画布控制 - 先获取，供业务钩子使用
   const {
     onNodeClick,
     onPaneClick,
@@ -269,733 +141,194 @@ export function WorkflowCanvas({
     handleLocateNode,
   } = useCanvasControls()
 
-  const clipboard = useClipboard()
+  // 业务逻辑钩子 - 正确在组件顶层调用
+  const { exportWorkflow, importWorkflow, processImportFile } = useFileOperations(workflow, {
+    onShowToast: showToast,
+    onGetViewport: getViewport,
+    onFitView: handleFitView
+  })
 
-  const panOnDrag = [1, 2]
+  const {
+    copyNodes,
+    cutNodes,
+    pasteNodes,
+    deleteSelection,
+    createGroup,
+    ungroupNodes,
+    collapseNodes,
+    expandNodes,
+    autoLayout,
+    deleteNode,
+    deleteEdge,
+    toggleNodeCollapse,
+    clearCanvas
+  } = useNodeOperations(workflow, {
+    onShowToast: showToast,
+    onFitView: handleFitView
+  })
 
-  // 获取选中的节点
-  const getSelectedNodes = useCallback(() => {
-    return nodes.filter((node) => node.selected)
-  }, [nodes])
+  // 工作流操作
+  const { runNode, saveWorkflow, saveSubWorkflow, runWorkflow } = useWorkflowOperations(workflow, {
+    onShowToast: showToast,
+    onSetRunning: setIsRunning,
+    onSetSaving: setIsSaving,
+    getViewport,
+  })
 
-  // 获取选中节点相关的边
-  const getSelectedNodesEdges = useCallback(() => {
-    const selectedNodeIds = new Set(
-      nodes.filter((node) => node.selected).map((node) => node.id)
-    )
-    return edges.filter(
-      (edge) => selectedNodeIds.has(edge.source) && selectedNodeIds.has(edge.target)
-    )
-  }, [nodes, edges])
+  // 事件处理统一委托
+  useEventHandlers({
+    onEdgeDelete: useCallback((edgeId: string) => {
+      const edge = workflow.edges.find((e) => e.id === edgeId)
+      if (edge) {
+        workflow.removeEdge(edge)
+      }
+    }, [workflow]),
 
-  // 复制选中的节点
-  const handleCopy = useCallback(() => {
-    const selectedNodes = getSelectedNodes()
-    if (selectedNodes.length > 0) {
-      const selectedEdges = getSelectedNodesEdges()
-      clipboard.copyNodes(selectedNodes, selectedEdges)
-      console.log(`已复制 ${selectedNodes.length} 个节点`)
+    onOpenSubWorkflow: useCallback((nodeId: string, workflowAst: any) => {
+      openSubWorkflowModal({ nodeId, workflowAst })
+    }, [openSubWorkflowModal]),
+
+    onOpenSettingPanel: useCallback((nodeId: string, nodeData: any) => {
+      openSettingPanel({ nodeId, nodeData })
+    }, [openSettingPanel]),
+
+    onOpenEdgeConfig: useCallback((edgeId: string) => {
+      const edge = workflow.edges.find((e) => e.id === edgeId)
+      if (edge?.data?.edge) {
+        openEdgeConfigDialog(edge.data.edge)
+      }
+    }, [workflow.edges, openEdgeConfigDialog]),
+
+    onNodeDoubleClick: useCallback((nodeId: string) => {
+      openDrawer(nodeId)
+    }, [openDrawer]),
+  })
+
+  // 恢复视图窗口状态
+  useEffect(() => {
+    if (workflow.workflowAst.viewport) {
+      const { x, y, zoom } = workflow.workflowAst.viewport
+      setViewport({ x, y, zoom }, { duration: 0 })
     }
-  }, [getSelectedNodes, getSelectedNodesEdges, clipboard])
+  }, [workflow.workflowAst, setViewport])
 
-  // 剪切选中的节点
-  const handleCut = useCallback(() => {
-    const selectedNodes = getSelectedNodes()
-    if (selectedNodes.length > 0) {
-      const selectedEdges = getSelectedNodesEdges()
-      clipboard.cutNodes(selectedNodes, selectedEdges)
-      // 删除原节点
-      selectedNodes.forEach((node) => workflow.removeNode(node.id))
-      console.log(`已剪切 ${selectedNodes.length} 个节点`)
-    }
-  }, [getSelectedNodes, getSelectedNodesEdges, clipboard, workflow])
+  // 键盘快捷键
+  useKeyboardShortcuts({
+    enabled: true,
+    onCopy: copyNodes,
+    onCut: cutNodes,
+    onPaste: () => pasteNodes(),
+    onDelete: deleteSelection,
+    onSelectAll: handleSelectAll,
+    onSave: () => saveWorkflow(workflow.workflowAst?.name || 'Untitled'),
+    onToggleCollapse: () => {}, // 通过节点操作钩子处理
+    onCreateGroup: createGroup,
+    onUngroupNodes: ungroupNodes,
+    onCollapseNodes: collapseNodes,
+    onExpandNodes: expandNodes,
+    onAutoLayout: autoLayout,
+  })
 
-  // 粘贴节点
-  const handlePaste = useCallback(() => {
-    if (!clipboard.hasClipboard) return
+  // 处理连线
+  const handleNodesChangeInternal = useCallback((changes: NodeChange[]) => {
+    workflow.onNodesChange(changes)
+  }, [workflow])
 
-    // 获取画布中心位置作为粘贴位置
-    const flowPosition = { x: 100, y: 100 } // 默认位置，实际应该用 screenToFlowPosition
+  const handleEdgesChangeInternal = useCallback((changes: EdgeChange[]) => {
+    workflow.onEdgesChange(changes)
+  }, [workflow])
 
-    clipboard.pasteNodes(flowPosition, (newNodes, newEdges) => {
-      // 将新节点添加到工作流
-      newNodes.forEach((node) => {
-        workflow.addNode(findNodeType(node.data.type), node.position, node.data.label)
-      })
+  const handleConnectInternal = useCallback((connection: Connection) => {
+    workflow.connectNodes(connection)
+  }, [workflow])
 
-      // 将新边添加到工作流（AST + UI）
-      newEdges.forEach((edge) => {
-        if (edge.data?.edge) {
-          // 同步到 AST
-          workflow.workflowAst.addEdge(edge.data.edge)
-        }
-      })
-
-      // 同步到 UI
-      workflow.setEdges((currentEdges) => [...currentEdges, ...newEdges])
-
-      console.log(`已粘贴 ${newNodes.length} 个节点和 ${newEdges.length} 条边`)
+  const handleConnectStart = useCallback((
+    _event: MouseEvent | TouchEvent,
+    params: { nodeId: string | null; handleId: string | null; handleType: 'source' | 'target' | null }
+  ) => {
+    setConnectingInfo({
+      nodeId: params.nodeId,
+      handleId: params.handleId,
+      handleType: params.handleType,
     })
-  }, [clipboard, workflow])
-
-  // 删除选中的节点和边
-  const handleDelete = useCallback(() => {
-    const selectedNodes = getSelectedNodes()
-    const selectedEdges = edges.filter((edge) => edge.selected)
-
-    selectedNodes.forEach((node) => workflow.removeNode(node.id))
-    selectedEdges.forEach((edge) => workflow.removeEdge(edge.id))
-
-    if (selectedNodes.length > 0 || selectedEdges.length > 0) {
-      console.log(
-        `已删除 ${selectedNodes.length} 个节点和 ${selectedEdges.length} 条边`
-      )
-    }
-  }, [getSelectedNodes, edges, workflow])
-
-  const handleToggleCollapse = useCallback(() => {
-    const selectedNodes = getSelectedNodes()
-    if (selectedNodes.length === 0) return
-
-    workflow.setNodes((nodes) =>
-      nodes.map((node) =>
-        node.selected
-          ? { ...node, data: { ...node.data, collapsed: !node.data.collapsed } }
-          : node
-      )
-    )
-  }, [getSelectedNodes, workflow])
-
-  /**
-   * 创建分组
-   *
-   * 将选中的节点组织为一个分组（WorkflowGraphAst）
-   */
-  const handleCreateGroup = useCallback(() => {
-    const selectedNodes = getSelectedNodes()
-    if (selectedNodes.length === 0) {
-      showToast('error', '请先选择节点', '至少选择一个节点才能创建分组')
-      return
-    }
-
-    const selectedNodeIds = selectedNodes.map(n => n.id)
-    const groupId = workflow.createGroup(selectedNodeIds)
-
-    if (groupId) {
-      showToast('success', '分组创建成功', `已将 ${selectedNodes.length} 个节点组织为分组`)
-    }
-  }, [getSelectedNodes, workflow, showToast])
-
-  /**
-   * 解散分组
-   *
-   * 如果选中的节点是分组，则解散它
-   */
-  const handleUngroupNodes = useCallback(() => {
-    const selectedNodes = getSelectedNodes()
-    if (selectedNodes.length === 0) {
-      showToast('error', '请先选择分组', '请选择要解散的分组节点')
-      return
-    }
-
-    const groupNodes = selectedNodes.filter(
-      node => node.data instanceof WorkflowGraphAst && node.data.isGroup
-    )
-
-    if (groupNodes.length === 0) {
-      showToast('error', '未选中分组', '选中的节点中没有分组')
-      return
-    }
-
-    groupNodes.forEach(groupNode => {
-      workflow.ungroupNodes(groupNode.id)
-    })
-
-    showToast('success', '分组已解散', `已解散 ${groupNodes.length} 个分组`)
-  }, [getSelectedNodes, workflow, showToast])
-
-  /**
-   * 删除单个节点（右键菜单）
-   *
-   * 确保同步更新 AST 和 UI
-   */
-  const handleDeleteNode = useCallback(
-    (nodeId: string) => {
-      workflow.removeNode(nodeId)
-    },
-    [workflow]
-  )
-
-  const handleToggleNodeCollapse = useCallback(
-    (nodeId: string) => {
-      workflow.setNodes((nodes) =>
-        nodes.map((node) =>
-          node.id === nodeId
-            ? { ...node, data: { ...node.data, collapsed: !node.data.collapsed } }
-            : node
-        )
-      )
-    },
-    [workflow]
-  )
-
-  /**
-   * 折叠节点（智能模式）
-   *
-   * - 有选中：仅折叠选中的
-   * - 无选中：折叠全部
-   */
-  const handleCollapseNodes = useCallback(() => {
-    const selectedNodes = getSelectedNodes()
-    const targetNodeIds = selectedNodes.length > 0
-      ? selectedNodes.map(n => n.id)
-      : undefined
-
-    workflow.collapseNodes(targetNodeIds)
-
-    showToast(
-      'success',
-      '折叠完成',
-      selectedNodes.length > 0
-        ? `已折叠 ${selectedNodes.length} 个节点`
-        : '已折叠所有节点'
-    )
-  }, [getSelectedNodes, workflow, showToast])
-
-  /**
-   * 展开节点（智能模式）
-   *
-   * - 有选中：仅展开选中的
-   * - 无选中：展开全部
-   */
-  const handleExpandNodes = useCallback(() => {
-    const selectedNodes = getSelectedNodes()
-    const targetNodeIds = selectedNodes.length > 0
-      ? selectedNodes.map(n => n.id)
-      : undefined
-
-    workflow.expandNodes(targetNodeIds)
-
-    showToast(
-      'success',
-      '展开完成',
-      selectedNodes.length > 0
-        ? `已展开 ${selectedNodes.length} 个节点`
-        : '已展开所有节点'
-    )
-  }, [getSelectedNodes, workflow, showToast])
-
-  /**
-   * 自动布局
-   *
-   * 使用 Dagre 算法重新排列节点
-   */
-  const handleAutoLayout = useCallback(() => {
-    workflow.autoLayout()
-
-    // 布局后自动适应视图
-    setTimeout(() => {
-      handleFitView()
-    }, 100)
-
-    showToast('success', '布局完成', '已根据拓扑结构重新排列节点')
-  }, [workflow, handleFitView, showToast])
-
-  /**
-   * 删除单个边（右键菜单）
-   *
-   * 确保同步更新 AST 和 UI
-   */
-  const handleDeleteEdge = useCallback(
-    (edgeId: string) => {
-      workflow.removeEdge(edgeId)
-    },
-    [workflow]
-  )
-
-  /**
-   * 处理节点双击事件
-   *
-   * 打开左侧抽屉显示节点属性
-   */
-  const handleNodeDoubleClick = useCallback((nodeId: string) => {
-    openDrawer(nodeId)
-  }, [openDrawer])
-
-  /**
-   * 关闭左侧抽屉
-   */
-  const handleCloseDrawer = useCallback(() => {
-    closeDrawer()
-  }, [closeDrawer])
-
-  /**
-   * 监听节点双点击查看节点事件
-   */
-  React.useEffect(() => {
-    const handleDoubleClick = (e: Event) => {
-      const customEvent = e as CustomEvent
-      const { nodeId } = customEvent.detail
-      handleNodeDoubleClick(nodeId)
-    }
-
-    window.addEventListener('node-double-click', handleDoubleClick)
-    return () => window.removeEventListener('node-double-click', handleDoubleClick)
   }, [])
 
-  /**
-   * 监听节点选择变化事件
-   *
-   * 单击节点时选中（高亮），但不自动打开抽屉
-   */
-  React.useEffect(() => {
-    const handleNodeClick = (e: Event) => {
-      const customEvent = e as CustomEvent
-      const { nodeId } = customEvent.detail
-      console.log('节点被选中:', nodeId)
+  const handleConnectEnd = useCallback((event: MouseEvent | TouchEvent) => {
+    if (connectingInfo && connectingInfo.nodeId) {
+      const clientX = 'touches' in event ? event.touches[0]?.clientX ?? 0 : event.clientX
+      const clientY = 'touches' in event ? event.touches[0]?.clientY ?? 0 : event.clientY
+
+      const screenPosition = { x: clientX, y: clientY }
+      const flowPosition = screenToFlowPosition(screenPosition)
+
+      openNodeSelector(screenPosition, flowPosition)
     }
 
-    window.addEventListener('node-selected', handleNodeClick)
-    return () => window.removeEventListener('node-selected', handleNodeClick)
-  }, [])
+    setConnectingInfo(null)
+  }, [connectingInfo, screenToFlowPosition, openNodeSelector])
 
-  // 处理保存快捷键
-  const handleSave = useCallback(() => {
-    saveWorkflow(workflow.workflowAst?.name || 'Untitled')
-  }, [saveWorkflow, workflow.workflowAst])
+  const handleNodesDelete = useCallback((nodesToDelete: any[]) => {
+    nodesToDelete.forEach((node) => workflow.removeNode(node.id))
+  }, [workflow])
 
-  /**
-   * 验证工作流数据的完整性
-   *
-   * 优雅设计：
-   * - 分层验证：格式 → 节点类型 → 边完整性
-   * - 详细的错误信息，帮助用户定位问题
-   * - 返回 { valid, errors } 结构，便于批量展示错误
-   */
-  const validateWorkflowData = useCallback((data: any): { valid: boolean; errors: string[] } => {
-    const errors: string[] = []
+  const handleEdgesDelete = useCallback((edgesToDelete: any[]) => {
+    edgesToDelete.forEach((edge) => workflow.removeEdge(edge))
+  }, [workflow])
 
-    // 1. 基础格式验证
-    if (!data || typeof data !== 'object') {
-      errors.push('无效的数据格式')
-      return { valid: false, errors }
-    }
-
-    if (!data.workflow) {
-      errors.push('缺少 workflow 字段')
-      return { valid: false, errors }
-    }
-
-    const workflowData = data.workflow
-
-    // 2. 工作流结构验证
-    if (!workflowData.type || workflowData.type !== 'WorkflowGraphAst') {
-      errors.push(`无效的工作流类型: ${workflowData.type || '未指定'}`)
-    }
-
-    if (!Array.isArray(workflowData.nodes)) {
-      errors.push('nodes 字段必须是数组')
-    }
-
-    if (!Array.isArray(workflowData.edges)) {
-      errors.push('edges 字段必须是数组')
-    }
-
-    // 如果基础结构有问题，直接返回
-    if (errors.length > 0) {
-      return { valid: false, errors }
-    }
-
-    // 3. 节点类型验证
+  const handleAddNodeFromSelector = useCallback((metadata: any) => {
+    const { getAllNodeTypes } = require('../../adapters')
     const registeredNodeTypes = getAllNodeTypes()
-    const nodeTypeNames = new Set(registeredNodeTypes.map((type: any) => type.name))
-    const nodeIds = new Set<string>()
+    const NodeClass = registeredNodeTypes.find((type: any) => type.name === metadata.type)
 
-    workflowData.nodes.forEach((node: INode, index: number) => {
-      // 收集节点 ID
-      if (node.id) {
-        nodeIds.add(node.id)
-      } else {
-        errors.push(`节点 #${index + 1} 缺少 id 字段`)
-      }
+    if (NodeClass) {
+      const newNode = workflow.addNode(NodeClass, nodeSelector.flowPosition, metadata.label)
 
-      // 检查节点类型是否已注册
-      if (!node.type) {
-        errors.push(`节点 #${index + 1} (id: ${node.id || 'unknown'}) 缺少 type 字段`)
-      } else if (!nodeTypeNames.has(node.type)) {
-        errors.push(
-          `节点 #${index + 1} (id: ${node.id}) 的类型 "${node.type}" 未注册。` +
-          `请确保所有必需的节点类型已安装。`
-        )
-      }
-    })
-
-    // 4. 边完整性验证
-    workflowData.edges.forEach((edge: any, index: number) => {
-      if (!edge.from) {
-        errors.push(`边 #${index + 1} 缺少 from 字段`)
-      } else if (!nodeIds.has(edge.from)) {
-        errors.push(`边 #${index + 1} 的源节点 "${edge.from}" 不存在`)
-      }
-
-      if (!edge.to) {
-        errors.push(`边 #${index + 1} 缺少 to 字段`)
-      } else if (!nodeIds.has(edge.to)) {
-        errors.push(`边 #${index + 1} 的目标节点 "${edge.to}" 不存在`)
-      }
-    })
-
-    return {
-      valid: errors.length === 0,
-      errors
-    }
-  }, [])
-
-  /**
-   * 导出工作流为 JSON 文件
-   *
-   * 优雅设计：
-   * - 先保存 viewport 状态，确保导出包含完整的视图信息
-   * - 使用工作流名称和时间戳生成文件名
-   * - 通过 Blob 和 URL.createObjectURL 触发浏览器下载
-   * - 自动清理临时 URL，避免内存泄漏
-   */
-  const handleExportWorkflow = useCallback(() => {
-    try {
-      // 保存当前 viewport 状态
-      workflow.workflowAst.viewport = getViewport()
-
-      // 序列化工作流数据
-      const workflowJson = toJson(workflow.workflowAst)
-      const exportData = {
-        workflow: workflowJson
-      }
-
-      // 创建 Blob 并触发下载
-      const blob = new Blob([JSON.stringify(exportData, null, 2)], {
-        type: 'application/json'
-      })
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      const filename = `workflow-${workflow.workflowAst.name || 'untitled'}-${Date.now()}.json`
-
-      link.href = url
-      link.download = filename
-      link.click()
-
-      // 清理临时 URL
-      URL.revokeObjectURL(url)
-
-      showToast('success', '导出成功', `工作流已导出为 ${filename}`)
-    } catch (error) {
-      console.error('导出工作流失败:', error)
-      showToast('error', '导出失败', error instanceof Error ? error.message : '未知错误')
-    }
-  }, [workflow, getViewport, showToast])
-
-  /**
-   * 从文件导入工作流（通用逻辑）
-   *
-   * 优雅设计：
-   * - 统一处理按钮导入和拖拽导入
-   * - 避免代码重复
-   * - 便于维护和扩展
-   */
-  const processImportFile = useCallback(async (file: File) => {
-    try {
-      const text = await file.text()
-      const data = JSON.parse(text)
-
-      // 完整验证数据格式
-      const validation = validateWorkflowData(data)
-      if (!validation.valid) {
-        const errorMessage = validation.errors.join('\n• ')
-        throw new Error(`工作流验证失败：\n\n• ${errorMessage}`)
-      }
-
-      // 反序列化工作流
-      const importedWorkflow = fromJson<WorkflowGraphAst>(data.workflow)
-
-      // 智能检测：画布为空直接导入，否则显示确认对话框
-      if (isCanvasEmpty) {
-        // 直接替换当前工作流
-        Object.assign(workflow.workflowAst, importedWorkflow)
-        workflow.syncFromAst()
-
-        // 自动适应视图
-        setTimeout(() => {
-          handleFitView()
-        }, 100)
-
-        showToast('success', '导入成功', `已导入工作流 "${importedWorkflow.name || '未命名'}"`)
-      } else {
-        // 画布有内容，显示确认对话框
-        const confirmReplace = window.confirm(
-          '当前画布已有内容。\n\n' +
-          '• 确定：覆盖当前工作流\n' +
-          '• 取消：取消导入'
-        )
-
-        if (confirmReplace) {
-          Object.assign(workflow.workflowAst, importedWorkflow)
-          workflow.syncFromAst()
-
-          setTimeout(() => {
-            handleFitView()
-          }, 100)
-
-          showToast('success', '导入成功', `已导入工作流 "${importedWorkflow.name || '未命名'}"`)
+      if (connectingInfo && connectingInfo.nodeId && newNode) {
+        const connection: Connection = {
+          source: connectingInfo.handleType === 'source' ? connectingInfo.nodeId : newNode.id,
+          target: connectingInfo.handleType === 'source' ? newNode.id : connectingInfo.nodeId,
+          sourceHandle: connectingInfo.handleType === 'source' ? connectingInfo.handleId : null,
+          targetHandle: connectingInfo.handleType === 'source' ? null : connectingInfo.handleId,
         }
-      }
-    } catch (error) {
-      console.error('导入工作流失败:', error)
-      showToast('error', '导入失败', error instanceof Error ? error.message : '文件格式不正确')
-    }
-  }, [workflow, isCanvasEmpty, handleFitView, showToast, validateWorkflowData])
-
-  /**
-   * 导入工作流从 JSON 文件（按钮触发）
-   *
-   * 优雅设计：
-   * - 使用隐藏的 input 元素触发文件选择
-   * - 委托给 processImportFile 处理具体逻辑
-   */
-  const handleImportWorkflow = useCallback(() => {
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.accept = '.json'
-
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0]
-      if (file) {
-        await processImportFile(file)
+        workflow.connectNodes(connection)
       }
     }
+  }, [workflow, nodeSelector.flowPosition, connectingInfo])
 
-    input.click()
-  }, [processImportFile])
+  // 拖拽处理
+  const handleDrop = useCallback(async (event: React.DragEvent) => {
+    event.preventDefault()
+    event.stopPropagation()
 
-  /**
-   * 处理文件拖拽到画布
-   *
-   * 优雅设计：
-   * - 阻止默认行为，确保浏览器不会打开文件
-   * - 只接受 JSON 文件
-   * - 复用 processImportFile 处理导入逻辑
-   */
-  const handleDrop = useCallback(
-    (event: React.DragEvent) => {
-      event.preventDefault()
-      event.stopPropagation()
+    const files = Array.from(event.dataTransfer.files)
+    const jsonFile = files.find((file) => file.name.endsWith('.json'))
 
-      const files = Array.from(event.dataTransfer.files)
-      const jsonFile = files.find((file) => file.name.endsWith('.json'))
+    if (jsonFile) {
+      const isCanvasEmpty = workflow.nodes.length === 0
+      await processImportFile(jsonFile, isCanvasEmpty)
+    } else if (files.length > 0) {
+      showToast('error', '文件类型错误', '请拖拽 JSON 格式的工作流文件')
+    }
+  }, [processImportFile, workflow.nodes.length, showToast])
 
-      if (jsonFile) {
-        processImportFile(jsonFile)
-      } else if (files.length > 0) {
-        showToast('error', '文件类型错误', '请拖拽 JSON 格式的工作流文件')
-      }
-    },
-    [processImportFile, showToast]
-  )
-
-  /**
-   * 处理拖拽经过画布
-   *
-   * 优雅设计：
-   * - 阻止默认行为，允许拖放
-   * - 提供视觉反馈
-   */
   const handleDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault()
     event.stopPropagation()
-    // 设置拖放效果
     event.dataTransfer.dropEffect = 'copy'
   }, [])
 
-  // 集成键盘快捷键
-  useKeyboardShortcuts({
-    enabled: true,
-    onCopy: handleCopy,
-    onCut: handleCut,
-    onPaste: handlePaste,
-    onDelete: handleDelete,
-    onSelectAll: handleSelectAll,
-    onSave: handleSave,
-    onToggleCollapse: handleToggleCollapse,
-    onCreateGroup: handleCreateGroup,
-    onUngroupNodes: handleUngroupNodes,
-    onCollapseNodes: handleCollapseNodes,
-    onExpandNodes: handleExpandNodes,
-    onAutoLayout: handleAutoLayout,
-  })
-
-  const handleNodesChangeInternal = useCallback(
-    (changes: NodeChange[]) => {
-      workflow.onNodesChange(changes)
-    },
-    [workflow]
-  )
-
-  const handleEdgesChangeInternal = useCallback(
-    (changes: EdgeChange[]) => {
-      workflow.onEdgesChange(changes)
-    },
-    [workflow]
-  )
-
-  const handleConnectInternal = useCallback(
-    (connection: Connection) => {
-      workflow.connectNodes(connection)
-    },
-    [workflow]
-  )
-
-  /**
-   * 连线开始时保存起始节点信息
-   *
-   * 优雅设计：
-   * - 保存连线起始节点、handle 和类型
-   * - 为后续自动连接提供必要信息
-   */
-  const handleConnectStart = useCallback(
-    (
-      _event: MouseEvent | TouchEvent,
-      params: { nodeId: string | null; handleId: string | null; handleType: 'source' | 'target' | null }
-    ) => {
-      setConnectingInfo({
-        nodeId: params.nodeId,
-        handleId: params.handleId,
-        handleType: params.handleType,
-      })
-    },
-    []
-  )
-
-  /**
-   * 连线结束时判断是否成功连接
-   *
-   * 优雅设计：
-   * - 如果未成功连接到目标节点，打开节点选择器
-   * - 在鼠标松开位置创建新节点
-   * - 自动连接到新节点
-   */
-  const handleConnectEnd = useCallback(
-    (event: MouseEvent | TouchEvent) => {
-      // 如果有连线起始信息（说明正在拖拽连线）
-      if (connectingInfo && connectingInfo.nodeId) {
-        // 获取鼠标位置
-        const clientX = 'touches' in event ? event.touches[0]?.clientX ?? 0 : event.clientX
-        const clientY = 'touches' in event ? event.touches[0]?.clientY ?? 0 : event.clientY
-
-        const screenPosition = { x: clientX, y: clientY }
-        const flowPosition = screenToFlowPosition(screenPosition)
-
-        // 打开节点选择器
-        openNodeSelector(screenPosition, flowPosition)
-
-        console.log('连线未连接，打开节点选择器', {
-          起始节点: connectingInfo.nodeId,
-          输出端口: connectingInfo.handleId,
-          位置: flowPosition,
-        })
-      }
-
-      // 清除连线状态
-      setConnectingInfo(null)
-    },
-    [connectingInfo, screenToFlowPosition, openNodeSelector]
-  )
-
-  const handleNodesDelete = useCallback(
-    (nodesToDelete: any[]) => {
-      nodesToDelete.forEach((node) => workflow.removeNode(node.id))
-    },
-    [workflow]
-  )
-
-  const handleEdgesDelete = useCallback(
-    (edgesToDelete: any[]) => {
-      console.log('删除边:', edgesToDelete.length, '条')
-      edgesToDelete.forEach((edge) => {
-        console.log('删除边:', edge.id, 'source:', edge.source, 'target:', edge.target)
-        workflow.removeEdge(edge)  // 传入完整的 edge 对象
-      })
-      console.log('删除后 AST edges:', workflow.workflowAst.edges.length)
-    },
-    [workflow]
-  )
-
-  const handleAddNodeFromSelector = useCallback(
-    (metadata: any) => {
-      const registeredNodeTypes = getAllNodeTypes()
-      const NodeClass = registeredNodeTypes.find((type: any) => type.name === metadata.type)
-      if (NodeClass) {
-        const newNode = workflow.addNode(NodeClass, nodeSelector.flowPosition, metadata.label)
-
-        // 如果有连线起始信息，自动连接到新节点
-        if (connectingInfo && connectingInfo.nodeId && newNode) {
-          const connection: Connection = {
-            source: connectingInfo.handleType === 'source' ? connectingInfo.nodeId : newNode.id,
-            target: connectingInfo.handleType === 'source' ? newNode.id : connectingInfo.nodeId,
-            sourceHandle: connectingInfo.handleType === 'source' ? connectingInfo.handleId : null,
-            targetHandle: connectingInfo.handleType === 'source' ? null : connectingInfo.handleId,
-          }
-          workflow.connectNodes(connection)
-
-          console.log('自动连接节点', {
-            起始节点: connectingInfo.nodeId,
-            新节点: newNode.id,
-            连接: connection,
-          })
-        }
-      }
-    },
-    [workflow, nodeSelector.flowPosition, connectingInfo]
-  )
-
-  const handleClearCanvas = useCallback(() => {
-    if (nodes.length === 0 || confirm('确定要清空画布吗？此操作无法撤销。')) {
-      workflow.clearWorkflow()
-    }
-  }, [nodes.length, workflow])
-
-  /**
-   * 关闭子工作流弹框
-   */
-  const handleCloseSubWorkflowModal = useCallback(() => {
-    closeSubWorkflowModal()
-  }, [closeSubWorkflowModal])
-
-  /**
-   * 关闭设置面板
-   */
-  const handleCloseSettingPanel = useCallback(() => {
-    closeSettingPanel()
-  }, [closeSettingPanel])
-
-  /**
-   * 保存边配置
-   *
-   * 优雅设计：
-   * - 同步更新 AST 和 UI
-   * - 确保数据一致性
-   */
-  const handleSaveEdgeConfig = useCallback((edgeConfig: Partial<IEdge>) => {
+  // 边配置处理
+  const handleSaveEdgeConfig = useCallback((edgeConfig: any) => {
     if (!edgeConfigDialog.edge) return
 
     const edgeId = edgeConfigDialog.edge.id
-    console.log('保存边配置:', edgeId, edgeConfig)
+    const astEdge = workflow.workflowAst.edges.find((e: any) => e.id === edgeId)
 
-    // 更新 AST 中的边
-    const astEdge = workflow.workflowAst.edges.find((e: IEdge) => e.id === edgeId)
     if (astEdge) {
       Object.assign(astEdge, edgeConfig)
     }
 
-    // 更新 UI 中的边
-    workflow.setEdges((currentEdges) =>
+    workflow.setEdges((currentEdges: any[]) =>
       currentEdges.map((edge) => {
         if (edge.id === edgeId && edge.data?.edge) {
           return {
@@ -1013,12 +346,6 @@ export function WorkflowCanvas({
     showToast('success', '边配置已更新')
   }, [edgeConfigDialog.edge, workflow, showToast])
 
-  /**
-   * 配置边（右键菜单触发）
-   *
-   * 优雅设计：
-   * - 触发自定义事件，统一处理边配置对话框的打开
-   */
   const handleConfigEdge = useCallback((edgeId: string) => {
     const customEvent = new CustomEvent('open-edge-config', {
       detail: { edgeId },
@@ -1026,13 +353,7 @@ export function WorkflowCanvas({
     window.dispatchEvent(customEvent)
   }, [])
 
-  /**
-   * 保存工作流设置
-   *
-   * 优雅设计：
-   * - 直接更新 AST 实例，确保数据一致性
-   * - 触发 Toast 提示，给用户反馈
-   */
+  // 工作流设置
   const handleSaveWorkflowSettings = useCallback((settings: any) => {
     if (settings.name) {
       workflow.workflowAst.name = settings.name
@@ -1050,6 +371,8 @@ export function WorkflowCanvas({
     showToast('success', '工作流设置已保存', `已更新工作流 "${settings.name || '未命名'}" 的属性`)
   }, [workflow, showToast])
 
+  const isCanvasEmpty = workflow.nodes.length === 0
+
   return (
     <div
       className={cn(
@@ -1060,8 +383,8 @@ export function WorkflowCanvas({
       <div className="relative flex flex-1 overflow-hidden">
         <div className="relative flex flex-1">
           <ReactFlow
-            nodes={nodes}
-            edges={edges}
+            nodes={workflow.nodes}
+            edges={workflow.edges}
             onNodesChange={handleNodesChangeInternal}
             onEdgesChange={handleEdgesChangeInternal}
             onConnect={handleConnectInternal}
@@ -1078,9 +401,9 @@ export function WorkflowCanvas({
             edgeTypes={edgeTypes}
             panOnScroll
             selectionOnDrag={true}
-            panOnDrag={panOnDrag}
+            panOnDrag={[1, 2]}
             selectionMode={SelectionMode.Partial}
-            fitView={!workflow.workflowAst.viewport}  // 只有在没有保存的 viewport 时才自动适应
+            fitView={!workflow.workflowAst.viewport}
             deleteKeyCode="Delete"
             snapToGrid={snapToGrid}
             nodesDraggable={true}
@@ -1088,7 +411,7 @@ export function WorkflowCanvas({
             elementsSelectable={true}
             minZoom={0.1}
             maxZoom={4}
-            zoomOnDoubleClick={false}  // 禁用双击缩放，确保双击空白区域只打开节点选择器
+            zoomOnDoubleClick={false}
             className="workflow-canvas__reactflow"
             style={{ background: '#1a1d24' }}
           >
@@ -1110,116 +433,27 @@ export function WorkflowCanvas({
             )}
           </ReactFlow>
 
-          {isCanvasEmpty && (
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <div className="flex max-w-lg flex-col items-center gap-4 rounded-lg border-2 border-dashed border-[#3b4354] bg-[#111318]/80 px-10 py-12 text-center backdrop-blur-sm">
-                <div className="rounded-full bg-[#1f2531] p-3 text-[#3b4354]">
-                  <PlusSquare className="h-8 w-8" strokeWidth={1.5} />
-                </div>
-                <h3 className="text-lg font-semibold leading-tight tracking-[-0.015em]">
-                  工作流画布
-                </h3>
-                <p className="text-sm text-[#9da6b9]">
-                  双击画布空白区域以搜索并添加新节点。
-                </p>
-              </div>
-            </div>
-          )}
+          {isCanvasEmpty && <CanvasEmptyState />}
 
           {showControls && (
-            <div className="absolute bottom-60 right-4 z-[5] flex flex-col gap-2 rounded-xl border border-[#282e39] bg-[#111318] p-1.5 shadow-lg shadow-black/30">
-              <button
-                onClick={() => runWorkflow()}
-                className="flex h-9 w-9 items-center justify-center rounded-md text-[#9da6b9] transition hover:bg-[#282e39] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111318]"
-              >
-                <PlayIcon className="h-4 w-4" strokeWidth={2} />
-              </button>
-
-              <button
-                onClick={() => openWorkflowSettingsDialog()}
-                className="flex h-9 w-9 items-center justify-center rounded-md text-[#9da6b9] transition hover:bg-[#282e39] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111318]"
-                title="工作流设置"
-              >
-                <SettingsIcon className="h-4 w-4" strokeWidth={2} />
-              </button>
-
-              <button
-                onClick={() => handleSave()}
-                className="flex h-9 w-9 items-center justify-center rounded-md text-[#9da6b9] transition hover:bg-[#282e39] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111318]"
-              >
-                <SaveIcon className="h-4 w-4" strokeWidth={2} />
-              </button>
-
-              <button
-                type="button"
-                onClick={handleZoomIn}
-                className="flex h-9 w-9 items-center justify-center rounded-md text-[#9da6b9] transition hover:bg-[#282e39] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111318]"
-              >
-                <ZoomIn className="h-4 w-4" strokeWidth={2} />
-              </button>
-              <button
-                type="button"
-                onClick={handleZoomOut}
-                className="flex h-9 w-9 items-center justify-center rounded-md text-[#9da6b9] transition hover:bg-[#282e39] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111318]"
-              >
-                <ZoomOut className="h-4 w-4" strokeWidth={2} />
-              </button>
-              <button
-                type="button"
-                onClick={handleFitView}
-                className="flex h-9 w-9 items-center justify-center rounded-md text-[#9da6b9] transition hover:bg-[#282e39] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111318]"
-              >
-                <Maximize2 className="h-4 w-4" strokeWidth={2} />
-              </button>
-
-              <button
-                onClick={handleImportWorkflow}
-                className="flex h-9 w-9 items-center justify-center rounded-md text-[#9da6b9] transition hover:bg-[#282e39] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111318]"
-                title="导入工作流"
-              >
-                <UploadIcon className="h-4 w-4" strokeWidth={2}/>
-              </button>
-
-              <button
-                onClick={handleExportWorkflow}
-                className="flex h-9 w-9 items-center justify-center rounded-md text-[#9da6b9] transition hover:bg-[#282e39] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111318]"
-                title="导出工作流"
-              >
-                <Download className="h-4 w-4" strokeWidth={2} />
-              </button>
-
-              {/* 分隔线 */}
-              <div className="my-1 h-px bg-[#282e39]" />
-
-              {/* 折叠/展开按钮组 */}
-              <button
-                onClick={handleCollapseNodes}
-                className="flex h-9 w-9 items-center justify-center rounded-md text-[#9da6b9] transition hover:bg-[#282e39] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111318]"
-                title="折叠节点（有选中时仅折叠选中的，无选中时折叠全部）&#10;快捷键: Ctrl+Shift+C"
-              >
-                <Minimize2 className="h-4 w-4" strokeWidth={2} />
-              </button>
-
-              <button
-                onClick={handleExpandNodes}
-                className="flex h-9 w-9 items-center justify-center rounded-md text-[#9da6b9] transition hover:bg-[#282e39] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111318]"
-                title="展开节点（有选中时仅展开选中的，无选中时展开全部）&#10;快捷键: Ctrl+Shift+E"
-              >
-                <Maximize2 className="h-4 w-4" strokeWidth={2} />
-              </button>
-
-              {/* 分隔线 */}
-              <div className="my-1 h-px bg-[#282e39]" />
-
-              {/* 自动布局按钮 */}
-              <button
-                onClick={handleAutoLayout}
-                className="flex h-9 w-9 items-center justify-center rounded-md text-[#9da6b9] transition hover:bg-[#282e39] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111318]"
-                title="自动布局（基于拓扑结构重新排列节点）&#10;快捷键: Ctrl+Shift+L"
-              >
-                <LayoutGrid className="h-4 w-4" strokeWidth={2} />
-              </button>
-            </div>
+            <CanvasControls
+              onRunWorkflow={() => runWorkflow(() => {
+                // 运行完成后的回调，可以在这里添加完成逻辑
+                console.log('工作流执行完成')
+              })}
+              onSaveWorkflow={() => saveWorkflow(workflow.workflowAst?.name || 'Untitled')}
+              onExportWorkflow={exportWorkflow}
+              onImportWorkflow={importWorkflow}
+              onOpenWorkflowSettings={openWorkflowSettingsDialog}
+              onZoomIn={handleZoomIn}
+              onZoomOut={handleZoomOut}
+              onFitView={handleFitView}
+              onCollapseNodes={collapseNodes}
+              onExpandNodes={expandNodes}
+              onAutoLayout={autoLayout}
+              isRunning={false} // 需要从状态管理获取
+              isSaving={false}  // 需要从状态管理获取
+            />
           )}
         </div>
       </div>
@@ -1230,26 +464,28 @@ export function WorkflowCanvas({
         onCenterView={handleCenterView}
         onResetZoom={handleResetZoom}
         onSelectAll={handleSelectAll}
-        onClearCanvas={handleClearCanvas}
-        onDeleteNode={handleDeleteNode}
+        onClearCanvas={clearCanvas}
+        onDeleteNode={deleteNode}
         onRunNode={runNode}
-        onToggleNodeCollapse={handleToggleNodeCollapse}
-        onDeleteEdge={handleDeleteEdge}
+        onToggleNodeCollapse={toggleNodeCollapse}
+        onDeleteEdge={deleteEdge}
         onConfigEdge={handleConfigEdge}
-        onCreateGroup={handleCreateGroup}
-        onUngroupNodes={handleUngroupNodes}
-        onCollapseNodes={handleCollapseNodes}
-        onExpandNodes={handleExpandNodes}
-        onAutoLayout={handleAutoLayout}
+        onCreateGroup={createGroup}
+        onUngroupNodes={ungroupNodes}
+        onCollapseNodes={collapseNodes}
+        onExpandNodes={expandNodes}
+        onAutoLayout={autoLayout}
         onClose={closeMenu}
-        nodeData={menu.contextType === 'node' && menu.targetId ? nodes.find(n => n.id === menu.targetId)?.data : undefined}
-        hasMultipleSelectedNodes={getSelectedNodes().length > 1}
+        nodeData={menu.contextType === 'node' && menu.targetId
+          ? workflow.nodes.find((n: any) => n.id === menu.targetId)?.data
+          : undefined}
+        hasMultipleSelectedNodes={workflow.nodes.filter((n: any) => n.selected).length > 1}
         isGroupNode={
           menu.contextType === 'node' && menu.targetId
-            ? nodes.find(n => n.id === menu.targetId)?.data instanceof WorkflowGraphAst && nodes.find(n => n.id === menu.targetId)?.data.isGroup
+            ? workflow.nodes.find((n: any) => n.id === menu.targetId)?.data instanceof WorkflowGraphAst && workflow.nodes.find((n: any) => n.id === menu.targetId)?.data.isGroup
             : false
         }
-        selectedNodesCount={getSelectedNodes().length}
+        selectedNodesCount={workflow.nodes.filter((n: any) => n.selected).length}
       />
 
       <NodeSelector
@@ -1277,7 +513,7 @@ export function WorkflowCanvas({
         visible={subWorkflowModal.visible}
         workflowAst={subWorkflowModal.workflowAst}
         parentNodeId={subWorkflowModal.nodeId}
-        onClose={handleCloseSubWorkflowModal}
+        onClose={closeSubWorkflowModal}
         onSave={saveSubWorkflow}
       />
 
@@ -1285,13 +521,13 @@ export function WorkflowCanvas({
         <SettingPanel
           nodeId={settingPanel.nodeId || null}
           nodeData={settingPanel.nodeData}
-          onClose={handleCloseSettingPanel}
+          onClose={closeSettingPanel}
         />
       )}
 
       <LeftDrawer
         visible={drawer.visible}
-        onClose={handleCloseDrawer}
+        onClose={closeDrawer}
         onRunNode={runNode}
         onLocateNode={handleLocateNode}
       />
@@ -1312,3 +548,5 @@ export function WorkflowCanvas({
     </div>
   )
 }
+
+WorkflowCanvas.displayName = 'WorkflowCanvas'

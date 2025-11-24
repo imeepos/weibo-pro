@@ -1,4 +1,4 @@
-import { Controller, Post, Sse, Body, Get, Query, Delete } from '@sker/core'
+import { Controller, Post, Sse, Body, Get, Query, Delete, Param } from '@sker/core'
 import type {
   WorkflowSummary,
   CreateRunResult,
@@ -15,6 +15,25 @@ export interface MessageEvent {
     type?: string;
     retry?: number;
 }
+
+export interface WorkflowTemplate {
+  name: string;
+  description: string;
+}
+
+export interface InitWorkflowResponse {
+  template?: WorkflowGraphAst;
+}
+
+export interface ExecuteNodePayload {
+  workflow: INode;
+  nodeId: string;
+  config?: any;
+}
+
+export interface FineTunePayload {
+  config: any;
+}
 @Controller('api/workflow')
 export class WorkflowController {
   @Post('save')
@@ -30,6 +49,16 @@ export class WorkflowController {
   @Get('list')
   listWorkflows(): Promise<WorkflowSummary[]> {
     throw new Error('method listWorkflows not implements')
+  }
+
+  @Get('init')
+  initWorkflow(@Query() params: { name: string }): Promise<InitWorkflowResponse> {
+    throw new Error('method initWorkflow not implements')
+  }
+
+  @Get('templates')
+  listTemplates(): Promise<WorkflowTemplate[]> {
+    throw new Error('method listTemplates not implements')
   }
 
   @Delete('delete/:id')
@@ -87,5 +116,26 @@ export class WorkflowController {
   @Post('runs/:runId/cancel')
   cancelRun(@Body() body: { runId: number }): Promise<{ success: boolean }> {
     throw new Error('method cancelRun not implements')
+  }
+
+  /**
+   * 执行单个节点 - 微调执行
+   */
+  @Sse('executeNode')
+  executeNode(@Body() body: ExecuteNodePayload, res?: any): Observable<INode> {
+    throw new Error('method executeNode not implements')
+  }
+
+  /**
+   * 节点微调 - 基于响应式流的智能重放
+   */
+  @Sse('runs/:runId/fine-tune/:nodeId')
+  fineTuneNode(
+    @Param('runId') runId: string,
+    @Param('nodeId') nodeId: string,
+    @Body() body: FineTunePayload,
+    res?: any
+  ): Observable<WorkflowGraphAst> {
+    throw new Error('method fineTuneNode not implements')
   }
 }
