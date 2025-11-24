@@ -40,6 +40,8 @@ import { LeftDrawer } from '../LeftDrawer'
 import { SettingPanel } from '../SettingPanel'
 import { EdgeConfigDialog } from './EdgeConfigDialog'
 import { WorkflowSettingsDialog } from './WorkflowSettingsDialog'
+import { ScheduleDialog } from './ScheduleDialog'
+import { ScheduleList } from './ScheduleList'
 import { cn } from '../../utils/cn'
 import { getAllNodeTypes } from '../../adapters'
 
@@ -60,6 +62,8 @@ export interface WorkflowCanvasProps {
   title?: string
   /** 名称 */
   name?: string
+  /** 工作流ID */
+  workflowId?: number
   /** 运行全部节点回调 */
   onRunAll?: () => void
   /** 保存工作流回调 */
@@ -83,7 +87,8 @@ export function WorkflowCanvas({
   showControls = true,
   showBackground = true,
   snapToGrid = false,
-  className = ''
+  className = '',
+  workflowId,
 }: WorkflowCanvasProps) {
   // 工作流上下文
   const workflow = useWorkflow(fromJson<WorkflowGraphAst>(workflowAst))
@@ -113,6 +118,12 @@ export function WorkflowCanvas({
     workflowSettingsDialog,
     openWorkflowSettingsDialog,
     closeWorkflowSettingsDialog,
+    scheduleDialog,
+    openScheduleDialog,
+    closeScheduleDialog,
+    schedulePanel,
+    openSchedulePanel,
+    closeSchedulePanel,
   } = useCanvasState()
 
   // 连线状态追踪
@@ -354,7 +365,7 @@ export function WorkflowCanvas({
   }, [])
 
   // 工作流设置
-  const handleSaveWorkflowSettings = useCallback((settings: any) => {
+  const handleSaveWorkflowSettings = useCallback(async (settings: any) => {
     if (settings.name) {
       workflow.workflowAst.name = settings.name
     }
@@ -368,8 +379,11 @@ export function WorkflowCanvas({
       workflow.workflowAst.tags = settings.tags
     }
 
+    // 保存到后端
+    await saveWorkflow(settings.name || workflow.workflowAst.name)
+
     showToast('success', '工作流设置已保存', `已更新工作流 "${settings.name || '未命名'}" 的属性`)
-  }, [workflow, showToast])
+  }, [workflow, showToast, saveWorkflow])
 
   const isCanvasEmpty = workflow.nodes.length === 0
 
@@ -445,6 +459,13 @@ export function WorkflowCanvas({
               onExportWorkflow={exportWorkflow}
               onImportWorkflow={importWorkflow}
               onOpenWorkflowSettings={openWorkflowSettingsDialog}
+              onOpenScheduleDialog={() => {
+                if (workflowId) {
+                  openScheduleDialog(workflowId)
+                } else {
+                  showToast('warning', '请先保存工作流', '只有保存的工作流才能创建调度')
+                }
+              }}
               onZoomIn={handleZoomIn}
               onZoomOut={handleZoomOut}
               onFitView={handleFitView}
@@ -546,6 +567,30 @@ export function WorkflowCanvas({
         onClose={closeWorkflowSettingsDialog}
         onSave={handleSaveWorkflowSettings}
       />
+
+      {/* 调度对话框 */}
+      {scheduleDialog.visible && (
+        <ScheduleDialog
+          workflowId={scheduleDialog.workflowId!}
+          open={scheduleDialog.visible}
+          onOpenChange={closeScheduleDialog}
+          onSuccess={() => {
+            showToast('success', '调度创建成功', '工作流调度已创建成功')
+            // 如果调度面板是打开的，刷新列表
+            if (schedulePanel.visible) {
+              // 这里可以添加刷新逻辑
+            }
+          }}
+        />
+      )}
+
+      {/* 调度列表面板 */}
+      {schedulePanel.visible && (
+        <ScheduleList
+          workflowId={schedulePanel.workflowId!}
+          className="absolute top-4 right-4 w-[600px] max-h-[80vh] overflow-y-auto z-[5]"
+        />
+      )}
     </div>
   )
 }

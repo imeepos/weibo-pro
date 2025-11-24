@@ -56,15 +56,17 @@ export class WorkflowController implements sdk.WorkflowController {
   }
 
   @Get('init')
-  async initWorkflow(@Query() params: { name: string }) {
+  async initWorkflow(@Query() params: { name: string }): Promise<sdk.InitWorkflowResponse> {
     const { name } = params;
     // 2. 检查是否有对应的模板
     const template = this.workflowTemplateService.createFromTemplate(name);
 
     if (template) {
       await this.saveWorkflow(template);
-      return template;
+      return { template };
     }
+
+    return {};
   }
 
   /**
@@ -151,7 +153,7 @@ export class WorkflowController implements sdk.WorkflowController {
    * - 妥善处理所有错误，确保服务稳定
    */
   @Post('execute')
-  execute(@Body() body: Ast, @Res() res?: any): Observable<WorkflowGraphAst> {
+  execute(@Body() body: Ast, @Res() res?: any): Observable<Ast> {
     // 设置 SSE 响应头
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
@@ -170,7 +172,7 @@ export class WorkflowController implements sdk.WorkflowController {
       // 执行工作流并发送实时事件
       const subscription$ = executeAst(ast, ast as WorkflowGraphAst)
       const subscription = subscription$.subscribe({
-        next: (workflow: WorkflowGraphAst) => {
+        next: (workflow: Ast) => {
           // 发送工作流状态更新事件
           res.write(`data: ${JSON.stringify(workflow)}\n\n`);
         },

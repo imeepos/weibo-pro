@@ -61,6 +61,18 @@ export function useCanvasState() {
     visible: boolean
   }>({ visible: false })
 
+  // 调度对话框状态
+  const [scheduleDialog, setScheduleDialog] = useState<{
+    visible: boolean
+    workflowId?: number
+  }>({ visible: false })
+
+  // 调度列表面板状态
+  const [schedulePanel, setSchedulePanel] = useState<{
+    visible: boolean
+    workflowId?: number
+  }>({ visible: false })
+
   /**
    * 显示 Toast 提示
    */
@@ -162,6 +174,34 @@ export function useCanvasState() {
     setWorkflowSettingsDialog({ visible: false })
   }, [])
 
+  /**
+   * 打开调度对话框
+   */
+  const openScheduleDialog = useCallback((workflowId?: number) => {
+    setScheduleDialog({ visible: true, workflowId })
+  }, [])
+
+  /**
+   * 关闭调度对话框
+   */
+  const closeScheduleDialog = useCallback(() => {
+    setScheduleDialog({ visible: false, workflowId: undefined })
+  }, [])
+
+  /**
+   * 打开调度列表面板
+   */
+  const openSchedulePanel = useCallback((workflowId?: number) => {
+    setSchedulePanel({ visible: true, workflowId })
+  }, [])
+
+  /**
+   * 关闭调度列表面板
+   */
+  const closeSchedulePanel = useCallback(() => {
+    setSchedulePanel({ visible: false, workflowId: undefined })
+  }, [])
+
   return {
     // 执行状态
     isRunning,
@@ -180,6 +220,15 @@ export function useCanvasState() {
     subWorkflowModal,
     openSubWorkflowModal,
     closeSubWorkflowModal,
+
+    // 调度相关状态
+    scheduleDialog,
+    openScheduleDialog,
+    closeScheduleDialog,
+
+    schedulePanel,
+    openSchedulePanel,
+    closeSchedulePanel,
 
     // Toast 提示
     toast,

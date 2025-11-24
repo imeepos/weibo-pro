@@ -1,10 +1,13 @@
-import { Controller, Post, Sse, Body, Get, Query, Delete, Param } from '@sker/core'
+import { Controller, Post, Sse, Body, Get, Query, Delete, Param, Put } from '@sker/core'
 import type {
   WorkflowSummary,
   CreateRunResult,
   ListRunsResult,
   WorkflowRunEntity,
   RunStatus,
+  WorkflowScheduleEntity,
+  CreateScheduleResult,
+  UpdateScheduleResult,
 } from '../types'
 import { Observable } from 'rxjs'
 import type { WorkflowGraphAst, Ast, INode } from '@sker/workflow';
@@ -105,6 +108,7 @@ export class WorkflowController {
       page?: number;
       pageSize?: number;
       status?: RunStatus;
+      scheduleId?: number;
     },
   ): Promise<ListRunsResult> {
     throw new Error('method listRuns not implements')
@@ -116,6 +120,87 @@ export class WorkflowController {
   @Post('runs/:runId/cancel')
   cancelRun(@Body() body: { runId: number }): Promise<{ success: boolean }> {
     throw new Error('method cancelRun not implements')
+  }
+
+  // ========== 调度相关方法 ==========
+
+  /**
+   * 创建调度
+   */
+  @Post(':id/schedules')
+  createSchedule(
+    @Param('id') workflowId: number,
+    @Body() body: {
+      name: string;
+      scheduleType: string;
+      cronExpression?: string;
+      intervalSeconds?: number;
+      inputs?: Record<string, unknown>;
+      startTime?: Date;
+      endTime?: Date;
+    }
+  ): Promise<WorkflowScheduleEntity> {
+    throw new Error('method createSchedule not implements')
+  }
+
+  /**
+   * 列出调度
+   */
+  @Get(':id/schedules')
+  listSchedules(@Param('id') workflowId: number): Promise<WorkflowScheduleEntity[]> {
+    throw new Error('method listSchedules not implements')
+  }
+
+  /**
+   * 获取调度详情
+   */
+  @Get('schedules/:scheduleId')
+  getSchedule(@Param('scheduleId') scheduleId: number): Promise<WorkflowScheduleEntity> {
+    throw new Error('method getSchedule not implements')
+  }
+
+  /**
+   * 更新调度
+   */
+  @Put('schedules/:scheduleId')
+  updateSchedule(
+    @Param('scheduleId') scheduleId: number,
+    @Body() body: {
+      name?: string;
+      scheduleType?: string;
+      cronExpression?: string;
+      intervalSeconds?: number;
+      inputs?: Record<string, unknown>;
+      startTime?: Date;
+      endTime?: Date;
+      status?: string;
+    }
+  ): Promise<WorkflowScheduleEntity> {
+    throw new Error('method updateSchedule not implements')
+  }
+
+  /**
+   * 删除调度
+   */
+  @Delete('schedules/:scheduleId')
+  deleteSchedule(@Param('scheduleId') scheduleId: number): Promise<{ success: boolean }> {
+    throw new Error('method deleteSchedule not implements')
+  }
+
+  /**
+   * 启用调度
+   */
+  @Post('schedules/:scheduleId/enable')
+  enableSchedule(@Param('scheduleId') scheduleId: number): Promise<WorkflowScheduleEntity> {
+    throw new Error('method enableSchedule not implements')
+  }
+
+  /**
+   * 禁用调度
+   */
+  @Post('schedules/:scheduleId/disable')
+  disableSchedule(@Param('scheduleId') scheduleId: number): Promise<WorkflowScheduleEntity> {
+    throw new Error('method disableSchedule not implements')
   }
 
   /**

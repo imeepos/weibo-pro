@@ -16,3 +16,4 @@ export { WeiboLoginAst } from './WeiboLoginAst'
 export { WorkflowGraphAst } from '@sker/workflow'
 export { WeiboUserDetectionAst } from './WeiboUserDetectionAst';
 export { LlmTextAgentAst } from './LlmTextAgentAst';
+export { WeiboAccountPickAst } from './WeiboAccountPickAst'

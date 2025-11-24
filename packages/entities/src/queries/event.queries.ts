@@ -7,11 +7,11 @@ export type TimeRange = '1h' | '6h' | '12h' | '24h' | '7d' | '30d' | '90d' | '18
 export interface HotEvent {
   id: string;
   title: string;
-  postCount: number;
-  sentiment: SentimentScore;
-  hotness: number;
-  trend: 'up' | 'down' | 'stable';
-  trendData: number[];
+  heat: number;
+  posts: number;
+  users: number;
+  sentiment: 'positive' | 'negative' | 'neutral';
+  trend: 'rising' | 'stable' | 'falling';
 }
 
 /** 根据时间范围计算日期范围 */
@@ -105,15 +105,31 @@ const generateTrendData = (statistics: EventStatisticsEntity[], currentHotness: 
 };
 
 /** 将数据库实体映射为前端需要的HotEvent格式 */
-const mapEventToHotEvent = (event: EventEntity, statistics: EventStatisticsEntity[]): HotEvent => {
+const mapEventToHotEvent = (event: EventEntity, statistics: EventStatisticsEntity[]) => {
+  const sentimentScore = getSentiment(event, statistics);
+
+  // 根据情感分数确定主导情感
+  const dominantSentiment = sentimentScore.positive >= sentimentScore.negative && sentimentScore.positive >= sentimentScore.neutral
+    ? 'positive'
+    : sentimentScore.negative >= sentimentScore.positive && sentimentScore.negative >= sentimentScore.neutral
+    ? 'negative'
+    : 'neutral';
+
+  const trend = calculateTrend(statistics);
+  const trendMapping = {
+    'up': 'rising' as const,
+    'down': 'falling' as const,
+    'stable': 'stable' as const
+  };
+
   return {
     id: event.id,
     title: event.title,
-    postCount: calculatePostCount(statistics),
-    sentiment: getSentiment(event, statistics),
-    hotness: event.hotness,
-    trend: calculateTrend(statistics),
-    trendData: generateTrendData(statistics, event.hotness)
+    heat: event.hotness,
+    posts: calculatePostCount(statistics),
+    users: statistics[0]?.user_count || 0,
+    sentiment: dominantSentiment,
+    trend: trendMapping[trend]
   };
 };
 

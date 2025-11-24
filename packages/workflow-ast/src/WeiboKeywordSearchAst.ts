@@ -16,11 +16,12 @@ export class WeiboKeywordSearchAst extends Ast {
     @State({ title: '页码', type: 'number' })
     page: number = 1;
 
+    @Output({ title: '帖子id' })
+    mblogid: string = ``
+    
     @Output({ title: '用户id' })
     uid: string = ``
 
-    @Output({ title: '帖子id' })
-    mblogid: string = ``
 
     @Output({ title: '是否结束' })
     isEnd: boolean = false;

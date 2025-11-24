@@ -14,6 +14,7 @@ import {
   StopCircle,
   ChevronLeft,
   ChevronRight,
+  Calendar,
 } from 'lucide-react'
 import { type WorkflowRunEntity, RunStatus } from '@sker/sdk'
 import { root } from '@sker/core'
@@ -39,6 +40,7 @@ export interface RunHistoryPanelProps {
   workflowId: number
   onClose: () => void
   onViewDetail?: (run: WorkflowRunEntity) => void
+  scheduleId?: number
 }
 
 export function RunHistoryPanel({
@@ -46,6 +48,7 @@ export function RunHistoryPanel({
   workflowId,
   onClose,
   onViewDetail,
+  scheduleId,
 }: RunHistoryPanelProps) {
   const [runs, setRuns] = useState<WorkflowRunEntity[]>([])
   const [total, setTotal] = useState(0)
@@ -59,7 +62,7 @@ export function RunHistoryPanel({
     if (visible) {
       loadRuns()
     }
-  }, [visible, page, statusFilter, workflowId])
+  }, [visible, page, statusFilter, workflowId, scheduleId])
 
   const loadRuns = async () => {
     setLoading(true)
@@ -70,6 +73,7 @@ export function RunHistoryPanel({
         page,
         pageSize,
         status: statusFilter,
+        scheduleId,
       })
 
       setRuns(result.runs)
@@ -123,7 +127,7 @@ export function RunHistoryPanel({
               <Clock className="h-5 w-5" strokeWidth={1.8} />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-white">运行历史</h3>
+              <h3 className="text-lg font-semibold text-white">{scheduleId ? `调度 #${scheduleId} 的运行历史` : '运行历史'}</h3>
               <p className="text-sm text-[#6c7a91]">共 {total} 条记录</p>
             </div>
           </div>
@@ -209,6 +213,12 @@ export function RunHistoryPanel({
                           </span>
                           {run.durationMs && (
                             <span>耗时 {formatDuration(run.durationMs)}</span>
+                          )}
+                          {run.scheduleId && (
+                            <span className="inline-flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              调度 #{run.scheduleId}
+                            </span>
                           )}
                         </div>
                       </div>

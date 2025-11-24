@@ -10,6 +10,7 @@ import {
   Download,
   UploadIcon,
   LayoutGrid,
+  Clock,
 } from 'lucide-react'
 
 export interface CanvasControlsProps {
@@ -19,6 +20,7 @@ export interface CanvasControlsProps {
   onExportWorkflow?: () => void
   onImportWorkflow?: () => void
   onOpenWorkflowSettings?: () => void
+  onOpenScheduleDialog?: () => void
 
   // 视图控制
   onZoomIn?: () => void
@@ -55,6 +57,7 @@ export const CanvasControls: React.FC<CanvasControlsProps> = ({
   onExportWorkflow,
   onImportWorkflow,
   onOpenWorkflowSettings,
+  onOpenScheduleDialog,
 
   // 视图控制
   onZoomIn,
@@ -92,6 +95,14 @@ export const CanvasControls: React.FC<CanvasControlsProps> = ({
         className="flex h-9 w-9 items-center justify-center rounded-md text-[#9da6b9] transition hover:bg-[#282e39] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111318]"
         title="工作流设置">
         <SettingsIcon className="h-4 w-4" strokeWidth={2} />
+      </button>
+
+      {/* 调度按钮 */}
+      <button
+        onClick={onOpenScheduleDialog}
+        className="flex h-9 w-9 items-center justify-center rounded-md text-[#9da6b9] transition hover:bg-[#282e39] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111318]"
+        title="调度设置">
+        <Clock className="h-4 w-4" strokeWidth={2} />
       </button>
 
       {/* 保存按钮 */}

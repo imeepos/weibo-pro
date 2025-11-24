@@ -40,10 +40,10 @@ export class WeiboKeywordSearchAstVisitor {
                 return;
             }
 
-            const { keyword, startDate, endDate, page = 1 } = ast;
+            const { keyword, startDate, endDate = new Date(), page = 1 } = ast;
             if (!keyword || !startDate || !endDate) {
                 ast.state = 'fail';
-                ast.setError(new NoRetryError('WeiboSearchUrlBuilderAst 缺少必要参数: keyword, start, end'));
+                ast.setError(new NoRetryError(`WeiboSearchUrlBuilderAst 缺少必要参数: keyword:${keyword}, start:${startDate}, end:${endDate}`));
                 obs.next({ ...ast });
                 return;
             }

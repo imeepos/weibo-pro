@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { X, Workflow, Palette, FileText, Tag } from 'lucide-react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { X, Workflow, Palette, FileText, Tag, Loader2 } from 'lucide-react'
 import { cn } from '../../utils/cn'
 import type { WorkflowGraphAst } from '@sker/workflow'
-import { Subject, merge, fromEvent, debounceTime, distinctUntilChanged, filter, map, startWith, tap } from 'rxjs'
+import { Subject, merge, debounceTime, distinctUntilChanged, filter, map, tap } from 'rxjs'
 
 export interface WorkflowSettingsDialogProps {
   visible: boolean
@@ -54,11 +54,12 @@ export function WorkflowSettingsDialog({
   const [tags, setTags] = useState<string[]>(workflow.tags || [])
   const [newTag, setNewTag] = useState('')
   const [nameError, setNameError] = useState('')
+  const [saving, setSaving] = useState(false)
 
   // 表单验证流
   const nameValidation$ = nameInput$.pipe(
-    debounceTime(300), // 防抖 300ms
-    distinctUntilChanged(), // 避免重复值
+    debounceTime(300),
+    distinctUntilChanged(),
     map(value => {
       if (!value.trim()) {
         return { value, error: '工作流名称不能为空' }
@@ -67,23 +68,6 @@ export function WorkflowSettingsDialog({
         return { value, error: '工作流名称不能超过50个字符' }
       }
       return { value, error: '' }
-    })
-  )
-
-  // 表单状态流 - 用于实时监控表单状态
-  const formState$ = merge(
-    nameInput$.pipe(map(value => ({ type: 'name', value }))),
-    descriptionInput$.pipe(map(value => ({ type: 'description', value }))),
-    colorChange$.pipe(map(value => ({ type: 'color', value }))),
-    customColorChange$.pipe(map(value => ({ type: 'customColor', value }))),
-    tagInput$.pipe(map(value => ({ type: 'tagInput', value }))),
-    addTag$.pipe(map(() => ({ type: 'addTag' }))),
-    removeTag$.pipe(map(tag => ({ type: 'removeTag', value: tag })))
-  ).pipe(
-    debounceTime(100), // 轻微防抖，避免过于频繁的更新
-    tap(state => {
-      // 可以在这里添加调试日志或性能监控
-      // console.log('Form state change:', state)
     })
   )
 
@@ -150,17 +134,15 @@ export function WorkflowSettingsDialog({
       colorSelection$.subscribe(),
       tagInputChange$.subscribe(),
       tagManagement$.subscribe(),
-      formState$.subscribe() // 监控表单状态变化
     ]
 
     return () => {
       subscriptions.forEach(sub => sub.unsubscribe())
     }
-  }, [])
+  }, [nameValidation$, descriptionInput$, colorSelection$, tagInputChange$, tagManagement$])
 
 
-  const handleSave = useCallback(() => {
-    // 最终验证
+  const handleSave = useCallback(async () => {
     if (!name.trim()) {
       setNameError('工作流名称不能为空')
       return
@@ -171,14 +153,30 @@ export function WorkflowSettingsDialog({
     }
 
     setNameError('')
-    onSave({
-      name,
-      description,
-      color: customColor || color,
-      tags,
-    })
-    onClose()
-  }, [name, description, customColor, color, tags, onSave, onClose])
+    setSaving(true)
+
+    try {
+      // 更新工作流属性
+      workflow.name = name
+      workflow.description = description
+      workflow.groupColor = customColor || color
+      workflow.tags = tags
+
+      // 调用父组件的保存回调
+      await onSave({
+        name,
+        description,
+        color: customColor || color,
+        tags,
+      })
+
+      onClose()
+    } catch (error: any) {
+      setNameError(error.message || '保存失败，请重试')
+    } finally {
+      setSaving(false)
+    }
+  }, [name, description, customColor, color, tags, workflow, onSave, onClose])
 
   // 事件处理函数
   const handleNameChange = (value: string) => {
@@ -427,15 +425,17 @@ export function WorkflowSettingsDialog({
             </button>
             <button
               onClick={handleSave}
-              disabled={!name.trim() || !!nameError}
+              disabled={!name.trim() || !!nameError || saving}
               className={cn(
                 'rounded-lg px-6 py-2 text-sm font-medium transition-colors',
-                name.trim() && !nameError
+                'flex items-center gap-2',
+                name.trim() && !nameError && !saving
                   ? 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
                   : 'cursor-not-allowed bg-slate-800 text-slate-600'
               )}
             >
-              保存设置
+              {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+              {saving ? '保存中...' : '保存设置'}
             </button>
           </div>
         </div>

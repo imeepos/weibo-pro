@@ -12,6 +12,7 @@ export * from './WeiboAjaxStatusesShowAstRender'
 export * from './WeiboKeywordSearchAstRender'
 export * from './WeiboLoginAstRender'
 export * from './WeiboLoginAstPreview'
+export * from './WeiboAccountPickAstRender'
 export * from './WorkflowGraphAstRender'
 export * from './WeiboUserDetectionAstRender';
 export * from './LlmTextAgentAstRender';

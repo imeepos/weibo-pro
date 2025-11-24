@@ -1,5 +1,15 @@
-import { EntityOptions, Entity as TypeormEntity, ViewEntityOptions, ViewEntity as TypeormViewEntity } from 'typeorm'
+import { EntityOptions, Entity as TypeormEntity, ViewEntity as TypeormViewEntity } from 'typeorm'
 import { InjectionToken, root, Type } from '@sker/core'
+
+interface ViewEntityOptions {
+  name?: string
+  expression?: string | ((connection: any) => any)
+  database?: string
+  schema?: string
+  synchronize?: boolean
+  materialized?: boolean
+}
+
 export const ENTITY = new InjectionToken<Type<any>[]>(`ENTITY`)
 
 export const Entity = (name?: string | EntityOptions, options?: EntityOptions): ClassDecorator => {

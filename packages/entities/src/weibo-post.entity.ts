@@ -423,43 +423,43 @@ export class WeiboPostEntity {
   @PrimaryColumn({ type: 'bigint', unsigned: true })
   id!: string;
 
-  @Column({ type: 'jsonb', name: 'visible' })
+  @Column({ type: 'jsonb', name: 'visible', nullable: true })
   visible!: Visible;
 
-  @Column({ type: 'varchar', length: 255, name: 'created_at' })
+  @Column({ type: 'varchar', length: 255, name: 'created_at', nullable: true })
   created_at!: string;
 
-  @Column({ type: 'varchar', length: 64, name: 'idstr' })
+  @Column({ type: 'varchar', length: 64, name: 'idstr', nullable: true })
   idstr!: string;
 
-  @Column({ type: 'varchar', length: 64, name: 'mid' })
+  @Column({ type: 'varchar', length: 64, name: 'mid', nullable: true })
   mid!: string;
 
-  @Column({ type: 'varchar', length: 64, name: 'mblogid' })
+  @Column({ type: 'varchar', length: 64, name: 'mblogid', nullable: true })
   mblogid!: string;
 
-  @Column({ type: 'jsonb', name: 'user' })
+  @Column({ type: 'jsonb', name: 'user', nullable: true })
   user!: User;
 
-  @Column({ type: 'boolean', name: 'can_edit' })
+  @Column({ type: 'boolean', name: 'can_edit', nullable: true })
   can_edit!: boolean;
 
   @Column({ type: 'integer', name: 'textLength', default: 0 })
   textLength!: number;
 
-  @Column({ type: 'jsonb', name: 'annotations' })
+  @Column({ type: 'jsonb', name: 'annotations', nullable: true })
   annotations!: Annotation[];
 
-  @Column({ type: 'text', name: 'source' })
+  @Column({ type: 'text', name: 'source', default: '' })
   source!: string;
 
-  @Column({ type: 'boolean', name: 'favorited' })
+  @Column({ type: 'boolean', name: 'favorited', default: false })
   favorited!: boolean;
 
   @Column({ type: 'varchar', length: 255, name: 'mark', nullable: true })
   mark!: string;
 
-  @Column({ type: 'varchar', length: 255, name: 'rid' })
+  @Column({ type: 'varchar', length: 255, name: 'rid', nullable: true })
   rid!: string;
 
   @Column({ type: 'varchar', length: 255, name: 'cardid', default: '' })
@@ -468,49 +468,49 @@ export class WeiboPostEntity {
   @Column({ type: 'jsonb', name: 'pic_ids', nullable: true })
   pic_ids!: string[];
 
-  @Column({ type: 'integer', name: 'pic_num' })
+  @Column({ type: 'integer', name: 'pic_num', nullable: true })
   pic_num!: number;
 
-  @Column({ type: 'boolean', name: 'is_paid' })
+  @Column({ type: 'boolean', name: 'is_paid', nullable: true })
   is_paid!: boolean;
 
   @Column({ type: 'text', name: 'pic_bg_new', nullable: true })
   pic_bg_new!: string | null;
 
-  @Column({ type: 'integer', name: 'mblog_vip_type' })
+  @Column({ type: 'integer', name: 'mblog_vip_type', nullable: true })
   mblog_vip_type!: number;
 
-  @Column({ type: 'jsonb', name: 'number_display_strategy' })
+  @Column({ type: 'jsonb', name: 'number_display_strategy', nullable: true })
   number_display_strategy!: NumberDisplayStrategy;
 
   @Column({ type: 'jsonb', name: 'title_source', nullable: true })
   title_source!: TitleSource | null;
 
-  @Column({ type: 'integer', name: 'reposts_count' })
+  @Column({ type: 'integer', name: 'reposts_count', nullable: true })
   reposts_count!: number;
 
-  @Column({ type: 'integer', name: 'comments_count' })
+  @Column({ type: 'integer', name: 'comments_count', nullable: true })
   comments_count!: number;
 
-  @Column({ type: 'integer', name: 'attitudes_count' })
+  @Column({ type: 'integer', name: 'attitudes_count', nullable: true })
   attitudes_count!: number;
 
-  @Column({ type: 'integer', name: 'attitudes_status' })
+  @Column({ type: 'integer', name: 'attitudes_status', nullable: true })
   attitudes_status!: number;
 
-  @Column({ type: 'boolean', name: 'isLongText' })
+  @Column({ type: 'boolean', name: 'isLongText', nullable: true })
   isLongText!: boolean;
 
-  @Column({ type: 'integer', name: 'mlevel' })
+  @Column({ type: 'integer', name: 'mlevel', nullable: true })
   mlevel!: number;
 
-  @Column({ type: 'integer', name: 'content_auth' })
+  @Column({ type: 'integer', name: 'content_auth', nullable: true })
   content_auth!: number;
 
-  @Column({ type: 'integer', name: 'is_show_bulletin' })
+  @Column({ type: 'integer', name: 'is_show_bulletin', nullable: true })
   is_show_bulletin!: number;
 
-  @Column({ type: 'jsonb', name: 'comment_manage_info' })
+  @Column({ type: 'jsonb', name: 'comment_manage_info', nullable: true })
   comment_manage_info!: CommentManageInfo;
 
   @Column({ type: 'jsonb', name: 'screen_name_suffix_new', nullable: true })

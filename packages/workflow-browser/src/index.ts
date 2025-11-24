@@ -15,6 +15,7 @@ import './EventAutoCreatorBrowserVisitor';
 import './WorkflowGraphBrowserVisitor';
 import "./WeiboUserDetectionAstVisitor";
 import "./LlmTextAgentAstVisitor";
+import "./WeiboAccountPickAstBrowserVisitor"
 
 // 微博 API 节点浏览器端执行器
 export { WeiboLoginBrowserVisitor } from './WeiboLoginBrowserVisitor';
@@ -42,3 +43,4 @@ export { WeiboUserDetectionAstVisitor } from './WeiboUserDetectionAstVisitor'
 export { LlmTextAgentAstVisitor } from './LlmTextAgentAstVisitor';
 export { TextAreaAstVisitor } from './TextAreaAstVisitor'
 export { DateAstVisitor } from './DateAstVisitor'
+export { WeiboAccountPickAstBrowserVisitor } from './WeiboAccountPickAstBrowserVisitor'

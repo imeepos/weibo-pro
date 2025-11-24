@@ -342,7 +342,7 @@ export class WeiboAuthService implements OnDestroy {
     cookies: Cookie[],
     userInfo: WeiboUserInfo,
   ): Promise<WeiboAccountEntity> {
-    return useEntityManager(async (m) => {
+    const savedAccount = await useEntityManager(async (m) => {
       const repo = m.getRepository(WeiboAccountEntity);
 
       // 检查是否已存在
@@ -377,6 +377,10 @@ export class WeiboAuthService implements OnDestroy {
 
       return savedAccount;
     });
+
+    await this.redis.zadd('weibo:account:health', 100, savedAccount.id.toString());
+
+    return savedAccount;
   }
 
   /**
