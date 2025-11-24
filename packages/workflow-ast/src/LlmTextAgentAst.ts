@@ -13,6 +13,12 @@ export class LlmTextAgentAst extends Ast {
     @Input({ title: '用户提示词' })
     prompt: string = ``;
 
+    @Input({ title: '温度' })
+    temperature: number = 0.5;
+
+    @Input({ title: '模型' })
+    model: string = `deepseek-ai/DeepSeek-V3.2-Exp`;
+
     @Output({ title: '输出' })
     text: string = ``;
 

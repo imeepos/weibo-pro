@@ -8,6 +8,11 @@ export type IAstStates = `pending` | `running` | `emitting` | `success` | `fail`
 
 // 状态数据的基础约束
 export interface INode extends Record<string, any> {
+     // 标题
+    name?: string;
+    // 简介
+    description?: string;
+    // 自定义颜色
     state: IAstStates;
     id: string;
     type: string;

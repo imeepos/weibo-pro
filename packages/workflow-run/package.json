@@ -31,6 +31,8 @@
     "main": "tsx src/main.ts"
   },
   "dependencies": {
+    "@langchain/core": "^1.0.2",
+    "@langchain/tavily": "^1.0.0",
     "@sker/core": "workspace:*",
     "@sker/entities": "workspace:*",
     "@sker/mq": "workspace:*",
@@ -39,8 +41,11 @@
     "@sker/workflow": "workspace:*",
     "@sker/workflow-ast": "workspace:*",
     "cheerio": "^1.1.2",
+    "deepagents": "^1.1.1",
+    "langchain": "^1.0.2",
     "playwright": "^1.56.1",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@sker/eslint-config": "workspace:*",

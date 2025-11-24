@@ -1,5 +1,6 @@
 import OpenAI, { ClientOptions } from 'openai';
 
+export { OpenAI }
 export function useOpenAi() {
   const config = getOpenAiConfig();
   validateOpenAiConfig(config);
