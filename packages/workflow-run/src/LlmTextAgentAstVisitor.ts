@@ -34,22 +34,10 @@ export class LlmTextAgentAstVisitor {
                     obs.complete()
                     return;
                 }
-                const chartModel = new ChatOpenAI({ model: ast.model });
+                const chartModel = new ChatOpenAI({ model: ast.model, temperature: ast.temperature });
+                const result = await chartModel.invoke(ast.prompt)
                 // 获取nodes
-                const nodes = ctx.nodes;
-                const agent = createAgent({
-                    name: ast.name,
-                    systemPrompt: ast.system,
-                    model: chartModel,
-                    tools: [getNodeTool(nodes)] // 解决 pnpm monorepo 中的模块解析类型问题
-                })
-                const result = await agent.invoke({
-                    messages: [
-                        { role: 'user', content: ast.prompt }
-                    ]
-                })
-                const messages = result.messages;
-                ast.text = messages[messages.length - 1]!.content as string;
+                ast.text = result.content as string;
                 ast.state = 'emitting'
                 obs.next({ ...ast })
 
