@@ -4,7 +4,7 @@ import { WeiboKeywordSearchAst } from "@sker/workflow-ast";
 import { WeiboHtmlParser } from "./services/WeiboHtmlParser";
 import { PlaywrightService } from "./services/PlaywrightService";
 import { WeiboAccountService } from "./services/weibo-account.service";
-import { delay } from "./services/utils";
+import { DelayService } from "./services/delay.service";
 import { Observable, Subscriber } from "rxjs";
 
 @Injectable()
@@ -12,7 +12,8 @@ export class WeiboKeywordSearchAstVisitor {
     constructor(
         @Inject(WeiboHtmlParser) private parser: WeiboHtmlParser,
         @Inject(PlaywrightService) private playwright: PlaywrightService,
-        @Inject(WeiboAccountService) private account: WeiboAccountService
+        @Inject(WeiboAccountService) private account: WeiboAccountService,
+        @Inject(DelayService) private delayService: DelayService
     ) { }
 
     @Handler(WeiboKeywordSearchAst)
@@ -62,14 +63,14 @@ export class WeiboKeywordSearchAstVisitor {
             let html = await this.playwright.getHtml(url, selection.cookieHeader, `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36`);
             let result = this.parser.parseSearchResultHtml(html);
 
-            // 2️⃣ 发射首页进度
-            await Promise.all(result.posts.map(async post => {
+            // 2️⃣ 发射首页进度（串行发射，确保延迟生效）
+            for (const post of result.posts) {
                 ast.state = 'emitting';
                 ast.mblogid = post.mid;
                 ast.uid = post.uid;
                 obs.next({ ...ast });
-                await delay();
-            }))
+                await this.delayService.randomDelay(ast.emitDelayMin || 1, ast.emitDelayMax || 3);
+            }
 
             // 第二步：分页采集
             let currentPageNum = 1;
@@ -91,22 +92,22 @@ export class WeiboKeywordSearchAstVisitor {
                         html = await this.playwright.getHtml(result.nextPageLink, selection.cookieHeader, `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36`);
                         result = this.parser.parseSearchResultHtml(html);
 
-                        // 3️⃣ 发射分页进度
+                        // 3️⃣ 发射分页进度（串行发射，确保延迟生效）
                         ast.currentPage = currentPageNum;
-                        await Promise.all(result.posts.map(async post => {
+                        for (const post of result.posts) {
                             ast.state = 'emitting';
                             ast.mblogid = post.mid;
                             ast.uid = post.uid;
                             obs.next({ ...ast });
-                            await delay();
-                        }))
+                            await this.delayService.randomDelay(ast.emitDelayMin || 1, ast.emitDelayMax || 3);
+                        }
 
                         pageSuccess = true;
 
                         if (result.totalCount) {
                             break;
                         }
-                        await delay();
+                        await this.delayService.randomDelay(ast.pageDelayMin || 3, ast.pageDelayMax || 5);
                     } catch (error) {
                         pageRetryCount++;
                         console.warn(`[WeiboKeywordSearchAstVisitor] 分页搜索失败，第${pageRetryCount}次重试: ${result.nextPageLink}`, error);
@@ -117,7 +118,7 @@ export class WeiboKeywordSearchAstVisitor {
                         }
 
                         // 重试前等待一段时间
-                        await delay();
+                        await this.delayService.randomDelay(ast.pageDelayMin || 3, ast.pageDelayMax || 5);
                     }
                 }
 

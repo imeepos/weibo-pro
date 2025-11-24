@@ -3,7 +3,8 @@ import { WeiboAccountService } from './weibo-account.service';
 import { WeiboRequestHeaderBuilder } from './weibo-request-header.builder';
 import { WeiboRefererBuilder } from './weibo-referer.builder';
 import { WeiboErrorHandler, WeiboError, WeiboErrorType } from './weibo-error.handler';
-import { delay } from './utils';
+import { DelayService } from './delay.service';
+import { RateLimiterService } from './rate-limiter.service';
 
 export interface FetchApiOptions {
     url: string;
@@ -31,6 +32,8 @@ export interface FetchPaginationOptions<T> {
 export abstract class WeiboApiClient {
     constructor(
         @Inject(WeiboAccountService) protected readonly accountService: WeiboAccountService,
+        @Inject(DelayService) protected readonly delayService: DelayService,
+        @Inject(RateLimiterService) protected readonly rateLimiter: RateLimiterService,
     ) {}
 
     /**

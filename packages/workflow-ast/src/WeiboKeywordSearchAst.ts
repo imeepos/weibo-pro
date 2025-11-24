@@ -16,9 +16,21 @@ export class WeiboKeywordSearchAst extends Ast {
     @State({ title: '页码', type: 'number' })
     page: number = 1;
 
+    @Input({ title: '发射最小延迟(秒)', type: 'number' })
+    emitDelayMin: number = 1;
+
+    @Input({ title: '发射最大延迟(秒)', type: 'number' })
+    emitDelayMax: number = 3;
+
+    @Input({ title: '翻页最小延迟(秒)', type: 'number' })
+    pageDelayMin: number = 3;
+
+    @Input({ title: '翻页最大延迟(秒)', type: 'number' })
+    pageDelayMax: number = 5;
+
     @Output({ title: '帖子id' })
     mblogid: string = ``
-    
+
     @Output({ title: '用户id' })
     uid: string = ``
 
