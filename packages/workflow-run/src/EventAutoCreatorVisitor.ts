@@ -127,7 +127,7 @@ export class EventAutoCreatorVisitor {
         .andWhere('nlp.created_at < :end', {
           end: new Date(snapshotAt.getTime() + 3600000),
         })
-        .select('COUNT(DISTINCT p.user_id)', 'count')
+        .select('COUNT(DISTINCT (p.user->>\'id\')::bigint)', 'count')
         .getRawOne();
       stats.user_count = parseInt(uniqueUserCount?.count || '1', 10);
 
