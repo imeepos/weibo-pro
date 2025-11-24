@@ -28,6 +28,9 @@ export class LlmTextAgentAstVisitor {
     handler(ast: LlmTextAgentAst, ctx: WorkflowGraphAst) {
         return new Observable((obs) => {
             const run = async () => {
+                ast.state = 'running';
+                obs.next({ ...ast })
+
                 if (!ast.prompt) {
                     ast.state = 'fail';
                     obs.next({ ...ast })

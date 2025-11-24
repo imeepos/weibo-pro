@@ -120,11 +120,13 @@ export class ReactiveScheduler {
     }
 
     /**
-     * 构建增量执行网络（直接重执行版本）
+     * 构建增量执行网络（递归构建版本）
      *
      * 策略：
      * - 受影响节点：重新构建流并执行
      * - 未受影响节点：复用原始网络中的 shareReplay 缓存
+     * - 递归构建：确保上游依赖先于下游构建（修复依赖顺序问题）
+     * - 循环检测：防止死锁
      */
     private buildIncrementalNetworkDirect(
         ctx: WorkflowGraphAst,
@@ -132,25 +134,56 @@ export class ReactiveScheduler {
         affectedNodes: Set<string>
     ): Map<string, Observable<INode>> {
         const incrementalNetwork = new Map<string, Observable<INode>>();
+        const building = new Set<string>();
 
-        ctx.nodes.forEach(node => {
-            if (affectedNodes.has(node.id)) {
-                // 受影响节点：重新构建流
-                const incomingEdges = ctx.edges.filter(e => e.to === node.id);
+        const buildNode = (nodeId: string): Observable<INode> => {
+            // 已构建：直接返回
+            if (incrementalNetwork.has(nodeId)) {
+                return incrementalNetwork.get(nodeId)!;
+            }
 
-                const newStream = incomingEdges.length === 0
+            // 正在构建：检测到循环依赖
+            if (building.has(nodeId)) {
+                const cycle = Array.from(building).join(' → ') + ' → ' + nodeId;
+                throw new Error(`检测到循环依赖: ${cycle}`);
+            }
+
+            building.add(nodeId);
+
+            const node = ctx.nodes.find(n => n.id === nodeId);
+            if (!node) {
+                throw new Error(`节点不存在: ${nodeId}`);
+            }
+
+            let stream: Observable<INode>;
+
+            if (affectedNodes.has(nodeId)) {
+                // 受影响节点：重新构建，但先递归构建所有上游
+                const incomingEdges = ctx.edges.filter(e => e.to === nodeId);
+
+                // 先递归构建所有上游节点
+                incomingEdges.forEach(edge => buildNode(edge.from));
+
+                stream = incomingEdges.length === 0
                     ? this.createEntryNodeStream(node, ctx)
                     : this._createNode(node, incomingEdges, incrementalNetwork, ctx);
-
-                incrementalNetwork.set(node.id, newStream);
             } else {
                 // 未受影响节点：复用原始流（利用 shareReplay 缓存）
-                const originalStream = originalNetwork.get(node.id);
-                if (originalStream) {
-                    incrementalNetwork.set(node.id, originalStream);
+                const originalStream = originalNetwork.get(nodeId);
+                if (!originalStream) {
+                    throw new Error(`原始节点流未找到: ${nodeId}`);
                 }
+                stream = originalStream;
             }
-        });
+
+            incrementalNetwork.set(nodeId, stream);
+            building.delete(nodeId);
+
+            return stream;
+        };
+
+        // 为所有节点构建流
+        ctx.nodes.forEach(node => buildNode(node.id));
 
         return incrementalNetwork;
     }

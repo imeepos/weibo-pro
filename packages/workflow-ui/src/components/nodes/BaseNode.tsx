@@ -198,8 +198,8 @@ export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNode>) =
       className={cn(
         'flex flex-col rounded-2xl border-[2px] relative',
         'group pb-1 shadow-xs rounded-[15px] bg-workflow-block-bg hover:shadow-lg',
-        'cursor-move select-none transition-all duration-200',
-        isCollapsed ? 'w-[180px]' : 'w-[240px]'
+        'cursor-move select-none transition-all duration-200 max-h-[480px]',
+        isCollapsed ? 'min-w-[180px]' : 'min-w-[240px]'
       )}
       style={{
         borderColor: getBorderColor(),
@@ -252,7 +252,9 @@ export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNode>) =
             isCollapsed={isCollapsed}
           />
         ))}
-        {!isCollapsed && CustomRender}
+        <div className="relative overflow-auto w-full h-full max-h-[380px]">
+          {!isCollapsed && CustomRender}
+        </div>
       </div>
     </div>
   )
