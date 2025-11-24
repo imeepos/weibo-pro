@@ -19,6 +19,11 @@ export class PostContextCollectorVisitor {
           ast.state = 'running';
           obs.next({ ...ast });
 
+          if (ast.canStart && ast.canStart.length > 0) {
+            const canStart = ast.canStart.every(it => !!it)
+            if (!canStart) return;
+          }
+
           // 验证 postId
           if (!ast.postId || ast.postId.trim().length === 0) {
             throw new Error('postId 不能为空');

@@ -467,6 +467,14 @@ export function WorkflowCanvas({
                   showToast('error', '请先保存工作流', '只有保存的工作流才能创建调度')
                 }
               }}
+              onOpenScheduleList={() => {
+                const workflowName = workflow.workflowAst?.name
+                if (workflowName) {
+                  openSchedulePanel(workflowName)
+                } else {
+                  showToast('error', '请先保存工作流', '只有保存的工作流才能查看调度')
+                }
+              }}
               onZoomIn={handleZoomIn}
               onZoomOut={handleZoomOut}
               onFitView={handleFitView}
@@ -589,6 +597,7 @@ export function WorkflowCanvas({
       {schedulePanel.visible && schedulePanel.workflowName && (
         <ScheduleList
           workflowName={schedulePanel.workflowName}
+          onClose={closeSchedulePanel}
           className="absolute top-4 right-4 w-[600px] max-h-[80vh] overflow-y-auto z-[5]"
         />
       )}

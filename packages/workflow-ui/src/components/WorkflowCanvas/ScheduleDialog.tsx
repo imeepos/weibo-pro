@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Clock, Info } from 'lucide-react'
 import { WorkflowController } from '@sker/sdk'
+import type { WorkflowScheduleEntity } from '@sker/entities'
 import { root } from '@sker/core'
 
 /**
@@ -11,6 +12,7 @@ import { root } from '@sker/core'
  *
  * 存在即合理:
  * - 创建工作流调度任务
+ * - 编辑现有调度配置
  * - 支持多种调度类型(Cron/间隔/一次性/手动)
  * - 自动计算下次执行时间
  * - 输入参数配置
@@ -19,9 +21,11 @@ import { root } from '@sker/core'
  * - 手工打造的 UI,无外部依赖
  * - 表单验证清晰明了
  * - 响应式布局
+ * - 编辑模式自动填充数据
  */
 export interface ScheduleDialogProps {
   workflowName: string
+  schedule?: WorkflowScheduleEntity | null
   open?: boolean
   onOpenChange?: (open: boolean) => void
   onSuccess?: () => void
@@ -54,7 +58,7 @@ const INTERVAL_UNITS: IntervalUnit[] = [
   { label: '天', value: 86400 },
 ]
 
-export function ScheduleDialog({ workflowName, open, onOpenChange, onSuccess }: ScheduleDialogProps) {
+export function ScheduleDialog({ workflowName, schedule, open, onOpenChange, onSuccess }: ScheduleDialogProps) {
   const [loading, setLoading] = useState(false)
   const [scheduleType, setScheduleType] = useState<string>('cron')
   const [name, setName] = useState('')
@@ -69,6 +73,55 @@ export function ScheduleDialog({ workflowName, open, onOpenChange, onSuccess }: 
   const [error, setError] = useState<string>('')
 
   const client = root.get<WorkflowController>(WorkflowController) as any
+  const isEditMode = !!schedule
+
+  // 编辑模式：初始化表单数据
+  useEffect(() => {
+    if (schedule) {
+      setName(schedule.name)
+      setScheduleType(schedule.scheduleType)
+
+      if (schedule.scheduleType === 'cron' && schedule.cronExpression) {
+        setCronExpression(schedule.cronExpression)
+        // 检查是否匹配模板
+        const matchedTemplate = CRON_TEMPLATES.find(t => t.value === schedule.cronExpression)
+        setCronTemplate(matchedTemplate?.value || '')
+      }
+
+      if (schedule.scheduleType === 'interval' && schedule.intervalSeconds) {
+        // 智能解析间隔时间
+        const seconds = schedule.intervalSeconds
+        if (seconds % 86400 === 0) {
+          setIntervalValue(seconds / 86400)
+          setIntervalUnit(86400)
+        } else if (seconds % 3600 === 0) {
+          setIntervalValue(seconds / 3600)
+          setIntervalUnit(3600)
+        } else if (seconds % 60 === 0) {
+          setIntervalValue(seconds / 60)
+          setIntervalUnit(60)
+        } else {
+          setIntervalValue(seconds)
+          setIntervalUnit(1)
+        }
+      }
+
+      setInputs(JSON.stringify(schedule.inputs || {}, null, 2))
+      setStartTime(schedule.startTime ? new Date(schedule.startTime) : undefined)
+      setEndTime(schedule.endTime ? new Date(schedule.endTime) : undefined)
+    } else {
+      // 新建模式：重置表单
+      setName('')
+      setScheduleType('cron')
+      setCronExpression('0 * * * *')
+      setCronTemplate('0 * * * *')
+      setIntervalValue(1)
+      setIntervalUnit(60)
+      setInputs('{}')
+      setStartTime(undefined)
+      setEndTime(undefined)
+    }
+  }, [schedule])
 
   // 计算下次执行时间
   useEffect(() => {
@@ -153,31 +206,47 @@ export function ScheduleDialog({ workflowName, open, onOpenChange, onSuccess }: 
     try {
       const intervalSeconds = scheduleType === 'interval' ? intervalValue * intervalUnit : undefined
 
-      await client.createSchedule(workflowName, {
-        name: name.trim(),
-        scheduleType,
-        cronExpression: scheduleType === 'cron' ? cronExpression : undefined,
-        intervalSeconds,
-        inputs: JSON.parse(inputs),
-        startTime,
-        endTime,
-      })
+      if (isEditMode && schedule) {
+        // 编辑模式：更新现有调度
+        await client.updateSchedule(schedule.id, {
+          name: name.trim(),
+          scheduleType,
+          cronExpression: scheduleType === 'cron' ? cronExpression : undefined,
+          intervalSeconds,
+          inputs: JSON.parse(inputs),
+          startTime,
+          endTime,
+        })
+      } else {
+        // 新建模式：创建新调度
+        await client.createSchedule(workflowName, {
+          name: name.trim(),
+          scheduleType,
+          cronExpression: scheduleType === 'cron' ? cronExpression : undefined,
+          intervalSeconds,
+          inputs: JSON.parse(inputs),
+          startTime,
+          endTime,
+        })
+      }
 
       onSuccess?.()
       onOpenChange?.(false)
 
-      // 重置表单
-      setName('')
-      setCronExpression('0 * * * *')
-      setCronTemplate('0 * * * *')
-      setIntervalValue(1)
-      setIntervalUnit(60)
-      setInputs('{}')
-      setStartTime(undefined)
-      setEndTime(undefined)
+      // 重置表单（仅在新建模式下）
+      if (!isEditMode) {
+        setName('')
+        setCronExpression('0 * * * *')
+        setCronTemplate('0 * * * *')
+        setIntervalValue(1)
+        setIntervalUnit(60)
+        setInputs('{}')
+        setStartTime(undefined)
+        setEndTime(undefined)
+      }
     } catch (err: unknown) {
       const error = err as Error
-      setError(error.message || '创建调度失败')
+      setError(error.message || (isEditMode ? '更新调度失败' : '创建调度失败'))
     } finally {
       setLoading(false)
     }
@@ -216,8 +285,12 @@ export function ScheduleDialog({ workflowName, open, onOpenChange, onSuccess }: 
               <Clock className="h-5 w-5" strokeWidth={1.8} />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-white">创建工作流调度</h3>
-              <p className="text-sm text-[#6c7a91]">设置工作流的自动执行计划,支持多种调度方式</p>
+              <h3 className="text-lg font-semibold text-white">
+                {isEditMode ? '编辑工作流调度' : '创建工作流调度'}
+              </h3>
+              <p className="text-sm text-[#6c7a91]">
+                {isEditMode ? '修改工作流的自动执行计划配置' : '设置工作流的自动执行计划,支持多种调度方式'}
+              </p>
             </div>
           </div>
           <button
@@ -420,7 +493,7 @@ export function ScheduleDialog({ workflowName, open, onOpenChange, onSuccess }: 
             disabled={loading}
             className="rounded-lg bg-[#135bec] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1b6aff] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#135bec] focus-visible:ring-offset-2 focus-visible:ring-offset-[#111318] disabled:opacity-50"
           >
-            {loading ? '创建中...' : '创建调度'}
+            {loading ? (isEditMode ? '保存中...' : '创建中...') : (isEditMode ? '保存' : '创建调度')}
           </button>
         </div>
       </div>

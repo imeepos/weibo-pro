@@ -21,6 +21,7 @@ export interface CanvasControlsProps {
   onImportWorkflow?: () => void
   onOpenWorkflowSettings?: () => void
   onOpenScheduleDialog?: () => void
+  onOpenScheduleList?: () => void
 
   // 视图控制
   onZoomIn?: () => void
@@ -58,6 +59,7 @@ export const CanvasControls: React.FC<CanvasControlsProps> = ({
   onImportWorkflow,
   onOpenWorkflowSettings,
   onOpenScheduleDialog,
+  onOpenScheduleList,
 
   // 视图控制
   onZoomIn,
@@ -99,9 +101,9 @@ export const CanvasControls: React.FC<CanvasControlsProps> = ({
 
       {/* 调度按钮 */}
       <button
-        onClick={onOpenScheduleDialog}
+        onClick={onOpenScheduleList}
         className="flex h-9 w-9 items-center justify-center rounded-md text-[#9da6b9] transition hover:bg-[#282e39] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111318]"
-        title="调度设置">
+        title="调度管理">
         <Clock className="h-4 w-4" strokeWidth={2} />
       </button>
 
