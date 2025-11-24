@@ -48,7 +48,10 @@ export class WeiboAjaxStatusesLikeShowAstVisitor extends WeiboApiClient {
                         shouldContinue: (data) => data.data.length > 0
                     })) {
                         await useEntityManager(async m => {
-                            const userEntities = body.data.map(item => m.create(WeiboUserEntity, item.user));
+                            const uniqueUsers = Array.from(
+                                new Map(body.data.map(item => [item.user.id, item.user])).values()
+                            );
+                            const userEntities = uniqueUsers.map(user => m.create(WeiboUserEntity, user));
                             console.log(`[${page}]处理${userEntities.length}个用户`);
                             await m.upsert(WeiboUserEntity, userEntities as any[], ['id']);
 

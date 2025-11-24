@@ -53,9 +53,14 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
                     break;
                 }
                 await useEntityManager(async m => {
-                    const users = statuses
-                        .filter(item => item.user)
-                        .map(item => m.create(WeiboUserEntity, item.user as any));
+                    const uniqueUsers = Array.from(
+                        new Map(
+                            statuses
+                                .filter(item => item.user)
+                                .map(item => [item.user.id, item.user])
+                        ).values()
+                    );
+                    const users = uniqueUsers.map(user => m.create(WeiboUserEntity, user as any));
 
                     if (users.length > 0) {
                         await m.upsert(WeiboUserEntity, users as any[], ['id']);

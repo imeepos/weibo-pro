@@ -45,7 +45,10 @@ export class WeiboAjaxStatusesRepostTimelineAstVisitor extends WeiboApiClient {
                         shouldContinue: (data) => data.data.length > 0
                     })) {
                         await useEntityManager(async m => {
-                            const users = body.data.map(item => m.create(WeiboUserEntity, item.user));
+                            const uniqueUsers = Array.from(
+                                new Map(body.data.map(item => [item.user.id, item.user])).values()
+                            );
+                            const users = uniqueUsers.map(user => m.create(WeiboUserEntity, user));
                             await m.upsert(WeiboUserEntity, users as any[], ['id']);
 
                             const entities = body.data.map(item => m.create(WeiboRepostEntity, item));
