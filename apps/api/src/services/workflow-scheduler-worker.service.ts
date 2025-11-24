@@ -1,9 +1,8 @@
 import { Injectable } from '@sker/core'
 import { DataSource } from 'typeorm'
-import { WorkflowScheduleEntity, ScheduleStatus, WorkflowRunEntity } from '@sker/entities'
+import { WorkflowScheduleEntity, ScheduleStatus, WorkflowEntity } from '@sker/entities'
 import { WorkflowScheduleService } from './workflow-schedule.service'
 import { WorkflowRunService } from './workflow-run.service'
-import { WorkflowService } from './workflow.service'
 import * as cron from 'node-cron'
 import { logger } from '@sker/core'
 
@@ -17,8 +16,7 @@ export class WorkflowSchedulerWorker {
   constructor(
     private dataSource: DataSource,
     private scheduleService: WorkflowScheduleService,
-    private runService: WorkflowRunService,
-    private workflowService: WorkflowService
+    private runService: WorkflowRunService
   ) {}
 
   async start(): Promise<void> {
@@ -32,10 +30,10 @@ export class WorkflowSchedulerWorker {
     // 启动定时任务
     this.schedulerJob = cron.schedule(this.scanInterval, async () => {
       await this.processSchedules()
-    }, {
-      scheduled: true,
-      runOnInit: true // 启动时立即执行一次
     })
+
+    // 立即执行一次
+    await this.processSchedules()
 
     logger.info('Workflow scheduler worker started')
   }
@@ -86,31 +84,34 @@ export class WorkflowSchedulerWorker {
 
     try {
       // 获取工作流
-      const workflow = await this.workflowService.getWorkflowById(schedule.workflowId)
+      const workflow = await this.dataSource
+        .getRepository(WorkflowEntity)
+        .findOne({ where: { id: schedule.workflowId } })
+
       if (!workflow) {
         logger.error(`Workflow ${schedule.workflowId} not found for schedule ${schedule.id}`)
         return
       }
 
       // 创建工作流运行实例
-      const run = await this.runService.createRun({
-        workflowId: schedule.workflowId,
-        scheduleId: schedule.id,
-        inputs: {
+      const run = await this.runService.createRun(
+        schedule.workflowId,
+        {
           ...workflow.defaultInputs,
           ...schedule.inputs
         },
-        graphSnapshot: workflow.graphDefinition
-      })
+        schedule.id
+      )
 
       logger.info(`Created run ${run.id} for schedule ${schedule.id}`)
 
       // 更新调度状态（在事务中）
+      const nextRunAt = this.calculateNextRunTime(schedule)
       await this.dataSource.transaction(async manager => {
         // 更新调度的执行时间
         await manager.update(WorkflowScheduleEntity, schedule.id, {
           lastRunAt: new Date(),
-          nextRunAt: this.calculateNextRunTime(schedule)
+          nextRunAt: nextRunAt ?? undefined
         })
       })
 
@@ -150,7 +151,7 @@ export class WorkflowSchedulerWorker {
           .getRepository(WorkflowScheduleEntity)
           .update(ids, {
             status: ScheduleStatus.EXPIRED,
-            nextRunAt: null
+            nextRunAt: undefined
           })
 
         logger.info(`Updated ${ids.length} schedules to expired status`)

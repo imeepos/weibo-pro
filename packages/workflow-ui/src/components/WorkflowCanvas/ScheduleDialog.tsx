@@ -68,7 +68,7 @@ export function ScheduleDialog({ workflowId, open, onOpenChange, onSuccess }: Sc
   const [nextRunTime, setNextRunTime] = useState<Date | undefined>()
   const [error, setError] = useState<string>('')
 
-  const client = root.get(WorkflowController)
+  const client = root.get<WorkflowController>(WorkflowController) as any
 
   // 计算下次执行时间
   useEffect(() => {

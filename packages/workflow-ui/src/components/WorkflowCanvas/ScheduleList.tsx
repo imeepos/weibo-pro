@@ -53,7 +53,7 @@ const TYPE_CONFIG: Record<ScheduleType, TypeConfig> = {
 }
 
 export function ScheduleList({ workflowId, className = '' }: ScheduleListProps) {
-  const client = root.get(WorkflowController)
+  const client = root.get<WorkflowController>(WorkflowController) as any
   const [schedules, setSchedules] = useState<WorkflowScheduleEntity[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')

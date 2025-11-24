@@ -463,7 +463,7 @@ export function WorkflowCanvas({
                 if (workflowId) {
                   openScheduleDialog(workflowId)
                 } else {
-                  showToast('warning', '请先保存工作流', '只有保存的工作流才能创建调度')
+                  showToast('error', '请先保存工作流', '只有保存的工作流才能创建调度')
                 }
               }}
               onZoomIn={handleZoomIn}
