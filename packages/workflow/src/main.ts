@@ -186,7 +186,7 @@ async function testSingleNode() {
 
     console.log('开始调度...\n');
 
-    scheduler.schedule(ast, {}).subscribe({
+    scheduler.schedule(ast, ast).subscribe({
         next: (result) => {
             console.log(`\n工作流状态更新: ${result.state}`);
             console.log(`节点状态:`, result.nodes.map(n => `${n.id}=${n.state}`));
