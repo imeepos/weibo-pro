@@ -18,6 +18,7 @@ export class WeiboLoginAstVisitor {
   @Handler(WeiboLoginAst)
   handler(ast: WeiboLoginAst, ctx: any): Observable<INode> {
     return new Observable<INode>(obs => {
+      ast.count += 1;
       this.authService.startLogin(ast, obs)
     })
   }

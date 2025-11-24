@@ -205,6 +205,7 @@ export class EventAutoCreatorVisitor {
       const handler = async () => {
         try {
           ast.state = 'running';
+          ast.count += 1;
           obs.next(ast);
 
           await useEntityManager(async (m) => {

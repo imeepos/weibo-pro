@@ -36,6 +36,7 @@ export class ReactiveScheduler {
         ast.state = 'pending';
         ast.nodes = ast.nodes.map(node => {
             node.state = 'pending';
+            node.count = 0;
             return node;
         })
         return ast;

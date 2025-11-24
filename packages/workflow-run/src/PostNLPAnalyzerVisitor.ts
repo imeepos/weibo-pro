@@ -20,6 +20,7 @@ export class PostNLPAnalyzerVisitor {
       const handler = async () => {
         try {
           ast.state = 'running';
+          ast.count += 1;
           obs.next({ ...ast });
 
           const { availableCategories, availableTags, recentEvents } = await useEntityManager(async (m) => {

@@ -17,6 +17,7 @@ export class PostContextCollectorVisitor {
       const handler = async () => {
         try {
           ast.state = 'running';
+          ast.count += 1;
           obs.next({ ...ast });
 
           if (ast.canStart && ast.canStart.length > 0) {

@@ -22,6 +22,7 @@ export class WeiboAjaxStatusesShowAstVisitor extends WeiboApiClient {
             const handler = async () => {
                 try {
                     ast.state = 'running';
+                    ast.count += 1;
                     obs.next({ ...ast });
 
                     const url = `https://weibo.com/ajax/statuses/show?id=${ast.mblogid}&locale=zh-CN&isGetLongText=true`;

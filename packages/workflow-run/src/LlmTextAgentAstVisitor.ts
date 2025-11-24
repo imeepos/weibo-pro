@@ -29,6 +29,7 @@ export class LlmTextAgentAstVisitor {
         return new Observable((obs) => {
             const run = async () => {
                 ast.state = 'running';
+                ast.count += 1;
                 obs.next({ ...ast })
 
                 if (!ast.prompt) {

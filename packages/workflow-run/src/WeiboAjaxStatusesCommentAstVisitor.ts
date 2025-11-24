@@ -29,6 +29,7 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
             const handler = async () => {
                 try {
                     ast.state = 'running';
+                    ast.count += 1;
                     obs.next({ ...ast });
 
                     while (true) {

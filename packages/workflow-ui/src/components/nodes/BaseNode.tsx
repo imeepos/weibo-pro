@@ -36,7 +36,7 @@ const StateIcon = ({ state }: { state: IAstStates }) => {
 /**
  * 状态徽章组件
  */
-const StatusBadge = ({ state }: { state?: IAstStates }) => {
+const StatusBadge = ({ state, count }: { state?: IAstStates, count: number }) => {
   if (!state || state === 'pending') return null
 
   const stateColor = NODE_STATE_COLORS[state]
@@ -61,7 +61,7 @@ const StatusBadge = ({ state }: { state?: IAstStates }) => {
       title={stateLabel}
     >
       <StateIcon state={state} />
-      <span>{stateLabel}</span>
+      <span>{stateLabel}({count})</span>
     </div>
   )
 }
@@ -208,7 +208,7 @@ export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNode>) =
       onContextMenu={handleContextMenu}
       onDoubleClick={handleDoubleClick}
     >
-      <StatusBadge state={data.state as IAstStates} />
+      <StatusBadge state={data.state as IAstStates} count={data.count || 0}/>
 
       <div className="flex items-center rounded-t-2xl px-3 py-4 border-b">
         <div

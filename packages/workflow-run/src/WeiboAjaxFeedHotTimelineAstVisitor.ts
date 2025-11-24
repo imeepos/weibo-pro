@@ -31,6 +31,7 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
     private async handler(ast: WeiboAjaxFeedHotTimelineAst, obs: Subscriber<INode>) {
         try {
             let pageCount = 0;
+            ast.count += 1;
             ast.state = 'running';
             obs.next({ ...ast })
             while (true) {

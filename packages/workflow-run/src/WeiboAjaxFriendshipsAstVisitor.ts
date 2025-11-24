@@ -22,6 +22,7 @@ export class WeiboAjaxFriendshipsAstVisitor extends WeiboApiClient {
             const handler = async () => {
                 try {
                     ast.state = 'running';
+                    ast.count += 1;
                     obs.next({ ...ast });
 
                     const url = `https://weibo.com/ajax/friendships/friends?page=${ast.page || 1}&uid=${ast.uid}`;

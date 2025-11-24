@@ -30,6 +30,7 @@ export class WeiboAjaxProfileInfoAstVisitor extends WeiboApiClient {
             const handler = async () => {
                 try {
                     ast.state = 'running';
+                    ast.count += 1;
                     obs.next({ ...ast });
 
                     const url = `https://weibo.com/ajax/profile/info?uid=${ast.uid}`;

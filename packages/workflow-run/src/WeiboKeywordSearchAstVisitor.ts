@@ -55,6 +55,7 @@ export class WeiboKeywordSearchAstVisitor {
 
             // 1️⃣ 发射初始状态
             ast.state = 'running';
+            ast.count += 1;
             ast.currentPage = 1;
             obs.next({ ...ast });
 

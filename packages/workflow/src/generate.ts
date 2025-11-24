@@ -140,6 +140,7 @@ export function toJson(ast: Ast): INode {
         ...inputs,
         ...outputs,
         ...states,
+        count: ast.count,
         type: ast.type,
         id: ast.id,
         state: ast.state,

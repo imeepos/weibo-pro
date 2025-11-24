@@ -14,6 +14,7 @@ export interface INode extends Record<string, any> {
     description?: string;
     // 自定义颜色
     state: IAstStates;
+    count: number;
     id: string;
     type: string;
     error: Error | undefined;

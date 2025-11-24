@@ -23,6 +23,7 @@ export class WeiboAccountPickAstVisitor {
             const handler = async () => {
                 try {
                     ast.state = 'running';
+                    ast.count += 1;
                     obs.next({ ...ast });
 
                     const accounts = await useEntityManager(async m => {
