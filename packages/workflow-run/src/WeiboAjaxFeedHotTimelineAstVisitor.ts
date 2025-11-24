@@ -1,10 +1,11 @@
-import { Injectable } from "@sker/core";
+import { Inject, Injectable } from "@sker/core";
 import { WeiboAccountService } from "./services/weibo-account.service";
+import { DelayService } from "./services/delay.service";
+import { RateLimiterService } from "./services/rate-limiter.service";
 import { Handler, INode } from '@sker/workflow'
 import { WeiboAjaxFeedHotTimelineAst } from '@sker/workflow-ast'
 import { useEntityManager, WeiboPostEntity, WeiboUserEntity } from "@sker/entities";
 import { WeiboApiClient } from "./services/weibo-api-client.base";
-import { delay } from "./services/utils";
 import { Observable, Subscriber } from 'rxjs'
 export interface WeiboAjaxFeedHotTimelineResponse {
     readonly ok: number;
@@ -16,8 +17,12 @@ export interface WeiboAjaxFeedHotTimelineResponse {
 
 @Injectable()
 export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
-    constructor(accountService: WeiboAccountService) {
-        super(accountService);
+    constructor(
+        @Inject(WeiboAccountService) accountService: WeiboAccountService,
+        @Inject(DelayService) delayService: DelayService,
+        @Inject(RateLimiterService) rateLimiter: RateLimiterService
+    ) {
+        super(accountService, delayService, rateLimiter);
     }
 
     @Handler(WeiboAjaxFeedHotTimelineAst)
@@ -69,7 +74,7 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
                 if (body.max_id) ast.max_id = body.max_id;
                 if (body.since_id) ast.since_id = body.since_id;
 
-                await delay();
+                await this.delayService.randomDelay(3, 5);
                 break;
             }
 

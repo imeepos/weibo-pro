@@ -1,10 +1,12 @@
-import { Injectable } from "@sker/core";
+import { Inject, Injectable } from "@sker/core";
 import { useEntityManager, WeiboUserEntity } from "@sker/entities";
 import { WeiboAccountService } from "./services/weibo-account.service";
 import { Handler, INode } from "@sker/workflow";
 import { WeiboAjaxProfileInfoAst } from "@sker/workflow-ast";
 import { WeiboApiClient } from "./services/weibo-api-client.base";
 import { Observable } from "rxjs";
+import { DelayService } from "./services/delay.service";
+import { RateLimiterService } from "./services/rate-limiter.service";
 
 export interface WeiboAjaxProfileInfoAstResponse {
     ok: number;
@@ -20,8 +22,12 @@ export interface WeiboAjaxProfileDetailResponse {
 
 @Injectable()
 export class WeiboAjaxProfileInfoAstVisitor extends WeiboApiClient {
-    constructor(accountService: WeiboAccountService) {
-        super(accountService);
+    constructor(
+        @Inject(WeiboAccountService) accountService: WeiboAccountService,
+        @Inject(DelayService) delayService: DelayService,
+        @Inject(RateLimiterService) rateLimiter: RateLimiterService
+    ) {
+        super(accountService, delayService, rateLimiter);
     }
 
     @Handler(WeiboAjaxProfileInfoAst)

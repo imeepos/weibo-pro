@@ -1,9 +1,11 @@
-import { Injectable } from "@sker/core";
+import { Inject, Injectable } from "@sker/core";
 import { WeiboAccountService } from "./services/weibo-account.service";
 import { Handler, INode } from "@sker/workflow";
 import { WeiboAjaxFriendshipsAst } from "@sker/workflow-ast";
 import { WeiboApiClient } from "./services/weibo-api-client.base";
 import { Observable } from "rxjs";
+import { DelayService } from "./services/delay.service";
+import { RateLimiterService } from "./services/rate-limiter.service";
 
 export interface WeiboAjaxFriendshipsResponse {
     ok: number;
@@ -12,8 +14,12 @@ export interface WeiboAjaxFriendshipsResponse {
 
 @Injectable()
 export class WeiboAjaxFriendshipsAstVisitor extends WeiboApiClient {
-    constructor(accountService: WeiboAccountService) {
-        super(accountService);
+    constructor(
+        @Inject(WeiboAccountService) accountService: WeiboAccountService,
+        @Inject(DelayService) delayService: DelayService,
+        @Inject(RateLimiterService) rateLimiter: RateLimiterService
+    ) {
+        super(accountService, delayService, rateLimiter);
     }
 
     @Handler(WeiboAjaxFriendshipsAst)

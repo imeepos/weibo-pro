@@ -1,10 +1,12 @@
-import { Injectable } from "@sker/core";
+import { Inject, Injectable } from "@sker/core";
 import { useEntityManager, WeiboUserEntity, WeiboLikeEntity } from "@sker/entities";
 import { WeiboAccountService } from "./services/weibo-account.service";
 import { Handler, INode } from "@sker/workflow";
 import { WeiboAjaxStatusesLikeShowAst } from "@sker/workflow-ast";
 import { WeiboApiClient } from "./services/weibo-api-client.base";
 import { Observable } from "rxjs";
+import { DelayService } from "./services/delay.service";
+import { RateLimiterService } from "./services/rate-limiter.service";
 
 export interface WeiboStatusAttitude {
     readonly user: WeiboUserEntity;
@@ -19,8 +21,12 @@ export interface WeiboStatusLikeShowResponse {
 
 @Injectable()
 export class WeiboAjaxStatusesLikeShowAstVisitor extends WeiboApiClient {
-    constructor(accountService: WeiboAccountService) {
-        super(accountService);
+    constructor(
+        @Inject(WeiboAccountService) accountService: WeiboAccountService,
+        @Inject(DelayService) delayService: DelayService,
+        @Inject(RateLimiterService) rateLimiter: RateLimiterService
+    ) {
+        super(accountService, delayService, rateLimiter);
     }
 
     @Handler(WeiboAjaxStatusesLikeShowAst)
