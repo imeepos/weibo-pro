@@ -17,7 +17,7 @@ export class WorkflowExecutorVisitor {
      * - ctx.useReactiveScheduler: false → 使用传统调度器（默认，向后兼容）
      */
     @Handler(WorkflowGraphAst)
-    visit(ast: WorkflowGraphAst, ctx: any): Observable<INode> {
+    visit(ast: WorkflowGraphAst, ctx: WorkflowGraphAst): Observable<INode> {
         const scheduler = root.get(ReactiveScheduler);
         return scheduler.schedule(ast, ctx);
     }
@@ -31,7 +31,7 @@ export class WorkflowExecutorVisitor {
  * - 自动转换 JSON 为 AST 实例
  * - 委托给 Visitor 执行
  */
-export function executeAst<S extends INode>(state: S, context: any): Observable<S> {
+export function executeAst<S extends INode>(state: S, context: WorkflowGraphAst): Observable<S> {
     const ast = fromJson(state);
     const visitor = root.get(VisitorExecutor)
     // 单步执行 每次返回单步执行后的 结果

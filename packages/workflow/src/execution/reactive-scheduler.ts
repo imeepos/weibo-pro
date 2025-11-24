@@ -32,7 +32,7 @@ export class ReactiveScheduler {
     /**
      * 调度工作流：将工作流图转换为响应式流网络
      */
-    schedule(ast: WorkflowGraphAst, ctx: any): Observable<WorkflowGraphAst> {
+    schedule(ast: WorkflowGraphAst, ctx: WorkflowGraphAst): Observable<WorkflowGraphAst> {
         const { state } = ast;
 
         // 已完成的工作流直接返回
@@ -414,7 +414,7 @@ export class ReactiveScheduler {
      */
     private buildStreamNetwork(
         ast: WorkflowGraphAst,
-        ctx: any
+        ctx: WorkflowGraphAst
     ): Map<string, Observable<INode>> {
         const network = new Map<string, Observable<INode>>();
         const building = new Set<string>(); // 正在构建的节点（循环检测）
@@ -471,7 +471,7 @@ export class ReactiveScheduler {
      * - 多个下游订阅时共享执行结果
      * - bufferSize: 2 确保 emitting 和 success 都能被重播
      */
-    private createEntryNodeStream(node: INode, ctx: any): Observable<INode> {
+    private createEntryNodeStream(node: INode, ctx: WorkflowGraphAst): Observable<INode> {
         return this.executeNode(node, ctx).pipe(
             subscribeOn(asyncScheduler),
             shareReplay({ bufferSize: 2, refCount: true })
@@ -633,7 +633,7 @@ export class ReactiveScheduler {
     /**
      * 执行单个节点（复用现有 executeAst）
      */
-    private executeNode(node: INode, ctx: any): Observable<INode> {
+    private executeNode(node: INode, ctx: WorkflowGraphAst): Observable<INode> {
         return executeAst(node, ctx).pipe(
             catchError(error => {
                 node.state = 'fail';

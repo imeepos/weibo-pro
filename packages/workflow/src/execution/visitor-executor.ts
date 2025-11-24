@@ -1,5 +1,5 @@
 import { Injectable, root } from '@sker/core';
-import { Visitor } from '../ast';
+import { Visitor, WorkflowGraphAst } from '../ast';
 import { findNodeType, HANDLER_METHOD } from '../decorator';
 import { NoRetryError } from '../errors';
 import { Observable, of, from } from 'rxjs';
@@ -17,7 +17,7 @@ import { INode } from '../types';
  */
 @Injectable()
 export class VisitorExecutor implements Visitor {
-    visit(ast: INode, ctx: any): Observable<INode> {
+    visit(ast: INode, ctx: WorkflowGraphAst): Observable<INode> {
         const type = findNodeType(ast.type);
         const methods = root.get(HANDLER_METHOD, []);
 

@@ -21,14 +21,14 @@
     "test": "ts-node -r tsconfig-paths/register src/main.ts"
   },
   "dependencies": {
-    "@langchain/core": "^1.0.2",
+    "@langchain/core": "^1.0.4",
     "@langchain/langgraph": "^1.0.1",
-    "@langchain/openai": "^1.0.0",
+    "@langchain/openai": "^1.1.0",
     "@sker/core": "workspace:*",
     "@sker/entities": "workspace:*",
     "@sker/nlp": "workspace:*",
     "@sker/workflow-run": "workspace:*",
-    "langchain": "^1.0.2",
+    "langchain": "^1.0.4",
     "typeorm": "^0.3.20",
     "zod": "^3.23.8"
   },

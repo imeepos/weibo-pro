@@ -1,32 +1,31 @@
 import { Injectable, root } from "@sker/core";
-import { DataFlowManager, Handler, INode } from "@sker/workflow";
+import { DataFlowManager, Handler, INode, WorkflowGraphAst } from "@sker/workflow";
 import { LlmTextAgentAst } from "@sker/workflow-ast";
 import { Observable } from "rxjs";
-import { tool } from "langchain";
 import { z } from 'zod'
-import { createDeepAgent } from "deepagents";
-
+import { DynamicStructuredTool } from "@langchain/core/tools";
+import { ChatOpenAI } from "@langchain/openai";
+import { createAgent } from "langchain";
 export const getNodeTool = (nodes: INode[]) => {
-    return tool(
-        async ({ name }) => {
+    const tool = new DynamicStructuredTool({
+        name: 'getNode',
+        description: 'get node content',
+        schema: z.object({ name: z.string() }),
+        func: async ({ name }) => {
             const filterNodes = nodes.filter(node => node.name === name)
             const dataFlowManager = root.get(DataFlowManager)
             return filterNodes.map(it => {
                 return { name: it.name, description: it.description, content: dataFlowManager.extractNodeOutputs(it) }
             })
-        },
-        {
-            name: 'getNode', description: `get node content`, schema: z.object({
-                name: z.string()
-            })
         }
-    )
+    })
+    return tool
 }
 @Injectable()
 export class LlmTextAgentAstVisitor {
 
     @Handler(LlmTextAgentAst)
-    handler(ast: LlmTextAgentAst, ctx: any) {
+    handler(ast: LlmTextAgentAst, ctx: WorkflowGraphAst) {
         return new Observable((obs) => {
             const run = async () => {
                 if (!ast.prompt) {
@@ -35,14 +34,22 @@ export class LlmTextAgentAstVisitor {
                     obs.complete()
                     return;
                 }
-                const agent = createDeepAgent({
+                const chartModel = new ChatOpenAI({ model: ast.model });
+                // 获取nodes
+                const nodes = ctx.nodes;
+                const agent = createAgent({
                     name: ast.name,
                     systemPrompt: ast.system,
-                    model: ast.model,
-                    tools: [getNodeTool(ast.nodes)]
+                    model: chartModel,
+                    tools: [getNodeTool(nodes)] // 解决 pnpm monorepo 中的模块解析类型问题
                 })
-                const result = await agent.invoke(ast.prompt)
-                ast.text = result.messages[result.messages.length - 1].content;
+                const result = await agent.invoke({
+                    messages: [
+                        { role: 'user', content: ast.prompt }
+                    ]
+                })
+                const messages = result.messages;
+                ast.text = messages[messages.length - 1]!.content as string;
                 ast.state = 'emitting'
                 obs.next({ ...ast })
 

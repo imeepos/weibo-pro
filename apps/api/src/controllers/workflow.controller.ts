@@ -166,7 +166,7 @@ export class WorkflowController implements sdk.WorkflowController {
       res.write(`data: ${JSON.stringify(ast)}\n\n`);
 
       // 执行工作流并发送实时事件
-      const subscription$ = executeAst(ast, {})
+      const subscription$ = executeAst(ast, ast as WorkflowGraphAst)
       const subscription = subscription$.subscribe({
         next: (node: INode) => {
           // 发送节点执行事件
@@ -265,7 +265,7 @@ export class WorkflowController implements sdk.WorkflowController {
       });
 
       // 执行工作流（传入 inputs 作为上下文）
-      const result = await executeAst(ast, run.inputs).toPromise();
+      const result = await executeAst(ast, ast as WorkflowGraphAst).toPromise();
 
       // 提取节点状态
       const nodeStates: Record<string, unknown> = {};
