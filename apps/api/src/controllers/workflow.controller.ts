@@ -1,14 +1,14 @@
-import { Controller, Post, Body, Get, BadRequestException, Query, Delete, NotFoundException, Sse, Res, Param } from '@nestjs/common';
+import { Controller, Post, Body, Get, BadRequestException, Query, Delete, NotFoundException, Sse, Res, Param, Put } from '@nestjs/common';
 import { Observable, tap } from 'rxjs';
 import { Ast, executeAst, fromJson, INode } from '@sker/workflow';
 import { WorkflowGraphAst, ReactiveScheduler } from '@sker/workflow';
-import { logger } from '@sker/core';
+import { logger, root } from '@sker/core';
 import * as sdk from '@sker/sdk';
 import { WorkflowService } from '../services/workflow.service';
 import { WorkflowRunService } from '../services/workflow-run.service';
 import { WorkflowTemplateService } from '../services/workflow-template.service';
-import { root } from '@sker/core';
-import { WorkflowEntity, WorkflowRunEntity, RunStatus } from '@sker/entities';
+import { WorkflowScheduleService } from '../services/workflow-schedule.service';
+import { WorkflowEntity, WorkflowRunEntity, RunStatus, WorkflowScheduleEntity } from '@sker/entities';
 
 /**
  * 爬虫工作流触发控制器
@@ -24,12 +24,14 @@ export class WorkflowController implements sdk.WorkflowController {
   private readonly workflowService: WorkflowService;
   private readonly workflowRunService: WorkflowRunService;
   private readonly workflowTemplateService: WorkflowTemplateService;
+  private readonly workflowScheduleService: WorkflowScheduleService;
   private readonly reactiveScheduler: ReactiveScheduler;
 
   constructor() {
     this.workflowService = root.get(WorkflowService);
     this.workflowRunService = root.get(WorkflowRunService);
     this.workflowTemplateService = root.get(WorkflowTemplateService);
+    this.workflowScheduleService = root.get(WorkflowScheduleService);
     this.reactiveScheduler = root.get(ReactiveScheduler);
   }
 
@@ -777,5 +779,106 @@ export class WorkflowController implements sdk.WorkflowController {
     });
 
     return config;
+  }
+
+  // ========== 调度相关方法 ==========
+
+  /**
+   * 创建调度
+   */
+  @Post(':name/schedules')
+  async createSchedule(
+    @Param('name') workflowName: string,
+    @Body() body: {
+      name: string;
+      scheduleType: string;
+      cronExpression?: string;
+      intervalSeconds?: number;
+      inputs?: Record<string, unknown>;
+      startTime?: Date;
+      endTime?: Date;
+    }
+  ): Promise<WorkflowScheduleEntity> {
+    if (!workflowName) {
+      throw new BadRequestException('工作流名称不能为空')
+    }
+
+    return this.workflowScheduleService.createSchedule({
+      workflowName,
+      name: body.name,
+      scheduleType: body.scheduleType as any,
+      cronExpression: body.cronExpression,
+      intervalSeconds: body.intervalSeconds,
+      inputs: body.inputs || {},
+      startTime: body.startTime ? new Date(body.startTime) : undefined,
+      endTime: body.endTime ? new Date(body.endTime) : undefined,
+    })
+  }
+
+  /**
+   * 列出调度
+   */
+  @Get(':name/schedules')
+  async listSchedules(@Param('name') workflowName: string): Promise<WorkflowScheduleEntity[]> {
+    return this.workflowScheduleService.listSchedules(workflowName)
+  }
+
+  /**
+   * 获取调度详情
+   */
+  @Get('schedules/:scheduleId')
+  async getSchedule(@Param('scheduleId') scheduleId: number): Promise<WorkflowScheduleEntity> {
+    return this.workflowScheduleService.getSchedule(scheduleId)
+  }
+
+  /**
+   * 更新调度
+   */
+  @Put('schedules/:scheduleId')
+  async updateSchedule(
+    @Param('scheduleId') scheduleId: number,
+    @Body() body: {
+      name?: string;
+      scheduleType?: string;
+      cronExpression?: string;
+      intervalSeconds?: number;
+      inputs?: Record<string, unknown>;
+      startTime?: Date;
+      endTime?: Date;
+      status?: string;
+    }
+  ): Promise<WorkflowScheduleEntity> {
+    return this.workflowScheduleService.updateSchedule(scheduleId, {
+      ...body,
+      scheduleType: body.scheduleType as any,
+      status: body.status as any,
+      startTime: body.startTime ? new Date(body.startTime) : undefined,
+      endTime: body.endTime ? new Date(body.endTime) : undefined,
+    })
+  }
+
+  /**
+   * 删除调度
+   */
+  @Delete('schedules/:scheduleId')
+  async deleteSchedule(@Param('scheduleId') scheduleId: number): Promise<{ success: boolean }> {
+    await this.workflowScheduleService.deleteSchedule(scheduleId)
+    return { success: true }
+  }
+
+  /**
+   * 启用调度
+   */
+  @Post('schedules/:scheduleId/enable')
+  async enableSchedule(@Param('scheduleId') scheduleId: number): Promise<WorkflowScheduleEntity> {
+    return this.workflowScheduleService.enableSchedule(scheduleId)
+  }
+
+  /**
+   * 禁用调度
+   */
+  @Post('schedules/:scheduleId/disable')
+  async disableSchedule(@Param('scheduleId') scheduleId: number): Promise<WorkflowScheduleEntity> {
+    return this.workflowScheduleService.disableSchedule(scheduleId)
   }
 }

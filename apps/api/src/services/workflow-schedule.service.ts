@@ -5,7 +5,7 @@ import { WorkflowRunService } from './workflow-run.service'
 import { CronExpressionParser } from 'cron-parser'
 
 export interface CreateScheduleDto {
-  workflowId: number
+  workflowName: string
   name: string
   scheduleType: ScheduleType
   cronExpression?: string
@@ -39,6 +39,18 @@ export class WorkflowScheduleService {
   }
 
   async createSchedule(dto: CreateScheduleDto): Promise<WorkflowScheduleEntity> {
+    // 通过工作流名称查询工作流ID
+    const workflowRepo = this.dataSource.getRepository('WorkflowEntity')
+    const workflow = await workflowRepo.findOne({
+      where: { code: dto.workflowName }
+    })
+
+    if (!workflow) {
+      throw new Error(`Workflow ${dto.workflowName} not found`)
+    }
+
+    const workflowId = (workflow as any).id
+
     // 验证调度参数
     this.validateSchedule(dto)
 
@@ -50,7 +62,7 @@ export class WorkflowScheduleService {
     })
 
     const schedule = this.scheduleRepository.create({
-      workflowId: dto.workflowId,
+      workflowId,
       name: dto.name,
       scheduleType: dto.scheduleType,
       cronExpression: dto.cronExpression,
@@ -118,13 +130,23 @@ export class WorkflowScheduleService {
     return schedule
   }
 
-  async listSchedules(workflowId?: number): Promise<WorkflowScheduleEntity[]> {
-    const where: any = {}
-    if (workflowId) {
-      where.workflowId = workflowId
+  async listSchedules(workflowName?: string): Promise<WorkflowScheduleEntity[]> {
+    if (workflowName) {
+      // 通过工作流名称查询
+      const workflowRepo = this.dataSource.getRepository('WorkflowEntity')
+      const workflow = await workflowRepo.findOne({
+        where: { code: workflowName }
+      })
+      if (!workflow) {
+        return []
+      }
+      return this.scheduleRepository.find({
+        where: { workflowId: (workflow as any).id },
+        order: { createdAt: 'DESC' }
+      })
     }
+    // 查询所有
     return this.scheduleRepository.find({
-      where,
       order: { createdAt: 'DESC' }
     })
   }

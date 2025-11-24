@@ -125,9 +125,9 @@ export class WorkflowController {
   /**
    * 创建调度
    */
-  @Post(':id/schedules')
+  @Post(':name/schedules')
   createSchedule(
-    @Param('id') workflowId: number,
+    @Param('name') workflowName: string,
     @Body() body: {
       name: string;
       scheduleType: string;
@@ -144,8 +144,8 @@ export class WorkflowController {
   /**
    * 列出调度
    */
-  @Get(':id/schedules')
-  listSchedules(@Param('id') workflowId: number): Promise<WorkflowScheduleEntity[]> {
+  @Get(':name/schedules')
+  listSchedules(@Param('name') workflowName: string): Promise<WorkflowScheduleEntity[]> {
     throw new Error('method listSchedules not implements')
   }
 
