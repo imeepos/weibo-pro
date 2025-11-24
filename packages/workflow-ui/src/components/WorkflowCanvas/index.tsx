@@ -169,7 +169,7 @@ export function WorkflowCanvas({
   })
 
   // 工作流操作
-  const { runNode, saveWorkflow, saveSubWorkflow, runWorkflow } = useWorkflowOperations(workflow, {
+  const { runNode, runNodeIsolated, saveWorkflow, saveSubWorkflow, runWorkflow } = useWorkflowOperations(workflow, {
     onShowToast: showToast,
     onSetRunning: setIsRunning,
     onSetSaving: setIsSaving,
@@ -467,6 +467,7 @@ export function WorkflowCanvas({
         onClearCanvas={clearCanvas}
         onDeleteNode={deleteNode}
         onRunNode={runNode}
+        onRunNodeIsolated={runNodeIsolated}
         onToggleNodeCollapse={toggleNodeCollapse}
         onDeleteEdge={deleteEdge}
         onConfigEdge={handleConfigEdge}

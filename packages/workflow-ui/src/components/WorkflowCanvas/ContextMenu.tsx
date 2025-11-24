@@ -27,6 +27,7 @@ export interface ContextMenuProps {
   onClearCanvas: () => void
   onDeleteNode?: (nodeId: string) => void
   onRunNode?: (nodeId: string) => void
+  onRunNodeIsolated?: (nodeId: string) => void
   onToggleNodeCollapse?: (nodeId: string) => void
   onDeleteEdge?: (edgeId: string) => void
   onConfigEdge?: (edgeId: string) => void
@@ -59,6 +60,7 @@ export function ContextMenu({
   onClearCanvas,
   onDeleteNode,
   onRunNode,
+  onRunNodeIsolated,
   onToggleNodeCollapse,
   onDeleteEdge,
   onConfigEdge,
@@ -150,10 +152,19 @@ export function ContextMenu({
       {
         title: '节点操作',
         items: [
+          ...(onRunNodeIsolated
+            ? [
+              {
+                label: '运行节点（测试）',
+                icon: Play,
+                action: () => onRunNodeIsolated(nodeId),
+              },
+            ]
+            : []),
           ...(onRunNode
             ? [
               {
-                label: '运行节点',
+                label: '运行节点及下游（更新）',
                 icon: Play,
                 action: () => onRunNode(nodeId),
               },

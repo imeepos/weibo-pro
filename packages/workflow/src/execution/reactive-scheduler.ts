@@ -55,17 +55,18 @@ export class ReactiveScheduler {
     }
 
     /**
-     * 节点微调执行 - 基于响应式流的智能重放
+     * 节点微调执行 - 基于历史结果的增量执行（包含下游）
      *
      * 核心机制：
-     * 1. 从 ctx 获取目标节点（配置已更新）
-     * 2. 识别受影响的节点及其下游依赖
-     * 3. 重用未受影响节点的 shareReplay 缓存
-     * 4. 重新执行受影响节点流
-     * 5. 合并结果并更新工作流状态
+     * 1. 验证目标节点存在
+     * 2. 识别受影响的节点（目标节点 + 下游）
+     * 3. 验证所有未受影响的节点已执行完成（可作为历史结果）
+     * 4. 重置受影响节点状态
+     * 5. 未受影响节点直接使用历史结果（of(node)）
+     * 6. 受影响节点重新构建流并执行
      *
      * @param ctx 工作流执行上下文（节点配置已在其中更新）
-     * @param nodeId 目标节点ID
+     * @param nodeId 目标节��ID
      */
     fineTuneNode(
         ctx: WorkflowGraphAst,
@@ -77,21 +78,143 @@ export class ReactiveScheduler {
             throw new Error(`节点不存在: ${nodeId}`);
         }
 
-        // 2. 构建原始的完整流网络（用于获取缓存结果）
-        const originalNetwork = this.buildStreamNetwork(ctx, ctx);
-
-        // 3. 分析受影响的节点
+        // 2. 找到受影响的节点（目标节点 + 下游）
         const affectedNodes = this.findAffectedNodes(ctx, nodeId);
 
-        // 4. 构建增量执行网络
-        const incrementalNetwork = this.buildIncrementalNetworkDirect(
-            ctx,
-            originalNetwork,
-            affectedNodes
-        );
+        // 3. 验证所有未受影响的节点已执行完成
+        this.validateUnaffectedNodesCompletion(ctx, affectedNodes);
 
-        // 5. 合并原始结果与新执行结果
-        return this.mergeIncrementalResults(ctx, incrementalNetwork, affectedNodes);
+        // 4. 重置受影响节点状态
+        ctx.nodes.forEach(node => {
+            if (affectedNodes.has(node.id)) {
+                node.state = 'pending';
+                node.error = undefined;
+            }
+        });
+
+        // 5. 构建增量执行网络
+        const network = this.buildIncrementalNetwork(ctx, affectedNodes);
+
+        // 6. 订阅并合并结果（只订阅受影响节点）
+        ctx.state = 'running';
+        return this.subscribeAndMerge(network, ctx, affectedNodes);
+    }
+
+    /**
+     * 执行单个节点（不影响下游）
+     *
+     * 适用场景：
+     * - 测试单个节点逻辑
+     * - 调试节点配置
+     * - 不希望触发下游节点重新执行
+     *
+     * 核心机制：
+     * 1. 验证目标节点存在
+     * 2. 验证所有上游节点已执行完成（使用历史输出作为输入）
+     * 3. 只将目标节点标记为受影响（不递归查找下游）
+     * 4. 复用增量执行网络逻辑
+     * 5. 下游节点保持原有状态，不受影响
+     *
+     * @param ctx 工作流执行上下文
+     * @param nodeId 目标节点ID
+     */
+    executeNodeIsolated(
+        ctx: WorkflowGraphAst,
+        nodeId: string
+    ): Observable<WorkflowGraphAst> {
+        // 1. 验证目标节点存在
+        const targetNode = ctx.nodes.find(n => n.id === nodeId);
+        if (!targetNode) {
+            throw new Error(`节点不存在: ${nodeId}`);
+        }
+
+        // 2. 验证所有上游节点已执行完成
+        this.validateUpstreamCompletion(ctx, nodeId);
+
+        // 3. 只将目标节点作为受影响节点（不包含下游）
+        const affectedNodes = new Set<string>([nodeId]);
+
+        // 4. 验证所有未受影响的节点已执行完成
+        this.validateUnaffectedNodesCompletion(ctx, affectedNodes);
+
+        // 5. 重置目标节点状态
+        targetNode.state = 'pending';
+        targetNode.error = undefined;
+
+        // 6. 构建增量执行网络（只执行目标节点）
+        const network = this.buildIncrementalNetwork(ctx, affectedNodes);
+
+        // 7. 订阅并合并结果（只订阅受影响节点）
+        ctx.state = 'running';
+        return this.subscribeAndMerge(network, ctx, affectedNodes);
+    }
+
+    /**
+     * 验证上游节点是否已执行完成
+     *
+     * 用于单节点执行场景，确保可以使用上游的历史输出
+     */
+    private validateUpstreamCompletion(ctx: WorkflowGraphAst, nodeId: string): void {
+        const visited = new Set<string>();
+
+        const checkUpstream = (currentNodeId: string) => {
+            if (visited.has(currentNodeId)) return;
+            visited.add(currentNodeId);
+
+            const upstreamEdges = ctx.edges.filter(edge => edge.to === currentNodeId);
+
+            for (const edge of upstreamEdges) {
+                const upstreamNode = ctx.nodes.find(n => n.id === edge.from);
+                if (!upstreamNode) {
+                    throw new Error(`上游节点不存在: ${edge.from}`);
+                }
+
+                if (upstreamNode.state !== 'success' && upstreamNode.state !== 'fail') {
+                    throw new Error(
+                        `上游节点 ${upstreamNode.id} 尚未执行完成（状态: ${upstreamNode.state}）。\n` +
+                        `单节点执行需要使用上游的历史输出，请先执行完整工作流。`
+                    );
+                }
+
+                checkUpstream(edge.from);
+            }
+        };
+
+        checkUpstream(nodeId);
+    }
+
+    /**
+     * 验证所有未受影响的节点已执行完成
+     *
+     * 策略：
+     * - 受影响节点：无需验证（会重新执行）
+     * - 未受影响节点：必须已完成（success/fail），否则抛出明确错误
+     */
+    private validateUnaffectedNodesCompletion(
+        ctx: WorkflowGraphAst,
+        affectedNodes: Set<string>
+    ): void {
+        const unfinishedNodes: string[] = [];
+
+        for (const node of ctx.nodes) {
+            // 跳过受影响节点（会重新执行）
+            if (affectedNodes.has(node.id)) {
+                continue;
+            }
+
+            // 检查未受影响节点是否已完成
+            if (node.state !== 'success' && node.state !== 'fail') {
+                unfinishedNodes.push(`${node.id} (${node.state})`);
+            }
+        }
+
+        if (unfinishedNodes.length > 0) {
+            throw new Error(
+                `工作流尚未全部完成，无法进行增量执行。\n` +
+                `以下节点仍在运行或待执行：\n${unfinishedNodes.join('\n')}\n\n` +
+                `建议：等待当前工作流完成后再重新执行节点。`
+            );
+        }
     }
 
     /**
@@ -120,26 +243,25 @@ export class ReactiveScheduler {
     }
 
     /**
-     * 构建增量执行网络（递归构建版本）
+     * 构建增量执行网络 - 复用历史结果
      *
      * 策略：
      * - 受影响节点：重新构建流并执行
-     * - 未受影响节点：复用原始网络中的 shareReplay 缓存
-     * - 递归构建：确保上游依赖先于下游构建（修复依赖顺序问题）
+     * - 未受影响节点：直接使用历史结果（of(node)）
+     * - 递归构建：确保上游依赖先于下游构建
      * - 循环检测：防止死锁
      */
-    private buildIncrementalNetworkDirect(
+    private buildIncrementalNetwork(
         ctx: WorkflowGraphAst,
-        originalNetwork: Map<string, Observable<INode>>,
         affectedNodes: Set<string>
     ): Map<string, Observable<INode>> {
-        const incrementalNetwork = new Map<string, Observable<INode>>();
+        const network = new Map<string, Observable<INode>>();
         const building = new Set<string>();
 
         const buildNode = (nodeId: string): Observable<INode> => {
             // 已构建：直接返回
-            if (incrementalNetwork.has(nodeId)) {
-                return incrementalNetwork.get(nodeId)!;
+            if (network.has(nodeId)) {
+                return network.get(nodeId)!;
             }
 
             // 正在构建：检测到循环依赖
@@ -158,83 +280,47 @@ export class ReactiveScheduler {
             let stream: Observable<INode>;
 
             if (affectedNodes.has(nodeId)) {
-                // 受影响节点：重新构建，但先递归构建所有上游
+                // 受影响节点：重新构建并执行
                 const incomingEdges = ctx.edges.filter(e => e.to === nodeId);
 
                 // 先递归构建所有上游节点
                 incomingEdges.forEach(edge => buildNode(edge.from));
 
+                console.log(`[buildIncrementalNetwork] 构建受影响节点 ${nodeId}:`, {
+                    hasIncomingEdges: incomingEdges.length > 0,
+                    incomingEdgesCount: incomingEdges.length,
+                    isEntryNode: incomingEdges.length === 0
+                });
+
                 stream = incomingEdges.length === 0
                     ? this.createEntryNodeStream(node, ctx)
-                    : this._createNode(node, incomingEdges, incrementalNetwork, ctx);
+                    : this._createNode(node, incomingEdges, network, ctx);
             } else {
-                // 未受影响节点：复用原始流（利用 shareReplay 缓存）
-                const originalStream = originalNetwork.get(nodeId);
-                if (!originalStream) {
-                    throw new Error(`原始节点流未找到: ${nodeId}`);
+                // 未受影响节点：发射 emitting 状态的历史结果副本，以便下游能接收数据
+                if (node.state !== 'success' && node.state !== 'fail') {
+                    // 这种情况理论上不会发生（已在 validateUnaffectedNodesCompletion 中检查）
+                    throw new Error(
+                        `内部错误：节点 ${nodeId} 状态为 ${node.state}，但未被标记为受影响节点。\n` +
+                        `这可能是调度器的 bug，请联系开发者。`
+                    );
                 }
-                stream = originalStream;
+                // 创建 emitting 状态的副本以传递数据给下游，然后立即发射最终状态
+                const emittingCopy = { ...node, state: 'emitting' as const };
+                stream = of(emittingCopy, node).pipe(
+                    shareReplay({ bufferSize: 2, refCount: true })
+                );
             }
 
-            incrementalNetwork.set(nodeId, stream);
+            network.set(nodeId, stream);
             building.delete(nodeId);
 
             return stream;
         };
 
-        // 为所有节点构建流
+        // 为所有节点构建流（但只有受影响节点会重新执行）
         ctx.nodes.forEach(node => buildNode(node.id));
 
-        return incrementalNetwork;
-    }
-
-    /**
-     * 合并增量执行结果
-     */
-    private mergeIncrementalResults(
-        ast: WorkflowGraphAst,
-        incrementalNetwork: Map<string, Observable<INode>>,
-        affectedNodes: Set<string>
-    ): Observable<WorkflowGraphAst> {
-        // 使用 subscribeAndMerge 的变体，只关注受影响节点的变化
-        const affectedStreams = Array.from(incrementalNetwork.entries())
-            .filter(([nodeId]) => affectedNodes.has(nodeId))
-            .map(([, stream]) => stream);
-
-        if (affectedStreams.length === 0) {
-            return of(ast);
-        }
-
-        return merge(...affectedStreams).pipe(
-            map(updatedNode => {
-                // 更新工作流图中的对应节点
-                const nodeIndex = ast.nodes.findIndex(n => n.id === updatedNode.id);
-                if (nodeIndex !== -1) {
-                    ast.nodes[nodeIndex] = updatedNode;
-                }
-
-                // 保持运行状态
-                ast.state = 'running';
-                return ast;
-            }),
-            // 所有受影响节点完成后，检查整体状态
-            finalize(() => {
-                const hasFailures = ast.nodes.some(n => n.state === 'fail');
-                const allAffectedComplete = Array.from(affectedNodes).every(nodeId => {
-                    const node = ast.nodes.find(n => n.id === nodeId);
-                    return node && (node.state === 'success' || node.state === 'fail');
-                });
-
-                if (allAffectedComplete) {
-                    ast.state = hasFailures ? 'fail' : 'success';
-                }
-            }),
-            catchError(error => {
-                ast.state = 'fail';
-                ast.setError(error);
-                return of(ast);
-            })
-        );
+        return network;
     }
 
     /**
@@ -863,22 +949,44 @@ export class ReactiveScheduler {
      * - 每次节点状态变化，更新工作流图
      * - 自动判断完成状态
      * - 持续发射直到完成
+     * - 支持增量执行：只订阅受影响节点的流
+     *
+     * @param network 节点流网络
+     * @param ast 工作流图
+     * @param affectedNodes 可选：受影响的节点集合。如果提供，只订阅这些节点的流
      */
     private subscribeAndMerge(
         network: Map<string, Observable<INode>>,
-        ast: WorkflowGraphAst
+        ast: WorkflowGraphAst,
+        affectedNodes?: Set<string>
     ): Observable<WorkflowGraphAst> {
-        const allStreams = Array.from(network.values());
+        // 筛选要订阅的流：全量执行时订阅所有流，增量执行时只订阅受影响节点
+        const streamsToSubscribe = affectedNodes
+            ? Array.from(network.entries())
+                .filter(([nodeId]) => affectedNodes.has(nodeId))
+                .map(([, stream]) => stream)
+            : Array.from(network.values());
 
-        if (allStreams.length === 0) {
+        console.log('[subscribeAndMerge] 订阅配置:', {
+            totalNetworkSize: network.size,
+            affectedNodesSize: affectedNodes?.size,
+            streamsToSubscribeCount: streamsToSubscribe.length,
+            affectedNodeIds: affectedNodes ? Array.from(affectedNodes) : 'all'
+        });
+
+        if (streamsToSubscribe.length === 0) {
             ast.state = 'success';
             return of(ast);
         }
 
-        // 合并所有节点流
-        return merge(...allStreams).pipe(
+        // 合并要订阅的节点流
+        return merge(...streamsToSubscribe).pipe(
             // 每次节点状态变化，更新工作流图
             map(updatedNode => {
+                console.log('[subscribeAndMerge] 节点状态更新:', {
+                    nodeId: updatedNode.id,
+                    state: updatedNode.state
+                });
                 const nodeIndex = ast.nodes.findIndex(n => n.id === updatedNode.id);
                 if (nodeIndex !== -1) {
                     ast.nodes[nodeIndex] = updatedNode;
@@ -889,10 +997,12 @@ export class ReactiveScheduler {
             }),
             // 所有流完成后判定最终状态
             finalize(() => {
+                console.log('[subscribeAndMerge] 所有流完成，判定最终状态');
                 const hasFailures = ast.nodes.some(n => n.state === 'fail');
                 ast.state = hasFailures ? 'fail' : 'success';
             }),
             catchError(error => {
+                console.error('[subscribeAndMerge] 执行错误:', error);
                 ast.state = 'fail';
                 ast.setError(error);
                 return of(ast);
