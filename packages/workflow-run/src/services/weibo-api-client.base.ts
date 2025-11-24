@@ -52,6 +52,12 @@ export abstract class WeiboApiClient {
             );
         }
 
+        const accountKey = `account_${selection.id}`;
+
+        await this.rateLimiter.acquire(accountKey);
+
+        await this.delayService.backoffDelay(accountKey);
+
         const referer = WeiboRefererBuilder.auto(options.refererOptions);
 
         const headers = WeiboRequestHeaderBuilder.buildStandardHeaders({
@@ -60,24 +66,33 @@ export abstract class WeiboApiClient {
             referer,
         });
 
-        const response = await fetch(options.url, { headers });
+        try {
+            const response = await fetch(options.url, { headers });
 
-        if (!response.ok) {
-            const error = await WeiboErrorHandler.checkResponse(response);
+            if (!response.ok) {
+                const error = await WeiboErrorHandler.checkResponse(response);
+                if (error) {
+                    await this.handleWeiboError(error, selection.id, accountKey);
+                    throw WeiboErrorHandler.toNoRetryErrorIfNeeded(error);
+                }
+            }
+
+            const data = await response.json();
+            const error = await WeiboErrorHandler.checkResponse(response, data);
             if (error) {
-                await this.handleWeiboError(error, selection.id);
+                await this.handleWeiboError(error, selection.id, accountKey);
                 throw WeiboErrorHandler.toNoRetryErrorIfNeeded(error);
             }
-        }
 
-        const data = await response.json();
-        const error = await WeiboErrorHandler.checkResponse(response, data);
-        if (error) {
-            await this.handleWeiboError(error, selection.id);
-            throw WeiboErrorHandler.toNoRetryErrorIfNeeded(error);
-        }
+            this.delayService.recordSuccess(accountKey);
 
-        return data;
+            await this.delayService.randomDelay(1, 3);
+
+            return data;
+        } catch (error) {
+            this.delayService.recordError(accountKey);
+            throw error;
+        }
     }
 
     /**
@@ -85,14 +100,15 @@ export abstract class WeiboApiClient {
      *
      * @param error 错误对象
      * @param accountId 账号 ID
+     * @param accountKey 账号键（用于退避机制）
      */
-    private async handleWeiboError(error: WeiboError, accountId: number): Promise<void> {
-        // 处理登录失效错误
+    private async handleWeiboError(error: WeiboError, accountId: number, accountKey: string): Promise<void> {
+        this.delayService.recordError(accountKey);
+
         if (error.type === WeiboErrorType.LOGIN_EXPIRED) {
             console.warn(`[WeiboApiClient] 检测到账号 ${accountId} 登录失效，标记为过期状态`);
             await this.accountService.markAccountAsExpired(accountId);
         } else {
-            // 其他错误：降低健康评分
             await this.accountService.decreaseHealthScore(accountId, 1);
         }
     }
@@ -119,7 +135,7 @@ export abstract class WeiboApiClient {
             }
 
             page++;
-            await delay();
+            await this.delayService.randomDelay(3, 5);
         }
     }
 }
