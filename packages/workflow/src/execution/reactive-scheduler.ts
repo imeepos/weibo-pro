@@ -32,9 +32,16 @@ export class ReactiveScheduler {
     /**
      * 调度工作流：将工作流图转换为响应式流网络
      */
+    private resetWorkflowGraphAst(ast: WorkflowGraphAst) {
+        ast.state = 'pending';
+        ast.nodes = ast.nodes.map(node => {
+            node.state = 'pending';
+            return node;
+        })
+        return ast;
+    }
     schedule(ast: WorkflowGraphAst, ctx: WorkflowGraphAst): Observable<WorkflowGraphAst> {
-        const { state } = ast;
-
+        const { state } = this.resetWorkflowGraphAst(ast);
         // 已完成的工作流直接返回
         if (state === 'success' || state === 'fail') {
             return of(ast);
