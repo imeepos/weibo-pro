@@ -5,13 +5,11 @@ import type {
   ListRunsResult,
   WorkflowRunEntity,
   RunStatus,
-  WorkflowScheduleEntity,
-  CreateScheduleResult,
-  UpdateScheduleResult,
 } from '../types'
+
 import { Observable } from 'rxjs'
 import type { WorkflowGraphAst, Ast, INode } from '@sker/workflow';
-import type { WorkflowEntity } from '@sker/entities';
+import type { WorkflowEntity, WorkflowScheduleEntity } from '@sker/entities';
 export interface MessageEvent {
     data: string | object;
     id?: string;

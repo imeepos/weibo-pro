@@ -64,13 +64,13 @@ export function useCanvasState() {
   // 调度对话框状态
   const [scheduleDialog, setScheduleDialog] = useState<{
     visible: boolean
-    workflowId?: number
+    workflowName?: string
   }>({ visible: false })
 
   // 调度列表面板状态
   const [schedulePanel, setSchedulePanel] = useState<{
     visible: boolean
-    workflowId?: number
+    workflowName?: string
   }>({ visible: false })
 
   /**
@@ -177,29 +177,29 @@ export function useCanvasState() {
   /**
    * 打开调度对话框
    */
-  const openScheduleDialog = useCallback((workflowId?: number) => {
-    setScheduleDialog({ visible: true, workflowId })
+  const openScheduleDialog = useCallback((workflowName?: string) => {
+    setScheduleDialog({ visible: true, workflowName })
   }, [])
 
   /**
    * 关闭调度对话框
    */
   const closeScheduleDialog = useCallback(() => {
-    setScheduleDialog({ visible: false, workflowId: undefined })
+    setScheduleDialog({ visible: false, workflowName: undefined })
   }, [])
 
   /**
    * 打开调度列表面板
    */
-  const openSchedulePanel = useCallback((workflowId?: number) => {
-    setSchedulePanel({ visible: true, workflowId })
+  const openSchedulePanel = useCallback((workflowName?: string) => {
+    setSchedulePanel({ visible: true, workflowName })
   }, [])
 
   /**
    * 关闭调度列表面板
    */
   const closeSchedulePanel = useCallback(() => {
-    setSchedulePanel({ visible: false, workflowId: undefined })
+    setSchedulePanel({ visible: false, workflowName: undefined })
   }, [])
 
   return {

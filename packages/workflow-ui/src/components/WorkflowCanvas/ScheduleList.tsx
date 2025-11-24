@@ -21,7 +21,7 @@ import { ScheduleDialog } from './ScheduleDialog'
  * - 优雅的交互动画
  */
 export interface ScheduleListProps {
-  workflowId: number
+  workflowName: string
   className?: string
 }
 
@@ -52,7 +52,7 @@ const TYPE_CONFIG: Record<ScheduleType, TypeConfig> = {
   manual: { label: '手动', color: 'text-gray-600 border-gray-500/30' },
 }
 
-export function ScheduleList({ workflowId, className = '' }: ScheduleListProps) {
+export function ScheduleList({ workflowName, className = '' }: ScheduleListProps) {
   const client = root.get<WorkflowController>(WorkflowController) as any
   const [schedules, setSchedules] = useState<WorkflowScheduleEntity[]>([])
   const [loading, setLoading] = useState(false)
@@ -65,7 +65,7 @@ export function ScheduleList({ workflowId, className = '' }: ScheduleListProps) 
     setError('')
 
     try {
-      const data = await client.listSchedules(workflowId)
+      const data = await client.listSchedules(workflowName)
       setSchedules(data)
     } catch (err: unknown) {
       const error = err as Error
@@ -77,7 +77,7 @@ export function ScheduleList({ workflowId, className = '' }: ScheduleListProps) 
 
   useEffect(() => {
     fetchSchedules()
-  }, [workflowId])
+  }, [workflowName])
 
   const handleToggleStatus = async (schedule: WorkflowScheduleEntity) => {
     try {
@@ -283,7 +283,7 @@ export function ScheduleList({ workflowId, className = '' }: ScheduleListProps) 
 
       {editSchedule && (
         <ScheduleDialog
-          workflowId={workflowId}
+          workflowName={workflowName}
           open={!!editSchedule}
           onOpenChange={(open) => !open && setEditSchedule(null)}
           onSuccess={fetchSchedules}

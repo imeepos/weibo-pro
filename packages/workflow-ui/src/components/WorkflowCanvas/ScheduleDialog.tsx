@@ -21,7 +21,7 @@ import { root } from '@sker/core'
  * - 响应式布局
  */
 export interface ScheduleDialogProps {
-  workflowId: number
+  workflowName: string
   open?: boolean
   onOpenChange?: (open: boolean) => void
   onSuccess?: () => void
@@ -54,7 +54,7 @@ const INTERVAL_UNITS: IntervalUnit[] = [
   { label: '天', value: 86400 },
 ]
 
-export function ScheduleDialog({ workflowId, open, onOpenChange, onSuccess }: ScheduleDialogProps) {
+export function ScheduleDialog({ workflowName, open, onOpenChange, onSuccess }: ScheduleDialogProps) {
   const [loading, setLoading] = useState(false)
   const [scheduleType, setScheduleType] = useState<string>('cron')
   const [name, setName] = useState('')
@@ -153,7 +153,7 @@ export function ScheduleDialog({ workflowId, open, onOpenChange, onSuccess }: Sc
     try {
       const intervalSeconds = scheduleType === 'interval' ? intervalValue * intervalUnit : undefined
 
-      await client.createSchedule(workflowId, {
+      await client.createSchedule(workflowName, {
         name: name.trim(),
         scheduleType,
         cronExpression: scheduleType === 'cron' ? cronExpression : undefined,

@@ -2,7 +2,7 @@ import { Injectable } from '@sker/core'
 import { DataSource, Repository } from 'typeorm'
 import { WorkflowScheduleEntity, ScheduleType, ScheduleStatus } from '@sker/entities'
 import { WorkflowRunService } from './workflow-run.service'
-import * as cronParser from 'cron-parser'
+import { CronExpressionParser } from 'cron-parser'
 
 export interface CreateScheduleDto {
   workflowId: number
@@ -193,7 +193,7 @@ export class WorkflowScheduleService {
           throw new Error('Cron expression is required for cron schedule')
         }
         try {
-          cronParser.parseExpression(dto.cronExpression)
+          CronExpressionParser.parse(dto.cronExpression)
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error)
           throw new Error(`Invalid cron expression: ${errorMessage}`)
@@ -235,7 +235,7 @@ export class WorkflowScheduleService {
           throw new Error('Cron expression required')
         }
         try {
-          const interval = cronParser.parseExpression(params.cronExpression)
+          const interval = CronExpressionParser.parse(params.cronExpression)
           const next = interval.next()
           return next.toDate()
         } catch (error) {

@@ -460,8 +460,9 @@ export function WorkflowCanvas({
               onImportWorkflow={importWorkflow}
               onOpenWorkflowSettings={openWorkflowSettingsDialog}
               onOpenScheduleDialog={() => {
-                if (workflowId) {
-                  openScheduleDialog(workflowId)
+                const workflowName = workflow.workflowAst?.name
+                if (workflowName) {
+                  openScheduleDialog(workflowName)
                 } else {
                   showToast('error', '请先保存工作流', '只有保存的工作流才能创建调度')
                 }
@@ -569,9 +570,9 @@ export function WorkflowCanvas({
       />
 
       {/* 调度对话框 */}
-      {scheduleDialog.visible && (
+      {scheduleDialog.visible && scheduleDialog.workflowName && (
         <ScheduleDialog
-          workflowId={scheduleDialog.workflowId!}
+          workflowName={scheduleDialog.workflowName}
           open={scheduleDialog.visible}
           onOpenChange={closeScheduleDialog}
           onSuccess={() => {
@@ -585,9 +586,9 @@ export function WorkflowCanvas({
       )}
 
       {/* 调度列表面板 */}
-      {schedulePanel.visible && (
+      {schedulePanel.visible && schedulePanel.workflowName && (
         <ScheduleList
-          workflowId={schedulePanel.workflowId!}
+          workflowName={schedulePanel.workflowName}
           className="absolute top-4 right-4 w-[600px] max-h-[80vh] overflow-y-auto z-[5]"
         />
       )}
