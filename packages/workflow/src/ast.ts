@@ -11,8 +11,11 @@ export interface Visitor {
 
 // 抽象语法树的核心表达 - 状态与数据的统一
 export abstract class Ast implements INode {
+    // 运行次数
     count: number = 0;
+    // 发射次数
     emitCount: number = 0;
+    // 唯一标识
     id: string = generateId();
     // 标题
     name?: string;
@@ -20,11 +23,17 @@ export abstract class Ast implements INode {
     description?: string;
     // 自定义颜色
     color?: string;
+    // 折叠
     collapsed?: boolean;
+    // 宽度
     width?: number;
+    // 状态
     state: IAstStates = 'pending';
+    // 错误信息
     error: SerializedError | undefined;
+    // 类型-序列化的关键
     type!: string;
+    // 画布中的位置信息
     position: { x: number; y: number } = { x: 0, y: 0 }
 
     /**
@@ -61,26 +70,17 @@ export class WorkflowGraphAst extends Ast {
     @State({ title: "名称", type: 'text' })
     name: string | undefined;
 
+    // 节点泪飙
     @State({ title: "节点列表" })
     nodes: INode[] = [];
 
-    @State()
-    start: INode[] = [];
+    // 开始节点
+    @State({ title: '开始节点' })
+    entryNodeIds: string[] = [];
 
+    // 边集合
     @State({ title: "边列表" })
     edges: IEdge[] = [];
-
-    @Input({ title: '上下文' })
-    ctx: any = {};
-
-    @Output({ title: '执行结果' })
-    results: any[] = [];
-
-    @State({ title: '正在执行的节点' })
-    currentNodes: INode[] = [];
-
-    @State({ title: '下一步执行的节点' })
-    nextNodes: INode[] = [];
 
     /**
      * 视图窗口状态

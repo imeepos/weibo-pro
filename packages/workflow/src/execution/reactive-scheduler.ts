@@ -216,14 +216,6 @@ export class ReactiveScheduler {
                 unfinishedNodes.push(`${node.id} (${node.state})`);
             }
         }
-
-        if (unfinishedNodes.length > 0) {
-            throw new Error(
-                `工作流尚未全部完成，无法进行增量执行。\n` +
-                `以下节点仍在运行或待执行：\n${unfinishedNodes.join('\n')}\n\n` +
-                `建议：等待当前工作流完成后再重新执行节点。`
-            );
-        }
     }
 
     /**
