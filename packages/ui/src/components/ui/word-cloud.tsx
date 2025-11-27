@@ -1,9 +1,11 @@
 "use client"
 
 import * as React from "react"
-import ReactECharts from "echarts-for-react"
+import * as echarts from "echarts"
+import type { EChartsOption } from "echarts"
 import { motion } from "framer-motion"
 import { cn } from "@sker/ui/lib/utils"
+import { EChartNative } from "./echart-native"
 
 import "echarts-wordcloud"
 
@@ -25,19 +27,41 @@ export interface WordCloudProps {
   onWordClick?: (item: WordCloudItem) => void
 }
 
+// 常量默认值，避免每次渲染创建新数组
+const DEFAULT_SIZE_RANGE: [number, number] = [12, 60]
+const DEFAULT_ROTATION_RANGE: [number, number] = [-45, 45]
+
 function WordCloud({
   data,
   height,
   className,
   shape = "pentagon",
-  sizeRange = [12, 60],
-  rotationRange = [-45, 45],
+  sizeRange = DEFAULT_SIZE_RANGE,
+  rotationRange = DEFAULT_ROTATION_RANGE,
   animated = true,
   tooltipFormatter,
   onWordClick,
 }: WordCloudProps) {
+  const dataRef = React.useRef(data)
+  const tooltipFormatterRef = React.useRef(tooltipFormatter)
+
+  // 更新 refs
+  React.useEffect(() => {
+    dataRef.current = data
+    tooltipFormatterRef.current = tooltipFormatter
+  }, [data, tooltipFormatter])
+
+  // 使用深度比较稳定所有数组引用
+  const dataKey = React.useMemo(() => {
+    return JSON.stringify(data.map(item => [item.name, item.value, item.color]))
+  }, [data])
+
+  const sizeRangeKey = React.useMemo(() => JSON.stringify(sizeRange), [sizeRange])
+  const rotationRangeKey = React.useMemo(() => JSON.stringify(rotationRange), [rotationRange])
+
   const option = React.useMemo(() => {
-    const processedData = data.map((item) => ({
+    const currentData = dataRef.current
+    const processedData = currentData.map((item) => ({
       name: item.name,
       value: item.value,
       textStyle: item.color ? { color: item.color } : undefined,
@@ -45,14 +69,14 @@ function WordCloud({
 
     return {
       tooltip: {
-        trigger: "item",
+        trigger: "item" as const,
         backgroundColor: "rgba(0, 0, 0, 0.8)",
         borderColor: "rgba(255, 255, 255, 0.2)",
         textStyle: { color: "#ffffff" },
         formatter: (params: any) => {
-          const item = data.find((d) => d.name === params.name)
-          if (tooltipFormatter && item) {
-            return tooltipFormatter(item)
+          const item = dataRef.current.find((d) => d.name === params.name)
+          if (tooltipFormatterRef.current && item) {
+            return tooltipFormatterRef.current(item)
           }
           return `
             <div style="font-weight: bold; margin-bottom: 4px;">${params.name}</div>
@@ -62,10 +86,10 @@ function WordCloud({
       },
       series: [
         {
-          type: "wordCloud",
+          type: "wordCloud" as const,
           gridSize: 8,
-          sizeRange,
-          rotationRange,
+          sizeRange: JSON.parse(sizeRangeKey),
+          rotationRange: JSON.parse(rotationRangeKey),
           rotationStep: 15,
           shape,
           width: "100%",
@@ -84,7 +108,7 @@ function WordCloud({
             },
           },
           emphasis: {
-            focus: "self",
+            focus: "self" as const,
             textStyle: {
               shadowBlur: 10,
               shadowColor: "rgba(0, 0, 0, 0.5)",
@@ -95,31 +119,40 @@ function WordCloud({
       ],
       animation: true,
       animationDuration: 1000,
-      animationEasing: "cubicOut",
-    }
-  }, [data, shape, sizeRange, rotationRange, tooltipFormatter])
+      animationEasing: "cubicOut" as const,
+    } as any as EChartsOption
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataKey, shape, sizeRangeKey, rotationRangeKey])
 
-  const handleEvents = React.useMemo(() => {
-    if (!onWordClick) return {}
-    return {
-      click: (params: any) => {
-        const item = data.find((d) => d.name === params.name)
-        if (item) onWordClick(item)
-      },
-    }
-  }, [data, onWordClick])
+  const onWordClickRef = React.useRef(onWordClick)
+
+  React.useEffect(() => {
+    onWordClickRef.current = onWordClick
+  }, [onWordClick])
+
+  const handleChartReady = React.useCallback(
+    (chart: echarts.ECharts) => {
+      if (onWordClickRef.current) {
+        chart.on("click", (params: any) => {
+          const item = dataRef.current.find((d) => d.name === params.name)
+          if (item && onWordClickRef.current) {
+            onWordClickRef.current(item)
+          }
+        })
+      }
+    },
+    []
+  )
 
   const content = (
-    <ReactECharts
+    <EChartNative
       option={option}
-      style={{
-        height: height ? `${height}px` : "100%",
-        width: "100%",
-      }}
-      opts={{ renderer: "canvas" }}
-      notMerge={true}
-      lazyUpdate={true}
-      onEvents={handleEvents}
+      height={height ? `${height}px` : "100%"}
+      width="100%"
+      renderer="canvas"
+      animated={false}
+      onChartReady={handleChartReady}
+      className="w-full h-full"
     />
   )
 

@@ -10,7 +10,6 @@ import UserDetection from '@/pages/UserDetection';
 import UserRelationTopology from '@/pages/UserRelationTopology';
 import { LayoutDemo } from '@/pages/LayoutDemo';
 import BleMeshTopology from '@/pages/BleMeshTopology';
-import NetworkTopology from '@/pages/NetworkTopology';
 import WorkflowEditor from '@/pages/WorkflowEditor';
 import WorkflowDemo from '@/pages/WorkflowDemo';
 import CrawlerControl from '@/pages/CrawlerControl';
@@ -287,25 +286,6 @@ const App: React.FC = () => {
                       transition={{ duration: 0.3 }}
                     >
                       <BleMeshTopology />
-                    </motion.div>
-                  </AnimatePresence>
-                </Layout>
-              }
-            />
-            <Route
-              path="/network-topology"
-              element={
-                <Layout>
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key="network-topology"
-                      className="h-full"
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 1.05 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <NetworkTopology />
                     </motion.div>
                   </AnimatePresence>
                 </Layout>

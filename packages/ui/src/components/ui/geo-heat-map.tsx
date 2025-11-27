@@ -1,13 +1,13 @@
 'use client'
 
-import React, { useMemo } from 'react'
-import type { EChartsOption } from 'echarts-for-react'
+import React, { useMemo, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { cn } from '@sker/ui/lib/utils'
-import { EChart } from './echart'
+import { EChartNative } from './echart-native'
 import { ChartState } from './chart-state'
 import { useChinaMap, type UseChinaMapOptions } from '../../hooks/use-china-map'
 import { useEChartTheme } from '../../hooks/use-echart-theme'
+import type { EChartsOption } from 'echarts'
 
 export interface GeoDataPoint {
   /** 地点名称 */
@@ -100,6 +100,7 @@ export const GeoHeatMap = React.forwardRef<HTMLDivElement, GeoHeatMapProps>(
   ) => {
     const { mapReady, error } = useChinaMap(mapOptions)
     const { isDark, colors } = useEChartTheme({ isDark: isDarkProp })
+    const internalRef = useRef<HTMLDivElement>(null)
 
     const option = useMemo<EChartsOption>(() => {
       if (!mapReady) return {}
@@ -116,15 +117,15 @@ export const GeoHeatMap = React.forwardRef<HTMLDivElement, GeoHeatMapProps>(
       return {
         title: title
           ? {
-              text: title,
-              left: 'center',
-              top: 20,
-              textStyle: {
-                color: colors.text,
-                fontSize: 16,
-                fontWeight: 'bold',
-              },
-            }
+            text: title,
+            left: 'center',
+            top: 20,
+            textStyle: {
+              color: colors.text,
+              fontSize: 16,
+              fontWeight: 'bold',
+            },
+          }
           : undefined,
         tooltip: {
           trigger: 'item',
@@ -161,12 +162,11 @@ export const GeoHeatMap = React.forwardRef<HTMLDivElement, GeoHeatMapProps>(
               <div style="margin-bottom: 4px;">
                 坐标: <span style="font-family: monospace;">${params.value[0].toFixed(2)}, ${params.value[1].toFixed(2)}</span>
               </div>
-              ${
-                item.sentiment
-                  ? `<div>
+              ${item.sentiment
+                ? `<div>
                   情感倾向: <span style="color: ${sentimentColor}; font-weight: bold;">${sentimentText}</span>
                 </div>`
-                  : ''
+                : ''
               }
             `
           },
@@ -195,26 +195,26 @@ export const GeoHeatMap = React.forwardRef<HTMLDivElement, GeoHeatMapProps>(
         },
         ...(showVisualMap && data.length > 0
           ? {
-              visualMap: {
-                min: 0,
-                max: maxValue,
-                left: 'left',
-                top: 'bottom',
-                text: ['高', '低'],
-                textStyle: {
-                  color: colors.text,
-                },
-                backgroundColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(255, 255, 255, 0.8)',
-                borderColor: colors.border,
-                borderWidth: 1,
-                borderRadius: 6,
-                padding: [8, 12],
-                inRange: {
-                  color: colorRange,
-                },
-                calculable: true,
+            visualMap: {
+              min: 0,
+              max: maxValue,
+              left: 'left',
+              top: 'bottom',
+              text: ['高', '低'],
+              textStyle: {
+                color: colors.text,
               },
-            }
+              backgroundColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(255, 255, 255, 0.8)',
+              borderColor: colors.border,
+              borderWidth: 1,
+              borderRadius: 6,
+              padding: [8, 12],
+              inRange: {
+                color: colorRange,
+              },
+              calculable: true,
+            },
+          }
           : {}),
         series: [
           {
@@ -284,12 +284,12 @@ export const GeoHeatMap = React.forwardRef<HTMLDivElement, GeoHeatMapProps>(
           transition={{ duration: 0.5, delay: 0.3 }}
           className="relative h-full w-full overflow-hidden rounded-lg bg-card/30"
         >
-          <EChart
+          <EChartNative
             option={option}
             className="h-full w-full"
             renderer="canvas"
-            notMerge={false}
-            lazyUpdate={false}
+            animated={false}
+            ref={internalRef}
           />
 
           {/* 装饰性渐变覆盖层 */}

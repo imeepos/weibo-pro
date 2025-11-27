@@ -1,5 +1,5 @@
 import React from 'react';
-import ReactECharts from 'echarts-for-react';
+import {EChart} from '@sker/ui/components/ui/echart';
 import { useTheme } from '@/hooks/useTheme';
 
 // Safe color validation function
@@ -111,9 +111,8 @@ const MiniTrendChart: React.FC<MiniTrendChartProps> = ({
   }, [data, color, type, isDark]);
 
   return (
-    <ReactECharts
+    <EChart
       option={option}
-      style={{ height: height ? `${height}px` : `100%`, width: '100%' }}
       opts={{ renderer: 'canvas' }}
       notMerge={true}
       lazyUpdate={true}

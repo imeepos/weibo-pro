@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import ReactECharts from 'echarts-for-react';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/hooks/useTheme';
 import { useAppStore } from '@/stores/useAppStore';
-
+import { EChart } from '@sker/ui/components/ui/echart'
 import { CommonAPI } from '@/services/api';
 import { createLogger } from '@/utils';
 import type { EChartsFormatterParams } from '@/types/charts';
@@ -209,76 +208,76 @@ const EmotionCurveChart: React.FC<EmotionCurveChartProps> = ({
 
 
     return {
-    tooltip: {
-      trigger: 'axis',
-      backgroundColor: 'rgba(0, 0, 0, 0.8)',
-      borderColor: 'rgba(255, 255, 255, 0.2)',
-      textStyle: {
-        color: '#ffffff',
-      },
-      axisPointer: {
-        type: 'cross',
-        label: {
-          backgroundColor: '#6a7985'
+      tooltip: {
+        trigger: 'axis',
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        borderColor: 'rgba(255, 255, 255, 0.2)',
+        textStyle: {
+          color: '#ffffff',
+        },
+        axisPointer: {
+          type: 'cross',
+          label: {
+            backgroundColor: '#6a7985'
+          }
+        },
+        formatter: (params: EChartsFormatterParams[]) => {
+          let result = `${params[0]?.name}<br/>`;
+          params.forEach((param) => {
+            result += `<span style="color: ${param.color};">●</span> ${param.seriesName}: ${param.value}<br/>`;
+          });
+          return result;
         }
       },
-      formatter: (params: EChartsFormatterParams[]) => {
-        let result = `${params[0]?.name}<br/>`;
-        params.forEach((param) => {
-          result += `<span style="color: ${param.color};">●</span> ${param.seriesName}: ${param.value}<br/>`;
-        });
-        return result;
-      }
-    },
-    grid: {
-      left: '3%',
-      right: '4%',
-      bottom: '3%',
-      top: '15%',
-      containLabel: true
-    },
-    xAxis: {
-      type: 'category',
-      boundaryGap: false,
-      data: hours,
-      axisLine: {
-        lineStyle: {
-          color: isDark ? '#374151' : '#e5e7eb'
+      grid: {
+        left: '3%',
+        right: '4%',
+        bottom: '3%',
+        top: '15%',
+        containLabel: true
+      },
+      xAxis: {
+        type: 'category',
+        boundaryGap: false,
+        data: hours,
+        axisLine: {
+          lineStyle: {
+            color: isDark ? '#374151' : '#e5e7eb'
+          }
+        },
+        axisLabel: {
+          color: isDark ? '#9ca3af' : '#6b7280',
+          fontSize: 12
+        },
+        splitLine: {
+          show: false
         }
       },
-      axisLabel: {
-        color: isDark ? '#9ca3af' : '#6b7280',
-        fontSize: 12
-      },
-      splitLine: {
-        show: false
-      }
-    },
-    yAxis: {
-      type: 'value',
-      name: '数量',
-      nameTextStyle: {
-        color: isDark ? '#9ca3af' : '#6b7280',
-        fontSize: 12
-      },
-      axisLine: {
-        lineStyle: {
-          color: isDark ? '#374151' : '#e5e7eb'
+      yAxis: {
+        type: 'value',
+        name: '数量',
+        nameTextStyle: {
+          color: isDark ? '#9ca3af' : '#6b7280',
+          fontSize: 12
+        },
+        axisLine: {
+          lineStyle: {
+            color: isDark ? '#374151' : '#e5e7eb'
+          }
+        },
+        axisLabel: {
+          color: isDark ? '#9ca3af' : '#6b7280',
+          formatter: '{value}'
+        },
+        splitLine: {
+          lineStyle: {
+            color: isDark ? '#374151' : '#e5e7eb',
+            type: 'dashed'
+          }
         }
       },
-      axisLabel: {
-        color: isDark ? '#9ca3af' : '#6b7280',
-        formatter: '{value}'
-      },
-      splitLine: {
-        lineStyle: {
-          color: isDark ? '#374151' : '#e5e7eb',
-          type: 'dashed'
-        }
-      }
-    },
-    series: getSeriesData()
-  };
+      series: getSeriesData()
+    };
   }, [isDark, selectedType, positiveData, negativeData, neutralData, hours]);
 
   return (
@@ -294,11 +293,10 @@ const EmotionCurveChart: React.FC<EmotionCurveChartProps> = ({
           <button
             key={type.key}
             onClick={() => setSelectedType(type.key)}
-            className={`flex items-center space-x-1 px-2 py-1 text-xs font-medium transition-all duration-200 ${
-              selectedType === type.key
-                ? 'opacity-100'
-                : 'opacity-60 hover:opacity-80'
-            }`}
+            className={`flex items-center space-x-1 px-2 py-1 text-xs font-medium transition-all duration-200 ${selectedType === type.key
+              ? 'opacity-100'
+              : 'opacity-60 hover:opacity-80'
+              }`}
             style={{
               color: type.color || '#6b7280'
             }}
@@ -320,9 +318,8 @@ const EmotionCurveChart: React.FC<EmotionCurveChartProps> = ({
       {/* 图表 */}
       <div className="flex-1 min-h-0">
         {option ? (
-          <ReactECharts
+          <EChart
             option={option}
-            style={{ height: '100%', width: '100%' }}
             opts={{ renderer: 'canvas' }}
           />
         ) : (

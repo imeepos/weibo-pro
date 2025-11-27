@@ -43,9 +43,15 @@ function useAsyncData<T>(
 
   const retryCountRef = useRef(0);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const fetchFnRef = useRef(fetchFn);
+
+  // 每次更新 fetchFn ref，避免闭包陷阱
+  useEffect(() => {
+    fetchFnRef.current = fetchFn;
+  }, [fetchFn]);
 
   // 检查数据是否过期
-  const isStale = state.lastUpdated 
+  const isStale = state.lastUpdated
     ? Date.now() - state.lastUpdated > cacheTime
     : true;
 
@@ -61,8 +67,8 @@ function useAsyncData<T>(
     setState(prev => ({ ...prev, loading: true, error: null }));
 
     try {
-      const data = await fetchFn();
-      
+      const data = await fetchFnRef.current();
+
       // 检查请求是否被取消
       if (abortControllerRef.current?.signal.aborted) {
         return;
@@ -83,17 +89,17 @@ function useAsyncData<T>(
       }
 
       const errorMessage = error.message || '数据获取失败';
-      
+
       // 重试逻辑
       if (retryCountRef.current < retryCount) {
         retryCountRef.current++;
         logger.warn(`数据获取失败，正在重试... (${retryCountRef.current}/${retryCount})`, error);
-        
+
         // 延迟重试
         setTimeout(() => {
           fetchData();
         }, Math.pow(2, retryCountRef.current) * 1000);
-        
+
         return;
       }
 
@@ -103,7 +109,8 @@ function useAsyncData<T>(
         error: errorMessage,
       }));
     }
-  }, dependencies);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [...dependencies]);
 
   // 手动刷新数据
   const refetch = useCallback(async (): Promise<void> => {

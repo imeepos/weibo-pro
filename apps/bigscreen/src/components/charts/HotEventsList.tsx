@@ -13,8 +13,10 @@ import {
 import { cn, formatNumber } from '@/utils';
 import { createLogger } from '@sker/core';
 import { HotEvent } from '@/types';
-import { EventsController } from '@sker/sdk'
-import { root } from '@sker/core'
+import { EventsController } from '@sker/sdk';
+import { root } from '@sker/core';
+import { ScrollArea } from '@sker/ui/components/ui/scroll-area';
+
 interface HotEventsListProps {
   className?: string;
 }
@@ -124,69 +126,68 @@ const HotEventsList: React.FC<HotEventsListProps> = ({ className = '' }) => {
   }
 
   return (
-    <div className={cn('space-y-4', className)}>
-      {Array.isArray(events) ? events.map((event, index) => (
-        <motion.div
-          key={event.id}
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: index * 0.1 }}
-          className="bg-muted/30 hover:bg-muted/50 rounded-lg p-2 cursor-pointer transition-all duration-300"
-          onClick={() => handleEventClick(event.id)}
-        >
-          <div className="flex items-start justify-between">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center space-x-2 mb-2">
-                <span className="text-sm font-bold text-primary">#{index + 1}</span>
-                <h4 className="text-sm font-medium text-foreground truncate">{event.title}</h4>
+    <ScrollArea className={cn('h-full', className)}>
+      <div className="space-y-4 pr-4">
+        {Array.isArray(events) ? events.map((event, index) => (
+          <motion.div
+            key={event.id}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: index * 0.1 }}
+            className="bg-muted/30 hover:bg-muted/50 rounded-lg p-2 cursor-pointer transition-all duration-300"
+            onClick={() => handleEventClick(event.id)}
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center space-x-2 mb-2">
+                  <span className="text-sm font-bold text-primary">#{index + 1}</span>
+                  <h4 className="text-sm font-medium text-foreground truncate">{event.title}</h4>
+                </div>
+
+                <div className="flex items-center space-x-4 text-xs text-muted-foreground">
+                  <div className="flex items-center space-x-1">
+                    <MessageSquare className="w-3 h-3" />
+                    <span>{formatNumber(event.postCount)}</span>
+                  </div>
+
+                  <div className="flex items-center space-x-1">
+                    <Heart className={cn('w-3 h-3', getSentimentColor(event.sentiment))} />
+                    <span className={getSentimentColor(event.sentiment)}>
+                      {getSentimentLabel(event.sentiment)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center space-x-1">
+                    <BarChart3 className="w-3 h-3" />
+                    <span>{event.hotness}</span>
+                  </div>
+
+                  <div className="flex items-center space-x-1">
+                    {getTrendIcon(event.trend)}
+                  </div>
+                </div>
               </div>
-              
-              <div className="flex items-center space-x-4 text-xs text-muted-foreground">
-                <div className="flex items-center space-x-1">
-                  <MessageSquare className="w-3 h-3" />
-                  <span>{formatNumber(event.postCount)}</span>
+
+              <div className="flex items-center space-x-3 ml-4">
+                <div className="text-right">
+                  <div className="text-xs text-muted-foreground mb-1">7天热度</div>
+                  {renderMiniChart(event.trendData)}
                 </div>
-                
-                <div className="flex items-center space-x-1">
-                  <Heart className={cn('w-3 h-3', getSentimentColor(event.sentiment))} />
-                  <span className={getSentimentColor(event.sentiment)}>
-                    {getSentimentLabel(event.sentiment)}
-                  </span>
+
+                <div className="text-right">
+                  <div className="text-lg font-bold text-foreground">{event.hotness}</div>
+                  <div className="text-xs text-muted-foreground">热度</div>
                 </div>
-                
-                <div className="flex items-center space-x-1">
-                  <BarChart3 className="w-3 h-3" />
-                  <span>{event.hotness}</span>
-                </div>
-                
-                <div className="flex items-center space-x-1">
-                  {getTrendIcon(event.trend)}
-                </div>
+
+                <button className="p-2 rounded-lg hover:bg-accent transition-colors group">
+                  <Eye className="w-4 h-4 text-muted-foreground group-hover:text-foreground" />
+                </button>
               </div>
             </div>
-            
-            <div className="flex items-center space-x-3 ml-4">
-              {/* 热度直方图 */}
-              <div className="text-right">
-                <div className="text-xs text-muted-foreground mb-1">7天热度</div>
-                {renderMiniChart(event.trendData)}
-              </div>
-              
-              {/* 热度指数 */}
-              <div className="text-right">
-                <div className="text-lg font-bold text-foreground">{event.hotness}</div>
-                <div className="text-xs text-muted-foreground">热度</div>
-              </div>
-              
-              {/* 查看详情按钮 */}
-              <button className="p-2 rounded-lg hover:bg-accent transition-colors group">
-                <Eye className="w-4 h-4 text-muted-foreground group-hover:text-foreground" />
-              </button>
-            </div>
-          </div>
-        </motion.div>
-      )) : null}
-    </div>
+          </motion.div>
+        )) : null}
+      </div>
+    </ScrollArea>
   );
 };
 

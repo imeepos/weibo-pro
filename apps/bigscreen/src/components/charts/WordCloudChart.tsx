@@ -17,6 +17,18 @@ const WordCloudChart: React.FC<WordCloudChartProps> = ({
   maxWords = 100,
 }) => {
   const { data, loading, error, refetch } = useWordCloudData(maxWords)
+  const dataRef = React.useRef(data)
+
+  // 更新 data ref
+  React.useEffect(() => {
+    dataRef.current = data
+  }, [data])
+
+  // 使用 JSON 序列化进行深度比较，避免引用变化导致重新计算
+  const dataKey = React.useMemo(() => {
+    if (!data) return 'empty'
+    return JSON.stringify(data.slice(0, maxWords).map(item => [item.keyword, item.weight, item.sentiment]))
+  }, [data, maxWords])
 
   const wordCloudData: WordCloudItem[] = React.useMemo(() => {
     if (!data) return []
@@ -25,11 +37,14 @@ const WordCloudChart: React.FC<WordCloudChartProps> = ({
       value: item.weight,
       color: getSentimentColorHex(item.sentiment || "neutral"),
     }))
-  }, [data, maxWords])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataKey, maxWords])
 
+  // 稳定的 tooltipFormatter（不依赖 data）
   const tooltipFormatter = React.useCallback(
     (item: WordCloudItem) => {
-      const originalItem = data?.find((d) => d.keyword === item.name)
+      const currentData = dataRef.current
+      const originalItem = currentData?.find((d) => d.keyword === item.name)
       if (!originalItem) return ""
 
       const sentiment = originalItem.sentiment || "neutral"
@@ -45,7 +60,7 @@ const WordCloudChart: React.FC<WordCloudChartProps> = ({
         <div>情感: <span style="color: ${getSentimentColorHex(sentiment)}; font-weight: bold;">${sentimentText}</span></div>
       `
     },
-    [data]
+    []
   )
 
   return (
@@ -60,7 +75,7 @@ const WordCloudChart: React.FC<WordCloudChartProps> = ({
     >
       <WordCloud
         data={wordCloudData}
-        height={height}
+        height={height || undefined}
         className={cn("w-full h-full", className)}
         tooltipFormatter={tooltipFormatter}
         animated={true}
