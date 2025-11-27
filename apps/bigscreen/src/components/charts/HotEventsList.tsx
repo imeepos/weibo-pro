@@ -33,9 +33,18 @@ const HotEventsList: React.FC<HotEventsListProps> = ({ className = '' }) => {
         const c = root.get(EventsController)
         const result = await c.getHotList();
         console.log(`EventsAPI.getHotList`, {result})
-        // 确保返回的是数组
+        // 确保返回的是数组并转换类型
         if (Array.isArray(result)) {
-          setEvents(result);
+          const transformedEvents: HotEvent[] = result.map(event => ({
+            id: event.id,
+            title: event.title,
+            postCount: event.posts || 0,
+            sentiment: { positive: 0, negative: 0, neutral: 0 },
+            hotness: event.heat || 0,
+            trend: event.trend === 'rising' ? 'up' : event.trend === 'falling' ? 'down' : 'stable',
+            trendData: []
+          }));
+          setEvents(transformedEvents);
         } else {
           logger.warn('Hot events data is not an array:', result);
           setEvents([]);

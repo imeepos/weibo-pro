@@ -72,7 +72,7 @@ export const EChart = React.forwardRef<ReactECharts, EChartProps>(
     ref,
   ) => {
     const heightValue = height ? `${height}px` : '100%'
-    const widthValue = typeof width === 'number' ? `${width}px` : width
+    const widthValue = typeof width === 'number' ? `${width}px` : (width || '100%')
 
     const Container = animated ? motion.div : 'div'
 
@@ -93,7 +93,7 @@ export const EChart = React.forwardRef<ReactECharts, EChartProps>(
           ref={ref}
           option={option}
           style={{ height: heightValue, width: widthValue }}
-          opts={{ renderer, ...opts }}
+          opts={{ renderer, ...opts } as any}
           notMerge={notMerge}
           lazyUpdate={lazyUpdate}
           showLoading={loading}

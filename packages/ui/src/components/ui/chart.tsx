@@ -260,6 +260,7 @@ function ChartLegendContent({
   payload,
   verticalAlign = "bottom",
   nameKey,
+  ...props
 }: React.ComponentProps<"div"> & {
     payload?: RechartsPrimitive.LegendProps["payload"]
     verticalAlign?: RechartsPrimitive.LegendProps["verticalAlign"]

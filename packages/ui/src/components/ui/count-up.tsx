@@ -39,12 +39,13 @@ const CountUp = React.forwardRef<HTMLSpanElement, CountUpProps>(
     }
 
     const animate = React.useCallback(
-      (currentTime: number) => {
+      (currentTime?: number) => {
+        const now = currentTime ?? performance.now()
         if (!startTimeRef.current) {
-          startTimeRef.current = currentTime
+          startTimeRef.current = now
         }
 
-        const elapsed = currentTime - startTimeRef.current
+        const elapsed = now - startTimeRef.current
         const progress = Math.min(elapsed / duration, 1)
         const easeOutQuart = 1 - Math.pow(1 - progress, 4)
         const currentValue = start + (end - start) * easeOutQuart
@@ -68,14 +69,14 @@ const CountUp = React.forwardRef<HTMLSpanElement, CountUpProps>(
 
       startTimeRef.current = undefined
 
-      if (animationRef.current) {
+      if (animationRef.current !== undefined) {
         cancelAnimationFrame(animationRef.current)
       }
 
       animationRef.current = requestAnimationFrame(animate)
 
       return () => {
-        if (animationRef.current) {
+        if (animationRef.current !== undefined) {
           cancelAnimationFrame(animationRef.current)
         }
       }

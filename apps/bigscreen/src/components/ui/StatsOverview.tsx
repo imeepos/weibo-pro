@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
+import { FileText, MessageCircle, Users, ThumbsUp } from 'lucide-react';
 import MetricCard from './MetricCard';
 import MiniTrendChart from '@/components/charts/MiniTrendChart';
 
@@ -59,7 +60,7 @@ const StatsOverview: React.FC<StatsOverviewProps> = ({
           title="事件数"
           value={formatValue(statsData.events.value)}
           change={statsData.events.change}
-          icon="FileText"
+          icon={FileText}
           color="blue"
           loading={loading}
           size="tiny"
@@ -78,7 +79,7 @@ const StatsOverview: React.FC<StatsOverviewProps> = ({
           title="贴子数"
           value={formatValue(statsData.posts.value)}
           change={statsData.posts.change}
-          icon="MessageCircle"
+          icon={MessageCircle}
           color="green"
           loading={loading}
           size="tiny"
@@ -97,7 +98,7 @@ const StatsOverview: React.FC<StatsOverviewProps> = ({
           title="用户数量"
           value={statsData.users.value}
           change={statsData.users.change}
-          icon="Users"
+          icon={Users}
           color="purple"
           loading={loading}
           size="tiny"

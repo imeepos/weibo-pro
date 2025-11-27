@@ -1,5 +1,6 @@
 import React from "react";
 import { KeywordData } from "@/types";
+import { TrendingUp } from "lucide-react";
 
 // 导入所有可用的真实组件
 // Charts 组件
@@ -333,7 +334,7 @@ export const componentWrappers = {
       title="示例指标" 
       value={1234} 
       change={12.5} 
-      icon="TrendingUp" 
+      icon={TrendingUp} 
       color="blue" 
       className="w-full h-full flex-1" 
     />;

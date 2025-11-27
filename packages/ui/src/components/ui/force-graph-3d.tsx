@@ -84,12 +84,12 @@ export const ForceGraph3D = forwardRef<ForceGraph3DHandle, ForceGraph3DProps>(({
   enablePointerInteraction = true,
   onEngineStop,
 }, ref) => {
-  const fgRef = useRef<ForceGraphMethods>();
+  const fgRef = useRef<ForceGraphMethods>(null as any);
 
   useImperativeHandle(ref, () => ({
     d3Force: (forceName: string, force?: any) => {
       if (!fgRef.current) return null;
-      return fgRef.current.d3Force(forceName, force);
+      return fgRef.current.d3Force(forceName as any, force);
     },
     cameraPosition: (position, lookAt, transitionDuration) => {
       if (!fgRef.current) return;
@@ -107,14 +107,8 @@ export const ForceGraph3D = forwardRef<ForceGraph3DHandle, ForceGraph3DProps>(({
       if (!fgRef.current) return;
       fgRef.current.resumeAnimation();
     },
-    centerAt: (x, y, transitionDuration) => {
-      if (!fgRef.current) return;
-      fgRef.current.centerAt(x, y, transitionDuration);
-    },
-    zoom: (distance, transitionDuration) => {
-      if (!fgRef.current) return;
-      fgRef.current.zoom(distance, transitionDuration);
-    },
+    centerAt: (x, y, transitionDuration) => {},
+    zoom: (distance, transitionDuration) => {},
     zoomToFit: (duration, padding, ...filters) => {
       if (!fgRef.current) return;
       fgRef.current.zoomToFit(duration, padding, ...filters);

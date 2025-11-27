@@ -145,16 +145,18 @@ export function Comment(props: {
 
   const onCancel = () => {
     setEditingId(null);
-    commentEditor.tf.replaceNodes(initialValue, {
-      at: [],
-      children: true,
-    });
+    if (commentEditor) {
+      commentEditor.tf.replaceNodes(initialValue, {
+        at: [],
+        children: true,
+      });
+    }
   };
 
   const onSave = () => {
     void updateComment({
       id: comment.id,
-      contentRich: commentEditor.children,
+      contentRich: commentEditor ? commentEditor.children : [],
       discussionId: comment.discussionId,
       isEdited: true,
     });
@@ -211,7 +213,9 @@ export function Comment(props: {
             <CommentMoreDropdown
               onCloseAutoFocus={() => {
                 setTimeout(() => {
-                  commentEditor.tf.focus({ edge: 'endEditor' });
+                  if (commentEditor) {
+                    commentEditor.tf.focus({ edge: 'endEditor' });
+                  }
                 }, 0);
               }}
               onRemoveComment={() => {
@@ -442,7 +446,9 @@ export function CommentCreateForm({
   const onAddComment = React.useCallback(async () => {
     if (!commentValue) return;
 
-    commentEditor.tf.reset();
+    if (commentEditor) {
+      commentEditor.tf.reset();
+    }
 
     if (discussionId) {
       // Get existing discussion
@@ -545,7 +551,7 @@ export function CommentCreateForm({
       );
       editor.tf.unsetNodes([getDraftCommentKey()], { at: path });
     });
-  }, [commentValue, commentEditor.tf, discussionId, editor, discussions]);
+  }, [commentValue, commentEditor, discussionId, editor, discussions]);
 
   return (
     <div className={cn('flex w-full', className)}>
@@ -560,7 +566,7 @@ export function CommentCreateForm({
       <div className="relative flex grow gap-2">
         <Plate
           onChange={({ value }) => {
-            setCommentValue(value);
+            setCommentValue(value as typeof commentValue);
           }}
           editor={commentEditor}
         >
