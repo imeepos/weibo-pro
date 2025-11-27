@@ -183,6 +183,12 @@ export class UsersService {
         `);
       }
 
+      const totalResult = await manager.query(`
+        SELECT COUNT(*) as total
+        FROM weibo_users
+      `);
+      const totalCount = parseInt(totalResult[0]?.total) || 0;
+
       const users: UserListItem[] = results.map((row: any) => {
         const analyzedCount = parseInt(row.analyzed_count);
         const positiveCount = parseInt(row.sentiment_positive);
@@ -225,13 +231,14 @@ export class UsersService {
         };
       });
 
+      const totalPages = Math.ceil(totalCount / 20);
       return {
         users,
-        total: users.length,
+        total: totalCount,
         page: 1,
         pageSize: 20,
-        totalPages: 1,
-        hasMore: false
+        totalPages,
+        hasMore: totalPages > 1
       };
     });
   }

@@ -11,7 +11,7 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children, className }) => {
   return (
     <div className={cn(
-      'relative min-h-screen flex flex-col bg-background text-foreground',
+      'relative h-screen flex flex-col bg-background text-foreground overflow-hidden',
       className
     )}>
       <Header />
@@ -19,7 +19,7 @@ const Layout: React.FC<LayoutProps> = ({ children, className }) => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.3 }}
-        className="flex-1 relative overflow-auto p-0"
+        className="flex-1 relative overflow-auto p-0 min-h-0"
       >
         {children}
       </motion.main>

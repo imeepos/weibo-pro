@@ -21,8 +21,17 @@ import { MetricCard } from '@sker/ui/components/ui/metric-card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@sker/ui/components/ui/select';
 import MiniTrendChart from '@/components/charts/MiniTrendChart';
 import { EventItem, TrendData } from '@/types';
-import { EventsController } from '@sker/sdk'
+import { EventsController, TrendDataSeries } from '@sker/sdk'
 import { root } from '@sker/core'
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@sker/ui/components/ui/pagination';
 
 const logger = createLogger('EventAnalysis');
 
@@ -34,8 +43,10 @@ const EventAnalysis: React.FC = () => {
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
   const [events, setEvents] = useState<EventItem[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
-  const [trendData, setTrendData] = useState<TrendData | null>(null);
+  const [trendData, setTrendData] = useState<TrendDataSeries | null>(null);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10);
 
   useEffect(() => {
     const loadData = async () => {
@@ -86,6 +97,17 @@ const EventAnalysis: React.FC = () => {
     return matchesSearch && matchesCategory;
   }) : [];
 
+  // 分页计算
+  const totalPages = Math.ceil(filteredEvents.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedEvents = filteredEvents.slice(startIndex, endIndex);
+
+  // 重置页码当筛选条件变化时
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedCategory]);
+
   const getSentimentColor = (sentiment: EventItem['sentiment']) => {
     if (sentiment.positive > sentiment.negative && sentiment.positive > sentiment.neutral) {
       return 'text-success';
@@ -105,17 +127,19 @@ const EventAnalysis: React.FC = () => {
         return <div className="w-4 h-4 bg-gray-400 rounded-full"></div>;
     }
   };
-  // 从后端获取总数统计
-  const totalEvents = trendData?.totals?.totalEvents || 0;
-  const totalPosts = trendData?.totals?.totalPosts || 0;
-  const totalUsers = trendData?.totals?.totalUsers || 0;
-  const avgHotness = trendData?.totals?.avgHotness || 0;
-
-  // 从后端获取趋势数据
+  // 从趋势数据中提取序列
   const eventTrendData = trendData?.series?.find(s => s.name === '事件数量')?.data || [];
   const postTrendData = trendData?.series?.find(s => s.name === '贴子数量')?.data || [];
   const userTrendData = trendData?.series?.find(s => s.name === '参与用户')?.data || [];
   const hotnessTrendData = trendData?.series?.find(s => s.name === '热度指数')?.data || [];
+
+  // 计算总数统计（取最新值或累计值）
+  const totalEvents = eventTrendData.length > 0 ? eventTrendData[eventTrendData.length - 1] : 0;
+  const totalPosts = postTrendData.length > 0 ? postTrendData[postTrendData.length - 1] : 0;
+  const totalUsers = userTrendData.length > 0 ? userTrendData[userTrendData.length - 1] : 0;
+  const avgHotness = hotnessTrendData.length > 0
+    ? Math.round(hotnessTrendData.reduce((sum, val) => sum + val, 0) / hotnessTrendData.length)
+    : 0;
 
   if (loading) {
     return (
@@ -130,8 +154,8 @@ const EventAnalysis: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full space-y-6">
-      {/* 页面标题和筛选区域 - 参考 UserDetection 布局 */}
+    <div className="space-y-6 px-4 py-4">
+      {/* 页面标题和筛选区域 */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">事件分析面板</h1>
@@ -209,115 +233,173 @@ const EventAnalysis: React.FC = () => {
         />
       </div>
 
-      {/* 事件列表 - 为列表预留充足空间 */}
-      <div className="flex-1 min-h-0 overflow-hidden">
-        <div className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent hover:scrollbar-thumb-primary/30 transition-colors">
-          <div className="grid grid-cols-1 gap-4">
-            {filteredEvents.length === 0 ? (
-              <div className="glass-card p-8 text-center">
-                <div className="text-muted-foreground text-lg">暂无事件数据</div>
-                <div className="text-sm text-muted-foreground mt-2">请尝试调整筛选条件</div>
-              </div>
-            ) : (
-              filteredEvents.map((event, index) => (
-                <motion.div
-                  key={event.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="glass-card p-4 hover:bg-card/90 transition-all duration-300 cursor-pointer"
-                  onClick={() => handleEventClick(event.id)}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <h3 className="text-lg font-bold text-foreground">{event.title}</h3>
-                        <span className="px-3 py-1 bg-primary/20 text-primary text-sm rounded-full font-medium">
-                          {event.category}
+      {/* 事件列表 */}
+      <div className="grid grid-cols-1 gap-4">
+          {paginatedEvents.length === 0 ? (
+            <div className="glass-card p-8 text-center">
+              <div className="text-muted-foreground text-lg">暂无事件数据</div>
+              <div className="text-sm text-muted-foreground mt-2">请尝试调整筛选条件</div>
+            </div>
+          ) : (
+            paginatedEvents.map((event, index) => (
+              <motion.div
+                key={event.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className="glass-card p-4 hover:bg-card/90 transition-all duration-300 cursor-pointer"
+                onClick={() => handleEventClick(event.id)}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-3 mb-2">
+                      <h3 className="text-lg font-bold text-foreground">{event.title}</h3>
+                      <span className="px-3 py-1 bg-primary/20 text-primary text-sm rounded-full font-medium">
+                        {event.category}
+                      </span>
+                      {getTrendIcon(event.trend)}
+                      {/* 热度等级指示器 */}
+                      {event.hotness >= 90 && (
+                        <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded-full flex items-center">
+                          <AlertTriangle className="w-3 h-3 mr-1" />
+                          高热度
                         </span>
-                        {getTrendIcon(event.trend)}
-                        {/* 热度等级指示器 */}
-                        {event.hotness >= 90 && (
-                          <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded-full flex items-center">
-                            <AlertTriangle className="w-3 h-3 mr-1" />
-                            高热度
-                          </span>
-                        )}
+                      )}
+                    </div>
+
+                    <p className="text-muted-foreground mb-3 text-sm">{event.description}</p>
+
+                    <div className="flex items-center space-x-8 text-sm">
+                      <div className="flex items-center space-x-2">
+                        <MessageSquare className="w-5 h-5 text-muted-foreground" />
+                        <span className="text-foreground font-semibold">{formatNumber(event.postCount)}</span>
+                        <span className="text-muted-foreground">贴子</span>
                       </div>
 
-                      <p className="text-muted-foreground mb-3 text-sm">{event.description}</p>
-
-                      <div className="flex items-center space-x-8 text-sm">
-                        <div className="flex items-center space-x-2">
-                          <MessageSquare className="w-5 h-5 text-muted-foreground" />
-                          <span className="text-foreground font-semibold">{formatNumber(event.postCount)}</span>
-                          <span className="text-muted-foreground">贴子</span>
-                        </div>
-
-                        <div className="flex items-center space-x-2">
-                          <Users className="w-5 h-5 text-muted-foreground" />
-                          <span className="text-foreground font-semibold">{formatNumber(event.userCount)}</span>
-                          <span className="text-muted-foreground">用户</span>
-                        </div>
-
-                        <div className="flex items-center space-x-2">
-                          <BarChart3 className="w-5 h-5 text-muted-foreground" />
-                          <span className="text-foreground font-semibold">{event.hotness}</span>
-                          <span className="text-muted-foreground">热度</span>
-                        </div>
-
-                        <div className="flex items-center space-x-2">
-                          <Heart className={cn('w-5 h-5', getSentimentColor(event.sentiment))} />
-                          <span className={cn('font-semibold', getSentimentColor(event.sentiment))}>
-                            {event.sentiment.positive > event.sentiment.negative ? '正面' :
-                              event.sentiment.negative > event.sentiment.positive ? '负面' : '中性'}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center space-x-2">
-                          <Clock className="w-5 h-5 text-muted-foreground" />
-                          <span className="text-muted-foreground">{formatRelativeTime(event.lastUpdate)}</span>
-                        </div>
+                      <div className="flex items-center space-x-2">
+                        <Users className="w-5 h-5 text-muted-foreground" />
+                        <span className="text-foreground font-semibold">{formatNumber(event.userCount)}</span>
+                        <span className="text-muted-foreground">用户</span>
                       </div>
 
-                      <div className="flex items-center justify-between mt-2">
-                        <div className="flex flex-wrap gap-2">
-                          {event.keywords.slice(0, 6).map(keyword => (
-                            <span key={keyword} className="px-3 py-1 bg-primary/10 text-primary text-sm rounded-full font-medium">
-                              #{keyword}
-                            </span>
-                          ))}
-                        </div>
+                      <div className="flex items-center space-x-2">
+                        <BarChart3 className="w-5 h-5 text-muted-foreground" />
+                        <span className="text-foreground font-semibold">{event.hotness}</span>
+                        <span className="text-muted-foreground">热度</span>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <Heart className={cn('w-5 h-5', getSentimentColor(event.sentiment))} />
+                        <span className={cn('font-semibold', getSentimentColor(event.sentiment))}>
+                          {event.sentiment.positive > event.sentiment.negative ? '正面' :
+                            event.sentiment.negative > event.sentiment.positive ? '负面' : '中性'}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <Clock className="w-5 h-5 text-muted-foreground" />
+                        <span className="text-muted-foreground">{formatRelativeTime(event.lastUpdate)}</span>
                       </div>
                     </div>
 
-                    <div className="ml-8 flex flex-col items-end space-y-4">
-                      <div className="text-right">
-                        <div className="text-3xl font-bold text-foreground">{event.hotness}</div>
-                        <div className="text-sm text-muted-foreground">热度指数</div>
-                      </div>
-
-                      {/* 热度直方图（简化版） */}
-                      <div className="w-20 h-12 bg-muted/30 rounded-lg flex items-end space-x-1 p-2">
-                        {[...Array(7)].map((_, i) => {
-                          const height = 20 + Math.random() * 60;
-                          return (
-                            <div
-                              key={i}
-                              className="flex-1 bg-gradient-to-t from-primary/60 to-primary rounded-sm"
-                              style={{ height: `${height}%` }}
-                            ></div>
-                          );
-                        })}
+                    <div className="flex items-center justify-between mt-2">
+                      <div className="flex flex-wrap gap-2">
+                        {event.keywords.slice(0, 6).map(keyword => (
+                          <span key={keyword} className="px-3 py-1 bg-primary/10 text-primary text-sm rounded-full font-medium">
+                            #{keyword}
+                          </span>
+                        ))}
                       </div>
                     </div>
                   </div>
-                </motion.div>
-              ))
-            )}
-          </div>
-        </div>
+
+                  <div className="ml-8 flex flex-col items-end space-y-4">
+                    <div className="text-right">
+                      <div className="text-3xl font-bold text-foreground">{event.hotness}</div>
+                      <div className="text-sm text-muted-foreground">热度指数</div>
+                    </div>
+
+                    {/* 热度直方图（简化版） */}
+                    <div className="w-20 h-12 bg-muted/30 rounded-lg flex items-end space-x-1 p-2">
+                      {[...Array(7)].map((_, i) => {
+                        const height = 20 + Math.random() * 60;
+                        return (
+                          <div
+                            key={i}
+                            className="flex-1 bg-gradient-to-t from-primary/60 to-primary rounded-sm"
+                            style={{ height: `${height}%` }}
+                          ></div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            ))
+          )}
       </div>
+
+      {/* 分页组件 */}
+      {filteredEvents.length > 0 && totalPages > 1 && (
+        <div className="flex justify-center mt-6">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (currentPage > 1) setCurrentPage(currentPage - 1);
+                  }}
+                  className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                if (
+                  page === 1 ||
+                  page === totalPages ||
+                  (page >= currentPage - 1 && page <= currentPage + 1)
+                ) {
+                  return (
+                    <PaginationItem key={page}>
+                      <PaginationLink
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setCurrentPage(page);
+                        }}
+                        isActive={currentPage === page}
+                        className="cursor-pointer"
+                      >
+                        {page}
+                      </PaginationLink>
+                    </PaginationItem>
+                  );
+                } else if (page === currentPage - 2 || page === currentPage + 2) {
+                  return (
+                    <PaginationItem key={page}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  );
+                }
+                return null;
+              })}
+
+              <PaginationItem>
+                <PaginationNext
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+                  }}
+                  className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
 
       {/* 事件详情模态框 */}
       {selectedEvent && (
@@ -330,7 +412,7 @@ const EventAnalysis: React.FC = () => {
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="bg-card border border-border rounded-xl p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto"
+            className="bg-card border border-border rounded-xl p-6 max-w-2xl w-full max-h-[80vh]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">

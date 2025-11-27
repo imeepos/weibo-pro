@@ -16,6 +16,19 @@ import { useAppStore } from '@/stores/useAppStore';
 import { cn, formatNumber, formatRelativeTime } from '@/utils';
 import { createLogger } from '@sker/core';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@sker/ui/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@sker/ui/components/ui/dialog';
+import { Card, CardHeader, CardTitle, CardContent } from '@sker/ui/components/ui/card';
+import { MetricCard } from '@sker/ui/components/ui/metric-card';
+import MiniTrendChart from '@/components/charts/MiniTrendChart';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@sker/ui/components/ui/pagination';
 import { UserProfile } from '@/types';
 import { UsersAPI } from '@/services/api';
 
@@ -28,9 +41,12 @@ const UserDetection: React.FC = () => {
   const [selectedRiskLevel, setSelectedRiskLevel] = useState('all');
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [totalUsers, setTotalUsers] = useState(0);
   const [riskLevels, setRiskLevels] = useState<string[]>([]);
   const [riskLevelLabels, setRiskLevelLabels] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10);
 
   useEffect(() => {
     const loadData = async () => {
@@ -44,6 +60,9 @@ const UserDetection: React.FC = () => {
         const users = Array.isArray(usersResult) ? usersResult :
                      (usersResult && usersResult.users) ? usersResult.users : [];
         setUsers(users);
+        // 保存总用户数
+        const total = Array.isArray(usersResult) ? usersResult.length : (usersResult?.total || 0);
+        setTotalUsers(total);
         // 转换风险等级数据
         const riskLevelNames = ['all', ...(riskLevelsResult || []).map(level => level.level)];
         setRiskLevels(riskLevelNames);
@@ -68,6 +87,17 @@ const UserDetection: React.FC = () => {
     const matchesRisk = selectedRiskLevel === 'all' || user.riskLevel === selectedRiskLevel;
     return matchesSearch && matchesRisk;
   });
+
+  // 分页计算
+  const totalPages = Math.ceil(filteredUsers.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
+
+  // 重置页码当筛选条件变化时
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedRiskLevel]);
 
   const getRiskColor = (level: UserProfile['riskLevel']) => {
     switch (level) {
@@ -96,7 +126,7 @@ const UserDetection: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 px-4 py-4">
       {/* 页面标题和搜索 */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
@@ -136,60 +166,43 @@ const UserDetection: React.FC = () => {
       </div>
 
       {/* 统计概览 */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="glass-card p-6">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-blue-500 rounded-lg">
-              <Users className="w-5 h-5 icon-on-colored-bg" />
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-foreground">{formatNumber((users || []).length)}</div>
-              <div className="text-sm text-muted-foreground">总用户数</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="glass-card p-6">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-red-500 rounded-lg">
-              <AlertTriangle className="w-5 h-5 icon-on-colored-bg" />
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-foreground">
-                {formatNumber((users || []).filter(u => u.riskLevel === 'high').length)}
-              </div>
-              <div className="text-sm text-muted-foreground">高风险用户</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="glass-card p-6">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-yellow-500 rounded-lg">
-              <Eye className="w-5 h-5 icon-on-colored-bg" />
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-foreground">
-                {formatNumber((users || []).filter(u => u.riskLevel === 'medium').length)}
-              </div>
-              <div className="text-sm text-muted-foreground">中风险用户</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="glass-card p-6">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-green-500 rounded-lg">
-              <Shield className="w-5 h-5 icon-on-colored-bg" />
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-foreground">
-                {formatNumber((users || []).filter(u => u.riskLevel === 'low').length)}
-              </div>
-              <div className="text-sm text-muted-foreground">低风险用户</div>
-            </div>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <MetricCard
+          title="总用户数"
+          className='sentiment-overview-card'
+          value={totalUsers}
+          change={8.5}
+          icon={Users}
+          color="blue"
+          chartComponent={<MiniTrendChart data={[12, 19, 15, 25, 22, 30, 28]} color="#3b82f6" type="line" />}
+        />
+        <MetricCard
+          title="高风险用户"
+          className='sentiment-overview-card'
+          value={(users || []).filter(u => u.riskLevel === 'high').length}
+          change={-3.2}
+          icon={AlertTriangle}
+          color="red"
+          chartComponent={<MiniTrendChart data={[8, 12, 10, 15, 13, 11, 9]} color="#ef4444" type="bar" />}
+        />
+        <MetricCard
+          title="中风险用户"
+          className='sentiment-overview-card'
+          value={(users || []).filter(u => u.riskLevel === 'medium').length}
+          change={1.8}
+          icon={Eye}
+          color="yellow"
+          chartComponent={<MiniTrendChart data={[15, 18, 16, 20, 19, 22, 21]} color="#eab308" type="line" />}
+        />
+        <MetricCard
+          title="低风险用户"
+          className='sentiment-overview-card'
+          value={(users || []).filter(u => u.riskLevel === 'low').length}
+          change={12.3}
+          icon={Shield}
+          color="green"
+          chartComponent={<MiniTrendChart data={[20, 25, 30, 35, 40, 45, 50]} color="#10b981" type="bar" />}
+        />
       </div>
 
       {/* 用户列表 */}
@@ -199,7 +212,7 @@ const UserDetection: React.FC = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4">
-          {filteredUsers.map((user, index) => (
+          {paginatedUsers.map((user, index) => (
           <motion.div
             key={user.id}
             initial={{ opacity: 0, y: 20 }}
@@ -303,124 +316,190 @@ const UserDetection: React.FC = () => {
         </div>
       )}
 
-      {/* 用户详情模态框 */}
-      {selectedUser && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
-          style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
-          onClick={() => setSelectedUser(null)}
-        >
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="glass-card-modal p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-foreground">用户详情</h2>
-              <button
-                onClick={() => setSelectedUser(null)}
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                ✕
-              </button>
-            </div>
+      {/* 分页组件 */}
+      {filteredUsers.length > 0 && totalPages > 1 && (
+        <div className="flex justify-center mt-6">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (currentPage > 1) setCurrentPage(currentPage - 1);
+                  }}
+                  className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
 
-            <div className="space-y-6">
-              {/* 基本信息 */}
-              <div className="flex items-start space-x-4">
-                {selectedUser.avatar ? (
-                  <img
-                    src={selectedUser.avatar}
-                    alt={selectedUser.nickname}
-                    className="w-16 h-16 rounded-full object-cover border-2 border-border"
-                    onError={(e) => {
-                      // 头像加载失败时显示默认图标
-                      const target = e.target as HTMLImageElement;
-                      target.style.display = 'none';
-                      const fallback = target.nextElementSibling as HTMLElement;
-                      if (fallback) fallback.style.display = 'flex';
-                    }}
-                  />
-                ) : null}
-                <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center" style={{ display: selectedUser.avatar ? 'none' : 'flex' }}>
-                  <Users className="w-8 h-8 icon-on-colored-bg" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <h3 className="text-lg font-bold text-foreground">{selectedUser.nickname}</h3>
-                    {selectedUser.verified && <UserCheck className="w-5 h-5 text-blue-400" />}
-                  </div>
-                  <p className="text-muted-foreground">@{selectedUser.username}</p>
-                  <p className="text-muted-foreground">{selectedUser.location}</p>
-                </div>
-                <div className={cn(
-                  'flex items-center space-x-1 px-3 py-1 rounded-full text-sm font-medium',
-                  getRiskColor(selectedUser.riskLevel)
-                )}>
-                  {getRiskIcon(selectedUser.riskLevel)}
-                  <span>{riskLevelLabels[selectedUser.riskLevel]}</span>
-                </div>
-              </div>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                if (
+                  page === 1 ||
+                  page === totalPages ||
+                  (page >= currentPage - 1 && page <= currentPage + 1)
+                ) {
+                  return (
+                    <PaginationItem key={page}>
+                      <PaginationLink
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setCurrentPage(page);
+                        }}
+                        isActive={currentPage === page}
+                        className="cursor-pointer"
+                      >
+                        {page}
+                      </PaginationLink>
+                    </PaginationItem>
+                  );
+                } else if (page === currentPage - 2 || page === currentPage + 2) {
+                  return (
+                    <PaginationItem key={page}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  );
+                }
+                return null;
+              })}
 
-              {/* 统计数据 */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-muted rounded-lg p-4">
-                  <div className="text-sm text-muted-foreground mb-1">粉丝数量</div>
-                  <div className="text-lg font-bold text-foreground">{formatNumber(selectedUser.followers)}</div>
-                </div>
-                <div className="bg-muted rounded-lg p-4">
-                  <div className="text-sm text-muted-foreground mb-1">关注数量</div>
-                  <div className="text-lg font-bold text-foreground">{formatNumber(selectedUser.following)}</div>
-                </div>
-                <div className="bg-muted rounded-lg p-4">
-                  <div className="text-sm text-muted-foreground mb-1">发布贴子</div>
-                  <div className="text-lg font-bold text-foreground">{formatNumber(selectedUser.posts)}</div>
-                </div>
-                <div className="bg-muted rounded-lg p-4">
-                  <div className="text-sm text-muted-foreground mb-1">活跃度</div>
-                  <div className="text-lg font-bold text-foreground">
-                    {formatNumber(selectedUser.activities.posts + selectedUser.activities.comments)}
-                  </div>
-                </div>
-              </div>
-
-              {/* 情感分析 */}
-              <div className="bg-muted rounded-lg p-4">
-                <div className="text-sm text-muted-foreground mb-3">情感分析</div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-success">正面情绪</span>
-                    <span className="text-foreground">{selectedUser.sentiment.positive}%</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-destructive">负面情绪</span>
-                    <span className="text-foreground">{selectedUser.sentiment.negative}%</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">中性情绪</span>
-                    <span className="text-foreground">{selectedUser.sentiment.neutral}%</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* 用户标签 */}
-              <div>
-                <div className="text-sm text-muted-foreground mb-2">用户标签</div>
-                <div className="flex flex-wrap gap-2">
-                  {selectedUser.tags.map(tag => (
-                    <span key={tag} className="px-3 py-1 bg-primary/20 text-primary text-sm rounded-full">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        </motion.div>
+              <PaginationItem>
+                <PaginationNext
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+                  }}
+                  className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
       )}
+
+      {/* 用户详情对话框 */}
+      <Dialog open={!!selectedUser} onOpenChange={(open) => !open && setSelectedUser(null)}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>用户详情</DialogTitle>
+          </DialogHeader>
+
+          {selectedUser && (
+            <div className="space-y-6">
+              {/* 基本信息卡片 */}
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-start space-x-4">
+                    {selectedUser.avatar ? (
+                      <img
+                        src={selectedUser.avatar}
+                        alt={selectedUser.nickname}
+                        className="w-16 h-16 rounded-full object-cover border-2 border-border"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          const fallback = target.nextElementSibling as HTMLElement;
+                          if (fallback) fallback.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center" style={{ display: selectedUser.avatar ? 'none' : 'flex' }}>
+                      <Users className="w-8 h-8 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <h3 className="text-lg font-bold text-foreground">{selectedUser.nickname}</h3>
+                        {selectedUser.verified && <UserCheck className="w-5 h-5 text-blue-400" />}
+                      </div>
+                      <p className="text-muted-foreground">@{selectedUser.username}</p>
+                      <p className="text-muted-foreground flex items-center gap-1 mt-1">
+                        <MapPin className="w-4 h-4" />
+                        {selectedUser.location}
+                      </p>
+                    </div>
+                    <div className={cn(
+                      'flex items-center space-x-1 px-3 py-1 rounded-full text-sm font-medium',
+                      getRiskColor(selectedUser.riskLevel)
+                    )}>
+                      {getRiskIcon(selectedUser.riskLevel)}
+                      <span>{riskLevelLabels[selectedUser.riskLevel]}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* 统计数据卡片 */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>统计数据</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-muted rounded-lg p-4">
+                      <div className="text-sm text-muted-foreground mb-1">粉丝数量</div>
+                      <div className="text-2xl font-bold text-foreground">{formatNumber(selectedUser.followers)}</div>
+                    </div>
+                    <div className="bg-muted rounded-lg p-4">
+                      <div className="text-sm text-muted-foreground mb-1">关注数量</div>
+                      <div className="text-2xl font-bold text-foreground">{formatNumber(selectedUser.following)}</div>
+                    </div>
+                    <div className="bg-muted rounded-lg p-4">
+                      <div className="text-sm text-muted-foreground mb-1">发布贴子</div>
+                      <div className="text-2xl font-bold text-foreground">{formatNumber(selectedUser.posts)}</div>
+                    </div>
+                    <div className="bg-muted rounded-lg p-4">
+                      <div className="text-sm text-muted-foreground mb-1">活跃度</div>
+                      <div className="text-2xl font-bold text-foreground">
+                        {formatNumber(selectedUser.activities.posts + selectedUser.activities.comments)}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* 情感分析卡片 */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>情感分析</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-success font-medium">正面情绪</span>
+                      <span className="text-foreground font-bold">{selectedUser.sentiment.positive}%</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-destructive font-medium">负面情绪</span>
+                      <span className="text-foreground font-bold">{selectedUser.sentiment.negative}%</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground font-medium">中性情绪</span>
+                      <span className="text-foreground font-bold">{selectedUser.sentiment.neutral}%</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* 用户标签卡片 */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>用户标签</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedUser.tags.map(tag => (
+                      <span key={tag} className="px-3 py-1 bg-primary/20 text-primary text-sm rounded-full font-medium">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
