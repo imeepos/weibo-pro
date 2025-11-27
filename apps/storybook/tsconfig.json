@@ -1,7 +1,9 @@
 {
   "extends": "@sker/typescript-config/react-library.json",
   "compilerOptions": {
-    "outDir": "dist"
+    "outDir": "dist",
+    "module": "ESNext",
+    "moduleResolution": "bundler"
   },
   "include": ["src/**/*", ".storybook/**/*"],
   "exclude": ["node_modules", "dist"]

@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
+import { Card, CardContent, CardHeader, CardTitle } from '@sker/ui';
 import { NetworkTopologyDashboard } from '@/components/biz';
 import { RefreshCw, Settings, Search, Info } from 'lucide-react';
 import { createLogger } from '@sker/core';

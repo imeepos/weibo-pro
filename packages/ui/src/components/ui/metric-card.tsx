@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import { BarChart3, LucideIcon } from 'lucide-react';
 import { Card } from '@sker/ui/components/ui/card';
 import { Skeleton } from '@sker/ui/components/ui/skeleton';
@@ -7,9 +6,9 @@ import { Statistic, StatisticLabel, StatisticValue } from '@sker/ui/components/u
 import { Trend } from '@sker/ui/components/ui/trend';
 import { CountUp } from '@sker/ui/components/ui/count-up';
 import { SentimentIndicator, SentimentLevel, SentimentType } from '@sker/ui/components/ui/sentiment-indicator';
-import { cn } from '@/utils';
+import { cn } from '@sker/ui/lib/utils';
 
-interface MetricCardProps {
+export interface MetricCardProps {
   title: string;
   value: number;
   change?: number;
@@ -88,7 +87,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
   }
 
   return (
-    <Card className={cn('p-6 cursor-pointer', className)}>
+    <Card className={cn('p-4 cursor-pointer overflow-hidden', className)}>
       <div className="flex items-start justify-between">
         <Statistic className="flex-1">
           <StatisticLabel>{title}</StatisticLabel>
@@ -119,11 +118,11 @@ const MetricCard: React.FC<MetricCardProps> = ({
         <div className="flex flex-col items-end gap-2">
           <div
             className={cn(
-              'flex h-12 w-12 items-center justify-center rounded-lg',
+              'flex h-8 w-8 items-center justify-center rounded-lg',
               colors.bg
             )}
           >
-            <Icon className={cn('h-6 w-6', colors.icon)} />
+            <Icon className={cn('h-4 w-4', colors.icon)} />
           </div>
 
           {chartComponent && (
@@ -144,4 +143,5 @@ const MetricCard: React.FC<MetricCardProps> = ({
   );
 };
 
-export default React.memo(MetricCard);
+
+export { MetricCard }

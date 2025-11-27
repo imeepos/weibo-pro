@@ -22,8 +22,8 @@ import {
 } from 'lucide-react';
 import { cn, formatNumber, formatRelativeTime } from '@/utils';
 import { createLogger } from '@sker/core';
-// import { generateTrendData } from '@/mock/mockData'; // 移除直接导入
-import MetricCard from '@/components/ui/MetricCard';
+import { MetricCard } from '@sker/ui/components/ui/metric-card';
+
 import MiniTrendChart from '@/components/charts/MiniTrendChart';
 import TimeSeriesChart from '@/components/charts/TimeSeriesChart';
 import WordCloudChart from '@/components/charts/WordCloudChart';

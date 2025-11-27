@@ -4,5 +4,4 @@ export { LayoutEditor } from './LayoutEditor';
 export { LayoutDesigner } from './LayoutDesigner';
 export { ComponentSelector, type ComponentOption } from './ComponentSelector';
 export { CustomLayoutEditor } from './CustomLayoutEditor';
-
 export type { LayoutArea } from '../../stores/useLayoutStore';

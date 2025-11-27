@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { WorkflowCanvas } from '@sker/workflow-ui';
-import { Card } from '@/components/ui/Card';
+import { Card } from '@sker/ui/components/ui/card';
 
 /**
  * 工作流编辑器页面

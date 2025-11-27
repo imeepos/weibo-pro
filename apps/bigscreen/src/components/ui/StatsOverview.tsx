@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
-import { motion } from 'framer-motion';
 import { FileText, MessageCircle, Users, ThumbsUp } from 'lucide-react';
-import MetricCard from './MetricCard';
+import { MetricCard } from '@sker/ui/components/ui/metric-card';
 import MiniTrendChart from '@/components/charts/MiniTrendChart';
 
 interface StatsData {

@@ -17,7 +17,7 @@ import {
 import { useAppStore } from '@/stores/useAppStore';
 import { cn, formatNumber, formatRelativeTime } from '@/utils';
 import { createLogger } from '@sker/core';
-import MetricCard from '@/components/ui/MetricCard';
+import { MetricCard } from '@sker/ui/components/ui/metric-card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@sker/ui/components/ui/select';
 import MiniTrendChart from '@/components/charts/MiniTrendChart';
 import { EventItem, TrendData } from '@/types';

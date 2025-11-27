@@ -300,7 +300,7 @@ export function useStateChangeProxy(
   setNodes: (nodes: WorkflowNode[] | ((nodes: WorkflowNode[]) => WorkflowNode[])) => void,
   options?: ConstructorParameters<typeof StateChangeProxy>[1]
 ): StateChangeProxy {
-  const proxyRef = useRef<StateChangeProxy>()
+  const proxyRef = useRef<StateChangeProxy | undefined>(undefined)
 
   if (!proxyRef.current) {
     proxyRef.current = new StateChangeProxy(setNodes, options)

@@ -1,4 +1,3 @@
-export { default as MetricCard } from './MetricCard';
 export { default as StatsOverview } from './StatsOverview';
 export { default as SentimentOverview } from './SentimentOverview';
 export { default as AlertPanel } from './AlertPanel';
@@ -11,4 +10,4 @@ export { default as RealTimeIndicator } from './RealTimeIndicator';
 export { default as CountUp } from './CountUp';
 export { ToastProvider, useToast } from './Toast';
 export { Card, CardHeader, CardTitle, CardContent } from './Card';
-export { Button } from './Button';
+export { Button } from '@sker/ui';

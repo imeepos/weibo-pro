@@ -32,7 +32,7 @@ import TimeSeriesChart from "../charts/TimeSeriesChart";
 import CountUp from "../ui/CountUp";
 import FullscreenIndicator from "../ui/FullscreenIndicator";
 import LoadingSpinner from "../ui/LoadingSpinner";
-import MetricCard from "../ui/MetricCard";
+import { MetricCard } from "@sker/ui/components/ui/metric-card";
 import NavigationMenu from "../ui/NavigationMenu";
 import SentimentOverview from "../ui/SentimentOverview";
 
@@ -50,9 +50,9 @@ const generateComponentData = (timeRange?: string) => {
     thisYear: { events: 456780, posts: 5801280, users: 3307965, interactions: 16784310 },
     all: { events: 823406, posts: 10460876, users: 5966646, interactions: 30271758 },
   };
-  
+
   const data = baseStats[timeRange as keyof typeof baseStats] || baseStats.today;
-  
+
   // 统计数据
   const statsData = {
     events: { value: data.events, change: (Math.random() - 0.5) * 40 },
@@ -77,9 +77,9 @@ const generateComponentData = (timeRange?: string) => {
     lastYear: 355,
     all: 730,
   };
-  
+
   const multiplier = multipliers[timeRange as keyof typeof multipliers] || 1;
-  
+
   // 词云数据
   const baseWords: KeywordData[] = [
     { name: "新能源", value: 856, sentiment: "positive" },
@@ -98,7 +98,7 @@ const generateComponentData = (timeRange?: string) => {
     { name: "智能制造", value: 276, sentiment: "positive" },
     { name: "乡村振兴", value: 245, sentiment: "positive" },
   ];
-  
+
   const wordCloudData: KeywordData[] = baseWords.map(word => ({
     ...word,
     value: Math.floor(word.value * multiplier * (0.85 + Math.random() * 0.3))
@@ -131,7 +131,7 @@ const generateComponentData = (timeRange?: string) => {
       sentiment: "positive" as const,
     },
   ];
-  
+
   const locationData = baseLocations.map(location => ({
     ...location,
     value: Math.floor(location.value * multiplier * (0.85 + Math.random() * 0.3))
@@ -235,12 +235,12 @@ export const componentWrappers = {
 
   // 事件发展图
   "event-development-chart": () => {
-    return <EventDevelopmentChart className="w-full h-full flex-1" phases={[]}/>;
+    return <EventDevelopmentChart className="w-full h-full flex-1" phases={[]} />;
   },
 
   // 事件时间轴图
   "event-timeline-chart": () => {
-    return <EventTimelineChart className="w-full h-full flex-1" data={[]}/>;
+    return <EventTimelineChart className="w-full h-full flex-1" data={[]} />;
   },
 
   // 事件类型饼图
@@ -255,12 +255,12 @@ export const componentWrappers = {
 
   // 热门话题图
   "hot-topics-chart": () => {
-    return <HotTopicsChart className="w-full h-full flex-1" data={[]}/>;
+    return <HotTopicsChart className="w-full h-full flex-1" data={[]} />;
   },
 
   // 影响力网络流
   "influence-network-flow": () => {
-    return <InfluenceNetworkFlow className="w-full h-full flex-1" users={[]}/>;
+    return <InfluenceNetworkFlow className="w-full h-full flex-1" users={[]} />;
   },
 
   // 帖子数量图
@@ -270,7 +270,7 @@ export const componentWrappers = {
 
   // 传播路径图
   "propagation-path-chart": () => {
-    return <PropagationPathChart className="w-full h-full flex-1" data={[]}/>;
+    return <PropagationPathChart className="w-full h-full flex-1" data={[]} />;
   },
 
   // 情感饼图
@@ -280,7 +280,7 @@ export const componentWrappers = {
 
   // 简单网络流
   "simple-network-flow": () => {
-    return <SimpleNetworkFlow className="w-full h-full flex-1" users={[]}/>;
+    return <SimpleNetworkFlow className="w-full h-full flex-1" users={[]} />;
   },
 
 
@@ -330,13 +330,13 @@ export const componentWrappers = {
 
   // 指标卡片
   "metric-card": () => {
-    return <MetricCard 
-      title="示例指标" 
-      value={1234} 
-      change={12.5} 
-      icon={TrendingUp} 
-      color="blue" 
-      className="w-full h-full flex-1" 
+    return <MetricCard
+      title="示例指标"
+      value={1234}
+      change={12.5}
+      icon={TrendingUp}
+      color="blue"
+      className="w-full h-full flex-1"
     />;
   },
 

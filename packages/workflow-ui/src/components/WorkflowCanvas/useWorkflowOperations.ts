@@ -207,10 +207,8 @@ export function useWorkflowOperations(
 
       onSetRunning?.(true)
 
-      const ctx = workflow.workflowAst.ctx || {}
-
       // executeAst 返回 Observable，利用流式特性实时更新状态
-      const subscription = executeAst(workflow.workflowAst, ctx).subscribe({
+      const subscription = executeAst(workflow.workflowAst, workflow.workflowAst).subscribe({
         next: (updatedWorkflow) => {
           // 每次 next 事件实时更新工作流状态
           Object.assign(workflow.workflowAst!, updatedWorkflow)
