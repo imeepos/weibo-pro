@@ -1,7 +1,5 @@
 import type { Preview } from '@storybook/react'
-import '../src/styles.css'
-import '@sker/ui/styles'
-import '@sker/workflow-ui/styles'
+import '@sker/ui/globals.css'
 
 const preview: Preview = {
   parameters: {

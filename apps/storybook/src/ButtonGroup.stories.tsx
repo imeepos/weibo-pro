@@ -3,12 +3,12 @@ import {
   ButtonGroup,
   ButtonGroupSeparator,
   ButtonGroupText,
-  Button,
-} from '@sker/ui'
+} from '@sker/ui/components/ui/button-group'
+import { Button } from '@sker/ui/components/ui/button'
 import { Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight } from 'lucide-react'
 
 const meta = {
-  title: '@sker/ui/ButtonGroup',
+  title: '@sker/ui/ui/ButtonGroup',
   component: ButtonGroup,
   parameters: {
     layout: 'centered',

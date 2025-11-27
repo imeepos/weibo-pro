@@ -30,7 +30,7 @@ export function PropertyField({ label, value, onChange }: PropertyFieldProps) {
       <label className="block text-xs font-medium text-slate-400 mb-1">{label}</label>
       <input
         type="text"
-        className="w-full px-3 py-2 text-sm font-mono rounded-lg border bg-[var(--color-node-bg)] border-[var(--color-border)] text-foreground focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50 focus:border-[var(--color-primary)] transition-colors"
+        className="w-full px-3 py-2 text-sm font-mono rounded-lg border bg-card border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
         value={localValue}
         onChange={(e) => setLocalValue(e.target.value)}
         onBlur={handleBlur}

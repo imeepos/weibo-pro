@@ -7,11 +7,10 @@ import {
   CardContent,
   CardFooter,
   CardAction,
-  Button,
-} from '@sker/ui'
-
+} from '@sker/ui/components/ui/card'
+import { Button } from '@sker/ui/components/ui/button'
 const meta = {
-  title: '@sker/ui/Card',
+  title: '@sker/ui/ui/Card',
   component: Card,
   parameters: {
     layout: 'centered',

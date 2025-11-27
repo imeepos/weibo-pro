@@ -7,11 +7,11 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
   BreadcrumbEllipsis,
-} from '@sker/ui'
+} from '@sker/ui/components/ui/breadcrumb'
 import { Slash, Home } from 'lucide-react'
 
 const meta = {
-  title: '@sker/ui/Breadcrumb',
+  title: '@sker/ui/ui/Breadcrumb',
   component: Breadcrumb,
   parameters: {
     layout: 'centered',

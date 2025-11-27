@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react'
-import { Button } from '@sker/ui'
+import { Button } from '@sker/ui/components/ui/button'
 import { Mail, Trash2 } from 'lucide-react'
 
 const meta = {
-  title: '@sker/ui/Button',
+  title: '@sker/ui/ui/Button',
   component: Button,
   parameters: {
     layout: 'centered',

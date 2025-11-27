@@ -1,9 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react'
-import { Calendar } from '@sker/ui'
+import { Calendar } from '@sker/ui/components/ui/calendar'
 import { useState } from 'react'
+import type { DateRange } from 'react-day-picker'
 
 const meta = {
-  title: '@sker/ui/Calendar',
+  title: '@sker/ui/ui/Calendar',
   component: Calendar,
   parameters: {
     layout: 'centered',
@@ -38,13 +39,20 @@ export const WithDropdown: Story = {
 export const Multiple: Story = {
   render: () => {
     const [selected, setSelected] = useState<Date[]>([])
-    return <Calendar mode="multiple" selected={selected} onSelect={setSelected} />
+    return (
+      <Calendar
+        mode="multiple"
+        selected={selected}
+        onSelect={(dates) => setSelected(dates || [])}
+        required={false}
+      />
+    )
   },
 }
 
 export const Range: Story = {
   render: () => {
-    const [range, setRange] = useState<{ from?: Date; to?: Date }>()
+    const [range, setRange] = useState<DateRange>()
     return <Calendar mode="range" selected={range} onSelect={setRange} />
   },
 }

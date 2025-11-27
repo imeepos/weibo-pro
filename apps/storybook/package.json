@@ -6,14 +6,15 @@
   "scripts": {
     "dev": "storybook dev -p 6007",
     "build": "storybook build",
-    "preview": "serve storybook-static"
+    "preview": "serve storybook-static",
+    "check-types": "tsc --noEmit"
   },
   "dependencies": {
     "@sker/ui": "workspace:*",
     "@sker/workflow-ui": "workspace:*",
     "lucide-react": "^0.555.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
   },
   "devDependencies": {
     "@chromatic-com/storybook": "^3.2.4",
@@ -26,8 +27,11 @@
     "@storybook/react-vite": "^8.5.0",
     "@storybook/test": "^8.5.0",
     "@tailwindcss/vite": "^4.1.5",
-    "@types/react": "^18.3.18",
-    "@types/react-dom": "^18.3.5",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/recharts": "^2.0.1",
+    "react-day-picker": "^9.11.2",
+    "recharts": "^3.5.0",
     "storybook": "^8.5.0",
     "storybook-dark-mode": "^4.0.2",
     "tailwindcss": "^4.1.5",

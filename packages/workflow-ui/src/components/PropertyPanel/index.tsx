@@ -81,7 +81,7 @@ export function PropertyPanel({ className = '' }: PropertyPanelProps) {
 
   if (!selectedNode) {
     return (
-      <div className={`flex flex-col h-full border-l bg-[var(--color-panel-bg)] border-[var(--color-panel-border)] ${className}`}>
+      <div className={`flex flex-col h-full border-l bg-card border-border ${className}`}>
         <div className="flex flex-col items-center justify-center h-full text-center p-4">
           <div className="text-muted mb-4">
             <svg className="h-12 w-12 mx-auto opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -124,7 +124,7 @@ export function PropertyPanel({ className = '' }: PropertyPanelProps) {
   }))
 
   return (
-    <div className={`flex flex-col h-full border-l bg-[var(--color-panel-bg)] border-[var(--color-panel-border)] ${className}`}>
+    <div className={`flex flex-col h-full border-l bg-card border-border ${className}`}>
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
         {/* 节点基础信息 */}
         <section className="space-y-3">
@@ -180,7 +180,7 @@ export function PropertyPanel({ className = '' }: PropertyPanelProps) {
                     )
                   )
                 }}
-                className="w-full h-10 rounded-lg border border-[var(--color-border)] bg-[var(--color-node-bg)] cursor-pointer"
+                className="w-full h-10 rounded-lg border border-border bg-card cursor-pointer"
               />
             </div>
           </div>
@@ -191,27 +191,27 @@ export function PropertyPanel({ className = '' }: PropertyPanelProps) {
           <section className="space-y-3">
             <div className="flex items-center justify-between mb-3">
               <h4 className="text-sm font-semibold text-slate-300 flex items-center">
-                <div className="w-1.5 h-1.5 bg-[var(--color-primary)] rounded-full mr-2"></div>
+                <div className="w-1.5 h-1.5 bg-primary rounded-full mr-2"></div>
                 输入参数
               </h4>
 
               {/* 保存状态指示器 */}
               <div className="flex items-center gap-2">
                 {isSaving && (
-                  <div className="flex items-center gap-1.5 text-xs text-[var(--color-primary)]">
-                    <div className="w-1 h-1 bg-[var(--color-primary)] rounded-full animate-pulse"></div>
+                  <div className="flex items-center gap-1.5 text-xs text-primary">
+                    <div className="w-1 h-1 bg-primary rounded-full animate-pulse"></div>
                     保存中...
                   </div>
                 )}
                 {!isSaving && hasChanges && (
-                  <div className="flex items-center gap-1.5 text-xs text-[var(--color-warning)]">
-                    <div className="w-1 h-1 bg-[var(--color-warning)] rounded-full"></div>
+                  <div className="flex items-center gap-1.5 text-xs text-yellow-500">
+                    <div className="w-1 h-1 bg-yellow-500 rounded-full"></div>
                     未保存
                   </div>
                 )}
                 {!isSaving && !hasChanges && formData && Object.keys(formData).length > 0 && (
-                  <div className="flex items-center gap-1.5 text-xs text-[var(--color-success)]">
-                    <div className="w-1 h-1 bg-[var(--color-success)] rounded-full"></div>
+                  <div className="flex items-center gap-1.5 text-xs text-green-500">
+                    <div className="w-1 h-1 bg-green-500 rounded-full"></div>
                     已同步
                   </div>
                 )}
@@ -236,7 +236,7 @@ export function PropertyPanel({ className = '' }: PropertyPanelProps) {
         {readonlyProperties.length > 0 && (
           <section className="space-y-3">
             <h4 className="text-sm font-semibold text-slate-300 mb-3 flex items-center">
-              <div className="w-1.5 h-1.5 bg-[var(--color-success)] rounded-full mr-2"></div>
+              <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-2"></div>
               输出结果
             </h4>
             <div className="space-y-3">
@@ -245,7 +245,7 @@ export function PropertyPanel({ className = '' }: PropertyPanelProps) {
                   <label className="block text-xs font-medium text-slate-400 mb-1">
                     {prop.label || prop.property}
                   </label>
-                  <div className="text-xs text-slate-300 font-mono bg-[var(--color-node-bg)]/50 px-3 py-2 rounded-lg border border-[var(--color-border)]/50 break-all">
+                  <div className="text-xs text-slate-300 font-mono bg-card/50 px-3 py-2 rounded-lg border border-border/50 break-all">
                     {JSON.stringify(prop.value)}
                   </div>
                 </div>
@@ -257,19 +257,19 @@ export function PropertyPanel({ className = '' }: PropertyPanelProps) {
         {/* 节点信息 */}
         <section className="space-y-3">
           <h4 className="text-sm font-semibold text-slate-300 mb-3 flex items-center">
-            <div className="w-1.5 h-1.5 bg-[var(--color-secondary)] rounded-full mr-2"></div>
+            <div className="w-1.5 h-1.5 bg-secondary rounded-full mr-2"></div>
             节点信息
           </h4>
           <div className="space-y-3">
             <div className="space-y-1.5 opacity-70">
               <label className="block text-xs font-medium text-slate-400 mb-1">节点ID</label>
-              <div className="text-xs text-slate-300 font-mono bg-[var(--color-node-bg)]/50 px-3 py-2 rounded-lg border border-[var(--color-border)]/50">
+              <div className="text-xs text-slate-300 font-mono bg-card/50 px-3 py-2 rounded-lg border border-border/50">
                 {selectedNode.id}
               </div>
             </div>
             <div className="space-y-1.5 opacity-70">
               <label className="block text-xs font-medium text-slate-400 mb-1">运行状态</label>
-              <div className="text-xs capitalize bg-[var(--color-node-bg)]/50 px-3 py-2 rounded-lg border border-[var(--color-border)]/50">
+              <div className="text-xs capitalize bg-card/50 px-3 py-2 rounded-lg border border-border/50">
                 <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                   selectedNode.data.state === 'running' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' :
                   selectedNode.data.state === 'success' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
@@ -283,7 +283,7 @@ export function PropertyPanel({ className = '' }: PropertyPanelProps) {
             {selectedNode.data.error && (
               <div className="space-y-1.5 opacity-70">
                 <label className="block text-xs font-medium text-slate-400 mb-1">错误信息</label>
-                <div className="bg-[var(--color-error)]/10 px-3 py-2 rounded-lg border border-[var(--color-error)]/30">
+                <div className="bg-destructive/10 px-3 py-2 rounded-lg border border-destructive/30">
                   <ErrorDetailPanel error={selectedNode.data.error as SerializedError} />
                 </div>
               </div>

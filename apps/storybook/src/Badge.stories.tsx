@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react'
-import { Badge } from '@sker/ui'
+import { Badge } from '@sker/ui/components/ui/badge'
 import { CheckCircle2, AlertCircle, Info, ArrowRight } from 'lucide-react'
 
 const meta = {
-  title: '@sker/ui/Badge',
+  title: '@sker/ui/ui/Badge',
   component: Badge,
   parameters: {
     layout: 'centered',
