@@ -3,7 +3,7 @@ import { Button } from '@sker/ui'
 import { Mail, Trash2 } from 'lucide-react'
 
 const meta = {
-  title: 'Components/Button',
+  title: '@sker/ui/Button',
   component: Button,
   parameters: {
     layout: 'centered',
@@ -92,4 +92,34 @@ export const Disabled: Story = {
     disabled: true,
     children: '禁用按钮',
   },
+}
+
+export const IconSmall: Story = {
+  args: {
+    size: 'icon-sm',
+    children: <Trash2 />,
+  },
+}
+
+export const IconLarge: Story = {
+  args: {
+    size: 'icon-lg',
+    children: <Mail />,
+  },
+}
+
+export const DestructiveLarge: Story = {
+  args: {
+    variant: 'destructive',
+    size: 'lg',
+    children: '删除所有',
+  },
+}
+
+export const AsChild: Story = {
+  render: () => (
+    <Button asChild>
+      <a href="https://example.com">链接按钮</a>
+    </Button>
+  ),
 }

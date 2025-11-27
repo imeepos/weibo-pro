@@ -11,7 +11,7 @@ import {
 } from '@sker/ui'
 
 const meta = {
-  title: 'Components/Card',
+  title: '@sker/ui/Card',
   component: Card,
   parameters: {
     layout: 'centered',
@@ -69,6 +69,69 @@ export const WithAction: Story = {
       <CardContent>
         <p>系统检测到 3 条新通知。</p>
       </CardContent>
+    </Card>
+  ),
+}
+
+export const ContentOnly: Story = {
+  render: () => (
+    <Card className="w-[350px]">
+      <CardContent>
+        <p>仅内容区域的简洁卡片。</p>
+      </CardContent>
+    </Card>
+  ),
+}
+
+export const NoDescription: Story = {
+  render: () => (
+    <Card className="w-[350px]">
+      <CardHeader>
+        <CardTitle>简洁标题</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p>无描述信息的卡片。</p>
+      </CardContent>
+    </Card>
+  ),
+}
+
+export const Complete: Story = {
+  render: () => (
+    <Card className="w-[350px]">
+      <CardHeader>
+        <CardTitle>完整卡片</CardTitle>
+        <CardDescription>包含所有组件</CardDescription>
+        <CardAction>
+          <Button size="sm" variant="ghost">
+            操作
+          </Button>
+        </CardAction>
+      </CardHeader>
+      <CardContent>
+        <p>展示所有卡片组件的组合效果。</p>
+      </CardContent>
+      <CardFooter className="gap-2">
+        <Button variant="outline">取消</Button>
+        <Button>确认</Button>
+      </CardFooter>
+    </Card>
+  ),
+}
+
+export const WithBorders: Story = {
+  render: () => (
+    <Card className="w-[350px]">
+      <CardHeader className="border-b">
+        <CardTitle>带分隔线</CardTitle>
+        <CardDescription>Header 底部边框</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <p>内容区域</p>
+      </CardContent>
+      <CardFooter className="border-t gap-2">
+        <Button>操作</Button>
+      </CardFooter>
     </Card>
   ),
 }

@@ -396,6 +396,12 @@ importers:
       '@tailwindcss/vite':
         specifier: ^4.1.5
         version: 4.1.17(vite@6.4.1(@types/node@20.19.24)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.1))
+      '@types/react':
+        specifier: ^18.3.18
+        version: 18.3.26
+      '@types/react-dom':
+        specifier: ^18.3.5
+        version: 18.3.7(@types/react@18.3.26)
       storybook:
         specifier: ^8.5.0
         version: 8.6.14(prettier@3.6.2)
