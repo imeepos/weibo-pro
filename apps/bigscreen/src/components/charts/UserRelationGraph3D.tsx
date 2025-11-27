@@ -42,7 +42,7 @@ import {
   DEFAULT_LINK_CONFIG,
   type LinkDistanceConfig
 } from './LinkDistanceCalculator';
-import { smartFocusAlgorithm } from '@sker/ui/components/ui/graph-focus-system';
+import { smartFocusAlgorithm } from '@sker/ui/lib/graph-focus-system';
 import {
   DEFAULT_PERFORMANCE_CONFIG,
   type PerformanceConfig,
@@ -50,8 +50,8 @@ import {
   FrameRateMonitor,
   MemoryMonitor,
   getAdaptivePerformanceConfig
-} from '@sker/ui/components/ui/graph-performance-optimizer';
-import { LouvainCommunityDetector, analyzeInterCommunityRelations } from '@sker/ui/components/ui/graph-community-detector';
+} from '@sker/ui/lib/graph-performance-optimizer';
+import { LouvainCommunityDetector, analyzeInterCommunityRelations } from '@sker/ui/lib/graph-community-detector';
 import type { CommunityMapping } from './NodeShapeUtils';
 
 interface UserRelationGraph3DProps {

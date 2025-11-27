@@ -1,10 +1,10 @@
-import type { Community } from '@sker/ui/components/ui/graph-community-detector';
+import type { Community } from '@sker/ui/lib/graph-community-detector';
 import {
   type NodeShape,
   createShapeGeometry,
   createPulseAnimation,
   calculateOpacityByTimestamp
-} from '@sker/ui/components/ui/graph-geometry-utils';
+} from '@sker/ui/lib/graph-geometry-utils';
 
 export type { NodeShape };
 export { createShapeGeometry, createPulseAnimation };

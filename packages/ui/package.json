@@ -145,12 +145,12 @@
     "./globals.css": "./src/styles/globals.css",
     "./postcss.config": "./postcss.config.mjs",
     "./lib/*": "./src/lib/*.ts",
+    "./lib/graph-focus-system": "./src/lib/graph-focus-system.ts",
+    "./lib/graph-community-detector": "./src/lib/graph-community-detector.ts",
+    "./lib/graph-performance-optimizer": "./src/lib/graph-performance-optimizer.ts",
+    "./lib/graph-geometry-utils": "./src/lib/graph-geometry-utils.ts",
     "./components/*": "./src/components/*.tsx",
     "./components/ui/*": "./src/components/ui/*",
-    "./components/ui/graph-focus-system": "./src/components/ui/graph-focus-system.ts",
-    "./components/ui/graph-community-detector": "./src/components/ui/graph-community-detector.ts",
-    "./components/ui/graph-performance-optimizer": "./src/components/ui/graph-performance-optimizer.ts",
-    "./components/ui/graph-geometry-utils": "./src/components/ui/graph-geometry-utils.ts",
     "./hooks/*": "./src/hooks/*.ts",
     "./hooks/use-echart-theme": "./src/hooks/use-echart-theme.ts"
   }

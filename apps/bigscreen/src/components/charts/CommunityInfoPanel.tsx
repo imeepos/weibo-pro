@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Community, InterCommunityRelation } from '@sker/ui/components/ui/graph-community-detector';
+import type { Community, InterCommunityRelation } from '@sker/ui/lib/graph-community-detector';
 
 interface CommunityInfoPanelProps {
   communities: Community[];

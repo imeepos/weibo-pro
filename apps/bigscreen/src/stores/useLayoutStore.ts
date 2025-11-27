@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { GridItem } from '../components/layout/GridContainer';
+import { type GridItem } from '../components/layout/index';
 
 export interface LayoutArea {
   id: string;
