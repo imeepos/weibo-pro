@@ -21,6 +21,7 @@
     "@sker/core": "workspace:*",
     "@sker/sdk": "workspace:*",
     "@sker/ui": "workspace:*",
+    "@sker/entities": "workspace:*",
     "@sker/workflow": "workspace:*",
     "@sker/workflow-ast": "workspace:*",
     "@sker/workflow-ui": "workspace:*",
