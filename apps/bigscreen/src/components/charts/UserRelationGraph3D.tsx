@@ -42,7 +42,7 @@ import {
   DEFAULT_LINK_CONFIG,
   type LinkDistanceConfig
 } from './LinkDistanceCalculator';
-import { smartFocusAlgorithm } from './SmartFocusSystem';
+import { smartFocusAlgorithm } from '@sker/ui/components/ui/graph-focus-system';
 import {
   DEFAULT_PERFORMANCE_CONFIG,
   type PerformanceConfig,
@@ -50,8 +50,8 @@ import {
   FrameRateMonitor,
   MemoryMonitor,
   getAdaptivePerformanceConfig
-} from './PerformanceOptimizer';
-import { LouvainCommunityDetector, analyzeInterCommunityRelations } from './CommunityDetector';
+} from '@sker/ui/components/ui/graph-performance-optimizer';
+import { LouvainCommunityDetector, analyzeInterCommunityRelations } from '@sker/ui/components/ui/graph-community-detector';
 import type { CommunityMapping } from './NodeShapeUtils';
 
 interface UserRelationGraph3DProps {
@@ -163,7 +163,12 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
     let processedEdges = network.edges;
 
     if (performanceConfig.enableSampling) {
-      const sampled = createSamplingStrategy(network.nodes, network.edges, performanceConfig);
+      const sampled = createSamplingStrategy(
+        network.nodes,
+        network.edges,
+        performanceConfig,
+        (a, b) => (b.influence || 0) - (a.influence || 0)
+      );
       processedNodes = sampled.nodes;
       processedEdges = sampled.edges;
       setSampledData({ nodes: processedNodes, edges: processedEdges });

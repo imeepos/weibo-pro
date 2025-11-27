@@ -1,70 +1,31 @@
-// 节点形状工具函数
-import * as THREE from 'three';
-import type { Community } from './CommunityDetector';
+import type { Community } from '@sker/ui/components/ui/graph-community-detector';
+import {
+  type NodeShape,
+  createShapeGeometry,
+  createPulseAnimation,
+  calculateOpacityByTimestamp
+} from '@sker/ui/components/ui/graph-geometry-utils';
 
-export type NodeShape = 'sphere' | 'cube' | 'cylinder' | 'dodecahedron';
+export type { NodeShape };
+export { createShapeGeometry, createPulseAnimation };
 
 export interface CommunityMapping {
   nodeToCommunity: Map<string, number>;
   communities: Community[];
 }
 
-/**
- * 根据用户类型获取节点形状
- */
 export const getUserNodeShape = (userType: string): NodeShape => {
   const shapeMap: Record<string, NodeShape> = {
-    'official': 'cube',      // 官方账号：立方体
-    'media': 'cylinder',     // 媒体账号：圆柱体
-    'kol': 'dodecahedron',   // KOL：十二面体
-    'normal': 'sphere'       // 普通用户：球体
+    'official': 'cube',
+    'media': 'cylinder',
+    'kol': 'dodecahedron',
+    'normal': 'sphere'
   };
   return shapeMap[userType] || 'sphere';
 };
 
-/**
- * 创建指定形状的几何体
- */
-export const createShapeGeometry = (shape: NodeShape, radius: number): THREE.BufferGeometry => {
-  switch (shape) {
-    case 'cube':
-      return new THREE.BoxGeometry(radius * 1.5, radius * 1.5, radius * 1.5);
-    case 'cylinder':
-      return new THREE.CylinderGeometry(radius, radius, radius * 2, 32);
-    case 'dodecahedron':
-      return new THREE.DodecahedronGeometry(radius, 0);
-    case 'sphere':
-    default:
-      return new THREE.SphereGeometry(radius, 32, 32);
-  }
-};
-
-/**
- * 基于最近活跃度计算节点透明度
- */
-export const calculateNodeOpacity = (lastActive?: string): number => {
-  if (!lastActive) return 1.0;
-
-  const daysSinceActive = Math.floor((Date.now() - new Date(lastActive).getTime()) / (1000 * 60 * 60 * 24));
-
-  if (daysSinceActive <= 1) return 1.0;      // 今天活跃：完全不透明
-  if (daysSinceActive <= 7) return 0.8;      // 一周内活跃：轻微透明
-  if (daysSinceActive <= 30) return 0.6;     // 一月内活跃：中等透明
-  return 0.3;                                // 超过一月：高度透明
-};
-
-/**
- * 创建脉动动画效果
- */
-export const createPulseAnimation = (
-  baseRadius: number,
-  currentTime: number,
-  pulseFrequency: number = 2,
-  pulseAmplitude: number = 0.1
-): number => {
-  const pulse = Math.sin(currentTime * pulseFrequency * Math.PI * 2) * pulseAmplitude;
-  return baseRadius * (1 + pulse);
-};
+export const calculateNodeOpacity = (lastActive?: string): number =>
+  calculateOpacityByTimestamp(lastActive);
 
 /**
  * 检测节点是否属于某个社群（基于真实社群检测）

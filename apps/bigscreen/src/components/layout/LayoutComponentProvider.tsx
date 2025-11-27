@@ -25,7 +25,6 @@ import PostCountChart from "../charts/PostCountChart";
 import PropagationPathChart from "../charts/PropagationPathChart";
 import SentimentPieChart from "../charts/SentimentPieChart";
 import SimpleNetworkFlow from "../charts/SimpleNetworkFlow";
-import SimpleWordCloudChart from "../charts/SimpleWordCloudChart";
 import TimeSeriesChart from "../charts/TimeSeriesChart";
 
 // UI 组件
@@ -283,10 +282,6 @@ export const componentWrappers = {
     return <SimpleNetworkFlow className="w-full h-full flex-1" users={[]}/>;
   },
 
-  // 简单词云图
-  "simple-word-cloud-chart": () => {
-    return <SimpleWordCloudChart className="w-full h-full flex-1" />;
-  },
 
   // 时间序列图
   "time-series-chart": () => {
