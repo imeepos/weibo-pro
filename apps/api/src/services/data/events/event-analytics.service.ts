@@ -66,6 +66,16 @@ export class EventAnalyticsService {
             Math.round(parseFloat(d.hotness || '0'))
           );
 
+          const totalStats = await entityManager
+            .createQueryBuilder(EventStatisticsEntity, 'stats')
+            .select('COUNT(DISTINCT stats.event_id)', 'totalevents')
+            .addSelect('SUM(stats.post_count)', 'totalposts')
+            .addSelect('SUM(stats.user_count)', 'totalusers')
+            .addSelect('AVG(stats.hotness)', 'avghotness')
+            .where('stats.snapshot_at >= :start', { start: dateRange.start })
+            .andWhere('stats.snapshot_at <= :end', { end: dateRange.end })
+            .getRawOne();
+
           return {
             categories,
             series: [
@@ -74,6 +84,12 @@ export class EventAnalyticsService {
               { name: '参与用户', data: userCounts },
               { name: '热度指数', data: hotness },
             ],
+            totals: {
+              totalEvents: parseInt(totalStats?.totalevents || '0', 10),
+              totalPosts: parseInt(totalStats?.totalposts || '0', 10),
+              totalUsers: parseInt(totalStats?.totalusers || '0', 10),
+              avgHotness: Math.round(parseFloat(totalStats?.avghotness || '0')),
+            },
           };
         });
       },

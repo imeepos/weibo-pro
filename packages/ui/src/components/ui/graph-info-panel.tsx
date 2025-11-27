@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardAction } from "./card"
 import { Button } from "./button"
 import { X } from "lucide-react"
 import { ScrollArea } from "./scroll-area"
+import { Tooltip, TooltipTrigger, TooltipContent } from "./tooltip"
+import { Popover, PopoverTrigger, PopoverContent } from "./popover"
 
 const graphInfoPanelVariants = cva(
   "fixed z-10 top-10 transition-all",
@@ -53,7 +55,7 @@ function GraphInfoPanel({
     <Card
       className={cn(
         graphInfoPanelVariants({ position }),
-        `max-w-${maxWidth} max-h-${maxHeight} bg-background/95 backdrop-blur-sm border shadow-xl`,
+        `max-w-${maxWidth} top-24 h-full bg-background/95 backdrop-blur-sm border shadow-xl`,
         className
       )}
     >
@@ -61,18 +63,27 @@ function GraphInfoPanel({
         <CardTitle className="text-base">{title}</CardTitle>
         {onClose && (
           <CardAction>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={onClose}
-            >
-              <X className="size-4" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={onClose}
+                >
+                  <X className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>关闭面板</p>
+              </TooltipContent>
+            </Tooltip>
           </CardAction>
         )}
       </CardHeader>
       <CardContent>
-        <ScrollArea className="h-full">
+        <ScrollArea className={cn(
+          `h-full max-h-${maxHeight}`
+        )}>
           {children}
         </ScrollArea>
       </CardContent>
@@ -85,19 +96,59 @@ interface InfoItemProps {
   label: string
   value: React.ReactNode
   variant?: "default" | "accent"
+  tooltip?: string
+  popover?: React.ReactNode
+  onClick?: () => void
 }
 
-function InfoItem({ label, value, variant = "default" }: InfoItemProps) {
+function InfoItem({ label, value, variant = "default", tooltip, popover, onClick }: InfoItemProps) {
   const bgClass = variant === "accent"
     ? "bg-primary/10 text-primary-foreground"
     : "bg-muted"
 
-  return (
-    <div className={cn("rounded-md p-2", bgClass)}>
+  const content = (
+    <div
+      className={cn(
+        "rounded-md p-2",
+        bgClass,
+        (popover || onClick) && "cursor-pointer hover:opacity-80 transition-opacity"
+      )}
+      onClick={!popover ? onClick : undefined}
+    >
       <div className="text-xs font-medium opacity-70">{label}</div>
       <div className="text-sm font-semibold">{value}</div>
     </div>
   )
+
+  // Popover 优先级最高
+  if (popover) {
+    return (
+      <Popover>
+        <PopoverTrigger asChild>
+          {content}
+        </PopoverTrigger>
+        <PopoverContent>
+          {popover}
+        </PopoverContent>
+      </Popover>
+    )
+  }
+
+  // 其次是 Tooltip
+  if (tooltip) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          {content}
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{tooltip}</p>
+        </TooltipContent>
+      </Tooltip>
+    )
+  }
+
+  return content
 }
 
 // 信息网格组件
@@ -124,6 +175,9 @@ interface InfoListProps {
     color?: string
     label: string
     value: React.ReactNode
+    tooltip?: string
+    popover?: React.ReactNode
+    onClick?: () => void
   }>
   maxItems?: number
 }
@@ -134,23 +188,59 @@ function InfoList({ items, maxItems }: InfoListProps) {
 
   return (
     <div className="space-y-2">
-      {displayItems.map((item) => (
-        <div
-          key={item.id}
-          className="flex items-center justify-between p-2 bg-muted rounded-md text-sm"
-        >
-          <div className="flex items-center gap-2">
-            {item.color && (
-              <div
-                className="size-3 rounded-full shrink-0"
-                style={{ backgroundColor: item.color }}
-              />
+      {displayItems.map((item) => {
+        const itemContent = (
+          <div
+            key={item.id}
+            className={cn(
+              "flex items-center justify-between p-2 bg-muted rounded-md text-sm",
+              (item.popover || item.onClick) && "cursor-pointer hover:bg-muted/80 transition-colors"
             )}
-            <span className="font-medium">{item.label}</span>
+            onClick={!item.popover ? item.onClick : undefined}
+          >
+            <div className="flex items-center gap-2">
+              {item.color && (
+                <div
+                  className="size-3 rounded-full shrink-0"
+                  style={{ backgroundColor: item.color }}
+                />
+              )}
+              <span className="font-medium">{item.label}</span>
+            </div>
+            <div className="text-muted-foreground">{item.value}</div>
           </div>
-          <div className="text-muted-foreground">{item.value}</div>
-        </div>
-      ))}
+        )
+
+        // Popover 优先级最高
+        if (item.popover) {
+          return (
+            <Popover key={item.id}>
+              <PopoverTrigger asChild>
+                {itemContent}
+              </PopoverTrigger>
+              <PopoverContent>
+                {item.popover}
+              </PopoverContent>
+            </Popover>
+          )
+        }
+
+        // 其次是 Tooltip
+        if (item.tooltip) {
+          return (
+            <Tooltip key={item.id}>
+              <TooltipTrigger asChild>
+                {itemContent}
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{item.tooltip}</p>
+              </TooltipContent>
+            </Tooltip>
+          )
+        }
+
+        return itemContent
+      })}
       {remaining > 0 && (
         <div className="text-xs text-muted-foreground text-center py-1">
           还有 {remaining} 项...

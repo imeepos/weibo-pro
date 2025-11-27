@@ -1,12 +1,12 @@
 import React from 'react';
-import { Clock, Activity, Settings, Maximize, Minimize, Sun, Moon, User, Layout, ChevronDown } from 'lucide-react';
+import { Clock, Activity, Settings, Maximize, Minimize, Sun, Moon, User, ChevronDown, BarChart3, Users, Network } from 'lucide-react';
 import { useAppStore } from '@/stores/useAppStore';
-import { useLayoutStore } from '@/stores/useLayoutStore';
 import { useTheme } from '@/hooks/useTheme';
 import { useFullscreen } from '@/hooks/useFullscreen';
 import { useFullscreenShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { formatTime, cn } from '@/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@sker/ui/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@sker/ui/components/ui/popover';
 import { useNavigate } from 'react-router-dom';
 
 interface HeaderProps {
@@ -19,18 +19,10 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
     selectedTimeRange,
     setSelectedTimeRange
   } = useAppStore();
-  const navigate = useNavigate()
-  const {
-    currentLayout,
-    savedLayouts,
-    setCurrentLayout,
-    isEditMode,
-    toggleEditMode
-  } = useLayoutStore();
+  const navigate = useNavigate();
   const { toggleTheme, isDark } = useTheme();
   const { isFullscreen, isSupported, toggleFullscreen, exitFullscreen } = useFullscreen();
   const [currentTime, setCurrentTime] = React.useState(new Date());
-  const [isLayoutMenuOpen, setIsLayoutMenuOpen] = React.useState(false);
 
   // 注册全屏快捷键
   useFullscreenShortcuts(toggleFullscreen, exitFullscreen);
@@ -43,18 +35,6 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
 
     return () => clearInterval(timer);
   }, []);
-
-  // 点击外部关闭布局菜单
-  React.useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (isLayoutMenuOpen && !(event.target as Element).closest('.layout-menu')) {
-        setIsLayoutMenuOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isLayoutMenuOpen]);
 
   // 时间区间选项 - 与后端 @sker/entities TimeRange 保持一致
   const timeRangeOptions = [
@@ -74,13 +54,43 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
   const isTimeRangeValue = (value: string): value is TimeRangeValue =>
     timeRangeOptions.some(option => option.value === value);
 
-  // 主题切换函数已在useTheme hook中提供
+  // 页面导航选项
+  const navigationOptions = [
+    {
+      id: 'data-overview',
+      label: '数据总览',
+      path: '/index',
+      icon: BarChart3,
+      description: '全面数据概览与统计'
+    },
+    {
+      id: 'event-analysis',
+      label: '事件分析',
+      path: '/event-analysis',
+      icon: Activity,
+      description: '热点事件深度分析'
+    },
+    {
+      id: 'user-detection',
+      label: '媒体检测面板',
+      path: '/user-detection',
+      icon: Users,
+      description: '用户行为监测分析'
+    },
+    {
+      id: 'user-relation-topology',
+      label: '用户关系拓扑',
+      path: '/user-relation-topology',
+      icon: Network,
+      description: '用户关系网络可视化'
+    }
+  ] as const;
 
   return (
     <header className={cn(
-      'relative isolate',
+      'relative z-50',
       'glass-card-flat px-6 py-2 flex items-center justify-between',
-      'backdrop-blur-xl',
+      'backdrop-blur-xl border-b',
       className
     )}>
       {/* 底部柔和分隔线 */}
@@ -123,7 +133,7 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
           <SelectTrigger className="min-w-[140px] text-sm font-medium">
             <SelectValue placeholder="选择时间区间" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="z-[100]">
             {timeRangeOptions.map(option => (
               <SelectItem key={option.value} value={option.value}>
                 {option.label}
@@ -167,88 +177,74 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
         </button>
 
         {/* 布局设置 - 简洁按钮 */}
-        <div className="relative layout-menu">
-          <button
-            onClick={() => setIsLayoutMenuOpen(!isLayoutMenuOpen)}
-            className="flex items-center space-x-2 px-3 py-2.5 rounded-xl hover:bg-muted/20 transition-all duration-300 group"
-            title="布局设置"
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              className="flex items-center space-x-2 px-3 py-2.5 rounded-xl hover:bg-muted/20 transition-all duration-300 group"
+              title="布局设置"
+            >
+              <Settings className="w-5 h-5 text-muted-foreground group-hover:text-foreground group-hover:rotate-90 transition-all duration-300" />
+              <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-all duration-300" />
+            </button>
+          </PopoverTrigger>
+
+          <PopoverContent
+            align="end"
+            sideOffset={8}
+            className="w-72 glass-card rounded-xl shadow-xl overflow-hidden p-0"
           >
-            <Settings className="w-5 h-5 text-muted-foreground group-hover:text-foreground group-hover:rotate-90 transition-all duration-300" />
-            <ChevronDown className={cn(
-              "w-4 h-4 text-muted-foreground group-hover:text-foreground transition-all duration-300",
-              isLayoutMenuOpen && "rotate-180"
-            )} />
-          </button>
+            {/* 顶部轻微渐变 */}
+            <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-primary/3 to-transparent pointer-events-none" />
 
-          {/* 布局选择下拉菜单 - 清爽弹出框 */}
-          {isLayoutMenuOpen && (
-            <div className="absolute right-0 mt-3 w-72 glass-card rounded-xl shadow-xl z-50 overflow-hidden">
-              {/* 顶部轻微渐变 */}
-              <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-primary/3 to-transparent pointer-events-none" />
+            <div className="relative p-5">
+              <h3 className="font-semibold text-foreground mb-4 flex items-center">
+                <Settings className="w-4 h-4 mr-2 text-primary" />
+                快速导航
+              </h3>
+              <div className="space-y-2">
+                {navigationOptions.map((option, index) => {
+                  const IconComponent = option.icon;
+                  const isActive = window.location.pathname === option.path;
 
-              <div className="relative p-5">
-                <h3 className="font-semibold text-foreground mb-4 flex items-center">
-                  <Layout className="w-4 h-4 mr-2 text-primary" />
-                  选择布局方案
-                </h3>
-                <div className="space-y-2">
-                  {savedLayouts.map((layout, index) => (
+                  return (
                     <button
-                      key={layout.id}
-                      onClick={() => {
-                        setCurrentLayout(layout);
-                        setIsLayoutMenuOpen(false);
-                      }}
+                      key={option.id}
+                      onClick={() => navigate(option.path)}
                       style={{ animationDelay: `${index * 50}ms` }}
                       className={cn(
                         'w-full text-left p-3.5 rounded-xl transition-all duration-300 group relative overflow-hidden',
-                        currentLayout?.id === layout.id
+                        isActive
                           ? 'bg-gradient-to-br from-primary to-primary/90 text-primary-foreground shadow-lg shadow-primary/20'
                           : 'hover:bg-muted/30 text-foreground'
                       )}
                     >
                       {/* 活动状态渐变装饰 */}
-                      {currentLayout?.id === layout.id && (
+                      {isActive && (
                         <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-events-none" />
                       )}
 
                       <div className="relative flex items-center justify-between">
                         <div className="flex-1">
                           <div className="font-medium flex items-center">
-                            {layout.name}
-                            {currentLayout?.id === layout.id && (
+                            {option.label}
+                            {isActive && (
                               <div className="ml-2 w-1.5 h-1.5 bg-current rounded-full animate-pulse" />
                             )}
                           </div>
-                          {layout.description && (
-                            <div className="text-xs opacity-70 mt-0.5">{layout.description}</div>
-                          )}
+                          <div className="text-xs opacity-70 mt-0.5">{option.description}</div>
                         </div>
-                        <Layout className={cn(
+                        <IconComponent className={cn(
                           "w-4 h-4 transition-all duration-300",
-                          currentLayout?.id === layout.id ? "" : "group-hover:scale-110 group-hover:rotate-12"
+                          isActive ? "" : "group-hover:scale-110 group-hover:rotate-12"
                         )} />
                       </div>
                     </button>
-                  ))}
-                </div>
-
-                <div className="mt-4 pt-4">
-                  <button
-                    onClick={() => {
-                      toggleEditMode();
-                      setIsLayoutMenuOpen(false);
-                    }}
-                    className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30 rounded-xl transition-all duration-300 group"
-                  >
-                    <Settings className="w-4 h-4 group-hover:rotate-90 transition-transform duration-300" />
-                    <span>{isEditMode ? '退出编辑模式' : '进入编辑模式'}</span>
-                  </button>
-                </div>
+                  );
+                })}
               </div>
             </div>
-          )}
-        </div>
+          </PopoverContent>
+        </Popover>
 
         {/* 当前用户 - 清爽用户信息 */}
         <div className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-muted/10 hover:bg-muted/20 backdrop-blur-sm transition-all duration-300 cursor-pointer group">

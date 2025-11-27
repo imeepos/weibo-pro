@@ -130,11 +130,17 @@ export interface UserProfile {
 
 // 趋势数据类型
 export interface TrendData {
-  eventTrendData?: number[];
-  postTrendData?: number[];
-  userTrendData?: number[];
-  hotnessData?: number[];
-  [key: string]: any;
+  categories: string[];
+  series: Array<{
+    name: string;
+    data: number[];
+  }>;
+  totals: {
+    totalEvents: number;
+    totalPosts: number;
+    totalUsers: number;
+    avgHotness: number;
+  };
 }
 
 // 实时数据类型

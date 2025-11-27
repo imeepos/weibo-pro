@@ -17,7 +17,7 @@ export const CommunityInfoPanel: React.FC<CommunityInfoPanelProps> = ({
   if (!isOpen || communities.length === 0) return null;
 
   return (
-    <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur-sm rounded-lg p-4 shadow-xl border border-gray-200 max-w-80 max-h-96 overflow-y-auto">
+    <div className="bg-white/95 backdrop-blur-sm rounded-lg p-4 shadow-xl border border-gray-200 max-w-80 max-h-96 overflow-y-auto">
       <div className="flex justify-between items-center mb-3">
         <h3 className="text-lg font-semibold text-gray-800">社群分析</h3>
         <button

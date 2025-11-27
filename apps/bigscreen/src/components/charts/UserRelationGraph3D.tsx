@@ -19,12 +19,12 @@ import {
   SwitchControl,
 } from '@sker/ui/components/ui/graph-control-panel';
 import {
-  GraphInfoPanel,
   InfoGrid,
   InfoItem,
   InfoList,
 } from '@sker/ui/components/ui/graph-info-panel';
 import { GraphFloatingButton } from '@sker/ui/components/ui/graph-floating-button';
+import { Popover, PopoverTrigger, PopoverContent } from '@sker/ui/components/ui/popover';
 import {
   PerformanceHud,
   getPerformanceLevel,
@@ -111,7 +111,6 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
   // 社群检测状态
   const [communityMapping, setCommunityMapping] = useState<CommunityMapping | null>(null);
   const [interCommunityRelations, setInterCommunityRelations] = useState<any[]>([]);
-  const [showCommunityInfo, setShowCommunityInfo] = useState(false);
 
   const { nodeThreeObject } = useForceGraphNodeRenderer({
     highlightNodes,
@@ -481,37 +480,35 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
 
       {/* 社群信息面板 */}
       {currentVisualization.enableCommunities && communityMapping && (
-        <>
-          <GraphFloatingButton
-            position="bottom-left"
-            onClick={() => setShowCommunityInfo(!showCommunityInfo)}
-            title="显示社群信息"
-          >
-            <Info className="size-4" />
-          </GraphFloatingButton>
+        <Popover>
+          <PopoverTrigger asChild>
+            <GraphFloatingButton
+              position="bottom-left"
+              title="显示社群信息"
+            >
+              <Info className="size-4" />
+            </GraphFloatingButton>
+          </PopoverTrigger>
 
-          <GraphInfoPanel
-            title="社群分析"
-            open={showCommunityInfo}
-            onClose={() => setShowCommunityInfo(false)}
-            position="bottom-left"
-            className="ml-14"
-          >
+          <PopoverContent className="w-96 max-h-[600px] overflow-y-auto" align="start" side="right" sideOffset={8}>
             <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                共检测到 <span className="font-semibold text-primary">{communityMapping.communities.length}</span> 个社群
-              </p>
+              <div>
+                <h3 className="font-semibold text-base mb-2">社群分析</h3>
+                <p className="text-sm text-muted-foreground">
+                  共检测到 <span className="font-semibold text-primary">{communityMapping.communities.length}</span> 个社群
+                </p>
+              </div>
 
               <InfoGrid columns={2}>
                 <InfoItem
                   label="最大社群"
                   value={`${communityMapping.communities[0]?.size || 0} 节点`}
-                  variant="accent"
+                  variant="default"
                 />
                 <InfoItem
                   label="平均密度"
                   value={`${((communityMapping.communities.reduce((sum, c) => sum + c.density, 0) / communityMapping.communities.length) * 100).toFixed(1)}%`}
-                  variant="accent"
+                  variant="default"
                 />
               </InfoGrid>
 
@@ -524,7 +521,7 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
                     label: `社群 ${c.id}`,
                     value: `${c.size} 节点`,
                   }))}
-                  maxItems={5}
+                  maxItems={10}
                 />
               </div>
 
@@ -551,8 +548,8 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
                 </div>
               )}
             </div>
-          </GraphInfoPanel>
-        </>
+          </PopoverContent>
+        </Popover>
       )}
     </div>
   );

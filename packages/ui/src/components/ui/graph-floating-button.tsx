@@ -5,14 +5,14 @@ import { cn } from "@sker/ui/lib/utils"
 import { Button } from "./button"
 
 const graphFloatingButtonVariants = cva(
-  "fixed bg-background/90 backdrop-blur-sm border shadow-lg hover:bg-background transition-colors",
+  "absolute bg-background/90 backdrop-blur-sm border shadow-lg hover:bg-background transition-colors",
   {
     variants: {
       position: {
         "top-left": "top-4 left-4",
         "top-right": "top-4 right-4",
-        "bottom-left": "bottom-4 left-4",
-        "bottom-right": "bottom-4 right-4",
+        "bottom-left": "bottom-2 left-2",
+        "bottom-right": "bottom-2 right-2",
       },
     },
     defaultVariants: {

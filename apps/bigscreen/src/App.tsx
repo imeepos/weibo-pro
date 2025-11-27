@@ -351,7 +351,7 @@ const App: React.FC = () => {
             <Route
               path="/user-relation-topology"
               element={
-                <FullscreenLayout>
+                <Layout>
                   <AnimatePresence mode="wait">
                     <motion.div
                       key="user-relation-topology"
@@ -364,7 +364,7 @@ const App: React.FC = () => {
                       <UserRelationTopology />
                     </motion.div>
                   </AnimatePresence>
-                </FullscreenLayout>
+                </Layout>
               }
             />
 

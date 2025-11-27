@@ -105,18 +105,17 @@ const EventAnalysis: React.FC = () => {
         return <div className="w-4 h-4 bg-gray-400 rounded-full"></div>;
     }
   };
-  // 计算统计数据
-  const totalEvents = filteredEvents.length;
-  const totalPosts = filteredEvents.reduce((sum, event) => sum + event.postCount, 0);
-  const totalUsers = filteredEvents.reduce((sum, event) => sum + event.userCount, 0);
-  const avgHotness = filteredEvents.length > 0 ?
-    Math.round(filteredEvents.reduce((sum, event) => sum + event.hotness, 0) / filteredEvents.length) : 0;
+  // 从后端获取总数统计
+  const totalEvents = trendData?.totals?.totalEvents || 0;
+  const totalPosts = trendData?.totals?.totalPosts || 0;
+  const totalUsers = trendData?.totals?.totalUsers || 0;
+  const avgHotness = trendData?.totals?.avgHotness || 0;
 
-  // 从 mock 服务获取趋势数据
-  const eventTrendData = trendData?.eventTrendData || [];
-  const postTrendData = trendData?.postTrendData || [];
-  const userTrendData = trendData?.userTrendData || [];
-  const hotnessTrendData = trendData?.hotnessData || [];
+  // 从后端获取趋势数据
+  const eventTrendData = trendData?.series?.find(s => s.name === '事件数量')?.data || [];
+  const postTrendData = trendData?.series?.find(s => s.name === '贴子数量')?.data || [];
+  const userTrendData = trendData?.series?.find(s => s.name === '参与用户')?.data || [];
+  const hotnessTrendData = trendData?.series?.find(s => s.name === '热度指数')?.data || [];
 
   if (loading) {
     return (

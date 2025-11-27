@@ -19,7 +19,7 @@ const Layout: React.FC<LayoutProps> = ({ children, className }) => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.3 }}
-        className="flex-1 relative overflow-auto p-4"
+        className="flex-1 relative overflow-auto p-0"
       >
         {children}
       </motion.main>

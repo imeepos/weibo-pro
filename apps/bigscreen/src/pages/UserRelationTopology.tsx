@@ -24,8 +24,8 @@ const USER_TYPE_CONFIGS = [
 const UserRelationTopology: React.FC = () => {
   const [relationType, setRelationType] = useState<UserRelationType>('comprehensive');
   const [timeRange, setTimeRange] = useState<TimeRange>('90d');
-  const [minWeight, setMinWeight] = useState(2);
-  const [limit, setLimit] = useState(200);
+  const [minWeight, setMinWeight] = useState(1);
+  const [limit, setLimit] = useState(5000);
   const [selectedNode, setSelectedNode] = useState<UserRelationNode | null>(null);
 
   const { network, isLoading, error, refetch } = useUserRelationNetwork({
@@ -102,6 +102,7 @@ const UserRelationTopology: React.FC = () => {
                 className="w-full h-full"
                 onNodeClick={handleNodeClick}
                 onNodeHover={handleNodeHover}
+                enableCommunities={true}
               />
             )}
           </div>

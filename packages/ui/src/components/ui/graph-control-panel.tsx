@@ -4,9 +4,16 @@ import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@sker/ui/lib/utils"
-import { Card, CardContent, CardHeader, CardTitle, CardAction } from "./card"
 import { Button } from "./button"
-import { X, Settings } from "lucide-react"
+import { Settings } from "lucide-react"
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "./drawer"
 
 const graphControlPanelVariants = cva(
   "fixed z-10 transition-all",
@@ -46,52 +53,30 @@ function GraphControlPanel({
   className,
   children,
 }: GraphControlPanelProps) {
-  const [internalOpen, setInternalOpen] = React.useState(false)
-
-  const isControlled = controlledOpen !== undefined
-  const open = isControlled ? controlledOpen : internalOpen
-
-  const handleOpenChange = React.useCallback((newOpen: boolean) => {
-    if (!isControlled) {
-      setInternalOpen(newOpen)
-    }
-    onOpenChange?.(newOpen)
-  }, [isControlled, onOpenChange])
-
   return (
-    <div className={cn(graphControlPanelVariants({ position }), className)}>
-      {/* 触发按钮 */}
-      <Button
-        variant="outline"
-        size="icon"
-        onClick={() => handleOpenChange(!open)}
-        title={triggerTitle}
-        className="bg-background/90 backdrop-blur-sm border shadow-lg hover:bg-background"
-      >
-        {triggerIcon || <Settings className="size-4" />}
-      </Button>
+    <Drawer direction="right" open={controlledOpen} onOpenChange={onOpenChange}>
+      <div className={cn(graphControlPanelVariants({ position }), className)}>
+        <DrawerTrigger asChild>
+          <Button
+            variant="outline"
+            size="icon"
+            title={triggerTitle}
+            className="bg-background/90 backdrop-blur-sm border shadow-lg hover:bg-background"
+          >
+            {triggerIcon || <Settings className="size-4" />}
+          </Button>
+        </DrawerTrigger>
+      </div>
 
-      {/* 控制面板内容 */}
-      {open && (
-        <Card className="mt-2 min-w-80 bg-background/95 backdrop-blur-sm border shadow-xl">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">{title}</CardTitle>
-            <CardAction>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={() => handleOpenChange(false)}
-              >
-                <X className="size-4" />
-              </Button>
-            </CardAction>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {children}
-          </CardContent>
-        </Card>
-      )}
-    </div>
+      <DrawerContent className="max-w-md h-full flex flex-col">
+        <DrawerHeader className="border-b shrink-0">
+          <DrawerTitle>{title}</DrawerTitle>
+        </DrawerHeader>
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {children}
+        </div>
+      </DrawerContent>
+    </Drawer>
   )
 }
 

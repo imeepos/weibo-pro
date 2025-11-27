@@ -75,11 +75,10 @@ const UserRelationControls: React.FC<UserRelationControlsProps> = ({
               <button
                 key={type.value}
                 onClick={() => onRelationTypeChange(type.value)}
-                className={`px-3 py-2 rounded-md transition-all duration-200 text-sm font-medium flex items-center justify-center gap-2 ${
-                  relationType === type.value
+                className={`px-3 py-2 rounded-md transition-all duration-200 text-sm font-medium flex items-center justify-center gap-2 ${relationType === type.value
                     ? 'bg-primary text-primary-foreground shadow'
                     : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-                }`}
+                  }`}
               >
                 {type.icon}
                 <span>{type.label}</span>
@@ -114,7 +113,7 @@ const UserRelationControls: React.FC<UserRelationControlsProps> = ({
           <input
             type="range"
             min="1"
-            max="10"
+            max="100"
             value={minWeight}
             onChange={(e) => onMinWeightChange(parseInt(e.target.value))}
             className="w-full h-1.5 bg-secondary rounded-md appearance-none cursor-pointer accent-primary"
@@ -133,7 +132,7 @@ const UserRelationControls: React.FC<UserRelationControlsProps> = ({
           <input
             type="range"
             min="20"
-            max="2000"
+            max="20000"
             step="20"
             value={limit}
             onChange={(e) => onLimitChange(parseInt(e.target.value))}
@@ -141,7 +140,7 @@ const UserRelationControls: React.FC<UserRelationControlsProps> = ({
           />
           <div className="flex justify-between text-xs text-muted-foreground mt-1">
             <span>20个</span>
-            <span>2000个</span>
+            <span>20000个</span>
           </div>
         </div>
       </div>
