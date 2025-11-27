@@ -84,7 +84,6 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
   const fgRef = useRef<ForceGraph3DHandle>(null);
   const [hoverNode, setHoverNode] = useState<UserRelationNode | null>(null);
   const [highlightNodes, setHighlightNodes] = useState<Set<string>>(new Set());
-  const [highlightLinks, setHighlightLinks] = useState<Set<string>>(new Set());
   const [fps, setFps] = useState(60);
   const [frameTime, setFrameTime] = useState(16.67);
   const frameCountRef = useRef(0);
@@ -100,7 +99,6 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
     enableNodePulse,
     enableCommunities
   });
-  const [dimmedNodes, setDimmedNodes] = useState<Set<string>>(new Set());
 
   // 性能优化状态
   const [performanceConfig, setPerformanceConfig] = useState<PerformanceConfig>(DEFAULT_PERFORMANCE_CONFIG);
@@ -210,8 +208,8 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
       setTimeout(() => {
         if (fgRef.current) {
           // 使用 zoomToFit 自动调整相机距离和位置，确保所有节点可见
-          // 参数：duration=0ms（禁用动画减少卡顿）, padding=200px（增大边距拉远镜头）
-          fgRef.current.zoomToFit(0, 200);
+          // 参数：duration=0ms（禁用动画减少卡顿）, padding=50px（适中边距，镜头距离更近）
+          fgRef.current.zoomToFit(0, 50);
         }
       }, 100);
     }
