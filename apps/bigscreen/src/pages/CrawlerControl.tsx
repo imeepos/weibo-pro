@@ -7,7 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { WorkflowAPI, WorkflowStatusResponse } from '@/services/api/workflow';
 import { createLogger } from '@/utils';
-import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { Spinner } from '@sker/ui/components/ui/spinner';
 
 const logger = createLogger('CrawlerControl');
 
@@ -284,7 +284,7 @@ const CrawlerControl: React.FC = () => {
                 )}
               </div>
             ) : (
-              <LoadingSpinner size="small" text="加载中..." />
+              <Spinner />
             )}
           </motion.div>
 

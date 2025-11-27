@@ -31,7 +31,7 @@ import TimeSeriesChart from "../charts/TimeSeriesChart";
 // UI 组件
 import { CountUp } from "@sker/ui/components/ui/count-up";
 import FullscreenIndicator from "../ui/FullscreenIndicator";
-import LoadingSpinner from "../ui/LoadingSpinner";
+import {Spinner} from "@sker/ui/components/ui/spinner";
 import { MetricCard } from "@sker/ui/components/ui/metric-card";
 import NavigationMenu from "../ui/NavigationMenu";
 import SentimentOverview from "../ui/SentimentOverview";
@@ -325,7 +325,7 @@ export const componentWrappers = {
 
   // 加载旋转器
   "loading-spinner": () => {
-    return <LoadingSpinner className="w-full h-full flex-1" />;
+    return <Spinner className="w-full h-full flex-1" />;
   },
 
   // 指标卡片

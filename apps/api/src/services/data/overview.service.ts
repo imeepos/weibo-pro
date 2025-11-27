@@ -224,20 +224,20 @@ export class OverviewService {
 
       // 计算趋势并补充完整数据
       return currentLocations.map((location: any) => {
-        const yesterdayCount = Number(yesterdayMap.get(location.region) || 0);
+        const yesterdayCount = Number(yesterdayMap.get(location?.region) || 0);
         let trend: 'up' | 'down' | 'stable' = 'stable';
 
         if (yesterdayCount === 0) {
-          trend = location.count > 0 ? 'up' : 'stable';
+          trend = location?.count > 0 ? 'up' : 'stable';
         } else {
-          const changeRate = (location.count - yesterdayCount) / yesterdayCount;
+          const changeRate = (location?.count - yesterdayCount) / yesterdayCount;
           if (changeRate > 0.05) {
             trend = 'up';
           } else if (changeRate < -0.05) {
             trend = 'down';
           }
         }
-        let region: string = (location.region || '');
+        let region: string = (location?.region || '');
         
         return {
           region: region.replace(`发布于`, '').trim(),

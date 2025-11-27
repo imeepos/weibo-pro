@@ -19,7 +19,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { cn, createLogger } from '@/utils';
 import { useWebSocket, useRealTimeData, useAutoRefresh } from '@/hooks';
 import { initializeApp, runHealthCheck } from '@/services/appInitialization';
-import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { Spinner } from '@sker/ui/components/ui/spinner';
 import { ToastProvider } from '@/components/ui/Toast';
 
 const logger = createLogger('App');
@@ -90,8 +90,8 @@ const App: React.FC = () => {
         <div className="text-center">
           <h1 className="text-2xl font-bold text-red-600 mb-4">应用初始化失败</h1>
           <p className="text-gray-600 mb-4">{initError}</p>
-          <button 
-            onClick={() => window.location.reload()} 
+          <button
+            onClick={() => window.location.reload()}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
           >
             重新加载
@@ -106,7 +106,7 @@ const App: React.FC = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <LoadingSpinner size="large" text="正在初始化应用..." />
+          <Spinner />
           <p className="text-gray-500 mt-4">正在注册组件和配置系统...</p>
         </div>
       </div>
