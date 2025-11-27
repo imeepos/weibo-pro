@@ -29,9 +29,7 @@ import {
   PerformanceHud,
   getPerformanceLevel,
   getFpsColor,
-  type Metric,
 } from '@sker/ui/components/ui/performance-hud';
-import { getNodeLabel } from './UserRelationGraph3D.utils';
 import {
   calculateCompositeScore,
   calculateNodeSize,

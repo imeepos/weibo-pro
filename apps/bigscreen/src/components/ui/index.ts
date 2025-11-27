@@ -12,4 +12,3 @@ export { default as CountUp } from './CountUp';
 export { ToastProvider, useToast } from './Toast';
 export { Card, CardHeader, CardTitle, CardContent } from './Card';
 export { Button } from './Button';
-export { default as Select } from './Select';

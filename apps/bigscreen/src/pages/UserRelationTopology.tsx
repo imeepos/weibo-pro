@@ -19,7 +19,7 @@ const USER_TYPE_CONFIGS = [
   { value: 'media', label: '媒体', color: getUserTypeColor('media') },
   { value: 'kol', label: 'KOL', color: getUserTypeColor('kol') },
   { value: 'normal', label: '普通', color: getUserTypeColor('normal') },
-] as const;
+];
 
 const UserRelationTopology: React.FC = () => {
   const [relationType, setRelationType] = useState<UserRelationType>('comprehensive');

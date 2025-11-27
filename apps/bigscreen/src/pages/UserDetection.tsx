@@ -15,7 +15,7 @@ import {
 import { useAppStore } from '@/stores/useAppStore';
 import { cn, formatNumber, formatRelativeTime } from '@/utils';
 import { createLogger } from '@sker/core';
-import Select from '@/components/ui/Select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@sker/ui/components/ui/select';
 import { UserProfile } from '@/types';
 import { UsersAPI } from '@/services/api';
 
@@ -120,16 +120,18 @@ const UserDetection: React.FC = () => {
           </div>
 
           {/* 风险等级筛选 */}
-          <Select
-            className="min-w-[150px]"
-            value={selectedRiskLevel}
-            onChange={(nextValue) => setSelectedRiskLevel(nextValue)}
-            options={(riskLevels.length ? riskLevels : ['all']).map(level => ({
-              value: level,
-              label: riskLevelLabels[level as keyof typeof riskLevelLabels] ?? (level === 'all' ? '全部等级' : level),
-            }))}
-            placeholder="选择风险等级"
-          />
+          <Select value={selectedRiskLevel} onValueChange={setSelectedRiskLevel}>
+            <SelectTrigger className="min-w-[150px]">
+              <SelectValue placeholder="选择风险等级" />
+            </SelectTrigger>
+            <SelectContent>
+              {(riskLevels.length ? riskLevels : ['all']).map(level => (
+                <SelectItem key={level} value={level}>
+                  {riskLevelLabels[level as keyof typeof riskLevelLabels] ?? (level === 'all' ? '全部等级' : level)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

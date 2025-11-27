@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import { Network, Options } from 'vis-network';
 import { DataSet } from 'vis-data';
-import { cn } from '../../lib/utils';
+import { cn } from '@sker/ui/lib/utils';
 
 export interface NetworkNode {
   id: string | number;

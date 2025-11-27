@@ -6,7 +6,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { useFullscreen } from '@/hooks/useFullscreen';
 import { useFullscreenShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { formatTime, cn } from '@/utils';
-import Select from './ui/Select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@sker/ui/components/ui/select';
 import { useNavigate } from 'react-router-dom';
 
 interface HeaderProps {
@@ -113,20 +113,24 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
       <div className="flex items-center space-x-3 px-4 py-2 rounded-xl bg-muted/10 backdrop-blur-sm">
         <Clock className="w-6 h-6 text-primary/70" />
         <Select
-          className="min-w-[140px]"
-          triggerClassName="text-sm font-medium"
           value={selectedTimeRange}
-          onChange={(nextValue) => {
+          onValueChange={(nextValue) => {
             if (isTimeRangeValue(nextValue)) {
               setSelectedTimeRange(nextValue);
             }
           }}
-          options={timeRangeOptions.map(option => ({
-            value: option.value,
-            label: option.label,
-          }))}
-          placeholder="选择时间区间"
-        />
+        >
+          <SelectTrigger className="min-w-[140px] text-sm font-medium">
+            <SelectValue placeholder="选择时间区间" />
+          </SelectTrigger>
+          <SelectContent>
+            {timeRangeOptions.map(option => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* 右侧：顶部右侧菜单 - 美化操作按钮组 */}

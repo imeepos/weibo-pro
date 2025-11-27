@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { RefreshCw } from 'lucide-react';
-import { NetworkGraph, NetworkGraphData, ChartState, Button } from '@sker/ui';
+import { NetworkGraph, NetworkGraphData } from '@sker/ui/components/ui/network-graph';
+import { ChartState } from '@sker/ui/components/ui/chart-state';
+import { Button } from '@sker/ui/components/ui/button';
 import { BleMeshTopologyData, DeviceInfo } from '../../types/bleMesh';
 import { getBleMeshTopologyData, getDeviceDetails } from '../../services/api/bleMesh';
 
@@ -184,7 +186,7 @@ const BleMeshNetworkChart: React.FC<BleMeshNetworkChartProps> = ({
   const handleNodeClick = useCallback(async (nodeId: string | number) => {
     if (!onDeviceSelect) return;
     try {
-      const deviceResponse = await getDeviceDetails(nodeId);
+      const deviceResponse = await getDeviceDetails(`${nodeId}`);
       if (deviceResponse.success) {
         onDeviceSelect(deviceResponse.data);
       }

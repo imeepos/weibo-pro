@@ -2,7 +2,9 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { DataSet, Network, Node, Edge } from 'vis-network/standalone';
 import { apiClient } from '@/services/api/apiClient';
 import { createLogger } from '@sker/core';
-import { LoadingOverlay, ErrorState, Legend, StatisticsCard } from '@sker/ui/components/ui';
+import { ChartState } from '@sker/ui/components/ui/chart-state';
+import { Legend } from '@sker/ui/components/ui/legend';
+import { StatisticsCard } from '@sker/ui/components/ui/statistics-card';
 
 const logger = createLogger('NetworkTopologyDashboard');
 
@@ -497,55 +499,50 @@ const NetworkTopologyDashboard: React.FC<NetworkTopologyDashboardProps> = ({
 
   // ================== 渲染 ==================
 
-  if (error) {
-    return (
-      <ErrorState
-        message={error}
-        onRetry={() => fetchTopologyData()}
-        className={className}
-      />
-    );
-  }
-
   return (
     <div className={`relative w-full h-full ${className}`} style={{ width, height }}>
-      {isLoading && <LoadingOverlay message="正在加载拓扑数据..." />}
+      <ChartState
+        loading={isLoading}
+        error={error || undefined}
+        loadingText="正在加载拓扑数据..."
+        onRetry={() => fetchTopologyData()}
+      >
+        {/* 网络容器 */}
+        <div
+          ref={containerRef}
+          className="w-full"
+          style={{
+            height: '500px',
+            minHeight: '500px',
+            maxHeight: '500px',
+            overflow: 'hidden'
+          }}
+        />
 
-      {/* 网络容器 */}
-      <div
-        ref={containerRef}
-        className="w-full"
-        style={{
-          height: '500px',
-          minHeight: '500px',
-          maxHeight: '500px',
-          overflow: 'hidden'
-        }}
-      />
-
-      <Legend
-        title="节点类型"
-        position="bottom-left"
-        items={[
-          { color: '#1e3a8a', label: '核心节点 (MainHub)', size: 'md', borderColor: '#1e40af' },
-          { color: '#1d4ed8', label: '高重要性节点', size: 'sm', borderColor: '#1e40af' },
-          { color: '#2563eb', label: '中等重要性节点 (0.15-0.3)', size: 'sm', borderColor: '#3b82f6' },
-          { color: '#3b82f6', label: '普通节点', size: 'sm', borderColor: '#60a5fa' }
-        ]}
-      />
-
-      {(statistics.efdTotal > 0 || statistics.appTotal > 0) && (
-        <StatisticsCard
-          title="统计"
-          position="top-right"
+        <Legend
+          title="节点类型"
+          position="bottom-left"
           items={[
-            { label: '回声设备', value: statistics.efdTotal },
-            { label: '家电设备', value: statistics.appTotal },
-            { label: 'IoT设备', value: statistics.iotTotal },
-            { label: '云服务', value: statistics.cloudTotal }
+            { color: '#1e3a8a', label: '核心节点 (MainHub)', size: 'md', borderColor: '#1e40af' },
+            { color: '#1d4ed8', label: '高重要性节点', size: 'sm', borderColor: '#1e40af' },
+            { color: '#2563eb', label: '中等重要性节点 (0.15-0.3)', size: 'sm', borderColor: '#3b82f6' },
+            { color: '#3b82f6', label: '普通节点', size: 'sm', borderColor: '#60a5fa' }
           ]}
         />
-      )}
+
+        {(statistics.efdTotal > 0 || statistics.appTotal > 0) && (
+          <StatisticsCard
+            title="统计"
+            position="top-right"
+            items={[
+              { label: '回声设备', value: statistics.efdTotal },
+              { label: '家电设备', value: statistics.appTotal },
+              { label: 'IoT设备', value: statistics.iotTotal },
+              { label: '云服务', value: statistics.cloudTotal }
+            ]}
+          />
+        )}
+      </ChartState>
     </div>
   );
 };

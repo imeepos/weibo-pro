@@ -56,12 +56,10 @@ export const BarCharts: ChartComponentsMap = {
 
 // 词云和热点分析
 import WordCloudChart from './WordCloudChart';
-import SimpleWordCloudChart from './SimpleWordCloudChart';
 import HotTopicsChart from './HotTopicsChart';
 
 export const AnalysisCharts: ChartComponentsMap = {
   WordCloudChart,
-  SimpleWordCloudChart,
   HotTopicsChart
 };
 
@@ -122,7 +120,6 @@ export { default as PostCountChart } from './PostCountChart';
 
 // 词云和热点分析
 export { default as WordCloudChart } from './WordCloudChart';
-export { default as SimpleWordCloudChart } from './SimpleWordCloudChart';
 export { default as HotTopicsChart } from './HotTopicsChart';
 
 // 地理和位置分析

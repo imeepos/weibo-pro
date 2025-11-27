@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-interface NodeType {
+export interface NodeType {
   value: string;
   label: string;
   color: string;

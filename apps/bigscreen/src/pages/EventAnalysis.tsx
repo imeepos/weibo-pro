@@ -16,7 +16,7 @@ import { useAppStore } from '@/stores/useAppStore';
 import { cn, formatNumber, formatRelativeTime } from '@/utils';
 import { createLogger } from '@sker/core';
 import MetricCard from '@/components/ui/MetricCard';
-import Select from '@/components/ui/Select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@sker/ui/components/ui/select';
 import MiniTrendChart from '@/components/charts/MiniTrendChart';
 import { EventItem, TrendData } from '@/types';
 import { EventsController } from '@sker/sdk'
@@ -153,16 +153,18 @@ const EventAnalysis: React.FC = () => {
           </div>
 
           {/* 分类筛选 */}
-          <Select
-            className="min-w-[150px]"
-            value={selectedCategory}
-            onChange={(nextValue) => setSelectedCategory(nextValue)}
-            options={(categories.length ? categories : ['all']).map(category => ({
-              value: category,
-              label: category === 'all' ? '全部分类' : category,
-            }))}
-            placeholder="选择分类"
-          />
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <SelectTrigger className="min-w-[150px]">
+              <SelectValue placeholder="选择分类" />
+            </SelectTrigger>
+            <SelectContent>
+              {(categories.length ? categories : ['all']).map(category => (
+                <SelectItem key={category} value={category}>
+                  {category === 'all' ? '全部分类' : category}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

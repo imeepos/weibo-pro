@@ -1,109 +1,60 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import {
-  BarChart3,
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  ArrowUp,
-  ArrowDown,
-  FileText,
-  Users,
-  MessageCircle,
-  ThumbsUp,
-  ThumbsDown,
-  LucideIcon
-} from 'lucide-react';
+import { BarChart3, LucideIcon } from 'lucide-react';
+import { Card } from '@sker/ui/components/ui/card';
+import { Skeleton } from '@sker/ui/components/ui/skeleton';
+import { Statistic, StatisticLabel, StatisticValue } from '@sker/ui/components/ui/statistic';
+import { Trend } from '@sker/ui/components/ui/trend';
+import { CountUp } from '@sker/ui/components/ui/count-up';
+import { SentimentIndicator, SentimentLevel, SentimentType } from '@sker/ui/components/ui/sentiment-indicator';
 import { cn } from '@/utils';
-import CountUp from './CountUp';
-import SentimentIndicator from './SentimentIndicator';
-
-type SentimentLevel = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
 
 interface MetricCardProps {
   title: string;
   value: number;
   change?: number;
-  icon?: string;
-  color?: 'blue' | 'green' | 'red' | 'gray' | 'purple' | 'yellow' | 'sentiment-positive' | 'sentiment-negative' | 'sentiment-neutral';
+  icon?: LucideIcon;
+  color?: 'blue' | 'green' | 'red' | 'gray' | 'purple' | 'yellow';
   className?: string;
   loading?: boolean;
-  showChart?: boolean;
   chartComponent?: React.ReactNode;
-  size?: 'small' | 'normal' | 'large' | 'xlarge' | 'tiny';
   animated?: boolean;
   sentiment?: {
-    type: 'positive' | 'negative' | 'neutral';
+    type: SentimentType;
     level: SentimentLevel;
   };
 }
 
-const iconMap: Record<string, LucideIcon> = {
-  BarChart3,
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  FileText,
-  Users,
-  MessageCircle,
-  ThumbsUp,
-  ThumbsDown,
-};
-
 const colorMap = {
   blue: {
     bg: 'bg-blue-500/20',
-    text: 'text-blue-400',
     icon: 'text-blue-400',
     gradient: 'from-blue-400 to-blue-600',
   },
   green: {
     bg: 'bg-green-500/20',
-    text: 'text-green-400',
     icon: 'text-green-400',
     gradient: 'from-green-400 to-green-600',
   },
   red: {
     bg: 'bg-red-500/20',
-    text: 'text-red-400',
     icon: 'text-red-400',
     gradient: 'from-red-400 to-red-600',
   },
   gray: {
     bg: 'bg-gray-500/20',
-    text: 'text-gray-400',
     icon: 'text-gray-400',
     gradient: 'from-gray-400 to-gray-600',
   },
   purple: {
     bg: 'bg-purple-500/20',
-    text: 'text-purple-400',
     icon: 'text-purple-400',
     gradient: 'from-purple-400 to-purple-600',
   },
   yellow: {
     bg: 'bg-yellow-500/20',
-    text: 'text-yellow-400',
     icon: 'text-yellow-400',
     gradient: 'from-yellow-400 to-yellow-600',
-  },
-  'sentiment-positive': {
-    bg: 'bg-green-500/20',
-    text: 'text-green-400',
-    icon: 'text-green-400',
-    gradient: 'from-green-400 to-green-600',
-  },
-  'sentiment-negative': {
-    bg: 'bg-red-500/20',
-    text: 'text-red-400',
-    icon: 'text-red-400',
-    gradient: 'from-red-400 to-red-600',
-  },
-  'sentiment-neutral': {
-    bg: 'bg-blue-500/20',
-    text: 'text-blue-400',
-    icon: 'text-blue-400',
-    gradient: 'from-blue-400 to-blue-600',
   },
 };
 
@@ -111,82 +62,28 @@ const MetricCard: React.FC<MetricCardProps> = ({
   title,
   value,
   change,
-  icon = 'BarChart3',
+  icon: Icon = BarChart3,
   color = 'blue',
   className,
   loading = false,
-  showChart = false,
   chartComponent,
-  size = 'normal',
   animated = true,
   sentiment,
 }) => {
-  const IconComponent = iconMap[icon] || BarChart3;
   const colors = colorMap[color];
-
-  const isPositiveChange = change !== undefined && change >= 0;
-  const changeIcon = isPositiveChange ? ArrowUp : ArrowDown;
-
-  const getSizeClasses = () => {
-    switch (size) {
-      case 'large':
-        return {
-          card: 'p-8',
-          title: 'text-lg font-medium',
-          value: 'text-3xl',
-          change: 'text-sm',
-          icon: 'w-8 h-8'
-        };
-      case 'xlarge':
-        return {
-          card: 'p-10',
-          title: 'text-xl font-bold',
-          value: 'text-3xl font-bold',
-          change: 'text-base',
-          icon: 'w-12 h-12'
-        };
-      case 'small':
-        return {
-          card: 'p-4',
-          title: 'text-xs',
-          value: 'text-lg',
-          change: 'text-xs',
-          icon: 'w-4 h-4'
-        };
-      case 'tiny':
-        return {
-          card: 'p-3',
-          title: 'text-xs',
-          value: 'text-sm',
-          change: 'text-xs',
-          icon: 'w-3 h-3'
-        };
-      default:
-        return {
-          card: 'p-6',
-          title: 'text-sm',
-          value: 'text-3xl',
-          change: 'text-sm',
-          icon: 'w-6 h-6'
-        };
-    }
-  };
-
-  const sizeClasses = getSizeClasses();
-  const ChangeIcon = changeIcon;
 
   if (loading) {
     return (
-      <div className={cn('data-card animate-pulse', className)}>
+      <Card className={cn('p-6', className)}>
         <div className="flex items-center justify-between">
-          <div className="space-y-2">
-            <div className="h-4 bg-muted rounded w-20"></div>
-            <div className="h-8 bg-muted rounded w-16"></div>
-            <div className="h-3 bg-muted rounded w-12"></div>
+          <div className="flex-1 space-y-3">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-8 w-16" />
+            <Skeleton className="h-3 w-24" />
           </div>
-          <div className="w-12 h-12 bg-muted rounded-lg"></div>
+          <Skeleton className="h-12 w-12 rounded-lg" />
         </div>
-      </div>
+      </Card>
     );
   }
 
@@ -194,85 +91,61 @@ const MetricCard: React.FC<MetricCardProps> = ({
     <motion.div
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
-      className={cn('glass-card cursor-pointer', sizeClasses.card, className)}
+      className="relative"
     >
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <h3 className={cn(
-            size === 'tiny' ? 'text-foreground mb-2' : 'text-foreground mb-2',
-            sizeClasses.title
-          )}>
-            {title}
-          </h3>
-
-          <div className="space-y-2">
-            <div className={cn(
-              'font-bold bg-gradient-to-r bg-clip-text text-transparent',
-              colors.gradient,
-              sizeClasses.value
-            )}>
-              <CountUp
-                end={value}
-                animated={animated}
-                size={size === 'xlarge' ? 'xl' : size === 'large' ? 'lg' : size === 'small' ? 'sm' : 'md'}
-              />
-            </div>
+      <Card className={cn('p-6 cursor-pointer', className)}>
+        <div className="flex items-start justify-between">
+          <Statistic className="flex-1">
+            <StatisticLabel>{title}</StatisticLabel>
+            <StatisticValue
+              className={cn(
+                'bg-gradient-to-r bg-clip-text text-transparent',
+                colors.gradient
+              )}
+            >
+              <CountUp end={value} animated={animated} />
+            </StatisticValue>
 
             {change !== undefined && (
-              <div className="flex items-center space-x-1">
-                <ChangeIcon className={cn(
-                  'w-3 h-3',
-                  isPositiveChange ? 'text-sentiment-positive' : 'text-sentiment-negative'
-                )} />
-                <span className={cn(
-                  'font-medium',
-                  sizeClasses.change,
-                  isPositiveChange ? 'text-sentiment-positive' : 'text-sentiment-negative'
-                )}>
-                  {Math.abs(change).toFixed(1)}%
-                </span>
-                <span className={cn('text-muted-foreground', sizeClasses.change)}>
-                  vs 上期
-                </span>
-              </div>
+              <Trend value={change} label="vs 上期" />
             )}
 
             {sentiment && (
-              <div className="flex items-center space-x-2 mt-2">
+              <div className="mt-2">
                 <SentimentIndicator
                   type={sentiment.type}
                   level={sentiment.level}
-                  size={size === 'xlarge' ? 'lg' : size === 'small' ? 'sm' : 'md'}
-                  showLabel={size !== 'normal' && size !== 'small'}
+                  showLabel
                 />
+              </div>
+            )}
+          </Statistic>
+
+          <div className="flex flex-col items-end gap-2">
+            <div
+              className={cn(
+                'flex h-12 w-12 items-center justify-center rounded-lg',
+                colors.bg
+              )}
+            >
+              <Icon className={cn('h-6 w-6', colors.icon)} />
+            </div>
+
+            {chartComponent && (
+              <div className="h-10 w-16 overflow-hidden rounded-md bg-muted/30 p-1">
+                {chartComponent}
               </div>
             )}
           </div>
         </div>
 
-        <div className="flex flex-col items-end space-y-2">
-          <div className={cn(
-            'rounded-lg flex items-center justify-center py-1 px-2',
-            colors.bg,
-            sizeClasses.icon
-          )}>
-            <IconComponent className={cn(sizeClasses.icon, colors.icon)} />
-          </div>
-
-          {/* 小图表区域 */}
-          {showChart && chartComponent && (
-            <div className="w-16 h-10 overflow-hidden rounded-md bg-muted/30 p-1">
-              {chartComponent}
-            </div>
+        <div
+          className={cn(
+            'absolute inset-x-0 bottom-0 h-1 rounded-b-lg bg-gradient-to-r',
+            colors.gradient
           )}
-        </div>
-      </div>
-      
-      {/* 装饰性渐变条 */}
-      <div className={cn(
-        'absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r rounded-b-lg',
-        colors.gradient
-      )}></div>
+        />
+      </Card>
     </motion.div>
   );
 };
