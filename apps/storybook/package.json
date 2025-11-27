@@ -1,0 +1,34 @@
+{
+  "name": "@sker/storybook",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "storybook dev -p 6007",
+    "build": "storybook build",
+    "preview": "serve storybook-static"
+  },
+  "dependencies": {
+    "@sker/ui": "workspace:*",
+    "@sker/workflow-ui": "workspace:*",
+    "lucide-react": "^0.555.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@sker/typescript-config": "workspace:*",
+    "@chromatic-com/storybook": "^3.2.4",
+    "@storybook/addon-essentials": "^8.5.0",
+    "@storybook/addon-interactions": "^8.5.0",
+    "@storybook/addon-links": "^8.5.0",
+    "@storybook/blocks": "^8.5.0",
+    "@storybook/react": "^8.5.0",
+    "@storybook/react-vite": "^8.5.0",
+    "@storybook/test": "^8.5.0",
+    "@tailwindcss/vite": "^4.1.5",
+    "storybook": "^8.5.0",
+    "tailwindcss": "^4.1.5",
+    "typescript": "5.9.2",
+    "vite": "^6.0.7"
+  }
+}

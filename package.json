@@ -10,6 +10,7 @@
     "dev:robust": "./scripts/ensure-deps-built.sh && turbo run dev --concurrency=20",
     "dev:clean": "./scripts/dev-with-port-guardian.sh",
     "port:guardian": "./scripts/port-guardian.sh",
+    "storybook": "turbo run dev --filter=@sker/storybook",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types",
