@@ -64,7 +64,7 @@ export const Loading: Story = {
   },
 }
 
-export const AllColors = {
+export const AllColors: Story = {
   render: () => (
     <div className="grid grid-cols-3 gap-4">
       <MetricCard title="蓝色" value={1234} color="blue" icon={TrendingUp} animated={false} />
@@ -75,4 +75,4 @@ export const AllColors = {
       <MetricCard title="黄色" value={2345} color="yellow" icon={Users} animated={false} />
     </div>
   ),
-} satisfies Story
+}
