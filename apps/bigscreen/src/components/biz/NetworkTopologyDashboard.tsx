@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { DataSet, Network, Node, Edge } from 'vis-network/standalone';
 import { apiClient } from '@/services/api/apiClient';
 import { createLogger } from '@sker/core';
-import { RefreshCw } from 'lucide-react';
+import { LoadingOverlay, ErrorState, Legend, StatisticsCard } from '@sker/ui/components/ui';
 
 const logger = createLogger('NetworkTopologyDashboard');
 
@@ -499,33 +499,17 @@ const NetworkTopologyDashboard: React.FC<NetworkTopologyDashboardProps> = ({
 
   if (error) {
     return (
-      <div className={`flex items-center justify-center h-full ${className}`}>
-        <div className="text-center">
-          <p className="text-red-500 mb-2">加载失败</p>
-          <p className="text-gray-500 text-sm mb-4">{error}</p>
-          <button
-            onClick={() => fetchTopologyData}
-            className="flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <RefreshCw className="w-4 h-4" />
-            <span>重试</span>
-          </button>
-        </div>
-      </div>
+      <ErrorState
+        message={error}
+        onRetry={() => fetchTopologyData()}
+        className={className}
+      />
     );
   }
 
   return (
     <div className={`relative w-full h-full ${className}`} style={{ width, height }}>
-      {/* 加载状态 */}
-      {isLoading && (
-        <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
-            <p className="text-gray-600">正在加载拓扑数据...</p>
-          </div>
-        </div>
-      )}
+      {isLoading && <LoadingOverlay message="正在加载拓扑数据..." />}
 
       {/* 网络容器 */}
       <div
@@ -539,52 +523,28 @@ const NetworkTopologyDashboard: React.FC<NetworkTopologyDashboardProps> = ({
         }}
       />
 
-      {/* 图例 */}
-      <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-md p-3 border border-gray-200">
-        <div className="text-sm font-medium text-gray-700 mb-2" style={{ fontFamily: 'Microsoft YaHei' }}>节点类型</div>
-        <div className="space-y-2 text-xs" style={{ fontFamily: 'Microsoft YaHei' }}>
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 rounded-full" style={{
-              background: "#1e3a8a",
-              border: "2px solid #1e40af"
-            }}></div>
-            <span className="text-gray-700 font-medium">核心节点 (MainHub)</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 rounded-full" style={{
-              background: "#1d4ed8",
-              border: "1px solid #1e40af"
-            }}></div>
-            <span className="text-gray-600">高重要性节点</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 rounded-full" style={{
-              background: "#2563eb",
-              border: "1px solid #3b82f6"
-            }}></div>
-            <span className="text-gray-600">中等重要性节点 (0.15-0.3)</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 rounded-full" style={{
-              background: "#3b82f6",
-              border: "1px solid #60a5fa"
-            }}></div>
-            <span className="text-gray-600">普通节点</span>
-          </div>
-        </div>
-      </div>
+      <Legend
+        title="节点类型"
+        position="bottom-left"
+        items={[
+          { color: '#1e3a8a', label: '核心节点 (MainHub)', size: 'md', borderColor: '#1e40af' },
+          { color: '#1d4ed8', label: '高重要性节点', size: 'sm', borderColor: '#1e40af' },
+          { color: '#2563eb', label: '中等重要性节点 (0.15-0.3)', size: 'sm', borderColor: '#3b82f6' },
+          { color: '#3b82f6', label: '普通节点', size: 'sm', borderColor: '#60a5fa' }
+        ]}
+      />
 
-      {/* 统计信息 */}
       {(statistics.efdTotal > 0 || statistics.appTotal > 0) && (
-        <div className="absolute top-4 right-4 bg-white rounded-lg shadow-md p-3 border border-gray-200">
-          <div className="text-sm font-medium text-gray-700 mb-2" style={{ fontFamily: 'Microsoft YaHei' }}>统计</div>
-          <div className="space-y-1 text-xs" style={{ fontFamily: 'Microsoft YaHei' }}>
-            <div>回声设备: {statistics.efdTotal}</div>
-            <div>家电设备: {statistics.appTotal}</div>
-            <div>IoT设备: {statistics.iotTotal}</div>
-            <div>云服务: {statistics.cloudTotal}</div>
-          </div>
-        </div>
+        <StatisticsCard
+          title="统计"
+          position="top-right"
+          items={[
+            { label: '回声设备', value: statistics.efdTotal },
+            { label: '家电设备', value: statistics.appTotal },
+            { label: 'IoT设备', value: statistics.iotTotal },
+            { label: '云服务', value: statistics.cloudTotal }
+          ]}
+        />
       )}
     </div>
   );

@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { EChart } from '@sker/ui/components/ui/echart';
-import type { EChartsOption } from 'echarts-for-react';
+
+type EChartsOption = any;
 
 const meta = {
   title: 'Charts/EChart',

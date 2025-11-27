@@ -37,7 +37,6 @@ const meta = {
 } satisfies Meta<typeof ForceGraph3D>;
 
 export default meta;
-type Story = StoryObj<typeof meta>;
 
 const generateSampleData = (nodeCount: number = 6) => {
   const nodes = [
@@ -92,7 +91,7 @@ const generateLargeData = () => {
   return { nodes, links };
 };
 
-export const Basic: Story = {
+export const Basic = {
   render: () => {
     const graphData = generateSampleData();
 
@@ -107,7 +106,7 @@ export const Basic: Story = {
   },
 };
 
-export const WithCustomRenderers: Story = {
+export const WithCustomRenderers = {
   render: () => {
     const graphData = generateSampleData();
     const [highlightNodes, setHighlightNodes] = useState<Set<string | number>>(new Set());
@@ -159,7 +158,7 @@ export const WithCustomRenderers: Story = {
   },
 };
 
-export const WithPulseAnimation: Story = {
+export const WithPulseAnimation = {
   render: () => {
     const graphData = generateSampleData();
 
@@ -183,7 +182,7 @@ export const WithPulseAnimation: Story = {
   },
 };
 
-export const InteractiveHighlight: Story = {
+export const InteractiveHighlight = {
   render: () => {
     const graphData = generateSampleData();
     const [highlightNodes, setHighlightNodes] = useState<Set<string | number>>(new Set());
@@ -273,7 +272,7 @@ export const InteractiveHighlight: Story = {
   },
 };
 
-export const DifferentShapes: Story = {
+export const DifferentShapes = {
   render: () => {
     const graphData = generateSampleData();
 
@@ -281,11 +280,11 @@ export const DifferentShapes: Story = {
       highlightNodes: new Set(),
       getNodeShape: (node: any) => {
         const shapes = ['sphere', 'cube', 'cylinder', 'dodecahedron'] as const;
-        return shapes[parseInt(node.id) % 4];
+        return shapes[parseInt(node.id) % 4] ?? 'sphere';
       },
       getNodeColor: (node: any) => {
         const colors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b'];
-        return colors[parseInt(node.id) % 4];
+        return colors[parseInt(node.id) % 4] ?? '#6b7280';
       },
       enableWireframe: true,
       enableGlow: true,
@@ -325,7 +324,7 @@ export const DifferentShapes: Story = {
   },
 };
 
-export const ColorfulLinks: Story = {
+export const ColorfulLinks = {
   render: () => {
     const graphData = generateSampleData();
 
@@ -337,7 +336,7 @@ export const ColorfulLinks: Story = {
     const { linkMaterial, linkWidth, linkDirectionalParticles } = useForceGraphLinkRenderer({
       getLinkColor: (link: any) => {
         const colors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#a855f7'];
-        return colors[Math.floor(link.value) % colors.length];
+        return colors[Math.floor(link.value) % colors.length] ?? '#6b7280';
       },
     });
 
@@ -358,7 +357,7 @@ export const ColorfulLinks: Story = {
   },
 };
 
-export const LargeGraph: Story = {
+export const LargeGraph = {
   render: () => {
     const graphData = generateLargeData();
 
@@ -402,7 +401,7 @@ export const LargeGraph: Story = {
   },
 };
 
-export const WithCameraControl: Story = {
+export const WithCameraControl = {
   render: () => {
     const graphData = generateSampleData();
     const fgRef = useRef<ForceGraph3DHandle>(null);
@@ -468,7 +467,7 @@ export const WithCameraControl: Story = {
   },
 };
 
-export const OpacityVariation: Story = {
+export const OpacityVariation = {
   render: () => {
     const graphData = generateSampleData();
 
