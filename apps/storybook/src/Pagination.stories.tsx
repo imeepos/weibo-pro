@@ -10,7 +10,7 @@ import {
 } from "@sker/ui/components/ui/pagination"
 
 const meta: Meta<typeof Pagination> = {
-  title: "@sker/ui/ui/Pagination",
+  title: "UI/Pagination",
   component: Pagination,
   tags: ["autodocs"],
 }

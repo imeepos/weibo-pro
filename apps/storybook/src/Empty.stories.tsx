@@ -12,7 +12,7 @@ import { Button } from '@sker/ui/components/ui/button'
 import { FileX, Inbox, Search, Workflow } from 'lucide-react'
 
 const meta = {
-  title: '@sker/ui/ui/Empty',
+  title: 'UI/Empty',
   component: Empty,
   parameters: {
     layout: 'centered',

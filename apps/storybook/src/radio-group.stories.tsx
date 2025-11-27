@@ -3,7 +3,7 @@ import { RadioGroup, RadioGroupItem } from "@sker/ui/components/ui/radio-group"
 import { Label } from "@sker/ui/components/ui/label"
 
 const meta: Meta<typeof RadioGroup> = {
-  title: "@sker/ui/ui/RadioGroup",
+  title: "UI/RadioGroup",
   component: RadioGroup,
   tags: ["autodocs"],
 }

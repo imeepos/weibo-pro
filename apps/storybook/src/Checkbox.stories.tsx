@@ -3,7 +3,7 @@ import { Checkbox } from '@sker/ui/components/ui/checkbox'
 import { useState } from 'react'
 
 const meta = {
-  title: '@sker/ui/ui/Checkbox',
+  title: 'UI/Checkbox',
   component: Checkbox,
   parameters: {
     layout: 'padded',

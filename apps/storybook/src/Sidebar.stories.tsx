@@ -17,7 +17,7 @@ import {
 import { Home, Settings, User, Mail } from 'lucide-react'
 
 const meta = {
-  title: '@sker/ui/ui/Sidebar',
+  title: 'UI/Sidebar',
   component: Sidebar,
   parameters: {
     layout: 'fullscreen',

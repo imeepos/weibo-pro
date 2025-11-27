@@ -6,7 +6,7 @@ import {
 } from "@sker/ui/components/ui/resizable"
 
 const meta: Meta<typeof ResizablePanelGroup> = {
-  title: "@sker/ui/ui/Resizable",
+  title: "UI/Resizable",
   component: ResizablePanelGroup,
   tags: ["autodocs"],
 }

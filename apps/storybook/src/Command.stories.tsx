@@ -14,7 +14,7 @@ import { Calendar, Settings, User, CreditCard, Smile } from 'lucide-react'
 import { useState } from 'react'
 
 const meta = {
-  title: '@sker/ui/ui/Command',
+  title: 'UI/Command',
   component: Command,
   parameters: {
     layout: 'centered',

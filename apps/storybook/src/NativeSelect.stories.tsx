@@ -6,7 +6,7 @@ import {
 } from '@sker/ui/components/ui/native-select'
 
 const meta = {
-  title: '@sker/ui/ui/NativeSelect',
+  title: 'UI/NativeSelect',
   component: NativeSelect,
   parameters: {
     layout: 'centered',

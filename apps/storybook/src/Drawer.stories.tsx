@@ -13,7 +13,7 @@ import {
 import { Button } from '@sker/ui/components/ui/button'
 
 const meta = {
-  title: '@sker/ui/ui/Drawer',
+  title: 'UI/Drawer',
   component: Drawer,
   parameters: {
     layout: 'centered',

@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react'
 import { AspectRatio } from '@sker/ui/components/ui/aspect-ratio'
 
 const meta = {
-  title: '@sker/ui/ui/AspectRatio',
+  title: 'UI/AspectRatio',
   component: AspectRatio,
   parameters: {
     layout: 'centered',

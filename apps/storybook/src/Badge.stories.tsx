@@ -3,7 +3,7 @@ import { Badge } from '@sker/ui/components/ui/badge'
 import { CheckCircle2, AlertCircle, Info, ArrowRight } from 'lucide-react'
 
 const meta = {
-  title: '@sker/ui/ui/Badge',
+  title: 'UI/Badge',
   component: Badge,
   parameters: {
     layout: 'centered',

@@ -4,7 +4,7 @@ import { Plate, usePlateEditor  } from 'platejs/react'
 import { EditorKit } from '@sker/ui/components/editor/editor-kit';
 
 const meta = {
-  title: '@sker/ui/blocks/Editor',
+  title: 'BLOCKS/Editor',
   component: Editor,
   parameters: {
     layout: 'padded',

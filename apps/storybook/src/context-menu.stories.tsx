@@ -16,7 +16,7 @@ import {
 } from "@sker/ui/components/ui/context-menu"
 
 const meta: Meta<typeof ContextMenu> = {
-  title: "@sker/ui/ui/ContextMenu",
+  title: "UI/ContextMenu",
   component: ContextMenu,
   tags: ["autodocs"],
 }

@@ -4,7 +4,7 @@ import { useState } from 'react'
 import type { DateRange } from 'react-day-picker'
 
 const meta = {
-  title: '@sker/ui/ui/Calendar',
+  title: 'UI/Calendar',
   component: Calendar,
   parameters: {
     layout: 'centered',

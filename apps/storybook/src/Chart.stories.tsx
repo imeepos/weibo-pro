@@ -24,7 +24,7 @@ import {
 } from 'recharts'
 
 const meta = {
-  title: '@sker/ui/ui/Chart',
+  title: 'UI/Chart',
   component: ChartContainer,
   parameters: {
     layout: 'padded',

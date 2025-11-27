@@ -3,7 +3,7 @@ import { Button } from '@sker/ui/components/ui/button'
 import { Mail, Trash2 } from 'lucide-react'
 
 const meta = {
-  title: '@sker/ui/ui/Button',
+  title: 'UI/Button',
   component: Button,
   parameters: {
     layout: 'centered',

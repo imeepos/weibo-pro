@@ -8,7 +8,7 @@ import { Button } from '@sker/ui/components/ui/button'
 import { Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight } from 'lucide-react'
 
 const meta = {
-  title: '@sker/ui/ui/ButtonGroup',
+  title: 'UI/ButtonGroup',
   component: ButtonGroup,
   parameters: {
     layout: 'centered',

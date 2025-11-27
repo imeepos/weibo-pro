@@ -11,7 +11,7 @@ import {
 } from '@sker/ui/components/ui/select'
 
 const meta = {
-  title: '@sker/ui/ui/Select',
+  title: 'UI/Select',
   component: Select,
   parameters: {
     layout: 'centered',

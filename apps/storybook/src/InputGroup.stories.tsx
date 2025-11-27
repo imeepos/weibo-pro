@@ -11,7 +11,7 @@ import {
 import { Search, X, Send, AtSign, Hash, DollarSign } from 'lucide-react'
 
 const meta = {
-  title: '@sker/ui/ui/InputGroup',
+  title: 'UI/InputGroup',
   component: InputGroup,
   parameters: {
     layout: 'centered',

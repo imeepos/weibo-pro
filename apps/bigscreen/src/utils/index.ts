@@ -80,6 +80,20 @@ export function getSentimentBgColor(sentiment: 'positive' | 'negative' | 'neutra
   }
 }
 
+// 获取情感颜色（十六进制，用于图表）
+export function getSentimentColorHex(sentiment: 'positive' | 'negative' | 'neutral'): string {
+  switch (sentiment) {
+    case 'positive':
+      return '#10b981';
+    case 'negative':
+      return '#ef4444';
+    case 'neutral':
+      return '#6b7280';
+    default:
+      return '#6b7280';
+  }
+}
+
 // 获取趋势图标
 export function getTrendIcon(trend: 'up' | 'down' | 'stable'): string {
   switch (trend) {

@@ -13,7 +13,7 @@ import { Button } from '@sker/ui/components/ui/button'
 import { User, Mail, Settings, MoreVertical } from 'lucide-react'
 
 const meta = {
-  title: '@sker/ui/ui/Item',
+  title: 'UI/Item',
   component: Item,
   parameters: {
     layout: 'centered',

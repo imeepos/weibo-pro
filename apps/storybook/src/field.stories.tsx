@@ -16,7 +16,7 @@ import { Checkbox } from "@sker/ui/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@sker/ui/components/ui/radio-group"
 
 const meta: Meta = {
-  title: "@sker/ui/ui/Field",
+  title: "UI/Field",
   tags: ["autodocs"],
 }
 

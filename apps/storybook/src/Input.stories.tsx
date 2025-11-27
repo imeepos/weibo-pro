@@ -3,7 +3,7 @@ import type { ReactRenderer } from '@storybook/react'
 import { Input } from '@sker/ui/components/ui/input'
 
 const meta = {
-  title: '@sker/ui/ui/Input',
+  title: 'UI/Input',
   component: Input,
   parameters: {
     layout: 'centered',

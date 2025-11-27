@@ -3,7 +3,7 @@ import { Alert, AlertTitle, AlertDescription } from '@sker/ui/components/ui/aler
 import { Terminal, AlertCircle, CheckCircle2, Info } from 'lucide-react'
 
 const meta = {
-  title: '@sker/ui/ui/Alert',
+  title: 'UI/Alert',
   component: Alert,
   parameters: {
     layout: 'padded',

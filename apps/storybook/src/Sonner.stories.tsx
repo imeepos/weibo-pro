@@ -5,7 +5,7 @@ import { Button } from '@sker/ui/components/ui/button'
 import { toast } from 'sonner'
 
 const meta = {
-  title: '@sker/ui/ui/Sonner',
+  title: 'UI/Sonner',
   component: Toaster,
   parameters: {
     layout: 'centered',

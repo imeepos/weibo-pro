@@ -5,7 +5,7 @@ import { Button } from '@sker/ui/components/ui/button'
 import { useState } from 'react'
 
 const meta = {
-  title: '@sker/ui/ui/Collapsible',
+  title: 'UI/Collapsible',
   component: Collapsible,
   parameters: {
     layout: 'centered',

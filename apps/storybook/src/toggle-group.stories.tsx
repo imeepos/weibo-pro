@@ -3,7 +3,7 @@ import { ToggleGroup, ToggleGroupItem } from "@sker/ui/components/ui/toggle-grou
 import { BoldIcon, ItalicIcon, UnderlineIcon } from "lucide-react"
 
 const meta: Meta<typeof ToggleGroup> = {
-  title: "@sker/ui/ui/ToggleGroup",
+  title: "UI/ToggleGroup",
   component: ToggleGroup,
   tags: ["autodocs"],
 }

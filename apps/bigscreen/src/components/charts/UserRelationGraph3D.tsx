@@ -1,10 +1,8 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import ForceGraph3D from 'react-force-graph-3d';
-import * as THREE from 'three';
 import type {
   UserRelationNetwork,
   UserRelationNode,
-  UserRelationEdge,
 } from '@sker/sdk';
 
 import { useNodeRenderer } from './NodeRenderer';

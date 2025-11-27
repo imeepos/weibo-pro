@@ -4,7 +4,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@sker/ui/components/ui
 import { Workflow, Database, BarChart } from 'lucide-react'
 
 const meta = {
-  title: '@sker/ui/ui/Tabs',
+  title: 'UI/Tabs',
   component: Tabs,
   parameters: {
     layout: 'centered',

@@ -3,7 +3,7 @@ import type { ReactRenderer } from '@storybook/react'
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@sker/ui/components/ui/accordion'
 
 const meta = {
-  title: '@sker/ui/ui/Accordion',
+  title: 'UI/Accordion',
   component: Accordion,
   parameters: {
     layout: 'centered',

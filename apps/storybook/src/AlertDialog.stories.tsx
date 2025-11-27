@@ -14,7 +14,7 @@ import { Button } from '@sker/ui/components/ui/button'
 import { Trash2, AlertTriangle, FileX, Database } from 'lucide-react'
 
 const meta = {
-  title: '@sker/ui/ui/AlertDialog',
+  title: 'UI/AlertDialog',
   component: AlertDialog,
   parameters: {
     layout: 'centered',

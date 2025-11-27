@@ -4,7 +4,7 @@ import { Switch } from "@sker/ui/components/ui/switch"
 import { Label } from "@sker/ui/components/ui/label"
 
 const meta: Meta<typeof Switch> = {
-  title: "@sker/ui/ui/Switch",
+  title: "UI/Switch",
   component: Switch,
   tags: ["autodocs"],
 }

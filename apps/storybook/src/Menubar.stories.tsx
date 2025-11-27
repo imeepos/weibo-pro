@@ -18,7 +18,7 @@ import {
 import { useState } from 'react'
 
 const meta = {
-  title: '@sker/ui/ui/Menubar',
+  title: 'UI/Menubar',
   component: Menubar,
   parameters: {
     layout: 'centered',

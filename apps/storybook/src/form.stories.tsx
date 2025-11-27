@@ -16,7 +16,7 @@ import { Button } from "@sker/ui/components/ui/button"
 import { Textarea } from "@sker/ui/components/ui/textarea"
 
 const meta: Meta = {
-  title: "@sker/ui/ui/Form",
+  title: "UI/Form",
   tags: ["autodocs"],
 }
 

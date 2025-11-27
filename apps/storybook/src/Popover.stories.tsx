@@ -6,7 +6,7 @@ import { Input } from '@sker/ui/components/ui/input'
 import { Settings, Info } from 'lucide-react'
 
 const meta = {
-  title: '@sker/ui/ui/Popover',
+  title: 'UI/Popover',
   component: Popover,
   parameters: {
     layout: 'centered',

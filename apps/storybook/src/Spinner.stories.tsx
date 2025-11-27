@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react'
 import { Spinner } from '@sker/ui/components/ui/spinner'
 
 const meta = {
-  title: '@sker/ui/ui/Spinner',
+  title: 'UI/Spinner',
   component: Spinner,
   parameters: {
     layout: 'centered',

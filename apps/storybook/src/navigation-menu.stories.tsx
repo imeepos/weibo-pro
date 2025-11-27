@@ -10,7 +10,7 @@ import {
 } from "@sker/ui/components/ui/navigation-menu"
 
 const meta: Meta<typeof NavigationMenu> = {
-  title: "@sker/ui/ui/NavigationMenu",
+  title: "UI/NavigationMenu",
   component: NavigationMenu,
   tags: ["autodocs"],
 }

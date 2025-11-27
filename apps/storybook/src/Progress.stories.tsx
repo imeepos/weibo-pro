@@ -3,7 +3,7 @@ import { Progress } from '@sker/ui/components/ui/progress'
 import { useEffect, useState } from 'react'
 
 const meta = {
-  title: '@sker/ui/ui/Progress',
+  title: 'UI/Progress',
   component: Progress,
   parameters: {
     layout: 'centered',

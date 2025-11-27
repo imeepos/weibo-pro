@@ -3,7 +3,7 @@ import { useState } from "react"
 import { Slider } from "@sker/ui/components/ui/slider"
 
 const meta: Meta<typeof Slider> = {
-  title: "@sker/ui/ui/Slider",
+  title: "UI/Slider",
   component: Slider,
   tags: ["autodocs"],
 }

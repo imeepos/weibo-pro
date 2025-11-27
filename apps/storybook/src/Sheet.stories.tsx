@@ -10,7 +10,7 @@ import {
 } from "@sker/ui/components/ui/sheet"
 
 const meta: Meta<typeof Sheet> = {
-  title: "@sker/ui/ui/Sheet",
+  title: "UI/Sheet",
   component: Sheet,
   tags: ["autodocs"],
 }

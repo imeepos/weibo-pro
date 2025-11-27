@@ -5,7 +5,7 @@ import { Button } from '@sker/ui/components/ui/button'
 import { Info, Settings, Trash2, Plus } from 'lucide-react'
 
 const meta = {
-  title: '@sker/ui/ui/Tooltip',
+  title: 'UI/Tooltip',
   component: Tooltip,
   parameters: {
     layout: 'centered',

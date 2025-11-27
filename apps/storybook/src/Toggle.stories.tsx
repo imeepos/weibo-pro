@@ -3,7 +3,7 @@ import { Toggle } from '@sker/ui/components/ui/toggle'
 import { Bold, Italic, Underline } from 'lucide-react'
 
 const meta = {
-  title: '@sker/ui/ui/Toggle',
+  title: 'UI/Toggle',
   component: Toggle,
   parameters: {
     layout: 'centered',

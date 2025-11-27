@@ -11,7 +11,7 @@ import {
 } from "@sker/ui/components/ui/dialog"
 
 const meta: Meta<typeof Dialog> = {
-  title: "@sker/ui/ui/Dialog",
+  title: "UI/Dialog",
   component: Dialog,
   tags: ["autodocs"],
 }

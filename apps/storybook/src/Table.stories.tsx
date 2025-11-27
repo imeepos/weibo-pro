@@ -11,7 +11,7 @@ import {
 } from "@sker/ui/components/ui/table"
 
 const meta: Meta<typeof Table> = {
-  title: "@sker/ui/ui/Table",
+  title: "UI/Table",
   component: Table,
   tags: ["autodocs"],
 }

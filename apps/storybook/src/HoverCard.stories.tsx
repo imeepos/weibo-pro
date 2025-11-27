@@ -6,7 +6,7 @@ import {
 } from "@sker/ui/components/ui/hover-card"
 
 const meta: Meta<typeof HoverCard> = {
-  title: "@sker/ui/ui/HoverCard",
+  title: "UI/HoverCard",
   component: HoverCard,
   tags: ["autodocs"],
 }

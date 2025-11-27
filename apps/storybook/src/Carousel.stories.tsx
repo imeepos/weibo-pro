@@ -12,7 +12,7 @@ import {
   CardContent,
 } from '@sker/ui/components/ui/card'
 const meta = {
-  title: '@sker/ui/ui/Carousel',
+  title: 'UI/Carousel',
   component: Carousel,
   parameters: {
     layout: 'centered',

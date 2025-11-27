@@ -7,7 +7,7 @@ import {
 } from '@sker/ui/components/ui/input-otp'
 
 const meta = {
-  title: '@sker/ui/ui/InputOTP',
+  title: 'UI/InputOTP',
   component: InputOTP,
   parameters: {
     layout: 'centered',

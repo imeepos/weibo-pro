@@ -3,7 +3,7 @@ import type { ReactRenderer } from '@storybook/react'
 import { ScrollArea, ScrollBar } from '@sker/ui/components/ui/scroll-area'
 
 const meta = {
-  title: '@sker/ui/ui/ScrollArea',
+  title: 'UI/ScrollArea',
   component: ScrollArea,
   parameters: {
     layout: 'centered',

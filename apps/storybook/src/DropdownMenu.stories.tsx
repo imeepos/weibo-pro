@@ -19,7 +19,7 @@ import { User, Settings, LogOut, Mail, MessageSquare, Plus } from 'lucide-react'
 import { useState } from 'react'
 
 const meta = {
-  title: '@sker/ui/ui/DropdownMenu',
+  title: 'UI/DropdownMenu',
   component: DropdownMenu,
   parameters: {
     layout: 'centered',
