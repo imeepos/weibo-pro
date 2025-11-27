@@ -15,13 +15,8 @@ export interface CommunityMapping {
 }
 
 export const getUserNodeShape = (userType: string): NodeShape => {
-  const shapeMap: Record<string, NodeShape> = {
-    'official': 'cube',
-    'media': 'cylinder',
-    'kol': 'dodecahedron',
-    'normal': 'sphere'
-  };
-  return shapeMap[userType] || 'sphere';
+  // 统一使用球体形状，通过颜色和大小区分用户类型
+  return 'sphere';
 };
 
 export const calculateNodeOpacity = (lastActive?: string): number =>

@@ -118,9 +118,9 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
     getNodeShape: (node: any) => {
       if (!currentVisualization.enableNodeShapes) return 'sphere';
       const shapeMap: Record<string, 'sphere' | 'cube' | 'cylinder' | 'dodecahedron'> = {
-        'official': 'cube',
-        'media': 'cylinder',
-        'kol': 'dodecahedron',
+        'official': 'sphere',
+        'media': 'sphere',
+        'kol': 'sphere',
         'normal': 'sphere'
       };
       return shapeMap[node.userType] || 'sphere';
@@ -203,31 +203,20 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
 
   useEffect(() => {
     if (fgRef.current) {
-      fgRef.current.d3Force('charge').strength(-200);
+      // 性能优化：简化力模拟参数
+      fgRef.current.d3Force('charge').strength(-100); // 降低斥力（从-200到-100）
+      fgRef.current.d3Force('link').distance(80); // 使用固定距离，禁用动态计算
 
-      if (currentLinkConfig.useDynamicDistance) {
-        const linkDistances = calculateAllLinkDistances(
-          network.edges,
-          network.nodes,
-          currentLinkConfig
-        );
-
-        fgRef.current.d3Force('link').distance((link: any) => {
-          const linkId = `${link.source}-${link.target}`;
-          return linkDistances.get(linkId) || 100;
-        });
-      } else {
-        fgRef.current.d3Force('link').distance(100);
-      }
-
-      const bounds = 500;
-      fgRef.current.cameraPosition({
-        x: bounds * 0.7,
-        y: bounds * 0.5,
-        z: bounds
-      }, { x: 0, y: 0, z: 0 }, 0);
+      // 初始化力导向图后，自动调整视图以适应所有节点
+      setTimeout(() => {
+        if (fgRef.current) {
+          // 使用 zoomToFit 自动调整相机距离和位置，确保所有节点可见
+          // 参数：duration=0ms（禁用动画减少卡顿）, padding=200px（增大边距拉远镜头）
+          fgRef.current.zoomToFit(0, 200);
+        }
+      }, 100);
     }
-  }, [network.edges, network.nodes, currentLinkConfig]);
+  }, [network.edges, network.nodes]);
 
   // 性能监控和自适应优化
   useEffect(() => {
@@ -319,58 +308,27 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
   }, [showDebugHud]);
 
 
+  // 性能优化：简化点击效果，禁用相机动画和复杂聚焦计算
   const handleNodeClick = useCallback((node: any) => {
     if (onNodeClick) {
       onNodeClick(node as UserRelationNode);
     }
 
-    const focusResult = smartFocusAlgorithm(node, graphData);
-    setHighlightNodes(focusResult.highlightNodes);
-    setDimmedNodes(focusResult.dimmedNodes);
+    // 性能优化：禁用聚焦算法和相机动画，减少计算和卡顿
+  }, [onNodeClick]);
 
-    if (fgRef.current) {
-      fgRef.current.cameraPosition(
-        focusResult.cameraPosition,
-        focusResult.cameraTarget,
-        2000
-      );
-    }
-  }, [onNodeClick, graphData]);
-
+  // 性能优化：简化悬停效果，避免频繁计算邻居节点
   const handleNodeHover = useCallback((node: any) => {
     const typedNode = node as UserRelationNode | null;
-
     setHoverNode(typedNode);
 
     if (onNodeHover) {
       onNodeHover(typedNode);
     }
 
-    if (node) {
-      const neighbors = new Set<string>();
-      const links = new Set<string>();
-
-      graphData.links.forEach(link => {
-        if (link.source === node.id || (typeof link.source === 'object' && (link.source as any).id === node.id)) {
-          const targetId = typeof link.target === 'string' ? link.target : (link.target as any).id;
-          neighbors.add(targetId);
-          links.add(`${node.id}-${targetId}`);
-        }
-        if (link.target === node.id || (typeof link.target === 'object' && (link.target as any).id === node.id)) {
-          const sourceId = typeof link.source === 'string' ? link.source : (link.source as any).id;
-          neighbors.add(sourceId);
-          links.add(`${sourceId}-${node.id}`);
-        }
-      });
-
-      neighbors.add(node.id);
-      setHighlightNodes(neighbors);
-      setHighlightLinks(links);
-    } else {
-      setHighlightNodes(new Set());
-      setHighlightLinks(new Set());
-    }
-  }, [graphData.links, onNodeHover]);
+    // 性能优化：禁用悬停高亮邻居节点，减少大数据量场景下的实时计算
+    // 只保留点击高亮功能
+  }, [onNodeHover]);
 
 
   return (
@@ -408,9 +366,7 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
         linkMaterial={linkMaterial}
         linkWidth={linkWidth}
         linkOpacity={0.4}
-        linkDirectionalParticles={linkDirectionalParticles}
-        linkDirectionalParticleWidth={linkDirectionalParticleWidth}
-        linkDirectionalParticleSpeed={linkDirectionalParticleSpeed}
+        linkDirectionalParticles={0}
         linkCurvature={0.1}
         onNodeClick={handleNodeClick}
         onNodeHover={handleNodeHover}
@@ -423,7 +379,7 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
       />
 
       {/* 控制面板 */}
-      <GraphControlPanel title="可视化设置" position="top-right">
+      <GraphControlPanel title="可视化设置" position="bottom-right">
         <ControlGroup
           title="节点大小权重"
           onReset={() => setCurrentWeights(DEFAULT_WEIGHTS)}
@@ -433,8 +389,8 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
               key={key}
               label={
                 key === 'followers' ? '粉丝数' :
-                key === 'influence' ? '影响力' :
-                key === 'postCount' ? '发帖数' : '连接数'
+                  key === 'influence' ? '影响力' :
+                    key === 'postCount' ? '发帖数' : '连接数'
               }
               value={Math.round(value * 100)}
               min={0}

@@ -273,6 +273,14 @@ export class ChartsService {
         ORDER BY count DESC
       `, [start, end]);
 
+      this.logger.info('Event types fetched', {
+        timeRange,
+        start,
+        end,
+        resultCount: results.length,
+        results: results.map((r: any) => ({ category: r.category, count: r.count }))
+      });
+
       const categories = results.map((r: any) => r.category);
       const data = results.map((r: any) => parseInt(r.count));
 

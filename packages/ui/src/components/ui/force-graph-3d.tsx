@@ -1,4 +1,4 @@
-import React, { useRef, useImperativeHandle, forwardRef } from 'react';
+import React, { useRef, useImperativeHandle, forwardRef, useState, useEffect } from 'react';
 import ForceGraph3DLib from 'react-force-graph-3d';
 import type { ForceGraphMethods } from 'react-force-graph-3d';
 
@@ -85,6 +85,32 @@ export const ForceGraph3D = forwardRef<ForceGraph3DHandle, ForceGraph3DProps>(({
   onEngineStop,
 }, ref) => {
   const fgRef = useRef<ForceGraphMethods>(null as any);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
+
+  // 监听容器尺寸变化
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const updateDimensions = () => {
+      const { width, height } = container.getBoundingClientRect();
+      if (width > 0 && height > 0) {
+        setDimensions({ width, height });
+      }
+    };
+
+    // 初始化尺寸
+    updateDimensions();
+
+    // 使用 ResizeObserver 监听尺寸变化
+    const resizeObserver = new ResizeObserver(updateDimensions);
+    resizeObserver.observe(container);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
 
   useImperativeHandle(ref, () => ({
     d3Force: (forceName: string, force?: any) => {
@@ -116,12 +142,18 @@ export const ForceGraph3D = forwardRef<ForceGraph3DHandle, ForceGraph3DProps>(({
   }));
 
   return (
-    <div className={className}>
+    <div
+      ref={containerRef}
+      className={`${className} relative`}
+      style={{ width: '100%', height: '100%', overflow: 'hidden' }}
+    >
       <ForceGraph3DLib
         ref={fgRef}
         graphData={graphData}
         backgroundColor={backgroundColor}
         nodeLabel={nodeLabel}
+        width={dimensions.width}
+        height={dimensions.height}
         nodeThreeObject={nodeThreeObject}
         nodeAutoColorBy={nodeAutoColorBy}
         nodeOpacity={nodeOpacity}
@@ -142,6 +174,14 @@ export const ForceGraph3D = forwardRef<ForceGraph3DHandle, ForceGraph3DProps>(({
         enableNavigationControls={enableNavigationControls}
         enablePointerInteraction={enablePointerInteraction}
         onEngineStop={onEngineStop}
+        cooldownTicks={50}
+        d3AlphaDecay={0.05}
+        d3VelocityDecay={0.4}
+        rendererConfig={{
+          antialias: false,
+          powerPreference: 'high-performance',
+          precision: 'lowp'
+        }}
       />
     </div>
   );

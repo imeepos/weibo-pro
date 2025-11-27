@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import ReactECharts from "echarts-for-react";
+import { EChart } from "@sker/ui/components/ui/echart";
 import { motion } from "framer-motion";
 import { useTheme } from "@/hooks/useTheme";
 import { createLogger } from '@sker/core';
@@ -14,23 +14,36 @@ interface EventTypeBarChartProps {
 
 const logger = createLogger('EventTypeBarChart');
 
+// 预定义的渐变色数组
+const CHART_COLORS = [
+  '#3b82f6', // 蓝色
+  '#10b981', // 绿色
+  '#f59e0b', // 橙色
+  '#ef4444', // 红色
+  '#8b5cf6', // 紫色
+  '#ec4899', // 粉色
+  '#06b6d4', // 青色
+  '#84cc16', // 黄绿色
+  '#f97316', // 深橙色
+  '#6366f1', // 靛蓝色
+];
+
 const EventTypeBarChart: React.FC<EventTypeBarChartProps> = ({
   height = 0,
   className = "",
 }) => {
   const { isDark } = useTheme();
   const { selectedTimeRange } = useAppStore();
-  const [mockData, setMockData] = useState<Array<{name: string, value: number, color: string}>>([]);
+  const [mockData, setMockData] = useState<Array<{ name: string, value: number, color?: string }>>([]);
 
   useEffect(() => {
     let cancelled = false;
-    
+
     const fetchData = async () => {
       try {
         const data = await CommonAPI.getEventTypes(selectedTimeRange);
         if (cancelled) return;
-
-        // 确保数据是数组格式
+        // 确保数据是数组格式，并只取前6条
         if (Array.isArray(data)) {
           setMockData(data);
         } else {
@@ -81,10 +94,10 @@ const EventTypeBarChart: React.FC<EventTypeBarChartProps> = ({
         },
       },
       grid: {
-        left: "15%",
-        right: "10%",
-        top: "10%",
-        bottom: "15%",
+        left: "3%",
+        right: "3%",
+        top: "8%",
+        bottom: "3%",
         containLabel: true,
       },
       xAxis: {
@@ -133,12 +146,12 @@ const EventTypeBarChart: React.FC<EventTypeBarChartProps> = ({
         {
           name: "事件类型",
           type: "bar",
-          data: mockData.map((item) => ({
+          data: mockData.map((item, index) => ({
             value: item.value,
             name: item.name,
             itemStyle: {
-              color: item.color || "#6b7280",
-              borderRadius: [4, 4, 0, 0],
+              color: CHART_COLORS[index % CHART_COLORS.length],
+              borderRadius: [6, 6, 0, 0],
             },
           })),
           barWidth: "60%",
@@ -151,9 +164,7 @@ const EventTypeBarChart: React.FC<EventTypeBarChartProps> = ({
           },
           emphasis: {
             itemStyle: {
-              shadowBlur: 10,
-              shadowOffsetX: 0,
-              shadowColor: "rgba(0, 0, 0, 0.5)",
+              opacity: 0.8,
             },
           },
           animationDelay: (idx: number) => idx * 100,
@@ -172,10 +183,10 @@ const EventTypeBarChart: React.FC<EventTypeBarChartProps> = ({
       className={`${className}`}
     >
       {option ? (
-        <ReactECharts
+        <EChart
           option={option}
-          style={{ height: height ? `${height}px` : '100%', width: '100%' }}
           opts={{ renderer: "canvas" }}
+          className="w-full h-full"
         />
       ) : (
         <div className="flex items-center justify-center h-full text-muted-foreground">

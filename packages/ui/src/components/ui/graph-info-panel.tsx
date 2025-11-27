@@ -10,7 +10,7 @@ import { X } from "lucide-react"
 import { ScrollArea } from "./scroll-area"
 
 const graphInfoPanelVariants = cva(
-  "fixed z-10 transition-all",
+  "fixed z-10 top-10 transition-all",
   {
     variants: {
       position: {

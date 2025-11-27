@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { cn } from '@/utils';
+import { EChartNative } from '@sker/ui/components/ui/echart-native';
+import type { EChartsOption } from 'echarts';
 
 interface SentimentData {
   positive: number;
@@ -47,33 +49,82 @@ const SentimentOverview: React.FC<SentimentOverviewProps> = ({
   const negativePercent = total > 0 ? Math.round((data.negative / total) * 100) : 0;
   const neutralPercent = total > 0 ? Math.round((data.neutral / total) * 100) : 0;
 
-  // 计算角度
-  const positiveAngle = positivePercent * 3.6;
-  const negativeAngle = negativePercent * 3.6;
-  // const neutralAngle = neutralPercent * 3.6; // Commented out unused variable
-
-  // 计算鼠标悬浮的扇形
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-    
-    const x = e.clientX - centerX;
-    const y = e.clientY - centerY;
-    
-    // 计算角度 (从12点方向开始，顺时针)
-    let angle = Math.atan2(y, x) * 180 / Math.PI + 90;
-    if (angle < 0) angle += 360;
-    
-    // 判断在哪个扇形
-    if (angle <= positiveAngle) {
-      setHoveredSegment('positive');
-    } else if (angle <= positiveAngle + negativeAngle) {
-      setHoveredSegment('negative');
-    } else {
-      setHoveredSegment('neutral');
-    }
-  };
+  // ECharts 饼图配置
+  const chartOption = useMemo<EChartsOption>(() => {
+    return {
+      tooltip: {
+        trigger: 'item',
+        formatter: '{b}: {c} ({d}%)',
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        borderColor: 'rgba(255, 255, 255, 0.2)',
+        borderWidth: 1,
+        textStyle: {
+          color: '#fff',
+          fontSize: 12
+        }
+      },
+      series: [
+        {
+          type: 'pie',
+          radius: ['50%', '80%'], // 环形图
+          center: ['50%', '50%'],
+          avoidLabelOverlap: false,
+          itemStyle: {
+            borderRadius: 6,
+            borderColor: 'rgba(0, 0, 0, 0.1)',
+            borderWidth: 2
+          },
+          label: {
+            show: false
+          },
+          labelLine: {
+            show: false
+          },
+          emphasis: {
+            scale: true,
+            scaleSize: 6,
+            itemStyle: {
+              borderWidth: 3,
+              borderColor: 'rgba(255, 255, 255, 0.3)'
+            },
+            label: {
+              show: true,
+              fontSize: 14,
+              fontWeight: 'bold',
+              formatter: '{d}%',
+              color: '#fff'
+            }
+          },
+          data: [
+            {
+              value: data.positive,
+              name: '正面',
+              itemStyle: {
+                color: positiveColor || '#10b981'
+              }
+            },
+            {
+              value: data.negative,
+              name: '负面',
+              itemStyle: {
+                color: negativeColor || '#ef4444'
+              }
+            },
+            {
+              value: data.neutral,
+              name: '中性',
+              itemStyle: {
+                color: neutralColor || '#3b82f6'
+              }
+            }
+          ],
+          animationType: 'scale',
+          animationEasing: 'elasticOut',
+          animationDelay: (idx: number) => idx * 100
+        }
+      ]
+    };
+  }, [data, positiveColor, negativeColor, neutralColor]);
 
   const SentimentItem = ({
     label,
@@ -161,44 +212,15 @@ const SentimentOverview: React.FC<SentimentOverviewProps> = ({
       <div className="flex items-center justify-between">
         {/* 左侧：环状图和百分比 */}
         <div className="flex items-center space-x-3">
-          {/* 环状图 */}
-          <div className="w-28 h-28 relative flex-shrink-0">
-            <div 
-              className={cn(
-                "w-full h-full rounded-full cursor-pointer transition-all duration-300",
-                hoveredSegment ? 'scale-110' : 'scale-100'
-              )}
-              style={{
-                background: `conic-gradient(
-                  ${hoveredSegment === 'positive' ? positiveColor : hoveredSegment ? positiveColor + '80' : positiveColor} 0deg ${positiveAngle}deg,
-                  ${hoveredSegment === 'negative' ? negativeColor : hoveredSegment ? negativeColor + '80' : negativeColor} ${positiveAngle}deg ${positiveAngle + negativeAngle}deg,
-                  ${hoveredSegment === 'neutral' ? neutralColor : hoveredSegment ? neutralColor + '80' : neutralColor} ${positiveAngle + negativeAngle}deg 360deg
-                )`
-              }}
-              onMouseMove={handleMouseMove}
-              onMouseLeave={() => setHoveredSegment(null)}
-            >
-              {/* 中心空白 */}
-              <div className="absolute inset-6 bg-background rounded-full pointer-events-none"></div>
-              
-              {/* 中心百分比显示 */}
-              {hoveredSegment && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="bg-card rounded-full w-16 h-16 flex items-center justify-center shadow-lg">
-                    <span className={cn(
-                      "text-sm font-bold",
-                      hoveredSegment === 'positive' && 'text-sentiment-positive',
-                      hoveredSegment === 'negative' && 'text-sentiment-negative',
-                      hoveredSegment === 'neutral' && 'text-sentiment-neutral'
-                    )}>
-                      {hoveredSegment === 'positive' && `${positivePercent}%`}
-                      {hoveredSegment === 'negative' && `${negativePercent}%`}
-                      {hoveredSegment === 'neutral' && `${neutralPercent}%`}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
+          {/* ECharts 环状图 */}
+          <div className="w-32 h-32 relative flex-shrink-0">
+            <EChartNative
+              option={chartOption}
+              height={128}
+              width={128}
+              renderer="canvas"
+              animated={true}
+            />
           </div>
           
           {/* 百分比 */}

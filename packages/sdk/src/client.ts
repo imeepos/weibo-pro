@@ -60,8 +60,14 @@ function createControllerInstance<T>(controllerClass: new () => T, axiosInstance
 
                 // 替换URL中的参数
                 let finalUrl = replaceUrlParams(fullPath, urlParams);
+
                 const axiosConfig = root.get(AXIOS_CONFIG, {})
+
                 if (axiosConfig && axiosConfig.baseURL) {
+                    // 确保 finalUrl 有前导斜杠
+                    if (!finalUrl.startsWith('/')) {
+                        finalUrl = '/' + finalUrl;
+                    }
                     finalUrl = axiosConfig.baseURL + finalUrl
                 }
                 // SSE 方法特殊处理

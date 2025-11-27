@@ -3,46 +3,48 @@ import { UserRelationGraph3D } from './UserRelationGraph3D';
 import type { UserRelationNetwork, UserRelationType, TimeRange } from '@sker/sdk';
 import { UserRelationController } from '@sker/sdk';
 import { root } from '@sker/core';
+import { useAppStore } from '@/stores/useAppStore';
 
 interface UserRelationOverviewProps {
   className?: string;
-  height?: number;
 }
 
 /**
  * 用户关系概览组件 - 大屏幕专用简化版本
  * 专注于核心可视化，移除所有无关元素
+ * 自适应父容器高度
  */
 export const UserRelationOverview: React.FC<UserRelationOverviewProps> = ({
-  className = '',
-  height = 400
+  className = ''
 }) => {
   const [networkData, setNetworkData] = useState<UserRelationNetwork | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
+  const { selectedTimeRange } = useAppStore()
   // 获取真实数据
   const fetchNetwork = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
+
       const controller = root.get(UserRelationController);
+
       const data = await controller.getNetwork(
         'comprehensive' as UserRelationType,
-        '7d' as TimeRange,
+        selectedTimeRange,
         1, // minWeight
-        100 // limit - 大屏幕显示适量节点
+        5000 // limit - 支持2000个节点
       );
+
       setNetworkData(data);
     } catch (err) {
-      const message = err instanceof Error ? err.message : '未知错误';
-      setError(`加载失败: ${message}`);
-      console.error('Failed to fetch network:', err);
+      console.error('❌ 获取数据失败:', err);
+      console.error('❌ 错误堆栈:', err instanceof Error ? err.stack : '无堆栈信息');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedTimeRange]);
 
   useEffect(() => {
     fetchNetwork();
@@ -57,24 +59,21 @@ export const UserRelationOverview: React.FC<UserRelationOverviewProps> = ({
       connections: 0
     },
     linkDistanceConfig: {
-      minDistance: 60,
-      maxDistance: 150,
+      minDistance: 10,
+      maxDistance: 60,
       useDynamicDistance: true
     },
     enableNodeShapes: true,
     enableNodeOpacity: true,
-    enableNodePulse: true, // 大屏幕开启脉动效果增强视觉吸引力
-    enableCommunities: false,
+    enableNodePulse: false, // 禁用脉动动画减少卡顿
+    enableCommunities: true, // 开启社群颜色区分
     showDebugHud: false
   };
 
   // 加载状态 - 简洁的大屏幕样式
   if (loading) {
     return (
-      <div
-        className={`flex items-center justify-center ${className}`}
-        style={{ height: `${height}px` }}
-      >
+      <div className={`flex items-center justify-center h-full w-full ${className}`}>
         <div className="text-center">
           <div className="inline-block w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mb-2"></div>
           <p className="text-muted-foreground text-sm">加载中...</p>
@@ -86,10 +85,7 @@ export const UserRelationOverview: React.FC<UserRelationOverviewProps> = ({
   // 错误状态
   if (error) {
     return (
-      <div
-        className={`flex items-center justify-center ${className}`}
-        style={{ height: `${height}px` }}
-      >
+      <div className={`flex items-center justify-center h-full w-full ${className}`}>
         <div className="text-center text-muted-foreground">
           <div className="text-sm">数据加载失败</div>
           <button
@@ -106,10 +102,7 @@ export const UserRelationOverview: React.FC<UserRelationOverviewProps> = ({
   // 无数据状态
   if (!networkData || networkData.nodes.length === 0) {
     return (
-      <div
-        className={`flex items-center justify-center ${className}`}
-        style={{ height: `${height}px` }}
-      >
+      <div className={`flex items-center justify-center h-full w-full ${className}`}>
         <div className="text-center text-muted-foreground">
           <div className="text-3xl mb-1">—</div>
           <div className="text-sm">暂无数据</div>
@@ -119,10 +112,7 @@ export const UserRelationOverview: React.FC<UserRelationOverviewProps> = ({
   }
 
   return (
-    <div
-      className={`overflow-hidden ${className}`}
-      style={{ height: `${height}px` }}
-    >
+    <div className={`h-full w-full overflow-hidden relative ${className}`}>
       {/* 纯可视化区域 - 无标题、无边框、无统计信息 */}
       <div className="w-full h-full">
         <UserRelationGraph3D
