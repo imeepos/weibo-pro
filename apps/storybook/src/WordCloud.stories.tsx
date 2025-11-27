@@ -3,7 +3,7 @@ import { WordCloud } from '@sker/ui/components/ui/word-cloud'
 import { useState } from 'react'
 
 const meta = {
-  title: 'UI/WordCloud',
+  title: 'BIGSCREEN/WordCloud',
   component: WordCloud,
   parameters: {
     layout: 'centered',
