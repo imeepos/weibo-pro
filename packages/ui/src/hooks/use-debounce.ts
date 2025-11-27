@@ -1,25 +1,18 @@
-import { useEffect, useState } from 'react'
-import { useDebounceFn } from '@sker/ui/hooks/use-debounce-fn'
-import type { DebounceOptions } from '@sker/ui/hooks/use-debounce-fn'
+import * as React from 'react';
 
-export function useDebounce<T>(
-  value: T,
-  debounceMs?: number,
-  options?: DebounceOptions,
-) {
-  const [debouncedValue, setDebouncedValue] = useState<T>(value)
+export const useDebounce = <T>(value: T, delay = 500) => {
+  const [debouncedValue, setDebouncedValue] = React.useState(value);
 
-  const { run } = useDebounceFn(
-    () => {
-      setDebouncedValue(value)
-    },
-    debounceMs,
-    options,
-  )
+  React.useEffect(() => {
+    const handler: NodeJS.Timeout = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
 
-  useEffect(() => {
-    return run()
-  }, [value, run])
+    // Cancel the timeout if value changes (also on delay change or unmount)
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
 
-  return debouncedValue
-}
+  return debouncedValue;
+};

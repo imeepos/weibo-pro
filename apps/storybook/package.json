@@ -13,6 +13,7 @@
     "@hookform/resolvers": "^5.2.2",
     "@sker/ui": "workspace:*",
     "@sker/workflow-ui": "workspace:*",
+    "lexical": "^0.38.2",
     "lucide-react": "^0.555.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",

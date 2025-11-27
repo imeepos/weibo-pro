@@ -2,10 +2,15 @@
   "extends": "@sker/typescript-config/react-library.json",
   "compilerOptions": {
     "baseUrl": ".",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "skipLibCheck": true,
+    "strict": false,
     "paths": {
-      "@sker/ui/*": ["./src/*"]
+      "@sker/ui/*": ["./src/*"],
+      "@/*": ["./src/*"]
     }
   },
-  "include": ["."],
+  "include": ["src/lib/**/*", "src/styles/**/*"],
   "exclude": ["node_modules", "dist"]
 }
