@@ -13,8 +13,11 @@
   "aliases": {
     "components": "@sker/ui/components",
     "utils": "@sker/ui/lib/utils",
-    "hooks": "@sker/ui/hooks",
+    "ui": "@sker/ui/components",
     "lib": "@sker/ui/lib",
-    "ui": "@sker/ui/components"
+    "hooks": "@sker/ui/hooks"
+  },
+  "registries": {
+    "@hooks": "https://shadcn-hooks.vercel.app/r/{name}.json"
   }
 }
