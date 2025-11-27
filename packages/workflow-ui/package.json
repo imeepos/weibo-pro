@@ -39,6 +39,7 @@
     "@radix-ui/react-tooltip": "^1.1.9",
     "@sker/core": "workspace:*",
     "@sker/sdk": "workspace:*",
+    "@sker/ui": "workspace:*",
     "@sker/workflow": "workspace:*",
     "@sker/workflow-ast": "workspace:*",
     "@sker/workflow-browser": "workspace:*",
