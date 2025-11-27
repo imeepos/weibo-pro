@@ -5,7 +5,7 @@ import { Observable } from 'rxjs';
 
 export const providers: (config?: AxiosRequestConfig) => Provider[] = (config = { baseURL: '/' }) => {
     const controllers = root.get(CONTROLLES, [])
-
+    console.log(`@sker/sdk`,{ config })
     return [
         {
             provide: AXIOS,

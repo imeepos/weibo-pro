@@ -152,6 +152,9 @@ importers:
       '@sker/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
+      '@sker/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       '@sker/workflow':
         specifier: workspace:*
         version: link:../../packages/workflow

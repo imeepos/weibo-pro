@@ -20,6 +20,7 @@
   "dependencies": {
     "@sker/core": "workspace:*",
     "@sker/sdk": "workspace:*",
+    "@sker/ui": "workspace:*",
     "@sker/workflow": "workspace:*",
     "@sker/workflow-ast": "workspace:*",
     "@sker/workflow-ui": "workspace:*",

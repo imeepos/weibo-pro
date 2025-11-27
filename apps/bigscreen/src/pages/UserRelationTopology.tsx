@@ -1,53 +1,39 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Users, Network, Activity } from 'lucide-react';
-import { root } from '@sker/core';
+import { Network } from 'lucide-react';
 import UserRelationGraph3D from '../components/charts/UserRelationGraph3D';
 import { getUserTypeColor } from '../components/charts/UserRelationGraph3D.utils';
 import UserRelationControls from '../components/charts/UserRelationControls';
+import NodeDetailPanel from '../components/charts/NodeDetailPanel';
+import NetworkStatisticsCards from '../components/charts/NetworkStatisticsCards';
+import NodeTypeLegend from '../components/charts/NodeTypeLegend';
+import { useUserRelationNetwork } from '../hooks/useUserRelationNetwork';
 import type {
-  UserRelationNetwork,
   UserRelationType,
   TimeRange,
   UserRelationNode,
 } from '@sker/sdk';
-import { UserRelationController } from '@sker/sdk';
+
+const USER_TYPE_CONFIGS = [
+  { value: 'official', label: '官方', color: getUserTypeColor('official') },
+  { value: 'media', label: '媒体', color: getUserTypeColor('media') },
+  { value: 'kol', label: 'KOL', color: getUserTypeColor('kol') },
+  { value: 'normal', label: '普通', color: getUserTypeColor('normal') },
+] as const;
 
 const UserRelationTopology: React.FC = () => {
   const [relationType, setRelationType] = useState<UserRelationType>('comprehensive');
   const [timeRange, setTimeRange] = useState<TimeRange>('90d');
   const [minWeight, setMinWeight] = useState(2);
   const [limit, setLimit] = useState(200);
-  const [network, setNetwork] = useState<UserRelationNetwork | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<UserRelationNode | null>(null);
 
-  const fetchNetwork = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const controller = root.get(UserRelationController);
-      const data = await controller.getNetwork(
-        relationType,
-        timeRange,
-        minWeight,
-        limit
-      );
-      setNetwork(data);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : '未知错误';
-      setError(`加载失败: ${message}`);
-      console.error('Failed to fetch network:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [relationType, timeRange, minWeight, limit]);
-
-  useEffect(() => {
-    fetchNetwork();
-  }, [fetchNetwork]);
+  const { network, isLoading, error, refetch } = useUserRelationNetwork({
+    relationType,
+    timeRange,
+    minWeight,
+    limit,
+  });
 
   const handleNodeClick = useCallback((node: UserRelationNode) => {
     setSelectedNode(node);
@@ -139,7 +125,7 @@ const UserRelationTopology: React.FC = () => {
               <div className="text-lg text-destructive mb-2">加载失败</div>
               <div className="text-muted-foreground mb-4 text-sm">{error}</div>
               <button
-                onClick={fetchNetwork}
+                onClick={refetch}
                 className="px-5 py-2.5 bg-primary hover:bg-primary/90 rounded-md transition-colors text-primary-foreground font-medium text-sm"
               >
                 重试
@@ -155,7 +141,7 @@ const UserRelationTopology: React.FC = () => {
           transition={{ delay: 0.2 }}
           className="absolute top-12 left-6 w-72 max-h-[calc(100vh-160px)] overflow-y-auto"
         >
-          <div className="backdrop-blur-sm bg-background/50 rounded-lg p-3">
+          <div className="glass-card p-3">
             <UserRelationControls
               relationType={relationType}
               onRelationTypeChange={setRelationType}
@@ -165,170 +151,35 @@ const UserRelationTopology: React.FC = () => {
               onMinWeightChange={setMinWeight}
               limit={limit}
               onLimitChange={setLimit}
-              onRefresh={fetchNetwork}
+              onRefresh={refetch}
               isLoading={isLoading}
             />
           </div>
         </motion.div>
 
         {/* 悬浮节点详情 - 右上角 */}
-        {selectedNode && (
-          <motion.div
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="absolute top-12 right-6 w-72"
-          >
-            <div className="backdrop-blur-sm bg-background/50 rounded-lg p-3">
-              <div className="flex items-center gap-2 mb-2">
-                <Activity className="w-4 h-4 text-primary" />
-                <h3 className="text-sm font-semibold">节点详情</h3>
-              </div>
-              <div className="space-y-1.5 text-xs">
-                <div>
-                  <div className="text-[10px] text-muted-foreground">用户名</div>
-                  <div className="font-medium">{selectedNode.name}</div>
-                </div>
-                <div>
-                  <div className="text-[10px] text-muted-foreground">用户类型</div>
-                  <div className="font-medium">
-                    {getUserTypeLabel(selectedNode.userType)}
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <div className="text-[10px] text-muted-foreground">粉丝数</div>
-                    <div className="font-medium text-primary">
-                      {formatNumber(selectedNode.followers)}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-[10px] text-muted-foreground">发帖数</div>
-                    <div className="font-medium text-sentiment-positive">
-                      {formatNumber(selectedNode.postCount)}
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <div className="text-[10px] text-muted-foreground">影响力</div>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
-                      <motion.div
-                        className="h-full bg-gradient-to-r from-cyan via-primary to-violet"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${selectedNode.influence}%` }}
-                        transition={{ duration: 0.5 }}
-                      />
-                    </div>
-                    <span className="text-[10px] font-medium">{selectedNode.influence}/100</span>
-                  </div>
-                </div>
-                {selectedNode.location && (
-                  <div>
-                    <div className="text-[10px] text-muted-foreground">位置</div>
-                    <div className="font-medium">{selectedNode.location}</div>
-                  </div>
-                )}
-                {selectedNode.verified && (
-                  <div className="flex items-center gap-2 text-primary text-xs">
-                    <Users className="w-3 h-3" />
-                    <span>已认证</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </motion.div>
-        )}
+        <NodeDetailPanel
+          node={selectedNode}
+          position="right"
+          className="absolute top-12 right-6 w-72"
+        />
 
         {/* 悬浮统计卡片 - 右下角 */}
         {network && network.nodes.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="absolute bottom-6 right-8 grid grid-cols-4 gap-1"
-          >
-            <div className="backdrop-blur-sm bg-background/50 rounded-md p-1.5">
-              <div className="text-base font-bold text-primary leading-tight">
-                {network.statistics.totalUsers}
-              </div>
-              <div className="text-[9px] text-muted-foreground leading-tight">节点</div>
-            </div>
-            <div className="backdrop-blur-sm bg-background/50 rounded-md p-1.5">
-              <div className="text-base font-bold text-violet leading-tight">
-                {network.statistics.totalRelations}
-              </div>
-              <div className="text-[9px] text-muted-foreground leading-tight">连接</div>
-            </div>
-            <div className="backdrop-blur-sm bg-background/50 rounded-md p-1.5">
-              <div className="text-base font-bold text-cyan leading-tight">
-                {network.statistics.avgDegree.toFixed(0)}
-              </div>
-              <div className="text-[9px] text-muted-foreground leading-tight">平均度</div>
-            </div>
-            <div className="backdrop-blur-sm bg-background/50 rounded-md p-1.5">
-              <div className="text-base font-bold text-fuchsia leading-tight">
-                {(network.statistics.density * 100).toFixed(0)}%
-              </div>
-              <div className="text-[9px] text-muted-foreground leading-tight">密度</div>
-            </div>
-          </motion.div>
+          <NetworkStatisticsCards
+            statistics={network.statistics}
+            className="absolute bottom-6 right-8"
+          />
         )}
 
         {/* 悬浮图例 - 左下角 */}
-        <motion.div
-          initial={{ opacity: 0, x: -50 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.4 }}
-          className="absolute bottom-6 left-8 backdrop-blur-sm bg-background/50 rounded-md px-2 py-1.5 text-[10px]"
-        >
-          <div className="font-semibold mb-0.5">节点类型</div>
-          <div className="space-y-0.5">
-            <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full" style={{ background: getUserTypeColor('official') }} />
-              <span>官方</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full" style={{ background: getUserTypeColor('media') }} />
-              <span>媒体</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full" style={{ background: getUserTypeColor('kol') }} />
-              <span>KOL</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full" style={{ background: getUserTypeColor('normal') }} />
-              <span>普通</span>
-            </div>
-          </div>
-        </motion.div>
+        <NodeTypeLegend
+          types={USER_TYPE_CONFIGS}
+          className="absolute bottom-6 left-8"
+        />
       </div>
     </div>
   );
 };
-
-function getUserTypeLabel(userType: string): string {
-  switch (userType) {
-    case 'official':
-      return '官方账号';
-    case 'media':
-      return '媒体账号';
-    case 'kol':
-      return 'KOL账号';
-    case 'normal':
-      return '普通用户';
-    default:
-      return '未知';
-  }
-}
-
-function formatNumber(num: number): string {
-  if (num >= 1000000) {
-    return `${(num / 1000000).toFixed(1)}M`;
-  }
-  if (num >= 1000) {
-    return `${(num / 1000).toFixed(1)}K`;
-  }
-  return num.toString();
-}
 
 export default UserRelationTopology;

@@ -105,7 +105,6 @@ const DataOverview: React.FC = () => {
         {/* 热词分析 */}
         <div className="glass-card sentiment-overview-card min-h-0 overflow-hidden p-4">
           <WordCloudChart
-            title=""
             maxWords={200}
           />
         </div>

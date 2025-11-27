@@ -85,7 +85,7 @@ const HotEventsList: React.FC<HotEventsListProps> = ({ className = '' }) => {
     navigate('/event-analysis', { state: { eventId } });
   };
 
-  const renderMiniChart = (data: number[]) => {
+  const renderMiniChart = (data: number[] = []) => {
     const max = Math.max(...data);
     const min = Math.min(...data);
     const range = max - min || 1;

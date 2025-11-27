@@ -1,9 +1,8 @@
 import React from "react"
 import { cn, getSentimentColorHex } from "@/utils"
 import { useWordCloudData } from "@/hooks/useChartData"
-import { ChartState } from "@sker/ui/components/ui/chart-state"
-import { WordCloud, WordCloudItem } from "@sker/ui/components/ui/word-cloud"
-
+import { WordCloud, type WordCloudItem } from "@sker/ui/components/ui/word-cloud"
+import { ChartState } from '@sker/ui/components/ui/chart-state'
 interface WordCloudChartProps {
   title?: string
   height?: number

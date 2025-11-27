@@ -44,7 +44,7 @@ export class UserLikeRelationView {
       MIN(c.ingested_at) as first_interaction_at,
       MAX(c.ingested_at) as last_interaction_at
     FROM weibo_comments c
-    JOIN weibo_posts p ON c.rootid::text = p.id
+    JOIN weibo_posts p ON c.rootid = p.id
     WHERE c.user->>'id' IS NOT NULL
       AND p.user->>'id' IS NOT NULL
       AND c.user->>'id' != p.user->>'id'

@@ -1,3 +1,5 @@
+import 'reflect-metadata';
+
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import "@sker/sdk";
@@ -17,7 +19,6 @@ function getBaseUrl(){
   }
   return `${url.protocol}//${url.hostname}`
 }
-
 
 root.set([
   ...providers({ baseURL: getBaseUrl() })
