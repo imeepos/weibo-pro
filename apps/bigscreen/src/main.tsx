@@ -7,14 +7,15 @@ import { providers } from '@sker/sdk'
 import { root } from '@sker/core'
 
 import App from './App';
-import './styles/index.css';
+import '@sker/ui/globals.css'
+
 import { createLogger } from './utils';
 
 const logger = createLogger('main');
 
-function getBaseUrl(){
+function getBaseUrl() {
   const url = new URL(window.location.href)
-  if(url.port){
+  if (url.port) {
     return `${url.protocol}//${url.hostname}:${url.port}`
   }
   return `${url.protocol}//${url.hostname}`

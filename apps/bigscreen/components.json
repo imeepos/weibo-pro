@@ -1,0 +1,20 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "new-york",
+  "rsc": false,
+  "tsx": true,
+  "tailwind": {
+    "config": "",
+    "css": "",
+    "baseColor": "zinc",
+    "cssVariables": true
+  },
+  "iconLibrary": "lucide",
+  "aliases": {
+    "components": "@sker/ui/components",
+    "utils": "@sker/ui/lib/utils",
+    "hooks": "@sker/ui/hooks",
+    "lib": "@sker/ui/lib",
+    "ui": "@sker/ui/components"
+  }
+}

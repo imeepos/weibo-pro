@@ -10,7 +10,9 @@ import {
   Eye,
   AlertTriangle,
   BarChart3,
-  Clock
+  Clock,
+  Activity,
+  Zap
 } from 'lucide-react';
 import { useAppStore } from '@/stores/useAppStore';
 import { cn, formatNumber, formatRelativeTime } from '@/utils';
@@ -175,10 +177,8 @@ const EventAnalysis: React.FC = () => {
           className='sentiment-overview-card'
           value={totalEvents}
           change={12.5}
-          icon="Activity"
-          color="sentiment-neutral"
-          size="large"
-          showChart={true}
+          icon={Activity}
+          color="blue"
           chartComponent={<MiniTrendChart data={eventTrendData} color="#3b82f6" type="bar" />}
         />
         <MetricCard
@@ -186,10 +186,8 @@ const EventAnalysis: React.FC = () => {
           className='sentiment-overview-card'
           value={totalPosts}
           change={8.3}
-          icon="MessageSquare"
-          color="sentiment-positive"
-          size="large"
-          showChart={true}
+          icon={MessageSquare}
+          color="green"
           chartComponent={<MiniTrendChart data={postTrendData} color="#10b981" type="line" />}
         />
         <MetricCard
@@ -197,10 +195,8 @@ const EventAnalysis: React.FC = () => {
           className='sentiment-overview-card'
           value={totalUsers}
           change={5.7}
-          icon="Users"
+          icon={Users}
           color="purple"
-          size="large"
-          showChart={true}
           chartComponent={<MiniTrendChart data={userTrendData} color="#8b5cf6" type="line" />}
         />
         <MetricCard
@@ -208,10 +204,8 @@ const EventAnalysis: React.FC = () => {
           className='sentiment-overview-card'
           value={avgHotness}
           change={15.2}
-          icon="Zap"
-          color="sentiment-negative"
-          size="large"
-          showChart={true}
+          icon={Zap}
+          color="red"
           chartComponent={<MiniTrendChart data={hotnessTrendData} color="#ef4444" type="bar" />}
         />
       </div>

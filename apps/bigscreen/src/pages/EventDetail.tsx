@@ -358,10 +358,8 @@ const EventDetail: React.FC = () => {
           className='sentiment-overview-card'
           value={eventData.postCount}
           change={25.3}
-          icon="MessageSquare"
-          color="sentiment-positive"
-          size="large"
-          showChart={true}
+          icon={MessageSquare}
+          color="green"
           chartComponent={<MiniTrendChart data={postData} color="#10b981" type="bar" />}
         />
         <MetricCard
@@ -369,10 +367,8 @@ const EventDetail: React.FC = () => {
           className='sentiment-overview-card'
           value={eventData.userCount}
           change={18.7}
-          icon="Users"
+          icon={Users}
           color="purple"
-          size="large"
-          showChart={true}
           chartComponent={<MiniTrendChart data={userData} color="#8b5cf6" type="line" />}
         />
         <MetricCard
@@ -380,10 +376,8 @@ const EventDetail: React.FC = () => {
           className='sentiment-overview-card'
           value={eventData.hotness}
           change={15.2}
-          icon="Zap"
-          color="sentiment-negative"
-          size="large"
-          showChart={true}
+          icon={Zap}
+          color="red"
           chartComponent={<MiniTrendChart data={hotnessData} color="#ef4444" type="line" />}
         />
         <MetricCard
@@ -391,10 +385,8 @@ const EventDetail: React.FC = () => {
           className='sentiment-overview-card'
           value={eventData.sentiment.positive}
           change={8.5}
-          icon="Heart"
-          color="sentiment-positive"
-          size="large"
-          showChart={true}
+          icon={Heart}
+          color="green"
           sentiment={{
             type: 'positive',
             level: toSentimentLevel(eventData.sentiment.positive)

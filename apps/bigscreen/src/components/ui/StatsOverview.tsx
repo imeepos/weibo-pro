@@ -45,87 +45,55 @@ const StatsOverview: React.FC<StatsOverviewProps> = ({
     userTrendData: [680, 720, 850, 780, 920, 860, 950],
     interactionTrendData: [3200, 3800, 4500, 4200, 4800, 4600, 5000]
   }), []);
-  
+
   const { eventTrendData, postTrendData, userTrendData, interactionTrendData } = trendData;
 
 
   return (
     <div className={`grid grid-cols-2 gap-2 w-full ${className}`}>
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0 }}
-      >
-        <MetricCard
-          title="事件数"
-          value={formatValue(statsData.events.value)}
-          change={statsData.events.change}
-          icon={FileText}
-          color="blue"
-          loading={loading}
-          size="tiny"
-          showChart={true}
-          chartComponent={<MiniTrendChart data={eventTrendData} color="#3b82f6" type="line" height={20} />}
-          className="relative"
-        />
-      </motion.div>
+      <MetricCard
+        title="事件数"
+        value={formatValue(statsData.events.value)}
+        change={statsData.events.change}
+        icon={FileText}
+        color="blue"
+        loading={loading}
+        chartComponent={<MiniTrendChart data={eventTrendData} color="#3b82f6" type="line" height={20} />}
+        className="relative"
+      />
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-      >
-        <MetricCard
-          title="贴子数"
-          value={formatValue(statsData.posts.value)}
-          change={statsData.posts.change}
-          icon={MessageCircle}
-          color="green"
-          loading={loading}
-          size="tiny"
-          showChart={true}
-          chartComponent={<MiniTrendChart data={postTrendData} color="#10b981" type="line" height={20} />}
-          className="relative"
-        />
-      </motion.div>
+      <MetricCard
+        title="贴子数"
+        value={formatValue(statsData.posts.value)}
+        change={statsData.posts.change}
+        icon={MessageCircle}
+        color="green"
+        loading={loading}
+        chartComponent={<MiniTrendChart data={postTrendData} color="#10b981" type="line" height={20} />}
+        className="relative"
+      />
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-      >
-        <MetricCard
-          title="用户数量"
-          value={statsData.users.value}
-          change={statsData.users.change}
-          icon={Users}
-          color="purple"
-          loading={loading}
-          size="tiny"
-          showChart={true}
-          chartComponent={<MiniTrendChart data={userTrendData} color="#8b5cf6" type="line" height={20} />}
-          className="relative"
-        />
-      </motion.div>
+      <MetricCard
+        title="用户数量"
+        value={statsData.users.value}
+        change={statsData.users.change}
+        icon={Users}
+        color="purple"
+        loading={loading}
+        chartComponent={<MiniTrendChart data={userTrendData} color="#8b5cf6" type="line" height={20} />}
+        className="relative"
+      />
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-      >
-        <MetricCard
-          title="互动数"
-          value={formatValue(statsData.interactions.value)}
-          change={statsData.interactions.change}
-          icon="ThumbsUp"
-          color="red"
-          loading={loading}
-          size="tiny"
-          showChart={true}
-          chartComponent={<MiniTrendChart data={interactionTrendData} color="#ef4444" type="line" height={20} />}
-          className="relative"
-        />
-      </motion.div>
+      <MetricCard
+        title="互动数"
+        value={formatValue(statsData.interactions.value)}
+        change={statsData.interactions.change}
+        icon={ThumbsUp}
+        color="red"
+        loading={loading}
+        chartComponent={<MiniTrendChart data={interactionTrendData} color="#ef4444" type="line" height={20} />}
+        className="relative"
+      />
     </div>
   );
 };

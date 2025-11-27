@@ -29,8 +29,8 @@ const CountUp = React.forwardRef<HTMLSpanElement, CountUpProps>(
     ref
   ) => {
     const [count, setCount] = React.useState(start)
-    const animationRef = React.useRef<number>()
-    const startTimeRef = React.useRef<number>()
+    const animationRef = React.useRef<number>(0)
+    const startTimeRef = React.useRef<number>(0)
 
     const formatValue = (value: number) => {
       const formatted =

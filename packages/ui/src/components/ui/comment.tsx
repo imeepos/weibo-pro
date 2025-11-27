@@ -395,7 +395,7 @@ function CommentMoreDropdown(props: {
 const useCommentEditor = (
   options: Omit<CreatePlateEditorOptions, 'plugins'> = {},
   deps: any[] = []
-) => {
+): any => {
   const commentEditor = usePlateEditor(
     {
       id: 'comment',
