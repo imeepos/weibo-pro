@@ -4,89 +4,63 @@
 @source "../";
 
 @theme {
-  --color-workflow-primary: #818cf8;
-  --color-workflow-primary-light: #a5b4fc;
-  --color-workflow-secondary: #c084fc;
-  --color-workflow-accent: #60a5fa;
-  --color-workflow-success: #34d399;
-  --color-workflow-warning: #fbbf24;
-  --color-workflow-error: #f87171;
-  --color-workflow-muted: #94a3b8;
+  /* 语义化颜色系统 - 支持主题切换 */
+  --color-background: light-dark(#ffffff, #000000);
+  --color-foreground: light-dark(#0f172a, #e2e8f0);
+  --color-muted: light-dark(#64748b, #94a3b8);
+  --color-border: light-dark(#e2e8f0, #334155);
 
-  --color-node-bg: #1e293b;
-  --color-node-bg-hover: #334155;
-  --color-node-border: #334155;
-  --color-node-border-hover: #475569;
-  --color-node-selected: #1e1b4b;
+  /* 工作流特定颜色 */
+  --color-primary: light-dark(#4f46e5, #818cf8);
+  --color-primary-light: light-dark(#818cf8, #a5b4fc);
+  --color-secondary: light-dark(#9333ea, #c084fc);
+  --color-accent: light-dark(#2563eb, #60a5fa);
+  --color-success: light-dark(#059669, #34d399);
+  --color-warning: light-dark(#d97706, #fbbf24);
+  --color-error: light-dark(#dc2626, #f87171);
 
-  --color-edge-data: #64748b;
-  --color-edge-control: #a855f7;
-  --color-edge-hover: #818cf8;
+  /* 节点颜色 */
+  --color-node-bg: light-dark(#f8fafc, #1e293b);
+  --color-node-bg-hover: light-dark(#f1f5f9, #334155);
+  --color-node-border: light-dark(#cbd5e1, #334155);
+  --color-node-selected: light-dark(#eef2ff, #1e1b4b);
 
-  --color-panel-bg: #0f172a;
-  --color-panel-border: #1e293b;
-  --color-panel-header: #1e293b;
-  --color-panel-divider: #334155;
+  /* 边颜色 */
+  --color-edge-data: light-dark(#94a3b8, #64748b);
+  --color-edge-control: light-dark(#9333ea, #a855f7);
 
-  --font-family-sans: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-family-mono: 'Fira Code', 'SF Mono', Monaco, Consolas, monospace;
+  /* 面板颜色 */
+  --color-panel-bg: light-dark(#ffffff, #0f172a);
+  --color-panel-border: light-dark(#e2e8f0, #1e293b);
+  --color-panel-header: light-dark(#f8fafc, #1e293b);
+  --color-panel-divider: light-dark(#e2e8f0, #334155);
 
-  --font-size-node-title: 0.875rem;
-  --font-size-node-label: 0.75rem;
-  --font-size-panel-title: 0.875rem;
-  --font-size-panel-label: 0.75rem;
+  /* 阴影 - 根据主题调整透明度 */
+  --shadow-node: light-dark(
+    0 4px 12px rgba(0, 0, 0, 0.1),
+    0 4px 12px rgba(0, 0, 0, 0.4)
+  );
+  --shadow-node-hover: light-dark(
+    0 8px 24px rgba(79, 70, 229, 0.15),
+    0 8px 24px rgba(129, 140, 248, 0.25)
+  );
+  --shadow-node-selected: light-dark(
+    0 0 0 2px theme(colors.primary), 0 8px 24px rgba(79, 70, 229, 0.2),
+    0 0 0 2px theme(colors.primary), 0 8px 24px rgba(129, 140, 248, 0.35)
+  );
+  --shadow-panel: light-dark(
+    0 0 30px rgba(0, 0, 0, 0.08),
+    0 0 30px rgba(0, 0, 0, 0.5)
+  );
 
-  --spacing-node-padding: 1rem;
-  --spacing-node-gap: 0.25rem;
-  --spacing-panel-padding: 1rem;
-  --spacing-panel-gap: 0.75rem;
+  /* 圆角 */
+  --radius-lg: 0.75rem;
+  --radius-md: 0.5rem;
 
-  --shadow-node: 0 4px 12px rgba(0, 0, 0, 0.4);
-  --shadow-node-hover: 0 8px 24px rgba(129, 140, 248, 0.25);
-  --shadow-node-selected: 0 0 0 2px #818cf8, 0 8px 24px rgba(129, 140, 248, 0.35);
-  --shadow-panel: 0 0 30px rgba(0, 0, 0, 0.5);
-
-  --radius-node: 0.75rem;
-  --radius-panel: 0.5rem;
-
-  --transition-fast: 150ms;
-  --transition-normal: 200ms;
-  --transition-slow: 300ms;
-}
-
-:root {
-  --workflow-primary: #818cf8;
-  --workflow-primary-light: #a5b4fc;
-  --workflow-secondary: #c084fc;
-  --workflow-accent: #60a5fa;
-  --workflow-success: #34d399;
-  --workflow-warning: #fbbf24;
-  --workflow-error: #f87171;
-  --workflow-muted: #94a3b8;
-
-  --node-bg: #1e293b;
-  --node-bg-hover: #334155;
-  --node-border: #334155;
-  --node-border-hover: #475569;
-  --node-selected: #1e1b4b;
-
-  --edge-data: #64748b;
-  --edge-control: #a855f7;
-  --edge-hover: #818cf8;
-
-  --panel-bg: #0f172a;
-  --panel-border: #1e293b;
-  --panel-header: #1e293b;
-  --panel-divider: #334155;
-
+  /* 过渡 */
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-normal: 200ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
-
-  --shadow-node: 0 4px 12px rgba(0, 0, 0, 0.4);
-  --shadow-node-hover: 0 8px 24px rgba(129, 140, 248, 0.25);
-  --shadow-node-selected: 0 0 0 2px var(--workflow-primary), 0 8px 24px rgba(129, 140, 248, 0.35);
-  --shadow-panel: 0 0 30px rgba(0, 0, 0, 0.5);
 }
 
 * {
@@ -95,47 +69,26 @@
 }
 
 body {
-  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background-color: #000000;
-  color: #e2e8f0;
+  @apply font-sans bg-background text-foreground;
 }
 
 .react-flow__node {
-  /* 移除 transition 以确保拖动流畅 */
-  /* transition: all var(--transition-normal); */
-  /* 防止宽度异常但允许内容自适应 */
-  min-width: 120px;
-  max-width: 320px;
-  box-sizing: border-box;
-  /* 确保选中时不会出现异常宽度 */
+  @apply min-w-[120px] max-w-[320px] box-border;
   width: fit-content !important;
-}
-
-/* 完全移除节点过渡效果，确保拖动流畅 */
-.react-flow__node {
   transition: none !important;
+  z-index: 2;
 }
 
-/* 只对非拖动状态下的特定属性应用过渡 */
 .react-flow__node:not(.dragging) {
-  transition: box-shadow 0.15s ease, background-color 0.15s ease !important;
+  transition: box-shadow var(--transition-fast), background-color var(--transition-fast) !important;
 }
 
-.react-flow__edge.selected path {
-  stroke: var(--workflow-primary);
+.react-flow__node.dragging {
+  z-index: 5;
 }
 
-.react-flow__edge:hover path {
-  stroke: var(--edge-hover);
-}
-
-/* Z-index 层级：连线(1) → 节点(2) → 端口(3) → 交互状态(4+) */
 .react-flow__edge {
   z-index: 1;
-}
-
-.react-flow__node {
-  z-index: 2;
 }
 
 .react-flow__edge.selected,
@@ -143,98 +96,18 @@ body {
   z-index: 4;
 }
 
-.react-flow__node.dragging {
-  z-index: 5;
+.react-flow__edge.selected path {
+  stroke: var(--color-primary);
+}
+
+.react-flow__edge:hover path {
+  stroke: var(--color-primary);
+}
+
+.react-flow__edges {
+  z-index: 9;
 }
 
 .react-flow__connection-line {
   z-index: 6;
-}
-
-.property-panel {
-  @apply flex flex-col h-full border-l;
-  background-color: var(--panel-bg);
-  border-color: var(--panel-border);
-}
-
-.property-panel-empty {
-  @apply flex flex-col items-center justify-center h-full text-center;
-  padding: var(--spacing-panel-padding);
-}
-
-.property-panel-empty p {
-  @apply text-sm font-semibold;
-  color: #cbd5e1;
-}
-
-.property-panel-hint {
-  @apply text-xs mt-2;
-  color: var(--workflow-muted);
-}
-
-.property-panel-header {
-  @apply flex items-center justify-between border-b;
-  background-color: var(--panel-header);
-  border-color: var(--panel-divider);
-  padding: var(--spacing-panel-padding);
-}
-
-.property-panel-title {
-  @apply text-sm font-semibold;
-  color: #f1f5f9;
-}
-
-.property-panel-type {
-  @apply text-xs font-mono;
-  color: var(--workflow-muted);
-}
-
-.property-panel-content {
-  @apply flex-1 overflow-y-auto;
-  padding: var(--spacing-panel-padding);
-}
-
-.property-panel-content>*+* {
-  margin-top: var(--spacing-panel-gap);
-}
-
-.property-panel-section {
-  @apply space-y-3;
-}
-
-.property-panel-section-title {
-  @apply text-xs uppercase tracking-wide mb-2;
-  color: #94a3b8;
-  font-weight: 600;
-}
-
-.property-field {
-  @apply space-y-1.5;
-}
-
-.property-field-readonly {
-  @apply opacity-70;
-}
-
-.property-field-label {
-  @apply block text-xs font-medium;
-  color: #cbd5e1;
-}
-
-.property-field-value {
-  @apply w-full px-3 py-2 text-sm font-mono rounded-md border;
-  background-color: #0f172a;
-  border-color: #334155;
-  color: #94a3b8;
-}
-
-.property-field-error {
-  background-color: #450a0a;
-  border-color: #7f1d1d;
-  color: var(--workflow-error);
-}
-
-
-.react-flow__edges {
-  z-index: 9;
 }
