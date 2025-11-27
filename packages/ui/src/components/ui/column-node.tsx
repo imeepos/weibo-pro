@@ -38,8 +38,8 @@ import {
     TooltipContent,
     TooltipProvider,
     TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { cn } from '@/lib/utils';
+} from '@sker/ui/components/ui/tooltip';
+import { cn } from '@sker/ui/lib/utils';
 
 export const ColumnElement = withHOC(
     ResizableProvider,

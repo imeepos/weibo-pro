@@ -45,20 +45,20 @@ import {
 } from 'platejs/react';
 import { type PlateEditor, useEditorRef } from 'platejs/react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@sker/ui/components/ui/button';
 import {
   Command,
   CommandGroup,
   CommandItem,
   CommandList,
-} from '@/components/ui/command';
+} from '@sker/ui/components/ui/command';
 import {
   Popover,
   PopoverAnchor,
   PopoverContent,
-} from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
-import { commentPlugin } from '@/components/editor/plugins/comment-kit';
+} from '@sker/ui/components/ui/popover';
+import { cn } from '@sker/ui/lib/utils';
+import { commentPlugin } from '@sker/ui/components/editor/plugins/comment-kit';
 
 import { AIChatEditor } from './ai-chat-editor';
 

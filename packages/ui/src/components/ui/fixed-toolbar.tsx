@@ -1,6 +1,6 @@
 'use client';
 
-import { cn } from '@/lib/utils';
+import { cn } from '@sker/ui/lib/utils';
 
 import { Toolbar } from './toolbar';
 
