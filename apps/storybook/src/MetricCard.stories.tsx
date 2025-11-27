@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react'
+import type { ReactRenderer } from '@storybook/react'
 import { TrendingUp, Users, MessageSquare, Heart } from 'lucide-react'
 import { MetricCard } from '@sker/ui/components/ui/metric-card'
 const meta = {
@@ -11,7 +12,7 @@ const meta = {
 } satisfies Meta<typeof MetricCard>
 
 export default meta
-type Story = StoryObj<typeof meta>
+type Story = StoryObj<ReactRenderer>
 
 export const Default: Story = {
   args: {
@@ -63,7 +64,7 @@ export const Loading: Story = {
   },
 }
 
-export const AllColors: Story = {
+export const AllColors = {
   render: () => (
     <div className="grid grid-cols-3 gap-4">
       <MetricCard title="蓝色" value={1234} color="blue" icon={TrendingUp} animated={false} />
@@ -71,4 +72,7 @@ export const AllColors: Story = {
       <MetricCard title="红色" value={9012} color="red" icon={Heart} animated={false} />
       <MetricCard title="灰色" value={3456} color="gray" icon={MessageSquare} animated={false} />
       <MetricCard title="紫色" value={7890} color="purple" icon={TrendingUp} animated={false} />
-      <MetricC
+      <MetricCard title="黄色" value={2345} color="yellow" icon={Users} animated={false} />
+    </div>
+  ),
+} satisfies Story

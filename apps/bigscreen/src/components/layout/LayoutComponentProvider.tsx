@@ -29,7 +29,7 @@ import SimpleNetworkFlow from "../charts/SimpleNetworkFlow";
 import TimeSeriesChart from "../charts/TimeSeriesChart";
 
 // UI 组件
-import CountUp from "../ui/CountUp";
+import { CountUp } from "@sker/ui/components/ui/count-up";
 import FullscreenIndicator from "../ui/FullscreenIndicator";
 import LoadingSpinner from "../ui/LoadingSpinner";
 import { MetricCard } from "@sker/ui/components/ui/metric-card";
