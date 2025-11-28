@@ -79,6 +79,7 @@
     "@types/lodash": "^4.17.21",
     "@udecode/cn": "^52.0.1",
     "@uploadthing/react": "^7.3.3",
+    "@xyflow/react": "^12.9.2",
     "ai": "5.0.28",
     "better-auth": "^1.4.2",
     "class-variance-authority": "^0.7.1",
@@ -134,7 +135,7 @@
     "@sker/eslint-config": "workspace:*",
     "@sker/typescript-config": "workspace:*",
     "@tailwindcss/postcss": "^4.1.11",
-    "@turbo/gen": "^2.5.5",
+    "@types/minimatch": "^6.0.0",
     "@types/node": "^20.19.9",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
@@ -147,6 +148,8 @@
     "./postcss.config": "./postcss.config.mjs",
     "./lib/*": "./src/lib/*.ts",
     "./components/*": "./src/components/*.tsx",
+    "./components/workflow": "./src/components/workflow/index.ts",
+    "./components/workflow/*": "./src/components/workflow/*.tsx",
     "./hooks/*": "./src/hooks/*.ts"
   }
 }

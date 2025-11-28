@@ -51,7 +51,9 @@ function createTestNode(id: string): INode {
         state: 'pending',
         error: undefined,
         position: { x: 0, y: 0 },
-        a: 0
+        a: 0,
+        count: 0,
+        emitCount: 0
     };
 }
 
@@ -62,7 +64,9 @@ function createTest2Node(id: string): INode {
         state: 'pending',
         error: undefined,
         position: { x: 0, y: 0 },
-        a: 0
+        a: 0,
+        count: 0,
+        emitCount: 0
     };
 }
 
@@ -73,7 +77,9 @@ function createTest3Node(id: string): INode {
         state: 'pending',
         error: undefined,
         position: { x: 0, y: 0 },
-        a: 0
+        a: 0,
+        count: 0,
+        emitCount: 0
     };
 }
 

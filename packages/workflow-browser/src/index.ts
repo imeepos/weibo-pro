@@ -1,46 +1,46 @@
 // 导入即自动注册（通过 @Injectable 装饰器）
-import './WeiboLoginBrowserVisitor';
-import './WeiboKeywordSearchBrowserVisitor';
-import './WeiboAjaxStatusesShowBrowserVisitor';
-import './WeiboAjaxStatusesCommentBrowserVisitor';
-import './WeiboAjaxStatusesRepostTimelineBrowserVisitor';
-import './WeiboAjaxStatusesLikeShowBrowserVisitor';
-import './WeiboAjaxStatusesMymblogBrowserVisitor';
-import './WeiboAjaxProfileInfoBrowserVisitor';
-import './WeiboAjaxFriendshipsBrowserVisitor';
-import './WeiboAjaxFeedHotTimelineBrowserVisitor';
-import './PostContextCollectorBrowserVisitor';
-import './PostNLPAnalyzerBrowserVisitor';
-import './EventAutoCreatorBrowserVisitor';
-import './WorkflowGraphBrowserVisitor';
-import "./WeiboUserDetectionAstVisitor";
-import "./LlmTextAgentAstVisitor";
-import "./WeiboAccountPickAstBrowserVisitor"
+import './WeiboLoginBrowserVisitor.js';
+import './WeiboKeywordSearchBrowserVisitor.js';
+import './WeiboAjaxStatusesShowBrowserVisitor.js';
+import './WeiboAjaxStatusesCommentBrowserVisitor.js';
+import './WeiboAjaxStatusesRepostTimelineBrowserVisitor.js';
+import './WeiboAjaxStatusesLikeShowBrowserVisitor.js';
+import './WeiboAjaxStatusesMymblogBrowserVisitor.js';
+import './WeiboAjaxProfileInfoBrowserVisitor.js';
+import './WeiboAjaxFriendshipsBrowserVisitor.js';
+import './WeiboAjaxFeedHotTimelineBrowserVisitor.js';
+import './PostContextCollectorBrowserVisitor.js';
+import './PostNLPAnalyzerBrowserVisitor.js';
+import './EventAutoCreatorBrowserVisitor.js';
+import './WorkflowGraphBrowserVisitor.js';
+import "./WeiboUserDetectionAstVisitor.js";
+import "./LlmTextAgentAstVisitor.js";
+import "./WeiboAccountPickAstBrowserVisitor.js"
 
 // 微博 API 节点浏览器端执行器
-export { WeiboLoginBrowserVisitor } from './WeiboLoginBrowserVisitor';
-export { WeiboKeywordSearchBrowserVisitor } from './WeiboKeywordSearchBrowserVisitor';
-export { WeiboAjaxStatusesShowBrowserVisitor } from './WeiboAjaxStatusesShowBrowserVisitor';
-export { WeiboAjaxStatusesCommentBrowserVisitor } from './WeiboAjaxStatusesCommentBrowserVisitor';
-export { WeiboAjaxStatusesRepostTimelineBrowserVisitor } from './WeiboAjaxStatusesRepostTimelineBrowserVisitor';
-export { WeiboAjaxStatusesLikeShowBrowserVisitor } from './WeiboAjaxStatusesLikeShowBrowserVisitor';
-export { WeiboAjaxStatusesMymblogBrowserVisitor } from './WeiboAjaxStatusesMymblogBrowserVisitor';
-export { WeiboAjaxProfileInfoBrowserVisitor } from './WeiboAjaxProfileInfoBrowserVisitor';
-export { WeiboAjaxFriendshipsBrowserVisitor } from './WeiboAjaxFriendshipsBrowserVisitor';
-export { WeiboAjaxFeedHotTimelineBrowserVisitor } from './WeiboAjaxFeedHotTimelineBrowserVisitor';
+export { WeiboLoginBrowserVisitor } from './WeiboLoginBrowserVisitor.js';
+export { WeiboKeywordSearchBrowserVisitor } from './WeiboKeywordSearchBrowserVisitor.js';
+export { WeiboAjaxStatusesShowBrowserVisitor } from './WeiboAjaxStatusesShowBrowserVisitor.js';
+export { WeiboAjaxStatusesCommentBrowserVisitor } from './WeiboAjaxStatusesCommentBrowserVisitor.js';
+export { WeiboAjaxStatusesRepostTimelineBrowserVisitor } from './WeiboAjaxStatusesRepostTimelineBrowserVisitor.js';
+export { WeiboAjaxStatusesLikeShowBrowserVisitor } from './WeiboAjaxStatusesLikeShowBrowserVisitor.js';
+export { WeiboAjaxStatusesMymblogBrowserVisitor } from './WeiboAjaxStatusesMymblogBrowserVisitor.js';
+export { WeiboAjaxProfileInfoBrowserVisitor } from './WeiboAjaxProfileInfoBrowserVisitor.js';
+export { WeiboAjaxFriendshipsBrowserVisitor } from './WeiboAjaxFriendshipsBrowserVisitor.js';
+export { WeiboAjaxFeedHotTimelineBrowserVisitor } from './WeiboAjaxFeedHotTimelineBrowserVisitor.js';
 
 // 数据处理节点浏览器端执行器
-export { PostContextCollectorBrowserVisitor } from './PostContextCollectorBrowserVisitor';
-export { PostNLPAnalyzerBrowserVisitor } from './PostNLPAnalyzerBrowserVisitor';
-export { EventAutoCreatorBrowserVisitor } from './EventAutoCreatorBrowserVisitor';
+export { PostContextCollectorBrowserVisitor } from './PostContextCollectorBrowserVisitor.js';
+export { PostNLPAnalyzerBrowserVisitor } from './PostNLPAnalyzerBrowserVisitor.js';
+export { EventAutoCreatorBrowserVisitor } from './EventAutoCreatorBrowserVisitor.js';
 
 // 基础节点浏览器端执行器
-export { WorkflowGraphBrowserVisitor } from './WorkflowGraphBrowserVisitor';
+export { WorkflowGraphBrowserVisitor } from './WorkflowGraphBrowserVisitor.js';
 // 类型导出
-export type { WeiboLoginEvent, WeiboLoginEventType } from './WeiboLoginBrowserVisitor';
+export type { WeiboLoginEvent, WeiboLoginEventType } from './WeiboLoginBrowserVisitor.js';
 
-export { WeiboUserDetectionAstVisitor } from './WeiboUserDetectionAstVisitor'
-export { LlmTextAgentAstVisitor } from './LlmTextAgentAstVisitor';
-export { TextAreaAstVisitor } from './TextAreaAstVisitor'
-export { DateAstVisitor } from './DateAstVisitor'
-export { WeiboAccountPickAstBrowserVisitor } from './WeiboAccountPickAstBrowserVisitor'
+export { WeiboUserDetectionAstVisitor } from './WeiboUserDetectionAstVisitor.js'
+export { LlmTextAgentAstVisitor } from './LlmTextAgentAstVisitor.js';
+export { TextAreaAstVisitor } from './TextAreaAstVisitor.js'
+export { DateAstVisitor } from './DateAstVisitor.js'
+export { WeiboAccountPickAstBrowserVisitor } from './WeiboAccountPickAstBrowserVisitor.js'
