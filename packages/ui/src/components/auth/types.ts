@@ -2,7 +2,7 @@ import type { AuthClient, Session } from './auth';
 
 export type { AuthClient, Session };
 
-export type SessionState = ReturnType<typeof import('./auth').authClient.useSession>;
+export type SessionState = any;
 
 export type User = NonNullable<Session['user']>;
 

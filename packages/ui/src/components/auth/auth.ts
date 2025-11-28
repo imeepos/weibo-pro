@@ -13,7 +13,7 @@ const getBaseURL = () => {
   return root.get(BETTER_AUTH_BASE_URL, `/`);
 };
 
-export const authClient = createAuthClient({
+export const authClient: any = createAuthClient({
   baseURL: getBaseURL(),
   plugins: [
     deviceAuthorizationClient(),

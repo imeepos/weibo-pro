@@ -35,7 +35,9 @@ export function useWorkflowNodes() {
             node.position = change.position
           }
           if (node && change.positionAbsolute) {
-            node.positionAbsolute = change.positionAbsolute
+            // React Flow 12.x 移除了 positionAbsolute 属性
+            // 使用 position 属性替代
+            node.position = change.positionAbsolute
           }
         } else if (change.type === 'dimensions') {
           const node = nextNodes.find((n) => n.id === change.id)

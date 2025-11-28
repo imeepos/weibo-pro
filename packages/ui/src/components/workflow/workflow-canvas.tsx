@@ -54,11 +54,14 @@ export function WorkflowCanvas({
   // 状态管理
   const {
     nodes: internalNodes,
-    edges: internalEdges,
     handleNodesChange,
+  } = useWorkflowNodes()
+
+  const {
+    edges: internalEdges,
     handleEdgesChange,
     handleConnect,
-  } = useWorkflowNodes()
+  } = useWorkflowEdges()
 
   const {
     runWorkflow,
@@ -202,7 +205,7 @@ export function WorkflowCanvas({
         onConnect={handleConnectCombined}
         onNodeClick={onNodeClick}
         onEdgeClick={onEdgeClick}
-        onMove={onViewportChange}
+        onMove={(event, viewport) => onViewportChange?.(viewport)}
         onPaneContextMenu={handlePaneContextMenu}
         connectionMode={connectionMode}
         selectionMode={selectionMode}

@@ -105,17 +105,19 @@ export function useWorkflowActions() {
   }, [])
 
   const zoomIn = useCallback(() => {
-    setViewport((prev) => ({
-      ...prev,
-      zoom: Math.min(prev.zoom + 0.1, 2),
-    }))
+    const { viewport } = useWorkflowCanvas.getState()
+    setViewport({
+      ...viewport,
+      zoom: Math.min(viewport.zoom + 0.1, 2),
+    })
   }, [setViewport])
 
   const zoomOut = useCallback(() => {
-    setViewport((prev) => ({
-      ...prev,
-      zoom: Math.max(prev.zoom - 0.1, 0.1),
-    }))
+    const { viewport } = useWorkflowCanvas.getState()
+    setViewport({
+      ...viewport,
+      zoom: Math.max(viewport.zoom - 0.1, 0.1),
+    })
   }, [setViewport])
 
   const resetView = useCallback(() => {

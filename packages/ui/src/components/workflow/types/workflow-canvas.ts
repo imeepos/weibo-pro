@@ -17,7 +17,7 @@ export interface WorkflowCanvasProps {
   nodes?: Node[]
   edges?: Edge[]
   nodeTypes?: Record<string, React.ComponentType<NodeProps>>
-  edgeTypes?: Record<string, React.ComponentType<EdgeProps>>
+  edgeTypes?: Record<string, React.ComponentType<any>>
 
   // 功能配置
   showControls?: boolean

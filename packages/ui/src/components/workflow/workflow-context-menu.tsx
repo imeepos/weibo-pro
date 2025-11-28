@@ -11,7 +11,7 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from '@sker/ui/components/ui/context-menu'
-import { Plus, Copy, Trash2, Paste } from 'lucide-react'
+import { Plus, Copy, Trash2 } from 'lucide-react'
 
 import { cn } from '@sker/ui/lib/utils'
 import { NODE_CATEGORIES, DEFAULT_NODE_TYPES } from './types/workflow-nodes'
@@ -84,7 +84,7 @@ export function WorkflowContextMenu({
                     .map((node) => (
                       <ContextMenuItem
                         key={node.id}
-                        onClick={() => onAddNode?.(node.id)}
+                        onClick={() => onAddNode?.(node.id, { x: 0, y: 0 })}
                         className="flex items-center gap-2"
                       >
                         <div
@@ -122,7 +122,6 @@ export function WorkflowContextMenu({
           onClick={onPaste}
           className="flex items-center gap-2"
         >
-          <Paste className="h-4 w-4" />
           <span>粘贴</span>
         </ContextMenuItem>
 

@@ -56,18 +56,11 @@ export function useEChartTheme(options?: UseEChartThemeOptions): UseEChartThemeR
   // 如果没有传入 isDark,尝试从 next-themes 获取
   let isDark = options?.isDark
   if (isDark === undefined) {
-    try {
-      // 动态导入 next-themes,如果不存在则回退到默认值
-      const { useTheme } = require('next-themes')
-      const { resolvedTheme } = useTheme()
-      isDark = resolvedTheme === 'dark'
-    } catch {
-      // 如果 next-themes 不存在,检查 document 的 class
-      if (typeof document !== 'undefined') {
-        isDark = document.documentElement.classList.contains('dark')
-      } else {
-        isDark = false
-      }
+    // 检查 document 的 class 来检测暗色模式
+    if (typeof document !== 'undefined') {
+      isDark = document.documentElement.classList.contains('dark')
+    } else {
+      isDark = false
     }
   }
 
