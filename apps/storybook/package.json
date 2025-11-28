@@ -12,6 +12,11 @@
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
     "@sker/ui": "workspace:*",
+    "@sker/core": "workspace:*",
+    "@sker/sdk": "workspace:*",
+    "@sker/workflow": "workspace:*",
+    "@sker/workflow-ast": "workspace:*",
+    "@sker/workflow-browser": "workspace:*",
     "@sker/workflow-ui": "workspace:*",
     "lexical": "^0.38.2",
     "lucide-react": "^0.555.0",

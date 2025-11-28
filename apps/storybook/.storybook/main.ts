@@ -1,6 +1,13 @@
+import 'reflect-metadata'
+import '@sker/workflow'
+import '@sker/workflow-ast'
+import '@sker/workflow-browser'  // 导入即自动注册
+import { root } from '@sker/core'
+import { providers } from '@sker/sdk'
 import type { StorybookConfig } from '@storybook/react-vite'
 import tailwindcss from '@tailwindcss/vite'
 
+root.set(providers({ baseURL: `http://localhost:8089` }))
 const config: StorybookConfig = {
   stories: [
     '../src/**/*.mdx',
