@@ -88,9 +88,9 @@ export function MediaToolbarButton({
   const [dialogOpen, setDialogOpen] = React.useState(false);
 
   const { openFilePicker } = useFilePicker({
-    accept: currentConfig.accept,
+    accept: currentConfig?.accept ?? [],
     multiple: true,
-    onFilesSelected: (data) => {
+    onFilesSelected: (data: any) => {
       if (!data.plainFiles || data.plainFiles.length === 0) return;
       editor.getTransforms(PlaceholderPlugin).insert.media(data.plainFiles);
     },
@@ -111,7 +111,7 @@ export function MediaToolbarButton({
         pressed={open}
       >
         <ToolbarSplitButtonPrimary>
-          {currentConfig.icon}
+          {currentConfig?.icon}
         </ToolbarSplitButtonPrimary>
 
         <DropdownMenu
@@ -131,7 +131,7 @@ export function MediaToolbarButton({
           >
             <DropdownMenuGroup>
               <DropdownMenuItem onSelect={() => openFilePicker()}>
-                {currentConfig.icon}
+                {currentConfig?.icon}
                 Upload from computer
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => setDialogOpen(true)}>
@@ -166,7 +166,7 @@ function MediaUrlDialogContent({
   nodeType,
   setOpen,
 }: {
-  currentConfig: (typeof MEDIA_CONFIG)[string];
+  currentConfig: (typeof MEDIA_CONFIG)[string] | undefined;
   nodeType: string;
   setOpen: (value: boolean) => void;
 }) {
@@ -188,7 +188,7 @@ function MediaUrlDialogContent({
   return (
     <>
       <AlertDialogHeader>
-        <AlertDialogTitle>{currentConfig.title}</AlertDialogTitle>
+        <AlertDialogTitle>{currentConfig?.title}</AlertDialogTitle>
       </AlertDialogHeader>
 
       <AlertDialogDescription className="group relative w-full">

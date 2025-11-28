@@ -26,7 +26,7 @@ const config: StorybookConfig = {
   },
   viteFinal: async (config) => {
     config.plugins = config.plugins || []
-    config.plugins.push(tailwindcss())
+    config.plugins.push(tailwindcss() as any)
     return config
   },
 }

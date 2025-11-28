@@ -139,12 +139,17 @@ export const SlowAnimation: Story = {
 }
 
 export const WithStatistic: Story = {
-  render: () => (
+  args: {
+    end: 456789,
+    prefix: '¥',
+    animated: true,
+  },
+  render: (args) => (
     <Card className="w-[280px] p-6">
       <Statistic>
         <StatisticLabel>总营收</StatisticLabel>
         <StatisticValue className="bg-gradient-to-r from-green-400 to-green-600 bg-clip-text text-transparent">
-          <CountUp end={456789} prefix="¥" animated />
+          <CountUp {...args} />
         </StatisticValue>
       </Statistic>
     </Card>
@@ -152,8 +157,12 @@ export const WithStatistic: Story = {
 }
 
 export const Interactive: Story = {
-  render: () => {
-    const [value, setValue] = useState(1000)
+  args: {
+    end: 1000,
+    animated: true,
+  },
+  render: (args) => {
+    const [value, setValue] = useState(args.end)
 
     return (
       <div className="flex flex-col items-center gap-4">
@@ -161,7 +170,7 @@ export const Interactive: Story = {
           <Statistic>
             <StatisticLabel>动态数值</StatisticLabel>
             <StatisticValue className="bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent">
-              <CountUp end={value} animated />
+              <CountUp {...args} end={value} />
             </StatisticValue>
           </Statistic>
         </Card>
@@ -182,6 +191,10 @@ export const Interactive: Story = {
 }
 
 export const MultipleCounters: Story = {
+  args: {
+    end: 123456,
+    animated: true,
+  },
   render: () => (
     <div className="grid grid-cols-3 gap-4">
       <Card className="p-6">
@@ -213,10 +226,13 @@ export const MultipleCounters: Story = {
 }
 
 export const CustomStyling: Story = {
-  render: () => (
+  args: {
+    end: 999999,
+    animated: true,
+  },
+  render: (args) => (
     <CountUp
-      end={999999}
-      animated
+      {...args}
       className="text-6xl font-extrabold bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent"
     />
   ),

@@ -299,6 +299,7 @@ const fakeStreamText = ({
           const block = blocks[i];
 
           // Stream the block content
+          if (!block) continue;
           for (const chunk of block) {
             await new Promise((resolve) => setTimeout(resolve, chunk.delay));
 

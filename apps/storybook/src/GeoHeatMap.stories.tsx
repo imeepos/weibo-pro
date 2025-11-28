@@ -215,6 +215,7 @@ export const EmptyState: Story = {
 }
 
 export const LoadingState: Story = {
+  args: {},
   render: () => {
     const [loading, setLoading] = useState(true)
     const [data, setData] = useState<GeoDataPoint[]>([])
@@ -242,6 +243,7 @@ export const LoadingState: Story = {
 }
 
 export const InteractiveDemo: Story = {
+  args: {},
   render: () => {
     const [zoom, setZoom] = useState(1.5)
     const [isDark, setIsDark] = useState(false)
@@ -344,6 +346,7 @@ export const WithMapOptions: Story = {
 }
 
 export const RealTimeUpdate: Story = {
+  args: {},
   render: () => {
     const [data, setData] = useState(majorCities)
 

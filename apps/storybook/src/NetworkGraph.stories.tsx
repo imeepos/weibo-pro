@@ -70,6 +70,7 @@ export const Complex: Story = {
 };
 
 export const WithInteraction: Story = {
+  args: {},
   render: () => {
     const graphRef = useRef<NetworkGraphRef>(null);
 

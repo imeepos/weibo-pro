@@ -470,20 +470,23 @@ const calculatePreviewTop = (
   const editable = editor.api.toDOMNode(editor)!;
   const firstSelectedChild = blocks[0];
 
-  const firstDomNode = editor.api.toDOMNode(firstSelectedChild)!;
+  const firstDomNode = firstSelectedChild ? editor.api.toDOMNode(firstSelectedChild) : null;
   // Get editor's top padding
   const editorPaddingTop = Number(
     window.getComputedStyle(editable).paddingTop.replace('px', '')
   );
 
   // Calculate distance from first selected node to editor top
-  const firstNodeToEditorDistance =
-    firstDomNode.getBoundingClientRect().top -
-    editable.getBoundingClientRect().top -
-    editorPaddingTop;
+  const firstNodeToEditorDistance = firstDomNode
+    ? firstDomNode.getBoundingClientRect().top -
+      editable.getBoundingClientRect().top -
+      editorPaddingTop
+    : 0;
 
   // Get margin top of first selected node
-  const firstMarginTopString = window.getComputedStyle(firstDomNode).marginTop;
+  const firstMarginTopString = firstDomNode
+    ? window.getComputedStyle(firstDomNode).marginTop
+    : '0px';
   const marginTop = Number(firstMarginTopString.replace('px', ''));
 
   // Calculate distance from current node to editor top

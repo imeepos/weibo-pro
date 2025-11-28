@@ -31,7 +31,7 @@ const formSchema = z.object({
 export const Default: Story = {
   render: () => {
     const form = useForm<z.infer<typeof formSchema>>({
-      resolver: zodResolver(formSchema),
+      resolver: zodResolver(formSchema as any),
       defaultValues: { username: "", email: "" },
     })
 
@@ -109,7 +109,7 @@ const multiFieldSchema = z.object({
 export const MultipleFields: Story = {
   render: () => {
     const form = useForm<z.infer<typeof multiFieldSchema>>({
-      resolver: zodResolver(multiFieldSchema),
+      resolver: zodResolver(multiFieldSchema as any),
       defaultValues: { firstName: "", lastName: "", age: "" },
     })
 

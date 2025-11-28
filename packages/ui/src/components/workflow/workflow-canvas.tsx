@@ -117,11 +117,13 @@ export function WorkflowCanvas({
   }>({ isOpen: false, x: 0, y: 0 })
 
   // 右键菜单处理
-  const handlePaneContextMenu = useCallback((event: React.MouseEvent) => {
+  const handlePaneContextMenu = useCallback((event: MouseEvent | React.MouseEvent<Element, MouseEvent>) => {
     event.preventDefault()
+    const clientX = 'clientX' in event ? event.clientX : 0
+    const clientY = 'clientY' in event ? event.clientY : 0
     setContextMenu({
-      x: event.clientX,
-      y: event.clientY,
+      x: clientX,
+      y: clientY,
       isOpen: true,
     })
   }, [])

@@ -84,7 +84,7 @@ export const ForceGraph3D = forwardRef<ForceGraph3DHandle, ForceGraph3DProps>(({
   enablePointerInteraction = true,
   onEngineStop,
 }, ref) => {
-  const fgRef = useRef<ForceGraphMethods>(null as any);
+  const fgRef = useRef<ForceGraphMethods<NodeObject<GraphNode>, LinkObject<GraphNode, GraphLink>> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
 
@@ -133,8 +133,14 @@ export const ForceGraph3D = forwardRef<ForceGraph3DHandle, ForceGraph3DProps>(({
       if (!fgRef.current) return;
       fgRef.current.resumeAnimation();
     },
-    centerAt: (x, y, transitionDuration) => {},
-    zoom: (distance, transitionDuration) => {},
+    centerAt: (x, y, transitionDuration) => {
+      if (!fgRef.current) return;
+      // 这里需要实现 centerAt 逻辑
+    },
+    zoom: (distance, transitionDuration) => {
+      if (!fgRef.current) return;
+      // 这里需要实现 zoom 逻辑
+    },
     zoomToFit: (duration, padding, ...filters) => {
       if (!fgRef.current) return;
       fgRef.current.zoomToFit(duration, padding, ...filters);

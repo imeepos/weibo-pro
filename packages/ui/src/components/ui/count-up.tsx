@@ -30,7 +30,7 @@ const CountUp = React.forwardRef<HTMLSpanElement, CountUpProps>(
   ) => {
     const [count, setCount] = React.useState(start)
     const animationRef = React.useRef<number>(0)
-    const startTimeRef = React.useRef<number>(0)
+    const startTimeRef = React.useRef<number | undefined>(0)
 
     const formatValue = (value: number) => {
       const formatted =
@@ -45,7 +45,7 @@ const CountUp = React.forwardRef<HTMLSpanElement, CountUpProps>(
           startTimeRef.current = now
         }
 
-        const elapsed = now - startTimeRef.current
+        const elapsed = now - (startTimeRef.current ?? 0)
         const progress = Math.min(elapsed / duration, 1)
         const easeOutQuart = 1 - Math.pow(1 - progress, 4)
         const currentValue = start + (end - start) * easeOutQuart

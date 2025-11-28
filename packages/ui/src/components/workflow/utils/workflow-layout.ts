@@ -45,12 +45,14 @@ export function createWorkflowLayout(
       const targetLevel = nodeLevels[edge.target]
 
       if (sourceLevel !== undefined && targetLevel === undefined) {
-        nodeLevels[edge.target] = sourceLevel + 1
-        if (!levels[sourceLevel + 1]) levels[sourceLevel + 1] = []
-        levels[sourceLevel + 1].push(
-          nodes.find((node) => node.id === edge.target)!
-        )
-        changed = true
+        const targetNode = nodes.find((node) => node.id === edge.target)
+        if (targetNode) {
+          nodeLevels[edge.target] = sourceLevel + 1
+          const levelKey = sourceLevel + 1
+          if (!levels[levelKey]) levels[levelKey] = []
+          levels[levelKey]?.push(targetNode)
+          changed = true
+        }
       }
     }
   }
@@ -62,7 +64,7 @@ export function createWorkflowLayout(
     const level = parseInt(levelStr)
     const levelNodes = levels[level]
 
-    levelNodes.forEach((node, index) => {
+    levelNodes?.forEach((node, index) => {
       const x = direction === 'horizontal'
         ? level * (nodeWidth + spacing)
         : index * (nodeWidth + spacing)
