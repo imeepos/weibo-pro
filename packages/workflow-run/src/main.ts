@@ -49,7 +49,7 @@ async function bootstrap() {
     // nlp 完成后传递数据到 auto 节点
     ast.addEdge({ id: generateId(), mode: EdgeMode.ZIP, from: nlp.id, to: auto.id, fromProperty: 'nlpResult', toProperty: 'nlpResult' })
     ast.addEdge({ id: generateId(), mode: EdgeMode.ZIP, from: context.id, to: auto.id, fromProperty: 'post', toProperty: 'post' })
-    executeAst(ast, {}).subscribe({
+    executeAst(ast, ast).subscribe({
         next(value) {
             console.log(`工作流状态: ${value.state}`)
             console.log(value.nodes.map(it => [it.type, it.state, JSON.stringify(aataFlowManager.extractNodeOutputs(it))].join(' ')).join('\n'))

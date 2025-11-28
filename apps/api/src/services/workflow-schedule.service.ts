@@ -90,8 +90,18 @@ export class WorkflowScheduleService {
       const intervalSeconds = dto.intervalSeconds || schedule.intervalSeconds
       const startTime = dto.startTime || schedule.startTime
 
+      // 通过工作流ID查询工作流名称
+      const workflowRepo = this.dataSource.getRepository('WorkflowEntity')
+      const workflow = await workflowRepo.findOne({
+        where: { id: schedule.workflowId }
+      })
+
+      if (!workflow) {
+        throw new Error(`Workflow with ID ${schedule.workflowId} not found`)
+      }
+
       this.validateSchedule({
-        workflowId: schedule.workflowId,
+        workflowName: (workflow as any).code,
         name: dto.name || schedule.name,
         scheduleType,
         cronExpression,

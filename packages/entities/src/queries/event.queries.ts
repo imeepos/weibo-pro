@@ -109,7 +109,7 @@ const mapEventToHotEvent = (event: EventEntity, statistics: EventStatisticsEntit
   const sentimentScore = getSentiment(event, statistics);
 
   // 根据情感分数确定主导情感
-  const dominantSentiment = sentimentScore.positive >= sentimentScore.negative && sentimentScore.positive >= sentimentScore.neutral
+  const dominantSentiment: 'positive' | 'negative' | 'neutral' = sentimentScore.positive >= sentimentScore.negative && sentimentScore.positive >= sentimentScore.neutral
     ? 'positive'
     : sentimentScore.negative >= sentimentScore.positive && sentimentScore.negative >= sentimentScore.neutral
     ? 'negative'

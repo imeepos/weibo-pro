@@ -1,5 +1,5 @@
 import { Injectable } from '@sker/core';
-import { WorkflowGraphAst } from '@sker/workflow';
+import { WorkflowGraphAst, generateId } from '@sker/workflow';
 import {
   WeiboKeywordSearchAst,
   WeiboAjaxStatusesShowAst,
@@ -92,6 +92,7 @@ export class WorkflowTemplateService {
     const edges: IEdge[] = [
       // 搜索 → 博文详情（items[0] 作为示例）
       {
+        id: generateId(),
         from: searchNode.id,
         to: showNode.id,
         fromProperty: 'items',
@@ -100,12 +101,14 @@ export class WorkflowTemplateService {
 
       // 博文详情 → 评论
       {
+        id: generateId(),
         from: showNode.id,
         to: commentNode.id,
         fromProperty: 'mid',
         toProperty: 'mid',
       },
       {
+        id: generateId(),
         from: showNode.id,
         to: commentNode.id,
         fromProperty: 'uid',
@@ -114,12 +117,14 @@ export class WorkflowTemplateService {
 
       // 博文详情 → 转发
       {
+        id: generateId(),
         from: showNode.id,
         to: repostNode.id,
         fromProperty: 'mid',
         toProperty: 'mid',
       },
       {
+        id: generateId(),
         from: showNode.id,
         to: repostNode.id,
         fromProperty: 'uid',
@@ -128,12 +133,14 @@ export class WorkflowTemplateService {
 
       // 博文详情 → 点赞
       {
+        id: generateId(),
         from: showNode.id,
         to: likeNode.id,
         fromProperty: 'mid',
         toProperty: 'mid',
       },
       {
+        id: generateId(),
         from: showNode.id,
         to: likeNode.id,
         fromProperty: 'uid',
