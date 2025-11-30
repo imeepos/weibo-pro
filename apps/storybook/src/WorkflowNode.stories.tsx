@@ -1,9 +1,19 @@
 import type { Meta, StoryObj } from '@storybook/react'
+import { ReactFlowProvider } from '@xyflow/react'
 import { WorkflowNode } from '@sker/ui/components/workflow'
 
 const meta = {
   title: 'Workflow/WorkflowNode',
   component: WorkflowNode,
+  decorators: [
+    (Story) => (
+      <ReactFlowProvider>
+        <div className="w-[300px] h-[200px]">
+          <Story />
+        </div>
+      </ReactFlowProvider>
+    ),
+  ],
   parameters: {
     layout: 'centered',
   },

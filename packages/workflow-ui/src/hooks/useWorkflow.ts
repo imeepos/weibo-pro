@@ -306,10 +306,10 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
       // 1. 创建分组 AST
       const groupAst = new WorkflowGraphAst()
       groupAst.id = generateId()
-      groupAst.isGroup = true
-      groupAst.groupTitle = title || `分组 ${workflowAst.nodes.filter(n => n instanceof WorkflowGraphAst && n.isGroup).length + 1}`
-      groupAst.groupColor = '#3b82f6'
+      groupAst.name = title || `分组 ${workflowAst.nodes.filter(n => n instanceof WorkflowGraphAst && n.isGroup).length + 1}`
+      groupAst.color = '#3b82f6'
       groupAst.collapsed = true
+      // 注意：不设置 entryNodeIds，保持为空数组，这样 isGroup getter 会返回 true
 
       // 2. 提取选中节点
       const selectedNodes = workflowAst.nodes.filter(n => selectedNodeIds.includes(n.id))

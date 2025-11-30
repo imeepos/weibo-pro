@@ -49,7 +49,7 @@ export function WorkflowSettingsDialog({
   // React 状态
   const [name, setName] = useState(workflow.name || '')
   const [description, setDescription] = useState(workflow.description || '')
-  const [color, setColor] = useState(workflow.groupColor || '#3b82f6')
+  const [color, setColor] = useState(workflow.color || '#3b82f6')
   const [customColor, setCustomColor] = useState('')
   const [tags, setTags] = useState<string[]>(workflow.tags || [])
   const [newTag, setNewTag] = useState('')
@@ -115,7 +115,7 @@ export function WorkflowSettingsDialog({
     if (visible) {
       setName(workflow.name || '')
       setDescription(workflow.description || '')
-      setColor(workflow.groupColor || '#3b82f6')
+      setColor(workflow.color || '#3b82f6')
       setCustomColor('')
       setTags(workflow.tags || [])
       setNewTag('')
@@ -159,7 +159,7 @@ export function WorkflowSettingsDialog({
       // 更新工作流属性
       workflow.name = name
       workflow.description = description
-      workflow.groupColor = customColor || color
+      workflow.color = customColor || color
       workflow.tags = tags
 
       // 调用父组件的保存回调

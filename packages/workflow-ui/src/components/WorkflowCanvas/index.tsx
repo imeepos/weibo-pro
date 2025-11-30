@@ -373,7 +373,7 @@ export function WorkflowCanvas({
       workflow.workflowAst.description = settings.description
     }
     if (settings.color) {
-      workflow.workflowAst.groupColor = settings.color
+      workflow.workflowAst.color = settings.color
     }
     if (settings.tags !== undefined) {
       workflow.workflowAst.tags = settings.tags

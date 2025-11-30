@@ -93,15 +93,6 @@ export class WorkflowGraphAst extends Ast {
     @State({ title: '视图状态' })
     viewport?: { x: number; y: number; zoom: number };
 
-    @State({ title: '是否为分组' })
-    isGroup?: boolean = false;
-
-    @State({ title: '分组标题' })
-    groupTitle?: string;
-
-    @State({ title: '分组颜色' })
-    groupColor?: string = '#3b82f6';
-
     @State({ title: '折叠状态' })
     collapsed?: boolean = false;
 
@@ -109,6 +100,18 @@ export class WorkflowGraphAst extends Ast {
     tags?: string[] = [];
 
     type: `WorkflowGraphAst` = `WorkflowGraphAst`
+
+    /**
+     * 判断是否为分组节点
+     *
+     * 优雅设计：
+     * - 分组节点 = 没有执行入口的 WorkflowGraphAst
+     * - 可执行工作流 = 有执行入口的 WorkflowGraphAst
+     * - 不需要额外的标记字段，通过语义判断
+     */
+    get isGroup(): boolean {
+        return this.entryNodeIds.length === 0 && this.nodes.length > 0
+    }
 
     /**
      * 添加节点
