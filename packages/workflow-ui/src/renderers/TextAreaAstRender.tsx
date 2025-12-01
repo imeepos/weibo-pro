@@ -9,12 +9,10 @@ export class TextAreaAstRender {
     @Render(TextAreaAst)
     render(ast: TextAreaAst, ctx: any) {
         return (
-            <div className="px-4 py-3">
-                <div className="prose prose-sm prose-slate max-w-none">
-                    <Markdown remarkPlugins={[remarkGfm]}>
-                        {Array.isArray(ast.input) ? ast.input.join('\n') : ast.input}
-                    </Markdown>
-                </div>
+            <div className="prose prose-sm prose-slate max-w-none">
+                <Markdown remarkPlugins={[remarkGfm]}>
+                    {Array.isArray(ast.input) ? ast.input.join('\n') : ast.input}
+                </Markdown>
             </div>
         );
     }

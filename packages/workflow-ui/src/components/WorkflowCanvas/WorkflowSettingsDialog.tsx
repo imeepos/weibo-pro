@@ -113,7 +113,7 @@ export function WorkflowSettingsDialog({
   // 初始化表单状态
   useEffect(() => {
     if (visible) {
-      setName(workflow.name || '')
+      setName(workflow.name || 'default')
       setDescription(workflow.description || '')
       setColor(workflow.color || '#3b82f6')
       setCustomColor('')
@@ -143,6 +143,7 @@ export function WorkflowSettingsDialog({
 
 
   const handleSave = useCallback(async () => {
+    console.log({ name })
     if (!name.trim()) {
       setNameError('工作流名称不能为空')
       return
@@ -163,7 +164,7 @@ export function WorkflowSettingsDialog({
       workflow.tags = tags
 
       // 调用父组件的保存回调
-      await onSave({
+      onSave({
         name,
         description,
         color: customColor || color,

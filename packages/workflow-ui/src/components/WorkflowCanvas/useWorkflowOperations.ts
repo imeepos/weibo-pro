@@ -264,6 +264,7 @@ export function useWorkflowOperations(
         }
 
         const controller = root.get<WorkflowController>(WorkflowController)
+        workflow.workflowAst.name = name;
         await controller.saveWorkflow(workflow.workflowAst)
 
         onShowToast?.('success', '保存成功', '工作流已保存')

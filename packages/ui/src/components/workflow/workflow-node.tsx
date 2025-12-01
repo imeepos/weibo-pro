@@ -2,27 +2,22 @@
 
 import React, { memo } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import {
-  Clock,
-  Play,
-  TrendingUp,
-  Check,
-  X,
-  ChevronDown,
-  ChevronUp,
-} from 'lucide-react'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 
 import { cn } from '@sker/ui/lib/utils'
+import { Badge } from '@sker/ui/components/ui/badge'
+import { Button } from '@sker/ui/components/ui/button'
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@sker/ui/components/ui/collapsible'
 import type { WorkflowNodeProps, WorkflowNodePort } from './types/workflow-nodes'
 import type { IAstStates } from '@sker/workflow'
 
-// 状态颜色映射（从 workflow-ui 迁移）
+// 状态颜色映射
 export const NODE_STATE_COLORS: Record<IAstStates, string> = {
-  pending: '#94a3b8',
-  running: '#3b82f6',
-  emitting: '#a855f7',
-  success: '#22c55e',
-  fail: '#ef4444',
+  pending: 'hsl(var(--muted-foreground))',
+  running: 'hsl(var(--node-running))',
+  emitting: 'hsl(var(--node-emitting))',
+  success: 'hsl(var(--node-success))',
+  fail: 'hsl(var(--node-error))',
 }
 
 export const NODE_STATE_LABELS: Record<IAstStates, string> = {
@@ -33,29 +28,7 @@ export const NODE_STATE_LABELS: Record<IAstStates, string> = {
   fail: '失败',
 }
 
-// 状态图标组件
-const StateIcon = ({ state }: { state: IAstStates }) => {
-  const iconProps = {
-    size: 12,
-    strokeWidth: 2,
-    className: 'shrink-0',
-  }
-
-  switch (state) {
-    case 'pending':
-      return <Clock {...iconProps} />
-    case 'running':
-      return <Play {...iconProps} fill="currentColor" />
-    case 'emitting':
-      return <TrendingUp {...iconProps} />
-    case 'success':
-      return <Check {...iconProps} />
-    case 'fail':
-      return <X {...iconProps} />
-  }
-}
-
-// 状态徽章组件
+// 状态徽章
 const StatusBadge = ({
   status,
   count,
@@ -65,31 +38,32 @@ const StatusBadge = ({
 }) => {
   if (!status || status === 'pending') return null
 
-  const stateColor = NODE_STATE_COLORS[status]
-  const stateLabel = NODE_STATE_LABELS[status]
-
-  const getAnimationClass = () => {
-    if (status === 'running') return 'animate-pulse'
-    if (status === 'emitting') return 'animate-bounce'
-    return ''
+  const getVariant = () => {
+    switch (status) {
+      case 'success':
+        return 'default'
+      case 'fail':
+        return 'destructive'
+      default:
+        return 'secondary'
+    }
   }
 
   return (
-    <div
+    <Badge
+      variant={getVariant()}
       className={cn(
         'absolute -top-2 -right-2 z-10',
-        'flex items-center gap-1 px-2 py-0.5 rounded-full',
-        'text-[10px] font-medium text-white shadow-lg',
-        getAnimationClass()
+        status === 'running' && 'animate-pulse',
+        status === 'emitting' && 'animate-bounce'
       )}
-      style={{ backgroundColor: stateColor }}
-      title={stateLabel}
+      style={{
+        backgroundColor: NODE_STATE_COLORS[status],
+        borderColor: NODE_STATE_COLORS[status],
+      }}
     >
-      <StateIcon state={status} />
-      <span>
-        {stateLabel}({count})
-      </span>
-    </div>
+      {NODE_STATE_LABELS[status]}({count})
+    </Badge>
   )
 }
 
@@ -118,8 +92,8 @@ const HandleWrapper = ({
         'hover:!w-4 hover:!h-4 hover:shadow-lg',
         '!z-50 !cursor-crosshair',
         isTarget
-          ? '!bg-blue-500 !border-blue-300 hover:!bg-blue-400'
-          : '!bg-green-500 !border-green-300 hover:!bg-green-400',
+          ? 'bg-[hsl(var(--workflow-handle-input))] border-[hsl(var(--workflow-handle-input-border))] hover:opacity-80'
+          : 'bg-[hsl(var(--workflow-handle-output))] border-[hsl(var(--workflow-handle-output-border))] hover:opacity-80',
         isCollapsed && '!opacity-0 !pointer-events-none !w-0 !h-0'
       )}
     />
@@ -148,11 +122,11 @@ const PortRow = ({
           <HandleWrapper port={input} type="target" isCollapsed={isCollapsed} />
           {!isCollapsed && (
             <>
-              <span className="text-xs text-slate-200 truncate ml-2">
+              <span className="text-xs text-foreground/90 truncate ml-2">
                 {input.label || input.property}
               </span>
               {input.isMulti && (
-                <span className="text-[10px] text-slate-400 font-mono">[]</span>
+                <span className="text-[10px] text-muted-foreground font-mono">[]</span>
               )}
             </>
           )}
@@ -165,9 +139,9 @@ const PortRow = ({
           {!isCollapsed && (
             <>
               {output.isMulti && (
-                <span className="text-[10px] text-slate-400 font-mono">[]</span>
+                <span className="text-[10px] text-muted-foreground font-mono">[]</span>
               )}
-              <span className="text-xs text-slate-200 truncate mr-2">
+              <span className="text-xs text-foreground/90 truncate mr-2">
                 {output.label || output.property}
               </span>
             </>
@@ -199,88 +173,95 @@ const WorkflowNodeComponent = ({
   className,
 }: WorkflowNodeProps) => {
   const getBorderColor = () => {
-    if (selected) return '#818cf6'
+    if (selected) return 'hsl(var(--primary))'
     if (status) return NODE_STATE_COLORS[status] || NODE_STATE_COLORS.pending
-    return 'transparent'
+    return 'hsl(var(--input))'
   }
 
   return (
-    <div
-      className={cn(
-        'flex flex-col rounded-2xl border-[2px] relative',
-        'group pb-1 shadow-xs rounded-[15px] bg-workflow-block-bg hover:shadow-lg',
-        'cursor-move select-none transition-all duration-200 max-h-[480px]',
-        collapsed ? 'min-w-[180px]' : 'min-w-[240px]',
-        className
-      )}
-      style={{
-        borderColor: getBorderColor(),
-        transition:
-          'border-color 0.15s ease, box-shadow 0.15s ease, width 0.2s ease',
-      }}
-      onContextMenu={onContextMenu}
-      onDoubleClick={onDoubleClick}
+    <Collapsible
+      open={!collapsed}
+      onOpenChange={(open) => onToggleCollapse?.()}
+      asChild
     >
-      <StatusBadge status={status} count={statusCount} />
-
-      {/* 节点头部 */}
-      <div className="flex items-center rounded-t-2xl px-3 py-4 border-b">
-        <div
-          className="flex items-center justify-center w-6 h-6 rounded-lg mr-2 shrink-0"
-          style={{ backgroundColor: color }}
-        >
-          <div className="w-3 h-3 bg-white rounded-sm"></div>
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium text-white truncate">{label}</div>
-          {description && !collapsed && (
-            <div className="text-xs text-slate-400 truncate mt-0.5">
-              {description}
-            </div>
-          )}
-        </div>
-        {onToggleCollapse && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              onToggleCollapse()
-            }}
-            className="ml-2 shrink-0 w-5 h-5 flex items-center justify-center rounded hover:bg-white/10 transition-colors"
-            title={collapsed ? '展开节点' : '折叠节点'}
-          >
-            {collapsed ? (
-              <ChevronDown size={14} className="text-white" />
-            ) : (
-              <ChevronUp size={14} className="text-white" />
-            )}
-          </button>
-        )}
-      </div>
-
-      {/* 端口区域 */}
       <div
         className={cn(
-          'flex flex-col gap-1 relative transition-all duration-200',
-          collapsed ? 'mt-0' : 'mt-2'
+          'flex flex-col rounded-2xl bg-background border border-input relative',
+          'group shadow-xs rounded-[15px] hover:shadow-lg',
+          'cursor-move select-none transition-all duration-200 max-h-[480px]',
+          collapsed ? 'min-w-[180px]' : 'min-w-[240px]',
+          className
         )}
+        style={{
+          borderColor: getBorderColor(),
+          transition:
+            'border-color 0.15s ease, box-shadow 0.15s ease, width 0.2s ease',
+        }}
+        onContextMenu={onContextMenu}
+        onDoubleClick={onDoubleClick}
       >
-        {Array.from({ length: Math.max(inputs.length, outputs.length) }).map(
-          (_, index) => (
-            <PortRow
-              key={`port-${index}`}
-              input={inputs[index]}
-              output={outputs[index]}
-              isCollapsed={collapsed}
-            />
-          )
-        )}
+        <StatusBadge status={status} count={statusCount} />
 
-        {/* 自定义内容 */}
-        <div className="relative overflow-auto w-full h-full max-h-[380px]">
-          {!collapsed && children}
+        {/* 节点头部 */}
+        <div className="flex items-center rounded-t-2xl p-2">
+          <div
+            className="flex items-center justify-center w-6 h-6 rounded-lg mr-2 shrink-0"
+            style={{ backgroundColor: color }}
+          >
+            <div className="w-3 h-3 bg-primary-foreground rounded-sm" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium text-foreground truncate">{label}</div>
+            {description && !collapsed && (
+              <div className="text-xs text-muted-foreground truncate mt-0.5">
+                {description}
+              </div>
+            )}
+          </div>
+          {onToggleCollapse && (
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="ml-2"
+                title={collapsed ? '展开节点' : '折叠节点'}
+              >
+                {collapsed ? (
+                  <ChevronDown className="size-4" />
+                ) : (
+                  <ChevronUp className="size-4" />
+                )}
+              </Button>
+            </CollapsibleTrigger>
+          )}
         </div>
+
+        {/* 端口区域 */}
+        <CollapsibleContent asChild>
+          <div
+            className={cn(
+              'flex flex-col gap-1 relative border-t transition-all duration-200 py-2'
+            )}
+          >
+            {Array.from({ length: Math.max(inputs.length, outputs.length) }).map(
+              (_, index) => (
+                <PortRow
+                  key={`port-${index}`}
+                  input={inputs[index]}
+                  output={outputs[index]}
+                  isCollapsed={collapsed}
+                />
+              )
+            )}
+
+            {/* 自定义内容 */}
+            <div className="relative overflow-auto w-full h-full max-h-[380px] px-2">
+              {children}
+            </div>
+          </div>
+        </CollapsibleContent>
       </div>
-    </div>
+    </Collapsible>
   )
 }
 
