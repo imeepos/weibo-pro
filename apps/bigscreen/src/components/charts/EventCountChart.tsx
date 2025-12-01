@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import ReactECharts from 'echarts-for-react';
+import { EChart } from '@sker/ui/components/ui/echart';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/hooks/useTheme';
 import { createLogger } from '@sker/core';
@@ -17,16 +17,16 @@ const EventCountChart: React.FC<EventCountChartProps> = ({
   className = ''
 }) => {
   const { isDark } = useTheme();
-  const [mockData, setMockData] = useState<Array<{date: string, count: number}>>([]);
+  const [mockData, setMockData] = useState<Array<{ date: string, count: number }>>([]);
 
   useEffect(() => {
     let cancelled = false;
-    
+
     const fetchData = async () => {
       try {
         const data = await CommonAPI.getDateSeries(7);
         if (cancelled) return;
-        
+
         if (Array.isArray(data)) {
           setMockData(data);
         } else {
@@ -39,9 +39,9 @@ const EventCountChart: React.FC<EventCountChartProps> = ({
         setMockData([]);
       }
     };
-    
+
     fetchData();
-    
+
     return () => {
       cancelled = true;
     };
@@ -150,9 +150,8 @@ const EventCountChart: React.FC<EventCountChartProps> = ({
       transition={{ duration: 0.5 }}
       className={className}
     >
-      <ReactECharts
+      <EChart
         option={option}
-        style={{ height: height ? `${height}px` : `100%`, width: '100%' }}
         opts={{ renderer: 'canvas' }}
       />
     </motion.div>
