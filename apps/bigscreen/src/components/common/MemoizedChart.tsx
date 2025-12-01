@@ -1,8 +1,7 @@
 import React, { memo, useMemo, useRef } from 'react';
-import ReactECharts from 'echarts-for-react';
+import { EChart, EChartsOption, } from '@sker/ui/components/ui/echart';
 import { motion } from 'framer-motion';
 import { cn } from '@/utils';
-import { EChartsOption } from 'echarts';
 
 interface ChartEventParams {
   type: string;
@@ -30,17 +29,17 @@ const deepEqual = (obj1: unknown, obj2: unknown): boolean => {
   if (obj1 === obj2) return true;
   if (obj1 == null || obj2 == null) return false;
   if (typeof obj1 !== typeof obj2) return false;
-  
+
   if (typeof obj1 === 'object') {
     const keys1 = Object.keys(obj1 as Record<string, unknown>);
     const keys2 = Object.keys(obj2 as Record<string, unknown>);
-    
+
     if (keys1.length !== keys2.length) return false;
-    
+
     for (const key of keys1) {
       if (!keys2.includes(key)) return false;
       if (!deepEqual(
-        (obj1 as Record<string, unknown>)[key], 
+        (obj1 as Record<string, unknown>)[key],
         (obj2 as Record<string, unknown>)[key]
       )) {
         return false;
@@ -48,7 +47,7 @@ const deepEqual = (obj1: unknown, obj2: unknown): boolean => {
     }
     return true;
   }
-  
+
   return false;
 };
 
@@ -63,7 +62,7 @@ const MemoizedChart: React.FC<MemoizedChartProps> = ({
   style,
 }) => {
   const previousOption = useRef<EChartsOption | undefined>(undefined);
-  
+
   // 使用更智能的选项记忆化
   const memoizedOption = useMemo(() => {
     if (!previousOption.current || !deepEqual(previousOption.current, option)) {
@@ -73,15 +72,6 @@ const MemoizedChart: React.FC<MemoizedChartProps> = ({
     return previousOption.current;
   }, [option]);
 
-  // Memoize the style object
-  const chartStyle = useMemo(() => ({
-    height: typeof height === 'number' ? `${height}px` : height,
-    width: '100%',
-    ...style,
-  }), [height, style]);
-
-  // Memoize event handlers to prevent unnecessary re-renders
-  const memoizedOnEvents = useMemo(() => onEvents, [onEvents]);
 
   return (
     <motion.div
@@ -90,14 +80,11 @@ const MemoizedChart: React.FC<MemoizedChartProps> = ({
       transition={{ duration: 0.5 }}
       className={cn('w-full h-full', className)}
     >
-      <ReactECharts
+      <EChart
         option={memoizedOption}
-        style={chartStyle}
         opts={{ renderer: 'canvas' }}
         notMerge={notMerge}
         lazyUpdate={lazyUpdate}
-        showLoading={loading}
-        onEvents={memoizedOnEvents}
       />
     </motion.div>
   );

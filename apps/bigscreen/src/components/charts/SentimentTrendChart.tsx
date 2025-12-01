@@ -1,5 +1,5 @@
 import React from 'react';
-import ReactECharts from 'echarts-for-react';
+import {EChart} from '@sker/ui/components/ui/echart';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/hooks/useTheme';
 import { useSentimentTrend } from '@/hooks/useChartData';
@@ -196,7 +196,7 @@ const SentimentTrendChart: React.FC<SentimentTrendChartProps> = ({
   if (loading) {
     return (
       <div className={`flex items-center justify-center h-full ${className}`}>
-        <LoadingSpinner size="large" text="加载情感趋势数据..." />
+        <LoadingSpinner />
       </div>
     );
   }
@@ -235,12 +235,8 @@ const SentimentTrendChart: React.FC<SentimentTrendChartProps> = ({
       className={`w-full h-full ${className}`}
     >
       {option && (
-        <ReactECharts
+        <EChart
           option={option}
-          style={{ 
-            height: height ? `${height}px` : '100%', 
-            width: '100%' 
-          }}
           opts={{ renderer: 'canvas' }}
         />
       )}
