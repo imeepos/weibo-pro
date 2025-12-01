@@ -20,12 +20,12 @@ export function useWorkflowEdges() {
         if (change.type === 'add') {
           nextEdges.push(change.item)
         } else if (change.type === 'remove') {
-          const index = nextEdges.findIndex((e) => e.id === change.id)
+          const index = nextEdges.findIndex((e: Edge) => e.id === change.id)
           if (index >= 0) {
             nextEdges.splice(index, 1)
           }
         } else if (change.type === 'select') {
-          const edge = nextEdges.find((e) => e.id === change.id)
+          const edge = nextEdges.find((e: Edge) => e.id === change.id)
           if (edge) {
             edge.selected = change.selected
           }
@@ -51,19 +51,19 @@ export function useWorkflowEdges() {
 
   const getEdge = useCallback(
     (id: string) => {
-      return edges.find((edge) => edge.id === id)
+      return edges.find((edge: Edge) => edge.id === id)
     },
     [edges]
   )
 
   const getSelectedEdges = useCallback(() => {
-    return edges.filter((edge) => edge.selected)
+    return edges.filter((edge: Edge) => edge.selected)
   }, [edges])
 
   const getConnectedEdges = useCallback(
     (nodeId: string) => {
       return edges.filter(
-        (edge) => edge.source === nodeId || edge.target === nodeId
+        (edge: Edge) => edge.source === nodeId || edge.target === nodeId
       )
     },
     [edges]

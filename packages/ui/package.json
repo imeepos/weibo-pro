@@ -130,6 +130,7 @@
     "vaul": "^1.1.2",
     "vis-data": "^8.0.3",
     "vis-network": "^10.0.2",
+    "zustand": "^5.0.8",
     "zod": "^3.25.76"
   },
   "devDependencies": {

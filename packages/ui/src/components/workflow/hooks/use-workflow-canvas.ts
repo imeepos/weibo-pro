@@ -41,45 +41,45 @@ export const useWorkflowCanvas = create<WorkflowCanvasStore>()(
       ...initialState,
 
       addNode: (node: Node) => {
-        set((state) => ({
+        set((state: WorkflowCanvasStore) => ({
           nodes: [...state.nodes, node],
         }))
       },
 
       removeNode: (id: string) => {
-        set((state) => ({
-          nodes: state.nodes.filter((node) => node.id !== id),
+        set((state: WorkflowCanvasStore) => ({
+          nodes: state.nodes.filter((node: Node) => node.id !== id),
           edges: state.edges.filter(
-            (edge) => edge.source !== id && edge.target !== id
+            (edge: Edge) => edge.source !== id && edge.target !== id
           ),
-          selectedNodes: state.selectedNodes.filter((nodeId) => nodeId !== id),
+          selectedNodes: state.selectedNodes.filter((nodeId: string) => nodeId !== id),
         }))
       },
 
       updateNode: (id: string, updates: Partial<Node>) => {
-        set((state) => ({
-          nodes: state.nodes.map((node) =>
+        set((state: WorkflowCanvasStore) => ({
+          nodes: state.nodes.map((node: Node) =>
             node.id === id ? { ...node, ...updates } : node
           ),
         }))
       },
 
       addEdge: (edge: Edge) => {
-        set((state) => ({
+        set((state: WorkflowCanvasStore) => ({
           edges: [...state.edges, edge],
         }))
       },
 
       removeEdge: (id: string) => {
-        set((state) => ({
-          edges: state.edges.filter((edge) => edge.id !== id),
-          selectedEdges: state.selectedEdges.filter((edgeId) => edgeId !== id),
+        set((state: WorkflowCanvasStore) => ({
+          edges: state.edges.filter((edge: Edge) => edge.id !== id),
+          selectedEdges: state.selectedEdges.filter((edgeId: string) => edgeId !== id),
         }))
       },
 
       updateEdge: (id: string, updates: Partial<Edge>) => {
-        set((state) => ({
-          edges: state.edges.map((edge) =>
+        set((state: WorkflowCanvasStore) => ({
+          edges: state.edges.map((edge: Edge) =>
             edge.id === id ? { ...edge, ...updates } : edge
           ),
         }))
@@ -125,29 +125,29 @@ export const useWorkflowCanvas = create<WorkflowCanvasStore>()(
 
 // 选择器钩子
 export const useWorkflowNodes = () => {
-  return useWorkflowCanvas((state) => state.nodes)
+  return useWorkflowCanvas((state: WorkflowCanvasStore) => state.nodes)
 }
 
 export const useWorkflowEdges = () => {
-  return useWorkflowCanvas((state) => state.edges)
+  return useWorkflowCanvas((state: WorkflowCanvasStore) => state.edges)
 }
 
 export const useWorkflowSelectedNodes = () => {
-  return useWorkflowCanvas((state) => state.selectedNodes)
+  return useWorkflowCanvas((state: WorkflowCanvasStore) => state.selectedNodes)
 }
 
 export const useWorkflowSelectedEdges = () => {
-  return useWorkflowCanvas((state) => state.selectedEdges)
+  return useWorkflowCanvas((state: WorkflowCanvasStore) => state.selectedEdges)
 }
 
 export const useWorkflowViewport = () => {
-  return useWorkflowCanvas((state) => state.viewport)
+  return useWorkflowCanvas((state: WorkflowCanvasStore) => state.viewport)
 }
 
 export const useWorkflowIsRunning = () => {
-  return useWorkflowCanvas((state) => state.isRunning)
+  return useWorkflowCanvas((state: WorkflowCanvasStore) => state.isRunning)
 }
 
 export const useWorkflowIsSaving = () => {
-  return useWorkflowCanvas((state) => state.isSaving)
+  return useWorkflowCanvas((state: WorkflowCanvasStore) => state.isSaving)
 }

@@ -18,6 +18,7 @@
     "@sker/workflow-ast": "workspace:*",
     "@sker/workflow-browser": "workspace:*",
     "@sker/workflow-ui": "workspace:*",
+    "@xyflow/react": "^12.9.2",
     "lexical": "^0.38.2",
     "lucide-react": "^0.555.0",
     "platejs": "^52.0.1",

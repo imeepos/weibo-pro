@@ -206,6 +206,9 @@ importers:
       recharts:
         specifier: ^2.8.0
         version: 2.15.4(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+      reflect-metadata:
+        specifier: ^0.2.2
+        version: 0.2.2
       socket.io-client:
         specifier: ^4.8.1
         version: 4.8.1
@@ -219,8 +222,8 @@ importers:
         specifier: ^5.1.0
         version: 5.1.0
       zustand:
-        specifier: ^4.4.7
-        version: 4.5.7(@types/react@19.2.7)(immer@11.0.0)(react@19.2.0)
+        specifier: ^5.0.8
+        version: 5.0.8(@types/react@19.2.7)(immer@11.0.0)(react@19.2.0)(use-sync-external-store@1.6.0(react@19.2.0))
     devDependencies:
       '@sker/eslint-config':
         specifier: workspace:*
@@ -372,6 +375,9 @@ importers:
       '@sker/workflow-ui':
         specifier: workspace:*
         version: link:../../packages/workflow-ui
+      '@xyflow/react':
+        specifier: ^12.9.2
+        version: 12.9.2(@types/react@19.2.7)(immer@11.0.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       lexical:
         specifier: ^0.38.2
         version: 0.38.2
@@ -639,7 +645,7 @@ importers:
         specifier: ^5.0.0
         version: 5.6.0
       echarts-for-react:
-        specifier: ^3.0.2
+        specifier: ^3.0.5
         version: 3.0.5(echarts@5.6.0)(react@19.2.0)
       konva:
         specifier: ^10.0.8
@@ -1255,6 +1261,9 @@ importers:
       zod:
         specifier: ^3.25.76
         version: 3.25.76
+      zustand:
+        specifier: ^5.0.8
+        version: 5.0.8(@types/react@19.2.7)(immer@11.0.0)(react@19.2.0)(use-sync-external-store@1.6.0(react@19.2.0))
     devDependencies:
       '@sker/eslint-config':
         specifier: workspace:*
@@ -1397,6 +1406,9 @@ importers:
       eslint:
         specifier: ^9.38.0
         version: 9.39.1(jiti@2.6.1)
+      tsup:
+        specifier: ^8.4.0
+        version: 8.5.0(@swc/core@1.15.1(@swc/helpers@0.5.17))(jiti@2.6.1)(postcss@8.5.6)(tsx@4.20.6)(typescript@5.9.2)(yaml@2.8.1)
       typescript:
         specifier: 5.9.2
         version: 5.9.2
