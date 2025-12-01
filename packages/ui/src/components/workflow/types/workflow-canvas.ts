@@ -62,40 +62,7 @@ export interface WorkflowCanvasControlsProps {
   className?: string
 }
 
-export interface WorkflowContextMenuProps {
-  position: { x: number; y: number }
-  onClose: () => void
-  onAddNode?: (type: string, position: { x: number; y: number }) => void
-  onDeleteSelected?: () => void
-  onCopySelected?: () => void
-  onPaste?: () => void
-  className?: string
-}
-
-export interface WorkflowNodeSelectorProps {
-  isOpen: boolean
-  onClose: () => void
-  onSelectNodeType: (type: string) => void
-  position?: { x: number; y: number }
-  className?: string
-}
-
-export interface WorkflowToolbarProps {
-  onAddNode?: (type: string) => void
-  onRun?: () => void
-  onSave?: () => void
-  onExport?: (format: 'json' | 'image') => void
-  className?: string
-}
-
 export interface WorkflowMinimapProps {
-  className?: string
-}
-
-export interface WorkflowSidebarProps {
-  isOpen: boolean
-  onClose: () => void
-  onNodeTypeSelect?: (type: string) => void
   className?: string
 }
 

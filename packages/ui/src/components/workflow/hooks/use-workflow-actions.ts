@@ -100,7 +100,7 @@ export function useWorkflowActions() {
   }, [setNodes, setEdges, setSelectedNodes, setSelectedEdges, setViewport])
 
   const fitView = useCallback(() => {
-    // 这里可以实现适应视图的逻辑
+    // TODO: 实现适应视图逻辑（需要 React Flow 实例引用）
     console.log('Fitting view to nodes')
   }, [])
 

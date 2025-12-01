@@ -28,9 +28,8 @@ import { useFileOperations } from './hooks/useFileOperations'
 import { useNodeOperations } from './hooks/useNodeOperations'
 import { useEventHandlers } from './hooks/useEventHandlers'
 
-// 新的UI组件
-import { CanvasControls } from './components/CanvasControls'
-import { CanvasEmptyState } from './components/CanvasEmptyState'
+// 纯展示组件（来自 @sker/ui）
+import { WorkflowControls, WorkflowEmptyState } from '@sker/ui/components/workflow'
 
 // 原有组件
 import { ContextMenu } from './ContextMenu'
@@ -617,19 +616,19 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
           )}
         </ReactFlow>
 
-        {isCanvasEmpty && <CanvasEmptyState />}
+        {isCanvasEmpty && <WorkflowEmptyState />}
 
         {showControls && (
-          <CanvasControls
-            onRunWorkflow={() => runWorkflow(() => {
-              // 运行完成后的回调，可以在这里添加完成逻辑
+          <WorkflowControls
+            className="absolute bottom-60 right-4 z-[5]"
+            onRun={() => runWorkflow(() => {
               console.log('工作流执行完成')
             })}
-            onSaveWorkflow={() => saveWorkflow(workflow.workflowAst?.name || 'Untitled')}
-            onExportWorkflow={exportWorkflow}
-            onImportWorkflow={importWorkflow}
-            onOpenWorkflowSettings={openWorkflowSettingsDialog}
-            onOpenScheduleDialog={() => {
+            onSave={() => saveWorkflow(workflow.workflowAst?.name || 'Untitled')}
+            onExport={exportWorkflow}
+            onImport={importWorkflow}
+            onSettings={openWorkflowSettingsDialog}
+            onSchedule={() => {
               const workflowName = workflow.workflowAst?.name
               if (workflowName) {
                 openScheduleDialog(workflowName)
@@ -637,7 +636,7 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
                 showToast('error', '请先保存工作流', '只有保存的工作流才能创建调度')
               }
             }}
-            onOpenScheduleList={() => {
+            onScheduleList={() => {
               const workflowName = workflow.workflowAst?.name
               if (workflowName) {
                 openSchedulePanel(workflowName)
@@ -651,8 +650,8 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
             onCollapseNodes={collapseNodes}
             onExpandNodes={expandNodes}
             onAutoLayout={autoLayout}
-            isRunning={false} // 需要从状态管理获取
-            isSaving={false}  // 需要从状态管理获取
+            isRunning={false}
+            isSaving={false}
           />
         )}
       </div>

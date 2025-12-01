@@ -8,8 +8,7 @@ import { cn } from '@sker/ui/lib/utils'
 import { Badge } from '@sker/ui/components/ui/badge'
 import { Button } from '@sker/ui/components/ui/button'
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@sker/ui/components/ui/collapsible'
-import type { WorkflowNodeProps, WorkflowNodePort } from './types/workflow-nodes'
-import type { IAstStates } from '@sker/workflow'
+import type { WorkflowNodeProps, WorkflowNodePort, IAstStates } from './types/workflow-nodes'
 
 // 状态颜色映射
 export const NODE_STATE_COLORS: Record<IAstStates, string> = {

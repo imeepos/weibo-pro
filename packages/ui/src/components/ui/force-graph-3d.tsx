@@ -1,6 +1,6 @@
 import React, { useRef, useImperativeHandle, forwardRef, useState, useEffect } from 'react';
 import ForceGraph3DLib from 'react-force-graph-3d';
-import type { ForceGraphMethods } from 'react-force-graph-3d';
+import type { ForceGraphMethods, NodeObject, LinkObject } from 'react-force-graph-3d';
 
 export interface GraphNode {
   id: string | number;

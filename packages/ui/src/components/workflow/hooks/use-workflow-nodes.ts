@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { useWorkflowCanvas } from './use-workflow-canvas'
 import type { Node, NodeChange } from '@xyflow/react'
+import { generateId } from '@sker/ui/lib/id'
 
 export function useWorkflowNodes() {
   const {
@@ -71,7 +72,7 @@ export function useWorkflowNodes() {
 
       const newNode: Node = {
         ...node,
-        id: `${node.id}-copy-${Date.now()}`,
+        id: generateId(),
         position: {
           x: node.position.x + 50,
           y: node.position.y + 50,

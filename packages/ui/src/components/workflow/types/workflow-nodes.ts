@@ -1,5 +1,7 @@
 import type { Position } from '@xyflow/react'
-import type { IAstStates } from '@sker/workflow'
+
+// 工作流节点状态类型（本地定义，避免依赖 @sker/workflow）
+export type IAstStates = 'pending' | 'running' | 'emitting' | 'success' | 'fail'
 
 export interface WorkflowNodeHandle {
   id: string

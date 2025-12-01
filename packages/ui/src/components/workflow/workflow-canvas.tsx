@@ -16,8 +16,6 @@ import { useWorkflowNodes } from './hooks/use-workflow-nodes'
 import { useWorkflowEdges } from './hooks/use-workflow-edges'
 import { useWorkflowActions } from './hooks/use-workflow-actions'
 import { WorkflowCanvasControls } from './workflow-canvas-controls'
-import { WorkflowContextMenu } from './workflow-context-menu'
-import { WorkflowNodeSelector } from './workflow-node-selector'
 import { WorkflowMinimap } from './workflow-minimap'
 
 import type { WorkflowCanvasProps } from './types/workflow-canvas'
@@ -103,49 +101,6 @@ export function WorkflowCanvas({
     [handleConnect, onConnect]
   )
 
-  // 右键菜单状态
-  const [contextMenu, setContextMenu] = React.useState<{
-    x: number
-    y: number
-    isOpen: boolean
-  }>({ x: 0, y: 0, isOpen: false })
-
-  const [nodeSelector, setNodeSelector] = React.useState<{
-    isOpen: boolean
-    x: number
-    y: number
-  }>({ isOpen: false, x: 0, y: 0 })
-
-  // 右键菜单处理
-  const handlePaneContextMenu = useCallback((event: MouseEvent | React.MouseEvent<Element, MouseEvent>) => {
-    event.preventDefault()
-    const clientX = 'clientX' in event ? event.clientX : 0
-    const clientY = 'clientY' in event ? event.clientY : 0
-    setContextMenu({
-      x: clientX,
-      y: clientY,
-      isOpen: true,
-    })
-  }, [])
-
-  const handleCloseContextMenu = useCallback(() => {
-    setContextMenu((prev) => ({ ...prev, isOpen: false }))
-  }, [])
-
-  const handleCloseNodeSelector = useCallback(() => {
-    setNodeSelector((prev) => ({ ...prev, isOpen: false }))
-  }, [])
-
-  const handleAddNode = useCallback((type: string, position: { x: number; y: number }) => {
-    // 这里可以添加创建新节点的逻辑
-    console.log('Adding node:', type, position)
-  }, [])
-
-  const handleSelectNodeType = useCallback((type: string) => {
-    handleAddNode(type, { x: nodeSelector.x, y: nodeSelector.y })
-    handleCloseNodeSelector()
-  }, [handleAddNode, handleCloseNodeSelector, nodeSelector.x, nodeSelector.y])
-
   // 控制栏回调
   const handleRun = useCallback(() => {
     runWorkflow()
@@ -208,7 +163,6 @@ export function WorkflowCanvas({
         onNodeClick={onNodeClick}
         onEdgeClick={onEdgeClick}
         onMove={(event, viewport) => onViewportChange?.(viewport)}
-        onPaneContextMenu={handlePaneContextMenu}
         connectionMode={connectionMode}
         selectionMode={selectionMode}
         snapToGrid={snapToGrid}
@@ -232,25 +186,6 @@ export function WorkflowCanvas({
         {/* 控制按钮 */}
         <Controls position="top-right" />
       </ReactFlow>
-
-      {/* 右键菜单 */}
-      <WorkflowContextMenu
-        position={{ x: contextMenu.x, y: contextMenu.y }}
-        isOpen={contextMenu.isOpen}
-        onClose={handleCloseContextMenu}
-        onAddNode={(type) => {
-          handleAddNode(type, { x: contextMenu.x, y: contextMenu.y })
-          handleCloseContextMenu()
-        }}
-      />
-
-      {/* 节点选择器 */}
-      <WorkflowNodeSelector
-        isOpen={nodeSelector.isOpen}
-        onClose={handleCloseNodeSelector}
-        onSelectNodeType={handleSelectNodeType}
-        position={{ x: nodeSelector.x, y: nodeSelector.y }}
-      />
     </div>
   )
 }

@@ -25,8 +25,6 @@ export function resolveConstructor(target: object | Type<any>): Type<any> {
 
 export interface NodeOptions {
     title?: string;
-    icon?: any;
-    color?: string;
     outputs?: OutputOptions;
 }
 

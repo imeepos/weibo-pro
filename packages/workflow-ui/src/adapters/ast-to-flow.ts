@@ -1,4 +1,4 @@
-import type { INode, IEdge } from '@sker/workflow'
+import { type INode, type IEdge, generateId } from '@sker/workflow'
 import type { WorkflowNode, WorkflowEdge } from '../types'
 
 /**
@@ -51,24 +51,13 @@ function toFlowNode<T extends INode>(node: T): WorkflowNode<T> {
  * 转换单个边
  */
 function toFlowEdge(edge: IEdge): WorkflowEdge {
-  // 使用源节点、目标节点和连接属性生成稳定的唯一 id
-  const idParts = [
-    edge.from,
-    edge.to,
-    edge.fromProperty || '',
-    edge.toProperty || '',
-    edge.weight || '',
-    edge.condition ? JSON.stringify(edge.condition) : ''
-  ].filter(Boolean)
-  const stableId = idParts.join('-')
-
   // 根据边的属性决定类型
   const hasDataMapping = edge.fromProperty || edge.toProperty
   const edgeType = hasDataMapping ? 'data' : 'control'
   const flowEdgeType = hasDataMapping ? 'workflow-data-edge' : 'workflow-control-edge'
 
   return {
-    id: edge.id || `edge-${stableId}`,
+    id: edge.id || generateId(),
     source: edge.from,
     target: edge.to,
     sourceHandle: edge.fromProperty || null,
