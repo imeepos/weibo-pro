@@ -1090,6 +1090,9 @@ importers:
       '@sker/core':
         specifier: workspace:*
         version: link:../core
+      '@sker/workflow':
+        specifier: workspace:*
+        version: link:../workflow
       '@types/lodash':
         specifier: ^4.17.21
         version: 4.17.21

@@ -1,19 +1,58 @@
-import type { Node } from '@xyflow/react'
+import type { Position } from '@xyflow/react'
+import type { IAstStates } from '@sker/workflow'
 
-export interface WorkflowNodeData {
+export interface WorkflowNodeHandle {
+  id: string
+  type: 'source' | 'target'
+  position: Position
   label?: string
-  type: string
-  status?: 'idle' | 'running' | 'success' | 'error'
-  progress?: number
-  [key: string]: any
+  isMulti?: boolean
+}
+
+export interface WorkflowNodePort {
+  property: string
+  label?: string
+  isMulti?: boolean
 }
 
 export interface WorkflowNodeProps {
+  // 基础信息
   id: string
   type: string
-  data: WorkflowNodeData
+  label: string
+  description?: string
+  color?: string
+
+  // 状态
+  status?: IAstStates
+  statusCount?: number
+
+  // 端口
+  inputs?: WorkflowNodePort[]
+  outputs?: WorkflowNodePort[]
+
+  // UI 状态
   selected?: boolean
+  collapsed?: boolean
+  onToggleCollapse?: () => void
+
+  // 自定义内容
+  children?: React.ReactNode
+
+  // 交互
+  onContextMenu?: (e: React.MouseEvent) => void
+  onDoubleClick?: (e: React.MouseEvent) => void
+
   className?: string
+}
+
+// 保留旧的接口以兼容现有代码
+export interface WorkflowNodeData {
+  label?: string
+  type: string
+  status?: IAstStates
+  progress?: number
+  [key: string]: any
 }
 
 export interface WorkflowEdgeData {
