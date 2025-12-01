@@ -1,5 +1,6 @@
 import React from "react";
-import ReactECharts from "echarts-for-react";
+import { EChart } from "@sker/ui/components/ui/echart";
+
 import { motion } from "framer-motion";
 import { useTheme } from "@/hooks/useTheme";
 import { useAgeDistribution } from "@/hooks/useChartData";
@@ -153,7 +154,7 @@ const AgeDistributionChart: React.FC<AgeDistributionChartProps> = ({
   if (loading) {
     return (
       <div className={`flex items-center justify-center h-full ${className}`}>
-        <LoadingSpinner size="large" text="加载年龄分布数据..." />
+        <LoadingSpinner />
       </div>
     );
   }
@@ -192,9 +193,8 @@ const AgeDistributionChart: React.FC<AgeDistributionChartProps> = ({
       className={className}
     >
       {option && (
-        <ReactECharts
+        <EChart
           option={option}
-          style={{ height: height ? `${height}px` : `100%`, width: "100%" }}
           opts={{ renderer: "canvas" }}
         />
       )}

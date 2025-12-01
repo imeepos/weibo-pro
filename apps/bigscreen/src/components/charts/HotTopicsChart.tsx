@@ -1,5 +1,6 @@
 import React from "react";
-import ReactECharts from "echarts-for-react";
+import { EChart } from "@sker/ui/components/ui/echart";
+
 import { motion } from "framer-motion";
 import { HotTopic } from "@/types";
 import { cn, formatNumber } from "@/utils";
@@ -272,9 +273,8 @@ const HotTopicsChart: React.FC<HotTopicsChartProps> = ({
       className={cn("chart-container", className)}
     >
       {option ? (
-        <ReactECharts
+        <EChart
           option={option}
-          style={{ height: height ? `${height}px` : `100%`, width: "100%" }}
           opts={{ renderer: "canvas" }}
           notMerge={true}
           lazyUpdate={true}

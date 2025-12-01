@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import ReactECharts from "echarts-for-react";
+import { EChart } from "@sker/ui/components/ui/echart";
+
 import { motion } from "framer-motion";
 import { useTheme } from "@/hooks/useTheme";
 import { createLogger } from '@sker/core';
@@ -141,9 +142,8 @@ const PostCountChart: React.FC<PostCountChartProps> = ({
       transition={{ duration: 0.5 }}
       className={className}
     >
-      <ReactECharts
+      <EChart
         option={option}
-        style={{ height: height ? `${height}px` : `100%`, width: "100%" }}
         opts={{ renderer: "canvas" }}
       />
     </motion.div>

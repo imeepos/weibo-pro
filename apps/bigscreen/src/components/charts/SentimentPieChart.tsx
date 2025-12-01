@@ -1,5 +1,5 @@
 import React from "react";
-import ReactECharts from "echarts-for-react";
+import { EChart } from "@sker/ui/components/ui/echart";
 import { motion } from "framer-motion";
 import { cn, formatNumber } from "@/utils";
 import { useTheme } from "@/hooks/useTheme";
@@ -37,8 +37,8 @@ const SentimentPieChart: React.FC<SentimentPieChartProps> = ({
         }
       };
     }
-    
-    const {total} = data;
+
+    const { total } = data;
     const pieData = [
       {
         value: data.positive,
@@ -115,17 +115,15 @@ const SentimentPieChart: React.FC<SentimentPieChartProps> = ({
           const percentage = ((params.value / total) * 100).toFixed(1);
           return `
             <div style="display: flex; align-items: center; margin-bottom: 8px;">
-              <span style="display: inline-block; width: 12px; height: 12px; background-color: ${
-                params.color || '#6b7280'
-              }; border-radius: 50%; margin-right: 8px;"></span>
-              <span style="font-weight: bold; margin-right: 8px;">${
-                params.name
-              }</span>
+              <span style="display: inline-block; width: 12px; height: 12px; background-color: ${params.color || '#6b7280'
+            }; border-radius: 50%; margin-right: 8px;"></span>
+              <span style="font-weight: bold; margin-right: 8px;">${params.name
+            }</span>
             </div>
             <div style="margin-left: 20px;">
               <div>数量: <span style="font-weight: bold;">${formatNumber(
-                params.value
-              )}</span></div>
+              params.value
+            )}</span></div>
               <div>占比: <span style="font-weight: bold;">${percentage}%</span></div>
             </div>
           `;
@@ -210,7 +208,7 @@ const SentimentPieChart: React.FC<SentimentPieChartProps> = ({
   if (loading) {
     return (
       <div className={cn("flex items-center justify-center h-full", className)}>
-        <LoadingSpinner size="large" text="加载情感分析数据..." />
+        <LoadingSpinner />
       </div>
     );
   }
@@ -249,9 +247,8 @@ const SentimentPieChart: React.FC<SentimentPieChartProps> = ({
       className={cn("chart-container", className)}
     >
       {option && (
-        <ReactECharts
+        <EChart
           option={option}
-          style={{ height: `100%`, width: "100%" }}
           opts={{ renderer: "canvas" }}
           notMerge={true}
           lazyUpdate={true}
