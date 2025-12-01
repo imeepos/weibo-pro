@@ -36,21 +36,14 @@ export class EventsController implements sdk.EventsController{
     return this.eventsService.getHotList(validTimeRange);
   }
 
-  @Get(':id')
-  async getEventDetail(@Param('id') id: string) {
-    return this.eventsService.getEventDetail(id);
-  }
-
   @Get(':id/timeseries')
-  async getEventTimeSeries(@Param('id') id: string, @Query('timeRange') timeRange?: string) {
-    const validTimeRange = this.validateTimeRange(timeRange);
-    return this.eventsService.getEventTimeSeries(id, validTimeRange);
+  async getEventTimeSeries(@Param('id') id: string) {
+    return this.eventsService.getEventTimeSeries(id);
   }
 
   @Get(':id/trends')
-  async getEventTrends(@Param('id') id: string, @Query('timeRange') timeRange?: string) {
-    const validTimeRange = this.validateTimeRange(timeRange);
-    return this.eventsService.getEventTrends(id, validTimeRange);
+  async getEventTrends(@Param('id') id: string) {
+    return this.eventsService.getEventTrends(id);
   }
 
   @Get(':id/influence-users')
@@ -61,6 +54,16 @@ export class EventsController implements sdk.EventsController{
   @Get(':id/geographic')
   async getEventGeographic(@Param('id') id: string) {
     return this.eventsService.getEventGeographic(id);
+  }
+
+  @Get(':id/keywords')
+  async getEventKeywords(@Param('id') id: string) {
+    return this.eventsService.getEventKeywords(id);
+  }
+
+  @Get(':id')
+  async getEventDetail(@Param('id') id: string) {
+    return this.eventsService.getEventDetail(id);
   }
 
   private validateTimeRange(timeRange?: string): TimeRange {

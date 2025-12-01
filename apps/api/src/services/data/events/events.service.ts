@@ -55,7 +55,8 @@ export class EventsService {
     }
 
     const latestStats = await this.queryService.getLatestStatistics(id);
-    const statistics = await this.queryService.getEventStatistics(id, '30d');
+    const statistics = await this.queryService.getAllEventStatistics(id);
+    const keywordsData = await this.queryService.getEventKeywords(id);
 
     const timeline = this.timelineBuilder.buildTimeline(event, statistics);
     const propagationPath = this.analyticsService.buildPropagationPath(event);
@@ -91,7 +92,7 @@ export class EventsService {
       hotness: event.hotness,
       trend,
       category: event.category?.name || '未分类',
-      keywords: [],
+      keywords: keywordsData.map((kw) => kw.keyword),
       createdAt: event.created_at.toISOString(),
       lastUpdate: event.updated_at.toISOString(),
       timeline,
@@ -103,34 +104,22 @@ export class EventsService {
     };
   }
 
-  async getEventTimeSeries(
-    id: string,
-    timeRange: TimeRange
-  ): Promise<TimeSeriesData> {
-    const statistics = await this.queryService.getEventStatistics(
-      id,
-      timeRange
-    );
+  async getEventTimeSeries(id: string): Promise<TimeSeriesData> {
+    const statistics = await this.queryService.getAllEventStatistics(id);
     const data = await this.analyticsService.getEventTimeSeries(
       id,
-      timeRange,
+      '30d',
       statistics
     );
 
     return data
   }
 
-  async getEventTrends(
-    id: string,
-    timeRange: TimeRange
-  ): Promise<TrendAnalysis> {
-    const statistics = await this.queryService.getEventStatistics(
-      id,
-      timeRange
-    );
+  async getEventTrends(id: string): Promise<TrendAnalysis> {
+    const statistics = await this.queryService.getAllEventStatistics(id);
     const data = await this.analyticsService.getEventTrends(
       id,
-      timeRange,
+      '30d',
       statistics
     );
 
@@ -143,5 +132,11 @@ export class EventsService {
 
   async getEventGeographic(id: string): Promise<GeographicDistribution[]> {
     return await this.queryService.getGeographicDistribution(id);
+  }
+
+  async getEventKeywords(
+    id: string
+  ): Promise<Array<{ keyword: string; weight: number; sentiment: string }>> {
+    return await this.queryService.getEventKeywords(id);
   }
 }

@@ -112,6 +112,18 @@ export class EventQueryService {
     return stats as EventStatistics[];
   }
 
+  async getAllEventStatistics(eventId: string): Promise<EventStatistics[]> {
+    return await useEntityManager(async (entityManager) => {
+      const stats = await entityManager
+        .createQueryBuilder(EventStatisticsEntity, 'stats')
+        .where('stats.event_id = :id', { id: eventId })
+        .orderBy('stats.snapshot_at', 'ASC')
+        .getMany();
+
+      return stats as EventStatistics[];
+    });
+  }
+
   async getEventCategories(
     timeRange: TimeRange
   ): Promise<EventCategoryStats> {
@@ -198,6 +210,56 @@ export class EventQueryService {
     );
   }
 
+  async getEventKeywords(
+    eventId: string
+  ): Promise<Array<{ keyword: string; weight: number; sentiment: string }>> {
+    const cacheKey = CacheService.buildKey('event:keywords', eventId);
+
+    return await this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        return await useEntityManager(async (entityManager) => {
+          const nlpResults = await entityManager
+            .createQueryBuilder(PostNLPResultEntity, 'nlp')
+            .where('nlp.event_id = :eventId', { eventId })
+            .getMany();
+
+          const keywordMap = new Map<
+            string,
+            { totalWeight: number; sentiment: string; count: number }
+          >();
+
+          nlpResults.forEach((result) => {
+            const keywords = result.keywords || [];
+            keywords.forEach((kw) => {
+              const existing = keywordMap.get(kw.keyword);
+              if (existing) {
+                existing.totalWeight += kw.weight;
+                existing.count += 1;
+              } else {
+                keywordMap.set(kw.keyword, {
+                  totalWeight: kw.weight,
+                  sentiment: kw.sentiment || 'neutral',
+                  count: 1,
+                });
+              }
+            });
+          });
+
+          return Array.from(keywordMap.entries())
+            .map(([keyword, data]) => ({
+              keyword,
+              weight: Math.round(data.totalWeight * 100) / 100,
+              sentiment: data.sentiment,
+            }))
+            .sort((a, b) => b.weight - a.weight)
+            .slice(0, 100);
+        });
+      },
+      CACHE_TTL.MEDIUM
+    );
+  }
+
   async getGeographicDistribution(
     eventId: string
   ): Promise<GeographicDistribution[]> {
@@ -255,7 +317,7 @@ export class EventQueryService {
                 : this.mockService.generateSentiment();
 
             return {
-              region: item.location || '未知',
+              region: (item.location || '未知').replace('发布于 ', ''),
               count: userCount,
               percentage:
                 totalUsers > 0

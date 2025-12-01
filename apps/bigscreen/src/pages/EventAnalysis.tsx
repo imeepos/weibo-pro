@@ -59,12 +59,6 @@ const EventAnalysis: React.FC = () => {
           c.getTrendData(selectedTimeRange)
         ]);
 
-        console.log({
-          eventsResult,
-          categoriesResult,
-          trendsResult
-        })
-
         // 确保数据为数组
         const eventsArray = Array.isArray(eventsResult) ? eventsResult : [];
         const categoriesArray = Array.isArray(categoriesResult) ? categoriesResult : [];

@@ -8,14 +8,22 @@ import { LoadingSpinner } from '@/components/ui';
 interface GeographicChartProps {
   height?: number;
   className?: string;
+  data?: Array<{ name: string; value: number }> | null; // 支持外部传入数据
 }
 
 const GeographicChart: React.FC<GeographicChartProps> = ({
   height = 0,
-  className = ''
+  className = '',
+  data: propData
 }) => {
   const { isDark } = useTheme();
-  const { data, loading, error, refetch } = useGeographicData();
+  const hookData = useGeographicData();
+
+  // 优先使用 props 数据，否则使用 hook 数据
+  const data = propData ?? hookData.data;
+  const loading = propData === undefined ? hookData.loading : false;
+  const error = propData === undefined ? hookData.error : null;
+  const refetch = hookData.refetch;
 
   // 在所有条件检查之前计算option
   const option = React.useMemo(() => {

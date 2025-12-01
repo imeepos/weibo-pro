@@ -35,18 +35,13 @@ export class EventsController {
     throw new Error('method getHotList not implements')
   }
 
-  @Get(':id')
-  getEventDetail(@Param('id') id: string): Promise<EventDetail> {
-    throw new Error('method getEventDetail not implements')
-  }
-
   @Get(':id/timeseries')
-  getEventTimeSeries(@Param('id') id: string, @Query('timeRange') timeRange?: TimeRange): Promise<TimeSeriesData> {
+  getEventTimeSeries(@Param('id') id: string): Promise<TimeSeriesData> {
     throw new Error('method getEventTimeSeries not implements')
   }
 
   @Get(':id/trends')
-  getEventTrends(@Param('id') id: string, @Query('timeRange') timeRange?: TimeRange): Promise<TrendAnalysis> {
+  getEventTrends(@Param('id') id: string): Promise<TrendAnalysis> {
     throw new Error('method getEventTrends not implements')
   }
 
@@ -58,5 +53,15 @@ export class EventsController {
   @Get(':id/geographic')
   getEventGeographic(@Param('id') id: string): Promise<GeographicDistribution[]> {
     throw new Error('method getEventGeographic not implements')
+  }
+
+  @Get(':id/keywords')
+  getEventKeywords(@Param('id') id: string): Promise<Array<{ keyword: string; weight: number; sentiment: string }>> {
+    throw new Error('method getEventKeywords not implements')
+  }
+
+  @Get(':id')
+  getEventDetail(@Param('id') id: string): Promise<EventDetail> {
+    throw new Error('method getEventDetail not implements')
   }
 }

@@ -134,7 +134,7 @@ const mapEventToHotEvent = (event: EventEntity, statistics: EventStatisticsEntit
 };
 
 /** 获取热门事件列表 */
-export const findHotEvents = (timeRange: TimeRange, limit: number = 20) =>
+export const findHotEvents = (timeRange: TimeRange, limit: number = 20): Promise<HotEvent[]> =>
   useEntityManager(async m => {
     const dateRange = getDateRangeByTimeRange(timeRange);
 

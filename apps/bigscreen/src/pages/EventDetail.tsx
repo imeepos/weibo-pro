@@ -23,6 +23,11 @@ import {
 import { cn, formatNumber, formatRelativeTime } from '@/utils';
 import { createLogger } from '@sker/core';
 import { MetricCard } from '@sker/ui/components/ui/metric-card';
+import { Button } from '@sker/ui/components/ui/button';
+import { Badge } from '@sker/ui/components/ui/badge';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@sker/ui/components/ui/card';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@sker/ui/components/ui/tabs';
+import { Skeleton } from '@sker/ui/components/ui/skeleton';
 
 import MiniTrendChart from '@/components/charts/MiniTrendChart';
 import TimeSeriesChart from '@/components/charts/TimeSeriesChart';
@@ -33,13 +38,13 @@ import EventTimelineChart from '@/components/charts/EventTimelineChart';
 import EventDevelopmentChart from '@/components/charts/EventDevelopmentChart';
 import InfluenceNetworkFlow from '@/components/charts/InfluenceNetworkFlow';
 
-// 时间序列数据接口
+// 时间序列数据接口 - 与 TimeSeriesChart 组件期望的格式匹配
 interface TimeSeriesDataPoint {
   timestamp: string;
   value: number;
-  positive: number;
-  negative: number;
-  neutral: number;
+  positive?: number;
+  negative?: number;
+  neutral?: number;
 }
 
 // 趋势图表数据接口
@@ -148,6 +153,7 @@ const EventDetail: React.FC = () => {
   const [trendData, setTrendData] = useState<TrendChartData | null>(null);
   const [influenceUsers, setInfluenceUsers] = useState<InfluenceUser[]>([]);
   const [geographicData, setGeographicData] = useState<GeographicDataPoint[]>([]);
+  const [keywordData, setKeywordData] = useState<Array<{ keyword: string; weight: number; sentiment: 'positive' | 'negative' | 'neutral' }>>([]);
   type EventTab = 'overview' | 'timeline' | 'propagation' | 'analysis' | 'development';
   const [activeTab, setActiveTab] = useState<EventTab>('overview');
   const sentimentLevels = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
@@ -198,18 +204,35 @@ const EventDetail: React.FC = () => {
         };
         setEventData(convertedEventData);
 
-        // 获取时间序列数据
+        // 获取时间序列数据（事件完整生命周期）
         const timeSeriesData = await c.getEventTimeSeries(eventId);
-        // 转换为 TimeSeriesDataPoint 格式，添加防御性检查
-        const convertedTimeSeries: TimeSeriesDataPoint[] = Array.isArray(timeSeriesData)
-          ? timeSeriesData.map(item => ({
-            timestamp: item.timestamp,
-            value: item.posts + item.users + item.interactions,
-            positive: item.positive,
-            negative: item.negative,
-            neutral: item.neutral
-          }))
-          : [];
+        logger.debug('原始时间序列数据:', timeSeriesData);
+
+        // 转换为 TimeSeriesDataPoint 格式
+        // API 返回的是 { categories: string[], series: Array<{name, data}> } 格式
+        const convertedTimeSeries: TimeSeriesDataPoint[] = [];
+        if (timeSeriesData?.categories && Array.isArray(timeSeriesData.categories)) {
+          const categories = timeSeriesData.categories;
+          const postSeries = timeSeriesData.series?.find(s => s.name === '帖子数量')?.data || [];
+          const userSeries = timeSeriesData.series?.find(s => s.name === '用户参与')?.data || [];
+          const positiveSeries = timeSeriesData.series?.find(s => s.name === '正面情绪')?.data || [];
+          const negativeSeries = timeSeriesData.series?.find(s => s.name === '负面情绪')?.data || [];
+          const neutralSeries = timeSeriesData.series?.find(s => s.name === '中性情绪')?.data || [];
+
+          for (let i = 0; i < categories.length; i++) {
+            convertedTimeSeries.push({
+              timestamp: categories[i] || '',
+              value: (postSeries[i] || 0) + (userSeries[i] || 0),
+              positive: positiveSeries[i] || 0,
+              negative: negativeSeries[i] || 0,
+              neutral: neutralSeries[i] || 0
+            });
+          }
+        } else {
+          logger.warn('时间序列数据格式不正确:', timeSeriesData);
+        }
+
+        logger.debug('转换后的时间序列数据:', convertedTimeSeries);
         setTimeSeriesData(convertedTimeSeries);
 
         // 获取趋势数据
@@ -248,6 +271,17 @@ const EventDetail: React.FC = () => {
           sentiment: item.sentiment
         }));
         setGeographicData(convertedGeographicData);
+
+        // 获取关键词数据
+        const keywordsData = await c.getEventKeywords(eventId);
+        // 转换为 WordCloudChart 期望的格式
+        const convertedKeywords = keywordsData.map(item => ({
+          keyword: item.keyword,
+          weight: item.weight,
+          sentiment: item.sentiment as 'positive' | 'negative' | 'neutral'
+        }));
+        // 将关键词数据存储到状态中，以便传递给 WordCloudChart
+        setKeywordData(convertedKeywords);
       } catch (error) {
         logger.error('Failed to fetch event data:', error);
       }
@@ -287,8 +321,66 @@ const EventDetail: React.FC = () => {
 
   if (!eventData) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-muted-foreground">加载中...</div>
+      <div className="h-full overflow-y-auto overflow-x-hidden space-y-8 p-6">
+        {/* 标题骨架 */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <Skeleton className="h-10 w-10 rounded-lg" />
+            <div className="space-y-2">
+              <Skeleton className="h-8 w-48" />
+              <Skeleton className="h-4 w-64" />
+            </div>
+          </div>
+          <Skeleton className="h-4 w-32" />
+        </div>
+
+        {/* 事件基本信息骨架 */}
+        <Card className="sentiment-overview-card">
+          <CardContent className="p-8">
+            <div className="space-y-4">
+              <div className="flex items-center space-x-4">
+                <Skeleton className="h-8 w-64" />
+                <Skeleton className="h-6 w-20 rounded-full" />
+                <Skeleton className="h-6 w-20 rounded-full" />
+              </div>
+              <Skeleton className="h-6 w-full" />
+              <Skeleton className="h-6 w-3/4" />
+              <div className="flex gap-2">
+                <Skeleton className="h-6 w-16 rounded-full" />
+                <Skeleton className="h-6 w-20 rounded-full" />
+                <Skeleton className="h-6 w-16 rounded-full" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 指标卡片骨架 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="p-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-8 w-8 rounded-lg" />
+                </div>
+                <Skeleton className="h-10 w-32" />
+                <Skeleton className="h-3 w-20" />
+              </div>
+            </Card>
+          ))}
+        </div>
+
+        {/* 标签页骨架 */}
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex gap-8 mb-6">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Skeleton key={i} className="h-10 w-24" />
+              ))}
+            </div>
+            <Skeleton className="h-64 w-full" />
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -297,12 +389,13 @@ const EventDetail: React.FC = () => {
       {/* 页面标题和返回按钮 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <button
+          <Button
             onClick={() => navigate('/event-analysis')}
-            className="p-2 rounded-lg hover:bg-accent transition-colors"
+            variant="ghost"
+            size="icon"
           >
-            <ArrowLeft className="w-6 h-6 text-foreground" />
-          </button>
+            <ArrowLeft className="w-6 h-6" />
+          </Button>
           <div>
             <h1 className="text-2xl font-bold text-foreground flex items-center">
               <div className="w-1 h-10 bg-gradient-to-b from-primary via-primary to-primary/30 rounded-full mr-4"></div>
@@ -319,37 +412,39 @@ const EventDetail: React.FC = () => {
       </div>
 
       {/* 事件基本信息 */}
-      <div className="glass-card p-8 sentiment-overview-card">
-        <div className="flex items-start justify-between mb-6">
-          <div className="flex-1">
-            <div className="flex items-center space-x-4 mb-3">
-              <h2 className="text-2xl font-bold text-foreground">{eventData.title}</h2>
-              <span className="px-3 py-1 bg-primary/20 text-primary text-sm rounded-full font-medium">
-                {eventData.category}
-              </span>
-              {getTrendIcon(eventData.trend)}
-              {eventData.hotness >= 90 && (
-                <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded-full flex items-center">
-                  <AlertTriangle className="w-3 h-3 mr-1" />
-                  高热度事件
-                </span>
-              )}
+      <Card className="sentiment-overview-card">
+        <CardContent className="p-8">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <div className="flex items-center space-x-4 mb-3">
+                <h2 className="text-2xl font-bold text-foreground">{eventData.title}</h2>
+                <Badge variant="secondary" className="bg-primary/20 text-primary">
+                  {eventData.category}
+                </Badge>
+                {getTrendIcon(eventData.trend)}
+                {eventData.hotness >= 90 && (
+                  <Badge variant="destructive" className="bg-red-500/20 text-red-400">
+                    <AlertTriangle className="w-3 h-3 mr-1" />
+                    高热度事件
+                  </Badge>
+                )}
+              </div>
+              <p className="text-muted-foreground text-lg mb-4">{eventData.description}</p>
+              <div className="flex flex-wrap gap-2">
+                {eventData.keywords.map(keyword => (
+                  <Badge key={keyword} variant="outline" className="bg-primary/10 text-primary">
+                    #{keyword}
+                  </Badge>
+                ))}
+              </div>
             </div>
-            <p className="text-muted-foreground text-lg mb-4">{eventData.description}</p>
-            <div className="flex flex-wrap gap-2">
-              {eventData.keywords.map(keyword => (
-                <span key={keyword} className="px-3 py-1 bg-primary/10 text-primary text-sm rounded-full font-medium">
-                  #{keyword}
-                </span>
-              ))}
+            <div className="text-right">
+              <div className="text-3xl font-bold text-foreground mb-2">{eventData.hotness}</div>
+              <div className="text-muted-foreground">热度指数</div>
             </div>
           </div>
-          <div className="text-right">
-            <div className="text-3xl font-bold text-foreground mb-2">{eventData.hotness}</div>
-            <div className="text-muted-foreground">热度指数</div>
-          </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* 核心统计指标 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -396,278 +491,290 @@ const EventDetail: React.FC = () => {
       </div>
 
       {/* 标签页导航 */}
-      <div className="glass-card sentiment-overview-card">
-        <div className="border-b border-border">
-          <nav className="flex space-x-8 px-6">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as EventTab)} className="w-full">
+        <div className="border-b px-0">
+          <TabsList className="h-auto bg-transparent p-0">
             {tabs.map(tab => (
-              <button
+              <TabsTrigger
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                value={tab.id}
                 className={cn(
-                  'flex items-center space-x-2 py-4 px-2 border-b-2 font-medium text-sm transition-colors',
-                  activeTab === tab.id
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground'
+                  'flex items-center font-medium text-sm transition-colors',
+                  'bg-transparent shadow-none rounded-none',
+                  'data-[state=active]:text-primary data-[state=active]:bg-transparent',
+                  'data-[state=inactive]:text-muted-foreground',
+                  'hover:text-foreground'
                 )}
               >
                 <tab.icon className="w-4 h-4" />
                 <span>{tab.label}</span>
-              </button>
+              </TabsTrigger>
             ))}
-          </nav>
+          </TabsList>
         </div>
 
         {/* 标签页内容 */}
-        <div className="p-6">
-          {activeTab === 'overview' && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-6"
-            >
+        <TabsContent value="overview" className="p-6 mt-0">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
 
-              {/* 趋势图表 */}
+            {/* 趋势图表 */}
+            <div className="bg-muted/30 rounded-lg p-6">
+              <h3 className="text-foreground mb-4 flex items-center">
+                <BarChart3 className="w-5 h-5 mr-2" />
+                热度趋势分析
+              </h3>
+              <TimeSeriesChart
+                data={timeSeriesData}
+                title=""
+                height={300}
+              />
+            </div>
+
+            {/* 图表分析区域 */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* 关键词分析 */}
               <div className="bg-muted/30 rounded-lg p-6">
                 <h3 className="text-foreground mb-4 flex items-center">
-                  <BarChart3 className="w-5 h-5 mr-2" />
-                  热度趋势分析
+                  <Target className="w-5 h-5 mr-2" />
+                  关键词热度
                 </h3>
-                <TimeSeriesChart
-                  data={timeSeriesData}
+                <WordCloudChart
                   title=""
-                  height={300}
+                  height={250}
+                  maxWords={20}
+                  data={keywordData}
                 />
               </div>
 
-              {/* 图表分析区域 */}
+              {/* 地理分布分析 */}
+              <div className="bg-muted/30 rounded-lg p-6">
+                <h3 className="text-foreground mb-4 flex items-center">
+                  <Globe className="w-5 h-5 mr-2" />
+                  地理分布
+                </h3>
+                <GeographicChart
+                  data={geographicData.map(item => ({
+                    name: item.region,
+                    value: item.users
+                  }))}
+                />
+              </div>
+            </div>
+          </motion.div>
+        </TabsContent>
+
+        <TabsContent value="timeline" className="p-6 mt-0">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
+            <EventTimelineChart data={eventData.timeline} />
+          </motion.div>
+        </TabsContent>
+
+        <TabsContent value="propagation" className="p-6 mt-0">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
+            <PropagationPathChart data={eventData.propagationPath} />
+
+            {/* 影响力用户网络 */}
+            <div className="bg-muted/20 rounded-lg p-6">
+              <h4 className="text-lg font-semibold text-foreground mb-4 flex items-center">
+                <Users className="w-5 h-5 mr-2" />
+                用户影响力排名
+              </h4>
+              {/* 影响力网络图 */}
+              <InfluenceNetworkFlow
+                users={influenceUsers}
+              />
+            </div>
+
+            {/* 地理传播分析 */}
+            <div className="bg-muted/20 rounded-lg p-6">
+              <h4 className="text-lg font-semibold text-foreground mb-4 flex items-center">
+                <Globe className="w-5 h-5 mr-2" />
+                地理传播分析
+              </h4>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* 关键词分析 */}
-                <div className="bg-muted/30 rounded-lg p-6">
-                  <h3 className="text-foreground mb-4 flex items-center">
-                    <Target className="w-5 h-5 mr-2" />
-                    关键词热度
-                  </h3>
-                  <WordCloudChart
-                    title=""
-                    height={250}
-                    maxWords={20}
+                <div>
+                  <GeographicChart
+                    data={geographicData.map(item => ({
+                      name: item.region,
+                      value: item.users
+                    }))}
                   />
                 </div>
-
-                {/* 地理分布分析 */}
-                <div className="bg-muted/30 rounded-lg p-6">
-                  <h3 className="text-foreground mb-4 flex items-center">
-                    <Globe className="w-5 h-5 mr-2" />
-                    地理分布
-                  </h3>
-                  <GeographicChart />
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {activeTab === 'timeline' && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-6"
-            >
-              <EventTimelineChart data={eventData.timeline} />
-            </motion.div>
-          )}
-
-          {activeTab === 'propagation' && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-6"
-            >
-              <PropagationPathChart data={eventData.propagationPath} />
-
-              {/* 影响力用户网络 */}
-              <div className="bg-muted/20 rounded-lg p-6">
-                <h4 className="text-lg font-semibold text-foreground mb-4 flex items-center">
-                  <Users className="w-5 h-5 mr-2" />
-                  用户影响力排名
-                </h4>
-                {/* 影响力网络图 */}
-                <InfluenceNetworkFlow
-                  users={influenceUsers}
-                />
-              </div>
-
-              {/* 地理传播分析 */}
-              <div className="bg-muted/20 rounded-lg p-6">
-                <h4 className="text-lg font-semibold text-foreground mb-4 flex items-center">
-                  <Globe className="w-5 h-5 mr-2" />
-                  地理传播分析
-                </h4>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div>
-                    <GeographicChart />
-                  </div>
-                  <div className="space-y-4">
-                    <h5 className="font-medium text-foreground">传播热点地区</h5>
-                    <div className="space-y-3">
-                      {geographicData.map((region: GeographicDataPoint, index: number) => (
-                        <div key={region.region} className="flex items-center justify-between p-3 bg-card/50 rounded-lg">
-                          <div className="flex items-center space-x-3">
-                            <span className="text-sm font-medium text-primary">#{index + 1}</span>
-                            <span className="text-foreground">{region.region}</span>
-                          </div>
-                          <div className="flex items-center space-x-4 text-sm">
-                            <span className="text-muted-foreground">{region.posts.toLocaleString()} 贴子</span>
-                            <span className="text-muted-foreground">{region.users.toLocaleString()} 用户</span>
-                            <span className={cn(
-                              'font-semibold',
-                              region.sentiment > 0.6 ? 'text-green-400' :
-                                region.sentiment < 0.4 ? 'text-red-400' : 'text-yellow-400'
-                            )}>
-                              {(region.sentiment * 100).toFixed(0)}% 正面
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {activeTab === 'development' && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-6"
-            >
-              <EventDevelopmentChart phases={eventData.developmentPhases} />
-            </motion.div>
-          )}
-
-          {activeTab === 'analysis' && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-6"
-            >
-              {/* 关键节点分析 */}
-              <div className="bg-muted/20 rounded-lg p-6">
-                <h3 className="text-foreground mb-6 flex items-center">
-                  <Target className="w-5 h-5 mr-2" />
-                  关键节点分析
-                </h3>
-
                 <div className="space-y-4">
-                  {eventData.keyNodes.map((node, index) => (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      className="bg-card/50 border border-border/50 rounded-lg p-6"
-                    >
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-3 mb-2">
-                            <span className="text-sm font-medium text-primary bg-primary/10 px-2 py-1 rounded">
-                              {node.time}
-                            </span>
-                            <span className={cn(
-                              'px-2 py-1 text-xs rounded-full font-medium',
-                              node.impact === 'high' && 'bg-red-500/20 text-red-400',
-                              node.impact === 'medium' && 'bg-yellow-500/20 text-yellow-400',
-                              node.impact === 'low' && 'bg-green-500/20 text-green-400'
-                            )}>
-                              {node.impact === 'high' ? '高影响' : node.impact === 'medium' ? '中影响' : '低影响'}
-                            </span>
+                  <h5 className="font-medium text-foreground">传播热点地区</h5>
+                  <div className="space-y-3">
+                    {geographicData.map((region: GeographicDataPoint, index: number) => (
+                      <div key={region.region} className="flex items-center justify-between p-3 bg-card/50 rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <span className="text-sm font-medium text-primary">#{index + 1}</span>
+                          <span className="text-foreground">{region.region}</span>
+                        </div>
+                        <div className="flex items-center space-x-4 text-sm">
+                          <span className="text-muted-foreground">{region.posts.toLocaleString()} 贴子</span>
+                          <span className="text-muted-foreground">{region.users.toLocaleString()} 用户</span>
+                          <span className={cn(
+                            'font-semibold',
+                            region.sentiment > 0.6 ? 'text-green-400' :
+                              region.sentiment < 0.4 ? 'text-red-400' : 'text-yellow-400'
+                          )}>
+                            {(region.sentiment * 100).toFixed(0)}% 正面
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </TabsContent>
+
+        <TabsContent value="development" className="p-6 mt-0">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
+            <EventDevelopmentChart phases={eventData.developmentPhases} />
+          </motion.div>
+        </TabsContent>
+
+        <TabsContent value="analysis" className="p-6 mt-0">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
+            {/* 关键节点分析 */}
+            <div className="bg-muted/20 rounded-lg p-6">
+              <h3 className="text-foreground mb-6 flex items-center">
+                <Target className="w-5 h-5 mr-2" />
+                关键节点分析
+              </h3>
+
+              <div className="space-y-4">
+                {eventData.keyNodes.map((node, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="bg-card/50 rounded-lg p-6"
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3 mb-2">
+                          <Badge variant="outline" className="text-primary bg-primary/10">
+                            {node.time}
+                          </Badge>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              node.impact === 'high' && 'bg-red-500/20 text-red-400 border-red-500/30',
+                              node.impact === 'medium' && 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+                              node.impact === 'low' && 'bg-green-500/20 text-green-400 border-green-500/30'
+                            )}
+                          >
+                            {node.impact === 'high' ? '高影响' : node.impact === 'medium' ? '中影响' : '低影响'}
+                          </Badge>
+                        </div>
+                        <p className="text-foreground mb-4 text-base">{node.description}</p>
+                        <div className="flex items-center space-x-8 text-sm">
+                          <div className="flex items-center space-x-2">
+                            <MessageSquare className="w-4 h-4 text-muted-foreground" />
+                            <span className="text-foreground font-semibold">{formatNumber(node.metrics.posts)}</span>
+                            <span className="text-muted-foreground">贴子</span>
                           </div>
-                          <p className="text-foreground mb-4 text-base">{node.description}</p>
-                          <div className="flex items-center space-x-8 text-sm">
-                            <div className="flex items-center space-x-2">
-                              <MessageSquare className="w-4 h-4 text-muted-foreground" />
-                              <span className="text-foreground font-semibold">{formatNumber(node.metrics.posts)}</span>
-                              <span className="text-muted-foreground">贴子</span>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <Users className="w-4 h-4 text-muted-foreground" />
-                              <span className="text-foreground font-semibold">{formatNumber(node.metrics.users)}</span>
-                              <span className="text-muted-foreground">用户</span>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <Heart className="w-4 h-4 text-muted-foreground" />
-                              <span className="text-foreground font-semibold">{(node.metrics.sentiment * 100).toFixed(1)}%</span>
-                              <span className="text-muted-foreground">正面情感</span>
-                            </div>
+                          <div className="flex items-center space-x-2">
+                            <Users className="w-4 h-4 text-muted-foreground" />
+                            <span className="text-foreground font-semibold">{formatNumber(node.metrics.users)}</span>
+                            <span className="text-muted-foreground">用户</span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Heart className="w-4 h-4 text-muted-foreground" />
+                            <span className="text-foreground font-semibold">{(node.metrics.sentiment * 100).toFixed(1)}%</span>
+                            <span className="text-muted-foreground">正面情感</span>
                           </div>
                         </div>
                       </div>
-                    </motion.div>
-                  ))}
-                </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+
+            {/* 深度分析洞察 */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-muted/20 rounded-lg p-6">
+                <h4 className="text-lg font-semibold text-foreground mb-4 flex items-center">
+                  <Activity className="w-5 h-5 mr-2" />
+                  事件发展模式
+                </h4>
+                {eventData.developmentPattern ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-3 bg-card/50 rounded-lg">
+                      <span className="text-foreground">爆发速度</span>
+                      <span className="text-green-400 font-semibold">{eventData.developmentPattern.outbreakSpeed}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-card/50 rounded-lg">
+                      <span className="text-foreground">传播范围</span>
+                      <span className="text-blue-400 font-semibold">{eventData.developmentPattern.propagationScope}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-card/50 rounded-lg">
+                      <span className="text-foreground">持续时间</span>
+                      <span className="text-yellow-400 font-semibold">{eventData.developmentPattern.duration}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-card/50 rounded-lg">
+                      <span className="text-foreground">影响深度</span>
+                      <span className="text-red-400 font-semibold">{eventData.developmentPattern.impactDepth}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-muted-foreground text-sm">暂无发展模式数据</div>
+                )}
               </div>
 
-              {/* 深度分析洞察 */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-muted/20 rounded-lg p-6">
-                  <h4 className="text-lg font-semibold text-foreground mb-4 flex items-center">
-                    <Activity className="w-5 h-5 mr-2" />
-                    事件发展模式
-                  </h4>
-                  {eventData.developmentPattern ? (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between p-3 bg-card/50 rounded-lg">
-                        <span className="text-foreground">爆发速度</span>
-                        <span className="text-green-400 font-semibold">{eventData.developmentPattern.outbreakSpeed}</span>
-                      </div>
-                      <div className="flex items-center justify-between p-3 bg-card/50 rounded-lg">
-                        <span className="text-foreground">传播范围</span>
-                        <span className="text-blue-400 font-semibold">{eventData.developmentPattern.propagationScope}</span>
-                      </div>
-                      <div className="flex items-center justify-between p-3 bg-card/50 rounded-lg">
-                        <span className="text-foreground">持续时间</span>
-                        <span className="text-yellow-400 font-semibold">{eventData.developmentPattern.duration}</span>
-                      </div>
-                      <div className="flex items-center justify-between p-3 bg-card/50 rounded-lg">
-                        <span className="text-foreground">影响深度</span>
-                        <span className="text-red-400 font-semibold">{eventData.developmentPattern.impactDepth}</span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-muted-foreground text-sm">暂无发展模式数据</div>
-                  )}
-                </div>
-
-                <div className="bg-muted/20 rounded-lg p-6">
-                  <h4 className="text-lg font-semibold text-foreground mb-4 flex items-center">
-                    <Zap className="w-5 h-5 mr-2" />
-                    关键成功因素
-                  </h4>
-                  {eventData.successFactors && eventData.successFactors.length > 0 ? (
-                    <div className="space-y-3">
-                      {eventData.successFactors.map((factor, index) => {
-                        const colors = ['green', 'blue', 'purple', 'yellow', 'red'];
-                        const color = colors[index % colors.length];
-                        return (
-                          <div key={index} className="flex items-start space-x-3">
-                            <div className={`w-2 h-2 bg-${color}-400 rounded-full mt-2`}></div>
-                            <div>
-                              <div className="text-foreground font-medium">{factor.title}</div>
-                              <div className="text-muted-foreground text-sm">{factor.description}</div>
-                            </div>
+              <div className="bg-muted/20 rounded-lg p-6">
+                <h4 className="text-lg font-semibold text-foreground mb-4 flex items-center">
+                  <Zap className="w-5 h-5 mr-2" />
+                  关键成功因素
+                </h4>
+                {eventData.successFactors && eventData.successFactors.length > 0 ? (
+                  <div className="space-y-3">
+                    {eventData.successFactors.map((factor, index) => {
+                      const colors = ['green', 'blue', 'purple', 'yellow', 'red'];
+                      const color = colors[index % colors.length];
+                      return (
+                        <div key={index} className="flex items-start space-x-3">
+                          <div className={`w-2 h-2 bg-${color}-400 rounded-full mt-2`}></div>
+                          <div>
+                            <div className="text-foreground font-medium">{factor.title}</div>
+                            <div className="text-muted-foreground text-sm">{factor.description}</div>
                           </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="text-muted-foreground text-sm">暂无成功因素分析</div>
-                  )}
-                </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-muted-foreground text-sm">暂无成功因素分析</div>
+                )}
               </div>
-            </motion.div>
-          )}
-        </div>
-      </div>
+            </div>
+          </motion.div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
