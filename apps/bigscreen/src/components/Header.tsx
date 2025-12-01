@@ -54,7 +54,7 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
   const isTimeRangeValue = (value: string): value is TimeRangeValue =>
     timeRangeOptions.some(option => option.value === value);
 
-  // 页面导航选项
+  // 页面导航选项 - 简洁的9宫格设计
   const navigationOptions = [
     {
       id: 'data-overview',
@@ -219,56 +219,107 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
           <PopoverContent
             align="end"
             sideOffset={8}
-            className="w-72 glass-card rounded-xl shadow-xl overflow-hidden p-0"
+            className="w-[520px] glass-card rounded-xl shadow-2xl overflow-hidden p-0 border border-border/50"
           >
-            {/* 顶部轻微渐变 */}
-            <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-primary/3 to-transparent pointer-events-none" />
+            {/* 顶部渐变装饰 */}
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent pointer-events-none" />
 
-            <div className="relative p-5">
-              <h3 className="font-semibold text-foreground mb-4 flex items-center">
-                <Settings className="w-4 h-4 mr-2 text-primary" />
-                快速导航
-              </h3>
-              <div className="space-y-2">
-                {navigationOptions.map((option, index) => {
-                  const IconComponent = option.icon;
-                  const isActive = window.location.pathname === option.path;
+            <div className="relative">
+              {/* 标题区域 */}
+              <div className="backdrop-blur-xl bg-background/80 border-b border-border/30 px-5 py-3">
+                <h3 className="font-semibold text-base text-foreground flex items-center gap-2">
+                  <div className="p-1 rounded-lg bg-primary/10">
+                    <Settings className="w-3.5 h-3.5 text-primary" />
+                  </div>
+                  快速导航
+                </h3>
+              </div>
 
-                  return (
-                    <button
-                      key={option.id}
-                      onClick={() => navigate(option.path)}
-                      style={{ animationDelay: `${index * 50}ms` }}
-                      className={cn(
-                        'w-full text-left p-3.5 rounded-xl transition-all duration-300 group relative overflow-hidden',
-                        isActive
-                          ? 'bg-gradient-to-br from-primary to-primary/90 text-primary-foreground shadow-lg shadow-primary/20'
-                          : 'hover:bg-muted/30 text-foreground'
-                      )}
-                    >
-                      {/* 活动状态渐变装饰 */}
-                      {isActive && (
-                        <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-events-none" />
-                      )}
+              {/* 3x3网格导航 */}
+              <div className="p-4">
+                <div className="grid grid-cols-3 gap-2.5">
+                  {navigationOptions.map((option, index) => {
+                    const IconComponent = option.icon;
+                    const isActive = window.location.pathname === option.path;
 
-                      <div className="relative flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="font-medium flex items-center">
-                            {option.label}
+                    return (
+                      <button
+                        key={option.id}
+                        onClick={() => navigate(option.path)}
+                        style={{ animationDelay: `${index * 40}ms` }}
+                        className={cn(
+                          'relative group overflow-hidden rounded-lg transition-all duration-300',
+                          'hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]',
+                          'flex flex-col items-center justify-center gap-2 p-3',
+                          'min-h-[100px]',
+                          isActive
+                            ? 'bg-gradient-to-br from-primary via-primary to-primary/90 text-primary-foreground shadow-md shadow-primary/25 ring-1 ring-primary/20'
+                            : 'bg-muted/20 hover:bg-muted/30 text-foreground border border-border/20 hover:border-primary/20'
+                        )}
+                      >
+                        {/* 活动状态装饰 */}
+                        {isActive && (
+                          <div className="absolute inset-0 bg-gradient-to-br from-white/15 via-transparent to-transparent pointer-events-none" />
+                        )}
+
+                        {/* 悬停光效 */}
+                        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent" />
+                        </div>
+
+                        {/* 图标 */}
+                        <div className={cn(
+                          "relative p-2.5 rounded-lg transition-all duration-300",
+                          "group-hover:scale-105",
+                          isActive
+                            ? "bg-white/15"
+                            : "bg-background/40 group-hover:bg-primary/10"
+                        )}>
+                          <IconComponent className={cn(
+                            "w-5 h-5 transition-all duration-300",
+                            isActive
+                              ? "text-primary-foreground"
+                              : "text-foreground group-hover:text-primary"
+                          )} />
+                        </div>
+
+                        {/* 文本内容 */}
+                        <div className="relative text-center space-y-0.5">
+                          <div className={cn(
+                            "font-medium text-xs flex items-center justify-center gap-1",
+                            "transition-colors duration-300"
+                          )}>
+                            <span className="truncate max-w-[120px]">{option.label}</span>
                             {isActive && (
-                              <div className="ml-2 w-1.5 h-1.5 bg-current rounded-full animate-pulse" />
+                              <div className="flex-shrink-0 w-1 h-1 bg-current rounded-full animate-pulse" />
                             )}
                           </div>
-                          <div className="text-xs opacity-70 mt-0.5">{option.description}</div>
+                          <div className={cn(
+                            "text-[10px] line-clamp-2 transition-colors duration-300 leading-snug",
+                            isActive
+                              ? "text-primary-foreground/70"
+                              : "text-muted-foreground group-hover:text-foreground/70"
+                          )}>
+                            {option.description}
+                          </div>
                         </div>
-                        <IconComponent className={cn(
-                          "w-4 h-4 transition-all duration-300",
-                          isActive ? "" : "group-hover:scale-110 group-hover:rotate-12"
-                        )} />
-                      </div>
-                    </button>
-                  );
-                })}
+
+                        {/* 角标装饰 */}
+                        {isActive && (
+                          <div className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-white/40 rounded-full animate-ping" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 底部提示 */}
+              <div className="backdrop-blur-xl bg-background/80 border-t border-border/30 px-4 py-2">
+                <p className="text-[10px] text-center text-muted-foreground flex items-center justify-center gap-1.5">
+                  <kbd className="px-1.5 py-0.5 rounded bg-muted/80 text-foreground text-[9px] font-mono">ESC</kbd>
+                  <span className="opacity-50">关闭</span>
+                </p>
               </div>
             </div>
           </PopoverContent>
