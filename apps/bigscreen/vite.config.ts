@@ -166,7 +166,7 @@ export default defineConfig(({ command }) => {
 
         // Tree shaking优化
         treeshake: {
-          moduleSideEffects: false, // 改为 false 减少内存使用
+          moduleSideEffects: true, // 必须设为 true，否则 React 组件会被 tree-shake 掉
           propertyReadSideEffects: false,
           tryCatchDeoptimization: false,
         },
