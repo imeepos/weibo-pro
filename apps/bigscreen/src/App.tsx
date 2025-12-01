@@ -11,7 +11,6 @@ import UserRelationTopology from '@/pages/UserRelationTopology';
 import { LayoutDemo } from '@/pages/LayoutDemo';
 import BleMeshTopology from '@/pages/BleMeshTopology';
 import WorkflowEditor from '@/pages/WorkflowEditor';
-import WorkflowDemo from '@/pages/WorkflowDemo';
 import CrawlerControl from '@/pages/CrawlerControl';
 import HeroDemo from '@/pages/HeroDemo';
 import { useTheme } from '@/hooks/useTheme';
@@ -305,25 +304,6 @@ const App: React.FC = () => {
                       transition={{ duration: 0.3 }}
                     >
                       <WorkflowEditor />
-                    </motion.div>
-                  </AnimatePresence>
-                </Layout>
-              }
-            />
-            <Route
-              path="/workflow-demo"
-              element={
-                <Layout>
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key="workflow-demo"
-                      className="h-full"
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 1.05 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <WorkflowDemo />
                     </motion.div>
                   </AnimatePresence>
                 </Layout>

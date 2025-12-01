@@ -6,7 +6,7 @@ import "./index.js";
 import { DataFlowManager, EdgeMode, executeAst, generateId, WorkflowGraphAst } from "@sker/workflow";
 import { EventAutoCreatorAst, PostContextCollectorAst, PostNLPAnalyzerAst, WeiboAjaxFeedHotTimelineAst, WeiboAjaxStatusesCommentAst, WeiboAjaxStatusesLikeShowAst, WeiboAjaxStatusesRepostTimelineAst, WeiboAjaxStatusesShowAst } from "@sker/workflow-ast";
 import { root } from "@sker/core";
-import { providers } from '@sker/sdk'
+import { providers } from '@sker/sdk';
 
 async function bootstrap() {
 

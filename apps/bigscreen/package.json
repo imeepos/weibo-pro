@@ -25,6 +25,7 @@
     "@sker/workflow": "workspace:*",
     "@sker/workflow-ast": "workspace:*",
     "@sker/workflow-ui": "workspace:*",
+    "@sker/workflow-browser": "workspace:*",
     "@types/three": "^0.181.0",
     "axios": "1.7.9",
     "clsx": "^2.0.0",

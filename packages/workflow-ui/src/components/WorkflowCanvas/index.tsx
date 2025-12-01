@@ -6,6 +6,7 @@ import {
   MiniMap,
   BackgroundVariant,
   SelectionMode,
+  ReactFlowProvider,
   type Connection,
   type NodeChange,
   type EdgeChange,
@@ -73,15 +74,11 @@ export interface WorkflowCanvasProps {
 }
 
 /**
- * 工作流画布组件 - 重构版
+ * 工作流画布内部组件
  *
- * 优雅设计：
- * - 职责单一：只负责组件组合和基础状态管理
- * - 业务逻辑委托给专门的钩子
- * - UI组件纯粹化，不包含业务逻辑
- * - 代码简洁，易于维护
+ * 职责：包含所有需要访问 ReactFlow 上下文的逻辑
  */
-export function WorkflowCanvas({
+function WorkflowCanvasInner({
   workflowAst,
   showMiniMap = true,
   showControls = true,
@@ -390,105 +387,104 @@ export function WorkflowCanvas({
   return (
     <div
       className={cn(
-        'workflow-canvas relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-[#111318] text-white',
+        'workflow-canvas relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-background text-foreground',
         className
       )}
     >
       <div className="relative flex flex-1 overflow-hidden">
         <div className="relative flex flex-1">
           <ReactFlow
-            nodes={workflow.nodes}
-            edges={workflow.edges}
-            onNodesChange={handleNodesChangeInternal}
-            onEdgesChange={handleEdgesChangeInternal}
-            onConnect={handleConnectInternal}
-            onConnectStart={handleConnectStart}
-            onConnectEnd={handleConnectEnd}
-            onNodeClick={onNodeClick}
-            onPaneClick={onPaneClick}
-            onNodesDelete={handleNodesDelete}
-            onEdgesDelete={handleEdgesDelete}
-            onPaneContextMenu={onPaneContextMenu}
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            nodeTypes={createNodeTypes()}
-            edgeTypes={edgeTypes}
-            panOnScroll
-            selectionOnDrag={true}
-            panOnDrag={[1, 2]}
-            selectionMode={SelectionMode.Partial}
-            fitView={!workflow.workflowAst.viewport}
-            deleteKeyCode="Delete"
-            snapToGrid={snapToGrid}
-            nodesDraggable={true}
-            nodesConnectable={true}
-            elementsSelectable={true}
-            minZoom={0.1}
-            maxZoom={4}
-            zoomOnDoubleClick={false}
-            className="workflow-canvas__reactflow"
-            style={{ background: '#1a1d24' }}
-          >
-            {showBackground && (
-              <Background
-                variant={BackgroundVariant.Dots}
-                gap={24}
-                size={1}
-                color="#2f3542"
+              nodes={workflow.nodes}
+              edges={workflow.edges}
+              onNodesChange={handleNodesChangeInternal}
+              onEdgesChange={handleEdgesChangeInternal}
+              onConnect={handleConnectInternal}
+              onConnectStart={handleConnectStart}
+              onConnectEnd={handleConnectEnd}
+              onNodeClick={onNodeClick}
+              onPaneClick={onPaneClick}
+              onNodesDelete={handleNodesDelete}
+              onEdgesDelete={handleEdgesDelete}
+              onPaneContextMenu={onPaneContextMenu}
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              nodeTypes={createNodeTypes()}
+              edgeTypes={edgeTypes}
+              panOnScroll
+              selectionOnDrag={true}
+              panOnDrag={[1, 2]}
+              selectionMode={SelectionMode.Partial}
+              fitView={!workflow.workflowAst.viewport}
+              deleteKeyCode="Delete"
+              snapToGrid={snapToGrid}
+              nodesDraggable={true}
+              nodesConnectable={true}
+              elementsSelectable={true}
+              minZoom={0.1}
+              maxZoom={4}
+              zoomOnDoubleClick={false}
+              className="workflow-canvas__reactflow bg-[var(--workflow-canvas-bg)]"
+            >
+              {showBackground && (
+                <Background
+                  variant={BackgroundVariant.Dots}
+                  gap={24}
+                  size={1}
+                  className="[--xy-background-pattern-color:var(--workflow-grid-color)]"
+                />
+              )}
+              {showMiniMap && (
+                <MiniMap
+                  className="!bg-background/80 !text-muted-foreground"
+                  maskColor="var(--workflow-minimap-mask)"
+                  pannable
+                  zoomable
+                />
+              )}
+            </ReactFlow>
+
+            {isCanvasEmpty && <CanvasEmptyState />}
+
+            {showControls && (
+              <CanvasControls
+                onRunWorkflow={() => runWorkflow(() => {
+                  // 运行完成后的回调，可以在这里添加完成逻辑
+                  console.log('工作流执行完成')
+                })}
+                onSaveWorkflow={() => saveWorkflow(workflow.workflowAst?.name || 'Untitled')}
+                onExportWorkflow={exportWorkflow}
+                onImportWorkflow={importWorkflow}
+                onOpenWorkflowSettings={openWorkflowSettingsDialog}
+                onOpenScheduleDialog={() => {
+                  const workflowName = workflow.workflowAst?.name
+                  if (workflowName) {
+                    openScheduleDialog(workflowName)
+                  } else {
+                    showToast('error', '请先保存工作流', '只有保存的工作流才能创建调度')
+                  }
+                }}
+                onOpenScheduleList={() => {
+                  const workflowName = workflow.workflowAst?.name
+                  if (workflowName) {
+                    openSchedulePanel(workflowName)
+                  } else {
+                    showToast('error', '请先保存工作流', '只有保存的工作流才能查看调度')
+                  }
+                }}
+                onZoomIn={handleZoomIn}
+                onZoomOut={handleZoomOut}
+                onFitView={handleFitView}
+                onCollapseNodes={collapseNodes}
+                onExpandNodes={expandNodes}
+                onAutoLayout={autoLayout}
+                isRunning={false} // 需要从状态管理获取
+                isSaving={false}  // 需要从状态管理获取
               />
             )}
-            {showMiniMap && (
-              <MiniMap
-                className="!bg-[#111318]/80 !text-[#9da6b9]"
-                maskColor="rgba(17, 19, 24, 0.85)"
-                pannable
-                zoomable
-              />
-            )}
-          </ReactFlow>
-
-          {isCanvasEmpty && <CanvasEmptyState />}
-
-          {showControls && (
-            <CanvasControls
-              onRunWorkflow={() => runWorkflow(() => {
-                // 运行完成后的回调，可以在这里添加完成逻辑
-                console.log('工作流执行完成')
-              })}
-              onSaveWorkflow={() => saveWorkflow(workflow.workflowAst?.name || 'Untitled')}
-              onExportWorkflow={exportWorkflow}
-              onImportWorkflow={importWorkflow}
-              onOpenWorkflowSettings={openWorkflowSettingsDialog}
-              onOpenScheduleDialog={() => {
-                const workflowName = workflow.workflowAst?.name
-                if (workflowName) {
-                  openScheduleDialog(workflowName)
-                } else {
-                  showToast('error', '请先保存工作流', '只有保存的工作流才能创建调度')
-                }
-              }}
-              onOpenScheduleList={() => {
-                const workflowName = workflow.workflowAst?.name
-                if (workflowName) {
-                  openSchedulePanel(workflowName)
-                } else {
-                  showToast('error', '请先保存工作流', '只有保存的工作流才能查看调度')
-                }
-              }}
-              onZoomIn={handleZoomIn}
-              onZoomOut={handleZoomOut}
-              onFitView={handleFitView}
-              onCollapseNodes={collapseNodes}
-              onExpandNodes={expandNodes}
-              onAutoLayout={autoLayout}
-              isRunning={false} // 需要从状态管理获取
-              isSaving={false}  // 需要从状态管理获取
-            />
-          )}
+          </div>
         </div>
-      </div>
 
-      <ContextMenu
+        <ContextMenu
         menu={menu}
         onFitView={handleFitView}
         onCenterView={handleCenterView}
@@ -602,6 +598,22 @@ export function WorkflowCanvas({
         />
       )}
     </div>
+  )
+}
+
+WorkflowCanvasInner.displayName = 'WorkflowCanvasInner'
+
+/**
+ * 工作流画布组件 - 外层容器
+ *
+ * 职责：提供 ReactFlowProvider 上下文
+ * 优雅设计：最小化的包装，仅负责提供必要的上下文
+ */
+export function WorkflowCanvas(props: WorkflowCanvasProps) {
+  return (
+    <ReactFlowProvider>
+      <WorkflowCanvasInner {...props} />
+    </ReactFlowProvider>
   )
 }
 

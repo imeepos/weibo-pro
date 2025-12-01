@@ -59,6 +59,9 @@
   --node-idle-foreground: oklch(1 0 0);
   --node-emitting: oklch(0.6 0.2 290);
   --node-emitting-foreground: oklch(0.95 0.05 290);
+  --workflow-canvas-bg: oklch(0.985 0 0);
+  --workflow-grid-color: oklch(0.85 0 0);
+  --workflow-minimap-mask: rgba(249, 250, 251, 0.85);
 }
 
 .dark {
@@ -110,6 +113,9 @@
   --node-idle-foreground: oklch(0.145 0 0);
   --node-emitting: oklch(0.5 0.18 290);
   --node-emitting-foreground: oklch(0.2 0.05 290);
+  --workflow-canvas-bg: oklch(0.175 0 0);
+  --workflow-grid-color: oklch(0.3 0 0);
+  --workflow-minimap-mask: rgba(17, 19, 24, 0.85);
 }
 
 @theme inline {
@@ -165,6 +171,9 @@
   --color-node-idle-foreground: var(--node-idle-foreground);
   --color-node-emitting: var(--node-emitting);
   --color-node-emitting-foreground: var(--node-emitting-foreground);
+  --workflow-canvas-bg: var(--workflow-canvas-bg);
+  --workflow-grid-color: var(--workflow-grid-color);
+  --workflow-minimap-mask: var(--workflow-minimap-mask);
 }
 
 @layer base {

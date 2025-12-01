@@ -170,8 +170,8 @@ export const findEventList = (
       .leftJoinAndSelect('event.category', 'category')
       .where('event.deleted_at IS NULL')
       .andWhere('event.status = :status', { status: 'active' })
-      .andWhere('event.occurred_at >= :start', { start: dateRange.start })
-      .andWhere('event.occurred_at <= :end', { end: dateRange.end });
+      .andWhere('event.created_at >= :start', { start: dateRange.start })
+      .andWhere('event.created_at <= :end', { end: dateRange.end });
 
     if (options?.category) {
       query = query.andWhere('category.name = :category', { category: options.category });
@@ -186,7 +186,7 @@ export const findEventList = (
 
     return await query
       .orderBy('event.hotness', 'DESC')
-      .addOrderBy('event.occurred_at', 'DESC')
+      .addOrderBy('event.created_at', 'DESC')
       .limit(options?.limit || 20)
       .getMany();
   });
@@ -203,8 +203,8 @@ export const getEventCategoryStats = (timeRange: TimeRange = '24h') =>
       .addSelect('COUNT(event.id)', 'count')
       .where('event.deleted_at IS NULL')
       .andWhere('event.status = :status', { status: 'active' })
-      .andWhere('event.occurred_at >= :start', { start: dateRange.start })
-      .andWhere('event.occurred_at <= :end', { end: dateRange.end })
+      .andWhere('event.created_at >= :start', { start: dateRange.start })
+      .andWhere('event.created_at <= :end', { end: dateRange.end })
       .groupBy('category.name')
       .orderBy('count', 'DESC');
 

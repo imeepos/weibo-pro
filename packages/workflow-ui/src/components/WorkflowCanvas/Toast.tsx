@@ -20,7 +20,7 @@ export function Toast({
   type,
   title,
   message,
-  duration = 5000,
+  duration = 3000,
   onClose,
 }: ToastProps) {
   useEffect(() => {
@@ -63,7 +63,7 @@ export function Toast({
   const colorScheme = colors[type]
 
   const toastContent = (
-    <div className="pointer-events-none fixed right-4 top-4 z-[10000] flex justify-end">
+    <div className="pointer-events-none absolute right-4 top-4 z-[10000] flex justify-end" style={{ zIndex: 10000 }}>
       <div
         className={`pointer-events-auto flex max-w-md items-start gap-3 rounded-xl border ${colorScheme.border} ${colorScheme.bg} p-4 shadow-2xl backdrop-blur-xl`}
         role="alert"
