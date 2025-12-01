@@ -112,11 +112,11 @@ export function RunConfigDialog({
         className="fixed inset-0 z-[9998] bg-black/60 backdrop-blur-sm"
         onClick={handleCancel}
       />
-      <div className="fixed left-1/2 top-1/2 z-[9999] w-full max-w-2xl max-h-[80vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-[#2f3543] bg-[#111318] shadow-2xl overflow-hidden flex flex-col">
+      <div className="fixed left-1/2 top-1/2 z-[9999] w-full max-w-2xl max-h-[80vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-card shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-[#2f3543] p-6">
+        <div className="flex items-center justify-between border-b border-border p-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1f2531] text-[#135bec]">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-primary">
               <Settings className="h-5 w-5" strokeWidth={1.8} />
             </div>
             <h3 className="text-lg font-semibold text-white">运行配置</h3>
@@ -124,7 +124,7 @@ export function RunConfigDialog({
           <button
             type="button"
             onClick={handleCancel}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-[#9da6b9] transition hover:bg-[#1f2531] hover:text-white"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-secondary hover:text-white"
           >
             <X className="h-5 w-5" strokeWidth={1.8} />
           </button>
@@ -134,10 +134,10 @@ export function RunConfigDialog({
         <div className="flex-1 overflow-y-auto p-6">
           {inputFields.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#1f2531] text-[#6c7a91]">
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-secondary text-muted-foreground/70">
                 <Settings className="h-8 w-8" strokeWidth={1.5} />
               </div>
-              <p className="text-sm text-[#6c7a91]">
+              <p className="text-sm text-muted-foreground/70">
                 此工作流不需要配置输入参数
               </p>
             </div>
@@ -148,7 +148,7 @@ export function RunConfigDialog({
 
                 return (
                   <div key={fullKey}>
-                    <label className="mb-2 block text-sm font-medium text-[#9da6b9]">
+                    <label className="mb-2 block text-sm font-medium text-muted-foreground">
                       {field.nodeName} - {field.propertyLabel}
                     </label>
                     {renderInputField(field, fullKey, handleInputChange)}
@@ -160,18 +160,18 @@ export function RunConfigDialog({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 border-t border-[#2f3543] p-6">
+        <div className="flex items-center justify-end gap-3 border-t border-border p-6">
           <button
             type="button"
             onClick={handleCancel}
-            className="rounded-lg border border-[#2f3543] bg-[#1a1d24] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1f2531] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#135bec] focus-visible:ring-offset-2 focus-visible:ring-offset-[#111318]"
+            className="rounded-lg border border-border bg-secondary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-card"
           >
             取消
           </button>
           <button
             type="button"
             onClick={handleConfirm}
-            className="inline-flex items-center gap-2 rounded-lg bg-[#135bec] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1b6aff] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#135bec] focus-visible:ring-offset-2 focus-visible:ring-offset-[#111318]"
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-card"
           >
             <Play className="h-4 w-4" strokeWidth={2} />
             <span>开始运行</span>
@@ -195,7 +195,7 @@ function renderInputField(
   onChange: (key: string, value: any) => void
 ) {
   const baseInputClass =
-    'w-full rounded-lg border border-[#2f3543] bg-[#1a1d24] px-4 py-2.5 text-sm text-white focus:border-[#135bec] focus:outline-none focus:ring-2 focus:ring-[#135bec]/20'
+    'w-full rounded-lg border border-border bg-secondary px-4 py-2.5 text-sm text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20'
 
   switch (field.type) {
     case 'string':
@@ -237,9 +237,9 @@ function renderInputField(
             type="checkbox"
             checked={field.value || false}
             onChange={(e) => onChange(fullKey, e.target.checked)}
-            className="h-4 w-4 rounded border-[#2f3543] bg-[#1a1d24] text-[#135bec] focus:ring-2 focus:ring-[#135bec]/20 focus:ring-offset-2 focus:ring-offset-[#111318]"
+            className="h-4 w-4 rounded border-border bg-secondary text-primary focus:ring-2 focus:ring-primary/20 focus:ring-offset-2 focus:ring-offset-card"
           />
-          <span className="text-sm text-[#9da6b9]">启用</span>
+          <span className="text-sm text-muted-foreground">启用</span>
         </label>
       )
 

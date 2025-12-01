@@ -68,11 +68,13 @@ export const WorkflowControls: React.FC<WorkflowControlsProps> = ({
   isSaving = false,
   className,
 }) => {
+  const buttonClassName = 'h-9 w-9 text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+
   return (
     <div
       className={cn(
-        'flex flex-col gap-2 rounded-xl border border-[#282e39] bg-[#111318] p-1.5',
-        'shadow-lg shadow-black/30',
+        'flex flex-col gap-2 rounded-xl border border-border bg-card p-1.5',
+        'shadow-lg shadow-black/20 dark:shadow-black/40',
         className
       )}
     >
@@ -85,7 +87,7 @@ export const WorkflowControls: React.FC<WorkflowControlsProps> = ({
           disabled={isRunning}
           title={isRunning ? '运行中...' : '运行工作流'}
           className={cn(
-            'h-9 w-9 text-[#9da6b9] hover:bg-[#282e39] hover:text-white',
+            buttonClassName,
             'disabled:opacity-50 disabled:cursor-not-allowed'
           )}
         >
@@ -100,7 +102,7 @@ export const WorkflowControls: React.FC<WorkflowControlsProps> = ({
           size="icon-sm"
           onClick={onSettings}
           title="工作流设置"
-          className="h-9 w-9 text-[#9da6b9] hover:bg-[#282e39] hover:text-white"
+          className={buttonClassName}
         >
           <SettingsIcon className="h-4 w-4" strokeWidth={2} />
         </Button>
@@ -113,7 +115,7 @@ export const WorkflowControls: React.FC<WorkflowControlsProps> = ({
           size="icon-sm"
           onClick={onScheduleList}
           title="调度管理"
-          className="h-9 w-9 text-[#9da6b9] hover:bg-[#282e39] hover:text-white"
+          className={buttonClassName}
         >
           <Clock className="h-4 w-4" strokeWidth={2} />
         </Button>
@@ -128,7 +130,7 @@ export const WorkflowControls: React.FC<WorkflowControlsProps> = ({
           disabled={isSaving}
           title={isSaving ? '保存中...' : '保存工作流'}
           className={cn(
-            'h-9 w-9 text-[#9da6b9] hover:bg-[#282e39] hover:text-white',
+            buttonClassName,
             'disabled:opacity-50 disabled:cursor-not-allowed'
           )}
         >
@@ -143,7 +145,7 @@ export const WorkflowControls: React.FC<WorkflowControlsProps> = ({
           size="icon-sm"
           onClick={onZoomIn}
           title="放大"
-          className="h-9 w-9 text-[#9da6b9] hover:bg-[#282e39] hover:text-white"
+          className={buttonClassName}
         >
           <ZoomIn className="h-4 w-4" strokeWidth={2} />
         </Button>
@@ -155,7 +157,7 @@ export const WorkflowControls: React.FC<WorkflowControlsProps> = ({
           size="icon-sm"
           onClick={onZoomOut}
           title="缩小"
-          className="h-9 w-9 text-[#9da6b9] hover:bg-[#282e39] hover:text-white"
+          className={buttonClassName}
         >
           <ZoomOut className="h-4 w-4" strokeWidth={2} />
         </Button>
@@ -167,7 +169,7 @@ export const WorkflowControls: React.FC<WorkflowControlsProps> = ({
           size="icon-sm"
           onClick={onFitView}
           title="适应视图"
-          className="h-9 w-9 text-[#9da6b9] hover:bg-[#282e39] hover:text-white"
+          className={buttonClassName}
         >
           <Maximize2 className="h-4 w-4" strokeWidth={2} />
         </Button>
@@ -180,7 +182,7 @@ export const WorkflowControls: React.FC<WorkflowControlsProps> = ({
           size="icon-sm"
           onClick={onImport}
           title="导入工作流"
-          className="h-9 w-9 text-[#9da6b9] hover:bg-[#282e39] hover:text-white"
+          className={buttonClassName}
         >
           <UploadIcon className="h-4 w-4" strokeWidth={2} />
         </Button>
@@ -192,7 +194,7 @@ export const WorkflowControls: React.FC<WorkflowControlsProps> = ({
           size="icon-sm"
           onClick={onExport}
           title="导出工作流"
-          className="h-9 w-9 text-[#9da6b9] hover:bg-[#282e39] hover:text-white"
+          className={buttonClassName}
         >
           <Download className="h-4 w-4" strokeWidth={2} />
         </Button>
@@ -200,7 +202,7 @@ export const WorkflowControls: React.FC<WorkflowControlsProps> = ({
 
       {/* 分隔线 */}
       {(onCollapseNodes || onExpandNodes || onAutoLayout) && (
-        <div className="my-1 h-px bg-[#282e39]" />
+        <div className="my-1 h-px bg-border" />
       )}
 
       {/* 折叠/展开 */}
@@ -210,7 +212,7 @@ export const WorkflowControls: React.FC<WorkflowControlsProps> = ({
           size="icon-sm"
           onClick={onCollapseNodes}
           title="折叠节点（有选中时仅折叠选中的，无选中时折叠全部）&#10;快捷键: Ctrl+Shift+C"
-          className="h-9 w-9 text-[#9da6b9] hover:bg-[#282e39] hover:text-white"
+          className={buttonClassName}
         >
           <Minimize2 className="h-4 w-4" strokeWidth={2} />
         </Button>
@@ -222,7 +224,7 @@ export const WorkflowControls: React.FC<WorkflowControlsProps> = ({
           size="icon-sm"
           onClick={onExpandNodes}
           title="展开节点（有选中时仅展开选中的，无选中时展开全部）&#10;快捷键: Ctrl+Shift+E"
-          className="h-9 w-9 text-[#9da6b9] hover:bg-[#282e39] hover:text-white"
+          className={buttonClassName}
         >
           <Maximize2 className="h-4 w-4" strokeWidth={2} />
         </Button>
@@ -231,13 +233,13 @@ export const WorkflowControls: React.FC<WorkflowControlsProps> = ({
       {/* 自动布局 */}
       {onAutoLayout && (
         <>
-          <div className="my-1 h-px bg-[#282e39]" />
+          <div className="my-1 h-px bg-border" />
           <Button
             variant="ghost"
             size="icon-sm"
             onClick={onAutoLayout}
             title="自动布局（基于拓扑结构重新排列节点）&#10;快捷键: Ctrl+Shift+L"
-            className="h-9 w-9 text-[#9da6b9] hover:bg-[#282e39] hover:text-white"
+            className={buttonClassName}
           >
             <LayoutGrid className="h-4 w-4" strokeWidth={2} />
           </Button>

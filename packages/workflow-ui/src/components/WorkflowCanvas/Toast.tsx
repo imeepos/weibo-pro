@@ -72,13 +72,13 @@ export function Toast({
         <div className="flex-1">
           <h4 className={`text-sm font-semibold ${colorScheme.text}`}>{title}</h4>
           {message && (
-            <p className="mt-1 text-sm text-[#9da6b9]">{message}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{message}</p>
           )}
         </div>
         <button
           type="button"
           onClick={onClose}
-          className="flex-shrink-0 rounded-lg p-1 text-[#9da6b9] transition hover:bg-white/10 hover:text-white"
+          className="flex-shrink-0 rounded-lg p-1 text-muted-foreground transition hover:bg-white/10 hover:text-white"
         >
           <X className="h-4 w-4" strokeWidth={1.8} />
         </button>

@@ -64,6 +64,7 @@ export interface WorkflowCanvasControlsProps {
 
 export interface WorkflowMinimapProps {
   className?: string
+  nodeColor?: (node: any) => string
 }
 
 export interface WorkflowCanvasState {

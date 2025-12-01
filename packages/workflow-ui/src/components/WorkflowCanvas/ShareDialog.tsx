@@ -31,10 +31,10 @@ export function ShareDialog({ visible, shareUrl, onClose }: ShareDialogProps) {
         className="fixed inset-0 z-[9998] bg-black/60 backdrop-blur-sm"
         onClick={onClose}
       />
-      <div className="fixed left-1/2 top-1/2 z-[9999] w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-[#2f3543] bg-[#111318] p-6 shadow-2xl">
+      <div className="fixed left-1/2 top-1/2 z-[9999] w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-card p-6 shadow-2xl">
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1f2531] text-[#135bec]">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-primary">
               <Share2 className="h-5 w-5" strokeWidth={1.8} />
             </div>
             <h3 className="text-lg font-semibold text-white">分享工作流</h3>
@@ -42,14 +42,14 @@ export function ShareDialog({ visible, shareUrl, onClose }: ShareDialogProps) {
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-[#9da6b9] transition hover:bg-[#1f2531] hover:text-white"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-secondary hover:text-white"
           >
             <X className="h-5 w-5" strokeWidth={1.8} />
           </button>
         </div>
 
         <div className="mb-4">
-          <label className="mb-2 block text-sm font-medium text-[#9da6b9]">
+          <label className="mb-2 block text-sm font-medium text-muted-foreground">
             分享链接
           </label>
           <div className="flex gap-2">
@@ -57,12 +57,12 @@ export function ShareDialog({ visible, shareUrl, onClose }: ShareDialogProps) {
               type="text"
               value={shareUrl}
               readOnly
-              className="flex-1 rounded-lg border border-[#2f3543] bg-[#1a1d24] px-4 py-2.5 text-sm text-white focus:border-[#135bec] focus:outline-none focus:ring-2 focus:ring-[#135bec]/20"
+              className="flex-1 rounded-lg border border-border bg-secondary px-4 py-2.5 text-sm text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
             <button
               type="button"
               onClick={handleCopy}
-              className="inline-flex items-center gap-2 rounded-lg bg-[#135bec] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1b6aff] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#135bec] focus-visible:ring-offset-2 focus-visible:ring-offset-[#111318]"
+              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-card"
             >
               {copied ? (
                 <>
@@ -79,7 +79,7 @@ export function ShareDialog({ visible, shareUrl, onClose }: ShareDialogProps) {
           </div>
         </div>
 
-        <p className="text-sm text-[#6c7a91]">
+        <p className="text-sm text-muted-foreground/70">
           任何拥有此链接的人都可以查看该工作流
         </p>
       </div>

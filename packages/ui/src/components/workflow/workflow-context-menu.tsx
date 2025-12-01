@@ -62,8 +62,8 @@ export const WorkflowContextMenu: React.FC<WorkflowContextMenuProps> = ({
   const menuContent = (
     <div
       className={cn(
-        'workflow-context-menu min-w-56 rounded-xl border border-[#2f3543]',
-        'bg-[#111318] p-2 shadow-2xl shadow-black/40 backdrop-blur-xl',
+        'workflow-context-menu min-w-56 rounded-xl border border-border',
+        'bg-popover p-2 shadow-2xl shadow-black/40 backdrop-blur-xl',
         className
       )}
       style={{
@@ -77,11 +77,11 @@ export const WorkflowContextMenu: React.FC<WorkflowContextMenuProps> = ({
       {sections.map((section, sectionIndex) => (
         <div
           className={cn(
-            sectionIndex === 0 ? 'py-2' : 'border-t border-[#2f3543] py-2'
+            sectionIndex === 0 ? 'py-2' : 'border-t border-border py-2'
           )}
           key={section.title}
         >
-          <div className="px-3 pb-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#6c7a91]">
+          <div className="px-3 pb-2 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
             {section.title}
           </div>
           <div className="flex flex-col gap-1 px-1">
@@ -93,15 +93,15 @@ export const WorkflowContextMenu: React.FC<WorkflowContextMenuProps> = ({
                   'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm',
                   'transition focus:outline-none',
                   item.danger
-                    ? 'text-[#f87171] hover:bg-[#3b1f28]'
-                    : 'text-[#e5e9f5] hover:bg-[#1f2531]'
+                    ? 'text-destructive hover:bg-destructive/10'
+                    : 'text-foreground hover:bg-accent'
                 )}
                 onClick={() => handleActionClick(item.action)}
               >
                 <item.icon
                   className={cn(
                     'h-4 w-4',
-                    item.danger ? 'text-[#f87171]' : 'text-[#135bec]'
+                    item.danger ? 'text-destructive' : 'text-primary'
                   )}
                   strokeWidth={1.8}
                 />

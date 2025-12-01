@@ -3,7 +3,6 @@ import React, { useCallback, useState, useEffect, useImperativeHandle, forwardRe
 import {
   ReactFlow,
   Background,
-  MiniMap,
   BackgroundVariant,
   SelectionMode,
   ReactFlowProvider,
@@ -29,7 +28,7 @@ import { useNodeOperations } from './hooks/useNodeOperations'
 import { useEventHandlers } from './hooks/useEventHandlers'
 
 // 纯展示组件（来自 @sker/ui）
-import { WorkflowControls, WorkflowEmptyState } from '@sker/ui/components/workflow'
+import { WorkflowControls, WorkflowEmptyState, WorkflowMinimap } from '@sker/ui/components/workflow'
 
 // 原有组件
 import { ContextMenu } from './ContextMenu'
@@ -160,6 +159,25 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
     handleId: string | null
     handleType: 'source' | 'target' | null
   } | null>(null)
+
+  // 主题检测
+  const [isDark, setIsDark] = useState(() =>
+    document.documentElement.classList.contains('dark')
+  )
+
+  // 监听主题变化
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsDark(document.documentElement.classList.contains('dark'))
+    })
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    })
+
+    return () => observer.disconnect()
+  }, [])
 
   // 画布控制 - 先获取，供业务钩子使用
   const {
@@ -563,98 +581,95 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
   return (
     <div
       className={cn(
-        'workflow-canvas relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-background text-foreground',
+        'workflow-canvas relative flex h-full min-h-0 w-full flex-col overflow-hidden',
         className
       )}
     >
-      <div className="relative flex flex-1">
-        <ReactFlow
-          nodes={workflow.nodes}
-          edges={workflow.edges}
-          onNodesChange={handleNodesChangeInternal}
-          onEdgesChange={handleEdgesChangeInternal}
-          onConnect={handleConnectInternal}
-          onConnectStart={handleConnectStart}
-          onConnectEnd={handleConnectEnd}
-          onNodeClick={onNodeClick}
-          onPaneClick={onPaneClick}
-          onNodesDelete={handleNodesDelete}
-          onEdgesDelete={handleEdgesDelete}
-          onPaneContextMenu={onPaneContextMenu}
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          nodeTypes={createNodeTypes()}
-          edgeTypes={edgeTypes}
-          panOnScroll
-          selectionOnDrag={true}
-          panOnDrag={[1, 2]}
-          selectionMode={SelectionMode.Partial}
-          fitView={!workflow.workflowAst.viewport}
-          deleteKeyCode="Delete"
-          snapToGrid={snapToGrid}
-          nodesDraggable={true}
-          nodesConnectable={true}
-          elementsSelectable={true}
-          minZoom={0.1}
-          maxZoom={4}
-          zoomOnDoubleClick={false}
-          colorMode="dark"
-        >
-          {showBackground && (
-            <Background
-              variant={BackgroundVariant.Dots}
-              gap={24}
-              size={1}
-              bgColor={'#000000'}
-            />
-          )}
-          {showMiniMap && (
-            <MiniMap
-              pannable
-              zoomable
-            />
-          )}
-        </ReactFlow>
-
-        {isCanvasEmpty && <WorkflowEmptyState />}
-
-        {showControls && (
-          <WorkflowControls
-            className="absolute bottom-60 right-4 z-[5]"
-            onRun={() => runWorkflow(() => {
-              console.log('工作流执行完成')
-            })}
-            onSave={() => saveWorkflow(workflow.workflowAst?.name || 'Untitled')}
-            onExport={exportWorkflow}
-            onImport={importWorkflow}
-            onSettings={openWorkflowSettingsDialog}
-            onSchedule={() => {
-              const workflowName = workflow.workflowAst?.name
-              if (workflowName) {
-                openScheduleDialog(workflowName)
-              } else {
-                showToast('error', '请先保存工作流', '只有保存的工作流才能创建调度')
-              }
+      <ReactFlow
+        nodes={workflow.nodes}
+        edges={workflow.edges}
+        onNodesChange={handleNodesChangeInternal}
+        onEdgesChange={handleEdgesChangeInternal}
+        onConnect={handleConnectInternal}
+        onConnectStart={handleConnectStart}
+        onConnectEnd={handleConnectEnd}
+        onNodeClick={onNodeClick}
+        onPaneClick={onPaneClick}
+        onNodesDelete={handleNodesDelete}
+        onEdgesDelete={handleEdgesDelete}
+        onPaneContextMenu={onPaneContextMenu}
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        nodeTypes={createNodeTypes()}
+        edgeTypes={edgeTypes}
+        panOnScroll
+        selectionOnDrag={true}
+        panOnDrag={[1, 2]}
+        selectionMode={SelectionMode.Partial}
+        fitView={!workflow.workflowAst.viewport}
+        deleteKeyCode="Delete"
+        snapToGrid={snapToGrid}
+        nodesDraggable={true}
+        nodesConnectable={true}
+        elementsSelectable={true}
+        minZoom={0.1}
+        maxZoom={4}
+        zoomOnDoubleClick={false}
+        colorMode={isDark ? 'dark' : 'light'}
+      >
+        {showBackground && (
+          <Background
+            variant={BackgroundVariant.Dots}
+            gap={24}
+            size={1}
+            style={{
+              backgroundColor: isDark
+                ? 'oklch(0.175 0 0)'
+                : 'oklch(0.985 0 0)'
             }}
-            onScheduleList={() => {
-              const workflowName = workflow.workflowAst?.name
-              if (workflowName) {
-                openSchedulePanel(workflowName)
-              } else {
-                showToast('error', '请先保存工作流', '只有保存的工作流才能查看调度')
-              }
-            }}
-            onZoomIn={handleZoomIn}
-            onZoomOut={handleZoomOut}
-            onFitView={handleFitView}
-            onCollapseNodes={collapseNodes}
-            onExpandNodes={expandNodes}
-            onAutoLayout={autoLayout}
-            isRunning={false}
-            isSaving={false}
           />
         )}
-      </div>
+        {showMiniMap && <WorkflowMinimap nodeColor={getMiniMapNodeColor} />}
+      </ReactFlow>
+
+      {isCanvasEmpty && <WorkflowEmptyState />}
+
+      {showControls && (
+        <WorkflowControls
+          className="absolute bottom-60 right-4 z-[5]"
+          onRun={() => runWorkflow(() => {
+            console.log('工作流执行完成')
+          })}
+          onSave={() => saveWorkflow(workflow.workflowAst?.name || 'Untitled')}
+          onExport={exportWorkflow}
+          onImport={importWorkflow}
+          onSettings={openWorkflowSettingsDialog}
+          onSchedule={() => {
+            const workflowName = workflow.workflowAst?.name
+            if (workflowName) {
+              openScheduleDialog(workflowName)
+            } else {
+              showToast('error', '请先保存工作流', '只有保存的工作流才能创建调度')
+            }
+          }}
+          onScheduleList={() => {
+            const workflowName = workflow.workflowAst?.name
+            if (workflowName) {
+              openSchedulePanel(workflowName)
+            } else {
+              showToast('error', '请先保存工作流', '只有保存的工作流才能查看调度')
+            }
+          }}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onFitView={handleFitView}
+          onCollapseNodes={collapseNodes}
+          onExpandNodes={expandNodes}
+          onAutoLayout={autoLayout}
+          isRunning={false}
+          isSaving={false}
+        />
+      )}
 
       <ContextMenu
         menu={menu}

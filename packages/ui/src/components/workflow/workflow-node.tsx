@@ -175,7 +175,7 @@ const WorkflowNodeComponent = ({
   const getBorderColor = () => {
     if (selected) return 'hsl(var(--primary))'
     if (status) return NODE_STATE_COLORS[status] || NODE_STATE_COLORS.pending
-    return 'hsl(var(--input))'
+    return 'hsl(var(--border))'
   }
 
   return (
@@ -186,7 +186,7 @@ const WorkflowNodeComponent = ({
     >
       <div
         className={cn(
-          'flex flex-col rounded-2xl bg-background border border-input relative',
+          'flex flex-col rounded-2xl bg-background border border-border relative',
           'group shadow-xs rounded-[15px] hover:shadow-lg',
           'cursor-move select-none transition-all duration-200 max-h-[480px]',
           collapsed ? 'min-w-[180px]' : 'min-w-[240px]',

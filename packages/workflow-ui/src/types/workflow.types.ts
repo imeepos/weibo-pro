@@ -48,10 +48,6 @@ export interface NodeMetadata {
   label: string
   /** 节点原始标题（装饰器定义的中文标题） */
   title?: string
-  /** 节点图标 */
-  icon?: React.ReactNode
-  /** 节点颜色 */
-  color?: string
   /** 输入端口定义 */
   inputs: PortMetadata[]
   /** 输出端口定义 */

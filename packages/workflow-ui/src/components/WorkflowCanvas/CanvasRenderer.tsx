@@ -73,7 +73,7 @@ export function CanvasRenderer({
   return (
     <div
       className={cn(
-        'workflow-canvas relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-[#111318] text-white',
+        'workflow-canvas relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-card text-white',
         className
       )}
     >
@@ -118,7 +118,7 @@ export function CanvasRenderer({
             )}
             {showMiniMap && (
               <MiniMap
-                className="!bg-[#111318]/80 !text-[#9da6b9]"
+                className="!bg-card/80 !text-muted-foreground"
                 maskColor="rgba(17, 19, 24, 0.85)"
                 pannable
                 zoomable
@@ -128,14 +128,14 @@ export function CanvasRenderer({
 
           {isCanvasEmpty && (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <div className="flex max-w-lg flex-col items-center gap-4 rounded-lg border-2 border-dashed border-[#3b4354] bg-[#111318]/80 px-10 py-12 text-center backdrop-blur-sm">
-                <div className="rounded-full bg-[#1f2531] p-3 text-[#3b4354]">
+              <div className="flex max-w-lg flex-col items-center gap-4 rounded-lg border-2 border-dashed border-border bg-card/80 px-10 py-12 text-center backdrop-blur-sm">
+                <div className="rounded-full bg-secondary p-3 text-muted-foreground/50">
                   <PlusSquare className="h-8 w-8" strokeWidth={1.5} />
                 </div>
                 <h3 className="text-lg font-semibold leading-tight tracking-[-0.015em]">
                   工作流画布
                 </h3>
-                <p className="text-sm text-[#9da6b9]">
+                <p className="text-sm text-muted-foreground">
                   双击画布空白区域以搜索并添加新节点。
                 </p>
               </div>

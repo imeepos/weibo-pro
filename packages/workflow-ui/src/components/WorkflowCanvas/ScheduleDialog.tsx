@@ -277,18 +277,18 @@ export function ScheduleDialog({ workflowName, schedule, open, onOpenChange, onS
         className="fixed inset-0 z-[9998] bg-black/60 backdrop-blur-sm"
         onClick={() => onOpenChange?.(false)}
       />
-      <div className="fixed left-1/2 top-1/2 z-[9999] w-full max-w-2xl max-h-[90vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-[#2f3543] bg-[#111318] shadow-2xl overflow-hidden flex flex-col">
+      <div className="fixed left-1/2 top-1/2 z-[9999] w-full max-w-2xl max-h-[90vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-card shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-[#2f3543] p-6">
+        <div className="flex items-center justify-between border-b border-border p-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1f2531] text-[#135bec]">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-primary">
               <Clock className="h-5 w-5" strokeWidth={1.8} />
             </div>
             <div>
               <h3 className="text-lg font-semibold text-white">
                 {isEditMode ? '编辑工作流调度' : '创建工作流调度'}
               </h3>
-              <p className="text-sm text-[#6c7a91]">
+              <p className="text-sm text-muted-foreground/70">
                 {isEditMode ? '修改工作流的自动执行计划配置' : '设置工作流的自动执行计划,支持多种调度方式'}
               </p>
             </div>
@@ -296,7 +296,7 @@ export function ScheduleDialog({ workflowName, schedule, open, onOpenChange, onS
           <button
             type="button"
             onClick={() => onOpenChange?.(false)}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-[#9da6b9] transition hover:bg-[#1f2531] hover:text-white"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-secondary hover:text-white"
           >
             <X className="h-5 w-5" strokeWidth={1.8} />
           </button>

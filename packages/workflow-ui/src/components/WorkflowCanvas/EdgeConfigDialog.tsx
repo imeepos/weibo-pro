@@ -72,14 +72,14 @@ export function EdgeConfigDialog({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-xl border border-[#282e39] bg-[#111318] shadow-2xl"
+        className="w-full max-w-lg rounded-xl border border-border bg-card shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-[#282e39] px-6 py-4">
+        <div className="flex items-center justify-between border-b border-border px-6 py-4">
           <h2 className="text-lg font-semibold text-white">边配置</h2>
           <button
             onClick={onClose}
-            className="rounded-md p-1 text-[#9da6b9] transition hover:bg-[#282e39] hover:text-white"
+            className="rounded-md p-1 text-muted-foreground transition hover:bg-secondary hover:text-white"
           >
             <X className="h-5 w-5" />
           </button>
@@ -95,7 +95,7 @@ export function EdgeConfigDialog({
                   className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition ${
                     mode === key
                       ? 'border-blue-500 bg-blue-500/10'
-                      : 'border-[#282e39] hover:border-[#3b4354]'
+                      : 'border-border hover:border-border'
                   }`}
                 >
                   <input
@@ -110,9 +110,9 @@ export function EdgeConfigDialog({
                     <div className="flex items-center gap-2">
                       <span className="text-lg">{config.icon}</span>
                       <span className="font-medium text-white">{config.label}</span>
-                      <span className="text-sm text-[#9da6b9]">{config.description}</span>
+                      <span className="text-sm text-muted-foreground">{config.description}</span>
                     </div>
-                    <p className="mt-1 text-xs text-[#6b7280]">适用：{config.scenario}</p>
+                    <p className="mt-1 text-xs text-muted-foreground/70">适用：{config.scenario}</p>
                   </div>
                 </label>
               ))}
@@ -130,7 +130,7 @@ export function EdgeConfigDialog({
                 />
                 <span className="text-sm text-white">标记为主流</span>
               </label>
-              <p className="text-xs text-[#6b7280]">主流触发时，会携带其他辅流的最新值</p>
+              <p className="text-xs text-muted-foreground/70">主流触发时，会携带其他辅流的最新值</p>
             </div>
           )}
 
@@ -138,33 +138,33 @@ export function EdgeConfigDialog({
             <label className="text-sm font-medium text-white">数据映射</label>
             <div className="space-y-2">
               <div>
-                <label className="mb-1 block text-xs text-[#9da6b9]">源属性</label>
+                <label className="mb-1 block text-xs text-muted-foreground">源属性</label>
                 <input
                   type="text"
                   value={fromProperty}
                   onChange={(e) => setFromProperty(e.target.value)}
                   placeholder="例如: currentItem.text"
-                  className="w-full rounded-md border border-[#282e39] bg-[#1a1d24] px-3 py-2 text-sm text-white placeholder-[#6b7280] focus:border-blue-500 focus:outline-none"
+                  className="w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm text-white placeholder-muted-foreground/70 focus:border-blue-500 focus:outline-none"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs text-[#9da6b9]">目标属性</label>
+                <label className="mb-1 block text-xs text-muted-foreground">目标属性</label>
                 <input
                   type="text"
                   value={toProperty}
                   onChange={(e) => setToProperty(e.target.value)}
                   placeholder="例如: content"
-                  className="w-full rounded-md border border-[#282e39] bg-[#1a1d24] px-3 py-2 text-sm text-white placeholder-[#6b7280] focus:border-blue-500 focus:outline-none"
+                  className="w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm text-white placeholder-muted-foreground/70 focus:border-blue-500 focus:outline-none"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs text-[#9da6b9]">权重</label>
+                <label className="mb-1 block text-xs text-muted-foreground">权重</label>
                 <input
                   type="number"
                   value={weight}
                   onChange={(e) => setWeight(parseInt(e.target.value) || 1)}
                   min="1"
-                  className="w-full rounded-md border border-[#282e39] bg-[#1a1d24] px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
+                  className="w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
                 />
               </div>
             </div>
@@ -176,10 +176,10 @@ export function EdgeConfigDialog({
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-3 border-t border-[#282e39] px-6 py-4">
+        <div className="flex items-center justify-end gap-3 border-t border-border px-6 py-4">
           <button
             onClick={onClose}
-            className="rounded-md px-4 py-2 text-sm text-[#9da6b9] transition hover:bg-[#282e39] hover:text-white"
+            className="rounded-md px-4 py-2 text-sm text-muted-foreground transition hover:bg-secondary hover:text-white"
           >
             取消
           </button>

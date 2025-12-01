@@ -114,7 +114,7 @@ const WeiboLoginRender: React.FC<{ ast: WeiboLoginAst }> = ({ ast }) => {
         {/* 状态消息 */}
         {(ast.message && !ast.account) && (
           <div className="text-center mt-2">
-            <p className="text-sm text-[#9da6b9]">{ast.message}</p>
+            <p className="text-sm text-muted-foreground">{ast.message}</p>
           </div>
         )}
       </div>

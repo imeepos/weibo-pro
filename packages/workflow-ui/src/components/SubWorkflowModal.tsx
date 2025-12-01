@@ -107,11 +107,11 @@ export function SubWorkflowModal({
       onClick={handleClose}
     >
       <div
-        className="relative flex flex-col w-full h-full max-w-[95vw] max-h-[95vh] bg-[#111318] rounded-xl border border-[#282e39] shadow-2xl"
+        className="relative flex flex-col w-full h-full max-w-[95vw] max-h-[95vh] bg-card rounded-xl border border-border shadow-2xl"
         onClick={handleBackdropClick}
       >
         {/* 弹框头部 */}
-        <header className="flex items-center justify-between border-b border-[#282e39] bg-[#111318] px-6 py-4">
+        <header className="flex items-center justify-between border-b border-border bg-card px-6 py-4">
           <div className="flex items-center gap-3">
             <h2 className="text-lg font-semibold text-white">
               子工作流编辑器
@@ -169,7 +169,7 @@ export function SubWorkflowModal({
         </div>
 
         {/* 底部状态栏 */}
-        <footer className="flex items-center justify-between border-t border-[#282e39] bg-[#111318] px-6 py-3 text-sm text-slate-400">
+        <footer className="flex items-center justify-between border-t border-border bg-card px-6 py-3 text-sm text-slate-400">
           <div className="flex items-center gap-4">
             <span>
               节点: {localWorkflowAst?.nodes.length || 0}

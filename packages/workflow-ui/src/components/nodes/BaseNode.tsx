@@ -6,6 +6,7 @@ import type { WorkflowNode as WorkflowNodeType } from '../../types'
 import { findNodeType, getNodeMetadata } from '../../adapters'
 import { useRender } from './hook'
 import { fromJson } from '@sker/workflow'
+import { BoxIcon } from 'lucide-react'
 
 /**
  * BaseNode - 工作流节点数据适配器
@@ -66,8 +67,8 @@ export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNodeType
       type={data.type}
       label={data.name || metadata.title || data.type}
       description={data.description}
-      color={data.color || metadata.color}
-      icon={metadata.icon}
+      color={data.color}
+      icon={<BoxIcon/>}
       status={data.state}
       statusCount={data.count || 0}
       inputs={metadata.inputs}

@@ -24,8 +24,6 @@ export function getNodeMetadata(nodeClass: Type<any>): NodeMetadata {
     type: nodeType,
     label: customTitle || formatNodeLabel(nodeType),
     title: customTitle,
-    icon: (nodeMetadata as any)?.icon,
-    color: (nodeMetadata as any)?.color,
     inputs,
     outputs,
   }
