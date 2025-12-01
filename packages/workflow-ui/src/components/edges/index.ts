@@ -1,6 +1,4 @@
-import { WorkflowEdge } from './WorkflowEdge'
-
-export { WorkflowEdge } from './WorkflowEdge'
+import { WorkflowEdge } from '@sker/ui/components/workflow/workflow-edge'
 
 /**
  * 边类型注册

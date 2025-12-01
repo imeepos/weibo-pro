@@ -17,9 +17,7 @@ const WorkflowEditor: React.FC = () => {
   }, []);
 
   return (
-    <div className={theme === 'dark' ? 'dark h-full' : 'h-full'}>
-      <WorkflowCanvas workflowAst={workflowData} name="default"/>
-    </div>
+    <WorkflowCanvas workflowAst={workflowData} name="default" className={theme === 'dark' ? 'dark h-full min-h-screen ' : 'h-full min-h-screen '} />
   );
 };
 

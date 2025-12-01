@@ -312,7 +312,7 @@ export function ScheduleDialog({ workflowName, schedule, open, onOpenChange, onS
             )}
 
             <div className="space-y-2">
-              <label htmlFor="schedule-name" className="block text-sm font-medium text-[#9da6b9]">
+              <label htmlFor="schedule-name" className="block text-sm font-medium text-muted-foreground">
                 调度名称 *
               </label>
               <input
@@ -321,19 +321,19 @@ export function ScheduleDialog({ workflowName, schedule, open, onOpenChange, onS
                 placeholder="例如:每日舆情监控"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full rounded-lg border border-[#2f3543] bg-[#1a1d24] px-4 py-2.5 text-sm text-white focus:border-[#135bec] focus:outline-none focus:ring-2 focus:ring-[#135bec]/20"
+                className="w-full rounded-lg border border-border bg-secondary px-4 py-2.5 text-sm text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="schedule-type" className="block text-sm font-medium text-[#9da6b9]">
+              <label htmlFor="schedule-type" className="block text-sm font-medium text-muted-foreground">
                 调度类型 *
               </label>
               <select
                 id="schedule-type"
                 value={scheduleType}
                 onChange={(e) => setScheduleType(e.target.value)}
-                className="w-full rounded-lg border border-[#2f3543] bg-[#1a1d24] px-4 py-2.5 text-sm text-white focus:border-[#135bec] focus:outline-none focus:ring-2 focus:ring-[#135bec]/20"
+                className="w-full rounded-lg border border-border bg-secondary px-4 py-2.5 text-sm text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
                 <option value="cron">Cron 表达式</option>
                 <option value="interval">固定间隔</option>
@@ -343,13 +343,13 @@ export function ScheduleDialog({ workflowName, schedule, open, onOpenChange, onS
             </div>
 
             {scheduleType === 'cron' && (
-              <div className="space-y-4 rounded-lg border border-[#2f3543] p-4">
+              <div className="space-y-4 rounded-lg border border-border p-4">
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-[#9da6b9]">快速模板</label>
+                  <label className="block text-sm font-medium text-muted-foreground">快速模板</label>
                   <select
                     value={cronTemplate}
                     onChange={(e) => setCronTemplate(e.target.value)}
-                    className="w-full rounded-lg border border-[#2f3543] bg-[#1a1d24] px-4 py-2.5 text-sm text-white focus:border-[#135bec] focus:outline-none focus:ring-2 focus:ring-[#135bec]/20"
+                    className="w-full rounded-lg border border-border bg-secondary px-4 py-2.5 text-sm text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                   >
                     {CRON_TEMPLATES.map((template) => (
                       <option key={template.value} value={template.value}>
@@ -359,7 +359,7 @@ export function ScheduleDialog({ workflowName, schedule, open, onOpenChange, onS
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <label htmlFor="cron-expression" className="block text-sm font-medium text-[#9da6b9]">
+                  <label htmlFor="cron-expression" className="block text-sm font-medium text-muted-foreground">
                     Cron 表达式 *
                   </label>
                   <input
@@ -369,9 +369,9 @@ export function ScheduleDialog({ workflowName, schedule, open, onOpenChange, onS
                     value={cronExpression}
                     onChange={(e) => setCronExpression(e.target.value)}
                     disabled={cronTemplate !== ''}
-                    className="w-full rounded-lg border border-[#2f3543] bg-[#1a1d24] px-4 py-2.5 text-sm text-white disabled:opacity-50 focus:border-[#135bec] focus:outline-none focus:ring-2 focus:ring-[#135bec]/20"
+                    className="w-full rounded-lg border border-border bg-secondary px-4 py-2.5 text-sm text-white disabled:opacity-50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
-                  <p className="text-xs text-[#6c7a91]">
+                  <p className="text-xs text-muted-foreground/70">
                     格式:分 时 日 月 周,例如 "0 9 * * 1-5" 表示工作日早上9点
                   </p>
                 </div>
@@ -379,10 +379,10 @@ export function ScheduleDialog({ workflowName, schedule, open, onOpenChange, onS
             )}
 
             {scheduleType === 'interval' && (
-              <div className="space-y-4 rounded-lg border border-[#2f3543] p-4">
+              <div className="space-y-4 rounded-lg border border-border p-4">
                 <div className="flex gap-2">
                   <div className="flex-1 space-y-2">
-                    <label htmlFor="interval-value" className="block text-sm font-medium text-[#9da6b9]">
+                    <label htmlFor="interval-value" className="block text-sm font-medium text-muted-foreground">
                       间隔时间 *
                     </label>
                     <input
@@ -391,15 +391,15 @@ export function ScheduleDialog({ workflowName, schedule, open, onOpenChange, onS
                       min="1"
                       value={intervalValue}
                       onChange={(e) => setIntervalValue(parseInt(e.target.value) || 1)}
-                      className="w-full rounded-lg border border-[#2f3543] bg-[#1a1d24] px-4 py-2.5 text-sm text-white focus:border-[#135bec] focus:outline-none focus:ring-2 focus:ring-[#135bec]/20"
+                      className="w-full rounded-lg border border-border bg-secondary px-4 py-2.5 text-sm text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
                   <div className="flex-1 space-y-2">
-                    <label className="block text-sm font-medium text-[#9da6b9]">单位</label>
+                    <label className="block text-sm font-medium text-muted-foreground">单位</label>
                     <select
                       value={intervalUnit.toString()}
                       onChange={(e) => setIntervalUnit(parseInt(e.target.value))}
-                      className="w-full rounded-lg border border-[#2f3543] bg-[#1a1d24] px-4 py-2.5 text-sm text-white focus:border-[#135bec] focus:outline-none focus:ring-2 focus:ring-[#135bec]/20"
+                      className="w-full rounded-lg border border-border bg-secondary px-4 py-2.5 text-sm text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                     >
                       {INTERVAL_UNITS.map((unit) => (
                         <option key={unit.value} value={unit.value.toString()}>
@@ -413,14 +413,14 @@ export function ScheduleDialog({ workflowName, schedule, open, onOpenChange, onS
             )}
 
             {scheduleType === 'once' && (
-              <div className="space-y-4 rounded-lg border border-[#2f3543] p-4">
+              <div className="space-y-4 rounded-lg border border-border p-4">
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-[#9da6b9]">执行时间 *</label>
+                  <label className="block text-sm font-medium text-muted-foreground">执行时间 *</label>
                   <input
                     type="datetime-local"
                     value={startTime ? formatDate(startTime) + 'T' + String(startTime.getHours()).padStart(2, '0') + ':' + String(startTime.getMinutes()).padStart(2, '0') : ''}
                     onChange={(e) => setStartTime(e.target.value ? new Date(e.target.value) : undefined)}
-                    className="w-full rounded-lg border border-[#2f3543] bg-[#1a1d24] px-4 py-2.5 text-sm text-white focus:border-[#135bec] focus:outline-none focus:ring-2 focus:ring-[#135bec]/20"
+                    className="w-full rounded-lg border border-border bg-secondary px-4 py-2.5 text-sm text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
               </div>
@@ -438,7 +438,7 @@ export function ScheduleDialog({ workflowName, schedule, open, onOpenChange, onS
             )}
 
             <div className="space-y-2">
-              <label htmlFor="schedule-inputs" className="block text-sm font-medium text-[#9da6b9]">
+              <label htmlFor="schedule-inputs" className="block text-sm font-medium text-muted-foreground">
                 输入参数(JSON 格式)
               </label>
               <textarea
@@ -447,30 +447,30 @@ export function ScheduleDialog({ workflowName, schedule, open, onOpenChange, onS
                 value={inputs}
                 onChange={(e) => setInputs(e.target.value)}
                 rows={4}
-                className="w-full rounded-lg border border-[#2f3543] bg-[#1a1d24] px-4 py-2.5 text-sm text-white font-mono focus:border-[#135bec] focus:outline-none focus:ring-2 focus:ring-[#135bec]/20"
+                className="w-full rounded-lg border border-border bg-secondary px-4 py-2.5 text-sm text-white font-mono focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
-              <p className="text-xs text-[#6c7a91]">
+              <p className="text-xs text-muted-foreground/70">
                 工作流执行时使用的输入参数,JSON 对象格式
               </p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-[#9da6b9]">开始时间(可选)</label>
+                <label className="block text-sm font-medium text-muted-foreground">开始时间(可选)</label>
                 <input
                   type="date"
                   value={startTime ? formatDate(startTime) : ''}
                   onChange={(e) => setStartTime(e.target.value ? new Date(e.target.value) : undefined)}
-                  className="w-full rounded-lg border border-[#2f3543] bg-[#1a1d24] px-4 py-2.5 text-sm text-white focus:border-[#135bec] focus:outline-none focus:ring-2 focus:ring-[#135bec]/20"
+                  className="w-full rounded-lg border border-border bg-secondary px-4 py-2.5 text-sm text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </div>
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-[#9da6b9]">结束时间(可选)</label>
+                <label className="block text-sm font-medium text-muted-foreground">结束时间(可选)</label>
                 <input
                   type="date"
                   value={endTime ? formatDate(endTime) : ''}
                   onChange={(e) => setEndTime(e.target.value ? new Date(e.target.value) : undefined)}
-                  className="w-full rounded-lg border border-[#2f3543] bg-[#1a1d24] px-4 py-2.5 text-sm text-white focus:border-[#135bec] focus:outline-none focus:ring-2 focus:ring-[#135bec]/20"
+                  className="w-full rounded-lg border border-border bg-secondary px-4 py-2.5 text-sm text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </div>
             </div>
@@ -478,12 +478,12 @@ export function ScheduleDialog({ workflowName, schedule, open, onOpenChange, onS
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 border-t border-[#2f3543] p-6">
+        <div className="flex items-center justify-end gap-3 border-t border-border p-6">
           <button
             type="button"
             onClick={() => onOpenChange?.(false)}
             disabled={loading}
-            className="rounded-lg border border-[#2f3543] bg-[#1a1d24] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1f2531] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#135bec] focus-visible:ring-offset-2 focus-visible:ring-offset-[#111318] disabled:opacity-50"
+            className="rounded-lg border border-border bg-secondary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-secondary hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-card disabled:opacity-50"
           >
             取消
           </button>
@@ -491,7 +491,7 @@ export function ScheduleDialog({ workflowName, schedule, open, onOpenChange, onS
             type="button"
             onClick={handleSubmit}
             disabled={loading}
-            className="rounded-lg bg-[#135bec] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1b6aff] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#135bec] focus-visible:ring-offset-2 focus-visible:ring-offset-[#111318] disabled:opacity-50"
+            className="rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-card disabled:opacity-50"
           >
             {loading ? (isEditMode ? '保存中...' : '创建中...') : (isEditMode ? '保存' : '创建调度')}
           </button>

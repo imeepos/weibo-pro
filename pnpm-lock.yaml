@@ -476,6 +476,9 @@ importers:
       '@sker/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
+      '@sker/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       '@sker/workflow':
         specifier: workspace:*
         version: link:../../packages/workflow
@@ -1094,12 +1097,6 @@ importers:
       '@radix-ui/react-tooltip':
         specifier: ^1.2.8
         version: 1.2.8(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
-      '@sker/core':
-        specifier: workspace:*
-        version: link:../core
-      '@sker/workflow':
-        specifier: workspace:*
-        version: link:../workflow
       '@types/lodash':
         specifier: ^4.17.21
         version: 4.17.21

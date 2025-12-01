@@ -27,7 +27,8 @@ export default defineConfig({
     }) as PluginOption,
   ],
   server: {
-    host: true,
+    host: '127.0.0.1',
+    port: 3002,
     proxy: {
       // SSE 专用代理配置 - 必须在普通 API 之前
       '/api/sse': {

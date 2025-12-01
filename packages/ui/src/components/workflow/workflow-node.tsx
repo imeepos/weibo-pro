@@ -8,10 +8,10 @@ import { cn } from '@sker/ui/lib/utils'
 import { Badge } from '@sker/ui/components/ui/badge'
 import { Button } from '@sker/ui/components/ui/button'
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@sker/ui/components/ui/collapsible'
-import type { WorkflowNodeProps, WorkflowNodePort, IAstStates } from './types/workflow-nodes'
+import type { WorkflowNodeProps, WorkflowNodePort } from './types/workflow-nodes'
 
 // 状态颜色映射
-export const NODE_STATE_COLORS: Record<IAstStates, string> = {
+export const NODE_STATE_COLORS: Record<string, string> = {
   pending: 'hsl(var(--muted-foreground))',
   running: 'hsl(var(--node-running))',
   emitting: 'hsl(var(--node-emitting))',
@@ -19,7 +19,7 @@ export const NODE_STATE_COLORS: Record<IAstStates, string> = {
   fail: 'hsl(var(--node-error))',
 }
 
-export const NODE_STATE_LABELS: Record<IAstStates, string> = {
+export const NODE_STATE_LABELS: Record<string, string> = {
   pending: '待执行',
   running: '执行中',
   emitting: '发送中',
@@ -32,7 +32,7 @@ const StatusBadge = ({
   status,
   count,
 }: {
-  status?: IAstStates
+  status?: string
   count: number
 }) => {
   if (!status || status === 'pending') return null
@@ -175,7 +175,7 @@ const WorkflowNodeComponent = ({
   const getBorderColor = () => {
     if (selected) return 'hsl(var(--primary))'
     if (status) return NODE_STATE_COLORS[status] || NODE_STATE_COLORS.pending
-    return 'hsl(var(--border))'
+    return 'hsl(var(--input))'
   }
 
   return (
@@ -186,7 +186,7 @@ const WorkflowNodeComponent = ({
     >
       <div
         className={cn(
-          'flex flex-col rounded-2xl bg-background border border-border relative',
+          'flex flex-col rounded-2xl bg-background border border-input relative',
           'group shadow-xs rounded-[15px] hover:shadow-lg',
           'cursor-move select-none transition-all duration-200 max-h-[480px]',
           collapsed ? 'min-w-[180px]' : 'min-w-[240px]',

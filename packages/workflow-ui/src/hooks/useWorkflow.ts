@@ -163,6 +163,10 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
 
   /**
    * 更新节点
+   *
+   * 优雅设计：保持 data 对象引用稳定，避免不必要的重新渲染
+   * - 直接修改 AST 对象，保持引用不变
+   * - 最小化 React Flow 节点对象更新
    */
   const updateNode = useCallback(
     (nodeId: string, updates: Partial<INode>) => {
@@ -172,18 +176,20 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
       }
 
       setNodes((nodes) =>
-        nodes.map((node) =>
-          node.id === nodeId
-            ? {
+        nodes.map((node) => {
+          if (node.id === nodeId) {
+            // 只在必要时更新 state，保持 data 引用稳定
+            if (updates.state !== undefined && node.data.state !== updates.state) {
+              return {
                 ...node,
-                data: {
-                  ...node.data,
-                  ast: { ...node.data.ast, ...updates },
-                  state: updates.state || node.data.state
-                }
+                data: node.data
               }
-            : node
-        )
+            }
+            // 如果只有 AST 数据变化，保持整个 node 引用稳定
+            return node
+          }
+          return node
+        })
       )
     },
     [workflowAst, setNodes]
@@ -416,18 +422,21 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
    *
    * - 有指定节点：仅折叠指定的节点
    * - 无指定节点：折叠所有节点
+   *
+   * 优雅设计：保持 data 对象引用稳定
    */
   const collapseNodes = useCallback((nodeIds?: string[]) => {
     setNodes(nodes =>
       nodes.map(node => {
         const shouldCollapse = !nodeIds || nodeIds.includes(node.id)
-        if (shouldCollapse) {
+        if (shouldCollapse && node.data.collapsed !== true) {
           // 同步到 AST
           const astNode = workflowAst.nodes.find(n => n.id === node.id)
           if (astNode) {
             astNode.collapsed = true
           }
-          return { ...node, data: { ...node.data, collapsed: true } }
+          // 直接修改 data 对象，保持引用稳定
+          node.data.collapsed = true
         }
         return node
       })
@@ -439,18 +448,21 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
    *
    * - 有指定节点：仅展开指定的节点
    * - 无指定节点：展开所有节点
+   *
+   * 优雅设计：保持 data 对象引用稳定
    */
   const expandNodes = useCallback((nodeIds?: string[]) => {
     setNodes(nodes =>
       nodes.map(node => {
         const shouldExpand = !nodeIds || nodeIds.includes(node.id)
-        if (shouldExpand) {
+        if (shouldExpand && node.data.collapsed !== false) {
           // 同步到 AST
           const astNode = workflowAst.nodes.find(n => n.id === node.id)
           if (astNode) {
             astNode.collapsed = false
           }
-          return { ...node, data: { ...node.data, collapsed: false } }
+          // 直接修改 data 对象，保持引用稳定
+          node.data.collapsed = false
         }
         return node
       })

@@ -10,6 +10,7 @@ import { root } from '@sker/core'
 
 import App from './App';
 import '@sker/ui/globals.css'
+import '@sker/workflow-ui/styles'
 
 import { createLogger } from './utils';
 

@@ -119,37 +119,37 @@ export function RunHistoryPanel({
         className="fixed inset-0 z-[9998] bg-black/60 backdrop-blur-sm"
         onClick={onClose}
       />
-      <div className="fixed left-1/2 top-1/2 z-[9999] w-full max-w-5xl max-h-[85vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-[#2f3543] bg-[#111318] shadow-2xl overflow-hidden flex flex-col">
+      <div className="fixed left-1/2 top-1/2 z-[9999] w-full max-w-5xl max-h-[85vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-card shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-[#2f3543] p-6">
+        <div className="flex items-center justify-between border-b border-border p-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1f2531] text-[#135bec]">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-primary">
               <Clock className="h-5 w-5" strokeWidth={1.8} />
             </div>
             <div>
               <h3 className="text-lg font-semibold text-white">{scheduleId ? `调度 #${scheduleId} 的运行历史` : '运行历史'}</h3>
-              <p className="text-sm text-[#6c7a91]">共 {total} 条记录</p>
+              <p className="text-sm text-muted-foreground/70">共 {total} 条记录</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-[#9da6b9] transition hover:bg-[#1f2531] hover:text-white"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-secondary hover:text-white"
           >
             <X className="h-5 w-5" strokeWidth={1.8} />
           </button>
         </div>
 
         {/* Filters */}
-        <div className="border-b border-[#2f3543] p-4">
+        <div className="border-b border-border p-4">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-[#9da6b9]">状态：</span>
+            <span className="text-sm font-medium text-muted-foreground">状态：</span>
             <button
               type="button"
               onClick={() => setStatusFilter(undefined)}
               className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${statusFilter === undefined
-                  ? 'bg-[#135bec] text-white'
-                  : 'bg-[#1a1d24] text-[#9da6b9] hover:bg-[#1f2531]'
+                  ? 'bg-primary text-white'
+                  : 'bg-secondary text-muted-foreground hover:bg-secondary'
                 }`}
             >
               全部
@@ -165,8 +165,8 @@ export function RunHistoryPanel({
                 type="button"
                 onClick={() => setStatusFilter(status.value)}
                 className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${statusFilter === status.value
-                    ? 'bg-[#135bec] text-white'
-                    : 'bg-[#1a1d24] text-[#9da6b9] hover:bg-[#1f2531]'
+                    ? 'bg-primary text-white'
+                    : 'bg-secondary text-muted-foreground hover:bg-secondary'
                   }`}
               >
                 {status.label}
@@ -179,25 +179,25 @@ export function RunHistoryPanel({
         <div className="flex-1 overflow-y-auto p-6">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <RefreshCw className="h-8 w-8 animate-spin text-[#135bec]" />
+              <RefreshCw className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : runs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#1f2531] text-[#6c7a91]">
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-secondary text-muted-foreground/70">
                 <Clock className="h-8 w-8" strokeWidth={1.5} />
               </div>
-              <p className="text-sm text-[#6c7a91]">暂无运行记录</p>
+              <p className="text-sm text-muted-foreground/70">暂无运行记录</p>
             </div>
           ) : (
             <div className="space-y-3">
               {runs.map((run) => (
                 <div
                   key={run.id}
-                  className="rounded-lg border border-[#2f3543] bg-[#1a1d24] p-4 transition hover:border-[#3f4553]"
+                  className="rounded-lg border border-border bg-secondary p-4 transition hover:border-border"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#1f2531]">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
                         {getStatusIcon(run.status)}
                       </div>
                       <div>
@@ -207,7 +207,7 @@ export function RunHistoryPanel({
                           </span>
                           {getStatusBadge(run.status)}
                         </div>
-                        <div className="mt-1 flex items-center gap-3 text-xs text-[#6c7a91]">
+                        <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground/70">
                           <span>
                             {formatDate(run.createdAt)}
                           </span>
@@ -228,7 +228,7 @@ export function RunHistoryPanel({
                       <button
                         type="button"
                         onClick={() => handleViewDetail(run.id)}
-                        className="inline-flex items-center gap-2 rounded-lg border border-[#2f3543] bg-[#1a1d24] px-3 py-1.5 text-xs font-medium text-white transition hover:bg-[#1f2531]"
+                        className="inline-flex items-center gap-2 rounded-lg border border-border bg-secondary px-3 py-1.5 text-xs font-medium text-white transition hover:bg-secondary"
                       >
                         <Eye className="h-3.5 w-3.5" strokeWidth={2} />
                         查看详情
@@ -260,8 +260,8 @@ export function RunHistoryPanel({
 
         {/* Footer with Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-[#2f3543] p-6">
-            <p className="text-sm text-[#6c7a91]">
+          <div className="flex items-center justify-between border-t border-border p-6">
+            <p className="text-sm text-muted-foreground/70">
               第 {page} 页，共 {totalPages} 页
             </p>
             <div className="flex items-center gap-2">
@@ -269,7 +269,7 @@ export function RunHistoryPanel({
                 type="button"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="inline-flex items-center gap-1 rounded-lg border border-[#2f3543] bg-[#1a1d24] px-3 py-1.5 text-xs font-medium text-white transition hover:bg-[#1f2531] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center gap-1 rounded-lg border border-border bg-secondary px-3 py-1.5 text-xs font-medium text-white transition hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <ChevronLeft className="h-3.5 w-3.5" strokeWidth={2} />
                 上一页
@@ -278,7 +278,7 @@ export function RunHistoryPanel({
                 type="button"
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="inline-flex items-center gap-1 rounded-lg border border-[#2f3543] bg-[#1a1d24] px-3 py-1.5 text-xs font-medium text-white transition hover:bg-[#1f2531] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center gap-1 rounded-lg border border-border bg-secondary px-3 py-1.5 text-xs font-medium text-white transition hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 下一页
                 <ChevronRight className="h-3.5 w-3.5" strokeWidth={2} />
@@ -318,18 +318,18 @@ function RunDetailDialog({ run, onClose }: RunDetailDialogProps) {
         className="fixed inset-0 z-[10000] bg-black/60 backdrop-blur-sm"
         onClick={onClose}
       />
-      <div className="fixed left-1/2 top-1/2 z-[10001] w-full max-w-3xl max-h-[80vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-[#2f3543] bg-[#111318] shadow-2xl overflow-hidden flex flex-col">
+      <div className="fixed left-1/2 top-1/2 z-[10001] w-full max-w-3xl max-h-[80vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-card shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-[#2f3543] p-6">
+        <div className="flex items-center justify-between border-b border-border p-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1f2531]">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary">
               {getStatusIcon(run.status)}
             </div>
             <div>
               <h3 className="text-lg font-semibold text-white">
                 运行详情 #{run.id}
               </h3>
-              <p className="text-sm text-[#6c7a91]">
+              <p className="text-sm text-muted-foreground/70">
                 {formatDate(run.createdAt)}
               </p>
             </div>
@@ -337,7 +337,7 @@ function RunDetailDialog({ run, onClose }: RunDetailDialogProps) {
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-[#9da6b9] transition hover:bg-[#1f2531] hover:text-white"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-secondary hover:text-white"
           >
             <X className="h-5 w-5" strokeWidth={1.8} />
           </button>
@@ -347,7 +347,7 @@ function RunDetailDialog({ run, onClose }: RunDetailDialogProps) {
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {/* Status */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-[#9da6b9]">
+            <label className="mb-2 block text-sm font-medium text-muted-foreground">
               状态
             </label>
             {getStatusBadge(run.status)}
@@ -356,7 +356,7 @@ function RunDetailDialog({ run, onClose }: RunDetailDialogProps) {
           {/* Timing */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="mb-2 block text-sm font-medium text-[#9da6b9]">
+              <label className="mb-2 block text-sm font-medium text-muted-foreground">
                 开始时间
               </label>
               <p className="text-sm text-white">
@@ -364,7 +364,7 @@ function RunDetailDialog({ run, onClose }: RunDetailDialogProps) {
               </p>
             </div>
             <div>
-              <label className="mb-2 block text-sm font-medium text-[#9da6b9]">
+              <label className="mb-2 block text-sm font-medium text-muted-foreground">
                 完成时间
               </label>
               <p className="text-sm text-white">
@@ -376,7 +376,7 @@ function RunDetailDialog({ run, onClose }: RunDetailDialogProps) {
           {/* Duration */}
           {run.durationMs && (
             <div>
-              <label className="mb-2 block text-sm font-medium text-[#9da6b9]">
+              <label className="mb-2 block text-sm font-medium text-muted-foreground">
                 执行耗时
               </label>
               <p className="text-sm text-white">{formatDuration(run.durationMs)}</p>
@@ -386,10 +386,10 @@ function RunDetailDialog({ run, onClose }: RunDetailDialogProps) {
           {/* Inputs */}
           {run.inputs && Object.keys(run.inputs).length > 0 && (
             <div>
-              <label className="mb-2 block text-sm font-medium text-[#9da6b9]">
+              <label className="mb-2 block text-sm font-medium text-muted-foreground">
                 输入参数
               </label>
-              <pre className="rounded-lg border border-[#2f3543] bg-[#1a1d24] p-3 text-xs text-white overflow-x-auto">
+              <pre className="rounded-lg border border-border bg-secondary p-3 text-xs text-white overflow-x-auto">
                 {JSON.stringify(run.inputs, null, 2)}
               </pre>
             </div>
@@ -398,10 +398,10 @@ function RunDetailDialog({ run, onClose }: RunDetailDialogProps) {
           {/* Outputs */}
           {run.outputs && Object.keys(run.outputs).length > 0 && (
             <div>
-              <label className="mb-2 block text-sm font-medium text-[#9da6b9]">
+              <label className="mb-2 block text-sm font-medium text-muted-foreground">
                 输出结果
               </label>
-              <pre className="rounded-lg border border-[#2f3543] bg-[#1a1d24] p-3 text-xs text-white overflow-x-auto">
+              <pre className="rounded-lg border border-border bg-secondary p-3 text-xs text-white overflow-x-auto">
                 {JSON.stringify(run.outputs, null, 2)}
               </pre>
             </div>
@@ -410,7 +410,7 @@ function RunDetailDialog({ run, onClose }: RunDetailDialogProps) {
           {/* Error */}
           {run.error && (
             <div>
-              <label className="mb-2 block text-sm font-medium text-[#9da6b9]">
+              <label className="mb-2 block text-sm font-medium text-muted-foreground">
                 错误信息
               </label>
               <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-4">
@@ -426,11 +426,11 @@ function RunDetailDialog({ run, onClose }: RunDetailDialogProps) {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end border-t border-[#2f3543] p-6">
+        <div className="flex items-center justify-end border-t border-border p-6">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-[#2f3543] bg-[#1a1d24] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1f2531]"
+            className="rounded-lg border border-border bg-secondary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-secondary"
           >
             关闭
           </button>

@@ -1,8 +1,6 @@
 // 导入渲染器（确保装饰器注册）
 import './renderers'
 
-export * from './core';
-
 // 导出 ReactFlow 核心组件
 export { ReactFlowProvider } from '@xyflow/react'
 
@@ -17,7 +15,7 @@ export { PropertyPanel } from './components/PropertyPanel'
 export type { PropertyPanelProps } from './components/PropertyPanel'
 
 export { createNodeTypes } from './components/nodes'
-export { WorkflowEdge, edgeTypes } from './components/edges'
+export { edgeTypes } from './components/edges'
 
 // 导出 Hooks
 export { useWorkflow } from './hooks'

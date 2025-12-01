@@ -1,4 +1,4 @@
-import { CoreFlow, ReactFlowProvider, WorkflowCanvas } from '@sker/workflow-ui'
+import { ReactFlowProvider, WorkflowCanvas } from '@sker/workflow-ui'
 import React, { Component, ErrorInfo, ReactNode, useEffect, useState } from 'react'
 import { WorkflowGraphAst, fromJson, toJson } from '@sker/workflow'
 import type { Ast, INode } from '@sker/workflow'
@@ -113,6 +113,7 @@ function WorkflowCanvasWrapper() {
 
   return <WorkflowCanvas
     workflowAst={node!}
+    name='hello'
   />
 }
 

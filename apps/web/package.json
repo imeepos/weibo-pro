@@ -11,6 +11,7 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "@sker/ui": "workspace:*",
     "@sker/core": "workspace:*",
     "@sker/workflow": "workspace:*",
     "@sker/sdk": "workspace:*",
