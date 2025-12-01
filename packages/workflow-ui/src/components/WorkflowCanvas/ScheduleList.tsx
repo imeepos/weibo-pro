@@ -158,7 +158,7 @@ export function ScheduleList({ workflowName, className = '', onClose }: Schedule
     }
   }
 
-  const handleDelete = async (scheduleId: number) => {
+  const handleDelete = async (scheduleId: string) => {
     if (!confirm('确定要删除这个调度吗?此操作不可恢复。')) {
       return
     }
