@@ -34,7 +34,7 @@ export class WorkflowEntity {
   code!: string;
 
   // 对应 WorkflowGraphAst.name
-  @Column({ type: 'varchar', length: 100 })
+  @Column({ type: 'varchar', length: 100, default: '未命名工作流' })
   name!: string;
 
   // 对应 WorkflowGraphAst.description
