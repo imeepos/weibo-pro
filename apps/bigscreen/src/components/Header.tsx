@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, Activity, Settings, Maximize, Minimize, Sun, Moon, User, ChevronDown, BarChart3, Users, Network } from 'lucide-react';
+import { Clock, Activity, Settings, Maximize, Minimize, Sun, Moon, User, ChevronDown, BarChart3, Users, Network, LogIn, Search, Sparkles, Shield } from 'lucide-react';
 import { useAppStore } from '@/stores/useAppStore';
 import { useTheme } from '@/hooks/useTheme';
 import { useFullscreen } from '@/hooks/useFullscreen';
@@ -83,6 +83,34 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
       path: '/user-relation-topology',
       icon: Network,
       description: '用户关系网络可视化'
+    },
+    {
+      id: 'weibo-login',
+      label: '微博登录',
+      path: '/workflow-editor/weibo_login',
+      icon: LogIn,
+      description: '微博账号登录与授权'
+    },
+    {
+      id: 'weibo-event-crawler',
+      label: '微博事件爬取',
+      path: '/workflow-editor/weibo_event',
+      icon: Search,
+      description: '微博事件数据采集与抓取'
+    },
+    {
+      id: 'weibo-nlp-analysis',
+      label: 'NLP 情感分析',
+      path: '/workflow-editor/weibo_nlp',
+      icon: Sparkles,
+      description: 'AI 驱动的文本情感分析'
+    },
+    {
+      id: 'weibo-user-detection',
+      label: '水军监控',
+      path: '/workflow-editor/weibo_user_detection',
+      icon: Shield,
+      description: '智能识别与监控水军账号'
     }
   ] as const;
 

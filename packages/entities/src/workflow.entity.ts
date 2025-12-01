@@ -27,7 +27,7 @@ export enum WorkflowStatus {
 @Entity('workflows')
 export class WorkflowEntity {
   // 数据库主键
-  @PrimaryColumn()
+  @PrimaryColumn('uuid')
   id!: string;
 
   // 对应 WorkflowGraphAst.id（业务唯一标识）

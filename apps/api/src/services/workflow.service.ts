@@ -1,7 +1,7 @@
 import { Injectable } from '@sker/core';
 import { WorkflowEntity, WorkflowShareEntity, useEntityManager, WorkflowStatus } from '@sker/entities';
 import { logger } from '@sker/core';
-import { randomBytes } from 'crypto';
+import { randomBytes, randomUUID } from 'crypto';
 import { WorkflowGraphAst } from '@sker/workflow';
 import * as sdk from '@sker/sdk'
 /**
@@ -38,8 +38,8 @@ export class WorkflowService {
 
       if (workflow) {
         // 更新现有工作流
-        workflow.name = params.name!;
-        workflow.code = params.name!;
+        workflow.name = params.name || workflow.name;
+        workflow.code = params.name || workflow.code;
         workflow.collapsed = !!params.collapsed;
         workflow.nodes = params.nodes || [];
         workflow.edges = params.edges || [];
@@ -51,11 +51,14 @@ export class WorkflowService {
         workflow.description = params.description;
         workflow.color = params.color;
       } else {
-        // 创建新工作流
+        // 创建新工作流 - 确保 id 永不为空
+        const workflowId = params.id || params.name || randomUUID();
+        const workflowName = params.name || 'Untitled';
+
         workflow = repository.create({
-          id: params.id || params.name,
-          code: params.name,
-          name: params.name,
+          id: workflowId,
+          code: workflowName,
+          name: workflowName,
           description: params.description,
           color: params.color,
           type: params.type || 'WorkflowGraphAst',

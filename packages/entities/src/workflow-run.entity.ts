@@ -25,11 +25,11 @@ interface ErrorDetail {
 
 @Entity('workflow_runs')
 export class WorkflowRunEntity {
-  @PrimaryColumn()
+  @PrimaryColumn('uuid')
   id!: string;
 
   @Index()
-  @Column({ name: 'workflow_id' })
+  @Column({ name: 'workflow_id', type: 'uuid' })
   workflowId!: string;
 
   @Index()

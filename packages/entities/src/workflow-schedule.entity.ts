@@ -23,11 +23,11 @@ export enum ScheduleStatus {
 
 @Entity('workflow_schedules')
 export class WorkflowScheduleEntity {
-  @PrimaryColumn()
+  @PrimaryColumn('uuid')
   id!: string;
 
   @Index()
-  @Column({ name: 'workflow_id' })
+  @Column({ name: 'workflow_id', type: 'uuid' })
   workflowId!: string;
 
   @Column({ type: 'varchar', length: 100 })

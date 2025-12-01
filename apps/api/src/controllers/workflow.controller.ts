@@ -1,6 +1,6 @@
 import { Controller, Post, Body, Get, BadRequestException, Query, Delete, NotFoundException, Sse, Res, Param, Put } from '@nestjs/common';
 import { Observable, tap } from 'rxjs';
-import { Ast, executeAst, fromJson, INode } from '@sker/workflow';
+import { Ast, executeAst, fromJson, generateId, INode } from '@sker/workflow';
 import { WorkflowGraphAst, ReactiveScheduler } from '@sker/workflow';
 import { logger, root } from '@sker/core';
 import * as sdk from '@sker/sdk';
@@ -44,7 +44,7 @@ export class WorkflowController implements sdk.WorkflowController {
    */
   @Post('save')
   async saveWorkflow(@Body() body: WorkflowGraphAst): Promise<WorkflowEntity> {
-    const { name, id, edges, nodes } = body;
+    const { name, edges, nodes } = body;
 
     if (!name || name.trim().length === 0) {
       throw new BadRequestException('工作流名称不能为空');
@@ -53,7 +53,7 @@ export class WorkflowController implements sdk.WorkflowController {
     if (!nodes || !edges) {
       throw new BadRequestException('工作流数据格式错误');
     }
-
+    body.id = body.id || generateId()
     return await this.workflowService.saveWorkflow(body);
   }
 
