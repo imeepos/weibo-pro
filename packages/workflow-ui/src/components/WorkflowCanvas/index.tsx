@@ -1,5 +1,5 @@
 'use client'
-import React, { useCallback, useState, useEffect } from 'react'
+import React, { useCallback, useState, useEffect, useImperativeHandle, forwardRef } from 'react'
 import {
   ReactFlow,
   Background,
@@ -13,7 +13,7 @@ import {
   useReactFlow,
 } from '@xyflow/react'
 
-import { fromJson, generateId, INode, WorkflowGraphAst } from '@sker/workflow'
+import { fromJson, INode, WorkflowGraphAst, toJson } from '@sker/workflow'
 import { createNodeTypes } from '../nodes'
 import { edgeTypes } from '../edges'
 import { useWorkflow } from '../../hooks/useWorkflow'
@@ -21,6 +21,7 @@ import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { useCanvasControls } from './useCanvasControls'
 import { useCanvasState } from './useCanvasState'
 import { useWorkflowOperations } from './useWorkflowOperations'
+import { validateEdge } from '../../utils/edgeValidator'
 
 // 新的业务逻辑钩子
 import { useFileOperations } from './hooks/useFileOperations'
@@ -45,6 +46,39 @@ import { ScheduleDialog } from './ScheduleDialog'
 import { ScheduleList } from './ScheduleList'
 import { cn } from '../../utils/cn'
 import { getAllNodeTypes } from '../../adapters'
+
+/**
+ * WorkflowCanvas 命令式 API 接口
+ * 通过 ref 暴露给外部的方法
+ */
+export interface WorkflowCanvasRef {
+  // 文件操作
+  importWorkflow: (json: string) => Promise<void>
+  exportWorkflow: () => string
+
+  // 执行控制
+  runWorkflow: () => Promise<void>
+  runNode: (nodeId: string) => Promise<void>
+  runNodeIsolated: (nodeId: string) => Promise<void>
+
+  // 视图操作
+  autoLayout: (direction?: 'TB' | 'LR') => void
+  fitView: () => void
+  zoomIn: () => void
+  zoomOut: () => void
+  centerView: () => void
+  locateNode: (nodeId: string) => void
+
+  // 节点操作
+  selectAll: () => void
+  deleteSelection: () => void
+  copyNodes: () => void
+  pasteNodes: () => void
+
+  // 数据访问
+  getWorkflowAst: () => WorkflowGraphAst
+  getSelectedNodes: () => INode[]
+}
 
 export interface WorkflowCanvasProps {
   /** 工作流 AST 实例 */
@@ -76,7 +110,7 @@ export interface WorkflowCanvasProps {
  *
  * 职责：包含所有需要访问 ReactFlow 上下文的逻辑
  */
-function WorkflowCanvasInner({
+const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>(({
   workflowAst,
   showMiniMap = true,
   showControls = true,
@@ -84,9 +118,9 @@ function WorkflowCanvasInner({
   snapToGrid = false,
   className = '',
   name = 'default'
-}: WorkflowCanvasProps) {
+}, ref) => {
   // 工作流上下文
-  const workflow = useWorkflow(fromJson<WorkflowGraphAst>({  ...workflowAst, name }))
+  const workflow = useWorkflow(fromJson<WorkflowGraphAst>({ ...workflowAst, name }))
   const { getViewport, setViewport } = useReactFlow()
 
   // 状态管理
@@ -236,6 +270,113 @@ function WorkflowCanvasInner({
     onAutoLayout: autoLayout,
   })
 
+  // 暴露命令式 API
+  useImperativeHandle(ref, () => ({
+    // 文件操作
+    importWorkflow: async (json: string) => {
+      try {
+        // importWorkflow 是按钮触发函数，不接受参数
+        // 这里需要直接处理 JSON 字符串
+        const data = JSON.parse(json)
+        const importedWorkflow = fromJson<WorkflowGraphAst>(data.workflow || data)
+
+        Object.assign(workflow.workflowAst, importedWorkflow)
+        workflow.syncFromAst()
+
+        if (handleFitView) {
+          setTimeout(() => {
+            handleFitView()
+          }, 100)
+        }
+
+        showToast('success', '导入成功', `已导入工作流 "${importedWorkflow.name || '未命名'}"`)
+      } catch (error) {
+        console.error('导入工作流失败:', error)
+        showToast('error', '导入失败', error instanceof Error ? error.message : '未知错误')
+        throw error
+      }
+    },
+    exportWorkflow: () => {
+      try {
+        if (!workflow?.workflowAst) {
+          return ''
+        }
+
+        const workflowJson = toJson(workflow.workflowAst)
+        const exportData = {
+          workflow: workflowJson
+        }
+
+        return JSON.stringify(exportData, null, 2)
+      } catch (error) {
+        console.error('导出工作流失败:', error)
+        return ''
+      }
+    },
+
+    // 执行控制
+    runWorkflow: async () => {
+      await runWorkflow(() => {
+        console.log('工作流执行完成')
+      })
+    },
+    runNode: async (nodeId: string) => {
+      await runNode(nodeId)
+    },
+    runNodeIsolated: async (nodeId: string) => {
+      await runNodeIsolated(nodeId)
+    },
+
+    // 视图操作
+    autoLayout: (direction?: 'TB' | 'LR') => {
+      // autoLayout 不接受参数，这里忽略参数
+      autoLayout()
+    },
+    fitView: () => {
+      handleFitView()
+    },
+    zoomIn: () => {
+      handleZoomIn()
+    },
+    zoomOut: () => {
+      handleZoomOut()
+    },
+    centerView: () => {
+      handleCenterView()
+    },
+    locateNode: (nodeId: string) => {
+      handleLocateNode(nodeId)
+    },
+
+    // 节点操作
+    selectAll: () => {
+      handleSelectAll()
+    },
+    deleteSelection: () => {
+      deleteSelection()
+    },
+    copyNodes: () => {
+      copyNodes()
+    },
+    pasteNodes: () => {
+      pasteNodes()
+    },
+
+    // 数据访问
+    getWorkflowAst: () => {
+      return workflow.workflowAst
+    },
+    getSelectedNodes: () => {
+      return workflow.nodes.filter((n: any) => n.selected).map((n: any) => n.data)
+    },
+  }), [
+    exportWorkflow,
+    runWorkflow, runNode, runNodeIsolated,
+    autoLayout, handleFitView, handleZoomIn, handleZoomOut, handleCenterView, handleLocateNode,
+    handleSelectAll, deleteSelection, copyNodes, pasteNodes,
+    workflow, showToast
+  ])
+
   // 处理连线
   const handleNodesChangeInternal = useCallback((changes: NodeChange[]) => {
     workflow.onNodesChange(changes)
@@ -246,8 +387,29 @@ function WorkflowCanvasInner({
   }, [workflow])
 
   const handleConnectInternal = useCallback((connection: Connection) => {
+    // 创建临时边对象用于验证
+    const tempEdge = {
+      id: `temp-${Date.now()}`,
+      source: connection.source!,
+      target: connection.target!,
+      sourceHandle: connection.sourceHandle,
+      targetHandle: connection.targetHandle,
+    }
+
+    // 验证边的合法性
+    const { valid, errors } = validateEdge(
+      tempEdge as any,
+      workflow.nodes.map((n: any) => n.data),
+      workflow.edges
+    )
+
+    if (!valid) {
+      showToast('error', '连接失败', errors.join('；'))
+      return
+    }
+
     workflow.connectNodes(connection)
-  }, [workflow])
+  }, [workflow, showToast])
 
   const handleConnectStart = useCallback((
     _event: MouseEvent | TouchEvent,
@@ -382,6 +544,23 @@ function WorkflowCanvasInner({
 
   const isCanvasEmpty = workflow.nodes.length === 0
 
+  // MiniMap 节点颜色映射
+  const getMiniMapNodeColor = useCallback((node: any) => {
+    const status = node.data?.state
+    if (!status || status === 'pending') {
+      return 'hsl(var(--muted-foreground))'
+    }
+
+    const statusColors: Record<string, string> = {
+      running: 'hsl(var(--node-running))',
+      emitting: 'hsl(var(--node-emitting))',
+      success: 'hsl(var(--node-success))',
+      fail: 'hsl(var(--node-error))',
+    }
+
+    return statusColors[status] || 'hsl(var(--muted-foreground))'
+  }, [])
+
   return (
     <div
       className={cn(
@@ -389,97 +568,93 @@ function WorkflowCanvasInner({
         className
       )}
     >
-      <div className="relative flex flex-1 overflow-hidden">
-        <div className="relative flex flex-1">
-          <ReactFlow
-            nodes={workflow.nodes}
-            edges={workflow.edges}
-            onNodesChange={handleNodesChangeInternal}
-            onEdgesChange={handleEdgesChangeInternal}
-            onConnect={handleConnectInternal}
-            onConnectStart={handleConnectStart}
-            onConnectEnd={handleConnectEnd}
-            onNodeClick={onNodeClick}
-            onPaneClick={onPaneClick}
-            onNodesDelete={handleNodesDelete}
-            onEdgesDelete={handleEdgesDelete}
-            onPaneContextMenu={onPaneContextMenu}
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            nodeTypes={createNodeTypes()}
-            edgeTypes={edgeTypes}
-            panOnScroll
-            selectionOnDrag={true}
-            panOnDrag={[1, 2]}
-            selectionMode={SelectionMode.Partial}
-            fitView={!workflow.workflowAst.viewport}
-            deleteKeyCode="Delete"
-            snapToGrid={snapToGrid}
-            nodesDraggable={true}
-            nodesConnectable={true}
-            elementsSelectable={true}
-            minZoom={0.1}
-            maxZoom={4}
-            zoomOnDoubleClick={false}
-            className="workflow-canvas__reactflow bg-[var(--workflow-canvas-bg)]"
-          >
-            {showBackground && (
-              <Background
-                variant={BackgroundVariant.Dots}
-                gap={24}
-                size={1}
-                className="[--xy-background-pattern-color:var(--workflow-grid-color)]"
-              />
-            )}
-            {showMiniMap && (
-              <MiniMap
-                className="!bg-background/80 !text-muted-foreground"
-                maskColor="var(--workflow-minimap-mask)"
-                pannable
-                zoomable
-              />
-            )}
-          </ReactFlow>
-
-          {isCanvasEmpty && <CanvasEmptyState />}
-
-          {showControls && (
-            <CanvasControls
-              onRunWorkflow={() => runWorkflow(() => {
-                // 运行完成后的回调，可以在这里添加完成逻辑
-                console.log('工作流执行完成')
-              })}
-              onSaveWorkflow={() => saveWorkflow(workflow.workflowAst?.name || 'Untitled')}
-              onExportWorkflow={exportWorkflow}
-              onImportWorkflow={importWorkflow}
-              onOpenWorkflowSettings={openWorkflowSettingsDialog}
-              onOpenScheduleDialog={() => {
-                const workflowName = workflow.workflowAst?.name
-                if (workflowName) {
-                  openScheduleDialog(workflowName)
-                } else {
-                  showToast('error', '请先保存工作流', '只有保存的工作流才能创建调度')
-                }
-              }}
-              onOpenScheduleList={() => {
-                const workflowName = workflow.workflowAst?.name
-                if (workflowName) {
-                  openSchedulePanel(workflowName)
-                } else {
-                  showToast('error', '请先保存工作流', '只有保存的工作流才能查看调度')
-                }
-              }}
-              onZoomIn={handleZoomIn}
-              onZoomOut={handleZoomOut}
-              onFitView={handleFitView}
-              onCollapseNodes={collapseNodes}
-              onExpandNodes={expandNodes}
-              onAutoLayout={autoLayout}
-              isRunning={false} // 需要从状态管理获取
-              isSaving={false}  // 需要从状态管理获取
+      <div className="relative flex flex-1">
+        <ReactFlow
+          nodes={workflow.nodes}
+          edges={workflow.edges}
+          onNodesChange={handleNodesChangeInternal}
+          onEdgesChange={handleEdgesChangeInternal}
+          onConnect={handleConnectInternal}
+          onConnectStart={handleConnectStart}
+          onConnectEnd={handleConnectEnd}
+          onNodeClick={onNodeClick}
+          onPaneClick={onPaneClick}
+          onNodesDelete={handleNodesDelete}
+          onEdgesDelete={handleEdgesDelete}
+          onPaneContextMenu={onPaneContextMenu}
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          nodeTypes={createNodeTypes()}
+          edgeTypes={edgeTypes}
+          panOnScroll
+          selectionOnDrag={true}
+          panOnDrag={[1, 2]}
+          selectionMode={SelectionMode.Partial}
+          fitView={!workflow.workflowAst.viewport}
+          deleteKeyCode="Delete"
+          snapToGrid={snapToGrid}
+          nodesDraggable={true}
+          nodesConnectable={true}
+          elementsSelectable={true}
+          minZoom={0.1}
+          maxZoom={4}
+          zoomOnDoubleClick={false}
+          colorMode="dark"
+        >
+          {showBackground && (
+            <Background
+              variant={BackgroundVariant.Dots}
+              gap={24}
+              size={1}
+              bgColor={'#000000'}
             />
           )}
-        </div>
+          {showMiniMap && (
+            <MiniMap
+              pannable
+              zoomable
+            />
+          )}
+        </ReactFlow>
+
+        {isCanvasEmpty && <CanvasEmptyState />}
+
+        {showControls && (
+          <CanvasControls
+            onRunWorkflow={() => runWorkflow(() => {
+              // 运行完成后的回调，可以在这里添加完成逻辑
+              console.log('工作流执行完成')
+            })}
+            onSaveWorkflow={() => saveWorkflow(workflow.workflowAst?.name || 'Untitled')}
+            onExportWorkflow={exportWorkflow}
+            onImportWorkflow={importWorkflow}
+            onOpenWorkflowSettings={openWorkflowSettingsDialog}
+            onOpenScheduleDialog={() => {
+              const workflowName = workflow.workflowAst?.name
+              if (workflowName) {
+                openScheduleDialog(workflowName)
+              } else {
+                showToast('error', '请先保存工作流', '只有保存的工作流才能创建调度')
+              }
+            }}
+            onOpenScheduleList={() => {
+              const workflowName = workflow.workflowAst?.name
+              if (workflowName) {
+                openSchedulePanel(workflowName)
+              } else {
+                showToast('error', '请先保存工作流', '只有保存的工作流才能查看调度')
+              }
+            }}
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            onFitView={handleFitView}
+            onCollapseNodes={collapseNodes}
+            onExpandNodes={expandNodes}
+            onAutoLayout={autoLayout}
+            isRunning={false} // 需要从状态管理获取
+            isSaving={false}  // 需要从状态管理获取
+          />
+        )}
       </div>
 
       <ContextMenu
@@ -597,7 +772,7 @@ function WorkflowCanvasInner({
       )}
     </div>
   )
-}
+})
 
 WorkflowCanvasInner.displayName = 'WorkflowCanvasInner'
 
@@ -607,12 +782,12 @@ WorkflowCanvasInner.displayName = 'WorkflowCanvasInner'
  * 职责：提供 ReactFlowProvider 上下文
  * 优雅设计：最小化的包装，仅负责提供必要的上下文
  */
-export function WorkflowCanvas(props: WorkflowCanvasProps) {
+export const WorkflowCanvas = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((props, ref) => {
   return (
     <ReactFlowProvider>
-      <WorkflowCanvasInner {...props} />
+      <WorkflowCanvasInner {...props} ref={ref} />
     </ReactFlowProvider>
   )
-}
+})
 
 WorkflowCanvas.displayName = 'WorkflowCanvas'

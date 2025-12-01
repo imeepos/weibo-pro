@@ -122,7 +122,7 @@ const PortRow = ({
           <HandleWrapper port={input} type="target" isCollapsed={isCollapsed} />
           {!isCollapsed && (
             <>
-              <span className="text-xs text-foreground/90 truncate ml-2">
+              <span className="text-xs text-foreground/90 truncate ml-3">
                 {input.label || input.property}
               </span>
               {input.isMulti && (
@@ -141,7 +141,7 @@ const PortRow = ({
               {output.isMulti && (
                 <span className="text-[10px] text-muted-foreground font-mono">[]</span>
               )}
-              <span className="text-xs text-foreground/90 truncate mr-2">
+              <span className="text-xs text-foreground/90 truncate mr-3">
                 {output.label || output.property}
               </span>
             </>
@@ -160,6 +160,7 @@ const WorkflowNodeComponent = ({
   label,
   description,
   color = '#3b82f6',
+  icon,
   status,
   statusCount = 0,
   inputs = [],
@@ -205,10 +206,12 @@ const WorkflowNodeComponent = ({
         {/* 节点头部 */}
         <div className="flex items-center rounded-t-2xl p-2">
           <div
-            className="flex items-center justify-center w-6 h-6 rounded-lg mr-2 shrink-0"
+            className="flex items-center justify-center w-6 h-6 rounded-lg mr-2 shrink-0 text-primary-foreground [&>svg]:size-4"
             style={{ backgroundColor: color }}
           >
-            <div className="w-3 h-3 bg-primary-foreground rounded-sm" />
+            {icon || (
+              <div className="w-3 h-3 bg-primary-foreground rounded-sm" />
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-sm font-medium text-foreground truncate">{label}</div>

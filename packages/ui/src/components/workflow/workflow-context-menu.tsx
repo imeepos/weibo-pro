@@ -14,7 +14,7 @@ import {
 import { Plus, Copy, Trash2 } from 'lucide-react'
 
 import { cn } from '@sker/ui/lib/utils'
-import { NODE_CATEGORIES, DEFAULT_NODE_TYPES } from './types/workflow-nodes'
+import { getWorkflowNodeDefinitions, getNodeCategories } from './metadata-factory'
 
 import type { WorkflowContextMenuProps } from './types/workflow-canvas'
 
@@ -32,6 +32,9 @@ export function WorkflowContextMenu({
   onPaste,
   className,
 }: ExtendedWorkflowContextMenuProps) {
+  const nodeDefinitions = React.useMemo(() => getWorkflowNodeDefinitions(), [])
+  const nodeCategories = React.useMemo(() => getNodeCategories(), [])
+
   // 关闭菜单的全局点击事件
   useEffect(() => {
     if (!isOpen) return
@@ -67,7 +70,7 @@ export function WorkflowContextMenu({
             <span>添加节点</span>
           </ContextMenuSubTrigger>
           <ContextMenuSubContent className="w-48">
-            {NODE_CATEGORIES.map((category) => (
+            {nodeCategories.map((category) => (
               <ContextMenuSub key={category.id}>
                 <ContextMenuSubTrigger>
                   <div className="flex items-center gap-2">
@@ -79,7 +82,7 @@ export function WorkflowContextMenu({
                   </div>
                 </ContextMenuSubTrigger>
                 <ContextMenuSubContent>
-                  {Object.values(DEFAULT_NODE_TYPES)
+                  {Object.values(nodeDefinitions)
                     .filter((node) => node.category === category.id)
                     .map((node) => (
                       <ContextMenuItem

@@ -17,7 +17,7 @@ import {
 import { Plus, Play, Save, Download } from 'lucide-react'
 
 import { cn } from '@sker/ui/lib/utils'
-import { NODE_CATEGORIES, DEFAULT_NODE_TYPES } from './types/workflow-nodes'
+import { getWorkflowNodeDefinitions, getNodeCategories } from './metadata-factory'
 
 import type { WorkflowToolbarProps } from './types/workflow-canvas'
 
@@ -28,6 +28,9 @@ export function WorkflowToolbar({
   onExport,
   className,
 }: WorkflowToolbarProps) {
+  const nodeDefinitions = React.useMemo(() => getWorkflowNodeDefinitions(), [])
+  const nodeCategories = React.useMemo(() => getNodeCategories(), [])
+
   return (
     <TooltipProvider>
       <div
@@ -52,8 +55,8 @@ export function WorkflowToolbar({
             </TooltipContent>
           </Tooltip>
           <DropdownMenuContent align="start" className="w-64">
-            {NODE_CATEGORIES.map((category) => {
-              const categoryNodes = Object.values(DEFAULT_NODE_TYPES).filter(
+            {nodeCategories.map((category) => {
+              const categoryNodes = Object.values(nodeDefinitions).filter(
                 (node) => node.category === category.id
               )
 

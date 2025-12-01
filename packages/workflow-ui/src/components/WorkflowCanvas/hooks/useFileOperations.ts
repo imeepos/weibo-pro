@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { toJson, fromJson, WorkflowGraphAst, INode, IEdge } from '@sker/workflow'
 import { getAllNodeTypes } from '../../../adapters'
+import { validateEdgesDetailed } from '../../../utils/edgeValidator'
 
 export interface FileOperationsOptions {
   onShowToast?: (type: 'success' | 'error' | 'info', title: string, message?: string) => void
@@ -169,6 +170,33 @@ export const useFileOperations = (workflow: any, options: FileOperationsOptions 
 
       // 反序列化工作流
       const importedWorkflow = fromJson<WorkflowGraphAst>(data.workflow)
+
+      // 验证和清理边
+      const edgesArray = Array.isArray(importedWorkflow.edges) ? importedWorkflow.edges : []
+      const nodesArray = Array.isArray(importedWorkflow.nodes) ? importedWorkflow.nodes : []
+
+      const edgeValidation = validateEdgesDetailed(
+        edgesArray as any[],
+        nodesArray
+      )
+
+      if (edgeValidation.invalidEdges.length > 0) {
+        const invalidCount = edgeValidation.invalidEdges.length
+        const errorDetails = edgeValidation.invalidEdges
+          .slice(0, 3)
+          .map(({ edge, errors }) => `边 ${edge.source} → ${edge.target}: ${errors[0]}`)
+          .join('\n• ')
+
+        console.warn('导入工作流时发现非法边:', edgeValidation.invalidEdges)
+
+        onShowToast?.(
+          'info',
+          `已清理 ${invalidCount} 条非法连线`,
+          invalidCount <= 3 ? errorDetails : `${errorDetails}\n...还有 ${invalidCount - 3} 条`
+        )
+
+        importedWorkflow.edges = edgeValidation.validEdges as any
+      }
 
       // 智能检测：画布为空直接导入，否则显示确认对话框
       if (isCanvasEmpty) {

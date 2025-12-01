@@ -12,7 +12,7 @@ import { ScrollArea } from '@sker/ui/components/ui/scroll-area'
 import { Search } from 'lucide-react'
 
 import { cn } from '@sker/ui/lib/utils'
-import { NODE_CATEGORIES, DEFAULT_NODE_TYPES } from './types/workflow-nodes'
+import { getWorkflowNodeDefinitions, getNodeCategories } from './metadata-factory'
 
 import type { WorkflowNodeSelectorProps } from './types/workflow-canvas'
 
@@ -25,8 +25,11 @@ export function WorkflowNodeSelector({
 }: WorkflowNodeSelectorProps) {
   const [searchTerm, setSearchTerm] = useState('')
 
+  const nodeDefinitions = React.useMemo(() => getWorkflowNodeDefinitions(), [])
+  const nodeCategories = React.useMemo(() => getNodeCategories(), [])
+
   // 过滤节点类型
-  const filteredNodes = Object.values(DEFAULT_NODE_TYPES).filter((node) =>
+  const filteredNodes = Object.values(nodeDefinitions).filter((node) =>
     node.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     node.description?.toLowerCase().includes(searchTerm.toLowerCase())
   )
@@ -85,8 +88,8 @@ export function WorkflowNodeSelector({
           ) : (
             // 按分类显示
             <div className="space-y-6">
-              {NODE_CATEGORIES.map((category) => {
-                const categoryNodes = Object.values(DEFAULT_NODE_TYPES).filter(
+              {nodeCategories.map((category) => {
+                const categoryNodes = Object.values(nodeDefinitions).filter(
                   (node) => node.category === category.id
                 )
 
