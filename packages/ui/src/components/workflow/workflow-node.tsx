@@ -66,19 +66,52 @@ const StatusBadge = ({
   )
 }
 
-// Handle 包装器
+// Handle 包装器 - 折叠时独立渲染
 const HandleWrapper = ({
   port,
   type,
   isCollapsed,
+  portIndex,
+  totalPorts,
 }: {
   port?: WorkflowNodePort
   type: 'source' | 'target'
   isCollapsed?: boolean
+  portIndex?: number
+  totalPorts?: number
 }) => {
   if (!port) return null
 
   const isTarget = type === 'target'
+
+  // 计算 Handle 的垂直位置
+  const getHandlePosition = () => {
+    if (portIndex === undefined || totalPorts === undefined) {
+      return undefined
+    }
+
+    if (isCollapsed) {
+      // 折叠状态：端口均匀分布在节点头部下方
+      const headerHeight = 48
+      const nodeHeight = 100
+      const availableHeight = nodeHeight - headerHeight
+
+      if (totalPorts === 1) {
+        return headerHeight + availableHeight / 2
+      }
+
+      const spacing = availableHeight / (totalPorts + 1)
+      return headerHeight + spacing * (portIndex + 1)
+    } else {
+      // 展开状态：对齐每个端口行的中心
+      // 头部高度 48px + 边框 1px + padding 8px + 每行高度 24px
+      const headerHeight = 48
+      const borderAndPadding = 9
+      const rowHeight = 24
+
+      return headerHeight + borderAndPadding + rowHeight * portIndex + rowHeight / 2
+    }
+  }
 
   return (
     <Handle
@@ -86,48 +119,39 @@ const HandleWrapper = ({
       id={port.property}
       position={isTarget ? Position.Left : Position.Right}
       isConnectable={true}
+      style={{
+        top: `${getHandlePosition()}px`,
+        [isTarget ? 'left' : 'right']: 0,
+      }}
       className={cn(
         '!w-3 !h-3 !border-2 rounded-full transition-all duration-150',
         'hover:!w-4 hover:!h-4 hover:shadow-lg',
         '!z-50 !cursor-crosshair',
         isTarget
           ? 'bg-[hsl(var(--workflow-handle-input))] border-[hsl(var(--workflow-handle-input-border))] hover:opacity-80'
-          : 'bg-[hsl(var(--workflow-handle-output))] border-[hsl(var(--workflow-handle-output-border))] hover:opacity-80',
-        isCollapsed && '!opacity-0 !pointer-events-none !w-0 !h-0'
+          : 'bg-[hsl(var(--workflow-handle-output))] border-[hsl(var(--workflow-handle-output-border))] hover:opacity-80'
       )}
     />
   )
 }
 
-// 端口行组件
+// 端口行组件 - 不再包含 Handle
 const PortRow = ({
   input,
   output,
-  isCollapsed,
 }: {
   input?: WorkflowNodePort
   output?: WorkflowNodePort
-  isCollapsed?: boolean
 }) => (
-  <div
-    className={cn(
-      'relative flex items-center justify-between h-6 px-2',
-      isCollapsed && 'h-0 overflow-hidden opacity-0'
-    )}
-  >
+  <div className="relative flex items-center justify-between h-6 px-2">
     <div className="flex items-center gap-1 relative">
       {input && (
         <>
-          <HandleWrapper port={input} type="target" isCollapsed={isCollapsed} />
-          {!isCollapsed && (
-            <>
-              <span className="text-xs text-foreground/90 truncate ml-3">
-                {input.label || input.property}
-              </span>
-              {input.isMulti && (
-                <span className="text-[10px] text-muted-foreground font-mono">[]</span>
-              )}
-            </>
+          <span className="text-xs text-foreground/90 truncate ml-3">
+            {input.label || input.property}
+          </span>
+          {input.isMulti && (
+            <span className="text-[10px] text-muted-foreground font-mono">[]</span>
           )}
         </>
       )}
@@ -135,17 +159,12 @@ const PortRow = ({
     <div className="flex items-center gap-1 relative">
       {output && (
         <>
-          {!isCollapsed && (
-            <>
-              {output.isMulti && (
-                <span className="text-[10px] text-muted-foreground font-mono">[]</span>
-              )}
-              <span className="text-xs text-foreground/90 truncate mr-3">
-                {output.label || output.property}
-              </span>
-            </>
+          {output.isMulti && (
+            <span className="text-[10px] text-muted-foreground font-mono">[]</span>
           )}
-          <HandleWrapper port={output} type="source" isCollapsed={isCollapsed} />
+          <span className="text-xs text-foreground/90 truncate mr-3">
+            {output.label || output.property}
+          </span>
         </>
       )}
     </div>
@@ -178,6 +197,10 @@ const WorkflowNodeComponent = ({
     return 'hsl(var(--input))'
   }
 
+  // 收集所有需要渲染的 Handle
+  const allInputs = inputs.filter((input) => input != null)
+  const allOutputs = outputs.filter((output) => output != null)
+
   return (
     <Collapsible
       open={!collapsed}
@@ -201,6 +224,28 @@ const WorkflowNodeComponent = ({
         onDoubleClick={onDoubleClick}
       >
         <StatusBadge status={status} count={statusCount} />
+
+        {/* Handle 独立渲染层 - 始终可见，不受折叠影响 */}
+        {allInputs.map((input, index) => (
+          <HandleWrapper
+            key={`input-handle-${input.property}`}
+            port={input}
+            type="target"
+            isCollapsed={collapsed}
+            portIndex={index}
+            totalPorts={allInputs.length}
+          />
+        ))}
+        {allOutputs.map((output, index) => (
+          <HandleWrapper
+            key={`output-handle-${output.property}`}
+            port={output}
+            type="source"
+            isCollapsed={collapsed}
+            portIndex={index}
+            totalPorts={allOutputs.length}
+          />
+        ))}
 
         {/* 节点头部 */}
         <div className="flex items-center rounded-t-2xl p-2">
@@ -251,7 +296,6 @@ const WorkflowNodeComponent = ({
                   key={`port-${index}`}
                   input={inputs[index]}
                   output={outputs[index]}
-                  isCollapsed={collapsed}
                 />
               )
             )}

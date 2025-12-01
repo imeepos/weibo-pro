@@ -38,15 +38,35 @@ export class WorkflowService {
 
       if (workflow) {
         // 更新现有工作流
-        workflow.title = params.name!;
-        workflow.graphDefinition = params;
-        workflow.status = WorkflowStatus.ACTIVE;
+        workflow.name = params.name!;
+        workflow.code = params.name!;
+        workflow.collapsed = !!params.collapsed;
+        workflow.nodes = params.nodes || [];
+        workflow.edges = params.edges || [];
+        workflow.entryNodeIds = params.entryNodeIds || [];
+        workflow.position = params.position;
+        workflow.width = params.width;
+        workflow.viewport = params.viewport;
+        workflow.tags = params.tags || [];
+        workflow.description = params.description;
+        workflow.color = params.color;
       } else {
         // 创建新工作流
         workflow = repository.create({
+          id: params.id || params.name,
           code: params.name,
-          title: params.name,
-          graphDefinition: params,
+          name: params.name,
+          description: params.description,
+          color: params.color,
+          type: params.type || 'WorkflowGraphAst',
+          nodes: params.nodes || [],
+          edges: params.edges || [],
+          entryNodeIds: params.entryNodeIds || [],
+          position: params.position,
+          width: params.width,
+          viewport: params.viewport,
+          collapsed: !!params.collapsed,
+          tags: params.tags || [],
           defaultInputs: {},
           status: WorkflowStatus.ACTIVE,
         });
@@ -77,7 +97,22 @@ export class WorkflowService {
 
       logger.info('Workflow retrieved', { id: workflow.id, name });
 
-      return workflow.graphDefinition as WorkflowGraphAst;
+      // 将实体转换为 WorkflowGraphAst
+      return {
+        id: workflow.id,
+        type: workflow.type,
+        name: workflow.name,
+        description: workflow.description,
+        color: workflow.color,
+        nodes: workflow.nodes,
+        edges: workflow.edges,
+        entryNodeIds: workflow.entryNodeIds,
+        position: workflow.position,
+        width: workflow.width,
+        viewport: workflow.viewport,
+        collapsed: workflow.collapsed,
+        tags: workflow.tags,
+      } as WorkflowGraphAst;
     });
   }
 
@@ -95,7 +130,7 @@ export class WorkflowService {
 
       return workflows.map(w => ({
         id: String(w.id),
-        name: w.title,
+        name: w.name,
         createdAt: w.createdAt.toISOString(),
         updatedAt: w.updatedAt.toISOString(),
       }));
@@ -109,7 +144,7 @@ export class WorkflowService {
     return useEntityManager(async (manager) => {
       const repository = manager.getRepository(WorkflowEntity);
 
-      const result = await repository.softDelete(Number(id));
+      const result = await repository.softDelete(id);
 
       const deleted = (result.affected ?? 0) > 0;
 
@@ -139,15 +174,12 @@ export class WorkflowService {
       const shareRepository = manager.getRepository(WorkflowShareEntity);
 
       // 尝试通过 ID 或 code 查找工作流
-      const numericId = Number(params.workflowId);
       let workflow: WorkflowEntity | null = null;
 
-      if (Number.isInteger(numericId)) {
-        logger.debug('Searching workflow by ID', { id: numericId });
-        workflow = await workflowRepository.findOne({
-          where: { id: numericId },
-        });
-      }
+      logger.debug('Searching workflow by ID', { id: params.workflowId });
+      workflow = await workflowRepository.findOne({
+        where: { id: params.workflowId },
+      });
 
       if (!workflow) {
         logger.debug('Searching workflow by code', { code: params.workflowId });
@@ -216,8 +248,11 @@ export class WorkflowService {
 
       return {
         id: String(workflow.id),
-        name: workflow.title,
-        data: workflow.graphDefinition as { nodes: any[]; edges: any[] },
+        name: workflow.name,
+        data: {
+          nodes: workflow.nodes,
+          edges: workflow.edges,
+        },
         createdAt: workflow.createdAt.toISOString(),
         updatedAt: workflow.updatedAt.toISOString(),
       };
@@ -239,13 +274,6 @@ interface WorkflowData {
     nodes: any[];
     edges: any[];
   };
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface WorkflowSummary {
-  id: string;
-  name: string;
   createdAt: string;
   updatedAt: string;
 }

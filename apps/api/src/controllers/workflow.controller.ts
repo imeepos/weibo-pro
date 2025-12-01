@@ -358,8 +358,8 @@ export class WorkflowController implements sdk.WorkflowController {
    */
   @Post(':id/runs')
   async createRun(
-    @Body() body: { workflowId: number; inputs?: Record<string, unknown> },
-  ): Promise<{ runId: number; run: WorkflowRunEntity }> {
+    @Body() body: { workflowId: string; inputs?: Record<string, unknown> },
+  ): Promise<{ runId: string; run: WorkflowRunEntity }> {
     const { workflowId, inputs } = body;
 
     if (!workflowId) {
@@ -387,7 +387,7 @@ export class WorkflowController implements sdk.WorkflowController {
    * - 返回完整的运行结果
    */
   @Post('runs/:runId/execute')
-  async executeRun(@Body() body: { runId: number }): Promise<WorkflowRunEntity> {
+  async executeRun(@Body() body: { runId: string }): Promise<WorkflowRunEntity> {
     const { runId } = body;
 
     if (!runId) {
@@ -490,7 +490,7 @@ export class WorkflowController implements sdk.WorkflowController {
    * - 包括输入、输出、节点状态、错误信息
    */
   @Get('runs/:runId')
-  async getRun(@Body() body: { runId: number }): Promise<WorkflowRunEntity> {
+  async getRun(@Body() body: { runId: string }): Promise<WorkflowRunEntity> {
     const { runId } = body;
 
     if (!runId) {
@@ -519,7 +519,7 @@ export class WorkflowController implements sdk.WorkflowController {
   async listRuns(
     @Query()
     query: {
-      workflowId: number;
+      workflowId: string;
       page?: number;
       pageSize?: number;
       status?: RunStatus;
@@ -552,7 +552,7 @@ export class WorkflowController implements sdk.WorkflowController {
    * - 记录取消时间
    */
   @Post('runs/:runId/cancel')
-  async cancelRun(@Body() body: { runId: number }): Promise<{ success: boolean }> {
+  async cancelRun(@Body() body: { runId: string }): Promise<{ success: boolean }> {
     const { runId } = body;
 
     if (!runId) {
@@ -612,7 +612,7 @@ export class WorkflowController implements sdk.WorkflowController {
       logger.info('开始节点微调', { runId, nodeId, config: body.config });
 
       // 获取运行实例
-      const runPromise = this.workflowRunService.getRun(parseInt(runId));
+      const runPromise = this.workflowRunService.getRun(runId);
 
       return new Observable(observer => {
         runPromise.then(run => {
@@ -827,7 +827,7 @@ export class WorkflowController implements sdk.WorkflowController {
    * 获取调度详情
    */
   @Get('schedules/:scheduleId')
-  async getSchedule(@Param('scheduleId') scheduleId: number): Promise<WorkflowScheduleEntity> {
+  async getSchedule(@Param('scheduleId') scheduleId: string): Promise<WorkflowScheduleEntity> {
     return this.workflowScheduleService.getSchedule(scheduleId)
   }
 
@@ -836,7 +836,7 @@ export class WorkflowController implements sdk.WorkflowController {
    */
   @Put('schedules/:scheduleId')
   async updateSchedule(
-    @Param('scheduleId') scheduleId: number,
+    @Param('scheduleId') scheduleId: string,
     @Body() body: {
       name?: string;
       scheduleType?: string;
@@ -861,7 +861,7 @@ export class WorkflowController implements sdk.WorkflowController {
    * 删除调度
    */
   @Delete('schedules/:scheduleId')
-  async deleteSchedule(@Param('scheduleId') scheduleId: number): Promise<{ success: boolean }> {
+  async deleteSchedule(@Param('scheduleId') scheduleId: string): Promise<{ success: boolean }> {
     await this.workflowScheduleService.deleteSchedule(scheduleId)
     return { success: true }
   }
@@ -870,7 +870,7 @@ export class WorkflowController implements sdk.WorkflowController {
    * 启用调度
    */
   @Post('schedules/:scheduleId/enable')
-  async enableSchedule(@Param('scheduleId') scheduleId: number): Promise<WorkflowScheduleEntity> {
+  async enableSchedule(@Param('scheduleId') scheduleId: string): Promise<WorkflowScheduleEntity> {
     return this.workflowScheduleService.enableSchedule(scheduleId)
   }
 
@@ -878,7 +878,7 @@ export class WorkflowController implements sdk.WorkflowController {
    * 禁用调度
    */
   @Post('schedules/:scheduleId/disable')
-  async disableSchedule(@Param('scheduleId') scheduleId: number): Promise<WorkflowScheduleEntity> {
+  async disableSchedule(@Param('scheduleId') scheduleId: string): Promise<WorkflowScheduleEntity> {
     return this.workflowScheduleService.disableSchedule(scheduleId)
   }
 }

@@ -77,7 +77,7 @@ export class WorkflowScheduleService {
     return this.scheduleRepository.save(schedule)
   }
 
-  async updateSchedule(id: number, dto: UpdateScheduleDto): Promise<WorkflowScheduleEntity> {
+  async updateSchedule(id: string, dto: UpdateScheduleDto): Promise<WorkflowScheduleEntity> {
     const schedule = await this.scheduleRepository.findOne({ where: { id } })
     if (!schedule) {
       throw new Error(`Schedule ${id} not found`)
@@ -122,14 +122,14 @@ export class WorkflowScheduleService {
     return this.scheduleRepository.save(schedule)
   }
 
-  async deleteSchedule(id: number): Promise<void> {
+  async deleteSchedule(id: string): Promise<void> {
     const result = await this.scheduleRepository.softDelete(id)
     if (result.affected === 0) {
       throw new Error(`Schedule ${id} not found`)
     }
   }
 
-  async getSchedule(id: number): Promise<WorkflowScheduleEntity> {
+  async getSchedule(id: string): Promise<WorkflowScheduleEntity> {
     const schedule = await this.scheduleRepository.findOne({
       where: { id },
       relations: ['workflow']
@@ -161,7 +161,7 @@ export class WorkflowScheduleService {
     })
   }
 
-  async enableSchedule(id: number): Promise<WorkflowScheduleEntity> {
+  async enableSchedule(id: string): Promise<WorkflowScheduleEntity> {
     const schedule = await this.getSchedule(id)
     if (schedule.status === ScheduleStatus.ENABLED) {
       return schedule
@@ -180,7 +180,7 @@ export class WorkflowScheduleService {
     })
   }
 
-  async disableSchedule(id: number): Promise<WorkflowScheduleEntity> {
+  async disableSchedule(id: string): Promise<WorkflowScheduleEntity> {
     return this.updateSchedule(id, {
       status: ScheduleStatus.DISABLED,
       nextRunAt: null

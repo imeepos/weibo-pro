@@ -560,9 +560,9 @@ export enum RunStatus {
 
 // 工作流运行实例类型（前端专用）
 export interface WorkflowRunEntity {
-  id: number
-  workflowId: number
-  scheduleId?: number
+  id: string
+  workflowId: string
+  scheduleId?: string
   status: RunStatus
   graphSnapshot: unknown
   inputs: Record<string, unknown>
@@ -582,7 +582,7 @@ export interface WorkflowRunEntity {
 
 // 工作流运行实例相关类型
 export interface CreateRunResult {
-  runId: number
+  runId: string
   run: WorkflowRunEntity
 }
 

@@ -291,7 +291,7 @@ const App: React.FC = () => {
               }
             />
             <Route
-              path="/workflow-editor"
+              path="/workflow-editor/:name?"
               element={
                 <Layout>
                   <AnimatePresence mode="wait">

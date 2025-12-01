@@ -189,7 +189,7 @@ export class WorkflowSchedulerWorker {
   }
 
   // 立即触发某个调度（用于测试或手动执行）
-  async triggerSchedule(scheduleId: number): Promise<void> {
+  async triggerSchedule(scheduleId: string): Promise<void> {
     const schedule = await this.scheduleService.getSchedule(scheduleId)
     if (schedule.status !== ScheduleStatus.ENABLED) {
       throw new Error(`Schedule ${scheduleId} is not enabled`)

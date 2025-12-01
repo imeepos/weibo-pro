@@ -3,6 +3,7 @@ import {
   CreateDateColumn,
   DeleteDateColumn,
   Index,
+  PrimaryColumn,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -26,8 +27,8 @@ export enum WorkflowStatus {
 @Entity('workflows')
 export class WorkflowEntity {
   // 数据库主键
-  @PrimaryGeneratedColumn('increment')
-  id!: number;
+  @PrimaryColumn()
+  id!: string;
 
   // 对应 WorkflowGraphAst.id（业务唯一标识）
   @Column({ type: 'varchar', length: 100, unique: true })
@@ -122,8 +123,8 @@ export class WorkflowShareEntity {
   token!: string;
 
   @Index()
-  @Column({ type: 'int', name: 'workflow_id' })
-  workflowId!: number;
+  @Column({ type: 'varchar', length: 100, name: 'workflow_id' })
+  workflowId!: string;
 
   @Column({ type: 'timestamptz', name: 'expires_at', nullable: true })
   expiresAt?: Date;

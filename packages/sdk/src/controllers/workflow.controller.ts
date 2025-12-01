@@ -76,7 +76,7 @@ export class WorkflowController {
    * 创建工作流运行实例
    */
   @Post(':id/runs')
-  createRun(@Body() body: { workflowId: number; inputs?: Record<string, unknown> }): Promise<CreateRunResult> {
+  createRun(@Body() body: { workflowId: string; inputs?: Record<string, unknown> }): Promise<CreateRunResult> {
     throw new Error('method createRun not implements')
   }
 
@@ -84,7 +84,7 @@ export class WorkflowController {
    * 执行工作流运行实例
    */
   @Post('runs/:runId/execute')
-  executeRun(@Body() body: { runId: number }): Promise<WorkflowRunEntity> {
+  executeRun(@Body() body: { runId: string }): Promise<WorkflowRunEntity> {
     throw new Error('method executeRun not implements')
   }
 
@@ -92,7 +92,7 @@ export class WorkflowController {
    * 获取运行实例详情
    */
   @Get('runs/:runId')
-  getRun(@Body() body: { runId: number }): Promise<WorkflowRunEntity> {
+  getRun(@Body() body: { runId: string }): Promise<WorkflowRunEntity> {
     throw new Error('method getRun not implements')
   }
 
@@ -102,11 +102,11 @@ export class WorkflowController {
   @Get(':id/runs')
   listRuns(
     @Query() query: {
-      workflowId: number;
+      workflowId: string;
       page?: number;
       pageSize?: number;
       status?: RunStatus;
-      scheduleId?: number;
+      scheduleId?: string;
     },
   ): Promise<ListRunsResult> {
     throw new Error('method listRuns not implements')
@@ -116,7 +116,7 @@ export class WorkflowController {
    * 取消运行实例
    */
   @Post('runs/:runId/cancel')
-  cancelRun(@Body() body: { runId: number }): Promise<{ success: boolean }> {
+  cancelRun(@Body() body: { runId: string }): Promise<{ success: boolean }> {
     throw new Error('method cancelRun not implements')
   }
 
@@ -153,7 +153,7 @@ export class WorkflowController {
    * 获取调度详情
    */
   @Get('schedules/:scheduleId')
-  getSchedule(@Param('scheduleId') scheduleId: number): Promise<WorkflowScheduleEntity> {
+  getSchedule(@Param('scheduleId') scheduleId: string): Promise<WorkflowScheduleEntity> {
     throw new Error('method getSchedule not implements')
   }
 
@@ -162,7 +162,7 @@ export class WorkflowController {
    */
   @Put('schedules/:scheduleId')
   updateSchedule(
-    @Param('scheduleId') scheduleId: number,
+    @Param('scheduleId') scheduleId: string,
     @Body() body: {
       name?: string;
       scheduleType?: string;
@@ -181,7 +181,7 @@ export class WorkflowController {
    * 删除调度
    */
   @Delete('schedules/:scheduleId')
-  deleteSchedule(@Param('scheduleId') scheduleId: number): Promise<{ success: boolean }> {
+  deleteSchedule(@Param('scheduleId') scheduleId: string): Promise<{ success: boolean }> {
     throw new Error('method deleteSchedule not implements')
   }
 
@@ -189,7 +189,7 @@ export class WorkflowController {
    * 启用调度
    */
   @Post('schedules/:scheduleId/enable')
-  enableSchedule(@Param('scheduleId') scheduleId: number): Promise<WorkflowScheduleEntity> {
+  enableSchedule(@Param('scheduleId') scheduleId: string): Promise<WorkflowScheduleEntity> {
     throw new Error('method enableSchedule not implements')
   }
 
@@ -197,7 +197,7 @@ export class WorkflowController {
    * 禁用调度
    */
   @Post('schedules/:scheduleId/disable')
-  disableSchedule(@Param('scheduleId') scheduleId: number): Promise<WorkflowScheduleEntity> {
+  disableSchedule(@Param('scheduleId') scheduleId: string): Promise<WorkflowScheduleEntity> {
     throw new Error('method disableSchedule not implements')
   }
 

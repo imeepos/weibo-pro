@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Index,
+  PrimaryColumn,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -22,12 +23,12 @@ export enum ScheduleStatus {
 
 @Entity('workflow_schedules')
 export class WorkflowScheduleEntity {
-  @PrimaryGeneratedColumn('increment')
-  id!: number;
+  @PrimaryColumn()
+  id!: string;
 
   @Index()
-  @Column({ type: 'bigint', name: 'workflow_id' })
-  workflowId!: number;
+  @Column({ name: 'workflow_id' })
+  workflowId!: string;
 
   @Column({ type: 'varchar', length: 100 })
   name!: string;

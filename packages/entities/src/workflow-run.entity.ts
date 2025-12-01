@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Index,
+  PrimaryColumn,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -24,16 +25,16 @@ interface ErrorDetail {
 
 @Entity('workflow_runs')
 export class WorkflowRunEntity {
-  @PrimaryGeneratedColumn('increment')
-  id!: number;
+  @PrimaryColumn()
+  id!: string;
 
   @Index()
-  @Column({ type: 'bigint', name: 'workflow_id' })
-  workflowId!: number;
+  @Column({ name: 'workflow_id' })
+  workflowId!: string;
 
   @Index()
-  @Column({ type: 'bigint', name: 'schedule_id', nullable: true })
-  scheduleId?: number;
+  @Column({ name: 'schedule_id', nullable: true })
+  scheduleId?: string;
 
   @Index()
   @Column({

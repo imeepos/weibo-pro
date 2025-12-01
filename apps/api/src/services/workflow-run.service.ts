@@ -35,9 +35,9 @@ export class WorkflowRunService {
    * - 初始状态为 PENDING
    */
   async createRun(
-    workflowId: number,
+    workflowId: string,
     inputs?: Record<string, unknown>,
-    scheduleId?: number,
+    scheduleId?: string,
   ): Promise<WorkflowRunEntity> {
     return useEntityManager(async (manager) => {
       const workflowRepository = manager.getRepository(WorkflowEntity);
@@ -63,7 +63,7 @@ export class WorkflowRunService {
         workflowId: workflow.id,
         scheduleId,
         status: RunStatus.PENDING,
-        graphSnapshot: workflow.graphDefinition,
+        graphSnapshot: workflow,
         inputs: mergedInputs,
         nodeStates: {},
       });
@@ -73,7 +73,7 @@ export class WorkflowRunService {
       logger.info('工作流运行实例已创建', {
         runId: run.id,
         workflowId: workflow.id,
-        workflowName: workflow.title,
+        workflowName: workflow.name,
       });
 
       return run;
@@ -83,7 +83,7 @@ export class WorkflowRunService {
   /**
    * 获取运行实例
    */
-  async getRun(runId: number): Promise<WorkflowRunEntity | null> {
+  async getRun(runId: string): Promise<WorkflowRunEntity | null> {
     return useEntityManager(async (manager) => {
       const runRepository = manager.getRepository(WorkflowRunEntity);
 
@@ -109,7 +109,7 @@ export class WorkflowRunService {
    * - 可选择性过滤状态
    */
   async listRuns(
-    workflowId: number,
+    workflowId: string,
     options?: {
       page?: number;
       pageSize?: number;
@@ -167,7 +167,7 @@ export class WorkflowRunService {
    * - 原子性更新，避免并发冲突
    */
   async updateRunStatus(
-    runId: number,
+    runId: string,
     updates: {
       status?: RunStatus;
       nodeStates?: Record<string, unknown>;
@@ -236,7 +236,7 @@ export class WorkflowRunService {
    * - 记录开始时间
    * - 幂等性：如果已经开始，不重复设置
    */
-  async startRun(runId: number): Promise<void> {
+  async startRun(runId: string): Promise<void> {
     return useEntityManager(async (manager) => {
       const runRepository = manager.getRepository(WorkflowRunEntity);
 
@@ -270,7 +270,7 @@ export class WorkflowRunService {
    * - 记录完成时间和耗时
    */
   async completeRun(
-    runId: number,
+    runId: string,
     result: {
       success: boolean;
       outputs?: Record<string, unknown>;
@@ -327,7 +327,7 @@ export class WorkflowRunService {
    * - 只能取消 PENDING 或 RUNNING 状态的运行
    * - 记录取消时间
    */
-  async cancelRun(runId: number): Promise<void> {
+  async cancelRun(runId: string): Promise<void> {
     return useEntityManager(async (manager) => {
       const runRepository = manager.getRepository(WorkflowRunEntity);
 
@@ -364,7 +364,7 @@ export class WorkflowRunService {
    * - 支持批量删除
    * - 物理删除，不保留记录
    */
-  async deleteRuns(runIds: number[]): Promise<number> {
+  async deleteRuns(runIds: string[]): Promise<number> {
     return useEntityManager(async (manager) => {
       const runRepository = manager.getRepository(WorkflowRunEntity);
 
