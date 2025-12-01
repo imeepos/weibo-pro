@@ -5,6 +5,8 @@ import ReactECharts, { type EChartsOption } from 'echarts-for-react'
 import { motion } from 'framer-motion'
 import { cn } from '@sker/ui/lib/utils'
 
+export type { EChartsOption } from 'echarts-for-react'
+
 export interface EChartProps {
   /** ECharts 配置选项 */
   option: EChartsOption

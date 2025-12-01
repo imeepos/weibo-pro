@@ -1,5 +1,5 @@
 import React from 'react';
-import ReactECharts from 'echarts-for-react';
+import { EChart, type EChartsOption } from '@sker/ui/components/ui/echart';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/hooks/useTheme';
 import { useGeographicData } from '@/hooks/useChartData';
@@ -26,7 +26,7 @@ const GeographicChart: React.FC<GeographicChartProps> = ({
   const refetch = hookData.refetch;
 
   // 在所有条件检查之前计算option
-  const option = React.useMemo(() => {
+  const option: EChartsOption | null = React.useMemo(() => {
     if (!data || data.length === 0) {
       return null;
     }
@@ -116,7 +116,7 @@ const GeographicChart: React.FC<GeographicChartProps> = ({
   if (loading) {
     return (
       <div className={`flex items-center justify-center h-full ${className}`}>
-        <LoadingSpinner size="large" text="加载地理分布数据..." />
+        <LoadingSpinner />
       </div>
     );
   }
@@ -155,13 +155,9 @@ const GeographicChart: React.FC<GeographicChartProps> = ({
       className={`w-full h-full ${className}`}
     >
       {option && (
-        <ReactECharts
+        <EChart
           option={option}
-          style={{ 
-            height: height ? `${height}px` : '100%', 
-            width: '100%' 
-          }}
-          opts={{ renderer: 'canvas' }}
+          height={height || undefined}
         />
       )}
     </motion.div>
