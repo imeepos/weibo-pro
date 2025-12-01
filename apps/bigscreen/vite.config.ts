@@ -96,7 +96,7 @@ export default defineConfig(({ command }) => {
     build: {
       outDir: projectOutDir,
       target: 'es2020',
-      sourcemap: 'hidden', // 生产环境启用隐藏的源码映射，便于调试但不暴露给用户
+      sourcemap: false, // 禁用 sourcemap 减少内存使用
       cssCodeSplit: true, // 启用CSS代码分割
       assetsInlineLimit: 4096, // 小于4KB的资源内联
 
@@ -120,20 +120,36 @@ export default defineConfig(({ command }) => {
 
       chunkSizeWarningLimit: 1000, // 提高警告阈值到 1MB
       rollupOptions: {
-        // 移除外部依赖配置，让所有依赖都打包到bundle中
         output: {
-          // 使用自动代码分割
+          // 优化代码分割策略
+          manualChunks(id) {
+            // 将 node_modules 中的依赖分割到 vendor chunk
+            if (id.includes('node_modules')) {
+              // 大型库单独分割
+              if (id.includes('echarts')) {
+                return 'vendor-echarts'
+              }
+              if (id.includes('monaco-editor')) {
+                return 'vendor-monaco'
+              }
+              if (id.includes('@xyflow') || id.includes('react-flow')) {
+                return 'vendor-workflow'
+              }
+              return 'vendor'
+            }
+          },
 
           // 文件命名优化
-          chunkFileNames: () => {
-            return `assets/js/[name]-[hash:8].js`
-          },
+          chunkFileNames: 'assets/js/[name]-[hash:8].js',
           entryFileNames: 'assets/js/[name]-[hash:8].js',
           assetFileNames: (assetInfo) => {
             const info = assetInfo.name?.split('.') || []
             const extType = info[info.length - 1]
 
             // 根据资源类型分目录
+            if (/\.(mp4|webm|ogg|mp3|wav|flac|aac)(\?.*)?$/i.test(assetInfo.name || '')) {
+              return `assets/media/[name]-[hash:8][extname]`
+            }
             if (/\.(png|jpe?g|gif|svg|webp|avif)(\?.*)?$/i.test(assetInfo.name || '')) {
               return `assets/images/[name]-[hash:8][extname]`
             }
@@ -150,9 +166,9 @@ export default defineConfig(({ command }) => {
 
         // Tree shaking优化
         treeshake: {
-          moduleSideEffects: true,
-          propertyReadSideEffects: true,
-          tryCatchDeoptimization: true,
+          moduleSideEffects: false, // 改为 false 减少内存使用
+          propertyReadSideEffects: false,
+          tryCatchDeoptimization: false,
         },
       },
     },
