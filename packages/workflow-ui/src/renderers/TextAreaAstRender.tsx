@@ -1,20 +1,13 @@
 import { Injectable } from "@sker/core";
 import { Render, TextAreaAst } from "@sker/workflow";
+import { MarkdownViewer } from "@sker/ui/components/ui";
 import React from "react";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 
 @Injectable()
 export class TextAreaAstRender {
     @Render(TextAreaAst)
     render(ast: TextAreaAst, ctx: any) {
-        return (
-            <div className="prose prose-sm prose-neutral dark:prose-invert max-w-none">
-                <Markdown remarkPlugins={[remarkGfm]}>
-                    {Array.isArray(ast.input) ? ast.input.join('\n') : ast.input}
-                </Markdown>
-            </div>
-        );
+        return <MarkdownViewer>{ast.input}</MarkdownViewer>;
     }
 }
 
