@@ -26,3 +26,6 @@ export * from './CollectorAstRender';
 // 控制流节点
 export * from './IfAstRender';
 export * from './SwitchAstRender';
+
+// 循环群聊节点
+export * from './GroupChatLoopAstRender';

@@ -5,7 +5,6 @@ import { Observable } from "rxjs";
 import { z } from 'zod'
 import { DynamicStructuredTool } from "@langchain/core/tools";
 import { ChatOpenAI } from "@langchain/openai";
-import { createAgent } from "langchain";
 export const getNodeTool = (nodes: INode[]) => {
     const tool = new DynamicStructuredTool({
         name: 'getNode',
@@ -63,6 +62,8 @@ export class LlmTextAgentAstVisitor {
                 }
 
                 ast.text = result.content as string;
+                ast.username = ast.name || ast.id;
+                ast.profile = ast.description || ast.name || ast.id;
                 ast.state = 'emitting'
                 obs.next({ ...ast })
 

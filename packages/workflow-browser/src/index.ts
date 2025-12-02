@@ -19,3 +19,4 @@ import "./WeiboAccountPickAstBrowserVisitor"
 import "./CollectorVisitor";
 import "./TextAreaAstVisitor";
 import "./IfAstVisitor";
+import "./ShareAstVisitor";

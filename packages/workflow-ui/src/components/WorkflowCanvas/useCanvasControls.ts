@@ -71,7 +71,7 @@ export function useCanvasControls() {
       if (!connection.source || !connection.target) return
 
       const edge: WorkflowEdge = {
-        id: `edge-${Date.now()}`,
+        id: generateId(),
         source: connection.source,
         target: connection.target,
         sourceHandle: connection.sourceHandle,
@@ -80,7 +80,7 @@ export function useCanvasControls() {
         data: {
           edgeType: 'data',
           edge: {
-            id: `edge-${Date.now()}`,
+            id: generateId(),
             type: 'data',
             from: connection.source,
             to: connection.target,

@@ -4,7 +4,7 @@ import { fromJson } from "./generate";
 import { INode } from "./types";
 import { ReactiveScheduler } from './execution/reactive-scheduler';
 import { VisitorExecutor } from './execution/visitor-executor';
-import { Observable } from 'rxjs';
+import { concat, Observable } from 'rxjs';
 import { Injectable, root } from "@sker/core";
 
 @Injectable()
@@ -50,7 +50,6 @@ export function executeAst<S extends INode>(state: S, context: WorkflowGraphAst)
  */
 export function executeAstWithWorkflowGraph(nodeId: string, context: WorkflowGraphAst) {
     const scheduler = root.get(ReactiveScheduler);
-    console.log(`executeAstWithWorkflowGraph`, { nodeId, context })
     return scheduler.fineTuneNode(context, nodeId);
 }
 
@@ -70,6 +69,5 @@ export function executeAstWithWorkflowGraph(nodeId: string, context: WorkflowGra
  */
 export function executeNodeIsolated(nodeId: string, context: WorkflowGraphAst) {
     const scheduler = root.get(ReactiveScheduler);
-    console.log(`executeNodeIsolated`, { nodeId, context })
     return scheduler.executeNodeIsolated(context, nodeId);
 }

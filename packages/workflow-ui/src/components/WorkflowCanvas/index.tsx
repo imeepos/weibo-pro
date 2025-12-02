@@ -486,6 +486,30 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
     edgesToDelete.forEach((edge) => workflow.removeEdge(edge))
   }, [workflow])
 
+  // 边事件处理
+  const handleEdgeDoubleClick = useCallback((_event: React.MouseEvent, edge: any) => {
+    console.log('[handleEdgeDoubleClick] 双击边:', edge.id)
+    // 直接打开边配置对话框
+    const astEdge = workflow.workflowAst.edges.find((e: any) => e.id === edge.id)
+    if (astEdge) {
+      openEdgeConfigDialog(astEdge)
+    }
+  }, [workflow.workflowAst.edges, openEdgeConfigDialog])
+
+  const handleEdgeContextMenu = useCallback((event: React.MouseEvent, edge: any) => {
+    event.preventDefault()
+    console.log('[handleEdgeContextMenu] 右键边:', edge.id)
+    // 打开右键菜单
+    const screenPosition = { x: event.clientX, y: event.clientY }
+    const flowPosition = screenToFlowPosition(screenPosition)
+
+    // 使用 useCanvasControls 的 menu 系统
+    const customEvent = new CustomEvent('edge-context-menu', {
+      detail: { edgeId: edge.id, event },
+    })
+    window.dispatchEvent(customEvent)
+  }, [screenToFlowPosition])
+
   const handleAddNodeFromSelector = useCallback((metadata: any) => {
     const registeredNodeTypes = getAllNodeTypes()
     const NodeClass = registeredNodeTypes.find((type: any) => type.name === metadata.type)
@@ -622,6 +646,8 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
         onPaneClick={onPaneClick}
         onNodesDelete={handleNodesDelete}
         onEdgesDelete={handleEdgesDelete}
+        onEdgeDoubleClick={handleEdgeDoubleClick}
+        onEdgeContextMenu={handleEdgeContextMenu}
         onPaneContextMenu={onPaneContextMenu}
         onDrop={handleDrop}
         onDragOver={handleDragOver}

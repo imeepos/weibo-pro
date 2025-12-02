@@ -19,5 +19,11 @@ export class LlmTextAgentAst extends Ast {
     @Output({ title: '输出' })
     text: string = ``;
 
+    @Output({ title: '节点名' })
+    username: string = ``
+
+    @Output({ title: '节点介绍' })
+    profile: string = ``
+
     type: `LlmTextAgentAst` = `LlmTextAgentAst`
 }

@@ -2,36 +2,22 @@ import { Injectable } from "@sker/core";
 import { Render } from "@sker/workflow";
 import { ShareAst } from "@sker/workflow-ast";
 import React from "react";
-import { Card } from "@sker/ui/components/ui/card";
 
 /**
  * 群聊节点渲染器
- * 显示收集到的多个 Agent 对话内容
+ * 
+ * 功能列表：
+ * 1. 实现一个 + 号功能，点击后选择添加的节点
+ * 2. 实现群内列表展示，可以踢出某人
+ * 3. 实现拖拽排序 
+ * 4. 尽量服用@sker/ui中相关组件
+ * 5. 排序代表发言顺序
+ * 6. 可以设置会议时长
  */
 @Injectable()
 export class ShareAstVisitor {
     @Render(ShareAst)
     render(ast: ShareAst) {
-        // 如果没有输出，显示提示信息
-        if (!ast.output || ast.output.length === 0) {
-            return (
-                <div className="p-4 text-sm text-muted-foreground">
-                    等待接收消息...
-                </div>
-            );
-        }
-
-        // 显示群聊消息
-        return (
-            <div className="space-y-2 p-4 max-h-[300px] overflow-y-auto">
-                {ast.output.map((message, index) => (
-                    <Card key={index} className="p-3">
-                        <div className="text-sm whitespace-pre-wrap">
-                            {message}
-                        </div>
-                    </Card>
-                ))}
-            </div>
-        );
+        return (<></>);
     }
 }

@@ -73,42 +73,7 @@ export const EDGE_VALIDATION_RULES: EdgeValidationRule[] = [
       return true
     },
     errorMessage: '此输入端口不支持多条连接'
-  },
-  {
-    name: 'no-cycle',
-    validate: (edge, nodes, edges) => {
-      const adjacencyList = new Map<string, string[]>()
-
-      const allEdges = [...edges.filter(e => e.id !== edge.id), edge]
-      allEdges.forEach(e => {
-        if (!adjacencyList.has(e.source)) adjacencyList.set(e.source, [])
-        adjacencyList.get(e.source)!.push(e.target)
-      })
-
-      const visited = new Set<string>()
-      const recStack = new Set<string>()
-
-      function hasCycle(nodeId: string): boolean {
-        visited.add(nodeId)
-        recStack.add(nodeId)
-
-        const neighbors = adjacencyList.get(nodeId) || []
-        for (const neighbor of neighbors) {
-          if (!visited.has(neighbor)) {
-            if (hasCycle(neighbor)) return true
-          } else if (recStack.has(neighbor)) {
-            return true
-          }
-        }
-
-        recStack.delete(nodeId)
-        return false
-      }
-
-      return !hasCycle(edge.source)
-    },
-    errorMessage: '不允许创建环路'
-  },
+  }
 ]
 
 /**

@@ -2,7 +2,7 @@ import { WorkflowGraphAst } from '../ast';
 import { INode, IEdge, EdgeMode, hasDataMapping } from '../types';
 import { executeAst } from '../executor';
 import { Observable, of, EMPTY, merge, combineLatest, zip, asyncScheduler, concat } from 'rxjs';
-import { map, catchError, takeWhile, concatMap, filter, withLatestFrom, shareReplay, subscribeOn, finalize, scan, takeLast, toArray, reduce } from 'rxjs/operators';
+import { map, catchError, takeWhile, concatMap, filter, withLatestFrom, shareReplay, subscribeOn, finalize, scan, takeLast, toArray, reduce, expand, tap, take } from 'rxjs/operators';
 import { Injectable, root  } from '@sker/core';
 import { findNodeType, INPUT, InputMetadata, hasMultiMode, hasBufferMode, OUTPUT, type OutputMetadata, resolveConstructor } from '../decorator';
 
@@ -244,13 +244,14 @@ export class ReactiveScheduler {
     }
 
     /**
-     * 构建增量执行网络 - 复用历史结果
+     * 构建增量执行网络 - 复用历史结果，支持循环
      *
      * 策略：
      * - 受影响节点：重新构建流并执行
      * - 未受影响节点：直接使用历史结果（of(node)）
      * - 递归构建：确保上游依赖先于下游构建
-     * - 循环检测：防止死锁
+     * - 循环支持：回路边不参与常规拓扑排序，循环入口节点使用特殊流
+     * - 循环检测：区分合法的回路边和非法的未标记循环依赖
      */
     private buildIncrementalNetwork(
         ctx: WorkflowGraphAst,
@@ -259,16 +260,49 @@ export class ReactiveScheduler {
         const network = new Map<string, Observable<INode>>();
         const building = new Set<string>();
 
+        // 检测循环结构
+        const { loops, loopEntries } = this.detectLoops(ctx);
+
+        // 为每个循环入口节点找到对应的回路边
+        const loopBackEdgeMap = new Map<string, IEdge>();
+        loops.forEach(loopEdge => {
+            loopBackEdgeMap.set(loopEdge.to, loopEdge);
+        });
+
         const buildNode = (nodeId: string): Observable<INode> => {
             // 已构建：直接返回
             if (network.has(nodeId)) {
                 return network.get(nodeId)!;
             }
 
-            // 正在构建：检测到循环依赖
+            // 正在构建：检测到非法循环依赖（未使用 isLoopBack 标记）
             if (building.has(nodeId)) {
-                const cycle = Array.from(building).join(' → ') + ' → ' + nodeId;
-                throw new Error(`检测到循环依赖: ${cycle}`);
+                const cyclePath = Array.from(building).concat(nodeId);
+                const cycleDisplay = cyclePath.join(' → ');
+
+                // 找到回路边：从最后一个节点指向第一次出现的节点
+                const loopStartIndex = cyclePath.indexOf(nodeId);
+                const loopBackFrom = cyclePath[cyclePath.length - 2];
+                const loopBackTo = nodeId;
+
+                // 查找这条边
+                const loopBackEdge = ctx.edges.find(
+                    e => e.from === loopBackFrom && e.to === loopBackTo
+                );
+
+                const edgeInfo = loopBackEdge
+                    ? `\n\n需要标记的边：\n  ID: ${loopBackEdge.id}\n  从节点: ${loopBackFrom}\n  到节点: ${loopBackTo}\n\n修复方法：在此边上添加属性 isLoopBack: true`
+                    : '';
+
+                throw new Error(
+                    `检测到未标记的循环依赖:\n${cycleDisplay}${edgeInfo}\n\n` +
+                    `循环功能需要显式标记回路边，请设置：\n` +
+                    `{\n` +
+                    `  isLoopBack: true,\n` +
+                    `  maxLoopIterations: 100,  // 可选：最大循环次数\n` +
+                    `  loopConditionProperty: 'shouldContinue'  // 可选：停止条件属性\n` +
+                    `}`
+                );
             }
 
             building.add(nodeId);
@@ -284,18 +318,27 @@ export class ReactiveScheduler {
                 // 受影响节点：重新构建并执行
                 const incomingEdges = ctx.edges.filter(e => e.to === nodeId);
 
-                // 先递归构建所有上游节点
-                incomingEdges.forEach(edge => buildNode(edge.from));
+                // 先递归构建所有上游节点（排除回路边）
+                incomingEdges
+                    .filter(edge => !edge.isLoopBack)
+                    .forEach(edge => buildNode(edge.from));
 
                 console.log(`[buildIncrementalNetwork] 构建受影响节点 ${nodeId}:`, {
                     hasIncomingEdges: incomingEdges.length > 0,
                     incomingEdgesCount: incomingEdges.length,
-                    isEntryNode: incomingEdges.length === 0
+                    isEntryNode: incomingEdges.length === 0,
+                    isLoopEntry: loopEntries.has(nodeId)
                 });
 
-                stream = incomingEdges.length === 0
-                    ? this.createEntryNodeStream(node, ctx)
-                    : this._createNode(node, incomingEdges, network, ctx);
+                // 检查是否是循环入口节点
+                if (loopEntries.has(nodeId)) {
+                    const loopBackEdge = loopBackEdgeMap.get(nodeId)!;
+                    stream = this.createLoopNodeStream(node, incomingEdges, loopBackEdge, network, ctx);
+                } else if (incomingEdges.length === 0) {
+                    stream = this.createEntryNodeStream(node, ctx);
+                } else {
+                    stream = this._createNode(node, incomingEdges, network, ctx);
+                }
             } else {
                 // 未受影响节点：发射 emitting 状态的历史结果副本，以便下游能接收数据
                 if (node.state !== 'success' && node.state !== 'fail') {
@@ -800,19 +843,29 @@ export class ReactiveScheduler {
         );
     }
     /**
-     * 构建流网络 - 使用拓扑排序保证依赖顺序
+     * 构建流网络 - 使用拓扑排序保证依赖顺序，支持循环
      *
      * 优雅设计:
      * - 递归构建：先构建上游，再构建下游
      * - 去重保护：使用 Map 防止重复构建
-     * - 循环检测：抛出明确错误而非死锁
+     * - 循环支持：回路边不参与常规拓扑排序，循环入口节点使用特殊流
+     * - 循环检测：区分合法的回路边和非法的未标记循环依赖
      */
     private buildStreamNetwork(
         ast: WorkflowGraphAst,
         ctx: WorkflowGraphAst
     ): Map<string, Observable<INode>> {
         const network = new Map<string, Observable<INode>>();
-        const building = new Set<string>(); // 正在构建的节点（循环检测）
+        const building = new Set<string>(); // 正在构建的节点（非法循环检测）
+
+        // 检测循环结构
+        const { loops, loopEntries } = this.detectLoops(ast);
+
+        // 为每个循环入口节点找到对应的回路边
+        const loopBackEdgeMap = new Map<string, IEdge>();
+        loops.forEach(loopEdge => {
+            loopBackEdgeMap.set(loopEdge.to, loopEdge);
+        });
 
         /**
          * 递归构建单个节点流
@@ -823,10 +876,34 @@ export class ReactiveScheduler {
                 return network.get(nodeId)!;
             }
 
-            // 正在构建：检测到循环依赖
+            // 正在构建：检测到非法循环依赖（未使用 isLoopBack 标记）
             if (building.has(nodeId)) {
-                const cycle = Array.from(building).join(' → ') + ' → ' + nodeId;
-                throw new Error(`检测到循环依赖: ${cycle}`);
+                const cyclePath = Array.from(building).concat(nodeId);
+                const cycleDisplay = cyclePath.join(' → ');
+
+                // 找到回路边：从最后一个节点指向第一次出现的节点
+                const loopStartIndex = cyclePath.indexOf(nodeId);
+                const loopBackFrom = cyclePath[cyclePath.length - 2];
+                const loopBackTo = nodeId;
+
+                // 查找这条边
+                const loopBackEdge = ast.edges.find(
+                    e => e.from === loopBackFrom && e.to === loopBackTo
+                );
+
+                const edgeInfo = loopBackEdge
+                    ? `\n\n需要标记的边：\n  ID: ${loopBackEdge.id}\n  从节点: ${loopBackFrom}\n  到节点: ${loopBackTo}\n\n修复方法：在此边上添加属性 isLoopBack: true`
+                    : '';
+
+                throw new Error(
+                    `检测到未标记的循环依赖:\n${cycleDisplay}${edgeInfo}\n\n` +
+                    `循环功能需要显式标记回路边，请设置：\n` +
+                    `{\n` +
+                    `  isLoopBack: true,\n` +
+                    `  maxLoopIterations: 100,  // 可选：最大循环次数\n` +
+                    `  loopConditionProperty: 'shouldContinue'  // 可选：停止条件属性\n` +
+                    `}`
+                );
             }
 
             building.add(nodeId);
@@ -838,13 +915,28 @@ export class ReactiveScheduler {
 
             const incomingEdges = ast.edges.filter(e => e.to === nodeId);
 
-            // 先递归构建所有上游节点
-            incomingEdges.forEach(edge => buildNode(edge.from));
+            // 先递归构建所有上游节点（排除回路边）
+            incomingEdges
+                .filter(edge => !edge.isLoopBack)
+                .forEach(edge => buildNode(edge.from));
 
-            // 使用新的 _createNode 方法构建节点流
-            const stream$ = incomingEdges.length === 0
-                ? this.createEntryNodeStream(node, ctx)
-                : this._createNode(node, incomingEdges, network, ctx);
+            let stream$: Observable<INode>;
+
+            // 检查是否是循环入口节点
+            if (loopEntries.has(nodeId)) {
+                const loopBackEdge = loopBackEdgeMap.get(nodeId)!;
+                console.log('[buildStreamNetwork] 构建循环节点:', {
+                    nodeId,
+                    loopBackEdge: loopBackEdge.id
+                });
+                stream$ = this.createLoopNodeStream(node, incomingEdges, loopBackEdge, network, ctx);
+            } else if (incomingEdges.length === 0) {
+                // 入口节点
+                stream$ = this.createEntryNodeStream(node, ctx);
+            } else {
+                // 常规节点
+                stream$ = this._createNode(node, incomingEdges, network, ctx);
+            }
 
             network.set(nodeId, stream$);
             building.delete(nodeId);
@@ -1243,5 +1335,249 @@ export class ReactiveScheduler {
         return outputs.find(
             meta => meta.target === ctor && meta.propertyKey === propertyKey
         )
+    }
+
+    /**
+     * 检测工作流中的循环结构
+     *
+     * 返回值：
+     * - loops: 循环边数组（isLoopBack: true 的边）
+     * - loopNodes: 参与循环的节点ID集合
+     * - loopEntries: 循环入口节点ID集合（被回路边指向的节点）
+     */
+    private detectLoops(ast: WorkflowGraphAst): {
+        loops: IEdge[];
+        loopNodes: Set<string>;
+        loopEntries: Set<string>;
+    } {
+        const loops = ast.edges.filter(edge => edge.isLoopBack);
+        const loopEntries = new Set<string>();
+        const loopNodes = new Set<string>();
+
+        // 收集循环入口节点
+        loops.forEach(loopEdge => {
+            loopEntries.add(loopEdge.to);
+        });
+
+        // 收集循环体内的所有节点（从入口到回路边源节点之间的路径）
+        loops.forEach(loopEdge => {
+            const entryNode = loopEdge.to;
+            const exitNode = loopEdge.from;
+
+            // 使用 BFS 找到从入口到出口的所有节点
+            const visited = new Set<string>();
+            const queue: string[] = [entryNode];
+
+            while (queue.length > 0) {
+                const current = queue.shift()!;
+                if (visited.has(current)) continue;
+                visited.add(current);
+                loopNodes.add(current);
+
+                // 找到下游节点（排除回路边）
+                const downstreamEdges = ast.edges.filter(
+                    e => e.from === current && !e.isLoopBack
+                );
+
+                downstreamEdges.forEach(edge => {
+                    if (!visited.has(edge.to)) {
+                        queue.push(edge.to);
+                    }
+                });
+
+                // 如果到达回路边的源节点，停止扩展
+                if (current === exitNode) {
+                    continue;
+                }
+            }
+        });
+
+        console.log('[detectLoops] 检测到循环结构:', {
+            loopCount: loops.length,
+            loopEntries: Array.from(loopEntries),
+            loopNodesCount: loopNodes.size,
+            loopNodes: Array.from(loopNodes)
+        });
+
+        return { loops, loopNodes, loopEntries };
+    }
+
+    /**
+     * 为循环入口节点创建循环执行流
+     *
+     * 核心设计（受 RxJS expand 启发）：
+     * - 初始执行：节点首次执行（使用常规输入）
+     * - 反馈执行：使用回路边传递的数据作为输入，重新执行节点
+     * - 停止条件：达到最大迭代次数 || 条件属性为 falsy
+     * - 数据隔离：每次迭代创建新的节点实例
+     */
+    private createLoopNodeStream(
+        node: INode,
+        incomingEdges: IEdge[],
+        loopBackEdge: IEdge,
+        network: Map<string, Observable<INode>>,
+        ctx: WorkflowGraphAst
+    ): Observable<INode> {
+        // 分离常规输入边和回路边
+        const regularEdges = incomingEdges.filter(e => !e.isLoopBack);
+
+        // 配置循环参数
+        const maxIterations = loopBackEdge.maxLoopIterations ?? 100;
+        const conditionProperty = loopBackEdge.loopConditionProperty;
+
+        console.log('[createLoopNodeStream] 创建循环节点流:', {
+            nodeId: node.id,
+            maxIterations,
+            conditionProperty,
+            regularEdgesCount: regularEdges.length,
+            hasLoopBack: true
+        });
+
+        // 创建初始输入流（仅来自常规边）
+        const initialInput$ = regularEdges.length > 0
+            ? this._createNodeInputObservable(node, regularEdges, network, ctx)
+            : of({});
+
+        // 获取节点默认值
+        const defaults = this.getInputDefaultValues(node);
+
+        // 使用 expand 实现循环：每次执行结果可能触发下一次迭代
+        return initialInput$.pipe(
+            concatMap(initialInputs => {
+                let iteration = 0;
+
+                // expand：递归展开，每次发射的值会再次进入 expand 函数
+                return of(initialInputs).pipe(
+                    expand((inputs: any) => {
+                        iteration++;
+
+                        console.log('[createLoopNodeStream] 循环迭代:', {
+                            nodeId: node.id,
+                            iteration,
+                            maxIterations,
+                            inputs
+                        });
+
+                        // 检查是否达到最大迭代次数
+                        if (iteration > maxIterations) {
+                            console.log('[createLoopNodeStream] 达到最大迭代次数，停止循环');
+                            return EMPTY;
+                        }
+
+                        // 创建节点实例并执行
+                        const nodeInstance = this.cloneNode(node);
+                        Object.assign(nodeInstance, defaults);
+                        this.assignInputsToNodeInstance(nodeInstance, inputs);
+
+                        // 执行节点，收集输出
+                        return this.executeNode(nodeInstance, ctx).pipe(
+                            // 只处理 emitting 状态（有输出数据）
+                            filter(executedNode => executedNode.state === 'emitting'),
+                            concatMap(executedNode => {
+                                // 检查循环条件
+                                if (conditionProperty) {
+                                    const conditionValue = (executedNode as any)[conditionProperty];
+                                    if (!conditionValue) {
+                                        console.log('[createLoopNodeStream] 循环条件为 falsy，停止循环:', {
+                                            conditionProperty,
+                                            conditionValue
+                                        });
+                                        // 发射最终状态，然后停止循环
+                                        return concat(
+                                            of(executedNode),
+                                            of({ ...executedNode, state: 'success' as const })
+                                        ).pipe(
+                                            tap(() => EMPTY) // 确保 expand 停止
+                                        );
+                                    }
+                                }
+
+                                // 从回路边提取反馈数据
+                                const feedbackInputs = this.extractLoopBackInputs(
+                                    executedNode,
+                                    loopBackEdge,
+                                    node
+                                );
+
+                                console.log('[createLoopNodeStream] 提取反馈数据:', {
+                                    nodeId: node.id,
+                                    feedbackInputs,
+                                    willContinue: Object.keys(feedbackInputs).length > 0
+                                });
+
+                                // 发射当前迭代结果
+                                return concat(
+                                    of(executedNode),
+                                    // 如果有反馈数据，继续下一次迭代
+                                    Object.keys(feedbackInputs).length > 0
+                                        ? of(feedbackInputs)
+                                        : EMPTY
+                                );
+                            }),
+                            catchError(error => {
+                                console.error('[createLoopNodeStream] 循环执行错误:', error);
+                                const failedNode = this.cloneNode(node);
+                                failedNode.state = 'fail';
+                                failedNode.error = error;
+                                return of(failedNode);
+                            })
+                        );
+                    }),
+                    // 限制总输出次数（防止无限流）
+                    take(maxIterations * 2), // 每次迭代最多发射 2 次（emitting + success）
+                    // 确保最后一个状态是 success 或 fail
+                    finalize(() => {
+                        console.log('[createLoopNodeStream] 循环结束:', {
+                            nodeId: node.id,
+                            finalIteration: iteration
+                        });
+                    })
+                );
+            }),
+            catchError(error => {
+                const failedNode = this.cloneNode(node);
+                failedNode.state = 'fail';
+                failedNode.error = error;
+                return of(failedNode);
+            }),
+            shareReplay({ bufferSize: maxIterations * 2, refCount: true })
+        );
+    }
+
+    /**
+     * 从执行完成的节点中提取回路边的反馈数据
+     */
+    private extractLoopBackInputs(
+        executedNode: INode,
+        loopBackEdge: IEdge,
+        targetNode: INode
+    ): any {
+        const feedbackInputs: any = {};
+
+        // 检查条件
+        if (loopBackEdge.condition) {
+            const value = (executedNode as any)[loopBackEdge.condition.property];
+            if (value !== loopBackEdge.condition.value) {
+                return feedbackInputs; // 条件不满足，返回空输入
+            }
+        }
+
+        // 提取数据
+        if (hasDataMapping(loopBackEdge) && loopBackEdge.fromProperty) {
+            const value = this.resolveProperty(executedNode, loopBackEdge.fromProperty);
+
+            if (loopBackEdge.toProperty) {
+                feedbackInputs[loopBackEdge.toProperty] = value;
+            } else {
+                // 无目标属性，尝试展开对象
+                if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+                    Object.assign(feedbackInputs, value);
+                } else {
+                    feedbackInputs[loopBackEdge.fromProperty] = value;
+                }
+            }
+        }
+
+        return feedbackInputs;
     }
 }

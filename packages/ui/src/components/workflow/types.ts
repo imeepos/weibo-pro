@@ -1,27 +1,3 @@
-// 抽象语法树的核心表达 - 万物皆为状态
-// - pending: 等待执行
-// - running: 执行中但未产生输出
-// - emitting: 正在发射数据（触发下游）
-// - success: 执行完成（不触发下游）
-// - fail: 执行失败
-export type IAstStates = `pending` | `running` | `emitting` | `success` | `fail`;
-
-// 状态数据的基础约束
-export interface INode extends Record<string, any> {
-     // 标题
-    name?: string;
-    // 简介
-    description?: string;
-    // 自定义颜色
-    state: IAstStates;
-    count: number;
-    emitCount: number;
-    id: string;
-    type: string;
-    error: Error | undefined;
-    position: { x: number; y: number };
-}
-
 // 边的流式合并模式 - 定义上游如何触发下游
 export enum EdgeMode {
     /** 任一上游发射立即触发下游（默认，适合并发场景） */
@@ -36,6 +12,7 @@ export enum EdgeMode {
     /** 主流触发，携带其他流的最新值（适合主从依赖场景） */
     WITH_LATEST_FROM = 'withLatestFrom'
 }
+
 
 // 统一的边类型
 export interface IEdge extends Record<string, any> {
@@ -62,14 +39,4 @@ export interface IEdge extends Record<string, any> {
     isLoopBack?: boolean;  // 回路边标识：true 时不参与常规拓扑排序，仅用于循环反馈
     maxLoopIterations?: number;  // 最大循环迭代次数（防止死循环，默认 100）
     loopConditionProperty?: string;  // 循环条件属性：当源节点的此属性为 falsy 时停止循环
-}
-
-// 辅助函数：检查边是否有条件
-export function hasCondition(edge: IEdge): boolean {
-    return edge.condition !== undefined;
-}
-
-// 辅助函数：检查边是否传递数据
-export function hasDataMapping(edge: IEdge): boolean {
-    return edge.fromProperty !== undefined || edge.toProperty !== undefined;
 }

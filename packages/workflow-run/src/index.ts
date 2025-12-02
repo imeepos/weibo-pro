@@ -24,6 +24,7 @@ export { IfAstVisitor } from './IfAstVisitor'
 export { SwitchAstVisitor } from './SwitchAstVisitor'
 // 群聊节点
 export { ShareAstVisitor } from './ShareAstVisitor'
+export { GroupChatLoopAstVisitor } from './GroupChatLoopAstVisitor'
 
 export {
     WeiboAccountService,

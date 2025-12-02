@@ -32,6 +32,13 @@ export {
   LayoutGrid,
 } from './workflow-context-menu'
 
+// 边配置相关组件
+export { EdgeConfigDialog } from './edge-config-dialog'
+export { EdgeModeSelector } from './edge-mode-selector'
+export { EdgeDataMapping } from './edge-data-mapping'
+export { EdgeLoopConfig } from './edge-loop-config'
+export { EdgePreview } from './edge-preview'
+
 // 类型导出
 export type {
   WorkflowCanvasProps,
@@ -70,6 +77,13 @@ export type {
 } from './workflow-property-panel'
 export type { WorkflowFormFieldProps } from './workflow-form-field'
 export type { WorkflowSettingsDialogProps } from './workflow-settings-dialog'
+
+// 边配置相关类型导出
+export type { EdgeConfigDialogProps } from './edge-config-dialog'
+export type { EdgeModeSelectorProps, EdgeModeOption } from './edge-mode-selector'
+export type { EdgeDataMappingProps } from './edge-data-mapping'
+export type { EdgeLoopConfigProps } from './edge-loop-config'
+export type { EdgePreviewProps, EdgeModeStyle } from './edge-preview'
 
 // Hooks 导出
 export { useWorkflowCanvas } from './hooks/use-workflow-canvas'

@@ -169,6 +169,9 @@ export interface InputOptions {
     defaultValue?: any;
     title?: string;
     type?: string;
+    // 支持UI动态添加输入节点
+    dynamic?: boolean;
+    isAst?: boolean;
 }
 
 export interface InputMetadata {
