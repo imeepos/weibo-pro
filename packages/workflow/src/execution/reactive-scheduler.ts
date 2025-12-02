@@ -378,7 +378,7 @@ export class ReactiveScheduler {
                         node
                     );
                 });
-                return this.combineGroupedStreamsByMode(groupedStreams, incomingEdges);
+                return this.combineGroupedStreamsByMode(groupedStreams, incomingEdges, node);
             }
         });
 
@@ -850,10 +850,12 @@ export class ReactiveScheduler {
      * 优雅设计:
      * - 单源：直接返回
      * - 多源：根据边模式决定合并策略（ZIP/COMBINE_LATEST/MERGE 等）
+     * - 智能合并：IS_MULTI 属性聚合数组，非 IS_MULTI 属性后者覆盖前者
      */
     private combineGroupedStreamsByMode(
         groupedStreams: Observable<any>[],
-        edges: IEdge[]
+        edges: IEdge[],
+        targetNode: INode
     ): Observable<any> {
         if (groupedStreams.length === 0) {
             return EMPTY;
@@ -871,13 +873,13 @@ export class ReactiveScheduler {
             case EdgeMode.ZIP:
                 // 配对执行：不同源按索引配对
                 return zip(...groupedStreams).pipe(
-                    map(groups => Object.assign({}, ...groups))
+                    map(groups => this.smartMergeGroups(groups, targetNode))
                 );
 
             case EdgeMode.COMBINE_LATEST:
                 // 任一变化触发：使用所有最新值
                 return combineLatest(groupedStreams).pipe(
-                    map(groups => Object.assign({}, ...groups))
+                    map(groups => this.smartMergeGroups(groups, targetNode))
                 );
 
             case EdgeMode.WITH_LATEST_FROM:
@@ -953,6 +955,47 @@ export class ReactiveScheduler {
 
         // 默认 COMBINE_LATEST（等待所有上游就绪）
         return EdgeMode.COMBINE_LATEST;
+    }
+
+    /**
+     * 智能合并多组数据（支持 IS_MULTI 模式聚合）
+     *
+     * 优雅设计：
+     * - IS_MULTI 属性：聚合所有组的值到一个数组
+     * - 非 IS_MULTI 属性：使用最后一组的值（覆盖）
+     */
+    private smartMergeGroups(groups: any[], targetNode: INode): any {
+        const merged: any = {};
+        const inputMetadataMap = this.getInputMetadataMap(targetNode);
+
+        // 遍历所有组
+        groups.forEach(group => {
+            if (!group || typeof group !== 'object') return;
+
+            // 遍历组内所有属性
+            Object.entries(group).forEach(([key, value]) => {
+                const metadata = inputMetadataMap.get(key);
+                const isMulti = hasMultiMode(metadata?.mode) || metadata?.isMulti;
+
+                if (isMulti) {
+                    // IS_MULTI 模式：聚合到数组
+                    if (!Array.isArray(merged[key])) {
+                        merged[key] = [];
+                    }
+                    // 如果 value 是数组（已经被 IS_BUFFER reduce 处理过），展开合并
+                    if (Array.isArray(value)) {
+                        merged[key].push(...value);
+                    } else {
+                        merged[key].push(value);
+                    }
+                } else {
+                    // 非 IS_MULTI：覆盖
+                    merged[key] = value;
+                }
+            });
+        });
+
+        return merged;
     }
 
     /**

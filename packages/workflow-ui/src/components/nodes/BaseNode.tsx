@@ -25,6 +25,17 @@ export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNodeType
   const { setNodes } = useReactFlow()
   const isCollapsed = data.collapsed ?? false
 
+  // 用节点实例的实际值增强端口元数据
+  const enhancedInputs = metadata.inputs.map(input => ({
+    ...input,
+    value: (data as any)[input.property]
+  }))
+
+  const enhancedOutputs = metadata.outputs.map(output => ({
+    ...output,
+    value: (data as any)[output.property]
+  }))
+
   // 当端口或折叠状态变化时，更新节点内部连接点
   useEffect(() => {
     updateNodeInternals(id)
@@ -71,8 +82,8 @@ export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNodeType
       icon={<BoxIcon/>}
       status={data.state}
       statusCount={data.count || 0}
-      inputs={metadata.inputs}
-      outputs={metadata.outputs}
+      inputs={enhancedInputs}
+      outputs={enhancedOutputs}
       selected={selected}
       collapsed={isCollapsed}
       onToggleCollapse={toggleCollapse}
