@@ -21,6 +21,9 @@ export { DateAstVisitor } from './DateAstVisitor'
 export { CollectorVisitor } from './CollectorVisitor'
 // 控制流节点
 export { IfAstVisitor } from './IfAstVisitor'
+export { SwitchAstVisitor } from './SwitchAstVisitor'
+// 群聊节点
+export { ShareAstVisitor } from './ShareAstVisitor'
 
 export {
     WeiboAccountService,

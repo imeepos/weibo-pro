@@ -40,8 +40,8 @@ import { Ast, Input, Node, Output } from '@sker/workflow';
  */
 @Node({ title: '条件判断', type: 'control' })
 export class IfAst extends Ast {
-    @Input({ title: '条件值' })
-    value: any = undefined;
+    @Input({ title: '条件值', type: 'boolean' })
+    value: boolean = false;
 
     @Output({ title: '分支结果' })
     result: any = undefined;

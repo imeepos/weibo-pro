@@ -3,8 +3,8 @@ import { INode, IEdge, EdgeMode, hasDataMapping } from '../types';
 import { executeAst } from '../executor';
 import { Observable, of, EMPTY, merge, combineLatest, zip, asyncScheduler, concat } from 'rxjs';
 import { map, catchError, takeWhile, concatMap, filter, withLatestFrom, shareReplay, subscribeOn, finalize, scan, takeLast, toArray, reduce } from 'rxjs/operators';
-import { Injectable, root } from '@sker/core';
-import { findNodeType, INPUT, InputMetadata, hasMultiMode, hasBufferMode } from '../decorator';
+import { Injectable, root  } from '@sker/core';
+import { findNodeType, INPUT, InputMetadata, hasMultiMode, hasBufferMode, OUTPUT, type OutputMetadata, resolveConstructor } from '../decorator';
 
 /**
  * 响应式工作流调度器 - 基于 RxJS Observable 流式调度
@@ -389,12 +389,18 @@ export class ReactiveScheduler {
                         node
                     );
                 });
+                // 【路由节点支持】如果所有源流都被路由过滤，groupedStreams 可能为空
+                if (groupedStreams.length === 0) {
+                    return EMPTY;
+                }
                 return this.combineGroupedStreamsByMode(groupedStreams, incomingEdges, node);
             }
         });
 
         // 5. 使用 MERGE 合并所有完整组合的流
+        // 【路由节点支持】无有效输入组合，节点不需要执行
         if (combinationStreams.length === 0) {
+            console.log(`[_createNodeInputObservable] 节点 ${node.id} 无有效输入，跳过执行`);
             return EMPTY;
         } else if (combinationStreams.length === 1) {
             return combinationStreams[0]!;
@@ -690,6 +696,18 @@ export class ReactiveScheduler {
             // 一次性处理该源的所有边
             map(ast => {
                 const edgeValues = edges.map(edge => {
+                    // 【路由节点支持】检查 isRouter 输出是否为 undefined
+                    if (edge.fromProperty) {
+                        const sourceOutputMeta = this.getOutputMetadata(ast, edge.fromProperty)
+                        if (sourceOutputMeta?.isRouter) {
+                            const value = (ast as any)[edge.fromProperty]
+                            // 路由输出为 undefined 时，过滤掉此边
+                            if (value === undefined) {
+                                return null
+                            }
+                        }
+                    }
+
                     // 条件检查
                     if (edge.condition) {
                         const value = (ast as any)[edge.condition.property];
@@ -1213,5 +1231,17 @@ export class ReactiveScheduler {
                 obs.complete();
             })
         );
+    }
+
+    /**
+     * 获取输出属性的元数据
+     * 用于路由节点检测 isRouter 标识
+     */
+    private getOutputMetadata(ast: INode, propertyKey: string): OutputMetadata | undefined {
+        const ctor = resolveConstructor(ast)
+        const outputs = root.get(OUTPUT, [])
+        return outputs.find(
+            meta => meta.target === ctor && meta.propertyKey === propertyKey
+        )
     }
 }

@@ -18,9 +18,11 @@ export * from './WeiboUserDetectionAstRender';
 export * from './LlmTextAgentAstRender';
 export * from './TextAreaAstRender';
 export * from './DateAstRender';
+export * from './ShareAstVisitor';
 
 // IS_BUFFER 模式示例
 export * from './CollectorAstRender';
 
 // 控制流节点
 export * from './IfAstRender';
+export * from './SwitchAstRender';

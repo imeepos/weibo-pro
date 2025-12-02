@@ -10,4 +10,5 @@ export * from './icon-picker';
 export * from './search-input';
 export * from './schedule-card';
 export * from './schedule-form';
+export * from './dynamic-outputs-dialog';
 export { toast } from 'sonner';

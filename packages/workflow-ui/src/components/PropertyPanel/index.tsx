@@ -4,9 +4,9 @@ import React, { useState, useEffect } from 'react'
 import { useSelectedNode } from './useSelectedNode'
 import { SmartFormField } from './SmartFormField'
 import { getNodeMetadata } from '../../adapters'
-import { resolveConstructor } from '@sker/workflow'
+import { resolveConstructor, type DynamicOutput, OUTPUT } from '@sker/workflow'
 import { ErrorDetailPanel } from '../ErrorDetail'
-import { SerializedError } from '@sker/core'
+import { SerializedError, root } from '@sker/core'
 import {
   WorkflowPropertyPanel,
   PropertyPanelEmptyState,
@@ -14,6 +14,9 @@ import {
   NodeStateBadge,
   type PropertySection,
 } from '@sker/ui/components/workflow'
+import { DynamicOutputsDialog, } from '@sker/ui/components/ui/dynamic-outputs-dialog'
+import { Button } from '@sker/ui/components/ui/button'
+import { SettingsIcon } from 'lucide-react'
 
 export interface PropertyPanelProps {
   className?: string
@@ -29,6 +32,7 @@ export function PropertyPanel({
   const selectedNode = useSelectedNode()
 
   const [internalFormData, setInternalFormData] = useState<Record<string, any>>({})
+  const [dynamicOutputsDialogOpen, setDynamicOutputsDialogOpen] = useState(false)
 
   const formData = externalFormData ?? internalFormData
   const handlePropertyChange = externalOnPropertyChange ?? ((property: string, value: any) => {
@@ -151,6 +155,72 @@ export function PropertyPanel({
               readonly
             />
           ))}
+        </>
+      ),
+    })
+  }
+
+  // 检查节点是否支持动态输出（有 isRouter: true 的输出）
+  const nodeClass = resolveConstructor(ast)
+  const outputMetadata = root.get(OUTPUT, []).filter(it => it.target === nodeClass)
+  const hasDynamicOutputSupport = outputMetadata.some(meta => meta.isRouter)
+
+  if (hasDynamicOutputSupport) {
+    const currentDynamicOutputs = (ast as any).dynamicOutputs as DynamicOutput[] || []
+
+    const handleSaveDynamicOutputs = (outputs: DynamicOutput[]) => {
+      if (selectedNode) {
+        // 更新节点的 dynamicOutputs 属性
+        (selectedNode.data as any).dynamicOutputs = outputs
+
+        // 初始化动态输出的属性值为 undefined
+        outputs.forEach(output => {
+          if ((selectedNode.data as any)[output.property] === undefined) {
+            (selectedNode.data as any)[output.property] = undefined
+          }
+        })
+
+        // 触发 React Flow 重新渲染
+        handlePropertyChange('dynamicOutputs', outputs)
+      }
+    }
+
+    sections.push({
+      id: 'dynamic-outputs',
+      title: '动态输出管理',
+      color: 'warning',
+      defaultOpen: false,
+      content: (
+        <>
+          <div className="space-y-2">
+            <p className="text-xs text-muted-foreground">
+              当前配置了 {currentDynamicOutputs.length} 个动态输出端口
+            </p>
+            {currentDynamicOutputs.map((output, index) => (
+              <div key={index} className="text-xs p-2 bg-muted rounded">
+                <div className="font-medium">{output.title}</div>
+                <div className="text-muted-foreground font-mono text-[10px]">
+                  {output.condition}
+                </div>
+              </div>
+            ))}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDynamicOutputsDialogOpen(true)}
+              className="w-full"
+            >
+              <SettingsIcon className="h-4 w-4 mr-2" />
+              配置动态输出
+            </Button>
+          </div>
+
+          <DynamicOutputsDialog
+            open={dynamicOutputsDialogOpen}
+            onOpenChange={setDynamicOutputsDialogOpen}
+            outputs={currentDynamicOutputs}
+            onSave={handleSaveDynamicOutputs}
+          />
         </>
       ),
     })

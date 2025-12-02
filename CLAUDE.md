@@ -107,7 +107,6 @@ NestJS 容器作为 HTTP 层 facade，实际服务由 @sker/core 全局根注入
 **节点类型** (@sker/workflow-ast)：
 - 微博 API：`WeiboKeywordSearchAst`, `WeiboAjaxStatusesShowAst` 等（8个）
 - 数据处理：`PostContextCollectorAst`, `PostNLPAnalyzerAst`, `EventAutoCreatorAst`
-- 基础：`WorkflowGraphAst` (容器), `ArrayIteratorAst` (循环)
 
 **工作流执行流程**：
 ```

@@ -57,8 +57,6 @@ export class WorkflowTemplateService {
     searchNode.page = 1;
     searchNode.position = { x: 100, y: 100 };
 
-    // 节点2: 博文详情（这里简化为单个节点，实际应该使用ArrayIterator）
-    // 由于ArrayIterator需要特殊处理，这里先创建一个简化版本
     // 用户可以在编辑器中进一步优化
     const showNode = new WeiboAjaxStatusesShowAst();
     showNode.id = 'show_node';

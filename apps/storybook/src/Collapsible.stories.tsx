@@ -70,7 +70,6 @@ export const WithList: Story = {
           <div className="rounded border px-4 py-2 text-sm">PostNLPAnalyzerAst</div>
           <div className="rounded border px-4 py-2 text-sm">EventAutoCreatorAst</div>
           <div className="rounded border px-4 py-2 text-sm">WorkflowGraphAst</div>
-          <div className="rounded border px-4 py-2 text-sm">ArrayIteratorAst</div>
         </CollapsibleContent>
       </Collapsible>
     )

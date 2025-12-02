@@ -227,6 +227,11 @@ export function getInputMetadata(target: Type<any> | object, propertyKey?: strin
 export interface OutputOptions {
     title?: string;
     type?: string;
+
+    // 路由节点支持
+    isRouter?: boolean;      // 标识为路由输出，Scheduler 会过滤 undefined 值
+    dynamic?: boolean;       // 支持 UI 动态添加输出端口
+    condition?: string;      // 条件表达式字符串（如 '$input === 1'）
 }
 
 export interface OutputMetadata extends OutputOptions {

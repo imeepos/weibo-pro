@@ -14,7 +14,6 @@ export class CollectorAst extends Ast {
      * 使用 IS_BUFFER 模式：收集单边的所有发射
      *
      * 示例：
-     * ArrayIterator (发射 3 次) → CollectorAst
      * 结果：items = [item1, item2, item3]
      */
     @Input({ title: '数据流', mode: IS_BUFFER | IS_MULTI })

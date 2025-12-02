@@ -3,8 +3,15 @@ import { IAstStates, IEdge, INode } from "./types";
 import { generateId } from "./utils";
 import { ErrorSerializer, SerializedError } from "@sker/core";
 import { Observable } from 'rxjs'
+
+export interface DynamicOutput {
+    property: string      // 属性名（如 output_case4）
+    title: string         // 显示标题
+    condition: string     // 条件表达式
+}
+
 export interface Visitor {
-    // 每一次执行 返回最新的 Ast 
+    // 每一次执行 返回最新的 Ast
     // 一定要遵守： 每一次状态变更都需要发射一个新的 INode 给外部
     visit(ast: INode, ctx: any): Observable<INode>;
 }
@@ -35,6 +42,8 @@ export abstract class Ast implements INode {
     type!: string;
     // 画布中的位置信息
     position: { x: number; y: number } = { x: 0, y: 0 }
+    // 动态输出配置（用于支持运行时添加输出端口）
+    dynamicOutputs?: DynamicOutput[]
 
     /**
      * 优雅的错误赋值方法

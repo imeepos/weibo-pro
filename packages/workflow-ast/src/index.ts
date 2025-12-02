@@ -30,6 +30,8 @@ export { WeiboAccountPickAst } from './WeiboAccountPickAst';
 
 // IS_BUFFER 模式示例
 export { CollectorAst } from './CollectorAst';
+export { ShareAst } from './ShareAst';
 
 // 控制流节点
 export { IfAst } from './IfAst';
+export { SwitchAst } from './SwitchAst';

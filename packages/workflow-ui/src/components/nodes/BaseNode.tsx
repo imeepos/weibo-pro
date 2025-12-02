@@ -5,7 +5,7 @@ import { WorkflowNode } from '@sker/ui/components/workflow'
 import type { WorkflowNode as WorkflowNodeType } from '../../types'
 import { findNodeType, getNodeMetadata } from '../../adapters'
 import { useRender } from './hook'
-import { fromJson } from '@sker/workflow'
+import { fromJson, type DynamicOutput } from '@sker/workflow'
 import { BoxIcon } from 'lucide-react'
 
 /**
@@ -31,7 +31,20 @@ export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNodeType
     value: (data as any)[input.property]
   }))
 
-  const enhancedOutputs = metadata.outputs.map(output => ({
+  // 合并装饰器输出和动态输出
+  const dynamicOutputs = (data as any).dynamicOutputs as DynamicOutput[] | undefined
+  const allOutputs = [
+    ...metadata.outputs,
+    ...(dynamicOutputs?.map(dyn => ({
+      property: dyn.property,
+      label: dyn.title,
+      type: 'any' as const,
+      isMulti: false,
+      mode: undefined
+    })) || [])
+  ]
+
+  const enhancedOutputs = allOutputs.map(output => ({
     ...output,
     value: (data as any)[output.property]
   }))
@@ -39,7 +52,7 @@ export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNodeType
   // 当端口或折叠状态变化时，更新节点内部连接点
   useEffect(() => {
     updateNodeInternals(id)
-  }, [id, metadata.inputs.length, metadata.outputs.length, isCollapsed, updateNodeInternals])
+  }, [id, metadata.inputs.length, allOutputs.length, isCollapsed, updateNodeInternals])
 
   // 切换节点折叠状态
   const toggleCollapse = () => {

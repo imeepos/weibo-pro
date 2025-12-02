@@ -208,7 +208,6 @@ interface Visitor {
 ### `/src/ast.ts` - AST基础设施
 - `Ast`：所有节点的基类
 - `WorkflowGraphAst`：工作流容器
-- `ArrayIteratorAst`：数组迭代助手
 
 ### `/src/generate.ts` - 序列化/反序列化
 - `toJson(ast)`：节点→JSON序列化
