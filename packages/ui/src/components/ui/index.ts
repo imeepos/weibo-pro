@@ -4,3 +4,4 @@ export * from './legend';
 export * from './statistics-card';
 export * from './network-graph';
 export * from './chart-state';
+export * from './markdown-viewer';

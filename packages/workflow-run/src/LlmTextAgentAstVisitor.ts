@@ -32,14 +32,8 @@ export class LlmTextAgentAstVisitor {
                 ast.count += 1;
                 obs.next({ ...ast })
 
-                if (!ast.prompt) {
-                    ast.state = 'fail';
-                    obs.next({ ...ast })
-                    obs.complete()
-                    return;
-                }
                 const chartModel = new ChatOpenAI({ model: ast.model, temperature: ast.temperature });
-                const result = await chartModel.invoke(ast.prompt)
+                const result = await chartModel.invoke(Array.isArray(ast.prompt) ? ast.prompt.join('\n') : ast.prompt)
                 // 获取nodes
                 ast.text = result.content as string;
                 ast.state = 'emitting'

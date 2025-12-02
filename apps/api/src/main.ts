@@ -12,7 +12,6 @@ import { ResponseInterceptor } from './interceptors/response.interceptor';
 import { NotFoundExceptionFilter } from './filters/not-found.filter';
 import { killPortProcess } from 'kill-port-process';
 
-// 
 async function bootstrap() {
   const PORT = parseInt(process.env.PORT || `3000`);
   const logger = root.get(Logger)

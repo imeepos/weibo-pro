@@ -9,6 +9,15 @@ export { WorkflowEmptyState } from './workflow-empty-state'
 export { WorkflowNodeSelector } from './workflow-node-selector'
 export { WorkflowPropertyDrawer } from './workflow-property-drawer'
 export {
+  WorkflowPropertyPanel,
+  PropertyPanelSection,
+  PropertyPanelEmptyState,
+  PropertyPanelField,
+  SaveStatusIndicator,
+  NodeStateBadge,
+} from './workflow-property-panel'
+export { WorkflowFormField } from './workflow-form-field'
+export {
   WorkflowContextMenu,
   CheckSquare,
   Crosshair,
@@ -51,6 +60,16 @@ export type {
   DrawerTab,
   DrawerAction,
 } from './workflow-property-drawer'
+export type {
+  WorkflowPropertyPanelProps,
+  PropertySection,
+  PropertyPanelSectionProps,
+  PropertyPanelEmptyStateProps,
+  PropertyPanelFieldProps,
+  SaveStatusIndicatorProps,
+  NodeStateBadgeProps,
+} from './workflow-property-panel'
+export type { WorkflowFormFieldProps } from './workflow-form-field'
 
 // Hooks 导出
 export { useWorkflowCanvas } from './hooks/use-workflow-canvas'

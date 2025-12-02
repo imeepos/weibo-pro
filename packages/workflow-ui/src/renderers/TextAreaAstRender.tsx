@@ -9,7 +9,7 @@ export class TextAreaAstRender {
     @Render(TextAreaAst)
     render(ast: TextAreaAst, ctx: any) {
         return (
-            <div className="prose prose-sm prose-slate max-w-none">
+            <div className="prose prose-sm prose-neutral dark:prose-invert max-w-none">
                 <Markdown remarkPlugins={[remarkGfm]}>
                     {Array.isArray(ast.input) ? ast.input.join('\n') : ast.input}
                 </Markdown>

@@ -79,10 +79,21 @@ export class ReactiveScheduler {
         // 2. 找到受影响的节点（目标节点 + 下游）
         const affectedNodes = this.findAffectedNodes(ctx, nodeId);
 
-        // 3. 验证所有未受影响的节点已执行完成
+        // 3. 检测首次执行场景：如果有未受影响的节点从未执行过（状态为 pending）
+        //    则回退到完整工作流执行，避免增量执行逻辑的假设冲突
+        const hasUnexecutedNodes = ctx.nodes.some(node =>
+            !affectedNodes.has(node.id) && node.state === 'pending'
+        );
+
+        if (hasUnexecutedNodes) {
+            console.log('[fineTuneNode] 检测到首次执行场景，回退到完整工作流执行');
+            return this.schedule(ctx, ctx);
+        }
+
+        // 4. 验证所有未受影响的节点已执行完成
         this.validateUnaffectedNodesCompletion(ctx, affectedNodes);
 
-        // 4. 重置受影响节点状态
+        // 5. 重置受影响节点状态
         ctx.nodes.forEach(node => {
             if (affectedNodes.has(node.id)) {
                 node.state = 'pending';
@@ -90,10 +101,10 @@ export class ReactiveScheduler {
             }
         });
 
-        // 5. 构建增量执行网络
+        // 6. 构建增量执行网络
         const network = this.buildIncrementalNetwork(ctx, affectedNodes);
 
-        // 6. 订阅并合并结果（只订阅受影响节点）
+        // 7. 订阅并合并结果（只订阅受影响节点）
         ctx.state = 'running';
         return this.subscribeAndMerge(network, ctx, affectedNodes);
     }
