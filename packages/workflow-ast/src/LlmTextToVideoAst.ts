@@ -1,6 +1,6 @@
 import { Ast, Input, IS_BUFFER, IS_MULTI, Node, Output } from "@sker/workflow";
 
-@Node()
+@Node({ title: '文生视频' })
 export class LlmTextToVideoAst extends Ast {
 
     @Input({ mode: IS_MULTI | IS_BUFFER, title: '文本' })

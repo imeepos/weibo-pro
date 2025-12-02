@@ -7,6 +7,7 @@ export { WorkflowEdge } from './workflow-edge'
 export { WorkflowControls } from './workflow-controls'
 export { WorkflowEmptyState } from './workflow-empty-state'
 export { WorkflowNodeSelector } from './workflow-node-selector'
+export { WorkflowPropertyDrawer } from './workflow-property-drawer'
 export {
   WorkflowContextMenu,
   CheckSquare,
@@ -45,6 +46,11 @@ export type { WorkflowControlsProps } from './workflow-controls'
 export type { WorkflowEmptyStateProps } from './workflow-empty-state'
 export type { WorkflowNodeSelectorProps, NodeItem } from './workflow-node-selector'
 export type { WorkflowContextMenuProps, MenuItem, MenuSection } from './workflow-context-menu'
+export type {
+  WorkflowPropertyDrawerProps,
+  DrawerTab,
+  DrawerAction,
+} from './workflow-property-drawer'
 
 // Hooks 导出
 export { useWorkflowCanvas } from './hooks/use-workflow-canvas'

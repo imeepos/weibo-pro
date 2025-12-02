@@ -1,19 +1,19 @@
-export { WeiboAjaxFeedHotTimelineAst } from './WeiboAjaxFeedHotTimelineAst'
-export { WeiboAjaxFriendshipsAst } from './WeiboAjaxFriendshipsAst'
-export { WeiboAjaxProfileInfoAst } from './WeiboAjaxProfileInfoAst'
-export { WeiboAjaxStatusesCommentAst } from './WeiboAjaxStatusesCommentAst'
-export { WeiboAjaxStatusesLikeShowAst } from './WeiboAjaxStatusesLikeShowAst'
-export { WeiboAjaxStatusesMymblogAst } from './WeiboAjaxStatusesMymblogAst'
-export { WeiboAjaxStatusesRepostTimelineAst } from './WeiboAjaxStatusesRepostTimelineAst'
-export { WeiboAjaxStatusesShowAst } from './WeiboAjaxStatusesShowAst'
-export { WeiboKeywordSearchAst } from './WeiboKeywordSearchAst'
-export { PostContextCollectorAst } from './PostContextCollectorAst'
-export { PostNLPAnalyzerAst } from './PostNLPAnalyzerAst'
-export { EventAutoCreatorAst } from './EventAutoCreatorAst'
+export { WeiboAjaxFeedHotTimelineAst } from './WeiboAjaxFeedHotTimelineAst';
+export { WeiboAjaxFriendshipsAst } from './WeiboAjaxFriendshipsAst';
+export { WeiboAjaxProfileInfoAst } from './WeiboAjaxProfileInfoAst';
+export { WeiboAjaxStatusesCommentAst } from './WeiboAjaxStatusesCommentAst';
+export { WeiboAjaxStatusesLikeShowAst } from './WeiboAjaxStatusesLikeShowAst';
+export { WeiboAjaxStatusesMymblogAst } from './WeiboAjaxStatusesMymblogAst';
+export { WeiboAjaxStatusesRepostTimelineAst } from './WeiboAjaxStatusesRepostTimelineAst';
+export { WeiboAjaxStatusesShowAst } from './WeiboAjaxStatusesShowAst';
+export { WeiboKeywordSearchAst } from './WeiboKeywordSearchAst';
+export { PostContextCollectorAst } from './PostContextCollectorAst';
+export { PostNLPAnalyzerAst } from './PostNLPAnalyzerAst';
+export { EventAutoCreatorAst } from './EventAutoCreatorAst';
 
 // 微博登录 AST
-export { WeiboLoginAst } from './WeiboLoginAst'
-export { WorkflowGraphAst } from '@sker/workflow'
+export { WeiboLoginAst } from './WeiboLoginAst';
+export { WorkflowGraphAst } from '@sker/workflow';
 export { WeiboUserDetectionAst } from './WeiboUserDetectionAst';
 
 export { LlmTextAgentAst } from './LlmTextAgentAst';
@@ -23,8 +23,10 @@ export { LlmTextToAudioAst } from './LlmTextToAudioAst';
 export { LlmTextToImageAst } from './LlmTextToImageAst';
 export { LlmTextToVideoAst } from './LlmTextToVideoAst';
 export { LlmVideoToTextAst } from './LlmVideoToTextAst';
+export { LlmTextImageToVideoAst } from './LlmTextImageToVideoAst';
+export { LlmTextImage2ToVideoAst } from './LlmTextImage2ToVideoAst';
 
-export { WeiboAccountPickAst } from './WeiboAccountPickAst'
+export { WeiboAccountPickAst } from './WeiboAccountPickAst';
 
 // IS_BUFFER 模式示例
 export { CollectorAst } from './CollectorAst';

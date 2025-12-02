@@ -1,6 +1,6 @@
 import { Ast, Input, IS_BUFFER, IS_MULTI, Node, Output } from "@sker/workflow";
 
-@Node()
+@Node({ title: '文生图' })
 export class LlmTextToImageAst extends Ast {
 
     @Input({ mode: IS_MULTI | IS_BUFFER, title: '文本' })
