@@ -33,8 +33,8 @@ export const useNodeOperations = (workflow: any, options: NodeOperationsOptions 
     console.log('[copyNodes] 开始复制', {
       nodeCount: selectedNodes.length,
       edgeCount: selectedEdges.length,
-      nodes: selectedNodes.map(n => ({ id: n.id, type: n.data?.type })),
-      edges: selectedEdges.map(e => ({ id: e.id, source: e.source, target: e.target }))
+      nodes: selectedNodes.map((n: any) => ({ id: n.id, type: n.data?.type })),
+      edges: selectedEdges.map((e: any) => ({ id: e.id, source: e.source, target: e.target }))
     })
 
     if (selectedNodes.length > 0) {
