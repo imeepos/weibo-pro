@@ -7,6 +7,7 @@ import { Handler, INode } from "@sker/workflow";
 import { WeiboAjaxStatusesShowAst } from "@sker/workflow-ast";
 import { WeiboApiClient } from "./services/weibo-api-client.base";
 import { Observable } from "rxjs";
+import { checkAbortSignal } from "./utils/abort-helper";
 
 export interface WeiboAjaxStatusesShowAstReponse extends WeiboPostEntity {
     ok: number;
@@ -23,10 +24,17 @@ export class WeiboAjaxStatusesShowAstVisitor extends WeiboApiClient {
     }
 
     @Handler(WeiboAjaxStatusesShowAst)
-    visit(ast: WeiboAjaxStatusesShowAst, _ctx: any): Observable<INode> {
+    visit(ast: WeiboAjaxStatusesShowAst, ctx: any): Observable<INode> {
         return new Observable<INode>(obs => {
             const handler = async () => {
                 try {
+                    // 检查取消信号
+                    if (checkAbortSignal(ctx, ast)) {
+                        obs.next({ ...ast });
+                        obs.complete();
+                        return;
+                    }
+
                     ast.state = 'running';
                     obs.next({ ...ast });
 
@@ -35,6 +43,13 @@ export class WeiboAjaxStatusesShowAstVisitor extends WeiboApiClient {
                         url,
                         refererOptions: { uid: ast.uid, mid: ast.mblogid }
                     });
+
+                    // 检查取消信号（网络请求后）
+                    if (checkAbortSignal(ctx, ast)) {
+                        obs.next({ ...ast });
+                        obs.complete();
+                        return;
+                    }
 
                     await useEntityManager(async m => {
                         const user = m.create(WeiboUserEntity, body.user as any);

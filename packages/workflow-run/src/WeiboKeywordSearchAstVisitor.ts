@@ -33,6 +33,14 @@ export class WeiboKeywordSearchAstVisitor {
         obs: Subscriber<INode>
     ): Promise<void> {
         try {
+            // 检查取消信号
+            if (ctx.abortSignal?.aborted) {
+                ast.state = 'fail';
+                ast.setError(new Error('工作流已取消'));
+                obs.next({ ...ast });
+                return;
+            }
+
             const selection = await this.account.selectBestAccount();
             if (!selection) {
                 ast.state = 'fail';
@@ -59,12 +67,28 @@ export class WeiboKeywordSearchAstVisitor {
             ast.currentPage = 1;
             obs.next({ ...ast });
 
+            // 检查取消信号
+            if (ctx.abortSignal?.aborted) {
+                ast.state = 'fail';
+                ast.setError(new Error('工作流已取消'));
+                obs.next({ ...ast });
+                return;
+            }
+
             // 第一步：获取首页结果
             let html = await this.playwright.getHtml(url, selection.cookieHeader, `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36`);
             let result = this.parser.parseSearchResultHtml(html);
 
             // 2️⃣ 发射首页进度（串行发射，确保延迟生效）
             for (const post of result.posts) {
+                // 检查取消信号
+                if (ctx.abortSignal?.aborted) {
+                    ast.state = 'fail';
+                    ast.setError(new Error('工作流已取消'));
+                    obs.next({ ...ast });
+                    return;
+                }
+
                 ast.state = 'emitting';
                 ast.mblogid = post.mid;
                 ast.uid = post.uid;
@@ -77,6 +101,14 @@ export class WeiboKeywordSearchAstVisitor {
             const maxPageRetries = 2; // 每页最大重试次数
 
             while (result.hasNextPage && result.nextPageLink) {
+                // 检查取消信号
+                if (ctx.abortSignal?.aborted) {
+                    ast.state = 'fail';
+                    ast.setError(new Error('工作流已取消'));
+                    obs.next({ ...ast });
+                    return;
+                }
+
                 let pageRetryCount = 0;
                 let pageSuccess = false;
 
@@ -95,6 +127,14 @@ export class WeiboKeywordSearchAstVisitor {
                         // 3️⃣ 发射分页进度（串行发射，确保延迟生效）
                         ast.currentPage = currentPageNum;
                         for (const post of result.posts) {
+                            // 检查取消信号
+                            if (ctx.abortSignal?.aborted) {
+                                ast.state = 'fail';
+                                ast.setError(new Error('工作流已取消'));
+                                obs.next({ ...ast });
+                                return;
+                            }
+
                             ast.state = 'emitting';
                             ast.mblogid = post.mid;
                             ast.uid = post.uid;
@@ -153,30 +193,7 @@ export class WeiboKeywordSearchAstVisitor {
             obs.complete()
         }
     }
-
-    private async handleLoginExpired(accountId: number): Promise<void> {
-        try {
-            await this.account.decreaseHealthScore(accountId, 100);
-
-            const { useEntityManager, WeiboAccountEntity, WeiboAccountStatus } = await import('@sker/entities');
-            await useEntityManager(async m => {
-                const account = await m.findOne(WeiboAccountEntity, {
-                    where: { id: accountId }
-                });
-                if (account) {
-                    account.status = WeiboAccountStatus.EXPIRED;
-                    account.lastCheckAt = new Date();
-                    await m.save(account);
-                    console.log(`[WeiboKeywordSearchAstVisitor] 账号 ${accountId} 已标记为过期状态`);
-                }
-            });
-        } catch (error) {
-            console.error(`[WeiboKeywordSearchAstVisitor] 更新账号 ${accountId} 状态失败:`, error);
-        }
-    }
 }
-
-
 
 const formatDate = (date: Date) => {
     const time = new Date(date)

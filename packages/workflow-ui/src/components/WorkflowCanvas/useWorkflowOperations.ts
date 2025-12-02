@@ -1,9 +1,10 @@
-import { useCallback } from 'react'
+import { useCallback, useRef } from 'react'
 import { executeAstWithWorkflowGraph, executeNodeIsolated, executeAst, fromJson, toJson, type WorkflowGraphAst } from '@sker/workflow'
 import type { useWorkflow } from '../../hooks/useWorkflow'
 import type { ToastType } from './useCanvasState'
 import { WorkflowController } from '@sker/sdk'
 import { root } from '@sker/core'
+import { Subscription } from 'rxjs'
 
 /**
  * 工作流操作 Hook
@@ -23,6 +24,10 @@ export function useWorkflowOperations(
   }
 ) {
   const { onShowToast, onSetRunning, onSetSaving, getViewport } = callbacks || {}
+
+  // 保存当前运行的订阅和取消控制器
+  const runningSubscriptionRef = useRef<Subscription | null>(null)
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   /**
    * 运行单个节点
@@ -191,6 +196,7 @@ export function useWorkflowOperations(
    * - 利用 Observable 流式特性，实时更新工作流状态
    * - 每次 next 事件触发状态同步，提供流畅执行体验
    * - 自动统计执行结果，提供清晰反馈
+   * - 自动取消上一次运行，避免重复执行
    */
   const runWorkflow = useCallback(
     (onComplete?: () => void) => {
@@ -205,6 +211,36 @@ export function useWorkflowOperations(
         return
       }
 
+      // 如果有正在运行的工作流，先取消
+      if (runningSubscriptionRef.current) {
+        console.log('检测到上一次工作流正在运行，自动取消')
+        runningSubscriptionRef.current.unsubscribe()
+        runningSubscriptionRef.current = null
+
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort()
+          abortControllerRef.current = null
+        }
+
+        onShowToast?.('info', '已取消上一次运行', '开始新的工作流执行')
+
+        // 重置正在运行的节点状态
+        workflow.workflowAst.nodes.forEach(node => {
+          if (node.state === 'running') {
+            node.state = 'pending'
+            node.error = undefined
+          }
+        })
+        workflow.syncFromAst()
+      }
+
+      // 创建新的 AbortController
+      const abortController = new AbortController()
+      abortControllerRef.current = abortController
+
+      // 将 abortSignal 附加到工作流上下文
+      workflow.workflowAst.abortSignal = abortController.signal
+
       onSetRunning?.(true)
 
       // executeAst 返回 Observable，利用流式特性实时更新状态
@@ -215,13 +251,24 @@ export function useWorkflowOperations(
           workflow.syncFromAst()
         },
         error: (error) => {
+          runningSubscriptionRef.current = null
+          abortControllerRef.current = null
+
           const errorInfo = extractErrorInfo(error)
           console.error(`工作流执行异常`)
-          onShowToast?.('error', '工作流执行异常', errorInfo.message)
+
+          // 检查是否是取消导致的错误
+          if (error?.name === 'AbortError' || errorInfo.message.includes('取消')) {
+            onShowToast?.('info', '工作流已取消', '用户主动取消执行')
+          } else {
+            onShowToast?.('error', '工作流执行异常', errorInfo.message)
+          }
           onSetRunning?.(false)
         },
         complete: () => {
           console.log(`工作流执行完成`)
+          runningSubscriptionRef.current = null
+          abortControllerRef.current = null
 
           // 统计执行结果
           const successCount = workflow.workflowAst!.nodes.filter(n => n.state === 'success').length
@@ -240,8 +287,16 @@ export function useWorkflowOperations(
         }
       })
 
-      // 返回取消订阅函数，便于外部管理
-      return () => subscription.unsubscribe()
+      // 保存订阅引用
+      runningSubscriptionRef.current = subscription
+
+      // 返回取消函数，便于外部管理
+      return () => {
+        subscription.unsubscribe()
+        abortController.abort()
+        runningSubscriptionRef.current = null
+        abortControllerRef.current = null
+      }
     },
     [workflow, onShowToast, onSetRunning]
   )
@@ -279,6 +334,50 @@ export function useWorkflowOperations(
   )
 
   /**
+   * 取消工作流执行
+   *
+   * 优雅设计：
+   * - 取消 Observable 订阅
+   * - 触发 AbortSignal
+   * - 重置正在运行的节点状态
+   * - 清理引用
+   */
+  const cancelWorkflow = useCallback(() => {
+    if (!runningSubscriptionRef.current && !abortControllerRef.current) {
+      onShowToast?.('info', '没有正在运行的工作流', '当前没有需要取消的任务')
+      return
+    }
+
+    console.log('手动取消工作流执行')
+
+    // 取消订阅
+    if (runningSubscriptionRef.current) {
+      runningSubscriptionRef.current.unsubscribe()
+      runningSubscriptionRef.current = null
+    }
+
+    // 触发 AbortSignal
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      abortControllerRef.current = null
+    }
+
+    // 重置正在运行的节点状态
+    if (workflow.workflowAst) {
+      workflow.workflowAst.nodes.forEach(node => {
+        if (node.state === 'running') {
+          node.state = 'pending'
+          node.error = undefined
+        }
+      })
+      workflow.syncFromAst()
+    }
+
+    onSetRunning?.(false)
+    onShowToast?.('info', '工作流已取消', '已停止执行')
+  }, [workflow, onSetRunning, onShowToast])
+
+  /**
    * 保存子工作流
    */
   const saveSubWorkflow = useCallback(
@@ -311,6 +410,7 @@ export function useWorkflowOperations(
     runNode,
     runNodeIsolated,
     runWorkflow,
+    cancelWorkflow,
     saveWorkflow,
     saveSubWorkflow,
   }

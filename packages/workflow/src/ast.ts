@@ -102,6 +102,16 @@ export class WorkflowGraphAst extends Ast {
     type: `WorkflowGraphAst` = `WorkflowGraphAst`
 
     /**
+     * 工作流取消信号
+     *
+     * 优雅设计：
+     * - 使用标准 AbortSignal API
+     * - 支持取消长时间运行的操作
+     * - Handler 可选择性监听并响应取消
+     */
+    abortSignal?: AbortSignal
+
+    /**
      * 判断是否为分组节点
      *
      * 优雅设计：

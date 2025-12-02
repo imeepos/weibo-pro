@@ -55,6 +55,7 @@ export interface WorkflowCanvasRef {
 
   // 执行控制
   runWorkflow: () => Promise<void>
+  cancelWorkflow: () => void
   runNode: (nodeId: string) => Promise<void>
   runNodeIsolated: (nodeId: string) => Promise<void>
 
@@ -160,6 +161,22 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
     handleType: 'source' | 'target' | null
   } | null>(null)
 
+  // 鼠标位置追踪（用于智能粘贴）
+  const [lastMousePosition, setLastMousePosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
+
+  // 全局鼠标移动监听（确保始终追踪到最新位置）
+  useEffect(() => {
+    const handleGlobalMouseMove = (event: MouseEvent) => {
+      setLastMousePosition({
+        x: event.clientX,
+        y: event.clientY
+      })
+    }
+
+    window.addEventListener('mousemove', handleGlobalMouseMove)
+    return () => window.removeEventListener('mousemove', handleGlobalMouseMove)
+  }, [])
+
   // 主题检测
   const [isDark, setIsDark] = useState(() =>
     document.documentElement.classList.contains('dark')
@@ -226,7 +243,7 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
   })
 
   // 工作流操作
-  const { runNode, runNodeIsolated, saveWorkflow, saveSubWorkflow, runWorkflow } = useWorkflowOperations(workflow, {
+  const { runNode, runNodeIsolated, saveWorkflow, saveSubWorkflow, runWorkflow, cancelWorkflow } = useWorkflowOperations(workflow, {
     onShowToast: showToast,
     onSetRunning: setIsRunning,
     onSetSaving: setIsSaving,
@@ -275,10 +292,20 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
     enabled: true,
     onCopy: copyNodes,
     onCut: cutNodes,
-    onPaste: () => pasteNodes(),
+    onPaste: () => {
+      // 将屏幕坐标转换为 Flow 坐标
+      const flowPosition = screenToFlowPosition(lastMousePosition)
+      console.log('[快捷键粘贴] 坐标转换', {
+        屏幕坐标: lastMousePosition,
+        Flow坐标: flowPosition,
+        当前缩放: getViewport(),
+      })
+      pasteNodes(flowPosition)
+    },
     onDelete: deleteSelection,
     onSelectAll: handleSelectAll,
     onSave: () => saveWorkflow(workflow.workflowAst?.name || 'Untitled'),
+    onCancel: cancelWorkflow,
     onToggleCollapse: () => { }, // 通过节点操作钩子处理
     onCreateGroup: createGroup,
     onUngroupNodes: ungroupNodes,
@@ -337,6 +364,9 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
         console.log('工作流执行完成')
       })
     },
+    cancelWorkflow: () => {
+      cancelWorkflow()
+    },
     runNode: async (nodeId: string) => {
       await runNode(nodeId)
     },
@@ -388,7 +418,7 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
     },
   }), [
     exportWorkflow,
-    runWorkflow, runNode, runNodeIsolated,
+    runWorkflow, cancelWorkflow, runNode, runNodeIsolated,
     autoLayout, handleFitView, handleZoomIn, handleZoomOut, handleCenterView, handleLocateNode,
     handleSelectAll, deleteSelection, copyNodes, pasteNodes,
     workflow, showToast
@@ -638,6 +668,7 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
         <WorkflowControls
           className="absolute bottom-60 right-4 z-[5]"
           onRun={() => runWorkflow(() => {
+          onCancel={cancelWorkflow}
             console.log('工作流执行完成')
           })}
           onSave={() => saveWorkflow(workflow.workflowAst?.name || 'Untitled')}
@@ -666,8 +697,8 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
           onCollapseNodes={collapseNodes}
           onExpandNodes={expandNodes}
           onAutoLayout={autoLayout}
-          isRunning={false}
-          isSaving={false}
+          isRunning={isRunning}
+          isSaving={isSaving}
         />
       )}
       <ContextMenu

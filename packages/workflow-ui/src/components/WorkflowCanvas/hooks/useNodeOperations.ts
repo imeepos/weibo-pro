@@ -28,11 +28,22 @@ export const useNodeOperations = (workflow: any, options: NodeOperationsOptions 
   // 复制选中的节点
   const copyNodes = useCallback(() => {
     const selectedNodes = getSelectedNodes()
+    const selectedEdges = getSelectedNodesEdges()
+
+    console.log('[copyNodes] 开始复制', {
+      nodeCount: selectedNodes.length,
+      edgeCount: selectedEdges.length,
+      nodes: selectedNodes.map(n => ({ id: n.id, type: n.data?.type })),
+      edges: selectedEdges.map(e => ({ id: e.id, source: e.source, target: e.target }))
+    })
+
     if (selectedNodes.length > 0) {
-      const selectedEdges = getSelectedNodesEdges()
       clipboard.copyNodes(selectedNodes, selectedEdges)
-      console.log(`已复制 ${selectedNodes.length} 个节点`)
+      console.log(`已复制 ${selectedNodes.length} 个节点和 ${selectedEdges.length} 条边`)
       onShowToast?.('info', '复制成功', `已复制 ${selectedNodes.length} 个节点`)
+    } else {
+      console.log('[copyNodes] 没有选中的节点')
+      onShowToast?.('info', '没有选中节点', '请先选择要复制的节点')
     }
   }, [getSelectedNodes, getSelectedNodesEdges, clipboard, onShowToast])
 
@@ -51,29 +62,66 @@ export const useNodeOperations = (workflow: any, options: NodeOperationsOptions 
 
   // 粘贴节点
   const pasteNodes = useCallback((targetPosition?: { x: number; y: number }) => {
-    if (!clipboard.hasClipboard) return
+    console.log('[pasteNodes] 开始粘贴', {
+      hasClipboard: clipboard.hasClipboard,
+      clipboardCount: clipboard.clipboardCount,
+      targetPosition
+    })
 
-    // 获取粘贴位置
+    if (!clipboard.hasClipboard) {
+      console.log('[pasteNodes] 剪贴板为空，跳过粘贴')
+      onShowToast?.('info', '剪贴板为空', '请先复制或剪切节点')
+      return
+    }
+
+    // 如果没有指定位置，使用默认位置（略微偏移避免完全重叠）
     const flowPosition = targetPosition || { x: 100, y: 100 }
 
     clipboard.pasteNodes(flowPosition, (newNodes: any[], newEdges: any[]) => {
+      console.log('[pasteNodes] 收到节点和边', {
+        nodeCount: newNodes.length,
+        edgeCount: newEdges.length,
+        nodes: newNodes.map(n => ({ id: n.id, type: n.data?.type })),
+        edges: newEdges.map(e => ({ id: e.id, source: e.source, target: e.target }))
+      })
+
       // 直接将节点添加到 AST（node.data 即 AST 对象）
       newNodes.forEach((node) => {
+        console.log('[pasteNodes] 添加节点到 AST', { id: node.id, type: node.data?.type })
         workflow.workflowAst.addNode(node.data)
       })
 
       // 将边添加到 AST
       newEdges.forEach((edge) => {
         if (edge.data?.edge) {
+          console.log('[pasteNodes] 添加边到 AST', {
+            id: edge.data.edge.id,
+            from: edge.data.edge.from,
+            to: edge.data.edge.to
+          })
           workflow.workflowAst.addEdge(edge.data.edge)
         }
+      })
+
+      console.log('[pasteNodes] AST 同步前', {
+        astNodes: workflow.workflowAst.nodes.length,
+        astEdges: workflow.workflowAst.edges.length
       })
 
       // 从 AST 同步到 UI（一次性重建节点和边）
       workflow.syncFromAst()
 
-      console.log(`已粘贴 ${newNodes.length} 个节点和 ${newEdges.length} 条边`)
-      onShowToast?.('success', '粘贴成功', `已粘贴 ${newNodes.length} 个节点和 ${newEdges.length} 条边`)
+      console.log('[pasteNodes] AST 同步后', {
+        uiNodes: workflow.nodes.length,
+        uiEdges: workflow.edges.length
+      })
+
+      const message = targetPosition
+        ? `已粘贴到鼠标位置 (${Math.round(flowPosition.x)}, ${Math.round(flowPosition.y)})`
+        : `已粘贴 ${newNodes.length} 个节点和 ${newEdges.length} 条边`
+
+      console.log(message)
+      onShowToast?.('success', '粘贴成功', message)
     })
   }, [clipboard, workflow, onShowToast])
 

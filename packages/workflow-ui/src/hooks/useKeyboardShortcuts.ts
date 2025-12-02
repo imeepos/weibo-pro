@@ -8,6 +8,7 @@ export interface KeyboardShortcutsOptions {
   onDelete?: () => void
   onSelectAll?: () => void
   onSave?: () => void
+  onCancel?: () => void
   onToggleCollapse?: () => void
   onCreateGroup?: () => void
   onUngroupNodes?: () => void
@@ -35,6 +36,7 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
     onDelete,
     onSelectAll,
     onSave,
+    onCancel,
     onToggleCollapse,
     onCreateGroup,
     onUngroupNodes,
@@ -50,7 +52,11 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
       const isMod = event.ctrlKey || event.metaKey
       const isShift = event.shiftKey
 
-      if (event.key === 'Delete' || event.key === 'Backspace') {
+      // Esc 键取消运行
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        onCancel?.()
+      } else if (event.key === 'Delete' || event.key === 'Backspace') {
         event.preventDefault()
         onDelete?.()
       } else if (event.key === ' ' || event.key === 'Spacebar') {
@@ -88,10 +94,10 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
         event.preventDefault()
         onSave?.()
       } else if (event.key === 'Escape') {
-        // Escape 由其他部分处理（如关闭菜单）
+        // Esc 键已在前面处理（取消运行）
       }
     },
-    [enabled, onCopy, onCut, onPaste, onDelete, onSelectAll, onSave, onToggleCollapse, onCreateGroup, onUngroupNodes, onCollapseNodes, onExpandNodes, onAutoLayout]
+    [enabled, onCopy, onCut, onPaste, onDelete, onSelectAll, onSave, onCancel, onToggleCollapse, onCreateGroup, onUngroupNodes, onCollapseNodes, onExpandNodes, onAutoLayout]
   )
 
   useEffect(() => {

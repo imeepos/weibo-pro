@@ -8,6 +8,7 @@ import {
 import { NLPAnalyzer } from '@sker/nlp';
 import type { PostContext } from '@sker/nlp';
 import { Observable } from 'rxjs';
+import { checkAbortSignal } from './utils/abort-helper';
 
 @Injectable()
 export class PostNLPAnalyzerVisitor {
@@ -15,10 +16,17 @@ export class PostNLPAnalyzerVisitor {
   constructor(@Inject(NLPAnalyzer) private analyzer: NLPAnalyzer) { }
 
   @Handler(PostNLPAnalyzerAst)
-  visit(ast: PostNLPAnalyzerAst, _ctx: any): Observable<INode> {
+  visit(ast: PostNLPAnalyzerAst, ctx: any): Observable<INode> {
     return new Observable<INode>(obs => {
       const handler = async () => {
         try {
+          // 检查取消信号
+          if (checkAbortSignal(ctx, ast)) {
+            obs.next({ ...ast });
+            obs.complete();
+            return;
+          }
+
           ast.state = 'running';
           ast.count += 1;
           obs.next({ ...ast });

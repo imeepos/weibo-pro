@@ -38,6 +38,13 @@ export function useClipboard(): UseClipboardReturn {
       (edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target)
     )
 
+    console.log('[useClipboard.copyNodes]', {
+      nodeCount: nodes.length,
+      edgeCount: relevantEdges.length,
+      nodes: nodes.map(n => ({ id: n.id, position: n.position })),
+      edges: relevantEdges.map(e => ({ id: e.id, source: e.source, target: e.target }))
+    })
+
     setClipboard({
       nodes: structuredClone(nodes),
       edges: structuredClone(relevantEdges),
@@ -65,6 +72,14 @@ export function useClipboard(): UseClipboardReturn {
       position: XYPosition,
       onPaste: (nodes: WorkflowNode[], edges: WorkflowEdge[]) => void
     ) => {
+      console.log('[useClipboard.pasteNodes] 开始粘贴', {
+        hasNodes: clipboard.nodes.length > 0,
+        nodeCount: clipboard.nodes.length,
+        edgeCount: clipboard.edges.length,
+        targetPosition: position,
+        原始节点位置: clipboard.nodes.map(n => ({ id: n.id, pos: n.position }))
+      })
+
       if (clipboard.nodes.length === 0) return
 
       // 计算原始节点的中心点
@@ -76,11 +91,22 @@ export function useClipboard(): UseClipboardReturn {
         { x: 0, y: 0 }
       )
 
+      console.log('[useClipboard.pasteNodes] 中心点计算', {
+        原始中心点: originalCenter,
+        目标位置: position,
+        偏移: {
+          x: position.x - originalCenter.x,
+          y: position.y - originalCenter.y
+        }
+      })
+
       // 创建旧ID到新ID的映射
       const idMap = new Map<string, string>()
       clipboard.nodes.forEach((node) => {
         idMap.set(node.id, generateId())
       })
+
+      console.log('[useClipboard.pasteNodes] ID 映射', Array.from(idMap.entries()))
 
       // 克隆节点，生成新ID，调整位置
       const newNodes: WorkflowNode[] = clipboard.nodes.map((node) => {
@@ -88,20 +114,26 @@ export function useClipboard(): UseClipboardReturn {
         const offsetX = node.position.x - originalCenter.x
         const offsetY = node.position.y - originalCenter.y
 
+        const newPosition = {
+          x: position.x + offsetX,
+          y: position.y + offsetY,
+        }
+
+        console.log('[useClipboard.pasteNodes] 节点位置计算', {
+          原始位置: node.position,
+          相对中心偏移: { x: offsetX, y: offsetY },
+          新位置: newPosition
+        })
+
+        // 深拷贝 AST 对象并更新 ID
+        const clonedData = structuredClone(node.data)
+        clonedData.id = newId
+
         return {
           ...node,
           id: newId,
-          position: {
-            x: position.x + offsetX,
-            y: position.y + offsetY,
-          },
-          data: {
-            ...node.data,
-            ast: {
-              ...node.data.ast,
-              id: newId,
-            },
-          },
+          position: newPosition,
+          data: clonedData,
           selected: false,
         }
       })
@@ -131,6 +163,17 @@ export function useClipboard(): UseClipboardReturn {
         }
 
         return newEdge
+      })
+
+      console.log('[useClipboard.pasteNodes] 生成的新节点和边', {
+        newNodes: newNodes.map(n => ({ id: n.id, position: n.position })),
+        newEdges: newEdges.map(e => ({
+          id: e.id,
+          source: e.source,
+          target: e.target,
+          astFrom: e.data?.edge?.from,
+          astTo: e.data?.edge?.to
+        }))
       })
 
       onPaste(newNodes, newEdges)

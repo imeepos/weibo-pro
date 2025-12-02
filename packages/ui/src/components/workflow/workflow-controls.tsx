@@ -13,6 +13,7 @@ import {
   UploadIcon,
   LayoutGrid,
   Clock,
+  XCircle,
 } from 'lucide-react'
 import { cn } from '@sker/ui/lib/utils'
 import { Button } from '@sker/ui/components/ui/button'
@@ -20,6 +21,7 @@ import { Button } from '@sker/ui/components/ui/button'
 export interface WorkflowControlsProps {
   // 工作流操作
   onRun?: () => void
+  onCancel?: () => void
   onSave?: () => void
   onExport?: () => void
   onImport?: () => void
@@ -52,6 +54,7 @@ export interface WorkflowControlsProps {
  */
 export const WorkflowControls: React.FC<WorkflowControlsProps> = ({
   onRun,
+  onCancel,
   onSave,
   onExport,
   onImport,
@@ -78,20 +81,23 @@ export const WorkflowControls: React.FC<WorkflowControlsProps> = ({
         className
       )}
     >
-      {/* 运行 */}
-      {onRun && (
+      {/* 运行 / 取消 */}
+      {(onRun || onCancel) && (
         <Button
           variant="ghost"
           size="icon-sm"
-          onClick={onRun}
-          disabled={isRunning}
-          title={isRunning ? '运行中...' : '运行工作流'}
+          onClick={isRunning ? onCancel : onRun}
+          title={isRunning ? '取消运行' : '运行工作流'}
           className={cn(
             buttonClassName,
-            'disabled:opacity-50 disabled:cursor-not-allowed'
+            isRunning && 'text-destructive hover:text-destructive hover:bg-destructive/10'
           )}
         >
-          <PlayIcon className="h-4 w-4" strokeWidth={2} />
+          {isRunning ? (
+            <XCircle className="h-4 w-4" strokeWidth={2} />
+          ) : (
+            <PlayIcon className="h-4 w-4" strokeWidth={2} />
+          )}
         </Button>
       )}
 
