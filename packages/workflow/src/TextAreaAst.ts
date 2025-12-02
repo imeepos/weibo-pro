@@ -1,7 +1,7 @@
 import { Ast } from "./ast";
 import { Input, Node, Output, IS_MULTI } from "./decorator";
 
-@Node({ title: '文本节点' })
+@Node({ title: '文本节点', type: 'basic' })
 export class TextAreaAst extends Ast {
 
     // 使用 IS_MULTI 聚合多条边的数据

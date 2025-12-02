@@ -1,8 +1,7 @@
 import { Ast, Input, Node, Output, State } from "@sker/workflow";
-import type { WeiboCommentEntity } from '@sker/entities'
 
 
-@Node({ title: "微博评论" })
+@Node({ title: "微博评论", type: 'crawler' })
 export class WeiboAjaxStatusesCommentAst extends Ast {
 
     @Input({ title: "帖子ID" })

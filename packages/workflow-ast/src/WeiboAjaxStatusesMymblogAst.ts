@@ -1,7 +1,7 @@
 import { Ast, Input, Node, Output, State } from "@sker/workflow";
 
 
-@Node({ title: "微博个人博文" })
+@Node({ title: "微博个人博文", type: 'crawler' })
 export class WeiboAjaxStatusesMymblogAst extends Ast {
 
     @Input({ title: "用户ID" })

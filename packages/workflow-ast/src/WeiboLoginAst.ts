@@ -2,7 +2,7 @@ import { Ast, Node, Output, State } from "@sker/workflow";
 import type { WeiboAccountEntity } from "@sker/entities";
 
 
-@Node({ title: '微博登录' })
+@Node({ title: '微博登录', type: 'crawler' })
 export class WeiboLoginAst extends Ast {
 
     @Output({ title: '微博账号' })

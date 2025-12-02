@@ -1,8 +1,8 @@
 import { Ast, Input, Node, Output } from '@sker/workflow';
-import type { EventEntity, WeiboPostEntity } from '@sker/entities';
+import type { WeiboPostEntity } from '@sker/entities';
 import type { CompleteAnalysisResult } from '@sker/nlp';
 
-@Node({ title: '事件自动创建器' })
+@Node({ title: '事件自动创建器', type: 'crawler' })
 export class EventAutoCreatorAst extends Ast {
   @Input({ title: 'NLP 分析结果' })
   nlpResult!: CompleteAnalysisResult;

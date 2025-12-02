@@ -2,7 +2,7 @@ import { Ast } from "./ast";
 import { Input, Node, Output } from "./decorator";
 import dayjs from 'dayjs'
 
-@Node({ title: '日期' })
+@Node({ title: '日期', type: 'basic' })
 export class DateAst extends Ast {
 
     @Input({ title: '日期' })

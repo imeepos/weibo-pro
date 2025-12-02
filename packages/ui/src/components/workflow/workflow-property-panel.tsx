@@ -39,11 +39,8 @@ export function WorkflowPropertyPanel({
     )
   }
 
-  // 确定默认打开的 sections
-  const defaultValue = defaultOpenSections ||
-    sections
-      .filter(s => s.defaultOpen === true)
-      .map(s => s.id)
+  // 默认全部折叠，除非显式指定
+  const defaultValue = defaultOpenSections ?? []
 
   return (
     <div className={cn('flex flex-col h-full border-l bg-card border-border', className)}>

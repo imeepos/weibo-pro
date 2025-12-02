@@ -1,6 +1,6 @@
 import { Ast, Input, Node, Output, State } from "@sker/workflow";
 
-@Node({ title: '微博账号选择器' })
+@Node({ title: '微博账号选择器', type: 'crawler' })
 export class WeiboAccountPickAst extends Ast {
 
     @Input({ title: '扫码登录', isMulti: true })

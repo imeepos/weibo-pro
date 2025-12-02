@@ -1,7 +1,7 @@
 import { Ast, Input, Node, Output, State } from "@sker/workflow";
 
 
-@Node({ title: "微博热门" })
+@Node({ title: "微博热门", type: 'crawler' })
 export class WeiboAjaxFeedHotTimelineAst extends Ast {
 
     @Input({ isMulti: true, title: '开始' })

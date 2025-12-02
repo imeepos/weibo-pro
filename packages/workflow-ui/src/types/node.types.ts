@@ -3,25 +3,15 @@ import type { Position } from '@xyflow/react'
 
 /**
  * 节点状态视觉映射
+ * @deprecated 使用 @sker/ui 包中的 NODE_STATE_COLORS
  */
-export const NODE_STATE_COLORS: Record<IAstStates, string> = {
-  pending: '#94a3b8',   // slate-400
-  running: '#3b82f6',   // blue-500
-  emitting: '#a855f7',  // purple-500
-  success: '#22c55e',   // green-500
-  fail: '#ef4444',      // red-500
-}
+export { NODE_STATE_COLORS } from '@sker/ui/constants/workflow'
 
 /**
  * 节点状态标签
+ * @deprecated 使用 @sker/ui 包中的 NODE_STATE_LABELS
  */
-export const NODE_STATE_LABELS: Record<IAstStates, string> = {
-  pending: '待执行',
-  running: '执行中',
-  emitting: '发送中',
-  success: '成功',
-  fail: '失败',
-}
+export { NODE_STATE_LABELS } from '@sker/ui/constants/workflow'
 
 /**
  * 节点句柄配置

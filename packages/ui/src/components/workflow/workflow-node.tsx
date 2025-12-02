@@ -8,6 +8,7 @@ import { cn } from '@sker/ui/lib/utils'
 import { Badge } from '@sker/ui/components/ui/badge'
 import { Button } from '@sker/ui/components/ui/button'
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@sker/ui/components/ui/collapsible'
+import { NODE_STATE_COLORS, NODE_STATE_LABELS } from '../../constants/workflow'
 import type { WorkflowNodeProps, WorkflowNodePort } from './types/workflow-nodes'
 
 // 聚合模式位标志
@@ -29,23 +30,6 @@ const getArrayLength = (value: any): number | null => {
     return value.length
   }
   return null
-}
-
-// 状态颜色映射
-export const NODE_STATE_COLORS: Record<string, string> = {
-  pending: 'hsl(var(--muted-foreground))',
-  running: 'hsl(var(--node-running))',
-  emitting: 'hsl(var(--node-emitting))',
-  success: 'hsl(var(--node-success))',
-  fail: 'hsl(var(--node-error))',
-}
-
-export const NODE_STATE_LABELS: Record<string, string> = {
-  pending: '待执行',
-  running: '执行中',
-  emitting: '发送中',
-  success: '成功',
-  fail: '失败',
 }
 
 // 状态徽章

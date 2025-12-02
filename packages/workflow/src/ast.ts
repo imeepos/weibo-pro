@@ -65,7 +65,7 @@ export abstract class Ast implements INode {
     }
 }
 
-@Node({ title: "工作流" })
+@Node({ title: "工作流", type: 'basic' })
 export class WorkflowGraphAst extends Ast {
     @State({ title: "名称", type: 'text' })
     name: string | undefined;

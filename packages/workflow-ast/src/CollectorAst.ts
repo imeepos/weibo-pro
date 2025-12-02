@@ -8,7 +8,7 @@ import { Input, Node, Output, IS_BUFFER, IS_MULTI } from "@sker/workflow";
  * - IS_BUFFER：收集单边的多次发射
  * - IS_MULTI | IS_BUFFER：收集所有边的所有发射
  */
-@Node({ title: '收集器' })
+@Node({ title: '收集器', type: 'basic' })
 export class CollectorAst extends Ast {
     /**
      * 使用 IS_BUFFER 模式：收集单边的所有发射

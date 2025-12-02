@@ -5,7 +5,7 @@ import type {
   WeiboRepostEntity,
 } from '@sker/entities';
 
-@Node({ title: '帖子上下文收集器' })
+@Node({ title: '帖子上下文收集器', type: 'crawler' })
 export class PostContextCollectorAst extends Ast {
   @Input({ title: '帖子ID' })
   postId: string = '';
