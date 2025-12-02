@@ -11,9 +11,7 @@ export class TextAreaAstVisitor {
             obs.next({ ...ast })
 
             ast.state = 'emitting';
-
             ast.output = Array.isArray(ast.input) ? ast.input.join('\n') : ast.input;
-
             obs.next({ ...ast })
 
             ast.state = 'success';

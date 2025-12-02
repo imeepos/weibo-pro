@@ -16,3 +16,5 @@ import './WorkflowGraphBrowserVisitor';
 import "./WeiboUserDetectionAstVisitor";
 import "./LlmTextAgentAstVisitor";
 import "./WeiboAccountPickAstBrowserVisitor"
+import "./CollectorVisitor";
+import "./TextAreaAstVisitor";

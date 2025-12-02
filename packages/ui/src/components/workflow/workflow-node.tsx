@@ -10,6 +10,27 @@ import { Button } from '@sker/ui/components/ui/button'
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@sker/ui/components/ui/collapsible'
 import type { WorkflowNodeProps, WorkflowNodePort } from './types/workflow-nodes'
 
+// 聚合模式位标志
+const IS_MULTI = 0x000001
+const IS_BUFFER = 0x000010
+
+// 位标志检查函数
+const hasMultiMode = (mode?: number): boolean => {
+  return ((mode ?? 0) & IS_MULTI) === IS_MULTI
+}
+
+const hasBufferMode = (mode?: number): boolean => {
+  return ((mode ?? 0) & IS_BUFFER) === IS_BUFFER
+}
+
+// 获取数组长度
+const getArrayLength = (value: any): number | null => {
+  if (Array.isArray(value)) {
+    return value.length
+  }
+  return null
+}
+
 // 状态颜色映射
 export const NODE_STATE_COLORS: Record<string, string> = {
   pending: 'hsl(var(--muted-foreground))',
@@ -109,36 +130,56 @@ const PortRow = ({
   input?: WorkflowNodePort
   output?: WorkflowNodePort,
   isCollapsed?: boolean
-}) => (
-  <div className="relative flex items-center justify-between h-6 px-2">
-    <div className="flex items-center gap-1 relative">
-      {input && (
-        <>
-          <HandleWrapper port={input} type="target" isCollapsed={isCollapsed} />
-          <span className="text-xs text-foreground/90 truncate ml-3">
-            {input.label || input.property}
-          </span>
-          {input.isMulti && (
-            <span className="text-[10px] text-muted-foreground font-mono">[]</span>
-          )}
-        </>
-      )}
+}) => {
+  // 检查输入端口的聚合模式
+  const inputIsMulti = input && (hasMultiMode(input.mode) || input.isMulti)
+  const inputIsBuffer = input && hasBufferMode(input.mode)
+  const inputCount = input && getArrayLength(input.value)
+
+  // 检查输出端口的聚合模式
+  const outputIsMulti = output && (hasMultiMode(output.mode) || output.isMulti)
+  const outputIsBuffer = output && hasBufferMode(output.mode)
+  const outputCount = output && getArrayLength(output.value)
+
+  return (
+    <div className="relative flex items-center justify-between h-6 px-2">
+      <div className="flex items-center gap-1 relative">
+        {input && (
+          <>
+            <HandleWrapper port={input} type="target" isCollapsed={isCollapsed} />
+            <span className="text-xs text-foreground/90 truncate ml-3">
+              {input.label || input.property}
+            </span>
+            {(inputIsMulti || inputIsBuffer) && (
+              <span className="text-[10px] text-muted-foreground font-mono">
+                [{inputCount !== null ? inputCount : ''}]
+                {inputIsBuffer && inputIsMulti && <span className="ml-0.5" title="缓冲+聚合">⚡</span>}
+                {inputIsBuffer && !inputIsMulti && <span className="ml-0.5" title="缓冲">⏱</span>}
+              </span>
+            )}
+          </>
+        )}
+      </div>
+      <div className="flex items-center gap-1 relative">
+        {output && (
+          <>
+            {(outputIsMulti || outputIsBuffer) && (
+              <span className="text-[10px] text-muted-foreground font-mono">
+                {outputIsBuffer && outputIsMulti && <span className="mr-0.5" title="缓冲+聚合">⚡</span>}
+                {outputIsBuffer && !outputIsMulti && <span className="mr-0.5" title="缓冲">⏱</span>}
+                [{outputCount !== null ? outputCount : ''}]
+              </span>
+            )}
+            <span className="text-xs text-foreground/90 truncate mr-3">
+              {output.label || output.property}
+            </span>
+            <HandleWrapper port={output} type="source" isCollapsed={isCollapsed} />
+          </>
+        )}
+      </div>
     </div>
-    <div className="flex items-center gap-1 relative">
-      {output && (
-        <>
-          {output.isMulti && (
-            <span className="text-[10px] text-muted-foreground font-mono">[]</span>
-          )}
-          <span className="text-xs text-foreground/90 truncate mr-3">
-            {output.label || output.property}
-          </span>
-          <HandleWrapper port={output} type="source" isCollapsed={isCollapsed} />
-        </>
-      )}
-    </div>
-  </div>
-)
+  )
+}
 
 // 主组件
 const WorkflowNodeComponent = ({

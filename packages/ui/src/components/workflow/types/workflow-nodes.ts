@@ -14,7 +14,12 @@ export interface WorkflowNodeHandle {
 export interface WorkflowNodePort {
   property: string
   label?: string
+  /** @deprecated 使用 mode 替代 */
   isMulti?: boolean
+  /** 聚合模式位标志 (IS_MULTI | IS_BUFFER) */
+  mode?: number
+  /** 端口当前值（用于显示数量） */
+  value?: any
 }
 
 export interface WorkflowNodeProps {

@@ -62,10 +62,14 @@ export interface PortMetadata {
   property: string
   /** 属性类型 */
   type: string
-  /** 是否多输入汇聚 */
+  /** @deprecated 使用 mode 替代 */
   isMulti?: boolean
+  /** 聚合模式位标志 (IS_MULTI | IS_BUFFER) */
+  mode?: number
   /** 显示标签 */
   label?: string
+  /** 端口当前值（用于显示数量） */
+  value?: any
 }
 
 /**

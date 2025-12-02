@@ -1119,6 +1119,7 @@ export class ReactiveScheduler {
 
                     console.log('[subscribeAndMerge] 节点状态更新:', {
                         nodeId: updatedNode.id,
+                        type: updatedNode.type,
                         stateTransition,
                         shouldIncrementCount,
                         shouldIncrementEmitCount,

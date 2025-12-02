@@ -45,7 +45,7 @@ export function findNodeType<T = any>(name: string): Type<T> | undefined {
  * 转换为端口元数据
  */
 function toPortMetadata(
-  metadata: { propertyKey: string | symbol; isMulti?: boolean; title?: string; type?: string }
+  metadata: { propertyKey: string | symbol; isMulti?: boolean; mode?: number; title?: string; type?: string }
 ): PortMetadata {
   const property = String(metadata.propertyKey)
   const customTitle = metadata.title
@@ -54,6 +54,7 @@ function toPortMetadata(
     property,
     type: metadata.type || 'any',
     isMulti: metadata.isMulti,
+    mode: metadata.mode,
     label: customTitle || formatPortLabel(property),
   }
 }

@@ -15,7 +15,15 @@ export { EventAutoCreatorAst } from './EventAutoCreatorAst'
 export { WeiboLoginAst } from './WeiboLoginAst'
 export { WorkflowGraphAst } from '@sker/workflow'
 export { WeiboUserDetectionAst } from './WeiboUserDetectionAst';
+
 export { LlmTextAgentAst } from './LlmTextAgentAst';
+export { LlmCategoryAst } from './LlmCategoryAst';
+export { LlmImageToTextAst } from './LlmImageToTextAst';
+export { LlmTextToAudioAst } from './LlmTextToAudioAst';
+export { LlmTextToImageAst } from './LlmTextToImageAst';
+export { LlmTextToVideoAst } from './LlmTextToVideoAst';
+export { LlmVideoToTextAst } from './LlmVideoToTextAst';
+
 export { WeiboAccountPickAst } from './WeiboAccountPickAst'
 
 // IS_BUFFER 模式示例
