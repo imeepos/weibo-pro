@@ -33,8 +33,25 @@ export class WeiboAjaxProfileInfoAstVisitor extends WeiboApiClient {
     @Handler(WeiboAjaxProfileInfoAst)
     visit(ast: WeiboAjaxProfileInfoAst, _ctx: any): Observable<INode> {
         return new Observable<INode>(obs => {
+            // 创建专门的 AbortController
+            const abortController = new AbortController();
+
+            // 包装 ctx
+            const wrappedCtx = {
+                ..._ctx,
+                abortSignal: abortController.signal
+            };
+
             const handler = async () => {
                 try {
+                    // 检查取消信号
+                    if (wrappedCtx.abortSignal?.aborted) {
+                        ast.state = 'fail';
+                        ast.setError(new Error('工作流已取消'));
+                        obs.next({ ...ast });
+                        return;
+                    }
+
                     ast.state = 'running';
                     ast.count += 1;
                     obs.next({ ...ast });
@@ -45,13 +62,21 @@ export class WeiboAjaxProfileInfoAstVisitor extends WeiboApiClient {
                         refererOptions: { uid: ast.uid }
                     });
 
+                    // 检查取消信号（网络请求后）
+                    if (wrappedCtx.abortSignal?.aborted) {
+                        ast.state = 'fail';
+                        ast.setError(new Error('工作流已取消'));
+                        obs.next({ ...ast });
+                        return;
+                    }
+
                     await useEntityManager(async m => {
                         const user = m.create(WeiboUserEntity, body.data.user as any);
                         ast.uid = `${user.id}`;
                         await m.upsert(WeiboUserEntity, user as any, ['id']);
                     });
 
-                    await this.fetchDetail(ast, _ctx);
+                    await this.fetchDetail(ast, wrappedCtx);
 
                     ast.state = 'emitting';
                     ast.isEnd = true;
@@ -69,11 +94,23 @@ export class WeiboAjaxProfileInfoAstVisitor extends WeiboApiClient {
                 }
             };
             handler();
-            return () => obs.complete();
+
+            // 返回清理函数
+            return () => {
+                console.log('[WeiboAjaxProfileInfoAstVisitor] 订阅被取消，触发 AbortSignal');
+                abortController.abort();
+                obs.complete();
+            };
         });
     }
 
     private async fetchDetail(ast: WeiboAjaxProfileInfoAst, _ctx: any) {
+        // 检查取消信号
+        if (_ctx.abortSignal?.aborted) {
+            console.log('[WeiboAjaxProfileInfoAstVisitor] fetchDetail 已取消');
+            return;
+        }
+
         const url = `https://weibo.com/ajax/profile/detail?uid=${ast.uid}`;
         const body = await this.fetchApi<WeiboAjaxProfileDetailResponse>({
             url,

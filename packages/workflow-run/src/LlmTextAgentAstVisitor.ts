@@ -27,14 +27,41 @@ export class LlmTextAgentAstVisitor {
     @Handler(LlmTextAgentAst)
     handler(ast: LlmTextAgentAst, ctx: WorkflowGraphAst) {
         return new Observable((obs) => {
+            // 创建专门的 AbortController
+            const abortController = new AbortController();
+
+            // 包装 ctx
+            const wrappedCtx = {
+                ...ctx,
+                abortSignal: abortController.signal
+            };
+
             const run = async () => {
+                // 检查取消信号
+                if (wrappedCtx.abortSignal?.aborted) {
+                    ast.state = 'fail';
+                    ast.setError(new Error('工作流已取消'));
+                    obs.next({ ...ast });
+                    return;
+                }
+
                 ast.state = 'running';
                 ast.count += 1;
                 obs.next({ ...ast })
 
                 const chartModel = new ChatOpenAI({ model: ast.model, temperature: ast.temperature });
+
+                // LLM 调用（未来可传递 signal）
                 const result = await chartModel.invoke(Array.isArray(ast.prompt) ? ast.prompt.join('\n') : ast.prompt)
-                // 获取nodes
+
+                // 检查取消信号（LLM 调用后）
+                if (wrappedCtx.abortSignal?.aborted) {
+                    ast.state = 'fail';
+                    ast.setError(new Error('工作流已取消'));
+                    obs.next({ ...ast });
+                    return;
+                }
+
                 ast.text = result.content as string;
                 ast.state = 'emitting'
                 obs.next({ ...ast })
@@ -49,7 +76,13 @@ export class LlmTextAgentAstVisitor {
                 obs.next({ ...ast })
                 obs.complete()
             })
-            return () => obs.complete()
+
+            // 返回清理函数
+            return () => {
+                console.log('[LlmTextAgentAstVisitor] 订阅被取消，触发 AbortSignal');
+                abortController.abort();
+                obs.complete();
+            }
         })
     }
 }

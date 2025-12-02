@@ -7,7 +7,6 @@ import { Handler, INode } from "@sker/workflow";
 import { WeiboAjaxStatusesShowAst } from "@sker/workflow-ast";
 import { WeiboApiClient } from "./services/weibo-api-client.base";
 import { Observable } from "rxjs";
-import { checkAbortSignal } from "./utils/abort-helper";
 
 export interface WeiboAjaxStatusesShowAstReponse extends WeiboPostEntity {
     ok: number;
@@ -26,12 +25,22 @@ export class WeiboAjaxStatusesShowAstVisitor extends WeiboApiClient {
     @Handler(WeiboAjaxStatusesShowAst)
     visit(ast: WeiboAjaxStatusesShowAst, ctx: any): Observable<INode> {
         return new Observable<INode>(obs => {
+            // 创建专门的 AbortController
+            const abortController = new AbortController();
+
+            // 包装 ctx
+            const wrappedCtx = {
+                ...ctx,
+                abortSignal: abortController.signal
+            };
+
             const handler = async () => {
                 try {
                     // 检查取消信号
-                    if (checkAbortSignal(ctx, ast)) {
+                    if (wrappedCtx.abortSignal?.aborted) {
+                        ast.state = 'fail';
+                        ast.setError(new Error('工作流已取消'));
                         obs.next({ ...ast });
-                        obs.complete();
                         return;
                     }
 
@@ -45,9 +54,10 @@ export class WeiboAjaxStatusesShowAstVisitor extends WeiboApiClient {
                     });
 
                     // 检查取消信号（网络请求后）
-                    if (checkAbortSignal(ctx, ast)) {
+                    if (wrappedCtx.abortSignal?.aborted) {
+                        ast.state = 'fail';
+                        ast.setError(new Error('工作流已取消'));
                         obs.next({ ...ast });
-                        obs.complete();
                         return;
                     }
 
@@ -63,16 +73,13 @@ export class WeiboAjaxStatusesShowAstVisitor extends WeiboApiClient {
                         try {
                             await m.upsert(WeiboPostEntity, post as any, ['id']);
                         } catch (error) {
-                            // 如果 upsert 失败，尝试查找现有记录
                             const existingPost = await m.findOne(WeiboPostEntity, {
                                 where: { id: post.id }
                             });
 
                             if (existingPost) {
-                                // 如果记录已存在，更新它
                                 await m.update(WeiboPostEntity, { id: post.id }, post as any);
                             } else {
-                                // 如果记录不存在，重新抛出错误
                                 throw error;
                             }
                         }
@@ -93,8 +100,15 @@ export class WeiboAjaxStatusesShowAstVisitor extends WeiboApiClient {
                     obs.complete()
                 }
             };
+
             handler();
-            return () => obs.complete();
+
+            // 返回清理函数
+            return () => {
+                console.log('[WeiboAjaxStatusesShowAstVisitor] 订阅被取消，触发 AbortSignal');
+                abortController.abort();
+                obs.complete();
+            };
         });
     }
 }

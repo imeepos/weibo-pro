@@ -200,21 +200,42 @@ export class EventAutoCreatorVisitor {
   }
 
   @Handler(EventAutoCreatorAst)
-  visit(ast: EventAutoCreatorAst, _ctx: any): Observable<INode> {
+  visit(ast: EventAutoCreatorAst, ctx: any): Observable<INode> {
     return new Observable<INode>(obs => {
+      // 创建专门的 AbortController
+      const abortController = new AbortController();
+
+      // 包装 ctx
+      const wrappedCtx = {
+        ...ctx,
+        abortSignal: abortController.signal
+      };
+
       const handler = async () => {
         try {
+          // 检查取消信号
+          if (wrappedCtx.abortSignal?.aborted) {
+            ast.state = 'fail';
+            ast.setError(new Error('工作流已取消'));
+            obs.next(ast);
+            return;
+          }
+
           ast.state = 'running';
           ast.count += 1;
           obs.next(ast);
 
           await useEntityManager(async (m) => {
+            // 检查取消信号（数据库操作前）
+            if (wrappedCtx.abortSignal?.aborted) {
+              throw new Error('工作流已取消');
+            }
+
             let category = await m.findOne(EventCategoryEntity, {
               where: { name: ast.nlpResult.event.type, status: 'active' },
             });
 
-            // 宽容式处理：如果分类不存在，自动创建（即使 isNewCategory 为 false）
-            // 这样可以容忍 LLM 的误判或数据库状态不一致
+            // 宽容式处理：如果分类不存在，自动创建
             if (!category) {
               const maxSort = await m
                 .createQueryBuilder(EventCategoryEntity, 'c')
@@ -248,6 +269,11 @@ export class EventAutoCreatorVisitor {
             const eventDescription = ast.nlpResult.eventDescription ||
               ast.post.text_raw.substring(0, 200).trim();
 
+            // 检查取消信号（事件创建前）
+            if (wrappedCtx.abortSignal?.aborted) {
+              throw new Error('工作流已取消');
+            }
+
             const existingEvent = await m.findOne(EventEntity, {
               where: {
                 title: eventTitle,
@@ -269,13 +295,9 @@ export class EventAutoCreatorVisitor {
               existingEvent.sentiment = updatedSentiment;
               existingEvent.hotness = Number(existingEvent.hotness) + 1;
 
-              // 如果新的描述更详细，则更新描述
               if (eventDescription.length > (existingEvent.description?.length || 0)) {
                 existingEvent.description = eventDescription;
               }
-
-              // peak_at 将在统计信息更新后根据实际热度峰值确定
-              // 此处暂不更新，留给统计分析任务处理
 
               event = await m.save(EventEntity, existingEvent);
             } else {
@@ -288,7 +310,7 @@ export class EventAutoCreatorVisitor {
                 status: 'active',
                 seed_url: `https://weibo.com/${ast.post.user.id}/${ast.post.mblogid}`,
                 occurred_at: new Date(ast.post.created_at),
-                peak_at: new Date(ast.post.created_at), // 初始峰值时间即发生时间
+                peak_at: new Date(ast.post.created_at),
               });
               event = await m.save(EventEntity, newEvent);
             }
@@ -312,6 +334,11 @@ export class EventAutoCreatorVisitor {
             // 处理标签
             if (ast.nlpResult.tags && ast.nlpResult.tags.length > 0) {
               for (const tagData of ast.nlpResult.tags) {
+                // 检查取消信号（标签循环中）
+                if (wrappedCtx.abortSignal?.aborted) {
+                  throw new Error('工作流已取消');
+                }
+
                 let tag = await m.findOne(EventTagEntity, {
                   where: { name: tagData.name },
                 });
@@ -364,7 +391,13 @@ export class EventAutoCreatorVisitor {
         }
       };
       handler();
-      return () => obs.complete();
+
+      // 返回清理函数
+      return () => {
+        console.log('[EventAutoCreatorVisitor] 订阅被取消，触发 AbortSignal');
+        abortController.abort();
+        obs.complete();
+      };
     });
   }
 }

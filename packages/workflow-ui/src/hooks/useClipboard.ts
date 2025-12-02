@@ -7,6 +7,16 @@ interface ClipboardState {
   nodes: WorkflowNode[]
   edges: WorkflowEdge[]
   operation: 'copy' | 'cut' | null
+  boundingBox?: {
+    minX: number
+    minY: number
+    maxX: number
+    maxY: number
+    width: number
+    height: number
+    centerX: number
+    centerY: number
+  }
 }
 
 export interface UseClipboardReturn {
@@ -38,15 +48,20 @@ export function useClipboard(): UseClipboardReturn {
       (edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target)
     )
 
-    console.log('[useClipboard.copyNodes]', {
-      nodeCount: nodes.length,
-      edgeCount: relevantEdges.length,
-      nodes: nodes.map(n => ({ id: n.id, position: n.position })),
-      edges: relevantEdges.map(e => ({ id: e.id, source: e.source, target: e.target }))
-    })
+    console.log('[useClipboard.copyNodes]')
+    console.log('  节点数量:', nodes.length)
+    console.log('  边数量:', relevantEdges.length)
+
+    // 保存节点时包含尺寸信息（用于粘贴时计算包围盒）
+    const nodesWithSize = nodes.map(node => ({
+      ...node,
+      // 保存实际尺寸，如果没有则使用默认值
+      _width: node.width || node.measured?.width || 280,
+      _height: node.height || node.measured?.height || 120,
+    }))
 
     setClipboard({
-      nodes: structuredClone(nodes),
+      nodes: structuredClone(nodesWithSize) as any,
       edges: structuredClone(relevantEdges),
       operation: 'copy',
     })
@@ -60,8 +75,15 @@ export function useClipboard(): UseClipboardReturn {
       (edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target)
     )
 
+    // 保存节点时包含尺寸信息（用于粘贴时计算包围盒）
+    const nodesWithSize = nodes.map(node => ({
+      ...node,
+      _width: node.width || node.measured?.width || 280,
+      _height: node.height || node.measured?.height || 120,
+    }))
+
     setClipboard({
-      nodes: structuredClone(nodes),
+      nodes: structuredClone(nodesWithSize) as any,
       edges: structuredClone(relevantEdges),
       operation: 'cut',
     })
@@ -72,33 +94,46 @@ export function useClipboard(): UseClipboardReturn {
       position: XYPosition,
       onPaste: (nodes: WorkflowNode[], edges: WorkflowEdge[]) => void
     ) => {
-      console.log('[useClipboard.pasteNodes] 开始粘贴', {
-        hasNodes: clipboard.nodes.length > 0,
-        nodeCount: clipboard.nodes.length,
-        edgeCount: clipboard.edges.length,
-        targetPosition: position,
-        原始节点位置: clipboard.nodes.map(n => ({ id: n.id, pos: n.position }))
-      })
-
       if (clipboard.nodes.length === 0) return
 
-      // 计算原始节点的中心点
-      const originalCenter = clipboard.nodes.reduce(
-        (acc, node) => ({
-          x: acc.x + node.position.x / clipboard.nodes.length,
-          y: acc.y + node.position.y / clipboard.nodes.length,
-        }),
-        { x: 0, y: 0 }
-      )
+      console.log('[useClipboard.pasteNodes] 开始粘贴')
+      console.log('  节点数量:', clipboard.nodes.length)
+      console.log('  边数量:', clipboard.edges.length)
+      console.log('  鼠标位置 X:', position.x)
+      console.log('  鼠标位置 Y:', position.y)
 
-      console.log('[useClipboard.pasteNodes] 中心点计算', {
-        原始中心点: originalCenter,
-        目标位置: position,
-        偏移: {
-          x: position.x - originalCenter.x,
-          y: position.y - originalCenter.y
-        }
-      })
+      // 粘贴时计算包围盒（根据剪贴板中保存的位置和尺寸）
+      const positions = clipboard.nodes.map((node: any) => ({
+        x: node.position.x,
+        y: node.position.y,
+        width: node._width || 280,
+        height: node._height || 120,
+      }))
+
+      const minX = Math.min(...positions.map(p => p.x))
+      const maxX = Math.max(...positions.map(p => p.x + p.width))
+      const minY = Math.min(...positions.map(p => p.y))
+      const maxY = Math.max(...positions.map(p => p.y + p.height))
+
+      // 包围盒中心
+      const boundingBoxCenter = {
+        x: (minX + maxX) / 2,
+        y: (minY + maxY) / 2,
+      }
+
+      console.log('[useClipboard.pasteNodes] 包围盒计算')
+      console.log('  包围盒 minX:', minX)
+      console.log('  包围盒 maxX:', maxX)
+      console.log('  包围盒 minY:', minY)
+      console.log('  包围盒 maxY:', maxY)
+      console.log('  包围盒宽度:', maxX - minX)
+      console.log('  包围盒高度:', maxY - minY)
+      console.log('  包围盒中心 X:', boundingBoxCenter.x)
+      console.log('  包围盒中心 Y:', boundingBoxCenter.y)
+      console.log('  鼠标位置 X:', position.x)
+      console.log('  鼠标位置 Y:', position.y)
+      console.log('  偏移量 X:', position.x - boundingBoxCenter.x)
+      console.log('  偏移量 Y:', position.y - boundingBoxCenter.y)
 
       // 创建旧ID到新ID的映射
       const idMap = new Map<string, string>()
@@ -106,31 +141,37 @@ export function useClipboard(): UseClipboardReturn {
         idMap.set(node.id, generateId())
       })
 
-      console.log('[useClipboard.pasteNodes] ID 映射', Array.from(idMap.entries()))
-
       // 克隆节点，生成新ID，调整位置
-      const newNodes: WorkflowNode[] = clipboard.nodes.map((node) => {
+      const newNodes: WorkflowNode[] = clipboard.nodes.map((node: any, i) => {
         const newId = idMap.get(node.id)!
-        const offsetX = node.position.x - originalCenter.x
-        const offsetY = node.position.y - originalCenter.y
 
+        // 计算节点相对于包围盒中心的偏移
+        const offsetX = node.position.x - boundingBoxCenter.x
+        const offsetY = node.position.y - boundingBoxCenter.y
+
+        // 新位置 = 鼠标位置 + 相对偏移
         const newPosition = {
           x: position.x + offsetX,
           y: position.y + offsetY,
         }
 
-        console.log('[useClipboard.pasteNodes] 节点位置计算', {
-          原始位置: node.position,
-          相对中心偏移: { x: offsetX, y: offsetY },
-          新位置: newPosition
-        })
+        console.log(`[useClipboard.pasteNodes] 节点[${i}]位置计算`)
+        console.log(`  原始位置 X:`, node.position.x)
+        console.log(`  原始位置 Y:`, node.position.y)
+        console.log(`  相对包围盒中心偏移 X:`, offsetX)
+        console.log(`  相对包围盒中心偏移 Y:`, offsetY)
+        console.log(`  新位置 X:`, newPosition.x)
+        console.log(`  新位置 Y:`, newPosition.y)
 
         // 深拷贝 AST 对象并更新 ID
         const clonedData = structuredClone(node.data)
         clonedData.id = newId
 
+        // 清除临时尺寸属性
+        const { _width, _height, ...cleanNode } = node
+
         return {
-          ...node,
+          ...cleanNode,
           id: newId,
           position: newPosition,
           data: clonedData,
@@ -165,16 +206,9 @@ export function useClipboard(): UseClipboardReturn {
         return newEdge
       })
 
-      console.log('[useClipboard.pasteNodes] 生成的新节点和边', {
-        newNodes: newNodes.map(n => ({ id: n.id, position: n.position })),
-        newEdges: newEdges.map(e => ({
-          id: e.id,
-          source: e.source,
-          target: e.target,
-          astFrom: e.data?.edge?.from,
-          astTo: e.data?.edge?.to
-        }))
-      })
+      console.log('[useClipboard.pasteNodes] 生成完成')
+      console.log('  新节点数量:', newNodes.length)
+      console.log('  新边数量:', newEdges.length)
 
       onPaste(newNodes, newEdges)
 

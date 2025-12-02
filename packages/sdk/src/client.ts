@@ -76,6 +76,9 @@ function createControllerInstance<T>(controllerClass: new () => T, axiosInstance
                     if (bodyData !== undefined) {
                         // POST SSE：支持复杂 JSON 传输
                         return new Observable<any>(subscriber => {
+                            const abortController = new AbortController();
+                            let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
+
                             // 使用 fetch API 处理 POST SSE
                             fetch(finalUrl, {
                                 method: 'POST',
@@ -84,7 +87,8 @@ function createControllerInstance<T>(controllerClass: new () => T, axiosInstance
                                     'Accept': 'text/event-stream',
                                     'Cache-Control': 'no-cache'
                                 },
-                                body: JSON.stringify(bodyData)
+                                body: JSON.stringify(bodyData),
+                                signal: abortController.signal
                             })
                                 .then(response => {
                                     const ok = response.ok;
@@ -93,7 +97,7 @@ function createControllerInstance<T>(controllerClass: new () => T, axiosInstance
                                         throw new Error(`HTTP error! status: ${status}`);
                                     }
 
-                                    const reader = response.body?.getReader();
+                                    reader = response.body?.getReader();
                                     if (!reader) {
                                         throw new Error('Response body is not readable');
                                     }
@@ -125,20 +129,36 @@ function createControllerInstance<T>(controllerClass: new () => T, axiosInstance
 
                                             read();
                                         }).catch(error => {
-                                            bodyData.state = 'fail'
-                                            subscriber.next({ ...bodyData })
-                                            subscriber.complete()
+                                            // 如果是取消导致的错误，不视为失败
+                                            if (error.name === 'AbortError') {
+                                                subscriber.complete();
+                                            } else {
+                                                bodyData.state = 'fail'
+                                                subscriber.next({ ...bodyData })
+                                                subscriber.complete()
+                                            }
                                         });
                                     }
 
                                     read();
                                 })
                                 .catch(error => {
-                                    subscriber.error(error);
+                                    // 如果是取消导致的错误，正常完成
+                                    if (error.name === 'AbortError') {
+                                        subscriber.complete();
+                                    } else {
+                                        subscriber.error(error);
+                                    }
                                 });
 
                             return () => {
-                                // 清理函数
+                                // 清理：取消 fetch 请求并关闭 reader
+                                abortController.abort();
+                                if (reader) {
+                                    reader.cancel().catch(() => {
+                                        // 忽略取消时的错误
+                                    });
+                                }
                             };
                         });
                     } else {

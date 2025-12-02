@@ -28,8 +28,25 @@ export class WeiboAjaxStatusesMymblogAstVisitor extends WeiboApiClient {
     @Handler(WeiboAjaxStatusesMymblogAst)
     visit(ast: WeiboAjaxStatusesMymblogAst, _ctx: any): Observable<INode> {
         return new Observable<INode>(obs => {
+            // 创建专门的 AbortController
+            const abortController = new AbortController();
+
+            // 包装 ctx
+            const wrappedCtx = {
+                ..._ctx,
+                abortSignal: abortController.signal
+            };
+
             const handler = async () => {
                 try {
+                    // 检查取消信号
+                    if (wrappedCtx.abortSignal?.aborted) {
+                        ast.state = 'fail';
+                        ast.setError(new Error('工作流已取消'));
+                        obs.next({ ...ast });
+                        return;
+                    }
+
                     ast.state = 'running';
                     ast.count += 1;
                     obs.next({ ...ast });
@@ -39,6 +56,14 @@ export class WeiboAjaxStatusesMymblogAstVisitor extends WeiboApiClient {
                         refererOptions: { uid: ast.uid },
                         shouldContinue: (data) => data.data.list.length > 0
                     })) {
+                        // 检查取消信号（每次分页后）
+                        if (wrappedCtx.abortSignal?.aborted) {
+                            ast.state = 'fail';
+                            ast.setError(new Error('工作流已取消'));
+                            obs.next({ ...ast });
+                            return;
+                        }
+
                         await useEntityManager(async m => {
                             const posts = body.data.list.map(item => m.create(WeiboPostEntity, item));
                             await m.upsert(WeiboPostEntity, posts as any, ['id']);
@@ -61,7 +86,13 @@ export class WeiboAjaxStatusesMymblogAstVisitor extends WeiboApiClient {
                 }
             };
             handler();
-            return () => obs.complete();
+
+            // 返回清理函数
+            return () => {
+                console.log('[WeiboAjaxStatusesMymblogAstVisitor] 订阅被取消，触发 AbortSignal');
+                abortController.abort();
+                obs.complete();
+            };
         });
     }
 }

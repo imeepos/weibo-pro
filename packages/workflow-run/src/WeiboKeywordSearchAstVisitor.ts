@@ -19,8 +19,29 @@ export class WeiboKeywordSearchAstVisitor {
     @Handler(WeiboKeywordSearchAst)
     handler(ast: WeiboKeywordSearchAst, ctx: any): Observable<INode> {
         return new Observable<INode>(obs => {
-            this.executeSearch(ast, ctx, obs);
-            return () => obs.complete();
+            // 创建专门的 AbortController 用于取消订阅
+            const abortController = new AbortController();
+
+            // 包装 ctx，优先使用我们的 AbortController
+            const wrappedCtx = {
+                ...ctx,
+                abortSignal: abortController.signal,
+                // 保留原始信号以支持级联取消
+                get isAborted() {
+                    return abortController.signal.aborted || ctx.abortSignal?.aborted;
+                }
+            };
+
+            // 执行搜索
+            this.executeSearch(ast, wrappedCtx, obs);
+
+            // 返回取消函数 - 真正的清理逻辑
+            return () => {
+                console.log('[WeiboKeywordSearchAstVisitor] 订阅被取消，触发 AbortSignal');
+                // 触发 abort 会让所有监听此 signal 的操作停止
+                abortController.abort();
+                obs.complete();
+            };
         });
     }
 

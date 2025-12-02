@@ -8,7 +8,6 @@ import {
 import { NLPAnalyzer } from '@sker/nlp';
 import type { PostContext } from '@sker/nlp';
 import { Observable } from 'rxjs';
-import { checkAbortSignal } from './utils/abort-helper';
 
 @Injectable()
 export class PostNLPAnalyzerVisitor {
@@ -18,10 +17,21 @@ export class PostNLPAnalyzerVisitor {
   @Handler(PostNLPAnalyzerAst)
   visit(ast: PostNLPAnalyzerAst, ctx: any): Observable<INode> {
     return new Observable<INode>(obs => {
+      // 创建专门的 AbortController
+      const abortController = new AbortController();
+
+      // 包装 ctx
+      const wrappedCtx = {
+        ...ctx,
+        abortSignal: abortController.signal
+      };
+
       const handler = async () => {
         try {
           // 检查取消信号
-          if (checkAbortSignal(ctx, ast)) {
+          if (wrappedCtx.abortSignal?.aborted) {
+            ast.state = 'fail';
+            ast.setError(new Error('工作流已取消'));
             obs.next({ ...ast });
             obs.complete();
             return;
@@ -113,7 +123,13 @@ export class PostNLPAnalyzerVisitor {
         }
       };
       handler();
-      return () => obs.complete();
+
+      // 返回清理函数
+      return () => {
+        console.log('[PostNLPAnalyzerVisitor] 订阅被取消，触发 AbortSignal');
+        abortController.abort();
+        obs.complete();
+      };
     });
   }
 }

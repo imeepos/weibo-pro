@@ -32,14 +32,47 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
     @Handler(WeiboAjaxStatusesCommentAst)
     visit(ast: WeiboAjaxStatusesCommentAst, _ctx: any): Observable<INode> {
         return new Observable<INode>(obs => {
+            // 创建专门的 AbortController
+            const abortController = new AbortController();
+
+            // 包装 ctx
+            const wrappedCtx = {
+                ..._ctx,
+                abortSignal: abortController.signal
+            };
+
             const handler = async () => {
                 try {
+                    // 检查取消信号
+                    if (wrappedCtx.abortSignal?.aborted) {
+                        ast.state = 'fail';
+                        ast.setError(new Error('工作流已取消'));
+                        obs.next({ ...ast });
+                        return;
+                    }
+
                     ast.state = 'running';
                     ast.count += 1;
                     obs.next({ ...ast });
 
                     while (true) {
+                        // 检查取消信号（循环开始）
+                        if (wrappedCtx.abortSignal?.aborted) {
+                            ast.state = 'fail';
+                            ast.setError(new Error('工作流已取消'));
+                            obs.next({ ...ast });
+                            return;
+                        }
+
                         const body = await this.fetchComments(ast);
+
+                        // 检查取消信号（网络请求后）
+                        if (wrappedCtx.abortSignal?.aborted) {
+                            ast.state = 'fail';
+                            ast.setError(new Error('工作流已取消'));
+                            obs.next({ ...ast });
+                            return;
+                        }
 
                         const entities = await this.saveComments(body);
 
@@ -47,6 +80,14 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
 
                         if (entities.length > 0) {
                             for (let child of entities) {
+                                // 检查取消信号（子评论循环中）
+                                if (wrappedCtx.abortSignal?.aborted) {
+                                    ast.state = 'fail';
+                                    ast.setError(new Error('工作流已取消'));
+                                    obs.next({ ...ast });
+                                    return;
+                                }
+
                                 if (child.more_info) {
                                     const childAst = new WeiboAjaxStatusesCommentAst();
                                     childAst.mid = `${child.id}`;
@@ -56,7 +97,7 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
                                     childAst.max_id = 0;
                                     childAst.count = 20;
                                     childAst.uid = ast.uid;
-                                    await this.visitChildren(childAst, _ctx);
+                                    await this.visitChildren(childAst, wrappedCtx);
                                 }
                             }
                         }
@@ -86,13 +127,25 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
                 }
             };
             handler();
-            return () => obs.complete();
+
+            // 返回清理函数
+            return () => {
+                console.log('[WeiboAjaxStatusesCommentAstVisitor] 订阅被取消，触发 AbortSignal');
+                abortController.abort();
+                obs.complete();
+            };
         });
     }
 
     async visitChildren(ast: WeiboAjaxStatusesCommentAst, _ctx: any) {
         try {
             while (true) {
+                // 检查取消信号
+                if (_ctx.abortSignal?.aborted) {
+                    console.log('[WeiboAjaxStatusesCommentAstVisitor] 子评论处理已取消');
+                    return;
+                }
+
                 const body = await this.fetchComments(ast);
                 await this.saveComments(body);
 

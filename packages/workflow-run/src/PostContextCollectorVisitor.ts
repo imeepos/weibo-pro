@@ -12,10 +12,27 @@ import { Observable } from 'rxjs';
 @Injectable()
 export class PostContextCollectorVisitor {
   @Handler(PostContextCollectorAst)
-  visit(ast: PostContextCollectorAst, _ctx: any): Observable<INode> {
+  visit(ast: PostContextCollectorAst, ctx: any): Observable<INode> {
     return new Observable<INode>(obs => {
+      // 创建专门的 AbortController
+      const abortController = new AbortController();
+
+      // 包装 ctx
+      const wrappedCtx = {
+        ...ctx,
+        abortSignal: abortController.signal
+      };
+
       const handler = async () => {
         try {
+          // 检查取消信号
+          if (wrappedCtx.abortSignal?.aborted) {
+            ast.state = 'fail';
+            ast.setError(new Error('工作流已取消'));
+            obs.next({ ...ast });
+            return;
+          }
+
           ast.state = 'running';
           ast.count += 1;
           obs.next({ ...ast });
@@ -28,6 +45,14 @@ export class PostContextCollectorVisitor {
           // 验证 postId
           if (!ast.postId || ast.postId.trim().length === 0) {
             throw new Error('postId 不能为空');
+          }
+
+          // 检查取消信号（数据库操作前）
+          if (wrappedCtx.abortSignal?.aborted) {
+            ast.state = 'fail';
+            ast.setError(new Error('工作流已取消'));
+            obs.next({ ...ast });
+            return;
           }
 
           await useEntityManager(async (m) => {
@@ -48,7 +73,6 @@ export class PostContextCollectorVisitor {
             });
 
             // 转发需要通过 retweeted_status 的 id 来匹配
-            // 转发表中每条记录的 retweeted_status.id 应该等于原帖的 id
             const reposts = await m
               .createQueryBuilder(WeiboRepostEntity, 'r')
               .where("r.retweeted_status->>'id' = :postId", { postId: String(post.id) })
@@ -76,7 +100,13 @@ export class PostContextCollectorVisitor {
         }
       };
       handler();
-      return () => obs.complete();
+
+      // 返回清理函数
+      return () => {
+        console.log('[PostContextCollectorVisitor] 订阅被取消，触发 AbortSignal');
+        abortController.abort();
+        obs.complete();
+      };
     });
   }
 }
