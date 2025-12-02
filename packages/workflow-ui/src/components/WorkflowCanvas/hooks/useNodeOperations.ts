@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { findNodeType, WorkflowGraphAst } from '@sker/workflow'
+import { WorkflowGraphAst } from '@sker/workflow'
 import { useClipboard } from '../../../hooks/useClipboard'
 
 export interface NodeOperationsOptions {
@@ -57,24 +57,23 @@ export const useNodeOperations = (workflow: any, options: NodeOperationsOptions 
     const flowPosition = targetPosition || { x: 100, y: 100 }
 
     clipboard.pasteNodes(flowPosition, (newNodes: any[], newEdges: any[]) => {
-      // 将新节点添加到工作流
+      // 直接将节点添加到 AST（node.data 即 AST 对象）
       newNodes.forEach((node) => {
-        workflow.addNode(findNodeType(node.data.type), node.position, node.data.label)
+        workflow.workflowAst.addNode(node.data)
       })
 
-      // 将新边添加到工作流（AST + UI）
+      // 将边添加到 AST
       newEdges.forEach((edge) => {
         if (edge.data?.edge) {
-          // 同步到 AST
           workflow.workflowAst.addEdge(edge.data.edge)
         }
       })
 
-      // 同步到 UI
-      workflow.setEdges((currentEdges: any[]) => [...currentEdges, ...newEdges])
+      // 从 AST 同步到 UI（一次性重建节点和边）
+      workflow.syncFromAst()
 
       console.log(`已粘贴 ${newNodes.length} 个节点和 ${newEdges.length} 条边`)
-      onShowToast?.('success', '粘贴成功', `已粘贴 ${newNodes.length} 个节点`)
+      onShowToast?.('success', '粘贴成功', `已粘贴 ${newNodes.length} 个节点和 ${newEdges.length} 条边`)
     })
   }, [clipboard, workflow, onShowToast])
 

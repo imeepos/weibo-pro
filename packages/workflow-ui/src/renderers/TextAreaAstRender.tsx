@@ -7,7 +7,7 @@ import React from "react";
 export class TextAreaAstRender {
     @Render(TextAreaAst)
     render(ast: TextAreaAst, ctx: any) {
-        return <MarkdownViewer>{Array.isArray(ast.input) ? ast.input.join('\n') : ast.input}</MarkdownViewer>;
+        return <MarkdownViewer>{Array.isArray(ast.input) ? ast.input.join('\n\n') : ast.input}</MarkdownViewer>;
     }
 }
 

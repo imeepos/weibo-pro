@@ -23,7 +23,7 @@ export function resolveConstructor(target: object | Type<any>): Type<any> {
     throw new Error('Workflow decorators expect to receive a class constructor or instance.');
 }
 
-export type NodeType = `llm` | `basic` | `crawler`;
+export type NodeType = `llm` | `basic` | `crawler` | `control`;
 
 export interface NodeOptions {
     title?: string;

@@ -29,12 +29,12 @@ import { useEventHandlers } from './hooks/useEventHandlers'
 
 // 纯展示组件（来自 @sker/ui）
 import { WorkflowControls, WorkflowEmptyState, WorkflowMinimap } from '@sker/ui/components/workflow'
+import { Toaster } from '@sker/ui/components/ui'
 
 // 原有组件
 import { ContextMenu } from './ContextMenu'
 import { NodeSelector } from './NodeSelector'
 import { ShareDialog } from './ShareDialog'
-import { Toast } from './Toast'
 import { SubWorkflowModal } from '../SubWorkflowModal'
 import { LeftDrawer } from '../LeftDrawer'
 import { EdgeConfigDialog } from './EdgeConfigDialog'
@@ -132,9 +132,7 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
     subWorkflowModal,
     openSubWorkflowModal,
     closeSubWorkflowModal,
-    toast,
     showToast,
-    hideToast,
     settingPanel,
     openSettingPanel,
     closeSettingPanel,
@@ -716,13 +714,7 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
         onClose={closeShareDialog}
       />
 
-      <Toast
-        visible={toast.visible}
-        type={toast.type}
-        title={toast.title}
-        message={toast.message}
-        onClose={hideToast}
-      />
+      <Toaster />
 
       <SubWorkflowModal
         visible={subWorkflowModal.visible}

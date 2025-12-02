@@ -15,6 +15,7 @@ export function getNodeMetadata(nodeClass: Type<any>): NodeMetadata {
   const nodeType = instance.type || nodeClass.name
   const nodeMetadata = nodeMetadatas[0]
   const customTitle = nodeMetadata?.title
+  const categoryType = nodeMetadata?.type
 
   const inputs = inputMetadata.map(toPortMetadata)
 
@@ -24,6 +25,7 @@ export function getNodeMetadata(nodeClass: Type<any>): NodeMetadata {
     type: nodeType,
     label: customTitle || formatNodeLabel(nodeType),
     title: customTitle,
+    nodeType: categoryType,
     inputs,
     outputs,
   }

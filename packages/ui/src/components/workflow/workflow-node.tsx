@@ -57,7 +57,7 @@ const StatusBadge = ({
     <Badge
       variant={getVariant()}
       className={cn(
-        'absolute -top-2 -right-2 z-10',
+        'absolute -top-4 -left-2 z-10',
         status === 'running' && 'animate-pulse',
         status === 'emitting' && 'animate-bounce'
       )}
@@ -76,6 +76,8 @@ const HandleWrapper = ({
   port,
   type,
   isCollapsed,
+  portIndex,
+  totalPorts,
 }: {
   port?: WorkflowNodePort
   type: 'source' | 'target'
@@ -87,12 +89,22 @@ const HandleWrapper = ({
 
   const isTarget = type === 'target'
 
+  // 在折叠状态下，计算 Handle 的垂直位置（均匀分布）
+  const style: React.CSSProperties = {}
+  if (isCollapsed && portIndex !== undefined && totalPorts !== undefined && totalPorts > 0) {
+    // 计算垂直位置百分比，使 Handles 均匀分布
+    const spacing = 100 / (totalPorts + 1)
+    const top = `${spacing * (portIndex + 1)}%`
+    style.top = top
+  }
+
   return (
     <Handle
       type={type}
       id={port.property}
       position={isTarget ? Position.Left : Position.Right}
       isConnectable={true}
+      style={style}
       className={cn(
         '!w-3 !h-3 !border-2 rounded-full transition-all duration-150',
         'hover:!w-4 hover:!h-4 hover:shadow-lg',
@@ -234,7 +246,7 @@ const WorkflowNodeComponent = ({
           {onToggleCollapse && (
             <CollapsibleTrigger asChild>
               <Button
-                variant="ghost"
+                variant="secondary"
                 size="icon-sm"
                 className="ml-2"
                 title={collapsed ? '展开节点' : '折叠节点'}
@@ -249,6 +261,32 @@ const WorkflowNodeComponent = ({
           )}
         </div>
 
+        {/* 折叠状态下的 Handles - 始终渲染以保持边的连线 */}
+        {collapsed && (
+          <>
+            {inputs.map((input, index) => (
+              <HandleWrapper
+                key={`collapsed-input-${input.property}`}
+                port={input}
+                type="target"
+                isCollapsed={true}
+                portIndex={index}
+                totalPorts={inputs.length}
+              />
+            ))}
+            {outputs.map((output, index) => (
+              <HandleWrapper
+                key={`collapsed-output-${output.property}`}
+                port={output}
+                type="source"
+                isCollapsed={true}
+                portIndex={index}
+                totalPorts={outputs.length}
+              />
+            ))}
+          </>
+        )}
+
         {/* 端口区域 */}
         <CollapsibleContent asChild>
           <div
@@ -262,6 +300,7 @@ const WorkflowNodeComponent = ({
                   key={`port-${index}`}
                   input={inputs[index]}
                   output={outputs[index]}
+                  isCollapsed={collapsed}
                 />
               )
             )}

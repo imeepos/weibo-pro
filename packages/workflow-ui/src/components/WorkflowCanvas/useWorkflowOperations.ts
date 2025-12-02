@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import { executeAstWithWorkflowGraph, executeNodeIsolated, executeAst, fromJson, toJson, type WorkflowGraphAst } from '@sker/workflow'
 import type { useWorkflow } from '../../hooks/useWorkflow'
-import type { ToastType } from './Toast'
+import type { ToastType } from './useCanvasState'
 import { WorkflowController } from '@sker/sdk'
 import { root } from '@sker/core'
 

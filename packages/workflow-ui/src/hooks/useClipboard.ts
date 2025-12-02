@@ -106,14 +106,32 @@ export function useClipboard(): UseClipboardReturn {
         }
       })
 
-      // 克隆边，更新节点引用
-      const newEdges: WorkflowEdge[] = clipboard.edges.map((edge) => ({
-        ...edge,
-        id: `edge-${generateId()}`,
-        source: idMap.get(edge.source) || edge.source,
-        target: idMap.get(edge.target) || edge.target,
-        selected: false,
-      }))
+      // 克隆边，更新节点引用（包括 AST 边对象）
+      const newEdges: WorkflowEdge[] = clipboard.edges.map((edge) => {
+        const newSource = idMap.get(edge.source) || edge.source
+        const newTarget = idMap.get(edge.target) || edge.target
+        const newEdgeId = `edge-${generateId()}`
+
+        const newEdge: WorkflowEdge = {
+          ...edge,
+          id: newEdgeId,
+          source: newSource,
+          target: newTarget,
+          selected: false,
+        }
+
+        // 更新 AST 边对象的节点引用
+        if (newEdge.data?.edge) {
+          newEdge.data.edge = {
+            ...newEdge.data.edge,
+            id: newEdgeId,
+            from: newSource,
+            to: newTarget,
+          }
+        }
+
+        return newEdge
+      })
 
       onPaste(newNodes, newEdges)
 

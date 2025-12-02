@@ -1,6 +1,8 @@
 import { useCallback, useState } from 'react'
 import type { WorkflowGraphAst, IEdge } from '@sker/workflow'
-import type { ToastType } from './Toast'
+import { toast } from '@sker/ui/components/ui'
+
+export type ToastType = 'success' | 'error' | 'info'
 
 /**
  * 画布状态管理 Hook
@@ -29,14 +31,6 @@ export function useCanvasState() {
     nodeId?: string
     workflowAst?: WorkflowGraphAst
   }>({ visible: false })
-
-  // Toast 提示状态
-  const [toast, setToast] = useState<{
-    visible: boolean
-    type: ToastType
-    title: string
-    message?: string
-  }>({ visible: false, type: 'info', title: '' })
 
   // 设置面板状态
   const [settingPanel, setSettingPanel] = useState<{
@@ -77,14 +71,8 @@ export function useCanvasState() {
    * 显示 Toast 提示
    */
   const showToast = useCallback((type: ToastType, title: string, message?: string) => {
-    setToast({ visible: true, type, title, message })
-  }, [])
-
-  /**
-   * 隐藏 Toast 提示
-   */
-  const hideToast = useCallback(() => {
-    setToast((prev) => ({ ...prev, visible: false }))
+    const content = message ? `${title}\n${message}` : title
+    toast[type](content)
   }, [])
 
   /**
@@ -231,9 +219,7 @@ export function useCanvasState() {
     closeSchedulePanel,
 
     // Toast 提示
-    toast,
     showToast,
-    hideToast,
 
     // 设置面板
     settingPanel,

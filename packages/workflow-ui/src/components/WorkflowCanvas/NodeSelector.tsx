@@ -32,6 +32,7 @@ export function NodeSelector({
   const nodes = nodeRegistry.map((metadata) => ({
     type: metadata.type,
     label: metadata.label,
+    nodeType: metadata.nodeType,
     inputs: metadata.inputs,
     outputs: metadata.outputs,
   }))
