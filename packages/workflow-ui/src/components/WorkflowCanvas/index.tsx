@@ -425,6 +425,35 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
   }, [workflow])
 
   const handleEdgesChangeInternal = useCallback((changes: EdgeChange[]) => {
+    // 检测边选中事件并打印边数据结构
+    changes.forEach((change) => {
+      if (change.type === 'select' && change.selected) {
+        const selectedEdge = workflow.edges.find((edge) => edge.id === change.id)
+        if (selectedEdge) {
+          console.log('[WorkflowCanvas] 选中边 - ID:', change.id)
+          console.log('[WorkflowCanvas] 边数据结构:', {
+            id: selectedEdge.id,
+            source: selectedEdge.source,
+            target: selectedEdge.target,
+            sourceHandle: selectedEdge.sourceHandle,
+            targetHandle: selectedEdge.targetHandle,
+            data: selectedEdge.data,
+            type: selectedEdge.type,
+            selected: selectedEdge.selected,
+            style: selectedEdge.style,
+            markerEnd: selectedEdge.markerEnd,
+          })
+          console.log('[WorkflowCanvas] 完整边对象:', selectedEdge)
+
+          // 如果存在对应的 AST 边对象,也打印出来
+          const astEdge = workflow.workflowAst.edges.find((e: any) => e.id === change.id)
+          if (astEdge) {
+            console.log('[WorkflowCanvas] AST 边对象:', astEdge)
+          }
+        }
+      }
+    })
+
     workflow.onEdgesChange(changes)
   }, [workflow])
 

@@ -1,17 +1,32 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   BaseEdge,
   EdgeLabelRenderer,
   EdgeProps,
   getBezierPath,
+  getStraightPath,
+  getSmoothStepPath
 } from '@xyflow/react'
 
 import { cn } from '@sker/ui/lib/utils'
 
 import type { WorkflowEdgeProps } from './types/workflow-nodes'
-
+import { EdgeMode, IEdge } from './types'
+function getLabel(mode?: EdgeMode) {
+  switch (mode) {
+    case EdgeMode.COMBINE_LATEST:
+      return `最新值聚合`
+    case EdgeMode.ZIP:
+      return `配对执行`
+    case EdgeMode.WITH_LATEST_FROM:
+      return `主流携带`
+    case EdgeMode.MERGE:
+    default:
+      return ``
+  }
+}
 export function WorkflowEdge({
   id,
   source,
@@ -21,8 +36,11 @@ export function WorkflowEdge({
   className,
   ...props
 }: WorkflowEdgeProps & EdgeProps) {
-  const { label, type = 'default' } = data || {}
-
+  const { label, mode } = useMemo(() => {
+    const edge = data.edge as IEdge
+    const label = getLabel(edge?.mode)
+    return { label, edge, mode: edge.mode }
+  }, [data])
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX: props.sourceX,
     sourceY: props.sourceY,
@@ -32,20 +50,19 @@ export function WorkflowEdge({
     targetPosition: props.targetPosition,
   })
 
-  const getEdgeColor = () => {
-    switch (type) {
-      case 'success':
+  const edgeColor = useMemo(() => {
+    switch (mode) {
+      case EdgeMode.ZIP:
         return '#10b981'
-      case 'error':
+      case EdgeMode.WITH_LATEST_FROM:
         return '#ef4444'
-      case 'warning':
+      case EdgeMode.COMBINE_LATEST:
         return '#f59e0b'
+      case EdgeMode.MERGE:
       default:
         return '#6b7280'
     }
-  }
-
-  const edgeColor = getEdgeColor()
+  }, [mode])
 
   return (
     <>

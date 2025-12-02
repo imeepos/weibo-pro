@@ -27,10 +27,21 @@ export class ShareAstVisitor {
             // 组织成 ChatMessage 格式
             ast.chatHistory = ast.chatHistory || [];
             ast.chatHistory.push({
-                role: ast.username,
+                role: ast.username || '未知角色',
                 content: ast.prompt,
                 timestamp: new Date().toISOString()
             })
+
+            // 格式化对话历史为 LLM 可读的字符串
+            ast.formattedHistory = ast.chatHistory
+                .map(msg => `【${msg.role}】${msg.content}`)
+                .join('\n\n---\n\n');
+
+            console.log('[ShareAstVisitor] 格式化历史记录:', {
+                totalMessages: ast.chatHistory.length,
+                formattedLength: ast.formattedHistory.length,
+                latestRole: ast.username
+            });
 
             ast.state = 'emitting';
             obs.next(ast);

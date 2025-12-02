@@ -49,5 +49,8 @@ export class ShareAst extends Ast {
     @Output({ title: '对话历史' })
     chatHistory: ChatMessage[] = [];
 
+    @Output({ title: '格式化历史' })
+    formattedHistory: string = '';
+
     type: `ShareAst` = `ShareAst`
 }

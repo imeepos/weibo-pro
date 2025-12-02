@@ -1,4 +1,5 @@
 import type { Position } from '@xyflow/react'
+import { IEdge } from '../types'
 
 // 工作流节点状态类型（本地定义，避免依赖 @sker/workflow）
 export type IAstStates = 'pending' | 'running' | 'emitting' | 'success' | 'fail'
@@ -63,10 +64,8 @@ export interface WorkflowNodeData {
   [key: string]: any
 }
 
-export interface WorkflowEdgeData {
-  label?: string
-  type?: string
-  [key: string]: any
+export interface WorkflowEdgeData extends IEdge {
+  edge: IEdge
 }
 
 export interface WorkflowEdgeProps {
