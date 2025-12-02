@@ -693,7 +693,7 @@ export class ReactiveScheduler {
     /**
      * 为节点创建执行流（使用 _createNodeInputObservable）
      *
-     * 变更：合并输入数据时，为缺失的属性填充默认值
+     * 变更：使用元数据感知的赋值逻辑，支持 @Input({ isMulti: true })
      */
     private _createNode(
         node: INode,
@@ -711,8 +711,11 @@ export class ReactiveScheduler {
             concatMap(inputs => {
                 const nodeInstance = this.cloneNode(node);
 
-                // 先填充默认值，再应用连线数据（连线数据优先级更高）
-                Object.assign(nodeInstance, defaults, inputs);
+                // 先填充默认值（直接赋值）
+                Object.assign(nodeInstance, defaults);
+
+                // 再应用连线数据（使用元数据感知的赋值逻辑）
+                this.assignInputsToNodeInstance(nodeInstance, inputs);
 
                 return this.executeNode(nodeInstance, ctx);
             }),
