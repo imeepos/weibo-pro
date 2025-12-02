@@ -112,7 +112,7 @@ export function useContextMenu() {
 
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement
-      if (!target.closest('.context-menu')) {
+      if (!target.closest('.workflow-context-menu')) {
         closeMenu()
       }
     }

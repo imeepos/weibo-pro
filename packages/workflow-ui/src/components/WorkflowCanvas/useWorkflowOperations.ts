@@ -36,10 +36,10 @@ export function useWorkflowOperations(
    * - 直接调用 executeAst，装饰器系统自动查找 Handler
    * - 利用 Observable 流式特性，实时更新节点状态
    * - 每次 next 事件触发状态同步，提供流畅执行体验
-   * - 无需额外判断，代码即文档
+   * - 执行前后自动保存状态，确保数据持久化
    */
   const runNode = useCallback(
-    (nodeId: string) => {
+    async (nodeId: string) => {
       if (!workflow.workflowAst) {
         console.error(`工作流 AST 不存在`)
         onShowToast?.('error', '工作流 AST 不存在')
@@ -51,6 +51,17 @@ export function useWorkflowOperations(
         console.error(`节点不存在`)
         onShowToast?.('error', '节点不存在', `节点ID: ${nodeId}`)
         return
+      }
+
+      // 执行前保存状态
+      try {
+        if (getViewport) {
+          workflow.workflowAst.viewport = getViewport()
+        }
+        const controller = root.get<WorkflowController>(WorkflowController)
+        await controller.saveWorkflow(workflow.workflowAst)
+      } catch (error: any) {
+        console.error('执行前保存工作流失败:', error)
       }
 
       onSetRunning?.(true)
@@ -70,12 +81,23 @@ export function useWorkflowOperations(
             Object.assign(workflow.workflowAst!, updatedWorkflow)
             workflow.syncFromAst()
           },
-          error: (error) => {
+          error: async (error) => {
             const errorInfo = extractErrorInfo(error)
             console.error(`工作流执行异常`)
             onShowToast?.('error', '工作流执行异常', errorInfo.message)
+
+            // 执行失败后保存状态
+            try {
+              if (getViewport) {
+                workflow.workflowAst!.viewport = getViewport()
+              }
+              const controller = root.get<WorkflowController>(WorkflowController)
+              await controller.saveWorkflow(workflow.workflowAst!)
+            } catch (saveError: any) {
+              console.error('执行失败后保存工作流失败:', saveError)
+            }
           },
-          complete: () => {
+          complete: async () => {
             // 统计执行结果
             const successCount = workflow.workflowAst!.nodes.filter(n => n.state === 'success').length
             const failCount = workflow.workflowAst!.nodes.filter(n => n.state === 'fail').length
@@ -87,13 +109,24 @@ export function useWorkflowOperations(
             } else {
               onShowToast?.('error', '工作流执行失败', `所有节点均失败`)
             }
+
+            // 执行完成后保存状态
+            try {
+              if (getViewport) {
+                workflow.workflowAst!.viewport = getViewport()
+              }
+              const controller = root.get<WorkflowController>(WorkflowController)
+              await controller.saveWorkflow(workflow.workflowAst!)
+            } catch (error: any) {
+              console.error('执行完成后保存工作流失败:', error)
+            }
           }
         })
 
       // 返回取消订阅函数，便于外部管理
       return () => subscription.unsubscribe()
     },
-    [workflow, onShowToast, onSetRunning]
+    [workflow, onShowToast, onSetRunning, getViewport]
   )
 
   /**
@@ -103,10 +136,11 @@ export function useWorkflowOperations(
    * - 调用 executeNodeIsolated，只执行选中的节点
    * - 使用上游节点的历史输出作为输入
    * - 不触发下游节点重新执行
+   * - 执行前后自动保存状态，确保数据持久化
    * - 适合测试和调试场景
    */
   const runNodeIsolated = useCallback(
-    (nodeId: string) => {
+    async (nodeId: string) => {
       if (!workflow.workflowAst) {
         console.error(`工作流 AST 不存在`)
         onShowToast?.('error', '工作流 AST 不存在')
@@ -118,6 +152,17 @@ export function useWorkflowOperations(
         console.error(`节点不存在`)
         onShowToast?.('error', '节点不存在', `节点ID: ${nodeId}`)
         return
+      }
+
+      // 执行前保存状态
+      try {
+        if (getViewport) {
+          workflow.workflowAst.viewport = getViewport()
+        }
+        const controller = root.get<WorkflowController>(WorkflowController)
+        await controller.saveWorkflow(workflow.workflowAst)
+      } catch (error: any) {
+        console.error('执行前保存工作流失败:', error)
       }
 
       onSetRunning?.(true)
@@ -137,12 +182,23 @@ export function useWorkflowOperations(
             Object.assign(workflow.workflowAst!, updatedWorkflow)
             workflow.syncFromAst()
           },
-          error: (error) => {
+          error: async (error) => {
             const errorInfo = extractErrorInfo(error)
             console.error(`节点执行异常`)
             onShowToast?.('error', '节点执行异常', errorInfo.message)
+
+            // 执行失败后保存状态
+            try {
+              if (getViewport) {
+                workflow.workflowAst!.viewport = getViewport()
+              }
+              const controller = root.get<WorkflowController>(WorkflowController)
+              await controller.saveWorkflow(workflow.workflowAst!)
+            } catch (saveError: any) {
+              console.error('执行失败后保存工作流失败:', saveError)
+            }
           },
-          complete: () => {
+          complete: async () => {
             // 只统计目标节点的执行结果
             const nodeState = workflow.workflowAst!.nodes.find(n => n.id === nodeId)?.state
 
@@ -151,13 +207,24 @@ export function useWorkflowOperations(
             } else if (nodeState === 'fail') {
               onShowToast?.('error', '节点执行失败', '请检查节点配置和输入数据')
             }
+
+            // 执行完成后保存状态
+            try {
+              if (getViewport) {
+                workflow.workflowAst!.viewport = getViewport()
+              }
+              const controller = root.get<WorkflowController>(WorkflowController)
+              await controller.saveWorkflow(workflow.workflowAst!)
+            } catch (error: any) {
+              console.error('执行完成后保存工作流失败:', error)
+            }
           }
         })
 
       // 返回取消订阅函数，便于外部管理
       return () => subscription.unsubscribe()
     },
-    [workflow, onShowToast, onSetRunning]
+    [workflow, onShowToast, onSetRunning, getViewport]
   )
 
   /**
@@ -203,10 +270,11 @@ export function useWorkflowOperations(
    * 优雅设计：
    * - 利用 Observable + takeUntil 实现优雅的取消机制
    * - 通过 Subject emit 值来触发取消，符合响应式编程范式
+   * - 执行前后自动保存状态，确保数据持久化
    * - 自动统计执行结果，提供清晰反馈
    */
   const runWorkflow = useCallback(
-    (onComplete?: () => void) => {
+    async (onComplete?: () => void) => {
       if (!workflow.workflowAst) {
         onShowToast?.('error', '工作流不存在', '无法执行空工作流')
         return
@@ -238,6 +306,17 @@ export function useWorkflowOperations(
         workflow.syncFromAst()
       }
 
+      // 执行前保存状态
+      try {
+        if (getViewport) {
+          workflow.workflowAst.viewport = getViewport()
+        }
+        const controller = root.get<WorkflowController>(WorkflowController)
+        await controller.saveWorkflow(workflow.workflowAst)
+      } catch (error: any) {
+        console.error('执行前保存工作流失败:', error)
+      }
+
       // 创建新的取消 Subject（重置上一次的）
       cancelSubject$.current = new Subject<void>()
 
@@ -267,7 +346,7 @@ export function useWorkflowOperations(
             Object.assign(workflow.workflowAst!, updatedWorkflow)
             workflow.syncFromAst()
           },
-          error: (error) => {
+          error: async (error) => {
             const errorInfo = extractErrorInfo(error)
 
             // 检查是否是取消导致的错误
@@ -277,8 +356,19 @@ export function useWorkflowOperations(
               console.error('工作流执行异常:', error)
               onShowToast?.('error', '工作流执行异常', errorInfo.message)
             }
+
+            // 执行失败后保存状态
+            try {
+              if (getViewport) {
+                workflow.workflowAst!.viewport = getViewport()
+              }
+              const controller = root.get<WorkflowController>(WorkflowController)
+              await controller.saveWorkflow(workflow.workflowAst!)
+            } catch (saveError: any) {
+              console.error('执行失败后保存工作流失败:', saveError)
+            }
           },
-          complete: () => {
+          complete: async () => {
             // 统计执行结果
             const successCount = workflow.workflowAst!.nodes.filter(n => n.state === 'success').length
             const failCount = workflow.workflowAst!.nodes.filter(n => n.state === 'fail').length
@@ -289,6 +379,17 @@ export function useWorkflowOperations(
               onShowToast?.('error', '工作流部分失败', `成功: ${successCount}, 失败: ${failCount}`)
             } else {
               onShowToast?.('error', '工作流执行失败', `所有节点均失败`)
+            }
+
+            // 执行完成后保存状态
+            try {
+              if (getViewport) {
+                workflow.workflowAst!.viewport = getViewport()
+              }
+              const controller = root.get<WorkflowController>(WorkflowController)
+              await controller.saveWorkflow(workflow.workflowAst!)
+            } catch (error: any) {
+              console.error('执行完成后保存工作流失败:', error)
             }
 
             onComplete?.()
@@ -302,7 +403,7 @@ export function useWorkflowOperations(
         abortControllerRef.current = null
       }
     },
-    [workflow, onShowToast, onSetRunning]
+    [workflow, onShowToast, onSetRunning, getViewport]
   )
 
   /**

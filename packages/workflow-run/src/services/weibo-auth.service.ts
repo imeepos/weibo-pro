@@ -384,6 +384,16 @@ export class WeiboAuthService implements OnDestroy {
   }
 
   /**
+   * 取消登录会话（公共方法，供外部调用）
+   */
+  cancelSession(sessionId: string): void {
+    console.log(`[WeiboAuthService] 取消登录会话: ${sessionId}`);
+    this.cleanupSession(sessionId).catch(error => {
+      console.error(`[WeiboAuthService] 清理会话失败: ${sessionId}`, error);
+    });
+  }
+
+  /**
    * 清理登录会话
    */
   private async cleanupSession(sessionId: string): Promise<void> {
