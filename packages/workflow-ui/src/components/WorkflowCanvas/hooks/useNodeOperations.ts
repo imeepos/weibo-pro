@@ -1,27 +1,30 @@
 import { useCallback } from 'react'
 import { WorkflowGraphAst } from '@sker/workflow'
 import { useClipboard } from '../../../hooks/useClipboard'
+import type { WorkflowNode, WorkflowEdge } from '../../../types'
+import type { UseWorkflowReturn } from '../../../hooks/useWorkflow'
 
 export interface NodeOperationsOptions {
   onShowToast?: (type: 'success' | 'error' | 'info', title: string, message?: string) => void
+  onFitView?: () => void
 }
 
-export const useNodeOperations = (workflow: any, options: NodeOperationsOptions = {}) => {
+export const useNodeOperations = (workflow: UseWorkflowReturn, options: NodeOperationsOptions = {}) => {
   const { onShowToast, onFitView } = options
   const clipboard = useClipboard()
 
   // 获取选中的节点
-  const getSelectedNodes = useCallback(() => {
-    return workflow.nodes.filter((node: any) => node.selected)
+  const getSelectedNodes = useCallback((): WorkflowNode[] => {
+    return workflow.nodes.filter((node) => node.selected)
   }, [workflow.nodes])
 
   // 获取选中节点相关的边
-  const getSelectedNodesEdges = useCallback(() => {
+  const getSelectedNodesEdges = useCallback((): WorkflowEdge[] => {
     const selectedNodeIds = new Set(
-      workflow.nodes.filter((node: any) => node.selected).map((node: any) => node.id)
+      workflow.nodes.filter((node) => node.selected).map((node) => node.id)
     )
     return workflow.edges.filter(
-      (edge: any) => selectedNodeIds.has(edge.source) && selectedNodeIds.has(edge.target)
+      (edge) => selectedNodeIds.has(edge.source) && selectedNodeIds.has(edge.target)
     )
   }, [workflow.nodes, workflow.edges])
 
@@ -33,8 +36,8 @@ export const useNodeOperations = (workflow: any, options: NodeOperationsOptions 
     console.log('[copyNodes] 开始复制', {
       nodeCount: selectedNodes.length,
       edgeCount: selectedEdges.length,
-      nodes: selectedNodes.map((n: any) => ({ id: n.id, type: n.data?.type })),
-      edges: selectedEdges.map((e: any) => ({ id: e.id, source: e.source, target: e.target }))
+      nodes: selectedNodes.map((n) => ({ id: n.id, type: n.data?.type })),
+      edges: selectedEdges.map((e) => ({ id: e.id, source: e.source, target: e.target }))
     })
 
     if (selectedNodes.length > 0) {
@@ -54,7 +57,7 @@ export const useNodeOperations = (workflow: any, options: NodeOperationsOptions 
       const selectedEdges = getSelectedNodesEdges()
       clipboard.cutNodes(selectedNodes, selectedEdges)
       // 删除原节点
-      selectedNodes.forEach((node: any) => workflow.removeNode(node.id))
+      selectedNodes.forEach((node) => workflow.removeNode(node.id))
       console.log(`已剪切 ${selectedNodes.length} 个节点`)
       onShowToast?.('info', '剪切成功', `已剪切 ${selectedNodes.length} 个节点`)
     }
@@ -77,7 +80,7 @@ export const useNodeOperations = (workflow: any, options: NodeOperationsOptions 
     // 如果没有指定位置，使用默认位置（略微偏移避免完全重叠）
     const flowPosition = targetPosition || { x: 100, y: 100 }
 
-    clipboard.pasteNodes(flowPosition, (newNodes: any[], newEdges: any[]) => {
+    clipboard.pasteNodes(flowPosition, (newNodes: WorkflowNode[], newEdges: WorkflowEdge[]) => {
       console.log('[pasteNodes] 收到节点和边', {
         nodeCount: newNodes.length,
         edgeCount: newEdges.length,
@@ -139,10 +142,10 @@ export const useNodeOperations = (workflow: any, options: NodeOperationsOptions 
   // 删除选中的节点和边
   const deleteSelection = useCallback(() => {
     const selectedNodes = getSelectedNodes()
-    const selectedEdges = workflow.edges.filter((edge: any) => edge.selected)
+    const selectedEdges = workflow.edges.filter((edge) => edge.selected)
 
-    selectedNodes.forEach((node: any) => workflow.removeNode(node.id))
-    selectedEdges.forEach((edge: any) => workflow.removeEdge(edge.id))
+    selectedNodes.forEach((node) => workflow.removeNode(node.id))
+    selectedEdges.forEach((edge) => workflow.removeEdge(edge.id))
 
     if (selectedNodes.length > 0 || selectedEdges.length > 0) {
       console.log(
@@ -157,7 +160,7 @@ export const useNodeOperations = (workflow: any, options: NodeOperationsOptions 
     const selectedNodes = getSelectedNodes()
     if (selectedNodes.length === 0) return
 
-    workflow.setNodes((nodes: any[]) =>
+    workflow.setNodes((nodes) =>
       nodes.map((node) =>
         node.selected
           ? { ...node, data: { ...node.data, collapsed: !node.data.collapsed } }
@@ -178,7 +181,7 @@ export const useNodeOperations = (workflow: any, options: NodeOperationsOptions 
       return
     }
 
-    const selectedNodeIds = selectedNodes.map((n: any) => n.id)
+    const selectedNodeIds = selectedNodes.map((n) => n.id)
     const groupId = workflow.createGroup(selectedNodeIds)
 
     if (groupId) {
@@ -199,7 +202,7 @@ export const useNodeOperations = (workflow: any, options: NodeOperationsOptions 
     }
 
     const groupNodes = selectedNodes.filter(
-      (node: any) => node.data instanceof WorkflowGraphAst && node.data.isGroup
+      (node) => node.data instanceof WorkflowGraphAst && node.data.isGroup
     )
 
     if (groupNodes.length === 0) {
@@ -207,7 +210,7 @@ export const useNodeOperations = (workflow: any, options: NodeOperationsOptions 
       return
     }
 
-    groupNodes.forEach((groupNode: any) => {
+    groupNodes.forEach((groupNode) => {
       workflow.ungroupNodes(groupNode.id)
     })
 
@@ -222,7 +225,7 @@ export const useNodeOperations = (workflow: any, options: NodeOperationsOptions 
 
   // 切换单个节点折叠状态
   const toggleNodeCollapse = useCallback((nodeId: string) => {
-    workflow.setNodes((nodes: any[]) =>
+    workflow.setNodes((nodes) =>
       nodes.map((node) =>
         node.id === nodeId
           ? { ...node, data: { ...node.data, collapsed: !node.data.collapsed } }
@@ -240,7 +243,7 @@ export const useNodeOperations = (workflow: any, options: NodeOperationsOptions 
   const collapseNodes = useCallback(() => {
     const selectedNodes = getSelectedNodes()
     const targetNodeIds = selectedNodes.length > 0
-      ? selectedNodes.map((n: any) => n.id)
+      ? selectedNodes.map((n) => n.id)
       : undefined
 
     workflow.collapseNodes(targetNodeIds)
@@ -263,7 +266,7 @@ export const useNodeOperations = (workflow: any, options: NodeOperationsOptions 
   const expandNodes = useCallback(() => {
     const selectedNodes = getSelectedNodes()
     const targetNodeIds = selectedNodes.length > 0
-      ? selectedNodes.map((n: any) => n.id)
+      ? selectedNodes.map((n) => n.id)
       : undefined
 
     workflow.expandNodes(targetNodeIds)
@@ -344,9 +347,4 @@ export const useNodeOperations = (workflow: any, options: NodeOperationsOptions 
     // 剪贴板状态
     hasClipboard: clipboard.hasClipboard
   }
-}
-
-export interface NodeOperationsOptions {
-  onShowToast?: (type: 'success' | 'error' | 'info', title: string, message?: string) => void
-  onFitView?: () => void
 }

@@ -1,5 +1,6 @@
 import type { Edge } from '@xyflow/react'
 import type { INode } from '@sker/workflow'
+import { hasMultiMode } from '@sker/workflow'
 import { getNodeMetadata } from '../adapters'
 
 /**
@@ -51,13 +52,18 @@ export const EDGE_VALIDATION_RULES: EdgeValidationRule[] = [
         const targetMetadata = getNodeMetadata(targetNode.constructor as any)
         const inputPort = targetMetadata.inputs.find(i => i.property === edge.targetHandle)
 
-        if (inputPort && !inputPort.isMulti) {
-          const existingConnection = edges.find(e =>
-            e.id !== edge.id &&
-            e.target === edge.target &&
-            e.targetHandle === edge.targetHandle
-          )
-          return !existingConnection
+        if (inputPort) {
+          // 优雅设计：优先使用 mode 位标志，兼容旧的 isMulti
+          const supportsMultipleInputs = hasMultiMode(inputPort.mode) || inputPort.isMulti
+
+          if (!supportsMultipleInputs) {
+            const existingConnection = edges.find(e =>
+              e.id !== edge.id &&
+              e.target === edge.target &&
+              e.targetHandle === edge.targetHandle
+            )
+            return !existingConnection
+          }
         }
       } catch {
         // 如果获取元数据失败，允许连接

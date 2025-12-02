@@ -10,17 +10,19 @@ import {
   Pause,
   Plus,
   X,
-  Search,
-  Calendar,
   Zap,
-  ChevronLeft,
-  ChevronRight,
+  Calendar,
   ArrowUpDown
 } from 'lucide-react'
 import { WorkflowController } from '@sker/sdk'
 import type { WorkflowScheduleEntity } from '@sker/entities'
 import { root } from '@sker/core'
 import { ScheduleDialog } from './ScheduleDialog'
+import { Button } from '@sker/ui/components/ui/button'
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@sker/ui/components/ui/empty'
+import { Card } from '@sker/ui/components/ui/card'
+import { ScheduleCard } from '@sker/ui/components/ui/schedule-card'
+import { SearchInput } from '@sker/ui/components/ui/search-input'
 
 /**
  * 调度列表
@@ -33,8 +35,7 @@ import { ScheduleDialog } from './ScheduleDialog'
  * - 分页和排序
  *
  * 优雅设计:
- * - 2列网格卡片布局
- * - 搜索集成在头部
+ * - 使用 @sker/ui 组件实现统一的设计语言
  * - 清晰的视觉层级
  * - 符合工作流整体风格
  */
@@ -52,34 +53,29 @@ type SortOrder = 'asc' | 'desc'
 interface StatusConfig {
   label: string
   color: string
-  bgColor: string
   icon: typeof CheckCircle
 }
 
 interface TypeConfig {
   label: string
   color: string
-  bgColor: string
   icon: typeof Calendar
 }
 
 const STATUS_CONFIG: Record<ScheduleStatus, StatusConfig> = {
   enabled: {
     label: '启用中',
-    color: 'text-green-400',
-    bgColor: 'bg-green-500/10',
+    color: 'text-[color:var(--node-success)]',
     icon: CheckCircle
   },
   disabled: {
     label: '已禁用',
-    color: 'text-gray-400',
-    bgColor: 'bg-gray-500/10',
+    color: 'text-muted-foreground',
     icon: Pause
   },
   expired: {
     label: '已过期',
-    color: 'text-red-400',
-    bgColor: 'bg-red-500/10',
+    color: 'text-destructive',
     icon: XCircle
   },
 }
@@ -87,26 +83,22 @@ const STATUS_CONFIG: Record<ScheduleStatus, StatusConfig> = {
 const TYPE_CONFIG: Record<ScheduleType, TypeConfig> = {
   cron: {
     label: 'Cron',
-    color: 'text-blue-400',
-    bgColor: 'bg-blue-500/10',
+    color: 'text-chart-2',
     icon: Clock
   },
   interval: {
     label: '间隔',
-    color: 'text-purple-400',
-    bgColor: 'bg-purple-500/10',
+    color: 'text-chart-4',
     icon: Zap
   },
   once: {
     label: '一次性',
-    color: 'text-orange-400',
-    bgColor: 'bg-orange-500/10',
+    color: 'text-chart-5',
     icon: Calendar
   },
   manual: {
     label: '手动',
-    color: 'text-gray-400',
-    bgColor: 'bg-gray-500/10',
+    color: 'text-muted-foreground',
     icon: Calendar
   },
 }
@@ -214,11 +206,9 @@ export function ScheduleList({ workflowName, className = '', onClose }: Schedule
     }
   }
 
-  // 搜索、排序和分页
   const filteredAndSortedSchedules = useMemo(() => {
     let result = [...schedules]
 
-    // 搜索过滤
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase()
       result = result.filter(schedule =>
@@ -227,7 +217,6 @@ export function ScheduleList({ workflowName, className = '', onClose }: Schedule
       )
     }
 
-    // 排序
     result.sort((a, b) => {
       let comparison = 0
 
@@ -254,281 +243,187 @@ export function ScheduleList({ workflowName, className = '', onClose }: Schedule
     return result
   }, [schedules, searchQuery, sortField, sortOrder])
 
-  // 分页
   const totalPages = Math.ceil(filteredAndSortedSchedules.length / ITEMS_PER_PAGE)
   const paginatedSchedules = filteredAndSortedSchedules.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   )
 
-  // 重置页码当搜索或排序变化时
   useEffect(() => {
     setCurrentPage(1)
   }, [searchQuery, sortField, sortOrder])
 
   if (loading) {
     return (
-      <div className={`rounded-2xl border border-[#2f3543] bg-[#111318] backdrop-blur-sm ${className}`}>
+      <Card className={className}>
         <div className="flex items-center justify-center p-24">
           <div className="flex flex-col items-center gap-4">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#135bec] border-t-transparent"></div>
-            <p className="text-sm text-[#6c7a91]">加载调度列表...</p>
+            <div className="border-primary h-8 w-8 animate-spin rounded-full border-2 border-t-transparent" />
+            <p className="text-muted-foreground text-sm">加载调度列表...</p>
           </div>
         </div>
-      </div>
+      </Card>
     )
   }
 
   return (
     <>
-      <div className={`rounded-2xl border border-[#2f3543] bg-[#111318] backdrop-blur-sm shadow-2xl ${className}`}>
-        {/* Header */}
-        <div className="border-b border-[#2f3543] px-6 py-5">
-          <div className="flex items-center justify-between mb-4">
+      <Card className={className}>
+        <div className="border-border border-b px-6 py-5">
+          <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1f2531] text-[#135bec]">
+              <div className="bg-secondary text-primary flex h-10 w-10 items-center justify-center rounded-xl">
                 <Clock className="h-5 w-5" strokeWidth={1.8} />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-white">调度管理</h3>
-                <p className="text-sm text-[#6c7a91]">{filteredAndSortedSchedules.length} 个调度</p>
+                <h3 className="text-lg font-semibold">调度管理</h3>
+                <p className="text-muted-foreground text-sm">{filteredAndSortedSchedules.length} 个调度</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setShowCreateDialog(true)}
-                className="flex items-center gap-2 rounded-lg bg-[#135bec] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1b6aff] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#135bec]"
-              >
+              <Button onClick={() => setShowCreateDialog(true)}>
                 <Plus className="h-4 w-4" strokeWidth={2} />
                 新建
-              </button>
+              </Button>
               {onClose && (
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="flex h-10 w-10 items-center justify-center rounded-lg text-[#9da6b9] transition hover:bg-[#1f2531] hover:text-white"
-                >
+                <Button variant="ghost" size="icon" onClick={onClose}>
                   <X className="h-5 w-5" strokeWidth={1.8} />
-                </button>
+                </Button>
               )}
             </div>
           </div>
 
-          {/* Search & Sort */}
           <div className="flex items-center gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6c7a91]" strokeWidth={2} />
-              <input
-                type="text"
+            <div className="flex-1">
+              <SearchInput
                 placeholder="搜索调度..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-lg border border-[#2f3543] bg-[#1a1d24] py-2.5 pl-10 pr-4 text-sm text-white placeholder-[#6c7a91] focus:border-[#135bec] focus:outline-none focus:ring-2 focus:ring-[#135bec]/20"
               />
             </div>
             <div className="flex items-center gap-2">
-              <button
-                type="button"
+              <Button
+                variant={sortField === 'name' ? 'default' : 'outline'}
+                size="sm"
                 onClick={() => handleSort('name')}
-                className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition ${
-                  sortField === 'name'
-                    ? 'border-[#135bec] bg-[#135bec]/10 text-[#135bec]'
-                    : 'border-[#2f3543] bg-[#1a1d24] text-[#9da6b9] hover:bg-[#1f2531]'
-                }`}
               >
                 名称
                 {sortField === 'name' && (
-                  <ArrowUpDown className="h-3 w-3" strokeWidth={2} />
+                  <ArrowUpDown className="ml-1 h-3 w-3" strokeWidth={2} />
                 )}
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant={sortField === 'nextRunAt' ? 'default' : 'outline'}
+                size="sm"
                 onClick={() => handleSort('nextRunAt')}
-                className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition ${
-                  sortField === 'nextRunAt'
-                    ? 'border-[#135bec] bg-[#135bec]/10 text-[#135bec]'
-                    : 'border-[#2f3543] bg-[#1a1d24] text-[#9da6b9] hover:bg-[#1f2531]'
-                }`}
               >
                 时间
                 {sortField === 'nextRunAt' && (
-                  <ArrowUpDown className="h-3 w-3" strokeWidth={2} />
+                  <ArrowUpDown className="ml-1 h-3 w-3" strokeWidth={2} />
                 )}
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant={sortField === 'status' ? 'default' : 'outline'}
+                size="sm"
                 onClick={() => handleSort('status')}
-                className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition ${
-                  sortField === 'status'
-                    ? 'border-[#135bec] bg-[#135bec]/10 text-[#135bec]'
-                    : 'border-[#2f3543] bg-[#1a1d24] text-[#9da6b9] hover:bg-[#1f2531]'
-                }`}
               >
                 状态
                 {sortField === 'status' && (
-                  <ArrowUpDown className="h-3 w-3" strokeWidth={2} />
+                  <ArrowUpDown className="ml-1 h-3 w-3" strokeWidth={2} />
                 )}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
 
-        {/* Content */}
         <div className="p-6">
           {error && (
-            <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 p-4">
-              <p className="text-sm text-red-100">{error}</p>
+            <div className="border-destructive/30 bg-destructive/10 mb-4 rounded-lg border p-4">
+              <p className="text-destructive text-sm">{error}</p>
             </div>
           )}
 
           {paginatedSchedules.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#1f2531]">
-                <Clock className="h-8 w-8 text-[#6c7a91]" strokeWidth={1.5} />
-              </div>
-              <p className="text-base font-medium text-white">
-                {searchQuery ? '未找到匹配的调度' : '暂无调度计划'}
-              </p>
-              <p className="mt-2 text-sm text-[#6c7a91]">
-                {searchQuery ? '尝试使用其他关键词搜索' : '点击"新建"按钮创建第一个调度任务'}
-              </p>
-            </div>
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <Clock className="text-muted-foreground h-8 w-8" strokeWidth={1.5} />
+                </EmptyMedia>
+                <EmptyTitle>
+                  {searchQuery ? '未找到匹配的调度' : '暂无调度计划'}
+                </EmptyTitle>
+                <EmptyDescription>
+                  {searchQuery ? '尝试使用其他关键词搜索' : '点击"新建"按钮创建第一个调度任务'}
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           ) : (
             <>
-              {/* 2-column Grid */}
-              <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="mb-6 grid grid-cols-2 gap-4">
                 {paginatedSchedules.map((schedule) => {
                   const statusConfig = STATUS_CONFIG[schedule.status as ScheduleStatus]
                   const typeConfig = TYPE_CONFIG[schedule.scheduleType as ScheduleType]
-                  const StatusIcon = statusConfig.icon
-                  const TypeIcon = typeConfig.icon
 
                   return (
-                    <div
+                    <ScheduleCard
                       key={schedule.id}
-                      className="group rounded-xl border border-[#2f3543] bg-[#1a1d24] p-4 transition hover:border-[#3f4653] hover:bg-[#1f2531]"
-                    >
-                      {/* Header: Name & Status */}
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-sm font-semibold text-white truncate mb-2">{schedule.name}</h4>
-                          <div className="flex items-center gap-2">
-                            <div className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium ${statusConfig.color} ${statusConfig.bgColor}`}>
-                              <StatusIcon className="h-3 w-3" strokeWidth={2.5} />
-                              {statusConfig.label}
-                            </div>
-                            <div className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium ${typeConfig.color} ${typeConfig.bgColor}`}>
-                              <TypeIcon className="h-3 w-3" strokeWidth={2} />
-                              {typeConfig.label}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Toggle Switch */}
-                        <label className="relative inline-flex cursor-pointer items-center ml-2">
-                          <input
-                            type="checkbox"
-                            checked={schedule.status === 'enabled'}
-                            onChange={() => handleToggleStatus(schedule)}
-                            disabled={schedule.status === 'expired'}
-                            className="peer sr-only"
-                          />
-                          <div className="peer h-5 w-9 rounded-full bg-[#2f3543] after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-[#135bec] peer-checked:after:translate-x-full peer-disabled:opacity-50 peer-disabled:cursor-not-allowed"></div>
-                        </label>
-                      </div>
-
-                      {/* Description */}
-                      <div className="mb-3">
-                        <p className="text-xs text-[#9da6b9] truncate">{getScheduleDescription(schedule)}</p>
-                      </div>
-
-                      {/* Time Info */}
-                      <div className="space-y-1 mb-3">
-                        {schedule.nextRunAt && (
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-[#6c7a91]">下次执行</span>
-                            <span className="text-[#9da6b9] font-medium">{formatDateTime(schedule.nextRunAt)}</span>
-                          </div>
-                        )}
-                        {schedule.lastRunAt && (
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-[#6c7a91]">上次执行</span>
-                            <span className="text-[#9da6b9]">{formatDateTime(schedule.lastRunAt)}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex items-center gap-2 pt-3 border-t border-[#2f3543]">
-                        <button
-                          type="button"
-                          onClick={() => handleEdit(schedule)}
-                          className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-[#1f2531] px-3 py-2 text-xs font-medium text-white transition hover:bg-[#282e39]"
-                        >
-                          <Edit2 className="h-3 w-3" strokeWidth={2} />
-                          编辑
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(schedule.id)}
-                          className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-[#1f2531] px-3 py-2 text-xs font-medium text-red-400 transition hover:bg-[#282e39]"
-                        >
-                          <Trash2 className="h-3 w-3" strokeWidth={2} />
-                          删除
-                        </button>
-                      </div>
-                    </div>
+                      name={schedule.name}
+                      description={getScheduleDescription(schedule)}
+                      status={statusConfig}
+                      type={typeConfig}
+                      enabled={schedule.status === 'enabled'}
+                      expired={schedule.status === 'expired'}
+                      nextRunAt={schedule.nextRunAt ? formatDateTime(schedule.nextRunAt) : undefined}
+                      lastRunAt={schedule.lastRunAt ? formatDateTime(schedule.lastRunAt) : undefined}
+                      onToggle={() => handleToggleStatus(schedule)}
+                      onEdit={() => handleEdit(schedule)}
+                      onDelete={() => handleDelete(schedule.id)}
+                    />
                   )
                 })}
               </div>
 
-              {/* Pagination */}
               {totalPages > 1 && (
                 <div className="flex items-center justify-between">
-                  <p className="text-xs text-[#6c7a91]">
+                  <p className="text-muted-foreground text-xs">
                     显示 {(currentPage - 1) * ITEMS_PER_PAGE + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, filteredAndSortedSchedules.length)} 项，共 {filteredAndSortedSchedules.length} 项
                   </p>
                   <div className="flex items-center gap-2">
-                    <button
-                      type="button"
+                    <Button
+                      variant="outline"
+                      size="icon-sm"
                       onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                       disabled={currentPage === 1}
-                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#2f3543] bg-[#1a1d24] text-[#9da6b9] transition hover:bg-[#1f2531] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <ChevronLeft className="h-4 w-4" strokeWidth={2} />
-                    </button>
+                      &lt;
+                    </Button>
                     <div className="flex items-center gap-1">
                       {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                        <button
+                        <Button
                           key={page}
-                          type="button"
+                          variant={currentPage === page ? 'default' : 'outline'}
+                          size="icon-sm"
                           onClick={() => setCurrentPage(page)}
-                          className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-medium transition ${
-                            currentPage === page
-                              ? 'bg-[#135bec] text-white'
-                              : 'border border-[#2f3543] bg-[#1a1d24] text-[#9da6b9] hover:bg-[#1f2531]'
-                          }`}
                         >
                           {page}
-                        </button>
+                        </Button>
                       ))}
                     </div>
-                    <button
-                      type="button"
+                    <Button
+                      variant="outline"
+                      size="icon-sm"
                       onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                       disabled={currentPage === totalPages}
-                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#2f3543] bg-[#1a1d24] text-[#9da6b9] transition hover:bg-[#1f2531] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <ChevronRight className="h-4 w-4" strokeWidth={2} />
-                    </button>
+                      &gt;
+                    </Button>
                   </div>
                 </div>
               )}
             </>
           )}
         </div>
-      </div>
+      </Card>
 
       {editSchedule && (
         <ScheduleDialog

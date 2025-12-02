@@ -21,3 +21,6 @@ export * from './DateAstRender';
 
 // IS_BUFFER 模式示例
 export * from './CollectorAstRender';
+
+// 控制流节点
+export * from './IfAstRender';
