@@ -71,8 +71,6 @@ const HandleWrapper = ({
   port,
   type,
   isCollapsed,
-  portIndex,
-  totalPorts,
 }: {
   port?: WorkflowNodePort
   type: 'source' | 'target'
@@ -84,45 +82,12 @@ const HandleWrapper = ({
 
   const isTarget = type === 'target'
 
-  // 计算 Handle 的垂直位置
-  const getHandlePosition = () => {
-    if (portIndex === undefined || totalPorts === undefined) {
-      return undefined
-    }
-
-    if (isCollapsed) {
-      // 折叠状态：端口均匀分布在节点头部下方
-      const headerHeight = 48
-      const nodeHeight = 100
-      const availableHeight = nodeHeight - headerHeight
-
-      if (totalPorts === 1) {
-        return headerHeight + availableHeight / 2
-      }
-
-      const spacing = availableHeight / (totalPorts + 1)
-      return headerHeight + spacing * (portIndex + 1)
-    } else {
-      // 展开状态：对齐每个端口行的中心
-      // 头部高度 48px + 边框 1px + padding 8px + 每行高度 24px
-      const headerHeight = 48
-      const borderAndPadding = 9
-      const rowHeight = 24
-
-      return headerHeight + borderAndPadding + rowHeight * portIndex + rowHeight / 2
-    }
-  }
-
   return (
     <Handle
       type={type}
       id={port.property}
       position={isTarget ? Position.Left : Position.Right}
       isConnectable={true}
-      style={{
-        top: `${getHandlePosition()}px`,
-        [isTarget ? 'left' : 'right']: 0,
-      }}
       className={cn(
         '!w-3 !h-3 !border-2 rounded-full transition-all duration-150',
         'hover:!w-4 hover:!h-4 hover:shadow-lg',
@@ -139,14 +104,17 @@ const HandleWrapper = ({
 const PortRow = ({
   input,
   output,
+  isCollapsed
 }: {
   input?: WorkflowNodePort
-  output?: WorkflowNodePort
+  output?: WorkflowNodePort,
+  isCollapsed?: boolean
 }) => (
   <div className="relative flex items-center justify-between h-6 px-2">
     <div className="flex items-center gap-1 relative">
       {input && (
         <>
+          <HandleWrapper port={input} type="target" isCollapsed={isCollapsed} />
           <span className="text-xs text-foreground/90 truncate ml-3">
             {input.label || input.property}
           </span>
@@ -165,6 +133,7 @@ const PortRow = ({
           <span className="text-xs text-foreground/90 truncate mr-3">
             {output.label || output.property}
           </span>
+          <HandleWrapper port={output} type="source" isCollapsed={isCollapsed} />
         </>
       )}
     </div>
@@ -197,10 +166,6 @@ const WorkflowNodeComponent = ({
     return 'hsl(var(--input))'
   }
 
-  // 收集所有需要渲染的 Handle
-  const allInputs = inputs.filter((input) => input != null)
-  const allOutputs = outputs.filter((output) => output != null)
-
   return (
     <Collapsible
       open={!collapsed}
@@ -224,30 +189,6 @@ const WorkflowNodeComponent = ({
         onDoubleClick={onDoubleClick}
       >
         <StatusBadge status={status} count={statusCount} />
-
-        {/* Handle 独立渲染层 - 始终可见，不受折叠影响 */}
-        {allInputs.map((input, index) => (
-          <HandleWrapper
-            key={`input-handle-${input.property}`}
-            port={input}
-            type="target"
-            isCollapsed={collapsed}
-            portIndex={index}
-            totalPorts={allInputs.length}
-          />
-        ))}
-        {allOutputs.map((output, index) => (
-          <HandleWrapper
-            key={`output-handle-${output.property}`}
-            port={output}
-            type="source"
-            isCollapsed={collapsed}
-            portIndex={index}
-            totalPorts={allOutputs.length}
-          />
-        ))}
-
-        {/* 节点头部 */}
         <div className="flex items-center rounded-t-2xl p-2">
           <div
             className="flex items-center justify-center w-6 h-6 rounded-lg mr-2 shrink-0 text-primary-foreground [&>svg]:size-4"

@@ -1,11 +1,10 @@
 import { WorkflowGraphAst } from '../ast';
 import { INode, IEdge, EdgeMode, hasDataMapping } from '../types';
-import { DataFlowManager } from './data-flow-manager';
 import { executeAst } from '../executor';
 import { Observable, of, EMPTY, merge, combineLatest, zip, asyncScheduler, concat } from 'rxjs';
 import { map, catchError, takeWhile, concatMap, filter, withLatestFrom, shareReplay, subscribeOn, finalize } from 'rxjs/operators';
 import { Injectable, root } from '@sker/core';
-import { findNodeType, INPUT } from '../decorator';
+import { findNodeType, INPUT, InputMetadata } from '../decorator';
 
 /**
  * 响应式工作流调度器 - 基于 RxJS Observable 流式调度
@@ -23,11 +22,6 @@ import { findNodeType, INPUT } from '../decorator';
  */
 @Injectable()
 export class ReactiveScheduler {
-    private dataFlowManager: DataFlowManager;
-
-    constructor() {
-        this.dataFlowManager = root.get(DataFlowManager);
-    }
 
     /**
      * 调度工作流：将工作流图转换为响应式流网络
@@ -47,11 +41,6 @@ export class ReactiveScheduler {
         // 已完成的工作流直接返回
         if (state === 'success' || state === 'fail') {
             return of(ast);
-        }
-
-        // 初始化输入节点
-        if (state === 'pending' && ctx) {
-            this.dataFlowManager.initializeInputNodes(ast.nodes, ast.edges, ctx);
         }
 
         ast.state = 'running';
@@ -376,7 +365,8 @@ export class ReactiveScheduler {
                 return this.createSingleSourceStream(
                     sourceIds[0]!,
                     edgesBySource.get(sourceIds[0]!)!,
-                    network
+                    network,
+                    node
                 );
             } else {
                 // 多源互补：根据边模式组合
@@ -384,7 +374,8 @@ export class ReactiveScheduler {
                     return this.createSingleSourceStream(
                         sourceId,
                         edgesBySource.get(sourceId)!,
-                        network
+                        network,
+                        node
                     );
                 });
                 return this.combineGroupedStreamsByMode(groupedStreams, incomingEdges);
@@ -467,6 +458,65 @@ export class ReactiveScheduler {
         }
 
         return properties;
+    }
+
+    /**
+     * 获取节点输入属性的元数据映射
+     *
+     * 用于检查 isMulti 等属性配置
+     */
+    private getInputMetadataMap(node: INode): Map<string | symbol, InputMetadata> {
+        const metadataMap = new Map<string | symbol, InputMetadata>();
+
+        try {
+            const ctor = findNodeType(node.type);
+            if (!ctor) return metadataMap;
+
+            const inputs = root.get(INPUT, []).filter(it => it.target === ctor);
+            inputs.forEach(input => {
+                metadataMap.set(input.propertyKey, input);
+            });
+        } catch {
+            // 无装饰器元数据，返回空映射
+        }
+
+        return metadataMap;
+    }
+
+    /**
+     * 将输入数据赋值到节点实例（元数据感知）
+     *
+     * 优雅设计：
+     * - 检查 @Input({ isMulti: true })：累加到数组
+     * - 普通输入：直接赋值
+     * - 尊重装饰器元数据，避免数据覆盖
+     */
+    private assignInputsToNodeInstance(
+        nodeInstance: INode,
+        inputs: Record<string, any>
+    ): void {
+        const metadataMap = this.getInputMetadataMap(nodeInstance);
+
+        Object.entries(inputs).forEach(([key, value]) => {
+            const metadata = metadataMap.get(key);
+            const isMulti = metadata?.isMulti ?? false;
+
+            if (isMulti) {
+                // 多值模式：累加到数组
+                if (!Array.isArray((nodeInstance as any)[key])) {
+                    (nodeInstance as any)[key] = [];
+                }
+                // 如果 value 已经是数组，展开后累加（处理多源情况）
+                if (Array.isArray(value)) {
+                    (nodeInstance as any)[key].push(...value);
+                } else {
+                    (nodeInstance as any)[key].push(value);
+                }
+            } else {
+                // 单值模式：直接赋值
+                (nodeInstance as any)[key] = value;
+            }
+        });
     }
 
     /**
@@ -598,7 +648,8 @@ export class ReactiveScheduler {
     private createSingleSourceStream(
         sourceId: string,
         edges: IEdge[],
-        network: Map<string, Observable<INode>>
+        network: Map<string, Observable<INode>>,
+        targetNode: INode
     ): Observable<any> {
         const sourceStream = network.get(sourceId);
         if (!sourceStream) {
@@ -632,7 +683,7 @@ export class ReactiveScheduler {
                     return { edge, value };
                 }).filter(Boolean) as { edge: IEdge; value: any }[];
 
-                return this.mergeEdgeValues(edgeValues);
+                return this.mergeEdgeValues(edgeValues, targetNode);
             }),
             // 过滤掉空结果 - 但允许空字符串等有效值
             filter(result => result !== null && result !== undefined)
@@ -863,20 +914,34 @@ export class ReactiveScheduler {
      * 合并边值数据
      *
      * 优雅设计:
-     * - 有 toProperty：包装后赋值到目标属性
+     * - 有 toProperty：检查 isMulti 元数据，聚合或覆盖
      * - 无 toProperty 且值是对象：直接合并（展开）
      * - 其他情况：使用 fromProperty 或默认 key
      *
-     * 注意：当多条边指向同一 toProperty 时，后面的值会覆盖前面的值
+     * 修复：支持 @Input({ isMulti: true }) 多值聚合
      */
-    private mergeEdgeValues(edgeValues: { edge: IEdge; value: any }[]): any {
+    private mergeEdgeValues(edgeValues: { edge: IEdge; value: any }[], targetNode: INode): any {
         const merged: any = {};
+
+        // 获取目标节点的输入元数据
+        const inputMetadataMap = this.getInputMetadataMap(targetNode);
 
         edgeValues.forEach(({ edge, value }) => {
             if (edge.toProperty) {
-                // 有 toProperty：直接赋值（value 已由 createEdgeOperator 提取）
-                // 注意：多条边指向同一属性时会覆盖
-                merged[edge.toProperty] = value;
+                // 检查是否为多值输入
+                const metadata = inputMetadataMap.get(edge.toProperty);
+                const isMulti = metadata?.isMulti ?? false;
+
+                if (isMulti) {
+                    // 多值模式：累加到数组
+                    if (!Array.isArray(merged[edge.toProperty])) {
+                        merged[edge.toProperty] = [];
+                    }
+                    merged[edge.toProperty].push(value);
+                } else {
+                    // 单值模式：直接覆盖
+                    merged[edge.toProperty] = value;
+                }
             } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
                 // 无 toProperty 且值是对象：直接合并
                 Object.assign(merged, value);
