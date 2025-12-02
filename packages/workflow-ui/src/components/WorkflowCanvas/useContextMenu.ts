@@ -41,10 +41,6 @@ export function useContextMenu() {
 
   const openMenu = useCallback(
     (screenPosition: Position, flowPosition: XYPosition) => {
-      console.log('[useContextMenu] openMenu called', {
-        screenPosition,
-        flowPosition,
-      })
       setMenu({
         visible: true,
         screenPosition,

@@ -4,7 +4,7 @@ import type { useWorkflow } from '../../hooks/useWorkflow'
 import type { ToastType } from './useCanvasState'
 import { WorkflowController } from '@sker/sdk'
 import { root } from '@sker/core'
-import { Subject, takeUntil } from 'rxjs'
+import { Subject, takeUntil, finalize } from 'rxjs'
 
 /**
  * 工作流操作 Hook
@@ -40,7 +40,6 @@ export function useWorkflowOperations(
    */
   const runNode = useCallback(
     (nodeId: string) => {
-      console.log(`run node ${nodeId}`);
       if (!workflow.workflowAst) {
         console.error(`工作流 AST 不存在`)
         onShowToast?.('error', '工作流 AST 不存在')
@@ -57,34 +56,39 @@ export function useWorkflowOperations(
       onSetRunning?.(true)
 
       // executeAst 返回 Observable，利用流式特性实时更新状态
-      const subscription = executeAstWithWorkflowGraph(targetNode.id, workflow.workflowAst).subscribe({
-        next: (updatedWorkflow) => {
-          // 每次 next 事件实时更新工作流状态
-          Object.assign(workflow.workflowAst!, updatedWorkflow)
-          workflow.syncFromAst()
-        },
-        error: (error) => {
-          const errorInfo = extractErrorInfo(error)
-          console.error(`工作流执行异常`)
-          onShowToast?.('error', '工作流执行异常', errorInfo.message)
-          onSetRunning?.(false)
-        },
-        complete: () => {
-          console.log(`工作流执行完成`)
-          // 统计执行结果
-          const successCount = workflow.workflowAst!.nodes.filter(n => n.state === 'success').length
-          const failCount = workflow.workflowAst!.nodes.filter(n => n.state === 'fail').length
+      // finalize 确保无论如何结束都会重置状态
+      const subscription = executeAstWithWorkflowGraph(targetNode.id, workflow.workflowAst)
+        .pipe(
+          finalize(() => {
+            // 确保在所有情况下都重置运行状态
+            onSetRunning?.(false)
+          })
+        )
+        .subscribe({
+          next: (updatedWorkflow) => {
+            // 每次 next 事件实时更新工作流状态
+            Object.assign(workflow.workflowAst!, updatedWorkflow)
+            workflow.syncFromAst()
+          },
+          error: (error) => {
+            const errorInfo = extractErrorInfo(error)
+            console.error(`工作流执行异常`)
+            onShowToast?.('error', '工作流执行异常', errorInfo.message)
+          },
+          complete: () => {
+            // 统计执行结果
+            const successCount = workflow.workflowAst!.nodes.filter(n => n.state === 'success').length
+            const failCount = workflow.workflowAst!.nodes.filter(n => n.state === 'fail').length
 
-          if (failCount === 0) {
-            onShowToast?.('success', '工作流执行成功', `共执行 ${successCount} 个节点`)
-          } else if (successCount > 0) {
-            onShowToast?.('error', '工作流部分失败', `成功: ${successCount}, 失败: ${failCount}`)
-          } else {
-            onShowToast?.('error', '工作流执行失败', `所有节点均失败`)
+            if (failCount === 0) {
+              onShowToast?.('success', '工作流执行成功', `共执行 ${successCount} 个节点`)
+            } else if (successCount > 0) {
+              onShowToast?.('error', '工作流部分失败', `成功: ${successCount}, 失败: ${failCount}`)
+            } else {
+              onShowToast?.('error', '工作流执行失败', `所有节点均失败`)
+            }
           }
-          onSetRunning?.(false)
-        }
-      })
+        })
 
       // 返回取消订阅函数，便于外部管理
       return () => subscription.unsubscribe()
@@ -103,7 +107,6 @@ export function useWorkflowOperations(
    */
   const runNodeIsolated = useCallback(
     (nodeId: string) => {
-      console.log(`run node isolated ${nodeId}`);
       if (!workflow.workflowAst) {
         console.error(`工作流 AST 不存在`)
         onShowToast?.('error', '工作流 AST 不存在')
@@ -120,31 +123,36 @@ export function useWorkflowOperations(
       onSetRunning?.(true)
 
       // executeNodeIsolated 返回 Observable，只执行单个节点
-      const subscription = executeNodeIsolated(targetNode.id, workflow.workflowAst).subscribe({
-        next: (updatedWorkflow) => {
-          // 每次 next 事件实时更新工作流状态
-          Object.assign(workflow.workflowAst!, updatedWorkflow)
-          workflow.syncFromAst()
-        },
-        error: (error) => {
-          const errorInfo = extractErrorInfo(error)
-          console.error(`节点执行异常`)
-          onShowToast?.('error', '节点执行异常', errorInfo.message)
-          onSetRunning?.(false)
-        },
-        complete: () => {
-          console.log(`节点执行完成`)
-          // 只统计目标节点的执行结果
-          const nodeState = workflow.workflowAst!.nodes.find(n => n.id === nodeId)?.state
+      // finalize 确保无论如何结束都会重置状态
+      const subscription = executeNodeIsolated(targetNode.id, workflow.workflowAst)
+        .pipe(
+          finalize(() => {
+            // 确保在所有情况下都重置运行状态
+            onSetRunning?.(false)
+          })
+        )
+        .subscribe({
+          next: (updatedWorkflow) => {
+            // 每次 next 事件实时更新工作流状态
+            Object.assign(workflow.workflowAst!, updatedWorkflow)
+            workflow.syncFromAst()
+          },
+          error: (error) => {
+            const errorInfo = extractErrorInfo(error)
+            console.error(`节点执行异常`)
+            onShowToast?.('error', '节点执行异常', errorInfo.message)
+          },
+          complete: () => {
+            // 只统计目标节点的执行结果
+            const nodeState = workflow.workflowAst!.nodes.find(n => n.id === nodeId)?.state
 
-          if (nodeState === 'success') {
-            onShowToast?.('success', '节点执行成功', '该节点已完成执行')
-          } else if (nodeState === 'fail') {
-            onShowToast?.('error', '节点执行失败', '请检查节点配置和输入数据')
+            if (nodeState === 'success') {
+              onShowToast?.('success', '节点执行成功', '该节点已完成执行')
+            } else if (nodeState === 'fail') {
+              onShowToast?.('error', '节点执行失败', '请检查节点配置和输入数据')
+            }
           }
-          onSetRunning?.(false)
-        }
-      })
+        })
 
       // 返回取消订阅函数，便于外部管理
       return () => subscription.unsubscribe()
@@ -210,12 +218,8 @@ export function useWorkflowOperations(
         return
       }
 
-      console.log('[工作流执行] 开始执行工作流')
-      console.log('[工作流执行] 节点数量:', nodes.length)
-
       // 如果有正在运行的工作流，先取消
       if (abortControllerRef.current) {
-        console.log('[工作流执行] 检测到上一次工作流正在运行，先取消')
         cancelSubject$.current.next()
 
         if (abortControllerRef.current) {
@@ -236,12 +240,10 @@ export function useWorkflowOperations(
 
       // 创建新的取消 Subject（重置上一次的）
       cancelSubject$.current = new Subject<void>()
-      console.log('[工作流执行] 创建新的取消 Subject')
 
       // 创建新的 AbortController
       const abortController = new AbortController()
       abortControllerRef.current = abortController
-      console.log('[工作流执行] 创建新的 AbortController')
 
       // 将 abortSignal 附加到工作流上下文
       workflow.workflowAst.abortSignal = abortController.signal
@@ -249,40 +251,37 @@ export function useWorkflowOperations(
       onSetRunning?.(true)
 
       // executeAst 返回 Observable，使用 takeUntil 监听取消信号
+      // finalize 确保无论如何结束（完成、错误、取消）都会重置状态
       const subscription = executeAst(workflow.workflowAst, workflow.workflowAst)
-        .pipe(takeUntil(cancelSubject$.current))
+        .pipe(
+          takeUntil(cancelSubject$.current),
+          finalize(() => {
+            // 确保在所有情况下都重置运行状态和控制器引用
+            abortControllerRef.current = null
+            onSetRunning?.(false)
+          })
+        )
         .subscribe({
           next: (updatedWorkflow) => {
-            console.log('[工作流执行] 收到状态更新')
             // 每次 next 事件实时更新工作流状态
             Object.assign(workflow.workflowAst!, updatedWorkflow)
             workflow.syncFromAst()
           },
           error: (error) => {
-            console.error('[工作流执行] 执行异常:', error)
-            abortControllerRef.current = null
-
             const errorInfo = extractErrorInfo(error)
 
             // 检查是否是取消导致的错误
             if (error?.name === 'AbortError' || errorInfo.message.includes('取消')) {
-              console.log('[工作流执行] 工作流被取消')
               onShowToast?.('info', '工作流已取消', '用户主动取消执行')
             } else {
-              console.error('[工作流执行] 工作流执行异常:', errorInfo.message)
+              console.error('工作流执行异常:', error)
               onShowToast?.('error', '工作流执行异常', errorInfo.message)
             }
-            onSetRunning?.(false)
           },
           complete: () => {
-            console.log('[工作流执行] 执行完成')
-            abortControllerRef.current = null
-
             // 统计执行结果
             const successCount = workflow.workflowAst!.nodes.filter(n => n.state === 'success').length
             const failCount = workflow.workflowAst!.nodes.filter(n => n.state === 'fail').length
-
-            console.log(`[工作流执行] 执行统计 - 成功: ${successCount}, 失败: ${failCount}`)
 
             if (failCount === 0) {
               onShowToast?.('success', '工作流执行成功', `共执行 ${successCount} 个节点`)
@@ -293,13 +292,11 @@ export function useWorkflowOperations(
             }
 
             onComplete?.()
-            onSetRunning?.(false)
           }
         })
 
       // 返回取消函数，便于外部管理
       return () => {
-        console.log('[工作流执行] 外部调用取消函数')
         cancelSubject$.current.next()
         abortController.abort()
         abortControllerRef.current = null
@@ -350,25 +347,19 @@ export function useWorkflowOperations(
    */
   const cancelWorkflow = useCallback(() => {
     if (!abortControllerRef.current) {
-      console.log('[工作流取消] 没有正在运行的工作流')
       onShowToast?.('info', '没有正在运行的工作流', '当前没有需要取消的任务')
       return
     }
 
-    console.log('[工作流取消] 开始取消工作流')
-    console.log('[工作流取消] 触发 cancelSubject$.next()')
-
     // 触发取消信号：通过 Subject emit 值，takeUntil 会自动完成流
     cancelSubject$.current.next()
 
-    console.log('[工作流取消] 触发 abortController.abort()')
     // 触发 AbortSignal
     if (abortControllerRef.current) {
       abortControllerRef.current.abort()
       abortControllerRef.current = null
     }
 
-    console.log('[工作流取消] 重置正在运行的节点状态')
     // 重置正在运行的节点状态
     if (workflow.workflowAst) {
       workflow.workflowAst.nodes.forEach(node => {
@@ -382,7 +373,6 @@ export function useWorkflowOperations(
 
     onSetRunning?.(false)
     onShowToast?.('info', '工作流已取消', '已停止执行')
-    console.log('[工作流取消] 取消完成')
   }, [workflow, onSetRunning, onShowToast])
 
   /**

@@ -87,7 +87,18 @@ export const useNodeOperations = (workflow: any, options: NodeOperationsOptions 
 
       // 直接将节点添加到 AST（node.data 即 AST 对象）
       newNodes.forEach((node) => {
-        console.log('[pasteNodes] 添加节点到 AST', { id: node.id, type: node.data?.type })
+        console.log('[pasteNodes] 添加节点到 AST', {
+          id: node.id,
+          type: node.data?.type,
+          uiPosition: node.position,
+          astPositionBefore: { ...node.data.position }
+        })
+        // 将 UI 层计算的新位置同步到 AST 对象
+        node.data.position = node.position
+        console.log('[pasteNodes] AST position 已同步', {
+          id: node.id,
+          astPositionAfter: node.data.position
+        })
         workflow.workflowAst.addNode(node.data)
       })
 

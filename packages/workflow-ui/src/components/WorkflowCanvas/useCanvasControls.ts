@@ -290,7 +290,6 @@ export function useCanvasControls() {
    * 运行节点（暂时留空，后续实现）
    */
   const handleRunNode = useCallback((nodeId: string) => {
-    console.log('Run node:', nodeId)
     // TODO: 实现节点运行逻辑
   }, [])
 

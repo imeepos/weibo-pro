@@ -168,21 +168,11 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
 
   // 全局鼠标移动监听（确保始终追踪到最新位置）
   useEffect(() => {
-    let lastLogTime = 0
-    const LOG_INTERVAL = 1000 // 每秒最多打印一次，避免刷屏
-
     const handleGlobalMouseMove = (event: MouseEvent) => {
       setLastMousePosition({
         x: event.clientX,
         y: event.clientY
       })
-
-      // 节流日志输出
-      const now = Date.now()
-      if (now - lastLogTime > LOG_INTERVAL) {
-        console.log('[鼠标追踪] 屏幕坐标 X:', event.clientX, 'Y:', event.clientY)
-        lastLogTime = now
-      }
     }
 
     window.addEventListener('mousemove', handleGlobalMouseMove)
@@ -305,32 +295,8 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
     onCopy: copyNodes,
     onCut: cutNodes,
     onPaste: () => {
-      console.log('[快捷键粘贴] 鼠标追踪状态')
-      console.log('  lastMousePosition:', lastMousePosition)
-      console.log('  lastMousePosition 是否为初始值:', lastMousePosition.x === 0 && lastMousePosition.y === 0)
-
       // 将屏幕坐标转换为 Flow 坐标
       const flowPosition = screenToFlowPosition(lastMousePosition)
-      const viewport = getViewport()
-
-      console.log('[快捷键粘贴] 坐标转换')
-      console.log('  屏幕坐标 X:', lastMousePosition.x)
-      console.log('  屏幕坐标 Y:', lastMousePosition.y)
-      console.log('  Flow坐标 X:', flowPosition.x)
-      console.log('  Flow坐标 Y:', flowPosition.y)
-      console.log('  视口偏移 X:', viewport.x)
-      console.log('  视口偏移 Y:', viewport.y)
-      console.log('  视口缩放:', viewport.zoom)
-
-      // 手动验证坐标转换公式
-      const manualFlowX = (lastMousePosition.x - viewport.x) / viewport.zoom
-      const manualFlowY = (lastMousePosition.y - viewport.y) / viewport.zoom
-      console.log('  手动计算 Flow X:', manualFlowX)
-      console.log('  手动计算 Flow Y:', manualFlowY)
-      console.log('  转换一致性检查:',
-        Math.abs(flowPosition.x - manualFlowX) < 0.01 &&
-        Math.abs(flowPosition.y - manualFlowY) < 0.01 ? '✓ 一致' : '✗ 不一致')
-
       pasteNodes(flowPosition)
     },
     onDelete: deleteSelection,
@@ -391,9 +357,7 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
 
     // 执行控制
     runWorkflow: async () => {
-      await runWorkflow(() => {
-        console.log('工作流执行完成')
-      })
+      await runWorkflow()
     },
     cancelWorkflow: () => {
       cancelWorkflow()
@@ -698,9 +662,7 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
       {showControls && (
         <WorkflowControls
           className="absolute bottom-60 right-4 z-[5]"
-          onRun={() => runWorkflow(() => {
-            console.log('工作流执行完成')
-          })}
+          onRun={() => runWorkflow()}
           onCancel={cancelWorkflow}
           onSave={() => saveWorkflow(workflow.workflowAst?.name || 'Untitled')}
           onExport={exportWorkflow}
