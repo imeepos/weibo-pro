@@ -97,7 +97,7 @@ function createControllerInstance<T>(controllerClass: new () => T, axiosInstance
                                         throw new Error(`HTTP error! status: ${status}`);
                                     }
 
-                                    reader = response.body?.getReader();
+                                    reader = response.body?.getReader() ?? null;
                                     if (!reader) {
                                         throw new Error('Response body is not readable');
                                     }
