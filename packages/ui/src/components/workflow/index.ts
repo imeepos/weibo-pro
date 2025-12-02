@@ -13,10 +13,10 @@ export {
   PropertyPanelSection,
   PropertyPanelEmptyState,
   PropertyPanelField,
-  SaveStatusIndicator,
   NodeStateBadge,
 } from './workflow-property-panel'
 export { WorkflowFormField } from './workflow-form-field'
+export { WorkflowSettingsDialog, PRESET_COLORS } from './workflow-settings-dialog'
 export {
   WorkflowContextMenu,
   CheckSquare,
@@ -66,10 +66,10 @@ export type {
   PropertyPanelSectionProps,
   PropertyPanelEmptyStateProps,
   PropertyPanelFieldProps,
-  SaveStatusIndicatorProps,
   NodeStateBadgeProps,
 } from './workflow-property-panel'
 export type { WorkflowFormFieldProps } from './workflow-form-field'
+export type { WorkflowSettingsDialogProps } from './workflow-settings-dialog'
 
 // Hooks 导出
 export { useWorkflowCanvas } from './hooks/use-workflow-canvas'

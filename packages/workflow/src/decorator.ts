@@ -224,9 +224,6 @@ export function getInputMetadata(target: Type<any> | object, propertyKey?: strin
 export interface OutputOptions {
     title?: string;
     type?: string;
-    properties?: {
-        [key: string]: OutputOptions;
-    }
 }
 
 export interface OutputMetadata extends OutputOptions {

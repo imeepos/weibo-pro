@@ -15,11 +15,8 @@ export function MarkdownViewer({
   const content = Array.isArray(children) ? children.join('\n') : children;
 
   return (
-    <div className={cn(
-      "prose prose-sm prose-neutral dark:prose-invert max-w-none",
-      className
-    )}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+    <div className={cn("prose prose-sm", className)}>
+      <ReactMarkdown remarkPlugins={[[remarkGfm, { singleTilde: false }]]}>
         {content}
       </ReactMarkdown>
     </div>

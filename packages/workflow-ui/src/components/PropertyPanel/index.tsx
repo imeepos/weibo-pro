@@ -1,9 +1,8 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useSelectedNode } from './useSelectedNode'
 import { SmartFormField } from './SmartFormField'
-import { useReactFlow } from '@xyflow/react'
 import { getNodeMetadata } from '../../adapters'
 import { resolveConstructor } from '@sker/workflow'
 import { ErrorDetailPanel } from '../ErrorDetail'
@@ -12,24 +11,35 @@ import {
   WorkflowPropertyPanel,
   PropertyPanelEmptyState,
   PropertyPanelField,
-  SaveStatusIndicator,
   NodeStateBadge,
   type PropertySection,
 } from '@sker/ui/components/workflow'
 
 export interface PropertyPanelProps {
   className?: string
+  formData?: Record<string, any>
+  onPropertyChange?: (property: string, value: any) => void
 }
 
-export function PropertyPanel({ className = '' }: PropertyPanelProps) {
+export function PropertyPanel({
+  className = '',
+  formData: externalFormData,
+  onPropertyChange: externalOnPropertyChange
+}: PropertyPanelProps) {
   const selectedNode = useSelectedNode()
-  const { setNodes } = useReactFlow()
 
-  const [formData, setFormData] = useState<Record<string, any>>({})
-  const [hasChanges, setHasChanges] = useState(false)
+  const [internalFormData, setInternalFormData] = useState<Record<string, any>>({})
+
+  const formData = externalFormData ?? internalFormData
+  const handlePropertyChange = externalOnPropertyChange ?? ((property: string, value: any) => {
+    setInternalFormData({
+      ...internalFormData,
+      [property]: value,
+    })
+  })
 
   useEffect(() => {
-    if (selectedNode) {
+    if (selectedNode && !externalFormData) {
       const metadata = getNodeMetadata(resolveConstructor(selectedNode.data))
       const initialData: Record<string, any> = {
         name: selectedNode.data.name,
@@ -41,49 +51,9 @@ export function PropertyPanel({ className = '' }: PropertyPanelProps) {
         initialData[input.property] = (selectedNode.data as any)[input.property]
       })
 
-      setFormData(initialData)
-      setHasChanges(false)
+      setInternalFormData(initialData)
     }
-  }, [selectedNode?.id])
-
-  const handlePropertyChange = (property: string, value: any) => {
-    setFormData({
-      ...formData,
-      [property]: value,
-    })
-    setHasChanges(true)
-  }
-
-  const handleSave = () => {
-    if (!selectedNode || !hasChanges) return
-
-    const ast = selectedNode.data
-    const { name, description, color, ...inputProperties } = formData
-
-    if (name !== undefined) ast.name = name
-    if (description !== undefined) ast.description = description
-    if (color !== undefined) ast.color = color
-
-    Object.entries(inputProperties).forEach(([property, value]) => {
-      ;(ast as any)[property] = value
-    })
-
-    setNodes((nodes) =>
-      nodes.map((node) =>
-        node.id === selectedNode.id
-          ? { ...node, data: { ...node.data } }
-          : node
-      )
-    )
-
-    setHasChanges(false)
-  }
-
-  const saveStatus = useMemo(() => {
-    if (hasChanges) return 'unsaved'
-    if (formData && Object.keys(formData).length > 0) return 'saved'
-    return 'idle'
-  }, [hasChanges, formData])
+  }, [selectedNode?.id, externalFormData])
 
   if (!selectedNode) {
     return (
@@ -113,19 +83,6 @@ export function PropertyPanel({ className = '' }: PropertyPanelProps) {
       title: '基础信息',
       color: 'info',
       defaultOpen: true,
-      actions: (
-        <div className="flex items-center gap-2">
-          <SaveStatusIndicator status={saveStatus as any} />
-          {hasChanges && (
-            <button
-              onClick={handleSave}
-              className="px-3 py-1 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-            >
-              保存
-            </button>
-          )}
-        </div>
-      ),
       content: (
         <>
           <SmartFormField
@@ -162,19 +119,6 @@ export function PropertyPanel({ className = '' }: PropertyPanelProps) {
       title: '输入参数',
       color: 'primary',
       defaultOpen: true,
-      actions: (
-        <div className="flex items-center gap-2">
-          <SaveStatusIndicator status={saveStatus as any} />
-          {hasChanges && (
-            <button
-              onClick={handleSave}
-              className="px-3 py-1 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-            >
-              保存
-            </button>
-          )}
-        </div>
-      ),
       content: (
         <>
           {editableProperties.map((prop) => (
@@ -226,7 +170,7 @@ export function PropertyPanel({ className = '' }: PropertyPanelProps) {
             <NodeStateBadge state={selectedNode.data.state || 'idle'} />
           </div>
         </div>
-        {selectedNode.data.error && (
+        {selectedNode.data.error && selectedNode.data.state === 'fail' && (
           <div className="space-y-1.5 opacity-70">
             <label className="block text-xs font-medium text-muted-foreground mb-1">错误信息</label>
             <div className="bg-destructive/10 px-3 py-2 rounded-lg border border-destructive/30">
@@ -240,4 +184,3 @@ export function PropertyPanel({ className = '' }: PropertyPanelProps) {
 
   return <WorkflowPropertyPanel sections={sections} className={className} />
 }
-

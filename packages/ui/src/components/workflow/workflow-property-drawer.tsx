@@ -28,6 +28,7 @@ export interface WorkflowPropertyDrawerProps {
   icon?: LucideIcon
   tabs?: DrawerTab[]
   actions?: DrawerAction[]
+  statusIndicator?: React.ReactNode
   defaultTab?: string
   defaultWidth?: number
   minWidth?: number
@@ -50,6 +51,7 @@ export function WorkflowPropertyDrawer({
   icon: Icon,
   tabs = [],
   actions = [],
+  statusIndicator,
   defaultTab,
   defaultWidth = 420,
   minWidth = 320,
@@ -120,6 +122,12 @@ export function WorkflowPropertyDrawer({
               </p>
             )}
           </div>
+
+          {statusIndicator && (
+            <div className="flex-shrink-0 ml-3">
+              {statusIndicator}
+            </div>
+          )}
         </div>
 
         {/* 操作按钮组 */}

@@ -42,7 +42,7 @@ export function WorkflowPropertyPanel({
   // 确定默认打开的 sections
   const defaultValue = defaultOpenSections ||
     sections
-      .filter(s => s.defaultOpen !== false)
+      .filter(s => s.defaultOpen === true)
       .map(s => s.id)
 
   return (
@@ -163,51 +163,6 @@ export function PropertyPanelField({
       <div className="text-xs text-foreground font-mono bg-card/50 px-3 py-2 rounded-lg border border-border/50 break-all">
         {displayValue}
       </div>
-    </div>
-  )
-}
-
-export interface SaveStatusIndicatorProps {
-  status: 'saving' | 'unsaved' | 'saved' | 'idle'
-  className?: string
-}
-
-export function SaveStatusIndicator({ status, className }: SaveStatusIndicatorProps) {
-  const statusConfig = {
-    saving: {
-      color: 'text-primary',
-      dotColor: 'bg-primary',
-      label: '保存中...',
-      animate: true,
-    },
-    unsaved: {
-      color: 'text-yellow-500',
-      dotColor: 'bg-yellow-500',
-      label: '未保存',
-      animate: false,
-    },
-    saved: {
-      color: 'text-green-500',
-      dotColor: 'bg-green-500',
-      label: '已同步',
-      animate: false,
-    },
-    idle: {
-      color: 'text-muted-foreground',
-      dotColor: 'bg-muted-foreground',
-      label: '',
-      animate: false,
-    },
-  }
-
-  const config = statusConfig[status]
-
-  if (status === 'idle') return null
-
-  return (
-    <div className={cn('flex items-center gap-1.5 text-xs', config.color, className)}>
-      <div className={cn('w-1 h-1 rounded-full', config.dotColor, config.animate && 'animate-pulse')} />
-      {config.label}
     </div>
   )
 }

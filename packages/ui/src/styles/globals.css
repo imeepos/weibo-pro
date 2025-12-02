@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 @plugin "tailwind-scrollbar-hide";
+@plugin "@tailwindcss/typography";
 @source "../../../apps/**/*.{ts,tsx}";
 @source "../../workflow-ui/**/*.{ts,tsx}";
 @source "../**/*.{ts,tsx}";
@@ -195,5 +196,74 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* Prose typography 样式覆盖 */
+  .prose {
+    color: var(--color-foreground);
+    max-width: none;
+  }
+
+  .prose p {
+    color: var(--color-foreground);
+    font-size: 0.875rem;
+    line-height: 1.5rem;
+    margin-top: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .prose h1,
+  .prose h2,
+  .prose h3,
+  .prose h4,
+  .prose h5,
+  .prose h6 {
+    color: var(--color-foreground);
+  }
+
+  .prose strong {
+    color: var(--color-foreground);
+    font-weight: 600;
+  }
+
+  .prose code {
+    color: var(--color-foreground);
+  }
+
+  .prose a {
+    color: var(--color-primary);
+    text-decoration: underline;
+  }
+
+  .prose a:hover {
+    color: var(--color-primary);
+    opacity: 0.8;
+  }
+
+  .prose blockquote {
+    color: var(--color-foreground);
+    border-left-color: var(--color-border);
+  }
+
+  .prose hr {
+    border-color: var(--color-border);
+  }
+
+  .prose ul > li::marker,
+  .prose ol > li::marker {
+    color: var(--color-muted-foreground);
+  }
+
+  .prose thead th,
+  .prose tbody td {
+    color: var(--color-foreground);
+  }
+
+  .prose thead {
+    border-bottom-color: var(--color-border);
+  }
+
+  .prose tbody tr {
+    border-bottom-color: var(--color-border);
   }
 }
