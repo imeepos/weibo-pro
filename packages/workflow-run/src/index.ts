@@ -17,6 +17,10 @@ export { WeiboAccountPickAstVisitor } from './WeiboAccountPickAstVisitor'
 export { LlmTextAgentAstVisitor } from './LlmTextAgentAstVisitor'
 export { TextAreaAstVisitor } from './TextAreaAstVisitor'
 export { DateAstVisitor } from './DateAstVisitor'
+
+// IS_BUFFER 模式示例
+export { CollectorVisitor } from './CollectorVisitor'
+
 export {
     WeiboAccountService,
     type WeiboLoginSuccessMessage

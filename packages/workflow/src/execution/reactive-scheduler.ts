@@ -2,9 +2,9 @@ import { WorkflowGraphAst } from '../ast';
 import { INode, IEdge, EdgeMode, hasDataMapping } from '../types';
 import { executeAst } from '../executor';
 import { Observable, of, EMPTY, merge, combineLatest, zip, asyncScheduler, concat } from 'rxjs';
-import { map, catchError, takeWhile, concatMap, filter, withLatestFrom, shareReplay, subscribeOn, finalize } from 'rxjs/operators';
+import { map, catchError, takeWhile, concatMap, filter, withLatestFrom, shareReplay, subscribeOn, finalize, scan, takeLast, toArray, reduce } from 'rxjs/operators';
 import { Injectable, root } from '@sker/core';
-import { findNodeType, INPUT, InputMetadata } from '../decorator';
+import { findNodeType, INPUT, InputMetadata, hasMultiMode, hasBufferMode } from '../decorator';
 
 /**
  * 响应式工作流调度器 - 基于 RxJS Observable 流式调度
@@ -487,9 +487,10 @@ export class ReactiveScheduler {
      * 将输入数据赋值到节点实例（元数据感知）
      *
      * 优雅设计：
-     * - 检查 @Input({ isMulti: true })：累加到数组
+     * - IS_BUFFER：value 已在流层面累积成数组，直接赋值
+     * - IS_MULTI（无 IS_BUFFER）：累加到数组
+     * - IS_MULTI | IS_BUFFER：value 已是所有边所有发射的数组，直接赋值
      * - 普通输入：直接赋值
-     * - 尊重装饰器元数据，避免数据覆盖
      */
     private assignInputsToNodeInstance(
         nodeInstance: INode,
@@ -499,10 +500,14 @@ export class ReactiveScheduler {
 
         Object.entries(inputs).forEach(([key, value]) => {
             const metadata = metadataMap.get(key);
-            const isMulti = metadata?.isMulti ?? false;
+            const isBuffer = hasBufferMode(metadata?.mode);
+            const isMulti = hasMultiMode(metadata?.mode) || metadata?.isMulti;
 
-            if (isMulti) {
-                // 多值模式：累加到数组
+            if (isBuffer) {
+                // IS_BUFFER 模式：value 已在流层面累积成数组，直接赋值
+                (nodeInstance as any)[key] = value;
+            } else if (isMulti) {
+                // IS_MULTI 模式（无 IS_BUFFER）：累加到数组
                 if (!Array.isArray((nodeInstance as any)[key])) {
                     (nodeInstance as any)[key] = [];
                 }
@@ -644,6 +649,8 @@ export class ReactiveScheduler {
 
     /**
      * 为单个源创建流（处理该源的所有边）
+     *
+     * 支持 IS_BUFFER 模式：收集单边的所有发射，直到上游完成
      */
     private createSingleSourceStream(
         sourceId: string,
@@ -656,7 +663,15 @@ export class ReactiveScheduler {
             throw new Error(`上游节点流未找到: ${sourceId}`);
         }
 
-        return sourceStream.pipe(
+        // 检查是否有任何边的目标属性使用 IS_BUFFER 模式
+        const inputMetadataMap = this.getInputMetadataMap(targetNode);
+        const hasAnyBufferMode = edges.some(edge => {
+            if (!edge.toProperty) return false;
+            const metadata = inputMetadataMap.get(edge.toProperty);
+            return hasBufferMode(metadata?.mode);
+        });
+
+        const dataStream = sourceStream.pipe(
             // 持续接收直到上游完成
             takeWhile(ast => ast.state !== 'success' && ast.state !== 'fail'),
             // 只响应 emitting 状态
@@ -688,6 +703,33 @@ export class ReactiveScheduler {
             // 过滤掉空结果 - 但允许空字符串等有效值
             filter(result => result !== null && result !== undefined)
         );
+
+        // IS_BUFFER 模式：收集所有发射，只在流完成时发射一次
+        if (hasAnyBufferMode) {
+            return dataStream.pipe(
+                // 使用 reduce 累积所有发射
+                reduce((acc: any, curr: any) => {
+                    // 检查每个属性是否需要 buffer
+                    Object.entries(curr).forEach(([key, value]) => {
+                        const metadata = inputMetadataMap.get(key);
+                        if (hasBufferMode(metadata?.mode)) {
+                            // IS_BUFFER：累积到数组
+                            if (!acc[key]) {
+                                acc[key] = [];
+                            }
+                            acc[key].push(value);
+                        } else {
+                            // 非 IS_BUFFER：保留最新值
+                            acc[key] = value;
+                        }
+                    });
+                    return acc;
+                }, {})
+            );
+        }
+
+        // 非 IS_BUFFER 模式：保持原有行为（每次发射立即传递）
+        return dataStream;
     }
 
     /**
@@ -917,11 +959,11 @@ export class ReactiveScheduler {
      * 合并边值数据
      *
      * 优雅设计:
-     * - 有 toProperty：检查 isMulti 元数据，聚合或覆盖
+     * - 有 toProperty：检查聚合模式，聚合或覆盖
      * - 无 toProperty 且值是对象：直接合并（展开）
      * - 其他情况：使用 fromProperty 或默认 key
      *
-     * 修复：支持 @Input({ isMulti: true }) 多值聚合
+     * 支持位标志聚合模式：IS_MULTI
      */
     private mergeEdgeValues(edgeValues: { edge: IEdge; value: any }[], targetNode: INode): any {
         const merged: any = {};
@@ -931,12 +973,12 @@ export class ReactiveScheduler {
 
         edgeValues.forEach(({ edge, value }) => {
             if (edge.toProperty) {
-                // 检查是否为多值输入
+                // 检查聚合模式
                 const metadata = inputMetadataMap.get(edge.toProperty);
-                const isMulti = metadata?.isMulti ?? false;
+                const shouldAggregate = hasMultiMode(metadata?.mode) || metadata?.isMulti;
 
-                if (isMulti) {
-                    // 多值模式：累加到数组
+                if (shouldAggregate) {
+                    // IS_MULTI 模式：累加多条边的数据到数组
                     if (!Array.isArray(merged[edge.toProperty])) {
                         merged[edge.toProperty] = [];
                     }

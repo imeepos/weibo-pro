@@ -1,5 +1,5 @@
 import { Injectable, root } from '@sker/core';
-import { INPUT, OUTPUT, STATE, resolveConstructor, getInputMetadata, InputMetadata } from '../decorator';
+import { INPUT, OUTPUT, STATE, resolveConstructor, getInputMetadata, InputMetadata, hasMultiMode } from '../decorator';
 import { fromJson } from '../generate';
 import { IEdge, INode, hasCondition } from '../types';
 import { Observable, OperatorFunction, pipe, map, filter, combineLatest } from 'rxjs';
@@ -134,14 +134,16 @@ export class DataFlowManager {
         inputMetadataMap: Map<string | symbol, InputMetadata>
     ): void {
         const metadata = inputMetadataMap.get(propertyKey);
-        const isMulti = metadata?.isMulti ?? false;
+        const shouldAggregate = hasMultiMode(metadata?.mode) || metadata?.isMulti;
 
-        if (isMulti) {
+        if (shouldAggregate) {
+            // IS_MULTI 模式：累加到数组
             if (!Array.isArray((targetNode as any)[propertyKey])) {
                 (targetNode as any)[propertyKey] = [];
             }
             (targetNode as any)[propertyKey].push(value);
         } else {
+            // 单值模式：直接赋值
             (targetNode as any)[propertyKey] = value;
         }
     }

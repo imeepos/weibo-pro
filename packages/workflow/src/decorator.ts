@@ -122,24 +122,48 @@ export function Preview(ast: Type<any>): any {
     };
 }
 
+/**
+ * 输入聚合模式位标志
+ *
+ * 优雅设计：使用位标志组合不同的聚合语义
+ */
+export const IS_MULTI = 0x000001;   // 聚合多条边 → [edge1, edge2]
+export const IS_BUFFER = 0x000010;  // 聚合单边多次发射 → [emit1, emit2, emitN]
+
+/**
+ * 位标志检查辅助函数
+ */
+export function hasMultiMode(mode?: number): boolean {
+    return ((mode ?? 0) & IS_MULTI) === IS_MULTI;
+}
+
+export function hasBufferMode(mode?: number): boolean {
+    return ((mode ?? 0) & IS_BUFFER) === IS_BUFFER;
+}
+
 export interface InputOptions {
     /**
-     * Marks this input property to accept multiple edge inputs and aggregate them into an array.
-     * When isMulti is true, multiple incoming edges will accumulate values into an array instead of overwriting.
-     * @default false
+     * 输入聚合模式（位标志）
+     *
+     * 使用位标志组合不同的聚合语义：
+     * - IS_MULTI (0x000001)：聚合多条边
+     * - IS_BUFFER (0x000010)：聚合单边多次发射
+     * - IS_MULTI | IS_BUFFER：聚合所有边所有发射
+     *
+     * @example
+     * @Input({ mode: IS_MULTI })           // 多条边聚合
+     * @Input({ mode: IS_BUFFER })          // 单边发射聚合
+     * @Input({ mode: IS_MULTI | IS_BUFFER }) // 全部聚合
+     */
+    mode?: number;
+
+    /**
+     * @deprecated 使用 mode: IS_MULTI 替代
+     * 向后兼容：isMulti: true 等价于 mode: IS_MULTI
      */
     isMulti?: boolean;
-    /**
-     * Marks this input as required. If true, the node will not execute unless this input is connected.
-     * If false or undefined, the input is optional and will use defaultValue if not connected.
-     * @default undefined (auto-detect from property initializer)
-     */
+
     required?: boolean;
-    /**
-     * Default value to use when this input is not connected.
-     * If not specified, will attempt to read the property's initial value from the class.
-     * @default undefined
-     */
     defaultValue?: any;
     title?: string;
     type?: string;
@@ -148,6 +172,8 @@ export interface InputOptions {
 export interface InputMetadata {
     target: Type<any>;
     propertyKey: string | symbol;
+    mode?: number;
+    /** @deprecated 使用 mode 替代 */
     isMulti?: boolean;
     required?: boolean;
     defaultValue?: any;
@@ -159,13 +185,21 @@ export const INPUT = new InjectionToken<InputMetadata[]>(`INPUT`)
 export function Input(options?: InputOptions): PropertyDecorator {
     return (target, propertyKey) => {
         const ctor = resolveConstructor(target);
+
+        // 向后兼容：isMulti: true → mode: IS_MULTI
+        let mode = options?.mode;
+        if (mode === undefined && options?.isMulti === true) {
+            mode = IS_MULTI;
+        }
+
         root.set([{
             provide: INPUT,
             multi: true,
             useValue: {
                 target: ctor,
                 propertyKey,
-                isMulti: options?.isMulti ?? false,
+                mode,
+                isMulti: options?.isMulti ?? false,  // 保留旧字段以向后兼容
                 required: options?.required,
                 defaultValue: options?.defaultValue,
                 title: options?.title,
@@ -182,7 +216,7 @@ export function getInputMetadata(target: Type<any> | object, propertyKey?: strin
 
     if (propertyKey !== undefined) {
         const metadata = targetInputs.find(it => it.propertyKey === propertyKey);
-        return metadata || { target: ctor, propertyKey, isMulti: false };
+        return metadata || { target: ctor, propertyKey, mode: 0, isMulti: false };
     }
 
     return targetInputs;

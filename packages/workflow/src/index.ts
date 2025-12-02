@@ -1,4 +1,4 @@
-export { Node, Input, Output, State, Handler, getInputMetadata, getStateMetadata, NODE, INPUT, OUTPUT, STATE, Render, HANDLER_METHOD, RENDER_METHOD, SETTING_METHOD, Preview, Setting, PREVIEW_METHOD, resolveConstructor, findNodeType } from './decorator';
+export { Node, Input, Output, State, Handler, getInputMetadata, getStateMetadata, NODE, INPUT, OUTPUT, STATE, Render, HANDLER_METHOD, RENDER_METHOD, SETTING_METHOD, Preview, Setting, PREVIEW_METHOD, resolveConstructor, findNodeType, IS_MULTI, IS_BUFFER, hasMultiMode, hasBufferMode } from './decorator';
 export type { InputOptions, InputMetadata, StateOptions, StateMetadata } from './decorator';
 export { Ast, WorkflowGraphAst, createWorkflowGraphAst } from './ast'
 export type { Visitor } from './ast'

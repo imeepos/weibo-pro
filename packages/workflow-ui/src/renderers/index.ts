@@ -18,3 +18,6 @@ export * from './WeiboUserDetectionAstRender';
 export * from './LlmTextAgentAstRender';
 export * from './TextAreaAstRender';
 export * from './DateAstRender';
+
+// IS_BUFFER 模式示例
+export * from './CollectorAstRender';
