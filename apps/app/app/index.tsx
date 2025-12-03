@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import { View, Image, StyleSheet, Dimensions } from 'react-native';
+import { StyleSheet, Dimensions, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import "./global.css"
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from '../components/ui/carousel';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, CancelAlertDialogAction, DeleteAlertDialogAction } from '../components/ui/alert-dialog'
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, CancelAlertDialogAction, DeleteAlertDialogAction } from '../components/ui/alert-dialog'
 import { Button } from '../components/ui/button';
+import { Media } from '../components/ui/media';
+
 const { width: screenWidth } = Dimensions.get('window');
 
 export default function HomeScreen() {
@@ -39,10 +41,9 @@ export default function HomeScreen() {
           <CarouselContent>
             {Array.from({ length: 5 }).map((_, index) => (
               <CarouselItem key={index} className='w-full h-full'>
-                <Image
+                <Media
                   source={require('@/assets/images/image-17.png')}
-                  style={{ width: '100%', height: '100%' }}
-                  resizeMode='cover'
+                  className='w-full h-full'
                 />
               </CarouselItem>
             ))}
@@ -88,6 +89,10 @@ export default function HomeScreen() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <View className='!grap-6 !mt-2 !px-2 !flex-row'>
+        <Media source={require('@/assets/images/demo-1.png')} className='w-[177] h-[214] border-radius-16' />
+        <Media source={require('@/assets/images/demo-1.png')} className='w-[177] h-[214] border-radius-16' />
+      </View>
     </View>
   );
 }
