@@ -4,7 +4,8 @@ import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import "./global.css"
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from '../components/ui/carousel';
-
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../components/ui/alert-dialog'
+import { Button } from '../components/ui/button';
 const { width: screenWidth } = Dimensions.get('window');
 
 export default function HomeScreen() {
@@ -69,6 +70,24 @@ export default function HomeScreen() {
           ))}
         </View>
       </View>
+
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button variant="outline">打开对话框</Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认操作</AlertDialogTitle>
+            <AlertDialogDescription>
+              此操作无法撤销，请谨慎操作。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction>继续</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </View>
   );
 }
