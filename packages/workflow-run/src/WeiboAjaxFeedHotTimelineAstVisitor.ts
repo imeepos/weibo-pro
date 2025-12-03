@@ -2,7 +2,7 @@ import { Inject, Injectable } from "@sker/core";
 import { WeiboAccountService } from "./services/weibo-account.service";
 import { DelayService } from "./services/delay.service";
 import { RateLimiterService } from "./services/rate-limiter.service";
-import { Handler, INode } from '@sker/workflow'
+import { Handler, INode, setAstError } from '@sker/workflow'
 import { WeiboAjaxFeedHotTimelineAst } from '@sker/workflow-ast'
 import { useEntityManager, WeiboPostEntity, WeiboUserEntity } from "@sker/entities";
 import { WeiboApiClient } from "./services/weibo-api-client.base";
@@ -53,7 +53,7 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
             // 检查取消信号
             if (ctx.abortSignal?.aborted) {
                 ast.state = 'fail';
-                ast.setError(new Error('工作流已取消'));
+                setAstError(ast, new Error('工作流已取消'));
                 obs.next({ ...ast });
                 return;
             }
@@ -67,7 +67,7 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
                 // 检查取消信号（循环开始）
                 if (ctx.abortSignal?.aborted) {
                     ast.state = 'fail';
-                    ast.setError(new Error('工作流已取消'));
+                    setAstError(ast, new Error('工作流已取消'));
                     obs.next({ ...ast });
                     return;
                 }
@@ -83,7 +83,7 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
                 // 检查取消信号（网络请求后）
                 if (ctx.abortSignal?.aborted) {
                     ast.state = 'fail';
-                    ast.setError(new Error('工作流已取消'));
+                    setAstError(ast, new Error('工作流已取消'));
                     obs.next({ ...ast });
                     return;
                 }
@@ -132,7 +132,7 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
         } catch (error) {
             console.error(`[WeiboAjaxFeedHotTimelineAstVisitor] 抓取失败`, error);
             ast.state = 'fail';
-            ast.setError(error);
+            setAstError(ast, error);
             obs.next({ ...ast });
             obs.complete();
         }

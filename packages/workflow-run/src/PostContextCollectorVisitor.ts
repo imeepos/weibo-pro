@@ -1,5 +1,5 @@
 import { Injectable } from '@sker/core';
-import { Handler, INode } from '@sker/workflow';
+import { Handler, INode, setAstError } from '@sker/workflow';
 import { PostContextCollectorAst } from '@sker/workflow-ast';
 import {
   useEntityManager,
@@ -28,7 +28,7 @@ export class PostContextCollectorVisitor {
           // 检查取消信号
           if (wrappedCtx.abortSignal?.aborted) {
             ast.state = 'fail';
-            ast.setError(new Error('工作流已取消'));
+            setAstError(ast, new Error('工作流已取消'));
             obs.next({ ...ast });
             return;
           }
@@ -50,7 +50,7 @@ export class PostContextCollectorVisitor {
           // 检查取消信号（数据库操作前）
           if (wrappedCtx.abortSignal?.aborted) {
             ast.state = 'fail';
-            ast.setError(new Error('工作流已取消'));
+            setAstError(ast, new Error('工作流已取消'));
             obs.next({ ...ast });
             return;
           }
@@ -93,7 +93,7 @@ export class PostContextCollectorVisitor {
           obs.complete()
         } catch (error) {
           ast.state = 'fail';
-          ast.setError(error, process.env.NODE_ENV === 'development');
+          setAstError(ast, error, process.env.NODE_ENV === 'development');
           console.error(`[PostContextCollectorVisitor] postId: ${ast.postId}`, error);
           obs.next({ ...ast });
           obs.complete()

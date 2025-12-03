@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from 'react'
-import { WorkflowGraphAst, generateId } from '@sker/workflow'
+import { WorkflowGraphAst, generateId, addNode as astAddNode, addEdge as astAddEdge } from '@sker/workflow'
 import type { INode, IEdge } from '@sker/workflow'
 import { useNodesState, useEdgesState, addEdge, type Connection } from '@xyflow/react'
 import type { WorkflowNode, WorkflowEdge } from '../types'

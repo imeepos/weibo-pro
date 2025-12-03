@@ -1,6 +1,6 @@
 import { Inject, Injectable } from "@sker/core";
 import { WeiboAccountService } from "./services/weibo-account.service";
-import { Handler, INode } from "@sker/workflow";
+import { Handler, INode, setAstError } from "@sker/workflow";
 import { WeiboAjaxFriendshipsAst } from "@sker/workflow-ast";
 import { WeiboApiClient } from "./services/weibo-api-client.base";
 import { Observable } from "rxjs";
@@ -47,7 +47,7 @@ export class WeiboAjaxFriendshipsAstVisitor extends WeiboApiClient {
                 } catch (error) {
                     console.error(`[WeiboAjaxFriendshipsAstVisitor] uid: ${ast.uid}`, error);
                     ast.state = 'fail';
-                    ast.setError(error);
+                    setAstError(ast, error);
                     obs.next({ ...ast });
                     obs.complete()
                 }

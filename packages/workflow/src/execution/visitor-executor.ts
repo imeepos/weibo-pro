@@ -1,5 +1,5 @@
 import { Injectable, root } from '@sker/core';
-import { Visitor, WorkflowGraphAst } from '../ast';
+import { Visitor, WorkflowGraphAst, setAstError } from '../ast';
 import { findNodeType, HANDLER_METHOD } from '../decorator';
 import { NoRetryError } from '../errors';
 import { Observable, of, from } from 'rxjs';
@@ -80,17 +80,17 @@ export class VisitorExecutor implements Visitor {
     private handleError(error: unknown, ast: INode): Observable<INode> {
         if (error instanceof Event) {
             ast.state = 'fail';
-            ast.setError(error);
+            setAstError(ast, error);
             return of(ast)
         }
         if (error instanceof NoRetryError) {
             ast.state = 'fail';
-            ast.setError(error);
+            setAstError(ast, error);
             return of(ast);
         }
 
         ast.state = 'fail';
-        ast.setError(error);
+        setAstError(ast, error);
         return of(ast);
     }
 }

@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@sker/core';
-import { Handler, INode } from '@sker/workflow';
+import { Handler, INode, setAstError } from '@sker/workflow';
 import { WeiboAccountPickAst } from '@sker/workflow-ast';
 import {
     useEntityManager,
@@ -74,7 +74,7 @@ export class WeiboAccountPickAstVisitor {
                     obs.complete();
                 } catch (error) {
                     ast.state = 'fail';
-                    ast.setError(error, process.env.NODE_ENV === 'development');
+                    setAstError(ast, error, process.env.NODE_ENV === 'development');
                     obs.next({ ...ast });
                     obs.complete();
                 }

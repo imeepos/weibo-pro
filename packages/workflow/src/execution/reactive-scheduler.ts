@@ -1,9 +1,9 @@
-import { WorkflowGraphAst } from '../ast';
+import { setAstError, WorkflowGraphAst } from '../ast';
 import { INode, IEdge, EdgeMode, hasDataMapping } from '../types';
 import { executeAst } from '../executor';
 import { Observable, of, EMPTY, merge, combineLatest, zip, asyncScheduler, concat } from 'rxjs';
 import { map, catchError, takeWhile, concatMap, filter, withLatestFrom, shareReplay, subscribeOn, finalize, scan, takeLast, toArray, reduce, expand, tap, take } from 'rxjs/operators';
-import { Injectable, root  } from '@sker/core';
+import { Injectable, root } from '@sker/core';
 import { findNodeType, INPUT, InputMetadata, hasMultiMode, hasBufferMode, OUTPUT, type OutputMetadata, resolveConstructor } from '../decorator';
 
 /**
@@ -1306,7 +1306,7 @@ export class ReactiveScheduler {
             catchError(error => {
                 console.error('[subscribeAndMerge] 执行错误:', error);
                 ast.state = 'fail';
-                ast.setError(error);
+                setAstError(ast, error);
                 return of(ast);
             })
         );

@@ -1,5 +1,5 @@
 import { Injectable } from '@sker/core';
-import { Handler, INode } from '@sker/workflow';
+import { Handler, INode, setAstError } from '@sker/workflow';
 import { EventAutoCreatorAst } from '@sker/workflow-ast';
 import { Observable } from 'rxjs';
 import {
@@ -216,7 +216,7 @@ export class EventAutoCreatorVisitor {
           // 检查取消信号
           if (wrappedCtx.abortSignal?.aborted) {
             ast.state = 'fail';
-            ast.setError(new Error('工作流已取消'));
+            setAstError(ast, new Error('工作流已取消'));
             obs.next(ast);
             return;
           }
@@ -384,7 +384,7 @@ export class EventAutoCreatorVisitor {
           obs.complete()
         } catch (error) {
           ast.state = 'fail';
-          ast.setError(error, process.env.NODE_ENV === 'development');
+          setAstError(ast, error, process.env.NODE_ENV === 'development');
           console.error(`[EventAutoCreatorVisitor] postId: ${ast.post.id}`, error);
           obs.next(ast);
           obs.complete()

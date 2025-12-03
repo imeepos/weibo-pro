@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@sker/core";
 import { useEntityManager, WeiboUserEntity, WeiboLikeEntity } from "@sker/entities";
 import { WeiboAccountService } from "./services/weibo-account.service";
-import { Handler, INode } from "@sker/workflow";
+import { Handler, INode, setAstError } from "@sker/workflow";
 import { WeiboAjaxStatusesLikeShowAst } from "@sker/workflow-ast";
 import { WeiboApiClient } from "./services/weibo-api-client.base";
 import { Observable } from "rxjs";
@@ -76,7 +76,7 @@ export class WeiboAjaxStatusesLikeShowAstVisitor extends WeiboApiClient {
                 } catch (error) {
                     console.error(`[WeiboAjaxStatusesLikeShowAstVisitor] mid: ${ast.mid}`, error);
                     ast.state = 'fail';
-                    ast.setError(error);
+                    setAstError(ast, error);
                     obs.next({ ...ast });
                     obs.complete()
                 }

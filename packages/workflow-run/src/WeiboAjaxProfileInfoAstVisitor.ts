@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@sker/core";
 import { useEntityManager, WeiboUserEntity } from "@sker/entities";
 import { WeiboAccountService } from "./services/weibo-account.service";
-import { Handler, INode } from "@sker/workflow";
+import { Handler, INode, setAstError } from "@sker/workflow";
 import { WeiboAjaxProfileInfoAst } from "@sker/workflow-ast";
 import { WeiboApiClient } from "./services/weibo-api-client.base";
 import { Observable } from "rxjs";
@@ -47,7 +47,7 @@ export class WeiboAjaxProfileInfoAstVisitor extends WeiboApiClient {
                     // 检查取消信号
                     if (wrappedCtx.abortSignal?.aborted) {
                         ast.state = 'fail';
-                        ast.setError(new Error('工作流已取消'));
+                        setAstError(ast, new Error('工作流已取消'));
                         obs.next({ ...ast });
                         return;
                     }
@@ -65,7 +65,7 @@ export class WeiboAjaxProfileInfoAstVisitor extends WeiboApiClient {
                     // 检查取消信号（网络请求后）
                     if (wrappedCtx.abortSignal?.aborted) {
                         ast.state = 'fail';
-                        ast.setError(new Error('工作流已取消'));
+                        setAstError(ast, new Error('工作流已取消'));
                         obs.next({ ...ast });
                         return;
                     }
@@ -88,7 +88,7 @@ export class WeiboAjaxProfileInfoAstVisitor extends WeiboApiClient {
                 } catch (error) {
                     console.error(`[WeiboAjaxProfileInfoAstVisitor] uid: ${ast.uid}`, error);
                     ast.state = 'fail';
-                    ast.setError(error);
+                    setAstError(ast, error);
                     obs.next({ ...ast });
                     obs.complete()
                 }

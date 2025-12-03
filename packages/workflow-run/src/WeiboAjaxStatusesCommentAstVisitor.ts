@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@sker/core";
 import { useEntityManager, WeiboCommentEntity, WeiboUserEntity } from "@sker/entities";
 import { WeiboAccountService } from "./services/weibo-account.service";
-import { Handler, INode } from "@sker/workflow";
+import { Handler, INode, setAstError } from "@sker/workflow";
 import { WeiboAjaxStatusesCommentAst } from "@sker/workflow-ast";
 import { delay } from "./services/utils";
 import { WeiboApiClient } from "./services/weibo-api-client.base";
@@ -46,7 +46,7 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
                     // 检查取消信号
                     if (wrappedCtx.abortSignal?.aborted) {
                         ast.state = 'fail';
-                        ast.setError(new Error('工作流已取消'));
+                        setAstError(ast, new Error('工作流已取消'));
                         obs.next({ ...ast });
                         return;
                     }
@@ -59,7 +59,7 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
                         // 检查取消信号（循环开始）
                         if (wrappedCtx.abortSignal?.aborted) {
                             ast.state = 'fail';
-                            ast.setError(new Error('工作流已取消'));
+                            setAstError(ast, new Error('工作流已取消'));
                             obs.next({ ...ast });
                             return;
                         }
@@ -69,7 +69,7 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
                         // 检查取消信号（网络请求后）
                         if (wrappedCtx.abortSignal?.aborted) {
                             ast.state = 'fail';
-                            ast.setError(new Error('工作流已取消'));
+                            setAstError(ast, new Error('工作流已取消'));
                             obs.next({ ...ast });
                             return;
                         }
@@ -83,7 +83,7 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
                                 // 检查取消信号（子评论循环中）
                                 if (wrappedCtx.abortSignal?.aborted) {
                                     ast.state = 'fail';
-                                    ast.setError(new Error('工作流已取消'));
+                                    setAstError(ast, new Error('工作流已取消'));
                                     obs.next({ ...ast });
                                     return;
                                 }
@@ -121,7 +121,7 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
                 } catch (error) {
                     console.error(`[WeiboAjaxStatusesCommentAstVisitor] mid: ${ast.mid}`, error);
                     ast.state = 'fail';
-                    ast.setError(error, process.env.NODE_ENV === 'development');
+                    setAstError(ast, error, process.env.NODE_ENV === 'development');
                     obs.next({ ...ast });
                     obs.complete()
                 }

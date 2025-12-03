@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@sker/core';
-import { Handler, INode } from '@sker/workflow';
+import { Handler, INode, setAstError } from '@sker/workflow';
 import { PostNLPAnalyzerAst } from '@sker/workflow-ast';
 import {
   EventCategoryEntity,
@@ -31,7 +31,7 @@ export class PostNLPAnalyzerVisitor {
           // 检查取消信号
           if (wrappedCtx.abortSignal?.aborted) {
             ast.state = 'fail';
-            ast.setError(new Error('工作流已取消'));
+            setAstError(ast, new Error('工作流已取消'));
             obs.next({ ...ast });
             obs.complete();
             return;
@@ -116,7 +116,7 @@ export class PostNLPAnalyzerVisitor {
           obs.complete()
         } catch (error) {
           ast.state = 'fail';
-          ast.setError(error, process.env.NODE_ENV === 'development');
+          setAstError(ast, error, process.env.NODE_ENV === 'development');
           console.error(`[PostNLPAnalyzerVisitor] postId: ${ast.post.id}`, error);
           obs.next({ ...ast });
           obs.complete()

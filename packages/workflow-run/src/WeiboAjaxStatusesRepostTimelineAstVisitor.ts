@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@sker/core";
 import { useEntityManager, WeiboRepostEntity, WeiboUserEntity } from "@sker/entities";
 import { WeiboAccountService } from "./services/weibo-account.service";
-import { Handler, INode } from "@sker/workflow";
+import { Handler, INode, setAstError } from "@sker/workflow";
 import { WeiboAjaxStatusesRepostTimelineAst } from "@sker/workflow-ast";
 import { WeiboApiClient } from "./services/weibo-api-client.base";
 import { Observable } from "rxjs";
@@ -43,7 +43,7 @@ export class WeiboAjaxStatusesRepostTimelineAstVisitor extends WeiboApiClient {
                     // 检查取消信号
                     if (wrappedCtx.abortSignal?.aborted) {
                         ast.state = 'fail';
-                        ast.setError(new Error('工作流已取消'));
+                        setAstError(ast, new Error('工作流已取消'));
                         obs.next({ ...ast });
                         return;
                     }
@@ -64,7 +64,7 @@ export class WeiboAjaxStatusesRepostTimelineAstVisitor extends WeiboApiClient {
                         // 检查取消信号（每次分页后）
                         if (wrappedCtx.abortSignal?.aborted) {
                             ast.state = 'fail';
-                            ast.setError(new Error('工作流已取消'));
+                            setAstError(ast, new Error('工作流已取消'));
                             obs.next({ ...ast });
                             return;
                         }
@@ -92,7 +92,7 @@ export class WeiboAjaxStatusesRepostTimelineAstVisitor extends WeiboApiClient {
                 } catch (error) {
                     console.error(`[WeiboAjaxStatusesRepostTimelineAstVisitor] mid: ${ast.mid}`, error);
                     ast.state = 'fail';
-                    ast.setError(error, process.env.NODE_ENV === 'development');
+                    setAstError(ast, error, process.env.NODE_ENV === 'development');
                     obs.next({ ...ast });
                     obs.complete()
                 }

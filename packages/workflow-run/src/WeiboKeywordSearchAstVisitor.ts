@@ -1,5 +1,5 @@
 import { Inject, Injectable, NoRetryError } from "@sker/core";
-import { Handler, INode } from "@sker/workflow";
+import { Handler, INode, setAstError } from "@sker/workflow";
 import { WeiboKeywordSearchAst } from "@sker/workflow-ast";
 import { WeiboHtmlParser } from "./services/WeiboHtmlParser";
 import { PlaywrightService } from "./services/PlaywrightService";
@@ -57,7 +57,7 @@ export class WeiboKeywordSearchAstVisitor {
             // 检查取消信号
             if (ctx.abortSignal?.aborted) {
                 ast.state = 'fail';
-                ast.setError(new Error('工作流已取消'));
+                setAstError(ast, new Error('工作流已取消'));
                 obs.next({ ...ast });
                 return;
             }
@@ -65,7 +65,7 @@ export class WeiboKeywordSearchAstVisitor {
             const selection = await this.account.selectBestAccount();
             if (!selection) {
                 ast.state = 'fail';
-                ast.setError(new Error('没有可用账号'));
+                setAstError(ast, new Error('没有可用账号'));
                 obs.next({ ...ast });
                 return;
             }
@@ -73,7 +73,7 @@ export class WeiboKeywordSearchAstVisitor {
             const { keyword, startDate, endDate = new Date(), page = 1 } = ast;
             if (!keyword || !startDate || !endDate) {
                 ast.state = 'fail';
-                ast.setError(new NoRetryError(`WeiboSearchUrlBuilderAst 缺少必要参数: keyword:${keyword}, start:${startDate}, end:${endDate}`));
+                setAstError(ast, new NoRetryError(`WeiboSearchUrlBuilderAst 缺少必要参数: keyword:${keyword}, start:${startDate}, end:${endDate}`));
                 obs.next({ ...ast });
                 return;
             }
@@ -91,7 +91,7 @@ export class WeiboKeywordSearchAstVisitor {
             // 检查取消信号
             if (ctx.abortSignal?.aborted) {
                 ast.state = 'fail';
-                ast.setError(new Error('工作流已取消'));
+                setAstError(ast, new Error('工作流已取消'));
                 obs.next({ ...ast });
                 return;
             }
@@ -105,7 +105,7 @@ export class WeiboKeywordSearchAstVisitor {
                 // 检查取消信号
                 if (ctx.abortSignal?.aborted) {
                     ast.state = 'fail';
-                    ast.setError(new Error('工作流已取消'));
+                    setAstError(ast, new Error('工作流已取消'));
                     obs.next({ ...ast });
                     return;
                 }
@@ -125,7 +125,7 @@ export class WeiboKeywordSearchAstVisitor {
                 // 检查取消信号
                 if (ctx.abortSignal?.aborted) {
                     ast.state = 'fail';
-                    ast.setError(new Error('工作流已取消'));
+                    setAstError(ast, new Error('工作流已取消'));
                     obs.next({ ...ast });
                     return;
                 }
@@ -151,7 +151,7 @@ export class WeiboKeywordSearchAstVisitor {
                             // 检查取消信号
                             if (ctx.abortSignal?.aborted) {
                                 ast.state = 'fail';
-                                ast.setError(new Error('工作流已取消'));
+                                setAstError(ast, new Error('工作流已取消'));
                                 obs.next({ ...ast });
                                 return;
                             }
@@ -206,9 +206,9 @@ export class WeiboKeywordSearchAstVisitor {
             console.error(`[WeiboKeywordSearchAstVisitor] 搜索失败: ${ast.keyword}`, error);
             ast.state = 'fail';
             if (error instanceof Error) {
-                ast.setError(error, process.env.NODE_ENV === 'development');
+                setAstError(ast, error, process.env.NODE_ENV === 'development');
             } else {
-                ast.setError(new Error(String(error)));
+                setAstError(ast, new Error(String(error)));
             }
             obs.next({ ...ast });
             obs.complete()

@@ -1,5 +1,5 @@
 import { Injectable, root } from "@sker/core";
-import { DataFlowManager, Handler, INode, WorkflowGraphAst } from "@sker/workflow";
+import { DataFlowManager, Handler, INode, setAstError, WorkflowGraphAst } from "@sker/workflow";
 import { LlmTextAgentAst } from "@sker/workflow-ast";
 import { Observable } from "rxjs";
 import { z } from 'zod'
@@ -39,7 +39,7 @@ export class LlmTextAgentAstVisitor {
                 // 检查取消信号
                 if (wrappedCtx.abortSignal?.aborted) {
                     ast.state = 'fail';
-                    ast.setError(new Error('工作流已取消'));
+                    setAstError(ast, new Error('工作流已取消'));
                     obs.next({ ...ast });
                     return;
                 }
@@ -56,7 +56,7 @@ export class LlmTextAgentAstVisitor {
                 // 检查取消信号（LLM 调用后）
                 if (wrappedCtx.abortSignal?.aborted) {
                     ast.state = 'fail';
-                    ast.setError(new Error('工作流已取消'));
+                    setAstError(ast, new Error('工作流已取消'));
                     obs.next({ ...ast });
                     return;
                 }
