@@ -44,6 +44,17 @@ export class ShareAst extends Ast {
     @Input({ title: '介绍' })
     profile: string = ``
 
+    /**
+     * 历史对话记录输入 - 用于循环场景
+     *
+     * 设计意图:
+     * - 在循环工作流中,接收上一轮迭代的完整对话历史
+     * - 避免因节点克隆导致的状态丢失
+     * - 新消息会追加到此历史记录中
+     */
+    @Input({ title: '历史记录输入', required: false })
+    previousHistory: ChatMessage[] = [];
+
     // === 输出：对话历史 ===
 
     @Output({ title: '对话历史' })

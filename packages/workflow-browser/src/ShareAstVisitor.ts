@@ -24,13 +24,30 @@ export class ShareAstVisitor {
             ast.count += 1;
             obs.next(ast);
 
-            // 组织成 ChatMessage 格式
-            ast.chatHistory = ast.chatHistory || [];
+            /**
+             * 循环场景下的历史记录累积
+             *
+             * 优雅设计:
+             * - 如果 previousHistory 有数据,从它开始(循环的第 N 轮)
+             * - 否则从空数组开始(循环的第 1 轮)
+             * - 追加当前轮次的新消息
+             * - 这样即使节点被 clone,历史也能通过输入边传递
+             */
+            ast.chatHistory = Array.isArray(ast.previousHistory) && ast.previousHistory.length > 0
+                ? [...ast.previousHistory] // 复制上一轮的历史
+                : []; // 第一轮,从空开始
+
+            // 追加本轮新消息
             ast.chatHistory.push({
-                role: ast.username,
+                role: ast.username || '未知角色',
                 content: ast.prompt,
                 timestamp: new Date().toISOString()
             })
+
+            // 格式化对话历史为 LLM 可读的字符串
+            ast.formattedHistory = ast.chatHistory
+                .map(msg => `【${msg.role}】${msg.content}`)
+                .join('\n\n---\n\n');
 
             ast.state = 'emitting';
             obs.next(ast);

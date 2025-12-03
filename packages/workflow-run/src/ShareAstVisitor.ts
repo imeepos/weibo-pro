@@ -24,8 +24,20 @@ export class ShareAstVisitor {
             ast.count += 1;
             obs.next(ast);
 
-            // 组织成 ChatMessage 格式
-            ast.chatHistory = ast.chatHistory || [];
+            /**
+             * 循环场景下的历史记录累积
+             *
+             * 优雅设计:
+             * - 如果 previousHistory 有数据,从它开始(循环的第 N 轮)
+             * - 否则从空数组开始(循环的第 1 轮)
+             * - 追加当前轮次的新消息
+             * - 这样即使节点被 clone,历史也能通过输入边传递
+             */
+            ast.chatHistory = Array.isArray(ast.previousHistory) && ast.previousHistory.length > 0
+                ? [...ast.previousHistory] // 复制上一轮的历史
+                : []; // 第一轮,从空开始
+
+            // 追加本轮新消息
             ast.chatHistory.push({
                 role: ast.username || '未知角色',
                 content: ast.prompt,
@@ -39,8 +51,10 @@ export class ShareAstVisitor {
 
             console.log('[ShareAstVisitor] 格式化历史记录:', {
                 totalMessages: ast.chatHistory.length,
+                previousHistoryLength: ast.previousHistory?.length || 0,
                 formattedLength: ast.formattedHistory.length,
-                latestRole: ast.username
+                latestRole: ast.username,
+                isAccumulating: (ast.previousHistory?.length || 0) > 0
             });
 
             ast.state = 'emitting';

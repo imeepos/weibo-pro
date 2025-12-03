@@ -167,11 +167,8 @@ export class WorkflowController implements sdk.WorkflowController {
 
     try {
       const ast = fromJson(body) as Ast;
-      ast.state = 'running';
-      // 发送开始事件
-      res.write(`data: ${JSON.stringify(ast)}\n\n`);
 
-      // 执行工作流并发送实时事件
+      // 执行工作流并发送实时事件 (executeAst 内部会自动设置 running 状态)
       const subscription$ = executeAst(ast, ast as WorkflowGraphAst)
       const subscription = subscription$.subscribe({
         next: (workflow: Ast) => {
