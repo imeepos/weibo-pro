@@ -1268,7 +1268,7 @@ export class ReactiveScheduler {
                     let newCount = existingNode.count;
                     let newEmitCount = existingNode.emitCount;
 
-                    const stateTransition = `${existingNode.state} → ${updatedNode.state}`;
+                    // const stateTransition = `${existingNode.state} → ${updatedNode.state}`;
                     // count: 只要从 pending 变化到其他状态，就算一次执行
                     const shouldIncrementCount = existingNode.state === 'pending' && updatedNode.state !== 'pending';
                     const shouldIncrementEmitCount = updatedNode.state === 'emitting';
@@ -1280,18 +1280,6 @@ export class ReactiveScheduler {
                     if (shouldIncrementEmitCount) {
                         newEmitCount += 1;
                     }
-
-                    console.log('[subscribeAndMerge] 节点状态更新:', {
-                        nodeId: updatedNode.id,
-                        type: updatedNode.type,
-                        stateTransition,
-                        shouldIncrementCount,
-                        shouldIncrementEmitCount,
-                        oldCount: existingNode.count,
-                        newCount,
-                        oldEmitCount: existingNode.emitCount,
-                        newEmitCount
-                    });
 
                     ast.nodes[nodeIndex] = {
                         ...updatedNode,
@@ -1318,7 +1306,6 @@ export class ReactiveScheduler {
                 // finalize 已经修改了 ast.state，现在发射它
                 const hasFailures = ast.nodes.some(n => n.state === 'fail');
                 ast.state = hasFailures ? 'fail' : 'success';
-                console.log('[subscribeAndMerge] 所有流完成，判定最终状态:', ast.state);
                 obs.next(ast);
                 obs.complete();
             })

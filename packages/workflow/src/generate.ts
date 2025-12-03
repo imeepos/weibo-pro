@@ -114,9 +114,27 @@ export function fromJson<T extends object = any>(json: any): T {
 
     const source = coerceRecord(rest);
 
+    // 获取装饰器标记的属性键
+    const inputs = root.get(INPUT);
+    const outputs = root.get(OUTPUT);
+    const states = root.get(STATE);
+    const decoratedKeys = new Set<string>();
+
+    [...inputs, ...outputs, ...states]
+        .filter(it => it.target === ctor)
+        .forEach(field => decoratedKeys.add(String(field.propertyKey)));
+
+    // 应用装饰器管理的属性
     applyInputData(instance, source);
     applyOutputData(instance, source);
     applyStateData(instance, source);
+
+    // 应用其他动态属性（不被装饰器管理的属性，如子工作流的动态输入）
+    Object.entries(source).forEach(([key, value]) => {
+        if (!decoratedKeys.has(key) && value !== undefined) {
+            Reflect.set(instance, key, value);
+        }
+    });
 
     if (type) Reflect.set(instance, 'type', type);
     if (id) Reflect.set(instance, 'id', id);

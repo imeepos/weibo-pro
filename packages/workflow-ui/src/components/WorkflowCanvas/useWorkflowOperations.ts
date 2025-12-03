@@ -343,6 +343,7 @@ export function useWorkflowOperations(
         .subscribe({
           next: (updatedWorkflow) => {
             // 每次 next 事件实时更新工作流状态
+            console.log(`updatedWorkflow`, updatedWorkflow.state)
             Object.assign(workflow.workflowAst!, updatedWorkflow)
             workflow.syncFromAst()
           },
@@ -401,6 +402,7 @@ export function useWorkflowOperations(
         cancelSubject$.current.next()
         abortController.abort()
         abortControllerRef.current = null
+        subscription.unsubscribe();
       }
     },
     [workflow, onShowToast, onSetRunning, getViewport]
