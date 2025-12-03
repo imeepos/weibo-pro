@@ -81,6 +81,9 @@ export function getExposedOutputs(workflow: WorkflowData): PortInfo[] {
   const exposedOutputs: PortInfo[] = []
 
   for (const node of workflow.nodes) {
+    // 检查该节点是否有入边
+    const isConnected = workflow.edges.some(edge => edge.from === node.id)
+    if (isConnected) continue
     // 跳过 WorkflowGraphAst 自身
     if (node.type === 'WorkflowGraphAst') continue
 

@@ -3,6 +3,9 @@
 // - running: 执行中但未产生输出
 // - emitting: 正在发射数据（触发下游）
 // - success: 执行完成（不触发下游）
+
+import { SerializedError } from "@sker/core";
+
 // - fail: 执行失败
 export type IAstStates = `pending` | `running` | `emitting` | `success` | `fail`;
 
@@ -18,7 +21,7 @@ export interface INode extends Record<string, any> {
     emitCount: number;
     id: string;
     type: string;
-    error: Error | undefined;
+    error: SerializedError | undefined;
     position: { x: number; y: number };
 }
 
