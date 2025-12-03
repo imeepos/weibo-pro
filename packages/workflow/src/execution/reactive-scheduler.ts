@@ -1095,7 +1095,13 @@ export class ReactiveScheduler {
 
             // 遍历组内所有属性
             Object.entries(group).forEach(([key, value]) => {
-                const metadata = inputMetadataMap.get(key);
+                let metadata = inputMetadataMap.get(key);
+
+                // 特殊处理：子工作流的动态输入属性（格式：nodeId.property）
+                if (!metadata && targetNode.type === 'WorkflowGraphAst' && key.includes('.')) {
+                    metadata = this.resolveSubworkflowInputMetadata(targetNode, key);
+                }
+
                 const isMulti = hasMultiMode(metadata?.mode) || metadata?.isMulti;
 
                 if (isMulti) {
@@ -1138,7 +1144,13 @@ export class ReactiveScheduler {
         edgeValues.forEach(({ edge, value }) => {
             if (edge.toProperty) {
                 // 检查聚合模式
-                const metadata = inputMetadataMap.get(edge.toProperty);
+                let metadata = inputMetadataMap.get(edge.toProperty);
+
+                // 特殊处理：子工作流的动态输入属性（格式：nodeId.property）
+                if (!metadata && targetNode.type === 'WorkflowGraphAst' && edge.toProperty.includes('.')) {
+                    metadata = this.resolveSubworkflowInputMetadata(targetNode, edge.toProperty);
+                }
+
                 const shouldAggregate = hasMultiMode(metadata?.mode) || metadata?.isMulti;
 
                 if (shouldAggregate) {
@@ -1162,6 +1174,40 @@ export class ReactiveScheduler {
         });
 
         return merged;
+    }
+
+    /**
+     * 解析子工作流内部节点的输入元数据
+     *
+     * 当边连接到子工作流的动态输入属性（nodeId.property）时，
+     * 需要查找内部节点的真实元数据，判断是否支持 IS_MULTI
+     */
+    private resolveSubworkflowInputMetadata(
+        workflow: INode,
+        dynamicProperty: string
+    ): InputMetadata | undefined {
+        // 解析 nodeId.property 格式（支持 nodeId 包含点）
+        const lastDotIndex = dynamicProperty.lastIndexOf('.');
+        if (lastDotIndex === -1) return undefined;
+
+        const nodeId = dynamicProperty.substring(0, lastDotIndex);
+        const property = dynamicProperty.substring(lastDotIndex + 1);
+
+        // 查找内部节点
+        const workflowAst = workflow as WorkflowGraphAst;
+        const internalNode = workflowAst.nodes?.find(n => n.id === nodeId);
+        if (!internalNode) return undefined;
+
+        // 获取内部节点的输入元数据
+        try {
+            const ctor = findNodeType(internalNode.type);
+            if (!ctor) return undefined;
+
+            const inputs = root.get(INPUT, []).filter(it => it.target === ctor);
+            return inputs.find(input => String(input.propertyKey) === property);
+        } catch {
+            return undefined;
+        }
     }
 
     /**
