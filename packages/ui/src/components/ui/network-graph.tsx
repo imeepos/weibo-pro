@@ -1,7 +1,11 @@
 import React, { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
-import { Network, Options } from 'vis-network';
 import { DataSet } from 'vis-data';
 import { cn } from '@sker/ui/lib/utils';
+
+// 使用 any 类型来绕过 vis-network 的类型导出问题
+// 运行时通过动态导入获取实际的 Network 类
+type Network = any;
+type Options = any;
 
 export interface NetworkNode {
   id: string | number;
@@ -63,32 +67,42 @@ export const NetworkGraph = forwardRef<NetworkGraphRef, NetworkGraphProps>(
         networkRef.current = null;
       }
 
-      try {
-        const nodes = new DataSet(data.nodes);
-        const edges = new DataSet(data.edges);
+      // 动态导入 vis-network 以获取运行时值
+      let mounted = true;
 
-        networkRef.current = new Network(
-          containerRef.current,
-          { nodes, edges },
-          options
-        );
+      import('vis-network').then((visModule) => {
+        if (!mounted || !containerRef.current) return;
 
-        if (onNodeClick) {
-          networkRef.current.on('click', (params: any) => {
-            if (params.nodes.length > 0) {
-              onNodeClick(params.nodes[0]);
-            }
-          });
+        try {
+          const nodes = new DataSet(data.nodes);
+          const edges = new DataSet(data.edges);
+
+          // vis-network 使用默认导出
+          const vis = (visModule as any).default || visModule;
+          networkRef.current = new vis.Network(
+            containerRef.current,
+            { nodes, edges },
+            options
+          );
+
+          if (onNodeClick) {
+            networkRef.current.on('click', (params: any) => {
+              if (params.nodes.length > 0) {
+                onNodeClick(params.nodes[0]);
+              }
+            });
+          }
+
+          if (onStabilized) {
+            networkRef.current.once('stabilizationIterationsDone', onStabilized);
+          }
+        } catch (error) {
+          console.error('Network initialization failed:', error);
         }
-
-        if (onStabilized) {
-          networkRef.current.once('stabilizationIterationsDone', onStabilized);
-        }
-      } catch (error) {
-        console.error('Network initialization failed:', error);
-      }
+      });
 
       return () => {
+        mounted = false;
         if (networkRef.current) {
           networkRef.current.destroy();
           networkRef.current = null;

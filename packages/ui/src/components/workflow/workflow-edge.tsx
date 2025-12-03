@@ -37,9 +37,9 @@ export function WorkflowEdge({
   ...props
 }: WorkflowEdgeProps & EdgeProps) {
   const { label, mode } = useMemo(() => {
-    const edge = data.edge as IEdge
+    const edge = data?.edge as IEdge
     const label = getLabel(edge?.mode)
-    return { label, edge, mode: edge.mode }
+    return { label, edge, mode: edge?.mode }
   }, [data])
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX: props.sourceX,

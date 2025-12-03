@@ -47,7 +47,7 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
     if (initialAst) return initialAst
 
     const ast = new WorkflowGraphAst()
-    ast.setName('New Workflow')
+    ast.name = 'New Workflow'
     ast.state = 'pending'
     return ast
   })
@@ -125,7 +125,7 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
       ast.id = generateId()
       ast.position = position
 
-      workflowAst.addNode(ast)
+      workflowAst.nodes = astAddNode(workflowAst.nodes, ast)
 
       const metadata = getNodeMetadata(nodeClass)
       const node: WorkflowNode = {
@@ -211,7 +211,7 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
         toProperty: connection.targetHandle || undefined
       }
 
-      workflowAst.addEdge(edge)
+      workflowAst.edges = astAddEdge(workflowAst.nodes, workflowAst.edges, edge)
 
       const flowEdge: WorkflowEdge = {
         id: edge.id,
@@ -354,7 +354,7 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
       )
 
       // 7. 将分组添加到父工作流
-      workflowAst.addNode(groupAst)
+      workflowAst.nodes = astAddNode(workflowAst.nodes, groupAst)
 
       // 8. 处理跨边界边（一端在分组内，一端在外）
       // TODO: 未来实现边重定向逻辑

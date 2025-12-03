@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { WorkflowGraphAst } from '@sker/workflow'
+import { WorkflowGraphAst, addNode as astAddNode, addEdge as astAddEdge } from '@sker/workflow'
 import { useClipboard } from '../../../hooks/useClipboard'
 import type { WorkflowNode, WorkflowEdge } from '../../../types'
 import type { UseWorkflowReturn } from '../../../hooks/useWorkflow'
@@ -102,7 +102,7 @@ export const useNodeOperations = (workflow: UseWorkflowReturn, options: NodeOper
           id: node.id,
           astPositionAfter: node.data.position
         })
-        workflow.workflowAst.addNode(node.data)
+        workflow.workflowAst.nodes = astAddNode(workflow.workflowAst.nodes, node.data)
       })
 
       // 将边添加到 AST
@@ -113,7 +113,7 @@ export const useNodeOperations = (workflow: UseWorkflowReturn, options: NodeOper
             from: edge.data.edge.from,
             to: edge.data.edge.to
           })
-          workflow.workflowAst.addEdge(edge.data.edge)
+          workflow.workflowAst.edges = astAddEdge(workflow.workflowAst.nodes, workflow.workflowAst.edges, edge.data.edge)
         }
       })
 

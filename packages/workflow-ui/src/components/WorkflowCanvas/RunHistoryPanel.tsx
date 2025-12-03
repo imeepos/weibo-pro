@@ -37,10 +37,10 @@ import { WorkflowController } from '@sker/sdk'
  */
 export interface RunHistoryPanelProps {
   visible: boolean
-  workflowId: number
+  workflowId: string
   onClose: () => void
   onViewDetail?: (run: WorkflowRunEntity) => void
-  scheduleId?: number
+  scheduleId?: string
 }
 
 export function RunHistoryPanel({
@@ -85,7 +85,7 @@ export function RunHistoryPanel({
     }
   }
 
-  const handleViewDetail = async (runId: number) => {
+  const handleViewDetail = async (runId: string) => {
     try {
       const controller = root.get<WorkflowController>(WorkflowController)
       const run = await controller.getRun({ runId })
@@ -97,7 +97,7 @@ export function RunHistoryPanel({
     }
   }
 
-  const handleCancelRun = async (runId: number) => {
+  const handleCancelRun = async (runId: string) => {
     try {
       const controller = root.get<WorkflowController>(WorkflowController)
       await controller.cancelRun({ runId })
