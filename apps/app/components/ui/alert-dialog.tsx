@@ -20,6 +20,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
+import { BlurView } from "expo-blur";
 
 import { cn } from "../../lib/utils";
 import { Button, buttonVariants } from "./button";
@@ -121,9 +122,21 @@ function AlertDialogOverlay({ className, style }: AlertDialogOverlayProps) {
     <Animated.View
       entering={FadeIn.duration(200)}
       exiting={FadeOut.duration(150)}
-      className={cn("absolute inset-0 bg-black/50", className)}
+      className={cn("absolute inset-0", className)}
       style={[styles.overlay, style]}
-    />
+    >
+      <BlurView
+        intensity={20}
+        tint="default"
+        style={StyleSheet.absoluteFill}
+      />
+      <View
+        style={[
+          StyleSheet.absoluteFill,
+          { backgroundColor: "#00000080" },
+        ]}
+      />
+    </Animated.View>
   );
 }
 
@@ -215,7 +228,7 @@ function AlertDialogFooter({
 }: AlertDialogFooterProps) {
   return (
     <View
-      className={cn("flex-row gap-2 justify-end", className)}
+      className={cn("flex flex-row gap-2 justify-end", className)}
       style={style}
     >
       {children}
@@ -328,6 +341,44 @@ function AlertDialogCancel({
   );
 }
 
+interface DeleteAlertDialogActionProps {
+  onPress?: () => void;
+  style?: ViewStyle;
+  className?: string;
+}
+
+function DeleteAlertDialogAction({
+  onPress,
+  style,
+  className,
+}: DeleteAlertDialogActionProps) {
+  return (
+    <AlertDialogAction
+      onPress={onPress}
+      className={className}
+      style={{ ...styles.deleteActionButton, ...style }}
+    >
+      <Text style={styles.deleteActionText}>删除</Text>
+    </AlertDialogAction>
+  );
+}
+
+function CancelAlertDialogAction({
+  onPress,
+  style,
+  className,
+}: DeleteAlertDialogActionProps) {
+  return (
+    <AlertDialogAction
+      onPress={onPress}
+      className={className}
+      style={{ ...styles.cancelActionButton, ...style }}
+    >
+      <Text style={styles.cancelActionText}>删除</Text>
+    </AlertDialogAction>
+  );
+}
+
 const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
@@ -343,6 +394,23 @@ const styles = StyleSheet.create({
   content: {
     zIndex: 2,
   },
+  deleteActionButton: {
+    backgroundColor: "#FA3F2C",
+    alignItems: 'center'
+  },
+  deleteActionText: {
+    color: "确认删除",
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  cancelActionButton: {
+    backgroundColor: '#262A31',
+    alignItems: 'center'
+  },
+  cancelActionText: {
+    color: "#CCCCCC",
+    fontSize: 14,
+  }
 });
 
 export {
@@ -357,4 +425,6 @@ export {
   AlertDialogDescription,
   AlertDialogAction,
   AlertDialogCancel,
+  DeleteAlertDialogAction,
+  CancelAlertDialogAction
 };

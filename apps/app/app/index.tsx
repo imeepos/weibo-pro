@@ -4,7 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import "./global.css"
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from '../components/ui/carousel';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../components/ui/alert-dialog'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, CancelAlertDialogAction, DeleteAlertDialogAction } from '../components/ui/alert-dialog'
 import { Button } from '../components/ui/button';
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -73,18 +73,18 @@ export default function HomeScreen() {
 
       <AlertDialog>
         <AlertDialogTrigger asChild>
-          <Button variant="outline">打开对话框</Button>
+          <Button variant="gradient">打开对话框</Button>
         </AlertDialogTrigger>
-        <AlertDialogContent>
+        <AlertDialogContent className='w-[250]' style={{ backgroundColor: `#16181B` }}>
           <AlertDialogHeader>
             <AlertDialogTitle>确认操作</AlertDialogTitle>
             <AlertDialogDescription>
               此操作无法撤销，请谨慎操作。
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction>继续</AlertDialogAction>
+          <AlertDialogFooter style={{ display: 'flex', flexDirection: 'row' }} className='gap-2'>
+            <CancelAlertDialogAction />
+            <DeleteAlertDialogAction />
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

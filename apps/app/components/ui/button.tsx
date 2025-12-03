@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Pressable, Text, type PressableProps, type ViewStyle } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "../../lib/utils";
@@ -15,6 +16,7 @@ const buttonVariants = cva(
         secondary: "bg-secondary",
         ghost: "active:bg-accent",
         link: "",
+        gradient: "",
       },
       size: {
         default: "h-10 px-4 py-2",
@@ -39,6 +41,7 @@ const buttonTextVariants = cva("text-sm font-medium text-center", {
       secondary: "text-secondary-foreground",
       ghost: "text-foreground",
       link: "text-primary",
+      gradient: "text-white",
     },
   },
   defaultVariants: {
@@ -57,24 +60,45 @@ const Button = React.forwardRef<
   React.ElementRef<typeof Pressable>,
   ButtonProps
 >(({ className, variant, size, children, disabled, style, ...props }, ref) => {
+  const isGradient = variant === "gradient";
+
+  const content = typeof children === "string" ? (
+    <Text className={cn(buttonTextVariants({ variant }))}>{children}</Text>
+  ) : (
+    children
+  );
+
   return (
     <Pressable
       ref={ref}
       className={cn(
         buttonVariants({ variant, size }),
         disabled && "opacity-50",
+        isGradient && "overflow-hidden",
         className
       )}
       disabled={disabled}
       style={style}
       {...props}
     >
-      {typeof children === "string" ? (
-        <Text className={cn(buttonTextVariants({ variant }))}>
-          {children}
-        </Text>
+      {isGradient ? (
+        <LinearGradient
+          colors={["#9966FF", "#FF6699", "#FF9966"]}
+          locations={[0.0015, 0.4985, 0.9956]}
+          start={{ x: 1, y: 0 }}
+          end={{ x: 0, y: 0 }}
+          style={{
+            flex: 1,
+            width: "100%",
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          {content}
+        </LinearGradient>
       ) : (
-        children
+        content
       )}
     </Pressable>
   );
