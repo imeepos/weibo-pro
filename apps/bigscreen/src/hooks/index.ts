@@ -1,6 +1,5 @@
 // 核心hooks
 export { useTheme } from './useTheme';
-export { useWebSocket } from './useWebSocket';
 export { useRealTimeData } from './useRealTimeData';
 export { useAutoRefresh } from './useAutoRefresh';
 export { useDebounce } from './useDebounce';

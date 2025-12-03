@@ -3,6 +3,7 @@ export { WorkflowCanvas } from './workflow-canvas'
 export { WorkflowCanvasControls } from './workflow-canvas-controls'
 export { WorkflowMinimap } from './workflow-minimap'
 export { WorkflowNode } from './workflow-node'
+export { WorkflowGraphNode } from './workflow-graph-node'
 export { WorkflowEdge } from './workflow-edge'
 export { WorkflowControls } from './workflow-controls'
 export { WorkflowEmptyState } from './workflow-empty-state'
@@ -57,6 +58,8 @@ export type {
   WorkflowNodeCategory,
   WorkflowNodeDefinition,
 } from './types/workflow-nodes'
+
+export type { WorkflowGraphNodeProps } from './workflow-graph-node'
 
 export type { WorkflowControlsProps } from './workflow-controls'
 export type { WorkflowEmptyStateProps } from './workflow-empty-state'

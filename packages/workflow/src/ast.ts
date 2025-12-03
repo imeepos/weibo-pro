@@ -1,7 +1,7 @@
-import { Input, Node, Output, State } from "./decorator";
+import { Input, Node, Output, State, INPUT, OUTPUT } from "./decorator";
 import { IAstStates, IEdge, INode } from "./types";
 import { generateId } from "./utils";
-import { ErrorSerializer, SerializedError } from "@sker/core";
+import { ErrorSerializer, SerializedError, root } from "@sker/core";
 import { Observable } from 'rxjs'
 
 export interface DynamicOutput {
@@ -550,6 +550,107 @@ export class WorkflowGraphAst extends Ast {
     setName(name: string): this {
         this.name = name
         return this
+    }
+
+    /**
+     * 动态计算工作流的输入端口
+     *
+     * 优雅设计：
+     * - 输入端口 = 内部节点的未连接输入
+     * - 这些输入需要从外部提供数据
+     * - 自动根据内部结构推断接口
+     */
+    getExposedInputs(): Array<{ nodeId: string; property: string; title?: string; type?: string; required?: boolean }> {
+        const exposedInputs: Array<{ nodeId: string; property: string; title?: string; type?: string; required?: boolean }> = []
+
+        // 遍历所有节点，找到未连接的输入端口
+        for (const node of this.nodes) {
+            // 跳过 WorkflowGraphAst 自身
+            if (node.type === 'WorkflowGraphAst') continue
+
+            try {
+                const ctor = (node as any).constructor
+                if (!ctor) continue
+
+                // 获取该节点的输入元数据
+                const inputMetadatas = root.get(INPUT, [])
+                const nodeInputs = inputMetadatas.filter((meta: any) => meta.target === ctor)
+
+                // 检查每个输入端口是否被连接
+                for (const inputMeta of nodeInputs) {
+                    const property = String(inputMeta.propertyKey)
+                    const isConnected = this.edges.some(edge =>
+                        edge.to === node.id && edge.toProperty === property
+                    )
+
+                    // 如果未连接，则暴露为工作流的输入
+                    if (!isConnected) {
+                        exposedInputs.push({
+                            nodeId: node.id,
+                            property,
+                            title: inputMeta.title || property,
+                            type: inputMeta.type,
+                            required: inputMeta.required
+                        })
+                    }
+                }
+            } catch (error) {
+                // 获取元数据失败时跳过该节点
+                continue
+            }
+        }
+
+        return exposedInputs
+    }
+
+    /**
+     * 动态计算工作流的输出端口
+     *
+     * 优雅设计：
+     * - 输出端口 = 内部节点的未连接输出
+     * - 这些输出可以被外部消费
+     * - 自动根据内部结构推断接口
+     */
+    getExposedOutputs(): Array<{ nodeId: string; property: string; title?: string; type?: string }> {
+        const exposedOutputs: Array<{ nodeId: string; property: string; title?: string; type?: string }> = []
+
+        // 遍历所有节点，找到未连接的输出端口
+        for (const node of this.nodes) {
+            // 跳过 WorkflowGraphAst 自身
+            if (node.type === 'WorkflowGraphAst') continue
+
+            try {
+                const ctor = (node as any).constructor
+                if (!ctor) continue
+
+                // 获取该节点的输出元数据
+                const outputMetadatas = root.get(OUTPUT, [])
+                const nodeOutputs = outputMetadatas.filter((meta: any) => meta.target === ctor)
+
+                // 检查每个输出端口是否被连接
+                for (const outputMeta of nodeOutputs) {
+                    const property = String(outputMeta.propertyKey)
+                    const isConnected = this.edges.some(edge =>
+                        edge.from === node.id && edge.fromProperty === property
+                    )
+
+                    // 如果未连接，则暴露为工作流的输出
+                    if (!isConnected) {
+                        exposedOutputs.push({
+                            nodeId: node.id,
+                            property,
+                            title: outputMeta.title || property,
+                            type: outputMeta.type
+                        })
+                    }
+                }
+            } catch (error) {
+                // 获取元数据失败时跳过该节点
+                continue
+            }
+        }
+
+        return exposedOutputs
     }
 }
 export function createWorkflowGraphAst({ nodes = [], edges = [], id, state, name = 'Untitled Workflow' }: { name?: string, nodes?: INode[], edges?: IEdge[], id?: string, state?: IAstStates } = {}) {

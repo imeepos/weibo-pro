@@ -5,39 +5,15 @@
 
 import { initializeDefaultComponents } from './defaultComponents';
 import { componentRegistry } from './ComponentRegistry';
-import { createLogger } from '@sker/core';
-
-const logger = createLogger('AppInitialization');
 
 /**
  * 初始化应用
  */
 export async function initializeApp() {
-  logger.info('Initializing Weibo Sentiment Dashboard...');
-
   try {
     // 1. 初始化组件注册表
-    logger.info('Registering default components...');
     initializeDefaultComponents();
-    
-    // 2. 验证组件注册
-    const registeredCount = componentRegistry.size();
-    logger.info(`Successfully registered ${registeredCount} components`);
-    
-    // 3. 打印注册的组件信息（开发模式）
-    if (process.env.NODE_ENV === 'development') {
-      const categories = componentRegistry.getCategories();
-      logger.debug('Component categories:', categories);
-      
-      categories.forEach(category => {
-        const components = componentRegistry.getByCategory(category);
-        logger.debug(`${category}: ${components.map(c => c.name).join(', ')}`);
-      });
-    }
-    
-    logger.info('Application initialized successfully');
   } catch (error) {
-    logger.error('Failed to initialize application:', error);
     throw error;
   }
 }

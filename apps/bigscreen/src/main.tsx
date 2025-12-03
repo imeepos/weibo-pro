@@ -25,13 +25,8 @@ function getBaseUrl() {
 }
 
 const baseURL = getBaseUrl();
-console.log('🚀 Bigscreen 初始化 baseURL:', baseURL);
-
 const providersArray = providers({ baseURL });
-console.log('🚀 SDK providers 数量:', providersArray.length);
-
 root.set(providersArray);
-console.log('🚀 DI 容器初始化完成');
 
 // Mock服务现在由vite-plugin-mock处理
 

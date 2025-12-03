@@ -1,8 +1,26 @@
-import React, { useCallback, useEffect, useState } from 'react'
-import { X, Save } from 'lucide-react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { WorkflowGraphAst } from '@sker/workflow'
-import { WorkflowCanvas } from './WorkflowCanvas'
-import { cn } from '../utils/cn'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogPortal,
+  DialogClose
+} from '@sker/ui/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@sker/ui/components/ui/alert-dialog'
+import { XIcon } from 'lucide-react'
+import { cn } from '@sker/ui/lib/utils'
+import { WorkflowCanvas, type WorkflowCanvasRef } from './WorkflowCanvas'
 
 export interface SubWorkflowModalProps {
   /** 是否可见 */
@@ -24,13 +42,13 @@ export function SubWorkflowModal({
   onClose,
   onSave,
 }: SubWorkflowModalProps) {
+  const canvasRef = useRef<WorkflowCanvasRef>(null)
   const [localWorkflowAst, setLocalWorkflowAst] = useState<WorkflowGraphAst>()
   const [hasChanges, setHasChanges] = useState(false)
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
 
-  // 初始化本地工作流状态
   useEffect(() => {
     if (visible && workflowAst) {
-      // 深拷贝工作流 AST，避免直接修改父级状态
       const clonedAst = new WorkflowGraphAst()
       Object.assign(clonedAst, JSON.parse(JSON.stringify(workflowAst)))
       setLocalWorkflowAst(clonedAst)
@@ -38,18 +56,15 @@ export function SubWorkflowModal({
     }
   }, [visible, workflowAst])
 
-  // 监听键盘事件
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (!visible) return
 
-      // ESC 键关闭弹框
       if (event.key === 'Escape') {
         event.preventDefault()
-        handleClose()
+        handleCloseRequest()
       }
 
-      // Ctrl+S 保存
       if (event.ctrlKey && event.key === 's') {
         event.preventDefault()
         handleSave()
@@ -58,138 +73,128 @@ export function SubWorkflowModal({
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [visible, localWorkflowAst, parentNodeId])
+  }, [visible, localWorkflowAst, parentNodeId, hasChanges])
 
-  // 处理工作流变化
   const handleWorkflowChange = useCallback((updatedAst: WorkflowGraphAst) => {
     setLocalWorkflowAst(updatedAst)
     setHasChanges(true)
   }, [])
 
-  // 保存子工作流
   const handleSave = useCallback(() => {
-    if (!localWorkflowAst || !parentNodeId) return
+    if (!parentNodeId) return
 
-    try {
-      onSave(parentNodeId, localWorkflowAst)
-      setHasChanges(false)
-      console.log('子工作流保存成功', {
-        parentNodeId,
-        nodeCount: localWorkflowAst.nodes.length,
-        edgeCount: localWorkflowAst.edges.length
-      })
-    } catch (error) {
-      console.error('保存子工作流失败', error)
-    }
-  }, [localWorkflowAst, parentNodeId, onSave])
+    // 从 canvas ref 获取最新的工作流状态，而不是使用闭包中的旧 localWorkflowAst
+    const currentAst = canvasRef.current?.getWorkflowAst()
+    if (!currentAst) return
 
-  // 关闭弹框
-  const handleClose = useCallback(() => {
+    onSave(parentNodeId, currentAst)
+    setHasChanges(false)
+  }, [parentNodeId, onSave])
+
+  const handleCloseRequest = useCallback(() => {
     if (hasChanges) {
-      const confirmClose = window.confirm(
-        '子工作流有未保存的更改，确定要关闭吗？'
-      )
-      if (!confirmClose) return
+      setShowConfirmDialog(true)
+    } else {
+      onClose()
     }
-    onClose()
   }, [hasChanges, onClose])
 
-  // 阻止背景点击关闭
-  const handleBackdropClick = useCallback((event: React.MouseEvent) => {
-    event.stopPropagation()
-  }, [])
-
-  if (!visible) return null
+  const handleConfirmClose = useCallback(() => {
+    setShowConfirmDialog(false)
+    // 关闭前先保存
+    if (hasChanges) {
+      handleSave()
+    }
+    onClose()
+  }, [hasChanges, handleSave, onClose])
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
-      onClick={handleClose}
-    >
-      <div
-        className="relative flex flex-col w-full h-full max-w-[95vw] max-h-[95vh] bg-card rounded-xl border border-border shadow-2xl"
-        onClick={handleBackdropClick}
+    <>
+      <Dialog
+        open={visible}
+        onOpenChange={(open: boolean) => !open && handleCloseRequest()}
+        modal={false}  // 禁用模态行为，允许与 Dialog 外部元素交互（NodeSelector）
       >
-        {/* 弹框头部 */}
-        <header className="flex items-center justify-between border-b border-border bg-card px-6 py-4">
-          <div className="flex items-center gap-3">
-            <h2 className="text-lg font-semibold text-white">
-              子工作流编辑器
-            </h2>
-            {localWorkflowAst?.name && (
-              <span className="text-sm text-slate-400">
-                {localWorkflowAst.name}
-              </span>
-            )}
-          </div>
+        <DialogPortal>
+          {/* 自定义背景遮罩（视觉效果） */}
+          <div
+            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+            style={{ pointerEvents: 'none' }}
+            aria-hidden="true"
+          />
 
-          <div className="flex items-center gap-3">
-            {/* 保存按钮 */}
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={!hasChanges}
-              className={cn(
-                'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition',
-                hasChanges
-                  ? 'bg-green-600 text-white hover:bg-green-700'
-                  : 'bg-slate-700 text-slate-400 cursor-not-allowed'
+          <DialogContent
+            className={cn(
+              'fixed top-[50%] left-[50%] z-50 translate-x-[-50%] translate-y-[-50%]',
+              'flex flex-col p-0 bg-background rounded-lg border shadow-lg',
+              'data-[state=open]:animate-in data-[state=closed]:animate-out',
+              'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+              'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
+              'duration-200'
+            )}
+            style={{
+              width: '100vw',
+              maxWidth: `100vw`,
+              height: `95vh`,
+            }}
+          >
+            <DialogHeader className="border-b px-6 py-4">
+              <DialogTitle className="flex items-center gap-3">
+                <span>子工作流编辑器</span>
+                {localWorkflowAst?.name && (
+                  <span className="text-sm text-muted-foreground font-normal">
+                    {localWorkflowAst.name}
+                  </span>
+                )}
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="flex-1 overflow-hidden">
+              {localWorkflowAst ? (
+                <WorkflowCanvas
+                  ref={canvasRef}
+                  workflowAst={localWorkflowAst}
+                  title="子工作流"
+                  name={localWorkflowAst.name || '未命名子工作流'}
+                  onSave={() => {
+                    setHasChanges(true)
+                    handleSave()
+                  }}
+                  className="h-full"
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full text-muted-foreground">
+                  加载中...
+                </div>
               )}
-            >
-              <Save className="h-4 w-4" />
-              <span>保存</span>
-            </button>
+            </div>
 
             {/* 关闭按钮 */}
-            <button
-              type="button"
-              onClick={handleClose}
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-700 hover:text-white transition"
+            <DialogClose
+              onClick={handleCloseRequest}
+              className="absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden"
             >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-        </header>
+              <XIcon className="h-4 w-4" />
+              <span className="sr-only">Close</span>
+            </DialogClose>
+          </DialogContent>
+        </DialogPortal>
+      </Dialog>
 
-        {/* 弹框内容 */}
-        <div className="flex-1 overflow-hidden">
-          {localWorkflowAst ? (
-            <WorkflowCanvas
-              workflowAst={localWorkflowAst}
-              title="子工作流"
-              name={localWorkflowAst.name || '未命名子工作流'}
-              onSave={() => handleWorkflowChange(localWorkflowAst)}
-              className="h-full"
-            />
-          ) : (
-            <div className="flex items-center justify-center h-full text-slate-400">
-              加载中...
-            </div>
-          )}
-        </div>
-
-        {/* 底部状态栏 */}
-        <footer className="flex items-center justify-between border-t border-border bg-card px-6 py-3 text-sm text-slate-400">
-          <div className="flex items-center gap-4">
-            <span>
-              节点: {localWorkflowAst?.nodes.length || 0}
-            </span>
-            <span>
-              边: {localWorkflowAst?.edges.length || 0}
-            </span>
-            {hasChanges && (
-              <span className="text-yellow-400">
-                • 有未保存的更改
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-4">
-            <span>ESC 关闭</span>
-            <span>Ctrl+S 保存</span>
-          </div>
-        </footer>
-      </div>
-    </div>
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认关闭</AlertDialogTitle>
+            <AlertDialogDescription>
+              子工作流有未保存的更改，确定要关闭吗？
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmClose}>确定</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }

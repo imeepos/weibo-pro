@@ -379,20 +379,17 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
     (groupId: string) => {
       const groupNode = workflowAst.nodes.find(n => n.id === groupId)
 
-      if (!(groupNode instanceof WorkflowGraphAst) || !groupNode.isGroup) {
-        console.warn('未找到分组节点或节点不是分组')
-        return
+      if (groupNode && groupNode.type === 'WorkflowGraphAst') {
+        // 1. 将分组内节点移回父工作流
+        workflowAst.nodes = workflowAst.nodes.filter(n => n.id !== groupId)
+        workflowAst.nodes.push(...groupNode.nodes)
+
+        // 2. 将内部边移回父工作流
+        workflowAst.edges.push(...groupNode.edges)
+
+        // 3. 同步到 UI
+        syncFromAst()
       }
-
-      // 1. 将分组内节点移回父工作流
-      workflowAst.nodes = workflowAst.nodes.filter(n => n.id !== groupId)
-      workflowAst.nodes.push(...groupNode.nodes)
-
-      // 2. 将内部边移回父工作流
-      workflowAst.edges.push(...groupNode.edges)
-
-      // 3. 同步到 UI
-      syncFromAst()
     },
     [workflowAst, syncFromAst]
   )
@@ -404,15 +401,11 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
     (groupId: string) => {
       const groupNode = workflowAst.nodes.find(n => n.id === groupId)
 
-      if (!(groupNode instanceof WorkflowGraphAst) || !groupNode.isGroup) {
-        console.warn('未找到分组节点或节点不是分组')
-        return
+      if (groupNode && groupNode.type === 'WorkflowGraphAst') {
+        groupNode.collapsed = !groupNode.collapsed
+        // 同步到 UI
+        syncFromAst()
       }
-
-      groupNode.collapsed = !groupNode.collapsed
-
-      // 同步到 UI
-      syncFromAst()
     },
     [workflowAst, syncFromAst]
   )

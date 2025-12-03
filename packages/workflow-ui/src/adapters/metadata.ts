@@ -4,22 +4,50 @@ import type { NodeMetadata, PortMetadata } from '../types'
 
 /**
  * 获取节点的输入/输出元数据
+ *
+ * 优雅设计：
+ * - WorkflowGraphAst 动态计算端口（基于内部结构）
+ * - 其他节点使用装饰器定义的静态端口
+ * - 支持传入类或实例
  */
-export function getNodeMetadata(nodeClass: Type<any>): NodeMetadata {
-  if (!nodeClass) throw new Error(`node class is null`)
+export function getNodeMetadata(nodeClassOrInstance: Type<any> | any): NodeMetadata {
+  if (!nodeClassOrInstance) throw new Error(`node class is null`)
+
+  // 判断传入的是类还是实例
+  const isInstance = typeof nodeClassOrInstance === 'object'
+  const nodeClass = isInstance ? nodeClassOrInstance.constructor : nodeClassOrInstance
+  const instance = isInstance ? nodeClassOrInstance : new nodeClass()
+
   const inputMetadata = root.get(INPUT, []).filter(it => it.target === nodeClass)
   const outputMetadata = root.get(OUTPUT, []).filter(it => it.target === nodeClass)
   const nodeMetadatas = root.get(NODE, []).filter(it => it.target === nodeClass)
 
-  const instance = new nodeClass()
   const nodeType = instance.type || nodeClass.name
   const nodeMetadata = nodeMetadatas[0]
   const customTitle = nodeMetadata?.title
   const categoryType = nodeMetadata?.type
 
-  const inputs = inputMetadata.map(toPortMetadata)
+  let inputs: PortMetadata[] = inputMetadata.map(toPortMetadata)
+  let outputs: PortMetadata[] = outputMetadata.map(toPortMetadata)
 
-  let outputs = outputMetadata.map(toPortMetadata)
+  // WorkflowGraphAst 特殊处理：动态计算端口
+  if (nodeType === 'WorkflowGraphAst' && typeof instance.getExposedInputs === 'function') {
+    const exposedInputs = instance.getExposedInputs()
+    inputs = exposedInputs.map((input: any) => ({
+      property: `${input.nodeId}.${input.property}`,
+      type: input.type || 'any',
+      label: input.title || formatPortLabel(input.property),
+      isMulti: false
+    }))
+
+    const exposedOutputs = instance.getExposedOutputs()
+    outputs = exposedOutputs.map((output: any) => ({
+      property: `${output.nodeId}.${output.property}`,
+      type: output.type || 'any',
+      label: output.title || formatPortLabel(output.property),
+      isMulti: false
+    }))
+  }
 
   return {
     type: nodeType,

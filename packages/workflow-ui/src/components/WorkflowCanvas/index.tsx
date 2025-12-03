@@ -26,6 +26,7 @@ import { validateEdge } from '../../utils/edgeValidator'
 import { useFileOperations } from './hooks/useFileOperations'
 import { useNodeOperations } from './hooks/useNodeOperations'
 import { useEventHandlers } from './hooks/useEventHandlers'
+import { WorkflowOperationsContext, type WorkflowOperations } from '../../context/workflow-operations'
 
 // 纯展示组件（来自 @sker/ui）
 import { WorkflowControls, WorkflowEmptyState, WorkflowMinimap } from '@sker/ui/components/workflow'
@@ -660,13 +661,25 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
     return statusColors[status] || 'hsl(var(--muted-foreground))'
   }, [])
 
+  // 准备工作流操作上下文
+  const workflowOps: WorkflowOperations = useMemo(() => ({
+    toggleGroupCollapse: workflow.toggleGroupCollapse,
+    openSubWorkflow: (nodeId, workflowAst) => {
+      openSubWorkflowModal({ nodeId, workflowAst })
+    },
+    selectNode: (nodeId) => {
+      onNodeClick?.(null as any, workflow.nodes.find(n => n.id === nodeId) as any)
+    }
+  }), [workflow, openSubWorkflowModal, onNodeClick])
+
   return (
-    <div
-      className={cn(
-        'workflow-canvas relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-[#111318] text-white',
-        className
-      )}
-    >
+    <WorkflowOperationsContext.Provider value={workflowOps}>
+      <div
+        className={cn(
+          'workflow-canvas relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-[#111318] text-white',
+          className
+        )}
+      >
       <ReactFlow
         nodes={workflow.nodes}
         edges={workflow.edges}
@@ -853,6 +866,7 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
         />
       )}
     </div>
+    </WorkflowOperationsContext.Provider>
   )
 })
 

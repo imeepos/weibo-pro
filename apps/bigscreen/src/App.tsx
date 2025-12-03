@@ -15,7 +15,7 @@ import CrawlerControl from '@/pages/CrawlerControl';
 import HeroDemo from '@/pages/HeroDemo';
 import { useTheme } from '@/hooks/useTheme';
 import { cn, createLogger } from '@/utils';
-import { useWebSocket, useRealTimeData, useAutoRefresh } from '@/hooks';
+import { useRealTimeData, useAutoRefresh } from '@/hooks';
 import { initializeApp, runHealthCheck } from '@/services/appInitialization';
 import { Spinner } from '@sker/ui/components/ui/spinner';
 import { ToastProvider } from '@/components/ui/Toast';
@@ -35,37 +35,18 @@ const App: React.FC = () => {
         const timeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Initialization timeout')), 10000)
         );
-
         await Promise.race([
           initializeApp(),
           timeoutPromise
         ]);
-
-        // 运行健康检查
-        const healthCheck = runHealthCheck();
-        if (!healthCheck.healthy) {
-          logger.warn('Health check failed', healthCheck.issues);
-        } else {
-          logger.info('Application initialized successfully');
-        }
-
         setIsAppInitialized(true);
       } catch (error) {
-        logger.error('App initialization failed', error);
-        // 即使初始化失败，也允许应用继续运行（降级处理）
         setIsAppInitialized(true);
       }
     };
 
     initialize();
   }, []);
-
-  // 初始化 WebSocket 连接（仅在应用初始化完成后）
-  useWebSocket({
-    autoConnect: isAppInitialized,
-    reconnectOnClose: true,
-    maxReconnectAttempts: 5,
-  });
 
   // 初始化数据获取（仅在应用初始化完成后）
   const { refreshData } = useRealTimeData({

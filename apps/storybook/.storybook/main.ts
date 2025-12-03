@@ -1,25 +1,14 @@
 
 import type { StorybookConfig } from '@storybook/react-vite'
 import tailwindcss from '@tailwindcss/vite'
-import 'reflect-metadata'
-import '@sker/workflow'
-import '@sker/workflow-ast'
-import '@sker/workflow-browser'  // 导入即自动注册
-import { root } from '@sker/core'
-import { providers } from '@sker/sdk'
-root.set(providers({ baseURL: `http://localhost:8089` }))
-
 const config: StorybookConfig = {
   stories: [
-    '../src/**/*.mdx',
     '../src/**/*.stories.@(js|jsx|mjs|ts|tsx)',
+    '../src/**/*.mdx',
   ],
   addons: [
-    '@storybook/addon-links',
+    '@storybook/addon-onboarding',
     '@storybook/addon-essentials',
-    "@storybook/addon-onboarding",
-    '@chromatic-com/storybook',
-    '@storybook/addon-interactions',
     'storybook-dark-mode',
     {
       name: "@storybook/addon-react-native-web",
@@ -29,10 +18,7 @@ const config: StorybookConfig = {
       },
     },
   ],
-  framework: {
-    name: '@storybook/react-vite',
-    options: {},
-  },
+  framework: "@storybook/react-vite",
   docs: {
     autodocs: "tag",
   },
@@ -51,17 +37,27 @@ const config: StorybookConfig = {
       },
     }
 
-    // 配置 react-docgen 插件跳过 renderer 文件
+    // 配置 react-docgen: 允许装饰器在 export 之前
     config.plugins = config.plugins?.map((plugin: any) => {
       if (plugin?.name === 'storybook:react-docgen-plugin') {
+        const originalTransform = plugin.transform
         return {
           ...plugin,
+          babelOptions: {
+            ...plugin.babelOptions,
+            parserOpts: {
+              ...plugin.babelOptions?.parserOpts,
+              plugins: [
+                ['decorators', { decoratorsBeforeExport: true }],
+                'typescript',
+              ],
+            },
+          },
           transform(code: string, id: string) {
-            // 跳过 renderer 文件
-            if (id.includes('Render.tsx') || id.includes('/renderers/')) {
+            if (id.includes('Visitor.ts') || id.includes('Ast.ts') || id.includes('/workflow-')) {
               return null
             }
-            return plugin.transform?.call(this, code, id)
+            return originalTransform?.call(this, code, id)
           },
         }
       }

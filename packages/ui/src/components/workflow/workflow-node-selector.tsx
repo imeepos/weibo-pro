@@ -155,7 +155,7 @@ export const WorkflowNodeSelector: React.FC<WorkflowNodeSelectorProps> = ({
         position: 'fixed',
         left: position.x,
         top: position.y,
-        zIndex: 1000,
+        zIndex: 99999,
         width: '560px',
         height: '480px',
       }}

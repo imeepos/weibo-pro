@@ -68,6 +68,8 @@
   --workflow-handle-input-border: 217 91% 75%;
   --workflow-handle-output: 142 76% 46%;
   --workflow-handle-output-border: 142 76% 65%;
+  --workflow-graph-accent: 217 91% 60%;
+  --workflow-graph-border: 217 91% 75%;
 }
 
 .dark {
@@ -126,6 +128,8 @@
   --workflow-handle-input-border: 217 91% 50%;
   --workflow-handle-output: 142 76% 46%;
   --workflow-handle-output-border: 142 76% 36%;
+  --workflow-graph-accent: 217 91% 65%;
+  --workflow-graph-border: 217 91% 55%;
 }
 
 @theme inline {
@@ -188,6 +192,8 @@
   --workflow-handle-input-border: var(--workflow-handle-input-border);
   --workflow-handle-output: var(--workflow-handle-output);
   --workflow-handle-output-border: var(--workflow-handle-output-border);
+  --workflow-graph-accent: var(--workflow-graph-accent);
+  --workflow-graph-border: var(--workflow-graph-border);
 }
 
 @layer base {

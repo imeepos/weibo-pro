@@ -490,7 +490,14 @@ export function useWorkflowOperations(
         const parentNode = workflow.workflowAst.nodes.find((node) => node.id === parentNodeId)
 
         if (parentNode && parentNode.type === 'WorkflowGraphAst') {
-          Object.assign(parentNode, updatedAst)
+          // 深拷贝更新，确保嵌套属性（nodes/edges）正确更新
+          parentNode.nodes = [...updatedAst.nodes]
+          parentNode.edges = [...updatedAst.edges]
+          parentNode.name = updatedAst.name
+          parentNode.description = updatedAst.description
+          parentNode.viewport = updatedAst.viewport ? { ...updatedAst.viewport } : undefined
+
+          // 同步到 React Flow
           workflow.syncFromAst()
 
           onShowToast?.('success', '子工作流已保存', '更改已同步到父工作流')
