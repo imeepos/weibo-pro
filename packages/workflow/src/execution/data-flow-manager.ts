@@ -15,11 +15,51 @@ import { Observable, OperatorFunction, pipe, map, filter, combineLatest } from '
  */
 @Injectable()
 export class DataFlowManager {
+    /**
+     * 解析属性路径（支持子工作流动态输出）
+     *
+     * 优先级：
+     * 1. 先尝试直接访问完整路径（支持动态输出如 "nodeId.output"）
+     * 2. 如果不存在，再按点号分割（支持嵌套对象如 "user.name"）
+     */
     private resolveNestedProperty(obj: any, path: string): any {
         if (!path.includes('.')) {
             return obj?.[path];
         }
+
+        // 优先尝试直接访问完整路径（用于子工作流动态输出）
+        if (obj?.[path] !== undefined) {
+            return obj[path];
+        }
+
+        // 回退：按点号分割访问嵌套属性
         return path.split('.').reduce((current, key) => current?.[key], obj);
+    }
+
+    /**
+     * 提取 WorkflowGraphAst 的动态输出属性
+     *
+     * 动态输出属性格式：nodeId.property
+     * 由子工作流执行器在运行时添加，用于暴露内部节点的输出
+     */
+    private extractDynamicOutputs(node: INode, outputData: Record<string, any>): void {
+        const builtinProps = [
+            'id', 'type', 'name', 'description', 'state', 'error', 'count', 'emitCount',
+            'position', 'color', 'collapsed', 'width', 'dynamicOutputs',
+            'nodes', 'edges', 'entryNodeIds', 'viewport', 'tags', 'abortSignal'
+        ];
+
+        for (const [key, value] of Object.entries(node as any)) {
+            // 跳过内置属性
+            if (builtinProps.includes(key)) {
+                continue;
+            }
+
+            // 只提取包含点号的属性（nodeId.property 格式）
+            if (key.includes('.') && value !== undefined) {
+                outputData[key] = value;
+            }
+        }
     }
 
     extractNodeOutputs(node: INode): any {
@@ -50,6 +90,10 @@ export class DataFlowManager {
 
             // 如果有装饰器定义，只返回装饰器标记的属性
             if ((outputs && outputs.length > 0) || (states && states.length > 0)) {
+                // 特殊处理：WorkflowGraphAst 需要额外包含动态输出属性（格式：nodeId.property）
+                if (node.type === 'WorkflowGraphAst') {
+                    this.extractDynamicOutputs(node, outputData);
+                }
                 return outputData;
             }
         } catch {

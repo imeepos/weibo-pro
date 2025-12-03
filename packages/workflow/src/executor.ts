@@ -4,9 +4,9 @@ import { fromJson } from "./generate";
 import { INode } from "./types";
 import { ReactiveScheduler } from './execution/reactive-scheduler';
 import { VisitorExecutor } from './execution/visitor-executor';
-import { concat, Observable } from 'rxjs';
+import { concat, Observable, of } from 'rxjs';
 import { Injectable, root } from "@sker/core";
-import { map } from 'rxjs/operators';
+import { map, concatMap } from 'rxjs/operators';
 
 @Injectable()
 export class WorkflowExecutorVisitor {
@@ -29,20 +29,26 @@ export class WorkflowExecutorVisitor {
         const scheduler = root.get(ReactiveScheduler);
 
         return scheduler.schedule(ast, ctx).pipe(
-            map(updatedWorkflow => {
-                // 检查内部是否有 output 节点正在 emitting
-                const exposedOutputs = this.extractExposedOutputsIfEmitting(updatedWorkflow);
+            concatMap(updatedWorkflow => {
+                // 关键修复：只在子工作流完成时（最终状态）提取并暴露输出
+                // 这样可以避免中间状态的多次发射
+                if (updatedWorkflow.state === 'success' || updatedWorkflow.state === 'fail') {
+                    const exposedOutputs = this.extractExposedOutputs(updatedWorkflow);
 
-                if (Object.keys(exposedOutputs).length > 0) {
-                    // 有输出值发射，创建子工作流的 emitting 副本
-                    const emittingWorkflow = { ...updatedWorkflow };
-                    Object.assign(emittingWorkflow, exposedOutputs);
-                    emittingWorkflow.state = 'emitting';
-                    return emittingWorkflow;
+                    if (Object.keys(exposedOutputs).length > 0) {
+                        // 有输出值，需要通过 emitting 状态传递给下游
+                        const workflowWithOutputs = { ...updatedWorkflow };
+                        Object.assign(workflowWithOutputs, exposedOutputs);
+
+                        // 先发射 emitting（传递数据），再发射最终状态
+                        // 因为调度器的 createSingleSourceStream 只处理 emitting 状态
+                        const emittingCopy = { ...workflowWithOutputs, state: 'emitting' as const };
+                        return of(emittingCopy, workflowWithOutputs);
+                    }
                 }
 
-                // 没有输出或非 emitting 状态，返回原状态
-                return updatedWorkflow;
+                // 其他情况：直接返回原状态
+                return of(updatedWorkflow);
             })
         );
     }
@@ -112,10 +118,10 @@ export class WorkflowExecutorVisitor {
     }
 
     /**
-     * 提取正在 emitting 的未连接输出节点的值
+     * 提取未连接输出节点的值（子工作流完成时调用）
      *
      * 逻辑：
-     * - 只查找状态为 emitting 的节点
+     * - 只提取成功完成的节点（state = success）的输出
      * - 找到节点未连接的 @Output 端口
      * - 从节点实例中提取这些输出属性的值
      * - 按照 `${nodeId}.${property}` 格式返回（符合子工作流输出端口命名规范）
@@ -124,15 +130,15 @@ export class WorkflowExecutorVisitor {
      * - 内部节点 ID: node-abc123, 输出属性: text
      * - 子工作流输出: { "node-abc123.text": "hello" }
      */
-    private extractExposedOutputsIfEmitting(workflow: WorkflowGraphAst): Record<string, any> {
+    private extractExposedOutputs(workflow: WorkflowGraphAst): Record<string, any> {
         const outputs: Record<string, any> = {};
 
         for (const node of workflow.nodes) {
             // 跳过子工作流自身
             if (node.type === 'WorkflowGraphAst') continue;
 
-            // 只处理 emitting 状态的节点
-            if (node.state !== 'emitting') continue;
+            // 只处理成功完成的节点
+            if (node.state !== 'success') continue;
 
             try {
                 // 获取节点的输出元数据

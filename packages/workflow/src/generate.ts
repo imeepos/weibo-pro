@@ -155,25 +155,5 @@ export function fromJson<T extends object = any>(json: any): T {
 }
 
 export function toJson(ast: Ast): INode {
-    const { inputs, outputs, states } = snapshotNode(ast);
-    const node: INode = {
-        ...inputs,
-        ...outputs,
-        ...states,
-        emitCount: ast.emitCount || 0,
-        count: ast.count || 0,
-        type: ast.type,
-        id: ast.id,
-        state: ast.state,
-        error: ast.error,
-        position: ast.position
-    };
-
-    // 保存节点的扩展属性（用于 UI 自定义）
-    const extendedAst = ast as any;
-    if (extendedAst.name !== undefined) node.name = extendedAst.name;
-    if (extendedAst.description !== undefined) node.description = extendedAst.description;
-    if (extendedAst.color !== undefined) node.color = extendedAst.color;
-
-    return node;
+    return ast;
 }

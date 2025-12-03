@@ -1165,12 +1165,23 @@ export class ReactiveScheduler {
     }
 
     /**
-     * 辅助方法：解析嵌套属性路径
+     * 解析属性路径（支持子工作流动态输出）
+     *
+     * 优先级：
+     * 1. 先尝试直接访问完整路径（支持动态输出如 "nodeId.output"）
+     * 2. 如果不存在，再按点号分割（支持嵌套对象如 "user.name"）
      */
     private resolveProperty(obj: any, path: string): any {
         if (!path.includes('.')) {
             return obj?.[path];
         }
+
+        // 优先尝试直接访问完整路径（用于子工作流动态输出）
+        if (obj?.[path] !== undefined) {
+            return obj[path];
+        }
+
+        // 回退：按点号分割访问嵌套属性
         return path.split('.').reduce((current, key) => current?.[key], obj);
     }
 
