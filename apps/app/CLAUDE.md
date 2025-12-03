@@ -2,6 +2,9 @@
 
 这是一个expo项目，技术栈 tailwindcss + react native + zustand 状态管理
 
+
+设计稿宽度是：375px，如果用户发送了样式代码，需要将它转换成tailwindcss
+
 常用库：
 
 ```tsx
@@ -48,6 +51,15 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import styled from "styled-components/native";
 import { handleURLCallback, StripeProvider } from "@stripe/stripe-react-native";
 import type { Stripe } from "stripe";
+import {
+  SQLiteProvider,
+  useSQLiteContext,
+  type SQLiteDatabase,
+} from 'expo-sqlite';
+import * as SplashScreen from "expo-splash-screen";
+import { Asset } from "expo-asset";
+import * as Updates from "expo-updates";
+import io from "socket.io-client";
 
 ```
 
