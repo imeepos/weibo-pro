@@ -1253,13 +1253,6 @@ export class ReactiveScheduler {
                 .map(([, stream]) => stream)
             : Array.from(network.values());
 
-        console.log('[subscribeAndMerge] 订阅配置:', {
-            totalNetworkSize: network.size,
-            affectedNodesSize: affectedNodes?.size,
-            streamsToSubscribeCount: streamsToSubscribe.length,
-            affectedNodeIds: affectedNodes ? Array.from(affectedNodes) : 'all'
-        });
-
         if (streamsToSubscribe.length === 0) {
             ast.state = 'success';
             return of(ast);
@@ -1388,13 +1381,6 @@ export class ReactiveScheduler {
                     continue;
                 }
             }
-        });
-
-        console.log('[detectLoops] 检测到循环结构:', {
-            loopCount: loops.length,
-            loopEntries: Array.from(loopEntries),
-            loopNodesCount: loopNodes.size,
-            loopNodes: Array.from(loopNodes)
         });
 
         return { loops, loopNodes, loopEntries };
