@@ -52,7 +52,8 @@ function Carousel({
   autoPlay = false,
   autoPlayInterval = 3000,
   loop = true,
-}: CarouselProps) {
+  onIndexChange,
+}: CarouselProps & { onIndexChange?: (index: number) => void }) {
   const [api, setInternalApi] = useState<CarouselApi | null>(null);
   const carouselRef = useRef<ICarouselInstance>(null);
 
@@ -93,6 +94,7 @@ function Carousel({
           scrollAnimationDuration={500}
           vertical={orientation === "vertical"}
           renderItem={({ item }) => item as React.ReactElement}
+          onSnapToItem={onIndexChange}
         />
       </View>
     </CarouselContext.Provider>

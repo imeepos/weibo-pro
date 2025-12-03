@@ -91,14 +91,15 @@ const VideoPlayer = forwardRef<VideoView, VideoPlayerProps>(
         setShowPoster(false);
       }
     };
+    console.log({ visible, isLoading, showPoster })
 
     return (
-      <View className={cn("relative bg-black rounded-lg overflow-hidden", className)}>
+      <View className={cn("!relative !bg-black !overflow-hidden", className)}>
         {visible && (
           <VideoView
             ref={ref}
             player={player}
-            className="w-full h-full"
+            className="!absolute !top-0 !left-0 !bottom-0 !right-0 !inset-0 !w-full !h-full"
             nativeControls={false}
             contentFit="contain"
           />
@@ -107,16 +108,11 @@ const VideoPlayer = forwardRef<VideoView, VideoPlayerProps>(
         {showPoster && poster && (
           <Image
             source={poster}
-            className="absolute inset-0 w-full h-full"
+            className="!absolute !top-0 !left-0 !bottom-0 !right-0 !inset-0 !w-full !h-full"
             contentFit="cover"
           />
         )}
 
-        {isLoading && visible && (
-          <View className="absolute inset-0 items-center justify-center bg-black/50">
-            <ActivityIndicator size="large" color="#ffffff" />
-          </View>
-        )}
 
         {controls && !isLoading && visible && (
           <Pressable

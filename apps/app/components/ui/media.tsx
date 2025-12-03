@@ -2,6 +2,7 @@ import { forwardRef, useMemo } from "react";
 import { VideoView } from "expo-video";
 import { Image } from "./image";
 import { VideoPlayer, type VideoPlayerProps } from "./video";
+import { cn } from "@/lib/utils";
 
 type MediaType = "image" | "video";
 
@@ -30,7 +31,7 @@ const detectMediaType = (source: string | { uri: string }): MediaType => {
 };
 
 const Media = forwardRef<VideoView, MediaProps>(
-  ({ source, type, poster, visible = true, ...props }, ref) => {
+  ({ source, type, poster, visible = true, className, ...props }, ref) => {
     const mediaType = useMemo(
       () => type || detectMediaType(source),
       [source, type]
@@ -42,6 +43,8 @@ const Media = forwardRef<VideoView, MediaProps>(
           source={source}
           poster={poster}
           visible={visible}
+          className={cn('w-full h-full', className)}
+          autoPlay
           {...props}
         />
       );
@@ -50,7 +53,7 @@ const Media = forwardRef<VideoView, MediaProps>(
     return (
       <Image
         source={source}
-        className={props.className}
+        className={cn('w-full h-full', className)}
         contentFit="cover"
       />
     );
