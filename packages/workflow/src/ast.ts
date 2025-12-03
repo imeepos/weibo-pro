@@ -1,4 +1,4 @@
-import { Input, Node, Output, State, INPUT, OUTPUT } from "./decorator";
+import { Input, Node, Output, State, INPUT, OUTPUT, NODE, findNodeType } from "./decorator";
 import { IAstStates, IEdge, INode } from "./types";
 import { generateId } from "./utils";
 import { ErrorSerializer, SerializedError, root } from "@sker/core";
@@ -566,10 +566,15 @@ export class WorkflowGraphAst extends Ast {
         // 遍历所有节点，找到未连接的输入端口
         for (const node of this.nodes) {
             // 跳过 WorkflowGraphAst 自身
+            const isConnected = this.edges.some(edge =>
+                edge.to === node.id
+            )
+            if(isConnected) continue
             if (node.type === 'WorkflowGraphAst') continue
 
             try {
-                const ctor = (node as any).constructor
+                // 通过 type 查找对应的类（而非 constructor，因为 nodes 可能是 JSON 对象）
+                const ctor = findNodeType(node.type)
                 if (!ctor) continue
 
                 // 获取该节点的输入元数据
@@ -579,9 +584,7 @@ export class WorkflowGraphAst extends Ast {
                 // 检查每个输入端口是否被连接
                 for (const inputMeta of nodeInputs) {
                     const property = String(inputMeta.propertyKey)
-                    const isConnected = this.edges.some(edge =>
-                        edge.to === node.id && edge.toProperty === property
-                    )
+
 
                     // 如果未连接，则暴露为工作流的输入
                     if (!isConnected) {
@@ -620,7 +623,10 @@ export class WorkflowGraphAst extends Ast {
             if (node.type === 'WorkflowGraphAst') continue
 
             try {
-                const ctor = (node as any).constructor
+                // 通过 type 查找对应的类（而非 constructor，因为 nodes 可能是 JSON 对象）
+                const registry = root.get(NODE, [])
+                const nodeMetadata = registry.find((meta: any) => meta.target.name === node.type)
+                const ctor = nodeMetadata?.target
                 if (!ctor) continue
 
                 // 获取该节点的输出元数据

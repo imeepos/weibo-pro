@@ -10,6 +10,7 @@ import {
   type NodeChange,
   type EdgeChange,
   useReactFlow,
+  useUpdateNodeInternals,
 } from '@xyflow/react'
 
 import { fromJson, INode, WorkflowGraphAst, toJson, createWorkflowGraphAst } from '@sker/workflow'
@@ -116,7 +117,8 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
   showBackground = true,
   snapToGrid = false,
   className = '',
-  name = 'default'
+  name = 'default',
+  onSave: customOnSave
 }, ref) => {
   // 缓存 nodeTypes 避免每次渲染都创建新对象导致 React Flow 重新初始化节点
   const nodeTypes = useMemo(() => createNodeTypes(), [])
@@ -128,6 +130,7 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
       : createWorkflowGraphAst({ name })
   )
   const { getViewport, setViewport } = useReactFlow()
+  const updateNodeInternals = useUpdateNodeInternals()
 
   // 状态管理
   const {
@@ -250,12 +253,32 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
   })
 
   // 工作流操作
-  const { runNode, runNodeIsolated, saveWorkflow, saveSubWorkflow, runWorkflow, cancelWorkflow } = useWorkflowOperations(workflow, {
+  const { runNode, runNodeIsolated, saveWorkflow, saveSubWorkflow: originalSaveSubWorkflow, runWorkflow, cancelWorkflow } = useWorkflowOperations(workflow, {
     onShowToast: showToast,
     onSetRunning: setIsRunning,
     onSetSaving: setIsSaving,
     getViewport,
   })
+
+  // 包装 saveSubWorkflow，保存后刷新节点端口
+  const saveSubWorkflow = useCallback(
+    (parentNodeId: string, updatedAst: WorkflowGraphAst) => {
+      const result = originalSaveSubWorkflow(parentNodeId, updatedAst)
+
+      // 如果保存成功（返回了 parentNodeId），刷新该节点的端口
+      if (result) {
+        // 使用 requestAnimationFrame 确保在下一帧渲染后刷新
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            updateNodeInternals(result)
+          })
+        })
+      }
+
+      return result
+    },
+    [originalSaveSubWorkflow, updateNodeInternals]
+  )
 
   // 事件处理统一委托
   useEventHandlers({
@@ -306,7 +329,7 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
     },
     onDelete: deleteSelection,
     onSelectAll: handleSelectAll,
-    onSave: () => saveWorkflow(workflow.workflowAst?.name || 'Untitled'),
+    onSave: customOnSave || (() => saveWorkflow(workflow.workflowAst?.name || 'Untitled')),
     onCancel: cancelWorkflow,
     onToggleCollapse: () => { }, // 通过节点操作钩子处理
     onCreateGroup: createGroup,
@@ -736,7 +759,7 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
           className="absolute left-4 top-4 z-[5]"
           onRun={() => runWorkflow()}
           onCancel={cancelWorkflow}
-          onSave={() => saveWorkflow(workflow.workflowAst?.name || 'Untitled')}
+          onSave={customOnSave || (() => saveWorkflow(workflow.workflowAst?.name || 'Untitled'))}
           onExport={exportWorkflow}
           onImport={importWorkflow}
           onSettings={openWorkflowSettingsDialog}

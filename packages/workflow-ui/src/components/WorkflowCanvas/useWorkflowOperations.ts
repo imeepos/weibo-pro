@@ -478,6 +478,11 @@ export function useWorkflowOperations(
 
   /**
    * 保存子工作流
+   *
+   * 优雅设计：
+   * - 更新父节点中的子工作流数据
+   * - 通过 syncFromAst 强制重新生成所有节点，触发 React 更新
+   * - 返回父节点 ID，通知调用者刷新节点端口
    */
   const saveSubWorkflow = useCallback(
     (parentNodeId: string, updatedAst: WorkflowGraphAst, onComplete?: () => void) => {
@@ -490,18 +495,22 @@ export function useWorkflowOperations(
         const parentNode = workflow.workflowAst.nodes.find((node) => node.id === parentNodeId)
 
         if (parentNode && parentNode.type === 'WorkflowGraphAst') {
-          // 深拷贝更新，确保嵌套属性（nodes/edges）正确更新
+          // 更新子工作流数据
           parentNode.nodes = [...updatedAst.nodes]
           parentNode.edges = [...updatedAst.edges]
           parentNode.name = updatedAst.name
           parentNode.description = updatedAst.description
           parentNode.viewport = updatedAst.viewport ? { ...updatedAst.viewport } : undefined
 
-          // 同步到 React Flow
+          // 强制同步到 React Flow，完全重新生成节点数组
+          // 这会创建新的 Flow 节点对象，触发 React 重新渲染
           workflow.syncFromAst()
 
           onShowToast?.('success', '子工作流已保存', '更改已同步到父工作流')
           onComplete?.()
+
+          // 返回父节点 ID
+          return parentNodeId
         } else {
           onShowToast?.('error', '保存失败', '无法找到对应的子工作流节点')
         }

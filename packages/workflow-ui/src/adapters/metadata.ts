@@ -1,6 +1,7 @@
 import { root, Type } from '@sker/core'
-import { INPUT, OUTPUT, NODE } from '@sker/workflow'
+import { INPUT, OUTPUT, NODE, WorkflowGraphAst } from '@sker/workflow'
 import type { NodeMetadata, PortMetadata } from '../types'
+import { getExposedInputs, getExposedOutputs } from '../utils/workflow-ports'
 
 /**
  * 获取节点的输入/输出元数据
@@ -31,17 +32,18 @@ export function getNodeMetadata(nodeClassOrInstance: Type<any> | any): NodeMetad
   let outputs: PortMetadata[] = outputMetadata.map(toPortMetadata)
 
   // WorkflowGraphAst 特殊处理：动态计算端口
-  if (nodeType === 'WorkflowGraphAst' && typeof instance.getExposedInputs === 'function') {
-    const exposedInputs = instance.getExposedInputs()
-    inputs = exposedInputs.map((input: any) => ({
+  // 优雅设计：使用纯函数，无需依赖类方法，可直接处理序列化对象
+  if (nodeType === 'WorkflowGraphAst') {
+    const exposedInputs = getExposedInputs(instance)
+    inputs = exposedInputs.map(input => ({
       property: `${input.nodeId}.${input.property}`,
       type: input.type || 'any',
       label: input.title || formatPortLabel(input.property),
       isMulti: false
     }))
 
-    const exposedOutputs = instance.getExposedOutputs()
-    outputs = exposedOutputs.map((output: any) => ({
+    const exposedOutputs = getExposedOutputs(instance)
+    outputs = exposedOutputs.map(output => ({
       property: `${output.nodeId}.${output.property}`,
       type: output.type || 'any',
       label: output.title || formatPortLabel(output.property),

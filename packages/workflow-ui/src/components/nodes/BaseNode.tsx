@@ -5,7 +5,7 @@ import { WorkflowNode } from '@sker/ui/components/workflow'
 import type { WorkflowNode as WorkflowNodeType } from '../../types'
 import { findNodeType, getNodeMetadata } from '../../adapters'
 import { useRender } from './hook'
-import { fromJson, type DynamicOutput } from '@sker/workflow'
+import { fromJson, type DynamicOutput, WorkflowGraphAst } from '@sker/workflow'
 import { BoxIcon } from 'lucide-react'
 
 /**
@@ -18,8 +18,10 @@ import { BoxIcon } from 'lucide-react'
  * - 处理工作流特定的交互事件
  */
 export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNodeType>) => {
+  // 对于 WorkflowGraphAst，直接传入实例以正确计算动态端点
+  // 对于其他节点，传入类（保持向后兼容）
   const nodeClass = findNodeType(data.type)!
-  const metadata = getNodeMetadata(nodeClass)
+  const metadata = getNodeMetadata(data.type === 'WorkflowGraphAst' ? data : nodeClass)
   const updateNodeInternals = useUpdateNodeInternals()
   const CustomRender = useRender(fromJson(data))
   const { setNodes } = useReactFlow()
@@ -28,11 +30,11 @@ export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNodeType
   // 用节点实例的实际值增强端口元数据
   const enhancedInputs = metadata.inputs.map(input => ({
     ...input,
-    value: (data as any)[input.property]
+    value: data[input.property as keyof typeof data]
   }))
 
   // 合并装饰器输出和动态输出
-  const dynamicOutputs = (data as any).dynamicOutputs as DynamicOutput[] | undefined
+  const dynamicOutputs = 'dynamicOutputs' in data ? data.dynamicOutputs as DynamicOutput[] | undefined : undefined
   const allOutputs = [
     ...metadata.outputs,
     ...(dynamicOutputs?.map(dyn => ({
@@ -46,13 +48,24 @@ export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNodeType
 
   const enhancedOutputs = allOutputs.map(output => ({
     ...output,
-    value: (data as any)[output.property]
+    value: data[output.property as keyof typeof data]
   }))
 
-  // 当端口或折叠状态变化时，更新节点内部连接点
+  // 当端口数量或折叠状态变化时，更新节点内部连接点
+  // metadata 会根据 data 动态计算，端口变化会反映在 inputs/outputs 长度上
+  // 对于 WorkflowGraphAst，还需要监听内部节点和边的变化
   useEffect(() => {
     updateNodeInternals(id)
-  }, [id, metadata.inputs.length, allOutputs.length, isCollapsed, updateNodeInternals])
+  }, [
+    id,
+    metadata.inputs.length,
+    metadata.outputs.length,
+    isCollapsed,
+    // 对于 WorkflowGraphAst，监听内部结构变化
+    data.type === 'WorkflowGraphAst' ? (data as WorkflowGraphAst).nodes?.length : 0,
+    data.type === 'WorkflowGraphAst' ? (data as WorkflowGraphAst).edges?.length : 0,
+    updateNodeInternals
+  ])
 
   // 切换节点折叠状态
   const toggleCollapse = () => {
@@ -92,7 +105,7 @@ export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNodeType
       label={data.name || metadata.title || data.type}
       description={data.description}
       color={data.color}
-      icon={<BoxIcon/>}
+      icon={<BoxIcon />}
       status={data.state}
       statusCount={data.count || 0}
       inputs={enhancedInputs}
