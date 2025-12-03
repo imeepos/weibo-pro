@@ -552,7 +552,7 @@ export class WorkflowGraphAst extends Ast {
         return this
     }
 }
-export function createWorkflowGraphAst({ nodes, edges, id, state, name }: { name: string, nodes: INode[], edges: IEdge[], id?: string, state?: IAstStates }) {
+export function createWorkflowGraphAst({ nodes = [], edges = [], id, state, name = 'Untitled Workflow' }: { name?: string, nodes?: INode[], edges?: IEdge[], id?: string, state?: IAstStates } = {}) {
     const ast = new WorkflowGraphAst()
     ast.name = name
     ast.nodes = nodes;

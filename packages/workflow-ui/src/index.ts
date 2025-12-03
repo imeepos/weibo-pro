@@ -6,7 +6,7 @@ export { ReactFlowProvider } from '@xyflow/react'
 
 // 导出组件
 export { WorkflowCanvas } from './components/WorkflowCanvas'
-export type { WorkflowCanvasProps } from './components/WorkflowCanvas'
+export type { WorkflowCanvasProps, WorkflowCanvasRef } from './components/WorkflowCanvas'
 
 export { NodePalette } from './components/NodePalette'
 export type { NodePaletteProps } from './components/NodePalette'

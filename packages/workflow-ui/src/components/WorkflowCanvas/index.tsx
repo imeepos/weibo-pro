@@ -12,7 +12,7 @@ import {
   useReactFlow,
 } from '@xyflow/react'
 
-import { fromJson, INode, WorkflowGraphAst, toJson } from '@sker/workflow'
+import { fromJson, INode, WorkflowGraphAst, toJson, createWorkflowGraphAst } from '@sker/workflow'
 import { createNodeTypes } from '../nodes'
 import { edgeTypes } from '../edges'
 import { useWorkflow } from '../../hooks/useWorkflow'
@@ -121,7 +121,11 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
   const nodeTypes = useMemo(() => createNodeTypes(), [])
 
   // 工作流上下文
-  const workflow = useWorkflow(fromJson<WorkflowGraphAst>({ ...workflowAst, name }))
+  const workflow = useWorkflow(
+    workflowAst
+      ? fromJson<WorkflowGraphAst>({ ...workflowAst, name })
+      : createWorkflowGraphAst({ name })
+  )
   const { getViewport, setViewport } = useReactFlow()
 
   // 状态管理
@@ -716,7 +720,7 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
 
       {showControls && (
         <WorkflowControls
-          className="absolute bottom-60 right-4 z-[5]"
+          className="absolute left-4 top-4 z-[5]"
           onRun={() => runWorkflow()}
           onCancel={cancelWorkflow}
           onSave={() => saveWorkflow(workflow.workflowAst?.name || 'Untitled')}

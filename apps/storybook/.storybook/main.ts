@@ -27,6 +27,35 @@ const config: StorybookConfig = {
   viteFinal: async (config) => {
     config.plugins = config.plugins || []
     config.plugins.push(tailwindcss() as any)
+
+    // 配置 esbuild 支持装饰器
+    config.esbuild = {
+      ...config.esbuild,
+      tsconfigRaw: {
+        compilerOptions: {
+          experimentalDecorators: true,
+          useDefineForClassFields: false,
+        },
+      },
+    }
+
+    // 配置 react-docgen 插件跳过 renderer 文件
+    config.plugins = config.plugins?.map((plugin: any) => {
+      if (plugin?.name === 'storybook:react-docgen-plugin') {
+        return {
+          ...plugin,
+          transform(code: string, id: string) {
+            // 跳过 renderer 文件
+            if (id.includes('Render.tsx') || id.includes('/renderers/')) {
+              return null
+            }
+            return plugin.transform?.call(this, code, id)
+          },
+        }
+      }
+      return plugin
+    })
+
     return config
   },
 }
