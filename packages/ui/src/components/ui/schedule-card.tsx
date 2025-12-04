@@ -34,6 +34,7 @@ export interface ScheduleCardProps {
   isManual?: boolean
   scheduleId?: string
   apiBaseUrl?: string
+  triggering?: boolean
   onToggle?: () => void
   onEdit?: () => void
   onDelete?: () => void
@@ -53,6 +54,7 @@ function ScheduleCard({
   isManual = false,
   scheduleId,
   apiBaseUrl,
+  triggering = false,
   onToggle,
   onEdit,
   onDelete,
@@ -171,9 +173,16 @@ function ScheduleCard({
               size="sm"
               onClick={onTrigger}
               className="flex-1"
-              disabled={!enabled || expired}
+              disabled={!enabled || expired || triggering}
             >
-              触发
+              {triggering ? (
+                <>
+                  <div className="mr-2 h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  触发中...
+                </>
+              ) : (
+                '触发'
+              )}
             </Button>
           )}
           <Button

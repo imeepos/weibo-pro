@@ -12,6 +12,7 @@ import {
   Calendar,
   ArrowUpDown
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { WorkflowController } from '@sker/sdk'
 import type { WorkflowScheduleEntity } from '@sker/entities'
 import { root } from '@sker/core'
@@ -115,6 +116,7 @@ export function ScheduleList({ workflowName, className = '', onClose, apiBaseUrl
   const [currentPage, setCurrentPage] = useState(1)
   const [sortField, setSortField] = useState<SortField>('createdAt')
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
+  const [triggeringIds, setTriggeringIds] = useState<Set<string>>(new Set())
 
   // 自动获取 API 基础 URL（如果未提供）
   const effectiveApiBaseUrl = apiBaseUrl || (
@@ -164,27 +166,40 @@ export function ScheduleList({ workflowName, className = '', onClose, apiBaseUrl
     try {
       await client.deleteSchedule(scheduleId)
       await fetchSchedules()
+      toast.success('调度已删除')
     } catch (err: unknown) {
       const error = err as Error
-      setError(error.message || '删除调度失败')
+      const errorMsg = error.message || '删除调度失败'
+      setError(errorMsg)
+      toast.error(errorMsg)
     }
   }
 
   const handleTrigger = async (schedule: WorkflowScheduleEntity) => {
+    setTriggeringIds(prev => new Set(prev).add(schedule.id))
+
     try {
       setError('')
       const result = await client.triggerSchedule(schedule.id)
 
       if (result.success) {
-        // 成功触发，刷新调度列表以更新最后运行时间
-        await fetchSchedules()
-
-        // 可以显示成功提示
-        alert(`调度已触发！运行ID: ${result.runId}`)
+        toast.success('调度已触发', {
+          description: `运行ID: ${result.runId}`
+        })
       }
     } catch (err: unknown) {
       const error = err as Error
-      setError(error.message || '触发调度失败')
+      const errorMsg = error.message || '触发调度失败'
+      setError(errorMsg)
+      toast.error('触发失败', {
+        description: errorMsg
+      })
+    } finally {
+      setTriggeringIds(prev => {
+        const next = new Set(prev)
+        next.delete(schedule.id)
+        return next
+      })
     }
   }
 
@@ -402,6 +417,7 @@ export function ScheduleList({ workflowName, className = '', onClose, apiBaseUrl
                       isManual={schedule.scheduleType === 'manual'}
                       scheduleId={schedule.id}
                       apiBaseUrl={effectiveApiBaseUrl}
+                      triggering={triggeringIds.has(schedule.id)}
                       onToggle={() => handleToggleStatus(schedule)}
                       onEdit={() => handleEdit(schedule)}
                       onDelete={() => handleDelete(schedule.id)}
