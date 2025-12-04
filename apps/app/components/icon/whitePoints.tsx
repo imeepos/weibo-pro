@@ -1,7 +1,12 @@
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Path, type SvgProps } from 'react-native-svg';
+import { useCssElement } from 'react-native-css';
 
-export const WhitePointsIcon = () => (
-  <Svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+type IconProps = SvgProps & { className?: string };
+
+const BaseSvg = (props: SvgProps) => (
+  <Svg width="14" height="14" viewBox="0 0 14 14" fill="none" {...props}>
     <Path d="M10.297 6.55474H8.38602C8.21382 6.55474 8.08222 6.39934 8.11022 6.22994L8.79062 2.06214C8.83542 1.78914 8.49802 1.62394 8.30902 1.82554L3.49862 6.97334C3.33202 7.15254 3.45802 7.44514 3.70302 7.44514H5.61402C5.78622 7.44514 5.91782 7.60054 5.88982 7.76994L5.20942 11.9377C5.16462 12.2107 5.50202 12.3759 5.69102 12.1743L10.5014 7.02654C10.6694 6.84734 10.542 6.55474 10.297 6.55474Z" fill="white" />
   </Svg>
 );
+
+export const WhitePointsIcon = (props: IconProps) => useCssElement(BaseSvg, props, { className: 'style' });

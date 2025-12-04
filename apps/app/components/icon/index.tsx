@@ -17,3 +17,4 @@ export { WhitePointsIcon } from "./whitePoints";
 export { EditIcon } from "./edit";
 export { DeleteIcon } from "./delete";
 export { AvatarUploadIcon } from "./avatarUpload";
+export { UploadIcon } from "./upload";

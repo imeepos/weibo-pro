@@ -3,15 +3,6 @@
 这是一个expo项目，技术栈 tailwindcss + react native + zustand 状态管理
 
 
-设计稿宽度是：375px，如果用户发送了样式代码，需要将它转换成tailwindcss
-当前版本已知的bug:
-
-要在tailwindcss前加! 才能生效
-```tsx
-<View className="!p-6"></View>
-```
-
-
 常用库：
 
 ```tsx

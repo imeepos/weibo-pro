@@ -1,9 +1,14 @@
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Path, type SvgProps } from 'react-native-svg';
+import { useCssElement } from 'react-native-css';
 
-export const SameStyleIcon = () => (
-  <Svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+type IconProps = SvgProps & { className?: string };
+
+const BaseSvg = (props: SvgProps) => (
+  <Svg width="32" height="32" viewBox="0 0 32 32" fill="none" {...props}>
     <Path d="M27.7932 4.93529L23.4285 4L26.38 21.2176C26.6919 23.037 26.4942 24.9072 25.8086 26.6211L24.5713 29.7143L26.2706 28.2578C27.753 26.9871 28.7196 25.2182 28.9882 23.2843L30.917 9.39677C31.2053 7.32089 29.8424 5.37442 27.7932 4.93529Z" fill="#E6E6E6" />
     <Path d="M16.0806 2.99778L5.09443 4.99525C2.91464 5.39158 1.47222 7.48421 1.87745 9.66237L4.98561 26.3687C5.38851 28.5343 7.46644 29.9666 9.63366 29.5725L20.6198 27.5751C22.7996 27.1787 24.242 25.0861 23.8368 22.9079L20.7286 6.20163C20.3257 4.03603 18.2478 2.60374 16.0806 2.99778Z" fill="#E6E6E6" />
     <Path d="M10.5898 19.1379L9.94426 14.2966C9.8423 13.5319 10.608 12.9446 11.3201 13.2413L15.1931 14.8551C15.8502 15.1289 16.0189 15.982 15.5156 16.4853L12.2881 19.7128C11.7024 20.2985 10.6992 19.9589 10.5898 19.1379Z" fill="#070708" />
   </Svg>
 );
+
+export const SameStyleIcon = (props: IconProps) => useCssElement(BaseSvg, props, { className: 'style' });

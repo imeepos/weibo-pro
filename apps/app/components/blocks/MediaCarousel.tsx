@@ -38,13 +38,13 @@ export function MediaCarousel({
           {sources.map((_source, index) => {
             const { source, poster } = useResource(_source, { width: screenWidth })
             return (
-              <CarouselItem key={index} className='!w-full !h-full'>
+              <CarouselItem key={index} className='w-full h-full'>
                 <Media
                   source={source}
                   poster={poster}
                   visible={current === index}
                   loop={true}
-                  className='!w-full !h-full'
+                  className='w-full h-full'
                 />
               </CarouselItem>
             )
@@ -55,18 +55,18 @@ export function MediaCarousel({
       <LinearGradient
         colors={['rgba(9, 10, 11, 0)', 'rgba(9, 10, 11, 1)']}
         locations={[0.0964, 1]}
-        className="!absolute !left-0 !right-0 !h-[83px]"
+        className="absolute left-0 right-0 h-[83px]"
         style={{ top: 327 }}
         pointerEvents="none"
       />
 
-      <View className="!absolute !flex-row !gap-1" style={{ top: 366, left: 16 }} pointerEvents="none">
+      <View className="absolute flex-row gap-1" style={{ top: 366, left: 16 }} pointerEvents="none">
         {sources.map((_, index) => (
           <View
             key={index}
-            className={`!h-1 !rounded-sm ${current === index
-              ? '!w-[10px] !bg-white'
-              : '!w-1 !bg-white/50'
+            className={`h-1 rounded-sm ${current === index
+              ? 'w-[10px] bg-white'
+              : 'w-1 bg-white/50'
               }`}
           />
         ))}

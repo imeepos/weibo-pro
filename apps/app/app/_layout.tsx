@@ -1,6 +1,5 @@
 import { Slot } from "expo-router";
 import Head from "expo-router/head";
-
 import { TooltipProvider } from "../components/ui/tooltip";
 
 export default function Layout() {
