@@ -517,7 +517,6 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
 
   // 边事件处理
   const handleEdgeDoubleClick = useCallback((_event: React.MouseEvent, edge: any) => {
-    console.log('[handleEdgeDoubleClick] 双击边:', edge.id)
     // 直接打开边配置对话框
     const astEdge = workflow.workflowAst.edges.find((e: any) => e.id === edge.id)
     if (astEdge) {

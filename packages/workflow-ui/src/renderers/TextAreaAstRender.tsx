@@ -5,7 +5,7 @@ import React from "react";
 const toString = (ast: any): string => {
     if (typeof ast === 'string') return ast;
     if (Array.isArray(ast)) {
-        return ast.map(it => toString(it)).join('\n')
+        return ast.flat().map(it => toString(it)).join('\n\n--------------\n\n')
     }
     return JSON.stringify(ast)
 }
@@ -13,7 +13,8 @@ const toString = (ast: any): string => {
 export class TextAreaAstRender {
     @Render(TextAreaAst)
     render(ast: TextAreaAst, ctx: any) {
-        return <MarkdownViewer>{toString(ast.input)}</MarkdownViewer>;
+        const output = toString(ast.input)
+        return <MarkdownViewer>{output}</MarkdownViewer>;
     }
 }
 

@@ -406,6 +406,19 @@ export class ReactiveScheduler {
             edgesBySource.get(edge.from)!.push(edge);
         });
 
+        // 调试日志：打印边模式信息
+        const edgeMode = this.detectEdgeMode(incomingEdges);
+        if (edgeMode === 'withLatestFrom') {
+            const primaryEdge = incomingEdges.find(e => e.isPrimary);
+            console.log('[_createNodeInputObservable] withLatestFrom 模式:', {
+                nodeId: node.id,
+                nodeType: node.type,
+                primarySourceId: primaryEdge?.from,
+                allSourceIds: Array.from(edgesBySource.keys()),
+                edgesCount: incomingEdges.length
+            });
+        }
+
         // 3. 找到所有能提供完整输入的源组合
         const completeCombinations = this.findCompleteSourceCombinations(
             requiredProperties,
@@ -436,7 +449,8 @@ export class ReactiveScheduler {
                 if (groupedStreams.length === 0) {
                     return EMPTY;
                 }
-                return this.combineGroupedStreamsByMode(groupedStreams, incomingEdges, node);
+                // 传递 sourceIds 确保流顺序一致性（修复 withLatestFrom 索引错位）
+                return this.combineGroupedStreamsByMode(groupedStreams, incomingEdges, node, sourceIds);
             }
         });
 
@@ -732,9 +746,9 @@ export class ReactiveScheduler {
         });
 
         const dataStream = sourceStream.pipe(
-            // 持续接收直到上游完成
-            takeWhile(ast => ast.state !== 'success' && ast.state !== 'fail'),
-            // 只响应 emitting 状态
+            // 只响应 emitting 状态（不使用 takeWhile，让流自然完成）
+            // 在 MERGE 模式下，节点可以多次执行，每次都会发射 emitting 和 success
+            // takeWhile 会在第一个 success 后终止流，导致后续发射丢失
             filter(ast => ast.state === 'emitting'),
             // 一次性处理该源的所有边
             map(ast => {
@@ -978,7 +992,8 @@ export class ReactiveScheduler {
     private combineGroupedStreamsByMode(
         groupedStreams: Observable<any>[],
         edges: IEdge[],
-        targetNode: INode
+        targetNode: INode,
+        sourceIds?: string[]  // 新增：显式传递流的顺序映射
     ): Observable<any> {
         if (groupedStreams.length === 0) {
             return EMPTY;
@@ -1007,7 +1022,7 @@ export class ReactiveScheduler {
 
             case EdgeMode.WITH_LATEST_FROM:
                 // 主流触发：携带其他流的最新值
-                return this.combineGroupedByWithLatestFrom(groupedStreams, edges);
+                return this.combineGroupedByWithLatestFrom(groupedStreams, edges, sourceIds);
 
             case EdgeMode.MERGE:
                 // MERGE：任一源发射立即触发
@@ -1025,39 +1040,72 @@ export class ReactiveScheduler {
 
     /**
      * WITH_LATEST_FROM 模式的分组流合并
+     *
+     * 修复：使用显式的 sourceIds 参数建立流的映射关系，避免索引错位
      */
     private combineGroupedByWithLatestFrom(
         groupedStreams: Observable<any>[],
-        edges: IEdge[]
+        edges: IEdge[],
+        sourceIds?: string[]  // 显式传递流的顺序映射
     ): Observable<any> {
         // 找到主流（isPrimary: true）
-        const sourceIds = Array.from(new Set(edges.map(e => e.from)));
-        const primaryIndex = edges.findIndex(e => e.isPrimary);
+        const primaryEdge = edges.find(e => e.isPrimary);
 
-        if (primaryIndex === -1) {
+        if (!primaryEdge) {
             // 没有主流标记，回退到 combineLatest
+            console.warn('[combineGroupedByWithLatestFrom] 未找到主流标记 (isPrimary: true)，回退到 combineLatest');
             return combineLatest(groupedStreams).pipe(
                 map(groups => Object.assign({}, ...groups))
             );
         }
 
-        const primarySourceId = edges[primaryIndex]!.from;
-        const primaryStreamIndex = sourceIds.indexOf(primarySourceId);
+        const primarySourceId = primaryEdge.from;
 
-        if (primaryStreamIndex === -1 || !groupedStreams[primaryStreamIndex]) {
+        // 如果没有传递 sourceIds，从 edges 重建（保持向后兼容，但会有索引错位风险）
+        const actualSourceIds = sourceIds || Array.from(new Set(edges.map(e => e.from)));
+
+        // 建立 sourceId -> stream 的映射
+        const streamMap = new Map<string, Observable<any>>();
+        actualSourceIds.forEach((id, index) => {
+            if (groupedStreams[index]) {
+                streamMap.set(id, groupedStreams[index]!);
+            }
+        });
+
+        const primaryStream = streamMap.get(primarySourceId);
+        if (!primaryStream) {
             // 主流不存在，回退到 combineLatest
+            console.error('[combineGroupedByWithLatestFrom] 主流不存在:', {
+                primarySourceId,
+                actualSourceIds,
+                streamMapSize: streamMap.size
+            });
             return combineLatest(groupedStreams).pipe(
                 map(groups => Object.assign({}, ...groups))
             );
         }
 
-        const primaryStream = groupedStreams[primaryStreamIndex]!;
-        const otherStreams = groupedStreams.filter((_, i) => i !== primaryStreamIndex);
+        // 提取所有副流（非主流）
+        const otherStreams: Observable<any>[] = [];
+        actualSourceIds.forEach(id => {
+            if (id !== primarySourceId) {
+                const stream = streamMap.get(id);
+                if (stream) {
+                    otherStreams.push(stream);
+                }
+            }
+        });
 
         if (otherStreams.length === 0) {
             // 只有主流，直接返回
             return primaryStream;
         }
+
+        console.log('[combineGroupedByWithLatestFrom] 配置成功:', {
+            primarySourceId,
+            otherSourcesCount: otherStreams.length,
+            actualSourceIds
+        });
 
         return primaryStream.pipe(
             withLatestFrom(...otherStreams),
@@ -1329,23 +1377,20 @@ export class ReactiveScheduler {
                 if (nodeIndex !== -1) {
                     const existingNode = ast.nodes[nodeIndex]!;
 
-                    // 自动追踪执行次数和发射次数（Visitor 不再手动累加）
-                    // count: 每次节点从 pending 状态变化时 +1（表示新的执行）
-                    // emitCount: 每次状态变为 emitting 时 +1
+                    // 简化的计数逻辑：基于流的自然发射，而非状态检测
+                    // 原理：RxJS 流每次发射都是独立的事件，直接响应即可
                     let newCount = existingNode.count;
                     let newEmitCount = existingNode.emitCount;
 
-                    // const stateTransition = `${existingNode.state} → ${updatedNode.state}`;
-                    // count: 只要从 pending 变化到其他状态，就算一次执行
-                    const shouldIncrementCount = existingNode.state === 'pending' && updatedNode.state !== 'pending';
-                    const shouldIncrementEmitCount = updatedNode.state === 'emitting';
-
-                    if (shouldIncrementCount) {
-                        newCount += 1;
+                    // emitCount: 每次发射 emitting 状态 +1（明确的输出事件）
+                    if (updatedNode.state === 'emitting') {
+                        newEmitCount += 1;
                     }
 
-                    if (shouldIncrementEmitCount) {
-                        newEmitCount += 1;
+                    // count: 每次发射 success 或 fail 状态 +1（一次完整执行）
+                    // 不依赖 existingNode 的状态，让流自然驱动计数
+                    if (updatedNode.state === 'success' || updatedNode.state === 'fail') {
+                        newCount += 1;
                     }
 
                     ast.nodes[nodeIndex] = {
