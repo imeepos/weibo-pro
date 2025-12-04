@@ -6,19 +6,29 @@ const isVideo = (url: string): boolean => {
     return videoExts.test(url);
 };
 
-export function useResource(source: string | { uri: string }, options: {
+export function useResource(source: any, options: {
     time?: string;
     width?: number;
     height?: number;
     fit?: 'contain' | 'scale-down' | 'cover';
     format?: 'jpg' | 'png';
 } = {}) {
-    const videoSource = typeof source === "string" ? source : source.uri;
+    // 处理 React Native 的本地资源（require 返回数字）
+    if (typeof source === "number") {
+        return { source, poster: source };
+    }
+
+    const videoSource = typeof source === "string" ? source : source?.uri;
+
+    if (!videoSource) {
+        return { source, poster: source };
+    }
+
     const isVideoFile = isVideo(videoSource);
 
     return {
-        source: isVideoFile ? getVideoThumbnail(videoSource) : videoSource,
-        poster: isVideoFile ? getVideoUrl(videoSource) : videoSource
+        source: isVideoFile ? getVideoUrl(videoSource) : videoSource,
+        poster: isVideoFile ? getVideoThumbnail(videoSource, options) : undefined
     }
 }
 

@@ -31,7 +31,7 @@ const detectMediaType = (source: string | { uri: string }): MediaType => {
 };
 
 const Media = forwardRef<VideoView, MediaProps>(
-  ({ source, type, poster, visible = true, className, ...props }, ref) => {
+  ({ source, type, poster, visible = true, className, loop = true, ...props }, ref) => {
     const mediaType = useMemo(
       () => type || detectMediaType(source),
       [source, type]
@@ -45,6 +45,7 @@ const Media = forwardRef<VideoView, MediaProps>(
           visible={visible}
           className={cn('w-full h-full', className)}
           autoPlay
+          loop={loop}
           {...props}
         />
       );

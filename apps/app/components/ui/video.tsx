@@ -91,7 +91,6 @@ const VideoPlayer = forwardRef<VideoView, VideoPlayerProps>(
         setShowPoster(false);
       }
     };
-    console.log({ visible, isLoading, showPoster })
 
     return (
       <View className={cn("!relative !bg-black !overflow-hidden", className)}>
@@ -100,8 +99,9 @@ const VideoPlayer = forwardRef<VideoView, VideoPlayerProps>(
             ref={ref}
             player={player}
             className="!absolute !top-0 !left-0 !bottom-0 !right-0 !inset-0 !w-full !h-full"
+            style={{ width: '100%', height: '100%', position: 'absolute', left: 0, top: 0 }}
             nativeControls={false}
-            contentFit="contain"
+            contentFit="cover"
           />
         )}
 

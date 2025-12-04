@@ -43,6 +43,7 @@ export function MediaCarousel({
                   source={source}
                   poster={poster}
                   visible={current === index}
+                  loop={true}
                   className='!w-full !h-full'
                 />
               </CarouselItem>

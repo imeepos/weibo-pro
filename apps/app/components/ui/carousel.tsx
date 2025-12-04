@@ -66,9 +66,21 @@ function Carousel({
   }, [setApi]);
 
   // 提取子元素到数组，过滤掉非 ReactElement 的内容
-  const items = React.Children.toArray(children).filter(
-    (child): child is React.ReactElement => React.isValidElement(child)
-  );
+  // 如果子元素是 CarouselContent，需要提取其内部的子元素
+  const childrenArray = React.Children.toArray(children);
+  const items = childrenArray.reduce<React.ReactElement[]>((acc, child) => {
+    if (React.isValidElement(child)) {
+      const props = child.props as { children?: React.ReactNode };
+      if (props.children) {
+        const innerChildren = React.Children.toArray(props.children).filter(
+          (innerChild): innerChild is React.ReactElement => React.isValidElement(innerChild)
+        );
+        return [...acc, ...innerChildren];
+      }
+      return [...acc, child];
+    }
+    return acc;
+  }, []);
 
   return (
     <CarouselContext.Provider
