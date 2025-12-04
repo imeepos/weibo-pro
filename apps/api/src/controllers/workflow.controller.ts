@@ -901,17 +901,10 @@ export class WorkflowController implements sdk.WorkflowController {
       throw new NotFoundException(`调度不存在: ${scheduleId}`)
     }
 
-    // 获取工作流
-    const workflow = await this.workflowService.getWorkflowByName(schedule.workflowName)
+    logger.info('手动触发调度', { scheduleId, workflowId: schedule.workflowId })
 
-    if (!workflow) {
-      throw new NotFoundException(`工作流不存在: ${schedule.workflowName}`)
-    }
-
-    logger.info('手动触发调度', { scheduleId, workflowName: schedule.workflowName })
-
-    // 创建运行实例
-    const run = await this.workflowRunService.createRun(workflow.id, schedule.inputs)
+    // 创建运行实例（直接使用 workflowId）
+    const run = await this.workflowRunService.createRun(schedule.workflowId, schedule.inputs, scheduleId)
 
     // 更新调度的最后运行时间
     await this.workflowScheduleService.updateLastRunTime(scheduleId)
