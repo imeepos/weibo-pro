@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, Dimensions, ScrollView, Pressable, StatusBar as
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import "./global.css"
 import { Image } from '../components/ui/image';
 import { PointsIcon, SearchIcon, MessageIcon, MyIcon, VideoIcon, DownArrowIcon } from '../components/icon';
 
