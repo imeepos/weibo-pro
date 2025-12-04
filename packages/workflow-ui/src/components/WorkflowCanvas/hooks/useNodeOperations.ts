@@ -146,13 +146,6 @@ export const useNodeOperations = (workflow: UseWorkflowReturn, options: NodeOper
 
     selectedNodes.forEach((node) => workflow.removeNode(node.id))
     selectedEdges.forEach((edge) => workflow.removeEdge(edge.id))
-
-    if (selectedNodes.length > 0 || selectedEdges.length > 0) {
-      console.log(
-        `已删除 ${selectedNodes.length} 个节点和 ${selectedEdges.length} 条边`
-      )
-      onShowToast?.('info', '删除成功', `已删除 ${selectedNodes.length} 个节点和 ${selectedEdges.length} 条边`)
-    }
   }, [getSelectedNodes, workflow, onShowToast])
 
   // 切换选中节点的折叠状态

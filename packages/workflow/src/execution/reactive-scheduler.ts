@@ -839,7 +839,9 @@ export class ReactiveScheduler {
                 failedNode.error = error;
                 return of(failedNode);
             }),
-            shareReplay({ bufferSize: 2, refCount: true })
+            // refCount: false 确保流持续存在，支持 MERGE 模式的多次触发
+            // 即使下游节点暂时取消订阅，流仍然保持活跃，等待新的订阅者
+            shareReplay({ bufferSize: 2, refCount: false })
         );
     }
     /**

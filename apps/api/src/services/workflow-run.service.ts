@@ -372,8 +372,6 @@ export class WorkflowRunService {
 
       const deletedCount = result.affected ?? 0;
 
-      logger.info('运行历史已删除', { count: deletedCount });
-
       return deletedCount;
     });
   }
