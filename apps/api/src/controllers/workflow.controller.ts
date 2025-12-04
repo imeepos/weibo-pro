@@ -929,12 +929,14 @@ export class WorkflowController implements sdk.WorkflowController {
    *
    * 优雅设计：
    * - 为手动类型调度提供即时触发能力
+   * - 支持动态传递运行参数（覆盖调度中保存的参数）
    * - 创建运行实例并立即执行
    * - 返回运行实例 ID，用于追踪执行状态
    */
   @Post('schedules/:scheduleId/trigger')
   async triggerSchedule(
-    @Param('scheduleId') scheduleId: string
+    @Param('scheduleId') scheduleId: string,
+    @Body() body?: { inputs?: Record<string, unknown> }
   ): Promise<{ success: boolean; runId: string; run: WorkflowRunEntity }> {
     if (!scheduleId) {
       throw new BadRequestException('调度 ID 不能为空')
@@ -946,10 +948,17 @@ export class WorkflowController implements sdk.WorkflowController {
       throw new NotFoundException(`调度不存在: ${scheduleId}`)
     }
 
-    logger.info('手动触发调度', { scheduleId, workflowId: schedule.workflowId })
+    // 优先使用请求中的 inputs，否则使用调度保存的 inputs
+    const inputs = body?.inputs ?? schedule.inputs
+
+    logger.info('手动触发调度', {
+      scheduleId,
+      workflowId: schedule.workflowId,
+      hasCustomInputs: !!body?.inputs
+    })
 
     // 创建运行实例（直接使用 workflowId）
-    const run = await this.workflowRunService.createRun(schedule.workflowId, schedule.inputs, scheduleId)
+    const run = await this.workflowRunService.createRun(schedule.workflowId, inputs, scheduleId)
 
     // 更新调度的最后运行时间
     await this.workflowScheduleService.updateLastRunTime(scheduleId)

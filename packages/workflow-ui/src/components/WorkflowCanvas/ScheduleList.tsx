@@ -17,11 +17,13 @@ import { WorkflowController } from '@sker/sdk'
 import type { WorkflowScheduleEntity } from '@sker/entities'
 import { root } from '@sker/core'
 import { ScheduleDialog } from './ScheduleDialog'
+import { RunConfigDialog } from './RunConfigDialog'
 import { Button } from '@sker/ui/components/ui/button'
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@sker/ui/components/ui/empty'
 import { Card } from '@sker/ui/components/ui/card'
 import { ScheduleCard } from '@sker/ui/components/ui/schedule-card'
 import { SearchInput } from '@sker/ui/components/ui/search-input'
+import { WorkflowGraphAst, fromJson } from '@sker/workflow'
 
 /**
  * 调度列表
@@ -117,6 +119,8 @@ export function ScheduleList({ workflowName, className = '', onClose, apiBaseUrl
   const [sortField, setSortField] = useState<SortField>('createdAt')
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
   const [triggeringIds, setTriggeringIds] = useState<Set<string>>(new Set())
+  const [triggerDialogSchedule, setTriggerDialogSchedule] = useState<WorkflowScheduleEntity | null>(null)
+  const [workflowAst, setWorkflowAst] = useState<WorkflowGraphAst | null>(null)
 
   // 自动获取 API 基础 URL（如果未提供）
   const effectiveApiBaseUrl = apiBaseUrl || (
@@ -176,11 +180,38 @@ export function ScheduleList({ workflowName, className = '', onClose, apiBaseUrl
   }
 
   const handleTrigger = async (schedule: WorkflowScheduleEntity) => {
-    setTriggeringIds(prev => new Set(prev).add(schedule.id))
+    try {
+      setError('')
+      // 获取工作流 AST
+      const workflow = await client.getWorkflow({ name: workflowName })
+      if (!workflow) {
+        throw new Error('工作流不存在')
+      }
+
+      // 反序列化工作流 AST
+      const ast = fromJson<WorkflowGraphAst>(workflow)
+
+      // 设置工作流 AST 和调度信息
+      setWorkflowAst(ast)
+      setTriggerDialogSchedule(schedule)
+    } catch (err: unknown) {
+      const error = err as Error
+      const errorMsg = error.message || '获取工作流失败'
+      setError(errorMsg)
+      toast.error('打开配置失败', {
+        description: errorMsg
+      })
+    }
+  }
+
+  const handleConfirmTrigger = async (inputs: Record<string, unknown>) => {
+    if (!triggerDialogSchedule) return
+
+    setTriggeringIds(prev => new Set(prev).add(triggerDialogSchedule.id))
 
     try {
       setError('')
-      const result = await client.triggerSchedule(schedule.id)
+      const result = await client.triggerSchedule(triggerDialogSchedule.id, { inputs })
 
       if (result.success) {
         toast.success('调度已触发', {
@@ -197,10 +228,18 @@ export function ScheduleList({ workflowName, className = '', onClose, apiBaseUrl
     } finally {
       setTriggeringIds(prev => {
         const next = new Set(prev)
-        next.delete(schedule.id)
+        next.delete(triggerDialogSchedule.id)
         return next
       })
+      // 关闭对话框
+      setTriggerDialogSchedule(null)
+      setWorkflowAst(null)
     }
+  }
+
+  const handleCancelTrigger = () => {
+    setTriggerDialogSchedule(null)
+    setWorkflowAst(null)
   }
 
   const handleEdit = (schedule: WorkflowScheduleEntity) => {
@@ -485,6 +524,16 @@ export function ScheduleList({ workflowName, className = '', onClose, apiBaseUrl
           open={showCreateDialog}
           onOpenChange={(open) => setShowCreateDialog(open)}
           onSuccess={fetchSchedules}
+        />
+      )}
+
+      {triggerDialogSchedule && workflowAst && (
+        <RunConfigDialog
+          visible={true}
+          workflow={workflowAst}
+          defaultInputs={triggerDialogSchedule.inputs || {}}
+          onConfirm={handleConfirmTrigger}
+          onCancel={handleCancelTrigger}
         />
       )}
     </>
