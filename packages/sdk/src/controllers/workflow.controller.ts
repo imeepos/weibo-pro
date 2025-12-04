@@ -202,6 +202,14 @@ export class WorkflowController {
   }
 
   /**
+   * 手动触发调度
+   */
+  @Post('schedules/:scheduleId/trigger')
+  triggerSchedule(@Param('scheduleId') scheduleId: string): Promise<{ success: boolean; runId: string; run: WorkflowRunEntity }> {
+    throw new Error('method triggerSchedule not implements')
+  }
+
+  /**
    * 执行单个节点 - 微调执行
    */
   @Sse('executeNode')

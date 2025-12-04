@@ -29,7 +29,11 @@ async function bootstrap() {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logger.warn(`端口 ${PORT} 清理失败: ${errorMessage}`);
   }
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    bodyParser: true,
+  });
+  app.use(require('body-parser').json({ limit: '50mb' }));
+  app.use(require('body-parser').urlencoded({ limit: '50mb', extended: true }));
 
   app.useGlobalInterceptors(new ResponseInterceptor());
   app.useGlobalFilters(new NotFoundExceptionFilter());

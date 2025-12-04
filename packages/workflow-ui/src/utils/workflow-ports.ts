@@ -38,14 +38,13 @@ export function getExposedInputs(workflow: WorkflowData): PortInfo[] {
     // 检查该节点是否有入边
     const isConnected = workflow.edges.some(edge => edge.to === node.id)
     if (isConnected) continue
-
     try {
       // 通过 type 查找对应的类
       const nodeRegistry = root.get(NODE, [])
       const nodeMetadata = nodeRegistry.find((meta: any) => meta.target.name === node.type)
       const ctor = nodeMetadata?.target
       if (!ctor) continue
-
+      const pre = node.name || nodeMetadata.title
       // 获取该节点的输入元数据
       const inputMetadatas = root.get(INPUT, [])
       const nodeInputs = inputMetadatas.filter((meta: any) => meta.target === ctor)
@@ -56,7 +55,7 @@ export function getExposedInputs(workflow: WorkflowData): PortInfo[] {
         exposedInputs.push({
           nodeId: node.id,
           property,
-          title: inputMeta.title || property,
+          title: `${pre}.${inputMeta.title}` || property,
           type: inputMeta.type,
           required: inputMeta.required
         })

@@ -434,6 +434,7 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
 
     // 数据访问
     getWorkflowAst: () => {
+      workflow.workflowAst.viewport = getViewport()
       return workflow.workflowAst
     },
     getSelectedNodes: () => {

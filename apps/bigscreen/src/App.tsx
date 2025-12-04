@@ -15,8 +15,7 @@ import CrawlerControl from '@/pages/CrawlerControl';
 import HeroDemo from '@/pages/HeroDemo';
 import { useTheme } from '@/hooks/useTheme';
 import { cn, createLogger } from '@/utils';
-import { useRealTimeData, useAutoRefresh } from '@/hooks';
-import { initializeApp, runHealthCheck } from '@/services/appInitialization';
+import { initializeApp } from '@/services/appInitialization';
 import { Spinner } from '@sker/ui/components/ui/spinner';
 import { ToastProvider } from '@/components/ui/Toast';
 
@@ -25,7 +24,6 @@ const logger = createLogger('App');
 const App: React.FC = () => {
   const { theme } = useTheme();
   const [isAppInitialized, setIsAppInitialized] = useState(false);
-  const [initError, setInitError] = useState<string | null>(null);
 
   // 应用初始化
   useEffect(() => {
@@ -47,38 +45,6 @@ const App: React.FC = () => {
 
     initialize();
   }, []);
-
-  // 初始化数据获取（仅在应用初始化完成后）
-  const { refreshData } = useRealTimeData({
-    autoRefresh: isAppInitialized,
-    refreshInterval: 30000,
-  });
-
-  // 自动刷新（仅在应用初始化完成后）
-  useAutoRefresh({
-    onRefresh: refreshData,
-    interval: 30000,
-    enabled: isAppInitialized,
-    immediate: false,
-  });
-
-  // 显示初始化错误
-  if (initError) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-red-600 mb-4">应用初始化失败</h1>
-          <p className="text-gray-600 mb-4">{initError}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            重新加载
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   // 显示加载状态
   if (!isAppInitialized) {

@@ -28,8 +28,11 @@ export function getNodeMetadata(nodeClassOrInstance: Type<any> | any): NodeMetad
   const customTitle = nodeMetadata?.title
   const categoryType = nodeMetadata?.type
 
-  let inputs: PortMetadata[] = inputMetadata.map(toPortMetadata)
-  let outputs: PortMetadata[] = outputMetadata.map(toPortMetadata)
+  // 获取实例级别的自定义端口标签
+  const portLabels: Record<string, string> = instance.portLabels || {}
+
+  let inputs: PortMetadata[] = inputMetadata.map(m => toPortMetadata(m, portLabels))
+  let outputs: PortMetadata[] = outputMetadata.map(m => toPortMetadata(m, portLabels))
 
   // WorkflowGraphAst 特殊处理：动态计算端口
   // 优雅设计：使用纯函数，无需依赖类方法，可直接处理序列化对象
@@ -75,19 +78,22 @@ export function findNodeType<T = any>(name: string): Type<T> | undefined {
 
 /**
  * 转换为端口元数据
+ * portLabels: 实例级别的自定义标签，优先级最高
  */
 function toPortMetadata(
-  metadata: { propertyKey: string | symbol; isMulti?: boolean; mode?: number; title?: string; type?: string }
+  metadata: { propertyKey: string | symbol; isMulti?: boolean; mode?: number; title?: string; type?: string },
+  portLabels: Record<string, string> = {}
 ): PortMetadata {
   const property = String(metadata.propertyKey)
-  const customTitle = metadata.title
+  // 优先级：实例自定义标签 > 装饰器 title > 属性名格式化
+  const label = portLabels[property] || metadata.title || formatPortLabel(property)
 
   return {
     property,
     type: metadata.type || 'any',
     isMulti: metadata.isMulti,
     mode: metadata.mode,
-    label: customTitle || formatPortLabel(property),
+    label,
   }
 }
 

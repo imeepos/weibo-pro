@@ -878,4 +878,51 @@ export class WorkflowController implements sdk.WorkflowController {
   async disableSchedule(@Param('scheduleId') scheduleId: string): Promise<WorkflowScheduleEntity> {
     return this.workflowScheduleService.disableSchedule(scheduleId)
   }
+
+  /**
+   * 手动触发调度
+   *
+   * 优雅设计：
+   * - 为手动类型调度提供即时触发能力
+   * - 创建运行实例并立即执行
+   * - 返回运行实例 ID，用于追踪执行状态
+   */
+  @Post('schedules/:scheduleId/trigger')
+  async triggerSchedule(
+    @Param('scheduleId') scheduleId: string
+  ): Promise<{ success: boolean; runId: string; run: WorkflowRunEntity }> {
+    if (!scheduleId) {
+      throw new BadRequestException('调度 ID 不能为空')
+    }
+
+    const schedule = await this.workflowScheduleService.getSchedule(scheduleId)
+
+    if (!schedule) {
+      throw new NotFoundException(`调度不存在: ${scheduleId}`)
+    }
+
+    // 获取工作流
+    const workflow = await this.workflowService.getWorkflowByName(schedule.workflowName)
+
+    if (!workflow) {
+      throw new NotFoundException(`工作流不存在: ${schedule.workflowName}`)
+    }
+
+    logger.info('手动触发调度', { scheduleId, workflowName: schedule.workflowName })
+
+    // 创建运行实例
+    const run = await this.workflowRunService.createRun(workflow.id, schedule.inputs)
+
+    // 更新调度的最后运行时间
+    await this.workflowScheduleService.updateLastRunTime(scheduleId)
+
+    // 立即执行
+    const executedRun = await this.executeRun({ runId: run.id })
+
+    return {
+      success: true,
+      runId: run.id,
+      run: executedRun
+    }
+  }
 }

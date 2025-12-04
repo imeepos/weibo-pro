@@ -16,7 +16,8 @@ import {
 } from '@sker/ui/components/workflow'
 import { DynamicOutputsDialog, } from '@sker/ui/components/ui/dynamic-outputs-dialog'
 import { Button } from '@sker/ui/components/ui/button'
-import { SettingsIcon } from 'lucide-react'
+import { Input } from '@sker/ui/components/ui/input'
+import { SettingsIcon, PencilIcon } from 'lucide-react'
 
 export interface PropertyPanelProps {
   className?: string
@@ -33,6 +34,7 @@ export function PropertyPanel({
 
   const [internalFormData, setInternalFormData] = useState<Record<string, any>>({})
   const [dynamicOutputsDialogOpen, setDynamicOutputsDialogOpen] = useState(false)
+  const [editingPortLabel, setEditingPortLabel] = useState<string | null>(null)
 
   const formData = externalFormData ?? internalFormData
   const handlePropertyChange = externalOnPropertyChange ?? ((property: string, value: any) => {
@@ -71,10 +73,19 @@ export function PropertyPanel({
   const metadata = getNodeMetadata(resolveConstructor(selectedNode.data))
   const ast = selectedNode.data
 
+  const portLabels: Record<string, string> = (ast as any).portLabels || {}
+
   const editableProperties = metadata.inputs.map((input) => ({
     ...input,
     value: formData[input.property] ?? (ast as any)[input.property],
   }))
+
+  const handlePortLabelChange = (property: string, newLabel: string) => {
+    const updatedLabels = { ...portLabels, [property]: newLabel }
+    // 清除空标签
+    if (!newLabel.trim()) delete updatedLabels[property]
+    handlePropertyChange('portLabels', updatedLabels)
+  }
 
   const readonlyProperties = metadata.outputs.map((output) => ({
     ...output,
@@ -126,13 +137,47 @@ export function PropertyPanel({
       content: (
         <>
           {editableProperties.map((prop) => (
-            <SmartFormField
-              key={prop.property}
-              label={prop.label || prop.property}
-              value={prop.value}
-              type={prop.type}
-              onChange={(value) => handlePropertyChange(prop.property, value)}
-            />
+            <div key={prop.property} className="space-y-1.5">
+              <div className="flex items-center gap-1">
+                {editingPortLabel === prop.property ? (
+                  <Input
+                    autoFocus
+                    className="h-6 text-xs"
+                    defaultValue={portLabels[prop.property] || prop.label || prop.property}
+                    onBlur={(e) => {
+                      handlePortLabelChange(prop.property, e.target.value)
+                      setEditingPortLabel(null)
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handlePortLabelChange(prop.property, e.currentTarget.value)
+                        setEditingPortLabel(null)
+                      }
+                      if (e.key === 'Escape') setEditingPortLabel(null)
+                    }}
+                  />
+                ) : (
+                  <>
+                    <label className="block text-xs font-medium text-muted-foreground">
+                      {prop.label || prop.property}
+                    </label>
+                    <button
+                      onClick={() => setEditingPortLabel(prop.property)}
+                      className="p-0.5 hover:bg-muted rounded"
+                      title="编辑端口名称"
+                    >
+                      <PencilIcon className="h-3 w-3 text-muted-foreground" />
+                    </button>
+                  </>
+                )}
+              </div>
+              <SmartFormField
+                label=""
+                value={prop.value}
+                type={prop.type}
+                onChange={(value) => handlePropertyChange(prop.property, value)}
+              />
+            </div>
           ))}
         </>
       ),

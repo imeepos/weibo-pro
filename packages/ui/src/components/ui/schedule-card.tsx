@@ -1,5 +1,5 @@
 import * as React from "react"
-import { type LucideIcon } from "lucide-react"
+import { type LucideIcon, Copy, Check } from "lucide-react"
 
 import { cn } from "@sker/ui/lib/utils"
 import { Card } from "./card"
@@ -31,9 +31,13 @@ export interface ScheduleCardProps {
   expired?: boolean
   nextRunAt?: string
   lastRunAt?: string
+  isManual?: boolean
+  scheduleId?: string
+  apiBaseUrl?: string
   onToggle?: () => void
   onEdit?: () => void
   onDelete?: () => void
+  onTrigger?: () => void
   className?: string
 }
 
@@ -46,13 +50,34 @@ function ScheduleCard({
   expired = false,
   nextRunAt,
   lastRunAt,
+  isManual = false,
+  scheduleId,
+  apiBaseUrl,
   onToggle,
   onEdit,
   onDelete,
+  onTrigger,
   className,
 }: ScheduleCardProps) {
   const StatusIcon = status.icon
   const TypeIcon = type.icon
+  const [copied, setCopied] = React.useState(false)
+
+  const triggerUrl = scheduleId && apiBaseUrl
+    ? `${apiBaseUrl}/api/workflow/schedules/${scheduleId}/trigger`
+    : ''
+
+  const handleCopy = async () => {
+    if (!triggerUrl) return
+
+    try {
+      await navigator.clipboard.writeText(triggerUrl)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error('复制失败', err)
+    }
+  }
 
   return (
     <Card
@@ -96,7 +121,7 @@ function ScheduleCard({
           {description}
         </p>
 
-        {(nextRunAt || lastRunAt) && (
+        {(nextRunAt || lastRunAt || (isManual && triggerUrl)) && (
           <div className="text-muted-foreground space-y-1 text-xs">
             {nextRunAt && (
               <div className="flex items-center justify-between">
@@ -110,10 +135,47 @@ function ScheduleCard({
                 <span>{lastRunAt}</span>
               </div>
             )}
+            {isManual && triggerUrl && (
+              <div className="space-y-1.5 rounded-md bg-muted/50 p-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-medium uppercase tracking-wide opacity-70">触发接口</span>
+                  <Badge variant="outline" className="text-[10px]">POST</Badge>
+                </div>
+                <div className="flex items-center gap-1">
+                  <code className="flex-1 truncate rounded bg-background px-1.5 py-0.5 text-[10px] font-mono">
+                    {triggerUrl}
+                  </code>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-5 shrink-0"
+                    onClick={handleCopy}
+                    title="复制接口地址"
+                  >
+                    {copied ? (
+                      <Check className="h-3 w-3 text-green-500" strokeWidth={2.5} />
+                    ) : (
+                      <Copy className="h-3 w-3" strokeWidth={2} />
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
         <div className="border-border flex items-center gap-2 border-t pt-3">
+          {isManual && onTrigger && (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={onTrigger}
+              className="flex-1"
+              disabled={!enabled || expired}
+            >
+              触发
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"

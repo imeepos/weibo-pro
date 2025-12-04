@@ -26,12 +26,12 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowUp,
-  CombineIcon,
-  EraserIcon,
-  Grid2X2Icon,
+  Combine,
+  Eraser,
+  Grid2X2,
   GripVertical,
-  PaintBucketIcon,
-  SquareSplitHorizontalIcon,
+  PaintBucket,
+  SquareSplitHorizontal,
   Trash2Icon,
   XIcon,
 } from 'lucide-react';
@@ -182,7 +182,7 @@ function TableFloatingToolbar({
         >
           <ToolbarGroup>
             <ColorDropdownMenu tooltip="Background color">
-              <PaintBucketIcon />
+              <PaintBucket />
             </ColorDropdownMenu>
             {canMerge && (
               <ToolbarButton
@@ -190,7 +190,7 @@ function TableFloatingToolbar({
                 onMouseDown={(e) => e.preventDefault()}
                 tooltip="Merge cells"
               >
-                <CombineIcon />
+                <Combine />
               </ToolbarButton>
             )}
             {canSplit && (
@@ -199,14 +199,14 @@ function TableFloatingToolbar({
                 onMouseDown={(e) => e.preventDefault()}
                 tooltip="Split cell"
               >
-                <SquareSplitHorizontalIcon />
+                <SquareSplitHorizontal />
               </ToolbarButton>
             )}
 
             <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
                 <ToolbarButton tooltip="Cell borders">
-                  <Grid2X2Icon />
+                  <Grid2X2 />
                 </ToolbarButton>
               </DropdownMenuTrigger>
 
@@ -414,7 +414,7 @@ function ColorDropdownMenu({
         </ToolbarMenuGroup>
         <DropdownMenuGroup>
           <DropdownMenuItem className="p-2" onClick={onClearColor}>
-            <EraserIcon />
+            <Eraser />
             <span>Clear</span>
           </DropdownMenuItem>
         </DropdownMenuGroup>

@@ -42,6 +42,7 @@ export function LeftDrawer({ visible, onClose, onRunNode, onLocateNode, classNam
         name: selectedNode.data.name,
         description: selectedNode.data.description,
         color: selectedNode.data.color,
+        portLabels: (selectedNode.data as any).portLabels,
       }
 
       metadata.inputs.forEach((input) => {
@@ -67,37 +68,21 @@ export function LeftDrawer({ visible, onClose, onRunNode, onLocateNode, classNam
     setNodes((nodes) =>
       nodes.map((node) => {
         if (node.id === selectedNode.id) {
-          const { name, description, color, ...inputProperties } = formData
+          const { name, description, color, portLabels, ...inputProperties } = formData
 
-          // 直接修改 AST 实例（node.data），保持引用不变
-          // 同时检测是否有实际变更
-          let hasActualChanges = false
+          // 创建新的 data 对象，同时更新原 AST 实例
+          const newData = Object.assign(Object.create(Object.getPrototypeOf(node.data)), node.data)
 
-          if (name !== undefined && node.data.name !== name) {
-            node.data.name = name
-            hasActualChanges = true
-          }
-          if (description !== undefined && node.data.description !== description) {
-            node.data.description = description
-            hasActualChanges = true
-          }
-          if (color !== undefined && node.data.color !== color) {
-            node.data.color = color
-            hasActualChanges = true
-          }
+          if (name !== undefined) newData.name = name
+          if (description !== undefined) newData.description = description
+          if (color !== undefined) newData.color = color
+          if (portLabels !== undefined) newData.portLabels = portLabels
 
           Object.entries(inputProperties).forEach(([property, value]) => {
-            if ((node.data as any)[property] !== value) {
-              (node.data as any)[property] = value
-              hasActualChanges = true
-            }
+            newData[property] = value
           })
 
-          // 如果有变更，返回新的 node 对象（浅拷贝）触发 React 重渲染
-          // 但 data 引用保持不变，仍然指向 AST 实例
-          if (hasActualChanges) {
-            return { ...node }
-          }
+          return { ...node, data: newData }
         }
         return node
       })

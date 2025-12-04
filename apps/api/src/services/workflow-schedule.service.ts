@@ -131,8 +131,7 @@ export class WorkflowScheduleService {
 
   async getSchedule(id: string): Promise<WorkflowScheduleEntity> {
     const schedule = await this.scheduleRepository.findOne({
-      where: { id },
-      relations: ['workflow']
+      where: { id }
     })
     if (!schedule) {
       throw new Error(`Schedule ${id} not found`)
@@ -215,6 +214,12 @@ export class WorkflowScheduleService {
       lastRunAt: now,
       nextRunAt: status === ScheduleStatus.EXPIRED ? undefined : nextRunAt ?? undefined,
       status
+    })
+  }
+
+  async updateLastRunTime(scheduleId: string): Promise<void> {
+    await this.scheduleRepository.update(scheduleId, {
+      lastRunAt: new Date()
     })
   }
 

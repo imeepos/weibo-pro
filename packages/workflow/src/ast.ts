@@ -1,7 +1,7 @@
-import { Input, Node, Output, State, INPUT, OUTPUT, NODE, findNodeType } from "./decorator";
+import { Node, State } from "./decorator";
 import { IAstStates, IEdge, INode } from "./types";
 import { generateId } from "./utils";
-import { ErrorSerializer, SerializedError, root } from "@sker/core";
+import { SerializedError } from "@sker/core";
 import { Observable } from 'rxjs'
 
 export interface DynamicOutput {
@@ -44,6 +44,8 @@ export abstract class Ast implements INode {
     position: { x: number; y: number } = { x: 0, y: 0 }
     // 动态输出配置（用于支持运行时添加输出端口）
     dynamicOutputs?: DynamicOutput[]
+    // 自定义端口标签 { propertyKey: customLabel }
+    portLabels?: Record<string, string>
 }
 
 @Node({ title: "工作流", type: 'basic' })

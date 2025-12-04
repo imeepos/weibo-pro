@@ -143,6 +143,18 @@ export function hasBufferMode(mode?: number): boolean {
     return ((mode ?? 0) & IS_BUFFER) === IS_BUFFER;
 }
 
+/** 支持的输入字段类型 */
+export type InputFieldType =
+    | 'string'
+    | 'text'
+    | 'textarea'
+    | 'richtext'
+    | 'number'
+    | 'boolean'
+    | 'date'
+    | 'datetime-local'
+    | 'any';
+
 export interface InputOptions {
     /**
      * 输入聚合模式（位标志）
@@ -168,7 +180,7 @@ export interface InputOptions {
     required?: boolean;
     defaultValue?: any;
     title?: string;
-    type?: string;
+    type?: InputFieldType;
     // 支持UI动态添加输入节点
     dynamic?: boolean;
     isAst?: boolean;
@@ -183,7 +195,7 @@ export interface InputMetadata {
     required?: boolean;
     defaultValue?: any;
     title?: string;
-    type?: string;
+    type?: InputFieldType;
 }
 
 export const INPUT = new InjectionToken<InputMetadata[]>(`INPUT`)

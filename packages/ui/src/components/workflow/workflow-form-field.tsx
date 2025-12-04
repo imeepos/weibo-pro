@@ -1,12 +1,25 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, lazy, Suspense } from 'react'
 import { cn } from '@udecode/cn'
+import { MarkdownEditor } from '@sker/ui/components/ui/markdown-editor'
+
+/** 支持的输入字段类型 */
+export type InputFieldType =
+  | 'string'
+  | 'text'
+  | 'textarea'
+  | 'richtext'
+  | 'number'
+  | 'boolean'
+  | 'date'
+  | 'datetime-local'
+  | 'any'
 
 export interface WorkflowFormFieldProps {
   label: string
   value: any
-  type?: 'string' | 'number' | 'boolean' | 'date' | 'datetime-local' | 'textarea' | 'text' | any
+  type?: InputFieldType
   onChange: (value: any) => void
   placeholder?: string
   error?: string
@@ -223,6 +236,19 @@ export function WorkflowFormField({
           />
         )
 
+      case 'richtext':
+        return (
+          <Suspense fallback={<div className={cn(baseInputClass, 'min-h-[120px] animate-pulse')} />}>
+            <MarkdownEditor
+              value={typeof value === 'string' ? value : ''}
+              onChange={onChange}
+              placeholder={placeholder || '输入富文本内容...'}
+              disabled={disabled}
+              className="min-h-[120px]"
+            />
+          </Suspense>
+        )
+
       case 'text':
       case 'string':
       default:
@@ -248,7 +274,7 @@ export function WorkflowFormField({
 
   return (
     <div className={cn('mb-4', className)}>
-      <label className="block mb-2 text-xs font-medium text-muted-foreground leading-tight">{label}</label>
+      {label && <label className="block mb-2 text-xs font-medium text-muted-foreground leading-tight">{label}</label>}
       {renderInput()}
       {error && (
         <div className="mt-2 text-xs text-destructive font-medium animate-pulse">{error}</div>

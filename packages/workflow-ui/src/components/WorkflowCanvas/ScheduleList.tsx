@@ -3,8 +3,6 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import {
   Clock,
-  Edit2,
-  Trash2,
   CheckCircle,
   XCircle,
   Pause,
@@ -43,6 +41,7 @@ export interface ScheduleListProps {
   workflowName: string
   className?: string
   onClose?: () => void
+  apiBaseUrl?: string
 }
 
 type ScheduleStatus = 'enabled' | 'disabled' | 'expired'
@@ -105,7 +104,7 @@ const TYPE_CONFIG: Record<ScheduleType, TypeConfig> = {
 
 const ITEMS_PER_PAGE = 8
 
-export function ScheduleList({ workflowName, className = '', onClose }: ScheduleListProps) {
+export function ScheduleList({ workflowName, className = '', onClose, apiBaseUrl }: ScheduleListProps) {
   const client = root.get<WorkflowController>(WorkflowController) as any
   const [schedules, setSchedules] = useState<WorkflowScheduleEntity[]>([])
   const [loading, setLoading] = useState(false)
@@ -116,6 +115,13 @@ export function ScheduleList({ workflowName, className = '', onClose }: Schedule
   const [currentPage, setCurrentPage] = useState(1)
   const [sortField, setSortField] = useState<SortField>('createdAt')
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
+
+  // 自动获取 API 基础 URL（如果未提供）
+  const effectiveApiBaseUrl = apiBaseUrl || (
+    typeof window !== 'undefined'
+      ? `${window.location.protocol}//${window.location.host}`
+      : ''
+  )
 
   const fetchSchedules = async () => {
     setLoading(true)
@@ -161,6 +167,24 @@ export function ScheduleList({ workflowName, className = '', onClose }: Schedule
     } catch (err: unknown) {
       const error = err as Error
       setError(error.message || '删除调度失败')
+    }
+  }
+
+  const handleTrigger = async (schedule: WorkflowScheduleEntity) => {
+    try {
+      setError('')
+      const result = await client.triggerSchedule(schedule.id)
+
+      if (result.success) {
+        // 成功触发，刷新调度列表以更新最后运行时间
+        await fetchSchedules()
+
+        // 可以显示成功提示
+        alert(`调度已触发！运行ID: ${result.runId}`)
+      }
+    } catch (err: unknown) {
+      const error = err as Error
+      setError(error.message || '触发调度失败')
     }
   }
 
@@ -375,9 +399,13 @@ export function ScheduleList({ workflowName, className = '', onClose }: Schedule
                       expired={schedule.status === 'expired'}
                       nextRunAt={schedule.nextRunAt ? formatDateTime(schedule.nextRunAt) : undefined}
                       lastRunAt={schedule.lastRunAt ? formatDateTime(schedule.lastRunAt) : undefined}
+                      isManual={schedule.scheduleType === 'manual'}
+                      scheduleId={schedule.id}
+                      apiBaseUrl={effectiveApiBaseUrl}
                       onToggle={() => handleToggleStatus(schedule)}
                       onEdit={() => handleEdit(schedule)}
                       onDelete={() => handleDelete(schedule.id)}
+                      onTrigger={() => handleTrigger(schedule)}
                     />
                   )
                 })}

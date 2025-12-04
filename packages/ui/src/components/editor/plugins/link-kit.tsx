@@ -1,5 +1,5 @@
 'use client';
-
+import React from 'react'
 import { LinkPlugin } from '@platejs/link/react';
 
 import { LinkElement } from '@sker/ui/components/ui/link-node';
