@@ -15,7 +15,10 @@ import { cn } from '@sker/ui/lib/utils'
 import type { WorkflowEdgeProps } from './types/workflow-nodes'
 import { EdgeMode, IEdge } from './types'
 function getLabel(mode?: EdgeMode) {
-  switch (mode) {
+  // 默认使用 COMBINE_LATEST（与后端一致）
+  const actualMode = mode ?? EdgeMode.COMBINE_LATEST
+
+  switch (actualMode) {
     case EdgeMode.COMBINE_LATEST:
       return `最新值聚合`
     case EdgeMode.ZIP:
@@ -23,6 +26,7 @@ function getLabel(mode?: EdgeMode) {
     case EdgeMode.WITH_LATEST_FROM:
       return `主流携带`
     case EdgeMode.MERGE:
+      return ``
     default:
       return ``
   }
@@ -51,16 +55,20 @@ export function WorkflowEdge({
   })
 
   const edgeColor = useMemo(() => {
-    switch (mode) {
+    // 默认使用 COMBINE_LATEST（与后端一致）
+    const actualMode = mode ?? EdgeMode.COMBINE_LATEST
+
+    switch (actualMode) {
       case EdgeMode.ZIP:
-        return '#10b981'
+        return '#10b981'      // 绿色
       case EdgeMode.WITH_LATEST_FROM:
-        return '#ef4444'
+        return '#ef4444'      // 红色
       case EdgeMode.COMBINE_LATEST:
-        return '#f59e0b'
+        return '#f59e0b'      // 橙色
       case EdgeMode.MERGE:
+        return '#6b7280'      // 灰色
       default:
-        return '#6b7280'
+        return '#f59e0b'      // 默认橙色（COMBINE_LATEST）
     }
   }, [mode])
 

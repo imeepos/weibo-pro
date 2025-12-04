@@ -35,7 +35,7 @@ export function EdgeConfigDialog({
   onOpenChange,
   onSave
 }: EdgeConfigDialogProps) {
-  const [mode, setMode] = useState<EdgeMode>(EdgeMode.MERGE)
+  const [mode, setMode] = useState<EdgeMode>(EdgeMode.COMBINE_LATEST)
   const [fromProperty, setFromProperty] = useState('')
   const [toProperty, setToProperty] = useState('')
   const [weight, setWeight] = useState(1)
@@ -46,7 +46,7 @@ export function EdgeConfigDialog({
 
   useEffect(() => {
     if (edge) {
-      setMode(edge.mode || EdgeMode.MERGE)
+      setMode(edge.mode || EdgeMode.COMBINE_LATEST)
       setFromProperty(edge.fromProperty || '')
       setToProperty(edge.toProperty || '')
       setWeight(edge.weight || 1)

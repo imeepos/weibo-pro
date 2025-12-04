@@ -1065,13 +1065,28 @@ export class ReactiveScheduler {
 
     /**
      * 检测边模式（优先级：ZIP > WITH_LATEST_FROM > COMBINE_LATEST > MERGE）
+     *
+     * 优雅设计：
+     * - 多条边可以有不同的 mode 配置
+     * - 按优先级选择最严格的模式（ZIP 最严格，MERGE 最宽松）
+     * - ZIP：要求精确配对，最严格
+     * - WITH_LATEST_FROM：要求主从关系，次严格
+     * - COMBINE_LATEST：等待所有上游至少一次，中等
+     * - MERGE：任一上游即可触发，最宽松
      */
     private detectEdgeMode(edges: IEdge[]): EdgeMode {
-        // 检查是否有明确的 mode 配置
-        for (const edge of edges) {
-            if (edge.mode) {
-                return edge.mode;
-            }
+        // 按优先级检查（从严格到宽松）
+        if (edges.some(e => e.mode === EdgeMode.ZIP)) {
+            return EdgeMode.ZIP;
+        }
+        if (edges.some(e => e.mode === EdgeMode.WITH_LATEST_FROM)) {
+            return EdgeMode.WITH_LATEST_FROM;
+        }
+        if (edges.some(e => e.mode === EdgeMode.COMBINE_LATEST)) {
+            return EdgeMode.COMBINE_LATEST;
+        }
+        if (edges.some(e => e.mode === EdgeMode.MERGE)) {
+            return EdgeMode.MERGE;
         }
 
         // 默认 COMBINE_LATEST（等待所有上游就绪）
