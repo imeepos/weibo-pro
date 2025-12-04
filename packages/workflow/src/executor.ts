@@ -35,16 +35,19 @@ export class WorkflowExecutorVisitor {
                 if (updatedWorkflow.state === 'success' || updatedWorkflow.state === 'fail') {
                     const exposedOutputs = this.extractExposedOutputs(updatedWorkflow);
 
-                    if (Object.keys(exposedOutputs).length > 0) {
-                        // 有输出值，需要通过 emitting 状态传递给下游
-                        const workflowWithOutputs = { ...updatedWorkflow };
-                        Object.assign(workflowWithOutputs, exposedOutputs);
+                    // 无论是否有输出，都发射 emitting 状态以触发下游节点
+                    // 原因：调度器的 createSingleSourceStream 只处理 emitting 状态（reactive-scheduler.ts:752）
+                    // 如果不发射 emitting，下游节点永远不会被触发
+                    const workflowWithOutputs = { ...updatedWorkflow };
 
-                        // 先发射 emitting（传递数据），再发射最终状态
-                        // 因为调度器的 createSingleSourceStream 只处理 emitting 状态
-                        const emittingCopy = { ...workflowWithOutputs, state: 'emitting' as const };
-                        return of(emittingCopy, workflowWithOutputs);
+                    // 如果有输出，附加到节点实例上
+                    if (Object.keys(exposedOutputs).length > 0) {
+                        Object.assign(workflowWithOutputs, exposedOutputs);
                     }
+
+                    // 先发射 emitting（传递数据或触发信号），再发射最终状态
+                    const emittingCopy = { ...workflowWithOutputs, state: 'emitting' as const };
+                    return of(emittingCopy, workflowWithOutputs);
                 }
 
                 // 其他情况：直接返回原状态
