@@ -27,7 +27,7 @@ export function useResource(source: any, options: {
     const isVideoFile = isVideo(videoSource);
 
     return {
-        source: isVideoFile ? getVideoUrl(videoSource) : videoSource,
+        source: isVideoFile ? getVideoUrl(videoSource, { width: options.width, height: options.height }) : videoSource,
         poster: isVideoFile ? getVideoThumbnail(videoSource, options) : undefined
     }
 }
@@ -58,9 +58,22 @@ const getVideoThumbnail = (
     return `https://${CLOUDFLARE_ZONE}/cdn-cgi/media/${optionsString}/${videoUrl}`;
 };
 
-const getVideoUrl = (videoUrl: string) => {
+const getVideoUrl = (
+    videoUrl: string,
+    options: {
+        width?: number;
+        height?: number;
+    } = {}
+) => {
     if (videoUrl.startsWith(`https://${CLOUDFLARE_ZONE}`)) {
         return videoUrl;
     }
-    return `https://${CLOUDFLARE_ZONE}/cdn-cgi/media/mode=video,audio=false/${videoUrl}`;
+
+    const opts: string[] = ['mode=video', 'audio=false'];
+
+    if (options?.width) opts.push(`width=${options.width}`);
+    if (options?.height) opts.push(`height=${options.height}`);
+
+    const optionsString = opts.join(',');
+    return `https://${CLOUDFLARE_ZONE}/cdn-cgi/media/${optionsString}/${videoUrl}`;
 }
