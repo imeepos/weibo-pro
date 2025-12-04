@@ -7,6 +7,7 @@ import {
 } from '@sker/entities';
 import { logger } from '@sker/core';
 import { FindOptionsWhere, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
+import { generateId } from '@sker/workflow';
 
 /**
  * 工作流运行实例服务
@@ -60,6 +61,7 @@ export class WorkflowRunService {
 
       // 创建运行实例
       const run = runRepository.create({
+        id: generateId(),
         workflowId: workflow.id,
         scheduleId,
         status: RunStatus.PENDING,
