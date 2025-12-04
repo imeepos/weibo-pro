@@ -1,7 +1,10 @@
-import Svg, { Path, Rect, G, Defs, ClipPath } from 'react-native-svg';
+import Svg, { Path, Rect, G, Defs, ClipPath, type SvgProps } from 'react-native-svg';
+import { useCssElement } from 'react-native-css';
 
-export const CloseIcon = ({ className }: { className?: string }) => (
-  <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+type IconProps = SvgProps & { className?: string };
+
+const BaseSvg = (props: SvgProps) => (
+  <Svg width="24" height="24" viewBox="0 0 24 24" fill="none" {...props}>
     <Rect width="24" height="24" rx="12" fill="#262626" />
     <G clipPath="url(#clip0_3512_209)">
       <Path
@@ -16,3 +19,5 @@ export const CloseIcon = ({ className }: { className?: string }) => (
     </Defs>
   </Svg>
 );
+
+export const CloseIcon = (props: IconProps) => useCssElement(BaseSvg, props, { className: 'style' });

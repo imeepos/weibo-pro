@@ -98,8 +98,7 @@ const VideoPlayer = forwardRef<VideoView, VideoPlayerProps>(
           <VideoView
             ref={ref}
             player={player}
-            className="!absolute !top-0 !left-0 !bottom-0 !right-0 !inset-0 !w-full !h-full"
-            style={{ width: '100%', height: '100%', position: 'absolute', left: 0, top: 0 }}
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
             nativeControls={false}
             contentFit="cover"
           />
@@ -107,8 +106,8 @@ const VideoPlayer = forwardRef<VideoView, VideoPlayerProps>(
 
         {showPoster && poster && (
           <Image
-            source={poster}
-            className="!absolute !top-0 !left-0 !bottom-0 !right-0 !inset-0 !w-full !h-full"
+            src={poster}
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
             contentFit="cover"
           />
         )}

@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Pressable, Text, type PressableProps, type ViewStyle } from "react-native";
+import { Pressable, Text, ActivityIndicator, type PressableProps, type ViewStyle } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { cva, type VariantProps } from "class-variance-authority";
 
@@ -54,15 +54,20 @@ export interface ButtonProps
     VariantProps<typeof buttonVariants> {
   children?: React.ReactNode;
   style?: ViewStyle;
+  loading?: boolean;
+  onClick?: () => void;
 }
 
 const Button = React.forwardRef<
   React.ElementRef<typeof Pressable>,
   ButtonProps
->(({ className, variant, size, children, disabled, style, ...props }, ref) => {
+>(({ className, variant, size, children, disabled, loading, style, onClick, onPress, ...props }, ref) => {
   const isGradient = variant === "gradient";
+  const isDisabled = disabled || loading;
 
-  const content = typeof children === "string" ? (
+  const content = loading ? (
+    <ActivityIndicator size="small" color={variant === "outline" || variant === "ghost" ? "#666" : "#fff"} />
+  ) : typeof children === "string" ? (
     <Text className={cn(buttonTextVariants({ variant }))}>{children}</Text>
   ) : (
     children
@@ -73,12 +78,13 @@ const Button = React.forwardRef<
       ref={ref}
       className={cn(
         buttonVariants({ variant, size }),
-        disabled && "opacity-50",
+        isDisabled && "opacity-50",
         isGradient && "overflow-hidden",
         className
       )}
-      disabled={disabled}
+      disabled={isDisabled}
       style={style}
+      onPress={onClick || onPress}
       {...props}
     >
       {isGradient ? (

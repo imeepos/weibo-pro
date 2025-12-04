@@ -29,19 +29,7 @@ export default function HomeScreen() {
 
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
-            <StatusBar style="light" />
-            <RNStatusBar barStyle="light-content" />
-
-            {/* 顶部状态栏和标题栏 */}
             <View style={styles.header}>
-                <View style={styles.statusBar}>
-                    <Text style={styles.time}>9:41</Text>
-                    <View style={styles.statusIcons}>
-                        <View style={styles.signalBars} />
-                        <View style={styles.wifiIcon} />
-                        <View style={styles.batteryIcon} />
-                    </View>
-                </View>
                 <View style={styles.titleBar}>
                     <Text style={styles.appTitle}>Popcore</Text>
                     <View style={styles.headerRight}>
@@ -78,6 +66,7 @@ export default function HomeScreen() {
                         <Image
                             source={require('@/assets/images/image-17.png')}
                             style={styles.heroSideImage}
+                            className={''}
                             contentFit="cover"
                         />
                         <View style={styles.heroSideTextContainer}>

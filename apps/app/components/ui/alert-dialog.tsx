@@ -358,7 +358,7 @@ function DeleteAlertDialogAction({
       className={className}
       style={{ ...styles.deleteActionButton, ...style }}
     >
-      <Text style={styles.deleteActionText}>删除</Text>
+      <Text style={styles.deleteActionText}>确认删除</Text>
     </AlertDialogAction>
   );
 }
@@ -374,7 +374,7 @@ function CancelAlertDialogAction({
       className={className}
       style={{ ...styles.cancelActionButton, ...style }}
     >
-      <Text style={styles.cancelActionText}>删除</Text>
+      <Text style={styles.cancelActionText}>取消</Text>
     </AlertDialogAction>
   );
 }
@@ -399,7 +399,7 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
   deleteActionText: {
-    color: "确认删除",
+    color: "#FFFFFF",
     fontSize: 14,
     fontWeight: "500",
   },

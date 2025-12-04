@@ -1,10 +1,15 @@
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Path, type SvgProps } from 'react-native-svg';
+import { useCssElement } from 'react-native-css';
 
-export const HomeIcon = ({ className }: { className?: string }) => (
-  <Svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+type IconProps = SvgProps & { className?: string };
+
+const BaseSvg = (props: SvgProps) => (
+  <Svg width="20" height="20" viewBox="0 0 20 20" fill="none" {...props}>
     <Path
       d="M16.9717 7.85439L10.9446 1.94699C10.1097 1.12884 8.63951 1.12884 7.80462 1.94699L1.77793 7.85439C1.43791 8.18789 1.25 8.61816 1.25 9.06363V16.8441C1.25 17.851 2.18915 18.6667 3.34812 18.6667H6.69234C7.33388 18.6667 7.85364 18.2148 7.85364 17.6574V14.8591C7.85364 14.2285 8.3415 13.6522 9.0519 13.5231C10.028 13.3455 10.8964 13.9969 10.8964 14.8155V17.6574C10.8964 18.2148 11.4165 18.6667 12.0577 18.6667H15.4019C16.5605 18.6667 17.5 17.8506 17.5 16.8441V9.06363C17.4996 8.61816 17.3121 8.18789 16.9717 7.85439Z"
       fill="white"
     />
   </Svg>
 );
+
+export const HomeIcon = (props: IconProps) => useCssElement(BaseSvg, props, { className: 'style' });
