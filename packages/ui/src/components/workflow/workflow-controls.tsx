@@ -14,6 +14,7 @@ import {
   LayoutGrid,
   Clock,
   XCircle,
+  History,
 } from 'lucide-react'
 import { cn } from '@sker/ui/lib/utils'
 import { Button } from '@sker/ui/components/ui/button'
@@ -28,6 +29,7 @@ export interface WorkflowControlsProps {
   onSettings?: () => void
   onSchedule?: () => void
   onScheduleList?: () => void
+  onRunHistory?: () => void
 
   // 视图控制
   onZoomIn?: () => void
@@ -61,6 +63,7 @@ export const WorkflowControls: React.FC<WorkflowControlsProps> = ({
   onSettings,
   onSchedule,
   onScheduleList,
+  onRunHistory,
   onZoomIn,
   onZoomOut,
   onFitView,
@@ -124,6 +127,19 @@ export const WorkflowControls: React.FC<WorkflowControlsProps> = ({
           className={buttonClassName}
         >
           <Clock className="h-4 w-4" strokeWidth={2} />
+        </Button>
+      )}
+
+      {/* 运行历史 */}
+      {onRunHistory && (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={onRunHistory}
+          title="运行历史"
+          className={buttonClassName}
+        >
+          <History className="h-4 w-4" strokeWidth={2} />
         </Button>
       )}
 

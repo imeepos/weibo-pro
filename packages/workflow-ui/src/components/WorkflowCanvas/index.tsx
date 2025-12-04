@@ -43,6 +43,8 @@ import { EdgeConfigDialog } from './EdgeConfigDialog'
 import { WorkflowSettingsDialog } from './WorkflowSettingsDialog'
 import { ScheduleDialog } from './ScheduleDialog'
 import { ScheduleList } from './ScheduleList'
+import { RunHistoryPanel } from './RunHistoryPanel'
+import { RunConfigDialog } from './RunConfigDialog'
 import { cn } from '../../utils/cn'
 import { getAllNodeTypes } from '../../adapters'
 
@@ -162,6 +164,12 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
     schedulePanel,
     openSchedulePanel,
     closeSchedulePanel,
+    runHistoryPanel,
+    openRunHistoryPanel,
+    closeRunHistoryPanel,
+    runConfigDialog,
+    openRunConfigDialog,
+    closeRunConfigDialog,
   } = useCanvasState()
 
   // 连线状态追踪
@@ -637,6 +645,35 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
     showToast('success', '工作流设置已保存', `已更新工作流 "${settings.name || '未命名'}" 的属性`)
   }, [workflow, showToast, saveWorkflow])
 
+  /**
+   * 检测工作流是否有需要配置的输入节点
+   * 优雅设计：只要有入度为 0 的起始节点，就认为需要配置
+   */
+  const hasConfigurableInputs = useCallback(() => {
+    if (!workflow.workflowAst?.nodes || !workflow.workflowAst?.edges) {
+      return false
+    }
+
+    return workflow.workflowAst.nodes.some((node) => {
+      const hasIncomingEdges = workflow.workflowAst!.edges.some(
+        (edge: any) => edge.to === node.id
+      )
+      return !hasIncomingEdges  // 没有输入边 = 起始节点
+    })
+  }, [workflow])
+
+  /**
+   * 处理工作流运行
+   * 优雅设计：自动检测是否需要配置输入，提供流畅的用户体验
+   */
+  const handleRunWorkflow = useCallback(() => {
+    if (hasConfigurableInputs()) {
+      openRunConfigDialog()
+    } else {
+      runWorkflow()
+    }
+  }, [hasConfigurableInputs, openRunConfigDialog, runWorkflow])
+
   const isCanvasEmpty = workflow.nodes.length === 0
 
   // MiniMap 节点颜色映射
@@ -729,7 +766,7 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
       {showControls && (
         <WorkflowControls
           className="absolute left-4 top-4 z-[5]"
-          onRun={() => runWorkflow()}
+          onRun={handleRunWorkflow}
           onCancel={cancelWorkflow}
           onSave={customOnSave || (() => saveWorkflow(workflow.workflowAst?.name || 'Untitled'))}
           onExport={exportWorkflow}
@@ -749,6 +786,14 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
               openSchedulePanel(workflowName)
             } else {
               showToast('error', '请先保存工作流', '只有保存的工作流才能查看调度')
+            }
+          }}
+          onRunHistory={() => {
+            const workflowId = workflow.workflowAst?.id
+            if (workflowId) {
+              openRunHistoryPanel(workflowId)
+            } else {
+              showToast('error', '请先保存工作流', '只有保存的工作流才能查看运行历史')
             }
           }}
           onZoomIn={handleZoomIn}
@@ -860,6 +905,27 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
           className="absolute top-4 right-4 w-[600px] max-h-[80vh] overflow-y-auto z-[5]"
         />
       )}
+
+      {/* 运行历史面板 */}
+      {runHistoryPanel.visible && runHistoryPanel.workflowId && (
+        <RunHistoryPanel
+          visible={runHistoryPanel.visible}
+          workflowId={runHistoryPanel.workflowId}
+          onClose={closeRunHistoryPanel}
+        />
+      )}
+
+      {/* 运行配置对话框 */}
+      <RunConfigDialog
+        visible={runConfigDialog.visible}
+        workflow={workflow.workflowAst}
+        defaultInputs={runConfigDialog.defaultInputs}
+        onConfirm={(inputs) => {
+          closeRunConfigDialog()
+          runWorkflow(inputs)
+        }}
+        onCancel={closeRunConfigDialog}
+      />
     </div>
     </WorkflowOperationsContext.Provider>
   )

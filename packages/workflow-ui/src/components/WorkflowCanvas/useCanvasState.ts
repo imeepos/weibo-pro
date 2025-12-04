@@ -67,6 +67,18 @@ export function useCanvasState() {
     workflowName?: string
   }>({ visible: false })
 
+  // 运行历史面板状态
+  const [runHistoryPanel, setRunHistoryPanel] = useState<{
+    visible: boolean
+    workflowId?: string
+  }>({ visible: false })
+
+  // 运行配置对话框状态
+  const [runConfigDialog, setRunConfigDialog] = useState<{
+    visible: boolean
+    defaultInputs?: Record<string, unknown>
+  }>({ visible: false })
+
   /**
    * 显示 Toast 提示
    */
@@ -190,6 +202,34 @@ export function useCanvasState() {
     setSchedulePanel({ visible: false, workflowName: undefined })
   }, [])
 
+  /**
+   * 打开运行历史面板
+   */
+  const openRunHistoryPanel = useCallback((workflowId?: string) => {
+    setRunHistoryPanel({ visible: true, workflowId })
+  }, [])
+
+  /**
+   * 关闭运行历史面板
+   */
+  const closeRunHistoryPanel = useCallback(() => {
+    setRunHistoryPanel({ visible: false, workflowId: undefined })
+  }, [])
+
+  /**
+   * 打开运行配置对话框
+   */
+  const openRunConfigDialog = useCallback((defaultInputs?: Record<string, unknown>) => {
+    setRunConfigDialog({ visible: true, defaultInputs })
+  }, [])
+
+  /**
+   * 关闭运行配置对话框
+   */
+  const closeRunConfigDialog = useCallback(() => {
+    setRunConfigDialog({ visible: false })
+  }, [])
+
   return {
     // 执行状态
     isRunning,
@@ -218,6 +258,10 @@ export function useCanvasState() {
     openSchedulePanel,
     closeSchedulePanel,
 
+    runHistoryPanel,
+    openRunHistoryPanel,
+    closeRunHistoryPanel,
+
     // Toast 提示
     showToast,
 
@@ -240,5 +284,10 @@ export function useCanvasState() {
     workflowSettingsDialog,
     openWorkflowSettingsDialog,
     closeWorkflowSettingsDialog,
+
+    // 运行配置对话框
+    runConfigDialog,
+    openRunConfigDialog,
+    closeRunConfigDialog,
   }
 }

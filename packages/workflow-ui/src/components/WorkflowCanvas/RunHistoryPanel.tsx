@@ -5,35 +5,35 @@ import { createPortal } from 'react-dom'
 import {
   X,
   Clock,
-  CheckCircle2,
-  XCircle,
-  AlertCircle,
-  RefreshCw,
   Eye,
-  Play,
   StopCircle,
-  ChevronLeft,
-  ChevronRight,
   Calendar,
 } from 'lucide-react'
 import { type WorkflowRunEntity, RunStatus } from '@sker/sdk'
 import { root } from '@sker/core'
 import { WorkflowController } from '@sker/sdk'
+import {
+  StatusBadge
+} from '@sker/ui/components/ui/status-badge'
+import { StatusIcon } from '@sker/ui/components/ui/status-icon'
+import {
+  EmptyState,
+} from '@sker/ui/components/ui/empty-state'
+import {
+  SimplePagination,
+} from '@sker/ui/components/ui/simple-pagination'
+import {
+  FilterBar,
+  type FilterOption,
+} from '@sker/ui/components/ui/filter-bar'
+import {
+  Spinner,
+} from '@sker/ui/components/ui/spinner'
+import { Button } from '@sker/ui/components/ui/button'
+import { cn } from '@sker/ui/lib/utils'
 
 /**
  * 运行历史面板
- *
- * 存在即合理：
- * - 展示工作流的所有运行历史
- * - 支持查看运行详情
- * - 支持分页和筛选
- * - 支持取消正在运行的实例
- *
- * 优雅设计：
- * - 响应式布局
- * - 实时状态更新
- * - 清晰的状态标识
- * - 优雅的错误处理
  */
 export interface RunHistoryPanelProps {
   visible: boolean
@@ -41,6 +41,22 @@ export interface RunHistoryPanelProps {
   onClose: () => void
   onViewDetail?: (run: WorkflowRunEntity) => void
   scheduleId?: string
+}
+
+const STATUS_FILTERS: FilterOption<RunStatus>[] = [
+  { value: RunStatus.RUNNING, label: '运行中' },
+  { value: RunStatus.SUCCESS, label: '成功' },
+  { value: RunStatus.FAILED, label: '失败' },
+  { value: RunStatus.CANCELLED, label: '已取消' },
+]
+
+const STATUS_MAP: Record<RunStatus, { badge: 'success' | 'error' | 'info' | 'pending' | 'cancelled' | 'warning', label: string }> = {
+  [RunStatus.SUCCESS]: { badge: 'success', label: '成功' },
+  [RunStatus.FAILED]: { badge: 'error', label: '失败' },
+  [RunStatus.RUNNING]: { badge: 'info', label: '运行中' },
+  [RunStatus.CANCELLED]: { badge: 'cancelled', label: '已取消' },
+  [RunStatus.PENDING]: { badge: 'pending', label: '等待中' },
+  [RunStatus.TIMEOUT]: { badge: 'warning', label: '超时' },
 }
 
 export function RunHistoryPanel({
@@ -88,7 +104,7 @@ export function RunHistoryPanel({
   const handleViewDetail = async (runId: string) => {
     try {
       const controller = root.get<WorkflowController>(WorkflowController)
-      const run = await controller.getRun({ runId })
+      const run = await controller.getRun(runId)
 
       setSelectedRun(run)
       onViewDetail?.(run)
@@ -101,8 +117,6 @@ export function RunHistoryPanel({
     try {
       const controller = root.get<WorkflowController>(WorkflowController)
       await controller.cancelRun({ runId })
-
-      // 刷新列表
       loadRuns()
     } catch (error) {
       console.error('取消运行失败', error)
@@ -127,14 +141,16 @@ export function RunHistoryPanel({
               <Clock className="h-5 w-5" strokeWidth={1.8} />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-white">{scheduleId ? `调度 #${scheduleId} 的运行历史` : '运行历史'}</h3>
+              <h3 className="text-lg font-semibold text-foreground">
+                {scheduleId ? `调度 #${scheduleId} 的运行历史` : '运行历史'}
+              </h3>
               <p className="text-sm text-muted-foreground/70">共 {total} 条记录</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-secondary hover:text-white"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-secondary hover:text-foreground"
           >
             <X className="h-5 w-5" strokeWidth={1.8} />
           </button>
@@ -142,148 +158,107 @@ export function RunHistoryPanel({
 
         {/* Filters */}
         <div className="border-b border-border p-4">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-muted-foreground">状态：</span>
-            <button
-              type="button"
-              onClick={() => setStatusFilter(undefined)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${statusFilter === undefined
-                  ? 'bg-primary text-white'
-                  : 'bg-secondary text-muted-foreground hover:bg-secondary'
-                }`}
-            >
-              全部
-            </button>
-            {[
-              { value: RunStatus.RUNNING, label: '运行中' },
-              { value: RunStatus.SUCCESS, label: '成功' },
-              { value: RunStatus.FAILED, label: '失败' },
-              { value: RunStatus.CANCELLED, label: '已取消' },
-            ].map((status) => (
-              <button
-                key={status.value}
-                type="button"
-                onClick={() => setStatusFilter(status.value)}
-                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${statusFilter === status.value
-                    ? 'bg-primary text-white'
-                    : 'bg-secondary text-muted-foreground hover:bg-secondary'
-                  }`}
-              >
-                {status.label}
-              </button>
-            ))}
-          </div>
+          <FilterBar
+            options={STATUS_FILTERS}
+            value={statusFilter}
+            onChange={setStatusFilter}
+          />
         </div>
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+              <Spinner className="h-8 w-8 text-primary" />
             </div>
           ) : runs.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-secondary text-muted-foreground/70">
-                <Clock className="h-8 w-8" strokeWidth={1.5} />
-              </div>
-              <p className="text-sm text-muted-foreground/70">暂无运行记录</p>
-            </div>
+            <EmptyState
+              icon={Clock}
+              description="暂无运行记录"
+            />
           ) : (
             <div className="space-y-3">
-              {runs.map((run) => (
-                <div
-                  key={run.id}
-                  className="rounded-lg border border-border bg-secondary p-4 transition hover:border-border"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
-                        {getStatusIcon(run.status)}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-white">
-                            运行 #{run.id}
-                          </span>
-                          {getStatusBadge(run.status)}
+              {runs.map((run) => {
+                const statusConfig = STATUS_MAP[run.status]
+                return (
+                  <div
+                    key={run.id}
+                    className="rounded-lg border border-border bg-secondary p-4 transition hover:border-border"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-background">
+                          <StatusIcon status={run.status === RunStatus.TIMEOUT ? 'timeout' : run.status.toLowerCase() as any} />
                         </div>
-                        <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground/70">
-                          <span>
-                            {formatDate(run.createdAt)}
-                          </span>
-                          {run.durationMs && (
-                            <span>耗时 {formatDuration(run.durationMs)}</span>
-                          )}
-                          {run.scheduleId && (
-                            <span className="inline-flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              调度 #{run.scheduleId}
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-foreground">
+                              运行 #{run.id}
                             </span>
-                          )}
+                            <StatusBadge status={statusConfig.badge}>
+                              {statusConfig.label}
+                            </StatusBadge>
+                          </div>
+                          <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground/70">
+                            <span>{formatDate(run.createdAt)}</span>
+                            {run.durationMs && (
+                              <span>耗时 {formatDuration(run.durationMs)}</span>
+                            )}
+                            {run.scheduleId && (
+                              <span className="inline-flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                调度 #{run.scheduleId}
+                              </span>
+                            )}
+                          </div>
                         </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewDetail(run.id)}
+                          className="gap-2"
+                        >
+                          <Eye className="h-3.5 w-3.5" strokeWidth={2} />
+                          查看详情
+                        </Button>
+
+                        {run.status === RunStatus.RUNNING && (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleCancelRun(run.id)}
+                            className="gap-2"
+                          >
+                            <StopCircle className="h-3.5 w-3.5" strokeWidth={2} />
+                            取消
+                          </Button>
+                        )}
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleViewDetail(run.id)}
-                        className="inline-flex items-center gap-2 rounded-lg border border-border bg-secondary px-3 py-1.5 text-xs font-medium text-white transition hover:bg-secondary"
-                      >
-                        <Eye className="h-3.5 w-3.5" strokeWidth={2} />
-                        查看详情
-                      </button>
-
-                      {run.status === RunStatus.RUNNING && (
-                        <button
-                          type="button"
-                          onClick={() => handleCancelRun(run.id)}
-                          className="inline-flex items-center gap-2 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-400 transition hover:bg-red-500/20"
-                        >
-                          <StopCircle className="h-3.5 w-3.5" strokeWidth={2} />
-                          取消
-                        </button>
-                      )}
-                    </div>
+                    {run.error && (
+                      <div className="mt-3 rounded-lg border border-destructive/20 bg-destructive/10 p-3">
+                        <p className="text-xs text-destructive">{run.error.message}</p>
+                      </div>
+                    )}
                   </div>
-
-                  {run.error && (
-                    <div className="mt-3 rounded-lg border border-red-500/20 bg-red-500/10 p-3">
-                      <p className="text-xs text-red-400">{run.error.message}</p>
-                    </div>
-                  )}
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
 
         {/* Footer with Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-border p-6">
-            <p className="text-sm text-muted-foreground/70">
-              第 {page} 页，共 {totalPages} 页
-            </p>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="inline-flex items-center gap-1 rounded-lg border border-border bg-secondary px-3 py-1.5 text-xs font-medium text-white transition hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronLeft className="h-3.5 w-3.5" strokeWidth={2} />
-                上一页
-              </button>
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="inline-flex items-center gap-1 rounded-lg border border-border bg-secondary px-3 py-1.5 text-xs font-medium text-white transition hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                下一页
-                <ChevronRight className="h-3.5 w-3.5" strokeWidth={2} />
-              </button>
-            </div>
+          <div className="border-t border-border p-6">
+            <SimplePagination
+              currentPage={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+            />
           </div>
         )}
       </div>
@@ -312,6 +287,8 @@ interface RunDetailDialogProps {
 }
 
 function RunDetailDialog({ run, onClose }: RunDetailDialogProps) {
+  const statusConfig = STATUS_MAP[run.status]
+
   const dialogContent = (
     <>
       <div
@@ -323,10 +300,10 @@ function RunDetailDialog({ run, onClose }: RunDetailDialogProps) {
         <div className="flex items-center justify-between border-b border-border p-6">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary">
-              {getStatusIcon(run.status)}
+              <StatusIcon status={run.status === RunStatus.TIMEOUT ? 'timeout' : run.status.toLowerCase() as any} />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 运行详情 #{run.id}
               </h3>
               <p className="text-sm text-muted-foreground/70">
@@ -337,7 +314,7 @@ function RunDetailDialog({ run, onClose }: RunDetailDialogProps) {
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-secondary hover:text-white"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-secondary hover:text-foreground"
           >
             <X className="h-5 w-5" strokeWidth={1.8} />
           </button>
@@ -350,7 +327,9 @@ function RunDetailDialog({ run, onClose }: RunDetailDialogProps) {
             <label className="mb-2 block text-sm font-medium text-muted-foreground">
               状态
             </label>
-            {getStatusBadge(run.status)}
+            <StatusBadge status={statusConfig.badge}>
+              {statusConfig.label}
+            </StatusBadge>
           </div>
 
           {/* Timing */}
@@ -359,7 +338,7 @@ function RunDetailDialog({ run, onClose }: RunDetailDialogProps) {
               <label className="mb-2 block text-sm font-medium text-muted-foreground">
                 开始时间
               </label>
-              <p className="text-sm text-white">
+              <p className="text-sm text-foreground">
                 {run.startedAt ? formatDate(run.startedAt) : '-'}
               </p>
             </div>
@@ -367,7 +346,7 @@ function RunDetailDialog({ run, onClose }: RunDetailDialogProps) {
               <label className="mb-2 block text-sm font-medium text-muted-foreground">
                 完成时间
               </label>
-              <p className="text-sm text-white">
+              <p className="text-sm text-foreground">
                 {run.completedAt ? formatDate(run.completedAt) : '-'}
               </p>
             </div>
@@ -379,7 +358,7 @@ function RunDetailDialog({ run, onClose }: RunDetailDialogProps) {
               <label className="mb-2 block text-sm font-medium text-muted-foreground">
                 执行耗时
               </label>
-              <p className="text-sm text-white">{formatDuration(run.durationMs)}</p>
+              <p className="text-sm text-foreground">{formatDuration(run.durationMs)}</p>
             </div>
           )}
 
@@ -389,7 +368,7 @@ function RunDetailDialog({ run, onClose }: RunDetailDialogProps) {
               <label className="mb-2 block text-sm font-medium text-muted-foreground">
                 输入参数
               </label>
-              <pre className="rounded-lg border border-border bg-secondary p-3 text-xs text-white overflow-x-auto">
+              <pre className="rounded-lg border border-border bg-secondary p-3 text-xs text-foreground overflow-x-auto">
                 {JSON.stringify(run.inputs, null, 2)}
               </pre>
             </div>
@@ -401,7 +380,7 @@ function RunDetailDialog({ run, onClose }: RunDetailDialogProps) {
               <label className="mb-2 block text-sm font-medium text-muted-foreground">
                 输出结果
               </label>
-              <pre className="rounded-lg border border-border bg-secondary p-3 text-xs text-white overflow-x-auto">
+              <pre className="rounded-lg border border-border bg-secondary p-3 text-xs text-foreground overflow-x-auto">
                 {JSON.stringify(run.outputs, null, 2)}
               </pre>
             </div>
@@ -413,10 +392,10 @@ function RunDetailDialog({ run, onClose }: RunDetailDialogProps) {
               <label className="mb-2 block text-sm font-medium text-muted-foreground">
                 错误信息
               </label>
-              <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-4">
-                <p className="text-sm text-red-400 mb-2">{run.error.message}</p>
+              <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4">
+                <p className="text-sm text-destructive mb-2">{run.error.message}</p>
                 {run.error.stack && (
-                  <pre className="text-xs text-red-300 overflow-x-auto">
+                  <pre className="text-xs text-destructive/80 overflow-x-auto">
                     {run.error.stack}
                   </pre>
                 )}
@@ -427,13 +406,12 @@ function RunDetailDialog({ run, onClose }: RunDetailDialogProps) {
 
         {/* Footer */}
         <div className="flex items-center justify-end border-t border-border p-6">
-          <button
-            type="button"
+          <Button
+            variant="outline"
             onClick={onClose}
-            className="rounded-lg border border-border bg-secondary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-secondary"
           >
             关闭
-          </button>
+          </Button>
         </div>
       </div>
     </>
@@ -445,80 +423,11 @@ function RunDetailDialog({ run, onClose }: RunDetailDialogProps) {
 }
 
 /**
- * 获取状态图标
- */
-function getStatusIcon(status: RunStatus) {
-  switch (status) {
-    case RunStatus.SUCCESS:
-      return <CheckCircle2 className="h-5 w-5 text-green-400" strokeWidth={2} />
-    case RunStatus.FAILED:
-      return <XCircle className="h-5 w-5 text-red-400" strokeWidth={2} />
-    case RunStatus.RUNNING:
-      return <RefreshCw className="h-5 w-5 text-blue-400 animate-spin" strokeWidth={2} />
-    case RunStatus.CANCELLED:
-      return <StopCircle className="h-5 w-5 text-orange-400" strokeWidth={2} />
-    case RunStatus.PENDING:
-      return <Clock className="h-5 w-5 text-gray-400" strokeWidth={2} />
-    case RunStatus.TIMEOUT:
-      return <AlertCircle className="h-5 w-5 text-yellow-400" strokeWidth={2} />
-    default:
-      return <AlertCircle className="h-5 w-5 text-gray-400" strokeWidth={2} />
-  }
-}
-
-/**
- * 获取状态徽章
- */
-function getStatusBadge(status: RunStatus) {
-  const configs: Record<
-    RunStatus,
-    { label: string; className: string }
-  > = {
-    [RunStatus.SUCCESS]: {
-      label: '成功',
-      className: 'bg-green-500/10 text-green-400 border-green-500/20',
-    },
-    [RunStatus.FAILED]: {
-      label: '失败',
-      className: 'bg-red-500/10 text-red-400 border-red-500/20',
-    },
-    [RunStatus.RUNNING]: {
-      label: '运行中',
-      className: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-    },
-    [RunStatus.CANCELLED]: {
-      label: '已取消',
-      className: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
-    },
-    [RunStatus.PENDING]: {
-      label: '等待中',
-      className: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
-    },
-    [RunStatus.TIMEOUT]: {
-      label: '超时',
-      className: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
-    },
-  }
-
-  const config = configs[status] || {
-    label: status,
-    className: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
-  }
-
-  return (
-    <span
-      className={`inline-flex items-center rounded-lg border px-2 py-1 text-xs font-medium ${config.className}`}
-    >
-      {config.label}
-    </span>
-  )
-}
-
-/**
- * 格式化日期
+ * 格式化日期（显示本地时区时间）
  */
 function formatDate(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date
+
   return d.toLocaleString('zh-CN', {
     year: 'numeric',
     month: '2-digit',

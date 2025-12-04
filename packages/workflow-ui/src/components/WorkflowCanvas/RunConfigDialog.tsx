@@ -3,22 +3,21 @@
 import React, { useState, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Play, Settings } from 'lucide-react'
-import { WorkflowGraphAst } from '@sker/workflow'
+import { WorkflowGraphAst, getInputMetadata, resolveConstructor } from '@sker/workflow'
 import { IEdge } from '@sker/workflow'
+import { WorkflowFormField, type InputFieldType } from '@sker/ui/components/workflow/workflow-form-field'
+import { EmptyState } from '@sker/ui/components/ui'
+import { Button } from '@sker/ui/components/ui/button'
 
 /**
  * 运行配置对话框
  *
- * 存在即合理：
- * - 收集工作流运行所需的输入参数
- * - 自动识别入度为 0 的输入节点
- * - 支持多种数据类型的输入
- * - 合并默认输入和用户自定义输入
- *
  * 优雅设计：
- * - 自动推断节点的输入属性
- * - 智能表单生成
- * - 响应式布局
+ * - 自动收集所有入度为 0 的起始节点
+ * - 只渲染带有 @Input 装饰器的属性（通过元数据系统）
+ * - 智能推断字段类型（优先使用 @Input 的 type）
+ * - 使用 WorkflowFormField 构建统一表单
+ * - 保留节点的默认值
  */
 export interface RunConfigDialogProps {
   visible: boolean
@@ -33,8 +32,9 @@ interface InputField {
   nodeName: string
   propertyKey: string
   propertyLabel: string
-  type: 'string' | 'number' | 'date' | 'boolean' | 'json'
+  type: InputFieldType
   value: any
+  fullKey: string
 }
 
 export function RunConfigDialog({
@@ -60,29 +60,47 @@ export function RunConfigDialog({
     })
   }, [workflow])
 
-  // 提取输入字段
+  // 提取所有带 @Input 装饰器的字段
   const inputFields = useMemo(() => {
     const fields: InputField[] = []
 
     inputNodes.forEach((node: any) => {
       const nodeType = node.type || node.constructor?.name || 'Unknown'
+      const nodeName = node.name || nodeType
 
-      // 常见的输入属性（可扩展）
-      const commonInputProps = ['keyword', 'startDate', 'endDate', 'page', 'mblogid']
+      try {
+        // 获取节点构造函数
+        const ctor = resolveConstructor(node)
 
-      commonInputProps.forEach((propKey) => {
-        if (propKey in node) {
+        // 获取该节点类型的所有 @Input 元数据
+        const inputMetadatas = getInputMetadata(ctor)
+        const metadataArray = Array.isArray(inputMetadatas) ? inputMetadatas : [inputMetadatas]
+
+        // 遍历所有 @Input 属性
+        metadataArray.forEach((metadata) => {
+          const propKey = String(metadata.propertyKey)
           const fullKey = `${node.id}.${propKey}`
+          const currentValue = inputs[fullKey] ?? node[propKey] ?? metadata.defaultValue
+
+          // 优先使用 @Input 装饰器指定的类型，否则智能推断
+          const fieldType = metadata.type || inferFieldType(propKey, currentValue)
+
+          // 优先使用 @Input 装饰器指定的标题，否则格式化属性名
+          const label = metadata.title || formatLabel(propKey)
+
           fields.push({
             nodeId: node.id,
-            nodeName: node.name || nodeType,
+            nodeName,
             propertyKey: propKey,
-            propertyLabel: formatLabel(propKey),
-            type: inferType(propKey, node[propKey]),
-            value: inputs[fullKey] ?? node[propKey],
+            propertyLabel: label,
+            type: fieldType,
+            value: currentValue,
+            fullKey,
           })
-        }
-      })
+        })
+      } catch (error) {
+        console.warn(`无法获取节点 ${nodeName} 的 @Input 元数据:`, error)
+      }
     })
 
     return fields
@@ -90,10 +108,10 @@ export function RunConfigDialog({
 
   if (!visible) return null
 
-  const handleInputChange = (fieldKey: string, value: any) => {
+  const handleInputChange = (fullKey: string, value: any) => {
     setInputs((prev) => ({
       ...prev,
-      [fieldKey]: value,
+      [fullKey]: value,
     }))
   }
 
@@ -119,12 +137,12 @@ export function RunConfigDialog({
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-primary">
               <Settings className="h-5 w-5" strokeWidth={1.8} />
             </div>
-            <h3 className="text-lg font-semibold text-white">运行配置</h3>
+            <h3 className="text-lg font-semibold text-foreground">运行配置</h3>
           </div>
           <button
             type="button"
             onClick={handleCancel}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-secondary hover:text-white"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-secondary hover:text-foreground"
           >
             <X className="h-5 w-5" strokeWidth={1.8} />
           </button>
@@ -133,49 +151,53 @@ export function RunConfigDialog({
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
           {inputFields.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-secondary text-muted-foreground/70">
-                <Settings className="h-8 w-8" strokeWidth={1.5} />
-              </div>
-              <p className="text-sm text-muted-foreground/70">
-                此工作流不需要配置输入参数
-              </p>
-            </div>
+            <EmptyState
+              icon={Settings}
+              description="此工作流不需要配置输入参数"
+            />
           ) : (
             <div className="space-y-6">
-              {inputFields.map((field) => {
-                const fullKey = `${field.nodeId}.${field.propertyKey}`
-
-                return (
-                  <div key={fullKey}>
-                    <label className="mb-2 block text-sm font-medium text-muted-foreground">
-                      {field.nodeName} - {field.propertyLabel}
-                    </label>
-                    {renderInputField(field, fullKey, handleInputChange)}
+              {/* 按节点分组显示 */}
+              {groupFieldsByNode(inputFields).map(({ nodeName, fields }) => (
+                <div key={fields[0].nodeId} className="space-y-4">
+                  <div className="flex items-center gap-2 pb-2 border-b border-border/50">
+                    <div className="h-2 w-2 rounded-full bg-primary" />
+                    <h4 className="text-sm font-semibold text-foreground">{nodeName}</h4>
+                    <span className="text-xs text-muted-foreground">({fields.length} 个参数)</span>
                   </div>
-                )
-              })}
+                  <div className="pl-4 space-y-3">
+                    {fields.map((field) => (
+                      <WorkflowFormField
+                        key={field.fullKey}
+                        label={field.propertyLabel}
+                        value={field.value}
+                        type={field.type}
+                        onChange={(value) => handleInputChange(field.fullKey, value)}
+                        placeholder={getPlaceholder(field.propertyKey, field.type)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
 
         {/* Footer */}
         <div className="flex items-center justify-end gap-3 border-t border-border p-6">
-          <button
-            type="button"
+          <Button
+            variant="outline"
             onClick={handleCancel}
-            className="rounded-lg border border-border bg-secondary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-card"
           >
             取消
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
             onClick={handleConfirm}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-card"
+            className="gap-2"
           >
             <Play className="h-4 w-4" strokeWidth={2} />
             <span>开始运行</span>
-          </button>
+          </Button>
         </div>
       </div>
     </>
@@ -187,127 +209,38 @@ export function RunConfigDialog({
 }
 
 /**
- * 渲染输入字段
+ * 智能推断字段类型
+ * 优雅设计：根据属性名和值推断最合适的输入类型（作为 @Input type 的备选）
  */
-function renderInputField(
-  field: InputField,
-  fullKey: string,
-  onChange: (key: string, value: any) => void
-) {
-  const baseInputClass =
-    'w-full rounded-lg border border-border bg-secondary px-4 py-2.5 text-sm text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20'
+function inferFieldType(propKey: string, value: any): InputFieldType {
+  const lowerKey = propKey.toLowerCase()
 
-  switch (field.type) {
-    case 'string':
-      return (
-        <input
-          type="text"
-          value={field.value || ''}
-          onChange={(e) => onChange(fullKey, e.target.value)}
-          placeholder={`请输入${field.propertyLabel}`}
-          className={baseInputClass}
-        />
-      )
-
-    case 'number':
-      return (
-        <input
-          type="number"
-          value={field.value || ''}
-          onChange={(e) => onChange(fullKey, Number(e.target.value))}
-          placeholder={`请输入${field.propertyLabel}`}
-          className={baseInputClass}
-        />
-      )
-
-    case 'date':
-      return (
-        <input
-          type="date"
-          value={formatDateValue(field.value)}
-          onChange={(e) => onChange(fullKey, new Date(e.target.value))}
-          className={baseInputClass}
-        />
-      )
-
-    case 'boolean':
-      return (
-        <label className="flex items-center gap-3">
-          <input
-            type="checkbox"
-            checked={field.value || false}
-            onChange={(e) => onChange(fullKey, e.target.checked)}
-            className="h-4 w-4 rounded border-border bg-secondary text-primary focus:ring-2 focus:ring-primary/20 focus:ring-offset-2 focus:ring-offset-card"
-          />
-          <span className="text-sm text-muted-foreground">启用</span>
-        </label>
-      )
-
-    case 'json':
-      return (
-        <textarea
-          value={
-            typeof field.value === 'object'
-              ? JSON.stringify(field.value, null, 2)
-              : field.value || ''
-          }
-          onChange={(e) => {
-            try {
-              const parsed = JSON.parse(e.target.value)
-              onChange(fullKey, parsed)
-            } catch {
-              onChange(fullKey, e.target.value)
-            }
-          }}
-          placeholder={`请输入 JSON 格式的${field.propertyLabel}`}
-          rows={4}
-          className={`${baseInputClass} font-mono text-xs`}
-        />
-      )
-
-    default:
-      return (
-        <input
-          type="text"
-          value={field.value || ''}
-          onChange={(e) => onChange(fullKey, e.target.value)}
-          placeholder={`请输入${field.propertyLabel}`}
-          className={baseInputClass}
-        />
-      )
-  }
-}
-
-/**
- * 格式化标签
- */
-function formatLabel(key: string): string {
-  const labelMap: Record<string, string> = {
-    keyword: '关键词',
-    startDate: '开始日期',
-    endDate: '结束日期',
-    page: '页码',
-    mblogid: '微博 ID',
-  }
-
-  return labelMap[key] || key
-}
-
-/**
- * 推断类型
- */
-function inferType(
-  key: string,
-  value: any
-): 'string' | 'number' | 'date' | 'boolean' | 'json' {
-  if (key.toLowerCase().includes('date')) {
+  // 根据属性名推断
+  if (lowerKey.includes('date')) {
     return 'date'
   }
 
-  if (key.toLowerCase().includes('page') || key.toLowerCase().includes('count')) {
+  if (lowerKey.includes('time') && !lowerKey.includes('date')) {
+    return 'datetime-local'
+  }
+
+  if (lowerKey.includes('count') || lowerKey.includes('page') || lowerKey.includes('limit') || lowerKey.includes('size')) {
     return 'number'
   }
 
+  if (lowerKey.includes('enable') || lowerKey.includes('is') || lowerKey.includes('has') || lowerKey.includes('should')) {
+    return 'boolean'
+  }
+
+  if (lowerKey.includes('description') || lowerKey.includes('content') || lowerKey.includes('text')) {
+    return 'textarea'
+  }
+
+  if (lowerKey.includes('markdown') || lowerKey.includes('rich')) {
+    return 'richtext'
+  }
+
+  // 根据值的类型推断
   if (typeof value === 'number') {
     return 'number'
   }
@@ -320,23 +253,104 @@ function inferType(
     return 'date'
   }
 
-  if (typeof value === 'object' && value !== null) {
-    return 'json'
+  if (typeof value === 'string') {
+    // 检查字符串长度，长字符串用 textarea
+    if (value.length > 100) {
+      return 'textarea'
+    }
+    return 'string'
   }
 
+  // 复杂类型
+  if (typeof value === 'object' && value !== null) {
+    return 'any'
+  }
+
+  // 默认文本
   return 'string'
 }
 
 /**
- * 格式化日期值
+ * 格式化属性标签
+ * 优雅设计：驼峰转中文、常见词汇映射
  */
-function formatDateValue(value: any): string {
-  if (!value) return ''
-
-  try {
-    const date = value instanceof Date ? value : new Date(value)
-    return date.toISOString().split('T')[0]!
-  } catch {
-    return ''
+function formatLabel(key: string): string {
+  // 常见词汇映射
+  const labelMap: Record<string, string> = {
+    keyword: '关键词',
+    query: '查询条件',
+    startDate: '开始日期',
+    endDate: '结束日期',
+    page: '页码',
+    pageSize: '每页数量',
+    limit: '限制数量',
+    offset: '偏移量',
+    mblogid: '微博 ID',
+    url: '链接地址',
+    method: '请求方法',
+    headers: '请求头',
+    body: '请求体',
+    timeout: '超时时间',
+    retries: '重试次数',
+    interval: '间隔时间',
+    delay: '延迟时间',
+    enabled: '启用',
+    disabled: '禁用',
   }
+
+  if (labelMap[key]) {
+    return labelMap[key]
+  }
+
+  // 驼峰转中文：camelCase -> Camel Case
+  return key.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase()).trim()
+}
+
+/**
+ * 获取占位符文本
+ */
+function getPlaceholder(propKey: string, type: InputFieldType): string {
+  const lowerKey = propKey.toLowerCase()
+
+  if (lowerKey.includes('keyword') || lowerKey.includes('query')) {
+    return '请输入搜索关键词'
+  }
+
+  if (lowerKey.includes('url')) {
+    return 'https://example.com'
+  }
+
+  if (lowerKey.includes('page')) {
+    return '1'
+  }
+
+  if (type === 'number') {
+    return '0'
+  }
+
+  if (type === 'textarea') {
+    return '请输入多行文本...'
+  }
+
+  return `请输入${formatLabel(propKey)}`
+}
+
+/**
+ * 按节点分组字段
+ */
+function groupFieldsByNode(fields: InputField[]): Array<{ nodeName: string; fields: InputField[] }> {
+  const grouped = new Map<string, InputField[]>()
+
+  fields.forEach((field) => {
+    const key = `${field.nodeId}-${field.nodeName}`
+    if (!grouped.has(key)) {
+      grouped.set(key, [])
+    }
+    grouped.get(key)!.push(field)
+  })
+
+  return Array.from(grouped.entries()).map(([key, fields]) => ({
+    nodeName: fields[0].nodeName,
+    fields,
+  }))
 }

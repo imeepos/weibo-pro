@@ -92,7 +92,7 @@ export class WorkflowController {
    * 获取运行实例详情
    */
   @Get('runs/:runId')
-  getRun(@Body() body: { runId: string }): Promise<WorkflowRunEntity> {
+  getRun(@Param('runId') runId: string): Promise<WorkflowRunEntity> {
     throw new Error('method getRun not implements')
   }
 

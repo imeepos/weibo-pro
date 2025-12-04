@@ -1,6 +1,6 @@
 import { Controller, Post, Body, Get, BadRequestException, Query, Delete, NotFoundException, Sse, Res, Param, Put } from '@nestjs/common';
 import { Observable, tap } from 'rxjs';
-import { Ast, executeAst, fromJson, generateId, INode } from '@sker/workflow';
+import { Ast, executeAst, fromJson, generateId, INode, OUTPUT, resolveConstructor, OutputMetadata } from '@sker/workflow';
 import { WorkflowGraphAst, ReactiveScheduler } from '@sker/workflow';
 import { logger, root } from '@sker/core';
 import * as sdk from '@sker/sdk';
@@ -487,9 +487,7 @@ export class WorkflowController implements sdk.WorkflowController {
    * - 包括输入、输出、节点状态、错误信息
    */
   @Get('runs/:runId')
-  async getRun(@Body() body: { runId: string }): Promise<WorkflowRunEntity> {
-    const { runId } = body;
-
+  async getRun(@Param('runId') runId: string): Promise<WorkflowRunEntity> {
     if (!runId) {
       throw new BadRequestException('运行实例 ID 不能为空');
     }
@@ -717,42 +715,89 @@ export class WorkflowController implements sdk.WorkflowController {
   }
 
   /**
-   * 提取节点输出
+   * 提取节点输出 - 基于 @Output 装饰器元数据
    *
    * 优雅设计：
-   * - 提取所有非系统属性作为输出
-   * - 过滤掉内部状态字段
+   * - 只提取 @Output 装饰的属性
+   * - 通过元数据确保输出结构的明确性
+   * - 避免提取内部状态和配置属性
    */
   private extractNodeOutputs(node: any): Record<string, unknown> {
     const outputs: Record<string, unknown> = {};
-    const systemKeys = ['id', 'type', 'state', 'error', 'position', 'name'];
 
-    Object.keys(node).forEach((key) => {
-      if (!systemKeys.includes(key) && node[key] !== undefined) {
-        outputs[key] = node[key];
-      }
-    });
+    try {
+      // 获取节点的构造函数
+      const ctor = resolveConstructor(node);
+
+      // 获取所有 @Output 元数据
+      const allOutputs = root.get<OutputMetadata[]>(OUTPUT, []);
+
+      // 过滤出当前节点类型的输出属性
+      const nodeOutputs = allOutputs.filter(meta => meta.target === ctor);
+
+      // 提取输出属性的值
+      nodeOutputs.forEach(meta => {
+        const propertyKey = meta.propertyKey as string;
+        const value = node[propertyKey];
+
+        if (value !== undefined) {
+          outputs[propertyKey] = value;
+        }
+      });
+    } catch (error) {
+      logger.error('提取节点输出失败', {
+        nodeId: node.id,
+        nodeType: node.type,
+        error: (error as Error).message
+      });
+    }
 
     return outputs;
   }
 
   /**
-   * 提取工作流输出
+   * 提取工作流输出 - 只收集输出节点的结果
    *
    * 优雅设计：
-   * - 收集所有成功节点的输出
+   * - 找到所有没有后续连线的节点（出度为 0）
+   * - 这些节点被视为工作流的输出节点
+   * - 收集输出节点的 @Output 属性值
    * - 以节点 ID 为 key 组织输出
    */
-  private extractWorkflowOutputs(ast: any): Record<string, unknown> {
+  private extractWorkflowOutputs(ast: WorkflowGraphAst): Record<string, unknown> {
     const outputs: Record<string, unknown> = {};
 
-    if (ast.nodes) {
-      ast.nodes.forEach((node: any) => {
-        if (node.state === 'success') {
-          outputs[node.id] = this.extractNodeOutputs(node);
-        }
-      });
+    if (!ast.nodes || !ast.edges) {
+      return outputs;
     }
+
+    // 构建出度映射：记录每个节点有多少条出边
+    const outDegree = new Map<string, number>();
+    ast.nodes.forEach(node => outDegree.set(node.id, 0));
+
+    ast.edges.forEach(edge => {
+      const count = outDegree.get(edge.from) || 0;
+      outDegree.set(edge.from, count + 1);
+    });
+
+    // 找到所有出度为 0 的节点（输出节点）
+    const outputNodes = ast.nodes.filter(node => {
+      const degree = outDegree.get(node.id) || 0;
+      return degree === 0 && node.state === 'success';
+    });
+
+    // 收集输出节点的结果
+    outputNodes.forEach(node => {
+      const nodeOutputs = this.extractNodeOutputs(node);
+
+      if (Object.keys(nodeOutputs).length > 0) {
+        outputs[node.id] = {
+          nodeType: node.type,
+          nodeName: (node as any).name || node.id,
+          outputs: nodeOutputs
+        };
+      }
+    });
 
     return outputs;
   }

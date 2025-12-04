@@ -272,9 +272,10 @@ export function useWorkflowOperations(
    * - 通过 Subject emit 值来触发取消，符合响应式编程范式
    * - 执行前后自动保存状态，确保数据持久化
    * - 自动统计执行结果，提供清晰反馈
+   * - 支持运行前配置输入参数，应用到对应节点
    */
   const runWorkflow = useCallback(
-    async (onComplete?: () => void) => {
+    async (inputs?: Record<string, unknown>, onComplete?: () => void) => {
       if (!workflow.workflowAst) {
         onShowToast?.('error', '工作流不存在', '无法执行空工作流')
         return
@@ -301,6 +302,20 @@ export function useWorkflowOperations(
           if (node.state === 'running') {
             node.state = 'pending'
             node.error = undefined
+          }
+        })
+        workflow.syncFromAst()
+      }
+
+      // 应用输入参数到对应节点
+      if (inputs && Object.keys(inputs).length > 0) {
+        Object.entries(inputs).forEach(([key, value]) => {
+          const [nodeId, propertyKey] = key.split('.')
+          if (nodeId && propertyKey) {
+            const targetNode = workflow.workflowAst!.nodes.find(n => n.id === nodeId)
+            if (targetNode && propertyKey in targetNode) {
+              (targetNode as any)[propertyKey] = value
+            }
           }
         })
         workflow.syncFromAst()
