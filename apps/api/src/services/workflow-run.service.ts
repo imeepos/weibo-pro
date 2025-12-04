@@ -60,6 +60,13 @@ export class WorkflowRunService {
       };
 
       // 创建运行实例
+      const currentTime = new Date();
+      logger.info('💡 创建运行实例时的时间检查', {
+        nodeJsTime: currentTime.toISOString(),
+        nodeJsLocalTime: currentTime.toLocaleString('zh-CN'),
+        nodeJsTimestamp: currentTime.getTime(),
+      });
+
       const run = runRepository.create({
         id: generateId(),
         workflowId: workflow.id,
@@ -76,6 +83,8 @@ export class WorkflowRunService {
         runId: run.id,
         workflowId: workflow.id,
         workflowName: workflow.name,
+        createdAt: run.createdAt?.toISOString(),
+        createdAtLocal: run.createdAt?.toLocaleString('zh-CN'),
       });
 
       return run;

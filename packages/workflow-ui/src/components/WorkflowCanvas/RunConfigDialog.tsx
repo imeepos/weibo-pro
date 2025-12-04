@@ -159,7 +159,7 @@ export function RunConfigDialog({
             <div className="space-y-6">
               {/* 按节点分组显示 */}
               {groupFieldsByNode(inputFields).map(({ nodeName, fields }) => (
-                <div key={fields[0].nodeId} className="space-y-4">
+                <div key={fields[0]!.nodeId} className="space-y-4">
                   <div className="flex items-center gap-2 pb-2 border-b border-border/50">
                     <div className="h-2 w-2 rounded-full bg-primary" />
                     <h4 className="text-sm font-semibold text-foreground">{nodeName}</h4>
@@ -350,7 +350,7 @@ function groupFieldsByNode(fields: InputField[]): Array<{ nodeName: string; fiel
   })
 
   return Array.from(grouped.entries()).map(([key, fields]) => ({
-    nodeName: fields[0].nodeName,
+    nodeName: fields[0]!.nodeName,
     fields,
   }))
 }
