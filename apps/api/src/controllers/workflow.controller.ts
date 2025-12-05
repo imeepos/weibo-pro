@@ -1,6 +1,6 @@
 import { Controller, Post, Body, Get, BadRequestException, Query, Delete, NotFoundException, Sse, Res, Param, Put } from '@nestjs/common';
 import { Observable, tap } from 'rxjs';
-import { Ast, executeAst, fromJson, generateId, INode, OUTPUT, resolveConstructor, OutputMetadata } from '@sker/workflow';
+import { Ast, executeAst, fromJson, generateId, INode, resolveConstructor, type OutputMetadata } from '@sker/workflow';
 import { WorkflowGraphAst, ReactiveScheduler } from '@sker/workflow';
 import { logger, root } from '@sker/core';
 import * as sdk from '@sker/sdk';
@@ -729,14 +729,11 @@ export class WorkflowController implements sdk.WorkflowController {
       // 获取节点的构造函数
       const ctor = resolveConstructor(node);
 
-      // 获取所有 @Output 元数据
-      const allOutputs = root.get<OutputMetadata[]>(OUTPUT, []);
-
-      // 过滤出当前节点类型的输出属性
-      const nodeOutputs = allOutputs.filter(meta => meta.target === ctor);
+      // ✨使用编译后的 node.metadata.outputs，不再依赖装饰器
+      const nodeOutputs = node.metadata?.outputs || [];
 
       // 提取输出属性的值
-      nodeOutputs.forEach(meta => {
+      nodeOutputs.forEach((meta: OutputMetadata) => {
         const propertyKey = meta.propertyKey as string;
         const value = node[propertyKey];
 

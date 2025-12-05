@@ -17,17 +17,17 @@
     "ensure-deps": "./scripts/ensure-deps-built.sh"
   },
   "devDependencies": {
-    "prettier": "^3.6.2",
-    "tsx": "^4.20.6",
-    "turbo": "^2.6.0",
-    "typescript": "5.9.2"
+    "prettier": "^3.7.4",
+    "tsx": "^4.21.0",
+    "turbo": "^2.6.3",
+    "typescript": "5.9.3"
   },
   "packageManager": "pnpm@9.0.0",
   "engines": {
     "node": ">=18"
   },
   "dependencies": {
-    "better-auth": "^1.4.2",
+    "better-auth": "^1.4.5",
     "pg": "^8.16.3"
   },
   "pnpm": {

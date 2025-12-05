@@ -1,5 +1,5 @@
 import { Node, State } from "./decorator";
-import { IAstStates, IEdge, INode } from "./types";
+import { IAstStates, IEdge, INode, INodeInputMetadata, INodeOutputMetadata, INodeStateMetadata, INodeMetadata } from "./types";
 import { generateId } from "./utils";
 import { SerializedError } from "@sker/core";
 import { Observable } from 'rxjs'
@@ -42,8 +42,25 @@ export abstract class Ast implements INode {
     type!: string;
     // 画布中的位置信息
     position: { x: number; y: number } = { x: 0, y: 0 }
+
+    /**
+     * 编译后的元数据（由 Compiler 生成）
+     *
+     * 优雅设计：
+     * - 在运行时通过 Compiler.compile() 固化装饰器元数据
+     * - 自包含，无需依赖装饰器系统
+     * - 支持用户自定义修改节点行为
+     */
+    metadata!: {
+        class: INodeMetadata
+        inputs: INodeInputMetadata[]
+        outputs: INodeOutputMetadata[]
+        states: INodeStateMetadata[]
+    }
+
     // 动态输出配置（用于支持运行时添加输出端口）
     dynamicOutputs?: DynamicOutput[]
+
     // 自定义端口标签 { propertyKey: customLabel }
     portLabels?: Record<string, string>
 }

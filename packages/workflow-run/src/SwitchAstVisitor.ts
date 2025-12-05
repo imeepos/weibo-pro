@@ -1,5 +1,5 @@
-import { Handler, OUTPUT, type OutputMetadata, type DynamicOutput } from '@sker/workflow'
-import { Injectable, root } from '@sker/core'
+import { Handler, type DynamicOutput } from '@sker/workflow'
+import { Injectable } from '@sker/core'
 import { SwitchAst } from '@sker/workflow-ast'
 import { Observable } from 'rxjs'
 
@@ -15,12 +15,13 @@ export class SwitchAstVisitor {
 
             // 核心路由逻辑：根据条件求值，只设置匹配的输出
             const inputValue = ast.value
-            const ctor = (ast as any).constructor
-            const outputs: OutputMetadata[] = root.get(OUTPUT, []).filter(meta => meta.target === ctor)
+
+            // ✨使用编译后的 node.metadata.outputs
+            const outputs = ast.metadata.outputs
 
             // 处理装饰器定义的输出
             outputs.forEach(outputMeta => {
-                const propKey = outputMeta.propertyKey as string
+                const propKey = String(outputMeta.propertyKey)
 
                 if (outputMeta.isRouter && outputMeta.condition) {
                     // 条件求值
@@ -30,15 +31,15 @@ export class SwitchAstVisitor {
                     )
 
                     if (matched) {
-                        (ast as any)[propKey] = inputValue
+                        ;(ast as any)[propKey] = inputValue
                     } else {
-                        (ast as any)[propKey] = undefined
+                        ;(ast as any)[propKey] = undefined
                     }
                 }
             })
 
             // 处理动态输出
-            const dynamicOutputs = (ast as any).dynamicOutputs as DynamicOutput[] | undefined
+            const dynamicOutputs = ast.dynamicOutputs as DynamicOutput[] | undefined
             if (dynamicOutputs && dynamicOutputs.length > 0) {
                 dynamicOutputs.forEach(dynamicOutput => {
                     const propKey = dynamicOutput.property
@@ -50,9 +51,9 @@ export class SwitchAstVisitor {
                     )
 
                     if (matched) {
-                        (ast as any)[propKey] = inputValue
+                        ;(ast as any)[propKey] = inputValue
                     } else {
-                        (ast as any)[propKey] = undefined
+                        ;(ast as any)[propKey] = undefined
                     }
                 })
             }
