@@ -76,7 +76,7 @@ function toFlowNode<T extends INode>(node: T): WorkflowNode<T> {
     data: node,
     ...(node.parentId && { parentId: node.parentId }),
     ...(isGroup && {
-      style: { width: node.width, height: node.height }
+      style: { width: node.width ?? 300, height: node.height ?? 200 }
     })
   }
 }

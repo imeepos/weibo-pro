@@ -44,15 +44,7 @@ export class Compiler {
         // 组装 INode
         return {
             // 基础属性
-            id: ast.id,
-            name: ast.name,
-            description: ast.description,
-            state: ast.state,
-            count: ast.count,
-            emitCount: ast.emitCount,
-            type: ast.type,
-            error: ast.error,
-            position: ast.position,
+            ...ast,
 
             // 元数据
             metadata: {
@@ -61,13 +53,6 @@ export class Compiler {
                 outputs,
                 states
             },
-
-            // 其他属性（如 color, collapsed, width, dynamicOutputs, portLabels）
-            ...(ast.color && { color: ast.color }),
-            ...(ast.collapsed !== undefined && { collapsed: ast.collapsed }),
-            ...(ast.width && { width: ast.width }),
-            ...(ast.dynamicOutputs && { dynamicOutputs: ast.dynamicOutputs }),
-            ...(ast.portLabels && { portLabels: ast.portLabels })
         };
     }
 
