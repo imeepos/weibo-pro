@@ -1,5 +1,5 @@
-import { Injectable } from '@sker/core'
-import { DataSource } from 'typeorm'
+import { Inject, Injectable } from '@sker/core'
+import { DataSource } from '@sker/entities'
 import { WorkflowScheduleEntity, ScheduleStatus, WorkflowEntity } from '@sker/entities'
 import { WorkflowScheduleService } from './workflow-schedule.service'
 import { WorkflowRunService } from './workflow-run.service'
@@ -14,9 +14,9 @@ export class WorkflowSchedulerWorker {
   private readonly maxConcurrentRuns = 10 // 最大并发执行数
 
   constructor(
-    private dataSource: DataSource,
-    private scheduleService: WorkflowScheduleService,
-    private runService: WorkflowRunService
+    @Inject(DataSource) private dataSource: DataSource,
+    @Inject(WorkflowScheduleService) private scheduleService: WorkflowScheduleService,
+    @Inject(WorkflowRunService) private runService: WorkflowRunService
   ) {}
 
   async start(): Promise<void> {

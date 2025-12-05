@@ -15,19 +15,18 @@ import { killPortProcess } from 'kill-port-process';
 async function bootstrap() {
   const PORT = parseInt(process.env.PORT || `3000`);
   const logger = root.get(Logger)
-  try {
-    root.set([
-      ...entitiesProviders
-    ])
-    await root.init();
-    if (process.env.DEV) {
+
+  root.set([...entitiesProviders])
+  await root.init();
+
+  if (process.env.DEV) {
+    try {
       await killPortProcess(PORT);
       logger.info(`端口 ${PORT} 清理完成`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.warn(`端口 ${PORT} 清理失败: ${errorMessage}`);
     }
-
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.warn(`端口 ${PORT} 清理失败: ${errorMessage}`);
   }
   const app = await NestFactory.create(AppModule, {
     bodyParser: true,

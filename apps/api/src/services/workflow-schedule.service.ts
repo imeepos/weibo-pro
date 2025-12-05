@@ -1,5 +1,5 @@
-import { Injectable } from '@sker/core'
-import { DataSource, Repository } from 'typeorm'
+import { Injectable, Inject } from '@sker/core'
+import { DataSource, Repository } from '@sker/entities'
 import { WorkflowScheduleEntity, ScheduleType, ScheduleStatus } from '@sker/entities'
 import { WorkflowRunService } from './workflow-run.service'
 import { CronExpressionParser } from 'cron-parser'
@@ -32,9 +32,10 @@ export class WorkflowScheduleService {
   private scheduleRepository: Repository<WorkflowScheduleEntity>
 
   constructor(
-    private dataSource: DataSource,
-    private workflowRunService: WorkflowRunService
+    @Inject(DataSource) private dataSource: DataSource,
+    @Inject(WorkflowRunService) private workflowRunService: WorkflowRunService
   ) {
+    console.log(this.dataSource.getRepository)
     this.scheduleRepository = this.dataSource.getRepository(WorkflowScheduleEntity)
   }
 

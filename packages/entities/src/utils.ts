@@ -1,7 +1,6 @@
 
-import { DataSourceOptions, EntityManager } from 'typeorm';
+import { DataSource, DataSourceOptions, EntityManager } from 'typeorm';
 import { ENTITY } from "./decorator";
-import { DataSource } from 'typeorm'
 import { APP_INITIALIZER, Initializer, Provider, root } from '@sker/core'
 import { WeiboPostSubscriber } from './weibo-post.subscriber';
 
@@ -87,9 +86,7 @@ export const entitiesProviders: Provider[] = [
   },
   {
     provide: DataSource,
-    useFactory: () => {
-      return ds
-    },
+    useFactory: () => ds!,
     deps: []
   },
   {
