@@ -17,6 +17,8 @@ export * from './empty-state';
 export * from './simple-pagination';
 export * from './filter-bar';
 export * from './form-field';
+export * from './event-selector';
 export * from './image-editor';
 export * from './image-upload-preview';
+export * from './media-picker';
 export { toast } from 'sonner';
