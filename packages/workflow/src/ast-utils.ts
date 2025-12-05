@@ -50,10 +50,16 @@ export function isWorkflowGroup(workflow: Ast): boolean {
 }
 
 /**
- * 检查节点是否存在
+ * 检查节点是否存在（递归查找分组内节点）
  */
 export function hasNode(nodes: INode[], id: string): boolean {
-    return nodes.some(node => node.id === id);
+    for (const node of nodes) {
+        if (node.id === id) return true;
+        if ((node as any).isGroupNode && (node as any).nodes?.length > 0) {
+            if (hasNode((node as any).nodes, id)) return true;
+        }
+    }
+    return false;
 }
 
 /**

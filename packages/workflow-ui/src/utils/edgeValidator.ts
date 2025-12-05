@@ -18,7 +18,16 @@ export const EDGE_VALIDATION_RULES: EdgeValidationRule[] = [
   {
     name: 'nodes-exist',
     validate: (edge, nodes) => {
-      const nodeIds = new Set(nodes.map((n: any) => n.id))
+      const collectNodeIds = (nodeList: INode[], ids: Set<string>) => {
+        for (const n of nodeList) {
+          ids.add(n.id)
+          if ((n as any).isGroupNode && (n as any).nodes?.length > 0) {
+            collectNodeIds((n as any).nodes, ids)
+          }
+        }
+      }
+      const nodeIds = new Set<string>()
+      collectNodeIds(nodes, nodeIds)
       return nodeIds.has(edge.source) && nodeIds.has(edge.target)
     },
     errorMessage: '源节点或目标节点不存在'
@@ -44,11 +53,20 @@ export const EDGE_VALIDATION_RULES: EdgeValidationRule[] = [
   {
     name: 'input-single-connection',
     validate: (edge, nodes, edges) => {
-      const targetNode = nodes.find((n: any) => n.id === edge.target)
+      const findNode = (nodeList: INode[], id: string): INode | undefined => {
+        for (const n of nodeList) {
+          if (n.id === id) return n
+          if ((n as any).isGroupNode && (n as any).nodes?.length > 0) {
+            const found = findNode((n as any).nodes, id)
+            if (found) return found
+          }
+        }
+        return undefined
+      }
+      const targetNode = findNode(nodes, edge.target)
       if (!targetNode) return false
 
       try {
-        // ✅ 直接使用 metadata 字段，targetNode 已经是编译后的 INode
         const targetMetadata = targetNode.metadata
         if (!targetMetadata) {
           console.warn('[edgeValidator] 节点缺少 metadata', { nodeId: targetNode.id })

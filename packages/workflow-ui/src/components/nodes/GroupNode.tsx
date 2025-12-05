@@ -2,7 +2,6 @@ import React, { memo } from 'react'
 import type { NodeProps } from '@xyflow/react'
 import { NodeResizer } from '@xyflow/react'
 import type { WorkflowNode as WorkflowNodeType } from '../../types'
-import { WorkflowGraphAst } from '@sker/workflow'
 import { cn } from '@sker/ui/lib/utils'
 
 /**
@@ -13,9 +12,6 @@ import { cn } from '@sker/ui/lib/utils'
  */
 export const GroupNode = memo(({ id, data, selected, width, height }: NodeProps<WorkflowNodeType>) => {
   const groupData = data as any
-  const w = width ?? groupData.width ?? 200
-  const h = height ?? groupData.height ?? 150
-
   const handleContextMenu = (event: React.MouseEvent) => {
     event.preventDefault()
     event.stopPropagation()
@@ -30,8 +26,8 @@ export const GroupNode = memo(({ id, data, selected, width, height }: NodeProps<
         'rounded-lg border-2 border-dashed bg-slate-900/30 relative',
         selected ? 'border-blue-500' : 'border-slate-500'
       )}
-      style={{ width: w, height: h }}
       onContextMenu={handleContextMenu}
+      style={{ width: width, height: height }}
     >
       <NodeResizer
         minWidth={100}

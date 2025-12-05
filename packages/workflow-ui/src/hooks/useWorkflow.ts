@@ -92,6 +92,9 @@ export function useWorkflow(
   // 防抖定时器
   const recordTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // 标记是否已完成初始化（用于防止初始测量覆盖保存的尺寸）
+  const isInitializedRef = useRef(false)
+
   // 订阅历史记录状态
   useEffect(() => {
     const undoSub = historyManager.canUndo$.subscribe(setCanUndo)
@@ -136,8 +139,8 @@ export function useWorkflow(
     const findAstNode = (id: string, nodeList: INode[]): INode | undefined => {
       for (const n of nodeList) {
         if (n.id === id) return n
-        if (n instanceof WorkflowGraphAst && n.isGroup) {
-          const found = findAstNode(id, n.nodes)
+        if ((n as any).isGroupNode && (n as any).nodes?.length > 0) {
+          const found = findAstNode(id, (n as any).nodes)
           if (found) return found
         }
       }
@@ -158,11 +161,30 @@ export function useWorkflow(
         if (astNode.collapsed !== node.data.collapsed) {
           astNode.collapsed = node.data.collapsed
         }
+
+        // 同步 GroupNode 的尺寸（仅在初始化完成后）
+        if (isInitializedRef.current) {
+          if (node.width !== undefined && node.width > 0 && astNode.width !== node.width) {
+            astNode.width = node.width
+            hasPositionChanged = true
+          }
+          if (node.height !== undefined && node.height > 0 && astNode.height !== node.height) {
+            astNode.height = node.height
+            hasPositionChanged = true
+          }
+        }
       }
     })
 
     if (hasPositionChanged && onWorkflowChangeRef.current) {
       onWorkflowChangeRef.current()
+    }
+
+    // 延迟标记初始化完成，跳过 React Flow 的初始测量
+    if (!isInitializedRef.current) {
+      setTimeout(() => {
+        isInitializedRef.current = true
+      }, 500)
     }
   }, [nodes, workflowAst])
 
@@ -289,7 +311,30 @@ export function useWorkflow(
         toProperty: connection.targetHandle || undefined
       }
 
-      workflowAst.edges = astAddEdge(workflowAst.nodes, workflowAst.edges, edge)
+      // 查找节点所属的分组
+      const findNodeParentGroup = (nodeId: string, nodes: INode[]): WorkflowGraphAst | null => {
+        for (const node of nodes) {
+          if ((node as any).isGroupNode && (node as any).nodes?.length > 0) {
+            const group = node as WorkflowGraphAst
+            if (group.nodes.some(n => n.id === nodeId)) {
+              return group
+            }
+            const nested = findNodeParentGroup(nodeId, group.nodes)
+            if (nested) return nested
+          }
+        }
+        return null
+      }
+
+      const sourceGroup = findNodeParentGroup(connection.source, workflowAst.nodes)
+      const targetGroup = findNodeParentGroup(connection.target, workflowAst.nodes)
+
+      // 如果两个节点在同一分组内，边添加到分组的 edges
+      if (sourceGroup && sourceGroup === targetGroup) {
+        sourceGroup.edges = astAddEdge(sourceGroup.nodes, sourceGroup.edges, edge)
+      } else {
+        workflowAst.edges = astAddEdge(workflowAst.nodes, workflowAst.edges, edge)
+      }
 
       const flowEdge: WorkflowEdge = {
         id: edge.id,

@@ -31,10 +31,11 @@ export class FlowAstConverter {
    */
   static toFlowNode<T extends INode>(node: T): WorkflowNode<T> {
     return {
+      ...node,
       id: node.id,
       type: node.type,
       position: node.position || { x: 0, y: 0 },
-      data: node // 直接引用，而非深拷贝
+      data: node, // 直接引用，而非深拷贝
     }
   }
 
