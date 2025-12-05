@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo, useEffect } from 'react'
-import { WorkflowGraphAst, generateId, addNode as astAddNode, addEdge as astAddEdge } from '@sker/workflow'
+import { WorkflowGraphAst, generateId, addNode as astAddNode, addEdge as astAddEdge, Compiler } from '@sker/workflow'
+import { root } from '@sker/core'
 import type { INode, IEdge } from '@sker/workflow'
 import { useNodesState, useEdgesState, addEdge, type Connection } from '@xyflow/react'
 import type { WorkflowNode, WorkflowEdge } from '../types'
@@ -117,22 +118,34 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
 
   /**
    * 添加节点
+   *
+   * 优雅设计：
+   * - 创建 Ast 实例后，立即使用 Compiler 固化元数据
+   * - 将装饰器元数据提取到 node.metadata 字段
+   * - 保存后的 INode 自包含元数据，无需依赖装饰器
    */
   const addNode = useCallback(
     (nodeClass: any, position: { x: number; y: number }, label?: string) => {
       console.log({ nodeClass, position, label })
+
+      // 1. 创建 Ast 实例
       const ast = new nodeClass()
       ast.id = generateId()
       ast.position = position
 
-      workflowAst.nodes = astAddNode(workflowAst.nodes, ast)
+      // 2. 使用 Compiler 固化元数据（关键步骤）
+      const compiler = root.get(Compiler)
+      const compiledNode = compiler.compile(ast)
 
-      const metadata = getNodeMetadata(nodeClass)
+      // 3. 添加到工作流
+      workflowAst.nodes = astAddNode(workflowAst.nodes, compiledNode)
+
+      const metadata = getNodeMetadata(compiledNode)
       const node: WorkflowNode = {
-        id: ast.id,
+        id: compiledNode.id,
         type: metadata.type,
         position,
-        data: ast
+        data: compiledNode  // 使用编译后的节点（包含 metadata）
       }
 
       setNodes((nodes) => [...nodes, node])

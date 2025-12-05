@@ -1,7 +1,6 @@
 import dagre from 'dagre'
 import type { WorkflowNode, WorkflowEdge } from '../types'
 import { getNodeMetadata } from '../adapters'
-import { resolveConstructor } from '@sker/workflow'
 
 /**
  * 计算节点高度
@@ -18,7 +17,8 @@ function calculateNodeHeight(node: WorkflowNode): number {
   }
 
   try {
-    const metadata = getNodeMetadata(resolveConstructor(node.data))
+    // node.data is already an INode, pass it directly
+    const metadata = getNodeMetadata(node.data)
     const portRows = Math.max(metadata.inputs.length, metadata.outputs.length)
     return headerHeight + (portRows * portRowHeight) + padding
   } catch (error) {

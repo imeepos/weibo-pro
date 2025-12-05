@@ -37,7 +37,7 @@ export interface INodeStateMetadata {
     title?: string;
     type?: string;
 }
-export function isNode(val: any): val is INode{
+export function isNode(val: any): val is Required<INode> {
     return val && val.metadata
 }
 export interface INode extends Record<string, any> {

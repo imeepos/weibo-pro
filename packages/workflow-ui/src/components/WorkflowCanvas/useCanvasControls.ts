@@ -2,7 +2,8 @@ import { useCallback, useEffect } from 'react'
 import { useReactFlow, type Connection, } from '@xyflow/react'
 import { useSelectionStore } from '../../store'
 import { getAllNodeTypes, getNodeMetadata } from '../../adapters'
-import { generateId } from '@sker/workflow'
+import { generateId, Compiler } from '@sker/workflow'
+import { root } from '@sker/core'
 import type { WorkflowEdge, WorkflowNode, NodeMetadata } from '../../types'
 import { useContextMenu } from './useContextMenu'
 
@@ -174,7 +175,11 @@ export function useCanvasControls() {
       const ast = new NodeClass()
       ast.id = generateId()
 
-      const nodeMetadata = getNodeMetadata(NodeClass)
+      // Compile the AST to get INode with metadata
+      const compiler = root.get(Compiler)
+      const compiledNode = compiler.compile(ast)
+      const nodeMetadata = getNodeMetadata(compiledNode)
+
       const node: WorkflowNode = {
         id: ast.id,
         type: nodeMetadata.type,
@@ -203,7 +208,11 @@ export function useCanvasControls() {
       const ast = new NodeClass()
       ast.id = generateId()
 
-      const nodeMetadata = getNodeMetadata(NodeClass)
+      // Compile the AST to get INode with metadata
+      const compiler = root.get(Compiler)
+      const compiledNode = compiler.compile(ast)
+      const nodeMetadata = getNodeMetadata(compiledNode)
+
       const node: WorkflowNode = {
         id: ast.id,
         type: nodeMetadata.type,

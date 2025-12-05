@@ -23,7 +23,7 @@ export interface LeftDrawerProps {
 
 export function LeftDrawer({ visible, onClose, onRunNode, onLocateNode, className }: LeftDrawerProps) {
   const selectedNode = useSelectedNode()
-  const metadata = selectedNode ? getNodeMetadata(resolveConstructor(selectedNode.data)) : null
+  const metadata = selectedNode ? getNodeMetadata(selectedNode.data) : null
   const { setNodes } = useReactFlow()
 
   const [formData, setFormData] = useState<Record<string, any>>({})
@@ -37,7 +37,7 @@ export function LeftDrawer({ visible, onClose, onRunNode, onLocateNode, classNam
 
   useEffect(() => {
     if (selectedNode) {
-      const metadata = getNodeMetadata(resolveConstructor(selectedNode.data))
+      const metadata = getNodeMetadata(selectedNode.data)
       const initialData: Record<string, any> = {
         name: selectedNode.data.name,
         description: selectedNode.data.description,

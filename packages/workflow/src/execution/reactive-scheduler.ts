@@ -1,10 +1,11 @@
 import { setAstError, WorkflowGraphAst } from '../ast';
-import { INode, IEdge, EdgeMode, hasDataMapping } from '../types';
+import { INode, IEdge, EdgeMode, hasDataMapping, isNode } from '../types';
 import { executeAst } from '../executor';
 import { Observable, of, EMPTY, merge, combineLatest, zip, asyncScheduler, concat } from 'rxjs';
 import { map, catchError, takeWhile, concatMap, filter, withLatestFrom, shareReplay, subscribeOn, finalize, scan, takeLast, toArray, reduce, expand, tap, take } from 'rxjs/operators';
 import { Injectable, root } from '@sker/core';
 import { findNodeType, INPUT, InputMetadata, hasMultiMode, hasBufferMode, OUTPUT, type OutputMetadata, resolveConstructor } from '../decorator';
+import { Compiler } from '../compiler';
 
 /**
  * 响应式工作流调度器 - 基于 RxJS Observable 流式调度
@@ -281,7 +282,6 @@ export class ReactiveScheduler {
                 const cycleDisplay = cyclePath.join(' → ');
 
                 // 找到回路边：从最后一个节点指向第一次出现的节点
-                const loopStartIndex = cyclePath.indexOf(nodeId);
                 const loopBackFrom = cyclePath[cyclePath.length - 2];
                 const loopBackTo = nodeId;
 
@@ -408,16 +408,6 @@ export class ReactiveScheduler {
 
         // 调试日志：打印边模式信息
         const edgeMode = this.detectEdgeMode(incomingEdges);
-        if (edgeMode === 'withLatestFrom') {
-            const primaryEdge = incomingEdges.find(e => e.isPrimary);
-            console.log('[_createNodeInputObservable] withLatestFrom 模式:', {
-                nodeId: node.id,
-                nodeType: node.type,
-                primarySourceId: primaryEdge?.from,
-                allSourceIds: Array.from(edgesBySource.keys()),
-                edgesCount: incomingEdges.length
-            });
-        }
 
         // 3. 找到所有能提供完整输入的源组合
         const completeCombinations = this.findCompleteSourceCombinations(
@@ -470,90 +460,77 @@ export class ReactiveScheduler {
      * 获取节点所需的必填输入属性（无默认值）
      *
      * 逻辑：
-     * 1. 如果装饰器明确指定 required: true 且无 defaultValue → 必填
-     * 2. 如果装饰器明确指定 required: false → 非必填
-     * 3. 如果装饰器提供了 defaultValue → 非必填
-     * 4. 如果未指定 required，尝试从类实例读取默认值：
+     * 1. **优先使用 node.metadata**：如果节点已编译，直接从 metadata 读取
+     * 2. **回退到装饰器**：如果节点未编译，从 DI 容器读取装饰器元数据
+     * 3. 如果装饰器明确指定 required: true 且无 defaultValue → 必填
+     * 4. 如果装饰器明确指定 required: false → 非必填
+     * 5. 如果装饰器提供了 defaultValue → 非必填
+     * 6. 如果未指定 required，尝试从类实例读取默认值：
      *    - 有默认值 → 非必填
      *    - 无默认值（undefined）→ 必填
      */
     private getRequiredInputProperties(node: INode): Set<string> {
         const properties = new Set<string>();
-
-        try {
-            const ctor = findNodeType(node.type);
-            if (!ctor) return properties;
-
-            const inputs = root.get(INPUT, []).filter(it => it.target === ctor);
-
-            // 尝试实例化以读取默认值
-            let instance: any;
-            try {
-                instance = new ctor();
-            } catch {
-                // 实例化失败（可能需要构造参数），保守处理：所有输入都视为必填
-                inputs.forEach(input => {
-                    if (input.required !== false && input.defaultValue === undefined) {
-                        properties.add(String(input.propertyKey));
-                    }
-                });
-                return properties;
+        if (!isNode(node)) {
+            const compiler = root.get(Compiler)
+            node = compiler.compile(node)
+        }
+        if (!isNode(node)) {
+            throw new Error(`getRequiredInputProperties error: node 类型错误`)
+        }
+        // 🔧 优先使用编译后的 metadata 字段
+        node.metadata.inputs.forEach(input => {
+            // 明确标记为非必填
+            if (input.required === false) {
+                return;
             }
 
-            inputs.forEach(input => {
-                const propKey = String(input.propertyKey);
+            // 装饰器提供了默认值
+            if (input.defaultValue !== undefined) {
+                return;
+            }
 
-                // 明确标记为非必填
-                if (input.required === false) {
-                    return;
-                }
+            // 明确标记为必填
+            if (input.required === true) {
+                properties.add(input.propertyKey);
+                return;
+            }
 
-                // 装饰器提供了默认值
-                if (input.defaultValue !== undefined) {
-                    return;
-                }
-
-                // 明确标记为必填
-                if (input.required === true) {
-                    properties.add(propKey);
-                    return;
-                }
-
-                // 未明确指定：检查类属性初始值
-                const initialValue = instance[propKey];
-                if (initialValue === undefined) {
-                    // 无默认值 → 必填
-                    properties.add(propKey);
-                }
-                // 有默认值 → 非必填（不添加到 properties）
-            });
-        } catch {
-            // 无装饰器元数据，返回空集合
-        }
+            // 未明确指定：检查节点实例的属性值
+            const currentValue = (node as any)[input.propertyKey];
+            if (currentValue === undefined) {
+                // 无默认值 → 必填
+                properties.add(input.propertyKey);
+            }
+        });
 
         return properties;
+        throw new Error(`get node metadata failed`)
     }
 
     /**
      * 获取节点输入属性的元数据映射
      *
      * 用于检查 isMulti 等属性配置
+     *
+     * 优雅设计：
+     * - **优先使用 node.metadata**：如果节点已编译，直接从 metadata 构建映射
+     * - **回退到装饰器**：如果节点未编译，从 DI 容器读取装饰器元数据
      */
     private getInputMetadataMap(node: INode): Map<string | symbol, InputMetadata> {
+        if (!isNode(node)) {
+            const compiler = root.get(Compiler)
+            node = compiler.compile(node)
+        }
+        if (!isNode(node)) {
+            throw new Error(`getRequiredInputProperties error: node 类型错误`)
+        }
         const metadataMap = new Map<string | symbol, InputMetadata>();
 
-        try {
-            const ctor = findNodeType(node.type);
-            if (!ctor) return metadataMap;
-
-            const inputs = root.get(INPUT, []).filter(it => it.target === ctor);
-            inputs.forEach(input => {
-                metadataMap.set(input.propertyKey, input);
-            });
-        } catch {
-            // 无装饰器元数据，返回空映射
-        }
-
+        // 🔧 优先使用编译后的 metadata 字段
+        node.metadata!.inputs.forEach(input => {
+            metadataMap.set(input.propertyKey, input as InputMetadata);
+        });
         return metadataMap;
     }
 
@@ -602,51 +579,36 @@ export class ReactiveScheduler {
      * 获取节点输入属性的默认值
      *
      * 优先级：
-     * 1. 装饰器的 defaultValue
-     * 2. 类属性的初始值
-     * 3. undefined
+     * 1. **node.metadata.inputs[].defaultValue**（编译后的元数据）
+     * 2. 装饰器的 defaultValue
+     * 3. 类属性的初始值
+     * 4. undefined
      */
     private getInputDefaultValues(node: INode): Record<string, any> {
+        if (!isNode(node)) {
+            const compiler = root.get(Compiler)
+            node = compiler.compile(node)
+        }
+        if (!isNode(node)) {
+            throw new Error(`getRequiredInputProperties error: node 类型错误`)
+        }
         const defaults: Record<string, any> = {};
 
-        try {
-            const ctor = findNodeType(node.type);
-            if (!ctor) return defaults;
+        // 🔧 优先使用编译后的 metadata 字段
+        node.metadata!.inputs.forEach(input => {
+            const propKey = String(input.propertyKey);
 
-            const inputs = root.get(INPUT, []).filter(it => it.target === ctor);
-
-            // 尝试实例化以读取默认值
-            let instance: any;
-            try {
-                instance = new ctor();
-            } catch {
-                // 实例化失败，只使用装饰器提供的默认值
-                inputs.forEach(input => {
-                    if (input.defaultValue !== undefined) {
-                        defaults[String(input.propertyKey)] = input.defaultValue;
-                    }
-                });
-                return defaults;
-            }
-
-            inputs.forEach(input => {
-                const propKey = String(input.propertyKey);
-
-                // 优先使用装饰器的 defaultValue
-                if (input.defaultValue !== undefined) {
-                    defaults[propKey] = input.defaultValue;
-                } else {
-                    // 尝试读取类属性的初始值
-                    const initialValue = instance[propKey];
-                    if (initialValue !== undefined) {
-                        defaults[propKey] = initialValue;
-                    }
+            // 优先使用装饰器的 defaultValue
+            if (input.defaultValue !== undefined) {
+                defaults[propKey] = input.defaultValue;
+            } else {
+                // 尝试读取节点实例的当前值
+                const currentValue = (node as any)[propKey];
+                if (currentValue !== undefined) {
+                    defaults[propKey] = currentValue;
                 }
-            });
-        } catch {
-            // 忽略错误
-        }
-
+            }
+        });
         return defaults;
     }
 

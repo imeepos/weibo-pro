@@ -1,5 +1,5 @@
-import { root, Type } from '@sker/core'
-import { INPUT, OUTPUT, NODE, WorkflowGraphAst } from '@sker/workflow'
+import { Type } from '@sker/core'
+import { isNode, INode } from '@sker/workflow'
 import type { NodeMetadata, PortMetadata } from '../types'
 import { getExposedInputs, getExposedOutputs } from '../utils/workflow-ports'
 
@@ -7,37 +7,29 @@ import { getExposedInputs, getExposedOutputs } from '../utils/workflow-ports'
  * 获取节点的输入/输出元数据
  *
  * 优雅设计：
+ * - ✨强制使用编译后的 node.metadata 字段
+ * - 不支持从装饰器读取元数据（确保一致性）
  * - WorkflowGraphAst 动态计算端口（基于内部结构）
- * - 其他节点使用装饰器定义的静态端口
- * - 支持传入类或实例
+ *
+ * 存在即合理：
+ * - 编译后的节点自包含元数据，无需依赖装饰器
+ * - 统一管理元数据获取路径，避免多处实现
  */
-export function getNodeMetadata(nodeClassOrInstance: Type<any> | any): NodeMetadata {
-  if (!nodeClassOrInstance) throw new Error(`node class is null`)
+export function getNodeMetadata(node: INode): NodeMetadata {
+  if (!node) throw new Error(`node is null`)
+  if (!isNode(node)) throw new Error(`node must be compiled with metadata field`)
 
-  // 判断传入的是类还是实例
-  const isInstance = typeof nodeClassOrInstance === 'object'
-  const nodeClass = isInstance ? nodeClassOrInstance.constructor : nodeClassOrInstance
-  const instance = isInstance ? nodeClassOrInstance : new nodeClass()
-
-  const inputMetadata = root.get(INPUT, []).filter(it => it.target === nodeClass)
-  const outputMetadata = root.get(OUTPUT, []).filter(it => it.target === nodeClass)
-  const nodeMetadatas = root.get(NODE, []).filter(it => it.target === nodeClass)
-
-  const nodeType = instance.type || nodeClass.name
-  const nodeMetadata = nodeMetadatas[0]
-  const customTitle = nodeMetadata?.title
-  const categoryType = nodeMetadata?.type
+  const nodeType = node.type
 
   // 获取实例级别的自定义端口标签
-  const portLabels: Record<string, string> = instance.portLabels || {}
+  const portLabels: Record<string, string> = node.portLabels || {}
 
-  let inputs: PortMetadata[] = inputMetadata.map(m => toPortMetadata(m, portLabels))
-  let outputs: PortMetadata[] = outputMetadata.map(m => toPortMetadata(m, portLabels))
+  let inputs: PortMetadata[] = node.metadata.inputs.map((m: any) => toPortMetadata(m, portLabels))
+  let outputs: PortMetadata[] = node.metadata.outputs.map((m: any) => toPortMetadata(m, portLabels))
 
   // WorkflowGraphAst 特殊处理：动态计算端口
-  // 优雅设计：使用纯函数，无需依赖类方法，可直接处理序列化对象
   if (nodeType === 'WorkflowGraphAst') {
-    const exposedInputs = getExposedInputs(instance)
+    const exposedInputs = getExposedInputs(node)
     inputs = exposedInputs.map(input => ({
       property: `${input.nodeId}.${input.property}`,
       type: input.type || 'any',
@@ -45,7 +37,7 @@ export function getNodeMetadata(nodeClassOrInstance: Type<any> | any): NodeMetad
       isMulti: false
     }))
 
-    const exposedOutputs = getExposedOutputs(instance)
+    const exposedOutputs = getExposedOutputs(node)
     outputs = exposedOutputs.map(output => ({
       property: `${output.nodeId}.${output.property}`,
       type: output.type || 'any',
@@ -56,9 +48,9 @@ export function getNodeMetadata(nodeClassOrInstance: Type<any> | any): NodeMetad
 
   return {
     type: nodeType,
-    label: customTitle || formatNodeLabel(nodeType),
-    title: customTitle,
-    nodeType: categoryType,
+    label: node.metadata.class.title || formatNodeLabel(nodeType),
+    title: node.metadata.class.title,
+    nodeType: node.metadata.class.type,
     inputs,
     outputs,
   }
@@ -68,12 +60,11 @@ export function getNodeMetadata(nodeClassOrInstance: Type<any> | any): NodeMetad
  * 获取所有已注册的节点类型
  */
 export function getAllNodeTypes(): Type<any>[] {
-  const nodeMetadatas = root.get(NODE, [])
-  return nodeMetadatas.map(metadata => metadata.target)
+  throw new Error('getAllNodeTypes is deprecated. Use Compiler.compile() instead.')
 }
 
 export function findNodeType<T = any>(name: string): Type<T> | undefined {
-  return getAllNodeTypes().find((type: any) => type.name === name)
+  throw new Error('findNodeType is deprecated. Use Compiler.compile() instead.')
 }
 
 /**

@@ -1,5 +1,4 @@
-import { root } from '@sker/core'
-import { INPUT, OUTPUT, NODE, type INode, type IEdge } from '@sker/workflow'
+import type { INode, IEdge } from '@sker/workflow'
 
 /**
  * 端口信息
@@ -27,8 +26,9 @@ export interface WorkflowData {
  * - 纯函数，无副作用
  * - 不依赖类方法，可直接处理序列化后的对象
  * - 输入端口 = 内部节点的未连接输入
+ * - ✨使用 node.metadata.inputs，不依赖装饰器
  */
-export function getExposedInputs(workflow: WorkflowData): PortInfo[] {
+export function getExposedInputs(workflow: INode): PortInfo[] {
   const exposedInputs: PortInfo[] = []
 
   for (const node of workflow.nodes) {
@@ -36,18 +36,13 @@ export function getExposedInputs(workflow: WorkflowData): PortInfo[] {
     if (node.type === 'WorkflowGraphAst') continue
 
     // 检查该节点是否有入边
-    const isConnected = workflow.edges.some(edge => edge.to === node.id)
+    const isConnected = (workflow.edges as IEdge[]).some(edge => edge.to === node.id)
     if (isConnected) continue
+
     try {
-      // 通过 type 查找对应的类
-      const nodeRegistry = root.get(NODE, [])
-      const nodeMetadata = nodeRegistry.find((meta: any) => meta.target.name === node.type)
-      const ctor = nodeMetadata?.target
-      if (!ctor) continue
-      const pre = node.name || nodeMetadata.title
-      // 获取该节点的输入元数据
-      const inputMetadatas = root.get(INPUT, [])
-      const nodeInputs = inputMetadatas.filter((meta: any) => meta.target === ctor)
+      // ✨使用编译后的 node.metadata.inputs
+      const nodeName = node.name || node.metadata.class.title || node.type
+      const nodeInputs = node.metadata.inputs
 
       // 所有输入端口都暴露
       for (const inputMeta of nodeInputs) {
@@ -55,7 +50,7 @@ export function getExposedInputs(workflow: WorkflowData): PortInfo[] {
         exposedInputs.push({
           nodeId: node.id,
           property,
-          title: `${pre}.${inputMeta.title}` || property,
+          title: `${nodeName}.${inputMeta.title || property}`,
           type: inputMeta.type,
           required: inputMeta.required
         })
@@ -75,32 +70,26 @@ export function getExposedInputs(workflow: WorkflowData): PortInfo[] {
  * - 纯函数，无副作用
  * - 不依赖类方法，可直接处理序列化后的对象
  * - 输出端口 = 内部节点的未连接输出
+ * - ✨使用 node.metadata.outputs，不依赖装饰器
  */
-export function getExposedOutputs(workflow: WorkflowData): PortInfo[] {
+export function getExposedOutputs(workflow: INode): PortInfo[] {
   const exposedOutputs: PortInfo[] = []
 
   for (const node of workflow.nodes) {
     // 检查该节点是否有入边
-    const isConnected = workflow.edges.some(edge => edge.from === node.id)
+    const isConnected = (workflow.edges as IEdge[]).some(edge => edge.from === node.id)
     if (isConnected) continue
     // 跳过 WorkflowGraphAst 自身
     if (node.type === 'WorkflowGraphAst') continue
 
     try {
-      // 通过 type 查找对应的类
-      const nodeRegistry = root.get(NODE, [])
-      const nodeMetadata = nodeRegistry.find((meta: any) => meta.target.name === node.type)
-      const ctor = nodeMetadata?.target
-      if (!ctor) continue
-
-      // 获取该节点的输出元数据
-      const outputMetadatas = root.get(OUTPUT, [])
-      const nodeOutputs = outputMetadatas.filter((meta: any) => meta.target === ctor)
+      // ✨使用编译后的 node.metadata.outputs
+      const nodeOutputs = node.metadata.outputs
 
       // 检查每个输出端口是否被连接
       for (const outputMeta of nodeOutputs) {
         const property = String(outputMeta.propertyKey)
-        const isConnected = workflow.edges.some(edge =>
+        const isConnected = workflow.edges.some((edge: IEdge) =>
           edge.from === node.id && edge.fromProperty === property
         )
 

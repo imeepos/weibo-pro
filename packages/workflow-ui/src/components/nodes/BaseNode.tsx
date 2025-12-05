@@ -5,7 +5,9 @@ import { WorkflowNode } from '@sker/ui/components/workflow'
 import type { WorkflowNode as WorkflowNodeType } from '../../types'
 import { findNodeType, getNodeMetadata } from '../../adapters'
 import { useRender } from './hook'
-import { fromJson, type DynamicOutput, WorkflowGraphAst } from '@sker/workflow'
+import { fromJson, type DynamicOutput, WorkflowGraphAst, Compiler } from '@sker/workflow'
+import type { INode } from '@sker/workflow'
+import { root } from '@sker/core'
 import { BoxIcon } from 'lucide-react'
 
 /**
@@ -19,9 +21,20 @@ import { BoxIcon } from 'lucide-react'
  */
 export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNodeType>) => {
   // 对于 WorkflowGraphAst，直接传入实例以正确计算动态端点
-  // 对于其他节点，传入类（保持向后兼容）
+  // 对于其他节点，如果 data 不是 INode，需要编译
   const nodeClass = findNodeType(data.type)!
-  const metadata = getNodeMetadata(data.type === 'WorkflowGraphAst' ? data : nodeClass)
+  let nodeToUse: INode
+
+  // 如果 data 已经是 INode（有 metadata 字段），直接使用
+  if ('metadata' in data) {
+    nodeToUse = data as INode
+  } else {
+    // 否则需要编译节点
+    const compiler = root.get(Compiler)
+    nodeToUse = compiler.compile(data as any)
+  }
+
+  const metadata = getNodeMetadata(nodeToUse)
   const updateNodeInternals = useUpdateNodeInternals()
   const CustomRender = useRender(fromJson(data))
   const { setNodes } = useReactFlow()

@@ -49,7 +49,8 @@ export const EDGE_VALIDATION_RULES: EdgeValidationRule[] = [
       if (!targetNode) return false
 
       try {
-        const targetMetadata = getNodeMetadata(targetNode.constructor as any)
+        // targetNode is already an INode, pass it directly
+        const targetMetadata = getNodeMetadata(targetNode)
         const inputPort = targetMetadata.inputs.find(i => i.property === edge.targetHandle)
 
         if (inputPort) {

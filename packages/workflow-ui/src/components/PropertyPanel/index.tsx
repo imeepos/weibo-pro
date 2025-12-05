@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { useSelectedNode } from './useSelectedNode'
 import { SmartFormField } from './SmartFormField'
 import { getNodeMetadata } from '../../adapters'
-import { resolveConstructor, type DynamicOutput, OUTPUT } from '@sker/workflow'
+import { type DynamicOutput } from '@sker/workflow'
 import { ErrorDetailPanel } from '../ErrorDetail'
 import { SerializedError, root } from '@sker/core'
 import {
@@ -47,7 +47,7 @@ export function PropertyPanel({
 
   useEffect(() => {
     if (selectedNode && !externalFormData) {
-      const metadata = getNodeMetadata(resolveConstructor(selectedNode.data))
+      const metadata = getNodeMetadata(selectedNode.data)
       const initialData: Record<string, any> = {
         name: selectedNode.data.name,
         description: selectedNode.data.description,
@@ -71,7 +71,7 @@ export function PropertyPanel({
     )
   }
 
-  const metadata = getNodeMetadata(resolveConstructor(selectedNode.data))
+  const metadata = getNodeMetadata(selectedNode.data)
   const ast = selectedNode.data
 
   const portLabels: Record<string, string> = (ast as any).portLabels || {}
@@ -207,8 +207,17 @@ export function PropertyPanel({
   }
 
   // 检查节点是否支持动态输出（有 isRouter: true 的输出）
-  const nodeClass = resolveConstructor(ast)
-  const outputMetadata = root.get(OUTPUT, []).filter(it => it.target === nodeClass)
+  // ✨使用编译后的 node.metadata.outputs
+  if (!ast.metadata) {
+    return (
+      <WorkflowPropertyPanel
+        className={className}
+        emptyState={<PropertyPanelEmptyState />}
+        sections={[]}
+      />
+    )
+  }
+  const outputMetadata = ast.metadata.outputs
   const hasDynamicOutputSupport = outputMetadata.some(meta => meta.isRouter)
 
   if (hasDynamicOutputSupport) {

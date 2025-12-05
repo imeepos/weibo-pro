@@ -1,5 +1,7 @@
 import { useMemo } from 'react'
 import { getAllNodeTypes, getNodeMetadata } from '../../adapters'
+import { Compiler } from '@sker/workflow'
+import { root } from '@sker/core'
 import type { NodeMetadata } from '../../types'
 
 /**
@@ -8,6 +10,13 @@ import type { NodeMetadata } from '../../types'
 export function useNodeRegistry(): NodeMetadata[] {
   return useMemo(() => {
     const nodeTypes = getAllNodeTypes()
-    return nodeTypes.map(getNodeMetadata)
+    const compiler = root.get(Compiler)
+
+    return nodeTypes.map(NodeClass => {
+      // Create a temporary instance and compile it to get metadata
+      const tempAst = new NodeClass()
+      const compiledNode = compiler.compile(tempAst)
+      return getNodeMetadata(compiledNode)
+    })
   }, [])
 }
