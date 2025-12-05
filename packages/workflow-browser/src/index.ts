@@ -18,6 +18,8 @@ import "./LlmTextAgentAstVisitor";
 import "./WeiboAccountPickAstBrowserVisitor"
 import "./CollectorVisitor";
 import "./ImageBrowserVisitor";
+import "./VideoBrowserVisitor";
+import "./AudioBrowserVisitor";
 import "./TextAreaAstVisitor";
 import "./IfAstVisitor";
 import "./ShareAstVisitor";

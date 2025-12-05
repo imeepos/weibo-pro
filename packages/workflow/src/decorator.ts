@@ -154,6 +154,8 @@ export type InputFieldType =
     | 'date'
     | 'datetime-local'
     | 'image'
+    | 'video'
+    | 'audio'
     | 'any';
 
 export interface InputOptions {

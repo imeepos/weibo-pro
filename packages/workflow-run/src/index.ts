@@ -22,6 +22,8 @@ export { CollectorVisitor } from './CollectorVisitor'
 
 // 媒体节点
 export { ImageVisitor } from './ImageVisitor'
+export { VideoVisitor } from './VideoVisitor'
+export { AudioVisitor } from './AudioVisitor'
 
 // 控制流节点
 export { IfAstVisitor } from './IfAstVisitor'

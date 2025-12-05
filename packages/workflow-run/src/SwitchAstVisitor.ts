@@ -21,7 +21,7 @@ export class SwitchAstVisitor {
 
             // 处理装饰器定义的输出
             outputs.forEach(outputMeta => {
-                const propKey = String(outputMeta.propertyKey)
+                const propKey = String(outputMeta.property)
 
                 if (outputMeta.isRouter && outputMeta.condition) {
                     // 条件求值

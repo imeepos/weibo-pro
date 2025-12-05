@@ -25,6 +25,8 @@ export * from './CollectorAstRender';
 
 // 媒体节点
 export * from './ImageAstRender';
+export * from './VideoAstRender';
+export * from './AudioAstRender';
 
 // 控制流节点
 export * from './IfAstRender';

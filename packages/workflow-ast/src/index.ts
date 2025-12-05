@@ -28,6 +28,8 @@ export { LlmTextImage2ToVideoAst } from './LlmTextImage2ToVideoAst';
 
 // 媒体节点
 export { ImageAst } from './ImageAst';
+export { VideoAst } from './VideoAst';
+export { AudioAst } from './AudioAst';
 
 export { WeiboAccountPickAst } from './WeiboAccountPickAst';
 
