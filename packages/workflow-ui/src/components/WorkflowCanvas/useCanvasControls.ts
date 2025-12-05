@@ -4,6 +4,7 @@ import { useSelectionStore } from '../../store'
 import { getAllNodeTypes, getNodeMetadata } from '../../adapters'
 import { generateId, Compiler } from '@sker/workflow'
 import { root } from '@sker/core'
+import { createCompiledNode } from '../../utils/createCompiledNode'
 import type { WorkflowEdge, WorkflowNode, NodeMetadata } from '../../types'
 import { useContextMenu } from './useContextMenu'
 
@@ -205,19 +206,16 @@ export function useCanvasControls() {
         return
       }
 
-      const ast = new NodeClass()
-      ast.id = generateId()
-
-      // Compile the AST to get INode with metadata
-      const compiler = root.get(Compiler)
-      const compiledNode = compiler.compile(ast)
-      const nodeMetadata = getNodeMetadata(compiledNode)
+      // 使用工具函数创建并编译节点
+      const compiledNode = createCompiledNode(NodeClass, {
+        position: nodeSelector.flowPosition
+      })
 
       const node: WorkflowNode = {
-        id: ast.id,
-        type: nodeMetadata.type,
+        id: compiledNode.id,
+        type: metadata.type,
         position: nodeSelector.flowPosition,
-        data: ast,
+        data: compiledNode,  // ✅ 使用编译后的节点
       }
 
       setNodes((nodes) => [...nodes, node])
