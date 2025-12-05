@@ -271,13 +271,14 @@ export interface StateMetadata {
     target: Type<any>;
     propertyKey: string | symbol;
     title?: string;
+    type?: string;
 }
 
 export const STATE = new InjectionToken<StateMetadata[]>(`STATE`)
 export function State(options?: StateOptions): PropertyDecorator {
     return (target, propertyKey) => {
         const ctor = resolveConstructor(target);
-        root.set([{ provide: STATE, multi: true, useValue: { target: ctor, propertyKey, title: options?.title } }])
+        root.set([{ provide: STATE, multi: true, useValue: { target: ctor, type: options?.type, propertyKey, title: options?.title } }])
     };
 }
 

@@ -5,24 +5,64 @@
 // - success: 执行完成（不触发下游）
 
 import { SerializedError } from "@sker/core";
+import { InputFieldType, NodeType } from "./decorator";
 
 // - fail: 执行失败
 export type IAstStates = `pending` | `running` | `emitting` | `success` | `fail`;
 
 // 状态数据的基础约束
+export interface INodeMetadata {
+    title?: string;
+    type?: NodeType;
+}
+export interface INodeInputMetadata {
+    propertyKey: string;
+    mode?: number;
+    required?: boolean;
+    defaultValue?: any;
+    title?: string;
+    type?: InputFieldType;
+}
+export interface INodeOutputMetadata {
+    title?: string;
+    type?: string;
+    // 路由节点支持
+    isRouter?: boolean;      // 标识为路由输出，Scheduler 会过滤 undefined 值
+    dynamic?: boolean;       // 支持 UI 动态添加输出端口
+    condition?: string;      // 条件表达式字符串（如 '$input === 1'）
+    propertyKey: string;
+}
+export interface INodeStateMetadata {
+    propertyKey: string | symbol;
+    title?: string;
+    type?: string;
+}
 export interface INode extends Record<string, any> {
-     // 标题
+    // 标题
     name?: string;
     // 简介
     description?: string;
     // 自定义颜色
     state: IAstStates;
+    // 运行次数
     count: number;
+    // 发射次数
     emitCount: number;
+    // 编号
     id: string;
+    // 类型
     type: string;
+    // 报错
     error: SerializedError | undefined;
+    // 位置
     position: { x: number; y: number };
+    // 元数据
+    metadata: {
+        class: INodeMetadata;
+        inputs: INodeInputMetadata[];
+        outputs: INodeOutputMetadata[];
+        states: INodeStateMetadata[];
+    }
 }
 
 // 边的流式合并模式 - 定义上游如何触发下游

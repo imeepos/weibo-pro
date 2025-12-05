@@ -1258,8 +1258,11 @@ export class ReactiveScheduler {
         const nodeId = dynamicProperty.substring(0, lastDotIndex);
         const property = dynamicProperty.substring(lastDotIndex + 1);
 
-        // 查找内部节点
-        const workflowAst = workflow as WorkflowGraphAst;
+        // 查找内部节点（仅当 workflow 是子工作流时）
+        if (workflow.type !== 'WorkflowGraphAst') return undefined;
+
+        // 类型断言：已确认是 WorkflowGraphAst 类型
+        const workflowAst = workflow as unknown as WorkflowGraphAst;
         const internalNode = workflowAst.nodes?.find(n => n.id === nodeId);
         if (!internalNode) return undefined;
 
