@@ -34,6 +34,8 @@ export abstract class Ast implements INode {
     collapsed?: boolean;
     // 宽度
     width?: number;
+    // 高度
+    height?: number;
     // 状态
     state: IAstStates = 'pending';
     // 错误信息
@@ -101,6 +103,10 @@ export class WorkflowGraphAst extends Ast {
     @State({ title: '标签' })
     tags?: string[] = [];
 
+    // 显式标记是否为分组节点
+    @State({ title: '分组标记' })
+    isGroupNode?: boolean = false;
+
     type: `WorkflowGraphAst` = `WorkflowGraphAst`
 
     /**
@@ -115,14 +121,9 @@ export class WorkflowGraphAst extends Ast {
 
     /**
      * 判断是否为分组节点
-     *
-     * 优雅设计：
-     * - 分组节点 = 没有执行入口的 WorkflowGraphAst
-     * - 可执行工作流 = 有执行入口的 WorkflowGraphAst
-     * - 不需要额外的标记字段，通过语义判断
      */
     get isGroup(): boolean {
-        return this.entryNodeIds.length === 0 && this.nodes.length > 0
+        return this.isGroupNode === true
     }
 }
 export function createWorkflowGraphAst({ nodes = [], edges = [], id, state, name = 'Untitled Workflow' }: { name?: string, nodes?: INode[], edges?: IEdge[], id?: string, state?: IAstStates } = {}) {

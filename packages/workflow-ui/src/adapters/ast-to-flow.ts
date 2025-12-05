@@ -23,19 +23,19 @@ export function astToFlowNodes(ast: { nodes: INode[] }): WorkflowNode[] {
 
   function collect(nodes: INode[], parentId?: string) {
     for (const node of nodes) {
-      const isGroup = node instanceof WorkflowGraphAst && node.isGroup
+      const isGroup = (node as any).isGroupNode === true
 
       // 先添加分组节点本身
       const flowNode = toFlowNode(node)
       if (parentId) {
         flowNode.parentId = parentId
-        flowNode.extent = 'parent'
+        flowNode.extent = 'parent'  // 限制子节点不能拖出分组边界
       }
       result.push(flowNode)
 
       // 再递归添加子节点（保证父节点在前）
-      if (isGroup) {
-        collect((node as WorkflowGraphAst).nodes, node.id)
+      if (isGroup && (node as any).nodes?.length > 0) {
+        collect((node as any).nodes, node.id)
       }
     }
   }
@@ -52,9 +52,10 @@ export function astToFlowEdges(ast: { nodes: INode[]; edges: IEdge[] }): Workflo
 
   function collectFromGroups(nodes: INode[]) {
     for (const node of nodes) {
-      if (node instanceof WorkflowGraphAst && node.isGroup) {
-        result.push(...node.edges.map(toFlowEdge))
-        collectFromGroups(node.nodes)
+      const isGroup = (node as any).isGroupNode === true
+      if (isGroup && (node as any).nodes?.length > 0) {
+        result.push(...((node as any).edges || []).map(toFlowEdge))
+        collectFromGroups((node as any).nodes)
       }
     }
   }
@@ -67,14 +68,15 @@ export function astToFlowEdges(ast: { nodes: INode[]; edges: IEdge[] }): Workflo
  * 转换单个节点
  */
 function toFlowNode<T extends INode>(node: T): WorkflowNode<T> {
-  const isGroup = node instanceof WorkflowGraphAst && node.isGroup
+  const isGroup = (node as any).isGroupNode === true
   return {
     id: node.id,
     type: isGroup ? 'GroupNode' : node.type,
     position: node.position || { x: 0, y: 0 },
     data: node,
+    ...(node.parentId && { parentId: node.parentId }),
     ...(isGroup && {
-      style: { width: node.width, height: (node as any).height }
+      style: { width: node.width, height: node.height }
     })
   }
 }

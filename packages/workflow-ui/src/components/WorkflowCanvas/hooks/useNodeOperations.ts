@@ -195,7 +195,7 @@ export const useNodeOperations = (workflow: UseWorkflowReturn, options: NodeOper
     }
 
     const groupNodes = selectedNodes.filter(
-      (node) => node.data instanceof WorkflowGraphAst && node.data.isGroup
+      (node) => node.type === 'GroupNode'
     )
 
     if (groupNodes.length === 0) {

@@ -402,13 +402,14 @@ export function useWorkflow(
       // 创建分组节点
       const groupAst = new WorkflowGraphAst()
       groupAst.id = generateId()
-      groupAst.name = title || `分组 ${workflowAst.nodes.filter(n => n instanceof WorkflowGraphAst && n.isGroup).length + 1}`
+      groupAst.name = title || `分组 ${workflowAst.nodes.filter(n => (n as any).isGroupNode === true).length + 1}`
       groupAst.color = '#3b82f6'
+      groupAst.isGroupNode = true
       groupAst.position = { x: minX, y: minY }
       groupAst.width = maxX - minX
-      ;(groupAst as any).height = maxY - minY
+      groupAst.height = maxY - minY
 
-      // 设置子节点的 parentId，并转换为相对坐标（加上标题栏偏移）
+      // 设置子节点的 parentId，并转换为相对坐标
       selectedNodes.forEach(node => {
         node.parentId = groupAst.id
         node.position = {
@@ -425,10 +426,14 @@ export function useWorkflow(
       groupAst.nodes = selectedNodes
       groupAst.edges = internalEdges
 
+      // 编译分组节点，生成 metadata
+      const compiler = root.get(Compiler)
+      const compiledGroup = compiler.compile(groupAst)
+
       // 从父工作流移除
       workflowAst.nodes = workflowAst.nodes.filter(n => !selectedNodeIds.includes(n.id))
       workflowAst.edges = workflowAst.edges.filter(e => !internalEdges.some(ie => ie.id === e.id))
-      workflowAst.nodes = astAddNode(workflowAst.nodes, groupAst)
+      workflowAst.nodes = astAddNode(workflowAst.nodes, compiledGroup)
 
       syncFromAst()
       recordHistory()
