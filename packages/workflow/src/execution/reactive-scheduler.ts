@@ -26,6 +26,12 @@ export class ReactiveScheduler {
 
     /**
      * 调度工作流：将工作流图转换为响应式流网络
+     *
+     * 重置逻辑：
+     * - 清空所有节点的状态、计数
+     * - 清空 IS_MULTI/IS_BUFFER 输入属性（避免重复执行时累积）
+     * - 清空有输入边的节点的输出属性（输出由计算产生）
+     * - 保留入口节点的输出属性（用户输入数据）
      */
     private resetWorkflowGraphAst(ast: WorkflowGraphAst) {
         ast.state = 'pending';
@@ -33,9 +39,60 @@ export class ReactiveScheduler {
             node.state = 'pending';
             node.count = 0;
             node.emitCount = 0;
+
+            // 清空 IS_MULTI/IS_BUFFER 输入属性
+            this.clearMultiBufferInputs(node);
+
+            // 清空有输入边的节点的输出属性
+            const hasIncomingEdges = ast.edges.some(edge => edge.to === node.id);
+            if (hasIncomingEdges) {
+                this.clearNodeOutputs(node);
+            }
+
             return node;
         })
         return ast;
+    }
+
+    /**
+     * 清空节点的 IS_MULTI 和 IS_BUFFER 输入属性
+     *
+     * 原因：这些模式使用数组累积，重复执行会导致数据越积越多
+     */
+    private clearMultiBufferInputs(node: INode): void {
+        try {
+            const inputMetadataMap = this.getInputMetadataMap(node);
+
+            inputMetadataMap.forEach((metadata, propertyKey) => {
+                const isBuffer = hasBufferMode(metadata?.mode);
+                const isMulti = hasMultiMode(metadata?.mode) || metadata?.isMulti;
+
+                if (isBuffer || isMulti) {
+                    // 清空为空数组
+                    (node as any)[propertyKey] = [];
+                }
+            });
+        } catch (error) {
+            // 无法获取元数据，跳过清空
+        }
+    }
+
+    /**
+     * 清空节点的输出属性
+     *
+     * 适用于有输入边的节点，因为输出应该由计算产生
+     */
+    private clearNodeOutputs(node: INode): void {
+        try {
+            const ctor = resolveConstructor(node);
+            const outputs = root.get(OUTPUT, []).filter(it => it.target === ctor);
+
+            outputs.forEach(output => {
+                (node as any)[output.propertyKey] = undefined;
+            });
+        } catch (error) {
+            // 无法获取元数据，跳过清空
+        }
     }
     schedule(ast: WorkflowGraphAst, ctx: WorkflowGraphAst): Observable<WorkflowGraphAst> {
         const { state } = this.resetWorkflowGraphAst(ast);
@@ -43,6 +100,9 @@ export class ReactiveScheduler {
         if (state === 'success' || state === 'fail') {
             return of(ast);
         }
+
+        // 展平 GroupNode 结构：提取所有嵌套节点和边到顶层
+        this.flattenWorkflowStructure(ast);
 
         ast.state = 'running';
 
@@ -71,6 +131,9 @@ export class ReactiveScheduler {
         ctx: WorkflowGraphAst,
         nodeId: string
     ): Observable<WorkflowGraphAst> {
+        // 展平 GroupNode 结构（确保所有嵌套节点都被处理）
+        this.flattenWorkflowStructure(ctx);
+
         // 1. 验证目标节点存在
         const targetNode = ctx.nodes.find(n => n.id === nodeId);
         if (!targetNode) {
@@ -132,6 +195,9 @@ export class ReactiveScheduler {
         ctx: WorkflowGraphAst,
         nodeId: string
     ): Observable<WorkflowGraphAst> {
+        // 展平 GroupNode 结构（确保所有嵌套节点都被处理）
+        this.flattenWorkflowStructure(ctx);
+
         // 1. 验证目标节点存在
         const targetNode = ctx.nodes.find(n => n.id === nodeId);
         if (!targetNode) {
@@ -1383,6 +1449,10 @@ export class ReactiveScheduler {
                 // finalize 已经修改了 ast.state，现在发射它
                 const hasFailures = ast.nodes.some(n => n.state === 'fail');
                 ast.state = hasFailures ? 'fail' : 'success';
+
+                // 恢复 GroupNode 的嵌套结构（确保 UI 层和保存时的数据正确）
+                this.restoreGroupStructure(ast);
+
                 obs.next(ast);
                 obs.complete();
             })
@@ -1636,5 +1706,149 @@ export class ReactiveScheduler {
         }
 
         return feedbackInputs;
+    }
+
+    /**
+     * 展平 GroupNode 结构 - 递归提取所有嵌套节点和边到顶层
+     *
+     * 设计理念：
+     * - GroupNode 仅作为 UI 层的容器（分组、折叠、布局）
+     * - 执行层面，所有节点和边都应该在顶层被调度
+     * - 递归遍历所有 GroupNode，提取内部的 nodes 和 edges
+     * - 保留节点的 parentId 属性（用于 UI 层识别分组关系）
+     *
+     * 重要：
+     * - 不修改传入的 ast 对象（保留 UI 层的嵌套结构）
+     * - 返回展平后的节点和边数组副本
+     * - 节点状态同步回原始 AST 由 subscribeAndMerge 处理
+     */
+    private flattenWorkflowStructure(ast: WorkflowGraphAst): void {
+        const allNodes: INode[] = [];
+        const allEdges: IEdge[] = [];
+        const originalGroupContents = new Map<string, { nodes: INode[], edges: IEdge[] }>();
+
+        // 递归收集所有节点（包括嵌套的）
+        const collectNodes = (nodes: INode[]) => {
+            for (const node of nodes) {
+                // 检查是否是 GroupNode（使用 isGroupNode 标记，不依赖类实例）
+                const isGroup = (node as any).isGroupNode === true;
+
+                if (isGroup) {
+                    // 保存 GroupNode 的原始内容（用于后续恢复）
+                    const groupNodes = (node as any).nodes || [];
+                    const groupEdges = (node as any).edges || [];
+                    originalGroupContents.set(node.id, {
+                        nodes: [...groupNodes],
+                        edges: [...groupEdges]
+                    });
+
+                    // GroupNode 本身也要添加到顶层（UI 需要渲染）
+                    allNodes.push(node);
+
+                    // 递归提取 GroupNode 内部的节点
+                    if (groupNodes.length > 0) {
+                        collectNodes(groupNodes);
+                    }
+
+                    // 收集 GroupNode 内部的边
+                    if (groupEdges.length > 0) {
+                        allEdges.push(...groupEdges);
+                    }
+                } else {
+                    // 普通节点直接添加
+                    allNodes.push(node);
+                }
+            }
+        };
+
+        // 从顶层开始收集
+        collectNodes(ast.nodes);
+        allEdges.push(...ast.edges);
+
+        // 替换 ast 的节点和边数组（用于执行）
+        ast.nodes = allNodes;
+        ast.edges = allEdges;
+
+        // 将原始内容存储在 AST 上（用于执行后恢复）
+        (ast as any).__originalGroupContents = originalGroupContents;
+
+        console.log('[flattenWorkflowStructure] 展平完成:', {
+            totalNodes: allNodes.length,
+            totalEdges: allEdges.length,
+            groupNodes: allNodes.filter(n => (n as any).isGroupNode === true).length,
+            regularNodes: allNodes.filter(n => (n as any).isGroupNode !== true).length
+        });
+    }
+
+    /**
+     * 恢复 GroupNode 的嵌套结构（执行完成后调用）
+     *
+     * 用途：
+     * - 将展平的节点和边重新组织回嵌套结构
+     * - 确保 UI 层能正确显示 GroupNode 的父子关系
+     * - 保证数据保存时不丢失嵌套信息
+     */
+    private restoreGroupStructure(ast: WorkflowGraphAst): void {
+        const originalContents = (ast as any).__originalGroupContents as Map<string, { nodes: INode[], edges: IEdge[] }>;
+        if (!originalContents) {
+            return; // 没有 GroupNode，无需恢复
+        }
+
+        // 从展平的节点数组中分离顶层节点和子节点
+        const topLevelNodes: INode[] = [];
+        const childNodeMap = new Map<string, INode[]>(); // parentId -> 子节点数组
+
+        for (const node of ast.nodes) {
+            if (node.parentId) {
+                // 有 parentId 的是子节点
+                if (!childNodeMap.has(node.parentId)) {
+                    childNodeMap.set(node.parentId, []);
+                }
+                childNodeMap.get(node.parentId)!.push(node);
+            } else {
+                // 无 parentId 的是顶层节点
+                topLevelNodes.push(node);
+            }
+        }
+
+        // 恢复 GroupNode 的内部结构
+        for (const groupNode of topLevelNodes) {
+            const isGroup = (groupNode as any).isGroupNode === true;
+            if (isGroup) {
+                const originalContent = originalContents.get(groupNode.id);
+                if (originalContent) {
+                    // 恢复内部节点和边
+                    const childNodes = childNodeMap.get(groupNode.id) || [];
+                    (groupNode as any).nodes = childNodes;
+
+                    // 恢复内部边（从展平的边数组中筛选）
+                    const childNodeIds = new Set(childNodes.map(n => n.id));
+                    const internalEdges = ast.edges.filter(edge =>
+                        childNodeIds.has(edge.from) || childNodeIds.has(edge.to)
+                    );
+                    (groupNode as any).edges = internalEdges;
+                }
+            }
+        }
+
+        // 恢复顶层节点数组（只包含顶层节点）
+        ast.nodes = topLevelNodes;
+
+        // 恢复顶层边数组（排除内部边）
+        const allChildNodeIds = new Set<string>();
+        childNodeMap.forEach(nodes => {
+            nodes.forEach(n => allChildNodeIds.add(n.id));
+        });
+        ast.edges = ast.edges.filter(edge =>
+            !allChildNodeIds.has(edge.from) && !allChildNodeIds.has(edge.to)
+        );
+
+        // 清理临时数据
+        delete (ast as any).__originalGroupContents;
+
+        console.log('[restoreGroupStructure] 恢复完成:', {
+            topLevelNodes: topLevelNodes.length,
+            groupNodes: topLevelNodes.filter(n => (n as any).isGroupNode === true).length
+        });
     }
 }
