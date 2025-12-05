@@ -37,7 +37,7 @@ async function bootstrap() {
   app.use(require('body-parser').urlencoded({ limit: '50mb', extended: true }));
 
   // 配置静态文件服务 - 上传的文件可通过 /uploads 访问（带 CORS）
-  app.use('/uploads', (req, res, next) => {
+  app.use('/uploads', (req: any, res: any, next: any) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');

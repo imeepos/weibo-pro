@@ -15,6 +15,8 @@ import {
   Clock,
   XCircle,
   History,
+  Undo,
+  Redo,
 } from 'lucide-react'
 import { cn } from '@sker/ui/lib/utils'
 import { Button } from '@sker/ui/components/ui/button'
@@ -40,6 +42,12 @@ export interface WorkflowControlsProps {
   onCollapseNodes?: () => void
   onExpandNodes?: () => void
   onAutoLayout?: () => void
+
+  // 历史操作
+  onUndo?: () => void
+  onRedo?: () => void
+  canUndo?: boolean
+  canRedo?: boolean
 
   // 状态
   isRunning?: boolean
@@ -70,6 +78,10 @@ export const WorkflowControls: React.FC<WorkflowControlsProps> = ({
   onCollapseNodes,
   onExpandNodes,
   onAutoLayout,
+  onUndo,
+  onRedo,
+  canUndo = false,
+  canRedo = false,
   isRunning = false,
   isSaving = false,
   className,
@@ -157,6 +169,43 @@ export const WorkflowControls: React.FC<WorkflowControlsProps> = ({
           )}
         >
           <SaveIcon className="h-4 w-4" strokeWidth={2} />
+        </Button>
+      )}
+
+      {/* 分隔线 */}
+      {(onUndo || onRedo) && <div className="my-1 h-px bg-border" />}
+
+      {/* 撤销 */}
+      {onUndo && (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={onUndo}
+          disabled={!canUndo}
+          title="撤销&#10;快捷键: Ctrl+Z"
+          className={cn(
+            buttonClassName,
+            'disabled:opacity-30 disabled:cursor-not-allowed'
+          )}
+        >
+          <Undo className="h-4 w-4" strokeWidth={2} />
+        </Button>
+      )}
+
+      {/* 重做 */}
+      {onRedo && (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={onRedo}
+          disabled={!canRedo}
+          title="重做&#10;快捷键: Ctrl+Shift+Z"
+          className={cn(
+            buttonClassName,
+            'disabled:opacity-30 disabled:cursor-not-allowed'
+          )}
+        >
+          <Redo className="h-4 w-4" strokeWidth={2} />
         </Button>
       )}
 

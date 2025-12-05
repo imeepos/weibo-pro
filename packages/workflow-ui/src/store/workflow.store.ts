@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { WorkflowNode, WorkflowEdge } from '../types'
 import { flowToAst } from '../adapters'
+import { historyManager } from './history.store'
 
 interface WorkflowState {
   /** 节点列表 */
@@ -9,9 +10,9 @@ interface WorkflowState {
   edges: WorkflowEdge[]
 
   /** 设置节点 */
-  setNodes: (nodes: WorkflowNode[] | ((currentNodes: WorkflowNode[]) => WorkflowNode[])) => void
+  setNodes: (nodes: WorkflowNode[] | ((currentNodes: WorkflowNode[]) => WorkflowNode[]), recordHistory?: boolean) => void
   /** 设置边 */
-  setEdges: (edges: WorkflowEdge[] | ((currentEdges: WorkflowEdge[]) => WorkflowEdge[])) => void
+  setEdges: (edges: WorkflowEdge[] | ((currentEdges: WorkflowEdge[]) => WorkflowEdge[]), recordHistory?: boolean) => void
 
   /** 添加节点 */
   addNode: (node: WorkflowNode) => void
@@ -24,6 +25,11 @@ interface WorkflowState {
   addEdge: (edge: WorkflowEdge) => void
   /** 删除边 */
   removeEdge: (edgeId: string) => void
+
+  /** 撤销 */
+  undo: () => void
+  /** 重做 */
+  redo: () => void
 
   /** 清空工作流 */
   clear: () => void
@@ -38,74 +44,116 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => {
     edges: [] as WorkflowEdge[],
   }
 
-  
+  const recordHistory = () => {
+    const { nodes, edges } = get()
+    historyManager.push(nodes, edges)
+  }
+
   return {
     ...initialState,
 
-  setNodes: (nodes) => {
+    setNodes: (nodes, shouldRecordHistory = true) => {
       if (typeof nodes === 'function') {
-        // 函数式更新：调用函数并传入当前状态，优化性能
-        return set((state) => ({ nodes: nodes(state.nodes) }), false)
+        return set((state) => {
+          const newNodes = nodes(state.nodes)
+          if (shouldRecordHistory) {
+            setTimeout(() => recordHistory(), 0)
+          }
+          return { nodes: newNodes }
+        }, false)
       } else {
-        // 直接设置数组
         const safeNodes = Array.isArray(nodes) ? nodes : []
         if (!Array.isArray(nodes)) {
           console.error('[WorkflowStore] Invalid nodes passed to setNodes:', nodes)
         }
+        if (shouldRecordHistory) {
+          setTimeout(() => recordHistory(), 0)
+        }
         return set({ nodes: safeNodes }, false)
       }
     },
-  setEdges: (edges) => {
+
+    setEdges: (edges, shouldRecordHistory = true) => {
       if (typeof edges === 'function') {
-        // 函数式更新：调用函数并传入当前状态
-        return set((state) => ({ edges: edges(state.edges) }), false)
+        return set((state) => {
+          const newEdges = edges(state.edges)
+          if (shouldRecordHistory) {
+            setTimeout(() => recordHistory(), 0)
+          }
+          return { edges: newEdges }
+        }, false)
       } else {
-        // 直接设置数组
         const safeEdges = Array.isArray(edges) ? edges : []
         if (!Array.isArray(edges)) {
           console.error('[WorkflowStore] Invalid edges passed to setEdges:', edges)
+        }
+        if (shouldRecordHistory) {
+          setTimeout(() => recordHistory(), 0)
         }
         return set({ edges: safeEdges }, false)
       }
     },
 
-  addNode: (node) =>
-    set((state) => ({
-      nodes: [...state.nodes, node],
-    })),
+    addNode: (node) => {
+      set((state) => ({ nodes: [...state.nodes, node] }))
+      recordHistory()
+    },
 
-  removeNode: (nodeId) =>
-    set((state) => ({
-      nodes: state.nodes.filter((n) => n.id !== nodeId),
-      edges: state.edges.filter(
-        (e) => e.source !== nodeId && e.target !== nodeId
-      ),
-    })),
+    removeNode: (nodeId) => {
+      set((state) => ({
+        nodes: state.nodes.filter((n) => n.id !== nodeId),
+        edges: state.edges.filter(
+          (e) => e.source !== nodeId && e.target !== nodeId
+        ),
+      }))
+      recordHistory()
+    },
 
-  updateNode: (nodeId, updates) =>
-    set((state) => ({
-      nodes: state.nodes.map((node) =>
-        node.id === nodeId
-          ? { ...node, data: { ...node.data, ...updates } }
-          : node
-      ),
-    })),
+    updateNode: (nodeId, updates) => {
+      set((state) => ({
+        nodes: state.nodes.map((node) =>
+          node.id === nodeId
+            ? { ...node, data: { ...node.data, ...updates } }
+            : node
+        ),
+      }))
+      recordHistory()
+    },
 
-  addEdge: (edge) =>
-    set((state) => ({
-      edges: [...state.edges, edge],
-    })),
+    addEdge: (edge) => {
+      set((state) => ({ edges: [...state.edges, edge] }))
+      recordHistory()
+    },
 
-  removeEdge: (edgeId) =>
-    set((state) => ({
-      edges: state.edges.filter((e) => e.id !== edgeId),
-    })),
+    removeEdge: (edgeId) => {
+      set((state) => ({
+        edges: state.edges.filter((e) => e.id !== edgeId),
+      }))
+      recordHistory()
+    },
 
-  clear: () => set({ nodes: [], edges: [] }),
+    undo: () => {
+      const snapshot = historyManager.undo()
+      if (snapshot) {
+        set({ nodes: snapshot.nodes, edges: snapshot.edges }, false)
+      }
+    },
 
-  toAst: () => {
-    const { nodes, edges } = get()
-    return flowToAst(nodes, edges)
-  },
+    redo: () => {
+      const snapshot = historyManager.redo()
+      if (snapshot) {
+        set({ nodes: snapshot.nodes, edges: snapshot.edges }, false)
+      }
+    },
+
+    clear: () => {
+      set({ nodes: [], edges: [] })
+      historyManager.clear()
+    },
+
+    toAst: () => {
+      const { nodes, edges } = get()
+      return flowToAst(nodes, edges)
+    },
   }
 })

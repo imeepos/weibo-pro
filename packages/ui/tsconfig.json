@@ -6,6 +6,8 @@
     "moduleResolution": "bundler",
     "skipLibCheck": true,
     "strict": false,
+    "declaration": false,
+    "declarationMap": false,
     "types": [],
     "paths": {
       "@sker/ui/*": ["./src/*"],

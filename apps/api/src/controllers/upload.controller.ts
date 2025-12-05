@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UploadService } from '../services/upload.service';
-import { Request } from 'express';
+import type { Request } from 'express';
 
 /**
  * 文件上传控制器

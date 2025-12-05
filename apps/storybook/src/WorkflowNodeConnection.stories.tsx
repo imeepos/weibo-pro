@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react'
 import { ReactFlow, ReactFlowProvider, Background, Controls, useNodesState, useEdgesState } from '@xyflow/react'
-import type { NodeProps } from '@xyflow/react'
+import type { Node, NodeProps } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { WorkflowNode } from '@sker/ui/components/workflow'
-import type { WorkflowNodePort } from '@sker/ui/components/workflow'
+import type { INodeInputMetadata, INodeOutputMetadata, IAstStates } from '@sker/workflow'
 
 const meta = {
   title: 'Workflow/NodeConnection',
@@ -16,8 +16,22 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-// 简化的测试节点组件 - 直接传递 inputs/outputs
-function TestNode({ id, data, selected }: NodeProps) {
+// 定义节点 data 属性的类型
+type TestNodeData = {
+  label: string
+  description?: string
+  type: string
+  status: IAstStates
+  inputs?: INodeInputMetadata[]
+  outputs?: INodeOutputMetadata[]
+  collapsed?: boolean
+}
+
+// 定义完整的节点类型
+type TestNode = Node<TestNodeData>
+
+// 简化的测试节点组件
+function TestNodeComponent({ id, data, selected }: NodeProps<TestNode>) {
   return (
     <WorkflowNode
       id={id}
@@ -34,7 +48,7 @@ function TestNode({ id, data, selected }: NodeProps) {
 
 // 自定义节点类型
 const nodeTypes = {
-  testNode: TestNode,
+  testNode: TestNodeComponent,
 }
 
 // 可拖动的交互式组件
@@ -82,8 +96,8 @@ export const MinimalConnection: Story = {
           description: '源节点',
           type: 'text',
           status: 'pending',
-          inputs: [{ property: '输入', label: '输入' }] as WorkflowNodePort[],
-          outputs: [{ property: '输出', label: '输出' }] as WorkflowNodePort[],
+          inputs: [{ property: '输入', title: '输入' }] as INodeInputMetadata[],
+          outputs: [{ property: '输出', title: '输出' }] as INodeOutputMetadata[],
         },
       },
       {
@@ -95,8 +109,8 @@ export const MinimalConnection: Story = {
           description: '目标节点',
           type: 'text',
           status: 'pending',
-          inputs: [{ property: '输入', label: '输入' }] as WorkflowNodePort[],
-          outputs: [{ property: '输出', label: '输出' }] as WorkflowNodePort[],
+          inputs: [{ property: '输入', title: '输入' }] as INodeInputMetadata[],
+          outputs: [{ property: '输出', title: '输出' }] as INodeOutputMetadata[],
         },
       },
     ]
@@ -132,8 +146,8 @@ export const CollapsedNodesConnection: Story = {
           description: '默认折叠',
           type: 'text',
           status: 'pending',
-          inputs: [{ property: '输入', label: '输入' }] as WorkflowNodePort[],
-          outputs: [{ property: '输出', label: '输出' }] as WorkflowNodePort[],
+          inputs: [{ property: '输入', title: '输入' }] as INodeInputMetadata[],
+          outputs: [{ property: '输出', title: '输出' }] as INodeOutputMetadata[],
           collapsed: true,  // 默认折叠
         },
       },
@@ -146,8 +160,8 @@ export const CollapsedNodesConnection: Story = {
           description: '默认折叠',
           type: 'text',
           status: 'pending',
-          inputs: [{ property: '输入', label: '输入' }] as WorkflowNodePort[],
-          outputs: [{ property: '输出', label: '输出' }] as WorkflowNodePort[],
+          inputs: [{ property: '输入', title: '输入' }] as INodeInputMetadata[],
+          outputs: [{ property: '输出', title: '输出' }] as INodeOutputMetadata[],
           collapsed: true,  // 默认折叠
         },
       },
@@ -185,13 +199,13 @@ export const MultiPortConnection: Story = {
           type: 'custom',
           status: 'pending',
           inputs: [
-            { property: 'input1', label: '输入1' },
-            { property: 'input2', label: '输入2' },
-          ] as WorkflowNodePort[],
+            { property: 'input1', title: '输入1' },
+            { property: 'input2', title: '输入2' },
+          ] as INodeInputMetadata[],
           outputs: [
-            { property: 'output1', label: '输出1' },
-            { property: 'output2', label: '输出2' },
-          ] as WorkflowNodePort[],
+            { property: 'output1', title: '输出1' },
+            { property: 'output2', title: '输出2' },
+          ] as INodeOutputMetadata[],
         },
       },
       {
@@ -203,13 +217,13 @@ export const MultiPortConnection: Story = {
           type: 'custom',
           status: 'pending',
           inputs: [
-            { property: 'input1', label: '输入1' },
-            { property: 'input2', label: '输入2' },
-          ] as WorkflowNodePort[],
+            { property: 'input1', title: '输入1' },
+            { property: 'input2', title: '输入2' },
+          ] as INodeInputMetadata[],
           outputs: [
-            { property: 'output1', label: '输出1' },
-            { property: 'output2', label: '输出2' },
-          ] as WorkflowNodePort[],
+            { property: 'output1', title: '输出1' },
+            { property: 'output2', title: '输出2' },
+          ] as INodeOutputMetadata[],
         },
       },
     ]

@@ -15,6 +15,8 @@ export interface KeyboardShortcutsOptions {
   onCollapseNodes?: () => void
   onExpandNodes?: () => void
   onAutoLayout?: () => void
+  onUndo?: () => void
+  onRedo?: () => void
 }
 
 const isInputElement = (target: EventTarget | null): boolean => {
@@ -43,6 +45,8 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
     onCollapseNodes,
     onExpandNodes,
     onAutoLayout,
+    onUndo,
+    onRedo,
   } = options
 
   const handleKeyDown = useCallback(
@@ -62,6 +66,12 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
       } else if (event.key === ' ' || event.key === 'Spacebar') {
         event.preventDefault()
         onToggleCollapse?.()
+      } else if (isMod && isShift && event.key.toLowerCase() === 'z') {
+        event.preventDefault()
+        onRedo?.()
+      } else if (isMod && event.key.toLowerCase() === 'z') {
+        event.preventDefault()
+        onUndo?.()
       } else if (isMod && event.key.toLowerCase() === 'g') {
         event.preventDefault()
         if (isShift) {
@@ -97,7 +107,7 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
         // Esc 键已在前面处理（取消运行）
       }
     },
-    [enabled, onCopy, onCut, onPaste, onDelete, onSelectAll, onSave, onCancel, onToggleCollapse, onCreateGroup, onUngroupNodes, onCollapseNodes, onExpandNodes, onAutoLayout]
+    [enabled, onCopy, onCut, onPaste, onDelete, onSelectAll, onSave, onCancel, onToggleCollapse, onCreateGroup, onUngroupNodes, onCollapseNodes, onExpandNodes, onAutoLayout, onUndo, onRedo]
   )
 
   useEffect(() => {

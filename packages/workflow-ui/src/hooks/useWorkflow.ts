@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { WorkflowGraphAst, generateId, addNode as astAddNode, addEdge as astAddEdge, Compiler, cleanOrphanedProperties } from '@sker/workflow'
 import { root } from '@sker/core'
 import type { INode, IEdge } from '@sker/workflow'
@@ -52,6 +52,15 @@ export function useWorkflow(
   options?: UseWorkflowOptions
 ): UseWorkflowReturn {
   const { onWorkflowChange } = options || {}
+
+  // 使用 ref 存储回调，避免 useEffect 依赖项不断变化
+  const onWorkflowChangeRef = useRef(onWorkflowChange)
+
+  // 更新 ref
+  useEffect(() => {
+    onWorkflowChangeRef.current = onWorkflowChange
+  }, [onWorkflowChange])
+
   const [workflowAst] = useState<WorkflowGraphAst>(() => {
     if (initialAst) return initialAst
 
@@ -74,28 +83,22 @@ export function useWorkflow(
     [setNodes]
   )
 
-  // 监听节点位置变化，同步到 AST
-  // 优雅设计：
-  // - 细粒度同步，仅更新位置属性
-  // - 引用透明性，React Flow 节点 data 直接引用 AST 实例
-  // - 类型安全，无需 any 断言
-  // - 节流优化：拖拽时使用节流版本，避免过度渲染
-  // - 分组同步：当分组节点移动时，同步移动内部所有节点
   useEffect(() => {
+    let hasPositionChanged = false
+
     nodes.forEach((node) => {
       const astNode = workflowAst.nodes.find((n) => n.id === node.id)
       if (astNode) {
         const currentPos = astNode.position
         const newPos = node.position
 
-        // 只有位置真正改变时才更新
         if (!currentPos || currentPos.x !== newPos.x || currentPos.y !== newPos.y) {
           const deltaX = newPos.x - (currentPos?.x || 0)
           const deltaY = newPos.y - (currentPos?.y || 0)
 
           astNode.position = newPos
+          hasPositionChanged = true
 
-          // 如果是分组节点，同步移动内部所有节点
           if (astNode instanceof WorkflowGraphAst && astNode.isGroup) {
             astNode.nodes.forEach(innerNode => {
               innerNode.position = {
@@ -106,12 +109,15 @@ export function useWorkflow(
           }
         }
 
-        // 同步折叠状态（保护 UI 状态）
         if (astNode.collapsed !== node.data.collapsed) {
           astNode.collapsed = node.data.collapsed
         }
       }
     })
+
+    if (hasPositionChanged && onWorkflowChangeRef.current) {
+      onWorkflowChangeRef.current()
+    }
   }, [nodes, workflowAst])
 
   /**
@@ -134,37 +140,28 @@ export function useWorkflow(
    */
   const addNode = useCallback(
     (nodeClass: any, position: { x: number; y: number }, label?: string) => {
-      console.log({ nodeClass, position, label })
-
-      // 1. 创建 Ast 实例
       const ast = new nodeClass()
       ast.id = generateId()
       ast.position = position
 
-      // 2. 使用 Compiler 固化元数据（关键步骤）
       const compiler = root.get(Compiler)
       const compiledNode = compiler.compile(ast)
 
-      // 3. 添加到工作流
       workflowAst.nodes = astAddNode(workflowAst.nodes, compiledNode)
 
-      // ✅ 直接使用 metadata 字段
       const node: WorkflowNode = {
         id: compiledNode.id,
         type: compiledNode.type,
         position,
-        data: compiledNode  // 使用编译后的节点（包含 metadata）
+        data: compiledNode
       }
 
       setNodes((nodes) => [...nodes, node])
+      onWorkflowChangeRef.current?.()
 
-      // 触发变更回调
-      onWorkflowChange?.()
-
-      // 返回创建的节点
       return node
     },
-    [workflowAst, setNodes, onWorkflowChange]
+    [workflowAst, setNodes]
   )
 
   /**
@@ -182,7 +179,6 @@ export function useWorkflow(
         (edge) => edge.from !== nodeId && edge.to !== nodeId
       )
 
-      // 清理引用该节点的动态属性（nodeId.property 格式）
       cleanOrphanedProperties(workflowAst, [nodeId])
 
       setNodes((nodes) => nodes.filter((node) => node.id !== nodeId))
@@ -190,10 +186,9 @@ export function useWorkflow(
         edges.filter((edge) => edge.source !== nodeId && edge.target !== nodeId)
       )
 
-      // 触发变更回调
-      onWorkflowChange?.()
+      onWorkflowChangeRef.current?.()
     },
-    [workflowAst, setNodes, setEdges, onWorkflowChange]
+    [workflowAst, setNodes, setEdges]
   )
 
   /**
@@ -228,14 +223,11 @@ export function useWorkflow(
       )
 
       // 触发变更回调
-      onWorkflowChange?.()
+      onWorkflowChangeRef.current?.()
     },
-    [workflowAst, setNodes, onWorkflowChange]
+    [workflowAst, setNodes]
   )
 
-  /**
-   * 连接节点
-   */
   const connectNodes = useCallback(
     (connection: Connection) => {
       if (!connection.source || !connection.target) return
@@ -265,11 +257,9 @@ export function useWorkflow(
       }
 
       setEdges((edges) => addEdge(flowEdge, edges))
-
-      // 触发变更回调
-      onWorkflowChange?.()
+      onWorkflowChangeRef.current?.()
     },
-    [workflowAst, setEdges, onWorkflowChange]
+    [workflowAst, setEdges]
   )
 
   /**
@@ -322,9 +312,9 @@ export function useWorkflow(
       setEdges((currentEdges) => currentEdges.filter((e) => e.id !== edge.id))
 
       // 触发变更回调
-      onWorkflowChange?.()
+      onWorkflowChangeRef.current?.()
     },
-    [workflowAst, edges, setEdges, onWorkflowChange]
+    [workflowAst, edges, setEdges]
   )
 
   /**

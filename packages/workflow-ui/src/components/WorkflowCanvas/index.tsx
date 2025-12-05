@@ -19,6 +19,7 @@ import { edgeTypes } from '../edges'
 import { useWorkflow } from '../../hooks/useWorkflow'
 import { useAutoSave } from '../../hooks/useAutoSave'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
+import { useWorkflowHistory } from '../../hooks/useWorkflowHistory'
 import { useCanvasControls } from './useCanvasControls'
 import { useCanvasState } from './useCanvasState'
 import { useWorkflowOperations } from './useWorkflowOperations'
@@ -132,35 +133,33 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
   // 自动保存触发器 ref - 用于在 useWorkflow 回调中调用
   const triggerSaveRef = useRef<(() => void) | null>(null)
 
-  // 工作流上下文 - 传入 onWorkflowChange 回调
   const workflow = useWorkflow(
     workflowAst
       ? fromJson<WorkflowGraphAst>({ ...workflowAst, name })
       : createWorkflowGraphAst({ name }),
     {
       onWorkflowChange: () => {
-        // 通过 ref 调用自动保存，避免循环依赖
         triggerSaveRef.current?.()
       }
     }
   )
 
-  // 自动保存钩子 - 使用 RxJS Subject 统一管理保存流
   const { triggerSave, saveNow } = useAutoSave(workflow.workflowAst, {
     debounce: 1000,
     enabled: true,
-    onSaveSuccess: () => {
-      console.log('[AutoSave] 保存成功')
-    },
-    onSaveError: (error) => {
+    onSaveSuccess: useCallback(() => {}, []),
+    onSaveError: useCallback((error: Error) => {
       console.error('[AutoSave] 保存失败:', error)
-    },
+    }, []),
     getViewport
   })
 
-  // 更新 ref 以供 useWorkflow 回调使用
   useEffect(() => {
     triggerSaveRef.current = triggerSave
+  }, [triggerSave])
+
+  const handleViewportChange = useCallback(() => {
+    triggerSave()
   }, [triggerSave])
 
   // 状态管理
@@ -200,6 +199,9 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
     openRunConfigDialog,
     closeRunConfigDialog,
   } = useCanvasState()
+
+  // 撤销/重做历史
+  const { canUndo, canRedo, undo, redo } = useWorkflowHistory()
 
   // 连线状态追踪
   const [connectingInfo, setConnectingInfo] = useState<{
@@ -369,6 +371,8 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
     onSave: customOnSave || (() => saveWorkflow(workflow.workflowAst?.name || 'Untitled')),
     onCancel: cancelWorkflow,
     onToggleCollapse: () => { }, // 通过节点操作钩子处理
+    onUndo: undo,
+    onRedo: redo,
     onCreateGroup: createGroup,
     onUngroupNodes: ungroupNodes,
     onCollapseNodes: collapseNodes,
@@ -758,6 +762,7 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
         onPaneContextMenu={onPaneContextMenu}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
+        onMove={handleViewportChange}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         panOnScroll
@@ -831,6 +836,10 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
           onCollapseNodes={collapseNodes}
           onExpandNodes={expandNodes}
           onAutoLayout={autoLayout}
+          onUndo={undo}
+          onRedo={redo}
+          canUndo={canUndo}
+          canRedo={canRedo}
           isRunning={isRunning}
           isSaving={isSaving}
         />

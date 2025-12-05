@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react'
 import { ReactFlow, ReactFlowProvider, Background, Controls, useNodesState, useEdgesState, Panel } from '@xyflow/react'
-import type { NodeProps } from '@xyflow/react'
+import type { Node, NodeProps } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { WorkflowNode } from '@sker/ui/components/workflow'
-import type { WorkflowNodePort } from '@sker/ui/components/workflow'
+import type { INodeInputMetadata, INodeOutputMetadata, IAstStates } from '@sker/workflow'
 
 const meta = {
   title: 'Workflow/DebugConnection',
@@ -16,8 +16,21 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-// 调试用节点组件 - 直接传递 inputs/outputs
-function DebugNode({ id, data, selected }: NodeProps) {
+// 定义节点 data 属性的类型
+type DebugNodeData = {
+  label: string
+  description?: string
+  type: string
+  status: IAstStates
+  inputs?: INodeInputMetadata[]
+  outputs?: INodeOutputMetadata[]
+}
+
+// 定义完整的节点类型
+type DebugNode = Node<DebugNodeData>
+
+// 调试用节点组件
+function DebugNodeComponent({ id, data, selected }: NodeProps<DebugNode>) {
   console.log('DebugNode render:', { id, data, selected })
 
   return (
@@ -41,7 +54,7 @@ function DebugNode({ id, data, selected }: NodeProps) {
 
 // 自定义节点类型
 const nodeTypes = {
-  debugNode: DebugNode,
+  debugNode: DebugNodeComponent,
 }
 
 // 调试案例
@@ -57,8 +70,8 @@ export const DebugConnection: Story = {
           description: '测试源',
           type: 'text',
           status: 'pending',
-          inputs: [{ property: 'input', label: '输入' }] as WorkflowNodePort[],
-          outputs: [{ property: 'output', label: '输出' }] as WorkflowNodePort[],
+          inputs: [{ property: 'input', title: '输入' }] as INodeInputMetadata[],
+          outputs: [{ property: 'output', title: '输出' }] as INodeOutputMetadata[],
         },
       },
       {
@@ -70,8 +83,8 @@ export const DebugConnection: Story = {
           description: '测试目标',
           type: 'text',
           status: 'pending',
-          inputs: [{ property: 'input', label: '输入' }] as WorkflowNodePort[],
-          outputs: [{ property: 'output', label: '输出' }] as WorkflowNodePort[],
+          inputs: [{ property: 'input', title: '输入' }] as INodeInputMetadata[],
+          outputs: [{ property: 'output', title: '输出' }] as INodeOutputMetadata[],
         },
       },
     ]
