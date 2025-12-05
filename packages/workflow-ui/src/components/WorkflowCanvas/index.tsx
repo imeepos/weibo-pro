@@ -1,5 +1,5 @@
 'use client'
-import React, { useCallback, useState, useEffect, useImperativeHandle, forwardRef, useMemo } from 'react'
+import React, { useCallback, useState, useEffect, useImperativeHandle, forwardRef, useMemo, useRef } from 'react'
 import {
   ReactFlow,
   Background,
@@ -17,6 +17,7 @@ import { fromJson, INode, WorkflowGraphAst, toJson, createWorkflowGraphAst } fro
 import { createNodeTypes } from '../nodes'
 import { edgeTypes } from '../edges'
 import { useWorkflow } from '../../hooks/useWorkflow'
+import { useAutoSave } from '../../hooks/useAutoSave'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { useCanvasControls } from './useCanvasControls'
 import { useCanvasState } from './useCanvasState'
@@ -125,14 +126,42 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
   // 缓存 nodeTypes 避免每次渲染都创建新对象导致 React Flow 重新初始化节点
   const nodeTypes = useMemo(() => createNodeTypes(), [])
 
-  // 工作流上下文
+  const { getViewport, setViewport } = useReactFlow()
+  const updateNodeInternals = useUpdateNodeInternals()
+
+  // 自动保存触发器 ref - 用于在 useWorkflow 回调中调用
+  const triggerSaveRef = useRef<(() => void) | null>(null)
+
+  // 工作流上下文 - 传入 onWorkflowChange 回调
   const workflow = useWorkflow(
     workflowAst
       ? fromJson<WorkflowGraphAst>({ ...workflowAst, name })
-      : createWorkflowGraphAst({ name })
+      : createWorkflowGraphAst({ name }),
+    {
+      onWorkflowChange: () => {
+        // 通过 ref 调用自动保存，避免循环依赖
+        triggerSaveRef.current?.()
+      }
+    }
   )
-  const { getViewport, setViewport } = useReactFlow()
-  const updateNodeInternals = useUpdateNodeInternals()
+
+  // 自动保存钩子 - 使用 RxJS Subject 统一管理保存流
+  const { triggerSave, saveNow } = useAutoSave(workflow.workflowAst, {
+    debounce: 1000,
+    enabled: true,
+    onSaveSuccess: () => {
+      console.log('[AutoSave] 保存成功')
+    },
+    onSaveError: (error) => {
+      console.error('[AutoSave] 保存失败:', error)
+    },
+    getViewport
+  })
+
+  // 更新 ref 以供 useWorkflow 回调使用
+  useEffect(() => {
+    triggerSaveRef.current = triggerSave
+  }, [triggerSave])
 
   // 状态管理
   const {

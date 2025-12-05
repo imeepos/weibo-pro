@@ -5,6 +5,7 @@ import type { ToastType } from './useCanvasState'
 import { WorkflowController } from '@sker/sdk'
 import { root } from '@sker/core'
 import { Subject, takeUntil, finalize } from 'rxjs'
+import { getExposedInputs, getExposedOutputs } from '../../utils/workflow-ports'
 
 /**
  * 工作流操作 Hook
@@ -514,6 +515,7 @@ export function useWorkflowOperations(
    *
    * 优雅设计：
    * - 更新父节点中的子工作流数据
+   * - 动态重新生成 metadata，反映最新的端口结构
    * - 通过 syncFromAst 强制重新生成所有节点，触发 React 更新
    * - 返回父节点 ID，通知调用者刷新节点端口
    */
@@ -534,6 +536,48 @@ export function useWorkflowOperations(
           parentNode.name = updatedAst.name
           parentNode.description = updatedAst.description
           parentNode.viewport = updatedAst.viewport ? { ...updatedAst.viewport } : undefined
+
+          // 动态生成 metadata - 反映子工作流的实际端口结构
+          // 存在即合理：WorkflowGraphAst 的端口由内部节点决定，保存时必须重新计算
+          if (parentNode.metadata) {
+            // 计算暴露的输入端口
+            const exposedInputs = getExposedInputs(parentNode)
+            parentNode.metadata.inputs = exposedInputs.map((input) => {
+              // 查找原始节点的 metadata，保留所有字段
+              const originNode = parentNode.nodes?.find((n: any) => n.id === input.nodeId)
+              const originInputMeta = originNode?.metadata?.inputs.find(
+                (m: any) => String(m.property) === input.property
+              )
+
+              return {
+                property: `${input.nodeId}.${input.property}`,
+                type: input.type as any,
+                title: input.title || input.property,
+                required: input.required,
+                mode: originInputMeta?.mode,
+                defaultValue: originInputMeta?.defaultValue
+              }
+            })
+
+            // 计算暴露的输出端口
+            const exposedOutputs = getExposedOutputs(parentNode)
+            parentNode.metadata.outputs = exposedOutputs.map((output) => {
+              // 查找原始节点的 metadata，保留所有字段
+              const originNode = parentNode.nodes?.find((n: any) => n.id === output.nodeId)
+              const originOutputMeta = originNode?.metadata?.outputs.find(
+                (m: any) => String(m.property) === output.property
+              )
+
+              return {
+                property: `${output.nodeId}.${output.property}`,
+                type: output.type,
+                title: output.title || output.property,
+                isRouter: originOutputMeta?.isRouter,
+                dynamic: originOutputMeta?.dynamic,
+                condition: originOutputMeta?.condition
+              }
+            })
+          }
 
           // 强制同步到 React Flow，完全重新生成节点数组
           // 这会创建新的 Flow 节点对象，触发 React 重新渲染

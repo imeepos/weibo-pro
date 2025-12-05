@@ -87,17 +87,17 @@ export function getWorkflowGraphlEdges(workflow: WorkflowGraphAst): IEdge[] {
 }
 export function getExposedOutputs(workflow: INode): PortInfo[] {
   const exposedOutputs: PortInfo[] = []
+  const nodes = getWorkflowGraphlNodes(workflow as WorkflowGraphAst)
   const edges = getWorkflowGraphlEdges(workflow as WorkflowGraphAst)
-  for (const node of edges) {
-    // 检查该节点是否有入边
-    const isConnected = edges.some(edge => edge.from === node.id)
-    if (isConnected) continue
+
+  for (const node of nodes) {
     // 跳过 WorkflowGraphAst 自身
     if (node.type === 'WorkflowGraphAst') continue
 
     try {
       // ✨使用编译后的 node.metadata.outputs
-      const nodeOutputs = node.metadata.outputs
+      const nodeName = node.name || node.metadata!.class.title || node.type
+      const nodeOutputs = node.metadata!.outputs
 
       // 检查每个输出端口是否被连接
       for (const outputMeta of nodeOutputs) {
@@ -111,7 +111,7 @@ export function getExposedOutputs(workflow: INode): PortInfo[] {
           exposedOutputs.push({
             nodeId: node.id,
             property,
-            title: outputMeta.title || property,
+            title: `${nodeName}.${outputMeta.title || property}`,
             type: outputMeta.type
           })
         }

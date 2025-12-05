@@ -68,6 +68,8 @@
   --workflow-handle-input-border: 217 91% 75%;
   --workflow-handle-output: 142 76% 46%;
   --workflow-handle-output-border: 142 76% 65%;
+  --workflow-port-input-text: 217 91% 60%;
+  --workflow-port-output-text: 160 84% 39%;
   --workflow-graph-accent: 217 91% 60%;
   --workflow-graph-border: 217 91% 75%;
 }
@@ -128,6 +130,8 @@
   --workflow-handle-input-border: 217 91% 50%;
   --workflow-handle-output: 142 76% 46%;
   --workflow-handle-output-border: 142 76% 36%;
+  --workflow-port-input-text: 217 91% 74%;
+  --workflow-port-output-text: 160 84% 60%;
   --workflow-graph-accent: 217 91% 65%;
   --workflow-graph-border: 217 91% 55%;
 }
@@ -192,6 +196,8 @@
   --workflow-handle-input-border: var(--workflow-handle-input-border);
   --workflow-handle-output: var(--workflow-handle-output);
   --workflow-handle-output-border: var(--workflow-handle-output-border);
+  --workflow-port-input-text: var(--workflow-port-input-text);
+  --workflow-port-output-text: var(--workflow-port-output-text);
   --workflow-graph-accent: var(--workflow-graph-accent);
   --workflow-graph-border: var(--workflow-graph-border);
 }

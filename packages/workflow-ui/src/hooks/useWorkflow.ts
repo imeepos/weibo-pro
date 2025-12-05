@@ -32,6 +32,11 @@ export interface UseWorkflowReturn {
   changeProxy: any
 }
 
+export interface UseWorkflowOptions {
+  /** 工作流变更回调（用于自动保存等场景） */
+  onWorkflowChange?: () => void
+}
+
 /**
  * 工作流状态管理 Hook
  *
@@ -42,7 +47,11 @@ export interface UseWorkflowReturn {
  * - 连接节点 → workflowAst.addEdge()
  * - 删除连接 → 从 workflowAst.edges 移除
  */
-export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
+export function useWorkflow(
+  initialAst?: WorkflowGraphAst,
+  options?: UseWorkflowOptions
+): UseWorkflowReturn {
+  const { onWorkflowChange } = options || {}
   const [workflowAst] = useState<WorkflowGraphAst>(() => {
     if (initialAst) return initialAst
 
@@ -149,10 +158,13 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
 
       setNodes((nodes) => [...nodes, node])
 
+      // 触发变更回调
+      onWorkflowChange?.()
+
       // 返回创建的节点
       return node
     },
-    [workflowAst, setNodes]
+    [workflowAst, setNodes, onWorkflowChange]
   )
 
   /**
@@ -177,8 +189,11 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
       setEdges((edges) =>
         edges.filter((edge) => edge.source !== nodeId && edge.target !== nodeId)
       )
+
+      // 触发变更回调
+      onWorkflowChange?.()
     },
-    [workflowAst, setNodes, setEdges]
+    [workflowAst, setNodes, setEdges, onWorkflowChange]
   )
 
   /**
@@ -211,8 +226,11 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
           return node
         })
       )
+
+      // 触发变更回调
+      onWorkflowChange?.()
     },
-    [workflowAst, setNodes]
+    [workflowAst, setNodes, onWorkflowChange]
   )
 
   /**
@@ -247,8 +265,11 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
       }
 
       setEdges((edges) => addEdge(flowEdge, edges))
+
+      // 触发变更回调
+      onWorkflowChange?.()
     },
-    [workflowAst, setEdges]
+    [workflowAst, setEdges, onWorkflowChange]
   )
 
   /**
@@ -299,8 +320,11 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
 
       // 更新 UI 状态
       setEdges((currentEdges) => currentEdges.filter((e) => e.id !== edge.id))
+
+      // 触发变更回调
+      onWorkflowChange?.()
     },
-    [workflowAst, edges, setEdges]
+    [workflowAst, edges, setEdges, onWorkflowChange]
   )
 
   /**
