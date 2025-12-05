@@ -13,6 +13,7 @@ import {
   PropertyPanelField,
   NodeStateBadge,
   type PropertySection,
+  type InputFieldType,
 } from '@sker/ui/components/workflow'
 import { DynamicOutputsDialog, } from '@sker/ui/components/ui/dynamic-outputs-dialog'
 import { Button } from '@sker/ui/components/ui/button'
@@ -174,7 +175,7 @@ export function PropertyPanel({
               <SmartFormField
                 label=""
                 value={prop.value}
-                type={prop.type}
+                type={prop.type as InputFieldType}
                 onChange={(value) => handlePropertyChange(prop.property, value)}
               />
             </div>

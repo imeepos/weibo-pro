@@ -23,6 +23,16 @@ import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@s
 import { Card } from '@sker/ui/components/ui/card'
 import { ScheduleCard } from '@sker/ui/components/ui/schedule-card'
 import { SearchInput } from '@sker/ui/components/ui/search-input'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@sker/ui/components/ui/alert-dialog'
 import { WorkflowGraphAst, fromJson } from '@sker/workflow'
 
 /**
@@ -121,6 +131,7 @@ export function ScheduleList({ workflowName, className = '', onClose, apiBaseUrl
   const [triggeringIds, setTriggeringIds] = useState<Set<string>>(new Set())
   const [triggerDialogSchedule, setTriggerDialogSchedule] = useState<WorkflowScheduleEntity | null>(null)
   const [workflowAst, setWorkflowAst] = useState<WorkflowGraphAst | null>(null)
+  const [deleteScheduleId, setDeleteScheduleId] = useState<string | null>(null)
 
   // 自动获取 API 基础 URL（如果未提供）
   const effectiveApiBaseUrl = apiBaseUrl || (
@@ -162,13 +173,15 @@ export function ScheduleList({ workflowName, className = '', onClose, apiBaseUrl
     }
   }
 
-  const handleDelete = async (scheduleId: string) => {
-    if (!confirm('确定要删除这个调度吗?此操作不可恢复。')) {
-      return
-    }
+  const handleDelete = (scheduleId: string) => {
+    setDeleteScheduleId(scheduleId)
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteScheduleId) return
 
     try {
-      await client.deleteSchedule(scheduleId)
+      await client.deleteSchedule(deleteScheduleId)
       await fetchSchedules()
       toast.success('调度已删除')
     } catch (err: unknown) {
@@ -176,6 +189,8 @@ export function ScheduleList({ workflowName, className = '', onClose, apiBaseUrl
       const errorMsg = error.message || '删除调度失败'
       setError(errorMsg)
       toast.error(errorMsg)
+    } finally {
+      setDeleteScheduleId(null)
     }
   }
 
@@ -536,6 +551,23 @@ export function ScheduleList({ workflowName, className = '', onClose, apiBaseUrl
           onCancel={handleCancelTrigger}
         />
       )}
+
+      <AlertDialog open={!!deleteScheduleId} onOpenChange={(open) => !open && setDeleteScheduleId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除</AlertDialogTitle>
+            <AlertDialogDescription>
+              确定要删除这个调度吗？此操作不可恢复。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              删除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

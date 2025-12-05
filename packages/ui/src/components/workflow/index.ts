@@ -78,7 +78,7 @@ export type {
   PropertyPanelFieldProps,
   NodeStateBadgeProps,
 } from './workflow-property-panel'
-export type { WorkflowFormFieldProps } from './workflow-form-field'
+export type { WorkflowFormFieldProps, InputFieldType } from './workflow-form-field'
 export type { WorkflowSettingsDialogProps } from './workflow-settings-dialog'
 
 // 边配置相关类型导出
