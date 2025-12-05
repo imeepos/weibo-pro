@@ -201,8 +201,8 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
     closeRunConfigDialog,
   } = useCanvasState()
 
-  // 撤销/重做历史
-  const { canUndo, canRedo, undo, redo } = useWorkflowHistory()
+  // 撤销/重做历史（直接从 workflow 实例获取）
+  const { canUndo, canRedo, undo, redo } = workflow
 
   // 连线状态追踪
   const [connectingInfo, setConnectingInfo] = useState<{

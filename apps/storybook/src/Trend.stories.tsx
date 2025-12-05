@@ -82,6 +82,9 @@ export const LargeDecrease: Story = {
 }
 
 export const WithStatistic: Story = {
+  args: {
+    value: 18.5,
+  },
   render: () => (
     <Card className="w-[280px] p-6">
       <Statistic>
@@ -96,6 +99,9 @@ export const WithStatistic: Story = {
 }
 
 export const MultipleComparison: Story = {
+  args: {
+    value: 0,
+  },
   render: () => (
     <div className="grid grid-cols-2 gap-4">
       <Card className="p-6">
@@ -131,6 +137,9 @@ export const MultipleComparison: Story = {
 }
 
 export const CustomStyling: Story = {
+  args: {
+    value: 28.6,
+  },
   render: () => (
     <Trend
       value={28.6}

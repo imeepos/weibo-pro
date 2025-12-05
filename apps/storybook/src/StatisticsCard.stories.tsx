@@ -63,6 +63,9 @@ export const StringValues: Story = {
 };
 
 export const Positioned: Story = {
+  args: {
+    items: [],
+  },
   render: () => (
     <div className="relative w-[800px] h-[600px] bg-gray-100 rounded-lg">
       <StatisticsCard

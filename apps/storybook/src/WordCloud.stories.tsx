@@ -169,6 +169,9 @@ export const CustomTooltip: Story = {
 }
 
 export const WithClick: Story = {
+  args: {
+    data: [],
+  },
   render: () => {
     const [selected, setSelected] = useState<string | null>(null)
 

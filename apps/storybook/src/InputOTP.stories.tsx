@@ -19,6 +19,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  args: {},
   render: () => (
     <InputOTP maxLength={6}>
       <InputOTPGroup>
@@ -34,6 +35,7 @@ export const Default: Story = {
 }
 
 export const WithSeparator: Story = {
+  args: {},
   render: () => (
     <InputOTP maxLength={6}>
       <InputOTPGroup>
@@ -52,6 +54,7 @@ export const WithSeparator: Story = {
 }
 
 export const FourDigits: Story = {
+  args: {},
   render: () => (
     <InputOTP maxLength={4}>
       <InputOTPGroup>
@@ -65,6 +68,7 @@ export const FourDigits: Story = {
 }
 
 export const Disabled: Story = {
+  args: {},
   render: () => (
     <InputOTP maxLength={6} disabled>
       <InputOTPGroup>

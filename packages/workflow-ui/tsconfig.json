@@ -2,7 +2,7 @@
   "extends": "@sker/typescript-config/react-library.json",
   "compilerOptions": {
     "outDir": "dist",
-    "types": [],
+    "types": ["node"],
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true
   },

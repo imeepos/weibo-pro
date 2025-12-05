@@ -92,6 +92,10 @@ export const WithLabel: Story = {
 }
 
 export const AllLevels: Story = {
+  args: {
+    type: 'positive',
+    level: 5,
+  },
   render: () => (
     <div className="flex flex-col gap-6">
       <div>
@@ -123,6 +127,10 @@ export const AllLevels: Story = {
 }
 
 export const WithLabels: Story = {
+  args: {
+    type: 'positive',
+    level: 8,
+  },
   render: () => (
     <div className="flex flex-col gap-4">
       <SentimentIndicator type="positive" level={8} showLabel />
@@ -133,6 +141,10 @@ export const WithLabels: Story = {
 }
 
 export const InStatistic: Story = {
+  args: {
+    type: 'positive',
+    level: 7,
+  },
   render: () => (
     <Card className="w-[280px] p-6">
       <Statistic>
@@ -147,6 +159,10 @@ export const InStatistic: Story = {
 }
 
 export const MultipleInCards: Story = {
+  args: {
+    type: 'positive',
+    level: 9,
+  },
   render: () => (
     <div className="grid grid-cols-3 gap-4">
       <Card className="p-6">
@@ -187,6 +203,10 @@ export const MultipleInCards: Story = {
 }
 
 export const HighIntensityGlow: Story = {
+  args: {
+    type: 'positive',
+    level: 10,
+  },
   render: () => (
     <div className="flex gap-8 rounded-lg bg-slate-900 p-8">
       <div className="flex flex-col items-center gap-2">
@@ -210,6 +230,10 @@ export const HighIntensityGlow: Story = {
 }
 
 export const ComparisonView: Story = {
+  args: {
+    type: 'positive',
+    level: 8,
+  },
   render: () => (
     <Card className="w-[400px] p-6">
       <h3 className="mb-4 text-lg font-semibold">情感分布对比</h3>
@@ -232,6 +256,10 @@ export const ComparisonView: Story = {
 }
 
 export const CustomStyling: Story = {
+  args: {
+    type: 'positive',
+    level: 9,
+  },
   render: () => (
     <SentimentIndicator
       type="positive"

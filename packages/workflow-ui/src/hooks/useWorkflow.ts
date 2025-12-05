@@ -7,6 +7,7 @@ import type { WorkflowNode, WorkflowEdge } from '../types'
 import { astToFlowNodes, astToFlowEdges } from '../adapters/ast-to-flow'
 import { StateChangeProxy } from '../core/state-change-proxy'
 import { calculateDagreLayout } from '../utils/layout'
+import { historyManager } from '../store/history.store'
 
 export interface UseWorkflowReturn {
   workflowAst: WorkflowGraphAst
@@ -29,6 +30,11 @@ export interface UseWorkflowReturn {
   collapseNodes: (nodeIds?: string[]) => void
   expandNodes: (nodeIds?: string[]) => void
   autoLayout: () => void
+  // 历史记录功能
+  undo: () => void
+  redo: () => void
+  canUndo: boolean
+  canRedo: boolean
   changeProxy: any
 }
 
@@ -75,6 +81,46 @@ export function useWorkflow(
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
+
+  // 历史记录状态
+  const [canUndo, setCanUndo] = useState(false)
+  const [canRedo, setCanRedo] = useState(false)
+
+  // 标记是否正在执行 undo/redo，避免重复记录历史
+  const isUndoRedoRef = useRef(false)
+
+  // 防抖定时器
+  const recordTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // 订阅历史记录状态
+  useEffect(() => {
+    const undoSub = historyManager.canUndo$.subscribe(setCanUndo)
+    const redoSub = historyManager.canRedo$.subscribe(setCanRedo)
+
+    return () => {
+      undoSub.unsubscribe()
+      redoSub.unsubscribe()
+    }
+  }, [])
+
+  /**
+   * 记录当前状态到历史
+   * 使用防抖避免频繁记录
+   */
+  const recordHistory = useCallback(() => {
+    // 如果正在执行 undo/redo，不记录历史
+    if (isUndoRedoRef.current) return
+
+    // 清除之前的定时器
+    if (recordTimerRef.current) {
+      clearTimeout(recordTimerRef.current)
+    }
+
+    // 延迟记录，合并快速连续的操作
+    recordTimerRef.current = setTimeout(() => {
+      historyManager.push(nodes, edges)
+    }, 300)
+  }, [nodes, edges])
 
   // 创建 StateChangeProxy 实例，用于管理 AST 与 React Flow 的同步
   // 优雅设计：变更拦截器自动同步，批量更新优化性能
@@ -158,10 +204,11 @@ export function useWorkflow(
 
       setNodes((nodes) => [...nodes, node])
       onWorkflowChangeRef.current?.()
+      recordHistory()
 
       return node
     },
-    [workflowAst, setNodes]
+    [workflowAst, setNodes, recordHistory]
   )
 
   /**
@@ -187,8 +234,9 @@ export function useWorkflow(
       )
 
       onWorkflowChangeRef.current?.()
+      recordHistory()
     },
-    [workflowAst, setNodes, setEdges]
+    [workflowAst, setNodes, setEdges, recordHistory]
   )
 
   /**
@@ -258,8 +306,9 @@ export function useWorkflow(
 
       setEdges((edges) => addEdge(flowEdge, edges))
       onWorkflowChangeRef.current?.()
+      recordHistory()
     },
-    [workflowAst, setEdges]
+    [workflowAst, setEdges, recordHistory]
   )
 
   /**
@@ -313,8 +362,9 @@ export function useWorkflow(
 
       // 触发变更回调
       onWorkflowChangeRef.current?.()
+      recordHistory()
     },
-    [workflowAst, edges, setEdges]
+    [workflowAst, edges, setEdges, recordHistory]
   )
 
   /**
@@ -395,10 +445,11 @@ export function useWorkflow(
 
       // 9. 同步到 UI
       syncFromAst()
+      recordHistory()
 
       return groupAst.id
     },
-    [workflowAst, syncFromAst]
+    [workflowAst, syncFromAst, recordHistory]
   )
 
   /**
@@ -423,9 +474,10 @@ export function useWorkflow(
 
         // 3. 同步到 UI
         syncFromAst()
+        recordHistory()
       }
     },
-    [workflowAst, syncFromAst]
+    [workflowAst, syncFromAst, recordHistory]
   )
 
   /**
@@ -521,7 +573,98 @@ export function useWorkflow(
         return node
       })
     )
-  }, [nodes, edges, workflowAst, setNodes])
+
+    recordHistory()
+  }, [nodes, edges, workflowAst, setNodes, recordHistory])
+
+  /**
+   * 撤销操作
+   * 优雅设计：从历史管理器恢复快照，同步到画布和 AST
+   */
+  const undo = useCallback(() => {
+    const snapshot = historyManager.undo()
+    if (!snapshot) return
+
+    isUndoRedoRef.current = true
+
+    try {
+      // 恢复 ReactFlow 状态
+      setNodes(snapshot.nodes)
+      setEdges(snapshot.edges)
+
+      // 同步到 AST
+      const flowNodes = astToFlowNodes(workflowAst)
+      const nodeIdSet = new Set(snapshot.nodes.map(n => n.id))
+
+      // 移除不在快照中的节点
+      workflowAst.nodes = workflowAst.nodes.filter(n => nodeIdSet.has(n.id))
+
+      // 更新节点位置和状态
+      snapshot.nodes.forEach(flowNode => {
+        const astNode = workflowAst.nodes.find(n => n.id === flowNode.id)
+        if (astNode) {
+          astNode.position = flowNode.position
+          if (flowNode.data.collapsed !== undefined) {
+            astNode.collapsed = flowNode.data.collapsed
+          }
+        }
+      })
+
+      // 同步边
+      const edgeSet = new Set(
+        snapshot.edges.map(e => `${e.source}-${e.sourceHandle}-${e.target}-${e.targetHandle}`)
+      )
+      workflowAst.edges = workflowAst.edges.filter(e =>
+        edgeSet.has(`${e.from}-${e.fromProperty}-${e.to}-${e.toProperty}`)
+      )
+    } finally {
+      isUndoRedoRef.current = false
+    }
+  }, [workflowAst, setNodes, setEdges])
+
+  /**
+   * 重做操作
+   * 优雅设计：从历史管理器恢复快照，同步到画布和 AST
+   */
+  const redo = useCallback(() => {
+    const snapshot = historyManager.redo()
+    if (!snapshot) return
+
+    isUndoRedoRef.current = true
+
+    try {
+      // 恢复 ReactFlow 状态
+      setNodes(snapshot.nodes)
+      setEdges(snapshot.edges)
+
+      // 同步到 AST
+      const nodeIdSet = new Set(snapshot.nodes.map(n => n.id))
+
+      // 移除不在快照中的节点
+      workflowAst.nodes = workflowAst.nodes.filter(n => nodeIdSet.has(n.id))
+
+      // 更新节点位置和状态
+      snapshot.nodes.forEach(flowNode => {
+        const astNode = workflowAst.nodes.find(n => n.id === flowNode.id)
+        if (astNode) {
+          astNode.position = flowNode.position
+          if (flowNode.data.collapsed !== undefined) {
+            astNode.collapsed = flowNode.data.collapsed
+          }
+        }
+      })
+
+      // 同步边
+      const edgeSet = new Set(
+        snapshot.edges.map(e => `${e.source}-${e.sourceHandle}-${e.target}-${e.targetHandle}`)
+      )
+      workflowAst.edges = workflowAst.edges.filter(e =>
+        edgeSet.has(`${e.from}-${e.fromProperty}-${e.to}-${e.toProperty}`)
+      )
+    } finally {
+      isUndoRedoRef.current = false
+    }
+  }, [workflowAst, setNodes, setEdges])
 
   return {
     workflowAst,
@@ -544,6 +687,11 @@ export function useWorkflow(
     collapseNodes,
     expandNodes,
     autoLayout,
+    // 历史记录功能
+    undo,
+    redo,
+    canUndo,
+    canRedo,
     // 导出 StateChangeProxy，供高级用法使用
     changeProxy
   }
