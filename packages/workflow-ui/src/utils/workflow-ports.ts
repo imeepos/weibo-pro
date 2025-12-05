@@ -1,4 +1,4 @@
-import type { INode, IEdge } from '@sker/workflow'
+import { type INode, type IEdge, isINode, WorkflowGraphAst } from '@sker/workflow'
 
 /**
  * 端口信息
@@ -28,21 +28,30 @@ export interface WorkflowData {
  * - 输入端口 = 内部节点的未连接输入
  * - ✨使用 node.metadata.inputs，不依赖装饰器
  */
+export function getWorkflowGraphlNodes(workflow: WorkflowGraphAst): INode[] {
+  if (workflow && workflow.nodes) return workflow.nodes
+  return []
+}
 export function getExposedInputs(workflow: INode): PortInfo[] {
+  if (!isINode(workflow)) {
+    throw new Error(`getExposedInputs error: `, workflow)
+  }
   const exposedInputs: PortInfo[] = []
+  const nodes = getWorkflowGraphlNodes(workflow as WorkflowGraphAst)
+  const edges = getWorkflowGraphlEdges(workflow as WorkflowGraphAst)
 
-  for (const node of workflow.nodes) {
+  for (const node of nodes) {
     // 跳过 WorkflowGraphAst 自身
     if (node.type === 'WorkflowGraphAst') continue
 
     // 检查该节点是否有入边
-    const isConnected = (workflow.edges as IEdge[]).some(edge => edge.to === node.id)
+    const isConnected = edges.some(edge => edge.to === node.id)
     if (isConnected) continue
 
     try {
       // ✨使用编译后的 node.metadata.inputs
-      const nodeName = node.name || node.metadata.class.title || node.type
-      const nodeInputs = node.metadata.inputs
+      const nodeName = node.name || node.metadata!.class.title || node.type
+      const nodeInputs = node.metadata!.inputs
 
       // 所有输入端口都暴露
       for (const inputMeta of nodeInputs) {
@@ -72,12 +81,16 @@ export function getExposedInputs(workflow: INode): PortInfo[] {
  * - 输出端口 = 内部节点的未连接输出
  * - ✨使用 node.metadata.outputs，不依赖装饰器
  */
+export function getWorkflowGraphlEdges(workflow: WorkflowGraphAst): IEdge[] {
+  if (workflow && workflow.edges) return workflow.edges
+  return []
+}
 export function getExposedOutputs(workflow: INode): PortInfo[] {
   const exposedOutputs: PortInfo[] = []
-
-  for (const node of workflow.nodes) {
+  const edges = getWorkflowGraphlEdges(workflow as WorkflowGraphAst)
+  for (const node of edges) {
     // 检查该节点是否有入边
-    const isConnected = (workflow.edges as IEdge[]).some(edge => edge.from === node.id)
+    const isConnected = edges.some(edge => edge.from === node.id)
     if (isConnected) continue
     // 跳过 WorkflowGraphAst 自身
     if (node.type === 'WorkflowGraphAst') continue
@@ -89,7 +102,7 @@ export function getExposedOutputs(workflow: INode): PortInfo[] {
       // 检查每个输出端口是否被连接
       for (const outputMeta of nodeOutputs) {
         const property = String(outputMeta.propertyKey)
-        const isConnected = workflow.edges.some((edge: IEdge) =>
+        const isConnected = edges.some((edge: IEdge) =>
           edge.from === node.id && edge.fromProperty === property
         )
 

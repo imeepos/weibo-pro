@@ -182,7 +182,7 @@ function AlertDialogContent({
           entering={ZoomIn.duration(200).springify().damping(15)}
           exiting={ZoomOut.duration(150)}
           className={cn(
-            "bg-background w-[90%] max-w-[500px] rounded-lg border border-border p-6 shadow-2xl gap-4",
+            "bg-background w-[90] max-w-[500px] rounded-lg border border-border p-6 shadow-2xl gap-4",
             className
           )}
           style={[styles.content, style]}

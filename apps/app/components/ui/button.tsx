@@ -95,7 +95,6 @@ const Button = React.forwardRef<
           end={{ x: 0, y: 0 }}
           style={{
             flex: 1,
-            width: "100%",
             flexDirection: "row",
             alignItems: "center",
             justifyContent: "center",

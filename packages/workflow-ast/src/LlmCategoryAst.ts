@@ -8,4 +8,6 @@ import { Ast, Input, Node } from "@sker/workflow";
 export class LlmCategoryAst extends Ast {
     @Input({ title: '上下文', isMulti: true })
     context: string[] = [];
+
+    type: `LlmCategoryAst` = `LlmCategoryAst`
 }

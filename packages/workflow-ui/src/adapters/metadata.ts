@@ -1,4 +1,3 @@
-import { Type } from '@sker/core'
 import { isNode, INode } from '@sker/workflow'
 import type { NodeMetadata, PortMetadata } from '../types'
 import { getExposedInputs, getExposedOutputs } from '../utils/workflow-ports'
@@ -56,16 +55,6 @@ export function getNodeMetadata(node: INode): NodeMetadata {
   }
 }
 
-/**
- * 获取所有已注册的节点类型
- */
-export function getAllNodeTypes(): Type<any>[] {
-  throw new Error('getAllNodeTypes is deprecated. Use Compiler.compile() instead.')
-}
-
-export function findNodeType<T = any>(name: string): Type<T> | undefined {
-  throw new Error('findNodeType is deprecated. Use Compiler.compile() instead.')
-}
 
 /**
  * 转换为端口元数据

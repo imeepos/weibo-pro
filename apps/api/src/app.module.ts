@@ -28,6 +28,7 @@ import { EventAnalyticsService } from './services/data/events/event-analytics.se
 import { EventTimelineBuilder } from './services/data/events/event-timeline.builder';
 import { DataMockService } from './services/data/events/data-mock.service';
 import { root } from '@sker/core';
+import { DataSource } from '@sker/entities';
 
 @Module({
   controllers: [
@@ -64,6 +65,7 @@ import { root } from '@sker/core';
     { provide: EventAnalyticsService, useFactory: () => root.get(EventAnalyticsService) },
     { provide: EventTimelineBuilder, useFactory: () => root.get(EventTimelineBuilder) },
     { provide: DataMockService, useFactory: () => root.get(DataMockService) },
+    { provide: DataSource, useFactory: () => root.get(DataSource) },
   ],
 })
 export class AppModule { }

@@ -24,7 +24,10 @@ export class Compiler {
     compile(ast: Ast | INode): INode {
         if (isNode(ast)) return ast;
         const ctor = findNodeType(ast.type);
-        if (!ctor) throw new Error(`compiler error: ast type ${ast.type} not found`)
+        if (!ctor) {
+            console.log(ast)
+            throw new Error(`compiler error: ast type ${ast.type} not found`)
+        }
 
         // 提取 @Node 类装饰器元数据
         const classMetadata = this.extractNodeMetadata(ctor);

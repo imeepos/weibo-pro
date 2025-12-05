@@ -15,6 +15,7 @@ export function useNodeRegistry(): NodeMetadata[] {
     return nodeTypes.map(NodeClass => {
       // Create a temporary instance and compile it to get metadata
       const tempAst = new NodeClass()
+      console.log({ tempAst, NodeClass })
       const compiledNode = compiler.compile(tempAst)
       return getNodeMetadata(compiledNode)
     })
