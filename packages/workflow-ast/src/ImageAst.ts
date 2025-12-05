@@ -10,10 +10,10 @@ import { Ast, Input, Node, Output } from "@sker/workflow";
  */
 @Node({ title: '图片', type: 'basic' })
 export class ImageAst extends Ast {
-    @Input({ title: '图片', type: 'image' })
+    @Input({ title: '输入', type: 'image' })
     uploadedImage: string = '';
 
-    @Output({ title: '图片' })
+    @Output({ title: '输出' })
     image: string = '';
 
     type: 'ImageAst' = 'ImageAst';

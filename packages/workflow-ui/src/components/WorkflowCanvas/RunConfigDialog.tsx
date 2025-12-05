@@ -283,6 +283,16 @@ function inferFieldType(propKey: string, value: any): InputFieldType {
     return 'image'
   }
 
+  // 根据属性名推断 - 视频相关
+  if (lowerKey.includes('video') || lowerKey.includes('movie') || lowerKey.includes('film')) {
+    return 'video'
+  }
+
+  // 根据属性名推断 - 音频相关
+  if (lowerKey.includes('audio') || lowerKey.includes('sound') || lowerKey.includes('music')) {
+    return 'audio'
+  }
+
   // 根据属性名推断 - 日期时间
   if (lowerKey.includes('date')) {
     return 'date'
@@ -325,6 +335,16 @@ function inferFieldType(propKey: string, value: any): InputFieldType {
     // 检查是否为图片 URL
     if (/\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(value) || value.startsWith('data:image/')) {
       return 'image'
+    }
+
+    // 检查是否为视频 URL
+    if (/\.(mp4|webm|ogg|mov|avi|mkv)(\?.*)?$/i.test(value) || value.startsWith('data:video/')) {
+      return 'video'
+    }
+
+    // 检查是否为音频 URL
+    if (/\.(mp3|wav|ogg|m4a|aac|flac)(\?.*)?$/i.test(value) || value.startsWith('data:audio/')) {
+      return 'audio'
     }
 
     // 检查字符串长度，长字符串用 textarea
@@ -372,6 +392,12 @@ function formatLabel(key: string): string {
     image: '图片',
     uploadedImage: '已上传图片',
     imageUrl: '图片地址',
+    video: '视频',
+    uploadedVideo: '已上传视频',
+    videoUrl: '视频地址',
+    audio: '音频',
+    uploadedAudio: '已上传音频',
+    audioUrl: '音频地址',
   }
 
   if (labelMap[key]) {
@@ -410,6 +436,14 @@ function getPlaceholder(propKey: string, type: InputFieldType): string {
 
   if (type === 'image') {
     return '点击上传图片'
+  }
+
+  if (type === 'video') {
+    return '点击上传视频'
+  }
+
+  if (type === 'audio') {
+    return '点击上传音频'
   }
 
   return `请输入${formatLabel(propKey)}`

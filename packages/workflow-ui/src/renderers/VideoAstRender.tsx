@@ -4,7 +4,7 @@ import { VideoAst } from "@sker/workflow-ast";
 import React, { useState, useRef } from "react";
 import { useUploadFile } from "@sker/ui/hooks/use-upload-file";
 import { Button } from "@sker/ui/components/ui/button";
-import { Upload, X, Download, Play, Pause } from "lucide-react";
+import { Upload, X, Download, Play, Pause, Maximize } from "lucide-react";
 import { cn } from "@sker/ui/lib/utils";
 
 /**
@@ -13,6 +13,7 @@ import { cn } from "@sker/ui/lib/utils";
 const VideoComponent: React.FC<{ ast: VideoAst }> = ({ ast }) => {
     const [updateKey, setUpdateKey] = useState(0);
     const [isPlaying, setIsPlaying] = useState(false);
+    const [showFullscreen, setShowFullscreen] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -92,6 +93,18 @@ const VideoComponent: React.FC<{ ast: VideoAst }> = ({ ast }) => {
         document.body.removeChild(link);
     };
 
+    const handleFullscreen = () => {
+        setShowFullscreen(true);
+    };
+
+    const handleFullscreenClose = () => {
+        setShowFullscreen(false);
+        if (videoRef.current) {
+            videoRef.current.pause();
+            setIsPlaying(false);
+        }
+    };
+
     return (
         <div className="p-4" key={updateKey}>
             <input
@@ -141,6 +154,15 @@ const VideoComponent: React.FC<{ ast: VideoAst }> = ({ ast }) => {
                         >
                             <X className="h-3 w-3" />
                         </Button>
+
+                        <Button
+                            size="icon"
+                            variant="secondary"
+                            className="absolute top-2 right-10 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={handleFullscreen}
+                        >
+                            <Maximize className="h-3 w-3" />
+                        </Button>
                     </div>
 
                     <div className="flex gap-2">
@@ -187,6 +209,33 @@ const VideoComponent: React.FC<{ ast: VideoAst }> = ({ ast }) => {
                         上传中... {progress}%
                     </p>
                 </div>
+            )}
+
+            {/* 全屏预览模态框 */}
+            {showFullscreen && currentVideo && (
+                <>
+                    <div
+                        className="fixed inset-0 z-[9998] bg-black/90 backdrop-blur-sm"
+                        onClick={handleFullscreenClose}
+                    />
+                    <div className="fixed left-1/2 top-1/2 z-[9999] w-[90vw] h-[90vh] -translate-x-1/2 -translate-y-1/2 flex flex-col">
+                        <div className="absolute top-4 right-4 z-10 flex gap-2">
+                            <Button
+                                size="icon"
+                                variant="secondary"
+                                onClick={handleFullscreenClose}
+                            >
+                                <X className="h-4 w-4" />
+                            </Button>
+                        </div>
+                        <video
+                            src={currentVideo}
+                            className="w-full h-full object-contain rounded-lg"
+                            controls
+                            autoPlay
+                        />
+                    </div>
+                </>
             )}
         </div>
     );

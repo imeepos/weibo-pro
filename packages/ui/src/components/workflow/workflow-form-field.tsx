@@ -7,7 +7,7 @@ import { ImageEditor } from '@sker/ui/components/ui/image-editor'
 import type { Annotation, CropArea } from '@sker/ui/components/ui/image-editor'
 import { useUploadFile } from '@sker/ui/hooks/use-upload-file'
 import { Button } from '@sker/ui/components/ui/button'
-import { Upload, X } from 'lucide-react'
+import { Upload, X, Play, Pause, Maximize } from 'lucide-react'
 
 /** 支持的输入字段类型 */
 export type InputFieldType =
@@ -20,6 +20,8 @@ export type InputFieldType =
   | 'date'
   | 'datetime-local'
   | 'image'
+  | 'video'
+  | 'audio'
   | 'any'
 
 export interface WorkflowFormFieldProps {
@@ -54,6 +56,11 @@ export function WorkflowFormField({
   const [imageAnnotations, setImageAnnotations] = useState<Annotation[]>([])
   const [imageCropArea, setImageCropArea] = useState<CropArea | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // 视频播放相关状态
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [showFullscreen, setShowFullscreen] = useState(false)
+  const videoRef = useRef<HTMLVideoElement>(null)
 
   // 图片上传 hook
   const { isUploading, progress, uploadFile } = useUploadFile({
@@ -156,13 +163,27 @@ export function WorkflowFormField({
     }
   }
 
-  // 图片上传处理
+  // 图片/视频/音频上传处理
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
-    if (!file.type.startsWith('image/')) {
+    const isImage = file.type.startsWith('image/')
+    const isVideo = file.type.startsWith('video/')
+    const isAudio = file.type.startsWith('audio/')
+
+    if (type === 'image' && !isImage) {
       setError('请选择图片文件')
+      return
+    }
+
+    if (type === 'video' && !isVideo) {
+      setError('请选择视频文件')
+      return
+    }
+
+    if (type === 'audio' && !isAudio) {
+      setError('请选择音频文件')
       return
     }
 
@@ -189,6 +210,35 @@ export function WorkflowFormField({
     setImageAnnotations(data.annotations || [])
     setImageCropArea(data.crop || null)
     setShowEditor(false)
+  }
+
+  // 视频相关处理
+  const handleVideoDelete = () => {
+    onChange('')
+    setIsPlaying(false)
+  }
+
+  const handlePlayPause = () => {
+    if (!videoRef.current) return
+
+    if (isPlaying) {
+      videoRef.current.pause()
+    } else {
+      videoRef.current.play()
+    }
+    setIsPlaying(!isPlaying)
+  }
+
+  const handleFullscreen = () => {
+    setShowFullscreen(true)
+  }
+
+  const handleFullscreenClose = () => {
+    setShowFullscreen(false)
+    if (videoRef.current) {
+      videoRef.current.pause()
+      setIsPlaying(false)
+    }
   }
 
   const baseInputClass = cn(
@@ -290,6 +340,235 @@ export function WorkflowFormField({
                 onClose={() => setShowEditor(false)}
                 open={showEditor}
               />
+            )}
+          </div>
+        )
+
+      case 'video':
+        return (
+          <div className="space-y-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="video/*"
+              onChange={handleFileChange}
+              className="hidden"
+              disabled={disabled}
+              aria-label="选择视频文件"
+            />
+
+            {!value && !isUploading && (
+              <button
+                type="button"
+                onClick={handleUploadClick}
+                disabled={disabled}
+                className={cn(
+                  "relative flex items-center justify-center",
+                  "w-full h-32 rounded-lg border-2 border-dashed",
+                  "transition-all duration-200",
+                  "hover:border-primary hover:bg-primary/5",
+                  "focus:outline-none focus:ring-2 focus:ring-primary/50",
+                  "disabled:opacity-50 disabled:cursor-not-allowed",
+                  "border-border bg-muted/30"
+                )}
+              >
+                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                  <Upload className="h-8 w-8" strokeWidth={1.5} />
+                  <span className="text-xs font-medium">{placeholder || '上传视频'}</span>
+                </div>
+              </button>
+            )}
+
+            {value && (
+              <div className="space-y-2">
+                <div className="relative group">
+                  <div
+                    className={cn(
+                      "relative border rounded-lg overflow-hidden",
+                      "bg-muted/30 dark:bg-muted/10"
+                    )}
+                  >
+                    <video
+                      ref={videoRef}
+                      src={value}
+                      className="w-full h-auto max-h-64 object-contain"
+                      controls={false}
+                      onPlay={() => setIsPlaying(true)}
+                      onPause={() => setIsPlaying(false)}
+                      onEnded={() => setIsPlaying(false)}
+                    />
+                  </div>
+
+                  {!disabled && (
+                    <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        size="icon"
+                        variant="secondary"
+                        className="h-6 w-6"
+                        onClick={handleFullscreen}
+                        type="button"
+                      >
+                        <Maximize className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="destructive"
+                        className="h-6 w-6"
+                        onClick={handleVideoDelete}
+                        type="button"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={handlePlayPause}
+                    disabled={disabled}
+                    type="button"
+                  >
+                    {isPlaying ? (
+                      <>
+                        <Pause className="h-4 w-4 mr-2" />
+                        暂停
+                      </>
+                    ) : (
+                      <>
+                        <Play className="h-4 w-4 mr-2" />
+                        播放
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {isUploading && (
+              <div className="space-y-2">
+                <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full bg-primary transition-all duration-300"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+                <p className="text-sm text-muted-foreground text-center">
+                  上传中... {progress}%
+                </p>
+              </div>
+            )}
+
+            {/* 全屏预览模态框 */}
+            {showFullscreen && value && (
+              <>
+                <div
+                  className="fixed inset-0 z-[9998] bg-black/90 backdrop-blur-sm"
+                  onClick={handleFullscreenClose}
+                />
+                <div className="fixed left-1/2 top-1/2 z-[9999] w-[90vw] h-[90vh] -translate-x-1/2 -translate-y-1/2 flex flex-col">
+                  <div className="absolute top-4 right-4 z-10 flex gap-2">
+                    <Button
+                      size="icon"
+                      variant="secondary"
+                      onClick={handleFullscreenClose}
+                      type="button"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <video
+                    src={value}
+                    className="w-full h-full object-contain rounded-lg"
+                    controls
+                    autoPlay
+                  />
+                </div>
+              </>
+            )}
+          </div>
+        )
+
+      case 'audio':
+        return (
+          <div className="space-y-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="audio/*"
+              onChange={handleFileChange}
+              className="hidden"
+              disabled={disabled}
+              aria-label="选择音频文件"
+            />
+
+            {!value && !isUploading && (
+              <button
+                type="button"
+                onClick={handleUploadClick}
+                disabled={disabled}
+                className={cn(
+                  "relative flex items-center justify-center",
+                  "w-full h-24 rounded-lg border-2 border-dashed",
+                  "transition-all duration-200",
+                  "hover:border-primary hover:bg-primary/5",
+                  "focus:outline-none focus:ring-2 focus:ring-primary/50",
+                  "disabled:opacity-50 disabled:cursor-not-allowed",
+                  "border-border bg-muted/30"
+                )}
+              >
+                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                  <Upload className="h-8 w-8" strokeWidth={1.5} />
+                  <span className="text-xs font-medium">{placeholder || '上传音频'}</span>
+                </div>
+              </button>
+            )}
+
+            {value && (
+              <div className="space-y-2">
+                <div
+                  className={cn(
+                    "relative border rounded-lg overflow-hidden p-3",
+                    "bg-muted/30 dark:bg-muted/10"
+                  )}
+                >
+                  <audio
+                    controls
+                    src={value}
+                    className="w-full"
+                  />
+                </div>
+
+                {!disabled && (
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => onChange('')}
+                    className="w-full"
+                    type="button"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    删除
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {isUploading && (
+              <div className="space-y-2">
+                <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full bg-primary transition-all duration-300"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+                <p className="text-sm text-muted-foreground text-center">
+                  上传中... {progress}%
+                </p>
+              </div>
             )}
           </div>
         )
@@ -542,6 +821,10 @@ function getPlaceholder(type: string): string {
       return '输入多行文本...'
     case 'image':
       return '上传图片'
+    case 'video':
+      return '上传视频'
+    case 'audio':
+      return '上传音频'
     default:
       return '输入文本...'
   }

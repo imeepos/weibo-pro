@@ -23,3 +23,4 @@ import "./AudioBrowserVisitor";
 import "./TextAreaAstVisitor";
 import "./IfAstVisitor";
 import "./ShareAstVisitor";
+import "./DateAstVisitor";

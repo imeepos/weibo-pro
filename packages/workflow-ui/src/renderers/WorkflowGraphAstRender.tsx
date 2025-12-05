@@ -10,8 +10,8 @@ const WorkflowGraphComponent: React.FC<{ ast: WorkflowGraphAst }> = ({ ast }) =>
     return (
         <WorkflowGraphNode
             name={ast.name}
-            nodeCount={ast.nodes.length}
-            edgeCount={ast.edges.length}
+            nodeCount={ast.nodes?.length ?? 0}
+            edgeCount={ast.edges?.length ?? 0}
             variant="default"
             onClick={() => {
                 ops.openSubWorkflow?.(ast.id, ast)

@@ -137,7 +137,7 @@ const PortRow = ({
         {input && (
           <>
             <HandleWrapper port={input} type="target" isCollapsed={isCollapsed} />
-            <span className="text-xs text-foreground/90 truncate ml-3">
+            <span className="text-xs text-blue-600 dark:text-blue-400 font-medium truncate ml-3">
               {input.title || input.property}
             </span>
             {(inputIsMulti || inputIsBuffer) && (
@@ -152,7 +152,7 @@ const PortRow = ({
       <div className="flex items-center gap-1 relative">
         {output && (
           <>
-            <span className="text-xs text-foreground/90 truncate mr-3">
+            <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium truncate mr-3">
               {output.title || output.property}
             </span>
             <HandleWrapper port={output as INodeInputMetadata} type="source" isCollapsed={isCollapsed} />
