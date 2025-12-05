@@ -18,3 +18,4 @@ export * from './utils';
 export * from './TextAreaAst';
 export * from './DateAst';
 export * from './ast-utils';
+export { Compiler } from './compiler/index';

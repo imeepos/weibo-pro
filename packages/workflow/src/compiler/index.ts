@@ -1,7 +1,7 @@
 import { Injectable, root } from "@sker/core";
 import { Ast } from "../ast";
-import { INode, INodeInputMetadata, INodeMetadata, INodeOutputMetadata, INodeStateMetadata } from "../types";
-import { INPUT, InputMetadata, NODE, NodeMetadata, OUTPUT, OutputMetadata, STATE, StateMetadata } from "../decorator";
+import { INode, INodeInputMetadata, INodeMetadata, INodeOutputMetadata, INodeStateMetadata, isNode } from "../types";
+import { findNodeType, INPUT, InputMetadata, NODE, NodeMetadata, OUTPUT, OutputMetadata, STATE, StateMetadata } from "../decorator";
 
 /**
  * 编译器 - 将 AST 实例编译为 INode
@@ -21,8 +21,10 @@ export class Compiler {
      * 2. 从全局 DI 容器提取装饰器元数据
      * 3. 组装完整的 INode 结构
      */
-    compile(ast: Ast): INode {
-        const ctor = ast.constructor;
+    compile(ast: Ast | INode): INode {
+        if (isNode(ast)) return ast;
+        const ctor = findNodeType(ast.type);
+        if (!ctor) throw new Error(`compiler error: ast type ${ast.type} not found`)
 
         // 提取 @Node 类装饰器元数据
         const classMetadata = this.extractNodeMetadata(ctor);

@@ -1,6 +1,7 @@
 import { ErrorSerializer, SerializedError, root } from "@sker/core";
 import { IEdge, INode } from "./types";
 import { INPUT, OUTPUT, NODE, findNodeType } from "./decorator";
+import { Ast } from "./ast";
 
 // ============================================
 // Ast 错误处理工具函数
@@ -44,8 +45,8 @@ export function getAstErrorDescription(node: INode): string | undefined {
  * - 可执行工作流 = 有执行入口的 WorkflowGraphAst
  * - 不需要额外的标记字段，通过语义判断
  */
-export function isWorkflowGroup(workflow: { entryNodeIds: string[]; nodes: INode[] }): boolean {
-    return workflow.entryNodeIds.length === 0 && workflow.nodes.length > 0;
+export function isWorkflowGroup(workflow: Ast): boolean {
+    return workflow.type === `WorkflowGraphAst`
 }
 
 /**

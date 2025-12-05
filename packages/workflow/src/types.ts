@@ -37,6 +37,9 @@ export interface INodeStateMetadata {
     title?: string;
     type?: string;
 }
+export function isNode(val: any): val is INode{
+    return val && val.metadata
+}
 export interface INode extends Record<string, any> {
     // 标题
     name?: string;
@@ -57,7 +60,7 @@ export interface INode extends Record<string, any> {
     // 位置
     position: { x: number; y: number };
     // 元数据
-    metadata: {
+    metadata?: {
         class: INodeMetadata;
         inputs: INodeInputMetadata[];
         outputs: INodeOutputMetadata[];
