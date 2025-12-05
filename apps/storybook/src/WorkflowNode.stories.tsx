@@ -3,7 +3,7 @@ import { ReactFlowProvider } from '@xyflow/react'
 import { WorkflowNode } from '@sker/ui/components/workflow'
 import type { IAstStates } from '@sker/workflow'
 
-const meta = {
+const meta: Meta<typeof WorkflowNode> = {
   title: 'Workflow/WorkflowNode',
   component: WorkflowNode,
   decorators: [

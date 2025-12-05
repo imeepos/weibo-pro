@@ -9,7 +9,7 @@ import {
 import { useState } from 'react'
 import { Button } from '@sker/ui/components/ui/button'
 
-const meta = {
+const meta: Meta<typeof CountUp> = {
   title: 'UI/CountUp',
   component: CountUp,
   parameters: {
@@ -144,12 +144,12 @@ export const WithStatistic: Story = {
     prefix: '¥',
     animated: true,
   },
-  render: (args) => (
+  render: () => (
     <Card className="w-[280px] p-6">
       <Statistic>
         <StatisticLabel>总营收</StatisticLabel>
         <StatisticValue className="bg-gradient-to-r from-green-400 to-green-600 bg-clip-text text-transparent">
-          <CountUp {...args} />
+          <CountUp end={456789} prefix="¥" animated />
         </StatisticValue>
       </Statistic>
     </Card>
@@ -230,9 +230,10 @@ export const CustomStyling: Story = {
     end: 999999,
     animated: true,
   },
-  render: (args) => (
+  render: () => (
     <CountUp
-      {...args}
+      end={999999}
+      animated
       className="text-6xl font-extrabold bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent"
     />
   ),

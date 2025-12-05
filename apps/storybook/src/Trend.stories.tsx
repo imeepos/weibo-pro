@@ -7,7 +7,7 @@ import {
   StatisticValue,
 } from '@sker/ui/components/ui/statistic'
 
-const meta = {
+const meta: Meta<typeof Trend> = {
   title: 'UI/Trend',
   component: Trend,
   parameters: {

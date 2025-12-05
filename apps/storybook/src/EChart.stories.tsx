@@ -3,7 +3,7 @@ import { EChart } from '@sker/ui/components/ui/echart';
 
 type EChartsOption = any;
 
-const meta = {
+const meta: Meta<typeof EChart> = {
   title: 'Charts/EChart',
   component: EChart,
   parameters: {

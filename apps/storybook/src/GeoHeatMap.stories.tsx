@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react'
 import { GeoHeatMap, type GeoDataPoint } from '@sker/ui/components/ui/geo-heat-map'
 import { useState } from 'react'
 
-const meta = {
+const meta: Meta<typeof GeoHeatMap> = {
   title: 'Charts/GeoHeatMap',
   component: GeoHeatMap,
   parameters: {
@@ -170,7 +170,7 @@ export const CustomTooltip: Story = {
   args: {
     data: majorCities,
     title: '自定义 Tooltip',
-    formatTooltip: (point) => {
+    formatTooltip: (point: GeoDataPoint) => {
       const trend = point.value > 1000 ? '↑ 上升' : point.value > 500 ? '→ 平稳' : '↓ 下降'
       const level = point.value > 1000 ? '高' : point.value > 500 ? '中' : '低'
 
@@ -203,7 +203,7 @@ export const CustomValueFormat: Story = {
   args: {
     data: majorCities,
     title: '自定义数值格式',
-    formatValue: (value) => `${(value / 1000).toFixed(1)}K`,
+    formatValue: (value: number) => `${(value / 1000).toFixed(1)}K`,
   },
 }
 

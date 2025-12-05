@@ -7,7 +7,7 @@ import {
   StatisticValue,
 } from '@sker/ui/components/ui/statistic'
 
-const meta = {
+const meta: Meta<typeof SentimentIndicator> = {
   title: 'UI/SentimentIndicator',
   component: SentimentIndicator,
   parameters: {

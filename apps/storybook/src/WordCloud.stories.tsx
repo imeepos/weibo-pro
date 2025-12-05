@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react'
 import { WordCloud } from '@sker/ui/components/ui/word-cloud'
 import { useState } from 'react'
 
-const meta = {
+const meta: Meta<typeof WordCloud> = {
   title: 'BIGSCREEN/WordCloud',
   component: WordCloud,
   parameters: {
@@ -158,7 +158,7 @@ export const CustomTooltip: Story = {
   args: {
     data: baseData,
     height: 600,
-    tooltipFormatter: (item) => `
+    tooltipFormatter: (item: { name: string; value: number; color?: string }) => `
       <div style="padding: 8px;">
         <div style="font-size: 16px; font-weight: bold; margin-bottom: 4px;">${item.name}</div>
         <div style="color: #10b981;">热度值: ${item.value}</div>
@@ -216,7 +216,7 @@ export const SentimentAnalysis: Story = {
     ],
     height: 600,
     shape: 'circle',
-    tooltipFormatter: (item) => {
+    tooltipFormatter: (item: { name: string; value: number; color?: string }) => {
       const sentiment = item.color === '#10b981' || item.color?.startsWith('#3') || item.color?.startsWith('#6e') || item.color?.startsWith('#14')
         ? '正面'
         : item.color?.startsWith('#6b') || item.color?.startsWith('#9c') || item.color?.startsWith('#d1')

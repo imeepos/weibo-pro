@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { StatisticsCard } from '@sker/ui/components/ui/statistics-card';
 
-const meta = {
+const meta: Meta<typeof StatisticsCard> = {
   title: 'Components/StatisticsCard',
   component: StatisticsCard,
   parameters: {
