@@ -310,13 +310,9 @@ export function useWorkflowOperations(
 
       // 应用输入参数到对应节点
       if (inputs && Object.keys(inputs).length > 0) {
-        console.log('🎯 [runWorkflow] 开始应用输入参数，inputs 对象:', inputs)
-        console.log('🎯 [runWorkflow] inputs entries:', Object.entries(inputs))
-
         Object.entries(inputs).forEach(([key, value]) => {
           // 跳过 undefined 值（保留节点默认值）
           if (value === undefined) {
-            console.log(`⚠️ [runWorkflow] 跳过 undefined 值: ${key}`)
             return
           }
 
@@ -332,21 +328,13 @@ export function useWorkflowOperations(
 
           const targetNode = getNodeById(workflow.workflowAst!.nodes, nodeId)
           if (targetNode) {
-            console.log(`🎯 [runWorkflow] 找到目标节点 ${nodeId}`)
-            console.log(`🎯 [runWorkflow] 赋值前 ${propertyKey} =`, (targetNode as any)[propertyKey])
-            console.log(`✅ 设置节点 ${nodeId}.${propertyKey} =`, value);
             // 直接赋值，不检查属性是否存在（支持动态属性）
             (targetNode as any)[propertyKey] = value
-            console.log(`🎯 [runWorkflow] 赋值后 ${propertyKey} =`, (targetNode as any)[propertyKey])
           } else {
             console.warn(`⚠️ 未找到节点: ${nodeId}`)
           }
         })
         workflow.syncFromAst()
-        console.log('✅ 输入参数应用完成');
-        console.log('🎯 [runWorkflow] 应用参数后的工作流 AST:', workflow.workflowAst)
-      } else {
-        console.log('⚠️ [runWorkflow] inputs 为空或没有值')
       }
 
       // 执行前保存状态
