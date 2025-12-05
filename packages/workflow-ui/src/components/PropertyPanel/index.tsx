@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react'
 import { useSelectedNode } from './useSelectedNode'
 import { SmartFormField } from './SmartFormField'
-import { getNodeMetadata } from '../../adapters'
 import { type DynamicOutput } from '@sker/workflow'
 import { ErrorDetailPanel } from '../ErrorDetail'
 import { SerializedError, root } from '@sker/core'
@@ -47,7 +46,10 @@ export function PropertyPanel({
 
   useEffect(() => {
     if (selectedNode && !externalFormData) {
-      const metadata = getNodeMetadata(selectedNode.data)
+      // ✅ 直接使用 metadata 字段，不需要动态获取
+      const metadata = selectedNode.data.metadata
+      if (!metadata) return
+
       const initialData: Record<string, any> = {
         name: selectedNode.data.name,
         description: selectedNode.data.description,
@@ -71,13 +73,24 @@ export function PropertyPanel({
     )
   }
 
-  const metadata = getNodeMetadata(selectedNode.data)
+  // ✅ 直接使用 metadata 字段
+  const metadata = selectedNode.data.metadata
+  if (!metadata) {
+    return (
+      <WorkflowPropertyPanel
+        className={className}
+        emptyState={<PropertyPanelEmptyState />}
+      />
+    )
+  }
+
   const ast = selectedNode.data
 
   const portLabels: Record<string, string> = (ast as any).portLabels || {}
 
   const editableProperties = metadata.inputs.map((input) => ({
     ...input,
+    label: input.title || input.property,
     value: formData[input.property] ?? (ast as any)[input.property],
   }))
 
@@ -90,6 +103,7 @@ export function PropertyPanel({
 
   const readonlyProperties = metadata.outputs.map((output) => ({
     ...output,
+    label: output.title || output.property,
     value: (ast as any)[output.property],
   }))
 
@@ -103,7 +117,7 @@ export function PropertyPanel({
         <>
           <SmartFormField
             label="节点名称"
-            value={formData.name || metadata.title}
+            value={formData.name || metadata.class.title}
             type="string"
             onChange={(value) => handlePropertyChange('name', value)}
           />
@@ -207,17 +221,7 @@ export function PropertyPanel({
   }
 
   // 检查节点是否支持动态输出（有 isRouter: true 的输出）
-  // ✨使用编译后的 node.metadata.outputs
-  if (!ast.metadata) {
-    return (
-      <WorkflowPropertyPanel
-        className={className}
-        emptyState={<PropertyPanelEmptyState />}
-        sections={[]}
-      />
-    )
-  }
-  const outputMetadata = ast.metadata.outputs
+  const outputMetadata = metadata.outputs
   const hasDynamicOutputSupport = outputMetadata.some(meta => meta.isRouter)
 
   if (hasDynamicOutputSupport) {

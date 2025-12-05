@@ -92,7 +92,7 @@ export class Compiler {
         const targetInputs = allInputMetadata.filter(m => m.target === ctor);
 
         return targetInputs.map(input => ({
-            propertyKey: String(input.propertyKey),
+            property: String(input.propertyKey),
             mode: input.mode,
             required: input.required,
             defaultValue: input.defaultValue,
@@ -109,7 +109,7 @@ export class Compiler {
         const targetOutputs = allOutputMetadata.filter(m => m.target === ctor);
 
         return targetOutputs.map(output => ({
-            propertyKey: String(output.propertyKey),
+            property: String(output.propertyKey),
             title: output.title,
             type: output.type,
             isRouter: output.isRouter,

@@ -17,6 +17,7 @@ import "./WeiboUserDetectionAstVisitor";
 import "./LlmTextAgentAstVisitor";
 import "./WeiboAccountPickAstBrowserVisitor"
 import "./CollectorVisitor";
+import "./ImageBrowserVisitor";
 import "./TextAreaAstVisitor";
 import "./IfAstVisitor";
 import "./ShareAstVisitor";

@@ -26,6 +26,9 @@ export { LlmVideoToTextAst } from './LlmVideoToTextAst';
 export { LlmTextImageToVideoAst } from './LlmTextImageToVideoAst';
 export { LlmTextImage2ToVideoAst } from './LlmTextImage2ToVideoAst';
 
+// 媒体节点
+export { ImageAst, type Annotation, type CropArea, type AnnotationType } from './ImageAst';
+
 export { WeiboAccountPickAst } from './WeiboAccountPickAst';
 
 // IS_BUFFER 模式示例

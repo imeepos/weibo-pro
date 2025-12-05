@@ -19,6 +19,10 @@ export { TextAreaAstVisitor } from './TextAreaAstVisitor'
 export { DateAstVisitor } from './DateAstVisitor'
 // IS_BUFFER 模式示例
 export { CollectorVisitor } from './CollectorVisitor'
+
+// 媒体节点
+export { ImageVisitor } from './ImageVisitor'
+
 // 控制流节点
 export { IfAstVisitor } from './IfAstVisitor'
 export { SwitchAstVisitor } from './SwitchAstVisitor'

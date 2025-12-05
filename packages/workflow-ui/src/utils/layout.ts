@@ -1,6 +1,5 @@
 import dagre from 'dagre'
 import type { WorkflowNode, WorkflowEdge } from '../types'
-import { getNodeMetadata } from '../adapters'
 
 /**
  * 计算节点高度
@@ -17,12 +16,18 @@ function calculateNodeHeight(node: WorkflowNode): number {
   }
 
   try {
-    // node.data is already an INode, pass it directly
-    const metadata = getNodeMetadata(node.data)
+    // ✅ 直接使用 metadata 字段，node.data 已经是编译后的 INode
+    const metadata = node.data.metadata
+    if (!metadata) {
+      console.warn('[layout] 节点缺少 metadata，使用默认高度', { nodeId: node.id })
+      return headerHeight + (2 * portRowHeight) + padding
+    }
+
     const portRows = Math.max(metadata.inputs.length, metadata.outputs.length)
     return headerHeight + (portRows * portRowHeight) + padding
   } catch (error) {
     // 如果获取元数据失败，返回默认高度
+    console.error('[layout] 计算节点高度失败', error)
     return headerHeight + (2 * portRowHeight) + padding
   }
 }

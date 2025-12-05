@@ -1,7 +1,6 @@
 import type { Edge } from '@xyflow/react'
 import type { INode } from '@sker/workflow'
 import { hasMultiMode } from '@sker/workflow'
-import { getNodeMetadata } from '../adapters'
 
 /**
  * 边验证规则接口
@@ -49,13 +48,18 @@ export const EDGE_VALIDATION_RULES: EdgeValidationRule[] = [
       if (!targetNode) return false
 
       try {
-        // targetNode is already an INode, pass it directly
-        const targetMetadata = getNodeMetadata(targetNode)
+        // ✅ 直接使用 metadata 字段，targetNode 已经是编译后的 INode
+        const targetMetadata = targetNode.metadata
+        if (!targetMetadata) {
+          console.warn('[edgeValidator] 节点缺少 metadata', { nodeId: targetNode.id })
+          return true // 容错处理
+        }
+
         const inputPort = targetMetadata.inputs.find(i => i.property === edge.targetHandle)
 
         if (inputPort) {
-          // 优雅设计：优先使用 mode 位标志，兼容旧的 isMulti
-          const supportsMultipleInputs = hasMultiMode(inputPort.mode) || inputPort.isMulti
+          // 使用 mode 位标志判断是否支持多输入
+          const supportsMultipleInputs = hasMultiMode(inputPort.mode)
 
           if (!supportsMultipleInputs) {
             const existingConnection = edges.find(e =>
@@ -66,8 +70,9 @@ export const EDGE_VALIDATION_RULES: EdgeValidationRule[] = [
             return !existingConnection
           }
         }
-      } catch {
-        // 如果获取元数据失败，允许连接
+      } catch (error) {
+        // 如果获取元数据失败，允许连接（容错处理）
+        console.error('[edgeValidator] 验证失败', error)
         return true
       }
 

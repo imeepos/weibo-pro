@@ -92,7 +92,7 @@ const { isExecuting, nodeStates, startExecution } = useExecutionStore()
 ### 适配器
 
 ```ts
-import { astToFlow, flowToAst, getNodeMetadata, getAllNodeTypes } from '@sker/workflow-ui'
+import { astToFlow, flowToAst, getAllNodeTypes } from '@sker/workflow-ui'
 
 // Ast → React Flow
 const { nodes, edges } = astToFlow(astNodes, astEdges)
@@ -100,8 +100,6 @@ const { nodes, edges } = astToFlow(astNodes, astEdges)
 // React Flow → Ast
 const { nodes, edges } = flowToAst(flowNodes, flowEdges)
 
-// 获取节点元数据
-const metadata = getNodeMetadata(NodeClass)
 
 // 获取所有已注册节点
 const nodeTypes = getAllNodeTypes()

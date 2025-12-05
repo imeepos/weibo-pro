@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from 'react'
 import { useReactFlow, type Connection, } from '@xyflow/react'
 import { useSelectionStore } from '../../store'
-import { getAllNodeTypes, getNodeMetadata } from '../../adapters'
+import { getAllNodeTypes } from '../../adapters'
 import { generateId, Compiler } from '@sker/workflow'
 import { root } from '@sker/core'
 import { createCompiledNode } from '../../utils/createCompiledNode'
@@ -173,19 +173,16 @@ export function useCanvasControls() {
         return
       }
 
-      const ast = new NodeClass()
-      ast.id = generateId()
-
-      // Compile the AST to get INode with metadata
-      const compiler = root.get(Compiler)
-      const compiledNode = compiler.compile(ast)
-      const nodeMetadata = getNodeMetadata(compiledNode)
+      // 使用工具函数创建并编译节点
+      const compiledNode = createCompiledNode(NodeClass, {
+        position: menu.flowPosition
+      })
 
       const node: WorkflowNode = {
-        id: ast.id,
-        type: nodeMetadata.type,
+        id: compiledNode.id,
+        type: compiledNode.metadata.type,
         position: menu.flowPosition,
-        data: ast,
+        data: compiledNode,  // ✅ 使用编译后的节点
       }
 
       setNodes((nodes) => [...nodes, node])

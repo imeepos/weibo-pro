@@ -55,7 +55,7 @@ export function getExposedInputs(workflow: INode): PortInfo[] {
 
       // 所有输入端口都暴露
       for (const inputMeta of nodeInputs) {
-        const property = String(inputMeta.propertyKey)
+        const property = String(inputMeta.property)
         exposedInputs.push({
           nodeId: node.id,
           property,
@@ -101,7 +101,7 @@ export function getExposedOutputs(workflow: INode): PortInfo[] {
 
       // 检查每个输出端口是否被连接
       for (const outputMeta of nodeOutputs) {
-        const property = String(outputMeta.propertyKey)
+        const property = String(outputMeta.property)
         const isConnected = edges.some((edge: IEdge) =>
           edge.from === node.id && edge.fromProperty === property
         )

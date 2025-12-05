@@ -4,7 +4,6 @@ import React, { useEffect, useMemo, useState, useCallback } from 'react'
 import { PropertyPanel } from '../PropertyPanel'
 import { Workflow, Settings, History, Play, Crosshair, Save } from 'lucide-react'
 import { useSelectedNode } from '../PropertyPanel/useSelectedNode'
-import { getNodeMetadata } from '../../adapters'
 import { resolveConstructor } from '@sker/workflow'
 import { useReactFlow } from '@xyflow/react'
 import {
@@ -28,12 +27,8 @@ export function LeftDrawer({ visible, onClose, onRunNode, onLocateNode, classNam
   // useSelectedNode 已确保节点已编译，可安全获取 metadata
   const metadata = useMemo(() => {
     if (!selectedNode) return null
-    try {
-      return getNodeMetadata(selectedNode.data)
-    } catch (error) {
-      console.error('[LeftDrawer] 获取节点元数据失败', error)
-      return null
-    }
+    // ✅ 直接使用 metadata 字段
+    return selectedNode.data.metadata
   }, [selectedNode])
 
   const [formData, setFormData] = useState<Record<string, any>>({})
@@ -47,7 +42,10 @@ export function LeftDrawer({ visible, onClose, onRunNode, onLocateNode, classNam
 
   useEffect(() => {
     if (selectedNode) {
-      const metadata = getNodeMetadata(selectedNode.data)
+      // ✅ 直接使用 metadata 字段
+      const metadata = selectedNode.data.metadata
+      if (!metadata) return
+
       const initialData: Record<string, any> = {
         name: selectedNode.data.name,
         description: selectedNode.data.description,
@@ -179,8 +177,8 @@ export function LeftDrawer({ visible, onClose, onRunNode, onLocateNode, classNam
     <WorkflowPropertyDrawer
       visible={visible}
       onClose={onClose}
-      title={metadata?.label || '节点属性'}
-      subtitle={metadata?.type}
+      title={metadata?.class.title || '节点属性'}
+      subtitle={metadata?.class.type}
       icon={Workflow}
       tabs={tabs}
       actions={actions}

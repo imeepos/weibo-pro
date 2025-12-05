@@ -9,8 +9,8 @@ import { Badge } from '@sker/ui/components/ui/badge'
 import { Button } from '@sker/ui/components/ui/button'
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@sker/ui/components/ui/collapsible'
 import { NODE_STATE_COLORS, NODE_STATE_LABELS } from '../../constants/workflow'
-import type { WorkflowNodeProps, WorkflowNodePort } from './types/workflow-nodes'
-
+import type { WorkflowNodeProps } from './types/workflow-nodes'
+import { INodeInputMetadata, INodeOutputMetadata } from '@sker/workflow'
 // 聚合模式位标志
 const IS_MULTI = 0x000001
 const IS_BUFFER = 0x000010
@@ -79,7 +79,7 @@ const HandleWrapper = ({
   portIndex,
   totalPorts,
 }: {
-  port?: WorkflowNodePort
+  port?: INodeInputMetadata
   type: 'source' | 'target'
   isCollapsed?: boolean
   portIndex?: number
@@ -123,19 +123,13 @@ const PortRow = ({
   output,
   isCollapsed
 }: {
-  input?: WorkflowNodePort
-  output?: WorkflowNodePort,
+  input?: INodeInputMetadata
+  output?: INodeOutputMetadata,
   isCollapsed?: boolean
 }) => {
   // 检查输入端口的聚合模式
-  const inputIsMulti = input && (hasMultiMode(input.mode) || input.isMulti)
+  const inputIsMulti = input && hasMultiMode(input.mode)
   const inputIsBuffer = input && hasBufferMode(input.mode)
-  const inputCount = input && getArrayLength(input.value)
-
-  // 检查输出端口的聚合模式
-  const outputIsMulti = output && (hasMultiMode(output.mode) || output.isMulti)
-  const outputIsBuffer = output && hasBufferMode(output.mode)
-  const outputCount = output && getArrayLength(output.value)
 
   return (
     <div className="relative flex items-center justify-between h-6 px-2">
@@ -144,11 +138,10 @@ const PortRow = ({
           <>
             <HandleWrapper port={input} type="target" isCollapsed={isCollapsed} />
             <span className="text-xs text-foreground/90 truncate ml-3">
-              {input.label || input.property}
+              {input.title || input.property}
             </span>
             {(inputIsMulti || inputIsBuffer) && (
               <span className="text-[10px] text-muted-foreground font-mono">
-                [{inputCount !== null ? inputCount : ''}]
                 {inputIsBuffer && inputIsMulti && <span className="ml-0.5" title="缓冲+聚合">⚡</span>}
                 {inputIsBuffer && !inputIsMulti && <span className="ml-0.5" title="缓冲">⏱</span>}
               </span>
@@ -159,17 +152,10 @@ const PortRow = ({
       <div className="flex items-center gap-1 relative">
         {output && (
           <>
-            {(outputIsMulti || outputIsBuffer) && (
-              <span className="text-[10px] text-muted-foreground font-mono">
-                {outputIsBuffer && outputIsMulti && <span className="mr-0.5" title="缓冲+聚合">⚡</span>}
-                {outputIsBuffer && !outputIsMulti && <span className="mr-0.5" title="缓冲">⏱</span>}
-                [{outputCount !== null ? outputCount : ''}]
-              </span>
-            )}
             <span className="text-xs text-foreground/90 truncate mr-3">
-              {output.label || output.property}
+              {output.title || output.property}
             </span>
-            <HandleWrapper port={output} type="source" isCollapsed={isCollapsed} />
+            <HandleWrapper port={output as INodeInputMetadata} type="source" isCollapsed={isCollapsed} />
           </>
         )}
       </div>
@@ -277,7 +263,7 @@ const WorkflowNodeComponent = ({
             {outputs.map((output, index) => (
               <HandleWrapper
                 key={`collapsed-output-${output.property}`}
-                port={output}
+                port={output as INodeInputMetadata}
                 type="source"
                 isCollapsed={true}
                 portIndex={index}

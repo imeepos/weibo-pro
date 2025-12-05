@@ -23,6 +23,9 @@ export * from './ShareAstVisitor';
 // IS_BUFFER 模式示例
 export * from './CollectorAstRender';
 
+// 媒体节点
+export * from './ImageAstRender';
+
 // 控制流节点
 export * from './IfAstRender';
 export * from './SwitchAstRender';

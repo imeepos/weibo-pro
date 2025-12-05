@@ -1,8 +1,6 @@
 import type { Position } from '@xyflow/react'
 import { IEdge } from '../types'
-
-// 工作流节点状态类型（本地定义，避免依赖 @sker/workflow）
-export type IAstStates = 'pending' | 'running' | 'emitting' | 'success' | 'fail'
+import { INodeInputMetadata, INodeOutputMetadata, IAstStates } from '@sker/workflow'
 
 export interface WorkflowNodeHandle {
   id: string
@@ -10,17 +8,6 @@ export interface WorkflowNodeHandle {
   position: Position
   label?: string
   isMulti?: boolean
-}
-
-export interface WorkflowNodePort {
-  property: string
-  label?: string
-  /** @deprecated 使用 mode 替代 */
-  isMulti?: boolean
-  /** 聚合模式位标志 (IS_MULTI | IS_BUFFER) */
-  mode?: number
-  /** 端口当前值（用于显示数量） */
-  value?: any
 }
 
 export interface WorkflowNodeProps {
@@ -37,8 +24,8 @@ export interface WorkflowNodeProps {
   statusCount?: number
 
   // 端口
-  inputs?: WorkflowNodePort[]
-  outputs?: WorkflowNodePort[]
+  inputs?: INodeInputMetadata[]
+  outputs?: INodeOutputMetadata[]
 
   // UI 状态
   selected?: boolean

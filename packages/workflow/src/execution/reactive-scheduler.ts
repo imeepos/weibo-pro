@@ -492,15 +492,15 @@ export class ReactiveScheduler {
 
             // 明确标记为必填
             if (input.required === true) {
-                properties.add(input.propertyKey);
+                properties.add(input.property);
                 return;
             }
 
             // 未明确指定：检查节点实例的属性值
-            const currentValue = (node as any)[input.propertyKey];
+            const currentValue = (node as any)[input.property];
             if (currentValue === undefined) {
                 // 无默认值 → 必填
-                properties.add(input.propertyKey);
+                properties.add(input.property);
             }
         });
 
@@ -529,7 +529,7 @@ export class ReactiveScheduler {
 
         // 🔧 优先使用编译后的 metadata 字段
         node.metadata!.inputs.forEach(input => {
-            metadataMap.set(input.propertyKey, input as InputMetadata);
+            metadataMap.set(input.property, input as any);
         });
         return metadataMap;
     }
@@ -596,7 +596,7 @@ export class ReactiveScheduler {
 
         // 🔧 优先使用编译后的 metadata 字段
         node.metadata!.inputs.forEach(input => {
-            const propKey = String(input.propertyKey);
+            const propKey = String(input.property);
 
             // 优先使用装饰器的 defaultValue
             if (input.defaultValue !== undefined) {

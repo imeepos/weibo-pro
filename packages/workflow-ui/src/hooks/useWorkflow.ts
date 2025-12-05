@@ -5,7 +5,6 @@ import type { INode, IEdge } from '@sker/workflow'
 import { useNodesState, useEdgesState, addEdge, type Connection } from '@xyflow/react'
 import type { WorkflowNode, WorkflowEdge } from '../types'
 import { astToFlowNodes, astToFlowEdges } from '../adapters/ast-to-flow'
-import { getNodeMetadata } from '../adapters/metadata'
 import { StateChangeProxy } from '../core/state-change-proxy'
 import { calculateDagreLayout } from '../utils/layout'
 
@@ -140,10 +139,10 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
       // 3. 添加到工作流
       workflowAst.nodes = astAddNode(workflowAst.nodes, compiledNode)
 
-      const metadata = getNodeMetadata(compiledNode)
+      // ✅ 直接使用 metadata 字段
       const node: WorkflowNode = {
         id: compiledNode.id,
-        type: metadata.type,
+        type: compiledNode.type,
         position,
         data: compiledNode  // 使用编译后的节点（包含 metadata）
       }

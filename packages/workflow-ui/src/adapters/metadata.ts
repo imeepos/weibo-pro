@@ -35,8 +35,8 @@ export function getNodeMetadata(node: INode): NodeMetadata {
   // 获取实例级别的自定义端口标签
   const portLabels: Record<string, string> = node.portLabels || {}
 
-  let inputs: PortMetadata[] = node.metadata.inputs.map((m: any) => toPortMetadata(m, portLabels))
-  let outputs: PortMetadata[] = node.metadata.outputs.map((m: any) => toPortMetadata(m, portLabels))
+  let inputs: PortMetadata[] = node.metadata!.inputs.map((m: any) => toPortMetadata(m, portLabels))
+  let outputs: PortMetadata[] = node.metadata!.outputs.map((m: any) => toPortMetadata(m, portLabels))
 
   // WorkflowGraphAst 特殊处理：动态计算端口
   if (nodeType === 'WorkflowGraphAst') {
@@ -59,9 +59,9 @@ export function getNodeMetadata(node: INode): NodeMetadata {
 
   return {
     type: nodeType,
-    label: node.metadata.class.title || formatNodeLabel(nodeType),
-    title: node.metadata.class.title,
-    nodeType: node.metadata.class.type,
+    label: node.metadata!.class.title || formatNodeLabel(nodeType),
+    title: node.metadata!.class.title,
+    nodeType: node.metadata!.class.type,
     inputs,
     outputs,
   }
