@@ -4,10 +4,10 @@ import { ImageAst } from "@sker/workflow-ast";
 import { Observable } from "rxjs";
 
 /**
- * 图片节点后端 Visitor - 简单传递，不做处理
+ * 图片节点后端 Visitor - 简单传递
  *
  * 图片合成由前端 ImageBrowserVisitor 完成
- * 后端只负责选择图片源并传递
+ * 后端只负责将 uploadedImage 传递到 image 输出
  */
 @Injectable()
 export class ImageVisitor {
@@ -19,13 +19,8 @@ export class ImageVisitor {
 
             ast.state = 'emitting';
 
-            // 选择图片：优先上传的图片，否则第一个输入
-            let inputs = ast.imageInputs || [];
-            if (Array.isArray(inputs) && inputs.length > 0 && Array.isArray(inputs[0])) {
-                inputs = inputs.flat();
-            }
-
-            ast.image = ast.uploadedImage || inputs[0] || '';
+            // 直接使用 uploadedImage（可能来自上游或用户上传）
+            ast.image = ast.uploadedImage || '';
 
             obs.next({ ...ast });
 

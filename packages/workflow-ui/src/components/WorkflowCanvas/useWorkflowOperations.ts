@@ -310,15 +310,32 @@ export function useWorkflowOperations(
       // 应用输入参数到对应节点
       if (inputs && Object.keys(inputs).length > 0) {
         Object.entries(inputs).forEach(([key, value]) => {
-          const [nodeId, propertyKey] = key.split('.')
-          if (nodeId && propertyKey) {
-            const targetNode = workflow.workflowAst!.nodes.find(n => n.id === nodeId)
-            if (targetNode && propertyKey in targetNode) {
-              (targetNode as any)[propertyKey] = value
-            }
+          // 跳过 undefined 值（保留节点默认值）
+          if (value === undefined) {
+            return
+          }
+
+          // key 格式: "nodeId.propertyKey"
+          const dotIndex = key.indexOf('.')
+          if (dotIndex === -1) {
+            console.warn(`⚠️ 无效的输入键格式: ${key}`)
+            return
+          }
+
+          const nodeId = key.substring(0, dotIndex)
+          const propertyKey = key.substring(dotIndex + 1)
+
+          const targetNode = workflow.workflowAst!.nodes.find(n => n.id === nodeId)
+          if (targetNode) {
+            console.log(`✅ 设置节点 ${nodeId}.${propertyKey} =`, value);
+            // 直接赋值，不检查属性是否存在（支持动态属性）
+            (targetNode as any)[propertyKey] = value
+          } else {
+            console.warn(`⚠️ 未找到节点: ${nodeId}`)
           }
         })
         workflow.syncFromAst()
+        console.log('✅ 输入参数应用完成');
       }
 
       // 执行前保存状态

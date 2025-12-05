@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Play, Settings } from 'lucide-react'
 import { WorkflowGraphAst, getInputMetadata, resolveConstructor } from '@sker/workflow'
@@ -44,7 +44,65 @@ export function RunConfigDialog({
   onConfirm,
   onCancel,
 }: RunConfigDialogProps) {
-  const [inputs, setInputs] = useState<Record<string, unknown>>(defaultInputs)
+  const [inputs, setInputs] = useState<Record<string, unknown>>({})
+  const prevVisibleRef = useRef(visible)
+
+  // 当对话框从关闭变为打开时，收集节点当前值初始化 inputs
+  useEffect(() => {
+    if (visible && !prevVisibleRef.current) {
+      // 合并默认输入和节点当前值
+      const initialInputs = { ...defaultInputs }
+
+      // 收集所有入度为 0 的节点的 @Input 属性值
+      // 注意：workflow.nodes 是 AST 节点数组，不是 React Flow 节点数组
+      if (workflow?.nodes && workflow?.edges) {
+        const startNodes = workflow.nodes.filter((node) => {
+          const hasIncomingEdges = workflow.edges.some((edge: IEdge) => edge.to === node.id)
+          return !hasIncomingEdges
+        })
+
+        startNodes.forEach((astNode: any) => {
+          try {
+            console.log('🔍 [RunConfigDialog] 处理 AST 节点:', {
+              nodeId: astNode.id,
+              nodeType: astNode.type,
+              nodeName: astNode.name,
+              astNode: astNode
+            })
+
+            const ctor = resolveConstructor(astNode)
+            const inputMetadatas = getInputMetadata(ctor)
+            const metadataArray = Array.isArray(inputMetadatas) ? inputMetadatas : [inputMetadatas]
+
+            metadataArray.forEach((metadata) => {
+              const propKey = String(metadata.propertyKey)
+              const fullKey = `${astNode.id}.${propKey}`
+
+              // 如果 defaultInputs 中没有，使用节点当前值或装饰器默认值
+              if (!(fullKey in initialInputs)) {
+                const nodeValue = astNode[propKey]
+                const finalValue = nodeValue !== undefined ? nodeValue : metadata.defaultValue
+
+                // 只在值不为 undefined 时才添加到 initialInputs
+                // 避免将 undefined 传递给工作流执行器
+                if (finalValue !== undefined) {
+                  initialInputs[fullKey] = finalValue
+                }
+              }
+            })
+          } catch (error) {
+            console.error('❌ [RunConfigDialog] 处理节点失败:', error)
+          }
+        })
+      }
+
+      console.log('🔄 RunConfigDialog 初始化输入:', initialInputs)
+      setInputs(initialInputs)
+    }
+    prevVisibleRef.current = visible
+    // 只依赖 visible，避免对象引用导致的无限循环
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible])
 
   // 识别输入节点（入度为 0 的节点）
   const inputNodes = useMemo(() => {
@@ -65,8 +123,11 @@ export function RunConfigDialog({
     const fields: InputField[] = []
 
     inputNodes.forEach((node: any) => {
-      const nodeType = node.type || node.constructor?.name || 'Unknown'
-      const nodeName = node.name || nodeType
+      // 优雅的名称获取策略：
+      // 1. 优先使用 node.name（用户自定义名称）
+      // 2. 回退到 node.metadata.class.title（节点类型的中文名）
+      // 3. 最后使用类型名称
+      const nodeName = node.name || node.metadata?.class?.title || node.type || '未命名节点'
 
       try {
         // 获取节点构造函数
@@ -80,7 +141,9 @@ export function RunConfigDialog({
         metadataArray.forEach((metadata) => {
           const propKey = String(metadata.propertyKey)
           const fullKey = `${node.id}.${propKey}`
-          const currentValue = inputs[fullKey] ?? node[propKey] ?? metadata.defaultValue
+
+          // 获取当前值（inputs 初始化时已包含节点当前值和默认值）
+          const currentValue = inputs[fullKey]
 
           // 优先使用 @Input 装饰器指定的类型，否则智能推断
           const fieldType = metadata.type || inferFieldType(propKey, currentValue)
@@ -132,7 +195,7 @@ export function RunConfigDialog({
       />
       <div className="fixed left-1/2 top-1/2 z-[9999] w-full max-w-2xl max-h-[80vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-card shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-border p-6">
+        <div className="flex items-center justify-between border-b border-border p-4">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-primary">
               <Settings className="h-5 w-5" strokeWidth={1.8} />
@@ -215,7 +278,12 @@ export function RunConfigDialog({
 function inferFieldType(propKey: string, value: any): InputFieldType {
   const lowerKey = propKey.toLowerCase()
 
-  // 根据属性名推断
+  // 根据属性名推断 - 图片相关
+  if (lowerKey.includes('image') || lowerKey.includes('img') || lowerKey.includes('picture') || lowerKey.includes('photo')) {
+    return 'image'
+  }
+
+  // 根据属性名推断 - 日期时间
   if (lowerKey.includes('date')) {
     return 'date'
   }
@@ -254,6 +322,11 @@ function inferFieldType(propKey: string, value: any): InputFieldType {
   }
 
   if (typeof value === 'string') {
+    // 检查是否为图片 URL
+    if (/\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(value) || value.startsWith('data:image/')) {
+      return 'image'
+    }
+
     // 检查字符串长度，长字符串用 textarea
     if (value.length > 100) {
       return 'textarea'
@@ -296,6 +369,9 @@ function formatLabel(key: string): string {
     delay: '延迟时间',
     enabled: '启用',
     disabled: '禁用',
+    image: '图片',
+    uploadedImage: '已上传图片',
+    imageUrl: '图片地址',
   }
 
   if (labelMap[key]) {
@@ -330,6 +406,10 @@ function getPlaceholder(propKey: string, type: InputFieldType): string {
 
   if (type === 'textarea') {
     return '请输入多行文本...'
+  }
+
+  if (type === 'image') {
+    return '点击上传图片'
   }
 
   return `请输入${formatLabel(propKey)}`

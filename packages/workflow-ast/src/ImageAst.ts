@@ -1,49 +1,17 @@
-import { Ast, Input, IS_BUFFER, IS_MULTI, Node, Output } from "@sker/workflow";
+import { Ast, Input, Node, Output } from "@sker/workflow";
 
 /**
- * 标注类型
- */
-export type AnnotationType = 'text' | 'arrow' | 'rect' | 'circle';
-
-/**
- * 标注数据
- */
-export interface Annotation {
-    type: AnnotationType;
-    x: number;
-    y: number;
-    width?: number;
-    height?: number;
-    endX?: number;
-    endY?: number;
-    text?: string;
-    color: string;
-    lineWidth?: number;
-}
-
-/**
- * 裁剪区域
- */
-export interface CropArea {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-}
-
-/**
- * 图片节点 - 支持上传、输入、预览、编辑和标注
+ * 图片节点 - 支持上传、输入、预览
+ *
+ * 设计说明：
+ * - uploadedImage 既可以是用户上传的图片，也可以从上游节点接收图片 URL
+ * - 支持通过边连接自动填充，也支持在 RunConfigDialog 中手动上传
+ * - 裁剪和标注是 UI 层的临时编辑状态，最终生成新图片 URL 保存在 uploadedImage 中
  */
 @Node({ title: '图片', type: 'basic' })
 export class ImageAst extends Ast {
-    @Input({ title: '图片输入', mode: IS_MULTI | IS_BUFFER })
-    imageInputs: string[] = [];
-
+    @Input({ title: '图片', type: 'image' })
     uploadedImage: string = '';
-
-    annotations: Annotation[] = [];
-
-    cropArea: CropArea | null = null;
 
     @Output({ title: '图片' })
     image: string = '';

@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from 'react'
-import { WorkflowGraphAst, generateId, addNode as astAddNode, addEdge as astAddEdge, Compiler } from '@sker/workflow'
+import { WorkflowGraphAst, generateId, addNode as astAddNode, addEdge as astAddEdge, Compiler, cleanOrphanedProperties } from '@sker/workflow'
 import { root } from '@sker/core'
 import type { INode, IEdge } from '@sker/workflow'
 import { useNodesState, useEdgesState, addEdge, type Connection } from '@xyflow/react'
@@ -157,6 +157,11 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
 
   /**
    * 删除节点
+   *
+   * 优雅设计：
+   * - 同步删除关联的边
+   * - 清理引用该节点的动态属性（避免属性残留）
+   * - 同步更新 AST 和 UI 状态
    */
   const removeNode = useCallback(
     (nodeId: string) => {
@@ -164,6 +169,9 @@ export function useWorkflow(initialAst?: WorkflowGraphAst): UseWorkflowReturn {
       workflowAst.edges = workflowAst.edges.filter(
         (edge) => edge.from !== nodeId && edge.to !== nodeId
       )
+
+      // 清理引用该节点的动态属性（nodeId.property 格式）
+      cleanOrphanedProperties(workflowAst, [nodeId])
 
       setNodes((nodes) => nodes.filter((node) => node.id !== nodeId))
       setEdges((edges) =>

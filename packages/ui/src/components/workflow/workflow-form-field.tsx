@@ -1,8 +1,13 @@
 'use client'
 
-import React, { useState, useEffect, lazy, Suspense } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { cn } from '@udecode/cn'
 import { MarkdownEditor } from '@sker/ui/components/ui/markdown-editor'
+import { ImageEditor } from '@sker/ui/components/ui/image-editor'
+import type { Annotation, CropArea } from '@sker/ui/components/ui/image-editor'
+import { useUploadFile } from '@sker/ui/hooks/use-upload-file'
+import { Button } from '@sker/ui/components/ui/button'
+import { Upload, X } from 'lucide-react'
 
 /** 支持的输入字段类型 */
 export type InputFieldType =
@@ -14,6 +19,7 @@ export type InputFieldType =
   | 'boolean'
   | 'date'
   | 'datetime-local'
+  | 'image'
   | 'any'
 
 export interface WorkflowFormFieldProps {
@@ -25,6 +31,7 @@ export interface WorkflowFormFieldProps {
   error?: string
   disabled?: boolean
   className?: string
+  uploadEndpoint?: string  // 图片上传接口
 }
 
 export function WorkflowFormField({
@@ -36,10 +43,28 @@ export function WorkflowFormField({
   error: externalError,
   disabled = false,
   className,
+  uploadEndpoint,
 }: WorkflowFormFieldProps) {
   const [localValue, setLocalValue] = useState(formatValueForInput(value, type))
   const [error, setError] = useState<string | null>(null)
   const [isFocused, setIsFocused] = useState(false)
+
+  // 图片编辑相关状态
+  const [showEditor, setShowEditor] = useState(false)
+  const [imageAnnotations, setImageAnnotations] = useState<Annotation[]>([])
+  const [imageCropArea, setImageCropArea] = useState<CropArea | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // 图片上传 hook
+  const { isUploading, progress, uploadFile } = useUploadFile({
+    endpoint: uploadEndpoint || '/api/upload/file',
+    onSuccess: (file) => {
+      onChange(file.url)
+    },
+    onError: (err) => {
+      setError(err.message)
+    }
+  })
 
   useEffect(() => {
     if (!isFocused) {
@@ -131,6 +156,41 @@ export function WorkflowFormField({
     }
   }
 
+  // 图片上传处理
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+      setError('请选择图片文件')
+      return
+    }
+
+    await uploadFile(file)
+  }
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleImageDelete = () => {
+    onChange('')
+    setImageAnnotations([])
+    setImageCropArea(null)
+  }
+
+  const handleImageClick = () => {
+    if (value) {
+      setShowEditor(true)
+    }
+  }
+
+  const handleEditorSave = (data: { annotations?: Annotation[], crop?: CropArea }) => {
+    setImageAnnotations(data.annotations || [])
+    setImageCropArea(data.crop || null)
+    setShowEditor(false)
+  }
+
   const baseInputClass = cn(
     'w-full px-3 py-2 text-sm border rounded-lg transition-all duration-200',
     'focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary',
@@ -141,6 +201,99 @@ export function WorkflowFormField({
 
   const renderInput = () => {
     switch (type) {
+      case 'image':
+        return (
+          <div className="space-y-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              className="hidden"
+              disabled={disabled}
+              aria-label="选择图片文件"
+            />
+
+            {!value && !isUploading && (
+              <button
+                type="button"
+                onClick={handleUploadClick}
+                disabled={disabled}
+                className={cn(
+                  "relative flex items-center justify-center",
+                  "w-32 h-32 rounded-lg border-2 border-dashed",
+                  "transition-all duration-200",
+                  "hover:border-primary hover:bg-primary/5",
+                  "focus:outline-none focus:ring-2 focus:ring-primary/50",
+                  "disabled:opacity-50 disabled:cursor-not-allowed",
+                  "border-border bg-muted/30"
+                )}
+              >
+                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                  <Upload className="h-8 w-8" strokeWidth={1.5} />
+                  <span className="text-xs font-medium">{placeholder || '上传图片'}</span>
+                </div>
+              </button>
+            )}
+
+            {value && (
+              <div className="relative group w-fit">
+                <div
+                  className={cn(
+                    "relative border rounded-lg overflow-hidden",
+                    "bg-muted/30 dark:bg-muted/10",
+                    !disabled && "cursor-pointer hover:border-primary transition-colors"
+                  )}
+                  onClick={!disabled ? handleImageClick : undefined}
+                >
+                  <img
+                    src={value}
+                    alt="预览"
+                    className="w-full h-auto max-h-64 object-contain"
+                  />
+                </div>
+
+                {!disabled && (
+                  <Button
+                    size="icon"
+                    variant="destructive"
+                    className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={handleImageDelete}
+                    type="button"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {isUploading && (
+              <div className="space-y-2">
+                <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full bg-primary transition-all duration-300"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+                <p className="text-sm text-muted-foreground text-center">
+                  上传中... {progress}%
+                </p>
+              </div>
+            )}
+
+            {showEditor && value && (
+              <ImageEditor
+                imageUrl={value}
+                initialAnnotations={imageAnnotations}
+                initialCrop={imageCropArea}
+                onSave={handleEditorSave}
+                onClose={() => setShowEditor(false)}
+                open={showEditor}
+              />
+            )}
+          </div>
+        )
+
       case 'boolean':
         return (
           <label className={cn(
@@ -238,15 +391,13 @@ export function WorkflowFormField({
 
       case 'richtext':
         return (
-          <Suspense fallback={<div className={cn(baseInputClass, 'min-h-[120px] animate-pulse')} />}>
-            <MarkdownEditor
-              value={typeof value === 'string' ? value : ''}
-              onChange={onChange}
-              placeholder={placeholder || '输入富文本内容...'}
-              disabled={disabled}
-              className="min-h-[120px]"
-            />
-          </Suspense>
+          <MarkdownEditor
+            value={typeof value === 'string' ? value : ''}
+            onChange={onChange}
+            placeholder={placeholder || '输入富文本内容...'}
+            disabled={disabled}
+            className="min-h-[120px]"
+          />
         )
 
       case 'text':
@@ -389,6 +540,8 @@ function getPlaceholder(type: string): string {
       return '选择日期时间'
     case 'textarea':
       return '输入多行文本...'
+    case 'image':
+      return '上传图片'
     default:
       return '输入文本...'
   }

@@ -153,6 +153,7 @@ export type InputFieldType =
     | 'boolean'
     | 'date'
     | 'datetime-local'
+    | 'image'
     | 'any';
 
 export interface InputOptions {

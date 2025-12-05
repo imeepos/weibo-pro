@@ -7,6 +7,7 @@ import { VisitorExecutor } from './execution/visitor-executor';
 import { concat, Observable, of } from 'rxjs';
 import { Injectable, root } from "@sker/core";
 import { map, concatMap } from 'rxjs/operators';
+import { cleanOrphanedProperties } from "./ast-utils";
 
 @Injectable()
 export class WorkflowExecutorVisitor {
@@ -23,6 +24,9 @@ export class WorkflowExecutorVisitor {
      */
     @Handler(WorkflowGraphAst)
     visit(ast: WorkflowGraphAst, ctx: WorkflowGraphAst): Observable<INode> {
+        // 执行前清理不存在节点的动态属性
+        cleanOrphanedProperties(ast);
+
         // 在执行前，将子工作流的输入分发给内部节点
         this.distributeInputsToInternalNodes(ast);
 

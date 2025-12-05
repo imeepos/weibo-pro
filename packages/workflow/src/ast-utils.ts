@@ -381,6 +381,82 @@ export function clearGraph(
 }
 
 /**
+ * 清理工作流中孤立的动态属性
+ *
+ * 应用场景：
+ * - 删除节点后，清理引用该节点的 `nodeId.property` 格式属性
+ * - 执行工作流前，确保所有动态属性都有效
+ *
+ * 优雅设计：
+ * - 原地修改 workflow 对象（性能优化）
+ * - 自动识别动态属性格式
+ * - 仅清理引用不存在节点的属性
+ *
+ * @param workflow 工作流 AST 对象
+ * @param deletedNodeIds 可选，仅清理引用这些节点的属性（性能优化）
+ */
+export function cleanOrphanedProperties(
+    workflow: INode,
+    deletedNodeIds?: string[]
+): void {
+    const validNodeIds = deletedNodeIds
+        ? new Set(
+              (workflow as any).nodes
+                  ?.map((n: INode) => n.id)
+                  .filter((id: string) => !deletedNodeIds.includes(id))
+          )
+        : new Set((workflow as any).nodes?.map((n: INode) => n.id) || []);
+
+    // 内置属性白名单
+    const builtinProps = new Set([
+        'id',
+        'type',
+        'name',
+        'description',
+        'state',
+        'error',
+        'count',
+        'emitCount',
+        'position',
+        'color',
+        'collapsed',
+        'width',
+        'dynamicOutputs',
+        'nodes',
+        'edges',
+        'entryNodeIds',
+        'viewport',
+        'tags',
+        'abortSignal'
+    ]);
+
+    Object.keys(workflow).forEach((key) => {
+        // 跳过内置属性
+        if (builtinProps.has(key)) {
+            return;
+        }
+
+        // 检查是否是动态属性（包含点号）
+        const lastDotIndex = key.lastIndexOf('.');
+        if (lastDotIndex === -1) {
+            return;
+        }
+
+        const nodeId = key.substring(0, lastDotIndex);
+
+        // 如果指定了 deletedNodeIds，仅清理这些节点的属性
+        if (deletedNodeIds && !deletedNodeIds.includes(nodeId)) {
+            return;
+        }
+
+        // 如果节点不存在，删除该属性
+        if (!validNodeIds.has(nodeId)) {
+            delete (workflow as any)[key];
+        }
+    });
+}
+
+/**
  * 动态计算工作流的输入端口
  *
  * 优雅设计：

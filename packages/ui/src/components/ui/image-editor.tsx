@@ -8,6 +8,7 @@ import { cn } from "@sker/ui/lib/utils"
 
 export type AnnotationType = 'rect' | 'circle' | 'arrow' | 'text'
 export type ToolType = AnnotationType | 'crop'
+export type CropShape = 'rect' | 'circle'
 
 export interface Annotation {
   type: AnnotationType
@@ -27,13 +28,14 @@ export interface CropArea {
   y: number
   width: number
   height: number
+  shape?: CropShape  // 裁剪形状：矩形或圆形
 }
 
 interface ImageEditorProps {
   imageUrl: string
   initialAnnotations?: Annotation[]
   initialCrop?: CropArea | null
-  onSave?: (data: { annotations?: Annotation[], crop?: CropArea }) => void
+  onSave?: (data: { annotations?: Annotation[], crop?: CropArea }) => void | Promise<void>
   onClose: () => void
   open?: boolean
 }
@@ -42,11 +44,13 @@ export const ImageEditor = React.forwardRef<HTMLCanvasElement, ImageEditorProps>
   ({ imageUrl, initialAnnotations = [], initialCrop = null, onSave, onClose, open = true }, ref) => {
     const canvasRef = React.useRef<HTMLCanvasElement>(null)
     const [currentTool, setCurrentTool] = React.useState<ToolType>('rect')
+    const [cropShape, setCropShape] = React.useState<CropShape>(initialCrop?.shape || 'rect')
     const [annotations, setAnnotations] = React.useState<Annotation[]>(initialAnnotations)
     const [cropArea, setCropArea] = React.useState<CropArea | null>(initialCrop)
     const [isDrawing, setIsDrawing] = React.useState(false)
     const [startPos, setStartPos] = React.useState({ x: 0, y: 0 })
     const [image, setImage] = React.useState<HTMLImageElement | null>(null)
+    const [isSaving, setIsSaving] = React.useState(false)
 
     React.useEffect(() => {
       const img = new Image()
@@ -76,15 +80,56 @@ export const ImageEditor = React.forwardRef<HTMLCanvasElement, ImageEditorProps>
 
       // 绘制裁剪遮罩
       if (crop) {
+        const shape = crop.shape || 'rect'
+
+        // 绘制半透明黑色遮罩
         ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'
         ctx.fillRect(0, 0, canvas.width, canvas.height)
-        ctx.clearRect(crop.x, crop.y, crop.width, crop.height)
-        ctx.drawImage(img, crop.x, crop.y, crop.width, crop.height, crop.x, crop.y, crop.width, crop.height)
-        ctx.strokeStyle = 'hsl(var(--primary))'
-        ctx.lineWidth = 2
-        ctx.setLineDash([5, 5])
-        ctx.strokeRect(crop.x, crop.y, crop.width, crop.height)
-        ctx.setLineDash([])
+
+        // 保存上下文状态
+        ctx.save()
+
+        if (shape === 'circle') {
+          // 圆形裁剪
+          const centerX = crop.x + crop.width / 2
+          const centerY = crop.y + crop.height / 2
+          const radiusX = Math.abs(crop.width / 2)
+          const radiusY = Math.abs(crop.height / 2)
+
+          // 创建圆形路径并裁剪
+          ctx.beginPath()
+          ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, 2 * Math.PI)
+          ctx.clip()
+
+          // 清除遮罩并重新绘制图片
+          ctx.clearRect(0, 0, canvas.width, canvas.height)
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+
+          // 恢复上下文以绘制边框
+          ctx.restore()
+
+          // 绘制圆形边框
+          ctx.strokeStyle = 'hsl(var(--primary))'
+          ctx.lineWidth = 2
+          ctx.setLineDash([5, 5])
+          ctx.beginPath()
+          ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, 2 * Math.PI)
+          ctx.stroke()
+          ctx.setLineDash([])
+        } else {
+          // 矩形裁剪（原有逻辑）
+          ctx.clearRect(crop.x, crop.y, crop.width, crop.height)
+          ctx.drawImage(img, crop.x, crop.y, crop.width, crop.height, crop.x, crop.y, crop.width, crop.height)
+
+          // 绘制矩形边框
+          ctx.strokeStyle = 'hsl(var(--primary))'
+          ctx.lineWidth = 2
+          ctx.setLineDash([5, 5])
+          ctx.strokeRect(crop.x, crop.y, crop.width, crop.height)
+          ctx.setLineDash([])
+
+          ctx.restore()
+        }
       }
 
       // 始终绘制标注（不受模式限制）
@@ -180,7 +225,8 @@ export const ImageEditor = React.forwardRef<HTMLCanvasElement, ImageEditorProps>
           x: Math.min(startPos.x, x),
           y: Math.min(startPos.y, y),
           width: Math.abs(x - startPos.x),
-          height: Math.abs(y - startPos.y)
+          height: Math.abs(y - startPos.y),
+          shape: cropShape
         }
         redraw(image, annotations, tempCrop)
       } else if (currentTool !== 'text') {
@@ -207,7 +253,8 @@ export const ImageEditor = React.forwardRef<HTMLCanvasElement, ImageEditorProps>
           x: Math.min(startPos.x, x),
           y: Math.min(startPos.y, y),
           width: Math.abs(x - startPos.x),
-          height: Math.abs(y - startPos.y)
+          height: Math.abs(y - startPos.y),
+          shape: cropShape
         }
         setCropArea(newCrop)
         redraw(image, annotations, newCrop)
@@ -240,12 +287,22 @@ export const ImageEditor = React.forwardRef<HTMLCanvasElement, ImageEditorProps>
       }
     }
 
-    const handleSave = () => {
-      onSave?.({
-        annotations,
-        crop: cropArea || undefined
-      })
-      onClose()
+    const handleSave = async () => {
+      if (!onSave) {
+        onClose()
+        return
+      }
+
+      setIsSaving(true)
+      try {
+        await onSave({
+          annotations,
+          crop: cropArea || undefined
+        })
+        onClose()
+      } finally {
+        setIsSaving(false)
+      }
     }
 
     const tools = [
@@ -281,6 +338,29 @@ export const ImageEditor = React.forwardRef<HTMLCanvasElement, ImageEditorProps>
                   </Button>
                 ))}
 
+                {/* 裁剪形状切换 */}
+                {currentTool === 'crop' && (
+                  <div className="flex flex-col gap-2 pt-2 border-t">
+                    <span className="text-xs text-muted-foreground px-1">裁剪形状</span>
+                    <Button
+                      size="icon"
+                      variant={cropShape === 'rect' ? 'default' : 'outline'}
+                      onClick={() => setCropShape('rect')}
+                      title="矩形裁剪"
+                    >
+                      <Square className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant={cropShape === 'circle' ? 'default' : 'outline'}
+                      onClick={() => setCropShape('circle')}
+                      title="圆形裁剪"
+                    >
+                      <Circle className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+
                 {(annotations.length > 0 || cropArea) && (
                   <>
                     <div className="border-t my-2" />
@@ -301,9 +381,10 @@ export const ImageEditor = React.forwardRef<HTMLCanvasElement, ImageEditorProps>
                   size="icon"
                   variant="outline"
                   onClick={handleSave}
+                  disabled={isSaving}
                   title="保存"
                 >
-                  <Save />
+                  <Save className={cn(isSaving && "animate-pulse")} />
                 </Button>
               </div>
 
