@@ -1,4 +1,4 @@
-import { type INode, type IEdge, generateId } from '@sker/workflow'
+import { type INode, type IEdge, generateId, WorkflowGraphAst } from '@sker/workflow'
 import type { WorkflowNode, WorkflowEdge } from '../types'
 
 /**
@@ -15,35 +15,67 @@ export function astToFlow(
 }
 
 /**
- * 转换节点数组
+ * 转换节点数组（递归展开分组）
+ * 注意：父节点必须在子节点之前，React Flow 要求
  */
 export function astToFlowNodes(ast: { nodes: INode[] }): WorkflowNode[] {
-  return ast.nodes.map(toFlowNode)
+  const result: WorkflowNode[] = []
+
+  function collect(nodes: INode[], parentId?: string) {
+    for (const node of nodes) {
+      const isGroup = node instanceof WorkflowGraphAst && node.isGroup
+
+      // 先添加分组节点本身
+      const flowNode = toFlowNode(node)
+      if (parentId) {
+        flowNode.parentId = parentId
+        flowNode.extent = 'parent'
+      }
+      result.push(flowNode)
+
+      // 再递归添加子节点（保证父节点在前）
+      if (isGroup) {
+        collect((node as WorkflowGraphAst).nodes, node.id)
+      }
+    }
+  }
+
+  collect(ast.nodes)
+  return result
 }
 
 /**
- * 转换边数组
+ * 转换边数组（递归收集分组内的边）
  */
-export function astToFlowEdges(ast: { edges: IEdge[] }): WorkflowEdge[] {
-  return ast.edges.map(toFlowEdge)
+export function astToFlowEdges(ast: { nodes: INode[]; edges: IEdge[] }): WorkflowEdge[] {
+  const result: WorkflowEdge[] = ast.edges.map(toFlowEdge)
+
+  function collectFromGroups(nodes: INode[]) {
+    for (const node of nodes) {
+      if (node instanceof WorkflowGraphAst && node.isGroup) {
+        result.push(...node.edges.map(toFlowEdge))
+        collectFromGroups(node.nodes)
+      }
+    }
+  }
+
+  collectFromGroups(ast.nodes)
+  return result
 }
 
 /**
  * 转换单个节点
- * @param node - AST 节点实例
- * @returns React Flow 节点（类型安全，直接引用 AST 实例）
- *
- * 优雅设计：
- * - data 属性直接引用 AST 实例，而非深拷贝
- * - 保持引用透明性，修改 AST 立即反映到 UI
- * - 类型安全，无需 any 断言
  */
 function toFlowNode<T extends INode>(node: T): WorkflowNode<T> {
+  const isGroup = node instanceof WorkflowGraphAst && node.isGroup
   return {
     id: node.id,
-    type: node.type,
+    type: isGroup ? 'GroupNode' : node.type,
     position: node.position || { x: 0, y: 0 },
-    data: node // 直接引用，保持引用透明性
+    data: node,
+    ...(isGroup && {
+      style: { width: node.width, height: (node as any).height }
+    })
   }
 }
 

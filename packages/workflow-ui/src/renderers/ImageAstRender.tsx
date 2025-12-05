@@ -51,13 +51,6 @@ const ImageComponent: React.FC<{ ast: ImageAst }> = ({ ast }) => {
 
     const currentImage = getCurrentImage();
 
-    console.log('🖼️ 当前渲染状态:', {
-        currentImage,
-        uploadedImage: ast.uploadedImage,
-        isUploading,
-        updateKey
-    });
-
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         console.log('📁 选择的文件:', file);

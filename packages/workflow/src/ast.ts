@@ -42,6 +42,8 @@ export abstract class Ast implements INode {
     type!: string;
     // 画布中的位置信息
     position: { x: number; y: number } = { x: 0, y: 0 }
+    // 父节点ID（用于分组）
+    parentId?: string
 
     /**
      * 编译后的元数据（由 Compiler 生成）

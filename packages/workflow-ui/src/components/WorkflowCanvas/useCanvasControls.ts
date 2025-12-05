@@ -98,13 +98,37 @@ export function useCanvasControls() {
   )
 
   /**
-   * 处理节点选择
+   * 处理节点选择（分组节点会选中所有子节点）
    */
   const onNodeClick = useCallback(
     (_event: React.MouseEvent, node: any) => {
       selectNode(node.id)
+
+      // 如果是分组节点，选中所有子节点
+      if (node.type === 'GroupNode') {
+        const allNodes = getNodes()
+        const childIds = new Set<string>()
+
+        // 递归收集所有子节点
+        const collectChildren = (parentId: string) => {
+          allNodes.forEach(n => {
+            if (n.parentId === parentId) {
+              childIds.add(n.id)
+              if (n.type === 'GroupNode') collectChildren(n.id)
+            }
+          })
+        }
+        collectChildren(node.id)
+
+        if (childIds.size > 0) {
+          setNodes(nodes => nodes.map(n => ({
+            ...n,
+            selected: n.id === node.id || childIds.has(n.id)
+          })))
+        }
+      }
     },
-    [selectNode]
+    [selectNode, getNodes, setNodes]
   )
 
   /**

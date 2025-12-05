@@ -132,27 +132,27 @@ export function useWorkflow(
   useEffect(() => {
     let hasPositionChanged = false
 
+    // 递归查找 AST 节点
+    const findAstNode = (id: string, nodeList: INode[]): INode | undefined => {
+      for (const n of nodeList) {
+        if (n.id === id) return n
+        if (n instanceof WorkflowGraphAst && n.isGroup) {
+          const found = findAstNode(id, n.nodes)
+          if (found) return found
+        }
+      }
+      return undefined
+    }
+
     nodes.forEach((node) => {
-      const astNode = workflowAst.nodes.find((n) => n.id === node.id)
+      const astNode = findAstNode(node.id, workflowAst.nodes)
       if (astNode) {
         const currentPos = astNode.position
         const newPos = node.position
 
         if (!currentPos || currentPos.x !== newPos.x || currentPos.y !== newPos.y) {
-          const deltaX = newPos.x - (currentPos?.x || 0)
-          const deltaY = newPos.y - (currentPos?.y || 0)
-
           astNode.position = newPos
           hasPositionChanged = true
-
-          if (astNode instanceof WorkflowGraphAst && astNode.isGroup) {
-            astNode.nodes.forEach(innerNode => {
-              innerNode.position = {
-                x: innerNode.position.x + deltaX,
-                y: innerNode.position.y + deltaY
-              }
-            })
-          }
         }
 
         if (astNode.collapsed !== node.data.collapsed) {
@@ -378,75 +378,60 @@ export function useWorkflow(
   }, [workflowAst, setNodes, setEdges])
 
   /**
-   * 创建分组
-   *
-   * 优雅设计：
-   * - 将选中节点转换为分组容器（WorkflowGraphAst）
-   * - 自动处理内部边和跨边界边
-   * - 计算分组位置为选中节点包围盒中心
-   * - 返回分组ID，便于后续操作
+   * 创建分组（使用 React Flow parentId 机制）
    */
   const createGroup = useCallback(
     (selectedNodeIds: string[], title?: string): string | undefined => {
-      if (selectedNodeIds.length === 0) {
-        console.warn('无选中节点，无法创建分组')
-        return undefined
-      }
+      if (selectedNodeIds.length === 0) return undefined
 
-      // 1. 创建分组 AST
+      const selectedNodes = workflowAst.nodes.filter(n => selectedNodeIds.includes(n.id))
+      if (selectedNodes.length === 0) return undefined
+
+      // 计算包围盒（考虑节点实际大小）
+      const positions = selectedNodes.map(n => n.position).filter(Boolean)
+      const padding = 20
+      const headerHeight = 30
+      const nodeWidth = 200
+      const nodeHeight = 80
+
+      const minX = Math.min(...positions.map(p => p.x)) - padding
+      const minY = Math.min(...positions.map(p => p.y)) - padding - headerHeight
+      const maxX = Math.max(...positions.map(p => p.x)) + nodeWidth + padding
+      const maxY = Math.max(...positions.map(p => p.y)) + nodeHeight + padding
+
+      // 创建分组节点
       const groupAst = new WorkflowGraphAst()
       groupAst.id = generateId()
       groupAst.name = title || `分组 ${workflowAst.nodes.filter(n => n instanceof WorkflowGraphAst && n.isGroup).length + 1}`
       groupAst.color = '#3b82f6'
-      groupAst.collapsed = true
-      // 注意：不设置 entryNodeIds，保持为空数组，这样 isGroup getter 会返回 true
+      groupAst.position = { x: minX, y: minY }
+      groupAst.width = maxX - minX
+      ;(groupAst as any).height = maxY - minY
 
-      // 2. 提取选中节点
-      const selectedNodes = workflowAst.nodes.filter(n => selectedNodeIds.includes(n.id))
-      if (selectedNodes.length === 0) {
-        console.warn('未找到选中节点')
-        return undefined
-      }
-
-      // 3. 计算分组位置（包围盒中心）
-      const positions = selectedNodes.map(n => n.position).filter(p => p)
-      if (positions.length > 0) {
-        const minX = Math.min(...positions.map(p => p.x))
-        const maxX = Math.max(...positions.map(p => p.x))
-        const minY = Math.min(...positions.map(p => p.y))
-        const maxY = Math.max(...positions.map(p => p.y))
-        groupAst.position = {
-          x: (minX + maxX) / 2,
-          y: (minY + maxY) / 2
+      // 设置子节点的 parentId，并转换为相对坐标（加上标题栏偏移）
+      selectedNodes.forEach(node => {
+        node.parentId = groupAst.id
+        node.position = {
+          x: node.position.x - minX,
+          y: node.position.y - minY
         }
-      }
+      })
 
-      // 4. 提取内部边（两端都在选中节点内）
+      // 提取内部边移入分组
       const selectedNodeIdSet = new Set(selectedNodeIds)
       const internalEdges = workflowAst.edges.filter(
         e => selectedNodeIdSet.has(e.from) && selectedNodeIdSet.has(e.to)
       )
-
-      // 5. 将节点和内部边移入分组
       groupAst.nodes = selectedNodes
       groupAst.edges = internalEdges
 
-      // 6. 从父工作流移除节点和内部边
+      // 从父工作流移除
       workflowAst.nodes = workflowAst.nodes.filter(n => !selectedNodeIds.includes(n.id))
-      workflowAst.edges = workflowAst.edges.filter(
-        e => !internalEdges.some(ie => ie.id === e.id)
-      )
-
-      // 7. 将分组添加到父工作流
+      workflowAst.edges = workflowAst.edges.filter(e => !internalEdges.some(ie => ie.id === e.id))
       workflowAst.nodes = astAddNode(workflowAst.nodes, groupAst)
 
-      // 8. 处理跨边界边（一端在分组内，一端在外）
-      // TODO: 未来实现边重定向逻辑
-
-      // 9. 同步到 UI
       syncFromAst()
       recordHistory()
-
       return groupAst.id
     },
     [workflowAst, syncFromAst, recordHistory]
@@ -454,28 +439,30 @@ export function useWorkflow(
 
   /**
    * 解散分组
-   *
-   * 优雅设计：
-   * - 将分组内节点还原到父工作流
-   * - 恢复内部边
-   * - 删除分组节点
    */
   const ungroupNodes = useCallback(
     (groupId: string) => {
-      const groupNode = workflowAst.nodes.find(n => n.id === groupId)
+      const groupNode = workflowAst.nodes.find(n => n.id === groupId) as WorkflowGraphAst | undefined
+      if (!groupNode || groupNode.type !== 'WorkflowGraphAst') return
 
-      if (groupNode && groupNode.type === 'WorkflowGraphAst') {
-        // 1. 将分组内节点移回父工作流
-        workflowAst.nodes = workflowAst.nodes.filter(n => n.id !== groupId)
-        workflowAst.nodes.push(...groupNode.nodes)
+      const groupPos = groupNode.position
 
-        // 2. 将内部边移回父工作流
-        workflowAst.edges.push(...groupNode.edges)
+      // 清除 parentId，转换为绝对坐标
+      groupNode.nodes.forEach(node => {
+        node.parentId = undefined
+        node.position = {
+          x: node.position.x + groupPos.x,
+          y: node.position.y + groupPos.y
+        }
+      })
 
-        // 3. 同步到 UI
-        syncFromAst()
-        recordHistory()
-      }
+      // 移回父工作流
+      workflowAst.nodes = workflowAst.nodes.filter(n => n.id !== groupId)
+      workflowAst.nodes.push(...groupNode.nodes)
+      workflowAst.edges.push(...groupNode.edges)
+
+      syncFromAst()
+      recordHistory()
     },
     [workflowAst, syncFromAst, recordHistory]
   )

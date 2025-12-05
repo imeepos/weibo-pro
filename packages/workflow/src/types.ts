@@ -59,6 +59,8 @@ export interface INode extends Record<string, any> {
     error: SerializedError | undefined;
     // 位置
     position: { x: number; y: number };
+    // 父节点ID（用于分组）
+    parentId?: string;
     // 元数据
     metadata?: {
         class: INodeMetadata;

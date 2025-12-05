@@ -38,14 +38,6 @@ const VideoComponent: React.FC<{ ast: VideoAst }> = ({ ast }) => {
     };
 
     const currentVideo = getCurrentVideo();
-
-    console.log('🎬 当前渲染状态:', {
-        currentVideo,
-        uploadedVideo: ast.uploadedVideo,
-        isUploading,
-        updateKey
-    });
-
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         console.log('📁 选择的文件:', file);

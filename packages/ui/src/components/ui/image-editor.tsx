@@ -316,14 +316,14 @@ export const ImageEditor = React.forwardRef<HTMLCanvasElement, ImageEditorProps>
     return (
       <Dialog open={open} onOpenChange={onClose}>
         <DialogContent
-          className="p-0 max-w-[95vw] max-h-[95vh]"
+          className="p-0 max-w-[95vw] max-h-[95vh] h-[95vh] flex flex-col"
         >
-          <div className="flex flex-col h-full">
+          <div className="flex flex-col h-full min-h-0">
             <DialogHeader className="px-6 py-4 border-b shrink-0">
               <DialogTitle>图片编辑器</DialogTitle>
             </DialogHeader>
 
-            <div className="flex flex-1 overflow-hidden">
+            <div className="flex flex-1 overflow-hidden min-h-0">
               {/* 左侧工具栏 */}
               <div className="flex flex-col gap-2 p-4 border-r shrink-0 bg-muted/30">
                 {tools.map(({ type, icon: Icon, title }) => (
