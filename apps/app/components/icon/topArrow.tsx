@@ -10,7 +10,7 @@ const BaseSvg = (props: SvgProps) => (
     </G>
     <Defs>
       <ClipPath id="clip0_5062_901">
-        <Rect width="10" height="10" fill="white" x="10" y="10" scaleX={-1} scaleY={-1} />
+        <Rect width="10" height="10" fill="white" transform="translate(10, 10) scale(-1, -1)" />
       </ClipPath>
     </Defs>
   </Svg>

@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
-import { generateId } from '@sker/workflow'
+import { generateId, Compiler } from '@sker/workflow'
+import { root } from '@sker/core'
 import type { WorkflowNode, WorkflowEdge } from '../types'
 import type { XYPosition } from '@xyflow/react'
 
@@ -142,6 +143,7 @@ export function useClipboard(): UseClipboardReturn {
       })
 
       // 克隆节点，生成新ID，调整位置
+      const compiler = root.get(Compiler)
       const newNodes: WorkflowNode[] = clipboard.nodes.map((node: any, i) => {
         const newId = idMap.get(node.id)!
 
@@ -166,6 +168,10 @@ export function useClipboard(): UseClipboardReturn {
         // 深拷贝 AST 对象并更新 ID
         const clonedData = structuredClone(node.data)
         clonedData.id = newId
+        clonedData.position = newPosition
+
+        // 重新编译以恢复 metadata 字段
+        const compiledData = compiler.compile(clonedData)
 
         // 清除临时尺寸属性
         const { _width, _height, ...cleanNode } = node
@@ -174,7 +180,7 @@ export function useClipboard(): UseClipboardReturn {
           ...cleanNode,
           id: newId,
           position: newPosition,
-          data: clonedData,
+          data: compiledData,
           selected: false,
         }
       })

@@ -1,4 +1,5 @@
-import { isNode, INode } from '@sker/workflow'
+import { isNode, INode, Compiler } from '@sker/workflow'
+import { root } from '@sker/core'
 import type { NodeMetadata, PortMetadata } from '../types'
 import { getExposedInputs, getExposedOutputs } from '../utils/workflow-ports'
 
@@ -7,16 +8,27 @@ import { getExposedInputs, getExposedOutputs } from '../utils/workflow-ports'
  *
  * 优雅设计：
  * - ✨强制使用编译后的 node.metadata 字段
- * - 不支持从装饰器读取元数据（确保一致性）
+ * - 如果节点未编译，自动编译以恢复 metadata
  * - WorkflowGraphAst 动态计算端口（基于内部结构）
  *
  * 存在即合理：
  * - 编译后的节点自包含元数据，无需依赖装饰器
  * - 统一管理元数据获取路径，避免多处实现
+ * - 自动修复丢失 metadata 的节点（防御性编程）
  */
 export function getNodeMetadata(node: INode): NodeMetadata {
   if (!node) throw new Error(`node is null`)
-  if (!isNode(node)) throw new Error(`node must be compiled with metadata field`)
+
+  // 如果节点未编译（缺少 metadata），自动编译
+  if (!isNode(node)) {
+    console.warn(`[getNodeMetadata] 节点缺少 metadata，自动编译恢复`, {
+      nodeId: node.id,
+      nodeType: node.type
+    })
+
+    const compiler = root.get(Compiler)
+    node = compiler.compile(node)
+  }
 
   const nodeType = node.type
 

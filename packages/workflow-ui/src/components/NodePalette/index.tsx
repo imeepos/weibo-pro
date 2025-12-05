@@ -9,7 +9,7 @@ import { useNodeRegistry } from './useNodeRegistry'
 import { NodeCard } from './NodeCard'
 import { getAllNodeTypes } from '../../adapters'
 import type { NodeMetadata, WorkflowNode } from '../../types'
-import { generateId } from '@sker/workflow'
+import { createCompiledNode } from '../../utils/createCompiledNode'
 import { cn } from '../../utils/cn'
 
 export interface NodePaletteProps {
@@ -34,19 +34,19 @@ export function NodePalette({ className = '' }: NodePaletteProps) {
 
       if (!NodeClass) return
 
-      const ast = new NodeClass()
-      ast.id = generateId()
-
       const position = screenToFlowPosition({
         x: window.innerWidth / 2,
         y: window.innerHeight / 2,
       })
 
+      // 使用工具函数创建并编译节点
+      const compiledAst = createCompiledNode(NodeClass, { position })
+
       const node: WorkflowNode = {
-        id: ast.id,
+        id: compiledAst.id,
         type: metadata.type,
         position,
-        data: ast,
+        data: compiledAst,
       }
 
       addNode(node)

@@ -23,8 +23,18 @@ export interface LeftDrawerProps {
 
 export function LeftDrawer({ visible, onClose, onRunNode, onLocateNode, className }: LeftDrawerProps) {
   const selectedNode = useSelectedNode()
-  const metadata = selectedNode ? getNodeMetadata(selectedNode.data) : null
   const { setNodes } = useReactFlow()
+
+  // useSelectedNode 已确保节点已编译，可安全获取 metadata
+  const metadata = useMemo(() => {
+    if (!selectedNode) return null
+    try {
+      return getNodeMetadata(selectedNode.data)
+    } catch (error) {
+      console.error('[LeftDrawer] 获取节点元数据失败', error)
+      return null
+    }
+  }, [selectedNode])
 
   const [formData, setFormData] = useState<Record<string, any>>({})
   const [hasChanges, setHasChanges] = useState(false)
