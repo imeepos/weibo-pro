@@ -63,10 +63,23 @@ export function hasNode(nodes: INode[], id: string): boolean {
 }
 
 /**
- * 根据 ID 获取节点
+ * 根据 ID 获取节点（递归查找组节点内部）
+ *
+ * 优雅设计：
+ * - 与 hasNode 保持一致，支持递归查找
+ * - 自动遍历 WorkflowGraphAst 组节点的子节点
  */
 export function getNodeById<T extends INode = INode>(nodes: INode[], id: string): T | undefined {
-    return nodes.find(node => node.id === id) as T | undefined;
+    for (const node of nodes) {
+        if (node.id === id) return node as T;
+
+        // 递归查找组节点内部
+        if ((node as any).isGroupNode && (node as any).nodes?.length > 0) {
+            const found = getNodeById<T>((node as any).nodes, id);
+            if (found) return found;
+        }
+    }
+    return undefined;
 }
 
 /**

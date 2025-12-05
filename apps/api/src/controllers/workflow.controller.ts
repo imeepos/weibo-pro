@@ -1,6 +1,6 @@
 import { Controller, Post, Body, Get, BadRequestException, Query, Delete, NotFoundException, Sse, Res, Param, Put } from '@nestjs/common';
 import { Observable, tap } from 'rxjs';
-import { Ast, executeAst, fromJson, generateId, INode, resolveConstructor, type OutputMetadata } from '@sker/workflow';
+import { Ast, executeAst, fromJson, generateId, INode, resolveConstructor, type OutputMetadata, getNodeById } from '@sker/workflow';
 import { WorkflowGraphAst, ReactiveScheduler } from '@sker/workflow';
 import { logger, root } from '@sker/core';
 import * as sdk from '@sker/sdk';
@@ -239,8 +239,8 @@ export class WorkflowController implements sdk.WorkflowController {
       // 反序列化工作流图
       const workflowAst = fromJson(workflow) as WorkflowGraphAst;
 
-      // 找到要执行的节点
-      const targetNode = workflowAst.nodes.find(n => n.id === nodeId);
+      // 找到要执行的节点（支持递归查找组节点内部）
+      const targetNode = getNodeById(workflowAst.nodes, nodeId);
       if (!targetNode) {
         throw new BadRequestException(`节点不存在: ${nodeId}`);
       }
@@ -273,7 +273,7 @@ export class WorkflowController implements sdk.WorkflowController {
       const subscription = nodeExecution$.subscribe({
         next: (updatedWorkflow: WorkflowGraphAst) => {
           // 找到执行后的节点状态
-          const executedNode = updatedWorkflow.nodes.find(n => n.id === nodeId);
+          const executedNode = getNodeById(updatedWorkflow.nodes, nodeId);
 
           logger.debug('节点执行状态更新', {
             nodeId: nodeId,
@@ -623,7 +623,7 @@ export class WorkflowController implements sdk.WorkflowController {
 
           // 如果提供了配置，应用到目标节点
           if (body.config) {
-            const targetNode = ast.nodes.find(n => n.id === nodeId);
+            const targetNode = getNodeById(ast.nodes, nodeId);
             if (targetNode) {
               Object.keys(body.config).forEach(key => {
                 (targetNode as any)[key] = body.config[key];

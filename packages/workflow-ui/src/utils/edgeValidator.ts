@@ -18,9 +18,11 @@ export const EDGE_VALIDATION_RULES: EdgeValidationRule[] = [
   {
     name: 'nodes-exist',
     validate: (edge, nodes) => {
+      // 展平所有节点（包括分组内的节点）
       const collectNodeIds = (nodeList: INode[], ids: Set<string>) => {
         for (const n of nodeList) {
           ids.add(n.id)
+          // 递归收集分组内的节点
           if ((n as any).isGroupNode && (n as any).nodes?.length > 0) {
             collectNodeIds((n as any).nodes, ids)
           }
@@ -28,7 +30,13 @@ export const EDGE_VALIDATION_RULES: EdgeValidationRule[] = [
       }
       const nodeIds = new Set<string>()
       collectNodeIds(nodes, nodeIds)
-      return nodeIds.has(edge.source) && nodeIds.has(edge.target)
+
+      // 【关键修复】跨层级连接是合法的，只要节点存在即可
+      // 不再要求边的两端必须在同一作用域
+      const hasSource = nodeIds.has(edge.source)
+      const hasTarget = nodeIds.has(edge.target)
+
+      return hasSource && hasTarget
     },
     errorMessage: '源节点或目标节点不存在'
   },

@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
-import { WorkflowGraphAst, generateId, addNode as astAddNode, addEdge as astAddEdge, Compiler, cleanOrphanedProperties } from '@sker/workflow'
+import { WorkflowGraphAst, generateId, addNode as astAddNode, addEdge as astAddEdge, Compiler, cleanOrphanedProperties, getNodeById } from '@sker/workflow'
 import { root } from '@sker/core'
 import type { INode, IEdge } from '@sker/workflow'
 import { useNodesState, useEdgesState, addEdge, type Connection } from '@xyflow/react'
@@ -270,7 +270,7 @@ export function useWorkflow(
    */
   const updateNode = useCallback(
     (nodeId: string, updates: Partial<INode>) => {
-      const astNode = workflowAst.nodes.find((node) => node.id === nodeId)
+      const astNode = getNodeById(workflowAst.nodes, nodeId)
       if (astNode) {
         Object.assign(astNode, updates)
       }
@@ -492,7 +492,7 @@ export function useWorkflow(
    */
   const ungroupNodes = useCallback(
     (groupId: string) => {
-      const groupNode = workflowAst.nodes.find(n => n.id === groupId) as WorkflowGraphAst | undefined
+      const groupNode = getNodeById(workflowAst.nodes, groupId) as WorkflowGraphAst | undefined
       if (!groupNode || groupNode.type !== 'WorkflowGraphAst') return
 
       const groupPos = groupNode.position
@@ -522,7 +522,7 @@ export function useWorkflow(
    */
   const toggleGroupCollapse = useCallback(
     (groupId: string) => {
-      const groupNode = workflowAst.nodes.find(n => n.id === groupId)
+      const groupNode = getNodeById(workflowAst.nodes, groupId)
 
       if (groupNode && groupNode.type === 'WorkflowGraphAst') {
         groupNode.collapsed = !groupNode.collapsed
@@ -547,7 +547,7 @@ export function useWorkflow(
         const shouldCollapse = !nodeIds || nodeIds.includes(node.id)
         if (shouldCollapse && node.data.collapsed !== true) {
           // 同步到 AST
-          const astNode = workflowAst.nodes.find(n => n.id === node.id)
+          const astNode = getNodeById(workflowAst.nodes, node.id)
           if (astNode) {
             astNode.collapsed = true
           }
@@ -573,7 +573,7 @@ export function useWorkflow(
         const shouldExpand = !nodeIds || nodeIds.includes(node.id)
         if (shouldExpand && node.data.collapsed !== false) {
           // 同步到 AST
-          const astNode = workflowAst.nodes.find(n => n.id === node.id)
+          const astNode = getNodeById(workflowAst.nodes, node.id)
           if (astNode) {
             astNode.collapsed = false
           }
@@ -598,7 +598,7 @@ export function useWorkflow(
         const newPosition = positions.get(node.id)
         if (newPosition) {
           // 同步到 AST
-          const astNode = workflowAst.nodes.find(n => n.id === node.id)
+          const astNode = getNodeById(workflowAst.nodes, node.id)
           if (astNode) {
             astNode.position = newPosition
           }
@@ -638,7 +638,7 @@ export function useWorkflow(
 
       // 更新节点位置和状态
       snapshot.nodes.forEach(flowNode => {
-        const astNode = workflowAst.nodes.find(n => n.id === flowNode.id)
+        const astNode = getNodeById(workflowAst.nodes, flowNode.id)
         if (astNode) {
           astNode.position = flowNode.position
           if (flowNode.data.collapsed !== undefined) {
@@ -682,7 +682,7 @@ export function useWorkflow(
 
       // 更新节点位置和状态
       snapshot.nodes.forEach(flowNode => {
-        const astNode = workflowAst.nodes.find(n => n.id === flowNode.id)
+        const astNode = getNodeById(workflowAst.nodes, flowNode.id)
         if (astNode) {
           astNode.position = flowNode.position
           if (flowNode.data.collapsed !== undefined) {
