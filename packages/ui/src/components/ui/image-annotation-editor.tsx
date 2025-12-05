@@ -5,21 +5,21 @@ import { Button } from "./button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./dialog"
 import { Square, Circle, ArrowRight, Type, Trash2 } from "lucide-react"
 import { cn } from "@sker/ui/lib/utils"
-
 export type AnnotationType = 'rect' | 'circle' | 'arrow' | 'text'
 
 export interface Annotation {
-  type: AnnotationType
-  x: number
-  y: number
-  width?: number
-  height?: number
-  endX?: number
-  endY?: number
-  text?: string
-  color: string
-  lineWidth: number
+  type: AnnotationType;
+  x: number;
+  y: number;
+  width?: number;
+  height?: number;
+  endX?: number;
+  endY?: number;
+  text?: string;
+  color: string;
+  lineWidth?: number;
 }
+
 
 interface ImageAnnotationEditorProps {
   imageUrl: string

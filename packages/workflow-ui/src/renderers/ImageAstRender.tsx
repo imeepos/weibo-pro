@@ -6,10 +6,13 @@ import React, { useState, useEffect } from "react";
 import { useUploadFile } from "@sker/ui/hooks/use-upload-file";
 import {
     ImageAnnotationEditor,
+} from "@sker/ui/components/ui/image-annotation-editor";
+import {
     ImageCropEditor,
+} from "@sker/ui/components/ui/image-crop-editor";
+import {
     ImageUploadPreview
-} from "@sker/ui/components/ui";
-
+} from "@sker/ui/components/ui/image-upload-preview";
 /**
  * 图片节点渲染组件
  */

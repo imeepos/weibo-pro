@@ -1,4 +1,4 @@
-import { Injectable } from "@sker/core";
+import { Injectable, ErrorSerializer } from "@sker/core";
 import { Handler } from "@sker/workflow";
 import { ImageAst, Annotation, CropArea } from "@sker/workflow-ast";
 import { Observable } from "rxjs";
@@ -71,8 +71,8 @@ export class ImageBrowserVisitor {
             obs.next({ ...ast });
             obs.complete();
         } catch (error) {
-            ast.state = 'error';
-            ast.error = error instanceof Error ? error.message : '图片处理失败';
+            ast.state = 'fail';
+            ast.error = ErrorSerializer.serialize(error);
             obs.next({ ...ast });
             obs.complete();
         }
