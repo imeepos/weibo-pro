@@ -55,7 +55,9 @@ export function useUploadFile(
               if (xhr.status >= 200 && xhr.status < 300) {
                 try {
                   const response = JSON.parse(xhr.responseText)
-                  resolve(response)
+                  // 处理后端响应格式 {success: true, data: {url, name}}
+                  const result = response.data || response
+                  resolve(result)
                 } catch {
                   reject(new Error('上传响应解析失败'))
                 }

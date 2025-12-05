@@ -64,8 +64,9 @@ export class ImageBrowserVisitor {
                 this.applyAnnotations(ctx, ast.annotations);
             }
 
-            // 输出合成后的图片
-            ast.image = canvas.toDataURL('image/png');
+            // 上传图片到服务器
+            const imageUrl = await this.uploadCanvasImage(canvas);
+            ast.image = imageUrl;
 
             ast.state = 'success';
             obs.next({ ...ast });
@@ -183,5 +184,30 @@ export class ImageBrowserVisitor {
         ctx.moveTo(x2, y2);
         ctx.lineTo(x2 - headlen * Math.cos(angle + Math.PI / 6), y2 - headlen * Math.sin(angle + Math.PI / 6));
         ctx.stroke();
+    }
+
+    /**
+     * 上传 Canvas 图片到服务器
+     */
+    private async uploadCanvasImage(canvas: HTMLCanvasElement): Promise<string> {
+        const base64Image = canvas.toDataURL('image/png');
+
+        const response = await fetch('/api/upload/base64', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                image: base64Image,
+                filename: `image-${Date.now()}.png`,
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`图片上传失败: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        return result.url;
     }
 }

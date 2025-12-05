@@ -11,6 +11,8 @@ import { entitiesProviders } from "@sker/entities";
 import { ResponseInterceptor } from './interceptors/response.interceptor';
 import { NotFoundExceptionFilter } from './filters/not-found.filter';
 import { killPortProcess } from 'kill-port-process';
+import { join } from 'path';
+import * as express from 'express';
 
 async function bootstrap() {
   const PORT = parseInt(process.env.PORT || `3000`);
@@ -33,6 +35,15 @@ async function bootstrap() {
   });
   app.use(require('body-parser').json({ limit: '50mb' }));
   app.use(require('body-parser').urlencoded({ limit: '50mb', extended: true }));
+
+  // 配置静态文件服务 - 上传的文件可通过 /uploads 访问（带 CORS）
+  app.use('/uploads', (req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    next();
+  }, express.static(join(process.cwd(), 'uploads')));
 
   app.useGlobalInterceptors(new ResponseInterceptor());
   app.useGlobalFilters(new NotFoundExceptionFilter());

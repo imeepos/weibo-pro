@@ -63,6 +63,12 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
         ws: true,
+      },
+      // 上传文件代理
+      '/uploads': {
+        target: 'http://localhost:8089',
+        changeOrigin: true,
+        secure: false
       }
     }
   },

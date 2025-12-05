@@ -22,6 +22,8 @@ import { SentimentService } from './services/data/sentiment.service';
 import { LayoutService } from './services/data/layout.service';
 import { UserRelationService } from './services/data/user-relation.service';
 import { WorkflowService } from './services/workflow.service';
+import { UploadService } from './services/upload.service';
+import { UploadController } from './controllers/upload.controller';
 import { AppWebSocketGateway } from './gateways/websocket.gateway';
 import { EventQueryService } from './services/data/events/event-query.service';
 import { EventAnalyticsService } from './services/data/events/event-analytics.service';
@@ -43,6 +45,7 @@ import { DataSource } from '@sker/entities';
     WorkflowController,
     LayoutController,
     UserRelationController,
+    UploadController,
   ],
   providers: [
     {
@@ -60,6 +63,7 @@ import { DataSource } from '@sker/entities';
     { provide: SentimentService, useFactory: () => root.get(SentimentService) },
     { provide: LayoutService, useFactory: () => root.get(LayoutService) },
     { provide: WorkflowService, useFactory: () => root.get(WorkflowService) },
+    { provide: UploadService, useFactory: () => root.get(UploadService) },
     AppWebSocketGateway,
     { provide: EventQueryService, useFactory: () => root.get(EventQueryService) },
     { provide: EventAnalyticsService, useFactory: () => root.get(EventAnalyticsService) },
