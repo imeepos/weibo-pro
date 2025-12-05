@@ -98,7 +98,7 @@ export const WithAction: Story = {
   ),
 }
 
-export const Promise: Story = {
+export const PromiseStory: Story = {
   render: () => (
     <>
       <Button

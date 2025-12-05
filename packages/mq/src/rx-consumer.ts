@@ -44,18 +44,12 @@ async function waitForConnection(
 
         // 进度日志（每 5 秒输出一次）
         if (elapsed - lastLogTime >= 5000) {
-            console.log(
-                `[RxConsumer] 等待 RabbitMQ 连接建立... ` +
-                `已等待 ${Math.floor(elapsed / 1000)}s, 当前状态: ${state}`
-            );
             lastLogTime = elapsed;
         }
 
         // 等待 100ms 后重试
         await new Promise(resolve => setTimeout(resolve, 100));
     }
-
-    console.log(`[RxConsumer] RabbitMQ 连接已建立`);
 }
 
 /**

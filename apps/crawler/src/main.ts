@@ -9,8 +9,6 @@ import { root } from '@sker/core';
 import { entitiesProviders } from '@sker/entities';
 import { WeiboAccountService, WeiboLoginSuccessMessage } from '@sker/workflow-run';
 async function bootstrap() {
-  console.log('[Crawler] 启动爬虫服务...');
-
   root.set([...entitiesProviders]);
   await root.init();
 

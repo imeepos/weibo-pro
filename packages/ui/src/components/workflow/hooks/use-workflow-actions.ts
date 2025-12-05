@@ -34,7 +34,6 @@ export function useWorkflowActions() {
         edges,
         timestamp: new Date().toISOString(),
       }
-      console.log('Saving workflow:', workflowData)
       // 模拟保存过程
       await new Promise((resolve) => setTimeout(resolve, 500))
     } catch (error) {
@@ -83,7 +82,6 @@ export function useWorkflowActions() {
         if (data.edges && Array.isArray(data.edges)) {
           setEdges(data.edges)
         }
-        console.log('Workflow imported successfully')
       } catch (error) {
         console.error('Failed to import workflow:', error)
       }

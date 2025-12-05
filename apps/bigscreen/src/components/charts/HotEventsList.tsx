@@ -34,7 +34,6 @@ const HotEventsList: React.FC<HotEventsListProps> = ({ className = '' }) => {
         setLoading(true);
         const c = root.get(EventsController)
         const result = await c.getHotList();
-        console.log(`EventsAPI.getHotList`, {result})
         // 确保返回的是数组并转换类型
         if (Array.isArray(result)) {
           const transformedEvents: HotEvent[] = result.map(event => ({

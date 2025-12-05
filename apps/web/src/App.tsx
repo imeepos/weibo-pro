@@ -66,7 +66,6 @@ function WorkflowCanvasWrapper() {
           setNode(fromJson<WorkflowGraphAst>(workflowData))
         } else {
           // 工作流不存在，创建新的空白工作流
-          console.log('工作流不存在，创建新的空白工作流', { name })
           const ast = new WorkflowGraphAst()
           ast.name = name
           setNode(toJson(ast))

@@ -14,6 +14,7 @@ import {
 } from '@xyflow/react'
 
 import { fromJson, INode, WorkflowGraphAst, toJson, createWorkflowGraphAst } from '@sker/workflow'
+import type { WorkflowNode, WorkflowEdge } from '../../types'
 import { createNodeTypes } from '../nodes'
 import { edgeTypes } from '../edges'
 import { useWorkflow } from '../../hooks/useWorkflow'
@@ -479,7 +480,7 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
       return workflow.workflowAst
     },
     getSelectedNodes: () => {
-      return workflow.nodes.filter((n: any) => n.selected).map((n: any) => n.data)
+      return workflow.nodes.filter((n) => n.selected).map((n) => n.data)
     },
   }), [
     exportWorkflow,
@@ -501,18 +502,20 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
 
   const handleConnectInternal = useCallback((connection: Connection) => {
     // 创建临时边对象用于验证
-    const tempEdge = {
+    const tempEdge: WorkflowEdge = {
       id: `temp-${Date.now()}`,
       source: connection.source!,
       target: connection.target!,
       sourceHandle: connection.sourceHandle,
       targetHandle: connection.targetHandle,
+      type: 'workflow-data-edge',
+      data: { edgeType: 'data' }
     }
 
     // 验证边的合法性
     const { valid, errors } = validateEdge(
-      tempEdge as any,
-      workflow.nodes.map((n: any) => n.data),
+      tempEdge,
+      workflow.nodes.map((n) => n.data),
       workflow.edges
     )
 
@@ -549,24 +552,24 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
     setConnectingInfo(null)
   }, [connectingInfo, screenToFlowPosition, openNodeSelector])
 
-  const handleNodesDelete = useCallback((nodesToDelete: any[]) => {
+  const handleNodesDelete = useCallback((nodesToDelete: WorkflowNode[]) => {
     nodesToDelete.forEach((node) => workflow.removeNode(node.id))
   }, [workflow])
 
-  const handleEdgesDelete = useCallback((edgesToDelete: any[]) => {
+  const handleEdgesDelete = useCallback((edgesToDelete: WorkflowEdge[]) => {
     edgesToDelete.forEach((edge) => workflow.removeEdge(edge))
   }, [workflow])
 
   // 边事件处理
-  const handleEdgeDoubleClick = useCallback((_event: React.MouseEvent, edge: any) => {
+  const handleEdgeDoubleClick = useCallback((_event: React.MouseEvent, edge: WorkflowEdge) => {
     // 直接打开边配置对话框
-    const astEdge = workflow.workflowAst.edges.find((e: any) => e.id === edge.id)
+    const astEdge = workflow.workflowAst.edges.find((e) => e.id === edge.id)
     if (astEdge) {
       openEdgeConfigDialog(astEdge)
     }
   }, [workflow.workflowAst.edges, openEdgeConfigDialog])
 
-  const handleEdgeContextMenu = useCallback((event: React.MouseEvent, edge: any) => {
+  const handleEdgeContextMenu = useCallback((event: React.MouseEvent, edge: WorkflowEdge) => {
     event.preventDefault()
     console.log('[handleEdgeContextMenu] 右键边:', edge.id)
     // 打开右键菜单
@@ -632,7 +635,7 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
       Object.assign(astEdge, edgeConfig)
     }
 
-    workflow.setEdges((currentEdges: any[]) =>
+    workflow.setEdges((currentEdges) =>
       currentEdges.map((edge) => {
         if (edge.id === edgeId && edge.data?.edge) {
           return {
@@ -733,7 +736,11 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
       openSubWorkflowModal({ nodeId, workflowAst })
     },
     selectNode: (nodeId) => {
-      onNodeClick?.(null as any, workflow.nodes.find(n => n.id === nodeId) as any)
+      const targetNode = workflow.nodes.find(n => n.id === nodeId)
+      if (targetNode && onNodeClick) {
+        const mouseEvent = new MouseEvent('click') as unknown as React.MouseEvent
+        onNodeClick(mouseEvent, targetNode)
+      }
     }
   }), [workflow, openSubWorkflowModal, onNodeClick])
 
@@ -864,15 +871,18 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
         onAutoLayout={autoLayout}
         onClose={closeMenu}
         nodeData={menu.contextType === 'node' && menu.targetId
-          ? workflow.nodes.find((n: any) => n.id === menu.targetId)?.data
+          ? workflow.nodes.find((n) => n.id === menu.targetId)?.data
           : undefined}
-        hasMultipleSelectedNodes={workflow.nodes.filter((n: any) => n.selected).length > 1}
+        hasMultipleSelectedNodes={workflow.nodes.filter((n) => n.selected).length > 1}
         isGroupNode={
           menu.contextType === 'node' && menu.targetId
-            ? workflow.nodes.find((n: any) => n.id === menu.targetId)?.data instanceof WorkflowGraphAst && workflow.nodes.find((n: any) => n.id === menu.targetId)?.data.isGroup
+            ? (() => {
+                const node = workflow.nodes.find((n) => n.id === menu.targetId)
+                return node?.data instanceof WorkflowGraphAst && node.data.isGroup
+              })()
             : false
         }
-        selectedNodesCount={workflow.nodes.filter((n: any) => n.selected).length}
+        selectedNodesCount={workflow.nodes.filter((n) => n.selected).length}
       />
 
       <NodeSelector

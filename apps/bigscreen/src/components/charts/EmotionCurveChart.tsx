@@ -36,14 +36,11 @@ const EmotionCurveChart: React.FC<EmotionCurveChartProps> = ({
 
     const fetchData = async () => {
       try {
-        console.log('[EmotionCurveChart] 🚀 开始获取数据', { selectedTimeRange });
         const data = await CommonAPI.getEmotionCurve(selectedTimeRange);
         if (cancelled) return;
-        console.log('[EmotionCurveChart] ✅ 收到数据', data);
         setEmotionData(data);
       } catch (error) {
         if (cancelled) return;
-        console.error('[EmotionCurveChart] ❌ 获取数据失败', error);
         logger.error('Failed to fetch emotion curve data', error);
       }
     };
@@ -177,20 +174,8 @@ const EmotionCurveChart: React.FC<EmotionCurveChartProps> = ({
   };
 
   const option = React.useMemo(() => {
-    console.log('[EmotionCurveChart] 📊 渲染判断', {
-      hours_length: hours.length,
-      positiveData_length: positiveData.length,
-      negativeData_length: negativeData.length,
-      neutralData_length: neutralData.length,
-      hours,
-      positiveData,
-      negativeData,
-      neutralData
-    });
-
     // Return null if no valid data to prevent gradient rendering errors
     if (!hours.length || (!positiveData.length && !negativeData.length && !neutralData.length)) {
-      console.log('[EmotionCurveChart] ⚠️ 显示"暂无数据"');
       return {
         title: {
           text: '暂无数据',
@@ -203,9 +188,6 @@ const EmotionCurveChart: React.FC<EmotionCurveChartProps> = ({
         }
       };
     }
-
-    console.log('[EmotionCurveChart] ✅ 显示图表');
-
 
     return {
       tooltip: {

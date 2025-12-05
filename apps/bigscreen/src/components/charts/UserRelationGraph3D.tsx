@@ -263,7 +263,6 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
           const relations = analyzeInterCommunityRelations(communities, network.edges);
           setInterCommunityRelations(relations);
 
-          console.log(`检测到 ${communities.length} 个社群，最大社群包含 ${communities[0]?.size || 0} 个节点`);
         } catch (error) {
           console.warn('社群检测失败:', error);
         }

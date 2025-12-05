@@ -76,11 +76,6 @@ export class CommonAPI {
         timeRange = points > 7 ? 'month' : 'week';
       }
 
-      console.log('[CommonAPI.getEmotionCurve] 🚀 开始请求', {
-        原始参数: timeRangeOrPoints,
-        最终timeRange: timeRange
-      });
-
       // 调用 charts 接口的 sentiment-trend，该接口提供相同的功能
       const chartData = await apiClient.get<{
         categories: string[];

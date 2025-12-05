@@ -88,8 +88,6 @@ import { startWeiboDetailConsumer } from './consumers/weibo-detail.consumer';
 import { queueConfigs } from './config/queues';
 
 async function bootstrap() {
-  console.log('[Crawler] 启动爬虫服务...');
-
   // 注册队列配置
   queueConfigs.forEach(registerMqQueueConfig);
 

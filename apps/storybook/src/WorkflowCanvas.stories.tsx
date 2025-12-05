@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react'
 import { useRef } from 'react'
 import { WorkflowCanvas, type WorkflowCanvasProps } from '@sker/workflow-ui'
 import type { WorkflowCanvasRef } from '@sker/workflow-ui'
-import { createWorkflowGraphAst, toJson } from '@sker/workflow'
+import { createWorkflowGraphAst, toJson, addEdge } from '@sker/workflow'
 import {
   WeiboKeywordSearchAst,
   WeiboAjaxStatusesShowAst,
@@ -137,7 +137,7 @@ export const DataCollectionWorkflow: Story = {
     workflow.nodes.push(searchNode, postDetailNode, nlpNode, eventNode)
 
     // 连线
-    workflow.addEdge({
+    workflow.edges.push({
       id: 'edge-1',
       from: searchNode.id,
       to: postDetailNode.id,
@@ -145,7 +145,7 @@ export const DataCollectionWorkflow: Story = {
       toProperty: 'id',
     })
 
-    workflow.addEdge({
+    workflow.edges.push({
       id: 'edge-2',
       from: postDetailNode.id,
       to: nlpNode.id,
@@ -153,7 +153,7 @@ export const DataCollectionWorkflow: Story = {
       toProperty: 'post',
     })
 
-    workflow.addEdge({
+    workflow.edges.push({
       id: 'edge-3',
       from: nlpNode.id,
       to: eventNode.id,
@@ -211,7 +211,7 @@ export const BranchWorkflow: Story = {
     workflow.nodes.push(searchNode, postDetailA, postDetailB, nlpNode)
 
     // 分支连线
-    workflow.addEdge({
+    workflow.edges.push({
       id: 'edge-1',
       from: searchNode.id,
       to: postDetailA.id,
@@ -219,7 +219,7 @@ export const BranchWorkflow: Story = {
       toProperty: 'id',
     })
 
-    workflow.addEdge({
+    workflow.edges.push({
       id: 'edge-2',
       from: searchNode.id,
       to: postDetailB.id,
@@ -228,7 +228,7 @@ export const BranchWorkflow: Story = {
     })
 
     // 汇聚连线
-    workflow.addEdge({
+    workflow.edges.push({
       id: 'edge-3',
       from: postDetailA.id,
       to: nlpNode.id,
@@ -236,7 +236,7 @@ export const BranchWorkflow: Story = {
       toProperty: 'post',
     })
 
-    workflow.addEdge({
+    workflow.edges.push({
       id: 'edge-4',
       from: postDetailB.id,
       to: nlpNode.id,
@@ -313,7 +313,7 @@ export const SnapToGrid: Story = {
 
     workflow.nodes.push(searchNode, postNode)
 
-    workflow.addEdge({
+    workflow.edges.push({
       id: 'edge-1',
       from: searchNode.id,
       to: postNode.id,
@@ -361,7 +361,7 @@ export const WithRefControls: Story = {
 
     workflow.nodes.push(searchNode, postNode)
 
-    workflow.addEdge({
+    workflow.edges.push({
       id: 'edge-1',
       from: searchNode.id,
       to: postNode.id,
@@ -392,13 +392,11 @@ export const WithRefControls: Story = {
     const handleExport = () => {
       const json = canvasRef.current?.exportWorkflow()
       console.log('导出的工作流 JSON:', json)
-      alert('工作流已导出到控制台')
     }
 
     const handleGetAst = () => {
       const ast = canvasRef.current?.getWorkflowAst()
       console.log('工作流 AST:', ast)
-      console.log('工作流 JSON:', toJson(ast!))
     }
 
     return (
@@ -507,7 +505,7 @@ export const ComplexWorkflow: Story = {
     )
 
     // 第一层到第二层的连线
-    workflow.addEdge({
+    workflow.edges.push({
       id: 'edge-1-1',
       from: searchNode1.id,
       to: postDetail1.id,
@@ -515,7 +513,7 @@ export const ComplexWorkflow: Story = {
       toProperty: 'id',
     })
 
-    workflow.addEdge({
+    workflow.edges.push({
       id: 'edge-2-2',
       from: searchNode2.id,
       to: postDetail2.id,
@@ -523,7 +521,7 @@ export const ComplexWorkflow: Story = {
       toProperty: 'id',
     })
 
-    workflow.addEdge({
+    workflow.edges.push({
       id: 'edge-3-3',
       from: searchNode3.id,
       to: postDetail3.id,
@@ -532,7 +530,7 @@ export const ComplexWorkflow: Story = {
     })
 
     // 第二层到第三层的连线
-    workflow.addEdge({
+    workflow.edges.push({
       id: 'edge-p1-nlp1',
       from: postDetail1.id,
       to: nlp1.id,
@@ -540,7 +538,7 @@ export const ComplexWorkflow: Story = {
       toProperty: 'post',
     })
 
-    workflow.addEdge({
+    workflow.edges.push({
       id: 'edge-p2-nlp1',
       from: postDetail2.id,
       to: nlp1.id,
@@ -548,7 +546,7 @@ export const ComplexWorkflow: Story = {
       toProperty: 'post',
     })
 
-    workflow.addEdge({
+    workflow.edges.push({
       id: 'edge-p3-nlp2',
       from: postDetail3.id,
       to: nlp2.id,
@@ -557,7 +555,7 @@ export const ComplexWorkflow: Story = {
     })
 
     // 第三层到第四层的连线（汇总）
-    workflow.addEdge({
+    workflow.edges.push({
       id: 'edge-nlp1-event',
       from: nlp1.id,
       to: eventCreator.id,
@@ -565,7 +563,7 @@ export const ComplexWorkflow: Story = {
       toProperty: 'nlpResults',
     })
 
-    workflow.addEdge({
+    workflow.edges.push({
       id: 'edge-nlp2-event',
       from: nlp2.id,
       to: eventCreator.id,

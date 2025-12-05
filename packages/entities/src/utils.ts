@@ -40,7 +40,6 @@ export const useDataSource = async () => {
     const start = Date.now();
     try {
       await ds.initialize();
-      console.log(`[DataSource] initialized in ${Date.now() - start}ms`);
       return ds;
     } catch (error) {
       console.error(`[DataSource] initialization failed:`, error);

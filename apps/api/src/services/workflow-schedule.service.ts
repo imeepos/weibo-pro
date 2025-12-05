@@ -35,7 +35,6 @@ export class WorkflowScheduleService {
     @Inject(DataSource) private dataSource: DataSource,
     @Inject(WorkflowRunService) private workflowRunService: WorkflowRunService
   ) {
-    console.log(this.dataSource.getRepository)
     this.scheduleRepository = this.dataSource.getRepository(WorkflowScheduleEntity)
   }
 

@@ -31,8 +31,6 @@ type DebugNode = Node<DebugNodeData>
 
 // 调试用节点组件
 function DebugNodeComponent({ id, data, selected }: NodeProps<DebugNode>) {
-  console.log('DebugNode render:', { id, data, selected })
-
   return (
     <div style={{ border: '2px solid red', padding: '10px' }}>
       <div>Node ID: {id}</div>

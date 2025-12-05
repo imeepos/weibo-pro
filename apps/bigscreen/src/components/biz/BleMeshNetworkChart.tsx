@@ -28,15 +28,11 @@ const BleMeshNetworkChart: React.FC<BleMeshNetworkChartProps> = ({
 
   // 简化的数据转换 - 仿Vue策略
   const convertToVisFormat = useCallback((data: BleMeshTopologyData[]) => {
-    console.log('🔄 开始转换数据格式...', { dataLength: data?.length, data: data?.slice(0, 2) });
-    
     if (!Array.isArray(data)) {
-      console.warn('⚠️ 数据不是数组格式:', typeof data);
       return { nodes: [], edges: [] };
     }
 
     if (data.length === 0) {
-      console.warn('⚠️ 数据数组为空');
       return { nodes: [], edges: [] };
     }
 
@@ -45,11 +41,8 @@ const BleMeshNetworkChart: React.FC<BleMeshNetworkChartProps> = ({
 
     // 1. 生成节点
     data.forEach((item, index) => {
-      if (index < 3) console.log(`处理数据项 ${index}:`, item);
-      
       // 安全检查数据项
       if (!item || typeof item !== 'object') {
-        console.warn(`数据项 ${index} 无效:`, item);
         return;
       }
       
@@ -103,14 +96,6 @@ const BleMeshNetworkChart: React.FC<BleMeshNetworkChartProps> = ({
       edges: Array.from(edgeMap.values())
     };
     
-    console.log('✅ 数据转换完成:', {
-      原始数据长度: data.length,
-      节点数量: result.nodes.length,
-      边数量: result.edges.length,
-      节点示例: result.nodes.slice(0, 2),
-      边示例: result.edges.slice(0, 2)
-    });
-    
     return result;
   }, []);
 
@@ -118,25 +103,15 @@ const BleMeshNetworkChart: React.FC<BleMeshNetworkChartProps> = ({
   const loadData = useCallback(async () => {
     try {
       setError(null);
-      console.log('🔄 开始加载BLE Mesh数据...', { customerId, type });
-      
       const response = await getBleMeshTopologyData({
         customerId,
         type,
         refresh: true
       });
 
-      console.log('📥 API响应:', response);
 
       if (response?.success && Array.isArray(response.data)) {
-        console.log('📊 原始数据长度:', response.data.length);
-        console.log('📊 原始数据前3项:', response.data.slice(0, 3));
-        
         const visData = convertToVisFormat(response.data);
-        console.log('🎯 转换后的vis数据:', visData);
-        console.log('🎯 节点数量:', visData.nodes.length);
-        console.log('🎯 边数量:', visData.edges.length);
-        
         setNetworkData(visData);
       } else {
         throw new Error('API响应格式错误');

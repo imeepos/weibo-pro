@@ -64,10 +64,6 @@ export class ConnectionPool {
         const wasReconnecting = this.reconnectAttempts > 0;
         if (wasReconnecting) {
           const reconnectDuration = Date.now() - this.reconnectStartedAt;
-          console.log(
-            `[ConnectionPool] 重连成功，尝试次数: ${this.reconnectAttempts}, 耗时: ${reconnectDuration}ms`
-          );
-
           // 触发重连回调
           this.onReconnectedCallback?.();
         }
