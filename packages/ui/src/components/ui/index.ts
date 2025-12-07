@@ -10,6 +10,8 @@ export * from './icon-picker';
 export * from './search-input';
 export * from './schedule-card';
 export * from './schedule-form';
+export * from './date-picker';
+export * from './date-range-field';
 export * from './dynamic-outputs-dialog';
 export * from './status-badge';
 export * from './status-icon';

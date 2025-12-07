@@ -265,9 +265,12 @@ export function ScheduleDialog({
       return false
     }
 
-    if (formData.startTime && formData.endTime && formData.startTime >= formData.endTime) {
-      setError('结束时间必须晚于开始时间')
-      return false
+    // 时间范围验证 - 仅对使用 startTime 的调度类型进行验证
+    if ((formData.scheduleType === 'cron' || formData.scheduleType === 'interval')) {
+      if (formData.startTime && formData.endTime && formData.startTime >= formData.endTime) {
+        setError('结束时间必须晚于开始时间')
+        return false
+      }
     }
 
     return true
@@ -291,6 +294,12 @@ export function ScheduleDialog({
         ? formData.cronExpression
         : undefined
 
+      // 根据调度类型决定是否包含 startTime
+      // 只有 manual 类型不需要 startTime（其他类型都有意义）
+      const startTime = formData.scheduleType !== 'manual'
+        ? formData.startTime
+        : undefined
+
       if (isEditMode && schedule) {
         await client.updateSchedule(schedule.id, {
           name: formData.name.trim(),
@@ -298,7 +307,7 @@ export function ScheduleDialog({
           cronExpression: cronExpr,
           intervalSeconds,
           inputs: JSON.parse(formData.inputs),
-          startTime: formData.startTime,
+          startTime,
           endTime: formData.endTime,
         })
       } else {
@@ -308,7 +317,7 @@ export function ScheduleDialog({
           cronExpression: cronExpr,
           intervalSeconds,
           inputs: JSON.parse(formData.inputs),
-          startTime: formData.startTime,
+          startTime,
           endTime: formData.endTime,
         })
       }
