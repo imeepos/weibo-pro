@@ -1811,13 +1811,6 @@ export class ReactiveScheduler {
 
         // 将原始内容存储在 AST 上（用于执行后恢复）
         (ast as any).__originalGroupContents = originalGroupContents;
-
-        console.log('[flattenWorkflowStructure] 展平完成:', {
-            totalNodes: allNodes.length,
-            totalEdges: allEdges.length,
-            groupNodes: originalGroupContents.size,
-            regularNodes: allNodes.length
-        });
     }
 
     /**

@@ -409,12 +409,6 @@ export class WorkflowController implements sdk.WorkflowController {
       // 反序列化工作流 AST
       const ast = fromJson(run.graphSnapshot);
 
-      logger.info('开始执行工作流运行实例', {
-        runId,
-        workflowId: run.workflowId,
-        inputs: run.inputs,
-      });
-
       // 执行工作流（传入 inputs 作为上下文）
       const result = await executeAst(ast, ast as WorkflowGraphAst).toPromise();
 

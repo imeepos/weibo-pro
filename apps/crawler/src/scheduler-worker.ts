@@ -156,12 +156,6 @@ export class WorkflowSchedulerWorker {
         ...schedule.inputs,
       };
 
-      logger.info(`开始执行工作流`, {
-        workflowName: workflow.name,
-        scheduleId: schedule.id,
-        inputs,
-      });
-
       // 执行工作流（直接执行，不通过MQ）
       const result = await executeAst(ast, ast as WorkflowGraphAst).toPromise();
 

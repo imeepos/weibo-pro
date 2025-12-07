@@ -54,54 +54,7 @@ async function bootstrap() {
       return from(handle());
     })
   ).subscribe()
-  // workflow 爬取过程 每次只执行一个步骤
-  // const workflow = useQueue<WorkflowGraphAst>(`workflow`)
-  // const workflow$ = workflow.consumer$.pipe(
-  //   tap(msg => {
-  //     const message = msg.message
-  //     console.log(`[Crawler] ${message.name}:${message.id}`)
-  //   }),
-  //   switchMap(msg => {
-  //     const message = msg.message
-  //     const executeOnce = async () => {
-  //       try {
-  //         const ast = fromJson(message)
-  //         const result: WorkflowGraphAst = await execute(ast, {})
-  //         if (result.state === 'success') {
-  //           console.log(`[Crawler] 工作流执行成功: ${message.name}:${message.id}`)
-  //           msg.ack()
-  //           return result;
-  //         }
-  //         if (result.state === 'fail') {
-  //           console.warn(`[Crawler] 工作流执行失败: ${message.name}:${message.id}`)
-  //           msg.ack()
-  //           return result;
-  //         }
-  //         console.log(`[Crawler] 工作流继续执行: ${message.name}:${message.id}`, result)
-  //         msg.ack()
-  //         return result;
-  //       } catch (e) {
-  //         console.error(`[Crawler] 工作流执行异常: ${message.name}:${message.id}`, e)
-  //         const error = (e as Error).message
-  //         if (error.includes(`workflow node type`)) {
-  //           msg.ack()
-  //           return;
-  //         }
-  //         msg.nack()
-  //       }
-  //     }
-  //     return from(executeOnce().then(res=>{
-  //       console.log(res)
-  //       return res;
-  //     }))
-  //   })
-  // ).subscribe()
-  // 启动工作流调度器
   await schedulerWorker.start();
-  logger.info('✅ 工作流调度器已启动');
-
-  logger.info('✅ Crawler 服务启动完成');
-
   // 优雅关闭
   const shutdown = async () => {
     logger.info('📴 Crawler 服务关闭中...');
