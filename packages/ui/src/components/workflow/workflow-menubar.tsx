@@ -17,6 +17,10 @@ import {
   History,
   Undo,
   Redo,
+  FileText,
+  Edit3,
+  Eye,
+  Zap,
 } from 'lucide-react'
 import { cn } from '@sker/ui/lib/utils'
 import {
@@ -104,7 +108,10 @@ export const WorkflowMenubar: React.FC<WorkflowMenubarProps> = ({
       {/* 文件菜单 */}
       {(onSave || onImport || onExport || onSettings) && (
         <MenubarMenu>
-          <MenubarTrigger>文件</MenubarTrigger>
+          <MenubarTrigger>
+            <FileText className="mr-1.5 h-3.5 w-3.5" />
+            文件
+          </MenubarTrigger>
           <MenubarContent>
             {onSave && (
               <MenubarItem onSelect={onSave} disabled={isSaving}>
@@ -139,7 +146,10 @@ export const WorkflowMenubar: React.FC<WorkflowMenubarProps> = ({
       {/* 编辑菜单 */}
       {(onUndo || onRedo) && (
         <MenubarMenu>
-          <MenubarTrigger>编辑</MenubarTrigger>
+          <MenubarTrigger>
+            <Edit3 className="mr-1.5 h-3.5 w-3.5" />
+            编辑
+          </MenubarTrigger>
           <MenubarContent>
             {onUndo && (
               <MenubarItem onSelect={onUndo} disabled={!canUndo}>
@@ -162,7 +172,10 @@ export const WorkflowMenubar: React.FC<WorkflowMenubarProps> = ({
       {/* 视图菜单 */}
       {(onZoomIn || onZoomOut || onFitView || onCollapseNodes || onExpandNodes) && (
         <MenubarMenu>
-          <MenubarTrigger>视图</MenubarTrigger>
+          <MenubarTrigger>
+            <Eye className="mr-1.5 h-3.5 w-3.5" />
+            视图
+          </MenubarTrigger>
           <MenubarContent>
             {onZoomIn && (
               <MenubarItem onSelect={onZoomIn}>
@@ -206,7 +219,10 @@ export const WorkflowMenubar: React.FC<WorkflowMenubarProps> = ({
       {/* 布局菜单 */}
       {onAutoLayout && (
         <MenubarMenu>
-          <MenubarTrigger>布局</MenubarTrigger>
+          <MenubarTrigger>
+            <LayoutGrid className="mr-1.5 h-3.5 w-3.5" />
+            布局
+          </MenubarTrigger>
           <MenubarContent>
             <MenubarItem onSelect={onAutoLayout}>
               <LayoutGrid className="mr-2 h-4 w-4" />
@@ -220,7 +236,10 @@ export const WorkflowMenubar: React.FC<WorkflowMenubarProps> = ({
       {/* 运行菜单 */}
       {(onRun || onCancel || onSchedule || onScheduleList || onRunHistory) && (
         <MenubarMenu>
-          <MenubarTrigger>运行</MenubarTrigger>
+          <MenubarTrigger>
+            <Zap className="mr-1.5 h-3.5 w-3.5" />
+            运行
+          </MenubarTrigger>
           <MenubarContent>
             {(onRun || onCancel) && (
               <MenubarItem

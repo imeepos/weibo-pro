@@ -90,6 +90,7 @@ const WorkflowEditor: React.FC = () => {
       workflowAst={workflowData}
       name={name || 'default'}
       className={theme === 'dark' ? 'dark h-full min-h-screen' : 'h-full min-h-screen'}
+      useMenubar={true}
     />
   );
 };
