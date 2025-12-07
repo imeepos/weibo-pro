@@ -146,11 +146,13 @@ export class MqPullAstVisitor {
           obs.complete();
         } catch (error) {
           ast.state = 'fail';
+          // 使用 useQueue 再次获取规范化后的队列名（避免显示包含换行符等的原始名称）
+          const normalizedQueueName = useQueue(ast.queueName).queueName;
           const errorMessage = error instanceof Error && error.name === 'TimeoutError'
-            ? `队列 ${ast.queueName} 在10秒内无消息`
+            ? `队列 ${normalizedQueueName} 在10秒内无消息`
             : error;
           setAstError(ast, errorMessage, process.env.NODE_ENV === 'development');
-          console.error(`[MqPullAstVisitor] queue=${ast.queueName}`, error);
+          console.error(`[MqPullAstVisitor] queue=${normalizedQueueName}`, error);
           obs.next({ ...ast });
           obs.complete();
         }

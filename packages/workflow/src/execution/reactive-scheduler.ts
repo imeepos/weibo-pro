@@ -395,7 +395,7 @@ export class ReactiveScheduler {
                     stream = this._createNode(node, incomingEdges, network, ctx);
                 }
             } else {
-                // 未受影响节点：发射 emitting 状态的历史结果副本，以便下游能接收数据
+                // 未受影响节点：检查状态，决定是否传递数据
                 if (node.state !== 'success' && node.state !== 'fail') {
                     // 这种情况理论上不会发生（已在 validateUnaffectedNodesCompletion 中检查）
                     throw new Error(
@@ -403,11 +403,18 @@ export class ReactiveScheduler {
                         `这可能是调度器的 bug，请联系开发者。`
                     );
                 }
-                // 创建 emitting 状态的副本以传递数据给下游，然后立即发射最终状态
-                const emittingCopy = { ...node, state: 'emitting' as const };
-                stream = of(emittingCopy, node).pipe(
-                    shareReplay({ bufferSize: 2, refCount: true })
-                );
+
+                // 失败节点不应传递数据给下游，直接返回空流阻断执行
+                if (node.state === 'fail') {
+                    console.log(`[buildIncrementalNetwork] 节点 ${nodeId} 状态为 fail，阻断下游执行`);
+                    stream = EMPTY;
+                } else {
+                    // 成功节点：发射 emitting 状态的历史结果副本以传递数据给下游
+                    const emittingCopy = { ...node, state: 'emitting' as const };
+                    stream = of(emittingCopy, node).pipe(
+                        shareReplay({ bufferSize: 2, refCount: true })
+                    );
+                }
             }
 
             network.set(nodeId, stream);
