@@ -429,7 +429,7 @@ export function ScheduleList({ workflowName, className = '', onClose, apiBaseUrl
           </div>
         </div>
 
-        <div className="p-6">
+        <div className="px-4">
           {error && (
             <div className="border-destructive/30 bg-destructive/10 mb-4 rounded-lg border p-4">
               <p className="text-destructive text-sm">{error}</p>

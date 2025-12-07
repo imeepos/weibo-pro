@@ -23,6 +23,7 @@ import {
   type CronTemplate,
   type IntervalUnit,
 } from '@sker/ui/components/ui/schedule-form'
+import { WorkflowGraphAst, fromJson, getInputMetadata, resolveConstructor, type IEdge } from '@sker/workflow'
 
 /**
  * 调度对话框
@@ -81,12 +82,87 @@ export function ScheduleDialog({
     intervalUnit: 60,
     inputs: '{}',
   })
+  const [workflowAst, setWorkflowAst] = useState<WorkflowGraphAst | null>(null)
 
   const client = root.get<WorkflowController>(WorkflowController) as any
   const isEditMode = !!schedule
 
+  /**
+   * 提取工作流入口节点的默认输入值
+   *
+   * 存在即合理：
+   * - 扫描所有入度为 0 的节点（入口节点）
+   * - 提取 @Input 装饰器的属性值
+   * - 优先级：节点当前值 > 装饰器默认值
+   *
+   * 优雅设计：
+   * - 复用 RunConfigDialog 的提取逻辑
+   * - 返回结构化的 JSON 对象
+   */
+  const extractDefaultInputs = (workflow: WorkflowGraphAst): Record<string, unknown> => {
+    const defaultInputs: Record<string, unknown> = {}
+
+    if (!workflow?.nodes || !workflow?.edges) {
+      return defaultInputs
+    }
+
+    // 找到所有入口节点（入度为 0）
+    const entryNodes = workflow.nodes.filter((node) => {
+      const hasIncomingEdges = workflow.edges.some((edge: IEdge) => edge.to === node.id)
+      return !hasIncomingEdges
+    })
+
+    // 提取每个入口节点的 @Input 属性值
+    entryNodes.forEach((astNode: any) => {
+      try {
+        const ctor = resolveConstructor(astNode)
+        const inputMetadatas = getInputMetadata(ctor)
+        const metadataArray = Array.isArray(inputMetadatas) ? inputMetadatas : [inputMetadatas]
+
+        metadataArray.forEach((metadata) => {
+          const propKey = String(metadata.propertyKey)
+          const fullKey = `${astNode.id}.${propKey}`
+
+          // 优先使用节点当前值，否则使用装饰器默认值
+          const nodeValue = astNode[propKey]
+          const finalValue = nodeValue !== undefined ? nodeValue : metadata.defaultValue
+
+          // 只添加有效值（排除 undefined）
+          if (finalValue !== undefined) {
+            defaultInputs[fullKey] = finalValue
+          }
+        })
+      } catch (error) {
+        console.warn('提取节点默认输入失败:', astNode.id, error)
+      }
+    })
+
+    return defaultInputs
+  }
+
+  // 获取工作流 AST（用于提取默认输入）
+  useEffect(() => {
+    const fetchWorkflow = async () => {
+      if (!open || isEditMode) return // 编辑模式不需要重新获取
+
+      try {
+        const workflow = await client.getWorkflow({ name: workflowName })
+        if (workflow) {
+          const ast = fromJson<WorkflowGraphAst>(workflow)
+          setWorkflowAst(ast)
+        }
+      } catch (error) {
+        console.error('获取工作流失败:', error)
+      }
+    }
+
+    fetchWorkflow()
+  }, [open, workflowName, isEditMode])
+
+  // 编辑/新建模式下初始化表单数据
   useEffect(() => {
     if (schedule) {
+      // 编辑模式：使用现有调度的配置
       const newFormData: ScheduleFormData = {
         name: schedule.name,
         scheduleType: schedule.scheduleType,
@@ -117,17 +193,23 @@ export function ScheduleDialog({
       }
 
       setFormData(newFormData)
-    } else {
+    } else if (workflowAst) {
+      // 新建模式：自动提取入口节点的默认值
+      const defaultInputs = extractDefaultInputs(workflowAst)
+      const inputsJson = Object.keys(defaultInputs).length > 0
+        ? JSON.stringify(defaultInputs, null, 2)
+        : '{}'
+
       setFormData({
         name: '',
         scheduleType: 'cron',
         cronExpression: '0 * * * *',
         intervalValue: 1,
         intervalUnit: 60,
-        inputs: '{}',
+        inputs: inputsJson,  // 使用提取的默认值
       })
     }
-  }, [schedule])
+  }, [schedule, workflowAst])
 
   useEffect(() => {
     calculateNextRunTime()

@@ -44,12 +44,23 @@ export function MarkdownEditor({
     enabled: true
   })
 
+  // 追踪上一次的值，避免不必要的更新
+  const prevValueRef = React.useRef<string | undefined>(undefined)
+
   React.useEffect(() => {
-    if (value) {
-      const nodes = editor.getApi(MarkdownPlugin).markdown.deserialize(value)
-      editor.tf.setValue(nodes)
+    // 只在值真正改变时才更新编辑器
+    if (value !== prevValueRef.current) {
+      if (value) {
+        const nodes = editor.getApi(MarkdownPlugin).markdown.deserialize(value)
+        editor.tf.setValue(nodes)
+      } else {
+        // 清空编辑器
+        editor.tf.setValue([{ type: 'p', children: [{ text: '' }] }])
+      }
+
+      prevValueRef.current = value
     }
-  }, [])
+  }, [value, editor])
 
   return (
     <Plate

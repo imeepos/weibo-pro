@@ -45,64 +45,68 @@ export function RunConfigDialog({
   onCancel,
 }: RunConfigDialogProps) {
   const [inputs, setInputs] = useState<Record<string, unknown>>({})
-  const prevVisibleRef = useRef(visible)
+  const [isInitialized, setIsInitialized] = useState(false)
 
-  // 当对话框从关闭变为打开时，收集节点当前值初始化 inputs
+  // 初始化表单输入值
   useEffect(() => {
-    if (visible && !prevVisibleRef.current) {
-      // 合并默认输入和节点当前值
-      const initialInputs = { ...defaultInputs }
-
-      // 收集所有入度为 0 的节点的 @Input 属性值
-      // 注意：workflow.nodes 是 AST 节点数组，不是 React Flow 节点数组
-      if (workflow?.nodes && workflow?.edges) {
-        const startNodes = workflow.nodes.filter((node) => {
-          const hasIncomingEdges = workflow.edges.some((edge: IEdge) => edge.to === node.id)
-          return !hasIncomingEdges
-        })
-
-        startNodes.forEach((astNode: any) => {
-          try {
-            console.log('🔍 [RunConfigDialog] 处理 AST 节点:', {
-              nodeId: astNode.id,
-              nodeType: astNode.type,
-              nodeName: astNode.name,
-              astNode: astNode
-            })
-
-            const ctor = resolveConstructor(astNode)
-            const inputMetadatas = getInputMetadata(ctor)
-            const metadataArray = Array.isArray(inputMetadatas) ? inputMetadatas : [inputMetadatas]
-
-            metadataArray.forEach((metadata) => {
-              const propKey = String(metadata.propertyKey)
-              const fullKey = `${astNode.id}.${propKey}`
-
-              // 如果 defaultInputs 中没有，使用节点当前值或装饰器默认值
-              if (!(fullKey in initialInputs)) {
-                const nodeValue = astNode[propKey]
-                const finalValue = nodeValue !== undefined ? nodeValue : metadata.defaultValue
-
-                // 只在值不为 undefined 时才添加到 initialInputs
-                // 避免将 undefined 传递给工作流执行器
-                if (finalValue !== undefined) {
-                  initialInputs[fullKey] = finalValue
-                }
-              }
-            })
-          } catch (error) {
-            console.error('❌ [RunConfigDialog] 处理节点失败:', error)
-          }
-        })
-      }
-
-      console.log('🔄 RunConfigDialog 初始化输入:', initialInputs)
-      setInputs(initialInputs)
+    // 只在 Dialog 可见时初始化
+    if (!visible) {
+      setIsInitialized(false)
+      return
     }
-    prevVisibleRef.current = visible
-    // 只依赖 visible，避免对象引用导致的无限循环
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible])
+
+    // 规范化 defaultInputs 格式：支持简化格式和完整格式
+    const normalizedInputs: Record<string, unknown> = {}
+
+    // 收集所有入度为 0 的节点的 @Input 属性值
+    // 注意：workflow.nodes 是 AST 节点数组，不是 React Flow 节点数组
+    if (workflow?.nodes && workflow?.edges) {
+      const startNodes = workflow.nodes.filter((node) => {
+        const hasIncomingEdges = workflow.edges.some((edge: IEdge) => edge.to === node.id)
+        return !hasIncomingEdges
+      })
+
+      startNodes.forEach((astNode: any) => {
+        try {
+          const ctor = resolveConstructor(astNode)
+          const inputMetadatas = getInputMetadata(ctor)
+          const metadataArray = Array.isArray(inputMetadatas) ? inputMetadatas : [inputMetadatas]
+
+          metadataArray.forEach((metadata) => {
+            const propKey = String(metadata.propertyKey)
+            const fullKey = `${astNode.id}.${propKey}`
+
+            // 优先级：完整格式 > 简化格式 > 节点当前值 > 装饰器默认值
+            let finalValue: any = undefined
+
+            // 1. 优先使用完整格式 (nodeId.propertyKey)
+            if (fullKey in defaultInputs) {
+              finalValue = defaultInputs[fullKey]
+            }
+            // 2. 回退到简化格式 (propertyKey) - 兼容旧数据或用户手动填写
+            else if (propKey in defaultInputs) {
+              finalValue = defaultInputs[propKey]
+            }
+            // 3. 使用节点当前值
+            else {
+              const nodeValue = astNode[propKey]
+              finalValue = nodeValue !== undefined ? nodeValue : metadata.defaultValue
+            }
+
+            // 只在值不为 undefined 时才添加
+            if (finalValue !== undefined) {
+              normalizedInputs[fullKey] = finalValue
+            }
+          })
+        } catch (error) {
+          console.error('[RunConfigDialog] 处理节点失败:', error)
+        }
+      })
+    }
+
+    setInputs(normalizedInputs)
+    setIsInitialized(true)  // 标记初始化完成
+  }, [visible, workflow, defaultInputs])
 
   // 识别输入节点（入度为 0 的节点）
   const inputNodes = useMemo(() => {
@@ -172,6 +176,11 @@ export function RunConfigDialog({
   if (!visible) return null
 
   const handleInputChange = (fullKey: string, value: any) => {
+    // 防止在初始化期间触发 onChange 导致数据被清空
+    if (!isInitialized) {
+      return
+    }
+
     setInputs((prev) => ({
       ...prev,
       [fullKey]: value,
@@ -184,6 +193,7 @@ export function RunConfigDialog({
 
   const handleCancel = () => {
     setInputs(defaultInputs)
+    setIsInitialized(false)
     onCancel()
   }
 
