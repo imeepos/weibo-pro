@@ -46,10 +46,28 @@ export function MarkdownEditor({
 
   // 追踪上一次的值，避免不必要的更新
   const prevValueRef = React.useRef<string | undefined>(undefined)
+  // 追踪是否正在内部更新（用户输入）
+  const isInternalUpdateRef = React.useRef(false)
 
   React.useEffect(() => {
-    // 只在值真正改变时才更新编辑器
+    // 如果是内部更新（用户输入导致的），不要重新设置编辑器值
+    if (isInternalUpdateRef.current) {
+      isInternalUpdateRef.current = false
+      prevValueRef.current = value
+      return
+    }
+
+    // 只在值真正从外部改变时才更新编辑器
     if (value !== prevValueRef.current) {
+      // 获取编辑器当前的序列化值
+      const currentValue = editor.getApi(MarkdownPlugin).markdown.serialize()
+
+      // 如果当前值与新值相同，不需要更新（避免不必要的重新渲染）
+      if (currentValue === value) {
+        prevValueRef.current = value
+        return
+      }
+
       if (value) {
         const nodes = editor.getApi(MarkdownPlugin).markdown.deserialize(value)
         editor.tf.setValue(nodes)
@@ -66,6 +84,8 @@ export function MarkdownEditor({
     <Plate
       editor={editor}
       onChange={() => {
+        // 标记为内部更新
+        isInternalUpdateRef.current = true
         onChange?.(editor.getApi(MarkdownPlugin).markdown.serialize())
       }}
     >

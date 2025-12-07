@@ -4,25 +4,34 @@ import React, { useEffect, useMemo, useState, useCallback } from 'react'
 import { PropertyPanel } from '../PropertyPanel'
 import { Workflow, Settings, History, Play, Crosshair, Save } from 'lucide-react'
 import { useSelectedNode } from '../PropertyPanel/useSelectedNode'
-import { resolveConstructor } from '@sker/workflow'
-import { useReactFlow } from '@xyflow/react'
 import {
   WorkflowPropertyDrawer,
   type DrawerTab,
   type DrawerAction,
 } from '@sker/ui/components/workflow'
 
+// ✨ 稳定的设置面板包装器，避免因 formData 改变而重新挂载
+const SettingsTabContent = React.memo(({
+  formData,
+  onPropertyChange
+}: {
+  formData: Record<string, any>
+  onPropertyChange: (property: string, value: any) => void
+}) => {
+  return <PropertyPanel formData={formData} onPropertyChange={onPropertyChange} />
+})
+
 export interface LeftDrawerProps {
   visible: boolean
   onClose: () => void
   onRunNode?: (nodeId: string) => void
   onLocateNode?: (nodeId: string) => void
+  onSave?: (nodeId: string, updates: Record<string, any>) => void  // ✨ 保存节点更新
   className?: string
 }
 
-export function LeftDrawer({ visible, onClose, onRunNode, onLocateNode, className }: LeftDrawerProps) {
+export function LeftDrawer({ visible, onClose, onRunNode, onLocateNode, onSave, className }: LeftDrawerProps) {
   const selectedNode = useSelectedNode()
-  const { setNodes } = useReactFlow()
 
   // useSelectedNode 已确保节点已编译，可安全获取 metadata
   const metadata = useMemo(() => {
@@ -62,42 +71,38 @@ export function LeftDrawer({ visible, onClose, onRunNode, onLocateNode, classNam
     }
   }, [selectedNode?.id])
 
-  const handlePropertyChange = (property: string, value: any) => {
-    setFormData({
-      ...formData,
+  const handlePropertyChange = useCallback((property: string, value: any) => {
+    setFormData((prev) => ({
+      ...prev,
       [property]: value,
-    })
+    }))
     setHasChanges(true)
-  }
+  }, [])
 
   const handleSave = useCallback(() => {
-    if (!selectedNode || !hasChanges) return
+    if (!selectedNode || !hasChanges || !onSave) return
 
-    setNodes((nodes) =>
-      nodes.map((node) => {
-        if (node.id === selectedNode.id) {
-          const { name, description, color, portLabels, ...inputProperties } = formData
+    const { name, description, color, portLabels, ...inputProperties } = formData
 
-          // 创建新的 data 对象，同时更新原 AST 实例
-          const newData = Object.assign(Object.create(Object.getPrototypeOf(node.data)), node.data)
+    // ✨ 构建更新对象
+    const updates: Record<string, any> = {}
 
-          if (name !== undefined) newData.name = name
-          if (description !== undefined) newData.description = description
-          if (color !== undefined) newData.color = color
-          if (portLabels !== undefined) newData.portLabels = portLabels
+    if (name !== undefined) updates.name = name
+    if (description !== undefined) updates.description = description
+    if (color !== undefined) updates.color = color
+    if (portLabels !== undefined) updates.portLabels = portLabels
 
-          Object.entries(inputProperties).forEach(([property, value]) => {
-            newData[property] = value
-          })
+    // 添加所有输入属性
+    Object.entries(inputProperties).forEach(([property, value]) => {
+      updates[property] = value
+    })
 
-          return { ...node, data: newData }
-        }
-        return node
-      })
-    )
+    // ✨ 调用外部 onSave，让父组件通过 workflow.updateNode 更新
+    // 这样能同时更新 AST 和 React Flow
+    onSave(selectedNode.id, updates)
 
     setHasChanges(false)
-  }, [selectedNode, hasChanges, formData, setNodes])
+  }, [selectedNode, hasChanges, formData, onSave])
 
   useEffect(() => {
     if (!visible) return
@@ -119,29 +124,29 @@ export function LeftDrawer({ visible, onClose, onRunNode, onLocateNode, classNam
     return 'idle'
   }, [hasChanges, formData])
 
-  const tabs: DrawerTab[] = useMemo(
-    () => [
-      {
-        id: 'settings',
-        label: '设置',
-        icon: Settings,
-        content: <PropertyPanel formData={formData} onPropertyChange={handlePropertyChange} />,
-      },
-      {
-        id: 'history',
-        label: '历史',
-        icon: History,
-        content: (
-          <div className="text-center py-12">
-            <History className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
-            <p className="text-sm font-medium text-muted-foreground">暂无历史记录</p>
-            <p className="text-xs text-muted-foreground/70 mt-2">节点执行历史将显示在这里</p>
-          </div>
-        ),
-      },
-    ],
-    [formData, handlePropertyChange]
-  )
+  // ✨ 每次都使用最新的 formData 创建 tabs
+  // React 会通过 key 和组件类型识别，只更新 props 而不重新挂载
+  // SettingsTabContent 用 React.memo 减少不必要的重新渲染
+  const tabs: DrawerTab[] = [
+    {
+      id: 'settings',
+      label: '设置',
+      icon: Settings,
+      content: <SettingsTabContent formData={formData} onPropertyChange={handlePropertyChange} />,
+    },
+    {
+      id: 'history',
+      label: '历史',
+      icon: History,
+      content: (
+        <div className="text-center py-12">
+          <History className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
+          <p className="text-sm font-medium text-muted-foreground">暂无历史记录</p>
+          <p className="text-xs text-muted-foreground/70 mt-2">节点执行历史将显示在这里</p>
+        </div>
+      ),
+    },
+  ]
 
   const actions: DrawerAction[] = useMemo(
     () => [

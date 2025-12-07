@@ -264,29 +264,39 @@ export function useWorkflow(
   /**
    * 更新节点
    *
-   * 优雅设计：保持 data 对象引用稳定，避免不必要的重新渲染
-   * - 直接修改 AST 对象，保持引用不变
-   * - 最小化 React Flow 节点对象更新
+   * ✨ 遵守不可变性原则：创建新对象而不是修改原对象
    */
   const updateNode = useCallback(
     (nodeId: string, updates: Partial<INode>) => {
-      const astNode = getNodeById(workflowAst.nodes, nodeId)
-      if (astNode) {
-        Object.assign(astNode, updates)
-      }
+      // ✨ 1. 找到 AST 节点并创建新对象（不可变）
+      const astNodeIndex = workflowAst.nodes.findIndex(n => n.id === nodeId)
+      if (astNodeIndex === -1) return
 
+      const oldAstNode = workflowAst.nodes[astNodeIndex]
+
+      // ✨ 创建新的 AST 节点对象（保持原型链）
+      const newAstNode = Object.assign(
+        Object.create(Object.getPrototypeOf(oldAstNode)),
+        oldAstNode,
+        updates
+      )
+
+      // ✨ 2. 替换 workflowAst.nodes 中的节点（不可变）
+      workflowAst.nodes = [
+        ...workflowAst.nodes.slice(0, astNodeIndex),
+        newAstNode,
+        ...workflowAst.nodes.slice(astNodeIndex + 1)
+      ]
+
+      // ✨ 3. 更新 React Flow 节点（不可变）
       setNodes((nodes) =>
         nodes.map((node) => {
           if (node.id === nodeId) {
-            // 只在必要时更新 state，保持 data 引用稳定
-            if (updates.state !== undefined && node.data.state !== updates.state) {
-              return {
-                ...node,
-                data: node.data
-              }
+            // 返回新的 node 对象，data 指向新的 AST 节点
+            return {
+              ...node,
+              data: newAstNode
             }
-            // 如果只有 AST 数据变化，保持整个 node 引用稳定
-            return node
           }
           return node
         })
@@ -377,7 +387,7 @@ export function useWorkflow(
         return
       }
 
-      // 从 AST 中删除对应的边
+      // ✨ 从 AST 中删除对应的边（不可变方式）
       const astEdgeIndex = workflowAst.edges.findIndex((e) => {
         // 检查是否有数据映射属性
         if (!e.fromProperty || !e.toProperty) return false
@@ -391,7 +401,11 @@ export function useWorkflow(
       })
 
       if (astEdgeIndex !== -1) {
-        workflowAst.edges.splice(astEdgeIndex, 1)
+        // ✨ 创建新数组而不是修改原数组
+        workflowAst.edges = [
+          ...workflowAst.edges.slice(0, astEdgeIndex),
+          ...workflowAst.edges.slice(astEdgeIndex + 1)
+        ]
         console.log(
           'Edge removed from AST:',
           edge.id,
@@ -497,19 +511,32 @@ export function useWorkflow(
 
       const groupPos = groupNode.position
 
-      // 清除 parentId，转换为绝对坐标
-      groupNode.nodes.forEach(node => {
-        node.parentId = undefined
-        node.position = {
-          x: node.position.x + groupPos.x,
-          y: node.position.y + groupPos.y
-        }
+      // ✨ 创建新的节点对象（不可变方式）
+      const updatedNodes = groupNode.nodes.map(node => {
+        // 创建新的节点对象
+        const newNode = Object.assign(
+          Object.create(Object.getPrototypeOf(node)),
+          node,
+          {
+            parentId: undefined,
+            position: {
+              x: node.position.x + groupPos.x,
+              y: node.position.y + groupPos.y
+            }
+          }
+        )
+        return newNode
       })
 
-      // 移回父工作流
-      workflowAst.nodes = workflowAst.nodes.filter(n => n.id !== groupId)
-      workflowAst.nodes.push(...groupNode.nodes)
-      workflowAst.edges.push(...groupNode.edges)
+      // ✨ 移回父工作流（不可变方式）
+      workflowAst.nodes = [
+        ...workflowAst.nodes.filter(n => n.id !== groupId),
+        ...updatedNodes
+      ]
+      workflowAst.edges = [
+        ...workflowAst.edges,
+        ...groupNode.edges
+      ]
 
       syncFromAst()
       recordHistory()

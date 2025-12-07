@@ -47,11 +47,22 @@ export function RunConfigDialog({
   const [inputs, setInputs] = useState<Record<string, unknown>>({})
   const [isInitialized, setIsInitialized] = useState(false)
 
+  // 追踪上一次的 visible 状态，只在 Dialog 打开时初始化一次
+  const prevVisibleRef = useRef(false)
+
   // 初始化表单输入值
   useEffect(() => {
-    // 只在 Dialog 可见时初始化
+    // 只在 Dialog 从隐藏变为可见时初始化
+    const isOpening = visible && !prevVisibleRef.current
+
     if (!visible) {
       setIsInitialized(false)
+      prevVisibleRef.current = false
+      return
+    }
+
+    // 如果已经初始化过了（visible 保持为 true），不再重复初始化
+    if (!isOpening) {
       return
     }
 
@@ -106,6 +117,7 @@ export function RunConfigDialog({
 
     setInputs(normalizedInputs)
     setIsInitialized(true)  // 标记初始化完成
+    prevVisibleRef.current = true
   }, [visible, workflow, defaultInputs])
 
   // 识别输入节点（入度为 0 的节点）
@@ -192,8 +204,10 @@ export function RunConfigDialog({
   }
 
   const handleCancel = () => {
-    setInputs(defaultInputs)
+    // 清空输入状态，避免下次打开时残留旧数据
+    setInputs({})
     setIsInitialized(false)
+    prevVisibleRef.current = false
     onCancel()
   }
 
