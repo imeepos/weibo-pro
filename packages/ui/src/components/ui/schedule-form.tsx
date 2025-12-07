@@ -227,7 +227,7 @@ function ScheduleForm({
                   value={data.startTime ? toDateTimeInput(data.startTime).split('T')[1] : ''}
                   onChange={(e) => {
                     if (e.target.value) {
-                      const [hours, minutes] = e.target.value.split(':')
+                      const [hours = '0', minutes = '0'] = e.target.value.split(':')
                       const newDate = data.startTime ? new Date(data.startTime) : new Date()
                       newDate.setHours(parseInt(hours), parseInt(minutes))
                       onChange({ startTime: newDate })

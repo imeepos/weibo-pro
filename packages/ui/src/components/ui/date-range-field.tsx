@@ -97,7 +97,7 @@ function DateRangeField({
 
   const handleStartTimeChange = (time: string) => {
     if (!time) return
-    const [hours, minutes] = time.split(':')
+    const [hours = '0', minutes = '0'] = time.split(':')
     const newDate = startDate ? new Date(startDate) : new Date()
     newDate.setHours(parseInt(hours), parseInt(minutes))
     onStartDateChange?.(newDate)
@@ -106,7 +106,7 @@ function DateRangeField({
 
   const handleEndTimeChange = (time: string) => {
     if (!time) return
-    const [hours, minutes] = time.split(':')
+    const [hours = '0', minutes = '0'] = time.split(':')
     const newDate = endDate ? new Date(endDate) : new Date()
     newDate.setHours(parseInt(hours), parseInt(minutes))
 

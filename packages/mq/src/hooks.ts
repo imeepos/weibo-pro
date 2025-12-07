@@ -33,6 +33,38 @@ function getOrCreateConnectionPool(): ConnectionPool {
 }
 
 /**
+ * 规范化队列名称
+ *
+ * 存在即合理:
+ * - 统一的队列名过滤逻辑
+ * - 确保队列名符合 RabbitMQ 规范
+ * - 防止因换行符、空格等导致的错误
+ *
+ * 优雅即简约:
+ * - 单一职责：只负责清理队列名
+ * - 防御性编程：在入口处就做好校验
+ */
+function sanitizeQueueName(name: string | undefined | null): string {
+    if (!name) {
+        throw new Error('队列名称不能为空');
+    }
+
+    // 过滤所有不可见字符和多余空格
+    const sanitized = name
+        .trim()                          // 去除首尾空白
+        .replace(/[\n\r\t\s]+/g, ' ')    // 将所有空白字符（包括换行、制表符）替换为单个空格
+        .replace(/\s+/g, '-')            // 将空格替换为连字符（更符合队列名规范）
+        .replace(/[^\w.-]/g, '')         // 只保留字母、数字、点、连字符、下划线
+        .toLowerCase();                  // 统一转为小写
+
+    if (!sanitized) {
+        throw new Error(`无效的队列名称: "${name}"`);
+    }
+
+    return sanitized;
+}
+
+/**
  * 使用队列的钩子函数 - RxJS 双 Observable 架构
  *
  * 优雅即简约:
@@ -40,11 +72,13 @@ function getOrCreateConnectionPool(): ConnectionPool {
  * - 支持所有 RxJS 操作符
  * - 类型安全的消息传递
  * - 自动配置管理
+ * - 入口处统一过滤队列名
  *
  * 存在即合理:
  * - 移除了对 RabbitMQService 的依赖
  * - 直接使用 ConnectionPool
  * - 减少抽象层次
+ * - 防御性编程：确保队列名合法
  *
  * @example
  * const queue = useQueue<WeiboTask>('weibo_crawl_queue');
@@ -87,7 +121,10 @@ export function useQueue<T = any>(
     name: string,
     options: RxConsumerOptions = { manualAck: true }
 ): QueueManager<T> {
-    const config = getMqQueueConfig(name);
+    // 关键：在入口处统一规范化队列名
+    const sanitizedName = sanitizeQueueName(name);
+
+    const config = getMqQueueConfig(sanitizedName);
     const connectionPool = getOrCreateConnectionPool();
 
     // 创建生产者

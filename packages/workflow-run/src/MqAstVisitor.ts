@@ -36,24 +36,16 @@ export class MqPushAstVisitor {
           ast.count += 1;
           obs.next({ ...ast });
 
-          const { queueName: rawQueueName, input } = ast;
+          // useQueue 内部会自动规范化队列名，无需在此过滤
+          const queue = useQueue(ast.queueName);
 
-          // 过滤队列名称中的换行符、制表符、空格等无效字符
-          const queueName = rawQueueName?.trim().replace(/[\n\r\t]/g, '');
-
-          if (!queueName) {
-            throw new Error('队列名称不能为空');
-          }
-
-          const queue = useQueue(queueName);
-
-          await queue.producer.next(input);
+          await queue.producer.next(ast.input);
 
           ast.success = true;
           ast.state = 'emitting';
           obs.next({ ...ast });
 
-          console.log(`[MqPush] 推送成功: queue=${queueName}, data=`, input);
+          console.log(`[MqPush] 推送成功: queue=${queue.queueName}, data=`, ast.input);
 
           ast.state = 'success';
           obs.next({ ...ast });
@@ -115,16 +107,8 @@ export class MqPullAstVisitor {
           ast.count += 1;
           obs.next({ ...ast });
 
-          const { queueName: rawQueueName } = ast;
-
-          // 过滤队列名称中的换行符、制表符、空格等无效字符
-          const queueName = rawQueueName?.trim().replace(/[\n\r\t]/g, '');
-
-          if (!queueName) {
-            throw new Error('队列名称不能为空');
-          }
-
-          const queue = useQueue(queueName, { manualAck: false });
+          // useQueue 内部会自动规范化队列名，无需在此过滤
+          const queue = useQueue(ast.queueName, { manualAck: false });
 
           // 从队列拉取一条消息，设置10秒超时
           const message = await new Promise<any>((resolve, reject) => {
@@ -155,7 +139,7 @@ export class MqPullAstVisitor {
           ast.state = 'emitting';
           obs.next({ ...ast });
 
-          console.log(`[MqPull] 拉取成功: queue=${queueName}, data=`, message);
+          console.log(`[MqPull] 拉取成功: queue=${queue.queueName}, data=`, message);
 
           ast.state = 'success';
           obs.next({ ...ast });
