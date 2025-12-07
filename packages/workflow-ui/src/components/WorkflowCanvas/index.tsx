@@ -913,12 +913,7 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
         onClose={closeDrawer}
         onRunNode={runNode}
         onLocateNode={handleLocateNode}
-        onSave={(nodeId, updates) => {
-          // ✨ 1. 更新节点（同时更新 AST 和 React Flow）
-          workflow.updateNode(nodeId, updates)
-          // ✨ 2. 触发保存到后台
-          triggerSave()
-        }}
+        onAutoSave={triggerSave}
       />
 
       <EdgeConfigDialog

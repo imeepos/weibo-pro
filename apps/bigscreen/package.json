@@ -35,7 +35,7 @@
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-force-graph-3d": "^1.29.0",
-    "react-router-dom": "^6.8.1",
+    "react-router-dom": "^6.29.0",
     "reactflow": "^11.11.4",
     "reflect-metadata": "^0.2.2",
     "recharts": "^2.8.0",

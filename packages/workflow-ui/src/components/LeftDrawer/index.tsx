@@ -9,6 +9,7 @@ import {
   type DrawerTab,
   type DrawerAction,
 } from '@sker/ui/components/workflow'
+import { useWorkflowStore } from '../../store/workflow.store'
 
 // ✨ 稳定的设置面板包装器，避免因 formData 改变而重新挂载
 const SettingsTabContent = React.memo(({
@@ -21,22 +22,24 @@ const SettingsTabContent = React.memo(({
   return <PropertyPanel formData={formData} onPropertyChange={onPropertyChange} />
 })
 
+SettingsTabContent.displayName = 'SettingsTabContent'
+
 export interface LeftDrawerProps {
   visible: boolean
   onClose: () => void
   onRunNode?: (nodeId: string) => void
   onLocateNode?: (nodeId: string) => void
-  onSave?: (nodeId: string, updates: Record<string, any>) => void  // ✨ 保存节点更新
+  onAutoSave?: () => void  // ✨ 触发自动保存
   className?: string
 }
 
-export function LeftDrawer({ visible, onClose, onRunNode, onLocateNode, onSave, className }: LeftDrawerProps) {
+export function LeftDrawer({ visible, onClose, onRunNode, onLocateNode, onAutoSave, className }: LeftDrawerProps) {
   const selectedNode = useSelectedNode()
+  const updateNode = useWorkflowStore((state) => state.updateNode)
 
   // useSelectedNode 已确保节点已编译，可安全获取 metadata
   const metadata = useMemo(() => {
     if (!selectedNode) return null
-    // ✅ 直接使用 metadata 字段
     return selectedNode.data.metadata
   }, [selectedNode])
 
@@ -51,7 +54,6 @@ export function LeftDrawer({ visible, onClose, onRunNode, onLocateNode, onSave, 
 
   useEffect(() => {
     if (selectedNode) {
-      // ✅ 直接使用 metadata 字段
       const metadata = selectedNode.data.metadata
       if (!metadata) return
 
@@ -80,7 +82,7 @@ export function LeftDrawer({ visible, onClose, onRunNode, onLocateNode, onSave, 
   }, [])
 
   const handleSave = useCallback(() => {
-    if (!selectedNode || !hasChanges || !onSave) return
+    if (!selectedNode || !hasChanges) return
 
     const { name, description, color, portLabels, ...inputProperties } = formData
 
@@ -97,12 +99,14 @@ export function LeftDrawer({ visible, onClose, onRunNode, onLocateNode, onSave, 
       updates[property] = value
     })
 
-    // ✨ 调用外部 onSave，让父组件通过 workflow.updateNode 更新
-    // 这样能同时更新 AST 和 React Flow
-    onSave(selectedNode.id, updates)
+    // ✨ 直接调用 store 的 updateNode（内部使用 Immer 确保不可变性）
+    updateNode(selectedNode.id, updates)
+
+    // ✨ 触发自动保存到后台
+    onAutoSave?.()
 
     setHasChanges(false)
-  }, [selectedNode, hasChanges, formData, onSave])
+  }, [selectedNode, hasChanges, formData, updateNode, onAutoSave])
 
   useEffect(() => {
     if (!visible) return

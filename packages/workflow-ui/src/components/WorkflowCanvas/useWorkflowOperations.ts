@@ -67,9 +67,15 @@ export function useWorkflowOperations(
 
       onSetRunning?.(true)
 
+      // ✨ 深拷贝 AST：避免 Zustand + Immer 冻结对象导致的只读属性问题
+      // 调度器需要可变对象来实时更新节点状态
+      const mutableAst = fromJson<WorkflowGraphAst>(
+        JSON.parse(JSON.stringify(toJson(workflow.workflowAst)))
+      )
+
       // executeAst 返回 Observable，利用流式特性实时更新状态
       // finalize 确保无论如何结束都会重置状态
-      const subscription = executeAstWithWorkflowGraph(targetNode.id, workflow.workflowAst)
+      const subscription = executeAstWithWorkflowGraph(targetNode.id, mutableAst)
         .pipe(
           finalize(() => {
             // 确保在所有情况下都重置运行状态
@@ -79,6 +85,7 @@ export function useWorkflowOperations(
         .subscribe({
           next: (updatedWorkflow) => {
             // 每次 next 事件实时更新工作流状态
+            // ✨ 合并可变副本的状态回原 AST
             Object.assign(workflow.workflowAst!, updatedWorkflow)
             workflow.syncFromAst()
           },
@@ -168,9 +175,15 @@ export function useWorkflowOperations(
 
       onSetRunning?.(true)
 
+      // ✨ 深拷贝 AST：避免 Zustand + Immer 冻结对象导致的只读属性问题
+      // 调度器需要可变对象来实时更新节点状态
+      const mutableAst = fromJson<WorkflowGraphAst>(
+        JSON.parse(JSON.stringify(toJson(workflow.workflowAst)))
+      )
+
       // executeNodeIsolated 返回 Observable，只执行单个节点
       // finalize 确保无论如何结束都会重置状态
-      const subscription = executeNodeIsolated(targetNode.id, workflow.workflowAst)
+      const subscription = executeNodeIsolated(targetNode.id, mutableAst)
         .pipe(
           finalize(() => {
             // 确保在所有情况下都重置运行状态
@@ -180,6 +193,7 @@ export function useWorkflowOperations(
         .subscribe({
           next: (updatedWorkflow) => {
             // 每次 next 事件实时更新工作流状态
+            // ✨ 合并可变副本的状态回原 AST
             Object.assign(workflow.workflowAst!, updatedWorkflow)
             workflow.syncFromAst()
           },
@@ -298,18 +312,25 @@ export function useWorkflowOperations(
 
         onShowToast?.('info', '已取消上一次运行', '开始新的工作流执行')
 
-        // 重置正在运行的节点状态
-        workflow.workflowAst.nodes.forEach(node => {
+        // 重置正在运行的节点状态（不可变方式）
+        workflow.workflowAst.nodes = workflow.workflowAst.nodes.map(node => {
           if (node.state === 'running') {
-            node.state = 'pending'
-            node.error = undefined
+            return Object.assign(
+              Object.create(Object.getPrototypeOf(node)),
+              node,
+              { state: 'pending', error: undefined }
+            )
           }
+          return node
         })
         workflow.syncFromAst()
       }
 
       // 应用输入参数到对应节点
       if (inputs && Object.keys(inputs).length > 0) {
+        // 收集所有需要修改的节点更新（批量优化）
+        const nodeUpdates = new Map<string, Record<string, any>>()
+
         Object.entries(inputs).forEach(([key, value]) => {
           // 跳过 undefined 值（保留节点默认值）
           if (value === undefined) {
@@ -326,14 +347,27 @@ export function useWorkflowOperations(
           const nodeId = key.substring(0, dotIndex)
           const propertyKey = key.substring(dotIndex + 1)
 
-          const targetNode = getNodeById(workflow.workflowAst!.nodes, nodeId)
-          if (targetNode) {
-            // 直接赋值，不检查属性是否存在（支持动态属性）
-            (targetNode as any)[propertyKey] = value
-          } else {
-            console.warn(`⚠️ 未找到节点: ${nodeId}`)
+          if (!nodeUpdates.has(nodeId)) {
+            nodeUpdates.set(nodeId, {})
           }
+          nodeUpdates.get(nodeId)![propertyKey] = value
         })
+
+        // 批量更新节点（不可变方式，避免修改只读对象）
+        workflow.workflowAst!.nodes = workflow.workflowAst!.nodes.map(node => {
+          const updates = nodeUpdates.get(node.id)
+          if (updates) {
+            // 创建新节点对象，保持原型链
+            return Object.assign(
+              Object.create(Object.getPrototypeOf(node)),
+              node,
+              updates
+            )
+          }
+          return node
+        })
+
+        // 同步到 React Flow
         workflow.syncFromAst()
       }
 
@@ -355,14 +389,20 @@ export function useWorkflowOperations(
       const abortController = new AbortController()
       abortControllerRef.current = abortController
 
-      // 将 abortSignal 附加到工作流上下文
-      workflow.workflowAst.abortSignal = abortController.signal
-
       onSetRunning?.(true)
+
+      // ✨ 深拷贝 AST：避免 Zustand + Immer 冻结对象导致的只读属性问题
+      // 调度器需要可变对象来实时更新节点状态
+      const mutableAst = fromJson<WorkflowGraphAst>(
+        JSON.parse(JSON.stringify(toJson(workflow.workflowAst)))
+      )
+
+      // 将 abortSignal 附加到工作流上下文
+      mutableAst.abortSignal = abortController.signal
 
       // executeAst 返回 Observable，使用 takeUntil 监听取消信号
       // finalize 确保无论如何结束（完成、错误、取消）都会重置状态
-      const subscription = executeAst(workflow.workflowAst, workflow.workflowAst)
+      const subscription = executeAst(mutableAst, mutableAst)
         .pipe(
           takeUntil(cancelSubject$.current),
           finalize(() => {
@@ -374,6 +414,7 @@ export function useWorkflowOperations(
         .subscribe({
           next: (updatedWorkflow) => {
             // 每次 next 事件实时更新工作流状态
+            // ✨ 合并可变副本的状态回原 AST
             Object.assign(workflow.workflowAst!, updatedWorkflow)
             workflow.syncFromAst()
           },
@@ -493,13 +534,17 @@ export function useWorkflowOperations(
       abortControllerRef.current = null
     }
 
-    // 重置正在运行的节点状态
+    // 重置正在运行的节点状态（不可变方式）
     if (workflow.workflowAst) {
-      workflow.workflowAst.nodes.forEach(node => {
+      workflow.workflowAst.nodes = workflow.workflowAst.nodes.map(node => {
         if (node.state === 'running') {
-          node.state = 'pending'
-          node.error = undefined
+          return Object.assign(
+            Object.create(Object.getPrototypeOf(node)),
+            node,
+            { state: 'pending', error: undefined }
+          )
         }
+        return node
       })
       workflow.syncFromAst()
     }

@@ -34,35 +34,49 @@ export class ReactiveScheduler {
      * - 保留入口节点的输入/输出属性（用户输入数据）
      */
     private resetWorkflowGraphAst(ast: WorkflowGraphAst) {
+        // ✨ 不可变方式：创建新状态对象
         ast.state = 'pending';
+
         ast.nodes = ast.nodes.map(node => {
-            node.state = 'pending';
-            node.count = 0;
-            node.emitCount = 0;
+            // ✨ 基础属性更新
+            const updates: Partial<INode> = {
+                state: 'pending',
+                count: 0,
+                emitCount: 0
+            };
 
             // 只清空有输入边的节点的 IS_MULTI/IS_BUFFER 属性
             // 入口节点（没有输入边）的值来自用户输入，需要保留
             const hasIncomingEdges = ast.edges.some(edge => edge.to === node.id);
             if (hasIncomingEdges) {
-                this.clearMultiBufferInputs(node);
+                const clearedInputs = this.getClearedMultiBufferInputs(node);
+                Object.assign(updates, clearedInputs);
             }
 
             // 清空有输入边的节点的输出属性
             // if (hasIncomingEdges) {
-            //     this.clearNodeOutputs(node);
+            //     const clearedOutputs = this.getClearedNodeOutputs(node);
+            //     Object.assign(updates, clearedOutputs);
             // }
 
-            return node;
+            // ✨ 创建新节点对象（保持原型链）
+            return Object.assign(
+                Object.create(Object.getPrototypeOf(node)),
+                node,
+                updates
+            );
         })
         return ast;
     }
 
     /**
-     * 清空节点的 IS_MULTI 和 IS_BUFFER 输入属性
+     * 获取清空后的 IS_MULTI 和 IS_BUFFER 输入属性
      *
      * 原因：这些模式使用数组累积，重复执行会导致数据越积越多
+     * ✨ 返回需要更新的属性对象（不可变方式）
      */
-    private clearMultiBufferInputs(node: INode): void {
+    private getClearedMultiBufferInputs(node: INode): Record<string, any> {
+        const updates: Record<string, any> = {};
         try {
             const inputMetadataMap = this.getInputMetadataMap(node);
 
@@ -70,31 +84,36 @@ export class ReactiveScheduler {
                 const isBuffer = hasBufferMode(metadata?.mode);
                 const isMulti = hasMultiMode(metadata?.mode) || metadata?.isMulti;
                 if (isBuffer || isMulti) {
-                    // 清空为空数组
-                    (node as any)[propertyKey] = [];
+                    // 清空为空数组（将 propertyKey 转为 string）
+                    updates[String(propertyKey)] = [];
                 }
             });
         } catch (error) {
             // 无法获取元数据，跳过清空
         }
+        return updates;
     }
 
     /**
-     * 清空节点的输出属性
+     * 获取清空后的输出属性
      *
      * 适用于有输入边的节点，因为输出应该由计算产生
+     * ✨ 返回需要更新的属性对象（不可变方式）
      */
-    private clearNodeOutputs(node: INode): void {
+    private getClearedNodeOutputs(node: INode): Record<string, any> {
+        const updates: Record<string, any> = {};
         try {
             const ctor = resolveConstructor(node);
             const outputs = root.get(OUTPUT, []).filter(it => it.target === ctor);
 
             outputs.forEach(output => {
-                (node as any)[output.propertyKey] = undefined;
+                // 将 propertyKey 转为 string
+                updates[String(output.propertyKey)] = undefined;
             });
         } catch (error) {
             // 无法获取元数据，跳过清空
         }
+        return updates;
     }
     schedule(ast: WorkflowGraphAst, ctx: WorkflowGraphAst): Observable<WorkflowGraphAst> {
         const { state } = this.resetWorkflowGraphAst(ast);

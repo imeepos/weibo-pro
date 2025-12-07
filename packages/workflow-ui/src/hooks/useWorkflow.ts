@@ -8,6 +8,7 @@ import { astToFlowNodes, astToFlowEdges } from '../adapters/ast-to-flow'
 import { StateChangeProxy } from '../core/state-change-proxy'
 import { calculateDagreLayout } from '../utils/layout'
 import { historyManager } from '../store/history.store'
+// import { useWorkflowStore } from '../store/workflow.store' // 暂时禁用
 
 export interface UseWorkflowReturn {
   workflowAst: WorkflowGraphAst
@@ -82,6 +83,17 @@ export function useWorkflow(
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
 
+  // ✨ 集成 Zustand Store：暂时禁用以避免 Immer 冻结对象
+  // TODO: 重构为完全基于 store 的架构，或完全移除 store
+  // const initWorkflow = useWorkflowStore((state) => state.initWorkflow)
+  // const storeUpdateNode = useWorkflowStore((state) => state.updateNode)
+  // const storeNodes = useWorkflowStore((state) => state.nodes)
+
+  // 初始化 store（暂时禁用）
+  // useEffect(() => {
+  //   initWorkflow(workflowAst)
+  // }, [])
+
   // 历史记录状态
   const [canUndo, setCanUndo] = useState(false)
   const [canRedo, setCanRedo] = useState(false)
@@ -153,6 +165,7 @@ export function useWorkflow(
         const currentPos = astNode.position
         const newPos = node.position
 
+        // 直接修改本地 workflowAst（不通过 store，避免触发循环更新）
         if (!currentPos || currentPos.x !== newPos.x || currentPos.y !== newPos.y) {
           astNode.position = newPos
           hasPositionChanged = true
@@ -264,48 +277,36 @@ export function useWorkflow(
   /**
    * 更新节点
    *
-   * ✨ 遵守不可变性原则：创建新对象而不是修改原对象
+   * 直接修改 workflowAst，然后同步到 React Flow
    */
   const updateNode = useCallback(
     (nodeId: string, updates: Partial<INode>) => {
-      // ✨ 1. 找到 AST 节点并创建新对象（不可变）
-      const astNodeIndex = workflowAst.nodes.findIndex(n => n.id === nodeId)
-      if (astNodeIndex === -1) return
-
-      const oldAstNode = workflowAst.nodes[astNodeIndex]
-
-      // ✨ 创建新的 AST 节点对象（保持原型链）
-      const newAstNode = Object.assign(
-        Object.create(Object.getPrototypeOf(oldAstNode)),
-        oldAstNode,
-        updates
-      )
-
-      // ✨ 2. 替换 workflowAst.nodes 中的节点（不可变）
-      workflowAst.nodes = [
-        ...workflowAst.nodes.slice(0, astNodeIndex),
-        newAstNode,
-        ...workflowAst.nodes.slice(astNodeIndex + 1)
-      ]
-
-      // ✨ 3. 更新 React Flow 节点（不可变）
-      setNodes((nodes) =>
-        nodes.map((node) => {
+      // 递归查找并更新节点
+      const findAndUpdateNode = (nodes: INode[]): boolean => {
+        for (const node of nodes) {
           if (node.id === nodeId) {
-            // 返回新的 node 对象，data 指向新的 AST 节点
-            return {
-              ...node,
-              data: newAstNode
+            Object.assign(node, updates)
+            return true
+          }
+          if ((node as any).isGroupNode && (node as any).nodes?.length > 0) {
+            if (findAndUpdateNode((node as any).nodes)) {
+              return true
             }
           }
-          return node
-        })
-      )
+        }
+        return false
+      }
 
-      // 触发变更回调
-      onWorkflowChangeRef.current?.()
+      const found = findAndUpdateNode(workflowAst.nodes)
+
+      if (found) {
+        // 同步到 React Flow
+        syncFromAst()
+        // 触发变更回调
+        onWorkflowChangeRef.current?.()
+      }
     },
-    [workflowAst, setNodes]
+    [workflowAst, syncFromAst]
   )
 
   const connectNodes = useCallback(

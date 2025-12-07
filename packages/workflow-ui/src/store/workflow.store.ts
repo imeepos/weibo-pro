@@ -145,39 +145,48 @@ export const useWorkflowStore = create<WorkflowState>()(
       /**
        * ✨ 更新节点（关键方法）
        *
-       * 使用 Immer 确保不可变性：
-       * 1. 更新 workflowAst.nodes 中的节点
-       * 2. 更新 React Flow nodes
-       * 3. 保持 node.data 引用指向 AST 节点
+       * 策略：因为 AST 节点类可能有只读属性，我们需要创建新对象来替换
+       * 1. 找到 AST 节点在数组中的索引
+       * 2. 创建新的节点对象（保持原型链）
+       * 3. 替换 workflowAst.nodes 中的节点
+       * 4. 同步更新 React Flow nodes
        */
       updateNode: (nodeId: string, updates: Partial<INode>) => {
         set((draft) => {
-          // ✨ 1. 找到并更新 AST 节点
           if (!draft.workflowAst) {
             console.warn('WorkflowAst not initialized')
             return
           }
 
-          const astNode = getNodeById(draft.workflowAst.nodes, nodeId)
-          if (!astNode) {
+          // ✨ 1. 找到节点索引
+          const astNodeIndex = draft.workflowAst.nodes.findIndex(n => n.id === nodeId)
+          if (astNodeIndex === -1) {
             console.warn(`Node ${nodeId} not found in AST`)
             return
           }
 
-          // ✨ Immer 会自动创建新对象
-          Object.assign(astNode, updates)
+          const oldAstNode = draft.workflowAst.nodes[astNodeIndex]
 
-          // ✨ 2. 更新 React Flow 节点
-          const nodeIndex = draft.nodes.findIndex(n => n.id === nodeId)
-          if (nodeIndex !== -1) {
-            // 保持 data 引用指向更新后的 AST 节点
-            draft.nodes[nodeIndex] = {
-              ...draft.nodes[nodeIndex],
-              data: astNode
+          // ✨ 2. 创建新节点对象（保持原型链，避免只读属性问题）
+          const newAstNode = Object.assign(
+            Object.create(Object.getPrototypeOf(oldAstNode)),
+            oldAstNode,
+            updates
+          )
+
+          // ✨ 3. 替换 AST 数组中的节点（Immer 会自动处理不可变性）
+          draft.workflowAst.nodes[astNodeIndex] = newAstNode
+
+          // ✨ 4. 更新 React Flow 节点
+          const flowNodeIndex = draft.nodes.findIndex(n => n.id === nodeId)
+          if (flowNodeIndex !== -1) {
+            const flowNode = draft.nodes[flowNodeIndex]
+            if (flowNode) {
+              flowNode.data = newAstNode
             }
           }
 
-          // ✨ 3. 标记有未保存的更改
+          // ✨ 5. 标记有未保存的更改
           draft.hasUnsavedChanges = true
         })
 

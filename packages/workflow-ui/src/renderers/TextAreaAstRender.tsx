@@ -5,7 +5,7 @@ import React from "react";
 const toString = (ast: any): string => {
     if (typeof ast === 'string') return ast;
     if (Array.isArray(ast)) {
-        return ast.flat().map(it => toString(it)).join('\n\n--------------\n\n')
+        return ast.flat().map(it => toString(it)).join('\n\n')
     }
     return JSON.stringify(ast)
 }
