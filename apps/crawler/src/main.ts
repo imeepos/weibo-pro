@@ -5,14 +5,32 @@ import "@sker/workflow-ast";
 import "@sker/workflow-run";
 import { useQueue } from '@sker/mq'
 import { from, switchMap } from 'rxjs';
-import { root } from '@sker/core';
+import { root, logger } from '@sker/core';
 import { entitiesProviders } from '@sker/entities';
 import { WeiboAccountService, WeiboLoginSuccessMessage } from '@sker/workflow-run';
+import { WorkflowSchedulerWorker } from './scheduler-worker';
+
+/**
+ * Crawler 服务启动入口
+ *
+ * 存在即合理：
+ * - 专注异步任务处理（MQ消费 + 定时调度）
+ * - 独立部署，不影响 API 服务性能
+ * - 职责清晰：爬虫执行和工作流调度
+ *
+ * 优雅设计：
+ * - 启动 MQ 消费者监听登录事件
+ * - 启动工作流调度器自动执行定时任务
+ * - 优雅关闭，清理所有订阅
+ */
 async function bootstrap() {
   root.set([...entitiesProviders]);
   await root.init();
 
+  logger.info('🚀 Crawler 服务启动中...');
+
   const accountService = root.get(WeiboAccountService);
+  const schedulerWorker = root.get(WorkflowSchedulerWorker);
 
   // 登录成功事件
   const weiboLoginSuccess = useQueue<{ body: WeiboLoginSuccessMessage }>(`weibo_login_success`)
@@ -78,20 +96,23 @@ async function bootstrap() {
   //     }))
   //   })
   // ).subscribe()
-  // const startDate = new Date(`2025-11-08 00:00:00`)
-  // workflow.producer.next(createWeiboKeywordSearchGraphAst(`江浙沪3000元人情的婚礼`, startDate))
-  // 微博账号
-  process.on('SIGTERM', () => {
-    weiboLogin$.unsubscribe()
-    // workflow$.unsubscribe()
-    process.exit(0);
-  });
+  // 启动工作流调度器
+  await schedulerWorker.start();
+  logger.info('✅ 工作流调度器已启动');
 
-  process.on('SIGINT', () => {
-    weiboLogin$.unsubscribe()
-    // workflow$.unsubscribe()
+  logger.info('✅ Crawler 服务启动完成');
+
+  // 优雅关闭
+  const shutdown = async () => {
+    logger.info('📴 Crawler 服务关闭中...');
+    weiboLogin$.unsubscribe();
+    await schedulerWorker.stop();
+    logger.info('✅ Crawler 服务已关闭');
     process.exit(0);
-  });
+  };
+
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
 }
 
 bootstrap().catch(console.error);

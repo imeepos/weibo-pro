@@ -339,6 +339,9 @@ importers:
       '@sker/workflow-run':
         specifier: workspace:*
         version: link:../../packages/workflow-run
+      cron-parser:
+        specifier: ^5.4.0
+        version: 5.4.0
       dotenv:
         specifier: ^16.4.7
         version: 16.6.1
