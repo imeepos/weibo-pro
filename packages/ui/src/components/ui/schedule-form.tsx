@@ -74,8 +74,21 @@ function ScheduleForm({
   intervalUnits = DEFAULT_INTERVAL_UNITS,
   className,
 }: ScheduleFormProps) {
-  const toDateTimeInput = (date?: Date): string =>
-    date?.toISOString().slice(0, 16) ?? ''
+  /**
+   * 将 Date 转换为本地时间的 datetime-local input 格式 (YYYY-MM-DDTHH:mm)
+   * 不使用 toISOString() 以避免时区转换问题
+   */
+  const toDateTimeInput = (date?: Date): string => {
+    if (!date) return ''
+
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+
+    return `${year}-${month}-${day}T${hours}:${minutes}`
+  }
 
   const toDisplayTime = (date?: Date): string =>
     date?.toLocaleString('zh-CN', {
@@ -122,9 +135,7 @@ function ScheduleForm({
               <Select
                 value={data.cronExpression && cronTemplates.some(t => t.value === data.cronExpression) ? data.cronExpression : '__custom__'}
                 onValueChange={(value) => {
-                  if (value !== '__custom__') {
-                    onChange({ cronExpression: value })
-                  }
+                  onChange({ cronExpression: value })
                 }}
               >
                 <SelectTrigger id="cron-template">
@@ -144,9 +155,9 @@ function ScheduleForm({
               <Input
                 id="cron-expression"
                 placeholder="0 * * * *"
-                value={data.cronExpression || ''}
+                value={data.cronExpression === '__custom__' ? '' : (data.cronExpression || '')}
                 onChange={(e) => onChange({ cronExpression: e.target.value })}
-                disabled={data.cronExpression !== '__custom__' && cronTemplates.some(t => t.value && t.value === data.cronExpression)}
+                disabled={data.cronExpression !== '__custom__' && cronTemplates.some(t => t.value && t.value !== '__custom__' && t.value === data.cronExpression)}
               />
               <p className="text-muted-foreground text-xs">
                 格式:分 时 日 月 周,例如 "0 9 * * 1-5" 表示工作日早上9点

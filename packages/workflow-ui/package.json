@@ -46,13 +46,14 @@
     "@tailwindcss/typography": "^0.5.19",
     "@xyflow/react": "^12.9.2",
     "clsx": "^2.1.1",
-    "sonner": "^2.0.7",
+    "cron-parser": "^5.4.0",
     "dagre": "^0.8.5",
     "framer-motion": "^12.0.0",
     "lucide-react": "^0.555.0",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
     "rxjs": "^7.8.1",
+    "sonner": "^2.0.7",
     "tailwind-merge": "^2.6.0",
     "zustand": "^5.0.8"
   }

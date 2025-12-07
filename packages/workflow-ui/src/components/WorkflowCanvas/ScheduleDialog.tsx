@@ -24,6 +24,7 @@ import {
   type IntervalUnit,
 } from '@sker/ui/components/ui/schedule-form'
 import { WorkflowGraphAst, fromJson, getInputMetadata, resolveConstructor, type IEdge } from '@sker/workflow'
+import { CronExpressionParser } from 'cron-parser'
 
 /**
  * 调度对话框
@@ -215,6 +216,19 @@ export function ScheduleDialog({
     calculateNextRunTime()
   }, [formData.scheduleType, formData.cronExpression, formData.intervalValue, formData.intervalUnit, formData.startTime])
 
+  /**
+   * 计算下次执行时间
+   *
+   * 存在即合理：
+   * - once: 使用 startTime
+   * - cron: 解析 cron 表达式计算下次执行时间
+   * - interval: 当前时间 + 间隔时间
+   * - manual: 无需计算（不自动执行）
+   *
+   * 优雅设计：
+   * - 使用 cron-parser 库精确计算 cron 下次执行时间
+   * - 错误处理：解析失败返回 undefined
+   */
   const calculateNextRunTime = async () => {
     try {
       let calculatedNextRun: Date | undefined
@@ -222,14 +236,27 @@ export function ScheduleDialog({
       if (formData.scheduleType === 'once' && formData.startTime) {
         calculatedNextRun = formData.startTime
       } else if (formData.scheduleType === 'cron' && formData.cronExpression) {
-        try {
-          calculatedNextRun = new Date(Date.now() + 60000)
-        } catch {
+        // 跳过自定义模板选项（用户尚未输入实际表达式）
+        if (formData.cronExpression === '__custom__') {
           calculatedNextRun = undefined
+        } else {
+          try {
+            // 使用 cron-parser 解析表达式并计算下次执行时间
+            const interval = CronExpressionParser.parse(formData.cronExpression, {
+              currentDate: formData.startTime || new Date(),
+              tz: Intl.DateTimeFormat().resolvedOptions().timeZone // 使用本地时区
+            })
+            const next = interval.next()
+            calculatedNextRun = next.toDate()
+          } catch (error) {
+            console.warn('Cron 表达式解析失败:', formData.cronExpression, error)
+            calculatedNextRun = undefined
+          }
         }
       } else if (formData.scheduleType === 'interval') {
         const intervalSeconds = (formData.intervalValue || 1) * (formData.intervalUnit || 60)
-        calculatedNextRun = new Date(Date.now() + intervalSeconds * 1000)
+        const startTime = formData.startTime || new Date()
+        calculatedNextRun = new Date(startTime.getTime() + intervalSeconds * 1000)
       }
 
       setFormData(prev => ({ ...prev, nextRunTime: calculatedNextRun }))
