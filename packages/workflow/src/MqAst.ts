@@ -42,6 +42,9 @@ export class MqPullAst extends Ast {
     @Input({ title: '队列名称' })
     queueName: string = ``
 
+    @Input({ title: '最多拉取次数', defaultValue: 10 })
+    max: number = 10
+
     @Output({ title: '消息内容' })
     output: any = ``
 }

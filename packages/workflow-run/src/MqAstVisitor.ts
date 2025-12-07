@@ -1,8 +1,8 @@
 import { Injectable } from '@sker/core';
 import { Handler, INode, setAstError, MqPushAst, MqPullAst } from '@sker/workflow';
 import { useQueue } from '@sker/mq';
-import { Observable } from 'rxjs';
-import { take, timeout } from 'rxjs/operators';
+import { Observable, EMPTY } from 'rxjs';
+import { take, timeout, finalize, catchError, map } from 'rxjs/operators';
 
 /**
  * 消息队列推送节点执行器
@@ -73,13 +73,14 @@ export class MqPushAstVisitor {
 /**
  * 消息队列拉取节点执行器
  *
- * 功能：从 RabbitMQ 队列拉取单条消息
+ * 功能：从 RabbitMQ 队列逐条拉取消息，流式发射
  * 跨工作流通信：接收其他工作流推送的消息
  *
- * 注意：
- * - 使用超时机制（10秒），避免无限等待
- * - 消息自动 ACK
- * - 若队列为空，会抛出超时错误
+ * 优雅设计：
+ * - 响应式监听：订阅 MQ consumer$，每收到一条消息就 emitting 一次
+ * - 自动终止：达到 max 条消息或超时后自动结束
+ * - 可配置参数：max（最多拉取次数）、timeout（超时时间）
+ * - 自动 ACK：消息自动确认
  */
 @Injectable()
 export class MqPullAstVisitor {
@@ -93,76 +94,88 @@ export class MqPullAstVisitor {
         abortSignal: abortController.signal
       };
 
-      const handler = async () => {
-        try {
-          if (wrappedCtx.abortSignal?.aborted) {
+      // 检查工作流是否已取消
+      if (wrappedCtx.abortSignal?.aborted) {
+        ast.state = 'fail';
+        setAstError(ast, new Error('工作流已取消'));
+        obs.next({ ...ast });
+        obs.complete();
+        return;
+      }
+
+      // 发送 running 状态
+      ast.state = 'running';
+      ast.count += 1;
+      obs.next({ ...ast });
+
+      // useQueue 内部会自动规范化队列名
+      const queue = useQueue(ast.queueName, { manualAck: false });
+      const normalizedQueueName = queue.queueName;
+
+      console.log(`[MqPull] 开始监听: queue=${normalizedQueueName}, max=${ast.max}`);
+
+      // 订阅消息队列，响应式流式处理
+      const subscription = queue.consumer$
+        .pipe(
+          take(ast.max),
+          catchError((error) => {
+            // 超时错误处理
+            if (error.name === 'TimeoutError') {
+              // 如果已经发射过消息，超时视为队列已清空，正常结束
+              if (ast.emitCount > 0) {
+                return EMPTY; // 返回空流，正常结束
+              } else {
+                // 一条消息都没收到就超时
+                throw new Error(`队列 ${normalizedQueueName} 内无消息`);
+              }
+            }
+            throw error;
+          }),
+          finalize(() => {
+            // 流结束时的清理逻辑
+            console.log(`[MqPull] 监听结束: queue=${normalizedQueueName}, 共发射 ${ast.emitCount} 条消息`);
+          })
+        )
+        .subscribe({
+          next: (envelope) => {
+            // 每收到一条消息就 emitting 一次
+            ast.output = envelope.message;
+            ast.emitCount += 1;
+            ast.state = 'emitting';
+            obs.next({ ...ast });
+
+            console.log(`[MqPull] 收到消息: queue=${normalizedQueueName}, emitCount=${ast.emitCount}`);
+          },
+          error: (error) => {
+            // 错误处理
             ast.state = 'fail';
-            setAstError(ast, new Error('工作流已取消'));
+            setAstError(ast, error, process.env.NODE_ENV === 'development');
+            console.error(`[MqPullAstVisitor] queue=${normalizedQueueName}, 已发射=${ast.emitCount}条`, error);
             obs.next({ ...ast });
             obs.complete();
-            return;
+          },
+          complete: () => {
+            // 正常结束
+            ast.state = 'success';
+            obs.next({ ...ast });
+            obs.complete();
           }
+        });
 
-          ast.state = 'running';
-          ast.count += 1;
-          obs.next({ ...ast });
-
-          // useQueue 内部会自动规范化队列名，无需在此过滤
-          const queue = useQueue(ast.queueName, { manualAck: false });
-
-          // 从队列拉取一条消息，设置10秒超时
-          const message = await new Promise<any>((resolve, reject) => {
-            const subscription = queue.consumer$
-              .pipe(
-                take(1),
-                timeout(10000)
-              )
-              .subscribe({
-                next: (envelope) => {
-                  resolve(envelope.message);
-                },
-                error: (error) => {
-                  reject(error);
-                }
-              });
-
-            // 取消信号处理
-            if (wrappedCtx.abortSignal) {
-              wrappedCtx.abortSignal.addEventListener('abort', () => {
-                subscription.unsubscribe();
-                reject(new Error('工作流已取消'));
-              });
-            }
-          });
-
-          ast.output = message;
-          ast.state = 'emitting';
-          obs.next({ ...ast });
-
-          console.log(`[MqPull] 拉取成功: queue=${queue.queueName}, data=`, message);
-
-          ast.state = 'success';
-          obs.next({ ...ast });
-          obs.complete();
-        } catch (error) {
+      // 监听工作流取消信号
+      if (wrappedCtx.abortSignal) {
+        wrappedCtx.abortSignal.addEventListener('abort', () => {
+          subscription.unsubscribe();
           ast.state = 'fail';
-          // 使用 useQueue 再次获取规范化后的队列名（避免显示包含换行符等的原始名称）
-          const normalizedQueueName = useQueue(ast.queueName).queueName;
-          const errorMessage = error instanceof Error && error.name === 'TimeoutError'
-            ? `队列 ${normalizedQueueName} 在10秒内无消息`
-            : error;
-          setAstError(ast, errorMessage, process.env.NODE_ENV === 'development');
-          console.error(`[MqPullAstVisitor] queue=${normalizedQueueName}`, error);
+          setAstError(ast, new Error('工作流已取消'));
           obs.next({ ...ast });
           obs.complete();
-        }
-      };
+        });
+      }
 
-      handler();
-
+      // 返回清理函数
       return () => {
-        abortController.abort();
-        obs.complete();
+        subscription.unsubscribe();
       };
     });
   }

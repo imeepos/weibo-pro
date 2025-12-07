@@ -85,8 +85,31 @@ export function useWorkflowOperations(
         .subscribe({
           next: (updatedWorkflow) => {
             // 每次 next 事件实时更新工作流状态
-            // ✨ 合并可变副本的状态回原 AST
-            Object.assign(workflow.workflowAst!, updatedWorkflow)
+            // ✨ 只同步节点状态，不覆盖 nodes/edges 数组（避免画布清空）
+            workflow.workflowAst!.state = updatedWorkflow.state
+            workflow.workflowAst!.error = updatedWorkflow.error
+
+            // 同步每个节点的状态属性（state, error, count, emitCount, output）
+            updatedWorkflow.nodes.forEach((updatedNode: any) => {
+              const originalNode = workflow.workflowAst!.nodes.find(n => n.id === updatedNode.id)
+              if (originalNode) {
+                originalNode.state = updatedNode.state
+                originalNode.error = updatedNode.error
+                originalNode.count = updatedNode.count
+                originalNode.emitCount = updatedNode.emitCount
+
+                // 同步输出属性（@Output 装饰器定义的属性）
+                if (originalNode.metadata?.outputs) {
+                  originalNode.metadata.outputs.forEach((output: any) => {
+                    const propKey = String(output.property)
+                    if (updatedNode[propKey] !== undefined) {
+                      (originalNode as any)[propKey] = updatedNode[propKey]
+                    }
+                  })
+                }
+              }
+            })
+
             workflow.syncFromAst()
           },
           error: async (error) => {
@@ -193,8 +216,31 @@ export function useWorkflowOperations(
         .subscribe({
           next: (updatedWorkflow) => {
             // 每次 next 事件实时更新工作流状态
-            // ✨ 合并可变副本的状态回原 AST
-            Object.assign(workflow.workflowAst!, updatedWorkflow)
+            // ✨ 只同步节点状态，不覆盖 nodes/edges 数组（避免画布清空）
+            workflow.workflowAst!.state = updatedWorkflow.state
+            workflow.workflowAst!.error = updatedWorkflow.error
+
+            // 同步每个节点的状态属性（state, error, count, emitCount, output）
+            updatedWorkflow.nodes.forEach((updatedNode: any) => {
+              const originalNode = workflow.workflowAst!.nodes.find(n => n.id === updatedNode.id)
+              if (originalNode) {
+                originalNode.state = updatedNode.state
+                originalNode.error = updatedNode.error
+                originalNode.count = updatedNode.count
+                originalNode.emitCount = updatedNode.emitCount
+
+                // 同步输出属性（@Output 装饰器定义的属性）
+                if (originalNode.metadata?.outputs) {
+                  originalNode.metadata.outputs.forEach((output: any) => {
+                    const propKey = String(output.property)
+                    if (updatedNode[propKey] !== undefined) {
+                      (originalNode as any)[propKey] = updatedNode[propKey]
+                    }
+                  })
+                }
+              }
+            })
+
             workflow.syncFromAst()
           },
           error: async (error) => {
@@ -414,8 +460,31 @@ export function useWorkflowOperations(
         .subscribe({
           next: (updatedWorkflow) => {
             // 每次 next 事件实时更新工作流状态
-            // ✨ 合并可变副本的状态回原 AST
-            Object.assign(workflow.workflowAst!, updatedWorkflow)
+            // ✨ 只同步节点状态，不覆盖 nodes/edges 数组（避免画布清空）
+            workflow.workflowAst!.state = updatedWorkflow.state
+            workflow.workflowAst!.error = updatedWorkflow.error
+
+            // 同步每个节点的状态属性（state, error, count, emitCount, output）
+            updatedWorkflow.nodes.forEach((updatedNode: any) => {
+              const originalNode = workflow.workflowAst!.nodes.find(n => n.id === updatedNode.id)
+              if (originalNode) {
+                originalNode.state = updatedNode.state
+                originalNode.error = updatedNode.error
+                originalNode.count = updatedNode.count
+                originalNode.emitCount = updatedNode.emitCount
+
+                // 同步输出属性（@Output 装饰器定义的属性）
+                if (originalNode.metadata?.outputs) {
+                  originalNode.metadata.outputs.forEach((output: any) => {
+                    const propKey = String(output.property)
+                    if (updatedNode[propKey] !== undefined) {
+                      (originalNode as any)[propKey] = updatedNode[propKey]
+                    }
+                  })
+                }
+              }
+            })
+
             workflow.syncFromAst()
           },
           error: async (error) => {
