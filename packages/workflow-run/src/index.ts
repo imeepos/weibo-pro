@@ -28,6 +28,12 @@ export { AudioVisitor } from './AudioVisitor'
 // 控制流节点
 export { IfAstVisitor } from './IfAstVisitor'
 export { SwitchAstVisitor } from './SwitchAstVisitor'
+
+// 消息队列节点
+export { MqPushAstVisitor, MqPullAstVisitor } from './MqAstVisitor'
+
+// 存储节点
+export { StoreGetAstVisitor, StoreSetAstVisitor } from './StoreAstVisitor'
 // 群聊节点
 export { ShareAstVisitor } from './ShareAstVisitor'
 export { GroupChatLoopAstVisitor } from './GroupChatLoopAstVisitor'

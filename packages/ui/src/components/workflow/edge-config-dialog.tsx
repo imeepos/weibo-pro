@@ -15,7 +15,7 @@ import { Label } from '../ui/label'
 import { ScrollArea } from '../ui/scroll-area'
 import { EdgeModeSelector, type EdgeModeOption } from './edge-mode-selector'
 import { EdgeDataMapping } from './edge-data-mapping'
-import { EdgeLoopConfig } from './edge-loop-config'
+import { EdgeConditionConfig } from './edge-condition-config'
 import { EdgePreview, type EdgeModeStyle } from './edge-preview'
 
 export interface EdgeConfigDialogProps {
@@ -40,9 +40,7 @@ export function EdgeConfigDialog({
   const [toProperty, setToProperty] = useState('')
   const [weight, setWeight] = useState(1)
   const [isPrimary, setIsPrimary] = useState(false)
-  const [isLoopBack, setIsLoopBack] = useState(false)
-  const [maxLoopIterations, setMaxLoopIterations] = useState(100)
-  const [loopConditionProperty, setLoopConditionProperty] = useState('')
+  const [condition, setCondition] = useState<{ property: string; value: any } | undefined>(undefined)
 
   useEffect(() => {
     if (edge) {
@@ -51,9 +49,7 @@ export function EdgeConfigDialog({
       setToProperty(edge.toProperty || '')
       setWeight(edge.weight || 1)
       setIsPrimary(edge.isPrimary || false)
-      setIsLoopBack(edge.isLoopBack || false)
-      setMaxLoopIterations(edge.maxLoopIterations || 100)
-      setLoopConditionProperty(edge.loopConditionProperty || '')
+      setCondition(edge.condition)
     }
   }, [edge])
 
@@ -63,16 +59,11 @@ export function EdgeConfigDialog({
       fromProperty: fromProperty || undefined,
       toProperty: toProperty || undefined,
       weight,
-      isLoopBack,
+      condition,
     }
 
     if (mode === EdgeMode.WITH_LATEST_FROM) {
       config.isPrimary = isPrimary
-    }
-
-    if (isLoopBack) {
-      config.maxLoopIterations = maxLoopIterations
-      config.loopConditionProperty = loopConditionProperty || undefined
     }
 
     onSave(config)
@@ -119,13 +110,9 @@ export function EdgeConfigDialog({
               onWeightChange={setWeight}
             />
 
-            <EdgeLoopConfig
-              isLoopBack={isLoopBack}
-              maxLoopIterations={maxLoopIterations}
-              loopConditionProperty={loopConditionProperty}
-              onLoopBackChange={(checked) => setIsLoopBack(checked as boolean)}
-              onMaxIterationsChange={setMaxLoopIterations}
-              onConditionPropertyChange={setLoopConditionProperty}
+            <EdgeConditionConfig
+              condition={condition}
+              onConditionChange={setCondition}
             />
 
             <EdgePreview mode={mode} modeStyles={modeStyles} />

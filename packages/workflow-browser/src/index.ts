@@ -24,3 +24,5 @@ import "./TextAreaAstVisitor";
 import "./IfAstVisitor";
 import "./ShareAstVisitor";
 import "./DateAstVisitor";
+import "./StoreVisitor";
+import "./MqVisitor";

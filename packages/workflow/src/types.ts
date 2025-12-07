@@ -105,11 +105,6 @@ export interface IEdge extends Record<string, any> {
     // 流式合并模式
     mode?: EdgeMode;
     isPrimary?: boolean;  // 标记主流（用于 WITH_LATEST_FROM 模式）
-
-    // 循环控制 - 优雅的递归执行
-    isLoopBack?: boolean;  // 回路边标识：true 时不参与常规拓扑排序，仅用于循环反馈
-    maxLoopIterations?: number;  // 最大循环迭代次数（防止死循环，默认 100）
-    loopConditionProperty?: string;  // 循环条件属性：当源节点的此属性为 falsy 时停止循环
 }
 
 // 辅助函数：检查边是否有条件

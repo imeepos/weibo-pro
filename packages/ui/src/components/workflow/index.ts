@@ -37,7 +37,7 @@ export {
 export { EdgeConfigDialog } from './edge-config-dialog'
 export { EdgeModeSelector } from './edge-mode-selector'
 export { EdgeDataMapping } from './edge-data-mapping'
-export { EdgeLoopConfig } from './edge-loop-config'
+export { EdgeConditionConfig } from './edge-condition-config'
 export { EdgePreview } from './edge-preview'
 
 // 类型导出
@@ -85,7 +85,7 @@ export type { WorkflowSettingsDialogProps } from './workflow-settings-dialog'
 export type { EdgeConfigDialogProps } from './edge-config-dialog'
 export type { EdgeModeSelectorProps, EdgeModeOption } from './edge-mode-selector'
 export type { EdgeDataMappingProps } from './edge-data-mapping'
-export type { EdgeLoopConfigProps } from './edge-loop-config'
+export type { EdgeConditionConfigProps } from './edge-condition-config'
 export type { EdgePreviewProps, EdgeModeStyle } from './edge-preview'
 
 // Hooks 导出
