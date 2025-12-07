@@ -34,3 +34,11 @@ export * from './SwitchAstRender';
 
 // 循环群聊节点
 export * from './GroupChatLoopAstRender';
+
+// 消息队列节点
+export * from './MqPushAstRender';
+export * from './MqPullAstRender';
+
+// 存储节点
+export * from './StoreGetAstRender';
+export * from './StoreSetAstRender';
