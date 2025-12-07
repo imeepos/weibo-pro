@@ -3,6 +3,7 @@ import { ConnectionPool } from "./connection-pool.js";
 import { RxQueueProducer } from "./rx-producer.js";
 import { createRxConsumer } from "./rx-consumer.js";
 import type { QueueManager, RxConsumerOptions } from "./rx-types.js";
+import { share } from 'rxjs/operators';
 
 /**
  * 全局单例 ConnectionPool
@@ -13,6 +14,20 @@ import type { QueueManager, RxConsumerOptions } from "./rx-types.js";
  * - 自动初始化
  */
 let globalConnectionPool: ConnectionPool | null = null;
+
+/**
+ * 全局队列管理器缓存
+ *
+ * 存在即合理:
+ * - 同一队列只创建一个 consumer$（避免消息竞争）
+ * - 减少 RabbitMQ 连接数
+ * - 提升性能
+ *
+ * 优雅即简约:
+ * - 使用 Map 存储队列名 → QueueManager 映射
+ * - 自动共享同一队列的消费者
+ */
+const queueManagerCache = new Map<string, QueueManager<any>>();
 
 function getOrCreateConnectionPool(): ConnectionPool {
     if (!globalConnectionPool) {
@@ -124,21 +139,35 @@ export function useQueue<T = any>(
     // 关键：在入口处统一规范化队列名
     const sanitizedName = sanitizeQueueName(name);
 
+    // 生成缓存 key（包含队列名和选项，确保相同配置共享实例）
+    const cacheKey = `${sanitizedName}:${JSON.stringify(options)}`;
+
+    // 检查缓存
+    if (queueManagerCache.has(cacheKey)) {
+        return queueManagerCache.get(cacheKey)!;
+    }
+
     const config = getMqQueueConfig(sanitizedName);
     const connectionPool = getOrCreateConnectionPool();
 
-    // 创建生产者
+    // 创建生产者（每次都创建新的，因为生产者是无状态的）
     const producer = new RxQueueProducer<T>(connectionPool, config.queue);
 
-    // 创建消费者 Observable
+    // 创建消费者 Observable，使用 share() 转为热流
+    // 优雅设计：
+    // - share() 确保多次订阅共享同一个 RabbitMQ consumer（避免消息竞争）
+    // - 当所有订阅者取消订阅时，自动停止消费（节省资源）
+    // - 下次订阅时会重新创建 consumer（保证消息不丢失）
     const consumer$ = createRxConsumer<T>(
         connectionPool,
         config.queue,
         options,
         config.queueOptions
+    ).pipe(
+        share() // 转为热流，多次订阅共享同一个 RabbitMQ consumer
     );
 
-    return {
+    const queueManager: QueueManager<T> = {
         producer,
         consumer$,
 
@@ -150,4 +179,11 @@ export function useQueue<T = any>(
             return config.dlq;
         }
     };
+
+    // 缓存队列管理器
+    queueManagerCache.set(cacheKey, queueManager);
+
+    console.log(`[useQueue] 创建队列管理器: ${sanitizedName} (cacheKey: ${cacheKey})`);
+
+    return queueManager;
 }
