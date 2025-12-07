@@ -41,6 +41,7 @@ class ErrorBoundary extends Component<
  *
  * 优雅设计：
  * - 根据 URL 参数自动加载或创建工作流
+ * - 支持通过 ?menubar=true 启用水平菜单栏
  * - 提供加载状态反馈
  * - 处理错误情况
  */
@@ -49,6 +50,7 @@ function WorkflowCanvasWrapper() {
   const [node, setNode] = useState<INode | undefined>(undefined)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [useMenubar, setUseMenubar] = useState(false)
 
   useEffect(() => {
     async function initializeWorkflow() {
@@ -56,7 +58,10 @@ function WorkflowCanvasWrapper() {
         // 获取 URL 参数
         const urlParams = new URLSearchParams(window.location.search)
         const name = urlParams.get('name') || 'default'
+        const menubarParam = urlParams.get('menubar')
+
         setWorkflowName(name)
+        setUseMenubar(menubarParam === 'true')
 
         // 尝试从后端加载工作流
         const controller = root.get<WorkflowController>(WorkflowController)
@@ -113,6 +118,7 @@ function WorkflowCanvasWrapper() {
   return <WorkflowCanvas
     workflowAst={node!}
     name='hello'
+    useMenubar={useMenubar}
   />
 }
 

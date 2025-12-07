@@ -33,7 +33,7 @@ import { useEventHandlers } from './hooks/useEventHandlers'
 import { WorkflowOperationsContext, type WorkflowOperations } from '../../context/workflow-operations'
 
 // 纯展示组件（来自 @sker/ui）
-import { WorkflowControls, WorkflowEmptyState, WorkflowMinimap } from '@sker/ui/components/workflow'
+import { WorkflowControls, WorkflowMenubar, WorkflowEmptyState, WorkflowMinimap } from '@sker/ui/components/workflow'
 import { Toaster } from '@sker/ui/components/ui'
 
 // 原有组件
@@ -92,6 +92,8 @@ export interface WorkflowCanvasProps {
   showMiniMap?: boolean
   /** 是否显示控制面板 */
   showControls?: boolean
+  /** 是否使用水平菜单栏（默认 false 使用垂直按钮组） */
+  useMenubar?: boolean
   /** 是否显示背景 */
   showBackground?: boolean
   /** 是否启用网格吸附 */
@@ -119,6 +121,7 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
   workflowAst,
   showMiniMap = true,
   showControls = true,
+  useMenubar = false,
   showBackground = true,
   snapToGrid = false,
   className = '',
@@ -804,8 +807,56 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
 
       {isCanvasEmpty && <WorkflowEmptyState />}
 
-      {showControls && (
+      {showControls && !useMenubar && (
         <WorkflowControls
+          className="absolute left-4 top-4 z-[5]"
+          onRun={handleRunWorkflow}
+          onCancel={cancelWorkflow}
+          onSave={customOnSave || (() => saveWorkflow(workflow.workflowAst?.name || 'Untitled'))}
+          onExport={exportWorkflow}
+          onImport={importWorkflow}
+          onSettings={openWorkflowSettingsDialog}
+          onSchedule={() => {
+            const workflowName = workflow.workflowAst?.name
+            if (workflowName) {
+              openScheduleDialog(workflowName)
+            } else {
+              showToast('error', '请先保存工作流', '只有保存的工作流才能创建调度')
+            }
+          }}
+          onScheduleList={() => {
+            const workflowName = workflow.workflowAst?.name
+            if (workflowName) {
+              openSchedulePanel(workflowName)
+            } else {
+              showToast('error', '请先保存工作流', '只有保存的工作流才能查看调度')
+            }
+          }}
+          onRunHistory={() => {
+            const workflowId = workflow.workflowAst?.id
+            if (workflowId) {
+              openRunHistoryPanel(workflowId)
+            } else {
+              showToast('error', '请先保存工作流', '只有保存的工作流才能查看运行历史')
+            }
+          }}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onFitView={handleFitView}
+          onCollapseNodes={collapseNodes}
+          onExpandNodes={expandNodes}
+          onAutoLayout={autoLayout}
+          onUndo={undo}
+          onRedo={redo}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          isRunning={isRunning}
+          isSaving={isSaving}
+        />
+      )}
+
+      {showControls && useMenubar && (
+        <WorkflowMenubar
           className="absolute left-4 top-4 z-[5]"
           onRun={handleRunWorkflow}
           onCancel={cancelWorkflow}
