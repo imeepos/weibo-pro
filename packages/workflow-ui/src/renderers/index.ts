@@ -16,6 +16,7 @@ export * from './WeiboAccountPickAstRender'
 export * from './WorkflowGraphAstRender'
 export * from './WeiboUserDetectionAstRender';
 export * from './LlmTextAgentAstRender';
+export * from './LlmStructuredOutputAstRender';
 export * from './TextAreaAstRender';
 export * from './DateAstRender';
 export * from './ShareAstVisitor';
