@@ -15,7 +15,7 @@ import {
 } from '@sker/ui/components/workflow'
 import { Button } from '@sker/ui/components/ui/button'
 import { Input } from '@sker/ui/components/ui/input'
-import { SettingsIcon, PencilIcon } from 'lucide-react'
+import { PencilIcon } from 'lucide-react'
 
 export interface PropertyPanelProps {
   className?: string
@@ -31,7 +31,6 @@ export function PropertyPanel({
   const selectedNode = useSelectedNode()
 
   const [internalFormData, setInternalFormData] = useState<Record<string, any>>({})
-  const [dynamicOutputsDialogOpen, setDynamicOutputsDialogOpen] = useState(false)
   const [editingPortLabel, setEditingPortLabel] = useState<string | null>(null)
 
   const formData = externalFormData ?? internalFormData
