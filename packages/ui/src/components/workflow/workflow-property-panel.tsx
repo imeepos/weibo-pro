@@ -198,10 +198,11 @@ export interface DynamicPortItemProps {
   title: string
   description?: string
   type?: string
+  isStatic?: boolean  // 装饰器定义的端口，只能修改 title/description
   onTitleChange: (value: string) => void
   onDescriptionChange?: (value: string) => void
   onTypeChange?: (value: string) => void
-  onRemove: () => void
+  onRemove?: () => void
   className?: string
 }
 
@@ -211,6 +212,7 @@ export function DynamicPortItem({
   title,
   description = '',
   type = 'string',
+  isStatic = false,
   onTitleChange,
   onDescriptionChange,
   onTypeChange,
@@ -221,6 +223,7 @@ export function DynamicPortItem({
     <div className={cn(
       'flex flex-col gap-2 p-3 rounded-lg',
       'bg-accent/50 dark:bg-accent/30',
+      isStatic && 'border-l-2 border-primary/50',
       className
     )}>
       <div className="flex items-center gap-2">
@@ -230,7 +233,7 @@ export function DynamicPortItem({
           placeholder="端口名称"
           className="h-7 text-xs flex-1 bg-card text-foreground"
         />
-        {onTypeChange && (
+        {!isStatic && onTypeChange && (
           <select
             value={type}
             onChange={(e) => onTypeChange(e.target.value)}
@@ -241,15 +244,20 @@ export function DynamicPortItem({
             ))}
           </select>
         )}
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={onRemove}
-          className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-        >
-          删除
-        </Button>
+        {isStatic && (
+          <span className="h-7 text-xs px-2 flex items-center text-muted-foreground">{type}</span>
+        )}
+        {!isStatic && onRemove && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onRemove}
+            className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+          >
+            删除
+          </Button>
+        )}
       </div>
       {onDescriptionChange && (
         <Input

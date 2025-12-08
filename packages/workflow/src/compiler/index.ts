@@ -84,7 +84,8 @@ export class Compiler {
             required: input.required,
             defaultValue: input.defaultValue,
             title: input.title,
-            type: input.type
+            type: input.type,
+            isStatic: true
         }));
     }
 
@@ -101,7 +102,8 @@ export class Compiler {
             type: output.type,
             isRouter: output.isRouter,
             dynamic: output.dynamic,
-            condition: output.condition
+            condition: output.condition,
+            isStatic: true
         }));
     }
 

@@ -271,6 +271,7 @@ export function PropertyPanel({
                   title={input.title || input.property}
                   description={input.description || ''}
                   type={input.type || 'string'}
+                  isStatic={input.isStatic}
                   onTitleChange={(value) => {
                     input.title = value
                     handlePropertyChange('metadata', { ...metadata })
@@ -283,7 +284,7 @@ export function PropertyPanel({
                     input.type = value as any
                     handlePropertyChange('metadata', { ...metadata })
                   }}
-                  onRemove={() => handleRemoveInput(input.property)}
+                  onRemove={input.isStatic ? undefined : () => handleRemoveInput(input.property)}
                 />
               ))}
             </div>
@@ -302,6 +303,7 @@ export function PropertyPanel({
                   title={output.title || output.property}
                   description={output.description || ''}
                   type={output.type || 'string'}
+                  isStatic={output.isStatic}
                   onTitleChange={(value) => {
                     output.title = value
                     handlePropertyChange('metadata', { ...metadata })
@@ -314,7 +316,7 @@ export function PropertyPanel({
                     output.type = value
                     handlePropertyChange('metadata', { ...metadata })
                   }}
-                  onRemove={() => handleRemoveOutput(output.property)}
+                  onRemove={output.isStatic ? undefined : () => handleRemoveOutput(output.property)}
                 />
               ))}
             </div>
