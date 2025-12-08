@@ -116,6 +116,14 @@ export class WorkflowScheduleService {
         intervalSeconds,
         startTime
       })
+
+      // 如果调度已过期但新的下次执行时间有效，重新启用
+      const endTime = dto.endTime !== undefined ? dto.endTime : schedule.endTime
+      if (schedule.status === ScheduleStatus.EXPIRED && dto.nextRunAt) {
+        if (!endTime || dto.nextRunAt <= endTime) {
+          dto.status = ScheduleStatus.ENABLED
+        }
+      }
     }
 
     Object.assign(schedule, dto)
