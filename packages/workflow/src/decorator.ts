@@ -28,6 +28,8 @@ export type NodeType = `llm` | `basic` | `crawler` | `control`;
 export interface NodeOptions {
     title?: string;
     type?: NodeType;
+    dynamicInputs?: boolean;
+    dynamicOutputs?: boolean;
 }
 
 export interface NodeMetadata extends NodeOptions {

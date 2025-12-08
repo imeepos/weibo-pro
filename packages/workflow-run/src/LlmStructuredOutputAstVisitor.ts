@@ -4,6 +4,11 @@ import { LlmStructuredOutputAst } from "@sker/workflow-ast";
 import { Observable } from "rxjs";
 import { ChatOpenAI } from "@langchain/openai";
 
+interface JsonSchema {
+    type: string;
+    properties?: Record<string, { type: string; description?: string }>;
+}
+
 @Injectable()
 export class LlmStructuredOutputAstVisitor {
 
@@ -24,7 +29,18 @@ export class LlmStructuredOutputAstVisitor {
                 ast.count += 1;
                 obs.next({ ...ast });
 
-                const schema = JSON.parse(ast.schema);
+                const schema: JsonSchema = JSON.parse(ast.schema);
+
+                // 根据 schema 动态生成 metadata.outputs
+                if (schema.properties) {
+                    ast.metadata = ast.metadata || { class: {}, inputs: [], outputs: [], states: [] };
+                    ast.metadata.outputs = Object.entries(schema.properties).map(([key, prop]) => ({
+                        property: key,
+                        title: prop.description || key,
+                        type: prop.type
+                    }));
+                }
+
                 const model = new ChatOpenAI({ model: ast.model, temperature: ast.temperature });
                 const structuredModel = model.withStructuredOutput(schema);
 
@@ -42,8 +58,11 @@ export class LlmStructuredOutputAstVisitor {
                     return;
                 }
 
-                ast.output = result as Record<string, unknown>;
-                ast.rawText = JSON.stringify(result, null, 2);
+                // 将结构化输出的每个字段赋值到 ast 上
+                for (const [key, value] of Object.entries(result as Record<string, unknown>)) {
+                    (ast as any)[key] = value;
+                }
+
                 ast.state = 'emitting';
                 obs.next({ ...ast });
 

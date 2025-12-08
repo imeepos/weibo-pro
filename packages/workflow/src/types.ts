@@ -14,6 +14,8 @@ export type IAstStates = `pending` | `running` | `emitting` | `success` | `fail`
 export interface INodeMetadata {
     title?: string;
     type?: NodeType;
+    dynamicInputs?: boolean;
+    dynamicOutputs?: boolean;
 }
 export interface INodeInputMetadata {
     property: string;

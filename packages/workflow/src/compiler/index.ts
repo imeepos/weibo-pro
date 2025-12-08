@@ -65,7 +65,9 @@ export class Compiler {
 
         return {
             title: metadata?.title,
-            type: metadata?.type
+            type: metadata?.type,
+            dynamicInputs: metadata?.dynamicInputs,
+            dynamicOutputs: metadata?.dynamicOutputs
         };
     }
 
