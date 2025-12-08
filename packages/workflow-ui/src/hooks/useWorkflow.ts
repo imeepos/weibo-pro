@@ -8,7 +8,7 @@ import { astToFlowNodes, astToFlowEdges } from '../adapters/ast-to-flow'
 import { StateChangeProxy } from '../core/state-change-proxy'
 import { calculateDagreLayout } from '../utils/layout'
 import { historyManager } from '../store/history.store'
-// import { useWorkflowStore } from '../store/workflow.store' // 暂时禁用
+import { useWorkflowStore } from '../store/workflow.store'
 
 export interface UseWorkflowReturn {
   workflowAst: WorkflowGraphAst
@@ -83,16 +83,15 @@ export function useWorkflow(
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
 
-  // ✨ 集成 Zustand Store：暂时禁用以避免 Immer 冻结对象
-  // TODO: 重构为完全基于 store 的架构，或完全移除 store
-  // const initWorkflow = useWorkflowStore((state) => state.initWorkflow)
-  // const storeUpdateNode = useWorkflowStore((state) => state.updateNode)
-  // const storeNodes = useWorkflowStore((state) => state.nodes)
+  // ✨ 集成 Zustand Store：同步状态到全局 store
+  const initWorkflow = useWorkflowStore((state) => state.initWorkflow)
+  const storeSyncNodes = useWorkflowStore((state) => state.setNodes)
+  const storeSyncEdges = useWorkflowStore((state) => state.setEdges)
 
-  // 初始化 store（暂时禁用）
-  // useEffect(() => {
-  //   initWorkflow(workflowAst)
-  // }, [])
+  // 初始化 store
+  useEffect(() => {
+    initWorkflow(workflowAst)
+  }, [workflowAst, initWorkflow])
 
   // 历史记录状态
   const [canUndo, setCanUndo] = useState(false)
@@ -193,23 +192,34 @@ export function useWorkflow(
       onWorkflowChangeRef.current()
     }
 
+    // 同步 nodes 到全局 store
+    storeSyncNodes(nodes, false)
+
     // 延迟标记初始化完成，跳过 React Flow 的初始测量
     if (!isInitializedRef.current) {
       setTimeout(() => {
         isInitializedRef.current = true
       }, 500)
     }
-  }, [nodes, workflowAst])
+  }, [nodes, workflowAst, storeSyncNodes])
+
+  // 同步 edges 到全局 store
+  useEffect(() => {
+    storeSyncEdges(edges, false)
+  }, [edges, storeSyncEdges])
 
   /**
-   * 从 AST 同步到 React Flow
+   * 从 AST 同步到 React Flow 和 Zustand Store
    */
   const syncFromAst = useCallback(() => {
     const flowNodes = astToFlowNodes(workflowAst)
     const flowEdges = astToFlowEdges(workflowAst)
     setNodes(flowNodes)
     setEdges(flowEdges)
-  }, [workflowAst, setNodes, setEdges])
+    // 同步到全局 store
+    storeSyncNodes(flowNodes, false)
+    storeSyncEdges(flowEdges, false)
+  }, [workflowAst, setNodes, setEdges, storeSyncNodes, storeSyncEdges])
 
   /**
    * 添加节点
@@ -277,32 +287,44 @@ export function useWorkflow(
   /**
    * 更新节点
    *
-   * 直接修改 workflowAst，然后同步到 React Flow
+   * 创建新节点对象替换旧节点，确保 React 检测到变化
    */
   const updateNode = useCallback(
     (nodeId: string, updates: Partial<INode>) => {
-      // 递归查找并更新节点
-      const findAndUpdateNode = (nodes: INode[]): boolean => {
-        for (const node of nodes) {
+      // 递归查找并替换节点（不可变方式）
+      const replaceNode = (nodes: INode[]): { nodes: INode[]; found: boolean } => {
+        let found = false
+        const newNodes = nodes.map(node => {
           if (node.id === nodeId) {
-            Object.assign(node, updates)
-            return true
+            found = true
+            // 创建新对象，保持原型链
+            return Object.assign(
+              Object.create(Object.getPrototypeOf(node)),
+              node,
+              updates
+            )
           }
           if ((node as any).isGroupNode && (node as any).nodes?.length > 0) {
-            if (findAndUpdateNode((node as any).nodes)) {
-              return true
+            const result = replaceNode((node as any).nodes)
+            if (result.found) {
+              found = true
+              return Object.assign(
+                Object.create(Object.getPrototypeOf(node)),
+                node,
+                { nodes: result.nodes }
+              )
             }
           }
-        }
-        return false
+          return node
+        })
+        return { nodes: newNodes, found }
       }
 
-      const found = findAndUpdateNode(workflowAst.nodes)
+      const result = replaceNode(workflowAst.nodes)
 
-      if (found) {
-        // 同步到 React Flow
+      if (result.found) {
+        workflowAst.nodes = result.nodes
         syncFromAst()
-        // 触发变更回调
         onWorkflowChangeRef.current?.()
       }
     },

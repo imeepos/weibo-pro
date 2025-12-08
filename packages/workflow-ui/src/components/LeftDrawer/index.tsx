@@ -9,7 +9,6 @@ import {
   type DrawerTab,
   type DrawerAction,
 } from '@sker/ui/components/workflow'
-import { useWorkflowStore } from '../../store/workflow.store'
 import { NodeRunHistory } from './NodeRunHistory'
 
 // ✨ 稳定的设置面板包装器，避免因 formData 改变而重新挂载
@@ -31,12 +30,12 @@ export interface LeftDrawerProps {
   onRunNode?: (nodeId: string) => void
   onLocateNode?: (nodeId: string) => void
   onAutoSave?: () => void
+  onUpdateNode?: (nodeId: string, updates: Record<string, any>) => void
   className?: string
 }
 
-export function LeftDrawer({ visible, onClose, onRunNode, onLocateNode, onAutoSave, className }: LeftDrawerProps) {
+export function LeftDrawer({ visible, onClose, onRunNode, onLocateNode, onAutoSave, onUpdateNode, className }: LeftDrawerProps) {
   const selectedNode = useSelectedNode()
-  const updateNode = useWorkflowStore((state) => state.updateNode)
 
   // useSelectedNode 已确保节点已编译，可安全获取 metadata
   const metadata = useMemo(() => {
@@ -100,14 +99,14 @@ export function LeftDrawer({ visible, onClose, onRunNode, onLocateNode, onAutoSa
       updates[property] = value
     })
 
-    // ✨ 直接调用 store 的 updateNode（内部使用 Immer 确保不可变性）
-    updateNode(selectedNode.id, updates)
+    // ✨ 使用传入的 updateNode 更新节点（确保与 WorkflowCanvas 状态同步）
+    onUpdateNode?.(selectedNode.id, updates)
 
     // ✨ 触发自动保存到后台
     onAutoSave?.()
 
     setHasChanges(false)
-  }, [selectedNode, hasChanges, formData, updateNode, onAutoSave])
+  }, [selectedNode, hasChanges, formData, onUpdateNode, onAutoSave])
 
   useEffect(() => {
     if (!visible) return

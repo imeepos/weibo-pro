@@ -965,6 +965,7 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
         onRunNode={runNode}
         onLocateNode={handleLocateNode}
         onAutoSave={triggerSave}
+        onUpdateNode={workflow.updateNode}
       />
 
       <EdgeConfigDialog

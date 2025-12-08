@@ -147,6 +147,8 @@ export function useWorkflowOperations(
             }
           },
           complete: async () => {
+            workflow.syncFromAst()
+
             const successCount = workflow.workflowAst!.nodes.filter(n => n.state === 'success').length
             const failCount = workflow.workflowAst!.nodes.filter(n => n.state === 'fail').length
 
@@ -538,6 +540,9 @@ export function useWorkflowOperations(
             }
           },
           complete: async () => {
+            // 确保最终状态同步到 UI
+            workflow.syncFromAst()
+
             // 统计执行结果
             const successCount = workflow.workflowAst!.nodes.filter(n => n.state === 'success').length
             const failCount = workflow.workflowAst!.nodes.filter(n => n.state === 'fail').length
