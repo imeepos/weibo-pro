@@ -41,8 +41,12 @@ export class LlmStructuredOutputAstVisitor {
                 obs.next({ ...ast });
 
                 const schema = buildSchemaFromMetadata(ast.metadata?.outputs || []);
-                const model = new ChatOpenAI({ model: ast.model, temperature: ast.temperature });
-                const structuredModel = model.withStructuredOutput(schema);
+                const model = new ChatOpenAI({
+                    model: ast.model,
+                    temperature: ast.temperature,
+                    modelKwargs: { response_format: { type: 'json_object' } }
+                });
+                const structuredModel = model.withStructuredOutput(schema, { strict: true });
 
                 const messages = [
                     ...(ast.system.length ? [{ role: 'system' as const, content: ast.system.join('\n') }] : []),
