@@ -10,6 +10,7 @@ import {
   PropertyPanelEmptyState,
   PropertyPanelField,
   NodeStateBadge,
+  DynamicPortItem,
   type PropertySection,
   type InputFieldType,
 } from '@sker/ui/components/workflow'
@@ -265,20 +266,16 @@ export function PropertyPanel({
                 </Button>
               </div>
               {dynamicInputs.map((input) => (
-                <div key={input.property} className="flex items-center gap-2 text-xs p-2 bg-muted rounded">
-                  <Input
-                    className="h-6 text-xs flex-1"
-                    value={input.title || input.property}
-                    onChange={(e) => {
-                      input.title = e.target.value
-                      handlePropertyChange('metadata', { ...metadata })
-                    }}
-                    placeholder="输入名称"
-                  />
-                  <Button variant="ghost" size="sm" onClick={() => handleRemoveInput(input.property)}>
-                    删除
-                  </Button>
-                </div>
+                <DynamicPortItem
+                  key={input.property}
+                  value={input.title || input.property}
+                  onChange={(value) => {
+                    input.title = value
+                    handlePropertyChange('metadata', { ...metadata })
+                  }}
+                  onRemove={() => handleRemoveInput(input.property)}
+                  placeholder="输入名称"
+                />
               ))}
             </div>
           )}
@@ -291,20 +288,16 @@ export function PropertyPanel({
                 </Button>
               </div>
               {dynamicOutputs.map((output) => (
-                <div key={output.property} className="flex items-center gap-2 text-xs p-2 bg-muted rounded">
-                  <Input
-                    className="h-6 text-xs flex-1"
-                    value={output.title || output.property}
-                    onChange={(e) => {
-                      output.title = e.target.value
-                      handlePropertyChange('metadata', { ...metadata })
-                    }}
-                    placeholder="输出名称"
-                  />
-                  <Button variant="ghost" size="sm" onClick={() => handleRemoveOutput(output.property)}>
-                    删除
-                  </Button>
-                </div>
+                <DynamicPortItem
+                  key={output.property}
+                  value={output.title || output.property}
+                  onChange={(value) => {
+                    output.title = value
+                    handlePropertyChange('metadata', { ...metadata })
+                  }}
+                  onRemove={() => handleRemoveOutput(output.property)}
+                  placeholder="输出名称"
+                />
               ))}
             </div>
           )}

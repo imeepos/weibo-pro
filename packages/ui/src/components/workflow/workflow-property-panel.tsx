@@ -8,6 +8,8 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from '../ui/accordion'
+import { Input } from '../ui/input'
+import { Button } from '../ui/button'
 
 export interface PropertySection {
   id: string
@@ -189,5 +191,45 @@ export function NodeStateBadge({ state, className }: NodeStateBadgeProps) {
     >
       {state}
     </span>
+  )
+}
+
+export interface DynamicPortItemProps {
+  value: string
+  onChange: (value: string) => void
+  onRemove: () => void
+  placeholder?: string
+  className?: string
+}
+
+export function DynamicPortItem({
+  value,
+  onChange,
+  onRemove,
+  placeholder = '端口名称',
+  className,
+}: DynamicPortItemProps) {
+  return (
+    <div className={cn(
+      'flex items-center gap-2 p-2 rounded-lg',
+      'bg-accent/50 dark:bg-accent/30',
+      className
+    )}>
+      <Input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="h-7 text-xs flex-1 bg-card text-foreground"
+      />
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={onRemove}
+        className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+      >
+        删除
+      </Button>
+    </div>
   )
 }

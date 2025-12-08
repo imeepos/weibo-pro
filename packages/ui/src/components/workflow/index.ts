@@ -16,6 +16,7 @@ export {
   PropertyPanelEmptyState,
   PropertyPanelField,
   NodeStateBadge,
+  DynamicPortItem,
 } from './workflow-property-panel'
 export { WorkflowFormField } from './workflow-form-field'
 export { WorkflowSettingsDialog, PRESET_COLORS } from './workflow-settings-dialog'
@@ -79,6 +80,7 @@ export type {
   PropertyPanelEmptyStateProps,
   PropertyPanelFieldProps,
   NodeStateBadgeProps,
+  DynamicPortItemProps,
 } from './workflow-property-panel'
 export type { WorkflowFormFieldProps, InputFieldType } from './workflow-form-field'
 export type { WorkflowSettingsDialogProps } from './workflow-settings-dialog'
