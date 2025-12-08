@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react'
 import { useSelectedNode } from './useSelectedNode'
 import { SmartFormField } from './SmartFormField'
-import { type DynamicOutput } from '@sker/workflow'
 import { ErrorDetailPanel } from '../ErrorDetail'
 import { SerializedError, root } from '@sker/core'
 import {
@@ -14,7 +13,6 @@ import {
   type PropertySection,
   type InputFieldType,
 } from '@sker/ui/components/workflow'
-import { DynamicOutputsDialog, } from '@sker/ui/components/ui/dynamic-outputs-dialog'
 import { Button } from '@sker/ui/components/ui/button'
 import { Input } from '@sker/ui/components/ui/input'
 import { SettingsIcon, PencilIcon } from 'lucide-react'
@@ -220,67 +218,98 @@ export function PropertyPanel({
     })
   }
 
-  // 检查节点是否支持动态输出（有 isRouter: true 的输出）
-  const outputMetadata = metadata.outputs
-  const hasDynamicOutputSupport = outputMetadata.some(meta => meta.isRouter)
+  // 检查节点是否支持动态输入/输出
+  const supportsDynamicInputs = metadata.class.dynamicInputs === true
+  const supportsDynamicOutputs = metadata.class.dynamicOutputs === true
 
-  if (hasDynamicOutputSupport) {
-    const currentDynamicOutputs = (ast as any).dynamicOutputs as DynamicOutput[] || []
+  if (supportsDynamicInputs || supportsDynamicOutputs) {
+    const dynamicInputs = metadata.inputs.filter(() => supportsDynamicInputs)
+    const dynamicOutputs = metadata.outputs
 
-    const handleSaveDynamicOutputs = (outputs: DynamicOutput[]) => {
-      if (selectedNode) {
-        // 更新节点的 dynamicOutputs 属性
-        (selectedNode.data as any).dynamicOutputs = outputs
+    const handleAddInput = () => {
+      const newProperty = `input_${Date.now()}`
+      const newInput = { property: newProperty, title: '新输入', type: 'string' as const }
+      metadata.inputs.push(newInput)
+      handlePropertyChange('metadata', { ...metadata })
+    }
 
-        // 初始化动态输出的属性值为 undefined
-        outputs.forEach(output => {
-          if ((selectedNode.data as any)[output.property] === undefined) {
-            (selectedNode.data as any)[output.property] = undefined
-          }
-        })
+    const handleRemoveInput = (property: string) => {
+      metadata.inputs = metadata.inputs.filter(i => i.property !== property)
+      handlePropertyChange('metadata', { ...metadata })
+    }
 
-        // 触发 React Flow 重新渲染
-        handlePropertyChange('dynamicOutputs', outputs)
-      }
+    const handleAddOutput = () => {
+      const newProperty = `output_${Date.now()}`
+      const newOutput = { property: newProperty, title: '新输出', type: 'string' }
+      metadata.outputs.push(newOutput)
+      handlePropertyChange('metadata', { ...metadata })
+    }
+
+    const handleRemoveOutput = (property: string) => {
+      metadata.outputs = metadata.outputs.filter(o => o.property !== property)
+      handlePropertyChange('metadata', { ...metadata })
     }
 
     sections.push({
-      id: 'dynamic-outputs',
-      title: '动态输出管理',
+      id: 'dynamic-ports',
+      title: '动态端口管理',
       color: 'warning',
-      defaultOpen: false,
+      defaultOpen: true,
       content: (
-        <>
-          <div className="space-y-2">
-            <p className="text-xs text-muted-foreground">
-              当前配置了 {currentDynamicOutputs.length} 个动态输出端口
-            </p>
-            {currentDynamicOutputs.map((output, index) => (
-              <div key={index} className="text-xs p-2 bg-muted rounded">
-                <div className="font-medium">{output.title}</div>
-                <div className="text-muted-foreground font-mono text-[10px]">
-                  {output.condition}
-                </div>
+        <div className="space-y-4">
+          {supportsDynamicInputs && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium">输入端口 ({dynamicInputs.length})</span>
+                <Button variant="outline" size="sm" onClick={handleAddInput}>
+                  添加输入
+                </Button>
               </div>
-            ))}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setDynamicOutputsDialogOpen(true)}
-              className="w-full"
-            >
-              <SettingsIcon className="h-4 w-4 mr-2" />
-              配置动态输出
-            </Button>
-          </div>
-
-          <DynamicOutputsDialog
-            open={dynamicOutputsDialogOpen}
-            onOpenChange={setDynamicOutputsDialogOpen}
-            outputs={currentDynamicOutputs}
-            onSave={handleSaveDynamicOutputs}
-          />
-        </>
+              {dynamicInputs.map((input) => (
+                <div key={input.property} className="flex items-center gap-2 text-xs p-2 bg-muted rounded">
+                  <Input
+                    className="h-6 text-xs flex-1"
+                    value={input.title || input.property}
+                    onChange={(e) => {
+                      input.title = e.target.value
+                      handlePropertyChange('metadata', { ...metadata })
+                    }}
+                    placeholder="输入名称"
+                  />
+                  <Button variant="ghost" size="sm" onClick={() => handleRemoveInput(input.property)}>
+                    删除
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+          {supportsDynamicOutputs && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium">输出端口 ({dynamicOutputs.length})</span>
+                <Button variant="outline" size="sm" onClick={handleAddOutput}>
+                  添加输出
+                </Button>
+              </div>
+              {dynamicOutputs.map((output) => (
+                <div key={output.property} className="flex items-center gap-2 text-xs p-2 bg-muted rounded">
+                  <Input
+                    className="h-6 text-xs flex-1"
+                    value={output.title || output.property}
+                    onChange={(e) => {
+                      output.title = e.target.value
+                      handlePropertyChange('metadata', { ...metadata })
+                    }}
+                    placeholder="输出名称"
+                  />
+                  <Button variant="ghost" size="sm" onClick={() => handleRemoveOutput(output.property)}>
+                    删除
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       ),
     })
   }

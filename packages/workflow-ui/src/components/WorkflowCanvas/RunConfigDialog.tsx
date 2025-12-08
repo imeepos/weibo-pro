@@ -18,6 +18,7 @@ import { Button } from '@sker/ui/components/ui/button'
  * - 智能推断字段类型（优先使用 @Input 的 type）
  * - 使用 WorkflowFormField 构建统一表单
  * - 保留节点的默认值
+ * - 每次打开时获取工作流最新状态
  */
 export interface RunConfigDialogProps {
   visible: boolean
@@ -37,6 +38,58 @@ interface InputField {
   fullKey: string
 }
 
+/**
+ * 从工作流 AST 收集起始节点的输入值
+ */
+function collectInputsFromWorkflow(
+  workflow: WorkflowGraphAst,
+  defaultInputs: Record<string, unknown>
+): Record<string, unknown> {
+  const normalizedInputs: Record<string, unknown> = {}
+
+  if (!workflow?.nodes || !workflow?.edges) {
+    return normalizedInputs
+  }
+
+  const startNodes = workflow.nodes.filter((node) => {
+    const hasIncomingEdges = workflow.edges.some((edge: IEdge) => edge.to === node.id)
+    return !hasIncomingEdges
+  })
+
+  startNodes.forEach((astNode: any) => {
+    try {
+      const ctor = resolveConstructor(astNode)
+      const inputMetadatas = getInputMetadata(ctor)
+      const metadataArray = Array.isArray(inputMetadatas) ? inputMetadatas : [inputMetadatas]
+
+      metadataArray.forEach((metadata) => {
+        const propKey = String(metadata.propertyKey)
+        const fullKey = `${astNode.id}.${propKey}`
+
+        // 优先级：完整格式 > 简化格式 > 节点当前值 > 装饰器默认值
+        let finalValue: any = undefined
+
+        if (fullKey in defaultInputs) {
+          finalValue = defaultInputs[fullKey]
+        } else if (propKey in defaultInputs) {
+          finalValue = defaultInputs[propKey]
+        } else {
+          const nodeValue = astNode[propKey]
+          finalValue = nodeValue !== undefined ? nodeValue : metadata.defaultValue
+        }
+
+        if (finalValue !== undefined) {
+          normalizedInputs[fullKey] = finalValue
+        }
+      })
+    } catch (error) {
+      console.error('[RunConfigDialog] 处理节点失败:', error)
+    }
+  })
+
+  return normalizedInputs
+}
+
 export function RunConfigDialog({
   visible,
   workflow,
@@ -46,13 +99,10 @@ export function RunConfigDialog({
 }: RunConfigDialogProps) {
   const [inputs, setInputs] = useState<Record<string, unknown>>({})
   const [isInitialized, setIsInitialized] = useState(false)
-
-  // 追踪上一次的 visible 状态，只在 Dialog 打开时初始化一次
   const prevVisibleRef = useRef(false)
 
-  // 初始化表单输入值
+  // 每次打开对话框时，从工作流获取最新状态
   useEffect(() => {
-    // 只在 Dialog 从隐藏变为可见时初始化
     const isOpening = visible && !prevVisibleRef.current
 
     if (!visible) {
@@ -61,62 +111,14 @@ export function RunConfigDialog({
       return
     }
 
-    // 如果已经初始化过了（visible 保持为 true），不再重复初始化
     if (!isOpening) {
       return
     }
 
-    // 规范化 defaultInputs 格式：支持简化格式和完整格式
-    const normalizedInputs: Record<string, unknown> = {}
-
-    // 收集所有入度为 0 的节点的 @Input 属性值
-    // 注意：workflow.nodes 是 AST 节点数组，不是 React Flow 节点数组
-    if (workflow?.nodes && workflow?.edges) {
-      const startNodes = workflow.nodes.filter((node) => {
-        const hasIncomingEdges = workflow.edges.some((edge: IEdge) => edge.to === node.id)
-        return !hasIncomingEdges
-      })
-
-      startNodes.forEach((astNode: any) => {
-        try {
-          const ctor = resolveConstructor(astNode)
-          const inputMetadatas = getInputMetadata(ctor)
-          const metadataArray = Array.isArray(inputMetadatas) ? inputMetadatas : [inputMetadatas]
-
-          metadataArray.forEach((metadata) => {
-            const propKey = String(metadata.propertyKey)
-            const fullKey = `${astNode.id}.${propKey}`
-
-            // 优先级：完整格式 > 简化格式 > 节点当前值 > 装饰器默认值
-            let finalValue: any = undefined
-
-            // 1. 优先使用完整格式 (nodeId.propertyKey)
-            if (fullKey in defaultInputs) {
-              finalValue = defaultInputs[fullKey]
-            }
-            // 2. 回退到简化格式 (propertyKey) - 兼容旧数据或用户手动填写
-            else if (propKey in defaultInputs) {
-              finalValue = defaultInputs[propKey]
-            }
-            // 3. 使用节点当前值
-            else {
-              const nodeValue = astNode[propKey]
-              finalValue = nodeValue !== undefined ? nodeValue : metadata.defaultValue
-            }
-
-            // 只在值不为 undefined 时才添加
-            if (finalValue !== undefined) {
-              normalizedInputs[fullKey] = finalValue
-            }
-          })
-        } catch (error) {
-          console.error('[RunConfigDialog] 处理节点失败:', error)
-        }
-      })
-    }
-
-    setInputs(normalizedInputs)
-    setIsInitialized(true)  // 标记初始化完成
+    // 从当前工作流 AST 收集最新的输入值
+    const latestInputs = collectInputsFromWorkflow(workflow, defaultInputs)
+    setInputs(latestInputs)
+    setIsInitialized(true)
     prevVisibleRef.current = true
   }, [visible, workflow, defaultInputs])
 
