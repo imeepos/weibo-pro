@@ -15,6 +15,7 @@ export { EventAutoCreatorVisitor } from './EventAutoCreatorVisitor'
 export { WeiboLoginAstVisitor } from './WeiboLoginAstVisitor'
 export { WeiboAccountPickAstVisitor } from './WeiboAccountPickAstVisitor'
 export { LlmTextAgentAstVisitor } from './LlmTextAgentAstVisitor'
+export { LlmStructuredOutputAstVisitor } from './LlmStructuredOutputAstVisitor'
 export { TextAreaAstVisitor } from './TextAreaAstVisitor'
 export { DateAstVisitor } from './DateAstVisitor'
 // IS_BUFFER 模式示例

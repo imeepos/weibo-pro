@@ -173,7 +173,6 @@ export interface InputOptions {
      * @Input({ mode: IS_MULTI | IS_BUFFER }) // 全部聚合
      */
     mode?: number;
-
     /**
      * @deprecated 使用 mode: IS_MULTI 替代
      * 向后兼容：isMulti: true 等价于 mode: IS_MULTI
@@ -183,6 +182,8 @@ export interface InputOptions {
     required?: boolean;
     defaultValue?: any;
     title?: string;
+    // 节点简介 可以给大模型用
+    description?: string;
     type?: InputFieldType;
     // 支持UI动态添加输入节点
     dynamic?: boolean;
@@ -245,7 +246,7 @@ export function getInputMetadata(target: Type<any> | object, propertyKey?: strin
 export interface OutputOptions {
     title?: string;
     type?: string;
-
+    description?: string;
     // 路由节点支持
     isRouter?: boolean;      // 标识为路由输出，Scheduler 会过滤 undefined 值
     dynamic?: boolean;       // 支持 UI 动态添加输出端口

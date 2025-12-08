@@ -17,6 +17,7 @@ export { WorkflowGraphAst } from '@sker/workflow';
 export { WeiboUserDetectionAst } from './WeiboUserDetectionAst';
 
 export { LlmTextAgentAst } from './LlmTextAgentAst';
+export { LlmStructuredOutputAst } from './LlmStructuredOutputAst';
 export { LlmCategoryAst } from './LlmCategoryAst';
 export { LlmImageToTextAst } from './LlmImageToTextAst';
 export { LlmTextToAudioAst } from './LlmTextToAudioAst';
