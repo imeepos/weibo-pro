@@ -655,7 +655,7 @@ export class ReactiveScheduler {
         // 🔧 优先使用编译后的 metadata 字段
         node.metadata!.inputs.forEach(input => {
             const propKey = String(input.property);
-            const isMulti = hasMultiMode(input.mode) || input.isMulti;
+            const isMulti = hasMultiMode(input.mode);
 
             // 优先使用装饰器的 defaultValue
             if (input.defaultValue !== undefined) {
