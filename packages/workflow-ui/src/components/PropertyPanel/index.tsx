@@ -228,7 +228,7 @@ export function PropertyPanel({
 
     const handleAddInput = () => {
       const newProperty = `input_${Date.now()}`
-      const newInput = { property: newProperty, title: '新输入', type: 'string' as const }
+      const newInput = { property: newProperty, title: '新输入', description: '', type: 'string' as const }
       metadata.inputs.push(newInput)
       handlePropertyChange('metadata', { ...metadata })
     }
@@ -240,7 +240,7 @@ export function PropertyPanel({
 
     const handleAddOutput = () => {
       const newProperty = `output_${Date.now()}`
-      const newOutput = { property: newProperty, title: '新输出', type: 'string' }
+      const newOutput = { property: newProperty, title: '新输出', description: '', type: 'string' }
       metadata.outputs.push(newOutput)
       handlePropertyChange('metadata', { ...metadata })
     }
@@ -268,13 +268,22 @@ export function PropertyPanel({
               {dynamicInputs.map((input) => (
                 <DynamicPortItem
                   key={input.property}
-                  value={input.title || input.property}
-                  onChange={(value) => {
+                  title={input.title || input.property}
+                  description={input.description || ''}
+                  type={input.type || 'string'}
+                  onTitleChange={(value) => {
                     input.title = value
                     handlePropertyChange('metadata', { ...metadata })
                   }}
+                  onDescriptionChange={(value) => {
+                    input.description = value
+                    handlePropertyChange('metadata', { ...metadata })
+                  }}
+                  onTypeChange={(value) => {
+                    input.type = value as any
+                    handlePropertyChange('metadata', { ...metadata })
+                  }}
                   onRemove={() => handleRemoveInput(input.property)}
-                  placeholder="输入名称"
                 />
               ))}
             </div>
@@ -290,13 +299,22 @@ export function PropertyPanel({
               {dynamicOutputs.map((output) => (
                 <DynamicPortItem
                   key={output.property}
-                  value={output.title || output.property}
-                  onChange={(value) => {
+                  title={output.title || output.property}
+                  description={output.description || ''}
+                  type={output.type || 'string'}
+                  onTitleChange={(value) => {
                     output.title = value
                     handlePropertyChange('metadata', { ...metadata })
                   }}
+                  onDescriptionChange={(value) => {
+                    output.description = value
+                    handlePropertyChange('metadata', { ...metadata })
+                  }}
+                  onTypeChange={(value) => {
+                    output.type = value
+                    handlePropertyChange('metadata', { ...metadata })
+                  }}
                   onRemove={() => handleRemoveOutput(output.property)}
-                  placeholder="输出名称"
                 />
               ))}
             </div>
