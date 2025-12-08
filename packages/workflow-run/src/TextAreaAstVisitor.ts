@@ -13,6 +13,7 @@ export class TextAreaAstVisitor {
     @Handler(TextAreaAst)
     handler(ast: TextAreaAst, ctx: any) {
         return new Observable(obs => {
+            console.log('[TextAreaAstVisitor] input:', ast.input, 'type:', typeof ast.input, 'isArray:', Array.isArray(ast.input));
             ast.state = 'running'
             ast.output = ``
             obs.next({ ...ast })

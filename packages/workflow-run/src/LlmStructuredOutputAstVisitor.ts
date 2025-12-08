@@ -9,9 +9,10 @@ const buildSchemaFromMetadata = (outputs: INodeOutputMetadata[]) => {
     const required: string[] = [];
 
     for (const output of outputs) {
+        const desc = output.description || output.title || '';
         properties[output.property] = {
             type: output.type || 'string',
-            description: output.title
+            description: desc ? `${desc}（字段名必须是 ${output.property}）` : `字段名必须是 ${output.property}`
         };
         required.push(output.property);
     }
@@ -57,9 +58,20 @@ export class LlmStructuredOutputAstVisitor {
                     return;
                 }
 
-                for (const [key, value] of Object.entries(result as Record<string, unknown>)) {
-                    (ast as any)[key] = value;
-                }
+                const outputs = ast.metadata?.outputs || [];
+                const resultObj = result as Record<string, unknown>;
+
+                // 按定义的输出属性名提取值，优先精确匹配，否则按顺序映射
+                const resultKeys = Object.keys(resultObj);
+                outputs.forEach((output, index) => {
+                    if (output.property in resultObj) {
+                        // 精确匹配
+                        (ast as any)[output.property] = resultObj[output.property];
+                    } else if (resultKeys[index] !== undefined) {
+                        // 按顺序映射
+                        (ast as any)[output.property] = resultObj[resultKeys[index]!];
+                    }
+                });
 
                 ast.state = 'emitting';
                 obs.next({ ...ast });

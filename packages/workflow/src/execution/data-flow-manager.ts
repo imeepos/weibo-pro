@@ -1,7 +1,7 @@
 import { Injectable, root } from '@sker/core';
-import { INPUT, OUTPUT, STATE, resolveConstructor, getInputMetadata, InputMetadata, hasMultiMode } from '../decorator';
+import { INPUT, resolveConstructor, getInputMetadata, InputMetadata, hasMultiMode } from '../decorator';
 import { fromJson } from '../generate';
-import { IEdge, INode, hasCondition } from '../types';
+import { IEdge, INode } from '../types';
 import { Observable, OperatorFunction, pipe, map, filter, combineLatest } from 'rxjs';
 
 /**
@@ -63,47 +63,37 @@ export class DataFlowManager {
     }
 
     extractNodeOutputs(node: INode): any {
-        try {
-            const ast = fromJson(node);
-            const ctor = resolveConstructor(ast);
-            const outputs = root.get(OUTPUT);
-            const states = root.get(STATE);
-            const outputData: any = {};
+        const outputData: any = {};
+        const metadata = node.metadata;
 
-            // 处理 @Output 装饰的属性
-            if (outputs && outputs.length > 0) {
-                outputs.filter(it => it.target === ctor).map(it => {
-                    if ((node as any)[it.propertyKey] !== undefined) {
-                        outputData[it.propertyKey] = (node as any)[it.propertyKey];
-                    }
-                });
-            }
-
-            // 处理 @State 装饰的属性 - 可以作为输出传递但不作为最终结果
-            if (states && states.length > 0) {
-                states.filter(it => it.target === ctor).map(it => {
-                    if ((node as any)[it.propertyKey] !== undefined) {
-                        outputData[it.propertyKey] = (node as any)[it.propertyKey];
-                    }
-                });
-            }
-
-            // 如果有装饰器定义，只返回装饰器标记的属性
-            if ((outputs && outputs.length > 0) || (states && states.length > 0)) {
-                // 特殊处理：WorkflowGraphAst 需要额外包含动态输出属性（格式：nodeId.property）
-                if (node.type === 'WorkflowGraphAst') {
-                    this.extractDynamicOutputs(node, outputData);
+        if (metadata) {
+            // 从 metadata.outputs 提取输出
+            for (const output of metadata.outputs) {
+                const value = (node as any)[output.property];
+                if (value !== undefined) {
+                    outputData[output.property] = value;
                 }
-                return outputData;
             }
-        } catch {
-            // 装饰器元数据不可用，使用回退方案
+
+            // 从 metadata.states 提取状态（可作为输出传递）
+            for (const state of metadata.states) {
+                const key = String(state.propertyKey);
+                const value = (node as any)[key];
+                if (value !== undefined) {
+                    outputData[key] = value;
+                }
+            }
+
+            // WorkflowGraphAst 需要额外包含动态输出属性
+            if (node.type === 'WorkflowGraphAst') {
+                this.extractDynamicOutputs(node, outputData);
+            }
+
+            return outputData;
         }
 
-        // 回退方案：排除系统属性
-        const outputData: any = {};
+        // 回退：无 metadata 时排除系统属性
         const systemProperties = ['id', 'state', 'type'];
-
         for (const [key, value] of Object.entries(node as any)) {
             if (!systemProperties.includes(key) && value !== undefined) {
                 outputData[key] = value;
