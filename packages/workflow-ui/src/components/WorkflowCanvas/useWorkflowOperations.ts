@@ -6,6 +6,7 @@ import { WorkflowController } from '@sker/sdk'
 import { root } from '@sker/core'
 import { Subject, takeUntil, finalize } from 'rxjs'
 import { getExposedInputs, getExposedOutputs } from '../../utils/workflow-ports'
+import { useExecutionStore } from '../../store/execution.store'
 
 /**
  * 工作流操作 Hook
@@ -29,6 +30,10 @@ export function useWorkflowOperations(
   // 取消 Subject：当需要取消时，emit 一个值，通过 takeUntil 自动完成流
   const cancelSubject$ = useRef(new Subject<void>())
   const abortControllerRef = useRef<AbortController | null>(null)
+  // 追踪节点执行记录 ID（nodeId -> recordId）
+  const nodeRecordIds = useRef<Map<string, string>>(new Map())
+
+  const { recordNodeStart, recordNodeComplete } = useExecutionStore.getState()
 
   /**
    * 运行单个节点
@@ -84,12 +89,9 @@ export function useWorkflowOperations(
         )
         .subscribe({
           next: (updatedWorkflow) => {
-            // 每次 next 事件实时更新工作流状态
-            // ✨ 只同步节点状态，不覆盖 nodes/edges 数组（避免画布清空）
             workflow.workflowAst!.state = updatedWorkflow.state
             workflow.workflowAst!.error = updatedWorkflow.error
 
-            // 同步每个节点的状态属性（state, error, count, emitCount, output）
             updatedWorkflow.nodes.forEach((updatedNode: any) => {
               const originalNode = workflow.workflowAst!.nodes.find(n => n.id === updatedNode.id)
               if (originalNode) {
@@ -98,7 +100,20 @@ export function useWorkflowOperations(
                 originalNode.count = updatedNode.count
                 originalNode.emitCount = updatedNode.emitCount
 
-                // 同步输出属性（@Output 装饰器定义的属性）
+                // 记录节点执行历史
+                if (updatedNode.state === 'running' && !nodeRecordIds.current.has(updatedNode.id)) {
+                  nodeRecordIds.current.set(updatedNode.id, recordNodeStart(updatedNode.id))
+                } else if ((updatedNode.state === 'success' || updatedNode.state === 'fail') && nodeRecordIds.current.has(updatedNode.id)) {
+                  const outputs: Record<string, unknown> = {}
+                  originalNode.metadata?.outputs?.forEach((output: any) => {
+                    outputs[String(output.property)] = updatedNode[String(output.property)]
+                  })
+                  recordNodeComplete(updatedNode.id, nodeRecordIds.current.get(updatedNode.id)!, updatedNode.state,
+                    updatedNode.error ? { message: String(updatedNode.error.message || updatedNode.error) } : undefined,
+                    Object.keys(outputs).length > 0 ? outputs : undefined)
+                  nodeRecordIds.current.delete(updatedNode.id)
+                }
+
                 if (originalNode.metadata?.outputs) {
                   originalNode.metadata.outputs.forEach((output: any) => {
                     const propKey = String(output.property)
@@ -114,10 +129,13 @@ export function useWorkflowOperations(
           },
           error: async (error) => {
             const errorInfo = extractErrorInfo(error)
+            nodeRecordIds.current.forEach((recordId, nId) => {
+              recordNodeComplete(nId, recordId, 'fail', { message: errorInfo.message })
+            })
+            nodeRecordIds.current.clear()
             console.error(`工作流执行异常`)
             onShowToast?.('error', '工作流执行异常', errorInfo.message)
 
-            // 执行失败后保存状态
             try {
               if (getViewport) {
                 workflow.workflowAst!.viewport = getViewport()
@@ -129,7 +147,6 @@ export function useWorkflowOperations(
             }
           },
           complete: async () => {
-            // 统计执行结果
             const successCount = workflow.workflowAst!.nodes.filter(n => n.state === 'success').length
             const failCount = workflow.workflowAst!.nodes.filter(n => n.state === 'fail').length
 
@@ -141,7 +158,6 @@ export function useWorkflowOperations(
               onShowToast?.('error', '工作流执行失败', `所有节点均失败`)
             }
 
-            // 执行完成后保存状态
             try {
               if (getViewport) {
                 workflow.workflowAst!.viewport = getViewport()
@@ -154,22 +170,11 @@ export function useWorkflowOperations(
           }
         })
 
-      // 返回取消订阅函数，便于外部管理
       return () => subscription.unsubscribe()
     },
     [workflow, onShowToast, onSetRunning, getViewport]
   )
 
-  /**
-   * 运行单个节点（不影响下游）
-   *
-   * 优雅设计：
-   * - 调用 executeNodeIsolated，只执行选中的节点
-   * - 使用上游节点的历史输出作为输入
-   * - 不触发下游节点重新执行
-   * - 执行前后自动保存状态，确保数据持久化
-   * - 适合测试和调试场景
-   */
   const runNodeIsolated = useCallback(
     async (nodeId: string) => {
       if (!workflow.workflowAst) {
@@ -185,7 +190,6 @@ export function useWorkflowOperations(
         return
       }
 
-      // 执行前保存状态
       try {
         if (getViewport) {
           workflow.workflowAst.viewport = getViewport()
@@ -198,29 +202,21 @@ export function useWorkflowOperations(
 
       onSetRunning?.(true)
 
-      // ✨ 深拷贝 AST：避免 Zustand + Immer 冻结对象导致的只读属性问题
-      // 调度器需要可变对象来实时更新节点状态
       const mutableAst = fromJson<WorkflowGraphAst>(
         JSON.parse(JSON.stringify(toJson(workflow.workflowAst)))
       )
 
-      // executeNodeIsolated 返回 Observable，只执行单个节点
-      // finalize 确保无论如何结束都会重置状态
       const subscription = executeNodeIsolated(targetNode.id, mutableAst)
         .pipe(
           finalize(() => {
-            // 确保在所有情况下都重置运行状态
             onSetRunning?.(false)
           })
         )
         .subscribe({
           next: (updatedWorkflow) => {
-            // 每次 next 事件实时更新工作流状态
-            // ✨ 只同步节点状态，不覆盖 nodes/edges 数组（避免画布清空）
             workflow.workflowAst!.state = updatedWorkflow.state
             workflow.workflowAst!.error = updatedWorkflow.error
 
-            // 同步每个节点的状态属性（state, error, count, emitCount, output）
             updatedWorkflow.nodes.forEach((updatedNode: any) => {
               const originalNode = workflow.workflowAst!.nodes.find(n => n.id === updatedNode.id)
               if (originalNode) {
@@ -229,7 +225,20 @@ export function useWorkflowOperations(
                 originalNode.count = updatedNode.count
                 originalNode.emitCount = updatedNode.emitCount
 
-                // 同步输出属性（@Output 装饰器定义的属性）
+                // 记录节点执行历史
+                if (updatedNode.state === 'running' && !nodeRecordIds.current.has(updatedNode.id)) {
+                  nodeRecordIds.current.set(updatedNode.id, recordNodeStart(updatedNode.id))
+                } else if ((updatedNode.state === 'success' || updatedNode.state === 'fail') && nodeRecordIds.current.has(updatedNode.id)) {
+                  const outputs: Record<string, unknown> = {}
+                  originalNode.metadata?.outputs?.forEach((output: any) => {
+                    outputs[String(output.property)] = updatedNode[String(output.property)]
+                  })
+                  recordNodeComplete(updatedNode.id, nodeRecordIds.current.get(updatedNode.id)!, updatedNode.state,
+                    updatedNode.error ? { message: String(updatedNode.error.message || updatedNode.error) } : undefined,
+                    Object.keys(outputs).length > 0 ? outputs : undefined)
+                  nodeRecordIds.current.delete(updatedNode.id)
+                }
+
                 if (originalNode.metadata?.outputs) {
                   originalNode.metadata.outputs.forEach((output: any) => {
                     const propKey = String(output.property)
@@ -245,10 +254,13 @@ export function useWorkflowOperations(
           },
           error: async (error) => {
             const errorInfo = extractErrorInfo(error)
+            nodeRecordIds.current.forEach((recordId, nId) => {
+              recordNodeComplete(nId, recordId, 'fail', { message: errorInfo.message })
+            })
+            nodeRecordIds.current.clear()
             console.error(`节点执行异常`)
             onShowToast?.('error', '节点执行异常', errorInfo.message)
 
-            // 执行失败后保存状态
             try {
               if (getViewport) {
                 workflow.workflowAst!.viewport = getViewport()
@@ -260,16 +272,13 @@ export function useWorkflowOperations(
             }
           },
           complete: async () => {
-            // 只统计目标节点的执行结果
             const nodeState = getNodeById(workflow.workflowAst!.nodes, nodeId)?.state
-
             if (nodeState === 'success') {
               onShowToast?.('success', '节点执行成功', '该节点已完成执行')
             } else if (nodeState === 'fail') {
               onShowToast?.('error', '节点执行失败', '请检查节点配置和输入数据')
             }
 
-            // 执行完成后保存状态
             try {
               if (getViewport) {
                 workflow.workflowAst!.viewport = getViewport()
@@ -282,15 +291,11 @@ export function useWorkflowOperations(
           }
         })
 
-      // 返回取消订阅函数，便于外部管理
       return () => subscription.unsubscribe()
     },
     [workflow, onShowToast, onSetRunning, getViewport]
   )
 
-  /**
-   * 提取错误信息的辅助函数
-   */
   function extractErrorInfo(error: unknown): { message: string; type?: string } {
     if (!error) return { message: '未知错误' }
 
@@ -464,7 +469,6 @@ export function useWorkflowOperations(
             workflow.workflowAst!.state = updatedWorkflow.state
             workflow.workflowAst!.error = updatedWorkflow.error
 
-            // 同步每个节点的状态属性（state, error, count, emitCount, output）
             updatedWorkflow.nodes.forEach((updatedNode: any) => {
               const originalNode = workflow.workflowAst!.nodes.find(n => n.id === updatedNode.id)
               if (originalNode) {
@@ -472,6 +476,24 @@ export function useWorkflowOperations(
                 originalNode.error = updatedNode.error
                 originalNode.count = updatedNode.count
                 originalNode.emitCount = updatedNode.emitCount
+
+                // 记录节点执行历史
+                if (updatedNode.state === 'running' && !nodeRecordIds.current.has(updatedNode.id)) {
+                  nodeRecordIds.current.set(updatedNode.id, recordNodeStart(updatedNode.id))
+                } else if ((updatedNode.state === 'success' || updatedNode.state === 'fail') && nodeRecordIds.current.has(updatedNode.id)) {
+                  const outputs: Record<string, unknown> = {}
+                  originalNode.metadata?.outputs?.forEach((output: any) => {
+                    outputs[String(output.property)] = updatedNode[String(output.property)]
+                  })
+                  recordNodeComplete(
+                    updatedNode.id,
+                    nodeRecordIds.current.get(updatedNode.id)!,
+                    updatedNode.state,
+                    updatedNode.error ? { message: String(updatedNode.error.message || updatedNode.error) } : undefined,
+                    Object.keys(outputs).length > 0 ? outputs : undefined
+                  )
+                  nodeRecordIds.current.delete(updatedNode.id)
+                }
 
                 // 同步输出属性（@Output 装饰器定义的属性）
                 if (originalNode.metadata?.outputs) {
@@ -489,6 +511,12 @@ export function useWorkflowOperations(
           },
           error: async (error) => {
             const errorInfo = extractErrorInfo(error)
+
+            // 完成所有正在运行的节点记录
+            nodeRecordIds.current.forEach((recordId, nodeId) => {
+              recordNodeComplete(nodeId, recordId, 'fail', { message: errorInfo.message })
+            })
+            nodeRecordIds.current.clear()
 
             // 检查是否是取消导致的错误
             if (error?.name === 'AbortError' || errorInfo.message.includes('取消')) {

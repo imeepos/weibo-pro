@@ -414,6 +414,7 @@ export class WorkflowController implements sdk.WorkflowController {
 
       // 提取节点状态
       const nodeStates: Record<string, unknown> = {};
+      logger.info('执行结果', { hasNodes: !!result.nodes, nodeCount: result.nodes?.length });
       if (result.nodes) {
         result.nodes.forEach((node: any) => {
           nodeStates[node.id] = {
@@ -424,6 +425,7 @@ export class WorkflowController implements sdk.WorkflowController {
           };
         });
       }
+      logger.info('节点状态', { nodeStates: Object.keys(nodeStates) });
 
       // 提取工作流输出
       const outputs = this.extractWorkflowOutputs(result);

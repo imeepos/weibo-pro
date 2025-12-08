@@ -15,7 +15,7 @@ export class MqPullAstRender {
                     </div>
                 )}
                 {ast.output && (
-                    <div className="mt-2 p-3 bg-muted rounded-md">
+                    <div className="bg-muted rounded-md">
                         <pre className="text-xs overflow-auto max-h-40">
                             {typeof ast.output === 'string'
                                 ? ast.output

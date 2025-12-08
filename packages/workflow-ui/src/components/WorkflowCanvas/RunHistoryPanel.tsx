@@ -263,18 +263,21 @@ export function RunHistoryPanel({
         )}
       </div>
 
-      {/* Run Detail Dialog */}
-      {selectedRun && (
-        <RunDetailDialog
-          run={selectedRun}
-          onClose={() => setSelectedRun(null)}
-        />
-      )}
     </>
   )
 
   return typeof document !== 'undefined'
-    ? createPortal(dialogContent, document.body)
+    ? (
+      <>
+        {createPortal(dialogContent, document.body)}
+        {selectedRun && (
+          <RunDetailDialog
+            run={selectedRun}
+            onClose={() => setSelectedRun(null)}
+          />
+        )}
+      </>
+    )
     : null
 }
 
@@ -292,10 +295,14 @@ function RunDetailDialog({ run, onClose }: RunDetailDialogProps) {
   const dialogContent = (
     <>
       <div
-        className="fixed inset-0 z-[10000] bg-black/60 backdrop-blur-sm"
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+        style={{ zIndex: 10000 }}
         onClick={onClose}
       />
-      <div className="fixed left-1/2 top-1/2 z-[10001] w-full max-w-3xl max-h-[80vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-card shadow-2xl overflow-hidden flex flex-col">
+      <div
+        className="fixed left-1/2 top-1/2 w-full max-w-3xl max-h-[80vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-card shadow-2xl overflow-hidden flex flex-col"
+        style={{ zIndex: 10001 }}
+      >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border p-6">
           <div className="flex items-center gap-3">

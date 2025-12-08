@@ -10,6 +10,7 @@ import {
   type DrawerAction,
 } from '@sker/ui/components/workflow'
 import { useWorkflowStore } from '../../store/workflow.store'
+import { NodeRunHistory } from './NodeRunHistory'
 
 // ✨ 稳定的设置面板包装器，避免因 formData 改变而重新挂载
 const SettingsTabContent = React.memo(({
@@ -29,7 +30,7 @@ export interface LeftDrawerProps {
   onClose: () => void
   onRunNode?: (nodeId: string) => void
   onLocateNode?: (nodeId: string) => void
-  onAutoSave?: () => void  // ✨ 触发自动保存
+  onAutoSave?: () => void
   className?: string
 }
 
@@ -128,6 +129,7 @@ export function LeftDrawer({ visible, onClose, onRunNode, onLocateNode, onAutoSa
     return 'idle'
   }, [hasChanges, formData])
 
+
   // ✨ 每次都使用最新的 formData 创建 tabs
   // React 会通过 key 和组件类型识别，只更新 props 而不重新挂载
   // SettingsTabContent 用 React.memo 减少不必要的重新渲染
@@ -142,13 +144,9 @@ export function LeftDrawer({ visible, onClose, onRunNode, onLocateNode, onAutoSa
       id: 'history',
       label: '历史',
       icon: History,
-      content: (
-        <div className="text-center py-12">
-          <History className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
-          <p className="text-sm font-medium text-muted-foreground">暂无历史记录</p>
-          <p className="text-xs text-muted-foreground/70 mt-2">节点执行历史将显示在这里</p>
-        </div>
-      ),
+      content: selectedNode ? (
+        <NodeRunHistory nodeId={selectedNode.id} />
+      ) : null,
     },
   ]
 
