@@ -45,13 +45,8 @@ export class ReactiveScheduler {
                 emitCount: 0
             };
 
-            // 只清空有输入边的节点的 IS_MULTI/IS_BUFFER 属性
-            // 入口节点（没有输入边）的值来自用户输入，需要保留
-            const hasIncomingEdges = ast.edges.some(edge => edge.to === node.id);
-            if (hasIncomingEdges) {
-                const clearedInputs = this.getClearedMultiBufferInputs(node);
-                Object.assign(updates, clearedInputs);
-            }
+            // 注意：IS_BUFFER 属性的清空移到 _createNode 的 concatMap 中
+            // 在执行前清空，而不是在重置时清空，这样执行后节点能保留输入数据
 
             // 清空有输入边的节点的输出属性
             // if (hasIncomingEdges) {
@@ -70,9 +65,10 @@ export class ReactiveScheduler {
     }
 
     /**
-     * 获取清空后的 IS_MULTI 和 IS_BUFFER 输入属性
+     * 获取清空后的 IS_BUFFER 输入属性
      *
-     * 原因：这些模式使用数组累积，重复执行会导致数据越积越多
+     * 原因：IS_BUFFER 模式使用数组累积单边多次发射，重复执行会导致数据越积越多
+     * 注意：IS_MULTI 模式不需要清空，因为它在 assignInputsToNodeInstance 中会重新初始化
      * ✨ 返回需要更新的属性对象（不可变方式）
      */
     private getClearedMultiBufferInputs(node: INode): Record<string, any> {
@@ -82,9 +78,9 @@ export class ReactiveScheduler {
 
             inputMetadataMap.forEach((metadata, propertyKey) => {
                 const isBuffer = hasBufferMode(metadata?.mode);
-                const isMulti = hasMultiMode(metadata?.mode) || metadata?.isMulti;
-                if (isBuffer || isMulti) {
-                    // 清空为空数组（将 propertyKey 转为 string）
+                // 只清空 IS_BUFFER 模式的属性
+                // IS_MULTI 模式在 assignInputsToNodeInstance 中会检查并重新初始化
+                if (isBuffer) {
                     updates[String(propertyKey)] = [];
                 }
             });
@@ -659,6 +655,7 @@ export class ReactiveScheduler {
         // 🔧 优先使用编译后的 metadata 字段
         node.metadata!.inputs.forEach(input => {
             const propKey = String(input.property);
+            const isMulti = hasMultiMode(input.mode) || input.isMulti;
 
             // 优先使用装饰器的 defaultValue
             if (input.defaultValue !== undefined) {
@@ -666,7 +663,10 @@ export class ReactiveScheduler {
             } else {
                 // 尝试读取节点实例的当前值
                 const currentValue = (node as any)[propKey];
-                if (currentValue !== undefined) {
+                // IS_MULTI 模式：如果当前值不是数组，不设置默认值（让 assignInputsToNodeInstance 初始化）
+                if (isMulti && !Array.isArray(currentValue)) {
+                    // 不设置默认值，让 assignInputsToNodeInstance 初始化为空数组
+                } else if (currentValue !== undefined) {
                     defaults[propKey] = currentValue;
                 }
             }
@@ -865,6 +865,10 @@ export class ReactiveScheduler {
 
                 // 先填充默认值（直接赋值）
                 Object.assign(nodeInstance, defaults);
+
+                // 清空 IS_BUFFER 属性（防止历史数据累积）
+                const clearedBufferInputs = this.getClearedMultiBufferInputs(nodeInstance);
+                Object.assign(nodeInstance, clearedBufferInputs);
 
                 // 再应用连线数据（使用元数据感知的赋值逻辑）
                 this.assignInputsToNodeInstance(nodeInstance, inputs);

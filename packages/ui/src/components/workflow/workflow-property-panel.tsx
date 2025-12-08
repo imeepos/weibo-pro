@@ -204,6 +204,7 @@ export interface DynamicPortItemProps {
   onTypeChange?: (value: string) => void
   onRemove?: () => void
   className?: string
+  children?: ReactNode  // 自定义 property 渲染
 }
 
 const PORT_TYPES = ['string', 'number', 'boolean', 'object', 'array'] as const
@@ -218,6 +219,7 @@ export function DynamicPortItem({
   onTypeChange,
   onRemove,
   className,
+  children,
 }: DynamicPortItemProps) {
   return (
     <div className={cn(
@@ -267,6 +269,7 @@ export function DynamicPortItem({
           className="h-7 text-xs bg-card text-foreground"
         />
       )}
+      {children}
     </div>
   )
 }

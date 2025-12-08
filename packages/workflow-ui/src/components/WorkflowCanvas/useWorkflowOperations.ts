@@ -92,37 +92,47 @@ export function useWorkflowOperations(
             workflow.workflowAst!.state = updatedWorkflow.state
             workflow.workflowAst!.error = updatedWorkflow.error
 
-            updatedWorkflow.nodes.forEach((updatedNode: any) => {
-              const originalNode = workflow.workflowAst!.nodes.find(n => n.id === updatedNode.id)
-              if (originalNode) {
-                originalNode.state = updatedNode.state
-                originalNode.error = updatedNode.error
-                originalNode.count = updatedNode.count
-                originalNode.emitCount = updatedNode.emitCount
+            // 不可变更新：创建新节点数组
+            workflow.workflowAst!.nodes = workflow.workflowAst!.nodes.map(originalNode => {
+              const updatedNode = updatedWorkflow.nodes.find((n: any) => n.id === originalNode.id)
+              if (!updatedNode) return originalNode
 
-                // 记录节点执行历史
-                if (updatedNode.state === 'running' && !nodeRecordIds.current.has(updatedNode.id)) {
-                  nodeRecordIds.current.set(updatedNode.id, recordNodeStart(updatedNode.id))
-                } else if ((updatedNode.state === 'success' || updatedNode.state === 'fail') && nodeRecordIds.current.has(updatedNode.id)) {
-                  const outputs: Record<string, unknown> = {}
-                  originalNode.metadata?.outputs?.forEach((output: any) => {
-                    outputs[String(output.property)] = updatedNode[String(output.property)]
-                  })
-                  recordNodeComplete(updatedNode.id, nodeRecordIds.current.get(updatedNode.id)!, updatedNode.state,
-                    updatedNode.error ? { message: String(updatedNode.error.message || updatedNode.error) } : undefined,
-                    Object.keys(outputs).length > 0 ? outputs : undefined)
-                  nodeRecordIds.current.delete(updatedNode.id)
-                }
-
-                if (originalNode.metadata?.outputs) {
-                  originalNode.metadata.outputs.forEach((output: any) => {
-                    const propKey = String(output.property)
-                    if (updatedNode[propKey] !== undefined) {
-                      (originalNode as any)[propKey] = updatedNode[propKey]
-                    }
-                  })
-                }
+              // 记录节点执行历史
+              if (updatedNode.state === 'running' && !nodeRecordIds.current.has(updatedNode.id)) {
+                nodeRecordIds.current.set(updatedNode.id, recordNodeStart(updatedNode.id))
+              } else if ((updatedNode.state === 'success' || updatedNode.state === 'fail') && nodeRecordIds.current.has(updatedNode.id)) {
+                const outputs: Record<string, unknown> = {}
+                originalNode.metadata?.outputs?.forEach((output: any) => {
+                  outputs[String(output.property)] = updatedNode[String(output.property)]
+                })
+                recordNodeComplete(updatedNode.id, nodeRecordIds.current.get(updatedNode.id)!, updatedNode.state,
+                  updatedNode.error ? { message: String(updatedNode.error.message || updatedNode.error) } : undefined,
+                  Object.keys(outputs).length > 0 ? outputs : undefined)
+                nodeRecordIds.current.delete(updatedNode.id)
               }
+
+              // 收集输出属性
+              const outputUpdates: Record<string, any> = {}
+              if (originalNode.metadata?.outputs) {
+                originalNode.metadata.outputs.forEach((output: any) => {
+                  const propKey = String(output.property)
+                  if (updatedNode[propKey] !== undefined) {
+                    outputUpdates[propKey] = updatedNode[propKey]
+                  }
+                })
+              }
+
+              return Object.assign(
+                Object.create(Object.getPrototypeOf(originalNode)),
+                originalNode,
+                {
+                  state: updatedNode.state,
+                  error: updatedNode.error,
+                  count: updatedNode.count,
+                  emitCount: updatedNode.emitCount,
+                  ...outputUpdates
+                }
+              )
             })
 
             workflow.syncFromAst()
@@ -219,37 +229,47 @@ export function useWorkflowOperations(
             workflow.workflowAst!.state = updatedWorkflow.state
             workflow.workflowAst!.error = updatedWorkflow.error
 
-            updatedWorkflow.nodes.forEach((updatedNode: any) => {
-              const originalNode = workflow.workflowAst!.nodes.find(n => n.id === updatedNode.id)
-              if (originalNode) {
-                originalNode.state = updatedNode.state
-                originalNode.error = updatedNode.error
-                originalNode.count = updatedNode.count
-                originalNode.emitCount = updatedNode.emitCount
+            // 不可变更新：创建新节点数组
+            workflow.workflowAst!.nodes = workflow.workflowAst!.nodes.map(originalNode => {
+              const updatedNode = updatedWorkflow.nodes.find((n: any) => n.id === originalNode.id)
+              if (!updatedNode) return originalNode
 
-                // 记录节点执行历史
-                if (updatedNode.state === 'running' && !nodeRecordIds.current.has(updatedNode.id)) {
-                  nodeRecordIds.current.set(updatedNode.id, recordNodeStart(updatedNode.id))
-                } else if ((updatedNode.state === 'success' || updatedNode.state === 'fail') && nodeRecordIds.current.has(updatedNode.id)) {
-                  const outputs: Record<string, unknown> = {}
-                  originalNode.metadata?.outputs?.forEach((output: any) => {
-                    outputs[String(output.property)] = updatedNode[String(output.property)]
-                  })
-                  recordNodeComplete(updatedNode.id, nodeRecordIds.current.get(updatedNode.id)!, updatedNode.state,
-                    updatedNode.error ? { message: String(updatedNode.error.message || updatedNode.error) } : undefined,
-                    Object.keys(outputs).length > 0 ? outputs : undefined)
-                  nodeRecordIds.current.delete(updatedNode.id)
-                }
-
-                if (originalNode.metadata?.outputs) {
-                  originalNode.metadata.outputs.forEach((output: any) => {
-                    const propKey = String(output.property)
-                    if (updatedNode[propKey] !== undefined) {
-                      (originalNode as any)[propKey] = updatedNode[propKey]
-                    }
-                  })
-                }
+              // 记录节点执行历史
+              if (updatedNode.state === 'running' && !nodeRecordIds.current.has(updatedNode.id)) {
+                nodeRecordIds.current.set(updatedNode.id, recordNodeStart(updatedNode.id))
+              } else if ((updatedNode.state === 'success' || updatedNode.state === 'fail') && nodeRecordIds.current.has(updatedNode.id)) {
+                const outputs: Record<string, unknown> = {}
+                originalNode.metadata?.outputs?.forEach((output: any) => {
+                  outputs[String(output.property)] = updatedNode[String(output.property)]
+                })
+                recordNodeComplete(updatedNode.id, nodeRecordIds.current.get(updatedNode.id)!, updatedNode.state,
+                  updatedNode.error ? { message: String(updatedNode.error.message || updatedNode.error) } : undefined,
+                  Object.keys(outputs).length > 0 ? outputs : undefined)
+                nodeRecordIds.current.delete(updatedNode.id)
               }
+
+              // 收集输出属性
+              const outputUpdates: Record<string, any> = {}
+              if (originalNode.metadata?.outputs) {
+                originalNode.metadata.outputs.forEach((output: any) => {
+                  const propKey = String(output.property)
+                  if (updatedNode[propKey] !== undefined) {
+                    outputUpdates[propKey] = updatedNode[propKey]
+                  }
+                })
+              }
+
+              return Object.assign(
+                Object.create(Object.getPrototypeOf(originalNode)),
+                originalNode,
+                {
+                  state: updatedNode.state,
+                  error: updatedNode.error,
+                  count: updatedNode.count,
+                  emitCount: updatedNode.emitCount,
+                  ...outputUpdates
+                }
+              )
             })
 
             workflow.syncFromAst()
@@ -274,6 +294,8 @@ export function useWorkflowOperations(
             }
           },
           complete: async () => {
+            workflow.syncFromAst()
+
             const nodeState = getNodeById(workflow.workflowAst!.nodes, nodeId)?.state
             if (nodeState === 'success') {
               onShowToast?.('success', '节点执行成功', '该节点已完成执行')
@@ -467,46 +489,55 @@ export function useWorkflowOperations(
         .subscribe({
           next: (updatedWorkflow) => {
             // 每次 next 事件实时更新工作流状态
-            // ✨ 只同步节点状态，不覆盖 nodes/edges 数组（避免画布清空）
             workflow.workflowAst!.state = updatedWorkflow.state
             workflow.workflowAst!.error = updatedWorkflow.error
 
-            updatedWorkflow.nodes.forEach((updatedNode: any) => {
-              const originalNode = workflow.workflowAst!.nodes.find(n => n.id === updatedNode.id)
-              if (originalNode) {
-                originalNode.state = updatedNode.state
-                originalNode.error = updatedNode.error
-                originalNode.count = updatedNode.count
-                originalNode.emitCount = updatedNode.emitCount
+            // 不可变更新：创建新节点数组
+            workflow.workflowAst!.nodes = workflow.workflowAst!.nodes.map(originalNode => {
+              const updatedNode = updatedWorkflow.nodes.find((n: any) => n.id === originalNode.id)
+              if (!updatedNode) return originalNode
 
-                // 记录节点执行历史
-                if (updatedNode.state === 'running' && !nodeRecordIds.current.has(updatedNode.id)) {
-                  nodeRecordIds.current.set(updatedNode.id, recordNodeStart(updatedNode.id))
-                } else if ((updatedNode.state === 'success' || updatedNode.state === 'fail') && nodeRecordIds.current.has(updatedNode.id)) {
-                  const outputs: Record<string, unknown> = {}
-                  originalNode.metadata?.outputs?.forEach((output: any) => {
-                    outputs[String(output.property)] = updatedNode[String(output.property)]
-                  })
-                  recordNodeComplete(
-                    updatedNode.id,
-                    nodeRecordIds.current.get(updatedNode.id)!,
-                    updatedNode.state,
-                    updatedNode.error ? { message: String(updatedNode.error.message || updatedNode.error) } : undefined,
-                    Object.keys(outputs).length > 0 ? outputs : undefined
-                  )
-                  nodeRecordIds.current.delete(updatedNode.id)
-                }
-
-                // 同步输出属性（@Output 装饰器定义的属性）
-                if (originalNode.metadata?.outputs) {
-                  originalNode.metadata.outputs.forEach((output: any) => {
-                    const propKey = String(output.property)
-                    if (updatedNode[propKey] !== undefined) {
-                      (originalNode as any)[propKey] = updatedNode[propKey]
-                    }
-                  })
-                }
+              // 记录节点执行历史
+              if (updatedNode.state === 'running' && !nodeRecordIds.current.has(updatedNode.id)) {
+                nodeRecordIds.current.set(updatedNode.id, recordNodeStart(updatedNode.id))
+              } else if ((updatedNode.state === 'success' || updatedNode.state === 'fail') && nodeRecordIds.current.has(updatedNode.id)) {
+                const outputs: Record<string, unknown> = {}
+                originalNode.metadata?.outputs?.forEach((output: any) => {
+                  outputs[String(output.property)] = updatedNode[String(output.property)]
+                })
+                recordNodeComplete(
+                  updatedNode.id,
+                  nodeRecordIds.current.get(updatedNode.id)!,
+                  updatedNode.state,
+                  updatedNode.error ? { message: String(updatedNode.error.message || updatedNode.error) } : undefined,
+                  Object.keys(outputs).length > 0 ? outputs : undefined
+                )
+                nodeRecordIds.current.delete(updatedNode.id)
               }
+
+              // 收集输出属性
+              const outputUpdates: Record<string, any> = {}
+              if (originalNode.metadata?.outputs) {
+                originalNode.metadata.outputs.forEach((output: any) => {
+                  const propKey = String(output.property)
+                  if (updatedNode[propKey] !== undefined) {
+                    outputUpdates[propKey] = updatedNode[propKey]
+                  }
+                })
+              }
+
+              // 创建新节点对象（保持原型链）
+              return Object.assign(
+                Object.create(Object.getPrototypeOf(originalNode)),
+                originalNode,
+                {
+                  state: updatedNode.state,
+                  error: updatedNode.error,
+                  count: updatedNode.count,
+                  emitCount: updatedNode.emitCount,
+                  ...outputUpdates
+                }
+              )
             })
 
             workflow.syncFromAst()
