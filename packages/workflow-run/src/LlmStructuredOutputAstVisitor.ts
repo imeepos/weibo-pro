@@ -1,13 +1,23 @@
 import { Injectable } from "@sker/core";
-import { Handler, setAstError, WorkflowGraphAst } from "@sker/workflow";
+import { Handler, INodeOutputMetadata, setAstError, WorkflowGraphAst } from "@sker/workflow";
 import { LlmStructuredOutputAst } from "@sker/workflow-ast";
 import { Observable } from "rxjs";
 import { ChatOpenAI } from "@langchain/openai";
 
-interface JsonSchema {
-    type: string;
-    properties?: Record<string, { type: string; description?: string }>;
-}
+const buildSchemaFromMetadata = (outputs: INodeOutputMetadata[]) => {
+    const properties: Record<string, { type: string; description?: string }> = {};
+    const required: string[] = [];
+
+    for (const output of outputs) {
+        properties[output.property] = {
+            type: output.type || 'string',
+            description: output.title
+        };
+        required.push(output.property);
+    }
+
+    return { type: 'object', properties, required };
+};
 
 @Injectable()
 export class LlmStructuredOutputAstVisitor {
@@ -29,18 +39,7 @@ export class LlmStructuredOutputAstVisitor {
                 ast.count += 1;
                 obs.next({ ...ast });
 
-                const schema: JsonSchema = JSON.parse(ast.schema);
-
-                // 根据 schema 动态生成 metadata.outputs
-                if (schema.properties) {
-                    ast.metadata = ast.metadata || { class: {}, inputs: [], outputs: [], states: [] };
-                    ast.metadata.outputs = Object.entries(schema.properties).map(([key, prop]) => ({
-                        property: key,
-                        title: prop.description || key,
-                        type: prop.type
-                    }));
-                }
-
+                const schema = buildSchemaFromMetadata(ast.metadata?.outputs || []);
                 const model = new ChatOpenAI({ model: ast.model, temperature: ast.temperature });
                 const structuredModel = model.withStructuredOutput(schema);
 
@@ -58,7 +57,6 @@ export class LlmStructuredOutputAstVisitor {
                     return;
                 }
 
-                // 将结构化输出的每个字段赋值到 ast 上
                 for (const [key, value] of Object.entries(result as Record<string, unknown>)) {
                     (ast as any)[key] = value;
                 }
