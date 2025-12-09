@@ -55,7 +55,7 @@ const cc302 = async (header: any, body: any) => {
 app.post('/v1/messages', async (c) => {
   const body = await c.req.json()
   const header = c.req.header()
-  return bigmodel(header, body)
+  return minimax(header, body)
 })
 
 // 错误处理
