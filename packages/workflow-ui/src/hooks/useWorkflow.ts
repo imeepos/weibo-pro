@@ -146,47 +146,83 @@ export function useWorkflow(
   useEffect(() => {
     let hasPositionChanged = false
 
-    // 递归查找 AST 节点
-    const findAstNode = (id: string, nodeList: INode[]): INode | undefined => {
-      for (const n of nodeList) {
-        if (n.id === id) return n
-        if ((n as any).isGroupNode && (n as any).nodes?.length > 0) {
-          const found = findAstNode(id, (n as any).nodes)
-          if (found) return found
-        }
-      }
-      return undefined
-    }
+    // 递归更新 AST 节点（不可变方式）
+    const updateAstNodes = (nodeList: INode[]): { nodes: INode[]; changed: boolean } => {
+      let changed = false
+      const updatedNodes = nodeList.map(astNode => {
+        const flowNode = nodes.find(n => n.id === astNode.id)
+        if (!flowNode) return astNode
 
-    nodes.forEach((node) => {
-      const astNode = findAstNode(node.id, workflowAst.nodes)
-      if (astNode) {
+        let updates: any = {}
         const currentPos = astNode.position
-        const newPos = node.position
+        const newPos = flowNode.position
 
-        // 直接修改本地 workflowAst（不通过 store，避免触发循环更新）
+        // 检查位置是否变化
         if (!currentPos || currentPos.x !== newPos.x || currentPos.y !== newPos.y) {
-          astNode.position = newPos
-          hasPositionChanged = true
+          updates.position = newPos
+          changed = true
         }
 
-        if (astNode.collapsed !== node.data.collapsed) {
-          astNode.collapsed = node.data.collapsed
+        // 检查折叠状态
+        if (astNode.collapsed !== flowNode.data.collapsed) {
+          updates.collapsed = flowNode.data.collapsed
         }
 
         // 同步 GroupNode 的尺寸（仅在初始化完成后）
         if (isInitializedRef.current) {
-          if (node.width !== undefined && node.width > 0 && astNode.width !== node.width) {
-            astNode.width = node.width
-            hasPositionChanged = true
+          if (flowNode.width !== undefined && flowNode.width > 0 && astNode.width !== flowNode.width) {
+            updates.width = flowNode.width
+            changed = true
           }
-          if (node.height !== undefined && node.height > 0 && astNode.height !== node.height) {
-            astNode.height = node.height
-            hasPositionChanged = true
+          if (flowNode.height !== undefined && flowNode.height > 0 && astNode.height !== flowNode.height) {
+            updates.height = flowNode.height
+            changed = true
           }
         }
-      }
-    })
+
+        // 如果有更新，创建新对象
+        if (Object.keys(updates).length > 0) {
+          const newNode = Object.assign(
+            Object.create(Object.getPrototypeOf(astNode)),
+            astNode,
+            updates
+          )
+
+          // 递归更新子节点
+          if ((astNode as any).isGroupNode && (astNode as any).nodes?.length > 0) {
+            const result = updateAstNodes((astNode as any).nodes)
+            if (result.changed) {
+              newNode.nodes = result.nodes
+              changed = true
+            }
+          }
+
+          return newNode
+        }
+
+        // 即使没有直接更新，也要递归检查子节点
+        if ((astNode as any).isGroupNode && (astNode as any).nodes?.length > 0) {
+          const result = updateAstNodes((astNode as any).nodes)
+          if (result.changed) {
+            return Object.assign(
+              Object.create(Object.getPrototypeOf(astNode)),
+              astNode,
+              { nodes: result.nodes }
+            )
+          }
+        }
+
+        return astNode
+      })
+
+      return { nodes: updatedNodes, changed }
+    }
+
+    const result = updateAstNodes(workflowAst.nodes)
+    if (result.changed) {
+      workflowAst.nodes = result.nodes
+      hasPositionChanged = true
+    }
 
     if (hasPositionChanged && onWorkflowChangeRef.current) {
       onWorkflowChangeRef.current()

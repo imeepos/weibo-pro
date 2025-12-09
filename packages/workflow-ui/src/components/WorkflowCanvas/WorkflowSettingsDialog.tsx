@@ -44,18 +44,18 @@ export function WorkflowSettingsDialog({
   const [nameError, setNameError] = useState('')
   const [saving, setSaving] = useState(false)
 
-  // 表单验证流
+  // 表单验证流（仅处理验证，不影响输入框值）
   const nameValidation$ = nameInput$.pipe(
     debounceTime(300),
     distinctUntilChanged(),
     map(value => {
       if (!value.trim()) {
-        return { value, error: '工作流名称不能为空' }
+        return '工作流名称不能为空'
       }
       if (value.length > 50) {
-        return { value, error: '工作流名称不能超过50个字符' }
+        return '工作流名称不能超过50个字符'
       }
-      return { value, error: '' }
+      return ''
     })
   )
 
@@ -112,8 +112,7 @@ export function WorkflowSettingsDialog({
   // 订阅 RxJS 流
   useEffect(() => {
     const subscriptions = [
-      nameValidation$.subscribe(({ value, error }) => {
-        setName(value)
+      nameValidation$.subscribe(error => {
         setNameError(error)
       }),
       descriptionInput$.subscribe(setDescription),
@@ -162,7 +161,10 @@ export function WorkflowSettingsDialog({
   }, [name, description, customColor, color, tags, workflow, onSave, onClose])
 
   // 事件处理函数
-  const handleNameChange = (value: string) => nameInput$.next(value)
+  const handleNameChange = (value: string) => {
+    setName(value)
+    nameInput$.next(value)
+  }
   const handleDescriptionChange = (value: string) => descriptionInput$.next(value)
   const handleColorChange = (value: string) => colorChange$.next(value)
   const handleCustomColorChange = (value: string) => customColorChange$.next(value)

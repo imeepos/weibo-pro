@@ -31,10 +31,10 @@ async function bootstrap() {
     }
   }
   const app = await NestFactory.create(AppModule, {
-    bodyParser: true,
+    bodyParser: false,
   });
-  app.use(require('body-parser').json({ limit: '50mb' }));
-  app.use(require('body-parser').urlencoded({ limit: '50mb', extended: true }));
+  app.use(express.json({ limit: '100mb' }));
+  app.use(express.urlencoded({ limit: '100mb', extended: true }));
 
   // 配置静态文件服务 - 上传的文件可通过 /uploads 访问（带 CORS）
   app.use('/uploads', (req: any, res: any, next: any) => {

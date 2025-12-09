@@ -638,8 +638,7 @@ export class EnvironmentInjector extends Injector {
       const instanceName = instance.constructor?.name || 'Unknown';
       const errorMsg = error instanceof Error ? error.message : String(error);
       throw new Error(
-        `@OnInit 服务初始化失败 [${instanceName}]: ${errorMsg}`,
-        { cause: error }
+        `@OnInit 服务初始化失败 [${instanceName}]: ${errorMsg}`
       );
     }
   }

@@ -62,8 +62,7 @@ export class InitializerGraph {
         const errorMsg = error instanceof Error ? error.message : String(error);
         const tokenStr = this.tokenToString(node.token);
         throw new Error(
-          `初始化器执行失败 [${tokenStr}]: ${errorMsg}`,
-          { cause: error }
+          `初始化器执行失败 [${tokenStr}]: ${errorMsg}`
         );
       }
     }

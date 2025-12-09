@@ -1,0 +1,32 @@
+{
+  "name": "@sker/ai",
+  "version": "0.0.1",
+  "description": "Claude Code Load Balancer",
+  "scripts": {
+    "start": "ts-node src/main.ts",
+    "start:dev": "ts-node --transpile-only src/main.ts",
+    "start:prod": "node dist/main",
+    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.12.0",
+    "@sker/core": "workspace:*",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.0",
+    "hono": "^4.10.7",
+    "reflect-metadata": "^0.1.13",
+    "rxjs": "^7.8.1"
+  },
+  "devDependencies": {
+    "@sker/typescript-config": "workspace:*",
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.42.0",
+    "jest": "^29.5.0",
+    "ts-jest": "^29.1.0",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.1.3"
+  }
+}
