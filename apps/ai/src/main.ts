@@ -40,13 +40,22 @@ const cc12137207134 = async (header: any, body: any) => {
   return response;
 }
 
+const cc302 = async (header: any, body: any) => {
+  // 模型负载均衡
+  const headers = new Headers(header)
+  headers.set('Authorization', `Bearer sk-DmQWgeQhO14iY5MwdE8V2gm85eIPXQgTo5mo6GBMm6nqleD8`)
+  const response = await fetch('https://api.302.ai/cc/v1/messages', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body)
+  });
+  return response;
+}
+
 app.post('/v1/messages', async (c) => {
   const body = await c.req.json()
-  const { messages } = body;
-  if (messages && messages.length > 5) {
-    body.messages = messages.slice(-5)
-  }
-  return cc12137207134(c.req.header(), body)
+  const header = c.req.header()
+  return bigmodel(header, body)
 })
 
 // 错误处理

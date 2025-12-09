@@ -24,6 +24,7 @@ import { UserRelationService } from './services/data/user-relation.service';
 import { WorkflowService } from './services/workflow.service';
 import { UploadService } from './services/upload.service';
 import { UploadController } from './controllers/upload.controller';
+import { LlmProvidersController } from './controllers/llm-providers.controller';
 import { AppWebSocketGateway } from './gateways/websocket.gateway';
 import { EventQueryService } from './services/data/events/event-query.service';
 import { EventAnalyticsService } from './services/data/events/event-analytics.service';
@@ -31,6 +32,7 @@ import { EventTimelineBuilder } from './services/data/events/event-timeline.buil
 import { DataMockService } from './services/data/events/data-mock.service';
 import { root } from '@sker/core';
 import { DataSource } from '@sker/entities';
+import { LlmProviderService } from './services/llm-provider.service';
 
 @Module({
   controllers: [
@@ -46,6 +48,7 @@ import { DataSource } from '@sker/entities';
     LayoutController,
     UserRelationController,
     UploadController,
+    LlmProvidersController,
   ],
   providers: [
     {
@@ -70,6 +73,7 @@ import { DataSource } from '@sker/entities';
     { provide: EventTimelineBuilder, useFactory: () => root.get(EventTimelineBuilder) },
     { provide: DataMockService, useFactory: () => root.get(DataMockService) },
     { provide: DataSource, useFactory: () => root.get(DataSource) },
+    { provide: LlmProviderService, useFactory: () => root.get(LlmProviderService) },
   ],
 })
 export class AppModule { }

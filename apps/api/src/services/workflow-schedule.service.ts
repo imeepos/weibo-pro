@@ -1,6 +1,6 @@
 import { Injectable, Inject } from '@sker/core'
-import { DataSource, Repository } from '@sker/entities'
-import { WorkflowScheduleEntity, ScheduleType, ScheduleStatus } from '@sker/entities'
+import { useEntityManager, LessThanOrEqual } from '@sker/entities'
+import { WorkflowScheduleEntity, ScheduleType, ScheduleStatus, WorkflowEntity } from '@sker/entities'
 import { WorkflowRunService } from './workflow-run.service'
 import { CronExpressionParser } from 'cron-parser'
 
@@ -29,142 +29,149 @@ export interface UpdateScheduleDto {
 
 @Injectable()
 export class WorkflowScheduleService {
-  private scheduleRepository: Repository<WorkflowScheduleEntity>
-
   constructor(
-    @Inject(DataSource) private dataSource: DataSource,
     @Inject(WorkflowRunService) private workflowRunService: WorkflowRunService
-  ) {
-    this.scheduleRepository = this.dataSource.getRepository(WorkflowScheduleEntity)
-  }
+  ) {}
 
   async createSchedule(dto: CreateScheduleDto): Promise<WorkflowScheduleEntity> {
-    // 通过工作流名称查询工作流ID
-    const workflowRepo = this.dataSource.getRepository('WorkflowEntity')
-    const workflow = await workflowRepo.findOne({
-      where: { code: dto.workflowName }
+    return await useEntityManager(async m => {
+      // 通过工作流名称查询工作流ID
+      const workflow = await m.findOne(WorkflowEntity, {
+        where: { code: dto.workflowName }
+      })
+
+      if (!workflow) {
+        throw new Error(`Workflow ${dto.workflowName} not found`)
+      }
+
+      const workflowId = workflow.id
+
+      // 验证调度参数
+      this.validateSchedule(dto)
+
+      // 计算下次执行时间
+      const nextRunAt = this.calculateNextRunTime(dto.scheduleType, {
+        cronExpression: dto.cronExpression,
+        intervalSeconds: dto.intervalSeconds,
+        startTime: dto.startTime
+      })
+
+      const schedule = m.create(WorkflowScheduleEntity, {
+        workflowId,
+        name: dto.name,
+        scheduleType: dto.scheduleType,
+        cronExpression: dto.cronExpression,
+        intervalSeconds: dto.intervalSeconds,
+        inputs: dto.inputs,
+        startTime: dto.startTime || new Date(),
+        endTime: dto.endTime,
+        nextRunAt: nextRunAt ?? undefined,
+        status: ScheduleStatus.ENABLED
+      })
+
+      const { id } = await m.save(WorkflowScheduleEntity, schedule)
+      return { ...schedule, id }
     })
-
-    if (!workflow) {
-      throw new Error(`Workflow ${dto.workflowName} not found`)
-    }
-
-    const workflowId = (workflow as any).id
-
-    // 验证调度参数
-    this.validateSchedule(dto)
-
-    // 计算下次执行时间
-    const nextRunAt = this.calculateNextRunTime(dto.scheduleType, {
-      cronExpression: dto.cronExpression,
-      intervalSeconds: dto.intervalSeconds,
-      startTime: dto.startTime
-    })
-
-    const schedule = this.scheduleRepository.create({
-      workflowId,
-      name: dto.name,
-      scheduleType: dto.scheduleType,
-      cronExpression: dto.cronExpression,
-      intervalSeconds: dto.intervalSeconds,
-      inputs: dto.inputs,
-      startTime: dto.startTime || new Date(),
-      endTime: dto.endTime,
-      nextRunAt: nextRunAt ?? undefined,
-      status: ScheduleStatus.ENABLED
-    })
-
-    return this.scheduleRepository.save(schedule)
   }
 
   async updateSchedule(id: string, dto: UpdateScheduleDto): Promise<WorkflowScheduleEntity> {
-    const schedule = await this.scheduleRepository.findOne({ where: { id } })
-    if (!schedule) {
-      throw new Error(`Schedule ${id} not found`)
-    }
-
-    // 如果修改了调度参数，重新计算下次执行时间
-    if (dto.scheduleType || dto.cronExpression || dto.intervalSeconds || dto.startTime) {
-      const scheduleType = dto.scheduleType || schedule.scheduleType
-      const cronExpression = dto.cronExpression || schedule.cronExpression
-      const intervalSeconds = dto.intervalSeconds || schedule.intervalSeconds
-      const startTime = dto.startTime || schedule.startTime
-
-      // 通过工作流ID查询工作流名称
-      const workflowRepo = this.dataSource.getRepository('WorkflowEntity')
-      const workflow = await workflowRepo.findOne({
-        where: { id: schedule.workflowId }
-      })
-
-      if (!workflow) {
-        throw new Error(`Workflow with ID ${schedule.workflowId} not found`)
+    return await useEntityManager(async m => {
+      const schedule = await m.findOne(WorkflowScheduleEntity, { where: { id } })
+      if (!schedule) {
+        throw new Error(`Schedule ${id} not found`)
       }
 
-      this.validateSchedule({
-        workflowName: (workflow as any).code,
-        name: dto.name || schedule.name,
-        scheduleType,
-        cronExpression,
-        intervalSeconds,
-        inputs: dto.inputs || schedule.inputs,
-        startTime,
-        endTime: dto.endTime || schedule.endTime
-      })
+      // 如果修改了调度参数，重新计算下次执行时间
+      if (dto.scheduleType || dto.cronExpression || dto.intervalSeconds || dto.startTime) {
+        const scheduleType = dto.scheduleType || schedule.scheduleType
+        const cronExpression = dto.cronExpression || schedule.cronExpression
+        const intervalSeconds = dto.intervalSeconds || schedule.intervalSeconds
+        const startTime = dto.startTime || schedule.startTime
 
-      dto.nextRunAt = this.calculateNextRunTime(scheduleType, {
-        cronExpression,
-        intervalSeconds,
-        startTime
-      })
+        // 通过工作流ID查询工作流名称
+        const workflow = await m.findOne(WorkflowEntity, {
+          where: { id: schedule.workflowId }
+        })
 
-      // 如果调度已过期但新的下次执行时间有效，重新启用
-      const endTime = dto.endTime !== undefined ? dto.endTime : schedule.endTime
-      if (schedule.status === ScheduleStatus.EXPIRED && dto.nextRunAt) {
-        if (!endTime || dto.nextRunAt <= endTime) {
-          dto.status = ScheduleStatus.ENABLED
+        if (!workflow) {
+          throw new Error(`Workflow with ID ${schedule.workflowId} not found`)
+        }
+
+        this.validateSchedule({
+          workflowName: workflow.code,
+          name: dto.name || schedule.name,
+          scheduleType,
+          cronExpression,
+          intervalSeconds,
+          inputs: dto.inputs || schedule.inputs,
+          startTime,
+          endTime: dto.endTime || schedule.endTime
+        })
+
+        dto.nextRunAt = this.calculateNextRunTime(scheduleType, {
+          cronExpression,
+          intervalSeconds,
+          startTime
+        })
+
+        // 如果调度已过期但新的下次执行时间有效，重新启用
+        const endTime = dto.endTime !== undefined ? dto.endTime : schedule.endTime
+        if (schedule.status === ScheduleStatus.EXPIRED && dto.nextRunAt) {
+          if (!endTime || dto.nextRunAt <= endTime) {
+            dto.status = ScheduleStatus.ENABLED
+          }
         }
       }
-    }
 
-    Object.assign(schedule, dto)
-    return this.scheduleRepository.save(schedule)
+      await m.update(WorkflowScheduleEntity, id, dto)
+      const updatedSchedule = await m.findOne(WorkflowScheduleEntity, { where: { id } })
+      if (!updatedSchedule) {
+        throw new Error(`Schedule ${id} not found after update`)
+      }
+      return updatedSchedule
+    })
   }
 
   async deleteSchedule(id: string): Promise<void> {
-    const result = await this.scheduleRepository.softDelete(id)
-    if (result.affected === 0) {
-      throw new Error(`Schedule ${id} not found`)
-    }
+    await useEntityManager(async m => {
+      const result = await m.softDelete(WorkflowScheduleEntity, id)
+      if (result.affected === 0) {
+        throw new Error(`Schedule ${id} not found`)
+      }
+    })
   }
 
   async getSchedule(id: string): Promise<WorkflowScheduleEntity> {
-    const schedule = await this.scheduleRepository.findOne({
-      where: { id }
+    return await useEntityManager(async m => {
+      const schedule = await m.findOne(WorkflowScheduleEntity, {
+        where: { id }
+      })
+      if (!schedule) {
+        throw new Error(`Schedule ${id} not found`)
+      }
+      return schedule
     })
-    if (!schedule) {
-      throw new Error(`Schedule ${id} not found`)
-    }
-    return schedule
   }
 
   async listSchedules(workflowName?: string): Promise<WorkflowScheduleEntity[]> {
-    if (workflowName) {
-      // 通过工作流名称查询
-      const workflowRepo = this.dataSource.getRepository('WorkflowEntity')
-      const workflow = await workflowRepo.findOne({
-        where: { code: workflowName }
-      })
-      if (!workflow) {
-        return []
+    return await useEntityManager(async m => {
+      if (workflowName) {
+        // 通过工作流名称查询
+        const workflow = await m.findOne(WorkflowEntity, {
+          where: { code: workflowName }
+        })
+        if (!workflow) {
+          return []
+        }
+        return m.find(WorkflowScheduleEntity, {
+          where: { workflowId: workflow.id },
+          order: { createdAt: 'DESC' }
+        })
       }
-      return this.scheduleRepository.find({
-        where: { workflowId: (workflow as any).id },
+      // 查询所有
+      return m.find(WorkflowScheduleEntity, {
         order: { createdAt: 'DESC' }
       })
-    }
-    // 查询所有
-    return this.scheduleRepository.find({
-      order: { createdAt: 'DESC' }
     })
   }
 
@@ -195,39 +202,46 @@ export class WorkflowScheduleService {
   }
 
   async getSchedulesToRun(limit = 100): Promise<WorkflowScheduleEntity[]> {
-    return this.scheduleRepository
-      .createQueryBuilder('schedule')
-      .where('schedule.status = :status', { status: ScheduleStatus.ENABLED })
-      .andWhere('schedule.nextRunAt <= :now', { now: new Date() })
-      .orderBy('schedule.nextRunAt', 'ASC')
-      .take(limit)
-      .getMany()
+    return await useEntityManager(async m => {
+      return m.find(WorkflowScheduleEntity, {
+        where: {
+          status: ScheduleStatus.ENABLED,
+          nextRunAt: LessThanOrEqual(new Date())
+        },
+        order: { nextRunAt: 'ASC' },
+        take: limit
+      })
+    })
   }
 
   async updateScheduleAfterRun(schedule: WorkflowScheduleEntity): Promise<void> {
-    const now = new Date()
-    const nextRunAt = this.calculateNextRunTime(schedule.scheduleType, {
-      cronExpression: schedule.cronExpression,
-      intervalSeconds: schedule.intervalSeconds,
-      startTime: now
-    })
+    await useEntityManager(async m => {
+      const now = new Date()
+      const nextRunAt = this.calculateNextRunTime(schedule.scheduleType, {
+        cronExpression: schedule.cronExpression,
+        intervalSeconds: schedule.intervalSeconds,
+        startTime: now
+      })
 
-    // 检查是否过期
-    let status = schedule.status
-    if (schedule.endTime && nextRunAt && nextRunAt > schedule.endTime) {
-      status = ScheduleStatus.EXPIRED
-    }
+      // 检查是否过期
+      let status = schedule.status
+      if (schedule.endTime && nextRunAt && nextRunAt > schedule.endTime) {
+        status = ScheduleStatus.EXPIRED
+      }
 
-    await this.scheduleRepository.update(schedule.id, {
-      lastRunAt: now,
-      nextRunAt: status === ScheduleStatus.EXPIRED ? undefined : nextRunAt ?? undefined,
-      status
+      await m.update(WorkflowScheduleEntity, schedule.id, {
+        lastRunAt: now,
+        nextRunAt: status === ScheduleStatus.EXPIRED ? undefined : nextRunAt ?? undefined,
+        status
+      })
     })
   }
 
   async updateLastRunTime(scheduleId: string): Promise<void> {
-    await this.scheduleRepository.update(scheduleId, {
-      lastRunAt: new Date()
+    await useEntityManager(async m => {
+      await m.update(WorkflowScheduleEntity, scheduleId, {
+        lastRunAt: new Date()
+      })
     })
   }
 
