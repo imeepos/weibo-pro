@@ -1,8 +1,9 @@
 import { Injectable, Inject } from '@sker/core'
-import { useEntityManager, LessThanOrEqual } from '@sker/entities'
+import { useEntityManager } from '@sker/entities'
 import { WorkflowScheduleEntity, ScheduleType, ScheduleStatus, WorkflowEntity } from '@sker/entities'
 import { WorkflowRunService } from './workflow-run.service'
 import { CronExpressionParser } from 'cron-parser'
+import { LessThanOrEqual } from 'typeorm'
 
 export interface CreateScheduleDto {
   workflowName: string
@@ -123,7 +124,11 @@ export class WorkflowScheduleService {
         }
       }
 
-      await m.update(WorkflowScheduleEntity, id, dto)
+      const updateData: any = { ...dto }
+      if (dto.nextRunAt === null) {
+        updateData.nextRunAt = null
+      }
+      await m.update(WorkflowScheduleEntity, id, updateData)
       const updatedSchedule = await m.findOne(WorkflowScheduleEntity, { where: { id } })
       if (!updatedSchedule) {
         throw new Error(`Schedule ${id} not found after update`)
