@@ -4,10 +4,6 @@ import { serve } from '@hono/node-server'
 
 const app = new Hono()
 
-// 健康检查
-app.get('/health', (c) => {
-  return c.json({ status: 'ok', timestamp: new Date().toISOString() })
-})
 app.post('/v1/messages', async (c) => {
   const apiKey = `82956e56a119d60063c3cab701c7ba74.bxEZzx9O5jI9Egwe`
   if (!apiKey) {
