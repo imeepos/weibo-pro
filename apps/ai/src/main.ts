@@ -1,75 +1,89 @@
 import 'reflect-metadata'
 import { Hono } from 'hono'
 import { serve } from '@hono/node-server'
+import { useEntityManager, LlmModel, LlmProvider } from '@sker/entities'
+import "dotenv/config";
 
 const app = new Hono()
 
-const bigmodel = async (header: any, body: any) => {
-  // 模型负载均衡
-  const headers = new Headers(header)
-  headers.set('Authorization', `Bearer 82956e56a119d60063c3cab701c7ba74.bxEZzx9O5jI9Egwe`)
-  const response = await fetch('https://open.bigmodel.cn/api/anthropic/v1/messages', {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(body)
+interface ProviderInfo {
+  providerId: string
+  baseUrl: string
+  apiKey: string
+  modelName: string
+}
+
+const findBestProvider = async (modelName: string): Promise<ProviderInfo | null> => {
+  return useEntityManager(async m => {
+    const result = await m.createQueryBuilder(LlmModel, 'model')
+      .innerJoin('model.providers', 'mp')
+      .innerJoin('mp.provider', 'provider')
+      .select(['provider.id', 'provider.base_url', 'provider.api_key', 'provider.score', 'mp.modelName'])
+      .where('model.name = :modelName', { modelName })
+      .andWhere('provider.score > 0')
+      .orderBy('provider.score', 'DESC')
+      .getRawOne()
+
+    if (!result) return null
+
+    return {
+      providerId: result.provider_id,
+      baseUrl: result.provider_base_url,
+      apiKey: result.provider_api_key,
+      modelName: result.mp_model_name
+    }
   })
-  return response;
 }
 
-const minimax = async (header: any, body: any) => {
-  // 模型负载均衡
-  const headers = new Headers(header)
-  headers.set('Authorization', `Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJHcm91cE5hbWUiOiLmnajmmI7mmI4iLCJVc2VyTmFtZSI6IuadqOaYjuaYjiIsIkFjY291bnQiOiIiLCJTdWJqZWN0SUQiOiIxOTY3NDc0OTI5OTU5OTY5MDQ2IiwiUGhvbmUiOiIiLCJHcm91cElEIjoiMTk2NzQ3NDkyOTk1MTU3NjM0MiIsIlBhZ2VOYW1lIjoiIiwiTWFpbCI6InltaW5nbWluZzM3NUBnbWFpbC5jb20iLCJDcmVhdGVUaW1lIjoiMjAyNS0xMC0zMSAxMDoxNjoxOSIsIlRva2VuVHlwZSI6MSwiaXNzIjoibWluaW1heCJ9.Ub6N1CCACkwGQjyrkh6lMYKJOsUPo1w4QtOErBZfJoi71VhAT4tJsOtw8lF0EBlLowE7eeUWNGzZYZ-Vfo4ho14wlxv9FJylOVo48CgYPNnKvKdQBCWENTyd_vcQp7k_zKs4PK-PMKka6hbG2wCp7V_4aOmZeD25VpRbRf9cFU8hzEZCCwMfztDgd-hXY6i1gR0vCvz8aot6EmriN-6vHWms2FpVAtaBveaHrmNIKM3A2glFE0gh-6jMQszfWcVz6s7Gi5qgJ7uM3y6EJ4IfOcglAPM_et9Fwlqz-OQwZhg-mDWPPZWXL0NUQjFvV6h6Q2SxAmjL-6OLaRZrfR6wDw`)
-  const response = await fetch('https://api.minimax.io/anthropic/v1/messages', {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(body)
-  });
-  return response;
-}
-
-const cc12137207134 = async (header: any, body: any) => {
-  // 模型负载均衡
-  const headers = new Headers(header)
-  headers.set('Authorization', `Bearer sk-A6DtbqEHYT7cGp2psCuUVywkij0kN2mPcuTTy3CGfLDDso0y`)
-  const response = await fetch('http://121.37.207.134:8000/v1/messages', {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(body)
-  });
-  return response;
-}
-
-const cc302 = async (header: any, body: any) => {
-  // 模型负载均衡
-  const headers = new Headers(header)
-  headers.set('Authorization', `Bearer sk-DmQWgeQhO14iY5MwdE8V2gm85eIPXQgTo5mo6GBMm6nqleD8`)
-  const response = await fetch('https://api.302.ai/cc/v1/messages', {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(body)
-  });
-  return response;
+const updateScore = async (providerId: string, delta: number) => {
+  await useEntityManager(async m => {
+    await m.createQueryBuilder()
+      .update(LlmProvider)
+      .set({ score: () => `GREATEST(0, score + ${delta})` })
+      .where('id = :providerId', { providerId })
+      .execute()
+  })
 }
 
 app.post('/v1/messages', async (c) => {
   const body = await c.req.json()
-  const header = c.req.header()
-  return minimax(header, body)
+  const modelName = body.model as string
+
+  const provider = await findBestProvider(modelName)
+  if (!provider) {
+    return c.json({ error: `无可用 provider: ${modelName}` }, 503)
+  }
+
+  const headers = new Headers(c.req.header())
+  headers.set('Authorization', `Bearer ${provider.apiKey}`)
+
+  const requestBody = { ...body, model: provider.modelName }
+
+  try {
+    const response = await fetch(`${provider.baseUrl}/v1/messages`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(requestBody)
+    })
+
+    await updateScore(provider.providerId, -1)
+
+    return response
+  } catch (error) {
+    await updateScore(provider.providerId, -100)
+    throw error
+  }
 })
 
-// 错误处理
 app.onError((err, c) => {
   console.error('错误:', err)
   return c.json({ error: '服务器错误', details: err.message }, 500)
 })
 
-// 404 处理
 app.notFound((c) => {
   return c.json({ error: '端点不存在', path: c.req.path }, 404)
 })
 
-// 启动服务
 const port = process.env.PORT ? parseInt(process.env.PORT) : 8088
 serve(
   {
