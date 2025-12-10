@@ -51,6 +51,10 @@ export class LlmChatLog {
     @Column({ type: 'int', name: 'total_tokens', nullable: true })
     totalTokens?: number;
 
-    @CreateDateColumn({ name: 'created_at' })
+    @CreateDateColumn({
+        name: 'created_at',
+        type: 'timestamptz',
+        default: () => 'CURRENT_TIMESTAMP'
+    })
     createdAt!: Date;
 }

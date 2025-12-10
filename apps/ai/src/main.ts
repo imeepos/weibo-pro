@@ -1,4 +1,7 @@
 import 'reflect-metadata'
+// 强制使用UTC时区 - 在Windows上使用UTC避免时区转换问题
+const now = new Date();
+process.env.TZ = 'UTC';
 import { Hono } from 'hono'
 import { serve } from '@hono/node-server'
 import { useEntityManager, LlmModel, LlmProvider, LlmChatLog } from '@sker/entities'

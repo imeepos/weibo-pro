@@ -84,7 +84,7 @@ const LlmManagement: React.FC = () => {
   };
 
   const handleResetScore = async (id: string) => {
-    await providersCtrl.updateScore(id, 1000);
+    await providersCtrl.updateScore(id, 10000);
     loadData();
   };
 

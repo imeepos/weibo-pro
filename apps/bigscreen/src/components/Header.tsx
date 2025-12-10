@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, Activity, Settings, Maximize, Minimize, Sun, Moon, User, ChevronDown, BarChart3, Users, Network, LogIn, Search, Sparkles, Shield, Brain } from 'lucide-react';
+import { Clock, Activity, Settings, Maximize, Minimize, Sun, Moon, User, ChevronDown, BarChart3, Users, Network, LogIn, Search, Sparkles, Shield, Brain, MessageSquare } from 'lucide-react';
 import { useAppStore } from '@/stores/useAppStore';
 import { useTheme } from '@/hooks/useTheme';
 import { useFullscreen } from '@/hooks/useFullscreen';
@@ -119,6 +119,13 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
       path: '/llm-management',
       icon: Brain,
       description: '大语言模型配置与管理'
+    },
+    {
+      id: 'llm-chat-logs',
+      label: 'LLM 对话日志',
+      path: '/llm-chat-logs',
+      icon: MessageSquare,
+      description: 'LLM 对话记录与分析'
     }
   ] as const;
 

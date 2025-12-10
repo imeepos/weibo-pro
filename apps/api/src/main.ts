@@ -1,4 +1,6 @@
 import "reflect-metadata";
+// 强制使用UTC时区 - 在Windows上使用UTC避免时区转换问题
+process.env.TZ = 'UTC';
 import "dotenv/config";
 import "@sker/workflow";
 import "@sker/workflow-ast";

@@ -256,7 +256,12 @@ function extractParameters(args: any[], routeArgs: Record<string, any>) {
                 }
                 break;
             case ParamType.BODY:
-                bodyData = value;
+                if (paramKey) {
+                    bodyData = bodyData || {};
+                    bodyData[paramKey] = value;
+                } else {
+                    bodyData = value;
+                }
                 break;
             case ParamType.HEADER:
                 if (paramKey) {
