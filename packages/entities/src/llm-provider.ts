@@ -23,7 +23,7 @@ export class LlmProvider {
   @Column({ type: 'varchar', length: 500 })
   base_url!: string;
 
-  @Column({ type: 'text' })
+  @Column({ type: 'text', default: '' })
   api_key!: string;
 
   // 健康分数 (0-10000)，每次使用后降低，不自动恢复
