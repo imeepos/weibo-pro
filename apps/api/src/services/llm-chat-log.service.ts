@@ -25,8 +25,7 @@ export class LlmChatLogService {
         avgDuration,
         modelStats,
         providerStats,
-        statusCodeStats,
-        timeStats
+        statusCodeStats
       ] = await Promise.all([
         // 总请求数
         m.count(LlmChatLog, { where }),
