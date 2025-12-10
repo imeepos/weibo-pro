@@ -17,12 +17,12 @@ interface ProviderInfo {
 }
 
 const findProviderByModelName = async (modelName: string): Promise<ProviderInfo | null> => {
-  if (!modelName) return null;
+  if (!modelName) return null
   return useEntityManager(async m => {
     const result = await m.createQueryBuilder(LlmProvider, 'provider')
       .innerJoin('provider.models', 'mp')
-      .select(['provider.id', 'provider.base_url', 'provider.api_key', 'provider.score', 'mp.model_name'])
-      .where('mp.model_name = :modelName', { modelName })
+      .select(['provider.id', 'provider.base_url', 'provider.api_key', 'provider.score', 'mp.modelName'])
+      .where('mp.modelName = :modelName', { modelName })
       .andWhere('provider.score > 0')
       .orderBy('provider.score', 'DESC')
       .getRawOne()
@@ -43,7 +43,7 @@ const findBestProvider = async (modelName: string): Promise<ProviderInfo | null>
     const result = await m.createQueryBuilder(LlmModel, 'model')
       .innerJoin('model.providers', 'mp')
       .innerJoin('mp.provider', 'provider')
-      .select(['provider.id', 'provider.base_url', 'provider.api_key', 'provider.score', 'mp.model_name'])
+      .select(['provider.id', 'provider.base_url', 'provider.api_key', 'provider.score', 'mp.modelName'])
       .where('model.name = :modelName', { modelName })
       .andWhere('provider.score > 0')
       .orderBy('provider.score', 'DESC')
@@ -109,7 +109,6 @@ app.post('/:model/v1/messages', async (c) => {
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     let provider = await findProviderByModelName(body.model)
     if (!provider) {
-      console.error(`无可用 provider: ${pathModelName}, 尝试次数: ${attempt + 1}, 已尝试 providers: ${Array.from(triedProviders).join(', ')}`)
       provider = await findBestProvider(pathModelName)
     }
     if (!provider || triedProviders.has(provider.providerId)) {

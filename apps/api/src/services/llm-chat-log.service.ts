@@ -81,40 +81,27 @@ export class LlmChatLogService {
       ]);
 
       // 按时间统计（根据粒度自动选择）
-      // 如果未指定粒度，根据时间范围自动确定
       let granularityType = granularity;
       if (!granularityType && startDate && endDate) {
         const start = new Date(startDate);
         const end = new Date(endDate);
         const diffHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-        if (diffHours <= 1) {
-          granularityType = 'minute';
-        } else if (diffHours <= 24) {
-          granularityType = 'hour';
-        } else {
-          granularityType = 'day';
-        }
+        granularityType = diffHours <= 1 ? 'minute' : diffHours <= 24 ? 'hour' : 'day';
+        console.log('[LlmChatLogService] Auto granularity:', { diffHours, granularityType });
       }
 
-      let timeQuery = m.createQueryBuilder(LlmChatLog, 'log')
+      const dateExpr = granularityType === 'minute'
+        ? "TO_CHAR(log.createdAt, 'YYYY-MM-DD HH24:MI:00')"
+        : granularityType === 'hour'
+          ? "TO_CHAR(log.createdAt, 'YYYY-MM-DD HH24:00:00')"
+          : "TO_CHAR(log.createdAt, 'YYYY-MM-DD')";
+
+      const timeQuery = m.createQueryBuilder(LlmChatLog, 'log')
+        .select(dateExpr, 'date')
         .addSelect('COUNT(*)', 'count')
         .addSelect('COALESCE(SUM(log.totalTokens), 0)', 'tokens')
-        .where(where);
-
-      if (granularityType === 'minute') {
-        timeQuery = timeQuery
-          .select("DATE_FORMAT(log.createdAt, '%Y-%m-%d %H:%i:00')", 'date')
-          .groupBy("DATE_FORMAT(log.createdAt, '%Y-%m-%d %H:%i:00')");
-      } else if (granularityType === 'hour') {
-        timeQuery = timeQuery
-          .select("DATE_FORMAT(log.createdAt, '%Y-%m-%d %H:00:00')", 'date')
-          .groupBy("DATE_FORMAT(log.createdAt, '%Y-%m-%d %H:00:00')");
-      } else {
-        // 默认按天
-        timeQuery = timeQuery
-          .select('DATE(log.createdAt)', 'date')
-          .groupBy('DATE(log.createdAt)');
-      }
+        .where(where)
+        .groupBy(dateExpr);
 
       const timeStats = await timeQuery.orderBy('date', 'ASC').getRawMany();
 
@@ -144,7 +131,7 @@ export class LlmChatLogService {
         byModel: (modelStats || []).map((stat: any) => ({
           modelName: stat.modelName,
           count: parseInt(stat.count) || 0,
-          successRate: stat.count > 0 ? Math.round((parseInt(stat.success) || 0) / parseInt(stat.count) * 100) : null,
+          successRate: stat.count > 0 ? Math.round((parseInt(stat.success) || 0) / parseInt(stat.count) * 100) : 0,
           tokens: parseInt(stat.tokens) || 0,
         })),
         byProvider: (providerStats || []).map((stat: any) => ({
@@ -158,22 +145,11 @@ export class LlmChatLogService {
           statusCode: parseInt(stat.statusCode) || 0,
           count: parseInt(stat.count) || 0,
         })),
-        byTime: (timeStats || []).map((stat: any) => {
-          // 格式化日期字符串
-          let dateStr = stat.date;
-          if (granularityType === 'minute') {
-            // 格式：2024-01-15 14:30:00
-            dateStr = dateStr + ':00';
-          } else if (granularityType === 'hour') {
-            // 格式：2024-01-15 14:00:00
-            dateStr = dateStr + ':00';
-          }
-          return {
-            date: dateStr,
-            count: parseInt(stat.count) || 0,
-            tokens: parseInt(stat.tokens) || 0,
-          };
-        }),
+        byTime: (timeStats || []).map((stat: any) => ({
+          date: stat.date,
+          count: parseInt(stat.count) || 0,
+          tokens: parseInt(stat.tokens) || 0,
+        })),
       };
     });
   }
