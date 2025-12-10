@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { root } from '@sker/core';
 import {
   LlmProvidersController,
@@ -7,14 +6,11 @@ import {
   LlmModelProvidersController,
   type LlmModelProviderWithRelations
 } from '@sker/sdk';
-import type { LlmProvider, LlmModel, LlmModelProvider } from '@sker/entities';
+import type { LlmProvider, LlmModel } from '@sker/entities';
 import { Spinner } from '@sker/ui/components/ui/spinner';
-import { PlusIcon, TrashIcon, PencilIcon, ServerIcon, CpuIcon, LinkIcon } from 'lucide-react';
-
-type Tab = 'providers' | 'models' | 'bindings';
+import { PlusIcon, TrashIcon, PencilIcon, RefreshCwIcon, ServerIcon, CpuIcon, LinkIcon } from 'lucide-react';
 
 const LlmManagement: React.FC = () => {
-  const [tab, setTab] = useState<Tab>('providers');
   const [providers, setProviders] = useState<LlmProvider[]>([]);
   const [models, setModels] = useState<LlmModel[]>([]);
   const [bindings, setBindings] = useState<LlmModelProviderWithRelations[]>([]);
@@ -66,6 +62,11 @@ const LlmManagement: React.FC = () => {
     loadData();
   };
 
+  const handleResetScore = async (id: string) => {
+    await providersCtrl.updateScore(id, 1000);
+    loadData();
+  };
+
   // Model CRUD
   const [modelForm, setModelForm] = useState({ name: '' });
   const [editingModel, setEditingModel] = useState<string | null>(null);
@@ -112,110 +113,95 @@ const LlmManagement: React.FC = () => {
     );
   }
 
-  const tabs: { key: Tab; label: string; icon: React.ReactNode }[] = [
-    { key: 'providers', label: '提供商', icon: <ServerIcon className="size-4" /> },
-    { key: 'models', label: '模型', icon: <CpuIcon className="size-4" /> },
-    { key: 'bindings', label: '绑定关系', icon: <LinkIcon className="size-4" /> },
-  ];
-
   return (
-    <div className="h-full overflow-auto p-6">
-      <div className="mb-6 flex gap-2">
-        {tabs.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-              tab === t.key
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-muted hover:bg-muted/80 text-foreground'
-            }`}
-          >
-            {t.icon}
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {tab === 'providers' && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-          <div className="glass-card p-4">
-            <h3 className="mb-4 font-medium">{editingProvider ? '编辑提供商' : '添加提供商'}</h3>
-            <div className="grid gap-3 sm:grid-cols-3">
+    <div className="h-full overflow-auto p-4">
+      <div className="grid h-full gap-4 lg:grid-cols-3">
+        {/* 提供商 */}
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <ServerIcon className="size-4" />
+            提供商
+          </div>
+          <div className="glass-card p-3">
+            <div className="grid gap-2">
               <input
                 placeholder="名称"
                 value={providerForm.name}
                 onChange={(e) => setProviderForm({ ...providerForm, name: e.target.value })}
-                className="rounded-md border bg-background px-3 py-2 text-sm"
+                className="rounded-md border bg-background px-2 py-1.5 text-sm"
               />
               <input
                 placeholder="Base URL"
                 value={providerForm.base_url}
                 onChange={(e) => setProviderForm({ ...providerForm, base_url: e.target.value })}
-                className="rounded-md border bg-background px-3 py-2 text-sm"
+                className="rounded-md border bg-background px-2 py-1.5 text-sm"
               />
               <input
                 placeholder="API Key"
                 type="password"
                 value={providerForm.api_key}
                 onChange={(e) => setProviderForm({ ...providerForm, api_key: e.target.value })}
-                className="rounded-md border bg-background px-3 py-2 text-sm"
+                className="rounded-md border bg-background px-2 py-1.5 text-sm"
               />
-            </div>
-            <div className="mt-3 flex gap-2">
-              <button
-                onClick={handleProviderSubmit}
-                className="flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground"
-              >
-                <PlusIcon className="size-4" />
-                {editingProvider ? '保存' : '添加'}
-              </button>
-              {editingProvider && (
+              <div className="flex gap-2">
                 <button
-                  onClick={() => {
-                    setEditingProvider(null);
-                    setProviderForm({ name: '', base_url: '', api_key: '' });
-                  }}
-                  className="rounded-md bg-muted px-3 py-1.5 text-sm"
+                  onClick={handleProviderSubmit}
+                  className="flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-xs text-primary-foreground"
                 >
-                  取消
+                  <PlusIcon className="size-3" />
+                  {editingProvider ? '保存' : '添加'}
                 </button>
-              )}
+                {editingProvider && (
+                  <button
+                    onClick={() => {
+                      setEditingProvider(null);
+                      setProviderForm({ name: '', base_url: '', api_key: '' });
+                    }}
+                    className="rounded-md bg-muted px-2 py-1 text-xs"
+                  >
+                    取消
+                  </button>
+                )}
+              </div>
             </div>
           </div>
-
-          <div className="glass-card overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="border-b bg-muted/50">
+          <div className="glass-card flex-1 overflow-auto">
+            <table className="w-full text-xs">
+              <thead className="sticky top-0 border-b bg-muted/50">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium">名称</th>
-                  <th className="px-4 py-3 text-left font-medium">Base URL</th>
-                  <th className="px-4 py-3 text-left font-medium">健康分数</th>
-                  <th className="px-4 py-3 text-right font-medium">操作</th>
+                  <th className="px-2 py-2 text-left font-medium">名称</th>
+                  <th className="px-2 py-2 text-left font-medium">健康分</th>
+                  <th className="px-2 py-2 text-right font-medium">操作</th>
                 </tr>
               </thead>
               <tbody>
                 {providers.map((p) => (
                   <tr key={p.id} className="border-b last:border-0">
-                    <td className="px-4 py-3">{p.name}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{p.base_url}</td>
-                    <td className="px-4 py-3">
-                      <span className={p.score >= 8000 ? 'text-green-500' : p.score >= 5000 ? 'text-yellow-500' : 'text-red-500'}>
+                    <td className="px-2 py-2" title={p.base_url}>{p.name}</td>
+                    <td className="px-2 py-2">
+                      <span className={p.score >= 800 ? 'text-green-500' : p.score >= 500 ? 'text-yellow-500' : 'text-red-500'}>
                         {p.score}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-2 py-2 text-right">
+                      <button
+                        onClick={() => handleResetScore(p.id)}
+                        className="mr-1 text-blue-500 hover:text-blue-600"
+                        title="重置健康分"
+                      >
+                        <RefreshCwIcon className="size-3" />
+                      </button>
                       <button
                         onClick={() => {
                           setEditingProvider(p.id);
                           setProviderForm({ name: p.name, base_url: p.base_url, api_key: p.api_key });
                         }}
-                        className="mr-2 text-muted-foreground hover:text-foreground"
+                        className="mr-1 text-muted-foreground hover:text-foreground"
                       >
-                        <PencilIcon className="size-4" />
+                        <PencilIcon className="size-3" />
                       </button>
                       <button onClick={() => handleDeleteProvider(p.id)} className="text-red-500 hover:text-red-600">
-                        <TrashIcon className="size-4" />
+                        <TrashIcon className="size-3" />
                       </button>
                     </td>
                   </tr>
@@ -223,25 +209,27 @@ const LlmManagement: React.FC = () => {
               </tbody>
             </table>
           </div>
-        </motion.div>
-      )}
+        </div>
 
-      {tab === 'models' && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-          <div className="glass-card p-4">
-            <h3 className="mb-4 font-medium">{editingModel ? '编辑模型' : '添加模型'}</h3>
-            <div className="flex gap-3">
+        {/* 模型 */}
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <CpuIcon className="size-4" />
+            模型
+          </div>
+          <div className="glass-card p-3">
+            <div className="flex gap-2">
               <input
-                placeholder="模型名称 (如 gpt-4, claude-3-opus)"
+                placeholder="模型名称"
                 value={modelForm.name}
                 onChange={(e) => setModelForm({ name: e.target.value })}
-                className="flex-1 rounded-md border bg-background px-3 py-2 text-sm"
+                className="flex-1 rounded-md border bg-background px-2 py-1.5 text-sm"
               />
               <button
                 onClick={handleModelSubmit}
-                className="flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground"
+                className="flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-xs text-primary-foreground"
               >
-                <PlusIcon className="size-4" />
+                <PlusIcon className="size-3" />
                 {editingModel ? '保存' : '添加'}
               </button>
               {editingModel && (
@@ -250,42 +238,37 @@ const LlmManagement: React.FC = () => {
                     setEditingModel(null);
                     setModelForm({ name: '' });
                   }}
-                  className="rounded-md bg-muted px-3 py-1.5 text-sm"
+                  className="rounded-md bg-muted px-2 py-1 text-xs"
                 >
                   取消
                 </button>
               )}
             </div>
           </div>
-
-          <div className="glass-card overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="border-b bg-muted/50">
+          <div className="glass-card flex-1 overflow-auto">
+            <table className="w-full text-xs">
+              <thead className="sticky top-0 border-b bg-muted/50">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium">模型名称</th>
-                  <th className="px-4 py-3 text-left font-medium">创建时间</th>
-                  <th className="px-4 py-3 text-right font-medium">操作</th>
+                  <th className="px-2 py-2 text-left font-medium">模型名称</th>
+                  <th className="px-2 py-2 text-right font-medium">操作</th>
                 </tr>
               </thead>
               <tbody>
                 {models.map((m) => (
                   <tr key={m.id} className="border-b last:border-0">
-                    <td className="px-4 py-3 font-medium">{m.name}</td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {new Date(m.created_at).toLocaleDateString('zh-CN')}
-                    </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-2 py-2 font-medium">{m.name}</td>
+                    <td className="px-2 py-2 text-right">
                       <button
                         onClick={() => {
                           setEditingModel(m.id);
                           setModelForm({ name: m.name });
                         }}
-                        className="mr-2 text-muted-foreground hover:text-foreground"
+                        className="mr-1 text-muted-foreground hover:text-foreground"
                       >
-                        <PencilIcon className="size-4" />
+                        <PencilIcon className="size-3" />
                       </button>
                       <button onClick={() => handleDeleteModel(m.id)} className="text-red-500 hover:text-red-600">
-                        <TrashIcon className="size-4" />
+                        <TrashIcon className="size-3" />
                       </button>
                     </td>
                   </tr>
@@ -293,18 +276,20 @@ const LlmManagement: React.FC = () => {
               </tbody>
             </table>
           </div>
-        </motion.div>
-      )}
+        </div>
 
-      {tab === 'bindings' && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-          <div className="glass-card p-4">
-            <h3 className="mb-4 font-medium">添加绑定</h3>
-            <div className="grid gap-3 sm:grid-cols-3">
+        {/* 绑定关系 */}
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <LinkIcon className="size-4" />
+            绑定关系
+          </div>
+          <div className="glass-card p-3">
+            <div className="grid gap-2">
               <select
                 value={bindingForm.modelId}
                 onChange={(e) => setBindingForm({ ...bindingForm, modelId: e.target.value })}
-                className="rounded-md border bg-background px-3 py-2 text-sm"
+                className="rounded-md border bg-background px-2 py-1.5 text-sm"
               >
                 <option value="">选择模型</option>
                 {models.map((m) => (
@@ -314,7 +299,7 @@ const LlmManagement: React.FC = () => {
               <select
                 value={bindingForm.providerId}
                 onChange={(e) => setBindingForm({ ...bindingForm, providerId: e.target.value })}
-                className="rounded-md border bg-background px-3 py-2 text-sm"
+                className="rounded-md border bg-background px-2 py-1.5 text-sm"
               >
                 <option value="">选择提供商</option>
                 {providers.map((p) => (
@@ -325,37 +310,34 @@ const LlmManagement: React.FC = () => {
                 placeholder="提供商模型名称"
                 value={bindingForm.modelName}
                 onChange={(e) => setBindingForm({ ...bindingForm, modelName: e.target.value })}
-                className="rounded-md border bg-background px-3 py-2 text-sm"
+                className="rounded-md border bg-background px-2 py-1.5 text-sm"
               />
+              <button
+                onClick={handleBindingSubmit}
+                className="flex items-center justify-center gap-1 rounded-md bg-primary px-2 py-1 text-xs text-primary-foreground"
+              >
+                <PlusIcon className="size-3" />
+                添加绑定
+              </button>
             </div>
-            <button
-              onClick={handleBindingSubmit}
-              className="mt-3 flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground"
-            >
-              <PlusIcon className="size-4" />
-              添加绑定
-            </button>
           </div>
-
-          <div className="glass-card overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="border-b bg-muted/50">
+          <div className="glass-card flex-1 overflow-auto">
+            <table className="w-full text-xs">
+              <thead className="sticky top-0 border-b bg-muted/50">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium">标准模型</th>
-                  <th className="px-4 py-3 text-left font-medium">提供商</th>
-                  <th className="px-4 py-3 text-left font-medium">提供商模型名</th>
-                  <th className="px-4 py-3 text-right font-medium">操作</th>
+                  <th className="px-2 py-2 text-left font-medium">模型</th>
+                  <th className="px-2 py-2 text-left font-medium">提供商</th>
+                  <th className="px-2 py-2 text-right font-medium">操作</th>
                 </tr>
               </thead>
               <tbody>
                 {bindings.map((b) => (
                   <tr key={b.id} className="border-b last:border-0">
-                    <td className="px-4 py-3 font-medium">{b.model?.name || b.modelId}</td>
-                    <td className="px-4 py-3">{b.provider?.name || b.providerId}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{b.modelName}</td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-2 py-2 font-medium">{b.model?.name || b.modelId}</td>
+                    <td className="px-2 py-2" title={b.modelName}>{b.provider?.name || b.providerId}</td>
+                    <td className="px-2 py-2 text-right">
                       <button onClick={() => handleDeleteBinding(b.id)} className="text-red-500 hover:text-red-600">
-                        <TrashIcon className="size-4" />
+                        <TrashIcon className="size-3" />
                       </button>
                     </td>
                   </tr>
@@ -363,8 +345,8 @@ const LlmManagement: React.FC = () => {
               </tbody>
             </table>
           </div>
-        </motion.div>
-      )}
+        </div>
+      </div>
     </div>
   );
 };
