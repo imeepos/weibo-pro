@@ -14,9 +14,10 @@ interface ProviderInfo {
 }
 
 const findProviderByModelName = async (modelName: string): Promise<ProviderInfo | null> => {
+  if (!modelName) return null;
   return useEntityManager(async m => {
-    const result = await m.createQueryBuilder('llm_model_providers', 'mp')
-      .innerJoin('llm_providers', 'provider', 'mp.provider_id = provider.id')
+    const result = await m.createQueryBuilder(LlmProvider, 'provider')
+      .innerJoin('provider.models', 'mp')
       .select(['provider.id', 'provider.base_url', 'provider.api_key', 'provider.score', 'mp.model_name'])
       .where('mp.model_name = :modelName', { modelName })
       .andWhere('provider.score > 0')
@@ -24,13 +25,12 @@ const findProviderByModelName = async (modelName: string): Promise<ProviderInfo 
       .getRawOne()
 
     if (!result) return null
-    if (!result.id) return null;
 
     return {
-      providerId: result.id,
-      baseUrl: result.base_url,
-      apiKey: result.api_key,
-      modelName: result.model_name
+      providerId: result.provider_id,
+      baseUrl: result.provider_base_url,
+      apiKey: result.provider_api_key,
+      modelName: result.mp_model_name
     }
   })
 }
@@ -40,14 +40,14 @@ const findBestProvider = async (modelName: string): Promise<ProviderInfo | null>
     const result = await m.createQueryBuilder(LlmModel, 'model')
       .innerJoin('model.providers', 'mp')
       .innerJoin('mp.provider', 'provider')
-      .select(['provider.id', 'provider.base_url', 'provider.api_key', 'provider.score', 'mp.modelName'])
+      .select(['provider.id', 'provider.base_url', 'provider.api_key', 'provider.score', 'mp.model_name'])
       .where('model.name = :modelName', { modelName })
       .andWhere('provider.score > 0')
       .orderBy('provider.score', 'DESC')
       .getRawOne()
 
     if (!result) return null
-    if(!result.provider_id) return null;
+
     return {
       providerId: result.provider_id,
       baseUrl: result.provider_base_url,
@@ -98,22 +98,22 @@ const MAX_RETRIES = 3
 
 app.post('/:model/v1/messages', async (c) => {
   const body = await c.req.json()
-  const modelName = c.req.param('model')
+  const pathModelName = c.req.param('model')
+  // 优先使用请求体中的 model，如果没有则使用路径中的 model
   const contentLength = parseInt(c.req.header('content-length') || '0')
   const triedProviders = new Set<string>()
 
-  const requestModel = body.model;
-
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-    let provider = await findProviderByModelName(requestModel)
+    let provider = await findProviderByModelName(body.model)
     if (!provider) {
-      provider = await findBestProvider(modelName)
+      console.error(`无可用 provider: ${pathModelName}, 尝试次数: ${attempt + 1}, 已尝试 providers: ${Array.from(triedProviders).join(', ')}`)
+      provider = await findBestProvider(pathModelName)
     }
-    console.log(provider)
     if (!provider || triedProviders.has(provider.providerId)) {
-      return c.json({ error: `无可用 provider: ${modelName}` }, 503)
+      return c.json({ error: `无可用 provider: ${pathModelName}` }, 503)
     }
     triedProviders.add(provider.providerId)
+    console.log(`使用 provider: ${provider.providerId} (baseUrl: ${provider.baseUrl}) 模型: ${provider.modelName}`)
 
     const headers = new Headers(c.req.header())
     headers.set('Authorization', `Bearer ${provider.apiKey}`)
@@ -223,7 +223,7 @@ app.post('/:model/v1/messages', async (c) => {
       await useEntityManager(async m => {
         await m.save(LlmChatLog, {
           providerId: provider.providerId,
-          modelName: provider.modelName,
+          modelName: body.model,
           request: body,
           durationMs,
           isSuccess: false,

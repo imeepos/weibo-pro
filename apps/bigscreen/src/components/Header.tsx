@@ -148,7 +148,7 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
             navigate('/')
           }}>
             <h1 className="text-2xl font-bold text-foreground">
-              舆情监控大屏幕
+              监控大屏幕
             </h1>
             <p className="text-xs text-muted-foreground tracking-wide">实时数据分析与展示</p>
           </div>

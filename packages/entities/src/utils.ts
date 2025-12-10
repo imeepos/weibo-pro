@@ -22,8 +22,8 @@ export const createDatabaseConfig = (): DataSourceOptions => {
         max: 10,
         min: 2,
         idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 10000, // 增加到10秒
-        statement_timeout: 30000, // 30秒语句超时
+        connectionTimeoutMillis: 10000, // 10秒连接超时
+        statement_timeout: 120000, // 120秒语句超时 - 给复杂聚合查询更多时间
       },
     };
   }

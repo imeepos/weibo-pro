@@ -13,6 +13,10 @@ import { Entity } from "./decorator";
 @Index(['modelName'])
 @Index(['isSuccess'])
 @Index(['createdAt'])
+@Index(['createdAt', 'isSuccess'])  // 用于时间范围和成功状态组合查询
+@Index(['providerId', 'createdAt'])  // 用于按提供商和时间查询
+@Index(['modelName', 'createdAt'])   // 用于按模型和时间查询
+@Index(['statusCode'])               // 用于状态码统计
 export class LlmChatLog {
     @PrimaryGeneratedColumn('uuid')
     id!: string;
