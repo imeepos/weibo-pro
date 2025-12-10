@@ -14,9 +14,10 @@ export class LlmChatLogsController implements sdk.LlmChatLogsController {
   @Get('stats')
   async getStats(
     @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string
+    @Query('endDate') endDate?: string,
+    @Query('granularity') granularity?: 'minute' | 'hour' | 'day'
   ): Promise<sdk.LlmChatLogStats> {
-    return this.service.getStats(startDate, endDate);
+    return this.service.getStats(startDate, endDate, granularity);
   }
 
   @Get()

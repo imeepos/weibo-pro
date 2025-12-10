@@ -69,7 +69,8 @@ export class LlmChatLogsController {
   @Get('stats')
   getStats(
     @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string
+    @Query('endDate') endDate?: string,
+    @Query('granularity') granularity?: 'minute' | 'hour' | 'day'
   ): Promise<LlmChatLogStats> {
     throw new Error('method getStats not implements');
   }

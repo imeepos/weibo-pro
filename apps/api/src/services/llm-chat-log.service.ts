@@ -5,7 +5,7 @@ import { Between, Like } from 'typeorm';
 
 @Injectable({ providedIn: 'root' })
 export class LlmChatLogService {
-  async getStats(startDate?: string, endDate?: string): Promise<LlmChatLogStats> {
+  async getStats(startDate?: string, endDate?: string, granularity?: 'minute' | 'hour' | 'day'): Promise<LlmChatLogStats> {
     return useEntityManager(async m => {
       console.log('[LlmChatLogService] Getting stats with date range:', { startDate, endDate });
       const where: any = {};
@@ -80,15 +80,43 @@ export class LlmChatLogService {
           .orderBy('count', 'DESC')
           .getRawMany(),
 
-        // 按时间统计（按天）
-        m.createQueryBuilder(LlmChatLog, 'log')
-          .select('DATE(log.createdAt)', 'date')
+        // 按时间统计（根据粒度自动选择）
+        // 如果未指定粒度，根据时间范围自动确定
+        let granularityType = granularity;
+        if (!granularityType && startDate && endDate) {
+          const start = new Date(startDate);
+          const end = new Date(endDate);
+          const diffHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+          if (diffHours <= 1) {
+            granularityType = 'minute';
+          } else if (diffHours <= 24) {
+            granularityType = 'hour';
+          } else {
+            granularityType = 'day';
+          }
+        }
+
+        let timeQuery = m.createQueryBuilder(LlmChatLog, 'log')
           .addSelect('COUNT(*)', 'count')
           .addSelect('COALESCE(SUM(log.totalTokens), 0)', 'tokens')
-          .where(where)
-          .groupBy('DATE(log.createdAt)')
-          .orderBy('date', 'ASC')
-          .getRawMany()
+          .where(where);
+
+        if (granularityType === 'minute') {
+          timeQuery = timeQuery
+            .select("DATE_FORMAT(log.createdAt, '%Y-%m-%d %H:%i:00')", 'date')
+            .groupBy("DATE_FORMAT(log.createdAt, '%Y-%m-%d %H:%i:00')");
+        } else if (granularityType === 'hour') {
+          timeQuery = timeQuery
+            .select("DATE_FORMAT(log.createdAt, '%Y-%m-%d %H:00:00')", 'date')
+            .groupBy("DATE_FORMAT(log.createdAt, '%Y-%m-%d %H:00:00')");
+        } else {
+          // 默认按天
+          timeQuery = timeQuery
+            .select('DATE(log.createdAt)', 'date')
+            .groupBy('DATE(log.createdAt)');
+        }
+
+        const timeStats = await timeQuery.orderBy('date', 'ASC').getRawMany();
       ]);
 
       const failCount = totalRequests - successCount;
@@ -131,11 +159,22 @@ export class LlmChatLogService {
           statusCode: parseInt(stat.statusCode) || 0,
           count: parseInt(stat.count) || 0,
         })),
-        byTime: (timeStats || []).map((stat: any) => ({
-          date: stat.date instanceof Date ? stat.date.toISOString().split('T')[0] : stat.date,
-          count: parseInt(stat.count) || 0,
-          tokens: parseInt(stat.tokens) || 0,
-        })),
+        byTime: (timeStats || []).map((stat: any) => {
+          // 格式化日期字符串
+          let dateStr = stat.date;
+          if (granularityType === 'minute') {
+            // 格式：2024-01-15 14:30:00
+            dateStr = dateStr + ':00';
+          } else if (granularityType === 'hour') {
+            // 格式：2024-01-15 14:00:00
+            dateStr = dateStr + ':00';
+          }
+          return {
+            date: dateStr,
+            count: parseInt(stat.count) || 0,
+            tokens: parseInt(stat.tokens) || 0,
+          };
+        }),
       };
     });
   }

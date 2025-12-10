@@ -330,7 +330,27 @@ const LlmChatLogs: React.FC = () => {
                       boundaryGap: false,
                       data: stats.byTime.map(item => {
                         const date = new Date(item.date);
-                        return `${date.getMonth() + 1}/${date.getDate()}`;
+                        // 根据时间范围格式化标签
+                        if (selectedTimeRange === '1h') {
+                          // 分钟级别：显示 HH:mm
+                          return date.toLocaleTimeString('zh-CN', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: false
+                          });
+                        } else if (selectedTimeRange === '6h' || selectedTimeRange === '12h' || selectedTimeRange === '24h') {
+                          // 小时级别：显示 MM-DD HH:mm
+                          return date.toLocaleString('zh-CN', {
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: false
+                          });
+                        } else {
+                          // 天级别：显示 MM-DD
+                          return `${date.getMonth() + 1}/${date.getDate()}`;
+                        }
                       })
                     },
                     yAxis: [
