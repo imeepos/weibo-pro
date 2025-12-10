@@ -25,6 +25,8 @@ import { WorkflowService } from './services/workflow.service';
 import { UploadService } from './services/upload.service';
 import { UploadController } from './controllers/upload.controller';
 import { LlmProvidersController } from './controllers/llm-providers.controller';
+import { LlmModelsController } from './controllers/llm-models.controller';
+import { LlmModelProvidersController } from './controllers/llm-model-providers.controller';
 import { AppWebSocketGateway } from './gateways/websocket.gateway';
 import { EventQueryService } from './services/data/events/event-query.service';
 import { EventAnalyticsService } from './services/data/events/event-analytics.service';
@@ -33,6 +35,8 @@ import { DataMockService } from './services/data/events/data-mock.service';
 import { root } from '@sker/core';
 import { DataSource } from '@sker/entities';
 import { LlmProviderService } from './services/llm-provider.service';
+import { LlmModelService } from './services/llm-model.service';
+import { LlmModelProviderService } from './services/llm-model-provider.service';
 
 @Module({
   controllers: [
@@ -49,6 +53,8 @@ import { LlmProviderService } from './services/llm-provider.service';
     UserRelationController,
     UploadController,
     LlmProvidersController,
+    LlmModelsController,
+    LlmModelProvidersController,
   ],
   providers: [
     {
@@ -74,6 +80,8 @@ import { LlmProviderService } from './services/llm-provider.service';
     { provide: DataMockService, useFactory: () => root.get(DataMockService) },
     { provide: DataSource, useFactory: () => root.get(DataSource) },
     { provide: LlmProviderService, useFactory: () => root.get(LlmProviderService) },
+    { provide: LlmModelService, useFactory: () => root.get(LlmModelService) },
+    { provide: LlmModelProviderService, useFactory: () => root.get(LlmModelProviderService) },
   ],
 })
 export class AppModule { }

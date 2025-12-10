@@ -23,4 +23,6 @@ export * from './event-selector';
 export * from './image-editor';
 export * from './image-upload-preview';
 export * from './media-picker';
+export * from './llm-provider-selector';
+export * from './llm-model-selector';
 export { toast } from 'sonner';

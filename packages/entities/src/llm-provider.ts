@@ -2,10 +2,12 @@ import {
   Column,
   CreateDateColumn,
   Index,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { Entity } from './decorator';
+import type { LlmModelProvider } from './llm-model-provider';
 
 @Entity({
   name: 'llm_providers'
@@ -27,6 +29,9 @@ export class LlmProvider {
   // 健康分数 (0-10000)，每次使用后降低，不自动恢复
   @Column({ type: 'int', default: 10000 })
   score!: number;
+
+  @OneToMany('LlmModelProvider', 'provider')
+  models!: LlmModelProvider[];
 
   @CreateDateColumn({ name: 'created_at' })
   created_at!: Date;
