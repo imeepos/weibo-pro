@@ -4,12 +4,10 @@
 
 文件：packages\entities\src\llm-chat-log.ts
 
-设计并完善这个对话记录表
+分析这个表结构，在@sker/bigscrren中开发一个用于查看/统计的管理页面
 
-记录： 模型/provider/输入/输出/token数
-尽量详细的记录信息 方便后续统计分析
+注意：需要按模型统计/按provider统计/按时间统计/输入输出token统计/总token统计/成功失败统计/status code  统计
 
-apps\ai\src\main.ts
 
 ## 说明
 

@@ -13,6 +13,7 @@ import BleMeshTopology from '@/pages/BleMeshTopology';
 import WorkflowEditor from '@/pages/WorkflowEditor';
 import CrawlerControl from '@/pages/CrawlerControl';
 import LlmManagement from '@/pages/LlmManagement';
+import LlmChatLogs from '@/pages/LlmChatLogs';
 import HeroDemo from '@/pages/HeroDemo';
 import { useTheme } from '@/hooks/useTheme';
 import { cn, createLogger } from '@/utils';
@@ -314,6 +315,25 @@ const App: React.FC = () => {
                       transition={{ duration: 0.3 }}
                     >
                       <LlmManagement />
+                    </motion.div>
+                  </AnimatePresence>
+                </Layout>
+              }
+            />
+            <Route
+              path="/llm-chat-logs"
+              element={
+                <Layout>
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key="llm-chat-logs"
+                      className="h-full"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 1.05 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <LlmChatLogs />
                     </motion.div>
                   </AnimatePresence>
                 </Layout>

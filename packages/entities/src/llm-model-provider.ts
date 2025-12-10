@@ -6,7 +6,7 @@ import { LlmProvider } from "./llm-provider";
 @Entity({
     name: 'llm_model_providers'
 })
-@Unique(['model', 'provider'])
+@Unique(['modelName', 'providerId'])
 @Index(['providerId'])
 export class LlmModelProvider {
     @PrimaryGeneratedColumn('uuid')

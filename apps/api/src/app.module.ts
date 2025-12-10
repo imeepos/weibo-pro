@@ -27,6 +27,7 @@ import { UploadController } from './controllers/upload.controller';
 import { LlmProvidersController } from './controllers/llm-providers.controller';
 import { LlmModelsController } from './controllers/llm-models.controller';
 import { LlmModelProvidersController } from './controllers/llm-model-providers.controller';
+import { LlmChatLogsController } from './controllers/llm-chat-logs.controller';
 import { AppWebSocketGateway } from './gateways/websocket.gateway';
 import { EventQueryService } from './services/data/events/event-query.service';
 import { EventAnalyticsService } from './services/data/events/event-analytics.service';
@@ -37,6 +38,7 @@ import { DataSource } from '@sker/entities';
 import { LlmProviderService } from './services/llm-provider.service';
 import { LlmModelService } from './services/llm-model.service';
 import { LlmModelProviderService } from './services/llm-model-provider.service';
+import { LlmChatLogService } from './services/llm-chat-log.service';
 
 @Module({
   controllers: [
@@ -55,6 +57,7 @@ import { LlmModelProviderService } from './services/llm-model-provider.service';
     LlmProvidersController,
     LlmModelsController,
     LlmModelProvidersController,
+    LlmChatLogsController,
   ],
   providers: [
     {
@@ -82,6 +85,7 @@ import { LlmModelProviderService } from './services/llm-model-provider.service';
     { provide: LlmProviderService, useFactory: () => root.get(LlmProviderService) },
     { provide: LlmModelService, useFactory: () => root.get(LlmModelService) },
     { provide: LlmModelProviderService, useFactory: () => root.get(LlmModelProviderService) },
+    { provide: LlmChatLogService, useFactory: () => root.get(LlmChatLogService) },
   ],
 })
 export class AppModule { }
