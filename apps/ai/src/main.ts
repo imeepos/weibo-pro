@@ -109,7 +109,7 @@ app.post('/:model/v1/messages', async (c) => {
       if (!response.body) return response
 
       const isStreaming = body.stream === true
-      let usage: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } | undefined
+      let usage: { input_tokens?: number; output_tokens?: number } | undefined
 
       if (!isStreaming && response.ok) {
         const responseData = await response.json()
@@ -123,13 +123,13 @@ app.post('/:model/v1/messages', async (c) => {
             durationMs,
             isSuccess: true,
             statusCode: response.status,
-            promptTokens: usage?.prompt_tokens,
-            completionTokens: usage?.completion_tokens,
-            totalTokens: usage?.total_tokens
+            promptTokens: usage?.input_tokens,
+            completionTokens: usage?.output_tokens,
+            totalTokens: usage ? (usage.input_tokens || 0) + (usage.output_tokens || 0) : undefined
           })
         }).catch(err => console.error('日志记录失败:', err))
 
-        return c.json(responseData, response.status)
+        return c.json(responseData, response.status as 200)
       }
 
       let logId: string | undefined
@@ -157,21 +157,29 @@ app.post('/:model/v1/messages', async (c) => {
           for (const line of lines) {
             try {
               const data = JSON.parse(line.slice(6))
-              if (data.usage) usage = data.usage
+              if (data.usage) {
+                if (!usage) usage = {}
+                if (data.usage.input_tokens) usage.input_tokens = data.usage.input_tokens
+                if (data.usage.output_tokens) usage.output_tokens = data.usage.output_tokens
+              }
             } catch {}
           }
 
           controller.enqueue(chunk)
         },
         async flush() {
+          console.log(usage)
           if (logId && usage) {
-            await useEntityManager(async m => {
-              await m.update(LlmChatLog, logId!, {
-                promptTokens: usage!.prompt_tokens,
-                completionTokens: usage!.completion_tokens,
-                totalTokens: usage!.total_tokens
-              })
-            }).catch(err => console.error('更新 token 失败:', err))
+            const totalTokens = (usage.input_tokens || 0) + (usage.output_tokens || 0)
+            if (totalTokens > 0) {
+              await useEntityManager(async m => {
+                await m.update(LlmChatLog, logId!, {
+                  promptTokens: usage!.input_tokens,
+                  completionTokens: usage!.output_tokens,
+                  totalTokens
+                })
+              }).catch(err => console.error('更新 token 失败:', err))
+            }
           }
         }
       }))
@@ -186,7 +194,7 @@ app.post('/:model/v1/messages', async (c) => {
       await updateScore(provider.providerId, isTimeout ? -100 : -300)
       console.error(`重试 ${attempt + 1}/${MAX_RETRIES}: ${provider.providerId}`, error)
 
-      useEntityManager(async m => {
+      await useEntityManager(async m => {
         await m.save(LlmChatLog, {
           providerId: provider.providerId,
           modelName: provider.modelName,

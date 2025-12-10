@@ -6,7 +6,7 @@ import { WeiboPostSubscriber } from './weibo-post.subscriber';
 
 export const createDatabaseConfig = (): DataSourceOptions => {
   const databaseUrl = process.env.DATABASE_URL;
-  const entities = root.get(ENTITY, [])
+  const entities = [...new Set(root.get(ENTITY, []))]
   if (databaseUrl) {
     return {
       type: 'postgres',

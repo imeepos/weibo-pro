@@ -2,30 +2,23 @@ import {
     Column,
     CreateDateColumn,
     Index,
-    JoinColumn,
-    ManyToOne,
     PrimaryGeneratedColumn
 } from "typeorm";
 import { Entity } from "./decorator";
-import type { LlmProvider } from "./llm-provider";
 
 @Entity({
     name: 'llm_chat_log'
 })
-@Index(['provider_id'])
-@Index(['model_name'])
-@Index(['is_success'])
-@Index(['created_at'])
+@Index(['providerId'])
+@Index(['modelName'])
+@Index(['isSuccess'])
+@Index(['createdAt'])
 export class LlmChatLog {
     @PrimaryGeneratedColumn('uuid')
     id!: string;
 
     @Column({ type: 'uuid', name: 'provider_id' })
     providerId!: string;
-
-    @ManyToOne('LlmProvider', 'id')
-    @JoinColumn({ name: 'provider_id' })
-    provider!: LlmProvider;
 
     @Column({ type: 'varchar', length: 100, name: 'model_name' })
     modelName!: string;
