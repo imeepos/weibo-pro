@@ -2,11 +2,9 @@
 
 ## 需求
 
-apps\bigscreen\src\pages\LlmManagement.tsx
+文件： apps\bigscreen\src\components\Header.tsx
 
-1. 提供商管理，添加重置健康分功能按钮，点击后重置到 1000 健康分
-2. 现在这个页面比较空旷，可以讲三个tab 展示到一个页面中，左侧 提供商、中间模型、右侧绑定关系
-3. 检查分页功能是否正常
+下拉菜单点击后，应该关闭下拉菜单
 
 
 ## 说明
@@ -22,3 +20,5 @@ apps\bigscreen\src\pages\LlmManagement.tsx
    5. @sker/ui/components/mobile 手机端组件
    6. @sker/ui/components/editor 富文本编辑器组件
 5. 数据库表结构：packages\entities 定义数据库表结构 @sker/entities
+
+只实现用到的，不要有多余的代码，保持简单美

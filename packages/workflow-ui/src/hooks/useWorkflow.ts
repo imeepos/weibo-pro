@@ -80,8 +80,44 @@ export function useWorkflow(
   const initialNodes = useMemo(() => astToFlowNodes(workflowAst), [])
   const initialEdges = useMemo(() => astToFlowEdges(workflowAst), [])
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
+  const [nodes, setNodes, onNodesChangeInternal] = useNodesState(initialNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
+
+  /**
+   * 包装 onNodesChange，处理 dimensions 变更时的只读属性问题
+   *
+   * React Flow 的 applyNodeChanges 会直接修改节点对象的 width/height，
+   * 如果节点对象是只读的（如来自 immer 或 Object.freeze），会抛出错误。
+   * 这里手动处理 dimensions 变更，确保创建新对象而非修改原对象。
+   */
+  const onNodesChange = useCallback((changes: any[]) => {
+    const dimensionChanges = changes.filter((c: any) => c.type === 'dimensions')
+    const otherChanges = changes.filter((c: any) => c.type !== 'dimensions')
+
+    // 先应用非 dimensions 变更（包括 add、remove、position 等）
+    if (otherChanges.length > 0) {
+      onNodesChangeInternal(otherChanges)
+    }
+
+    // 手动应用 dimensions 变更，创建新对象
+    // 注意：必须在 otherChanges 之后处理，确保节点已存在
+    if (dimensionChanges.length > 0) {
+      setNodes((currentNodes) =>
+        currentNodes.map((node) => {
+          const change = dimensionChanges.find((c: any) => c.id === node.id)
+          if (change && change.dimensions) {
+            return {
+              ...node,
+              width: change.dimensions.width,
+              height: change.dimensions.height,
+              measured: { width: change.dimensions.width, height: change.dimensions.height }
+            }
+          }
+          return node
+        })
+      )
+    }
+  }, [onNodesChangeInternal, setNodes])
 
   // ✨ 集成 Zustand Store：同步状态到全局 store
   const initWorkflow = useWorkflowStore((state) => state.initWorkflow)
@@ -624,21 +660,29 @@ export function useWorkflow(
    *
    * - 有指定节点：仅折叠指定的节点
    * - 无指定节点：折叠所有节点
-   *
-   * 优雅设计：保持 data 对象引用稳定
    */
   const collapseNodes = useCallback((nodeIds?: string[]) => {
+    const targetIds = new Set(nodeIds)
+
+    // 更新 AST 节点（创建新对象避免只读属性问题）
+    workflowAst.nodes = workflowAst.nodes.map(node => {
+      const shouldCollapse = !nodeIds || targetIds.has(node.id)
+      if (shouldCollapse && node.collapsed !== true) {
+        return Object.assign(
+          Object.create(Object.getPrototypeOf(node)),
+          node,
+          { collapsed: true }
+        )
+      }
+      return node
+    })
+
+    // 更新 React Flow 节点
     setNodes(nodes =>
       nodes.map(node => {
-        const shouldCollapse = !nodeIds || nodeIds.includes(node.id)
+        const shouldCollapse = !nodeIds || targetIds.has(node.id)
         if (shouldCollapse && node.data.collapsed !== true) {
-          // 同步到 AST
-          const astNode = getNodeById(workflowAst.nodes, node.id)
-          if (astNode) {
-            astNode.collapsed = true
-          }
-          // 直接修改 data 对象，保持引用稳定
-          node.data.collapsed = true
+          return { ...node, data: { ...node.data, collapsed: true } }
         }
         return node
       })
@@ -650,21 +694,29 @@ export function useWorkflow(
    *
    * - 有指定节点：仅展开指定的节点
    * - 无指定节点：展开所有节点
-   *
-   * 优雅设计：保持 data 对象引用稳定
    */
   const expandNodes = useCallback((nodeIds?: string[]) => {
+    const targetIds = new Set(nodeIds)
+
+    // 更新 AST 节点（创建新对象避免只读属性问题）
+    workflowAst.nodes = workflowAst.nodes.map(node => {
+      const shouldExpand = !nodeIds || targetIds.has(node.id)
+      if (shouldExpand && node.collapsed !== false) {
+        return Object.assign(
+          Object.create(Object.getPrototypeOf(node)),
+          node,
+          { collapsed: false }
+        )
+      }
+      return node
+    })
+
+    // 更新 React Flow 节点
     setNodes(nodes =>
       nodes.map(node => {
-        const shouldExpand = !nodeIds || nodeIds.includes(node.id)
+        const shouldExpand = !nodeIds || targetIds.has(node.id)
         if (shouldExpand && node.data.collapsed !== false) {
-          // 同步到 AST
-          const astNode = getNodeById(workflowAst.nodes, node.id)
-          if (astNode) {
-            astNode.collapsed = false
-          }
-          // 直接修改 data 对象，保持引用稳定
-          node.data.collapsed = false
+          return { ...node, data: { ...node.data, collapsed: false } }
         }
         return node
       })
@@ -679,21 +731,24 @@ export function useWorkflow(
   const autoLayout = useCallback(() => {
     const positions = calculateDagreLayout(nodes, edges)
 
+    // 更新 AST 节点位置（创建新对象避免只读属性问题）
+    workflowAst.nodes = workflowAst.nodes.map(node => {
+      const newPosition = positions.get(node.id)
+      if (newPosition) {
+        return Object.assign(
+          Object.create(Object.getPrototypeOf(node)),
+          node,
+          { position: newPosition }
+        )
+      }
+      return node
+    })
+
+    // 更新 React Flow 节点
     setNodes(nodes =>
       nodes.map(node => {
         const newPosition = positions.get(node.id)
-        if (newPosition) {
-          // 同步到 AST
-          const astNode = getNodeById(workflowAst.nodes, node.id)
-          if (astNode) {
-            astNode.position = newPosition
-          }
-          return {
-            ...node,
-            position: newPosition
-          }
-        }
-        return node
+        return newPosition ? { ...node, position: newPosition } : node
       })
     )
 
@@ -716,22 +771,24 @@ export function useWorkflow(
       setEdges(snapshot.edges)
 
       // 同步到 AST
-      const flowNodes = astToFlowNodes(workflowAst)
       const nodeIdSet = new Set(snapshot.nodes.map(n => n.id))
+      const positionMap = new Map(snapshot.nodes.map(n => [n.id, { position: n.position, collapsed: n.data.collapsed }]))
 
-      // 移除不在快照中的节点
-      workflowAst.nodes = workflowAst.nodes.filter(n => nodeIdSet.has(n.id))
-
-      // 更新节点位置和状态
-      snapshot.nodes.forEach(flowNode => {
-        const astNode = getNodeById(workflowAst.nodes, flowNode.id)
-        if (astNode) {
-          astNode.position = flowNode.position
-          if (flowNode.data.collapsed !== undefined) {
-            astNode.collapsed = flowNode.data.collapsed
+      // 更新 AST 节点（创建新对象避免只读属性问题）
+      workflowAst.nodes = workflowAst.nodes
+        .filter(n => nodeIdSet.has(n.id))
+        .map(node => {
+          const updates = positionMap.get(node.id)
+          if (updates) {
+            return Object.assign(
+              Object.create(Object.getPrototypeOf(node)),
+              node,
+              { position: updates.position },
+              updates.collapsed !== undefined ? { collapsed: updates.collapsed } : {}
+            )
           }
-        }
-      })
+          return node
+        })
 
       // 同步边
       const edgeSet = new Set(
@@ -762,20 +819,23 @@ export function useWorkflow(
 
       // 同步到 AST
       const nodeIdSet = new Set(snapshot.nodes.map(n => n.id))
+      const positionMap = new Map(snapshot.nodes.map(n => [n.id, { position: n.position, collapsed: n.data.collapsed }]))
 
-      // 移除不在快照中的节点
-      workflowAst.nodes = workflowAst.nodes.filter(n => nodeIdSet.has(n.id))
-
-      // 更新节点位置和状态
-      snapshot.nodes.forEach(flowNode => {
-        const astNode = getNodeById(workflowAst.nodes, flowNode.id)
-        if (astNode) {
-          astNode.position = flowNode.position
-          if (flowNode.data.collapsed !== undefined) {
-            astNode.collapsed = flowNode.data.collapsed
+      // 更新 AST 节点（创建新对象避免只读属性问题）
+      workflowAst.nodes = workflowAst.nodes
+        .filter(n => nodeIdSet.has(n.id))
+        .map(node => {
+          const updates = positionMap.get(node.id)
+          if (updates) {
+            return Object.assign(
+              Object.create(Object.getPrototypeOf(node)),
+              node,
+              { position: updates.position },
+              updates.collapsed !== undefined ? { collapsed: updates.collapsed } : {}
+            )
           }
-        }
-      })
+          return node
+        })
 
       // 同步边
       const edgeSet = new Set(

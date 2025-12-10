@@ -66,13 +66,16 @@ export function astToFlowEdges(ast: { nodes: INode[]; edges: IEdge[] }): Workflo
 
 /**
  * 转换单个节点
+ *
+ * 注意：返回的节点对象必须是可扩展的，因为 React Flow 会在运行时
+ * 修改节点的 width/height 等属性。使用展开运算符确保创建新对象。
  */
 function toFlowNode<T extends INode>(node: T): WorkflowNode<T> {
   const isGroup = (node as any).isGroupNode === true
   return {
     id: node.id,
     type: isGroup ? 'GroupNode' : node.type,
-    position: node.position || { x: 0, y: 0 },
+    position: node.position ? { ...node.position } : { x: 0, y: 0 },
     data: node,
     ...(node.parentId && { parentId: node.parentId }),
     ...(isGroup && node.width && node.height && {

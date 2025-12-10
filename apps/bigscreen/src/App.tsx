@@ -246,9 +246,7 @@ const App: React.FC = () => {
             <Route
               path="/workflow-editor/:name?"
               element={
-                <div className={cn(
-                  'relative h-screen flex flex-col bg-background text-foreground overflow-hidden'
-                )}>
+                <Layout>
                   <AnimatePresence mode="wait">
                     <motion.div
                       key="workflow-editor"
@@ -261,7 +259,7 @@ const App: React.FC = () => {
                       <WorkflowEditor />
                     </motion.div>
                   </AnimatePresence>
-                </div>
+                </Layout>
               }
             />
             <Route

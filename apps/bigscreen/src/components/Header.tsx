@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, Activity, Settings, Maximize, Minimize, Sun, Moon, User, ChevronDown, BarChart3, Users, Network, LogIn, Search, Sparkles, Shield } from 'lucide-react';
+import { Clock, Activity, Settings, Maximize, Minimize, Sun, Moon, User, ChevronDown, BarChart3, Users, Network, LogIn, Search, Sparkles, Shield, Brain } from 'lucide-react';
 import { useAppStore } from '@/stores/useAppStore';
 import { useTheme } from '@/hooks/useTheme';
 import { useFullscreen } from '@/hooks/useFullscreen';
@@ -23,6 +23,7 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
   const { toggleTheme, isDark } = useTheme();
   const { isFullscreen, isSupported, toggleFullscreen, exitFullscreen } = useFullscreen();
   const [currentTime, setCurrentTime] = React.useState(new Date());
+  const [navOpen, setNavOpen] = React.useState(false);
 
   // 注册全屏快捷键
   useFullscreenShortcuts(toggleFullscreen, exitFullscreen);
@@ -111,6 +112,13 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
       path: '/workflow-editor/weibo_user_detection',
       icon: Shield,
       description: '智能识别与监控水军账号'
+    },
+    {
+      id: 'llm-management',
+      label: 'LLM 管理',
+      path: '/llm-management',
+      icon: Brain,
+      description: '大语言模型配置与管理'
     }
   ] as const;
 
@@ -205,7 +213,7 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
         </button>
 
         {/* 布局设置 - 简洁按钮 */}
-        <Popover>
+        <Popover open={navOpen} onOpenChange={setNavOpen}>
           <PopoverTrigger asChild>
             <button
               className="flex items-center space-x-2 px-3 py-2.5 rounded-xl hover:bg-muted/20 transition-all duration-300 group"
@@ -245,7 +253,7 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
                     return (
                       <button
                         key={option.id}
-                        onClick={() => navigate(option.path)}
+                        onClick={() => { setNavOpen(false); navigate(option.path); }}
                         style={{ animationDelay: `${index * 40}ms` }}
                         className={cn(
                           'relative group overflow-hidden rounded-lg transition-all duration-300',

@@ -2,9 +2,9 @@
 
 @plugin "tailwind-scrollbar-hide";
 @plugin "@tailwindcss/typography";
-@source "../../../apps/**/*.{ts,tsx}";
-@source "../../workflow-ui/**/*.{ts,tsx}";
-@source "../**/*.{ts,tsx}";
+@source "../../../apps/**/*.{tsx}";
+@source "../../workflow-ui/**/*.{tsx}";
+@source "../**/*.{tsx}";
 
 @import "tw-animate-css";
 @import '@xyflow/react/dist/style.css';

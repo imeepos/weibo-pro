@@ -56,7 +56,7 @@ const WorkflowEditor: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="h-full min-h-screen flex items-center justify-center">
+      <div className="h-full flex items-center justify-center">
         <div className="text-center">
           <Spinner />
           <p className="mt-4 text-gray-500">正在加载工作流...</p>
@@ -67,7 +67,7 @@ const WorkflowEditor: React.FC = () => {
 
   if (error) {
     return (
-      <div className="h-full min-h-screen flex items-center justify-center">
+      <div className="h-full flex items-center justify-center">
         <div className="text-center text-red-500">
           <p className="mb-4">{error}</p>
           <button
@@ -89,7 +89,7 @@ const WorkflowEditor: React.FC = () => {
     <WorkflowCanvas
       workflowAst={workflowData}
       name={name || 'default'}
-      className={theme === 'dark' ? 'dark h-full min-h-screen' : 'h-full min-h-screen'}
+      className={theme === 'dark' ? 'dark h-full' : 'h-full'}
       useMenubar={true}
     />
   );
