@@ -2,66 +2,14 @@
 
 ## 需求
 
-看一下下面的警告，有没有能处理的，能处理的处理掉
+文件：packages\entities\src\llm-chat-log.ts
 
- Issues with peer dependencies found
-apps/api
-├─┬ @nestjs/core 10.4.20
-│ └── ✕ unmet peer @nestjs/websockets@^10.0.0: found 11.1.8
-├─┬ @nestjs/platform-socket.io 11.1.8
-│ └── ✕ unmet peer @nestjs/common@^11.0.0: found 10.4.20
-└─┬ @nestjs/websockets 11.1.8
-  ├── ✕ unmet peer @nestjs/common@^11.0.0: found 10.4.20
-  └── ✕ unmet peer @nestjs/core@^11.0.0: found 10.4.20
+设计并完善这个对话记录表
 
-apps/bigscreen
-└─┬ eslint-plugin-react-hooks 4.6.2
-  └── ✕ unmet peer eslint@"^3.0.0 || ^4.0.0 || ^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0-0": found 9.39.1
+记录： 模型/provider/输入/输出/token数
+尽量详细的记录信息 方便后续统计分析
 
-packages/ui
-├─┬ @better-auth/passkey 1.4.3
-│ ├── ✕ unmet peer @better-auth/core@1.4.3: found 1.4.2 in better-auth
-│ └── ✕ unmet peer better-auth@1.4.3: found 1.4.2
-├─┬ @better-auth/sso 1.4.3
-│ └── ✕ unmet peer better-auth@1.4.3: found 1.4.2
-├─┬ @platejs/excalidraw 52.0.1
-│ └─┬ @excalidraw/excalidraw 0.18.0
-│   └─┬ @radix-ui/react-tabs 1.0.2
-│     ├── ✕ unmet peer react@"^16.8 || ^17.0 || ^18.0": found 19.2.0
-│     ├── ✕ unmet peer react-dom@"^16.8 || ^17.0 || ^18.0": found 19.2.0
-│     ├─┬ @radix-ui/react-context 1.0.0
-│     │ └── ✕ unmet peer react@"^16.8 || ^17.0 || ^18.0": found 19.2.0
-│     ├─┬ @radix-ui/react-direction 1.0.0
-│     │ └── ✕ unmet peer react@"^16.8 || ^17.0 || ^18.0": found 19.2.0
-│     ├─┬ @radix-ui/react-id 1.0.0
-│     │ ├── ✕ unmet peer react@"^16.8 || ^17.0 || ^18.0": found 19.2.0
-│     │ └─┬ @radix-ui/react-use-layout-effect 1.0.0
-│     │   └── ✕ unmet peer react@"^16.8 || ^17.0 || ^18.0": found 19.2.0
-│     ├─┬ @radix-ui/react-presence 1.0.0
-│     │ ├── ✕ unmet peer react@"^16.8 || ^17.0 || ^18.0": found 19.2.0
-│     │ ├── ✕ unmet peer react-dom@"^16.8 || ^17.0 || ^18.0": found 19.2.0
-│     │ └─┬ @radix-ui/react-compose-refs 1.0.0
-│     │   └── ✕ unmet peer react@"^16.8 || ^17.0 || ^18.0": found 19.2.0
-│     ├─┬ @radix-ui/react-primitive 1.0.1
-│     │ ├── ✕ unmet peer react@"^16.8 || ^17.0 || ^18.0": found 19.2.0
-│     │ ├── ✕ unmet peer react-dom@"^16.8 || ^17.0 || ^18.0": found 19.2.0
-│     │ └─┬ @radix-ui/react-slot 1.0.1
-│     │   └── ✕ unmet peer react@"^16.8 || ^17.0 || ^18.0": found 19.2.0
-│     └─┬ @radix-ui/react-roving-focus 1.0.2
-│       ├── ✕ unmet peer react@"^16.8 || ^17.0 || ^18.0": found 19.2.0
-│       ├── ✕ unmet peer react-dom@"^16.8 || ^17.0 || ^18.0": found 19.2.0
-│       ├─┬ @radix-ui/react-collection 1.0.1
-│       │ ├── ✕ unmet peer react@"^16.8 || ^17.0 || ^18.0": found 19.2.0
-│       │ └── ✕ unmet peer react-dom@"^16.8 || ^17.0 || ^18.0": found 19.2.0
-│       ├─┬ @radix-ui/react-use-callback-ref 1.0.0
-│       │ └── ✕ unmet peer react@"^16.8 || ^17.0 || ^18.0": found 19.2.0
-│       └─┬ @radix-ui/react-use-controllable-state 1.0.0
-│         └── ✕ unmet peer react@"^16.8 || ^17.0 || ^18.0": found 19.2.0
-└─┬ echarts-wordcloud 2.1.0
-  └── ✕ unmet peer echarts@^5.0.1: found 6.0.0
-
-Done in 31.5s
-
+apps\ai\src\main.ts
 
 ## 说明
 

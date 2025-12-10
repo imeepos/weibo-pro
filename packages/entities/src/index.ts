@@ -24,6 +24,7 @@ export * from './layout-configuration.entity'
 export * from './llm-provider'
 export * from './llm-model'
 export * from './llm-model-provider'
+export * from './llm-chat-log'
 export * from './queries'
 export * from './user-relation.view'
 

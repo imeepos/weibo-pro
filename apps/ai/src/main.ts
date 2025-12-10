@@ -1,7 +1,7 @@
 import 'reflect-metadata'
 import { Hono } from 'hono'
 import { serve } from '@hono/node-server'
-import { useEntityManager, LlmModel, LlmProvider } from '@sker/entities'
+import { useEntityManager, LlmModel, LlmProvider, LlmChatLog } from '@sker/entities'
 import "dotenv/config";
 
 const app = new Hono()
@@ -44,35 +44,163 @@ const updateScore = async (providerId: string, delta: number) => {
       .execute()
   })
 }
+app.use(async (c, next) => {
+  await next()
+})
+const TIMEOUT_MS = 30000
+const IDLE_TIMEOUT_MS = 15000
 
-app.post('/v1/messages', async (c) => {
+const calcPenalty = (responseMs: number, contentLength: number): number => {
+  const len = Math.max(contentLength, 100)
+  const raw = Math.ceil(responseMs / len * 0.1)
+  return Math.min(10, Math.max(1, raw))
+}
+
+const withIdleTimeout = (body: ReadableStream<Uint8Array>, timeoutMs: number, onTimeout: () => void) => {
+  let timer: ReturnType<typeof setTimeout>
+  const resetTimer = () => {
+    clearTimeout(timer)
+    timer = setTimeout(onTimeout, timeoutMs)
+  }
+  resetTimer()
+  return body.pipeThrough(new TransformStream({
+    transform(chunk, controller) {
+      resetTimer()
+      console.log(chunk.length)
+      controller.enqueue(chunk)
+    },
+    flush() { clearTimeout(timer) }
+  }))
+}
+
+const MAX_RETRIES = 3
+
+app.post('/:model/v1/messages', async (c) => {
   const body = await c.req.json()
-  const modelName = body.model as string
+  const modelName = c.req.param('model')
+  const contentLength = parseInt(c.req.header('content-length') || '0')
+  const triedProviders = new Set<string>()
 
-  const provider = await findBestProvider(modelName)
-  if (!provider) {
-    return c.json({ error: `无可用 provider: ${modelName}` }, 503)
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    const provider = await findBestProvider(modelName)
+    if (!provider || triedProviders.has(provider.providerId)) {
+      return c.json({ error: `无可用 provider: ${modelName}` }, 503)
+    }
+    triedProviders.add(provider.providerId)
+
+    const headers = new Headers(c.req.header())
+    headers.set('Authorization', `Bearer ${provider.apiKey}`)
+    const startTime = Date.now()
+
+    try {
+      const url = `${provider.baseUrl}/v1/messages`
+      console.log(`${body.model}:${url}`)
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(TIMEOUT_MS)
+      })
+
+      const durationMs = Date.now() - startTime
+      const penalty = calcPenalty(durationMs, contentLength)
+      await updateScore(provider.providerId, -penalty)
+
+      if (!response.body) return response
+
+      const isStreaming = body.stream === true
+      let usage: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } | undefined
+
+      if (!isStreaming && response.ok) {
+        const responseData = await response.json()
+        usage = responseData.usage
+
+        await useEntityManager(async m => {
+          await m.save(LlmChatLog, {
+            providerId: provider.providerId,
+            modelName: body.model,
+            request: body,
+            durationMs,
+            isSuccess: true,
+            statusCode: response.status,
+            promptTokens: usage?.prompt_tokens,
+            completionTokens: usage?.completion_tokens,
+            totalTokens: usage?.total_tokens
+          })
+        }).catch(err => console.error('日志记录失败:', err))
+
+        return c.json(responseData, response.status)
+      }
+
+      let logId: string | undefined
+      await useEntityManager(async m => {
+        const log = await m.save(LlmChatLog, {
+          providerId: provider.providerId,
+          modelName: body.model,
+          request: body,
+          durationMs,
+          isSuccess: response.ok,
+          statusCode: response.status
+        })
+        logId = log.id
+      }).catch(err => console.error('日志记录失败:', err))
+
+      const decoder = new TextDecoder()
+      const monitoredBody = withIdleTimeout(response.body, IDLE_TIMEOUT_MS, () => {
+        updateScore(provider.providerId, -10)
+        console.error(`流空闲超时: ${provider.providerId}`)
+      }).pipeThrough(new TransformStream({
+        transform(chunk, controller) {
+          const text = decoder.decode(chunk, { stream: true })
+          const lines = text.split('\n').filter(line => line.startsWith('data: '))
+
+          for (const line of lines) {
+            try {
+              const data = JSON.parse(line.slice(6))
+              if (data.usage) usage = data.usage
+            } catch {}
+          }
+
+          controller.enqueue(chunk)
+        },
+        async flush() {
+          if (logId && usage) {
+            await useEntityManager(async m => {
+              await m.update(LlmChatLog, logId!, {
+                promptTokens: usage!.prompt_tokens,
+                completionTokens: usage!.completion_tokens,
+                totalTokens: usage!.total_tokens
+              })
+            }).catch(err => console.error('更新 token 失败:', err))
+          }
+        }
+      }))
+
+      return new Response(monitoredBody, {
+        status: response.status,
+        headers: response.headers
+      })
+    } catch (error) {
+      const durationMs = Date.now() - startTime
+      const isTimeout = error instanceof Error && error.name === 'TimeoutError'
+      await updateScore(provider.providerId, isTimeout ? -100 : -300)
+      console.error(`重试 ${attempt + 1}/${MAX_RETRIES}: ${provider.providerId}`, error)
+
+      useEntityManager(async m => {
+        await m.save(LlmChatLog, {
+          providerId: provider.providerId,
+          modelName: provider.modelName,
+          request: body,
+          durationMs,
+          isSuccess: false,
+          statusCode: 0,
+          error: error instanceof Error ? error.message : String(error)
+        })
+      }).catch(err => console.error('日志记录失败:', err))
+    }
   }
 
-  const headers = new Headers(c.req.header())
-  headers.set('Authorization', `Bearer ${provider.apiKey}`)
-
-  const requestBody = { ...body, model: provider.modelName }
-
-  try {
-    const response = await fetch(`${provider.baseUrl}/v1/messages`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(requestBody)
-    })
-
-    await updateScore(provider.providerId, -1)
-
-    return response
-  } catch (error) {
-    await updateScore(provider.providerId, -100)
-    throw error
-  }
+  return c.json({ error: '所有 provider 均失败' }, 503)
 })
 
 app.onError((err, c) => {
