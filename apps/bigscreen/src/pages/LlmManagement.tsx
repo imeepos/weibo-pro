@@ -124,15 +124,30 @@ const LlmManagement: React.FC = () => {
   // Binding Dialog
   const [bindingDialogOpen, setBindingDialogOpen] = useState(false);
   const [bindingForm, setBindingForm] = useState({ modelId: '', providerId: '', modelName: '' });
+  const [editingBinding, setEditingBinding] = useState<string | null>(null);
 
-  const openBindingDialog = () => {
-    setBindingForm({ modelId: '', providerId: '', modelName: '' });
+  const openBindingDialog = (binding?: LlmModelProviderWithRelations) => {
+    if (binding) {
+      setEditingBinding(binding.id);
+      setBindingForm({
+        modelId: binding.modelId,
+        providerId: binding.providerId,
+        modelName: binding.modelName
+      });
+    } else {
+      setEditingBinding(null);
+      setBindingForm({ modelId: '', providerId: '', modelName: '' });
+    }
     setBindingDialogOpen(true);
   };
 
   const handleBindingSubmit = async () => {
     if (!bindingForm.modelId || !bindingForm.providerId || !bindingForm.modelName) return;
-    await bindingsCtrl.create(bindingForm);
+    if (editingBinding) {
+      await bindingsCtrl.update(editingBinding, bindingForm);
+    } else {
+      await bindingsCtrl.create(bindingForm);
+    }
     setBindingDialogOpen(false);
     loadData();
   };
@@ -270,7 +285,7 @@ const LlmManagement: React.FC = () => {
             </CardTitle>
             <div className="flex-1"></div>
             <button
-              onClick={openBindingDialog}
+              onClick={() => openBindingDialog()}
               className="flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-xs text-primary-foreground"
             >
               <PlusIcon className="size-3" />
@@ -283,6 +298,7 @@ const LlmManagement: React.FC = () => {
                 <tr>
                   <th className="px-4 py-2 text-left font-medium">模型</th>
                   <th className="px-4 py-2 text-left font-medium">提供商</th>
+                  <th className="px-4 py-2 text-left font-medium">提供商模型</th>
                   <th className="px-4 py-2 text-right font-medium">操作</th>
                 </tr>
               </thead>
@@ -291,7 +307,14 @@ const LlmManagement: React.FC = () => {
                   <tr key={b.id} className="border-b last:border-0">
                     <td className="px-4 py-2 font-medium">{b.model?.name || b.modelId}</td>
                     <td className="px-4 py-2" title={b.modelName}>{b.provider?.name || b.providerId}</td>
+                    <td className="px-4 py-2">{b.modelName}</td>
                     <td className="px-4 py-2 text-right">
+                      <button
+                        onClick={() => openBindingDialog(b)}
+                        className="mr-1 text-muted-foreground hover:text-foreground"
+                      >
+                        <PencilIcon className="size-3" />
+                      </button>
                       <button onClick={() => handleDeleteBinding(b.id)} className="text-red-500 hover:text-red-600">
                         <TrashIcon className="size-3" />
                       </button>
@@ -383,7 +406,7 @@ const LlmManagement: React.FC = () => {
       <Dialog open={bindingDialogOpen} onOpenChange={setBindingDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>添加绑定</DialogTitle>
+            <DialogTitle>{editingBinding ? '编辑绑定' : '添加绑定'}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-3">
             <select
@@ -424,7 +447,7 @@ const LlmManagement: React.FC = () => {
               onClick={handleBindingSubmit}
               className="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground"
             >
-              添加
+              {editingBinding ? '保存' : '添加'}
             </button>
           </DialogFooter>
         </DialogContent>

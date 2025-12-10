@@ -13,6 +13,28 @@ interface ProviderInfo {
   modelName: string
 }
 
+const findProviderByModelName = async (modelName: string): Promise<ProviderInfo | null> => {
+  return useEntityManager(async m => {
+    const result = await m.createQueryBuilder('llm_model_providers', 'mp')
+      .innerJoin('llm_providers', 'provider', 'mp.provider_id = provider.id')
+      .select(['provider.id', 'provider.base_url', 'provider.api_key', 'provider.score', 'mp.model_name'])
+      .where('mp.model_name = :modelName', { modelName })
+      .andWhere('provider.score > 0')
+      .orderBy('provider.score', 'DESC')
+      .getRawOne()
+
+    if (!result) return null
+    if (!result.id) return null;
+
+    return {
+      providerId: result.id,
+      baseUrl: result.base_url,
+      apiKey: result.api_key,
+      modelName: result.model_name
+    }
+  })
+}
+
 const findBestProvider = async (modelName: string): Promise<ProviderInfo | null> => {
   return useEntityManager(async m => {
     const result = await m.createQueryBuilder(LlmModel, 'model')
@@ -25,7 +47,7 @@ const findBestProvider = async (modelName: string): Promise<ProviderInfo | null>
       .getRawOne()
 
     if (!result) return null
-
+    if(!result.provider_id) return null;
     return {
       providerId: result.provider_id,
       baseUrl: result.provider_base_url,
@@ -66,7 +88,6 @@ const withIdleTimeout = (body: ReadableStream<Uint8Array>, timeoutMs: number, on
   return body.pipeThrough(new TransformStream({
     transform(chunk, controller) {
       resetTimer()
-      console.log(chunk.length)
       controller.enqueue(chunk)
     },
     flush() { clearTimeout(timer) }
@@ -81,8 +102,14 @@ app.post('/:model/v1/messages', async (c) => {
   const contentLength = parseInt(c.req.header('content-length') || '0')
   const triedProviders = new Set<string>()
 
+  const requestModel = body.model;
+
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-    const provider = await findBestProvider(modelName)
+    let provider = await findProviderByModelName(requestModel)
+    if (!provider) {
+      provider = await findBestProvider(modelName)
+    }
+    console.log(provider)
     if (!provider || triedProviders.has(provider.providerId)) {
       return c.json({ error: `无可用 provider: ${modelName}` }, 503)
     }
@@ -162,13 +189,12 @@ app.post('/:model/v1/messages', async (c) => {
                 if (data.usage.input_tokens) usage.input_tokens = data.usage.input_tokens
                 if (data.usage.output_tokens) usage.output_tokens = data.usage.output_tokens
               }
-            } catch {}
+            } catch { }
           }
 
           controller.enqueue(chunk)
         },
         async flush() {
-          console.log(usage)
           if (logId && usage) {
             const totalTokens = (usage.input_tokens || 0) + (usage.output_tokens || 0)
             if (totalTokens > 0) {
