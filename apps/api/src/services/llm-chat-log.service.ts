@@ -28,7 +28,7 @@ export class LlmChatLogService {
         statusCodeStats,
         timeStats
       ] = await Promise.all([
-      // 总请求数
+        // 总请求数
         m.count(LlmChatLog, { where }),
 
         // 成功数
@@ -79,45 +79,45 @@ export class LlmChatLogService {
           .groupBy('log.statusCode')
           .orderBy('count', 'DESC')
           .getRawMany(),
-
-        // 按时间统计（根据粒度自动选择）
-        // 如果未指定粒度，根据时间范围自动确定
-        let granularityType = granularity;
-        if (!granularityType && startDate && endDate) {
-          const start = new Date(startDate);
-          const end = new Date(endDate);
-          const diffHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-          if (diffHours <= 1) {
-            granularityType = 'minute';
-          } else if (diffHours <= 24) {
-            granularityType = 'hour';
-          } else {
-            granularityType = 'day';
-          }
-        }
-
-        let timeQuery = m.createQueryBuilder(LlmChatLog, 'log')
-          .addSelect('COUNT(*)', 'count')
-          .addSelect('COALESCE(SUM(log.totalTokens), 0)', 'tokens')
-          .where(where);
-
-        if (granularityType === 'minute') {
-          timeQuery = timeQuery
-            .select("DATE_FORMAT(log.createdAt, '%Y-%m-%d %H:%i:00')", 'date')
-            .groupBy("DATE_FORMAT(log.createdAt, '%Y-%m-%d %H:%i:00')");
-        } else if (granularityType === 'hour') {
-          timeQuery = timeQuery
-            .select("DATE_FORMAT(log.createdAt, '%Y-%m-%d %H:00:00')", 'date')
-            .groupBy("DATE_FORMAT(log.createdAt, '%Y-%m-%d %H:00:00')");
-        } else {
-          // 默认按天
-          timeQuery = timeQuery
-            .select('DATE(log.createdAt)', 'date')
-            .groupBy('DATE(log.createdAt)');
-        }
-
-        const timeStats = await timeQuery.orderBy('date', 'ASC').getRawMany();
       ]);
+
+      // 按时间统计（根据粒度自动选择）
+      // 如果未指定粒度，根据时间范围自动确定
+      let granularityType = granularity;
+      if (!granularityType && startDate && endDate) {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const diffHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+        if (diffHours <= 1) {
+          granularityType = 'minute';
+        } else if (diffHours <= 24) {
+          granularityType = 'hour';
+        } else {
+          granularityType = 'day';
+        }
+      }
+
+      let timeQuery = m.createQueryBuilder(LlmChatLog, 'log')
+        .addSelect('COUNT(*)', 'count')
+        .addSelect('COALESCE(SUM(log.totalTokens), 0)', 'tokens')
+        .where(where);
+
+      if (granularityType === 'minute') {
+        timeQuery = timeQuery
+          .select("DATE_FORMAT(log.createdAt, '%Y-%m-%d %H:%i:00')", 'date')
+          .groupBy("DATE_FORMAT(log.createdAt, '%Y-%m-%d %H:%i:00')");
+      } else if (granularityType === 'hour') {
+        timeQuery = timeQuery
+          .select("DATE_FORMAT(log.createdAt, '%Y-%m-%d %H:00:00')", 'date')
+          .groupBy("DATE_FORMAT(log.createdAt, '%Y-%m-%d %H:00:00')");
+      } else {
+        // 默认按天
+        timeQuery = timeQuery
+          .select('DATE(log.createdAt)', 'date')
+          .groupBy('DATE(log.createdAt)');
+      }
+
+      const timeStats = await timeQuery.orderBy('date', 'ASC').getRawMany();
 
       const failCount = totalRequests - successCount;
 
