@@ -61,4 +61,33 @@ export type { FeatureConfig } from './feature-creator';
 export { capitalize, uncapitalize, assertDefined } from './helpers';
 
 // 工具函数
-export { isObject, isPlainObject } from './utils';
+export {
+  isObject,
+  isPlainObject,
+  combineReducers,
+  omit,
+  compose,
+  createReducerFactory,
+  createFeatureReducerFactory,
+} from './utils';
+
+// ========== 运行时（Runtime）API ==========
+
+// Store 核心
+export { Store, select } from './store';
+
+// Store 创建器
+export { createStore } from './create-store';
+export type { StoreConfig } from './create-store';
+
+// ActionsSubject
+export { ActionsSubject, INIT } from './actions-subject';
+
+// State 管理
+export { State, StateObservable, ScannedActionsSubject } from './state';
+export type { StateActionPair } from './state';
+
+// Reducer 管理
+export { ReducerManager, ReducerObservable, UPDATE } from './reducer-manager';
+export type { StoreFeature } from './reducer-manager';
+
