@@ -536,8 +536,9 @@ describe('ReactiveScheduler', () => {
         it('节点不存在时抛出错误', async () => {
             const workflow = createWorkflow([], [])
 
-            await expect(() => getFinal(scheduler.fineTuneNode(workflow, 'nonexistent')))
-                .rejects.toThrow('节点不存在')
+            await expect(async () => {
+                await getFinal(scheduler.fineTuneNode(workflow, 'nonexistent'))
+            }).rejects.toThrow('节点不存在')
         })
 
         it('首次执行场景回退到完整执行', async () => {
@@ -619,8 +620,9 @@ describe('ReactiveScheduler', () => {
 
             const workflow = createWorkflow([nodeA, nodeB], edges)
 
-            await expect(() => getFinal(scheduler.executeNodeIsolated(workflow, 'B')))
-                .rejects.toThrow('尚未执行完成')
+            await expect(async () => {
+                await getFinal(scheduler.executeNodeIsolated(workflow, 'B'))
+            }).rejects.toThrow('尚未执行完成')
         })
     })
 
@@ -636,8 +638,9 @@ describe('ReactiveScheduler', () => {
 
             const workflow = createWorkflow([nodeA, nodeB], edges)
 
-            await expect(() => getFinal(scheduler.schedule(workflow, workflow)))
-                .rejects.toThrow('循环依赖')
+            await expect(async () => {
+                await getFinal(scheduler.schedule(workflow, workflow))
+            }).rejects.toThrow('循环依赖')
         })
 
         it('检测间接循环 A→B→C→A', async () => {
@@ -653,8 +656,9 @@ describe('ReactiveScheduler', () => {
 
             const workflow = createWorkflow([nodeA, nodeB, nodeC], edges)
 
-            await expect(() => getFinal(scheduler.schedule(workflow, workflow)))
-                .rejects.toThrow('循环依赖')
+            await expect(async () => {
+                await getFinal(scheduler.schedule(workflow, workflow))
+            }).rejects.toThrow('循环依赖')
         })
 
         it('错误信息包含循环路径', async () => {
@@ -668,8 +672,9 @@ describe('ReactiveScheduler', () => {
 
             const workflow = createWorkflow([nodeA, nodeB], edges)
 
-            await expect(() => getFinal(scheduler.schedule(workflow, workflow)))
-                .rejects.toThrow(/A.*B.*A/)
+            await expect(async () => {
+                await getFinal(scheduler.schedule(workflow, workflow))
+            }).rejects.toThrow(/A.*B.*A/)
         })
     })
 
