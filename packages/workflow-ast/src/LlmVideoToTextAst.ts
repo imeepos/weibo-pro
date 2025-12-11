@@ -6,7 +6,7 @@ export class LlmVideoToTextAst extends Ast {
     @Input({ title: '视频', mode: IS_MULTI | IS_BUFFER })
     videos: string[] = [];
 
-    @Output()
+    @Output({ title: '描述' })
     text: string = ``;
 
     type: `LlmVideoToTextAst` = `LlmVideoToTextAst`

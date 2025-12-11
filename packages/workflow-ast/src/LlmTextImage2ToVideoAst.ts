@@ -12,7 +12,7 @@ export class LlmTextImage2ToVideoAst extends Ast {
     @Input({ title: '尾帧图' })
     last_image: string = ``;
 
-    @Output()
+    @Output({ title: '视频' })
     video: string = ``;
 
     type: `LlmTextImage2ToVideoAst` = `LlmTextImage2ToVideoAst`

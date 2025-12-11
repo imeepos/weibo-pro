@@ -6,7 +6,7 @@ export class LlmTextToImageAst extends Ast {
     @Input({ mode: IS_MULTI | IS_BUFFER, title: '文本' })
     text: string[] = [];
 
-    @Output()
+    @Output({ title: '图片' })
     image: string = ``;
 
     type: `LlmTextToImageAst` = `LlmTextToImageAst`

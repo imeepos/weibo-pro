@@ -9,7 +9,7 @@ export class LlmTextImageToVideoAst extends Ast {
     @Input({ mode: IS_MULTI | IS_BUFFER, title: '图片' })
     images: string[] = [];
 
-    @Output()
+    @Output({ title: '视频' })
     video: string = ``;
 
     type: `LlmTextImageToVideoAst` = `LlmTextImageToVideoAst`

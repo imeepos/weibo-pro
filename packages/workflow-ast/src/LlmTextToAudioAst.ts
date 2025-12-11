@@ -11,7 +11,7 @@ export class LlmTextToAudioAst extends Ast {
     @Input({ title: '文本', mode: IS_BUFFER | IS_MULTI })
     text: string[] = [];
 
-    @Output()
+    @Output({ title: '音频' })
     audio: string = ``;
 
     type: `LlmTextToAudioAst` = `LlmTextToAudioAst`

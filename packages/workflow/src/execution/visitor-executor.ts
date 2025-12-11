@@ -5,6 +5,7 @@ import { NoRetryError } from '../errors';
 import { Observable, of, from } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
 import { INode } from '../types';
+import { DefaultVisitor } from '../defaultVisitor';
 
 /**
  * 访问者执行器 - 工作流引擎的核心执行者
@@ -27,7 +28,7 @@ export class VisitorExecutor implements Visitor {
 
         const method = methods.find(it => it.ast === type);
         if (!method) {
-            return this.handleError(new Error(`未找到节点 ${ast.type} 的 Handler`), ast);
+            return this.useDefaultVisitor(ast);
         }
 
         const instance = root.get(method.target);
@@ -65,6 +66,13 @@ export class VisitorExecutor implements Visitor {
             );
         }
         return of(result as INode).pipe(
+            catchError(error => this.handleError(error, ast))
+        );
+    }
+
+    private useDefaultVisitor(ast: INode): Observable<INode> {
+        const defaultVisitor = new DefaultVisitor();
+        return defaultVisitor.visit(ast).pipe(
             catchError(error => this.handleError(error, ast))
         );
     }
