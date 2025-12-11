@@ -297,8 +297,6 @@ export class ReactiveScheduler {
             return of({});
         }
 
-        const requiredProperties = this.getRequiredInputProperties(node);
-
         const edgesBySource = new Map<string, IEdge[]>();
         incomingEdges.forEach(edge => {
             if (!edgesBySource.has(edge.from)) {
@@ -307,23 +305,41 @@ export class ReactiveScheduler {
             edgesBySource.get(edge.from)!.push(edge);
         });
 
+        // 检测边模式
+        const edgeMode = this.detectEdgeMode(incomingEdges);
+
+        // MERGE 模式：每个源独立创建流，然后 merge
+        if (edgeMode === EdgeMode.MERGE) {
+            const sourceStreams = Array.from(edgesBySource.entries()).map(([sourceId, edges]) => {
+                return this.createSingleSourceStream(sourceId, edges, network, node);
+            });
+
+            if (sourceStreams.length === 0) {
+                return EMPTY;
+            } else if (sourceStreams.length === 1) {
+                return sourceStreams[0]!;
+            } else {
+                return merge(...sourceStreams);
+            }
+        }
+
+        // 非 MERGE 模式：使用原有的完整源组合逻辑
+        const requiredProperties = this.getRequiredInputProperties(node);
+
         // 检测上游是否有条件边（回溯检查）
         const hasUpstreamConditionalEdges = Array.from(edgesBySource.keys()).some(sourceId => {
             const sourceUpstreamEdges = ctx.edges.filter(e => e.to === sourceId);
             return sourceUpstreamEdges.some(e => e.condition !== undefined);
         });
 
-        // 调试日志：打印边模式信息
-        const edgeMode = this.detectEdgeMode(incomingEdges);
-
-        // 3. 找到所有能提供完整输入的源组合
+        // 找到所有能提供完整输入的源组合
         const completeCombinations = this.findCompleteSourceCombinations(
             requiredProperties,
             edgesBySource,
-            hasUpstreamConditionalEdges  // 传递条件边信息
+            hasUpstreamConditionalEdges
         );
 
-        // 4. 为每个完整组合创建流
+        // 为每个完整组合创建流
         const combinationStreams = completeCombinations.map(sourceIds => {
             if (sourceIds.length === 1) {
                 // 单源完整：直接创建流
@@ -494,9 +510,9 @@ export class ReactiveScheduler {
         if (requiredProperties.size === 0 && edgesBySource.size > 1) {
             const allSourceIds = Array.from(edgesBySource.keys());
 
-            // 如果有上游条件边，每个源单独作为一个组合（使用 MERGE 模式）
+            // 如果有上游条件边或需要强制分离源（如 MERGE 模式），每个源单独作为一个组合
             if (hasUpstreamConditionalEdges) {
-                console.log('[findCompleteSourceCombinations] 检测到上游条件边，每个源独立触发');
+                console.log('[findCompleteSourceCombinations] 强制每个源独立触发（条件边或 MERGE 模式）');
                 return allSourceIds.map(id => [id]);
             }
 

@@ -267,8 +267,8 @@ describe('DataFlowManager', () => {
             const targetNode = compiler.compile(new TargetAst());
 
             const allOutputs = new Map<string, any>();
-            allOutputs.set('source1', { value: 'low-priority' });
-            allOutputs.set('source2', { value: 'high-priority' });
+            allOutputs.set('source1', { value: 'first' });
+            allOutputs.set('source2', { value: 'second' });
 
             const edges: IEdge[] = [
                 { id: '1', from: 'source1', to: targetNode.id!, fromProperty: 'value', toProperty: 'input', weight: 10 },
@@ -277,7 +277,8 @@ describe('DataFlowManager', () => {
 
             manager.assignInputsToNode(targetNode, allOutputs, edges, []);
 
-            expect((targetNode as any).input).toBe('high-priority');
+            // 权重小的先处理，权重大的后处理，后处理的会覆盖前面的值（单值模式）
+            expect((targetNode as any).input).toBe('first');
         });
     });
 

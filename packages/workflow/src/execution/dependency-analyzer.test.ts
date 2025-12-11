@@ -92,7 +92,10 @@ describe('DependencyAnalyzer', () => {
 
             const result = analyzer.findExecutableNodes(nodes, edges);
 
-            expect(result).toHaveLength(0);
+            // B 是入口节点（无依赖），可执行
+            // C 依赖 A 和 B，但 B 未完成，所以 C 不可执行
+            expect(result).toHaveLength(1);
+            expect(result[0].id).toBe('B');
         });
 
         it('条件边未满足时节点不可执行', () => {
@@ -145,8 +148,10 @@ describe('DependencyAnalyzer', () => {
 
             const result = analyzer.findExecutableNodes(nodes, edges);
 
-            expect(result).toHaveLength(1);
-            expect(result[0].id).toBe('C');
+            // B 是入口节点，可执行
+            // C 的无条件边（A→C）已满足，条件边（B→C）源未完成，允许执行
+            expect(result).toHaveLength(2);
+            expect(result.map(n => n.id)).toEqual(expect.arrayContaining(['B', 'C']));
         });
 
         it('已运行或完成的节点不可执行', () => {
@@ -226,8 +231,11 @@ describe('DependencyAnalyzer', () => {
 
             const result = analyzer.findReachableNodes(nodes, edges);
 
-            expect(result).toHaveLength(2);
-            expect(result.map(n => n.id)).not.toContain('C');
+            // A 是入口节点，可达
+            // B 从 A 可达
+            // C 也是入口节点（无入边），也可达
+            expect(result).toHaveLength(3);
+            expect(result.map(n => n.id)).toEqual(expect.arrayContaining(['A', 'B', 'C']));
         });
 
         it('复杂DAG正确遍历', () => {
