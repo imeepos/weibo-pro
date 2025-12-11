@@ -30,31 +30,32 @@ export function combineReducers<T, V extends Action = Action>(
   reducers: ActionReducerMap<T, V>,
   initialState?: Partial<T>
 ): ActionReducer<T, V> {
-  const reducerKeys = Object.keys(reducers);
-  const finalReducers: any = {};
+  const reducerKeys = Object.keys(reducers) as (keyof T)[];
+  const finalReducers: Partial<ActionReducerMap<T, V>> = {};
 
   for (const key of reducerKeys) {
-    if (typeof (reducers as any)[key] === 'function') {
-      finalReducers[key] = (reducers as any)[key];
+    if (typeof reducers[key] === 'function') {
+      finalReducers[key] = reducers[key];
     }
   }
 
-  const finalReducerKeys = Object.keys(finalReducers);
+  const finalReducerKeys = Object.keys(finalReducers) as (keyof T)[];
 
   return function combination(state, action) {
-    state = state === undefined ? initialState : state;
+    const workingState = state === undefined ? initialState : state;
     let hasChanged = false;
     const nextState: any = {};
 
-    // 检查是否有 reducer 被移除（state 中有键但 reducers 中没有）
-    const stateKeys = Object.keys(state);
-    const hasRemovedReducers = stateKeys.some(
-      (key) => !finalReducers[key]
-    );
+    // 检查是否有 reducer 被移除（只有当 workingState 存在时才检查）
+    const hasRemovedReducers = workingState
+      ? (Object.keys(workingState) as (keyof T)[]).some(
+          (key) => !finalReducers[key]
+        )
+      : false;
 
     for (const key of finalReducerKeys) {
-      const reducer: any = finalReducers[key];
-      const previousStateForKey = state[key];
+      const reducer = finalReducers[key]!;
+      const previousStateForKey = workingState?.[key];
       const nextStateForKey = reducer(previousStateForKey, action);
 
       nextState[key] = nextStateForKey;
@@ -62,7 +63,7 @@ export function combineReducers<T, V extends Action = Action>(
     }
 
     // 如果有 reducer 被移除，强制返回新状态
-    return hasChanged || hasRemovedReducers ? nextState : state;
+    return hasChanged || hasRemovedReducers ? nextState : (workingState ?? nextState);
   };
 }
 

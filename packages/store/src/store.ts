@@ -1,4 +1,4 @@
-import { Observable, Observer, Operator } from 'rxjs';
+import { Observable, type Observer, type OperatorFunction } from 'rxjs';
 import { distinctUntilChanged, map, pluck } from 'rxjs/operators';
 import { ActionsSubject } from './actions-subject';
 import type { Action, ActionReducer } from './models';
@@ -80,17 +80,23 @@ export class Store<T = any> extends Observable<T> implements Observer<Action> {
     pathOrMapFn: ((state: T) => K) | string,
     ...paths: string[]
   ): Observable<any> {
-    return (select as any)(pathOrMapFn, ...paths)(this);
+    let mapped$: Observable<any>;
+
+    if (typeof pathOrMapFn === 'string') {
+      const pathSlices = paths.filter(Boolean);
+      mapped$ = this.pipe(pluck(pathOrMapFn, ...pathSlices));
+    } else if (typeof pathOrMapFn === 'function') {
+      mapped$ = this.pipe(map(pathOrMapFn));
+    } else {
+      throw new TypeError(
+        `Unexpected type '${typeof pathOrMapFn}' in select operator, ` +
+          `expected 'string' or 'function'`
+      );
+    }
+
+    return mapped$.pipe(distinctUntilChanged());
   }
 
-  /**
-   * 使用 RxJS operator 转换 Store
-   */
-  override lift<R>(operator: Operator<T, R>): Store<R> {
-    const store = new Store<R>(this, this.actionsObserver, this.reducerManager);
-    store.operator = operator;
-    return store;
-  }
 
   /**
    * 派发 Action
