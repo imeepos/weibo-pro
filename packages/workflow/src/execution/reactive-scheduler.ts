@@ -3,6 +3,8 @@ import { INode, IEdge, EdgeMode, hasDataMapping, isNode } from '../types';
 import { executeAst } from '../executor';
 import { Observable, of, EMPTY, merge, combineLatest, zip, asyncScheduler } from 'rxjs';
 import { map, catchError, takeWhile, concatMap, filter, withLatestFrom, shareReplay, subscribeOn, finalize, scan, takeLast, toArray, reduce, expand, tap, take, distinctUntilChanged, defaultIfEmpty } from 'rxjs/operators';
+import { concatLatestFrom } from '../operators/concat_latest_from';
+import { tapResponse } from '../operators/tap-response';
 import { Inject, Injectable, root } from '@sker/core';
 import { findNodeType, INPUT, InputMetadata, hasMultiMode, hasBufferMode, OUTPUT, type OutputMetadata, resolveConstructor } from '../decorator';
 import { Compiler } from '../compiler';
@@ -896,8 +898,11 @@ export class ReactiveScheduler {
             actualSourceIds
         });
 
+        // ✨ 使用 concatLatestFrom 替代 withLatestFrom，避免过早求值陷阱
+        // withLatestFrom 在订阅时立即取值，如果副流未发射，主流会被阻塞
+        // concatLatestFrom 延迟到主流发射时才取值，保证副流已就绪
         return primaryStream.pipe(
-            withLatestFrom(...otherStreams),
+            concatLatestFrom(() => otherStreams),
             map(([primary, ...others]) => Object.assign({}, primary, ...others))
         );
     }
@@ -1119,14 +1124,19 @@ export class ReactiveScheduler {
 
         // 使用 scan + reducer 模式累积状态变更
         const allStreams$ = merge(...streamsToSubscribe).pipe(
-            // 发射节点事件到事件总线
-            tap(updatedNode => {
-                if (updatedNode.state === 'emitting') {
-                    this.eventBus.emitNodeEmit(updatedNode.id, updatedNode, ast.id);
-                } else if (updatedNode.state === 'success') {
-                    this.eventBus.emitNodeSuccess(updatedNode.id, updatedNode, ast.id);
-                } else if (updatedNode.state === 'fail') {
-                    this.eventBus.emitNodeFail(updatedNode.id, updatedNode.error, ast.id);
+            // ✨ 使用 tapResponse 保护事件发射：副作用失败不应中断主流
+            tapResponse({
+                next: (updatedNode) => {
+                    if (updatedNode.state === 'emitting') {
+                        this.eventBus.emitNodeEmit(updatedNode.id, updatedNode, ast.id);
+                    } else if (updatedNode.state === 'success') {
+                        this.eventBus.emitNodeSuccess(updatedNode.id, updatedNode, ast.id);
+                    } else if (updatedNode.state === 'fail') {
+                        this.eventBus.emitNodeFail(updatedNode.id, updatedNode.error, ast.id);
+                    }
+                },
+                error: (err) => {
+                    console.error('[事件发射失败，但不影响工作流执行]', err);
                 }
             }),
             // 使用 reducer 累积状态（借鉴 @sker/store 的 scan + reducer 模式）

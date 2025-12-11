@@ -4,6 +4,7 @@ import { findNodeType, HANDLER_METHOD } from '../decorator';
 import { NoRetryError } from '../errors';
 import { Observable, of, from } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
+import { mapResponse } from '../operators/map-response';
 import { INode } from '../types';
 import { DefaultVisitor } from '../defaultVisitor';
 
@@ -49,24 +50,44 @@ export class VisitorExecutor implements Visitor {
      *
      * 优雅设计：
      * - 自动识别 Promise、Observable、同步值
-     * - Promise -> Observable (使用 from)
-     * - Observable -> 直接返回
-     * - 同步值 -> Observable (使用 of)
+     * - 使用 mapResponse 统一处理成功和错误路径
+     * - 错误转换为失败节点（Error as Data 模式）
+     * - 支持嵌套类型：Promise<Observable<INode>>
      */
     private normalizeResult(result: any, ast: INode): Observable<INode> {
+        // 1. Observable → 直接应用 mapResponse
         if (result && typeof result.subscribe === 'function') {
             return result.pipe(
-                catchError(error => this.handleError(error, ast))
+                mapResponse({
+                    next: (node) => node,
+                    error: (error) => this.createFailedNode(ast, error)
+                })
             );
         }
+
+        // 2. Promise → 转 Observable，支持嵌套（Promise<Observable>）
         if (result && typeof result.then === 'function') {
-            return from(result as Promise<INode>).pipe(
-                switchMap(res => this.normalizeResult(res, ast)),
-                catchError(error => this.handleError(error, ast))
+            return from(result as Promise<any>).pipe(
+                switchMap(res => {
+                    // Promise resolve 的值可能是 Observable，需要递归处理
+                    if (res && typeof res.subscribe === 'function') {
+                        return this.normalizeResult(res, ast);
+                    }
+                    return of(res);
+                }),
+                mapResponse({
+                    next: (node) => node,
+                    error: (error) => this.createFailedNode(ast, error)
+                })
             );
         }
+
+        // 3. 同步值 → 包装为 Observable
         return of(result as INode).pipe(
-            catchError(error => this.handleError(error, ast))
+            mapResponse({
+                next: (node) => node,
+                error: (error) => this.createFailedNode(ast, error)
+            })
         );
     }
 
@@ -78,7 +99,21 @@ export class VisitorExecutor implements Visitor {
     }
 
     /**
-     * 统一错误处理
+     * 创建失败状态的节点
+     *
+     * 优雅设计：
+     * - 纯函数：不修改原节点，返回新节点
+     * - Error as Data：错误作为节点的属性，而非异常
+     */
+    private createFailedNode(ast: INode, error: unknown): INode {
+        const failedNode = { ...ast };
+        failedNode.state = 'fail';
+        setAstError(failedNode, error);
+        return failedNode;
+    }
+
+    /**
+     * 统一错误处理（保留用于兼容性）
      *
      * 优雅设计：
      * - NoRetryError 不可重试错误特殊处理
@@ -86,8 +121,6 @@ export class VisitorExecutor implements Visitor {
      * - 返回失败状态的节点（作为 Observable 完成）
      */
     private handleError(error: unknown, ast: INode): Observable<INode> {
-        ast.state = 'fail';
-        setAstError(ast, error);
-        return of(ast);
+        return of(this.createFailedNode(ast, error));
     }
 }

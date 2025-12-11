@@ -222,7 +222,7 @@ describe('VisitorExecutor', () => {
             expect(result.state).toBe('success');
         });
 
-        it.skip('Handler 方法不存在抛出错误', async () => {
+        it('Handler 方法不存在抛出错误', async () => {
             @Node({ title: '无效方法节点' })
             class InvalidMethodAst extends Ast {
                 type = 'InvalidMethodAst';
@@ -237,18 +237,17 @@ describe('VisitorExecutor', () => {
                 }
             }
 
-            const visitor = root.get(InvalidMethodVisitor);
-            // 删除方法模拟不存在
-            delete (visitor as any).wrongMethod;
+            // 删除原型上的方法（影响所有实例）
+            delete (InvalidMethodVisitor.prototype as any).wrongMethod;
 
             const ast = new InvalidMethodAst();
             const node = compiler.compile(ast);
             const workflow = createWorkflowGraphAst({ nodes: [], edges: [] });
 
-            // 使用 firstValueFrom 而不是 lastValueFrom，因为错误处理只发出一个值
             const result = await firstValueFrom(executor.visit(node, workflow));
             expect(result.state).toBe('fail');
             expect(result.error).toBeDefined();
+            expect(result.error?.message).toContain('Handler 方法不存在或不可调用');
         });
 
         it('Handler 接收 workflow 上下文', async () => {
