@@ -85,12 +85,12 @@ describe('VisitorExecutor', () => {
                 visit(ast: ObservableAst): Observable<INode> {
                     return new Observable(observer => {
                         ast.state = 'running';
-                        observer.next(ast as INode);
+                        observer.next({ ...ast } as INode);
 
                         setTimeout(() => {
                             ast.state = 'success';
                             ast.result = 'observable-result';
-                            observer.next(ast as INode);
+                            observer.next({ ...ast } as INode);
                             observer.complete();
                         }, 10);
                     });
