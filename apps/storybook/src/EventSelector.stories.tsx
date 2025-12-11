@@ -48,12 +48,15 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Single: Story = {
-  render: () => {
+  args: {
+    events: mockEvents,
+  },
+  render: (args) => {
     const Demo = () => {
       const [value, setValue] = useState<string>('')
       return (
         <div className="w-96 space-y-4">
-          <EventSelector events={mockEvents} value={value} onChange={(v) => setValue(v as string)} />
+          <EventSelector {...args} value={value} onChange={(v) => setValue(v as string)} />
           <p className="text-sm text-muted-foreground">已选: {value || '无'}</p>
         </div>
       )
@@ -63,12 +66,16 @@ export const Single: Story = {
 }
 
 export const Multiple: Story = {
-  render: () => {
+  args: {
+    events: mockEvents,
+    multiple: true,
+  },
+  render: (args) => {
     const Demo = () => {
       const [value, setValue] = useState<string[]>([])
       return (
         <div className="w-96 space-y-4">
-          <EventSelector events={mockEvents} value={value} onChange={(v) => setValue(v as string[])} multiple />
+          <EventSelector {...args} value={value} onChange={(v) => setValue(v as string[])} />
           <p className="text-sm text-muted-foreground">已选: {value.length ? value.join(', ') : '无'}</p>
         </div>
       )
@@ -78,17 +85,24 @@ export const Multiple: Story = {
 }
 
 export const WithSearch: Story = {
-  render: () => (
+  args: {
+    events: mockEvents,
+    placeholder: '输入关键词搜索...',
+  },
+  render: (args) => (
     <div className="w-96">
-      <EventSelector events={mockEvents} placeholder="输入关键词搜索..." />
+      <EventSelector {...args} />
     </div>
   ),
 }
 
 export const Empty: Story = {
-  render: () => (
+  args: {
+    events: [],
+  },
+  render: (args) => (
     <div className="w-96">
-      <EventSelector events={[]} />
+      <EventSelector {...args} />
     </div>
   ),
 }

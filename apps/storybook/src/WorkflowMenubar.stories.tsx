@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react'
 import { WorkflowMenubar } from '@sker/ui/components/workflow/workflow-menubar'
 
-const meta = {
+const meta: Meta<typeof WorkflowMenubar> = {
   title: 'Workflow/WorkflowMenubar',
   component: WorkflowMenubar,
   parameters: {

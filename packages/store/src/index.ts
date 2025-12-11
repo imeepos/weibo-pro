@@ -17,7 +17,6 @@ export type {
   NotAllowedCheck,
   ActionCreatorProps,
   Selector,
-  SelectorWithProps,
   RuntimeChecks,
   FunctionWithParametersType,
   ValueEqualityFn,
@@ -26,6 +25,9 @@ export type {
 
 // Action 创建器
 export { createAction, props, union, getRegisteredActionTypes } from './action-creator';
+
+// Action Group 创建器
+export { createActionGroup, emptyProps } from './action-group-creator';
 
 // Reducer 创建器
 export { createReducer, on } from './reducer-creator';
@@ -47,7 +49,16 @@ export type {
   MemoizeFn,
   MemoizedProjection,
   MemoizedSelector,
-  MemoizedSelectorWithProps,
   DefaultProjectorFn,
   ComparatorFn,
 } from './selector';
+
+// Feature 创建器
+export { createFeature } from './feature-creator';
+export type { FeatureConfig } from './feature-creator';
+
+// 辅助函数
+export { capitalize, uncapitalize, assertDefined } from './helpers';
+
+// 工具函数
+export { isObject, isPlainObject } from './utils';

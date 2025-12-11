@@ -1,4 +1,4 @@
-import { Selector, SelectorWithProps } from './models';
+import { Selector } from './models';
 
 export type AnyFn = (...args: any[]) => any;
 
@@ -18,21 +18,6 @@ export interface MemoizedSelector<
   Result,
   ProjectorFn = DefaultProjectorFn<Result>,
 > extends Selector<State, Result> {
-  release(): void;
-  projector: ProjectorFn;
-  setResult: (result?: Result) => void;
-  clearResult: () => void;
-}
-
-/**
- * @deprecated Selectors with props are deprecated
- */
-export interface MemoizedSelectorWithProps<
-  State,
-  Props,
-  Result,
-  ProjectorFn = DefaultProjectorFn<Result>,
-> extends SelectorWithProps<State, Props, Result> {
   release(): void;
   projector: ProjectorFn;
   setResult: (result?: Result) => void;
@@ -187,25 +172,18 @@ export function createSelector<State, Slices extends unknown[], Result>(
  */
 export function createSelector(
   ...input: any[]
-): MemoizedSelector<any, any> | MemoizedSelectorWithProps<any, any, any> {
+): MemoizedSelector<any, any> {
   return createSelectorFactory(defaultMemoize)(...input);
 }
 
 export function defaultStateFn(
   state: any,
-  selectors: Selector<any, any>[] | SelectorWithProps<any, any, any>[],
+  selectors: Selector<any, any>[],
   props: any,
   memoizedProjector: MemoizedProjection
 ): any {
-  if (props === undefined) {
-    const args = (<Selector<any, any>[]>selectors).map((fn) => fn(state));
-    return memoizedProjector.memoized.apply(null, args);
-  }
-
-  const args = (<SelectorWithProps<any, any, any>[]>selectors).map((fn) =>
-    fn(state, props)
-  );
-  return memoizedProjector.memoized.apply(null, [...args, props]);
+  const args = selectors.map((fn) => fn(state));
+  return memoizedProjector.memoized.apply(null, args);
 }
 
 export type SelectorFactoryConfig<T = any, V = any> = {
@@ -228,7 +206,7 @@ export function createSelectorFactory<T = any, V = any>(
 ) {
   return function (
     ...input: any[]
-  ): MemoizedSelector<any, any> | MemoizedSelectorWithProps<any, any, any> {
+  ): MemoizedSelector<any, any> {
     let args = input;
     if (Array.isArray(args[0])) {
       const [head, ...tail] = args;

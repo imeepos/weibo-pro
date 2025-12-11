@@ -48,14 +48,6 @@ export interface StoreFeature<T, V extends Action = Action> {
 
 export type Selector<T, V> = (state: T) => V;
 
-/**
- * @deprecated Selectors with props are deprecated
- */
-export type SelectorWithProps<State, Props, Result> = (
-  state: State,
-  props: Props
-) => Result;
-
 // Action Creator 类型检查错误消息
 export const arraysAreNotAllowedMsg = 'action creator cannot return an array';
 type ArraysAreNotAllowed = typeof arraysAreNotAllowedMsg;

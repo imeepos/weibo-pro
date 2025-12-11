@@ -8,6 +8,7 @@ import {
   setNgrxMockEnvironment,
   isNgrxMockEnvironment,
   isEqualCheck,
+  AnyFn,
 } from './selector';
 
 describe('selector', () => {
@@ -227,7 +228,7 @@ describe('selector', () => {
   describe('createSelectorFactory', () => {
     it('创建自定义记忆化选择器', () => {
       let memoizeCallCount = 0;
-      const customMemoize = (fn: any) => {
+      const customMemoize = (fn: AnyFn) => {
         memoizeCallCount++;
         return defaultMemoize(fn);
       };
