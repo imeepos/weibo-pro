@@ -235,31 +235,21 @@ export class DataFlowManager {
     createEdgeOperator(edge: IEdge): OperatorFunction<any, any> {
         const operators: OperatorFunction<any, any>[] = [];
 
-        // 保存 fromProperty 以供后续使用
-        let fromProperty: string | undefined;
-        let hasFromProperty = false;
-
-        // 1. fromProperty: 提取嵌套属性
-        if (edge.fromProperty) {
-            fromProperty = edge.fromProperty;
-            hasFromProperty = true;
-            operators.push(
-                map((ast: any) => this.resolveProperty(ast, fromProperty!))
-            );
-        }
-
-        // 2. condition: 条件过滤
+        // 1. condition: 条件过滤（必须先执行，在提取属性之前）
         if (edge.condition) {
             const condition = edge.condition;
             operators.push(
                 filter((data: any) => {
-                    // 如果前面有 fromProperty，data 已经是提取的值
-                    // 如果没有 fromProperty，data 是完整的 AST
-                    const actualValue = hasFromProperty
-                        ? data  // 已经提取的值，直接比较
-                        : this.resolveProperty(data, condition.property);
+                    const actualValue = this.resolveProperty(data, condition.property);
                     return actualValue === condition.value;
                 })
+            );
+        }
+
+        // 2. fromProperty: 提取嵌套属性（在过滤之后）
+        if (edge.fromProperty) {
+            operators.push(
+                map((ast: any) => this.resolveProperty(ast, edge.fromProperty!))
             );
         }
 

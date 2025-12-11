@@ -5,7 +5,7 @@ import { VisitorExecutor } from './visitor-executor';
 import { Node, Handler, Input, Output } from '../decorator';
 import { Ast, createWorkflowGraphAst } from '../ast';
 import { Compiler } from '../compiler';
-import { Observable, of } from 'rxjs';
+import { Observable, of, firstValueFrom, lastValueFrom, toArray, map } from 'rxjs';
 import { INode } from '../types';
 import { NoRetryError } from '../errors';
 
@@ -19,7 +19,7 @@ describe('VisitorExecutor', () => {
     });
 
     describe('visit()', () => {
-        it('执行同步 Handler', (done) => {
+        it('执行同步 Handler', async () => {
             @Node({ title: '同步节点' })
             class SyncAst extends Ast {
                 @Output() result?: string;
@@ -40,14 +40,12 @@ describe('VisitorExecutor', () => {
             const node = compiler.compile(ast);
             const workflow = createWorkflowGraphAst({ nodes: [], edges: [] });
 
-            executor.visit(node, workflow).subscribe(result => {
-                expect(result.state).toBe('success');
-                expect((result as any).result).toBe('sync-result');
-                done();
-            });
+            const result = await firstValueFrom(executor.visit(node, workflow));
+            expect(result.state).toBe('success');
+            expect((result as any).result).toBe('sync-result');
         });
 
-        it('执行 Promise Handler', (done) => {
+        it('执行 Promise Handler', async () => {
             @Node({ title: 'Promise 节点' })
             class PromiseAst extends Ast {
                 @Output() result?: string;
@@ -69,14 +67,12 @@ describe('VisitorExecutor', () => {
             const node = compiler.compile(ast);
             const workflow = createWorkflowGraphAst({ nodes: [], edges: [] });
 
-            executor.visit(node, workflow).subscribe(result => {
-                expect(result.state).toBe('success');
-                expect((result as any).result).toBe('promise-result');
-                done();
-            });
+            const result = await firstValueFrom(executor.visit(node, workflow));
+            expect(result.state).toBe('success');
+            expect((result as any).result).toBe('promise-result');
         });
 
-        it('执行 Observable Handler', (done) => {
+        it('执行 Observable Handler', async () => {
             @Node({ title: 'Observable 节点' })
             class ObservableAst extends Ast {
                 @Output() result?: string;
@@ -105,19 +101,16 @@ describe('VisitorExecutor', () => {
             const node = compiler.compile(ast);
             const workflow = createWorkflowGraphAst({ nodes: [], edges: [] });
 
-            const states: string[] = [];
-            executor.visit(node, workflow).subscribe({
-                next: result => {
-                    states.push(result.state);
-                },
-                complete: () => {
-                    expect(states).toEqual(['running', 'success']);
-                    done();
-                },
-            });
+            const states = await lastValueFrom(
+                executor.visit(node, workflow).pipe(
+                    toArray(),
+                    map((results: any[]) => results.map((r: any) => r.state))
+                )
+            );
+            expect(states).toEqual(['running', 'success']);
         });
 
-        it('捕获同步错误', (done) => {
+        it('捕获同步错误', async () => {
             @Node({ title: '错误节点' })
             class ErrorAst extends Ast {
                 type = 'ErrorAst';
@@ -135,15 +128,13 @@ describe('VisitorExecutor', () => {
             const node = compiler.compile(ast);
             const workflow = createWorkflowGraphAst({ nodes: [], edges: [] });
 
-            executor.visit(node, workflow).subscribe(result => {
-                expect(result.state).toBe('fail');
-                expect(result.error).toBeDefined();
-                expect(result.error?.message).toContain('Sync error');
-                done();
-            });
+            const result = await firstValueFrom(executor.visit(node, workflow));
+            expect(result.state).toBe('fail');
+            expect(result.error).toBeDefined();
+            expect(result.error?.message).toContain('Sync error');
         });
 
-        it('捕获 Promise 错误', (done) => {
+        it('捕获 Promise 错误', async () => {
             @Node({ title: 'Promise 错误节点' })
             class PromiseErrorAst extends Ast {
                 type = 'PromiseErrorAst';
@@ -161,15 +152,13 @@ describe('VisitorExecutor', () => {
             const node = compiler.compile(ast);
             const workflow = createWorkflowGraphAst({ nodes: [], edges: [] });
 
-            executor.visit(node, workflow).subscribe(result => {
-                expect(result.state).toBe('fail');
-                expect(result.error).toBeDefined();
-                expect(result.error?.message).toContain('Promise error');
-                done();
-            });
+            const result = await firstValueFrom(executor.visit(node, workflow));
+            expect(result.state).toBe('fail');
+            expect(result.error).toBeDefined();
+            expect(result.error?.message).toContain('Promise error');
         });
 
-        it('捕获 Observable 错误', (done) => {
+        it('捕获 Observable 错误', async () => {
             @Node({ title: 'Observable 错误节点' })
             class ObservableErrorAst extends Ast {
                 type = 'ObservableErrorAst';
@@ -189,15 +178,13 @@ describe('VisitorExecutor', () => {
             const node = compiler.compile(ast);
             const workflow = createWorkflowGraphAst({ nodes: [], edges: [] });
 
-            executor.visit(node, workflow).subscribe(result => {
-                expect(result.state).toBe('fail');
-                expect(result.error).toBeDefined();
-                expect(result.error?.message).toContain('Observable error');
-                done();
-            });
+            const result = await firstValueFrom(executor.visit(node, workflow));
+            expect(result.state).toBe('fail');
+            expect(result.error).toBeDefined();
+            expect(result.error?.message).toContain('Observable error');
         });
 
-        it('NoRetryError 特殊处理', (done) => {
+        it('NoRetryError 特殊处理', async () => {
             @Node({ title: 'NoRetry 节点' })
             class NoRetryAst extends Ast {
                 type = 'NoRetryAst';
@@ -215,15 +202,13 @@ describe('VisitorExecutor', () => {
             const node = compiler.compile(ast);
             const workflow = createWorkflowGraphAst({ nodes: [], edges: [] });
 
-            executor.visit(node, workflow).subscribe(result => {
-                expect(result.state).toBe('fail');
-                expect(result.error).toBeDefined();
-                expect(result.error?.message).toContain('Cannot retry');
-                done();
-            });
+            const result = await firstValueFrom(executor.visit(node, workflow));
+            expect(result.state).toBe('fail');
+            expect(result.error).toBeDefined();
+            expect(result.error?.message).toContain('Cannot retry');
         });
 
-        it('未注册 Handler 使用 DefaultVisitor', (done) => {
+        it('未注册 Handler 使用 DefaultVisitor', async () => {
             @Node({ title: '无处理器节点' })
             class NoHandlerAst extends Ast {
                 type = 'NoHandlerAst';
@@ -233,13 +218,11 @@ describe('VisitorExecutor', () => {
             const node = compiler.compile(ast);
             const workflow = createWorkflowGraphAst({ nodes: [], edges: [] });
 
-            executor.visit(node, workflow).subscribe(result => {
-                expect(result.state).toBe('success');
-                done();
-            });
+            const result = await lastValueFrom(executor.visit(node, workflow));
+            expect(result.state).toBe('success');
         });
 
-        it('Handler 方法不存在抛出错误', (done) => {
+        it('Handler 方法不存在抛出错误', async () => {
             @Node({ title: '无效方法节点' })
             class InvalidMethodAst extends Ast {
                 type = 'InvalidMethodAst';
@@ -262,14 +245,12 @@ describe('VisitorExecutor', () => {
             const node = compiler.compile(ast);
             const workflow = createWorkflowGraphAst({ nodes: [], edges: [] });
 
-            executor.visit(node, workflow).subscribe(result => {
-                expect(result.state).toBe('fail');
-                expect(result.error).toBeDefined();
-                done();
-            });
+            const result = await lastValueFrom(executor.visit(node, workflow));
+            expect(result.state).toBe('fail');
+            expect(result.error).toBeDefined();
         });
 
-        it('Handler 接收 workflow 上下文', (done) => {
+        it('Handler 接收 workflow 上下文', async () => {
             @Node({ title: '上下文节点' })
             class ContextAst extends Ast {
                 @Output() workflowId?: string;
@@ -291,13 +272,11 @@ describe('VisitorExecutor', () => {
             const workflow = createWorkflowGraphAst({ nodes: [], edges: [] });
             workflow.id = 'workflow-123';
 
-            executor.visit(node, workflow).subscribe(result => {
-                expect((result as any).workflowId).toBe('workflow-123');
-                done();
-            });
+            const result = await firstValueFrom(executor.visit(node, workflow));
+            expect((result as any).workflowId).toBe('workflow-123');
         });
 
-        it('多次发射正确传递', (done) => {
+        it('多次发射正确传递', async () => {
             @Node({ title: '多发射节点' })
             class MultiEmitAst extends Ast {
                 @Output() value?: number;
@@ -325,21 +304,20 @@ describe('VisitorExecutor', () => {
             const node = compiler.compile(ast);
             const workflow = createWorkflowGraphAst({ nodes: [], edges: [] });
 
-            const values: number[] = [];
-            executor.visit(node, workflow).subscribe({
-                next: result => {
-                    if (result.state === 'emitting') {
-                        values.push((result as any).value);
-                    }
-                },
-                complete: () => {
-                    expect(values).toEqual([1, 2, 3]);
-                    done();
-                },
-            });
+            const values = await lastValueFrom(
+                executor.visit(node, workflow).pipe(
+                    toArray(),
+                    map((results: any[]) =>
+                        results
+                            .filter((r: any) => r.state === 'emitting')
+                            .map((r: any) => r.value)
+                    )
+                )
+            );
+            expect(values).toEqual([1, 2, 3]);
         });
 
-        it('Promise 返回 Observable 嵌套处理', (done) => {
+        it('Promise 返回 Observable 嵌套处理', async () => {
             @Node({ title: '嵌套节点' })
             class NestedAst extends Ast {
                 @Output() result?: string;
@@ -364,11 +342,9 @@ describe('VisitorExecutor', () => {
             const node = compiler.compile(ast);
             const workflow = createWorkflowGraphAst({ nodes: [], edges: [] });
 
-            executor.visit(node, workflow).subscribe(result => {
-                expect(result.state).toBe('success');
-                expect((result as any).result).toBe('nested-result');
-                done();
-            });
+            const result = await firstValueFrom(executor.visit(node, workflow));
+            expect(result.state).toBe('success');
+            expect((result as any).result).toBe('nested-result');
         });
     });
 });
