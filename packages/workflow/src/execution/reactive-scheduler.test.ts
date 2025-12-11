@@ -112,7 +112,7 @@ class BufferVisitor {
  */
 @Node({ title: '多发射节点' })
 class MultiEmitAst extends Ast {
-    @Input() count: number = 0
+    @Input() times: number = 3
     @Output() value?: number
     type = 'MultiEmitAst'
 }
@@ -125,7 +125,7 @@ class MultiEmitVisitor {
             ast.state = 'running'
             obs.next({ ...ast })
 
-            const emitCount = ast.count ?? 3
+            const emitCount = ast.times || 3
             for (let i = 1; i <= emitCount; i++) {
                 ast.value = i
                 ast.state = 'emitting'
@@ -681,8 +681,8 @@ describe('ReactiveScheduler', () => {
     describe('EdgeMode 边模式', () => {
         it('MERGE: 任一上游发射立即触发', async () => {
             // 简化测试：验证两个独立节点都能执行
-            const multi1 = createCompiledNode(MultiEmitAst, { id: 'multi1', count: 2 })
-            const multi2 = createCompiledNode(MultiEmitAst, { id: 'multi2', count: 2 })
+            const multi1 = createCompiledNode(MultiEmitAst, { id: 'multi1', times: 2 })
+            const multi2 = createCompiledNode(MultiEmitAst, { id: 'multi2', times: 2 })
 
             const workflow = createWorkflow([multi1, multi2], [])
             const result = await getFinal(scheduler.schedule(workflow, workflow))
@@ -855,7 +855,7 @@ describe('ReactiveScheduler', () => {
         })
 
         it('IS_BUFFER 收集所有发射', async () => {
-            const multi = createCompiledNode(MultiEmitAst, { id: 'multi', count: 3 })
+            const multi = createCompiledNode(MultiEmitAst, { id: 'multi', times: 3 })
             const buffer = createCompiledNode(BufferAst, { id: 'buffer' })
 
             const edges = [
@@ -1530,8 +1530,8 @@ describe('ReactiveScheduler', () => {
 
         describe('边模式组合场景', () => {
             it('MERGE + ZIP 组合模式', async () => {
-                const source1 = createCompiledNode(MultiEmitAst, { id: 's1', count: 2 })
-                const source2 = createCompiledNode(MultiEmitAst, { id: 's2', count: 2 })
+                const source1 = createCompiledNode(MultiEmitAst, { id: 's1', times: 2 })
+                const source2 = createCompiledNode(MultiEmitAst, { id: 's2', times: 2 })
                 const source3 = createCompiledNode(PassThroughAst, { id: 's3', input: 'single' })
 
                 const zipTarget = createCompiledNode(AggregatorAst, { id: 'zipTarget' })
@@ -1614,7 +1614,7 @@ describe('ReactiveScheduler', () => {
             })
 
             it('多层级边模式组合', async () => {
-                const source1 = createCompiledNode(MultiEmitAst, { id: 'source1', count: 2 })
+                const source1 = createCompiledNode(MultiEmitAst, { id: 'source1', times: 2 })
                 const source2 = createCompiledNode(PassThroughAst, { id: 'source2', input: 'static' })
 
                 const zipLayer = createCompiledNode(AggregatorAst, { id: 'zipLayer' })
