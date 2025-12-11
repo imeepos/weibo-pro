@@ -63,7 +63,7 @@ export function updateNodeReducer(
  * 纯函数，根据节点状态变化计算 count 和 emitCount
  *
  * 计数规则：
- * - emitCount: 每次发射 emitting 状态 +1（输出事件计数）
+ * - emitCount: 每次发射 running 状态 +1（BehaviorSubject 发射事件计数）
  * - count: 每次发射 success 或 fail 状态 +1（完整执行计数）
  *
  * @param existing 现有节点状态
@@ -77,8 +77,8 @@ function computeNodeCounters(
   let count = existing.count;
   let emitCount = existing.emitCount;
 
-  // emitting 状态：输出事件计数
-  if (updated.state === 'emitting') {
+  // running 状态：输出事件计数（替代原 emitting 状态）
+  if (updated.state === 'running' && existing.state !== 'running') {
     emitCount += 1;
   }
 

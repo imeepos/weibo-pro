@@ -1,4 +1,5 @@
 import { InjectionToken, root, Type } from '@sker/core'
+import { BehaviorSubject } from 'rxjs'
 /**
  * 获取所有已注册的节点类型
  */
@@ -278,14 +279,55 @@ export interface OutputOptions {
 export interface OutputMetadata extends OutputOptions {
     target: Type<any>;
     propertyKey: string | symbol;
+    isSubject?: boolean;     // 标识为 BehaviorSubject 类型
 }
 
 export const OUTPUT = new InjectionToken<OutputMetadata[]>(`OUTPUT`)
+
+/**
+ * 输出装饰器
+ *
+ * 支持两种风格：
+ * 1. 值类型（向后兼容）: @Output() result?: Post[]
+ * 2. BehaviorSubject（推荐）: @Output() result = new BehaviorSubject<Post[]>([])
+ *
+ * BehaviorSubject 风格的优势：
+ * - 运行时直接发射值，无需 emitting 状态
+ * - 下游自动订阅，数据流更清晰
+ * - 序列化时自动跳过（只保存元数据）
+ */
 export function Output(options: OutputOptions = {}): PropertyDecorator {
     return (target, propertyKey) => {
         const ctor = resolveConstructor(target);
         root.set([{ provide: OUTPUT, multi: true, useValue: { target: ctor, propertyKey, ...options } }])
     };
+}
+
+/**
+ * 检查节点实例的某个属性是否为 BehaviorSubject
+ */
+export function isOutputSubject(instance: any, propertyKey: string | symbol): boolean {
+    const value = instance[propertyKey];
+    return value instanceof BehaviorSubject;
+}
+
+/**
+ * 获取节点的所有 Output BehaviorSubject
+ */
+export function getOutputSubjects(instance: any): Map<string, BehaviorSubject<any>> {
+    const ctor = resolveConstructor(instance);
+    const outputs = root.get(OUTPUT, []).filter(it => it.target === ctor);
+    const subjects = new Map<string, BehaviorSubject<any>>();
+
+    for (const output of outputs) {
+        const key = String(output.propertyKey);
+        const value = instance[key];
+        if (value instanceof BehaviorSubject) {
+            subjects.set(key, value);
+        }
+    }
+
+    return subjects;
 }
 
 export interface StateOptions {

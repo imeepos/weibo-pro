@@ -1,8 +1,8 @@
 import { setAstError, WorkflowGraphAst } from '../ast';
-import { INode, IEdge, EdgeMode, hasDataMapping, isNode } from '../types';
+import { INode, IEdge, EdgeMode, hasDataMapping, isNode, isBehaviorSubject } from '../types';
 import { executeAst } from '../executor';
-import { Observable, of, EMPTY, merge, combineLatest, zip, asyncScheduler } from 'rxjs';
-import { map, catchError, takeWhile, concatMap, filter, withLatestFrom, shareReplay, subscribeOn, finalize, scan, takeLast, toArray, reduce, expand, tap, take, distinctUntilChanged, defaultIfEmpty } from 'rxjs/operators';
+import { Observable, of, EMPTY, merge, combineLatest, zip, asyncScheduler, BehaviorSubject } from 'rxjs';
+import { map, catchError, takeWhile, concatMap, filter, withLatestFrom, shareReplay, subscribeOn, finalize, scan, takeLast, toArray, reduce, expand, tap, take, distinctUntilChanged, defaultIfEmpty, skip } from 'rxjs/operators';
 import { concatLatestFrom } from '../operators/concat_latest_from';
 import { tapResponse } from '../operators/tap-response';
 import { Inject, Injectable, root } from '@sker/core';
@@ -599,57 +599,13 @@ export class ReactiveScheduler {
         const edgeMode = this.detectEdgeMode(edges);
         const shouldDedup = edgeMode !== EdgeMode.MERGE;
 
-        let dataStream = sourceStream.pipe(
-            filter(ast => ast.state === 'emitting'),
-            // 一次性处理该源的所有边
-            map(ast => {
-                const edgeValues = edges.map(edge => {
-                    // 【路由节点支持】检查 isRouter 输出是否为 undefined
-                    if (edge.fromProperty) {
-                        const sourceOutputMeta = this.getOutputMetadata(ast, edge.fromProperty)
-                        if (sourceOutputMeta?.isRouter) {
-                            const value = (ast as any)[edge.fromProperty]
-                            // 路由输出为 undefined 时，过滤掉此边
-                            if (value === undefined) {
-                                return null
-                            }
-                        }
-                    }
-
-                    // 条件检查
-                    if (edge.condition) {
-                        const value = (ast as any)[edge.condition.property];
-                        if (value !== edge.condition.value) {
-                            return null;
-                        }
-                    }
-
-                    // 数据提取
-                    let value: any;
-                    if (hasDataMapping(edge) && edge.fromProperty) {
-                        value = this.resolveProperty(ast, edge.fromProperty);
-                    } else {
-                        value = {};
-                    }
-
-                    return { edge, value };
-                }).filter(Boolean) as { edge: IEdge; value: any }[];
-
-                return this.mergeEdgeValues(edgeValues, targetNode);
-            }),
-            // 过滤掉空结果 - 空对象也应该被过滤（所有边都被条件/路由过滤）
-            filter(result => {
-                if (result === null || result === undefined) return false;
-                // 如果是空对象（所有边都被过滤），也过滤掉
-                if (typeof result === 'object' && Object.keys(result).length === 0) return false;
-                return true;
-            })
-        );
+        // 创建数据流：优先使用 BehaviorSubject 模式，回退到旧模式
+        let dataStream = this.createDataStreamFromSource(sourceStream, edges, targetNode);
 
         // 只在非 MERGE 模式下使用去重
         if (shouldDedup) {
             dataStream = dataStream.pipe(
-                // 去重：防止同一个源在连续的 emitting 中传递相同的属性值
+                // 去重：防止同一个源在连续的发射中传递相同的属性值
                 distinctUntilChanged((prev, curr) => {
                     try {
                         return JSON.stringify(prev) === JSON.stringify(curr);
@@ -686,6 +642,144 @@ export class ReactiveScheduler {
 
         // 非 IS_BUFFER 模式：保持原有行为（每次发射立即传递）
         return dataStream;
+    }
+
+    /**
+     * 从源流创建数据流
+     *
+     * 支持两种模式：
+     * 1. BehaviorSubject 模式（新）：直接订阅 @Output BehaviorSubject
+     * 2. 旧模式（兼容）：监听节点 success 状态，从属性提取值
+     */
+    private createDataStreamFromSource(
+        sourceStream: Observable<INode>,
+        edges: IEdge[],
+        targetNode: INode
+    ): Observable<any> {
+        // 为每条边创建数据流，然后合并
+        const edgeStreams = edges.map(edge => {
+            return sourceStream.pipe(
+                // 等待节点状态变化
+                filter(ast => ast.state === 'running' || ast.state === 'success'),
+                concatMap(ast => {
+                    // 检查是否使用 BehaviorSubject 模式
+                    if (edge.fromProperty) {
+                        const outputValue = (ast as any)[edge.fromProperty];
+
+                        // BehaviorSubject 模式：直接订阅
+                        if (isBehaviorSubject(outputValue)) {
+                            return this.createBehaviorSubjectStream(outputValue, edge, ast, targetNode);
+                        }
+                    }
+
+                    // 旧模式：等待 success 状态后提取值
+                    if (ast.state === 'success') {
+                        return this.createLegacyValueStream(ast, edge, targetNode);
+                    }
+
+                    // running 状态但不是 BehaviorSubject，跳过
+                    return EMPTY;
+                })
+            );
+        });
+
+        if (edgeStreams.length === 0) {
+            return EMPTY;
+        }
+
+        if (edgeStreams.length === 1) {
+            return edgeStreams[0]!;
+        }
+
+        // 多边：合并所有边的数据流
+        return merge(...edgeStreams).pipe(
+            // 合并同一源的多条边数据
+            map(data => data)
+        );
+    }
+
+    /**
+     * 从 BehaviorSubject 创建数据流
+     */
+    private createBehaviorSubjectStream(
+        subject: BehaviorSubject<any>,
+        edge: IEdge,
+        sourceAst: INode,
+        targetNode: INode
+    ): Observable<any> {
+        return subject.asObservable().pipe(
+            // 跳过初始值（如果是默认空值）
+            // BehaviorSubject 订阅时会立即发射当前值，需要判断是否有效
+            filter(value => {
+                // 路由节点支持：undefined 值表示不走这条路径
+                if (edge.fromProperty) {
+                    const sourceOutputMeta = this.getOutputMetadata(sourceAst, edge.fromProperty);
+                    if (sourceOutputMeta?.isRouter && value === undefined) {
+                        return false;
+                    }
+                }
+
+                // 条件检查
+                if (edge.condition) {
+                    const conditionValue = (sourceAst as any)[edge.condition.property];
+                    if (conditionValue !== edge.condition.value) {
+                        return false;
+                    }
+                }
+
+                return true;
+            }),
+            // 映射到目标属性
+            map(value => {
+                if (edge.toProperty) {
+                    return { [edge.toProperty]: value };
+                }
+                return value;
+            })
+        );
+    }
+
+    /**
+     * 旧模式：从节点属性提取值（兼容现有代码）
+     */
+    private createLegacyValueStream(
+        ast: INode,
+        edge: IEdge,
+        targetNode: INode
+    ): Observable<any> {
+        // 路由节点支持
+        if (edge.fromProperty) {
+            const sourceOutputMeta = this.getOutputMetadata(ast, edge.fromProperty);
+            if (sourceOutputMeta?.isRouter) {
+                const value = (ast as any)[edge.fromProperty];
+                if (value === undefined) {
+                    return EMPTY;
+                }
+            }
+        }
+
+        // 条件检查
+        if (edge.condition) {
+            const value = (ast as any)[edge.condition.property];
+            if (value !== edge.condition.value) {
+                return EMPTY;
+            }
+        }
+
+        // 数据提取
+        let value: any;
+        if (hasDataMapping(edge) && edge.fromProperty) {
+            value = this.resolveProperty(ast, edge.fromProperty);
+        } else {
+            value = {};
+        }
+
+        // 映射到目标属性
+        if (edge.toProperty) {
+            return of({ [edge.toProperty]: value });
+        }
+
+        return of(value);
     }
 
     private _createNode(
@@ -1142,12 +1236,14 @@ export class ReactiveScheduler {
             // ✨ 使用 tapResponse 保护事件发射：副作用失败不应中断主流
             tapResponse({
                 next: (updatedNode) => {
-                    if (updatedNode.state === 'emitting') {
-                        this.eventBus.emitNodeEmit(updatedNode.id, updatedNode, ast.id);
-                    } else if (updatedNode.state === 'success') {
+                    // 移除 emitting 状态依赖，只关心最终状态
+                    if (updatedNode.state === 'success') {
                         this.eventBus.emitNodeSuccess(updatedNode.id, updatedNode, ast.id);
                     } else if (updatedNode.state === 'fail') {
                         this.eventBus.emitNodeFail(updatedNode.id, updatedNode.error, ast.id);
+                    } else if (updatedNode.state === 'running') {
+                        // running 状态可用于 UI 显示进度
+                        this.eventBus.emitNodeEmit(updatedNode.id, updatedNode, ast.id);
                     }
                 },
                 error: (err) => {

@@ -1,4 +1,5 @@
 import { Injectable, root } from "@sker/core";
+import { BehaviorSubject } from "rxjs";
 import { Ast } from "../ast";
 import { INode, INodeInputMetadata, INodeMetadata, INodeOutputMetadata, INodeStateMetadata, isNode } from "../types";
 import { findNodeType, INPUT, InputMetadata, NODE, NodeMetadata, OUTPUT, OutputMetadata, STATE, StateMetadata } from "../decorator";
@@ -35,8 +36,8 @@ export class Compiler {
         // 提取 @Input 属性装饰器元数据
         const inputs = this.extractInputMetadata(ctor);
 
-        // 提取 @Output 属性装饰器元数据
-        const outputs = this.extractOutputMetadata(ctor);
+        // 提取 @Output 属性装饰器元数据（传递实例以检测 BehaviorSubject）
+        const outputs = this.extractOutputMetadata(ctor, ast);
 
         // 提取 @State 属性装饰器元数据
         const states = this.extractStateMetadata(ctor);
@@ -91,20 +92,29 @@ export class Compiler {
 
     /**
      * 提取 @Output 属性装饰器元数据
+     *
+     * 增强：检测 BehaviorSubject 类型的属性并标记 isSubject
      */
-    private extractOutputMetadata(ctor: Function): INodeOutputMetadata[] {
+    private extractOutputMetadata(ctor: Function, instance?: any): INodeOutputMetadata[] {
         const allOutputMetadata = root.get(OUTPUT, []) as OutputMetadata[];
         const targetOutputs = allOutputMetadata.filter(m => m.target === ctor);
 
-        return targetOutputs.map(output => ({
-            property: String(output.propertyKey),
-            title: output.title,
-            type: output.type,
-            isRouter: output.isRouter,
-            dynamic: output.dynamic,
-            condition: output.condition,
-            isStatic: true
-        }));
+        return targetOutputs.map(output => {
+            const key = String(output.propertyKey);
+            // 检测是否为 BehaviorSubject（需要实例）
+            const isSubject = instance ? instance[key] instanceof BehaviorSubject : false;
+
+            return {
+                property: key,
+                title: output.title,
+                type: output.type,
+                isRouter: output.isRouter,
+                dynamic: output.dynamic,
+                condition: output.condition,
+                isStatic: true,
+                isSubject
+            };
+        });
     }
 
     /**
