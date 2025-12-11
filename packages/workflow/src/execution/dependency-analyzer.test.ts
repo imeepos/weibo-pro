@@ -34,7 +34,7 @@ describe('DependencyAnalyzer', () => {
             const result = analyzer.findExecutableNodes(nodes, edges);
 
             expect(result).toHaveLength(1);
-            expect(result[0].id).toBe('A');
+            expect(result[0]!.id).toBe('A');
         });
 
         it('上游成功时节点可执行', () => {
@@ -47,7 +47,7 @@ describe('DependencyAnalyzer', () => {
             const result = analyzer.findExecutableNodes(nodes, edges);
 
             expect(result).toHaveLength(1);
-            expect(result[0].id).toBe('B');
+            expect(result[0]!.id).toBe('B');
         });
 
         it('上游失败时节点不可执行', () => {
@@ -76,7 +76,7 @@ describe('DependencyAnalyzer', () => {
             const result = analyzer.findExecutableNodes(nodes, edges);
 
             expect(result).toHaveLength(1);
-            expect(result[0].id).toBe('C');
+            expect(result[0]!.id).toBe('C');
         });
 
         it('多依赖时任一未完成则不可执行', () => {
@@ -95,7 +95,7 @@ describe('DependencyAnalyzer', () => {
             // B 是入口节点（无依赖），可执行
             // C 依赖 A 和 B，但 B 未完成，所以 C 不可执行
             expect(result).toHaveLength(1);
-            expect(result[0].id).toBe('B');
+            expect(result[0]!.id).toBe('B');
         });
 
         it('条件边未满足时节点不可执行', () => {
@@ -132,7 +132,7 @@ describe('DependencyAnalyzer', () => {
             const result = analyzer.findExecutableNodes(nodes, edges);
 
             expect(result).toHaveLength(1);
-            expect(result[0].id).toBe('B');
+            expect(result[0]!.id).toBe('B');
         });
 
         it('混合条件边：条件源未完成时允许执行', () => {
@@ -331,6 +331,7 @@ function createNode(id: string, state: INode['state']): INode {
         count: 0,
         emitCount: 0,
         position: { x: 0, y: 0 },
+        error: undefined,
         metadata: {
             class: {},
             inputs: [],

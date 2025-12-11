@@ -16,6 +16,15 @@ export interface INodeMetadata {
     type?: NodeType;
     dynamicInputs?: boolean;
     dynamicOutputs?: boolean;
+
+    /** 错误处理策略 */
+    errorStrategy?: 'retry' | 'skip' | 'fail' | 'abort';
+    /** 最大重试次数（仅对 retry 策略有效） */
+    maxRetries?: number;
+    /** 重试延迟（毫秒，仅对 retry 策略有效） */
+    retryDelay?: number;
+    /** 重试延迟增长因子（指数退避） */
+    retryBackoff?: number;
 }
 export interface INodeInputMetadata {
     property: string;

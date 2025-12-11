@@ -25,11 +25,30 @@ export function resolveConstructor(target: object | Type<any>): Type<any> {
 
 export type NodeType = `llm` | `basic` | `crawler` | `control` | `sentiment`;
 
+/**
+ * 错误处理策略
+ *
+ * - retry: 自动重试（适用于网络波动、临时故障）
+ * - skip: 跳过失败节点，继续执行下游（适用于可选节点）
+ * - fail: 标记失败但不中断工作流（默认行为）
+ * - abort: 中断整个工作流（适用于关键节点）
+ */
+export type ErrorStrategy = 'retry' | 'skip' | 'fail' | 'abort';
+
 export interface NodeOptions {
     title?: string;
     type?: NodeType;
     dynamicInputs?: boolean;
     dynamicOutputs?: boolean;
+
+    /** 错误处理策略 */
+    errorStrategy?: ErrorStrategy;
+    /** 最大重试次数（仅对 retry 策略有效） */
+    maxRetries?: number;
+    /** 重试延迟（毫秒，仅对 retry 策略有效） */
+    retryDelay?: number;
+    /** 重试延迟增长因子（指数退避） */
+    retryBackoff?: number;
 }
 
 export interface NodeMetadata extends NodeOptions {
