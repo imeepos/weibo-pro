@@ -1,6 +1,6 @@
 'use client'
 
-import React, { ReactNode } from 'react'
+import React, { ReactNode, useRef } from 'react'
 import { cn } from '@udecode/cn'
 import {
   Accordion,
@@ -225,6 +225,45 @@ export function DynamicPortItem({
   className,
   children,
 }: DynamicPortItemProps) {
+  const propertyTimeoutRef = useRef<ReturnType<typeof setTimeout>>(0)
+  const titleTimeoutRef = useRef<ReturnType<typeof setTimeout>>(0)
+  const descriptionTimeoutRef = useRef<ReturnType<typeof setTimeout>>(0)
+  const typeTimeoutRef = useRef<ReturnType<typeof setTimeout>>(0)
+
+  const [propertyValue, setPropertyValue] = React.useState(property)
+  const [titleValue, setTitleValue] = React.useState(title)
+  const [descriptionValue, setDescriptionValue] = React.useState(description)
+  const [typeValue, setTypeValue] = React.useState(type)
+
+  React.useEffect(() => setPropertyValue(property), [property])
+  React.useEffect(() => setTitleValue(title), [title])
+  React.useEffect(() => setDescriptionValue(description), [description])
+  React.useEffect(() => setTypeValue(type), [type])
+
+  const handlePropertyChange = (value: string) => {
+    setPropertyValue(value)
+    if (propertyTimeoutRef.current) clearTimeout(propertyTimeoutRef.current)
+    propertyTimeoutRef.current = setTimeout(() => onPropertyChange(value), 300)
+  }
+
+  const handleTitleChange = (value: string) => {
+    setTitleValue(value)
+    if (titleTimeoutRef.current) clearTimeout(titleTimeoutRef.current)
+    titleTimeoutRef.current = setTimeout(() => onTitleChange(value), 300)
+  }
+
+  const handleDescriptionChange = (value: string) => {
+    setDescriptionValue(value)
+    if (descriptionTimeoutRef.current) clearTimeout(descriptionTimeoutRef.current)
+    descriptionTimeoutRef.current = setTimeout(() => onDescriptionChange && onDescriptionChange(value), 300)
+  }
+
+  const handleTypeChange = (value: string) => {
+    setTypeValue(value)
+    if (typeTimeoutRef.current) clearTimeout(typeTimeoutRef.current)
+    typeTimeoutRef.current = setTimeout(() => onTypeChange && onTypeChange(value), 300)
+  }
+
   return (
     <div className={cn(
       'flex flex-col gap-2 p-3 rounded-lg',
@@ -234,21 +273,21 @@ export function DynamicPortItem({
     )}>
       <div className="flex items-center gap-2">
         <Input
-          value={property}
-          onChange={(e) => onPropertyChange(e.target.value)}
+          value={propertyValue}
+          onChange={(e) => handlePropertyChange(e.target.value)}
           placeholder="属性名"
           className="h-7 text-xs flex-1 bg-card text-foreground"
         />
         <Input
-          value={title}
-          onChange={(e) => onTitleChange(e.target.value)}
+          value={titleValue}
+          onChange={(e) => handleTitleChange(e.target.value)}
           placeholder="端口名称"
           className="h-7 text-xs flex-1 bg-card text-foreground"
         />
         {!isStatic && (
           <select
-            value={type}
-            onChange={(e) => onTypeChange && onTypeChange(e.target.value)}
+            value={typeValue}
+            onChange={(e) => handleTypeChange(e.target.value)}
             className="h-7 text-xs px-2 rounded border border-border bg-card text-foreground"
           >
             {PORT_TYPES.map((t) => (
@@ -272,8 +311,8 @@ export function DynamicPortItem({
         )}
       </div>
       <Input
-        value={description}
-        onChange={(e) => onDescriptionChange && onDescriptionChange(e.target.value)}
+        value={descriptionValue}
+        onChange={(e) => handleDescriptionChange(e.target.value)}
         placeholder="端口描述（可选）"
         className="h-7 text-xs bg-card text-foreground"
       />

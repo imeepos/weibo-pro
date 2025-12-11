@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useSelectedNode } from './useSelectedNode'
 import { SmartFormField } from './SmartFormField'
 import { ErrorDetailPanel } from '../ErrorDetail'
@@ -17,11 +17,11 @@ import {
 import { Button } from '@sker/ui/components/ui/button'
 import { Input } from '@sker/ui/components/ui/input'
 import { PencilIcon } from 'lucide-react'
-import { INodeInputMetadata, INodeOutputMetadata } from '@sker/workflow'
+import { INode, INodeInputMetadata, INodeOutputMetadata } from '@sker/workflow'
 
 export interface PropertyPanelProps {
   className?: string
-  formData?: Record<string, any>
+  formData?: INode
   onPropertyChange?: (property: string, value: any) => void
 }
 
@@ -35,7 +35,7 @@ export function PropertyPanel({
   const [internalFormData, setInternalFormData] = useState<Record<string, any>>({})
   const [editingPortLabel, setEditingPortLabel] = useState<string | null>(null)
 
-  const formData = externalFormData ?? internalFormData
+  const formData: INode = (externalFormData ?? internalFormData) as INode;
   const handlePropertyChange = externalOnPropertyChange ?? ((property: string, value: any) => {
     setInternalFormData({
       ...internalFormData,
@@ -90,7 +90,6 @@ export function PropertyPanel({
   const editableProperties = metadata.inputs.map((input) => ({
     ...input,
     label: input.title || input.property,
-    value: formData[input.property] ?? (ast as any)[input.property],
   }))
 
   const handlePortLabelChange = (property: string, newLabel: string) => {
@@ -153,41 +152,13 @@ export function PropertyPanel({
           {editableProperties.map((prop) => (
             <div key={prop.property} className="space-y-1.5">
               <div className="flex items-center gap-1">
-                {editingPortLabel === prop.property ? (
-                  <Input
-                    autoFocus
-                    className="h-6 text-xs"
-                    defaultValue={portLabels[prop.property] || prop.label || prop.property}
-                    onBlur={(e) => {
-                      handlePortLabelChange(prop.property, e.target.value)
-                      setEditingPortLabel(null)
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        handlePortLabelChange(prop.property, e.currentTarget.value)
-                        setEditingPortLabel(null)
-                      }
-                      if (e.key === 'Escape') setEditingPortLabel(null)
-                    }}
-                  />
-                ) : (
-                  <>
-                    <label className="block text-xs font-medium text-muted-foreground">
-                      {prop.label || prop.property}
-                    </label>
-                    <button
-                      onClick={() => setEditingPortLabel(prop.property)}
-                      className="p-0.5 hover:bg-muted rounded"
-                      title="编辑端口名称"
-                    >
-                      <PencilIcon className="h-3 w-3 text-muted-foreground" />
-                    </button>
-                  </>
-                )}
+                <label className="block text-xs font-medium text-muted-foreground">
+                  {prop.label || prop.property}
+                </label>
               </div>
               <SmartFormField
                 label=""
-                value={prop.value}
+                value={prop.defaultValue}
                 type={prop.type as InputFieldType}
                 onChange={(value) => handlePropertyChange(prop.property, value)}
               />
@@ -220,161 +191,151 @@ export function PropertyPanel({
   }
 
   // 检查节点是否支持动态输入/输出
-  const supportsDynamicInputs = metadata.class.dynamicInputs === true
-  const supportsDynamicOutputs = metadata.class.dynamicOutputs === true
+  const supportsDynamicInputs = useMemo(() => metadata.class.dynamicInputs === true, [metadata])
+  const supportsDynamicOutputs = useMemo(() =>metadata.class.dynamicOutputs === true, [ metadata])
 
-  if (supportsDynamicInputs || supportsDynamicOutputs) {
-    // ✅ 优先从 formData 读取（包含未保存的修改），否则从 AST 读取
-    const currentDynamicInputs: INodeInputMetadata[] = (formData.dynamicInputs || ast.dynamicInputs || [])
-    const currentDynamicOutputs: INodeOutputMetadata[] = (formData.dynamicOutputs || ast.dynamicOutputs || [])
+  // ✅ 优先从 formData 读取（包含未保存的修改），否则从 AST 读取
+  const [currentDynamicInputs, setCurrentDynamicInputs] = useState<INodeInputMetadata[]>(metadata.inputs || [])
+  const [currentDynamicOutputs, setCurrentDynamicOutputs] = useState<INodeOutputMetadata[]>(metadata.outputs || [])
 
-    // 合并静态端口和动态端口用于显示
-    const allInputsForDisplay: INodeInputMetadata[] = supportsDynamicInputs
-      ? [...metadata.inputs, ...currentDynamicInputs]
-      : []
+  // 生成默认属性名（确保唯一性）
+  const generateDefaultPropertyName = useCallback((prefix: 'input' | 'output'): string => {
+    const existingProperties = new Set([
+      ...currentDynamicInputs.map((i: { property: string }) => i.property),
+      ...currentDynamicOutputs.map((o: { property: string }) => o.property),
+    ])
 
-    const allOutputsForDisplay: INodeOutputMetadata[] = supportsDynamicOutputs
-      ? [...metadata.outputs, ...currentDynamicOutputs]
-      : []
-
-    // 生成默认属性名（确保唯一性）
-    const generateDefaultPropertyName = (prefix: 'input' | 'output'): string => {
-      const existingProperties = new Set([
-        ...metadata.inputs.map(i => i.property),
-        ...metadata.outputs.map(o => o.property),
-        ...currentDynamicInputs.map((i: { property: string }) => i.property),
-        ...currentDynamicOutputs.map((o: { property: string }) => o.property),
-      ])
-
-      let counter = 1
-      while (existingProperties.has(`${prefix}_${counter}`)) {
-        counter++
-      }
-      return `${prefix}_${counter}`
+    let counter = 1
+    while (existingProperties.has(`${prefix}_${counter}`)) {
+      counter++
     }
+    return `${prefix}_${counter}`
+  }, [currentDynamicInputs, currentDynamicOutputs])
 
-    const handleConfirmAddInput = () => {
-      const property = generateDefaultPropertyName('input')
+  const handleConfirmAddInput = () => {
+    const property = generateDefaultPropertyName('input')
 
-      const newInput: INodeInputMetadata = {
-        property,
-        title: property,
-        description: '',
-        type: 'string',
-        isStatic: false
-      }
-      const updatedInputs = [...currentDynamicInputs, newInput]
-      handlePropertyChange('dynamicInputs', updatedInputs)
+    const newInput: INodeInputMetadata = {
+      property,
+      title: property,
+      description: '',
+      type: 'string',
+      isStatic: false
     }
-
-    const handleRemoveInput = (property: string) => {
-      const updatedInputs = currentDynamicInputs.filter((i: { property: string }) => i.property !== property)
-      handlePropertyChange('dynamicInputs', updatedInputs)
-    }
-
-    const handleConfirmAddOutput = () => {
-      const property = generateDefaultPropertyName('output')
-
-      const newOutput: INodeOutputMetadata = {
-        property,
-        title: property,
-        description: '',
-        type: 'string',
-        condition: 'true',
-        isStatic: false
-      }
-      const updatedOutputs = [...currentDynamicOutputs, newOutput]
-      handlePropertyChange('dynamicOutputs', updatedOutputs)
-    }
-
-    const handleRemoveOutput = (property: string) => {
-      const updatedOutputs = currentDynamicOutputs.filter((o: { property: string }) => o.property !== property)
-      handlePropertyChange('dynamicOutputs', updatedOutputs)
-    }
-
-    const handleUpdateInput = (property: string, field: keyof INodeInputMetadata, value: any) => {
-      const nowUpdateInputs = currentDynamicInputs.map((item: INodeInputMetadata) => {
-        if (item.property === property) {
-          return { ...item, [field]: value }
-        }
-        return item
-      })
-      handlePropertyChange('dynamicInputs', [...nowUpdateInputs])
-    }
-
-    const handleUpdateOutput = (property: string, field: keyof INodeOutputMetadata, value: any) => {
-      const nowUpdateOutputs = currentDynamicOutputs.map((item: INodeOutputMetadata) => {
-        if (item.property === property) {
-          return { ...item, [field]: value }
-        }
-        return item
-      })
-      handlePropertyChange('dynamicOutputs', nowUpdateOutputs)
-    }
-
-    sections.push({
-      id: 'dynamic-ports',
-      title: '动态端口管理',
-      color: 'warning',
-      defaultOpen: true,
-      content: (
-        <div className="space-y-4">
-          {supportsDynamicInputs && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium">输入端口 ({allInputsForDisplay.length})</span>
-                <Button variant="outline" size="sm" onClick={() => handleConfirmAddInput()}>
-                  添加输入
-                </Button>
-              </div>
-
-              {allInputsForDisplay.map((input, index) => (
-                <DynamicPortItem
-                  key={`${input.property}-${index}`}
-                  property={input.property}
-                  title={input.title || input.property}
-                  description={input.description || ''}
-                  type={input.type || 'string'}
-                  isStatic={input.isStatic !== false}
-                  onPropertyChange={(value) => handleUpdateInput(input.property, 'property', value)}
-                  onTitleChange={(value) => handleUpdateInput(input.property, 'title', value)}
-                  onDescriptionChange={(value) => handleUpdateInput(input.property, 'description', value)}
-                  onTypeChange={(value) => handleUpdateInput(input.property, 'type', value)}
-                  onRemove={input.isStatic !== false ? undefined : () => handleRemoveInput(input.property)}
-                />
-              ))}
-            </div>
-          )}
-          {supportsDynamicOutputs && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium">输出端口 ({allOutputsForDisplay.length})</span>
-                <Button variant="outline" size="sm" onClick={() => handleConfirmAddOutput()}>
-                  添加输出
-                </Button>
-              </div>
-
-              {allOutputsForDisplay.map((output, index) => (
-                <DynamicPortItem
-                  key={`${output.property}-${index}`}
-                  property={output.property}
-                  title={output.title || output.property}
-                  description={output.description || ''}
-                  type={output.type || 'string'}
-                  isStatic={output.isStatic !== false}
-                  onPropertyChange={(value) => handleUpdateOutput(output.property, 'property', value)}
-                  onTitleChange={(value) => handleUpdateOutput(output.property, 'title', value)}
-                  onDescriptionChange={(value) => handleUpdateOutput(output.property, 'description', value)}
-                  onTypeChange={(value) => handleUpdateOutput(output.property, 'type', value)}
-                  onRemove={() => handleRemoveOutput(output.property)}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      ),
-    })
+    const updatedInputs = [...currentDynamicInputs, newInput]
+    handlePropertyChange('metadata', { ...metadata, inputs: updatedInputs })
+    setCurrentDynamicInputs(updatedInputs)
   }
+
+  const handleRemoveInput = (property: string) => {
+    const updatedInputs = currentDynamicInputs.filter((i: { property: string }) => i.property !== property)
+    handlePropertyChange('metadata', { ...metadata, inputs: updatedInputs })
+    setCurrentDynamicInputs(updatedInputs)
+  }
+
+  const handleConfirmAddOutput = () => {
+    const property = generateDefaultPropertyName('output')
+
+    const newOutput: INodeOutputMetadata = {
+      property,
+      title: property,
+      description: '',
+      type: 'string',
+      condition: 'true',
+      isStatic: false
+    }
+    const outputs = [...currentDynamicOutputs, newOutput]
+    handlePropertyChange('metadata', { ...metadata, outputs })
+    setCurrentDynamicOutputs(outputs)
+  }
+
+  const handleRemoveOutput = (property: string) => {
+    const outputs = currentDynamicOutputs.filter((o: { property: string }) => o.property !== property)
+    handlePropertyChange('metadata', { ...metadata, outputs })
+    setCurrentDynamicOutputs(outputs)
+  }
+
+  const handleUpdateInput = (property: string, field: keyof INodeInputMetadata, value: any) => {
+    const nowUpdateInputs = currentDynamicInputs.map((item: INodeInputMetadata) => {
+      if (item.property === property) {
+        return { ...item, [field]: value }
+      }
+      return item
+    })
+    handlePropertyChange('metadata', { ...metadata, inputs: nowUpdateInputs })
+    setCurrentDynamicInputs(nowUpdateInputs)
+  }
+
+  const handleUpdateOutput = (property: string, field: keyof INodeOutputMetadata, value: any) => {
+    const nowUpdateOutputs = currentDynamicOutputs.map((item: INodeOutputMetadata) => {
+      if (item.property === property) {
+        return { ...item, [field]: value }
+      }
+      return item
+    })
+    handlePropertyChange('metadata', { ...metadata, outputs: nowUpdateOutputs })
+    setCurrentDynamicOutputs(nowUpdateOutputs)
+  }
+
+  sections.push({
+    id: 'dynamic-ports',
+    title: '动态端口管理',
+    color: 'warning',
+    defaultOpen: true,
+    content: (
+      <div className="space-y-4">
+        <div className="space-y-2">
+          {supportsDynamicInputs && <div className="flex items-center justify-between">
+            <span className="text-xs font-medium">输入端口 ({currentDynamicInputs.length})</span>
+            <Button variant="outline" size="sm" onClick={() => handleConfirmAddInput()}>
+              添加输入
+            </Button>
+          </div>}
+
+          {currentDynamicInputs.map((input, index) => (
+            <DynamicPortItem
+              key={`${input.property}-${index}`}
+              property={input.property}
+              title={input.title || input.property}
+              description={input.description || ''}
+              type={input.type || 'string'}
+              isStatic={input.isStatic !== false}
+              onPropertyChange={(value) => handleUpdateInput(input.property, 'property', value)}
+              onTitleChange={(value) => handleUpdateInput(input.property, 'title', value)}
+              onDescriptionChange={(value) => handleUpdateInput(input.property, 'description', value)}
+              onTypeChange={(value) => handleUpdateInput(input.property, 'type', value)}
+              onRemove={input.isStatic !== false ? undefined : () => handleRemoveInput(input.property)}
+            />
+          ))}
+        </div>
+        <div className="space-y-2">
+          {supportsDynamicOutputs && <div className="flex items-center justify-between">
+            <span className="text-xs font-medium">输出端口 ({currentDynamicOutputs.length})</span>
+            <Button variant="outline" size="sm" onClick={() => handleConfirmAddOutput()}>
+              添加输出
+            </Button>
+          </div>}
+
+
+          {currentDynamicOutputs.map((output, index) => (
+            <DynamicPortItem
+              key={`${output.property}-${index}`}
+              property={output.property}
+              title={output.title || output.property}
+              description={output.description || ''}
+              type={output.type || 'string'}
+              isStatic={output.isStatic !== false}
+              onPropertyChange={(value) => handleUpdateOutput(output.property, 'property', value)}
+              onTitleChange={(value) => handleUpdateOutput(output.property, 'title', value)}
+              onDescriptionChange={(value) => handleUpdateOutput(output.property, 'description', value)}
+              onTypeChange={(value) => handleUpdateOutput(output.property, 'type', value)}
+              onRemove={() => handleRemoveOutput(output.property)}
+            />
+          ))}
+        </div>
+      </div>
+    ),
+  })
 
   sections.push({
     id: 'info',

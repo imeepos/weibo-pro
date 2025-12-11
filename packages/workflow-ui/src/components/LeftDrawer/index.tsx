@@ -11,13 +11,14 @@ import {
 } from '@sker/ui/components/workflow'
 import { NodeRunHistory } from './NodeRunHistory'
 import { INode } from '@sker/workflow'
+import { deepCopy } from './deep-copy'
 
 // ✨ 稳定的设置面板包装器，避免因 formData 改变而重新挂载
 const SettingsTabContent = React.memo(({
   formData,
   onPropertyChange
 }: {
-  formData: Record<string, any>
+  formData: INode
   onPropertyChange: (property: string, value: any) => void
 }) => {
   return <PropertyPanel formData={formData} onPropertyChange={onPropertyChange} />
@@ -44,7 +45,7 @@ export function LeftDrawer({ visible, onClose, onRunNode, onLocateNode, onAutoSa
     return selectedNode.data.metadata
   }, [selectedNode])
 
-  const [formData, setFormData] = useState<Record<string, any>>({})
+  const [formData, setFormData] = useState<INode>({} as INode)
   const [hasChanges, setHasChanges] = useState(false)
 
   useEffect(() => {
@@ -53,64 +54,37 @@ export function LeftDrawer({ visible, onClose, onRunNode, onLocateNode, onAutoSa
     }
   }, [selectedNode, visible, onClose])
 
+
   useEffect(() => {
     if (selectedNode) {
       const metadata = selectedNode.data.metadata
       if (!metadata) return
-
-      const initialData: Record<string, any> = {
-        name: selectedNode.data.name,
-        description: selectedNode.data.description,
-        color: selectedNode.data.color,
-        portLabels: (selectedNode.data as INode).portLabels,
-        dynamicInputs: (selectedNode.data as INode).metadata?.inputs,
-        dynamicOutputs: (selectedNode.data as INode).metadata?.outputs,
-      }
-
-      metadata.inputs.forEach((input) => {
-        initialData[input.property] = (selectedNode.data as any)[input.property]
-      })
-
+      const initialData: INode = deepCopy(selectedNode.data)
       setFormData(initialData)
       setHasChanges(false)
     }
   }, [selectedNode?.id])
 
   const handlePropertyChange = useCallback((property: string, value: any) => {
-    setFormData((prev) => ({
-      ...prev,
-      [property]: value,
-    }))
+    setFormData((prev) => {
+
+      console.log({
+        prev,
+        property, value
+      })
+
+      return {
+        ...prev,
+        [property]: value,
+      }
+    })
     setHasChanges(true)
   }, [])
 
   const handleSave = useCallback(() => {
     if (!selectedNode || !hasChanges) return
-
-    const { name, description, color, portLabels, dynamicInputs, dynamicOutputs, customProperties, ...inputProperties } = formData
-
-    // ✨ 构建更新对象
-    const updates: Partial<INode> = {}
-
-    if (name !== undefined) updates.name = name
-    if (description !== undefined) updates.description = description
-    if (color !== undefined) updates.color = color
-    if (portLabels !== undefined) updates.portLabels = portLabels
-    if (dynamicInputs !== undefined) updates.dynamicInputs = dynamicInputs
-    if (dynamicOutputs !== undefined) updates.dynamicOutputs = dynamicOutputs
-    if (customProperties !== undefined) updates.customProperties = customProperties
-
-    // 添加所有输入属性
-    Object.entries(inputProperties).forEach(([property, value]) => {
-      updates[property] = value
-    })
-    console.log(updates)
-    // ✨ 使用传入的 updateNode 更新节点（确保与 WorkflowCanvas 状态同步）
-    onUpdateNode?.(selectedNode.id, updates)
-
-    // ✨ 触发自动保存到后台
+    onUpdateNode?.(selectedNode.id, formData)
     onAutoSave?.()
-
     setHasChanges(false)
   }, [selectedNode, hasChanges, formData, onUpdateNode, onAutoSave])
 

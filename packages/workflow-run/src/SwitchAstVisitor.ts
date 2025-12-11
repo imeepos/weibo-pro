@@ -38,26 +38,6 @@ export class SwitchAstVisitor {
                 }
             })
 
-            // 处理动态输出
-            const dynamicOutputs = ast.dynamicOutputs as DynamicOutput[] | undefined
-            if (dynamicOutputs && dynamicOutputs.length > 0) {
-                dynamicOutputs.forEach(dynamicOutput => {
-                    const propKey = dynamicOutput.property
-
-                    // 条件求值
-                    const matched = this.evaluateCondition(
-                        dynamicOutput.condition,
-                        { $input: inputValue }
-                    )
-
-                    if (matched) {
-                        ;(ast as any)[propKey] = inputValue
-                    } else {
-                        ;(ast as any)[propKey] = undefined
-                    }
-                })
-            }
-
             obs.next({ ...ast })
 
             ast.state = 'success'

@@ -70,18 +70,6 @@ export abstract class Ast implements INode {
         outputs: INodeOutputMetadata[]
         states: INodeStateMetadata[]
     }
-
-    // 动态输出配置（用于支持运行时添加输出端口）
-    dynamicOutputs?: DynamicOutput[]
-
-    // 动态输入配置（用于支持运行时添加输入端口）
-    dynamicInputs?: DynamicInput[]
-
-    // 自定义端口标签 { propertyKey: customLabel }
-    portLabels?: Record<string, string>
-
-    // 自定义属性（用户可动态添加任意属性）
-    customProperties?: Record<string, any>
 }
 
 @Node({ title: "工作流", type: 'basic' })
