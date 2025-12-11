@@ -1,3 +1,4 @@
+import { BehaviorSubject } from "rxjs";
 import { Ast, Input, IS_BUFFER, IS_MULTI, Node, Output } from "@sker/workflow";
 
 @Node({
@@ -14,7 +15,7 @@ export class LlmTextToVideoAst extends Ast {
     prompt: string[] = [];
 
     @Output({ title: '视频' })
-    video: string = ``;
+    video: BehaviorSubject<string> = new BehaviorSubject<string>(``)
 
     type: `LlmTextToVideoAst` = `LlmTextToVideoAst`
 }

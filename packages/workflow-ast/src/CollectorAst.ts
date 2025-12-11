@@ -1,5 +1,6 @@
 import { Ast } from "@sker/workflow";
 import { Input, Node, Output, IS_BUFFER, IS_MULTI } from "@sker/workflow";
+import { BehaviorSubject } from "rxjs";
 
 /**
  * 收集器节点 - 演示 IS_BUFFER 模式
@@ -20,7 +21,7 @@ export class CollectorAst extends Ast {
     items: any[] = [];
 
     @Output({ title: '收集结果' })
-    result: any[] = [];
+    result: BehaviorSubject<any[]> = new BehaviorSubject<any[]>([]);
 
     type: 'CollectorAst' = 'CollectorAst';
 }

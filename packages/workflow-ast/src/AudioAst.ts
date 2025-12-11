@@ -1,4 +1,5 @@
 import { Ast, Input, Node, Output } from "@sker/workflow";
+import { BehaviorSubject } from "rxjs";
 
 @Node({ title: '音频', type: 'basic' })
 export class AudioAst extends Ast {
@@ -6,7 +7,7 @@ export class AudioAst extends Ast {
     uploadedAudio: string = '';
 
     @Output({ title: '音频' })
-    audio: string = '';
+    audio: BehaviorSubject<string> = new BehaviorSubject<string>('');
 
     type: 'AudioAst' = 'AudioAst';
 }

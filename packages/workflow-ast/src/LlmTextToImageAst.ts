@@ -1,4 +1,5 @@
 import { Ast, Input, IS_BUFFER, IS_MULTI, Node, Output } from "@sker/workflow";
+import { BehaviorSubject } from "rxjs";
 
 @Node({
     title: '文生图',
@@ -14,7 +15,7 @@ export class LlmTextToImageAst extends Ast {
     text: string[] = [];
 
     @Output({ title: '图片' })
-    image: string = ``;
+    image: BehaviorSubject<string> = new BehaviorSubject<string>(``)
 
     type: `LlmTextToImageAst` = `LlmTextToImageAst`
 }
