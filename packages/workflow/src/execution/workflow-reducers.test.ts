@@ -68,15 +68,15 @@ describe('workflow-reducers', () => {
     });
 
     describe('计数器逻辑', () => {
-      it('emitting 状态增加 emitCount', () => {
-        const node = createNode('node-1', 'running');
+      it('running 状态增加 emitCount（从非 running 状态变化时）', () => {
+        const node = createNode('node-1', 'pending');
         const workflow = createWorkflowGraphAst({
           nodes: [node],
         });
 
         const updated = updateNodeReducer(workflow, {
           nodeId: 'node-1',
-          updates: { state: 'emitting' },
+          updates: { state: 'running' },
         });
 
         expect(updated.nodes[0].emitCount).toBe(1);
@@ -111,25 +111,6 @@ describe('workflow-reducers', () => {
 
         expect(updated.nodes[0].count).toBe(1);
         expect(updated.nodes[0].emitCount).toBe(0);
-      });
-
-      it('多次 emitting 状态累加 emitCount', () => {
-        const node = createNode('node-1', 'running');
-        const workflow = createWorkflowGraphAst({
-          nodes: [node],
-        });
-
-        let updated = updateNodeReducer(workflow, {
-          nodeId: 'node-1',
-          updates: { state: 'emitting' },
-        });
-
-        updated = updateNodeReducer(updated, {
-          nodeId: 'node-1',
-          updates: { state: 'emitting' },
-        });
-
-        expect(updated.nodes[0].emitCount).toBe(2);
       });
 
       it('多次 success 状态累加 count', () => {

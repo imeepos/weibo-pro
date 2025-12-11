@@ -96,22 +96,23 @@ export class TestNodeVisitor {
             console.log(`[${node.id}] 开始执行`);
 
             (async () => {
-                // 第一次发射 emitting
-                node.state = 'emitting';
-                console.log(`[${node.id}] 发射 emitting b=1`);
+                node.state = 'running';
+
+                // 第一次发射
                 node.b = 1;
+                console.log(`[${node.id}] 发射 b=1`);
                 obs.next({ ...node });
                 await delay()
 
-                // 第二次发射 emitting
+                // 第二次发射
                 node.b = 2;
-                console.log(`[${node.id}] 发射 emitting b=2`);
+                console.log(`[${node.id}] 发射 b=2`);
                 obs.next({ ...node });
                 await delay()
 
-                // 第三次发射 emitting
+                // 第三次发射
                 node.b = 3;
-                console.log(`[${node.id}] 发射 emitting b=3`);
+                console.log(`[${node.id}] 发射 b=3`);
                 obs.next({ ...node });
                 await delay()
 
@@ -143,22 +144,23 @@ export class TestNode3Visitor {
             console.log(`[${node.id}] 开始执行`);
 
             (async () => {
-                // 第一次发射 emitting
-                node.state = 'emitting';
-                console.log(`[${node.id}] 发射 emitting b=1`);
+                node.state = 'running';
+
+                // 第一次发射
                 node.b = 30;
+                console.log(`[${node.id}] 发射 b=30`);
                 obs.next({ ...node });
                 await delay()
 
-                // 第二次发射 emitting
+                // 第二次发射
                 node.b = 31;
-                console.log(`[${node.id}] 发射 emitting b=2`);
+                console.log(`[${node.id}] 发射 b=31`);
                 obs.next({ ...node });
                 await delay()
 
-                // 第三次发射 emitting
+                // 第三次发射
                 node.b = 32;
-                console.log(`[${node.id}] 发射 emitting b=3`);
+                console.log(`[${node.id}] 发射 b=32`);
                 obs.next({ ...node });
                 await delay()
 

@@ -288,9 +288,9 @@ describe('VisitorExecutor', () => {
                 @Handler(MultiEmitAst)
                 visit(ast: MultiEmitAst): Observable<INode> {
                     return new Observable(observer => {
+                        ast.state = 'running';
                         for (let i = 1; i <= 3; i++) {
                             ast.value = i;
-                            ast.state = 'emitting';
                             observer.next({ ...ast } as INode);
                         }
                         ast.state = 'success';
@@ -309,7 +309,7 @@ describe('VisitorExecutor', () => {
                     toArray(),
                     map((results: any[]) =>
                         results
-                            .filter((r: any) => r.state === 'emitting')
+                            .filter((r: any) => r.state === 'running')
                             .map((r: any) => r.value)
                     )
                 )
