@@ -14,6 +14,19 @@ export { DataFlowManager } from './execution/data-flow-manager'
 export { StateMerger } from './execution/state-merger'
 export { PropertyAnalyzer } from './execution/property-analyzer'
 export { NoRetryError } from './errors'
+
+// 新增：状态管理和事件总线
+export { WorkflowState } from './execution/workflow-state';
+export { WorkflowEventBus, WorkflowEventType } from './execution/workflow-events';
+export type { WorkflowEvent } from './execution/workflow-events';
+export {
+  updateNodeReducer,
+  finalizeWorkflowReducer,
+  failWorkflowReducer,
+  resetWorkflowReducer
+} from './execution/workflow-reducers';
+export type { NodeUpdateEvent } from './execution/workflow-reducers';
+
 export * from './utils';
 export * from './TextAreaAst';
 export * from './DateAst';

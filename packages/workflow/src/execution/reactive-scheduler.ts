@@ -3,12 +3,15 @@ import { INode, IEdge, EdgeMode, hasDataMapping, isNode } from '../types';
 import { executeAst } from '../executor';
 import { Observable, of, EMPTY, merge, combineLatest, zip, asyncScheduler, concat } from 'rxjs';
 import { map, catchError, takeWhile, concatMap, filter, withLatestFrom, shareReplay, subscribeOn, finalize, scan, takeLast, toArray, reduce, expand, tap, take, distinctUntilChanged } from 'rxjs/operators';
-import { Injectable, root } from '@sker/core';
+import { Inject, Injectable, root } from '@sker/core';
 import { findNodeType, INPUT, InputMetadata, hasMultiMode, hasBufferMode, OUTPUT, type OutputMetadata, resolveConstructor } from '../decorator';
 import { Compiler } from '../compiler';
+import { WorkflowEventBus } from './workflow-events';
+import { updateNodeReducer, finalizeWorkflowReducer, failWorkflowReducer } from './workflow-reducers';
 
 @Injectable()
 export class ReactiveScheduler {
+    constructor(@Inject(WorkflowEventBus) private eventBus: WorkflowEventBus) {}
 
     private resetWorkflowGraphAst(ast: WorkflowGraphAst) {
         // ✨ 不可变方式：创建新状态对象
@@ -48,6 +51,9 @@ export class ReactiveScheduler {
         return updates;
     }
     schedule(ast: WorkflowGraphAst, ctx: WorkflowGraphAst): Observable<WorkflowGraphAst> {
+        // 发射工作流开始事件
+        this.eventBus.emitWorkflowStart(ast.id);
+
         const { state } = this.resetWorkflowGraphAst(ast);
         // 已完成的工作流直接返回
         if (state === 'success' || state === 'fail') {
@@ -56,7 +62,16 @@ export class ReactiveScheduler {
         this.flattenWorkflowStructure(ast);
         ast.state = 'running';
         const network = this.buildStreamNetwork(ast, ctx);
-        return this.subscribeAndMerge(network, ast);
+        return this.subscribeAndMerge(network, ast).pipe(
+            finalize(() => {
+                // 根据最终状态发射相应事件
+                if (ast.state === 'fail') {
+                    this.eventBus.emitWorkflowFail(ast.id, ast.error);
+                } else {
+                    this.eventBus.emitWorkflowComplete(ast.id, ast);
+                }
+            })
+        );
     }
 
     fineTuneNode(
@@ -1058,62 +1073,45 @@ export class ReactiveScheduler {
             : Array.from(network.values());
 
         if (streamsToSubscribe.length === 0) {
-            ast.state = 'success';
-            return of(ast);
+            return of(finalizeWorkflowReducer(ast));
         }
 
-        // 合并要订阅的节点流
+        // 使用 scan + reducer 模式累积状态变更
         const allStreams$ = merge(...streamsToSubscribe).pipe(
-            // 每次节点状态变化，更新工作流图
-            map(updatedNode => {
-                const nodeIndex = ast.nodes.findIndex(n => n.id === updatedNode.id);
-                if (nodeIndex !== -1) {
-                    const existingNode = ast.nodes[nodeIndex]!;
-
-                    // 简化的计数逻辑：基于流的自然发射，而非状态检测
-                    // 原理：RxJS 流每次发射都是独立的事件，直接响应即可
-                    let newCount = existingNode.count;
-                    let newEmitCount = existingNode.emitCount;
-
-                    // emitCount: 每次发射 emitting 状态 +1（明确的输出事件）
-                    if (updatedNode.state === 'emitting') {
-                        newEmitCount += 1;
-                    }
-
-                    // count: 每次发射 success 或 fail 状态 +1（一次完整执行）
-                    // 不依赖 existingNode 的状态，让流自然驱动计数
-                    if (updatedNode.state === 'success' || updatedNode.state === 'fail') {
-                        newCount += 1;
-                    }
-
-                    ast.nodes[nodeIndex] = {
-                        ...updatedNode,
-                        count: newCount,
-                        emitCount: newEmitCount
-                    };
+            // 发射节点事件到事件总线
+            tap(updatedNode => {
+                if (updatedNode.state === 'emitting') {
+                    this.eventBus.emitNodeEmit(updatedNode.id, updatedNode, ast.id);
+                } else if (updatedNode.state === 'success') {
+                    this.eventBus.emitNodeSuccess(updatedNode.id, updatedNode, ast.id);
+                } else if (updatedNode.state === 'fail') {
+                    this.eventBus.emitNodeFail(updatedNode.id, updatedNode.error, ast.id);
                 }
-                // 保持 running 状态直到所有流完成
-                ast.state = 'running';
-                return ast;
             }),
+            // 使用 reducer 累积状态（借鉴 @sker/store 的 scan + reducer 模式）
+            scan(
+                (workflow, updatedNode) => updateNodeReducer(workflow, {
+                    nodeId: updatedNode.id,
+                    updates: updatedNode,
+                }),
+                ast // seed
+            ),
             catchError(error => {
                 console.error('[subscribeAndMerge] 执行错误:', error);
-                ast.state = 'fail';
-                setAstError(ast, error);
-                return of(ast);
+                return of(failWorkflowReducer(ast, error));
             })
         );
 
-        // 在流完成后发射最终状态（包含 finalize 的修改）
+        // 流完成后应用 finalizeWorkflowReducer
         return concat(
             allStreams$,
             new Observable<WorkflowGraphAst>(obs => {
-                // finalize 已经修改了 ast.state，现在发射它
-                const failedNodes = ast.nodes.filter(n => n.state === 'fail');
-                const hasFailures = failedNodes.length > 0;
+                // 应用最终化 reducer
+                const finalWorkflow = finalizeWorkflowReducer(ast);
 
                 // 【调试日志】输出失败节点信息
-                if (hasFailures) {
+                const failedNodes = finalWorkflow.nodes.filter(n => n.state === 'fail');
+                if (failedNodes.length > 0) {
                     console.error('[subscribeAndMerge] 发现失败节点:', failedNodes.map(n => ({
                         id: n.id,
                         type: n.type,
@@ -1123,12 +1121,10 @@ export class ReactiveScheduler {
                     })));
                 }
 
-                ast.state = hasFailures ? 'fail' : 'success';
-
                 // 恢复 GroupNode 的嵌套结构（确保 UI 层和保存时的数据正确）
-                this.restoreGroupStructure(ast);
+                this.restoreGroupStructure(finalWorkflow);
 
-                obs.next(ast);
+                obs.next(finalWorkflow);
                 obs.complete();
             })
         );

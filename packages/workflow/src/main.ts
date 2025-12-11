@@ -3,6 +3,7 @@ import { Ast, createWorkflowGraphAst } from '.';
 import { INode } from '.';
 import { Observable } from 'rxjs';
 import { Handler, Node } from '.';
+import { root } from '@sker/core';
 
 
 /**
@@ -188,7 +189,7 @@ async function testSingleNode() {
         state: 'pending'
     });
 
-    const scheduler = new ReactiveScheduler();
+    const scheduler = root.get(ReactiveScheduler);
 
     console.log('开始调度...\n');
 
