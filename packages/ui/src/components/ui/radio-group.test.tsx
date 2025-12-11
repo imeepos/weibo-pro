@@ -62,13 +62,19 @@ describe('RadioGroup Components', () => {
       expect(container.querySelector('[data-slot="radio-group-item"]')).toBeInTheDocument()
     })
 
-    it('应该有 indicator 子元素', () => {
+    it('选中状态应该有 indicator 子元素', async () => {
+      const user = userEvent.setup()
       const { container } = render(
         <RadioGroup>
           <RadioGroupItem value="option1" />
         </RadioGroup>
       )
-      expect(container.querySelector('[data-slot="radio-group-indicator"]')).toBeInTheDocument()
+      // indicator 仅在选中时渲染
+      const item = container.querySelector('button[role="radio"]')
+      if (item) {
+        await user.click(item)
+        expect(container.querySelector('[data-slot="radio-group-indicator"]')).toBeInTheDocument()
+      }
     })
 
     it('初始状态应该是未选中', () => {

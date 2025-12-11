@@ -920,6 +920,8 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
         onCollapseNodes={collapseNodes}
         onExpandNodes={expandNodes}
         onAutoLayout={autoLayout}
+        onToggleEntryNode={workflow.toggleEntryNode}
+        onToggleEndNode={workflow.toggleEndNode}
         onClose={closeMenu}
         nodeData={menu.contextType === 'node' && menu.targetId
           ? workflow.nodes.find((n) => n.id === menu.targetId)?.data
@@ -934,6 +936,16 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
             : false
         }
         selectedNodesCount={workflow.nodes.filter((n) => n.selected).length}
+        isEntryNode={
+          menu.contextType === 'node' && menu.targetId
+            ? workflow.isEntryNode(menu.targetId)
+            : false
+        }
+        isEndNode={
+          menu.contextType === 'node' && menu.targetId
+            ? workflow.isEndNode(menu.targetId)
+            : false
+        }
       />
 
       <NodeSelector

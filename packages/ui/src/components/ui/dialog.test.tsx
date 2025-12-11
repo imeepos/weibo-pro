@@ -15,7 +15,7 @@ import {
 describe('Dialog Components', () => {
   describe('Dialog', () => {
     it('应该渲染为对话框容器', () => {
-      const { container } = render(
+      render(
         <Dialog>
           <DialogTrigger>打开</DialogTrigger>
           <DialogContent>
@@ -23,7 +23,8 @@ describe('Dialog Components', () => {
           </DialogContent>
         </Dialog>
       )
-      expect(container.querySelector('[data-slot="dialog"]')).toBeInTheDocument()
+      // Dialog 本身不渲染 DOM 元素，只提供上下文
+      expect(screen.getByText('打开')).toBeInTheDocument()
     })
 
     it('应该默认不显示内容', () => {
@@ -91,7 +92,7 @@ describe('Dialog Components', () => {
   describe('DialogContent', () => {
     it('应该有正确的 data-slot 属性', async () => {
       const user = userEvent.setup()
-      const { container } = render(
+      render(
         <Dialog>
           <DialogTrigger>打开</DialogTrigger>
           <DialogContent>内容</DialogContent>
@@ -101,13 +102,14 @@ describe('Dialog Components', () => {
       await user.click(screen.getByText('打开'))
 
       await waitFor(() => {
-        expect(container.querySelector('[data-slot="dialog-content"]')).toBeInTheDocument()
+        // Portal 渲染到 document.body，需要在 body 中查找
+        expect(document.body.querySelector('[data-slot="dialog-content"]')).toBeInTheDocument()
       })
     })
 
     it('应该有覆盖层', async () => {
       const user = userEvent.setup()
-      const { container } = render(
+      render(
         <Dialog>
           <DialogTrigger>打开</DialogTrigger>
           <DialogContent>内容</DialogContent>
@@ -117,13 +119,13 @@ describe('Dialog Components', () => {
       await user.click(screen.getByText('打开'))
 
       await waitFor(() => {
-        expect(container.querySelector('[data-slot="dialog-overlay"]')).toBeInTheDocument()
+        expect(document.body.querySelector('[data-slot="dialog-overlay"]')).toBeInTheDocument()
       })
     })
 
     it('应该支持关闭按钮', async () => {
       const user = userEvent.setup()
-      const { container } = render(
+      render(
         <Dialog>
           <DialogTrigger>打开</DialogTrigger>
           <DialogContent showCloseButton={true}>内容</DialogContent>
@@ -134,14 +136,14 @@ describe('Dialog Components', () => {
 
       await waitFor(() => {
         expect(
-          container.querySelectorAll('[data-slot="dialog-close"]').length
+          document.body.querySelectorAll('[data-slot="dialog-close"]').length
         ).toBeGreaterThan(0)
       })
     })
 
     it('应该支持隐藏关闭按钮', async () => {
       const user = userEvent.setup()
-      const { container } = render(
+      render(
         <Dialog>
           <DialogTrigger>打开</DialogTrigger>
           <DialogContent showCloseButton={false}>内容</DialogContent>
@@ -151,7 +153,7 @@ describe('Dialog Components', () => {
       await user.click(screen.getByText('打开'))
 
       await waitFor(() => {
-        const closeButtons = container.querySelectorAll('[data-slot="dialog-close"]')
+        const closeButtons = document.body.querySelectorAll('[data-slot="dialog-close"]')
         // 虽然定义了 showCloseButton={false}，但渲染结构可能不同
         expect(closeButtons.length).toBeGreaterThanOrEqual(0)
       })
@@ -159,7 +161,7 @@ describe('Dialog Components', () => {
 
     it('应该接受自定义 className', async () => {
       const user = userEvent.setup()
-      const { container } = render(
+      render(
         <Dialog>
           <DialogTrigger>打开</DialogTrigger>
           <DialogContent className="custom-content">内容</DialogContent>
@@ -169,7 +171,7 @@ describe('Dialog Components', () => {
       await user.click(screen.getByText('打开'))
 
       await waitFor(() => {
-        expect(container.querySelector('[data-slot="dialog-content"]')).toHaveClass('custom-content')
+        expect(document.body.querySelector('[data-slot="dialog-content"]')).toHaveClass('custom-content')
       })
     })
   })
@@ -177,7 +179,7 @@ describe('Dialog Components', () => {
   describe('DialogHeader & DialogTitle & DialogDescription', () => {
     it('应该有正确的 data-slot 属性', async () => {
       const user = userEvent.setup()
-      const { container } = render(
+      render(
         <Dialog>
           <DialogTrigger>打开</DialogTrigger>
           <DialogContent>
@@ -192,9 +194,9 @@ describe('Dialog Components', () => {
       await user.click(screen.getByText('打开'))
 
       await waitFor(() => {
-        expect(container.querySelector('[data-slot="dialog-header"]')).toBeInTheDocument()
-        expect(container.querySelector('[data-slot="dialog-title"]')).toBeInTheDocument()
-        expect(container.querySelector('[data-slot="dialog-description"]')).toBeInTheDocument()
+        expect(document.body.querySelector('[data-slot="dialog-header"]')).toBeInTheDocument()
+        expect(document.body.querySelector('[data-slot="dialog-title"]')).toBeInTheDocument()
+        expect(document.body.querySelector('[data-slot="dialog-description"]')).toBeInTheDocument()
       })
     })
 
@@ -224,7 +226,7 @@ describe('Dialog Components', () => {
   describe('DialogFooter', () => {
     it('应该有正确的 data-slot 属性', async () => {
       const user = userEvent.setup()
-      const { container } = render(
+      render(
         <Dialog>
           <DialogTrigger>打开</DialogTrigger>
           <DialogContent>
@@ -237,7 +239,7 @@ describe('Dialog Components', () => {
       await user.click(screen.getByText('打开'))
 
       await waitFor(() => {
-        expect(container.querySelector('[data-slot="dialog-footer"]')).toBeInTheDocument()
+        expect(document.body.querySelector('[data-slot="dialog-footer"]')).toBeInTheDocument()
       })
     })
   })

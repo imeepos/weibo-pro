@@ -14,6 +14,8 @@ import {
   FolderPlus,
   FolderMinus,
   LayoutGrid,
+  PlayCircle,
+  StopCircle,
   type MenuSection,
 } from '@sker/ui/components/workflow'
 import type { ContextMenuState } from './useContextMenu'
@@ -36,11 +38,15 @@ export interface ContextMenuProps {
   onCollapseNodes?: () => void
   onExpandNodes?: () => void
   onAutoLayout?: () => void
+  onToggleEntryNode?: (nodeId: string) => void
+  onToggleEndNode?: (nodeId: string) => void
   onClose: () => void
   nodeData?: any
   hasMultipleSelectedNodes?: boolean
   isGroupNode?: boolean
   selectedNodesCount?: number
+  isEntryNode?: boolean
+  isEndNode?: boolean
 }
 
 /**
@@ -68,11 +74,15 @@ export function ContextMenu({
   onCollapseNodes,
   onExpandNodes,
   onAutoLayout,
+  onToggleEntryNode,
+  onToggleEndNode,
   onClose,
   nodeData,
   hasMultipleSelectedNodes = false,
   isGroupNode = false,
   selectedNodesCount = 0,
+  isEntryNode = false,
+  isEndNode = false,
 }: ContextMenuProps) {
   // 根据上下文构建菜单项
   const sections = useMemo<MenuSection[]>(() => {
@@ -181,6 +191,29 @@ export function ContextMenu({
               : []),
           ],
         },
+        {
+          title: '执行控制',
+          items: [
+            ...(onToggleEntryNode
+              ? [
+                  {
+                    label: isEntryNode ? '取消起始节点' : '设为起始节点',
+                    icon: PlayCircle,
+                    action: () => onToggleEntryNode(nodeId),
+                  },
+                ]
+              : []),
+            ...(onToggleEndNode
+              ? [
+                  {
+                    label: isEndNode ? '取消结束节点' : '设为结束节点',
+                    icon: StopCircle,
+                    action: () => onToggleEndNode(nodeId),
+                  },
+                ]
+              : []),
+          ],
+        },
         ...(hasMultipleSelectedNodes || isGroupNode
           ? [
               {
@@ -282,6 +315,8 @@ export function ContextMenu({
     nodeData?.collapsed,
     hasMultipleSelectedNodes,
     isGroupNode,
+    isEntryNode,
+    isEndNode,
     onCollapseNodes,
     onExpandNodes,
     onAutoLayout,
@@ -298,6 +333,8 @@ export function ContextMenu({
     onUngroupNodes,
     onConfigEdge,
     onDeleteEdge,
+    onToggleEntryNode,
+    onToggleEndNode,
   ])
 
   return (

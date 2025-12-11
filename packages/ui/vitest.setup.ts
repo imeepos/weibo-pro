@@ -27,7 +27,18 @@ class MockPointerEvent extends Event {
 
   constructor(type: string, init?: any) {
     super(type, init);
-    Object.assign(this, init);
+    if (init) {
+      const pointerProps = [
+        'pointerId', 'pointerType', 'isPrimary', 'width', 'height',
+        'pressure', 'tangentialPressure', 'tiltX', 'tiltY', 'twist',
+        'clientX', 'clientY', 'pageX', 'pageY', 'screenX', 'screenY'
+      ];
+      pointerProps.forEach(prop => {
+        if (prop in init) {
+          Object.defineProperty(this, prop, { value: init[prop], writable: true });
+        }
+      });
+    }
   }
 
   getCoalescedEvents() {

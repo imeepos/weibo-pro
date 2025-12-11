@@ -14,6 +14,8 @@ import {
   FolderPlus,
   FolderMinus,
   LayoutGrid,
+  PlayCircle,
+  StopCircle,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@sker/ui/lib/utils'
@@ -55,8 +57,8 @@ export const WorkflowContextMenu: React.FC<WorkflowContextMenuProps> = ({
   }
 
   const handleActionClick = (action: () => void) => {
-    action()
     onClose()
+    action()
   }
 
   const menuContent = (
@@ -134,4 +136,6 @@ export {
   FolderPlus,
   FolderMinus,
   LayoutGrid,
+  PlayCircle,
+  StopCircle,
 }

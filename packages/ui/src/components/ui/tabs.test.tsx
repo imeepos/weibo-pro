@@ -125,7 +125,7 @@ describe('Tabs Components', () => {
 
     it('禁用的触发器不应该响应点击', async () => {
       const user = userEvent.setup()
-      const { container } = render(
+      render(
         <Tabs defaultValue="tab1">
           <TabsList>
             <TabsTrigger value="tab1">标签1</TabsTrigger>
@@ -142,7 +142,9 @@ describe('Tabs Components', () => {
       await user.click(tab2Trigger)
 
       expect(screen.getByText('内容1')).toBeVisible()
-      expect(screen.queryByText('内容2')).not.toBeVisible()
+      // 内容2 的 TabsContent 存在但被隐藏，使用 container 查询 data-state
+      const tab2Content = document.querySelector('[data-slot="tabs-content"][data-state="inactive"]')
+      expect(tab2Content).toBeInTheDocument()
     })
   })
 

@@ -32,6 +32,10 @@ export interface WorkflowNodeProps {
   collapsed?: boolean
   onToggleCollapse?: () => void
 
+  // 起始/结束节点标记
+  isEntryNode?: boolean
+  isEndNode?: boolean
+
   // 自定义内容
   children?: React.ReactNode
 

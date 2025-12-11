@@ -1,14 +1,21 @@
 // 抽象语法树的核心表达 - 万物皆为状态
 // - pending: 等待执行
 // - running: 执行中但未产生输出
-// - emitting: 正在发射数据（触发下游）
-// - success: 执行完成（不触发下游）
+// - success: 执行完成
+// - fail: 执行失败
 
 import { SerializedError } from "@sker/core";
+import { BehaviorSubject } from "rxjs";
 import { InputFieldType, NodeType } from "./decorator";
 
-// - fail: 执行失败
-export type IAstStates = `pending` | `running` | `emitting` | `success` | `fail`;
+export type IAstStates = `pending` | `running` | `success` | `fail`;
+
+/**
+ * 判断值是否为 BehaviorSubject
+ */
+export function isBehaviorSubject<T = any>(value: unknown): value is BehaviorSubject<T> {
+    return value instanceof BehaviorSubject;
+}
 
 // 状态数据的基础约束
 export interface INodeMetadata {
@@ -46,6 +53,7 @@ export interface INodeOutputMetadata {
     dynamic?: boolean;       // 支持 UI 动态添加输出端口
     condition?: string;      // 条件表达式字符串（如 '$input === 1'）
     isStatic?: boolean;      // 装饰器定义的端口为 true，动态添加的为 false
+    isSubject?: boolean;     // 标识为 BehaviorSubject 类型，序列化时跳过
 }
 export interface INodeStateMetadata {
     propertyKey: string | symbol;

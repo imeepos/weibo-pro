@@ -1,8 +1,6 @@
-'use client'
-
 import React, { memo } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronDown, ChevronUp, Play, Square } from 'lucide-react'
 
 import { cn } from '@sker/ui/lib/utils'
 import { Badge } from '@sker/ui/components/ui/badge'
@@ -178,6 +176,8 @@ const WorkflowNodeComponent = ({
   selected = false,
   collapsed = false,
   onToggleCollapse,
+  isEntryNode = false,
+  isEndNode = false,
   children,
   onContextMenu,
   onDoubleClick,
@@ -211,6 +211,24 @@ const WorkflowNodeComponent = ({
         onContextMenu={onContextMenu}
         onDoubleClick={onDoubleClick}
       >
+        {/* 起始节点标记 */}
+        {isEntryNode && (
+          <div
+            className="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-green-500 border-2 border-white shadow-md z-10 flex items-center justify-center"
+            title="起始节点"
+          >
+            <Play className="w-2 h-2 text-white fill-white" />
+          </div>
+        )}
+        {/* 结束节点标记 */}
+        {isEndNode && (
+          <div
+            className="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-red-500 border-2 border-white shadow-md z-10 flex items-center justify-center"
+            title="结束节点"
+          >
+            <Square className="w-2 h-2 text-white fill-white" />
+          </div>
+        )}
         <StatusBadge status={status} count={statusCount} />
         <div className="flex items-center rounded-t-2xl p-2">
           <div

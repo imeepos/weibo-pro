@@ -11,8 +11,9 @@ describe('Input Component', () => {
 
   it('应该有 text type 作为默认', () => {
     const { container } = render(<Input />)
-    const input = container.querySelector('[data-slot="input"]')
-    expect(input).toHaveAttribute('type', 'text')
+    const input = container.querySelector('[data-slot="input"]') as HTMLInputElement
+    // HTML input 的默认 type 是 'text'，但不一定显式设置属性
+    expect(input.type).toBe('text')
   })
 
   it('应该支持 type 属性', () => {

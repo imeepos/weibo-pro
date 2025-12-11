@@ -38,6 +38,8 @@ export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNodeType
   const CustomRender = useRender(fromJson(data))
   const { setNodes } = useReactFlow()
   const isCollapsed = data.collapsed ?? false
+  const isEntryNode = (data as any).isEntryNode ?? false
+  const isEndNode = (data as any).isEndNode ?? false
 
   // 将 INodeInputMetadata 转换为 WorkflowNodePort
   const inputs = metadata.inputs;
@@ -106,6 +108,8 @@ export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNodeType
       outputs={outputs}
       selected={selected}
       collapsed={isCollapsed}
+      isEntryNode={isEntryNode}
+      isEndNode={isEndNode}
       onToggleCollapse={toggleCollapse}
       onContextMenu={handleContextMenu}
       onDoubleClick={handleDoubleClick}

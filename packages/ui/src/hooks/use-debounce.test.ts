@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { renderHook, act, waitFor } from '@testing-library/react'
+import { renderHook, act } from '@testing-library/react'
 import { useDebounce } from './use-debounce'
 
 describe('useDebounce hook', () => {
@@ -16,7 +16,7 @@ describe('useDebounce hook', () => {
     expect(result.current).toBe('initial')
   })
 
-  it('应该在延迟后返回新值', async () => {
+  it('应该在延迟后返回新值', () => {
     const { result, rerender } = renderHook(
       ({ value, delay }) => useDebounce(value, delay),
       { initialProps: { value: 'initial', delay: 500 } }
@@ -31,9 +31,7 @@ describe('useDebounce hook', () => {
       vi.advanceTimersByTime(500)
     })
 
-    await waitFor(() => {
-      expect(result.current).toBe('updated')
-    })
+    expect(result.current).toBe('updated')
   })
 
   it('应该在值再次变化时取消之前的延迟', () => {
@@ -65,7 +63,7 @@ describe('useDebounce hook', () => {
     expect(result.current).toBe('third')
   })
 
-  it('应该支持自定义延迟时间', async () => {
+  it('应该支持自定义延迟时间', () => {
     const { result, rerender } = renderHook(
       ({ value, delay }) => useDebounce(value, delay),
       { initialProps: { value: 'initial', delay: 1000 } }
@@ -83,9 +81,7 @@ describe('useDebounce hook', () => {
       vi.advanceTimersByTime(500)
     })
 
-    await waitFor(() => {
-      expect(result.current).toBe('updated')
-    })
+    expect(result.current).toBe('updated')
   })
 
   it('应该在卸载时清理定时器', () => {

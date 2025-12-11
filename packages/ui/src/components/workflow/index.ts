@@ -33,6 +33,8 @@ export {
   FolderPlus,
   FolderMinus,
   LayoutGrid,
+  PlayCircle,
+  StopCircle,
 } from './workflow-context-menu'
 
 // 边配置相关组件

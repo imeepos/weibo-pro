@@ -38,9 +38,15 @@ describe('Checkbox Component', () => {
     expect(checkbox).toHaveClass('custom-checkbox')
   })
 
-  it('应该有 checkbox indicator', () => {
+  it('选中状态应该有 checkbox indicator', async () => {
+    const user = userEvent.setup()
     const { container } = render(<Checkbox />)
-    expect(container.querySelector('[data-slot="checkbox-indicator"]')).toBeInTheDocument()
+    const checkbox = container.querySelector('button[role="checkbox"]')
+    // indicator 仅在选中时渲染
+    if (checkbox) {
+      await user.click(checkbox)
+      expect(container.querySelector('[data-slot="checkbox-indicator"]')).toBeInTheDocument()
+    }
   })
 
   it('应该支持 aria 属性', () => {

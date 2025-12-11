@@ -63,14 +63,15 @@ describe('EdgeModeSelector Component', () => {
       />
     )
 
-    const radioButtons = container.querySelectorAll('input[type="radio"]')
-    expect(radioButtons[1]).toBeChecked()
+    // Radix RadioGroup 使用 button[role="radio"] 而非 input[type="radio"]
+    const radioButtons = container.querySelectorAll('button[role="radio"]')
+    expect(radioButtons[1]).toHaveAttribute('data-state', 'checked')
   })
 
   it('should call onChange when selecting different mode', async () => {
     const onChange = vi.fn()
     const user = userEvent.setup()
-    render(
+    const { container } = render(
       <EdgeModeSelector
         value={EdgeMode.MERGE}
         options={mockOptions}
@@ -78,8 +79,9 @@ describe('EdgeModeSelector Component', () => {
       />
     )
 
-    const zipModeRadio = screen.getByDisplayValue(EdgeMode.ZIP)
-    await user.click(zipModeRadio)
+    // Radix RadioGroup 使用 button[role="radio"]
+    const radioButtons = container.querySelectorAll('button[role="radio"]')
+    await user.click(radioButtons[1]) // ZIP is at index 1
 
     expect(onChange).toHaveBeenCalledWith(EdgeMode.ZIP)
   })
@@ -124,8 +126,9 @@ describe('EdgeModeSelector Component', () => {
       />
     )
 
-    const radioButtons = container.querySelectorAll('input[type="radio"]')
-    expect(radioButtons[0]).toBeChecked()
+    // Radix RadioGroup 使用 button[role="radio"]
+    const radioButtons = container.querySelectorAll('button[role="radio"]')
+    expect(radioButtons[0]).toHaveAttribute('data-state', 'checked')
 
     rerender(
       <EdgeModeSelector
@@ -135,8 +138,8 @@ describe('EdgeModeSelector Component', () => {
       />
     )
 
-    const updatedRadioButtons = container.querySelectorAll('input[type="radio"]')
-    expect(updatedRadioButtons[2]).toBeChecked()
+    const updatedRadioButtons = container.querySelectorAll('button[role="radio"]')
+    expect(updatedRadioButtons[2]).toHaveAttribute('data-state', 'checked')
   })
 
   it('should work with empty options', () => {
