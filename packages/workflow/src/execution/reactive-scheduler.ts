@@ -11,6 +11,7 @@ import { Compiler } from '../compiler';
 import { WorkflowEventBus } from './workflow-events';
 import { updateNodeReducer, finalizeWorkflowReducer, failWorkflowReducer } from './workflow-reducers';
 import { createDefaultErrorHandler, getErrorConfigFromNode } from './error-handler';
+import { extractEndNodeOutputs } from '../ast-utils';
 
 @Injectable()
 export class ReactiveScheduler {
@@ -251,7 +252,14 @@ export class ReactiveScheduler {
                     isEntryNode: incomingEdges.length === 0
                 });
 
-                if (incomingEdges.length === 0) {
+                // 判断是否为入口节点：
+                // 1. 如果 entryNodeIds 已指定，则仅这些节点为入口
+                // 2. 否则回退到自动识别（无入边节点）
+                const isEntryNode = ctx.entryNodeIds && ctx.entryNodeIds.length > 0
+                    ? ctx.entryNodeIds.includes(nodeId)
+                    : incomingEdges.length === 0;
+
+                if (isEntryNode) {
                     stream = this.createEntryNodeStream(node, ctx);
                 } else {
                     stream = this._createNode(node, incomingEdges, network, ctx);
@@ -761,7 +769,14 @@ export class ReactiveScheduler {
 
             let stream$: Observable<INode>;
 
-            if (incomingEdges.length === 0) {
+            // 判断是否为入口节点：
+            // 1. 如果 entryNodeIds 已指定，则仅这些节点为入口
+            // 2. 否则回退到自动识别（无入边节点）
+            const isEntryNode = ast.entryNodeIds && ast.entryNodeIds.length > 0
+                ? ast.entryNodeIds.includes(nodeId)
+                : incomingEdges.length === 0;
+
+            if (isEntryNode) {
                 // 入口节点
                 stream$ = this.createEntryNodeStream(node, ctx);
             } else {
@@ -1175,6 +1190,17 @@ export class ReactiveScheduler {
 
                 // 应用最终化 reducer
                 const result = finalizeWorkflowReducer(workflow);
+
+                // 【新增】提取结束节点输出（如果工作流成功完成且指定了 endNodeIds）
+                if (result.state === 'success' && result.endNodeIds && result.endNodeIds.length > 0) {
+                    const outputs = extractEndNodeOutputs(result.nodes, result.endNodeIds);
+
+                    // 如果有输出，附加到工作流实例上（按照 nodeId.property 格式）
+                    if (Object.keys(outputs).length > 0) {
+                        Object.assign(result, outputs);
+                        console.log('[subscribeAndMerge] 提取结束节点输出:', outputs);
+                    }
+                }
 
                 // 恢复 GroupNode 的嵌套结构（确保 UI 层和保存时的数据正确）
                 this.restoreGroupStructure(result);

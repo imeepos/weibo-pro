@@ -44,6 +44,7 @@ export class WorkflowService {
         workflow.nodes = params.nodes || [];
         workflow.edges = params.edges || [];
         workflow.entryNodeIds = params.entryNodeIds || [];
+        workflow.endNodeIds = params.endNodeIds || [];
         workflow.position = params.position;
         workflow.width = params.width;
         workflow.viewport = params.viewport;
@@ -65,6 +66,7 @@ export class WorkflowService {
           nodes: params.nodes || [],
           edges: params.edges || [],
           entryNodeIds: params.entryNodeIds || [],
+          endNodeIds: params.endNodeIds || [],
           position: params.position,
           width: params.width,
           viewport: params.viewport,
@@ -110,6 +112,7 @@ export class WorkflowService {
         nodes: workflow.nodes,
         edges: workflow.edges,
         entryNodeIds: workflow.entryNodeIds,
+        endNodeIds: workflow.endNodeIds,
         position: workflow.position,
         width: workflow.width,
         viewport: workflow.viewport,

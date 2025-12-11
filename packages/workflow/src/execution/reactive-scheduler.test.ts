@@ -1963,4 +1963,184 @@ describe('ReactiveScheduler', () => {
             })
         })
     })
+
+    // ============================================================================
+    // 开始节点和结束节点测试
+    // ============================================================================
+    describe('开始节点和结束节点', () => {
+        describe('entryNodeIds - 指定工作流入口', () => {
+            it('未指定 entryNodeIds 时，自动识别无入边节点为入口', async () => {
+                const node1 = createCompiledNode(PassThroughAst, { id: 'node1', input: 'start' })
+                const node2 = createCompiledNode(PassThroughAst, { id: 'node2' })
+
+                const edges: IEdge[] = [
+                    { id: 'e1', from: 'node1', to: 'node2', fromProperty: 'output', toProperty: 'input' }
+                ]
+
+                const workflow = createWorkflow([node1, node2], edges)
+                const result = await getFinal(scheduler.schedule(workflow, workflow))
+
+                // node1 应自动作为入口节点执行
+                const node1Result = result.nodes.find(n => n.id === 'node1')
+                const node2Result = result.nodes.find(n => n.id === 'node2')
+
+                expect(node1Result?.state).toBe('success')
+                expect(node1Result?.output).toBe('start')
+                expect(node2Result?.state).toBe('success')
+                expect(node2Result?.output).toBe('start')
+            })
+
+            it('指定 entryNodeIds 后，仅执行指定节点作为入口', async () => {
+                // 创建三个节点：node1, node2（有入边但被指定为入口）, node3
+                const node1 = createCompiledNode(PassThroughAst, { id: 'node1', input: 'from-node1' })
+                const node2 = createCompiledNode(PassThroughAst, { id: 'node2', input: 'from-node2' })
+                const node3 = createCompiledNode(PassThroughAst, { id: 'node3' })
+
+                const edges: IEdge[] = [
+                    { id: 'e1', from: 'node1', to: 'node3', fromProperty: 'output', toProperty: 'input' },
+                    { id: 'e2', from: 'node2', to: 'node3', fromProperty: 'output', toProperty: 'input' }
+                ]
+
+                const workflow = createWorkflow([node1, node2, node3], edges)
+
+                // 显式指定 node2 为入口节点（虽然它本来不是入口）
+                workflow.entryNodeIds = ['node2']
+
+                const result = await getFinal(scheduler.schedule(workflow, workflow))
+
+                // 只有 node2 应该执行（因为只指定了它作为入口）
+                const node1Result = result.nodes.find(n => n.id === 'node1')
+                const node2Result = result.nodes.find(n => n.id === 'node2')
+                const node3Result = result.nodes.find(n => n.id === 'node3')
+
+                expect(node1Result?.state).toBe('pending')  // node1 未被指定为入口，不执行
+                expect(node2Result?.state).toBe('success')  // node2 被指定为入口，执行
+                expect(node2Result?.output).toBe('from-node2')
+                expect(node3Result?.state).toBe('success')  // node3 从 node2 获取数据
+                expect(node3Result?.output).toBe('from-node2')
+            })
+
+            it('指定多个 entryNodeIds，所有指定节点都作为入口', async () => {
+                const node1 = createCompiledNode(PassThroughAst, { id: 'node1', input: 'entry1' })
+                const node2 = createCompiledNode(PassThroughAst, { id: 'node2', input: 'entry2' })
+                const node3 = createCompiledNode(AggregatorAst, { id: 'node3' })
+
+                const edges: IEdge[] = [
+                    { id: 'e1', from: 'node1', to: 'node3', fromProperty: 'output', toProperty: 'inputs' },
+                    { id: 'e2', from: 'node2', to: 'node3', fromProperty: 'output', toProperty: 'inputs' }
+                ]
+
+                const workflow = createWorkflow([node1, node2, node3], edges)
+                workflow.entryNodeIds = ['node1', 'node2']
+
+                const result = await getFinal(scheduler.schedule(workflow, workflow))
+
+                const node3Result = result.nodes.find(n => n.id === 'node3') as AggregatorAst
+
+                expect(node3Result?.state).toBe('success')
+                expect(node3Result?.result).toBe('entry1,entry2')
+            })
+        })
+
+        describe('endNodeIds - 收集工作流输出', () => {
+            it('未指定 endNodeIds 时，不收集任何输出', async () => {
+                const node1 = createCompiledNode(PassThroughAst, { id: 'node1', input: 'test' })
+                const workflow = createWorkflow([node1], [])
+
+                const result = await getFinal(scheduler.schedule(workflow, workflow))
+
+                // 工作流实例上不应附加任何输出属性
+                expect((result as any)['node1.output']).toBeUndefined()
+            })
+
+            it('指定 endNodeIds 后，收集结束节点的输出', async () => {
+                const node1 = createCompiledNode(PassThroughAst, { id: 'node1', input: 'start' })
+                const node2 = createCompiledNode(PassThroughAst, { id: 'node2' })
+
+                const edges: IEdge[] = [
+                    { id: 'e1', from: 'node1', to: 'node2', fromProperty: 'output', toProperty: 'input' }
+                ]
+
+                const workflow = createWorkflow([node1, node2], edges)
+                workflow.endNodeIds = ['node2']
+
+                const result = await getFinal(scheduler.schedule(workflow, workflow))
+
+                // 工作流实例上应附加 node2 的输出
+                expect(result.state).toBe('success')
+                expect((result as any)['node2.output']).toBe('start')
+            })
+
+            it('指定多个 endNodeIds，收集所有结束节点的输出', async () => {
+                const node1 = createCompiledNode(PassThroughAst, { id: 'node1', input: 'data1' })
+                const node2 = createCompiledNode(PassThroughAst, { id: 'node2', input: 'data2' })
+                const node3 = createCompiledNode(PassThroughAst, { id: 'node3', input: 'data3' })
+
+                const workflow = createWorkflow([node1, node2, node3], [])
+                workflow.endNodeIds = ['node1', 'node2', 'node3']
+
+                const result = await getFinal(scheduler.schedule(workflow, workflow))
+
+                expect(result.state).toBe('success')
+                expect((result as any)['node1.output']).toBe('data1')
+                expect((result as any)['node2.output']).toBe('data2')
+                expect((result as any)['node3.output']).toBe('data3')
+            })
+
+            it('结束节点失败时，不收集其输出', async () => {
+                @Node({ title: '失败节点' })
+                class FailingAst extends Ast {
+                    @Output() output?: string
+                    type = 'FailingAst'
+                }
+
+                @Injectable()
+                class FailingVisitor {
+                    @Handler(FailingAst)
+                    visit(ast: FailingAst): Observable<INode> {
+                        return new Observable(obs => {
+                            ast.output = 'should-not-collect'
+                            ast.state = 'fail'
+                            ast.error = { name: 'Error', message: 'Intentional failure' }
+                            obs.next({ ...ast })
+                            obs.complete()
+                        })
+                    }
+                }
+
+                const failNode = createCompiledNode(FailingAst, { id: 'fail-node' })
+                const workflow = createWorkflow([failNode], [])
+                workflow.endNodeIds = ['fail-node']
+
+                const result = await getFinal(scheduler.schedule(workflow, workflow))
+
+                // 失败的节点不应收集输出
+                expect(result.state).toBe('fail')
+                expect((result as any)['fail-node.output']).toBeUndefined()
+            })
+        })
+
+        describe('entryNodeIds 和 endNodeIds 组合', () => {
+            it('同时指定 entryNodeIds 和 endNodeIds，形成完整的输入输出流', async () => {
+                const node1 = createCompiledNode(PassThroughAst, { id: 'node1', input: 'input-value' })
+                const node2 = createCompiledNode(PassThroughAst, { id: 'node2' })
+                const node3 = createCompiledNode(PassThroughAst, { id: 'node3' })
+
+                const edges: IEdge[] = [
+                    { id: 'e1', from: 'node1', to: 'node2', fromProperty: 'output', toProperty: 'input' },
+                    { id: 'e2', from: 'node2', to: 'node3', fromProperty: 'output', toProperty: 'input' }
+                ]
+
+                const workflow = createWorkflow([node1, node2, node3], edges)
+                workflow.entryNodeIds = ['node1']  // 显式指定入口
+                workflow.endNodeIds = ['node3']    // 指定输出
+
+                const result = await getFinal(scheduler.schedule(workflow, workflow))
+
+                expect(result.state).toBe('success')
+                expect((result as any)['node3.output']).toBe('input-value')
+            })
+        })
+    })
 })
+

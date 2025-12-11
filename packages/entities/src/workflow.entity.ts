@@ -62,6 +62,10 @@ export class WorkflowEntity {
   @Column({ type: 'jsonb', name: 'entry_node_ids', default: '[]' })
   entryNodeIds!: string[];
 
+  // 对应 WorkflowGraphAst.endNodeIds
+  @Column({ type: 'jsonb', name: 'end_node_ids', default: '[]' })
+  endNodeIds!: string[];
+
   // 对应 WorkflowGraphAst.position
   @Column({ type: 'jsonb', nullable: true })
   position?: { x: number; y: number };
