@@ -86,17 +86,6 @@ export class VisitorExecutor implements Visitor {
      * - 返回失败状态的节点（作为 Observable 完成）
      */
     private handleError(error: unknown, ast: INode): Observable<INode> {
-        if (error instanceof Event) {
-            ast.state = 'fail';
-            setAstError(ast, error);
-            return of(ast)
-        }
-        if (error instanceof NoRetryError) {
-            ast.state = 'fail';
-            setAstError(ast, error);
-            return of(ast);
-        }
-
         ast.state = 'fail';
         setAstError(ast, error);
         return of(ast);
