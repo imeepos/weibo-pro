@@ -1,0 +1,7 @@
+输入：A bright, clean school hallway, daytime, anime style, with sunlight streaming through the windows. 0-2s: A medium shot shows a black-haired girl in a sailor uniform walking down the hallway, her arms full of books. The camera tracks her movement. [cut] 2-4s: A low-angle shot captures the moment she slips, and the books are thrown into the air. [cut] 4-6s: An eye-level shot shows the books frozen in mid-air, hovering as if weightless. [cut] 6-8s: The books gracefully fly back into the girl's arms in a smooth motion. [cut] 8-10s: An over-the-shoulder shot from the perspective of the boy with soft hair, wearing a white shirt and blue tie, reveals his stunned expression as the black-haired girl in a sailor uniform, blushing, quickly runs away.
+
+输出：0-2s: Light, rhythmic footsteps on a polished floor, accompanied by the creaking shift of heavy books and faint distant school chatter.
+2-4s: A sudden rubber squeak of a shoe slipping, a sharp gasp, and the loud flapping sound of loose pages and books tumbling upward.
+4-6s: All background noise cuts out, replaced by a surreal, high-pitched magical shimmering sound as the books suspend in the air.
+6-8s: A series of smooth, airy 'zips' and 'whooshes' ending with a satisfying, rhythmic thud as the books stack themselves back into her arms.
+8-10s: A flustered squeak from the girl, followed by the rapid-fire tapping of running footsteps fading quickly into the distance.

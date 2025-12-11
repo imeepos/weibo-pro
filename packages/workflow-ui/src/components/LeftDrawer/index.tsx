@@ -11,7 +11,6 @@ import {
 } from '@sker/ui/components/workflow'
 import { NodeRunHistory } from './NodeRunHistory'
 import { INode } from '@sker/workflow'
-import { deepCopy } from './deep-copy'
 
 // ✨ 稳定的设置面板包装器，避免因 formData 改变而重新挂载
 const SettingsTabContent = React.memo(({
@@ -59,25 +58,29 @@ export function LeftDrawer({ visible, onClose, onRunNode, onLocateNode, onAutoSa
     if (selectedNode) {
       const metadata = selectedNode.data.metadata
       if (!metadata) return
-      const initialData: INode = deepCopy(selectedNode.data)
-      setFormData(initialData)
+      // 只提取用户可编辑的属性，避免覆盖系统属性和元数据
+      const initialData: Record<string, any> = {
+        name: selectedNode.data.name,
+        description: selectedNode.data.description,
+        color: selectedNode.data.color,
+        portLabels: selectedNode.data.portLabels || {}
+      }
+
+      // 提取所有输入参数
+      metadata.inputs.forEach((input) => {
+        initialData[input.property] = selectedNode.data[input.property]
+      })
+
+      setFormData(initialData as INode)
       setHasChanges(false)
     }
   }, [selectedNode?.id])
 
   const handlePropertyChange = useCallback((property: string, value: any) => {
-    setFormData((prev) => {
-
-      console.log({
-        prev,
-        property, value
-      })
-
-      return {
-        ...prev,
-        [property]: value,
-      }
-    })
+    setFormData((prev) => ({
+      ...prev,
+      [property]: value,
+    }))
     setHasChanges(true)
   }, [])
 
