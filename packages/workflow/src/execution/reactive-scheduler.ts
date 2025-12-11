@@ -123,13 +123,12 @@ export class ReactiveScheduler {
             throw new Error(`节点不存在: ${nodeId}`);
         }
 
+        // 仅验证上游节点已完成，下游节点无关（不执行）
         this.validateUpstreamCompletion(ctx, nodeId);
 
         const affectedNodes = new Set<string>([nodeId]);
 
-        this.validateUnaffectedNodesCompletion(ctx, affectedNodes);
-
-        // 5. 重置目标节点状态
+        // 重置目标节点状态
         targetNode.state = 'pending';
         targetNode.error = undefined;
 
@@ -274,23 +273,19 @@ export class ReactiveScheduler {
                 }
             } else {
                 // 未受影响节点：检查状态，决定是否传递数据
-                if (node.state !== 'success' && node.state !== 'fail') {
-                    // 这种情况理论上不会发生（已在 validateUnaffectedNodesCompletion 中检查）
-                    throw new Error(
-                        `内部错误：节点 ${nodeId} 状态为 ${node.state}，但未被标记为受影响节点。\n` +
-                        `这可能是调度器的 bug，请联系开发者。`
-                    );
-                }
-
-                // 失败节点不应传递数据给下游，直接返回空流阻断执行
                 if (node.state === 'fail') {
                     console.log(`[buildIncrementalNetwork] 节点 ${nodeId} 状态为 fail，阻断下游执行`);
                     stream = EMPTY;
-                } else {
+                } else if (node.state === 'success') {
                     // 成功节点：直接发射历史结果，下游通过 BehaviorSubject 或属性提取数据
                     stream = of(node).pipe(
                         shareReplay({ bufferSize: Infinity, refCount: true })
                     );
+                } else {
+                    // pending 或其他状态（通常是下游未执行节点）
+                    // executeNodeIsolated 场景下，下游节点可能未执行，返回空流阻止对它们的处理
+                    console.log(`[buildIncrementalNetwork] 跳过未受影响的 ${node.state} 节点 ${nodeId}（可能是下游节点）`);
+                    stream = EMPTY;
                 }
             }
 

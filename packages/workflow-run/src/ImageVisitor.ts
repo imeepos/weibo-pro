@@ -18,7 +18,7 @@ export class ImageVisitor {
             obs.next({ ...ast });
 
             // 直接使用 uploadedImage（可能来自上游或用户上传）
-            ast.image = ast.uploadedImage || '';
+            ast.image.next(ast.uploadedImage || '');
 
             obs.next({ ...ast });
 

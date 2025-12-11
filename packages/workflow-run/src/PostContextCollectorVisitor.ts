@@ -80,9 +80,9 @@ export class PostContextCollectorVisitor {
 
             console.log(`[PostContextCollector] 收集到 ${comments.length} 条评论, ${reposts.length} 条转发`);
 
-            ast.post = post;
-            ast.comments = comments;
-            ast.reposts = reposts;
+            ast.post.next(post);
+            ast.comments.next(comments);
+            ast.reposts.next(reposts);
             obs.next({ ...ast });
           });
 

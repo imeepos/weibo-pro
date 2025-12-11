@@ -67,9 +67,9 @@ export class LlmTextAgentAstVisitor {
                     return;
                 }
 
-                ast.text = result.content as string;
-                ast.username = ast.name || ast.id;
-                ast.profile = ast.description || ast.name || ast.id;
+                ast.text.next(result.content as string);
+                ast.username.next(ast.name || ast.id);
+                ast.profile.next(ast.description || ast.name || ast.id);
                 obs.next({ ...ast })
 
                 ast.state = 'success';

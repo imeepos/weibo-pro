@@ -25,7 +25,7 @@ export class CollectorVisitor {
                 items = items.flat();
             }
 
-            ast.result = items;
+            ast.result.next(items);
 
             obs.next({ ...ast });
 

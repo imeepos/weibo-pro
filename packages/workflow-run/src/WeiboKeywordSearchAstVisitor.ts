@@ -109,8 +109,8 @@ export class WeiboKeywordSearchAstVisitor {
                     obs.next({ ...ast });
                     return;
                 }
-                ast.mblogid = post.mid;
-                ast.uid = post.uid;
+                ast.mblogid.next(post.mid);
+                ast.uid.next(post.uid);
                 obs.next({ ...ast });
                 await this.delayService.randomDelay(ast.emitDelayMin || 1, ast.emitDelayMax || 3);
             }
@@ -153,8 +153,8 @@ export class WeiboKeywordSearchAstVisitor {
                                 obs.next({ ...ast });
                                 return;
                             }
-                            ast.mblogid = post.mid;
-                            ast.uid = post.uid;
+                            ast.mblogid.next(post.mid);
+                            ast.uid.next(post.uid);
                             obs.next({ ...ast });
                             await this.delayService.randomDelay(ast.emitDelayMin || 1, ast.emitDelayMax || 3);
                         }

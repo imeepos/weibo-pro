@@ -69,7 +69,7 @@ export class WeiboAjaxStatusesMymblogAstVisitor extends WeiboApiClient {
                             await m.upsert(WeiboPostEntity, posts as any, ['id']);
                         });
                     }
-                    ast.isEnd = true;
+                    ast.isEnd.next(true);
                     obs.next({ ...ast });
 
                     ast.state = 'success';

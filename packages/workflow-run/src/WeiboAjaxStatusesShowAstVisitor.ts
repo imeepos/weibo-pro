@@ -50,7 +50,7 @@ export class WeiboAjaxStatusesShowAstVisitor extends WeiboApiClient {
                     const url = `https://weibo.com/ajax/statuses/show?id=${ast.mblogid}&locale=zh-CN&isGetLongText=true`;
                     const body = await this.fetchApi<WeiboAjaxStatusesShowAstReponse>({
                         url,
-                        refererOptions: { uid: ast.uid, mid: ast.mblogid }
+                        refererOptions: { uid: ast.uid.value, mid: ast.mblogid }
                     });
 
                     // 检查取消信号（网络请求后）
@@ -63,11 +63,11 @@ export class WeiboAjaxStatusesShowAstVisitor extends WeiboApiClient {
 
                     await useEntityManager(async m => {
                         const user = m.create(WeiboUserEntity, body.user as any);
-                        ast.uid = `${user.id}`;
+                        ast.uid.next(`${user.id}`);
                         await m.upsert(WeiboUserEntity, user as any, ['id']);
 
                         const post = m.create(WeiboPostEntity, body);
-                        ast.mid = post.mid;
+                        ast.mid.next(post.mid);
 
                         // 使用安全的 upsert 方式，处理可能的重复插入
                         try {

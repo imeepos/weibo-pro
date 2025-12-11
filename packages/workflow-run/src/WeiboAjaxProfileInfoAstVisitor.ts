@@ -77,7 +77,7 @@ export class WeiboAjaxProfileInfoAstVisitor extends WeiboApiClient {
                     });
 
                     await this.fetchDetail(ast, wrappedCtx);
-                    ast.isEnd = true;
+                    ast.isEnd.next(true);
                     obs.next({ ...ast });
 
                     ast.state = 'success';

@@ -101,12 +101,12 @@ export class PostNLPAnalyzerVisitor {
             repostsChars: context.reposts.join('').length,
           });
 
-          ast.nlpResult = await this.analyzer.analyze(
+          ast.nlpResult.next(await this.analyzer.analyze(
             context,
             availableCategories,
             availableTags,
             recentEvents
-          );
+          ));
           obs.next({ ...ast });
 
           ast.state = 'success';
