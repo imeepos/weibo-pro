@@ -158,6 +158,7 @@ export type InputFieldType =
     | 'image'
     | 'video'
     | 'audio'
+    | 'object'
     | 'any';
 
 export interface InputOptions {

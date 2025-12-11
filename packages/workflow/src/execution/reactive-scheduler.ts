@@ -310,15 +310,23 @@ export class ReactiveScheduler {
 
         // MERGE 模式：每个源独立创建流，然后 merge
         if (edgeMode === EdgeMode.MERGE) {
+            console.log(`[_createNodeInputObservable MERGE] 节点 ${node.id}:`, {
+                sourcesCount: edgesBySource.size,
+                sources: Array.from(edgesBySource.keys())
+            });
+
             const sourceStreams = Array.from(edgesBySource.entries()).map(([sourceId, edges]) => {
                 return this.createSingleSourceStream(sourceId, edges, network, node);
             });
 
             if (sourceStreams.length === 0) {
+                console.log(`[_createNodeInputObservable MERGE] 节点 ${node.id}: 无有效流`);
                 return EMPTY;
             } else if (sourceStreams.length === 1) {
+                console.log(`[_createNodeInputObservable MERGE] 节点 ${node.id}: 单源流`);
                 return sourceStreams[0]!;
             } else {
+                console.log(`[_createNodeInputObservable MERGE] 节点 ${node.id}: 合并 ${sourceStreams.length} 个流`);
                 return merge(...sourceStreams);
             }
         }
@@ -576,6 +584,11 @@ export class ReactiveScheduler {
             throw new Error(`上游节点流未找到: ${sourceId}`);
         }
 
+        console.log(`[createSingleSourceStream] 源 ${sourceId} → 目标 ${targetNode.id}:`, {
+            edgesCount: edges.length,
+            edges: edges.map(e => ({ from: e.from, to: e.to, fromProperty: e.fromProperty, toProperty: e.toProperty, mode: e.mode }))
+        });
+
         // 检查是否有任何边的目标属性使用 IS_BUFFER 模式
         const inputMetadataMap = this.getInputMetadataMap(targetNode);
         const hasAnyBufferMode = edges.some(edge => {
@@ -588,8 +601,20 @@ export class ReactiveScheduler {
         const edgeMode = this.detectEdgeMode(edges);
         const shouldDedup = edgeMode !== EdgeMode.MERGE;
 
+        console.log(`[createSingleSourceStream] 源 ${sourceId}:`, {
+            edgeMode,
+            shouldDedup,
+            hasAnyBufferMode
+        });
+
         let dataStream = sourceStream.pipe(
-            filter(ast => ast.state === 'emitting'),
+            filter(ast => {
+                console.log(`[createSingleSourceStream] 源 ${sourceId} 发射:`, {
+                    state: ast.state,
+                    willFilter: ast.state !== 'emitting'
+                });
+                return ast.state === 'emitting';
+            }),
             // 一次性处理该源的所有边
             map(ast => {
                 const edgeValues = edges.map(edge => {
@@ -624,14 +649,18 @@ export class ReactiveScheduler {
                     return { edge, value };
                 }).filter(Boolean) as { edge: IEdge; value: any }[];
 
-                return this.mergeEdgeValues(edgeValues, targetNode);
+                const result = this.mergeEdgeValues(edgeValues, targetNode);
+                console.log(`[createSingleSourceStream] 源 ${sourceId} 映射结果:`, result);
+                return result;
             }),
             // 过滤掉空结果 - 空对象也应该被过滤（所有边都被条件/路由过滤）
             filter(result => {
-                if (result === null || result === undefined) return false;
-                // 如果是空对象（所有边都被过滤），也过滤掉
-                if (typeof result === 'object' && Object.keys(result).length === 0) return false;
-                return true;
+                const shouldKeep = result !== null && result !== undefined && !(typeof result === 'object' && Object.keys(result).length === 0);
+                console.log(`[createSingleSourceStream] 源 ${sourceId} 过滤检查:`, {
+                    result,
+                    shouldKeep
+                });
+                return shouldKeep;
             })
         );
 
@@ -683,6 +712,7 @@ export class ReactiveScheduler {
         network: Map<string, Observable<INode>>,
         ctx: any
     ): Observable<INode> {
+        console.log(`[_createNode] 创建节点 ${node.id} 流`);
         const input$ = this._createNodeInputObservable(node, incomingEdges, network, ctx);
 
         // 获取节点的默认值
@@ -691,6 +721,7 @@ export class ReactiveScheduler {
         return input$.pipe(
             // 每次输入变化 → 创建新节点实例执行
             concatMap(inputs => {
+                console.log(`[_createNode] 节点 ${node.id} 接收输入:`, inputs);
                 const nodeInstance = this.cloneNode(node);
 
                 // 先填充默认值（直接赋值）
@@ -703,6 +734,7 @@ export class ReactiveScheduler {
                 // 再应用连线数据（使用元数据感知的赋值逻辑）
                 this.assignInputsToNodeInstance(nodeInstance, inputs);
 
+                console.log(`[_createNode] 节点 ${node.id} 开始执行`);
                 return this.executeNode(nodeInstance, ctx);
             }),
             catchError(error => {
@@ -1113,10 +1145,20 @@ export class ReactiveScheduler {
             }),
             // 使用 reducer 累积状态（借鉴 @sker/store 的 scan + reducer 模式）
             scan(
-                (workflow, updatedNode) => updateNodeReducer(workflow, {
-                    nodeId: updatedNode.id,
-                    updates: updatedNode,
-                }),
+                (workflow, updatedNode) => {
+                    const updated = updateNodeReducer(workflow, {
+                        nodeId: updatedNode.id,
+                        updates: updatedNode,
+                    });
+                    // 调试日志：验证 count 累积
+                    const node = updated.nodes.find(n => n.id === updatedNode.id);
+                    console.log(`[subscribeAndMerge scan] 节点 ${updatedNode.id} 更新:`, {
+                        state: updatedNode.state,
+                        count: node?.count,
+                        emitCount: node?.emitCount
+                    });
+                    return updated;
+                },
                 ast // seed
             ),
             catchError(error => {

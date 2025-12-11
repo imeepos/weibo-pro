@@ -26,7 +26,7 @@ describe('Compiler', () => {
             expect(node.id).toBe('node1');
             expect(node.type).toBe('SimpleAst');
             expect(node.metadata).toBeDefined();
-            expect(node.metadata.class.title).toBe('简单节点');
+            expect(node.metadata?.class.title).toBe('简单节点');
         });
 
         it('编译带输入输出的节点', () => {
@@ -41,12 +41,12 @@ describe('Compiler', () => {
             const ast = new CalculateAst();
             const node = compiler.compile(ast);
 
-            expect(node.metadata.inputs).toHaveLength(2);
-            expect(node.metadata.inputs.map(i => i.property)).toEqual(
+            expect(node.metadata!.inputs).toHaveLength(2);
+            expect(node.metadata!.inputs.map(i => i.property)).toEqual(
                 expect.arrayContaining(['x', 'y'])
             );
-            expect(node.metadata.outputs).toHaveLength(1);
-            expect(node.metadata.outputs[0].property).toBe('result');
+            expect(node.metadata!.outputs).toHaveLength(1);
+            expect(node.metadata!.outputs[0]!.property).toBe('result');
         });
 
         it('编译带状态的节点', () => {
@@ -60,8 +60,8 @@ describe('Compiler', () => {
             const ast = new StatefulAst();
             const node = compiler.compile(ast);
 
-            expect(node.metadata.states).toHaveLength(2);
-            expect(node.metadata.states.map(s => String(s.propertyKey))).toEqual(
+            expect(node.metadata!.states).toHaveLength(2);
+            expect(node.metadata!.states.map(s => String(s.propertyKey))).toEqual(
                 expect.arrayContaining(['progress', 'status'])
             );
         });
@@ -76,8 +76,8 @@ describe('Compiler', () => {
             const ast = new AggregateAst();
             const node = compiler.compile(ast);
 
-            expect(node.metadata.inputs).toHaveLength(1);
-            expect(node.metadata.inputs[0].mode).toBe(IS_MULTI);
+            expect(node.metadata!.inputs).toHaveLength(1);
+            expect(node.metadata!.inputs[0]!.mode).toBe(IS_MULTI);
         });
 
         it('编译路由输出节点', () => {
@@ -91,8 +91,8 @@ describe('Compiler', () => {
             const ast = new RouterAst();
             const node = compiler.compile(ast);
 
-            expect(node.metadata.outputs).toHaveLength(2);
-            expect(node.metadata.outputs.every(o => o.isRouter)).toBe(true);
+            expect(node.metadata!.outputs).toHaveLength(2);
+            expect(node.metadata!.outputs.every(o => o.isRouter)).toBe(true);
         });
 
         it('编译节点类型选项', () => {
@@ -104,7 +104,7 @@ describe('Compiler', () => {
             const ast = new LLMAst();
             const node = compiler.compile(ast);
 
-            expect(node.metadata.class.type).toBe('llm');
+            expect(node.metadata!.class.type).toBe('llm');
         });
 
         it('编译完整输入元数据', () => {
@@ -123,12 +123,12 @@ describe('Compiler', () => {
             const ast = new FullInputAst();
             const node = compiler.compile(ast);
 
-            const inputMeta = node.metadata.inputs[0];
-            expect(inputMeta.title).toBe('输入值');
-            expect(inputMeta.type).toBe('string');
-            expect(inputMeta.required).toBe(true);
-            expect(inputMeta.defaultValue).toBe('default');
-            expect(inputMeta.isStatic).toBe(true);
+            const inputMeta = node.metadata!.inputs[0];
+            expect(inputMeta?.title).toBe('输入值');
+            expect(inputMeta?.type).toBe('string');
+            expect(inputMeta?.required).toBe(true);
+            expect(inputMeta?.defaultValue).toBe('default');
+            expect(inputMeta?.isStatic).toBe(true);
         });
 
         it('编译完整输出元数据', () => {
@@ -147,12 +147,12 @@ describe('Compiler', () => {
             const ast = new FullOutputAst();
             const node = compiler.compile(ast);
 
-            const outputMeta = node.metadata.outputs[0];
-            expect(outputMeta.title).toBe('输出结果');
-            expect(outputMeta.type).toBe('object');
-            expect(outputMeta.isRouter).toBe(false);
-            expect(outputMeta.dynamic).toBe(false);
-            expect(outputMeta.isStatic).toBe(true);
+            const outputMeta = node.metadata!.outputs[0];
+            expect(outputMeta?.title).toBe('输出结果');
+            expect(outputMeta?.type).toBe('object');
+            expect(outputMeta?.isRouter).toBe(false);
+            expect(outputMeta?.dynamic).toBe(false);
+            expect(outputMeta?.isStatic).toBe(true);
         });
 
         it('编译动态输入输出节点', () => {
@@ -164,8 +164,8 @@ describe('Compiler', () => {
             const ast = new DynamicAst();
             const node = compiler.compile(ast);
 
-            expect(node.metadata.class.dynamicInputs).toBe(true);
-            expect(node.metadata.class.dynamicOutputs).toBe(true);
+            expect(node.metadata!.class.dynamicInputs).toBe(true);
+            expect(node.metadata!.class.dynamicOutputs).toBe(true);
         });
 
         it('编译保留 AST 原有属性', () => {
@@ -231,20 +231,20 @@ describe('Compiler', () => {
             const ast = new ComplexAst();
             const node = compiler.compile(ast);
 
-            expect(node.metadata.class.title).toBe('复杂节点');
-            expect(node.metadata.class.type).toBe('crawler');
-            expect(node.metadata.class.dynamicInputs).toBe(true);
-            expect(node.metadata.class.dynamicOutputs).toBe(false);
+            expect(node.metadata!.class.title).toBe('复杂节点');
+            expect(node.metadata!.class.type).toBe('crawler');
+            expect(node.metadata!.class.dynamicInputs).toBe(true);
+            expect(node.metadata!.class.dynamicOutputs).toBe(false);
 
-            expect(node.metadata.inputs).toHaveLength(2);
-            expect(node.metadata.outputs).toHaveLength(2);
-            expect(node.metadata.states).toHaveLength(1);
+            expect(node.metadata!.inputs).toHaveLength(2);
+            expect(node.metadata!.outputs).toHaveLength(2);
+            expect(node.metadata!.states).toHaveLength(1);
 
-            const multiInput = node.metadata.inputs.find(i => i.property === 'inputs');
+            const multiInput = node.metadata!.inputs.find(i => i.property === 'inputs');
             expect(multiInput?.mode).toBe(IS_MULTI);
             expect(multiInput?.required).toBe(true);
 
-            const routerOutput = node.metadata.outputs.find(o => o.property === 'status');
+            const routerOutput = node.metadata!.outputs.find(o => o.property === 'status');
             expect(routerOutput?.isRouter).toBe(true);
         });
     });
