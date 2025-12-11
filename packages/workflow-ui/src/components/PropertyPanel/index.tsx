@@ -15,8 +15,6 @@ import {
   type InputFieldType,
 } from '@sker/ui/components/workflow'
 import { Button } from '@sker/ui/components/ui/button'
-import { Input } from '@sker/ui/components/ui/input'
-import { PencilIcon } from 'lucide-react'
 import { INode, INodeInputMetadata, INodeOutputMetadata } from '@sker/workflow'
 
 export interface PropertyPanelProps {
@@ -31,9 +29,11 @@ export function PropertyPanel({
   onPropertyChange: externalOnPropertyChange
 }: PropertyPanelProps) {
   const selectedNode = useSelectedNode()
+  const metadata = selectedNode?.data?.metadata
 
   const [internalFormData, setInternalFormData] = useState<Record<string, any>>({})
-  const [editingPortLabel, setEditingPortLabel] = useState<string | null>(null)
+  const [currentDynamicInputs, setCurrentDynamicInputs] = useState<INodeInputMetadata[]>([])
+  const [currentDynamicOutputs, setCurrentDynamicOutputs] = useState<INodeOutputMetadata[]>([])
 
   const formData: INode = (externalFormData ?? internalFormData) as INode;
   const handlePropertyChange = externalOnPropertyChange ?? ((property: string, value: any) => {
@@ -43,12 +43,24 @@ export function PropertyPanel({
     })
   })
 
-  useEffect(() => {
-    if (selectedNode && !externalFormData) {
-      // ✅ 直接使用 metadata 字段，不需要动态获取
-      const metadata = selectedNode.data.metadata
-      if (!metadata) return
+  const supportsDynamicInputs = useMemo(() => metadata?.class?.dynamicInputs === true, [metadata])
+  const supportsDynamicOutputs = useMemo(() => metadata?.class?.dynamicOutputs === true, [metadata])
 
+  const generateDefaultPropertyName = useCallback((prefix: 'input' | 'output'): string => {
+    const existingProperties = new Set([
+      ...currentDynamicInputs.map((i: { property: string }) => i.property),
+      ...currentDynamicOutputs.map((o: { property: string }) => o.property),
+    ])
+
+    let counter = 1
+    while (existingProperties.has(`${prefix}_${counter}`)) {
+      counter++
+    }
+    return `${prefix}_${counter}`
+  }, [currentDynamicInputs, currentDynamicOutputs])
+
+  useEffect(() => {
+    if (selectedNode && !externalFormData && metadata) {
       const initialData: Record<string, any> = {
         name: selectedNode.data.name,
         description: selectedNode.data.description,
@@ -60,21 +72,12 @@ export function PropertyPanel({
       })
 
       setInternalFormData(initialData)
+      setCurrentDynamicInputs(metadata.inputs || [])
+      setCurrentDynamicOutputs(metadata.outputs || [])
     }
-  }, [selectedNode?.id, externalFormData])
+  }, [selectedNode?.id, externalFormData, metadata])
 
-  if (!selectedNode) {
-    return (
-      <WorkflowPropertyPanel
-        className={className}
-        emptyState={<PropertyPanelEmptyState />}
-      />
-    )
-  }
-
-  // ✅ 直接使用 metadata 字段
-  const metadata = selectedNode.data.metadata
-  if (!metadata) {
+  if (!selectedNode || !metadata) {
     return (
       <WorkflowPropertyPanel
         className={className}
@@ -85,19 +88,10 @@ export function PropertyPanel({
 
   const ast = selectedNode.data
 
-  const portLabels: Record<string, string> = (ast as any).portLabels || {}
-
   const editableProperties = metadata.inputs.map((input) => ({
     ...input,
     label: input.title || input.property,
   }))
-
-  const handlePortLabelChange = (property: string, newLabel: string) => {
-    const updatedLabels = { ...portLabels, [property]: newLabel }
-    // 清除空标签
-    if (!newLabel.trim()) delete updatedLabels[property]
-    handlePropertyChange('portLabels', updatedLabels)
-  }
 
   const readonlyProperties = metadata.outputs.map((output) => ({
     ...output,
@@ -189,28 +183,6 @@ export function PropertyPanel({
       ),
     })
   }
-
-  // 检查节点是否支持动态输入/输出
-  const supportsDynamicInputs = useMemo(() => metadata.class.dynamicInputs === true, [metadata])
-  const supportsDynamicOutputs = useMemo(() =>metadata.class.dynamicOutputs === true, [ metadata])
-
-  // ✅ 优先从 formData 读取（包含未保存的修改），否则从 AST 读取
-  const [currentDynamicInputs, setCurrentDynamicInputs] = useState<INodeInputMetadata[]>(metadata.inputs || [])
-  const [currentDynamicOutputs, setCurrentDynamicOutputs] = useState<INodeOutputMetadata[]>(metadata.outputs || [])
-
-  // 生成默认属性名（确保唯一性）
-  const generateDefaultPropertyName = useCallback((prefix: 'input' | 'output'): string => {
-    const existingProperties = new Set([
-      ...currentDynamicInputs.map((i: { property: string }) => i.property),
-      ...currentDynamicOutputs.map((o: { property: string }) => o.property),
-    ])
-
-    let counter = 1
-    while (existingProperties.has(`${prefix}_${counter}`)) {
-      counter++
-    }
-    return `${prefix}_${counter}`
-  }, [currentDynamicInputs, currentDynamicOutputs])
 
   const handleConfirmAddInput = () => {
     const property = generateDefaultPropertyName('input')

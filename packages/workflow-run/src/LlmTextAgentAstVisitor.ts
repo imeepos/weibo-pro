@@ -51,7 +51,13 @@ export class LlmTextAgentAstVisitor {
                 const chartModel = new ChatOpenAI({ model: ast.model, temperature: ast.temperature });
 
                 // LLM 调用（未来可传递 signal）
-                const result = await chartModel.invoke(Array.isArray(ast.prompt) ? ast.prompt.join('\n') : ast.prompt)
+                const prompts = Array.isArray(ast.prompt) ? ast.prompt.join('\n') : ast.prompt
+                const systems = Array.isArray(ast.system) ? ast.system.join('\n') : ast.system
+
+                const result = await chartModel.invoke([
+                    { role: 'system', content: systems },
+                    { role: 'human', content: prompts }
+                ])
 
                 // 检查取消信号（LLM 调用后）
                 if (wrappedCtx.abortSignal?.aborted) {
