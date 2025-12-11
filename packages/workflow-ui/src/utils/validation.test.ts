@@ -148,7 +148,7 @@ describe('Validation Utils', () => {
     })
 
     it('应该检测自循环', () => {
-      const edges: any[] = []
+      const edges = [{ source: 'A', target: 'A' }]
 
       const hasCycle = detectCycle('A', 'A', edges)
 

@@ -142,7 +142,7 @@ describe('Tabs Components', () => {
       await user.click(tab2Trigger)
 
       expect(screen.getByText('内容1')).toBeVisible()
-      expect(screen.queryByDisplayValue('内容2')).not.toBeVisible()
+      expect(screen.queryByText('内容2')).not.toBeVisible()
     })
   })
 

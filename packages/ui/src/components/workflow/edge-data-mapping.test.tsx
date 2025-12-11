@@ -53,7 +53,7 @@ describe('EdgeDataMapping Component', () => {
     await user.clear(fromInput)
     await user.type(fromInput, 'new.source')
 
-    expect(onFromPropertyChange).toHaveBeenCalledWith('new.source')
+    expect(onFromPropertyChange).toHaveBeenLastCalledWith('new.source')
   })
 
   it('应该在目标属性变化时调用回调', async () => {
