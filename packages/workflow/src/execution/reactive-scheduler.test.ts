@@ -1059,4 +1059,901 @@ describe('ReactiveScheduler', () => {
             expect(downstreamNode?.state).toBe('pending')
         })
     })
+
+    describe('复杂场景测试 - 流式、多输出、边模式组合', () => {
+        describe('流式数据处理', () => {
+            it('流式节点持续输出数据', async () => {
+                @Node({ title: '流式节点' })
+                class StreamingAst extends Ast {
+                    @Input() duration: number = 100
+                    @Output() item?: any
+                    @Output() isComplete?: boolean
+                    type = 'StreamingAst'
+                }
+
+                @Injectable()
+                class StreamingVisitor {
+                    @Handler(StreamingAst)
+                    visit(ast: StreamingAst): Observable<INode> {
+                        return new Observable(obs => {
+                            ast.state = 'running'
+                            obs.next({ ...ast })
+
+                            let counter = 0
+                            const interval = setInterval(() => {
+                                counter++
+                                ast.item = { id: counter, value: `item-${counter}` }
+                                ast.state = 'emitting'
+                                obs.next({ ...ast })
+
+                                if (counter >= 3) {
+                                    ast.isComplete = true
+                                    ast.state = 'emitting'
+                                    obs.next({ ...ast })
+                                    clearInterval(interval)
+                                    ast.state = 'success'
+                                    obs.next({ ...ast })
+                                    obs.complete()
+                                }
+                            }, ast.duration)
+                        })
+                    }
+                }
+
+                const streaming = createCompiledNode(StreamingAst, { id: 'stream', duration: 50 })
+                const collector = createCompiledNode(BufferAst, { id: 'collector' })
+
+                const edges = [
+                    createEdge('stream', 'collector', {
+                        fromProperty: 'item',
+                        toProperty: 'items'
+                    })
+                ]
+
+                const workflow = createWorkflow([streaming, collector], edges)
+                const result = await getFinal(scheduler.schedule(workflow, workflow))
+
+                const collectorNode = result.nodes.find(n => n.id === 'collector') as any
+                expect(collectorNode?.state).toBe('success')
+                expect(Array.isArray(collectorNode?.collected)).toBe(true)
+                expect(collectorNode?.collected.length).toBeGreaterThan(0)
+            })
+
+            it('流式数据经过多个处理节点', async () => {
+                @Node({ title: '流式源' })
+                class StreamSourceAst extends Ast {
+                    @Output() data?: any
+                    @Output() isComplete?: boolean
+                    type = 'StreamSourceAst'
+                }
+
+                @Injectable()
+                class StreamSourceVisitor {
+                    @Handler(StreamSourceAst)
+                    visit(ast: StreamSourceAst): Observable<INode> {
+                        return new Observable(obs => {
+                            ast.state = 'running'
+                            obs.next({ ...ast })
+
+                            let counter = 0
+                            const interval = setInterval(() => {
+                                counter++
+                                ast.data = { id: counter, value: counter * 10 }
+                                ast.state = 'emitting'
+                                obs.next({ ...ast })
+
+                                if (counter >= 3) {
+                                    ast.isComplete = true
+                                    ast.state = 'emitting'
+                                    obs.next({ ...ast })
+                                    clearInterval(interval)
+                                    ast.state = 'success'
+                                    obs.next({ ...ast })
+                                    obs.complete()
+                                }
+                            }, 30)
+                        })
+                    }
+                }
+
+                @Node({ title: '数据转换' })
+                class TransformAst extends Ast {
+                    @Input() data?: any
+                    @Output() transformed?: any
+                    type = 'TransformAst'
+                }
+
+                @Injectable()
+                class TransformVisitor {
+                    @Handler(TransformAst)
+                    visit(ast: TransformAst): Observable<INode> {
+                        return new Observable(obs => {
+                            ast.state = 'running'
+                            obs.next({ ...ast })
+
+                            if (ast.data) {
+                                ast.transformed = {
+                                    ...ast.data,
+                                    value: ast.data.value * 2,
+                                    transformed: true
+                                }
+                                ast.state = 'emitting'
+                                obs.next({ ...ast })
+                            }
+
+                            ast.state = 'success'
+                            obs.next({ ...ast })
+                            obs.complete()
+                        })
+                    }
+                }
+
+                const source = createCompiledNode(StreamSourceAst, { id: 'source' })
+                const transform = createCompiledNode(TransformAst, { id: 'transform' })
+                const buffer = createCompiledNode(BufferAst, { id: 'buffer' })
+
+                const edges = [
+                    createEdge('source', 'transform', {
+                        fromProperty: 'data',
+                        toProperty: 'data'
+                    }),
+                    createEdge('transform', 'buffer', {
+                        fromProperty: 'transformed',
+                        toProperty: 'items'
+                    })
+                ]
+
+                const workflow = createWorkflow([source, transform, buffer], edges)
+                const result = await getFinal(scheduler.schedule(workflow, workflow))
+
+                const bufferNode = result.nodes.find(n => n.id === 'buffer') as any
+                expect(bufferNode?.state).toBe('success')
+                expect(Array.isArray(bufferNode?.collected)).toBe(true)
+                bufferNode?.collected?.forEach((item: any) => {
+                    expect(item?.transformed).toBe(true)
+                    expect(item?.value % 20).toBe(0)
+                })
+            })
+
+            it('流式与静态数据合并', async () => {
+                @Node({ title: '静态源' })
+                class StaticSourceAst extends Ast {
+                    @Output() staticData?: string
+                    type = 'StaticSourceAst'
+                }
+
+                @Injectable()
+                class StaticSourceVisitor {
+                    @Handler(StaticSourceAst)
+                    visit(ast: StaticSourceAst): Observable<INode> {
+                        return new Observable(obs => {
+                            ast.state = 'running'
+                            obs.next({ ...ast })
+
+                            ast.staticData = 'static-value'
+                            ast.state = 'emitting'
+                            obs.next({ ...ast })
+
+                            ast.state = 'success'
+                            obs.next({ ...ast })
+                            obs.complete()
+                        })
+                    }
+                }
+
+                @Node({ title: '流式源' })
+                class StreamSourceAst2 extends Ast {
+                    @Output() streamData?: string
+                    @Output() isComplete?: boolean
+                    type = 'StreamSourceAst2'
+                }
+
+                @Injectable()
+                class StreamSourceVisitor2 {
+                    @Handler(StreamSourceAst2)
+                    visit(ast: StreamSourceAst2): Observable<INode> {
+                        return new Observable(obs => {
+                            ast.state = 'running'
+                            obs.next({ ...ast })
+
+                            let counter = 0
+                            const interval = setInterval(() => {
+                                counter++
+                                ast.streamData = `stream-${counter}`
+                                ast.state = 'emitting'
+                                obs.next({ ...ast })
+
+                                if (counter >= 2) {
+                                    ast.isComplete = true
+                                    ast.state = 'emitting'
+                                    obs.next({ ...ast })
+                                    clearInterval(interval)
+                                    ast.state = 'success'
+                                    obs.next({ ...ast })
+                                    obs.complete()
+                                }
+                            }, 20)
+                        })
+                    }
+                }
+
+                @Node({ title: '合并器' })
+                class MergerAst extends Ast {
+                    @Input({ mode: IS_MULTI }) inputs: string[] = []
+                    @Output() merged?: string
+                    type = 'MergerAst'
+                }
+
+                @Injectable()
+                class MergerVisitor {
+                    @Handler(MergerAst)
+                    visit(ast: MergerAst): Observable<INode> {
+                        return new Observable(obs => {
+                            ast.state = 'running'
+                            obs.next({ ...ast })
+
+                            ast.merged = ast.inputs.join('|')
+                            ast.state = 'emitting'
+                            obs.next({ ...ast })
+
+                            ast.state = 'success'
+                            obs.next({ ...ast })
+                            obs.complete()
+                        })
+                    }
+                }
+
+                const staticSource = createCompiledNode(StaticSourceAst, { id: 'static' })
+                const streamSource = createCompiledNode(StreamSourceAst2, { id: 'stream' })
+                const merger = createCompiledNode(MergerAst, { id: 'merger' })
+
+                const edges = [
+                    createEdge('static', 'merger', {
+                        fromProperty: 'staticData',
+                        toProperty: 'inputs'
+                    }),
+                    createEdge('stream', 'merger', {
+                        fromProperty: 'streamData',
+                        toProperty: 'inputs'
+                    })
+                ]
+
+                const workflow = createWorkflow([staticSource, streamSource, merger], edges)
+                const result = await getFinal(scheduler.schedule(workflow, workflow))
+
+                const mergerNode = result.nodes.find(n => n.id === 'merger') as any
+                expect(mergerNode?.state).toBe('success')
+                expect(mergerNode?.merged).toContain('static-value')
+            })
+        })
+
+        describe('多输出节点', () => {
+            it('节点多输出分别路由到不同目标', async () => {
+                @Node({ title: '多输出节点' })
+                class MultiOutputAst extends Ast {
+                    @Input() data?: any
+                    @Output() outputA?: string
+                    @Output() outputB?: string
+                    @Output() outputC?: string
+                    type = 'MultiOutputAst'
+                }
+
+                @Injectable()
+                class MultiOutputVisitor {
+                    @Handler(MultiOutputAst)
+                    visit(ast: MultiOutputAst): Observable<INode> {
+                        return new Observable(obs => {
+                            ast.state = 'running'
+                            obs.next({ ...ast })
+
+                            ast.outputA = `A: ${ast.data}`
+                            ast.outputB = `B: ${ast.data}`
+                            ast.outputC = `C: ${ast.data}`
+                            ast.state = 'emitting'
+                            obs.next({ ...ast })
+
+                            ast.state = 'success'
+                            obs.next({ ...ast })
+                            obs.complete()
+                        })
+                    }
+                }
+
+                const source = createCompiledNode(MultiOutputAst, { id: 'source', data: 'test' })
+                const targetA = createCompiledNode(PassThroughAst, { id: 'targetA' })
+                const targetB = createCompiledNode(PassThroughAst, { id: 'targetB' })
+                const targetC = createCompiledNode(PassThroughAst, { id: 'targetC' })
+
+                const edges = [
+                    createEdge('source', 'targetA', {
+                        fromProperty: 'outputA',
+                        toProperty: 'input'
+                    }),
+                    createEdge('source', 'targetB', {
+                        fromProperty: 'outputB',
+                        toProperty: 'input'
+                    }),
+                    createEdge('source', 'targetC', {
+                        fromProperty: 'outputC',
+                        toProperty: 'input'
+                    })
+                ]
+
+                const workflow = createWorkflow([source, targetA, targetB, targetC], edges)
+                const result = await getFinal(scheduler.schedule(workflow, workflow))
+
+                expect((result.nodes.find(n => n.id === 'targetA') as any)?.input).toBe('A: test')
+                expect((result.nodes.find(n => n.id === 'targetB') as any)?.input).toBe('B: test')
+                expect((result.nodes.find(n => n.id === 'targetC') as any)?.input).toBe('C: test')
+            })
+
+            it('多输出节点扇出到聚合器', async () => {
+                @Node({ title: '条件输出节点' })
+                class ConditionalOutputAst extends Ast {
+                    @Input() condition?: string
+                    @Output() pass?: string
+                    @Output() fail?: string
+                    type = 'ConditionalOutputAst'
+                }
+
+                @Injectable()
+                class ConditionalOutputVisitor {
+                    @Handler(ConditionalOutputAst)
+                    visit(ast: ConditionalOutputAst): Observable<INode> {
+                        return new Observable(obs => {
+                            ast.state = 'running'
+                            obs.next({ ...ast })
+
+                            if (ast.condition === 'pass') {
+                                ast.pass = '通过'
+                                ast.fail = undefined
+                            } else {
+                                ast.pass = undefined
+                                ast.fail = '失败'
+                            }
+                            ast.state = 'emitting'
+                            obs.next({ ...ast })
+
+                            ast.state = 'success'
+                            obs.next({ ...ast })
+                            obs.complete()
+                        })
+                    }
+                }
+
+                const source = createCompiledNode(ConditionalOutputAst, {
+                    id: 'source',
+                    condition: 'pass'
+                })
+                const passTarget = createCompiledNode(PassThroughAst, { id: 'passTarget' })
+                const failTarget = createCompiledNode(PassThroughAst, { id: 'failTarget' })
+                const aggregator = createCompiledNode(AggregatorAst, { id: 'aggregator' })
+
+                const edges = [
+                    createEdge('source', 'passTarget', {
+                        fromProperty: 'pass',
+                        toProperty: 'input'
+                    }),
+                    createEdge('source', 'failTarget', {
+                        fromProperty: 'fail',
+                        toProperty: 'input'
+                    }),
+                    createEdge('passTarget', 'aggregator', {
+                        fromProperty: 'output',
+                        toProperty: 'inputs'
+                    }),
+                    createEdge('failTarget', 'aggregator', {
+                        fromProperty: 'output',
+                        toProperty: 'inputs'
+                    })
+                ]
+
+                const workflow = createWorkflow([source, passTarget, failTarget, aggregator], edges)
+                const result = await getFinal(scheduler.schedule(workflow, workflow))
+
+                const aggNode = result.nodes.find(n => n.id === 'aggregator') as any
+                expect(aggNode?.state).toBe('success')
+                expect(aggNode?.inputs).toContain('通过')
+            })
+
+            it('多输出路由器模式', async () => {
+                @Node({ title: '路由器' })
+                class RouterMultiAst extends Ast {
+                    @Input() value?: number
+                    @Output({ isRouter: true }) even?: number
+                    @Output({ isRouter: true }) odd?: number
+                    @Output({ isRouter: true }) zero?: number
+                    type = 'RouterMultiAst'
+                }
+
+                @Injectable()
+                class RouterMultiVisitor {
+                    @Handler(RouterMultiAst)
+                    visit(ast: RouterMultiAst): Observable<INode> {
+                        return new Observable(obs => {
+                            ast.state = 'running'
+                            obs.next({ ...ast })
+
+                            const value = ast.value ?? 0
+                            if (value === 0) {
+                                ast.zero = value
+                                ast.even = undefined
+                                ast.odd = undefined
+                            } else if (value % 2 === 0) {
+                                ast.even = value
+                                ast.odd = undefined
+                                ast.zero = undefined
+                            } else {
+                                ast.odd = value
+                                ast.even = undefined
+                                ast.zero = undefined
+                            }
+
+                            ast.state = 'emitting'
+                            obs.next({ ...ast })
+
+                            ast.state = 'success'
+                            obs.next({ ...ast })
+                            obs.complete()
+                        })
+                    }
+                }
+
+                const router = createCompiledNode(RouterMultiAst, { id: 'router', value: 4 })
+                const even = createCompiledNode(PassThroughAst, { id: 'even' })
+                const odd = createCompiledNode(PassThroughAst, { id: 'odd' })
+                const zero = createCompiledNode(PassThroughAst, { id: 'zero' })
+
+                const edges = [
+                    createEdge('router', 'even', {
+                        fromProperty: 'even',
+                        toProperty: 'input'
+                    }),
+                    createEdge('router', 'odd', {
+                        fromProperty: 'odd',
+                        toProperty: 'input'
+                    }),
+                    createEdge('router', 'zero', {
+                        fromProperty: 'zero',
+                        toProperty: 'input'
+                    })
+                ]
+
+                const workflow = createWorkflow([router, even, odd, zero], edges)
+                const result = await getFinal(scheduler.schedule(workflow, workflow))
+
+                expect((result.nodes.find(n => n.id === 'even') as any)?.input).toBe(4)
+                expect((result.nodes.find(n => n.id === 'odd') as any)?.input).toBeUndefined()
+                expect((result.nodes.find(n => n.id === 'zero') as any)?.input).toBeUndefined()
+            })
+        })
+
+        describe('边模式组合场景', () => {
+            it('MERGE + ZIP 组合模式', async () => {
+                const source1 = createCompiledNode(MultiEmitAst, { id: 's1', count: 2 })
+                const source2 = createCompiledNode(MultiEmitAst, { id: 's2', count: 2 })
+                const source3 = createCompiledNode(PassThroughAst, { id: 's3', input: 'single' })
+
+                const zipTarget = createCompiledNode(AggregatorAst, { id: 'zipTarget' })
+                const mergeTarget = createCompiledNode(AggregatorAst, { id: 'mergeTarget' })
+
+                const edges = [
+                    // ZIP 模式：按索引配对
+                    createEdge('s1', 'zipTarget', {
+                        fromProperty: 'value',
+                        toProperty: 'inputs',
+                        mode: EdgeMode.ZIP
+                    }),
+                    createEdge('s2', 'zipTarget', {
+                        fromProperty: 'value',
+                        toProperty: 'inputs',
+                        mode: EdgeMode.ZIP
+                    }),
+                    // MERGE 模式：任一触发
+                    createEdge('s3', 'mergeTarget', {
+                        fromProperty: 'output',
+                        toProperty: 'inputs',
+                        mode: EdgeMode.MERGE
+                    })
+                ]
+
+                const workflow = createWorkflow([source1, source2, source3, zipTarget, mergeTarget], edges)
+                const result = await getFinal(scheduler.schedule(workflow, workflow))
+
+                const zipNode = result.nodes.find(n => n.id === 'zipTarget') as any
+                const mergeNode = result.nodes.find(n => n.id === 'mergeTarget') as any
+
+                // 验证两个聚合器都成功执行
+                expect(zipNode?.state).toBe('success')
+                expect(mergeNode?.state).toBe('success')
+            })
+
+            it('COMBINE_LATEST + WITH_LATEST_FROM 组合', async () => {
+                const primary = createCompiledNode(PassThroughAst, { id: 'primary', input: 'P' })
+                const secondary = createCompiledNode(PassThroughAst, { id: 'secondary', input: 'S' })
+                const tertiary = createCompiledNode(PassThroughAst, { id: 'tertiary', input: 'T' })
+
+                const combineLatest = createCompiledNode(AggregatorAst, { id: 'combineLatest' })
+                const withLatestFrom = createCompiledNode(AggregatorAst, { id: 'withLatestFrom' })
+
+                const edges = [
+                    // COMBINE_LATEST：使用所有最新值
+                    createEdge('primary', 'combineLatest', {
+                        fromProperty: 'output',
+                        toProperty: 'inputs',
+                        mode: EdgeMode.COMBINE_LATEST
+                    }),
+                    createEdge('secondary', 'combineLatest', {
+                        fromProperty: 'output',
+                        toProperty: 'inputs',
+                        mode: EdgeMode.COMBINE_LATEST
+                    }),
+                    // WITH_LATEST_FROM：主流触发携带副流
+                    createEdge('tertiary', 'withLatestFrom', {
+                        fromProperty: 'output',
+                        toProperty: 'inputs',
+                        mode: EdgeMode.WITH_LATEST_FROM,
+                        isPrimary: true
+                    }),
+                    createEdge('primary', 'withLatestFrom', {
+                        fromProperty: 'output',
+                        toProperty: 'inputs',
+                        mode: EdgeMode.WITH_LATEST_FROM,
+                        isPrimary: false
+                    })
+                ]
+
+                const workflow = createWorkflow([primary, secondary, tertiary, combineLatest, withLatestFrom], edges)
+                const result = await getFinal(scheduler.schedule(workflow, workflow))
+
+                const combineNode = result.nodes.find(n => n.id === 'combineLatest') as any
+                const withLatestNode = result.nodes.find(n => n.id === 'withLatestFrom') as any
+
+                expect(combineNode?.state).toBe('success')
+                expect(withLatestNode?.state).toBe('success')
+            })
+
+            it('多层级边模式组合', async () => {
+                const source1 = createCompiledNode(MultiEmitAst, { id: 'source1', count: 2 })
+                const source2 = createCompiledNode(PassThroughAst, { id: 'source2', input: 'static' })
+
+                const zipLayer = createCompiledNode(AggregatorAst, { id: 'zipLayer' })
+                const mergeLayer = createCompiledNode(AggregatorAst, { id: 'mergeLayer' })
+                const finalLayer = createCompiledNode(AggregatorAst, { id: 'finalLayer' })
+
+                const edges = [
+                    // 第一层：ZIP 模式
+                    createEdge('source1', 'zipLayer', {
+                        fromProperty: 'value',
+                        toProperty: 'inputs',
+                        mode: EdgeMode.ZIP
+                    }),
+                    createEdge('source2', 'zipLayer', {
+                        fromProperty: 'output',
+                        toProperty: 'inputs',
+                        mode: EdgeMode.ZIP
+                    }),
+                    // 第二层：MERGE 模式
+                    createEdge('zipLayer', 'mergeLayer', {
+                        fromProperty: 'result',
+                        toProperty: 'inputs',
+                        mode: EdgeMode.MERGE
+                    }),
+                    // 第三层：COMBINE_LATEST 模式
+                    createEdge('mergeLayer', 'finalLayer', {
+                        fromProperty: 'result',
+                        toProperty: 'inputs',
+                        mode: EdgeMode.COMBINE_LATEST
+                    })
+                ]
+
+                const workflow = createWorkflow([source1, source2, zipLayer, mergeLayer, finalLayer], edges)
+                const result = await getFinal(scheduler.schedule(workflow, workflow))
+
+                const finalNode = result.nodes.find(n => n.id === 'finalLayer') as any
+                expect(finalNode?.state).toBe('success')
+            })
+
+            it('边模式与条件路由组合', async () => {
+                const source = createCompiledNode(PassThroughAst, { id: 'source', input: 'test' })
+
+                @Node({ title: '条件分支节点' })
+                class ConditionalBranchAst extends Ast {
+                    @Input() input?: any
+                    @Output() result?: any
+                    @Output() status?: string
+                    type = 'ConditionalBranchAst'
+                }
+
+                @Injectable()
+                class ConditionalBranchVisitor {
+                    @Handler(ConditionalBranchAst)
+                    visit(ast: ConditionalBranchAst): Observable<INode> {
+                        return new Observable(obs => {
+                            ast.state = 'running'
+                            obs.next({ ...ast })
+
+                            ast.result = `processed: ${ast.input}`
+                            ast.status = ast.input === 'test' ? 'match' : 'nomatch'
+                            ast.state = 'emitting'
+                            obs.next({ ...ast })
+
+                            ast.state = 'success'
+                            obs.next({ ...ast })
+                            obs.complete()
+                        })
+                    }
+                }
+
+                const branch = createCompiledNode(ConditionalBranchAst, { id: 'branch' })
+                const matchTarget = createCompiledNode(PassThroughAst, { id: 'match' })
+                const noMatchTarget = createCompiledNode(PassThroughAst, { id: 'noMatch' })
+                const finalAggregator = createCompiledNode(AggregatorAst, { id: 'final' })
+
+                const edges = [
+                    createEdge('source', 'branch', {
+                        fromProperty: 'output',
+                        toProperty: 'input'
+                    }),
+                    // 条件边：status = match 时触发
+                    createEdge('branch', 'match', {
+                        fromProperty: 'result',
+                        toProperty: 'inputs',
+                        condition: { property: 'status', value: 'match' }
+                    }),
+                    // 条件边：status != match 时触发
+                    createEdge('branch', 'noMatch', {
+                        fromProperty: 'result',
+                        toProperty: 'inputs',
+                        condition: { property: 'status', value: 'nomatch' }
+                    }),
+                    createEdge('match', 'final', {
+                        fromProperty: 'output',
+                        toProperty: 'inputs'
+                    }),
+                    createEdge('noMatch', 'final', {
+                        fromProperty: 'output',
+                        toProperty: 'inputs'
+                    })
+                ]
+
+                const workflow = createWorkflow([source, branch, matchTarget, noMatchTarget, finalAggregator], edges)
+                const result = await getFinal(scheduler.schedule(workflow, workflow))
+
+                const finalNode = result.nodes.find(n => n.id === 'final') as any
+                expect(finalNode?.state).toBe('success')
+                expect(finalNode?.inputs).toContain('processed: test')
+                expect(finalNode?.inputs).not.toContain('processed: test') // match 分支被触发，noMatch 没有
+            })
+        })
+
+        describe('复杂工作流集成场景', () => {
+            it('端到端：数据采集 → 处理 → 聚合 → 路由', async () => {
+                @Node({ title: '数据采集器' })
+                class DataCollectorAst extends Ast {
+                    @Output() rawData?: any
+                    @Output() isComplete?: boolean
+                    type = 'DataCollectorAst'
+                }
+
+                @Injectable()
+                class DataCollectorVisitor {
+                    @Handler(DataCollectorAst)
+                    visit(ast: DataCollectorAst): Observable<INode> {
+                        return new Observable(obs => {
+                            ast.state = 'running'
+                            obs.next({ ...ast })
+
+                            let counter = 0
+                            const interval = setInterval(() => {
+                                counter++
+                                ast.rawData = {
+                                    id: counter,
+                                    timestamp: Date.now(),
+                                    value: Math.random() * 100
+                                }
+                                ast.state = 'emitting'
+                                obs.next({ ...ast })
+
+                                if (counter >= 5) {
+                                    ast.isComplete = true
+                                    ast.state = 'emitting'
+                                    obs.next({ ...ast })
+                                    clearInterval(interval)
+                                    ast.state = 'success'
+                                    obs.next({ ...ast })
+                                    obs.complete()
+                                }
+                            }, 20)
+                        })
+                    }
+                }
+
+                @Node({ title: '数据处理器' })
+                class DataProcessorAst extends Ast {
+                    @Input() rawData?: any
+                    @Output() processed?: any
+                    type = 'DataProcessorAst'
+                }
+
+                @Injectable()
+                class DataProcessorVisitor {
+                    @Handler(DataProcessorAst)
+                    visit(ast: DataProcessorAst): Observable<INode> {
+                        return new Observable(obs => {
+                            ast.state = 'running'
+                            obs.next({ ...ast })
+
+                            if (ast.rawData) {
+                                ast.processed = {
+                                    ...ast.rawData,
+                                    processed: true,
+                                    category: ast.rawData.value > 50 ? 'high' : 'low'
+                                }
+                                ast.state = 'emitting'
+                                obs.next({ ...ast })
+                            }
+
+                            ast.state = 'success'
+                            obs.next({ ...ast })
+                            obs.complete()
+                        })
+                    }
+                }
+
+                @Node({ title: '分类路由器' })
+                class CategoryRouterAst extends Ast {
+                    @Input() processed?: any
+                    @Output({ isRouter: true }) high?: any
+                    @Output({ isRouter: true }) low?: any
+                    type = 'CategoryRouterAst'
+                }
+
+                @Injectable()
+                class CategoryRouterVisitor {
+                    @Handler(CategoryRouterAst)
+                    visit(ast: CategoryRouterAst): Observable<INode> {
+                        return new Observable(obs => {
+                            ast.state = 'running'
+                            obs.next({ ...ast })
+
+                            if (ast.processed) {
+                                if (ast.processed.category === 'high') {
+                                    ast.high = ast.processed
+                                    ast.low = undefined
+                                } else {
+                                    ast.high = undefined
+                                    ast.low = ast.processed
+                                }
+                                ast.state = 'emitting'
+                                obs.next({ ...ast })
+                            }
+
+                            ast.state = 'success'
+                            obs.next({ ...ast })
+                            obs.complete()
+                        })
+                    }
+                }
+
+                @Node({ title: '统计器' })
+                class StatisticsAst extends Ast {
+                    @Input({ mode: IS_MULTI }) items: any[] = []
+                    @Output() count: number = 0
+                    @Output() average?: number
+                    @Output() max?: number
+                    type = 'StatisticsAst'
+                }
+
+                @Injectable()
+                class StatisticsVisitor {
+                    @Handler(StatisticsAst)
+                    visit(ast: StatisticsAst): Observable<INode> {
+                        return new Observable(obs => {
+                            ast.state = 'running'
+                            obs.next({ ...ast })
+
+                            if (ast.items.length > 0) {
+                                ast.count = ast.items.length
+                                ast.average = ast.items.reduce((sum, item) => sum + item.value, 0) / ast.items.length
+                                ast.max = Math.max(...ast.items.map(item => item.value))
+                                ast.state = 'emitting'
+                                obs.next({ ...ast })
+                            }
+
+                            ast.state = 'success'
+                            obs.next({ ...ast })
+                            obs.complete()
+                        })
+                    }
+                }
+
+                const collector = createCompiledNode(DataCollectorAst, { id: 'collector' })
+                const processor = createCompiledNode(DataProcessorAst, { id: 'processor' })
+                const router = createCompiledNode(CategoryRouterAst, { id: 'router' })
+                const highStats = createCompiledNode(StatisticsAst, { id: 'highStats' })
+                const lowStats = createCompiledNode(StatisticsAst, { id: 'lowStats' })
+
+                const edges = [
+                    createEdge('collector', 'processor', {
+                        fromProperty: 'rawData',
+                        toProperty: 'rawData'
+                    }),
+                    createEdge('processor', 'router', {
+                        fromProperty: 'processed',
+                        toProperty: 'processed'
+                    }),
+                    createEdge('router', 'highStats', {
+                        fromProperty: 'high',
+                        toProperty: 'items'
+                    }),
+                    createEdge('router', 'lowStats', {
+                        fromProperty: 'low',
+                        toProperty: 'items'
+                    })
+                ]
+
+                const workflow = createWorkflow([collector, processor, router, highStats, lowStats], edges)
+                const result = await getFinal(scheduler.schedule(workflow, workflow))
+
+                const highNode = result.nodes.find(n => n.id === 'highStats') as any
+                const lowNode = result.nodes.find(n => n.id === 'lowStats') as any
+
+                expect(highNode?.state).toBe('success')
+                expect(lowNode?.state).toBe('success')
+                expect(highNode?.count).toBeGreaterThanOrEqual(0)
+                expect(lowNode?.count).toBeGreaterThanOrEqual(0)
+                // 验证总数正确（5个数据项）
+                expect((highNode?.count ?? 0) + (lowNode?.count ?? 0)).toBe(5)
+            })
+
+            it('错误恢复与重试机制', async () => {
+                @Node({ title: '不稳定节点' })
+                class UnstableAst extends Ast {
+                    @Input() attempt?: number
+                    @Output() output?: string
+                    type = 'UnstableAst'
+                }
+
+                @Injectable()
+                class UnstableVisitor {
+                    @Handler(UnstableAst)
+                    visit(ast: UnstableAst): Observable<INode> {
+                        return new Observable(obs => {
+                            ast.state = 'running'
+                            obs.next({ ...ast })
+
+                            const attempt = ast.attempt ?? 0
+                            // 前两次失败，第三次成功
+                            if (attempt < 2) {
+                                ast.state = 'fail'
+                                ast.error = { name: 'Error', message: `尝试 ${attempt + 1} 失败` }
+                                obs.next({ ...ast })
+                                obs.complete()
+                                return
+                            }
+
+                            ast.output = `成功：尝试 ${attempt + 1}`
+                            ast.state = 'emitting'
+                            obs.next({ ...ast })
+
+                            ast.state = 'success'
+                            obs.next({ ...ast })
+                            obs.complete()
+                        })
+                    }
+                }
+
+                const unstable = createCompiledNode(UnstableAst, { id: 'unstable', attempt: 0 })
+                const workflow = createWorkflow([unstable], [])
+
+                const result = await getFinal(scheduler.schedule(workflow, workflow))
+
+                // 验证节点最终失败（调度器不会自动重试）
+                const unstableNode = result.nodes.find(n => n.id === 'unstable')
+                expect(unstableNode?.state).toBe('fail')
+                expect(unstableNode?.error).toBeDefined()
+            })
+        })
+    })
 })

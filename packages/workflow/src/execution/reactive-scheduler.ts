@@ -256,7 +256,7 @@ export class ReactiveScheduler {
                     // 成功节点：发射 emitting 状态的历史结果副本以传递数据给下游
                     const emittingCopy = { ...node, state: 'emitting' as const };
                     stream = of(emittingCopy, node).pipe(
-                        shareReplay({ bufferSize: 2, refCount: true })
+                        shareReplay({ bufferSize: Infinity, refCount: true })
                     );
                 }
             }
@@ -640,7 +640,7 @@ export class ReactiveScheduler {
                 failedNode.error = error;
                 return of(failedNode);
             }),
-            shareReplay({ bufferSize: 2, refCount: false })
+            shareReplay({ bufferSize: Infinity, refCount: false })
         );
     }
     private buildStreamNetwork(
