@@ -1,4 +1,5 @@
 import { Ast, Input, Node, Output, State } from "@sker/workflow";
+import { BehaviorSubject } from 'rxjs';
 
 @Node({
     title: '微博账号选择器',
@@ -26,7 +27,7 @@ export class WeiboAccountPickAst extends Ast {
     selectedId?: number;
 
     @Output({ title: 'Cookies' })
-    cookies: string = ``;
+    cookies: BehaviorSubject<string> = new BehaviorSubject<string>(``);
 
     type: `WeiboAccountPickAst` = `WeiboAccountPickAst`
 }

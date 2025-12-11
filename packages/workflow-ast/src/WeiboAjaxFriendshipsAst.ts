@@ -1,4 +1,5 @@
 import { Ast, Input, Node, Output } from "@sker/workflow";
+import { BehaviorSubject } from 'rxjs';
 
 @Node({
     title: "微博关注",
@@ -17,7 +18,7 @@ export class WeiboAjaxFriendshipsAst extends Ast {
     page?: number = 1;
 
     @Output({ title: '是否结束' })
-    isEnd: boolean = false;
+    isEnd: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
 
     type: `WeiboAjaxFriendshipsAst` = `WeiboAjaxFriendshipsAst`
 }

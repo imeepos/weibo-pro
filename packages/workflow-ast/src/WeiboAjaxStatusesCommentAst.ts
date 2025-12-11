@@ -1,4 +1,5 @@
 import { Ast, Input, Node, Output, State } from "@sker/workflow";
+import { BehaviorSubject } from 'rxjs';
 
 
 @Node({
@@ -37,7 +38,7 @@ export class WeiboAjaxStatusesCommentAst extends Ast {
     next_max_id: number = 0;
 
     @Output({ title: '结束' })
-    is_end: boolean = false;
+    is_end: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
 
     type: `WeiboAjaxStatusesCommentAst` = `WeiboAjaxStatusesCommentAst`
 }

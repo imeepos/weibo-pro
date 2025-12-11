@@ -1,4 +1,5 @@
 import { Ast, Input, Node, Output, State } from "@sker/workflow";
+import { BehaviorSubject } from 'rxjs';
 
 @Node({
     title: "微博点赞",
@@ -28,7 +29,7 @@ export class WeiboAjaxStatusesLikeShowAst extends Ast {
     attitude_enable: number = 1;
 
     @Output({ title: '结束' })
-    is_end: boolean = false;
+    is_end: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
 
     type: `WeiboAjaxStatusesLikeShowAst` = `WeiboAjaxStatusesLikeShowAst`
 }

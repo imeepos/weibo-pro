@@ -23,6 +23,7 @@
  */
 
 import { Ast, Input, IS_MULTI, IS_BUFFER, Node, Output } from "@sker/workflow";
+import { BehaviorSubject } from "rxjs";
 
 /**
  * Agent 配置（保留接口定义供未来扩展）
@@ -61,10 +62,10 @@ export class GroupChatLoopAst extends Ast {
     // === 运行时状态 ===
 
     @Output({ title: '对话历史（数组）' })
-    chatHistory: ChatMessage[] = [];
+    chatHistory: BehaviorSubject<ChatMessage[]> = new BehaviorSubject<ChatMessage[]>([]);
 
     @Output({ title: '对话历史（文本）' })
-    historyText: string = '';
+    historyText: BehaviorSubject<string> = new BehaviorSubject<string>('');
 
     @Output({ title: '当前轮次' })
     currentRound: number = 0;

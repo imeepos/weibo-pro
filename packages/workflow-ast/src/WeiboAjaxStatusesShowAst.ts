@@ -1,4 +1,5 @@
 import { Ast, Input, Node, Output } from "@sker/workflow";
+import { BehaviorSubject } from 'rxjs';
 
 @Node({
     title: "微博博文详情",
@@ -14,10 +15,10 @@ export class WeiboAjaxStatusesShowAst extends Ast {
 
     @Output({ title: "用户ID" })
     @Input({ title: "用户ID" })
-    uid: string = '';
+    uid: BehaviorSubject<string> = new BehaviorSubject<string>('');
 
     @Output({ title: '帖子id' })
-    mid: string = ``;
+    mid: BehaviorSubject<string> = new BehaviorSubject<string>(``);
 
     type: `WeiboAjaxStatusesShowAst` = `WeiboAjaxStatusesShowAst`
 }

@@ -1,5 +1,6 @@
 import { Ast, Node, Output, State } from "@sker/workflow";
 import type { WeiboAccountEntity } from "@sker/entities";
+import { BehaviorSubject } from 'rxjs';
 
 
 @Node({
@@ -13,7 +14,7 @@ import type { WeiboAccountEntity } from "@sker/entities";
 export class WeiboLoginAst extends Ast {
 
     @Output({ title: '微博账号' })
-    account?: WeiboAccountEntity;
+    account: BehaviorSubject<WeiboAccountEntity | undefined> = new BehaviorSubject<WeiboAccountEntity | undefined>(undefined);
 
     @State({ title: '登录二维码' })
     qrcode?: string;

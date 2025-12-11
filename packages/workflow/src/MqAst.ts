@@ -1,5 +1,6 @@
 import { Ast } from "./ast";
 import { Input, Node, Output } from "./decorator";
+import { BehaviorSubject } from "rxjs";
 
 /**
  * 消息队列推送节点
@@ -22,7 +23,7 @@ export class MqPushAst extends Ast {
     input: any = ``
 
     @Output({ title: '推送结果' })
-    success: boolean = false
+    success: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false)
 }
 
 /**
@@ -46,6 +47,6 @@ export class MqPullAst extends Ast {
     max: number = 10
 
     @Output({ title: '消息内容' })
-    output: any = ``
+    output: BehaviorSubject<any> = new BehaviorSubject<any>(``)
 }
 

@@ -1,5 +1,6 @@
 import { Ast } from "./ast";
 import { Input, Node, Output } from "./decorator";
+import { BehaviorSubject } from "rxjs";
 
 /**
  * 存储获取节点
@@ -15,7 +16,7 @@ export class StoreGetAst extends Ast {
     key: string = ``
 
     @Output({ title: '值' })
-    value: any = ``
+    value: BehaviorSubject<any> = new BehaviorSubject<any>(``)
 }
 
 /**
@@ -33,6 +34,6 @@ export class StoreSetAst extends Ast {
 
     @Input({ title: '值' })
     @Output({ title: '值' })
-    value: any = ``
+    value: BehaviorSubject<any> = new BehaviorSubject<any>(``)
 }
 

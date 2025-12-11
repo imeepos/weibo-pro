@@ -1,4 +1,5 @@
 import { Ast, Input, Node, Output } from "@sker/workflow";
+import { BehaviorSubject } from "rxjs";
 
 /**
  * 视频节点 - 支持上传、输入、预览、播放
@@ -14,7 +15,7 @@ export class VideoAst extends Ast {
     uploadedVideo: string = '';
 
     @Output({ title: '视频' })
-    video: string = '';
+    video: BehaviorSubject<string> = new BehaviorSubject<string>('');
 
     type: 'VideoAst' = 'VideoAst';
 }

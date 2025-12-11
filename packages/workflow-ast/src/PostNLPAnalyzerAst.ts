@@ -5,6 +5,7 @@ import type {
   WeiboRepostEntity,
 } from '@sker/entities';
 import type { CompleteAnalysisResult } from '@sker/nlp';
+import { BehaviorSubject } from 'rxjs';
 
 @Node({
   title: '帖子 NLP 分析器',
@@ -25,7 +26,7 @@ export class PostNLPAnalyzerAst extends Ast {
   reposts!: WeiboRepostEntity[];
 
   @Output({ title: 'NLP 分析结果' })
-  nlpResult!: CompleteAnalysisResult;
+  nlpResult: BehaviorSubject<CompleteAnalysisResult | undefined> = new BehaviorSubject<CompleteAnalysisResult | undefined>(undefined);
 
   type: 'PostNLPAnalyzerAst' = 'PostNLPAnalyzerAst';
 }

@@ -1,4 +1,5 @@
 import { Ast, Input, Node, Output } from '@sker/workflow';
+import { BehaviorSubject } from 'rxjs';
 import type {
   WeiboCommentEntity,
   WeiboPostEntity,
@@ -14,13 +15,13 @@ export class PostContextCollectorAst extends Ast {
   canStart: boolean[] = [];
 
   @Output({ title: '帖子实体' })
-  post!: WeiboPostEntity;
+  post: BehaviorSubject<WeiboPostEntity | undefined> = new BehaviorSubject<WeiboPostEntity | undefined>(undefined);
 
   @Output({ title: '评论列表' })
-  comments!: WeiboCommentEntity[];
+  comments: BehaviorSubject<WeiboCommentEntity[] | undefined> = new BehaviorSubject<WeiboCommentEntity[] | undefined>(undefined);
 
   @Output({ title: '转发列表' })
-  reposts!: WeiboRepostEntity[];
+  reposts: BehaviorSubject<WeiboRepostEntity[] | undefined> = new BehaviorSubject<WeiboRepostEntity[] | undefined>(undefined);
 
   type: 'PostContextCollectorAst' = 'PostContextCollectorAst';
 }

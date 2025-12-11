@@ -1,4 +1,5 @@
 import { Ast, Input, Node, Output } from '@sker/workflow';
+import { BehaviorSubject } from 'rxjs';
 
 /**
  * 条件分支节点
@@ -43,8 +44,8 @@ export class IfAst extends Ast {
     @Input({ title: '条件值', type: 'boolean' })
     value: boolean = false;
 
-    @Output({ title: '分支结果' })
-    result: any = undefined;
+    @Output({ title: '分支结果', isRouter: true })
+    result: BehaviorSubject<any> = new BehaviorSubject<any>(undefined);
 
     type: 'IfAst' = 'IfAst';
 }

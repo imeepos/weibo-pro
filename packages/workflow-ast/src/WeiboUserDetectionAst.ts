@@ -1,4 +1,5 @@
 import { Ast, Input, Node, Output } from "@sker/workflow";
+import { BehaviorSubject } from 'rxjs';
 
 @Node({
     title: '账号检测',
@@ -17,7 +18,7 @@ export class WeiboUserDetectionAst extends Ast {
     canStart: boolean[] = [];
 
     @Output({ title: '结束' })
-    is_end: boolean = false;
+    is_end: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
 
     type: `WeiboUserDetectionAst` = `WeiboUserDetectionAst`
 
