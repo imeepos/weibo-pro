@@ -22,10 +22,34 @@ export enum WorkflowEventType {
   /** 节点执行失败 */
   NODE_FAIL = 'NODE_FAIL',
 
+  /** 节点参数更新（编辑时） */
+  NODE_UPDATED = 'NODE_UPDATED',
+  /** 节点添加 */
+  NODE_ADDED = 'NODE_ADDED',
+  /** 节点删除 */
+  NODE_REMOVED = 'NODE_REMOVED',
+
+  /** 边添加 */
+  EDGE_ADDED = 'EDGE_ADDED',
+  /** 边删除 */
+  EDGE_REMOVED = 'EDGE_REMOVED',
+
   /** 增量执行开始 */
   INCREMENTAL_START = 'INCREMENTAL_START',
   /** 单节点隔离执行开始 */
   ISOLATED_START = 'ISOLATED_START',
+}
+
+/**
+ * 节点更新事件载荷
+ */
+export interface NodeUpdatePayload {
+  /** 更新的属性 */
+  updates: Record<string, any>;
+  /** 更新前的节点状态 */
+  previousState: 'pending' | 'running' | 'success' | 'fail' | 'emitting';
+  /** 更新后的节点状态 */
+  currentState: 'pending' | 'running' | 'success' | 'fail' | 'emitting';
 }
 
 /**

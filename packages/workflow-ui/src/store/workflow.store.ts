@@ -10,11 +10,13 @@
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 import type { WorkflowGraphAst, INode } from '@sker/workflow'
-import { getNodeById } from '@sker/workflow'
+import { getNodeById, updateNodeReducer, WorkflowState, WorkflowEventBus, WorkflowEventType } from '@sker/workflow'
+import { root } from '@sker/core'
 import type { WorkflowNode, WorkflowEdge } from '../types'
 import { flowToAst } from '../adapters'
 import { astToFlowNodes, astToFlowEdges } from '../adapters/ast-to-flow'
 import { historyManager } from './history.store'
+import { NodeExecutionManager } from '../services/node-execution-manager'
 
 interface WorkflowState {
   /** ✨ 工作流 AST（单一数据源） */
@@ -79,6 +81,11 @@ interface WorkflowState {
  */
 export const useWorkflowStore = create<WorkflowState>()(
   immer((set, get) => {
+    // ✨ 获取核心服务（单例）
+    const workflowState = root.get(WorkflowState)
+    const eventBus = root.get(WorkflowEventBus)
+    const nodeExecutionManager = root.get(NodeExecutionManager)
+
     const recordHistory = () => {
       const { nodes, edges } = get()
       historyManager.push(nodes, edges)
@@ -100,6 +107,9 @@ export const useWorkflowStore = create<WorkflowState>()(
           draft.edges = astToFlowEdges(ast)
           draft.hasUnsavedChanges = false
         })
+
+        // ✨ 初始化 WorkflowState
+        workflowState.init(ast)
       },
 
       setNodes: (nodes, shouldRecordHistory = true) => {

@@ -85,6 +85,10 @@ export class WorkflowGraphAst extends Ast {
     @State({ title: '开始节点' })
     entryNodeIds: string[] = [];
 
+    // 结束节点
+    @State({ title: '结束节点' })
+    endNodeIds: string[] = [];
+
     // 边集合
     @State({ title: "边列表" })
     edges: IEdge[] = [];
