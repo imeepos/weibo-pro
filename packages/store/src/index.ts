@@ -91,3 +91,19 @@ export type { StateActionPair } from './state';
 export { ReducerManager, ReducerObservable, UPDATE } from './reducer-manager';
 export type { StoreFeature } from './reducer-manager';
 
+// ========== 运行时检查（Runtime Checks）==========
+
+// Runtime Checks 配置
+export {
+  createActiveRuntimeChecks,
+  createRuntimeCheckMetaReducers,
+  createSerializationCheckMetaReducer,
+  createImmutabilityCheckMetaReducer,
+} from './runtime-checks';
+
+// Meta-Reducers
+export {
+  immutabilityCheckMetaReducer,
+  serializationCheckMetaReducer,
+} from './meta-reducers';
+

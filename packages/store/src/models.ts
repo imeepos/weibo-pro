@@ -136,6 +136,7 @@ export interface RuntimeChecks {
   strictActionSerializability: boolean;
   strictStateImmutability: boolean;
   strictActionImmutability: boolean;
+  strictActionWithinNgZone: boolean;
   strictActionTypeUniqueness?: boolean;
 }
 
