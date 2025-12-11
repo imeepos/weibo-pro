@@ -46,6 +46,12 @@ interface ExecutionState {
 }
 
 const MAX_HISTORY_PER_NODE = 20
+let recordIdCounter = 0
+
+const generateRecordId = (nodeId: string) => {
+  recordIdCounter++
+  return `${nodeId}-${Date.now()}-${recordIdCounter}`
+}
 
 export const useExecutionStore = create<ExecutionState>((set, get) => ({
   isExecuting: false,
@@ -73,7 +79,7 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
     })),
 
   recordNodeStart: (nodeId) => {
-    const recordId = `${nodeId}-${Date.now()}`
+    const recordId = generateRecordId(nodeId)
     const record: NodeExecutionRecord = {
       id: recordId,
       nodeId,
