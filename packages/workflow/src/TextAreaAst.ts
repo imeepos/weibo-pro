@@ -1,3 +1,4 @@
+import { BehaviorSubject } from "rxjs";
 import { Ast } from "./ast";
 import { Input, Node, Output, IS_MULTI } from "./decorator";
 
@@ -9,8 +10,9 @@ export class TextAreaAst extends Ast {
     @Input({ title: '输入', mode: IS_MULTI, type: 'richtext' })
     input: string[] | string = ``
 
+    // 使用 BehaviorSubject 作为输出，运行时直接发射值
     @Output({ title: '输出', type: 'richtext' })
-    output: string = ``;
+    output = new BehaviorSubject<string>(``);
 
     type: `TextAreaAst` = `TextAreaAst`
 }

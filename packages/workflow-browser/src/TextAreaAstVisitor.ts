@@ -10,9 +10,9 @@ export class TextAreaAstVisitor {
             ast.state = 'running'
             obs.next({ ...ast })
 
-            ast.state = 'emitting';
-            ast.output = Array.isArray(ast.input) ? ast.input.join('\n') : ast.input;
-            obs.next({ ...ast })
+            // 直接通过 BehaviorSubject 发射输出值
+            const outputValue = Array.isArray(ast.input) ? ast.input.join('\n') : ast.input;
+            ast.output.next(outputValue);
 
             ast.state = 'success';
             obs.next({ ...ast })

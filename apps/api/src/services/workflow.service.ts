@@ -38,6 +38,12 @@ export class WorkflowService {
 
       if (workflow) {
         // 更新现有工作流
+        logger.info('Saving workflow - endNodeIds from params', {
+          endNodeIds: params.endNodeIds,
+          entryNodeIds: params.entryNodeIds,
+          hasEndNodeIds: !!params.endNodeIds,
+          endNodeIdsLength: params.endNodeIds?.length
+        });
         workflow.name = params.name || workflow.name;
         workflow.code = params.name || workflow.code;
         workflow.collapsed = !!params.collapsed;

@@ -279,9 +279,8 @@ export class ReactiveScheduler {
                     console.log(`[buildIncrementalNetwork] 节点 ${nodeId} 状态为 fail，阻断下游执行`);
                     stream = EMPTY;
                 } else {
-                    // 成功节点：发射 emitting 状态的历史结果副本以传递数据给下游
-                    const emittingCopy = { ...node, state: 'emitting' as const };
-                    stream = of(emittingCopy, node).pipe(
+                    // 成功节点：直接发射历史结果，下游通过 BehaviorSubject 或属性提取数据
+                    stream = of(node).pipe(
                         shareReplay({ bufferSize: Infinity, refCount: true })
                     );
                 }
