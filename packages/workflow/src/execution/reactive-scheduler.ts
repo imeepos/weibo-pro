@@ -709,7 +709,7 @@ export class ReactiveScheduler {
     private createEntryNodeStream(node: INode, ctx: WorkflowGraphAst): Observable<INode> {
         return this.executeNode(node, ctx).pipe(
             subscribeOn(asyncScheduler),
-            shareReplay({ bufferSize: 2, refCount: false })
+            shareReplay({ bufferSize: Infinity, refCount: false })
         );
     }
     private combineGroupedStreamsByMode(
