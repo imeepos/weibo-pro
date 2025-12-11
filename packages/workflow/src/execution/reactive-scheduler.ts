@@ -568,7 +568,11 @@ export class ReactiveScheduler {
             return hasBufferMode(metadata?.mode);
         });
 
-        const dataStream = sourceStream.pipe(
+        // 检查边模式：MERGE 模式下不应该去重
+        const edgeMode = this.detectEdgeMode(edges);
+        const shouldDedup = edgeMode !== EdgeMode.MERGE;
+
+        let dataStream = sourceStream.pipe(
             filter(ast => ast.state === 'emitting'),
             // 一次性处理该源的所有边
             map(ast => {
@@ -612,19 +616,22 @@ export class ReactiveScheduler {
                 // 如果是空对象（所有边都被过滤），也过滤掉
                 if (typeof result === 'object' && Object.keys(result).length === 0) return false;
                 return true;
-            }),
-            // 去重：防止同一个源在连续的 emitting 中传递相同的属性值
-            // 使用深度比较来检测对象值的变化
-            distinctUntilChanged((prev, curr) => {
-                // 简单的 JSON 序列化比较（适用于大多数场景）
-                try {
-                    return JSON.stringify(prev) === JSON.stringify(curr);
-                } catch {
-                    // 如果序列化失败（如循环引用），认为不同
-                    return false;
-                }
             })
         );
+
+        // 只在非 MERGE 模式下使用去重
+        if (shouldDedup) {
+            dataStream = dataStream.pipe(
+                // 去重：防止同一个源在连续的 emitting 中传递相同的属性值
+                distinctUntilChanged((prev, curr) => {
+                    try {
+                        return JSON.stringify(prev) === JSON.stringify(curr);
+                    } catch {
+                        return false;
+                    }
+                })
+            );
+        }
 
         // IS_BUFFER 模式：收集所有发射，只在流完成时发射一次
         if (hasAnyBufferMode) {
