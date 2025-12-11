@@ -292,13 +292,20 @@ export class ReactiveScheduler {
             edgesBySource.get(edge.from)!.push(edge);
         });
 
+        // 检测上游是否有条件边（回溯检查）
+        const hasUpstreamConditionalEdges = Array.from(edgesBySource.keys()).some(sourceId => {
+            const sourceUpstreamEdges = ctx.edges.filter(e => e.to === sourceId);
+            return sourceUpstreamEdges.some(e => e.condition !== undefined);
+        });
+
         // 调试日志：打印边模式信息
         const edgeMode = this.detectEdgeMode(incomingEdges);
 
         // 3. 找到所有能提供完整输入的源组合
         const completeCombinations = this.findCompleteSourceCombinations(
             requiredProperties,
-            edgesBySource
+            edgesBySource,
+            hasUpstreamConditionalEdges  // 传递条件边信息
         );
 
         // 4. 为每个完整组合创建流
@@ -462,13 +469,23 @@ export class ReactiveScheduler {
 
     private findCompleteSourceCombinations(
         requiredProperties: Set<string>,
-        edgesBySource: Map<string, IEdge[]>
+        edgesBySource: Map<string, IEdge[]>,
+        hasUpstreamConditionalEdges: boolean = false
     ): string[][] {
         const combinations: string[][] = [];
         const incompleteSources: string[] = [];
 
+        // 如果没有必填属性且有多个源，检查是否有条件边
         if (requiredProperties.size === 0 && edgesBySource.size > 1) {
             const allSourceIds = Array.from(edgesBySource.keys());
+
+            // 如果有上游条件边，每个源单独作为一个组合（使用 MERGE 模式）
+            if (hasUpstreamConditionalEdges) {
+                console.log('[findCompleteSourceCombinations] 检测到上游条件边，每个源独立触发');
+                return allSourceIds.map(id => [id]);
+            }
+
+            // 否则返回所有源的组合（使用 COMBINE_LATEST）
             return [allSourceIds];
         }
 
@@ -574,8 +591,13 @@ export class ReactiveScheduler {
 
                 return this.mergeEdgeValues(edgeValues, targetNode);
             }),
-            // 过滤掉空结果 - 但允许空字符串等有效值
-            filter(result => result !== null && result !== undefined)
+            // 过滤掉空结果 - 空对象也应该被过滤（所有边都被条件/路由过滤）
+            filter(result => {
+                if (result === null || result === undefined) return false;
+                // 如果是空对象（所有边都被过滤），也过滤掉
+                if (typeof result === 'object' && Object.keys(result).length === 0) return false;
+                return true;
+            })
         );
 
         // IS_BUFFER 模式：收集所有发射，只在流完成时发射一次
@@ -841,6 +863,21 @@ export class ReactiveScheduler {
             return EdgeMode.COMBINE_LATEST;
         }
         if (edges.some(e => e.mode === EdgeMode.MERGE)) {
+            return EdgeMode.MERGE;
+        }
+
+        // 检测条件边或路由边：使用 MERGE 模式（任一源发射即触发）
+        const hasConditionalOrRouterEdges = edges.some(e => {
+            // 有条件的边
+            if (e.condition) return true;
+
+            // 来自路由节点的边（需要检查源节点的输出元数据）
+            // 注意：这里我们无法直接访问源节点，但可以通过检查多个来自同一源的边来推断
+            return false;
+        });
+
+        if (hasConditionalOrRouterEdges) {
+            console.log('[detectEdgeMode] 检测到条件边，使用 MERGE 模式');
             return EdgeMode.MERGE;
         }
 

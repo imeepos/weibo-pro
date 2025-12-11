@@ -1698,13 +1698,13 @@ describe('ReactiveScheduler', () => {
                     // 条件边：status = match 时触发
                     createEdge('branch', 'match', {
                         fromProperty: 'result',
-                        toProperty: 'inputs',
+                        toProperty: 'input',  // 修复：PassThroughAst 的属性是 'input' 而非 'inputs'
                         condition: { property: 'status', value: 'match' }
                     }),
                     // 条件边：status != match 时触发
                     createEdge('branch', 'noMatch', {
                         fromProperty: 'result',
-                        toProperty: 'inputs',
+                        toProperty: 'input',  // 修复：PassThroughAst 的属性是 'input' 而非 'inputs'
                         condition: { property: 'status', value: 'nomatch' }
                     }),
                     createEdge('match', 'final', {
@@ -1723,7 +1723,9 @@ describe('ReactiveScheduler', () => {
                 const finalNode = result.nodes.find(n => n.id === 'final') as any
                 expect(finalNode?.state).toBe('success')
                 expect(finalNode?.inputs).toContain('processed: test')
-                expect(finalNode?.inputs).not.toContain('processed: test') // match 分支被触发，noMatch 没有
+                // match 分支被触发，noMatch 没有（noMatch 输出默认值 'default'，不应该在 final 中）
+                expect(finalNode?.inputs.length).toBe(1)  // 只有一个源触发
+                expect(finalNode?.inputs).not.toContain('default')  // noMatch 的默认输出不应该出现
             })
         })
 
