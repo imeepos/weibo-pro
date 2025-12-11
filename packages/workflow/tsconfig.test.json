@@ -1,0 +1,9 @@
+{
+  "extends": "@sker/typescript-config/base.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "emitDecoratorMetadata": false
+  },
+  "include": ["src/**/*.test.ts"],
+  "exclude": ["node_modules"]
+}

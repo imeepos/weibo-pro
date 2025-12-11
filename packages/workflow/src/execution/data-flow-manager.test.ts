@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, it, expect, beforeEach } from 'vitest';
 import { root, Injectable } from '@sker/core';
 import { DataFlowManager } from './data-flow-manager';

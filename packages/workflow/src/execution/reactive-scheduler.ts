@@ -1,13 +1,14 @@
 import { setAstError, WorkflowGraphAst } from '../ast';
 import { INode, IEdge, EdgeMode, hasDataMapping, isNode } from '../types';
 import { executeAst } from '../executor';
-import { Observable, of, EMPTY, merge, combineLatest, zip, asyncScheduler, concat } from 'rxjs';
-import { map, catchError, takeWhile, concatMap, filter, withLatestFrom, shareReplay, subscribeOn, finalize, scan, takeLast, toArray, reduce, expand, tap, take, distinctUntilChanged } from 'rxjs/operators';
+import { Observable, of, EMPTY, merge, combineLatest, zip, asyncScheduler } from 'rxjs';
+import { map, catchError, takeWhile, concatMap, filter, withLatestFrom, shareReplay, subscribeOn, finalize, scan, takeLast, toArray, reduce, expand, tap, take, distinctUntilChanged, defaultIfEmpty } from 'rxjs/operators';
 import { Inject, Injectable, root } from '@sker/core';
 import { findNodeType, INPUT, InputMetadata, hasMultiMode, hasBufferMode, OUTPUT, type OutputMetadata, resolveConstructor } from '../decorator';
 import { Compiler } from '../compiler';
 import { WorkflowEventBus } from './workflow-events';
 import { updateNodeReducer, finalizeWorkflowReducer, failWorkflowReducer } from './workflow-reducers';
+import { createDefaultErrorHandler, getErrorConfigFromNode } from './error-handler';
 
 @Injectable()
 export class ReactiveScheduler {
@@ -310,23 +311,15 @@ export class ReactiveScheduler {
 
         // MERGE 模式：每个源独立创建流，然后 merge
         if (edgeMode === EdgeMode.MERGE) {
-            console.log(`[_createNodeInputObservable MERGE] 节点 ${node.id}:`, {
-                sourcesCount: edgesBySource.size,
-                sources: Array.from(edgesBySource.keys())
-            });
-
             const sourceStreams = Array.from(edgesBySource.entries()).map(([sourceId, edges]) => {
                 return this.createSingleSourceStream(sourceId, edges, network, node);
             });
 
             if (sourceStreams.length === 0) {
-                console.log(`[_createNodeInputObservable MERGE] 节点 ${node.id}: 无有效流`);
                 return EMPTY;
             } else if (sourceStreams.length === 1) {
-                console.log(`[_createNodeInputObservable MERGE] 节点 ${node.id}: 单源流`);
                 return sourceStreams[0]!;
             } else {
-                console.log(`[_createNodeInputObservable MERGE] 节点 ${node.id}: 合并 ${sourceStreams.length} 个流`);
                 return merge(...sourceStreams);
             }
         }
@@ -584,11 +577,6 @@ export class ReactiveScheduler {
             throw new Error(`上游节点流未找到: ${sourceId}`);
         }
 
-        console.log(`[createSingleSourceStream] 源 ${sourceId} → 目标 ${targetNode.id}:`, {
-            edgesCount: edges.length,
-            edges: edges.map(e => ({ from: e.from, to: e.to, fromProperty: e.fromProperty, toProperty: e.toProperty, mode: e.mode }))
-        });
-
         // 检查是否有任何边的目标属性使用 IS_BUFFER 模式
         const inputMetadataMap = this.getInputMetadataMap(targetNode);
         const hasAnyBufferMode = edges.some(edge => {
@@ -601,20 +589,8 @@ export class ReactiveScheduler {
         const edgeMode = this.detectEdgeMode(edges);
         const shouldDedup = edgeMode !== EdgeMode.MERGE;
 
-        console.log(`[createSingleSourceStream] 源 ${sourceId}:`, {
-            edgeMode,
-            shouldDedup,
-            hasAnyBufferMode
-        });
-
         let dataStream = sourceStream.pipe(
-            filter(ast => {
-                console.log(`[createSingleSourceStream] 源 ${sourceId} 发射:`, {
-                    state: ast.state,
-                    willFilter: ast.state !== 'emitting'
-                });
-                return ast.state === 'emitting';
-            }),
+            filter(ast => ast.state === 'emitting'),
             // 一次性处理该源的所有边
             map(ast => {
                 const edgeValues = edges.map(edge => {
@@ -649,18 +625,14 @@ export class ReactiveScheduler {
                     return { edge, value };
                 }).filter(Boolean) as { edge: IEdge; value: any }[];
 
-                const result = this.mergeEdgeValues(edgeValues, targetNode);
-                console.log(`[createSingleSourceStream] 源 ${sourceId} 映射结果:`, result);
-                return result;
+                return this.mergeEdgeValues(edgeValues, targetNode);
             }),
             // 过滤掉空结果 - 空对象也应该被过滤（所有边都被条件/路由过滤）
             filter(result => {
-                const shouldKeep = result !== null && result !== undefined && !(typeof result === 'object' && Object.keys(result).length === 0);
-                console.log(`[createSingleSourceStream] 源 ${sourceId} 过滤检查:`, {
-                    result,
-                    shouldKeep
-                });
-                return shouldKeep;
+                if (result === null || result === undefined) return false;
+                // 如果是空对象（所有边都被过滤），也过滤掉
+                if (typeof result === 'object' && Object.keys(result).length === 0) return false;
+                return true;
             })
         );
 
@@ -712,7 +684,6 @@ export class ReactiveScheduler {
         network: Map<string, Observable<INode>>,
         ctx: any
     ): Observable<INode> {
-        console.log(`[_createNode] 创建节点 ${node.id} 流`);
         const input$ = this._createNodeInputObservable(node, incomingEdges, network, ctx);
 
         // 获取节点的默认值
@@ -721,7 +692,6 @@ export class ReactiveScheduler {
         return input$.pipe(
             // 每次输入变化 → 创建新节点实例执行
             concatMap(inputs => {
-                console.log(`[_createNode] 节点 ${node.id} 接收输入:`, inputs);
                 const nodeInstance = this.cloneNode(node);
 
                 // 先填充默认值（直接赋值）
@@ -734,7 +704,6 @@ export class ReactiveScheduler {
                 // 再应用连线数据（使用元数据感知的赋值逻辑）
                 this.assignInputsToNodeInstance(nodeInstance, inputs);
 
-                console.log(`[_createNode] 节点 ${node.id} 开始执行`);
                 return this.executeNode(nodeInstance, ctx);
             }),
             catchError(error => {
@@ -1088,11 +1057,28 @@ export class ReactiveScheduler {
         return path.split('.').reduce((current, key) => current?.[key], obj);
     }
     private executeNode(node: INode, ctx: WorkflowGraphAst): Observable<INode> {
-        return executeAst(node, ctx).pipe(
+        // 获取节点的错误处理配置
+        const errorConfig = getErrorConfigFromNode(node);
+
+        // 执行节点并应用统一的错误处理策略
+        const execution$ = executeAst(node, ctx);
+
+        return createDefaultErrorHandler(
+            execution$,
+            node,
+            errorConfig,
+            this.eventBus
+        ).pipe(
+            // 如果错误处理器返回失败节点，捕获并返回
             catchError(error => {
-                node.state = 'fail';
-                node.error = error;
-                return of(node);
+                // error 可能是包装后的失败节点或原始错误
+                if (error && typeof error === 'object' && 'state' in error) {
+                    // 已经是包装的节点对象
+                    return of(error as INode);
+                }
+                // 原始错误，包装为失败节点
+                const failedNode = { ...node, state: 'fail' as const, error };
+                return of(failedNode);
             })
         );
     }
@@ -1145,20 +1131,10 @@ export class ReactiveScheduler {
             }),
             // 使用 reducer 累积状态（借鉴 @sker/store 的 scan + reducer 模式）
             scan(
-                (workflow, updatedNode) => {
-                    const updated = updateNodeReducer(workflow, {
-                        nodeId: updatedNode.id,
-                        updates: updatedNode,
-                    });
-                    // 调试日志：验证 count 累积
-                    const node = updated.nodes.find(n => n.id === updatedNode.id);
-                    console.log(`[subscribeAndMerge scan] 节点 ${updatedNode.id} 更新:`, {
-                        state: updatedNode.state,
-                        count: node?.count,
-                        emitCount: node?.emitCount
-                    });
-                    return updated;
-                },
+                (workflow, updatedNode) => updateNodeReducer(workflow, {
+                    nodeId: updatedNode.id,
+                    updates: updatedNode,
+                }),
                 ast // seed
             ),
             catchError(error => {
@@ -1168,16 +1144,17 @@ export class ReactiveScheduler {
         );
 
         // 流完成后应用 finalizeWorkflowReducer
-        return concat(
-            allStreams$,
-            new Observable<WorkflowGraphAst>(obs => {
-                // 应用最终化 reducer
-                const finalWorkflow = finalizeWorkflowReducer(ast);
+        // 使用 takeLast(1) 获取 scan 的最终累积状态，defaultIfEmpty 确保空流也有值
+        return allStreams$.pipe(
+            takeLast(1),
+            map((finalWorkflow: WorkflowGraphAst | typeof ast) => {
+                // 如果流为空，使用初始 ast
+                const workflow = finalWorkflow as WorkflowGraphAst;
 
                 // 【调试日志】输出失败节点信息
-                const failedNodes = finalWorkflow.nodes.filter(n => n.state === 'fail');
+                const failedNodes = workflow.nodes.filter((n: INode) => n.state === 'fail');
                 if (failedNodes.length > 0) {
-                    console.error('[subscribeAndMerge] 发现失败节点:', failedNodes.map(n => ({
+                    console.error('[subscribeAndMerge] 发现失败节点:', failedNodes.map((n: INode) => ({
                         id: n.id,
                         type: n.type,
                         state: n.state,
@@ -1186,11 +1163,13 @@ export class ReactiveScheduler {
                     })));
                 }
 
-                // 恢复 GroupNode 的嵌套结构（确保 UI 层和保存时的数据正确）
-                this.restoreGroupStructure(finalWorkflow);
+                // 应用最终化 reducer
+                const result = finalizeWorkflowReducer(workflow);
 
-                obs.next(finalWorkflow);
-                obs.complete();
+                // 恢复 GroupNode 的嵌套结构（确保 UI 层和保存时的数据正确）
+                this.restoreGroupStructure(result);
+
+                return result;
             })
         );
     }

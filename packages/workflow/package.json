@@ -25,7 +25,7 @@
     "dev": "tsup --watch",
     "claude": "claude --dangerously-skip-permissions",
     "lint": "eslint . --max-warnings 0",
-    "check-types": "tsc --noEmit",
+    "check-types": "tsc --noEmit && tsc --project tsconfig.test.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
