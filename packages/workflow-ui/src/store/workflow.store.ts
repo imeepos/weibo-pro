@@ -18,7 +18,7 @@ import { astToFlowNodes, astToFlowEdges } from '../adapters/ast-to-flow'
 import { historyManager } from './history.store'
 import { NodeExecutionManager } from '../services/node-execution-manager'
 
-interface WorkflowState {
+interface IWorkflowState {
   /** ✨ 工作流 AST（单一数据源） */
   workflowAst: WorkflowGraphAst | null
 
@@ -79,7 +79,7 @@ interface WorkflowState {
  * - 在 set 函数中可以直接"修改" draft state
  * - Immer 会自动创建新对象，确保不可变性
  */
-export const useWorkflowStore = create<WorkflowState>()(
+export const useWorkflowStore = create<IWorkflowState>()(
   immer((set, get) => {
     // ✨ 获取核心服务（单例）
     const workflowState = root.get(WorkflowState)
@@ -153,52 +153,88 @@ export const useWorkflowStore = create<WorkflowState>()(
       },
 
       /**
-       * ✨ 更新节点（关键方法）
+       * ✨ 更新节点（核心方法 - 细粒度事件驱动）
        *
-       * 策略：因为 AST 节点类可能有只读属性，我们需要创建新对象来替换
-       * 1. 找到 AST 节点在数组中的索引
-       * 2. 创建新的节点对象（保持原型链）
-       * 3. 替换 workflowAst.nodes 中的节点
-       * 4. 同步更新 React Flow nodes
+       * 优雅设计：
+       * 1. 获取更新前的节点状态
+       * 2. 使用 updateNodeReducer 更新 AST（前后端共享逻辑）
+       * 3. 发射 NODE_UPDATED 事件（携带状态信息）
+       * 4. 根据节点状态决定行为：
+       *    - running → 取消并重新执行
+       *    - pending → 只更新参数
+       *    - success/fail → 标记为待重执行（手动触发）
        */
       updateNode: (nodeId: string, updates: Partial<INode>) => {
+        const { workflowAst } = get()
+        if (!workflowAst) {
+          console.warn('[WorkflowStore] WorkflowAst not initialized')
+          return
+        }
+
+        // ✨ 1. 获取更新前的节点状态
+        const node = getNodeById(workflowAst.nodes, nodeId)
+        if (!node) {
+          console.warn(`[WorkflowStore] Node ${nodeId} not found in AST`)
+          return
+        }
+
+        const previousState = node.state
+
+        // ✨ 2. 使用 updateNodeReducer 更新 AST
         set((draft) => {
-          if (!draft.workflowAst) {
-            console.warn('WorkflowAst not initialized')
-            return
-          }
-
-          // ✨ 1. 找到节点索引
-          const astNodeIndex = draft.workflowAst.nodes.findIndex(n => n.id === nodeId)
-          if (astNodeIndex === -1) {
-            console.warn(`Node ${nodeId} not found in AST`)
-            return
-          }
-
-          const oldAstNode = draft.workflowAst.nodes[astNodeIndex]
-
-          // ✨ 2. 创建新节点对象（保持原型链，避免只读属性问题）
-          const newAstNode = Object.assign(
-            Object.create(Object.getPrototypeOf(oldAstNode)),
-            oldAstNode,
+          draft.workflowAst = updateNodeReducer(draft.workflowAst!, {
+            nodeId,
             updates
-          )
+          })
 
-          // ✨ 3. 替换 AST 数组中的节点（Immer 会自动处理不可变性）
-          draft.workflowAst.nodes[astNodeIndex] = newAstNode
-
-          // ✨ 4. 更新 React Flow 节点
+          // 同步到 React Flow
           const flowNodeIndex = draft.nodes.findIndex(n => n.id === nodeId)
           if (flowNodeIndex !== -1) {
-            const flowNode = draft.nodes[flowNodeIndex]
-            if (flowNode) {
-              flowNode.data = newAstNode
+            const updatedNode = getNodeById(draft.workflowAst!.nodes, nodeId)
+            if (updatedNode && draft.nodes[flowNodeIndex]) {
+              draft.nodes[flowNodeIndex].data = updatedNode
             }
           }
 
-          // ✨ 5. 标记有未保存的更改
           draft.hasUnsavedChanges = true
         })
+
+        const updatedNode = getNodeById(get().workflowAst!.nodes, nodeId)!
+        const currentState = updatedNode.state
+
+        // ✨ 3. 发射细粒度事件
+        eventBus.next({
+          type: WorkflowEventType.NODE_UPDATED,
+          nodeId,
+          workflowId: workflowAst.id,
+          payload: {
+            updates,
+            previousState,
+            currentState
+          },
+          timestamp: Date.now()
+        })
+
+        // ✨ 4. 根据节点状态决定行为
+        const isRunning = nodeExecutionManager.isNodeRunning(nodeId)
+
+        if (previousState === 'running' || isRunning) {
+          // 节点正在执行 → 取消并重新执行
+          console.log(`[WorkflowStore] 节点 ${nodeId} 正在执行，取消并重新执行`)
+          nodeExecutionManager.cancelNode(nodeId)
+
+          // 延迟重新执行，确保取消完成
+          setTimeout(() => {
+            nodeExecutionManager.executeNode(get().workflowAst!, nodeId)
+          }, 100)
+        } else if (previousState === 'pending') {
+          // 节点尚未执行 → 只更新参数，不执行
+          console.log(`[WorkflowStore] 节点 ${nodeId} 尚未执行，参数已更新`)
+        } else if (previousState === 'success' || previousState === 'fail') {
+          // 节点已完成 → 标记为待重执行（不自动执行）
+          console.log(`[WorkflowStore] 节点 ${nodeId} 已完成，已标记为待重执行`)
+          // 可以在UI显示一个"重新执行"按钮
+        }
 
         recordHistory()
       },
