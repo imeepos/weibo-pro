@@ -707,7 +707,9 @@ export class ReactiveScheduler {
         return network;
     }
     private createEntryNodeStream(node: INode, ctx: WorkflowGraphAst): Observable<INode> {
+        console.log(`[createEntryNodeStream] 创建入口节点流: ${node.id}`);
         return this.executeNode(node, ctx).pipe(
+            tap(state => console.log(`[createEntryNodeStream] ${node.id} 发射:`, state.state)),
             subscribeOn(asyncScheduler),
             shareReplay({ bufferSize: Infinity, refCount: false })
         );
