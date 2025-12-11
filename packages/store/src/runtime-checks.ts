@@ -39,9 +39,9 @@ export function createActiveRuntimeChecks(
 /**
  * 创建序列化检查 MetaReducer
  */
-export function createSerializationCheckMetaReducer(
+export function createSerializationCheckMetaReducer<T = any, V extends Action = Action>(
   runtimeChecks: RuntimeChecks
-): MetaReducer {
+): MetaReducer<T, V> {
   const { strictActionSerializability, strictStateSerializability } =
     runtimeChecks;
 
@@ -58,9 +58,9 @@ export function createSerializationCheckMetaReducer(
 /**
  * 创建不可变性检查 MetaReducer
  */
-export function createImmutabilityCheckMetaReducer(
+export function createImmutabilityCheckMetaReducer<T = any, V extends Action = Action>(
   runtimeChecks: RuntimeChecks
-): MetaReducer {
+): MetaReducer<T, V> {
   const { strictActionImmutability, strictStateImmutability } = runtimeChecks;
 
   return (reducer) =>
@@ -86,14 +86,14 @@ function isNgrxAction(action: Action): boolean {
  * @param runtimeChecks - 运行时检查配置
  * @returns MetaReducer 数组
  */
-export function createRuntimeCheckMetaReducers(
+export function createRuntimeCheckMetaReducers<T = any, V extends Action = Action>(
   runtimeChecks?: Partial<RuntimeChecks>
-): MetaReducer[] {
+): MetaReducer<T, V>[] {
   const activeChecks = createActiveRuntimeChecks(runtimeChecks);
-  const metaReducers: MetaReducer[] = [];
+  const metaReducers: MetaReducer<T, V>[] = [];
 
   // 添加不可变性检查
-  const immutabilityCheck = createImmutabilityCheckMetaReducer(activeChecks);
+  const immutabilityCheck = createImmutabilityCheckMetaReducer<T, V>(activeChecks);
   if (
     activeChecks.strictStateImmutability ||
     activeChecks.strictActionImmutability
@@ -102,7 +102,7 @@ export function createRuntimeCheckMetaReducers(
   }
 
   // 添加序列化检查
-  const serializationCheck = createSerializationCheckMetaReducer(activeChecks);
+  const serializationCheck = createSerializationCheckMetaReducer<T, V>(activeChecks);
   if (
     activeChecks.strictStateSerializability ||
     activeChecks.strictActionSerializability

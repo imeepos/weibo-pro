@@ -81,7 +81,7 @@ export function createStore<T, V extends Action = Action>(
   const scannedActionsSubject = new ScannedActionsSubject();
 
   // 3. 合并用户 MetaReducers 和运行时检查 MetaReducers
-  const runtimeCheckMetaReducers = createRuntimeCheckMetaReducers(runtimeChecks);
+  const runtimeCheckMetaReducers = createRuntimeCheckMetaReducers<T, V>(runtimeChecks);
   const allMetaReducers = [...runtimeCheckMetaReducers, ...metaReducers];
 
   // 4. 创建 ReducerFactory
