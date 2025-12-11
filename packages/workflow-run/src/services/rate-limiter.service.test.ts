@@ -177,21 +177,25 @@ describe('RateLimiterService', () => {
     it('应该同时执行全局和账号限制', async () => {
       const accountId = 'test-account';
 
-      // 设置更紧的限制便于测试
-      service.setGlobalRate(3, 1);
-      service.setAccountRate(accountId, 2, 0.5);
+      // 设置更高的补充速率便于测试
+      service.setGlobalRate(20, 20);
+      service.setAccountRate(accountId, 10, 10);
 
       const promises = [];
 
-      // 尝试获取 3 个令牌
+      // 连续获取 3 个令牌
       for (let i = 0; i < 3; i++) {
         promises.push(service.acquire(accountId));
       }
 
-      // 第三个请求会被账号限制阻挡
       await Promise.all(promises);
 
-      expect(vi.getTimerCount()).toBeGreaterThanOrEqual(0);
+      // 验证全局和账号令牌都被消耗
+      const globalAvailable = service.getGlobalAvailableTokens();
+      const accountAvailable = service.getAccountAvailableTokens(accountId);
+
+      expect(globalAvailable).toBeLessThan(20);
+      expect(accountAvailable).toBeLessThan(10);
     });
   });
 });
