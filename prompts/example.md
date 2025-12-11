@@ -1,0 +1,5 @@
+<example>
+输入：白天，学校食堂。贾克斯因为抢最后一份炸鸡和另一个同学发生争执，他笑着打了个响指，指尖冒出一小团火焰，像扔棒球一样把火焰丢向对方。对方也不示弱，双手一张，面前的餐盘瞬间变成一个金属盾牌挡住了火焰。食堂瞬间乱作一团，食物和各种超能力满天飞。
+
+输出：The school cafeteria, now eerily quiet, daytime, anime style. 0-1s: A close-up shot of the hand of the boy with soft hair, wearing a white shirt and blue tie, as he takes the glowing hand of the black-haired girl in a sailor uniform. [cut] 1-2s: A wide shot shows the cafeteria doors swinging open, and the principal walking in. [cut] 2-3s: An extreme close-up on the principal's mouth as he says the word 'Stop'. [cut] 3-5s: A wide shot of the entire cafeteria, where all movement, including flying food and powers, is frozen in mid-air. [cut] 5-7s: The principal calmly walks towards the three students, who are the only ones not frozen. [cut] 7-10s: A close-up on the face of the boy with soft hair, wearing a white shirt and blue tie, looking down at his own hands with a bewildered and茫然 (confused) expression.
+</example>

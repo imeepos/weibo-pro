@@ -328,9 +328,9 @@ export function PropertyPanel({
                 </Button>
               </div>
 
-              {allInputsForDisplay.map((input) => (
+              {allInputsForDisplay.map((input, index) => (
                 <DynamicPortItem
-                  key={input.property}
+                  key={`${input.property}-${index}`}
                   property={input.property}
                   title={input.title || input.property}
                   description={input.description || ''}
@@ -354,9 +354,9 @@ export function PropertyPanel({
                 </Button>
               </div>
 
-              {allOutputsForDisplay.map((output) => (
+              {allOutputsForDisplay.map((output, index) => (
                 <DynamicPortItem
-                  key={output.property}
+                  key={`${output.property}-${index}`}
                   property={output.property}
                   title={output.title || output.property}
                   description={output.description || ''}

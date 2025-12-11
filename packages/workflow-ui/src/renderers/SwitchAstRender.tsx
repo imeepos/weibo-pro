@@ -11,7 +11,7 @@ const SwitchComponent: React.FC<{ ast: SwitchAst }> = ({ ast }) => {
         <div className="px-2 py-1 text-xs space-y-1">
             {outputs.length > 0 ? (
                 outputs.map((output: any, index: number) => (
-                    <div key={index} className="flex items-center justify-between gap-2">
+                    <div key={`${output.property}-${index}`} className="flex items-center justify-between gap-2">
                         <span className="text-muted-foreground truncate">{output.title || String(output.propertyKey)}:</span>
                         <code className="font-mono text-foreground text-[10px] bg-muted px-1 rounded">
                             {output.condition}

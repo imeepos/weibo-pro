@@ -136,7 +136,7 @@ export function WorkflowPropertyDrawer({
             const ActionIcon = action.icon
             return (
               <React.Fragment key={action.id}>
-                {index > 0 && index === actions.length - 1 && (
+                {index > 0 && (
                   <div className="h-6 w-px bg-border/50" />
                 )}
                 <button

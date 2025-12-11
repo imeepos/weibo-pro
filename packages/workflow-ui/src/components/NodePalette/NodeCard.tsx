@@ -71,8 +71,8 @@ export function NodeCard({ metadata, onAddNode }: NodeCardProps) {
               <span className="font-medium">输出</span>
             </div>
             <ul className="space-y-0.5 pl-4">
-              {metadata.outputs.map((output) => (
-                <li key={output.property} className="text-slate-300 flex items-center gap-1">
+              {metadata.outputs.map((output, index) => (
+                <li key={`${output.property}-${index}`} className="text-slate-300 flex items-center gap-1">
                   <span className="w-1 h-1 rounded-full bg-[var(--workflow-secondary)]" />
                   <span>{output.label}</span>
                 </li>
