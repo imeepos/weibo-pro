@@ -8,7 +8,7 @@ import { Badge } from '@sker/ui/components/ui/badge';
 import { Input } from '@sker/ui/components/ui/input';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@sker/ui/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@sker/ui/components/ui/select';
-import { BarChart3Icon, ServerIcon, CpuIcon, ClockIcon, CheckCircleIcon, XCircleIcon, ActivityIcon, TrendingUpIcon } from 'lucide-react';
+import { BarChart3Icon, ServerIcon, CpuIcon, ClockIcon, CheckCircleIcon, XCircleIcon, ActivityIcon, TrendingUpIcon, RefreshCwIcon } from 'lucide-react';
 import { EChart } from '@sker/ui/components/ui/echart';
 import { TimeSeriesChart } from '@sker/ui/components/ui/time-series-chart';
 import { useAppStore } from '@/stores/useAppStore';
@@ -19,6 +19,7 @@ const LlmChatLogs: React.FC = () => {
   const [stats, setStats] = useState<LlmChatLogStats | null>(null);
   const [logs, setLogs] = useState<LlmChatLogItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [pageSize] = useState(20);
@@ -89,6 +90,15 @@ const LlmChatLogs: React.FC = () => {
       console.error('Failed to load logs:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([loadStats(), loadLogs()]);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -463,6 +473,17 @@ const LlmChatLogs: React.FC = () => {
                 <SelectItem value="false">失败</SelectItem>
               </SelectContent>
             </Select>
+            <div className="w-px h-6 bg-border" />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="gap-2"
+            >
+              <RefreshCwIcon className={`size-4 ${refreshing ? 'animate-spin' : ''}`} />
+              刷新
+            </Button>
           </div>
         </CardContent>
       </Card>

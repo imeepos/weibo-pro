@@ -45,7 +45,8 @@ export class DataFlowManager {
     private extractDynamicOutputs(node: INode, outputData: Record<string, any>): void {
         const builtinProps = [
             'id', 'type', 'name', 'description', 'state', 'error', 'count', 'emitCount',
-            'position', 'color', 'collapsed', 'width', 'dynamicOutputs',
+            'position', 'color', 'collapsed', 'width', 'dynamicOutputs', 'dynamicInputs',
+            'portLabels', 'customProperties',
             'nodes', 'edges', 'entryNodeIds', 'viewport', 'tags', 'abortSignal'
         ];
 

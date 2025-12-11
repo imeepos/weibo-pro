@@ -118,7 +118,8 @@ export class WorkflowExecutorVisitor {
     private isBuiltinProperty(key: string): boolean {
         const builtinProps = [
             'id', 'type', 'name', 'description', 'state', 'error', 'count', 'emitCount',
-            'position', 'color', 'collapsed', 'width', 'dynamicOutputs',
+            'position', 'color', 'collapsed', 'width', 'dynamicOutputs', 'dynamicInputs',
+            'portLabels', 'customProperties',
             'nodes', 'edges', 'entryNodeIds', 'viewport', 'tags', 'abortSignal'
         ];
         return builtinProps.includes(key);

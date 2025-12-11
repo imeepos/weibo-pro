@@ -1,6 +1,6 @@
 import { Input, Node, Output } from "@sker/workflow";
 
-@Node({ title: '主持人' })
+@Node({ title: '主持人', type: `sentiment` })
 export class ForumAgentAst {
     @Output({ title: '温度' })
     temperature: number = 0.6;

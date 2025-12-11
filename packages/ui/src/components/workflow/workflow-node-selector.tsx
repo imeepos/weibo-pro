@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import { Search, Sparkles, Box, Globe } from 'lucide-react'
 import { cn } from '@sker/ui/lib/utils'
 
-export type NodeType = 'llm' | 'basic' | 'crawler' | `control`
+export type NodeType = 'llm' | 'basic' | 'crawler' | `control` | 'sentiment'
 
 export interface NodeItem {
   type: string

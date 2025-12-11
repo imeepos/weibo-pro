@@ -91,10 +91,10 @@ export class LlmChatLogService {
       }
 
       const dateExpr = granularityType === 'minute'
-        ? "TO_CHAR(log.createdAt, 'YYYY-MM-DD HH24:MI:00')"
+        ? "TO_CHAR(log.createdAt AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Shanghai', 'YYYY-MM-DD HH24:MI:00')"
         : granularityType === 'hour'
-          ? "TO_CHAR(log.createdAt, 'YYYY-MM-DD HH24:00:00')"
-          : "TO_CHAR(log.createdAt, 'YYYY-MM-DD')";
+          ? "TO_CHAR(log.createdAt AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Shanghai', 'YYYY-MM-DD HH24:00:00')"
+          : "TO_CHAR(log.createdAt AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Shanghai', 'YYYY-MM-DD')";
 
       const timeQuery = m.createQueryBuilder(LlmChatLog, 'log')
         .select(dateExpr, 'date')
