@@ -225,10 +225,10 @@ export function DynamicPortItem({
   className,
   children,
 }: DynamicPortItemProps) {
-  const propertyTimeoutRef = useRef<ReturnType<typeof setTimeout>>(0)
-  const titleTimeoutRef = useRef<ReturnType<typeof setTimeout>>(0)
-  const descriptionTimeoutRef = useRef<ReturnType<typeof setTimeout>>(0)
-  const typeTimeoutRef = useRef<ReturnType<typeof setTimeout>>(0)
+  const propertyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const titleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const descriptionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const typeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [propertyValue, setPropertyValue] = React.useState(property)
   const [titleValue, setTitleValue] = React.useState(title)
