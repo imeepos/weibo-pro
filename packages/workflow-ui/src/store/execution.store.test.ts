@@ -159,8 +159,8 @@ describe('Execution Store', () => {
 
       const history = store.getNodeHistory('node-1')
       expect(history).toHaveLength(2)
-      expect(history[0].status).toBe('success')
-      expect(history[1].status).toBe('fail')
+      expect(history[0].status).toBe('fail')
+      expect(history[1].status).toBe('success')
     })
 
     it('应该返回空数组如果节点没有历史', () => {

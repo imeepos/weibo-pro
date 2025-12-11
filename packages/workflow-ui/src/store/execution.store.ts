@@ -111,5 +111,5 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
   getNodeHistory: (nodeId) => get().nodeHistory[nodeId] || [],
 
   resetExecution: () =>
-    set({ isExecuting: false, executionError: null, nodeStates: {} }),
+    set({ isExecuting: false, executionError: null, nodeStates: {}, nodeHistory: {} }),
 }))
