@@ -47,9 +47,9 @@ export interface NodeUpdatePayload {
   /** 更新的属性 */
   updates: Record<string, any>;
   /** 更新前的节点状态 */
-  previousState: 'pending' | 'running' | 'success' | 'fail' | 'emitting';
+  previousState: 'pending' | 'running' | 'success' | 'fail';
   /** 更新后的节点状态 */
-  currentState: 'pending' | 'running' | 'success' | 'fail' | 'emitting';
+  currentState: 'pending' | 'running' | 'success' | 'fail';
 }
 
 /**

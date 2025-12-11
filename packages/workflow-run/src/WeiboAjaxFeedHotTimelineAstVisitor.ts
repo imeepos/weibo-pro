@@ -110,7 +110,8 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
                     const posts = statuses.map(item => m.create(WeiboPostEntity, item as any));
                     await m.upsert(WeiboPostEntity, posts as any[], ['id']);
                     posts.map(post => {
-                        ast.state = 'emitting';  // 流式输出：每条数据发射触发下游
+                        // 流式输出：每条数据发射
+                        // TODO: 改造为 BehaviorSubject 模式后，这里直接发射到 output$
                         ast.mblogid = post.mblogid;
                         ast.uid = post.user.idstr;
                         obs.next({ ...ast });

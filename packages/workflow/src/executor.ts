@@ -1,10 +1,10 @@
 import { WorkflowGraphAst } from "./ast";
 import { Handler, OUTPUT } from "./decorator";
 import { fromJson } from "./generate";
-import { INode } from "./types";
+import { INode, isBehaviorSubject } from "./types";
 import { ReactiveScheduler } from './execution/reactive-scheduler';
 import { VisitorExecutor } from './execution/visitor-executor';
-import { concat, Observable, of } from 'rxjs';
+import { concat, Observable, of, BehaviorSubject } from 'rxjs';
 import { Injectable, root } from "@sker/core";
 import { map, concatMap } from 'rxjs/operators';
 import { cleanOrphanedProperties } from "./ast-utils";
@@ -17,10 +17,10 @@ export class WorkflowExecutorVisitor {
      * 核心机制：
      * 1. 将子工作流节点收到的输入值（格式：nodeId.property）分发给内部节点
      * 2. 执行子工作流内部所有节点
-     * 3. 每次内部节点状态更新时，检查是否有未连接的输出节点 emitting
+     * 3. 每次内部节点状态更新时，检查是否有未连接的输出节点
      * 4. 如果有，提取这些输出值并赋给子工作流节点
-     * 5. 子工作流节点也发射 emitting 状态（带输出数据）
-     * 6. 下游节点实时接收数据流
+     * 5. 子工作流节点发射最终状态（带输出数据）
+     * 6. 下游节点通过 BehaviorSubject 实时接收数据流
      */
     @Handler(WorkflowGraphAst)
     visit(ast: WorkflowGraphAst, ctx: WorkflowGraphAst): Observable<INode> {
@@ -34,14 +34,10 @@ export class WorkflowExecutorVisitor {
 
         return scheduler.schedule(ast, ctx).pipe(
             concatMap(updatedWorkflow => {
-                // 关键修复：只在子工作流完成时（最终状态）提取并暴露输出
-                // 这样可以避免中间状态的多次发射
+                // 只在子工作流完成时（最终状态）提取并暴露输出
                 if (updatedWorkflow.state === 'success' || updatedWorkflow.state === 'fail') {
                     const exposedOutputs = this.extractExposedOutputs(updatedWorkflow);
 
-                    // 无论是否有输出，都发射 emitting 状态以触发下游节点
-                    // 原因：调度器的 createSingleSourceStream 只处理 emitting 状态（reactive-scheduler.ts:752）
-                    // 如果不发射 emitting，下游节点永远不会被触发
                     const workflowWithOutputs = { ...updatedWorkflow };
 
                     // 如果有输出，附加到节点实例上
@@ -49,9 +45,9 @@ export class WorkflowExecutorVisitor {
                         Object.assign(workflowWithOutputs, exposedOutputs);
                     }
 
-                    // 先发射 emitting（传递数据或触发信号），再发射最终状态
-                    const emittingCopy = { ...workflowWithOutputs, state: 'emitting' as const };
-                    return of(emittingCopy, workflowWithOutputs);
+                    // 直接返回最终状态，不再需要 emitting
+                    // 下游通过 BehaviorSubject 或 success 状态的属性提取数据
+                    return of(workflowWithOutputs);
                 }
 
                 // 其他情况：直接返回原状态

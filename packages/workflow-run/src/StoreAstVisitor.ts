@@ -57,8 +57,7 @@ export class StoreGetAstVisitor {
           const redisKey = `${WORKFLOW_STORE_PREFIX}${key}`;
           const value = await this.redis.get<any>(redisKey);
 
-          ast.value = value;
-          ast.state = 'emitting';
+          ast.value = value;
           obs.next({ ...ast });
 
           console.log(`[StoreGet] 读取成功: key=${key}, exists=${value !== null}`);
@@ -134,9 +133,7 @@ export class StoreSetAstVisitor {
 
           // 默认7天过期时间，避免数据永久占用内存
           const ttl = 7 * 24 * 60 * 60; // 7 days
-          await this.redis.set(redisKey, value, ttl);
-
-          ast.state = 'emitting';
+          await this.redis.set(redisKey, value, ttl);
           obs.next({ ...ast });
 
           console.log(`[StoreSet] 写入成功: key=${key}, ttl=${ttl}s`);

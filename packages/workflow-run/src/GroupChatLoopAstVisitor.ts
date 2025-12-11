@@ -35,9 +35,7 @@ export class GroupChatLoopAstVisitor {
                     timestamp: new Date().toISOString()
                 }];
                 ast.currentRound = 0;
-            }
-
-            ast.state = 'emitting';
+            }
             obs.next(ast);
 
             ast.state = 'success';

@@ -80,9 +80,7 @@ export class WeiboAjaxStatusesRepostTimelineAstVisitor extends WeiboApiClient {
                             console.log(`[WeiboAjaxStatusesRepostTimelineAstVisitor] ${page} 页 共${entities.length}条数据`);
                             await m.upsert(WeiboRepostEntity, entities as any[], ['id']);
                         });
-                    }
-
-                    ast.state = 'emitting';
+                    }
                     ast.is_end = true;
                     obs.next({ ...ast });
 

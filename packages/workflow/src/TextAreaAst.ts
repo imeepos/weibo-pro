@@ -12,7 +12,7 @@ export class TextAreaAst extends Ast {
 
     // 使用 BehaviorSubject 作为输出，运行时直接发射值
     @Output({ title: '输出', type: 'richtext' })
-    output = new BehaviorSubject<string>(``);
+    output: BehaviorSubject<string> = new BehaviorSubject<string>(``);
 
     type: `TextAreaAst` = `TextAreaAst`
 }

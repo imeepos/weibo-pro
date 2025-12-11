@@ -17,8 +17,7 @@ export class CollectorVisitor {
             obs.next({ ...ast });
 
             // IS_BUFFER 模式已在流层面处理，这里直接使用收集的数据
-            // 展平多层嵌套的数组（处理 IS_MULTI | IS_BUFFER 组合导致的过度嵌套）
-            ast.state = 'emitting';
+            // 展平多层嵌套的数组（处理 IS_MULTI | IS_BUFFER 组合导致的过度嵌套）
 
             let items = ast.items || [];
             // 如果是多层嵌套的数组，展平一层

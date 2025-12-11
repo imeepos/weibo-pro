@@ -82,9 +82,7 @@ export class PostContextCollectorVisitor {
 
             ast.post = post;
             ast.comments = comments;
-            ast.reposts = reposts;
-
-            ast.state = 'emitting';
+            ast.reposts = reposts;
             obs.next({ ...ast });
           });
 

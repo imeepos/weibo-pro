@@ -9,9 +9,7 @@ export class AudioVisitor {
     handler(ast: AudioAst, ctx: any) {
         return new Observable(obs => {
             ast.state = 'running';
-            obs.next({ ...ast });
-
-            ast.state = 'emitting';
+            obs.next({ ...ast });
             ast.audio = ast.uploadedAudio || '';
             obs.next({ ...ast });
 

@@ -109,9 +109,7 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
                         ast.max_id = body.max_id;
                         ast.next_max_id = body.max_id;
                         await delay();
-                    }
-
-                    ast.state = 'emitting';
+                    }
                     ast.is_end = true;
                     obs.next({ ...ast });
 

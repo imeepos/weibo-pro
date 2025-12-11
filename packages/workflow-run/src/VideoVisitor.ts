@@ -15,9 +15,7 @@ export class VideoVisitor {
     handler(ast: VideoAst, ctx: any) {
         return new Observable(obs => {
             ast.state = 'running';
-            obs.next({ ...ast });
-
-            ast.state = 'emitting';
+            obs.next({ ...ast });
 
             // 直接使用 uploadedVideo（可能来自上游或用户上传）
             ast.video = ast.uploadedVideo || '';

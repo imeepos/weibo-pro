@@ -106,9 +106,7 @@ export class PostNLPAnalyzerVisitor {
             availableCategories,
             availableTags,
             recentEvents
-          );
-
-          ast.state = 'emitting';
+          );
           obs.next({ ...ast });
 
           ast.state = 'success';

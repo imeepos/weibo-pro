@@ -108,9 +108,7 @@ export class WeiboKeywordSearchAstVisitor {
                     setAstError(ast, new Error('工作流已取消'));
                     obs.next({ ...ast });
                     return;
-                }
-
-                ast.state = 'emitting';
+                }
                 ast.mblogid = post.mid;
                 ast.uid = post.uid;
                 obs.next({ ...ast });
@@ -154,9 +152,7 @@ export class WeiboKeywordSearchAstVisitor {
                                 setAstError(ast, new Error('工作流已取消'));
                                 obs.next({ ...ast });
                                 return;
-                            }
-
-                            ast.state = 'emitting';
+                            }
                             ast.mblogid = post.mid;
                             ast.uid = post.uid;
                             obs.next({ ...ast });

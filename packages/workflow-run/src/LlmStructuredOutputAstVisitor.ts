@@ -61,9 +61,7 @@ export class LlmStructuredOutputAstVisitor {
                     if (output.property in result) {
                         (ast as any)[output.property] = result[output.property];
                     }
-                }
-
-                ast.state = 'emitting';
+                }
                 obs.next({ ...ast });
 
                 ast.state = 'success';

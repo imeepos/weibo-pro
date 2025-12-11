@@ -11,8 +11,6 @@ export class SwitchAstVisitor {
             ast.state = 'running'
             obs.next({ ...ast })
 
-            ast.state = 'emitting'
-
             // 核心路由逻辑：根据条件求值，只设置匹配的输出
             const inputValue = ast.value
 

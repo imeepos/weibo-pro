@@ -70,7 +70,6 @@ export class LlmTextAgentAstVisitor {
                 ast.text = result.content as string;
                 ast.username = ast.name || ast.id;
                 ast.profile = ast.description || ast.name || ast.id;
-                ast.state = 'emitting'
                 obs.next({ ...ast })
 
                 ast.state = 'success';

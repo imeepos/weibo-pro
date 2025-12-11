@@ -55,9 +55,7 @@ export class ShareAstVisitor {
                 formattedLength: ast.formattedHistory.length,
                 latestRole: ast.username,
                 isAccumulating: (ast.previousHistory?.length || 0) > 0
-            });
-
-            ast.state = 'emitting';
+            });
             obs.next(ast);
 
             ast.state = 'success';

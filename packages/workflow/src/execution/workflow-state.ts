@@ -48,7 +48,8 @@ export class WorkflowState {
         break;
 
       case WorkflowEventType.NODE_EMIT:
-        updates = { state: 'emitting' as const };
+        // NODE_EMIT 现在映射到 running 状态（BehaviorSubject 模式下用于进度显示）
+        updates = { state: 'running' as const };
         break;
 
       case WorkflowEventType.NODE_SUCCESS:

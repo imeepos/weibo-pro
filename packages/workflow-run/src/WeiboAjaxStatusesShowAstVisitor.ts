@@ -83,9 +83,7 @@ export class WeiboAjaxStatusesShowAstVisitor extends WeiboApiClient {
                                 throw error;
                             }
                         }
-                    });
-
-                    ast.state = 'emitting';
+                    });
                     console.log(`[WeiboAjaxStatusesShowAstVisitor] 成功保存一条帖子`)
                     obs.next({ ...ast });
 

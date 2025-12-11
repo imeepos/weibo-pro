@@ -41,8 +41,7 @@ export class MqPushAstVisitor {
 
           await queue.producer.next(ast.input);
 
-          ast.success = true;
-          ast.state = 'emitting';
+          ast.success = true;
           obs.next({ ...ast });
 
           console.log(`[MqPush] 推送成功: queue=${queue.queueName}, data=`, ast.input);
@@ -140,8 +139,7 @@ export class MqPullAstVisitor {
           next: (envelope) => {
             // 每收到一条消息就 emitting 一次
             ast.output = envelope.message;
-            ast.emitCount += 1;
-            ast.state = 'emitting';
+            ast.emitCount += 1;
             obs.next({ ...ast });
 
             console.log(`[MqPull] 收到消息: queue=${normalizedQueueName}, emitCount=${ast.emitCount}`);

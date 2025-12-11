@@ -64,9 +64,7 @@ export class WeiboAjaxStatusesLikeShowAstVisitor extends WeiboApiClient {
                             await m.upsert(WeiboLikeEntity, likeEntities as any[], ['userWeiboId', 'targetWeiboId']);
                             console.log(`[${page}]保存${likeEntities.length}条点赞记录`);
                         });
-                    }
-
-                    ast.state = 'emitting';
+                    }
                     ast.is_end = true;
                     obs.next({ ...ast });
 

@@ -161,7 +161,6 @@ export class WeiboAuthService implements OnDestroy {
           if (data.data?.image) {
             ast.account = undefined;
             ast.qrcode = data.data.image;
-            ast.state = "emitting"
             ast.message = ``
             obs.next({ ...ast })
           }
@@ -178,7 +177,6 @@ export class WeiboAuthService implements OnDestroy {
             // 50114002: 已扫码,等待手机确认
             else if (data.retcode === 50114002) {
               ast.message = `请在手机点击确认以登录`
-              ast.state = "emitting"
               obs.next({ ...ast })
             }
             // 50114003: 二维码过期

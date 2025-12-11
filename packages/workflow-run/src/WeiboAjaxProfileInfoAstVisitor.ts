@@ -76,9 +76,7 @@ export class WeiboAjaxProfileInfoAstVisitor extends WeiboApiClient {
                         await m.upsert(WeiboUserEntity, user as any, ['id']);
                     });
 
-                    await this.fetchDetail(ast, wrappedCtx);
-
-                    ast.state = 'emitting';
+                    await this.fetchDetail(ast, wrappedCtx);
                     ast.isEnd = true;
                     obs.next({ ...ast });
 

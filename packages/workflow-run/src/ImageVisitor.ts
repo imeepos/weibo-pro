@@ -15,9 +15,7 @@ export class ImageVisitor {
     handler(ast: ImageAst, ctx: any) {
         return new Observable(obs => {
             ast.state = 'running';
-            obs.next({ ...ast });
-
-            ast.state = 'emitting';
+            obs.next({ ...ast });
 
             // 直接使用 uploadedImage（可能来自上游或用户上传）
             ast.image = ast.uploadedImage || '';
