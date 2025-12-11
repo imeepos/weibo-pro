@@ -1747,12 +1747,14 @@ describe('ReactiveScheduler', () => {
                             obs.next({ ...ast })
 
                             let counter = 0
+                            // 固定测试数据：确保 high (>50) 和 low (<=50) 都有数据
+                            const testValues = [30, 70, 20, 80, 40] // 2个high, 3个low
                             const interval = setInterval(() => {
                                 counter++
                                 ast.rawData = {
                                     id: counter,
                                     timestamp: Date.now(),
-                                    value: Math.random() * 100
+                                    value: testValues[counter - 1]
                                 }
                                 ast.state = 'emitting'
                                 obs.next({ ...ast })
@@ -1903,8 +1905,11 @@ describe('ReactiveScheduler', () => {
 
                 expect(highNode?.state).toBe('success')
                 expect(lowNode?.state).toBe('success')
-                expect(highNode?.count).toBeGreaterThanOrEqual(0)
-                expect(lowNode?.count).toBeGreaterThanOrEqual(0)
+                // 验证分类计数：testValues = [30, 70, 20, 80, 40]
+                // high (>50): 70, 80 → 2条
+                // low (<=50): 30, 20, 40 → 3条
+                expect(highNode?.count).toBe(2)
+                expect(lowNode?.count).toBe(3)
                 // 验证总数正确（5个数据项）
                 expect((highNode?.count ?? 0) + (lowNode?.count ?? 0)).toBe(5)
             })
