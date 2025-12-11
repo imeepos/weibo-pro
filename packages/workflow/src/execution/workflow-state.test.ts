@@ -1,20 +1,24 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { WorkflowState } from './workflow-state';
+import { WorkflowEventBus } from './workflow-events';
 import { createWorkflowGraphAst } from '../ast';
 import type { INode } from '../types';
 import { firstValueFrom, take, toArray } from 'rxjs';
 
 describe('WorkflowState', () => {
   let workflowState: WorkflowState;
+  let eventBus: WorkflowEventBus;
 
   beforeEach(() => {
+    eventBus = new WorkflowEventBus();
     const workflow = createWorkflowGraphAst({
       nodes: [
         createNode('node-1', 'pending'),
         createNode('node-2', 'pending'),
       ],
     });
-    workflowState = new WorkflowState(workflow);
+    workflowState = new WorkflowState(eventBus);
+    workflowState.init(workflow);
   });
 
   describe('current getter', () => {
@@ -126,7 +130,8 @@ describe('WorkflowState', () => {
           createNode('node-3', 'pending'),
         ],
       });
-      workflowState = new WorkflowState(workflow);
+      workflowState = new WorkflowState(eventBus);
+      workflowState.init(workflow);
 
       const progress = await firstValueFrom(workflowState.progress$);
       expect(progress.total).toBe(3);
@@ -136,7 +141,8 @@ describe('WorkflowState', () => {
 
     it('空工作流进度为 0', async () => {
       const workflow = createWorkflowGraphAst({ nodes: [] });
-      workflowState = new WorkflowState(workflow);
+      workflowState = new WorkflowState(eventBus);
+      workflowState.init(workflow);
 
       const progress = await firstValueFrom(workflowState.progress$);
       expect(progress.total).toBe(0);
@@ -169,7 +175,8 @@ describe('WorkflowState', () => {
           createNode('node-3', 'fail'),
         ],
       });
-      workflowState = new WorkflowState(workflow);
+      workflowState = new WorkflowState(eventBus);
+      workflowState.init(workflow);
 
       const failedNodes = await firstValueFrom(workflowState.failedNodes$);
       expect(failedNodes).toHaveLength(2);

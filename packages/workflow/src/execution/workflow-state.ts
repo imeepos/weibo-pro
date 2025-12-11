@@ -1,4 +1,4 @@
-import { Subject, Observable } from 'rxjs';
+import { ReplaySubject, Observable } from 'rxjs';
 import { map, distinctUntilChanged } from 'rxjs/operators';
 import { Injectable, Inject } from '@sker/core';
 import type { WorkflowGraphAst } from '../ast';
@@ -9,20 +9,11 @@ import { updateNodeReducer } from './workflow-reducers';
 /**
  * WorkflowState - 工作流状态管理器
  *
- * 优雅设计：
- * - ✅ 监听 EventBus，自动更新状态（事件驱动）
- * - ✅ 细粒度节点级更新，保持响应式
- * - ✅ 提供派生状态（progress$, failedNodes$）
- * - ✅ 单一数据源在外部，本类只作镜像和广播
- *
- * 存在即合理：
- * - 解耦状态存储和事件分发
- * - 状态由事件驱动，而非手动推送
- * - 自动响应节点编辑和执行事件
+ * 使用 ReplaySubject(1) 保证新订阅者立即获取最新状态
  */
 @Injectable()
 export class WorkflowState {
-  private readonly _subject = new Subject<WorkflowGraphAst>();
+  private readonly _subject = new ReplaySubject<WorkflowGraphAst>(1);
   private _current: WorkflowGraphAst | null = null;
 
   constructor(@Inject(WorkflowEventBus) private eventBus: WorkflowEventBus) {
