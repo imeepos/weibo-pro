@@ -35,6 +35,7 @@ Description]) [action description].
 - ❌ NO preamble (e.g., "Based on...", "I will...", "Here's...")
 - ❌ NO format headers or labels
 - ❌ NO thinking process or meta-commentary
+- ❌ NO prohibited content (violence, explicit content, discrimination, political sensitivity, illegal activities)
 
 # Input
 {{Insert your Chinese description here}}
