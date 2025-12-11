@@ -7,32 +7,9 @@ import { Injectable, root } from '@sker/core';
 import { findNodeType, INPUT, InputMetadata, hasMultiMode, hasBufferMode, OUTPUT, type OutputMetadata, resolveConstructor } from '../decorator';
 import { Compiler } from '../compiler';
 
-/**
- * 响应式工作流调度器 - 基于 RxJS Observable 流式调度
- *
- * 核心设计理念（受 NgRx Effects 启发）：
- * - 节点即流源：每个节点是 Observable<INode> 流，而非状态机
- * - 边即操作符：边定义数据如何从上游流向下游（map/filter/zip/combineLatest）
- * - 自动响应：上游发射 N 次 → 下游自动执行 N 次（无需轮询）
- * - 声明式组合：通过边的 mode 属性配置流式合并策略
- *
- * 与传统状态机调度器的区别：
- * - 不需要 findExecutableNodes()：流订阅自动触发
- * - 不需要 astInstances 状态管理：每次执行创建新实例
- * - 不需要手动 assignInputsToNode：边操作符自动传递数据
- */
 @Injectable()
 export class ReactiveScheduler {
 
-    /**
-     * 调度工作流：将工作流图转换为响应式流网络
-     *
-     * 重置逻辑：
-     * - 清空所有节点的状态、计数
-     * - 清空 IS_MULTI/IS_BUFFER 输入属性（避免重复执行时累积）
-     * - 清空有输入边的节点的输出属性（输出由计算产生）
-     * - 保留入口节点的输入/输出属性（用户输入数据）
-     */
     private resetWorkflowGraphAst(ast: WorkflowGraphAst) {
         // ✨ 不可变方式：创建新状态对象
         ast.state = 'pending';
@@ -44,17 +21,6 @@ export class ReactiveScheduler {
                 count: 0,
                 emitCount: 0
             };
-
-            // 注意：IS_BUFFER 属性的清空移到 _createNode 的 concatMap 中
-            // 在执行前清空，而不是在重置时清空，这样执行后节点能保留输入数据
-
-            // 清空有输入边的节点的输出属性
-            // if (hasIncomingEdges) {
-            //     const clearedOutputs = this.getClearedNodeOutputs(node);
-            //     Object.assign(updates, clearedOutputs);
-            // }
-
-            // ✨ 创建新节点对象（保持原型链）
             return Object.assign(
                 Object.create(Object.getPrototypeOf(node)),
                 node,
@@ -63,14 +29,6 @@ export class ReactiveScheduler {
         })
         return ast;
     }
-
-    /**
-     * 获取清空后的 IS_BUFFER 输入属性
-     *
-     * 原因：IS_BUFFER 模式使用数组累积单边多次发射，重复执行会导致数据越积越多
-     * 注意：IS_MULTI 模式不需要清空，因为它在 assignInputsToNodeInstance 中会重新初始化
-     * ✨ 返回需要更新的属性对象（不可变方式）
-     */
     private getClearedMultiBufferInputs(node: INode): Record<string, any> {
         const updates: Record<string, any> = {};
         try {
@@ -89,79 +47,28 @@ export class ReactiveScheduler {
         }
         return updates;
     }
-
-    /**
-     * 获取清空后的输出属性
-     *
-     * 适用于有输入边的节点，因为输出应该由计算产生
-     * ✨ 返回需要更新的属性对象（不可变方式）
-     */
-    private getClearedNodeOutputs(node: INode): Record<string, any> {
-        const updates: Record<string, any> = {};
-        try {
-            const ctor = resolveConstructor(node);
-            const outputs = root.get(OUTPUT, []).filter(it => it.target === ctor);
-
-            outputs.forEach(output => {
-                // 将 propertyKey 转为 string
-                updates[String(output.propertyKey)] = undefined;
-            });
-        } catch (error) {
-            // 无法获取元数据，跳过清空
-        }
-        return updates;
-    }
     schedule(ast: WorkflowGraphAst, ctx: WorkflowGraphAst): Observable<WorkflowGraphAst> {
         const { state } = this.resetWorkflowGraphAst(ast);
         // 已完成的工作流直接返回
         if (state === 'success' || state === 'fail') {
             return of(ast);
         }
-
-        // 展平 GroupNode 结构：提取所有嵌套节点和边到顶层
         this.flattenWorkflowStructure(ast);
-
         ast.state = 'running';
-
-        // 构建节点流网络
         const network = this.buildStreamNetwork(ast, ctx);
-
-        // 订阅所有节点流，合并状态变化
         return this.subscribeAndMerge(network, ast);
     }
 
-    /**
-     * 节点微调执行 - 基于历史结果的增量执行（包含下游）
-     *
-     * 核心机制：
-     * 1. 验证目标节点存在
-     * 2. 识别受影响的节点（目标节点 + 下游）
-     * 3. 验证所有未受影响的节点已执行完成（可作为历史结果）
-     * 4. 重置受影响节点状态
-     * 5. 未受影响节点直接使用历史结果（of(node)）
-     * 6. 受影响节点重新构建流并执行
-     *
-     * @param ctx 工作流执行上下文（节点配置已在其中更新）
-     * @param nodeId 目标节��ID
-     */
     fineTuneNode(
         ctx: WorkflowGraphAst,
         nodeId: string
     ): Observable<WorkflowGraphAst> {
-        // 展平 GroupNode 结构（确保所有嵌套节点都被处理）
         this.flattenWorkflowStructure(ctx);
-
-        // 1. 验证目标节点存在
         const targetNode = ctx.nodes.find(n => n.id === nodeId);
         if (!targetNode) {
             throw new Error(`节点不存在: ${nodeId}`);
         }
-
-        // 2. 找到受影响的节点（目标节点 + 下游）
         const affectedNodes = this.findAffectedNodes(ctx, nodeId);
-
-        // 3. 检测首次执行场景：如果有未受影响的节点从未执行过（状态为 pending）
-        //    则回退到完整工作流执行，避免增量执行逻辑的假设冲突
         const hasUnexecutedNodes = ctx.nodes.some(node =>
             !affectedNodes.has(node.id) && node.state === 'pending'
         );
@@ -171,10 +78,8 @@ export class ReactiveScheduler {
             return this.schedule(ctx, ctx);
         }
 
-        // 4. 验证所有未受影响的节点已执行完成
         this.validateUnaffectedNodesCompletion(ctx, affectedNodes);
 
-        // 5. 重置受影响节点状态
         ctx.nodes.forEach(node => {
             if (affectedNodes.has(node.id)) {
                 node.state = 'pending';
@@ -182,71 +87,39 @@ export class ReactiveScheduler {
             }
         });
 
-        // 6. 构建增量执行网络
         const network = this.buildIncrementalNetwork(ctx, affectedNodes);
 
-        // 7. 订阅并合并结果（只订阅受影响节点）
         ctx.state = 'running';
         return this.subscribeAndMerge(network, ctx, affectedNodes);
     }
 
-    /**
-     * 执行单个节点（不影响下游）
-     *
-     * 适用场景：
-     * - 测试单个节点逻辑
-     * - 调试节点配置
-     * - 不希望触发下游节点重新执行
-     *
-     * 核心机制：
-     * 1. 验证目标节点存在
-     * 2. 验证所有上游节点已执行完成（使用历史输出作为输入）
-     * 3. 只将目标节点标记为受影响（不递归查找下游）
-     * 4. 复用增量执行网络逻辑
-     * 5. 下游节点保持原有状态，不受影响
-     *
-     * @param ctx 工作流执行上下文
-     * @param nodeId 目标节点ID
-     */
     executeNodeIsolated(
         ctx: WorkflowGraphAst,
         nodeId: string
     ): Observable<WorkflowGraphAst> {
-        // 展平 GroupNode 结构（确保所有嵌套节点都被处理）
         this.flattenWorkflowStructure(ctx);
 
-        // 1. 验证目标节点存在
         const targetNode = ctx.nodes.find(n => n.id === nodeId);
         if (!targetNode) {
             throw new Error(`节点不存在: ${nodeId}`);
         }
 
-        // 2. 验证所有上游节点已执行完成
         this.validateUpstreamCompletion(ctx, nodeId);
 
-        // 3. 只将目标节点作为受影响节点（不包含下游）
         const affectedNodes = new Set<string>([nodeId]);
 
-        // 4. 验证所有未受影响的节点已执行完成
         this.validateUnaffectedNodesCompletion(ctx, affectedNodes);
 
         // 5. 重置目标节点状态
         targetNode.state = 'pending';
         targetNode.error = undefined;
 
-        // 6. 构建增量执行网络（只执行目标节点）
         const network = this.buildIncrementalNetwork(ctx, affectedNodes);
 
-        // 7. 订阅并合并结果（只订阅受影响节点）
         ctx.state = 'running';
         return this.subscribeAndMerge(network, ctx, affectedNodes);
     }
 
-    /**
-     * 验证上游节点是否已执行完成
-     *
-     * 用于单节点执行场景，确保可以使用上游的历史输出
-     */
     private validateUpstreamCompletion(ctx: WorkflowGraphAst, nodeId: string): void {
         const visited = new Set<string>();
 
@@ -276,13 +149,6 @@ export class ReactiveScheduler {
         checkUpstream(nodeId);
     }
 
-    /**
-     * 验证所有未受影响的节点已执行完成
-     *
-     * 策略：
-     * - 受影响节点：无需验证（会重新执行）
-     * - 未受影响节点：必须已完成（success/fail），否则抛出明确错误
-     */
     private validateUnaffectedNodesCompletion(
         ctx: WorkflowGraphAst,
         affectedNodes: Set<string>
@@ -290,21 +156,16 @@ export class ReactiveScheduler {
         const unfinishedNodes: string[] = [];
 
         for (const node of ctx.nodes) {
-            // 跳过受影响节点（会重新执行）
             if (affectedNodes.has(node.id)) {
                 continue;
             }
 
-            // 检查未受影响节点是否已完成
             if (node.state !== 'success' && node.state !== 'fail') {
                 unfinishedNodes.push(`${node.id} (${node.state})`);
             }
         }
     }
 
-    /**
-     * 查找受影响的节点（包括目标节点及其所有下游节点）
-     */
     private findAffectedNodes(ast: WorkflowGraphAst, changedNodeId: string): Set<string> {
         const affected = new Set<string>();
         const visited = new Set<string>();
@@ -312,11 +173,7 @@ export class ReactiveScheduler {
         const findDownstream = (nodeId: string) => {
             if (visited.has(nodeId)) return;
             visited.add(nodeId);
-
-            // 添加当前节点到受影响集合
             affected.add(nodeId);
-
-            // 查找所有下游节点
             const downstreamEdges = ast.edges.filter(edge => edge.from === nodeId);
             for (const edge of downstreamEdges) {
                 findDownstream(edge.to);
@@ -327,15 +184,6 @@ export class ReactiveScheduler {
         return affected;
     }
 
-    /**
-     * 构建增量执行网络 - 复用历史结果
-     *
-     * 策略：
-     * - 受影响节点：重新构建流并执行
-     * - 未受影响节点：直接使用历史结果（of(node)）
-     * - 递归构建：确保上游依赖先于下游构建
-     * - 循环检测：检测到循环依赖时抛出错误（建议使用 MQ 解耦）
-     */
     private buildIncrementalNetwork(
         ctx: WorkflowGraphAst,
         affectedNodes: Set<string>
@@ -424,38 +272,18 @@ export class ReactiveScheduler {
 
         return network;
     }
-
-    /**
-     * 为节点创建输入流（核心方法 - 按数据完整性分组）
-     *
-     * 优雅设计:
-     * - 入口节点：返回空对象流（立即发射）
-     * - 依赖节点：找到所有能提供完整必填输入的源组合
-     * - 每个完整组合独立触发执行
-     * - 使用 MERGE 合并所有组合流 → 实现多次触发
-     *
-     * 变更：现在只检查必填且无默认值的属性，可选属性不影响执行
-     *
-     * 示例：
-     * - C需要{a(必填), b(可选), c(默认值10)}，A提供{a}, B提供{b}
-     * - 完整组合：[[A]] → 只需 A 即可执行，b 和 c 使用默认值
-     * - 结果：A 发射 N 次 → C 执行 N 次
-     */
     private _createNodeInputObservable(
         node: INode,
         incomingEdges: IEdge[],
         network: Map<string, Observable<INode>>,
         ctx: WorkflowGraphAst
     ): Observable<any> {
-        // 入口节点：返回空对象流（立即触发执行）
         if (incomingEdges.length === 0) {
             return of({});
         }
 
-        // 1. 获取节点必填的输入属性（无默认值）
         const requiredProperties = this.getRequiredInputProperties(node);
 
-        // 2. 按源节点分组边
         const edgesBySource = new Map<string, IEdge[]>();
         incomingEdges.forEach(edge => {
             if (!edgesBySource.has(edge.from)) {
@@ -502,8 +330,6 @@ export class ReactiveScheduler {
             }
         });
 
-        // 5. 使用 MERGE 合并所有完整组合的流
-        // 【路由节点支持】无有效输入组合，节点不需要执行
         if (combinationStreams.length === 0) {
             console.log(`[_createNodeInputObservable] 节点 ${node.id} 无有效输入，跳过执行`);
             return EMPTY;
@@ -514,19 +340,6 @@ export class ReactiveScheduler {
         }
     }
 
-    /**
-     * 获取节点所需的必填输入属性（无默认值）
-     *
-     * 逻辑：
-     * 1. **优先使用 node.metadata**：如果节点已编译，直接从 metadata 读取
-     * 2. **回退到装饰器**：如果节点未编译，从 DI 容器读取装饰器元数据
-     * 3. 如果装饰器明确指定 required: true 且无 defaultValue → 必填
-     * 4. 如果装饰器明确指定 required: false → 非必填
-     * 5. 如果装饰器提供了 defaultValue → 非必填
-     * 6. 如果未指定 required，尝试从类实例读取默认值：
-     *    - 有默认值 → 非必填
-     *    - 无默认值（undefined）→ 必填
-     */
     private getRequiredInputProperties(node: INode): Set<string> {
         const properties = new Set<string>();
         if (!isNode(node)) {
@@ -566,15 +379,6 @@ export class ReactiveScheduler {
         throw new Error(`get node metadata failed`)
     }
 
-    /**
-     * 获取节点输入属性的元数据映射
-     *
-     * 用于检查 isMulti 等属性配置
-     *
-     * 优雅设计：
-     * - **优先使用 node.metadata**：如果节点已编译，直接从 metadata 构建映射
-     * - **回退到装饰器**：如果节点未编译，从 DI 容器读取装饰器元数据
-     */
     private getInputMetadataMap(node: INode): Map<string | symbol, InputMetadata> {
         if (!isNode(node)) {
             const compiler = root.get(Compiler)
@@ -592,15 +396,6 @@ export class ReactiveScheduler {
         return metadataMap;
     }
 
-    /**
-     * 将输入数据赋值到节点实例（元数据感知）
-     *
-     * 优雅设计：
-     * - IS_BUFFER：value 已在流层面累积成数组，直接赋值
-     * - IS_MULTI（无 IS_BUFFER）：累加到数组
-     * - IS_MULTI | IS_BUFFER：value 已是所有边所有发射的数组，直接赋值
-     * - 普通输入：直接赋值
-     */
     private assignInputsToNodeInstance(
         nodeInstance: INode,
         inputs: Record<string, any>
@@ -633,15 +428,6 @@ export class ReactiveScheduler {
         });
     }
 
-    /**
-     * 获取节点输入属性的默认值
-     *
-     * 优先级：
-     * 1. **node.metadata.inputs[].defaultValue**（编译后的元数据）
-     * 2. 装饰器的 defaultValue
-     * 3. 类属性的初始值
-     * 4. undefined
-     */
     private getInputDefaultValues(node: INode): Record<string, any> {
         if (!isNode(node)) {
             const compiler = root.get(Compiler)
@@ -674,13 +460,6 @@ export class ReactiveScheduler {
         return defaults;
     }
 
-    /**
-     * 找到所有能提供完整输入的源组合
-     *
-     * 算法：
-     * 1. 检查每个单源是否完整
-     * 2. 检查所有非完整源的组合是否完整
-     */
     private findCompleteSourceCombinations(
         requiredProperties: Set<string>,
         edgesBySource: Map<string, IEdge[]>
@@ -688,10 +467,6 @@ export class ReactiveScheduler {
         const combinations: string[][] = [];
         const incompleteSources: string[] = [];
 
-        // 🔧 修复：当无必填属性但有多个源时，强制多源组合（等待所有源发射）
-        // 场景：LlmTextAgentAst { system: '', prompt: '' } 两个输入都有默认值
-        // 期望：等待两个 TextArea 都发射后再执行（使用 combineLatest）
-        // 错误：若不修复，会用 merge，导致每个源发射时单独触发（执行2次）
         if (requiredProperties.size === 0 && edgesBySource.size > 1) {
             const allSourceIds = Array.from(edgesBySource.keys());
             return [allSourceIds];
@@ -731,9 +506,6 @@ export class ReactiveScheduler {
         return combinations;
     }
 
-    /**
-     * 检查提供的属性是否覆盖所有必需属性
-     */
     private isComplete(provided: Set<string>, required: Set<string>): boolean {
         if (required.size === 0) return true; // 无输入要求
 
@@ -745,11 +517,6 @@ export class ReactiveScheduler {
         return true;
     }
 
-    /**
-     * 为单个源创建流（处理该源的所有边）
-     *
-     * 支持 IS_BUFFER 模式：收集单边的所有发射，直到上游完成
-     */
     private createSingleSourceStream(
         sourceId: string,
         edges: IEdge[],
@@ -770,9 +537,6 @@ export class ReactiveScheduler {
         });
 
         const dataStream = sourceStream.pipe(
-            // 只响应 emitting 状态（不使用 takeWhile，让流自然完成）
-            // 在 MERGE 模式下，节点可以多次执行，每次都会发射 emitting 和 success
-            // takeWhile 会在第一个 success 后终止流，导致后续发射丢失
             filter(ast => ast.state === 'emitting'),
             // 一次性处理该源的所有边
             map(ast => {
@@ -842,11 +606,6 @@ export class ReactiveScheduler {
         return dataStream;
     }
 
-    /**
-     * 为节点创建执行流（使用 _createNodeInputObservable）
-     *
-     * 变更：使用元数据感知的赋值逻辑，支持 @Input({ isMulti: true })
-     */
     private _createNode(
         node: INode,
         incomingEdges: IEdge[],
@@ -881,19 +640,9 @@ export class ReactiveScheduler {
                 failedNode.error = error;
                 return of(failedNode);
             }),
-            // refCount: false 确保流持续存在，支持 MERGE 模式的多次触发
-            // 即使下游节点暂时取消订阅，流仍然保持活跃，等待新的订阅者
             shareReplay({ bufferSize: 2, refCount: false })
         );
     }
-    /**
-     * 构建流网络 - 使用拓扑排序保证依赖顺序
-     *
-     * 优雅设计:
-     * - 递归构建：先构建上游，再构建下游
-     * - 去重保护：使用 Map 防止重复构建
-     * - 循环检测：检测到循环依赖时抛出错误（建议使用 MQ 解耦）
-     */
     private buildStreamNetwork(
         ast: WorkflowGraphAst,
         ctx: WorkflowGraphAst
@@ -957,30 +706,12 @@ export class ReactiveScheduler {
 
         return network;
     }
-
-    /**
-     * 创建入口节点流（无上游依赖）
-     *
-     * 优雅设计:
-     * - 使用 shareReplay 缓存发射值（emitting + success）
-     * - 多个下游订阅时共享执行结果
-     * - bufferSize: 2 确保 emitting 和 success 都能被重播
-     */
     private createEntryNodeStream(node: INode, ctx: WorkflowGraphAst): Observable<INode> {
         return this.executeNode(node, ctx).pipe(
             subscribeOn(asyncScheduler),
             shareReplay({ bufferSize: 2, refCount: false })
         );
     }
-
-    /**
-     * 根据边模式组合分组后的流（不同源节点）
-     *
-     * 优雅设计:
-     * - 单源：直接返回
-     * - 多源：根据边模式决定合并策略（ZIP/COMBINE_LATEST/MERGE 等）
-     * - 智能合并：IS_MULTI 属性聚合数组，非 IS_MULTI 属性后者覆盖前者
-     */
     private combineGroupedStreamsByMode(
         groupedStreams: Observable<any>[],
         edges: IEdge[],
@@ -1029,12 +760,6 @@ export class ReactiveScheduler {
                 );
         }
     }
-
-    /**
-     * WITH_LATEST_FROM 模式的分组流合并
-     *
-     * 修复：使用显式的 sourceIds 参数建立流的映射关系，避免索引错位
-     */
     private combineGroupedByWithLatestFrom(
         groupedStreams: Observable<any>[],
         edges: IEdge[],
@@ -1104,18 +829,6 @@ export class ReactiveScheduler {
             map(([primary, ...others]) => Object.assign({}, primary, ...others))
         );
     }
-
-    /**
-     * 检测边模式（优先级：ZIP > WITH_LATEST_FROM > COMBINE_LATEST > MERGE）
-     *
-     * 优雅设计：
-     * - 多条边可以有不同的 mode 配置
-     * - 按优先级选择最严格的模式（ZIP 最严格，MERGE 最宽松）
-     * - ZIP：要求精确配对，最严格
-     * - WITH_LATEST_FROM：要求主从关系，次严格
-     * - COMBINE_LATEST：等待所有上游至少一次，中等
-     * - MERGE：任一上游即可触发，最宽松
-     */
     private detectEdgeMode(edges: IEdge[]): EdgeMode {
         // 按优先级检查（从严格到宽松）
         if (edges.some(e => e.mode === EdgeMode.ZIP)) {
@@ -1134,14 +847,6 @@ export class ReactiveScheduler {
         // 默认 COMBINE_LATEST（等待所有上游就绪）
         return EdgeMode.COMBINE_LATEST;
     }
-
-    /**
-     * 智能合并多组数据（支持 IS_MULTI 模式聚合）
-     *
-     * 优雅设计：
-     * - IS_MULTI 属性：聚合所有组的值到一个数组
-     * - 非 IS_MULTI 属性：使用最后一组的值（覆盖）
-     */
     private smartMergeGroups(groups: any[], targetNode: INode): any {
         const merged: any = {};
         const inputMetadataMap = this.getInputMetadataMap(targetNode);
@@ -1181,17 +886,6 @@ export class ReactiveScheduler {
 
         return merged;
     }
-
-    /**
-     * 合并边值数据
-     *
-     * 优雅设计:
-     * - 有 toProperty：检查聚合模式，聚合或覆盖
-     * - 无 toProperty 且值是对象：直接合并（展开）
-     * - 其他情况：使用 fromProperty 或默认 key
-     *
-     * 支持位标志聚合模式：IS_MULTI
-     */
     private mergeEdgeValues(edgeValues: { edge: IEdge; value: any }[], targetNode: INode): any {
         const merged: any = {};
 
@@ -1232,13 +926,6 @@ export class ReactiveScheduler {
 
         return merged;
     }
-
-    /**
-     * 解析子工作流内部节点的输入元数据
-     *
-     * 当边连接到子工作流的动态输入属性（nodeId.property）时，
-     * 需要查找内部节点的真实元数据，判断是否支持 IS_MULTI
-     */
     private resolveSubworkflowInputMetadata(
         workflow: INode,
         dynamicProperty: string
@@ -1269,14 +956,6 @@ export class ReactiveScheduler {
             return undefined;
         }
     }
-
-    /**
-     * 解析属性路径（支持子工作流动态输出）
-     *
-     * 优先级：
-     * 1. 先尝试直接访问完整路径（支持动态输出如 "nodeId.output"）
-     * 2. 如果不存在，再按点号分割（支持嵌套对象如 "user.name"）
-     */
     private resolveProperty(obj: any, path: string): any {
         if (!path.includes('.')) {
             return obj?.[path];
@@ -1290,10 +969,6 @@ export class ReactiveScheduler {
         // 回退：按点号分割访问嵌套属性
         return path.split('.').reduce((current, key) => current?.[key], obj);
     }
-
-    /**
-     * 执行单个节点（复用现有 executeAst）
-     */
     private executeNode(node: INode, ctx: WorkflowGraphAst): Observable<INode> {
         return executeAst(node, ctx).pipe(
             catchError(error => {
@@ -1303,16 +978,6 @@ export class ReactiveScheduler {
             })
         );
     }
-
-    /**
-     * 深度克隆节点 - 支持多次执行的隔离性
-     *
-     * 优雅设计:
-     * - 使用 structuredClone 确保完全隔离
-     * - 保留原始 ID（用于工作流图更新）
-     * - 重置执行状态
-     * - 兼容旧环境（回退到 JSON 序列化）
-     */
     private cloneNode(node: INode): INode {
         try {
             // 优先使用 structuredClone（现代浏览器/Node.js 17+）
@@ -1332,21 +997,6 @@ export class ReactiveScheduler {
         cloned.error = undefined;
         return cloned;
     }
-
-    /**
-     * 订阅所有节点流，合并状态变化
-     *
-     * 优雅设计:
-     * - 使用 merge 合并所有节点流
-     * - 每次节点状态变化，更新工作流图
-     * - 自动判断完成状态
-     * - 持续发射直到完成
-     * - 支持增量执行：只订阅受影响节点的流
-     *
-     * @param network 节点流网络
-     * @param ast 工作流图
-     * @param affectedNodes 可选：受影响的节点集合。如果提供，只订阅这些节点的流
-     */
     private subscribeAndMerge(
         network: Map<string, Observable<INode>>,
         ast: WorkflowGraphAst,
@@ -1436,10 +1086,6 @@ export class ReactiveScheduler {
         );
     }
 
-    /**
-     * 获取输出属性的元数据
-     * 用于路由节点检测 isRouter 标识
-     */
     private getOutputMetadata(ast: INode, propertyKey: string): OutputMetadata | undefined {
         const ctor = resolveConstructor(ast)
         const outputs = root.get(OUTPUT, [])
@@ -1448,20 +1094,6 @@ export class ReactiveScheduler {
         )
     }
 
-    /**
-     * 展平 GroupNode 结构 - 递归提取所有嵌套节点和边到顶层
-     *
-     * 设计理念：
-     * - GroupNode 仅作为 UI 层的容器（分组、折叠、布局）
-     * - 执行层面，所有节点和边都应该在顶层被调度
-     * - 递归遍历所有 GroupNode，提取内部的 nodes 和 edges
-     * - 保留节点的 parentId 属性（用于 UI 层识别分组关系）
-     *
-     * 重要：
-     * - 不修改传入的 ast 对象（保留 UI 层的嵌套结构）
-     * - 返回展平后的节点和边数组副本
-     * - 节点状态同步回原始 AST 由 subscribeAndMerge 处理
-     */
     private flattenWorkflowStructure(ast: WorkflowGraphAst): void {
         const allNodes: INode[] = [];
         const allEdges: IEdge[] = [];
@@ -1519,17 +1151,6 @@ export class ReactiveScheduler {
         (ast as any).__originalGroupContents = originalGroupContents;
     }
 
-    /**
-     * 恢复 GroupNode 的嵌套结构（执行完成后调用）
-     *
-     * 用途：
-     * - 将展平的节点和边重新组织回嵌套结构
-     * - 确保 UI 层能正确显示 GroupNode 的父子关系
-     * - 保证数据保存时不丢失嵌套信息
-     *
-     * 变更：
-     * - GroupNode 本身在展平时已被移除，需要重新创建
-     */
     private restoreGroupStructure(ast: WorkflowGraphAst): void {
         const originalContents = (ast as any).__originalGroupContents as Map<string, {
             nodes: INode[],

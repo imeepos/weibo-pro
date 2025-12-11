@@ -143,6 +143,39 @@ Evening, the same porch, one week later. The golden retriever lies beside the yo
 - Avoid violence, explicit content, discrimination, political sensitivity, illegal activities
 - No exposition dumps—trust the visual continuity to convey context
 
+## Anti-Repetition & Narrative Progression Rules (CRITICAL)
+防止 AI 续写的典型缺陷：
+
+### 1. 禁止平行版本堆叠
+- 每个时刻/动作只描写 **1 次**，然后必须推进
+- ❌ 错误: 段落 A 写"他冲入通道"，段落 B 又写"他扑进甬道"（同一动作的不同版本）
+- ✅ 正确: 一个动作完成后，立即进入下一个动作
+
+### 2. 禁止意象/句式重复
+- 同一比喻、形容词、句式在整个输出中只能出现 **1 次**
+- ❌ 错误: "像一颗不安的心跳" 出现 2 次
+- ❌ 错误: "仅容一人通过" 出现 3 次
+- ❌ 错误: 连续使用 "他...他...他..." 句式
+- ✅ 正确: 每个意象用完即弃，句式持续变换
+
+### 3. 强制叙事推进
+- 每个段落必须让故事 **前进**，不是原地描写
+- 衡量标准: 删除这段后，故事是否缺失关键信息？
+- ❌ 错误: 8 段 1500 字，主角只从 A 移动到 B
+- ✅ 正确: 每段引入新信息、新变化、新决策
+
+### 4. 人物深度要求
+- 纯动作描写不得超过 **连续 2 句**
+- 必须穿插: 感官细节、情绪微变、决策瞬间、内心闪念
+- ❌ 错误: 角色全程只有"跑、躲、逃"的机械动作
+- ✅ 正确: 动作中夹杂犹豫、恐惧、决心、回忆闪现
+
+### 自检清单 (输出前必须验证)
+1. ☐ 是否有任何比喻/形容词出现超过 1 次？→ 删除重复
+2. ☐ 是否有同一时刻的多个描写版本？→ 只保留最佳版本
+3. ☐ 删除任意一段后故事是否完整？→ 若完整则该段冗余
+4. ☐ 角色是否只有动作没有内心？→ 增加情感/决策着墨
+
 # FORBIDDEN
 - ❌ NO preamble (e.g., "Based on...", "Continuing from...", "Here's...")
 - ❌ NO format headers or labels beyond the required [STORY DNA] and [NEXT OPENING]

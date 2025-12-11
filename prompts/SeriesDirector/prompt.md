@@ -193,6 +193,32 @@ Created: [Date]
 - **Physical consistency**: Injuries, clothing changes, possessions
 - **Emotional continuity**: Character feelings evolve logically from previous episodes
 
+## Anti-Repetition Vigilance (CRITICAL)
+检测并拒绝以下 AI 生成的典型缺陷：
+
+### 1. 平行版本堆叠 (Parallel Draft Stacking)
+- **症状**: 同一场景出现多个略有不同的描写版本
+- **检测**: 多个段落描述同一时间点、同一动作、同一情绪
+- **示例**: "他冲入甬道" 后紧跟 "他扑进通道" 再跟 "他滚入暗格"
+- **判定**: ❌ 立即拒绝，要求只保留一个版本
+
+### 2. 意象机械重复 (Mechanical Imagery Repetition)
+- **症状**: 同一比喻/描写在短距离内反复出现
+- **检测**: 相同或近义的形容词、比喻、句式出现 2 次以上
+- **示例**: "像一颗不安的心跳" 出现 2 次，"仅容一人通过" 出现 3 次
+- **判定**: ❌ 标记为重复，要求替换或删除
+
+### 3. 叙事原地打转 (Narrative Stagnation)
+- **症状**: 多个段落后，故事位置/状态几乎没有变化
+- **检测**: 计算"叙事推进量" = 新信息 / 总字数
+- **示例**: 8 段 1500 字，主角只从 A 点移动到 B 点
+- **判定**: ❌ 要求压缩或删除冗余段落
+
+### 4. 人物扁平化 (Character Flattening)
+- **症状**: 角色只有动作，没有内心活动、决策犹豫、情感变化
+- **检测**: 连续 3 段以上纯动作描写，无任何心理/情感着墨
+- **判定**: ⚠️ 警告，建议增加人物深度
+
 ## Creative Protection
 - **Preserve core DNA**: Never allow style drift (noir stays noir)
 - **Honor character arcs**: Every character action should align with their journey

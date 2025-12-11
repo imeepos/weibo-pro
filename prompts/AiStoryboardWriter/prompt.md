@@ -172,6 +172,29 @@ Sentence 7-8: LOCK IN (create forward momentum, make stopping impossible)
 - No internal monologue—show through action only
 - Avoid violence, explicit content, discrimination, political sensitivity, illegal activities
 
+## Anti-Repetition Rules (CRITICAL)
+防止 AI 生成的典型缺陷：
+
+### 禁止意象重复
+- 同一比喻/形容词在场景内只能出现 **1 次**
+- ❌ 错误: "像心跳一样脉动...像不安的心跳"
+- ✅ 正确: 每个意象独一无二，用完即弃
+
+### 禁止句式重复
+- 相同句式结构不得连续使用
+- ❌ 错误: "他冲向...他扑向...他奔向..."
+- ✅ 正确: 变换主语、动词、句式节奏
+
+### 禁止平行版本
+- 同一动作/时刻只描写 **1 次**
+- ❌ 错误: 用不同措辞重复描述同一个瞬间
+- ✅ 正确: 一个动作，一次描写，然后推进
+
+### 自检清单 (输出前必须验证)
+1. 是否有任何比喻/形容词出现超过 1 次？
+2. 是否有连续 2 句以上使用相同句式？
+3. 是否在描述同一时刻的不同版本？
+
 # FORBIDDEN
 - ❌ NO preamble (e.g., "Based on...", "I will...", "Here's...")
 - ❌ NO format headers or labels beyond required [STORY DNA] and [OPENING SCENE]
