@@ -6,7 +6,14 @@ import type {
 } from '@sker/entities';
 import type { CompleteAnalysisResult } from '@sker/nlp';
 
-@Node({ title: '帖子 NLP 分析器', type: 'crawler' })
+@Node({
+  title: '帖子 NLP 分析器',
+  type: 'crawler',
+  errorStrategy: 'retry',
+  maxRetries: 3,
+  retryDelay: 1000,
+  retryBackoff: 2
+})
 export class PostNLPAnalyzerAst extends Ast {
   @Input({ title: '帖子实体' })
   post!: WeiboPostEntity;

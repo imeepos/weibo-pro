@@ -7,6 +7,7 @@ import { Node, Input, Output, IS_MULTI, IS_BUFFER } from '../decorator';
 import { Ast } from '../ast';
 import { Compiler } from '../compiler';
 import { of } from 'rxjs';
+import { firstValueFrom, toArray } from 'rxjs';
 
 describe('DataFlowManager', () => {
     let manager: DataFlowManager;
@@ -284,7 +285,7 @@ describe('DataFlowManager', () => {
     });
 
     describe('createEdgeOperator()', () => {
-        it('fromProperty 提取属性', (done) => {
+        it('fromProperty 提取属性', async () => {
             const edge: IEdge = {
                 id: '1',
                 from: 'source',
@@ -295,13 +296,11 @@ describe('DataFlowManager', () => {
             const operator = manager.createEdgeOperator(edge);
             const source = of({ result: 'test-value', other: 'ignore' });
 
-            source.pipe(operator).subscribe(value => {
-                expect(value).toBe('test-value');
-                done();
-            });
+            const value = await firstValueFrom(source.pipe(operator));
+            expect(value).toBe('test-value');
         });
 
-        it('嵌套 fromProperty 提取', (done) => {
+        it('嵌套 fromProperty 提取', async () => {
             const edge: IEdge = {
                 id: '1',
                 from: 'source',
@@ -312,13 +311,11 @@ describe('DataFlowManager', () => {
             const operator = manager.createEdgeOperator(edge);
             const source = of({ user: { name: 'Alice', age: 30 } });
 
-            source.pipe(operator).subscribe(value => {
-                expect(value).toBe('Alice');
-                done();
-            });
+            const value = await firstValueFrom(source.pipe(operator));
+            expect(value).toBe('Alice');
         });
 
-        it('condition 条件过滤', (done) => {
+        it('condition 条件过滤', async () => {
             const edge: IEdge = {
                 id: '1',
                 from: 'source',
@@ -333,18 +330,12 @@ describe('DataFlowManager', () => {
                 { status: 'inactive', data: 'C' }
             );
 
-            const results: any[] = [];
-            source.pipe(operator).subscribe({
-                next: value => results.push(value),
-                complete: () => {
-                    expect(results).toHaveLength(1);
-                    expect(results[0].data).toBe('B');
-                    done();
-                },
-            });
+            const results = await firstValueFrom(source.pipe(operator, toArray()));
+            expect(results).toHaveLength(1);
+            expect(results[0].data).toBe('B');
         });
 
-        it('fromProperty + condition 组合', (done) => {
+        it('fromProperty + condition 组合', async () => {
             const edge: IEdge = {
                 id: '1',
                 from: 'source',
@@ -359,15 +350,9 @@ describe('DataFlowManager', () => {
                 { status: 'error', data: 'fail' }
             );
 
-            const results: any[] = [];
-            source.pipe(operator).subscribe({
-                next: value => results.push(value),
-                complete: () => {
-                    expect(results).toHaveLength(1);
-                    expect(results[0]).toBe('pass');
-                    done();
-                },
-            });
+            const results = await firstValueFrom(source.pipe(operator, toArray()));
+            expect(results).toHaveLength(1);
+            expect(results[0]).toBe('pass');
         });
     });
 

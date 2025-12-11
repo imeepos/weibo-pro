@@ -1,7 +1,14 @@
 import { Ast, Input, Node, Output, State } from "@sker/workflow";
 
 
-@Node({ title: '微博检索', type: 'crawler' })
+@Node({
+    title: '微博检索',
+    type: 'crawler',
+    errorStrategy: 'retry',
+    maxRetries: 3,
+    retryDelay: 2000,
+    retryBackoff: 2
+})
 export class WeiboKeywordSearchAst extends Ast {
 
     @Input({ title: '关键字', type: 'text' })

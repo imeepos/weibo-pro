@@ -1,6 +1,13 @@
 import { Ast, Input, Node, Output, State } from "@sker/workflow";
 
-@Node({ title: "微博点赞",type: 'crawler' })
+@Node({
+    title: "微博点赞",
+    type: 'crawler',
+    errorStrategy: 'retry',
+    maxRetries: 3,
+    retryDelay: 2000,
+    retryBackoff: 2
+})
 export class WeiboAjaxStatusesLikeShowAst extends Ast {
 
     @Input({ title: "帖子ID" })

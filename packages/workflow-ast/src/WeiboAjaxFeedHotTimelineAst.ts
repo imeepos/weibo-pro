@@ -1,7 +1,14 @@
 import { Ast, Input, Node, Output, State } from "@sker/workflow";
 
 
-@Node({ title: "微博热门", type: 'crawler' })
+@Node({
+    title: "微博热门",
+    type: 'crawler',
+    errorStrategy: 'retry',
+    maxRetries: 3,
+    retryDelay: 2000,
+    retryBackoff: 2
+})
 export class WeiboAjaxFeedHotTimelineAst extends Ast {
 
     @Input({ isMulti: true, title: '开始' })

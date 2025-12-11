@@ -1,6 +1,13 @@
 import { Ast, Input, Node, Output, State } from "@sker/workflow";
 
-@Node({ title: "微博转发", type: 'crawler' })
+@Node({
+    title: "微博转发",
+    type: 'crawler',
+    errorStrategy: 'retry',
+    maxRetries: 3,
+    retryDelay: 2000,
+    retryBackoff: 2
+})
 export class WeiboAjaxStatusesRepostTimelineAst extends Ast {
 
     @Input({ title: "帖子ID" })

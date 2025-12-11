@@ -1,7 +1,14 @@
 import { Ast, Input, IS_MULTI, Node, Output } from "@sker/workflow";
 
 
-@Node({ title: '文字大模型', type: 'llm' })
+@Node({
+    title: '文字大模型',
+    type: 'llm',
+    errorStrategy: 'retry',
+    maxRetries: 5,
+    retryDelay: 1000,
+    retryBackoff: 2
+})
 export class LlmTextAgentAst extends Ast {
 
     @Input({ title: '系统提示词', type: 'textarea', mode: IS_MULTI })

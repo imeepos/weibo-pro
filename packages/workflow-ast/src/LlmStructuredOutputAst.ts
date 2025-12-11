@@ -1,6 +1,15 @@
 import { Ast, Input, IS_MULTI, Node, Output } from "@sker/workflow";
 
-@Node({ title: '结构化输出', type: 'llm', dynamicOutputs: true, dynamicInputs: true })
+@Node({
+    title: '结构化输出',
+    type: 'llm',
+    dynamicOutputs: true,
+    dynamicInputs: true,
+    errorStrategy: 'retry',
+    maxRetries: 5,
+    retryDelay: 1000,
+    retryBackoff: 2
+})
 export class LlmStructuredOutputAst extends Ast {
 
     @Input({ title: '系统提示词', type: 'textarea', mode: IS_MULTI })
