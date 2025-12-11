@@ -10,6 +10,7 @@ import {
   type DrawerAction,
 } from '@sker/ui/components/workflow'
 import { NodeRunHistory } from './NodeRunHistory'
+import { INode } from '@sker/workflow'
 
 // ✨ 稳定的设置面板包装器，避免因 formData 改变而重新挂载
 const SettingsTabContent = React.memo(({
@@ -61,7 +62,9 @@ export function LeftDrawer({ visible, onClose, onRunNode, onLocateNode, onAutoSa
         name: selectedNode.data.name,
         description: selectedNode.data.description,
         color: selectedNode.data.color,
-        portLabels: (selectedNode.data as any).portLabels,
+        portLabels: (selectedNode.data as INode).portLabels,
+        dynamicInputs: (selectedNode.data as INode).metadata?.inputs,
+        dynamicOutputs: (selectedNode.data as INode).metadata?.outputs,
       }
 
       metadata.inputs.forEach((input) => {
@@ -84,21 +87,24 @@ export function LeftDrawer({ visible, onClose, onRunNode, onLocateNode, onAutoSa
   const handleSave = useCallback(() => {
     if (!selectedNode || !hasChanges) return
 
-    const { name, description, color, portLabels, ...inputProperties } = formData
+    const { name, description, color, portLabels, dynamicInputs, dynamicOutputs, customProperties, ...inputProperties } = formData
 
     // ✨ 构建更新对象
-    const updates: Record<string, any> = {}
+    const updates: Partial<INode> = {}
 
     if (name !== undefined) updates.name = name
     if (description !== undefined) updates.description = description
     if (color !== undefined) updates.color = color
     if (portLabels !== undefined) updates.portLabels = portLabels
+    if (dynamicInputs !== undefined) updates.dynamicInputs = dynamicInputs
+    if (dynamicOutputs !== undefined) updates.dynamicOutputs = dynamicOutputs
+    if (customProperties !== undefined) updates.customProperties = customProperties
 
     // 添加所有输入属性
     Object.entries(inputProperties).forEach(([property, value]) => {
       updates[property] = value
     })
-
+    console.log(updates)
     // ✨ 使用传入的 updateNode 更新节点（确保与 WorkflowCanvas 状态同步）
     onUpdateNode?.(selectedNode.id, updates)
 
@@ -122,16 +128,7 @@ export function LeftDrawer({ visible, onClose, onRunNode, onLocateNode, onAutoSa
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [visible, handleSave])
 
-  const saveStatus = useMemo(() => {
-    if (hasChanges) return 'unsaved'
-    if (formData && Object.keys(formData).length > 0) return 'saved'
-    return 'idle'
-  }, [hasChanges, formData])
 
-
-  // ✨ 每次都使用最新的 formData 创建 tabs
-  // React 会通过 key 和组件类型识别，只更新 props 而不重新挂载
-  // SettingsTabContent 用 React.memo 减少不必要的重新渲染
   const tabs: DrawerTab[] = [
     {
       id: 'settings',

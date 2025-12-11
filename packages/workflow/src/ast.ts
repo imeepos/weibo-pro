@@ -7,7 +7,16 @@ import { Observable } from 'rxjs'
 export interface DynamicOutput {
     property: string      // 属性名（如 output_case4）
     title: string         // 显示标题
+    description?: string  // 端口描述
+    type?: string         // 数据类型
     condition: string     // 条件表达式
+}
+
+export interface DynamicInput {
+    property: string      // 属性名（如 input_custom1）
+    title: string         // 显示标题
+    description?: string  // 端口描述
+    type?: string         // 数据类型（'string' | 'number' | 'boolean' 等）
 }
 
 export interface Visitor {
@@ -65,8 +74,14 @@ export abstract class Ast implements INode {
     // 动态输出配置（用于支持运行时添加输出端口）
     dynamicOutputs?: DynamicOutput[]
 
+    // 动态输入配置（用于支持运行时添加输入端口）
+    dynamicInputs?: DynamicInput[]
+
     // 自定义端口标签 { propertyKey: customLabel }
     portLabels?: Record<string, string>
+
+    // 自定义属性（用户可动态添加任意属性）
+    customProperties?: Record<string, any>
 }
 
 @Node({ title: "工作流", type: 'basic' })

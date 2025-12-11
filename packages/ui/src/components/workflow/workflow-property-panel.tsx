@@ -199,6 +199,8 @@ export interface DynamicPortItemProps {
   description?: string
   type?: string
   isStatic?: boolean  // 装饰器定义的端口，只能修改 title/description
+  property: string
+  onPropertyChange: (value: string) => void
   onTitleChange: (value: string) => void
   onDescriptionChange?: (value: string) => void
   onTypeChange?: (value: string) => void
@@ -211,6 +213,8 @@ const PORT_TYPES = ['string', 'number', 'boolean', 'object', 'array'] as const
 
 export function DynamicPortItem({
   title,
+  property,
+  onPropertyChange,
   description = '',
   type = 'string',
   isStatic = false,
@@ -230,15 +234,21 @@ export function DynamicPortItem({
     )}>
       <div className="flex items-center gap-2">
         <Input
+          value={property}
+          onChange={(e) => onPropertyChange(e.target.value)}
+          placeholder="属性名"
+          className="h-7 text-xs flex-1 bg-card text-foreground"
+        />
+        <Input
           value={title}
           onChange={(e) => onTitleChange(e.target.value)}
           placeholder="端口名称"
           className="h-7 text-xs flex-1 bg-card text-foreground"
         />
-        {!isStatic && onTypeChange && (
+        {!isStatic && (
           <select
             value={type}
-            onChange={(e) => onTypeChange(e.target.value)}
+            onChange={(e) => onTypeChange && onTypeChange(e.target.value)}
             className="h-7 text-xs px-2 rounded border border-border bg-card text-foreground"
           >
             {PORT_TYPES.map((t) => (
@@ -249,26 +259,24 @@ export function DynamicPortItem({
         {isStatic && (
           <span className="h-7 text-xs px-2 flex items-center text-muted-foreground">{type}</span>
         )}
-        {!isStatic && onRemove && (
+        {!isStatic && (
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            onClick={onRemove}
+            onClick={() => onRemove && onRemove()}
             className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
           >
             删除
           </Button>
         )}
       </div>
-      {onDescriptionChange && (
-        <Input
-          value={description}
-          onChange={(e) => onDescriptionChange(e.target.value)}
-          placeholder="端口描述（可选）"
-          className="h-7 text-xs bg-card text-foreground"
-        />
-      )}
+      <Input
+        value={description}
+        onChange={(e) => onDescriptionChange && onDescriptionChange(e.target.value)}
+        placeholder="端口描述（可选）"
+        className="h-7 text-xs bg-card text-foreground"
+      />
       {children}
     </div>
   )

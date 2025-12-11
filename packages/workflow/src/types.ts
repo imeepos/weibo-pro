@@ -55,6 +55,7 @@ export interface INode extends Record<string, any> {
     state: IAstStates;
     // 运行次数
     count: number;
+    color?: string;
     // 发射次数
     emitCount: number;
     // 编号
