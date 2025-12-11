@@ -183,6 +183,14 @@ export class ReactiveScheduler {
                 unfinishedNodes.push(`${node.id} (${node.state})`);
             }
         }
+
+        if (unfinishedNodes.length > 0) {
+            throw new Error(
+                `无法执行增量更新：以下节点尚未完成执行，但不在本次更新范围内：\n` +
+                unfinishedNodes.join('\n') +
+                `\n\n请先执行完整工作流确保所有节点完成，再进行增量调整。`
+            );
+        }
     }
 
     private findAffectedNodes(ast: WorkflowGraphAst, changedNodeId: string): Set<string> {
