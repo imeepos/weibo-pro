@@ -43,8 +43,8 @@ describe('action-group-creator', () => {
         source: 'API',
         events: {
           'Fetch Data Success': emptyProps(),
-          'UPLOAD FILE': emptyProps(),
-          'delete item': emptyProps(),
+          'Upload File': emptyProps(),
+          'Delete Item': emptyProps(),
         },
       })
 
