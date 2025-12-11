@@ -18,9 +18,10 @@ export class Compiler {
      * 编译 AST 为 INode
      *
      * 流程：
-     * 1. 提取 AST 基础属性（id, name, state, count, position...）
-     * 2. 从全局 DI 容器提取装饰器元数据
-     * 3. 组装完整的 INode 结构
+     * 1. 实例化节点类（确保 BehaviorSubject 等默认值被正确初始化）
+     * 2. 合并 JSON 数据（跳过 BehaviorSubject 属性）
+     * 3. 从全局 DI 容器提取装饰器元数据
+     * 4. 组装完整的 INode 结构
      */
     compile(ast: Ast | INode): INode {
         if (isNode(ast)) return ast;
@@ -30,6 +31,16 @@ export class Compiler {
             throw new Error(`compiler error: ast type ${ast.type} not found`)
         }
 
+        // 实例化节点类，确保 BehaviorSubject 等默认值被正确初始化
+        const instance = new (ctor as new () => any)();
+
+        // 合并 JSON 数据到实例，跳过 BehaviorSubject 属性
+        for (const [key, value] of Object.entries(ast)) {
+            if (!(instance[key] instanceof BehaviorSubject)) {
+                instance[key] = value;
+            }
+        }
+
         // 提取 @Node 类装饰器元数据
         const classMetadata = this.extractNodeMetadata(ctor);
 
@@ -37,15 +48,15 @@ export class Compiler {
         const inputs = this.extractInputMetadata(ctor);
 
         // 提取 @Output 属性装饰器元数据（传递实例以检测 BehaviorSubject）
-        const outputs = this.extractOutputMetadata(ctor, ast);
+        const outputs = this.extractOutputMetadata(ctor, instance);
 
         // 提取 @State 属性装饰器元数据
         const states = this.extractStateMetadata(ctor);
 
         // 组装 INode
         return {
-            // 基础属性
-            ...ast,
+            // 基础属性（从实例获取，包含正确初始化的 BehaviorSubject）
+            ...instance,
 
             // 元数据
             metadata: {

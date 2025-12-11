@@ -16,8 +16,7 @@ export class CollectorVisitor {
             ast.state = 'running';
             obs.next({ ...ast });
 
-            // IS_BUFFER 模式已在流层面处理，这里直接使用收集的数据
-            ast.state = 'emitting';
+            // IS_BUFFER 模式已在流层面处理，这里直接使用收集的数据
             ast.result = ast.items || [];
 
             obs.next({ ...ast });

@@ -47,9 +47,7 @@ export class ShareAstVisitor {
             // 格式化对话历史为 LLM 可读的字符串
             ast.formattedHistory = ast.chatHistory
                 .map(msg => `【${msg.role}】${msg.content}`)
-                .join('\n\n---\n\n');
-
-            ast.state = 'emitting';
+                .join('\n\n---\n\n');
             obs.next(ast);
 
             ast.state = 'success';

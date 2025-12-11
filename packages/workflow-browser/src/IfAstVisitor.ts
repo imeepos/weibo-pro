@@ -26,9 +26,7 @@ export class IfAstVisitor {
     handler(ast: IfAst, ctx: any) {
         return new Observable(obs => {
             ast.state = 'running';
-            obs.next({ ...ast });
-
-            ast.state = 'emitting';
+            obs.next({ ...ast });
             ast.result = ast.value;
 
             obs.next({ ...ast });
