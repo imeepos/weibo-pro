@@ -2,7 +2,7 @@ import { setAstError, WorkflowGraphAst } from '../ast';
 import { INode, IEdge, EdgeMode, hasDataMapping, isNode } from '../types';
 import { executeAst } from '../executor';
 import { Observable, of, EMPTY, merge, combineLatest, zip, asyncScheduler, concat } from 'rxjs';
-import { map, catchError, takeWhile, concatMap, filter, withLatestFrom, shareReplay, subscribeOn, finalize, scan, takeLast, toArray, reduce, expand, tap, take } from 'rxjs/operators';
+import { map, catchError, takeWhile, concatMap, filter, withLatestFrom, shareReplay, subscribeOn, finalize, scan, takeLast, toArray, reduce, expand, tap, take, distinctUntilChanged } from 'rxjs/operators';
 import { Injectable, root } from '@sker/core';
 import { findNodeType, INPUT, InputMetadata, hasMultiMode, hasBufferMode, OUTPUT, type OutputMetadata, resolveConstructor } from '../decorator';
 import { Compiler } from '../compiler';
@@ -597,6 +597,17 @@ export class ReactiveScheduler {
                 // 如果是空对象（所有边都被过滤），也过滤掉
                 if (typeof result === 'object' && Object.keys(result).length === 0) return false;
                 return true;
+            }),
+            // 去重：防止同一个源在连续的 emitting 中传递相同的属性值
+            // 使用深度比较来检测对象值的变化
+            distinctUntilChanged((prev, curr) => {
+                // 简单的 JSON 序列化比较（适用于大多数场景）
+                try {
+                    return JSON.stringify(prev) === JSON.stringify(curr);
+                } catch {
+                    // 如果序列化失败（如循环引用），认为不同
+                    return false;
+                }
             })
         );
 
