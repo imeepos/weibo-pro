@@ -28,6 +28,7 @@ const findProviderByModelName = async (modelName: string): Promise<ProviderInfo 
       .getRawOne()
 
     if (!result) return null
+    if (!result.provider_id) return null;
 
     return {
       providerId: result.provider_id,
@@ -49,7 +50,8 @@ const findBestProvider = async (modelName: string): Promise<ProviderInfo | null>
       .orderBy('provider.score', 'DESC')
       .getRawOne()
 
-    if (!result) return null
+    if (!result) return null;
+    if (!result.provider_id) return null;
 
     return {
       providerId: result.provider_id,
