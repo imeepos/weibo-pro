@@ -293,14 +293,22 @@ describe('WorkflowState', () => {
 
   describe('响应式状态流', () => {
     it('继承自 BehaviorSubject，支持订阅', async () => {
-      const workflow = await firstValueFrom(workflowState.pipe(take(1)));
-      expect(workflow.nodes).toHaveLength(2);
+      let receivedWorkflow: any;
+      workflowState.subscribe(workflow => {
+        receivedWorkflow = workflow;
+      });
+      await new Promise(resolve => setTimeout(resolve, 10));
+      expect(receivedWorkflow.nodes).toHaveLength(2);
     });
 
     it('新订阅者立即收到当前状态', async () => {
       await new Promise(resolve => setTimeout(resolve, 10));
-      const workflow = await firstValueFrom(workflowState.pipe(take(1)));
-      expect(workflow.nodes).toHaveLength(2);
+      let receivedWorkflow: any;
+      workflowState.subscribe(workflow => {
+        receivedWorkflow = workflow;
+      });
+      await new Promise(resolve => setTimeout(resolve, 10));
+      expect(receivedWorkflow.nodes).toHaveLength(2);
     });
 
     it('多个订阅者同时接收更新', async () => {
@@ -311,7 +319,7 @@ describe('WorkflowState', () => {
       workflowState.subscribe(workflow => subscriber2Updates.push(workflow));
 
       setTimeout(() => {
-        const workflow = workflowState.current;
+        const workflow = workflowState.current!;
         workflow.nodes[0]!.state = 'success';
         workflowState.next({ ...workflow, nodes: [...workflow.nodes] });
       }, 10);

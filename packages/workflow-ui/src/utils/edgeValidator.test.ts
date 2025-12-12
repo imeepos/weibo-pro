@@ -178,7 +178,7 @@ describe('Edge Validator', () => {
       const result = validateEdges([edge1, edge2], nodes)
 
       expect(result).toHaveLength(1)
-      expect(result[0].id).toBe('edge-1')
+      expect(result[0]!.id).toBe('edge-1')
     })
 
     it('应该返回所有有效边', () => {
@@ -214,9 +214,9 @@ describe('Edge Validator', () => {
 
       expect(result.validEdges).toHaveLength(1)
       expect(result.invalidEdges).toHaveLength(1)
-      expect(result.validEdges[0].id).toBe('edge-1')
-      expect(result.invalidEdges[0].edge.id).toBe('edge-2')
-      expect(result.invalidEdges[0].errors).toContain('不允许节点连接到自己')
+      expect(result.validEdges[0]!.id).toBe('edge-1')
+      expect(result.invalidEdges[0]!.edge.id).toBe('edge-2')
+      expect(result.invalidEdges[0]!.errors).toContain('不允许节点连接到自己')
     })
 
     it('应该包含无效边的错误信息', () => {
@@ -226,7 +226,7 @@ describe('Edge Validator', () => {
       const result = validateEdgesDetailed([edge], nodes)
 
       expect(result.invalidEdges).toHaveLength(1)
-      expect(result.invalidEdges[0].errors.length).toBeGreaterThan(0)
+      expect(result.invalidEdges[0]!.errors.length).toBeGreaterThan(0)
     })
 
     it('应该处理嵌套的分组节点', () => {
