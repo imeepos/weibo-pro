@@ -1,18 +1,13 @@
-import { Injectable, root } from "@sker/core";
-import { WorkflowController } from "@sker/sdk";
-import { Handler, INode } from "@sker/workflow";
-import { LlmTextAgentAst } from "@sker/workflow-ast";
-import { Observable } from "rxjs";
-
+import { Injectable } from '@sker/core';
+import { Handler, INode } from '@sker/workflow';
+import { LlmTextAgentAst } from '@sker/workflow-ast';
+import { Observable } from 'rxjs';
+import { executeRemote } from './execute-remote.js';
 
 @Injectable()
 export class LlmTextAgentAstVisitor {
-    @Handler(LlmTextAgentAst)
-    handler(ast: LlmTextAgentAst, ctx: any): Observable<INode> {
-        const controller = root.get(WorkflowController);
-        if (!controller) {
-            throw new Error('WorkflowController 未找到');
-        }
-        return controller.execute(ast);
-    }
+  @Handler(LlmTextAgentAst)
+  handler(ast: LlmTextAgentAst, ctx: any): Observable<INode> {
+    return executeRemote(ast);
+  }
 }

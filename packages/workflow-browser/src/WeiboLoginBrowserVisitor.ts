@@ -2,7 +2,7 @@ import { Injectable } from '@sker/core';
 import { Handler, INode } from '@sker/workflow';
 import { WeiboLoginAst } from '@sker/workflow-ast';
 import { Observable } from 'rxjs';
-import { executeRemote } from './execute-remote';
+import { executeRemote } from './execute-remote.js';
 
 /**
  * 微博登录事件类型 (浏览器端定义)

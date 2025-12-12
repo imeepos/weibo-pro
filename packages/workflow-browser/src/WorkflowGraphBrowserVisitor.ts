@@ -1,7 +1,7 @@
 import { Injectable } from '@sker/core';
 import { Handler, INode, WorkflowGraphAst } from '@sker/workflow';
 import { Observable } from 'rxjs';
-import { executeRemote } from './execute-remote';
+import { executeRemote } from './execute-remote.js';
 
 /**
  * 工作流图浏览器端执行器

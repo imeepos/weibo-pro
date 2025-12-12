@@ -1,9 +1,9 @@
 import { Injectable } from '@sker/core';
 import { Handler, INode } from '@sker/workflow';
 import { WeiboAjaxStatusesCommentAst } from '@sker/workflow-ast';
-import { root } from '@sker/core';
-import { WorkflowController } from '@sker/sdk';
-import { Observable } from 'rxjs'
+import { Observable } from 'rxjs';
+import { executeRemote } from './execute-remote';
+
 /**
  * 微博评论浏览器端执行器
  *
@@ -15,10 +15,6 @@ import { Observable } from 'rxjs'
 export class WeiboAjaxStatusesCommentBrowserVisitor {
   @Handler(WeiboAjaxStatusesCommentAst)
   handler(ast: WeiboAjaxStatusesCommentAst, ctx: any): Observable<INode> {
-    const controller = root.get(WorkflowController);
-    if (!controller) {
-      throw new Error('WorkflowController 未找到');
-    }
-    return controller.execute(ast);
+    return executeRemote(ast);
   }
 }

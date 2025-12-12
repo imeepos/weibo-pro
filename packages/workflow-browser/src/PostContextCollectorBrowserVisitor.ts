@@ -2,7 +2,7 @@ import { Injectable } from '@sker/core';
 import { Handler, INode } from '@sker/workflow';
 import { PostContextCollectorAst } from '@sker/workflow-ast';
 import { Observable } from 'rxjs';
-import { executeRemote } from './execute-remote';
+import { executeRemote } from './execute-remote.js';
 
 /**
  * 帖子上下文收集器浏览器端执行器

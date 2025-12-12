@@ -1,18 +1,13 @@
-import { Injectable, root } from "@sker/core";
-import { WorkflowController } from "@sker/sdk";
-import { Handler } from "@sker/workflow";
-import { WeiboUserDetectionAst } from "@sker/workflow-ast";
-
+import { Injectable } from '@sker/core';
+import { Handler, INode } from '@sker/workflow';
+import { WeiboUserDetectionAst } from '@sker/workflow-ast';
+import { Observable } from 'rxjs';
+import { executeRemote } from './execute-remote.js';
 
 @Injectable()
 export class WeiboUserDetectionAstVisitor {
-
-    @Handler(WeiboUserDetectionAst)
-    handler(ast: WeiboUserDetectionAst, ctx: any) {
-        const controller = root.get(WorkflowController);
-        if (!controller) {
-            throw new Error('WorkflowController 未找到');
-        }
-        return controller.execute(ast);
-    }
+  @Handler(WeiboUserDetectionAst)
+  handler(ast: WeiboUserDetectionAst, ctx: any): Observable<INode> {
+    return executeRemote(ast);
+  }
 }
