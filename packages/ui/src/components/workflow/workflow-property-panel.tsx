@@ -198,18 +198,30 @@ export interface DynamicPortItemProps {
   title: string
   description?: string
   type?: string
-  isStatic?: boolean  // 装饰器定义的端口，只能修改 title/description
+  isStatic?: boolean
+  isRouter?: boolean
+  condition?: string
   property: string
   onPropertyChange: (value: string) => void
   onTitleChange: (value: string) => void
   onDescriptionChange?: (value: string) => void
   onTypeChange?: (value: string) => void
+  onConditionChange?: (value: string) => void
   onRemove?: () => void
   className?: string
-  children?: ReactNode  // 自定义 property 渲染
+  children?: ReactNode
 }
 
 const PORT_TYPES = ['string', 'number', 'boolean', 'object', 'array'] as const
+
+const CONDITION_PRESETS = [
+  { label: '等于', template: '$input === ' },
+  { label: '不等于', template: '$input !== ' },
+  { label: '大于', template: '$input > ' },
+  { label: '小于', template: '$input < ' },
+  { label: '包含', template: '$input.includes(' },
+  { label: '默认', template: 'true' },
+] as const
 
 export function DynamicPortItem({
   title,
@@ -218,9 +230,12 @@ export function DynamicPortItem({
   description = '',
   type = 'string',
   isStatic = false,
+  isRouter = false,
+  condition = '',
   onTitleChange,
   onDescriptionChange,
   onTypeChange,
+  onConditionChange,
   onRemove,
   className,
   children,
@@ -229,16 +244,19 @@ export function DynamicPortItem({
   const titleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const descriptionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const typeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const conditionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [propertyValue, setPropertyValue] = React.useState(property)
   const [titleValue, setTitleValue] = React.useState(title)
   const [descriptionValue, setDescriptionValue] = React.useState(description)
   const [typeValue, setTypeValue] = React.useState(type)
+  const [conditionValue, setConditionValue] = React.useState(condition)
 
   React.useEffect(() => setPropertyValue(property), [property])
   React.useEffect(() => setTitleValue(title), [title])
   React.useEffect(() => setDescriptionValue(description), [description])
   React.useEffect(() => setTypeValue(type), [type])
+  React.useEffect(() => setConditionValue(condition), [condition])
 
   const handlePropertyChange = (value: string) => {
     setPropertyValue(value)
@@ -255,13 +273,27 @@ export function DynamicPortItem({
   const handleDescriptionChange = (value: string) => {
     setDescriptionValue(value)
     if (descriptionTimeoutRef.current) clearTimeout(descriptionTimeoutRef.current)
-    descriptionTimeoutRef.current = setTimeout(() => onDescriptionChange && onDescriptionChange(value), 300)
+    descriptionTimeoutRef.current = setTimeout(() => onDescriptionChange?.(value), 300)
   }
 
   const handleTypeChange = (value: string) => {
     setTypeValue(value)
     if (typeTimeoutRef.current) clearTimeout(typeTimeoutRef.current)
-    typeTimeoutRef.current = setTimeout(() => onTypeChange && onTypeChange(value), 300)
+    typeTimeoutRef.current = setTimeout(() => onTypeChange?.(value), 300)
+  }
+
+  const handleConditionChange = (value: string) => {
+    setConditionValue(value)
+    if (conditionTimeoutRef.current) clearTimeout(conditionTimeoutRef.current)
+    conditionTimeoutRef.current = setTimeout(() => onConditionChange?.(value), 300)
+  }
+
+  const applyPreset = (template: string) => {
+    if (template === 'true') {
+      handleConditionChange('true')
+    } else {
+      setConditionValue(template)
+    }
   }
 
   return (
@@ -269,6 +301,7 @@ export function DynamicPortItem({
       'flex flex-col gap-2 p-3 rounded-lg',
       'bg-accent/50 dark:bg-accent/30',
       isStatic && 'border-l-2 border-primary/50',
+      isRouter && 'border-l-2 border-amber-500/50',
       className
     )}>
       <div className="flex items-center gap-2">
@@ -298,12 +331,12 @@ export function DynamicPortItem({
         {isStatic && (
           <span className="h-7 text-xs px-2 flex items-center text-muted-foreground">{type}</span>
         )}
-        {!isStatic && (
+        {onRemove && (
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            onClick={() => onRemove && onRemove()}
+            onClick={onRemove}
             className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
           >
             删除
@@ -316,6 +349,40 @@ export function DynamicPortItem({
         placeholder="端口描述（可选）"
         className="h-7 text-xs bg-card text-foreground"
       />
+      {isRouter && (
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-1 flex-wrap">
+            <span className="text-xs text-muted-foreground">条件:</span>
+            {CONDITION_PRESETS.map((preset) => (
+              <Button
+                key={preset.label}
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => applyPreset(preset.template)}
+                className={cn(
+                  'h-5 px-1.5 text-[10px]',
+                  conditionValue === preset.template && 'bg-amber-500/20 border-amber-500/50'
+                )}
+              >
+                {preset.label}
+              </Button>
+            ))}
+          </div>
+          <Input
+            value={conditionValue}
+            onChange={(e) => handleConditionChange(e.target.value)}
+            placeholder="$input === 1"
+            className={cn(
+              'h-7 text-xs font-mono bg-card text-foreground',
+              conditionValue === 'true' && 'border-green-500/50'
+            )}
+          />
+          <p className="text-[10px] text-muted-foreground">
+            使用 $input 引用输入值，如: $input === 1, $input {'>'} 10
+          </p>
+        </div>
+      )}
       {children}
     </div>
   )

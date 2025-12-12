@@ -17,6 +17,13 @@ import {
 import { Button } from '@sker/ui/components/ui/button'
 import { INode, INodeInputMetadata, INodeOutputMetadata } from '@sker/workflow'
 
+function extractValue(value: any): any {
+  if (value && typeof value === 'object' && typeof value.getValue === 'function') {
+    return value.getValue()
+  }
+  return value
+}
+
 export interface PropertyPanelProps {
   className?: string
   formData?: INode
@@ -45,6 +52,7 @@ export function PropertyPanel({
 
   const supportsDynamicInputs = useMemo(() => metadata?.class?.dynamicInputs === true, [metadata])
   const supportsDynamicOutputs = useMemo(() => metadata?.class?.dynamicOutputs === true, [metadata])
+  const isControlNode = useMemo(() => metadata?.class?.type === 'control', [metadata])
 
   const generateDefaultPropertyName = useCallback((prefix: 'input' | 'output'): string => {
     const existingProperties = new Set([
@@ -96,7 +104,7 @@ export function PropertyPanel({
   const readonlyProperties = metadata.outputs.map((output) => ({
     ...output,
     label: output.title || output.property,
-    value: (ast as any)[output.property],
+    value: extractValue((ast as any)[output.property]),
   }))
 
   const sections: PropertySection[] = [
@@ -213,8 +221,8 @@ export function PropertyPanel({
       title: property,
       description: '',
       type: 'string',
-      condition: 'true',
-      isStatic: false
+      isStatic: false,
+      ...(isControlNode && { isRouter: true, condition: '$input === ' })
     }
     const outputs = [...currentDynamicOutputs, newOutput]
     handlePropertyChange('metadata', { ...metadata, outputs })
@@ -297,11 +305,14 @@ export function PropertyPanel({
               description={output.description || ''}
               type={output.type || 'string'}
               isStatic={output.isStatic !== false}
+              isRouter={output.isRouter}
+              condition={output.condition}
               onPropertyChange={(value) => handleUpdateOutput(output.property, 'property', value)}
               onTitleChange={(value) => handleUpdateOutput(output.property, 'title', value)}
               onDescriptionChange={(value) => handleUpdateOutput(output.property, 'description', value)}
               onTypeChange={(value) => handleUpdateOutput(output.property, 'type', value)}
-              onRemove={() => handleRemoveOutput(output.property)}
+              onConditionChange={(value) => handleUpdateOutput(output.property, 'condition', value)}
+              onRemove={output.isStatic !== false ? undefined : () => handleRemoveOutput(output.property)}
             />
           ))}
         </div>
