@@ -57,3 +57,6 @@ export * from './PersonaCreatorAstRender';
 
 // 角色技能节点
 export * from './PromptRoleSkillAstRender';
+
+// 查询重写节点
+export * from './QueryRewriterAstRender';

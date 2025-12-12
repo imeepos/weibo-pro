@@ -53,3 +53,6 @@ export { PersonaCreatorAst } from './PersonaCreatorAst';
 
 // 角色技能节点
 export { PromptRoleSkillAst } from './PromptRoleSkillAst';
+
+// 查询重写器节点
+export { QueryRewriterAst } from './QueryRewriterAst';

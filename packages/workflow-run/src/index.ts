@@ -57,6 +57,9 @@ export { useLlmModel } from './llm-client'
 // 角色技能节点
 export { PromptRoleSkillAstVisitor } from './PromptRoleSkillAstVisitor'
 
+// 查询重写节点
+export { QueryRewriterAstVisitor } from './QueryRewriterAstVisitor'
+
 export {
     WeiboAccountService,
     type WeiboLoginSuccessMessage

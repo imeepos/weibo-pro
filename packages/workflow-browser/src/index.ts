@@ -34,3 +34,4 @@ import "./SwitchAstVisitor";
 import "./PersonaAstBrowserVisitor";
 import "./PersonaCreatorAstVisitor";
 import "./PromptRoleSkillAstVisitor";
+import "./QueryRewriterAstVisitor";

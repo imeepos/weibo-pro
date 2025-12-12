@@ -1,18 +1,28 @@
 ## 需求
 
-参考：packages\workflow-ast\src\PersonaAst.ts
+参考 node-DeepResearch 项目中的
 
-创建一个 packages\entities\src\prompt-role.entity.ts 的节点
+SERP 聚类器 (src/tools/serp-cluster.ts)
 
-功能要求：
+  功能：将搜索结果分组为有意义的集群
 
-1. 提供： skill tools 工具，查询当前角色可用的skill，附加到上下文 {id: string;
-  title: string;
-  type: PromptSkillType;
-  description: string | null;
-}[]
-2. 大模型 根据具体场景 选择合适的skill 并获取相关的skill，批量操作
-3. 多轮调用 function call
+  提示词 (line 10-12)：
+  You are a search engine result analyzer.
+  You look at the SERP API response and group them into meaningful cluster.
+  Each cluster should contain a summary of the content, key data and insights,
+  the corresponding URLs and search advice.
+
+设计一个： SERP 聚类器 节点
+
+> 请依据分析结果，精心设计
+
+要求： 
+
+@sker/workflow-ast 节点定义
+@sker/workflow-run 服务端运行
+@sker/workflow-browser 浏览器运行
+@sker/workflow-ui 前端UI，特殊设置使用@Setting
+@sker/ui 通用组件
 
 范围：
 1. @sker/workflow-ast 定义
