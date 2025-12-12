@@ -14,7 +14,7 @@ export class SwitchAstVisitor {
             const inputValue = ast.value
             const outputs = ast.metadata.outputs
 
-            // 分离 default 分支和普通分支
+            // 分离默认分支和普通分支
             const defaultOutput = outputs.find(o =>
                 o.isRouter && (o.condition === 'true' || o.property === 'output_default')
             )
@@ -22,13 +22,11 @@ export class SwitchAstVisitor {
                 o.isRouter && o.condition && o.condition !== 'true' && o.property !== 'output_default'
             )
 
-            // 先评估所有普通分支，找出匹配的
+            // 先评估普通分支，记录是否有匹配
             let anyMatched = false
-            console.log('[SwitchAst] inputValue:', inputValue, 'normalOutputs:', normalOutputs.length)
             normalOutputs.forEach(outputMeta => {
                 const propKey = String(outputMeta.property)
                 const matched = this.evaluateCondition(outputMeta.condition!, { $input: inputValue })
-                console.log(`[SwitchAst] ${propKey} condition: "${outputMeta.condition}" matched:`, matched)
 
                 if (matched) {
                     anyMatched = true
@@ -38,12 +36,10 @@ export class SwitchAstVisitor {
                 }
             })
 
-            console.log('[SwitchAst] anyMatched:', anyMatched)
-            // default 分支：只有当所有普通分支都不匹配时才激活
+            // 默认分支：只有当所有普通分支都不匹配时才激活
             if (defaultOutput) {
                 const propKey = String(defaultOutput.property)
                 const value = anyMatched ? undefined : inputValue
-                console.log(`[SwitchAst] default branch ${propKey} value:`, value)
                 this.setOutputValue(ast, propKey, value)
             }
 
@@ -63,6 +59,13 @@ export class SwitchAstVisitor {
         }
     }
 
+    /**
+     * 求值条件表达式
+     * 简单实现：支持 $input === value 和 true/false
+     *
+     * 注意：使用 new Function() 存在安全风险
+     * 生产环境建议使用 expr-eval 或 jexl 等安全的表达式引擎
+     */
     private evaluateCondition(condition: string, context: any): boolean {
         try {
             const func = new Function(

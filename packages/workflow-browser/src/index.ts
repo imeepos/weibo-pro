@@ -30,3 +30,4 @@ import "./LlmStructuredOutputAstVisitor";
 import "./FilterAstVisitor";
 import "./MergeAstVisitor";
 import "./LoopAstVisitor";
+import "./SwitchAstVisitor";

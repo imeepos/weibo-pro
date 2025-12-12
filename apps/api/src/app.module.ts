@@ -28,6 +28,7 @@ import { LlmProvidersController } from './controllers/llm-providers.controller';
 import { LlmModelsController } from './controllers/llm-models.controller';
 import { LlmModelProvidersController } from './controllers/llm-model-providers.controller';
 import { LlmChatLogsController } from './controllers/llm-chat-logs.controller';
+import { LlmProxyController } from './controllers/llm-proxy.controller';
 import { AppWebSocketGateway } from './gateways/websocket.gateway';
 import { EventQueryService } from './services/data/events/event-query.service';
 import { EventAnalyticsService } from './services/data/events/event-analytics.service';
@@ -39,6 +40,7 @@ import { LlmProviderService } from './services/llm-provider.service';
 import { LlmModelService } from './services/llm-model.service';
 import { LlmModelProviderService } from './services/llm-model-provider.service';
 import { LlmChatLogService } from './services/llm-chat-log.service';
+import { LlmProxyService } from './services/llm-proxy.service';
 
 @Module({
   controllers: [
@@ -58,6 +60,7 @@ import { LlmChatLogService } from './services/llm-chat-log.service';
     LlmModelsController,
     LlmModelProvidersController,
     LlmChatLogsController,
+    LlmProxyController,
   ],
   providers: [
     {
@@ -86,6 +89,7 @@ import { LlmChatLogService } from './services/llm-chat-log.service';
     { provide: LlmModelService, useFactory: () => root.get(LlmModelService) },
     { provide: LlmModelProviderService, useFactory: () => root.get(LlmModelProviderService) },
     { provide: LlmChatLogService, useFactory: () => root.get(LlmChatLogService) },
+    { provide: LlmProxyService, useFactory: () => root.get(LlmProxyService) },
   ],
 })
 export class AppModule { }
