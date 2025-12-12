@@ -60,3 +60,15 @@ export * from './PromptRoleSkillAstRender';
 
 // 查询重写节点
 export * from './QueryRewriterAstRender';
+
+// 研究规划器节点
+export * from './ResearchPlannerAstRender';
+
+// 答案终稿器节点
+export * from './AnswerFinalizerAstRender';
+
+// 错误分析器节点
+export * from './ErrorAnalyzerAstRender';
+
+// 答案评估器节点
+export * from './AnswerEvaluatorAstRender';

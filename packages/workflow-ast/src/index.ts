@@ -59,3 +59,15 @@ export { QueryRewriterAst } from './QueryRewriterAst';
 
 // 答案终稿器节点
 export { AnswerFinalizerAst } from './AnswerFinalizerAst';
+
+// 答案评估器节点
+export { AnswerEvaluatorAst } from './AnswerEvaluatorAst';
+export type { EvaluationType, EvaluationResult } from './AnswerEvaluatorAst';
+
+// 错误分析器节点
+export { ErrorAnalyzerAst } from './ErrorAnalyzerAst';
+
+// 研究规划器节点
+export { ResearchPlannerAst } from './ResearchPlannerAst';
+
+export { SerpClusterAst } from './SerpClusterAst'

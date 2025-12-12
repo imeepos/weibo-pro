@@ -60,6 +60,18 @@ export { PromptRoleSkillAstVisitor } from './PromptRoleSkillAstVisitor'
 // 查询重写节点
 export { QueryRewriterAstVisitor } from './QueryRewriterAstVisitor'
 
+// 答案终稿器节点
+export { AnswerFinalizerAstVisitor } from './AnswerFinalizerAstVisitor'
+
+// 错误分析器节点
+export { ErrorAnalyzerAstVisitor } from './ErrorAnalyzerAstVisitor'
+
+// 研究规划器节点
+export { ResearchPlannerAstVisitor } from './ResearchPlannerAstVisitor'
+
+// 答案评估器节点
+export { AnswerEvaluatorAstVisitor } from './AnswerEvaluatorAstVisitor'
+
 export {
     WeiboAccountService,
     type WeiboLoginSuccessMessage

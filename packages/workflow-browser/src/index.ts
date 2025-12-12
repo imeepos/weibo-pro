@@ -35,3 +35,7 @@ import "./PersonaAstBrowserVisitor";
 import "./PersonaCreatorAstVisitor";
 import "./PromptRoleSkillAstVisitor";
 import "./QueryRewriterAstVisitor";
+import "./AnswerFinalizerAstVisitor";
+import "./AnswerEvaluatorAstVisitor";
+import "./ErrorAnalyzerAstVisitor";
+import "./ResearchPlannerAstVisitor";
