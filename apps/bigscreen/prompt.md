@@ -1,6 +1,16 @@
 ## 需求
 
+问题：
 
+- packages\workflow-run\src\PersonaAstVisitor.ts 一次运行会入库多条
+而且 name/description/type 生成的都很不精确，这是记忆系统，根据name/description 要能知道 content里发生了什么事情
+一个故事剧情，要根据需要，生成合理的多条记忆，而不是静态的一条
+
+d44379ef-0f78-4baf-a31e-f39da46b7da2	bff2929c-773a-4b5c-99f9-a75229e4b685	对话-2025/12/12 12:06:46	undefined
+7132011e-303b-42f5-97a5-1d3ccefc44c3	bff2929c-773a-4b5c-99f9-a75229e4b685	对话-2025/12/12 12:06:52	undefined
+03773322-2d1d-4b05-b896-acff03471296	bff2929c-773a-4b5c-99f9-a75229e4b685	对话-2025/12/12 12:14:35	undefined
+86b8d631-79a3-42c4-8b9f-2f2aa4a4c6df	bff2929c-773a-4b5c-99f9-a75229e4b685	对话-2025/12/12 12:14:35	undefined
+38ae21c9-5520-4e66-b89f-03dd94ca2bb6	bff2929c-773a-4b5c-99f9-a75229e4b685	对话-2025/12/12 12:14:38	undefined
 
 范围：
 1. @sker/workflow-ast 定义

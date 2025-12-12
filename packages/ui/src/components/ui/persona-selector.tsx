@@ -19,6 +19,7 @@ export interface PersonaSelectorProps {
   onChange?: (value: string) => void
   placeholder?: string
   className?: string
+  defaultLimit?: number
 }
 
 function PersonaSelector({
@@ -27,8 +28,10 @@ function PersonaSelector({
   onChange,
   placeholder = "搜索角色...",
   className,
+  defaultLimit = 3,
 }: PersonaSelectorProps) {
   const [search, setSearch] = React.useState("")
+  const [expanded, setExpanded] = React.useState(false)
 
   const filtered = React.useMemo(() => {
     if (!search.trim()) return personas
@@ -39,6 +42,11 @@ function PersonaSelector({
         p.description?.toLowerCase().includes(keyword)
     )
   }, [personas, search])
+
+  // 搜索时显示全部，否则受限于 defaultLimit
+  const isSearching = search.trim().length > 0
+  const displayList = isSearching || expanded ? filtered : filtered.slice(0, defaultLimit)
+  const hasMore = !isSearching && filtered.length > defaultLimit
 
   const handleSelect = (id: string) => {
     onChange?.(value === id ? "" : id)
@@ -57,53 +65,64 @@ function PersonaSelector({
             无匹配角色
           </div>
         ) : (
-          filtered.map((persona) => {
-            const selected = value === persona.id
-            return (
-              <div
-                key={persona.id}
-                onClick={() => handleSelect(persona.id)}
-                className={cn(
-                  "border-border flex cursor-pointer items-center gap-3 border-b p-3 transition-colors last:border-b-0",
-                  selected ? "bg-primary/5" : "hover:bg-muted/50"
-                )}
-              >
+          <>
+            {displayList.map((persona) => {
+              const selected = value === persona.id
+              return (
                 <div
+                  key={persona.id}
+                  onClick={() => handleSelect(persona.id)}
                   className={cn(
-                    "flex size-4 shrink-0 items-center justify-center rounded border transition-colors",
-                    selected
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-input"
+                    "border-border flex cursor-pointer items-center gap-3 border-b p-3 transition-colors last:border-b-0",
+                    selected ? "bg-primary/5" : "hover:bg-muted/50"
                   )}
                 >
-                  {selected && <CheckIcon className="size-3" />}
-                </div>
-                {persona.avatar ? (
-                  <img
-                    src={persona.avatar}
-                    alt={persona.name}
-                    className="size-8 shrink-0 rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="bg-muted flex size-8 shrink-0 items-center justify-center rounded-full">
-                    <UserIcon className="text-muted-foreground size-4" />
+                  <div
+                    className={cn(
+                      "flex size-4 shrink-0 items-center justify-center rounded border transition-colors",
+                      selected
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-input"
+                    )}
+                  >
+                    {selected && <CheckIcon className="size-3" />}
                   </div>
-                )}
-                <div className="min-w-0 flex-1">
-                  <div className="truncate font-medium">{persona.name}</div>
-                  {persona.description && (
-                    <div className="text-muted-foreground truncate text-xs">
-                      {persona.description}
+                  {persona.avatar ? (
+                    <img
+                      src={persona.avatar}
+                      alt={persona.name}
+                      className="size-8 shrink-0 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="bg-muted flex size-8 shrink-0 items-center justify-center rounded-full">
+                      <UserIcon className="text-muted-foreground size-4" />
                     </div>
                   )}
+                  <div className="min-w-0 flex-1">
+                    <div className="text-foreground truncate font-medium">{persona.name}</div>
+                    {persona.description && (
+                      <div className="text-muted-foreground truncate text-xs">
+                        {persona.description}
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-muted-foreground flex items-center gap-1 text-xs">
+                    <BrainCircuitIcon className="size-3" />
+                    {persona.memoryCount}
+                  </div>
                 </div>
-                <div className="text-muted-foreground flex items-center gap-1 text-xs">
-                  <BrainCircuitIcon className="size-3" />
-                  {persona.memoryCount}
-                </div>
-              </div>
-            )
-          })
+              )
+            })}
+            {hasMore && (
+              <button
+                type="button"
+                onClick={() => setExpanded(!expanded)}
+                className="text-muted-foreground hover:text-foreground w-full py-2 text-center text-xs transition-colors"
+              >
+                {expanded ? "收起" : `展开更多 (${filtered.length - defaultLimit})`}
+              </button>
+            )}
+          </>
         )}
       </div>
     </div>

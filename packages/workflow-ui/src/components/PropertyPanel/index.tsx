@@ -15,7 +15,7 @@ import {
   type InputFieldType,
 } from '@sker/ui/components/workflow'
 import { Button } from '@sker/ui/components/ui/button'
-import { INode, INodeInputMetadata, INodeOutputMetadata } from '@sker/workflow'
+import { INode, INodeInputMetadata, INodeOutputMetadata, SETTING_METHOD, resolveConstructor } from '@sker/workflow'
 
 function extractValue(value: any): any {
   if (value && typeof value === 'object') {
@@ -46,6 +46,21 @@ export function PropertyPanel({
   const [internalFormData, setInternalFormData] = useState<Record<string, any>>({})
   const [currentDynamicInputs, setCurrentDynamicInputs] = useState<INodeInputMetadata[]>([])
   const [currentDynamicOutputs, setCurrentDynamicOutputs] = useState<INodeOutputMetadata[]>([])
+
+  // 获取节点的 @Setting 渲染器
+  const settingRenderer = useMemo(() => {
+    if (!selectedNode?.data) return null
+    try {
+      const ctor = resolveConstructor(selectedNode.data)
+      const settings = root.get(SETTING_METHOD, [])
+      const setting = settings.find(s => s.ast === ctor)
+      if (!setting) return null
+      const instance = root.get(setting.target)
+      return (instance as any)[setting.property].bind(instance)
+    } catch {
+      return null
+    }
+  }, [selectedNode?.data])
 
   const formData: INode = (externalFormData ?? internalFormData) as INode;
   const handlePropertyChange = externalOnPropertyChange ?? ((property: string, value: any) => {
@@ -154,6 +169,19 @@ export function PropertyPanel({
       ),
     },
   ]
+
+  // 如果有 @Setting 渲染器，添加自定义设置 section
+  if (settingRenderer) {
+    // 合并 formData 到 ast，确保 Setting 组件能获取最新状态
+    const mergedAst = { ...ast, ...formData } as typeof ast
+    sections.push({
+      id: 'custom-setting',
+      title: '节点设置',
+      color: 'primary',
+      defaultOpen: true,
+      content: settingRenderer(mergedAst, handlePropertyChange),
+    })
+  }
 
   if (editableProperties.length > 0) {
     sections.push({
