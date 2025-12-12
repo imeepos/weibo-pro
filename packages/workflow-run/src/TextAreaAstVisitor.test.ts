@@ -11,7 +11,7 @@ describe('TextAreaAstVisitor 单元测试', () => {
 
         ast.id = 'test-node-1'
         ast.input = 'test input'
-        ast.output = new BehaviorSubject('')
+        ast.output = new BehaviorSubject<string|null>('')
 
         const result = await lastValueFrom(visitor.handler(ast, {}))
 
@@ -25,7 +25,7 @@ describe('TextAreaAstVisitor 单元测试', () => {
 
         ast.id = 'test-node-2'
         ast.input = '001\n'
-        ast.output = new BehaviorSubject('')
+        ast.output = new BehaviorSubject<string|null>('')
 
         const result = await lastValueFrom(visitor.handler(ast, {}))
 
@@ -39,7 +39,7 @@ describe('TextAreaAstVisitor 单元测试', () => {
 
         ast.id = 'test-node-3'
         ast.input = ['line1', 'line2', 'line3'] as any
-        ast.output = new BehaviorSubject('')
+        ast.output = new BehaviorSubject<string|null>('')
 
         const result = await lastValueFrom(visitor.handler(ast, {}))
 
@@ -53,7 +53,7 @@ describe('TextAreaAstVisitor 单元测试', () => {
 
         ast.id = 'test-node-4'
         ast.input = ''
-        ast.output = new BehaviorSubject('')
+        ast.output = new BehaviorSubject<string|null>('')
 
         const result = await lastValueFrom(visitor.handler(ast, {}))
 
@@ -67,7 +67,7 @@ describe('TextAreaAstVisitor 单元测试', () => {
 
         ast.id = 'test-node-5'
         ast.input = { key: 'value' } as any
-        ast.output = new BehaviorSubject('')
+        ast.output = new BehaviorSubject<string|null>('')
 
         const result = await lastValueFrom(visitor.handler(ast, {}))
 
@@ -81,13 +81,13 @@ describe('TextAreaAstVisitor 单元测试', () => {
 
         ast.id = 'test-node-6'
         ast.input = 'test'
-        ast.output = new BehaviorSubject('')
+        ast.output = new BehaviorSubject<string|null>('')
 
         const result = await lastValueFrom(visitor.handler(ast, {}))
 
         // 验证 BehaviorSubject 包含值
-        let receivedValue: any = null
-        result.output.subscribe(value => {
+        let receivedValue: string | null = null
+        result.output.subscribe((value: string | null) => {
             receivedValue = value
         })
 
@@ -100,9 +100,9 @@ describe('TextAreaAstVisitor 单元测试', () => {
 
         ast.id = 'test-node-7'
         ast.input = 'test'
-        ast.output = new BehaviorSubject('')
+        ast.output = new BehaviorSubject<string|null>('')
 
-        const states: any[] = []
+        const states: string[] = []
 
         const observable = visitor.handler(ast, {})
         observable.subscribe(node => {

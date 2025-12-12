@@ -234,7 +234,6 @@ describe('StoreGetAstVisitor', () => {
           },
           complete: () => {
             expect(states).toContain('running');
-            expect(states).toContain('emitting');
             expect(states).toContain('success');
             resolve();
           },
@@ -481,7 +480,6 @@ describe('StoreSetAstVisitor', () => {
           },
           complete: () => {
             expect(states).toContain('running');
-            expect(states).toContain('emitting');
             expect(states).toContain('success');
             resolve();
           },

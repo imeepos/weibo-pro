@@ -66,6 +66,13 @@ export class Compiler {
         const dynamicInputs = existingMetadata?.inputs?.filter(i => i.isStatic === false) || [];
         const dynamicOutputs = existingMetadata?.outputs?.filter(o => o.isStatic === false) || [];
 
+        // 初始化动态输出为 BehaviorSubject（路由输出必须是 BehaviorSubject）
+        for (const output of dynamicOutputs) {
+            if (!(instance[output.property] instanceof BehaviorSubject)) {
+                instance[output.property] = new BehaviorSubject<any>(undefined);
+            }
+        }
+
         // 组装 INode：直接修改实例，保留原型链（确保 toJSON 方法生效）
         instance.metadata = {
             class: classMetadata,
