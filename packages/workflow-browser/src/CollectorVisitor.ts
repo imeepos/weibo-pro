@@ -16,8 +16,14 @@ export class CollectorVisitor {
             ast.state = 'running';
             obs.next({ ...ast });
 
-            // IS_BUFFER 模式已在流层面处理，这里直接使用收集的数据
-            ast.result = ast.items || [];
+            // IS_BUFFER 模式已在流层面处理，这里直接使用收集的数据
+            let items = ast.items || [];
+            // 如果是多层嵌套的数组，展平一层
+            if (Array.isArray(items) && items.length > 0) {
+                items = items.flat();
+            }
+
+            ast.result.next(items);
 
             obs.next({ ...ast });
 

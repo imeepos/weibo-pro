@@ -86,7 +86,9 @@ export function MarkdownEditor({
       onChange={() => {
         // 标记为内部更新
         isInternalUpdateRef.current = true
-        onChange?.(editor.getApi(MarkdownPlugin).markdown.serialize())
+        const serialized = editor.getApi(MarkdownPlugin).markdown.serialize()
+        // 去掉 Plate 编辑器自动添加的末尾换行符
+        onChange?.(serialized.replace(/\n$/, ''))
       }}
     >
       <EditorContainer variant="comment" className={cn('text-foreground',className)}>
