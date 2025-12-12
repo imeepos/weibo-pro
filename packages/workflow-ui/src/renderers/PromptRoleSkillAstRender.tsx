@@ -1,77 +1,181 @@
-import React from 'react';
-import { Injectable } from '@sker/core';
-import { Render } from '@sker/workflow';
+import React, { useState, useEffect } from 'react';
+import { Injectable, root } from '@sker/core';
+import { Render, Setting } from '@sker/workflow';
 import { PromptRoleSkillAst } from '@sker/workflow-ast';
+import { PromptRolesController, type PromptRoleWithSkills } from '@sker/sdk';
+import type { PromptSkillType } from '@sker/entities';
+
+const SkillTypeColors: Record<PromptSkillType, string> = {
+  thought: 'bg-blue-500/20 text-blue-400',
+  execution: 'bg-green-500/20 text-green-400',
+  knowledge: 'bg-purple-500/20 text-purple-400',
+  decision: 'bg-orange-500/20 text-orange-400',
+};
+
+const SkillItem: React.FC<{
+  title: string;
+  description: string | null;
+  type: PromptSkillType;
+  isSelected: boolean;
+}> = ({ title, description, type, isSelected }) => (
+  <div className={`flex items-start gap-2 p-2 rounded-lg border transition-all ${
+    isSelected
+      ? 'bg-accent/50 border-border'
+      : 'bg-muted/50 border-border'
+  }`}>
+    <span className={`px-1.5 py-0.5 text-[10px] rounded whitespace-nowrap ${SkillTypeColors[type] || 'bg-muted text-muted-foreground'}`}>
+      {type}
+    </span>
+    <div className="flex-1 min-w-0">
+      <div className="text-xs font-medium text-foreground truncate">{title}</div>
+      {description && (
+        <div className="text-[10px] text-muted-foreground line-clamp-2">{description}</div>
+      )}
+    </div>
+    {isSelected && (
+      <span className="text-[10px] text-accent-foreground">✓</span>
+    )}
+  </div>
+);
 
 const PromptRoleSkillRender: React.FC<{ ast: PromptRoleSkillAst }> = ({ ast }) => {
-  if (ast.state === 'pending') {
+  if (!ast.roleId) {
     return (
-      <div className="p-3 text-center text-slate-400 text-sm">
-        指定角色后运行
+      <div className="p-3 text-center text-muted-foreground text-sm">
+        请在属性面板中选择角色
       </div>
     );
   }
 
   const selectedSkills = ast.selectedSkillsList?.getValue() || [];
+  const availableSkills = ast.availableSkills || [];
 
   return (
     <div className="space-y-3 p-3 max-w-sm">
-      {ast.availableSkills.length > 0 && (
+      {/* 可用技能 */}
+      {availableSkills.length > 0 && (
         <div className="space-y-1.5">
-          <div className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">
-            可用技能
+          <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+            可用技能 ({availableSkills.length})
           </div>
-          <div className="flex flex-wrap gap-1">
-            {ast.availableSkills.map((skill) => (
-              <span
+          <div className="space-y-1 max-h-40 overflow-y-auto">
+            {availableSkills.map((skill) => (
+              <SkillItem
                 key={skill.id}
-                className={`px-2 py-0.5 text-[10px] rounded-full border transition-all ${
-                  selectedSkills.some(s => s.id === skill.id)
-                    ? 'bg-emerald-500/30 text-emerald-400 border-emerald-500/50'
-                    : 'bg-slate-700/30 text-slate-400 border-slate-600/50'
-                }`}
-              >
-                {skill.title}
-              </span>
+                title={skill.title}
+                description={skill.description}
+                type={skill.type}
+                isSelected={selectedSkills.some(s => s.id === skill.id)}
+              />
             ))}
           </div>
         </div>
       )}
 
+      {/* 选中的技能 */}
       {selectedSkills.length > 0 && (
-        <div className="space-y-2 pt-2 border-t border-slate-700">
-          <div className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">
-            选中的技能
+        <div className="space-y-1.5 pt-2 border-t border-border">
+          <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+            选中的技能 ({selectedSkills.length})
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-1 max-h-40 overflow-y-auto">
             {selectedSkills.map((skill) => (
-              <div key={skill.id} className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="text-xs font-medium text-emerald-300">{skill.title}</div>
-                    {skill.description && (
-                      <div className="text-[10px] text-emerald-400/70 line-clamp-2">
-                        {skill.description}
-                      </div>
-                    )}
-                  </div>
-                  <div className="ml-2 px-1.5 py-0.5 rounded text-[9px] bg-slate-700/50 text-slate-400">
-                    {skill.type}
-                  </div>
-                </div>
-              </div>
+              <SkillItem
+                key={skill.id}
+                title={skill.title}
+                description={skill.description}
+                type={skill.type}
+                isSelected={true}
+              />
             ))}
           </div>
         </div>
       )}
 
-      {ast.state === 'success' && selectedSkills.length === 0 && ast.availableSkills.length > 0 && (
-        <div className="p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
-          <div className="text-xs text-yellow-300">
+      {/* 无选择提示 */}
+      {ast.state === 'success' && selectedSkills.length === 0 && availableSkills.length > 0 && (
+        <div className="p-2 rounded-lg bg-muted/50 border border-border">
+          <div className="text-xs text-muted-foreground">
             未选择任何技能
           </div>
         </div>
       )}
+    </div>
+  );
+};
+
+interface RoleSettingProps {
+  ast: PromptRoleSkillAst;
+  onPropertyChange?: (property: string, value: any) => void;
+}
+
+const RoleSetting: React.FC<RoleSettingProps> = ({ ast, onPropertyChange }) => {
+  const [roles, setRoles] = useState<PromptRoleWithSkills[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const controller = root.get(PromptRolesController);
+    controller.findAll().then((list) => {
+      setRoles(list);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
+
+  const handleSelect = (roleId: string) => {
+    onPropertyChange?.('roleId', roleId);
+  };
+
+  if (loading) {
+    return <div className="py-4 text-center text-muted-foreground text-sm">加载中...</div>;
+  }
+
+  const selectedRole = roles.find(r => r.id === ast.roleId);
+
+  return (
+    <div className="space-y-3 p-3">
+      {/* 当前选择 */}
+      {selectedRole && (
+        <div className="space-y-1.5">
+          <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+            当前角色
+          </div>
+          <div className="p-2 rounded-lg bg-accent/50 border border-border">
+            <div className="text-xs font-medium text-foreground">{selectedRole.name}</div>
+            {selectedRole.description && (
+              <div className="text-[10px] text-muted-foreground line-clamp-2">
+                {selectedRole.description}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 角色列表 */}
+      <div className="space-y-1.5">
+        <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+          选择角色
+        </div>
+        <div className="space-y-1 max-h-60 overflow-y-auto">
+          {roles.map((role) => (
+            <button
+              key={role.id}
+              onClick={() => handleSelect(role.id)}
+              className={`w-full text-left p-2 rounded-lg border transition-all ${
+                ast.roleId === role.id
+                  ? 'bg-accent/50 border-border'
+                  : 'bg-muted/50 border-border hover:bg-muted'
+              }`}
+            >
+              <div className="text-xs font-medium text-foreground">{role.name}</div>
+              {role.description && (
+                <div className="text-[10px] text-muted-foreground line-clamp-1">
+                  {role.description}
+                </div>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 };
@@ -81,5 +185,10 @@ export class PromptRoleSkillAstRender {
   @Render(PromptRoleSkillAst)
   render(ast: PromptRoleSkillAst) {
     return <PromptRoleSkillRender ast={ast} />;
+  }
+
+  @Setting(PromptRoleSkillAst)
+  setting(ast: PromptRoleSkillAst, handlePropertyChange?: (property: string, value: any) => void) {
+    return <RoleSetting ast={ast} onPropertyChange={handlePropertyChange} />;
   }
 }
