@@ -23,7 +23,7 @@ import { BehaviorSubject } from 'rxjs'
  * // batchSize = 1 (默认)
  * // 输出: 依次发射 'a', 'b', 'c'
  */
-@Node({ title: '循环', type: 'basic' })
+@Node({ title: '循环', type: 'control' })
 export class LoopAst extends Ast {
     @Input({ title: '数据', mode: IS_MULTI, type: 'any' })
     items: any[] = []

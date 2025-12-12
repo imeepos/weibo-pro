@@ -13,7 +13,7 @@ import { Button } from '@sker/ui/components/ui/button'
  * 运行配置对话框
  *
  * 优雅设计：
- * - 自动收集所有入度为 0 的起始节点
+ * - 优先使用 entryNodeIds 确定入口节点，为空时回退到无入边节点
  * - 只渲染带有 @Input 装饰器的属性（通过元数据系统）
  * - 智能推断字段类型（优先使用 @Input 的 type）
  * - 使用 WorkflowFormField 构建统一表单
@@ -39,7 +39,9 @@ interface InputField {
 }
 
 /**
- * 从工作流 AST 收集起始节点的输入值
+ * 从工作流 AST 收集入口节点的输入值
+ *
+ * 优先使用 entryNodeIds，为空时回退到自动识别（无入边节点）
  */
 function collectInputsFromWorkflow(
   workflow: WorkflowGraphAst,
@@ -51,10 +53,13 @@ function collectInputsFromWorkflow(
     return normalizedInputs
   }
 
-  const startNodes = workflow.nodes.filter((node) => {
-    const hasIncomingEdges = workflow.edges.some((edge: IEdge) => edge.to === node.id)
-    return !hasIncomingEdges
-  })
+  // 优先使用显式指定的入口节点，否则回退到无入边节点
+  const startNodes = workflow.entryNodeIds?.length
+    ? workflow.nodes.filter((node) => workflow.entryNodeIds.includes(node.id))
+    : workflow.nodes.filter((node) => {
+        const hasIncomingEdges = workflow.edges.some((edge: IEdge) => edge.to === node.id)
+        return !hasIncomingEdges
+      })
 
   startNodes.forEach((astNode: any) => {
     try {
@@ -122,18 +127,18 @@ export function RunConfigDialog({
     prevVisibleRef.current = true
   }, [visible, workflow, defaultInputs])
 
-  // 识别输入节点（入度为 0 的节点）
+  // 识别入口节点（优先使用 entryNodeIds，为空时回退到无入边节点）
   const inputNodes = useMemo(() => {
     if (!workflow?.nodes || !workflow?.edges) {
       return []
     }
 
-    return workflow.nodes.filter((node) => {
-      const hasIncomingEdges = workflow.edges.some(
-        (edge: IEdge) => edge.to === node.id
-      )
-      return !hasIncomingEdges
-    })
+    return workflow.entryNodeIds?.length
+      ? workflow.nodes.filter((node) => workflow.entryNodeIds.includes(node.id))
+      : workflow.nodes.filter((node) => {
+          const hasIncomingEdges = workflow.edges.some((edge: IEdge) => edge.to === node.id)
+          return !hasIncomingEdges
+        })
   }, [workflow])
 
   // 提取所有带 @Input 装饰器的字段

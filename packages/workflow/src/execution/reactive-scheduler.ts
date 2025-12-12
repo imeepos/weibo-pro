@@ -683,7 +683,8 @@ export class ReactiveScheduler {
         const shouldSkipInitial =
             initialValue === '' ||
             initialValue === null ||
-            initialValue === undefined;
+            initialValue === undefined ||
+            (Array.isArray(initialValue) && initialValue.length === 0);
 
         const stream$ = subject.asObservable();
 
