@@ -31,7 +31,7 @@ export class PromptRoleSkillAst extends Ast {
   selectedSkills: SkillSummary[] = [];
 
   @State({ title: '技能内容缓存' })
-  skillContents: Map<string, string> = new Map();
+  skillContents: Record<string, string> = {};
 
   @Output({ title: '选中技能列表' })
   selectedSkillsList: BehaviorSubject<SkillSummary[]> = new BehaviorSubject<SkillSummary[]>([]);

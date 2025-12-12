@@ -112,12 +112,18 @@ export class LlmProxyService {
       const proxyBody = { ...body, model: provider.modelName }
       console.log(`[${requestedModel}] -> [${provider.modelName}] via ${provider.baseUrl}`)
 
-      const reqHeaders: Record<string, string> = { ...headers, 'Authorization': `Bearer ${provider.apiKey}` }
+      const reqHeaders: Record<string, string> = {}
+      for (const [key, value] of Object.entries(headers)) {
+        const lowerKey = key.toLowerCase()
+        if (lowerKey !== 'authorization' && lowerKey !== 'host' && typeof value === 'string') {
+          reqHeaders[key] = value
+        }
+      }
+      reqHeaders['Authorization'] = `Bearer ${provider.apiKey}`
       const startTime = Date.now()
 
       try {
         const url = `${provider.baseUrl}${apiPath}`
-        console.log({url, provider})
         const response = await fetch(url, {
           method: 'POST',
           headers: reqHeaders,
@@ -136,7 +142,7 @@ export class LlmProxyService {
         const isStreaming = body.stream === true
         let usage: { input_tokens?: number; output_tokens?: number } | undefined
 
-        if (!isStreaming && response.ok) {
+        if (!isStreaming) {
           const responseData = await response.json()
           usage = responseData.usage
 
@@ -145,9 +151,10 @@ export class LlmProxyService {
             modelName: requestedModel,
             request: proxyBody,
             durationMs,
-            isSuccess: true,
+            isSuccess: response.ok,
             statusCode: response.status,
-            usage
+            usage,
+            error: response.ok ? undefined : JSON.stringify(responseData)
           })
 
           return {
