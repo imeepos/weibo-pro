@@ -9,7 +9,7 @@ export class DefaultVisitor {
             obs.next({ ...ast });
 
             // 不再需要 emitting 状态，BehaviorSubject 模式直接发射值
-
+            
             ast.state = 'success';
             obs.next({ ...ast });
             obs.complete();
