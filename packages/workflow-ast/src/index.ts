@@ -38,7 +38,6 @@ export { ShareAst } from './ShareAst';
 export type { ChatMessage } from './ShareAst';
 
 // 控制流节点
-export { IfAst } from './IfAst';
 export { SwitchAst } from './SwitchAst';
 
 // 循环群聊节点

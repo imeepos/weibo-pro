@@ -27,7 +27,6 @@ export { VideoVisitor } from './VideoVisitor'
 export { AudioVisitor } from './AudioVisitor'
 
 // 控制流节点
-export { IfAstVisitor } from './IfAstVisitor'
 export { SwitchAstVisitor } from './SwitchAstVisitor'
 
 // 消息队列节点

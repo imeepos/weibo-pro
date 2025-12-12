@@ -30,7 +30,6 @@ export * from './VideoAstRender';
 export * from './AudioAstRender';
 
 // 控制流节点
-export * from './IfAstRender';
 export * from './SwitchAstRender';
 
 // 数据处理节点

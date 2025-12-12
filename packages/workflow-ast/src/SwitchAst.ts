@@ -1,4 +1,4 @@
-import { Ast, Node, Input, Output, type INodeMetadata } from '@sker/workflow'
+import { Ast, Node, Input, Output } from '@sker/workflow'
 import { BehaviorSubject } from 'rxjs'
 
 @Node({ title: '分支路由器', type: 'control', dynamicOutputs: true })

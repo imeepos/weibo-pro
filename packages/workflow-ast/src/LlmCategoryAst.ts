@@ -2,7 +2,7 @@
  * 设计一个大模型分类节点
  */
 
-import { Ast, Input, Node } from "@sker/workflow";
+import { Ast, Input, IS_MULTI, Node } from "@sker/workflow";
 
 @Node({
     title: '分类器',
@@ -14,7 +14,7 @@ import { Ast, Input, Node } from "@sker/workflow";
     retryBackoff: 2
 })
 export class LlmCategoryAst extends Ast {
-    @Input({ title: '上下文', isMulti: true })
+    @Input({ title: '上下文', mode: IS_MULTI })
     context: string[] = [];
 
     type: 'LlmCategoryAst' = 'LlmCategoryAst';
