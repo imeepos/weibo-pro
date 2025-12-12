@@ -1,8 +1,18 @@
 ## 需求
 
-页面：apps\bigscreen\src\pages\PromptManagement.tsx
+参考：packages\workflow-ast\src\PersonaAst.ts
 
-Bind Skill Dialog 下拉
+创建一个 packages\entities\src\prompt-role.entity.ts 的节点
+
+功能要求：
+
+1. 提供： skill tools 工具，查询当前角色可用的skill，附加到上下文 {id: string;
+  title: string;
+  type: PromptSkillType;
+  description: string | null;
+}[]
+2. 大模型 根据具体场景 选择合适的skill 并获取相关的skill，批量操作
+3. 多轮调用 function call
 
 范围：
 1. @sker/workflow-ast 定义

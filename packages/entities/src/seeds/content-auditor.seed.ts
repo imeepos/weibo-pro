@@ -228,32 +228,28 @@ export async function seedContentAuditor(em: EntityManager) {
     },
   ];
 
-  // 检测唯一性，只创建不存在的 skills
+  // 创建或更新 skills（逻辑检查 + 条件保存）
   const skills: PromptSkillEntity[] = [];
   for (const data of skillsData) {
-    const existing = await em.findOne(PromptSkillEntity, {
+    let skill = await em.findOne(PromptSkillEntity, {
       where: { name: data.name, scope: data.scope },
     });
-    if (!existing) {
-      const skill = await em.save(PromptSkillEntity, data);
-      skills.push(skill);
+    if (!skill) {
+      skill = await em.save(PromptSkillEntity, data);
     } else {
-      skills.push(existing);
+      Object.assign(skill, data);
+      skill = await em.save(skill);
     }
+    skills.push(skill);
   }
 
-  // 检测角色是否已存在
-  let role = await em.findOne(PromptRoleEntity, {
-    where: { role_id: 'content-auditor' },
-  });
-
-  if (!role) {
-    role = await em.save(PromptRoleEntity, {
-      role_id: 'content-auditor',
-      name: '内容审计员',
-      description: '微博内容质量审计专家',
-      scope: 'system',
-      personality: `我是内容审计员，负责确保发布的内容准确、清晰、安全。
+  // 创建或更新角色
+  const roleData = {
+    role_id: 'content-auditor',
+    name: '内容审计员',
+    description: '微博内容质量审计专家',
+    scope: 'system' as const,
+    personality: `我是内容审计员，负责确保发布的内容准确、清晰、安全。
 
 我的原则：
 - 严格但不苛刻：标准明确，改进可行
@@ -264,23 +260,33 @@ export async function seedContentAuditor(em: EntityManager) {
 - 事实准确性：信息是否真实可靠
 - 表述清晰性：是否容易被误解
 - 潜在风险：是否可能带来负面影响`,
-    });
+  };
 
-    // 创建角色-技能关联（检测重复）
-    const existingRefs = await em.find(PromptRoleSkillRefEntity, {
-      where: { role_id: role.id },
+  let role = await em.findOne(PromptRoleEntity, {
+    where: { role_id: 'content-auditor' },
+  });
+
+  if (!role) {
+    role = await em.save(PromptRoleEntity, roleData);
+  } else {
+    Object.assign(role, roleData);
+    role = await em.save(role);
+  }
+
+  // 逐个检查并创建缺失的关联
+  for (let i = 0; i < skills.length; i++) {
+    const skill = skills[i];
+    const existing = await em.findOne(PromptRoleSkillRefEntity, {
+      where: { role_id: role!.id, skill_id: skill!.id },
     });
-    if (existingRefs.length === 0) {
-      await em.save(
-        PromptRoleSkillRefEntity,
-        skills.map((s, i) => ({
-          role_id: role!.id,
-          skill_id: s.id,
-          skill_type: s.type,
-          ref_type: 'required' as const,
-          sort_order: i,
-        }))
-      );
+    if (!existing) {
+      await em.save(PromptRoleSkillRefEntity, {
+        role_id: role!.id,
+        skill_id: skill!.id,
+        skill_type: skill!.type,
+        ref_type: 'required' as const,
+        sort_order: i,
+      });
     }
   }
 

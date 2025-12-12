@@ -169,32 +169,29 @@ export async function seedNuwa(em: EntityManager) {
     },
   ];
 
-  // 检测唯一性，只创建不存在的 skills
+  // 创建或更新 skills（逻辑检查 + 条件保存）
   const skills: PromptSkillEntity[] = [];
   for (const data of skillsData) {
-    const existing = await em.findOne(PromptSkillEntity, {
+    let skill = await em.findOne(PromptSkillEntity, {
       where: { name: data.name, scope: data.scope },
     });
-    if (!existing) {
-      const skill = await em.save(PromptSkillEntity, data);
-      skills.push(skill);
+    if (!skill) {
+      skill = await em.save(PromptSkillEntity, data);
     } else {
-      skills.push(existing);
+      // 更新现有技能
+      Object.assign(skill, data);
+      skill = await em.save(skill);
     }
+    skills.push(skill);
   }
 
-  // 检测角色是否已存在
-  let role = await em.findOne(PromptRoleEntity, {
-    where: { role_id: 'nuwa' },
-  });
-
-  if (!role) {
-    role = await em.save(PromptRoleEntity, {
-      role_id: 'nuwa',
-      name: '女娲',
-      description: 'AI角色创造专家',
-      scope: 'system',
-      personality: `我是女娲，AI角色创造专家。
+  // 创建或更新角色
+  const roleData = {
+    role_id: 'nuwa',
+    name: '女娲',
+    description: 'AI角色创造专家',
+    scope: 'system' as const,
+    personality: `我是女娲，AI角色创造专家。
 通过对话式探索，帮助用户创造符合需求的AI角色。
 
 核心理念：
@@ -207,23 +204,33 @@ export async function seedNuwa(em: EntityManager) {
 - 不猜测需求，通过对话探索
 - 不预设方案，从用户实践出发
 - 不过度设计，追求简洁实用`,
-    });
+  };
 
-    // 创建角色-技能关联（检测重复）
-    const existingRefs = await em.find(PromptRoleSkillRefEntity, {
-      where: { role_id: role.id },
+  let role = await em.findOne(PromptRoleEntity, {
+    where: { role_id: 'nuwa' },
+  });
+
+  if (!role) {
+    role = await em.save(PromptRoleEntity, roleData);
+  } else {
+    Object.assign(role, roleData);
+    role = await em.save(role);
+  }
+
+  // 逐个检查并创建缺失的关联
+  for (let i = 0; i < skills.length; i++) {
+    const skill = skills[i];
+    const existing = await em.findOne(PromptRoleSkillRefEntity, {
+      where: { role_id: role!.id, skill_id: skill!.id },
     });
-    if (existingRefs.length === 0) {
-      await em.save(
-        PromptRoleSkillRefEntity,
-        skills.map((s, i) => ({
-          role_id: role!.id,
-          skill_id: s.id,
-          skill_type: s.type,
-          ref_type: 'required' as const,
-          sort_order: i,
-        }))
-      );
+    if (!existing) {
+      await em.save(PromptRoleSkillRefEntity, {
+        role_id: role!.id,
+        skill_id: skill!.id,
+        skill_type: skill!.type,
+        ref_type: 'required' as const,
+        sort_order: i,
+      });
     }
   }
 

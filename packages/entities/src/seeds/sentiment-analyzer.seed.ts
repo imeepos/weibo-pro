@@ -245,32 +245,28 @@ export async function seedSentimentAnalyzer(em: EntityManager) {
     },
   ];
 
-  // 检测唯一性，只创建不存在的 skills
+  // 创建或更新 skills（逻辑检查 + 条件保存）
   const skills: PromptSkillEntity[] = [];
   for (const data of skillsData) {
-    const existing = await em.findOne(PromptSkillEntity, {
+    let skill = await em.findOne(PromptSkillEntity, {
       where: { name: data.name, scope: data.scope },
     });
-    if (!existing) {
-      const skill = await em.save(PromptSkillEntity, data);
-      skills.push(skill);
+    if (!skill) {
+      skill = await em.save(PromptSkillEntity, data);
     } else {
-      skills.push(existing);
+      Object.assign(skill, data);
+      skill = await em.save(skill);
     }
+    skills.push(skill);
   }
 
-  // 检测角色是否已存在
-  let role = await em.findOne(PromptRoleEntity, {
-    where: { role_id: 'sentiment-analyzer' },
-  });
-
-  if (!role) {
-    role = await em.save(PromptRoleEntity, {
-      role_id: 'sentiment-analyzer',
-      name: '舆情分析师',
-      description: '微博舆情分析专家',
-      scope: 'system',
-      personality: `我是舆情分析师，微博舆情分析领域的专家。
+  // 创建或更新角色
+  const roleData = {
+    role_id: 'sentiment-analyzer',
+    name: '舆情分析师',
+    description: '微博舆情分析专家',
+    scope: 'system' as const,
+    personality: `我是舆情分析师，微博舆情分析领域的专家。
 
 我用数据说话，用事实论证，用模式预判。
 
@@ -283,23 +279,33 @@ export async function seedSentimentAnalyzer(em: EntityManager) {
 - 数据优先：每个判断都有数据支撑
 - 具象化：用具体数据代替模糊表述
 - 预判性：识别事件走向，预测风险`,
-    });
+  };
 
-    // 创建角色-技能关联（检测重复）
-    const existingRefs = await em.find(PromptRoleSkillRefEntity, {
-      where: { role_id: role.id },
+  let role = await em.findOne(PromptRoleEntity, {
+    where: { role_id: 'sentiment-analyzer' },
+  });
+
+  if (!role) {
+    role = await em.save(PromptRoleEntity, roleData);
+  } else {
+    Object.assign(role, roleData);
+    role = await em.save(role);
+  }
+
+  // 逐个检查并创建缺失的关联
+  for (let i = 0; i < skills.length; i++) {
+    const skill = skills[i];
+    const existing = await em.findOne(PromptRoleSkillRefEntity, {
+      where: { role_id: role!.id, skill_id: skill!.id },
     });
-    if (existingRefs.length === 0) {
-      await em.save(
-        PromptRoleSkillRefEntity,
-        skills.map((s, i) => ({
-          role_id: role!.id,
-          skill_id: s.id,
-          skill_type: s.type,
-          ref_type: 'required' as const,
-          sort_order: i,
-        }))
-      );
+    if (!existing) {
+      await em.save(PromptRoleSkillRefEntity, {
+        role_id: role!.id,
+        skill_id: skill!.id,
+        skill_type: skill!.type,
+        ref_type: 'required' as const,
+        sort_order: i,
+      });
     }
   }
 
