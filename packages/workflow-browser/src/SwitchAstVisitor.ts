@@ -1,4 +1,4 @@
-import { Handler, type DynamicOutput } from '@sker/workflow'
+import { Handler, type DynamicOutput, ROUTE_SKIPPED } from '@sker/workflow'
 import { Injectable } from '@sker/core'
 import { SwitchAst } from '@sker/workflow-ast'
 import { Observable, BehaviorSubject } from 'rxjs'
@@ -32,14 +32,14 @@ export class SwitchAstVisitor {
                     anyMatched = true
                     this.setOutputValue(ast, propKey, inputValue)
                 } else {
-                    this.setOutputValue(ast, propKey, undefined)
+                    this.setOutputValue(ast, propKey, ROUTE_SKIPPED)
                 }
             })
 
             // 默认分支：只有当所有普通分支都不匹配时才激活
             if (defaultOutput) {
                 const propKey = String(defaultOutput.property)
-                const value = anyMatched ? undefined : inputValue
+                const value = anyMatched ? ROUTE_SKIPPED : inputValue
                 this.setOutputValue(ast, propKey, value)
             }
 

@@ -98,7 +98,7 @@ export class LlmProxyService {
     }))
   }
 
-  async proxyRequest(protocol: string, body: any, headers: Record<string, string>, contentLength: number): Promise<ProxyResult> {
+  async proxyRequest(protocol: string, apiPath: string, body: any, headers: Record<string, string>, contentLength: number): Promise<ProxyResult> {
     const triedProviders = new Set<string>()
     const requestedModel = body.model
 
@@ -116,7 +116,7 @@ export class LlmProxyService {
       const startTime = Date.now()
 
       try {
-        const url = `${provider.baseUrl}/v1/messages`
+        const url = `${provider.baseUrl}${apiPath}`
         const response = await fetch(url, {
           method: 'POST',
           headers: reqHeaders,

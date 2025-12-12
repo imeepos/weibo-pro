@@ -7,7 +7,7 @@ import { Readable } from 'stream';
 export class LlmProxyController {
   constructor(private readonly llmProxyService: LlmProxyService) { }
 
-  @Post(':protocol/v1/messages')
+  @Post(':protocol/*')
   async proxyMessages(
     @Param('protocol') protocol: string,
     @Req() req: Request,
@@ -16,6 +16,8 @@ export class LlmProxyController {
   ) {
     const body = req.body
     const contentLength = parseInt(headers['content-length'] || '0')
+    // 提取 /llm/:protocol 之后的路径部分
+    const apiPath = '/' + req.path.split('/').slice(3).join('/')
 
     const reqHeaders: Record<string, string> = {}
     for (const [key, value] of Object.entries(headers)) {
@@ -24,7 +26,7 @@ export class LlmProxyController {
       }
     }
 
-    const result = await this.llmProxyService.proxyRequest(protocol, body, reqHeaders, contentLength)
+    const result = await this.llmProxyService.proxyRequest(protocol, apiPath, body, reqHeaders, contentLength)
 
     if (!result.success) {
       return res.status(503).json({ error: result.error })
