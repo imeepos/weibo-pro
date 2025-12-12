@@ -21,9 +21,19 @@ export const ROUTE_SKIPPED = `__ROUTE_SKIPPED`;
 
 /**
  * 判断值是否为路由跳过标记
+ *
+ * 支持三种形式：
+ * 1. 直接的字符串常量 "__ROUTE_SKIPPED"
+ * 2. BehaviorSubject 实例（检查其内部值）
+ * 3. 序列化后的 BehaviorSubject 对象（检查 _value 属性）
  */
-export function isRouteSkipped(value: unknown): value is typeof ROUTE_SKIPPED {
-    return value === ROUTE_SKIPPED;
+export function isRouteSkipped(value: unknown): boolean {
+    if (value === ROUTE_SKIPPED) return true;
+    if (value instanceof BehaviorSubject) return value.getValue() === ROUTE_SKIPPED;
+    if (value && typeof value === 'object' && '_value' in value) {
+        return (value as any)._value === ROUTE_SKIPPED;
+    }
+    return false;
 }
 
 /**
@@ -31,6 +41,22 @@ export function isRouteSkipped(value: unknown): value is typeof ROUTE_SKIPPED {
  */
 export function isBehaviorSubject<T = any>(value: unknown): value is BehaviorSubject<T> {
     return value instanceof BehaviorSubject;
+}
+
+/**
+ * 从 BehaviorSubject 或其序列化形式中提取实际值
+ *
+ * 处理三种情况：
+ * 1. BehaviorSubject 实例 → getValue()
+ * 2. 序列化的 BehaviorSubject 对象 → _value 属性
+ * 3. 普通值 → 直接返回
+ */
+export function extractSubjectValue<T = any>(value: unknown): T {
+    if (value instanceof BehaviorSubject) return value.getValue();
+    if (value && typeof value === 'object' && '_value' in value) {
+        return (value as any)._value;
+    }
+    return value as T;
 }
 
 // 状态数据的基础约束

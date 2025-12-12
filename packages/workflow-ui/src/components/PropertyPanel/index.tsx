@@ -18,8 +18,13 @@ import { Button } from '@sker/ui/components/ui/button'
 import { INode, INodeInputMetadata, INodeOutputMetadata } from '@sker/workflow'
 
 function extractValue(value: any): any {
-  if (value && typeof value === 'object' && typeof value.getValue === 'function') {
-    return value.getValue()
+  if (value && typeof value === 'object') {
+    if (typeof value.getValue === 'function') {
+      return value.getValue()
+    }
+    if ('_value' in value && 'closed' in value && 'observers' in value) {
+      return value._value
+    }
   }
   return value
 }

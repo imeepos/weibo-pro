@@ -26,6 +26,9 @@ export class LlmCategoryAst extends Ast {
     @Output({ title: 'Default', isRouter: true })
     output_default: BehaviorSubject<any> = new BehaviorSubject<any>(undefined);
 
+    @Output({ title: '原始输出' })
+    rawOutput: BehaviorSubject<string> = new BehaviorSubject<string>('');
+
     type: 'LlmCategoryAst' = 'LlmCategoryAst';
 
     declare metadata: NonNullable<Ast['metadata']>;

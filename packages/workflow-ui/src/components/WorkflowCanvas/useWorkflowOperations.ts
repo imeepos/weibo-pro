@@ -488,6 +488,23 @@ export function useWorkflowOperations(
       const abortController = new AbortController()
       abortControllerRef.current = abortController
 
+      // ✨ 重置所有节点状态为 pending（参考 reactive-scheduler.ts 的 resetWorkflowGraphAst）
+      // 确保进度条从 0% 开始
+      workflow.workflowAst.state = 'pending'
+      workflow.workflowAst.nodes = workflow.workflowAst.nodes.map(node => {
+        return Object.assign(
+          Object.create(Object.getPrototypeOf(node)),
+          node,
+          {
+            state: 'pending',
+            count: 0,
+            emitCount: 0,
+            error: undefined
+          }
+        )
+      })
+      workflow.syncFromAst()
+
       onSetRunning?.(true)
 
       // ✨ 深拷贝 AST：避免 Zustand + Immer 冻结对象导致的只读属性问题

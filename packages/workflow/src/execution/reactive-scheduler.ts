@@ -1,5 +1,5 @@
 import { WorkflowGraphAst } from '../ast';
-import { INode, IEdge, EdgeMode, hasDataMapping, isNode, isBehaviorSubject, isRouteSkipped } from '../types';
+import { INode, IEdge, EdgeMode, hasDataMapping, isNode, isBehaviorSubject, isRouteSkipped, extractSubjectValue } from '../types';
 import { executeAst } from '../executor';
 import { Observable, of, EMPTY, merge, combineLatest, zip, asyncScheduler, BehaviorSubject } from 'rxjs';
 import { map, catchError, concatMap, filter, shareReplay, subscribeOn, finalize, scan, takeLast, reduce, take, distinctUntilChanged, skip, tap } from 'rxjs/operators';
@@ -738,10 +738,10 @@ export class ReactiveScheduler {
         edge: IEdge,
         targetNode: INode
     ): Observable<any> {
-        // 检测 ROUTE_SKIPPED 标记
+        // 检测 ROUTE_SKIPPED 标记（支持 BehaviorSubject 及其序列化形式）
         if (edge.fromProperty) {
-            const value = (ast as any)[edge.fromProperty];
-            if (isRouteSkipped(value)) {
+            const rawValue = (ast as any)[edge.fromProperty];
+            if (isRouteSkipped(rawValue)) {
                 return EMPTY;
             }
         }
@@ -754,10 +754,11 @@ export class ReactiveScheduler {
             }
         }
 
-        // 数据提取
+        // 数据提取：使用 extractSubjectValue 处理 BehaviorSubject 及其序列化形式
         let value: any;
         if (hasDataMapping(edge) && edge.fromProperty) {
-            value = this.resolveProperty(ast, edge.fromProperty);
+            const rawValue = this.resolveProperty(ast, edge.fromProperty);
+            value = extractSubjectValue(rawValue);
         } else {
             value = {};
         }

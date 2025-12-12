@@ -721,7 +721,7 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
     const total = nodes.length
     const completed = nodes.filter(n => n.state === 'success' || n.state === 'fail').length
     const failed = nodes.filter(n => n.state === 'fail').length
-    const runningNode = nodes.find(n => n.state === 'running' || n.state === 'emitting')
+    const runningNode = nodes.find(n => n.state === 'running')
 
     return {
       total,
