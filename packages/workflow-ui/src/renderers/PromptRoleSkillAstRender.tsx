@@ -112,6 +112,7 @@ interface RoleSettingProps {
 const RoleSetting: React.FC<RoleSettingProps> = ({ ast, onPropertyChange }) => {
   const [roles, setRoles] = useState<PromptRoleWithSkills[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     const controller = root.get(PromptRolesController);
@@ -130,9 +131,21 @@ const RoleSetting: React.FC<RoleSettingProps> = ({ ast, onPropertyChange }) => {
   }
 
   const selectedRole = roles.find(r => r.id === ast.roleId);
+  const filteredRoles = search
+    ? roles.filter(r => r.name.toLowerCase().includes(search.toLowerCase()) || r.description?.toLowerCase().includes(search.toLowerCase()))
+    : roles;
 
   return (
     <div className="space-y-3 p-3">
+      {/* 搜索框 */}
+      <input
+        type="text"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="搜索角色..."
+        className="w-full px-3 py-1.5 text-xs rounded-lg border border-border bg-muted/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+      />
+
       {/* 当前选择 */}
       {selectedRole && (
         <div className="space-y-1.5">
@@ -153,10 +166,10 @@ const RoleSetting: React.FC<RoleSettingProps> = ({ ast, onPropertyChange }) => {
       {/* 角色列表 */}
       <div className="space-y-1.5">
         <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-          选择角色
+          选择角色 ({filteredRoles.length})
         </div>
         <div className="space-y-1 max-h-60 overflow-y-auto">
-          {roles.map((role) => (
+          {filteredRoles.map((role) => (
             <button
               key={role.id}
               onClick={() => handleSelect(role.id)}
