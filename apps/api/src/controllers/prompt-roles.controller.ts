@@ -41,4 +41,9 @@ export class PromptRolesController implements sdk.PromptRolesController {
   removeSkill(@Param('id') roleId: string, @Param('skillId') skillId: string) {
     return this.service.removeSkill(roleId, skillId);
   }
+
+  @Get(':id/skills')
+  getSkills(@Param('id') roleId: string) {
+    return this.service.getSkills(roleId);
+  }
 }

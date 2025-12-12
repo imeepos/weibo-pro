@@ -33,3 +33,4 @@ import "./LoopAstVisitor";
 import "./SwitchAstVisitor";
 import "./PersonaAstBrowserVisitor";
 import "./PersonaCreatorAstVisitor";
+import "./PromptRoleSkillAstVisitor";

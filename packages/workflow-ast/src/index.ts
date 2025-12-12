@@ -50,3 +50,6 @@ export type { RetrievedMemory } from './PersonaAst';
 
 // 创建人物节点
 export { PersonaCreatorAst } from './PersonaCreatorAst';
+
+// 角色技能节点
+export { PromptRoleSkillAst } from './PromptRoleSkillAst';

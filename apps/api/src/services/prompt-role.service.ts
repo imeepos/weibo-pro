@@ -1,5 +1,5 @@
 import { Injectable } from '@sker/core';
-import { PromptRoleEntity, PromptRoleSkillRefEntity, PromptSkillEntity, useEntityManager } from '@sker/entities';
+import { PromptRoleEntity, PromptRoleSkillRefEntity, PromptSkillEntity, useEntityManager, type SkillSummary } from '@sker/entities';
 
 @Injectable({ providedIn: 'root' })
 export class PromptRoleService {
@@ -60,6 +60,23 @@ export class PromptRoleService {
   async removeSkill(roleId: string, skillId: string) {
     await useEntityManager(async m => {
       await m.delete(PromptRoleSkillRefEntity, { role_id: roleId, skill_id: skillId });
+    });
+  }
+
+  async getSkills(roleId: string): Promise<SkillSummary[]> {
+    return useEntityManager(async m => {
+      const skillRefs = await m.find(PromptRoleSkillRefEntity, {
+        where: { role_id: roleId },
+        relations: ['skill'],
+        order: { sort_order: 'ASC' }
+      });
+
+      return skillRefs.map(ref => ({
+        id: ref.skill.id,
+        title: ref.skill.title,
+        type: ref.skill.type,
+        description: ref.skill.description
+      }));
     });
   }
 }

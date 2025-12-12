@@ -54,6 +54,9 @@ export { PersonaCreatorAstVisitor } from './PersonaCreatorAstVisitor'
 // LLM 客户端
 export { useLlmModel } from './llm-client'
 
+// 角色技能节点
+export { PromptRoleSkillAstVisitor } from './PromptRoleSkillAstVisitor'
+
 export {
     WeiboAccountService,
     type WeiboLoginSuccessMessage

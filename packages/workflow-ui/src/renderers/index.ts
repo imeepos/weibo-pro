@@ -54,3 +54,6 @@ export * from './PersonaAstRender';
 
 // 创建人物节点
 export * from './PersonaCreatorAstRender';
+
+// 角色技能节点
+export * from './PromptRoleSkillAstRender';
