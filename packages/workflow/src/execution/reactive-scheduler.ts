@@ -490,9 +490,13 @@ export class ReactiveScheduler {
             } else {
                 // 尝试读取节点实例的当前值
                 const currentValue = (node as any)[propKey];
-                // IS_MULTI 模式：如果当前值不是数组，不设置默认值（让 assignInputsToNodeInstance 初始化）
+                // IS_MULTI 模式：如果当前值不是数组，初始化为空数组
                 if (isMulti && !Array.isArray(currentValue)) {
-                    // 不设置默认值，让 assignInputsToNodeInstance 初始化为空数组
+                    // 🔧 修复：对于旧数据（currentValue 是空字符串或其他非数组值）
+                    // 显式初始化为空数组，确保：
+                    // 1. 序列化时显示为数组
+                    // 2. assignInputsToNodeInstance 可以正确累加数据
+                    defaults[propKey] = [];
                 } else if (currentValue !== undefined) {
                     defaults[propKey] = currentValue;
                 }

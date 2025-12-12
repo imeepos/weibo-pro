@@ -149,6 +149,8 @@ describe('TextAreaAst 集成测试 - 旧数据序列化问题', () => {
         const node2 = Object.assign(new TextAreaAst(), node2Data);
         const node3 = Object.assign(new TextAreaAst(), node3Data);
 
+        console.log('[测试开始] 节点2初始 input:', node2.input, '类型:', typeof node2.input);
+
         // 编译
         compiler.compile(node1);
         compiler.compile(node2);
@@ -189,6 +191,10 @@ describe('TextAreaAst 集成测试 - 旧数据序列化问题', () => {
 
         compiler.compile(workflow);
 
+        // 执行前检查
+        const node2BeforeExec = workflow.nodes.find(n => n.id === "07731c31-75e8-4c32-9d9c-0510129b6076");
+        console.log('[执行前] 节点2的 input:', node2BeforeExec!.input, '类型:', typeof node2BeforeExec!.input);
+
         // 执行工作流
         const result = await firstValueFrom(scheduler.schedule(workflow, workflow));
 
@@ -200,13 +206,30 @@ describe('TextAreaAst 集成测试 - 旧数据序列化问题', () => {
         console.log('[用户场景测试] 节点2的 input:', finalNode2!.input);
         console.log('[用户场景测试] 节点2的 output._value:', (finalNode2 as any).output._value);
 
-        // 序列化测试：模拟前端接收到的 JSON
-        const serialized = JSON.parse(JSON.stringify(finalNode2));
-        console.log('[用户场景测试] 序列化后的 input:', serialized.input);
-        console.log('[用户场景测试] 序列化后的 input 类型:', typeof serialized.input);
+        // 关键测试：检查中间状态的节点
+        // 模拟前端在执行过程中收到的状态更新
+        console.log('\n=== 关键测试：序列化验证 ===');
+
+        // 场景1：直接序列化最终节点
+        const directSerialized = JSON.parse(JSON.stringify(finalNode2));
+        console.log('场景1-最终节点序列化 input:', directSerialized.input, '类型:', typeof directSerialized.input);
+
+        // 场景2：模拟 reducer 更新后的节点（这只是演示问题，不代表真实流程）
+        // 在实际应用中，前端会通过工作流执行获得更新后的节点
+        const intermediateNode = { ...node2Data };
+        const updated = Object.assign(intermediateNode, { state: 'success' as const });
+        console.log('场景2-中间状态节点 input:', updated.input, '类型:', typeof updated.input);
+        // 注意：场景2只是演示问题，真实流程中节点会通过执行更新
+
+        // 场景3：完整模拟 cloneNode + 应用默认值的流程
+        const cloned = JSON.parse(JSON.stringify(node2Data));
+        console.log('场景3-克隆节点 input:', cloned.input, '类型:', typeof cloned.input);
 
         // ⚠️ 关键断言：序列化后 input 应该是数组
-        expect(Array.isArray(serialized.input)).toBe(true);
-        expect(serialized.input).toEqual(['01', '02']);
+        expect(Array.isArray(directSerialized.input)).toBe(true);
+        expect(directSerialized.input).toEqual(['01', '02']);
+
+        // ✅ 修复验证：执行后的最终节点序列化结果正确
+        console.log('\n✅ 修复验证：最终节点序列化后 input 是数组');
     }, 10000);
 });
