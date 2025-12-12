@@ -55,8 +55,6 @@ export class ReactiveScheduler {
         return updates;
     }
     schedule(ast: WorkflowGraphAst, ctx: WorkflowGraphAst): Observable<WorkflowGraphAst> {
-        console.log(`[工作流] 开始 ${ast.name || ast.id}`);
-
         this.eventBus.emitWorkflowStart(ast.id);
 
         const { state } = this.resetWorkflowGraphAst(ast);
@@ -70,7 +68,6 @@ export class ReactiveScheduler {
 
         return this.subscribeAndMerge(network, ast).pipe(
             finalize(() => {
-                console.log(`[工作流] 完成 ${ast.name || ast.id}`, { state: ast.state });
                 if (ast.state === 'fail') {
                     this.eventBus.emitWorkflowFail(ast.id, ast.error);
                 } else {
@@ -95,7 +92,6 @@ export class ReactiveScheduler {
         );
 
         if (hasUnexecutedNodes) {
-            console.log('[fineTuneNode] 检测到首次执行场景，回退到完整工作流执行');
             return this.schedule(ctx, ctx);
         }
 
@@ -255,12 +251,6 @@ export class ReactiveScheduler {
                 // 递归构建所有上游节点
                 incomingEdges.forEach(edge => buildNode(edge.from));
 
-                console.log(`[buildIncrementalNetwork] 构建受影响节点 ${nodeId}:`, {
-                    hasIncomingEdges: incomingEdges.length > 0,
-                    incomingEdgesCount: incomingEdges.length,
-                    isEntryNode: incomingEdges.length === 0
-                });
-
                 // 判断是否为入口节点：
                 // 1. 如果 entryNodeIds 已指定，则仅这些节点为入口
                 // 2. 否则回退到自动识别（无入边节点）
@@ -276,7 +266,6 @@ export class ReactiveScheduler {
             } else {
                 // 未受影响节点：检查状态，决定是否传递数据
                 if (node.state === 'fail') {
-                    console.log(`[buildIncrementalNetwork] 节点 ${nodeId} 状态为 fail，阻断下游执行`);
                     stream = EMPTY;
                 } else if (node.state === 'success') {
                     // 成功节点：直接发射历史结果，下游通过 BehaviorSubject 或属性提取数据
@@ -286,7 +275,6 @@ export class ReactiveScheduler {
                 } else {
                     // pending 或其他状态（通常是下游未执行节点）
                     // executeNodeIsolated 场景下，下游节点可能未执行，返回空流阻止对它们的处理
-                    console.log(`[buildIncrementalNetwork] 跳过未受影响的 ${node.state} 节点 ${nodeId}（可能是下游节点）`);
                     stream = EMPTY;
                 }
             }
@@ -515,7 +503,6 @@ export class ReactiveScheduler {
 
             // 如果有上游条件边或需要强制分离源（如 MERGE 模式），每个源单独作为一个组合
             if (hasUpstreamConditionalEdges) {
-                console.log('[findCompleteSourceCombinations] 强制每个源独立触发（条件边或 MERGE 模式）');
                 return allSourceIds.map(id => [id]);
             }
 
@@ -656,7 +643,6 @@ export class ReactiveScheduler {
                         const outputValue = (ast as any)[edge.fromProperty];
 
                         if (isBehaviorSubject(outputValue)) {
-                            console.log(`[边] ${edge.from}.${edge.fromProperty} → ${targetNode.id}.${edge.toProperty}`);
                             return this.createBehaviorSubjectStream(outputValue, edge, ast, targetNode);
                         }
                     }
@@ -783,8 +769,6 @@ export class ReactiveScheduler {
 
         return input$.pipe(
             concatMap(inputs => {
-                console.log(`[节点] ${node.id} 执行`, { inputs });
-
                 const nodeInstance = this.cloneNode(node);
                 Object.assign(nodeInstance, defaults);
 
@@ -975,12 +959,6 @@ export class ReactiveScheduler {
             return primaryStream;
         }
 
-        console.log('[combineGroupedByWithLatestFrom] 配置成功:', {
-            primarySourceId,
-            otherSourcesCount: otherStreams.length,
-            actualSourceIds
-        });
-
         // ✨ 使用 concatLatestFrom 替代 withLatestFrom，避免过早求值陷阱
         // withLatestFrom 在订阅时立即取值，如果副流未发射，主流会被阻塞
         // concatLatestFrom 延迟到主流发射时才取值，保证副流已就绪
@@ -1015,7 +993,6 @@ export class ReactiveScheduler {
         });
 
         if (hasConditionalOrRouterEdges) {
-            console.log('[detectEdgeMode] 检测到条件边，使用 MERGE 模式');
             return EdgeMode.MERGE;
         }
 
@@ -1268,7 +1245,6 @@ export class ReactiveScheduler {
                     // 如果有输出，附加到工作流实例上（按照 nodeId.property 格式）
                     if (Object.keys(outputs).length > 0) {
                         Object.assign(result, outputs);
-                        console.log('[subscribeAndMerge] 提取结束节点输出:', outputs);
                     }
                 }
 
@@ -1411,10 +1387,5 @@ export class ReactiveScheduler {
 
         // 清理临时数据
         delete (ast as any).__originalGroupContents;
-
-        console.log('[restoreGroupStructure] 恢复完成:', {
-            topLevelNodes: topLevelNodes.length,
-            groupNodes: topLevelNodes.filter(n => (n as any).isGroupNode === true).length
-        });
     }
 }

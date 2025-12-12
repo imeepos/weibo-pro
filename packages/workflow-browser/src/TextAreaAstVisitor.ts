@@ -14,7 +14,6 @@ export class TextAreaAstVisitor {
             const outputValue = Array.isArray(ast.input) ? ast.input.join('\n') : ast.input;
             ast.output.next(outputValue);
 
-            console.log(`[TextArea] 完成 ${ast.id}`, { output: ast.input });
             ast.state = 'success';
             obs.next({ ...ast })
             obs.complete()

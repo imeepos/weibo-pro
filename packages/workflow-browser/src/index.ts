@@ -27,3 +27,6 @@ import "./DateAstVisitor";
 import "./StoreVisitor";
 import "./MqVisitor";
 import "./LlmStructuredOutputAstVisitor";
+import "./FilterAstVisitor";
+import "./MergeAstVisitor";
+import "./LoopAstVisitor";

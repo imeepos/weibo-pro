@@ -33,6 +33,11 @@ export * from './AudioAstRender';
 export * from './IfAstRender';
 export * from './SwitchAstRender';
 
+// 数据处理节点
+export * from './FilterAstRender';
+export * from './MergeAstRender';
+export * from './LoopAstRender';
+
 // 循环群聊节点
 export * from './GroupChatLoopAstRender';
 

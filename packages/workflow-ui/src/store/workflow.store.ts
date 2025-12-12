@@ -97,13 +97,11 @@ export const useWorkflowStore = create<IWorkflowState>()(
       WorkflowEventType.NODE_FAIL
     ).subscribe(event => {
         if (!event.nodeId || !event.payload) {
-          console.log('[WorkflowStore] 跳过事件: nodeId或payload为空')
           return
         }
 
         const { workflowAst } = get()
         if (!workflowAst) {
-          console.log('[WorkflowStore] 跳过事件: workflowAst不存在')
           return
         }
 
@@ -119,8 +117,6 @@ export const useWorkflowStore = create<IWorkflowState>()(
             })()
           : { state: 'fail' as const, error: event.payload }
 
-        console.log('[WorkflowStore] 收到事件 nodeId:', nodeId, 'input:', JSON.stringify(updates.input))
-
         // 使用现有的 updateNode 逻辑更新 AST 和 React Flow
         set((draft) => {
           draft.workflowAst = updateNodeReducer(draft.workflowAst!, {
@@ -134,7 +130,6 @@ export const useWorkflowStore = create<IWorkflowState>()(
             const updatedNode = getNodeById(draft.workflowAst!.nodes, nodeId)
             if (updatedNode && draft.nodes[flowNodeIndex]) {
               draft.nodes[flowNodeIndex].data = updatedNode
-              console.log('[WorkflowStore] 同步完成 nodeId:', nodeId, 'node.input:', JSON.stringify(updatedNode.input))
             }
           }
 
@@ -271,7 +266,6 @@ export const useWorkflowStore = create<IWorkflowState>()(
 
         if (previousState === 'running' || isRunning) {
           // 节点正在执行 → 取消并重新执行
-          console.log(`[WorkflowStore] 节点 ${nodeId} 正在执行，取消并重新执行`)
           nodeExecutionManager.cancelNode(nodeId)
 
           // 延迟重新执行，确保取消完成
@@ -280,10 +274,8 @@ export const useWorkflowStore = create<IWorkflowState>()(
           }, 100)
         } else if (previousState === 'pending') {
           // 节点尚未执行 → 只更新参数，不执行
-          console.log(`[WorkflowStore] 节点 ${nodeId} 尚未执行，参数已更新`)
         } else if (previousState === 'success' || previousState === 'fail') {
           // 节点已完成 → 标记为待重执行（不自动执行）
-          console.log(`[WorkflowStore] 节点 ${nodeId} 已完成，已标记为待重执行`)
           // 可以在UI显示一个"重新执行"按钮
         }
 
@@ -374,15 +366,11 @@ export const useWorkflowStore = create<IWorkflowState>()(
         // ✨ 直接返回 workflowAst（单一数据源）
         // workflowAst 已经通过事件监听自动同步了执行后的节点状态
         if (workflowAst) {
-          console.log('[WorkflowStore] toAst() 导出节点状态:', workflowAst.nodes.map(n =>
-            'nodeId: ' + n.id + ' input: ' + JSON.stringify(n.input) + ' state: ' + n.state
-          ).join(' | '))
           return workflowAst
         }
 
         // 回退：如果 workflowAst 不存在，从 React Flow 数据重新构建
         const { nodes, edges } = get()
-        console.log('[WorkflowStore] toAst() 回退到 flowToAst')
         return flowToAst(nodes, edges)
       },
     }
