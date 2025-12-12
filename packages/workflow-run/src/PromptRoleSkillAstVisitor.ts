@@ -80,14 +80,14 @@ export class PromptRoleSkillAstVisitor {
               skill_id: z.string().describe('技能ID')
             }),
             func: async ({ skill_id }) => {
-              if (ast.skillContents.has(skill_id)) {
-                return ast.skillContents.get(skill_id)!;
+              if (ast.skillContents && ast.skillContents[`${skill_id}`]) {
+                return Reflect.get(ast.skillContents, skill_id)
               }
               const skill = await manager.findOne(PromptSkillEntity, {
                 where: { id: skill_id }
               });
               if (!skill) return '技能不存在';
-              ast.skillContents.set(skill_id, skill.content);
+              Reflect.set(ast.skillContents, skill_id, skill.content)
               return skill.content;
             }
           });
@@ -127,7 +127,7 @@ ${skillsDescription}
                     where: { id: skillId }
                   });
                   if (skill) {
-                    ast.skillContents.set(skillId, skill.content);
+                    Reflect.set(ast.skillContents, skillId, skill.content)
                   }
                 }
               }
@@ -157,7 +157,7 @@ ${skillsDescription}
 
               const contentMap: Record<string, string> = {};
               for (const skill of skillsData) {
-                ast.skillContents.set(skill.id, skill.content);
+                Reflect.set(ast.skillContents, skill.id, skill.content)
                 contentMap[skill.id] = skill.content;
               }
 

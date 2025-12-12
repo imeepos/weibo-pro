@@ -56,3 +56,6 @@ export { PromptRoleSkillAst } from './PromptRoleSkillAst';
 
 // 查询重写器节点
 export { QueryRewriterAst } from './QueryRewriterAst';
+
+// 答案终稿器节点
+export { AnswerFinalizerAst } from './AnswerFinalizerAst';
