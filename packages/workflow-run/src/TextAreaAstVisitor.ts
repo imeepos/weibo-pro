@@ -15,14 +15,15 @@ export class TextAreaAstVisitor {
     @Handler(TextAreaAst)
     handler(ast: TextAreaAst, ctx: any) {
         return new Observable(obs => {
-            console.log('[TextAreaAstVisitor] input:', ast.input, 'type:', typeof ast.input, 'isArray:', Array.isArray(ast.input));
+            console.log(`[TextArea] 执行 ${ast.id}`, { input: ast.input });
 
             ast.state = 'running'
             obs.next({ ...ast })
 
-            // 直接通过 BehaviorSubject 发射输出值
             const outputValue = toString(ast.input);
             ast.output.next(outputValue);
+
+            console.log(`[TextArea] 完成 ${ast.id}`, { output: outputValue });
 
             ast.state = 'success';
             obs.next({ ...ast })

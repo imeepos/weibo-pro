@@ -34,6 +34,3 @@ export * from './ast-utils';
 export { Compiler } from './compiler/index';
 export * from './MqAst';
 export * from './StoreAst';
-
-// 简化的响应式工作流引擎 API
-export { run, runWorkflow, run as runNode } from './core-simple';

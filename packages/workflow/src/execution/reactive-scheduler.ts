@@ -55,20 +55,22 @@ export class ReactiveScheduler {
         return updates;
     }
     schedule(ast: WorkflowGraphAst, ctx: WorkflowGraphAst): Observable<WorkflowGraphAst> {
-        // 发射工作流开始事件
+        console.log(`[工作流] 开始 ${ast.name || ast.id}`);
+
         this.eventBus.emitWorkflowStart(ast.id);
 
         const { state } = this.resetWorkflowGraphAst(ast);
-        // 已完成的工作流直接返回
         if (state === 'success' || state === 'fail') {
             return of(ast);
         }
+
         this.flattenWorkflowStructure(ast);
         ast.state = 'running';
         const network = this.buildStreamNetwork(ast, ctx);
+
         return this.subscribeAndMerge(network, ast).pipe(
             finalize(() => {
-                // 根据最终状态发射相应事件
+                console.log(`[工作流] 完成 ${ast.name || ast.id}`, { state: ast.state });
                 if (ast.state === 'fail') {
                     this.eventBus.emitWorkflowFail(ast.id, ast.error);
                 } else {
@@ -318,10 +320,8 @@ export class ReactiveScheduler {
             edgesBySource.get(edge.from)!.push(edge);
         });
 
-        // 检测边模式
         const edgeMode = this.detectEdgeMode(incomingEdges);
 
-        // MERGE 模式：每个源独立创建流，然后 merge
         if (edgeMode === EdgeMode.MERGE) {
             const sourceStreams = Array.from(edgesBySource.entries()).map(([sourceId, edges]) => {
                 return this.createSingleSourceStream(sourceId, edges, network, node);
@@ -336,26 +336,20 @@ export class ReactiveScheduler {
             }
         }
 
-        // 非 MERGE 模式：使用原有的完整源组合逻辑
         const requiredProperties = this.getRequiredInputProperties(node);
-
-        // 检测上游是否有条件边（回溯检查）
         const hasUpstreamConditionalEdges = Array.from(edgesBySource.keys()).some(sourceId => {
             const sourceUpstreamEdges = ctx.edges.filter(e => e.to === sourceId);
             return sourceUpstreamEdges.some(e => e.condition !== undefined);
         });
 
-        // 找到所有能提供完整输入的源组合
         const completeCombinations = this.findCompleteSourceCombinations(
             requiredProperties,
             edgesBySource,
             hasUpstreamConditionalEdges
         );
 
-        // 为每个完整组合创建流
         const combinationStreams = completeCombinations.map(sourceIds => {
             if (sourceIds.length === 1) {
-                // 单源完整：直接创建流
                 return this.createSingleSourceStream(
                     sourceIds[0]!,
                     edgesBySource.get(sourceIds[0]!)!,
@@ -363,7 +357,6 @@ export class ReactiveScheduler {
                     node
                 );
             } else {
-                // 多源互补：根据边模式组合
                 const groupedStreams = sourceIds.map(sourceId => {
                     return this.createSingleSourceStream(
                         sourceId,
@@ -372,17 +365,14 @@ export class ReactiveScheduler {
                         node
                     );
                 });
-                // 【路由节点支持】如果所有源流都被路由过滤，groupedStreams 可能为空
                 if (groupedStreams.length === 0) {
                     return EMPTY;
                 }
-                // 传递 sourceIds 确保流顺序一致性（修复 withLatestFrom 索引错位）
                 return this.combineGroupedStreamsByMode(groupedStreams, incomingEdges, node, sourceIds);
             }
         });
 
         if (combinationStreams.length === 0) {
-            console.log(`[_createNodeInputObservable] 节点 ${node.id} 无有效输入，跳过执行`);
             return EMPTY;
         } else if (combinationStreams.length === 1) {
             return combinationStreams[0]!;
@@ -658,28 +648,23 @@ export class ReactiveScheduler {
         edges: IEdge[],
         targetNode: INode
     ): Observable<any> {
-        // 为每条边创建数据流，然后合并
         const edgeStreams = edges.map(edge => {
             return sourceStream.pipe(
-                // 等待节点状态变化
                 filter(ast => ast.state === 'running' || ast.state === 'success'),
                 concatMap(ast => {
-                    // 检查是否使用 BehaviorSubject 模式
                     if (edge.fromProperty) {
                         const outputValue = (ast as any)[edge.fromProperty];
 
-                        // BehaviorSubject 模式：直接订阅
                         if (isBehaviorSubject(outputValue)) {
+                            console.log(`[边] ${edge.from}.${edge.fromProperty} → ${targetNode.id}.${edge.toProperty}`);
                             return this.createBehaviorSubjectStream(outputValue, edge, ast, targetNode);
                         }
                     }
 
-                    // 旧模式：等待 success 状态后提取值
                     if (ast.state === 'success') {
                         return this.createLegacyValueStream(ast, edge, targetNode);
                     }
 
-                    // running 状态但不是 BehaviorSubject，跳过
                     return EMPTY;
                 })
             );
@@ -693,9 +678,7 @@ export class ReactiveScheduler {
             return edgeStreams[0]!;
         }
 
-        // 多边：合并所有边的数据流
         return merge(...edgeStreams).pipe(
-            // 合并同一源的多条边数据
             map(data => data)
         );
     }
@@ -710,10 +693,7 @@ export class ReactiveScheduler {
         targetNode: INode
     ): Observable<any> {
         return subject.asObservable().pipe(
-            // 跳过初始值（如果是默认空值）
-            // BehaviorSubject 订阅时会立即发射当前值，需要判断是否有效
             filter(value => {
-                // 路由节点支持：undefined 值表示不走这条路径
                 if (edge.fromProperty) {
                     const sourceOutputMeta = this.getOutputMetadata(sourceAst, edge.fromProperty);
                     if (sourceOutputMeta?.isRouter && value === undefined) {
@@ -721,7 +701,6 @@ export class ReactiveScheduler {
                     }
                 }
 
-                // 条件检查
                 if (edge.condition) {
                     const conditionValue = (sourceAst as any)[edge.condition.property];
                     if (conditionValue !== edge.condition.value) {
@@ -731,7 +710,6 @@ export class ReactiveScheduler {
 
                 return true;
             }),
-            // 映射到目标属性
             map(value => {
                 if (edge.toProperty) {
                     return { [edge.toProperty]: value };
@@ -791,28 +769,25 @@ export class ReactiveScheduler {
         ctx: any
     ): Observable<INode> {
         const input$ = this._createNodeInputObservable(node, incomingEdges, network, ctx);
-
-        // 获取节点的默认值
         const defaults = this.getInputDefaultValues(node);
 
         return input$.pipe(
-            // 每次输入变化 → 创建新节点实例执行
             concatMap(inputs => {
-                const nodeInstance = this.cloneNode(node);
+                console.log(`[节点] ${node.id} 执行`, { inputs });
 
-                // 先填充默认值（直接赋值）
+                const nodeInstance = this.cloneNode(node);
                 Object.assign(nodeInstance, defaults);
 
-                // 清空 IS_BUFFER 属性（防止历史数据累积）
                 const clearedBufferInputs = this.getClearedMultiBufferInputs(nodeInstance);
                 Object.assign(nodeInstance, clearedBufferInputs);
 
-                // 再应用连线数据（使用元数据感知的赋值逻辑）
                 this.assignInputsToNodeInstance(nodeInstance, inputs);
 
                 return this.executeNode(nodeInstance, ctx);
             }),
             catchError(error => {
+                console.error(`[节点] ${node.id} 出错`, error);
+
                 const failedNode = this.cloneNode(node);
                 failedNode.state = 'fail';
                 failedNode.error = error;
@@ -826,18 +801,13 @@ export class ReactiveScheduler {
         ctx: WorkflowGraphAst
     ): Map<string, Observable<INode>> {
         const network = new Map<string, Observable<INode>>();
-        const building = new Set<string>(); // 正在构建的节点（循环检测）
+        const building = new Set<string>();
 
-        /**
-         * 递归构建单个节点流
-         */
         const buildNode = (nodeId: string): Observable<INode> => {
-            // 已构建：直接返回
             if (network.has(nodeId)) {
                 return network.get(nodeId)!;
             }
 
-            // 正在构建：检测到循环依赖
             if (building.has(nodeId)) {
                 const cyclePath = Array.from(building).concat(nodeId);
                 const cycleDisplay = cyclePath.join(' → ');
@@ -860,23 +830,16 @@ export class ReactiveScheduler {
 
             const incomingEdges = ast.edges.filter(e => e.to === nodeId);
 
-            // 递归构建所有上游节点
             incomingEdges.forEach(edge => buildNode(edge.from));
 
-            let stream$: Observable<INode>;
-
-            // 判断是否为入口节点：
-            // 1. 如果 entryNodeIds 已指定，则仅这些节点为入口
-            // 2. 否则回退到自动识别（无入边节点）
             const isEntryNode = ast.entryNodeIds && ast.entryNodeIds.length > 0
                 ? ast.entryNodeIds.includes(nodeId)
                 : incomingEdges.length === 0;
 
+            let stream$: Observable<INode>;
             if (isEntryNode) {
-                // 入口节点
                 stream$ = this.createEntryNodeStream(node, ctx);
             } else {
-                // 常规节点
                 stream$ = this._createNode(node, incomingEdges, network, ctx);
             }
 
@@ -886,7 +849,6 @@ export class ReactiveScheduler {
             return stream$;
         };
 
-        // 为所有节点构建流
         ast.nodes.forEach(node => buildNode(node.id));
 
         return network;
