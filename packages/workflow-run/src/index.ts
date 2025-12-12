@@ -45,6 +45,12 @@ export { LoopAstVisitor } from './LoopAstVisitor'
 export { ShareAstVisitor } from './ShareAstVisitor'
 export { GroupChatLoopAstVisitor } from './GroupChatLoopAstVisitor'
 
+// 角色记忆节点
+export { PersonaAstVisitor } from './PersonaAstVisitor'
+
+// 创建人物节点
+export { PersonaCreatorAstVisitor } from './PersonaCreatorAstVisitor'
+
 export {
     WeiboAccountService,
     type WeiboLoginSuccessMessage

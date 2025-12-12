@@ -25,11 +25,31 @@ export class WorkflowService {
    * 优雅设计：
    * - 通过 name (code) 查找或创建
    * - 使用数据库事务保证一致性
-   * - 自动记录时间戳
+   * - 自动清理孤立引用（已删除节点的 ID）
    */
   async saveWorkflow(params: WorkflowGraphAst): Promise<WorkflowEntity> {
     return useEntityManager(async (manager) => {
       const repository = manager.getRepository(WorkflowEntity);
+
+      // 收集所有节点 ID（包括嵌套分组内的节点）
+      const collectNodeIds = (nodes: any[]): Set<string> => {
+        const ids = new Set<string>();
+        for (const node of nodes) {
+          ids.add(node.id);
+          if (node.nodes?.length) {
+            for (const id of collectNodeIds(node.nodes)) {
+              ids.add(id);
+            }
+          }
+        }
+        return ids;
+      };
+
+      const nodeIds = collectNodeIds(params.nodes || []);
+
+      // 清理孤立引用
+      const cleanedEntryNodeIds = (params.entryNodeIds || []).filter(id => nodeIds.has(id));
+      const cleanedEndNodeIds = (params.endNodeIds || []).filter(id => nodeIds.has(id));
 
       // 查找现有工作流（通过 code）
       let workflow = await repository.findOne({
@@ -37,20 +57,13 @@ export class WorkflowService {
       });
 
       if (workflow) {
-        // 更新现有工作流
-        logger.info('Saving workflow - endNodeIds from params', {
-          endNodeIds: params.endNodeIds,
-          entryNodeIds: params.entryNodeIds,
-          hasEndNodeIds: !!params.endNodeIds,
-          endNodeIdsLength: params.endNodeIds?.length
-        });
         workflow.name = params.name || workflow.name;
         workflow.code = params.name || workflow.code;
         workflow.collapsed = !!params.collapsed;
         workflow.nodes = params.nodes || [];
         workflow.edges = params.edges || [];
-        workflow.entryNodeIds = params.entryNodeIds || [];
-        workflow.endNodeIds = params.endNodeIds || [];
+        workflow.entryNodeIds = cleanedEntryNodeIds;
+        workflow.endNodeIds = cleanedEndNodeIds;
         workflow.position = params.position;
         workflow.width = params.width;
         workflow.viewport = params.viewport;
@@ -58,7 +71,6 @@ export class WorkflowService {
         workflow.description = params.description;
         workflow.color = params.color;
       } else {
-        // 创建新工作流 - 确保 id 永不为空
         const workflowId = params.id || params.name || randomUUID();
         const workflowName = params.name || 'Untitled';
 
@@ -71,8 +83,8 @@ export class WorkflowService {
           type: params.type || 'WorkflowGraphAst',
           nodes: params.nodes || [],
           edges: params.edges || [],
-          entryNodeIds: params.entryNodeIds || [],
-          endNodeIds: params.endNodeIds || [],
+          entryNodeIds: cleanedEntryNodeIds,
+          endNodeIds: cleanedEndNodeIds,
           position: params.position,
           width: params.width,
           viewport: params.viewport,

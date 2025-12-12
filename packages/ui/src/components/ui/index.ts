@@ -25,4 +25,5 @@ export * from './image-upload-preview';
 export * from './media-picker';
 export * from './llm-provider-selector';
 export * from './llm-model-selector';
+export * from './persona-selector';
 export { toast } from 'sonner';

@@ -735,3 +735,35 @@ export interface PersonaMemoryGraph {
   memories: MemoryNode[]
   relations: MemoryEdge[]
 }
+
+/** 记忆检索请求 */
+export interface RetrieveMemoriesRequest {
+  personaId: string
+  stimuli: string[]
+  depth?: number
+  timeout?: number
+}
+
+/** 检索到的记忆（带深度） */
+export interface RetrievedMemory {
+  id: string
+  name: string
+  content: string
+  type: MemoryType
+  depth: number
+}
+
+/** 记忆检索响应 */
+export interface RetrieveMemoriesResponse {
+  memories: RetrievedMemory[]
+  context: string
+}
+
+/** 创建记忆请求 */
+export interface CreateMemoryRequest {
+  personaId: string
+  name: string
+  content: string
+  type: MemoryType
+  relatedMemoryIds?: string[]
+}

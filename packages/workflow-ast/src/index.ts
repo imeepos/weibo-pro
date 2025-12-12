@@ -43,3 +43,10 @@ export { SwitchAst } from './SwitchAst';
 // 循环群聊节点
 export { GroupChatLoopAst } from './GroupChatLoopAst';
 export type { AgentConfig, ChatMessage as GroupChatMessage } from './GroupChatLoopAst';
+
+// 角色记忆节点
+export { PersonaAst } from './PersonaAst';
+export type { RetrievedMemory } from './PersonaAst';
+
+// 创建人物节点
+export { PersonaCreatorAst } from './PersonaCreatorAst';

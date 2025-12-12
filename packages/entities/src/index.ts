@@ -32,4 +32,4 @@ export * from './llm-chat-log'
 export * from './queries'
 export * from './user-relation.view'
 
-export { DataSource, EntityManager, Repository, type DataSourceOptions } from 'typeorm'
+export { DataSource, EntityManager, Repository, In, type DataSourceOptions } from 'typeorm'

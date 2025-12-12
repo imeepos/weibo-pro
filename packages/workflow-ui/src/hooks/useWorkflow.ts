@@ -383,6 +383,10 @@ export function useWorkflow(
         (edge) => edge.from !== nodeId && edge.to !== nodeId
       )
 
+      // 清理 entryNodeIds 和 endNodeIds 中的孤立引用
+      workflowAst.entryNodeIds = workflowAst.entryNodeIds.filter(id => id !== nodeId)
+      workflowAst.endNodeIds = workflowAst.endNodeIds.filter(id => id !== nodeId)
+
       cleanOrphanedProperties(workflowAst, [nodeId])
 
       setNodes((nodes) => nodes.filter((node) => node.id !== nodeId))

@@ -69,7 +69,11 @@ export class DataFlowManager {
         if (metadata) {
             // 从 metadata.outputs 提取输出
             for (const output of metadata.outputs) {
-                const value = (node as any)[output.property];
+                let value = (node as any)[output.property];
+                // BehaviorSubject 类型输出需要提取当前值
+                if (output.isSubject && value && typeof value.getValue === 'function') {
+                    value = value.getValue();
+                }
                 if (value !== undefined) {
                     outputData[output.property] = value;
                 }

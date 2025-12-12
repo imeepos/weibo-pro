@@ -31,3 +31,5 @@ import "./FilterAstVisitor";
 import "./MergeAstVisitor";
 import "./LoopAstVisitor";
 import "./SwitchAstVisitor";
+import "./PersonaAstBrowserVisitor";
+import "./PersonaCreatorAstVisitor";

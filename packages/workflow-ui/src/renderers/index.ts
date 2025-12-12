@@ -48,3 +48,9 @@ export * from './MqPullAstRender';
 // 存储节点
 export * from './StoreGetAstRender';
 export * from './StoreSetAstRender';
+
+// 角色记忆节点
+export * from './PersonaAstRender';
+
+// 创建人物节点
+export * from './PersonaCreatorAstRender';
