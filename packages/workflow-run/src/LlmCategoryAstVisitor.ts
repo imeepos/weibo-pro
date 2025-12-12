@@ -77,6 +77,9 @@ ${categoryList}
                 const response = await model.invoke(messages);
                 const result = (typeof response.content === 'string' ? response.content : '').trim();
 
+                // 输出原始结果用于调试
+                this.setOutput(ast, 'rawOutput', result);
+
                 if (abortController.signal.aborted) {
                     ast.state = 'fail';
                     setAstError(ast, new Error('工作流已取消'));
