@@ -25,15 +25,16 @@ export class LlmCategoryAstVisitor {
                 obs.next({ ...ast });
 
                 const outputs = ast.metadata.outputs.filter(o => o.isRouter);
-                const categories = outputs
-                    .filter(o => o.property !== 'output_default')
-                    .map(o => ({
-                        property: o.property,
-                        title: o.title || o.property,
-                        description: o.description || ''
-                    }));
+                const categories = outputs.map(o => ({
+                    property: o.property,
+                    title: o.title || o.property,
+                    description: o.description || '',
+                    isDefault: o.property === 'output_default'
+                }));
 
-                if (categories.length === 0) {
+                // 只有 default 一个分类时，直接走 default
+                const nonDefaultCategories = categories.filter(c => !c.isDefault);
+                if (nonDefaultCategories.length === 0) {
                     this.setOutput(ast, 'output_default', ast.context);
                     ast.state = 'success';
                     obs.next({ ...ast });
@@ -45,10 +46,25 @@ export class LlmCategoryAstVisitor {
                     .map((c, i) => `${i + 1}. ${c.title}${c.description ? ` - ${c.description}` : ''}`)
                     .join('\n');
 
-                const prompt = `请从以下类别中选择最匹配的一项：
+                const titleList = categories.map(c => c.title).join(' / ');
+
+                const prompt = `请从以下类别中选择最匹配的一项（必须选择一个）：
 ${categoryList}
 
-只需回复类别名称，不要包含序号或其他内容。`;
+【重要约束】
+- 你只能输出以下类别名称之一：${titleList}
+- 禁止输出任何其他内容，包括序号、标点、解释
+- 直接输出类别名称，一个词即可
+
+【示例】
+输入："帮我生成一张猫咪的图片"
+输出：图片
+
+输入："制作一个产品宣传视频"
+输出：视频
+
+输入："今天天气怎么样"
+输出：Default`;
 
                 const model = new ChatOpenAI({ model: ast.model, temperature: ast.temperature });
                 const userContent = ast.context.join('\n\n---\n\n');
@@ -68,15 +84,20 @@ ${categoryList}
                     return;
                 }
 
-                const matched = categories.find(c => c.title === result);
+                // 模糊匹配：忽略大小写、空格，支持包含匹配
+                const matched = categories.find(c => {
+                    const title = c.title.trim().toLowerCase();
+                    const answer = result.toLowerCase();
+                    return answer === title || answer.includes(title) || title.includes(answer);
+                });
+
+                // 如果没有匹配到任何分类，走 default
+                const finalMatched = matched || categories.find(c => c.isDefault);
 
                 for (const cat of categories) {
-                    const value = cat === matched ? ast.context : ROUTE_SKIPPED;
+                    const value = cat === finalMatched ? ast.context : ROUTE_SKIPPED;
                     this.setOutput(ast, cat.property, value);
                 }
-
-                const defaultValue = matched ? ROUTE_SKIPPED : ast.context;
-                this.setOutput(ast, 'output_default', defaultValue);
 
                 obs.next({ ...ast });
                 ast.state = 'success';
