@@ -33,7 +33,7 @@ import { useEventHandlers } from './hooks/useEventHandlers'
 import { WorkflowOperationsContext, type WorkflowOperations } from '../../context/workflow-operations'
 
 // 纯展示组件（来自 @sker/ui）
-import { WorkflowControls, WorkflowMenubar, WorkflowEmptyState, WorkflowMinimap } from '@sker/ui/components/workflow'
+import { WorkflowControls, WorkflowMenubar, WorkflowEmptyState, WorkflowMinimap, WorkflowProgress } from '@sker/ui/components/workflow'
 import { Toaster } from '@sker/ui/components/ui'
 
 // 原有组件
@@ -715,6 +715,22 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
 
   const isCanvasEmpty = workflow.nodes.length === 0
 
+  // 执行进度计算
+  const executionProgress = useMemo(() => {
+    const nodes = workflow.workflowAst?.nodes || []
+    const total = nodes.length
+    const completed = nodes.filter(n => n.state === 'success' || n.state === 'fail').length
+    const failed = nodes.filter(n => n.state === 'fail').length
+    const runningNode = nodes.find(n => n.state === 'running' || n.state === 'emitting')
+
+    return {
+      total,
+      completed,
+      failed,
+      currentNodeName: runningNode?.title || runningNode?.name,
+    }
+  }, [workflow.workflowAst?.nodes])
+
   // MiniMap 节点颜色映射
   const getMiniMapNodeColor = useCallback((node: any) => {
     const status = node.data?.state
@@ -806,6 +822,16 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
       </ReactFlow>
 
       {isCanvasEmpty && <WorkflowEmptyState />}
+
+      {/* 执行进度条 */}
+      <WorkflowProgress
+        isRunning={isRunning}
+        totalNodes={executionProgress.total}
+        completedNodes={executionProgress.completed}
+        currentNodeName={executionProgress.currentNodeName}
+        failedNodes={executionProgress.failed}
+        onCancel={cancelWorkflow}
+      />
 
       {showControls && !useMenubar && (
         <WorkflowControls

@@ -18,7 +18,7 @@ export { NoRetryError } from './errors'
 // 新增：状态管理和事件总线
 export { WorkflowState } from './execution/workflow-state';
 export { WorkflowEventBus, WorkflowEventType } from './execution/workflow-events';
-export type { WorkflowEvent } from './execution/workflow-events';
+export type { WorkflowEvent, OutputEmitPayload } from './execution/workflow-events';
 export {
   updateNodeReducer,
   finalizeWorkflowReducer,
