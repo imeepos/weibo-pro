@@ -34,8 +34,6 @@ export { AudioAst } from './AudioAst';
 
 export { WeiboAccountPickAst } from './WeiboAccountPickAst';
 
-// IS_BUFFER 模式示例
-export { CollectorAst } from './CollectorAst';
 export { ShareAst } from './ShareAst';
 export type { ChatMessage } from './ShareAst';
 

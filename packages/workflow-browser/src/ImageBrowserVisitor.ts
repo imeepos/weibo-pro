@@ -14,8 +14,9 @@ export class ImageBrowserVisitor {
             // 如果有标注或裁剪，使用完整处理流程
             // 无编辑操作，直接传递
             ast.state = 'running';
-            obs.next({ ...ast });
-            ast.image = ast.uploadedImage || '';
+            obs.next({ ...ast });
+
+            if (ast.uploadedImage) ast.image.next(ast.uploadedImage);
             obs.next({ ...ast });
 
             ast.state = 'success';

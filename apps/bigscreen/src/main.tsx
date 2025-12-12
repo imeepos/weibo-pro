@@ -1,7 +1,7 @@
 import 'reflect-metadata';
-import '@sker/workflow'
-import '@sker/workflow-ast'
-import '@sker/workflow-browser'
+import '@sker/workflow';
+import '@sker/workflow-ast';
+import '@sker/workflow-browser';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import "@sker/sdk";

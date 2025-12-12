@@ -41,7 +41,7 @@ export class MqPushAstVisitor {
 
           await queue.producer.next(ast.input);
 
-          ast.success = true;
+          ast.success.next(true);
           obs.next({ ...ast });
 
           console.log(`[MqPush] 推送成功: queue=${queue.queueName}, data=`, ast.input);
@@ -50,7 +50,7 @@ export class MqPushAstVisitor {
           obs.next({ ...ast });
           obs.complete();
         } catch (error) {
-          ast.success = false;
+          ast.success.next(false);
           ast.state = 'fail';
           setAstError(ast, error, process.env.NODE_ENV === 'development');
           console.error(`[MqPushAstVisitor] queue=${ast.queueName}`, error);

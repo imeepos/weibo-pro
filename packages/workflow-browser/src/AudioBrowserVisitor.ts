@@ -9,8 +9,9 @@ export class AudioBrowserVisitor {
     handler(ast: AudioAst, ctx: any) {
         return new Observable(obs => {
             ast.state = 'running';
-            obs.next({ ...ast });
-            ast.audio = ast.uploadedAudio || '';
+            obs.next({ ...ast });
+
+            if (ast.uploadedAudio) ast.audio.next(ast.uploadedAudio);
             obs.next({ ...ast });
 
             ast.state = 'success';

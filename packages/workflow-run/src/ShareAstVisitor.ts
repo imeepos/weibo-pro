@@ -33,26 +33,28 @@ export class ShareAstVisitor {
              * - 追加当前轮次的新消息
              * - 这样即使节点被 clone,历史也能通过输入边传递
              */
-            ast.chatHistory = Array.isArray(ast.previousHistory) && ast.previousHistory.length > 0
+            const currentHistory = Array.isArray(ast.previousHistory) && ast.previousHistory.length > 0
                 ? [...ast.previousHistory] // 复制上一轮的历史
                 : []; // 第一轮,从空开始
 
             // 追加本轮新消息
-            ast.chatHistory.push({
+            currentHistory.push({
                 role: ast.username || '未知角色',
                 content: ast.prompt,
                 timestamp: new Date().toISOString()
             })
+            ast.chatHistory.next(currentHistory);
 
             // 格式化对话历史为 LLM 可读的字符串
-            ast.formattedHistory = ast.chatHistory
+            const formatted = currentHistory
                 .map(msg => `【${msg.role}】${msg.content}`)
                 .join('\n\n---\n\n');
+            ast.formattedHistory.next(formatted);
 
             console.log('[ShareAstVisitor] 格式化历史记录:', {
-                totalMessages: ast.chatHistory.length,
+                totalMessages: currentHistory.length,
                 previousHistoryLength: ast.previousHistory?.length || 0,
-                formattedLength: ast.formattedHistory.length,
+                formattedLength: formatted.length,
                 latestRole: ast.username,
                 isAccumulating: (ast.previousHistory?.length || 0) > 0
             });

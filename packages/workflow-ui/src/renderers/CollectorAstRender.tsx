@@ -1,6 +1,6 @@
 import { Injectable } from "@sker/core";
 import { Render } from "@sker/workflow";
-import { CollectorAst } from "@sker/workflow-ast";
+import { CollectorAst } from "@sker/workflow";
 import React from "react";
 
 /**

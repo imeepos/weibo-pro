@@ -27,13 +27,13 @@ export class GroupChatLoopAstVisitor {
             obs.next(ast);
 
             // 如果是第一次执行（chatHistory 为空），初始化历史
-            if (ast.chatHistory.length === 0) {
-                ast.chatHistory = [{
+            if (ast.chatHistory.value.length === 0) {
+                ast.chatHistory.next([{
                     round: 0,
                     agentName: 'System',
                     content: ast.initialTopic,
                     timestamp: new Date().toISOString()
-                }];
+                }]);
                 ast.currentRound = 0;
             }
             obs.next(ast);

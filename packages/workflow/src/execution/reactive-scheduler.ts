@@ -452,15 +452,16 @@ export class ReactiveScheduler {
                 // IS_BUFFER 模式：value 已在流层面累积成数组，直接赋值
                 (nodeInstance as any)[key] = value;
             } else if (isMulti) {
-                // IS_MULTI 模式（无 IS_BUFFER）：累加到数组
-                if (!Array.isArray((nodeInstance as any)[key])) {
-                    (nodeInstance as any)[key] = [];
-                }
-                // 如果 value 已经是数组，展开后累加（处理多源情况）
+                // IS_MULTI 模式（无 IS_BUFFER）：创建新数组而非追加
+                // 避免 structuredClone 克隆的数组不可扩展问题
+                const existingValue = (nodeInstance as any)[key];
+                const existingArray = Array.isArray(existingValue) ? existingValue : [];
+
+                // 创建新数组，合并现有值和新值
                 if (Array.isArray(value)) {
-                    (nodeInstance as any)[key].push(...value);
+                    (nodeInstance as any)[key] = [...existingArray, ...value];
                 } else {
-                    (nodeInstance as any)[key].push(value);
+                    (nodeInstance as any)[key] = [...existingArray, value];
                 }
             } else {
                 // 单值模式：直接赋值

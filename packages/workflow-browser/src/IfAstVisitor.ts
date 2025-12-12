@@ -27,7 +27,7 @@ export class IfAstVisitor {
         return new Observable(obs => {
             ast.state = 'running';
             obs.next({ ...ast });
-            ast.result = ast.value;
+            ast.result.next(ast.value);
 
             obs.next({ ...ast });
 

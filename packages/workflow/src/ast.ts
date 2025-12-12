@@ -2,7 +2,7 @@ import { Node, State } from "./decorator";
 import { IAstStates, IEdge, INode, INodeInputMetadata, INodeOutputMetadata, INodeStateMetadata, INodeMetadata } from "./types";
 import { generateId } from "./utils";
 import { SerializedError } from "@sker/core";
-import { Observable } from 'rxjs'
+import { BehaviorSubject, Observable } from 'rxjs'
 
 export interface DynamicOutput {
     property: string      // 属性名（如 output_case4）
@@ -69,6 +69,38 @@ export abstract class Ast implements INode {
         inputs: INodeInputMetadata[]
         outputs: INodeOutputMetadata[]
         states: INodeStateMetadata[]
+    }
+
+    /**
+     * 自定义序列化：排除 BehaviorSubject 属性
+     *
+     * 设计哲学：
+     * - BehaviorSubject 是运行时响应式流，不应持久化
+     * - 序列化无意义的内部状态（observers, closed, isStopped 等）会污染数据
+     * - 反序列化后由 Compiler.compile() 自动重建 BehaviorSubject 实例
+     *
+     * 影响：
+     * - ✅ 序列化数据更简洁，只保留业务数据
+     * - ✅ 符合 BehaviorSubject 的运行时语义
+     * - ⚠️ BehaviorSubject._value（当前值）会丢失，但这通常是期望行为（运行时重新计算）
+     */
+    toJSON(): Record<string, any> {
+        const result: Record<string, any> = {};
+
+        for (const key in this) {
+            if (!Object.prototype.hasOwnProperty.call(this, key)) continue;
+
+            const value = this[key];
+
+            // 跳过 BehaviorSubject 属性（运行时响应式流）
+            if (value instanceof BehaviorSubject) {
+                continue;
+            }
+
+            result[key] = value;
+        }
+
+        return result;
     }
 }
 

@@ -61,19 +61,15 @@ export class Compiler {
         // 提取 @State 属性装饰器元数据
         const states = this.extractStateMetadata(ctor);
 
-        // 组装 INode
-        return {
-            // 基础属性（从实例获取，包含正确初始化的 BehaviorSubject）
-            ...instance,
-
-            // 元数据
-            metadata: {
-                class: classMetadata,
-                inputs,
-                outputs,
-                states
-            },
+        // 组装 INode：直接修改实例，保留原型链（确保 toJSON 方法生效）
+        instance.metadata = {
+            class: classMetadata,
+            inputs,
+            outputs,
+            states
         };
+
+        return instance;
     }
 
     /**

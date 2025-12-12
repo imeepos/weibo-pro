@@ -10,7 +10,7 @@ export class AudioVisitor {
         return new Observable(obs => {
             ast.state = 'running';
             obs.next({ ...ast });
-            ast.audio = ast.uploadedAudio || '';
+            ast.audio.next(ast.uploadedAudio || '');
             obs.next({ ...ast });
 
             ast.state = 'success';

@@ -9,8 +9,13 @@ export class DateAstVisitor {
 
         return new Observable(obs => {
             ast.state = 'running';
-            obs.next({ ...ast })
-            ast.date = new Date(ast.dateStr);
+            obs.next({ ...ast })
+
+            if (ast.dateStr) {
+                ast.date.next(new Date(ast.dateStr))
+            } else {
+                ast.date.next(new Date())
+            }
 
             obs.next({ ...ast })
 
