@@ -2,7 +2,7 @@ import { Injectable } from '@sker/core';
 import { Handler, INode } from '@sker/workflow';
 import { WeiboAjaxStatusesCommentAst } from '@sker/workflow-ast';
 import { Observable } from 'rxjs';
-import { executeRemote } from './execute-remote';
+import { executeRemote } from './execute-remote.js';
 
 /**
  * 微博评论浏览器端执行器

@@ -1,6 +1,6 @@
 import { root } from '@sker/core';
 import { WorkflowController } from '@sker/sdk';
-import { INode, syncAstOutputs, type SseMessage, type OutputEmitMessage, type NodeStateMessage, ROUTE_SKIPPED } from '@sker/workflow';
+import { INode, syncAstOutputs, type SseMessage, type OutputEmitMessage, type NodeStateMessage } from '@sker/workflow';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { filter, map, tap } from 'rxjs/operators';
 
@@ -58,14 +58,14 @@ export function executeRemote(ast: INode): Observable<INode> {
 
 /**
  * 实时同步 output_emit 消息到本地 BehaviorSubject
+ *
+ * ROUTE_SKIPPED 是字符串常量 "__ROUTE_SKIPPED"，可以正确序列化传输
  */
 function syncOutputEmit(localAst: INode, message: OutputEmitMessage): void {
     const { property, value } = message;
     const localValue = (localAst as any)[property];
 
     if (localValue instanceof BehaviorSubject) {
-        // 处理 ROUTE_SKIPPED（远程传输时变为 null/undefined）
-        const syncValue = value === null || value === undefined ? ROUTE_SKIPPED : value;
-        localValue.next(syncValue);
+        localValue.next(value);
     }
 }

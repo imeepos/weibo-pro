@@ -88,11 +88,13 @@ export function createNodeSseStream(nodeStream: Observable<INode>): Observable<S
  * @returns 增强的 SSE 消息流
  */
 export function wrapExecutionWithOutputEmit(execution$: Observable<INode>): Observable<SseMessage> {
+    const subscribedNodes = new Set<string>(); // 跟踪已订阅的节点
     const outputEmitters = new Map<string, Observable<OutputEmitMessage>>();
+
     const nodeStates$ = execution$.pipe(
         map(node => {
-            // 为新节点创建输出监听
-            if (!outputEmitters.has(node.id)) {
+            // 只在节点首次出现时创建输出监听
+            if (!subscribedNodes.has(node.id)) {
                 const outputs$ = createOutputEmitStream(node);
                 if (outputs$) {
                     outputEmitters.set(node.id, outputs$);
@@ -115,14 +117,16 @@ export function wrapExecutionWithOutputEmit(execution$: Observable<INode>): Obse
             next: (msg) => {
                 subscriber.next(msg);
 
-                // 订阅该节点的输出流（如果有）
-                const outputs$ = outputEmitters.get(msg.nodeId);
-                if (outputs$) {
-                    const sub = outputs$.subscribe(outputMsg => {
-                        subscriber.next(outputMsg);
-                    });
-                    activeOutputSubs.push(sub);
-                    outputEmitters.delete(msg.nodeId); // 防止重复订阅
+                // 订阅该节点的输出流（如果有且未订阅过）
+                if (!subscribedNodes.has(msg.nodeId)) {
+                    subscribedNodes.add(msg.nodeId);
+                    const outputs$ = outputEmitters.get(msg.nodeId);
+                    if (outputs$) {
+                        const sub = outputs$.subscribe(outputMsg => {
+                            subscriber.next(outputMsg);
+                        });
+                        activeOutputSubs.push(sub);
+                    }
                 }
             },
             error: (err) => subscriber.error(err),

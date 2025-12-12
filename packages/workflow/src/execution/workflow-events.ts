@@ -17,6 +17,8 @@ export enum WorkflowEventType {
   NODE_START = 'NODE_START',
   /** 节点发射输出 */
   NODE_EMIT = 'NODE_EMIT',
+  /** 节点输出传递给下游（用于 SSE output_emit） */
+  OUTPUT_EMIT = 'OUTPUT_EMIT',
   /** 节点执行成功 */
   NODE_SUCCESS = 'NODE_SUCCESS',
   /** 节点执行失败 */
@@ -50,6 +52,16 @@ export interface NodeUpdatePayload {
   previousState: 'pending' | 'running' | 'success' | 'fail';
   /** 更新后的节点状态 */
   currentState: 'pending' | 'running' | 'success' | 'fail';
+}
+
+/**
+ * 输出发射事件载荷（数据真正流向下游时触发）
+ */
+export interface OutputEmitPayload {
+  /** 输出属性名 */
+  property: string;
+  /** 发射的值 */
+  value: any;
 }
 
 /**
@@ -188,6 +200,19 @@ export class WorkflowEventBus extends Subject<WorkflowEvent> {
       workflowId,
       nodeId,
       payload: error,
+      timestamp: Date.now(),
+    });
+  }
+
+  /**
+   * 发射输出传递事件（数据真正流向下游时触发）
+   */
+  emitOutputEmit(nodeId: string, property: string, value: any, workflowId?: string): void {
+    this.next({
+      type: WorkflowEventType.OUTPUT_EMIT,
+      workflowId,
+      nodeId,
+      payload: { property, value } as OutputEmitPayload,
       timestamp: Date.now(),
     });
   }

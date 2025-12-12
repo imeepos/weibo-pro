@@ -49,28 +49,21 @@ function createControllerInstance<T>(controllerClass: new () => T, axiosInstance
         const routeArgs = Reflect.getMetadata(ROUTE_ARGS_METADATA, originalMethod) || {};
 
         if (httpMethod !== undefined) {
-            // 创建代理方法
-            instance[methodName] = async function (...args: any[]) {
-                // 构建完整URL
-                const fullPath = buildFullPath(controllerPrefix, methodPath);
+            // SSE 方法需要返回 Observable，不能用 async
+            if (httpMethod === RequestMethod.SSE) {
+                instance[methodName] = function (...args: any[]) {
+                    const fullPath = buildFullPath(controllerPrefix, methodPath);
+                    const { urlParams, queryParams, bodyData } = extractParameters(args, routeArgs);
+                    let finalUrl = replaceUrlParams(fullPath, urlParams);
 
-                // 提取参数
-                const { urlParams, queryParams, bodyData, headers } = extractParameters(args, routeArgs);
-
-                // 替换URL中的参数
-                let finalUrl = replaceUrlParams(fullPath, urlParams);
-
-                const axiosConfig = root.get(AXIOS_CONFIG, {})
-
-                if (axiosConfig && axiosConfig.baseURL) {
-                    // 确保 finalUrl 有前导斜杠
-                    if (!finalUrl.startsWith('/')) {
-                        finalUrl = '/' + finalUrl;
+                    const axiosConfig = root.get(AXIOS_CONFIG, {})
+                    if (axiosConfig && axiosConfig.baseURL) {
+                        if (!finalUrl.startsWith('/')) {
+                            finalUrl = '/' + finalUrl;
+                        }
+                        finalUrl = axiosConfig.baseURL + finalUrl
                     }
-                    finalUrl = axiosConfig.baseURL + finalUrl
-                }
-                // SSE 方法特殊处理
-                if (httpMethod === RequestMethod.SSE) {
+
                     // 检查是否有 body 数据，如果有则使用 POST SSE，否则使用 GET SSE
                     if (bodyData !== undefined) {
                         // POST SSE：支持复杂 JSON 传输
@@ -191,27 +184,36 @@ function createControllerInstance<T>(controllerClass: new () => T, axiosInstance
                             };
                         });
                     }
-                }
-
-                // 普通 HTTP 请求处理
-                const config: AxiosRequestConfig = {
-                    method: getHttpMethodString(httpMethod),
-                    url: finalUrl,
-                    params: queryParams,
-                    data: bodyData,
-                    headers
                 };
+            } else {
+                // 普通 HTTP 请求使用 async 函数
+                instance[methodName] = async function (...args: any[]) {
+                    const fullPath = buildFullPath(controllerPrefix, methodPath);
+                    const { urlParams, queryParams, bodyData, headers } = extractParameters(args, routeArgs);
+                    let finalUrl = replaceUrlParams(fullPath, urlParams);
 
-                // 发送请求
-                try {
+                    const axiosConfig = root.get(AXIOS_CONFIG, {})
+                    if (axiosConfig && axiosConfig.baseURL) {
+                        if (!finalUrl.startsWith('/')) {
+                            finalUrl = '/' + finalUrl;
+                        }
+                        finalUrl = axiosConfig.baseURL + finalUrl
+                    }
+
+                    const config: AxiosRequestConfig = {
+                        method: getHttpMethodString(httpMethod),
+                        url: finalUrl,
+                        params: queryParams,
+                        data: bodyData,
+                        headers
+                    };
+
                     const response = await axiosInstance.request(config);
                     const data = response.data;
                     if (data.success) return data.data;
                     throw new Error(`api error: ${JSON.stringify(data)}`)
-                } catch (error) {
-                    throw error;
-                }
-            };
+                };
+            }
         }
     }
 

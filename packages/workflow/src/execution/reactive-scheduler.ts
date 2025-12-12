@@ -2,7 +2,7 @@ import { WorkflowGraphAst } from '../ast';
 import { INode, IEdge, EdgeMode, hasDataMapping, isNode, isBehaviorSubject, isRouteSkipped } from '../types';
 import { executeAst } from '../executor';
 import { Observable, of, EMPTY, merge, combineLatest, zip, asyncScheduler, BehaviorSubject } from 'rxjs';
-import { map, catchError, concatMap, filter, shareReplay, subscribeOn, finalize, scan, takeLast, reduce, take, distinctUntilChanged, skip } from 'rxjs/operators';
+import { map, catchError, concatMap, filter, shareReplay, subscribeOn, finalize, scan, takeLast, reduce, take, distinctUntilChanged, skip, tap } from 'rxjs/operators';
 import { concatLatestFrom } from '../operators/concat_latest_from';
 import { tapResponse } from '../operators/tap-response';
 import { Inject, Injectable, root } from '@sker/core';
@@ -710,6 +710,17 @@ export class ReactiveScheduler {
             take(1),
             // 过滤掉 ROUTE_SKIPPED（防止订阅后才设置的情况）
             filter(value => !isRouteSkipped(value)),
+            // 🔑 发射 OUTPUT_EMIT 事件：数据真正流向下游时触发
+            tap(value => {
+                if (edge.fromProperty) {
+                    this.eventBus.emitOutputEmit(
+                        sourceAst.id,
+                        edge.fromProperty,
+                        value,
+                        (sourceAst as any).workflowId
+                    );
+                }
+            }),
             map(value => {
                 if (edge.toProperty) {
                     return { [edge.toProperty]: value };
