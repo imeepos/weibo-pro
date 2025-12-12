@@ -53,19 +53,24 @@ export class Compiler {
         const classMetadata = this.extractNodeMetadata(ctor);
 
         // 提取 @Input 属性装饰器元数据
-        const inputs = this.extractInputMetadata(ctor);
+        const staticInputs = this.extractInputMetadata(ctor);
 
         // 提取 @Output 属性装饰器元数据（传递实例以检测 BehaviorSubject）
-        const outputs = this.extractOutputMetadata(ctor, instance);
+        const staticOutputs = this.extractOutputMetadata(ctor, instance);
 
         // 提取 @State 属性装饰器元数据
         const states = this.extractStateMetadata(ctor);
 
+        // 保留动态添加的 inputs/outputs（isStatic: false）
+        const existingMetadata = (ast as INode).metadata;
+        const dynamicInputs = existingMetadata?.inputs?.filter(i => i.isStatic === false) || [];
+        const dynamicOutputs = existingMetadata?.outputs?.filter(o => o.isStatic === false) || [];
+
         // 组装 INode：直接修改实例，保留原型链（确保 toJSON 方法生效）
         instance.metadata = {
             class: classMetadata,
-            inputs,
-            outputs,
+            inputs: [...staticInputs, ...dynamicInputs],
+            outputs: [...staticOutputs, ...dynamicOutputs],
             states
         };
 

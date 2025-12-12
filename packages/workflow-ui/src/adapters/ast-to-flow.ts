@@ -1,5 +1,6 @@
 import { type INode, type IEdge, generateId, WorkflowGraphAst } from '@sker/workflow'
 import type { WorkflowNode, WorkflowEdge } from '../types'
+import { validateEdgesDetailed, EDGE_VALIDATION_RULES } from '../utils/edgeValidator'
 
 /**
  * 将 WorkflowGraphAst 转换为 React Flow 格式
@@ -48,22 +49,67 @@ export function astToFlowNodes(ast: { nodes: INode[]; entryNodeIds?: string[]; e
 
 /**
  * 转换边数组（递归收集分组内的边）
+ *
+ * 自动清理无效边：
+ * - 引用不存在节点的边
+ * - 引用不存在端口（handle）的边
+ *
+ * @param ast - 包含 nodes 和 edges 的工作流对象
+ * @param cleanAst - 是否同步清理 AST 中的无效边（默认 true）
  */
-export function astToFlowEdges(ast: { nodes: INode[]; edges: IEdge[] }): WorkflowEdge[] {
-  const result: WorkflowEdge[] = ast.edges.map(toFlowEdge)
+export function astToFlowEdges(
+  ast: { nodes: INode[]; edges: IEdge[] },
+  cleanAst = true
+): WorkflowEdge[] {
+  const allEdges: WorkflowEdge[] = ast.edges.map(toFlowEdge)
 
   function collectFromGroups(nodes: INode[]) {
     for (const node of nodes) {
       const isGroup = (node as any).isGroupNode === true
       if (isGroup && (node as any).nodes?.length > 0) {
-        result.push(...((node as any).edges || []).map(toFlowEdge))
+        allEdges.push(...((node as any).edges || []).map(toFlowEdge))
         collectFromGroups((node as any).nodes)
       }
     }
   }
 
   collectFromGroups(ast.nodes)
-  return result
+
+  // 验证并过滤无效边
+  const { validEdges, invalidEdges } = validateEdgesDetailed(
+    allEdges,
+    ast.nodes,
+    EDGE_VALIDATION_RULES
+  )
+
+  // 清理 AST 中的无效边
+  if (invalidEdges.length > 0 && cleanAst) {
+    const invalidIds = new Set(invalidEdges.map(({ edge }) => edge.id))
+    ast.edges = ast.edges.filter(e => !invalidIds.has(e.id || ''))
+
+    // 递归清理分组内的无效边
+    function cleanGroups(nodes: INode[]) {
+      for (const node of nodes) {
+        const isGroup = (node as any).isGroupNode === true
+        if (isGroup && (node as any).edges) {
+          ;(node as any).edges = (node as any).edges.filter(
+            (e: IEdge) => !invalidIds.has(e.id || '')
+          )
+          if ((node as any).nodes?.length > 0) {
+            cleanGroups((node as any).nodes)
+          }
+        }
+      }
+    }
+    cleanGroups(ast.nodes)
+
+    console.warn(
+      `[astToFlowEdges] 已清理 ${invalidEdges.length} 条无效边:`,
+      invalidEdges.map(({ edge, errors }) => ({ id: edge.id, errors }))
+    )
+  }
+
+  return validEdges as WorkflowEdge[]
 }
 
 /**

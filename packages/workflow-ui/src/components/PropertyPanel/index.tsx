@@ -67,6 +67,7 @@ export function PropertyPanel({
     return `${prefix}_${counter}`
   }, [currentDynamicInputs, currentDynamicOutputs])
 
+  // 初始化内部表单数据（仅在无外部 formData 时）
   useEffect(() => {
     if (selectedNode && !externalFormData && metadata) {
       const initialData: Record<string, any> = {
@@ -80,10 +81,16 @@ export function PropertyPanel({
       })
 
       setInternalFormData(initialData)
+    }
+  }, [selectedNode?.id, externalFormData, metadata])
+
+  // 动态端口状态必须与 metadata 同步（无论是否有外部 formData）
+  useEffect(() => {
+    if (metadata) {
       setCurrentDynamicInputs(metadata.inputs || [])
       setCurrentDynamicOutputs(metadata.outputs || [])
     }
-  }, [selectedNode?.id, externalFormData, metadata])
+  }, [selectedNode?.id, metadata])
 
   if (!selectedNode || !metadata) {
     return (

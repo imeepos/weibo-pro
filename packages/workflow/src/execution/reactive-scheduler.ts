@@ -1,5 +1,5 @@
 import { setAstError, WorkflowGraphAst } from '../ast';
-import { INode, IEdge, EdgeMode, hasDataMapping, isNode, isBehaviorSubject } from '../types';
+import { INode, IEdge, EdgeMode, hasDataMapping, isNode, isBehaviorSubject, INodeOutputMetadata } from '../types';
 import { executeAst } from '../executor';
 import { Observable, of, EMPTY, merge, combineLatest, zip, asyncScheduler, BehaviorSubject } from 'rxjs';
 import { map, catchError, takeWhile, concatMap, filter, withLatestFrom, shareReplay, subscribeOn, finalize, scan, takeLast, toArray, reduce, expand, tap, take, distinctUntilChanged, defaultIfEmpty, skip } from 'rxjs/operators';
@@ -1258,6 +1258,17 @@ export class ReactiveScheduler {
     }
 
     private getOutputMetadata(ast: INode, propertyKey: string): OutputMetadata | undefined {
+        // 优先从编译后的 metadata.outputs 中查找（包含动态添加的输出）
+        if (ast.metadata?.outputs) {
+            const metaOutput = ast.metadata.outputs.find(
+                output => output.property === propertyKey
+            )
+            if (metaOutput) {
+                return metaOutput as unknown as OutputMetadata
+            }
+        }
+
+        // 回退：从装饰器元数据中查找
         const ctor = resolveConstructor(ast)
         const outputs = root.get(OUTPUT, [])
         return outputs.find(

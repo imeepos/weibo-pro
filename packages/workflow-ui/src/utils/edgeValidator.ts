@@ -59,6 +59,46 @@ export const EDGE_VALIDATION_RULES: EdgeValidationRule[] = [
     errorMessage: '不允许重复连接'
   },
   {
+    name: 'handles-exist',
+    validate: (edge, nodes) => {
+      const findNode = (nodeList: INode[], id: string): INode | undefined => {
+        for (const n of nodeList) {
+          if (n.id === id) return n
+          if ((n as any).isGroupNode && (n as any).nodes?.length > 0) {
+            const found = findNode((n as any).nodes, id)
+            if (found) return found
+          }
+        }
+        return undefined
+      }
+
+      // 验证 sourceHandle 存在于源节点
+      if (edge.sourceHandle) {
+        const sourceNode = findNode(nodes, edge.source)
+        if (sourceNode?.metadata?.outputs) {
+          const hasOutput = sourceNode.metadata.outputs.some(
+            o => o.property === edge.sourceHandle
+          )
+          if (!hasOutput) return false
+        }
+      }
+
+      // 验证 targetHandle 存在于目标节点
+      if (edge.targetHandle) {
+        const targetNode = findNode(nodes, edge.target)
+        if (targetNode?.metadata?.inputs) {
+          const hasInput = targetNode.metadata.inputs.some(
+            i => i.property === edge.targetHandle
+          )
+          if (!hasInput) return false
+        }
+      }
+
+      return true
+    },
+    errorMessage: '连接的端口不存在'
+  },
+  {
     name: 'input-single-connection',
     validate: (edge, nodes, edges) => {
       const findNode = (nodeList: INode[], id: string): INode | undefined => {
