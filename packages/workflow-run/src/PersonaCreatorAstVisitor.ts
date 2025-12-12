@@ -13,7 +13,8 @@ const PersonaSchema = z.object({
   traits: z.array(z.string()).describe('性格特质列表，如：善良、勇敢、固执'),
   initialMemories: z.array(z.object({
     name: z.string().describe('记忆名称'),
-    content: z.string().describe('记忆内容'),
+    description: z.string().describe('记忆简述，一句话概括'),
+    content: z.string().describe('记忆详细内容'),
     type: z.enum(['fact', 'concept', 'event', 'person', 'insight']).describe('记忆类型'),
   })).describe('初始记忆，用于构建角色的知识图谱'),
   metadata: z.object({
@@ -123,6 +124,7 @@ export class PersonaCreatorAstVisitor {
               const memory = manager.create(MemoryEntity, {
                 persona_id: persona.id,
                 name: mem.name,
+                description: mem.description,
                 content: mem.content,
                 type: mem.type,
               });

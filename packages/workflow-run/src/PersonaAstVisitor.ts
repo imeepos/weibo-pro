@@ -11,6 +11,18 @@ import {
 } from '@sker/entities';
 import { Observable } from 'rxjs';
 import { ChatOpenAI } from '@langchain/openai';
+import { z } from 'zod';
+
+const MemoryExtractionSchema = z.object({
+  memories: z.array(z.object({
+    name: z.string().describe('简洁的标题（10字以内），能概括记忆核心'),
+    description: z.string().describe('一句话描述（30字以内），说明这条记忆的意义'),
+    content: z.string().describe('记忆的具体内容'),
+    type: z.enum(['fact', 'concept', 'event', 'person', 'insight']).describe('记忆类型：fact=客观事实、event=发生的事件、person=人物信息、concept=概念观点、insight=洞察感悟'),
+  })).describe('提取的记忆列表，如果没有值得记忆的内容则为空数组'),
+});
+
+type ExtractedMemory = z.infer<typeof MemoryExtractionSchema>['memories'][number];
 
 @Injectable()
 export class PersonaAstVisitor {
@@ -175,50 +187,66 @@ ${ast.context}`;
             return;
           }
 
-          // 创建新记忆
-          const memory = manager.create(MemoryEntity, {
-            persona_id: ast.personaId,
-            name: `对话-${new Date().toLocaleString('zh-CN')}`,
-            content: `问：${userPrompt}\n答：${responseText}`,
-            type: 'event',
-          });
-          await manager.save(memory);
+          // 智能提取记忆
+          const extractedMemories = await this.extractMemories(model, userPrompt, responseText);
 
-          // 创建关系
+          if (extractedMemories.length === 0) {
+            ast.state = 'success';
+            obs.next({ ...ast });
+            obs.complete();
+            return;
+          }
+
+          // 批量创建记忆
+          const savedMemoryIds: string[] = [];
+          for (const em of extractedMemories) {
+            const memory = manager.create(MemoryEntity, {
+              persona_id: ast.personaId,
+              name: em.name,
+              description: em.description,
+              content: em.content,
+              type: em.type,
+            });
+            await manager.save(memory);
+            savedMemoryIds.push(memory.id);
+
+            // 自引用闭包
+            const selfClosure = manager.create(MemoryClosureEntity, {
+              ancestor_id: memory.id,
+              descendant_id: memory.id,
+              path: [memory.id],
+              depth: 0,
+            });
+            await manager.save(selfClosure);
+          }
+
+          // 关联到检索到的记忆
           const relatedIds = memories.slice(0, 3).map(m => m.id);
-          for (const relatedId of relatedIds) {
-            const relation = manager.create(MemoryRelationEntity, {
-              source_id: relatedId,
-              target_id: memory.id,
-              relation_type: 'related',
-            });
-            await manager.save(relation);
-
-            // 更新闭包表
-            const ancestorClosures = await manager.find(MemoryClosureEntity, {
-              where: { descendant_id: relatedId },
-            });
-            for (const ac of ancestorClosures) {
-              const newClosure = manager.create(MemoryClosureEntity, {
-                ancestor_id: ac.ancestor_id,
-                descendant_id: memory.id,
-                path: [...ac.path, memory.id],
-                depth: ac.depth + 1,
+          for (const memoryId of savedMemoryIds) {
+            for (const relatedId of relatedIds) {
+              const relation = manager.create(MemoryRelationEntity, {
+                source_id: relatedId,
+                target_id: memoryId,
+                relation_type: 'related',
               });
-              await manager.save(newClosure);
+              await manager.save(relation);
+
+              const ancestorClosures = await manager.find(MemoryClosureEntity, {
+                where: { descendant_id: relatedId },
+              });
+              for (const ac of ancestorClosures) {
+                const newClosure = manager.create(MemoryClosureEntity, {
+                  ancestor_id: ac.ancestor_id,
+                  descendant_id: memoryId,
+                  path: [...ac.path, memoryId],
+                  depth: ac.depth + 1,
+                });
+                await manager.save(newClosure);
+              }
             }
           }
 
-          // 自引用闭包
-          const selfClosure = manager.create(MemoryClosureEntity, {
-            ancestor_id: memory.id,
-            descendant_id: memory.id,
-            path: [memory.id],
-            depth: 0,
-          });
-          await manager.save(selfClosure);
-
-          ast.newMemoryId.next(memory.id);
+          ast.newMemoryId.next(savedMemoryIds[0] || '');
         });
 
         ast.state = 'success';
@@ -238,5 +266,23 @@ ${ast.context}`;
         obs.complete();
       };
     });
+  }
+
+  private async extractMemories(
+    model: ChatOpenAI,
+    question: string,
+    answer: string
+  ): Promise<ExtractedMemory[]> {
+    const structuredModel = model.withStructuredOutput(MemoryExtractionSchema);
+
+    const systemPrompt = `分析对话内容，提取值得记忆的信息。只提取有实际意义的内容，不要为了提取而提取。
+如果对话没有值得记忆的内容，返回空数组。`;
+
+    const result = await structuredModel.invoke([
+      { role: 'system', content: systemPrompt },
+      { role: 'human', content: `问：${question}\n答：${answer}` },
+    ]);
+
+    return result.memories;
   }
 }
