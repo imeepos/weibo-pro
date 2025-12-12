@@ -41,6 +41,8 @@ import { LlmModelService } from './services/llm-model.service';
 import { LlmModelProviderService } from './services/llm-model-provider.service';
 import { LlmChatLogService } from './services/llm-chat-log.service';
 import { LlmProxyService } from './services/llm-proxy.service';
+import { PersonaController } from './controllers/persona.controller';
+import { PersonaService } from './services/data/persona.service';
 
 @Module({
   controllers: [
@@ -61,6 +63,7 @@ import { LlmProxyService } from './services/llm-proxy.service';
     LlmModelProvidersController,
     LlmChatLogsController,
     LlmProxyController,
+    PersonaController,
   ],
   providers: [
     {
@@ -90,6 +93,7 @@ import { LlmProxyService } from './services/llm-proxy.service';
     { provide: LlmModelProviderService, useFactory: () => root.get(LlmModelProviderService) },
     { provide: LlmChatLogService, useFactory: () => root.get(LlmChatLogService) },
     { provide: LlmProxyService, useFactory: () => root.get(LlmProxyService) },
+    { provide: PersonaService, useFactory: () => root.get(PersonaService) },
   ],
 })
 export class AppModule { }

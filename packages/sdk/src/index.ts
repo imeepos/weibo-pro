@@ -13,6 +13,7 @@ export * from './controllers/upload.controller'
 export * from './controllers/user-relation.controller'
 export * from './controllers/users.controller'
 export * from './controllers/workflow.controller'
+export * from './controllers/persona.controller'
 export * from './types';
 export * from './tokens';
 export * from './client';

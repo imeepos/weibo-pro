@@ -1,11 +1,25 @@
-
-
 ## 需求
 
-文件：apps\bigscreen\src\pages\LlmChatLogs.tsx
+分析：
+packages\entities\src\persona.entity.ts
+packages\entities\src\memory.entity.ts
+packages\entities\src\memory-relation.entity.ts
+packages\entities\src\memory-closure.entity.ts
 
-开发设计统计功能，需要按模型统计/按provider统计/按时间统计/输入输出token统计/总token统计/成功失败统计/status code  统计
+设计一个 角色节点 @sker/workflow-ast
 
+功能：可以在左侧抽屉中选数据库中选择一个已有角色
+
+1. 根据多个输入，触发记忆检索，每次检索一条线索，一层一层检索，
+2. 给定检索时间，当时间到了，根据检索的结果，汇总成上下文
+3. 根据上下文，做出响应的回复，生成一条记忆数据，插入到数据库
+
+范围：
+1. @sker/workflow-ast 定义
+2. @sker/workflow-browser 浏览器
+3. @sker/workflow-run 服务器
+4. @sker/workflow-ui 前端展示
+5. @sker/ui 选择角色组件抽离
 
 ## 说明
 

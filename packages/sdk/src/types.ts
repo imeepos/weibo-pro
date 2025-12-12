@@ -694,3 +694,44 @@ export interface HealthData {
     rabbitmq: string
   }
 }
+
+// Persona 记忆图谱相关类型
+export type MemoryType = 'fact' | 'concept' | 'event' | 'person' | 'insight'
+export type RelationType = 'related' | 'causes' | 'follows' | 'contains'
+
+export interface PersonaListItem {
+  id: string
+  name: string
+  avatar: string | null
+  description: string | null
+  memoryCount: number
+  createdAt: string
+}
+
+export interface MemoryNode {
+  id: string
+  name: string
+  description: string | null
+  content: string
+  type: MemoryType
+  createdAt: string
+}
+
+export interface MemoryEdge {
+  id: string
+  sourceId: string
+  targetId: string
+  relationType: RelationType
+}
+
+export interface PersonaMemoryGraph {
+  persona: {
+    id: string
+    name: string
+    avatar: string | null
+    description: string | null
+    traits: string[] | null
+  }
+  memories: MemoryNode[]
+  relations: MemoryEdge[]
+}
