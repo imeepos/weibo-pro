@@ -1,5 +1,5 @@
-import { Ast } from "@sker/workflow";
-import { Input, Node, Output, IS_BUFFER, IS_MULTI } from "@sker/workflow";
+import { Ast } from "./ast";
+import { Input, Node, Output, IS_BUFFER, IS_MULTI } from "./decorator";
 import { BehaviorSubject } from "rxjs";
 
 /**

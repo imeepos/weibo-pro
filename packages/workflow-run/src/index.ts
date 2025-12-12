@@ -35,6 +35,12 @@ export { MqPushAstVisitor, MqPullAstVisitor } from './MqAstVisitor'
 
 // 存储节点
 export { StoreGetAstVisitor, StoreSetAstVisitor } from './StoreAstVisitor'
+
+// 数据处理节点
+export { FilterAstVisitor } from './FilterAstVisitor'
+export { MergeAstVisitor } from './MergeAstVisitor'
+export { LoopAstVisitor } from './LoopAstVisitor'
+
 // 群聊节点
 export { ShareAstVisitor } from './ShareAstVisitor'
 export { GroupChatLoopAstVisitor } from './GroupChatLoopAstVisitor'

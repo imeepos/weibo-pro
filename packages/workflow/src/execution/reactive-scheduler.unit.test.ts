@@ -47,14 +47,14 @@ describe('ReactiveScheduler - getInputDefaultValues 行为测试', () => {
         }
     });
 
-    it('对于 IS_MULTI 模式的数组input，应该保持原值', () => {
+    it('对于 IS_MULTI 模式的数组input，应该重置为空数组（避免累积旧数据）', () => {
         const scheduler = root.get(ReactiveScheduler) as any;
         const compiler = root.get(Compiler);
 
-        // 创建一个新数据格式的节点（input 是数组）
+        // 创建一个已有数据的节点（模拟上次执行后的状态）
         const node = new TextAreaAst();
         node.id = 'test-node';
-        node.input = ['a', 'b'];  // ✅ 新数据：数组
+        node.input = ['a', 'b'];  // 上次执行遗留的数据
 
         compiler.compile(node);
 
@@ -62,9 +62,9 @@ describe('ReactiveScheduler - getInputDefaultValues 行为测试', () => {
 
         console.log('[测试-数组] defaults.input:', defaults.input);
 
-        // 数组应该被保留
+        // IS_MULTI 模式应该重置为空数组，避免累积旧数据
         expect(Array.isArray(defaults.input)).toBe(true);
-        expect(defaults.input).toEqual(['a', 'b']);
+        expect(defaults.input).toEqual([]);
     });
 
     it('验证完整的克隆+默认值流程', () => {
