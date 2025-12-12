@@ -113,13 +113,13 @@ describe('WorkflowState', () => {
 
       setTimeout(() => {
         const workflow = workflowState.current;
-        workflow.nodes[0].state = 'success';
+        workflow.nodes[0]!.state = 'success';
         workflowState.next({ ...workflow, nodes: [...workflow.nodes] });
       }, 10);
 
       const emissions = await promise;
-      expect(emissions[1].completed).toBe(1);
-      expect(emissions[1].percentage).toBe(50);
+      expect(emissions[1]!.completed).toBe(1);
+      expect(emissions[1]!.percentage).toBe(50);
     });
 
     it('包含成功和失败的节点', async () => {
@@ -194,14 +194,14 @@ describe('WorkflowState', () => {
 
       setTimeout(() => {
         const workflow = workflowState.current;
-        workflow.nodes[0].state = 'fail';
+        workflow.nodes[0]!.state = 'fail';
         workflowState.next({ ...workflow, nodes: [...workflow.nodes] });
       }, 10);
 
       const emissions = await promise;
-      expect(emissions[0]).toHaveLength(0);
-      expect(emissions[1]).toHaveLength(1);
-      expect(emissions[1][0].id).toBe('node-1');
+      expect(emissions[0]!).toHaveLength(0);
+      expect(emissions[1]!).toHaveLength(1);
+      expect(emissions[1]![0]!.id).toBe('node-1');
     });
 
     it('distinctUntilChanged - 相同失败列表不重复发射', async () => {
@@ -262,7 +262,7 @@ describe('WorkflowState', () => {
       workflowState.subscribe({
         complete: () => {
           completed = true;
-        },
+        }
       });
 
       workflowState.destroy();
@@ -293,13 +293,13 @@ describe('WorkflowState', () => {
 
   describe('响应式状态流', () => {
     it('继承自 BehaviorSubject，支持订阅', async () => {
-      const workflow = await firstValueFrom(workflowState);
+      const workflow = await firstValueFrom(workflowState.pipe(take(1)));
       expect(workflow.nodes).toHaveLength(2);
     });
 
     it('新订阅者立即收到当前状态', async () => {
       await new Promise(resolve => setTimeout(resolve, 10));
-      const workflow = await firstValueFrom(workflowState);
+      const workflow = await firstValueFrom(workflowState.pipe(take(1)));
       expect(workflow.nodes).toHaveLength(2);
     });
 
@@ -312,7 +312,7 @@ describe('WorkflowState', () => {
 
       setTimeout(() => {
         const workflow = workflowState.current;
-        workflow.nodes[0].state = 'success';
+        workflow.nodes[0]!.state = 'success';
         workflowState.next({ ...workflow, nodes: [...workflow.nodes] });
       }, 10);
 

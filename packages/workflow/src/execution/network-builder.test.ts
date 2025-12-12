@@ -3,7 +3,7 @@ import { BehaviorSubject, of } from 'rxjs';
 import { NetworkBuilder } from './network-builder';
 import { NodeExecutor } from './node-executor';
 import { createWorkflowGraphAst } from '../ast';
-import { INode, IAstStates } from '../types';
+import { INode, IAstStates, EdgeMode } from '../types';
 
 /**
  * 创建测试用的节点
@@ -206,12 +206,14 @@ describe('NetworkBuilder', () => {
                 nodes: [node1, node2, node3],
                 edges: [
                     {
+                        id: 'edge-1',
                         from: 'node-1',
                         to: 'node-3',
                         fromProperty: 'output',
                         toProperty: 'input',
                     },
                     {
+                        id: 'edge-2',
                         from: 'node-2',
                         to: 'node-3',
                         fromProperty: 'output',
@@ -244,12 +246,14 @@ describe('NetworkBuilder', () => {
                 nodes: [node1, node2, node3],
                 edges: [
                     {
+                        id: 'edge-3',
                         from: 'node-1',
                         to: 'node-3',
                         fromProperty: 'output',
                         toProperty: 'inputA',
                     },
                     {
+                        id: 'edge-4',
                         from: 'node-2',
                         to: 'node-3',
                         fromProperty: 'output',
@@ -285,12 +289,14 @@ describe('NetworkBuilder', () => {
                 nodes: [node1, node2, node3],
                 edges: [
                     {
+                        id: 'edge-5',
                         from: 'node-1',
                         to: 'node-2',
                         fromProperty: 'output',
                         toProperty: 'input',
                     },
                     {
+                        id: 'edge-6',
                         from: 'node-2',
                         to: 'node-3',
                         fromProperty: 'output',
@@ -321,12 +327,14 @@ describe('NetworkBuilder', () => {
                 nodes: [nodeA, nodeB, nodeC],
                 edges: [
                     {
+                        id: 'edge-7',
                         from: 'nodeA',
                         to: 'nodeB',
                         fromProperty: 'output',
                         toProperty: 'input',
                     },
                     {
+                        id: 'edge-8',
                         from: 'nodeA',
                         to: 'nodeC',
                         fromProperty: 'output',
@@ -359,12 +367,14 @@ describe('NetworkBuilder', () => {
                 nodes: [nodeA, nodeB, nodeC],
                 edges: [
                     {
+                        id: 'edge-9',
                         from: 'nodeA',
                         to: 'nodeC',
                         fromProperty: 'output',
                         toProperty: 'inputA',
                     },
                     {
+                        id: 'edge-10',
                         from: 'nodeB',
                         to: 'nodeC',
                         fromProperty: 'output',
@@ -400,24 +410,28 @@ describe('NetworkBuilder', () => {
                 nodes: [nodeA, nodeB, nodeC, nodeD],
                 edges: [
                     {
+                        id: 'edge-11',
                         from: 'nodeA',
                         to: 'nodeB',
                         fromProperty: 'output',
                         toProperty: 'input',
                     },
                     {
+                        id: 'edge-12',
                         from: 'nodeA',
                         to: 'nodeC',
                         fromProperty: 'output',
                         toProperty: 'input',
                     },
                     {
+                        id: 'edge-13',
                         from: 'nodeB',
                         to: 'nodeD',
                         fromProperty: 'output',
                         toProperty: 'inputA',
                     },
                     {
+                        id: 'edge-14',
                         from: 'nodeC',
                         to: 'nodeD',
                         fromProperty: 'output',
@@ -473,18 +487,20 @@ describe('NetworkBuilder', () => {
                 nodes: [node1, node2, node3],
                 edges: [
                     {
+                        id: 'edge-15',
                         from: 'node-1',
                         to: 'node-3',
                         fromProperty: 'output',
                         toProperty: 'input',
-                        mode: 'merge',
+                        mode: EdgeMode.MERGE,
                     },
                     {
+                        id: 'edge-16',
                         from: 'node-2',
                         to: 'node-3',
                         fromProperty: 'output',
                         toProperty: 'input',
-                        mode: 'merge',
+                        mode: EdgeMode.MERGE,
                     },
                 ],
             });
@@ -505,18 +521,20 @@ describe('NetworkBuilder', () => {
                 nodes: [node1, node2, node3],
                 edges: [
                     {
+                        id: 'edge-17',
                         from: 'node-1',
                         to: 'node-3',
                         fromProperty: 'output',
                         toProperty: 'inputA',
-                        mode: 'zip',
+                        mode: EdgeMode.ZIP,
                     },
                     {
+                        id: 'edge-18',
                         from: 'node-2',
                         to: 'node-3',
                         fromProperty: 'output',
                         toProperty: 'inputB',
-                        mode: 'zip',
+                        mode: EdgeMode.ZIP,
                     },
                 ],
             });
@@ -537,18 +555,20 @@ describe('NetworkBuilder', () => {
                 nodes: [node1, node2, node3],
                 edges: [
                     {
+                        id: 'edge-19',
                         from: 'node-1',
                         to: 'node-3',
                         fromProperty: 'output',
                         toProperty: 'inputA',
-                        mode: 'combineLatest',
+                        mode: EdgeMode.COMBINE_LATEST,
                     },
                     {
+                        id: 'edge-20',
                         from: 'node-2',
                         to: 'node-3',
                         fromProperty: 'output',
                         toProperty: 'inputB',
-                        mode: 'combineLatest',
+                        mode: EdgeMode.COMBINE_LATEST,
                     },
                 ],
             });
@@ -569,19 +589,21 @@ describe('NetworkBuilder', () => {
                 nodes: [node1, node2, node3],
                 edges: [
                     {
+                        id: 'edge-21',
                         from: 'node-1',
                         to: 'node-3',
                         fromProperty: 'output',
                         toProperty: 'inputA',
-                        mode: 'withLatestFrom',
+                        mode: EdgeMode.WITH_LATEST_FROM,
                         isPrimary: true,
                     },
                     {
+                        id: 'edge-22',
                         from: 'node-2',
                         to: 'node-3',
                         fromProperty: 'output',
                         toProperty: 'inputB',
-                        mode: 'withLatestFrom',
+                        mode: EdgeMode.WITH_LATEST_FROM,
                     },
                 ],
             });

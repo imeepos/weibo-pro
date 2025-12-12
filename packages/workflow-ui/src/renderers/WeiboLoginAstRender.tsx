@@ -100,19 +100,19 @@ const WeiboLoginRender: React.FC<{ ast: WeiboLoginAst }> = ({ ast }) => {
           </div>
         )}
 
-        {ast.account && (
+        {ast.account.value && (
           <div className="flex flex-row items-center">
             <img
-              src={ast.account.weiboAvatar}
-              alt={ast.account.weiboNickname}
+              src={ast.account.value.weiboAvatar}
+              alt={ast.account.value.weiboNickname}
               className="h-8 w-8 rounded-full border-2 border-white shadow-lg object-cover"
             />
-            <div className="ml-4">{ast.account.weiboNickname}</div>
+            <div className="ml-4">{ast.account.value.weiboNickname}</div>
           </div>
         )}
 
         {/* 状态消息 */}
-        {(ast.message && !ast.account) && (
+        {(ast.message && !ast.account.value) && (
           <div className="text-center mt-2">
             <p className="text-sm text-muted-foreground">{ast.message}</p>
           </div>

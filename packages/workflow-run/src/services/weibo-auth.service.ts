@@ -159,7 +159,7 @@ export class WeiboAuthService implements OnDestroy {
           const data = await response.json();
 
           if (data.data?.image) {
-            ast.account = undefined;
+            ast.account.next(undefined);
             ast.qrcode = data.data.image;
             ast.message = ``
             obs.next({ ...ast })
@@ -222,7 +222,7 @@ export class WeiboAuthService implements OnDestroy {
           // 保存到数据库
           const account = await this.saveAccount(ast.id, cookies, userInfo);
 
-          ast.account = account;
+          ast.account.next(account);
           ast.state = 'success'
           obs.next({ ...ast })
           obs.complete()

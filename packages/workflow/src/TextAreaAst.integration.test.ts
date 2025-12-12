@@ -216,7 +216,7 @@ describe('TextAreaAst 集成测试 - 旧数据序列化问题', () => {
 
         // 场景2：模拟 reducer 更新后的节点（这只是演示问题，不代表真实流程）
         // 在实际应用中，前端会通过工作流执行获得更新后的节点
-        const intermediateNode = { ...node2Data };
+        const intermediateNode: any = { ...node2Data };
         const updated = Object.assign(intermediateNode, { state: 'success' as const });
         console.log('场景2-中间状态节点 input:', updated.input, '类型:', typeof updated.input);
         // 注意：场景2只是演示问题，真实流程中节点会通过执行更新

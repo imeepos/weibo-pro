@@ -13,7 +13,7 @@ export class VideoBrowserVisitor {
         return new Observable(obs => {
             ast.state = 'running';
             obs.next({ ...ast });
-            ast.video = ast.uploadedVideo || '';
+            ast.video.next(ast.uploadedVideo || '');
             obs.next({ ...ast });
 
             ast.state = 'success';
