@@ -11,6 +11,22 @@ import { InputFieldType, NodeType } from "./decorator";
 export type IAstStates = `pending` | `running` | `success` | `fail`;
 
 /**
+ * 路由跳过标记 - 表示"这条路不走"
+ *
+ * 用于区分两种语义：
+ * - undefined: 初始值，还没准备好，需要等待
+ * - ROUTE_SKIPPED: 明确表示此路由分支不激活，不传递数据
+ */
+export const ROUTE_SKIPPED = Symbol('ROUTE_SKIPPED');
+
+/**
+ * 判断值是否为路由跳过标记
+ */
+export function isRouteSkipped(value: unknown): value is typeof ROUTE_SKIPPED {
+    return value === ROUTE_SKIPPED;
+}
+
+/**
  * 判断值是否为 BehaviorSubject
  */
 export function isBehaviorSubject<T = any>(value: unknown): value is BehaviorSubject<T> {

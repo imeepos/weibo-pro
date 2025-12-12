@@ -1,4 +1,4 @@
-import { Handler, type DynamicOutput } from '@sker/workflow'
+import { Handler, type DynamicOutput, ROUTE_SKIPPED } from '@sker/workflow'
 import { Injectable } from '@sker/core'
 import { SwitchAst } from '@sker/workflow-ast'
 import { Observable, BehaviorSubject } from 'rxjs'
@@ -24,26 +24,24 @@ export class SwitchAstVisitor {
 
             // 先评估所有普通分支，找出匹配的
             let anyMatched = false
-            console.log('[SwitchAst] inputValue:', inputValue, 'normalOutputs:', normalOutputs.length)
             normalOutputs.forEach(outputMeta => {
                 const propKey = String(outputMeta.property)
                 const matched = this.evaluateCondition(outputMeta.condition!, { $input: inputValue })
-                console.log(`[SwitchAst] ${propKey} condition: "${outputMeta.condition}" matched:`, matched)
 
                 if (matched) {
                     anyMatched = true
                     this.setOutputValue(ast, propKey, inputValue)
                 } else {
-                    this.setOutputValue(ast, propKey, undefined)
+                    // 条件不匹配：使用 ROUTE_SKIPPED 明确表示"这条路不走"
+                    this.setOutputValue(ast, propKey, ROUTE_SKIPPED)
                 }
             })
 
-            console.log('[SwitchAst] anyMatched:', anyMatched)
             // default 分支：只有当所有普通分支都不匹配时才激活
             if (defaultOutput) {
                 const propKey = String(defaultOutput.property)
-                const value = anyMatched ? undefined : inputValue
-                console.log(`[SwitchAst] default branch ${propKey} value:`, value)
+                // 有其他分支匹配时，default 使用 ROUTE_SKIPPED
+                const value = anyMatched ? ROUTE_SKIPPED : inputValue
                 this.setOutputValue(ast, propKey, value)
             }
 

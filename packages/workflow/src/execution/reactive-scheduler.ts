@@ -1,5 +1,5 @@
 import { setAstError, WorkflowGraphAst } from '../ast';
-import { INode, IEdge, EdgeMode, hasDataMapping, isNode, isBehaviorSubject, INodeOutputMetadata } from '../types';
+import { INode, IEdge, EdgeMode, hasDataMapping, isNode, isBehaviorSubject, INodeOutputMetadata, isRouteSkipped } from '../types';
 import { executeAst } from '../executor';
 import { Observable, of, EMPTY, merge, combineLatest, zip, asyncScheduler, BehaviorSubject } from 'rxjs';
 import { map, catchError, takeWhile, concatMap, filter, withLatestFrom, shareReplay, subscribeOn, finalize, scan, takeLast, toArray, reduce, expand, tap, take, distinctUntilChanged, defaultIfEmpty, skip } from 'rxjs/operators';
@@ -671,6 +671,10 @@ export class ReactiveScheduler {
 
     /**
      * 从 BehaviorSubject 创建数据流
+     *
+     * 使用 ROUTE_SKIPPED 标记区分：
+     * - undefined: 初始值，还没准备好，需要等待
+     * - ROUTE_SKIPPED: 明确表示此路由分支不激活，直接返回 EMPTY
      */
     private createBehaviorSubjectStream(
         subject: BehaviorSubject<any>,
@@ -678,35 +682,34 @@ export class ReactiveScheduler {
         sourceAst: INode,
         targetNode: INode
     ): Observable<any> {
-        // 获取当前值，判断是否需要跳过初始值
-        const initialValue = subject.getValue();
-        const shouldSkipInitial =
-            initialValue === '' ||
-            initialValue === null ||
-            initialValue === undefined ||
-            (Array.isArray(initialValue) && initialValue.length === 0);
+        const currentValue = subject.getValue();
+
+        // 🔑 检测 ROUTE_SKIPPED 标记：这条路不走
+        if (isRouteSkipped(currentValue)) {
+            return EMPTY;
+        }
+
+        // 条件边检查
+        if (edge.condition) {
+            const conditionValue = (sourceAst as any)[edge.condition.property];
+            if (conditionValue !== edge.condition.value) {
+                return EMPTY;
+            }
+        }
+
+        // 判断是否需要跳过初始空值（等待真实数据）
+        const isEmptyInitialValue =
+            currentValue === '' ||
+            currentValue === null ||
+            currentValue === undefined ||
+            (Array.isArray(currentValue) && currentValue.length === 0);
 
         const stream$ = subject.asObservable();
 
-        return (shouldSkipInitial ? stream$.pipe(skip(1)) : stream$).pipe(
-            take(1), // 只取第一个有效值后完成，避免无限订阅
-            filter(value => {
-                if (edge.fromProperty) {
-                    const sourceOutputMeta = this.getOutputMetadata(sourceAst, edge.fromProperty);
-                    if (sourceOutputMeta?.isRouter && value === undefined) {
-                        return false;
-                    }
-                }
-
-                if (edge.condition) {
-                    const conditionValue = (sourceAst as any)[edge.condition.property];
-                    if (conditionValue !== edge.condition.value) {
-                        return false;
-                    }
-                }
-
-                return true;
-            }),
+        return (isEmptyInitialValue ? stream$.pipe(skip(1)) : stream$).pipe(
+            take(1),
+            // 过滤掉 ROUTE_SKIPPED（防止订阅后才设置的情况）
+            filter(value => !isRouteSkipped(value)),
             map(value => {
                 if (edge.toProperty) {
                     return { [edge.toProperty]: value };
@@ -724,14 +727,11 @@ export class ReactiveScheduler {
         edge: IEdge,
         targetNode: INode
     ): Observable<any> {
-        // 路由节点支持
+        // 检测 ROUTE_SKIPPED 标记
         if (edge.fromProperty) {
-            const sourceOutputMeta = this.getOutputMetadata(ast, edge.fromProperty);
-            if (sourceOutputMeta?.isRouter) {
-                const value = (ast as any)[edge.fromProperty];
-                if (value === undefined) {
-                    return EMPTY;
-                }
+            const value = (ast as any)[edge.fromProperty];
+            if (isRouteSkipped(value)) {
+                return EMPTY;
             }
         }
 

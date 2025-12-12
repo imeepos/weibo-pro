@@ -1,5 +1,5 @@
 import { Injectable } from '@sker/core';
-import { useEntityManager, LlmModel, LlmProvider, LlmChatLog } from '@sker/entities';
+import { useEntityManager, LlmModel, LlmModelProvider, LlmProvider, LlmChatLog } from '@sker/entities';
 
 interface ProviderInfo {
   providerId: string
@@ -21,37 +21,40 @@ const MAX_RETRIES = 3
 @Injectable({ providedIn: 'root' })
 export class LlmProxyService {
 
-  async findProviderByModelName(modelName: string): Promise<ProviderInfo | null> {
-    if (!modelName) return null
-    return useEntityManager(async m => {
-      const result = await m.createQueryBuilder(LlmProvider, 'provider')
-        .innerJoin('provider.models', 'mp')
-        .select(['provider.id', 'provider.base_url', 'provider.api_key', 'provider.score', 'mp.modelName'])
-        .where('mp.modelName = :modelName', { modelName })
-        .andWhere('provider.score > 0')
-        .orderBy('provider.score', 'DESC')
-        .getRawOne()
+  async findProvider(requestedModel: string, protocol: string, excludeIds: Set<string> = new Set()): Promise<ProviderInfo | null> {
+    if (!requestedModel) return null
 
-      if (!result?.provider_id) return null
-      return {
-        providerId: result.provider_id,
-        baseUrl: result.provider_base_url,
-        apiKey: result.provider_api_key,
-        modelName: result.mp_model_name
-      }
-    })
-  }
-
-  async findBestProvider(modelName: string): Promise<ProviderInfo | null> {
     return useEntityManager(async m => {
-      const result = await m.createQueryBuilder(LlmModel, 'model')
-        .innerJoin('model.providers', 'mp')
+      // 先按供应商模型名查找
+      const qb1 = m.createQueryBuilder(LlmModelProvider, 'mp')
         .innerJoin('mp.provider', 'provider')
         .select(['provider.id', 'provider.base_url', 'provider.api_key', 'provider.score', 'mp.modelName'])
-        .where('model.name = :modelName', { modelName })
+        .where('mp.modelName = :requestedModel', { requestedModel })
+        .andWhere('provider.protocol = :protocol', { protocol })
         .andWhere('provider.score > 0')
-        .orderBy('provider.score', 'DESC')
-        .getRawOne()
+
+      if (excludeIds.size > 0) {
+        qb1.andWhere('provider.id NOT IN (:...excludeIds)', { excludeIds: [...excludeIds] })
+      }
+
+      let result = await qb1.orderBy('provider.score', 'DESC').getRawOne()
+
+      // 找不到则按标准模型名查找
+      if (!result?.provider_id) {
+        const qb2 = m.createQueryBuilder(LlmModel, 'model')
+          .innerJoin('model.providers', 'mp')
+          .innerJoin('mp.provider', 'provider')
+          .select(['provider.id', 'provider.base_url', 'provider.api_key', 'provider.score', 'mp.modelName'])
+          .where('model.name = :requestedModel', { requestedModel })
+          .andWhere('provider.protocol = :protocol', { protocol })
+          .andWhere('provider.score > 0')
+
+        if (excludeIds.size > 0) {
+          qb2.andWhere('provider.id NOT IN (:...excludeIds)', { excludeIds: [...excludeIds] })
+        }
+
+        result = await qb2.orderBy('provider.score', 'DESC').getRawOne()
+      }
 
       if (!result?.provider_id) return null
       return {
@@ -97,28 +100,27 @@ export class LlmProxyService {
 
   async proxyRequest(protocol: string, body: any, headers: Record<string, string>, contentLength: number): Promise<ProxyResult> {
     const triedProviders = new Set<string>()
+    const requestedModel = body.model
 
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-      let provider = await this.findProviderByModelName(body.model)
+      const provider = await this.findProvider(requestedModel, protocol, triedProviders)
       if (!provider) {
-        provider = await this.findBestProvider(body.model)
-      }
-      if (!provider || triedProviders.has(provider.providerId)) {
-        return { success: false, error: `无可用 provider: ${body.model}` }
+        return { success: false, error: `无可用 provider: ${requestedModel} (${protocol})` }
       }
       triedProviders.add(provider.providerId)
-      console.log(`使用 provider: ${provider.providerId} (baseUrl: ${provider.baseUrl}) 模型: ${provider.modelName}`)
+
+      const proxyBody = { ...body, model: provider.modelName }
+      console.log(`[${requestedModel}] -> [${provider.modelName}] via ${provider.baseUrl}`)
 
       const reqHeaders: Record<string, string> = { ...headers, 'Authorization': `Bearer ${provider.apiKey}` }
       const startTime = Date.now()
 
       try {
         const url = `${provider.baseUrl}/v1/messages`
-        console.log(`${body.model}:${url}`)
         const response = await fetch(url, {
           method: 'POST',
           headers: reqHeaders,
-          body: JSON.stringify(body),
+          body: JSON.stringify(proxyBody),
           signal: AbortSignal.timeout(TIMEOUT_MS)
         })
 
@@ -139,8 +141,8 @@ export class LlmProxyService {
 
           await this.saveLog({
             providerId: provider.providerId,
-            modelName: body.model,
-            request: body,
+            modelName: requestedModel,
+            request: proxyBody,
             durationMs,
             isSuccess: true,
             statusCode: response.status,
@@ -158,8 +160,8 @@ export class LlmProxyService {
 
         const logId = await this.saveLog({
           providerId: provider.providerId,
-          modelName: body.model,
-          request: body,
+          modelName: requestedModel,
+          request: proxyBody,
           durationMs,
           isSuccess: response.ok,
           statusCode: response.status
@@ -211,8 +213,8 @@ export class LlmProxyService {
 
         await this.saveLog({
           providerId: provider.providerId,
-          modelName: body.model,
-          request: body,
+          modelName: requestedModel,
+          request: proxyBody,
           durationMs,
           isSuccess: false,
           statusCode: 0,

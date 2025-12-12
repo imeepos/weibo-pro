@@ -13,12 +13,16 @@ import type { LlmModelProvider } from './llm-model-provider';
   name: 'llm_providers'
 })
 @Index(['score'])
+@Index(['protocol'])
 export class LlmProvider {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
   @Column({ type: 'varchar', length: 100 })
   name!: string;
+
+  @Column({ type: 'varchar', length: 50, default: 'anthropic' })
+  protocol!: string;
 
   @Column({ type: 'varchar', length: 500 })
   base_url!: string;

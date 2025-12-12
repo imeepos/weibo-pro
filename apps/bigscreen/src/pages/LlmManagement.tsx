@@ -19,12 +19,15 @@ import {
 import { PlusIcon, TrashIcon, PencilIcon, RefreshCwIcon, ServerIcon, CpuIcon, LinkIcon, HomeIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+type DeleteTarget = { type: 'provider' | 'model' | 'binding'; id: string; name: string } | null;
+
 const LlmManagement: React.FC = () => {
   const navigate = useNavigate();
   const [providers, setProviders] = useState<LlmProvider[]>([]);
   const [models, setModels] = useState<LlmModel[]>([]);
   const [bindings, setBindings] = useState<LlmModelProviderWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
 
   const providersCtrl = root.get(LlmProvidersController);
   const modelsCtrl = root.get(LlmModelsController);
@@ -78,9 +81,8 @@ const LlmManagement: React.FC = () => {
   };
 
   const handleDeleteProvider = async (id: string) => {
-    if (!confirm('确定删除此提供商？')) return;
-    await providersCtrl.remove(id);
-    loadData();
+    const provider = providers.find(p => p.id === id);
+    setDeleteTarget({ type: 'provider', id, name: provider?.name || '' });
   };
 
   const handleResetScore = async (id: string) => {
@@ -116,9 +118,8 @@ const LlmManagement: React.FC = () => {
   };
 
   const handleDeleteModel = async (id: string) => {
-    if (!confirm('确定删除此模型？')) return;
-    await modelsCtrl.remove(id);
-    loadData();
+    const model = models.find(m => m.id === id);
+    setDeleteTarget({ type: 'model', id, name: model?.name || '' });
   };
 
   // Binding Dialog
@@ -153,10 +154,21 @@ const LlmManagement: React.FC = () => {
   };
 
   const handleDeleteBinding = async (id: string) => {
-    if (!confirm('确定删除此绑定？')) return;
-    await bindingsCtrl.remove(id);
+    const binding = bindings.find(b => b.id === id);
+    setDeleteTarget({ type: 'binding', id, name: binding?.model?.name || '' });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    const { type, id } = deleteTarget;
+    if (type === 'provider') await providersCtrl.remove(id);
+    else if (type === 'model') await modelsCtrl.remove(id);
+    else if (type === 'binding') await bindingsCtrl.remove(id);
+    setDeleteTarget(null);
     loadData();
   };
+
+  const deleteTypeLabels = { provider: '提供商', model: '模型', binding: '绑定' };
 
   if (loading) {
     return (
@@ -168,7 +180,7 @@ const LlmManagement: React.FC = () => {
 
   return (
     <div className="h-full overflow-auto p-4">
-      <div className="grid h-full gap-4 lg:grid-cols-3">
+      <div className="grid h-full gap-4 lg:grid-cols-4">
         {/* 提供商 */}
         <Card className="flex flex-col">
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
@@ -189,21 +201,21 @@ const LlmManagement: React.FC = () => {
             <table className="w-full text-xs">
               <thead className="sticky top-0 border-b bg-muted/50">
                 <tr>
-                  <th className="px-4 py-2 text-left font-medium">名称</th>
-                  <th className="px-4 py-2 text-left font-medium">健康分</th>
-                  <th className="px-4 py-2 text-right font-medium">操作</th>
+                  <th className="px-4 py-3 text-left font-medium">名称</th>
+                  <th className="px-4 py-3 text-left font-medium">健康分</th>
+                  <th className="px-4 py-3 text-right font-medium">操作</th>
                 </tr>
               </thead>
               <tbody>
                 {providers.map((p) => (
                   <tr key={p.id} className="border-b last:border-0">
-                    <td className="px-4 py-2" title={p.base_url}>{p.name}</td>
-                    <td className="px-4 py-2">
+                    <td className="px-4 py-3" title={p.base_url}>{p.name}</td>
+                    <td className="px-4 py-3">
                       <span className={p.score >= 800 ? 'text-green-500' : p.score >= 500 ? 'text-yellow-500' : 'text-red-500'}>
                         {p.score}
                       </span>
                     </td>
-                    <td className="px-4 py-2 text-right">
+                    <td className="px-4 py-3 text-right">
                       <button
                         onClick={() => handleResetScore(p.id)}
                         className="mr-1 text-blue-500 hover:text-blue-600"
@@ -249,15 +261,15 @@ const LlmManagement: React.FC = () => {
             <table className="w-full text-xs">
               <thead className="sticky top-0 border-b bg-muted/50">
                 <tr>
-                  <th className="px-4 py-2 text-left font-medium">模型名称</th>
-                  <th className="px-4 py-2 text-right font-medium">操作</th>
+                  <th className="px-4 py-3 text-left font-medium">模型名称</th>
+                  <th className="px-4 py-3 text-right font-medium">操作</th>
                 </tr>
               </thead>
               <tbody>
                 {models.map((m) => (
                   <tr key={m.id} className="border-b last:border-0">
-                    <td className="px-4 py-2 font-medium">{m.name}</td>
-                    <td className="px-4 py-2 text-right">
+                    <td className="px-4 py-3 font-medium">{m.name}</td>
+                    <td className="px-4 py-3 text-right">
                       <button
                         onClick={() => openModelDialog(m)}
                         className="mr-1 text-muted-foreground hover:text-foreground"
@@ -276,7 +288,7 @@ const LlmManagement: React.FC = () => {
         </Card>
 
         {/* 绑定关系 */}
-        <Card className="flex flex-col">
+        <Card className="flex flex-col lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <CardTitle className="flex flex-row items-center gap-2 text-sm">
               <LinkIcon className="size-4" />
@@ -296,19 +308,19 @@ const LlmManagement: React.FC = () => {
             <table className="w-full text-xs">
               <thead className="sticky top-0 border-b bg-muted/50">
                 <tr>
-                  <th className="px-4 py-2 text-left font-medium">模型</th>
-                  <th className="px-4 py-2 text-left font-medium">提供商</th>
-                  <th className="px-4 py-2 text-left font-medium">提供商模型</th>
-                  <th className="px-4 py-2 text-right font-medium">操作</th>
+                  <th className="px-4 py-3 text-left font-medium">模型</th>
+                  <th className="px-4 py-3 text-left font-medium">提供商</th>
+                  <th className="px-4 py-3 text-left font-medium">提供商模型</th>
+                  <th className="px-4 py-3 text-right font-medium">操作</th>
                 </tr>
               </thead>
               <tbody>
                 {bindings.map((b) => (
                   <tr key={b.id} className="border-b last:border-0">
-                    <td className="px-4 py-2 font-medium">{b.model?.name || b.modelId}</td>
-                    <td className="px-4 py-2" title={b.modelName}>{b.provider?.name || b.providerId}</td>
-                    <td className="px-4 py-2">{b.modelName}</td>
-                    <td className="px-4 py-2 text-right">
+                    <td className="px-4 py-3 font-medium">{b.model?.name || b.modelId}</td>
+                    <td className="px-4 py-3" title={b.modelName}>{b.provider?.name || b.providerId}</td>
+                    <td className="px-4 py-3">{b.modelName}</td>
+                    <td className="px-4 py-3 text-right">
                       <button
                         onClick={() => openBindingDialog(b)}
                         className="mr-1 text-muted-foreground hover:text-foreground"
@@ -448,6 +460,33 @@ const LlmManagement: React.FC = () => {
               className="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground"
             >
               {editingBinding ? '保存' : '添加'}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirm Dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>确认删除</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            确定要删除{deleteTarget && deleteTypeLabels[deleteTarget.type]}
+            {deleteTarget?.name && <span className="font-medium text-foreground">「{deleteTarget.name}」</span>}吗？
+          </p>
+          <DialogFooter>
+            <button
+              onClick={() => setDeleteTarget(null)}
+              className="rounded-md bg-muted px-3 py-1.5 text-sm"
+            >
+              取消
+            </button>
+            <button
+              onClick={confirmDelete}
+              className="rounded-md bg-destructive px-3 py-1.5 text-sm text-white"
+            >
+              删除
             </button>
           </DialogFooter>
         </DialogContent>
