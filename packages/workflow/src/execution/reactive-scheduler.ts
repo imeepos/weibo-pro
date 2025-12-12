@@ -692,7 +692,17 @@ export class ReactiveScheduler {
         sourceAst: INode,
         targetNode: INode
     ): Observable<any> {
-        return subject.asObservable().pipe(
+        // 获取当前值，判断是否需要跳过初始值
+        const initialValue = subject.getValue();
+        const shouldSkipInitial =
+            initialValue === '' ||
+            initialValue === null ||
+            initialValue === undefined;
+
+        const stream$ = subject.asObservable();
+
+        return (shouldSkipInitial ? stream$.pipe(skip(1)) : stream$).pipe(
+            take(1), // 只取第一个有效值后完成，避免无限订阅
             filter(value => {
                 if (edge.fromProperty) {
                     const sourceOutputMeta = this.getOutputMetadata(sourceAst, edge.fromProperty);

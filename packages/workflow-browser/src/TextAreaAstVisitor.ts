@@ -11,9 +11,14 @@ export class TextAreaAstVisitor {
             obs.next({ ...ast })
 
             // 直接通过 BehaviorSubject 发射输出值
-            const outputValue = Array.isArray(ast.input) ? ast.input.join('\n') : ast.input;
-            ast.output.next(outputValue);
+            if (Array.isArray(ast.input) && ast.input.length) {
+                ast.output.next(ast.input[0]!)
+            } else {
+                const outputValue = Array.isArray(ast.input) ? ast.input.join('\n') : ast.input;
+                ast.output.next(outputValue);
+            }
 
+            console.log(`[TextArea] 完成 ${ast.id}`, { output: ast.input });
             ast.state = 'success';
             obs.next({ ...ast })
             obs.complete()
