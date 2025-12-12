@@ -38,3 +38,6 @@ export * from './CollectorAst';
 export * from './FilterAst';
 export * from './MergeAst';
 export * from './LoopAst';
+export { syncAstOutputs } from './sync-ast-outputs';
+export { wrapExecutionWithOutputEmit, createNodeSseStream } from './sse-output-stream';
+export type { SseMessage, OutputEmitMessage, NodeStateMessage } from './sse-output-stream';

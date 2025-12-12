@@ -1,6 +1,6 @@
 import { Controller, Post, Body, Get, BadRequestException, Query, Delete, NotFoundException, Sse, Res, Param, Put } from '@nestjs/common';
 import { Observable, tap } from 'rxjs';
-import { Ast, executeAst, fromJson, generateId, INode, resolveConstructor, type OutputMetadata, getNodeById } from '@sker/workflow';
+import { Ast, executeAst, fromJson, generateId, INode, resolveConstructor, type OutputMetadata, getNodeById, wrapExecutionWithOutputEmit, type SseMessage } from '@sker/workflow';
 import { WorkflowGraphAst, ReactiveScheduler } from '@sker/workflow';
 import { logger, root } from '@sker/core';
 import * as sdk from '@sker/sdk';
@@ -155,7 +155,7 @@ export class WorkflowController implements sdk.WorkflowController {
    * - 妥善处理所有错误，确保服务稳定
    */
   @Post('execute')
-  execute(@Body() body: Ast, @Res() res?: any): Observable<Ast> {
+  execute(@Body() body: Ast, @Res() res?: any): Observable<SseMessage> {
     // 设置 SSE 响应头
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
@@ -168,12 +168,14 @@ export class WorkflowController implements sdk.WorkflowController {
     try {
       const ast = fromJson(body) as Ast;
 
-      // 执行工作流并发送实时事件 (executeAst 内部会自动设置 running 状态)
-      const subscription$ = executeAst(ast, ast as WorkflowGraphAst)
-      const subscription = subscription$.subscribe({
-        next: (workflow: Ast) => {
-          // 发送工作流状态更新事件
-          res.write(`data: ${JSON.stringify(workflow)}\n\n`);
+      // 使用 wrapExecutionWithOutputEmit 包装执行流
+      // 包含 node_state（节点状态）和 output_emit（BehaviorSubject 发射）两种消息
+      const execution$ = executeAst(ast, ast as WorkflowGraphAst);
+      const sseStream$ = wrapExecutionWithOutputEmit(execution$);
+
+      const subscription = sseStream$.subscribe({
+        next: (message: SseMessage) => {
+          res.write(`data: ${JSON.stringify(message)}\n\n`);
         },
         error: (error: any) => {
           res.end();
@@ -188,7 +190,7 @@ export class WorkflowController implements sdk.WorkflowController {
         subscription.unsubscribe();
       });
 
-      return subscription$;
+      return sseStream$;
     } catch (error: any) {
       console.error(`execute error: `, { error, body });
       res.end();

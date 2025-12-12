@@ -17,7 +17,7 @@ export type IAstStates = `pending` | `running` | `success` | `fail`;
  * - undefined: 初始值，还没准备好，需要等待
  * - ROUTE_SKIPPED: 明确表示此路由分支不激活，不传递数据
  */
-export const ROUTE_SKIPPED = Symbol('ROUTE_SKIPPED');
+export const ROUTE_SKIPPED = `__ROUTE_SKIPPED`;
 
 /**
  * 判断值是否为路由跳过标记

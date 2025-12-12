@@ -1,9 +1,8 @@
-import { Injectable, root } from '@sker/core';
-import { Handler } from '@sker/workflow';
+import { Injectable } from '@sker/core';
+import { Handler, INode } from '@sker/workflow';
 import { WeiboLoginAst } from '@sker/workflow-ast';
 import { Observable } from 'rxjs';
-import { INode } from '@sker/workflow';
-import { WorkflowController } from '@sker/sdk';
+import { executeRemote } from './execute-remote';
 
 /**
  * 微博登录事件类型 (浏览器端定义)
@@ -39,10 +38,6 @@ export interface WeiboLoginEvent {
 export class WeiboLoginBrowserVisitor {
   @Handler(WeiboLoginAst)
   handler(ast: WeiboLoginAst, ctx: any): Observable<INode> {
-    const controller = root.get(WorkflowController);
-    if (!controller) {
-      throw new Error('WorkflowController 未找到');
-    }
-    return controller.execute(ast);
+    return executeRemote(ast);
   }
 }

@@ -1,9 +1,8 @@
 import { Injectable } from '@sker/core';
-import { Handler, INode } from '@sker/workflow';
-import { WorkflowGraphAst } from '@sker/workflow';
-import { root } from '@sker/core';
-import { WorkflowController } from '@sker/sdk';
+import { Handler, INode, WorkflowGraphAst } from '@sker/workflow';
 import { Observable } from 'rxjs';
+import { executeRemote } from './execute-remote';
+
 /**
  * 工作流图浏览器端执行器
  */
@@ -11,10 +10,6 @@ import { Observable } from 'rxjs';
 export class WorkflowGraphBrowserVisitor {
   @Handler(WorkflowGraphAst)
   handler(ast: WorkflowGraphAst, ctx: any): Observable<INode> {
-    const controller = root.get(WorkflowController);
-    if (!controller) {
-      throw new Error('WorkflowController 未找到');
-    }
-    return controller.execute(ast);
+    return executeRemote(ast);
   }
 }
