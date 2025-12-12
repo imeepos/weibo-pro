@@ -28,7 +28,7 @@
     "claude": "claude --dangerously-skip-permissions",
     "lint": "eslint . --max-warnings 0",
     "check-types": "tsc --noEmit",
-    "test": "vitest",
+    "test": "vitest run",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
     "main": "tsx src/main.ts"

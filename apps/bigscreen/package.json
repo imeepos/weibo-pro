@@ -6,7 +6,7 @@
   "scripts": {
     "start": "vite --port 8087",
     "build": "vite build",
-    "test": "vitest",
+    "test": "vitest run",
     "test:run": "vitest run",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",

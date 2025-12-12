@@ -91,6 +91,47 @@ export const useWorkflowStore = create<IWorkflowState>()(
       historyManager.push(nodes, edges)
     }
 
+    // 🔧 监听节点执行完成事件，同步节点状态到前端 store
+    eventBus.ofType(
+      WorkflowEventType.NODE_SUCCESS,
+      WorkflowEventType.NODE_FAIL
+    ).subscribe(event => {
+      if (!event.nodeId || !event.payload) return
+
+      const { workflowAst } = get()
+      if (!workflowAst) return
+
+      // 提取完整的节点数据（包括 input、output 等执行后的状态）
+      const updates = event.type === WorkflowEventType.NODE_SUCCESS
+        ? (() => {
+            // NODE_SUCCESS: payload 是完整的节点对象
+            const { state, ...nodeData } = event.payload
+            return { ...nodeData, state: 'success' as const }
+          })()
+        : { state: 'fail' as const, error: event.payload }
+
+      console.log(`[WorkflowStore] 同步节点执行结果: ${event.nodeId}`, updates)
+
+      // 使用现有的 updateNode 逻辑更新 AST 和 React Flow
+      set((draft) => {
+        draft.workflowAst = updateNodeReducer(draft.workflowAst!, {
+          nodeId: event.nodeId,
+          updates
+        })
+
+        // 同步到 React Flow
+        const flowNodeIndex = draft.nodes.findIndex(n => n.id === event.nodeId)
+        if (flowNodeIndex !== -1) {
+          const updatedNode = getNodeById(draft.workflowAst!.nodes, event.nodeId)
+          if (updatedNode && draft.nodes[flowNodeIndex]) {
+            draft.nodes[flowNodeIndex].data = updatedNode
+          }
+        }
+
+        draft.hasUnsavedChanges = true
+      })
+    })
+
     return {
       // ==================== Initial State ====================
       workflowAst: null,
@@ -319,6 +360,14 @@ export const useWorkflowStore = create<IWorkflowState>()(
       },
 
       toAst: () => {
+        const { workflowAst } = get()
+        // ✨ 直接返回 workflowAst（单一数据源）
+        // workflowAst 已经通过事件监听自动同步了执行后的节点状态
+        if (workflowAst) {
+          return workflowAst
+        }
+
+        // 回退：如果 workflowAst 不存在，从 React Flow 数据重新构建
         const { nodes, edges } = get()
         return flowToAst(nodes, edges)
       },
