@@ -96,41 +96,51 @@ export const useWorkflowStore = create<IWorkflowState>()(
       WorkflowEventType.NODE_SUCCESS,
       WorkflowEventType.NODE_FAIL
     ).subscribe(event => {
-      if (!event.nodeId || !event.payload) return
-
-      const { workflowAst } = get()
-      if (!workflowAst) return
-
-      // 提取完整的节点数据（包括 input、output 等执行后的状态）
-      const updates = event.type === WorkflowEventType.NODE_SUCCESS
-        ? (() => {
-            // NODE_SUCCESS: payload 是完整的节点对象
-            const { state, ...nodeData } = event.payload
-            return { ...nodeData, state: 'success' as const }
-          })()
-        : { state: 'fail' as const, error: event.payload }
-
-      console.log(`[WorkflowStore] 同步节点执行结果: ${event.nodeId}`, updates)
-
-      // 使用现有的 updateNode 逻辑更新 AST 和 React Flow
-      set((draft) => {
-        draft.workflowAst = updateNodeReducer(draft.workflowAst!, {
-          nodeId: event.nodeId,
-          updates
-        })
-
-        // 同步到 React Flow
-        const flowNodeIndex = draft.nodes.findIndex(n => n.id === event.nodeId)
-        if (flowNodeIndex !== -1) {
-          const updatedNode = getNodeById(draft.workflowAst!.nodes, event.nodeId)
-          if (updatedNode && draft.nodes[flowNodeIndex]) {
-            draft.nodes[flowNodeIndex].data = updatedNode
-          }
+        if (!event.nodeId || !event.payload) {
+          console.log('[WorkflowStore] 跳过事件: nodeId或payload为空')
+          return
         }
 
-        draft.hasUnsavedChanges = true
+        const { workflowAst } = get()
+        if (!workflowAst) {
+          console.log('[WorkflowStore] 跳过事件: workflowAst不存在')
+          return
+        }
+
+        // ✨ 确保 event.nodeId 是 string 类型（TypeScript 类型守卫）
+        const nodeId: string = event.nodeId
+
+        // 提取完整的节点数据（包括 input、output 等执行后的状态）
+        const updates = event.type === WorkflowEventType.NODE_SUCCESS
+          ? (() => {
+              // NODE_SUCCESS: payload 是完整的节点对象
+              const { state, ...nodeData } = event.payload
+              return { ...nodeData, state: 'success' as const }
+            })()
+          : { state: 'fail' as const, error: event.payload }
+
+        console.log('[WorkflowStore] 收到事件 nodeId:', nodeId, 'input:', JSON.stringify(updates.input))
+
+        // 使用现有的 updateNode 逻辑更新 AST 和 React Flow
+        set((draft) => {
+          draft.workflowAst = updateNodeReducer(draft.workflowAst!, {
+            nodeId,
+            updates
+          })
+
+          // 同步到 React Flow
+          const flowNodeIndex = draft.nodes.findIndex(n => n.id === nodeId)
+          if (flowNodeIndex !== -1) {
+            const updatedNode = getNodeById(draft.workflowAst!.nodes, nodeId)
+            if (updatedNode && draft.nodes[flowNodeIndex]) {
+              draft.nodes[flowNodeIndex].data = updatedNode
+              console.log('[WorkflowStore] 同步完成 nodeId:', nodeId, 'node.input:', JSON.stringify(updatedNode.input))
+            }
+          }
+
+          draft.hasUnsavedChanges = true
+        })
       })
-    })
 
     return {
       // ==================== Initial State ====================
@@ -364,11 +374,15 @@ export const useWorkflowStore = create<IWorkflowState>()(
         // ✨ 直接返回 workflowAst（单一数据源）
         // workflowAst 已经通过事件监听自动同步了执行后的节点状态
         if (workflowAst) {
+          console.log('[WorkflowStore] toAst() 导出节点状态:', workflowAst.nodes.map(n =>
+            'nodeId: ' + n.id + ' input: ' + JSON.stringify(n.input) + ' state: ' + n.state
+          ).join(' | '))
           return workflowAst
         }
 
         // 回退：如果 workflowAst 不存在，从 React Flow 数据重新构建
         const { nodes, edges } = get()
+        console.log('[WorkflowStore] toAst() 回退到 flowToAst')
         return flowToAst(nodes, edges)
       },
     }

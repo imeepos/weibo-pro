@@ -128,11 +128,46 @@ export function useWorkflow(
   const initWorkflow = useWorkflowStore((state) => state.initWorkflow)
   const storeSyncNodes = useWorkflowStore((state) => state.setNodes)
   const storeSyncEdges = useWorkflowStore((state) => state.setEdges)
+  const storeWorkflowAst = useWorkflowStore((state) => state.workflowAst)
+  const storeNodes = useWorkflowStore((state) => state.nodes)
 
   // 初始化 store
   useEffect(() => {
     initWorkflow(workflowAst)
   }, [workflowAst, initWorkflow])
+
+  // ✨ 订阅 store 变化，同步执行后的节点状态到本地 workflowAst
+  // 关键：实现双向同步（Store → useWorkflow）
+  useEffect(() => {
+    if (!storeWorkflowAst) return
+
+    // 检查是否有节点状态变更（运行时状态：running, success, fail）
+    let hasRuntimeUpdates = false
+    storeWorkflowAst.nodes.forEach((storeNode) => {
+      const localNode = workflowAst.nodes.find(n => n.id === storeNode.id)
+      if (localNode && storeNode.state !== localNode.state) {
+        console.log('[useWorkflow] 同步节点 nodeId:', storeNode.id, 'from:', localNode.state, 'to:', storeNode.state, 'input:', JSON.stringify(storeNode.input))
+
+        // 同步运行时状态（state, input, output, error, count）
+        Object.assign(localNode, {
+          state: storeNode.state,
+          input: storeNode.input,
+          output: storeNode.output,
+          error: storeNode.error,
+          count: storeNode.count,
+          emitCount: storeNode.emitCount
+        })
+        hasRuntimeUpdates = true
+      }
+    })
+
+    // 如果有运行时状态更新，同步到 React Flow
+    if (hasRuntimeUpdates) {
+      console.log('[useWorkflow] 应用状态更新到 React Flow')
+      // 直接使用 store 的 nodes（已经包含更新后的 data）
+      setNodes(storeNodes)
+    }
+  }, [storeWorkflowAst, storeNodes, workflowAst, setNodes])
 
   // 历史记录状态
   const [canUndo, setCanUndo] = useState(false)

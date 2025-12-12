@@ -171,7 +171,7 @@ describe('WorkflowStore - NODE_SUCCESS 事件监听', () => {
     const exported = store.toAst()
 
     console.log('[测试] 导出的工作流:', {
-      workflowId: exported.id,
+      workflowId: (exported as WorkflowGraphAst).id,
       nodes: exported.nodes.map(n => ({
         id: n.id,
         type: n.type,

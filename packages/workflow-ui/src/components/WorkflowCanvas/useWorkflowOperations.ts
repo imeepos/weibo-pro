@@ -122,6 +122,17 @@ export function useWorkflowOperations(
                 })
               }
 
+              // ✨ 收集输入属性
+              const inputUpdates: Record<string, any> = {}
+              if (originalNode.metadata?.inputs) {
+                originalNode.metadata.inputs.forEach((input: any) => {
+                  const propKey = String(input.property)
+                  if (updatedNode[propKey] !== undefined) {
+                    inputUpdates[propKey] = updatedNode[propKey]
+                  }
+                })
+              }
+
               return Object.assign(
                 Object.create(Object.getPrototypeOf(originalNode)),
                 originalNode,
@@ -130,6 +141,7 @@ export function useWorkflowOperations(
                   error: updatedNode.error,
                   count: updatedNode.count,
                   emitCount: updatedNode.emitCount,
+                  ...inputUpdates,
                   ...outputUpdates
                 }
               )
@@ -259,6 +271,17 @@ export function useWorkflowOperations(
                 })
               }
 
+              // ✨ 收集输入属性
+              const inputUpdates: Record<string, any> = {}
+              if (originalNode.metadata?.inputs) {
+                originalNode.metadata.inputs.forEach((input: any) => {
+                  const propKey = String(input.property)
+                  if (updatedNode[propKey] !== undefined) {
+                    inputUpdates[propKey] = updatedNode[propKey]
+                  }
+                })
+              }
+
               return Object.assign(
                 Object.create(Object.getPrototypeOf(originalNode)),
                 originalNode,
@@ -267,6 +290,7 @@ export function useWorkflowOperations(
                   error: updatedNode.error,
                   count: updatedNode.count,
                   emitCount: updatedNode.emitCount,
+                  ...inputUpdates,
                   ...outputUpdates
                 }
               )
@@ -526,6 +550,19 @@ export function useWorkflowOperations(
                 })
               }
 
+              // ✨ 收集输入属性（IS_MULTI 模式的 input 在执行后会变成数组）
+              const inputUpdates: Record<string, any> = {}
+              if (originalNode.metadata?.inputs) {
+                originalNode.metadata.inputs.forEach((input: any) => {
+                  const propKey = String(input.property)
+                  if (updatedNode[propKey] !== undefined) {
+                    inputUpdates[propKey] = updatedNode[propKey]
+                  }
+                })
+              }
+
+              console.log('[runWorkflow] 节点更新 nodeId:', updatedNode.id, 'input:', JSON.stringify(inputUpdates.input || updatedNode.input))
+
               // 创建新节点对象（保持原型链）
               return Object.assign(
                 Object.create(Object.getPrototypeOf(originalNode)),
@@ -535,6 +572,7 @@ export function useWorkflowOperations(
                   error: updatedNode.error,
                   count: updatedNode.count,
                   emitCount: updatedNode.emitCount,
+                  ...inputUpdates,
                   ...outputUpdates
                 }
               )
