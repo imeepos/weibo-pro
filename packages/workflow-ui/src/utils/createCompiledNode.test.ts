@@ -1,11 +1,15 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import type { INode } from '@sker/workflow'
+import type { INode, IAstStates } from '@sker/workflow'
 
 // 测试节点类
 class SimpleTestNode implements INode {
   id: string = 'test-id'
   type: string = 'SimpleTestAst'
   position: { x: number; y: number } = { x: 0, y: 0 }
+  state: IAstStates = 'pending'
+  count: number = 0
+  emitCount: number = 0
+  error: any = undefined
   customProp?: string
   numProp?: number
 }

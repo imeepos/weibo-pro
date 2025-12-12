@@ -88,9 +88,9 @@ describe('Execution Store', () => {
       const history = useExecutionStore.getState().nodeHistory['node-1']
       expect(history).toBeDefined()
       expect(history).toHaveLength(1)
-      expect(history[0].id).toBe(recordId)
-      expect(history[0].nodeId).toBe('node-1')
-      expect(history[0].status).toBe('running')
+      expect(history![0]!.id).toBe(recordId)
+      expect(history![0]!.nodeId).toBe('node-1')
+      expect(history![0]!.status).toBe('running')
     })
 
     it('应该记录节点执行完成', () => {
@@ -101,9 +101,9 @@ describe('Execution Store', () => {
 
       const history = useExecutionStore.getState().nodeHistory['node-1']
       expect(history).toHaveLength(1)
-      expect(history[0].status).toBe('success')
-      expect(history[0].outputs).toEqual({ result: 'done' })
-      expect(history[0].completedAt).toBeDefined()
+      expect(history![0]!.status).toBe('success')
+      expect(history![0]!.outputs).toEqual({ result: 'done' })
+      expect(history![0]!.completedAt).toBeDefined()
     })
 
     it('应该记录节点执行错误', () => {
@@ -114,8 +114,8 @@ describe('Execution Store', () => {
       store.recordNodeComplete('node-1', recordId, 'fail', error)
 
       const history = useExecutionStore.getState().nodeHistory['node-1']
-      expect(history[0].status).toBe('fail')
-      expect(history[0].error).toEqual(error)
+      expect(history![0]!.status).toBe('fail')
+      expect(history![0]!.error).toEqual(error)
     })
 
     it('应该限制单个节点的历史记录数量', () => {
@@ -127,7 +127,7 @@ describe('Execution Store', () => {
       }
 
       const history = useExecutionStore.getState().nodeHistory['node-1']
-      expect(history.length).toBeLessThanOrEqual(20)
+      expect(history!.length).toBeLessThanOrEqual(20)
     })
 
     it('应该为多个节点分别维护历史', () => {
@@ -144,8 +144,8 @@ describe('Execution Store', () => {
 
       expect(history1).toHaveLength(1)
       expect(history2).toHaveLength(1)
-      expect(history1[0].status).toBe('success')
-      expect(history2[0].status).toBe('fail')
+      expect(history1![0]!.status).toBe('success')
+      expect(history2![0]!.status).toBe('fail')
     })
 
     it('应该获取节点执行历史', () => {
@@ -159,8 +159,8 @@ describe('Execution Store', () => {
 
       const history = store.getNodeHistory('node-1')
       expect(history).toHaveLength(2)
-      expect(history[0].status).toBe('fail')
-      expect(history[1].status).toBe('success')
+      expect(history![0]!.status).toBe('fail')
+      expect(history![1]!.status).toBe('success')
     })
 
     it('应该返回空数组如果节点没有历史', () => {
@@ -219,7 +219,7 @@ describe('Execution Store', () => {
       expect(state.isExecuting).toBe(false)
       expect(state.nodeStates['node-1']).toBe('success')
       expect(state.nodeStates['node-2']).toBe('fail')
-      expect(state.nodeHistory['node-1'][0].outputs).toEqual({ value: 42 })
+      expect(state.nodeHistory['node-1']![0]!.outputs).toEqual({ value: 42 })
     })
   })
 })

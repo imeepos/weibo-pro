@@ -14,12 +14,12 @@ export class StoreGetAstRender {
                         <code className="px-2 py-1 bg-muted rounded text-xs">{ast.key}</code>
                     </div>
                 )}
-                {ast.value !== undefined && ast.value !== '' && (
+                {ast.value.value !== undefined && ast.value.value !== '' && (
                     <div className="mt-2 p-3 bg-muted rounded-md">
                         <pre className="text-xs overflow-auto max-h-40">
-                            {typeof ast.value === 'string'
-                                ? ast.value
-                                : JSON.stringify(ast.value, null, 2)}
+                            {typeof ast.value.value === 'string'
+                                ? ast.value.value
+                                : JSON.stringify(ast.value.value, null, 2)}
                         </pre>
                     </div>
                 )}

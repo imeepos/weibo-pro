@@ -164,7 +164,7 @@ export function RunConfigDialog({
           const currentValue = inputs[fullKey]
 
           // 优先使用 @Input 装饰器指定的类型，否则智能推断
-          const fieldType = metadata.type || inferFieldType(propKey, currentValue)
+          const fieldType: InputFieldType = metadata.type || inferFieldType(propKey, currentValue)
 
           // 优先使用 @Input 装饰器指定的标题，否则格式化属性名
           const label = metadata.title || formatLabel(propKey)

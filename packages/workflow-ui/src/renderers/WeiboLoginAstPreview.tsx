@@ -14,7 +14,7 @@ interface WeiboLoginAstPreviewProps {
  * - 视觉叙事：通过状态指示讲述登录流程的故事
  */
 export const WeiboLoginAstPreview: React.FC<WeiboLoginAstPreviewProps> = ({ ast }) => {
-  const hasAccount = !!ast.account
+  const hasAccount = !!ast.account.value
   const isReady = hasAccount
 
   return (
@@ -72,17 +72,17 @@ export const WeiboLoginAstPreview: React.FC<WeiboLoginAstPreviewProps> = ({ ast 
         </div>
 
         {/* 账号详情（如果已获取） */}
-        {ast.account && (
+        {ast.account.value && (
           <div className="mt-4 bg-gradient-to-r from-green-500/10 to-blue-500/10 border border-green-500/20 rounded-lg p-4">
             <h4 className="text-green-300 text-sm font-medium mb-2">账号信息</h4>
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div className="flex justify-between">
                 <span className="text-slate-400">用户名</span>
-                <span className="text-white font-mono">{ast.account.weiboNickname || '未知'}</span>
+                <span className="text-white font-mono">{ast.account.value.weiboNickname || '未知'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">用户ID</span>
-                <span className="text-white font-mono">{ast.account.weiboUid || '未知'}</span>
+                <span className="text-white font-mono">{ast.account.value.weiboUid || '未知'}</span>
               </div>
             </div>
           </div>

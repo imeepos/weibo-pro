@@ -24,7 +24,8 @@ describe('Validation Utils', () => {
       const connection: Connection = {
         source: 'node-1',
         target: 'node-2',
-        sourceHandle: 'output'
+        sourceHandle: 'output',
+        targetHandle: null as any
         // 缺少 targetHandle
       }
 
@@ -73,7 +74,8 @@ describe('Validation Utils', () => {
       const connection: Connection = {
         source: 'node-1',
         target: 'node-2',
-        targetHandle: 'input'
+        targetHandle: 'input',
+        sourceHandle: null as any
         // 缺少 sourceHandle
       }
 

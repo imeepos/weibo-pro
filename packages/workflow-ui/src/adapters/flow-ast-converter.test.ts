@@ -14,7 +14,11 @@ import type { WorkflowNode, WorkflowEdge } from '../types'
 const createTestNode = (id: string, type = 'TestAst'): INode => ({
   id,
   type,
-  position: { x: 100, y: 200 }
+  position: { x: 100, y: 200 },
+  state: 'pending',
+  count: 0,
+  emitCount: 0,
+  error: undefined
 })
 
 const createTestEdge = (
@@ -23,11 +27,11 @@ const createTestEdge = (
   fromProperty?: string,
   toProperty?: string
 ): IEdge => ({
+  id: `${from}-${to}`,
   from,
   to,
   fromProperty,
-  toProperty,
-  type: 'data'
+  toProperty
 })
 
 describe('FlowAstConverter', () => {
@@ -80,9 +84,9 @@ describe('FlowAstConverter', () => {
       const flowNodes = FlowAstConverter.toFlowNodes(astNodes)
 
       expect(flowNodes).toHaveLength(3)
-      expect(flowNodes[0].id).toBe('node-1')
-      expect(flowNodes[1].id).toBe('node-2')
-      expect(flowNodes[2].id).toBe('node-3')
+      expect(flowNodes[0]!.id).toBe('node-1')
+      expect(flowNodes[1]!.id).toBe('node-2')
+      expect(flowNodes[2]!.id).toBe('node-3')
     })
 
     it('应该处理空数组', () => {
@@ -101,9 +105,9 @@ describe('FlowAstConverter', () => {
 
       const flowNodes = FlowAstConverter.toFlowNodes(astNodes)
 
-      expect(flowNodes[0].id).toBe('a')
-      expect(flowNodes[1].id).toBe('b')
-      expect(flowNodes[2].id).toBe('c')
+      expect(flowNodes[0]!.id).toBe('a')
+      expect(flowNodes[1]!.id).toBe('b')
+      expect(flowNodes[2]!.id).toBe('c')
     })
   })
 
@@ -138,9 +142,9 @@ describe('FlowAstConverter', () => {
 
     it('应该在端口信息不足时使用索引生成 ID', () => {
       const edge: IEdge = {
+        id: 'test-edge',
         from: '',
-        to: '',
-        type: 'data'
+        to: ''
       }
 
       const flowEdge = FlowAstConverter.toFlowEdge(edge, 5)
@@ -169,9 +173,9 @@ describe('FlowAstConverter', () => {
       const flowEdges = FlowAstConverter.toFlowEdges(edges)
 
       expect(flowEdges).toHaveLength(3)
-      expect(flowEdges[0].source).toBe('A')
-      expect(flowEdges[1].source).toBe('B')
-      expect(flowEdges[2].source).toBe('C')
+      expect(flowEdges[0]!.source).toBe('A')
+      expect(flowEdges[1]!.source).toBe('B')
+      expect(flowEdges[2]!.source).toBe('C')
     })
 
     it('应该处理空数组', () => {
@@ -190,9 +194,9 @@ describe('FlowAstConverter', () => {
       const flowEdges = FlowAstConverter.toFlowEdges(edges)
 
       // 即使源和目标相同，由于索引不同，ID 应该不同
-      expect(flowEdges[0].id).toBeDefined()
-      expect(flowEdges[1].id).toBeDefined()
-      expect(flowEdges[2].id).toBeDefined()
+      expect(flowEdges[0]!.id).toBeDefined()
+      expect(flowEdges[1]!.id).toBeDefined()
+      expect(flowEdges[2]!.id).toBeDefined()
     })
   })
 
@@ -212,8 +216,8 @@ describe('FlowAstConverter', () => {
 
       expect(result.nodes).toHaveLength(2)
       expect(result.edges).toHaveLength(1)
-      expect(result.nodes[0].id).toBe('node-1')
-      expect(result.edges[0].source).toBe('node-1')
+      expect(result.nodes[0]!.id).toBe('node-1')
+      expect(result.edges[0]!.source).toBe('node-1')
     })
 
     it('应该处理没有边的工作流', () => {

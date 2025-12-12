@@ -47,8 +47,8 @@ describe('Flow to AST Adapters', () => {
       const result = flowToAst(nodes, edges)
 
       expect(result.nodes).toHaveLength(2)
-      expect(result.nodes[0].id).toBe('node-1')
-      expect(result.nodes[1].id).toBe('node-2')
+      expect(result.nodes[0]!.id).toBe('node-1')
+      expect(result.nodes[1]!.id).toBe('node-2')
     })
 
     it('应该将 React Flow 边转换为 AST 边', () => {
@@ -63,11 +63,11 @@ describe('Flow to AST Adapters', () => {
       const result = flowToAst(nodes, edges)
 
       expect(result.edges).toHaveLength(1)
-      expect(result.edges[0].id).toBe('edge-1')
-      expect(result.edges[0].from).toBe('node-1')
-      expect(result.edges[0].to).toBe('node-2')
-      expect(result.edges[0].fromProperty).toBe('output')
-      expect(result.edges[0].toProperty).toBe('input')
+      expect(result.edges[0]!.id).toBe('edge-1')
+      expect(result.edges[0]!.from).toBe('node-1')
+      expect(result.edges[0]!.to).toBe('node-2')
+      expect(result.edges[0]!.fromProperty).toBe('output')
+      expect(result.edges[0]!.toProperty).toBe('input')
     })
 
     it('应该处理边的 weight 属性', () => {
@@ -80,7 +80,7 @@ describe('Flow to AST Adapters', () => {
 
       const result = flowToAst(nodes, edges)
 
-      expect(result.edges[0].weight).toBe(0.8)
+      expect(result.edges[0]!.weight).toBe(0.8)
     })
 
     it('应该处理边的 condition 属性', () => {
@@ -93,7 +93,7 @@ describe('Flow to AST Adapters', () => {
 
       const result = flowToAst(nodes, edges)
 
-      expect(result.edges[0].condition).toBe('status === "success"')
+      expect(result.edges[0]!.condition).toBe('status === "success"')
     })
 
     it('应该忽略未定义的 fromProperty', () => {
@@ -107,8 +107,8 @@ describe('Flow to AST Adapters', () => {
 
       const result = flowToAst(nodes, edges)
 
-      expect(result.edges[0].fromProperty).toBeUndefined()
-      expect(result.edges[0].toProperty).toBe('input')
+      expect(result.edges[0]!.fromProperty).toBeUndefined()
+      expect(result.edges[0]!.toProperty).toBe('input')
     })
 
     it('应该抛出错误如果边缺少 data', () => {
@@ -142,8 +142,8 @@ describe('Flow to AST Adapters', () => {
 
       expect(result.nodes).toHaveLength(2)
       expect(result.edges).toHaveLength(2)
-      expect(result.edges[0].from).toBe('node-1')
-      expect(result.edges[1].from).toBe('node-2')
+      expect(result.edges[0]!.from).toBe('node-1')
+      expect(result.edges[1]!.from).toBe('node-2')
     })
   })
 })

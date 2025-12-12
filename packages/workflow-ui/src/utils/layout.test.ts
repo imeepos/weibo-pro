@@ -34,7 +34,7 @@ function createTestEdge(source: string, target: string, id?: string): WorkflowEd
     sourceHandle: 'output1',
     targetHandle: 'input1',
     type: 'workflow-data-edge',
-    data: {}
+    data: { edgeType: 'data' }
   }
 }
 
