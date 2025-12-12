@@ -43,6 +43,10 @@ import { LlmChatLogService } from './services/llm-chat-log.service';
 import { LlmProxyService } from './services/llm-proxy.service';
 import { PersonaController } from './controllers/persona.controller';
 import { PersonaService } from './services/data/persona.service';
+import { PromptRolesController } from './controllers/prompt-roles.controller';
+import { PromptSkillsController } from './controllers/prompt-skills.controller';
+import { PromptRoleService } from './services/prompt-role.service';
+import { PromptSkillService } from './services/prompt-skill.service';
 
 @Module({
   controllers: [
@@ -64,6 +68,8 @@ import { PersonaService } from './services/data/persona.service';
     LlmChatLogsController,
     LlmProxyController,
     PersonaController,
+    PromptRolesController,
+    PromptSkillsController,
   ],
   providers: [
     {
@@ -94,6 +100,8 @@ import { PersonaService } from './services/data/persona.service';
     { provide: LlmChatLogService, useFactory: () => root.get(LlmChatLogService) },
     { provide: LlmProxyService, useFactory: () => root.get(LlmProxyService) },
     { provide: PersonaService, useFactory: () => root.get(PersonaService) },
+    { provide: PromptRoleService, useFactory: () => root.get(PromptRoleService) },
+    { provide: PromptSkillService, useFactory: () => root.get(PromptSkillService) },
   ],
 })
 export class AppModule { }

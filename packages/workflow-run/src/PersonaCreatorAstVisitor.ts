@@ -3,8 +3,8 @@ import { Handler, setAstError, WorkflowGraphAst } from '@sker/workflow';
 import { PersonaCreatorAst } from '@sker/workflow-ast';
 import { useEntityManager, PersonaEntity, MemoryEntity, MemoryClosureEntity } from '@sker/entities';
 import { Observable } from 'rxjs';
-import { ChatOpenAI } from '@langchain/openai';
 import { z } from 'zod';
+import { useLlmModel } from './llm-client';
 
 const PersonaSchema = z.object({
   name: z.string().describe('角色名称'),
@@ -65,7 +65,7 @@ export class PersonaCreatorAstVisitor {
         ast.count += 1;
         obs.next({ ...ast });
 
-        const model = new ChatOpenAI({
+        const model = useLlmModel({
           model: ast.model,
           temperature: ast.temperature,
         });

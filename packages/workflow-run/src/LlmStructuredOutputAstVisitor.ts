@@ -2,7 +2,7 @@ import { Injectable } from "@sker/core";
 import { Handler, INodeOutputMetadata, setAstError, WorkflowGraphAst } from "@sker/workflow";
 import { LlmStructuredOutputAst } from "@sker/workflow-ast";
 import { Observable } from "rxjs";
-import { ChatOpenAI } from "@langchain/openai";
+import { useLlmModel } from "./llm-client";
 
 const buildJsonPrompt = (outputs: INodeOutputMetadata[]) => {
     const fields = outputs.map(o => {
@@ -34,7 +34,7 @@ export class LlmStructuredOutputAstVisitor {
 
                 const outputs = ast.metadata?.outputs || [];
                 const jsonPrompt = buildJsonPrompt(outputs);
-                const model = new ChatOpenAI({ model: ast.model, temperature: ast.temperature });
+                const model = useLlmModel({ model: ast.model, temperature: ast.temperature });
 
                 const systemContent = ast.system.length ? ast.system.join('\n') + '\n\n' + jsonPrompt : jsonPrompt;
                 const messages = [

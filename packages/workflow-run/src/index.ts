@@ -51,6 +51,9 @@ export { PersonaAstVisitor } from './PersonaAstVisitor'
 // 创建人物节点
 export { PersonaCreatorAstVisitor } from './PersonaCreatorAstVisitor'
 
+// LLM 客户端
+export { useLlmModel } from './llm-client'
+
 export {
     WeiboAccountService,
     type WeiboLoginSuccessMessage

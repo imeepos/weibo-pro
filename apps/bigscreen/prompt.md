@@ -1,11 +1,13 @@
 ## 需求
 
-问题：
+调用大模型相关的实现，应该对接： apps\api\src\controllers\llm-proxy.controller.ts
+这里做了统一的管理
 
-
-参考：packages\workflow-run\src\PersonaCreatorAstVisitor.ts 这种方式实现
-packages\workflow-run\src\PersonaAstVisitor.ts 规定好格式输出
-
+例如：
+packages\workflow-run\src\LlmCategoryAstVisitor.ts
+packages\workflow-run\src\LlmStructuredOutputAstVisitor.ts
+packages\workflow-run\src\LlmTextAgentAstVisitor.ts
+等等吧
 
 范围：
 1. @sker/workflow-ast 定义

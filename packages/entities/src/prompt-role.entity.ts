@@ -7,9 +7,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { Entity } from './decorator';
-import { PromptRoleThoughtRefEntity } from './prompt-role-thought-ref.entity';
-import { PromptRoleExecutionRefEntity } from './prompt-role-execution-ref.entity';
-import { PromptRoleKnowledgeRefEntity } from './prompt-role-knowledge-ref.entity';
+import { PromptRoleSkillRefEntity } from './prompt-role-skill-ref.entity';
 
 export type PromptResourceScope = 'system' | 'user' | 'project';
 
@@ -39,26 +37,12 @@ export class PromptRoleEntity {
   @Column({ type: 'uuid', nullable: true, name: 'project_id' })
   project_id!: string | null;
 
-  @OneToMany(() => PromptRoleThoughtRefEntity, (ref) => ref.role)
-  thought_refs!: PromptRoleThoughtRefEntity[];
+  @OneToMany(() => PromptRoleSkillRefEntity, (ref) => ref.role)
+  skill_refs!: PromptRoleSkillRefEntity[];
 
-  @OneToMany(() => PromptRoleExecutionRefEntity, (ref) => ref.role)
-  execution_refs!: PromptRoleExecutionRefEntity[];
-
-  @OneToMany(() => PromptRoleKnowledgeRefEntity, (ref) => ref.role)
-  knowledge_refs!: PromptRoleKnowledgeRefEntity[];
-
-  @CreateDateColumn({
-    type: 'timestamptz',
-    name: 'created_at',
-    default: () => 'CURRENT_TIMESTAMP',
-  })
+  @CreateDateColumn({ type: 'timestamptz', name: 'created_at', default: () => 'CURRENT_TIMESTAMP' })
   created_at!: Date;
 
-  @UpdateDateColumn({
-    type: 'timestamptz',
-    name: 'updated_at',
-    default: () => 'CURRENT_TIMESTAMP',
-  })
+  @UpdateDateColumn({ type: 'timestamptz', name: 'updated_at', default: () => 'CURRENT_TIMESTAMP' })
   updated_at!: Date;
 }

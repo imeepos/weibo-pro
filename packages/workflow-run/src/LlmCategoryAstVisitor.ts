@@ -2,7 +2,7 @@ import { Injectable } from "@sker/core";
 import { Handler, ROUTE_SKIPPED, setAstError, WorkflowGraphAst } from "@sker/workflow";
 import { LlmCategoryAst } from "@sker/workflow-ast";
 import { BehaviorSubject, Observable } from "rxjs";
-import { ChatOpenAI } from "@langchain/openai";
+import { useLlmModel } from "./llm-client";
 
 @Injectable()
 export class LlmCategoryAstVisitor {
@@ -66,7 +66,7 @@ ${categoryList}
 输入："今天天气怎么样"
 输出：Default`;
 
-                const model = new ChatOpenAI({ model: ast.model, temperature: ast.temperature });
+                const model = useLlmModel({ model: ast.model, temperature: ast.temperature });
                 const userContent = ast.context.join('\n\n---\n\n');
 
                 const messages = [

@@ -4,7 +4,7 @@ import { LlmTextAgentAst } from "@sker/workflow-ast";
 import { Observable } from "rxjs";
 import { z } from 'zod'
 import { DynamicStructuredTool } from "@langchain/core/tools";
-import { ChatOpenAI } from "@langchain/openai";
+import { useLlmModel } from "./llm-client";
 export const getNodeTool = (nodes: INode[]) => {
     const tool = new DynamicStructuredTool({
         name: 'getNode',
@@ -48,7 +48,7 @@ export class LlmTextAgentAstVisitor {
                 ast.count += 1;
                 obs.next({ ...ast })
 
-                const chartModel = new ChatOpenAI({ model: ast.model, temperature: ast.temperature });
+                const chartModel = useLlmModel({ model: ast.model, temperature: ast.temperature });
 
                 // LLM 调用（未来可传递 signal）
                 const prompts = Array.isArray(ast.prompt) ? ast.prompt.join('\n') : ast.prompt

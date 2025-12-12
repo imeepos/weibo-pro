@@ -10,8 +10,8 @@ import {
   In,
 } from '@sker/entities';
 import { Observable } from 'rxjs';
-import { ChatOpenAI } from '@langchain/openai';
 import { z } from 'zod';
+import { useLlmModel } from './llm-client';
 
 const MemoryExtractionSchema = z.object({
   memories: z.array(z.object({
@@ -159,7 +159,7 @@ export class PersonaAstVisitor {
           }
 
           // LLM 生成回复
-          const model = new ChatOpenAI({
+          const model = useLlmModel({
             model: ast.model,
             temperature: ast.temperature,
           });
@@ -269,7 +269,7 @@ ${ast.context}`;
   }
 
   private async extractMemories(
-    model: ChatOpenAI,
+    model: ReturnType<typeof useLlmModel>,
     question: string,
     answer: string
   ): Promise<ExtractedMemory[]> {

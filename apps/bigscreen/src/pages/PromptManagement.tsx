@@ -1,0 +1,456 @@
+import React, { useState, useEffect } from 'react';
+import { root } from '@sker/core';
+import {
+  PromptRolesController,
+  PromptSkillsController,
+  type PromptRoleWithSkills
+} from '@sker/sdk';
+import type { PromptSkillEntity, PromptSkillType, SkillContent } from '@sker/entities';
+import { Spinner } from '@sker/ui/components/ui/spinner';
+import { Card, CardHeader, CardTitle, CardContent } from '@sker/ui/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter
+} from '@sker/ui/components/ui/dialog';
+import { PlusIcon, TrashIcon, PencilIcon, UserIcon, WrenchIcon, LinkIcon } from 'lucide-react';
+
+const SKILL_TYPES: { value: PromptSkillType; label: string }[] = [
+  { value: 'thought', label: '思维' },
+  { value: 'execution', label: '执行' },
+  { value: 'knowledge', label: '知识' },
+  { value: 'decision', label: '决策' }
+];
+
+const PromptManagement: React.FC = () => {
+  const [roles, setRoles] = useState<PromptRoleWithSkills[]>([]);
+  const [skills, setSkills] = useState<PromptSkillEntity[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedRole, setSelectedRole] = useState<string | null>(null);
+
+  const rolesCtrl = root.get(PromptRolesController);
+  const skillsCtrl = root.get(PromptSkillsController);
+
+  useEffect(() => { loadData(); }, []);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [r, s] = await Promise.all([rolesCtrl.findAll(), skillsCtrl.findAll()]);
+      setRoles(r);
+      setSkills(s);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Role Dialog
+  const [roleDialogOpen, setRoleDialogOpen] = useState(false);
+  const [roleForm, setRoleForm] = useState({ role_id: '', name: '', description: '', personality: '', scope: 'user' as const });
+  const [editingRole, setEditingRole] = useState<string | null>(null);
+
+  const openRoleDialog = (role?: PromptRoleWithSkills) => {
+    if (role) {
+      setEditingRole(role.id);
+      setRoleForm({
+        role_id: role.role_id,
+        name: role.name,
+        description: role.description || '',
+        personality: role.personality,
+        scope: role.scope
+      });
+    } else {
+      setEditingRole(null);
+      setRoleForm({ role_id: '', name: '', description: '', personality: '', scope: 'user' });
+    }
+    setRoleDialogOpen(true);
+  };
+
+  const handleRoleSubmit = async () => {
+    if (!roleForm.role_id || !roleForm.name || !roleForm.personality) return;
+    if (editingRole) {
+      await rolesCtrl.update(editingRole, roleForm);
+    } else {
+      await rolesCtrl.create(roleForm);
+    }
+    setRoleDialogOpen(false);
+    loadData();
+  };
+
+  // Skill Dialog
+  const [skillDialogOpen, setSkillDialogOpen] = useState(false);
+  const [skillForm, setSkillForm] = useState({ name: '', title: '', description: '', type: 'thought' as PromptSkillType, content: '' });
+  const [editingSkill, setEditingSkill] = useState<string | null>(null);
+
+  const openSkillDialog = (skill?: PromptSkillEntity) => {
+    if (skill) {
+      setEditingSkill(skill.id);
+      setSkillForm({
+        name: skill.name,
+        title: skill.title,
+        description: skill.description || '',
+        type: skill.type,
+        content: typeof skill.content === 'string' ? skill.content : JSON.stringify(skill.content, null, 2)
+      });
+    } else {
+      setEditingSkill(null);
+      setSkillForm({ name: '', title: '', description: '', type: 'thought', content: '' });
+    }
+    setSkillDialogOpen(true);
+  };
+
+  const handleSkillSubmit = async () => {
+    if (!skillForm.name || !skillForm.title) return;
+    let content: SkillContent;
+    try {
+      content = JSON.parse(skillForm.content);
+    } catch {
+      content = skillForm.content;
+    }
+    const dto = { ...skillForm, content };
+    if (editingSkill) {
+      await skillsCtrl.update(editingSkill, dto);
+    } else {
+      await skillsCtrl.create(dto);
+    }
+    setSkillDialogOpen(false);
+    loadData();
+  };
+
+  // Bind Skill Dialog
+  const [bindDialogOpen, setBindDialogOpen] = useState(false);
+  const [bindForm, setBindForm] = useState({ skill_id: '', ref_type: 'required' });
+
+  const openBindDialog = (roleId: string) => {
+    setSelectedRole(roleId);
+    setBindForm({ skill_id: '', ref_type: 'required' });
+    setBindDialogOpen(true);
+  };
+
+  const handleBindSubmit = async () => {
+    if (!selectedRole || !bindForm.skill_id) return;
+    await rolesCtrl.addSkill(selectedRole, bindForm);
+    setBindDialogOpen(false);
+    loadData();
+  };
+
+  // Delete
+  const [deleteTarget, setDeleteTarget] = useState<{ type: 'role' | 'skill'; id: string; name: string } | null>(null);
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    if (deleteTarget.type === 'role') await rolesCtrl.remove(deleteTarget.id);
+    else await skillsCtrl.remove(deleteTarget.id);
+    setDeleteTarget(null);
+    loadData();
+  };
+
+  if (loading) {
+    return <div className="flex h-full items-center justify-center"><Spinner /></div>;
+  }
+
+  const currentRole = roles.find(r => r.id === selectedRole);
+  const boundSkillIds = new Set(currentRole?.skill_refs?.map(ref => ref.skill_id) || []);
+  const availableSkills = skills.filter(s => !boundSkillIds.has(s.id));
+
+  return (
+    <div className="h-full overflow-auto p-4">
+      <div className="grid h-full gap-4 lg:grid-cols-3">
+        {/* 角色列表 */}
+        <Card className="flex flex-col">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <UserIcon className="size-4" />
+              角色
+            </CardTitle>
+            <button
+              onClick={() => openRoleDialog()}
+              className="flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-xs text-primary-foreground"
+            >
+              <PlusIcon className="size-3" />
+              添加
+            </button>
+          </CardHeader>
+          <CardContent className="flex-1 overflow-auto p-0">
+            <div className="divide-y">
+              {roles.map((r) => (
+                <div
+                  key={r.id}
+                  className={`cursor-pointer p-3 hover:bg-muted/50 ${selectedRole === r.id ? 'bg-muted' : ''}`}
+                  onClick={() => setSelectedRole(r.id)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium text-sm">{r.name}</div>
+                      <div className="text-xs text-muted-foreground">{r.role_id}</div>
+                    </div>
+                    <div className="flex gap-1">
+                      <button onClick={(e) => { e.stopPropagation(); openRoleDialog(r); }} className="text-muted-foreground hover:text-foreground">
+                        <PencilIcon className="size-3" />
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); setDeleteTarget({ type: 'role', id: r.id, name: r.name }); }} className="text-red-500 hover:text-red-600">
+                        <TrashIcon className="size-3" />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="mt-1 text-xs text-muted-foreground line-clamp-2">{r.description}</div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 角色技能绑定 */}
+        <Card className="flex flex-col">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <LinkIcon className="size-4" />
+              {currentRole ? `${currentRole.name} 的技能` : '选择角色查看技能'}
+            </CardTitle>
+            {currentRole && (
+              <button
+                onClick={() => openBindDialog(currentRole.id)}
+                className="flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-xs text-primary-foreground"
+              >
+                <PlusIcon className="size-3" />
+                绑定
+              </button>
+            )}
+          </CardHeader>
+          <CardContent className="flex-1 overflow-auto p-0">
+            {currentRole?.skill_refs?.length ? (
+              <table className="w-full text-xs">
+                <thead className="sticky top-0 border-b bg-muted/50">
+                  <tr>
+                    <th className="px-4 py-2 text-left font-medium">技能</th>
+                    <th className="px-4 py-2 text-left font-medium">类型</th>
+                    <th className="px-4 py-2 text-left font-medium">必需</th>
+                    <th className="px-4 py-2 text-right font-medium">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {currentRole.skill_refs.map((ref) => (
+                    <tr key={ref.id} className="border-b last:border-0">
+                      <td className="px-4 py-2">{ref.skill?.title || ref.skill_id}</td>
+                      <td className="px-4 py-2">{SKILL_TYPES.find(t => t.value === ref.skill_type)?.label}</td>
+                      <td className="px-4 py-2">{ref.ref_type === 'required' ? '是' : '否'}</td>
+                      <td className="px-4 py-2 text-right">
+                        <button
+                          onClick={() => rolesCtrl.removeSkill(currentRole.id, ref.skill_id).then(loadData)}
+                          className="text-red-500 hover:text-red-600"
+                        >
+                          <TrashIcon className="size-3" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                {currentRole ? '暂无绑定技能' : '请先选择角色'}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* 技能列表 */}
+        <Card className="flex flex-col">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <WrenchIcon className="size-4" />
+              技能库
+            </CardTitle>
+            <button
+              onClick={() => openSkillDialog()}
+              className="flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-xs text-primary-foreground"
+            >
+              <PlusIcon className="size-3" />
+              添加
+            </button>
+          </CardHeader>
+          <CardContent className="flex-1 overflow-auto p-0">
+            <table className="w-full text-xs">
+              <thead className="sticky top-0 border-b bg-muted/50">
+                <tr>
+                  <th className="px-4 py-2 text-left font-medium">名称</th>
+                  <th className="px-4 py-2 text-left font-medium">类型</th>
+                  <th className="px-4 py-2 text-right font-medium">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {skills.map((s) => (
+                  <tr key={s.id} className="border-b last:border-0">
+                    <td className="px-4 py-2">
+                      <div className="font-medium">{s.title}</div>
+                      <div className="text-muted-foreground">{s.name}</div>
+                    </td>
+                    <td className="px-4 py-2">{SKILL_TYPES.find(t => t.value === s.type)?.label}</td>
+                    <td className="px-4 py-2 text-right">
+                      <button onClick={() => openSkillDialog(s)} className="mr-1 text-muted-foreground hover:text-foreground">
+                        <PencilIcon className="size-3" />
+                      </button>
+                      <button onClick={() => setDeleteTarget({ type: 'skill', id: s.id, name: s.title })} className="text-red-500 hover:text-red-600">
+                        <TrashIcon className="size-3" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Role Dialog */}
+      <Dialog open={roleDialogOpen} onOpenChange={setRoleDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editingRole ? '编辑角色' : '添加角色'}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-3">
+            <input
+              placeholder="角色ID (唯一标识)"
+              value={roleForm.role_id}
+              onChange={(e) => setRoleForm({ ...roleForm, role_id: e.target.value })}
+              className="rounded-md border bg-background px-3 py-2 text-sm"
+            />
+            <input
+              placeholder="名称"
+              value={roleForm.name}
+              onChange={(e) => setRoleForm({ ...roleForm, name: e.target.value })}
+              className="rounded-md border bg-background px-3 py-2 text-sm"
+            />
+            <input
+              placeholder="描述"
+              value={roleForm.description}
+              onChange={(e) => setRoleForm({ ...roleForm, description: e.target.value })}
+              className="rounded-md border bg-background px-3 py-2 text-sm"
+            />
+            <textarea
+              placeholder="人格设定"
+              value={roleForm.personality}
+              onChange={(e) => setRoleForm({ ...roleForm, personality: e.target.value })}
+              className="rounded-md border bg-background px-3 py-2 text-sm min-h-[100px]"
+            />
+            <select
+              value={roleForm.scope}
+              onChange={(e) => setRoleForm({ ...roleForm, scope: e.target.value as any })}
+              className="rounded-md border bg-background px-3 py-2 text-sm"
+            >
+              <option value="system">系统</option>
+              <option value="user">用户</option>
+              <option value="project">项目</option>
+            </select>
+          </div>
+          <DialogFooter>
+            <button onClick={() => setRoleDialogOpen(false)} className="rounded-md bg-muted px-3 py-1.5 text-sm">取消</button>
+            <button onClick={handleRoleSubmit} className="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground">
+              {editingRole ? '保存' : '添加'}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Skill Dialog */}
+      <Dialog open={skillDialogOpen} onOpenChange={setSkillDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editingSkill ? '编辑技能' : '添加技能'}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-3">
+            <input
+              placeholder="技能标识 (name)"
+              value={skillForm.name}
+              onChange={(e) => setSkillForm({ ...skillForm, name: e.target.value })}
+              className="rounded-md border bg-background px-3 py-2 text-sm"
+            />
+            <input
+              placeholder="标题"
+              value={skillForm.title}
+              onChange={(e) => setSkillForm({ ...skillForm, title: e.target.value })}
+              className="rounded-md border bg-background px-3 py-2 text-sm"
+            />
+            <input
+              placeholder="描述"
+              value={skillForm.description}
+              onChange={(e) => setSkillForm({ ...skillForm, description: e.target.value })}
+              className="rounded-md border bg-background px-3 py-2 text-sm"
+            />
+            <select
+              value={skillForm.type}
+              onChange={(e) => setSkillForm({ ...skillForm, type: e.target.value as PromptSkillType })}
+              className="rounded-md border bg-background px-3 py-2 text-sm"
+            >
+              {SKILL_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </select>
+            <textarea
+              placeholder="内容 (JSON 或纯文本)"
+              value={skillForm.content}
+              onChange={(e) => setSkillForm({ ...skillForm, content: e.target.value })}
+              className="rounded-md border bg-background px-3 py-2 text-sm min-h-[150px] font-mono"
+            />
+          </div>
+          <DialogFooter>
+            <button onClick={() => setSkillDialogOpen(false)} className="rounded-md bg-muted px-3 py-1.5 text-sm">取消</button>
+            <button onClick={handleSkillSubmit} className="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground">
+              {editingSkill ? '保存' : '添加'}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bind Skill Dialog */}
+      <Dialog open={bindDialogOpen} onOpenChange={setBindDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>绑定技能</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-3">
+            <select
+              value={bindForm.skill_id}
+              onChange={(e) => setBindForm({ ...bindForm, skill_id: e.target.value })}
+              className="rounded-md border bg-background px-3 py-2 text-sm"
+            >
+              <option value="">选择技能</option>
+              {availableSkills.map(s => <option key={s.id} value={s.id}>{s.title} ({SKILL_TYPES.find(t => t.value === s.type)?.label})</option>)}
+            </select>
+            <select
+              value={bindForm.ref_type}
+              onChange={(e) => setBindForm({ ...bindForm, ref_type: e.target.value })}
+              className="rounded-md border bg-background px-3 py-2 text-sm"
+            >
+              <option value="required">必需</option>
+              <option value="optional">可选</option>
+            </select>
+          </div>
+          <DialogFooter>
+            <button onClick={() => setBindDialogOpen(false)} className="rounded-md bg-muted px-3 py-1.5 text-sm">取消</button>
+            <button onClick={handleBindSubmit} className="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground">绑定</button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirm Dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>确认删除</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            确定要删除{deleteTarget?.type === 'role' ? '角色' : '技能'}
+            <span className="font-medium text-foreground">「{deleteTarget?.name}」</span>吗？
+          </p>
+          <DialogFooter>
+            <button onClick={() => setDeleteTarget(null)} className="rounded-md bg-muted px-3 py-1.5 text-sm">取消</button>
+            <button onClick={confirmDelete} className="rounded-md bg-destructive px-3 py-1.5 text-sm text-white">删除</button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default PromptManagement;

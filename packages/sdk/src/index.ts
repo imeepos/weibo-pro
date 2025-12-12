@@ -14,6 +14,8 @@ export * from './controllers/user-relation.controller'
 export * from './controllers/users.controller'
 export * from './controllers/workflow.controller'
 export * from './controllers/persona.controller'
+export * from './controllers/prompt-roles.controller'
+export * from './controllers/prompt-skills.controller'
 export * from './types';
 export * from './tokens';
 export * from './client';
