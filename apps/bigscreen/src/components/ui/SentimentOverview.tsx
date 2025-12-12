@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { cn } from '@/utils';
 import { EChartNative } from '@sker/ui/components/ui/echart-native';
-import type { EChartsOption } from 'echarts';
+import type { EChartsOption } from '@sker/ui/components/ui/echart';
 
 interface SentimentData {
   positive: number;

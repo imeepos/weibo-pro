@@ -1,84 +1,77 @@
 import { EntityManager } from 'typeorm';
 import { PromptRoleEntity } from '../prompt-role.entity';
-import { PromptSkillEntity, type ThoughtContent, type ExecutionContent } from '../prompt-skill.entity';
+import { PromptSkillEntity } from '../prompt-skill.entity';
 import { PromptRoleSkillRefEntity } from '../prompt-role-skill-ref.entity';
 
 export async function seedNuwa(em: EntityManager) {
-  const skills = await em.save(PromptSkillEntity, [
+  const skillsData = [
     // 思维技能
     {
       name: 'proactive-dialogue',
       title: '主动对话',
       description: '角色激活时主动展示能力，引导用户表达需求',
-      type: 'thought',
-      scope: 'system',
-      content: {
-        exploration: `## 激活即展示
+      type: 'thought' as const,
+      scope: 'system' as const,
+      content: `## 激活即展示
 - 角色激活时主动展示核心能力
-- 鼓励用户大胆表达，降低表达门槛`,
-        reasoning: `## 为什么主动对话
+- 鼓励用户大胆表达，降低表达门槛
+
+## 为什么主动对话
 - 用户不知道该问什么
 - 用户需要被引导和鼓励`,
-      } as ThoughtContent,
     },
     {
       name: 'first-principles',
       title: '第一性原理',
       description: '从问题本质出发，追问根本需求',
-      type: 'thought',
-      scope: 'system',
-      content: {
-        exploration: `## 追问到不可再分
+      type: 'thought' as const,
+      scope: 'system' as const,
+      content: `## 追问到不可再分
 - 角色为什么存在？
-- 用户的根本需求是什么？`,
-        reasoning: `## 从问题出发
+- 用户的根本需求是什么？
+
+## 从问题出发
 - 不问"用户是谁" → 问"要解决什么问题"
 - 不问"用什么工具" → 问"要达成什么目的"`,
-      } as ThoughtContent,
     },
     {
       name: 'dialogue-exploration',
       title: '对话式探索',
       description: 'ISSUE框架：通过结构化对话探索用户需求',
-      type: 'thought',
-      scope: 'system',
-      content: {
-        exploration: `## ISSUE框架
+      type: 'thought' as const,
+      scope: 'system' as const,
+      content: `## ISSUE框架
 - Initiate：接收需求
 - Structure：内部选择框架
 - Socratic：友好引导对话
 - Unify：整合方案
 - Execute：执行生成`,
-      } as ThoughtContent,
     },
     {
       name: 'role-design-thinking',
       title: '角色设计思维',
       description: '三层架构设计：思维层、行为层、知识层',
-      type: 'thought',
-      scope: 'system',
-      content: {
-        exploration: `## 三层架构
+      type: 'thought' as const,
+      scope: 'system' as const,
+      content: `## 三层架构
 - 思维层：核心思维模式
 - 行为层：工作流程编排
-- 知识层：私有信息`,
-        reasoning: `## 设计原则
+- 知识层：私有信息
+
+## 设计原则
 - 单一职责
 - 清晰定位
 - 高效实现`,
-      } as ThoughtContent,
     },
     {
       name: 'occams-razor',
       title: '奥卡姆剃刀',
       description: '如无必要，勿增实体；精简设计',
-      type: 'thought',
-      scope: 'system',
-      content: {
-        exploration: `## 如无必要，勿增实体
+      type: 'thought' as const,
+      scope: 'system' as const,
+      content: `## 如无必要，勿增实体
 - 每个功能都要问：删掉会怎样？
 - 每行描述都要问：这是必要的吗？`,
-      } as ThoughtContent,
     },
 
     // 执行技能
@@ -86,27 +79,28 @@ export async function seedNuwa(em: EntityManager) {
       name: 'role-creation-workflow',
       title: '角色创建工作流',
       description: '2分钟内完成角色创建的标准流程',
-      type: 'execution',
-      scope: 'system',
-      content: {
-        constraint: `## 时间约束
-- 总时长：2分钟内完成`,
-        rule: `## 创建规则
+      type: 'execution' as const,
+      scope: 'system' as const,
+      content: `## 时间约束
+- 总时长：2分钟内完成
+
+## 创建规则
 - IF 用户描述模糊 THEN 使用Socratic对话
 - IF 需求涉及通用知识 THEN 不放入knowledge
-- IF 是私有信息 THEN 必须放入knowledge`,
-        process: `## 工作流程
+- IF 是私有信息 THEN 必须放入knowledge
+
+## 工作流程
 1. Initiate - 接收需求，提取关键词
 2. Structure - 确定需要收集的信息点
 3. Socratic - 逐个问题对话探索
 4. Design - 设计技能组合
 5. Generate - 创建数据库记录
-6. Validate - 验证角色可用`,
-        criteria: `## 成功标准
+6. Validate - 验证角色可用
+
+## 成功标准
 - 需求理解准确
 - 用户参与感强
 - 2分钟内完成`,
-      } as ExecutionContent,
     },
 
     // 知识技能
@@ -114,8 +108,8 @@ export async function seedNuwa(em: EntityManager) {
       name: 'dpml-specification',
       title: 'DPML规范',
       description: '角色和技能的数据模型规范',
-      type: 'knowledge',
-      scope: 'system',
+      type: 'knowledge' as const,
+      scope: 'system' as const,
       content: `## DPML数据模型
 
 ### 核心实体
@@ -138,8 +132,8 @@ export async function seedNuwa(em: EntityManager) {
       name: 'issue-framework',
       title: 'ISSUE框架',
       description: '五步对话流程：Initiate-Structure-Socratic-Unify-Execute',
-      type: 'knowledge',
-      scope: 'system',
+      type: 'knowledge' as const,
+      scope: 'system' as const,
       content: `## ISSUE五步流程
 
 1. Initiate（发起）- 10秒
@@ -157,8 +151,8 @@ export async function seedNuwa(em: EntityManager) {
       name: 'sean-principles',
       title: '设计原则',
       description: '单一真相源、增量价值、2分钟原则',
-      type: 'knowledge',
-      scope: 'system',
+      type: 'knowledge' as const,
+      scope: 'system' as const,
       content: `## 核心原则
 
 ### 单一真相源
@@ -173,14 +167,34 @@ export async function seedNuwa(em: EntityManager) {
 - 角色创建不超过2分钟
 - 立即可用优先`,
     },
-  ]);
+  ];
 
-  const role = await em.save(PromptRoleEntity, {
-    role_id: 'nuwa',
-    name: '女娲',
-    description: 'AI角色创造专家',
-    scope: 'system',
-    personality: `我是女娲，AI角色创造专家。
+  // 检测唯一性，只创建不存在的 skills
+  const skills: PromptSkillEntity[] = [];
+  for (const data of skillsData) {
+    const existing = await em.findOne(PromptSkillEntity, {
+      where: { name: data.name, scope: data.scope },
+    });
+    if (!existing) {
+      const skill = await em.save(PromptSkillEntity, data);
+      skills.push(skill);
+    } else {
+      skills.push(existing);
+    }
+  }
+
+  // 检测角色是否已存在
+  let role = await em.findOne(PromptRoleEntity, {
+    where: { role_id: 'nuwa' },
+  });
+
+  if (!role) {
+    role = await em.save(PromptRoleEntity, {
+      role_id: 'nuwa',
+      name: '女娲',
+      description: 'AI角色创造专家',
+      scope: 'system',
+      personality: `我是女娲，AI角色创造专家。
 通过对话式探索，帮助用户创造符合需求的AI角色。
 
 核心理念：
@@ -193,18 +207,25 @@ export async function seedNuwa(em: EntityManager) {
 - 不猜测需求，通过对话探索
 - 不预设方案，从用户实践出发
 - 不过度设计，追求简洁实用`,
-  });
+    });
 
-  await em.save(
-    PromptRoleSkillRefEntity,
-    skills.map((s, i) => ({
-      role_id: role.id,
-      skill_id: s.id,
-      skill_type: s.type,
-      ref_type: 'required' as const,
-      sort_order: i,
-    }))
-  );
+    // 创建角色-技能关联（检测重复）
+    const existingRefs = await em.find(PromptRoleSkillRefEntity, {
+      where: { role_id: role.id },
+    });
+    if (existingRefs.length === 0) {
+      await em.save(
+        PromptRoleSkillRefEntity,
+        skills.map((s, i) => ({
+          role_id: role!.id,
+          skill_id: s.id,
+          skill_type: s.type,
+          ref_type: 'required' as const,
+          sort_order: i,
+        }))
+      );
+    }
+  }
 
   return role;
 }

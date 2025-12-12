@@ -82,11 +82,7 @@ export const HotEventsList: LazyComponent = lazy(() =>
 
 // ================== UI组件懒加载 ==================
 
-export const PerformanceDashboard = lazy(() => 
-  import('./ui/PerformanceDashboard').then(module => ({ default: module.PerformanceDashboard }))
-);
-
-export const ErrorNotification = lazy(() => 
+export const ErrorNotification = lazy(() =>
   import('./ui/ErrorNotification').then(module => ({ default: module.ErrorNotification }))
 );
 
@@ -211,7 +207,6 @@ export const LAZY_COMPONENT_MAP: Record<string, LazyComponent> = {
   HotEventsList,
   
   // UI组件
-  PerformanceDashboard,
   ErrorNotification,
 } as const;
 

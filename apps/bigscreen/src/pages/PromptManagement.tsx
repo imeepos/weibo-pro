@@ -5,7 +5,7 @@ import {
   PromptSkillsController,
   type PromptRoleWithSkills
 } from '@sker/sdk';
-import type { PromptSkillEntity, PromptSkillType, SkillContent } from '@sker/entities';
+import type { PromptSkillEntity, PromptSkillType, PromptResourceScope } from '@sker/entities';
 import { Spinner } from '@sker/ui/components/ui/spinner';
 import { Card, CardHeader, CardTitle, CardContent } from '@sker/ui/components/ui/card';
 import {
@@ -48,7 +48,7 @@ const PromptManagement: React.FC = () => {
 
   // Role Dialog
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
-  const [roleForm, setRoleForm] = useState({ role_id: '', name: '', description: '', personality: '', scope: 'user' as const });
+  const [roleForm, setRoleForm] = useState({ role_id: '', name: '', description: '', personality: '', scope: 'user' as PromptResourceScope });
   const [editingRole, setEditingRole] = useState<string | null>(null);
 
   const openRoleDialog = (role?: PromptRoleWithSkills) => {
@@ -92,7 +92,7 @@ const PromptManagement: React.FC = () => {
         title: skill.title,
         description: skill.description || '',
         type: skill.type,
-        content: typeof skill.content === 'string' ? skill.content : JSON.stringify(skill.content, null, 2)
+        content: skill.content
       });
     } else {
       setEditingSkill(null);
@@ -103,13 +103,7 @@ const PromptManagement: React.FC = () => {
 
   const handleSkillSubmit = async () => {
     if (!skillForm.name || !skillForm.title) return;
-    let content: SkillContent;
-    try {
-      content = JSON.parse(skillForm.content);
-    } catch {
-      content = skillForm.content;
-    }
-    const dto = { ...skillForm, content };
+    const dto = { ...skillForm };
     if (editingSkill) {
       await skillsCtrl.update(editingSkill, dto);
     } else {
@@ -387,7 +381,7 @@ const PromptManagement: React.FC = () => {
               {SKILL_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
             <textarea
-              placeholder="内容 (JSON 或纯文本)"
+              placeholder="Markdown 格式的内容"
               value={skillForm.content}
               onChange={(e) => setSkillForm({ ...skillForm, content: e.target.value })}
               className="rounded-md border bg-background px-3 py-2 text-sm min-h-[150px] font-mono"

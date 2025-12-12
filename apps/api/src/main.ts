@@ -9,7 +9,7 @@ import { Logger } from '@sker/core'
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { root } from '@sker/core';
-import { entitiesProviders } from "@sker/entities";
+import { entitiesProviders, seedNuwa, seedSentimentAnalyzer, seedContentAuditor, seedDataValidator, useEntityManager } from "@sker/entities";
 import { ResponseInterceptor } from './interceptors/response.interceptor';
 import { NotFoundExceptionFilter } from './filters/not-found.filter';
 import { killPortProcess } from 'kill-port-process';
@@ -22,6 +22,14 @@ async function bootstrap() {
 
   root.set([...entitiesProviders])
   await root.init();
+
+  await useEntityManager(async m=>{
+    await seedNuwa(m);
+    await seedSentimentAnalyzer(m);
+    await seedContentAuditor(m);
+    await seedDataValidator(m);
+    logger.info('✓ All seed roles initialized');
+  })
 
   if (process.env.DEV) {
     try {

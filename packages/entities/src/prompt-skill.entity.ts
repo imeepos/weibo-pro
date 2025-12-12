@@ -10,27 +10,7 @@ import { type PromptResourceScope } from './prompt-role.entity';
 
 export type PromptSkillType = 'thought' | 'execution' | 'knowledge' | 'decision';
 
-/** 思维子类型 */
-export interface ThoughtContent {
-  exploration?: string;
-  reasoning?: string;
-  challenge?: string;
-  plan?: string;
-}
-
-/** 执行子类型 */
-export interface ExecutionContent {
-  process?: string;
-  constraint?: string;
-  rule?: string;
-  guideline?: string;
-  criteria?: string;
-}
-
-/** 知识/决策：纯文本 */
-export type KnowledgeContent = string;
-
-export type SkillContent = ThoughtContent | ExecutionContent | KnowledgeContent;
+export type SkillContent = string;
 
 @Entity('prompt_skills')
 @Index(['name'])
@@ -54,7 +34,7 @@ export class PromptSkillEntity {
   @Column({ type: 'varchar', length: 20 })
   type!: PromptSkillType;
 
-  @Column({ type: 'jsonb' })
+  @Column({ type: 'text' })
   content!: SkillContent;
 
   @Column({ type: 'varchar', length: 20, default: 'user' })

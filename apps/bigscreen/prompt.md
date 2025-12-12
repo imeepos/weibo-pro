@@ -1,13 +1,8 @@
 ## 需求
 
-调用大模型相关的实现，应该对接： apps\api\src\controllers\llm-proxy.controller.ts
-这里做了统一的管理
+页面：apps\bigscreen\src\pages\PromptManagement.tsx
 
-例如：
-packages\workflow-run\src\LlmCategoryAstVisitor.ts
-packages\workflow-run\src\LlmStructuredOutputAstVisitor.ts
-packages\workflow-run\src\LlmTextAgentAstVisitor.ts
-等等吧
+Bind Skill Dialog 下拉
 
 范围：
 1. @sker/workflow-ast 定义

@@ -45,9 +45,9 @@ class TestTextAreaVisitor {
             obs.next({ ...ast })
 
             // 输出 input 的值（如果是数组取第一个，否则直接输出）
-            const value = Array.isArray(ast.input)
-                ? (ast.input.length > 0 ? ast.input[0] : null)
-                : ast.input
+            const value: string | null = Array.isArray(ast.input)
+                ? (ast.input.length > 0 ? ast.input[0]! : null)
+                : ((ast.input as string | undefined) ?? null)
             ast.output.next(value)
 
             ast.state = 'success'
@@ -240,6 +240,29 @@ class SimpleRouterVisitor {
 }
 
 // ============================================================================
+// 辅助函数
+// ============================================================================
+
+function createTestNode(partial: Partial<INode>): INode {
+    return {
+        id: 'default-id',
+        type: 'TestNode',
+        state: 'pending',
+        count: 0,
+        emitCount: 0,
+        error: undefined,
+        position: { x: 0, y: 0 },
+        metadata: {
+            class: {},
+            inputs: [],
+            outputs: [],
+            states: [],
+        },
+        ...partial,
+    } as INode;
+}
+
+// ============================================================================
 // 测试用例
 // ============================================================================
 
@@ -271,7 +294,7 @@ describe('SwitchAst 路由节点', () => {
             type: 'TestTextAreaAst',
             input: '02',
             state: 'pending',
-        } as INode)
+        } as unknown as INode)
 
         // 使用带 BehaviorSubject 输出的路由器
         const routerNode = compiler.compile({
@@ -279,7 +302,7 @@ describe('SwitchAst 路由节点', () => {
             type: 'BehaviorSubjectRouterAst',
             value: undefined,
             state: 'pending',
-        } as INode)
+        } as unknown as INode)
 
         // 最终节点
         const finalTextNode = compiler.compile({
@@ -287,7 +310,7 @@ describe('SwitchAst 路由节点', () => {
             type: 'TestTextAreaAst',
             input: [],
             state: 'pending',
-        } as INode)
+        } as unknown as INode)
 
         const edges: IEdge[] = [
             {
@@ -352,35 +375,35 @@ describe('SwitchAst 路由节点', () => {
             type: 'TestTextAreaAst',
             input: '01',
             state: 'pending',
-        } as INode)
+        } as unknown as INode)
 
         const textNode02 = compiler.compile({
             id: 'text-02',
             type: 'TestTextAreaAst',
             input: '02',
             state: 'pending',
-        } as INode)
+        } as unknown as INode)
 
         const collectorNode = compiler.compile({
             id: 'collector',
             type: 'TestCollectorAst',
             items: [],
             state: 'pending',
-        } as INode)
+        } as unknown as INode)
 
         const routerNode = compiler.compile({
             id: 'router',
             type: 'BehaviorSubjectRouterAst',
             value: undefined,
             state: 'pending',
-        } as INode)
+        } as unknown as INode)
 
         const finalTextNode = compiler.compile({
             id: 'final-text',
             type: 'TestTextAreaAst',
             input: [],
             state: 'pending',
-        } as INode)
+        } as unknown as INode)
 
         const edges: IEdge[] = [
             // TextAreaAst (01) -> CollectorAst.items
@@ -485,21 +508,21 @@ describe('SwitchAst 路由节点', () => {
             type: 'TestTextAreaAst',
             input: '01',
             state: 'pending',
-        } as INode)
+        } as unknown as INode)
 
         const textNode02 = compiler.compile({
             id: 'text-02',
             type: 'TestTextAreaAst',
             input: '02',
             state: 'pending',
-        } as INode)
+        } as unknown as INode)
 
         const collectorNode = compiler.compile({
             id: 'collector',
             type: 'TestCollectorAst',
             items: [],
             state: 'pending',
-        } as INode)
+        } as unknown as INode)
 
         // 使用 SimpleRouterAst
         const routerNode = compiler.compile({
@@ -507,7 +530,7 @@ describe('SwitchAst 路由节点', () => {
             type: 'SimpleRouterAst',
             value: undefined,
             state: 'pending',
-        } as INode)
+        } as unknown as INode)
 
         // 动态添加 output_1 到 metadata.outputs
         routerNode.metadata!.outputs.push({
@@ -525,7 +548,7 @@ describe('SwitchAst 路由节点', () => {
             type: 'TestTextAreaAst',
             input: [],
             state: 'pending',
-        } as INode)
+        } as unknown as INode)
 
         // 创建边
         const edges: IEdge[] = [
@@ -623,14 +646,14 @@ describe('SwitchAst 路由节点', () => {
             type: 'TestTextAreaAst',
             input: '01',
             state: 'pending',
-        } as INode)
+        } as unknown as INode)
 
         const routerNode = compiler.compile({
             id: 'router',
             type: 'SimpleRouterAst',
             value: undefined,
             state: 'pending',
-        } as INode)
+        } as unknown as INode)
 
         // 使用字符串比较条件
         routerNode.metadata!.outputs.push({
@@ -645,7 +668,7 @@ describe('SwitchAst 路由节点', () => {
             type: 'TestTextAreaAst',
             input: [],
             state: 'pending',
-        } as INode)
+        } as unknown as INode)
 
         const edges: IEdge[] = [
             {
@@ -699,14 +722,14 @@ describe('SwitchAst 路由节点', () => {
             type: 'TestTextAreaAst',
             input: 'A',
             state: 'pending',
-        } as INode)
+        } as unknown as INode)
 
         const routerNode = compiler.compile({
             id: 'router',
             type: 'SimpleRouterAst',
             value: undefined,
             state: 'pending',
-        } as INode)
+        } as unknown as INode)
 
         // 添加多个路由输出
         routerNode.metadata!.outputs.push(
@@ -729,14 +752,14 @@ describe('SwitchAst 路由节点', () => {
             type: 'TestTextAreaAst',
             input: [],
             state: 'pending',
-        } as INode)
+        } as unknown as INode)
 
         const finalB = compiler.compile({
             id: 'final-b',
             type: 'TestTextAreaAst',
             input: [],
             state: 'pending',
-        } as INode)
+        } as unknown as INode)
 
         const edges: IEdge[] = [
             {
@@ -809,7 +832,7 @@ describe('SwitchAst 路由节点', () => {
             type: 'BehaviorSubjectRouterAst',
             value: '02',  // 直接设置输入值
             state: 'pending',
-        } as INode)
+        } as unknown as INode)
 
         // 添加 output_1 分支
         routerNode.metadata!.outputs.push({
@@ -853,7 +876,7 @@ describe('SwitchAst 路由节点', () => {
             type: 'BehaviorSubjectRouterAst',
             value: '03',  // 不匹配 output_1 的条件
             state: 'pending',
-        } as INode)
+        } as unknown as INode)
 
         routerNode.metadata!.outputs.push({
             property: 'output_1',
@@ -896,28 +919,28 @@ describe('SwitchAst 路由节点', () => {
             type: 'TestTextAreaAst',
             input: '01',
             state: 'pending',
-        } as INode)
+        } as unknown as INode)
 
         const textNode02 = compiler.compile({
             id: 'text-02',
             type: 'TestTextAreaAst',
             input: '02',
             state: 'pending',
-        } as INode)
+        } as unknown as INode)
 
         const collectorNode = compiler.compile({
             id: 'collector',
             type: 'TestCollectorAst',
             items: [],
             state: 'pending',
-        } as INode)
+        } as unknown as INode)
 
         const routerNode = compiler.compile({
             id: 'router',
             type: 'BehaviorSubjectRouterAst',
             value: undefined,
             state: 'pending',
-        } as INode)
+        } as unknown as INode)
 
         // 添加 output_1 分支
         routerNode.metadata!.outputs.push({
@@ -935,7 +958,7 @@ describe('SwitchAst 路由节点', () => {
             type: 'TestTextAreaAst',
             input: [],
             state: 'pending',
-        } as INode)
+        } as unknown as INode)
 
         const edges: IEdge[] = [
             // TextArea (01) -> Collector

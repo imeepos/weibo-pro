@@ -21,7 +21,7 @@ describe('workflow-reducers', () => {
         updates: { state: 'running' },
       });
 
-      expect(updated.nodes[0].state).toBe('running');
+      expect(updated.nodes[0]!.state).toBe('running');
       expect(updated.state).toBe('running');
     });
 
@@ -63,8 +63,8 @@ describe('workflow-reducers', () => {
         updates: { state: 'running' },
       });
 
-      expect(workflow.nodes[0].state).toBe('pending');
-      expect(updated.nodes[0].state).toBe('running');
+      expect(workflow.nodes[0]!.state).toBe('pending');
+      expect(updated.nodes[0]!.state).toBe('running');
     });
 
     describe('计数器逻辑', () => {
@@ -79,8 +79,8 @@ describe('workflow-reducers', () => {
           updates: { state: 'running' },
         });
 
-        expect(updated.nodes[0].emitCount).toBe(1);
-        expect(updated.nodes[0].count).toBe(0);
+        expect(updated.nodes[0]!.emitCount).toBe(1);
+        expect(updated.nodes[0]!.count).toBe(0);
       });
 
       it('success 状态增加 count', () => {
@@ -94,8 +94,8 @@ describe('workflow-reducers', () => {
           updates: { state: 'success' },
         });
 
-        expect(updated.nodes[0].count).toBe(1);
-        expect(updated.nodes[0].emitCount).toBe(0);
+        expect(updated.nodes[0]!.count).toBe(1);
+        expect(updated.nodes[0]!.emitCount).toBe(0);
       });
 
       it('fail 状态增加 count', () => {
@@ -109,8 +109,8 @@ describe('workflow-reducers', () => {
           updates: { state: 'fail' },
         });
 
-        expect(updated.nodes[0].count).toBe(1);
-        expect(updated.nodes[0].emitCount).toBe(0);
+        expect(updated.nodes[0]!.count).toBe(1);
+        expect(updated.nodes[0]!.emitCount).toBe(0);
       });
 
       it('多次 success 状态累加 count', () => {
@@ -129,7 +129,7 @@ describe('workflow-reducers', () => {
           updates: { state: 'success' },
         });
 
-        expect(updated.nodes[0].count).toBe(2);
+        expect(updated.nodes[0]!.count).toBe(2);
       });
     });
 
@@ -144,8 +144,8 @@ describe('workflow-reducers', () => {
         updates: { state: 'success', name: 'Updated Node' },
       });
 
-      expect(updated.nodes[0].state).toBe('success');
-      expect(updated.nodes[0].name).toBe('Updated Node');
+      expect(updated.nodes[0]!.state).toBe('success');
+      expect(updated.nodes[0]!.name).toBe('Updated Node');
     });
   });
 
@@ -246,19 +246,19 @@ describe('workflow-reducers', () => {
         state: 'fail',
       });
 
-      workflow.nodes[0].count = 3;
-      workflow.nodes[0].emitCount = 5;
-      workflow.nodes[1].count = 2;
+      workflow.nodes[0]!.count = 3;
+      workflow.nodes[0]!.emitCount = 5;
+      workflow.nodes[1]!.count = 2;
 
       const reset = resetWorkflowReducer(workflow);
 
       expect(reset.state).toBe('pending');
-      expect(reset.nodes[0].state).toBe('pending');
-      expect(reset.nodes[0].count).toBe(0);
-      expect(reset.nodes[0].emitCount).toBe(0);
-      expect(reset.nodes[0].error).toBeUndefined();
-      expect(reset.nodes[1].state).toBe('pending');
-      expect(reset.nodes[1].count).toBe(0);
+      expect(reset.nodes[0]!.state).toBe('pending');
+      expect(reset.nodes[0]!.count).toBe(0);
+      expect(reset.nodes[0]!.emitCount).toBe(0);
+      expect(reset.nodes[0]!.error).toBeUndefined();
+      expect(reset.nodes[1]!.state).toBe('pending');
+      expect(reset.nodes[1]!.count).toBe(0);
     });
 
     it('保持原型链', () => {
@@ -276,14 +276,14 @@ describe('workflow-reducers', () => {
         nodes: [createNode('node-1', 'success')],
         state: 'success',
       });
-      workflow.nodes[0].count = 3;
+      workflow.nodes[0]!.count = 3;
 
       const reset = resetWorkflowReducer(workflow);
 
       expect(workflow.state).toBe('success');
-      expect(workflow.nodes[0].count).toBe(3);
+      expect(workflow.nodes[0]!.count).toBe(3);
       expect(reset.state).toBe('pending');
-      expect(reset.nodes[0].count).toBe(0);
+      expect(reset.nodes[0]!.count).toBe(0);
     });
 
     it('清除节点错误信息', () => {
@@ -295,7 +295,7 @@ describe('workflow-reducers', () => {
 
       const reset = resetWorkflowReducer(workflow);
 
-      expect(reset.nodes[0].error).toBeUndefined();
+      expect(reset.nodes[0]!.error).toBeUndefined();
     });
   });
 });
