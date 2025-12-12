@@ -181,7 +181,7 @@ ${skillsDescription}
 
       run().catch(e => {
         ast.state = 'fail';
-        ast.error = e;
+        setAstError(ast, e);
         obs.next({ ...ast });
         obs.complete();
       });

@@ -117,6 +117,7 @@ export class LlmProxyService {
 
       try {
         const url = `${provider.baseUrl}${apiPath}`
+        console.log({url, provider})
         const response = await fetch(url, {
           method: 'POST',
           headers: reqHeaders,

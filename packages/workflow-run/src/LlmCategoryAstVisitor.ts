@@ -111,7 +111,7 @@ ${categoryList}
             run().catch(e => {
                 console.error('[LlmCategoryAst] 执行失败:', e);
                 ast.state = 'fail';
-                ast.error = e;
+                setAstError(ast, e);
                 obs.next({ ...ast });
                 obs.complete();
             });

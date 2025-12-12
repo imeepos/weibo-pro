@@ -55,16 +55,16 @@ const LlmManagement: React.FC = () => {
 
   // Provider Dialog
   const [providerDialogOpen, setProviderDialogOpen] = useState(false);
-  const [providerForm, setProviderForm] = useState({ name: '', base_url: '', api_key: '' });
+  const [providerForm, setProviderForm] = useState({ name: '', protocol: 'anthropic', base_url: '', api_key: '' });
   const [editingProvider, setEditingProvider] = useState<string | null>(null);
 
   const openProviderDialog = (provider?: LlmProvider) => {
     if (provider) {
       setEditingProvider(provider.id);
-      setProviderForm({ name: provider.name, base_url: provider.base_url, api_key: provider.api_key });
+      setProviderForm({ name: provider.name, protocol: provider.protocol || 'anthropic', base_url: provider.base_url, api_key: provider.api_key });
     } else {
       setEditingProvider(null);
-      setProviderForm({ name: '', base_url: '', api_key: '' });
+      setProviderForm({ name: '', protocol: 'anthropic', base_url: '', api_key: '' });
     }
     setProviderDialogOpen(true);
   };
@@ -352,6 +352,16 @@ const LlmManagement: React.FC = () => {
               onChange={(e) => setProviderForm({ ...providerForm, name: e.target.value })}
               className="rounded-md border bg-background px-3 py-2 text-sm"
             />
+            <select
+              value={providerForm.protocol}
+              onChange={(e) => setProviderForm({ ...providerForm, protocol: e.target.value })}
+              className="rounded-md border bg-background px-3 py-2 text-sm"
+            >
+              <option value="anthropic">Anthropic</option>
+              <option value="openai">OpenAI</option>
+              <option value="gemini">Gemini</option>
+              <option value="openrouter">OpenRouter</option>
+            </select>
             <input
               placeholder="Base URL"
               value={providerForm.base_url}

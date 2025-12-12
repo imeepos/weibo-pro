@@ -18,7 +18,6 @@ export class LlmProxyController {
     const contentLength = parseInt(headers['content-length'] || '0')
     // 提取 /llm/:protocol 之后的路径部分
     const apiPath = '/' + req.path.split('/').slice(3).join('/')
-
     const reqHeaders: Record<string, string> = {}
     for (const [key, value] of Object.entries(headers)) {
       if (typeof value === 'string') {
