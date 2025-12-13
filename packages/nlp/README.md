@@ -164,7 +164,7 @@ console.log(config.baseURL);  // https://api.siliconflow.cn/v1
 
 ### LLM 模型
 
-- **默认模型**: `deepseek-ai/DeepSeek-V3.2-Exp`
+- **默认模型**: `deepseek-ai/DeepSeek-V3.2`
 - **响应格式**: 强制 JSON 输出
 - **温度设置**: 0.2（低随机性，结果稳定）
 - **兼容性**: 支持 OpenAI-compatible API

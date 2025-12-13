@@ -208,12 +208,67 @@ export class ReactiveScheduler {
         return affected;
     }
 
+    /**
+     * 获取有效的入口节点集合
+     *
+     * 策略：
+     * 1. 找出所有没有入边的节点（自然入口节点）
+     * 2. 如果 entryNodeIds 为空或未定义，返回所有自然入口节点
+     * 3. 如果 entryNodeIds 已指定但不完整（缺少某些自然入口节点），自动补全
+     *
+     * 这样可以防止用户或前端忘记指定某些入口节点导致工作流无法执行
+     */
+    private getEffectiveEntryNodes(ast: WorkflowGraphAst): Set<string> {
+        // 找出所有没有入边的节点（自然入口节点）
+        const naturalEntryNodes = new Set<string>();
+        for (const node of ast.nodes) {
+            const hasIncomingEdges = ast.edges.some(edge => edge.to === node.id);
+            if (!hasIncomingEdges) {
+                naturalEntryNodes.add(node.id);
+            }
+        }
+
+        // 如果 entryNodeIds 为空或未定义，返回所有自然入口节点
+        if (!ast.entryNodeIds || ast.entryNodeIds.length === 0) {
+            return naturalEntryNodes;
+        }
+
+        // 检查 entryNodeIds 是否完整
+        const specifiedEntryNodes = new Set(ast.entryNodeIds);
+        const missingEntryNodes: string[] = [];
+
+        for (const naturalEntry of naturalEntryNodes) {
+            if (!specifiedEntryNodes.has(naturalEntry)) {
+                missingEntryNodes.push(naturalEntry);
+            }
+        }
+
+        // 如果有缺失的入口节点，自动补全并警告
+        if (missingEntryNodes.length > 0) {
+            console.warn(
+                `[ReactiveScheduler] 检测到 entryNodeIds 不完整，自动补全缺失的入口节点:\n` +
+                `  指定的入口节点: [${Array.from(specifiedEntryNodes).join(', ')}]\n` +
+                `  自然入口节点: [${Array.from(naturalEntryNodes).join(', ')}]\n` +
+                `  自动补全: [${missingEntryNodes.join(', ')}]`
+            );
+
+            // 合并指定的和缺失的入口节点
+            return new Set([...specifiedEntryNodes, ...missingEntryNodes]);
+        }
+
+        // entryNodeIds 完整，直接使用
+        return specifiedEntryNodes;
+    }
+
     private buildIncrementalNetwork(
         ctx: WorkflowGraphAst,
         affectedNodes: Set<string>
     ): Map<string, Observable<INode>> {
         const network = new Map<string, Observable<INode>>();
         const building = new Set<string>();
+
+        // 获取有效的入口节点集合（自动补全缺失的入口节点）
+        const effectiveEntryNodes = this.getEffectiveEntryNodes(ctx);
 
         const buildNode = (nodeId: string): Observable<INode> => {
             // 已构建：直接返回
@@ -251,12 +306,8 @@ export class ReactiveScheduler {
                 // 递归构建所有上游节点
                 incomingEdges.forEach(edge => buildNode(edge.from));
 
-                // 判断是否为入口节点：
-                // 1. 如果 entryNodeIds 已指定，则仅这些节点为入口
-                // 2. 否则回退到自动识别（无入边节点）
-                const isEntryNode = ctx.entryNodeIds && ctx.entryNodeIds.length > 0
-                    ? ctx.entryNodeIds.includes(nodeId)
-                    : incomingEdges.length === 0;
+                // 使用有效的入口节点集合判断
+                const isEntryNode = effectiveEntryNodes.has(nodeId);
 
                 if (isEntryNode) {
                     stream = this.createEntryNodeStream(node, ctx);
@@ -810,6 +861,9 @@ export class ReactiveScheduler {
         const network = new Map<string, Observable<INode>>();
         const building = new Set<string>();
 
+        // 获取有效的入口节点集合（自动补全缺失的入口节点）
+        const effectiveEntryNodes = this.getEffectiveEntryNodes(ast);
+
         const buildNode = (nodeId: string): Observable<INode> => {
             if (network.has(nodeId)) {
                 return network.get(nodeId)!;
@@ -839,9 +893,8 @@ export class ReactiveScheduler {
 
             incomingEdges.forEach(edge => buildNode(edge.from));
 
-            const isEntryNode = ast.entryNodeIds && ast.entryNodeIds.length > 0
-                ? ast.entryNodeIds.includes(nodeId)
-                : incomingEdges.length === 0;
+            // 使用有效的入口节点集合判断
+            const isEntryNode = effectiveEntryNodes.has(nodeId);
 
             let stream$: Observable<INode>;
             if (isEntryNode) {

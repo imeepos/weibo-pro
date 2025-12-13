@@ -27,6 +27,7 @@ interface MockLlmCategoryAst {
             title?: string
             description?: string
             isRouter?: boolean
+            isStatic?: boolean
         }>
     }
     [key: string]: any
@@ -325,7 +326,7 @@ describe('LlmCategoryAstVisitor', () => {
                 context: ['我想要一张小猫的照片'],
                 system: '你是一个文本分类专家。根据用户提供的文本，判断其所属类别。',
                 temperature: 0,
-                model: 'deepseek-ai/DeepSeek-V3.2-Exp',
+                model: 'deepseek-ai/DeepSeek-V3.2',
                 image,
                 video,
                 metadata: {

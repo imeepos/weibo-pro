@@ -21,7 +21,7 @@ export class LlmCategoryAst extends Ast {
     temperature: number = 0;
 
     @Input({ title: '模型' })
-    model: string = 'deepseek-ai/DeepSeek-V3.2-Exp';
+    model: string = 'deepseek-ai/DeepSeek-V3.2';
 
     @Output({ title: 'Default', isRouter: true })
     output_default: BehaviorSubject<any> = new BehaviorSubject<any>(undefined);

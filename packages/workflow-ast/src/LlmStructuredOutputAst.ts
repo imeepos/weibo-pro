@@ -22,7 +22,7 @@ export class LlmStructuredOutputAst extends Ast {
     temperature: number = 0;
 
     @Input({ title: '模型' })
-    model: string = `deepseek-ai/DeepSeek-V3.2-Exp`;
+    model: string = `deepseek-ai/DeepSeek-V3.2`;
 
     type: `LlmStructuredOutputAst` = `LlmStructuredOutputAst`
 }

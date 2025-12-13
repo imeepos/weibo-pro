@@ -54,7 +54,7 @@ export class ResearchAgent {
     }
 
     const model = new ChatOpenAI({
-      modelName: 'deepseek-ai/DeepSeek-V3.2-Exp',
+      modelName: 'deepseek-ai/DeepSeek-V3.2',
       temperature: 0.3,
       apiKey: process.env.OPENAI_API_KEY,
       configuration: {

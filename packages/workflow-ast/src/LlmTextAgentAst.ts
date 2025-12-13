@@ -21,7 +21,7 @@ export class LlmTextAgentAst extends Ast {
     temperature: number = 0.5;
 
     @Input({ title: '模型' })
-    model: string = `deepseek-ai/DeepSeek-V3.2-Exp`;
+    model: string = `deepseek-ai/DeepSeek-V3.2`;
 
     @Output({ title: '输出' })
     text: BehaviorSubject<string> = new BehaviorSubject<string>(``)
