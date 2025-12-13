@@ -534,6 +534,8 @@ export interface WorkflowSummary {
   name: string
   createdAt: string
   updatedAt: string
+  tags?: string[]
+  description?: string
 }
 
 export interface CreateShareResult {

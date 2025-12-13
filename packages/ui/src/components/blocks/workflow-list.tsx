@@ -6,7 +6,8 @@ import {
   Edit3,
   Calendar,
   PlayCircle,
-  Trash2
+  Trash2,
+  Tag
 } from 'lucide-react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table'
 import { Badge } from '../ui/badge'
@@ -43,6 +44,8 @@ export function WorkflowList({
       <TableHeader>
         <TableRow>
           <TableHead>工作流名称</TableHead>
+          <TableHead>标签</TableHead>
+          <TableHead>简洁</TableHead>
           <TableHead>创建时间</TableHead>
           <TableHead>更新时间</TableHead>
           <TableHead className="text-right">操作</TableHead>
@@ -51,7 +54,7 @@ export function WorkflowList({
       <TableBody>
         {workflows.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={4} className="text-center text-muted-foreground h-32">
+            <TableCell colSpan={6} className="text-center text-muted-foreground h-32">
               暂无工作流
             </TableCell>
           </TableRow>
@@ -59,6 +62,29 @@ export function WorkflowList({
           workflows.map((workflow) => (
             <TableRow key={workflow.id}>
               <TableCell className="font-medium">{workflow.name}</TableCell>
+              <TableCell>
+                {workflow.tags && workflow.tags.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {workflow.tags.map((tag) => (
+                      <Badge key={tag} variant="secondary" className="text-xs">
+                        <Tag className="w-3 h-3 mr-1" />
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-muted-foreground text-sm">暂无标签</span>
+                )}
+              </TableCell>
+              <TableCell>
+                {workflow.description ? (
+                  <span className="text-sm text-muted-foreground line-clamp-2">
+                    {workflow.description}
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground text-sm">暂无简洁</span>
+                )}
+              </TableCell>
               <TableCell>
                 {formatDistanceToNow(new Date(workflow.createdAt), {
                   addSuffix: true,

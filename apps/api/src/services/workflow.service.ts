@@ -157,6 +157,8 @@ export class WorkflowService {
         name: w.name,
         createdAt: w.createdAt.toISOString(),
         updatedAt: w.updatedAt.toISOString(),
+        tags: w.tags,
+        description: w.description,
       }));
     });
   }
