@@ -175,6 +175,9 @@ export class LlmProxyService {
         if (response.status === 403) {
           await this.setScoreToZero(provider.providerId)
           console.warn(`403 权限错误，健康分清零: ${provider.providerId}`)
+        } else if (response.status === 404) {
+          await this.setScoreToZero(provider.providerId)
+          console.warn(`404 配置错误，健康分清零: ${provider.providerId}`)
         } else if (response.status === 500) {
           await this.updateScore(provider.providerId, -1000)
         } else {
@@ -263,7 +266,7 @@ export class LlmProxyService {
       } catch (error) {
         const durationMs = Date.now() - startTime
         const isTimeout = error instanceof Error && error.name === 'TimeoutError'
-        await this.updateScore(provider.providerId, isTimeout ? -100 : -300)
+        await this.updateScore(provider.providerId, isTimeout ? -100 : -1000)
         console.error(`重试 ${attempt + 1}/${MAX_RETRIES}: ${provider.providerId}`, error)
 
         await this.saveLog({

@@ -1,11 +1,12 @@
 ## 需求
 
-组件：apps\bigscreen\src\pages\PromptManagement.tsx
 
-1. 技能库Card中的列表添加 分页功能
-2. 现在的技能比较多 下拉选择 很难选到相应的技能，需要设计一个 技能选择组件 优化这个问题
+开发一个指定工作流的节点选择器
 
-要求： 
+@sker/ui/components/blocks 仅样式，接口调用逻辑抽离到使用测
+
+
+## 子包的作用 
 
 @sker/workflow-ast 节点定义
 @sker/workflow-run 服务端运行
@@ -13,11 +14,87 @@
 @sker/workflow-ui 前端UI，特殊设置使用@Setting
 @sker/ui 通用组件
 
-范围：
-1. @sker/workflow-ast 定义
-2. @sker/workflow-browser 浏览器
-3. @sker/workflow-run 服务器
-4. @sker/workflow-ui 前端展示
+
+## 最佳实践
+
+```ts
+// 类型复用
+import type { PromptSkillEntity, PromptSkillType, PromptResourceScope } from '@sker/entities';
+```
+分页使用： @sker/ui/components/ui/simple-pagination
+
+- 选择器-统一使用 Dialog + Command 的方式实现
+```tsx
+// 标准选择器封装
+<div>
+   <label className="text-sm text-muted-foreground mb-2 block">选择技能</label>
+   <div className="relative">
+      <button
+      onClick={() => setSkillSearchOpen(true)}
+      className="w-full rounded-md border bg-background px-3 py-2 text-sm text-left flex items-center justify-between hover:bg-muted/50"
+      >
+      <span className={selectedSkill ? '' : 'text-muted-foreground'}>
+         {selectedSkill ? (
+            <span>
+            {selectedSkill.title}
+            <span className="ml-2 text-xs text-muted-foreground">
+               ({SKILL_TYPES.find(t => t.value === selectedSkill.type)?.label})
+            </span>
+            </span>
+         ) : '点击选择技能...'}
+      </span>
+      <svg className="size-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+      </svg>
+      </button>
+
+      {/* Command 弹窗 */}
+      <Dialog open={skillSearchOpen} onOpenChange={setSkillSearchOpen}>
+      <DialogContent className="max-w-md p-0">
+         <Command className="rounded-lg border">
+            <CommandInput placeholder="搜索技能..." />
+            <CommandList className="max-h-[400px]">
+            <CommandEmpty>未找到技能</CommandEmpty>
+            {SKILL_TYPES.map(type => {
+               const skillsOfType = groupedAvailableSkills[type.value] || [];
+               if (skillsOfType.length === 0) return null;
+
+               return (
+                  <CommandGroup key={type.value} heading={type.label}>
+                  {skillsOfType.map(skill => (
+                     <CommandItem
+                        key={skill.id}
+                        value={`${skill.title} ${skill.name}`}
+                        onSelect={() => {
+                        setBindForm({ ...bindForm, skill_id: skill.id });
+                        setSkillSearchOpen(false);
+                        }}
+                        className="flex items-center justify-between"
+                     >
+                        <div className="flex-1">
+                        <div className="font-medium">{skill.title}</div>
+                        <div className="text-xs text-muted-foreground">{skill.name}</div>
+                        {skill.description && (
+                           <div className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
+                              {skill.description}
+                           </div>
+                        )}
+                        </div>
+                        {bindForm.skill_id === skill.id && (
+                        <CheckIcon className="size-4 ml-2 shrink-0" />
+                        )}
+                     </CommandItem>
+                  ))}
+                  </CommandGroup>
+               );
+            })}
+            </CommandList>
+         </Command>
+      </DialogContent>
+      </Dialog>
+   </div>
+</div>
+```
 
 ## 说明
 

@@ -967,4 +967,25 @@ export class WorkflowController implements sdk.WorkflowController {
       run: executedRun
     }
   }
+
+  /**
+   * 获取所有可用节点类型
+   *
+   * 优雅设计：
+   * - 遍历所有已注册的节点类型
+   * - 提取节点元数据（标题、类型等）
+   * - 返回统一的节点信息列表
+   */
+  @Get('nodes')
+  async getAvailableNodes(): Promise<sdk.WorkflowNodeInfo[]> {
+    const { NODE } = await import('@sker/workflow');
+    const nodeMetadatas = root.get(NODE, []);
+
+    return nodeMetadatas.map((metadata: any) => ({
+      type: metadata.target.name,
+      title: metadata.title || metadata.target.name,
+      nodeType: metadata.type || 'basic',
+      description: metadata.description,
+    }));
+  }
 }

@@ -10,6 +10,7 @@ import type {
 import { Observable } from 'rxjs'
 import type { WorkflowGraphAst, Ast, INode, SseMessage } from '@sker/workflow';
 import type { WorkflowEntity, WorkflowScheduleEntity } from '@sker/entities';
+
 export interface MessageEvent {
     data: string | object;
     id?: string;
@@ -34,6 +35,13 @@ export interface ExecuteNodePayload {
 
 export interface FineTunePayload {
   config: any;
+}
+
+export interface WorkflowNodeInfo {
+  type: string;
+  title: string;
+  nodeType: string;
+  description?: string;
 }
 @Controller('api/workflow')
 export class WorkflowController {
@@ -231,5 +239,13 @@ export class WorkflowController {
     res?: any
   ): Observable<WorkflowGraphAst> {
     throw new Error('method fineTuneNode not implements')
+  }
+
+  /**
+   * 获取所有可用节点类型
+   */
+  @Get('nodes')
+  getAvailableNodes(): Promise<WorkflowNodeInfo[]> {
+    throw new Error('method getAvailableNodes not implements')
   }
 }
