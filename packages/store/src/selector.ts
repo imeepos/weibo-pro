@@ -25,13 +25,6 @@ export interface MemoizedSelector<
 }
 
 /**
- * 开发模式判断（替代 Angular 的 isDevMode）
- */
-const isDevMode = (): boolean => {
-  return process.env.NODE_ENV !== 'production';
-};
-
-/**
  * Mock 环境标志
  */
 let ngrxMockEnvironment = false;
@@ -260,7 +253,7 @@ export function createFeatureSelector<T>(
     (state: any) => {
       const featureState = state[featureName];
       if (!isNgrxMockEnvironment() && isDevMode() && !(featureName in state)) {
-        console.warn(
+        globalThis.console?.warn?.(
           `@sker/store: Feature "${featureName}" 不存在于 state 中`
         );
       }
