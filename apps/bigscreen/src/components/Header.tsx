@@ -93,32 +93,11 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
       description: '角色记忆关系可视化'
     },
     {
-      id: 'weibo-login',
-      label: '微博登录',
-      path: '/workflow-editor/weibo_login',
-      icon: LogIn,
-      description: '微博账号登录与授权'
-    },
-    {
-      id: 'weibo-event-crawler',
-      label: '微博事件爬取',
-      path: '/workflow-editor/weibo_event',
-      icon: Search,
-      description: '微博事件数据采集与抓取'
-    },
-    {
-      id: 'weibo-nlp-analysis',
-      label: 'NLP 情感分析',
-      path: '/workflow-editor/weibo_nlp',
-      icon: Sparkles,
-      description: 'AI 驱动的文本情感分析'
-    },
-    {
-      id: 'weibo-user-detection',
-      label: '水军监控',
-      path: '/workflow-editor/weibo_user_detection',
-      icon: Shield,
-      description: '智能识别与监控水军账号'
+      id: 'workflow-management',
+      label: '工作流管理',
+      path: '/workflow-management',
+      icon: GitBranch,
+      description: '可视化工作流编排与管理'
     },
     {
       id: 'prompt-management',

@@ -16,8 +16,10 @@ import {
   DialogTitle,
   DialogFooter
 } from '@sker/ui/components/ui/dialog';
+import { Badge } from '@sker/ui/components/ui/badge';
 import { PlusIcon, TrashIcon, PencilIcon, RefreshCwIcon, ServerIcon, CpuIcon, LinkIcon, HomeIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { cn } from '@/utils';
 
 type DeleteTarget = { type: 'provider' | 'model' | 'binding'; id: string; name: string } | null;
 
@@ -28,6 +30,8 @@ const LlmManagement: React.FC = () => {
   const [bindings, setBindings] = useState<LlmModelProviderWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
+  const [bindingPage, setBindingPage] = useState(1);
+  const [bindingPageSize] = useState(20);
 
   const providersCtrl = root.get(LlmProvidersController);
   const modelsCtrl = root.get(LlmModelsController);
@@ -48,6 +52,7 @@ const LlmManagement: React.FC = () => {
       setProviders(p);
       setModels(m);
       setBindings(b);
+      setBindingPage(1);
     } finally {
       setLoading(false);
     }
@@ -90,6 +95,39 @@ const LlmManagement: React.FC = () => {
     loadData();
   };
 
+  const handleDecreaseScore = async (id: string, amount: number = 1000) => {
+    const provider = providers.find(p => p.id === id);
+    if (provider) {
+      const newScore = Math.max(0, provider.score - amount);
+      await providersCtrl.updateScore(id, newScore);
+      loadData();
+    }
+  };
+
+  const handleIncreaseScore = async (id: string, amount: number = 1000) => {
+    const provider = providers.find(p => p.id === id);
+    if (provider) {
+      const newScore = Math.min(10000, provider.score + amount);
+      await providersCtrl.updateScore(id, newScore);
+      loadData();
+    }
+  };
+
+  const [editingScoreProvider, setEditingScoreProvider] = useState<string | null>(null);
+  const [editingScoreValue, setEditingScoreValue] = useState<number>(0);
+
+  const handleEditScore = (provider: LlmProvider) => {
+    setEditingScoreProvider(provider.id);
+    setEditingScoreValue(provider.score);
+  };
+
+  const handleSaveScore = async () => {
+    if (!editingScoreProvider) return;
+    await providersCtrl.updateScore(editingScoreProvider, editingScoreValue);
+    setEditingScoreProvider(null);
+    loadData();
+  };
+
   // Model Dialog
   const [modelDialogOpen, setModelDialogOpen] = useState(false);
   const [modelForm, setModelForm] = useState({ name: '' });
@@ -124,7 +162,7 @@ const LlmManagement: React.FC = () => {
 
   // Binding Dialog
   const [bindingDialogOpen, setBindingDialogOpen] = useState(false);
-  const [bindingForm, setBindingForm] = useState({ modelId: '', providerId: '', modelName: '' });
+  const [bindingForm, setBindingForm] = useState({ modelId: '', providerId: '', modelName: '', tierLevel: 1 });
   const [editingBinding, setEditingBinding] = useState<string | null>(null);
 
   const openBindingDialog = (binding?: LlmModelProviderWithRelations) => {
@@ -133,11 +171,12 @@ const LlmManagement: React.FC = () => {
       setBindingForm({
         modelId: binding.modelId,
         providerId: binding.providerId,
-        modelName: binding.modelName
+        modelName: binding.modelName,
+        tierLevel: binding.tierLevel || 1
       });
     } else {
       setEditingBinding(null);
-      setBindingForm({ modelId: '', providerId: '', modelName: '' });
+      setBindingForm({ modelId: '', providerId: '', modelName: '', tierLevel: 1 });
     }
     setBindingDialogOpen(true);
   };
@@ -211,11 +250,58 @@ const LlmManagement: React.FC = () => {
                   <tr key={p.id} className="border-b last:border-0">
                     <td className="px-4 py-3" title={p.base_url}>{p.name}</td>
                     <td className="px-4 py-3">
-                      <span className={p.score >= 800 ? 'text-green-500' : p.score >= 500 ? 'text-yellow-500' : 'text-red-500'}>
-                        {p.score}
-                      </span>
+                      {editingScoreProvider === p.id ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            value={editingScoreValue}
+                            onChange={(e) => setEditingScoreValue(Number(e.target.value))}
+                            className="w-20 rounded border bg-background px-2 py-1 text-xs"
+                            min="0"
+                            max="10000"
+                            autoFocus
+                          />
+                          <button
+                            onClick={handleSaveScore}
+                            className="text-green-500 hover:text-green-600"
+                          >
+                            ✓
+                          </button>
+                          <button
+                            onClick={() => setEditingScoreProvider(null)}
+                            className="text-muted-foreground hover:text-foreground"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleEditScore(p)}
+                          className={cn(
+                            'font-medium hover:underline',
+                            p.score >= 800 ? 'text-green-500' : p.score >= 500 ? 'text-yellow-500' : 'text-red-500'
+                          )}
+                          title="点击编辑健康分"
+                        >
+                          {p.score}
+                        </button>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-right">
+                      <button
+                        onClick={() => handleIncreaseScore(p.id, 1000)}
+                        className="mr-1 text-green-500 hover:text-green-600"
+                        title="上调健康分 +1000"
+                      >
+                        ↑
+                      </button>
+                      <button
+                        onClick={() => handleDecreaseScore(p.id, 1000)}
+                        className="mr-1 text-orange-500 hover:text-orange-600"
+                        title="下调健康分 -1000"
+                      >
+                        ↓
+                      </button>
                       <button
                         onClick={() => handleResetScore(p.id)}
                         className="mr-1 text-blue-500 hover:text-blue-600"
@@ -304,37 +390,91 @@ const LlmManagement: React.FC = () => {
               添加
             </button>
           </CardHeader>
-          <CardContent className="flex-1 overflow-auto p-0">
-            <table className="w-full text-xs">
-              <thead className="sticky top-0 border-b bg-muted/50">
-                <tr>
-                  <th className="px-4 py-3 text-left font-medium">模型</th>
-                  <th className="px-4 py-3 text-left font-medium">提供商</th>
-                  <th className="px-4 py-3 text-left font-medium">提供商模型</th>
-                  <th className="px-4 py-3 text-right font-medium">操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                {bindings.map((b) => (
-                  <tr key={b.id} className="border-b last:border-0">
-                    <td className="px-4 py-3 font-medium">{b.model?.name || b.modelId}</td>
-                    <td className="px-4 py-3" title={b.modelName}>{b.provider?.name || b.providerId}</td>
-                    <td className="px-4 py-3">{b.modelName}</td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => openBindingDialog(b)}
-                        className="mr-1 text-muted-foreground hover:text-foreground"
-                      >
-                        <PencilIcon className="size-3" />
-                      </button>
-                      <button onClick={() => handleDeleteBinding(b.id)} className="text-red-500 hover:text-red-600">
-                        <TrashIcon className="size-3" />
-                      </button>
-                    </td>
+          <CardContent className="flex flex-1 flex-col overflow-hidden p-0">
+            <div className="flex-1 overflow-auto">
+              <table className="w-full text-xs">
+                <thead className="sticky top-0 border-b bg-muted/50">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-medium">模型</th>
+                    <th className="px-4 py-3 text-left font-medium">提供商</th>
+                    <th className="px-4 py-3 text-left font-medium">提供商模型</th>
+                    <th className="px-4 py-3 text-left font-medium">梯队</th>
+                    <th className="px-4 py-3 text-right font-medium">操作</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {(() => {
+                    const sortedBindings = [...bindings].sort((a, b) => {
+                      if (a.tierLevel !== b.tierLevel) {
+                        return a.tierLevel - b.tierLevel;
+                      }
+                      const providerA = a.provider?.name || a.providerId;
+                      const providerB = b.provider?.name || b.providerId;
+                      return providerA.localeCompare(providerB);
+                    });
+                    const startIndex = (bindingPage - 1) * bindingPageSize;
+                    const endIndex = startIndex + bindingPageSize;
+                    const paginatedBindings = sortedBindings.slice(startIndex, endIndex);
+
+                    return paginatedBindings.map((b) => (
+                      <tr key={b.id} className="border-b last:border-0">
+                        <td className="px-4 py-3 font-medium">{b.model?.name || b.modelId}</td>
+                        <td className="px-4 py-3" title={b.modelName}>{b.provider?.name || b.providerId}</td>
+                        <td className="px-4 py-3">{b.modelName}</td>
+                        <td className="px-4 py-3">
+                          <Badge
+                            variant={b.tierLevel === 1 ? 'default' : b.tierLevel === 2 ? 'secondary' : 'outline'}
+                            className={cn(
+                              'text-[10px]',
+                              b.tierLevel === 1 && 'bg-green-500 hover:bg-green-600',
+                              b.tierLevel === 2 && 'bg-yellow-500 hover:bg-yellow-600',
+                              b.tierLevel === 3 && 'bg-gray-500 hover:bg-gray-600'
+                            )}
+                          >
+                            T{b.tierLevel}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            onClick={() => openBindingDialog(b)}
+                            className="mr-1 text-muted-foreground hover:text-foreground"
+                          >
+                            <PencilIcon className="size-3" />
+                          </button>
+                          <button onClick={() => handleDeleteBinding(b.id)} className="text-red-500 hover:text-red-600">
+                            <TrashIcon className="size-3" />
+                          </button>
+                        </td>
+                      </tr>
+                    ));
+                  })()}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex items-center justify-between border-t px-4 py-3">
+              <div className="text-xs text-muted-foreground">
+                共 {bindings.length} 条，第 {bindings.length === 0 ? 0 : (bindingPage - 1) * bindingPageSize + 1}-{Math.min(bindingPage * bindingPageSize, bindings.length)} 条
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setBindingPage(p => Math.max(1, p - 1))}
+                  disabled={bindingPage === 1}
+                  className="rounded-md border px-2 py-1 text-xs disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted"
+                >
+                  上一页
+                </button>
+                <span className="text-xs">
+                  {bindingPage} / {Math.ceil(bindings.length / bindingPageSize) || 1}
+                </span>
+                <button
+                  onClick={() => setBindingPage(p => Math.min(Math.ceil(bindings.length / bindingPageSize), p + 1))}
+                  disabled={bindingPage >= Math.ceil(bindings.length / bindingPageSize)}
+                  className="rounded-md border px-2 py-1 text-xs disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted"
+                >
+                  下一页
+                </button>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -457,6 +597,15 @@ const LlmManagement: React.FC = () => {
               onChange={(e) => setBindingForm({ ...bindingForm, modelName: e.target.value })}
               className="rounded-md border bg-background px-3 py-2 text-sm"
             />
+            <select
+              value={bindingForm.tierLevel}
+              onChange={(e) => setBindingForm({ ...bindingForm, tierLevel: Number(e.target.value) })}
+              className="rounded-md border bg-background px-3 py-2 text-sm"
+            >
+              <option value={1}>第一梯队（优先）</option>
+              <option value={2}>第二梯队（回退）</option>
+              <option value={3}>第三梯队（兜底）</option>
+            </select>
           </div>
           <DialogFooter>
             <button

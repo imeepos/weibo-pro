@@ -3,7 +3,8 @@ import type { LlmModelProvider } from '@sker/entities';
 
 export interface LlmModelProviderWithRelations extends Omit<LlmModelProvider, 'model' | 'provider'> {
   model?: { id: string; name: string };
-  provider?: { id: string; name: string };
+  provider?: { id: string; name: string; score: number };
+  tierLevel: number;
 }
 
 @Controller('api/llm-model-providers')
@@ -30,12 +31,12 @@ export class LlmModelProvidersController {
   }
 
   @Post()
-  create(@Body() dto: { modelId: string; providerId: string; modelName: string }): Promise<LlmModelProvider> {
+  create(@Body() dto: { modelId: string; providerId: string; modelName: string; tierLevel?: number }): Promise<LlmModelProvider> {
     throw new Error('method create not implements');
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() dto: Partial<LlmModelProvider>): Promise<LlmModelProvider> {
+  update(@Param('id') id: string, @Body() dto: Partial<{ modelId: string; providerId: string; modelName: string; tierLevel: number }>): Promise<LlmModelProvider> {
     throw new Error('method update not implements');
   }
 

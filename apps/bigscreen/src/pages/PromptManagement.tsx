@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { root } from '@sker/core';
 import {
   PromptRolesController,
@@ -15,7 +15,16 @@ import {
   DialogTitle,
   DialogFooter
 } from '@sker/ui/components/ui/dialog';
-import { PlusIcon, TrashIcon, PencilIcon, UserIcon, WrenchIcon, LinkIcon } from 'lucide-react';
+import { SimplePagination } from '@sker/ui/components/ui/simple-pagination';
+import {
+  Command,
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem
+} from '@sker/ui/components/ui/command';
+import { PlusIcon, TrashIcon, PencilIcon, UserIcon, WrenchIcon, LinkIcon, CheckIcon } from 'lucide-react';
 
 const SKILL_TYPES: { value: PromptSkillType; label: string }[] = [
   { value: 'thought', label: '思维' },
@@ -24,11 +33,14 @@ const SKILL_TYPES: { value: PromptSkillType; label: string }[] = [
   { value: 'decision', label: '决策' }
 ];
 
+const SKILLS_PER_PAGE = 10;
+
 const PromptManagement: React.FC = () => {
   const [roles, setRoles] = useState<PromptRoleWithSkills[]>([]);
   const [skills, setSkills] = useState<PromptSkillEntity[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
+  const [skillsPage, setSkillsPage] = useState(1);
 
   const rolesCtrl = root.get(PromptRolesController);
   const skillsCtrl = root.get(PromptSkillsController);
@@ -41,10 +53,18 @@ const PromptManagement: React.FC = () => {
       const [r, s] = await Promise.all([rolesCtrl.findAll(), skillsCtrl.findAll()]);
       setRoles(r);
       setSkills(s);
+      setSkillsPage(1); // 重置到第一页
     } finally {
       setLoading(false);
     }
   };
+
+  // 分页计算
+  const totalSkillsPages = Math.ceil(skills.length / SKILLS_PER_PAGE);
+  const paginatedSkills = useMemo(() => {
+    const start = (skillsPage - 1) * SKILLS_PER_PAGE;
+    return skills.slice(start, start + SKILLS_PER_PAGE);
+  }, [skills, skillsPage]);
 
   // Role Dialog
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
@@ -116,6 +136,7 @@ const PromptManagement: React.FC = () => {
   // Bind Skill Dialog
   const [bindDialogOpen, setBindDialogOpen] = useState(false);
   const [bindForm, setBindForm] = useState({ skill_id: '', ref_type: 'required' });
+  const [skillSearchOpen, setSkillSearchOpen] = useState(false);
 
   const openBindDialog = (roleId: string) => {
     setSelectedRole(roleId);
@@ -129,6 +150,20 @@ const PromptManagement: React.FC = () => {
     setBindDialogOpen(false);
     loadData();
   };
+
+  const selectedSkill = skills.find(s => s.id === bindForm.skill_id);
+
+  // 按类型分组技能
+  const groupedAvailableSkills = useMemo(() => {
+    const currentRole = roles.find(r => r.id === selectedRole);
+    const boundSkillIds = new Set(currentRole?.skill_refs?.map(ref => ref.skill_id) || []);
+    const available = skills.filter(s => !boundSkillIds.has(s.id));
+
+    return SKILL_TYPES.reduce((acc, type) => {
+      acc[type.value] = available.filter(s => s.type === type.value);
+      return acc;
+    }, {} as Record<PromptSkillType, PromptSkillEntity[]>);
+  }, [skills, roles, selectedRole]);
 
   // Delete
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'role' | 'skill'; id: string; name: string } | null>(null);
@@ -146,8 +181,6 @@ const PromptManagement: React.FC = () => {
   }
 
   const currentRole = roles.find(r => r.id === selectedRole);
-  const boundSkillIds = new Set(currentRole?.skill_refs?.map(ref => ref.skill_id) || []);
-  const availableSkills = skills.filter(s => !boundSkillIds.has(s.id));
 
   return (
     <div className="h-full overflow-auto p-4">
@@ -265,35 +298,47 @@ const PromptManagement: React.FC = () => {
               添加
             </button>
           </CardHeader>
-          <CardContent className="flex-1 overflow-auto p-0">
-            <table className="w-full text-xs">
-              <thead className="sticky top-0 border-b bg-muted/50">
-                <tr>
-                  <th className="px-4 py-2 text-left font-medium">名称</th>
-                  <th className="px-4 py-2 text-left font-medium">类型</th>
-                  <th className="px-4 py-2 text-right font-medium">操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                {skills.map((s) => (
-                  <tr key={s.id} className="border-b last:border-0">
-                    <td className="px-4 py-2">
-                      <div className="font-medium">{s.title}</div>
-                      <div className="text-muted-foreground">{s.name}</div>
-                    </td>
-                    <td className="px-4 py-2">{SKILL_TYPES.find(t => t.value === s.type)?.label}</td>
-                    <td className="px-4 py-2 text-right">
-                      <button onClick={() => openSkillDialog(s)} className="mr-1 text-muted-foreground hover:text-foreground">
-                        <PencilIcon className="size-3" />
-                      </button>
-                      <button onClick={() => setDeleteTarget({ type: 'skill', id: s.id, name: s.title })} className="text-red-500 hover:text-red-600">
-                        <TrashIcon className="size-3" />
-                      </button>
-                    </td>
+          <CardContent className="flex flex-col gap-2 flex-1 p-0 overflow-hidden">
+            <div className="flex-1 overflow-auto">
+              <table className="w-full text-xs">
+                <thead className="sticky top-0 border-b bg-muted/50">
+                  <tr>
+                    <th className="px-4 py-2 text-left font-medium">名称</th>
+                    <th className="px-4 py-2 text-left font-medium">类型</th>
+                    <th className="px-4 py-2 text-right font-medium">操作</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {paginatedSkills.map((s) => (
+                    <tr key={s.id} className="border-b last:border-0">
+                      <td className="px-4 py-2">
+                        <div className="font-medium">{s.title}</div>
+                        <div className="text-muted-foreground">{s.name}</div>
+                      </td>
+                      <td className="px-4 py-2">{SKILL_TYPES.find(t => t.value === s.type)?.label}</td>
+                      <td className="px-4 py-2 text-right">
+                        <button onClick={() => openSkillDialog(s)} className="mr-1 text-muted-foreground hover:text-foreground">
+                          <PencilIcon className="size-3" />
+                        </button>
+                        <button onClick={() => setDeleteTarget({ type: 'skill', id: s.id, name: s.title })} className="text-red-500 hover:text-red-600">
+                          <TrashIcon className="size-3" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {totalSkillsPages > 1 && (
+              <div className="px-4 py-2 border-t bg-muted/20">
+                <SimplePagination
+                  currentPage={skillsPage}
+                  totalPages={totalSkillsPages}
+                  onPageChange={setSkillsPage}
+                  showInfo={true}
+                />
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -398,31 +443,103 @@ const PromptManagement: React.FC = () => {
 
       {/* Bind Skill Dialog */}
       <Dialog open={bindDialogOpen} onOpenChange={setBindDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>绑定技能</DialogTitle>
           </DialogHeader>
           <div className="grid gap-3">
-            <select
-              value={bindForm.skill_id}
-              onChange={(e) => setBindForm({ ...bindForm, skill_id: e.target.value })}
-              className="rounded-md border bg-background px-3 py-2 text-sm"
-            >
-              <option value="">选择技能</option>
-              {availableSkills.map(s => <option key={s.id} value={s.id}>{s.title} ({SKILL_TYPES.find(t => t.value === s.type)?.label})</option>)}
-            </select>
-            <select
-              value={bindForm.ref_type}
-              onChange={(e) => setBindForm({ ...bindForm, ref_type: e.target.value })}
-              className="rounded-md border bg-background px-3 py-2 text-sm"
-            >
-              <option value="required">必需</option>
-              <option value="optional">可选</option>
-            </select>
+            {/* 技能选择器 */}
+            <div>
+              <label className="text-sm text-muted-foreground mb-2 block">选择技能</label>
+              <div className="relative">
+                <button
+                  onClick={() => setSkillSearchOpen(true)}
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm text-left flex items-center justify-between hover:bg-muted/50"
+                >
+                  <span className={selectedSkill ? '' : 'text-muted-foreground'}>
+                    {selectedSkill ? (
+                      <span>
+                        {selectedSkill.title}
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          ({SKILL_TYPES.find(t => t.value === selectedSkill.type)?.label})
+                        </span>
+                      </span>
+                    ) : '点击选择技能...'}
+                  </span>
+                  <svg className="size-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+                  </svg>
+                </button>
+
+                {/* Command 弹窗 */}
+                <Dialog open={skillSearchOpen} onOpenChange={setSkillSearchOpen}>
+                  <DialogContent className="max-w-md p-0">
+                    <Command className="rounded-lg border">
+                      <CommandInput placeholder="搜索技能..." />
+                      <CommandList className="max-h-[400px]">
+                        <CommandEmpty>未找到技能</CommandEmpty>
+                        {SKILL_TYPES.map(type => {
+                          const skillsOfType = groupedAvailableSkills[type.value] || [];
+                          if (skillsOfType.length === 0) return null;
+
+                          return (
+                            <CommandGroup key={type.value} heading={type.label}>
+                              {skillsOfType.map(skill => (
+                                <CommandItem
+                                  key={skill.id}
+                                  value={`${skill.title} ${skill.name}`}
+                                  onSelect={() => {
+                                    setBindForm({ ...bindForm, skill_id: skill.id });
+                                    setSkillSearchOpen(false);
+                                  }}
+                                  className="flex items-center justify-between"
+                                >
+                                  <div className="flex-1">
+                                    <div className="font-medium">{skill.title}</div>
+                                    <div className="text-xs text-muted-foreground">{skill.name}</div>
+                                    {skill.description && (
+                                      <div className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
+                                        {skill.description}
+                                      </div>
+                                    )}
+                                  </div>
+                                  {bindForm.skill_id === skill.id && (
+                                    <CheckIcon className="size-4 ml-2 shrink-0" />
+                                  )}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          );
+                        })}
+                      </CommandList>
+                    </Command>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </div>
+
+            {/* 必需/可选选择 */}
+            <div>
+              <label className="text-sm text-muted-foreground mb-2 block">技能类型</label>
+              <select
+                value={bindForm.ref_type}
+                onChange={(e) => setBindForm({ ...bindForm, ref_type: e.target.value })}
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              >
+                <option value="required">必需</option>
+                <option value="optional">可选</option>
+              </select>
+            </div>
           </div>
           <DialogFooter>
             <button onClick={() => setBindDialogOpen(false)} className="rounded-md bg-muted px-3 py-1.5 text-sm">取消</button>
-            <button onClick={handleBindSubmit} className="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground">绑定</button>
+            <button
+              onClick={handleBindSubmit}
+              disabled={!bindForm.skill_id}
+              className="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              绑定
+            </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

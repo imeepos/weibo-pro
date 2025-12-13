@@ -25,44 +25,73 @@ export class LlmProxyService {
     if (!requestedModel) return null
 
     return useEntityManager(async m => {
-      // 先按供应商模型名查找
-      const qb1 = m.createQueryBuilder(LlmModelProvider, 'mp')
+      // 1. 获取所有可用梯队（按 tierLevel 升序）
+      const availableTiers = await m.createQueryBuilder(LlmModelProvider, 'mp')
         .innerJoin('mp.provider', 'provider')
-        .select(['provider.id', 'provider.base_url', 'provider.api_key', 'provider.score', 'mp.modelName'])
+        .select('DISTINCT mp.tierLevel', 'tier')
         .where('mp.modelName = :requestedModel', { requestedModel })
+        .orWhere(qb => {
+          qb.where('EXISTS (' +
+            qb.subQuery()
+              .from(LlmModel, 'model')
+              .where('model.id = mp.modelId')
+              .andWhere('model.name = :requestedModel')
+              .getQuery() +
+            ')')
+        })
         .andWhere('provider.protocol = :protocol', { protocol })
         .andWhere('provider.score > 0')
+        .orderBy('mp.tierLevel', 'ASC')
+        .getRawMany()
 
-      if (excludeIds.size > 0) {
-        qb1.andWhere('provider.id NOT IN (:...excludeIds)', { excludeIds: [...excludeIds] })
-      }
-
-      let result = await qb1.orderBy('provider.score', 'DESC').getRawOne()
-
-      // 找不到则按标准模型名查找
-      if (!result?.provider_id) {
-        const qb2 = m.createQueryBuilder(LlmModel, 'model')
-          .innerJoin('model.providers', 'mp')
+      // 2. 逐层查找可用 provider
+      for (const { tier } of availableTiers) {
+        // 先按供应商模型名查找
+        const qb1 = m.createQueryBuilder(LlmModelProvider, 'mp')
           .innerJoin('mp.provider', 'provider')
           .select(['provider.id', 'provider.base_url', 'provider.api_key', 'provider.score', 'mp.modelName'])
-          .where('model.name = :requestedModel', { requestedModel })
+          .where('mp.modelName = :requestedModel', { requestedModel })
+          .andWhere('mp.tierLevel = :tier', { tier })
           .andWhere('provider.protocol = :protocol', { protocol })
           .andWhere('provider.score > 0')
 
         if (excludeIds.size > 0) {
-          qb2.andWhere('provider.id NOT IN (:...excludeIds)', { excludeIds: [...excludeIds] })
+          qb1.andWhere('provider.id NOT IN (:...excludeIds)', { excludeIds: [...excludeIds] })
         }
 
-        result = await qb2.orderBy('provider.score', 'DESC').getRawOne()
+        let result = await qb1.orderBy('provider.score', 'DESC').getRawOne()
+
+        // 找不到则按标准模型名查找
+        if (!result?.provider_id) {
+          const qb2 = m.createQueryBuilder(LlmModel, 'model')
+            .innerJoin('model.providers', 'mp')
+            .innerJoin('mp.provider', 'provider')
+            .select(['provider.id', 'provider.base_url', 'provider.api_key', 'provider.score', 'mp.modelName'])
+            .where('model.name = :requestedModel', { requestedModel })
+            .andWhere('mp.tierLevel = :tier', { tier })
+            .andWhere('provider.protocol = :protocol', { protocol })
+            .andWhere('provider.score > 0')
+
+          if (excludeIds.size > 0) {
+            qb2.andWhere('provider.id NOT IN (:...excludeIds)', { excludeIds: [...excludeIds] })
+          }
+
+          result = await qb2.orderBy('provider.score', 'DESC').getRawOne()
+        }
+
+        // 当前梯队找到可用 provider，立即返回
+        if (result?.provider_id) {
+          return {
+            providerId: result.provider_id,
+            baseUrl: result.provider_base_url,
+            apiKey: result.provider_api_key,
+            modelName: result.mp_model_name
+          }
+        }
       }
 
-      if (!result?.provider_id) return null
-      return {
-        providerId: result.provider_id,
-        baseUrl: result.provider_base_url,
-        apiKey: result.provider_api_key,
-        modelName: result.mp_model_name
-      }
+      // 所有梯队均无可用 provider
+      return null
     })
   }
 
@@ -146,6 +175,8 @@ export class LlmProxyService {
         if (response.status === 403) {
           await this.setScoreToZero(provider.providerId)
           console.warn(`403 权限错误，健康分清零: ${provider.providerId}`)
+        } else if (response.status === 500) {
+          await this.updateScore(provider.providerId, -1000)
         } else {
           const penalty = this.calcPenalty(durationMs, contentLength)
           await this.updateScore(provider.providerId, -penalty)

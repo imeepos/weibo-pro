@@ -1,9 +1,9 @@
 ## 需求
 
-组件：apps\bigscreen\src\components\Header.tsx
+组件：apps\bigscreen\src\pages\PromptManagement.tsx
 
-下拉选中 添加  工作流管理入口，移除写死的工作流编辑入口
-
+1. 技能库Card中的列表添加 分页功能
+2. 现在的技能比较多 下拉选择 很难选到相应的技能，需要设计一个 技能选择组件 优化这个问题
 
 要求： 
 
