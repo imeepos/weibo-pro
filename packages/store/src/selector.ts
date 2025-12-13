@@ -24,16 +24,6 @@ export interface MemoizedSelector<
   clearResult: () => void;
 }
 
-/**
- * Mock 环境标志
- */
-let ngrxMockEnvironment = false;
-export function setNgrxMockEnvironment(value: boolean): void {
-  ngrxMockEnvironment = value;
-}
-export function isNgrxMockEnvironment(): boolean {
-  return ngrxMockEnvironment;
-}
 
 export function isEqualCheck(a: any, b: any): boolean {
   return a === b;
@@ -252,7 +242,7 @@ export function createFeatureSelector<T>(
   return createSelector(
     (state: any) => {
       const featureState = state[featureName];
-      if (!isNgrxMockEnvironment() && isDevMode() && !(featureName in state)) {
+      if (!(featureName in state)) {
         globalThis.console?.warn?.(
           `@sker/store: Feature "${featureName}" 不存在于 state 中`
         );

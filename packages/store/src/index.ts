@@ -41,8 +41,6 @@ export {
   defaultMemoize,
   defaultStateFn,
   resultMemoize,
-  setNgrxMockEnvironment,
-  isNgrxMockEnvironment,
 } from './selector';
 
 export type {

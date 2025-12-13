@@ -49,7 +49,7 @@ export interface NodeMetadata {
   /** 节点原始标题（装饰器定义的中文标题） */
   title?: string
   /** 节点分类类型 */
-  nodeType?: 'llm' | 'basic' | 'crawler' | `control` | 'sentiment'
+  nodeType?: 'llm' | 'basic' | 'crawler' | 'control' | 'sentiment' | 'analysis'
   /** 输入端口定义 */
   inputs: PortMetadata[]
   /** 输出端口定义 */
