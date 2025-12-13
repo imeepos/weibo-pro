@@ -14,7 +14,8 @@
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types",
-    "ensure-deps": "./scripts/ensure-deps-built.sh"
+    "ensure-deps": "./scripts/ensure-deps-built.sh",
+    "clean:cache": "tsx ./scripts/clean-cache.ts"
   },
   "devDependencies": {
     "@types/uuid": "^11.0.0",
