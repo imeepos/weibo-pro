@@ -64,6 +64,24 @@ export interface LlmChatLogListResult {
   pageSize: number;
 }
 
+export interface PromptAnalysisItem {
+  content: string;
+  hash: string;
+  count: number;
+  type: 'system' | 'user' | 'assistant' | 'tool';
+}
+
+export interface PromptAnalysisResult {
+  items: PromptAnalysisItem[];
+  total: number;
+  totalUsage: number;
+  byType: Array<{
+    type: string;
+    count: number;
+    usage: number;
+  }>;
+}
+
 @Controller('api/llm-chat-logs')
 export class LlmChatLogsController {
   @Get('stats')
@@ -86,5 +104,15 @@ export class LlmChatLogsController {
     @Query('pageSize') pageSize?: string
   ): Promise<LlmChatLogListResult> {
     throw new Error('method list not implements');
+  }
+
+  @Get('analyze-prompts')
+  analyzePrompts(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('modelName') modelName?: string,
+    @Query('providerId') providerId?: string
+  ): Promise<PromptAnalysisResult> {
+    throw new Error('method analyzePrompts not implements');
   }
 }

@@ -20,6 +20,16 @@ export class LlmChatLogsController implements sdk.LlmChatLogsController {
     return this.service.getStats(startDate, endDate, granularity);
   }
 
+  @Get('analyze-prompts')
+  async analyzePrompts(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('modelName') modelName?: string,
+    @Query('providerId') providerId?: string
+  ): Promise<sdk.PromptAnalysisResult> {
+    return this.service.analyzePrompts(startDate, endDate, modelName, providerId);
+  }
+
   @Get()
   async list(
     @Query('startDate') startDate?: string,

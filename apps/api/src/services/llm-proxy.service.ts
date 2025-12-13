@@ -1,5 +1,7 @@
 import { Injectable } from '@sker/core';
 import { useEntityManager, LlmModel, LlmModelProvider, LlmProvider, LlmChatLog } from '@sker/entities';
+import { appendFileSync, writeFileSync } from 'fs';
+import { join } from 'path';
 
 interface ProviderInfo {
   providerId: string
@@ -158,14 +160,17 @@ export class LlmProxyService {
           reqHeaders[key] = value
         }
       }
-      reqHeaders['Authorization'] = `Bearer ${provider.apiKey}`
       const startTime = Date.now()
 
       try {
         const url = `${provider.baseUrl}${apiPath}`
         const response = await fetch(url, {
           method: 'POST',
-          headers: reqHeaders,
+          headers: {
+            Authorization: `Bearer ${provider.apiKey}`,
+            connection: `keep-alive`,
+            [`content-type`]: reqHeaders[`content-type`] as string,
+          },
           body: JSON.stringify(proxyBody),
           signal: AbortSignal.timeout(TIMEOUT_MS)
         })
@@ -226,10 +231,7 @@ export class LlmProxyService {
         })
 
         const decoder = new TextDecoder()
-        const monitoredBody = this.withIdleTimeout(response.body, IDLE_TIMEOUT_MS, () => {
-          this.updateScore(provider!.providerId, -10)
-          console.error(`流空闲超时: ${provider!.providerId}`)
-        }).pipeThrough(new TransformStream({
+        const monitoredBody = response.body.pipeThrough(new TransformStream({
           transform: (chunk, controller) => {
             const text = decoder.decode(chunk, { stream: true })
             const lines = text.split('\n').filter(line => line.startsWith('data: '))

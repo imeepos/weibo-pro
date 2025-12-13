@@ -4,6 +4,7 @@ import {
   LlmProvidersController,
   LlmModelsController,
   LlmModelProvidersController,
+  LlmChatLogsController,
   type LlmModelProviderWithRelations
 } from '@sker/sdk';
 import type { LlmProvider, LlmModel } from '@sker/entities';
@@ -17,8 +18,9 @@ import {
   DialogFooter
 } from '@sker/ui/components/ui/dialog';
 import { Badge } from '@sker/ui/components/ui/badge';
-import { PlusIcon, TrashIcon, PencilIcon, RefreshCwIcon, ServerIcon, CpuIcon, LinkIcon, HomeIcon } from 'lucide-react';
+import { PlusIcon, TrashIcon, PencilIcon, RefreshCwIcon, ServerIcon, CpuIcon, LinkIcon, HomeIcon, SearchIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { PromptAnalysisDialog } from '@/components/PromptAnalysisDialog';
 import { cn } from '@/utils';
 
 type DeleteTarget = { type: 'provider' | 'model' | 'binding'; id: string; name: string } | null;
@@ -164,6 +166,9 @@ const LlmManagement: React.FC = () => {
   const [bindingDialogOpen, setBindingDialogOpen] = useState(false);
   const [bindingForm, setBindingForm] = useState({ modelId: '', providerId: '', modelName: '', tierLevel: 1 });
   const [editingBinding, setEditingBinding] = useState<string | null>(null);
+
+  // 提示词分析
+  const [promptAnalysisOpen, setPromptAnalysisOpen] = useState(false);
 
   const openBindingDialog = (binding?: LlmModelProviderWithRelations) => {
     if (binding) {
@@ -379,9 +384,16 @@ const LlmManagement: React.FC = () => {
             <CardTitle className="flex flex-row items-center gap-2 text-sm">
               <LinkIcon className="size-4" />
               绑定关系
-
             </CardTitle>
             <div className="flex-1"></div>
+            <button
+              onClick={() => setPromptAnalysisOpen(true)}
+              className="flex items-center gap-1 rounded-md bg-secondary px-2 py-1 text-xs text-secondary-foreground mr-2"
+              title="查看提示词分析"
+            >
+              <SearchIcon className="size-3" />
+              提示词分析
+            </button>
             <button
               onClick={() => openBindingDialog()}
               className="flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-xs text-primary-foreground"
@@ -650,6 +662,12 @@ const LlmManagement: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Prompt Analysis Dialog */}
+      <PromptAnalysisDialog
+        open={promptAnalysisOpen}
+        onOpenChange={setPromptAnalysisOpen}
+      />
     </div>
   );
 };
