@@ -19,6 +19,7 @@ export type InputFieldType =
   | 'boolean'
   | 'date'
   | 'datetime-local'
+  | 'select'
   | 'image'
   | 'video'
   | 'audio'

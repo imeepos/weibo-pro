@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, Activity, Settings, Maximize, Minimize, Sun, Moon, User, ChevronDown, BarChart3, Users, Network, LogIn, Search, Sparkles, Shield, Brain, MessageSquare } from 'lucide-react';
+import { Clock, Activity, Settings, Maximize, Minimize, Sun, Moon, User, ChevronDown, BarChart3, Users, Network, LogIn, Search, Sparkles, Shield, Brain, MessageSquare, FileText, GitBranch } from 'lucide-react';
 import { useAppStore } from '@/stores/useAppStore';
 import { useTheme } from '@/hooks/useTheme';
 import { useFullscreen } from '@/hooks/useFullscreen';
@@ -86,6 +86,13 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
       description: '用户关系网络可视化'
     },
     {
+      id: 'memory-graph',
+      label: '记忆图谱',
+      path: '/memory-graph',
+      icon: GitBranch,
+      description: '角色记忆关系可视化'
+    },
+    {
       id: 'weibo-login',
       label: '微博登录',
       path: '/workflow-editor/weibo_login',
@@ -112,6 +119,13 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
       path: '/workflow-editor/weibo_user_detection',
       icon: Shield,
       description: '智能识别与监控水军账号'
+    },
+    {
+      id: 'prompt-management',
+      label: 'Prompt 管理',
+      path: '/prompt-management',
+      icon: FileText,
+      description: '提示词角色与技能管理'
     },
     {
       id: 'llm-management',

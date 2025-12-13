@@ -41,6 +41,7 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@types/recharts": "^2.0.1",
+    "@types/uuid": "^10.0.0",
     "react-day-picker": "^9.11.2",
     "recharts": "^3.5.0",
     "remark-gfm": "^4.0.1",

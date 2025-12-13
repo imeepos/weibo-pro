@@ -24,7 +24,7 @@ export function resolveConstructor(target: object | Type<any>): Type<any> {
     throw new Error('Workflow decorators expect to receive a class constructor or instance.');
 }
 
-export type NodeType = `llm` | `basic` | `crawler` | `control` | `sentiment` | `analysis`;
+export type NodeType = `llm` | `basic` | `crawler` | `control` | `sentiment` | `analysis` | `scheduler`;
 
 /**
  * 错误处理策略
@@ -175,6 +175,7 @@ export type InputFieldType =
     | 'boolean'
     | 'date'
     | 'datetime-local'
+    | 'select'
     | 'image'
     | 'video'
     | 'audio'

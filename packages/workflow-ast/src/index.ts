@@ -71,3 +71,6 @@ export { ErrorAnalyzerAst } from './ErrorAnalyzerAst';
 export { ResearchPlannerAst } from './ResearchPlannerAst';
 
 export { SerpClusterAst } from './SerpClusterAst'
+
+// 定时调度节点
+export { ScheduledWorkflowAst } from './ScheduledWorkflowAst'

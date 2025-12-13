@@ -767,3 +767,35 @@ export interface CreateMemoryRequest {
   type: MemoryType
   relatedMemoryIds?: string[]
 }
+
+// 工作流调度相关类型
+export enum ScheduleType {
+  ONCE = 'once',
+  CRON = 'cron',
+  INTERVAL = 'interval',
+  MANUAL = 'manual',
+}
+
+export enum ScheduleStatus {
+  ENABLED = 'enabled',
+  DISABLED = 'disabled',
+  EXPIRED = 'expired',
+}
+
+export interface WorkflowScheduleEntity {
+  id: string
+  workflowId: string
+  name: string
+  scheduleType: ScheduleType
+  cronExpression?: string
+  intervalSeconds?: number
+  inputs: Record<string, unknown>
+  status: ScheduleStatus
+  startTime: Date
+  endTime?: Date
+  lastRunAt?: Date
+  nextRunAt?: Date
+  createdAt: Date
+  updatedAt: Date
+  deletedAt?: Date
+}

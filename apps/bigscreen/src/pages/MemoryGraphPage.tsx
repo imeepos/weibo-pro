@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Brain, Users, ChevronDown } from 'lucide-react';
+import { Brain, Users, ChevronDown, ArrowLeft, Home } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import MemoryGraph from '../components/charts/MemoryGraph';
 import { PersonaAPI } from '../services/api/persona';
 import type { PersonaListItem, PersonaMemoryGraph, MemoryType } from '@sker/sdk';
@@ -14,6 +15,7 @@ const MEMORY_TYPE_LEGEND: { type: MemoryType; label: string; color: string }[] =
 ];
 
 const MemoryGraphPage: React.FC = () => {
+  const navigate = useNavigate();
   const [personas, setPersonas] = useState<PersonaListItem[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [graphData, setGraphData] = useState<PersonaMemoryGraph | null>(null);
@@ -46,12 +48,23 @@ const MemoryGraphPage: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           className="flex items-center justify-between"
         >
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <Brain className="w-6 h-6 text-primary" />
-              <h1 className="text-2xl font-bold">记忆图谱</h1>
+          <div className="flex items-center gap-4">
+            {/* 返回按钮 */}
+            <button
+              onClick={() => navigate('/')}
+              className="p-2 rounded-lg hover:bg-muted/20 transition-all duration-300 group"
+              title="返回首页"
+            >
+              <Home className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+            </button>
+
+            <div>
+              <div className="flex items-center gap-3 mb-1">
+                <Brain className="w-6 h-6 text-primary" />
+                <h1 className="text-2xl font-bold">记忆图谱</h1>
+              </div>
+              <p className="text-muted-foreground text-sm">角色记忆关系可视化</p>
             </div>
-            <p className="text-muted-foreground text-sm">角色记忆关系可视化</p>
           </div>
           {graphData && (
             <div className="flex items-center gap-6">

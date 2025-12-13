@@ -1,20 +1,9 @@
 ## 需求
 
-参考 node-DeepResearch 项目中的
+组件：apps\bigscreen\src\components\Header.tsx
 
-SERP 聚类器 (src/tools/serp-cluster.ts)
+下拉选中 添加  工作流管理入口，移除写死的工作流编辑入口
 
-  功能：将搜索结果分组为有意义的集群
-
-  提示词 (line 10-12)：
-  You are a search engine result analyzer.
-  You look at the SERP API response and group them into meaningful cluster.
-  Each cluster should contain a summary of the content, key data and insights,
-  the corresponding URLs and search advice.
-
-设计一个： SERP 聚类器 节点
-
-> 请依据分析结果，精心设计
 
 要求： 
 

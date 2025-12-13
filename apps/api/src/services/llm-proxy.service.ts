@@ -14,8 +14,8 @@ interface ProxyResult {
   error?: string
 }
 
-const TIMEOUT_MS = 30000
-const IDLE_TIMEOUT_MS = 15000
+const TIMEOUT_MS = 1000 * 3 * 60;
+const IDLE_TIMEOUT_MS = 1000 * 60;
 const MAX_RETRIES = 3
 
 @Injectable({ providedIn: 'root' })
@@ -71,6 +71,16 @@ export class LlmProxyService {
       await m.createQueryBuilder()
         .update(LlmProvider)
         .set({ score: () => `GREATEST(0, score + ${delta})` })
+        .where('id = :providerId', { providerId })
+        .execute()
+    })
+  }
+
+  async setScoreToZero(providerId: string): Promise<void> {
+    await useEntityManager(async m => {
+      await m.createQueryBuilder()
+        .update(LlmProvider)
+        .set({ score: 0 })
         .where('id = :providerId', { providerId })
         .execute()
     })
@@ -132,8 +142,14 @@ export class LlmProxyService {
         })
 
         const durationMs = Date.now() - startTime
-        const penalty = this.calcPenalty(durationMs, contentLength)
-        await this.updateScore(provider.providerId, -penalty)
+
+        if (response.status === 403) {
+          await this.setScoreToZero(provider.providerId)
+          console.warn(`403 权限错误，健康分清零: ${provider.providerId}`)
+        } else {
+          const penalty = this.calcPenalty(durationMs, contentLength)
+          await this.updateScore(provider.providerId, -penalty)
+        }
 
         if (!response.body) {
           return { success: true, response }
