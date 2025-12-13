@@ -226,7 +226,7 @@ export class LlmChatLogService {
       const PAGE_SIZE = 5000;
       let offset = 0;
       let hasMore = true;
-      const promptMap = new Map<string, { content: string; count: number; type: 'system' | 'user' | 'assistant' | 'tool' }>();
+      const promptMap = new Map<string, { name?: string, content: string; count: number; type: 'system' | 'user' | 'assistant' | 'tool' }>();
 
       while (hasMore) {
         const logs = await m.find(LlmChatLog, {
@@ -317,12 +317,26 @@ export class LlmChatLogService {
               }
             }
 
-            // 3. 提取 tools 中的主要描述（简化版）
+            // 3. 提取 tools 中的描述（完整版）
             if (request.tools && Array.isArray(request.tools)) {
               for (const tool of request.tools) {
                 if (!tool || typeof tool !== 'object') continue;
 
-                // 只提取 function.description（主要描述）
+                // 提取工具的主描述
+                if (tool.description && typeof tool.description === 'string') {
+                  const content = tool.description.trim();
+                  if (content.length > 0) {
+                    const hash = this.hashContent(content);
+                    const existing = promptMap.get(hash);
+                    if (existing) {
+                      existing.count++;
+                    } else {
+                      promptMap.set(hash, { name: tool.name, content, count: 1, type: 'tool' });
+                    }
+                  }
+                }
+
+                // 提取 function.description
                 if (tool.function?.description && typeof tool.function.description === 'string') {
                   const content = tool.function.description.trim();
                   if (content.length > 0) {
@@ -332,6 +346,24 @@ export class LlmChatLogService {
                       existing.count++;
                     } else {
                       promptMap.set(hash, { content, count: 1, type: 'tool' });
+                    }
+                  }
+                }
+
+                // 提取 function.parameters.properties 中的描述
+                if (tool.function?.parameters?.properties && typeof tool.function.parameters.properties === 'object') {
+                  for (const [propName, prop] of Object.entries(tool.function.parameters.properties)) {
+                    if (prop && typeof prop === 'object' && 'description' in prop && typeof prop.description === 'string') {
+                      const content = prop.description.trim();
+                      if (content.length > 0) {
+                        const hash = this.hashContent(content);
+                        const existing = promptMap.get(hash);
+                        if (existing) {
+                          existing.count++;
+                        } else {
+                          promptMap.set(hash, { content, count: 1, type: 'tool' });
+                        }
+                      }
                     }
                   }
                 }

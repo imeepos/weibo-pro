@@ -13,6 +13,7 @@ import {
 } from '@sker/ui/components/ui/dialog';
 import { Spinner } from '@sker/ui/components/ui/spinner';
 import { SimplePagination } from '@sker/ui/components/ui/simple-pagination';
+import { DownloadIcon } from 'lucide-react';
 
 interface PromptAnalysisDialogProps {
   open: boolean;
@@ -85,6 +86,66 @@ export const PromptAnalysisDialog: React.FC<PromptAnalysisDialogProps> = ({
   const paginatedItems = filteredItems.slice((page - 1) * pageSize, page * pageSize);
   const totalPages = Math.ceil(filteredItems.length / pageSize);
 
+  const exportToMarkdown = () => {
+    if (!result) return;
+
+    const timeRangeLabel = TIME_RANGES.find(r => r.value === timeRange)?.label || '全部';
+    const now = new Date().toLocaleString('zh-CN');
+
+    let markdown = `# 提示词分析报告\n\n`;
+    markdown += `**生成时间**: ${now}\n\n`;
+    markdown += `**时间范围**: ${timeRangeLabel}\n\n`;
+
+    // 统计摘要
+    markdown += `## 统计摘要\n\n`;
+    markdown += `- **提示词总数**: ${result.total} 个不同提示词\n`;
+    markdown += `- **总使用次数**: ${result.totalUsage} 次\n`;
+    markdown += `- **平均使用次数**: ${(result.totalUsage / result.total).toFixed(2)} 次/提示词\n\n`;
+
+    // 按类型统计
+    markdown += `### 按类型统计\n\n`;
+    markdown += `| 类型 | 提示词数量 | 总使用次数 |\n`;
+    markdown += `|------|-----------|----------|\n`;
+    for (const stat of result.byType) {
+      const label = TYPE_LABELS[stat.type] || stat.type;
+      markdown += `| ${label} | ${stat.count} | ${stat.usage} |\n`;
+    }
+    markdown += `\n`;
+
+    // 按类型分组的详细列表
+    markdown += `## 详细列表\n\n`;
+
+    for (const stat of result.byType) {
+      const typeLabel = TYPE_LABELS[stat.type] || stat.type;
+      const typeItems = result.items.filter(item => item.type === stat.type);
+
+      markdown += `### ${typeLabel} (${typeItems.length} 个)\n\n`;
+
+      typeItems
+        .sort((a, b) => b.count - a.count)
+        .forEach((item, index) => {
+          markdown += `#### ${index + 1}. 使用次数: ${item.count}\n\n`;
+          if (item.name) {
+            markdown += `**工具名称**: ${item.name}\n\n`;
+          }
+          markdown += `\`\`\`\n${item.content}\n\`\`\`\n\n`;
+          markdown += `*Hash: ${item.hash}*\n\n`;
+          markdown += `---\n\n`;
+        });
+    }
+
+    // 触发下载
+    const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `prompt-analysis-${new Date().getTime()}.md`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="!min-w-[60vw] max-h-[80vh] flex flex-col p-0">
@@ -125,6 +186,16 @@ export const PromptAnalysisDialog: React.FC<PromptAnalysisDialogProps> = ({
                     : `${filteredItems.length} 个提示词`
                   }
                 </span>
+              )}
+              {result && (
+                <button
+                  onClick={exportToMarkdown}
+                  className="flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs text-primary-foreground hover:bg-primary/90 transition-colors"
+                  title="导出为 Markdown"
+                >
+                  <DownloadIcon className="size-3" />
+                  导出
+                </button>
               )}
             </div>
           </DialogTitle>
