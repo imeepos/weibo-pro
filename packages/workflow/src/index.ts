@@ -15,10 +15,14 @@ export { StateMerger } from './execution/state-merger'
 export { PropertyAnalyzer } from './execution/property-analyzer'
 export { NoRetryError } from './errors'
 
-// 新增：状态管理和事件总线
+// NetworkBuilder 和事件类型
+export { NetworkBuilder } from './execution/network-builder';
+export type { WorkflowEvent, NodeStateEvent, OutputEmitEvent, WorkflowCompleteEvent, WorkflowErrorEvent } from './execution/network-builder';
+
+// 新增：状态管理和事件总线（保留用于向后兼容）
 export { WorkflowState } from './execution/workflow-state';
 export { WorkflowEventBus, WorkflowEventType } from './execution/workflow-events';
-export type { WorkflowEvent, OutputEmitPayload } from './execution/workflow-events';
+export type { WorkflowEvent as LegacyWorkflowEvent, OutputEmitPayload } from './execution/workflow-events';
 export {
   updateNodeReducer,
   finalizeWorkflowReducer,
@@ -40,4 +44,4 @@ export * from './MergeAst';
 export * from './LoopAst';
 export { syncAstOutputs } from './sync-ast-outputs';
 export { wrapExecutionWithOutputEmit, createNodeSseStream } from './sse-output-stream';
-export type { SseMessage, OutputEmitMessage, NodeStateMessage } from './sse-output-stream';
+export type { SseMessage } from './sse-output-stream';

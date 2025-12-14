@@ -1,108 +1,56 @@
-import { Observable, merge } from 'rxjs';
-import { map, filter, takeUntil, share } from 'rxjs/operators';
-import { root } from '@sker/core';
-import { INode } from './types';
-import { WorkflowEventBus, WorkflowEventType, OutputEmitPayload } from './execution/workflow-events';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
+import type { WorkflowEvent } from './execution/network-builder';
 
 /**
- * SSE 消息类型 - 联合类型
+ * SSE 消息类型 - 直接使用 WorkflowEvent
  */
-export type SseMessage = NodeStateMessage | OutputEmitMessage;
-
-export interface OutputEmitMessage {
-    type: 'output_emit';
-    nodeId: string;
-    property: string;
-    value: any;
-}
-
-export interface NodeStateMessage {
-    type: 'node_state';
-    nodeId: string;
-    data: INode;
-}
+export type SseMessage = WorkflowEvent;
 
 /**
- * 包装 executeAst 的结果，监听 WorkflowEventBus 的 OUTPUT_EMIT 事件
+ * 包装工作流事件流为 SSE 消息流
  *
  * 设计思路：
- * - 节点状态更新：来自 execution$ 流（node_state 消息）
- * - 输出发射：来自 WorkflowEventBus 的 OUTPUT_EMIT 事件（output_emit 消息）
+ * - 纯流式架构，无需 EventBus
+ * - 事件流 = SSE 消息流（零转换）
+ * - 利用 RxJS 的所有操作符能力
  *
- * OUTPUT_EMIT 事件在 ReactiveScheduler.createBehaviorSubjectStream 中触发，
- * 确保只有当数据真正流向下游时才发射（LLM 调用完成后）
- *
- * @param execution$ 原始执行流
- * @returns 增强的 SSE 消息流
+ * @param events$ 工作流事件流
+ * @returns SSE 消息流
  */
-export function wrapExecutionWithOutputEmit(execution$: Observable<INode>): Observable<SseMessage> {
-    const eventBus = root.get(WorkflowEventBus);
+export function wrapExecutionWithOutputEmit(events$: Observable<WorkflowEvent>): Observable<SseMessage> {
+    console.log('[SSE] 开始包装工作流事件流');
 
-    // 节点状态流：转换为 SSE 消息格式
-    const nodeStates$ = execution$.pipe(
-        map(node => ({
-            type: 'node_state' as const,
-            nodeId: node.id,
-            data: node
-        } as NodeStateMessage)),
-        share() // 共享订阅，避免重复执行
-    );
-
-    // 输出发射流：监听 WorkflowEventBus 的 OUTPUT_EMIT 事件
-    const outputEmits$ = eventBus.ofType<OutputEmitPayload>(WorkflowEventType.OUTPUT_EMIT).pipe(
-        // 只在 execution$ 活跃期间监听
-        takeUntil(execution$.pipe(filter(() => false))), // 当 execution$ 完成时停止
-        map(event => ({
-            type: 'output_emit' as const,
-            nodeId: event.nodeId!,
-            property: event.payload!.property,
-            value: event.payload!.value
-        } as OutputEmitMessage))
-    );
-
-    // 合并两个流
-    return new Observable<SseMessage>(subscriber => {
-        let completed = false;
-
-        // 订阅输出发射流（eventBus 事件）
-        const outputSub = outputEmits$.subscribe({
-            next: (msg) => subscriber.next(msg),
-            error: (err) => {
-                // 输出流错误不应该终止整个 SSE 流
-                console.error('[SSE] 输出发射流错误:', err);
+    return events$.pipe(
+        map(event => {
+            // 记录不同类型的事件
+            switch (event.type) {
+                case 'node_state':
+                    console.log(`[SSE] 节点状态更新 节点=${event.nodeId} 状态=${event.data.state}`);
+                    break;
+                case 'output_emit':
+                    console.log(`[SSE] 输出发射 节点=${event.nodeId} 属性=${event.property}`);
+                    break;
+                case 'workflow_complete':
+                    console.log(`[SSE] 工作流执行完成`);
+                    break;
+                case 'workflow_error':
+                    console.error(`[SSE] 工作流错误 节点=${event.nodeId}`, event.error);
+                    break;
             }
-        });
 
-        // 订阅节点状态流
-        const stateSub = nodeStates$.subscribe({
-            next: (msg) => subscriber.next(msg),
-            error: (err) => {
-                outputSub.unsubscribe();
-                subscriber.error(err);
-            },
-            complete: () => {
-                completed = true;
-                // 延迟一点完成，确保最后的 OUTPUT_EMIT 事件能被处理
-                setTimeout(() => {
-                    outputSub.unsubscribe();
-                    subscriber.complete();
-                }, 100);
-            }
-        });
-
-        return () => {
-            stateSub.unsubscribe();
-            outputSub.unsubscribe();
-        };
-    });
+            // 事件即消息，零转换
+            return event as SseMessage;
+        })
+    );
 }
 
 /**
  * 创建节点的 SSE 消息流（简化版本）
  *
- * @param nodeStream 节点执行流
+ * @param eventStream 工作流事件流
  * @returns SSE 消息流
  */
-export function createNodeSseStream(nodeStream: Observable<INode>): Observable<SseMessage> {
-    return wrapExecutionWithOutputEmit(nodeStream);
+export function createNodeSseStream(eventStream: Observable<WorkflowEvent>): Observable<SseMessage> {
+    return wrapExecutionWithOutputEmit(eventStream);
 }

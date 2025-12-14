@@ -1,4 +1,4 @@
-import { Injectable } from '@sker/core';
+import { Inject, Injectable } from '@sker/core';
 import { Observable } from 'rxjs';
 import { tap, map } from 'rxjs/operators';
 import { INode } from '../types';
@@ -20,7 +20,7 @@ import { VisitorExecutor } from './visitor-executor';
  */
 @Injectable()
 export class NodeExecutor {
-    constructor(private visitorExecutor: VisitorExecutor) {}
+    constructor(@Inject(VisitorExecutor) private visitorExecutor: VisitorExecutor) {}
 
     /**
      * 执行单个节点

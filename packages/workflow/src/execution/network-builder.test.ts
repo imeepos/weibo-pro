@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { BehaviorSubject, of } from 'rxjs';
-import { NetworkBuilder } from './network-builder';
+import { NetworkBuilder, WorkflowEvent, NodeStateEvent, OutputEmitEvent, WorkflowCompleteEvent, WorkflowErrorEvent } from './network-builder';
 import { NodeExecutor } from './node-executor';
 import { createWorkflowGraphAst } from '../ast';
-import { INode, IAstStates, EdgeMode } from '../types';
+import { INode, IAstStates, EdgeMode, isBehaviorSubject } from '../types';
 
 /**
  * 创建测试用的节点
@@ -612,6 +612,411 @@ describe('NetworkBuilder', () => {
             expect(() => {
                 networkBuilder.buildNetwork(ast, ast);
             }).not.toThrow();
+        });
+    });
+
+    describe('事件流架构测试', () => {
+        it('应该发射 node_state 事件', async () => {
+            // Arrange
+            const node = createTestNode({ id: 'node-1' });
+            const ast = createWorkflowGraphAst({ nodes: [node], edges: [] });
+
+            vi.mocked(nodeExecutor.execute).mockReturnValue(
+                of({ ...node, state: 'success' as IAstStates })
+            );
+
+            // Act
+            const events: WorkflowEvent[] = [];
+            const network$ = networkBuilder.buildNetwork(ast, ast);
+
+            await new Promise<void>((resolve, reject) => {
+                network$.subscribe({
+                    next: event => events.push(event),
+                    error: reject,
+                    complete: resolve
+                });
+            });
+
+            // Assert
+            const nodeStateEvents = events.filter(e => e.type === 'node_state') as NodeStateEvent[];
+            expect(nodeStateEvents.length).toBeGreaterThan(0);
+            expect(nodeStateEvents[0]?.nodeId).toBe('node-1');
+        });
+
+        it('应该发射 output_emit 事件', async () => {
+            // Arrange
+            const node = createTestNode({ id: 'node-1' });
+            node.metadata!.outputs = [{ property: 'output', title: 'Output' }];
+            node.output = new BehaviorSubject('test-value');
+
+            const ast = createWorkflowGraphAst({ nodes: [node], edges: [] });
+
+            vi.mocked(nodeExecutor.execute).mockReturnValue(
+                of({ ...node, state: 'success' as IAstStates })
+            );
+
+            // Act
+            const events: WorkflowEvent[] = [];
+            const network$ = networkBuilder.buildNetwork(ast, ast);
+
+            await new Promise<void>((resolve, reject) => {
+                network$.subscribe({
+                    next: event => events.push(event),
+                    error: reject,
+                    complete: resolve
+                });
+            });
+
+            // Assert
+            const outputEvents = events.filter(e => e.type === 'output_emit') as OutputEmitEvent[];
+            expect(outputEvents.length).toBeGreaterThan(0);
+            expect(outputEvents[0]?.nodeId).toBe('node-1');
+            expect(outputEvents[0]?.property).toBe('output');
+            expect(outputEvents[0]?.value).toBe('test-value');
+        });
+
+        it('应该发射 workflow_complete 事件', async () => {
+            // Arrange
+            const node = createTestNode({ id: 'node-1' });
+            const ast = createWorkflowGraphAst({ nodes: [node], edges: [] });
+
+            vi.mocked(nodeExecutor.execute).mockReturnValue(
+                of({ ...node, state: 'success' as IAstStates })
+            );
+
+            // Act
+            const events: WorkflowEvent[] = [];
+            const network$ = networkBuilder.buildNetwork(ast, ast);
+
+            await new Promise<void>((resolve, reject) => {
+                network$.subscribe({
+                    next: event => events.push(event),
+                    error: reject,
+                    complete: resolve
+                });
+            });
+
+            // Assert
+            const completeEvents = events.filter(e => e.type === 'workflow_complete') as WorkflowCompleteEvent[];
+            expect(completeEvents.length).toBe(1);
+            expect(completeEvents[0]?.workflowId).toBe(ast.id);
+        });
+
+        it('应该发射 workflow_error 事件当节点失败时', async () => {
+            // Arrange
+            const node = createTestNode({ id: 'node-1' });
+            const ast = createWorkflowGraphAst({ nodes: [node], edges: [] });
+            const testError = new Error('Test error');
+
+            vi.mocked(nodeExecutor.execute).mockReturnValue(
+                new Observable(subscriber => {
+                    subscriber.error(testError);
+                })
+            );
+
+            // Act
+            const events: WorkflowEvent[] = [];
+            const network$ = networkBuilder.buildNetwork(ast, ast);
+
+            await new Promise<void>((resolve) => {
+                network$.subscribe({
+                    next: event => events.push(event),
+                    error: () => resolve(), // 期望错误
+                    complete: resolve
+                });
+            });
+
+            // Assert
+            const errorEvents = events.filter(e => e.type === 'workflow_error') as WorkflowErrorEvent[];
+            expect(errorEvents.length).toBeGreaterThan(0);
+            expect(errorEvents[0]?.nodeId).toBe('node-1');
+        });
+
+        it('应该按正确顺序发射事件', async () => {
+            // Arrange
+            const node = createTestNode({ id: 'node-1' });
+            node.metadata!.outputs = [{ property: 'output', title: 'Output' }];
+            node.output = new BehaviorSubject('value');
+
+            const ast = createWorkflowGraphAst({ nodes: [node], edges: [] });
+
+            vi.mocked(nodeExecutor.execute).mockReturnValue(
+                of({ ...node, state: 'success' as IAstStates })
+            );
+
+            // Act
+            const events: WorkflowEvent[] = [];
+            const network$ = networkBuilder.buildNetwork(ast, ast);
+
+            await new Promise<void>((resolve, reject) => {
+                network$.subscribe({
+                    next: event => events.push(event),
+                    error: reject,
+                    complete: resolve
+                });
+            });
+
+            // Assert
+            // 事件顺序: node_state → output_emit → workflow_complete
+            expect(events.length).toBeGreaterThanOrEqual(2);
+            expect(events[0]?.type).toBe('node_state');
+            const lastEvent = events[events.length - 1];
+            expect(lastEvent?.type).toBe('workflow_complete');
+        });
+
+        it('应该正确提取多个输出的事件', async () => {
+            // Arrange
+            const node = createTestNode({ id: 'node-1' });
+            node.metadata!.outputs = [
+                { property: 'output1', title: 'Output 1' },
+                { property: 'output2', title: 'Output 2' }
+            ];
+            (node as any).output1 = new BehaviorSubject('value1');
+            (node as any).output2 = new BehaviorSubject('value2');
+
+            const ast = createWorkflowGraphAst({ nodes: [node], edges: [] });
+
+            vi.mocked(nodeExecutor.execute).mockReturnValue(
+                of({ ...node, state: 'success' as IAstStates })
+            );
+
+            // Act
+            const events: WorkflowEvent[] = [];
+            const network$ = networkBuilder.buildNetwork(ast, ast);
+
+            await new Promise<void>((resolve, reject) => {
+                network$.subscribe({
+                    next: event => events.push(event),
+                    error: reject,
+                    complete: resolve
+                });
+            });
+
+            // Assert
+            const outputEvents = events.filter(e => e.type === 'output_emit') as OutputEmitEvent[];
+            expect(outputEvents.length).toBe(2);
+
+            const output1Event = outputEvents.find(e => e.property === 'output1');
+            expect(output1Event).toBeDefined();
+            expect(output1Event?.value).toBe('value1');
+
+            const output2Event = outputEvents.find(e => e.property === 'output2');
+            expect(output2Event).toBeDefined();
+            expect(output2Event?.value).toBe('value2');
+        });
+
+        it('应该跳过空值的输出事件', async () => {
+            // Arrange
+            const node = createTestNode({ id: 'node-1' });
+            node.metadata!.outputs = [
+                { property: 'output1', title: 'Output 1' },
+                { property: 'output2', title: 'Output 2' },
+                { property: 'output3', title: 'Output 3' }
+            ];
+            (node as any).output1 = new BehaviorSubject('value');
+            (node as any).output2 = new BehaviorSubject(null);
+            (node as any).output3 = new BehaviorSubject('');
+
+            const ast = createWorkflowGraphAst({ nodes: [node], edges: [] });
+
+            vi.mocked(nodeExecutor.execute).mockReturnValue(
+                of({ ...node, state: 'success' as IAstStates })
+            );
+
+            // Act
+            const events: WorkflowEvent[] = [];
+            const network$ = networkBuilder.buildNetwork(ast, ast);
+
+            await new Promise<void>((resolve, reject) => {
+                network$.subscribe({
+                    next: event => events.push(event),
+                    error: reject,
+                    complete: resolve
+                });
+            });
+
+            // Assert
+            const outputEvents = events.filter(e => e.type === 'output_emit') as OutputEmitEvent[];
+            // 只有 output1 有值，应该只发射一个事件
+            expect(outputEvents.length).toBe(1);
+            expect(outputEvents[0]?.property).toBe('output1');
+        });
+
+        it('应该在多节点工作流中发射所有节点的事件', async () => {
+            // Arrange
+            const node1 = createTestNode({ id: 'node-1' });
+            const node2 = createTestNode({ id: 'node-2' });
+            node1.metadata!.outputs = [{ property: 'output', title: 'Output' }];
+            node1.output = new BehaviorSubject('value1');
+            node2.metadata!.inputs = [{ property: 'input', title: 'Input' }];
+            node2.metadata!.outputs = [{ property: 'output', title: 'Output' }];
+            node2.output = new BehaviorSubject('value2');
+
+            const ast = createWorkflowGraphAst({
+                nodes: [node1, node2],
+                edges: [{
+                    id: 'edge-1',
+                    from: 'node-1',
+                    to: 'node-2',
+                    fromProperty: 'output',
+                    toProperty: 'input'
+                }]
+            });
+
+            vi.mocked(nodeExecutor.execute).mockImplementation((node) =>
+                of({ ...node, state: 'success' as IAstStates })
+            );
+
+            // Act
+            const events: WorkflowEvent[] = [];
+            const network$ = networkBuilder.buildNetwork(ast, ast);
+
+            await new Promise<void>((resolve, reject) => {
+                network$.subscribe({
+                    next: event => events.push(event),
+                    error: reject,
+                    complete: resolve
+                });
+            });
+
+            // Assert
+            const node1StateEvents = events.filter(e =>
+                e.type === 'node_state' && (e as NodeStateEvent).nodeId === 'node-1'
+            );
+            const node2StateEvents = events.filter(e =>
+                e.type === 'node_state' && (e as NodeStateEvent).nodeId === 'node-2'
+            );
+
+            expect(node1StateEvents.length).toBeGreaterThan(0);
+            expect(node2StateEvents.length).toBeGreaterThan(0);
+        });
+    });
+
+    describe('BehaviorSubject 初始化和更新', () => {
+        it('应该初始化未定义的 @Output 为 BehaviorSubject', () => {
+            // Arrange
+            const node = createTestNode({ id: 'node-1' });
+            node.metadata!.outputs = [{ property: 'output', title: 'Output' }];
+            (node as any).output = undefined; // 模拟未初始化
+
+            const ast = createWorkflowGraphAst({ nodes: [node], edges: [] });
+
+            // Act
+            networkBuilder.buildNetwork(ast, ast);
+
+            // Assert
+            expect(isBehaviorSubject((node as any).output)).toBe(true);
+        });
+
+        it('应该保留已经是 BehaviorSubject 的输出', () => {
+            // Arrange
+            const existingSubject = new BehaviorSubject('existing');
+            const node = createTestNode({ id: 'node-1' });
+            node.metadata!.outputs = [{ property: 'output', title: 'Output' }];
+            (node as any).output = existingSubject;
+
+            const ast = createWorkflowGraphAst({ nodes: [node], edges: [] });
+
+            // Act
+            networkBuilder.buildNetwork(ast, ast);
+
+            // Assert
+            expect((node as any).output).toBe(existingSubject);
+        });
+
+        it('应该为非 BehaviorSubject 值创建新的 Subject', () => {
+            // Arrange
+            const node = createTestNode({ id: 'node-1' });
+            node.metadata!.outputs = [{ property: 'output', title: 'Output' }];
+            (node as any).output = 'plain-value';
+
+            const ast = createWorkflowGraphAst({ nodes: [node], edges: [] });
+
+            // Act
+            networkBuilder.buildNetwork(ast, ast);
+
+            // Assert
+            expect(isBehaviorSubject((node as any).output)).toBe(true);
+        });
+    });
+
+    describe('清理和内存管理', () => {
+        it('应该在 finalize 时调用 cleanup', async () => {
+            // Arrange
+            const node = createTestNode({ id: 'node-1' });
+            const ast = createWorkflowGraphAst({ nodes: [node], edges: [] });
+
+            vi.mocked(nodeExecutor.execute).mockReturnValue(
+                of({ ...node, state: 'success' as IAstStates })
+            );
+
+            const cleanupSpy = vi.spyOn(networkBuilder, 'cleanup');
+
+            // Act
+            const network$ = networkBuilder.buildNetwork(ast, ast);
+
+            await new Promise<void>((resolve, reject) => {
+                network$.subscribe({
+                    next: () => {},
+                    error: reject,
+                    complete: resolve
+                });
+            });
+
+            // Assert
+            expect(cleanupSpy).toHaveBeenCalled();
+        });
+
+        it('应该在错误时也调用 cleanup', async () => {
+            // Arrange
+            const node = createTestNode({ id: 'node-1' });
+            const ast = createWorkflowGraphAst({ nodes: [node], edges: [] });
+
+            vi.mocked(nodeExecutor.execute).mockReturnValue(
+                new Observable(subscriber => {
+                    subscriber.error(new Error('Test error'));
+                })
+            );
+
+            const cleanupSpy = vi.spyOn(networkBuilder, 'cleanup');
+
+            // Act
+            const network$ = networkBuilder.buildNetwork(ast, ast);
+
+            await new Promise<void>((resolve) => {
+                network$.subscribe({
+                    next: () => {},
+                    error: () => resolve(),
+                    complete: resolve
+                });
+            });
+
+            // Assert
+            expect(cleanupSpy).toHaveBeenCalled();
+        });
+    });
+
+    describe('空工作流处理', () => {
+        it('应该为空工作流发射 workflow_complete 事件', async () => {
+            // Arrange
+            const ast = createWorkflowGraphAst({ nodes: [], edges: [] });
+
+            // Act
+            const events: WorkflowEvent[] = [];
+            const network$ = networkBuilder.buildNetwork(ast, ast);
+
+            await new Promise<void>((resolve, reject) => {
+                network$.subscribe({
+                    next: event => events.push(event),
+                    error: reject,
+                    complete: resolve
+                });
+            });
+
+            // Assert
+            expect(events.length).toBe(1);
+            expect(events[0]?.type).toBe('workflow_complete');
+            expect((events[0] as WorkflowCompleteEvent).workflowId).toBe(ast.id);
         });
     });
 });

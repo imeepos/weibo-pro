@@ -18,10 +18,44 @@ import {
     finalize,
     catchError,
     startWith,
+    concatMap,
 } from 'rxjs/operators';
 import { WorkflowGraphAst } from '../ast';
 import { INode, IEdge, EdgeMode, isBehaviorSubject } from '../types';
 import { NodeExecutor } from './node-executor';
+
+/**
+ * 工作流事件类型
+ */
+export type WorkflowEvent =
+    | NodeStateEvent
+    | OutputEmitEvent
+    | WorkflowCompleteEvent
+    | WorkflowErrorEvent;
+
+export interface NodeStateEvent {
+    type: 'node_state';
+    nodeId: string;
+    data: INode;
+}
+
+export interface OutputEmitEvent {
+    type: 'output_emit';
+    nodeId: string;
+    property: string;
+    value: any;
+}
+
+export interface WorkflowCompleteEvent {
+    type: 'workflow_complete';
+    workflowId?: string;
+}
+
+export interface WorkflowErrorEvent {
+    type: 'workflow_error';
+    nodeId?: string;
+    error: any;
+}
 
 interface EdgeGroup {
     nodeId: string;
@@ -30,25 +64,20 @@ interface EdgeGroup {
 }
 
 /**
- * 网络构建器 - 将工作流转换为反应式 Observable 网络
+ * 网络构建器 - 将工作流转换为反应式事件流
  *
- * 设计哲学：编译与执行分离
- * - buildNetwork() 只构建网络结构，不执行任何代码
- * - 返回 Observable 网络是"虚拟"的，只有订阅时才真正运行
- * - 同一个网络可以执行多次
+ * 设计哲学：纯流式架构
+ * - buildNetwork() 返回 Observable<WorkflowEvent> 事件流
+ * - 所有变化（节点状态、输出、完成）都通过事件发射
+ * - 无需额外的 EventBus，事件即流
  *
- * 网络结构：
+ * 事件流结构：
  * ┌─────────────────────────────────────┐
- * │  buildNodeObservable(A, input$) →   │
- * │  Observable<INode>                  │
- * │          ↓                          │
- * │    @Output: BehaviorSubject         │
- * │          ↓                          │
- * │  buildEdgeStream(A→B) →             │
- * │  input$ for B                       │
- * │          ↓                          │
- * │  buildNodeObservable(B, input$) →   │
- * │  Observable<INode>                  │
+ * │  Observable<WorkflowEvent>          │
+ * │    ├─ node_state: 节点状态变化      │
+ * │    ├─ output_emit: 输出发射        │
+ * │    ├─ workflow_complete: 完成      │
+ * │    └─ workflow_error: 错误         │
  * └─────────────────────────────────────┘
  */
 @Injectable()
@@ -66,21 +95,21 @@ export class NetworkBuilder {
      * 3. 按输入节点分组收集边，构建边流
      * 4. 为每个节点的边流创建数据连接
      * 5. 触发起始节点（入度为 0）的执行
-     * 6. 合并所有节点的 Observable，形成完整网络
+     * 6. 合并所有节点的事件流，形成完整网络
      *
-     * 返回值：Observable<WorkflowGraphAst>
-     * - 每次发射都是最新的工作流状态快照
+     * 返回值：Observable<WorkflowEvent>
+     * - 每次发射都是一个工作流事件
      * - 只有 subscribe 时才真正执行
      */
     buildNetwork(
         ast: WorkflowGraphAst,
         ctx: WorkflowGraphAst
-    ): Observable<WorkflowGraphAst> {
+    ): Observable<WorkflowEvent> {
         // Step 1: 初始化所有节点的 @Output BehaviorSubject
         this.initializeOutputSubjects(ast);
 
         // Step 2: 为每个节点创建输入 Subject 和 Observable
-        const nodeObservables = new Map<string, Observable<INode>>();
+        const nodeObservables = new Map<string, Observable<WorkflowEvent>>();
         const inputSubjects = new Map<string, Subject<any>>();
         const inDegrees = this.calculateInDegrees(ast);
 
@@ -103,8 +132,8 @@ export class NetworkBuilder {
         // Step 5: 触发起始节点（入度为 0）
         this.triggerStartNodes(ast, inDegrees, inputSubjects);
 
-        // Step 6: 合并所有节点的 Observable
-        return this.mergeNodeStreams(ast, nodeObservables).pipe(
+        // Step 6: 合并所有节点的事件流
+        return this.mergeNodeEventStreams(ast, nodeObservables).pipe(
             finalize(() => {
                 this.cleanup();
             })
@@ -120,29 +149,30 @@ export class NetworkBuilder {
     }
 
     /**
-     * 为单个节点构建 Observable
+     * 为单个节点构建事件流
      *
      * 输入：
      * - node: 节点 AST
      * - input$: 输入流（来自前端或上游节点的 @Output）
      *
      * 输出：
-     * - Observable<INode>
-     *   - 流式发射节点的执行状态和中间结果
-     *   - 同时更新节点的 @Output BehaviorSubject
+     * - Observable<WorkflowEvent>
+     *   - 流式发射节点的所有事件（状态变化 + 输出发射）
+     *   - 每次节点状态更新时，同时发射输出事件
      *
      * 核心机制：
      * 1. 当 input$ 发射时，触发节点执行
      * 2. 节点执行返回 Observable<INode>（可多次发射）
-     * 3. 每次发射时，自动更新 @Output BehaviorSubject
-     * 4. @Output BehaviorSubject 的变化自动流向下游
+     * 3. 将每次 INode 发射转换为事件流：
+     *    a. 发射 node_state 事件
+     *    b. 提取并发射 output_emit 事件
      */
     private buildNodeObservable(
         node: INode,
         input$: Observable<any>,
         ast: WorkflowGraphAst,
         ctx: WorkflowGraphAst
-    ): Observable<INode> {
+    ): Observable<WorkflowEvent> {
         return input$.pipe(
             switchMap(inputData => {
                 // 将输入数据赋给节点
@@ -150,24 +180,69 @@ export class NetworkBuilder {
                     Object.assign(node, inputData);
                 }
 
-                // 执行节点并处理错误
+                // 执行节点并转换为事件流
                 return this.nodeExecutor.execute(node, ast, ctx).pipe(
-                    tap(updatedNode => {
-                        this.updateOutputSubjects(updatedNode as INode);
+                    concatMap(updatedNode => {
+                        const events: WorkflowEvent[] = [];
+
+                        // 1. 发射节点状态事件
+                        events.push({
+                            type: 'node_state',
+                            nodeId: updatedNode.id,
+                            data: updatedNode
+                        });
+
+                        // 2. 提取并发射输出事件
+                        const outputEvents = this.extractOutputEvents(updatedNode as INode);
+                        events.push(...outputEvents);
+
+                        console.log(`[NetworkBuilder] 节点=${updatedNode.id} 发射 ${events.length} 个事件`);
+                        return events;
                     }),
                     catchError(error => {
-                        console.error(`Node ${node.id} execution failed:`, error);
+                        console.error(`[NetworkBuilder] 节点 ${node.id} 执行失败:`, error);
                         node.state = 'fail';
                         node.error = error;
-                        return new Observable<INode>(obs => {
-                            obs.next(node);
-                            obs.error(error);
-                        });
+                        return [
+                            { type: 'node_state', nodeId: node.id, data: node } as NodeStateEvent,
+                            { type: 'workflow_error', nodeId: node.id, error } as WorkflowErrorEvent
+                        ];
                     })
                 );
             }),
             shareReplay(1)
         );
+    }
+
+    /**
+     * 从节点提取输出事件
+     * 检查所有 @Output BehaviorSubject，提取非空值
+     */
+    private extractOutputEvents(node: INode): OutputEmitEvent[] {
+        if (!node.metadata?.outputs) return [];
+
+        const events: OutputEmitEvent[] = [];
+
+        node.metadata.outputs.forEach(output => {
+            const key = output.property;
+            const subject = (node as any)[key];
+
+            if (isBehaviorSubject(subject)) {
+                const value = subject.getValue();
+
+                // 只有非空值才发射事件
+                if (value !== null && value !== undefined && value !== '') {
+                    events.push({
+                        type: 'output_emit',
+                        nodeId: node.id,
+                        property: key,
+                        value
+                    });
+                }
+            }
+        });
+
+        return events;
     }
 
     /**
@@ -363,35 +438,37 @@ export class NetworkBuilder {
     }
 
     /**
-     * 合并所有节点的 Observable
+     * 合并所有节点的事件流
      *
-     * 返回一个"聚合" Observable，代表整个工作流的状态流
+     * 返回一个"聚合" Observable，代表整个工作流的事件流
+     * 最后发射一个 workflow_complete 事件
      */
-    private mergeNodeStreams(
+    private mergeNodeEventStreams(
         ast: WorkflowGraphAst,
-        nodeObservables: Map<string, Observable<INode>>
-    ): Observable<WorkflowGraphAst> {
+        nodeObservables: Map<string, Observable<WorkflowEvent>>
+    ): Observable<WorkflowEvent> {
         const allNodeStreams = Array.from(nodeObservables.values());
 
         if (allNodeStreams.length === 0) {
-            return new Observable(obs => {
-                obs.next(ast);
+            return new Observable<WorkflowEvent>(obs => {
+                obs.next({
+                    type: 'workflow_complete',
+                    workflowId: ast.id
+                });
                 obs.complete();
             });
         }
 
-        return merge(...allNodeStreams).pipe(
-            tap(updatedNode => {
-                const idx = ast.nodes.findIndex(n => n.id === updatedNode.id);
-                if (idx >= 0) {
-                    ast.nodes[idx] = updatedNode;
-                }
-            }),
-            map(() => ast),
+        return merge(...allNodeStreams, new Observable<WorkflowEvent>(obs => {
+            // 流结束时发射完成事件
+            obs.next({
+                type: 'workflow_complete',
+                workflowId: ast.id
+            });
+            obs.complete();
+        })).pipe(
             finalize(() => {
-                if (ast.state !== 'fail') {
-                    ast.state = 'success';
-                }
+                console.log(`[NetworkBuilder] 工作流 ${ast.id} 执行完成`);
             })
         );
     }
@@ -421,6 +498,7 @@ export class NetworkBuilder {
      * 更新节点的 @Output BehaviorSubject
      *
      * 当节点执行时，更新其输出的 BehaviorSubject
+     * 注意：现在这个方法只负责更新 Subject，事件在 buildNodeObservable 中统一发射
      */
     private updateOutputSubjects(node: INode): void {
         if (!node.metadata?.outputs) return;
