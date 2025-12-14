@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { BehaviorSubject, of } from 'rxjs';
+import { BehaviorSubject, of, Observable } from 'rxjs';
 import { NetworkBuilder, WorkflowEvent, NodeStateEvent, OutputEmitEvent, WorkflowCompleteEvent, WorkflowErrorEvent } from './network-builder';
 import { NodeExecutor } from './node-executor';
 import { createWorkflowGraphAst } from '../ast';

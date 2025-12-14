@@ -23,12 +23,12 @@ const MAX_RETRIES = 3
 @Injectable({ providedIn: 'root' })
 export class LlmProxyService {
 
-  async findProvider(requestedModel: string, protocol: string, excludeIds: Set<string> = new Set()): Promise<ProviderInfo | null> {
+  async findProvider(requestedModel: string, protocol: string, excludeIds: Set<string> = new Set(), requiresThinking: boolean = false): Promise<ProviderInfo | null> {
     if (!requestedModel) return null
 
     return useEntityManager(async m => {
       // 1. 获取所有可用梯队（按 tierLevel 升序）
-      const availableTiers = await m.createQueryBuilder(LlmModelProvider, 'mp')
+      const tierQuery = m.createQueryBuilder(LlmModelProvider, 'mp')
         .innerJoin('mp.provider', 'provider')
         .select('DISTINCT mp.tierLevel', 'tier')
         .where('mp.modelName = :requestedModel', { requestedModel })
@@ -43,8 +43,13 @@ export class LlmProxyService {
         })
         .andWhere('provider.protocol = :protocol', { protocol })
         .andWhere('provider.score > 0')
-        .orderBy('mp.tierLevel', 'ASC')
-        .getRawMany()
+
+      // 如果需要 thinking 模式，只查询支持 thinking 的 provider
+      if (requiresThinking) {
+        tierQuery.andWhere('mp.supportsThinking = true')
+      }
+
+      const availableTiers = await tierQuery.orderBy('mp.tierLevel', 'ASC').getRawMany()
 
       // 2. 逐层查找可用 provider
       for (const { tier } of availableTiers) {
@@ -56,6 +61,11 @@ export class LlmProxyService {
           .andWhere('mp.tierLevel = :tier', { tier })
           .andWhere('provider.protocol = :protocol', { protocol })
           .andWhere('provider.score > 0')
+
+        // 如果需要 thinking 模式，只查询支持 thinking 的 provider
+        if (requiresThinking) {
+          qb1.andWhere('mp.supportsThinking = true')
+        }
 
         if (excludeIds.size > 0) {
           qb1.andWhere('provider.id NOT IN (:...excludeIds)', { excludeIds: [...excludeIds] })
@@ -73,6 +83,11 @@ export class LlmProxyService {
             .andWhere('mp.tierLevel = :tier', { tier })
             .andWhere('provider.protocol = :protocol', { protocol })
             .andWhere('provider.score > 0')
+
+          // 如果需要 thinking 模式，只查询支持 thinking 的 provider
+          if (requiresThinking) {
+            qb2.andWhere('mp.supportsThinking = true')
+          }
 
           if (excludeIds.size > 0) {
             qb2.andWhere('provider.id NOT IN (:...excludeIds)', { excludeIds: [...excludeIds] })
@@ -143,15 +158,19 @@ export class LlmProxyService {
     const triedProviders = new Set<string>()
     const requestedModel = body.model
 
+    // 检测请求是否需要 thinking 模式
+    const requiresThinking = !!(body.extended_thinking || body.thinking || body.enable_thinking)
+
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-      const provider = await this.findProvider(requestedModel, protocol, triedProviders)
+      const provider = await this.findProvider(requestedModel, protocol, triedProviders, requiresThinking)
       if (!provider) {
-        return { success: false, error: `无可用 provider: ${requestedModel} (${protocol})` }
+        const thinkingHint = requiresThinking ? ' (需要 thinking 模式支持)' : ''
+        return { success: false, error: `无可用 provider: ${requestedModel} (${protocol})${thinkingHint}` }
       }
       triedProviders.add(provider.providerId)
 
       const proxyBody = { ...body, model: provider.modelName }
-      console.log(`[${requestedModel}] -> [${provider.modelName}] via ${provider.baseUrl}`)
+      console.log(`[${requestedModel}] -> [${provider.modelName}] via ${provider.baseUrl}${requiresThinking ? ' (thinking)' : ''}`)
 
       const reqHeaders: Record<string, string> = {}
       for (const [key, value] of Object.entries(headers)) {

@@ -5,6 +5,7 @@ export interface LlmModelProviderWithRelations extends Omit<LlmModelProvider, 'm
   model?: { id: string; name: string };
   provider?: { id: string; name: string; score: number };
   tierLevel: number;
+  supportsThinking: boolean;
 }
 
 @Controller('api/llm-model-providers')
@@ -31,12 +32,12 @@ export class LlmModelProvidersController {
   }
 
   @Post()
-  create(@Body() dto: { modelId: string; providerId: string; modelName: string; tierLevel?: number }): Promise<LlmModelProvider> {
+  create(@Body() dto: { modelId: string; providerId: string; modelName: string; tierLevel?: number; supportsThinking?: boolean }): Promise<LlmModelProvider> {
     throw new Error('method create not implements');
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() dto: Partial<{ modelId: string; providerId: string; modelName: string; tierLevel: number }>): Promise<LlmModelProvider> {
+  update(@Param('id') id: string, @Body() dto: Partial<{ modelId: string; providerId: string; modelName: string; tierLevel: number; supportsThinking: boolean }>): Promise<LlmModelProvider> {
     throw new Error('method update not implements');
   }
 

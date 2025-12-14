@@ -74,7 +74,7 @@ class TextAreaAstMultiInputVisitor {
 
             // 处理多个输入
             const inputValue = Array.isArray(ast.input)
-                ? ast.input.join('\n')
+                ? ast.input.map(v => String(v)).join('\n')
                 : ast.input || ''
 
             ast.output.next(inputValue)
@@ -108,16 +108,19 @@ describe('TextAreaAst - 文本节点', () => {
     let visitor: TextAreaAstVisitor
     let emptyInputVisitor: TextAreaAstEmptyInputVisitor
     let multiInputVisitor: TextAreaAstMultiInputVisitor
+    let compiler: Compiler
 
     beforeEach(() => {
         visitor = root.get(TextAreaAstVisitor)
         emptyInputVisitor = root.get(TextAreaAstEmptyInputVisitor)
         multiInputVisitor = root.get(TextAreaAstMultiInputVisitor)
+        compiler = root.get(Compiler)
     })
 
     describe('节点定义', () => {
         it('应正确设置节点元数据', () => {
-            const node = new TextAreaAst()
+            const rawNode = new TextAreaAst()
+            const node = compiler.compile(rawNode)
 
             expect(node.metadata.class.title).toBe('文本节点')
             expect(node.metadata.class.type).toBe('basic')

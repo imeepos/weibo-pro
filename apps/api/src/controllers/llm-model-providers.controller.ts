@@ -33,7 +33,7 @@ export class LlmModelProvidersController implements sdk.LlmModelProvidersControl
   }
 
   @Post()
-  async create(@Body() dto: { modelId: string; providerId: string; modelName: string }): Promise<LlmModelProvider> {
+  async create(@Body() dto: { modelId: string; providerId: string; modelName: string; tierLevel?: number; supportsThinking?: boolean }): Promise<LlmModelProvider> {
     return this.service.create(dto);
   }
 

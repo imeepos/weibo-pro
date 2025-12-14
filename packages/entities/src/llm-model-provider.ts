@@ -9,6 +9,7 @@ import { LlmProvider } from "./llm-provider";
 @Unique(['modelName', 'providerId', 'modelId'])
 @Index(['providerId'])
 @Index(['tierLevel'])
+@Index(['supportsThinking'])
 export class LlmModelProvider {
     @PrimaryGeneratedColumn('uuid')
     id!: string;
@@ -26,6 +27,10 @@ export class LlmModelProvider {
     // 梯队等级：1=第一梯队（优先）, 2=第二梯队（回退）, 3=第三梯队（兜底）
     @Column({ type: 'int', default: 1, name: 'tier_level' })
     tierLevel!: number;
+
+    // 是否支持 thinking 模式（如 Claude Extended Thinking）
+    @Column({ type: 'boolean', default: false, name: 'supports_thinking' })
+    supportsThinking!: boolean;
 
     @ManyToOne(() => LlmModel, model => model.providers, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'model_id' })

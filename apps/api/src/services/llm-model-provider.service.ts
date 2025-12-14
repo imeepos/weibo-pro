@@ -40,7 +40,7 @@ export class LlmModelProviderService {
     );
   }
 
-  async create(dto: { modelId: string; providerId: string; modelName: string; tierLevel?: number }): Promise<LlmModelProvider> {
+  async create(dto: { modelId: string; providerId: string; modelName: string; tierLevel?: number; supportsThinking?: boolean }): Promise<LlmModelProvider> {
     return useEntityManager(async m => {
       const existing = await m.findOne(LlmModelProvider, {
         where: {
