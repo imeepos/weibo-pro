@@ -27,10 +27,11 @@ import {
     endWith,
     take,
 } from 'rxjs/operators';
-import { WorkflowGraphAst } from '../ast';
+import { WorkflowGraphAst, isWorkflowGraphAst } from '../ast';
 import { INode, IEdge, EdgeMode, isBehaviorSubject, isNode, EMPTY_DATA } from '../types';
 import { NodeExecutor } from './node-executor';
 import { Compiler } from '../compiler';
+import { generateId } from '../utils';
 
 /**
  * 工作流事件类型
@@ -122,6 +123,9 @@ export class NetworkBuilder {
         return (input$: Observable<any>) => {
             // 使用 defer 确保每次订阅都重新构建网络
             return defer(() => {
+                // Step 0: 展开所有子工作流（递归）
+                this.expandSubWorkflows(ast);
+
                 // Step 1: 初始化所有节点的 @Output BehaviorSubject
                 this.initializeOutputSubjects(ast);
 
@@ -778,5 +782,242 @@ export class NetworkBuilder {
                 }
             });
         });
+    }
+
+    /**
+     * 展开所有子工作流（递归）
+     *
+     * 将子工作流节点（WorkflowGraphAst）的内部节点和边"内联"到主图中：
+     * 1. 递归处理嵌套子工作流
+     * 2. 为内部节点添加前缀避免 ID 冲突
+     * 3. 重定向连接到子工作流的边
+     * 4. 重定向从子工作流出来的边
+     * 5. 移除子工作流节点本身
+     */
+    private expandSubWorkflows(ast: WorkflowGraphAst): void {
+        const subWorkflows = ast.nodes.filter(n => this.isSubWorkflow(n));
+        if (subWorkflows.length === 0) return;
+
+        for (const subWorkflow of subWorkflows) {
+            this.expandSingleSubWorkflow(ast, subWorkflow as WorkflowGraphAst);
+        }
+
+        // 递归处理新加入的节点中可能包含的子工作流
+        this.expandSubWorkflows(ast);
+    }
+
+    /**
+     * 判断节点是否是子工作流
+     */
+    private isSubWorkflow(node: INode): boolean {
+        return isWorkflowGraphAst(node) &&
+            Array.isArray((node as WorkflowGraphAst).nodes) &&
+            (node as WorkflowGraphAst).nodes.length > 0;
+    }
+
+    /**
+     * 展开单个子工作流
+     */
+    private expandSingleSubWorkflow(ast: WorkflowGraphAst, subWorkflow: WorkflowGraphAst): void {
+        const prefix = `${subWorkflow.id}__`;
+        const compiler = root.get(Compiler);
+
+        // 1. 复制并重命名内部节点
+        const internalNodes: INode[] = subWorkflow.nodes.map(node => {
+            const cloned = this.cloneNode(node);
+            cloned.id = `${prefix}${node.id}`;
+            // 确保节点已编译
+            if (!isNode(cloned)) {
+                return compiler.compile(cloned);
+            }
+            return cloned;
+        });
+
+        // 2. 复制并重命名内部边
+        const internalEdges: IEdge[] = subWorkflow.edges.map(edge => ({
+            ...edge,
+            id: `${prefix}${edge.id}`,
+            from: `${prefix}${edge.from}`,
+            to: `${prefix}${edge.to}`,
+        }));
+
+        // 3. 找出入口节点和出口节点
+        const entryNodeIds = this.findEntryNodes(subWorkflow, prefix);
+        const exitNodeIds = this.findExitNodes(subWorkflow, prefix);
+
+        // 4. 处理连接到子工作流的边（重定向到入口节点）
+        this.redirectIncomingEdges(ast, subWorkflow.id, entryNodeIds, internalNodes);
+
+        // 5. 处理从子工作流出来的边（重定向从出口节点）
+        this.redirectOutgoingEdges(ast, subWorkflow.id, exitNodeIds, internalNodes);
+
+        // 6. 将内部节点和边添加到主图
+        ast.nodes.push(...internalNodes);
+        ast.edges.push(...internalEdges);
+
+        // 7. 移除子工作流节点本身
+        ast.nodes = ast.nodes.filter(n => n.id !== subWorkflow.id);
+
+        // 8. 移除指向/来自子工作流的原始边（已被重定向）
+        ast.edges = ast.edges.filter(e => e.from !== subWorkflow.id && e.to !== subWorkflow.id);
+    }
+
+    /**
+     * 找出入口节点（入度为 0 的节点）
+     */
+    private findEntryNodes(subWorkflow: WorkflowGraphAst, prefix: string): string[] {
+        // 优先使用显式定义的入口节点
+        if (subWorkflow.entryNodeIds?.length > 0) {
+            return subWorkflow.entryNodeIds.map(id => `${prefix}${id}`);
+        }
+
+        // 否则计算入度为 0 的节点
+        const inDegree = new Map<string, number>();
+        subWorkflow.nodes.forEach(n => inDegree.set(n.id, 0));
+        subWorkflow.edges.forEach(e => {
+            inDegree.set(e.to, (inDegree.get(e.to) ?? 0) + 1);
+        });
+
+        return subWorkflow.nodes
+            .filter(n => (inDegree.get(n.id) ?? 0) === 0)
+            .map(n => `${prefix}${n.id}`);
+    }
+
+    /**
+     * 找出出口节点（出度为 0 的节点）
+     */
+    private findExitNodes(subWorkflow: WorkflowGraphAst, prefix: string): string[] {
+        // 优先使用显式定义的结束节点
+        if (subWorkflow.endNodeIds?.length > 0) {
+            return subWorkflow.endNodeIds.map(id => `${prefix}${id}`);
+        }
+
+        // 否则计算出度为 0 的节点
+        const outDegree = new Map<string, number>();
+        subWorkflow.nodes.forEach(n => outDegree.set(n.id, 0));
+        subWorkflow.edges.forEach(e => {
+            outDegree.set(e.from, (outDegree.get(e.from) ?? 0) + 1);
+        });
+
+        return subWorkflow.nodes
+            .filter(n => (outDegree.get(n.id) ?? 0) === 0)
+            .map(n => `${prefix}${n.id}`);
+    }
+
+    /**
+     * 重定向连接到子工作流的边
+     *
+     * 边格式：`A.output → SubWorkflow.nodeId.property`
+     * 重定向为：`A.output → prefix__nodeId.property`
+     */
+    private redirectIncomingEdges(
+        ast: WorkflowGraphAst,
+        subWorkflowId: string,
+        entryNodeIds: string[],
+        internalNodes: INode[]
+    ): void {
+        const incomingEdges = ast.edges.filter(e => e.to === subWorkflowId);
+
+        for (const edge of incomingEdges) {
+            const toProperty = edge.toProperty;
+            if (!toProperty) continue;
+
+            // 解析 toProperty：格式可能是 "nodeId.property" 或直接 "property"
+            const { nodeId, property } = this.parsePropertyPath(toProperty);
+
+            if (nodeId) {
+                // 找到对应的内部节点
+                const targetNode = internalNodes.find(n => n.id.endsWith(`__${nodeId}`));
+                if (targetNode) {
+                    // 创建新边
+                    ast.edges.push({
+                        ...edge,
+                        id: generateId(),
+                        to: targetNode.id,
+                        toProperty: property,
+                    });
+                }
+            } else {
+                // 如果没有指定节点 ID，分发给所有入口节点
+                for (const entryId of entryNodeIds) {
+                    ast.edges.push({
+                        ...edge,
+                        id: generateId(),
+                        to: entryId,
+                        toProperty: property,
+                    });
+                }
+            }
+        }
+    }
+
+    /**
+     * 重定向从子工作流出来的边
+     *
+     * 边格式：`SubWorkflow.nodeId.property → B.input`
+     * 重定向为：`prefix__nodeId.property → B.input`
+     */
+    private redirectOutgoingEdges(
+        ast: WorkflowGraphAst,
+        subWorkflowId: string,
+        exitNodeIds: string[],
+        internalNodes: INode[]
+    ): void {
+        const outgoingEdges = ast.edges.filter(e => e.from === subWorkflowId);
+
+        for (const edge of outgoingEdges) {
+            const fromProperty = edge.fromProperty;
+            if (!fromProperty) continue;
+
+            // 解析 fromProperty：格式可能是 "nodeId.property" 或直接 "property"
+            const { nodeId, property } = this.parsePropertyPath(fromProperty);
+
+            if (nodeId) {
+                // 找到对应的内部节点
+                const sourceNode = internalNodes.find(n => n.id.endsWith(`__${nodeId}`));
+                if (sourceNode) {
+                    ast.edges.push({
+                        ...edge,
+                        id: generateId(),
+                        from: sourceNode.id,
+                        fromProperty: property,
+                    });
+                }
+            } else {
+                // 如果没有指定节点 ID，从所有出口节点创建边
+                for (const exitId of exitNodeIds) {
+                    ast.edges.push({
+                        ...edge,
+                        id: generateId(),
+                        from: exitId,
+                        fromProperty: property,
+                    });
+                }
+            }
+        }
+    }
+
+    /**
+     * 解析属性路径
+     * "nodeId.property" → { nodeId, property }
+     * "property" → { nodeId: undefined, property }
+     */
+    private parsePropertyPath(path: string): { nodeId?: string; property: string } {
+        const lastDotIndex = path.lastIndexOf('.');
+        if (lastDotIndex === -1) {
+            return { property: path };
+        }
+        return {
+            nodeId: path.substring(0, lastDotIndex),
+            property: path.substring(lastDotIndex + 1),
+        };
+    }
+
+    /**
+     * 深拷贝节点
+     */
+    private cloneNode(node: INode): INode {
+        // 使用 JSON 序列化进行深拷贝（Ast.toJSON 已处理 BehaviorSubject）
+        return JSON.parse(JSON.stringify(node));
     }
 }
