@@ -135,6 +135,7 @@ export class ReactiveScheduler {
         ctx: WorkflowGraphAst
     ): Observable<WorkflowEvent> {
         return input$.pipe(
+            take(1), // 只处理第一次输入，处理完成后立即完成流
             concatMap(inputData => {
                 // 将输入数据赋给节点
                 if (inputData) {

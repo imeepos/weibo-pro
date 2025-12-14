@@ -164,7 +164,7 @@ const LlmManagement: React.FC = () => {
 
   // Binding Dialog
   const [bindingDialogOpen, setBindingDialogOpen] = useState(false);
-  const [bindingForm, setBindingForm] = useState({ modelId: '', providerId: '', modelName: '', tierLevel: 1 });
+  const [bindingForm, setBindingForm] = useState({ modelId: '', providerId: '', modelName: '', tierLevel: 1, supportsThinking: false });
   const [editingBinding, setEditingBinding] = useState<string | null>(null);
 
   // 提示词分析
@@ -177,11 +177,12 @@ const LlmManagement: React.FC = () => {
         modelId: binding.modelId,
         providerId: binding.providerId,
         modelName: binding.modelName,
-        tierLevel: binding.tierLevel || 1
+        tierLevel: binding.tierLevel || 1,
+        supportsThinking: binding.supportsThinking || false
       });
     } else {
       setEditingBinding(null);
-      setBindingForm({ modelId: '', providerId: '', modelName: '', tierLevel: 1 });
+      setBindingForm({ modelId: '', providerId: '', modelName: '', tierLevel: 1, supportsThinking: false });
     }
     setBindingDialogOpen(true);
   };
@@ -411,6 +412,7 @@ const LlmManagement: React.FC = () => {
                     <th className="px-4 py-3 text-left font-medium">提供商</th>
                     <th className="px-4 py-3 text-left font-medium">提供商模型</th>
                     <th className="px-4 py-3 text-left font-medium">梯队</th>
+                    <th className="px-4 py-3 text-center font-medium">Thinking</th>
                     <th className="px-4 py-3 text-right font-medium">操作</th>
                   </tr>
                 </thead>
@@ -445,6 +447,13 @@ const LlmManagement: React.FC = () => {
                           >
                             T{b.tierLevel}
                           </Badge>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {b.supportsThinking ? (
+                            <Badge className="bg-purple-500 hover:bg-purple-600 text-[10px]">✓</Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-[10px]">-</span>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-right">
                           <button
@@ -618,6 +627,15 @@ const LlmManagement: React.FC = () => {
               <option value={2}>第二梯队（回退）</option>
               <option value={3}>第三梯队（兜底）</option>
             </select>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={bindingForm.supportsThinking}
+                onChange={(e) => setBindingForm({ ...bindingForm, supportsThinking: e.target.checked })}
+                className="size-4 rounded border-gray-300"
+              />
+              <span className="text-sm">支持 Thinking 模式（Claude Extended Thinking）</span>
+            </label>
           </div>
           <DialogFooter>
             <button

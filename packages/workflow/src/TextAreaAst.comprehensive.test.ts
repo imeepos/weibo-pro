@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { root, Injectable } from '@sker/core'
 import { TextAreaAst } from './TextAreaAst'
-import { Handler } from './decorator'
+import { Handler, IS_MULTI } from './decorator'
 import { Observable, BehaviorSubject } from 'rxjs'
 import { lastValueFrom } from 'rxjs'
 import { type INode } from './types'
@@ -126,7 +126,7 @@ describe('TextAreaAst - 文本节点', () => {
             expect(node.metadata.class.type).toBe('basic')
             expect(node.metadata.inputs).toHaveLength(1)
             expect(node.metadata.inputs[0].property).toBe('input')
-            expect(node.metadata.inputs[0].mode).toBe('IS_MULTI') // 聚合多条边
+            expect(node.metadata.inputs[0].mode).toBe(IS_MULTI) // 聚合多条边
             expect(node.metadata.outputs).toHaveLength(1)
             expect(node.metadata.outputs[0].property).toBe('output')
             expect(node.metadata.states).toHaveLength(0)

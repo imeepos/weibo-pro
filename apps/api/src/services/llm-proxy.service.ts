@@ -132,6 +132,18 @@ export class LlmProxyService {
     })
   }
 
+  async disableThinkingSupport(providerId: string, modelName: string): Promise<void> {
+    await useEntityManager(async m => {
+      await m.createQueryBuilder()
+        .update(LlmModelProvider)
+        .set({ supportsThinking: false })
+        .where('providerId = :providerId', { providerId })
+        .andWhere('modelName = :modelName', { modelName })
+        .execute()
+    })
+    console.warn(`已自动禁用 thinking 支持: provider=${providerId}, model=${modelName}`)
+  }
+
   private calcPenalty(responseMs: number, contentLength: number): number {
     const len = Math.max(contentLength, 100)
     const raw = Math.ceil(responseMs / len * 0.1)
@@ -220,6 +232,21 @@ export class LlmProxyService {
           const responseData = await response.json()
           usage = responseData.usage
 
+          // 检测 400 错误中的 thinking 模式不支持错误
+          if (response.status === 400 && requiresThinking) {
+            const errorMessage = responseData?.error?.message || JSON.stringify(responseData)
+            const isThinkingError =
+              errorMessage.includes('thinking') &&
+              (errorMessage.includes('Expected `thinking`') ||
+               errorMessage.includes('redacted_thinking') ||
+               errorMessage.includes('thinking block'))
+
+            if (isThinkingError) {
+              await this.disableThinkingSupport(provider.providerId, provider.modelName)
+              console.error(`检测到 thinking 模式不支持错误，已自动禁用: ${provider.modelName}`)
+            }
+          }
+
           await this.saveLog({
             providerId: provider.providerId,
             modelName: requestedModel,
@@ -250,6 +277,7 @@ export class LlmProxyService {
         })
 
         const decoder = new TextDecoder()
+        let thinkingErrorDetected = false
         const monitoredBody = response.body.pipeThrough(new TransformStream({
           transform: (chunk, controller) => {
             const text = decoder.decode(chunk, { stream: true })
@@ -258,6 +286,23 @@ export class LlmProxyService {
             for (const line of lines) {
               try {
                 const data = JSON.parse(line.slice(6))
+
+                // 检测流式响应中的 thinking 错误
+                if (!thinkingErrorDetected && response.status === 400 && requiresThinking && data.error) {
+                  const errorMessage = data.error.message || JSON.stringify(data.error)
+                  const isThinkingError =
+                    errorMessage.includes('thinking') &&
+                    (errorMessage.includes('Expected `thinking`') ||
+                     errorMessage.includes('redacted_thinking') ||
+                     errorMessage.includes('thinking block'))
+
+                  if (isThinkingError) {
+                    thinkingErrorDetected = true
+                    this.disableThinkingSupport(provider.providerId, provider.modelName).catch(console.error)
+                    console.error(`检测到 thinking 模式不支持错误（流式），已自动禁用: ${provider.modelName}`)
+                  }
+                }
+
                 if (data.usage) {
                   if (!usage) usage = {}
                   if (data.usage.input_tokens) usage.input_tokens = data.usage.input_tokens
