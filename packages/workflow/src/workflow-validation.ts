@@ -49,7 +49,7 @@ async function validateWorkflowSave() {
     console.log(`   标签: ${JSON.stringify(result.tags)}`)
     console.log(`   颜色: ${result.color}`)
   } catch (error) {
-    console.log('❌ 保存失败:', error.message)
+    console.log('❌ 保存失败:', (error as Error).message)
   }
 
   console.log()
@@ -78,9 +78,9 @@ async function validateWorkflowSave() {
 
     console.log('✅ 保存成功')
     console.log(`   标签: ${JSON.stringify(result.tags)}`)
-    console.log('   验证: 空标签数组被正确保存`)
+    console.log('   验证: 空标签数组被正确保存')
   } catch (error) {
-    console.log('❌ 保存失败:', error.message)
+    console.log('❌ 保存失败:', (error as Error).message)
   }
 
   console.log()
@@ -112,7 +112,7 @@ async function validateWorkflowSave() {
     console.log(`   标签: ${JSON.stringify(result.tags)}`)
     console.log('   验证: 特殊字符被正确保存')
   } catch (error) {
-    console.log('❌ 保存失败:', error.message)
+    console.log('❌ 保存失败:', (error as Error).message)
   }
 
   console.log()
@@ -147,7 +147,7 @@ async function validateWorkflowSave() {
     console.log(`   标签数量: ${result.tags.length}`)
     console.log('   验证: 长文本被正确保存')
   } catch (error) {
-    console.log('❌ 保存失败:', error.message)
+    console.log('❌ 保存失败:', (error as Error).message)
   }
 
   console.log()
@@ -180,7 +180,7 @@ async function validateWorkflowSave() {
     console.log(`   标签: ${JSON.stringify(result.tags)}`)
     console.log('   验证: null/undefined 值被正确处理')
   } catch (error) {
-    console.log('❌ 保存失败:', error.message)
+    console.log('❌ 保存失败:', (error as Error).message)
   }
 
   console.log()
@@ -200,7 +200,7 @@ async function validateWorkflowSave() {
       console.log('❌ 未找到工作流')
     }
   } catch (error) {
-    console.log('❌ 获取失败:', error.message)
+    console.log('❌ 获取失败:', (error as Error).message)
   }
 
   console.log()
@@ -218,7 +218,7 @@ async function validateWorkflowSave() {
       console.log(`      标签: ${JSON.stringify(wf.tags)}`)
     })
   } catch (error) {
-    console.log('❌ 列表获取失败:', error.message)
+    console.log('❌ 列表获取失败:', (error as Error).message)
   }
 
   console.log()

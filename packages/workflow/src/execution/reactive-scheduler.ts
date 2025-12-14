@@ -1,7 +1,7 @@
 import { WorkflowGraphAst } from '../ast';
 import { INode, IEdge, EdgeMode, hasDataMapping, isNode, isBehaviorSubject, isRouteSkipped, extractSubjectValue } from '../types';
 import { executeAst } from '../executor';
-import { Observable, of, EMPTY, merge, combineLatest, zip, asyncScheduler, BehaviorSubject } from 'rxjs';
+import { Observable, of, EMPTY, merge, combineLatest, zip, asyncScheduler, BehaviorSubject, Subject, concat } from 'rxjs';
 import { map, catchError, concatMap, filter, shareReplay, subscribeOn, finalize, scan, takeLast, reduce, take, distinctUntilChanged, skip, tap } from 'rxjs/operators';
 import { concatLatestFrom } from '../operators/concat_latest_from';
 import { tapResponse } from '../operators/tap-response';
@@ -13,9 +13,294 @@ import { updateNodeReducer, finalizeWorkflowReducer, failWorkflowReducer } from 
 import { createDefaultErrorHandler, getErrorConfigFromNode } from './error-handler';
 import { extractEndNodeOutputs } from '../ast-utils';
 
+/**
+ * 工作流事件类型 - 借鉴 NetworkBuilder 的事件模型
+ */
+export type WorkflowEvent =
+    | NodeStateEvent
+    | OutputEmitEvent
+    | WorkflowCompleteEvent
+    | WorkflowErrorEvent;
+
+export interface NodeStateEvent {
+    type: 'node_state';
+    nodeId: string;
+    data: INode;
+}
+
+export interface OutputEmitEvent {
+    type: 'output_emit';
+    nodeId: string;
+    property: string;
+    value: any;
+}
+
+export interface WorkflowCompleteEvent {
+    type: 'workflow_complete';
+    workflowId?: string;
+}
+
+export interface WorkflowErrorEvent {
+    type: 'workflow_error';
+    nodeId?: string;
+    error: any;
+}
+
+/**
+ * 边分组接口 - 借鉴 NetworkBuilder
+ */
+interface EdgeGroup {
+    nodeId: string;
+    edges: IEdge[];
+    sources: Map<string, BehaviorSubject<any>>;
+}
+
 @Injectable()
 export class ReactiveScheduler {
     constructor(@Inject(WorkflowEventBus) private eventBus: WorkflowEventBus) {}
+
+    /**
+     * 初始化节点的 @Output BehaviorSubject
+     *
+     * 借鉴 NetworkBuilder 的方式，确保每个 @Output 都是一个正确初始化的 BehaviorSubject
+     * 这样可以支持纯流式事件发射，避免手动状态管理
+     */
+    private initializeOutputSubjects(ast: WorkflowGraphAst): void {
+        ast.nodes.forEach(node => {
+            if (!isNode(node)) {
+                const compiler = root.get(Compiler);
+                node = compiler.compile(node);
+            }
+            if (!node.metadata?.outputs) return;
+
+            node.metadata.outputs.forEach(output => {
+                const key = output.property;
+                const current = (node as any)[key];
+
+                // 如果还不是 BehaviorSubject，创建一个
+                if (!isBehaviorSubject(current)) {
+                    (node as any)[key] = new BehaviorSubject(current ?? null);
+                }
+            });
+        });
+    }
+
+    /**
+     * 从节点提取输出事件
+     * 检查所有 @Output BehaviorSubject，提取非空值
+     */
+    private extractOutputEvents(node: INode): OutputEmitEvent[] {
+        if (!isNode(node)) {
+            const compiler = root.get(Compiler);
+            node = compiler.compile(node);
+        }
+        if (!node.metadata?.outputs) return [];
+
+        const events: OutputEmitEvent[] = [];
+
+        node.metadata.outputs.forEach(output => {
+            const key = output.property;
+            const subject = (node as any)[key];
+
+            if (isBehaviorSubject(subject)) {
+                const value = subject.getValue();
+
+                // 只有非空值才发射事件
+                if (value !== null && value !== undefined && value !== '') {
+                    events.push({
+                        type: 'output_emit',
+                        nodeId: node.id,
+                        property: key,
+                        value
+                    });
+                }
+            }
+        });
+
+        return events;
+    }
+
+    /**
+     * 为单个节点构建事件流
+     *
+     * 借鉴 NetworkBuilder 的纯流式事件发射机制：
+     * - 将节点执行转换为 Observable<WorkflowEvent>
+     * - 每次节点状态更新时，同时发射输出事件
+     * - 无需手动订阅管理，使用 finalize 自动清理
+     */
+    private buildNodeEventStream(
+        node: INode,
+        input$: Observable<any>,
+        ast: WorkflowGraphAst,
+        ctx: WorkflowGraphAst
+    ): Observable<WorkflowEvent> {
+        return input$.pipe(
+            concatMap(inputData => {
+                // 将输入数据赋给节点
+                if (inputData) {
+                    Object.assign(node, inputData);
+                }
+
+                // 执行节点并转换为事件流
+                return executeAst(node, ctx).pipe(
+                    concatMap(updatedNode => {
+                        const events: WorkflowEvent[] = [];
+
+                        // 1. 发射节点状态事件
+                        events.push({
+                            type: 'node_state',
+                            nodeId: updatedNode.id,
+                            data: updatedNode
+                        });
+
+                        // 2. 提取并发射输出事件
+                        const outputEvents = this.extractOutputEvents(updatedNode as INode);
+                        events.push(...outputEvents);
+
+                        console.log(`[ReactiveScheduler] 节点=${updatedNode.id} 发射 ${events.length} 个事件`);
+                        return events;
+                    }),
+                    catchError(error => {
+                        console.error(`[ReactiveScheduler] 节点 ${node.id} 执行失败:`, error);
+                        node.state = 'fail';
+                        node.error = error;
+                        return [
+                            { type: 'node_state', nodeId: node.id, data: node } as NodeStateEvent,
+                            { type: 'workflow_error', nodeId: node.id, error } as WorkflowErrorEvent
+                        ];
+                    })
+                );
+            }),
+            shareReplay(1)
+        );
+    }
+
+    /**
+     * 构建完整的工作流事件网络
+     *
+     * 借鉴 NetworkBuilder 的纯流式架构：
+     * - 初始化所有节点的 @Output BehaviorSubject
+     * - 为每个节点创建输入 Subject 和事件流
+     * - 按边分组连接数据流
+     * - 触发起始节点
+     * - 返回 Observable<WorkflowEvent> 事件流
+     */
+    private buildEventNetwork(
+        ast: WorkflowGraphAst,
+        ctx: WorkflowGraphAst
+    ): Observable<WorkflowEvent> {
+        // Step 1: 初始化所有节点的 @Output BehaviorSubject
+        this.initializeOutputSubjects(ast);
+
+        // Step 2: 为每个节点创建输入 Subject 和事件流
+        const nodeEventStreams = new Map<string, Observable<WorkflowEvent>>();
+        const inputSubjects = new Map<string, Subject<any>>();
+        const inDegrees = this.calculateInDegrees(ast);
+
+        ast.nodes.forEach(node => {
+            const input$ = new Subject<any>();
+            inputSubjects.set(node.id, input$);
+
+            const nodeEventStream$ = this.buildNodeEventStream(node, input$, ast, ctx);
+            nodeEventStreams.set(node.id, nodeEventStream$);
+        });
+
+        // Step 3: 按目标节点分组收集边，连接数据流
+        const edgeGroups = this.groupEdgesByTarget(ast);
+        edgeGroups.forEach(group => {
+            this.connectEdgesToNode(group, ast, inputSubjects);
+        });
+
+        // Step 4: 触发起始节点（入度为 0）
+        this.triggerStartNodes(ast, inDegrees, inputSubjects);
+
+        // Step 5: 合并所有节点的事件流
+        return this.mergeNodeEventStreams(ast, nodeEventStreams).pipe(
+            finalize(() => {
+                console.log(`[ReactiveScheduler] 工作流 ${ast.id} 事件网络清理完成`);
+            })
+        );
+    }
+
+    /**
+     * 重构后的 schedule 方法
+     *
+     * 融合方案：
+     * 1. 使用 buildEventNetwork 构建纯事件流（借鉴 NetworkBuilder）
+     * 2. 将事件流转换为状态累积流（保持返回 WorkflowGraphAst）
+     * 3. 自动清理订阅（借鉴 NetworkBuilder 的 finalize）
+     */
+    schedule(ast: WorkflowGraphAst, parent: WorkflowGraphAst): Observable<WorkflowGraphAst> {
+        this.eventBus.emitWorkflowStart(ast.id);
+
+        const { state } = this.resetWorkflowGraphAst(ast);
+        if (state === 'success' || state === 'fail') {
+            return of(ast);
+        }
+
+        this.flattenWorkflowStructure(ast);
+        ast.state = 'running';
+
+        // 使用纯事件流 + 状态累积（替代原来的 scan + reducer）
+        return this.buildEventNetwork(ast, parent).pipe(
+            // 将事件流转换为状态累积流
+            scan((workflow: WorkflowGraphAst, event: WorkflowEvent) => {
+                switch (event.type) {
+                    case 'node_state':
+                        // 同时发射到事件总线（兼容旧的订阅者）
+                        const node = event.data;
+                        if (node.state === 'success') {
+                            this.eventBus.emitNodeSuccess(node.id, node, ast.id);
+                        } else if (node.state === 'fail') {
+                            this.eventBus.emitNodeFail(node.id, node.error, ast.id);
+                        } else if (node.state === 'running') {
+                            this.eventBus.emitNodeEmit(node.id, node, ast.id);
+                        }
+                        return updateNodeReducer(workflow, {
+                            nodeId: event.nodeId,
+                            updates: event.data
+                        });
+                    case 'output_emit':
+                        // 发射输出事件到事件总线
+                        this.eventBus.emitOutputEmit(
+                            event.nodeId,
+                            event.property,
+                            event.value,
+                            ast.id
+                        );
+                        return workflow;
+                    case 'workflow_complete':
+                        return finalizeWorkflowReducer(workflow);
+                    case 'workflow_error':
+                        return failWorkflowReducer(workflow, event.error);
+                    default:
+                        return workflow;
+                }
+            }, ast),
+            // 最后一次状态就是完整的 WorkflowGraphAst
+            takeLast(1),
+            map((finalWorkflow: WorkflowGraphAst) => {
+                // 提取结束节点输出（保持原有行为）
+                if (finalWorkflow.state === 'success' && finalWorkflow.endNodeIds && finalWorkflow.endNodeIds.length > 0) {
+                    const outputs = extractEndNodeOutputs(finalWorkflow.nodes, finalWorkflow.endNodeIds);
+                    if (Object.keys(outputs).length > 0) {
+                        Object.assign(finalWorkflow, outputs);
+                    }
+                }
+                // 恢复 GroupNode 的嵌套结构
+                this.restoreGroupStructure(finalWorkflow);
+                return finalWorkflow;
+            }),
+            // 最终发射完成/失败事件（保持原有行为）
+            finalize(() => {
+                if (ast.state === 'fail') {
+                    this.eventBus.emitWorkflowFail(ast.id, ast.error);
+                } else {
+                    this.eventBus.emitWorkflowComplete(ast.id, ast);
+                }
+            })
+        );
+    }
 
     private resetWorkflowGraphAst(ast: WorkflowGraphAst) {
         // ✨ 不可变方式：创建新状态对象
@@ -36,6 +321,187 @@ export class ReactiveScheduler {
         })
         return ast;
     }
+
+    /**
+     * 计算各节点的入度（指向该节点的边数）
+     * 借鉴 NetworkBuilder
+     */
+    private calculateInDegrees(ast: WorkflowGraphAst): Map<string, number> {
+        const inDegrees = new Map<string, number>();
+
+        ast.nodes.forEach(node => inDegrees.set(node.id, 0));
+        ast.edges.forEach(edge => {
+            const current = inDegrees.get(edge.to) ?? 0;
+            inDegrees.set(edge.to, current + 1);
+        });
+
+        return inDegrees;
+    }
+
+    /**
+     * 按目标节点分组收集边
+     * 借鉴 NetworkBuilder
+     */
+    private groupEdgesByTarget(ast: WorkflowGraphAst): EdgeGroup[] {
+        const groups = new Map<string, EdgeGroup>();
+
+        ast.edges.forEach(edge => {
+            if (!groups.has(edge.to)) {
+                groups.set(edge.to, {
+                    nodeId: edge.to,
+                    edges: [],
+                    sources: new Map(),
+                });
+            }
+
+            const group = groups.get(edge.to)!;
+            group.edges.push(edge);
+
+            // 预加载源节点的输出
+            const sourceNode = ast.nodes.find(n => n.id === edge.from);
+            if (sourceNode) {
+                const output = (sourceNode as any)[edge.fromProperty!] as BehaviorSubject<any>;
+                if (isBehaviorSubject(output)) {
+                    groups.get(edge.to)!.sources.set(`${edge.from}:${edge.fromProperty}`, output);
+                }
+            }
+        });
+
+        return Array.from(groups.values());
+    }
+
+    /**
+     * 为目标节点连接所有输入边
+     * 借鉴 NetworkBuilder，支持多种流合并模式
+     */
+    private connectEdgesToNode(
+        group: EdgeGroup,
+        ast: WorkflowGraphAst,
+        inputSubjects: Map<string, Subject<any>>
+    ): void {
+        const targetSubject = inputSubjects.get(group.nodeId);
+        if (!targetSubject) return;
+
+        if (group.edges.length === 0) return;
+
+        // 如果只有一条边，直接连接
+        if (group.edges.length === 1) {
+            const edge = group.edges[0]!;
+            const source = group.sources.get(`${edge.from}:${edge.fromProperty}`);
+            if (source) {
+                source.asObservable().subscribe(value => {
+                    targetSubject.next({ [edge.toProperty!]: value });
+                });
+            }
+            return;
+        }
+
+        // 多条边的流合并处理
+        const mode = group.edges[0]!.mode ?? EdgeMode.MERGE;
+
+        switch (mode) {
+            case EdgeMode.MERGE:
+                this.connectMergeMode(group, targetSubject);
+                break;
+            case EdgeMode.ZIP:
+                this.connectZipMode(group, targetSubject);
+                break;
+            case EdgeMode.COMBINE_LATEST:
+                this.connectCombineLatestMode(group, targetSubject);
+                break;
+        }
+    }
+
+    private connectMergeMode(group: EdgeGroup, targetSubject: Subject<any>): void {
+        const sources = group.edges.map(edge => {
+            const source = group.sources.get(`${edge.from}:${edge.fromProperty}`);
+            return source ? source.asObservable() : EMPTY;
+        });
+
+        merge(...sources).subscribe(value => {
+            targetSubject.next(value);
+        });
+    }
+
+    private connectZipMode(group: EdgeGroup, targetSubject: Subject<any>): void {
+        const sources = group.edges.map(edge => {
+            const source = group.sources.get(`${edge.from}:${edge.fromProperty}`);
+            return source ? source.asObservable() : EMPTY;
+        });
+
+        zip(...sources).subscribe(values => {
+            const combined = {} as any;
+            group.edges.forEach((edge, idx) => {
+                combined[edge.toProperty!] = values[idx];
+            });
+            targetSubject.next(combined);
+        });
+    }
+
+    private connectCombineLatestMode(group: EdgeGroup, targetSubject: Subject<any>): void {
+        const sources = group.edges.map(edge => {
+            const source = group.sources.get(`${edge.from}:${edge.fromProperty}`);
+            return source ? source.asObservable() : EMPTY;
+        });
+
+        combineLatest(sources).subscribe(values => {
+            const combined = {} as any;
+            group.edges.forEach((edge, idx) => {
+                combined[edge.toProperty!] = values[idx];
+            });
+            targetSubject.next(combined);
+        });
+    }
+
+    /**
+     * 触发入度为 0 的起始节点
+     * 借鉴 NetworkBuilder
+     */
+    private triggerStartNodes(
+        ast: WorkflowGraphAst,
+        inDegrees: Map<string, number>,
+        inputSubjects: Map<string, Subject<any>>
+    ): void {
+        ast.nodes.forEach(node => {
+            if ((inDegrees.get(node.id) ?? 0) === 0) {
+                const subject = inputSubjects.get(node.id);
+                if (subject) {
+                    // 触发起始节点（无输入）
+                    subject.next({});
+                }
+            }
+        });
+    }
+
+    /**
+     * 合并所有节点的事件流
+     * 借鉴 NetworkBuilder
+     */
+    private mergeNodeEventStreams(
+        ast: WorkflowGraphAst,
+        nodeEventStreams: Map<string, Observable<WorkflowEvent>>
+    ): Observable<WorkflowEvent> {
+        const allNodeStreams = Array.from(nodeEventStreams.values());
+
+        if (allNodeStreams.length === 0) {
+            return new Observable<WorkflowEvent>(obs => {
+                obs.next({
+                    type: 'workflow_complete',
+                    workflowId: ast.id
+                });
+                obs.complete();
+            });
+        }
+
+        // 合并所有节点的事件流，在流结束时追加 workflow_complete 事件
+        return concat(
+            merge(...allNodeStreams),
+            of({
+                type: 'workflow_complete',
+                workflowId: ast.id
+            } as WorkflowCompleteEvent)
+        );
+    }
     private getClearedMultiBufferInputs(node: INode): Record<string, any> {
         const updates: Record<string, any> = {};
         try {
@@ -53,28 +519,6 @@ export class ReactiveScheduler {
             // 无法获取元数据，跳过清空
         }
         return updates;
-    }
-    schedule(ast: WorkflowGraphAst, parent: WorkflowGraphAst): Observable<WorkflowGraphAst> {
-        this.eventBus.emitWorkflowStart(ast.id);
-
-        const { state } = this.resetWorkflowGraphAst(ast);
-        if (state === 'success' || state === 'fail') {
-            return of(ast);
-        }
-
-        this.flattenWorkflowStructure(ast);
-        ast.state = 'running';
-        const network = this.buildStreamNetwork(ast, parent);
-
-        return this.subscribeAndMerge(network, ast).pipe(
-            finalize(() => {
-                if (ast.state === 'fail') {
-                    this.eventBus.emitWorkflowFail(ast.id, ast.error);
-                } else {
-                    this.eventBus.emitWorkflowComplete(ast.id, ast);
-                }
-            })
-        );
     }
 
     fineTuneNode(
