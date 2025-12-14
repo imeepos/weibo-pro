@@ -57,6 +57,19 @@ interface EdgeGroup {
 
 @Injectable()
 export class ReactiveScheduler {
+    // 缓存编译器实例，避免重复获取
+    private readonly compiler = root.get(Compiler);
+
+    // 缓存输入/输出元数据，避免重复查找
+    private readonly inputMetadataCache = new Map<string, Map<string | symbol, InputMetadata>>();
+    private readonly outputMetadataCache = new Map<string, Map<string | symbol, OutputMetadata>>();
+
+    // 统一的错误消息常量
+    private readonly ERRORS = {
+        INVALID_NODE: '节点类型错误',
+        GET_NODE_METADATA: '获取节点元数据失败'
+    };
+
     constructor(@Inject(WorkflowEventBus) private eventBus: WorkflowEventBus) {}
 
     /**
@@ -68,8 +81,7 @@ export class ReactiveScheduler {
     private initializeOutputSubjects(ast: WorkflowGraphAst): void {
         ast.nodes.forEach(node => {
             if (!isNode(node)) {
-                const compiler = root.get(Compiler);
-                node = compiler.compile(node);
+                node = this.compiler.compile(node);
             }
             if (!node.metadata?.outputs) return;
 
@@ -93,8 +105,7 @@ export class ReactiveScheduler {
      */
     private extractOutputEvents(node: INode): OutputEmitEvent[] {
         if (!isNode(node)) {
-            const compiler = root.get(Compiler);
-            node = compiler.compile(node);
+            node = this.compiler.compile(node);
         }
         if (!node.metadata?.outputs) return [];
 
@@ -198,6 +209,19 @@ export class ReactiveScheduler {
         const nodeEventStreams = new Map<string, Observable<WorkflowEvent>>();
         const inputSubjects = new Map<string, Subject<any>>();
         const inDegrees = this.calculateInDegrees(ast);
+
+        // 预分配容量，减少 Map 扩容开销（如果支持的话）
+        const nodeCount = ast.nodes.length;
+        try {
+            if (typeof (nodeEventStreams as any).reserve === 'function') {
+                (nodeEventStreams as any).reserve(nodeCount);
+            }
+            if (typeof (inputSubjects as any).reserve === 'function') {
+                (inputSubjects as any).reserve(nodeCount);
+            }
+        } catch {
+            // 忽略不支持的情况
+        }
 
         ast.nodes.forEach(node => {
             const input$ = new Subject<any>();
@@ -308,6 +332,11 @@ export class ReactiveScheduler {
                 } else {
                     this.eventBus.emitWorkflowComplete(ast.id, ast);
                 }
+
+                // 清理缓存，释放内存
+                this.inputMetadataCache.clear();
+                this.outputMetadataCache.clear();
+                console.log(`[ReactiveScheduler] 工作流 ${ast.id} 缓存清理完成`);
             })
         );
     }
@@ -346,6 +375,137 @@ export class ReactiveScheduler {
         });
 
         return inDegrees;
+    }
+
+    /**
+     * 使用 Kahn 算法检测循环依赖
+     * 时间复杂度：O(V + E)
+     * 空间复杂度：O(V + E)
+     */
+    private detectCycleWithKahn(ast: WorkflowGraphAst): { hasCycle: boolean; cyclePath: string[] } {
+        // 计算入度
+        const inDegrees = new Map<string, number>();
+        const adjacencyList = new Map<string, string[]>(); // 邻接表
+
+        // 初始化
+        ast.nodes.forEach(node => {
+            inDegrees.set(node.id, 0);
+            adjacencyList.set(node.id, []);
+        });
+
+        // 构建邻接表并计算入度
+        ast.edges.forEach(edge => {
+            const current = inDegrees.get(edge.to) ?? 0;
+            inDegrees.set(edge.to, current + 1);
+            adjacencyList.get(edge.from)!.push(edge.to);
+        });
+
+        // 找到所有入度为 0 的节点
+        const queue: string[] = [];
+        inDegrees.forEach((degree, nodeId) => {
+            if (degree === 0) {
+                queue.push(nodeId);
+            }
+        });
+
+        let visitedCount = 0;
+        const topologicalOrder: string[] = [];
+
+        // Kahn 算法
+        while (queue.length > 0) {
+            const current = queue.shift()!;
+            visitedCount++;
+            topologicalOrder.push(current);
+
+            // 处理当前节点的所有邻居
+            const neighbors = adjacencyList.get(current)!;
+            neighbors.forEach(neighbor => {
+                const newDegree = (inDegrees.get(neighbor) ?? 0) - 1;
+                inDegrees.set(neighbor, newDegree);
+
+                if (newDegree === 0) {
+                    queue.push(neighbor);
+                }
+            });
+        }
+
+        // 如果访问的节点数不等于总节点数，说明存在环
+        if (visitedCount !== ast.nodes.length) {
+            // 尝试找到环的路径（简化版，返回一个可能的环）
+            const cyclePath = this.findCyclePath(ast, inDegrees);
+            return { hasCycle: true, cyclePath };
+        }
+
+        return { hasCycle: false, cyclePath: [] };
+    }
+
+    /**
+     * 尝试找到环的路径
+     * 从剩余入度大于 0 的节点开始深度优先搜索
+     */
+    private findCyclePath(ast: WorkflowGraphAst, inDegrees: Map<string, number>): string[] {
+        const hasCycle = new Set<string>();
+        const visited = new Set<string>();
+        const path: string[] = [];
+
+        // 找到所有入度大于 0 的节点（这些节点在环中）
+        inDegrees.forEach((degree, nodeId) => {
+            if (degree > 0) {
+                hasCycle.add(nodeId);
+            }
+        });
+
+        if (hasCycle.size === 0) {
+            return [];
+        }
+
+        // 从环中的任意节点开始 DFS
+        const startNode = Array.from(hasCycle)[0]!;
+        const result = this.dfsFindCycle(startNode, ast, hasCycle, visited, path);
+
+        return result || [startNode];
+    }
+
+    /**
+     * 深度优先搜索寻找环
+     */
+    private dfsFindCycle(
+        current: string,
+        ast: WorkflowGraphAst,
+        hasCycle: Set<string>,
+        visited: Set<string>,
+        path: string[]
+    ): string[] | null {
+        if (visited.has(current)) {
+            // 找到环，返回路径
+            const cycleStartIndex = path.indexOf(current);
+            return path.slice(cycleStartIndex);
+        }
+
+        if (!hasCycle.has(current)) {
+            return null;
+        }
+
+        visited.add(current);
+        path.push(current);
+
+        // 遍历所有邻居
+        const neighbors = ast.edges
+            .filter(edge => edge.from === current)
+            .map(edge => edge.to);
+
+        for (const neighbor of neighbors) {
+            const result = this.dfsFindCycle(neighbor, ast, hasCycle, visited, path);
+            if (result) {
+                return result;
+            }
+        }
+
+        // 回溯
+        path.pop();
+        visited.delete(current);
+
+        return null;
     }
 
     /**
@@ -703,12 +863,13 @@ export class ReactiveScheduler {
      * 这样可以防止用户或前端忘记指定某些入口节点导致工作流无法执行
      */
     private getEffectiveEntryNodes(ast: WorkflowGraphAst): Set<string> {
-        // 找出所有没有入边的节点（自然入口节点）
+        // 使用入度映射，避免重复计算
+        const inDegrees = this.calculateInDegrees(ast);
         const naturalEntryNodes = new Set<string>();
-        for (const node of ast.nodes) {
-            const hasIncomingEdges = ast.edges.some(edge => edge.to === node.id);
-            if (!hasIncomingEdges) {
-                naturalEntryNodes.add(node.id);
+
+        for (const [nodeId, degree] of inDegrees) {
+            if (degree === 0) {
+                naturalEntryNodes.add(nodeId);
             }
         }
 
@@ -749,7 +910,18 @@ export class ReactiveScheduler {
         affectedNodes: Set<string>
     ): Map<string, Observable<INode>> {
         const network = new Map<string, Observable<INode>>();
-        const building = new Set<string>();
+
+        // 使用 Kahn 算法检测循环依赖，时间复杂度 O(V + E)
+        const cycleResult = this.detectCycleWithKahn(ctx);
+        if (cycleResult.hasCycle) {
+            throw new Error(
+                `检测到循环依赖:\n${cycleResult.cyclePath.join(' → ')}\n\n` +
+                `工作流不支持循环结构，请使用 MQ 解耦：\n` +
+                `1. 节点 A 输出 → MqPushAst 推送到队列\n` +
+                `2. 节点 B 输入 ← MqPullAst 从队列拉取\n` +
+                `3. 两个节点通过消息队列解耦，避免循环依赖`
+            );
+        }
 
         // 获取有效的入口节点集合（自动补全缺失的入口节点）
         const effectiveEntryNodes = this.getEffectiveEntryNodes(ctx);
@@ -759,22 +931,6 @@ export class ReactiveScheduler {
             if (network.has(nodeId)) {
                 return network.get(nodeId)!;
             }
-
-            // 正在构建：检测到循环依赖
-            if (building.has(nodeId)) {
-                const cyclePath = Array.from(building).concat(nodeId);
-                const cycleDisplay = cyclePath.join(' → ');
-
-                throw new Error(
-                    `检测到循环依赖:\n${cycleDisplay}\n\n` +
-                    `工作流不支持循环结构，请使用 MQ 解耦：\n` +
-                    `1. 节点 A 输出 → MqPushAst 推送到队列\n` +
-                    `2. 节点 B 输入 ← MqPullAst 从队列拉取\n` +
-                    `3. 两个节点通过消息队列解耦，避免循环依赖`
-                );
-            }
-
-            building.add(nodeId);
 
             const node = ctx.nodes.find(n => n.id === nodeId);
             if (!node) {
@@ -815,8 +971,6 @@ export class ReactiveScheduler {
             }
 
             network.set(nodeId, stream);
-            building.delete(nodeId);
-
             return stream;
         };
 
@@ -906,13 +1060,15 @@ export class ReactiveScheduler {
 
     private getRequiredInputProperties(node: INode): Set<string> {
         const properties = new Set<string>();
+
+        // 使用缓存的编译器
         if (!isNode(node)) {
-            const compiler = root.get(Compiler)
-            node = compiler.compile(node)
+            node = this.compiler.compile(node);
         }
         if (!isNode(node)) {
-            throw new Error(`getRequiredInputProperties error: node 类型错误`)
+            throw new Error(`getRequiredInputProperties error: ${this.ERRORS.INVALID_NODE}`);
         }
+
         // 🔧 优先使用编译后的 metadata 字段
         node.metadata.inputs.forEach(input => {
             // 明确标记为非必填
@@ -940,16 +1096,21 @@ export class ReactiveScheduler {
         });
 
         return properties;
-        throw new Error(`get node metadata failed`)
+        throw new Error(`get node metadata failed`);
     }
 
     private getInputMetadataMap(node: INode): Map<string | symbol, InputMetadata> {
+        // 检查缓存
+        const nodeType = node.type;
+        if (this.inputMetadataCache.has(nodeType)) {
+            return this.inputMetadataCache.get(nodeType)!;
+        }
+
         if (!isNode(node)) {
-            const compiler = root.get(Compiler)
-            node = compiler.compile(node)
+            node = this.compiler.compile(node);
         }
         if (!isNode(node)) {
-            throw new Error(`getRequiredInputProperties error: node 类型错误`)
+            throw new Error(`getRequiredInputProperties error: ${this.ERRORS.INVALID_NODE}`);
         }
         const metadataMap = new Map<string | symbol, InputMetadata>();
 
@@ -957,6 +1118,9 @@ export class ReactiveScheduler {
         node.metadata!.inputs.forEach(input => {
             metadataMap.set(input.property, input as any);
         });
+
+        // 缓存结果
+        this.inputMetadataCache.set(nodeType, metadataMap);
         return metadataMap;
     }
 
@@ -995,11 +1159,10 @@ export class ReactiveScheduler {
 
     private getInputDefaultValues(node: INode): Record<string, any> {
         if (!isNode(node)) {
-            const compiler = root.get(Compiler)
-            node = compiler.compile(node)
+            node = this.compiler.compile(node);
         }
         if (!isNode(node)) {
-            throw new Error(`getRequiredInputProperties error: node 类型错误`)
+            throw new Error(`getInputDefaultValues error: ${this.ERRORS.INVALID_NODE}`);
         }
         const defaults: Record<string, any> = {};
 

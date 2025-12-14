@@ -271,6 +271,7 @@ export interface OutputOptions {
     title?: string;
     type?: string;
     description?: string;
+    defaultValue?: any;
     // 路由节点支持
     isRouter?: boolean;      // 标识为路由输出，Scheduler 会过滤 undefined 值
     dynamic?: boolean;       // 支持 UI 动态添加输出端口
