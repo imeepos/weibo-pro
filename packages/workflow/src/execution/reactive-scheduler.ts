@@ -473,6 +473,8 @@ export class ReactiveScheduler {
         inputSubjects: Map<string, Subject<any>>
     ): void {
         ast.nodes.forEach(node => {
+            // 入度为0的节点都应该被触发，不管是否在entryNodeIds中
+            // 因为它们没有依赖，可以独立执行
             if ((inDegrees.get(node.id) ?? 0) === 0) {
                 const subject = inputSubjects.get(node.id);
                 if (subject) {

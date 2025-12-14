@@ -1,4 +1,4 @@
-import { Injectable } from '@sker/core';
+import { Injectable, root } from '@sker/core';
 import {
     Observable,
     Subject,
@@ -21,8 +21,9 @@ import {
     concatMap,
 } from 'rxjs/operators';
 import { WorkflowGraphAst } from '../ast';
-import { INode, IEdge, EdgeMode, isBehaviorSubject } from '../types';
+import { INode, IEdge, EdgeMode, isBehaviorSubject, isNode } from '../types';
 import { NodeExecutor } from './node-executor';
+import { Compiler } from '../compiler';
 
 /**
  * 工作流事件类型
@@ -141,6 +142,8 @@ export class NetworkBuilder {
                         subject.complete();
                     }
                 });
+                // 关闭所有输出Subjects，确保边模式能正确完成
+                this.completeOutputSubjects(ast);
                 this.cleanup();
             })
         );
