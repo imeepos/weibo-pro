@@ -236,6 +236,9 @@ export class NetworkBuilder {
                 // 执行节点并转换为事件流
                 return this.nodeExecutor.execute(node, ast, ctx).pipe(
                     concatMap(updatedNode => {
+                        // 同步更新原始节点的状态
+                        Object.assign(node, updatedNode);
+
                         const events: WorkflowEvent[] = [];
 
                         // 1. 发射节点状态事件
@@ -621,11 +624,26 @@ export class NetworkBuilder {
 
         // 使用 endWith 确保 workflow_complete 在所有节点流完成后才发射
         return merge(...allNodeStreams).pipe(
+            tap(event => {
+                // 检查是否所有节点都已完成（success 或 fail）
+                if (event.type === 'node_state') {
+                    const allDone = ast.nodes.every(n => n.state === 'success' || n.state === 'fail');
+                    if (allDone) {
+                        const hasError = ast.nodes.some(n => n.state === 'fail');
+                        ast.state = hasError ? 'fail' : 'success';
+                    }
+                }
+            }),
             endWith({
                 type: 'workflow_complete' as const,
                 workflowId: ast.id
             } as WorkflowCompleteEvent),
             finalize(() => {
+                // 确保工作流状态被设置
+                if (ast.state === 'pending' || ast.state === 'running') {
+                    const hasError = ast.nodes.some(n => n.state === 'fail');
+                    ast.state = hasError ? 'fail' : 'success';
+                }
                 console.log(`[NetworkBuilder] 工作流 ${ast.id} 执行完成`);
             })
         );
