@@ -133,8 +133,14 @@ export class NetworkBuilder {
         this.triggerStartNodes(ast, inDegrees, inputSubjects);
 
         // Step 6: 合并所有节点的事件流
-        return this.mergeNodeEventStreams(ast, nodeObservables).pipe(
+        return this.mergeNodeEventStreams(ast, nodeObservables, inputSubjects).pipe(
             finalize(() => {
+                // 工作流完成后关闭所有输入Subjects，确保流能正确完成
+                inputSubjects.forEach(subject => {
+                    if (!subject.closed) {
+                        subject.complete();
+                    }
+                });
                 this.cleanup();
             })
         );
@@ -445,7 +451,8 @@ export class NetworkBuilder {
      */
     private mergeNodeEventStreams(
         ast: WorkflowGraphAst,
-        nodeObservables: Map<string, Observable<WorkflowEvent>>
+        nodeObservables: Map<string, Observable<WorkflowEvent>>,
+        inputSubjects: Map<string, Subject<any>>
     ): Observable<WorkflowEvent> {
         const allNodeStreams = Array.from(nodeObservables.values());
 
@@ -489,6 +496,29 @@ export class NetworkBuilder {
                 // 如果还不是 BehaviorSubject，创建一个
                 if (!isBehaviorSubject(current)) {
                     (node as any)[key] = new BehaviorSubject(current ?? null);
+                }
+            });
+        });
+    }
+
+    /**
+     * 关闭所有节点的 @Output BehaviorSubject
+     * 用于工作流完成后清理，确保流能正确完成
+     */
+    private completeOutputSubjects(ast: WorkflowGraphAst): void {
+        ast.nodes.forEach(node => {
+            if (!isNode(node)) {
+                const compiler = root.get(Compiler);
+                node = compiler.compile(node);
+            }
+            if (!node.metadata?.outputs) return;
+
+            node.metadata.outputs.forEach(output => {
+                const key = output.property;
+                const subject = (node as any)[key];
+
+                if (isBehaviorSubject(subject) && !subject.closed) {
+                    subject.complete();
                 }
             });
         });

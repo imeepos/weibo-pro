@@ -81,6 +81,8 @@ export class ReactiveScheduler {
                 if (!isBehaviorSubject(current)) {
                     (node as any)[key] = new BehaviorSubject(current ?? null);
                 }
+                // 如果已经是 BehaviorSubject，不做任何修改
+                // 这样可以保持测试中手动设置的值
             });
         });
     }
@@ -135,7 +137,6 @@ export class ReactiveScheduler {
         ctx: WorkflowGraphAst
     ): Observable<WorkflowEvent> {
         return input$.pipe(
-            take(1), // 只处理第一次输入，处理完成后立即完成流
             concatMap(inputData => {
                 // 将输入数据赋给节点
                 if (inputData) {
@@ -216,8 +217,16 @@ export class ReactiveScheduler {
         this.triggerStartNodes(ast, inDegrees, inputSubjects);
 
         // Step 5: 合并所有节点的事件流
-        return this.mergeNodeEventStreams(ast, nodeEventStreams).pipe(
+        return this.mergeNodeEventStreams(ast, nodeEventStreams, inputSubjects).pipe(
             finalize(() => {
+                // 工作流完成后关闭所有输入Subjects，确保流能正确完成
+                inputSubjects.forEach(subject => {
+                    if (!subject.closed) {
+                        subject.complete();
+                    }
+                });
+                // 关闭所有输出Subjects，确保边模式能正确完成
+                this.completeOutputSubjects(ast);
                 console.log(`[ReactiveScheduler] 工作流 ${ast.id} 事件网络清理完成`);
             })
         );
@@ -480,7 +489,8 @@ export class ReactiveScheduler {
      */
     private mergeNodeEventStreams(
         ast: WorkflowGraphAst,
-        nodeEventStreams: Map<string, Observable<WorkflowEvent>>
+        nodeEventStreams: Map<string, Observable<WorkflowEvent>>,
+        inputSubjects: Map<string, Subject<any>>
     ): Observable<WorkflowEvent> {
         const allNodeStreams = Array.from(nodeEventStreams.values());
 
@@ -503,6 +513,30 @@ export class ReactiveScheduler {
             } as WorkflowCompleteEvent)
         );
     }
+
+    /**
+     * 关闭所有节点的 @Output BehaviorSubject
+     * 用于工作流完成后清理，确保流能正确完成
+     */
+    private completeOutputSubjects(ast: WorkflowGraphAst): void {
+        ast.nodes.forEach(node => {
+            if (!isNode(node)) {
+                const compiler = root.get(Compiler);
+                node = compiler.compile(node);
+            }
+            if (!node.metadata?.outputs) return;
+
+            node.metadata.outputs.forEach(output => {
+                const key = output.property;
+                const subject = (node as any)[key];
+
+                if (isBehaviorSubject(subject) && !subject.closed) {
+                    subject.complete();
+                }
+            });
+        });
+    }
+
     private getClearedMultiBufferInputs(node: INode): Record<string, any> {
         const updates: Record<string, any> = {};
         try {
