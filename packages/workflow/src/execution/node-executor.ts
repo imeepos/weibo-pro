@@ -26,7 +26,6 @@ export class NodeExecutor {
     execute(
         node: INode,
         ast: WorkflowGraphAst,
-        ctx?: WorkflowGraphAst
     ): Observable<INode> {
         // 标记节点为运行中
         const runningNode = { ...node };
@@ -34,7 +33,7 @@ export class NodeExecutor {
         runningNode.count = (runningNode.count ?? 0) + 1;
 
         // 使用 VisitorExecutor 执行 Handler
-        return this.visitorExecutor.visit(runningNode, ctx ?? ast).pipe(
+        return this.visitorExecutor.visit(runningNode, ast).pipe(
             tap(executedNode => {
                 executedNode.emitCount = (executedNode.emitCount ?? 0) + 1;
             })

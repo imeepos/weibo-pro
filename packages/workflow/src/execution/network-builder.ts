@@ -100,10 +100,11 @@ export class NetworkBuilder {
      *
      * 作为 RxJS 操作符使用：
      * ```typescript
-     * input$.pipe(buildNetwork(ast, ctx))
+     * input$.pipe(buildNetwork(ast))
      * ```
      *
      * 步骤：
+     * 0. 展开所有子工作流（递归）
      * 1. 初始化所有节点的 @Output BehaviorSubject
      * 2. 为每个节点创建执行 Observable 和输入 Subject
      * 3. 按输入节点分组收集边，构建边流
@@ -117,8 +118,7 @@ export class NetworkBuilder {
      * - 只有 subscribe 时才真正执行
      */
     buildNetwork(
-        ast: WorkflowGraphAst,
-        ctx: WorkflowGraphAst
+        ast: WorkflowGraphAst
     ): OperatorFunction<any, WorkflowEvent> {
         return (input$: Observable<any>) => {
             // 使用 defer 确保每次订阅都重新构建网络
@@ -139,7 +139,7 @@ export class NetworkBuilder {
                     const nodeInput$ = new ReplaySubject<any>(1);
                     inputSubjects.set(node.id, nodeInput$);
 
-                    const nodeObs$ = this.buildNodeObservable(node, nodeInput$, ast, ctx);
+                    const nodeObs$ = this.buildNodeObservable(node, nodeInput$, ast);
                     nodeObservables.set(node.id, nodeObs$);
                 });
 
@@ -173,6 +173,82 @@ export class NetworkBuilder {
     }
 
     /**
+     * 构建增量执行网络 - 执行指定节点及其下游
+     *
+     * 适用场景：
+     * - 修改节点配置后，需要更新该节点及下游的执行结果
+     * - 类似 Make 工具的增量编译
+     *
+     * @param ast 工作流 AST
+     * @param nodeId 目标节点 ID
+     */
+    buildIncrementalNetwork(
+        ast: WorkflowGraphAst,
+        nodeId: string
+    ): OperatorFunction<any, WorkflowEvent> {
+        return (input$: Observable<any>) => {
+            return defer(() => {
+                // Step 0: 展开所有子工作流
+                this.expandSubWorkflows(ast);
+
+                // Step 1: 找出受影响的节点（目标节点 + 所有下游）
+                const affectedNodes = this.findAffectedNodes(ast, nodeId);
+
+                // Step 2: 验证未受影响的上游节点已完成
+                this.validateUpstreamCompletion(ast, nodeId, affectedNodes);
+
+                // Step 3: 重置受影响节点的状态
+                this.resetAffectedNodes(ast, affectedNodes);
+
+                // Step 4: 初始化输出 Subjects
+                this.initializeOutputSubjects(ast);
+
+                // Step 5: 构建网络（仅受影响节点会重新执行）
+                return this.buildIncrementalNetworkInternal(ast, affectedNodes, input$);
+            });
+        };
+    }
+
+    /**
+     * 构建单节点执行网络 - 仅执行指定节点
+     *
+     * 适用场景：
+     * - 测试单个节点逻辑
+     * - 调试节点配置
+     * - 不希望触发下游节点重新执行
+     *
+     * 前置条件：
+     * - 所有上游节点必须已执行完成（使用历史输出作为输入）
+     *
+     * @param ast 工作流 AST
+     * @param nodeId 目标节点 ID
+     */
+    buildIsolatedNetwork(
+        ast: WorkflowGraphAst,
+        nodeId: string
+    ): OperatorFunction<any, WorkflowEvent> {
+        return (input$: Observable<any>) => {
+            return defer(() => {
+                // Step 0: 展开所有子工作流
+                this.expandSubWorkflows(ast);
+
+                // Step 1: 验证上游节点已完成
+                this.validateUpstreamCompletion(ast, nodeId, new Set([nodeId]));
+
+                // Step 2: 仅重置目标节点
+                const affectedNodes = new Set([nodeId]);
+                this.resetAffectedNodes(ast, affectedNodes);
+
+                // Step 3: 初始化输出 Subjects
+                this.initializeOutputSubjects(ast);
+
+                // Step 4: 构建单节点网络
+                return this.buildIncrementalNetworkInternal(ast, affectedNodes, input$);
+            });
+        };
+    }
+
+    /**
      * 清理订阅，防止内存泄漏
      */
     cleanup(): void {
@@ -194,10 +270,9 @@ export class NetworkBuilder {
     createNodeExecutor(
         node: INode,
         ast: WorkflowGraphAst,
-        ctx: WorkflowGraphAst
     ): OperatorFunction<any, WorkflowEvent> {
         return (input$: Observable<any>) => {
-            return this.buildNodeObservable(node, input$, ast, ctx);
+            return this.buildNodeObservable(node, input$, ast);
         };
     }
     /**
@@ -224,8 +299,7 @@ export class NetworkBuilder {
     private buildNodeObservable(
         node: INode,
         input$: Observable<any>,
-        ast: WorkflowGraphAst,
-        ctx: WorkflowGraphAst
+        ast: WorkflowGraphAst
     ): Observable<WorkflowEvent> {
         return input$.pipe(
             // 使用 take(1) 确保只处理第一次输入触发
@@ -238,7 +312,7 @@ export class NetworkBuilder {
                 }
 
                 // 执行节点并转换为事件流
-                return this.nodeExecutor.execute(node, ast, ctx).pipe(
+                return this.nodeExecutor.execute(node, ast).pipe(
                     concatMap(updatedNode => {
                         // 同步更新原始节点的状态
                         Object.assign(node, updatedNode);
@@ -1019,5 +1093,198 @@ export class NetworkBuilder {
     private cloneNode(node: INode): INode {
         // 使用 JSON 序列化进行深拷贝（Ast.toJSON 已处理 BehaviorSubject）
         return JSON.parse(JSON.stringify(node));
+    }
+
+    // ==================== 增量执行辅助方法 ====================
+
+    /**
+     * 找出受影响的节点（目标节点 + 所有下游节点）
+     */
+    private findAffectedNodes(ast: WorkflowGraphAst, startNodeId: string): Set<string> {
+        const affected = new Set<string>();
+        const visited = new Set<string>();
+
+        const findDownstream = (nodeId: string) => {
+            if (visited.has(nodeId)) return;
+            visited.add(nodeId);
+            affected.add(nodeId);
+
+            const downstreamEdges = ast.edges.filter(edge => edge.from === nodeId);
+            for (const edge of downstreamEdges) {
+                findDownstream(edge.to);
+            }
+        };
+
+        findDownstream(startNodeId);
+        return affected;
+    }
+
+    /**
+     * 验证上游节点已完成执行
+     */
+    private validateUpstreamCompletion(
+        ast: WorkflowGraphAst,
+        nodeId: string,
+        affectedNodes: Set<string>
+    ): void {
+        const visited = new Set<string>();
+
+        const checkUpstream = (currentNodeId: string) => {
+            if (visited.has(currentNodeId)) return;
+            visited.add(currentNodeId);
+
+            const upstreamEdges = ast.edges.filter(edge => edge.to === currentNodeId);
+
+            for (const edge of upstreamEdges) {
+                // 跳过受影响的节点（它们会重新执行）
+                if (affectedNodes.has(edge.from)) continue;
+
+                const upstreamNode = ast.nodes.find(n => n.id === edge.from);
+                if (!upstreamNode) {
+                    throw new Error(`上游节点不存在: ${edge.from}`);
+                }
+
+                if (upstreamNode.state !== 'success' && upstreamNode.state !== 'fail') {
+                    throw new Error(
+                        `上游节点 ${upstreamNode.id} 尚未执行完成（状态: ${upstreamNode.state}）。\n` +
+                        `增量执行需要使用上游的历史输出，请先执行完整工作流。`
+                    );
+                }
+
+                checkUpstream(edge.from);
+            }
+        };
+
+        checkUpstream(nodeId);
+    }
+
+    /**
+     * 重置受影响节点的状态
+     */
+    private resetAffectedNodes(ast: WorkflowGraphAst, affectedNodes: Set<string>): void {
+        ast.nodes.forEach(node => {
+            if (affectedNodes.has(node.id)) {
+                node.state = 'pending';
+                node.error = undefined;
+            }
+        });
+    }
+
+    /**
+     * 构建增量执行网络（内部实现）
+     *
+     * 对于受影响的节点：构建执行流
+     * 对于未受影响的节点：使用历史输出
+     */
+    private buildIncrementalNetworkInternal(
+        ast: WorkflowGraphAst,
+        affectedNodes: Set<string>,
+        input$: Observable<any>
+    ): Observable<WorkflowEvent> {
+        const nodeObservables = new Map<string, Observable<WorkflowEvent>>();
+        const inputSubjects = new Map<string, ReplaySubject<any>>();
+
+        // 为所有节点创建流（但只有受影响节点会重新执行）
+        ast.nodes.forEach(node => {
+            const nodeInput$ = new ReplaySubject<any>(1);
+            inputSubjects.set(node.id, nodeInput$);
+
+            if (affectedNodes.has(node.id)) {
+                // 受影响节点：构建执行流
+                const nodeObs$ = this.buildNodeObservable(node, nodeInput$, ast);
+                nodeObservables.set(node.id, nodeObs$);
+            } else if (node.state === 'success') {
+                // 成功节点：发射历史状态，触发下游
+                const historyObs$ = nodeInput$.pipe(
+                    take(1),
+                    map(() => ({
+                        type: 'node_state' as const,
+                        nodeId: node.id,
+                        data: node
+                    }))
+                );
+                nodeObservables.set(node.id, historyObs$);
+            }
+            // 失败或 pending 节点不参与流
+        });
+
+        // 连接边
+        const edgeGroups = this.groupEdgesByTarget(ast);
+        edgeGroups.forEach(group => {
+            // 只连接受影响节点的输入边
+            if (affectedNodes.has(group.nodeId)) {
+                this.connectEdgesToNode(group, ast, inputSubjects);
+            }
+        });
+
+        // 触发入口节点（受影响且入度为 0，或受影响且所有上游已完成）
+        const inDegrees = this.calculateInDegrees(ast);
+        affectedNodes.forEach(nodeId => {
+            const inDegree = inDegrees.get(nodeId) ?? 0;
+            const subject = inputSubjects.get(nodeId);
+
+            if (inDegree === 0 && subject) {
+                // 入度为 0，直接触发
+                input$.subscribe(value => subject.next(value ?? {}));
+            } else if (subject) {
+                // 检查所有上游是否已完成
+                const upstreamEdges = ast.edges.filter(e => e.to === nodeId);
+                const allUpstreamDone = upstreamEdges.every(e => {
+                    const upstream = ast.nodes.find(n => n.id === e.from);
+                    return upstream && (upstream.state === 'success' || upstream.state === 'fail');
+                });
+
+                if (allUpstreamDone && !affectedNodes.has(upstreamEdges[0]?.from ?? '')) {
+                    // 所有上游已完成且不在受影响节点中，触发执行
+                    const inputData = this.collectInputFromUpstream(ast, nodeId);
+                    subject.next(inputData);
+                }
+            }
+        });
+
+        // 合并仅受影响节点的事件流
+        const affectedStreams = Array.from(affectedNodes)
+            .map(nodeId => nodeObservables.get(nodeId))
+            .filter((obs): obs is Observable<WorkflowEvent> => obs !== undefined);
+
+        if (affectedStreams.length === 0) {
+            return new Observable<WorkflowEvent>(obs => {
+                obs.next({ type: 'workflow_complete', workflowId: ast.id });
+                obs.complete();
+            });
+        }
+
+        return merge(...affectedStreams).pipe(
+            endWith({ type: 'workflow_complete' as const, workflowId: ast.id } as WorkflowCompleteEvent),
+            finalize(() => {
+                inputSubjects.forEach(subject => {
+                    if (!subject.closed) subject.complete();
+                });
+                this.completeOutputSubjects(ast);
+                this.cleanup();
+            })
+        );
+    }
+
+    /**
+     * 从上游节点收集输入数据
+     */
+    private collectInputFromUpstream(ast: WorkflowGraphAst, nodeId: string): Record<string, any> {
+        const inputData: Record<string, any> = {};
+        const incomingEdges = ast.edges.filter(e => e.to === nodeId);
+
+        for (const edge of incomingEdges) {
+            const sourceNode = ast.nodes.find(n => n.id === edge.from);
+            if (!sourceNode || !edge.fromProperty || !edge.toProperty) continue;
+
+            const value = (sourceNode as any)[edge.fromProperty];
+            if (isBehaviorSubject(value)) {
+                inputData[edge.toProperty] = value.getValue();
+            } else if (value !== undefined) {
+                inputData[edge.toProperty] = value;
+            }
+        }
+
+        return inputData;
     }
 }

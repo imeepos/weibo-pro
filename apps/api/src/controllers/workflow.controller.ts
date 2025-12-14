@@ -1,7 +1,7 @@
 import { Controller, Post, Body, Get, BadRequestException, Query, Delete, NotFoundException, Sse, Res, Param, Put } from '@nestjs/common';
-import { Observable, tap } from 'rxjs';
-import { Ast, executeAst, fromJson, generateId, INode, resolveConstructor, type OutputMetadata, getNodeById, wrapExecutionWithOutputEmit, type SseMessage } from '@sker/workflow';
-import { WorkflowGraphAst, ReactiveScheduler } from '@sker/workflow';
+import { Observable, tap, filter, last, map, scan } from 'rxjs';
+import { Ast, executeAst, fromJson, generateId, INode, resolveConstructor, type OutputMetadata, getNodeById, type SseMessage, executeAstWithWorkflowGraph, executeNodeIsolated, type WorkflowEvent } from '@sker/workflow';
+import { WorkflowGraphAst } from '@sker/workflow';
 import { logger, root } from '@sker/core';
 import * as sdk from '@sker/sdk';
 import { WorkflowService } from '../services/workflow.service';
@@ -25,14 +25,12 @@ export class WorkflowController implements sdk.WorkflowController {
   private readonly workflowRunService: WorkflowRunService;
   private readonly workflowTemplateService: WorkflowTemplateService;
   private readonly workflowScheduleService: WorkflowScheduleService;
-  private readonly reactiveScheduler: ReactiveScheduler;
 
   constructor() {
     this.workflowService = root.get(WorkflowService);
     this.workflowRunService = root.get(WorkflowRunService);
     this.workflowTemplateService = root.get(WorkflowTemplateService);
     this.workflowScheduleService = root.get(WorkflowScheduleService);
-    this.reactiveScheduler = root.get(ReactiveScheduler);
   }
 
   /**
@@ -168,10 +166,18 @@ export class WorkflowController implements sdk.WorkflowController {
     try {
       const ast = fromJson(body) as Ast;
 
-      // 使用 wrapExecutionWithOutputEmit 包装执行流
-      // 包含 node_state（节点状态）和 output_emit（BehaviorSubject 发射）两种消息
+      // 执行单个节点
       const execution$ = executeAst(ast, ast as WorkflowGraphAst);
-      const sseStream$ = wrapExecutionWithOutputEmit(execution$);
+
+      // 将节点执行结果转换为 SSE 消息
+      const sseStream$ = execution$.pipe(
+        map((node: any) => ({
+          type: 'node_state' as const,
+          nodeId: node.id,
+          state: node.state,
+          data: node
+        }))
+      );
 
       const subscription = sseStream$.subscribe({
         next: (message: SseMessage) => {
@@ -212,7 +218,7 @@ export class WorkflowController implements sdk.WorkflowController {
   executeNode(
     @Body() body: { workflow: INode, nodeId: string, config?: any },
     @Res() res?: any
-  ): Observable<WorkflowGraphAst> {
+  ): Observable<WorkflowEvent> {
     // 设置 SSE 响应头
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
@@ -266,27 +272,18 @@ export class WorkflowController implements sdk.WorkflowController {
         state: 'running'
       })}\n\n`);
 
-      // 使用 fineTuneNode 进行智能微调 - 只需传入工作流和节点ID
-      const nodeExecution$ = this.reactiveScheduler.fineTuneNode(
-        workflowAst,
-        nodeId
-      );
+      // 使用 executeAstWithWorkflowGraph 进行增量执行
+      const nodeExecution$ = executeAstWithWorkflowGraph(nodeId, workflowAst);
 
       const subscription = nodeExecution$.subscribe({
-        next: (updatedWorkflow: WorkflowGraphAst) => {
-          // 找到执行后的节点状态
-          const executedNode = getNodeById(updatedWorkflow.nodes, nodeId);
+        next: (event: WorkflowEvent) => {
+          logger.debug('节点执行事件', { type: event.type, nodeId: (event as any).nodeId });
 
-          logger.debug('节点执行状态更新', {
-            nodeId: nodeId,
-            state: executedNode?.state
-          });
-
-          // 发送执行进度 - 包含完整的工作流状态
+          // 发送执行进度
           res.write(`data: ${JSON.stringify({
             type: 'progress',
-            workflow: updatedWorkflow,
-            node: executedNode,
+            event,
+            workflow: workflowAst,
             timestamp: new Date().toISOString()
           })}\n\n`);
         },
@@ -313,6 +310,7 @@ export class WorkflowController implements sdk.WorkflowController {
           res.write(`data: ${JSON.stringify({
             type: 'complete',
             nodeId,
+            workflow: workflowAst,
             timestamp: new Date().toISOString()
           })}\n\n`);
 
@@ -591,7 +589,7 @@ export class WorkflowController implements sdk.WorkflowController {
     @Param('nodeId') nodeId: string,
     @Body() body: { config: any },
     @Res() res?: any
-  ): Observable<WorkflowGraphAst> {
+  ): Observable<WorkflowEvent> {
     // 设置 SSE 响应头
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
@@ -635,19 +633,21 @@ export class WorkflowController implements sdk.WorkflowController {
 
 `);
 
-          // 执行节点微调 - 只需传入 AST 和节点ID
-          const fineTune$ = this.reactiveScheduler.fineTuneNode(ast, nodeId);
+          // 使用 executeAstWithWorkflowGraph 执行节点微调
+          const fineTune$ = executeAstWithWorkflowGraph(nodeId, ast);
 
           const subscription = fineTune$.subscribe({
-            next: (updatedAst: WorkflowGraphAst) => {
+            next: (event: WorkflowEvent) => {
               // 发送进度更新
               res.write(`data: ${JSON.stringify({
                 type: 'progress',
-                workflow: updatedAst,
+                event,
+                workflow: ast,
                 affectedNodes: Array.from(this.findAffectedNodesIds(ast, nodeId))
               })}
 
 `);
+              observer.next(event);
             },
             error: (error: any) => {
               logger.error('节点微调失败', { runId, nodeId, error: error.message });
@@ -659,7 +659,7 @@ export class WorkflowController implements sdk.WorkflowController {
             },
             complete: () => {
               logger.info('节点微调完成', { runId, nodeId });
-              res.write(`data: ${JSON.stringify({ type: 'complete' })}
+              res.write(`data: ${JSON.stringify({ type: 'complete', workflow: ast })}
 
 `);
               res.end();

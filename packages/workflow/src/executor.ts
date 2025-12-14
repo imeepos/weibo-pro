@@ -1,11 +1,10 @@
 import { WorkflowGraphAst } from "./ast";
 import { fromJson } from "./generate";
 import { INode } from "./types";
-import { ReactiveScheduler } from './execution/reactive-scheduler';
-import { VisitorExecutor } from './execution/visitor-executor';
 import { Observable, Subject, ReplaySubject } from 'rxjs';
 import { root } from "@sker/core";
 import { NetworkBuilder, WorkflowEvent } from "./execution/network-builder";
+import { NodeExecutor } from "./execution/node-executor";
 
 /**
  * 执行单个 AST 节点
@@ -17,8 +16,8 @@ import { NetworkBuilder, WorkflowEvent } from "./execution/network-builder";
  */
 export function executeAst<S extends INode>(state: S, parent: WorkflowGraphAst): Observable<S> {
     const ast = fromJson(state);
-    const visitor = root.get(VisitorExecutor)
-    return visitor.visit(ast, parent) as Observable<S>;
+    const visitor = root.get(NodeExecutor)
+    return visitor.execute(ast, parent) as Observable<S>;
 }
 
 /**
@@ -41,7 +40,7 @@ export function executeWorkflow(
     input$: Subject<any>
 ): Observable<WorkflowEvent> {
     const builder = root.get(NetworkBuilder)
-    return input$.pipe(builder.buildNetwork(workflow, workflow))
+    return input$.pipe(builder.buildNetwork(workflow))
 }
 
 /**
@@ -60,7 +59,7 @@ export function executeWorkflowImmediate(
     input$.next(inputData)
     input$.complete()
 
-    return input$.pipe(builder.buildNetwork(workflow, workflow))
+    return input$.pipe(builder.buildNetwork(workflow))
 }
 
 /**
@@ -73,9 +72,18 @@ export function executeWorkflowImmediate(
  * @param nodeId 目标节点ID
  * @param context 工作流上下文
  */
-export function executeAstWithWorkflowGraph(nodeId: string, context: WorkflowGraphAst) {
-    const scheduler = root.get(ReactiveScheduler);
-    return scheduler.fineTuneNode(context, nodeId);
+export function executeAstWithWorkflowGraph(
+    nodeId: string,
+    context: WorkflowGraphAst,
+    inputData: Record<string, any> = {}
+): Observable<WorkflowEvent> {
+    const builder = root.get(NetworkBuilder);
+    const input$ = new ReplaySubject<any>(1);
+
+    input$.next(inputData);
+    input$.complete();
+
+    return input$.pipe(builder.buildIncrementalNetwork(context, nodeId));
 }
 
 /**
@@ -92,7 +100,16 @@ export function executeAstWithWorkflowGraph(nodeId: string, context: WorkflowGra
  * @param nodeId 目标节点ID
  * @param context 工作流上下文
  */
-export function executeNodeIsolated(nodeId: string, context: WorkflowGraphAst) {
-    const scheduler = root.get(ReactiveScheduler);
-    return scheduler.executeNodeIsolated(context, nodeId);
+export function executeNodeIsolated(
+    nodeId: string,
+    context: WorkflowGraphAst,
+    inputData: Record<string, any> = {}
+): Observable<WorkflowEvent> {
+    const builder = root.get(NetworkBuilder);
+    const input$ = new ReplaySubject<any>(1);
+
+    input$.next(inputData);
+    input$.complete();
+
+    return input$.pipe(builder.buildIsolatedNetwork(context, nodeId));
 }
