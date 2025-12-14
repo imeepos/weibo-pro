@@ -1,7 +1,7 @@
 import { WorkflowGraphAst } from '../ast';
 import { INode, IEdge, EdgeMode, hasDataMapping, isNode, isBehaviorSubject, isRouteSkipped, extractSubjectValue } from '../types';
 import { executeAst } from '../executor';
-import { Observable, of, EMPTY, merge, combineLatest, zip, asyncScheduler, BehaviorSubject, Subject, concat } from 'rxjs';
+import { Observable, of, EMPTY, merge, combineLatest, zip, asyncScheduler, BehaviorSubject, Subject, concat, ReplaySubject, defer } from 'rxjs';
 import { map, catchError, concatMap, filter, shareReplay, subscribeOn, finalize, scan, takeLast, reduce, take, distinctUntilChanged, skip, tap } from 'rxjs/operators';
 import { concatLatestFrom } from '../operators/concat_latest_from';
 import { tapResponse } from '../operators/tap-response';
@@ -91,10 +91,28 @@ export class ReactiveScheduler {
 
                 // 如果还不是 BehaviorSubject，创建一个
                 if (!isBehaviorSubject(current)) {
-                    (node as any)[key] = new BehaviorSubject(current ?? null);
+                    // 根据属性类型设置合适的默认值
+                    let defaultValue = current;
+                    if (defaultValue === undefined || defaultValue === null) {
+                        // 如果是字符串类型，使用空字符串
+                        if (typeof (node as any)[key] === 'string') {
+                            defaultValue = '';
+                        }
+                        // 如果是数字类型，使用 0
+                        else if (typeof (node as any)[key] === 'number') {
+                            defaultValue = 0;
+                        }
+                        // 如果是布尔类型，使用 false
+                        else if (typeof (node as any)[key] === 'boolean') {
+                            defaultValue = false;
+                        }
+                        // 其他情况使用 null
+                        else {
+                            defaultValue = null;
+                        }
+                    }
+                    (node as any)[key] = new BehaviorSubject(defaultValue);
                 }
-                // 如果已经是 BehaviorSubject，不做任何修改
-                // 这样可以保持测试中手动设置的值
             });
         });
     }
@@ -202,58 +220,49 @@ export class ReactiveScheduler {
         ast: WorkflowGraphAst,
         ctx: WorkflowGraphAst
     ): Observable<WorkflowEvent> {
-        // Step 1: 初始化所有节点的 @Output BehaviorSubject
-        this.initializeOutputSubjects(ast);
+        // 使用 defer 确保每次订阅都重新构建网络
+        return defer(() => {
+            // Step 1: 初始化所有节点的 @Output BehaviorSubject
+            this.initializeOutputSubjects(ast);
 
-        // Step 2: 为每个节点创建输入 Subject 和事件流
-        const nodeEventStreams = new Map<string, Observable<WorkflowEvent>>();
-        const inputSubjects = new Map<string, Subject<any>>();
-        const inDegrees = this.calculateInDegrees(ast);
+            // Step 2: 为每个节点创建输入 Subject 和事件流
+            // 使用 ReplaySubject(1) 缓存最近值，解决订阅时序问题
+            const nodeEventStreams = new Map<string, Observable<WorkflowEvent>>();
+            const inputSubjects = new Map<string, ReplaySubject<any>>();
+            const inDegrees = this.calculateInDegrees(ast);
 
-        // 预分配容量，减少 Map 扩容开销（如果支持的话）
-        const nodeCount = ast.nodes.length;
-        try {
-            if (typeof (nodeEventStreams as any).reserve === 'function') {
-                (nodeEventStreams as any).reserve(nodeCount);
-            }
-            if (typeof (inputSubjects as any).reserve === 'function') {
-                (inputSubjects as any).reserve(nodeCount);
-            }
-        } catch {
-            // 忽略不支持的情况
-        }
+            ast.nodes.forEach(node => {
+                const input$ = new ReplaySubject<any>(1);
+                inputSubjects.set(node.id, input$);
 
-        ast.nodes.forEach(node => {
-            const input$ = new Subject<any>();
-            inputSubjects.set(node.id, input$);
+                const nodeEventStream$ = this.buildNodeEventStream(node, input$, ast, ctx);
+                nodeEventStreams.set(node.id, nodeEventStream$);
+            });
 
-            const nodeEventStream$ = this.buildNodeEventStream(node, input$, ast, ctx);
-            nodeEventStreams.set(node.id, nodeEventStream$);
+            // Step 3: 按目标节点分组收集边，连接数据流
+            const edgeGroups = this.groupEdgesByTarget(ast);
+            edgeGroups.forEach(group => {
+                this.connectEdgesToNode(group, ast, inputSubjects);
+            });
+
+            // Step 4: 触发起始节点（入度为 0）
+            this.triggerStartNodes(ast, inDegrees, inputSubjects);
+
+            // Step 5: 合并所有节点的事件流
+            return this.mergeNodeEventStreams(ast, nodeEventStreams, inputSubjects).pipe(
+                finalize(() => {
+                    // 工作流完成后关闭所有输入Subjects，确保流能正确完成
+                    inputSubjects.forEach(subject => {
+                        if (!subject.closed) {
+                            subject.complete();
+                        }
+                    });
+                    // 关闭所有输出Subjects，确保边模式能正确完成
+                    this.completeOutputSubjects(ast);
+                    console.log(`[ReactiveScheduler] 工作流 ${ast.id} 事件网络清理完成`);
+                })
+            );
         });
-
-        // Step 3: 按目标节点分组收集边，连接数据流
-        const edgeGroups = this.groupEdgesByTarget(ast);
-        edgeGroups.forEach(group => {
-            this.connectEdgesToNode(group, ast, inputSubjects);
-        });
-
-        // Step 4: 触发起始节点（入度为 0）
-        this.triggerStartNodes(ast, inDegrees, inputSubjects);
-
-        // Step 5: 合并所有节点的事件流
-        return this.mergeNodeEventStreams(ast, nodeEventStreams, inputSubjects).pipe(
-            finalize(() => {
-                // 工作流完成后关闭所有输入Subjects，确保流能正确完成
-                inputSubjects.forEach(subject => {
-                    if (!subject.closed) {
-                        subject.complete();
-                    }
-                });
-                // 关闭所有输出Subjects，确保边模式能正确完成
-                this.completeOutputSubjects(ast);
-                console.log(`[ReactiveScheduler] 工作流 ${ast.id} 事件网络清理完成`);
-            })
-        );
     }
 
     /**
@@ -530,14 +539,59 @@ export class ReactiveScheduler {
             // 预加载源节点的输出
             const sourceNode = ast.nodes.find(n => n.id === edge.from);
             if (sourceNode) {
+                // 确保源节点的输出已被初始化为 BehaviorSubject
+                this.ensureNodeOutputSubjects(sourceNode);
+
                 const output = (sourceNode as any)[edge.fromProperty!] as BehaviorSubject<any>;
-                if (isBehaviorSubject(output)) {
+                if (output && isBehaviorSubject(output)) {
                     groups.get(edge.to)!.sources.set(`${edge.from}:${edge.fromProperty}`, output);
+                } else {
+                    console.warn(`[ReactiveScheduler] 源节点 ${edge.from} 的输出 ${edge.fromProperty} 不是 BehaviorSubject，跳过边 ${edge.id}`);
                 }
             }
         });
 
         return Array.from(groups.values());
+    }
+
+    /**
+     * 确保节点的输出属性被初始化为 BehaviorSubject
+     */
+    private ensureNodeOutputSubjects(node: INode): void {
+        if (!isNode(node)) {
+            node = this.compiler.compile(node);
+        }
+        if (!node.metadata?.outputs) return;
+
+        node.metadata.outputs.forEach(output => {
+            const key = output.property;
+            const current = (node as any)[key];
+
+            // 如果还不是 BehaviorSubject，创建一个
+            if (!isBehaviorSubject(current)) {
+                // 根据属性类型设置合适的默认值
+                let defaultValue = current;
+                if (defaultValue === undefined || defaultValue === null) {
+                    // 如果是字符串类型，使用空字符串
+                    if (typeof (node as any)[key] === 'string') {
+                        defaultValue = '';
+                    }
+                    // 如果是数字类型，使用 0
+                    else if (typeof (node as any)[key] === 'number') {
+                        defaultValue = 0;
+                    }
+                    // 如果是布尔类型，使用 false
+                    else if (typeof (node as any)[key] === 'boolean') {
+                        defaultValue = false;
+                    }
+                    // 其他情况使用 null
+                    else {
+                        defaultValue = null;
+                    }
+                }
+                (node as any)[key] = new BehaviorSubject(defaultValue);
+            }
+        });
     }
 
     /**
@@ -547,7 +601,7 @@ export class ReactiveScheduler {
     private connectEdgesToNode(
         group: EdgeGroup,
         ast: WorkflowGraphAst,
-        inputSubjects: Map<string, Subject<any>>
+        inputSubjects: Map<string, ReplaySubject<any>>
     ): void {
         const targetSubject = inputSubjects.get(group.nodeId);
         if (!targetSubject) return;
@@ -633,12 +687,13 @@ export class ReactiveScheduler {
     private triggerStartNodes(
         ast: WorkflowGraphAst,
         inDegrees: Map<string, number>,
-        inputSubjects: Map<string, Subject<any>>
+        inputSubjects: Map<string, ReplaySubject<any>>
     ): void {
         ast.nodes.forEach(node => {
+            const inDegree = inDegrees.get(node.id) ?? 0;
             // 入度为0的节点都应该被触发，不管是否在entryNodeIds中
             // 因为它们没有依赖，可以独立执行
-            if ((inDegrees.get(node.id) ?? 0) === 0) {
+            if (inDegree === 0) {
                 const subject = inputSubjects.get(node.id);
                 if (subject) {
                     // 触发起始节点（无输入）
@@ -655,7 +710,7 @@ export class ReactiveScheduler {
     private mergeNodeEventStreams(
         ast: WorkflowGraphAst,
         nodeEventStreams: Map<string, Observable<WorkflowEvent>>,
-        inputSubjects: Map<string, Subject<any>>
+        inputSubjects: Map<string, ReplaySubject<any>>
     ): Observable<WorkflowEvent> {
         const allNodeStreams = Array.from(nodeEventStreams.values());
 

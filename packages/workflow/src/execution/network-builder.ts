@@ -2,6 +2,7 @@ import { Injectable, root } from '@sker/core';
 import {
     Observable,
     Subject,
+    ReplaySubject,
     combineLatest,
     zip,
     merge,
@@ -9,6 +10,7 @@ import {
     EMPTY,
     Subscription,
     OperatorFunction,
+    defer,
 } from 'rxjs';
 import {
     map,
@@ -21,9 +23,12 @@ import {
     startWith,
     concatMap,
     filter,
+    last,
+    endWith,
+    take,
 } from 'rxjs/operators';
 import { WorkflowGraphAst } from '../ast';
-import { INode, IEdge, EdgeMode, isBehaviorSubject, isNode } from '../types';
+import { INode, IEdge, EdgeMode, isBehaviorSubject, isNode, EMPTY_DATA } from '../types';
 import { NodeExecutor } from './node-executor';
 import { Compiler } from '../compiler';
 
@@ -115,47 +120,51 @@ export class NetworkBuilder {
         ctx: WorkflowGraphAst
     ): OperatorFunction<any, WorkflowEvent> {
         return (input$: Observable<any>) => {
-            // Step 1: 初始化所有节点的 @Output BehaviorSubject
-            this.initializeOutputSubjects(ast);
+            // 使用 defer 确保每次订阅都重新构建网络
+            return defer(() => {
+                // Step 1: 初始化所有节点的 @Output BehaviorSubject
+                this.initializeOutputSubjects(ast);
 
-            // Step 2: 为每个节点创建输入 Subject 和 Observable
-            const nodeObservables = new Map<string, Observable<WorkflowEvent>>();
-            const inputSubjects = new Map<string, Subject<any>>();
-            const inDegrees = this.calculateInDegrees(ast);
+                // Step 2: 为每个节点创建输入 Subject 和 Observable
+                // 使用 ReplaySubject(1) 缓存最近值，解决订阅时序问题
+                const nodeObservables = new Map<string, Observable<WorkflowEvent>>();
+                const inputSubjects = new Map<string, ReplaySubject<any>>();
+                const inDegrees = this.calculateInDegrees(ast);
 
-            ast.nodes.forEach(node => {
-                const input$ = new Subject<any>();
-                inputSubjects.set(node.id, input$);
+                ast.nodes.forEach(node => {
+                    const nodeInput$ = new ReplaySubject<any>(1);
+                    inputSubjects.set(node.id, nodeInput$);
 
-                const nodeObs$ = this.buildNodeObservable(node, input$, ast, ctx);
-                nodeObservables.set(node.id, nodeObs$);
+                    const nodeObs$ = this.buildNodeObservable(node, nodeInput$, ast, ctx);
+                    nodeObservables.set(node.id, nodeObs$);
+                });
+
+                // Step 3: 按目标节点分组收集边
+                const edgeGroups = this.groupEdgesByTarget(ast);
+
+                // Step 4: 为每个节点的边创建数据连接
+                edgeGroups.forEach(group => {
+                    this.connectEdgesToNode(group, ast, inputSubjects);
+                });
+
+                // Step 5: 将外部输入流连接到起始节点（入度为 0）
+                this.connectInputToStartNodes(ast, inDegrees, inputSubjects, input$);
+
+                // Step 6: 合并所有节点的事件流
+                return this.mergeNodeEventStreams(ast, nodeObservables, inputSubjects).pipe(
+                    finalize(() => {
+                        // 工作流完成后关闭所有输入Subjects，确保流能正确完成
+                        inputSubjects.forEach(subject => {
+                            if (!subject.closed) {
+                                subject.complete();
+                            }
+                        });
+                        // 关闭所有输出Subjects，确保边模式能正确完成
+                        this.completeOutputSubjects(ast);
+                        this.cleanup();
+                    })
+                );
             });
-
-            // Step 3: 按目标节点分组收集边
-            const edgeGroups = this.groupEdgesByTarget(ast);
-
-            // Step 4: 为每个节点的边创建数据连接
-            edgeGroups.forEach(group => {
-                this.connectEdgesToNode(group, ast, inputSubjects);
-            });
-
-            // Step 5: 将外部输入流连接到起始节点（入度为 0）
-            this.connectInputToStartNodes(ast, inDegrees, inputSubjects, input$);
-
-            // Step 6: 合并所有节点的事件流
-            return this.mergeNodeEventStreams(ast, nodeObservables, inputSubjects).pipe(
-                finalize(() => {
-                    // 工作流完成后关闭所有输入Subjects，确保流能正确完成
-                    inputSubjects.forEach(subject => {
-                        if (!subject.closed) {
-                            subject.complete();
-                        }
-                    });
-                    // 关闭所有输出Subjects，确保边模式能正确完成
-                    this.completeOutputSubjects(ast);
-                    this.cleanup();
-                })
-            );
         };
     }
 
@@ -198,6 +207,7 @@ export class NetworkBuilder {
      * - Observable<WorkflowEvent>
      *   - 流式发射节点的所有事件（状态变化 + 输出发射）
      *   - 每次节点状态更新时，同时发射输出事件
+     *   - 当节点执行完成（success/fail）时，流自动完成
      *
      * 核心机制：
      * 1. 当 input$ 发射时，触发节点执行
@@ -205,6 +215,7 @@ export class NetworkBuilder {
      * 3. 将每次 INode 发射转换为事件流：
      *    a. 发射 node_state 事件
      *    b. 提取并发射 output_emit 事件
+     * 4. 当节点达到终态（success/fail），流完成
      */
     private buildNodeObservable(
         node: INode,
@@ -213,6 +224,9 @@ export class NetworkBuilder {
         ctx: WorkflowGraphAst
     ): Observable<WorkflowEvent> {
         return input$.pipe(
+            // 使用 take(1) 确保只处理第一次输入触发
+            // 对于需要多输入的节点，应该使用 COMBINE_LATEST 边模式
+            take(1),
             switchMap(inputData => {
                 // 将输入数据赋给节点
                 if (inputData) {
@@ -235,7 +249,6 @@ export class NetworkBuilder {
                         const outputEvents = this.extractOutputEvents(updatedNode as INode);
                         events.push(...outputEvents);
 
-                        console.log(`[NetworkBuilder] 节点=${updatedNode.id} 发射 ${events.length} 个事件`);
                         return events;
                     }),
                     catchError(error => {
@@ -269,8 +282,8 @@ export class NetworkBuilder {
             if (isBehaviorSubject(subject)) {
                 const value = subject.getValue();
 
-                // 只有非空值才发射事件
-                if (value !== null && value !== undefined && value !== '') {
+                // 过滤空值：null、undefined、空字符串、EMPTY_DATA
+                if (value !== null && value !== undefined && value !== '' && value !== EMPTY_DATA) {
                     events.push({
                         type: 'output_emit',
                         nodeId: node.id,
@@ -420,23 +433,34 @@ export class NetworkBuilder {
     /**
      * 为目标节点连接所有输入边（内部实现）
      * 支持多种流合并模式
+     *
+     * 关键优化：多边情况下默认使用 COMBINE_LATEST 模式
+     * - 单边：直接连接，立即触发
+     * - 多边：等待所有输入就绪后再触发一次执行
      */
     private connectEdgesToNode(
         group: EdgeGroup,
         ast: WorkflowGraphAst,
-        inputSubjects: Map<string, Subject<any>>
+        inputSubjects: Map<string, ReplaySubject<any>>
     ): void {
         const targetSubject = inputSubjects.get(group.nodeId);
         if (!targetSubject) return;
 
         if (group.edges.length === 0) return;
 
+        // 判断值是否有效（过滤 null、undefined 和 EMPTY_DATA）
+        const isValidValue = (value: any) => value !== null && value !== undefined && value !== EMPTY_DATA;
+
         // 如果只有一条边，直接连接（保持原有逻辑）
         if (group.edges.length === 1) {
             const edge = group.edges[0]!;
             const source = group.sources.get(`${edge.from}:${edge.fromProperty}`);
             if (source) {
-                const sub = source.asObservable().subscribe(value => {
+                const sub = source.asObservable().pipe(
+                    // 只取第一个有效值，确保边只触发一次
+                    filter(isValidValue),
+                    take(1)
+                ).subscribe(value => {
                     targetSubject.next({ [edge.toProperty!]: value });
                 });
                 this.subscriptions.set(`${group.nodeId}:0`, sub);
@@ -444,20 +468,38 @@ export class NetworkBuilder {
             return;
         }
 
+        // 多边情况：默认使用 COMBINE_LATEST 模式
+        // 这样可以等待所有输入就绪后再触发节点执行
+        const mode = group.edges[0]!.mode ?? EdgeMode.COMBINE_LATEST;
+        console.log(`[NetworkBuilder] 节点 ${group.nodeId} 有 ${group.edges.length} 条输入边，使用 ${mode} 模式`);
+
         // 收集所有边的 Observable 和目标属性
-        const sources = group.edges.map(edge => {
+        const sources = group.edges.map((edge, idx) => {
             const source = group.sources.get(`${edge.from}:${edge.fromProperty}`);
-            return source ? source.asObservable() : EMPTY;
+            if (!source) {
+                console.warn(`[NetworkBuilder] 未找到源 ${edge.from}:${edge.fromProperty}`);
+                return EMPTY;
+            }
+            console.log(`[NetworkBuilder] 边 ${idx}: ${edge.from}:${edge.fromProperty} → ${group.nodeId}:${edge.toProperty}`);
+            return source.asObservable().pipe(
+                // 过滤掉 null 和 undefined，允许空字符串和 0
+                tap(value => console.log(`[NetworkBuilder] 边 ${idx} 收到值:`, typeof value, value === '' ? '(空字符串)' : value?.toString?.()?.substring(0, 50))),
+                filter(isValidValue),
+                tap(value => console.log(`[NetworkBuilder] 边 ${idx} 过滤后:`, typeof value, value === '' ? '(空字符串)' : value?.toString?.()?.substring(0, 50)))
+            );
         });
 
         const toProperties = group.edges.map(edge => edge.toProperty!);
-        const mode = group.edges[0]!.mode ?? EdgeMode.MERGE;
 
         // 使用 createEdgeMerger 创建边流合并 Observable
-        const merged$ = this.createEdgeMerger(mode, sources, toProperties);
+        const merged$ = this.createEdgeMerger(mode, sources, toProperties).pipe(
+            // 只取第一次组合值，确保节点只执行一次
+            take(1)
+        );
 
         // 订阅并发送到目标节点
         const sub = merged$.subscribe(value => {
+            console.log(`[NetworkBuilder] 边合并完成，发送到节点 ${group.nodeId}:`, Object.keys(value));
             targetSubject.next(value);
         });
 
@@ -471,7 +513,7 @@ export class NetworkBuilder {
     private connectInputToStartNodes(
         ast: WorkflowGraphAst,
         inDegrees: Map<string, number>,
-        inputSubjects: Map<string, Subject<any>>,
+        inputSubjects: Map<string, ReplaySubject<any>>,
         externalInput$: Observable<any>
     ): void {
         const startNodes = ast.nodes.filter(node => (inDegrees.get(node.id) ?? 0) === 0);
@@ -563,7 +605,7 @@ export class NetworkBuilder {
     private mergeNodeEventStreams(
         ast: WorkflowGraphAst,
         nodeObservables: Map<string, Observable<WorkflowEvent>>,
-        inputSubjects: Map<string, Subject<any>>
+        inputSubjects: Map<string, ReplaySubject<any>>
     ): Observable<WorkflowEvent> {
         const allNodeStreams = Array.from(nodeObservables.values());
 
@@ -577,14 +619,12 @@ export class NetworkBuilder {
             });
         }
 
-        return merge(...allNodeStreams, new Observable<WorkflowEvent>(obs => {
-            // 流结束时发射完成事件
-            obs.next({
+        // 使用 endWith 确保 workflow_complete 在所有节点流完成后才发射
+        return merge(...allNodeStreams).pipe(
+            endWith({
                 type: 'workflow_complete' as const,
                 workflowId: ast.id
-            });
-            obs.complete();
-        })).pipe(
+            } as WorkflowCompleteEvent),
             finalize(() => {
                 console.log(`[NetworkBuilder] 工作流 ${ast.id} 执行完成`);
             })
@@ -693,7 +733,7 @@ export class NetworkBuilder {
 
                 // 如果还不是 BehaviorSubject，创建一个
                 if (!isBehaviorSubject(current)) {
-                    (node as any)[key] = new BehaviorSubject(current ?? null);
+                    (node as any)[key] = new BehaviorSubject(current ?? EMPTY_DATA);
                 }
             });
         });

@@ -123,7 +123,7 @@
         "system": [],
         "prompt": [],
         "temperature": 0.5,
-        "model": "deepseek-ai/DeepSeek-V3.2-Exp"
+        "model": "deepseek-ai/DeepSeek-V3.2"
       },
       {
         "id": "efa98adc-faa7-4377-bacb-e1f693bc0655",
