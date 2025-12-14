@@ -37,13 +37,13 @@ export class WeiboAjaxFeedHotTimelineAst extends Ast {
     refresh: number = 1;
 
     @Output({ title: '帖子短id' })
-    mblogid: BehaviorSubject<string> = new BehaviorSubject<string>(``);
+    mblogid = new BehaviorSubject<string>(``);
 
     @Output({ title: '用户id' })
-    uid: BehaviorSubject<string> = new BehaviorSubject<string>(``);
+    uid = new BehaviorSubject<string>(``);
 
     @Output({ title: '结束' })
-    is_end: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
+    is_end = new BehaviorSubject<boolean>(false);
 
     type: 'WeiboAjaxFeedHotTimelineAst' = 'WeiboAjaxFeedHotTimelineAst';
 }

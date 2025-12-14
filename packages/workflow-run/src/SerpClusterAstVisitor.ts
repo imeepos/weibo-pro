@@ -39,13 +39,13 @@ export class SerpClusterAstVisitor {
                 if (abortController.signal.aborted) {
                     ast.state = 'fail';
                     setAstError(ast, new Error('工作流已取消'));
-                    obs.next({ ...ast });
+                    obs.next({ type: 'node_fail', id: ast.id, data: ast });
                     return;
                 }
 
                 ast.state = 'running';
                 ast.count += 1;
-                obs.next({ ...ast });
+                obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
                 const model = useLlmModel({ temperature: 0 });
                 const userContent = JSON.stringify(ast.searchResults, null, 2);
@@ -64,15 +64,15 @@ export class SerpClusterAstVisitor {
                 if (abortController.signal.aborted) {
                     ast.state = 'fail';
                     setAstError(ast, new Error('工作流已取消'));
-                    obs.next({ ...ast });
+                    obs.next({ type: 'node_fail', id: ast.id, data: ast });
                     return;
                 }
 
                 ast.clusters = result.clusters || [];
-                obs.next({ ...ast });
+                obs.next({ type: 'node_fail', id: ast.id, data: ast });
 
                 ast.state = 'success';
-                obs.next({ ...ast });
+                obs.next({ type: 'node_success', id: ast.id, data: ast });
                 obs.complete();
             };
 
@@ -80,7 +80,7 @@ export class SerpClusterAstVisitor {
                 console.error('[SerpClusterAst] 执行失败:', e);
                 ast.state = 'fail';
                 setAstError(ast, e);
-                obs.next({ ...ast });
+                obs.next({ type: 'node_fail', id: ast.id, data: ast });
                 obs.complete();
             });
 

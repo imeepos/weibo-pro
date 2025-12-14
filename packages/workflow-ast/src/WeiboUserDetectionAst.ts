@@ -18,7 +18,7 @@ export class WeiboUserDetectionAst extends Ast {
     canStart: boolean[] = [];
 
     @Output({ title: '结束' })
-    is_end: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
+    is_end = new BehaviorSubject<boolean>(false);
 
     type: `WeiboUserDetectionAst` = `WeiboUserDetectionAst`
 

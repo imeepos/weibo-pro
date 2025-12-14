@@ -62,13 +62,12 @@ export class AnswerEvaluatorAstVisitor {
         if (wrappedCtx.abortSignal?.aborted) {
           ast.state = 'fail';
           setAstError(ast, new Error('工作流已取消'));
-          obs.next({ ...ast });
+          obs.next({ type: 'node_fail', id: ast.id, data: ast });
           return;
         }
 
         ast.state = 'running';
-        ast.count += 1;
-        obs.next({ ...ast });
+        obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
         const model = useLlmModel({
           model: ast.model,
@@ -116,7 +115,7 @@ export class AnswerEvaluatorAstVisitor {
         if (wrappedCtx.abortSignal?.aborted) {
           ast.state = 'fail';
           setAstError(ast, new Error('工作流已取消'));
-          obs.next({ ...ast });
+          obs.next({ type: 'node_fail', id: ast.id, data: ast });
           return;
         }
 
@@ -128,14 +127,14 @@ export class AnswerEvaluatorAstVisitor {
         ast.passed.next(allPassed);
 
         ast.state = 'success';
-        obs.next({ ...ast });
+        obs.next({ type: 'node_success', id: ast.id, data: ast });
         obs.complete();
       };
 
       run().catch(e => {
         ast.state = 'fail';
         setAstError(ast, e);
-        obs.next({ ...ast });
+        obs.next({ type: 'node_fail', id: ast.id, data: ast });
         obs.complete();
       });
 

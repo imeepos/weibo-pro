@@ -376,7 +376,7 @@ export class EventAutoCreatorVisitor {
             // 更新事件统计信息（hourly 粒度）
             await this.updateEventStatistics(m, event, ast.post, sentiment);
           });
-          obs.next({ type: 'node_emit', id: ast.id, property: 'event', value: ast.event.value });
+          obs.next({ type: 'node_emit', id: ast.id, property: 'is_end', value: true });
 
           ast.state = 'success';
           obs.next({ type: 'node_success', id: ast.id, data: ast });

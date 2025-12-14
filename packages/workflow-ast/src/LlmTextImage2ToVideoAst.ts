@@ -8,13 +8,13 @@ export class LlmTextImage2ToVideoAst extends Ast {
     prompt: string[] = [];
 
     @Input({ title: '首帧图' })
-    first_image: BehaviorSubject<string> = new BehaviorSubject<string>(``)
+    first_image: string = ``
 
     @Input({ title: '尾帧图' })
-    last_image: BehaviorSubject<string> = new BehaviorSubject<string>(``)
+    last_image: string = ``
 
     @Output({ title: '视频' })
-    video: BehaviorSubject<string> = new BehaviorSubject<string>(``)
+    video = new BehaviorSubject<string>(``)
 
     type: `LlmTextImage2ToVideoAst` = `LlmTextImage2ToVideoAst`
 }

@@ -15,7 +15,7 @@ export class LlmVideoToTextAst extends Ast {
     videos: string[] = [];
 
     @Output({ title: '描述' })
-    text: BehaviorSubject<string> = new BehaviorSubject<string>(``)
+    text = new BehaviorSubject<string>(``)
 
     type: `LlmVideoToTextAst` = `LlmVideoToTextAst`
 }

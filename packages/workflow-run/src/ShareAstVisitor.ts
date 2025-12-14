@@ -22,7 +22,7 @@ export class ShareAstVisitor {
         return new Observable<NodeEvent>(obs => {
             ast.state = 'running';
             ast.count += 1;
-            obs.next(ast);
+            obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
             /**
              * 循环场景下的历史记录累积
@@ -59,10 +59,10 @@ export class ShareAstVisitor {
                 isAccumulating: (ast.previousHistory?.length || 0) > 0
             });
 
-            obs.next(ast);
+            obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
             ast.state = 'success';
-            obs.next(ast);
+            obs.next({ type: 'node_success', id: ast.id, data: ast });
             obs.complete();
         });
     }

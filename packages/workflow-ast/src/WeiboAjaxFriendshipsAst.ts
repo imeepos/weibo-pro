@@ -18,7 +18,7 @@ export class WeiboAjaxFriendshipsAst extends Ast {
     page?: number = 1;
 
     @Output({ title: '是否结束' })
-    isEnd: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
+    isEnd = new BehaviorSubject<boolean>(false);
 
     type: `WeiboAjaxFriendshipsAst` = `WeiboAjaxFriendshipsAst`
 }

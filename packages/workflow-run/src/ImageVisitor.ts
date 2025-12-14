@@ -15,16 +15,16 @@ export class ImageVisitor {
     handler(ast: ImageAst, ctx: any) {
         return new Observable<NodeEvent>(obs => {
             ast.state = 'running';
-            obs.next({ ...ast });
+            obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
 
             // 直接使用 uploadedImage（可能来自上游或用户上传）
             ast.image.next(ast.uploadedImage || '');
 
-            obs.next({ ...ast });
+            obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
             ast.state = 'success';
-            obs.next({ ...ast });
+            obs.next({ type: 'node_success', id: ast.id, data: ast });
             obs.complete();
         });
     }

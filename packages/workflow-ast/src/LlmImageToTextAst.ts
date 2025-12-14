@@ -15,7 +15,7 @@ export class LlmImageToTextAst extends Ast {
     images: string[] = [];
 
     @Output({ title: '描述' })
-    text: BehaviorSubject<string> = new BehaviorSubject<string>(``)
+    text = new BehaviorSubject<string>(``)
 
     type: `LlmImageToTextAst` = `LlmImageToTextAst`
 }

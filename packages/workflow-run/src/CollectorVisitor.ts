@@ -14,7 +14,7 @@ export class CollectorVisitor {
     handler(ast: CollectorAst, ctx: any) {
         return new Observable<NodeEvent>(obs => {
             ast.state = 'running';
-            obs.next({ ...ast });
+            obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
             // IS_BUFFER 模式已在流层面处理，这里直接使用收集的数据
             let items = ast.items || [];
@@ -25,10 +25,10 @@ export class CollectorVisitor {
 
             ast.result.next(items);
 
-            obs.next({ ...ast });
+            obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
             ast.state = 'success';
-            obs.next({ ...ast });
+            obs.next({ type: 'node_success', id: ast.id, data: ast });
             obs.complete();
         });
     }

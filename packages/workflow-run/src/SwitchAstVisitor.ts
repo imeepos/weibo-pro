@@ -9,7 +9,7 @@ export class SwitchAstVisitor {
     handler(ast: SwitchAst, ctx: any) {
         return new Observable<NodeEvent>(obs => {
             ast.state = 'running'
-            obs.next({ ...ast })
+            obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
             const inputValue = ast.value
             const outputs = ast.metadata.outputs
@@ -45,10 +45,10 @@ export class SwitchAstVisitor {
                 this.setOutputValue(ast, propKey, value)
             }
 
-            obs.next({ ...ast })
+            obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
             ast.state = 'success'
-            obs.next({ ...ast })
+            obs.next({ type: 'node_success', id: ast.id, data: ast });
             obs.complete()
         })
     }

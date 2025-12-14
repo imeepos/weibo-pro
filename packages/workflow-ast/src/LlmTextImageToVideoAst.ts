@@ -11,7 +11,7 @@ export class LlmTextImageToVideoAst extends Ast {
     images: string[] = [];
 
     @Output({ title: '视频' })
-    video: BehaviorSubject<string> = new BehaviorSubject<string>(``)
+    video = new BehaviorSubject<string>(``)
 
     type: `LlmTextImageToVideoAst` = `LlmTextImageToVideoAst`
 }

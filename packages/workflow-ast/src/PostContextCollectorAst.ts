@@ -15,13 +15,13 @@ export class PostContextCollectorAst extends Ast {
   canStart: boolean[] = [];
 
   @Output({ title: '帖子实体' })
-  post: BehaviorSubject<WeiboPostEntity | undefined> = new BehaviorSubject<WeiboPostEntity | undefined>(undefined);
+  post = new BehaviorSubject<WeiboPostEntity | undefined>(undefined);
 
   @Output({ title: '评论列表' })
-  comments: BehaviorSubject<WeiboCommentEntity[] | undefined> = new BehaviorSubject<WeiboCommentEntity[] | undefined>(undefined);
+  comments = new BehaviorSubject<WeiboCommentEntity[]>([]);
 
   @Output({ title: '转发列表' })
-  reposts: BehaviorSubject<WeiboRepostEntity[] | undefined> = new BehaviorSubject<WeiboRepostEntity[] | undefined>(undefined);
+  reposts = new BehaviorSubject<WeiboRepostEntity[]>([]);
 
   type: 'PostContextCollectorAst' = 'PostContextCollectorAst';
 }

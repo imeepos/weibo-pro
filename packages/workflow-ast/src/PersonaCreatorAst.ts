@@ -43,10 +43,10 @@ export class PersonaCreatorAst extends Ast {
   generatedDestiny?: PersonaDestiny;
 
   @Output({ title: '角色ID' })
-  personaId: BehaviorSubject<string> = new BehaviorSubject<string>('');
+  personaId = new BehaviorSubject<string>('');
 
   @Output({ title: '角色名' })
-  personaName: BehaviorSubject<string> = new BehaviorSubject<string>('');
+  personaName = new BehaviorSubject<string>('');
 
   type: 'PersonaCreatorAst' = 'PersonaCreatorAst';
 }

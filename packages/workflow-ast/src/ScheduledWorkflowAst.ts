@@ -1,4 +1,5 @@
 import { Ast, Input, Output, Node, State } from '@sker/workflow'
+import { BehaviorSubject } from 'rxjs'
 
 /**
  * 定时工作流节点
@@ -47,10 +48,10 @@ export class ScheduledWorkflowAst extends Ast {
   enabled: boolean = true
 
   @Output({ title: '调度ID' })
-  scheduleId: string = ''
+  scheduleId = new BehaviorSubject<string>('')
 
   @Output({ title: '下次执行时间' })
-  nextRunAt?: Date
+  nextRunAt = new BehaviorSubject<Date | undefined>(undefined)
 
   @State({ title: '状态' })
   status: string = 'enabled'

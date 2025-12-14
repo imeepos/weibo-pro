@@ -12,7 +12,7 @@ export class EventAutoCreatorAst extends Ast {
   post!: WeiboPostEntity;
 
   @Output({ title: '结束' })
-  is_end: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
+  is_end = new BehaviorSubject<boolean>(false);
 
   type: 'EventAutoCreatorAst' = 'EventAutoCreatorAst';
 }

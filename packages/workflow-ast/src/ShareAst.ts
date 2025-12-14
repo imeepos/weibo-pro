@@ -59,10 +59,10 @@ export class ShareAst extends Ast {
     // === 输出：对话历史 ===
 
     @Output({ title: '对话历史' })
-    chatHistory: BehaviorSubject<ChatMessage[]> = new BehaviorSubject<ChatMessage[]>([]);
+    chatHistory = new BehaviorSubject<ChatMessage[]>([]);
 
     @Output({ title: '格式化历史' })
-    formattedHistory: BehaviorSubject<string> = new BehaviorSubject<string>('');
+    formattedHistory = new BehaviorSubject<string>(``);
 
     type: `ShareAst` = `ShareAst`
 }

@@ -11,7 +11,7 @@ export class MergeAstVisitor {
     handler(ast: MergeAst, ctx: any) {
         return new Observable<NodeEvent>(obs => {
             ast.state = 'running'
-            obs.next({ ...ast })
+            obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
             let inputs = ast.inputs || []
             if (!Array.isArray(inputs)) {
@@ -23,10 +23,10 @@ export class MergeAstVisitor {
             ast.result.next(result)
             ast.totalCount.next(result.length)
 
-            obs.next({ ...ast })
+            obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
             ast.state = 'success'
-            obs.next({ ...ast })
+            obs.next({ type: 'node_success', id: ast.id, data: ast });
             obs.complete()
         })
     }

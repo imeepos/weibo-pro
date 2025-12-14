@@ -16,13 +16,13 @@ export class LlmCategoryAstVisitor {
                 if (abortController.signal.aborted) {
                     ast.state = 'fail';
                     setAstError(ast, new Error('工作流已取消'));
-                    obs.next({ ...ast });
+                    obs.next({ type: 'node_fail', id: ast.id, data: ast });
                     return;
                 }
 
                 ast.state = 'running';
                 ast.count += 1;
-                obs.next({ ...ast });
+                obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
                 const outputs = ast.metadata.outputs.filter(o => o.isRouter);
                 const categories = outputs.map(o => ({
@@ -37,7 +37,7 @@ export class LlmCategoryAstVisitor {
                 if (nonDefaultCategories.length === 0) {
                     this.setOutput(ast, 'output_default', ast.context);
                     ast.state = 'success';
-                    obs.next({ ...ast });
+                    obs.next({ type: 'node_success', id: ast.id, data: ast });
                     obs.complete();
                     return;
                 }
@@ -83,7 +83,7 @@ ${categoryList}
                 if (abortController.signal.aborted) {
                     ast.state = 'fail';
                     setAstError(ast, new Error('工作流已取消'));
-                    obs.next({ ...ast });
+                    obs.next({ type: 'node_fail', id: ast.id, data: ast });
                     return;
                 }
 
@@ -102,9 +102,9 @@ ${categoryList}
                     this.setOutput(ast, cat.property, value);
                 }
 
-                obs.next({ ...ast });
+                obs.next({ type: 'node_runing', id: ast.id, data: ast });
                 ast.state = 'success';
-                obs.next({ ...ast });
+                obs.next({ type: 'node_success', id: ast.id, data: ast });
                 obs.complete();
             };
 
@@ -112,7 +112,7 @@ ${categoryList}
                 console.error('[LlmCategoryAst] 执行失败:', e);
                 ast.state = 'fail';
                 setAstError(ast, e);
-                obs.next({ ...ast });
+                obs.next({ type: 'node_fail', id: ast.id, data: ast });
                 obs.complete();
             });
 

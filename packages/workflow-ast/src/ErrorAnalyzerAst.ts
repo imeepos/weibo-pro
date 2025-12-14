@@ -21,13 +21,13 @@ export class ErrorAnalyzerAst extends Ast {
   model: string = 'deepseek-ai/DeepSeek-V3';
 
   @Output({ title: '总结' })
-  recap: BehaviorSubject<string> = new BehaviorSubject<string>('');
+  recap = new BehaviorSubject<string>(``);
 
   @Output({ title: '错误定位' })
-  blame: BehaviorSubject<string> = new BehaviorSubject<string>('');
+  blame = new BehaviorSubject<string>(``);
 
   @Output({ title: '改进建议' })
-  improvement: BehaviorSubject<string> = new BehaviorSubject<string>('');
+  improvement = new BehaviorSubject<string>(``);
 
   type: 'ErrorAnalyzerAst' = 'ErrorAnalyzerAst';
 }

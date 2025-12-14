@@ -8,14 +8,14 @@ export class DateAstVisitor {
     handler(ast: DateAst, ctx: any) {
         return new Observable<NodeEvent>(obs => {
             ast.state = 'running'
-            obs.next({ ...ast })
+            obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
             ast.date.next(new Date(ast.dateStr));
 
-            obs.next({ ...ast })
+            obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
             ast.state = 'success';
-            obs.next({ ...ast })
+            obs.next({ type: 'node_success', id: ast.id, data: ast });
             obs.complete()
         })
     }

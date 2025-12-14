@@ -22,21 +22,21 @@ export class QueryRewriterAstVisitor {
         if (abortController.signal.aborted) {
           ast.state = 'fail';
           setAstError(ast, new Error('工作流已取消'));
-          obs.next({ ...ast });
+          obs.next({ type: 'node_fail', id: ast.id, data: ast });
           return;
         }
 
         if (!ast.query || ast.query.length === 0) {
           ast.state = 'fail';
           setAstError(ast, new Error('请提供原始查询'));
-          obs.next({ ...ast });
+          obs.next({ type: 'node_fail', id: ast.id, data: ast });
           obs.complete();
           return;
         }
 
         ast.state = 'running';
         ast.count += 1;
-        obs.next({ ...ast });
+        obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
         const model = useLlmModel({
           model: ast.model,
@@ -95,16 +95,16 @@ export class QueryRewriterAstVisitor {
           if (abortController.signal.aborted) {
             ast.state = 'fail';
             setAstError(ast, new Error('工作流已取消'));
-            obs.next({ ...ast });
+            obs.next({ type: 'node_fail', id: ast.id, data: ast });
             return;
           }
 
           ast.reasoning.next(result.reasoning);
           ast.subQueries.next(result.queries);
-          obs.next({ ...ast });
+          obs.next({ type: 'node_fail', id: ast.id, data: ast });
 
           ast.state = 'success';
-          obs.next({ ...ast });
+          obs.next({ type: 'node_success', id: ast.id, data: ast });
           obs.complete();
 
         } catch (error) {
@@ -115,7 +115,7 @@ export class QueryRewriterAstVisitor {
       run().catch(e => {
         ast.state = 'fail';
         setAstError(ast, e);
-        obs.next({ ...ast });
+        obs.next({ type: 'node_fail', id: ast.id, data: ast });
         obs.complete();
       });
 

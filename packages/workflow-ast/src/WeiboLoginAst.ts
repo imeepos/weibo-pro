@@ -23,13 +23,13 @@ import { BehaviorSubject } from 'rxjs';
 export class WeiboLoginAst extends Ast {
 
     @Output({ title: '微博账号', isRouter: true })
-    account: BehaviorSubject<WeiboAccountEntity | undefined> = new BehaviorSubject<WeiboAccountEntity | undefined>(undefined);
+    account = new BehaviorSubject<WeiboAccountEntity | undefined>(undefined);
 
     @Output({ title: '登录二维码', isRouter: true })
-    qrcode: BehaviorSubject<string | null> = new BehaviorSubject<string | null>(null);
+    qrcode = new BehaviorSubject<string | null>(null);
 
     @Output({ title: '提示消息' })
-    message: BehaviorSubject<string | null> = new BehaviorSubject<string | null>(null);
+    message = new BehaviorSubject<string | null>(null);
 
     type: `WeiboLoginAst` = `WeiboLoginAst`
 }

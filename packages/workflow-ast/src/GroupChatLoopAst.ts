@@ -62,13 +62,13 @@ export class GroupChatLoopAst extends Ast {
     // === 运行时状态 ===
 
     @Output({ title: '对话历史（数组）' })
-    chatHistory: BehaviorSubject<ChatMessage[]> = new BehaviorSubject<ChatMessage[]>([]);
+    chatHistory = new BehaviorSubject<ChatMessage[]>([]);
 
     @Output({ title: '对话历史（文本）' })
-    historyText: BehaviorSubject<string> = new BehaviorSubject<string>('');
+    historyText = new BehaviorSubject<string>('');
 
     @Output({ title: '当前轮次' })
-    currentRound: number = 0;
+    currentRound = new BehaviorSubject<number>(0);
 
     type: `GroupChatLoopAst` = `GroupChatLoopAst`;
 }

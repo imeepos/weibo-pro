@@ -27,10 +27,10 @@ export class ResearchPlannerAst extends Ast {
   soundbites: string[] = [];
 
   @Output({ title: '子问题列表' })
-  subproblems: BehaviorSubject<string[]> = new BehaviorSubject<string[]>([]);
+  subproblems = new BehaviorSubject<string[]>([]);
 
   @Output({ title: '推理过程' })
-  reasoning: BehaviorSubject<string> = new BehaviorSubject<string>('');
+  reasoning = new BehaviorSubject<string>(``);
 
   type: 'ResearchPlannerAst' = 'ResearchPlannerAst';
 }

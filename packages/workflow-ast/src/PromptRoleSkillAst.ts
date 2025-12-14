@@ -34,10 +34,10 @@ export class PromptRoleSkillAst extends Ast {
   skillContents: Record<string, string> = {};
 
   @Output({ title: '选中技能列表' })
-  selectedSkillsList: BehaviorSubject<SkillSummary[]> = new BehaviorSubject<SkillSummary[]>([]);
+  selectedSkillsList = new BehaviorSubject<SkillSummary[]>([])
 
   @Output({ title: '技能内容' })
-  skillContent: BehaviorSubject<Record<string, string>> = new BehaviorSubject<Record<string, string>>({});
+  skillContent = new BehaviorSubject<Record<string, string>>({})
 
   type: 'PromptRoleSkillAst' = 'PromptRoleSkillAst';
 }

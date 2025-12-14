@@ -26,7 +26,7 @@ export class PostNLPAnalyzerAst extends Ast {
   reposts!: WeiboRepostEntity[];
 
   @Output({ title: 'NLP 分析结果' })
-  nlpResult: BehaviorSubject<CompleteAnalysisResult | undefined> = new BehaviorSubject<CompleteAnalysisResult | undefined>(undefined);
+  nlpResult = new BehaviorSubject<CompleteAnalysisResult | undefined>(undefined);
 
   type: 'PostNLPAnalyzerAst' = 'PostNLPAnalyzerAst';
 }

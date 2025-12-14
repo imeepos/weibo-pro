@@ -1,6 +1,7 @@
 import { Subscriber } from "rxjs";
 import { BrowserContext, Page } from "playwright";
 import { WeiboLoginAst } from "@sker/workflow-ast";
+import { NodeEvent } from "@sker/workflow";
 
 /**
  * 微博登录事件类型
@@ -32,7 +33,7 @@ export interface WeiboUserInfo {
 export interface LoginSession {
   sessionId: string;
   userId: string;
-  subject: Subscriber<WeiboLoginAst>
+  subject: Subscriber<NodeEvent>
   context: BrowserContext;
   page: Page;
   timer?: NodeJS.Timeout;

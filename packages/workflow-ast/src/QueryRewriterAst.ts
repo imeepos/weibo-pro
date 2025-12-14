@@ -24,10 +24,10 @@ export class QueryRewriterAst extends Ast {
   model: string = 'deepseek-ai/DeepSeek-V3';
 
   @Output({ title: '子查询列表' })
-  subQueries: BehaviorSubject<string[] | null> = new BehaviorSubject<string[] | null>(null);
+  subQueries = new BehaviorSubject<string[] | null>(null);
 
   @Output({ title: '推理过程' })
-  reasoning: BehaviorSubject<string | null> = new BehaviorSubject<string | null>(null);
+  reasoning = new BehaviorSubject<string | null>(null);
 
   type: 'QueryRewriterAst' = 'QueryRewriterAst';
 }

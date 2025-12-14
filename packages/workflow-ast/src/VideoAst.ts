@@ -15,7 +15,7 @@ export class VideoAst extends Ast {
     uploadedVideo: string = '';
 
     @Output({ title: '视频' })
-    video: BehaviorSubject<string> = new BehaviorSubject<string>('');
+    video = new BehaviorSubject<string>(``);
 
     type: 'VideoAst' = 'VideoAst';
 }

@@ -7,7 +7,7 @@ export class SwitchAst extends Ast {
     value: any = undefined
 
     @Output({ title: 'Default', isRouter: true, condition: 'true' })
-    output_default: BehaviorSubject<any> = new BehaviorSubject<any>(undefined)
+    output_default = new BehaviorSubject<any>(undefined)
 
     type: 'SwitchAst' = 'SwitchAst'
 

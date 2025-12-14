@@ -46,7 +46,7 @@ export class PersonaCreatorAstVisitor {
         if (abortController.signal.aborted) {
           ast.state = 'fail';
           setAstError(ast, new Error('工作流已取消'));
-          obs.next({ ...ast });
+          obs.next({ type: 'node_fail', id: ast.id, data: ast });
           return;
         }
 
@@ -56,14 +56,14 @@ export class PersonaCreatorAstVisitor {
         if (!prompt.trim()) {
           ast.state = 'fail';
           setAstError(ast, new Error('请提供角色描述'));
-          obs.next({ ...ast });
+          obs.next({ type: 'node_fail', id: ast.id, data: ast });
           obs.complete();
           return;
         }
 
         ast.state = 'running';
         ast.count += 1;
-        obs.next({ ...ast });
+        obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
         const model = useLlmModel({
           model: ast.model,
@@ -92,7 +92,7 @@ export class PersonaCreatorAstVisitor {
         if (abortController.signal.aborted) {
           ast.state = 'fail';
           setAstError(ast, new Error('工作流已取消'));
-          obs.next({ ...ast });
+          obs.next({ type: 'node_fail', id: ast.id, data: ast });
           return;
         }
 
@@ -102,7 +102,7 @@ export class PersonaCreatorAstVisitor {
         ast.generatedTraits = result.traits;
         ast.generatedMetadata = result.metadata || {};
         ast.generatedDestiny = result.destiny || {};
-        obs.next({ ...ast });
+        obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
         await useEntityManager(async (manager) => {
           const persona = manager.create(PersonaEntity, {
@@ -117,7 +117,7 @@ export class PersonaCreatorAstVisitor {
 
           ast.personaId.next(persona.id);
           ast.personaName.next(persona.name);
-          obs.next({ ...ast });
+          obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
           if (result.initialMemories?.length) {
             for (const mem of result.initialMemories) {
@@ -142,14 +142,14 @@ export class PersonaCreatorAstVisitor {
         });
 
         ast.state = 'success';
-        obs.next({ ...ast });
+        obs.next({ type: 'node_success', id: ast.id, data: ast });
         obs.complete();
       };
 
       run().catch(e => {
         ast.state = 'fail';
         setAstError(ast, e);
-        obs.next({ ...ast });
+        obs.next({ type: 'node_fail', id: ast.id, data: ast });
         obs.complete();
       });
 

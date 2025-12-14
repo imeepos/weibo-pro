@@ -20,8 +20,7 @@ export class WeiboLoginAstVisitor {
     return new Observable<NodeEvent>(obs => {
       ast.count += 1;
       ast.state = 'running';
-          obs.next({ type: 'node_runing', id: ast.id, data: ast });
-      obs.next({...ast})
+      obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
       this.authService.startLogin(ast, obs)
       // 清理逻辑：取消订阅时清理登录会话

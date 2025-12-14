@@ -24,7 +24,7 @@ export class GroupChatLoopAstVisitor {
         return new Observable<NodeEvent>(obs => {
             ast.state = 'running';
             ast.count += 1;
-            obs.next(ast);
+            obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
             // 如果是第一次执行（chatHistory 为空），初始化历史
             if (ast.chatHistory.value.length === 0) {
@@ -34,13 +34,13 @@ export class GroupChatLoopAstVisitor {
                     content: ast.initialTopic,
                     timestamp: new Date().toISOString()
                 }]);
-                ast.currentRound = 0;
+                ast.currentRound.next(0);
             }
 
-            obs.next(ast);
+            obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
             ast.state = 'success';
-            obs.next(ast);
+            obs.next({ type: 'node_success', id: ast.id, data: ast });
             obs.complete();
         });
     }

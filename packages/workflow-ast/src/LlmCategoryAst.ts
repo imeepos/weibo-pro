@@ -24,10 +24,10 @@ export class LlmCategoryAst extends Ast {
     model: string = 'deepseek-ai/DeepSeek-V3.2';
 
     @Output({ title: 'Default', isRouter: true })
-    output_default: BehaviorSubject<any> = new BehaviorSubject<any>(undefined);
+    output_default = new BehaviorSubject<any>(undefined);
 
     @Output({ title: '原始输出' })
-    rawOutput: BehaviorSubject<string> = new BehaviorSubject<string>('');
+    rawOutput = new BehaviorSubject<string>('');
 
     type: 'LlmCategoryAst' = 'LlmCategoryAst';
 

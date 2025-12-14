@@ -111,8 +111,8 @@ export class ScheduledWorkflowVisitor {
           }
 
           // 设置输出
-          ast.scheduleId = schedule.id
-          ast.nextRunAt = schedule.nextRunAt
+          ast.scheduleId.next(schedule.id)
+          ast.nextRunAt.next(schedule.nextRunAt)
           ast.status = schedule.status
 
           ast.state = 'success'

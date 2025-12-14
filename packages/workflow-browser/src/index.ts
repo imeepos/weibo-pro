@@ -39,3 +39,4 @@ import "./AnswerFinalizerAstVisitor.js";
 import "./AnswerEvaluatorAstVisitor.js";
 import "./ErrorAnalyzerAstVisitor.js";
 import "./ResearchPlannerAstVisitor.js";
+import "./SerpClusterAstVisitor.js";

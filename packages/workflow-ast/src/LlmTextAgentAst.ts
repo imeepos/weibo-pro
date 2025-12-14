@@ -24,13 +24,13 @@ export class LlmTextAgentAst extends Ast {
     model: string = `deepseek-ai/DeepSeek-V3.2`;
 
     @Output({ title: '输出' })
-    text: BehaviorSubject<string> = new BehaviorSubject<string>(``)
+    text = new BehaviorSubject<string>(``)
 
     @Output({ title: '节点名' })
-    username: BehaviorSubject<string> = new BehaviorSubject<string>(``)
+    username = new BehaviorSubject<string>(``)
 
     @Output({ title: '节点介绍' })
-    profile: BehaviorSubject<string> = new BehaviorSubject<string>(``)
+    profile = new BehaviorSubject<string>(``)
 
     type: `LlmTextAgentAst` = `LlmTextAgentAst`
 }

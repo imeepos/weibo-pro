@@ -51,10 +51,10 @@ export class PersonaAst extends Ast {
   context: string = '';
 
   @Output({ title: '回复' })
-  response: BehaviorSubject<string> = new BehaviorSubject<string>('');
+  response = new BehaviorSubject<string>(``)
 
   @Output({ title: '新记忆ID' })
-  newMemoryId: BehaviorSubject<string> = new BehaviorSubject<string>('');
+  newMemoryId = new BehaviorSubject<string>(``)
 
   type: 'PersonaAst' = 'PersonaAst';
 }

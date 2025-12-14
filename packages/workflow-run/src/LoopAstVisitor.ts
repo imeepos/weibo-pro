@@ -13,7 +13,7 @@ export class LoopAstVisitor {
     handler(ast: LoopAst, ctx: any) {
         return new Observable<NodeEvent>(obs => {
             ast.state = 'running'
-            obs.next({ ...ast })
+            obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
             let items: any[] = ast.items || []
             if (!Array.isArray(items)) {
@@ -27,12 +27,12 @@ export class LoopAstVisitor {
 
             ast.total.next(total)
             ast.done.next(false)
-            obs.next({ ...ast })
+            obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
             if (total === 0) {
                 ast.done.next(true)
                 ast.state = 'success'
-                obs.next({ ...ast })
+                obs.next({ type: 'node_success', id: ast.id, data: ast });
                 obs.complete()
                 return
             }
@@ -45,7 +45,7 @@ export class LoopAstVisitor {
 
                 ast.index.next(startIndex)
                 ast.current.next(batch)
-                obs.next({ ...ast })
+                obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
                 const nextIndex = endIndex
                 if (nextIndex < total) {
@@ -57,7 +57,7 @@ export class LoopAstVisitor {
                 } else {
                     ast.done.next(true)
                     ast.state = 'success'
-                    obs.next({ ...ast })
+                    obs.next({ type: 'node_success', id: ast.id, data: ast });
                     obs.complete()
                 }
             }

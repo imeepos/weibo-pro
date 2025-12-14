@@ -15,7 +15,7 @@ export class ImageAst extends Ast {
     uploadedImage: string = '';
 
     @Output({ title: '输出' })
-    image: BehaviorSubject<string> = new BehaviorSubject<string>('');
+    image = new BehaviorSubject<string>('');
 
     type: 'ImageAst' = 'ImageAst';
 }
