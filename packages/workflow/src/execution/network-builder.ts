@@ -332,9 +332,12 @@ export class NetworkBuilder {
     }
 
     /**
-     * 创建边流合并操作符
+     * 创建边流合并 Observable
      *
-     * 将多条边的流合并为一个流，支持多种合并模式：
+     * 根据边的合并模式，将多条边的 Observable 合并为一个 Observable。
+     * 这是一个纯工具函数，只负责边流合并，不关心节点输入流。
+     *
+     * 支持的合并模式：
      * - MERGE: 任意源发射就传递
      * - ZIP: 等待所有源同步发射
      * - COMBINE_LATEST: 取各源最新值组合
@@ -347,58 +350,72 @@ export class NetworkBuilder {
      *   source2$.pipe(map(v => ({ key2: v })))
      * ];
      *
-     * input$.pipe(
-     *   createEdgeMerger(EdgeMode.COMBINE_LATEST, edgeSources, toProperties)
-     * )
+     * const merged$ = createEdgeMerger(EdgeMode.COMBINE_LATEST, edgeSources, toProperties);
+     * merged$.subscribe(value => {
+     *   targetSubject.next(value);
+     * });
      * ```
+     *
+     * @param mode 边的合并模式
+     * @param sources 每条边的 Observable（来自源节点的输出）
+     * @param toProperties 每条边对应的目标属性名
+     * @returns 合并后的 Observable，发射格式：{ [toProperty]: value }
      */
     createEdgeMerger(
         mode: EdgeMode,
         sources: Observable<any>[],
         toProperties: string[]
-    ): OperatorFunction<any, any> {
-        return (input$: Observable<any>) => {
-            switch (mode) {
-                case EdgeMode.MERGE:
-                    return merge(...sources);
-                case EdgeMode.ZIP:
-                    return zip(...sources).pipe(
-                        map(values => {
-                            const combined = {} as any;
-                            values.forEach((value, idx) => {
-                                combined[toProperties[idx]!] = value;
-                            });
-                            return combined;
-                        })
-                    );
-                case EdgeMode.COMBINE_LATEST:
-                    return combineLatest(sources).pipe(
-                        map(values => {
-                            const combined = {} as any;
-                            values.forEach((value, idx) => {
-                                combined[toProperties[idx]!] = value;
-                            });
-                            return combined;
-                        })
-                    );
-                case EdgeMode.WITH_LATEST_FROM:
-                    // 第一个作为主流（简化实现，复杂逻辑在 connectEdgesToNode 中）
-                    const primarySource = sources[0]!;
-                    const otherSources = sources.slice(1);
-                    return primarySource.pipe(
-                        withLatestFrom(...otherSources),
-                        map(([primaryValue, ...otherValues]) => {
-                            const combined = { [toProperties[0]!]: primaryValue } as any;
-                            otherValues.forEach((value, idx) => {
-                                combined[toProperties[idx + 1]!] = value;
-                            });
-                            return combined;
-                        })
-                    );
-                default:
-                    return merge(...sources);
-            }
-        };
+    ): Observable<any> {
+        switch (mode) {
+            case EdgeMode.MERGE:
+                return merge(...sources);
+            case EdgeMode.ZIP:
+                return zip(...sources).pipe(
+                    map(values => this.combineValues(values, toProperties))
+                );
+            case EdgeMode.COMBINE_LATEST:
+                return combineLatest(sources).pipe(
+                    map(values => this.combineValues(values, toProperties))
+                );
+            case EdgeMode.WITH_LATEST_FROM:
+                return this.createWithLatestFromObservable(sources, toProperties);
+            default:
+                return merge(...sources);
+        }
+    }
+
+    /**
+     * 辅助方法：合并值到目标属性对象
+     */
+    private combineValues(values: any[], toProperties: string[]): any {
+        const combined = {} as any;
+        values.forEach((value, idx) => {
+            combined[toProperties[idx]!] = value;
+        });
+        return combined;
+    }
+
+    /**
+     * 辅助方法：创建 WITH_LATEST_FROM 模式的 Observable
+     */
+    private createWithLatestFromObservable(sources: Observable<any>[], toProperties: string[]): Observable<any> {
+        if (sources.length === 0) return EMPTY;
+        if (sources.length === 1) {
+            return sources[0]!.pipe(map(value => ({ [toProperties[0]!]: value })));
+        }
+
+        const primary = sources[0]!;
+        const others = sources.slice(1);
+        return primary.pipe(
+            withLatestFrom(...others),
+            map(([primaryValue, ...otherValues]) => {
+                const combined = { [toProperties[0]!]: primaryValue } as any;
+                otherValues.forEach((value, idx) => {
+                    combined[toProperties[idx + 1]!] = value;
+                });
+                return combined;
+            })
+        );
     }
     /**
      * 为目标节点连接所有输入边（内部实现）
@@ -414,7 +431,7 @@ export class NetworkBuilder {
 
         if (group.edges.length === 0) return;
 
-        // 如果只有一条边，直接连接
+        // 如果只有一条边，直接连接（保持原有逻辑）
         if (group.edges.length === 1) {
             const edge = group.edges[0]!;
             const source = group.sources.get(`${edge.from}:${edge.fromProperty}`);
@@ -427,121 +444,22 @@ export class NetworkBuilder {
             return;
         }
 
-        // 多条边的流合并处理
+        // 收集所有边的 Observable 和目标属性
+        const sources = group.edges.map(edge => {
+            const source = group.sources.get(`${edge.from}:${edge.fromProperty}`);
+            return source ? source.asObservable() : EMPTY;
+        });
+
+        const toProperties = group.edges.map(edge => edge.toProperty!);
         const mode = group.edges[0]!.mode ?? EdgeMode.MERGE;
 
-        switch (mode) {
-            case EdgeMode.MERGE:
-                this.connectMergeMode(group, targetSubject);
-                break;
-            case EdgeMode.ZIP:
-                this.connectZipMode(group, targetSubject);
-                break;
-            case EdgeMode.COMBINE_LATEST:
-                this.connectCombineLatestMode(group, targetSubject);
-                break;
-            case EdgeMode.WITH_LATEST_FROM:
-                this.connectWithLatestFromMode(group, targetSubject);
-                break;
-        }
-    }
+        // 使用 createEdgeMerger 创建边流合并 Observable
+        const merged$ = this.createEdgeMerger(mode, sources, toProperties);
 
-    /**
-     * MERGE 模式连接：任意源发射就传递
-     */
-    private connectMergeMode(group: EdgeGroup, targetSubject: Subject<any>): void {
-        const sources = group.edges.map(edge => {
-            const source = group.sources.get(`${edge.from}:${edge.fromProperty}`);
-            return source ? source.asObservable() : EMPTY;
-        });
-
-        const sub = merge(...sources).subscribe(value => {
+        // 订阅并发送到目标节点
+        const sub = merged$.subscribe(value => {
             targetSubject.next(value);
         });
-        this.subscriptions.set(group.nodeId, sub);
-    }
-
-    /**
-     * ZIP 模式连接：等待所有源同步发射
-     */
-    private connectZipMode(group: EdgeGroup, targetSubject: Subject<any>): void {
-        const sources = group.edges.map(edge => {
-            const source = group.sources.get(`${edge.from}:${edge.fromProperty}`);
-            return source ? source.asObservable() : EMPTY;
-        });
-
-        const sub = zip(...sources).subscribe(values => {
-            const combined = {} as any;
-            group.edges.forEach((edge, idx) => {
-                combined[edge.toProperty!] = values[idx];
-            });
-            targetSubject.next(combined);
-        });
-        this.subscriptions.set(group.nodeId, sub);
-    }
-
-    /**
-     * COMBINE_LATEST 模式连接：取各源最新值组合
-     */
-    private connectCombineLatestMode(group: EdgeGroup, targetSubject: Subject<any>): void {
-        const sources = group.edges.map(edge => {
-            const source = group.sources.get(`${edge.from}:${edge.fromProperty}`);
-            return source ? source.asObservable() : EMPTY;
-        });
-
-        const sub = combineLatest(sources).subscribe(values => {
-            const combined = {} as any;
-            group.edges.forEach((edge, idx) => {
-                combined[edge.toProperty!] = values[idx];
-            });
-            targetSubject.next(combined);
-        });
-        this.subscriptions.set(group.nodeId, sub);
-    }
-
-    /**
-     * WITH_LATEST_FROM 模式连接：主流驱动，取其他源的最新值
-     */
-    private connectWithLatestFromMode(group: EdgeGroup, targetSubject: Subject<any>): void {
-        const primaryEdge = group.edges.find(e => e.isPrimary) ?? group.edges[0]!;
-        const primarySource = group.sources.get(`${primaryEdge.from}:${primaryEdge.fromProperty}`);
-
-        if (!primarySource) return;
-
-        const otherSources = group.edges
-            .filter(e => e !== primaryEdge)
-            .map(e => group.sources.get(`${e.from}:${e.fromProperty}`))
-            .filter((s): s is BehaviorSubject<any> => !!s);
-
-        if (otherSources.length === 0) {
-            // 只有主流，直接连接
-            const sub = primarySource.asObservable().subscribe(value => {
-                targetSubject.next({ [primaryEdge.toProperty!]: value });
-            });
-            this.subscriptions.set(group.nodeId, sub);
-            return;
-        }
-
-        const sub = primarySource
-            .asObservable()
-            .pipe(withLatestFrom(...otherSources.map(s => s.asObservable())))
-            .subscribe(([primaryValue, ...otherValues]) => {
-                const combined = { [primaryEdge.toProperty!]: primaryValue } as any;
-
-                // 将其他源的值按顺序赋给对应的边
-                let otherValueIndex = 0;
-                group.edges.forEach(edge => {
-                    if (edge === primaryEdge) return; // 跳过主流
-
-                    const otherSource = group.sources.get(`${edge.from}:${edge.fromProperty}`);
-                    if (otherSource && otherValueIndex < otherValues.length) {
-                        combined[edge.toProperty!] = otherValues[otherValueIndex];
-                        otherValueIndex++;
-                    }
-                });
-
-                targetSubject.next(combined);
-            });
 
         this.subscriptions.set(group.nodeId, sub);
     }
@@ -652,7 +570,7 @@ export class NetworkBuilder {
         if (allNodeStreams.length === 0) {
             return new Observable<WorkflowEvent>(obs => {
                 obs.next({
-                    type: 'workflow_complete',
+                    type: 'workflow_complete' as const,
                     workflowId: ast.id
                 });
                 obs.complete();
@@ -662,7 +580,7 @@ export class NetworkBuilder {
         return merge(...allNodeStreams, new Observable<WorkflowEvent>(obs => {
             // 流结束时发射完成事件
             obs.next({
-                type: 'workflow_complete',
+                type: 'workflow_complete' as const,
                 workflowId: ast.id
             });
             obs.complete();
