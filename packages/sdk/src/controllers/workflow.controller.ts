@@ -8,7 +8,7 @@ import type {
 } from '../types'
 
 import { Observable } from 'rxjs'
-import type { WorkflowGraphAst, Ast, INode, SseMessage, WorkflowEvent } from '@sker/workflow';
+import type { WorkflowGraphAst, Ast, INode, WorkflowEvent } from '@sker/workflow';
 import type { WorkflowEntity, WorkflowScheduleEntity } from '@sker/entities';
 
 export interface MessageEvent {
@@ -25,6 +25,11 @@ export interface WorkflowTemplate {
 
 export interface InitWorkflowResponse {
   template?: WorkflowGraphAst;
+}
+
+export interface ExecuteWorkflowPayload {
+  workflow: Ast;
+  input?: Record<string, any>;
 }
 
 export interface ExecuteNodePayload {
@@ -76,7 +81,7 @@ export class WorkflowController {
   }
 
   @Sse('execute')
-  execute(@Body() body: INode, res?: any): Observable<SseMessage> {
+  execute(@Body() body: ExecuteWorkflowPayload, res?: any): Observable<WorkflowEvent> {
     throw new Error('method execute not implements')
   }
 

@@ -1,0 +1,38 @@
+{
+  "name": "rx-workflow-demo",
+  "version": "1.0.0",
+  "description": "RxJS + Workflow 可视化工作流 demo",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "test": "turbo test",
+    "lint": "turbo lint",
+    "clean": "turbo clean",
+    "format": "prettier --write .",
+    "typecheck": "turbo typecheck"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "prettier": "^3.0.0",
+    "turbo": "^1.12.0",
+    "typescript": "^5.0.4"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.12.1",
+  "pnpm": {
+    "packageExtensions": {
+      "react-flow-renderer@*": {
+        "peerDependencies": {
+          "react": "^18.0.0",
+          "react-dom": "^18.0.0"
+        }
+      }
+    }
+  }
+}

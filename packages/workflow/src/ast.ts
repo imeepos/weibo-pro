@@ -1,4 +1,5 @@
 import { Node, State } from "./decorator";
+import { NodeEvent } from "./execution/events";
 import { IAstStates, IEdge, INode, INodeInputMetadata, INodeOutputMetadata, INodeStateMetadata, INodeMetadata } from "./types";
 import { generateId } from "./utils";
 import { SerializedError } from "@sker/core";
@@ -22,7 +23,7 @@ export interface DynamicInput {
 export interface Visitor {
     // 每一次执行 返回最新的 Ast
     // 一定要遵守： 每一次状态变更都需要发射一个新的 INode 给外部
-    visit(ast: INode, ctx: any): Observable<INode>;
+    visit(ast: INode, ctx: any): Observable<NodeEvent>;
 }
 
 // 抽象语法树的核心表达 - 状态与数据的统一

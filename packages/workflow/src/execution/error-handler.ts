@@ -1,7 +1,6 @@
 import { Observable, throwError, timer } from 'rxjs';
-import { catchError, retry, retryWhen, mergeMap, take } from 'rxjs/operators';
+import { catchError, retryWhen, mergeMap, take } from 'rxjs/operators';
 import { INode } from '../types';
-import { WorkflowEventBus, WorkflowEventType } from './workflow-events';
 
 /**
  * 错误处理策略
@@ -46,7 +45,6 @@ export type NodeErrorHandler = (
   node$: Observable<INode>,
   node: INode,
   config: ErrorHandlerConfig,
-  eventBus?: WorkflowEventBus
 ) => Observable<INode>;
 
 /**
@@ -64,7 +62,6 @@ export function createDefaultErrorHandler(
   node$: Observable<INode>,
   node: INode,
   config: ErrorHandlerConfig = {},
-  eventBus?: WorkflowEventBus
 ): Observable<INode> {
   const mergedConfig = { ...DEFAULT_ERROR_CONFIG, ...config };
   const { strategy, maxRetries, retryDelay, retryBackoff } = mergedConfig;
@@ -80,7 +77,6 @@ export function createDefaultErrorHandler(
 
               // 超过最大重试次数
               if (attemptNumber > maxRetries) {
-                eventBus?.emitNodeFail(node.id, error);
                 return throwError(() => error);
               }
 
@@ -92,16 +88,6 @@ export function createDefaultErrorHandler(
                 `${delay}ms 后进行第 ${attemptNumber}/${maxRetries} 次重试`,
                 error
               );
-
-              // 发射重试事件
-              eventBus?.next({
-                type: WorkflowEventType.NODE_FAIL,
-                nodeId: node.id,
-                workflowId: undefined,
-                payload: { error, attempt: attemptNumber, maxRetries },
-                timestamp: Date.now(),
-              });
-
               return timer(delay);
             }),
             take(maxRetries)
@@ -119,8 +105,6 @@ export function createDefaultErrorHandler(
       return node$.pipe(
         catchError(error => {
           console.warn(`[ErrorHandler] 节点 ${node.id} 执行失败，已跳过`, error);
-          eventBus?.emitNodeFail(node.id, error);
-
           // 返回跳过状态的节点（state = success 但不发射 emitting）
           const skippedNode = {
             ...node,
@@ -137,9 +121,6 @@ export function createDefaultErrorHandler(
       return node$.pipe(
         catchError(error => {
           console.error(`[ErrorHandler] 关键节点 ${node.id} 失败，中断工作流`, error);
-          eventBus?.emitNodeFail(node.id, error);
-          eventBus?.emitWorkflowFail(undefined, error);
-
           const failedNode = { ...node, state: 'fail' as const, error };
           return throwError(() => failedNode);
         })
@@ -151,8 +132,6 @@ export function createDefaultErrorHandler(
       return node$.pipe(
         catchError(error => {
           console.error(`[ErrorHandler] 节点 ${node.id} 执行失败`, error);
-          eventBus?.emitNodeFail(node.id, error);
-
           const failedNode = { ...node, state: 'fail' as const, error };
           return throwError(() => failedNode);
         })

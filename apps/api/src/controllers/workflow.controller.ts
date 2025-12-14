@@ -1,6 +1,6 @@
 import { Controller, Post, Body, Get, BadRequestException, Query, Delete, NotFoundException, Sse, Res, Param, Put } from '@nestjs/common';
-import { Observable, tap, filter, last, map, scan } from 'rxjs';
-import { Ast, executeAst, fromJson, generateId, INode, resolveConstructor, type OutputMetadata, getNodeById, type SseMessage, executeAstWithWorkflowGraph, executeNodeIsolated, type WorkflowEvent } from '@sker/workflow';
+import { Observable, tap, filter, last, map, scan, of, lastValueFrom } from 'rxjs';
+import { Ast, executeAst, fromJson, generateId, INode, resolveConstructor, type OutputMetadata, getNodeById, type SseMessage, executeAstWithWorkflowGraph, executeNodeIsolated, type WorkflowEvent, NetworkBuilder, executeWorkflowImmediate } from '@sker/workflow';
 import { WorkflowGraphAst } from '@sker/workflow';
 import { logger, root } from '@sker/core';
 import * as sdk from '@sker/sdk';
@@ -143,17 +143,16 @@ export class WorkflowController implements sdk.WorkflowController {
   }
 
   /**
-   * 执行单个节点 - POST SSE版本
+   * 执行工作流 - POST SSE版本
    *
-   * 优雅设计：
-   * - 支持POST方法传递复杂JSON数据
-   * - 手动返回text/event-stream SSE实时推送
-   * - 从工作流数据中反序列化节点
-   * - 执行指定节点，实时推送执行进度
-   * - 妥善处理所有错误，确保服务稳定
+   * 使用 NetworkBuilder 构建反应式工作流网络
+   * 通过 SSE 实时推送执行进度
    */
   @Post('execute')
-  execute(@Body() body: Ast, @Res() res?: any): Observable<SseMessage> {
+  execute(
+    @Body() body: { workflow: Ast; input?: Record<string, any> },
+    @Res() res?: any
+  ): Observable<WorkflowEvent> {
     // 设置 SSE 响应头
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
@@ -164,26 +163,22 @@ export class WorkflowController implements sdk.WorkflowController {
     });
 
     try {
-      const ast = fromJson(body) as Ast;
+      const { workflow, input = {} } = body;
+      const ast = fromJson(workflow) as WorkflowGraphAst;
 
-      // 执行单个节点
-      const execution$ = executeAst(ast, ast as WorkflowGraphAst);
+      // 使用 executeWorkflowImmediate 执行整个工作流
+      const execution$ = executeWorkflowImmediate(ast, input);
 
-      // 将节点执行结果转换为 SSE 消息
-      const sseStream$ = execution$.pipe(
-        map((node: any) => ({
-          type: 'node_state' as const,
-          nodeId: node.id,
-          state: node.state,
-          data: node
-        }))
-      );
-
-      const subscription = sseStream$.subscribe({
-        next: (message: SseMessage) => {
-          res.write(`data: ${JSON.stringify(message)}\n\n`);
+      const subscription = execution$.subscribe({
+        next: (event: WorkflowEvent) => {
+          res.write(`data: ${JSON.stringify(event)}\n\n`);
         },
         error: (error: any) => {
+          logger.error('工作流执行失败', { error: error.message });
+          res.write(`data: ${JSON.stringify({
+            type: 'workflow_error',
+            error: { message: error.message }
+          })}\n\n`);
           res.end();
         },
         complete: () => {
@@ -196,9 +191,13 @@ export class WorkflowController implements sdk.WorkflowController {
         subscription.unsubscribe();
       });
 
-      return sseStream$;
+      return execution$;
     } catch (error: any) {
-      console.error(`execute error: `, { error, body });
+      logger.error('execute error', { error: error.message, body });
+      res.write(`data: ${JSON.stringify({
+        type: 'workflow_error',
+        error: { message: error.message }
+      })}\n\n`);
       res.end();
       throw error;
     }
@@ -407,16 +406,16 @@ export class WorkflowController implements sdk.WorkflowController {
       await this.workflowRunService.startRun(runId);
 
       // 反序列化工作流 AST
-      const ast = fromJson(run.graphSnapshot);
+      const ast = fromJson(run.graphSnapshot) as WorkflowGraphAst;
 
-      // 执行工作流（传入 inputs 作为上下文）
-      const result = await executeAst(ast, ast as WorkflowGraphAst).toPromise();
+      // 执行工作流（AST 会被原地修改）
+      await lastValueFrom(executeWorkflowImmediate(ast, run.inputs as Record<string, any> || {}));
 
       // 提取节点状态
       const nodeStates: Record<string, unknown> = {};
-      logger.info('执行结果', { hasNodes: !!result.nodes, nodeCount: result.nodes?.length });
-      if (result.nodes) {
-        result.nodes.forEach((node: any) => {
+      logger.info('执行结果', { hasNodes: !!ast.nodes, nodeCount: ast.nodes?.length });
+      if (ast.nodes) {
+        ast.nodes.forEach((node: any) => {
           nodeStates[node.id] = {
             state: node.state,
             error: node.error,
@@ -428,26 +427,26 @@ export class WorkflowController implements sdk.WorkflowController {
       logger.info('节点状态', { nodeStates: Object.keys(nodeStates) });
 
       // 提取工作流输出
-      const outputs = this.extractWorkflowOutputs(result);
+      const outputs = this.extractWorkflowOutputs(ast);
 
       // 完成运行
       await this.workflowRunService.completeRun(runId, {
-        success: result.state === 'success',
+        success: ast.state === 'success',
         outputs,
         nodeStates,
-        error: result.error
+        error: ast.error
           ? {
-            message: typeof result.error.message === 'string'
-              ? result.error.message
-              : JSON.stringify(result.error.message || result.error),
-            stack: result.error.stack,
+            message: typeof ast.error.message === 'string'
+              ? ast.error.message
+              : JSON.stringify(ast.error.message || ast.error),
+            stack: ast.error.stack,
           }
           : undefined,
       });
 
       logger.info('工作流运行实例执行完成', {
         runId,
-        status: result.state,
+        status: ast.state,
       });
 
       // 返回更新后的运行实例

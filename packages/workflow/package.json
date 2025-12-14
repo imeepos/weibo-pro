@@ -39,6 +39,7 @@
     "dayjs": "^1.11.19",
     "json-schema": "^0.4.0",
     "rxjs": "^7.8.1",
+    "xstate": "^5.25.0",
     "zod": "^4.0.0"
   },
   "devDependencies": {

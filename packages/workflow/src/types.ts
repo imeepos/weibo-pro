@@ -11,6 +11,12 @@ import { InputFieldType, NodeType } from "./decorator";
 export type IAstStates = `pending` | `running` | `success` | `fail`;
 
 /**
+ * 节点状态类型（简化版，用于状态机）
+ * 从 IAstStates 映射而来
+ */
+export type NodeState = IAstStates;
+
+/**
  * 路由跳过标记 - 表示"这条路不走"
  *
  * 用于区分两种语义：

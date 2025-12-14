@@ -6,30 +6,9 @@ export { fromJson, toJson } from './generate'
 export type { NodeJsonPayload } from './generate'
 export { EdgeMode, isNode, ROUTE_SKIPPED, isRouteSkipped, extractSubjectValue } from './types'
 export type { INode, IEdge, IAstStates, INodeMetadata, INodeInputMetadata, INodeOutputMetadata, INodeStateMetadata } from './types'
-export { executeAst, executeWorkflow, executeWorkflowImmediate, executeAstWithWorkflowGraph, executeNodeIsolated } from './executor'
+export { executeAst, executeWorkflow, executeWorkflowImmediate, executeAstWithWorkflowGraph, executeNodeIsolated, NodeExecutor } from './executor'
 export { VisitorExecutor } from './execution/visitor-executor'
-export { ReactiveScheduler } from './execution/reactive-scheduler'
-export { DependencyAnalyzer } from './execution/dependency-analyzer'
-export { DataFlowManager } from './execution/data-flow-manager'
-export { StateMerger } from './execution/state-merger'
-export { PropertyAnalyzer } from './execution/property-analyzer'
 export { NoRetryError } from './errors'
-
-// NetworkBuilder 和事件类型
-export { NetworkBuilder } from './execution/network-builder';
-export type { WorkflowEvent, NodeStateEvent, OutputEmitEvent, WorkflowCompleteEvent, WorkflowErrorEvent } from './execution/network-builder';
-
-// 新增：状态管理和事件总线（保留用于向后兼容）
-export { WorkflowState } from './execution/workflow-state';
-export { WorkflowEventBus, WorkflowEventType } from './execution/workflow-events';
-export type { WorkflowEvent as LegacyWorkflowEvent, OutputEmitPayload } from './execution/workflow-events';
-export {
-  updateNodeReducer,
-  finalizeWorkflowReducer,
-  failWorkflowReducer,
-  resetWorkflowReducer
-} from './execution/workflow-reducers';
-export type { NodeUpdateEvent } from './execution/workflow-reducers';
 
 export * from './utils';
 export * from './TextAreaAst';
@@ -42,6 +21,3 @@ export * from './CollectorAst';
 export * from './FilterAst';
 export * from './MergeAst';
 export * from './LoopAst';
-export { syncAstOutputs } from './sync-ast-outputs';
-export { wrapExecutionWithOutputEmit, createNodeSseStream } from './sse-output-stream';
-export type { SseMessage } from './sse-output-stream';

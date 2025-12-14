@@ -1,12 +1,12 @@
 import { Injectable, root } from '@sker/core';
 import { Visitor, WorkflowGraphAst, setAstError } from '../ast';
 import { findNodeType, HANDLER_METHOD } from '../decorator';
-import { NoRetryError } from '../errors';
 import { Observable, of, from } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
 import { mapResponse } from '../operators/map-response';
 import { INode } from '../types';
 import { DefaultVisitor } from '../defaultVisitor';
+import { NodeEvent } from './events';
 
 /**
  * 访问者执行器 - 工作流引擎的核心执行者
@@ -19,7 +19,7 @@ import { DefaultVisitor } from '../defaultVisitor';
  */
 @Injectable()
 export class VisitorExecutor implements Visitor {
-    visit(ast: INode, parent: WorkflowGraphAst): Observable<INode> {
+    visit(ast: INode, parent?: WorkflowGraphAst): Observable<NodeEvent> {
         const type = findNodeType(ast.type);
         const methods = root.get(HANDLER_METHOD, []);
 
@@ -54,7 +54,7 @@ export class VisitorExecutor implements Visitor {
      * - 错误转换为失败节点（Error as Data 模式）
      * - 支持嵌套类型：Promise<Observable<INode>>
      */
-    private normalizeResult(result: any, ast: INode): Observable<INode> {
+    private normalizeResult(result: any, ast: INode): Observable<NodeEvent> {
         // 1. Observable → 直接应用 mapResponse
         if (result && typeof result.subscribe === 'function') {
             return result.pipe(
@@ -83,7 +83,7 @@ export class VisitorExecutor implements Visitor {
         }
 
         // 3. 同步值 → 包装为 Observable
-        return of(result as INode).pipe(
+        return of(result as NodeEvent).pipe(
             mapResponse({
                 next: (node) => node,
                 error: (error) => this.createFailedNode(ast, error)
@@ -91,7 +91,7 @@ export class VisitorExecutor implements Visitor {
         );
     }
 
-    private useDefaultVisitor(ast: INode): Observable<INode> {
+    private useDefaultVisitor(ast: INode): Observable<NodeEvent> {
         const defaultVisitor = new DefaultVisitor();
         return defaultVisitor.visit(ast).pipe(
             catchError(error => this.handleError(error, ast))
@@ -105,11 +105,11 @@ export class VisitorExecutor implements Visitor {
      * - 纯函数：不修改原节点，返回新节点
      * - Error as Data：错误作为节点的属性，而非异常
      */
-    private createFailedNode(ast: INode, error: unknown): INode {
+    private createFailedNode(ast: INode, error: unknown): NodeEvent {
         const failedNode = { ...ast };
         failedNode.state = 'fail';
         setAstError(failedNode, error);
-        return failedNode;
+        return { type: 'node_fail', id: ast.id, data: ast };
     }
 
     /**
@@ -120,7 +120,7 @@ export class VisitorExecutor implements Visitor {
      * - 设置节点状态为 fail
      * - 返回失败状态的节点（作为 Observable 完成）
      */
-    private handleError(error: unknown, ast: INode): Observable<INode> {
+    private handleError(error: unknown, ast: INode): Observable<NodeEvent> {
         return of(this.createFailedNode(ast, error));
     }
 }
