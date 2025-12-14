@@ -423,13 +423,16 @@ export class ReactiveScheduler {
     }
 
     private connectMergeMode(group: EdgeGroup, targetSubject: Subject<any>): void {
-        const sources = group.edges.map(edge => {
+        // 为每条边单独订阅，发射到对应的属性
+        group.edges.forEach(edge => {
             const source = group.sources.get(`${edge.from}:${edge.fromProperty}`);
-            return source ? source.asObservable() : EMPTY;
-        });
-
-        merge(...sources).subscribe(value => {
-            targetSubject.next(value);
+            if (source) {
+                source.asObservable().subscribe(value => {
+                    const obj = {} as any;
+                    obj[edge.toProperty!] = value;
+                    targetSubject.next(obj);
+                });
+            }
         });
     }
 

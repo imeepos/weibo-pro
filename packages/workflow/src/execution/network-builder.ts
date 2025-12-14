@@ -526,25 +526,4 @@ export class NetworkBuilder {
             });
         });
     }
-
-    /**
-     * 更新节点的 @Output BehaviorSubject
-     *
-     * 当节点执行时，更新其输出的 BehaviorSubject
-     * 注意：现在这个方法只负责更新 Subject，事件在 buildNodeObservable 中统一发射
-     */
-    private updateOutputSubjects(node: INode): void {
-        if (!node.metadata?.outputs) return;
-
-        node.metadata.outputs.forEach(output => {
-            const key = output.property;
-            const subject = (node as any)[key];
-            const value = (node as any)[key];
-
-            // 如果是 BehaviorSubject，发射新值
-            if (isBehaviorSubject(subject)) {
-                subject.next(value);
-            }
-        });
-    }
 }
