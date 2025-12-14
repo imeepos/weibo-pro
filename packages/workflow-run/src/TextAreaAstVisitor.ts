@@ -1,14 +1,14 @@
 import { Injectable } from "@sker/core";
-import { Handler, TextAreaAst } from "@sker/workflow";
+import { Handler, NodeEvent, TextAreaAst, WorkflowGraphAst } from "@sker/workflow";
 import { Observable } from "rxjs";
 
 @Injectable()
 export class TextAreaAstVisitor {
     @Handler(TextAreaAst)
-    handler(ast: TextAreaAst, ctx: any): Observable<TextAreaAst> {
-        return new Observable<TextAreaAst>(obs => {
+    handler(ast: TextAreaAst, ctx: WorkflowGraphAst): Observable<NodeEvent> {
+        return new Observable<NodeEvent>(obs => {
             ast.state = 'running'
-            obs.next(ast)
+            obs.next({ type: 'node_runing', id: ast.id, data: ast })
 
             // 直接通过 BehaviorSubject 发射输出值
             let outputValue: string;
@@ -19,10 +19,10 @@ export class TextAreaAstVisitor {
             } else {
                 outputValue = ast.input;
             }
-            ast.output.next(outputValue);
+            obs.next({ type: 'node_emit', id: ast.id, property: 'output', value: outputValue })
 
             ast.state = 'success';
-            obs.next(ast)
+            obs.next({ type: 'node_success', id: ast.id, data: ast })
             obs.complete()
         })
     }

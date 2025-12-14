@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@sker/core';
-import { Handler, INode, setAstError, StoreGetAst, StoreSetAst } from '@sker/workflow';
+import { Handler, NodeEvent, setAstError, StoreGetAst, StoreSetAst } from '@sker/workflow';
 import { RedisClient } from '@sker/redis';
 import { Observable } from 'rxjs';
 
@@ -25,8 +25,8 @@ export class StoreGetAstVisitor {
   constructor(@Inject(RedisClient) private readonly redis: RedisClient) {}
 
   @Handler(StoreGetAst)
-  visit(ast: StoreGetAst, ctx: any): Observable<INode> {
-    return new Observable<INode>(obs => {
+  visit(ast: StoreGetAst, ctx: any): Observable<NodeEvent> {
+    return new Observable<NodeEvent>(obs => {
       const abortController = new AbortController();
 
       const wrappedCtx = {
@@ -39,14 +39,15 @@ export class StoreGetAstVisitor {
           if (wrappedCtx.abortSignal?.aborted) {
             ast.state = 'fail';
             setAstError(ast, new Error('工作流已取消'));
-            obs.next({ ...ast });
+            obs.next({ type: 'node_fail', id: ast.id, data: ast });
             obs.complete();
             return;
           }
 
           ast.state = 'running';
+          obs.next({ type: 'node_runing', id: ast.id, data: ast });
           ast.count += 1;
-          obs.next({ ...ast });
+          obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
           const { key } = ast;
 
@@ -57,19 +58,19 @@ export class StoreGetAstVisitor {
           const redisKey = `${WORKFLOW_STORE_PREFIX}${key}`;
           const value = await this.redis.get<any>(redisKey);
 
-          ast.value = value;
-          obs.next({ ...ast });
+          ast.value = value;
+          obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
           console.log(`[StoreGet] 读取成功: key=${key}, exists=${value !== null}`);
 
           ast.state = 'success';
-          obs.next({ ...ast });
+          obs.next({ type: 'node_success', id: ast.id, data: ast });
           obs.complete();
         } catch (error) {
           ast.state = 'fail';
           setAstError(ast, error, process.env.NODE_ENV === 'development');
           console.error(`[StoreGetAstVisitor] key=${ast.key}`, error);
-          obs.next({ ...ast });
+          obs.next({ type: 'node_fail', id: ast.id, data: ast });
           obs.complete();
         }
       };
@@ -100,8 +101,8 @@ export class StoreSetAstVisitor {
   constructor(@Inject(RedisClient) private readonly redis: RedisClient) {}
 
   @Handler(StoreSetAst)
-  visit(ast: StoreSetAst, ctx: any): Observable<INode> {
-    return new Observable<INode>(obs => {
+  visit(ast: StoreSetAst, ctx: any): Observable<NodeEvent> {
+    return new Observable<NodeEvent>(obs => {
       const abortController = new AbortController();
 
       const wrappedCtx = {
@@ -114,14 +115,15 @@ export class StoreSetAstVisitor {
           if (wrappedCtx.abortSignal?.aborted) {
             ast.state = 'fail';
             setAstError(ast, new Error('工作流已取消'));
-            obs.next({ ...ast });
+            obs.next({ type: 'node_fail', id: ast.id, data: ast });
             obs.complete();
             return;
           }
 
           ast.state = 'running';
+          obs.next({ type: 'node_runing', id: ast.id, data: ast });
           ast.count += 1;
-          obs.next({ ...ast });
+          obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
           const { key, value } = ast;
 
@@ -133,19 +135,19 @@ export class StoreSetAstVisitor {
 
           // 默认7天过期时间，避免数据永久占用内存
           const ttl = 7 * 24 * 60 * 60; // 7 days
-          await this.redis.set(redisKey, value, ttl);
-          obs.next({ ...ast });
+          await this.redis.set(redisKey, value, ttl);
+          obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
           console.log(`[StoreSet] 写入成功: key=${key}, ttl=${ttl}s`);
 
           ast.state = 'success';
-          obs.next({ ...ast });
+          obs.next({ type: 'node_success', id: ast.id, data: ast });
           obs.complete();
         } catch (error) {
           ast.state = 'fail';
           setAstError(ast, error, process.env.NODE_ENV === 'development');
           console.error(`[StoreSetAstVisitor] key=${ast.key}`, error);
-          obs.next({ ...ast });
+          obs.next({ type: 'node_fail', id: ast.id, data: ast });
           obs.complete();
         }
       };

@@ -7,7 +7,7 @@ import { executeRemote } from './execute-remote.js';
 @Injectable()
 export class LlmTextAgentAstVisitor {
   @Handler(LlmTextAgentAst)
-  handler(ast: LlmTextAgentAst, ctx: any): Observable<INode> {
-    return executeRemote(ast);
+  handler(ast: LlmTextAgentAst, ctx: any) {
+    return executeRemote(ast, ctx);
   }
 }

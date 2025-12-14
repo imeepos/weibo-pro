@@ -1,5 +1,5 @@
 import { Injectable } from "@sker/core";
-import { Handler } from "@sker/workflow";
+import { Handler, NodeEvent } from "@sker/workflow";
 import { VideoAst } from "@sker/workflow-ast";
 import { Observable } from "rxjs";
 
@@ -12,10 +12,11 @@ import { Observable } from "rxjs";
 @Injectable()
 export class VideoVisitor {
     @Handler(VideoAst)
-    handler(ast: VideoAst, ctx: any) {
-        return new Observable(obs => {
+    handler(ast: VideoAst, ctx: any): Observable<NodeEvent> {
+        return new Observable<NodeEvent>(obs => {
             ast.state = 'running';
-            obs.next({ ...ast });
+            obs.next({ ...ast });
+
 
             // 直接使用 uploadedVideo（可能来自上游或用户上传）
             ast.video.next(ast.uploadedVideo || '');

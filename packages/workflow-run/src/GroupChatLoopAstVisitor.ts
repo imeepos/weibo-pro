@@ -1,5 +1,5 @@
 import { Injectable } from "@sker/core";
-import { Handler } from "@sker/workflow";
+import { Handler, NodeEvent } from "@sker/workflow";
 import { GroupChatLoopAst, ChatMessage } from "@sker/workflow-ast";
 import { Observable } from "rxjs";
 
@@ -21,7 +21,7 @@ import { Observable } from "rxjs";
 export class GroupChatLoopAstVisitor {
     @Handler(GroupChatLoopAst)
     handler(ast: GroupChatLoopAst) {
-        return new Observable<GroupChatLoopAst>(obs => {
+        return new Observable<NodeEvent>(obs => {
             ast.state = 'running';
             ast.count += 1;
             obs.next(ast);
@@ -35,7 +35,8 @@ export class GroupChatLoopAstVisitor {
                     timestamp: new Date().toISOString()
                 }]);
                 ast.currentRound = 0;
-            }
+            }
+
             obs.next(ast);
 
             ast.state = 'success';

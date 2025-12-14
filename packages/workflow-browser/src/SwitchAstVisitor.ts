@@ -1,4 +1,4 @@
-import { Handler, type DynamicOutput, ROUTE_SKIPPED } from '@sker/workflow'
+import { Handler, type DynamicOutput, ROUTE_SKIPPED, NodeEvent } from '@sker/workflow'
 import { Injectable } from '@sker/core'
 import { SwitchAst } from '@sker/workflow-ast'
 import { Observable, BehaviorSubject } from 'rxjs'
@@ -6,15 +6,14 @@ import { Observable, BehaviorSubject } from 'rxjs'
 @Injectable()
 export class SwitchAstVisitor {
     @Handler(SwitchAst)
-    handler(ast: SwitchAst, ctx: any) {
+    handler(ast: SwitchAst, ctx: any): Observable<NodeEvent> {
         return new Observable(obs => {
             ast.state = 'running'
-            obs.next({ ...ast })
+            obs.next({ type: 'node_runing', id: ast.id, data: ast })
 
             const inputValue = ast.value
             const outputs = ast.metadata.outputs
 
-            // 分离默认分支和普通分支
             const defaultOutput = outputs.find(o =>
                 o.isRouter && (o.condition === 'true' || o.property === 'output_default')
             )
@@ -22,7 +21,6 @@ export class SwitchAstVisitor {
                 o.isRouter && o.condition && o.condition !== 'true' && o.property !== 'output_default'
             )
 
-            // 先评估普通分支，记录是否有匹配
             let anyMatched = false
             normalOutputs.forEach(outputMeta => {
                 const propKey = String(outputMeta.property)
@@ -30,23 +28,20 @@ export class SwitchAstVisitor {
 
                 if (matched) {
                     anyMatched = true
-                    this.setOutputValue(ast, propKey, inputValue)
+                    obs.next({ type: 'node_emit', id: ast.id, property: propKey, value: inputValue })
                 } else {
-                    this.setOutputValue(ast, propKey, ROUTE_SKIPPED)
+                    obs.next({ type: 'node_emit', id: ast.id, property: propKey, value: ROUTE_SKIPPED })
                 }
             })
 
-            // 默认分支：只有当所有普通分支都不匹配时才激活
             if (defaultOutput) {
                 const propKey = String(defaultOutput.property)
                 const value = anyMatched ? ROUTE_SKIPPED : inputValue
-                this.setOutputValue(ast, propKey, value)
+                obs.next({ type: 'node_emit', id: ast.id, property: propKey, value })
             }
 
-            obs.next({ ...ast })
-
             ast.state = 'success'
-            obs.next({ ...ast })
+            obs.next({ type: 'node_success', id: ast.id, data: ast })
             obs.complete()
         })
     }

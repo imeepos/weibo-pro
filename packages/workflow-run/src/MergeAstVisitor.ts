@@ -1,5 +1,5 @@
 import { Injectable } from '@sker/core'
-import { Handler, MergeAst, type MergeMode } from '@sker/workflow'
+import { Handler, MergeAst, NodeEvent, type MergeMode } from '@sker/workflow'
 import { Observable } from 'rxjs'
 
 /**
@@ -9,7 +9,7 @@ import { Observable } from 'rxjs'
 export class MergeAstVisitor {
     @Handler(MergeAst)
     handler(ast: MergeAst, ctx: any) {
-        return new Observable(obs => {
+        return new Observable<NodeEvent>(obs => {
             ast.state = 'running'
             obs.next({ ...ast })
 

@@ -1,4 +1,4 @@
-import { Handler, type DynamicOutput, ROUTE_SKIPPED } from '@sker/workflow'
+import { Handler, type DynamicOutput, ROUTE_SKIPPED, NodeEvent } from '@sker/workflow'
 import { Injectable } from '@sker/core'
 import { SwitchAst } from '@sker/workflow-ast'
 import { Observable, BehaviorSubject } from 'rxjs'
@@ -7,7 +7,7 @@ import { Observable, BehaviorSubject } from 'rxjs'
 export class SwitchAstVisitor {
     @Handler(SwitchAst)
     handler(ast: SwitchAst, ctx: any) {
-        return new Observable(obs => {
+        return new Observable<NodeEvent>(obs => {
             ast.state = 'running'
             obs.next({ ...ast })
 

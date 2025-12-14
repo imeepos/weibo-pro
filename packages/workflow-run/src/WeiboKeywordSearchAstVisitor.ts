@@ -1,5 +1,5 @@
 import { Inject, Injectable, NoRetryError } from "@sker/core";
-import { Handler, INode, setAstError } from "@sker/workflow";
+import { Handler, NodeEvent, setAstError } from "@sker/workflow";
 import { WeiboKeywordSearchAst } from "@sker/workflow-ast";
 import { WeiboHtmlParser } from "./services/WeiboHtmlParser";
 import { PlaywrightService } from "./services/PlaywrightService";
@@ -17,48 +17,38 @@ export class WeiboKeywordSearchAstVisitor {
     ) { }
 
     @Handler(WeiboKeywordSearchAst)
-    handler(ast: WeiboKeywordSearchAst, ctx: any): Observable<INode> {
-        return new Observable<INode>(obs => {
-            // 创建专门的 AbortController 用于取消订阅
+    handler(ast: WeiboKeywordSearchAst, ctx: any): Observable<NodeEvent> {
+        return new Observable<NodeEvent>(obs => {
             const abortController = new AbortController();
 
-            // 包装 ctx，优先使用我们的 AbortController
             const wrappedCtx = {
                 ...ctx,
                 abortSignal: abortController.signal,
-                // 保留原始信号以支持级联取消
                 get isAborted() {
                     return abortController.signal.aborted || ctx.abortSignal?.aborted;
                 }
             };
 
-            // 执行搜索
             this.executeSearch(ast, wrappedCtx, obs);
 
-            // 返回取消函数 - 真正的清理逻辑
             return () => {
                 console.log('[WeiboKeywordSearchAstVisitor] 订阅被取消，触发 AbortSignal');
-                // 触发 abort 会让所有监听此 signal 的操作停止
                 abortController.abort();
                 obs.complete();
             };
         });
     }
 
-    /**
-     * 核心搜索逻辑（内部递归方法）
-     */
     private async executeSearch(
         ast: WeiboKeywordSearchAst,
         ctx: any,
-        obs: Subscriber<INode>
+        obs: Subscriber<NodeEvent>
     ): Promise<void> {
         try {
-            // 检查取消信号
             if (ctx.abortSignal?.aborted) {
                 ast.state = 'fail';
                 setAstError(ast, new Error('工作流已取消'));
-                obs.next({ ...ast });
+                obs.next({ type: 'node_fail', id: ast.id, data: ast });
                 return;
             }
 
@@ -66,7 +56,7 @@ export class WeiboKeywordSearchAstVisitor {
             if (!selection) {
                 ast.state = 'fail';
                 setAstError(ast, new Error('没有可用账号'));
-                obs.next({ ...ast });
+                obs.next({ type: 'node_fail', id: ast.id, data: ast });
                 return;
             }
 
@@ -74,7 +64,7 @@ export class WeiboKeywordSearchAstVisitor {
             if (!keyword || !startDate || !endDate) {
                 ast.state = 'fail';
                 setAstError(ast, new NoRetryError(`WeiboSearchUrlBuilderAst 缺少必要参数: keyword:${keyword}, start:${startDate}, end:${endDate}`));
-                obs.next({ ...ast });
+                obs.next({ type: 'node_fail', id: ast.id, data: ast });
                 return;
             }
 
@@ -83,48 +73,42 @@ export class WeiboKeywordSearchAstVisitor {
             params.set('timescope', `custom:${formatDate(startDate)}:${formatDate(endDate)}`);
             const url = `${base}?${params.toString()}`;
 
-            // 1️⃣ 发射初始状态
             ast.state = 'running';
             ast.currentPage = 1;
-            obs.next({ ...ast });
+            obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
-            // 检查取消信号
             if (ctx.abortSignal?.aborted) {
                 ast.state = 'fail';
                 setAstError(ast, new Error('工作流已取消'));
-                obs.next({ ...ast });
+                obs.next({ type: 'node_fail', id: ast.id, data: ast });
                 return;
             }
 
-            // 第一步：获取首页结果
             let html = await this.playwright.getHtml(url, selection.cookieHeader, `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36`);
             let result = this.parser.parseSearchResultHtml(html);
 
-            // 2️⃣ 发射首页进度（串行发射，确保延迟生效）
             for (const post of result.posts) {
-                // 检查取消信号
                 if (ctx.abortSignal?.aborted) {
                     ast.state = 'fail';
                     setAstError(ast, new Error('工作流已取消'));
-                    obs.next({ ...ast });
+                    obs.next({ type: 'node_fail', id: ast.id, data: ast });
                     return;
-                }
+                }
                 ast.mblogid.next(post.mid);
                 ast.uid.next(post.uid);
-                obs.next({ ...ast });
+                obs.next({ type: 'node_emit', id: ast.id, property: 'mblogid', value: ast.mblogid.value });
+                obs.next({ type: 'node_emit', id: ast.id, property: 'uid', value: ast.uid.value });
                 await this.delayService.randomDelay(ast.emitDelayMin || 1, ast.emitDelayMax || 3);
             }
 
-            // 第二步：分页采集
             let currentPageNum = 1;
-            const maxPageRetries = 2; // 每页最大重试次数
+            const maxPageRetries = 2;
 
             while (result.hasNextPage && result.nextPageLink) {
-                // 检查取消信号
                 if (ctx.abortSignal?.aborted) {
                     ast.state = 'fail';
                     setAstError(ast, new Error('工作流已取消'));
-                    obs.next({ ...ast });
+                    obs.next({ type: 'node_fail', id: ast.id, data: ast });
                     return;
                 }
 
@@ -143,19 +127,18 @@ export class WeiboKeywordSearchAstVisitor {
                         html = await this.playwright.getHtml(result.nextPageLink, selection.cookieHeader, `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36`);
                         result = this.parser.parseSearchResultHtml(html);
 
-                        // 3️⃣ 发射分页进度（串行发射，确保延迟生效）
                         ast.currentPage = currentPageNum;
                         for (const post of result.posts) {
-                            // 检查取消信号
                             if (ctx.abortSignal?.aborted) {
                                 ast.state = 'fail';
                                 setAstError(ast, new Error('工作流已取消'));
-                                obs.next({ ...ast });
+                                obs.next({ type: 'node_fail', id: ast.id, data: ast });
                                 return;
-                            }
+                            }
                             ast.mblogid.next(post.mid);
                             ast.uid.next(post.uid);
-                            obs.next({ ...ast });
+                            obs.next({ type: 'node_emit', id: ast.id, property: 'mblogid', value: ast.mblogid.value });
+                            obs.next({ type: 'node_emit', id: ast.id, property: 'uid', value: ast.uid.value });
                             await this.delayService.randomDelay(ast.emitDelayMin || 1, ast.emitDelayMax || 3);
                         }
 
@@ -174,18 +157,15 @@ export class WeiboKeywordSearchAstVisitor {
                             break;
                         }
 
-                        // 重试前等待一段时间
                         await this.delayService.randomDelay(ast.pageDelayMin || 3, ast.pageDelayMax || 5);
                     }
                 }
 
-                // 如果当前页重试失败，跳出分页循环
                 if (!pageSuccess) {
                     break;
                 }
             }
 
-            // 第三步：判断是否达到50页上限，需要调整时间范围
             if (result.totalCount && result.currentPage === result.totalPage && result.totalPage === 50) {
                 if (result.lastPostTime) {
                     ast.endDate = result.lastPostTime;
@@ -194,9 +174,8 @@ export class WeiboKeywordSearchAstVisitor {
                 }
             }
 
-            // 第四步：完成采集
             ast.state = 'success';
-            obs.next({ ...ast });
+            obs.next({ type: 'node_success', id: ast.id, data: ast });
             obs.complete()
         } catch (error) {
             console.error(`[WeiboKeywordSearchAstVisitor] 搜索失败: ${ast.keyword}`, error);
@@ -206,7 +185,7 @@ export class WeiboKeywordSearchAstVisitor {
             } else {
                 setAstError(ast, new Error(String(error)));
             }
-            obs.next({ ...ast });
+            obs.next({ type: 'node_fail', id: ast.id, data: ast });
             obs.complete()
         }
     }

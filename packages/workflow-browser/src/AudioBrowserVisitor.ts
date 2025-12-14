@@ -1,22 +1,12 @@
 import { Injectable } from "@sker/core";
-import { Handler } from "@sker/workflow";
+import { Handler, NodeEvent } from "@sker/workflow";
 import { AudioAst } from "@sker/workflow-ast";
-import { Observable } from "rxjs";
-
+import { executeRemote } from "./execute-remote.js";
+import { Observable } from 'rxjs'
 @Injectable()
 export class AudioBrowserVisitor {
     @Handler(AudioAst)
-    handler(ast: AudioAst, ctx: any) {
-        return new Observable(obs => {
-            ast.state = 'running';
-            obs.next({ ...ast });
-
-            if (ast.uploadedAudio) ast.audio.next(ast.uploadedAudio);
-            obs.next({ ...ast });
-
-            ast.state = 'success';
-            obs.next({ ...ast });
-            obs.complete();
-        });
+    handler(ast: AudioAst, ctx: any): Observable<NodeEvent> {
+        return executeRemote(ast, ctx);
     }
 }

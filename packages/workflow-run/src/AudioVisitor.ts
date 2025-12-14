@@ -1,5 +1,5 @@
 import { Injectable } from "@sker/core";
-import { Handler } from "@sker/workflow";
+import { Handler, NodeEvent } from "@sker/workflow";
 import { AudioAst } from "@sker/workflow-ast";
 import { Observable } from "rxjs";
 
@@ -7,9 +7,10 @@ import { Observable } from "rxjs";
 export class AudioVisitor {
     @Handler(AudioAst)
     handler(ast: AudioAst, ctx: any) {
-        return new Observable(obs => {
+        return new Observable<NodeEvent>(obs => {
             ast.state = 'running';
-            obs.next({ ...ast });
+            obs.next({ ...ast });
+
             ast.audio.next(ast.uploadedAudio || '');
             obs.next({ ...ast });
 

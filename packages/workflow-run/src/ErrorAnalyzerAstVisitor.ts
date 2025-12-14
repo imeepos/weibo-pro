@@ -1,5 +1,5 @@
 import { Injectable } from '@sker/core';
-import { Handler, setAstError, WorkflowGraphAst } from '@sker/workflow';
+import { Handler, NodeEvent, setAstError, WorkflowGraphAst } from '@sker/workflow';
 import { ErrorAnalyzerAst } from '@sker/workflow-ast';
 import { Observable } from 'rxjs';
 import { z } from 'zod';
@@ -16,7 +16,7 @@ export class ErrorAnalyzerAstVisitor {
 
   @Handler(ErrorAnalyzerAst)
   handler(ast: ErrorAnalyzerAst, ctx: WorkflowGraphAst) {
-    return new Observable((obs) => {
+    return new Observable<NodeEvent>((obs) => {
       const abortController = new AbortController();
 
       const run = async () => {

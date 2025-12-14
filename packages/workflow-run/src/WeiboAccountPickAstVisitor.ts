@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@sker/core';
-import { Handler, INode, setAstError } from '@sker/workflow';
+import { Handler, NodeEvent, setAstError } from '@sker/workflow';
 import { WeiboAccountPickAst } from '@sker/workflow-ast';
 import {
     useEntityManager,
@@ -18,13 +18,14 @@ export class WeiboAccountPickAstVisitor {
     ) { }
 
     @Handler(WeiboAccountPickAst)
-    visit(ast: WeiboAccountPickAst, _ctx: any): Observable<INode> {
-        return new Observable<INode>(obs => {
+    visit(ast: WeiboAccountPickAst, _ctx: any): Observable<NodeEvent> {
+        return new Observable<NodeEvent>(obs => {
             const handler = async () => {
                 try {
                     ast.state = 'running';
+          obs.next({ type: 'node_runing', id: ast.id, data: ast });
                     ast.count += 1;
-                    obs.next({ ...ast });
+                    obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
                     const accounts = await useEntityManager(async m => {
                         return m.find(WeiboAccountEntity, {
@@ -70,12 +71,12 @@ export class WeiboAccountPickAstVisitor {
                     await this.redis.zincrby(this.healthKey, -1, selected.id.toString());
 
                     ast.state = 'success';
-                    obs.next({ ...ast });
+                    obs.next({ type: 'node_success', id: ast.id, data: ast });
                     obs.complete();
                 } catch (error) {
                     ast.state = 'fail';
                     setAstError(ast, error, process.env.NODE_ENV === 'development');
-                    obs.next({ ...ast });
+                    obs.next({ type: 'node_fail', id: ast.id, data: ast });
                     obs.complete();
                 }
             };

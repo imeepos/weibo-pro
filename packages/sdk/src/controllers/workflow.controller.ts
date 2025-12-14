@@ -8,7 +8,7 @@ import type {
 } from '../types'
 
 import { Observable } from 'rxjs'
-import type { WorkflowGraphAst, Ast, INode, WorkflowEvent } from '@sker/workflow';
+import type { WorkflowGraphAst, Ast, INode, NodeEvent } from '@sker/workflow';
 import type { WorkflowEntity, WorkflowScheduleEntity } from '@sker/entities';
 
 export interface MessageEvent {
@@ -28,7 +28,8 @@ export interface InitWorkflowResponse {
 }
 
 export interface ExecuteWorkflowPayload {
-  workflow: Ast;
+  ast: Ast;
+  workflow: WorkflowGraphAst,
   input?: Record<string, any>;
 }
 
@@ -81,7 +82,7 @@ export class WorkflowController {
   }
 
   @Sse('execute')
-  execute(@Body() body: ExecuteWorkflowPayload, res?: any): Observable<WorkflowEvent> {
+  execute(@Body() body: ExecuteWorkflowPayload, res?: any): Observable<NodeEvent> {
     throw new Error('method execute not implements')
   }
 
@@ -229,7 +230,7 @@ export class WorkflowController {
    * 执行单个节点 - 微调执行
    */
   @Sse('executeNode')
-  executeNode(@Body() body: ExecuteNodePayload, res?: any): Observable<WorkflowEvent> {
+  executeNode(@Body() body: ExecuteNodePayload, res?: any): Observable<NodeEvent> {
     throw new Error('method executeNode not implements')
   }
 
@@ -242,7 +243,7 @@ export class WorkflowController {
     @Param('nodeId') nodeId: string,
     @Body() body: FineTunePayload,
     res?: any
-  ): Observable<WorkflowEvent> {
+  ): Observable<NodeEvent> {
     throw new Error('method fineTuneNode not implements')
   }
 

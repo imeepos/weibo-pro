@@ -1,31 +1,14 @@
-import { Injectable, root } from "@sker/core";
-import { DataFlowManager, Handler, INode, setAstError, WorkflowGraphAst } from "@sker/workflow";
+import { Injectable } from "@sker/core";
+import { Handler, NodeEvent, setAstError, WorkflowGraphAst } from "@sker/workflow";
 import { LlmTextAgentAst } from "@sker/workflow-ast";
 import { Observable } from "rxjs";
-import { z } from 'zod'
-import { DynamicStructuredTool } from "@langchain/core/tools";
 import { useLlmModel } from "./llm-client";
-export const getNodeTool = (nodes: INode[]) => {
-    const tool = new DynamicStructuredTool({
-        name: 'getNode',
-        description: 'get node content',
-        schema: z.object({ name: z.string() }),
-        func: async ({ name }) => {
-            const filterNodes = nodes.filter(node => node.name === name)
-            const dataFlowManager = root.get(DataFlowManager)
-            return filterNodes.map(it => {
-                return { name: it.name, description: it.description, content: dataFlowManager.extractNodeOutputs(it) }
-            })
-        }
-    })
-    return tool
-}
 @Injectable()
 export class LlmTextAgentAstVisitor {
 
     @Handler(LlmTextAgentAst)
-    handler(ast: LlmTextAgentAst, ctx: WorkflowGraphAst) {
-        return new Observable((obs) => {
+    handler(ast: LlmTextAgentAst, ctx: WorkflowGraphAst): Observable<NodeEvent> {
+        return new Observable<NodeEvent>((obs) => {
             // 创建专门的 AbortController
             const abortController = new AbortController();
 
@@ -40,13 +23,12 @@ export class LlmTextAgentAstVisitor {
                 if (wrappedCtx.abortSignal?.aborted) {
                     ast.state = 'fail';
                     setAstError(ast, new Error('工作流已取消'));
-                    obs.next({ ...ast });
+                    obs.next({ type: 'node_fail', id: ast.id, data: ast })
                     return;
                 }
 
                 ast.state = 'running';
-                ast.count += 1;
-                obs.next({ ...ast })
+                obs.next({ type: 'node_runing', id: ast.id, data: ast })
 
                 const chartModel = useLlmModel({ model: ast.model, temperature: ast.temperature });
 
@@ -63,23 +45,22 @@ export class LlmTextAgentAstVisitor {
                 if (wrappedCtx.abortSignal?.aborted) {
                     ast.state = 'fail';
                     setAstError(ast, new Error('工作流已取消'));
-                    obs.next({ ...ast });
+                    obs.next({ type: 'node_fail', id: ast.id, data: ast })
                     return;
                 }
 
-                ast.text.next(result.content as string);
-                ast.username.next(ast.name || ast.id);
-                ast.profile.next(ast.description || ast.name || ast.id);
-                obs.next({ ...ast })
+                obs.next({ type: 'node_emit', id: ast.id, property: 'text', value: result.content })
+                obs.next({ type: 'node_emit', id: ast.id, property: 'username', value: ast.name })
+                obs.next({ type: 'node_emit', id: ast.id, property: 'description', value: ast.description })
 
                 ast.state = 'success';
-                obs.next({ ...ast })
+                obs.next({ type: 'node_success', id: ast.id, data: ast })
                 obs.complete()
             }
             run().catch(e => {
                 ast.state = 'fail'
                 setAstError(ast, e);
-                obs.next({ ...ast })
+                obs.next({ type: 'node_fail', id: ast.id, data: ast })
                 obs.complete()
             })
 

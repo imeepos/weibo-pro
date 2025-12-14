@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@sker/core";
-import { Handler, INode } from "@sker/workflow";
+import { Handler, INode, NodeEvent } from "@sker/workflow";
 import { WeiboLoginAst } from "@sker/workflow-ast";
 import { WeiboAuthService } from "./services/weibo-auth.service";
 import { Observable } from 'rxjs'
@@ -16,10 +16,11 @@ export class WeiboLoginAstVisitor {
   ) { }
 
   @Handler(WeiboLoginAst)
-  handler(ast: WeiboLoginAst, ctx: any): Observable<INode> {
-    return new Observable<INode>(obs => {
+  handler(ast: WeiboLoginAst, ctx: any): Observable<NodeEvent> {
+    return new Observable<NodeEvent>(obs => {
       ast.count += 1;
       ast.state = 'running';
+          obs.next({ type: 'node_runing', id: ast.id, data: ast });
       obs.next({...ast})
 
       this.authService.startLogin(ast, obs)

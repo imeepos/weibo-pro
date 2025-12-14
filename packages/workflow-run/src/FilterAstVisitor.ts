@@ -1,17 +1,14 @@
 import { Injectable } from '@sker/core'
-import { Handler, FilterAst, type FilterCondition, type FilterOperator } from '@sker/workflow'
+import { Handler, FilterAst, type FilterCondition, type FilterOperator, NodeEvent, WorkflowGraphAst } from '@sker/workflow'
 import { Observable } from 'rxjs'
 
-/**
- * 过滤节点执行器
- */
 @Injectable()
 export class FilterAstVisitor {
     @Handler(FilterAst)
-    handler(ast: FilterAst, ctx: any) {
-        return new Observable(obs => {
+    handler(ast: FilterAst, workflow: WorkflowGraphAst): Observable<NodeEvent> {
+        return new Observable<NodeEvent>(obs => {
             ast.state = 'running'
-            obs.next({ ...ast })
+            obs.next({ type: 'node_runing', id: ast.id, data: ast })
 
             let items = ast.items || []
             if (!Array.isArray(items)) {
@@ -28,14 +25,11 @@ export class FilterAstVisitor {
             } else {
                 matched = items.filter(Boolean)
             }
-
-            ast.matched.next(matched)
-            ast.matchedCount.next(matched.length)
-
-            obs.next({ ...ast })
+            obs.next({ type: 'node_emit', id: ast.id, property: `matched`, value: matched })
+            obs.next({ type: 'node_emit', id: ast.id, property: `matchedCount`, value: matched.length })
 
             ast.state = 'success'
-            obs.next({ ...ast })
+            obs.next({ type: 'node_success', id: ast.id, data: ast })
             obs.complete()
         })
     }

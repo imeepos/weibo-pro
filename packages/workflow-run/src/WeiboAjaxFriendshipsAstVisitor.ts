@@ -1,6 +1,6 @@
 import { Inject, Injectable } from "@sker/core";
 import { WeiboAccountService } from "./services/weibo-account.service";
-import { Handler, INode, setAstError } from "@sker/workflow";
+import { Handler, NodeEvent, setAstError } from "@sker/workflow";
 import { WeiboAjaxFriendshipsAst } from "@sker/workflow-ast";
 import { WeiboApiClient } from "./services/weibo-api-client.base";
 import { Observable } from "rxjs";
@@ -23,13 +23,14 @@ export class WeiboAjaxFriendshipsAstVisitor extends WeiboApiClient {
     }
 
     @Handler(WeiboAjaxFriendshipsAst)
-    visit(ast: WeiboAjaxFriendshipsAst, _ctx: any): Observable<INode> {
-        return new Observable<INode>(obs => {
+    visit(ast: WeiboAjaxFriendshipsAst, _ctx: any): Observable<NodeEvent> {
+        return new Observable<NodeEvent>(obs => {
             const handler = async () => {
                 try {
                     ast.state = 'running';
+          obs.next({ type: 'node_runing', id: ast.id, data: ast });
                     ast.count += 1;
-                    obs.next({ ...ast });
+                    obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
                     const url = `https://weibo.com/ajax/friendships/friends?page=${ast.page || 1}&uid=${ast.uid}`;
                     const body = await this.fetchApi<WeiboAjaxFriendshipsResponse>({
@@ -37,17 +38,17 @@ export class WeiboAjaxFriendshipsAstVisitor extends WeiboApiClient {
                         refererOptions: { uid: ast.uid }
                     });
 
-                    ast.isEnd.next(true);
-                    obs.next({ ...ast });
+                    ast.isEnd.next(true);
+                    obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
                     ast.state = 'success';
-                    obs.next({ ...ast });
+                    obs.next({ type: 'node_success', id: ast.id, data: ast });
                     obs.complete()
                 } catch (error) {
                     console.error(`[WeiboAjaxFriendshipsAstVisitor] uid: ${ast.uid}`, error);
                     ast.state = 'fail';
                     setAstError(ast, error);
-                    obs.next({ ...ast });
+                    obs.next({ type: 'node_fail', id: ast.id, data: ast });
                     obs.complete()
                 }
             };

@@ -1,5 +1,5 @@
 import { Injectable } from "@sker/core";
-import { Handler } from "@sker/workflow";
+import { Handler, NodeEvent } from "@sker/workflow";
 import { ShareAst, ChatMessage } from "@sker/workflow-ast";
 import { Observable } from "rxjs";
 
@@ -19,7 +19,7 @@ import { Observable } from "rxjs";
 export class ShareAstVisitor {
     @Handler(ShareAst)
     handler(ast: ShareAst) {
-        return new Observable<ShareAst>(obs => {
+        return new Observable<NodeEvent>(obs => {
             ast.state = 'running';
             ast.count += 1;
             obs.next(ast);
@@ -57,7 +57,8 @@ export class ShareAstVisitor {
                 formattedLength: formatted.length,
                 latestRole: ast.username,
                 isAccumulating: (ast.previousHistory?.length || 0) > 0
-            });
+            });
+
             obs.next(ast);
 
             ast.state = 'success';

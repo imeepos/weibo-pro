@@ -1,5 +1,5 @@
 import { Injectable } from "@sker/core";
-import { Handler } from "@sker/workflow";
+import { Handler, NodeEvent } from "@sker/workflow";
 import { CollectorAst } from "@sker/workflow";
 import { Observable } from "rxjs";
 
@@ -12,7 +12,7 @@ import { Observable } from "rxjs";
 export class CollectorVisitor {
     @Handler(CollectorAst)
     handler(ast: CollectorAst, ctx: any) {
-        return new Observable(obs => {
+        return new Observable<NodeEvent>(obs => {
             ast.state = 'running';
             obs.next({ ...ast });
 

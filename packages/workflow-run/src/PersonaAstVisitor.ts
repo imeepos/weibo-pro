@@ -1,5 +1,5 @@
 import { Injectable } from '@sker/core';
-import { Handler, setAstError, WorkflowGraphAst } from '@sker/workflow';
+import { Handler, NodeEvent, setAstError, WorkflowGraphAst } from '@sker/workflow';
 import { PersonaAst, RetrievedMemory } from '@sker/workflow-ast';
 import {
   useEntityManager,
@@ -29,7 +29,7 @@ export class PersonaAstVisitor {
 
   @Handler(PersonaAst)
   handler(ast: PersonaAst, ctx: WorkflowGraphAst) {
-    return new Observable((obs) => {
+    return new Observable<NodeEvent>((obs) => {
       const abortController = new AbortController();
 
       const run = async () => {

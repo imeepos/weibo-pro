@@ -1,14 +1,15 @@
 import { Injectable } from "@sker/core";
-import { DateAst, Handler, TextAreaAst } from "@sker/workflow";
+import { DateAst, Handler, NodeEvent, TextAreaAst } from "@sker/workflow";
 import { Observable } from "rxjs";
 
 @Injectable()
 export class DateAstVisitor {
     @Handler(DateAst)
     handler(ast: DateAst, ctx: any) {
-        return new Observable(obs => {
+        return new Observable<NodeEvent>(obs => {
             ast.state = 'running'
-            obs.next({ ...ast })
+            obs.next({ ...ast })
+
             ast.date.next(new Date(ast.dateStr));
 
             obs.next({ ...ast })

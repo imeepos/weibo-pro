@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@sker/core";
 import { useEntityManager, WeiboUserEntity } from "@sker/entities";
 import { WeiboAccountService } from "./services/weibo-account.service";
-import { Handler, INode, setAstError } from "@sker/workflow";
+import { Handler, NodeEvent, setAstError } from "@sker/workflow";
 import { WeiboAjaxProfileInfoAst } from "@sker/workflow-ast";
 import { WeiboApiClient } from "./services/weibo-api-client.base";
 import { Observable } from "rxjs";
@@ -31,8 +31,8 @@ export class WeiboAjaxProfileInfoAstVisitor extends WeiboApiClient {
     }
 
     @Handler(WeiboAjaxProfileInfoAst)
-    visit(ast: WeiboAjaxProfileInfoAst, _ctx: any): Observable<INode> {
-        return new Observable<INode>(obs => {
+    visit(ast: WeiboAjaxProfileInfoAst, _ctx: any): Observable<NodeEvent> {
+        return new Observable<NodeEvent>(obs => {
             // 创建专门的 AbortController
             const abortController = new AbortController();
 
@@ -48,13 +48,13 @@ export class WeiboAjaxProfileInfoAstVisitor extends WeiboApiClient {
                     if (wrappedCtx.abortSignal?.aborted) {
                         ast.state = 'fail';
                         setAstError(ast, new Error('工作流已取消'));
-                        obs.next({ ...ast });
+                        obs.next({ type: 'node_fail', id: ast.id, data: ast });
                         return;
                     }
 
                     ast.state = 'running';
                     ast.count += 1;
-                    obs.next({ ...ast });
+                    obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
                     const url = `https://weibo.com/ajax/profile/info?uid=${ast.uid}`;
                     const body = await this.fetchApi<WeiboAjaxProfileInfoAstResponse>({
@@ -66,7 +66,7 @@ export class WeiboAjaxProfileInfoAstVisitor extends WeiboApiClient {
                     if (wrappedCtx.abortSignal?.aborted) {
                         ast.state = 'fail';
                         setAstError(ast, new Error('工作流已取消'));
-                        obs.next({ ...ast });
+                        obs.next({ type: 'node_fail', id: ast.id, data: ast });
                         return;
                     }
 
@@ -76,18 +76,18 @@ export class WeiboAjaxProfileInfoAstVisitor extends WeiboApiClient {
                         await m.upsert(WeiboUserEntity, user as any, ['id']);
                     });
 
-                    await this.fetchDetail(ast, wrappedCtx);
+                    await this.fetchDetail(ast, wrappedCtx);
                     ast.isEnd.next(true);
-                    obs.next({ ...ast });
+                    obs.next({ type: 'node_emit', id: ast.id, property: 'isEnd', value: ast.isEnd.value });
 
                     ast.state = 'success';
-                    obs.next({ ...ast });
+                    obs.next({ type: 'node_success', id: ast.id, data: ast });
                     obs.complete()
                 } catch (error) {
                     console.error(`[WeiboAjaxProfileInfoAstVisitor] uid: ${ast.uid}`, error);
                     ast.state = 'fail';
                     setAstError(ast, error);
-                    obs.next({ ...ast });
+                    obs.next({ type: 'node_fail', id: ast.id, data: ast });
                     obs.complete()
                 }
             };

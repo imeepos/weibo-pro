@@ -1,5 +1,5 @@
 import { Injectable } from "@sker/core";
-import { Handler, setAstError, WorkflowGraphAst } from "@sker/workflow";
+import { Handler, NodeEvent, setAstError, WorkflowGraphAst } from "@sker/workflow";
 import { AnswerFinalizerAst } from "@sker/workflow-ast";
 import { Observable } from "rxjs";
 import { useLlmModel } from "./llm-client";
@@ -52,7 +52,7 @@ export class AnswerFinalizerAstVisitor {
 
     @Handler(AnswerFinalizerAst)
     handler(ast: AnswerFinalizerAst, ctx: WorkflowGraphAst) {
-        return new Observable((obs) => {
+        return new Observable<NodeEvent>((obs) => {
             const abortController = new AbortController();
 
             const wrappedCtx = {

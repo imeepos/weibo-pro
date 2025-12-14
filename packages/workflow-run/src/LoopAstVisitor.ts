@@ -1,5 +1,5 @@
 import { Injectable } from '@sker/core'
-import { Handler, LoopAst } from '@sker/workflow'
+import { Handler, LoopAst, NodeEvent } from '@sker/workflow'
 import { Observable } from 'rxjs'
 
 /**
@@ -11,7 +11,7 @@ import { Observable } from 'rxjs'
 export class LoopAstVisitor {
     @Handler(LoopAst)
     handler(ast: LoopAst, ctx: any) {
-        return new Observable(obs => {
+        return new Observable<NodeEvent>(obs => {
             ast.state = 'running'
             obs.next({ ...ast })
 

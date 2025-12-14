@@ -1,8 +1,9 @@
 import { Injectable } from '@sker/core';
-import { Handler, INode } from '@sker/workflow';
+import { Handler, INode, NodeEvent, WorkflowGraphAst } from '@sker/workflow';
 import { WeiboAjaxStatusesMymblogAst } from '@sker/workflow-ast';
 import { Observable } from 'rxjs';
 import { executeRemote } from './execute-remote.js';
+import { WorkflowController } from '@sker/sdk';
 
 /**
  * 个人博文浏览器端执行器
@@ -10,7 +11,7 @@ import { executeRemote } from './execute-remote.js';
 @Injectable()
 export class WeiboAjaxStatusesMymblogBrowserVisitor {
   @Handler(WeiboAjaxStatusesMymblogAst)
-  handler(ast: WeiboAjaxStatusesMymblogAst, ctx: any): Observable<INode> {
-    return executeRemote(ast);
+  handler(ast: WeiboAjaxStatusesMymblogAst, ctx: WorkflowGraphAst): Observable<NodeEvent> {
+    return executeRemote(ast, ctx);
   }
 }

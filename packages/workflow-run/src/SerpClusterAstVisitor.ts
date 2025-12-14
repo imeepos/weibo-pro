@@ -1,5 +1,5 @@
 import { Injectable } from "@sker/core";
-import { Handler, setAstError, WorkflowGraphAst } from "@sker/workflow";
+import { Handler, NodeEvent, setAstError, WorkflowGraphAst } from "@sker/workflow";
 import { SerpClusterAst } from "@sker/workflow-ast";
 import { Observable } from "rxjs";
 import { useLlmModel } from "./llm-client";
@@ -32,7 +32,7 @@ export class SerpClusterAstVisitor {
 
     @Handler(SerpClusterAst)
     handler(ast: SerpClusterAst, ctx: WorkflowGraphAst) {
-        return new Observable((obs) => {
+        return new Observable<NodeEvent>((obs) => {
             const abortController = new AbortController();
 
             const run = async () => {

@@ -1,14 +1,14 @@
 import { Injectable } from '@sker/core'
-import { Handler, LoopAst } from '@sker/workflow'
+import { Handler, LoopAst, NodeEvent } from '@sker/workflow'
 import { Observable } from 'rxjs'
 
 @Injectable()
 export class LoopAstVisitor {
     @Handler(LoopAst)
-    handler(ast: LoopAst, ctx: any) {
+    handler(ast: LoopAst, ctx: any): Observable<NodeEvent> {
         return new Observable(obs => {
             ast.state = 'running'
-            obs.next({ ...ast })
+            obs.next({ type: 'node_runing', id: ast.id, data: ast })
 
             let items: any[] = ast.items || []
             if (!Array.isArray(items)) {
@@ -20,14 +20,13 @@ export class LoopAstVisitor {
             const delay = Math.max(0, ast.delay || 0)
             const total = items.length
 
-            ast.total.next(total)
-            ast.done.next(false)
-            obs.next({ ...ast })
+            obs.next({ type: 'node_emit', id: ast.id, property: 'total', value: total })
+            obs.next({ type: 'node_emit', id: ast.id, property: 'done', value: false })
 
             if (total === 0) {
-                ast.done.next(true)
+                obs.next({ type: 'node_emit', id: ast.id, property: 'done', value: true })
                 ast.state = 'success'
-                obs.next({ ...ast })
+                obs.next({ type: 'node_success', id: ast.id, data: ast })
                 obs.complete()
                 return
             }
@@ -38,9 +37,8 @@ export class LoopAstVisitor {
                     ? items[startIndex]
                     : items.slice(startIndex, endIndex)
 
-                ast.index.next(startIndex)
-                ast.current.next(batch)
-                obs.next({ ...ast })
+                obs.next({ type: 'node_emit', id: ast.id, property: 'index', value: startIndex })
+                obs.next({ type: 'node_emit', id: ast.id, property: 'current', value: batch })
 
                 const nextIndex = endIndex
                 if (nextIndex < total) {
@@ -50,9 +48,9 @@ export class LoopAstVisitor {
                         emitBatch(nextIndex)
                     }
                 } else {
-                    ast.done.next(true)
+                    obs.next({ type: 'node_emit', id: ast.id, property: 'done', value: true })
                     ast.state = 'success'
-                    obs.next({ ...ast })
+                    obs.next({ type: 'node_success', id: ast.id, data: ast })
                     obs.complete()
                 }
             }

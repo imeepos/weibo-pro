@@ -1,5 +1,5 @@
 import { Injectable } from "@sker/core";
-import { Handler, ROUTE_SKIPPED, setAstError, WorkflowGraphAst } from "@sker/workflow";
+import { Handler, NodeEvent, ROUTE_SKIPPED, setAstError, WorkflowGraphAst } from "@sker/workflow";
 import { LlmCategoryAst } from "@sker/workflow-ast";
 import { BehaviorSubject, Observable } from "rxjs";
 import { useLlmModel } from "./llm-client";
@@ -9,7 +9,7 @@ export class LlmCategoryAstVisitor {
 
     @Handler(LlmCategoryAst)
     handler(ast: LlmCategoryAst, ctx: WorkflowGraphAst) {
-        return new Observable((obs) => {
+        return new Observable<NodeEvent>((obs) => {
             const abortController = new AbortController();
 
             const run = async () => {

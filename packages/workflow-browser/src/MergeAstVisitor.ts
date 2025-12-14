@@ -1,14 +1,14 @@
 import { Injectable } from '@sker/core'
-import { Handler, MergeAst, type MergeMode } from '@sker/workflow'
+import { Handler, MergeAst, type MergeMode, NodeEvent } from '@sker/workflow'
 import { Observable } from 'rxjs'
 
 @Injectable()
 export class MergeAstVisitor {
     @Handler(MergeAst)
-    handler(ast: MergeAst, ctx: any) {
+    handler(ast: MergeAst, ctx: any): Observable<NodeEvent> {
         return new Observable(obs => {
             ast.state = 'running'
-            obs.next({ ...ast })
+            obs.next({ type: 'node_runing', id: ast.id, data: ast })
 
             let inputs = ast.inputs || []
             if (!Array.isArray(inputs)) {
@@ -17,13 +17,11 @@ export class MergeAstVisitor {
 
             const result = this.merge(inputs, ast.mode)
 
-            ast.result.next(result)
-            ast.totalCount.next(result.length)
-
-            obs.next({ ...ast })
+            obs.next({ type: 'node_emit', id: ast.id, property: 'result', value: result })
+            obs.next({ type: 'node_emit', id: ast.id, property: 'totalCount', value: result.length })
 
             ast.state = 'success'
-            obs.next({ ...ast })
+            obs.next({ type: 'node_success', id: ast.id, data: ast })
             obs.complete()
         })
     }

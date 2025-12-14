@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@sker/core";
 import { useEntityManager, WeiboUserEntity, WeiboLikeEntity } from "@sker/entities";
 import { WeiboAccountService } from "./services/weibo-account.service";
-import { Handler, INode, setAstError } from "@sker/workflow";
+import { Handler, NodeEvent, setAstError } from "@sker/workflow";
 import { WeiboAjaxStatusesLikeShowAst } from "@sker/workflow-ast";
 import { WeiboApiClient } from "./services/weibo-api-client.base";
 import { Observable } from "rxjs";
@@ -30,13 +30,13 @@ export class WeiboAjaxStatusesLikeShowAstVisitor extends WeiboApiClient {
     }
 
     @Handler(WeiboAjaxStatusesLikeShowAst)
-    handler(ast: WeiboAjaxStatusesLikeShowAst, _ctx: any): Observable<INode> {
-        return new Observable<INode>(obs => {
+    handler(ast: WeiboAjaxStatusesLikeShowAst, _ctx: any): Observable<NodeEvent> {
+        return new Observable<NodeEvent>(obs => {
             const handle = async () => {
                 try {
                     ast.state = 'running';
                     ast.count += 1;
-                    obs.next({ ...ast });
+                    obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
                     let page = 1;
                     for await (const body of this.fetchWithPagination<WeiboStatusLikeShowResponse>({
@@ -66,16 +66,16 @@ export class WeiboAjaxStatusesLikeShowAstVisitor extends WeiboApiClient {
                         });
                     }
                     ast.is_end.next(true);
-                    obs.next({ ...ast });
+                    obs.next({ type: 'node_emit', id: ast.id, property: 'is_end', value: ast.is_end.value });
 
                     ast.state = 'success';
-                    obs.next({ ...ast });
+                    obs.next({ type: 'node_success', id: ast.id, data: ast });
                     obs.complete()
                 } catch (error) {
                     console.error(`[WeiboAjaxStatusesLikeShowAstVisitor] mid: ${ast.mid}`, error);
                     ast.state = 'fail';
                     setAstError(ast, error);
-                    obs.next({ ...ast });
+                    obs.next({ type: 'node_fail', id: ast.id, data: ast });
                     obs.complete()
                 }
             };

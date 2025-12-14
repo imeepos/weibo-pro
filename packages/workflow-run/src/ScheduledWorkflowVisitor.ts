@@ -1,5 +1,5 @@
 import { Inject, Injectable, logger } from '@sker/core'
-import { Handler, INode, setAstError } from '@sker/workflow'
+import { Handler, NodeEvent, setAstError } from '@sker/workflow'
 import { ScheduledWorkflowAst } from '@sker/workflow-ast'
 import {
   WorkflowScheduleEntity,
@@ -32,12 +32,12 @@ export class ScheduledWorkflowVisitor {
   ) {}
 
   @Handler(ScheduledWorkflowAst)
-  visit(ast: ScheduledWorkflowAst, ctx: any): Observable<INode> {
-    return new Observable<INode>((obs) => {
+  visit(ast: ScheduledWorkflowAst, ctx: any): Observable<NodeEvent> {
+    return new Observable<NodeEvent>((obs) => {
       const handler = async () => {
         try {
           ast.state = 'running'
-          obs.next({ ...ast })
+          obs.next({ type: 'node_runing', id: ast.id, data: ast })
 
           // 解析输入参数
           let inputs: Record<string, unknown> = {}
@@ -116,7 +116,7 @@ export class ScheduledWorkflowVisitor {
           ast.status = schedule.status
 
           ast.state = 'success'
-          obs.next({ ...ast })
+          obs.next({ type: 'node_success', id: ast.id, data: ast })
 
           logger.info('创建定时工作流成功', {
             scheduleId: schedule.id,
@@ -136,7 +136,7 @@ export class ScheduledWorkflowVisitor {
 
           ast.state = 'fail'
           setAstError(ast, error as Error)
-          obs.next({ ...ast })
+          obs.next({ type: 'node_fail', id: ast.id, data: ast })
           obs.complete()
         }
       }

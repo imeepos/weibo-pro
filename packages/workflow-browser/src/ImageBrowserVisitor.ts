@@ -1,5 +1,5 @@
 import { Injectable } from "@sker/core";
-import { Handler } from "@sker/workflow";
+import { Handler, NodeEvent } from "@sker/workflow";
 import { ImageAst } from "@sker/workflow-ast";
 import { Observable } from "rxjs";
 
@@ -9,18 +9,17 @@ import { Observable } from "rxjs";
 @Injectable()
 export class ImageBrowserVisitor {
     @Handler(ImageAst)
-    handler(ast: ImageAst, ctx: any) {
+    handler(ast: ImageAst, ctx: any): Observable<NodeEvent> {
         return new Observable(obs => {
-            // 如果有标注或裁剪，使用完整处理流程
-            // 无编辑操作，直接传递
             ast.state = 'running';
-            obs.next({ ...ast });
+            obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
-            if (ast.uploadedImage) ast.image.next(ast.uploadedImage);
-            obs.next({ ...ast });
+            if (ast.uploadedImage) {
+                obs.next({ type: 'node_emit', id: ast.id, property: 'image', value: ast.uploadedImage });
+            }
 
             ast.state = 'success';
-            obs.next({ ...ast });
+            obs.next({ type: 'node_success', id: ast.id, data: ast });
             obs.complete();
         });
     }

@@ -1,5 +1,5 @@
 import { Injectable, root } from '@sker/core';
-import { Handler, setAstError, WorkflowGraphAst } from '@sker/workflow';
+import { Handler, NodeEvent, setAstError, WorkflowGraphAst } from '@sker/workflow';
 import { PromptRoleSkillAst } from '@sker/workflow-ast';
 import { PromptRoleSkillRefEntity, PromptSkillEntity, useEntityManager, In, type SkillSummary } from '@sker/entities';
 import { Observable } from 'rxjs';
@@ -16,7 +16,7 @@ export class PromptRoleSkillAstVisitor {
 
   @Handler(PromptRoleSkillAst)
   handler(ast: PromptRoleSkillAst, ctx: WorkflowGraphAst) {
-    return new Observable((obs) => {
+    return new Observable<NodeEvent>((obs) => {
       const abortController = new AbortController();
 
       const run = async () => {

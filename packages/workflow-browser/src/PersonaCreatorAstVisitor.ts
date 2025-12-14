@@ -7,7 +7,7 @@ import { executeRemote } from './execute-remote.js';
 @Injectable()
 export class PersonaCreatorAstVisitor {
   @Handler(PersonaCreatorAst)
-  handler(ast: PersonaCreatorAst, ctx: any): Observable<INode> {
-    return executeRemote(ast);
+  handler(ast: PersonaCreatorAst, ctx: any) {
+    return executeRemote(ast, ctx);
   }
 }

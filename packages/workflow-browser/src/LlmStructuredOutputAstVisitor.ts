@@ -7,7 +7,7 @@ import { executeRemote } from './execute-remote.js';
 @Injectable()
 export class LlmStructuredOutputAstVisitor {
   @Handler(LlmStructuredOutputAst)
-  handler(ast: LlmStructuredOutputAst, ctx: any): Observable<INode> {
-    return executeRemote(ast);
+  handler(ast: LlmStructuredOutputAst, ctx: any) {
+    return executeRemote(ast, ctx);
   }
 }

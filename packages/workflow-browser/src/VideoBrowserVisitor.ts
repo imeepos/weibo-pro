@@ -1,5 +1,5 @@
 import { Injectable } from "@sker/core";
-import { Handler } from "@sker/workflow";
+import { Handler, NodeEvent } from "@sker/workflow";
 import { VideoAst } from "@sker/workflow-ast";
 import { Observable } from "rxjs";
 
@@ -9,15 +9,17 @@ import { Observable } from "rxjs";
 @Injectable()
 export class VideoBrowserVisitor {
     @Handler(VideoAst)
-    handler(ast: VideoAst, ctx: any) {
+    handler(ast: VideoAst, ctx: any): Observable<NodeEvent> {
         return new Observable(obs => {
             ast.state = 'running';
-            obs.next({ ...ast });
-            ast.video.next(ast.uploadedVideo || '');
-            obs.next({ ...ast });
+            obs.next({ type: 'node_runing', id: ast.id, data: ast });
+
+            if (ast.uploadedVideo) {
+                obs.next({ type: 'node_emit', id: ast.id, property: 'video', value: ast.uploadedVideo });
+            }
 
             ast.state = 'success';
-            obs.next({ ...ast });
+            obs.next({ type: 'node_success', id: ast.id, data: ast });
             obs.complete();
         });
     }

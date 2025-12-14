@@ -1,5 +1,5 @@
 import { Injectable } from '@sker/core';
-import { Handler, INode, setAstError } from '@sker/workflow';
+import { Handler, NodeEvent, setAstError } from '@sker/workflow';
 import { PostContextCollectorAst } from '@sker/workflow-ast';
 import {
   useEntityManager,
@@ -12,8 +12,8 @@ import { Observable } from 'rxjs';
 @Injectable()
 export class PostContextCollectorVisitor {
   @Handler(PostContextCollectorAst)
-  visit(ast: PostContextCollectorAst, ctx: any): Observable<INode> {
-    return new Observable<INode>(obs => {
+  visit(ast: PostContextCollectorAst, ctx: any): Observable<NodeEvent> {
+    return new Observable<NodeEvent>(obs => {
       // 创建专门的 AbortController
       const abortController = new AbortController();
 
@@ -29,13 +29,13 @@ export class PostContextCollectorVisitor {
           if (wrappedCtx.abortSignal?.aborted) {
             ast.state = 'fail';
             setAstError(ast, new Error('工作流已取消'));
-            obs.next({ ...ast });
+            obs.next({ type: 'node_fail', id: ast.id, data: ast });
             return;
           }
 
           ast.state = 'running';
           ast.count += 1;
-          obs.next({ ...ast });
+          obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
           if (ast.canStart && ast.canStart.length > 0) {
             const canStart = ast.canStart.every(it => !!it)
@@ -51,7 +51,7 @@ export class PostContextCollectorVisitor {
           if (wrappedCtx.abortSignal?.aborted) {
             ast.state = 'fail';
             setAstError(ast, new Error('工作流已取消'));
-            obs.next({ ...ast });
+            obs.next({ type: 'node_fail', id: ast.id, data: ast });
             return;
           }
 
@@ -82,18 +82,20 @@ export class PostContextCollectorVisitor {
 
             ast.post.next(post);
             ast.comments.next(comments);
-            ast.reposts.next(reposts);
-            obs.next({ ...ast });
+            ast.reposts.next(reposts);
+            obs.next({ type: 'node_emit', id: ast.id, property: 'post', value: ast.post.value });
+            obs.next({ type: 'node_emit', id: ast.id, property: 'comments', value: ast.comments.value });
+            obs.next({ type: 'node_emit', id: ast.id, property: 'reposts', value: ast.reposts.value });
           });
 
           ast.state = 'success';
-          obs.next({ ...ast });
+          obs.next({ type: 'node_success', id: ast.id, data: ast });
           obs.complete()
         } catch (error) {
           ast.state = 'fail';
           setAstError(ast, error, process.env.NODE_ENV === 'development');
           console.error(`[PostContextCollectorVisitor] postId: ${ast.postId}`, error);
-          obs.next({ ...ast });
+          obs.next({ type: 'node_fail', id: ast.id, data: ast });
           obs.complete()
         }
       };

@@ -9,7 +9,7 @@ export type { INode, IEdge, IAstStates, INodeMetadata, INodeInputMetadata, INode
 export { executeAst, executeWorkflow, executeWorkflowImmediate, executeAstWithWorkflowGraph, executeNodeIsolated, NodeExecutor } from './executor'
 export { VisitorExecutor } from './execution/visitor-executor'
 export { NoRetryError } from './errors'
-
+export * from './execution/events'
 export * from './utils';
 export * from './TextAreaAst';
 export * from './DateAst';

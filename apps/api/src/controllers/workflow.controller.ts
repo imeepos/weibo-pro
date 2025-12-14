@@ -1,6 +1,6 @@
 import { Controller, Post, Body, Get, BadRequestException, Query, Delete, NotFoundException, Sse, Res, Param, Put } from '@nestjs/common';
-import { Observable, tap, filter, last, map, scan, of, lastValueFrom } from 'rxjs';
-import { Ast, executeAst, fromJson, generateId, INode, resolveConstructor, type OutputMetadata, getNodeById, type SseMessage, executeAstWithWorkflowGraph, executeNodeIsolated, type WorkflowEvent, NetworkBuilder, executeWorkflowImmediate } from '@sker/workflow';
+import { Observable, lastValueFrom } from 'rxjs';
+import { Ast, fromJson, generateId, INode, resolveConstructor, type OutputMetadata, getNodeById, executeAstWithWorkflowGraph, executeWorkflowImmediate, NodeEvent, executeAst } from '@sker/workflow';
 import { WorkflowGraphAst } from '@sker/workflow';
 import { logger, root } from '@sker/core';
 import * as sdk from '@sker/sdk';
@@ -152,7 +152,7 @@ export class WorkflowController implements sdk.WorkflowController {
   execute(
     @Body() body: { workflow: Ast; input?: Record<string, any> },
     @Res() res?: any
-  ): Observable<WorkflowEvent> {
+  ): Observable<NodeEvent> {
     // 设置 SSE 响应头
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
@@ -165,18 +165,15 @@ export class WorkflowController implements sdk.WorkflowController {
     try {
       const { workflow, input = {} } = body;
       const ast = fromJson(workflow) as WorkflowGraphAst;
-
-      // 使用 executeWorkflowImmediate 执行整个工作流
-      const execution$ = executeWorkflowImmediate(ast, input);
-
-      const subscription = execution$.subscribe({
-        next: (event: WorkflowEvent) => {
+      const events$ = executeAst(ast, input)
+      const subscription = events$.subscribe({
+        next: (event: NodeEvent) => {
           res.write(`data: ${JSON.stringify(event)}\n\n`);
         },
         error: (error: any) => {
           logger.error('工作流执行失败', { error: error.message });
           res.write(`data: ${JSON.stringify({
-            type: 'workflow_error',
+            type: 'fail',
             error: { message: error.message }
           })}\n\n`);
           res.end();
@@ -184,14 +181,14 @@ export class WorkflowController implements sdk.WorkflowController {
         complete: () => {
           res.end();
         }
-      });
+      })
 
       // 处理客户端断开连接
       res.on('close', () => {
         subscription.unsubscribe();
       });
 
-      return execution$;
+      return events$;
     } catch (error: any) {
       logger.error('execute error', { error: error.message, body });
       res.write(`data: ${JSON.stringify({
@@ -217,7 +214,7 @@ export class WorkflowController implements sdk.WorkflowController {
   executeNode(
     @Body() body: { workflow: INode, nodeId: string, config?: any },
     @Res() res?: any
-  ): Observable<WorkflowEvent> {
+  ): Observable<NodeEvent> {
     // 设置 SSE 响应头
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',

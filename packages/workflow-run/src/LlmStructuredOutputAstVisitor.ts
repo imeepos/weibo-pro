@@ -1,5 +1,5 @@
 import { Injectable } from "@sker/core";
-import { Handler, INodeOutputMetadata, setAstError, WorkflowGraphAst } from "@sker/workflow";
+import { Handler, INodeOutputMetadata, NodeEvent, setAstError, WorkflowGraphAst } from "@sker/workflow";
 import { LlmStructuredOutputAst } from "@sker/workflow-ast";
 import { Observable } from "rxjs";
 import { useLlmModel } from "./llm-client";
@@ -17,7 +17,7 @@ export class LlmStructuredOutputAstVisitor {
 
     @Handler(LlmStructuredOutputAst)
     handler(ast: LlmStructuredOutputAst, ctx: WorkflowGraphAst) {
-        return new Observable((obs) => {
+        return new Observable<NodeEvent>((obs) => {
             const abortController = new AbortController();
 
             const run = async () => {
@@ -61,7 +61,8 @@ export class LlmStructuredOutputAstVisitor {
                     if (output.property in result) {
                         (ast as any)[output.property] = result[output.property];
                     }
-                }
+                }
+
                 obs.next({ ...ast });
 
                 ast.state = 'success';

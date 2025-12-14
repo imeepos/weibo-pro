@@ -2,7 +2,7 @@ import { Inject, Injectable } from "@sker/core";
 import { WeiboAccountService } from "./services/weibo-account.service";
 import { DelayService } from "./services/delay.service";
 import { RateLimiterService } from "./services/rate-limiter.service";
-import { Handler, INode, setAstError } from '@sker/workflow'
+import { Handler, NodeEvent, setAstError } from '@sker/workflow'
 import { WeiboAjaxFeedHotTimelineAst } from '@sker/workflow-ast'
 import { useEntityManager, WeiboPostEntity, WeiboUserEntity } from "@sker/entities";
 import { WeiboApiClient } from "./services/weibo-api-client.base";
@@ -26,8 +26,8 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
     }
 
     @Handler(WeiboAjaxFeedHotTimelineAst)
-    visit(ast: WeiboAjaxFeedHotTimelineAst, _ctx: any): Observable<INode> {
-        return new Observable<INode>(obs => {
+    visit(ast: WeiboAjaxFeedHotTimelineAst, _ctx: any): Observable<NodeEvent> {
+        return new Observable<NodeEvent>(obs => {
             // 创建专门的 AbortController
             const abortController = new AbortController();
 
@@ -48,27 +48,28 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
         });
     }
 
-    private async handler(ast: WeiboAjaxFeedHotTimelineAst, obs: Subscriber<INode>, ctx: any) {
+    private async handler(ast: WeiboAjaxFeedHotTimelineAst, obs: Subscriber<NodeEvent>, ctx: any) {
         try {
             // 检查取消信号
             if (ctx.abortSignal?.aborted) {
                 ast.state = 'fail';
                 setAstError(ast, new Error('工作流已取消'));
-                obs.next({ ...ast });
+                obs.next({ type: 'node_fail', id: ast.id, data: ast });
                 return;
             }
 
             let pageCount = 0;
             ast.count += 1;
             ast.state = 'running';
-            obs.next({ ...ast });
+          obs.next({ type: 'node_runing', id: ast.id, data: ast });
+            obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
             while (true) {
                 // 检查取消信号（循环开始）
                 if (ctx.abortSignal?.aborted) {
                     ast.state = 'fail';
                     setAstError(ast, new Error('工作流已取消'));
-                    obs.next({ ...ast });
+                    obs.next({ type: 'node_fail', id: ast.id, data: ast });
                     return;
                 }
 
@@ -84,7 +85,7 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
                 if (ctx.abortSignal?.aborted) {
                     ast.state = 'fail';
                     setAstError(ast, new Error('工作流已取消'));
-                    obs.next({ ...ast });
+                    obs.next({ type: 'node_fail', id: ast.id, data: ast });
                     return;
                 }
 
@@ -114,7 +115,7 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
                         // TODO: 改造为 BehaviorSubject 模式后，这里直接发射到 output$
                         ast.mblogid.next(post.mblogid);
                         ast.uid.next(post.user.idstr);
-                        obs.next({ ...ast });
+                        obs.next({ type: 'node_runing', id: ast.id, data: ast });
                     });
                     console.log(`[WeiboAjaxFeedHotTimelineAstVisitor] 成功入库 ${posts.length} 条微博，${users.length} 个用户`);
                 });
@@ -128,13 +129,13 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
 
             console.log(`[WeiboAjaxFeedHotTimelineAstVisitor] 完成，共抓取 ${pageCount} 页数据`);
             ast.state = 'success';  // 完成信号：不触发下游，仅更新工作流状态
-            obs.next({ ...ast });
+            obs.next({ type: 'node_success', id: ast.id, data: ast });
             obs.complete();
         } catch (error) {
             console.error(`[WeiboAjaxFeedHotTimelineAstVisitor] 抓取失败`, error);
             ast.state = 'fail';
             setAstError(ast, error);
-            obs.next({ ...ast });
+            obs.next({ type: 'node_fail', id: ast.id, data: ast });
             obs.complete();
         }
         return ast;

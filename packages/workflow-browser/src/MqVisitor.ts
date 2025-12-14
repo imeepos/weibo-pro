@@ -6,15 +6,15 @@ import { executeRemote } from './execute-remote.js';
 @Injectable()
 export class MqPullAstVisitor {
   @Handler(MqPullAst)
-  handler(ast: MqPullAst, ctx: any): Observable<INode> {
-    return executeRemote(ast);
+  handler(ast: MqPullAst, ctx: any) {
+    return executeRemote(ast, ctx);
   }
 }
 
 @Injectable()
 export class MqPushAstVisitor {
   @Handler(MqPushAst)
-  handler(ast: MqPushAst, ctx: any): Observable<INode> {
-    return executeRemote(ast);
+  handler(ast: MqPushAst, ctx: any) {
+    return executeRemote(ast, ctx);
   }
 }

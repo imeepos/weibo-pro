@@ -10,9 +10,7 @@
   "scripts": {
     "claude": "claude --dangerously-skip-permissions",
     "lint": "eslint . --max-warnings 0",
-    "check-types": "tsc --noEmit",
-    "build": "tsc --noEmit",
-    "main": "tsx src/main.ts"
+    "check-types": "tsc --noEmit"
   },
   "dependencies": {
     "@sker/core": "workspace:*",
