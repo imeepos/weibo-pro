@@ -23,7 +23,7 @@ export class WorkflowExecutorVisitor {
      * 6. 下游节点通过 BehaviorSubject 实时接收数据流
      */
     @Handler(WorkflowGraphAst)
-    visit(ast: WorkflowGraphAst, ctx: WorkflowGraphAst): Observable<INode> {
+    visit(ast: WorkflowGraphAst, parent: WorkflowGraphAst): Observable<INode> {
         // 执行前清理不存在节点的动态属性
         cleanOrphanedProperties(ast);
 
@@ -32,7 +32,7 @@ export class WorkflowExecutorVisitor {
 
         const scheduler = root.get(ReactiveScheduler);
 
-        return scheduler.schedule(ast, ctx).pipe(
+        return scheduler.schedule(ast, parent).pipe(
             concatMap(updatedWorkflow => {
                 // 只在子工作流完成时（最终状态）提取并暴露输出
                 if (updatedWorkflow.state === 'success' || updatedWorkflow.state === 'fail') {
@@ -185,11 +185,11 @@ export class WorkflowExecutorVisitor {
  * - 自动转换 JSON 为 AST 实例
  * - 委托给 Visitor 执行
  */
-export function executeAst<S extends INode>(state: S, context: WorkflowGraphAst): Observable<S> {
+export function executeAst<S extends INode>(state: S, parent: WorkflowGraphAst): Observable<S> {
     const ast = fromJson(state);
     const visitor = root.get(VisitorExecutor)
     // 单步执行 每次返回单步执行后的 结果
-    return visitor.visit(ast, context) as Observable<S>;
+    return visitor.visit(ast, parent) as Observable<S>;
 }
 
 /**

@@ -54,7 +54,7 @@ export class ReactiveScheduler {
         }
         return updates;
     }
-    schedule(ast: WorkflowGraphAst, ctx: WorkflowGraphAst): Observable<WorkflowGraphAst> {
+    schedule(ast: WorkflowGraphAst, parent: WorkflowGraphAst): Observable<WorkflowGraphAst> {
         this.eventBus.emitWorkflowStart(ast.id);
 
         const { state } = this.resetWorkflowGraphAst(ast);
@@ -64,7 +64,7 @@ export class ReactiveScheduler {
 
         this.flattenWorkflowStructure(ast);
         ast.state = 'running';
-        const network = this.buildStreamNetwork(ast, ctx);
+        const network = this.buildStreamNetwork(ast, parent);
 
         return this.subscribeAndMerge(network, ast).pipe(
             finalize(() => {
@@ -856,7 +856,7 @@ export class ReactiveScheduler {
     }
     private buildStreamNetwork(
         ast: WorkflowGraphAst,
-        ctx: WorkflowGraphAst
+        parent: WorkflowGraphAst
     ): Map<string, Observable<INode>> {
         const network = new Map<string, Observable<INode>>();
         const building = new Set<string>();
@@ -898,9 +898,9 @@ export class ReactiveScheduler {
 
             let stream$: Observable<INode>;
             if (isEntryNode) {
-                stream$ = this.createEntryNodeStream(node, ctx);
+                stream$ = this.createEntryNodeStream(node, parent);
             } else {
-                stream$ = this._createNode(node, incomingEdges, network, ctx);
+                stream$ = this._createNode(node, incomingEdges, network, parent);
             }
 
             network.set(nodeId, stream$);
@@ -913,8 +913,8 @@ export class ReactiveScheduler {
 
         return network;
     }
-    private createEntryNodeStream(node: INode, ctx: WorkflowGraphAst): Observable<INode> {
-        return this.executeNode(node, ctx).pipe(
+    private createEntryNodeStream(node: INode, parent: WorkflowGraphAst): Observable<INode> {
+        return this.executeNode(node, parent).pipe(
             subscribeOn(asyncScheduler),
             shareReplay({ bufferSize: Infinity, refCount: false })
         );
@@ -1187,12 +1187,12 @@ export class ReactiveScheduler {
         // 回退：按点号分割访问嵌套属性
         return path.split('.').reduce((current, key) => current?.[key], obj);
     }
-    private executeNode(node: INode, ctx: WorkflowGraphAst): Observable<INode> {
+    private executeNode(node: INode, parent: WorkflowGraphAst): Observable<INode> {
         // 获取节点的错误处理配置
         const errorConfig = getErrorConfigFromNode(node);
 
         // 执行节点并应用统一的错误处理策略
-        const execution$ = executeAst(node, ctx);
+        const execution$ = executeAst(node, parent);
 
         return createDefaultErrorHandler(
             execution$,

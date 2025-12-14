@@ -19,8 +19,10 @@ export class WeiboLoginAstVisitor {
   handler(ast: WeiboLoginAst, ctx: any): Observable<INode> {
     return new Observable<INode>(obs => {
       ast.count += 1;
-      this.authService.startLogin(ast, obs)
+      ast.state = 'running';
+      obs.next({...ast})
 
+      this.authService.startLogin(ast, obs)
       // 清理逻辑：取消订阅时清理登录会话
       return () => {
         console.log('[WeiboLoginAstVisitor] 订阅被取消，清理登录会话');

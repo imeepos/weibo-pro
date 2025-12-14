@@ -83,41 +83,7 @@ const WeiboLoginRender: React.FC<{ ast: WeiboLoginAst }> = ({ ast }) => {
 
   return (
     <div className="z-50 flex items-center justify-center">
-      <div className="relative max-w-md rounded-lg py-4">
-        {(ast.qrcode && !ast.account) && (
-          <div className="flex justify-center">
-            <div className="rounded-lg">
-              <img
-                src={
-                  ast.qrcode.startsWith('http://') || ast.qrcode.startsWith('https://')
-                    ? ast.qrcode
-                    : `data:image/png;base64,${ast.qrcode}`
-                }
-                alt="微博登录二维码"
-                className="h-full w-full"
-              />
-            </div>
-          </div>
-        )}
-
-        {ast.account.value && (
-          <div className="flex flex-row items-center">
-            <img
-              src={ast.account.value.weiboAvatar}
-              alt={ast.account.value.weiboNickname}
-              className="h-8 w-8 rounded-full border-2 border-white shadow-lg object-cover"
-            />
-            <div className="ml-4">{ast.account.value.weiboNickname}</div>
-          </div>
-        )}
-
-        {/* 状态消息 */}
-        {(ast.message && !ast.account.value) && (
-          <div className="text-center mt-2">
-            <p className="text-sm text-muted-foreground">{ast.message}</p>
-          </div>
-        )}
-      </div>
+      
     </div>
   );
 }

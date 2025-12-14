@@ -19,7 +19,7 @@ import { DefaultVisitor } from '../defaultVisitor';
  */
 @Injectable()
 export class VisitorExecutor implements Visitor {
-    visit(ast: INode, ctx: WorkflowGraphAst): Observable<INode> {
+    visit(ast: INode, parent: WorkflowGraphAst): Observable<INode> {
         const type = findNodeType(ast.type);
         const methods = root.get(HANDLER_METHOD, []);
 
@@ -38,7 +38,7 @@ export class VisitorExecutor implements Visitor {
         }
 
         try {
-            const result = (instance as any)[method.property](ast, ctx);
+            const result = (instance as any)[method.property](ast, parent);
             return this.normalizeResult(result, ast);
         } catch (error) {
             return this.handleError(error, ast);
