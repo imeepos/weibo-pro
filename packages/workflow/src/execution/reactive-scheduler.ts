@@ -1,7 +1,7 @@
 import { WorkflowGraphAst } from '../ast';
 import { INode, IEdge, EdgeMode, hasDataMapping, isNode, isBehaviorSubject, isRouteSkipped, extractSubjectValue } from '../types';
 import { executeAst } from '../executor';
-import { Observable, of, EMPTY, merge, combineLatest, zip, asyncScheduler, BehaviorSubject, Subject, concat, ReplaySubject, defer } from 'rxjs';
+import { Observable, of, EMPTY, merge, combineLatest, zip, asyncScheduler, BehaviorSubject, concat, ReplaySubject, defer } from 'rxjs';
 import { map, catchError, concatMap, filter, shareReplay, subscribeOn, finalize, scan, takeLast, reduce, take, distinctUntilChanged, skip, tap } from 'rxjs/operators';
 import { concatLatestFrom } from '../operators/concat_latest_from';
 import { tapResponse } from '../operators/tap-response';
@@ -12,6 +12,7 @@ import { WorkflowEventBus } from './workflow-events';
 import { updateNodeReducer, finalizeWorkflowReducer, failWorkflowReducer } from './workflow-reducers';
 import { createDefaultErrorHandler, getErrorConfigFromNode } from './error-handler';
 import { extractEndNodeOutputs } from '../ast-utils';
+import { NetworkBuilder } from './network-builder';
 
 /**
  * 工作流事件类型 - 借鉴 NetworkBuilder 的事件模型
@@ -70,7 +71,10 @@ export class ReactiveScheduler {
         GET_NODE_METADATA: '获取节点元数据失败'
     };
 
-    constructor(@Inject(WorkflowEventBus) private eventBus: WorkflowEventBus) {}
+    constructor(
+        @Inject(WorkflowEventBus) private eventBus: WorkflowEventBus,
+        @Inject(NetworkBuilder) private networkBuilder: NetworkBuilder
+    ) {}
 
     /**
      * 初始化节点的 @Output BehaviorSubject
@@ -596,7 +600,7 @@ export class ReactiveScheduler {
 
     /**
      * 为目标节点连接所有输入边
-     * 借鉴 NetworkBuilder，支持多种流合并模式
+     * 复用 NetworkBuilder 的边合并逻辑，支持 MERGE/ZIP/COMBINE_LATEST/WITH_LATEST_FROM
      */
     private connectEdgesToNode(
         group: EdgeGroup,
@@ -604,11 +608,9 @@ export class ReactiveScheduler {
         inputSubjects: Map<string, ReplaySubject<any>>
     ): void {
         const targetSubject = inputSubjects.get(group.nodeId);
-        if (!targetSubject) return;
+        if (!targetSubject || group.edges.length === 0) return;
 
-        if (group.edges.length === 0) return;
-
-        // 如果只有一条边，直接连接
+        // 单边直连
         if (group.edges.length === 1) {
             const edge = group.edges[0]!;
             const source = group.sources.get(`${edge.from}:${edge.fromProperty}`);
@@ -620,64 +622,16 @@ export class ReactiveScheduler {
             return;
         }
 
-        // 多条边的流合并处理
-        const mode = group.edges[0]!.mode ?? EdgeMode.MERGE;
-
-        switch (mode) {
-            case EdgeMode.MERGE:
-                this.connectMergeMode(group, targetSubject);
-                break;
-            case EdgeMode.ZIP:
-                this.connectZipMode(group, targetSubject);
-                break;
-            case EdgeMode.COMBINE_LATEST:
-                this.connectCombineLatestMode(group, targetSubject);
-                break;
-        }
-    }
-
-    private connectMergeMode(group: EdgeGroup, targetSubject: Subject<any>): void {
-        // 为每条边单独订阅，发射到对应的属性
-        group.edges.forEach(edge => {
-            const source = group.sources.get(`${edge.from}:${edge.fromProperty}`);
-            if (source) {
-                source.asObservable().subscribe(value => {
-                    const obj = {} as any;
-                    obj[edge.toProperty!] = value;
-                    targetSubject.next(obj);
-                });
-            }
-        });
-    }
-
-    private connectZipMode(group: EdgeGroup, targetSubject: Subject<any>): void {
+        // 多边：复用 NetworkBuilder 的边合并逻辑
+        const mode = group.edges[0]!.mode ?? EdgeMode.COMBINE_LATEST;
         const sources = group.edges.map(edge => {
             const source = group.sources.get(`${edge.from}:${edge.fromProperty}`);
             return source ? source.asObservable() : EMPTY;
         });
+        const toProperties = group.edges.map(edge => edge.toProperty!);
 
-        zip(...sources).subscribe(values => {
-            const combined = {} as any;
-            group.edges.forEach((edge, idx) => {
-                combined[edge.toProperty!] = values[idx];
-            });
-            targetSubject.next(combined);
-        });
-    }
-
-    private connectCombineLatestMode(group: EdgeGroup, targetSubject: Subject<any>): void {
-        const sources = group.edges.map(edge => {
-            const source = group.sources.get(`${edge.from}:${edge.fromProperty}`);
-            return source ? source.asObservable() : EMPTY;
-        });
-
-        combineLatest(sources).subscribe(values => {
-            const combined = {} as any;
-            group.edges.forEach((edge, idx) => {
-                combined[edge.toProperty!] = values[idx];
-            });
-            targetSubject.next(combined);
-        });
+        this.networkBuilder.createEdgeMerger(mode, sources, toProperties)
+            .subscribe(value => targetSubject.next(value));
     }
 
     /**

@@ -4,10 +4,11 @@ import { fromJson } from "./generate";
 import { INode, isBehaviorSubject } from "./types";
 import { ReactiveScheduler } from './execution/reactive-scheduler';
 import { VisitorExecutor } from './execution/visitor-executor';
-import { concat, Observable, of, BehaviorSubject } from 'rxjs';
+import { concat, Observable, of, BehaviorSubject, Subject, ReplaySubject } from 'rxjs';
 import { Injectable, root } from "@sker/core";
-import { map, concatMap } from 'rxjs/operators';
+import { map, concatMap, filter, last, tap } from 'rxjs/operators';
 import { cleanOrphanedProperties } from "./ast-utils";
+import { NetworkBuilder, WorkflowEvent } from "./execution/network-builder";
 
 @Injectable()
 export class WorkflowExecutorVisitor {
@@ -190,6 +191,11 @@ export function executeAst<S extends INode>(state: S, parent: WorkflowGraphAst):
     const visitor = root.get(VisitorExecutor)
     // 单步执行 每次返回单步执行后的 结果
     return visitor.visit(ast, parent) as Observable<S>;
+}
+
+export function executeWorkflow(workflow: WorkflowGraphAst, input$: Subject<any>) {
+    const builder = root.get(NetworkBuilder)
+    return input$.pipe(builder.buildNetwork(workflow, workflow))
 }
 
 /**
