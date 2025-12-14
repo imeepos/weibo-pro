@@ -45,7 +45,7 @@ export function WorkflowList({
         <TableRow>
           <TableHead>工作流名称</TableHead>
           <TableHead>标签</TableHead>
-          <TableHead>简洁</TableHead>
+          <TableHead>工作流简介</TableHead>
           <TableHead>创建时间</TableHead>
           <TableHead>更新时间</TableHead>
           <TableHead className="text-right">操作</TableHead>

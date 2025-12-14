@@ -29,6 +29,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:weibo-login": "vitest run WeiboLoginAst.test.ts TextAreaAst.comprehensive.test.ts WeiboLoginWorkflow.integration.test.ts WeiboLoginWorkflow.json.test.ts",
+    "test:unit": "vitest run WeiboLoginAst.test.ts TextAreaAst.comprehensive.test.ts",
+    "test:integration": "vitest run WeiboLoginWorkflow.integration.test.ts WeiboLoginWorkflow.json.test.ts",
     "main": "tsx src/main.ts"
   },
   "dependencies": {
