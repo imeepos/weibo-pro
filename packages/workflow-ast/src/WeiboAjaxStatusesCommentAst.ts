@@ -38,7 +38,7 @@ export class WeiboAjaxStatusesCommentAst extends Ast {
     next_max_id: number = 0;
 
     @Output({ title: '结束' })
-    is_end = new BehaviorSubject<boolean>(false);
+    is_end = false;
 
     type: `WeiboAjaxStatusesCommentAst` = `WeiboAjaxStatusesCommentAst`
 }

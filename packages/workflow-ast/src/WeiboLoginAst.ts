@@ -26,10 +26,10 @@ export class WeiboLoginAst extends Ast {
     account = new BehaviorSubject<WeiboAccountEntity | undefined>(undefined);
 
     @Output({ title: '登录二维码', isRouter: true })
-    qrcode = new BehaviorSubject<string | null>(null);
+    qrcode = null;
 
     @Output({ title: '提示消息' })
-    message = new BehaviorSubject<string | null>(null);
+    message = null;
 
     type: `WeiboLoginAst` = `WeiboLoginAst`
 }

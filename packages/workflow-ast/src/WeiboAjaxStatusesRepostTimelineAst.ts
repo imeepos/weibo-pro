@@ -21,7 +21,7 @@ export class WeiboAjaxStatusesRepostTimelineAst extends Ast {
     page: number = 1;
 
     @Output({ title: '结束' })
-    is_end = new BehaviorSubject<boolean>(false);
+    is_end = false;
 
     type: `WeiboAjaxStatusesRepostTimelineAst` = `WeiboAjaxStatusesRepostTimelineAst`
 

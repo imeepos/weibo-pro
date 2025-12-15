@@ -15,7 +15,7 @@ export class WeiboAjaxProfileInfoAst extends Ast {
     uid: string = ``;
 
     @Output({ title: '是否结束' })
-    isEnd = new BehaviorSubject<boolean>(false);
+    isEnd = false;
 
     type: `WeiboAjaxProfileInfoAst` = `WeiboAjaxProfileInfoAst`
 }

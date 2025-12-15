@@ -13,9 +13,9 @@ import { BehaviorSubject } from "rxjs";
 export class VideoAst extends Ast {
     @Input({ title: '视频', type: 'video' })
     uploadedVideo: string = '';
-
+    // 注意：不使用BehaviorSubject
     @Output({ title: '视频' })
-    video = new BehaviorSubject<string>(``);
+    video = ``;
 
     type: 'VideoAst' = 'VideoAst';
 }

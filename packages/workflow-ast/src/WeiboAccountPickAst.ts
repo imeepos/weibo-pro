@@ -25,9 +25,9 @@ export class WeiboAccountPickAst extends Ast {
 
     @State({ title: '选中账号ID' })
     selectedId?: number;
-
+    // 注意：不使用BehaviorSubject
     @Output({ title: 'Cookies' })
-    cookies = new BehaviorSubject<string>(``)
+    cookies = ``
 
     type: `WeiboAccountPickAst` = `WeiboAccountPickAst`
 }

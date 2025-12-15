@@ -37,14 +37,14 @@ export class WeiboKeywordSearchAst extends Ast {
     pageDelayMax: number = 5;
 
     @Output({ title: '帖子id' })
-    mblogid = new BehaviorSubject<string>('')
+    mblogid = ''
 
     @Output({ title: '用户id' })
-    uid = new BehaviorSubject<string>('')
+    uid = ''
 
 
     @Output({ title: '是否结束' })
-    isEnd = new BehaviorSubject<boolean>(false);
+    isEnd = false;
 
     @State({ title: '当前页码' })
     currentPage: number = 1;

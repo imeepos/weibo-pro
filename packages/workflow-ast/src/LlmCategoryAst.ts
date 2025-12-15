@@ -1,5 +1,4 @@
 import { Ast, Input, IS_MULTI, Node, Output } from "@sker/workflow";
-import { BehaviorSubject } from "rxjs";
 
 @Node({
     title: '分类器',
@@ -24,10 +23,10 @@ export class LlmCategoryAst extends Ast {
     model: string = 'deepseek-ai/DeepSeek-V3.2';
 
     @Output({ title: 'Default', isRouter: true })
-    output_default = new BehaviorSubject<any>(undefined);
+    output_default = ``;
 
     @Output({ title: '原始输出' })
-    rawOutput = new BehaviorSubject<string>('');
+    rawOutput = ``;
 
     type: 'LlmCategoryAst' = 'LlmCategoryAst';
 

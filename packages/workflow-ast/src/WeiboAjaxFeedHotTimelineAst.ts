@@ -35,15 +35,15 @@ export class WeiboAjaxFeedHotTimelineAst extends Ast {
 
     @State({ title: "刷新" })
     refresh: number = 1;
-
+    // 注意：不使用BehaviorSubject
     @Output({ title: '帖子短id' })
-    mblogid = new BehaviorSubject<string>(``);
-
+    mblogid = ``;
+    // 注意：不使用BehaviorSubject
     @Output({ title: '用户id' })
-    uid = new BehaviorSubject<string>(``);
-
+    uid = ``;
+    // 注意：不使用BehaviorSubject
     @Output({ title: '结束' })
-    is_end = new BehaviorSubject<boolean>(false);
+    is_end = false;
 
     type: 'WeiboAjaxFeedHotTimelineAst' = 'WeiboAjaxFeedHotTimelineAst';
 }

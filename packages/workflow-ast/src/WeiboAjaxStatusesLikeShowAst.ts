@@ -29,7 +29,7 @@ export class WeiboAjaxStatusesLikeShowAst extends Ast {
     attitude_enable: number = 1;
 
     @Output({ title: '结束' })
-    is_end = new BehaviorSubject<boolean>(false);
+    is_end = false;
 
     type: `WeiboAjaxStatusesLikeShowAst` = `WeiboAjaxStatusesLikeShowAst`
 }

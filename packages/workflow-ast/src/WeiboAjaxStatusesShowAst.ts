@@ -15,10 +15,10 @@ export class WeiboAjaxStatusesShowAst extends Ast {
 
     @Output({ title: "用户ID" })
     @Input({ title: "用户ID" })
-    uid = new BehaviorSubject<string>('');
+    uid = '';
 
     @Output({ title: '帖子id' })
-    mid = new BehaviorSubject<string>(``);
+    mid = ``;
 
     type: `WeiboAjaxStatusesShowAst` = `WeiboAjaxStatusesShowAst`
 }
