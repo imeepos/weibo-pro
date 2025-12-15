@@ -1,11 +1,12 @@
 import { Injectable } from "@sker/core";
 import { Render } from "@sker/workflow";
 import { VideoAst } from "@sker/workflow-ast";
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import { useUploadFile } from "@sker/ui/hooks/use-upload-file";
 import { Button } from "@sker/ui/components/ui/button";
 import { Upload, X, Download, Play, Pause, Maximize } from "lucide-react";
 import { cn } from "@sker/ui/lib/utils";
+import { useReactFlow } from "@xyflow/react";
 
 /**
  * 视频节点渲染组件 - 支持播放和下载，无编辑功能
@@ -16,13 +17,25 @@ const VideoComponent: React.FC<{ ast: VideoAst }> = ({ ast }) => {
     const [showFullscreen, setShowFullscreen] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
+    const { setNodes } = useReactFlow();
+
+    // 不可变更新 AST 节点数据
+    const updateAstData = useCallback((updates: Partial<VideoAst>) => {
+        setNodes((nodes) =>
+            nodes.map((node) =>
+                node.id === ast.id
+                    ? { ...node, data: { ...node.data, ...updates } }
+                    : node
+            )
+        );
+        setUpdateKey(prev => prev + 1);
+    }, [ast.id, setNodes]);
 
     const { isUploading, progress, uploadFile } = useUploadFile({
         endpoint: '/api/upload/file',
         onSuccess: (file) => {
             console.log('✅ 上传成功:', file);
-            ast.uploadedVideo = file.url;
-            setUpdateKey(prev => prev + 1);
+            updateAstData({ uploadedVideo: file.url });
         },
         onError: (error) => {
             console.error('❌ 视频上传失败:', error);
@@ -58,9 +71,8 @@ const VideoComponent: React.FC<{ ast: VideoAst }> = ({ ast }) => {
     };
 
     const handleDelete = () => {
-        ast.uploadedVideo = '';
+        updateAstData({ uploadedVideo: '' });
         setIsPlaying(false);
-        setUpdateKey(prev => prev + 1);
     };
 
     const handlePlayPause = () => {

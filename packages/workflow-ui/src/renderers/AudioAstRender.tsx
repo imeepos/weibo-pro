@@ -1,21 +1,34 @@
 import { Injectable } from "@sker/core";
 import { Render } from "@sker/workflow";
 import { AudioAst } from "@sker/workflow-ast";
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useCallback } from "react";
 import { useUploadFile } from "@sker/ui/hooks/use-upload-file";
 import { Button } from "@sker/ui/components/ui/button";
 import { Upload, X, Download } from "lucide-react";
 import { cn } from "@sker/ui/lib/utils";
+import { useReactFlow } from "@xyflow/react";
 
 const AudioComponent: React.FC<{ ast: AudioAst }> = ({ ast }) => {
     const [updateKey, setUpdateKey] = useState(0);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const { setNodes } = useReactFlow();
+
+    // 不可变更新 AST 节点数据
+    const updateAstData = useCallback((updates: Partial<AudioAst>) => {
+        setNodes((nodes) =>
+            nodes.map((node) =>
+                node.id === ast.id
+                    ? { ...node, data: { ...node.data, ...updates } }
+                    : node
+            )
+        );
+        setUpdateKey(prev => prev + 1);
+    }, [ast.id, setNodes]);
 
     const { isUploading, progress, uploadFile } = useUploadFile({
         endpoint: '/api/upload/file',
         onSuccess: (file) => {
-            ast.uploadedAudio = file.url;
-            setUpdateKey(prev => prev + 1);
+            updateAstData({ uploadedAudio: file.url });
         },
         onError: (error) => {
             console.error('❌ 音频上传失败:', error);
@@ -42,8 +55,7 @@ const AudioComponent: React.FC<{ ast: AudioAst }> = ({ ast }) => {
     };
 
     const handleDelete = () => {
-        ast.uploadedAudio = '';
-        setUpdateKey(prev => prev + 1);
+        updateAstData({ uploadedAudio: '' });
     };
 
     const handleDownload = () => {

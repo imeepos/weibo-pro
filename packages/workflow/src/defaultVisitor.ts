@@ -7,13 +7,17 @@ import { WorkflowGraphAst } from "./ast";
 export class DefaultVisitor {
     visit(ast: INode, input$: Observable<INode>, workflow?: WorkflowGraphAst): Observable<NodeEvent> {
         return new Observable(obs => {
+            console.log(`DefaultVisitor run ${JSON.stringify(ast)}`)
             ast.state = 'running';
             obs.next({ type: 'node_runing', id: ast.id, data: ast })
-
             input$.subscribe({
-                next: (input) => {
-                    ast.metadata?.outputs.map(output => {
-                        obs.next({ type: 'node_emit', id: ast.id, property: output.property, value: input[output.property] })
+                next: (data) => {
+                    // 默认 一个输入 一个输出 输出直接等于输入
+                    ast.metadata?.inputs.map(input => {
+                        ast.metadata?.outputs.map(output => {
+                            ast[output.property] = ast[input.property];
+                            obs.next({ type: 'node_emit', id: ast.id, property: output.property, value: data[input.property] })
+                        })
                     })
                 },
                 error: (error) => {
@@ -28,7 +32,6 @@ export class DefaultVisitor {
                     obs.complete();
                 }
             })
-
         });
     }
 }

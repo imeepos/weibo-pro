@@ -2,12 +2,13 @@ import { Injectable } from "@sker/core";
 import { Render } from "@sker/workflow";
 import { ImageAst } from "@sker/workflow-ast";
 import type { Annotation, CropArea } from "@sker/ui/components/ui/image-editor";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useUploadFile } from "@sker/ui/hooks/use-upload-file";
 import { ImageEditor } from "@sker/ui/components/ui/image-editor";
 import { Button } from "@sker/ui/components/ui/button";
 import { Upload, X } from "lucide-react";
 import { cn } from "@sker/ui/lib/utils";
+import { useReactFlow } from "@xyflow/react";
 
 /**
  * 图片节点渲染组件
@@ -16,6 +17,7 @@ const ImageComponent: React.FC<{ ast: ImageAst }> = ({ ast }) => {
     const [showEditor, setShowEditor] = useState(false);
     const [updateKey, setUpdateKey] = useState(0);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const { setNodes } = useReactFlow();
 
     // 调试日志
     useEffect(() => {
@@ -25,6 +27,18 @@ const ImageComponent: React.FC<{ ast: ImageAst }> = ({ ast }) => {
     // 临时编辑状态（不保存到 AST）
     const [tempAnnotations, setTempAnnotations] = useState<Annotation[]>([]);
     const [tempCropArea, setTempCropArea] = useState<CropArea | null>(null);
+
+    // 不可变更新 AST 节点数据
+    const updateAstData = useCallback((updates: Partial<ImageAst>) => {
+        setNodes((nodes) =>
+            nodes.map((node) =>
+                node.id === ast.id
+                    ? { ...node, data: { ...node.data, ...updates } }
+                    : node
+            )
+        );
+        setUpdateKey(prev => prev + 1);
+    }, [ast.id, setNodes]);
 
     useEffect(() => {
         if (!ast.uploadedImage) {
@@ -38,8 +52,7 @@ const ImageComponent: React.FC<{ ast: ImageAst }> = ({ ast }) => {
         endpoint: '/api/upload/file',
         onSuccess: (file) => {
             console.log('✅ 上传成功:', file);
-            ast.uploadedImage = file.url;
-            setUpdateKey(prev => prev + 1);
+            updateAstData({ uploadedImage: file.url });
         },
         onError: (error) => {
             console.error('❌ 图片上传失败:', error);
@@ -76,11 +89,10 @@ const ImageComponent: React.FC<{ ast: ImageAst }> = ({ ast }) => {
     };
 
     const handleDelete = () => {
-        ast.uploadedImage = '';
+        updateAstData({ uploadedImage: '' });
         setTempAnnotations([]);
         setTempCropArea(null);
         setShowEditor(false);
-        setUpdateKey(prev => prev + 1);
     };
 
     const handleImageClick = () => {
@@ -250,7 +262,7 @@ const ImageComponent: React.FC<{ ast: ImageAst }> = ({ ast }) => {
         if ((data.annotations && data.annotations.length > 0) || data.crop) {
             try {
                 const newImageUrl = await processAndUploadImage(currentImage, data.annotations || [], data.crop || null);
-                ast.uploadedImage = newImageUrl;
+                updateAstData({ uploadedImage: newImageUrl });
                 // 图片处理完成后，清空临时编辑状态
                 setTempAnnotations([]);
                 setTempCropArea(null);
@@ -261,7 +273,6 @@ const ImageComponent: React.FC<{ ast: ImageAst }> = ({ ast }) => {
         }
 
         setShowEditor(false);
-        setUpdateKey(prev => prev + 1);
     };
 
     return (
