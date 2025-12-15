@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@sker/core";
-import { Handler, INode, NodeEvent } from "@sker/workflow";
+import { Handler, INode, NodeEvent, setAstError } from "@sker/workflow";
 import { WeiboLoginAst } from "@sker/workflow-ast";
 import { WeiboAuthService } from "./services/weibo-auth.service";
 import { Observable } from 'rxjs'
@@ -16,14 +16,31 @@ export class WeiboLoginAstVisitor {
   ) { }
 
   @Handler(WeiboLoginAst)
-  handler(ast: WeiboLoginAst, ctx: any): Observable<NodeEvent> {
+  handler(ast: WeiboLoginAst, input$: Observable<any>, ctx: any): Observable<NodeEvent> {
     return new Observable<NodeEvent>(obs => {
       ast.count += 1;
       ast.state = 'running';
       obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
-      this.authService.startLogin(ast, obs)
-      // 清理逻辑：取消订阅时清理登录会话
+      input$.subscribe({
+        next: (inputData) => {
+          if (inputData) {
+            Object.keys(inputData).forEach(key => {
+              (ast as any)[key] = inputData[key];
+            });
+          }
+        },
+        error: (error) => {
+          ast.state = 'fail';
+          setAstError(ast, error);
+          obs.next({ type: 'node_fail', id: ast.id, data: ast });
+          obs.complete();
+        },
+        complete: () => {
+          this.authService.startLogin(ast, obs);
+        }
+      });
+
       return () => {
         console.log('[WeiboLoginAstVisitor] 订阅被取消，清理登录会话');
         this.authService.cancelSession(ast.id);

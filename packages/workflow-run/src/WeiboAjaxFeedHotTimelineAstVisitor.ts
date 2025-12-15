@@ -26,20 +26,38 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
     }
 
     @Handler(WeiboAjaxFeedHotTimelineAst)
-    visit(ast: WeiboAjaxFeedHotTimelineAst, _ctx: any): Observable<NodeEvent> {
+    visit(ast: WeiboAjaxFeedHotTimelineAst, input$: Observable<any>, _ctx: any): Observable<NodeEvent> {
         return new Observable<NodeEvent>(obs => {
-            // 创建专门的 AbortController
             const abortController = new AbortController();
 
-            // 包装 ctx
             const wrappedCtx = {
                 ..._ctx,
                 abortSignal: abortController.signal
             };
 
-            this.handler(ast, obs, wrappedCtx);
+            ast.state = 'running';
+            ast.count += 1;
+            obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
-            // 返回清理函数
+            input$.subscribe({
+                next: (inputData) => {
+                    if (inputData) {
+                        Object.keys(inputData).forEach(key => {
+                            (ast as any)[key] = inputData[key];
+                        });
+                    }
+                },
+                error: (error) => {
+                    ast.state = 'fail';
+                    setAstError(ast, error);
+                    obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                    obs.complete();
+                },
+                complete: () => {
+                    this.handler(ast, obs, wrappedCtx);
+                }
+            });
+
             return () => {
                 console.log('[WeiboAjaxFeedHotTimelineAstVisitor] 订阅被取消，触发 AbortSignal');
                 abortController.abort();
@@ -59,10 +77,6 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
             }
 
             let pageCount = 0;
-            ast.count += 1;
-            ast.state = 'running';
-          obs.next({ type: 'node_runing', id: ast.id, data: ast });
-            obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
             while (true) {
                 // 检查取消信号（循环开始）

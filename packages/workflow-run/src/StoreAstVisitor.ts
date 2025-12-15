@@ -25,7 +25,7 @@ export class StoreGetAstVisitor {
   constructor(@Inject(RedisClient) private readonly redis: RedisClient) {}
 
   @Handler(StoreGetAst)
-  visit(ast: StoreGetAst, ctx: any): Observable<NodeEvent> {
+  visit(ast: StoreGetAst, input$: Observable<any>, ctx: any): Observable<NodeEvent> {
     return new Observable<NodeEvent>(obs => {
       const abortController = new AbortController();
 
@@ -34,48 +34,63 @@ export class StoreGetAstVisitor {
         abortSignal: abortController.signal
       };
 
-      const handler = async () => {
-        try {
-          if (wrappedCtx.abortSignal?.aborted) {
-            ast.state = 'fail';
-            setAstError(ast, new Error('工作流已取消'));
-            obs.next({ type: 'node_fail', id: ast.id, data: ast });
-            obs.complete();
-            return;
+      ast.state = 'running';
+      obs.next({ type: 'node_runing', id: ast.id, data: ast });
+
+      input$.subscribe({
+        next: (inputData) => {
+          if (inputData) {
+            Object.keys(inputData).forEach(key => {
+              (ast as any)[key] = inputData[key];
+            });
           }
-
-          ast.state = 'running';
-          obs.next({ type: 'node_runing', id: ast.id, data: ast });
-          ast.count += 1;
-          obs.next({ type: 'node_runing', id: ast.id, data: ast });
-
-          const { key } = ast;
-
-          if (!key) {
-            throw new Error('键名不能为空');
-          }
-
-          const redisKey = `${WORKFLOW_STORE_PREFIX}${key}`;
-          const value = await this.redis.get<any>(redisKey);
-
-          ast.value = value;
-          obs.next({ type: 'node_runing', id: ast.id, data: ast });
-
-          console.log(`[StoreGet] 读取成功: key=${key}, exists=${value !== null}`);
-
-          ast.state = 'success';
-          obs.next({ type: 'node_success', id: ast.id, data: ast });
-          obs.complete();
-        } catch (error) {
+        },
+        error: (error) => {
           ast.state = 'fail';
-          setAstError(ast, error, process.env.NODE_ENV === 'development');
-          console.error(`[StoreGetAstVisitor] key=${ast.key}`, error);
+          setAstError(ast, error);
           obs.next({ type: 'node_fail', id: ast.id, data: ast });
           obs.complete();
-        }
-      };
+        },
+        complete: async () => {
+          const handler = async () => {
+            try {
+              if (wrappedCtx.abortSignal?.aborted) {
+                ast.state = 'fail';
+                setAstError(ast, new Error('工作流已取消'));
+                obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                obs.complete();
+                return;
+              }
 
-      handler();
+              const { key } = ast;
+
+              if (!key) {
+                throw new Error('键名不能为空');
+              }
+
+              const redisKey = `${WORKFLOW_STORE_PREFIX}${key}`;
+              const value = await this.redis.get<any>(redisKey);
+
+              ast.value = value;
+              obs.next({ type: 'node_runing', id: ast.id, data: ast });
+
+              console.log(`[StoreGet] 读取成功: key=${key}, exists=${value !== null}`);
+
+              ast.state = 'success';
+              obs.next({ type: 'node_success', id: ast.id, data: ast });
+              obs.complete();
+            } catch (error) {
+              ast.state = 'fail';
+              setAstError(ast, error, process.env.NODE_ENV === 'development');
+              console.error(`[StoreGetAstVisitor] key=${ast.key}`, error);
+              obs.next({ type: 'node_fail', id: ast.id, data: ast });
+              obs.complete();
+            }
+          };
+
+          handler();
+        }
+      });
 
       return () => {
         abortController.abort();
@@ -101,7 +116,7 @@ export class StoreSetAstVisitor {
   constructor(@Inject(RedisClient) private readonly redis: RedisClient) {}
 
   @Handler(StoreSetAst)
-  visit(ast: StoreSetAst, ctx: any): Observable<NodeEvent> {
+  visit(ast: StoreSetAst, input$: Observable<any>, ctx: any): Observable<NodeEvent> {
     return new Observable<NodeEvent>(obs => {
       const abortController = new AbortController();
 
@@ -110,49 +125,65 @@ export class StoreSetAstVisitor {
         abortSignal: abortController.signal
       };
 
-      const handler = async () => {
-        try {
-          if (wrappedCtx.abortSignal?.aborted) {
-            ast.state = 'fail';
-            setAstError(ast, new Error('工作流已取消'));
-            obs.next({ type: 'node_fail', id: ast.id, data: ast });
-            obs.complete();
-            return;
+      ast.state = 'running';
+      ast.count += 1;
+      obs.next({ type: 'node_runing', id: ast.id, data: ast });
+
+      input$.subscribe({
+        next: (inputData) => {
+          if (inputData) {
+            Object.keys(inputData).forEach(key => {
+              (ast as any)[key] = inputData[key];
+            });
           }
-
-          ast.state = 'running';
-          obs.next({ type: 'node_runing', id: ast.id, data: ast });
-          ast.count += 1;
-          obs.next({ type: 'node_runing', id: ast.id, data: ast });
-
-          const { key, value } = ast;
-
-          if (!key) {
-            throw new Error('键名不能为空');
-          }
-
-          const redisKey = `${WORKFLOW_STORE_PREFIX}${key}`;
-
-          // 默认7天过期时间，避免数据永久占用内存
-          const ttl = 7 * 24 * 60 * 60; // 7 days
-          await this.redis.set(redisKey, value, ttl);
-          obs.next({ type: 'node_runing', id: ast.id, data: ast });
-
-          console.log(`[StoreSet] 写入成功: key=${key}, ttl=${ttl}s`);
-
-          ast.state = 'success';
-          obs.next({ type: 'node_success', id: ast.id, data: ast });
-          obs.complete();
-        } catch (error) {
+        },
+        error: (error) => {
           ast.state = 'fail';
-          setAstError(ast, error, process.env.NODE_ENV === 'development');
-          console.error(`[StoreSetAstVisitor] key=${ast.key}`, error);
+          setAstError(ast, error);
           obs.next({ type: 'node_fail', id: ast.id, data: ast });
           obs.complete();
-        }
-      };
+        },
+        complete: async () => {
+          const handler = async () => {
+            try {
+              if (wrappedCtx.abortSignal?.aborted) {
+                ast.state = 'fail';
+                setAstError(ast, new Error('工作流已取消'));
+                obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                obs.complete();
+                return;
+              }
 
-      handler();
+              const { key, value } = ast;
+
+              if (!key) {
+                throw new Error('键名不能为空');
+              }
+
+              const redisKey = `${WORKFLOW_STORE_PREFIX}${key}`;
+
+              // 默认7天过期时间，避免数据永久占用内存
+              const ttl = 7 * 24 * 60 * 60; // 7 days
+              await this.redis.set(redisKey, value, ttl);
+              obs.next({ type: 'node_runing', id: ast.id, data: ast });
+
+              console.log(`[StoreSet] 写入成功: key=${key}, ttl=${ttl}s`);
+
+              ast.state = 'success';
+              obs.next({ type: 'node_success', id: ast.id, data: ast });
+              obs.complete();
+            } catch (error) {
+              ast.state = 'fail';
+              setAstError(ast, error, process.env.NODE_ENV === 'development');
+              console.error(`[StoreSetAstVisitor] key=${ast.key}`, error);
+              obs.next({ type: 'node_fail', id: ast.id, data: ast });
+              obs.complete();
+            }
+          };
+
+          handler();
+        }
+      });
 
       return () => {
         abortController.abort();

@@ -1,5 +1,5 @@
 import { Injectable } from "@sker/core";
-import { Handler, NodeEvent } from "@sker/workflow";
+import { Handler, NodeEvent, setAstError } from "@sker/workflow";
 import { ShareAst, ChatMessage } from "@sker/workflow-ast";
 import { Observable } from "rxjs";
 
@@ -18,52 +18,67 @@ import { Observable } from "rxjs";
 @Injectable()
 export class ShareAstVisitor {
     @Handler(ShareAst)
-    handler(ast: ShareAst) {
+    handler(ast: ShareAst, input$: Observable<any>) {
         return new Observable<NodeEvent>(obs => {
             ast.state = 'running';
             ast.count += 1;
             obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
-            /**
-             * 循环场景下的历史记录累积
-             *
-             * 优雅设计:
-             * - 如果 previousHistory 有数据,从它开始(循环的第 N 轮)
-             * - 否则从空数组开始(循环的第 1 轮)
-             * - 追加当前轮次的新消息
-             * - 这样即使节点被 clone,历史也能通过输入边传递
-             */
-            const currentHistory = Array.isArray(ast.previousHistory) && ast.previousHistory.length > 0
-                ? [...ast.previousHistory] // 复制上一轮的历史
-                : []; // 第一轮,从空开始
+            input$.subscribe({
+                next: (inputData) => {
+                    if (inputData) {
+                        Object.keys(inputData).forEach(key => {
+                            (ast as any)[key] = inputData[key];
+                        });
+                    }
+                },
+                error: (error) => {
+                    ast.state = 'fail';
+                    setAstError(ast, error);
+                    obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                    obs.complete();
+                },
+                complete: () => {
+                    /**
+                     * 循环场景下的历史记录累积
+                     *
+                     * 优雅设计:
+                     * - 如果 previousHistory 有数据,从它开始(循环的第 N 轮)
+                     * - 否则从空数组开始(循环的第 1 轮)
+                     * - 追加当前轮次的新消息
+                     * - 这样即使节点被 clone,历史也能通过输入边传递
+                     */
+                    const currentHistory = Array.isArray(ast.previousHistory) && ast.previousHistory.length > 0
+                        ? [...ast.previousHistory] // 复制上一轮的历史
+                        : []; // 第一轮,从空开始
 
-            // 追加本轮新消息
-            currentHistory.push({
-                role: ast.username || '未知角色',
-                content: ast.prompt,
-                timestamp: new Date().toISOString()
-            })
-            ast.chatHistory = currentHistory;
+                    // 追加本轮新消息
+                    currentHistory.push({
+                        role: ast.username || '未知角色',
+                        content: ast.prompt,
+                        timestamp: new Date().toISOString()
+                    })
+                    ast.chatHistory = currentHistory;
 
-            // 格式化对话历史为 LLM 可读的字符串
-            const formatted = currentHistory
-                .map(msg => `【${msg.role}】${msg.content}`)
-                .join('\n\n---\n\n');
-            ast.formattedHistory = formatted;
+                    // 格式化对话历史为 LLM 可读的字符串
+                    const formatted = currentHistory
+                        .map(msg => `【${msg.role}】${msg.content}`)
+                        .join('\n\n---\n\n');
+                    ast.formattedHistory = formatted;
 
-            console.log('[ShareAstVisitor] 格式化历史记录:', {
-                totalMessages: currentHistory.length,
-                previousHistoryLength: ast.previousHistory?.length || 0,
-                formattedLength: formatted.length,
-                latestRole: ast.username,
-                isAccumulating: (ast.previousHistory?.length || 0) > 0
+                    console.log('[ShareAstVisitor] 格式化历史记录:', {
+                        totalMessages: currentHistory.length,
+                        previousHistoryLength: ast.previousHistory?.length || 0,
+                        formattedLength: formatted.length,
+                        latestRole: ast.username,
+                        isAccumulating: (ast.previousHistory?.length || 0) > 0
+                    });
+
+                    ast.state = 'success';
+                    obs.next({ type: 'node_success', id: ast.id, data: ast });
+                    obs.complete();
+                }
             });
-
-            obs.next({ type: 'node_runing', id: ast.id, data: ast });
-
-            ast.state = 'success';
-            obs.next({ type: 'node_success', id: ast.id, data: ast });
-            obs.complete();
         });
     }
 }

@@ -31,69 +31,83 @@ export class WeiboAjaxProfileInfoAstVisitor extends WeiboApiClient {
     }
 
     @Handler(WeiboAjaxProfileInfoAst)
-    visit(ast: WeiboAjaxProfileInfoAst, _ctx: any): Observable<NodeEvent> {
+    visit(ast: WeiboAjaxProfileInfoAst, input$: Observable<any>, _ctx: any): Observable<NodeEvent> {
         return new Observable<NodeEvent>(obs => {
-            // 创建专门的 AbortController
             const abortController = new AbortController();
 
-            // 包装 ctx
             const wrappedCtx = {
                 ..._ctx,
                 abortSignal: abortController.signal
             };
 
-            const handler = async () => {
-                try {
-                    // 检查取消信号
-                    if (wrappedCtx.abortSignal?.aborted) {
-                        ast.state = 'fail';
-                        setAstError(ast, new Error('工作流已取消'));
-                        obs.next({ type: 'node_fail', id: ast.id, data: ast });
-                        return;
+            ast.state = 'running';
+            ast.count += 1;
+            obs.next({ type: 'node_runing', id: ast.id, data: ast });
+
+            input$.subscribe({
+                next: (inputData) => {
+                    if (inputData) {
+                        Object.keys(inputData).forEach(key => {
+                            (ast as any)[key] = inputData[key];
+                        });
                     }
-
-                    ast.state = 'running';
-                    ast.count += 1;
-                    obs.next({ type: 'node_runing', id: ast.id, data: ast });
-
-                    const url = `https://weibo.com/ajax/profile/info?uid=${ast.uid}`;
-                    const body = await this.fetchApi<WeiboAjaxProfileInfoAstResponse>({
-                        url,
-                        refererOptions: { uid: ast.uid }
-                    });
-
-                    // 检查取消信号（网络请求后）
-                    if (wrappedCtx.abortSignal?.aborted) {
-                        ast.state = 'fail';
-                        setAstError(ast, new Error('工作流已取消'));
-                        obs.next({ type: 'node_fail', id: ast.id, data: ast });
-                        return;
-                    }
-
-                    await useEntityManager(async m => {
-                        const user = m.create(WeiboUserEntity, body.data.user as any);
-                        ast.uid = `${user.id}`;
-                        await m.upsert(WeiboUserEntity, user as any, ['id']);
-                    });
-
-                    await this.fetchDetail(ast, wrappedCtx);
-                    ast.isEnd = true;
-                    obs.next({ type: 'node_emit', id: ast.id, property: 'isEnd', value: ast.isEnd });
-
-                    ast.state = 'success';
-                    obs.next({ type: 'node_success', id: ast.id, data: ast });
-                    obs.complete()
-                } catch (error) {
-                    console.error(`[WeiboAjaxProfileInfoAstVisitor] uid: ${ast.uid}`, error);
+                },
+                error: (error) => {
                     ast.state = 'fail';
                     setAstError(ast, error);
                     obs.next({ type: 'node_fail', id: ast.id, data: ast });
-                    obs.complete()
-                }
-            };
-            handler();
+                    obs.complete();
+                },
+                complete: async () => {
+                    const handler = async () => {
+                        try {
+                            // 检查取消信号
+                            if (wrappedCtx.abortSignal?.aborted) {
+                                ast.state = 'fail';
+                                setAstError(ast, new Error('工作流已取消'));
+                                obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                                return;
+                            }
 
-            // 返回清理函数
+                            const url = `https://weibo.com/ajax/profile/info?uid=${ast.uid}`;
+                            const body = await this.fetchApi<WeiboAjaxProfileInfoAstResponse>({
+                                url,
+                                refererOptions: { uid: ast.uid }
+                            });
+
+                            // 检查取消信号（网络请求后）
+                            if (wrappedCtx.abortSignal?.aborted) {
+                                ast.state = 'fail';
+                                setAstError(ast, new Error('工作流已取消'));
+                                obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                                return;
+                            }
+
+                            await useEntityManager(async m => {
+                                const user = m.create(WeiboUserEntity, body.data.user as any);
+                                ast.uid = `${user.id}`;
+                                await m.upsert(WeiboUserEntity, user as any, ['id']);
+                            });
+
+                            await this.fetchDetail(ast, wrappedCtx);
+                            ast.isEnd = true;
+                            obs.next({ type: 'node_emit', id: ast.id, property: 'isEnd', value: ast.isEnd });
+
+                            ast.state = 'success';
+                            obs.next({ type: 'node_success', id: ast.id, data: ast });
+                            obs.complete()
+                        } catch (error) {
+                            console.error(`[WeiboAjaxProfileInfoAstVisitor] uid: ${ast.uid}`, error);
+                            ast.state = 'fail';
+                            setAstError(ast, error);
+                            obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                            obs.complete()
+                        }
+                    };
+                    handler();
+                }
+            });
+
             return () => {
                 console.log('[WeiboAjaxProfileInfoAstVisitor] 订阅被取消，触发 AbortSignal');
                 abortController.abort();

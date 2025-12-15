@@ -17,7 +17,7 @@ export class WeiboKeywordSearchAstVisitor {
     ) { }
 
     @Handler(WeiboKeywordSearchAst)
-    handler(ast: WeiboKeywordSearchAst, ctx: any): Observable<NodeEvent> {
+    handler(ast: WeiboKeywordSearchAst, input$: Observable<any>, ctx: any): Observable<NodeEvent> {
         return new Observable<NodeEvent>(obs => {
             const abortController = new AbortController();
 
@@ -29,7 +29,24 @@ export class WeiboKeywordSearchAstVisitor {
                 }
             };
 
-            this.executeSearch(ast, wrappedCtx, obs);
+            input$.subscribe({
+                next: (inputData) => {
+                    if (inputData) {
+                        Object.keys(inputData).forEach(key => {
+                            (ast as any)[key] = inputData[key];
+                        });
+                    }
+                },
+                error: (error) => {
+                    ast.state = 'fail';
+                    setAstError(ast, error);
+                    obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                    obs.complete();
+                },
+                complete: () => {
+                    this.executeSearch(ast, wrappedCtx, obs);
+                }
+            });
 
             return () => {
                 console.log('[WeiboKeywordSearchAstVisitor] 订阅被取消，触发 AbortSignal');

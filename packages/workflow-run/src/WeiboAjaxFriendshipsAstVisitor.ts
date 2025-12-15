@@ -23,36 +23,53 @@ export class WeiboAjaxFriendshipsAstVisitor extends WeiboApiClient {
     }
 
     @Handler(WeiboAjaxFriendshipsAst)
-    visit(ast: WeiboAjaxFriendshipsAst, _ctx: any): Observable<NodeEvent> {
+    visit(ast: WeiboAjaxFriendshipsAst, input$: Observable<any>, _ctx: any): Observable<NodeEvent> {
         return new Observable<NodeEvent>(obs => {
-            const handler = async () => {
-                try {
-                    ast.state = 'running';
-          obs.next({ type: 'node_runing', id: ast.id, data: ast });
-                    ast.count += 1;
-                    obs.next({ type: 'node_runing', id: ast.id, data: ast });
+            ast.state = 'running';
+            ast.count += 1;
+            obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
-                    const url = `https://weibo.com/ajax/friendships/friends?page=${ast.page || 1}&uid=${ast.uid}`;
-                    const body = await this.fetchApi<WeiboAjaxFriendshipsResponse>({
-                        url,
-                        refererOptions: { uid: ast.uid }
-                    });
-
-                    ast.isEnd = true;
-                    obs.next({ type: 'node_runing', id: ast.id, data: ast });
-
-                    ast.state = 'success';
-                    obs.next({ type: 'node_success', id: ast.id, data: ast });
-                    obs.complete()
-                } catch (error) {
-                    console.error(`[WeiboAjaxFriendshipsAstVisitor] uid: ${ast.uid}`, error);
+            input$.subscribe({
+                next: (inputData) => {
+                    if (inputData) {
+                        Object.keys(inputData).forEach(key => {
+                            (ast as any)[key] = inputData[key];
+                        });
+                    }
+                },
+                error: (error) => {
                     ast.state = 'fail';
                     setAstError(ast, error);
                     obs.next({ type: 'node_fail', id: ast.id, data: ast });
-                    obs.complete()
+                    obs.complete();
+                },
+                complete: async () => {
+                    const handler = async () => {
+                        try {
+                            const url = `https://weibo.com/ajax/friendships/friends?page=${ast.page || 1}&uid=${ast.uid}`;
+                            const body = await this.fetchApi<WeiboAjaxFriendshipsResponse>({
+                                url,
+                                refererOptions: { uid: ast.uid }
+                            });
+
+                            ast.isEnd = true;
+                            obs.next({ type: 'node_runing', id: ast.id, data: ast });
+
+                            ast.state = 'success';
+                            obs.next({ type: 'node_success', id: ast.id, data: ast });
+                            obs.complete()
+                        } catch (error) {
+                            console.error(`[WeiboAjaxFriendshipsAstVisitor] uid: ${ast.uid}`, error);
+                            ast.state = 'fail';
+                            setAstError(ast, error);
+                            obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                            obs.complete()
+                        }
+                    };
+                    handler();
                 }
-            };
-            handler();
+            });
+
             return () => obs.complete();
         });
     }
