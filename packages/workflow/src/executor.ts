@@ -1,7 +1,7 @@
 import { Inject, Injectable, root } from '@sker/core';
-import { Observable, EMPTY, merge, defer, ReplaySubject, concat, of, BehaviorSubject, zip, combineLatest } from 'rxjs';
-import { concatMap, finalize, map } from 'rxjs/operators';
-import { INode, IEdge, EdgeMode, isNode, isBehaviorSubject } from './types';
+import { Observable, EMPTY, merge, defer, ReplaySubject, concat, of } from 'rxjs';
+import { concatMap, finalize, map, filter } from 'rxjs/operators';
+import { INode, IEdge, EdgeMode, isNode } from './types';
 import { WorkflowGraphAst, isWorkflowGraphAst } from './ast';
 import { NodeEvent } from './execution/events';
 import { VisitorExecutor } from './execution/visitor-executor';
@@ -69,9 +69,6 @@ export class NodeExecutor {
      */
     private runWorkflow(workflow: WorkflowGraphAst, input$: Observable<any>): Observable<NodeEvent> {
         return defer(() => {
-            // 初始化所有节点的 @Output BehaviorSubject
-            this.initializeOutputSubjects(workflow);
-
             // 为每个节点创建输入 Subject
             const inputSubjects = new Map<string, ReplaySubject<any>>();
             const nodeEventStreams = new Map<string, Observable<NodeEvent>>();
@@ -86,7 +83,7 @@ export class NodeExecutor {
             });
 
             // 连接边：将上游节点的输出连接到下游节点的输入
-            this.connectEdges(workflow, inputSubjects);
+            this.connectEdges(workflow, inputSubjects, nodeEventStreams);
 
             // 触发入口节点
             this.triggerEntryNodes(workflow, input$, inputSubjects);
@@ -97,23 +94,12 @@ export class NodeExecutor {
     }
 
     /**
-     * 初始化节点的 @Output BehaviorSubject
-     */
-    private initializeOutputSubjects(workflow: WorkflowGraphAst): void {
-        workflow.nodes.forEach(node => {
-            if (!isNode(node)) {
-                node = this.compiler.compile(node);
-            }
-            if (!node.metadata?.outputs) return;
-        });
-    }
-
-    /**
      * 连接边：监听上游节点的输出，传递给下游节点
      */
     private connectEdges(
         workflow: WorkflowGraphAst,
-        inputSubjects: Map<string, ReplaySubject<any>>
+        inputSubjects: Map<string, ReplaySubject<any>>,
+        nodeEventStreams: Map<string, Observable<NodeEvent>>
     ): void {
         // 按目标节点分组
         const edgesByTarget = new Map<string, IEdge[]>();
@@ -132,28 +118,30 @@ export class NodeExecutor {
             // 单边直连
             if (edges.length === 1) {
                 const edge = edges[0]!;
-                const sourceNode = workflow.nodes.find(n => n.id === edge.from);
-                if (!sourceNode) return;
+                const eventStream$ = nodeEventStreams.get(edge.from);
+                if (!eventStream$) return;
 
-                const output = (sourceNode as any)[edge.fromProperty!];
-                if (isBehaviorSubject(output)) {
-                    output.asObservable().subscribe(value => {
-                        if (value !== null && value !== undefined) {
-                            targetSubject.next({ [edge.toProperty!]: value });
-                        }
-                    });
-                }
+                eventStream$.pipe(
+                    filter(event => event.type === 'node_emit' && event.property === edge.fromProperty),
+                    map(event => event.value)
+                ).subscribe(value => {
+                    if (value !== null && value !== undefined) {
+                        targetSubject.next({ [edge.toProperty!]: value });
+                    }
+                });
                 return;
             }
 
             // 多边：根据模式合并
             const mode = edges[0]?.mode ?? EdgeMode.COMBINE_LATEST;
             const sources = edges.map(edge => {
-                const sourceNode = workflow.nodes.find(n => n.id === edge.from);
-                if (!sourceNode) return EMPTY;
+                const eventStream$ = nodeEventStreams.get(edge.from);
+                if (!eventStream$) return EMPTY;
 
-                const output = (sourceNode as any)[edge.fromProperty!];
-                return isBehaviorSubject(output) ? output.asObservable() : EMPTY;
+                return eventStream$.pipe(
+                    filter(event => event.type === 'node_emit' && event.property === edge.fromProperty),
+                    map(event => event.value)
+                );
             });
 
             this.mergeEdgeSources(mode, sources, edges).subscribe(value => {

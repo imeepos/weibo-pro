@@ -1,5 +1,4 @@
 import { Injectable, root } from "@sker/core";
-import { BehaviorSubject } from "rxjs";
 import { Ast } from "../ast";
 import { INode, INodeInputMetadata, INodeMetadata, INodeOutputMetadata, INodeStateMetadata, isNode } from "../types";
 import { findNodeType, INPUT, InputMetadata, NODE, NodeMetadata, OUTPUT, OutputMetadata, STATE, StateMetadata } from "../decorator";
@@ -30,9 +29,7 @@ export class Compiler {
         const instance = new (ctor as new () => any)();
 
         for (const [key, value] of Object.entries(ast)) {
-            if (!(instance[key] instanceof BehaviorSubject)) {
-                instance[key] = value;
-            }
+            instance[key] = value;
         }
 
         // 提取 @Node 类装饰器元数据
@@ -107,7 +104,7 @@ export class Compiler {
         return targetOutputs.map(output => {
             const key = String(output.propertyKey);
             // 检测是否为 BehaviorSubject（需要实例）
-            const isSubject = instance ? instance[key] instanceof BehaviorSubject : false;
+            const isSubject = false;
 
             return {
                 property: key,

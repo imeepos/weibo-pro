@@ -1,5 +1,5 @@
 import { Observable } from "rxjs";
-import { INode, isBehaviorSubject } from "./types";
+import { INode } from "./types";
 
 // 添加ID生成功能
 export function generateId(): string {
@@ -14,7 +14,7 @@ export const clone = (obj: any, seen = new WeakSet()): any => {
 	if (obj === null || typeof obj !== 'object') return obj;
 	if (seen.has(obj)) return undefined;
 
-	if (isBehaviorSubject(obj) || obj instanceof Observable || typeof obj === 'function') {
+	if (obj instanceof Observable || typeof obj === 'function') {
 		return undefined;
 	}
 
