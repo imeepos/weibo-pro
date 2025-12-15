@@ -1,5 +1,4 @@
 import { Ast, Input, Output, State, Node, IS_MULTI } from "@sker/workflow";
-import { BehaviorSubject } from "rxjs";
 import type { SkillSummary } from "@sker/entities";
 
 @Node({
@@ -34,10 +33,10 @@ export class PromptRoleSkillAst extends Ast {
   skillContents: Record<string, string> = {};
 
   @Output({ title: '选中技能列表' })
-  selectedSkillsList = new BehaviorSubject<SkillSummary[]>([])
+  selectedSkillsList = []
 
   @Output({ title: '技能内容' })
-  skillContent = new BehaviorSubject<Record<string, string>>({})
+  skillContent = {}
 
   type: 'PromptRoleSkillAst' = 'PromptRoleSkillAst';
 }

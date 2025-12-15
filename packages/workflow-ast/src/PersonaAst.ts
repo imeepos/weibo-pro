@@ -1,5 +1,4 @@
 import { Ast, Input, IS_MULTI, Node, Output, State } from "@sker/workflow";
-import { BehaviorSubject } from "rxjs";
 
 /** 检索到的记忆 */
 export interface RetrievedMemory {
@@ -51,10 +50,10 @@ export class PersonaAst extends Ast {
   context: string = '';
 
   @Output({ title: '回复' })
-  response = new BehaviorSubject<string>(``)
+  response = ``
 
   @Output({ title: '新记忆ID' })
-  newMemoryId = new BehaviorSubject<string>(``)
+  newMemoryId = ``
 
   type: 'PersonaAst' = 'PersonaAst';
 }

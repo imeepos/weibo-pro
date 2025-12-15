@@ -1,5 +1,4 @@
 import { Ast, Input, Output, Node, IS_MULTI } from "@sker/workflow";
-import { BehaviorSubject } from "rxjs";
 
 @Node({
   title: '查询重写器',
@@ -24,10 +23,10 @@ export class QueryRewriterAst extends Ast {
   model: string = 'deepseek-ai/DeepSeek-V3';
 
   @Output({ title: '子查询列表' })
-  subQueries = new BehaviorSubject<string[] | null>(null);
+  subQueries = ``;
 
   @Output({ title: '推理过程' })
-  reasoning = new BehaviorSubject<string | null>(null);
+  reasoning = ``;
 
   type: 'QueryRewriterAst' = 'QueryRewriterAst';
 }

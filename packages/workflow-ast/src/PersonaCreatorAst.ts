@@ -1,5 +1,4 @@
 import { Ast, Input, IS_MULTI, Node, Output, State } from "@sker/workflow";
-import { BehaviorSubject } from "rxjs";
 import type { PersonaMetadata, PersonaDestiny } from "@sker/entities";
 
 @Node({
@@ -43,10 +42,10 @@ export class PersonaCreatorAst extends Ast {
   generatedDestiny?: PersonaDestiny;
 
   @Output({ title: '角色ID' })
-  personaId = new BehaviorSubject<string>('');
+  personaId = ``;
 
   @Output({ title: '角色名' })
-  personaName = new BehaviorSubject<string>('');
+  personaName = ``;
 
   type: 'PersonaCreatorAst' = 'PersonaCreatorAst';
 }
