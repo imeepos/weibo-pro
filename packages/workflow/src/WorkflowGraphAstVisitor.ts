@@ -85,7 +85,13 @@ export class WorkflowGraphAstVisitor {
                         filter((event): event is NodeEmitEvent =>
                             event.type === 'node_emit' && event.property === edge.fromProperty
                         ),
-                        map(event => event.value)
+                        map(event => event.value),
+                        finalize(() => {
+                            // 当上游节点完成时，完成下游节点的 subject
+                            if (!targetSubject.closed) {
+                                targetSubject.complete();
+                            }
+                        })
                     )
                     .subscribe(value => {
                         if (value !== null && value !== undefined) {
@@ -108,8 +114,16 @@ export class WorkflowGraphAstVisitor {
                 );
             });
 
-            this.mergeEdgeSources(mode, sources, edges).subscribe(value => {
-                targetSubject.next(value);
+            this.mergeEdgeSources(mode, sources, edges).subscribe({
+                next: value => {
+                    targetSubject.next(value);
+                },
+                complete: () => {
+                    // 当所有上游节点完成时，完成下游节点的 subject
+                    if (!targetSubject.closed) {
+                        targetSubject.complete();
+                    }
+                }
             });
         });
     }
@@ -220,6 +234,7 @@ export class WorkflowGraphAstVisitor {
             // 订阅每个节点流，追踪完成状态
             const subscriptions = allStreams.map((nodeStream, index) => {
                 console.log(`[WorkflowGraphAstVisitor] 订阅节点流 ${index + 1}/${totalNodes}`)
+
                 return nodeStream.subscribe({
                     next: (event) => {
                         // 传递所有事件给观察者
@@ -259,17 +274,6 @@ export class WorkflowGraphAstVisitor {
                     }
                 });
             });
-
-            // 额外等待：如果节点流没有完成，手动触发完成检查
-            // 这是一个安全机制，确保即使流没有正确完成，工作流也能完成
-            setTimeout(() => {
-                console.log(`[WorkflowGraphAstVisitor] 等待超时检查，当前完成数: ${completedCount}/${totalNodes}`)
-                if (completedCount === totalNodes) {
-                    console.log(`[WorkflowGraphAstVisitor] 所有节点已完成（超时检查），发射工作流完成事件`)
-                    completionSubject.next();
-                    completionSubject.complete();
-                }
-            }, 1000);
 
             // 监听 completionSubject，当所有节点完成后发射工作流完成事件
             const completionSubscription = completionSubject.subscribe(() => {
