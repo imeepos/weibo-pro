@@ -1,4 +1,4 @@
-import { WeiboAccountService, WeiboLoginSuccessMessage } from './services/weibo-account.service'
+export { WeiboAccountService } from './services/weibo-account.service'
 
 export { WeiboAjaxFeedHotTimelineAstVisitor } from './WeiboAjaxFeedHotTimelineAstVisitor'
 export { WeiboAjaxFriendshipsAstVisitor } from './WeiboAjaxFriendshipsAstVisitor'
@@ -78,8 +78,3 @@ export { ScheduledWorkflowVisitor } from './ScheduledWorkflowVisitor'
 // 服务
 export { CronSchedulerService } from './services/CronSchedulerService'
 export { WorkflowExecutionService } from './services/WorkflowExecutionService'
-
-export {
-    WeiboAccountService,
-    type WeiboLoginSuccessMessage
-}
