@@ -2,7 +2,8 @@ import { Injectable, root } from '@sker/core';
 import { Handler, NodeEvent, setAstError, WorkflowGraphAst } from '@sker/workflow';
 import { PromptRoleSkillAst } from '@sker/workflow-ast';
 import { PromptRoleSkillRefEntity, PromptSkillEntity, useEntityManager, In, type SkillSummary } from '@sker/entities';
-import { Observable } from 'rxjs';
+import { Observable, from } from 'rxjs';
+import { concatMap, mergeMap } from 'rxjs/operators';
 import { z } from 'zod';
 import { DynamicStructuredTool } from '@langchain/core/tools';
 import { useLlmModel } from './llm-client';
@@ -22,8 +23,8 @@ export class PromptRoleSkillAstVisitor {
       ast.state = 'running';
       obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
-      input$.subscribe({
-        next: async (inputData) => {
+      const subscription = input$.pipe(
+        concatMap(async (inputData) => {
           ast.emitCount += 1;
           if (inputData) {
             Object.keys(inputData).forEach(key => {
@@ -31,23 +32,15 @@ export class PromptRoleSkillAstVisitor {
             });
           }
 
-          try {
-            if (abortController.signal.aborted) {
-              ast.state = 'fail';
-              setAstError(ast, new Error('工作流已取消'));
-              obs.next({ type: 'node_fail', id: ast.id, data: ast });
-              return;
-            }
+          if (abortController.signal.aborted) {
+            throw new Error('工作流已取消');
+          }
 
-            if (!ast.roleId) {
-              ast.state = 'fail';
-              setAstError(ast, new Error('请指定角色ID'));
-              obs.next({ type: 'node_fail', id: ast.id, data: ast });
-              obs.complete();
-              return;
-            }
+          if (!ast.roleId) {
+            throw new Error('请指定角色ID');
+          }
 
-            await useEntityManager(async (manager) => {
+          await useEntityManager(async (manager) => {
               const skillRefs = await manager.find(PromptRoleSkillRefEntity, {
                 where: { role_id: ast.roleId },
                 relations: ['skill'],
@@ -163,20 +156,18 @@ ${skillsDescription}
                 ast.selectedSkillsList = [];
                 ast.skillContent = {};
               }
-
-              obs.next({ type: 'node_runing', id: ast.id, data: ast });
             });
 
-          } catch (error) {
-            ast.state = 'fail';
-            setAstError(ast, new Error(`LLM 选择技能失败: ${error instanceof Error ? error.message : '未知错误'}`));
-            obs.next({ type: 'node_fail', id: ast.id, data: ast });
-            obs.complete();
-          }
+          return [];
+        }),
+        mergeMap((events: NodeEvent[]) => from(events))
+      ).subscribe({
+        next: (event: NodeEvent) => {
+          obs.next(event);
         },
         error: (error) => {
           ast.state = 'fail';
-          setAstError(ast, error);
+          setAstError(ast, new Error(`LLM 选择技能失败: ${error instanceof Error ? error.message : '未知错误'}`));
           obs.next({ type: 'node_fail', id: ast.id, data: ast });
           obs.complete();
         },
@@ -188,6 +179,7 @@ ${skillsDescription}
       });
 
       return () => {
+        subscription.unsubscribe();
         abortController.abort();
         obs.complete();
       };
