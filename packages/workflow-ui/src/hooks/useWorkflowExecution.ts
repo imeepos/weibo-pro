@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { root } from '@sker/core'
-import { WorkflowState, WorkflowEventBus, WorkflowEventType } from '@sker/workflow'
+// import { WorkflowState, WorkflowEventBus, WorkflowEventType } from '@sker/workflow'
 import type { WorkflowGraphAst, INode } from '@sker/workflow'
-import { NodeExecutionManager } from '../services/node-execution-manager'
+// import { NodeExecutionManager } from '../services/node-execution-manager'
 
 /**
  * 订阅工作流执行进度
@@ -12,11 +12,11 @@ import { NodeExecutionManager } from '../services/node-execution-manager'
 export function useExecutionProgress() {
   const [progress, setProgress] = useState({ completed: 0, total: 0, percentage: 0 })
 
-  useEffect(() => {
-    const workflowState = root.get(WorkflowState)
-    const sub = workflowState.progress$.subscribe(setProgress)
-    return () => sub.unsubscribe()
-  }, [])
+  // useEffect(() => {
+  //   const workflowState = root.get(WorkflowState)
+  //   const sub = workflowState.progress$.subscribe(setProgress)
+  //   return () => sub.unsubscribe()
+  // }, [])
 
   return progress
 }
@@ -35,11 +35,11 @@ export function useExecutionProgress() {
 export function useNodeExecution(nodeId: string): INode | undefined {
   const [node, setNode] = useState<INode | undefined>()
 
-  useEffect(() => {
-    const workflowState = root.get(WorkflowState)
-    const sub = workflowState.selectNode(nodeId).subscribe(setNode)
-    return () => sub.unsubscribe()
-  }, [nodeId])
+  // useEffect(() => {
+  //   const workflowState = root.get(WorkflowState)
+  //   const sub = workflowState.selectNode(nodeId).subscribe(setNode)
+  //   return () => sub.unsubscribe()
+  // }, [nodeId])
 
   return node
 }
@@ -53,35 +53,35 @@ export function useNodeExecution(nodeId: string): INode | undefined {
 export function useIsNodeRunning(nodeId: string): boolean {
   const [isRunning, setIsRunning] = useState(false)
 
-  useEffect(() => {
-    const manager = root.get(NodeExecutionManager)
-    const eventBus = root.get(WorkflowEventBus)
+  // useEffect(() => {
+  //   const manager = root.get(NodeExecutionManager)
+  //   const eventBus = root.get(WorkflowEventBus)
 
-    // 初始状态
-    setIsRunning(manager.isNodeRunning(nodeId))
+  //   // 初始状态
+  //   setIsRunning(manager.isNodeRunning(nodeId))
 
-    // 监听节点开始事件
-    const startSub = eventBus.ofType(WorkflowEventType.NODE_START).subscribe(event => {
-      if (event.nodeId === nodeId) {
-        setIsRunning(true)
-      }
-    })
+  //   // 监听节点开始事件
+  //   const startSub = eventBus.ofType(WorkflowEventType.NODE_START).subscribe(event => {
+  //     if (event.nodeId === nodeId) {
+  //       setIsRunning(true)
+  //     }
+  //   })
 
-    // 监听节点完成事件（成功或失败）
-    const completeSub = eventBus.ofType(
-      WorkflowEventType.NODE_SUCCESS,
-      WorkflowEventType.NODE_FAIL
-    ).subscribe(event => {
-      if (event.nodeId === nodeId) {
-        setIsRunning(false)
-      }
-    })
+  //   // 监听节点完成事件（成功或失败）
+  //   const completeSub = eventBus.ofType(
+  //     WorkflowEventType.NODE_SUCCESS,
+  //     WorkflowEventType.NODE_FAIL
+  //   ).subscribe(event => {
+  //     if (event.nodeId === nodeId) {
+  //       setIsRunning(false)
+  //     }
+  //   })
 
-    return () => {
-      startSub.unsubscribe()
-      completeSub.unsubscribe()
-    }
-  }, [nodeId])
+  //   return () => {
+  //     startSub.unsubscribe()
+  //     completeSub.unsubscribe()
+  //   }
+  // }, [nodeId])
 
   return isRunning
 }
@@ -103,23 +103,23 @@ export function useWorkflowEvents(
   onNodeSuccess?: (nodeId: string, result: any) => void,
   onNodeFail?: (nodeId: string, error: any) => void
 ) {
-  useEffect(() => {
-    const eventBus = root.get(WorkflowEventBus)
+  // useEffect(() => {
+  //   const eventBus = root.get(WorkflowEventBus)
 
-    const subscriptions = [
-      onNodeStart && eventBus.ofType(WorkflowEventType.NODE_START).subscribe(e => {
-        onNodeStart(e.nodeId!)
-      }),
-      onNodeSuccess && eventBus.ofType(WorkflowEventType.NODE_SUCCESS).subscribe(e => {
-        onNodeSuccess(e.nodeId!, e.payload)
-      }),
-      onNodeFail && eventBus.ofType(WorkflowEventType.NODE_FAIL).subscribe(e => {
-        onNodeFail(e.nodeId!, e.payload)
-      })
-    ].filter(Boolean)
+  //   const subscriptions = [
+  //     onNodeStart && eventBus.ofType(WorkflowEventType.NODE_START).subscribe(e => {
+  //       onNodeStart(e.nodeId!)
+  //     }),
+  //     onNodeSuccess && eventBus.ofType(WorkflowEventType.NODE_SUCCESS).subscribe(e => {
+  //       onNodeSuccess(e.nodeId!, e.payload)
+  //     }),
+  //     onNodeFail && eventBus.ofType(WorkflowEventType.NODE_FAIL).subscribe(e => {
+  //       onNodeFail(e.nodeId!, e.payload)
+  //     })
+  //   ].filter(Boolean)
 
-    return () => subscriptions.forEach(sub => sub?.unsubscribe())
-  }, [onNodeStart, onNodeSuccess, onNodeFail])
+  //   return () => subscriptions.forEach(sub => sub?.unsubscribe())
+  // }, [onNodeStart, onNodeSuccess, onNodeFail])
 }
 
 /**
@@ -130,11 +130,11 @@ export function useWorkflowEvents(
 export function useWorkflowState(): WorkflowGraphAst['state'] | null {
   const [state, setState] = useState<WorkflowGraphAst['state'] | null>(null)
 
-  useEffect(() => {
-    const workflowState = root.get(WorkflowState)
-    const sub = workflowState.workflowState$.subscribe(setState)
-    return () => sub.unsubscribe()
-  }, [])
+  // useEffect(() => {
+  //   const workflowState = root.get(WorkflowState)
+  //   const sub = workflowState.workflowState$.subscribe(setState)
+  //   return () => sub.unsubscribe()
+  // }, [])
 
   return state
 }
@@ -149,11 +149,11 @@ export function useWorkflowState(): WorkflowGraphAst['state'] | null {
 export function useFailedNodes(): INode[] {
   const [failedNodes, setFailedNodes] = useState<INode[]>([])
 
-  useEffect(() => {
-    const workflowState = root.get(WorkflowState)
-    const sub = workflowState.failedNodes$.subscribe(setFailedNodes)
-    return () => sub.unsubscribe()
-  }, [])
+  // useEffect(() => {
+  //   const workflowState = root.get(WorkflowState)
+  //   const sub = workflowState.failedNodes$.subscribe(setFailedNodes)
+  //   return () => sub.unsubscribe()
+  // }, [])
 
   return failedNodes
 }

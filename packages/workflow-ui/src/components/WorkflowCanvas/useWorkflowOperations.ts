@@ -80,7 +80,7 @@ export function useWorkflowOperations(
 
       // executeAst 返回 Observable，利用流式特性实时更新状态
       // finalize 确保无论如何结束都会重置状态
-      const subscription = executeAstWithWorkflowGraph(targetNode.id, mutableAst)
+      const subscription = executeAstWithWorkflowGraph(targetNode, {}, mutableAst)
         .pipe(
           finalize(() => {
             // 确保在所有情况下都重置运行状态
@@ -88,14 +88,13 @@ export function useWorkflowOperations(
           })
         )
         .subscribe({
-          next: (updatedWorkflow) => {
-            workflow.workflowAst!.state = updatedWorkflow.state
-            workflow.workflowAst!.error = updatedWorkflow.error
+          next: (event) => {
+            if (event.type === 'node_success' || event.type === 'node_fail') {
+              const updatedNode = event.data
 
-            // 不可变更新：创建新节点数组
-            workflow.workflowAst!.nodes = workflow.workflowAst!.nodes.map(originalNode => {
-              const updatedNode = updatedWorkflow.nodes.find((n: any) => n.id === originalNode.id)
-              if (!updatedNode) return originalNode
+              // 不可变更新：创建新节点数组
+              workflow.workflowAst!.nodes = workflow.workflowAst!.nodes.map(originalNode => {
+                if (originalNode.id !== updatedNode.id) return originalNode
 
               // 记录节点执行历史
               if (updatedNode.state === 'running' && !nodeRecordIds.current.has(updatedNode.id)) {
@@ -148,6 +147,7 @@ export function useWorkflowOperations(
             })
 
             workflow.syncFromAst()
+            }
           },
           error: async (error) => {
             const errorInfo = extractErrorInfo(error)
@@ -230,14 +230,16 @@ export function useWorkflowOperations(
         JSON.parse(JSON.stringify(toJson(workflow.workflowAst)))
       )
 
-      const subscription = executeNodeIsolated(targetNode.id, mutableAst)
+      const subscription = executeNodeIsolated(targetNode, mutableAst)
         .pipe(
           finalize(() => {
             onSetRunning?.(false)
           })
         )
         .subscribe({
-          next: (updatedWorkflow) => {
+          next: (event) => {
+            if (event.type === 'node_success' || event.type === 'node_fail') {
+              const updatedWorkflow = event.data as any;
             workflow.workflowAst!.state = updatedWorkflow.state
             workflow.workflowAst!.error = updatedWorkflow.error
 
@@ -297,6 +299,7 @@ export function useWorkflowOperations(
             })
 
             workflow.syncFromAst()
+            }
           },
           error: async (error) => {
             const errorInfo = extractErrorInfo(error)
@@ -528,7 +531,9 @@ export function useWorkflowOperations(
           })
         )
         .subscribe({
-          next: (updatedWorkflow) => {
+          next: (event) => {
+            if (event.type === 'node_success' || event.type === 'node_fail') {
+              const updatedWorkflow = event.data as any;
             // 每次 next 事件实时更新工作流状态
             workflow.workflowAst!.state = updatedWorkflow.state
             workflow.workflowAst!.error = updatedWorkflow.error
@@ -596,6 +601,7 @@ export function useWorkflowOperations(
             })
 
             workflow.syncFromAst()
+            }
           },
           error: async (error) => {
             const errorInfo = extractErrorInfo(error)

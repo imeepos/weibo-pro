@@ -1,5 +1,5 @@
 import { Injectable, root } from '@sker/core'
-import { ReactiveScheduler, WorkflowEventBus, WorkflowEventType } from '@sker/workflow'
+// import { ReactiveScheduler, WorkflowEventBus, WorkflowEventType } from '@sker/workflow'
 import type { WorkflowGraphAst } from '@sker/workflow'
 import type { Subscription } from 'rxjs'
 
@@ -20,23 +20,23 @@ import type { Subscription } from 'rxjs'
 @Injectable({ providedIn: 'root' })
 export class NodeExecutionManager {
   private nodeSubscriptions = new Map<string, Subscription>()
-  private eventBus: WorkflowEventBus
-  private scheduler: ReactiveScheduler
+  // private eventBus: WorkflowEventBus
+  // private scheduler: ReactiveScheduler
 
   constructor() {
-    this.eventBus = root.get(WorkflowEventBus)
-    this.scheduler = root.get(ReactiveScheduler)
+    // this.eventBus = root.get(WorkflowEventBus)
+    // this.scheduler = root.get(ReactiveScheduler)
 
-    // ✨ 监听节点完成事件，自动清理订阅
-    this.eventBus.ofType(
-      WorkflowEventType.NODE_SUCCESS,
-      WorkflowEventType.NODE_FAIL
-    ).subscribe(event => {
-      if (event.nodeId && this.nodeSubscriptions.has(event.nodeId)) {
-        console.log(`[NodeExecutionManager] 节点 ${event.nodeId} 执行完成，清理订阅`)
-        this.nodeSubscriptions.delete(event.nodeId)
-      }
-    })
+    // // ✨ 监听节点完成事件，自动清理订阅
+    // this.eventBus.ofType(
+    //   WorkflowEventType.NODE_SUCCESS,
+    //   WorkflowEventType.NODE_FAIL
+    // ).subscribe(event => {
+    //   if (event.nodeId && this.nodeSubscriptions.has(event.nodeId)) {
+    //     console.log(`[NodeExecutionManager] 节点 ${event.nodeId} 执行完成，清理订阅`)
+    //     this.nodeSubscriptions.delete(event.nodeId)
+    //   }
+    // })
   }
 
   /**
@@ -46,33 +46,33 @@ export class NodeExecutionManager {
    * @param nodeId 节点 ID
    */
   executeNode(workflow: WorkflowGraphAst, nodeId: string): void {
-    // 如果节点正在执行，先取消
-    if (this.isNodeRunning(nodeId)) {
-      console.log(`[NodeExecutionManager] 节点 ${nodeId} 正在执行，先取消`)
-      this.cancelNode(nodeId)
-    }
+    // // 如果节点正在执行，先取消
+    // if (this.isNodeRunning(nodeId)) {
+    //   console.log(`[NodeExecutionManager] 节点 ${nodeId} 正在执行，先取消`)
+    //   this.cancelNode(nodeId)
+    // }
 
-    console.log(`[NodeExecutionManager] 开始执行节点: ${nodeId}`)
+    // console.log(`[NodeExecutionManager] 开始执行节点: ${nodeId}`)
 
-    // ✨ 使用 fineTuneNode 增量执行
-    const execution$ = this.scheduler.fineTuneNode(workflow, nodeId)
+    // // ✨ 使用 fineTuneNode 增量执行
+    // const execution$ = this.scheduler.fineTuneNode(workflow, nodeId)
 
-    const sub = execution$.subscribe({
-      next: (updatedWorkflow) => {
-        // WorkflowState 会自动监听事件并更新状态
-        // 这里不需要手动处理
-      },
-      error: (error) => {
-        console.error(`[NodeExecutionManager] 节点 ${nodeId} 执行失败`, error)
-        this.nodeSubscriptions.delete(nodeId)
-      },
-      complete: () => {
-        console.log(`[NodeExecutionManager] 节点 ${nodeId} 执行完成`)
-        this.nodeSubscriptions.delete(nodeId)
-      }
-    })
+    // const sub = execution$.subscribe({
+    //   next: (updatedWorkflow) => {
+    //     // WorkflowState 会自动监听事件并更新状态
+    //     // 这里不需要手动处理
+    //   },
+    //   error: (error: Error) => {
+    //     console.error(`[NodeExecutionManager] 节点 ${nodeId} 执行失败`, error)
+    //     this.nodeSubscriptions.delete(nodeId)
+    //   },
+    //   complete: () => {
+    //     console.log(`[NodeExecutionManager] 节点 ${nodeId} 执行完成`)
+    //     this.nodeSubscriptions.delete(nodeId)
+    //   }
+    // })
 
-    this.nodeSubscriptions.set(nodeId, sub)
+    // this.nodeSubscriptions.set(nodeId, sub)
   }
 
   /**

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, beforeAll } from 'vitest'
 import { useWorkflowStore } from './workflow.store'
-import { WorkflowGraphAst, Compiler, ReactiveScheduler } from '@sker/workflow'
+import { WorkflowGraphAst, Compiler } from '@sker/workflow'
 import { root, Injectable } from '@sker/core'
 import { TextAreaAst } from '@sker/workflow'
 import { firstValueFrom, Observable } from 'rxjs'

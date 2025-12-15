@@ -269,10 +269,10 @@ export class WorkflowController implements sdk.WorkflowController {
       })}\n\n`);
 
       // 使用 executeAstWithWorkflowGraph 进行增量执行
-      const nodeExecution$ = executeAstWithWorkflowGraph(nodeId, workflowAst);
+      const nodeExecution$ = executeAstWithWorkflowGraph(targetNode, {}, workflowAst);
 
       const subscription = nodeExecution$.subscribe({
-        next: (event: WorkflowEvent) => {
+        next: (event: NodeEvent) => {
           logger.debug('节点执行事件', { type: event.type, nodeId: (event as any).nodeId });
 
           // 发送执行进度
@@ -406,7 +406,7 @@ export class WorkflowController implements sdk.WorkflowController {
       const ast = fromJson(run.graphSnapshot) as WorkflowGraphAst;
 
       // 执行工作流（AST 会被原地修改）
-      await lastValueFrom(executeWorkflowImmediate(ast, run.inputs as Record<string, any> || {}));
+      await executeWorkflowImmediate(ast, run.inputs as Record<string, any> || {});
 
       // 提取节点状态
       const nodeStates: Record<string, unknown> = {};
@@ -585,7 +585,7 @@ export class WorkflowController implements sdk.WorkflowController {
     @Param('nodeId') nodeId: string,
     @Body() body: { config: any },
     @Res() res?: any
-  ): Observable<WorkflowEvent> {
+  ): Observable<NodeEvent> {
     // 设置 SSE 响应头
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
@@ -630,10 +630,17 @@ export class WorkflowController implements sdk.WorkflowController {
 `);
 
           // 使用 executeAstWithWorkflowGraph 执行节点微调
-          const fineTune$ = executeAstWithWorkflowGraph(nodeId, ast);
+          const targetNode = getNodeById(ast.nodes, nodeId);
+          if (!targetNode) {
+            const error = new NotFoundException(`节点不存在: ${nodeId}`);
+            observer.error(error);
+            res.end();
+            return;
+          }
+          const fineTune$ = executeAstWithWorkflowGraph(targetNode, {}, ast);
 
           const subscription = fineTune$.subscribe({
-            next: (event: WorkflowEvent) => {
+            next: (event: NodeEvent) => {
               // 发送进度更新
               res.write(`data: ${JSON.stringify({
                 type: 'progress',

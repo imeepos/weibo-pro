@@ -7,14 +7,15 @@ import React from "react";
 export class SerpClusterAstRender {
     @Render(SerpClusterAst)
     render(ast: SerpClusterAst) {
-        if (!ast.clusters?.length) return null;
+        const clusters = ast.clusters?.getValue() || [];
+        if (!clusters.length) return null;
 
         return (
             <div className="space-y-4 p-4">
                 <div className="text-sm font-medium text-muted-foreground">
-                    共 {ast.clusters.length} 个聚类
+                    共 {clusters.length} 个聚类
                 </div>
-                {ast.clusters.map((cluster, idx) => (
+                {clusters.map((cluster: any, idx: number) => (
                     <div key={idx} className="border rounded-lg p-4 space-y-3">
                         <div className="font-semibold text-primary">
                             {cluster.question}
@@ -28,7 +29,7 @@ export class SerpClusterAstRender {
                                     相关链接 ({cluster.urls.length})
                                 </div>
                                 <div className="space-y-1">
-                                    {cluster.urls.map((url, urlIdx) => (
+                                    {cluster.urls.map((url: string, urlIdx: number) => (
                                         <a
                                             key={urlIdx}
                                             href={url}

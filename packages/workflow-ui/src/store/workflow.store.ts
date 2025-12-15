@@ -10,13 +10,13 @@
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 import type { WorkflowGraphAst, INode } from '@sker/workflow'
-import { getNodeById, updateNodeReducer, WorkflowState, WorkflowEventBus, WorkflowEventType } from '@sker/workflow'
+import { getNodeById } from '@sker/workflow'
 import { root } from '@sker/core'
 import type { WorkflowNode, WorkflowEdge } from '../types'
 import { flowToAst } from '../adapters'
 import { astToFlowNodes, astToFlowEdges } from '../adapters/ast-to-flow'
 import { historyManager } from './history.store'
-import { NodeExecutionManager } from '../services/node-execution-manager'
+// import { NodeExecutionManager } from '../services/node-execution-manager'
 
 interface IWorkflowState {
   /** ✨ 工作流 AST（单一数据源） */
@@ -82,9 +82,9 @@ interface IWorkflowState {
 export const useWorkflowStore = create<IWorkflowState>()(
   immer((set, get) => {
     // ✨ 获取核心服务（单例）
-    const workflowState = root.get(WorkflowState)
-    const eventBus = root.get(WorkflowEventBus)
-    const nodeExecutionManager = root.get(NodeExecutionManager)
+    // const workflowState = root.get(WorkflowState)
+    // const eventBus = root.get(WorkflowEventBus)
+    // const nodeExecutionManager = root.get(NodeExecutionManager)
 
     const recordHistory = () => {
       const { nodes, edges } = get()
@@ -92,50 +92,50 @@ export const useWorkflowStore = create<IWorkflowState>()(
     }
 
     // 🔧 监听节点执行完成事件，同步节点状态到前端 store
-    eventBus.ofType(
-      WorkflowEventType.NODE_SUCCESS,
-      WorkflowEventType.NODE_FAIL
-    ).subscribe(event => {
-        if (!event.nodeId || !event.payload) {
-          return
-        }
+    // eventBus.ofType(
+    //   WorkflowEventType.NODE_SUCCESS,
+    //   WorkflowEventType.NODE_FAIL
+    // ).subscribe(event => {
+    //     if (!event.nodeId || !event.payload) {
+    //       return
+    //     }
 
-        const { workflowAst } = get()
-        if (!workflowAst) {
-          return
-        }
+    //     const { workflowAst } = get()
+    //     if (!workflowAst) {
+    //       return
+    //     }
 
-        // ✨ 确保 event.nodeId 是 string 类型（TypeScript 类型守卫）
-        const nodeId: string = event.nodeId
+    //     // ✨ 确保 event.nodeId 是 string 类型（TypeScript 类型守卫）
+    //     const nodeId: string = event.nodeId
 
-        // 提取完整的节点数据（包括 input、output 等执行后的状态）
-        const updates = event.type === WorkflowEventType.NODE_SUCCESS
-          ? (() => {
-              // NODE_SUCCESS: payload 是完整的节点对象
-              const { state, ...nodeData } = event.payload
-              return { ...nodeData, state: 'success' as const }
-            })()
-          : { state: 'fail' as const, error: event.payload }
+    //     // 提取完整的节点数据（包括 input、output 等执行后的状态）
+    //     const updates = event.type === WorkflowEventType.NODE_SUCCESS
+    //       ? (() => {
+    //           // NODE_SUCCESS: payload 是完整的节点对象
+    //           const { state, ...nodeData } = event.payload
+    //           return { ...nodeData, state: 'success' as const }
+    //         })()
+    //       : { state: 'fail' as const, error: event.payload }
 
-        // 使用现有的 updateNode 逻辑更新 AST 和 React Flow
-        set((draft) => {
-          draft.workflowAst = updateNodeReducer(draft.workflowAst!, {
-            nodeId,
-            updates
-          })
+    //     // 使用现有的 updateNode 逻辑更新 AST 和 React Flow
+    //     set((draft) => {
+    //       draft.workflowAst = updateNodeReducer(draft.workflowAst!, {
+    //         nodeId,
+    //         updates
+    //       })
 
-          // 同步到 React Flow
-          const flowNodeIndex = draft.nodes.findIndex(n => n.id === nodeId)
-          if (flowNodeIndex !== -1) {
-            const updatedNode = getNodeById(draft.workflowAst!.nodes, nodeId)
-            if (updatedNode && draft.nodes[flowNodeIndex]) {
-              draft.nodes[flowNodeIndex].data = updatedNode
-            }
-          }
+    //       // 同步到 React Flow
+    //       const flowNodeIndex = draft.nodes.findIndex(n => n.id === nodeId)
+    //       if (flowNodeIndex !== -1) {
+    //         const updatedNode = getNodeById(draft.workflowAst!.nodes, nodeId)
+    //         if (updatedNode && draft.nodes[flowNodeIndex]) {
+    //           draft.nodes[flowNodeIndex].data = updatedNode
+    //         }
+    //       }
 
-          draft.hasUnsavedChanges = true
-        })
-      })
+    //       draft.hasUnsavedChanges = true
+    //     })
+    //   })
 
     return {
       // ==================== Initial State ====================
@@ -155,7 +155,7 @@ export const useWorkflowStore = create<IWorkflowState>()(
         })
 
         // ✨ 初始化 WorkflowState
-        workflowState.init(ast)
+        // workflowState.init(ast)
       },
 
       setNodes: (nodes, shouldRecordHistory = true) => {
@@ -228,16 +228,17 @@ export const useWorkflowStore = create<IWorkflowState>()(
 
         // ✨ 2. 使用 updateNodeReducer 更新 AST
         set((draft) => {
-          draft.workflowAst = updateNodeReducer(draft.workflowAst!, {
-            nodeId,
-            updates
-          })
+          // draft.workflowAst = updateNodeReducer(draft.workflowAst!, {
+          //   nodeId,
+          //   updates
+          // })
 
           // 同步到 React Flow
           const flowNodeIndex = draft.nodes.findIndex(n => n.id === nodeId)
           if (flowNodeIndex !== -1) {
             const updatedNode = getNodeById(draft.workflowAst!.nodes, nodeId)
             if (updatedNode && draft.nodes[flowNodeIndex]) {
+              Object.assign(updatedNode, updates)
               draft.nodes[flowNodeIndex].data = updatedNode
             }
           }
@@ -245,39 +246,39 @@ export const useWorkflowStore = create<IWorkflowState>()(
           draft.hasUnsavedChanges = true
         })
 
-        const updatedNode = getNodeById(get().workflowAst!.nodes, nodeId)!
-        const currentState = updatedNode.state
+        // const updatedNode = getNodeById(get().workflowAst!.nodes, nodeId)!
+        // const currentState = updatedNode.state
 
-        // ✨ 3. 发射细粒度事件
-        eventBus.next({
-          type: WorkflowEventType.NODE_UPDATED,
-          nodeId,
-          workflowId: workflowAst.id,
-          payload: {
-            updates,
-            previousState,
-            currentState
-          },
-          timestamp: Date.now()
-        })
+        // // ✨ 3. 发射细粒度事件
+        // eventBus.next({
+        //   type: WorkflowEventType.NODE_UPDATED,
+        //   nodeId,
+        //   workflowId: workflowAst.id,
+        //   payload: {
+        //     updates,
+        //     previousState,
+        //     currentState
+        //   },
+        //   timestamp: Date.now()
+        // })
 
-        // ✨ 4. 根据节点状态决定行为
-        const isRunning = nodeExecutionManager.isNodeRunning(nodeId)
+        // // ✨ 4. 根据节点状态决定行为
+        // const isRunning = nodeExecutionManager.isNodeRunning(nodeId)
 
-        if (previousState === 'running' || isRunning) {
-          // 节点正在执行 → 取消并重新执行
-          nodeExecutionManager.cancelNode(nodeId)
+        // if (previousState === 'running' || isRunning) {
+        //   // 节点正在执行 → 取消并重新执行
+        //   nodeExecutionManager.cancelNode(nodeId)
 
-          // 延迟重新执行，确保取消完成
-          setTimeout(() => {
-            nodeExecutionManager.executeNode(get().workflowAst!, nodeId)
-          }, 100)
-        } else if (previousState === 'pending') {
-          // 节点尚未执行 → 只更新参数，不执行
-        } else if (previousState === 'success' || previousState === 'fail') {
-          // 节点已完成 → 标记为待重执行（不自动执行）
-          // 可以在UI显示一个"重新执行"按钮
-        }
+        //   // 延迟重新执行，确保取消完成
+        //   setTimeout(() => {
+        //     nodeExecutionManager.executeNode(get().workflowAst!, nodeId)
+        //   }, 100)
+        // } else if (previousState === 'pending') {
+        //   // 节点尚未执行 → 只更新参数，不执行
+        // } else if (previousState === 'success' || previousState === 'fail') {
+        //   // 节点已完成 → 标记为待重执行（不自动执行）
+        //   // 可以在UI显示一个"重新执行"按钮
+        // }
 
         recordHistory()
       },

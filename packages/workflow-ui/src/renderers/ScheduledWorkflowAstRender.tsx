@@ -78,7 +78,7 @@ const ScheduledWorkflowComponent: React.FC<{ ast: ScheduledWorkflowAst }> = ({ a
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground">下次:</span>
           <span className="font-mono text-blue-600 dark:text-blue-400">
-            {new Date(ast.nextRunAt).toLocaleString('zh-CN')}
+            {new Date(ast.nextRunAt.getValue() ?? Date.now()).toLocaleString('zh-CN')}
           </span>
         </div>
       )}
@@ -88,7 +88,7 @@ const ScheduledWorkflowComponent: React.FC<{ ast: ScheduledWorkflowAst }> = ({ a
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground">ID:</span>
           <span className="font-mono text-xs text-gray-500">
-            {ast.scheduleId.slice(0, 8)}...
+            {ast.scheduleId.getValue().slice(0, 8)}...
           </span>
         </div>
       )}

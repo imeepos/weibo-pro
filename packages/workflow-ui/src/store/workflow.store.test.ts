@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { useWorkflowStore } from './workflow.store'
 import { WorkflowGraphAst, Compiler } from '@sker/workflow'
 import { root } from '@sker/core'
-import { WorkflowEventBus, WorkflowEventType } from '@sker/workflow'
+// import { WorkflowEventBus, WorkflowEventType } from '@sker/workflow'
 import { TextAreaAst } from '@sker/workflow'
 
 /**
