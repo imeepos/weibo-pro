@@ -16,66 +16,62 @@ const buildJsonPrompt = (outputs: INodeOutputMetadata[]) => {
 export class LlmStructuredOutputAstVisitor {
 
     @Handler(LlmStructuredOutputAst)
-    handler(ast: LlmStructuredOutputAst, ctx: WorkflowGraphAst) {
+    visit(ast: LlmStructuredOutputAst, input$: Observable<any>, ctx: WorkflowGraphAst) {
         return new Observable<NodeEvent>((obs) => {
             const abortController = new AbortController();
 
-            const run = async () => {
-                if (abortController.signal.aborted) {
-                    ast.state = 'fail';
-                    setAstError(ast, new Error('工作流已取消'));
-                    obs.next({ type: 'node_fail', id: ast.id, data: ast });
-                    return;
-                }
+            ast.state = 'running';
+            ast.count += 1;
+            obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
-                ast.state = 'running';
-                ast.count += 1;
-                obs.next({ type: 'node_runing', id: ast.id, data: ast });
+            input$.subscribe({
+                next: async () => {
+                    try {
+                        if (abortController.signal.aborted) {
+                            throw new Error('工作流已取消');
+                        }
 
-                const outputs = ast.metadata?.outputs || [];
-                const jsonPrompt = buildJsonPrompt(outputs);
-                const model = useLlmModel({ model: ast.model, temperature: ast.temperature });
+                        const outputs = ast.metadata?.outputs || [];
+                        const jsonPrompt = buildJsonPrompt(outputs);
+                        const model = useLlmModel({ model: ast.model, temperature: ast.temperature });
 
-                const systemContent = ast.system.length ? ast.system.join('\n') + '\n\n' + jsonPrompt : jsonPrompt;
-                const messages = [
-                    { role: 'system' as const, content: systemContent },
-                    { role: 'user' as const, content: Array.isArray(ast.prompt) ? ast.prompt.join('\n') : ast.prompt }
-                ];
+                        const systemContent = ast.system.length ? ast.system.join('\n') + '\n\n' + jsonPrompt : jsonPrompt;
+                        const messages = [
+                            { role: 'system' as const, content: systemContent },
+                            { role: 'user' as const, content: Array.isArray(ast.prompt) ? ast.prompt.join('\n') : ast.prompt }
+                        ];
 
-                const response = await model.invoke(messages);
-                const content = typeof response.content === 'string' ? response.content : JSON.stringify(response.content);
+                        const response = await model.invoke(messages);
+                        const content = typeof response.content === 'string' ? response.content : JSON.stringify(response.content);
 
-                // 提取 JSON（支持 markdown 代码块）
-                const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, content];
-                const result = JSON.parse(jsonMatch[1]!.trim()) as Record<string, unknown>;
+                        const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, content];
+                        const result = JSON.parse(jsonMatch[1]!.trim()) as Record<string, unknown>;
 
-                if (abortController.signal.aborted) {
-                    ast.state = 'fail';
-                    setAstError(ast, new Error('工作流已取消'));
-                    obs.next({ type: 'node_fail', id: ast.id, data: ast });
-                    return;
-                }
-
-                // 将结果赋值到输出属性
-                for (const output of outputs) {
-                    if (output.property in result) {
-                        (ast as any)[output.property] = result[output.property];
+                        for (const output of outputs) {
+                            if (output.property in result) {
+                                (ast as any)[output.property] = result[output.property];
+                                obs.next({ type: 'node_emit', id: ast.id, property: output.property, value: result[output.property] });
+                            }
+                        }
+                    } catch (error) {
+                        console.error('[LlmStructuredOutputAst] 执行失败:', error);
+                        ast.state = 'fail';
+                        setAstError(ast, error);
+                        obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                        obs.complete();
                     }
+                },
+                error: (error) => {
+                    ast.state = 'fail';
+                    setAstError(ast, error);
+                    obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                    obs.complete();
+                },
+                complete: () => {
+                    ast.state = 'success';
+                    obs.next({ type: 'node_success', id: ast.id, data: ast });
+                    obs.complete();
                 }
-
-                obs.next({ type: 'node_runing', id: ast.id, data: ast });
-
-                ast.state = 'success';
-                obs.next({ type: 'node_success', id: ast.id, data: ast });
-                obs.complete();
-            };
-
-            run().catch(e => {
-                console.error('[LlmStructuredOutputAst] 执行失败:', e);
-                ast.state = 'fail';
-                setAstError(ast, e);
-                obs.next({ type: 'node_fail', id: ast.id, data: ast });
-                obs.complete();
             });
 
             return () => {

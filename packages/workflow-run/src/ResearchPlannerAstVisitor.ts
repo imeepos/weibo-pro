@@ -14,29 +14,44 @@ const ResearchPlanSchema = z.object({
 export class ResearchPlannerAstVisitor {
 
   @Handler(ResearchPlannerAst)
-  handler(ast: ResearchPlannerAst, ctx: WorkflowGraphAst) {
+  handler(ast: ResearchPlannerAst, input$: Observable<any>, ctx: WorkflowGraphAst) {
     return new Observable<NodeEvent>((obs) => {
       const abortController = new AbortController();
 
-      const run = async () => {
-        if (abortController.signal.aborted) {
-          ast.state = 'fail';
-          setAstError(ast, new Error('工作流已取消'));
-          obs.next({ type: 'node_fail', id: ast.id, data: ast });
-          return;
-        }
+      ast.state = 'running';
+      ast.count += 1;
+      obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
-        if (!ast.query || ast.query.length === 0) {
+      input$.subscribe({
+        next: (inputData) => {
+          if (inputData) {
+            Object.keys(inputData).forEach(key => {
+              (ast as any)[key] = inputData[key];
+            });
+          }
+        },
+        error: (error) => {
           ast.state = 'fail';
-          setAstError(ast, new Error('请提供研究主题'));
+          setAstError(ast, error);
           obs.next({ type: 'node_fail', id: ast.id, data: ast });
           obs.complete();
-          return;
-        }
+        },
+        complete: async () => {
+          const run = async () => {
+            if (abortController.signal.aborted) {
+              ast.state = 'fail';
+              setAstError(ast, new Error('工作流已取消'));
+              obs.next({ type: 'node_fail', id: ast.id, data: ast });
+              return;
+            }
 
-        ast.state = 'running';
-        ast.count += 1;
-        obs.next({ type: 'node_runing', id: ast.id, data: ast });
+            if (!ast.query || ast.query.length === 0) {
+              ast.state = 'fail';
+              setAstError(ast, new Error('请提供研究主题'));
+              obs.next({ type: 'node_fail', id: ast.id, data: ast });
+              obs.complete();
+              return;
+            }
 
         const model = useLlmModel({
           model: ast.model,
@@ -131,21 +146,23 @@ ${soundbites}
           obs.next({ type: 'node_emit', id: ast.id, property: 'subproblems', value: ast.subproblems });
           obs.next({ type: 'node_emit', id: ast.id, property: 'reasoning', value: ast.reasoning });
 
-          ast.state = 'success';
-          obs.next({ type: 'node_success', id: ast.id, data: ast });
+            ast.state = 'success';
+            obs.next({ type: 'node_success', id: ast.id, data: ast });
+            obs.complete();
+
+          } catch (error) {
+            throw new Error(`研究规划失败: ${error instanceof Error ? error.message : '未知错误'}`);
+          }
+        };
+
+        run().catch(e => {
+          ast.state = 'fail';
+          setAstError(ast, e);
+          obs.next({ type: 'node_fail', id: ast.id, data: ast });
           obs.complete();
-
-        } catch (error) {
-          throw new Error(`研究规划失败: ${error instanceof Error ? error.message : '未知错误'}`);
-        }
-      };
-
-      run().catch(e => {
-        ast.state = 'fail';
-        setAstError(ast, e);
-        obs.next({ type: 'node_fail', id: ast.id, data: ast });
-        obs.complete();
-      });
+        });
+      }
+    });
 
       return () => {
         abortController.abort();
