@@ -1,6 +1,6 @@
 import { Injectable, Inject } from '@sker/core';
-import { Observable, EMPTY, merge, defer, ReplaySubject, of, combineLatest, zip, concat, Subject } from 'rxjs';
-import { filter, map, finalize, tap, catchError, shareReplay, buffer, toArray } from 'rxjs/operators';
+import { Observable, EMPTY, merge, defer, ReplaySubject, of, combineLatest, zip, concat, Subject, isObservable } from 'rxjs';
+import { filter, map, finalize, tap, catchError, shareReplay, buffer, toArray, concatMap } from 'rxjs/operators';
 import { NodeExecutor } from './executor';
 import { Handler, getInputMetadata, hasBufferMode } from './decorator';
 import { resetNodeToDefaults, WorkflowGraphAst } from './ast';
@@ -31,35 +31,52 @@ export class WorkflowGraphAstVisitor {
 
     @Handler(WorkflowGraphAst)
     handler(ast: WorkflowGraphAst, input$: Observable<any>, _parent?: WorkflowGraphAst): Observable<NodeEvent> {
-        return defer(() => {
-            ast.state = 'running';
+        // 优先使用传入的 input$ 流，如果没有则使用空流
+        if (!input$) throw new Error(`[WorkflowGraphAstVisitor.handler] input$ is empty`)
+        if (!isObservable(input$)) throw new Error(`[WorkflowGraphAstVisitor.handler] input$ must be an Observable`)
 
-            const inputSubjects = new Map<string, ReplaySubject<any>>();
-            const nodeEventStreams = new Map<string, Observable<NodeEvent>>();
+        return input$.pipe(
+            concatMap(input => {
+                // 每次接收到输入时，重新初始化工作流状态
+                ast.state = 'running';
+                ast.error = undefined;
 
-            // 为每个子节点创建输入流和事件流
-            ast.nodes.forEach(node => {
-                const input$ = new ReplaySubject<any>(1);
-                inputSubjects.set(node.id, input$);
-                // 重置节点为默认值（防止上次执行的残留数据影响本次执行）
-                resetNodeToDefaults(node);
-                // 调用 NodeExecutor 执行子节点，使用 shareReplay 共享订阅
-                const eventStream$ = this.nodeExecutor.run(node, input$, ast).pipe(
-                    shareReplay({ bufferSize: Infinity, refCount: false })
-                );
-                nodeEventStreams.set(node.id, eventStream$);
-            });
+                const inputSubjects = new Map<string, ReplaySubject<any>>();
+                const nodeEventStreams = new Map<string, Observable<NodeEvent>>();
 
-            // 连接边
-            this.connectEdges(ast, inputSubjects, nodeEventStreams);
+                // 为每个子节点创建输入流和事件流
+                ast.nodes.forEach(node => {
+                    const input$ = new ReplaySubject<any>(1);
+                    inputSubjects.set(node.id, input$);
+                    // 重置节点为默认值（防止上次执行的残留数据影响本次执行）
+                    resetNodeToDefaults(node);
+                    // 调用 NodeExecutor 执行子节点，使用 shareReplay 共享订阅
+                    const eventStream$ = this.nodeExecutor.run(node, input$, ast).pipe(
+                        shareReplay({ bufferSize: Infinity, refCount: false })
+                    );
+                    nodeEventStreams.set(node.id, eventStream$);
+                });
 
-            // 计算笛卡尔积并触发入口节点
-            const combinedInput$ = this.computeCartesianProduct(ast, of({}));
-            this.triggerEntryNodes(ast, combinedInput$, inputSubjects);
+                // 连接边
+                this.connectEdges(ast, inputSubjects, nodeEventStreams);
 
-            // 合并所有事件流
-            return this.mergeNodeEventStreams(ast, nodeEventStreams, inputSubjects);
-        });
+                // 计算笛卡尔积并触发入口节点（使用当前输入）
+                const combinedInput$ = this.computeCartesianProduct(ast, of(input));
+                this.triggerEntryNodes(ast, combinedInput$, inputSubjects);
+
+                // 合并所有事件流
+                return this.mergeNodeEventStreams(ast, nodeEventStreams, inputSubjects);
+            }),
+            catchError(error => {
+                ast.state = 'fail';
+                ast.error = error;
+                return of({
+                    type: 'node_fail',
+                    id: ast.id,
+                    data: ast
+                } as NodeEvent);
+            })
+        );
     }
 
     private connectEdges(
@@ -286,10 +303,10 @@ export class WorkflowGraphAstVisitor {
      * 计算笛卡尔积：将外部输入与静态入口节点的值组合
      *
      * 例如：
-     * - 外部输入: [1, 2, 3]
-     * - 静态节点A的值: [x]
-     * - 静态节点B的值: [y]
-     * - 结果: [(1,x,y), (2,x,y), (3,x,y)]
+     * - 外部输入: { text: "hello" }
+     * - 静态节点A的值: { x: 1 }
+     * - 静态节点B的值: { y: 2 }
+     * - 结果: { text: "hello", A: { x: 1 }, B: { y: 2 } }
      */
     private computeCartesianProduct(
         workflow: WorkflowGraphAst,
@@ -347,10 +364,38 @@ export class WorkflowGraphAstVisitor {
             next: input => {
                 entryIds.forEach(nodeId => {
                     const subject = inputSubjects.get(nodeId);
-                    if (subject) {
-                        console.log(`[WorkflowGraphAstVisitor] 向入口节点 ${nodeId} 发送输入`);
-                        subject.next(input || {});
-                    }
+                    const node = workflow.nodes.find(n => n.id === nodeId);
+
+                    if (!subject || !node) return;
+
+                    console.log(`[WorkflowGraphAstVisitor] 向入口节点 ${nodeId} 发送输入`);
+
+                    // 根据节点的 metadata.inputs 构建输入对象
+                    const nodeInput: Record<string, any> = {};
+                    const inputs = node.metadata?.inputs || [];
+
+                    inputs.forEach(inputMeta => {
+                        const property = String(inputMeta.property);
+                        const propertyKey = `${nodeId}.${property}`;
+
+                        // 优先从 input 对象中查找 {nodeId.property: value} 格式
+                        if (input[propertyKey] !== undefined) {
+                            nodeInput[property] = input[propertyKey];
+                        }
+                        // 回退：尝试从静态节点组合格式 {nodeId: {property: value}}
+                        else if (input[nodeId]?.[property] !== undefined) {
+                            nodeInput[property] = input[nodeId][property];
+                        }
+                        // 使用节点当前值或默认值
+                        else if ((node as any)[property] !== undefined) {
+                            nodeInput[property] = (node as any)[property];
+                        } else if (inputMeta.defaultValue !== undefined) {
+                            nodeInput[property] = inputMeta.defaultValue;
+                        }
+                    });
+
+                    console.log(`[WorkflowGraphAstVisitor] 节点 ${nodeId} 输入数据:`, nodeInput);
+                    subject.next(nodeInput);
                 });
             },
             complete: () => {

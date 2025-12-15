@@ -44,7 +44,6 @@ function collectPropertyUpdates(
   metadata?.forEach((item: any) => {
     const propKey = String(item.property)
     if (source[propKey] !== undefined) {
-      console.log(`[collectPropertyUpdates] 收集属性更新: ${propKey} =`, source[propKey]);
       updates[propKey] = source[propKey]
     }
   })
@@ -346,7 +345,6 @@ export function useWorkflowOperations(
    */
   const runWorkflow = useCallback(
     async (inputs?: Record<string, unknown>, onComplete?: () => void) => {
-      console.log('[runWorkflow] 开始执行工作流')
       if (!workflow.workflowAst) {
         onShowToast?.('error', '工作流不存在', '无法执行空工作流')
         return
@@ -365,7 +363,6 @@ export function useWorkflowOperations(
       }
       isWorkflowRunningRef.current = true
 
-      console.log('[runWorkflow] 通过防重复检查，开始执行')
 
       const cleanup = () => {
         isWorkflowRunningRef.current = false
@@ -374,7 +371,6 @@ export function useWorkflowOperations(
       try {
         // 如果有正在运行的工作流，先取消
         if (abortControllerRef.current) {
-          console.log('[runWorkflow] 发现正在运行的工作流，先取消')
           cancelSubject$.current.next()
 
           if (abortControllerRef.current) {
@@ -407,7 +403,6 @@ export function useWorkflowOperations(
 
         // 应用输入参数到对应节点
         if (inputs && Object.keys(inputs).length > 0) {
-          console.log('[runWorkflow] 应用输入参数:', inputs)
           // 收集所有需要修改的节点更新（批量优化）
           const nodeUpdates = new Map<string, Record<string, any>>()
 
@@ -453,7 +448,6 @@ export function useWorkflowOperations(
 
         // 执行前保存状态
         try {
-          console.log('[runWorkflow] 执行前保存工作流状态')
           if (getViewport) {
             workflow.workflowAst.viewport = getViewport()
           }
@@ -496,7 +490,6 @@ export function useWorkflowOperations(
         })
         workflow.syncFromAst()
 
-        console.log('[runWorkflow] 重置节点状态为 pending，准备执行')
 
         onSetRunning?.(true)
 
@@ -506,7 +499,6 @@ export function useWorkflowOperations(
           JSON.parse(JSON.stringify(toJson(workflow.workflowAst)))
         )
 
-        console.log('[runWorkflow] 深拷贝 AST 完成，准备调用 executeAst')
 
         // 将 abortSignal 附加到工作流上下文
         mutableAst.abortSignal = abortController.signal
@@ -517,7 +509,6 @@ export function useWorkflowOperations(
           .pipe(
             takeUntil(cancelSubject$.current),
             finalize(() => {
-              console.log('[runWorkflow] finalize: Observable 完成，重置状态')
               // 确保在所有情况下都重置运行状态和控制器引用
               abortControllerRef.current = null
               onSetRunning?.(false)
@@ -526,48 +517,22 @@ export function useWorkflowOperations(
           )
           .subscribe({
             next: (event) => {
-              console.log('[runWorkflow] 收到事件:', event.type, '节点ID:', event.id)
-
-              // 调试 node_emit 事件
-              if (event.type === 'node_emit') {
-                console.log('[runWorkflow] node_emit 事件详情:', {
-                  id: event.id,
-                  property: (event as any).property,
-                  value: (event as any).value
-                });
-              }
-
               // 处理所有节点事件，包括 running 状态
               if (event.type === 'node_success' || event.type === 'node_fail') {
                 const updatedNode = event.data as any
-                console.log('[runWorkflow] event.data 结构:', {
-                  type: typeof updatedNode,
-                  keys: Object.keys(updatedNode),
-                  state: updatedNode.state,
-                  error: updatedNode.error,
-                  id: updatedNode.id,
-                  isNode: !!updatedNode.type // 节点有 type 属性
-                })
 
                 // 检查是否是工作流完成事件（不是单个节点）
                 if (!updatedNode.type) {
-                  console.log('[runWorkflow] 收到工作流完成事件:', updatedNode.state)
                   // 这是工作流完成事件，更新工作流状态
                   workflow.workflowAst!.state = updatedNode.state
                   workflow.workflowAst!.error = updatedNode.error
                   workflow.syncFromAst()
-                  console.log('[runWorkflow] 工作流状态已同步到 UI')
                   return
                 }
 
                 // 当 event.data 是单个节点时，直接更新对应节点
                 workflow.workflowAst!.nodes = workflow.workflowAst!.nodes.map(originalNode => {
                   if (originalNode.id === event.id) {
-                    console.log('[runWorkflow] 找到并更新节点:', {
-                      id: originalNode.id,
-                      oldState: originalNode.state,
-                      newState: updatedNode.state
-                    })
 
                     // 直接创建新节点对象，设置状态
                     const newNode = Object.assign(
@@ -594,14 +559,11 @@ export function useWorkflowOperations(
                 })
 
                 workflow.syncFromAst()
-                console.log('[runWorkflow] 节点完成状态已同步到 UI')
               } else if (event.type === 'node_runing') {
-                console.log('[runWorkflow] 处理节点运行事件:', event.type)
                 // 处理节点运行状态
                 const nodeData = event.data as any
                 workflow.workflowAst!.nodes = workflow.workflowAst!.nodes.map(originalNode => {
                   if (originalNode.id === event.id) {
-                    console.log('[runWorkflow] 更新节点状态为 running:', event.id)
                     return Object.assign(
                       Object.create(Object.getPrototypeOf(originalNode)),
                       originalNode,
@@ -611,7 +573,6 @@ export function useWorkflowOperations(
                   return originalNode
                 })
                 workflow.syncFromAst()
-                console.log('[runWorkflow] 节点运行状态已同步到 UI')
               }
             },
             error: async (error) => {
@@ -646,18 +607,15 @@ export function useWorkflowOperations(
               }
             },
             complete: async () => {
-              console.log('[runWorkflow] 执行完成')
               // 确保最终状态同步到 UI
               workflow.syncFromAst()
 
               // 调试：检查节点状态
-              console.log('[runWorkflow] syncFromAst 后的节点状态:', workflow.workflowAst!.nodes.map(n => ({ id: n.id, state: n.state })));
 
               // 统计执行结果
               const successCount = workflow.workflowAst!.nodes.filter(n => n.state === 'success').length
               const failCount = workflow.workflowAst!.nodes.filter(n => n.state === 'fail').length
 
-              console.log(`[runWorkflow] 统计结果: 成功 ${successCount} 个, 失败 ${failCount} 个`);
 
               if (failCount === 0) {
                 onShowToast?.('success', '工作流执行成功', `共执行 ${successCount} 个节点`)
@@ -671,7 +629,6 @@ export function useWorkflowOperations(
 
               // 执行完成后保存状态
               try {
-                console.log('[runWorkflow] 执行完成后保存工作流状态')
                 if (getViewport) {
                   workflow.workflowAst!.viewport = getViewport()
                 }
@@ -687,7 +644,6 @@ export function useWorkflowOperations(
 
         // 返回取消函数，便于外部管理
         return () => {
-          console.log('[runWorkflow] 取消工作流执行')
           cancelSubject$.current.next()
           abortController.abort()
           abortControllerRef.current = null
@@ -901,7 +857,6 @@ export function useWorkflowOperations(
 
       // 路由切换时，如果有正在运行的工作流，自动取消
       if (isWorkflowRunningRef.current) {
-        console.log('[Lifecycle] 路由切换，自动取消工作流执行')
         cancelWorkflowRef.current()
       }
     }

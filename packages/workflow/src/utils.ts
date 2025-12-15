@@ -10,6 +10,10 @@ export function isINode(val: unknown): val is INode {
 	return typeof val === 'object' && val !== null && 'type' in val;
 }
 
+export function isObservable<T = any>(val: unknown): val is Observable<T> {
+	return val && Reflect.get(val, 'subscribe')
+}
+
 export const clone = (obj: any, seen = new WeakSet()): any => {
 	if (obj === null || typeof obj !== 'object') return obj;
 	if (seen.has(obj)) return undefined;
