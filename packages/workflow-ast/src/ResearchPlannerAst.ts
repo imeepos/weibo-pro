@@ -26,7 +26,7 @@ export class ResearchPlannerAst extends Ast {
   soundbites: string[] = [];
 
   @Output({ title: '子问题列表' })
-  subproblems = [];
+  subproblems: string[] = [];
 
   @Output({ title: '推理过程' })
   reasoning = ``;

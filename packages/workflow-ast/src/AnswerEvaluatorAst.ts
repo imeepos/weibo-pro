@@ -35,7 +35,7 @@ export class AnswerEvaluatorAst extends Ast {
   model: string = 'deepseek-ai/DeepSeek-V3';
 
   @Output({ title: '评估结果' })
-  results = [];
+  results: EvaluationResult[] = [];
 
   @Output({ title: '是否通过' })
   passed = false;

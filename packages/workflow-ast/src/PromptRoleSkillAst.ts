@@ -33,7 +33,7 @@ export class PromptRoleSkillAst extends Ast {
   skillContents: Record<string, string> = {};
 
   @Output({ title: '选中技能列表' })
-  selectedSkillsList = []
+  selectedSkillsList: SkillSummary[] = []
 
   @Output({ title: '技能内容' })
   skillContent = {}

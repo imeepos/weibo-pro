@@ -97,7 +97,7 @@ ${categoryList}
                 // 如果没有匹配到任何分类，走 default
                 const finalMatched = matched || categories.find(c => c.isDefault);
 
-                // 通过 Observable 发射数据，而不是直接调用 BehaviorSubject.next()
+                // 通过 node_emit 事件发射数据（新数据流模式）
                 for (const cat of categories) {
                     const value = cat === finalMatched ? ast.context : ROUTE_SKIPPED;
                     obs.next({ type: 'node_emit', id: ast.id, property: cat.property, value });

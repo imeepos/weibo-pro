@@ -14,13 +14,13 @@ export class PostContextCollectorAst extends Ast {
   canStart: boolean[] = [];
 
   @Output({ title: '帖子实体' })
-  post = ``;
+  post: WeiboPostEntity | string = ``;
 
   @Output({ title: '评论列表' })
-  comments = [];
+  comments: WeiboCommentEntity[] = [];
 
   @Output({ title: '转发列表' })
-  reposts = [];
+  reposts: WeiboRepostEntity[] = [];
 
   type: 'PostContextCollectorAst' = 'PostContextCollectorAst';
 }

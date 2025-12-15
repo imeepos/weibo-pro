@@ -161,8 +161,9 @@ export class WeiboAuthService implements OnDestroy {
           const data = await response.json();
 
           if (data.data?.image) {
-            ast.account.next(undefined);
+            ast.account = undefined;
             ast.qrcode = data.data.image;
+            obs.next({ type: 'node_emit', id: ast.id, property: 'account', value: ast.account })
             obs.next({ type: 'node_runing', id: ast.id, data: ast })
           }
         }
@@ -177,13 +178,15 @@ export class WeiboAuthService implements OnDestroy {
             }
             // 50114002: 已扫码,等待手机确认
             else if (data.retcode === 50114002) {
-              ast.message.next(`请在手机点击确认以登录`)
+              ast.message = `请在手机点击确认以登录`
+              obs.next({ type: 'node_emit', id: ast.id, property: 'message', value: ast.message })
               obs.next({ type: 'node_runing', id: ast.id, data: ast })
             }
             // 50114003: 二维码过期
             else if (data.retcode === 50114003) {
               ast.state = 'fail';
-              ast.message.next(`该二维码已过期`)
+              ast.message = `该二维码已过期`
+              obs.next({ type: 'node_emit', id: ast.id, property: 'message', value: ast.message })
               obs.next({ type: 'node_runing', id: ast.id, data: ast })
               obs.complete()
               await this.cleanupSession(ast.id);
@@ -223,14 +226,16 @@ export class WeiboAuthService implements OnDestroy {
           // 保存到数据库
           const account = await this.saveAccount(ast.id, cookies, userInfo);
 
-          ast.account.next(account);
+          ast.account = account;
           ast.state = 'success'
+          obs.next({ type: 'node_emit', id: ast.id, property: 'account', value: ast.account })
           obs.next({ type: 'node_runing', id: ast.id, data: ast })
           obs.complete()
           await this.cleanupSession(ast.id);
         } catch (error) {
           ast.state = 'fail';
-          ast.message.next(`保存账号信息失败`)
+          ast.message = `保存账号信息失败`
+          obs.next({ type: 'node_emit', id: ast.id, property: 'message', value: ast.message })
           obs.next({ type: 'node_runing', id: ast.id, data: ast })
           obs.complete();
           await this.cleanupSession(ast.id);

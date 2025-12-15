@@ -61,7 +61,7 @@ export class GroupChatLoopAst extends Ast {
     // === 运行时状态 ===
 
     @Output({ title: '对话历史（数组）' })
-    chatHistory = [];
+    chatHistory: ChatMessage[] = [];
 
     @Output({ title: '对话历史（文本）' })
     historyText = '';

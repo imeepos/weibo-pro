@@ -50,7 +50,7 @@ export class ScheduledWorkflowAst extends Ast {
   scheduleId = ``
 
   @Output({ title: '下次执行时间' })
-  nextRunAt = ``
+  nextRunAt: Date | string | undefined = ``
 
   @State({ title: '状态' })
   status: string = 'enabled'

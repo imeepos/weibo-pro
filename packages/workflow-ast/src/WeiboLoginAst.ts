@@ -22,13 +22,13 @@ import type { WeiboAccountEntity } from "@sker/entities";
 export class WeiboLoginAst extends Ast {
 
     @Output({ title: '微博账号', isRouter: true })
-    account = ``;
+    account: WeiboAccountEntity | string | undefined = ``;
 
     @Output({ title: '登录二维码', isRouter: true })
-    qrcode = null;
+    qrcode: string | null = null;
 
     @Output({ title: '提示消息' })
-    message = null;
+    message: string | null = null;
 
     type: `WeiboLoginAst` = `WeiboLoginAst`
 }

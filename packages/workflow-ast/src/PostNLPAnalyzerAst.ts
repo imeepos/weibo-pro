@@ -1,4 +1,5 @@
 import type { WeiboCommentEntity, WeiboPostEntity, WeiboRepostEntity } from '@sker/entities';
+import type { CompleteAnalysisResult } from '@sker/nlp';
 import { Ast, Input, Node, Output } from '@sker/workflow';
 
 @Node({
@@ -20,7 +21,7 @@ export class PostNLPAnalyzerAst extends Ast {
   reposts!: WeiboRepostEntity[];
 
   @Output({ title: 'NLP 分析结果' })
-  nlpResult = ``;
+  nlpResult: CompleteAnalysisResult | string = ``;
 
   type: 'PostNLPAnalyzerAst' = 'PostNLPAnalyzerAst';
 }

@@ -30,7 +30,7 @@ export class SwitchAstVisitor {
 
                 if (matched) {
                     anyMatched = true
-                    // 通过 Observable 发射数据，而不是直接调用 BehaviorSubject.next()
+                    // 通过 node_emit 事件发射数据（新数据流模式）
                     obs.next({ type: 'node_emit', id: ast.id, property: propKey, value: inputValue });
                 } else {
                     // 条件不匹配：使用 ROUTE_SKIPPED 明确表示"这条路不走"
@@ -43,7 +43,7 @@ export class SwitchAstVisitor {
                 const propKey = String(defaultOutput.property)
                 // 有其他分支匹配时，default 使用 ROUTE_SKIPPED
                 const value = anyMatched ? ROUTE_SKIPPED : inputValue
-                // 通过 Observable 发射数据，而不是直接调用 BehaviorSubject.next()
+                // 通过 node_emit 事件发射数据（新数据流模式）
                 obs.next({ type: 'node_emit', id: ast.id, property: propKey, value });
             }
 
