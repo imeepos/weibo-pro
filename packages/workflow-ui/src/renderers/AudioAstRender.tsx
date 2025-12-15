@@ -13,8 +13,8 @@ const AudioComponent: React.FC<{ ast: AudioAst }> = ({ ast }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { setNodes } = useReactFlow();
 
-    // 不可变更新 AST 节点数据
-    const updateAstData = useCallback((updates: Partial<AudioAst>) => {
+    // 更新节点数据（只更新 React Flow 状态，useWorkflow 会自动同步到 AST）
+    const updateNodeData = useCallback((updates: Partial<AudioAst>) => {
         setNodes((nodes) =>
             nodes.map((node) =>
                 node.id === ast.id
@@ -22,13 +22,13 @@ const AudioComponent: React.FC<{ ast: AudioAst }> = ({ ast }) => {
                     : node
             )
         );
-        setUpdateKey(prev => prev + 1);
     }, [ast.id, setNodes]);
 
     const { isUploading, progress, uploadFile } = useUploadFile({
         endpoint: '/api/upload/file',
         onSuccess: (file) => {
-            updateAstData({ uploadedAudio: file.url });
+            updateNodeData({ uploadedAudio: file.url });
+            setUpdateKey(prev => prev + 1);
         },
         onError: (error) => {
             console.error('❌ 音频上传失败:', error);
@@ -55,7 +55,8 @@ const AudioComponent: React.FC<{ ast: AudioAst }> = ({ ast }) => {
     };
 
     const handleDelete = () => {
-        updateAstData({ uploadedAudio: '' });
+        updateNodeData({ uploadedAudio: '' });
+        setUpdateKey(prev => prev + 1);
     };
 
     const handleDownload = () => {

@@ -19,8 +19,8 @@ const VideoComponent: React.FC<{ ast: VideoAst }> = ({ ast }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const { setNodes } = useReactFlow();
 
-    // 不可变更新 AST 节点数据
-    const updateAstData = useCallback((updates: Partial<VideoAst>) => {
+    // 更新节点数据（只更新 React Flow 状态，useWorkflow 会自动同步到 AST）
+    const updateNodeData = useCallback((updates: Partial<VideoAst>) => {
         setNodes((nodes) =>
             nodes.map((node) =>
                 node.id === ast.id
@@ -28,14 +28,14 @@ const VideoComponent: React.FC<{ ast: VideoAst }> = ({ ast }) => {
                     : node
             )
         );
-        setUpdateKey(prev => prev + 1);
     }, [ast.id, setNodes]);
 
     const { isUploading, progress, uploadFile } = useUploadFile({
         endpoint: '/api/upload/file',
         onSuccess: (file) => {
             console.log('✅ 上传成功:', file);
-            updateAstData({ uploadedVideo: file.url });
+            updateNodeData({ uploadedVideo: file.url });
+            setUpdateKey(prev => prev + 1);
         },
         onError: (error) => {
             console.error('❌ 视频上传失败:', error);
@@ -71,8 +71,9 @@ const VideoComponent: React.FC<{ ast: VideoAst }> = ({ ast }) => {
     };
 
     const handleDelete = () => {
-        updateAstData({ uploadedVideo: '' });
+        updateNodeData({ uploadedVideo: '' });
         setIsPlaying(false);
+        setUpdateKey(prev => prev + 1);
     };
 
     const handlePlayPause = () => {

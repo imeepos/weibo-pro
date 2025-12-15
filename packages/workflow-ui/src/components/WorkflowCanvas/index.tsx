@@ -632,11 +632,11 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
     if (!edgeConfigDialog.edge) return
 
     const edgeId = edgeConfigDialog.edge.id
-    const astEdge = workflow.workflowAst.edges.find((e: any) => e.id === edgeId)
 
-    if (astEdge) {
-      Object.assign(astEdge, edgeConfig)
-    }
+    // 不可变更新 AST 中的边
+    workflow.workflowAst.edges = workflow.workflowAst.edges.map((e: any) =>
+      e.id === edgeId ? { ...e, ...edgeConfig } : e
+    )
 
     workflow.setEdges((currentEdges) =>
       currentEdges.map((edge) => {

@@ -256,6 +256,19 @@ export function useWorkflow(
           }
         }
 
+        // ✨ 同步所有 @Input 装饰的属性（支持渲染器组件更新数据）
+        astNode.metadata?.inputs?.forEach((inputMeta: any) => {
+          const key = String(inputMeta.property)
+          const flowValue = flowNode.data[key]
+          const astValue = astNode[key]
+
+          // 只同步真正变化的值（避免触发不必要的更新）
+          if (flowValue !== astValue && flowValue !== undefined) {
+            updates[key] = flowValue
+            changed = true
+          }
+        })
+
         // 如果有更新，创建新对象
         if (Object.keys(updates).length > 0) {
           const newNode = Object.assign(
@@ -297,11 +310,10 @@ export function useWorkflow(
     const result = updateAstNodes(workflowAst.nodes)
     if (result.changed) {
       workflowAst.nodes = result.nodes
-      hasPositionChanged = true
-    }
-
-    if (hasPositionChanged && onWorkflowChangeRef.current) {
-      onWorkflowChangeRef.current()
+      // 触发自动保存（位置、尺寸、Input 属性变化都会触发）
+      if (onWorkflowChangeRef.current) {
+        onWorkflowChangeRef.current()
+      }
     }
 
     // 同步 nodes 到全局 store

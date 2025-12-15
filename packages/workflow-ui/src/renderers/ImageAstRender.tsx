@@ -28,8 +28,8 @@ const ImageComponent: React.FC<{ ast: ImageAst }> = ({ ast }) => {
     const [tempAnnotations, setTempAnnotations] = useState<Annotation[]>([]);
     const [tempCropArea, setTempCropArea] = useState<CropArea | null>(null);
 
-    // 不可变更新 AST 节点数据
-    const updateAstData = useCallback((updates: Partial<ImageAst>) => {
+    // 更新节点数据（只更新 React Flow 状态，useWorkflow 会自动同步到 AST）
+    const updateNodeData = useCallback((updates: Partial<ImageAst>) => {
         setNodes((nodes) =>
             nodes.map((node) =>
                 node.id === ast.id
@@ -37,7 +37,6 @@ const ImageComponent: React.FC<{ ast: ImageAst }> = ({ ast }) => {
                     : node
             )
         );
-        setUpdateKey(prev => prev + 1);
     }, [ast.id, setNodes]);
 
     useEffect(() => {
@@ -52,7 +51,8 @@ const ImageComponent: React.FC<{ ast: ImageAst }> = ({ ast }) => {
         endpoint: '/api/upload/file',
         onSuccess: (file) => {
             console.log('✅ 上传成功:', file);
-            updateAstData({ uploadedImage: file.url });
+            updateNodeData({ uploadedImage: file.url });
+            setUpdateKey(prev => prev + 1);
         },
         onError: (error) => {
             console.error('❌ 图片上传失败:', error);
@@ -89,10 +89,11 @@ const ImageComponent: React.FC<{ ast: ImageAst }> = ({ ast }) => {
     };
 
     const handleDelete = () => {
-        updateAstData({ uploadedImage: '' });
+        updateNodeData({ uploadedImage: '' });
         setTempAnnotations([]);
         setTempCropArea(null);
         setShowEditor(false);
+        setUpdateKey(prev => prev + 1);
     };
 
     const handleImageClick = () => {
@@ -262,10 +263,11 @@ const ImageComponent: React.FC<{ ast: ImageAst }> = ({ ast }) => {
         if ((data.annotations && data.annotations.length > 0) || data.crop) {
             try {
                 const newImageUrl = await processAndUploadImage(currentImage, data.annotations || [], data.crop || null);
-                updateAstData({ uploadedImage: newImageUrl });
+                updateNodeData({ uploadedImage: newImageUrl });
                 // 图片处理完成后，清空临时编辑状态
                 setTempAnnotations([]);
                 setTempCropArea(null);
+                setUpdateKey(prev => prev + 1);
             } catch (error) {
                 console.error('❌ 图片处理失败:', error);
                 alert(`图片处理失败: ${error instanceof Error ? error.message : '未知错误'}`);

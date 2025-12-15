@@ -96,13 +96,17 @@ export const useNodeOperations = (workflow: UseWorkflowReturn, options: NodeOper
           uiPosition: node.position,
           astPositionBefore: { ...node.data.position }
         })
-        // 将 UI 层计算的新位置同步到 AST 对象
-        node.data.position = node.position
+        // 创建新的 AST 对象，包含新位置（不可变更新）
+        const astNode = Object.assign(
+          Object.create(Object.getPrototypeOf(node.data)),
+          node.data,
+          { position: node.position }
+        )
         console.log('[pasteNodes] AST position 已同步', {
           id: node.id,
-          astPositionAfter: node.data.position
+          astPositionAfter: astNode.position
         })
-        workflow.workflowAst.nodes = astAddNode(workflow.workflowAst.nodes, node.data)
+        workflow.workflowAst.nodes = astAddNode(workflow.workflowAst.nodes, astNode)
       })
 
       // 将边添加到 AST
