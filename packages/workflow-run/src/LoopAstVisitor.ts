@@ -17,6 +17,7 @@ export class LoopAstVisitor {
 
             input$.subscribe({
                 next: () => {
+                    ast.emitCount +=1;
                     let items: any[] = ast.items || [];
                     if (!Array.isArray(items)) {
                         items = [items];

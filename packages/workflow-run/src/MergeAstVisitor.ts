@@ -15,6 +15,7 @@ export class MergeAstVisitor {
 
             input$.subscribe({
                 next: () => {
+                    ast.emitCount +=1;
                     let inputs = ast.inputs || [];
                     if (!Array.isArray(inputs)) {
                         inputs = [inputs];

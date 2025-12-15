@@ -28,6 +28,7 @@ export class GroupChatLoopAstVisitor {
 
             input$.subscribe({
                 next: () => {
+                    ast.emitCount += 1;
                     if (!ast.chatHistory || ast.chatHistory.length === 0) {
                         ast.chatHistory = [{
                             round: 0,

@@ -48,7 +48,6 @@ export class WeiboAjaxStatusesMymblogAstVisitor extends WeiboApiClient {
                     }
 
                     ast.state = 'running';
-                    ast.count += 1;
                     obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
                     for await (const body of this.fetchWithPagination<WeiboAjaxStatusesMymblogAstResponse>({

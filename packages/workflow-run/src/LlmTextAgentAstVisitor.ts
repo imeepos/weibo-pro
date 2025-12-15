@@ -17,6 +17,7 @@ export class LlmTextAgentAstVisitor {
             input$.subscribe({
                 next: async () => {
                     try {
+                        ast.emitCount += 1;
                         if (abortController.signal.aborted) {
                             throw new Error('工作流已取消');
                         }

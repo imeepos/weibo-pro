@@ -19,25 +19,18 @@ export class QueryRewriterAstVisitor {
       const abortController = new AbortController();
 
       ast.state = 'running';
-      ast.count += 1;
       obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
       input$.subscribe({
-        next: (inputData) => {
+        next: async (inputData) => {
+          ast.emitCount += 1;
           if (inputData) {
             Object.keys(inputData).forEach(key => {
               (ast as any)[key] = inputData[key];
             });
           }
-        },
-        error: (error) => {
-          ast.state = 'fail';
-          setAstError(ast, error);
-          obs.next({ type: 'node_fail', id: ast.id, data: ast });
-          obs.complete();
-        },
-        complete: async () => {
-          const run = async () => {
+
+          try {
             if (abortController.signal.aborted) {
               ast.state = 'fail';
               setAstError(ast, new Error('工作流已取消'));
@@ -53,20 +46,20 @@ export class QueryRewriterAstVisitor {
               return;
             }
 
-        const model = useLlmModel({
-          model: ast.model,
-          temperature: ast.temperature
-        });
+            const model = useLlmModel({
+              model: ast.model,
+              temperature: ast.temperature
+            });
 
-        const originalQuery = Array.isArray(ast.query)
-          ? ast.query.filter(Boolean).join('\n')
-          : ast.query;
+            const originalQuery = Array.isArray(ast.query)
+              ? ast.query.filter(Boolean).join('\n')
+              : ast.query;
 
-        const now = new Date();
-        const currentYear = now.getFullYear();
-        const currentMonth = now.getMonth() + 1;
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const currentMonth = now.getMonth() + 1;
 
-        const systemPrompt = `你是一个查询重写专家，参考 node-DeepResearch 的设计理念。
+            const systemPrompt = `你是一个查询重写专家，参考 node-DeepResearch 的设计理念。
 
 当前时间：${currentYear}年${currentMonth}月
 
@@ -96,48 +89,48 @@ export class QueryRewriterAstVisitor {
 - 二手宝马价格趋势 ${currentYear}年
 </示例>`;
 
-        const userPrompt = `原始查询：${originalQuery}
+            const userPrompt = `原始查询：${originalQuery}
 
 请生成 ${ast.teamSize} 个重写查询。`;
 
-        try {
-          const structuredModel = model.withStructuredOutput(QueryRewriteSchema);
-          const result = await structuredModel.invoke([
-            { role: 'system', content: systemPrompt },
-            { role: 'human', content: userPrompt }
-          ]);
+            const structuredModel = model.withStructuredOutput(QueryRewriteSchema);
+            const result = await structuredModel.invoke([
+              { role: 'system', content: systemPrompt },
+              { role: 'human', content: userPrompt }
+            ]);
 
-          if (abortController.signal.aborted) {
-            ast.state = 'fail';
-            setAstError(ast, new Error('工作流已取消'));
-            obs.next({ type: 'node_fail', id: ast.id, data: ast });
-            return;
-          }
+            if (abortController.signal.aborted) {
+              ast.state = 'fail';
+              setAstError(ast, new Error('工作流已取消'));
+              obs.next({ type: 'node_fail', id: ast.id, data: ast });
+              return;
+            }
 
-          ast.reasoning = result.reasoning;
-          ast.subQueries = result.queries;
+            ast.reasoning = result.reasoning;
+            ast.subQueries = result.queries;
 
-          // 发出输出事件,传递数据给下游节点
-          obs.next({ type: 'node_emit', id: ast.id, property: 'subQueries', value: ast.subQueries });
-          obs.next({ type: 'node_emit', id: ast.id, property: 'reasoning', value: ast.reasoning });
-
-            ast.state = 'success';
-            obs.next({ type: 'node_success', id: ast.id, data: ast });
-            obs.complete();
+            obs.next({ type: 'node_emit', id: ast.id, property: 'subQueries', value: ast.subQueries });
+            obs.next({ type: 'node_emit', id: ast.id, property: 'reasoning', value: ast.reasoning });
 
           } catch (error) {
-            throw new Error(`查询重写失败: ${error instanceof Error ? error.message : '未知错误'}`);
+            ast.state = 'fail';
+            setAstError(ast, new Error(`查询重写失败: ${error instanceof Error ? error.message : '未知错误'}`));
+            obs.next({ type: 'node_fail', id: ast.id, data: ast });
+            obs.complete();
           }
-        };
-
-        run().catch(e => {
+        },
+        error: (error) => {
           ast.state = 'fail';
-          setAstError(ast, e);
+          setAstError(ast, error);
           obs.next({ type: 'node_fail', id: ast.id, data: ast });
           obs.complete();
-        });
-      }
-    });
+        },
+        complete: () => {
+          ast.state = 'success';
+          obs.next({ type: 'node_success', id: ast.id, data: ast });
+          obs.complete();
+        }
+      });
 
       return () => {
         abortController.abort();

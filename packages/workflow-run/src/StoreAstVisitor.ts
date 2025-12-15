@@ -22,7 +22,7 @@ const WORKFLOW_STORE_PREFIX = 'workflow:store:';
  */
 @Injectable()
 export class StoreGetAstVisitor {
-  constructor(@Inject(RedisClient) private readonly redis: RedisClient) {}
+  constructor(@Inject(RedisClient) private readonly redis: RedisClient) { }
 
   @Handler(StoreGetAst)
   visit(ast: StoreGetAst, input$: Observable<any>, ctx: any): Observable<NodeEvent> {
@@ -39,6 +39,7 @@ export class StoreGetAstVisitor {
 
       input$.subscribe({
         next: (inputData) => {
+          ast.emitCount += 1;
           if (inputData) {
             Object.keys(inputData).forEach(key => {
               (ast as any)[key] = inputData[key];
@@ -113,7 +114,7 @@ export class StoreGetAstVisitor {
  */
 @Injectable()
 export class StoreSetAstVisitor {
-  constructor(@Inject(RedisClient) private readonly redis: RedisClient) {}
+  constructor(@Inject(RedisClient) private readonly redis: RedisClient) { }
 
   @Handler(StoreSetAst)
   visit(ast: StoreSetAst, input$: Observable<any>, ctx: any): Observable<NodeEvent> {
@@ -126,11 +127,11 @@ export class StoreSetAstVisitor {
       };
 
       ast.state = 'running';
-      ast.count += 1;
       obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
       input$.subscribe({
         next: (inputData) => {
+          ast.emitCount += 1;
           if (inputData) {
             Object.keys(inputData).forEach(key => {
               (ast as any)[key] = inputData[key];

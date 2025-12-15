@@ -35,7 +35,6 @@ export class WeiboAjaxStatusesLikeShowAstVisitor extends WeiboApiClient {
             const handle = async () => {
                 try {
                     ast.state = 'running';
-                    ast.count += 1;
                     obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
                     let page = 1;
@@ -64,8 +63,10 @@ export class WeiboAjaxStatusesLikeShowAstVisitor extends WeiboApiClient {
                             await m.upsert(WeiboLikeEntity, likeEntities as any[], ['userWeiboId', 'targetWeiboId']);
                             console.log(`[${page}]保存${likeEntities.length}条点赞记录`);
                         });
-                    }
+                    }
+
                     ast.is_end = true;
+                    ast.emitCount += 1;
                     obs.next({ type: 'node_emit', id: ast.id, property: 'is_end', value: ast.is_end });
 
                     ast.state = 'success';

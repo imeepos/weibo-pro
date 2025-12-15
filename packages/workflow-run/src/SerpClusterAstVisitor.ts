@@ -36,25 +36,18 @@ export class SerpClusterAstVisitor {
             const abortController = new AbortController();
 
             ast.state = 'running';
-            ast.count += 1;
             obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
             input$.subscribe({
-                next: (inputData) => {
+                next: async (inputData) => {
+                    ast.emitCount += 1;
                     if (inputData) {
                         Object.keys(inputData).forEach(key => {
                             (ast as any)[key] = inputData[key];
                         });
                     }
-                },
-                error: (error) => {
-                    ast.state = 'fail';
-                    setAstError(ast, error);
-                    obs.next({ type: 'node_fail', id: ast.id, data: ast });
-                    obs.complete();
-                },
-                complete: async () => {
-                    const run = async () => {
+
+                    try {
                         if (abortController.signal.aborted) {
                             ast.state = 'fail';
                             setAstError(ast, new Error('工作流已取消'));
@@ -87,18 +80,24 @@ export class SerpClusterAstVisitor {
 
                         obs.next({ type: 'node_emit', id: ast.id, property: 'clusters', value: ast.clusters });
 
-                        ast.state = 'success';
-                        obs.next({ type: 'node_success', id: ast.id, data: ast });
-                        obs.complete();
-                    };
-
-                    run().catch(e => {
-                        console.error('[SerpClusterAst] 执行失败:', e);
+                    } catch (error) {
+                        console.error('[SerpClusterAst] 执行失败:', error);
                         ast.state = 'fail';
-                        setAstError(ast, e);
+                        setAstError(ast, error instanceof Error ? error : new Error(String(error)));
                         obs.next({ type: 'node_fail', id: ast.id, data: ast });
                         obs.complete();
-                    });
+                    }
+                },
+                error: (error) => {
+                    ast.state = 'fail';
+                    setAstError(ast, error);
+                    obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                    obs.complete();
+                },
+                complete: () => {
+                    ast.state = 'success';
+                    obs.next({ type: 'node_success', id: ast.id, data: ast });
+                    obs.complete();
                 }
             });
 

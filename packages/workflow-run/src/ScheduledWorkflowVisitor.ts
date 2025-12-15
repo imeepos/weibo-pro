@@ -39,6 +39,7 @@ export class ScheduledWorkflowVisitor {
 
       input$.subscribe({
         next: (inputData) => {
+          ast.emitCount += 1;
           if (inputData) {
             Object.keys(inputData).forEach(key => {
               (ast as any)[key] = inputData[key];

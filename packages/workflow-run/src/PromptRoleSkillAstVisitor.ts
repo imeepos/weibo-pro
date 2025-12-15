@@ -20,25 +20,18 @@ export class PromptRoleSkillAstVisitor {
       const abortController = new AbortController();
 
       ast.state = 'running';
-      ast.count += 1;
       obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
       input$.subscribe({
-        next: (inputData) => {
+        next: async (inputData) => {
+          ast.emitCount += 1;
           if (inputData) {
             Object.keys(inputData).forEach(key => {
               (ast as any)[key] = inputData[key];
             });
           }
-        },
-        error: (error) => {
-          ast.state = 'fail';
-          setAstError(ast, error);
-          obs.next({ type: 'node_fail', id: ast.id, data: ast });
-          obs.complete();
-        },
-        complete: async () => {
-          const run = async () => {
+
+          try {
             if (abortController.signal.aborted) {
               ast.state = 'fail';
               setAstError(ast, new Error('工作流已取消'));
@@ -54,64 +47,61 @@ export class PromptRoleSkillAstVisitor {
               return;
             }
 
-        await useEntityManager(async (manager) => {
-          // 获取角色的可用技能
-          const skillRefs = await manager.find(PromptRoleSkillRefEntity, {
-            where: { role_id: ast.roleId },
-            relations: ['skill'],
-            order: { sort_order: 'ASC' }
-          });
-
-          const skills: SkillSummary[] = skillRefs.map(ref => ({
-            id: ref.skill.id,
-            title: ref.skill.title,
-            type: ref.skill.type,
-            description: ref.skill.description
-          }));
-
-          ast.availableSkills = skills;
-          obs.next({ type: 'node_runing', id: ast.id, data: ast });
-
-          if (skills.length === 0) {
-            ast.state = 'success';
-            ast.selectedSkillsList = [];
-            ast.skillContent = {};
-            obs.next({ type: 'node_success', id: ast.id, data: ast });
-            obs.complete();
-            return;
-          }
-
-          // 使用 LLM 和 function call 选择技能
-          const model = useLlmModel({
-            model: ast.model,
-            temperature: ast.temperature
-          });
-
-          // 创建获取技能内容的工具
-          const getSkillTool = new DynamicStructuredTool({
-            name: 'get_skill_content',
-            description: '获取指定技能的详细内容',
-            schema: z.object({
-              skill_id: z.string().describe('技能ID')
-            }),
-            func: async ({ skill_id }) => {
-              if (ast.skillContents && ast.skillContents[`${skill_id}`]) {
-                return Reflect.get(ast.skillContents, skill_id)
-              }
-              const skill = await manager.findOne(PromptSkillEntity, {
-                where: { id: skill_id }
+            await useEntityManager(async (manager) => {
+              const skillRefs = await manager.find(PromptRoleSkillRefEntity, {
+                where: { role_id: ast.roleId },
+                relations: ['skill'],
+                order: { sort_order: 'ASC' }
               });
-              if (!skill) return '技能不存在';
-              Reflect.set(ast.skillContents, skill_id, skill.content)
-              return skill.content;
-            }
-          });
 
-          const skillsDescription = skills
-            .map(s => `- [${s.type}] ${s.title} (ID: ${s.id}): ${s.description || '无描述'}`)
-            .join('\n');
+              const skills: SkillSummary[] = skillRefs.map(ref => ({
+                id: ref.skill.id,
+                title: ref.skill.title,
+                type: ref.skill.type,
+                description: ref.skill.description
+              }));
 
-          const systemPrompt = `你是一个智能助手，负责为当前角色选择合适的技能。
+              ast.availableSkills = skills;
+              obs.next({ type: 'node_runing', id: ast.id, data: ast });
+
+              if (skills.length === 0) {
+                ast.state = 'success';
+                ast.selectedSkillsList = [];
+                ast.skillContent = {};
+                obs.next({ type: 'node_success', id: ast.id, data: ast });
+                obs.complete();
+                return;
+              }
+
+              const model = useLlmModel({
+                model: ast.model,
+                temperature: ast.temperature
+              });
+
+              const getSkillTool = new DynamicStructuredTool({
+                name: 'get_skill_content',
+                description: '获取指定技能的详细内容',
+                schema: z.object({
+                  skill_id: z.string().describe('技能ID')
+                }),
+                func: async ({ skill_id }) => {
+                  if (ast.skillContents && ast.skillContents[`${skill_id}`]) {
+                    return Reflect.get(ast.skillContents, skill_id)
+                  }
+                  const skill = await manager.findOne(PromptSkillEntity, {
+                    where: { id: skill_id }
+                  });
+                  if (!skill) return '技能不存在';
+                  Reflect.set(ast.skillContents, skill_id, skill.content)
+                  return skill.content;
+                }
+              });
+
+              const skillsDescription = skills
+                .map(s => `- [${s.type}] ${s.title} (ID: ${s.id}): ${s.description || '无描述'}`)
+                .join('\n');
+
+              const systemPrompt = `你是一个智能助手，负责为当前角色选择合适的技能。
 根据用户需求，从以下可用技能中选择最合适的技能：
 
 ${skillsDescription}
@@ -119,86 +109,81 @@ ${skillsDescription}
 使用 get_skill_content 工具来查看技能的详细内容，然后决定是否需要该技能。
 最后，选择最相关的技能供角色使用。`;
 
-          const userPrompt = Array.isArray(ast.requirements)
-            ? ast.requirements.filter(Boolean).join('\n')
-            : ast.requirements;
+              const userPrompt = Array.isArray(ast.requirements)
+                ? ast.requirements.filter(Boolean).join('\n')
+                : ast.requirements;
 
-          try {
-            // 第一轮：LLM 使用工具选择技能
-            const toolModel = model.bindTools([getSkillTool]);
-            const response = await toolModel.invoke([
-              { role: 'system', content: systemPrompt },
-              { role: 'human', content: userPrompt }
-            ]);
+              const toolModel = model.bindTools([getSkillTool]);
+              const response = await toolModel.invoke([
+                { role: 'system', content: systemPrompt },
+                { role: 'human', content: userPrompt }
+              ]);
 
-            // 处理工具调用
-            let selectedIds = new Set<string>();
-            if (response.tool_calls && response.tool_calls.length > 0) {
-              for (const toolCall of response.tool_calls) {
-                if (toolCall.name === 'get_skill_content') {
-                  const skillId = toolCall.args.skill_id;
-                  // 预加载技能内容
-                  const skill = await manager.findOne(PromptSkillEntity, {
-                    where: { id: skillId }
-                  });
-                  if (skill) {
-                    Reflect.set(ast.skillContents, skillId, skill.content)
+              if (response.tool_calls && response.tool_calls.length > 0) {
+                for (const toolCall of response.tool_calls) {
+                  if (toolCall.name === 'get_skill_content') {
+                    const skillId = toolCall.args.skill_id;
+                    const skill = await manager.findOne(PromptSkillEntity, {
+                      where: { id: skillId }
+                    });
+                    if (skill) {
+                      Reflect.set(ast.skillContents, skillId, skill.content)
+                    }
                   }
                 }
               }
-            }
 
-            // 第二轮：使用 structured output 获取最终选择
-            const structuredModel = model.withStructuredOutput(SkillSelectionSchema);
-            const selectionResult = await structuredModel.invoke([
-              { role: 'system', content: systemPrompt },
-              { role: 'human', content: userPrompt }
-            ]);
+              const structuredModel = model.withStructuredOutput(SkillSelectionSchema);
+              const selectionResult = await structuredModel.invoke([
+                { role: 'system', content: systemPrompt },
+                { role: 'human', content: userPrompt }
+              ]);
 
-            // 验证并获取选中的技能
-            const validSkillIds = new Set(skills.map(s => s.id));
-            const finalSelectedIds = (selectionResult.selected_skill_ids || [])
-              .filter(id => validSkillIds.has(id));
+              const validSkillIds = new Set(skills.map(s => s.id));
+              const finalSelectedIds = (selectionResult.selected_skill_ids || [])
+                .filter(id => validSkillIds.has(id));
 
-            if (finalSelectedIds.length > 0) {
-              const selectedSkills = skills.filter(s => finalSelectedIds.includes(s.id));
-              ast.selectedSkills = selectedSkills;
-              ast.selectedSkillsList = selectedSkills;
+              if (finalSelectedIds.length > 0) {
+                const selectedSkills = skills.filter(s => finalSelectedIds.includes(s.id));
+                ast.selectedSkills = selectedSkills;
+                ast.selectedSkillsList = selectedSkills;
 
-              // 预加载所有选中技能的内容
-              const skillsData = await manager.find(PromptSkillEntity, {
-                where: { id: In(finalSelectedIds) }
-              });
+                const skillsData = await manager.find(PromptSkillEntity, {
+                  where: { id: In(finalSelectedIds) }
+                });
 
-              const contentMap: Record<string, string> = {};
-              for (const skill of skillsData) {
-                Reflect.set(ast.skillContents, skill.id, skill.content)
-                contentMap[skill.id] = skill.content;
+                const contentMap: Record<string, string> = {};
+                for (const skill of skillsData) {
+                  Reflect.set(ast.skillContents, skill.id, skill.content)
+                  contentMap[skill.id] = skill.content;
+                }
+
+                ast.skillContent = contentMap;
+              } else {
+                ast.selectedSkillsList = [];
+                ast.skillContent = {};
               }
 
-              ast.skillContent = contentMap;
-            } else {
-              ast.selectedSkillsList = [];
-              ast.skillContent = {};
-            }
+              obs.next({ type: 'node_runing', id: ast.id, data: ast });
+            });
 
-            obs.next({ type: 'node_runing', id: ast.id, data: ast });
           } catch (error) {
-            throw new Error(`LLM 选择技能失败: ${error instanceof Error ? error.message : '未知错误'}`);
-          }
-        });
-
-            ast.state = 'success';
-            obs.next({ type: 'node_success', id: ast.id, data: ast });
-            obs.complete();
-          };
-
-          run().catch(e => {
             ast.state = 'fail';
-            setAstError(ast, e);
+            setAstError(ast, new Error(`LLM 选择技能失败: ${error instanceof Error ? error.message : '未知错误'}`));
             obs.next({ type: 'node_fail', id: ast.id, data: ast });
             obs.complete();
-          });
+          }
+        },
+        error: (error) => {
+          ast.state = 'fail';
+          setAstError(ast, error);
+          obs.next({ type: 'node_fail', id: ast.id, data: ast });
+          obs.complete();
+        },
+        complete: () => {
+          ast.state = 'success';
+          obs.next({ type: 'node_success', id: ast.id, data: ast });
+          obs.complete();
         }
       });
 

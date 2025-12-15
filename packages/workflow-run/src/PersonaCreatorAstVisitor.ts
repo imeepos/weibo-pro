@@ -43,25 +43,18 @@ export class PersonaCreatorAstVisitor {
       const abortController = new AbortController();
 
       ast.state = 'running';
-      ast.count += 1;
       obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
       input$.subscribe({
-        next: (inputData) => {
+        next: async (inputData) => {
+          ast.emitCount +=1;
           if (inputData) {
             Object.keys(inputData).forEach(key => {
               (ast as any)[key] = inputData[key];
             });
           }
-        },
-        error: (error) => {
-          ast.state = 'fail';
-          setAstError(ast, error);
-          obs.next({ type: 'node_fail', id: ast.id, data: ast });
-          obs.complete();
-        },
-        complete: async () => {
-          const run = async () => {
+
+          try {
             if (abortController.signal.aborted) {
               ast.state = 'fail';
               setAstError(ast, new Error('工作流已取消'));
@@ -80,14 +73,14 @@ export class PersonaCreatorAstVisitor {
               return;
             }
 
-        const model = useLlmModel({
-          model: ast.model,
-          temperature: ast.temperature,
-        });
+            const model = useLlmModel({
+              model: ast.model,
+              temperature: ast.temperature,
+            });
 
-        const structuredModel = model.withStructuredOutput(PersonaSchema);
+            const structuredModel = model.withStructuredOutput(PersonaSchema);
 
-        const systemPrompt = `你是一位专业的角色设计师。根据用户提供的描述，创建一个详细、立体的角色。
+            const systemPrompt = `你是一位专业的角色设计师。根据用户提供的描述，创建一个详细、立体的角色。
 
 要求：
 1. 名称应当独特且富有意义
@@ -99,75 +92,81 @@ export class PersonaCreatorAstVisitor {
 
 请根据以下描述创建角色：`;
 
-        const result = await structuredModel.invoke([
-          { role: 'system', content: systemPrompt },
-          { role: 'human', content: prompt },
-        ]);
+            const result = await structuredModel.invoke([
+              { role: 'system', content: systemPrompt },
+              { role: 'human', content: prompt },
+            ]);
 
-        if (abortController.signal.aborted) {
-          ast.state = 'fail';
-          setAstError(ast, new Error('工作流已取消'));
-          obs.next({ type: 'node_fail', id: ast.id, data: ast });
-          return;
-        }
-
-        ast.generatedName = result.name;
-        ast.generatedDescription = result.description;
-        ast.generatedBackground = result.background;
-        ast.generatedTraits = result.traits;
-        ast.generatedMetadata = result.metadata || {};
-        ast.generatedDestiny = result.destiny || {};
-        obs.next({ type: 'node_runing', id: ast.id, data: ast });
-
-        await useEntityManager(async (manager) => {
-          const persona = manager.create(PersonaEntity, {
-            name: result.name,
-            description: result.description,
-            background: result.background,
-            traits: result.traits,
-            metadata: result.metadata || {},
-            destiny: result.destiny || {},
-          });
-          await manager.save(persona);
-
-          ast.personaId = persona.id;
-          ast.personaName = persona.name;
-          obs.next({ type: 'node_emit', id: ast.id, property: 'personaId', value: ast.personaId });
-          obs.next({ type: 'node_emit', id: ast.id, property: 'personaName', value: ast.personaName });
-
-          if (result.initialMemories?.length) {
-            for (const mem of result.initialMemories) {
-              const memory = manager.create(MemoryEntity, {
-                persona_id: persona.id,
-                name: mem.name,
-                description: mem.description,
-                content: mem.content,
-                type: mem.type,
-              });
-              await manager.save(memory);
-
-              const selfClosure = manager.create(MemoryClosureEntity, {
-                ancestor_id: memory.id,
-                descendant_id: memory.id,
-                path: [memory.id],
-                depth: 0,
-              });
-              await manager.save(selfClosure);
+            if (abortController.signal.aborted) {
+              ast.state = 'fail';
+              setAstError(ast, new Error('工作流已取消'));
+              obs.next({ type: 'node_fail', id: ast.id, data: ast });
+              return;
             }
-          }
-        });
 
-            ast.state = 'success';
-            obs.next({ type: 'node_success', id: ast.id, data: ast });
-            obs.complete();
-          };
+            ast.generatedName = result.name;
+            ast.generatedDescription = result.description;
+            ast.generatedBackground = result.background;
+            ast.generatedTraits = result.traits;
+            ast.generatedMetadata = result.metadata || {};
+            ast.generatedDestiny = result.destiny || {};
+            obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
-          run().catch(e => {
+            await useEntityManager(async (manager) => {
+              const persona = manager.create(PersonaEntity, {
+                name: result.name,
+                description: result.description,
+                background: result.background,
+                traits: result.traits,
+                metadata: result.metadata || {},
+                destiny: result.destiny || {},
+              });
+              await manager.save(persona);
+
+              ast.personaId = persona.id;
+              ast.personaName = persona.name;
+              obs.next({ type: 'node_emit', id: ast.id, property: 'personaId', value: ast.personaId });
+              obs.next({ type: 'node_emit', id: ast.id, property: 'personaName', value: ast.personaName });
+
+              if (result.initialMemories?.length) {
+                for (const mem of result.initialMemories) {
+                  const memory = manager.create(MemoryEntity, {
+                    persona_id: persona.id,
+                    name: mem.name,
+                    description: mem.description,
+                    content: mem.content,
+                    type: mem.type,
+                  });
+                  await manager.save(memory);
+
+                  const selfClosure = manager.create(MemoryClosureEntity, {
+                    ancestor_id: memory.id,
+                    descendant_id: memory.id,
+                    path: [memory.id],
+                    depth: 0,
+                  });
+                  await manager.save(selfClosure);
+                }
+              }
+            });
+
+          } catch (error) {
             ast.state = 'fail';
-            setAstError(ast, e);
+            setAstError(ast, error instanceof Error ? error : new Error(String(error)));
             obs.next({ type: 'node_fail', id: ast.id, data: ast });
             obs.complete();
-          });
+          }
+        },
+        error: (error) => {
+          ast.state = 'fail';
+          setAstError(ast, error);
+          obs.next({ type: 'node_fail', id: ast.id, data: ast });
+          obs.complete();
+        },
+        complete: () => {
+          ast.state = 'success';
+          obs.next({ type: 'node_success', id: ast.id, data: ast });
+          obs.complete();
         }
       });
 

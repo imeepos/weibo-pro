@@ -36,11 +36,11 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
             };
 
             ast.state = 'running';
-            ast.count += 1;
             obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
             input$.subscribe({
                 next: (inputData) => {
+                    ast.emitCount += 1;
                     if (inputData) {
                         Object.keys(inputData).forEach(key => {
                             (ast as any)[key] = inputData[key];
