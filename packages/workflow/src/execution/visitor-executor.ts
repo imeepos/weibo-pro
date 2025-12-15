@@ -3,7 +3,6 @@ import { Visitor, WorkflowGraphAst, setAstError } from '../ast';
 import { findNodeType, HANDLER_METHOD } from '../decorator';
 import { Observable, of, from } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
-import { mapResponse } from '../operators/map-response';
 import { INode } from '../types';
 import { DefaultVisitor } from '../defaultVisitor';
 import { NodeEvent } from './events';
@@ -19,7 +18,7 @@ import { NodeEvent } from './events';
  */
 @Injectable()
 export class VisitorExecutor implements Visitor {
-    visit(ast: INode, parent?: WorkflowGraphAst): Observable<NodeEvent> {
+    visit(ast: INode, input$: Observable<any>, parent?: WorkflowGraphAst): Observable<NodeEvent> {
         const type = findNodeType(ast.type);
         const methods = root.get(HANDLER_METHOD, []);
 
@@ -38,7 +37,9 @@ export class VisitorExecutor implements Visitor {
         }
 
         try {
-            const result = (instance as any)[method.property](ast, parent);
+            console.log(`VisitorExecutor 调用 Handler`, method.property, '节点:', ast.type, '输入流:', input$);
+            console.log(`VisitorExecutor 节点 ast.input:`, ast.input);
+            const result = (instance as any)[method.property](ast, input$, parent);
             return this.normalizeResult(result, ast);
         } catch (error) {
             return this.handleError(error, ast);
@@ -50,18 +51,15 @@ export class VisitorExecutor implements Visitor {
      *
      * 优雅设计：
      * - 自动识别 Promise、Observable、同步值
-     * - 使用 mapResponse 统一处理成功和错误路径
+     * - 直接传递所有事件，不做转换
      * - 错误转换为失败节点（Error as Data 模式）
      * - 支持嵌套类型：Promise<Observable<INode>>
      */
     private normalizeResult(result: any, ast: INode): Observable<NodeEvent> {
-        // 1. Observable → 直接应用 mapResponse
+        // 1. Observable → 直接传递，只处理错误
         if (result && typeof result.subscribe === 'function') {
             return result.pipe(
-                mapResponse({
-                    next: (node) => node,
-                    error: (error) => this.createFailedNode(ast, error)
-                })
+                catchError(error => this.handleError(error, ast))
             );
         }
 
@@ -75,19 +73,13 @@ export class VisitorExecutor implements Visitor {
                     }
                     return of(res);
                 }),
-                mapResponse({
-                    next: (node) => node,
-                    error: (error) => this.createFailedNode(ast, error)
-                })
+                catchError(error => this.handleError(error, ast))
             );
         }
 
         // 3. 同步值 → 包装为 Observable
         return of(result as NodeEvent).pipe(
-            mapResponse({
-                next: (node) => node,
-                error: (error) => this.createFailedNode(ast, error)
-            })
+            catchError(error => this.handleError(error, ast))
         );
     }
 

@@ -1,7 +1,7 @@
-import { Ast, WorkflowGraphAst } from "./ast";
+import { Ast, setAstError, WorkflowGraphAst } from "./ast";
 import { Input, Node, Output, IS_MULTI, Handler } from "./decorator";
 import { Injectable } from "@sker/core";
-import { Observable } from "rxjs";
+import { catchError, concatMap, merge, Observable, of, switchMap } from "rxjs";
 import { NodeEvent } from "./execution/events";
 
 @Node({ title: '文本节点', type: 'basic' })
@@ -24,26 +24,71 @@ export class TextAreaAst extends Ast {
 @Injectable()
 export class TextAreaAstVisitor {
     @Handler(TextAreaAst)
-    handler(ast: TextAreaAst, ctx: WorkflowGraphAst): Observable<NodeEvent> {
-        return new Observable<NodeEvent>(obs => {
-            ast.state = 'running'
-            obs.next({ type: 'node_runing', id: ast.id, data: ast })
+    handler(ast: TextAreaAst, input$: Observable<TextAreaAst>, ctx: WorkflowGraphAst): Observable<NodeEvent> {
+        // 优先使用节点自身的 input 属性作为默认值
+        const defaultValue = ast.input !== undefined ? ast.input : [];
+        const source$ = input$ || of(defaultValue);
 
-            // 直接通过 BehaviorSubject 发射输出值
-            let outputValue: string;
-            if (Array.isArray(ast.input)) {
-                outputValue = ast.input.join('\n');
-            } else if (typeof ast.input === 'object' && ast.input !== null) {
-                outputValue = JSON.stringify(ast.input);
-            } else {
-                outputValue = ast.input;
-            }
-            ast.output = outputValue;
-            obs.next({ type: 'node_emit', id: ast.id, property: 'output', value: outputValue })
+        return source$.pipe(
+            concatMap(input => {
+                console.log(`TextAreaAstVisitor source`, input)
+                console.log(`TextAreaAstVisitor 节点自身的 input 属性:`, ast.input)
 
-            ast.state = 'success';
-            obs.next({ type: 'node_success', id: ast.id, data: ast })
-            obs.complete()
-        })
+                // 处理输入：可能是直接值、数组，或包含属性的对象
+                let values: any[] = [];
+
+                // 如果流输入是空对象或未定义，优先使用节点自身的 input 属性
+                const useInput = (typeof input === 'object' && input !== null && Object.keys(input).length > 0)
+                    ? input
+                    : (ast.input !== undefined ? ast.input : []);
+
+                if (typeof useInput === 'object' && useInput !== null) {
+                    // 如果是对象，提取 input 属性
+                    if ('input' in useInput) {
+                        const inputValue = (useInput as any).input;
+                        console.log(`TextAreaAstVisitor 提取 input 属性:`, inputValue);
+                        values = Array.isArray(inputValue) ? inputValue : [inputValue];
+                    } else {
+                        // 如果是其他对象，直接使用
+                        console.log(`TextAreaAstVisitor 直接使用对象:`, useInput);
+                        values = [useInput];
+                    }
+                } else {
+                    // 直接值
+                    console.log(`TextAreaAstVisitor 直接值:`, useInput);
+                    values = Array.isArray(useInput) ? useInput : [useInput];
+                }
+
+                // 过滤掉 undefined/null 值
+                const filteredValues = values.filter(v => v !== undefined && v !== null);
+                console.log(`TextAreaAstVisitor 处理后的值:`, filteredValues);
+
+                // 更新 ast.output 为数组
+                ast.output = filteredValues.join('\n');
+                console.log(`TextAreaAstVisitor 最终输出:`, ast.output);
+
+                // 设置节点状态为 success
+                ast.state = 'success';
+
+                // 创建事件序列
+                const events: NodeEvent[] = [
+                    { type: 'node_runing', id: ast.id, data: ast },
+                    ...filteredValues.map(value => ({ type: 'node_emit', id: ast.id, property: 'output', value } as NodeEvent)),
+                    { type: 'node_success', id: ast.id, data: ast }
+                ];
+
+                return events;
+            }),
+
+            catchError(error => {
+                ast.state = 'fail';
+                setAstError(ast, error)
+                return of({
+                    type: 'node_fail',
+                    id: ast.id,
+                    data: ast
+                } as NodeEvent);
+            })
+        );
     }
 }

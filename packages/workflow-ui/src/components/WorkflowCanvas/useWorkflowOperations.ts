@@ -650,9 +650,14 @@ export function useWorkflowOperations(
               // 确保最终状态同步到 UI
               workflow.syncFromAst()
 
+              // 调试：检查节点状态
+              console.log('[runWorkflow] syncFromAst 后的节点状态:', workflow.workflowAst!.nodes.map(n => ({ id: n.id, state: n.state })));
+
               // 统计执行结果
               const successCount = workflow.workflowAst!.nodes.filter(n => n.state === 'success').length
               const failCount = workflow.workflowAst!.nodes.filter(n => n.state === 'fail').length
+
+              console.log(`[runWorkflow] 统计结果: 成功 ${successCount} 个, 失败 ${failCount} 个`);
 
               if (failCount === 0) {
                 onShowToast?.('success', '工作流执行成功', `共执行 ${successCount} 个节点`)

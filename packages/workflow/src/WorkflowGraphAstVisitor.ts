@@ -3,7 +3,7 @@ import { Observable, EMPTY, merge, defer, ReplaySubject, of, combineLatest, zip,
 import { filter, map, finalize, tap, catchError, shareReplay, buffer, toArray } from 'rxjs/operators';
 import { NodeExecutor } from './executor';
 import { Handler, getInputMetadata, hasBufferMode } from './decorator';
-import { WorkflowGraphAst } from './ast';
+import { resetNodeToDefaults, WorkflowGraphAst } from './ast';
 import { NodeEmitEvent, NodeEvent } from './execution/events';
 import { EdgeMode, IEdge } from './types';
 
@@ -30,7 +30,7 @@ export class WorkflowGraphAstVisitor {
     ) { }
 
     @Handler(WorkflowGraphAst)
-    handler(ast: WorkflowGraphAst, _parent?: WorkflowGraphAst): Observable<NodeEvent> {
+    handler(ast: WorkflowGraphAst, input$: Observable<any>, _parent?: WorkflowGraphAst): Observable<NodeEvent> {
         return defer(() => {
             ast.state = 'running';
 
@@ -41,7 +41,8 @@ export class WorkflowGraphAstVisitor {
             ast.nodes.forEach(node => {
                 const input$ = new ReplaySubject<any>(1);
                 inputSubjects.set(node.id, input$);
-
+                // 重置节点为默认值（防止上次执行的残留数据影响本次执行）
+                resetNodeToDefaults(node);
                 // 调用 NodeExecutor 执行子节点，使用 shareReplay 共享订阅
                 const eventStream$ = this.nodeExecutor.run(node, input$, ast).pipe(
                     shareReplay({ bufferSize: Infinity, refCount: false })
