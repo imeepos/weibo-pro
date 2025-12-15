@@ -58,6 +58,7 @@ export class NodeExecutor {
  * 执行节点（便捷函数）
  */
 export function executeAst(node: INode, input?: any, parent?: WorkflowGraphAst): Observable<NodeEvent> {
+    console.log(`executeAst input is ${JSON.stringify(input)}`)
     const executor = root.get(NodeExecutor);
     return executor.run(node, of(input || {}), parent);
 }
@@ -66,6 +67,7 @@ export function executeAst(node: INode, input?: any, parent?: WorkflowGraphAst):
  * 执行工作流（便捷函数）
  */
 export function executeWorkflow(workflow: WorkflowGraphAst, input?: any): Observable<NodeEvent> {
+    console.log(`executeWorkflow input is ${JSON.stringify(input)}`)
     const executor = root.get(NodeExecutor);
     return executor.run(workflow, of(input || {}));
 }
@@ -74,6 +76,7 @@ export function executeWorkflow(workflow: WorkflowGraphAst, input?: any): Observ
  * 执行工作流（立即执行，返回 Promise）
  */
 export function executeWorkflowImmediate(workflow: WorkflowGraphAst, input?: any): Promise<WorkflowGraphAst> {
+    console.log(`executeWorkflowImmediate input is ${JSON.stringify(input)}`)
     return new Promise((resolve, reject) => {
         let finalWorkflow = workflow;
 
@@ -93,6 +96,7 @@ export function executeWorkflowImmediate(workflow: WorkflowGraphAst, input?: any
  * 在工作流上下文中执行节点
  */
 export function executeAstWithWorkflowGraph(node: INode, input: any, workflow: WorkflowGraphAst): Observable<NodeEvent> {
+    console.log(`executeAstWithWorkflowGraph input is ${JSON.stringify(input)}`)
     const executor = root.get(NodeExecutor);
     return executor.run(node, of(input || {}), workflow);
 }
@@ -101,6 +105,7 @@ export function executeAstWithWorkflowGraph(node: INode, input: any, workflow: W
  * 单独执行节点（不依赖工作流）
  */
 export function executeNodeIsolated(node: INode, input?: any): Observable<NodeEvent> {
+    console.log(`executeNodeIsolated input is ${JSON.stringify(input)}`)
     const executor = root.get(NodeExecutor);
     return executor.run(node, of(input || {}));
 }

@@ -24,11 +24,21 @@ export class TextAreaAstVisitor {
         if (!isObservable(input$)) throw new Error(`[TextAreaAstVisitor.handler] input$ must be an Observable`)
         return input$.pipe(
             concatMap((input: TextAreaAst) => {
-                const value = input.input.join('\n');
+                // 健壮性处理：支持 input.input 是数组或字符串
+                let inputArray: string[];
+                if (Array.isArray(input.input)) {
+                    inputArray = input.input;
+                } else if (typeof input.input === 'string') {
+                    inputArray = input.input ? [input.input] : [];
+                } else {
+                    inputArray = [];
+                }
+
+                const value = inputArray.join('\n');
                 const events: NodeEvent[] = [
                     { type: 'node_runing', id: ast.id, data: { ...ast, state: 'running' } },
                     { type: 'node_emit', id: ast.id, property: 'output', value },
-                    { type: 'node_success', id: ast.id, data: { ...ast, state: 'success' } }
+                    { type: 'node_success', id: ast.id, data: { ...ast, state: 'success', output: value } }
                 ];
                 return events;
             }),

@@ -402,6 +402,7 @@ export function useWorkflowOperations(
         }
 
         // 应用输入参数到对应节点
+        console.log(`[runWorkflow] 接收到的 inputs:`, inputs)
         if (inputs && Object.keys(inputs).length > 0) {
           // 收集所有需要修改的节点更新（批量优化）
           const nodeUpdates = new Map<string, Record<string, any>>()
@@ -505,7 +506,7 @@ export function useWorkflowOperations(
 
         // executeAst 返回 Observable，使用 takeUntil 监听取消信号
         // finalize 确保无论如何结束（完成、错误、取消）都会重置状态
-        const subscription = executeAst(mutableAst, {}, mutableAst)
+        const subscription = executeAst(mutableAst, inputs || {}, mutableAst)
           .pipe(
             takeUntil(cancelSubject$.current),
             finalize(() => {

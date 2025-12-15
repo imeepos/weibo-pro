@@ -37,6 +37,7 @@ export class WorkflowGraphAstVisitor {
 
         return input$.pipe(
             concatMap(input => {
+                console.log(`workflow input is ${JSON.stringify(input)}`)
                 // 每次接收到输入时，重新初始化工作流状态
                 ast.state = 'running';
                 ast.error = undefined;
@@ -48,8 +49,6 @@ export class WorkflowGraphAstVisitor {
                 ast.nodes.forEach(node => {
                     const input$ = new ReplaySubject<any>(1);
                     inputSubjects.set(node.id, input$);
-                    // 重置节点为默认值（防止上次执行的残留数据影响本次执行）
-                    resetNodeToDefaults(node);
                     // 调用 NodeExecutor 执行子节点，使用 shareReplay 共享订阅
                     const eventStream$ = this.nodeExecutor.run(node, input$, ast).pipe(
                         shareReplay({ bufferSize: Infinity, refCount: false })
@@ -96,7 +95,6 @@ export class WorkflowGraphAstVisitor {
             const targetSubject = inputSubjects.get(targetId);
             if (!targetSubject) return;
 
-            console.log(`[WorkflowGraphAstVisitor] 连接节点 ${targetId} 的边，边数: ${edges.length}`);
 
             if (edges.length === 1) {
                 const edge = edges[0]!;
@@ -110,7 +108,6 @@ export class WorkflowGraphAstVisitor {
                     ? hasBufferMode(inputMetadata.mode)
                     : false;
 
-                console.log(`[WorkflowGraphAstVisitor] 节点 ${targetId} 的输入 ${String(edge.toProperty)} IS_BUFFER 模式: ${isBufferMode}`);
 
                 if (isBufferMode) {
                     // IS_BUFFER 模式：使用 buffer 操作符收集所有发射的值
@@ -180,7 +177,6 @@ export class WorkflowGraphAstVisitor {
                 ? hasBufferMode(inputMetadata.mode)
                 : false;
 
-            console.log(`[WorkflowGraphAstVisitor] 多边节点 ${targetId} 的输入 ${String(firstEdge.toProperty)} IS_BUFFER 模式: ${isBufferMode}`);
 
             if (isBufferMode) {
                 // IS_BUFFER 模式：为每条边收集所有发射的值
@@ -245,7 +241,6 @@ export class WorkflowGraphAstVisitor {
                         targetSubject.next(value);
                     },
                     complete: () => {
-                        console.log(`[WorkflowGraphAstVisitor] 所有上游节点完成，完成节点 ${targetId} 的 subject`);
                         if (!targetSubject.closed) {
                             targetSubject.complete();
                         }
@@ -272,12 +267,30 @@ export class WorkflowGraphAstVisitor {
                 return zip(...validSources).pipe(
                     map(values => {
                         const result: any = {};
+                        const propertyValues: Record<string, any[]> = {};
+
+                        // 收集所有值，按属性名分组
                         values.forEach((value, index) => {
                             const edge = edges[index];
-                            if (edge?.toProperty) {
-                                result[edge.toProperty] = value;
+                            const toProperty = edge?.toProperty;
+                            if (toProperty) {
+                                if (!propertyValues[toProperty]) {
+                                    propertyValues[toProperty] = [];
+                                }
+                                propertyValues[toProperty].push(value);
                             }
                         });
+
+                        // 根据是否有多个值决定返回数组还是单个值
+                        Object.entries(propertyValues).forEach(([property, values]) => {
+                            if (values.length === 1) {
+                                result[property] = values[0];
+                            } else {
+                                // 多个边指向同一属性，聚合为数组
+                                result[property] = values;
+                            }
+                        });
+
                         return result;
                     })
                 );
@@ -287,12 +300,30 @@ export class WorkflowGraphAstVisitor {
                 return combineLatest(validSources).pipe(
                     map(values => {
                         const result: any = {};
+                        const propertyValues: Record<string, any[]> = {};
+
+                        // 收集所有值，按属性名分组
                         values.forEach((value, index) => {
                             const edge = edges[index];
-                            if (edge?.toProperty) {
-                                result[edge.toProperty] = value;
+                            const toProperty = edge?.toProperty;
+                            if (toProperty) {
+                                if (!propertyValues[toProperty]) {
+                                    propertyValues[toProperty] = [];
+                                }
+                                propertyValues[toProperty].push(value);
                             }
                         });
+
+                        // 根据是否有多个值决定返回数组还是单个值
+                        Object.entries(propertyValues).forEach(([property, values]) => {
+                            if (values.length === 1) {
+                                result[property] = values[0];
+                            } else {
+                                // 多个边指向同一属性，聚合为数组
+                                result[property] = values;
+                            }
+                        });
+
                         return result;
                     })
                 );
@@ -318,9 +349,6 @@ export class WorkflowGraphAstVisitor {
             : [];
         const staticEntryIds = autoEntryIds.filter(id => !dynamicEntryIds.includes(id));
 
-        console.log(`[WorkflowGraphAstVisitor] 动态入口节点:`, dynamicEntryIds);
-        console.log(`[WorkflowGraphAstVisitor] 静态入口节点:`, staticEntryIds);
-
         // 如果没有静态入口节点，直接返回外部输入
         if (staticEntryIds.length === 0) {
             return input$;
@@ -336,8 +364,6 @@ export class WorkflowGraphAstVisitor {
             }
         });
 
-        console.log(`[WorkflowGraphAstVisitor] 静态节点值:`, staticValues);
-
         // 将外部输入与静态值组合
         return input$.pipe(
             map(dynamicInput => {
@@ -346,7 +372,6 @@ export class WorkflowGraphAstVisitor {
                 staticEntryIds.forEach(nodeId => {
                     combined[`${nodeId}`] = staticValues[nodeId];
                 });
-                console.log(`[WorkflowGraphAstVisitor] 组合后的输入:`, combined);
                 return combined;
             })
         );
@@ -358,7 +383,6 @@ export class WorkflowGraphAstVisitor {
         inputSubjects: Map<string, ReplaySubject<any>>
     ): void {
         const entryIds = this.findEntryNodes(workflow);
-        console.log(`[WorkflowGraphAstVisitor] 触发入口节点:`, entryIds);
 
         input$.subscribe({
             next: input => {
@@ -368,7 +392,6 @@ export class WorkflowGraphAstVisitor {
 
                     if (!subject || !node) return;
 
-                    console.log(`[WorkflowGraphAstVisitor] 向入口节点 ${nodeId} 发送输入`);
 
                     // 根据节点的 metadata.inputs 构建输入对象
                     const nodeInput: Record<string, any> = {};
@@ -394,16 +417,13 @@ export class WorkflowGraphAstVisitor {
                         }
                     });
 
-                    console.log(`[WorkflowGraphAstVisitor] 节点 ${nodeId} 输入数据:`, nodeInput);
                     subject.next(nodeInput);
                 });
             },
             complete: () => {
-                console.log(`[WorkflowGraphAstVisitor] 输入流完成，完成所有入口节点的 subject`);
                 entryIds.forEach(nodeId => {
                     const subject = inputSubjects.get(nodeId);
                     if (subject && !subject.closed) {
-                        console.log(`[WorkflowGraphAstVisitor] 完成入口节点 ${nodeId} 的 subject`);
                         subject.complete();
                     }
                 });
@@ -418,13 +438,11 @@ export class WorkflowGraphAstVisitor {
             inDegrees.set(edge.to, (inDegrees.get(edge.to) ?? 0) + 1);
         });
 
-        console.log(`[WorkflowGraphAstVisitor] 节点入度统计:`, Object.fromEntries(inDegrees));
 
         const entryNodes = Array.from(inDegrees.entries())
             .filter(([_, degree]) => degree === 0)
             .map(([nodeId]) => nodeId);
 
-        console.log(`[WorkflowGraphAstVisitor] 找到入口节点:`, entryNodes);
         return entryNodes;
     }
 
@@ -434,14 +452,12 @@ export class WorkflowGraphAstVisitor {
         inputSubjects: Map<string, ReplaySubject<any>>
     ): Observable<NodeEvent> {
         return new Observable<NodeEvent>(obs => {
-            console.log('[WorkflowGraphAstVisitor] mergeNodeEventStreams 开始，节点数:', nodeEventStreams.size)
 
             // 先发射工作流运行事件
             obs.next({ type: 'node_runing', id: workflow.id, data: workflow });
 
             const allStreams = Array.from(nodeEventStreams.values());
             if (allStreams.length === 0) {
-                console.log('[WorkflowGraphAstVisitor] 没有子节点，直接完成')
                 workflow.state = 'success';
                 obs.next({ type: 'node_success', id: workflow.id, data: workflow });
                 obs.complete();
@@ -458,7 +474,6 @@ export class WorkflowGraphAstVisitor {
 
             // 订阅每个节点流，追踪完成状态
             const subscriptions = allStreams.map((nodeStream, index) => {
-                console.log(`[WorkflowGraphAstVisitor] 订阅节点流 ${index + 1}/${totalNodes}`)
 
                 return nodeStream.subscribe({
                     next: (event) => {
@@ -468,10 +483,8 @@ export class WorkflowGraphAstVisitor {
                         // 追踪节点的最终状态（success 事件会覆盖之前的 fail 状态）
                         if (event.type === 'node_fail') {
                             nodeStates.set(event.id!, 'fail');
-                            console.log(`[WorkflowGraphAstVisitor] 节点失败: ${event.id}`)
                         } else if (event.type === 'node_success') {
                             nodeStates.set(event.id!, 'success');
-                            console.log(`[WorkflowGraphAstVisitor] 节点成功: ${event.id}`)
                         }
                     },
                     error: (err) => {
@@ -490,11 +503,8 @@ export class WorkflowGraphAstVisitor {
                         });
                     },
                     complete: () => {
-                        console.log(`[WorkflowGraphAstVisitor] 节点流 ${index + 1}/${totalNodes} 完成`)
                         completedCount++;
-                        console.log(`[WorkflowGraphAstVisitor] 节点流完成 ${completedCount}/${totalNodes}`)
                         if (completedCount === totalNodes) {
-                            console.log(`[WorkflowGraphAstVisitor] 所有节点完成 ${completedCount}/${totalNodes}，准备发射工作流完成事件`)
                             completionSubject.next();
                             completionSubject.complete();
                         }
@@ -504,12 +514,9 @@ export class WorkflowGraphAstVisitor {
 
             // 监听 completionSubject，当所有节点完成后发射工作流完成事件
             const completionSubscription = completionSubject.subscribe(() => {
-                console.log(`[WorkflowGraphAstVisitor] 所有节点已完成，发射工作流完成事件`)
 
                 // 检查是否有任何节点最终状态为 fail
                 const hasError = Array.from(nodeStates.values()).some(state => state === 'fail');
-                console.log(`[WorkflowGraphAstVisitor] 节点最终状态:`, Object.fromEntries(nodeStates));
-                console.log(`[WorkflowGraphAstVisitor] 工作流最终状态: ${hasError ? 'fail' : 'success'}`);
 
                 workflow.state = hasError ? 'fail' : 'success';
                 const finalEvent: NodeEvent = hasError
@@ -528,7 +535,6 @@ export class WorkflowGraphAstVisitor {
             });
 
             return () => {
-                console.log(`[WorkflowGraphAstVisitor] mergeNodeEventStreams 清理资源`)
                 subscriptions.forEach(sub => sub.unsubscribe());
                 completionSubscription.unsubscribe();
                 inputSubjects.forEach(subject => {

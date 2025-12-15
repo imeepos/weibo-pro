@@ -2,7 +2,7 @@ import { Injectable, root } from '@sker/core';
 import { Visitor, WorkflowGraphAst, setAstError } from '../ast';
 import { findNodeType, HANDLER_METHOD } from '../decorator';
 import { Observable, of, from } from 'rxjs';
-import { catchError, switchMap } from 'rxjs/operators';
+import { catchError, switchMap, concatMap } from 'rxjs/operators';
 import { INode } from '../types';
 import { DefaultVisitor } from '../defaultVisitor';
 import { NodeEvent } from './events';
@@ -28,7 +28,7 @@ export class VisitorExecutor implements Visitor {
 
         const method = methods.find(it => it.ast === type);
         if (!method) {
-            return this.useDefaultVisitor(ast);
+            return this.useDefaultVisitor(ast, input$, parent);
         }
 
         const instance = root.get(method.target);
@@ -37,10 +37,30 @@ export class VisitorExecutor implements Visitor {
         }
 
         try {
-            console.log(`VisitorExecutor 调用 Handler`, method.property, '节点:', ast.type, '输入流:', input$);
-            console.log(`VisitorExecutor 节点 ast.input:`, ast.input);
-            const result = (instance as any)[method.property](ast, input$, parent);
-            return this.normalizeResult(result, ast);
+            // 检查 Handler 的参数数量，判断是新模式还是旧模式
+            const handlerFn = (instance as any)[method.property];
+            const handlerLength = handlerFn.length;
+
+            // 新模式：handler(ast, ctx) - 需要将 input$ 数据应用到 ast
+            // 旧模式：handler(ast, input$, ctx) - 直接传递 input$
+            if (handlerLength <= 2) {
+                // 新模式：从 input$ 中提取数据并应用到 ast
+                return input$.pipe(
+                    concatMap(inputData => {
+                        // 将输入数据应用到节点对象
+                        Object.keys(inputData).forEach(key => {
+                            (ast as any)[key] = inputData[key];
+                        });
+                        const result = handlerFn.call(instance, ast, parent);
+                        return this.normalizeResult(result, ast);
+                    }),
+                    catchError(error => this.handleError(error, ast))
+                );
+            } else {
+                // 旧模式：直接传递 input$
+                const result = handlerFn.call(instance, ast, input$, parent);
+                return this.normalizeResult(result, ast);
+            }
         } catch (error) {
             return this.handleError(error, ast);
         }
@@ -83,9 +103,9 @@ export class VisitorExecutor implements Visitor {
         );
     }
 
-    private useDefaultVisitor(ast: INode): Observable<NodeEvent> {
+    private useDefaultVisitor(ast: INode, input$: Observable<any>, workflow?: WorkflowGraphAst): Observable<NodeEvent> {
         const defaultVisitor = new DefaultVisitor();
-        return defaultVisitor.visit(ast).pipe(
+        return defaultVisitor.visit(ast, input$, workflow).pipe(
             catchError(error => this.handleError(error, ast))
         );
     }

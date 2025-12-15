@@ -17,12 +17,6 @@ export { WeiboAccountPickAstVisitor } from './WeiboAccountPickAstVisitor'
 export { LlmTextAgentAstVisitor } from './LlmTextAgentAstVisitor'
 export { LlmStructuredOutputAstVisitor } from './LlmStructuredOutputAstVisitor'
 export { LlmCategoryAstVisitor } from './LlmCategoryAstVisitor'
-export { TextAreaAstVisitor } from './TextAreaAstVisitor'
-
-// 媒体节点
-export { ImageVisitor } from './ImageVisitor'
-export { VideoVisitor } from './VideoVisitor'
-export { AudioVisitor } from './AudioVisitor'
 
 // 控制流节点
 export { SwitchAstVisitor } from './SwitchAstVisitor'
