@@ -45,6 +45,12 @@
     "clean": {
       "cache": false,
       "outputs": []
+    },
+    "@sker/workflow-ui#build": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "src/**/*.ts", "tsconfig.json"],
+      "cache": true,
+      "outputs": []
     }
   }
 }

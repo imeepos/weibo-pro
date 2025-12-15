@@ -34,6 +34,7 @@
     "main": "tsx src/main.ts"
   },
   "dependencies": {
+    "reflect-metadata": "^0.2.2",
     "@langchain/core": "^1.0.4",
     "@langchain/openai": "^1.1.0",
     "@langchain/tavily": "^1.0.0",

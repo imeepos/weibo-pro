@@ -3,7 +3,6 @@ import { RedisClient } from '@sker/redis'
 import { DataSource, WorkflowScheduleEntity, ScheduleStatus, ScheduleType } from '@sker/entities'
 import { WorkflowExecutionService } from './WorkflowExecutionService'
 import nodeSchedule from 'node-schedule'
-import { Not } from 'typeorm'
 
 /**
  * Cron 调度服务（基于 node-schedule + 分布式锁）
