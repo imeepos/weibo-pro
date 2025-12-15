@@ -23,7 +23,7 @@ export interface DynamicInput {
 export interface Visitor {
     // 每一次执行 返回最新的 Ast
     // 一定要遵守： 每一次状态变更都需要发射一个新的 INode 给外部
-    visit(ast: INode, ctx: WorkflowGraphAst): Observable<NodeEvent>;
+    visit(ast: INode, input$: Observable<any>, ctx: WorkflowGraphAst): Observable<NodeEvent>;
 }
 
 // 抽象语法树的核心表达 - 状态与数据的统一

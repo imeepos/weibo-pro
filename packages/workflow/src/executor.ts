@@ -36,25 +36,8 @@ export class NodeExecutor {
         if (!isNode(node)) {
             node = this.compiler.compile(node);
         }
-
-        // 统一处理：所有节点（包括 WorkflowGraphAst）都通过 VisitorExecutor
-        return input$.pipe(
-            concatMap(input => {
-                // 克隆节点
-                const nodeInstance = this.cloneNode(node);
-
-                // 重置节点为默认值（防止上次执行的残留数据影响本次执行）
-                resetNodeToDefaults(nodeInstance);
-
-                // 将输入赋值给节点
-                if (input && typeof input === 'object') {
-                    Object.assign(nodeInstance, input);
-                }
-
-                // 调用 Visitor 执行
-                return this.visitorExecutor.visit(nodeInstance, parent);
-            })
-        );
+        const nodeInstance = this.cloneNode(node);
+        return this.visitorExecutor.visit(nodeInstance, input$, parent);
     }
 
     /**
