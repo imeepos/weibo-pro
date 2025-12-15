@@ -1,7 +1,7 @@
 import { Injectable } from '@sker/core';
 import { Handler, INode, NodeEvent } from '@sker/workflow';
 import { EventAutoCreatorAst } from '@sker/workflow-ast';
-import { Observable } from 'rxjs';
+import { Observable, switchMap } from 'rxjs';
 import { executeRemote } from './execute-remote.js';
 
 /**
@@ -10,7 +10,7 @@ import { executeRemote } from './execute-remote.js';
 @Injectable()
 export class EventAutoCreatorBrowserVisitor {
   @Handler(EventAutoCreatorAst)
-  handler(ast: EventAutoCreatorAst, ctx: any): Observable<NodeEvent> {
-    return executeRemote(ast, ctx);
+  handler(ast: EventAutoCreatorAst, $input: Observable<any>, ctx: any): Observable<NodeEvent> {
+    return $input.pipe(switchMap(input => executeRemote(ast, ctx, input)));
   }
 }

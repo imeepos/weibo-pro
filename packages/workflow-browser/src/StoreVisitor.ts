@@ -1,20 +1,20 @@
 import { Injectable } from '@sker/core';
 import { Handler, INode, NodeEvent, StoreGetAst, StoreSetAst } from '@sker/workflow';
-import { Observable } from 'rxjs';
+import { Observable, switchMap } from 'rxjs';
 import { executeRemote } from './execute-remote.js';
 
 @Injectable()
 export class StoreGetAstVisitor {
   @Handler(StoreGetAst)
-  handler(ast: StoreGetAst, ctx: any): Observable<NodeEvent> {
-    return executeRemote(ast, ctx);
+  handler(ast: StoreGetAst, $input: Observable<any>, ctx: any): Observable<NodeEvent> {
+    return $input.pipe(switchMap(input => executeRemote(ast, ctx, input)));
   }
 }
 
 @Injectable()
 export class StoreSetAstVisitor {
   @Handler(StoreSetAst)
-  handler(ast: StoreSetAst, ctx: any): Observable<NodeEvent> {
-    return executeRemote(ast, ctx);
+  handler(ast: StoreSetAst, $input: Observable<any>, ctx: any): Observable<NodeEvent> {
+    return $input.pipe(switchMap(input => executeRemote(ast, ctx, input)));
   }
 }

@@ -1,13 +1,13 @@
 import { Injectable } from '@sker/core';
 import { Handler, INode } from '@sker/workflow';
 import { PersonaAst } from '@sker/workflow-ast';
-import { Observable } from 'rxjs';
+import { Observable, switchMap } from 'rxjs';
 import { executeRemote } from './execute-remote.js';
 
 @Injectable()
 export class PersonaAstBrowserVisitor {
   @Handler(PersonaAst)
-  handler(ast: PersonaAst, ctx: any) {
-    return executeRemote(ast, ctx);
+  handler(ast: PersonaAst, $input: Observable<any>, ctx: any) {
+    return $input.pipe(switchMap(input => executeRemote(ast, ctx, input)));
   }
 }

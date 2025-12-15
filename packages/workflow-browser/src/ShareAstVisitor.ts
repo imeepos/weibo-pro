@@ -1,7 +1,8 @@
 import { Injectable } from "@sker/core";
 import { Handler, NodeEvent } from "@sker/workflow";
 import { ShareAst, ChatMessage } from "@sker/workflow-ast";
-import { Observable } from "rxjs";
+import { Observable, switchMap } from "rxjs";
+import { executeRemote } from "./execute-remote.js";
 
 /**
  * 群聊节点执行器 - 收集和组织消息
@@ -18,32 +19,7 @@ import { Observable } from "rxjs";
 @Injectable()
 export class ShareAstVisitor {
     @Handler(ShareAst)
-    handler(ast: ShareAst): Observable<NodeEvent> {
-        return new Observable(obs => {
-            ast.state = 'running';
-            ast.count += 1;
-            obs.next({ type: 'node_runing', id: ast.id, data: ast });
-
-            const currentHistory = Array.isArray(ast.previousHistory) && ast.previousHistory.length > 0
-                ? [...ast.previousHistory]
-                : [];
-
-            currentHistory.push({
-                role: ast.username || '未知角色',
-                content: ast.prompt,
-                timestamp: new Date().toISOString()
-            })
-
-            obs.next({ type: 'node_emit', id: ast.id, property: 'chatHistory', value: currentHistory });
-
-            const formatted = currentHistory
-                .map(msg => `【${msg.role}】${msg.content}`)
-                .join('\n\n---\n\n');
-            obs.next({ type: 'node_emit', id: ast.id, property: 'formattedHistory', value: formatted });
-
-            ast.state = 'success';
-            obs.next({ type: 'node_success', id: ast.id, data: ast });
-            obs.complete();
-        });
+    handler(ast: ShareAst, $input: Observable<any>, ctx: any): Observable<NodeEvent> {
+        return $input.pipe(switchMap(input => executeRemote(ast, ctx, input)));
     }
 }

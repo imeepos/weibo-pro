@@ -1,7 +1,7 @@
 import { Injectable } from '@sker/core';
 import { Handler, INode, NodeEvent } from '@sker/workflow';
 import { PostContextCollectorAst } from '@sker/workflow-ast';
-import { Observable } from 'rxjs';
+import { Observable, switchMap } from 'rxjs';
 import { executeRemote } from './execute-remote.js';
 
 /**
@@ -10,7 +10,7 @@ import { executeRemote } from './execute-remote.js';
 @Injectable()
 export class PostContextCollectorBrowserVisitor {
   @Handler(PostContextCollectorAst)
-  handler(ast: PostContextCollectorAst, ctx: any): Observable<NodeEvent> {
-    return executeRemote(ast, ctx);
+  handler(ast: PostContextCollectorAst, $input: Observable<any>, ctx: any): Observable<NodeEvent> {
+    return $input.pipe(switchMap(input => executeRemote(ast, ctx, input)));
   }
 }

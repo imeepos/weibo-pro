@@ -1,7 +1,8 @@
 import { Injectable } from '@sker/core';
 import { Handler, NodeEvent, setAstError, WorkflowGraphAst } from '@sker/workflow';
 import { QueryRewriterAst } from '@sker/workflow-ast';
-import { Observable } from 'rxjs';
+import { Observable, from } from 'rxjs';
+import { concatMap, mergeMap } from 'rxjs/operators';
 import { z } from 'zod';
 import { useLlmModel } from './llm-client';
 
@@ -21,8 +22,8 @@ export class QueryRewriterAstVisitor {
       ast.state = 'running';
       obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
-      input$.subscribe({
-        next: async (inputData) => {
+      const subscription = input$.pipe(
+        concatMap(async (inputData) => {
           ast.emitCount += 1;
           if (inputData) {
             Object.keys(inputData).forEach(key => {
@@ -30,36 +31,28 @@ export class QueryRewriterAstVisitor {
             });
           }
 
-          try {
-            if (abortController.signal.aborted) {
-              ast.state = 'fail';
-              setAstError(ast, new Error('工作流已取消'));
-              obs.next({ type: 'node_fail', id: ast.id, data: ast });
-              return;
-            }
+          if (abortController.signal.aborted) {
+            throw new Error('工作流已取消');
+          }
 
-            if (!ast.query || ast.query.length === 0) {
-              ast.state = 'fail';
-              setAstError(ast, new Error('请提供原始查询'));
-              obs.next({ type: 'node_fail', id: ast.id, data: ast });
-              obs.complete();
-              return;
-            }
+          if (!ast.query || ast.query.length === 0) {
+            throw new Error('请提供原始查询');
+          }
 
-            const model = useLlmModel({
-              model: ast.model,
-              temperature: ast.temperature
-            });
+          const model = useLlmModel({
+            model: ast.model,
+            temperature: ast.temperature
+          });
 
-            const originalQuery = Array.isArray(ast.query)
-              ? ast.query.filter(Boolean).join('\n')
-              : ast.query;
+          const originalQuery = Array.isArray(ast.query)
+            ? ast.query.filter(Boolean).join('\n')
+            : ast.query;
 
-            const now = new Date();
-            const currentYear = now.getFullYear();
-            const currentMonth = now.getMonth() + 1;
+          const now = new Date();
+          const currentYear = now.getFullYear();
+          const currentMonth = now.getMonth() + 1;
 
-            const systemPrompt = `你是一个查询重写专家，参考 node-DeepResearch 的设计理念。
+          const systemPrompt = `你是一个查询重写专家，参考 node-DeepResearch 的设计理念。
 
 当前时间：${currentYear}年${currentMonth}月
 
@@ -89,39 +82,36 @@ export class QueryRewriterAstVisitor {
 - 二手宝马价格趋势 ${currentYear}年
 </示例>`;
 
-            const userPrompt = `原始查询：${originalQuery}
+          const userPrompt = `原始查询：${originalQuery}
 
 请生成 ${ast.teamSize} 个重写查询。`;
 
-            const structuredModel = model.withStructuredOutput(QueryRewriteSchema);
-            const result = await structuredModel.invoke([
-              { role: 'system', content: systemPrompt },
-              { role: 'human', content: userPrompt }
-            ]);
+          const structuredModel = model.withStructuredOutput(QueryRewriteSchema);
+          const result = await structuredModel.invoke([
+            { role: 'system', content: systemPrompt },
+            { role: 'human', content: userPrompt }
+          ]);
 
-            if (abortController.signal.aborted) {
-              ast.state = 'fail';
-              setAstError(ast, new Error('工作流已取消'));
-              obs.next({ type: 'node_fail', id: ast.id, data: ast });
-              return;
-            }
-
-            ast.reasoning = result.reasoning;
-            ast.subQueries = result.queries;
-
-            obs.next({ type: 'node_emit', id: ast.id, property: 'subQueries', value: ast.subQueries });
-            obs.next({ type: 'node_emit', id: ast.id, property: 'reasoning', value: ast.reasoning });
-
-          } catch (error) {
-            ast.state = 'fail';
-            setAstError(ast, new Error(`查询重写失败: ${error instanceof Error ? error.message : '未知错误'}`));
-            obs.next({ type: 'node_fail', id: ast.id, data: ast });
-            obs.complete();
+          if (abortController.signal.aborted) {
+            throw new Error('工作流已取消');
           }
+
+          ast.reasoning = result.reasoning;
+          ast.subQueries = result.queries;
+
+          return [
+            { type: 'node_emit' as const, id: ast.id, property: 'subQueries', value: ast.subQueries },
+            { type: 'node_emit' as const, id: ast.id, property: 'reasoning', value: ast.reasoning }
+          ];
+        }),
+        mergeMap((events: NodeEvent[]) => from(events))
+      ).subscribe({
+        next: (event: NodeEvent) => {
+          obs.next(event);
         },
         error: (error) => {
           ast.state = 'fail';
-          setAstError(ast, error);
+          setAstError(ast, new Error(`查询重写失败: ${error instanceof Error ? error.message : '未知错误'}`));
           obs.next({ type: 'node_fail', id: ast.id, data: ast });
           obs.complete();
         },
@@ -133,6 +123,7 @@ export class QueryRewriterAstVisitor {
       });
 
       return () => {
+        subscription.unsubscribe();
         abortController.abort();
         obs.complete();
       };

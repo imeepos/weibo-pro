@@ -1,7 +1,7 @@
 import { Injectable } from '@sker/core';
 import { Handler, INode, NodeEvent } from '@sker/workflow';
 import { PostNLPAnalyzerAst } from '@sker/workflow-ast';
-import { Observable } from 'rxjs';
+import { Observable, switchMap } from 'rxjs';
 import { executeRemote } from './execute-remote.js';
 
 /**
@@ -10,7 +10,7 @@ import { executeRemote } from './execute-remote.js';
 @Injectable()
 export class PostNLPAnalyzerBrowserVisitor {
   @Handler(PostNLPAnalyzerAst)
-  handler(ast: PostNLPAnalyzerAst, ctx: any): Observable<NodeEvent> {
-    return executeRemote(ast, ctx);
+  handler(ast: PostNLPAnalyzerAst, $input: Observable<any>, ctx: any): Observable<NodeEvent> {
+    return $input.pipe(switchMap(input => executeRemote(ast, ctx, input)));
   }
 }

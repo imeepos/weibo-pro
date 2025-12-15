@@ -145,8 +145,9 @@ export class WorkflowController implements sdk.WorkflowController {
   /**
    * 执行工作流 - POST SSE版本
    *
-   * 使用 NetworkBuilder 构建反应式工作流网络
-   * 通过 SSE 实时推送执行进度
+   * 支持两种执行模式：
+   * 1. 执行完整工作流：传递 workflow 字段
+   * 2. 执行单个节点：传递 ast 字段（在 workflow 上下文中执行）
    */
   @Post('execute')
   execute(
@@ -163,15 +164,56 @@ export class WorkflowController implements sdk.WorkflowController {
     });
 
     try {
-      const { ast: workflow, workflow: workflowAst, input = {} } = body;
-      const workflowInstance = fromJson(workflow) as WorkflowGraphAst;
-      const events$ = executeAst(workflowInstance, input, workflowInstance)
+      const { ast, workflow: workflowJson, input = {} } = body;
+
+      if (!workflowJson && !ast) {
+        throw new BadRequestException('必须提供 workflow 或 ast 字段');
+      }
+
+      // 明确区分三种执行场景
+      let target: INode;
+      let parent: WorkflowGraphAst | undefined;
+      let mode: string;
+
+      if (workflowJson && ast) {
+        // 场景1：同时提供 workflow 和 ast → 在工作流上下文中执行单个节点
+        mode = 'node-in-workflow';
+        target = fromJson(ast);
+        parent = fromJson(workflowJson) as WorkflowGraphAst;
+      } else if (workflowJson) {
+        // 场景2：只提供 workflow → 执行整个工作流
+        mode = 'workflow';
+        target = fromJson(workflowJson) as WorkflowGraphAst;
+        parent = undefined;
+      } else {
+        // 场景3：只提供 ast → 独立执行单个节点
+        mode = 'node';
+        target = fromJson(ast!);
+        parent = undefined;
+      }
+
+      logger.info('开始执行', {
+        mode,
+        targetId: target.id,
+        targetType: target.type,
+        targetName: (target as any).name,
+        nodeCount: (target as any).nodes?.length,
+        edgeCount: (target as any).edges?.length,
+        hasParent: !!parent
+      });
+
+      // executeAst 统一处理三种场景
+      const events$ = executeAst(target, input, parent);
+
+      logger.info('开始订阅执行事件流');
+
       const subscription = events$.subscribe({
         next: (event: NodeEvent) => {
+          logger.info('收到工作流事件', { type: event.type, nodeId: (event as any).id });
           res.write(`data: ${JSON.stringify(event)}\n\n`);
         },
         error: (error: any) => {
-          logger.error('工作流执行失败', { error: error.message });
+          logger.error('工作流执行失败', { error: error.message, stack: error.stack });
           res.write(`data: ${JSON.stringify({
             type: 'fail',
             error: { message: error.message }
@@ -179,6 +221,7 @@ export class WorkflowController implements sdk.WorkflowController {
           res.end();
         },
         complete: () => {
+          logger.info('工作流执行完成');
           res.end();
         }
       })
