@@ -37,10 +37,10 @@ export class MergeAst extends Ast {
     mode: MergeMode = 'append'
 
     @Output({ title: '合并结果' })
-    result: BehaviorSubject<any[]> = new BehaviorSubject<any[]>([])
+    result: any[] = []
 
     @Output({ title: '数据总量' })
-    totalCount: BehaviorSubject<number> = new BehaviorSubject<number>(0)
+    totalCount: number = 0
 
     type: 'MergeAst' = 'MergeAst'
 }

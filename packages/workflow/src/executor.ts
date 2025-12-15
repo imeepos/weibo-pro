@@ -6,6 +6,7 @@ import { WorkflowGraphAst, isWorkflowGraphAst } from './ast';
 import { NodeEvent } from './execution/events';
 import { VisitorExecutor } from './execution/visitor-executor';
 import { Compiler } from './compiler';
+import { clone } from './utils';
 
 /**
  * 节点执行器 - 统一的节点执行入口
@@ -307,16 +308,16 @@ export class NodeExecutor {
             }
         } catch { }
 
-        return JSON.parse(JSON.stringify(node));
+        return clone(node) as INode;
     }
 }
 
 /**
  * 执行节点（便捷函数）
  */
-export function executeAst(node: INode, input?: any): Observable<NodeEvent> {
+export function executeAst(node: INode, input?: any, parent?: WorkflowGraphAst): Observable<NodeEvent> {
     const executor = root.get(NodeExecutor);
-    return executor.run(node, of(input || {}));
+    return executor.run(node, of(input || {}), parent);
 }
 
 /**

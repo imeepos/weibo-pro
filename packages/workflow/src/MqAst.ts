@@ -23,7 +23,7 @@ export class MqPushAst extends Ast {
     input: any = ``
 
     @Output({ title: '推送结果' })
-    success: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false)
+    success: boolean = false
 }
 
 /**
@@ -47,6 +47,6 @@ export class MqPullAst extends Ast {
     max: number = 10
 
     @Output({ title: '消息内容' })
-    output: BehaviorSubject<any> = new BehaviorSubject<any>(``)
+    output: string = ``
 }
 

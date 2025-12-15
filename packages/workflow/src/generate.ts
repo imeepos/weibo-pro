@@ -51,57 +51,8 @@ export function fromJson<T extends object = any>(json: any): T {
 
 /**
  * 序列化 AST 为 JSON
- *
- * 设计：
- * - 跳过 BehaviorSubject 类型的 @Output 属性（运行时状态）
- * - 只保存元数据，不保存运行时值
  */
+import { clone } from './utils'
 export function toJson(ast: Ast): INode {
-    if (!ast || !ast.type) return ast as INode;
-
-    // 获取需要跳过的属性（BehaviorSubject 类型的 @Output）
-    const skipProperties = getOutputSubjectProperties(ast);
-
-    if (skipProperties.size === 0) {
-        return ast as INode;
-    }
-
-    // 创建新对象，跳过 BehaviorSubject 属性
-    const result: Record<string, any> = {};
-    for (const [key, value] of Object.entries(ast)) {
-        if (!skipProperties.has(key)) {
-            // 递归处理嵌套的节点
-            if (key === 'nodes' && Array.isArray(value)) {
-                result[key] = value.map(node => toJson(node));
-            } else {
-                result[key] = value;
-            }
-        }
-    }
-
-    return result as INode;
-}
-
-/**
- * 获取节点中是 BehaviorSubject 类型的 @Output 属性名
- */
-function getOutputSubjectProperties(ast: any): Set<string> {
-    const properties = new Set<string>();
-
-    if (!ast.type) return properties;
-
-    const ctor = findNodeType(ast.type);
-    if (!ctor) return properties;
-
-    const outputs = root.get(OUTPUT, []).filter(it => it.target === ctor);
-
-    for (const output of outputs) {
-        const key = String(output.propertyKey);
-        const value = ast[key];
-        if (value instanceof BehaviorSubject) {
-            properties.add(key);
-        }
-    }
-
-    return properties;
+    return clone(ast) as INode;
 }

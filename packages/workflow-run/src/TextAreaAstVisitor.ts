@@ -19,6 +19,7 @@ export class TextAreaAstVisitor {
             } else {
                 outputValue = ast.input;
             }
+            ast.output = outputValue;
             obs.next({ type: 'node_emit', id: ast.id, property: 'output', value: outputValue })
 
             ast.state = 'success';

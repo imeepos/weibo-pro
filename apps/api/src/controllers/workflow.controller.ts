@@ -150,7 +150,7 @@ export class WorkflowController implements sdk.WorkflowController {
    */
   @Post('execute')
   execute(
-    @Body() body: { workflow: Ast; input?: Record<string, any> },
+    @Body() body: { ast: Ast, workflow: WorkflowGraphAst; input?: Record<string, any> },
     @Res() res?: any
   ): Observable<NodeEvent> {
     // 设置 SSE 响应头
@@ -163,9 +163,10 @@ export class WorkflowController implements sdk.WorkflowController {
     });
 
     try {
-      const { workflow, input = {} } = body;
-      const ast = fromJson(workflow) as WorkflowGraphAst;
-      const events$ = executeAst(ast, input)
+      const { ast: node, workflow: workflowAst, input = {} } = body;
+      const ast = fromJson(node) as Ast;
+      const workflow = fromJson(workflowAst) as WorkflowGraphAst;
+      const events$ = executeAst(ast, input, workflow)
       const subscription = events$.subscribe({
         next: (event: NodeEvent) => {
           res.write(`data: ${JSON.stringify(event)}\n\n`);
@@ -566,7 +567,6 @@ export class WorkflowController implements sdk.WorkflowController {
    * 节点微调 - 基于响应式流的智能重放
    *
    * 核心机制：
-   * - 利用 BehaviorSubject 创建配置变更流
    * - 识别受影响的节点及其下游依赖
    * - 重用未受影响节点的 shareReplay 缓存
    * - 重新执行受影响节点流

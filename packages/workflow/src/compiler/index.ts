@@ -16,33 +16,19 @@ import { findNodeType, INPUT, InputMetadata, NODE, NodeMetadata, OUTPUT, OutputM
 export class Compiler {
     /**
      * 编译 AST 为 INode
-     *
-     * 流程：
-     * 1. 实例化节点类（确保 BehaviorSubject 等默认值被正确初始化）
-     * 2. 合并 JSON 数据（跳过 BehaviorSubject 属性）
-     * 3. 从全局 DI 容器提取装饰器元数据
-     * 4. 组装完整的 INode 结构
-     *
-     * 注意：即使节点已编译（有 metadata），也需要检查并修复 BehaviorSubject 属性
-     * 因为 JSON 序列化/反序列化后 BehaviorSubject 会丢失
      */
     compile(ast: Ast | INode): INode {
+        if (isNode(ast)) {
+            return ast;
+        }
         const ctor = findNodeType(ast.type);
         if (!ctor) {
             console.log(ast)
             throw new Error(`compiler error: ast type ${ast.type} not found`)
         }
 
-        // 检查是否需要修复 BehaviorSubject
-        // 即使已编译（有 metadata），如果 BehaviorSubject 属性不正确也需要修复
-        if (isNode(ast) && !this.needsSubjectRepair(ast, ctor)) {
-            return ast;
-        }
-
-        // 实例化节点类，确保 BehaviorSubject 等默认值被正确初始化
         const instance = new (ctor as new () => any)();
 
-        // 合并 JSON 数据到实例，跳过 BehaviorSubject 属性
         for (const [key, value] of Object.entries(ast)) {
             if (!(instance[key] instanceof BehaviorSubject)) {
                 instance[key] = value;
@@ -55,7 +41,6 @@ export class Compiler {
         // 提取 @Input 属性装饰器元数据
         const staticInputs = this.extractInputMetadata(ctor);
 
-        // 提取 @Output 属性装饰器元数据（传递实例以检测 BehaviorSubject）
         const staticOutputs = this.extractOutputMetadata(ctor, instance);
 
         // 提取 @State 属性装饰器元数据
@@ -66,13 +51,6 @@ export class Compiler {
         const dynamicInputs = existingMetadata?.inputs?.filter(i => i.isStatic === false) || [];
         const dynamicOutputs = existingMetadata?.outputs?.filter(o => o.isStatic === false) || [];
 
-        // 初始化动态输出为 BehaviorSubject（路由输出必须是 BehaviorSubject）
-        for (const output of dynamicOutputs) {
-            if (!(instance[output.property] instanceof BehaviorSubject)) {
-                instance[output.property] = new BehaviorSubject<any>(undefined);
-            }
-        }
-
         // 组装 INode：直接修改实例，保留原型链（确保 toJSON 方法生效）
         instance.metadata = {
             class: classMetadata,
@@ -82,29 +60,6 @@ export class Compiler {
         };
 
         return instance;
-    }
-
-    /**
-     * 检查节点是否需要修复 BehaviorSubject 属性
-     *
-     * 场景：JSON 序列化/反序列化后，BehaviorSubject 会变成普通值
-     */
-    private needsSubjectRepair(ast: INode, ctor: Function): boolean {
-        const allOutputMetadata = root.get(OUTPUT, []) as OutputMetadata[];
-        const targetOutputs = allOutputMetadata.filter(m => m.target === ctor);
-
-        // 创建临时实例检测哪些属性应该是 BehaviorSubject
-        const tempInstance = new (ctor as new () => any)();
-
-        for (const output of targetOutputs) {
-            const key = String(output.propertyKey);
-            // 如果类定义中是 BehaviorSubject，但当前值不是，则需要修复
-            if (tempInstance[key] instanceof BehaviorSubject && !(ast[key] instanceof BehaviorSubject)) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     /**

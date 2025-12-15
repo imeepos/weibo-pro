@@ -35,16 +35,16 @@ export class LoopAst extends Ast {
     delay: number = 0
 
     @Output({ title: '当前项' })
-    current: BehaviorSubject<any> = new BehaviorSubject<any>(undefined)
+    current: any = undefined
 
     @Output({ title: '当前索引' })
-    index: BehaviorSubject<number> = new BehaviorSubject<number>(0)
+    index: number = 0
 
     @Output({ title: '总数' })
-    total: BehaviorSubject<number> = new BehaviorSubject<number>(0)
+    total: number = 0
 
     @Output({ title: '完成信号' })
-    done: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false)
+    done: boolean = false
 
     type: 'LoopAst' = 'LoopAst'
 }

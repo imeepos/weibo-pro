@@ -21,7 +21,7 @@ export class CollectorAst extends Ast {
     items: any[] = [];
 
     @Output({ title: '收集结果' })
-    result: BehaviorSubject<any[]> = new BehaviorSubject<any[]>([]);
+    result: any[] = [];
 
     type: 'CollectorAst' = 'CollectorAst';
 }

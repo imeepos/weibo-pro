@@ -16,7 +16,7 @@ export class StoreGetAst extends Ast {
     key: string = ``
 
     @Output({ title: '值' })
-    value: BehaviorSubject<any> = new BehaviorSubject<any>(``)
+    value: any = ``
 }
 
 /**
@@ -34,6 +34,6 @@ export class StoreSetAst extends Ast {
 
     @Input({ title: '值' })
     @Output({ title: '值' })
-    value: BehaviorSubject<any> = new BehaviorSubject<any>(``)
+    value: any = ``
 }
 

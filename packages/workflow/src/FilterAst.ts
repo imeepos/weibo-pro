@@ -62,10 +62,10 @@ export class FilterAst extends Ast {
     expression?: string
 
     @Output({ title: '匹配数据' })
-    matched: BehaviorSubject<any[]> = new BehaviorSubject<any[]>([])
+    matched: any[] = []
 
     @Output({ title: '匹配数量' })
-    matchedCount: BehaviorSubject<number> = new BehaviorSubject<number>(0)
+    matchedCount: number = 0
 
     type: 'FilterAst' = 'FilterAst'
 }

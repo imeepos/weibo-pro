@@ -1,13 +1,40 @@
-import { INode } from "./types";
+import { Observable } from "rxjs";
+import { INode, isBehaviorSubject } from "./types";
 
 // 添加ID生成功能
 export function generateId(): string {
-    return v4();
+	return v4();
 }
 
 export function isINode(val: unknown): val is INode {
-    return typeof val === 'object' && val !== null && 'type' in val;
+	return typeof val === 'object' && val !== null && 'type' in val;
 }
+
+export const clone = (obj: any, seen = new WeakSet()): any => {
+	if (obj === null || typeof obj !== 'object') return obj;
+	if (seen.has(obj)) return undefined;
+
+	if (isBehaviorSubject(obj) || obj instanceof Observable || typeof obj === 'function') {
+		return undefined;
+	}
+
+	seen.add(obj);
+
+	if (Array.isArray(obj)) {
+		return obj.map(item => clone(item, seen)).filter(item => item !== undefined);
+	}
+
+	const cloned: any = {};
+	for (const key in obj) {
+		if (obj.hasOwnProperty(key)) {
+			const value = clone(obj[key], seen);
+			if (value !== undefined) {
+				cloned[key] = value;
+			}
+		}
+	}
+	return cloned;
+};
 
 let IDX: number = 256;
 const HEX: string[] = [];
