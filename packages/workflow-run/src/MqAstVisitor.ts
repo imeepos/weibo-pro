@@ -13,7 +13,7 @@ import { take, timeout, finalize, catchError, map } from 'rxjs/operators';
 @Injectable()
 export class MqPushAstVisitor {
   @Handler(MqPushAst)
-  visit(ast: MqPushAst, ctx: any): Observable<NodeEvent> {
+  visit(ast: MqPushAst, input: Observable<MqPushAst>, ctx: any): Observable<NodeEvent> {
     return new Observable<NodeEvent>(obs => {
       const abortController = new AbortController();
 
