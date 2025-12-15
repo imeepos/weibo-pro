@@ -43,7 +43,7 @@ export class LlmCategoryAstVisitor {
 
                         const titleList = categories.map(c => c.title).join(' / ');
 
-                const prompt = `请从以下类别中选择最匹配的一项（必须选择一个）：
+                        const prompt = `请从以下类别中选择最匹配的一项（必须选择一个）：
 ${categoryList}
 
 【重要约束】
@@ -61,54 +61,50 @@ ${categoryList}
 输入："今天天气怎么样"
 输出：Default`;
 
-                const model = useLlmModel({ model: ast.model, temperature: ast.temperature });
-                const userContent = ast.context.join('\n\n---\n\n');
+                        const model = useLlmModel({ model: ast.model, temperature: ast.temperature });
+                        const userContent = ast.context.join('\n\n---\n\n');
 
-                const messages = [
-                    { role: 'system' as const, content: `${ast.system}\n\n${prompt}` },
-                    { role: 'user' as const, content: userContent }
-                ];
+                        const messages = [
+                            { role: 'system' as const, content: `${ast.system}\n\n${prompt}` },
+                            { role: 'user' as const, content: userContent }
+                        ];
 
-                const response = await model.invoke(messages);
-                const result = (typeof response.content === 'string' ? response.content : '').trim();
+                        const response = await model.invoke(messages);
+                        const result = (typeof response.content === 'string' ? response.content : '').trim();
 
-                // 输出原始结果用于调试
-                obs.next({ type: 'node_emit', id: ast.id, property: 'rawOutput', value: result });
+                        obs.next({ type: 'node_emit', id: ast.id, property: 'rawOutput', value: result });
 
-                if (abortController.signal.aborted) {
+                        const matched = categories.find(c => {
+                            const title = c.title.trim().toLowerCase();
+                            const answer = result.toLowerCase();
+                            return answer === title || answer.includes(title) || title.includes(answer);
+                        });
+
+                        const finalMatched = matched || categories.find(c => c.isDefault);
+
+                        for (const cat of categories) {
+                            const value = cat === finalMatched ? ast.context : ROUTE_SKIPPED;
+                            obs.next({ type: 'node_emit', id: ast.id, property: cat.property, value });
+                        }
+                    } catch (error) {
+                        console.error('[LlmCategoryAst] 执行失败:', error);
+                        ast.state = 'fail';
+                        setAstError(ast, error);
+                        obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                        obs.complete();
+                    }
+                },
+                error: (error) => {
                     ast.state = 'fail';
-                    setAstError(ast, new Error('工作流已取消'));
+                    setAstError(ast, error);
                     obs.next({ type: 'node_fail', id: ast.id, data: ast });
-                    return;
+                    obs.complete();
+                },
+                complete: () => {
+                    ast.state = 'success';
+                    obs.next({ type: 'node_success', id: ast.id, data: ast });
+                    obs.complete();
                 }
-
-                // 模糊匹配：忽略大小写、空格，支持包含匹配
-                const matched = categories.find(c => {
-                    const title = c.title.trim().toLowerCase();
-                    const answer = result.toLowerCase();
-                    return answer === title || answer.includes(title) || title.includes(answer);
-                });
-
-                // 如果没有匹配到任何分类，走 default
-                const finalMatched = matched || categories.find(c => c.isDefault);
-
-                // 通过 node_emit 事件发射数据（新数据流模式）
-                for (const cat of categories) {
-                    const value = cat === finalMatched ? ast.context : ROUTE_SKIPPED;
-                    obs.next({ type: 'node_emit', id: ast.id, property: cat.property, value });
-                }
-
-                ast.state = 'success';
-                obs.next({ type: 'node_success', id: ast.id, data: ast });
-                obs.complete();
-            };
-
-            run().catch(e => {
-                console.error('[LlmCategoryAst] 执行失败:', e);
-                ast.state = 'fail';
-                setAstError(ast, e);
-                obs.next({ type: 'node_fail', id: ast.id, data: ast });
-                obs.complete();
             });
 
             return () => {
