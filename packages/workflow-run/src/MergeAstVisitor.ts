@@ -20,10 +20,10 @@ export class MergeAstVisitor {
 
             const result = this.merge(inputs, ast.mode)
 
-            ast.result.next(result)
-            ast.totalCount.next(result.length)
-
-            obs.next({ type: 'node_runing', id: ast.id, data: ast });
+            ast.result = result
+            ast.totalCount = result.length
+            obs.next({ type: 'node_emit', id: ast.id, property: 'result', value: ast.result });
+            obs.next({ type: 'node_emit', id: ast.id, property: 'totalCount', value: ast.totalCount });
 
             ast.state = 'success'
             obs.next({ type: 'node_success', id: ast.id, data: ast });

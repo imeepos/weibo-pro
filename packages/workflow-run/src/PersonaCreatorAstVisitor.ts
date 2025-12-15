@@ -115,9 +115,10 @@ export class PersonaCreatorAstVisitor {
           });
           await manager.save(persona);
 
-          ast.personaId.next(persona.id);
-          ast.personaName.next(persona.name);
-          obs.next({ type: 'node_runing', id: ast.id, data: ast });
+          ast.personaId = persona.id;
+          ast.personaName = persona.name;
+          obs.next({ type: 'node_emit', id: ast.id, property: 'personaId', value: ast.personaId });
+          obs.next({ type: 'node_emit', id: ast.id, property: 'personaName', value: ast.personaName });
 
           if (result.initialMemories?.length) {
             for (const mem of result.initialMemories) {

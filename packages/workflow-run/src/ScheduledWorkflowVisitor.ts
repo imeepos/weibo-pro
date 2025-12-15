@@ -111,9 +111,11 @@ export class ScheduledWorkflowVisitor {
           }
 
           // 设置输出
-          ast.scheduleId.next(schedule.id)
-          ast.nextRunAt.next(schedule.nextRunAt)
+          ast.scheduleId = schedule.id
+          ast.nextRunAt = schedule.nextRunAt
           ast.status = schedule.status
+          obs.next({ type: 'node_emit', id: ast.id, property: 'scheduleId', value: ast.scheduleId })
+          obs.next({ type: 'node_emit', id: ast.id, property: 'nextRunAt', value: ast.nextRunAt })
 
           ast.state = 'success'
           obs.next({ type: 'node_success', id: ast.id, data: ast })

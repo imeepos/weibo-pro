@@ -81,8 +81,8 @@ export class WeiboAjaxStatusesRepostTimelineAstVisitor extends WeiboApiClient {
                             await m.upsert(WeiboRepostEntity, entities as any[], ['id']);
                         });
                     }
-                    ast.is_end.next(true);
-                    obs.next({ type: 'node_emit', id: ast.id, property: 'is_end', value: ast.is_end.value });
+                    ast.is_end = true;
+                    obs.next({ type: 'node_emit', id: ast.id, property: 'is_end', value: ast.is_end });
 
                     ast.state = 'success';
                     obs.next({ type: 'node_success', id: ast.id, data: ast });

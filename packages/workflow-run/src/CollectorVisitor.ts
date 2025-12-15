@@ -23,9 +23,9 @@ export class CollectorVisitor {
                 items = items.flat();
             }
 
-            ast.result.next(items);
-
-            obs.next({ type: 'node_runing', id: ast.id, data: ast });
+            // 直接赋值并发射事件（新数据流模式）
+            ast.result = items;
+            obs.next({ type: 'node_emit', id: ast.id, property: 'result', value: ast.result });
 
             ast.state = 'success';
             obs.next({ type: 'node_success', id: ast.id, data: ast });

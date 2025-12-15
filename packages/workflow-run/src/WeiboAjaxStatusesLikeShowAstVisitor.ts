@@ -65,8 +65,8 @@ export class WeiboAjaxStatusesLikeShowAstVisitor extends WeiboApiClient {
                             console.log(`[${page}]保存${likeEntities.length}条点赞记录`);
                         });
                     }
-                    ast.is_end.next(true);
-                    obs.next({ type: 'node_emit', id: ast.id, property: 'is_end', value: ast.is_end.value });
+                    ast.is_end = true;
+                    obs.next({ type: 'node_emit', id: ast.id, property: 'is_end', value: ast.is_end });
 
                     ast.state = 'success';
                     obs.next({ type: 'node_success', id: ast.id, data: ast });

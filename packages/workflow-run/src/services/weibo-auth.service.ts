@@ -111,8 +111,9 @@ export class WeiboAuthService implements OnDestroy {
 
     // 设置超时定时器
     const timer = setTimeout(() => {
-      ast.message.next(`登录超时,请重新尝试`)
+      ast.message = `登录超时,请重新尝试`
       ast.state = 'fail'
+      obs.next({ type: 'node_emit', id: ast.id, property: 'message', value: ast.message })
       obs.next({ type: 'node_runing', id: ast.id, data: ast })
       this.cleanupSession(sessionId);
     }, this.config.sessionTimeout);
@@ -134,7 +135,8 @@ export class WeiboAuthService implements OnDestroy {
         }
       } catch (error) {
         ast.state = 'fail'
-        ast.message.next(`打开登录页面失败`)
+        ast.message = `打开登录页面失败`
+        obs.next({ type: 'node_emit', id: ast.id, property: 'message', value: ast.message })
         obs.next({ type: 'node_runing', id: ast.id, data: ast })
         await this.cleanupSession(sessionId);
       }

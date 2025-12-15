@@ -122,9 +122,14 @@ export class AnswerEvaluatorAstVisitor {
         const avgScore = results.length > 0 ? totalScore / results.length : 0;
         const allPassed = results.every(r => r.passed);
 
-        ast.results.next(results);
-        ast.totalScore.next(avgScore);
-        ast.passed.next(allPassed);
+        ast.results = results;
+        ast.totalScore = avgScore;
+        ast.passed = allPassed;
+
+        // 发射所有输出属性
+        obs.next({ type: 'node_emit', id: ast.id, property: 'results', value: ast.results });
+        obs.next({ type: 'node_emit', id: ast.id, property: 'totalScore', value: ast.totalScore });
+        obs.next({ type: 'node_emit', id: ast.id, property: 'passed', value: ast.passed });
 
         ast.state = 'success';
         obs.next({ type: 'node_success', id: ast.id, data: ast });

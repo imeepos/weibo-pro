@@ -38,7 +38,7 @@ export class WeiboAjaxFriendshipsAstVisitor extends WeiboApiClient {
                         refererOptions: { uid: ast.uid }
                     });
 
-                    ast.isEnd.next(true);
+                    ast.isEnd = true;
                     obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
                     ast.state = 'success';

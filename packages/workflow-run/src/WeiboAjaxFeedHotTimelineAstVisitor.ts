@@ -112,9 +112,8 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
                     await m.upsert(WeiboPostEntity, posts as any[], ['id']);
                     posts.map(post => {
                         // 流式输出：每条数据发射
-                        // TODO: 改造为 BehaviorSubject 模式后，这里直接发射到 output$
-                        ast.mblogid.next(post.mblogid);
-                        ast.uid.next(post.user.idstr);
+                        ast.mblogid = post.mblogid;
+                        ast.uid = post.user.idstr;
                         obs.next({ type: 'node_runing', id: ast.id, data: ast });
                     });
                     console.log(`[WeiboAjaxFeedHotTimelineAstVisitor] 成功入库 ${posts.length} 条微博，${users.length} 个用户`);

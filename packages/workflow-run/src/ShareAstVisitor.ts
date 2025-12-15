@@ -43,13 +43,13 @@ export class ShareAstVisitor {
                 content: ast.prompt,
                 timestamp: new Date().toISOString()
             })
-            ast.chatHistory.next(currentHistory);
+            ast.chatHistory = currentHistory;
 
             // 格式化对话历史为 LLM 可读的字符串
             const formatted = currentHistory
                 .map(msg => `【${msg.role}】${msg.content}`)
                 .join('\n\n---\n\n');
-            ast.formattedHistory.next(formatted);
+            ast.formattedHistory = formatted;
 
             console.log('[ShareAstVisitor] 格式化历史记录:', {
                 totalMessages: currentHistory.length,

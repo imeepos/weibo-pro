@@ -81,9 +81,15 @@ ${stepsText}`;
             return;
           }
 
-          ast.recap.next(result.recap);
-          ast.blame.next(result.blame);
-          ast.improvement.next(result.improvement);
+          ast.recap = result.recap;
+          ast.blame = result.blame;
+          ast.improvement = result.improvement;
+
+          // 发射所有输出属性
+          obs.next({ type: 'node_emit', id: ast.id, property: 'recap', value: ast.recap });
+          obs.next({ type: 'node_emit', id: ast.id, property: 'blame', value: ast.blame });
+          obs.next({ type: 'node_emit', id: ast.id, property: 'improvement', value: ast.improvement });
+
           obs.next({ type: 'node_fail', id: ast.id, data: ast });
 
           ast.state = 'success';

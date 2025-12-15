@@ -94,10 +94,10 @@ export class WeiboKeywordSearchAstVisitor {
                     obs.next({ type: 'node_fail', id: ast.id, data: ast });
                     return;
                 }
-                ast.mblogid.next(post.mid);
-                ast.uid.next(post.uid);
-                obs.next({ type: 'node_emit', id: ast.id, property: 'mblogid', value: ast.mblogid.value });
-                obs.next({ type: 'node_emit', id: ast.id, property: 'uid', value: ast.uid.value });
+                ast.mblogid = post.mid;
+                ast.uid = post.uid;
+                obs.next({ type: 'node_emit', id: ast.id, property: 'mblogid', value: ast.mblogid });
+                obs.next({ type: 'node_emit', id: ast.id, property: 'uid', value: ast.uid });
                 await this.delayService.randomDelay(ast.emitDelayMin || 1, ast.emitDelayMax || 3);
             }
 
@@ -135,10 +135,10 @@ export class WeiboKeywordSearchAstVisitor {
                                 obs.next({ type: 'node_fail', id: ast.id, data: ast });
                                 return;
                             }
-                            ast.mblogid.next(post.mid);
-                            ast.uid.next(post.uid);
-                            obs.next({ type: 'node_emit', id: ast.id, property: 'mblogid', value: ast.mblogid.value });
-                            obs.next({ type: 'node_emit', id: ast.id, property: 'uid', value: ast.uid.value });
+                            ast.mblogid = post.mid;
+                            ast.uid = post.uid;
+                            obs.next({ type: 'node_emit', id: ast.id, property: 'mblogid', value: ast.mblogid });
+                            obs.next({ type: 'node_emit', id: ast.id, property: 'uid', value: ast.uid });
                             await this.delayService.randomDelay(ast.emitDelayMin || 1, ast.emitDelayMax || 3);
                         }
 

@@ -89,10 +89,13 @@ export class AnswerFinalizerAstVisitor {
                 const finalizedContent = result.content as string;
 
                 if (finalizedContent.length < ast.markdown.length * 0.85) {
-                    ast.finalized.next(ast.markdown);
+                    ast.finalized = ast.markdown;
                 } else {
-                    ast.finalized.next(finalizedContent);
+                    ast.finalized = finalizedContent;
                 }
+
+                // 发射输出属性
+                obs.next({ type: 'node_emit', id: ast.id, property: 'finalized', value: ast.finalized });
 
                 ast.state = 'success';
                 obs.next({ type: 'node_success', id: ast.id, data: ast });

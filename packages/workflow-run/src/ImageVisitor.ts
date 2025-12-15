@@ -19,9 +19,8 @@ export class ImageVisitor {
 
 
             // 直接使用 uploadedImage（可能来自上游或用户上传）
-            ast.image.next(ast.uploadedImage || '');
-
-            obs.next({ type: 'node_runing', id: ast.id, data: ast });
+            ast.image = ast.uploadedImage || '';
+            obs.next({ type: 'node_emit', id: ast.id, property: 'image', value: ast.image });
 
             ast.state = 'success';
             obs.next({ type: 'node_success', id: ast.id, data: ast });

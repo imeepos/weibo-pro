@@ -59,8 +59,8 @@ export class PromptRoleSkillAstVisitor {
 
           if (skills.length === 0) {
             ast.state = 'success';
-            ast.selectedSkillsList.next([]);
-            ast.skillContent.next({});
+            ast.selectedSkillsList = [];
+            ast.skillContent = {};
             obs.next({ type: 'node_success', id: ast.id, data: ast });
             obs.complete();
             return;
@@ -148,7 +148,7 @@ ${skillsDescription}
             if (finalSelectedIds.length > 0) {
               const selectedSkills = skills.filter(s => finalSelectedIds.includes(s.id));
               ast.selectedSkills = selectedSkills;
-              ast.selectedSkillsList.next(selectedSkills);
+              ast.selectedSkillsList = selectedSkills;
 
               // 预加载所有选中技能的内容
               const skillsData = await manager.find(PromptSkillEntity, {
@@ -161,10 +161,10 @@ ${skillsDescription}
                 contentMap[skill.id] = skill.content;
               }
 
-              ast.skillContent.next(contentMap);
+              ast.skillContent = contentMap;
             } else {
-              ast.selectedSkillsList.next([]);
-              ast.skillContent.next({});
+              ast.selectedSkillsList = [];
+              ast.skillContent = {};
             }
 
             obs.next({ type: 'node_runing', id: ast.id, data: ast });

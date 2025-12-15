@@ -177,8 +177,8 @@ ${ast.context}`;
           ]);
 
           const responseText = result.content as string;
-          ast.response.next(responseText);
-          obs.next({ type: 'node_runing', id: ast.id, data: ast });
+          ast.response = responseText;
+          obs.next({ type: 'node_emit', id: ast.id, property: 'response', value: ast.response });
 
           if (abortController.signal.aborted) {
             ast.state = 'fail';
@@ -246,7 +246,8 @@ ${ast.context}`;
             }
           }
 
-          ast.newMemoryId.next(savedMemoryIds[0] || '');
+          ast.newMemoryId = savedMemoryIds[0] || '';
+          obs.next({ type: 'node_emit', id: ast.id, property: 'newMemoryId', value: ast.newMemoryId });
         });
 
         ast.state = 'success';

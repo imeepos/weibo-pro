@@ -101,13 +101,13 @@ export class PostNLPAnalyzerVisitor {
             repostsChars: context.reposts.join('').length,
           });
 
-          ast.nlpResult.next(await this.analyzer.analyze(
+          ast.nlpResult = await this.analyzer.analyze(
             context,
             availableCategories,
             availableTags,
             recentEvents
-          ));
-          obs.next({ type: 'node_emit', id: ast.id, property: 'nlpResult', value: ast.nlpResult.value });
+          );
+          obs.next({ type: 'node_emit', id: ast.id, property: 'nlpResult', value: ast.nlpResult });
 
           ast.state = 'success';
           obs.next({ type: 'node_success', id: ast.id, data: ast });

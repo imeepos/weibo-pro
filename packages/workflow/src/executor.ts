@@ -1,9 +1,9 @@
 import { Inject, Injectable, root } from '@sker/core';
-import { Observable, EMPTY, merge, defer, ReplaySubject, concat, of } from 'rxjs';
+import { Observable, EMPTY, merge, defer, ReplaySubject, concat, of, combineLatest, zip } from 'rxjs';
 import { concatMap, finalize, map, filter } from 'rxjs/operators';
 import { INode, IEdge, EdgeMode, isNode } from './types';
 import { WorkflowGraphAst, isWorkflowGraphAst } from './ast';
-import { NodeEvent } from './execution/events';
+import { NodeEmitEvent, NodeEvent } from './execution/events';
 import { VisitorExecutor } from './execution/visitor-executor';
 import { Compiler } from './compiler';
 import { clone } from './utils';
@@ -123,7 +123,7 @@ export class NodeExecutor {
 
                 eventStream$.pipe(
                     filter(event => event.type === 'node_emit' && event.property === edge.fromProperty),
-                    map(event => event.value)
+                    map(event => (event as NodeEmitEvent).value)
                 ).subscribe(value => {
                     if (value !== null && value !== undefined) {
                         targetSubject.next({ [edge.toProperty!]: value });
@@ -140,7 +140,7 @@ export class NodeExecutor {
 
                 return eventStream$.pipe(
                     filter(event => event.type === 'node_emit' && event.property === edge.fromProperty),
-                    map(event => event.value)
+                    map(event => (event as NodeEmitEvent).value)
                 );
             });
 

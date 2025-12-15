@@ -99,8 +99,8 @@ export class QueryRewriterAstVisitor {
             return;
           }
 
-          ast.reasoning.next(result.reasoning);
-          ast.subQueries.next(result.queries);
+          ast.reasoning = result.reasoning;
+          ast.subQueries = result.queries;
           obs.next({ type: 'node_fail', id: ast.id, data: ast });
 
           ast.state = 'success';

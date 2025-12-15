@@ -1,7 +1,7 @@
 import { Injectable } from "@sker/core";
 import { Handler, NodeEvent, ROUTE_SKIPPED, setAstError, WorkflowGraphAst } from "@sker/workflow";
 import { LlmCategoryAst } from "@sker/workflow-ast";
-import { BehaviorSubject, Observable } from "rxjs";
+import { Observable } from "rxjs";
 import { useLlmModel } from "./llm-client";
 
 @Injectable()
@@ -35,7 +35,7 @@ export class LlmCategoryAstVisitor {
                 // 只有 default 一个分类时，直接走 default
                 const nonDefaultCategories = categories.filter(c => !c.isDefault);
                 if (nonDefaultCategories.length === 0) {
-                    this.setOutput(ast, 'output_default', ast.context);
+                    obs.next({ type: 'node_emit', id: ast.id, property: 'output_default', value: ast.context });
                     ast.state = 'success';
                     obs.next({ type: 'node_success', id: ast.id, data: ast });
                     obs.complete();
@@ -78,7 +78,7 @@ ${categoryList}
                 const result = (typeof response.content === 'string' ? response.content : '').trim();
 
                 // 输出原始结果用于调试
-                this.setOutput(ast, 'rawOutput', result);
+                obs.next({ type: 'node_emit', id: ast.id, property: 'rawOutput', value: result });
 
                 if (abortController.signal.aborted) {
                     ast.state = 'fail';
@@ -97,12 +97,12 @@ ${categoryList}
                 // 如果没有匹配到任何分类，走 default
                 const finalMatched = matched || categories.find(c => c.isDefault);
 
+                // 通过 Observable 发射数据，而不是直接调用 BehaviorSubject.next()
                 for (const cat of categories) {
                     const value = cat === finalMatched ? ast.context : ROUTE_SKIPPED;
-                    this.setOutput(ast, cat.property, value);
+                    obs.next({ type: 'node_emit', id: ast.id, property: cat.property, value });
                 }
 
-                obs.next({ type: 'node_runing', id: ast.id, data: ast });
                 ast.state = 'success';
                 obs.next({ type: 'node_success', id: ast.id, data: ast });
                 obs.complete();
@@ -121,14 +121,5 @@ ${categoryList}
                 obs.complete();
             };
         });
-    }
-
-    private setOutput(ast: LlmCategoryAst, property: string, value: any): void {
-        const target = (ast as any)[property];
-        if (target instanceof BehaviorSubject) {
-            target.next(value);
-        } else {
-            (ast as any)[property] = value;
-        }
     }
 }

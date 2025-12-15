@@ -19,7 +19,7 @@ export class VideoVisitor {
 
 
             // 直接使用 uploadedVideo（可能来自上游或用户上传）
-            ast.video.next(ast.uploadedVideo || '');
+            ast.video = ast.uploadedVideo || '';
 
             obs.next({ type: 'node_runing', id: ast.id, data: ast });
 

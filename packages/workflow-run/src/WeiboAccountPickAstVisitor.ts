@@ -66,7 +66,7 @@ export class WeiboAccountPickAstVisitor {
 
                     ast.list = accountsWithScore;
                     ast.selectedId = selected.id;
-                    ast.cookies.next(selectedAccount.cookies);
+                    ast.cookies = selectedAccount.cookies;
 
                     await this.redis.zincrby(this.healthKey, -1, selected.id.toString());
 

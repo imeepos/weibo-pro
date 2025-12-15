@@ -1,7 +1,7 @@
 import { Handler, type DynamicOutput, ROUTE_SKIPPED, NodeEvent } from '@sker/workflow'
 import { Injectable } from '@sker/core'
 import { SwitchAst } from '@sker/workflow-ast'
-import { Observable, BehaviorSubject } from 'rxjs'
+import { Observable } from 'rxjs'
 
 @Injectable()
 export class SwitchAstVisitor {
@@ -30,10 +30,11 @@ export class SwitchAstVisitor {
 
                 if (matched) {
                     anyMatched = true
-                    this.setOutputValue(ast, propKey, inputValue)
+                    // 通过 Observable 发射数据，而不是直接调用 BehaviorSubject.next()
+                    obs.next({ type: 'node_emit', id: ast.id, property: propKey, value: inputValue });
                 } else {
                     // 条件不匹配：使用 ROUTE_SKIPPED 明确表示"这条路不走"
-                    this.setOutputValue(ast, propKey, ROUTE_SKIPPED)
+                    obs.next({ type: 'node_emit', id: ast.id, property: propKey, value: ROUTE_SKIPPED });
                 }
             })
 
@@ -42,23 +43,14 @@ export class SwitchAstVisitor {
                 const propKey = String(defaultOutput.property)
                 // 有其他分支匹配时，default 使用 ROUTE_SKIPPED
                 const value = anyMatched ? ROUTE_SKIPPED : inputValue
-                this.setOutputValue(ast, propKey, value)
+                // 通过 Observable 发射数据，而不是直接调用 BehaviorSubject.next()
+                obs.next({ type: 'node_emit', id: ast.id, property: propKey, value });
             }
-
-            obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
             ast.state = 'success'
             obs.next({ type: 'node_success', id: ast.id, data: ast });
             obs.complete()
         })
-    }
-
-    private setOutputValue(ast: SwitchAst, propKey: string, value: any): void {
-        if ((ast as any)[propKey] instanceof BehaviorSubject) {
-            ;(ast as any)[propKey].next(value)
-        } else {
-            ;(ast as any)[propKey] = value
-        }
     }
 
     private evaluateCondition(condition: string, context: any): boolean {

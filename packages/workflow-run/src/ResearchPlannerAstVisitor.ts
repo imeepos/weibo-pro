@@ -124,8 +124,8 @@ ${soundbites}
             return;
           }
 
-          ast.reasoning.next(result.reasoning);
-          ast.subproblems.next(result.subproblems);
+          ast.reasoning = result.reasoning;
+          ast.subproblems = result.subproblems;
           obs.next({ type: 'node_fail', id: ast.id, data: ast });
 
           ast.state = 'success';

@@ -10,9 +10,8 @@ export class DateAstVisitor {
             ast.state = 'running'
             obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
-            ast.date.next(new Date(ast.dateStr));
-
-            obs.next({ type: 'node_runing', id: ast.id, data: ast });
+            ast.date = new Date(ast.dateStr);
+            obs.next({ type: 'node_emit', id: ast.id, property: 'date', value: ast.date });
 
             ast.state = 'success';
             obs.next({ type: 'node_success', id: ast.id, data: ast });

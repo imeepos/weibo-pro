@@ -27,17 +27,17 @@ export class GroupChatLoopAstVisitor {
             obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
             // 如果是第一次执行（chatHistory 为空），初始化历史
-            if (ast.chatHistory.value.length === 0) {
-                ast.chatHistory.next([{
+            if (!ast.chatHistory || ast.chatHistory.length === 0) {
+                ast.chatHistory = [{
                     round: 0,
                     agentName: 'System',
                     content: ast.initialTopic,
                     timestamp: new Date().toISOString()
-                }]);
-                ast.currentRound.next(0);
+                }];
+                ast.currentRound = 0;
+                obs.next({ type: 'node_emit', id: ast.id, property: 'chatHistory', value: ast.chatHistory });
+                obs.next({ type: 'node_emit', id: ast.id, property: 'currentRound', value: ast.currentRound });
             }
-
-            obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
             ast.state = 'success';
             obs.next({ type: 'node_success', id: ast.id, data: ast });

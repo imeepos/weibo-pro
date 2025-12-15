@@ -80,12 +80,12 @@ export class PostContextCollectorVisitor {
 
             console.log(`[PostContextCollector] 收集到 ${comments.length} 条评论, ${reposts.length} 条转发`);
 
-            ast.post.next(post);
-            ast.comments.next(comments);
-            ast.reposts.next(reposts);
-            obs.next({ type: 'node_emit', id: ast.id, property: 'post', value: ast.post.value });
-            obs.next({ type: 'node_emit', id: ast.id, property: 'comments', value: ast.comments.value });
-            obs.next({ type: 'node_emit', id: ast.id, property: 'reposts', value: ast.reposts.value });
+            ast.post = post;
+            ast.comments = comments;
+            ast.reposts = reposts;
+            obs.next({ type: 'node_emit', id: ast.id, property: 'post', value: ast.post });
+            obs.next({ type: 'node_emit', id: ast.id, property: 'comments', value: ast.comments });
+            obs.next({ type: 'node_emit', id: ast.id, property: 'reposts', value: ast.reposts });
           });
 
           ast.state = 'success';

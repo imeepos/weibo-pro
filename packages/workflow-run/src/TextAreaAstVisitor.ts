@@ -10,7 +10,7 @@ export class TextAreaAstVisitor {
             ast.state = 'running'
             obs.next({ type: 'node_runing', id: ast.id, data: ast })
 
-            // 直接通过 BehaviorSubject 发射输出值
+            // 直接赋值并发射输出值（新数据流模式）
             let outputValue: string;
             if (Array.isArray(ast.input)) {
                 outputValue = ast.input.join('\n');

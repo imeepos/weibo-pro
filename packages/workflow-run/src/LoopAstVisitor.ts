@@ -25,12 +25,14 @@ export class LoopAstVisitor {
             const delay = Math.max(0, ast.delay || 0)
             const total = items.length
 
-            ast.total.next(total)
-            ast.done.next(false)
-            obs.next({ type: 'node_runing', id: ast.id, data: ast });
+            ast.total = total
+            ast.done = false
+            obs.next({ type: 'node_emit', id: ast.id, property: 'total', value: ast.total });
+            obs.next({ type: 'node_emit', id: ast.id, property: 'done', value: ast.done });
 
             if (total === 0) {
-                ast.done.next(true)
+                ast.done = true
+                obs.next({ type: 'node_emit', id: ast.id, property: 'done', value: ast.done });
                 ast.state = 'success'
                 obs.next({ type: 'node_success', id: ast.id, data: ast });
                 obs.complete()
@@ -43,9 +45,10 @@ export class LoopAstVisitor {
                     ? items[startIndex]
                     : items.slice(startIndex, endIndex)
 
-                ast.index.next(startIndex)
-                ast.current.next(batch)
-                obs.next({ type: 'node_runing', id: ast.id, data: ast });
+                ast.index = startIndex
+                ast.current = batch
+                obs.next({ type: 'node_emit', id: ast.id, property: 'index', value: ast.index });
+                obs.next({ type: 'node_emit', id: ast.id, property: 'current', value: ast.current });
 
                 const nextIndex = endIndex
                 if (nextIndex < total) {
@@ -55,7 +58,8 @@ export class LoopAstVisitor {
                         emitBatch(nextIndex)
                     }
                 } else {
-                    ast.done.next(true)
+                    ast.done = true
+                    obs.next({ type: 'node_emit', id: ast.id, property: 'done', value: ast.done });
                     ast.state = 'success'
                     obs.next({ type: 'node_success', id: ast.id, data: ast });
                     obs.complete()
