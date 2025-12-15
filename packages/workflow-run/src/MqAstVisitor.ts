@@ -1,8 +1,8 @@
 import { Injectable } from '@sker/core';
 import { Handler, NodeEvent, setAstError, MqPushAst, MqPullAst } from '@sker/workflow';
 import { useQueue } from '@sker/mq';
-import { Observable, EMPTY } from 'rxjs';
-import { take, timeout, finalize, catchError, map } from 'rxjs/operators';
+import { Observable, EMPTY, from } from 'rxjs';
+import { take, timeout, finalize, catchError, map, concatMap, mergeMap } from 'rxjs/operators';
 
 /**
  * 消息队列推送节点执行器
@@ -20,8 +20,8 @@ export class MqPushAstVisitor {
       ast.state = 'running';
       obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
-      input$.subscribe({
-        next: async (inputData) => {
+      const subscription = input$.pipe(
+        concatMap(async (inputData) => {
           ast.emitCount += 1;
           if (inputData) {
             Object.keys(inputData).forEach(key => {
@@ -29,31 +29,30 @@ export class MqPushAstVisitor {
             });
           }
 
-          try {
-            if (abortController.signal.aborted) {
-              throw new Error('工作流已取消');
-            }
-
-            const queue = useQueue(ast.queueName);
-            await queue.producer.next(ast.input);
-
-            ast.success = true;
-            console.log(`[MqPush] 推送成功: queue=${queue.queueName}, data=`, ast.input);
-
-            obs.next({ type: 'node_emit', id: ast.id, property: 'success', value: ast.success });
-          } catch (error) {
-            ast.success = false;
-            ast.state = 'fail';
-            setAstError(ast, error, process.env.NODE_ENV === 'development');
-            console.error(`[MqPushAstVisitor] queue=${ast.queueName}`, error);
-            obs.next({ type: 'node_fail', id: ast.id, data: ast });
-            obs.complete();
+          if (abortController.signal.aborted) {
+            throw new Error('工作流已取消');
           }
+
+          const queue = useQueue(ast.queueName);
+          await queue.producer.next(ast.input);
+
+          ast.success = true;
+          console.log(`[MqPush] 推送成功: queue=${queue.queueName}, data=`, ast.input);
+
+          return [
+            { type: 'node_emit' as const, id: ast.id, property: 'success', value: ast.success }
+          ];
+        }),
+        mergeMap((events: NodeEvent[]) => from(events))
+      ).subscribe({
+        next: (event: NodeEvent) => {
+          obs.next(event);
         },
         error: (error) => {
           ast.success = false;
           ast.state = 'fail';
           setAstError(ast, error, process.env.NODE_ENV === 'development');
+          console.error(`[MqPushAstVisitor] queue=${ast.queueName}`, error);
           obs.next({ type: 'node_fail', id: ast.id, data: ast });
           obs.complete();
         },
@@ -65,6 +64,7 @@ export class MqPushAstVisitor {
       });
 
       return () => {
+        subscription.unsubscribe();
         abortController.abort();
         obs.complete();
       };

@@ -1,7 +1,7 @@
 import { Injectable } from "@sker/core";
 import { Handler, NodeEvent } from "@sker/workflow";
 import { ShareAst, ChatMessage } from "@sker/workflow-ast";
-import { Observable, switchMap } from "rxjs";
+import { Observable, concatMap } from "rxjs";
 import { executeRemote } from "./execute-remote.js";
 
 /**
@@ -20,6 +20,6 @@ import { executeRemote } from "./execute-remote.js";
 export class ShareAstVisitor {
     @Handler(ShareAst)
     handler(ast: ShareAst, $input: Observable<any>, ctx: any): Observable<NodeEvent> {
-        return $input.pipe(switchMap(input => executeRemote(ast, ctx, input)));
+        return $input.pipe(concatMap(input => executeRemote(ast, ctx, input)));
     }
 }

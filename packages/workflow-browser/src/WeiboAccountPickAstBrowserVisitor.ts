@@ -1,7 +1,7 @@
 import { Injectable } from '@sker/core';
 import { Handler, INode, NodeEvent } from '@sker/workflow';
 import { WeiboAccountPickAst } from '@sker/workflow-ast';
-import { Observable, switchMap } from 'rxjs';
+import { Observable, concatMap } from 'rxjs';
 import { executeRemote } from './execute-remote.js';
 
 /**
@@ -11,6 +11,6 @@ import { executeRemote } from './execute-remote.js';
 export class WeiboAccountPickAstBrowserVisitor {
   @Handler(WeiboAccountPickAst)
   handler(ast: WeiboAccountPickAst, $input: Observable<any>, ctx: any): Observable<NodeEvent> {
-    return $input.pipe(switchMap(input => executeRemote(ast, ctx, input)));
+    return $input.pipe(concatMap(input => executeRemote(ast, ctx, input)));
   }
 }
