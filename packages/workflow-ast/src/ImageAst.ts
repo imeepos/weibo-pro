@@ -1,5 +1,4 @@
 import { Ast, Input, Node, Output } from "@sker/workflow";
-import { BehaviorSubject } from "rxjs";
 
 /**
  * 图片节点 - 支持上传、输入、预览
@@ -15,7 +14,7 @@ export class ImageAst extends Ast {
     uploadedImage: string = '';
 
     @Output({ title: '输出' })
-    image = new BehaviorSubject<string>('');
+    image = ``;
 
     type: 'ImageAst' = 'ImageAst';
 }

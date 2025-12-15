@@ -3,7 +3,6 @@
  */
 
 import { Ast, Input, IS_BUFFER, IS_MULTI, Node, Output } from "@sker/workflow";
-import { BehaviorSubject } from "rxjs";
 
 @Node({
     title: '语音合成',
@@ -19,7 +18,7 @@ export class LlmTextToAudioAst extends Ast {
     text: string[] = [];
 
     @Output({ title: '音频' })
-    audio = new BehaviorSubject<string>(``)
+    audio = ``
 
     type: `LlmTextToAudioAst` = `LlmTextToAudioAst`
 }

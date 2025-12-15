@@ -1,5 +1,4 @@
 import { Ast, Input, IS_MULTI, Node, Output } from "@sker/workflow";
-import { BehaviorSubject } from "rxjs";
 
 @Node({
     title: '文字大模型',
@@ -24,13 +23,13 @@ export class LlmTextAgentAst extends Ast {
     model: string = `deepseek-ai/DeepSeek-V3.2`;
 
     @Output({ title: '输出' })
-    text = new BehaviorSubject<string>(``)
+    text = ``
 
     @Output({ title: '节点名' })
-    username = new BehaviorSubject<string>(``)
+    username = ``
 
     @Output({ title: '节点介绍' })
-    profile = new BehaviorSubject<string>(``)
+    profile = ``
 
     type: `LlmTextAgentAst` = `LlmTextAgentAst`
 }
