@@ -10,7 +10,10 @@ prompts/spec-kit/
 ├── constitution.md     # 项目原则生成器
 ├── specify.md          # 功能规格生成器
 ├── clarify.md          # 需求澄清器
+├── plan.md             # 技术规划器（ResearchPlannerAst 内置）
 ├── tasks.md            # 任务分解器
+├── analyze.md          # 一致性分析器（可选）
+├── checklist.md        # 质量检查清单（可选）
 └── implement.md        # 代码生成器
 ```
 
@@ -21,8 +24,10 @@ prompts/spec-kit/
 | Constitution | constitution.md | LlmTextAgentAst | 0.3 |
 | Specify | specify.md | LlmStructuredOutputAst | 0.2 |
 | Clarify | clarify.md | LlmTextAgentAst | 0.4 |
-| Plan | (使用 ResearchPlannerAst 内置) | ResearchPlannerAst | 0.3 |
+| Plan | plan.md | ResearchPlannerAst | 0.3 |
 | Tasks | tasks.md | LlmStructuredOutputAst | 0.2 |
+| Analyze (可选) | analyze.md | LlmTextAgentAst | 0.3 |
+| Checklist (可选) | checklist.md | LlmTextAgentAst | 0.2 |
 | Implement | implement.md | CodeGeneratorAst | 0.2 |
 
 ## 数据流

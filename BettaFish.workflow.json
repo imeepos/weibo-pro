@@ -28,228 +28,151 @@
         }
       },
       {
+        "id": "keyword-agent",
+        "type": "KeywordAgentAst",
+        "count": 0,
+        "emitCount": 0,
+        "state": "pending",
+        "width": 280,
+        "height": 180,
+        "position": { "x": 400, "y": 280 },
+        "userQuery": "",
+        "analysisResult": "",
+        "coreKeywords": "",
+        "searchStrategy": "",
+        "metadata": {
+          "class": { "type": "sentiment", "title": "关键词专家" },
+          "inputs": [
+            { "property": "userQuery", "title": "用户需求", "isStatic": true }
+          ],
+          "outputs": [
+            { "property": "analysisResult", "title": "分析结果", "isStatic": true, "isSubject": true },
+            { "property": "coreKeywords", "title": "核心关键词", "isStatic": true, "isSubject": true },
+            { "property": "searchStrategy", "title": "搜索策略", "isStatic": true, "isSubject": true }
+          ],
+          "states": []
+        }
+      },
+      {
         "id": "agent-query",
-        "type": "LlmTextAgentAst",
+        "type": "QueryAgentAst",
         "count": 0,
         "emitCount": 0,
         "state": "pending",
         "width": 280,
         "height": 200,
-        "position": { "x": 500, "y": 50 },
-        "system": [],
-        "prompt": [],
-        "temperature": 0.7,
-        "model": "deepseek-ai/DeepSeek-V3",
-        "text": "",
-        "username": "Query Agent",
-        "profile": "国内外新闻广度搜索Agent，具备网页搜索能力，负责收集公开舆情信息",
+        "position": { "x": 750, "y": 50 },
+        "topic": "",
+        "speechesText": [],
+        "analysisResult": "",
         "metadata": {
-          "class": { "type": "llm", "title": "Query Agent (新闻搜索)" },
+          "class": { "type": "sentiment", "title": "Query Agent (新闻搜索)" },
           "inputs": [
-            { "property": "system", "mode": 1, "title": "系统提示词", "type": "textarea", "isStatic": true },
-            { "property": "prompt", "mode": 1, "title": "用户提示词", "type": "textarea", "isStatic": true },
-            { "property": "temperature", "title": "温度", "isStatic": true },
-            { "property": "model", "title": "模型", "isStatic": true }
+            { "property": "topic", "title": "分析主题", "isStatic": true },
+            { "property": "speechesText", "mode": 1, "title": "发言记录", "isStatic": true }
           ],
           "outputs": [
-            { "property": "text", "title": "分析结果", "isStatic": true, "isSubject": true },
-            { "property": "username", "title": "Agent名", "isStatic": true, "isSubject": true },
-            { "property": "profile", "title": "Agent介绍", "isStatic": true, "isSubject": true }
+            { "property": "analysisResult", "title": "分析结果", "isStatic": true, "isSubject": true },
+            { "property": "systemPrompt", "title": "系统提示词", "isStatic": true, "isSubject": true }
           ],
           "states": []
         }
       },
       {
         "id": "agent-media",
-        "type": "LlmTextAgentAst",
+        "type": "MediaAgentAst",
         "count": 0,
         "emitCount": 0,
         "state": "pending",
         "width": 280,
         "height": 200,
-        "position": { "x": 500, "y": 300 },
-        "system": [],
-        "prompt": [],
-        "temperature": 0.7,
-        "model": "deepseek-ai/DeepSeek-V3",
-        "text": "",
-        "username": "Media Agent",
-        "profile": "多模态内容分析Agent，具备图片、视频理解能力，负责分析多媒体舆情内容",
+        "position": { "x": 750, "y": 280 },
+        "topic": "",
+        "speechesText": [],
+        "analysisResult": "",
         "metadata": {
-          "class": { "type": "llm", "title": "Media Agent (多模态)" },
+          "class": { "type": "sentiment", "title": "Media Agent (多模态)" },
           "inputs": [
-            { "property": "system", "mode": 1, "title": "系统提示词", "type": "textarea", "isStatic": true },
-            { "property": "prompt", "mode": 1, "title": "用户提示词", "type": "textarea", "isStatic": true },
-            { "property": "temperature", "title": "温度", "isStatic": true },
-            { "property": "model", "title": "模型", "isStatic": true }
+            { "property": "topic", "title": "分析主题", "isStatic": true },
+            { "property": "speechesText", "mode": 1, "title": "发言记录", "isStatic": true }
           ],
           "outputs": [
-            { "property": "text", "title": "分析结果", "isStatic": true, "isSubject": true },
-            { "property": "username", "title": "Agent名", "isStatic": true, "isSubject": true },
-            { "property": "profile", "title": "Agent介绍", "isStatic": true, "isSubject": true }
+            { "property": "analysisResult", "title": "分析结果", "isStatic": true, "isSubject": true },
+            { "property": "systemPrompt", "title": "系统提示词", "isStatic": true, "isSubject": true }
           ],
           "states": []
         }
       },
       {
         "id": "agent-insight",
-        "type": "LlmTextAgentAst",
+        "type": "InsightAgentAst",
         "count": 0,
         "emitCount": 0,
         "state": "pending",
         "width": 280,
         "height": 200,
-        "position": { "x": 500, "y": 550 },
-        "system": [],
-        "prompt": [],
-        "temperature": 0.7,
-        "model": "deepseek-ai/DeepSeek-V3",
-        "text": "",
-        "username": "Insight Agent",
-        "profile": "私有数据库挖掘Agent，负责从内部舆情数据库中深度分析历史数据和趋势",
+        "position": { "x": 750, "y": 510 },
+        "topic": "",
+        "speechesText": [],
+        "analysisResult": "",
         "metadata": {
-          "class": { "type": "llm", "title": "Insight Agent (数据库)" },
+          "class": { "type": "sentiment", "title": "Insight Agent (数据库)" },
           "inputs": [
-            { "property": "system", "mode": 1, "title": "系统提示词", "type": "textarea", "isStatic": true },
-            { "property": "prompt", "mode": 1, "title": "用户提示词", "type": "textarea", "isStatic": true },
-            { "property": "temperature", "title": "温度", "isStatic": true },
-            { "property": "model", "title": "模型", "isStatic": true }
+            { "property": "topic", "title": "分析主题", "isStatic": true },
+            { "property": "speechesText", "mode": 1, "title": "发言记录", "isStatic": true }
           ],
           "outputs": [
-            { "property": "text", "title": "分析结果", "isStatic": true, "isSubject": true },
-            { "property": "username", "title": "Agent名", "isStatic": true, "isSubject": true },
-            { "property": "profile", "title": "Agent介绍", "isStatic": true, "isSubject": true }
+            { "property": "analysisResult", "title": "分析结果", "isStatic": true, "isSubject": true },
+            { "property": "systemPrompt", "title": "系统提示词", "isStatic": true, "isSubject": true }
           ],
-          "states": []
-        }
-      },
-      {
-        "id": "system-prompt-query",
-        "type": "TextAreaAst",
-        "count": 0,
-        "emitCount": 0,
-        "state": "pending",
-        "width": 300,
-        "height": 150,
-        "input": "你是 Query Agent，一个专业的新闻搜索和舆情收集专家。\n\n你的职责：\n1. 搜索国内外主流媒体的相关新闻报道\n2. 收集社交媒体上的公开讨论和评论\n3. 整理信息来源和时间线\n4. 识别关键事件节点和传播路径\n\n输出格式：\n- 新闻摘要（按时间排序）\n- 关键信息源\n- 舆情传播路径分析",
-        "position": { "x": 100, "y": 50 },
-        "metadata": {
-          "class": { "type": "basic", "title": "Query Agent 系统提示词" },
-          "inputs": [{ "property": "input", "title": "输入", "type": "textarea", "isStatic": true }],
-          "outputs": [{ "property": "output", "title": "输出", "isStatic": true, "isSubject": true }],
-          "states": []
-        }
-      },
-      {
-        "id": "system-prompt-media",
-        "type": "TextAreaAst",
-        "count": 0,
-        "emitCount": 0,
-        "state": "pending",
-        "width": 300,
-        "height": 150,
-        "input": "你是 Media Agent，一个专业的多模态内容分析专家。\n\n你的职责：\n1. 分析短视频平台（抖音、快手等）的相关内容\n2. 解读图片、表情包、截图中的信息\n3. 识别视觉内容中的情感倾向\n4. 提取多媒体内容中的关键信息\n\n输出格式：\n- 多媒体内容摘要\n- 视觉情感分析\n- 传播热度评估",
-        "position": { "x": 100, "y": 220 },
-        "metadata": {
-          "class": { "type": "basic", "title": "Media Agent 系统提示词" },
-          "inputs": [{ "property": "input", "title": "输入", "type": "textarea", "isStatic": true }],
-          "outputs": [{ "property": "output", "title": "输出", "isStatic": true, "isSubject": true }],
-          "states": []
-        }
-      },
-      {
-        "id": "system-prompt-insight",
-        "type": "TextAreaAst",
-        "count": 0,
-        "emitCount": 0,
-        "state": "pending",
-        "width": 300,
-        "height": 150,
-        "input": "你是 Insight Agent，一个专业的数据分析和洞察专家。\n\n你的职责：\n1. 分析历史舆情数据和趋势\n2. 挖掘数据中的深层规律\n3. 进行情感分析和观点聚类\n4. 预测舆情发展走向\n\n输出格式：\n- 数据统计摘要\n- 情感分布分析\n- 趋势预测",
-        "position": { "x": 100, "y": 470 },
-        "metadata": {
-          "class": { "type": "basic", "title": "Insight Agent 系统提示词" },
-          "inputs": [{ "property": "input", "title": "输入", "type": "textarea", "isStatic": true }],
-          "outputs": [{ "property": "output", "title": "输出", "isStatic": true, "isSubject": true }],
           "states": []
         }
       },
       {
         "id": "forum-engine",
-        "type": "GroupChatLoopAst",
+        "type": "ForumAgentAst",
         "count": 0,
         "emitCount": 0,
         "state": "pending",
         "width": 300,
         "height": 180,
-        "position": { "x": 900, "y": 250 },
-        "initialTopic": "基于各Agent的初步分析结果，进行深度讨论和观点碰撞",
-        "newMessages": [],
-        "maxRounds": 3,
-        "chatHistory": [],
-        "historyText": "",
-        "currentRound": 0,
+        "position": { "x": 1100, "y": 250 },
+        "speechesText": "",
         "metadata": {
-          "class": { "type": "llm", "title": "Forum Engine (论坛协作)" },
+          "class": { "type": "sentiment", "title": "Forum Engine (论坛主持人)" },
           "inputs": [
-            { "property": "initialTopic", "title": "初始话题", "isStatic": true },
-            { "property": "newMessages", "mode": 3, "title": "新消息", "isStatic": true },
-            { "property": "maxRounds", "title": "最大轮数", "isStatic": true }
+            { "property": "speechesText", "title": "发言记录", "isStatic": true }
           ],
           "outputs": [
-            { "property": "chatHistory", "title": "对话历史（数组）", "isStatic": true, "isSubject": true },
-            { "property": "historyText", "title": "对话历史（文本）", "isStatic": true, "isSubject": true },
-            { "property": "currentRound", "title": "当前轮次", "isStatic": true, "isSubject": true }
+            { "property": "systemPrompt", "title": "系统提示词", "isStatic": true, "isSubject": true },
+            { "property": "temperature", "title": "温度", "isStatic": true, "isSubject": true },
+            { "property": "top_p", "title": "topP", "isStatic": true, "isSubject": true }
           ],
           "states": []
         }
       },
       {
         "id": "report-agent",
-        "type": "LlmTextAgentAst",
+        "type": "ReportAgentAst",
         "count": 0,
         "emitCount": 0,
         "state": "pending",
         "width": 300,
         "height": 200,
-        "position": { "x": 1300, "y": 250 },
-        "system": [],
-        "prompt": [],
-        "temperature": 0.5,
-        "model": "deepseek-ai/DeepSeek-V3",
-        "text": "",
-        "username": "Report Agent",
-        "profile": "智能报告生成Agent，负责整合所有分析结果，生成结构化的舆情分析报告",
+        "position": { "x": 1450, "y": 250 },
+        "topic": "",
+        "discussionHistory": [],
+        "report": "",
         "metadata": {
-          "class": { "type": "llm", "title": "Report Agent (报告生成)" },
+          "class": { "type": "sentiment", "title": "Report Agent (报告生成)" },
           "inputs": [
-            { "property": "system", "mode": 1, "title": "系统提示词", "type": "textarea", "isStatic": true },
-            { "property": "prompt", "mode": 1, "title": "分析内容", "type": "textarea", "isStatic": true },
-            { "property": "temperature", "title": "温度", "isStatic": true },
-            { "property": "model", "title": "模型", "isStatic": true }
+            { "property": "topic", "title": "分析主题", "isStatic": true },
+            { "property": "discussionHistory", "mode": 1, "title": "讨论记录", "isStatic": true }
           ],
           "outputs": [
-            { "property": "text", "title": "分析报告", "isStatic": true, "isSubject": true },
-            { "property": "username", "title": "Agent名", "isStatic": true, "isSubject": true },
-            { "property": "profile", "title": "Agent介绍", "isStatic": true, "isSubject": true }
+            { "property": "report", "title": "舆情报告", "isStatic": true, "isSubject": true },
+            { "property": "systemPrompt", "title": "系统提示词", "isStatic": true, "isSubject": true }
           ],
-          "states": []
-        }
-      },
-      {
-        "id": "system-prompt-report",
-        "type": "TextAreaAst",
-        "count": 0,
-        "emitCount": 0,
-        "state": "pending",
-        "width": 320,
-        "height": 200,
-        "input": "你是 Report Agent，一个专业的舆情报告撰写专家。\n\n你的职责：\n1. 整合 Query Agent、Media Agent、Insight Agent 的分析结果\n2. 综合论坛讨论中的观点碰撞和共识\n3. 生成结构化的舆情分析报告\n\n报告结构：\n## 1. 执行摘要\n## 2. 舆情概况\n## 3. 多维度分析\n  - 3.1 新闻媒体分析\n  - 3.2 多媒体内容分析\n  - 3.3 数据洞察分析\n## 4. 情感分析\n## 5. 风险评估\n## 6. 建议与对策\n## 7. 趋势预测",
-        "position": { "x": 1300, "y": 50 },
-        "metadata": {
-          "class": { "type": "basic", "title": "Report Agent 系统提示词" },
-          "inputs": [{ "property": "input", "title": "输入", "type": "textarea", "isStatic": true }],
-          "outputs": [{ "property": "output", "title": "输出", "isStatic": true, "isSubject": true }],
           "states": []
         }
       },
@@ -261,7 +184,7 @@
         "state": "pending",
         "width": 280,
         "height": 120,
-        "position": { "x": 1700, "y": 280 },
+        "position": { "x": 1800, "y": 280 },
         "messages": [],
         "output": "",
         "metadata": {
@@ -274,108 +197,104 @@
     ],
     "edges": [
       {
-        "id": "edge-input-to-query",
+        "id": "edge-input-to-keyword",
         "from": "input-user-query",
+        "to": "keyword-agent",
+        "fromProperty": "output",
+        "toProperty": "userQuery",
+        "type": "data"
+      },
+      {
+        "id": "edge-keyword-to-query",
+        "from": "keyword-agent",
         "to": "agent-query",
-        "fromProperty": "output",
-        "toProperty": "prompt",
+        "fromProperty": "coreKeywords",
+        "toProperty": "topic",
         "type": "data"
       },
       {
-        "id": "edge-input-to-media",
-        "from": "input-user-query",
+        "id": "edge-keyword-to-media",
+        "from": "keyword-agent",
         "to": "agent-media",
-        "fromProperty": "output",
-        "toProperty": "prompt",
+        "fromProperty": "coreKeywords",
+        "toProperty": "topic",
         "type": "data"
       },
       {
-        "id": "edge-input-to-insight",
-        "from": "input-user-query",
+        "id": "edge-keyword-to-insight",
+        "from": "keyword-agent",
         "to": "agent-insight",
-        "fromProperty": "output",
-        "toProperty": "prompt",
-        "type": "data"
-      },
-      {
-        "id": "edge-system-to-query",
-        "from": "system-prompt-query",
-        "to": "agent-query",
-        "fromProperty": "output",
-        "toProperty": "system",
-        "type": "data"
-      },
-      {
-        "id": "edge-system-to-media",
-        "from": "system-prompt-media",
-        "to": "agent-media",
-        "fromProperty": "output",
-        "toProperty": "system",
-        "type": "data"
-      },
-      {
-        "id": "edge-system-to-insight",
-        "from": "system-prompt-insight",
-        "to": "agent-insight",
-        "fromProperty": "output",
-        "toProperty": "system",
+        "fromProperty": "coreKeywords",
+        "toProperty": "topic",
         "type": "data"
       },
       {
         "id": "edge-query-to-forum",
         "from": "agent-query",
         "to": "forum-engine",
-        "fromProperty": "text",
-        "toProperty": "newMessages",
+        "fromProperty": "analysisResult",
+        "toProperty": "speechesText",
         "type": "data"
       },
       {
         "id": "edge-media-to-forum",
         "from": "agent-media",
         "to": "forum-engine",
-        "fromProperty": "text",
-        "toProperty": "newMessages",
+        "fromProperty": "analysisResult",
+        "toProperty": "speechesText",
         "type": "data"
       },
       {
         "id": "edge-insight-to-forum",
         "from": "agent-insight",
         "to": "forum-engine",
-        "fromProperty": "text",
-        "toProperty": "newMessages",
+        "fromProperty": "analysisResult",
+        "toProperty": "speechesText",
         "type": "data"
       },
       {
-        "id": "edge-forum-to-report",
-        "from": "forum-engine",
+        "id": "edge-keyword-to-report",
+        "from": "keyword-agent",
         "to": "report-agent",
-        "fromProperty": "historyText",
-        "toProperty": "prompt",
+        "fromProperty": "coreKeywords",
+        "toProperty": "topic",
         "type": "data"
       },
       {
-        "id": "edge-system-to-report",
-        "from": "system-prompt-report",
+        "id": "edge-query-to-report",
+        "from": "agent-query",
         "to": "report-agent",
-        "fromProperty": "output",
-        "toProperty": "system",
+        "fromProperty": "analysisResult",
+        "toProperty": "discussionHistory",
+        "type": "data"
+      },
+      {
+        "id": "edge-media-to-report",
+        "from": "agent-media",
+        "to": "report-agent",
+        "fromProperty": "analysisResult",
+        "toProperty": "discussionHistory",
+        "type": "data"
+      },
+      {
+        "id": "edge-insight-to-report",
+        "from": "agent-insight",
+        "to": "report-agent",
+        "fromProperty": "analysisResult",
+        "toProperty": "discussionHistory",
         "type": "data"
       },
       {
         "id": "edge-report-to-output",
         "from": "report-agent",
         "to": "output-share",
-        "fromProperty": "text",
+        "fromProperty": "report",
         "toProperty": "messages",
         "type": "data"
       }
     ],
     "entryNodeIds": [
-      "input-user-query",
-      "system-prompt-query",
-      "system-prompt-media",
-      "system-prompt-insight",
-      "system-prompt-report"
+      "input-user-query"
     ],
     "endNodeIds": [
       "output-share"
