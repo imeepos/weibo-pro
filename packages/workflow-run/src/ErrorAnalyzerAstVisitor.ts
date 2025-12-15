@@ -90,8 +90,6 @@ ${stepsText}`;
           obs.next({ type: 'node_emit', id: ast.id, property: 'blame', value: ast.blame });
           obs.next({ type: 'node_emit', id: ast.id, property: 'improvement', value: ast.improvement });
 
-          obs.next({ type: 'node_fail', id: ast.id, data: ast });
-
           ast.state = 'success';
           obs.next({ type: 'node_success', id: ast.id, data: ast });
           obs.complete();

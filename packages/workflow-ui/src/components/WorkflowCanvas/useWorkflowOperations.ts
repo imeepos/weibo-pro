@@ -44,6 +44,7 @@ function collectPropertyUpdates(
   metadata?.forEach((item: any) => {
     const propKey = String(item.property)
     if (source[propKey] !== undefined) {
+      console.log(`[collectPropertyUpdates] 收集属性更新: ${propKey} =`, source[propKey]);
       updates[propKey] = source[propKey]
     }
   })
@@ -382,13 +383,21 @@ export function useWorkflowOperations(
 
           onShowToast?.('info', '已取消上一次运行', '开始新的工作流执行')
 
-          // 重置正在运行的节点状态（不可变方式）
+          // 重置正在运行的节点状态（不可变方式），但保留输出字段
           workflow.workflowAst.nodes = workflow.workflowAst.nodes.map(node => {
             if (node.state === 'running') {
+              // 保留输出字段
+              const outputFields: Record<string, any> = {}
+              node.metadata?.outputs?.forEach((output: any) => {
+                if (node[output.property] !== undefined) {
+                  outputFields[output.property] = node[output.property]
+                }
+              })
+
               return Object.assign(
                 Object.create(Object.getPrototypeOf(node)),
                 node,
-                { state: 'pending', error: undefined }
+                { state: 'pending', error: undefined, ...outputFields }
               )
             }
             return node
@@ -462,9 +471,17 @@ export function useWorkflowOperations(
         abortControllerRef.current = abortController
 
         // ✨ 重置所有节点状态为 pending（参考 reactive-scheduler.ts 的 resetWorkflowGraphAst）
-        // 确保进度条从 0% 开始
+        // 确保进度条从 0% 开始，但保留输出字段数据
         workflow.workflowAst.state = 'pending'
         workflow.workflowAst.nodes = workflow.workflowAst.nodes.map(node => {
+          // 保留输出字段（qrcode, account, message 等）
+          const outputFields: Record<string, any> = {}
+          node.metadata?.outputs?.forEach((output: any) => {
+            if (node[output.property] !== undefined) {
+              outputFields[output.property] = node[output.property]
+            }
+          })
+
           return Object.assign(
             Object.create(Object.getPrototypeOf(node)),
             node,
@@ -472,7 +489,8 @@ export function useWorkflowOperations(
               state: 'pending',
               count: 0,
               emitCount: 0,
-              error: undefined
+              error: undefined,
+              ...outputFields
             }
           )
         })
@@ -509,6 +527,15 @@ export function useWorkflowOperations(
           .subscribe({
             next: (event) => {
               console.log('[runWorkflow] 收到事件:', event.type, '节点ID:', event.id)
+
+              // 调试 node_emit 事件
+              if (event.type === 'node_emit') {
+                console.log('[runWorkflow] node_emit 事件详情:', {
+                  id: event.id,
+                  property: (event as any).property,
+                  value: (event as any).value
+                });
+              }
 
               // 处理所有节点事件，包括 running 状态
               if (event.type === 'node_success' || event.type === 'node_fail') {
@@ -725,14 +752,22 @@ export function useWorkflowOperations(
       abortControllerRef.current = null
     }
 
-    // 重置正在运行的节点状态（不可变方式）
+    // 重置正在运行的节点状态（不可变方式），但保留输出字段
     if (workflow.workflowAst) {
       workflow.workflowAst.nodes = workflow.workflowAst.nodes.map(node => {
         if (node.state === 'running') {
+          // 保留输出字段
+          const outputFields: Record<string, any> = {}
+          node.metadata?.outputs?.forEach((output: any) => {
+            if (node[output.property] !== undefined) {
+              outputFields[output.property] = node[output.property]
+            }
+          })
+
           return Object.assign(
             Object.create(Object.getPrototypeOf(node)),
             node,
-            { state: 'pending', error: undefined }
+            { state: 'pending', error: undefined, ...outputFields }
           )
         }
         return node

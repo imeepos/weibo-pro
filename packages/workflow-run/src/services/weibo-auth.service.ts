@@ -114,7 +114,8 @@ export class WeiboAuthService implements OnDestroy {
       ast.message = `登录超时,请重新尝试`
       ast.state = 'fail'
       obs.next({ type: 'node_emit', id: ast.id, property: 'message', value: ast.message })
-      obs.next({ type: 'node_runing', id: ast.id, data: ast })
+      obs.next({ type: 'node_fail', id: ast.id, data: ast })
+      obs.complete()
       this.cleanupSession(sessionId);
     }, this.config.sessionTimeout);
 
@@ -127,17 +128,23 @@ export class WeiboAuthService implements OnDestroy {
     // 启动登录流程
     setImmediate(async () => {
       try {
+        console.log('[WeiboAuthService] 开始导航到登录页面:', this.config.loginUrl);
         await page.goto(this.config.loginUrl, { waitUntil: 'networkidle' });
+        console.log('[WeiboAuthService] 登录页面加载完成');
+
         try {
           await page.waitForSelector('img[src*="qrcode"]', { timeout: 10000 });
+          console.log('[WeiboAuthService] 找到二维码元素');
         } catch (e) {
-          // 二维码元素加载超时，继续流程
+          console.log('[WeiboAuthService] 未找到二维码元素，继续流程');
         }
       } catch (error) {
+        console.error('[WeiboAuthService] 导航失败:', error);
         ast.state = 'fail'
         ast.message = `打开登录页面失败`
         obs.next({ type: 'node_emit', id: ast.id, property: 'message', value: ast.message })
-        obs.next({ type: 'node_runing', id: ast.id, data: ast })
+        obs.next({ type: 'node_fail', id: ast.id, data: ast })
+        obs.complete()
         await this.cleanupSession(sessionId);
       }
     });
@@ -158,13 +165,20 @@ export class WeiboAuthService implements OnDestroy {
       try {
         // 监听二维码生成接口
         if (url.includes('qrcode/image')) {
+          console.log('[WeiboAuthService] 收到 qrcode/image 响应:', url);
           const data = await response.json();
+          console.log('[WeiboAuthService] qrcode/image 响应数据:', data);
 
           if (data.data?.image) {
-            ast.account = undefined;
+            console.log('[WeiboAuthService] 发射 qrcode 事件:', data.data.image);
             ast.qrcode = data.data.image;
-            obs.next({ type: 'node_emit', id: ast.id, property: 'account', value: ast.account })
+            // 只发射 qrcode，让 ImageAst 节点显示二维码
+            obs.next({ type: 'node_emit', id: ast.id, property: 'qrcode', value: ast.qrcode })
+            // 不发射 account 事件，直到登录成功
+            // 最后发射 running 事件
             obs.next({ type: 'node_runing', id: ast.id, data: ast })
+          } else {
+            console.log('[WeiboAuthService] qrcode/image 响应中没有 image 字段:', data.data);
           }
         }
 
@@ -187,7 +201,7 @@ export class WeiboAuthService implements OnDestroy {
               ast.state = 'fail';
               ast.message = `该二维码已过期`
               obs.next({ type: 'node_emit', id: ast.id, property: 'message', value: ast.message })
-              obs.next({ type: 'node_runing', id: ast.id, data: ast })
+              obs.next({ type: 'node_fail', id: ast.id, data: ast })
               obs.complete()
               await this.cleanupSession(ast.id);
             }
@@ -229,14 +243,14 @@ export class WeiboAuthService implements OnDestroy {
           ast.account = account;
           ast.state = 'success'
           obs.next({ type: 'node_emit', id: ast.id, property: 'account', value: ast.account })
-          obs.next({ type: 'node_runing', id: ast.id, data: ast })
+          obs.next({ type: 'node_success', id: ast.id, data: ast })
           obs.complete()
           await this.cleanupSession(ast.id);
         } catch (error) {
           ast.state = 'fail';
           ast.message = `保存账号信息失败`
           obs.next({ type: 'node_emit', id: ast.id, property: 'message', value: ast.message })
-          obs.next({ type: 'node_runing', id: ast.id, data: ast })
+          obs.next({ type: 'node_fail', id: ast.id, data: ast })
           obs.complete();
           await this.cleanupSession(ast.id);
         }

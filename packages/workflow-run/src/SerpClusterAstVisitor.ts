@@ -69,7 +69,9 @@ export class SerpClusterAstVisitor {
                 }
 
                 ast.clusters = result.clusters || [];
-                obs.next({ type: 'node_fail', id: ast.id, data: ast });
+
+                // 发射输出属性
+                obs.next({ type: 'node_emit', id: ast.id, property: 'clusters', value: ast.clusters });
 
                 ast.state = 'success';
                 obs.next({ type: 'node_success', id: ast.id, data: ast });

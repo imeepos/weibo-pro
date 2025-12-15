@@ -302,9 +302,10 @@ export class WorkflowGraphAstVisitor {
                 return;
             }
 
-            let hasError = false;
             let completedCount = 0;
             const totalNodes = allStreams.length;
+            // 追踪每个节点的最终状态（nodeId -> state）
+            const nodeStates = new Map<string, 'success' | 'fail'>();
 
             // 创建一个 Subject 来追踪所有节点的完成
             const completionSubject = new ReplaySubject<void>(1);
@@ -318,15 +319,17 @@ export class WorkflowGraphAstVisitor {
                         // 传递所有事件给观察者
                         obs.next(event);
 
-                        // 检查是否是失败事件
+                        // 追踪节点的最终状态（success 事件会覆盖之前的 fail 状态）
                         if (event.type === 'node_fail') {
-                            hasError = true;
-                            console.log(`[WorkflowGraphAstVisitor] 节点失败: ${event.id}, 已标记 hasError = true`)
+                            nodeStates.set(event.id!, 'fail');
+                            console.log(`[WorkflowGraphAstVisitor] 节点失败: ${event.id}`)
+                        } else if (event.type === 'node_success') {
+                            nodeStates.set(event.id!, 'success');
+                            console.log(`[WorkflowGraphAstVisitor] 节点成功: ${event.id}`)
                         }
                     },
                     error: (err) => {
                         console.error(`[WorkflowGraphAstVisitor] 节点流错误:`, err);
-                        hasError = true;
                         workflow.state = 'fail';
                         workflow.error = err;
                         obs.next({ type: 'node_fail', id: workflow.id, data: workflow });
@@ -356,6 +359,12 @@ export class WorkflowGraphAstVisitor {
             // 监听 completionSubject，当所有节点完成后发射工作流完成事件
             const completionSubscription = completionSubject.subscribe(() => {
                 console.log(`[WorkflowGraphAstVisitor] 所有节点已完成，发射工作流完成事件`)
+
+                // 检查是否有任何节点最终状态为 fail
+                const hasError = Array.from(nodeStates.values()).some(state => state === 'fail');
+                console.log(`[WorkflowGraphAstVisitor] 节点最终状态:`, Object.fromEntries(nodeStates));
+                console.log(`[WorkflowGraphAstVisitor] 工作流最终状态: ${hasError ? 'fail' : 'success'}`);
+
                 workflow.state = hasError ? 'fail' : 'success';
                 const finalEvent: NodeEvent = hasError
                     ? { type: 'node_fail', id: workflow.id, data: workflow }

@@ -126,7 +126,10 @@ ${soundbites}
 
           ast.reasoning = result.reasoning;
           ast.subproblems = result.subproblems;
-          obs.next({ type: 'node_fail', id: ast.id, data: ast });
+
+          // 发出输出事件,传递数据给下游节点
+          obs.next({ type: 'node_emit', id: ast.id, property: 'subproblems', value: ast.subproblems });
+          obs.next({ type: 'node_emit', id: ast.id, property: 'reasoning', value: ast.reasoning });
 
           ast.state = 'success';
           obs.next({ type: 'node_success', id: ast.id, data: ast });
