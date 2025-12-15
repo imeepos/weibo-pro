@@ -23,7 +23,6 @@
  */
 
 import { Ast, Input, IS_MULTI, IS_BUFFER, Node, Output } from "@sker/workflow";
-import { BehaviorSubject } from "rxjs";
 
 /**
  * Agent 配置（保留接口定义供未来扩展）

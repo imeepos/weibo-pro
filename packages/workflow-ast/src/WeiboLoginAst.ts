@@ -1,6 +1,5 @@
 import { Ast, Node, Output, State } from "@sker/workflow";
 import type { WeiboAccountEntity } from "@sker/entities";
-import { BehaviorSubject } from 'rxjs';
 
 /**
  * 我需要重新设计 WeiboLoginAst
@@ -23,7 +22,7 @@ import { BehaviorSubject } from 'rxjs';
 export class WeiboLoginAst extends Ast {
 
     @Output({ title: '微博账号', isRouter: true })
-    account = new BehaviorSubject<WeiboAccountEntity | undefined>(undefined);
+    account = ``;
 
     @Output({ title: '登录二维码', isRouter: true })
     qrcode = null;

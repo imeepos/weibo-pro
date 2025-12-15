@@ -1,5 +1,4 @@
 import { Ast, Input, Node, Output, State, IS_MULTI } from "@sker/workflow";
-import { BehaviorSubject } from "rxjs";
 
 @Node({
   title: '错误分析器',

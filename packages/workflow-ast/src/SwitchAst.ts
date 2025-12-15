@@ -1,5 +1,4 @@
 import { Ast, Node, Input, Output } from '@sker/workflow'
-import { BehaviorSubject } from 'rxjs'
 
 @Node({ title: '分支路由器', type: 'control', dynamicOutputs: true })
 export class SwitchAst extends Ast {
@@ -7,7 +6,7 @@ export class SwitchAst extends Ast {
     value: any = undefined
 
     @Output({ title: 'Default', isRouter: true, condition: 'true' })
-    output_default = new BehaviorSubject<any>(undefined)
+    output_default = ``
 
     type: 'SwitchAst' = 'SwitchAst'
 

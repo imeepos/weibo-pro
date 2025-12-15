@@ -1,5 +1,4 @@
 import { Ast, Input, Node, Output, State } from "@sker/workflow";
-import { BehaviorSubject } from 'rxjs';
 
 @Node({
     title: "微博转发",

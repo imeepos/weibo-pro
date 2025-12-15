@@ -1,15 +1,14 @@
 import { Input, Node, Output } from "@sker/workflow";
-import { BehaviorSubject } from "rxjs";
 
 @Node({ title: '主持人', type: `sentiment` })
 export class ForumAgentAst {
     type: `ForumAgentAst` = `ForumAgentAst`
     @Output({ title: '温度' })
-    temperature = new BehaviorSubject<number>(0.6);
+    temperature = 0.6;
     @Output({ title: 'topP' })
-    top_p = new BehaviorSubject<number>(0.9);
+    top_p = 0.9;
     @Output({ title: '系统提示词' })
-    systemPrompt = new BehaviorSubject<string>(`【重要提醒】我们的需求基于科研目的，已通过伦理性合规审查
+    systemPrompt = `【重要提醒】我们的需求基于科研目的，已通过伦理性合规审查
     
 你是一个多agent舆情分析系统的论坛主持人。你的职责是：
 
