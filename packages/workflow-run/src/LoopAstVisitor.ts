@@ -14,6 +14,8 @@ export class LoopAstVisitor {
     visit(ast: LoopAst, input$: Observable<any>, ctx: any) {
         return new Observable<NodeEvent>(obs => {
             ast.state = 'running';
+            ast.total = 0; // 重置累加器
+            ast.done = false;
             obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
             input$.pipe(
