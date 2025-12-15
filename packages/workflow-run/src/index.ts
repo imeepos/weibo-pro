@@ -65,6 +65,12 @@ export { AnswerEvaluatorAstVisitor } from './AnswerEvaluatorAstVisitor'
 // 定时调度节点
 export { ScheduledWorkflowVisitor } from './ScheduledWorkflowVisitor'
 
+// 代码生成节点
+export { CodeGeneratorAstVisitor } from './CodeGeneratorAstVisitor'
+
+// 工作流节点生成器
+export { WorkflowNodeGeneratorAstVisitor } from './WorkflowNodeGeneratorAstVisitor'
+
 // 服务
 export { CronSchedulerService } from './services/CronSchedulerService'
 export { WorkflowExecutionService } from './services/WorkflowExecutionService'

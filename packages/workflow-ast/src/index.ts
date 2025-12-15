@@ -74,3 +74,9 @@ export { SerpClusterAst } from './SerpClusterAst'
 
 // 定时调度节点
 export { ScheduledWorkflowAst } from './ScheduledWorkflowAst'
+
+// 代码生成节点
+export { CodeGeneratorAst } from './CodeGeneratorAst'
+
+// 工作流节点生成器
+export { WorkflowNodeGeneratorAst } from './WorkflowNodeGeneratorAst'
