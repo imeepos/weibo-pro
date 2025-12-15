@@ -10,10 +10,10 @@ import { Ast, Input, IS_BUFFER, IS_MULTI, Node, Output } from "@sker/workflow";
 })
 export class LlmTextToImageAst extends Ast {
 
-    @Input({ mode: IS_MULTI | IS_BUFFER, title: '文本' })
+    @Input({ mode: IS_MULTI | IS_BUFFER, title: '文本', defaultValue: [] })
     text: string[] = [];
 
-    @Output({ title: '图片' })
+    @Output({ title: '图片', defaultValue: '' })
     image = ``
 
     type: `LlmTextToImageAst` = `LlmTextToImageAst`

@@ -10,9 +10,9 @@ import { Ast, Input, Node, Output, State } from "@sker/workflow";
 })
 export class WeiboAjaxStatusesLikeShowAst extends Ast {
 
-    @Input({ title: "帖子ID" })
+    @Input({ title: "帖子ID", defaultValue: '' })
     mid: string = ``;
-    @Input({ title: "用户ID" })
+    @Input({ title: "用户ID", defaultValue: '' })
     uid: string = ``;
 
     @State({ title: "页码" })
@@ -27,7 +27,7 @@ export class WeiboAjaxStatusesLikeShowAst extends Ast {
     @State({ title: "态度启用" })
     attitude_enable: number = 1;
 
-    @Output({ title: '结束' })
+    @Output({ title: '结束', defaultValue: false })
     is_end = false;
 
     type: `WeiboAjaxStatusesLikeShowAst` = `WeiboAjaxStatusesLikeShowAst`

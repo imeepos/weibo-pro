@@ -20,7 +20,7 @@ export interface RetrievedMemory {
 export class PersonaAst extends Ast {
 
   @State({ title: '角色ID' })
-  personaId?: string;
+  roleId?: string;
 
   @State({ title: '角色名称' })
   personaName?: string;
@@ -28,19 +28,19 @@ export class PersonaAst extends Ast {
   @State({ title: '角色头像' })
   personaAvatar?: string;
 
-  @Input({ title: '刺激/线索', mode: IS_MULTI })
+  @Input({ title: '刺激/线索', mode: IS_MULTI, defaultValue: [] })
   stimuli: string[] = [];
 
-  @Input({ title: '检索深度' })
+  @Input({ title: '检索深度', defaultValue: 3 })
   retrievalDepth: number = 3;
 
-  @Input({ title: '检索超时(秒)' })
+  @Input({ title: '检索超时(秒)', defaultValue: 10 })
   retrievalTimeout: number = 10;
 
-  @Input({ title: '温度' })
+  @Input({ title: '温度', defaultValue: 0.7 })
   temperature: number = 0.7;
 
-  @Input({ title: '模型' })
+  @Input({ title: '模型', defaultValue: 'deepseek-ai/DeepSeek-V3' })
   model: string = 'deepseek-ai/DeepSeek-V3';
 
   @State({ title: '检索到的记忆' })
@@ -49,10 +49,10 @@ export class PersonaAst extends Ast {
   @State({ title: '上下文' })
   context: string = '';
 
-  @Output({ title: '回复' })
+  @Output({ title: '回复', defaultValue: '' })
   response = ``
 
-  @Output({ title: '新记忆ID' })
+  @Output({ title: '新记忆ID', defaultValue: '' })
   newMemoryId = ``
 
   type: 'PersonaAst' = 'PersonaAst';

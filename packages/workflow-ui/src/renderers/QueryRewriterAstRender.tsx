@@ -56,7 +56,7 @@ const QueryRewriterRender: React.FC<{ ast: QueryRewriterAst }> = ({ ast }) => {
           <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
             子查询（{queries.length}）
           </div>
-          <div className="space-y-1.5 max-h-64 overflow-y-auto">
+          <div className="space-y-1.5">
             {queries.map((q: string, i: number) => (
               <QueryItem key={i} query={q} index={i} />
             ))}

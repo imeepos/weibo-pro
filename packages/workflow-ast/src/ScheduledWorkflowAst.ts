@@ -19,37 +19,37 @@ import { Ast, Input, Output, Node, State } from '@sker/workflow'
   errorStrategy: 'skip'
 })
 export class ScheduledWorkflowAst extends Ast {
-  @Input({ title: '工作流名称', type: 'text' })
+  @Input({ title: '工作流名称', type: 'text', defaultValue: '' })
   workflowName: string = ''
 
-  @Input({ title: '调度名称', type: 'text' })
+  @Input({ title: '调度名称', type: 'text', defaultValue: '' })
   scheduleName: string = ''
 
-  @Input({ title: '调度类型', type: 'select' })
+  @Input({ title: '调度类型', type: 'select', defaultValue: 'cron' })
   scheduleType: 'cron' | 'interval' | 'once' = 'cron'
 
-  @Input({ title: 'Cron 表达式', type: 'text' })
+  @Input({ title: 'Cron 表达式', type: 'text', defaultValue: '0 * * * *' })
   cronExpression?: string = '0 * * * *'
 
-  @Input({ title: '间隔秒数', type: 'number' })
+  @Input({ title: '间隔秒数', type: 'number', defaultValue: 3600 })
   intervalSeconds?: number = 3600
 
-  @Input({ title: '开始时间', type: 'date' })
+  @Input({ title: '开始时间', type: 'date', defaultValue: null })
   startTime?: Date
 
-  @Input({ title: '结束时间', type: 'date' })
+  @Input({ title: '结束时间', type: 'date', defaultValue: null })
   endTime?: Date
 
-  @Input({ title: '输入参数（JSON）', type: 'text' })
+  @Input({ title: '输入参数（JSON）', type: 'text', defaultValue: '{}' })
   inputs?: string = '{}'
 
-  @Input({ title: '是否启用', type: 'boolean' })
+  @Input({ title: '是否启用', type: 'boolean', defaultValue: true })
   enabled: boolean = true
 
-  @Output({ title: '调度ID' })
+  @Output({ title: '调度ID', defaultValue: '' })
   scheduleId = ``
 
-  @Output({ title: '下次执行时间' })
+  @Output({ title: '下次执行时间', defaultValue: '' })
   nextRunAt: Date | string | undefined = ``
 
   @State({ title: '状态' })

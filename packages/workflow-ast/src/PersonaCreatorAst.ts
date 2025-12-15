@@ -11,13 +11,13 @@ import type { PersonaMetadata, PersonaDestiny } from "@sker/entities";
 })
 export class PersonaCreatorAst extends Ast {
 
-  @Input({ title: '角色描述', type: 'textarea', mode: IS_MULTI })
+  @Input({ title: '角色描述', type: 'textarea', mode: IS_MULTI, defaultValue: [] })
   descriptions: string[] = [];
 
-  @Input({ title: '温度' })
+  @Input({ title: '温度', defaultValue: 0.7 })
   temperature: number = 0.7;
 
-  @Input({ title: '模型' })
+  @Input({ title: '模型', defaultValue: 'deepseek-ai/DeepSeek-V3' })
   model: string = 'deepseek-ai/DeepSeek-V3';
 
   @State({ title: '生成的角色名' })
@@ -41,10 +41,10 @@ export class PersonaCreatorAst extends Ast {
   @State({ title: '生成的命运' })
   generatedDestiny?: PersonaDestiny;
 
-  @Output({ title: '角色ID' })
+  @Output({ title: '角色ID', defaultValue: '' })
   personaId = ``;
 
-  @Output({ title: '角色名' })
+  @Output({ title: '角色名', defaultValue: '' })
   personaName = ``;
 
   type: 'PersonaCreatorAst' = 'PersonaCreatorAst';

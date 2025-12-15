@@ -4,13 +4,13 @@ import type { CompleteAnalysisResult } from '@sker/nlp';
 
 @Node({ title: '事件自动创建器', type: 'crawler' })
 export class EventAutoCreatorAst extends Ast {
-  @Input({ title: 'NLP 分析结果' })
+  @Input({ title: 'NLP 分析结果', defaultValue: null })
   nlpResult!: CompleteAnalysisResult;
 
-  @Input({ title: '帖子实体' })
+  @Input({ title: '帖子实体', defaultValue: null })
   post!: WeiboPostEntity;
 
-  @Output({ title: '结束' })
+  @Output({ title: '结束', defaultValue: false })
   is_end = false;
 
   type: 'EventAutoCreatorAst' = 'EventAutoCreatorAst';

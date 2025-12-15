@@ -10,10 +10,10 @@ import { Ast, Input, Node, Output } from "@sker/workflow";
 })
 export class WeiboAjaxProfileInfoAst extends Ast {
 
-    @Input({ title: "用户ID" })
+    @Input({ title: "用户ID", defaultValue: '' })
     uid: string = ``;
 
-    @Output({ title: '是否结束' })
+    @Output({ title: '是否结束', defaultValue: false })
     isEnd = false;
 
     type: `WeiboAjaxProfileInfoAst` = `WeiboAjaxProfileInfoAst`

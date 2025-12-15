@@ -2,10 +2,10 @@ import { Ast, Node, Input, Output } from '@sker/workflow'
 
 @Node({ title: '分支路由器', type: 'control', dynamicOutputs: true })
 export class SwitchAst extends Ast {
-    @Input({ title: '输入值' })
+    @Input({ title: '输入值', defaultValue: undefined })
     value: any = undefined
 
-    @Output({ title: 'Default', isRouter: true, condition: 'true' })
+    @Output({ title: 'Default', isRouter: true, condition: 'true', defaultValue: '' })
     output_default = ``
 
     type: 'SwitchAst' = 'SwitchAst'

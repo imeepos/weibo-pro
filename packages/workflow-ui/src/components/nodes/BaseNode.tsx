@@ -113,6 +113,7 @@ export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNodeType
       onToggleCollapse={toggleCollapse}
       onContextMenu={handleContextMenu}
       onDoubleClick={handleDoubleClick}
+      className={`${data.type}`}
     >
       {CustomRender}
     </WorkflowNode>

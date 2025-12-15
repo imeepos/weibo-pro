@@ -11,10 +11,10 @@ import { BehaviorSubject } from "rxjs";
  */
 @Node({ title: '视频', type: 'basic' })
 export class VideoAst extends Ast {
-    @Input({ title: '视频', type: 'video' })
+    @Input({ title: '视频', type: 'video', defaultValue: '' })
     uploadedVideo: string = '';
     // 注意：不使用BehaviorSubject
-    @Output({ title: '视频' })
+    @Output({ title: '视频', defaultValue: '' })
     video = ``;
 
     type: 'VideoAst' = 'VideoAst';

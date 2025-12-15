@@ -712,3 +712,96 @@ export function extractEndNodeOutputs(nodes: INode[], endNodeIds: string[]): Rec
 
     return outputs;
 }
+
+// ============================================
+// 节点默认值重置工具函数
+// ============================================
+
+/**
+ * 重置节点的输入和输出为默认值
+ *
+ * 优雅设计：
+ * - 防止上次执行的残留数据影响本次执行
+ * - 从装饰器元数据中读取 defaultValue
+ * - 如果未定义 defaultValue，使用类型推断的默认值
+ * - 原地修改节点对象（性能优化）
+ *
+ * @param node 要重置的节点
+ */
+export function resetNodeToDefaults(node: INode): void {
+    try {
+        const ctor = findNodeType(node.type);
+        if (!ctor) return;
+
+        // 重置所有 @Input 属性
+        const inputMetadatas = root.get(INPUT, []);
+        const nodeInputs = inputMetadatas.filter((meta: any) => meta.target === ctor);
+
+        for (const inputMeta of nodeInputs) {
+            const property = String(inputMeta.propertyKey);
+            const defaultValue = inputMeta.defaultValue;
+
+            if (defaultValue !== undefined) {
+                (node as any)[property] = cloneDefaultValue(defaultValue);
+            }
+        }
+
+        // 重置所有 @Output 属性
+        const outputMetadatas = root.get(OUTPUT, []);
+        const nodeOutputs = outputMetadatas.filter((meta: any) => meta.target === ctor);
+
+        for (const outputMeta of nodeOutputs) {
+            const property = String(outputMeta.propertyKey);
+            const defaultValue = outputMeta.defaultValue;
+
+            if (defaultValue !== undefined) {
+                (node as any)[property] = cloneDefaultValue(defaultValue);
+            }
+        }
+    } catch (error) {
+        console.warn(`[resetNodeToDefaults] 重置节点 ${node.id} 默认值失败:`, error);
+    }
+}
+
+/**
+ * 克隆默认值（防止引用类型污染）
+ *
+ * 优雅设计：
+ * - 基本类型直接返回
+ * - 引用类型深拷贝
+ * - 特殊处理 Date 对象
+ */
+function cloneDefaultValue(value: any): any {
+    if (value === null || value === undefined) {
+        return value;
+    }
+
+    // 基本类型
+    if (typeof value !== 'object') {
+        return value;
+    }
+
+    // Date 对象
+    if (value instanceof Date) {
+        return new Date(value);
+    }
+
+    // 数组
+    if (Array.isArray(value)) {
+        return value.map(item => cloneDefaultValue(item));
+    }
+
+    // 普通对象
+    try {
+        if (typeof structuredClone !== 'undefined') {
+            return structuredClone(value);
+        }
+    } catch { }
+
+    // 回退到 JSON 深拷贝
+    try {
+        return JSON.parse(JSON.stringify(value));
+    } catch {
+        return value;
+    }
+}

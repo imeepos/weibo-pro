@@ -19,10 +19,10 @@ export interface EvaluationResult {
 })
 export class AnswerEvaluatorAst extends Ast {
 
-  @Input({ title: '问题', type: 'textarea' })
+  @Input({ title: '问题', type: 'textarea', defaultValue: '' })
   question: string = '';
 
-  @Input({ title: '答案', type: 'textarea' })
+  @Input({ title: '答案', type: 'textarea', defaultValue: '' })
   answer: string = '';
 
   @State({ title: '评估类型' })
@@ -34,13 +34,13 @@ export class AnswerEvaluatorAst extends Ast {
   @State({ title: '模型' })
   model: string = 'deepseek-ai/DeepSeek-V3';
 
-  @Output({ title: '评估结果' })
+  @Output({ title: '评估结果', defaultValue: [] })
   results: EvaluationResult[] = [];
 
-  @Output({ title: '是否通过' })
+  @Output({ title: '是否通过', defaultValue: false })
   passed = false;
 
-  @Output({ title: '总分' })
+  @Output({ title: '总分', defaultValue: 0 })
   totalScore = 0;
 
   type: 'AnswerEvaluatorAst' = 'AnswerEvaluatorAst';

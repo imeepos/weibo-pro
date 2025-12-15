@@ -9,14 +9,14 @@ import { Ast, Input, Node, Output } from "@sker/workflow";
     retryBackoff: 2
 })
 export class WeiboAjaxStatusesShowAst extends Ast {
-    @Input({ title: "帖子短id" })
+    @Input({ title: "帖子短id", defaultValue: '' })
     mblogid: string = '';
 
-    @Output({ title: "用户ID" })
-    @Input({ title: "用户ID" })
+    @Output({ title: "用户ID", defaultValue: '' })
+    @Input({ title: "用户ID", defaultValue: '' })
     uid = '';
 
-    @Output({ title: '帖子id' })
+    @Output({ title: '帖子id', defaultValue: '' })
     mid = ``;
 
     type: `WeiboAjaxStatusesShowAst` = `WeiboAjaxStatusesShowAst`

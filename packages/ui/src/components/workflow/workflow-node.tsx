@@ -193,6 +193,7 @@ const WorkflowNodeComponent = ({
     <Collapsible
       open={!collapsed}
       onOpenChange={(open) => onToggleCollapse?.()}
+      key={id}
       asChild
     >
       <div
@@ -240,7 +241,7 @@ const WorkflowNodeComponent = ({
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium text-foreground truncate">{label}</div>
+            <div className={`text-sm font-medium text-foreground truncate ${type}`}>{label}</div>
             {description && !collapsed && (
               <div className="text-xs text-muted-foreground truncate mt-0.5">
                 {description}
@@ -310,7 +311,7 @@ const WorkflowNodeComponent = ({
             )}
 
             {/* 自定义内容 */}
-            <div className="relative overflow-auto w-full h-full max-h-[380px] px-2">
+            <div className="relative overflow-auto w-full max-h-[260px] px-2">
               {children}
             </div>
           </div>

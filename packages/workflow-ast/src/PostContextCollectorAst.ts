@@ -7,19 +7,19 @@ import type {
 
 @Node({ title: '帖子上下文收集器', type: 'crawler' })
 export class PostContextCollectorAst extends Ast {
-  @Input({ title: '帖子ID' })
+  @Input({ title: '帖子ID', defaultValue: '' })
   postId: string = '';
 
-  @Input({ isMulti: true, title: '开始' })
+  @Input({ isMulti: true, title: '开始', defaultValue: [] })
   canStart: boolean[] = [];
 
-  @Output({ title: '帖子实体' })
+  @Output({ title: '帖子实体', defaultValue: '' })
   post: WeiboPostEntity | string = ``;
 
-  @Output({ title: '评论列表' })
+  @Output({ title: '评论列表', defaultValue: [] })
   comments: WeiboCommentEntity[] = [];
 
-  @Output({ title: '转发列表' })
+  @Output({ title: '转发列表', defaultValue: [] })
   reposts: WeiboRepostEntity[] = [];
 
   type: 'PostContextCollectorAst' = 'PostContextCollectorAst';

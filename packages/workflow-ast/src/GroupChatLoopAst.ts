@@ -49,24 +49,24 @@ export class GroupChatLoopAst extends Ast {
 
     // === 输入配置 ===
 
-    @Input({ title: '初始话题' })
+    @Input({ title: '初始话题', defaultValue: '讨论人工智能的未来发展' })
     initialTopic: string = '讨论人工智能的未来发展';
 
-    @Input({ mode: IS_BUFFER | IS_MULTI, title: '新消息' })
+    @Input({ mode: IS_BUFFER | IS_MULTI, title: '新消息', defaultValue: [] })
     newMessages: string[] = [];
 
-    @Input({ title: '最大轮数' })
+    @Input({ title: '最大轮数', defaultValue: 10 })
     maxRounds: number = 10;
 
     // === 运行时状态 ===
 
-    @Output({ title: '对话历史（数组）' })
+    @Output({ title: '对话历史（数组）', defaultValue: [] })
     chatHistory: ChatMessage[] = [];
 
-    @Output({ title: '对话历史（文本）' })
+    @Output({ title: '对话历史（文本）', defaultValue: '' })
     historyText = '';
 
-    @Output({ title: '当前轮次' })
+    @Output({ title: '当前轮次', defaultValue: 0 })
     currentRound = 0;
 
     type: `GroupChatLoopAst` = `GroupChatLoopAst`;

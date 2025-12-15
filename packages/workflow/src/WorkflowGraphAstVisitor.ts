@@ -1,8 +1,8 @@
 import { Injectable, Inject } from '@sker/core';
-import { Observable, EMPTY, merge, defer, ReplaySubject, of, combineLatest, zip, concat } from 'rxjs';
-import { filter, map, finalize, tap, catchError, shareReplay } from 'rxjs/operators';
+import { Observable, EMPTY, merge, defer, ReplaySubject, of, combineLatest, zip, concat, Subject } from 'rxjs';
+import { filter, map, finalize, tap, catchError, shareReplay, buffer, toArray } from 'rxjs/operators';
 import { NodeExecutor } from './executor';
-import { Handler } from './decorator';
+import { Handler, getInputMetadata, hasBufferMode } from './decorator';
 import { WorkflowGraphAst } from './ast';
 import { NodeEmitEvent, NodeEvent } from './execution/events';
 import { EdgeMode, IEdge } from './types';
@@ -85,55 +85,155 @@ export class WorkflowGraphAstVisitor {
                 const eventStream$ = nodeEventStreams.get(edge.from);
                 if (!eventStream$) return;
 
-                eventStream$
-                    .pipe(
+                // 检查目标节点的输入属性是否使用了 IS_BUFFER 模式
+                const targetNode = workflow.nodes.find(n => n.id === targetId);
+                const inputMetadata = targetNode ? getInputMetadata(targetNode, edge.toProperty!) : null;
+                const isBufferMode = inputMetadata && typeof inputMetadata === 'object' && 'mode' in inputMetadata
+                    ? hasBufferMode(inputMetadata.mode)
+                    : false;
+
+                console.log(`[WorkflowGraphAstVisitor] 节点 ${targetId} 的输入 ${String(edge.toProperty)} IS_BUFFER 模式: ${isBufferMode}`);
+
+                if (isBufferMode) {
+                    // IS_BUFFER 模式：使用 buffer 操作符收集所有发射的值
+                    const completionSubject = new Subject<void>();
+
+                    eventStream$
+                        .pipe(
+                            filter((event): event is NodeEmitEvent =>
+                                event.type === 'node_emit' && event.property === edge.fromProperty
+                            ),
+                            map(event => event.value),
+                            buffer(completionSubject),
+                            finalize(() => {
+                                console.log(`[WorkflowGraphAstVisitor] 上游节点 ${edge.from} 完成，完成下游节点 ${targetId} 的 subject`);
+                                if (!targetSubject.closed) {
+                                    targetSubject.complete();
+                                }
+                            })
+                        )
+                        .subscribe(bufferedValues => {
+                            if (bufferedValues.length > 0) {
+                                console.log(`[WorkflowGraphAstVisitor] IS_BUFFER 模式收集到 ${bufferedValues.length} 个值:`, bufferedValues);
+                                targetSubject.next({ [edge.toProperty!]: bufferedValues });
+                            }
+                        });
+
+                    // 监听上游节点完成事件，触发 buffer 发射
+                    eventStream$
+                        .pipe(
+                            filter(event => event.type === 'node_success' || event.type === 'node_fail'),
+                            finalize(() => completionSubject.complete())
+                        )
+                        .subscribe(() => {
+                            console.log(`[WorkflowGraphAstVisitor] 上游节点 ${edge.from} 完成，触发 buffer 发射`);
+                            completionSubject.next();
+                        });
+                } else {
+                    // 普通模式：每次发射立即传递
+                    eventStream$
+                        .pipe(
+                            filter((event): event is NodeEmitEvent =>
+                                event.type === 'node_emit' && event.property === edge.fromProperty
+                            ),
+                            map(event => event.value),
+                            finalize(() => {
+                                console.log(`[WorkflowGraphAstVisitor] 上游节点 ${edge.from} 完成，完成下游节点 ${targetId} 的 subject`);
+                                if (!targetSubject.closed) {
+                                    targetSubject.complete();
+                                }
+                            })
+                        )
+                        .subscribe(value => {
+                            if (value !== null && value !== undefined) {
+                                console.log(`[WorkflowGraphAstVisitor] 边 ${edge.from}(${edge.fromProperty}) -> ${targetId}(${edge.toProperty!}) 发射值:`, value);
+                                targetSubject.next({ [edge.toProperty!]: value });
+                            }
+                        });
+                }
+                return;
+            }
+
+            // 检查目标节点的输入属性是否使用了 IS_BUFFER 模式
+            const targetNode = workflow.nodes.find(n => n.id === targetId);
+            const firstEdge = edges[0]!;
+            const inputMetadata = targetNode ? getInputMetadata(targetNode, firstEdge.toProperty!) : null;
+            const isBufferMode = inputMetadata && typeof inputMetadata === 'object' && 'mode' in inputMetadata
+                ? hasBufferMode(inputMetadata.mode)
+                : false;
+
+            console.log(`[WorkflowGraphAstVisitor] 多边节点 ${targetId} 的输入 ${String(firstEdge.toProperty)} IS_BUFFER 模式: ${isBufferMode}`);
+
+            if (isBufferMode) {
+                // IS_BUFFER 模式：为每条边收集所有发射的值
+                const completionSubjects = edges.map(() => new Subject<void>());
+                const bufferedSources = edges.map((edge, index) => {
+                    const eventStream$ = nodeEventStreams.get(edge.from);
+                    if (!eventStream$) return EMPTY;
+
+                    const completionSubject = completionSubjects[index]!;
+
+                    // 监听上游节点完成事件，触发 buffer 发射
+                    eventStream$
+                        .pipe(
+                            filter(event => event.type === 'node_success' || event.type === 'node_fail')
+                        )
+                        .subscribe(() => {
+                            console.log(`[WorkflowGraphAstVisitor] 多边上游节点 ${edge.from} 完成，触发 buffer 发射`);
+                            completionSubject.next();
+                            completionSubject.complete();
+                        });
+
+                    return eventStream$.pipe(
                         filter((event): event is NodeEmitEvent =>
                             event.type === 'node_emit' && event.property === edge.fromProperty
                         ),
                         map(event => event.value),
-                        finalize(() => {
-                            console.log(`[WorkflowGraphAstVisitor] 上游节点 ${edge.from} 完成，完成下游节点 ${targetId} 的 subject`);
-                            // 当上游节点完成时，完成下游节点的 subject
-                            if (!targetSubject.closed) {
-                                targetSubject.complete();
-                            }
-                        })
-                    )
-                    .subscribe(value => {
-                        if (value !== null && value !== undefined) {
-                            console.log(`[WorkflowGraphAstVisitor] 边 ${edge.from}(${edge.fromProperty}) -> ${targetId}(${edge.toProperty!}) 发射值:`, value);
-                            console.log(`[WorkflowGraphAstVisitor] 准备将数据发送给节点 ${targetId} 的 input$ subject`);
-                            targetSubject.next({ [edge.toProperty!]: value });
+                        buffer(completionSubject)
+                    );
+                });
+
+                // 等待所有边的 buffer 完成后，合并结果
+                const mode = edges[0]?.mode ?? EdgeMode.COMBINE_LATEST;
+                this.mergeEdgeSources(mode, bufferedSources, edges).subscribe({
+                    next: value => {
+                        console.log(`[WorkflowGraphAstVisitor] IS_BUFFER 多边模式收集到值:`, value);
+                        targetSubject.next(value);
+                    },
+                    complete: () => {
+                        console.log(`[WorkflowGraphAstVisitor] 所有上游节点完成，完成节点 ${targetId} 的 subject`);
+                        if (!targetSubject.closed) {
+                            targetSubject.complete();
                         }
-                    });
-                return;
-            }
-
-            const mode = edges[0]?.mode ?? EdgeMode.COMBINE_LATEST;
-            const sources = edges.map(edge => {
-                const eventStream$ = nodeEventStreams.get(edge.from);
-                if (!eventStream$) return EMPTY;
-
-                return eventStream$.pipe(
-                    filter((event): event is NodeEmitEvent =>
-                        event.type === 'node_emit' && event.property === edge.fromProperty
-                    ),
-                    map(event => event.value)
-                );
-            });
-
-            this.mergeEdgeSources(mode, sources, edges).subscribe({
-                next: value => {
-                    targetSubject.next(value);
-                },
-                complete: () => {
-                    console.log(`[WorkflowGraphAstVisitor] 所有上游节点完成，完成节点 ${targetId} 的 subject`);
-                    // 当所有上游节点完成时，完成下游节点的 subject
-                    if (!targetSubject.closed) {
-                        targetSubject.complete();
                     }
-                }
-            });
+                });
+            } else {
+                // 普通模式：每次发射立即传递
+                const mode = edges[0]?.mode ?? EdgeMode.COMBINE_LATEST;
+                const sources = edges.map(edge => {
+                    const eventStream$ = nodeEventStreams.get(edge.from);
+                    if (!eventStream$) return EMPTY;
+
+                    return eventStream$.pipe(
+                        filter((event): event is NodeEmitEvent =>
+                            event.type === 'node_emit' && event.property === edge.fromProperty
+                        ),
+                        map(event => event.value)
+                    );
+                });
+
+                this.mergeEdgeSources(mode, sources, edges).subscribe({
+                    next: value => {
+                        targetSubject.next(value);
+                    },
+                    complete: () => {
+                        console.log(`[WorkflowGraphAstVisitor] 所有上游节点完成，完成节点 ${targetId} 的 subject`);
+                        if (!targetSubject.closed) {
+                            targetSubject.complete();
+                        }
+                    }
+                });
+            }
         });
     }
 

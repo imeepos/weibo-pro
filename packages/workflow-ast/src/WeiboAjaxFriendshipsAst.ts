@@ -10,13 +10,13 @@ import { Ast, Input, Node, Output } from "@sker/workflow";
 })
 export class WeiboAjaxFriendshipsAst extends Ast {
 
-    @Input({ title: "用户ID" })
+    @Input({ title: "用户ID", defaultValue: '' })
     uid: string = ``;
 
-    @Input({ title: "页码" })
+    @Input({ title: "页码", defaultValue: 1 })
     page?: number = 1;
 
-    @Output({ title: '是否结束' })
+    @Output({ title: '是否结束', defaultValue: false })
     isEnd = false;
 
     type: `WeiboAjaxFriendshipsAst` = `WeiboAjaxFriendshipsAst`

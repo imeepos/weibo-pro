@@ -10,13 +10,13 @@ import { Ast, Input, Node, Output } from "@sker/workflow";
 })
 export class WeiboUserDetectionAst extends Ast {
 
-    @Input({ title: '用户id' })
+    @Input({ title: '用户id', defaultValue: '' })
     uid: string = ``
 
-    @Input({ isMulti: true, title: '开始' })
+    @Input({ isMulti: true, title: '开始', defaultValue: [] })
     canStart: boolean[] = [];
 
-    @Output({ title: '结束' })
+    @Output({ title: '结束', defaultValue: false })
     is_end = false;
 
     type: `WeiboUserDetectionAst` = `WeiboUserDetectionAst`

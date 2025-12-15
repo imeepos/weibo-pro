@@ -11,10 +11,10 @@ import { Ast, Input, Node, Output, State } from "@sker/workflow";
 })
 export class WeiboAjaxStatusesCommentAst extends Ast {
 
-    @Input({ title: "帖子ID" })
+    @Input({ title: "帖子ID", defaultValue: '' })
     mid!: string;
 
-    @Input({ title: "用户ID" })
+    @Input({ title: "用户ID", defaultValue: '' })
     uid!: string;
 
     // 默认
@@ -36,7 +36,7 @@ export class WeiboAjaxStatusesCommentAst extends Ast {
     @State({ title: "下一最大ID" })
     next_max_id: number = 0;
 
-    @Output({ title: '结束' })
+    @Output({ title: '结束', defaultValue: false })
     is_end = false;
 
     type: `WeiboAjaxStatusesCommentAst` = `WeiboAjaxStatusesCommentAst`

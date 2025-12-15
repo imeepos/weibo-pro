@@ -59,7 +59,7 @@ const ResearchPlannerRender: React.FC<{ ast: ResearchPlannerAst }> = ({ ast }) =
           <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
             研究子问题（{subproblems.length}）
           </div>
-          <div className="space-y-2 max-h-96 overflow-y-auto">
+          <div className="space-y-2">
             {subproblems.map((problem: string, i: number) => (
               <SubproblemItem key={i} problem={problem} index={i} total={subproblems.length} />
             ))}

@@ -10,10 +10,10 @@ import { Ast, Input, Node, Output } from "@sker/workflow";
 })
 export class AnswerFinalizerAst extends Ast {
 
-    @Input({ title: 'Markdown 初稿', type: 'textarea' })
+    @Input({ title: 'Markdown 初稿', type: 'textarea', defaultValue: '' })
     markdown: string = '';
 
-    @Output({ title: '润色后内容' })
+    @Output({ title: '润色后内容', defaultValue: '' })
     finalized = ``;
 
     type: 'AnswerFinalizerAst' = 'AnswerFinalizerAst';

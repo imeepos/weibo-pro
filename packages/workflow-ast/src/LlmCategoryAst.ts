@@ -10,22 +10,22 @@ import { Ast, Input, IS_MULTI, Node, Output } from "@sker/workflow";
     retryBackoff: 2
 })
 export class LlmCategoryAst extends Ast {
-    @Input({ title: '待分类文本', mode: IS_MULTI })
+    @Input({ title: '待分类文本', mode: IS_MULTI, defaultValue: [] })
     context: string[] = [];
 
-    @Input({ title: '系统提示词', type: 'textarea' })
+    @Input({ title: '系统提示词', type: 'textarea', defaultValue: '你是一个文本分类专家。根据用户提供的文本，判断其所属类别。' })
     system: string = '你是一个文本分类专家。根据用户提供的文本，判断其所属类别。';
 
-    @Input({ title: '温度' })
+    @Input({ title: '温度', defaultValue: 0 })
     temperature: number = 0;
 
-    @Input({ title: '模型' })
+    @Input({ title: '模型', defaultValue: 'deepseek-ai/DeepSeek-V3.2' })
     model: string = 'deepseek-ai/DeepSeek-V3.2';
 
-    @Output({ title: 'Default', isRouter: true })
+    @Output({ title: 'Default', isRouter: true, defaultValue: '' })
     output_default = ``;
 
-    @Output({ title: '原始输出' })
+    @Output({ title: '原始输出', defaultValue: '' })
     rawOutput = ``;
 
     type: 'LlmCategoryAst' = 'LlmCategoryAst';

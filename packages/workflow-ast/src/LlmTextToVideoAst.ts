@@ -10,10 +10,10 @@ import { Ast, Input, IS_BUFFER, IS_MULTI, Node, Output } from "@sker/workflow";
 })
 export class LlmTextToVideoAst extends Ast {
 
-    @Input({ mode: IS_MULTI | IS_BUFFER, title: '文本' })
+    @Input({ mode: IS_MULTI | IS_BUFFER, title: '文本', defaultValue: [] })
     prompt: string[] = [];
 
-    @Output({ title: '视频' })
+    @Output({ title: '视频', defaultValue: '' })
     video = ``
 
     type: `LlmTextToVideoAst` = `LlmTextToVideoAst`

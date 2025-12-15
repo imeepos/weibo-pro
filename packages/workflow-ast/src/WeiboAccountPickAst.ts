@@ -11,7 +11,7 @@ import { BehaviorSubject } from 'rxjs';
 })
 export class WeiboAccountPickAst extends Ast {
 
-    @Input({ title: '扫码登录', isMulti: true })
+    @Input({ title: '扫码登录', isMulti: true, defaultValue: [] })
     scanQrCodeLogin: any[] = [];
 
     @State({ title: '账号列表' })
@@ -26,7 +26,7 @@ export class WeiboAccountPickAst extends Ast {
     @State({ title: '选中账号ID' })
     selectedId?: number;
     // 注意：不使用BehaviorSubject
-    @Output({ title: 'Cookies' })
+    @Output({ title: 'Cookies', defaultValue: '' })
     cookies = ``
 
     type: `WeiboAccountPickAst` = `WeiboAccountPickAst`

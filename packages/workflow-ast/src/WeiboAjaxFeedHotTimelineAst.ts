@@ -12,7 +12,7 @@ import { BehaviorSubject } from 'rxjs';
 })
 export class WeiboAjaxFeedHotTimelineAst extends Ast {
 
-    @Input({ isMulti: true, title: '开始' })
+    @Input({ isMulti: true, title: '开始', defaultValue: [] })
     next: boolean[] = [];
 
     @State({ title: "组ID" })
@@ -36,13 +36,13 @@ export class WeiboAjaxFeedHotTimelineAst extends Ast {
     @State({ title: "刷新" })
     refresh: number = 1;
     // 注意：不使用BehaviorSubject
-    @Output({ title: '帖子短id' })
+    @Output({ title: '帖子短id', defaultValue: '' })
     mblogid = ``;
     // 注意：不使用BehaviorSubject
-    @Output({ title: '用户id' })
+    @Output({ title: '用户id', defaultValue: '' })
     uid = ``;
     // 注意：不使用BehaviorSubject
-    @Output({ title: '结束' })
+    @Output({ title: '结束', defaultValue: false })
     is_end = false;
 
     type: 'WeiboAjaxFeedHotTimelineAst' = 'WeiboAjaxFeedHotTimelineAst';

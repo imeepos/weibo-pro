@@ -14,13 +14,13 @@ export class PromptRoleSkillAst extends Ast {
   @State({ title: '角色ID' })
   roleId?: string;
 
-  @Input({ title: '角色需求', mode: IS_MULTI })
+  @Input({ title: '角色需求', mode: IS_MULTI, defaultValue: [] })
   requirements: string[] = [];
 
-  @Input({ title: '温度' })
+  @Input({ title: '温度', defaultValue: 0.7 })
   temperature: number = 0.7;
 
-  @Input({ title: '模型' })
+  @Input({ title: '模型', defaultValue: 'deepseek-ai/DeepSeek-V3' })
   model: string = 'deepseek-ai/DeepSeek-V3';
 
   @State({ title: '可用技能列表' })
@@ -32,10 +32,10 @@ export class PromptRoleSkillAst extends Ast {
   @State({ title: '技能内容缓存' })
   skillContents: Record<string, string> = {};
 
-  @Output({ title: '选中技能列表' })
+  @Output({ title: '选中技能列表', defaultValue: [] })
   selectedSkillsList: SkillSummary[] = []
 
-  @Output({ title: '技能内容' })
+  @Output({ title: '技能内容', defaultValue: {} })
   skillContent = {}
 
   type: 'PromptRoleSkillAst' = 'PromptRoleSkillAst';

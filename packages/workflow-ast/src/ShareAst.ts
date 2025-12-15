@@ -35,13 +35,13 @@ export class ShareAst extends Ast {
 
     // === 输入：收集所有上游消息 ===
 
-    @Input({ title: '消息输入' })
+    @Input({ title: '消息输入', defaultValue: '' })
     prompt: string = ``;
 
-    @Input({ title: '名称' })
+    @Input({ title: '名称', defaultValue: '' })
     username: string = ``
 
-    @Input({ title: '介绍' })
+    @Input({ title: '介绍', defaultValue: '' })
     profile: string = ``
 
     /**
@@ -52,15 +52,15 @@ export class ShareAst extends Ast {
      * - 避免因节点克隆导致的状态丢失
      * - 新消息会追加到此历史记录中
      */
-    @Input({ title: '历史记录输入', required: false })
+    @Input({ title: '历史记录输入', required: false, defaultValue: [] })
     previousHistory: ChatMessage[] = [];
 
     // === 输出：对话历史 ===
 
-    @Output({ title: '对话历史' })
+    @Output({ title: '对话历史', defaultValue: [] })
     chatHistory: ChatMessage[] = [];
 
-    @Output({ title: '格式化历史' })
+    @Output({ title: '格式化历史', defaultValue: '' })
     formattedHistory: string = ``;
 
     type: `ShareAst` = `ShareAst`

@@ -14,10 +14,10 @@ import { Ast, Input, IS_BUFFER, IS_MULTI, Node, Output } from "@sker/workflow";
 })
 export class LlmTextToAudioAst extends Ast {
 
-    @Input({ title: '文本', mode: IS_BUFFER | IS_MULTI })
+    @Input({ title: '文本', mode: IS_BUFFER | IS_MULTI, defaultValue: [] })
     text: string[] = [];
 
-    @Output({ title: '音频' })
+    @Output({ title: '音频', defaultValue: '' })
     audio = ``
 
     type: `LlmTextToAudioAst` = `LlmTextToAudioAst`

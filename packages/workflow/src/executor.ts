@@ -7,6 +7,7 @@ import { NodeEmitEvent, NodeEvent } from './execution/events';
 import { VisitorExecutor } from './execution/visitor-executor';
 import { Compiler } from './compiler';
 import { clone } from './utils';
+import { resetNodeToDefaults } from './ast-utils';
 
 /**
  * 节点执行器 - 统一的节点执行入口
@@ -39,11 +40,17 @@ export class NodeExecutor {
         // 统一处理：所有节点（包括 WorkflowGraphAst）都通过 VisitorExecutor
         return input$.pipe(
             concatMap(input => {
-                // 将输入赋值给节点
+                // 克隆节点
                 const nodeInstance = this.cloneNode(node);
+
+                // 重置节点为默认值（防止上次执行的残留数据影响本次执行）
+                resetNodeToDefaults(nodeInstance);
+
+                // 将输入赋值给节点
                 if (input && typeof input === 'object') {
                     Object.assign(nodeInstance, input);
                 }
+
                 // 调用 Visitor 执行
                 return this.visitorExecutor.visit(nodeInstance, parent);
             })

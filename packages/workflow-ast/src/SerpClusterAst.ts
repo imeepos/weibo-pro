@@ -22,13 +22,13 @@ export interface SerpCluster {
 })
 export class SerpClusterAst extends Ast {
 
-    @Input({ title: '搜索结果', mode: IS_MULTI })
+    @Input({ title: '搜索结果', mode: IS_MULTI, defaultValue: [] })
     searchResults: SearchSnippet[] = [];
 
-    @Input({ title: '最大集群数' })
+    @Input({ title: '最大集群数', defaultValue: 5 })
     maxClusters: number = 5;
 
-    @Output({ title: '聚类结果' })
+    @Output({ title: '聚类结果', defaultValue: [] })
     clusters = [];
 
     type: 'SerpClusterAst' = 'SerpClusterAst';
