@@ -10,63 +10,71 @@ import { Observable } from 'rxjs'
 @Injectable()
 export class LoopAstVisitor {
     @Handler(LoopAst)
-    handler(ast: LoopAst, ctx: any) {
+    visit(ast: LoopAst, input$: Observable<any>, ctx: any) {
         return new Observable<NodeEvent>(obs => {
-            ast.state = 'running'
+            ast.state = 'running';
             obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
-            let items: any[] = ast.items || []
-            if (!Array.isArray(items)) {
-                items = [items]
-            }
-            items = items.flat().filter(v => v != null)
-
-            const batchSize = Math.max(1, ast.batchSize || 1)
-            const delay = Math.max(0, ast.delay || 0)
-            const total = items.length
-
-            ast.total = total
-            ast.done = false
-            obs.next({ type: 'node_emit', id: ast.id, property: 'total', value: ast.total });
-            obs.next({ type: 'node_emit', id: ast.id, property: 'done', value: ast.done });
-
-            if (total === 0) {
-                ast.done = true
-                obs.next({ type: 'node_emit', id: ast.id, property: 'done', value: ast.done });
-                ast.state = 'success'
-                obs.next({ type: 'node_success', id: ast.id, data: ast });
-                obs.complete()
-                return
-            }
-
-            const emitBatch = (startIndex: number) => {
-                const endIndex = Math.min(startIndex + batchSize, total)
-                const batch = batchSize === 1
-                    ? items[startIndex]
-                    : items.slice(startIndex, endIndex)
-
-                ast.index = startIndex
-                ast.current = batch
-                obs.next({ type: 'node_emit', id: ast.id, property: 'index', value: ast.index });
-                obs.next({ type: 'node_emit', id: ast.id, property: 'current', value: ast.current });
-
-                const nextIndex = endIndex
-                if (nextIndex < total) {
-                    if (delay > 0) {
-                        setTimeout(() => emitBatch(nextIndex), delay)
-                    } else {
-                        emitBatch(nextIndex)
+            input$.subscribe({
+                next: () => {
+                    let items: any[] = ast.items || [];
+                    if (!Array.isArray(items)) {
+                        items = [items];
                     }
-                } else {
-                    ast.done = true
-                    obs.next({ type: 'node_emit', id: ast.id, property: 'done', value: ast.done });
-                    ast.state = 'success'
-                    obs.next({ type: 'node_success', id: ast.id, data: ast });
-                    obs.complete()
-                }
-            }
+                    items = items.flat().filter(v => v != null);
 
-            emitBatch(0)
-        })
+                    const batchSize = Math.max(1, ast.batchSize || 1);
+                    const delay = Math.max(0, ast.delay || 0);
+                    const total = items.length;
+
+                    ast.total = total;
+                    ast.done = false;
+                    obs.next({ type: 'node_emit', id: ast.id, property: 'total', value: ast.total });
+                    obs.next({ type: 'node_emit', id: ast.id, property: 'done', value: ast.done });
+
+                    if (total === 0) {
+                        ast.done = true;
+                        obs.next({ type: 'node_emit', id: ast.id, property: 'done', value: ast.done });
+                        return;
+                    }
+
+                    const emitBatch = (startIndex: number) => {
+                        const endIndex = Math.min(startIndex + batchSize, total);
+                        const batch = batchSize === 1
+                            ? items[startIndex]
+                            : items.slice(startIndex, endIndex);
+
+                        ast.index = startIndex;
+                        ast.current = batch;
+                        obs.next({ type: 'node_emit', id: ast.id, property: 'index', value: ast.index });
+                        obs.next({ type: 'node_emit', id: ast.id, property: 'current', value: ast.current });
+
+                        const nextIndex = endIndex;
+                        if (nextIndex < total) {
+                            if (delay > 0) {
+                                setTimeout(() => emitBatch(nextIndex), delay);
+                            } else {
+                                emitBatch(nextIndex);
+                            }
+                        } else {
+                            ast.done = true;
+                            obs.next({ type: 'node_emit', id: ast.id, property: 'done', value: ast.done });
+                        }
+                    };
+
+                    emitBatch(0);
+                },
+                error: (error) => {
+                    ast.state = 'fail';
+                    obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                    obs.complete();
+                },
+                complete: () => {
+                    ast.state = 'success';
+                    obs.next({ type: 'node_success', id: ast.id, data: ast });
+                    obs.complete();
+                }
+            });
+        });
     }
 }

@@ -32,12 +32,28 @@ export class ScheduledWorkflowVisitor {
   ) {}
 
   @Handler(ScheduledWorkflowAst)
-  visit(ast: ScheduledWorkflowAst, ctx: any): Observable<NodeEvent> {
+  visit(ast: ScheduledWorkflowAst, input$: Observable<any>, ctx: any): Observable<NodeEvent> {
     return new Observable<NodeEvent>((obs) => {
-      const handler = async () => {
-        try {
-          ast.state = 'running'
-          obs.next({ type: 'node_runing', id: ast.id, data: ast })
+      ast.state = 'running';
+      obs.next({ type: 'node_runing', id: ast.id, data: ast });
+
+      input$.subscribe({
+        next: (inputData) => {
+          if (inputData) {
+            Object.keys(inputData).forEach(key => {
+              (ast as any)[key] = inputData[key];
+            });
+          }
+        },
+        error: (error) => {
+          ast.state = 'fail';
+          setAstError(ast, error);
+          obs.next({ type: 'node_fail', id: ast.id, data: ast });
+          obs.complete();
+        },
+        complete: async () => {
+          const handler = async () => {
+            try {
 
           // 解析输入参数
           let inputs: Record<string, unknown> = {}
@@ -128,22 +144,24 @@ export class ScheduledWorkflowVisitor {
             nextRunAt: schedule.nextRunAt
           })
 
-          obs.complete()
-        } catch (error) {
-          logger.error('创建定时工作流失败', {
-            workflowName: ast.workflowName,
-            error: (error as Error).message,
-            stack: (error as Error).stack
-          })
+              obs.complete();
+            } catch (error) {
+              logger.error('创建定时工作流失败', {
+                workflowName: ast.workflowName,
+                error: (error as Error).message,
+                stack: (error as Error).stack
+              });
 
-          ast.state = 'fail'
-          setAstError(ast, error as Error)
-          obs.next({ type: 'node_fail', id: ast.id, data: ast })
-          obs.complete()
+              ast.state = 'fail';
+              setAstError(ast, error as Error);
+              obs.next({ type: 'node_fail', id: ast.id, data: ast });
+              obs.complete();
+            }
+          };
+
+          handler();
         }
-      }
-
-      handler()
-    })
+      });
+    });
   }
 }

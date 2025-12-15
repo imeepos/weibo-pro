@@ -8,27 +8,37 @@ import { Observable } from 'rxjs'
 @Injectable()
 export class MergeAstVisitor {
     @Handler(MergeAst)
-    handler(ast: MergeAst, ctx: any) {
+    visit(ast: MergeAst, input$: Observable<any>, ctx: any) {
         return new Observable<NodeEvent>(obs => {
-            ast.state = 'running'
+            ast.state = 'running';
             obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
-            let inputs = ast.inputs || []
-            if (!Array.isArray(inputs)) {
-                inputs = [inputs]
-            }
+            input$.subscribe({
+                next: () => {
+                    let inputs = ast.inputs || [];
+                    if (!Array.isArray(inputs)) {
+                        inputs = [inputs];
+                    }
 
-            const result = this.merge(inputs, ast.mode)
+                    const result = this.merge(inputs, ast.mode);
 
-            ast.result = result
-            ast.totalCount = result.length
-            obs.next({ type: 'node_emit', id: ast.id, property: 'result', value: ast.result });
-            obs.next({ type: 'node_emit', id: ast.id, property: 'totalCount', value: ast.totalCount });
-
-            ast.state = 'success'
-            obs.next({ type: 'node_success', id: ast.id, data: ast });
-            obs.complete()
-        })
+                    ast.result = result;
+                    ast.totalCount = result.length;
+                    obs.next({ type: 'node_emit', id: ast.id, property: 'result', value: ast.result });
+                    obs.next({ type: 'node_emit', id: ast.id, property: 'totalCount', value: ast.totalCount });
+                },
+                error: (error) => {
+                    ast.state = 'fail';
+                    obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                    obs.complete();
+                },
+                complete: () => {
+                    ast.state = 'success';
+                    obs.next({ type: 'node_success', id: ast.id, data: ast });
+                    obs.complete();
+                }
+            });
+        });
     }
 
     private merge(inputs: any[], mode: MergeMode): any[] {
