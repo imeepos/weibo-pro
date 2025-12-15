@@ -8,45 +8,40 @@ import { useLlmModel } from "./llm-client";
 export class LlmCategoryAstVisitor {
 
     @Handler(LlmCategoryAst)
-    handler(ast: LlmCategoryAst, ctx: WorkflowGraphAst) {
+    visit(ast: LlmCategoryAst, input$: Observable<any>, ctx: WorkflowGraphAst) {
         return new Observable<NodeEvent>((obs) => {
             const abortController = new AbortController();
 
-            const run = async () => {
-                if (abortController.signal.aborted) {
-                    ast.state = 'fail';
-                    setAstError(ast, new Error('工作流已取消'));
-                    obs.next({ type: 'node_fail', id: ast.id, data: ast });
-                    return;
-                }
+            ast.state = 'running';
+            ast.count += 1;
+            obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
-                ast.state = 'running';
-                ast.count += 1;
-                obs.next({ type: 'node_runing', id: ast.id, data: ast });
+            input$.subscribe({
+                next: async () => {
+                    try {
+                        if (abortController.signal.aborted) {
+                            throw new Error('工作流已取消');
+                        }
 
-                const outputs = ast.metadata.outputs.filter(o => o.isRouter);
-                const categories = outputs.map(o => ({
-                    property: o.property,
-                    title: o.title || o.property,
-                    description: o.description || '',
-                    isDefault: o.property === 'output_default'
-                }));
+                        const outputs = ast.metadata.outputs.filter(o => o.isRouter);
+                        const categories = outputs.map(o => ({
+                            property: o.property,
+                            title: o.title || o.property,
+                            description: o.description || '',
+                            isDefault: o.property === 'output_default'
+                        }));
 
-                // 只有 default 一个分类时，直接走 default
-                const nonDefaultCategories = categories.filter(c => !c.isDefault);
-                if (nonDefaultCategories.length === 0) {
-                    obs.next({ type: 'node_emit', id: ast.id, property: 'output_default', value: ast.context });
-                    ast.state = 'success';
-                    obs.next({ type: 'node_success', id: ast.id, data: ast });
-                    obs.complete();
-                    return;
-                }
+                        const nonDefaultCategories = categories.filter(c => !c.isDefault);
+                        if (nonDefaultCategories.length === 0) {
+                            obs.next({ type: 'node_emit', id: ast.id, property: 'output_default', value: ast.context });
+                            return;
+                        }
 
-                const categoryList = categories
-                    .map((c, i) => `${i + 1}. ${c.title}${c.description ? ` - ${c.description}` : ''}`)
-                    .join('\n');
+                        const categoryList = categories
+                            .map((c, i) => `${i + 1}. ${c.title}${c.description ? ` - ${c.description}` : ''}`)
+                            .join('\n');
 
-                const titleList = categories.map(c => c.title).join(' / ');
+                        const titleList = categories.map(c => c.title).join(' / ');
 
                 const prompt = `请从以下类别中选择最匹配的一项（必须选择一个）：
 ${categoryList}
