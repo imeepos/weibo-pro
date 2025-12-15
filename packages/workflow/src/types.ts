@@ -9,7 +9,12 @@ import { BehaviorSubject } from "rxjs";
 import { InputFieldType, NodeType } from "./decorator";
 
 export type IAstStates = `pending` | `running` | `success` | `fail`;
-
+/**
+ * 判断值是否为 BehaviorSubject
+ */
+export function isBehaviorSubject<T = any>(value: unknown): value is BehaviorSubject<T> {
+    return value instanceof BehaviorSubject;
+}
 /**
  * 节点状态类型（简化版，用于状态机）
  * 从 IAstStates 映射而来
@@ -41,13 +46,6 @@ export function isRouteSkipped(value: unknown): boolean {
         return (value as any)._value === ROUTE_SKIPPED;
     }
     return false;
-}
-
-/**
- * 判断值是否为 BehaviorSubject
- */
-export function isBehaviorSubject<T = any>(value: unknown): value is BehaviorSubject<T> {
-    return value instanceof BehaviorSubject;
 }
 
 /**
@@ -102,7 +100,6 @@ export interface INodeOutputMetadata {
     dynamic?: boolean;       // 支持 UI 动态添加输出端口
     condition?: string;      // 条件表达式字符串（如 '$input === 1'）
     isStatic?: boolean;      // 装饰器定义的端口为 true，动态添加的为 false
-    isSubject?: boolean;     // 标识为 BehaviorSubject 类型，序列化时跳过
 }
 export interface INodeStateMetadata {
     propertyKey: string | symbol;
