@@ -689,16 +689,8 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
    * 优雅设计：只要有入度为 0 的起始节点，就认为需要配置
    */
   const hasConfigurableInputs = useCallback(() => {
-    if (!workflow.workflowAst?.nodes || !workflow.workflowAst?.edges) {
-      return false
-    }
-
-    return workflow.workflowAst.nodes.some((node) => {
-      const hasIncomingEdges = workflow.workflowAst!.edges.some(
-        (edge: any) => edge.to === node.id
-      )
-      return !hasIncomingEdges  // 没有输入边 = 起始节点
-    })
+    // 只要有 entryNodeIds，就需要配置
+    return !!(workflow.workflowAst?.entryNodeIds && workflow.workflowAst.entryNodeIds.length > 0)
   }, [workflow])
 
   /**

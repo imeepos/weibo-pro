@@ -69,6 +69,9 @@ export class NodeExecutor {
      */
     private runWorkflow(workflow: WorkflowGraphAst, input$: Observable<any>): Observable<NodeEvent> {
         return defer(() => {
+            // 设置工作流状态为 running
+            workflow.state = 'running';
+
             // 为每个节点创建输入 Subject
             const inputSubjects = new Map<string, ReplaySubject<any>>();
             const nodeEventStreams = new Map<string, Observable<NodeEvent>>();

@@ -163,10 +163,9 @@ export class WorkflowController implements sdk.WorkflowController {
     });
 
     try {
-      const { ast: node, workflow: workflowAst, input = {} } = body;
-      const ast = fromJson(node) as Ast;
-      const workflow = fromJson(workflowAst) as WorkflowGraphAst;
-      const events$ = executeAst(ast, input, workflow)
+      const { ast: workflow, workflow: workflowAst, input = {} } = body;
+      const workflowInstance = fromJson(workflow) as WorkflowGraphAst;
+      const events$ = executeAst(workflowInstance, input, workflowInstance)
       const subscription = events$.subscribe({
         next: (event: NodeEvent) => {
           res.write(`data: ${JSON.stringify(event)}\n\n`);

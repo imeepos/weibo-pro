@@ -200,15 +200,21 @@ export class LlmProxyService {
 
         const durationMs = Date.now() - startTime
 
-        if (response.status === 403 || response.status === 429 || response.status === 401) {
+        if (response.status === 403 || response.status === 401) {
           await this.setScoreToZero(provider.providerId)
           console.warn(`${response.status} 权限错误，健康分清零: ${provider.providerId}`)
         } else if (response.status === 404) {
           await this.setScoreToZero(provider.providerId)
           console.warn(`404 配置错误，健康分清零: ${provider.providerId}`)
+        } else if (response.status === 429 || response.status === 400) {
+          await this.updateScore(provider.providerId, -500)
         } else if (response.status === 500) {
           await this.updateScore(provider.providerId, -1000)
-        } else {
+        } else if (response.status >= 500) {
+          await this.updateScore(provider.providerId, -800)
+        } else if (response.status >= 400) {
+          await this.updateScore(provider.providerId, -300)
+        } else if (response.ok) {
           const penalty = this.calcPenalty(durationMs, contentLength)
           await this.updateScore(provider.providerId, -penalty)
         }
