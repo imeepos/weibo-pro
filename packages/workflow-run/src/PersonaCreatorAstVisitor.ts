@@ -2,7 +2,8 @@ import { Injectable } from '@sker/core';
 import { Handler, NodeEvent, setAstError, WorkflowGraphAst } from '@sker/workflow';
 import { PersonaCreatorAst } from '@sker/workflow-ast';
 import { useEntityManager, PersonaEntity, MemoryEntity, MemoryClosureEntity } from '@sker/entities';
-import { Observable } from 'rxjs';
+import { Observable, from } from 'rxjs';
+import { concatMap, mergeMap } from 'rxjs/operators';
 import { z } from 'zod';
 import { useLlmModel } from './llm-client';
 
@@ -45,8 +46,8 @@ export class PersonaCreatorAstVisitor {
       ast.state = 'running';
       obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
-      input$.subscribe({
-        next: async (inputData) => {
+      const subscription = input$.pipe(
+        concatMap(async (inputData) => {
           ast.emitCount +=1;
           if (inputData) {
             Object.keys(inputData).forEach(key => {
@@ -54,33 +55,25 @@ export class PersonaCreatorAstVisitor {
             });
           }
 
-          try {
-            if (abortController.signal.aborted) {
-              ast.state = 'fail';
-              setAstError(ast, new Error('工作流已取消'));
-              obs.next({ type: 'node_fail', id: ast.id, data: ast });
-              return;
-            }
+          if (abortController.signal.aborted) {
+            throw new Error('工作流已取消');
+          }
 
-            const descriptions = Array.isArray(ast.descriptions) ? ast.descriptions : [ast.descriptions];
-            const prompt = descriptions.filter(Boolean).join('\n');
+          const descriptions = Array.isArray(ast.descriptions) ? ast.descriptions : [ast.descriptions];
+          const prompt = descriptions.filter(Boolean).join('\n');
 
-            if (!prompt.trim()) {
-              ast.state = 'fail';
-              setAstError(ast, new Error('请提供角色描述'));
-              obs.next({ type: 'node_fail', id: ast.id, data: ast });
-              obs.complete();
-              return;
-            }
+          if (!prompt.trim()) {
+            throw new Error('请提供角色描述');
+          }
 
-            const model = useLlmModel({
-              model: ast.model,
-              temperature: ast.temperature,
-            });
+          const model = useLlmModel({
+            model: ast.model,
+            temperature: ast.temperature,
+          });
 
-            const structuredModel = model.withStructuredOutput(PersonaSchema);
+          const structuredModel = model.withStructuredOutput(PersonaSchema);
 
-            const systemPrompt = `你是一位专业的角色设计师。根据用户提供的描述，创建一个详细、立体的角色。
+          const systemPrompt = `你是一位专业的角色设计师。根据用户提供的描述，创建一个详细、立体的角色。
 
 要求：
 1. 名称应当独特且富有意义
@@ -92,74 +85,71 @@ export class PersonaCreatorAstVisitor {
 
 请根据以下描述创建角色：`;
 
-            const result = await structuredModel.invoke([
-              { role: 'system', content: systemPrompt },
-              { role: 'human', content: prompt },
-            ]);
+          const result = await structuredModel.invoke([
+            { role: 'system', content: systemPrompt },
+            { role: 'human', content: prompt },
+          ]);
 
-            if (abortController.signal.aborted) {
-              ast.state = 'fail';
-              setAstError(ast, new Error('工作流已取消'));
-              obs.next({ type: 'node_fail', id: ast.id, data: ast });
-              return;
-            }
-
-            ast.generatedName = result.name;
-            ast.generatedDescription = result.description;
-            ast.generatedBackground = result.background;
-            ast.generatedTraits = result.traits;
-            ast.generatedMetadata = result.metadata || {};
-            ast.generatedDestiny = result.destiny || {};
-            obs.next({ type: 'node_runing', id: ast.id, data: ast });
-
-            await useEntityManager(async (manager) => {
-              const persona = manager.create(PersonaEntity, {
-                name: result.name,
-                description: result.description,
-                background: result.background,
-                traits: result.traits,
-                metadata: result.metadata || {},
-                destiny: result.destiny || {},
-              });
-              await manager.save(persona);
-
-              ast.personaId = persona.id;
-              ast.personaName = persona.name;
-              obs.next({ type: 'node_emit', id: ast.id, property: 'personaId', value: ast.personaId });
-              obs.next({ type: 'node_emit', id: ast.id, property: 'personaName', value: ast.personaName });
-
-              if (result.initialMemories?.length) {
-                for (const mem of result.initialMemories) {
-                  const memory = manager.create(MemoryEntity, {
-                    persona_id: persona.id,
-                    name: mem.name,
-                    description: mem.description,
-                    content: mem.content,
-                    type: mem.type,
-                  });
-                  await manager.save(memory);
-
-                  const selfClosure = manager.create(MemoryClosureEntity, {
-                    ancestor_id: memory.id,
-                    descendant_id: memory.id,
-                    path: [memory.id],
-                    depth: 0,
-                  });
-                  await manager.save(selfClosure);
-                }
-              }
-            });
-
-          } catch (error) {
-            ast.state = 'fail';
-            setAstError(ast, error instanceof Error ? error : new Error(String(error)));
-            obs.next({ type: 'node_fail', id: ast.id, data: ast });
-            obs.complete();
+          if (abortController.signal.aborted) {
+            throw new Error('工作流已取消');
           }
+
+          ast.generatedName = result.name;
+          ast.generatedDescription = result.description;
+          ast.generatedBackground = result.background;
+          ast.generatedTraits = result.traits;
+          ast.generatedMetadata = result.metadata || {};
+          ast.generatedDestiny = result.destiny || {};
+
+          await useEntityManager(async (manager) => {
+            const persona = manager.create(PersonaEntity, {
+              name: result.name,
+              description: result.description,
+              background: result.background,
+              traits: result.traits,
+              metadata: result.metadata || {},
+              destiny: result.destiny || {},
+            });
+            await manager.save(persona);
+
+            ast.personaId = persona.id;
+            ast.personaName = persona.name;
+
+            if (result.initialMemories?.length) {
+              for (const mem of result.initialMemories) {
+                const memory = manager.create(MemoryEntity, {
+                  persona_id: persona.id,
+                  name: mem.name,
+                  description: mem.description,
+                  content: mem.content,
+                  type: mem.type,
+                });
+                await manager.save(memory);
+
+                const selfClosure = manager.create(MemoryClosureEntity, {
+                  ancestor_id: memory.id,
+                  descendant_id: memory.id,
+                  path: [memory.id],
+                  depth: 0,
+                });
+                await manager.save(selfClosure);
+              }
+            }
+          });
+
+          return [
+            { type: 'node_emit' as const, id: ast.id, property: 'personaId', value: ast.personaId },
+            { type: 'node_emit' as const, id: ast.id, property: 'personaName', value: ast.personaName }
+          ];
+        }),
+        mergeMap((events: NodeEvent[]) => from(events))
+      ).subscribe({
+        next: (event: NodeEvent) => {
+          obs.next(event);
         },
         error: (error) => {
           ast.state = 'fail';
-          setAstError(ast, error);
+          setAstError(ast, error instanceof Error ? error : new Error(String(error)));
           obs.next({ type: 'node_fail', id: ast.id, data: ast });
           obs.complete();
         },
@@ -171,6 +161,7 @@ export class PersonaCreatorAstVisitor {
       });
 
       return () => {
+        subscription.unsubscribe();
         abortController.abort();
         obs.complete();
       };

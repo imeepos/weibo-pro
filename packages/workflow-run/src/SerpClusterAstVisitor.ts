@@ -1,7 +1,8 @@
 import { Injectable } from "@sker/core";
 import { Handler, NodeEvent, setAstError, WorkflowGraphAst } from "@sker/workflow";
 import { SerpClusterAst } from "@sker/workflow-ast";
-import { Observable } from "rxjs";
+import { Observable, from } from "rxjs";
+import { concatMap, mergeMap } from "rxjs/operators";
 import { useLlmModel } from "./llm-client";
 
 const SYSTEM_PROMPT = `你是搜索结果分析器，负责将搜索引擎返回的结果分组为有意义的集群。
@@ -38,8 +39,8 @@ export class SerpClusterAstVisitor {
             ast.state = 'running';
             obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
-            input$.subscribe({
-                next: async (inputData) => {
+            const subscription = input$.pipe(
+                concatMap(async (inputData) => {
                     ast.emitCount += 1;
                     if (inputData) {
                         Object.keys(inputData).forEach(key => {
@@ -47,50 +48,43 @@ export class SerpClusterAstVisitor {
                         });
                     }
 
-                    try {
-                        if (abortController.signal.aborted) {
-                            ast.state = 'fail';
-                            setAstError(ast, new Error('工作流已取消'));
-                            obs.next({ type: 'node_fail', id: ast.id, data: ast });
-                            return;
-                        }
-
-                        const model = useLlmModel({ temperature: 0 });
-                        const userContent = JSON.stringify(ast.searchResults, null, 2);
-
-                        const messages = [
-                            { role: 'system' as const, content: SYSTEM_PROMPT + `\n最多生成 ${ast.maxClusters} 个集群。` },
-                            { role: 'user' as const, content: userContent }
-                        ];
-
-                        const response = await model.invoke(messages);
-                        const content = typeof response.content === 'string' ? response.content : JSON.stringify(response.content);
-
-                        const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, content];
-                        const result = JSON.parse(jsonMatch[1]!.trim());
-
-                        if (abortController.signal.aborted) {
-                            ast.state = 'fail';
-                            setAstError(ast, new Error('工作流已取消'));
-                            obs.next({ type: 'node_fail', id: ast.id, data: ast });
-                            return;
-                        }
-
-                        ast.clusters = result.clusters || [];
-
-                        obs.next({ type: 'node_emit', id: ast.id, property: 'clusters', value: ast.clusters });
-
-                    } catch (error) {
-                        console.error('[SerpClusterAst] 执行失败:', error);
-                        ast.state = 'fail';
-                        setAstError(ast, error instanceof Error ? error : new Error(String(error)));
-                        obs.next({ type: 'node_fail', id: ast.id, data: ast });
-                        obs.complete();
+                    if (abortController.signal.aborted) {
+                        throw new Error('工作流已取消');
                     }
+
+                    const model = useLlmModel({ temperature: 0 });
+                    const userContent = JSON.stringify(ast.searchResults, null, 2);
+
+                    const messages = [
+                        { role: 'system' as const, content: SYSTEM_PROMPT + `\n最多生成 ${ast.maxClusters} 个集群。` },
+                        { role: 'user' as const, content: userContent }
+                    ];
+
+                    const response = await model.invoke(messages);
+                    const content = typeof response.content === 'string' ? response.content : JSON.stringify(response.content);
+
+                    const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, content];
+                    const result = JSON.parse(jsonMatch[1]!.trim());
+
+                    if (abortController.signal.aborted) {
+                        throw new Error('工作流已取消');
+                    }
+
+                    ast.clusters = result.clusters || [];
+
+                    return [
+                        { type: 'node_emit' as const, id: ast.id, property: 'clusters', value: ast.clusters }
+                    ];
+                }),
+                mergeMap((events: NodeEvent[]) => from(events))
+            ).subscribe({
+                next: (event: NodeEvent) => {
+                    obs.next(event);
                 },
                 error: (error) => {
+                    console.error('[SerpClusterAst] 执行失败:', error);
                     ast.state = 'fail';
-                    setAstError(ast, error);
+                    setAstError(ast, error instanceof Error ? error : new Error(String(error)));
                     obs.next({ type: 'node_fail', id: ast.id, data: ast });
                     obs.complete();
                 },
@@ -102,6 +96,7 @@ export class SerpClusterAstVisitor {
             });
 
             return () => {
+                subscription.unsubscribe();
                 abortController.abort();
                 obs.complete();
             };

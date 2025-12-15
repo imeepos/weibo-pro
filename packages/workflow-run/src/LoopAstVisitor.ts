@@ -16,9 +16,9 @@ export class LoopAstVisitor {
             obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
             input$.subscribe({
-                next: () => {
+                next: (inputData) => {
                     ast.emitCount +=1;
-                    let items: any[] = ast.items || [];
+                    let items: any[] = inputData || ast.items || [];
                     if (!Array.isArray(items)) {
                         items = [items];
                     }

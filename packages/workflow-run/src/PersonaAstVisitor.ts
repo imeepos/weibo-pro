@@ -9,7 +9,8 @@ import {
   MemoryClosureEntity,
   In,
 } from '@sker/entities';
-import { Observable } from 'rxjs';
+import { Observable, from } from 'rxjs';
+import { concatMap, mergeMap } from 'rxjs/operators';
 import { z } from 'zod';
 import { useLlmModel } from './llm-client';
 
@@ -36,8 +37,8 @@ export class PersonaAstVisitor {
       ast.count += 1;
       obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
-      input$.subscribe({
-        next: async (inputData) => {
+      const subscription = input$.pipe(
+        concatMap(async (inputData) => {
           ast.emitCount +=1;
           if (inputData) {
             Object.keys(inputData).forEach(key => {
@@ -45,23 +46,15 @@ export class PersonaAstVisitor {
             });
           }
 
-          try {
-            if (abortController.signal.aborted) {
-              ast.state = 'fail';
-              setAstError(ast, new Error('工作流已取消'));
-              obs.next({ type: 'node_fail', id: ast.id, data: ast });
-              return;
-            }
+          if (abortController.signal.aborted) {
+            throw new Error('工作流已取消');
+          }
 
-            if (!ast.roleId) {
-              ast.state = 'fail';
-              setAstError(ast, new Error('请选择角色'));
-              obs.next({ type: 'node_fail', id: ast.id, data: ast });
-              obs.complete();
-              return;
-            }
+          if (!ast.roleId) {
+            throw new Error('请选择角色');
+          }
 
-            await useEntityManager(async (manager) => {
+          await useEntityManager(async (manager) => {
           const persona = await manager.findOneOrFail(PersonaEntity, {
             where: { id: ast.roleId },
           });
@@ -187,23 +180,18 @@ ${ast.context}`;
 
           const responseText = result.content as string;
           ast.response = responseText;
-          obs.next({ type: 'node_emit', id: ast.id, property: 'response', value: ast.response });
 
           if (abortController.signal.aborted) {
-            ast.state = 'fail';
-            setAstError(ast, new Error('工作流已取消'));
-            obs.next({ type: 'node_fail', id: ast.id, data: ast });
-            return;
+            throw new Error('工作流已取消');
           }
 
           // 智能提取记忆
           const extractedMemories = await this.extractMemories(model, userPrompt, responseText);
 
           if (extractedMemories.length === 0) {
-            ast.state = 'success';
-            obs.next({ type: 'node_success', id: ast.id, data: ast });
-            obs.complete();
-            return;
+            return [
+              { type: 'node_emit' as const, id: ast.id, property: 'response', value: ast.response }
+            ];
           }
 
           // 批量创建记忆
@@ -255,20 +243,22 @@ ${ast.context}`;
             }
           }
 
-              ast.newMemoryId = savedMemoryIds[0] || '';
-              obs.next({ type: 'node_emit', id: ast.id, property: 'newMemoryId', value: ast.newMemoryId });
-            });
+          ast.newMemoryId = savedMemoryIds[0] || '';
+        });
 
-          } catch (error) {
-            ast.state = 'fail';
-            setAstError(ast, error instanceof Error ? error : new Error(String(error)));
-            obs.next({ type: 'node_fail', id: ast.id, data: ast });
-            obs.complete();
-          }
+        return [
+          { type: 'node_emit' as const, id: ast.id, property: 'response', value: ast.response },
+          { type: 'node_emit' as const, id: ast.id, property: 'newMemoryId', value: ast.newMemoryId }
+        ];
+      }),
+      mergeMap((events: NodeEvent[]) => from(events))
+      ).subscribe({
+        next: (event: NodeEvent) => {
+          obs.next(event);
         },
         error: (error) => {
           ast.state = 'fail';
-          setAstError(ast, error);
+          setAstError(ast, error instanceof Error ? error : new Error(String(error)));
           obs.next({ type: 'node_fail', id: ast.id, data: ast });
           obs.complete();
         },
@@ -280,6 +270,7 @@ ${ast.context}`;
       });
 
       return () => {
+        subscription.unsubscribe();
         abortController.abort();
         obs.complete();
       };

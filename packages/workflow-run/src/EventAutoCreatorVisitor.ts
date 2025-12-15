@@ -1,7 +1,8 @@
 import { Injectable } from '@sker/core';
 import { Handler, NodeEvent, setAstError } from '@sker/workflow';
 import { EventAutoCreatorAst } from '@sker/workflow-ast';
-import { Observable } from 'rxjs';
+import { Observable, from } from 'rxjs';
+import { concatMap, mergeMap } from 'rxjs/operators';
 import {
   EventCategoryEntity,
   EventEntity,
@@ -207,8 +208,8 @@ export class EventAutoCreatorVisitor {
       ast.state = 'running';
       obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
-      input$.subscribe({
-        next: async (inputData) => {
+      const subscription = input$.pipe(
+        concatMap(async (inputData) => {
           ast.emitCount += 1;
           if (inputData) {
             Object.keys(inputData).forEach(key => {
@@ -216,15 +217,14 @@ export class EventAutoCreatorVisitor {
             });
           }
 
-          try {
+          if (abortController.signal.aborted) {
+            throw new Error('工作流已取消');
+          }
+
+          await useEntityManager(async (m) => {
             if (abortController.signal.aborted) {
               throw new Error('工作流已取消');
             }
-
-            await useEntityManager(async (m) => {
-              if (abortController.signal.aborted) {
-                throw new Error('工作流已取消');
-              }
 
             let category = await m.findOne(EventCategoryEntity, {
               where: { name: ast.nlpResult.event.type, status: 'active' },
@@ -367,18 +367,19 @@ export class EventAutoCreatorVisitor {
               await this.updateEventStatistics(m, event, ast.post, sentiment);
             });
 
-            obs.next({ type: 'node_emit', id: ast.id, property: 'is_end', value: true });
-          } catch (error) {
-            ast.state = 'fail';
-            setAstError(ast, error, process.env.NODE_ENV === 'development');
-            console.error(`[EventAutoCreatorVisitor] postId: ${ast.post.id}`, error);
-            obs.next({ type: 'node_fail', id: ast.id, data: ast });
-            obs.complete();
-          }
+          return [
+            { type: 'node_emit' as const, id: ast.id, property: 'is_end', value: true }
+          ];
+        }),
+        mergeMap((events: NodeEvent[]) => from(events))
+      ).subscribe({
+        next: (event: NodeEvent) => {
+          obs.next(event);
         },
         error: (error) => {
           ast.state = 'fail';
           setAstError(ast, error, process.env.NODE_ENV === 'development');
+          console.error(`[EventAutoCreatorVisitor] postId: ${ast.post?.id}`, error);
           obs.next({ type: 'node_fail', id: ast.id, data: ast });
           obs.complete();
         },
@@ -391,6 +392,7 @@ export class EventAutoCreatorVisitor {
 
       return () => {
         console.log('[EventAutoCreatorVisitor] 订阅被取消，触发 AbortSignal');
+        subscription.unsubscribe();
         abortController.abort();
         obs.complete();
       };

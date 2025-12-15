@@ -1,7 +1,8 @@
 import { Injectable } from "@sker/core";
 import { Handler, INodeOutputMetadata, NodeEvent, setAstError, WorkflowGraphAst } from "@sker/workflow";
 import { LlmStructuredOutputAst } from "@sker/workflow-ast";
-import { Observable } from "rxjs";
+import { Observable, from } from "rxjs";
+import { concatMap, mergeMap } from "rxjs/operators";
 import { useLlmModel } from "./llm-client";
 
 const buildJsonPrompt = (outputs: INodeOutputMetadata[]) => {
@@ -24,8 +25,8 @@ export class LlmStructuredOutputAstVisitor {
             ast.count += 1;
             obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
-            input$.subscribe({
-                next: async (inputData) => {
+            const subscription = input$.pipe(
+                concatMap(async (inputData) => {
                     ast.emitCount += 1;
                     if (inputData) {
                         Object.keys(inputData).forEach(key => {
@@ -33,42 +34,43 @@ export class LlmStructuredOutputAstVisitor {
                         });
                     }
 
-                    try {
-                        if (abortController.signal.aborted) {
-                            throw new Error('工作流已取消');
-                        }
-
-                        const outputs = ast.metadata?.outputs || [];
-                        const jsonPrompt = buildJsonPrompt(outputs);
-                        const model = useLlmModel({ model: ast.model, temperature: ast.temperature });
-
-                        const systemContent = ast.system.length ? ast.system.join('\n') + '\n\n' + jsonPrompt : jsonPrompt;
-                        const messages = [
-                            { role: 'system' as const, content: systemContent },
-                            { role: 'user' as const, content: Array.isArray(ast.prompt) ? ast.prompt.join('\n') : ast.prompt }
-                        ];
-
-                        const response = await model.invoke(messages);
-                        const content = typeof response.content === 'string' ? response.content : JSON.stringify(response.content);
-
-                        const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, content];
-                        const result = JSON.parse(jsonMatch[1]!.trim()) as Record<string, unknown>;
-
-                        for (const output of outputs) {
-                            if (output.property in result) {
-                                (ast as any)[output.property] = result[output.property];
-                                obs.next({ type: 'node_emit', id: ast.id, property: output.property, value: result[output.property] });
-                            }
-                        }
-                    } catch (error) {
-                        console.error('[LlmStructuredOutputAst] 执行失败:', error);
-                        ast.state = 'fail';
-                        setAstError(ast, error);
-                        obs.next({ type: 'node_fail', id: ast.id, data: ast });
-                        obs.complete();
+                    if (abortController.signal.aborted) {
+                        throw new Error('工作流已取消');
                     }
+
+                    const outputs = ast.metadata?.outputs || [];
+                    const jsonPrompt = buildJsonPrompt(outputs);
+                    const model = useLlmModel({ model: ast.model, temperature: ast.temperature });
+
+                    const systemContent = ast.system.length ? ast.system.join('\n') + '\n\n' + jsonPrompt : jsonPrompt;
+                    const messages = [
+                        { role: 'system' as const, content: systemContent },
+                        { role: 'user' as const, content: Array.isArray(ast.prompt) ? ast.prompt.join('\n') : ast.prompt }
+                    ];
+
+                    const response = await model.invoke(messages);
+                    const content = typeof response.content === 'string' ? response.content : JSON.stringify(response.content);
+
+                    const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, content];
+                    const result = JSON.parse(jsonMatch[1]!.trim()) as Record<string, unknown>;
+
+                    const events: NodeEvent[] = [];
+                    for (const output of outputs) {
+                        if (output.property in result) {
+                            (ast as any)[output.property] = result[output.property];
+                            events.push({ type: 'node_emit' as const, id: ast.id, property: output.property, value: result[output.property] });
+                        }
+                    }
+
+                    return events;
+                }),
+                mergeMap((events: NodeEvent[]) => from(events))
+            ).subscribe({
+                next: (event: NodeEvent) => {
+                    obs.next(event);
                 },
                 error: (error) => {
+                    console.error('[LlmStructuredOutputAst] 执行失败:', error);
                     ast.state = 'fail';
                     setAstError(ast, error);
                     obs.next({ type: 'node_fail', id: ast.id, data: ast });
@@ -82,6 +84,7 @@ export class LlmStructuredOutputAstVisitor {
             });
 
             return () => {
+                subscription.unsubscribe();
                 abortController.abort();
                 obs.complete();
             };
