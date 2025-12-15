@@ -49,98 +49,91 @@ const EVALUATION_PROMPTS: Record<EvaluationType, string> = {
 export class AnswerEvaluatorAstVisitor {
 
   @Handler(AnswerEvaluatorAst)
-  handler(ast: AnswerEvaluatorAst, ctx: WorkflowGraphAst) {
+  visit(ast: AnswerEvaluatorAst, input$: Observable<any>, ctx: WorkflowGraphAst) {
     return new Observable<NodeEvent>((obs) => {
       const abortController = new AbortController();
 
-      const wrappedCtx = {
-        ...ctx,
-        abortSignal: abortController.signal
-      };
+      ast.state = 'running';
+      obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
-      const run = async () => {
-        if (wrappedCtx.abortSignal?.aborted) {
-          ast.state = 'fail';
-          setAstError(ast, new Error('工作流已取消'));
-          obs.next({ type: 'node_fail', id: ast.id, data: ast });
-          return;
-        }
-
-        ast.state = 'running';
-        obs.next({ type: 'node_runing', id: ast.id, data: ast });
-
-        const model = useLlmModel({
-          model: ast.model,
-          temperature: ast.temperature
-        });
-
-        const results: EvaluationResult[] = [];
-        let totalScore = 0;
-
-        for (const type of ast.evaluationTypes) {
-          if (wrappedCtx.abortSignal?.aborted) break;
-
-          const prompt = EVALUATION_PROMPTS[type];
-          const userMessage = `问题：${ast.question}\n\n答案：${ast.answer}`;
-
+      input$.subscribe({
+        next: async () => {
           try {
-            const result = await model.invoke([
-              { role: 'system', content: prompt },
-              { role: 'human', content: userMessage }
-            ]);
-
-            const content = result.content as string;
-            const jsonMatch = content.match(/\{[\s\S]*\}/);
-
-            if (jsonMatch) {
-              const evaluation = JSON.parse(jsonMatch[0]);
-              results.push({
-                type,
-                passed: evaluation.passed,
-                score: evaluation.score,
-                reason: evaluation.reason
-              });
-              totalScore += evaluation.score;
+            if (abortController.signal.aborted) {
+              throw new Error('工作流已取消');
             }
-          } catch (e) {
-            results.push({
-              type,
-              passed: false,
-              score: 0,
-              reason: `评估失败: ${e instanceof Error ? e.message : '未知错误'}`
+
+            const model = useLlmModel({
+              model: ast.model,
+              temperature: ast.temperature
             });
+
+            const results: EvaluationResult[] = [];
+            let totalScore = 0;
+
+            for (const type of ast.evaluationTypes) {
+              if (abortController.signal.aborted) break;
+
+              const prompt = EVALUATION_PROMPTS[type];
+              const userMessage = `问题：${ast.question}\n\n答案：${ast.answer}`;
+
+              try {
+                const result = await model.invoke([
+                  { role: 'system', content: prompt },
+                  { role: 'human', content: userMessage }
+                ]);
+
+                const content = result.content as string;
+                const jsonMatch = content.match(/\{[\s\S]*\}/);
+
+                if (jsonMatch) {
+                  const evaluation = JSON.parse(jsonMatch[0]);
+                  results.push({
+                    type,
+                    passed: evaluation.passed,
+                    score: evaluation.score,
+                    reason: evaluation.reason
+                  });
+                  totalScore += evaluation.score;
+                }
+              } catch (e) {
+                results.push({
+                  type,
+                  passed: false,
+                  score: 0,
+                  reason: `评估失败: ${e instanceof Error ? e.message : '未知错误'}`
+                });
+              }
+            }
+
+            const avgScore = results.length > 0 ? totalScore / results.length : 0;
+            const allPassed = results.every(r => r.passed);
+
+            ast.results = results;
+            ast.totalScore = avgScore;
+            ast.passed = allPassed;
+
+            obs.next({ type: 'node_emit', id: ast.id, property: 'results', value: ast.results });
+            obs.next({ type: 'node_emit', id: ast.id, property: 'totalScore', value: ast.totalScore });
+            obs.next({ type: 'node_emit', id: ast.id, property: 'passed', value: ast.passed });
+          } catch (error) {
+            ast.state = 'fail';
+            setAstError(ast, error);
+            obs.next({ type: 'node_fail', id: ast.id, data: ast });
+            obs.complete();
           }
-        }
-
-        if (wrappedCtx.abortSignal?.aborted) {
+        },
+        error: (error) => {
           ast.state = 'fail';
-          setAstError(ast, new Error('工作流已取消'));
+          setAstError(ast, error);
           obs.next({ type: 'node_fail', id: ast.id, data: ast });
-          return;
+          obs.complete();
+        },
+        complete: () => {
+          ast.state = 'success';
+          obs.next({ type: 'node_success', id: ast.id, data: ast });
+          obs.complete();
         }
-
-        const avgScore = results.length > 0 ? totalScore / results.length : 0;
-        const allPassed = results.every(r => r.passed);
-
-        ast.results = results;
-        ast.totalScore = avgScore;
-        ast.passed = allPassed;
-
-        // 发射所有输出属性
-        obs.next({ type: 'node_emit', id: ast.id, property: 'results', value: ast.results });
-        obs.next({ type: 'node_emit', id: ast.id, property: 'totalScore', value: ast.totalScore });
-        obs.next({ type: 'node_emit', id: ast.id, property: 'passed', value: ast.passed });
-
-        ast.state = 'success';
-        obs.next({ type: 'node_success', id: ast.id, data: ast });
-        obs.complete();
-      };
-
-      run().catch(e => {
-        ast.state = 'fail';
-        setAstError(ast, e);
-        obs.next({ type: 'node_fail', id: ast.id, data: ast });
-        obs.complete();
       });
 
       return () => {

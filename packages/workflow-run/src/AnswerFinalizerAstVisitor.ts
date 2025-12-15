@@ -51,62 +51,55 @@ IMPORTANT: Do not begin your response with phrases like "Sure", "Here is", "Belo
 export class AnswerFinalizerAstVisitor {
 
     @Handler(AnswerFinalizerAst)
-    handler(ast: AnswerFinalizerAst, ctx: WorkflowGraphAst) {
+    visit(ast: AnswerFinalizerAst, input$: Observable<any>, ctx: WorkflowGraphAst) {
         return new Observable<NodeEvent>((obs) => {
             const abortController = new AbortController();
 
-            const wrappedCtx = {
-                ...ctx,
-                abortSignal: abortController.signal
-            };
+            ast.state = 'running';
+            ast.count += 1;
+            obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
-            const run = async () => {
-                if (wrappedCtx.abortSignal?.aborted) {
+            input$.subscribe({
+                next: async () => {
+                    try {
+                        if (abortController.signal.aborted) {
+                            throw new Error('工作流已取消');
+                        }
+
+                        const model = useLlmModel({ model: 'deepseek-ai/DeepSeek-V3', temperature: 0.7 });
+
+                        const result = await model.invoke([
+                            { role: 'system', content: SYSTEM_PROMPT },
+                            { role: 'human', content: ast.markdown }
+                        ]);
+
+                        const finalizedContent = result.content as string;
+
+                        if (finalizedContent.length < ast.markdown.length * 0.85) {
+                            ast.finalized = ast.markdown;
+                        } else {
+                            ast.finalized = finalizedContent;
+                        }
+
+                        obs.next({ type: 'node_emit', id: ast.id, property: 'finalized', value: ast.finalized });
+                    } catch (error) {
+                        ast.state = 'fail';
+                        setAstError(ast, error);
+                        obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                        obs.complete();
+                    }
+                },
+                error: (error) => {
                     ast.state = 'fail';
-                    setAstError(ast, new Error('工作流已取消'));
+                    setAstError(ast, error);
                     obs.next({ type: 'node_fail', id: ast.id, data: ast });
-                    return;
+                    obs.complete();
+                },
+                complete: () => {
+                    ast.state = 'success';
+                    obs.next({ type: 'node_success', id: ast.id, data: ast });
+                    obs.complete();
                 }
-
-                ast.state = 'running';
-                ast.count += 1;
-                obs.next({ type: 'node_runing', id: ast.id, data: ast });
-
-                const model = useLlmModel({ model: 'deepseek-ai/DeepSeek-V3', temperature: 0.7 });
-
-                const result = await model.invoke([
-                    { role: 'system', content: SYSTEM_PROMPT },
-                    { role: 'human', content: ast.markdown }
-                ]);
-
-                if (wrappedCtx.abortSignal?.aborted) {
-                    ast.state = 'fail';
-                    setAstError(ast, new Error('工作流已取消'));
-                    obs.next({ type: 'node_fail', id: ast.id, data: ast });
-                    return;
-                }
-
-                const finalizedContent = result.content as string;
-
-                if (finalizedContent.length < ast.markdown.length * 0.85) {
-                    ast.finalized = ast.markdown;
-                } else {
-                    ast.finalized = finalizedContent;
-                }
-
-                // 发射输出属性
-                obs.next({ type: 'node_emit', id: ast.id, property: 'finalized', value: ast.finalized });
-
-                ast.state = 'success';
-                obs.next({ type: 'node_success', id: ast.id, data: ast });
-                obs.complete();
-            };
-
-            run().catch(e => {
-                ast.state = 'fail';
-                setAstError(ast, e);
-                obs.next({ type: 'node_fail', id: ast.id, data: ast });
-                obs.complete();
             });
 
             return () => {

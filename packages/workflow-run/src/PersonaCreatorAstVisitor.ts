@@ -38,32 +38,47 @@ const PersonaSchema = z.object({
 export class PersonaCreatorAstVisitor {
 
   @Handler(PersonaCreatorAst)
-  handler(ast: PersonaCreatorAst, ctx: WorkflowGraphAst) {
+  handler(ast: PersonaCreatorAst, input$: Observable<any>, ctx: WorkflowGraphAst) {
     return new Observable<NodeEvent>((obs) => {
       const abortController = new AbortController();
 
-      const run = async () => {
-        if (abortController.signal.aborted) {
-          ast.state = 'fail';
-          setAstError(ast, new Error('工作流已取消'));
-          obs.next({ type: 'node_fail', id: ast.id, data: ast });
-          return;
-        }
+      ast.state = 'running';
+      ast.count += 1;
+      obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
-        const descriptions = Array.isArray(ast.descriptions) ? ast.descriptions : [ast.descriptions];
-        const prompt = descriptions.filter(Boolean).join('\n');
-
-        if (!prompt.trim()) {
+      input$.subscribe({
+        next: (inputData) => {
+          if (inputData) {
+            Object.keys(inputData).forEach(key => {
+              (ast as any)[key] = inputData[key];
+            });
+          }
+        },
+        error: (error) => {
           ast.state = 'fail';
-          setAstError(ast, new Error('请提供角色描述'));
+          setAstError(ast, error);
           obs.next({ type: 'node_fail', id: ast.id, data: ast });
           obs.complete();
-          return;
-        }
+        },
+        complete: async () => {
+          const run = async () => {
+            if (abortController.signal.aborted) {
+              ast.state = 'fail';
+              setAstError(ast, new Error('工作流已取消'));
+              obs.next({ type: 'node_fail', id: ast.id, data: ast });
+              return;
+            }
 
-        ast.state = 'running';
-        ast.count += 1;
-        obs.next({ type: 'node_runing', id: ast.id, data: ast });
+            const descriptions = Array.isArray(ast.descriptions) ? ast.descriptions : [ast.descriptions];
+            const prompt = descriptions.filter(Boolean).join('\n');
+
+            if (!prompt.trim()) {
+              ast.state = 'fail';
+              setAstError(ast, new Error('请提供角色描述'));
+              obs.next({ type: 'node_fail', id: ast.id, data: ast });
+              obs.complete();
+              return;
+            }
 
         const model = useLlmModel({
           model: ast.model,
@@ -142,16 +157,18 @@ export class PersonaCreatorAstVisitor {
           }
         });
 
-        ast.state = 'success';
-        obs.next({ type: 'node_success', id: ast.id, data: ast });
-        obs.complete();
-      };
+            ast.state = 'success';
+            obs.next({ type: 'node_success', id: ast.id, data: ast });
+            obs.complete();
+          };
 
-      run().catch(e => {
-        ast.state = 'fail';
-        setAstError(ast, e);
-        obs.next({ type: 'node_fail', id: ast.id, data: ast });
-        obs.complete();
+          run().catch(e => {
+            ast.state = 'fail';
+            setAstError(ast, e);
+            obs.next({ type: 'node_fail', id: ast.id, data: ast });
+            obs.complete();
+          });
+        }
       });
 
       return () => {

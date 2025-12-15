@@ -200,37 +200,25 @@ export class EventAutoCreatorVisitor {
   }
 
   @Handler(EventAutoCreatorAst)
-  visit(ast: EventAutoCreatorAst, ctx: any): Observable<NodeEvent> {
+  visit(ast: EventAutoCreatorAst, input$: Observable<any>, ctx: any): Observable<NodeEvent> {
     return new Observable<NodeEvent>(obs => {
-      // 创建专门的 AbortController
       const abortController = new AbortController();
 
-      // 包装 ctx
-      const wrappedCtx = {
-        ...ctx,
-        abortSignal: abortController.signal
-      };
+      ast.state = 'running';
+      ast.count += 1;
+      obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
-      const handler = async () => {
-        try {
-          // 检查取消信号
-          if (wrappedCtx.abortSignal?.aborted) {
-            ast.state = 'fail';
-            setAstError(ast, new Error('工作流已取消'));
-            obs.next({ type: 'node_fail', id: ast.id, data: ast });
-            return;
-          }
-
-          ast.state = 'running';
-          obs.next({ type: 'node_runing', id: ast.id, data: ast });
-          ast.count += 1;
-          obs.next({ type: 'node_runing', id: ast.id, data: ast });
-
-          await useEntityManager(async (m) => {
-            // 检查取消信号（数据库操作前）
-            if (wrappedCtx.abortSignal?.aborted) {
+      input$.subscribe({
+        next: async () => {
+          try {
+            if (abortController.signal.aborted) {
               throw new Error('工作流已取消');
             }
+
+            await useEntityManager(async (m) => {
+              if (abortController.signal.aborted) {
+                throw new Error('工作流已取消');
+              }
 
             let category = await m.findOne(EventCategoryEntity, {
               where: { name: ast.nlpResult.event.type, status: 'active' },

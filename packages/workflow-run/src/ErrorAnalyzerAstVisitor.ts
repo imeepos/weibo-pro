@@ -15,38 +15,33 @@ const ErrorAnalysisSchema = z.object({
 export class ErrorAnalyzerAstVisitor {
 
   @Handler(ErrorAnalyzerAst)
-  handler(ast: ErrorAnalyzerAst, ctx: WorkflowGraphAst) {
+  visit(ast: ErrorAnalyzerAst, input$: Observable<any>, ctx: WorkflowGraphAst) {
     return new Observable<NodeEvent>((obs) => {
       const abortController = new AbortController();
 
-      const run = async () => {
-        if (abortController.signal.aborted) {
-          ast.state = 'fail';
-          setAstError(ast, new Error('工作流已取消'));
-          obs.next({ type: 'node_fail', id: ast.id, data: ast });
-          return;
-        }
+      ast.state = 'running';
+      ast.count += 1;
+      obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
-        if (!ast.steps || ast.steps.length === 0) {
-          ast.state = 'fail';
-          setAstError(ast, new Error('请提供步骤日志'));
-          obs.next({ type: 'node_fail', id: ast.id, data: ast });
-          obs.complete();
-          return;
-        }
+      input$.subscribe({
+        next: async () => {
+          try {
+            if (abortController.signal.aborted) {
+              throw new Error('工作流已取消');
+            }
 
-        ast.state = 'running';
-        ast.count += 1;
-        obs.next({ type: 'node_runing', id: ast.id, data: ast });
+            if (!ast.steps || ast.steps.length === 0) {
+              throw new Error('请提供步骤日志');
+            }
 
-        const model = useLlmModel({
-          model: ast.model,
-          temperature: ast.temperature
-        });
+            const model = useLlmModel({
+              model: ast.model,
+              temperature: ast.temperature
+            });
 
-        const stepsText = ast.steps.filter(Boolean).join('\n\n');
+            const stepsText = ast.steps.filter(Boolean).join('\n\n');
 
-        const systemPrompt = `你是搜索和推理过程分析专家。分析给定的步骤序列，识别问题所在。
+            const systemPrompt = `你是搜索和推理过程分析专家。分析给定的步骤序列，识别问题所在。
 
 <分析维度>
 1. 采取的行动序列
@@ -63,47 +58,41 @@ export class ErrorAnalyzerAstVisitor {
 - improvement：提供可操作的建议，引导更好的结果
 </指南>`;
 
-        const userPrompt = `请分析以下步骤序列：
+            const userPrompt = `请分析以下步骤序列：
 
 ${stepsText}`;
 
-        try {
-          const structuredModel = model.withStructuredOutput(ErrorAnalysisSchema);
-          const result = await structuredModel.invoke([
-            { role: 'system', content: systemPrompt },
-            { role: 'human', content: userPrompt }
-          ]);
+            const structuredModel = model.withStructuredOutput(ErrorAnalysisSchema);
+            const result = await structuredModel.invoke([
+              { role: 'system', content: systemPrompt },
+              { role: 'human', content: userPrompt }
+            ]);
 
-          if (abortController.signal.aborted) {
+            ast.recap = result.recap;
+            ast.blame = result.blame;
+            ast.improvement = result.improvement;
+
+            obs.next({ type: 'node_emit', id: ast.id, property: 'recap', value: ast.recap });
+            obs.next({ type: 'node_emit', id: ast.id, property: 'blame', value: ast.blame });
+            obs.next({ type: 'node_emit', id: ast.id, property: 'improvement', value: ast.improvement });
+          } catch (error) {
             ast.state = 'fail';
-            setAstError(ast, new Error('工作流已取消'));
+            setAstError(ast, error);
             obs.next({ type: 'node_fail', id: ast.id, data: ast });
-            return;
+            obs.complete();
           }
-
-          ast.recap = result.recap;
-          ast.blame = result.blame;
-          ast.improvement = result.improvement;
-
-          // 发射所有输出属性
-          obs.next({ type: 'node_emit', id: ast.id, property: 'recap', value: ast.recap });
-          obs.next({ type: 'node_emit', id: ast.id, property: 'blame', value: ast.blame });
-          obs.next({ type: 'node_emit', id: ast.id, property: 'improvement', value: ast.improvement });
-
+        },
+        error: (error) => {
+          ast.state = 'fail';
+          setAstError(ast, error);
+          obs.next({ type: 'node_fail', id: ast.id, data: ast });
+          obs.complete();
+        },
+        complete: () => {
           ast.state = 'success';
           obs.next({ type: 'node_success', id: ast.id, data: ast });
           obs.complete();
-
-        } catch (error) {
-          throw new Error(`错误分析失败: ${error instanceof Error ? error.message : '未知错误'}`);
         }
-      };
-
-      run().catch(e => {
-        ast.state = 'fail';
-        setAstError(ast, e);
-        obs.next({ type: 'node_fail', id: ast.id, data: ast });
-        obs.complete();
       });
 
       return () => {
