@@ -17,6 +17,11 @@ const ImageComponent: React.FC<{ ast: ImageAst }> = ({ ast }) => {
     const [updateKey, setUpdateKey] = useState(0);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    // 调试日志
+    useEffect(() => {
+        console.log('[ImageAstRender] ast.uploadedImage 更新:', ast.uploadedImage);
+    }, [ast.uploadedImage]);
+
     // 临时编辑状态（不保存到 AST）
     const [tempAnnotations, setTempAnnotations] = useState<Annotation[]>([]);
     const [tempCropArea, setTempCropArea] = useState<CropArea | null>(null);

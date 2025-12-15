@@ -14,9 +14,11 @@ export class ImageBrowserVisitor {
             ast.state = 'running';
             obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
-            if (ast.uploadedImage) {
-                obs.next({ type: 'node_emit', id: ast.id, property: 'image', value: ast.uploadedImage });
-            }
+            // 调试日志
+            console.log('[ImageBrowserVisitor] ast.uploadedImage:', ast.uploadedImage);
+
+            // 发射输出
+            obs.next({ type: 'node_emit', id: ast.id, property: 'image', value: ast.uploadedImage });
 
             ast.state = 'success';
             obs.next({ type: 'node_success', id: ast.id, data: ast });

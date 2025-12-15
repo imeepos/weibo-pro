@@ -101,6 +101,8 @@ export class WorkflowGraphAstVisitor {
                     )
                     .subscribe(value => {
                         if (value !== null && value !== undefined) {
+                            console.log(`[WorkflowGraphAstVisitor] 边 ${edge.from}(${edge.fromProperty}) -> ${targetId}(${edge.toProperty!}) 发射值:`, value);
+                            console.log(`[WorkflowGraphAstVisitor] 准备将数据发送给节点 ${targetId} 的 input$ subject`);
                             targetSubject.next({ [edge.toProperty!]: value });
                         }
                     });
