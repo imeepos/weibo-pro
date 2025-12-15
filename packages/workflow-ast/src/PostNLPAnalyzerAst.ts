@@ -1,3 +1,4 @@
+import type { WeiboCommentEntity, WeiboPostEntity, WeiboRepostEntity } from '@sker/entities';
 import { Ast, Input, Node, Output } from '@sker/workflow';
 
 @Node({
