@@ -18,9 +18,6 @@ export { LlmTextAgentAstVisitor } from './LlmTextAgentAstVisitor'
 export { LlmStructuredOutputAstVisitor } from './LlmStructuredOutputAstVisitor'
 export { LlmCategoryAstVisitor } from './LlmCategoryAstVisitor'
 export { TextAreaAstVisitor } from './TextAreaAstVisitor'
-export { DateAstVisitor } from './DateAstVisitor'
-// IS_BUFFER 模式示例
-export { CollectorVisitor } from './CollectorVisitor'
 
 // 媒体节点
 export { ImageVisitor } from './ImageVisitor'
@@ -37,7 +34,6 @@ export { MqPushAstVisitor, MqPullAstVisitor } from './MqAstVisitor'
 export { StoreGetAstVisitor, StoreSetAstVisitor } from './StoreAstVisitor'
 
 // 数据处理节点
-export { FilterAstVisitor } from './FilterAstVisitor'
 export { MergeAstVisitor } from './MergeAstVisitor'
 export { LoopAstVisitor } from './LoopAstVisitor'
 

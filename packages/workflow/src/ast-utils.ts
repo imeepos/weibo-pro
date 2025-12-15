@@ -722,38 +722,40 @@ export function extractEndNodeOutputs(nodes: INode[], endNodeIds: string[]): Rec
  *
  * 优雅设计：
  * - 防止上次执行的残留数据影响本次执行
- * - 从装饰器元数据中读取 defaultValue
- * - 如果未定义 defaultValue，使用类型推断的默认值
+ * - 直接使用 node.metadata.inputs 和 node.metadata.outputs 中的 defaultValue
+ * - 如果节点已有该属性值，优先使用节点的值（保持用户在工作流中设置的值）
+ * - 如果节点没有该属性值，使用 metadata 中的 defaultValue
+ * - 如果 metadata 中也没有 defaultValue，不设置（保持 undefined）
  * - 原地修改节点对象（性能优化）
  *
  * @param node 要重置的节点
  */
 export function resetNodeToDefaults(node: INode): void {
     try {
-        const ctor = findNodeType(node.type);
-        if (!ctor) return;
-
         // 重置所有 @Input 属性
-        const inputMetadatas = root.get(INPUT, []);
-        const nodeInputs = inputMetadatas.filter((meta: any) => meta.target === ctor);
-
+        const nodeInputs = node.metadata?.inputs || [];
         for (const inputMeta of nodeInputs) {
-            const property = String(inputMeta.propertyKey);
+            const property = String(inputMeta.property);
             const defaultValue = inputMeta.defaultValue;
 
+            // 如果节点已有该属性值，优先使用节点的值（保持用户在工作流中设置的值）
+            if ((node as any)[property] !== undefined) {
+                continue;
+            }
+
+            // 如果节点没有该属性值，使用 metadata 中的 defaultValue
             if (defaultValue !== undefined) {
                 (node as any)[property] = cloneDefaultValue(defaultValue);
             }
         }
 
         // 重置所有 @Output 属性
-        const outputMetadatas = root.get(OUTPUT, []);
-        const nodeOutputs = outputMetadatas.filter((meta: any) => meta.target === ctor);
-
+        const nodeOutputs = node.metadata?.outputs || [];
         for (const outputMeta of nodeOutputs) {
-            const property = String(outputMeta.propertyKey);
+            const property = String(outputMeta.property);
             const defaultValue = outputMeta.defaultValue;
 
+            // 输出属性通常不需要保留节点的值，直接使用 defaultValue
             if (defaultValue !== undefined) {
                 (node as any)[property] = cloneDefaultValue(defaultValue);
             }

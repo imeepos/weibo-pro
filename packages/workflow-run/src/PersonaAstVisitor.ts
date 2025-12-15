@@ -40,7 +40,7 @@ export class PersonaAstVisitor {
           return;
         }
 
-        if (!ast.personaId) {
+        if (!ast.roleId) {
           ast.state = 'fail';
           setAstError(ast, new Error('请选择角色'));
           obs.next({ type: 'node_fail', id: ast.id, data: ast });
@@ -54,7 +54,7 @@ export class PersonaAstVisitor {
 
         await useEntityManager(async (manager) => {
           const persona = await manager.findOneOrFail(PersonaEntity, {
-            where: { id: ast.personaId },
+            where: { id: ast.roleId },
           });
 
           ast.personaName = persona.name;
@@ -71,7 +71,7 @@ export class PersonaAstVisitor {
           const initialMemories = searchTerms
             ? await manager
                 .createQueryBuilder(MemoryEntity, 'm')
-                .where('m.persona_id = :personaId', { personaId: ast.personaId })
+                .where('m.persona_id = :personaId', { personaId: ast.roleId })
                 .andWhere(
                   '(LOWER(m.name) LIKE :search OR LOWER(m.content) LIKE :search)',
                   { search: `%${searchTerms}%` }
@@ -201,7 +201,7 @@ ${ast.context}`;
           const savedMemoryIds: string[] = [];
           for (const em of extractedMemories) {
             const memory = manager.create(MemoryEntity, {
-              persona_id: ast.personaId,
+              persona_id: ast.roleId,
               name: em.name,
               description: em.description,
               content: em.content,
