@@ -182,6 +182,22 @@ export class LlmProxyService {
       triedProviders.add(provider.providerId)
 
       const proxyBody = { ...body, model: provider.modelName }
+
+      // 转换 thinking 参数为 Claude API 期望的格式
+      if (requiresThinking) {
+        // 移除旧格式的参数
+        delete proxyBody.extended_thinking
+        delete proxyBody.enable_thinking
+
+        // 如果 thinking 不是对象或格式不正确，转换为标准格式
+        if (typeof proxyBody.thinking !== 'object' || !proxyBody.thinking?.type) {
+          proxyBody.thinking = {
+            type: 'enabled',
+            budget_tokens: 10000
+          }
+        }
+      }
+
       console.log(`[${requestedModel}] -> [${provider.modelName}] via ${provider.baseUrl}${requiresThinking ? ' (thinking)' : ''}`)
 
       const reqHeaders: Record<string, string> = {}
@@ -239,7 +255,8 @@ export class LlmProxyService {
               errorMessage.includes('thinking') &&
               (errorMessage.includes('Expected `thinking`') ||
                errorMessage.includes('redacted_thinking') ||
-               errorMessage.includes('thinking block'))
+               errorMessage.includes('thinking block') ||
+               errorMessage.includes('thinking: Field required'))
 
             if (isThinkingError) {
               await this.disableThinkingSupport(provider.providerId, provider.modelName)
@@ -294,7 +311,8 @@ export class LlmProxyService {
                     errorMessage.includes('thinking') &&
                     (errorMessage.includes('Expected `thinking`') ||
                      errorMessage.includes('redacted_thinking') ||
-                     errorMessage.includes('thinking block'))
+                     errorMessage.includes('thinking block') ||
+                     errorMessage.includes('thinking: Field required'))
 
                   if (isThinkingError) {
                     thinkingErrorDetected = true
