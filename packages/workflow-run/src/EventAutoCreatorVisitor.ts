@@ -258,10 +258,9 @@ export class EventAutoCreatorVisitor {
             const eventDescription = ast.nlpResult.eventDescription ||
               ast.post.text_raw.substring(0, 200).trim();
 
-            // 检查取消信号（事件创建前）
-            if (wrappedCtx.abortSignal?.aborted) {
-              throw new Error('工作流已取消');
-            }
+              if (abortController.signal.aborted) {
+                throw new Error('工作流已取消');
+              }
 
             const existingEvent = await m.findOne(EventEntity, {
               where: {
@@ -320,13 +319,11 @@ export class EventAutoCreatorVisitor {
 
             await m.save(PostNLPResultEntity, nlpResult);
 
-            // 处理标签
-            if (ast.nlpResult.tags && ast.nlpResult.tags.length > 0) {
-              for (const tagData of ast.nlpResult.tags) {
-                // 检查取消信号（标签循环中）
-                if (wrappedCtx.abortSignal?.aborted) {
-                  throw new Error('工作流已取消');
-                }
+              if (ast.nlpResult.tags && ast.nlpResult.tags.length > 0) {
+                for (const tagData of ast.nlpResult.tags) {
+                  if (abortController.signal.aborted) {
+                    throw new Error('工作流已取消');
+                  }
 
                 let tag = await m.findOne(EventTagEntity, {
                   where: { name: tagData.name },
@@ -358,28 +355,34 @@ export class EventAutoCreatorVisitor {
                     .execute();
 
                   await m.increment(EventTagEntity, { id: tag.id }, 'usage_count', 1);
+                  }
                 }
               }
-            }
-            // 更新事件统计信息（hourly 粒度）
-            await this.updateEventStatistics(m, event, ast.post, sentiment);
-          });
-          obs.next({ type: 'node_emit', id: ast.id, property: 'is_end', value: true });
+              await this.updateEventStatistics(m, event, ast.post, sentiment);
+            });
 
-          ast.state = 'success';
-          obs.next({ type: 'node_success', id: ast.id, data: ast });
-          obs.complete()
-        } catch (error) {
+            obs.next({ type: 'node_emit', id: ast.id, property: 'is_end', value: true });
+          } catch (error) {
+            ast.state = 'fail';
+            setAstError(ast, error, process.env.NODE_ENV === 'development');
+            console.error(`[EventAutoCreatorVisitor] postId: ${ast.post.id}`, error);
+            obs.next({ type: 'node_fail', id: ast.id, data: ast });
+            obs.complete();
+          }
+        },
+        error: (error) => {
           ast.state = 'fail';
           setAstError(ast, error, process.env.NODE_ENV === 'development');
-          console.error(`[EventAutoCreatorVisitor] postId: ${ast.post.id}`, error);
           obs.next({ type: 'node_fail', id: ast.id, data: ast });
-          obs.complete()
+          obs.complete();
+        },
+        complete: () => {
+          ast.state = 'success';
+          obs.next({ type: 'node_success', id: ast.id, data: ast });
+          obs.complete();
         }
-      };
-      handler();
+      });
 
-      // 返回清理函数
       return () => {
         console.log('[EventAutoCreatorVisitor] 订阅被取消，触发 AbortSignal');
         abortController.abort();

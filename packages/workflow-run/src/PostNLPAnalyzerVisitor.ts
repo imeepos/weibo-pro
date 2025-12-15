@@ -15,31 +15,43 @@ export class PostNLPAnalyzerVisitor {
   constructor(@Inject(NLPAnalyzer) private analyzer: NLPAnalyzer) { }
 
   @Handler(PostNLPAnalyzerAst)
-  visit(ast: PostNLPAnalyzerAst, ctx: any): Observable<NodeEvent> {
+  visit(ast: PostNLPAnalyzerAst, input$: Observable<any>, ctx: any): Observable<NodeEvent> {
     return new Observable<NodeEvent>(obs => {
-      // 创建专门的 AbortController
       const abortController = new AbortController();
 
-      // 包装 ctx
       const wrappedCtx = {
         ...ctx,
         abortSignal: abortController.signal
       };
 
-      const handler = async () => {
-        try {
-          // 检查取消信号
-          if (wrappedCtx.abortSignal?.aborted) {
-            ast.state = 'fail';
-            setAstError(ast, new Error('工作流已取消'));
-            obs.next({ type: 'node_fail', id: ast.id, data: ast });
-            obs.complete();
-            return;
-          }
+      ast.state = 'running';
+      ast.count += 1;
+      obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
-          ast.state = 'running';
-          ast.count += 1;
-          obs.next({ type: 'node_runing', id: ast.id, data: ast });
+      input$.subscribe({
+        next: (inputData) => {
+          if (inputData) {
+            Object.keys(inputData).forEach(key => {
+              (ast as any)[key] = inputData[key];
+            });
+          }
+        },
+        error: (error) => {
+          ast.state = 'fail';
+          setAstError(ast, error);
+          obs.next({ type: 'node_fail', id: ast.id, data: ast });
+          obs.complete();
+        },
+        complete: async () => {
+          const handler = async () => {
+            try {
+              if (wrappedCtx.abortSignal?.aborted) {
+                ast.state = 'fail';
+                setAstError(ast, new Error('工作流已取消'));
+                obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                obs.complete();
+                return;
+              }
 
           const { availableCategories, availableTags, recentEvents } = await useEntityManager(async (m) => {
             const categories = await m.find(EventCategoryEntity, {
@@ -109,20 +121,21 @@ export class PostNLPAnalyzerVisitor {
           );
           obs.next({ type: 'node_emit', id: ast.id, property: 'nlpResult', value: ast.nlpResult });
 
-          ast.state = 'success';
-          obs.next({ type: 'node_success', id: ast.id, data: ast });
-          obs.complete()
-        } catch (error) {
-          ast.state = 'fail';
-          setAstError(ast, error, process.env.NODE_ENV === 'development');
-          console.error(`[PostNLPAnalyzerVisitor] postId: ${ast.post.id}`, error);
-          obs.next({ type: 'node_fail', id: ast.id, data: ast });
-          obs.complete()
+              ast.state = 'success';
+              obs.next({ type: 'node_success', id: ast.id, data: ast });
+              obs.complete();
+            } catch (error) {
+              ast.state = 'fail';
+              setAstError(ast, error, process.env.NODE_ENV === 'development');
+              console.error(`[PostNLPAnalyzerVisitor] postId: ${ast.post.id}`, error);
+              obs.next({ type: 'node_fail', id: ast.id, data: ast });
+              obs.complete();
+            }
+          };
+          handler();
         }
-      };
-      handler();
+      });
 
-      // 返回清理函数
       return () => {
         console.log('[PostNLPAnalyzerVisitor] 订阅被取消，触发 AbortSignal');
         abortController.abort();
