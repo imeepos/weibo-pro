@@ -7,7 +7,7 @@ export class AudioAst extends Ast {
     uploadedAudio: string = '';
 
     @Output({ title: '音频' })
-    audio = new BehaviorSubject<string>(``);
+    audio = ``;
 
     type: 'AudioAst' = 'AudioAst';
 }

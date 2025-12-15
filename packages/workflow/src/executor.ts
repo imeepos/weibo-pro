@@ -105,15 +105,6 @@ export class NodeExecutor {
                 node = this.compiler.compile(node);
             }
             if (!node.metadata?.outputs) return;
-
-            node.metadata.outputs.forEach(output => {
-                const key = output.property;
-                const current = (node as any)[key];
-
-                if (!isBehaviorSubject(current)) {
-                    (node as any)[key] = new BehaviorSubject(null);
-                }
-            });
         });
     }
 

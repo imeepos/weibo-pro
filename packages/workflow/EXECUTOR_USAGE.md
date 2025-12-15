@@ -248,7 +248,7 @@ const edges = [
 @Node()
 class StreamNode extends Ast {
     @Output()
-    stream: BehaviorSubject<number> = new BehaviorSubject(0);
+    stream: number = 0;
 }
 
 // Visitor 中多次发射

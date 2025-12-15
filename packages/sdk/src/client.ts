@@ -2,6 +2,7 @@ import { CONTROLLES, Provider, root, PATH_METADATA, METHOD_METADATA, ROUTE_ARGS_
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios'
 import { AXIOS, AXIOS_CONFIG } from "./tokens";
 import { Observable } from 'rxjs';
+import { clone } from '@sker/workflow/utils';
 
 export const providers: (config?: AxiosRequestConfig) => Provider[] = (config = { baseURL: '/' }) => {
     const controllers = root.get(CONTROLLES, [])
@@ -79,7 +80,7 @@ function createControllerInstance<T>(controllerClass: new () => T, axiosInstance
                                     'Accept': 'text/event-stream',
                                     'Cache-Control': 'no-cache'
                                 },
-                                body: JSON.stringify(bodyData),
+                                body: JSON.stringify(clone(bodyData)),
                                 signal: abortController.signal
                             })
                                 .then(response => {
@@ -204,7 +205,7 @@ function createControllerInstance<T>(controllerClass: new () => T, axiosInstance
                         method: getHttpMethodString(httpMethod),
                         url: finalUrl,
                         params: queryParams,
-                        data: bodyData,
+                        data: bodyData ? clone(bodyData) : undefined,
                         headers
                     };
 

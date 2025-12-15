@@ -15,7 +15,7 @@ export class AnswerFinalizerAst extends Ast {
     markdown: string = '';
 
     @Output({ title: '润色后内容' })
-    finalized = new BehaviorSubject<string>(``);
+    finalized = ``;
 
     type: 'AnswerFinalizerAst' = 'AnswerFinalizerAst';
 }

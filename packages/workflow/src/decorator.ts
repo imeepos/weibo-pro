@@ -288,15 +288,6 @@ export const OUTPUT = new InjectionToken<OutputMetadata[]>(`OUTPUT`)
 
 /**
  * 输出装饰器
- *
- * 支持两种风格：
- * 1. 值类型（向后兼容）: @Output() result?: Post[]
- * 2. BehaviorSubject（推荐）: @Output() result = new BehaviorSubject<Post[]>([])
- *
- * BehaviorSubject 风格的优势：
- * - 运行时直接发射值，无需 emitting 状态
- * - 下游自动订阅，数据流更清晰
- * - 序列化时自动跳过（只保存元数据）
  */
 export function Output(options: OutputOptions = {}): PropertyDecorator {
     return (target, propertyKey) => {

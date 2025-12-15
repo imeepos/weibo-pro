@@ -36,13 +36,13 @@ export class AnswerEvaluatorAst extends Ast {
   model: string = 'deepseek-ai/DeepSeek-V3';
 
   @Output({ title: '评估结果' })
-  results = new BehaviorSubject<EvaluationResult[]>([]);
+  results = [];
 
   @Output({ title: '是否通过' })
-  passed = new BehaviorSubject<boolean>(false);
+  passed = false;
 
   @Output({ title: '总分' })
-  totalScore = new BehaviorSubject<number>(0);
+  totalScore = 0;
 
   type: 'AnswerEvaluatorAst' = 'AnswerEvaluatorAst';
 }
