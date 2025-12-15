@@ -1,5 +1,4 @@
 import { Ast, Input, Node, Output, State } from "@sker/workflow";
-import { BehaviorSubject } from "rxjs";
 
 export type EvaluationType = 'definitive' | 'freshness' | 'plurality' | 'completeness' | 'strict';
 
