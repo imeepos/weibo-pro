@@ -1,7 +1,8 @@
 import { Injectable } from "@sker/core";
 import { Handler, NodeEvent, setAstError, WorkflowGraphAst } from "@sker/workflow";
 import { AnswerFinalizerAst } from "@sker/workflow-ast";
-import { Observable } from "rxjs";
+import { Observable, from } from "rxjs";
+import { concatMap, mergeMap } from "rxjs/operators";
 import { useLlmModel } from "./llm-client";
 
 const SYSTEM_PROMPT = `You are a senior editor with multiple best-selling books and columns published in top magazines. You break conventional thinking, establish unique cross-disciplinary connections, and bring new perspectives to the user.
@@ -58,8 +59,8 @@ export class AnswerFinalizerAstVisitor {
             ast.state = 'running';
             obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
-            input$.subscribe({
-                next: async (inputData) => {
+            const subscription = input$.pipe(
+                concatMap(async (inputData) => {
                     ast.emitCount += 1;
                     if (inputData) {
                         Object.keys(inputData).forEach(key => {
@@ -67,33 +68,33 @@ export class AnswerFinalizerAstVisitor {
                         });
                     }
 
-                    try {
-                        if (abortController.signal.aborted) {
-                            throw new Error('工作流已取消');
-                        }
-
-                        const model = useLlmModel({ model: 'deepseek-ai/DeepSeek-V3', temperature: 0.7 });
-
-                        const result = await model.invoke([
-                            { role: 'system', content: SYSTEM_PROMPT },
-                            { role: 'human', content: ast.markdown }
-                        ]);
-
-                        const finalizedContent = result.content as string;
-
-                        if (finalizedContent.length < ast.markdown.length * 0.85) {
-                            ast.finalized = ast.markdown;
-                        } else {
-                            ast.finalized = finalizedContent;
-                        }
-
-                        obs.next({ type: 'node_emit', id: ast.id, property: 'finalized', value: ast.finalized });
-                    } catch (error) {
-                        ast.state = 'fail';
-                        setAstError(ast, error);
-                        obs.next({ type: 'node_fail', id: ast.id, data: ast });
-                        obs.complete();
+                    if (abortController.signal.aborted) {
+                        throw new Error('工作流已取消');
                     }
+
+                    const model = useLlmModel({ model: 'deepseek-ai/DeepSeek-V3', temperature: 0.7 });
+
+                    const result = await model.invoke([
+                        { role: 'system', content: SYSTEM_PROMPT },
+                        { role: 'human', content: ast.markdown }
+                    ]);
+
+                    const finalizedContent = result.content as string;
+
+                    if (finalizedContent.length < ast.markdown.length * 0.85) {
+                        ast.finalized = ast.markdown;
+                    } else {
+                        ast.finalized = finalizedContent;
+                    }
+
+                    return [
+                        { type: 'node_emit' as const, id: ast.id, property: 'finalized', value: ast.finalized }
+                    ];
+                }),
+                mergeMap((events: NodeEvent[]) => from(events))
+            ).subscribe({
+                next: (event: NodeEvent) => {
+                    obs.next(event);
                 },
                 error: (error) => {
                     ast.state = 'fail';
@@ -109,6 +110,7 @@ export class AnswerFinalizerAstVisitor {
             });
 
             return () => {
+                subscription.unsubscribe();
                 abortController.abort();
                 obs.complete();
             };

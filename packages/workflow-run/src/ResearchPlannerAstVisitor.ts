@@ -1,7 +1,8 @@
 import { Injectable } from '@sker/core';
 import { Handler, NodeEvent, setAstError, WorkflowGraphAst } from '@sker/workflow';
 import { ResearchPlannerAst } from '@sker/workflow-ast';
-import { Observable } from 'rxjs';
+import { Observable, from } from 'rxjs';
+import { concatMap, mergeMap } from 'rxjs/operators';
 import { z } from 'zod';
 import { useLlmModel } from './llm-client';
 
@@ -21,8 +22,8 @@ export class ResearchPlannerAstVisitor {
       ast.state = 'running';
       obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
-      input$.subscribe({
-        next: async (inputData) => {
+      const subscription = input$.pipe(
+        concatMap(async (inputData) => {
           ast.emitCount += 1;
           if (inputData) {
             Object.keys(inputData).forEach(key => {
@@ -30,40 +31,32 @@ export class ResearchPlannerAstVisitor {
             });
           }
 
-          try {
-            if (abortController.signal.aborted) {
-              ast.state = 'fail';
-              setAstError(ast, new Error('工作流已取消'));
-              obs.next({ type: 'node_fail', id: ast.id, data: ast });
-              return;
-            }
+          if (abortController.signal.aborted) {
+            throw new Error('工作流已取消');
+          }
 
-            if (!ast.query || ast.query.length === 0) {
-              ast.state = 'fail';
-              setAstError(ast, new Error('请提供研究主题'));
-              obs.next({ type: 'node_fail', id: ast.id, data: ast });
-              obs.complete();
-              return;
-            }
+          if (!ast.query || ast.query.length === 0) {
+            throw new Error('请提供研究主题');
+          }
 
-            const model = useLlmModel({
-              model: ast.model,
-              temperature: ast.temperature
-            });
+          const model = useLlmModel({
+            model: ast.model,
+            temperature: ast.temperature
+          });
 
-            const query = Array.isArray(ast.query)
-              ? ast.query.filter(Boolean).join('\n')
-              : ast.query;
+          const query = Array.isArray(ast.query)
+            ? ast.query.filter(Boolean).join('\n')
+            : ast.query;
 
-            const soundbites = Array.isArray(ast.soundbites)
-              ? ast.soundbites.filter(Boolean).join('\n')
-              : ast.soundbites || '';
+          const soundbites = Array.isArray(ast.soundbites)
+            ? ast.soundbites.filter(Boolean).join('\n')
+            : ast.soundbites || '';
 
-            const now = new Date();
-            const currentYear = now.getFullYear();
-            const currentMonth = now.getMonth() + 1;
+          const now = new Date();
+          const currentYear = now.getFullYear();
+          const currentMonth = now.getMonth() + 1;
 
-            const systemPrompt = `你是首席研究负责人，管理 ${ast.teamSize} 个初级研究员团队。
+          const systemPrompt = `你是首席研究负责人，管理 ${ast.teamSize} 个初级研究员团队。
 你的职责是将复杂的研究主题分解为聚焦、可管理的子问题，并分配给团队成员。
 
 当前时间：${currentYear}年${currentMonth}月
@@ -106,47 +99,44 @@ export class ResearchPlannerAstVisitor {
 
 现在开始分解和分配研究主题。`;
 
-            const userPrompt = soundbites
-              ? `研究主题：${query}
+          const userPrompt = soundbites
+            ? `研究主题：${query}
 
 <soundbites>
 ${soundbites}
 </soundbites>
 
 请生成 ${ast.teamSize} 个正交的研究子问题。`
-              : `研究主题：${query}
+            : `研究主题：${query}
 
 请生成 ${ast.teamSize} 个正交的研究子问题。`;
 
-            const structuredModel = model.withStructuredOutput(ResearchPlanSchema);
-            const result = await structuredModel.invoke([
-              { role: 'system', content: systemPrompt },
-              { role: 'human', content: userPrompt }
-            ]);
+          const structuredModel = model.withStructuredOutput(ResearchPlanSchema);
+          const result = await structuredModel.invoke([
+            { role: 'system', content: systemPrompt },
+            { role: 'human', content: userPrompt }
+          ]);
 
-            if (abortController.signal.aborted) {
-              ast.state = 'fail';
-              setAstError(ast, new Error('工作流已取消'));
-              obs.next({ type: 'node_fail', id: ast.id, data: ast });
-              return;
-            }
-
-            ast.reasoning = result.reasoning;
-            ast.subproblems = result.subproblems;
-
-            obs.next({ type: 'node_emit', id: ast.id, property: 'subproblems', value: ast.subproblems });
-            obs.next({ type: 'node_emit', id: ast.id, property: 'reasoning', value: ast.reasoning });
-
-          } catch (error) {
-            ast.state = 'fail';
-            setAstError(ast, new Error(`研究规划失败: ${error instanceof Error ? error.message : '未知错误'}`));
-            obs.next({ type: 'node_fail', id: ast.id, data: ast });
-            obs.complete();
+          if (abortController.signal.aborted) {
+            throw new Error('工作流已取消');
           }
+
+          ast.reasoning = result.reasoning;
+          ast.subproblems = result.subproblems;
+
+          return [
+            { type: 'node_emit' as const, id: ast.id, property: 'subproblems', value: ast.subproblems },
+            { type: 'node_emit' as const, id: ast.id, property: 'reasoning', value: ast.reasoning }
+          ];
+        }),
+        mergeMap((events: NodeEvent[]) => from(events))
+      ).subscribe({
+        next: (event: NodeEvent) => {
+          obs.next(event);
         },
         error: (error) => {
           ast.state = 'fail';
-          setAstError(ast, error);
+          setAstError(ast, new Error(`研究规划失败: ${error instanceof Error ? error.message : '未知错误'}`));
           obs.next({ type: 'node_fail', id: ast.id, data: ast });
           obs.complete();
         },
@@ -158,6 +148,7 @@ ${soundbites}
       });
 
       return () => {
+        subscription.unsubscribe();
         abortController.abort();
         obs.complete();
       };

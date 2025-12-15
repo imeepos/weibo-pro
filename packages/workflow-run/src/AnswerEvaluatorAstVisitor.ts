@@ -1,7 +1,8 @@
 import { Injectable } from "@sker/core";
 import { Handler, NodeEvent, setAstError, WorkflowGraphAst } from "@sker/workflow";
 import { AnswerEvaluatorAst, EvaluationResult, EvaluationType } from "@sker/workflow-ast";
-import { Observable } from "rxjs";
+import { Observable, from } from "rxjs";
+import { concatMap, mergeMap } from "rxjs/operators";
 import { useLlmModel } from "./llm-client";
 
 const EVALUATION_PROMPTS: Record<EvaluationType, string> = {
@@ -56,8 +57,8 @@ export class AnswerEvaluatorAstVisitor {
       ast.state = 'running';
       obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
-      input$.subscribe({
-        next: async (inputData) => {
+      const subscription = input$.pipe(
+        concatMap(async (inputData) => {
           ast.emitCount += 1;
           if (inputData) {
             Object.keys(inputData).forEach(key => {
@@ -65,70 +66,70 @@ export class AnswerEvaluatorAstVisitor {
             });
           }
 
-          try {
-            if (abortController.signal.aborted) {
-              throw new Error('工作流已取消');
-            }
+          if (abortController.signal.aborted) {
+            throw new Error('工作流已取消');
+          }
 
-            const model = useLlmModel({
-              model: ast.model,
-              temperature: ast.temperature
-            });
+          const model = useLlmModel({
+            model: ast.model,
+            temperature: ast.temperature
+          });
 
-            const results: EvaluationResult[] = [];
-            let totalScore = 0;
+          const results: EvaluationResult[] = [];
+          let totalScore = 0;
 
-            for (const type of ast.evaluationTypes) {
-              if (abortController.signal.aborted) break;
+          for (const type of ast.evaluationTypes) {
+            if (abortController.signal.aborted) break;
 
-              const prompt = EVALUATION_PROMPTS[type];
-              const userMessage = `问题：${ast.question}\n\n答案：${ast.answer}`;
+            const prompt = EVALUATION_PROMPTS[type];
+            const userMessage = `问题：${ast.question}\n\n答案：${ast.answer}`;
 
-              try {
-                const result = await model.invoke([
-                  { role: 'system', content: prompt },
-                  { role: 'human', content: userMessage }
-                ]);
+            try {
+              const result = await model.invoke([
+                { role: 'system', content: prompt },
+                { role: 'human', content: userMessage }
+              ]);
 
-                const content = result.content as string;
-                const jsonMatch = content.match(/\{[\s\S]*\}/);
+              const content = result.content as string;
+              const jsonMatch = content.match(/\{[\s\S]*\}/);
 
-                if (jsonMatch) {
-                  const evaluation = JSON.parse(jsonMatch[0]);
-                  results.push({
-                    type,
-                    passed: evaluation.passed,
-                    score: evaluation.score,
-                    reason: evaluation.reason
-                  });
-                  totalScore += evaluation.score;
-                }
-              } catch (e) {
+              if (jsonMatch) {
+                const evaluation = JSON.parse(jsonMatch[0]);
                 results.push({
                   type,
-                  passed: false,
-                  score: 0,
-                  reason: `评估失败: ${e instanceof Error ? e.message : '未知错误'}`
+                  passed: evaluation.passed,
+                  score: evaluation.score,
+                  reason: evaluation.reason
                 });
+                totalScore += evaluation.score;
               }
+            } catch (e) {
+              results.push({
+                type,
+                passed: false,
+                score: 0,
+                reason: `评估失败: ${e instanceof Error ? e.message : '未知错误'}`
+              });
             }
-
-            const avgScore = results.length > 0 ? totalScore / results.length : 0;
-            const allPassed = results.every(r => r.passed);
-
-            ast.results = results;
-            ast.totalScore = avgScore;
-            ast.passed = allPassed;
-
-            obs.next({ type: 'node_emit', id: ast.id, property: 'results', value: ast.results });
-            obs.next({ type: 'node_emit', id: ast.id, property: 'totalScore', value: ast.totalScore });
-            obs.next({ type: 'node_emit', id: ast.id, property: 'passed', value: ast.passed });
-          } catch (error) {
-            ast.state = 'fail';
-            setAstError(ast, error);
-            obs.next({ type: 'node_fail', id: ast.id, data: ast });
-            obs.complete();
           }
+
+          const avgScore = results.length > 0 ? totalScore / results.length : 0;
+          const allPassed = results.every(r => r.passed);
+
+          ast.results = results;
+          ast.totalScore = avgScore;
+          ast.passed = allPassed;
+
+          return [
+            { type: 'node_emit' as const, id: ast.id, property: 'results', value: ast.results },
+            { type: 'node_emit' as const, id: ast.id, property: 'totalScore', value: ast.totalScore },
+            { type: 'node_emit' as const, id: ast.id, property: 'passed', value: ast.passed }
+          ];
+        }),
+        mergeMap((events: NodeEvent[]) => from(events))
+      ).subscribe({
+        next: (event: NodeEvent) => {
+          obs.next(event);
         },
         error: (error) => {
           ast.state = 'fail';
@@ -144,6 +145,7 @@ export class AnswerEvaluatorAstVisitor {
       });
 
       return () => {
+        subscription.unsubscribe();
         abortController.abort();
         obs.complete();
       };
