@@ -34,7 +34,9 @@ describe('WorkflowStore E2E - 完整执行流程', () => {
           const outputValue = Array.isArray(ast.input)
             ? ast.input.join('\n')
             : ast.input
-          ast.output.next(outputValue)
+
+          // 通过 Observable 发射数据，而不是直接调用 BehaviorSubject.next()
+          obs.next({ type: 'node_emit', id: ast.id, property: 'output', value: outputValue });
 
           ast.state = 'success'
           obs.next({ ...ast })
