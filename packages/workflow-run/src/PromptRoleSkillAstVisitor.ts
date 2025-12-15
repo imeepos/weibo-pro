@@ -188,16 +188,18 @@ ${skillsDescription}
           }
         });
 
-        ast.state = 'success';
-        obs.next({ type: 'node_success', id: ast.id, data: ast });
-        obs.complete();
-      };
+            ast.state = 'success';
+            obs.next({ type: 'node_success', id: ast.id, data: ast });
+            obs.complete();
+          };
 
-      run().catch(e => {
-        ast.state = 'fail';
-        setAstError(ast, e);
-        obs.next({ type: 'node_fail', id: ast.id, data: ast });
-        obs.complete();
+          run().catch(e => {
+            ast.state = 'fail';
+            setAstError(ast, e);
+            obs.next({ type: 'node_fail', id: ast.id, data: ast });
+            obs.complete();
+          });
+        }
       });
 
       return () => {
