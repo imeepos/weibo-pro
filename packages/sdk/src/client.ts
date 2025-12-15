@@ -2,7 +2,7 @@ import { CONTROLLES, Provider, root, PATH_METADATA, METHOD_METADATA, ROUTE_ARGS_
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios'
 import { AXIOS, AXIOS_CONFIG } from "./tokens";
 import { Observable } from 'rxjs';
-import { clone } from '@sker/workflow/utils';
+import { clone } from '@sker/workflow';
 
 export const providers: (config?: AxiosRequestConfig) => Provider[] = (config = { baseURL: '/' }) => {
     const controllers = root.get(CONTROLLES, [])

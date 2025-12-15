@@ -1,7 +1,6 @@
 import { Injectable } from '@sker/core';
-import { useEntityManager, LlmModel, LlmModelProvider, LlmProvider, LlmChatLog } from '@sker/entities';
-import { appendFileSync, writeFileSync } from 'fs';
-import { join } from 'path';
+import { useEntityManager, LlmModelProvider, LlmProvider, LlmChatLog } from '@sker/entities';
+import { Brackets } from 'typeorm';
 
 interface ProviderInfo {
   providerId: string
@@ -27,87 +26,65 @@ export class LlmProxyService {
     if (!requestedModel) return null
 
     return useEntityManager(async m => {
-      // 1. 获取所有可用梯队（按 tierLevel 升序）
-      const tierQuery = m.createQueryBuilder(LlmModelProvider, 'mp')
-        .innerJoin('mp.provider', 'provider')
-        .select('DISTINCT mp.tierLevel', 'tier')
-        .where('mp.modelName = :requestedModel', { requestedModel })
-        .orWhere(qb => {
-          qb.where('EXISTS (' +
-            qb.subQuery()
-              .from(LlmModel, 'model')
-              .where('model.id = mp.modelId')
-              .andWhere('model.name = :requestedModel')
-              .getQuery() +
-            ')')
-        })
-        .andWhere('provider.protocol = :protocol', { protocol })
-        .andWhere('provider.score > 0')
+      // 模型名匹配条件：供应商模型名 或 标准模型名
+      const modelMatchCondition = new Brackets(qb => {
+        qb.where('mp.modelName = :requestedModel', { requestedModel })
+          .orWhere('model.name = :requestedModel', { requestedModel })
+      })
 
-      // 如果需要 thinking 模式，只查询支持 thinking 的 provider
-      if (requiresThinking) {
-        tierQuery.andWhere('mp.supportsThinking = true')
+      // 构建基础查询条件
+      const buildBaseConditions = (qb: any) => {
+        qb.andWhere('provider.protocol = :protocol', { protocol })
+          .andWhere('provider.score > 0')
+        if (requiresThinking) {
+          qb.andWhere('mp.supportsThinking = :supportsThinking', { supportsThinking: true })
+        }
+        if (excludeIds.size > 0) {
+          qb.andWhere('provider.id NOT IN (:...excludeIds)', { excludeIds: [...excludeIds] })
+        }
       }
 
-      const availableTiers = await tierQuery.orderBy('mp.tierLevel', 'ASC').getRawMany()
+      // 1. 获取所有可用梯队
+      const tierQuery = m.createQueryBuilder(LlmModelProvider, 'mp')
+        .innerJoin('mp.provider', 'provider')
+        .leftJoin('mp.model', 'model')
+        .select('DISTINCT mp.tierLevel', 'tier')
+        .where(modelMatchCondition)
+      buildBaseConditions(tierQuery)
 
-      // 2. 逐层查找可用 provider
+      const availableTiers = await tierQuery.orderBy('tier', 'ASC').getRawMany()
+
+      // 2. 逐层查找最优 provider
       for (const { tier } of availableTiers) {
-        // 先按供应商模型名查找
-        const qb1 = m.createQueryBuilder(LlmModelProvider, 'mp')
+        const providerQuery = m.createQueryBuilder(LlmModelProvider, 'mp')
           .innerJoin('mp.provider', 'provider')
-          .select(['provider.id', 'provider.base_url', 'provider.api_key', 'provider.score', 'mp.modelName'])
-          .where('mp.modelName = :requestedModel', { requestedModel })
+          .leftJoin('mp.model', 'model')
+          .select('provider.id', 'provider_id')
+          .addSelect('provider.base_url', 'provider_base_url')
+          .addSelect('provider.api_key', 'provider_api_key')
+          .addSelect('mp.model_name', 'mp_model_name')
+          .where(modelMatchCondition)
           .andWhere('mp.tierLevel = :tier', { tier })
-          .andWhere('provider.protocol = :protocol', { protocol })
-          .andWhere('provider.score > 0')
+        buildBaseConditions(providerQuery)
 
-        // 如果需要 thinking 模式，只查询支持 thinking 的 provider
-        if (requiresThinking) {
-          qb1.andWhere('mp.supportsThinking = true')
-        }
+        const result = await providerQuery.orderBy('provider.score', 'DESC').getRawOne()
 
-        if (excludeIds.size > 0) {
-          qb1.andWhere('provider.id NOT IN (:...excludeIds)', { excludeIds: [...excludeIds] })
-        }
-
-        let result = await qb1.orderBy('provider.score', 'DESC').getRawOne()
-
-        // 找不到则按标准模型名查找
-        if (!result?.provider_id) {
-          const qb2 = m.createQueryBuilder(LlmModel, 'model')
-            .innerJoin('model.providers', 'mp')
-            .innerJoin('mp.provider', 'provider')
-            .select(['provider.id', 'provider.base_url', 'provider.api_key', 'provider.score', 'mp.modelName'])
-            .where('model.name = :requestedModel', { requestedModel })
-            .andWhere('mp.tierLevel = :tier', { tier })
-            .andWhere('provider.protocol = :protocol', { protocol })
-            .andWhere('provider.score > 0')
-
-          // 如果需要 thinking 模式，只查询支持 thinking 的 provider
-          if (requiresThinking) {
-            qb2.andWhere('mp.supportsThinking = true')
-          }
-
-          if (excludeIds.size > 0) {
-            qb2.andWhere('provider.id NOT IN (:...excludeIds)', { excludeIds: [...excludeIds] })
-          }
-
-          result = await qb2.orderBy('provider.score', 'DESC').getRawOne()
-        }
-
-        // 当前梯队找到可用 provider，立即返回
         if (result?.provider_id) {
+          const modelName = result.mp_model_name
+          if (!modelName) {
+            console.warn(`[findProvider] provider ${result.provider_id} 的 modelName 为空，跳过`)
+            continue
+          }
+
           return {
             providerId: result.provider_id,
             baseUrl: result.provider_base_url,
             apiKey: result.provider_api_key,
-            modelName: result.mp_model_name
+            modelName
           }
         }
       }
 
-      // 所有梯队均无可用 provider
       return null
     })
   }
@@ -150,23 +127,15 @@ export class LlmProxyService {
     return Math.min(10, Math.max(1, raw))
   }
 
-  private withIdleTimeout(body: ReadableStream<Uint8Array>, timeoutMs: number, onTimeout: () => void): ReadableStream<Uint8Array> {
-    let timer: ReturnType<typeof setTimeout>
-    const resetTimer = () => {
-      clearTimeout(timer)
-      timer = setTimeout(onTimeout, timeoutMs)
-    }
-    resetTimer()
-    return body.pipeThrough(new TransformStream({
-      transform(chunk, controller) {
-        resetTimer()
-        controller.enqueue(chunk)
-      },
-      flush() { clearTimeout(timer) }
-    }))
-  }
-
   async proxyRequest(protocol: string, apiPath: string, body: any, headers: Record<string, string>, contentLength: number): Promise<ProxyResult> {
+    if (!body || typeof body !== 'object') {
+      return { success: false, error: '请求体不能为空' }
+    }
+
+    if (!body.model) {
+      return { success: false, error: '缺少必需参数: model' }
+    }
+
     const triedProviders = new Set<string>()
     const requestedModel = body.model
 
@@ -181,7 +150,14 @@ export class LlmProxyService {
       }
       triedProviders.add(provider.providerId)
 
-      const proxyBody = { ...body, model: provider.modelName }
+      // 确保 model 字段不为空，优先使用 provider.modelName，否则 fallback 到原始请求的 model
+      const targetModel = provider.modelName || requestedModel
+      if (!targetModel) {
+        console.error(`[proxyRequest] model 字段为空，跳过 provider ${provider.providerId}`)
+        continue
+      }
+
+      const proxyBody = { ...body, model: targetModel }
 
       // 转换 thinking 参数为 Claude API 期望的格式
       if (requiresThinking) {
@@ -216,7 +192,7 @@ export class LlmProxyService {
           headers: {
             Authorization: `Bearer ${provider.apiKey}`,
             connection: `keep-alive`,
-            [`content-type`]: reqHeaders[`content-type`] as string,
+            'content-type': reqHeaders['content-type'] || 'application/json',
           },
           body: JSON.stringify(proxyBody),
           signal: AbortSignal.timeout(TIMEOUT_MS)
@@ -224,9 +200,9 @@ export class LlmProxyService {
 
         const durationMs = Date.now() - startTime
 
-        if (response.status === 403) {
+        if (response.status === 403 || response.status === 429) {
           await this.setScoreToZero(provider.providerId)
-          console.warn(`403 权限错误，健康分清零: ${provider.providerId}`)
+          console.warn(`${response.status} 权限错误，健康分清零: ${provider.providerId}`)
         } else if (response.status === 404) {
           await this.setScoreToZero(provider.providerId)
           console.warn(`404 配置错误，健康分清零: ${provider.providerId}`)
@@ -254,9 +230,9 @@ export class LlmProxyService {
             const isThinkingError =
               errorMessage.includes('thinking') &&
               (errorMessage.includes('Expected `thinking`') ||
-               errorMessage.includes('redacted_thinking') ||
-               errorMessage.includes('thinking block') ||
-               errorMessage.includes('thinking: Field required'))
+                errorMessage.includes('redacted_thinking') ||
+                errorMessage.includes('thinking block') ||
+                errorMessage.includes('thinking: Field required'))
 
             if (isThinkingError) {
               await this.disableThinkingSupport(provider.providerId, provider.modelName)
@@ -310,9 +286,9 @@ export class LlmProxyService {
                   const isThinkingError =
                     errorMessage.includes('thinking') &&
                     (errorMessage.includes('Expected `thinking`') ||
-                     errorMessage.includes('redacted_thinking') ||
-                     errorMessage.includes('thinking block') ||
-                     errorMessage.includes('thinking: Field required'))
+                      errorMessage.includes('redacted_thinking') ||
+                      errorMessage.includes('thinking block') ||
+                      errorMessage.includes('thinking: Field required'))
 
                   if (isThinkingError) {
                     thinkingErrorDetected = true
