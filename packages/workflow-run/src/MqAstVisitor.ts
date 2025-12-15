@@ -13,54 +13,49 @@ import { take, timeout, finalize, catchError, map } from 'rxjs/operators';
 @Injectable()
 export class MqPushAstVisitor {
   @Handler(MqPushAst)
-  visit(ast: MqPushAst, input: Observable<MqPushAst>, ctx: any): Observable<NodeEvent> {
+  visit(ast: MqPushAst, input$: Observable<any>, ctx: any): Observable<NodeEvent> {
     return new Observable<NodeEvent>(obs => {
       const abortController = new AbortController();
 
-      const wrappedCtx = {
-        ...ctx,
-        abortSignal: abortController.signal
-      };
+      ast.state = 'running';
+      obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
-      const handler = async () => {
-        try {
-          if (wrappedCtx.abortSignal?.aborted) {
+      input$.subscribe({
+        next: async () => {
+          try {
+            if (abortController.signal.aborted) {
+              throw new Error('工作流已取消');
+            }
+
+            const queue = useQueue(ast.queueName);
+            await queue.producer.next(ast.input);
+
+            ast.success = true;
+            console.log(`[MqPush] 推送成功: queue=${queue.queueName}, data=`, ast.input);
+
+            obs.next({ type: 'node_emit', id: ast.id, property: 'success', value: ast.success });
+          } catch (error) {
+            ast.success = false;
             ast.state = 'fail';
-            setAstError(ast, new Error('工作流已取消'));
+            setAstError(ast, error, process.env.NODE_ENV === 'development');
+            console.error(`[MqPushAstVisitor] queue=${ast.queueName}`, error);
             obs.next({ type: 'node_fail', id: ast.id, data: ast });
             obs.complete();
-            return;
           }
-
-          ast.state = 'running';
-          obs.next({ type: 'node_runing', id: ast.id, data: ast });
-          ast.count += 1;
-          obs.next({ type: 'node_runing', id: ast.id, data: ast });
-
-          // useQueue 内部会自动规范化队列名，无需在此过滤
-          const queue = useQueue(ast.queueName);
-
-          await queue.producer.next(ast.input);
-
-          ast.success = true;
-          obs.next({ type: 'node_runing', id: ast.id, data: ast });
-
-          console.log(`[MqPush] 推送成功: queue=${queue.queueName}, data=`, ast.input);
-
-          ast.state = 'success';
-          obs.next({ type: 'node_success', id: ast.id, data: ast });
-          obs.complete();
-        } catch (error) {
+        },
+        error: (error) => {
           ast.success = false;
           ast.state = 'fail';
           setAstError(ast, error, process.env.NODE_ENV === 'development');
-          console.error(`[MqPushAstVisitor] queue=${ast.queueName}`, error);
           obs.next({ type: 'node_fail', id: ast.id, data: ast });
           obs.complete();
+        },
+        complete: () => {
+          ast.state = 'success';
+          obs.next({ type: 'node_success', id: ast.id, data: ast });
+          obs.complete();
         }
-      };
-
-      handler();
+      });
 
       return () => {
         abortController.abort();
@@ -85,97 +80,85 @@ export class MqPushAstVisitor {
 @Injectable()
 export class MqPullAstVisitor {
   @Handler(MqPullAst)
-  visit(ast: MqPullAst, ctx: any): Observable<NodeEvent> {
+  visit(ast: MqPullAst, input$: Observable<any>, ctx: any): Observable<NodeEvent> {
     return new Observable<NodeEvent>(obs => {
       const abortController = new AbortController();
 
-      const wrappedCtx = {
-        ...ctx,
-        abortSignal: abortController.signal
-      };
-
-      // 检查工作流是否已取消
-      if (wrappedCtx.abortSignal?.aborted) {
-        ast.state = 'fail';
-        setAstError(ast, new Error('工作流已取消'));
-        obs.next({ type: 'node_fail', id: ast.id, data: ast });
-        obs.complete();
-        return;
-      }
-
-      // 发送 running 状态
       ast.state = 'running';
-          obs.next({ type: 'node_runing', id: ast.id, data: ast });
       ast.count += 1;
       obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
-      // useQueue 内部会自动规范化队列名
-      const queue = useQueue(ast.queueName, { manualAck: false });
-      const normalizedQueueName = queue.queueName;
+      input$.subscribe({
+        next: () => {
+          const queue = useQueue(ast.queueName, { manualAck: false });
+          const normalizedQueueName = queue.queueName;
 
-      console.log(`[MqPull] 开始监听: queue=${normalizedQueueName}, max=${ast.max}`);
+          console.log(`[MqPull] 开始监听: queue=${normalizedQueueName}, max=${ast.max}`);
 
-      // 订阅消息队列，响应式流式处理
-      const subscription = queue.consumer$
-        .pipe(
-          take(ast.max),
-          catchError((error) => {
-            // 超时错误处理
-            if (error.name === 'TimeoutError') {
-              // 如果已经发射过消息，超时视为队列已清空，正常结束
-              if (ast.emitCount > 0) {
-                return EMPTY; // 返回空流，正常结束
-              } else {
-                // 一条消息都没收到就超时
-                throw new Error(`队列 ${normalizedQueueName} 内无消息`);
+          const subscription = queue.consumer$
+            .pipe(
+              take(ast.max),
+              catchError((error) => {
+                if (error.name === 'TimeoutError') {
+                  if (ast.emitCount > 0) {
+                    return EMPTY;
+                  } else {
+                    throw new Error(`队列 ${normalizedQueueName} 内无消息`);
+                  }
+                }
+                throw error;
+              }),
+              finalize(() => {
+                console.log(`[MqPull] 监听结束: queue=${normalizedQueueName}, 共发射 ${ast.emitCount} 条消息`);
+              })
+            )
+            .subscribe({
+              next: (envelope) => {
+                ast.output = envelope.message;
+                ast.emitCount += 1;
+                obs.next({ type: 'node_emit', id: ast.id, property: 'output', value: ast.output });
+                console.log(`[MqPull] 收到消息: queue=${normalizedQueueName}, emitCount=${ast.emitCount}`);
+              },
+              error: (error) => {
+                ast.state = 'fail';
+                setAstError(ast, error, process.env.NODE_ENV === 'development');
+                console.error(`[MqPullAstVisitor] queue=${normalizedQueueName}, 已发射=${ast.emitCount}条`, error);
+                obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                obs.complete();
+              },
+              complete: () => {
+                ast.state = 'success';
+                obs.next({ type: 'node_success', id: ast.id, data: ast });
+                obs.complete();
               }
-            }
-            throw error;
-          }),
-          finalize(() => {
-            // 流结束时的清理逻辑
-            console.log(`[MqPull] 监听结束: queue=${normalizedQueueName}, 共发射 ${ast.emitCount} 条消息`);
-          })
-        )
-        .subscribe({
-          next: (envelope) => {
-            // 每收到一条消息就 emitting 一次
-            ast.output = envelope.message;
-            ast.emitCount += 1;
-            obs.next({ type: 'node_runing', id: ast.id, data: ast });
+            });
 
-            console.log(`[MqPull] 收到消息: queue=${normalizedQueueName}, emitCount=${ast.emitCount}`);
-          },
-          error: (error) => {
-            // 错误处理
-            ast.state = 'fail';
-            setAstError(ast, error, process.env.NODE_ENV === 'development');
-            console.error(`[MqPullAstVisitor] queue=${normalizedQueueName}, 已发射=${ast.emitCount}条`, error);
-            obs.next({ type: 'node_fail', id: ast.id, data: ast });
-            obs.complete();
-          },
-          complete: () => {
-            // 正常结束
-            ast.state = 'success';
-            obs.next({ type: 'node_success', id: ast.id, data: ast });
-            obs.complete();
+          if (abortController.signal.aborted) {
+            subscription.unsubscribe();
+          } else {
+            abortController.signal.addEventListener('abort', () => {
+              subscription.unsubscribe();
+              ast.state = 'fail';
+              setAstError(ast, new Error('工作流已取消'));
+              obs.next({ type: 'node_fail', id: ast.id, data: ast });
+              obs.complete();
+            });
           }
-        });
-
-      // 监听工作流取消信号
-      if (wrappedCtx.abortSignal) {
-        wrappedCtx.abortSignal.addEventListener('abort', () => {
-          subscription.unsubscribe();
+        },
+        error: (error) => {
           ast.state = 'fail';
-          setAstError(ast, new Error('工作流已取消'));
+          setAstError(ast, error, process.env.NODE_ENV === 'development');
           obs.next({ type: 'node_fail', id: ast.id, data: ast });
           obs.complete();
-        });
-      }
+        },
+        complete: () => {
+          // MqPull 的完成由内部的 consumer$ 控制
+        }
+      });
 
-      // 返回清理函数
       return () => {
-        subscription.unsubscribe();
+        abortController.abort();
+        obs.complete();
       };
     });
   }
