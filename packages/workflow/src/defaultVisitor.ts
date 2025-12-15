@@ -17,8 +17,8 @@ export class DefaultVisitor {
                     // 默认 一个输入 一个输出 输出直接等于输入
                     ast.metadata?.inputs.map(input => {
                         ast.metadata?.outputs.map(output => {
-                            ast[output.property] = ast[input.property];
-                            obs.next({ type: 'node_emit', id: ast.id, property: output.property, value: data[input.property] })
+                            ast[output.property] = data[input.property];
+                            obs.next({ type: 'node_emit', id: ast.id, property: output.property, value: ast[output.property] })
                         })
                     })
                 },

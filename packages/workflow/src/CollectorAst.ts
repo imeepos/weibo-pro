@@ -14,21 +14,19 @@ export class CollectorAst extends Ast {
 
 
 import { Injectable } from "@sker/core";
-import { Observable, Subject, buffer, map, mergeMap, tap } from "rxjs";
+import { Observable, map, tap, toArray } from "rxjs";
 import { NodeEvent } from "./execution/events";
 
 @Injectable()
 export class CollectorVisitor {
     @Handler(CollectorAst)
     handler(ast: CollectorAst, input$: Observable<CollectorAst>, ctx: WorkflowGraphAst) {
-        const complete$ = new Subject<void>();
-
         return new Observable<NodeEvent>(obs => {
             ast.state = 'running';
             obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
             input$.pipe(
-                buffer(complete$),
+                toArray(),
                 map(asts => asts.flatMap(a => a.items || []).flat()),
                 tap(items => {
                     ast.result = items;
@@ -39,9 +37,6 @@ export class CollectorVisitor {
             ).subscribe({
                 complete: () => obs.complete()
             });
-
-            complete$.next();
-            complete$.complete();
         });
     }
 }

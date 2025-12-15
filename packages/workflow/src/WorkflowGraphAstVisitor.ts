@@ -1,6 +1,6 @@
 import { Injectable, Inject } from '@sker/core';
-import { Observable, EMPTY, merge, defer, ReplaySubject, of, combineLatest, zip, concat, Subject, isObservable } from 'rxjs';
-import { filter, map, finalize, tap, catchError, shareReplay, buffer, toArray, concatMap } from 'rxjs/operators';
+import { Observable, EMPTY, merge, defer, ReplaySubject, of, combineLatest, zip, concat, Subject, isObservable, asyncScheduler } from 'rxjs';
+import { filter, map, finalize, tap, catchError, shareReplay, buffer, toArray, concatMap, observeOn } from 'rxjs/operators';
 import { NodeExecutor } from './executor';
 import { Handler, getInputMetadata, hasBufferMode } from './decorator';
 import { resetNodeToDefaults, WorkflowGraphAst } from './ast';
@@ -134,10 +134,11 @@ export class WorkflowGraphAstVisitor {
                             }
                         });
 
-                    // 监听上游节点完成事件，触发 buffer 发射
+                    // 监听上游节点完成事件，触发 buffer 发射（异步延迟，确保 buffer 先订阅）
                     eventStream$
                         .pipe(
                             filter(event => event.type === 'node_success' || event.type === 'node_fail'),
+                            observeOn(asyncScheduler),
                             finalize(() => completionSubject.complete())
                         )
                         .subscribe(() => {
@@ -187,10 +188,11 @@ export class WorkflowGraphAstVisitor {
 
                     const completionSubject = completionSubjects[index]!;
 
-                    // 监听上游节点完成事件，触发 buffer 发射
+                    // 监听上游节点完成事件，触发 buffer 发射（异步延迟，确保 buffer 先订阅）
                     eventStream$
                         .pipe(
-                            filter(event => event.type === 'node_success' || event.type === 'node_fail')
+                            filter(event => event.type === 'node_success' || event.type === 'node_fail'),
+                            observeOn(asyncScheduler)
                         )
                         .subscribe(() => {
                             console.log(`[WorkflowGraphAstVisitor] 多边上游节点 ${edge.from} 完成，触发 buffer 发射`);
