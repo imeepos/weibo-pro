@@ -20,9 +20,9 @@ const EvaluationTypeColors: Record<EvaluationType, string> = {
 };
 
 const AnswerEvaluatorRender: React.FC<{ ast: AnswerEvaluatorAst }> = ({ ast }) => {
-  const results = ast.results?.getValue() || [];
-  const totalScore = ast.totalScore?.getValue() || 0;
-  const passed = ast.passed?.getValue() || false;
+  const results = ast.results || [];
+  const totalScore = ast.totalScore || 0;
+  const passed = ast.passed || false;
 
   if (results.length === 0) {
     return (

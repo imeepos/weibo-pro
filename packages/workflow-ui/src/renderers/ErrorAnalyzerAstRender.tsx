@@ -29,9 +29,9 @@ const AnalysisSection: React.FC<{
 };
 
 const ErrorAnalyzerRender: React.FC<{ ast: ErrorAnalyzerAst }> = ({ ast }) => {
-  const recap = ast.recap?.getValue() || '';
-  const blame = ast.blame?.getValue() || '';
-  const improvement = ast.improvement?.getValue() || '';
+  const recap = ast.recap || '';
+  const blame = ast.blame || '';
+  const improvement = ast.improvement || '';
 
   if (!recap && !blame && !improvement) {
     return (

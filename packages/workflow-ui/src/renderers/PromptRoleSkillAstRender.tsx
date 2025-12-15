@@ -47,7 +47,7 @@ const PromptRoleSkillRender: React.FC<{ ast: PromptRoleSkillAst }> = ({ ast }) =
     );
   }
 
-  const selectedSkills = ast.selectedSkillsList?.getValue() || [];
+  const selectedSkills = ast.selectedSkillsList || [];
   const availableSkills = ast.availableSkills || [];
 
   return (
@@ -65,7 +65,7 @@ const PromptRoleSkillRender: React.FC<{ ast: PromptRoleSkillAst }> = ({ ast }) =
                 title={skill.title}
                 description={skill.description}
                 type={skill.type}
-                isSelected={selectedSkills.some(s => s.id === skill.id)}
+                isSelected={selectedSkills.some((s: { id: string }) => s.id === skill.id)}
               />
             ))}
           </div>
@@ -79,7 +79,7 @@ const PromptRoleSkillRender: React.FC<{ ast: PromptRoleSkillAst }> = ({ ast }) =
             选中的技能 ({selectedSkills.length})
           </div>
           <div className="space-y-1 max-h-40 overflow-y-auto">
-            {selectedSkills.map((skill) => (
+            {selectedSkills.map((skill: { id: string; title: string; description: string | null; type: PromptSkillType }) => (
               <SkillItem
                 key={skill.id}
                 title={skill.title}

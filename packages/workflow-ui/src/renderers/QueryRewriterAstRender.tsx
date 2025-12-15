@@ -26,8 +26,9 @@ const QueryItem: React.FC<{ query: string; index: number }> = ({ query, index })
 };
 
 const QueryRewriterRender: React.FC<{ ast: QueryRewriterAst }> = ({ ast }) => {
-  const reasoning = ast.reasoning?.getValue() || '';
-  const queries = ast.subQueries?.getValue() || [];
+  const reasoning = ast.reasoning || '';
+  const rawQueries = ast.subQueries || [];
+  const queries = Array.isArray(rawQueries) ? rawQueries : [];
 
   if (!reasoning && queries.length === 0) {
     return (
@@ -56,7 +57,7 @@ const QueryRewriterRender: React.FC<{ ast: QueryRewriterAst }> = ({ ast }) => {
             子查询（{queries.length}）
           </div>
           <div className="space-y-1.5 max-h-64 overflow-y-auto">
-            {queries.map((q, i) => (
+            {queries.map((q: string, i: number) => (
               <QueryItem key={i} query={q} index={i} />
             ))}
           </div>

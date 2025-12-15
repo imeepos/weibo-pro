@@ -36,7 +36,7 @@ const PersonaRender: React.FC<{ ast: PersonaAst }> = ({ ast }) => {
     );
   }
 
-  const responseValue = ast.response?.getValue() || '';
+  const responseValue = ast.response || '';
   const memories = ast.retrievedMemories || [];
 
   return (

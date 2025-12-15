@@ -30,8 +30,8 @@ const SubproblemItem: React.FC<{ problem: string; index: number; total: number }
 };
 
 const ResearchPlannerRender: React.FC<{ ast: ResearchPlannerAst }> = ({ ast }) => {
-  const reasoning = ast.reasoning?.getValue() || '';
-  const subproblems = ast.subproblems?.getValue() || [];
+  const reasoning = ast.reasoning || '';
+  const subproblems = ast.subproblems || [];
 
   if (!reasoning && subproblems.length === 0) {
     return (
@@ -60,7 +60,7 @@ const ResearchPlannerRender: React.FC<{ ast: ResearchPlannerAst }> = ({ ast }) =
             研究子问题（{subproblems.length}）
           </div>
           <div className="space-y-2 max-h-96 overflow-y-auto">
-            {subproblems.map((problem, i) => (
+            {subproblems.map((problem: string, i: number) => (
               <SubproblemItem key={i} problem={problem} index={i} total={subproblems.length} />
             ))}
           </div>

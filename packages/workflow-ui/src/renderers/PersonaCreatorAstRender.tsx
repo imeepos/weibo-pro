@@ -12,7 +12,7 @@ const PersonaCreatorRender: React.FC<{ ast: PersonaCreatorAst }> = ({ ast }) => 
     );
   }
 
-  const personaId = ast.personaId?.getValue() || '';
+  const personaId = ast.personaId || '';
 
   return (
     <div className="space-y-3 p-3 max-w-sm">

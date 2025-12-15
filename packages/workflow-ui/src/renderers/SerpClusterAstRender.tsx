@@ -7,7 +7,7 @@ import React from "react";
 export class SerpClusterAstRender {
     @Render(SerpClusterAst)
     render(ast: SerpClusterAst) {
-        const clusters = ast.clusters?.getValue() || [];
+        const clusters = ast.clusters || [];
         if (!clusters.length) return null;
 
         return (
