@@ -1,6 +1,6 @@
 import { Injectable, Inject } from '@sker/core';
 import { Observable, EMPTY, merge, defer, ReplaySubject, of, combineLatest, zip, concat } from 'rxjs';
-import { filter, map, finalize, tap, catchError } from 'rxjs/operators';
+import { filter, map, finalize, tap, catchError, shareReplay } from 'rxjs/operators';
 import { NodeExecutor } from './executor';
 import { Handler } from './decorator';
 import { WorkflowGraphAst } from './ast';
@@ -42,16 +42,19 @@ export class WorkflowGraphAstVisitor {
                 const input$ = new ReplaySubject<any>(1);
                 inputSubjects.set(node.id, input$);
 
-                // 调用 NodeExecutor 执行子节点
-                const eventStream$ = this.nodeExecutor.run(node, input$, ast);
+                // 调用 NodeExecutor 执行子节点，使用 shareReplay 共享订阅
+                const eventStream$ = this.nodeExecutor.run(node, input$, ast).pipe(
+                    shareReplay({ bufferSize: Infinity, refCount: false })
+                );
                 nodeEventStreams.set(node.id, eventStream$);
             });
 
             // 连接边
             this.connectEdges(ast, inputSubjects, nodeEventStreams);
 
-            // 触发入口节点
-            this.triggerEntryNodes(ast, of({}), inputSubjects);
+            // 计算笛卡尔积并触发入口节点
+            const combinedInput$ = this.computeCartesianProduct(ast, of({}));
+            this.triggerEntryNodes(ast, combinedInput$, inputSubjects);
 
             // 合并所有事件流
             return this.mergeNodeEventStreams(ast, nodeEventStreams, inputSubjects);
@@ -75,6 +78,8 @@ export class WorkflowGraphAstVisitor {
             const targetSubject = inputSubjects.get(targetId);
             if (!targetSubject) return;
 
+            console.log(`[WorkflowGraphAstVisitor] 连接节点 ${targetId} 的边，边数: ${edges.length}`);
+
             if (edges.length === 1) {
                 const edge = edges[0]!;
                 const eventStream$ = nodeEventStreams.get(edge.from);
@@ -87,6 +92,7 @@ export class WorkflowGraphAstVisitor {
                         ),
                         map(event => event.value),
                         finalize(() => {
+                            console.log(`[WorkflowGraphAstVisitor] 上游节点 ${edge.from} 完成，完成下游节点 ${targetId} 的 subject`);
                             // 当上游节点完成时，完成下游节点的 subject
                             if (!targetSubject.closed) {
                                 targetSubject.complete();
@@ -119,6 +125,7 @@ export class WorkflowGraphAstVisitor {
                     targetSubject.next(value);
                 },
                 complete: () => {
+                    console.log(`[WorkflowGraphAstVisitor] 所有上游节点完成，完成节点 ${targetId} 的 subject`);
                     // 当所有上游节点完成时，完成下游节点的 subject
                     if (!targetSubject.closed) {
                         targetSubject.complete();
@@ -172,23 +179,87 @@ export class WorkflowGraphAstVisitor {
         }
     }
 
+    /**
+     * 计算笛卡尔积：将外部输入与静态入口节点的值组合
+     *
+     * 例如：
+     * - 外部输入: [1, 2, 3]
+     * - 静态节点A的值: [x]
+     * - 静态节点B的值: [y]
+     * - 结果: [(1,x,y), (2,x,y), (3,x,y)]
+     */
+    private computeCartesianProduct(
+        workflow: WorkflowGraphAst,
+        input$: Observable<any>
+    ): Observable<any> {
+        const autoEntryIds = this.findEntryNodes(workflow);
+        const dynamicEntryIds = workflow.entryNodeIds && workflow.entryNodeIds.length > 0
+            ? workflow.entryNodeIds
+            : [];
+        const staticEntryIds = autoEntryIds.filter(id => !dynamicEntryIds.includes(id));
+
+        console.log(`[WorkflowGraphAstVisitor] 动态入口节点:`, dynamicEntryIds);
+        console.log(`[WorkflowGraphAstVisitor] 静态入口节点:`, staticEntryIds);
+
+        // 如果没有静态入口节点，直接返回外部输入
+        if (staticEntryIds.length === 0) {
+            return input$;
+        }
+
+        // 收集静态节点的值
+        const staticValues: Record<string, any> = {};
+        staticEntryIds.forEach(nodeId => {
+            const node = workflow.nodes.find(n => n.id === nodeId);
+            if (node) {
+                // 收集节点的所有属性作为静态值
+                staticValues[nodeId] = { ...node };
+            }
+        });
+
+        console.log(`[WorkflowGraphAstVisitor] 静态节点值:`, staticValues);
+
+        // 将外部输入与静态值组合
+        return input$.pipe(
+            map(dynamicInput => {
+                const combined: any = { ...dynamicInput };
+                // 将静态值合并到输入中
+                staticEntryIds.forEach(nodeId => {
+                    combined[`${nodeId}`] = staticValues[nodeId];
+                });
+                console.log(`[WorkflowGraphAstVisitor] 组合后的输入:`, combined);
+                return combined;
+            })
+        );
+    }
+
     private triggerEntryNodes(
         workflow: WorkflowGraphAst,
         input$: Observable<any>,
         inputSubjects: Map<string, ReplaySubject<any>>
     ): void {
-        const entryIds =
-            workflow.entryNodeIds && workflow.entryNodeIds.length > 0
-                ? workflow.entryNodeIds
-                : this.findEntryNodes(workflow);
+        const entryIds = this.findEntryNodes(workflow);
+        console.log(`[WorkflowGraphAstVisitor] 触发入口节点:`, entryIds);
 
-        input$.subscribe(input => {
-            entryIds.forEach(nodeId => {
-                const subject = inputSubjects.get(nodeId);
-                if (subject) {
-                    subject.next(input || {});
-                }
-            });
+        input$.subscribe({
+            next: input => {
+                entryIds.forEach(nodeId => {
+                    const subject = inputSubjects.get(nodeId);
+                    if (subject) {
+                        console.log(`[WorkflowGraphAstVisitor] 向入口节点 ${nodeId} 发送输入`);
+                        subject.next(input || {});
+                    }
+                });
+            },
+            complete: () => {
+                console.log(`[WorkflowGraphAstVisitor] 输入流完成，完成所有入口节点的 subject`);
+                entryIds.forEach(nodeId => {
+                    const subject = inputSubjects.get(nodeId);
+                    if (subject && !subject.closed) {
+                        console.log(`[WorkflowGraphAstVisitor] 完成入口节点 ${nodeId} 的 subject`);
+                        subject.complete();
+                    }
+                });
+            }
         });
     }
 
@@ -199,9 +270,14 @@ export class WorkflowGraphAstVisitor {
             inDegrees.set(edge.to, (inDegrees.get(edge.to) ?? 0) + 1);
         });
 
-        return Array.from(inDegrees.entries())
+        console.log(`[WorkflowGraphAstVisitor] 节点入度统计:`, Object.fromEntries(inDegrees));
+
+        const entryNodes = Array.from(inDegrees.entries())
             .filter(([_, degree]) => degree === 0)
             .map(([nodeId]) => nodeId);
+
+        console.log(`[WorkflowGraphAstVisitor] 找到入口节点:`, entryNodes);
+        return entryNodes;
     }
 
     private mergeNodeEventStreams(

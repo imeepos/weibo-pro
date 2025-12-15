@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from 'react'
+import React, { useCallback, useRef, useState } from 'react'
 import { executeAstWithWorkflowGraph, executeNodeIsolated, executeAst, fromJson, toJson, type WorkflowGraphAst, getNodeById, type INode, type IAstStates } from '@sker/workflow'
 import type { useWorkflow } from '../../hooks/useWorkflow'
 import type { ToastType } from './useCanvasState'
@@ -11,9 +11,6 @@ import { useExecutionStore } from '../../store/execution.store'
 // ============================================================================
 // 工具函数：提取重复逻辑，保持单一职责
 // ============================================================================
-
-// 工作流执行锁，防止重复执行
-let isWorkflowRunning = false
 
 function extractErrorInfo(error: unknown): { message: string; type?: string } {
   if (!error) return { message: '未知错误' }
@@ -111,6 +108,8 @@ export function useWorkflowOperations(
   const abortControllerRef = useRef<AbortController | null>(null)
   // 追踪节点执行记录 ID（nodeId -> recordId）
   const nodeRecordIds = useRef<Map<string, string>>(new Map())
+  // 工作流执行锁，防止重复执行（使用 ref 而非 state，避免触发重渲染）
+  const isWorkflowRunningRef = useRef(false)
 
   const { recordNodeStart, recordNodeComplete } = useExecutionStore.getState()
 
@@ -359,16 +358,16 @@ export function useWorkflowOperations(
       }
 
       // 防止重复执行
-      if (isWorkflowRunning) {
+      if (isWorkflowRunningRef.current) {
         onShowToast?.('info', '工作流正在执行中', '请等待当前执行完成')
         return
       }
-      isWorkflowRunning = true
+      isWorkflowRunningRef.current = true
 
       console.log('[runWorkflow] 通过防重复检查，开始执行')
 
       const cleanup = () => {
-        isWorkflowRunning = false
+        isWorkflowRunningRef.current = false
       }
 
       try {
@@ -569,7 +568,7 @@ export function useWorkflowOperations(
 
                 workflow.syncFromAst()
                 console.log('[runWorkflow] 节点完成状态已同步到 UI')
-              } else if (event.type === 'node_runing' || event.type === 'node_running') {
+              } else if (event.type === 'node_runing') {
                 console.log('[runWorkflow] 处理节点运行事件:', event.type)
                 // 处理节点运行状态
                 const nodeData = event.data as any
@@ -745,7 +744,7 @@ export function useWorkflowOperations(
     onShowToast?.('info', '工作流已取消', '已停止执行')
 
     // 重置执行标志
-    isWorkflowRunning = false
+    isWorkflowRunningRef.current = false
   }, [workflow, onSetRunning, onShowToast])
 
   /**
@@ -835,6 +834,38 @@ export function useWorkflowOperations(
     },
     [workflow, onShowToast]
   )
+
+  // 使用 useRef 存储 cancel 函数，避免 useEffect cleanup 频繁触发
+  const cancelWorkflowRef = useRef(cancelWorkflow)
+  React.useEffect(() => {
+    cancelWorkflowRef.current = cancelWorkflow
+  }, [cancelWorkflow])
+
+  // 页面生命周期监听：处理路由切换、刷新、关闭等情况
+  React.useEffect(() => {
+    // 监听页面卸载（刷新、关闭浏览器）
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (isWorkflowRunningRef.current) {
+        // 提示用户有正在运行的工作流
+        const message = '有工作流正在执行中，离开页面将取消执行。'
+        event.returnValue = message
+        return message
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+
+    // 组件卸载时（路由切换）自动取消工作流
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+
+      // 路由切换时，如果有正在运行的工作流，自动取消
+      if (isWorkflowRunningRef.current) {
+        console.log('[Lifecycle] 路由切换，自动取消工作流执行')
+        cancelWorkflowRef.current()
+      }
+    }
+  }, []) // 空依赖数组，只在组件挂载/卸载时执行
 
   return {
     runNode,
