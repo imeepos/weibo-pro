@@ -17,9 +17,15 @@ export class LlmCategoryAstVisitor {
             obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
             input$.subscribe({
-                next: async () => {
+                next: async (inputData) => {
+                    ast.emitCount += 1;
+                    if (inputData) {
+                        Object.keys(inputData).forEach(key => {
+                            (ast as any)[key] = inputData[key];
+                        });
+                    }
+
                     try {
-                        ast.emitCount += 1;
                         if (abortController.signal.aborted) {
                             throw new Error('工作流已取消');
                         }

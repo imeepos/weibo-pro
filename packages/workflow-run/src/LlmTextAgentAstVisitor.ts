@@ -15,9 +15,15 @@ export class LlmTextAgentAstVisitor {
             obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
             input$.subscribe({
-                next: async () => {
+                next: async (inputData) => {
+                    ast.emitCount += 1;
+                    if (inputData) {
+                        Object.keys(inputData).forEach(key => {
+                            (ast as any)[key] = inputData[key];
+                        });
+                    }
+
                     try {
-                        ast.emitCount += 1;
                         if (abortController.signal.aborted) {
                             throw new Error('工作流已取消');
                         }
@@ -33,8 +39,8 @@ export class LlmTextAgentAstVisitor {
                         ]);
 
                         obs.next({ type: 'node_emit', id: ast.id, property: 'text', value: result.content });
-                        obs.next({ type: 'node_emit', id: ast.id, property: 'username', value: ast.name });
-                        obs.next({ type: 'node_emit', id: ast.id, property: 'description', value: ast.description });
+                        obs.next({ type: 'node_emit', id: ast.id, property: 'username', value: ast.username });
+                        obs.next({ type: 'node_emit', id: ast.id, property: 'profile', value: ast.profile });
                     } catch (error) {
                         ast.state = 'fail';
                         setAstError(ast, error);

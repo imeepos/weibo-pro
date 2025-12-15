@@ -21,14 +21,18 @@ Weibo-Pro 是一个基于 Turborepo 的微博舆情分析平台，采用数据�
 
 ### Apps
 - **@sker/api** (NestJS) - 后端 API 服务，端口 3000
-- **@sker/web** (Vite + React) - 前端可视化工作流编辑器，端口 3002
+- **@sker/app** (Expo + React Native) - 移动端应用
 - **@sker/bigscreen** - 大屏展示应用
 - **@sker/crawler** - 爬虫应用
+- **@sker/storybook** - UI 组件库开发工具
 
 ### Core Packages
 - **基础设施**: @sker/core (DI容器), @sker/entities (TypeORM), @sker/mq (RabbitMQ), @sker/redis, @sker/nlp
-- **工作流引擎**: @sker/workflow (引擎核心), @sker/workflow-ast (节点定义), @sker/workflow-run (执行器), @sker/workflow-ui (可视化编辑器)
+- **工作流引擎**: @sker/workflow (引擎核心), @sker/workflow-ast (节点定义), @sker/workflow-run (执行器), @sker/workflow-browser (浏览器执行器), @sker/workflow-ui (可视化编辑器)
 - **业务逻辑**: @sker/agent (LangChain Agent), @sker/sdk (API客户端)
+- **UI层**: @sker/ui (UI组件库), @sker/design (设计系统), @sker/store (RxJS状态管理)
+- **认证**: @sker/auth (Better Auth)
+- **工程配置**: @sker/eslint-config, @sker/typescript-config
 
 ## Development Commands
 
@@ -40,7 +44,8 @@ pnpm dev:clean            # 清理端口后启动
 
 # 单独启动应用
 turbo dev --filter=@sker/api     # 只启动 API
-turbo dev --filter=@sker/web     # 只启动 Web
+turbo dev --filter=@sker/app     # 只启动移动端应用
+turbo dev --filter=@sker/storybook  # 只启动 Storybook
 
 # 构建
 pnpm build                # 构建所有应用和包
@@ -55,6 +60,7 @@ pnpm format               # 格式化代码
 # 工具脚本
 pnpm ensure-deps          # 确保所有依赖包已构建
 pnpm port:guardian        # 检查并清理端口占用
+pnpm clean:cache          # 清理 Turbo 缓存
 ```
 
 ## Architecture
@@ -148,7 +154,50 @@ DataFlowManager 提取输出 → 传递给下游节点
 
 **约束**：仅使用数据库已有数据，严禁实时采集。
 
-### 4. 基础设施
+### 4. 状态管理 (@sker/store)
+
+受 NgRx Store 启发的框架无关状态管理库，基于 RxJS。
+
+**核心概念**：
+- `Store` - 全局状态容器，基于 RxJS Observable
+- `Action` - 描述状态变更的动作
+- `Reducer` - 纯函数，根据 Action 更新状态
+- `Selector` - 状态选择器，优化性能
+
+**特点**：
+- 响应式：基于 RxJS，支持 Observable 订阅
+- 不可变：状态更新使用不可变模式
+- 可预测：单向数据流，便于调试和追踪
+
+### 5. UI 组件库 (@sker/ui)
+
+企业级 React 组件库，集成多个优秀的第三方库。
+
+**核心依赖**：
+- Radix UI - 无样式可访问组件基础
+- Plate.js - 富文本编辑器（基于 Slate）
+- Shadcn/ui 设计风格
+- ECharts - 数据可视化
+- React Flow - 工作流可视化
+- TailwindCSS v4 - 样式系统
+
+**组件分类**：
+- 基础组件：Button, Input, Dialog, Dropdown 等
+- 数据展示：Table, Chart, Tree, Graph 等
+- 表单组件：Form, DatePicker, Select, Upload 等
+- 工作流组件：WorkflowEditor, NodeRenderer 等
+
+### 6. 认证系统 (@sker/auth)
+
+基于 Better Auth 的认证模块。
+
+**功能**：
+- 多种认证方式：邮箱密码、OAuth、Passkey
+- Session 管理
+- 权限控制
+- 与 @sker/core DI 系统集成
+
+### 7. 基础设施
 
 **数据库** (@sker/entities + TypeORM + PostgreSQL)：
 - `WeiboPostEntity`, `WeiboUserEntity` - 微博数据
@@ -177,7 +226,7 @@ useQueue(queueName)
 NLPAnalyzer.analyze(text) → { sentiment, keywords, score }
 ```
 
-### 5. 数据流全链路
+### 8. 数据流全链路
 
 微博数据采集 → NLP 分析 → 事件生成：
 
@@ -206,7 +255,8 @@ EventAutoCreatorAst（关键词相似度聚类）
 - **业务执行器**: `packages/workflow-run/src/*Visitor.ts`
 - **Agent 工具**: `packages/agent/src/tools/*.tool.ts`
 - **API 入口**: `apps/api/src/main.ts` (初始化 DI + 启动 NLP 消费者)
-- **Web 入口**: `apps/web/src/main.tsx`
+- **移动端入口**: `apps/app/app/_layout.tsx` (Expo Router 入口)
+- **UI 组件库**: `packages/ui/src/components/` (Radix UI + Shadcn)
 
 ## Architectural Patterns
 
@@ -227,13 +277,13 @@ EventAutoCreatorAst（关键词相似度聚类）
 
 ## Deployment
 
-Docker Compose 配置已包含 API + Web + Bigscreen 三个服务：
+Docker Compose 配置已包含 API + Bigscreen 服务：
 ```bash
 docker-compose up -d
 ```
 - API: http://localhost:3004
-- Web: http://localhost:3002
 - Bigscreen: http://localhost:8085
+- App: 使用 Expo Go 或原生构建运行
 
 ## 代码艺术家哲学
 
