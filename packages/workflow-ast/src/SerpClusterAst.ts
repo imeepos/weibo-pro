@@ -1,5 +1,4 @@
 import { Ast, Input, IS_MULTI, Node, Output } from "@sker/workflow";
-import { BehaviorSubject } from "rxjs";
 
 export interface SearchSnippet {
     title: string;
@@ -30,7 +29,7 @@ export class SerpClusterAst extends Ast {
     maxClusters: number = 5;
 
     @Output({ title: '聚类结果' })
-    clusters = new BehaviorSubject<SerpCluster[]>([]);
+    clusters = [];
 
     type: 'SerpClusterAst' = 'SerpClusterAst';
 }

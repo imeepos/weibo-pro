@@ -1,5 +1,4 @@
 import { Ast, Input, Output, Node, IS_MULTI } from "@sker/workflow";
-import { BehaviorSubject } from "rxjs";
 
 @Node({
   title: '研究规划器',
@@ -27,10 +26,10 @@ export class ResearchPlannerAst extends Ast {
   soundbites: string[] = [];
 
   @Output({ title: '子问题列表' })
-  subproblems = new BehaviorSubject<string[]>([]);
+  subproblems = [];
 
   @Output({ title: '推理过程' })
-  reasoning = new BehaviorSubject<string>(``);
+  reasoning = ``;
 
   type: 'ResearchPlannerAst' = 'ResearchPlannerAst';
 }

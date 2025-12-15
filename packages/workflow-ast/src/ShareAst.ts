@@ -23,7 +23,6 @@
  */
 
 import { Ast, Input, IS_BUFFER, IS_MULTI, Node, Output } from "@sker/workflow";
-import { BehaviorSubject } from "rxjs";
 
 export interface ChatMessage {
     role: string;        // 发言者角色
@@ -59,10 +58,10 @@ export class ShareAst extends Ast {
     // === 输出：对话历史 ===
 
     @Output({ title: '对话历史' })
-    chatHistory = new BehaviorSubject<ChatMessage[]>([]);
+    chatHistory = [];
 
     @Output({ title: '格式化历史' })
-    formattedHistory = new BehaviorSubject<string>(``);
+    formattedHistory = ``;
 
     type: `ShareAst` = `ShareAst`
 }
