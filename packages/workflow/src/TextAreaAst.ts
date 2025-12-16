@@ -1,7 +1,7 @@
 import { Ast, setAstError, WorkflowGraphAst } from "./ast";
 import { Input, Node, Output, Handler, IS_MULTI } from "./decorator";
 import { Injectable } from "@sker/core";
-import { catchError, concatMap, isObservable, Observable, of } from "rxjs";
+import { catchError, concatMap, endWith, ignoreElements, isObservable, merge, Observable, of } from "rxjs";
 import { NodeEvent } from "./execution/events";
 
 @Node({ title: '文本节点', type: 'basic' })
@@ -22,9 +22,19 @@ export class TextAreaAstVisitor {
     handler(ast: TextAreaAst, input$: Observable<TextAreaAst>, ctx: WorkflowGraphAst): Observable<NodeEvent> {
         if (!input$) throw new Error(`[TextAreaAstVisitor.handler] input$ is empty`)
         if (!isObservable(input$)) throw new Error(`[TextAreaAstVisitor.handler] input$ must be an Observable`)
-        return input$.pipe(
+
+        let started = false;
+
+        const emit$ = input$.pipe(
             concatMap((input: TextAreaAst) => {
-                // 健壮性处理：支持 input.input 是数组或字符串
+                const events: NodeEvent[] = [];
+
+                if (!started) {
+                    started = true;
+                    ast.state = 'running';
+                    events.push({ type: 'node_runing', id: ast.id, data: ast });
+                }
+
                 let inputArray: string[];
                 if (Array.isArray(input.input)) {
                     inputArray = input.input;
@@ -35,13 +45,20 @@ export class TextAreaAstVisitor {
                 }
 
                 const value = inputArray.join('\n');
-                const events: NodeEvent[] = [
-                    { type: 'node_runing', id: ast.id, data: { ...ast, state: 'running' } },
-                    { type: 'node_emit', id: ast.id, property: 'output', value },
-                    { type: 'node_success', id: ast.id, data: { ...ast, state: 'success', output: value } }
-                ];
+                ast.output = value;
+                events.push({ type: 'node_emit', id: ast.id, property: 'output', value });
+
                 return events;
-            }),
+            })
+        );
+
+        // input$ complete 时才发射 node_success
+        const complete$ = emit$.pipe(
+            ignoreElements(),
+            endWith({ type: 'node_success', id: ast.id, data: ast } as NodeEvent)
+        );
+
+        return merge(emit$, complete$).pipe(
             catchError(error => {
                 ast.state = 'fail';
                 setAstError(ast, error);

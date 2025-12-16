@@ -1,5 +1,13 @@
 # @sker/workflow - 工作流引擎核心包
 
+## 核心逻辑
+input$ = merge(input1$, input2$)
+- 当 input1$ complete 时，input$ 还没 complete（因为 input2$ 还在）
+- 只有当 input1$ 和 input2$ 都 complete 时，input$ 才 complete
+- 此时 TextAreaAst 才应该发射 node_success
+
+参考：packages\workflow\src\TextAreaAst.ts
+
 ## 包简介
 
 @sker/workflow 是 Weibo-Pro 的工作流编排引擎核心，基于 AST（抽象语法树）+ 访问者模式（Visitor Pattern）+ RxJS 响应式流构建。将工作流节点建模为语法树节点，通过装饰器系统自动收集元数据，实现声明式的节点定义和数据流编排。

@@ -26,7 +26,7 @@ export class MyAgent {
 
   constructor(@Inject(SomeDependency) private dep: SomeDependency) {
     const model = new ChatOpenAI({
-      modelName: 'deepseek-ai/DeepSeek-V3',
+      modelName: 'deepseek-ai/DeepSeek-V3.2',
       temperature: 0.3,
       apiKey: process.env.OPENAI_API_KEY,
       configuration: {
