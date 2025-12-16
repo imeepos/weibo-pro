@@ -27,4 +27,5 @@ export * from './MergeAst';
 export * from './LoopAst';
 export * from './event-store/types';
 export { MemoryEventStore } from './event-store/memory';
+export { WorkflowEventStream } from './event-store/event-stream';
 export * from './runtime';
