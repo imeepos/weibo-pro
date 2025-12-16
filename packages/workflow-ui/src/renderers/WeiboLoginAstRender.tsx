@@ -79,11 +79,49 @@ export const WeiboLoginSetting = ({ ast }: { ast: WeiboLoginAst }) => {
  */
 const WeiboLoginRender: React.FC<{ ast: WeiboLoginAst }> = ({ ast }) => {
 
+  // 调试日志
+  useEffect(() => {
+    console.log('[WeiboLoginRender] ast.qrcode 更新:', ast.qrcode);
+    console.log('[WeiboLoginRender] ast.message 更新:', ast.message);
+    console.log('[WeiboLoginRender] ast.state 更新:', ast.state);
+  }, [ast.qrcode, ast.message, ast.state]);
+
   if (ast.state === 'pending') return null;
 
   return (
-    <div className="z-50 flex items-center justify-center">
-      
+    <div className="p-4 flex flex-col items-center justify-center space-y-3">
+      {/* 显示二维码 */}
+      {ast.qrcode && (
+        <div className="flex flex-col items-center">
+          <img
+            src={ast.qrcode}
+            alt="微博登录二维码"
+            className="w-48 h-48 rounded-lg border border-slate-600"
+          />
+          <p className="text-xs text-slate-400 mt-2">请使用微博 App 扫码登录</p>
+        </div>
+      )}
+
+      {/* 显示提示消息 */}
+      {ast.message && (
+        <div className={`text-sm px-3 py-2 rounded ${
+          ast.state === 'success'
+            ? 'bg-green-900/30 text-green-400 border border-green-600/50'
+            : ast.state === 'fail'
+            ? 'bg-red-900/30 text-red-400 border border-red-600/50'
+            : 'bg-blue-900/30 text-blue-400 border border-blue-600/50'
+        }`}>
+          {ast.message}
+        </div>
+      )}
+
+      {/* 运行中但无二维码时显示加载状态 */}
+      {ast.state === 'running' && !ast.qrcode && !ast.message && (
+        <div className="flex items-center space-x-2 text-slate-400">
+          <div className="animate-spin h-4 w-4 border-2 border-slate-400 border-t-transparent rounded-full"></div>
+          <span className="text-sm">正在获取二维码...</span>
+        </div>
+      )}
     </div>
   );
 }

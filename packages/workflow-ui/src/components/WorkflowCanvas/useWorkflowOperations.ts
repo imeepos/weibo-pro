@@ -584,8 +584,13 @@ export function useWorkflowOperations(
                 workflow.syncFromAst()
               } else if (event.type === 'node_emit') {
                 // 处理属性实时更新（qrcode, message, account 等）
+                console.log(`[runWorkflow] node_emit 事件: nodeId=${event.id}, property=${event.property}, value=`, event.value)
+
+                let found = false
                 workflow.workflowAst!.nodes = workflow.workflowAst!.nodes.map(originalNode => {
                   if (originalNode.id === event.id) {
+                    found = true
+                    console.log(`[runWorkflow] 更新节点 ${event.id} 的 ${event.property}`)
                     return Object.assign(
                       Object.create(Object.getPrototypeOf(originalNode)),
                       originalNode,
@@ -594,6 +599,11 @@ export function useWorkflowOperations(
                   }
                   return originalNode
                 })
+
+                if (!found) {
+                  console.warn(`[runWorkflow] 未找到节点 ${event.id}，无法更新 ${event.property}`)
+                }
+
                 workflow.syncFromAst()
               }
             },

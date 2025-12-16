@@ -22,7 +22,8 @@ const ImageComponent: React.FC<{ ast: ImageAst }> = ({ ast }) => {
     // 调试日志
     useEffect(() => {
         console.log('[ImageAstRender] ast.uploadedImage 更新:', ast.uploadedImage);
-    }, [ast.uploadedImage]);
+        console.log('[ImageAstRender] ast.image 更新:', ast.image);
+    }, [ast.uploadedImage, ast.image]);
 
     // 临时编辑状态（不保存到 AST）
     const [tempAnnotations, setTempAnnotations] = useState<Annotation[]>([]);
@@ -61,10 +62,10 @@ const ImageComponent: React.FC<{ ast: ImageAst }> = ({ ast }) => {
     });
 
     const getCurrentImage = () => {
-        // uploadedImage 可能来自：
-        // 1. 用户在节点中手动上传
-        // 2. 上游节点通过边传递过来
-        return ast.uploadedImage || '';
+        // 图片来源优先级：
+        // 1. image（@Output）- 上游节点通过边传递或工作流运行时更新
+        // 2. uploadedImage（@Input）- 用户在节点中手动上传
+        return ast.image || ast.uploadedImage || '';
     };
 
     const currentImage = getCurrentImage();
