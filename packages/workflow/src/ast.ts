@@ -4,7 +4,6 @@ import { IAstStates, IEdge, INode, INodeInputMetadata, INodeOutputMetadata, INod
 import { generateId } from "./utils";
 import { SerializedError } from "@sker/core";
 import { BehaviorSubject, Observable } from 'rxjs';
-import { WorkflowEventStream } from "./event-store/event-stream";
 
 export interface DynamicOutput {
     property: string      // 属性名（如 output_case4）
@@ -92,8 +91,8 @@ export abstract class Ast implements INode {
 
             const value = this[key];
 
-            // 跳过 BehaviorSubject、Map、WorkflowEventStream（运行时状态）
-            if (value instanceof BehaviorSubject || value instanceof Map || value instanceof WorkflowEventStream) {
+            // 跳过 BehaviorSubject、Map（运行时状态）
+            if (value instanceof BehaviorSubject || value instanceof Map) {
                 continue;
             }
 
@@ -157,26 +156,6 @@ export class WorkflowGraphAst extends Ast {
      * - Handler 可选择性监听并响应取消
      */
     abortSignal?: AbortSignal
-
-    /**
-     * 工作流运行 ID（EventStore 持久化键）
-     *
-     * 设计哲学：
-     * - 关联 WorkflowRunEntity.id
-     * - EventStore 通过 runId 索引事件
-     * - 支持跨会话续跑和回放
-     */
-    runId?: string
-
-    /**
-     * 事件流（续跑 + 时间旅行核心）
-     *
-     * 设计哲学：
-     * - 记录所有节点事件，支持断点续跑
-     * - 已成功节点直接重放事件，跳过执行
-     * - 运行时状态：不序列化，由 fromJson 重建
-     */
-    eventStream: WorkflowEventStream = new WorkflowEventStream()
 
     /**
      * 判断是否为分组节点

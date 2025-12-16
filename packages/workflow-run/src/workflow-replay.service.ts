@@ -3,7 +3,7 @@ import { EntityManager } from 'typeorm';
 import { WorkflowRunEntity, RunStatus } from '@sker/entities';
 import { Observable, from, interval } from 'rxjs';
 import { concatMap, map } from 'rxjs/operators';
-import { NodeEvent, type IEventStore, EVENT_STORE, RunState } from '@sker/workflow';
+import { NodeEvent, type IEventStore, EVENT_STORE, RunState, globalRuntime, WorkflowEventStream } from '@sker/workflow';
 import { fromJson, WorkflowGraphAst, executeWorkflowImmediate } from '@sker/workflow';
 
 /**
@@ -25,10 +25,9 @@ export class WorkflowReplayService {
      * 续跑失败的工作流
      *
      * 流程：
-     * 1. 查询成功节点 ID
-     * 2. 从 EventStore 恢复缓存
-     * 3. 创建新 run 实例
-     * 4. 执行时跳过成功节点
+     * 1. 从 EventStore 恢复事件到 WorkflowEventStream
+     * 2. 创建运行时实例（runId + eventStream）
+     * 3. 执行时自动跳过成功节点（VisitorExecutor 检测 eventStream.isNodeSuccess）
      */
     async resumeRun(runId: string): Promise<string> {
         const run = await this.db.findOne(WorkflowRunEntity, {
@@ -43,32 +42,22 @@ export class WorkflowReplayService {
             throw new Error('只能恢复失败的运行');
         }
 
-        // 1. 查询成功节点
-        const successNodeIds = await this.eventStore.getSuccessNodeIds(runId);
-
-        // 2. 恢复工作流
+        // 1. 恢复工作流
         const workflow = fromJson<WorkflowGraphAst>(run.graphSnapshot);
 
-        // 3. 从 EventStore 恢复缓存到内存
+        // 2. 从 EventStore 恢复事件到 WorkflowEventStream
         const events = await this.eventStore.getEvents(runId);
-        const nodeEventsMap = new Map<string, NodeEvent[]>();
+        const eventStream = WorkflowEventStream.fromJSON({ events });
 
-        for (const event of events) {
-            if (!event.id) continue;
-            if (!nodeEventsMap.has(event.id)) {
-                nodeEventsMap.set(event.id, []);
-            }
-            nodeEventsMap.get(event.id)!.push(event);
+        // 3. 创建运行时实例
+        const newRunId = globalRuntime.createRun(workflow);
+        globalRuntime.setEventStream(newRunId, eventStream);
 
-            // 只缓存成功节点
-            if (event.type === 'node_success' && successNodeIds.has(event.id)) {
-                workflow.nodeResults.set(event.id, nodeEventsMap.get(event.id)!);
-            }
-        }
+        console.log(`[WorkflowReplayService] 续跑工作流: ${workflow.id}, newRunId: ${newRunId}, 恢复 ${events.length} 个事件`);
 
-        // 4. 创建新 run
+        // 4. 创建新 run 记录
         const newRun = this.db.create(WorkflowRunEntity, {
-            id: this.generateRunId(),
+            id: newRunId,
             workflowId: run.workflowId,
             scheduleId: run.scheduleId,
             status: RunStatus.RUNNING,
@@ -79,11 +68,10 @@ export class WorkflowReplayService {
         });
         await this.db.save(newRun);
 
-        // 5. 执行（成功节点会命中缓存直接跳过）
-        workflow.runId = newRun.id;
+        // 5. 执行（成功节点会从 eventStream 中重放，自动跳过）
         await executeWorkflowImmediate(workflow, run.inputs as any);
 
-        return newRun.id;
+        return newRunId;
     }
 
     /**
@@ -121,9 +109,5 @@ export class WorkflowReplayService {
      */
     async clearRunEvents(runId: string): Promise<void> {
         await this.eventStore.clear(runId);
-    }
-
-    private generateRunId(): string {
-        return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     }
 }

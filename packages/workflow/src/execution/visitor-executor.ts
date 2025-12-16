@@ -8,6 +8,7 @@ import { DefaultVisitor } from '../defaultVisitor';
 import { NodeEvent } from './events';
 import type { IEventStore } from '../event-store';
 import { EVENT_STORE, MemoryEventStore } from '../event-store';
+import { globalRuntime } from '../runtime';
 
 /**
  * 访问者执行器 - 工作流引擎的核心执行者
@@ -29,14 +30,15 @@ export class VisitorExecutor implements Visitor {
 
     visit(ast: INode, input$: Observable<any>, parent?: WorkflowGraphAst): Observable<NodeEvent> {
         // 续跑支持：检查 eventStream 中是否已成功执行
-        if (parent?.eventStream && typeof parent.eventStream.isNodeSuccess === 'function') {
-            if (parent.eventStream.isNodeSuccess(ast.id)) {
-                const cachedEvents = parent.eventStream.getNodeEvents(ast.id);
+        if (parent) {
+            const runId = globalRuntime.getRunId(parent);
+            const eventStream = runId ? globalRuntime.getEventStream(runId) : undefined;
+
+            if (eventStream?.isNodeSuccess(ast.id)) {
+                const cachedEvents = eventStream.getNodeEvents(ast.id);
                 console.log(`[VisitorExecutor] 节点 ${ast.id} 已成功，重放 ${cachedEvents.length} 个事件`);
                 return from(cachedEvents);
             }
-        } else if (parent?.eventStream) {
-            console.warn(`[VisitorExecutor] parent.eventStream 存在但不是 WorkflowEventStream 实例`);
         }
 
         console.log(`[VisitorExecutor] 开始执行节点 ${ast.id} (${ast.type})`);
@@ -96,7 +98,9 @@ export class VisitorExecutor implements Visitor {
                 execute$ = this.normalizeResult(result, ast);
             }
 
-            return this.recordEvents(execute$, parent);
+            // 如果 ast 是工作流，记录到自己；否则记录到 parent
+            const recordTarget = this.isWorkflowGraphAst(ast) ? (ast as WorkflowGraphAst) : parent;
+            return this.recordEvents(execute$, recordTarget);
         } catch (error) {
             console.error(`[VisitorExecutor] 执行节点 ${ast.id} 时发生错误:`, error);
             return this.handleError(error, ast);
@@ -113,26 +117,38 @@ export class VisitorExecutor implements Visitor {
      */
     private recordEvents(
         source$: Observable<NodeEvent>,
-        parent?: WorkflowGraphAst
+        workflow?: WorkflowGraphAst
     ): Observable<NodeEvent> {
-        if (!parent?.eventStream) return source$;
-
-        // 检查 eventStream 是否有 emit 方法
-        if (typeof parent.eventStream.emit !== 'function') {
-            console.warn(`[VisitorExecutor] eventStream 缺少 emit 方法，跳过事件记录`);
+        if (!workflow) {
+            console.warn(`[VisitorExecutor.recordEvents] skip - workflow 不存在`);
             return source$;
         }
+
+        // 从 runtime 获取 runId 和 eventStream
+        const runId = globalRuntime.getRunId(workflow);
+        const eventStream = runId ? globalRuntime.getEventStream(runId) : undefined;
+
+        if (!eventStream) {
+            console.warn(`[VisitorExecutor.recordEvents] skip - eventStream 不存在，runId: ${runId}`);
+            return source$;
+        }
+
+        console.log(`[VisitorExecutor.recordEvents] 开始记录事件到工作流 ${workflow.id}, runId: ${runId}`);
 
         return source$.pipe(
             tap(event => {
                 // 记录到 eventStream
-                parent.eventStream.emit(event);
+                eventStream.emit(event);
+                console.log(`[VisitorExecutor.recordEvents] 事件已记录到 eventStream:`, event.type, event.id);
 
                 // 持久化到 EventStore（异步，不阻塞执行）
-                if (this.eventStore && parent.runId) {
-                    this.eventStore.append(parent.runId, event).catch(err => {
-                        console.error(`[EventStore] 追加事件失败:`, err);
+                if (this.eventStore && runId) {
+                    console.log(`[VisitorExecutor.recordEvents] 持久化事件到 EventStore, runId: ${runId}`);
+                    this.eventStore.append(runId, event).catch(err => {
+                        console.error(`[VisitorExecutor.recordEvents] EventStore 追加事件失败:`, err);
                     });
+                } else {
+                    console.warn(`[VisitorExecutor.recordEvents] 跳过持久化 - eventStore: ${!!this.eventStore}, runId: ${runId}`);
                 }
             })
         );
@@ -205,5 +221,12 @@ export class VisitorExecutor implements Visitor {
      */
     private handleError(error: unknown, ast: INode): Observable<NodeEvent> {
         return of(this.createFailedNode(ast, error));
+    }
+
+    /**
+     * 检查节点是否为工作流图
+     */
+    private isWorkflowGraphAst(ast: INode): boolean {
+        return ast.type === 'WorkflowGraphAst' || 'nodes' in ast;
     }
 }

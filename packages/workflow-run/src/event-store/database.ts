@@ -12,8 +12,13 @@ export class DatabaseEventStore implements IEventStore {
     constructor(@Inject(EntityManager) private db: EntityManager) {}
 
     async append(runId: string, event: NodeEvent): Promise<void> {
+        const numericRunId = Number(runId);
+        if (!Number.isFinite(numericRunId)) {
+            console.warn(`[DatabaseEventStore] 跳过无效 runId: ${runId}`);
+            return;
+        }
         await this.db.insert(WorkflowRunLogEntity, {
-            runId: Number(runId),
+            runId: numericRunId,
             nodeId: event.id ?? '',
             eventType: this.toEventType(event.type),
             property: event.type === 'node_emit' ? event.property : undefined,

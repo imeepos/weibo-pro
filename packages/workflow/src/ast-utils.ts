@@ -16,6 +16,11 @@ import { Ast } from "./ast";
  * - 统一的错误处理接口
  */
 export function setAstError(node: INode, error: unknown, includeStack = false): void {
+    console.error(`❌ [${node.type}] 节点执行失败:`, {
+        nodeId: node.id,
+        nodeName: node.name,
+        error: error instanceof Error ? error.message : String(error),
+    });
     node.error = ErrorSerializer.serialize(error, includeStack);
 }
 
