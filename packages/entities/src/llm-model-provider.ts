@@ -2,6 +2,7 @@ import { Column, CreateDateColumn, Index, JoinColumn, ManyToOne, PrimaryGenerate
 import { Entity } from "./decorator";
 import { LlmModel } from "./llm-model";
 import { LlmProvider } from "./llm-provider";
+import { useEntityManager } from "./utils";
 
 @Entity({
     name: 'llm_model_providers'
@@ -32,6 +33,10 @@ export class LlmModelProvider {
     @Column({ type: 'boolean', default: false, name: 'supports_thinking' })
     supportsThinking!: boolean;
 
+    // 是否启用
+    @Column({ type: 'boolean', default: true })
+    enabled!: boolean;
+
     @ManyToOne(() => LlmModel, model => model.providers, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'model_id' })
     model!: LlmModel;
@@ -45,4 +50,53 @@ export class LlmModelProvider {
 
     @UpdateDateColumn({ name: 'updated_at' })
     updated_at!: Date;
+
+    // 快捷管理方法
+    static enable(id: string) {
+        return useEntityManager(async m => m.update(LlmModelProvider, id, { enabled: true }))
+    }
+
+    static disable(id: string) {
+        return useEntityManager(async m => m.update(LlmModelProvider, id, { enabled: false }))
+    }
+
+    static enableByModel(modelName: string) {
+        return useEntityManager(async m =>
+            m.createQueryBuilder()
+                .update(LlmModelProvider)
+                .set({ enabled: true })
+                .where('modelName = :modelName', { modelName })
+                .execute()
+        )
+    }
+
+    static disableByModel(modelName: string) {
+        return useEntityManager(async m =>
+            m.createQueryBuilder()
+                .update(LlmModelProvider)
+                .set({ enabled: false })
+                .where('modelName = :modelName', { modelName })
+                .execute()
+        )
+    }
+
+    static enableByProvider(providerId: string) {
+        return useEntityManager(async m =>
+            m.createQueryBuilder()
+                .update(LlmModelProvider)
+                .set({ enabled: true })
+                .where('providerId = :providerId', { providerId })
+                .execute()
+        )
+    }
+
+    static disableByProvider(providerId: string) {
+        return useEntityManager(async m =>
+            m.createQueryBuilder()
+                .update(LlmModelProvider)
+                .set({ enabled: false })
+                .where('providerId = :providerId', { providerId })
+                .execute()
+        )
+    }
 }

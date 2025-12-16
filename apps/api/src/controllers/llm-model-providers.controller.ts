@@ -46,4 +46,14 @@ export class LlmModelProvidersController implements sdk.LlmModelProvidersControl
   async remove(@Param('id') id: string): Promise<void> {
     return this.service.remove(id);
   }
+
+  @Put(':id/enable')
+  async enable(@Param('id') id: string): Promise<void> {
+    return this.service.enable(id);
+  }
+
+  @Put(':id/disable')
+  async disable(@Param('id') id: string): Promise<void> {
+    return this.service.disable(id);
+  }
 }

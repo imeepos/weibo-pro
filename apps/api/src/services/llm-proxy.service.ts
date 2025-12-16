@@ -48,6 +48,7 @@ export class LlmProxyService {
       // 构建基础查询条件
       const buildBaseConditions = (qb: any) => {
         qb.andWhere('provider.score > 0')
+          .andWhere('mp.enabled = true')
         if (requiresThinking) {
           qb.andWhere('mp.supportsThinking = :supportsThinking', { supportsThinking: true })
         }

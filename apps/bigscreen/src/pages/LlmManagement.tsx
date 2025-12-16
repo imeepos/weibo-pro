@@ -18,7 +18,7 @@ import {
   DialogFooter
 } from '@sker/ui/components/ui/dialog';
 import { Badge } from '@sker/ui/components/ui/badge';
-import { PlusIcon, TrashIcon, PencilIcon, RefreshCwIcon, ServerIcon, CpuIcon, LinkIcon, HomeIcon, SearchIcon } from 'lucide-react';
+import { PlusIcon, TrashIcon, PencilIcon, RefreshCwIcon, ServerIcon, CpuIcon, LinkIcon, HomeIcon, SearchIcon, ToggleLeftIcon, ToggleRightIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PromptAnalysisDialog } from '@/components/PromptAnalysisDialog';
 import { cn } from '@/utils';
@@ -43,7 +43,7 @@ const LlmManagement: React.FC = () => {
     loadData();
   }, []);
 
-  const loadData = async () => {
+  const loadData = async (resetPage = true) => {
     setLoading(true);
     try {
       const [p, m, b] = await Promise.all([
@@ -54,7 +54,9 @@ const LlmManagement: React.FC = () => {
       setProviders(p);
       setModels(m);
       setBindings(b);
-      setBindingPage(1);
+      if (resetPage) {
+        setBindingPage(1);
+      }
     } finally {
       setLoading(false);
     }
@@ -164,7 +166,7 @@ const LlmManagement: React.FC = () => {
 
   // Binding Dialog
   const [bindingDialogOpen, setBindingDialogOpen] = useState(false);
-  const [bindingForm, setBindingForm] = useState({ modelId: '', providerId: '', modelName: '', tierLevel: 1, supportsThinking: false });
+  const [bindingForm, setBindingForm] = useState({ modelId: '', providerId: '', modelName: '', tierLevel: 1, supportsThinking: false, enabled: true });
   const [editingBinding, setEditingBinding] = useState<string | null>(null);
 
   // 提示词分析
@@ -178,13 +180,23 @@ const LlmManagement: React.FC = () => {
         providerId: binding.providerId,
         modelName: binding.modelName,
         tierLevel: binding.tierLevel || 1,
-        supportsThinking: binding.supportsThinking || false
+        supportsThinking: binding.supportsThinking || false,
+        enabled: binding.enabled !== false
       });
     } else {
       setEditingBinding(null);
-      setBindingForm({ modelId: '', providerId: '', modelName: '', tierLevel: 1, supportsThinking: false });
+      setBindingForm({ modelId: '', providerId: '', modelName: '', tierLevel: 1, supportsThinking: false, enabled: true });
     }
     setBindingDialogOpen(true);
+  };
+
+  const handleToggleEnabled = async (id: string, currentEnabled: boolean) => {
+    if (currentEnabled) {
+      await bindingsCtrl.disable(id);
+    } else {
+      await bindingsCtrl.enable(id);
+    }
+    loadData(false);
   };
 
   const handleBindingSubmit = async () => {
@@ -413,6 +425,7 @@ const LlmManagement: React.FC = () => {
                     <th className="px-4 py-3 text-left font-medium">提供商模型</th>
                     <th className="px-4 py-3 text-left font-medium">梯队</th>
                     <th className="px-4 py-3 text-center font-medium">Thinking</th>
+                    <th className="px-4 py-3 text-center font-medium">状态</th>
                     <th className="px-4 py-3 text-right font-medium">操作</th>
                   </tr>
                 </thead>
@@ -454,6 +467,22 @@ const LlmManagement: React.FC = () => {
                           ) : (
                             <span className="text-muted-foreground text-[10px]">-</span>
                           )}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <button
+                            onClick={() => handleToggleEnabled(b.id, b.enabled !== false)}
+                            className={cn(
+                              'transition-colors',
+                              b.enabled !== false ? 'text-green-500 hover:text-green-600' : 'text-gray-400 hover:text-gray-500'
+                            )}
+                            title={b.enabled !== false ? '点击禁用' : '点击启用'}
+                          >
+                            {b.enabled !== false ? (
+                              <ToggleRightIcon className="size-5" />
+                            ) : (
+                              <ToggleLeftIcon className="size-5" />
+                            )}
+                          </button>
                         </td>
                         <td className="px-4 py-3 text-right">
                           <button

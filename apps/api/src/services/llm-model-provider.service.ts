@@ -72,4 +72,12 @@ export class LlmModelProviderService {
   async remove(id: string): Promise<void> {
     await useEntityManager(m => m.delete(LlmModelProvider, id));
   }
+
+  async enable(id: string): Promise<void> {
+    await LlmModelProvider.enable(id);
+  }
+
+  async disable(id: string): Promise<void> {
+    await LlmModelProvider.disable(id);
+  }
 }
