@@ -33,3 +33,12 @@ import "./AnswerEvaluatorAstVisitor.js";
 import "./ErrorAnalyzerAstVisitor.js";
 import "./ResearchPlannerAstVisitor.js";
 import "./SerpClusterAstVisitor.js";
+
+// EventStore - 注册浏览器端 LocalStorage 存储实现
+import { root } from '@sker/core'
+import { EVENT_STORE } from '@sker/workflow'
+import { LocalStorageEventStore } from './event-store/local-storage.js'
+
+root.set([
+    { provide: EVENT_STORE, useClass: LocalStorageEventStore }
+])

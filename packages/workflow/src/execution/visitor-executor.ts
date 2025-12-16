@@ -2,12 +2,12 @@ import { Injectable, root, Inject, Optional } from '@sker/core';
 import { Visitor, WorkflowGraphAst, setAstError } from '../ast';
 import { findNodeType, HANDLER_METHOD } from '../decorator';
 import { Observable, of, from } from 'rxjs';
-import { catchError, switchMap, concatMap, tap, finalize } from 'rxjs/operators';
+import { catchError, switchMap, concatMap, tap } from 'rxjs/operators';
 import { INode } from '../types';
 import { DefaultVisitor } from '../defaultVisitor';
 import { NodeEvent } from './events';
 import type { IEventStore } from '../event-store';
-import { EVENT_STORE } from '../event-store';
+import { EVENT_STORE, MemoryEventStore } from '../event-store';
 
 /**
  * 访问者执行器 - 工作流引擎的核心执行者
@@ -17,52 +17,67 @@ import { EVENT_STORE } from '../event-store';
  * - 支持 Promise 和 Observable 两种返回类型的 Handler
  * - 统一错误处理，设置节点状态
  * - Observable 流式输出，支持交互式执行
- * - 节点幂等执行：缓存拦截 + 结果重放（断点续跑核心）
+ * - 续跑支持：已成功节点直接重放 eventStream 中的事件
  * - EventStore 集成：持久化事件流，支持续跑和回放
  */
 @Injectable()
 export class VisitorExecutor implements Visitor {
-    constructor(
-        @Optional(EVENT_STORE) @Inject(EVENT_STORE) private eventStore?: IEventStore
-    ) {}
+    private eventStore: IEventStore
+    constructor() {
+        this.eventStore = root.get(EVENT_STORE, new MemoryEventStore())
+    }
+
     visit(ast: INode, input$: Observable<any>, parent?: WorkflowGraphAst): Observable<NodeEvent> {
-        // 幂等执行：检查缓存
-        if (parent?.nodeResults?.has(ast.id)) {
-            const cached = parent.nodeResults.get(ast.id)!;
-            console.log(`[VisitorExecutor] 节点 ${ast.id} 命中缓存，重放 ${cached.length} 个事件`);
-            return from(cached);
+        // 续跑支持：检查 eventStream 中是否已成功执行
+        if (parent?.eventStream?.isNodeSuccess(ast.id)) {
+            const cachedEvents = parent.eventStream.getNodeEvents(ast.id);
+            console.log(`[VisitorExecutor] 节点 ${ast.id} 已成功，重放 ${cachedEvents.length} 个事件`);
+            return from(cachedEvents);
         }
 
+        console.log(`[VisitorExecutor] 开始执行节点 ${ast.id} (${ast.type})`);
+
         const type = findNodeType(ast.type);
+        console.log(`[VisitorExecutor] 解析节点类型: ${ast.type} -> ${type?.name || 'NOT FOUND'}`);
+
         const methods = root.get(HANDLER_METHOD, []);
+        console.log(`[VisitorExecutor] 全局注册了 ${methods.length} 个 Handler`);
 
         if (!methods || methods.length === 0) {
+            console.error(`[VisitorExecutor] 未找到任何 Handler`);
             return this.handleError(new Error(`未找到任何 Handler`), ast);
         }
 
         const method = methods.find(it => it.ast === type);
+
         if (!method) {
-            return this.cacheEvents(
+            console.log(`[VisitorExecutor] 未找到节点 ${ast.type} 的 Handler，使用 DefaultVisitor`);
+            return this.recordEvents(
                 this.useDefaultVisitor(ast, input$, parent),
-                ast.id,
                 parent
             );
         }
 
+        console.log(`[VisitorExecutor] 找到 Handler: ${method.target.name}.${String(method.property)}`);
+
         const instance = root.get(method.target);
         if (!method.property || typeof (instance as any)[method.property] !== 'function') {
+            console.error(`[VisitorExecutor] Handler 方法不存在或不可调用: ${String(method.property)}`);
             return this.handleError(new Error(`Handler 方法不存在或不可调用: ${String(method.property)}`), ast);
         }
 
         try {
             const handlerFn = (instance as any)[method.property];
             const handlerLength = handlerFn.length;
+            console.log(`[VisitorExecutor] Handler 参数数量: ${handlerLength}`);
 
             let execute$: Observable<NodeEvent>;
 
             if (handlerLength <= 2) {
+                console.log(`[VisitorExecutor] 使用新模式 handler(ast, parent)`);
                 execute$ = input$.pipe(
                     concatMap(inputData => {
+                        console.log(`[VisitorExecutor] 应用输入数据到节点 ${ast.id}:`, inputData);
                         Object.keys(inputData).forEach(key => {
                             (ast as any)[key] = inputData[key];
                         });
@@ -72,52 +87,42 @@ export class VisitorExecutor implements Visitor {
                     catchError(error => this.handleError(error, ast))
                 );
             } else {
+                console.log(`[VisitorExecutor] 使用旧模式 handler(ast, input$, parent)`);
                 const result = handlerFn.call(instance, ast, input$, parent);
                 execute$ = this.normalizeResult(result, ast);
             }
 
-            return this.cacheEvents(execute$, ast.id, parent);
+            return this.recordEvents(execute$, parent);
         } catch (error) {
+            console.error(`[VisitorExecutor] 执行节点 ${ast.id} 时发生错误:`, error);
             return this.handleError(error, ast);
         }
     }
 
     /**
-     * 缓存节点事件流（断点续跑 + 时间旅行核心）
+     * 记录事件到 eventStream（续跑核心）
      *
      * 设计哲学：
-     * - 透明拦截：Handler 无需感知缓存逻辑
-     * - 完整记录：保存所有事件，支持精确重放
-     * - 只缓存成功节点：失败节点不写入缓存，支持重试
+     * - 透明拦截：Handler 无需感知记录逻辑
+     * - 完整记录：保存所有事件到 eventStream
      * - EventStore 持久化：支持跨会话续跑
      */
-    private cacheEvents(
+    private recordEvents(
         source$: Observable<NodeEvent>,
-        nodeId: string,
         parent?: WorkflowGraphAst
     ): Observable<NodeEvent> {
-        if (!parent) return source$;
-
-        const events: NodeEvent[] = [];
-        let hasSuccess = false;
+        if (!parent?.eventStream) return source$;
 
         return source$.pipe(
             tap(event => {
-                events.push(event);
+                // 记录到 eventStream
+                parent.eventStream.emit(event);
 
                 // 持久化到 EventStore（异步，不阻塞执行）
                 if (this.eventStore && parent.runId) {
                     this.eventStore.append(parent.runId, event).catch(err => {
                         console.error(`[EventStore] 追加事件失败:`, err);
                     });
-                }
-
-                if (event.type === 'node_success') hasSuccess = true;
-            }),
-            finalize(() => {
-                // 只缓存成功节点（失败节点支持重试）
-                if (events.length > 0 && hasSuccess) {
-                    parent.nodeResults.set(nodeId, events);
                 }
             })
         );
@@ -182,10 +187,9 @@ export class VisitorExecutor implements Visitor {
     }
 
     /**
-     * 统一错误处理（保留用于兼容性）
+     * 统一错误处理
      *
      * 优雅设计：
-     * - NoRetryError 不可重试错误特殊处理
      * - 设置节点状态为 fail
      * - 返回失败状态的节点（作为 Observable 完成）
      */

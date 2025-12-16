@@ -26,3 +26,4 @@ export * from './FilterAst';
 export * from './MergeAst';
 export * from './LoopAst';
 export * from './event-store/types';
+export { MemoryEventStore } from './event-store/memory';

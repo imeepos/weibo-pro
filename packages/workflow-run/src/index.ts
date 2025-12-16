@@ -74,3 +74,12 @@ export { WorkflowNodeGeneratorAstVisitor } from './WorkflowNodeGeneratorAstVisit
 // 服务
 export { CronSchedulerService } from './services/CronSchedulerService'
 export { WorkflowExecutionService } from './services/WorkflowExecutionService'
+
+// EventStore - 注册后端数据库存储实现
+import { root } from '@sker/core'
+import { EVENT_STORE } from '@sker/workflow'
+import { DatabaseEventStore } from './event-store/database'
+
+root.set([
+    { provide: EVENT_STORE, useClass: DatabaseEventStore }
+])

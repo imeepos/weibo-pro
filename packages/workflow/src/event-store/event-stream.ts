@@ -150,6 +150,27 @@ export class WorkflowEventStream {
         );
     }
 
+    // ========== 续跑支持 ==========
+
+    /** 获取成功节点 ID 集合（同步） */
+    get successNodeIds(): Set<string> {
+        return new Set(
+            this._events$.value
+                .filter(e => e.type === 'node_success' && e.id)
+                .map(e => e.id!)
+        );
+    }
+
+    /** 获取单个节点的所有事件（续跑重放用） */
+    getNodeEvents(nodeId: string): NodeEvent[] {
+        return this._events$.value.filter(e => e.id === nodeId);
+    }
+
+    /** 检查节点是否已成功执行 */
+    isNodeSuccess(nodeId: string): boolean {
+        return this._events$.value.some(e => e.id === nodeId && e.type === 'node_success');
+    }
+
     // ========== 回放功能 ==========
 
     /**

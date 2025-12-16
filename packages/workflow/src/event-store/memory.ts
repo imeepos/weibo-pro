@@ -67,3 +67,4 @@ export class MemoryEventStore implements IEventStore {
         this.store.clear();
     }
 }
+

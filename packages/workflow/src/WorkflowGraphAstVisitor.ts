@@ -385,19 +385,26 @@ export class WorkflowGraphAstVisitor {
         inputSubjects: Map<string, ReplaySubject<any>>
     ): void {
         const entryIds = this.findEntryNodes(workflow);
+        console.log(`[triggerEntryNodes] 找到 ${entryIds.length} 个入口节点:`, entryIds);
 
         input$.subscribe({
             next: input => {
+                console.log(`[triggerEntryNodes] 接收到输入:`, input);
                 entryIds.forEach(nodeId => {
                     const subject = inputSubjects.get(nodeId);
                     const node = workflow.nodes.find(n => n.id === nodeId);
 
-                    if (!subject || !node) return;
+                    if (!subject || !node) {
+                        console.warn(`[triggerEntryNodes] 节点 ${nodeId} 缺少 subject 或 node`);
+                        return;
+                    }
 
+                    console.log(`[triggerEntryNodes] 处理入口节点 ${nodeId} (${node.type})`);
 
                     // 根据节点的 metadata.inputs 构建输入对象
                     const nodeInput: Record<string, any> = {};
                     const inputs = node.metadata?.inputs || [];
+                    console.log(`[triggerEntryNodes] 节点 ${nodeId} 有 ${inputs.length} 个输入属性`);
 
                     inputs.forEach(inputMeta => {
                         const property = String(inputMeta.property);
@@ -406,26 +413,33 @@ export class WorkflowGraphAstVisitor {
                         // 优先从 input 对象中查找 {nodeId.property: value} 格式
                         if (input[propertyKey] !== undefined) {
                             nodeInput[property] = input[propertyKey];
+                            console.log(`[triggerEntryNodes] 匹配到输入 ${propertyKey} = ${input[propertyKey]}`);
                         }
                         // 回退：尝试从静态节点组合格式 {nodeId: {property: value}}
                         else if (input[nodeId]?.[property] !== undefined) {
                             nodeInput[property] = input[nodeId][property];
+                            console.log(`[triggerEntryNodes] 匹配到嵌套输入 ${nodeId}.${property}`);
                         }
                         // 使用节点当前值或默认值
                         else if ((node as any)[property] !== undefined) {
                             nodeInput[property] = (node as any)[property];
+                            console.log(`[triggerEntryNodes] 使用节点当前值 ${property} = ${(node as any)[property]}`);
                         } else if (inputMeta.defaultValue !== undefined) {
                             nodeInput[property] = inputMeta.defaultValue;
+                            console.log(`[triggerEntryNodes] 使用默认值 ${property} = ${inputMeta.defaultValue}`);
                         }
                     });
 
+                    console.log(`[triggerEntryNodes] 触发节点 ${nodeId}，输入:`, nodeInput);
                     subject.next(nodeInput);
                 });
             },
             complete: () => {
+                console.log(`[triggerEntryNodes] 输入流完成，完成所有入口节点的 subject`);
                 entryIds.forEach(nodeId => {
                     const subject = inputSubjects.get(nodeId);
                     if (subject && !subject.closed) {
+                        console.log(`[triggerEntryNodes] 完成节点 ${nodeId} 的 subject`);
                         subject.complete();
                     }
                 });

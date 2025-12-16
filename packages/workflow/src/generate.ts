@@ -2,6 +2,7 @@ import { Ast, WorkflowGraphAst } from "./ast";
 import { INode } from "./types";
 import { Compiler } from "./compiler";
 import { root } from "@sker/core";
+import { WorkflowEventStream } from "./event-store/event-stream";
 
 export type NodeJsonPayload = Omit<Partial<INode>, 'type'> & Record<string, unknown> & {
     type: string;
@@ -15,6 +16,7 @@ export type NodeJsonPayload = Omit<Partial<INode>, 'type'> & Record<string, unkn
  * - 支持嵌套的 WorkflowGraphAst（子工作流/分组）
  * - 递归处理所有节点
  * - WorkflowGraphAst 转换为真正的类实例（确保 isGroup getter 正常工作）
+ * - eventStream 重建：支持从已有事件恢复续跑状态
  * - @Output BehaviorSubject 属性由类默认值初始化
  */
 export function fromJson<T extends object = any>(json: any): T {
@@ -26,6 +28,14 @@ export function fromJson<T extends object = any>(json: any): T {
     if (json.type === 'WorkflowGraphAst') {
         const ast = new WorkflowGraphAst();
         Object.assign(ast, json);
+
+        // 重建 eventStream（运行时状态）
+        // 如果 JSON 中有 eventStreamData，从中恢复（支持续跑）
+        if (json.eventStreamData) {
+            ast.eventStream = WorkflowEventStream.fromJSON(json.eventStreamData);
+        } else {
+            ast.eventStream = new WorkflowEventStream();
+        }
 
         // 递归处理子节点
         if (Array.isArray(json.nodes)) {

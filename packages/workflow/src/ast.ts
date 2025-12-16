@@ -4,6 +4,7 @@ import { IAstStates, IEdge, INode, INodeInputMetadata, INodeOutputMetadata, INod
 import { generateId } from "./utils";
 import { SerializedError } from "@sker/core";
 import { BehaviorSubject, Observable } from 'rxjs';
+import { WorkflowEventStream } from "./event-store/event-stream";
 
 export interface DynamicOutput {
     property: string      // 属性名（如 output_case4）
@@ -91,8 +92,8 @@ export abstract class Ast implements INode {
 
             const value = this[key];
 
-            // 跳过 BehaviorSubject 属性（运行时响应式流）
-            if (value instanceof BehaviorSubject || value instanceof Map) {
+            // 跳过 BehaviorSubject、Map、WorkflowEventStream（运行时状态）
+            if (value instanceof BehaviorSubject || value instanceof Map || value instanceof WorkflowEventStream) {
                 continue;
             }
 
@@ -168,14 +169,14 @@ export class WorkflowGraphAst extends Ast {
     runId?: string
 
     /**
-     * 节点执行结果缓存（断点续跑核心）
+     * 事件流（续跑 + 时间旅行核心）
      *
      * 设计哲学：
-     * - 节点幂等性：相同节点 = 相同输出
-     * - 断点续跑：重新执行时，已完成节点直接重放缓存
-     * - 运行时状态：不序列化，每次执行重新构建
+     * - 记录所有节点事件，支持断点续跑
+     * - 已成功节点直接重放事件，跳过执行
+     * - 运行时状态：不序列化，由 fromJson 重建
      */
-    nodeResults: Map<string, NodeEvent[]> = new Map()
+    eventStream: WorkflowEventStream = new WorkflowEventStream()
 
     /**
      * 判断是否为分组节点

@@ -1,4 +1,4 @@
-import { Injectable } from '@sker/core';
+import { Injectable, Inject } from '@sker/core';
 import { EntityManager } from 'typeorm';
 import { WorkflowRunLogEntity, NodeEventType } from '@sker/entities';
 import type { IEventStore, RunState } from '@sker/workflow';
@@ -9,7 +9,7 @@ import type { NodeEvent } from '@sker/workflow';
  */
 @Injectable()
 export class DatabaseEventStore implements IEventStore {
-    constructor(private db: EntityManager) {}
+    constructor(@Inject(EntityManager) private db: EntityManager) {}
 
     async append(runId: string, event: NodeEvent): Promise<void> {
         await this.db.insert(WorkflowRunLogEntity, {
