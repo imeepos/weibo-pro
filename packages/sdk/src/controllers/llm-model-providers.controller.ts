@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@sker/core';
+import { Controller, Get, Post, Put, Delete, Body, Param } from '@sker/core';
 import type { LlmModelProvider } from '@sker/entities';
 
 export interface LlmModelProviderWithRelations extends Omit<LlmModelProvider, 'model' | 'provider'> {
@@ -6,6 +6,7 @@ export interface LlmModelProviderWithRelations extends Omit<LlmModelProvider, 'm
   provider?: { id: string; name: string; score: number };
   tierLevel: number;
   supportsThinking: boolean;
+  enabled: boolean;
 }
 
 @Controller('api/llm-model-providers')
@@ -44,5 +45,15 @@ export class LlmModelProvidersController {
   @Delete(':id')
   remove(@Param('id') id: string): Promise<void> {
     throw new Error('method remove not implements');
+  }
+
+  @Put(':id/enable')
+  enable(@Param('id') id: string): Promise<void> {
+    throw new Error('method enable not implements');
+  }
+
+  @Put(':id/disable')
+  disable(@Param('id') id: string): Promise<void> {
+    throw new Error('method disable not implements');
   }
 }
