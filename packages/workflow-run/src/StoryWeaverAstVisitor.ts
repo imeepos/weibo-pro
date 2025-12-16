@@ -36,6 +36,9 @@ export class StoryWeaverAstVisitor {
           const isFirstChapter = chapters.length === 0;
           const nextChapterNumber = isFirstChapter ? 1 : Math.max(...chapters.map(c => c.chapterNumber)) + 1;
 
+          // 提取已存在的章节标题（用于去重检查）
+          const existingTitles = new Set(chapters.map(ch => this.normalizeTitle(ch.title)));
+
           // 不使用工具，直接在提示词中包含前文章节信息
           const model = useLlmModel({ model: ast.model, temperature: ast.temperature });
 
@@ -44,20 +47,65 @@ export class StoryWeaverAstVisitor {
 
           const userPrompt = `请创作第 ${nextChapterNumber} 章。\n\n**创作要求**：\n${prompts}`;
 
-          const result = await model.invoke([
-            { role: 'system', content: systemPrompt },
-            { role: 'human', content: userPrompt }
-          ]);
+          // 重试机制：如果标题重复，最多重试 3 次
+          let chapterData: ChapterData | null = null;
+          let retryCount = 0;
+          const maxRetries = 3;
 
-          const content = typeof result.content === 'string' ? result.content : JSON.stringify(result.content);
-          const parsed = this.parseChapterContent(content);
+          while (retryCount <= maxRetries) {
+            if (abortController.signal.aborted) {
+              throw new Error('工作流已取消');
+            }
 
-          const chapterData: ChapterData = {
-            chapterNumber: nextChapterNumber,
-            title: parsed.title,
-            summary: parsed.summary,
-            content: parsed.content
-          };
+            const result = await model.invoke([
+              { role: 'system', content: systemPrompt },
+              { role: 'human', content: userPrompt }
+            ]);
+
+            const content = typeof result.content === 'string' ? result.content : JSON.stringify(result.content);
+            const parsed = this.parseChapterContent(content);
+
+            // 标准化标题并检查重复
+            const normalizedTitle = this.normalizeTitle(parsed.title);
+
+            if (!existingTitles.has(normalizedTitle)) {
+              // 标题唯一，生成成功
+              chapterData = {
+                chapterNumber: nextChapterNumber,
+                title: parsed.title,
+                summary: parsed.summary,
+                content: parsed.content
+              };
+
+              // 字数检查（可选，仅输出警告）
+              const wordCount = parsed.content.length;
+              const targetWordCount = ast.wordCount;
+              const deviation = Math.abs(wordCount - targetWordCount) / targetWordCount;
+
+              if (deviation > 0.3) {
+                console.warn(`[StoryWeaver] 第${nextChapterNumber}章字数偏差较大：实际${wordCount}字，目标${targetWordCount}字（偏差${(deviation * 100).toFixed(1)}%）`);
+              }
+
+              break;
+            } else {
+              // 标题重复，重试
+              retryCount++;
+              console.warn(`[StoryWeaver] 第${nextChapterNumber}章标题重复："${parsed.title}"，正在重试（${retryCount}/${maxRetries}）`);
+
+              if (retryCount <= maxRetries) {
+                // 在用户提示词中追加去重要求
+                const retryHint = `\n\n⚠️ 注意：刚才生成的标题"${parsed.title}"与已有章节重复，请重新构思一个完全不同的标题。`;
+                const result = await model.invoke([
+                  { role: 'system', content: systemPrompt },
+                  { role: 'human', content: userPrompt + retryHint }
+                ]);
+              }
+            }
+          }
+
+          if (!chapterData) {
+            throw new Error(`第${nextChapterNumber}章生成失败：经过${maxRetries}次重试后，仍无法生成唯一的章节标题`);
+          }
 
           // 自动累积章节到内部状态（stateful 保证下次运行时保留）
           // 检查是否已存在相同章节号，如果存在则更新，否则添加
@@ -181,9 +229,10 @@ export class StoryWeaverAstVisitor {
 
 **写作要求**：
 - 风格：${ast.style}
-- 本章字数：约 ${ast.wordCount} 字
+- 本章字数：严格控制在 ${ast.wordCount} 字左右（偏差不超过±20%）
 - 注重情节张力与人物刻画
 - 语言优美流畅，富有画面感
+- 每章推进核心情节，避免原地踏步
 
 **输出格式**：
 \`\`\`
@@ -198,30 +247,52 @@ export class StoryWeaverAstVisitor {
 `;
 
     if (isFirstChapter) {
-      return basePrompt + '\n这是第一章，请设定故事背景、引入主要人物。';
+      return basePrompt + '\n这是第一章，请设定故事背景、引入主要人物、埋下主要冲突线索。';
     }
 
-    // 构建前文章节信息
-    const previousContext = chapters.map(ch => {
-      return `## 第 ${ch.chapterNumber} 章：${ch.title}
+    // 提取所有已有章节标题（用于去重）
+    const existingTitles = chapters.map(ch => ch.title).join('、');
+
+    // 构建精简的前文回顾（只保留最近3章详细信息，其他章节仅列标题）
+    const recentChapters = chapters.slice(-3);
+    const olderChapters = chapters.slice(0, -3);
+
+    let previousContext = '';
+
+    if (olderChapters.length > 0) {
+      previousContext += '**早期章节**（仅标题）：\n';
+      previousContext += olderChapters.map(ch => `- 第${ch.chapterNumber}章：${ch.title}`).join('\n');
+      previousContext += '\n\n';
+    }
+
+    if (recentChapters.length > 0) {
+      previousContext += '**近期章节**（详细回顾）：\n\n';
+      previousContext += recentChapters.map(ch => {
+        return `## 第 ${ch.chapterNumber} 章：${ch.title}
 
 **简介**：${ch.summary}
 
-**正文节选**（前500字）：
-${ch.content.substring(0, 500)}${ch.content.length > 500 ? '...' : ''}
+**关键情节**（前300字）：
+${ch.content.substring(0, 300)}${ch.content.length > 300 ? '...' : ''}
 `;
-    }).join('\n\n');
+      }).join('\n\n');
+    }
 
     return basePrompt + `
 
 **前文章节回顾**：
 ${previousContext}
 
-**续写要点**：
-- 保持前文风格与人物设定
-- 情节自然衔接，推动故事发展
-- 可引入新冲突或转折
-- 注意与前文的连贯性`;
+**已存在的章节标题**：
+${existingTitles}
+
+**续写要点**（第 ${chapterNumber} 章）：
+- ⚠️ **章节标题必须唯一**，不得与已有章节标题重复
+- 保持前文风格与人物设定的一致性
+- 情节自然衔接上一章，推动故事向前发展
+- 可引入新冲突、转折或揭示伏笔
+- 注重人物性格的连贯性和成长弧线
+- 确保本章有明确的情节推进，避免重复前文内容`;
   }
 
   private parseChapterContent(content: string): { title: string; summary: string; content: string } {
@@ -245,5 +316,18 @@ ${previousContext}
     const end = Math.min(text.length, index + keyword.length + contextLength);
 
     return `...${text.substring(start, end)}...`;
+  }
+
+  /**
+   * 标准化章节标题（用于去重检查）
+   * 移除章节号前缀、空格、标点符号，统一为小写
+   */
+  private normalizeTitle(title: string): string {
+    return title
+      .replace(/^第.+?章[：:\s]*/g, '') // 移除"第X章："前缀
+      .replace(/\s+/g, '') // 移除所有空格
+      .replace(/[，。！？；：、""''（）《》【】]/g, '') // 移除中文标点
+      .toLowerCase() // 转小写
+      .trim();
   }
 }
