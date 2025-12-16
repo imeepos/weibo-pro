@@ -28,7 +28,7 @@ const MemoryItem: React.FC<{ memory: RetrievedMemory }> = ({ memory }) => (
 
 const PersonaRender: React.FC<{ ast: PersonaAst }> = ({ ast }) => {
   // 未选择角色时提示
-  if (!ast.personaId) {
+  if (!ast.roleId) {
     return (
       <div className="p-3 text-center text-muted-foreground text-sm">
         请在属性面板中选择角色
@@ -128,11 +128,11 @@ const PersonaSetting: React.FC<PersonaSettingProps> = ({ ast, onPropertyChange }
   const handleSelect = (personaId: string) => {
     const persona = personas.find(p => p.id === personaId);
     if (persona) {
-      onPropertyChange?.('personaId', persona.id);
+      onPropertyChange?.('roleId', persona.id);
       onPropertyChange?.('personaName', persona.name);
       onPropertyChange?.('personaAvatar', persona.avatar || undefined);
     } else {
-      onPropertyChange?.('personaId', undefined);
+      onPropertyChange?.('roleId', undefined);
       onPropertyChange?.('personaName', undefined);
       onPropertyChange?.('personaAvatar', undefined);
     }
@@ -145,7 +145,7 @@ const PersonaSetting: React.FC<PersonaSettingProps> = ({ ast, onPropertyChange }
   return (
     <PersonaSelector
       personas={personas}
-      value={ast.personaId}
+      value={ast.roleId}
       onChange={handleSelect}
       placeholder="搜索角色..."
     />

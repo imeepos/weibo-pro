@@ -1,4 +1,4 @@
-import { Injectable, root } from '@sker/core';
+import { Injectable, root, Inject, Optional } from '@sker/core';
 import { Visitor, WorkflowGraphAst, setAstError } from '../ast';
 import { findNodeType, HANDLER_METHOD } from '../decorator';
 import { Observable, of, from } from 'rxjs';
@@ -6,6 +6,8 @@ import { catchError, switchMap, concatMap, tap, finalize } from 'rxjs/operators'
 import { INode } from '../types';
 import { DefaultVisitor } from '../defaultVisitor';
 import { NodeEvent } from './events';
+import type { IEventStore } from '../event-store';
+import { EVENT_STORE } from '../event-store';
 
 /**
  * 访问者执行器 - 工作流引擎的核心执行者
@@ -16,9 +18,13 @@ import { NodeEvent } from './events';
  * - 统一错误处理，设置节点状态
  * - Observable 流式输出，支持交互式执行
  * - 节点幂等执行：缓存拦截 + 结果重放（断点续跑核心）
+ * - EventStore 集成：持久化事件流，支持续跑和回放
  */
 @Injectable()
 export class VisitorExecutor implements Visitor {
+    constructor(
+        @Optional(EVENT_STORE) @Inject(EVENT_STORE) private eventStore?: IEventStore
+    ) {}
     visit(ast: INode, input$: Observable<any>, parent?: WorkflowGraphAst): Observable<NodeEvent> {
         // 幂等执行：检查缓存
         if (parent?.nodeResults?.has(ast.id)) {
@@ -83,7 +89,7 @@ export class VisitorExecutor implements Visitor {
      * - 透明拦截：Handler 无需感知缓存逻辑
      * - 完整记录：保存所有事件，支持精确重放
      * - 只缓存成功节点：失败节点不写入缓存，支持重试
-     * - 同步发射到事件流：支持时间旅行
+     * - EventStore 持久化：支持跨会话续跑
      */
     private cacheEvents(
         source$: Observable<NodeEvent>,
@@ -98,7 +104,14 @@ export class VisitorExecutor implements Visitor {
         return source$.pipe(
             tap(event => {
                 events.push(event);
-                parent.emit(event);  // 发射到事件流（时间旅行）
+
+                // 持久化到 EventStore（异步，不阻塞执行）
+                if (this.eventStore && parent.runId) {
+                    this.eventStore.append(parent.runId, event).catch(err => {
+                        console.error(`[EventStore] 追加事件失败:`, err);
+                    });
+                }
+
                 if (event.type === 'node_success') hasSuccess = true;
             }),
             finalize(() => {

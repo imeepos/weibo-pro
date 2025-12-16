@@ -2,10 +2,13 @@ import 'reflect-metadata';
 import '@sker/workflow';
 import '@sker/workflow-ast';
 import '@sker/workflow-browser';
+import "@sker/sdk";
+// 上面的这些 import 必须要，加上会自动注册响应的controller到root
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import "@sker/sdk";
-import { providers } from '@sker/sdk'
+import {
+  providers
+} from '@sker/sdk'
 import { root } from '@sker/core'
 
 import App from './App';
