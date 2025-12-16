@@ -75,6 +75,9 @@ importers:
       '@sker/mq':
         specifier: workspace:*
         version: link:../../packages/mq
+      '@sker/openai2anthropic':
+        specifier: workspace:*
+        version: link:../../packages/openai2anthropic
       '@sker/redis':
         specifier: workspace:*
         version: link:../../packages/redis

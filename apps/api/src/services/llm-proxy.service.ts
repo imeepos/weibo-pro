@@ -1,12 +1,25 @@
 import { Injectable } from '@sker/core';
 import { useEntityManager, LlmModelProvider, LlmProvider, LlmChatLog } from '@sker/entities';
 import { Brackets } from 'typeorm';
+import {
+  openaiRequestToClaude,
+  claudeResponseToOpenai,
+  createClaudeToOpenaiStreamConverter,
+  claudeRequestToOpenai,
+  openaiResponseToClaude,
+  createOpenaiToClaudeStreamConverter,
+  type ClaudeResponse,
+  type OpenAIResponse,
+  type ClaudeStreamEvent,
+  type OpenAIStreamResponse,
+} from '@sker/openai2anthropic';
 
 interface ProviderInfo {
   providerId: string
   baseUrl: string
   apiKey: string
   modelName: string
+  providerProtocol: string
 }
 
 interface ProxyResult {
@@ -34,8 +47,7 @@ export class LlmProxyService {
 
       // 构建基础查询条件
       const buildBaseConditions = (qb: any) => {
-        qb.andWhere('provider.protocol = :protocol', { protocol })
-          .andWhere('provider.score > 0')
+        qb.andWhere('provider.score > 0')
         if (requiresThinking) {
           qb.andWhere('mp.supportsThinking = :supportsThinking', { supportsThinking: true })
         }
@@ -54,7 +66,7 @@ export class LlmProxyService {
 
       const availableTiers = await tierQuery.orderBy('tier', 'ASC').getRawMany()
 
-      // 2. 逐层查找最优 provider
+      // 2. 逐层查找最优 provider（优先相同协议，其次跨协议）
       for (const { tier } of availableTiers) {
         const providerQuery = m.createQueryBuilder(LlmModelProvider, 'mp')
           .innerJoin('mp.provider', 'provider')
@@ -62,12 +74,19 @@ export class LlmProxyService {
           .select('provider.id', 'provider_id')
           .addSelect('provider.base_url', 'provider_base_url')
           .addSelect('provider.api_key', 'provider_api_key')
+          .addSelect('provider.protocol', 'provider_protocol')
           .addSelect('mp.model_name', 'mp_model_name')
           .where(modelMatchCondition)
           .andWhere('mp.tierLevel = :tier', { tier })
         buildBaseConditions(providerQuery)
 
-        const result = await providerQuery.orderBy('provider.score', 'DESC').getRawOne()
+        // 优先相同协议（protocol_priority=0），其次跨协议（protocol_priority=1）
+        const result = await providerQuery
+          .addSelect(`CASE WHEN provider.protocol = :protocol THEN 0 ELSE 1 END`, 'protocol_priority')
+          .setParameter('protocol', protocol)
+          .orderBy('protocol_priority', 'ASC')
+          .addOrderBy('provider.score', 'DESC')
+          .getRawOne()
 
         if (result?.provider_id) {
           const modelName = result.mp_model_name
@@ -80,7 +99,8 @@ export class LlmProxyService {
             providerId: result.provider_id,
             baseUrl: result.provider_base_url,
             apiKey: result.provider_api_key,
-            modelName
+            modelName,
+            providerProtocol: result.provider_protocol
           }
         }
       }
@@ -157,7 +177,17 @@ export class LlmProxyService {
         continue
       }
 
-      const proxyBody = { ...body, model: targetModel }
+      // 协议转换：请求协议 vs Provider 协议
+      const needsConversion = protocol !== provider.providerProtocol
+      let proxyBody: any = { ...body, model: targetModel }
+
+      if (needsConversion) {
+        if (protocol === 'openai' && provider.providerProtocol === 'anthropic') {
+          proxyBody = openaiRequestToClaude({ ...body, model: targetModel })
+        } else if (protocol === 'anthropic' && provider.providerProtocol === 'openai') {
+          proxyBody = claudeRequestToOpenai({ ...body, model: targetModel })
+        }
+      }
 
       // 转换 thinking 参数为 Claude API 期望的格式
       if (requiresThinking) {
@@ -257,9 +287,19 @@ export class LlmProxyService {
             error: response.ok ? undefined : JSON.stringify(responseData)
           })
 
+          // 响应协议转换
+          let finalResponse = responseData
+          if (needsConversion && response.ok) {
+            if (protocol === 'openai' && provider.providerProtocol === 'anthropic') {
+              finalResponse = claudeResponseToOpenai(responseData as ClaudeResponse)
+            } else if (protocol === 'anthropic' && provider.providerProtocol === 'openai') {
+              finalResponse = openaiResponseToClaude(responseData as OpenAIResponse)
+            }
+          }
+
           return {
             success: true,
-            response: new Response(JSON.stringify(responseData), {
+            response: new Response(JSON.stringify(finalResponse), {
               status: response.status,
               headers: { 'Content-Type': 'application/json' }
             })
@@ -276,7 +316,18 @@ export class LlmProxyService {
         })
 
         const decoder = new TextDecoder()
+        const encoder = new TextEncoder()
         let thinkingErrorDetected = false
+
+        // 流式协议转换器
+        const streamConverter = needsConversion
+          ? protocol === 'openai' && provider.providerProtocol === 'anthropic'
+            ? createClaudeToOpenaiStreamConverter()
+            : protocol === 'anthropic' && provider.providerProtocol === 'openai'
+              ? createOpenaiToClaudeStreamConverter()
+              : null
+          : null
+
         const monitoredBody = response.body.pipeThrough(new TransformStream({
           transform: (chunk, controller) => {
             const text = decoder.decode(chunk, { stream: true })
@@ -284,7 +335,12 @@ export class LlmProxyService {
 
             for (const line of lines) {
               try {
-                const data = JSON.parse(line.slice(6))
+                const jsonStr = line.slice(6).trim()
+                if (jsonStr === '[DONE]') {
+                  controller.enqueue(encoder.encode('data: [DONE]\n\n'))
+                  continue
+                }
+                const data = JSON.parse(jsonStr)
 
                 // 检测流式响应中的 thinking 错误
                 if (!thinkingErrorDetected && response.status === 400 && requiresThinking && data.error) {
@@ -308,9 +364,26 @@ export class LlmProxyService {
                   if (data.usage.input_tokens) usage.input_tokens = data.usage.input_tokens
                   if (data.usage.output_tokens) usage.output_tokens = data.usage.output_tokens
                 }
+
+                // 流式协议转换
+                if (streamConverter) {
+                  if (protocol === 'openai' && provider.providerProtocol === 'anthropic') {
+                    const converted = (streamConverter as ReturnType<typeof createClaudeToOpenaiStreamConverter>)(data as ClaudeStreamEvent)
+                    if (converted) {
+                      controller.enqueue(encoder.encode(`data: ${JSON.stringify(converted)}\n\n`))
+                    }
+                  } else if (protocol === 'anthropic' && provider.providerProtocol === 'openai') {
+                    const events = (streamConverter as ReturnType<typeof createOpenaiToClaudeStreamConverter>)(data as OpenAIStreamResponse)
+                    for (const event of events) {
+                      controller.enqueue(encoder.encode(`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`))
+                    }
+                  }
+                } else {
+                  controller.enqueue(chunk)
+                  return
+                }
               } catch { }
             }
-            controller.enqueue(chunk)
           },
           flush: async () => {
             if (logId && usage) {

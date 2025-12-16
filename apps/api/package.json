@@ -29,6 +29,7 @@
     "@sker/core": "workspace:*",
     "@sker/entities": "workspace:*",
     "@sker/mq": "workspace:*",
+    "@sker/openai2anthropic": "workspace:*",
     "@sker/redis": "workspace:*",
     "@sker/sdk": "workspace:*",
     "@sker/workflow": "workspace:*",
