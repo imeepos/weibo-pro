@@ -4,6 +4,7 @@ import { IAstStates, IEdge, INode, INodeInputMetadata, INodeOutputMetadata, INod
 import { generateId } from "./utils";
 import { SerializedError } from "@sker/core";
 import { BehaviorSubject, Observable } from 'rxjs'
+import { map, switchMap } from 'rxjs/operators'
 
 export interface DynamicOutput {
     property: string      // 属性名（如 output_case4）
@@ -92,7 +93,7 @@ export abstract class Ast implements INode {
             const value = this[key];
 
             // 跳过 BehaviorSubject 属性（运行时响应式流）
-            if (value instanceof BehaviorSubject) {
+            if (value instanceof BehaviorSubject || value instanceof Map) {
                 continue;
             }
 
@@ -158,10 +159,102 @@ export class WorkflowGraphAst extends Ast {
     abortSignal?: AbortSignal
 
     /**
+     * 节点执行结果缓存（断点续跑核心）
+     *
+     * 设计哲学：
+     * - 节点幂等性：相同节点 = 相同输出
+     * - 断点续跑：重新执行时，已完成节点直接重放缓存
+     * - 运行时状态：不序列化，每次执行重新构建
+     */
+    nodeResults: Map<string, NodeEvent[]> = new Map()
+
+    // ========== 事件回放系统（时间旅行核心） ==========
+
+    /** 完整事件流 */
+    private _events$ = new BehaviorSubject<NodeEvent[]>([])
+
+    /** 回放索引（-1 = 实时模式） */
+    private _replayIndex$ = new BehaviorSubject<number>(-1)
+
+    /** 追加事件 */
+    emit(event: NodeEvent): void {
+        this._events$.next([...this._events$.value, event])
+    }
+
+    /** 跳转到指定时间点（-1 = 实时） */
+    jumpTo(index: number): void {
+        const max = this._events$.value.length - 1
+        this._replayIndex$.next(Math.min(Math.max(-1, index), max))
+    }
+
+    /** 当前可见事件（支持回放） */
+    get visibleEvents$(): Observable<NodeEvent[]> {
+        return this._replayIndex$.pipe(
+            switchMap(index => this._events$.pipe(
+                map(events => index < 0 ? events : events.slice(0, index + 1))
+            ))
+        )
+    }
+
+    /** 获取节点当前状态（响应式） */
+    getNodeState$(nodeId: string): Observable<NodeEvent | undefined> {
+        return this.visibleEvents$.pipe(
+            map(events => {
+                for (let i = events.length - 1; i >= 0; i--) {
+                    const e = events[i]!
+                    if (e.id === nodeId && e.type !== 'node_emit') return e
+                }
+                return undefined
+            })
+        )
+    }
+
+    /** 获取所有事件（用于序列化） */
+    get events(): NodeEvent[] {
+        return this._events$.value
+    }
+
+    /** 恢复事件（用于反序列化） */
+    restoreEvents(events: NodeEvent[]): void {
+        this._events$.next(events)
+        // 从事件重建 nodeResults 缓存（只缓存成功节点）
+        this.nodeResults.clear()
+        const nodeEventsMap = new Map<string, NodeEvent[]>()
+        for (const event of events) {
+            if (!event.id) continue
+            if (!nodeEventsMap.has(event.id)) nodeEventsMap.set(event.id, [])
+            nodeEventsMap.get(event.id)!.push(event)
+            if (event.type === 'node_success') {
+                this.nodeResults.set(event.id, nodeEventsMap.get(event.id)!)
+            }
+            if (event.type === 'node_fail') {
+                this.nodeResults.delete(event.id)
+            }
+        }
+    }
+
+    /** 当前回放索引 */
+    get replayIndex(): number {
+        return this._replayIndex$.value
+    }
+
+    /**
      * 判断是否为分组节点
      */
     get isGroup(): boolean {
         return this.isGroupNode === true
+    }
+
+    /**
+     * 序列化（包含事件流）
+     */
+    override toJSON(): Record<string, any> {
+        const result = super.toJSON();
+        // 包含事件流用于断点续跑
+        if (this._events$.value.length > 0) {
+            result._events = this._events$.value;
+        }
+        return result;
     }
 }
 export function createWorkflowGraphAst({ nodes = [], edges = [], id, state, name = 'Untitled Workflow', entryNodeIds = [], endNodeIds = [] }: { name?: string, nodes?: INode[], edges?: IEdge[], id?: string, state?: IAstStates, entryNodeIds?: string[], endNodeIds?: string[] } = {}) {

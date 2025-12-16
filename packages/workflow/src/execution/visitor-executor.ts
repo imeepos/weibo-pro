@@ -2,7 +2,7 @@ import { Injectable, root } from '@sker/core';
 import { Visitor, WorkflowGraphAst, setAstError } from '../ast';
 import { findNodeType, HANDLER_METHOD } from '../decorator';
 import { Observable, of, from } from 'rxjs';
-import { catchError, switchMap, concatMap } from 'rxjs/operators';
+import { catchError, switchMap, concatMap, tap, finalize } from 'rxjs/operators';
 import { INode } from '../types';
 import { DefaultVisitor } from '../defaultVisitor';
 import { NodeEvent } from './events';
@@ -15,10 +15,18 @@ import { NodeEvent } from './events';
  * - 支持 Promise 和 Observable 两种返回类型的 Handler
  * - 统一错误处理，设置节点状态
  * - Observable 流式输出，支持交互式执行
+ * - 节点幂等执行：缓存拦截 + 结果重放（断点续跑核心）
  */
 @Injectable()
 export class VisitorExecutor implements Visitor {
     visit(ast: INode, input$: Observable<any>, parent?: WorkflowGraphAst): Observable<NodeEvent> {
+        // 幂等执行：检查缓存
+        if (parent?.nodeResults?.has(ast.id)) {
+            const cached = parent.nodeResults.get(ast.id)!;
+            console.log(`[VisitorExecutor] 节点 ${ast.id} 命中缓存，重放 ${cached.length} 个事件`);
+            return from(cached);
+        }
+
         const type = findNodeType(ast.type);
         const methods = root.get(HANDLER_METHOD, []);
 
@@ -28,7 +36,11 @@ export class VisitorExecutor implements Visitor {
 
         const method = methods.find(it => it.ast === type);
         if (!method) {
-            return this.useDefaultVisitor(ast, input$, parent);
+            return this.cacheEvents(
+                this.useDefaultVisitor(ast, input$, parent),
+                ast.id,
+                parent
+            );
         }
 
         const instance = root.get(method.target);
@@ -37,17 +49,14 @@ export class VisitorExecutor implements Visitor {
         }
 
         try {
-            // 检查 Handler 的参数数量，判断是新模式还是旧模式
             const handlerFn = (instance as any)[method.property];
             const handlerLength = handlerFn.length;
 
-            // 新模式：handler(ast, ctx) - 需要将 input$ 数据应用到 ast
-            // 旧模式：handler(ast, input$, ctx) - 直接传递 input$
+            let execute$: Observable<NodeEvent>;
+
             if (handlerLength <= 2) {
-                // 新模式：从 input$ 中提取数据并应用到 ast
-                return input$.pipe(
+                execute$ = input$.pipe(
                     concatMap(inputData => {
-                        // 将输入数据应用到节点对象
                         Object.keys(inputData).forEach(key => {
                             (ast as any)[key] = inputData[key];
                         });
@@ -57,13 +66,48 @@ export class VisitorExecutor implements Visitor {
                     catchError(error => this.handleError(error, ast))
                 );
             } else {
-                // 旧模式：直接传递 input$
                 const result = handlerFn.call(instance, ast, input$, parent);
-                return this.normalizeResult(result, ast);
+                execute$ = this.normalizeResult(result, ast);
             }
+
+            return this.cacheEvents(execute$, ast.id, parent);
         } catch (error) {
             return this.handleError(error, ast);
         }
+    }
+
+    /**
+     * 缓存节点事件流（断点续跑 + 时间旅行核心）
+     *
+     * 设计哲学：
+     * - 透明拦截：Handler 无需感知缓存逻辑
+     * - 完整记录：保存所有事件，支持精确重放
+     * - 只缓存成功节点：失败节点不写入缓存，支持重试
+     * - 同步发射到事件流：支持时间旅行
+     */
+    private cacheEvents(
+        source$: Observable<NodeEvent>,
+        nodeId: string,
+        parent?: WorkflowGraphAst
+    ): Observable<NodeEvent> {
+        if (!parent) return source$;
+
+        const events: NodeEvent[] = [];
+        let hasSuccess = false;
+
+        return source$.pipe(
+            tap(event => {
+                events.push(event);
+                parent.emit(event);  // 发射到事件流（时间旅行）
+                if (event.type === 'node_success') hasSuccess = true;
+            }),
+            finalize(() => {
+                // 只缓存成功节点（失败节点支持重试）
+                if (events.length > 0 && hasSuccess) {
+                    parent.nodeResults.set(nodeId, events);
+                }
+            })
+        );
     }
 
     /**
