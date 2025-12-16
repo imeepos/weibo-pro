@@ -19,8 +19,8 @@ export class QueryRewriterAst extends Ast {
   @Input({ title: '温度', defaultValue: 0.7 })
   temperature: number = 0.7;
 
-  @Input({ title: '模型', defaultValue: 'deepseek-ai/DeepSeek-V3' })
-  model: string = 'deepseek-ai/DeepSeek-V3';
+  @Input({ title: '模型', defaultValue: 'deepseek-ai/DeepSeek-V3.2' })
+  model: string = 'deepseek-ai/DeepSeek-V3.2';
 
   @Output({ title: '子查询列表', defaultValue: '' })
   subQueries: string | string[] = ``;

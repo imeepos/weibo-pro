@@ -72,7 +72,7 @@ export class AnswerFinalizerAstVisitor {
                         throw new Error('工作流已取消');
                     }
 
-                    const model = useLlmModel({ model: 'deepseek-ai/DeepSeek-V3', temperature: 0.7 });
+                    const model = useLlmModel({ model: 'deepseek-ai/DeepSeek-V3.2', temperature: 0.7 });
 
                     const result = await model.invoke([
                         { role: 'system', content: SYSTEM_PROMPT },

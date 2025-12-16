@@ -21,6 +21,7 @@ export { StoryWeaverAstVisitor } from './StoryWeaverAstVisitor'
 
 // 控制流节点
 export { SwitchAstVisitor } from './SwitchAstVisitor'
+export { PassThroughAstVisitor } from './PassThroughAstVisitor'
 
 // 消息队列节点
 export { MqPushAstVisitor, MqPullAstVisitor } from './MqAstVisitor'
@@ -35,6 +36,9 @@ export { LoopAstVisitor } from './LoopAstVisitor'
 // 群聊节点
 export { ShareAstVisitor } from './ShareAstVisitor'
 export { GroupChatLoopAstVisitor } from './GroupChatLoopAstVisitor'
+
+// 故事质量循环节点
+export { StoryQualityLoopAstVisitor } from './StoryQualityLoopAstVisitor'
 
 // 角色记忆节点
 export { PersonaAstVisitor } from './PersonaAstVisitor'
@@ -75,6 +79,7 @@ export { WorkflowNodeGeneratorAstVisitor } from './WorkflowNodeGeneratorAstVisit
 // 服务
 export { CronSchedulerService } from './services/CronSchedulerService'
 export { WorkflowExecutionService } from './services/WorkflowExecutionService'
+export { ChapterQualityService } from './services/ChapterQualityService'
 
 // EventStore - 注册后端数据库存储实现
 import { root } from '@sker/core'

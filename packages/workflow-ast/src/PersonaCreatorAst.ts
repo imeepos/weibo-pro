@@ -17,8 +17,8 @@ export class PersonaCreatorAst extends Ast {
   @Input({ title: '温度', defaultValue: 0.7 })
   temperature: number = 0.7;
 
-  @Input({ title: '模型', defaultValue: 'deepseek-ai/DeepSeek-V3' })
-  model: string = 'deepseek-ai/DeepSeek-V3';
+  @Input({ title: '模型', defaultValue: 'deepseek-ai/DeepSeek-V3.2' })
+  model: string = 'deepseek-ai/DeepSeek-V3.2';
 
   @State({ title: '生成的角色名' })
   generatedName?: string;

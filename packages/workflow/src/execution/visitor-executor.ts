@@ -81,17 +81,60 @@ export class VisitorExecutor implements Visitor {
 
             if (handlerLength <= 2) {
                 console.log(`[VisitorExecutor] 使用新模式 handler(ast, parent)`);
-                execute$ = input$.pipe(
-                    concatMap(inputData => {
-                        console.log(`[VisitorExecutor] 应用输入数据到节点 ${ast.id}:`, inputData);
-                        Object.keys(inputData).forEach(key => {
-                            (ast as any)[key] = inputData[key];
-                        });
-                        const result = handlerFn.call(instance, ast, parent);
-                        return this.normalizeResult(result, ast);
-                    }),
-                    catchError(error => this.handleError(error, ast))
-                );
+                // 新模式：input$ 的每次发射触发一次 handler 执行
+                // node_success 只在 input$ complete 时发射
+                execute$ = new Observable<NodeEvent>(obs => {
+                    let started = false;
+                    const sub = input$.subscribe({
+                        next: inputData => {
+                            console.log(`[VisitorExecutor] 应用输入数据到节点 ${ast.id}:`, inputData);
+                            Object.keys(inputData).forEach(key => {
+                                (ast as any)[key] = inputData[key];
+                            });
+                            if (!started) {
+                                started = true;
+                                ast.state = 'running';
+                                obs.next({ type: 'node_runing', id: ast.id, data: ast });
+                            }
+                            try {
+                                const result = handlerFn.call(instance, ast, parent);
+                                // handler 只负责业务逻辑，只保留 node_emit
+                                // node_runing/node_success/node_fail 由 VisitorExecutor 统一管理
+                                this.normalizeResult(result, ast).subscribe({
+                                    next: event => {
+                                        if (event.type === 'node_emit') {
+                                            obs.next(event);
+                                        }
+                                        // 忽略 node_runing/node_success/node_fail
+                                    },
+                                    error: err => {
+                                        ast.state = 'fail';
+                                        setAstError(ast, err);
+                                        obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                                        obs.complete();
+                                    }
+                                });
+                            } catch (err) {
+                                ast.state = 'fail';
+                                setAstError(ast, err);
+                                obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                                obs.complete();
+                            }
+                        },
+                        error: err => {
+                            ast.state = 'fail';
+                            setAstError(ast, err);
+                            obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                            obs.complete();
+                        },
+                        complete: () => {
+                            ast.state = 'success';
+                            obs.next({ type: 'node_success', id: ast.id, data: ast });
+                            obs.complete();
+                        }
+                    });
+                    return () => sub.unsubscribe();
+                });
             } else {
                 console.log(`[VisitorExecutor] 使用旧模式 handler(ast, input$, parent)`);
                 const result = handlerFn.call(instance, ast, input$, parent);

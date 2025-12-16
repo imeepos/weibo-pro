@@ -32,7 +32,7 @@ export class AnswerEvaluatorAst extends Ast {
   temperature: number = 0.3;
 
   @State({ title: '模型' })
-  model: string = 'deepseek-ai/DeepSeek-V3';
+  model: string = 'deepseek-ai/DeepSeek-V3.2';
 
   @Output({ title: '评估结果', defaultValue: [] })
   results: EvaluationResult[] = [];

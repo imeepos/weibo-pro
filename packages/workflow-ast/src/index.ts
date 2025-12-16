@@ -27,7 +27,7 @@ export { LlmVideoToTextAst } from './LlmVideoToTextAst';
 export { LlmTextImageToVideoAst } from './LlmTextImageToVideoAst';
 export { LlmTextImage2ToVideoAst } from './LlmTextImage2ToVideoAst';
 export { StoryWeaverAst } from './StoryWeaverAst';
-export type { ChapterData } from './StoryWeaverAst';
+export type { ChapterData, Clue } from './StoryWeaverAst';
 
 // 媒体节点
 export { ImageAst } from './ImageAst';
@@ -41,10 +41,19 @@ export type { ChatMessage } from './ShareAst';
 
 // 控制流节点
 export { SwitchAst } from './SwitchAst';
+export { PassThroughAst } from './PassThroughAst';
 
 // 循环群聊节点
 export { GroupChatLoopAst } from './GroupChatLoopAst';
 export type { AgentConfig, ChatMessage as GroupChatMessage } from './GroupChatLoopAst';
+
+// 质量检查器节点
+export { QualityCheckerAst } from './QualityCheckerAst';
+export type { QualityDimension, QualityResult } from './QualityCheckerAst';
+
+// 故事质量循环节点
+export { StoryQualityLoopAst } from './StoryQualityLoopAst';
+export type { RewriteRequest, ChapterData as QualityLoopChapterData } from './StoryQualityLoopAst';
 
 // 角色记忆节点
 export { PersonaAst } from './PersonaAst';
