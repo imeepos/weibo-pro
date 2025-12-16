@@ -13,7 +13,7 @@ const toString = (ast: any): string => {
 export class TextAreaAstRender {
     @Render(TextAreaAst)
     render(ast: TextAreaAst, ctx: any) {
-        const output = toString(ast.input)
+        const output = toString(ast.output || ast.input)
         return <MarkdownViewer>{output}</MarkdownViewer>;
     }
 }
