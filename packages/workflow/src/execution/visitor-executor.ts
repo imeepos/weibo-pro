@@ -163,7 +163,6 @@ export class VisitorExecutor implements Visitor {
         workflow?: WorkflowGraphAst
     ): Observable<NodeEvent> {
         if (!workflow) {
-            console.warn(`[VisitorExecutor.recordEvents] skip - workflow 不存在`);
             return source$;
         }
 
@@ -172,26 +171,19 @@ export class VisitorExecutor implements Visitor {
         const eventStream = runId ? globalRuntime.getEventStream(runId) : undefined;
 
         if (!eventStream) {
-            console.warn(`[VisitorExecutor.recordEvents] skip - eventStream 不存在，runId: ${runId}`);
             return source$;
         }
-
-        console.log(`[VisitorExecutor.recordEvents] 开始记录事件到工作流 ${workflow.id}, runId: ${runId}`);
 
         return source$.pipe(
             tap(event => {
                 // 记录到 eventStream
                 eventStream.emit(event);
-                console.log(`[VisitorExecutor.recordEvents] 事件已记录到 eventStream:`, event.type, event.id);
 
                 // 持久化到 EventStore（异步，不阻塞执行）
                 if (this.eventStore && runId) {
-                    console.log(`[VisitorExecutor.recordEvents] 持久化事件到 EventStore, runId: ${runId}`);
                     this.eventStore.append(runId, event).catch(err => {
                         console.error(`[VisitorExecutor.recordEvents] EventStore 追加事件失败:`, err);
                     });
-                } else {
-                    console.warn(`[VisitorExecutor.recordEvents] 跳过持久化 - eventStore: ${!!this.eventStore}, runId: ${runId}`);
                 }
             })
         );

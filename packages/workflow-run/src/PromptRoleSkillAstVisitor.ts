@@ -2,8 +2,7 @@ import { Injectable, root } from '@sker/core';
 import { Handler, NodeEvent, setAstError, WorkflowGraphAst } from '@sker/workflow';
 import { PromptRoleSkillAst } from '@sker/workflow-ast';
 import { PromptRoleSkillRefEntity, PromptSkillEntity, useEntityManager, In, type SkillSummary } from '@sker/entities';
-import { Observable, from } from 'rxjs';
-import { concatMap, mergeMap } from 'rxjs/operators';
+import { Observable } from 'rxjs';
 import { z } from 'zod';
 import { DynamicStructuredTool } from '@langchain/core/tools';
 import { useLlmModel } from './llm-client';
@@ -12,6 +11,10 @@ const SkillSelectionSchema = z.object({
   selected_skill_ids: z.array(z.string()).describe('选中的技能ID列表'),
   reasoning: z.string().describe('选择这些技能的原因')
 });
+
+// UUID 格式验证正则
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 @Injectable()
 export class PromptRoleSkillAstVisitor {
 
@@ -19,28 +22,34 @@ export class PromptRoleSkillAstVisitor {
   handler(ast: PromptRoleSkillAst, input$: Observable<any>, ctx: WorkflowGraphAst) {
     return new Observable<NodeEvent>((obs) => {
       const abortController = new AbortController();
+      let started = false;
 
-      ast.state = 'running';
-      obs.next({ type: 'node_runing', id: ast.id, data: ast });
+      input$.subscribe({
+        next: async (inputData) => {
+          try {
+            // 第一次发射：标记节点运行中
+            if (!started) {
+              started = true;
+              ast.state = 'running';
+              obs.next({ type: 'node_runing', id: ast.id, data: ast });
+            }
 
-      const subscription = input$.pipe(
-        concatMap(async (inputData) => {
-          ast.emitCount += 1;
-          if (inputData) {
-            Object.keys(inputData).forEach(key => {
-              (ast as any)[key] = inputData[key];
-            });
-          }
+            ast.emitCount += 1;
+            if (inputData) {
+              Object.keys(inputData).forEach(key => {
+                (ast as any)[key] = inputData[key];
+              });
+            }
 
-          if (abortController.signal.aborted) {
-            throw new Error('工作流已取消');
-          }
+            if (abortController.signal.aborted) {
+              throw new Error('工作流已取消');
+            }
 
-          if (!ast.roleId) {
-            throw new Error('请指定角色ID');
-          }
+            if (!ast.roleId) {
+              throw new Error('请指定角色ID');
+            }
 
-          await useEntityManager(async (manager) => {
+            await useEntityManager(async (manager) => {
               const skillRefs = await manager.find(PromptRoleSkillRefEntity, {
                 where: { role_id: ast.roleId },
                 relations: ['skill'],
@@ -55,14 +64,12 @@ export class PromptRoleSkillAstVisitor {
               }));
 
               ast.availableSkills = skills;
-              obs.next({ type: 'node_runing', id: ast.id, data: ast });
 
               if (skills.length === 0) {
-                ast.state = 'success';
                 ast.selectedSkillsList = [];
                 ast.skillContent = {};
-                obs.next({ type: 'node_success', id: ast.id, data: ast });
-                obs.complete();
+                obs.next({ type: 'node_emit', id: ast.id, property: 'selectedSkillsList', value: [] });
+                obs.next({ type: 'node_emit', id: ast.id, property: 'skillContent', value: {} });
                 return;
               }
 
@@ -75,9 +82,14 @@ export class PromptRoleSkillAstVisitor {
                 name: 'get_skill_content',
                 description: '获取指定技能的详细内容',
                 schema: z.object({
-                  skill_id: z.string().describe('技能ID')
+                  skill_id: z.string().uuid('技能ID必须是有效的UUID格式').describe('技能ID')
                 }),
                 func: async ({ skill_id }) => {
+                  // UUID 格式验证
+                  if (!UUID_REGEX.test(skill_id)) {
+                    return `错误：技能ID格式无效 (${skill_id})，必须是有效的UUID格式`;
+                  }
+
                   if (ast.skillContents && ast.skillContents[`${skill_id}`]) {
                     return Reflect.get(ast.skillContents, skill_id)
                   }
@@ -99,8 +111,11 @@ export class PromptRoleSkillAstVisitor {
 
 ${skillsDescription}
 
-使用 get_skill_content 工具来查看技能的详细内容，然后决定是否需要该技能。
-最后，选择最相关的技能供角色使用。`;
+重要提示：
+1. 使用 get_skill_content 工具查看技能的详细内容
+2. 技能ID必须是完整的UUID格式（例如：a1b2c3d4-e5f6-7890-abcd-ef1234567890）
+3. 只能从上述可用技能列表中选择，不要编造或修改技能ID
+4. 最后返回最相关的技能ID列表供角色使用`;
 
               const userPrompt = Array.isArray(ast.requirements)
                 ? ast.requirements.filter(Boolean).join('\n')
@@ -116,6 +131,13 @@ ${skillsDescription}
                 for (const toolCall of response.tool_calls) {
                   if (toolCall.name === 'get_skill_content') {
                     const skillId = toolCall.args.skill_id;
+
+                    // UUID 格式验证
+                    if (!UUID_REGEX.test(skillId)) {
+                      console.warn(`LLM 返回了无效的技能ID: ${skillId}`);
+                      continue;
+                    }
+
                     const skill = await manager.findOne(PromptSkillEntity, {
                       where: { id: skillId }
                     });
@@ -133,8 +155,20 @@ ${skillsDescription}
               ]);
 
               const validSkillIds = new Set(skills.map(s => s.id));
+
+              // 过滤出有效的技能ID：必须是有效的UUID并且在可用技能列表中
               const finalSelectedIds = (selectionResult.selected_skill_ids || [])
-                .filter(id => validSkillIds.has(id));
+                .filter(id => {
+                  if (!UUID_REGEX.test(id)) {
+                    console.warn(`LLM 返回了无效的技能ID: ${id}，已过滤`);
+                    return false;
+                  }
+                  if (!validSkillIds.has(id)) {
+                    console.warn(`LLM 返回的技能ID ${id} 不在可用技能列表中，已过滤`);
+                    return false;
+                  }
+                  return true;
+                });
 
               if (finalSelectedIds.length > 0) {
                 const selectedSkills = skills.filter(s => finalSelectedIds.includes(s.id));
@@ -156,18 +190,21 @@ ${skillsDescription}
                 ast.selectedSkillsList = [];
                 ast.skillContent = {};
               }
-            });
 
-          return [];
-        }),
-        mergeMap((events: NodeEvent[]) => from(events))
-      ).subscribe({
-        next: (event: NodeEvent) => {
-          obs.next(event);
+              // 发射输出事件
+              obs.next({ type: 'node_emit', id: ast.id, property: 'selectedSkillsList', value: ast.selectedSkillsList });
+              obs.next({ type: 'node_emit', id: ast.id, property: 'skillContent', value: ast.skillContent });
+            });
+          } catch (error) {
+            ast.state = 'fail';
+            setAstError(ast, new Error(`LLM 选择技能失败: ${error instanceof Error ? error.message : '未知错误'}`));
+            obs.next({ type: 'node_fail', id: ast.id, data: ast });
+            obs.complete();
+          }
         },
         error: (error) => {
           ast.state = 'fail';
-          setAstError(ast, new Error(`LLM 选择技能失败: ${error instanceof Error ? error.message : '未知错误'}`));
+          setAstError(ast, new Error(`输入流错误: ${error instanceof Error ? error.message : '未知错误'}`));
           obs.next({ type: 'node_fail', id: ast.id, data: ast });
           obs.complete();
         },
@@ -179,9 +216,7 @@ ${skillsDescription}
       });
 
       return () => {
-        subscription.unsubscribe();
         abortController.abort();
-        obs.complete();
       };
     });
   }

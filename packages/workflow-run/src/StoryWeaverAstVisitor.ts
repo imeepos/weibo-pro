@@ -95,12 +95,19 @@ export class StoryWeaverAstVisitor {
     // 提取已存在的章节标题（用于去重检查）
     const existingTitles = new Set(chapters.map(ch => this.normalizeTitle(ch.title)));
 
-    // 不使用工具，直接在提示词中包含前文章节信息
-    const baseModel = useLlmModel({ model: ast.model, temperature: ast.temperature });
-    // 使用结构化输出（强制返回符合 Schema 的 JSON）
-    const model = baseModel.withStructuredOutput(ChapterOutputSchema);
+    // 根据章节数量决定是否启用工具模式
+    const useTools = chapters.length > 10;  // 超过 10 章启用工具模式
 
-    const systemPrompt = this.buildSystemPrompt(ast, chapters, isFirstChapter, nextChapterNumber);
+    const baseModel = useLlmModel({ model: ast.model, temperature: ast.temperature });
+
+    // 工具模式：绑定查询工具（不使用结构化输出）
+    const model = useTools ? baseModel.bindTools(this.createStoryTools(chapters)) : baseModel;
+
+    if (useTools) {
+      console.log(`[StoryWeaver] 启用工具模式（已有 ${chapters.length} 章）`);
+    }
+
+    const systemPrompt = this.buildSystemPrompt(ast, chapters, isFirstChapter, nextChapterNumber, useTools);
     const prompts = Array.isArray(ast.prompt) ? ast.prompt.join('\n') : ast.prompt;
 
     // 构建待回填伏笔列表
@@ -111,7 +118,15 @@ export class StoryWeaverAstVisitor {
       ).join('\n')}\n\n提示：可选择在本章回填部分伏笔，回填时需在 resolvedClueIds 中标注。`
       : '';
 
-    const userPrompt = `请创作第 ${nextChapterNumber} 章。\n\n**创作要求**：\n${prompts}${pendingCluesHint}`;
+    const userPrompt = `请创作第 ${nextChapterNumber} 章。
+
+**输出要求**：
+- 直接输出完整的小说文本（${ast.wordCount}字左右）
+- 可选：在文本末尾说明本章埋下的伏笔或回填的伏笔
+- 不需要特殊格式标记，自然流畅即可
+
+**创作要求**：
+${prompts}${pendingCluesHint}`;
 
     // 使用 expand 创建重试循环，使用 scan 累积所有尝试结果
     return of({ attempt: 0, improvementHints: '', allAttempts: [] as Array<{ chapter: ChapterData; quality: QualityCheckResult; attempt: number }> }).pipe(
@@ -127,7 +142,7 @@ export class StoryWeaverAstVisitor {
           currentUserPrompt += `\n\n**⚠️ 上一版本质量问题（需改进）**：\n${state.improvementHints}`;
         }
 
-        // 调用 LLM 生成章节
+        // 第一步：调用 LLM 生成章节（纯文本输出，可使用工具）
         console.log(`[StoryWeaver] 第${nextChapterNumber}章生成中...（第${state.attempt + 1}次尝试）`);
         return from(model.invoke(
           [
@@ -136,6 +151,32 @@ export class StoryWeaverAstVisitor {
           ],
           { signal }
         )).pipe(
+          // 第二步：提取文本内容
+          concatMap((response: any) => {
+            const rawText = response.content || response.text || String(response);
+            console.log(`[StoryWeaver] 生成文本长度: ${rawText.length} 字`);
+
+            // 第三步：用结构化输出解析文本
+            const extractionPrompt = `请从下面的小说文本中提取结构化信息：
+
+${rawText}
+
+---
+
+请严格按照 JSON Schema 提取以下信息：
+- title: 章节标题
+- summary: 章节简介（20-50字）
+- content: 正文内容（不包括标题、简介、伏笔说明等元数据）
+- clues: 本章埋下的伏笔列表（可选）
+- resolvedClueIds: 本章回填的伏笔ID列表（可选）`;
+
+            const extractionModel = baseModel.withStructuredOutput(ChapterOutputSchema);
+
+            return from(extractionModel.invoke([
+              { role: 'system', content: '你是一个文本结构化提取专家，精确提取小说章节的元数据。' },
+              { role: 'human', content: extractionPrompt }
+            ], { signal }));
+          }),
           // 清理和验证生成的内容
           map((parsed: z.infer<typeof ChapterOutputSchema>) => {
             // 清理 content 中重复的标题和简介
@@ -351,6 +392,7 @@ export class StoryWeaverAstVisitor {
     );
   }
 
+
   /**
    * 标准化章节标题（用于去重检查）
    * 移除章节号前缀、空格、标点符号，统一为小写
@@ -364,13 +406,21 @@ export class StoryWeaverAstVisitor {
       .trim();
   }
 
-  private buildSystemPrompt(ast: StoryWeaverAst, chapters: ChapterData[], isFirstChapter: boolean, chapterNumber: number): string {
+  private buildSystemPrompt(ast: StoryWeaverAst, chapters: ChapterData[], isFirstChapter: boolean, chapterNumber: number, useTools = false): string {
     const basePrompt = `你是一位资深小说家，正在创作一部小说的第 ${chapterNumber} 章。
 
 **写作要求**：
 - 风格：${ast.style}
 - 本章字数：严格控制在 ${ast.wordCount} 字（偏差不超过±10%，低于 -20% 视为不合格）
 
+${useTools ? `**工具使用提示**：
+由于前文章节较多，你可以使用以下工具按需查询：
+- list_chapters：列出所有章节标题和简介
+- retrieve_chapter：检索特定章节的完整内容
+- search_content：在前文中搜索关键词
+
+建议：先 list_chapters 了解全局，再根据需要 retrieve_chapter 或 search_content。
+` : ''}
 **字数达标策略**（必读）：
 当字数不足时，通过以下维度扩充（按优先级排序）：
 1. **环境细节雕刻**（+25%字数）：
@@ -468,32 +518,38 @@ export class StoryWeaverAstVisitor {
     // 提取所有已有章节标题（用于去重）
     const existingTitles = chapters.map(ch => ch.title).join('、');
 
-    // 构建精简的前文回顾（只保留最近3章详细信息，其他章节仅列标题）
-    const recentChapters = chapters.slice(-3);
-    const olderChapters = chapters.slice(0, -3);
-
     // 提取前文的关键设定元素（用于一致性检查）
     const extractedSettings = this.extractKeySettings(chapters);
 
     let previousContext = '';
 
-    if (olderChapters.length > 0) {
-      previousContext += '**早期章节**（仅标题）：\n';
-      previousContext += olderChapters.map(ch => `- 第${ch.chapterNumber}章：${ch.title}`).join('\n');
-      previousContext += '\n\n';
-    }
+    if (useTools) {
+      // 工具模式：只提供章节总览，让 LLM 使用工具按需查询
+      previousContext = '**章节总览**（使用工具查询详细内容）：\n';
+      previousContext += chapters.map(ch => `- 第${ch.chapterNumber}章：${ch.title}（${ch.summary}）`).join('\n');
+    } else {
+      // 非工具模式：构建精简的前文回顾（只保留最近3章详细信息）
+      const recentChapters = chapters.slice(-3);
+      const olderChapters = chapters.slice(0, -3);
 
-    if (recentChapters.length > 0) {
-      previousContext += '**近期章节**（详细回顾）：\n\n';
-      previousContext += recentChapters.map(ch => {
-        return `## 第 ${ch.chapterNumber} 章：${ch.title}
+      if (olderChapters.length > 0) {
+        previousContext += '**早期章节**（仅标题）：\n';
+        previousContext += olderChapters.map(ch => `- 第${ch.chapterNumber}章：${ch.title}`).join('\n');
+        previousContext += '\n\n';
+      }
+
+      if (recentChapters.length > 0) {
+        previousContext += '**近期章节**（详细回顾）：\n\n';
+        previousContext += recentChapters.map(ch => {
+          return `## 第 ${ch.chapterNumber} 章：${ch.title}
 
 **简介**：${ch.summary}
 
 **关键情节**（前400字）：
 ${ch.content.substring(0, 400)}${ch.content.length > 400 ? '...' : ''}
 `;
-      }).join('\n\n');
+        }).join('\n\n');
+      }
     }
 
     return basePrompt + `
@@ -677,6 +733,7 @@ ${extractedSettings}
   private createStoryTools(chapters: ChapterData[]) {
     const listChaptersTool = tool(
       async () => {
+        console.log(`call tool listChaptersTool`)
         return JSON.stringify(
           chapters.map(ch => ({
             chapterNumber: ch.chapterNumber,
@@ -696,6 +753,7 @@ ${extractedSettings}
 
     const retrieveChapterTool = tool(
       async ({ chapterNumber }: { chapterNumber: number }) => {
+        console.log(`call tool retrieveChapterTool ${chapterNumber}`)
         const chapter = chapters.find(c => c.chapterNumber === chapterNumber);
         if (!chapter) {
           return `章节 ${chapterNumber} 不存在`;
@@ -712,26 +770,82 @@ ${extractedSettings}
     );
 
     const searchContentTool = tool(
-      async ({ keyword }: { keyword: string }) => {
-        const results = chapters
-          .filter(ch => ch.content.includes(keyword) || ch.title.includes(keyword) || ch.summary.includes(keyword))
-          .map(ch => ({
-            chapterNumber: ch.chapterNumber,
-            title: ch.title,
-            matchContext: this.extractContext(ch.content, keyword)
-          }));
+      async ({ pattern, mode }: { pattern: string; mode?: 'literal' | 'regex' | 'glob' }) => {
+        console.log(`call tool searchContentTool pattern=${pattern} mode=${mode || 'literal'}`)
 
-        if (results.length === 0) {
-          return `未在前文中找到关键词"${keyword}"`;
+        const searchMode = mode || 'literal';
+        let matcher: (text: string) => { matched: boolean; matches?: RegExpMatchArray[] };
+
+        try {
+          if (searchMode === 'regex') {
+            // 正则表达式模式
+            const regex = new RegExp(pattern, 'gi');
+            matcher = (text: string) => {
+              const matches = Array.from(text.matchAll(new RegExp(pattern, 'gi')));
+              return { matched: matches.length > 0, matches };
+            };
+          } else if (searchMode === 'glob') {
+            // Glob 模式：转换为正则表达式
+            // * → .*    ? → .    其他字符转义
+            const regexPattern = pattern
+              .replace(/[.+^${}()|[\]\\]/g, '\\$&')  // 转义特殊字符
+              .replace(/\*/g, '.*')                   // * → .*
+              .replace(/\?/g, '.');                   // ? → .
+            const regex = new RegExp(regexPattern, 'gi');
+            matcher = (text: string) => {
+              const matches = Array.from(text.matchAll(regex));
+              return { matched: matches.length > 0, matches };
+            };
+          } else {
+            // 字面量模式（向后兼容）
+            matcher = (text: string) => {
+              const index = text.indexOf(pattern);
+              return {
+                matched: index !== -1,
+                matches: index !== -1 ? [{ 0: pattern, index, input: text }] as any : undefined
+              };
+            };
+          }
+
+          const results = chapters
+            .map(ch => {
+              const contentMatch = matcher(ch.content);
+              const titleMatch = matcher(ch.title);
+              const summaryMatch = matcher(ch.summary);
+
+              const matched = contentMatch.matched || titleMatch.matched || summaryMatch.matched;
+
+              if (!matched) return null;
+
+              return {
+                chapterNumber: ch.chapterNumber,
+                title: ch.title,
+                matchCount: (contentMatch.matches?.length || 0) + (titleMatch.matches?.length || 0) + (summaryMatch.matches?.length || 0),
+                matchLocations: {
+                  title: titleMatch.matched ? titleMatch.matches?.map(m => m[0]) : [],
+                  summary: summaryMatch.matched ? summaryMatch.matches?.map(m => m[0]) : [],
+                  content: contentMatch.matched ? contentMatch.matches?.slice(0, 5).map(m => m[0]) : []  // 最多返回5个内容匹配
+                },
+                matchContext: this.extractContextForMatches(ch.content, contentMatch.matches || [])
+              };
+            })
+            .filter(r => r !== null);
+
+          if (results.length === 0) {
+            return `未找到匹配模式 "${pattern}" (${searchMode} 模式) 的内容`;
+          }
+
+          return JSON.stringify(results, null, 2);
+        } catch (error: any) {
+          return `搜索失败：${error.message}`;
         }
-
-        return JSON.stringify(results, null, 2);
       },
       {
         name: 'search_content',
-        description: '在前文所有章节中搜索关键词，返回匹配的章节和上下文',
+        description: '在前文所有章节中搜索内容，支持多种模式：literal（字面量）、regex（正则表达式）、glob（通配符）',
         schema: z.object({
-          keyword: z.string().describe('要搜索的关键词')
+          pattern: z.string().describe('搜索模式。literal: 字面量匹配；regex: 正则表达式（如 "师父.*青玉"）；glob: 通配符（如 "*师父*", "青玉?"）'),
+          mode: z.enum(['literal', 'regex', 'glob']).optional().describe('搜索模式，默认为 literal')
         })
       }
     );
@@ -750,5 +864,22 @@ ${extractedSettings}
     const end = Math.min(text.length, index + keyword.length + contextLength);
 
     return `...${text.substring(start, end)}...`;
+  }
+
+  /**
+   * 提取多个匹配项的上下文（用于正则/glob搜索）
+   */
+  private extractContextForMatches(text: string, matches: RegExpMatchArray[], contextLength: number = 100): string[] {
+    if (!matches || matches.length === 0) return [];
+
+    // 最多返回前3个匹配的上下文
+    return matches.slice(0, 3).map(match => {
+      const index = match.index || 0;
+      const matchText = match[0];
+      const start = Math.max(0, index - contextLength);
+      const end = Math.min(text.length, index + matchText.length + contextLength);
+
+      return `...${text.substring(start, end)}...`;
+    });
   }
 }
