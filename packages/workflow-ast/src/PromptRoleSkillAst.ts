@@ -38,5 +38,8 @@ export class PromptRoleSkillAst extends Ast {
   @Output({ title: '技能内容', defaultValue: {} })
   skillContent = {}
 
+  @Output({ title: '技能内容文本', defaultValue: '' })
+  skillContentText = ''
+
   type: 'PromptRoleSkillAst' = 'PromptRoleSkillAst';
 }

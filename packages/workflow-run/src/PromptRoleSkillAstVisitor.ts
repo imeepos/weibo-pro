@@ -68,8 +68,10 @@ export class PromptRoleSkillAstVisitor {
               if (skills.length === 0) {
                 ast.selectedSkillsList = [];
                 ast.skillContent = {};
+                ast.skillContentText = '';
                 obs.next({ type: 'node_emit', id: ast.id, property: 'selectedSkillsList', value: [] });
                 obs.next({ type: 'node_emit', id: ast.id, property: 'skillContent', value: {} });
+                obs.next({ type: 'node_emit', id: ast.id, property: 'skillContentText', value: '' });
                 return;
               }
 
@@ -186,14 +188,23 @@ ${skillsDescription}
                 }
 
                 ast.skillContent = contentMap;
+
+                // 将 skillContent 对象转换为字符串（按技能顺序拼接）
+                const skillTexts = selectedSkills
+                  .map(skill => contentMap[skill.id])
+                  .filter(Boolean)
+                  .join('\n\n');
+                ast.skillContentText = skillTexts;
               } else {
                 ast.selectedSkillsList = [];
                 ast.skillContent = {};
+                ast.skillContentText = '';
               }
 
               // 发射输出事件
               obs.next({ type: 'node_emit', id: ast.id, property: 'selectedSkillsList', value: ast.selectedSkillsList });
               obs.next({ type: 'node_emit', id: ast.id, property: 'skillContent', value: ast.skillContent });
+              obs.next({ type: 'node_emit', id: ast.id, property: 'skillContentText', value: ast.skillContentText });
             });
           } catch (error) {
             ast.state = 'fail';

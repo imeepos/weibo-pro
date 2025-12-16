@@ -450,7 +450,7 @@ export class WeiboKeywordSearchAst extends Ast {
 2. Handler 通过反射读取 `keyword`, `startDate` 等输入
 3. 调用 Playwright 爬取微博
 4. 提取 `mblogid`, `uid` 并赋值
-5. Scheduler 通过 DataFlowManager 将输出传递给下游节点
+5. WorkflowGraphAstVisitor 将输出通过边传递给下游节点
 6. 如果失败，根据 `errorStrategy: 'retry'` 自动重试 3 次
 
 ### 示例 2：多值输入节点
@@ -787,9 +787,8 @@ toJSON(): Record<string, any> {
 **执行流程**：
 
 1. **Compiler**：读取装饰器元数据，生成 `ast.metadata`
-2. **Scheduler**：分析依赖关系，找到可执行节点
+2. **WorkflowGraphAstVisitor**：构建节点输入流，组合边，连接数据流
 3. **VisitorExecutor**：通过反射调用对应的 Handler
-4. **DataFlowManager**：提取输出，传递给下游节点
 
 ## 依赖关系
 

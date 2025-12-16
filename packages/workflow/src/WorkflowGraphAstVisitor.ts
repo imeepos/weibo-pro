@@ -1,6 +1,6 @@
 import { Injectable, Inject } from '@sker/core';
 import { Observable, EMPTY, merge, defer, of, combineLatest, zip, isObservable } from 'rxjs';
-import { filter, map, catchError, shareReplay, concatMap } from 'rxjs/operators';
+import { filter, map, catchError, shareReplay, concatMap, withLatestFrom } from 'rxjs/operators';
 import { NodeExecutor } from './executor';
 import { Handler } from './decorator';
 import { WorkflowGraphAst } from './ast';
@@ -141,7 +141,15 @@ export class WorkflowGraphAstVisitor {
             });
 
             // 5. 合并所有输入源（等待所有源 complete）
-            nodeInputStreams.set(node.id, this.mergeWithCompletion(inputSources));
+            if (inputSources.length === 0) {
+                // 没有输入源：使用节点自身的静态值作为初始输入
+                // 场景：辅流节点（如风格配置），不连接任何上游，只提供静态值
+                const staticInput = this.buildNodeInput(node, {});
+                console.log(`[buildNodeInputStreams] 节点 ${node.id} 无输入源，使用静态值:`, staticInput);
+                nodeInputStreams.set(node.id, of(staticInput));
+            } else {
+                nodeInputStreams.set(node.id, this.mergeWithCompletion(inputSources));
+            }
         });
 
         return nodeInputStreams;
@@ -271,10 +279,70 @@ export class WorkflowGraphAstVisitor {
                 );
             case EdgeMode.ZIP:
                 return zip(...sources).pipe(map(mapToObject));
+            case EdgeMode.WITH_LATEST_FROM:
+                return this.buildWithLatestFrom(sources, edges);
             case EdgeMode.COMBINE_LATEST:
             default:
                 return combineLatest(sources).pipe(map(mapToObject));
         }
+    }
+
+    /**
+     * 构建 withLatestFrom：主流触发，携带辅流最新值
+     *
+     * 场景示例：
+     * - 关键词节点（主流 isPrimary=true）→ 每次发射都触发下游
+     * - 风格节点（辅流 isPrimary=false）→ 只提供配置值，不主动触发
+     *
+     * 行为：
+     * 主流: ----A--------B--------C---
+     * 辅流: --1-----2---------3------
+     * 结果: ----A1-------B2-------C3--
+     */
+    private buildWithLatestFrom(sources: Observable<any>[], edges: IEdge[]): Observable<any> {
+        // 找到主流（isPrimary === true）
+        const primaryIndex = edges.findIndex(edge => edge.isPrimary === true);
+
+        if (primaryIndex === -1) {
+            console.warn('[buildWithLatestFrom] 未找到主流（isPrimary=true），回退到 combineLatest');
+            return combineLatest(sources).pipe(
+                map(values => {
+                    const result: Record<string, any> = {};
+                    values.forEach((value, index) => {
+                        const prop = edges[index]?.toProperty;
+                        if (prop) result[prop] = value;
+                    });
+                    return result;
+                })
+            );
+        }
+
+        // 分离主流和辅流
+        const primarySource = sources[primaryIndex]!;
+        const secondarySources = sources.filter((_, i) => i !== primaryIndex);
+        const primaryEdge = edges[primaryIndex]!;
+        const secondaryEdges = edges.filter((_, i) => i !== primaryIndex);
+
+        // 主流 + withLatestFrom(辅流1, 辅流2, ...)
+        return primarySource.pipe(
+            withLatestFrom(...secondarySources),
+            map(([primaryValue, ...secondaryValues]) => {
+                const result: Record<string, any> = {};
+
+                // 主流值
+                if (primaryEdge.toProperty) {
+                    result[primaryEdge.toProperty] = primaryValue;
+                }
+
+                // 辅流值
+                secondaryValues.forEach((value, index) => {
+                    const prop = secondaryEdges[index]?.toProperty;
+                    if (prop) result[prop] = value;
+                });
+
+                return result;
+            })
+        );
     }
 
     /**

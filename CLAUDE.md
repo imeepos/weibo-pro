@@ -105,10 +105,8 @@ NestJS 容器作为 HTTP 层 facade，实际服务由 @sker/core 全局根注入
 ```
 
 **执行引擎**：
-- `WorkflowScheduler` - 调度器：依赖分析 + 批量执行
-- `DependencyAnalyzer` - 找到可执行节点（依赖已满足）
-- `DataFlowManager` - 数据流管理：输入赋值 + 输出提取
-- `VisitorExecutor` - 访问者执行器：通过反射调用 Handler
+- `WorkflowGraphAstVisitor` - 工作流执行器：构建节点输入流、组合边、连接数据流
+- `VisitorExecutor` - 访问者执行器：查找并调用 Handler，将输入数据应用到节点
 
 **节点类型** (@sker/workflow-ast)：
 - 微博 API：`WeiboKeywordSearchAst`, `WeiboAjaxStatusesShowAst` 等（8个）
@@ -118,11 +116,11 @@ NestJS 容器作为 HTTP 层 facade，实际服务由 @sker/core 全局根注入
 ```
 WorkflowGraphAst 启动
  ↓
-WorkflowScheduler.schedule() → 找到可执行节点（入度为0）
+WorkflowGraphAstVisitor.handler() → 构建每个节点的输入流
  ↓
 并发执行当前批次 → VisitorExecutor.visit(ast, ctx)
  ↓
-DataFlowManager 提取输出 → 传递给下游节点
+WorkflowGraphAstVisitor 提取输出 → 通过边传递给下游节点
  ↓
 控制流判断（支持条件边） → 重复直到完成
 ```
