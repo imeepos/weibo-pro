@@ -196,14 +196,13 @@ export class WeiboAuthService implements OnDestroy {
               obs.next({ type: 'node_emit', id: ast.id, property: 'message', value: ast.message })
               obs.next({ type: 'node_runing', id: ast.id, data: ast })
             }
-            // 50114003: 二维码过期
+            // 50114003: 二维码过期，自动刷新
             else if (data.retcode === 50114003) {
-              ast.state = 'fail';
-              ast.message = `该二维码已过期`
+              ast.message = `二维码已过期，正在刷新...`
               obs.next({ type: 'node_emit', id: ast.id, property: 'message', value: ast.message })
-              obs.next({ type: 'node_fail', id: ast.id, data: ast })
-              obs.complete()
-              await this.cleanupSession(ast.id);
+              obs.next({ type: 'node_runing', id: ast.id, data: ast })
+              console.log('[WeiboAuthService] 二维码过期，刷新页面获取新二维码');
+              page.reload({ waitUntil: 'networkidle' }).catch(() => {});
             }
           } catch (e) {
             // 响应为空或无法解析，可能是登录成功后的空响应
