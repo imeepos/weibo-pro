@@ -1,7 +1,7 @@
 import { root } from '@sker/core';
 import { WorkflowController } from '@sker/sdk';
 import { Ast, NodeEvent, WorkflowGraphAst } from '@sker/workflow';
-import { Observable } from 'rxjs';
+import { Observable, tap } from 'rxjs';
 /**
  * 统一的远程执行器
  *
@@ -22,5 +22,11 @@ export function executeRemote(
     if (!controller) {
         throw new Error('WorkflowController 未注入，请确保已配置 SDK providers');
     }
-    return controller.execute({ ast, workflow: parent, input })
+    return controller.execute({ ast, workflow: parent, input }).pipe(
+        tap(event => {
+            if (event.type === 'node_emit') {
+                Reflect.set(ast, event.property, event.value)
+            }
+        })
+    )
 }

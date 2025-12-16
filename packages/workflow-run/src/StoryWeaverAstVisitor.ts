@@ -90,6 +90,8 @@ export class StoryWeaverAstVisitor {
     const isFirstChapter = chapters.length === 0;
     const nextChapterNumber = isFirstChapter ? 1 : Math.max(...chapters.map(c => c.chapterNumber)) + 1;
 
+    console.log(`[StoryWeaver] 章节计算: previousChapters.length=${ast.previousChapters?.length ?? 0}, validChapters=${chapters.length}, nextChapter=${nextChapterNumber}`);
+
     // 提取已存在的章节标题（用于去重检查）
     const existingTitles = new Set(chapters.map(ch => this.normalizeTitle(ch.title)));
 
@@ -211,11 +213,12 @@ export class StoryWeaverAstVisitor {
           map(({ chapter, quality, attempt }) => {
             console.log(`[StoryWeaver] 第${nextChapterNumber}章质量评分：${quality.score}/100`);
 
-            // 如果达到目标分数，停止重试
+            // 如果达到目标分数，停止重试（设置 attempt 为最大值以终止 expand）
             if (quality.score >= ast.minQualityScore) {
               return {
-                shouldContinue: false,
-                result: { chapter, quality, attempt }
+                result: { chapter, quality, attempt },
+                improvementHints: '',
+                attempt: ast.maxRewriteRetries ?? 2  // 达到最大值，expand 将终止
               };
             }
 
@@ -223,10 +226,9 @@ export class StoryWeaverAstVisitor {
             const improvementHints = this.buildImprovementHints(quality);
 
             return {
-              shouldContinue: attempt < (ast.maxRewriteRetries || 2),
               result: { chapter, quality, attempt },
               improvementHints,
-              nextAttempt: attempt + 1
+              attempt: attempt + 1  // expand 需要此字段判断是否继续
             };
           }),
           // 捕获标题重复错误
@@ -235,10 +237,9 @@ export class StoryWeaverAstVisitor {
               const title = error.message.replace('TITLE_DUPLICATE:', '');
               const improvementHints = `❌ 标题重复："${title}"与已有章节标题重复，请重新构思一个完全不同的标题\n`;
               return of({
-                shouldContinue: state.attempt < (ast.maxRewriteRetries || 2),
                 result: null,
                 improvementHints,
-                nextAttempt: state.attempt + 1
+                attempt: state.attempt + 1
               });
             }
             return throwError(() => error);
@@ -262,7 +263,7 @@ export class StoryWeaverAstVisitor {
         }
 
         return {
-          attempt: curr.nextAttempt || curr.attempt,
+          attempt: typeof curr.attempt === 'number' ? curr.attempt : acc.attempt,
           improvementHints: curr.improvementHints || '',
           allAttempts: acc.allAttempts
         };
@@ -336,6 +337,7 @@ export class StoryWeaverAstVisitor {
           { type: 'node_emit' as const, id: ast.id, property: 'content', value: chapterData.content },
           { type: 'node_emit' as const, id: ast.id, property: 'chapterNumber', value: chapterData.chapterNumber },
           { type: 'node_emit' as const, id: ast.id, property: 'chapterData', value: chapterData },
+          { type: 'node_emit' as const, id: ast.id, property: 'previousChapters', value: ast.previousChapters },
           { type: 'node_emit' as const, id: ast.id, property: 'isComplete', value: isComplete }
         ];
 
