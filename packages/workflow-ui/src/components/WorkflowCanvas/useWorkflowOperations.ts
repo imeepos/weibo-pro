@@ -92,6 +92,56 @@ function trackNodeExecution(
   }
 }
 
+/**
+ * 重置有入边连接的输入属性为默认值
+ *
+ * 设计理由：
+ * - 只重置有入边的输入属性，保留用户手动配置的值
+ * - 确保上一次运行的结果不会影响当前运行
+ * - 使用 metadata.inputs 中的 defaultValue 作为重置值
+ */
+function resetConnectedInputs(workflowAst: WorkflowGraphAst): void {
+  const { nodes, edges } = workflowAst
+
+  // 收集每个节点有入边连接的输入属性
+  const connectedInputs = new Map<string, Set<string>>()
+
+  for (const edge of edges) {
+    const targetNodeId = edge.to
+    const targetProperty = edge.toProperty
+
+    if (targetProperty) {
+      if (!connectedInputs.has(targetNodeId)) {
+        connectedInputs.set(targetNodeId, new Set())
+      }
+      connectedInputs.get(targetNodeId)!.add(targetProperty)
+    }
+  }
+
+  // 重置有入边连接的输入属性
+  for (const node of nodes) {
+    const nodeConnectedInputs = connectedInputs.get(node.id)
+    if (!nodeConnectedInputs || nodeConnectedInputs.size === 0) continue
+
+    const nodeInputs = node.metadata?.inputs || []
+    for (const inputMeta of nodeInputs) {
+      const property = String(inputMeta.property)
+
+      // 只重置有入边连接的属性
+      if (nodeConnectedInputs.has(property)) {
+        const defaultValue = inputMeta.defaultValue
+        if (defaultValue !== undefined) {
+          // 深拷贝默认值避免引用类型污染
+          (node as any)[property] = JSON.parse(JSON.stringify(defaultValue))
+        } else {
+          // 没有 defaultValue 时，根据类型设置合理默认值
+          (node as any)[property] = Array.isArray((node as any)[property]) ? [] : undefined
+        }
+      }
+    }
+  }
+}
+
 export function useWorkflowOperations(
   workflow: ReturnType<typeof useWorkflow>,
   callbacks?: {
@@ -473,6 +523,9 @@ export function useWorkflowOperations(
         // 创建新的 AbortController
         const abortController = new AbortController()
         abortControllerRef.current = abortController
+
+        // ✨ 重置有入边连接的输入属性，防止上一次运行结果影响当前运行
+        resetConnectedInputs(workflow.workflowAst)
 
         // ✨ 重置所有节点状态为 pending（参考 reactive-scheduler.ts 的 resetWorkflowGraphAst）
         // 确保进度条从 0% 开始，但保留输出字段数据
