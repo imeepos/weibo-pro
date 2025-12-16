@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react'
-import { executeAstWithWorkflowGraph, executeNodeIsolated, executeAst, fromJson, toJson, type WorkflowGraphAst, getNodeById, type INode, type IAstStates } from '@sker/workflow'
+import { executeAstWithWorkflowGraph, executeNodeIsolated, executeAst, fromJson, toJson, type WorkflowGraphAst, getNodeById, type INode, type IAstStates, globalRuntime } from '@sker/workflow'
 import type { useWorkflow } from '../../hooks/useWorkflow'
 import type { ToastType } from './useCanvasState'
 import { WorkflowController } from '@sker/sdk'
@@ -456,6 +456,15 @@ export function useWorkflowOperations(
           await controller.saveWorkflow(workflow.workflowAst)
         } catch (error: any) {
           console.error('[runWorkflow] 执行前保存工作流失败:', error)
+        }
+
+        // ✨ 清理旧的运行实例，防止缓存的 runId 导致节点不执行
+        // Bug 修复：globalRuntime.createRun() 会缓存 workflowId → runId 映射
+        // 第二次执行时会返回旧的 runId，导致 eventStream 已完成，节点不再执行
+        const oldRunId = await globalRuntime.getRunIdByWorkflowId(workflow.workflowAst.id)
+        if (oldRunId) {
+          console.log(`[runWorkflow] 清理旧的运行实例 runId=${oldRunId}`)
+          await globalRuntime.clearRun(oldRunId)
         }
 
         // 创建新的取消 Subject（重置上一次的）

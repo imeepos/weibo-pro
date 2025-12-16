@@ -3,10 +3,12 @@ import { Render } from '@sker/workflow';
 import { StoryWeaverAst } from '@sker/workflow-ast';
 import { MarkdownViewer } from '@sker/ui/components/ui/markdown-viewer';
 import { SimplePagination } from '@sker/ui/components/ui/simple-pagination';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@sker/ui/components/ui/dialog';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@sker/ui/components/ui/command';
-import { BookOpenIcon, ListIcon, CheckIcon } from 'lucide-react';
+import { Dialog, DialogContent, DialogTrigger } from '@sker/ui/components/ui/dialog';
+import { BookOpenIcon, MaximizeIcon, ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
 import React, { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { cn } from '@sker/ui/lib/utils';
 
 @Injectable()
 export class StoryWeaverAstRender {
@@ -37,7 +39,7 @@ interface NovelReaderProps {
 
 function NovelReader({ chapters, latestChapterNumber }: NovelReaderProps) {
   const [currentIndex, setCurrentIndex] = useState(chapters.length - 1);
-  const [catalogOpen, setCatalogOpen] = useState(false);
+  const [fullscreenOpen, setFullscreenOpen] = useState(false);
 
   const currentChapter = chapters[currentIndex];
   if (!currentChapter) return null;
@@ -52,77 +54,169 @@ ${currentChapter.content}`;
 
   return (
     <>
-      <div className="flex items-center justify-between mb-3 gap-2">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <BookOpenIcon className="size-4" />
-          <span>共 {chapters.length} 章</span>
-          {latestChapterNumber > 0 && (
-            <span className="text-xs">· 最新：第 {latestChapterNumber} 章</span>
-          )}
+      <div className="relative group">
+        <div className="flex items-center justify-between mb-3 gap-2">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <BookOpenIcon className="size-4" />
+            <span>共 {chapters.length} 章</span>
+            {latestChapterNumber > 0 && (
+              <span className="text-xs">· 最新：第 {latestChapterNumber} 章</span>
+            )}
+          </div>
         </div>
-
-        <Dialog open={catalogOpen} onOpenChange={setCatalogOpen}>
+        <Dialog open={fullscreenOpen} onOpenChange={setFullscreenOpen}>
           <DialogTrigger asChild>
             <button
-              className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm rounded-md border bg-background hover:bg-muted transition-colors"
-              title="目录"
+              className="absolute text-foreground top-2 right-2 p-1.5 rounded-xs border shadow-sm"
+              title="全屏阅读"
             >
-              <ListIcon className="size-3.5" />
-              <span>目录</span>
+              <MaximizeIcon className="size-4" />
             </button>
           </DialogTrigger>
-          <DialogContent className="max-w-md p-0">
-            <DialogHeader className="px-4 py-3 border-b">
-              <DialogTitle>目录</DialogTitle>
-            </DialogHeader>
-            <Command className="rounded-none border-0">
-              <CommandInput placeholder="搜索章节..." />
-              <CommandList className="max-h-[400px]">
-                <CommandEmpty>未找到章节</CommandEmpty>
-                <CommandGroup>
-                  {chapters.map((chapter, index) => (
-                    <CommandItem
-                      key={chapter.chapterNumber}
-                      value={`${chapter.chapterNumber} ${chapter.title}`}
-                      onSelect={() => {
-                        setCurrentIndex(index);
-                        setCatalogOpen(false);
-                      }}
-                      className="flex items-center justify-between gap-2"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium truncate">
-                          第 {chapter.chapterNumber} 章：{chapter.title}
-                        </div>
-                        <div className="text-xs text-muted-foreground truncate mt-0.5">
-                          {chapter.summary}
-                        </div>
-                      </div>
-                      {currentIndex === index && <CheckIcon className="size-4 shrink-0" />}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </CommandList>
-            </Command>
+          <DialogContent
+            className="p-0 border-0 rounded-none shadow-none [&>button]:fixed [&>button]:top-4 [&>button]:right-4 [&>button]:z-50 [&>button]:bg-black/20 [&>button]:hover:bg-black/40 [&>button]:backdrop-blur-sm [&>button]:opacity-60 [&>button]:hover:opacity-100 [&>button]:rounded-full [&>button]:p-2 [&>button>svg]:text-white"
+            style={{
+              maxWidth: '100vw',
+              width: '100vw',
+              height: '100vh',
+              maxHeight: '100vh'
+            }}
+          >
+            <FullscreenReader
+              chapters={chapters}
+              currentIndex={currentIndex}
+              onChapterChange={setCurrentIndex}
+            />
           </DialogContent>
         </Dialog>
       </div>
+    </>
+  );
+}
 
-      <div className="border rounded-md bg-background">
-        <div className="prose prose-sm max-w-none p-4 max-h-[500px] overflow-y-auto">
-          <MarkdownViewer>{chapterMarkdown}</MarkdownViewer>
+interface FullscreenReaderProps {
+  chapters: Array<{ chapterNumber: number; title: string; summary: string; content: string }>;
+  currentIndex: number;
+  onChapterChange: (index: number) => void;
+}
+
+function FullscreenReader({ chapters, currentIndex, onChapterChange }: FullscreenReaderProps) {
+  const currentChapter = chapters[currentIndex];
+
+  if (!currentChapter) return null;
+
+  const hasPrev = currentIndex > 0;
+  const hasNext = currentIndex < chapters.length - 1;
+
+  const goToPrev = () => hasPrev && onChapterChange(currentIndex - 1);
+  const goToNext = () => hasNext && onChapterChange(currentIndex + 1);
+
+  const chapterMarkdown = `# 第 ${currentChapter.chapterNumber} 章：${currentChapter.title}
+
+**简介**：${currentChapter.summary}
+
+---
+
+${currentChapter.content}`;
+
+  return (
+    <div className="w-full h-full flex bg-background">
+      {/* 左侧章节目录 */}
+      <div className="w-64 h-full border-r bg-muted/20 flex flex-col">
+        <div className="px-4 py-3 border-b bg-background/50 backdrop-blur-sm">
+          <h3 className="font-semibold">目录</h3>
+          <p className="text-xs text-muted-foreground mt-1">共 {chapters.length} 章</p>
         </div>
 
-        <div className="border-t p-3 bg-muted/30">
-          <SimplePagination
-            currentPage={currentIndex + 1}
-            totalPages={chapters.length}
-            onPageChange={(page) => setCurrentIndex(page - 1)}
-            showInfo={false}
-            className="justify-center"
-          />
+        <div className="flex-1 overflow-y-auto">
+          <style dangerouslySetInnerHTML={{
+            __html: `
+            .chapter-list::-webkit-scrollbar {
+              width: 6px;
+            }
+            .chapter-list::-webkit-scrollbar-track {
+              background: transparent;
+            }
+            .chapter-list::-webkit-scrollbar-thumb {
+              background: rgba(156, 163, 175, 0.5);
+              border-radius: 3px;
+            }
+            .chapter-list::-webkit-scrollbar-thumb:hover {
+              background: rgba(107, 114, 128, 0.7);
+            }
+          `}} />
+          <div className="chapter-list p-2 space-y-1">
+            {chapters.map((chapter, index) => (
+              <button
+                key={chapter.chapterNumber}
+                onClick={() => onChapterChange(index)}
+                className={cn(
+                  "w-full text-left px-3 py-2 rounded-md text-sm transition-colors",
+                  index === currentIndex
+                    ? "bg-primary text-primary-foreground font-medium"
+                    : "hover:bg-muted/50"
+                )}
+              >
+                <div className="truncate">第 {chapter.chapterNumber} 章：{chapter.title}</div>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
-    </>
+
+      {/* 右侧阅读区域 */}
+      <div className="flex-1 relative group">
+        <style dangerouslySetInnerHTML={{
+          __html: `
+          .reading-area::-webkit-scrollbar {
+            width: 6px;
+          }
+          .reading-area::-webkit-scrollbar-track {
+            background: transparent;
+          }
+          .reading-area::-webkit-scrollbar-thumb {
+            background: rgba(156, 163, 175, 0.5);
+            border-radius: 3px;
+          }
+          .reading-area::-webkit-scrollbar-thumb:hover {
+            background: rgba(107, 114, 128, 0.7);
+          }
+        `}} />
+        <div className="absolute inset-0 overflow-y-auto reading-area px-16 py-8">
+          <div className="max-w-3xl mx-auto prose prose-sm break-words [&_pre]:whitespace-pre-wrap [&_pre]:break-all [&_code]:break-all">
+            <ReactMarkdown remarkPlugins={[[remarkGfm, { singleTilde: false }]]}>
+              {chapterMarkdown}
+            </ReactMarkdown>
+          </div>
+        </div>
+
+        {/* 左侧悬浮按钮 - 上一章 */}
+        {hasPrev && (
+          <button
+            onClick={goToPrev}
+            className="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-background/80 hover:bg-muted border shadow-lg transition-all opacity-0 group-hover:opacity-100 hover:scale-110"
+            title="上一章"
+          >
+            <ChevronLeftIcon className="size-6" />
+          </button>
+        )}
+
+        {/* 右侧悬浮按钮 - 下一章 */}
+        {hasNext && (
+          <button
+            onClick={goToNext}
+            className="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-background/80 hover:bg-muted border shadow-lg transition-all opacity-0 group-hover:opacity-100 hover:scale-110"
+            title="下一章"
+          >
+            <ChevronRightIcon className="size-6" />
+          </button>
+        )}
+
+        {/* 底部章节导航提示 */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-background/80 backdrop-blur-sm border shadow-sm text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+          第 {currentChapter.chapterNumber} 章 / 共 {chapters.length} 章
+        </div>
+      </div>
+    </div>
   );
 }

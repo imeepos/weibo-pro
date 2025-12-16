@@ -31,26 +31,25 @@ export class StoryWeaverAstVisitor {
           }
 
           // previousChapters 是内部状态，会自动累积（stateful 节点）
-          const chapters = ast.previousChapters || [];
+          // 过滤掉空章节（避免空章节污染前文回顾）
+          const chapters = (ast.previousChapters || []).filter(ch => ch.content && ch.content.trim().length > 0);
           const isFirstChapter = chapters.length === 0;
           const nextChapterNumber = isFirstChapter ? 1 : Math.max(...chapters.map(c => c.chapterNumber)) + 1;
 
-          const tools = this.createStoryTools(chapters);
-          const model = useLlmModel({ model: ast.model, temperature: ast.temperature }).bindTools(tools);
+          // 不使用工具，直接在提示词中包含前文章节信息
+          const model = useLlmModel({ model: ast.model, temperature: ast.temperature });
 
-          const systemPrompt = this.buildSystemPrompt(ast, isFirstChapter, nextChapterNumber);
+          const systemPrompt = this.buildSystemPrompt(ast, chapters, isFirstChapter, nextChapterNumber);
           const prompts = Array.isArray(ast.prompt) ? ast.prompt.join('\n') : ast.prompt;
 
-          const userPrompt = isFirstChapter
-            ? `请创作第 ${nextChapterNumber} 章。\n\n**创作要求**：\n${prompts}`
-            : `请创作第 ${nextChapterNumber} 章。\n\n**创作要求**：\n${prompts}\n\n**提示**：你可以使用工具查看前文章节信息。`;
+          const userPrompt = `请创作第 ${nextChapterNumber} 章。\n\n**创作要求**：\n${prompts}`;
 
           const result = await model.invoke([
             { role: 'system', content: systemPrompt },
             { role: 'human', content: userPrompt }
           ]);
 
-          const content = typeof result.content === 'string' ? result.content : '';
+          const content = typeof result.content === 'string' ? result.content : JSON.stringify(result.content);
           const parsed = this.parseChapterContent(content);
 
           const chapterData: ChapterData = {
@@ -61,7 +60,13 @@ export class StoryWeaverAstVisitor {
           };
 
           // 自动累积章节到内部状态（stateful 保证下次运行时保留）
-          ast.previousChapters.push(chapterData);
+          // 检查是否已存在相同章节号，如果存在则更新，否则添加
+          const existingIndex = ast.previousChapters.findIndex(ch => ch.chapterNumber === nextChapterNumber);
+          if (existingIndex >= 0) {
+            ast.previousChapters[existingIndex] = chapterData;
+          } else {
+            ast.previousChapters.push(chapterData);
+          }
 
           ast.title = chapterData.title;
           ast.summary = chapterData.summary;
@@ -104,6 +109,8 @@ export class StoryWeaverAstVisitor {
     });
   }
 
+  // 工具方法：以下工具方法暂不使用，保留供将来长篇小说场景使用
+  // 对于短篇小说，直接在提示词中包含前文章节信息更简单可靠
   private createStoryTools(chapters: ChapterData[]) {
     const listChaptersTool = tool(
       async () => {
@@ -169,7 +176,7 @@ export class StoryWeaverAstVisitor {
     return [listChaptersTool, retrieveChapterTool, searchContentTool];
   }
 
-  private buildSystemPrompt(ast: StoryWeaverAst, isFirstChapter: boolean, chapterNumber: number): string {
+  private buildSystemPrompt(ast: StoryWeaverAst, chapters: ChapterData[], isFirstChapter: boolean, chapterNumber: number): string {
     const basePrompt = `你是一位资深小说家，正在创作一部小说的第 ${chapterNumber} 章。
 
 **写作要求**：
@@ -194,12 +201,27 @@ export class StoryWeaverAstVisitor {
       return basePrompt + '\n这是第一章，请设定故事背景、引入主要人物。';
     }
 
+    // 构建前文章节信息
+    const previousContext = chapters.map(ch => {
+      return `## 第 ${ch.chapterNumber} 章：${ch.title}
+
+**简介**：${ch.summary}
+
+**正文节选**（前500字）：
+${ch.content.substring(0, 500)}${ch.content.length > 500 ? '...' : ''}
+`;
+    }).join('\n\n');
+
     return basePrompt + `
+
+**前文章节回顾**：
+${previousContext}
+
 **续写要点**：
-- 你可以使用工具查看前文章节信息
 - 保持前文风格与人物设定
 - 情节自然衔接，推动故事发展
-- 可引入新冲突或转折`;
+- 可引入新冲突或转折
+- 注意与前文的连贯性`;
   }
 
   private parseChapterContent(content: string): { title: string; summary: string; content: string } {

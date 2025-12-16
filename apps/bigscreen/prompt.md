@@ -1,6 +1,8 @@
 ## 需求
 
-packages\workflow-ui\src\renderers\StoryWeaverAstRender.tsx 设计一个小说阅读器 markdown 渲染 上一章 下一章 目录 跳转等功能
+修复bug: 当工作流运行成功后，再次点击运行，提示：成功执行0个节点
+刷新页面，点击执行，正常运行
+
 
 ## 子包的作用 
 

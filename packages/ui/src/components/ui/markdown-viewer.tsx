@@ -22,7 +22,7 @@ const cleanMarkdownContent = (content: string): string => {
   const codeBlockRegex = /^```+\s*(?:markdown|md)?\s*\n?([\s\S]*?)\n?```+\s*$/;
   const match = cleaned.match(codeBlockRegex);
 
-  if (match) {
+  if (match && match[1]) {
     cleaned = match[1].trim();
   }
 

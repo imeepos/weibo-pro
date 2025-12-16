@@ -33,6 +33,7 @@ import "./AnswerEvaluatorAstVisitor.js";
 import "./ErrorAnalyzerAstVisitor.js";
 import "./ResearchPlannerAstVisitor.js";
 import "./SerpClusterAstVisitor.js";
+import "./StoryWeaverAstVisitor.js";
 
 // EventStore - 注册浏览器端 LocalStorage 存储实现
 import { root } from '@sker/core'
