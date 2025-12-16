@@ -18,6 +18,7 @@ export * from './WeiboUserDetectionAstRender';
 export * from './LlmTextAgentAstRender';
 export * from './LlmStructuredOutputAstRender';
 export * from './LlmCategoryAstRender';
+export * from './StoryWeaverAstRender';
 export * from './TextAreaAstRender';
 export * from './DateAstRender';
 export * from './ShareAstVisitor';

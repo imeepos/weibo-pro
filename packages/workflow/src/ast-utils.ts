@@ -731,11 +731,18 @@ export function extractEndNodeOutputs(nodes: INode[], endNodeIds: string[]): Rec
  * - 如果节点已有该属性值，优先使用 metadata 中的 defaultValue（确保类型正确）
  * - 如果 metadata 中也没有 defaultValue，不设置（保持 undefined）
  * - 原地修改节点对象（性能优化）
+ * - 如果节点标记为 stateful，则跳过重置（保留累积数据）
  *
  * @param node 要重置的节点
  */
 export function resetNodeToDefaults(node: INode): void {
     try {
+        // 检查节点是否标记为 stateful（状态保留）
+        if (node.metadata?.class?.stateful) {
+            console.log(`[resetNodeToDefaults] 节点 ${node.id} (${node.type}) 标记为 stateful，跳过重置`);
+            return;
+        }
+
         // 重置所有 @Input 属性
         const nodeInputs = node.metadata?.inputs || [];
         for (const inputMeta of nodeInputs) {

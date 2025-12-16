@@ -26,6 +26,8 @@ export { LlmTextToVideoAst } from './LlmTextToVideoAst';
 export { LlmVideoToTextAst } from './LlmVideoToTextAst';
 export { LlmTextImageToVideoAst } from './LlmTextImageToVideoAst';
 export { LlmTextImage2ToVideoAst } from './LlmTextImage2ToVideoAst';
+export { StoryWeaverAst } from './StoryWeaverAst';
+export type { ChapterData } from './StoryWeaverAst';
 
 // 媒体节点
 export { ImageAst } from './ImageAst';

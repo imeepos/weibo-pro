@@ -17,6 +17,7 @@ export { WeiboAccountPickAstVisitor } from './WeiboAccountPickAstVisitor'
 export { LlmTextAgentAstVisitor } from './LlmTextAgentAstVisitor'
 export { LlmStructuredOutputAstVisitor } from './LlmStructuredOutputAstVisitor'
 export { LlmCategoryAstVisitor } from './LlmCategoryAstVisitor'
+export { StoryWeaverAstVisitor } from './StoryWeaverAstVisitor'
 
 // 控制流节点
 export { SwitchAstVisitor } from './SwitchAstVisitor'

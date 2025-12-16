@@ -1,16 +1,6 @@
 ## 需求
 
-
-根据搜索条件查询：packages\entities\src\llm-chat-log.ts记录
-然后遍历分析 解析messages和tools
-
-- 提取所有提示词内容
-- 按内容哈希去重
-- 统计使用次数
-- 按次数降序排序
-
-设计一个弹框，展示这个信息
-在这个页面，apps\bigscreen\src\pages\LlmManagement.tsx 点击显示后弹出来上面的信息
+packages\workflow-ui\src\renderers\StoryWeaverAstRender.tsx 设计一个小说阅读器 markdown 渲染 上一章 下一章 目录 跳转等功能
 
 ## 子包的作用 
 

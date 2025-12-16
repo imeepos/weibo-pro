@@ -49,6 +49,9 @@ export interface NodeOptions {
     retryDelay?: number;
     /** 重试延迟增长因子（指数退避） */
     retryBackoff?: number;
+
+    /** 状态保留：true 时节点在工作流运行时保留数据，不重置为默认值 */
+    stateful?: boolean;
 }
 
 export interface NodeMetadata extends NodeOptions {
