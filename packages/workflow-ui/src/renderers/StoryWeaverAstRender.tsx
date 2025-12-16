@@ -128,24 +128,8 @@ ${currentChapter.content}`;
           <p className="text-xs text-muted-foreground mt-1">共 {chapters.length} 章</p>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
-          <style dangerouslySetInnerHTML={{
-            __html: `
-            .chapter-list::-webkit-scrollbar {
-              width: 6px;
-            }
-            .chapter-list::-webkit-scrollbar-track {
-              background: transparent;
-            }
-            .chapter-list::-webkit-scrollbar-thumb {
-              background: rgba(156, 163, 175, 0.5);
-              border-radius: 3px;
-            }
-            .chapter-list::-webkit-scrollbar-thumb:hover {
-              background: rgba(107, 114, 128, 0.7);
-            }
-          `}} />
-          <div className="chapter-list p-2 space-y-1">
+        <div className="flex-1 overflow-y-auto chapter-list">
+          <div className="p-2 space-y-1">
             {chapters.map((chapter, index) => (
               <button
                 key={chapter.chapterNumber}

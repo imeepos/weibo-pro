@@ -571,13 +571,25 @@ export function useWorkflowOperations(
                 workflow.syncFromAst()
               } else if (event.type === 'node_runing') {
                 // 处理节点运行状态
-                const nodeData = event.data as any
                 workflow.workflowAst!.nodes = workflow.workflowAst!.nodes.map(originalNode => {
                   if (originalNode.id === event.id) {
                     return Object.assign(
                       Object.create(Object.getPrototypeOf(originalNode)),
                       originalNode,
                       { state: 'running' }
+                    )
+                  }
+                  return originalNode
+                })
+                workflow.syncFromAst()
+              } else if (event.type === 'node_emit') {
+                // 处理属性实时更新（qrcode, message, account 等）
+                workflow.workflowAst!.nodes = workflow.workflowAst!.nodes.map(originalNode => {
+                  if (originalNode.id === event.id) {
+                    return Object.assign(
+                      Object.create(Object.getPrototypeOf(originalNode)),
+                      originalNode,
+                      { [event.property]: event.value }
                     )
                   }
                   return originalNode
