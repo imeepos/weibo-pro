@@ -27,13 +27,24 @@ export function fromJson<T extends object = any>(json: any): T {
     // 如果是 WorkflowGraphAst，转换为真正的实例
     if (json.type === 'WorkflowGraphAst') {
         const ast = new WorkflowGraphAst();
-        Object.assign(ast, json);
 
-        // 重建 eventStream（运行时状态）
-        // 如果 JSON 中有 eventStreamData，从中恢复（支持续跑）
-        if (json.eventStreamData) {
-            ast.eventStream = WorkflowEventStream.fromJSON(json.eventStreamData);
+        // 排除 eventStream 和 eventStreamData 字段，避免被普通对象覆盖
+        const { eventStream, eventStreamData, ...jsonWithoutEventStream } = json;
+        Object.assign(ast, jsonWithoutEventStream);
+
+        // 确保 eventStream 始终是 WorkflowEventStream 实例
+        if (eventStreamData && typeof eventStreamData === 'object' && 'events' in eventStreamData) {
+            // 从持久化数据恢复（优先）
+            ast.eventStream = WorkflowEventStream.fromJSON(eventStreamData);
+        } else if (eventStream && typeof eventStream === 'object' && ('events' in eventStream || Array.isArray((eventStream as any)._events$?.value))) {
+            // 如果 JSON 中有 eventStream 但不是类实例，尝试恢复
+            // 支持两种格式：{ events: [...] } 或包含 BehaviorSubject 的对象
+            const eventsData = 'events' in eventStream
+                ? eventStream.events
+                : (eventStream as any)._events$?.value || [];
+            ast.eventStream = WorkflowEventStream.fromJSON({ events: eventsData });
         } else {
+            // 创建全新实例
             ast.eventStream = new WorkflowEventStream();
         }
 

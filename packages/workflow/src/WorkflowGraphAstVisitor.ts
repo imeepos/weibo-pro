@@ -37,7 +37,10 @@ export class WorkflowGraphAstVisitor {
 
         return input$.pipe(
             concatMap(input => {
-                console.log(`workflow input is ${JSON.stringify(input)}`)
+                console.log(`[WorkflowGraphAstVisitor] workflow input is ${JSON.stringify(input)}`)
+                console.log(`[WorkflowGraphAstVisitor] 工作流节点数量: ${ast.nodes.length}`)
+                console.log(`[WorkflowGraphAstVisitor] 工作流边数量: ${ast.edges.length}`)
+
                 // 每次接收到输入时，重新初始化工作流状态
                 ast.state = 'running';
                 ast.error = undefined;
@@ -46,23 +49,41 @@ export class WorkflowGraphAstVisitor {
                 const nodeEventStreams = new Map<string, Observable<NodeEvent>>();
 
                 // 为每个子节点创建输入流和事件流
-                ast.nodes.forEach(node => {
-                    const input$ = new ReplaySubject<any>(1);
-                    inputSubjects.set(node.id, input$);
-                    // 调用 NodeExecutor 执行子节点，使用 shareReplay 共享订阅
-                    const eventStream$ = this.nodeExecutor.run(node, input$, ast).pipe(
-                        shareReplay({ bufferSize: Infinity, refCount: false })
-                    );
-                    nodeEventStreams.set(node.id, eventStream$);
+                ast.nodes.forEach((node, index) => {
+                    try {
+                        console.log(`[WorkflowGraphAstVisitor] 创建节点 [${index + 1}/${ast.nodes.length}] ${node.id} (${node.type}) 的执行流`);
+                        const input$ = new ReplaySubject<any>(1);
+                        inputSubjects.set(node.id, input$);
+
+                        // 调用 NodeExecutor 执行子节点，使用 shareReplay 共享订阅
+                        console.log(`[WorkflowGraphAstVisitor] 调用 NodeExecutor.run() for ${node.id}...`);
+                        const eventStream$ = this.nodeExecutor.run(node, input$, ast).pipe(
+                            shareReplay({ bufferSize: Infinity, refCount: false })
+                        );
+                        nodeEventStreams.set(node.id, eventStream$);
+                        console.log(`[WorkflowGraphAstVisitor] 节点 ${node.id} 执行流创建成功`);
+                    } catch (error) {
+                        console.error(`[WorkflowGraphAstVisitor] 创建节点 ${node.id} 执行流失败:`, error);
+                        throw error;
+                    }
                 });
 
+                console.log(`[WorkflowGraphAstVisitor] ✓ 所有 ${ast.nodes.length} 个节点执行流创建完成`);
+                console.log(`[WorkflowGraphAstVisitor] inputSubjects 数量: ${inputSubjects.size}`);
+                console.log(`[WorkflowGraphAstVisitor] nodeEventStreams 数量: ${nodeEventStreams.size}`);
+
+                console.log(`[WorkflowGraphAstVisitor] 开始连接边...`);
                 // 连接边
                 this.connectEdges(ast, inputSubjects, nodeEventStreams);
 
+                console.log(`[WorkflowGraphAstVisitor] 计算笛卡尔积...`);
                 // 计算笛卡尔积并触发入口节点（使用当前输入）
                 const combinedInput$ = this.computeCartesianProduct(ast, of(input));
+
+                console.log(`[WorkflowGraphAstVisitor] 触发入口节点...`);
                 this.triggerEntryNodes(ast, combinedInput$, inputSubjects);
 
+                console.log(`[WorkflowGraphAstVisitor] 合并节点事件流...`);
                 // 合并所有事件流
                 return this.mergeNodeEventStreams(ast, nodeEventStreams, inputSubjects);
             }),

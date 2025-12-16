@@ -29,10 +29,14 @@ export class VisitorExecutor implements Visitor {
 
     visit(ast: INode, input$: Observable<any>, parent?: WorkflowGraphAst): Observable<NodeEvent> {
         // 续跑支持：检查 eventStream 中是否已成功执行
-        if (parent?.eventStream?.isNodeSuccess(ast.id)) {
-            const cachedEvents = parent.eventStream.getNodeEvents(ast.id);
-            console.log(`[VisitorExecutor] 节点 ${ast.id} 已成功，重放 ${cachedEvents.length} 个事件`);
-            return from(cachedEvents);
+        if (parent?.eventStream && typeof parent.eventStream.isNodeSuccess === 'function') {
+            if (parent.eventStream.isNodeSuccess(ast.id)) {
+                const cachedEvents = parent.eventStream.getNodeEvents(ast.id);
+                console.log(`[VisitorExecutor] 节点 ${ast.id} 已成功，重放 ${cachedEvents.length} 个事件`);
+                return from(cachedEvents);
+            }
+        } else if (parent?.eventStream) {
+            console.warn(`[VisitorExecutor] parent.eventStream 存在但不是 WorkflowEventStream 实例`);
         }
 
         console.log(`[VisitorExecutor] 开始执行节点 ${ast.id} (${ast.type})`);
@@ -112,6 +116,12 @@ export class VisitorExecutor implements Visitor {
         parent?: WorkflowGraphAst
     ): Observable<NodeEvent> {
         if (!parent?.eventStream) return source$;
+
+        // 检查 eventStream 是否有 emit 方法
+        if (typeof parent.eventStream.emit !== 'function') {
+            console.warn(`[VisitorExecutor] eventStream 缺少 emit 方法，跳过事件记录`);
+            return source$;
+        }
 
         return source$.pipe(
             tap(event => {

@@ -8,6 +8,7 @@ import { VisitorExecutor } from './execution/visitor-executor';
 import { Compiler } from './compiler';
 import { clone } from './utils';
 import { resetNodeToDefaults } from './ast-utils';
+import { WorkflowEventStream } from './event-store/event-stream';
 
 /**
  * 节点执行器 - 统一的节点执行入口
@@ -32,6 +33,19 @@ export class NodeExecutor {
      * @returns 节点事件流
      */
     run<Input = any>(node: INode, input$: Observable<Input>, parent?: WorkflowGraphAst): Observable<NodeEvent> {
+        // 运行前检查：确保 parent.eventStream 是正确的 WorkflowEventStream 实例
+        if (parent && isWorkflowGraphAst(parent)) {
+            if (!parent.eventStream) {
+                console.warn(`[NodeExecutor] parent.eventStream 不存在，创建新实例`);
+                parent.eventStream = new WorkflowEventStream();
+            } else if (typeof parent.eventStream.emit !== 'function') {
+                console.warn(`[NodeExecutor] parent.eventStream 不是 WorkflowEventStream 实例，重新创建`);
+                // 尝试从现有数据恢复
+                const existingEvents = (parent.eventStream as any).events || (parent.eventStream as any)._events$?.value || [];
+                parent.eventStream = WorkflowEventStream.fromJSON({ events: existingEvents });
+            }
+        }
+
         // 确保节点已编译
         if (!isNode(node)) {
             node = this.compiler.compile(node);
