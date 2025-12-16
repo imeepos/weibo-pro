@@ -37,11 +37,6 @@ export function fromJson<T extends object = any>(json: any): T {
             });
         }
 
-        // 恢复事件流（时间旅行 + 断点续跑）
-        if (Array.isArray(json._events)) {
-            ast.restoreEvents(json._events);
-        }
-
         return ast as T;
     }
     // 如果是单个节点

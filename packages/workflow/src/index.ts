@@ -25,3 +25,4 @@ export { WorkflowGraphAstVisitor } from './WorkflowGraphAstVisitor';
 export * from './FilterAst';
 export * from './MergeAst';
 export * from './LoopAst';
+export * from './event-store/types';
