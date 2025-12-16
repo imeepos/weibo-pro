@@ -92,7 +92,10 @@ export function MarkdownViewer({
               background: rgba(107, 114, 128, 0.7);
             }
           `}} />
-          <div className="w-full h-full overflow-y-auto markdown-fullscreen-scroll px-4 py-4">
+          <div
+            className="w-full h-full overflow-y-auto markdown-fullscreen-scroll px-4 py-4"
+            onContextMenu={(e) => e.stopPropagation()}
+          >
             <div className="prose prose-sm max-w-none break-words [&_pre]:whitespace-pre-wrap [&_pre]:break-all [&_code]:break-all min-h-full">
               <ReactMarkdown remarkPlugins={[[remarkGfm, { singleTilde: false }]]}>
                 {content}

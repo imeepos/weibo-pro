@@ -3,6 +3,7 @@ import { Handler, NodeEvent, setAstError, WorkflowGraphAst } from '@sker/workflo
 import { PromptRoleSkillAst } from '@sker/workflow-ast';
 import { PromptRoleSkillRefEntity, PromptSkillEntity, useEntityManager, In, type SkillSummary } from '@sker/entities';
 import { Observable } from 'rxjs';
+import { concatMap } from 'rxjs/operators';
 import { z } from 'zod';
 import { DynamicStructuredTool } from '@langchain/core/tools';
 import { useLlmModel } from './llm-client';
@@ -22,17 +23,11 @@ export class PromptRoleSkillAstVisitor {
   handler(ast: PromptRoleSkillAst, input$: Observable<any>, ctx: WorkflowGraphAst) {
     return new Observable<NodeEvent>((obs) => {
       const abortController = new AbortController();
-      let started = false;
-
-      input$.subscribe({
-        next: async (inputData) => {
+      ast.state = 'running';
+      obs.next({ type: 'node_runing', id: ast.id, data: ast });
+      const subscription = input$.pipe(
+        concatMap(async (inputData) => {
           try {
-            // 第一次发射：标记节点运行中
-            if (!started) {
-              started = true;
-              ast.state = 'running';
-              obs.next({ type: 'node_runing', id: ast.id, data: ast });
-            }
 
             ast.emitCount += 1;
             if (inputData) {
@@ -206,16 +201,21 @@ ${skillsDescription}
               obs.next({ type: 'node_emit', id: ast.id, property: 'skillContent', value: ast.skillContent });
               obs.next({ type: 'node_emit', id: ast.id, property: 'skillContentText', value: ast.skillContentText });
             });
+
+            return { success: true };
           } catch (error) {
             ast.state = 'fail';
             setAstError(ast, new Error(`LLM 选择技能失败: ${error instanceof Error ? error.message : '未知错误'}`));
-            obs.next({ type: 'node_fail', id: ast.id, data: ast });
-            obs.complete();
+            throw error;
           }
+        })
+      ).subscribe({
+        next: () => {
+          // 异步操作成功完成
         },
         error: (error) => {
           ast.state = 'fail';
-          setAstError(ast, new Error(`输入流错误: ${error instanceof Error ? error.message : '未知错误'}`));
+          setAstError(ast, new Error(`执行失败: ${error instanceof Error ? error.message : '未知错误'}`));
           obs.next({ type: 'node_fail', id: ast.id, data: ast });
           obs.complete();
         },
@@ -227,6 +227,7 @@ ${skillsDescription}
       });
 
       return () => {
+        subscription.unsubscribe();
         abortController.abort();
       };
     });
