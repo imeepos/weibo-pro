@@ -1,6 +1,6 @@
 import { Inject, Injectable, root } from '@sker/core';
-import { Observable, EMPTY, merge, defer, ReplaySubject, concat, of, combineLatest, zip } from 'rxjs';
-import { concatMap, finalize, map, filter } from 'rxjs/operators';
+import { Observable, EMPTY, merge, defer, ReplaySubject, concat, of, combineLatest, zip, from } from 'rxjs';
+import { concatMap, finalize, map, filter, switchMap } from 'rxjs/operators';
 import { INode, IEdge, EdgeMode, isNode } from './types';
 import { WorkflowGraphAst, isWorkflowGraphAst } from './ast';
 import { NodeEmitEvent, NodeEvent } from './execution/events';
@@ -33,19 +33,27 @@ export class NodeExecutor {
      * @returns 节点事件流
      */
     run<Input = any>(node: INode, input$: Observable<Input>, parent?: WorkflowGraphAst): Observable<NodeEvent> {
-        // 如果 node 本身是工作流，确保创建运行实例
-        if (isWorkflowGraphAst(node)) {
-            const workflowNode = node as WorkflowGraphAst;
-            globalRuntime.createRun(workflowNode);
-            console.log(`[NodeExecutor] 为工作流 ${workflowNode.id} 创建运行实例`);
-        }
+        return defer(() => {
+            // 如果 node 本身是工作流，确保创建运行实例
+            if (isWorkflowGraphAst(node)) {
+                const workflowNode = node as WorkflowGraphAst;
+                return from(globalRuntime.createRun(workflowNode)).pipe(
+                    switchMap((runId) => {
+                        console.log(`[NodeExecutor] 为工作流 ${workflowNode.id} 创建运行实例: ${runId}`);
 
-        // 确保节点已编译
-        if (!isNode(node)) {
-            node = this.compiler.compile(node);
-        }
-        const nodeInstance = this.cloneNode(node);
-        return this.visitorExecutor.visit(nodeInstance, input$, parent);
+                        // 确保节点已编译
+                        const compiledNode = isNode(node) ? node : this.compiler.compile(node);
+                        const nodeInstance = this.cloneNode(compiledNode);
+                        return this.visitorExecutor.visit(nodeInstance, input$, parent);
+                    })
+                );
+            }
+
+            // 确保节点已编译
+            const compiledNode = isNode(node) ? node : this.compiler.compile(node);
+            const nodeInstance = this.cloneNode(compiledNode);
+            return this.visitorExecutor.visit(nodeInstance, input$, parent);
+        });
     }
 
     /**

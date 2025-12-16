@@ -42,3 +42,6 @@ import { LocalStorageEventStore } from './event-store/local-storage.js'
 root.set([
     { provide: EVENT_STORE, useClass: LocalStorageEventStore }
 ])
+
+// 导出初始化函数
+export { initBrowserWorkflowRuntime } from './init-runtime.js';

@@ -50,7 +50,7 @@ export class WorkflowReplayService {
         const eventStream = WorkflowEventStream.fromJSON({ events });
 
         // 3. 创建运行时实例
-        const newRunId = globalRuntime.createRun(workflow);
+        const newRunId = await globalRuntime.createRun(workflow);
         globalRuntime.setEventStream(newRunId, eventStream);
 
         console.log(`[WorkflowReplayService] 续跑工作流: ${workflow.id}, newRunId: ${newRunId}, 恢复 ${events.length} 个事件`);
