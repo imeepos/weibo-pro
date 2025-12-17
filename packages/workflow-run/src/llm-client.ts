@@ -12,6 +12,6 @@ export function useLlmModel(options: LlmModelOptions = {}): ChatOpenAI<ChatOpenA
     model: options.model || 'gpt-4o-mini',
     temperature: options.temperature ?? 0.7,
     configuration: { baseURL: LLM_PROXY_BASE_URL },
-    maxTokens: 1024 * 1024 * 100
+    maxTokens: 163840  // DeepSeek-V3 最大输出 token 限制
   })
 }
