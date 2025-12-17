@@ -64,7 +64,27 @@ export class LlmInvoker {
             });
           }),
           catchError((error) => {
-            console.error(`[LlmInvoker] 工具调用轮次 ${state.round + 1} 失败:`, error);
+            // 详细的错误诊断
+            const errorInfo: any = {
+              轮次: state.round + 1,
+              错误类型: error.name || 'Unknown',
+              状态码: error.status,
+              消息: error.message
+            }
+
+            // 检测是否是 tools 相关错误
+            if (error.status === 400 && useTools) {
+              errorInfo.可能原因 = '该 LLM Provider 可能不支持 function calling (tools)'
+              errorInfo.建议 = [
+                '1. 检查 LLM Provider 是否支持 tools/function calling',
+                '2. 更换支持 function calling 的 Provider',
+                '3. 或减少章节数量以禁用工具模式（当前阈值：>10章启用工具）'
+              ]
+              console.error(`[LlmInvoker] ⚠️ Tools 调用失败（Provider 可能不支持）:`, errorInfo)
+            } else {
+              console.error(`[LlmInvoker] 工具调用轮次 ${state.round + 1} 失败:`, errorInfo)
+            }
+
             return throwError(() => error);
           })
         );

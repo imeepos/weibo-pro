@@ -1,8 +1,8 @@
 import { Inject, Injectable } from '@sker/core';
 import { WorkflowGraphAst, NodeEvent } from '@sker/workflow';
 import { ChapterData, StoryWeaverAst } from '@sker/workflow-ast';
-import { Observable, of, from, throwError } from 'rxjs';
-import { concatMap, expand, scan, last, map, catchError } from 'rxjs/operators';
+import { Observable, of, from, throwError, Subject, merge } from 'rxjs';
+import { concatMap, expand, scan, last, map, catchError, tap, takeUntil, finalize } from 'rxjs/operators';
 import { z } from 'zod';
 import { useLlmModel } from '../llm-client';
 import { ChapterQualityService, QualityCheckResult } from './ChapterQualityService';
@@ -11,6 +11,7 @@ import { ContentValidator } from './ContentValidator';
 import { StoryContextService } from './StoryContextService';
 import { StoryToolsFactory } from './StoryToolsFactory';
 import { LlmInvoker } from './LlmInvoker';
+import { StreamingLlmInvoker, StreamChunk } from './StreamingLlmInvoker';
 
 /**
  * 章节生成服务
@@ -24,17 +25,22 @@ export class ChapterGenerationService {
     @Inject(ContentValidator) private contentValidator: ContentValidator,
     @Inject(StoryContextService) private contextService: StoryContextService,
     @Inject(StoryToolsFactory) private toolsFactory: StoryToolsFactory,
-    @Inject(LlmInvoker) private llmInvoker: LlmInvoker
+    @Inject(LlmInvoker) private llmInvoker: LlmInvoker,
+    @Inject(StreamingLlmInvoker) private streamingLlmInvoker: StreamingLlmInvoker
   ) {}
 
   /**
-   * 使用 RxJS 实现章节生成 + 质检 + 重试的完整流程
+   * 使用 RxJS 实现章节生成 + 质检 + 重试的完整流程（支持流式）
+   * 返回 Observable<NodeEvent>，包含：
+   * - node_delta: 实时文本片段（流式模式）
+   * - node_emit: 最终完整章节数据
    */
   generateChapterWithRetry(
     ast: StoryWeaverAst,
     ctx: WorkflowGraphAst,
-    signal: AbortSignal
-  ): Observable<NodeEvent[]> {
+    signal: AbortSignal,
+    enableStreaming: boolean = true
+  ): Observable<NodeEvent[] | NodeEvent> {
     const ChapterOutputSchema = z.object({
       title: z.string().describe('章节标题（简洁有力，体现核心冲突）'),
       summary: z.string().describe('章节简介，用一个七言绝句概括核心情节'),
@@ -68,7 +74,12 @@ export class ChapterGenerationService {
     const pendingClues = this.contextService.collectPendingClues(chapters);
     const userPrompt = this.promptBuilder.buildUserPrompt(nextChapterNumber, ast.wordCount, prompts, pendingClues);
 
-    return of({ attempt: 0, improvementHints: '', allAttempts: [] as Array<{ chapter: ChapterData; quality: QualityCheckResult; attempt: number }> }).pipe(
+    // 创建流式事件主题
+    const streamEventSubject = new Subject<NodeEvent>();
+    const completionSubject = new Subject<void>();
+
+    // 主处理流：重试 + 质检逻辑
+    const mainFlow$ = of({ attempt: 0, improvementHints: '', allAttempts: [] as Array<{ chapter: ChapterData; quality: QualityCheckResult; attempt: number }> }).pipe(
       expand((state) => {
         if (state.attempt >= (ast.maxRewriteRetries || 2)) {
           return of();
@@ -87,7 +98,9 @@ export class ChapterGenerationService {
           existingTitles,
           ChapterOutputSchema,
           chapters,
-          useTools
+          useTools,
+          enableStreaming,
+          streamEventSubject
         );
       }),
       scan((acc, curr: any) => {
@@ -104,8 +117,24 @@ export class ChapterGenerationService {
         };
       }, { attempt: 0, improvementHints: '', allAttempts: [] as Array<{ chapter: ChapterData; quality: QualityCheckResult; attempt: number }> }),
       last(),
-      map((finalState) => this.selectBestAttempt(finalState, ast, nextChapterNumber))
+      map((finalState) => this.selectBestAttempt(finalState, ast, nextChapterNumber)),
+      finalize(() => {
+        completionSubject.next();
+        completionSubject.complete();
+        streamEventSubject.complete();
+      })
     );
+
+    // 流式模式：合并实时事件和最终结果
+    if (enableStreaming) {
+      return merge(
+        streamEventSubject.asObservable().pipe(takeUntil(completionSubject)),
+        mainFlow$
+      );
+    }
+
+    // 批量模式：仅返回最终结果
+    return mainFlow$;
   }
 
   private generateSingleAttempt(
@@ -121,14 +150,16 @@ export class ChapterGenerationService {
     existingTitles: Set<string>,
     ChapterOutputSchema: any,
     chapters: ChapterData[],
-    useTools: boolean
+    useTools: boolean,
+    enableStreaming: boolean,
+    streamEventSubject: Subject<NodeEvent>
   ): Observable<any> {
     let currentUserPrompt = userPrompt;
     if (state.improvementHints) {
       currentUserPrompt += `\n\n**⚠️ 上一版本质量问题（需改进）**：\n${state.improvementHints}`;
     }
 
-    console.log(`[ChapterGeneration] 第${nextChapterNumber}章生成中...（第${state.attempt + 1}次尝试）`);
+    console.log(`[ChapterGeneration] 第${nextChapterNumber}章生成中...（第${state.attempt + 1}次尝试）${enableStreaming ? ' [流式模式]' : ''}`);
 
     const initialMessages = [
       { role: 'system', content: systemPrompt },
@@ -137,15 +168,32 @@ export class ChapterGenerationService {
 
     const tools = useTools ? this.createTools(chapters, ctx, ast.id, useTools) : [];
 
+    // 流式模式
+    if (enableStreaming) {
+      return this.invokeWithStreaming(
+        model,
+        initialMessages,
+        signal,
+        useTools,
+        tools,
+        ast,
+        streamEventSubject
+      ).pipe(
+        catchError((error) => this.handleLlmError(error, useTools, chapters)),
+        concatMap((rawText: string) => {
+          console.log(`[ChapterGeneration] 生成文本长度: ${rawText.length} 字`);
+          return this.extractStructuredContent(baseModel, rawText, signal, ChapterOutputSchema);
+        }),
+        map((parsed) => this.validateAndCleanContent(parsed, nextChapterNumber, existingTitles)),
+        concatMap(({ chapter, attempt }) => this.performQualityCheck(ast, chapter, attempt, chapters, signal)),
+        map(({ chapter, quality, attempt }) => this.evaluateQuality(ast, chapter, quality, attempt)),
+        catchError((error) => this.handleTitleDuplicate(error, state))
+      );
+    }
+
+    // 批量模式（向后兼容）
     return this.llmInvoker.invokeWithTools(model, initialMessages, signal, useTools, tools).pipe(
-      catchError((error) => {
-        console.error(`[ChapterGeneration] LLM 调用失败:`, {
-          message: error.message,
-          status: error.status,
-          statusText: error.statusText
-        });
-        return throwError(() => error);
-      }),
+      catchError((error) => this.handleLlmError(error, useTools, chapters)),
       concatMap((rawText: string) => {
         console.log(`[ChapterGeneration] 生成文本长度: ${rawText.length} 字`);
         return this.extractStructuredContent(baseModel, rawText, signal, ChapterOutputSchema);
@@ -155,6 +203,60 @@ export class ChapterGenerationService {
       map(({ chapter, quality, attempt }) => this.evaluateQuality(ast, chapter, quality, attempt)),
       catchError((error) => this.handleTitleDuplicate(error, state))
     );
+  }
+
+  /**
+   * 流式调用 LLM（支持工具）
+   */
+  private invokeWithStreaming(
+    model: any,
+    initialMessages: any[],
+    signal: AbortSignal,
+    useTools: boolean,
+    tools: any[],
+    ast: StoryWeaverAst,
+    streamEventSubject: Subject<NodeEvent>
+  ): Observable<string> {
+    let accumulatedText = '';
+
+    return this.streamingLlmInvoker.streamWithTools(model, initialMessages, signal, useTools, tools).pipe(
+      tap((chunk: StreamChunk) => {
+        if (chunk.type === 'delta' && chunk.delta) {
+          accumulatedText += chunk.delta;
+          // 实时推送文本片段到前端
+          streamEventSubject.next({
+            type: 'node_delta',
+            id: ast.id,
+            data: { delta: chunk.delta, accumulated: accumulatedText }
+          });
+        } else if (chunk.type === 'tool_call') {
+          console.log(`[ChapterGeneration] LLM 请求调用工具: ${chunk.toolCalls?.length} 个`);
+        }
+      }),
+      filter((chunk: StreamChunk) => chunk.type === 'complete'),
+      map((chunk: StreamChunk) => chunk.fullText || accumulatedText)
+    );
+  }
+
+  private handleLlmError(error: any, useTools: boolean, chapters: ChapterData[]): Observable<never> {
+    const errorInfo: any = {
+      message: error.message,
+      status: error.status,
+      statusText: error.statusText
+    };
+
+    if (error.status === 400 && useTools) {
+      errorInfo.诊断 = '该 LLM Provider 可能不支持 function calling';
+      errorInfo.详情 = `当前已有 ${chapters.length} 章，超过阈值（10章）自动启用工具模式`;
+      errorInfo.建议 = [
+        '1. 更换支持 function calling 的 Provider（如 OpenAI、Anthropic）',
+        '2. 或暂时减少章节数量（<= 10章）以禁用工具模式',
+        '3. 检查 Provider 配置和 API 文档'
+      ];
+    }
+
+    console.error(`[ChapterGeneration] LLM 调用失败:`, errorInfo);
+    return throwError(() => error);
   }
 
   private extractStructuredContent(

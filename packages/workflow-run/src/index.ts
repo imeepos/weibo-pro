@@ -76,6 +76,7 @@ export { WorkflowNodeGeneratorAstVisitor } from './WorkflowNodeGeneratorAstVisit
 export { CronSchedulerService } from './services/CronSchedulerService'
 export { WorkflowExecutionService } from './services/WorkflowExecutionService'
 export { ChapterQualityService } from './services/ChapterQualityService'
+export { StreamingLlmInvoker } from './services/StreamingLlmInvoker'
 
 // EventStore - 注册后端数据库存储实现
 import { root } from '@sker/core'

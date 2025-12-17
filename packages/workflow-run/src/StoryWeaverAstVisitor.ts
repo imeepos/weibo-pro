@@ -39,11 +39,23 @@ export class StoryWeaverAstVisitor {
             return throwError(() => new Error('工作流已取消'));
           }
 
-          return this.chapterGenerationService.generateChapterWithRetry(ast, ctx, abortController.signal);
-        }),
-        map((events: NodeEvent[]) => events)
+          // 启用流式模式，接收实时文本片段和最终结果
+          return this.chapterGenerationService.generateChapterWithRetry(
+            ast,
+            ctx,
+            abortController.signal,
+            true  // enableStreaming = true
+          );
+        })
       ).subscribe({
-        next: (events: NodeEvent[]) => {
+        next: (events: NodeEvent[] | NodeEvent) => {
+          // 处理单个事件（流式 delta 事件）
+          if (!Array.isArray(events)) {
+            obs.next(events);
+            return;
+          }
+
+          // 处理事件数组（最终完整结果）
           events.forEach(event => obs.next(event));
         },
         error: (error) => {

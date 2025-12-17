@@ -32,6 +32,60 @@ interface ProxyResult {
 const TIMEOUT_MS = 1000 * 3 * 60;
 const MAX_RETRIES = 3
 
+/**
+ * SSE 行解析流：处理跨 chunk 的行缓冲
+ */
+function createSSELineStream() {
+  let buffer = ''
+  const decoder = new TextDecoder()
+
+  return new TransformStream<Uint8Array, string>({
+    transform(chunk, controller) {
+      buffer += decoder.decode(chunk, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || ''
+
+      lines.forEach(line => controller.enqueue(line))
+    },
+    flush(controller) {
+      if (buffer) controller.enqueue(buffer)
+    }
+  })
+}
+
+/**
+ * SSE 数据提取流：data: 前缀处理
+ */
+function createSSEDataStream() {
+  return new TransformStream<string, string>({
+    transform(line, controller) {
+      if (!line.startsWith('data:')) return
+      const data = line.slice(5).trim()
+      if (data) controller.enqueue(data)
+    }
+  })
+}
+
+/**
+ * JSON 解析流：容错处理
+ */
+function createJSONParseStream<T = any>() {
+  return new TransformStream<string, T>({
+    transform(jsonStr, controller) {
+      if (jsonStr === '[DONE]') {
+        controller.enqueue('[DONE]' as any)
+        return
+      }
+
+      try {
+        controller.enqueue(JSON.parse(jsonStr))
+      } catch (err) {
+        console.warn(`[SSE] JSON 解析失败: ${jsonStr.slice(0, 100)}...`)
+      }
+    }
+  })
+}
+
 @Injectable({ providedIn: 'root' })
 export class LlmProxyService {
 
@@ -304,16 +358,6 @@ export class LlmProxyService {
         }
         const requestBody = JSON.stringify(proxyBody)
 
-        console.log(`[LlmProxy] 请求参数:`, {
-          url,
-          method: 'POST',
-          headers: {
-            ...requestHeaders,
-            Authorization: `Bearer ${provider.apiKey.slice(0, 10)}...` // 脱敏
-          },
-          body: requestBody.slice(0, 500) // 只记录前 500 字符，避免过长
-        })
-
         const response = await fetch(url, {
           method: 'POST',
           headers: requestHeaders,
@@ -359,7 +403,6 @@ export class LlmProxyService {
           const penalty = this.calcPenalty(durationMs, contentLength)
           await this.updateScore(provider.providerId, -penalty)
         }
-
         if (!response.body) {
           return { success: true, response }
         }
@@ -370,13 +413,35 @@ export class LlmProxyService {
         if (!isStreaming) {
           const responseData = await response.json()
           usage = responseData.usage
-
+          debugger;
           // 记录响应体（仅在非成功状态下）
           if (!response.ok) {
             console.error(`[LlmProxy] 响应体:`, {
               statusCode: response.status,
-              responseData: JSON.stringify(responseData).slice(0, 1000) // 限制长度
+              responseData: JSON.stringify(responseData, null, 2) // 完整输出，便于调试
             })
+          }
+
+          // 检测 400 错误中的 tools 不支持错误
+          if (response.status === 400 && body.tools && Array.isArray(body.tools) && body.tools.length > 0) {
+            const errorMessage = responseData?.error?.message || JSON.stringify(responseData)
+            const isToolsError =
+              errorMessage.includes('tools') ||
+              errorMessage.includes('function') ||
+              errorMessage.includes('tool_choice') ||
+              // 88code.ai 返回的异常响应格式
+              (!responseData.error && responseData.object === 'response' && !responseData.choices)
+
+            if (isToolsError) {
+              console.error(`[LlmProxy] ⚠️ 检测到可能不支持 tools/function calling:`, {
+                provider: provider.providerId,
+                model: provider.modelName,
+                errorMessage,
+                建议: '该 Provider 可能不支持 function calling，请检查 API 文档或更换 Provider'
+              })
+              // 降低评分，但不清零（可能只是临时问题）
+              await this.updateScore(provider.providerId, -300)
+            }
           }
 
           // 检测 400 错误中的 thinking 模式不支持错误
@@ -434,7 +499,6 @@ export class LlmProxyService {
           statusCode: response.status
         })
 
-        const decoder = new TextDecoder()
         const encoder = new TextEncoder()
         let thinkingErrorDetected = false
 
@@ -447,75 +511,70 @@ export class LlmProxyService {
               : null
           : null
 
-        const monitoredBody = response.body.pipeThrough(new TransformStream({
-          transform: (chunk, controller) => {
-            const text = decoder.decode(chunk, { stream: true })
-            const lines = text.split('\n').filter(line => line.startsWith('data: '))
+        // 流式处理管道：行解析 -> 数据提取 -> JSON 解析 -> 协议转换 -> 监控
+        const monitoredBody = response.body
+          .pipeThrough(createSSELineStream())
+          .pipeThrough(createSSEDataStream())
+          .pipeThrough(createJSONParseStream())
+          .pipeThrough(new TransformStream({
+            transform: (data, controller) => {
+              // [DONE] 标记直接透传
+              if (data === '[DONE]') {
+                controller.enqueue(encoder.encode('data: [DONE]\n\n'))
+                return
+              }
 
-            for (const line of lines) {
-              try {
-                const jsonStr = line.slice(6).trim()
-                if (jsonStr === '[DONE]') {
-                  controller.enqueue(encoder.encode('data: [DONE]\n\n'))
-                  continue
+              // 检测流式响应中的 thinking 错误
+              if (!thinkingErrorDetected && response.status === 400 && requiresThinking && data.error) {
+                const errorMessage = data.error.message || JSON.stringify(data.error)
+                const isThinkingError =
+                  errorMessage.includes('thinking') &&
+                  (errorMessage.includes('Expected `thinking`') ||
+                    errorMessage.includes('redacted_thinking') ||
+                    errorMessage.includes('thinking block') ||
+                    errorMessage.includes('thinking: Field required'))
+
+                if (isThinkingError) {
+                  thinkingErrorDetected = true
+                  this.disableThinkingSupport(provider.providerId, provider.modelName).catch(console.error)
+                  console.error(`检测到 thinking 模式不支持错误（流式），已自动禁用: ${provider.modelName}`)
                 }
-                const data = JSON.parse(jsonStr)
+              }
 
-                // 检测流式响应中的 thinking 错误
-                if (!thinkingErrorDetected && response.status === 400 && requiresThinking && data.error) {
-                  const errorMessage = data.error.message || JSON.stringify(data.error)
-                  const isThinkingError =
-                    errorMessage.includes('thinking') &&
-                    (errorMessage.includes('Expected `thinking`') ||
-                      errorMessage.includes('redacted_thinking') ||
-                      errorMessage.includes('thinking block') ||
-                      errorMessage.includes('thinking: Field required'))
+              // 提取 usage 信息
+              if (data.usage) {
+                if (!usage) usage = {}
+                if (data.usage.input_tokens) usage.input_tokens = data.usage.input_tokens
+                if (data.usage.output_tokens) usage.output_tokens = data.usage.output_tokens
+              }
 
-                  if (isThinkingError) {
-                    thinkingErrorDetected = true
-                    this.disableThinkingSupport(provider.providerId, provider.modelName).catch(console.error)
-                    console.error(`检测到 thinking 模式不支持错误（流式），已自动禁用: ${provider.modelName}`)
+              // 协议转换
+              if (streamConverter) {
+                if (protocol === 'openai' && provider.providerProtocol === 'anthropic') {
+                  const converted = (streamConverter as ReturnType<typeof createClaudeToOpenaiStreamConverter>)(data as ClaudeStreamEvent)
+                  if (converted) {
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify(converted)}\n\n`))
+                  }
+                } else if (protocol === 'anthropic' && provider.providerProtocol === 'openai') {
+                  const events = (streamConverter as ReturnType<typeof createOpenaiToClaudeStreamConverter>)(data as OpenAIStreamResponse)
+                  for (const event of events) {
+                    controller.enqueue(encoder.encode(`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`))
                   }
                 }
-
-                if (data.usage) {
-                  if (!usage) usage = {}
-                  if (data.usage.input_tokens) usage.input_tokens = data.usage.input_tokens
-                  if (data.usage.output_tokens) usage.output_tokens = data.usage.output_tokens
+              } else {
+                // 无需转换，直接输出
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`))
+              }
+            },
+            flush: async () => {
+              if (logId && usage) {
+                const totalTokens = (usage.input_tokens || 0) + (usage.output_tokens || 0)
+                if (totalTokens > 0) {
+                  await this.updateLog(logId, usage)
                 }
-
-                // 流式协议转换
-                if (streamConverter) {
-                  if (protocol === 'openai' && provider.providerProtocol === 'anthropic') {
-                    const converted = (streamConverter as ReturnType<typeof createClaudeToOpenaiStreamConverter>)(data as ClaudeStreamEvent)
-                    if (converted) {
-                      controller.enqueue(encoder.encode(`data: ${JSON.stringify(converted)}\n\n`))
-                    }
-                  } else if (protocol === 'anthropic' && provider.providerProtocol === 'openai') {
-                    const events = (streamConverter as ReturnType<typeof createOpenaiToClaudeStreamConverter>)(data as OpenAIStreamResponse)
-                    for (const event of events) {
-                      controller.enqueue(encoder.encode(`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`))
-                    }
-                  }
-                } else {
-                  controller.enqueue(chunk)
-                  return
-                }
-              } catch (err) {
-                // 跳过无效的流式数据行
-                console.warn(`[LlmProxy] 流式数据解析失败，跳过: ${line.slice(0, 100)}`)
               }
             }
-          },
-          flush: async () => {
-            if (logId && usage) {
-              const totalTokens = (usage.input_tokens || 0) + (usage.output_tokens || 0)
-              if (totalTokens > 0) {
-                await this.updateLog(logId, usage)
-              }
-            }
-          }
-        }))
+          }))
 
         return {
           success: true,
