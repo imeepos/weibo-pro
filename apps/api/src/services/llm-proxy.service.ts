@@ -36,48 +36,37 @@ const MAX_RETRIES = 3
 export class LlmProxyService {
 
   /**
-   * 负载均衡选择器：在最优协议组中按健康分数加权随机选择
-   * @param candidates 已排序的候选列表（按 protocol_priority ASC, score DESC）
+   * 负载均衡选择器：在同一 Tier 内按健康分数加权随机选择
+   * @param candidates 已排序的候选列表（按 score DESC）
    * @returns 选中的 provider，如果无候选则返回 undefined
    */
   private selectProviderWithLoadBalancing(candidates: any[]): any | undefined {
     if (candidates.length === 0) return undefined
     if (candidates.length === 1) return candidates[0]
 
-    // 找到最优协议优先级（第一个元素的 protocol_priority）
-    const bestProtocolPriority = candidates[0].protocol_priority
-
-    // 筛选出所有最优协议组的候选
-    const bestProtocolGroup = candidates.filter(c => c.protocol_priority === bestProtocolPriority)
-
-    // 如果只有一个最优候选，直接返回
-    if (bestProtocolGroup.length === 1) {
-      return bestProtocolGroup[0]
-    }
-
     // 加权随机：健康分数越高，被选中概率越大
     // score 必须 > 0，否则跳过（前面的过滤条件已确保 score > 0）
-    const totalScore = bestProtocolGroup.reduce((sum, c) => sum + c.provider_score, 0)
+    const totalScore = candidates.reduce((sum, c) => sum + c.provider_score, 0)
 
     if (totalScore === 0) {
       // 所有分数都是0，随机选择一个
-      const randomIndex = Math.floor(Math.random() * bestProtocolGroup.length)
-      return bestProtocolGroup[randomIndex]
+      const randomIndex = Math.floor(Math.random() * candidates.length)
+      return candidates[randomIndex]
     }
 
     // 加权随机选择
     let randomValue = Math.random() * totalScore
-    for (const candidate of bestProtocolGroup) {
+    for (const candidate of candidates) {
       randomValue -= candidate.provider_score
       if (randomValue <= 0) {
         const probability = ((candidate.provider_score / totalScore) * 100).toFixed(1)
-        console.log(`[findProvider] 负载均衡: 从 ${bestProtocolGroup.length} 个候选中选择 (概率 ${probability}%)`)
+        console.log(`[findProvider] 负载均衡: 从 ${candidates.length} 个候选中选择 (概率 ${probability}%)`)
         return candidate
       }
     }
 
     // fallback（理论上不会到这里）
-    return bestProtocolGroup[0]
+    return candidates[0]
   }
 
   async findProvider(requestedModel: string, protocol: string, excludeIds: Set<string> = new Set(), requiresThinking: boolean = false): Promise<ProviderInfo | null> {
@@ -137,12 +126,11 @@ export class LlmProxyService {
           .andWhere('mp.tierLevel = :tier', { tier })
         buildBaseConditions(providerQuery)
 
-        // 获取当前层所有可用 providers（用于日志）
+        // 获取当前层所有可用 providers（按健康分数排序）
         const allCandidates = await providerQuery
           .addSelect(`CASE WHEN provider.protocol = :protocol THEN 0 ELSE 1 END`, 'protocol_priority')
           .setParameter('protocol', protocol)
-          .orderBy('protocol_priority', 'ASC')
-          .addOrderBy('provider.score', 'DESC')
+          .orderBy('provider.score', 'DESC')
           .getRawMany()
 
         if (allCandidates.length > 0) {
@@ -178,10 +166,7 @@ export class LlmProxyService {
             : `协议转换 (${result.provider_protocol} -> ${protocol})`
           const scoreReason = `健康分数 ${result.provider_score}`
           const tierReason = `第${tier}梯队`
-
-          // 计算当前协议组的总数
-          const sameProtocolCount = allCandidates.filter(c => c.protocol_priority === result.protocol_priority).length
-          const balanceInfo = sameProtocolCount > 1 ? ` | 负载均衡(${sameProtocolCount}选1)` : ''
+          const balanceInfo = allCandidates.length > 1 ? ` | 负载均衡(${allCandidates.length}选1)` : ''
 
           console.log(`[findProvider] ✓ 选择: ${result.provider_base_url}`)
           console.log(`[findProvider]   理由: ${tierReason} | ${protocolReason} | ${scoreReason}${balanceInfo}`)
