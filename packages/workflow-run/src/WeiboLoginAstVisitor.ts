@@ -16,7 +16,7 @@ export class WeiboLoginAstVisitor {
   ) { }
 
   @Handler(WeiboLoginAst)
-  handler(ast: WeiboLoginAst, input$: Observable<any>, ctx: any): Observable<NodeEvent> {
+  handler(ast: WeiboLoginAst, input$: Observable<Record<string, unknown>>, ctx: Record<string, unknown>): Observable<NodeEvent> {
     return new Observable<NodeEvent>(obs => {
       ast.state = 'running';
       obs.next({ type: 'node_runing', id: ast.id });
@@ -27,7 +27,7 @@ export class WeiboLoginAstVisitor {
           obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } })
           if (inputData) {
             Object.keys(inputData).forEach(key => {
-              (ast as any)[key] = inputData[key];
+              (ast as unknown as Record<string, unknown>)[key] = inputData[key];
             });
           }
         },

@@ -18,7 +18,7 @@ import { Observable } from "rxjs";
 @Injectable()
 export class ShareAstVisitor {
     @Handler(ShareAst)
-    handler(ast: ShareAst, input$: Observable<any>) {
+    handler(ast: ShareAst, input$: Observable<Record<string, unknown>>) {
         return new Observable<NodeEvent>(obs => {
             ast.state = 'running';
             obs.next({ type: 'node_runing', id: ast.id });
@@ -29,7 +29,7 @@ export class ShareAstVisitor {
                     obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } })
                     if (inputData) {
                         Object.keys(inputData).forEach(key => {
-                            (ast as any)[key] = inputData[key];
+                            (ast as unknown as Record<string, unknown>)[key] = inputData[key];
                         });
                     }
                 },

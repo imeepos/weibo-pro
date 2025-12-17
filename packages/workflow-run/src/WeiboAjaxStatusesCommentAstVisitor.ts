@@ -13,9 +13,9 @@ import { RateLimiterService } from "./services/rate-limiter.service";
 export interface WeiboAjaxStatusesComponentAstResponse {
     readonly ok: number
     readonly data: WeiboCommentEntity[]
-    readonly filter_group: any[];
+    readonly filter_group: Array<Record<string, unknown>>;
     readonly max_id: number
-    readonly rootComment: any[];
+    readonly rootComment: Array<Record<string, unknown>>;
     readonly total_number: number;
     readonly trendsText: string;
 }
@@ -31,11 +31,15 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
     }
 
     @Handler(WeiboAjaxStatusesCommentAst)
-    visit(ast: WeiboAjaxStatusesCommentAst, input$: Observable<any>, _ctx: any): Observable<NodeEvent> {
+    visit(ast: WeiboAjaxStatusesCommentAst, input$: Observable<Record<string, unknown>>, _ctx: Record<string, unknown>): Observable<NodeEvent> {
         return new Observable<NodeEvent>(obs => {
             const abortController = new AbortController();
 
-            const wrappedCtx = {
+            interface WrappedContext extends Record<string, unknown> {
+                abortSignal: AbortSignal;
+            }
+
+            const wrappedCtx: WrappedContext = {
                 ..._ctx,
                 abortSignal: abortController.signal
             };
@@ -50,7 +54,7 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
 
                     if (inputData) {
                         Object.keys(inputData).forEach(key => {
-                            (ast as any)[key] = inputData[key];
+                            (ast as unknown as Record<string, unknown>)[key] = inputData[key];
                         });
                     }
 
@@ -82,7 +86,7 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
         });
     }
 
-    private async handler(ast: WeiboAjaxStatusesCommentAst, wrappedCtx: any): Promise<NodeEvent[]> {
+    private async handler(ast: WeiboAjaxStatusesCommentAst, wrappedCtx: { abortSignal?: AbortSignal }): Promise<NodeEvent[]> {
         // 检查取消信号
         if (wrappedCtx.abortSignal?.aborted) {
             throw new Error('工作流已取消');
@@ -141,7 +145,7 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
         ];
     }
 
-    async visitChildren(ast: WeiboAjaxStatusesCommentAst, _ctx: any) {
+    async visitChildren(ast: WeiboAjaxStatusesCommentAst, _ctx: { abortSignal?: AbortSignal }) {
         try {
             while (true) {
                 // 检查取消信号
@@ -191,11 +195,11 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
                 const BATCH_SIZE = 5;
                 for (let i = 0; i < users.length; i += BATCH_SIZE) {
                     const batch = users.slice(i, i + BATCH_SIZE);
-                    await m.upsert(WeiboUserEntity, batch as any, ['id']);
+                    await m.upsert(WeiboUserEntity, batch, ['id']);
                 }
             }
             const entities = body.data.map(item => m.create(WeiboCommentEntity, item));
-            await m.upsert(WeiboCommentEntity, entities as any[], ['id']);
+            await m.upsert(WeiboCommentEntity, entities, ['id']);
             return entities;
         });
     }

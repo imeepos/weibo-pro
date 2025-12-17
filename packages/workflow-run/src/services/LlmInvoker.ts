@@ -1,6 +1,41 @@
 import { Injectable } from '@sker/core';
 import { Observable, from, of, throwError, forkJoin } from 'rxjs';
 import { concatMap, expand, filter, take, map, catchError } from 'rxjs/operators';
+import { ChatOpenAI, ChatOpenAICallOptions } from '@langchain/openai';
+import { Runnable } from '@langchain/core/runnables';
+import { BaseLanguageModelInput } from '@langchain/core/language_models/base';
+import { AIMessage, AIMessageChunk } from '@langchain/core/messages';
+import { StructuredToolInterface } from '@langchain/core/tools';
+
+interface MessageContent {
+  role: string;
+  content: string;
+}
+
+interface ToolCall {
+  id: string;
+  name: string;
+  args: Record<string, unknown>;
+}
+
+interface LlmResponse {
+  content: string;
+  tool_calls?: ToolCall[];
+  [key: string]: unknown;
+}
+
+interface ToolMessage {
+  role: 'tool';
+  content: string;
+  tool_call_id: string;
+  name: string;
+}
+
+interface RoundState {
+  messages: Array<MessageContent | LlmResponse | ToolMessage>;
+  round: number;
+  finalText: string | null;
+}
 
 /**
  * LLM 调用器
@@ -19,26 +54,20 @@ export class LlmInvoker {
    * 5. 返回最终文本内容
    */
   invokeWithTools(
-    model: any,
-    initialMessages: Array<{ role: string; content: string }>,
+    model: ChatOpenAI<ChatOpenAICallOptions> | Runnable<BaseLanguageModelInput, AIMessageChunk, ChatOpenAICallOptions>,
+    initialMessages: MessageContent[],
     signal: AbortSignal,
     useTools: boolean,
-    tools: any[] = []
+    tools: StructuredToolInterface[] = []
   ): Observable<string> {
     if (!useTools) {
-      return from(model.invoke(initialMessages, { signal })).pipe(
-        map((response: any) => response.content || response.text || String(response))
+      return from((model.invoke as unknown as (messages: unknown, options: unknown) => Promise<LlmResponse>)(initialMessages, { signal })).pipe(
+        map((response: LlmResponse) => response.content || String(response))
       );
     }
 
     const MAX_ROUNDS = 10;
     const toolMap = new Map(tools.map(tool => [tool.name, tool]));
-
-    interface RoundState {
-      messages: any[];
-      round: number;
-      finalText: string | null;
-    }
 
     return of({ messages: initialMessages, round: 0, finalText: null } as RoundState).pipe(
       expand((state: RoundState) => {
@@ -48,13 +77,13 @@ export class LlmInvoker {
 
         console.log(`[LlmInvoker] 工具调用轮次 ${state.round + 1}/${MAX_ROUNDS}`);
 
-        return from(model.invoke(state.messages, { signal })).pipe(
-          concatMap((response: any) => {
+        return from((model.invoke as unknown as (messages: unknown, options: unknown) => Promise<LlmResponse>)(state.messages, { signal })).pipe(
+          concatMap((response: LlmResponse) => {
             if (response.tool_calls && response.tool_calls.length > 0) {
               return this.handleToolCalls(response, state, toolMap);
             }
 
-            const finalText = response.content || response.text || String(response);
+            const finalText = response.content || String(response);
             console.log(`[LlmInvoker] 工具调用完成，获得最终文本（${finalText.length} 字）`);
 
             return of({
@@ -63,24 +92,26 @@ export class LlmInvoker {
               finalText
             });
           }),
-          catchError((error) => {
+          catchError((error: Error) => {
             // 详细的错误诊断
-            const errorInfo: any = {
+            const errorInfo = {
               轮次: state.round + 1,
               错误类型: error.name || 'Unknown',
-              状态码: error.status,
+              状态码: (error as { status?: number }).status,
               消息: error.message
             }
 
             // 检测是否是 tools 相关错误
-            if (error.status === 400 && useTools) {
-              errorInfo.可能原因 = '该 LLM Provider 可能不支持 function calling (tools)'
-              errorInfo.建议 = [
-                '1. 检查 LLM Provider 是否支持 tools/function calling',
-                '2. 更换支持 function calling 的 Provider',
-                '3. 或减少章节数量以禁用工具模式（当前阈值：>10章启用工具）'
-              ]
-              console.error(`[LlmInvoker] ⚠️ Tools 调用失败（Provider 可能不支持）:`, errorInfo)
+            if ((error as { status?: number }).status === 400 && useTools) {
+              console.error(`[LlmInvoker] ⚠️ Tools 调用失败（Provider 可能不支持）:`, {
+                ...errorInfo,
+                可能原因: '该 LLM Provider 可能不支持 function calling (tools)',
+                建议: [
+                  '1. 检查 LLM Provider 是否支持 tools/function calling',
+                  '2. 更换支持 function calling 的 Provider',
+                  '3. 或减少章节数量以禁用工具模式（当前阈值：>10章启用工具）'
+                ]
+              })
             } else {
               console.error(`[LlmInvoker] 工具调用轮次 ${state.round + 1} 失败:`, errorInfo)
             }
@@ -101,22 +132,22 @@ export class LlmInvoker {
   }
 
   private handleToolCalls(
-    response: any,
-    state: { messages: any[]; round: number; finalText: string | null },
-    toolMap: Map<string, any>
-  ): Observable<{ messages: any[]; round: number; finalText: string | null }> {
-    console.log(`[LlmInvoker] LLM 请求调用 ${response.tool_calls.length} 个工具`);
+    response: LlmResponse,
+    state: RoundState,
+    toolMap: Map<string, StructuredToolInterface>
+  ): Observable<RoundState> {
+    console.log(`[LlmInvoker] LLM 请求调用 ${response.tool_calls?.length || 0} 个工具`);
 
     const newMessages = [...state.messages, response];
 
-    const toolExecutions = response.tool_calls.map((toolCall: any) => {
+    const toolExecutions = (response.tool_calls || []).map((toolCall: ToolCall) => {
       console.log(`[LlmInvoker] 执行工具: ${toolCall.name}，参数: ${JSON.stringify(toolCall.args)}`);
 
       const tool = toolMap.get(toolCall.name);
       if (!tool) {
         console.error(`[LlmInvoker] 未找到工具: ${toolCall.name}`);
         return of({
-          role: 'tool',
+          role: 'tool' as const,
           content: `错误：未找到工具 ${toolCall.name}`,
           tool_call_id: toolCall.id,
           name: toolCall.name
@@ -124,13 +155,13 @@ export class LlmInvoker {
       }
 
       return from(tool.invoke(toolCall.args)).pipe(
-        map((result: any) => ({
+        map((result: unknown): ToolMessage => ({
           role: 'tool',
           content: String(result),
           tool_call_id: toolCall.id,
           name: toolCall.name
         })),
-        catchError((error) => {
+        catchError((error: Error): Observable<ToolMessage> => {
           console.error(`[LlmInvoker] 工具执行失败: ${toolCall.name}`, error);
           return of({
             role: 'tool',
@@ -150,8 +181,8 @@ export class LlmInvoker {
       });
     }
 
-    return (forkJoin(toolExecutions) as Observable<any[]>).pipe(
-      map((toolResults: any[]) => {
+    return forkJoin(toolExecutions).pipe(
+      map((toolResults: ToolMessage[]) => {
         toolResults.forEach(result => newMessages.push(result));
 
         return {

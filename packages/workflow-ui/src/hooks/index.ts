@@ -10,3 +10,4 @@ export {
   useWorkflowState,
   useFailedNodes
 } from './useWorkflowExecution'
+export { useStreamingExecution } from './useStreamingExecution'

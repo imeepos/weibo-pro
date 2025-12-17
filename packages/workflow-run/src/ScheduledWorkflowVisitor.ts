@@ -33,7 +33,7 @@ export class ScheduledWorkflowVisitor {
   ) {}
 
   @Handler(ScheduledWorkflowAst)
-  visit(ast: ScheduledWorkflowAst, input$: Observable<any>, ctx: any): Observable<NodeEvent> {
+  visit(ast: ScheduledWorkflowAst, input$: Observable<Record<string, unknown>>, ctx: Record<string, unknown>): Observable<NodeEvent> {
     return new Observable<NodeEvent>((obs) => {
       const abortController = new AbortController();
 
@@ -47,7 +47,7 @@ export class ScheduledWorkflowVisitor {
 
           if (inputData) {
             Object.keys(inputData).forEach(key => {
-              (ast as any)[key] = inputData[key];
+              (ast as unknown as Record<string, unknown>)[key] = inputData[key];
             });
           }
 
@@ -77,7 +77,20 @@ export class ScheduledWorkflowVisitor {
           }
 
           // 确定调度类型的参数
-          const scheduleData: any = {
+          interface ScheduleData {
+            workflowId: string;
+            name: string;
+            scheduleType: ScheduleType;
+            inputs?: Record<string, unknown>;
+            startTime?: Date;
+            endTime?: Date;
+            status: ScheduleStatus;
+            cronExpression?: string;
+            intervalMs?: number;
+            nextRunAt?: Date;
+          }
+
+          const scheduleData: ScheduleData = {
             workflowId: workflow.id,
             name: ast.scheduleName || `调度-${ast.workflowName}`,
             scheduleType: ast.scheduleType,

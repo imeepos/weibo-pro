@@ -5,7 +5,8 @@ export type NodeEvent<T = any> =
     | NodeRuningEvent
     | NodeEmitEvent<T>
     | NodeSuccessEvent
-    | NodeFailEvent;
+    | NodeFailEvent
+    | NodeDeltaEvent;
 
 // 节点运行
 export interface NodeRuningEvent {
@@ -28,4 +29,14 @@ export interface NodeFailEvent {
     type: 'node_fail';
     id: string;
     error: string | undefined;
+}
+// 节点增量输出（流式）
+export interface NodeDeltaEvent {
+    type: 'node_delta';
+    id: string;
+    data: {
+        delta: string;
+        accumulated?: string;
+        [key: string]: any;
+    };
 }

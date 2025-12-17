@@ -17,7 +17,7 @@ export class StoryQualityLoopAstVisitor {
   @Handler(StoryQualityLoopAst)
   visit(
     ast: StoryQualityLoopAst,
-    input$: Observable<any>,
+    input$: Observable<Record<string, unknown>>,
     ctx: WorkflowGraphAst
   ): Observable<NodeEvent> {
     return new Observable<NodeEvent>((obs) => {
@@ -34,7 +34,7 @@ export class StoryQualityLoopAstVisitor {
             // 应用输入数据
             if (inputData) {
               Object.keys(inputData).forEach((key) => {
-                (ast as any)[key] = inputData[key];
+                (ast as unknown as Record<string, unknown>)[key] = inputData[key];
               });
             }
 
@@ -72,7 +72,13 @@ export class StoryQualityLoopAstVisitor {
               ast.rewriteRequest = undefined;
 
               // 从最新结果中提取 chapter（假设 QualityChecker 返回的结果包含 chapter）
-              const finalChapter = (latestResult as any).chapter;
+              interface QualityResult {
+                chapter?: Record<string, unknown>;
+                score?: number;
+                passed?: boolean;
+              }
+
+              const finalChapter = (latestResult as QualityResult).chapter;
               ast.finalChapter = finalChapter;
 
               return [
@@ -88,7 +94,7 @@ export class StoryQualityLoopAstVisitor {
               ast.isComplete = true;
               ast.rewriteRequest = undefined;
 
-              const finalChapter = (latestResult as any).chapter;
+              const finalChapter = (latestResult as QualityResult).chapter;
               ast.finalChapter = finalChapter;
 
               return [
@@ -101,8 +107,13 @@ export class StoryQualityLoopAstVisitor {
             ast.isComplete = false;
             ast.finalChapter = undefined;
 
+            interface ChapterContent {
+              content?: string;
+              [key: string]: unknown;
+            }
+
             const rewriteRequest: RewriteRequest = {
-              previousContent: (latestResult as any).chapter?.content || '',
+              previousContent: ((latestResult as QualityResult).chapter as ChapterContent)?.content || '',
               issues: latestResult.issues,
               suggestions: latestResult.suggestions,
               attemptNumber: ast.currentAttempt + 1

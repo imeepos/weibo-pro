@@ -4,32 +4,91 @@ import { StoryWeaverAst } from '@sker/workflow-ast';
 import { MarkdownViewer } from '@sker/ui/components/ui/markdown-viewer';
 import { SimplePagination } from '@sker/ui/components/ui/simple-pagination';
 import { Dialog, DialogContent, DialogTrigger } from '@sker/ui/components/ui/dialog';
-import { BookOpenIcon, MaximizeIcon, ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
-import React, { useState } from 'react';
+import { BookOpenIcon, MaximizeIcon, ChevronLeftIcon, ChevronRightIcon, Sparkles } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@sker/ui/lib/utils';
+import { useExecutionStore } from '../store/execution.store';
 
 @Injectable()
 export class StoryWeaverAstRender {
   @Render(StoryWeaverAst)
   render(ast: StoryWeaverAst) {
-    const chapters = ast.previousChapters || [];
-    const hasContent = chapters.length > 0;
-
-    return (
-      <div className="px-3 py-2">
-        {hasContent ? (
-          <NovelReader chapters={chapters} latestChapterNumber={ast.chapterNumber} />
-        ) : (
-          <div className="text-sm text-muted-foreground flex items-center gap-2">
-            <BookOpenIcon className="size-4" />
-            <span>尚未创作章节</span>
-          </div>
-        )}
-      </div>
-    );
+    return <StoryWeaverContent ast={ast} />;
   }
+}
+
+function StoryWeaverContent({ ast }: { ast: StoryWeaverAst }) {
+  const streamingData = useExecutionStore((state) => state.getStreamingData(ast.id));
+  const chapters = ast.previousChapters || [];
+  const hasContent = chapters.length > 0;
+  const isStreaming = !!streamingData;
+
+  return (
+    <div className="px-3 py-2">
+      {isStreaming && (
+        <StreamingPreview
+          accumulated={streamingData.accumulated}
+          chapterNumber={ast.chapterNumber || chapters.length + 1}
+        />
+      )}
+      {hasContent && !isStreaming && (
+        <NovelReader chapters={chapters} latestChapterNumber={ast.chapterNumber} />
+      )}
+      {!hasContent && !isStreaming && (
+        <div className="text-sm text-muted-foreground flex items-center gap-2">
+          <BookOpenIcon className="size-4" />
+          <span>尚未创作章节</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface StreamingPreviewProps {
+  accumulated: string;
+  chapterNumber: number;
+}
+
+function StreamingPreview({ accumulated, chapterNumber }: StreamingPreviewProps) {
+  const [shouldScroll, setShouldScroll] = useState(true);
+  const contentRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (shouldScroll && contentRef.current) {
+      const { scrollHeight, clientHeight, scrollTop } = contentRef.current;
+      const isNearBottom = scrollHeight - clientHeight - scrollTop < 100;
+      if (isNearBottom) {
+        contentRef.current.scrollTop = scrollHeight;
+      }
+    }
+  }, [accumulated, shouldScroll]);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollHeight, clientHeight, scrollTop } = e.currentTarget;
+    const isNearBottom = scrollHeight - clientHeight - scrollTop < 50;
+    setShouldScroll(isNearBottom);
+  };
+
+  return (
+    <div className="relative border rounded-lg bg-muted/20 overflow-hidden">
+      <div className="flex items-center gap-2 px-3 py-2 bg-primary/10 border-b">
+        <Sparkles className="size-4 text-primary animate-pulse" />
+        <span className="text-sm font-medium">正在创作第 {chapterNumber} 章...</span>
+      </div>
+      <div
+        ref={contentRef}
+        onScroll={handleScroll}
+        className="p-4 max-h-96 overflow-y-auto prose prose-sm max-w-none"
+      >
+        <ReactMarkdown remarkPlugins={[[remarkGfm, { singleTilde: false }]]}>
+          {accumulated}
+        </ReactMarkdown>
+        <span className="inline-block w-2 h-4 bg-primary animate-pulse ml-1" />
+      </div>
+    </div>
+  );
 }
 
 interface NovelReaderProps {

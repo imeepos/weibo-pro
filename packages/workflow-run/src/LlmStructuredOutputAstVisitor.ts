@@ -17,7 +17,7 @@ const buildJsonPrompt = (outputs: INodeOutputMetadata[]) => {
 export class LlmStructuredOutputAstVisitor {
 
     @Handler(LlmStructuredOutputAst)
-    visit(ast: LlmStructuredOutputAst, input$: Observable<any>, ctx: WorkflowGraphAst) {
+    visit(ast: LlmStructuredOutputAst, input$: Observable<Record<string, unknown>>, ctx: WorkflowGraphAst) {
         return new Observable<NodeEvent>((obs) => {
             const abortController = new AbortController();
 
@@ -30,7 +30,7 @@ export class LlmStructuredOutputAstVisitor {
                     ast.emitCount += 1;
                     if (inputData) {
                         Object.keys(inputData).forEach(key => {
-                            (ast as any)[key] = inputData[key];
+                            (ast as unknown as Record<string, unknown>)[key] = inputData[key];
                         });
                     }
 
@@ -57,7 +57,7 @@ export class LlmStructuredOutputAstVisitor {
                     const data: Record<string, unknown> = {};
                     for (const output of outputs) {
                         if (output.property in result) {
-                            (ast as any)[output.property] = result[output.property];
+                            (ast as unknown as Record<string, unknown>)[output.property] = result[output.property];
                             data[output.property] = result[output.property];
                         }
                     }

@@ -6,7 +6,8 @@ import {
   WeiboLoginEvent,
   LoginSession,
   WeiboUserInfo,
-  WeiboLoginConfig
+  WeiboLoginConfig,
+  WeiboLoginSessionSnapshot
 } from "./weibo-login.types";
 import { Subscriber } from 'rxjs'
 import { generateId, INode, NodeEvent } from "@sker/workflow";
@@ -490,7 +491,7 @@ export class WeiboAuthService implements OnDestroy {
 
   private async updateSessionEventInRedis(sessionId: string, event: WeiboLoginEvent): Promise<void> {
     const key = `weibo_session:${sessionId}`;
-    const sessionData = await this.redis.get<any>(key);
+    const sessionData = await this.redis.get<WeiboLoginSessionSnapshot>(key);
 
     if (sessionData) {
       sessionData.lastEvent = event;
@@ -500,7 +501,7 @@ export class WeiboAuthService implements OnDestroy {
 
   private async updateSessionStatusInRedis(sessionId: string, status: string): Promise<void> {
     const key = `weibo_session:${sessionId}`;
-    const sessionData = await this.redis.get<any>(key);
+    const sessionData = await this.redis.get<WeiboLoginSessionSnapshot>(key);
 
     if (sessionData) {
       sessionData.status = status;

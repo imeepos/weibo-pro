@@ -40,7 +40,7 @@ export interface WeiboLoginSuccessMessage {
         id: number;
         screen_name: string;
         profile_image_url: string;
-        [key: string]: any;
+        [key: string]: unknown;
     };
     timestamp: number;
     isValid: boolean;

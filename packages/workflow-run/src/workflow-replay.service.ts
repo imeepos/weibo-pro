@@ -69,7 +69,7 @@ export class WorkflowReplayService {
         await this.db.save(newRun);
 
         // 5. 执行（成功节点会从 eventStream 中重放，自动跳过）
-        await executeWorkflowImmediate(workflow, run.inputs as any);
+        await executeWorkflowImmediate(workflow, run.inputs as Record<string, unknown>);
 
         return newRunId;
     }

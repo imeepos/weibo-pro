@@ -52,7 +52,7 @@ IMPORTANT: Do not begin your response with phrases like "Sure", "Here is", "Belo
 export class AnswerFinalizerAstVisitor {
 
     @Handler(AnswerFinalizerAst)
-    visit(ast: AnswerFinalizerAst, input$: Observable<any>, ctx: WorkflowGraphAst) {
+    visit(ast: AnswerFinalizerAst, input$: Observable<Record<string, unknown>>, ctx: WorkflowGraphAst) {
         return new Observable<NodeEvent>((obs) => {
             const abortController = new AbortController();
 
@@ -64,7 +64,7 @@ export class AnswerFinalizerAstVisitor {
                     ast.emitCount += 1;
                     if (inputData) {
                         Object.keys(inputData).forEach(key => {
-                            (ast as any)[key] = inputData[key];
+                            (ast as unknown as Record<string, unknown>)[key] = inputData[key];
                         });
                     }
 

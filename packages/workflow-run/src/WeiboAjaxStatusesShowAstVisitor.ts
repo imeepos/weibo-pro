@@ -24,11 +24,15 @@ export class WeiboAjaxStatusesShowAstVisitor extends WeiboApiClient {
     }
 
     @Handler(WeiboAjaxStatusesShowAst)
-    visit(ast: WeiboAjaxStatusesShowAst, input$: Observable<any>, ctx: any): Observable<NodeEvent> {
+    visit(ast: WeiboAjaxStatusesShowAst, input$: Observable<Record<string, unknown>>, ctx: Record<string, unknown>): Observable<NodeEvent> {
         return new Observable<NodeEvent>(obs => {
             const abortController = new AbortController();
 
-            const wrappedCtx = {
+            interface WrappedContext extends Record<string, unknown> {
+                abortSignal: AbortSignal;
+            }
+
+            const wrappedCtx: WrappedContext = {
                 ...ctx,
                 abortSignal: abortController.signal
             };
@@ -43,7 +47,7 @@ export class WeiboAjaxStatusesShowAstVisitor extends WeiboApiClient {
 
                     if (inputData) {
                         Object.keys(inputData).forEach(key => {
-                            (ast as any)[key] = inputData[key];
+                            (ast as unknown as Record<string, unknown>)[key] = inputData[key];
                         });
                     }
 
@@ -64,23 +68,23 @@ export class WeiboAjaxStatusesShowAstVisitor extends WeiboApiClient {
                     }
 
                     await useEntityManager(async m => {
-                        const user = m.create(WeiboUserEntity, body.user as any);
+                        const user = m.create(WeiboUserEntity, body.user);
                         ast.uid = `${user.id}`;
-                        await m.upsert(WeiboUserEntity, user as any, ['id']);
+                        await m.upsert(WeiboUserEntity, user, ['id']);
 
                         const post = m.create(WeiboPostEntity, body);
                         ast.mid = post.mid;
 
                         // 使用安全的 upsert 方式，处理可能的重复插入
                         try {
-                            await m.upsert(WeiboPostEntity, post as any, ['id']);
+                            await m.upsert(WeiboPostEntity, post, ['id']);
                         } catch (error) {
                             const existingPost = await m.findOne(WeiboPostEntity, {
                                 where: { id: post.id }
                             });
 
                             if (existingPost) {
-                                await m.update(WeiboPostEntity, { id: post.id }, post as any);
+                                await m.update(WeiboPostEntity, { id: post.id }, post);
                             } else {
                                 throw error;
                             }

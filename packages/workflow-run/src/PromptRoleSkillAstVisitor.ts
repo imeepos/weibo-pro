@@ -20,7 +20,7 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 export class PromptRoleSkillAstVisitor {
 
   @Handler(PromptRoleSkillAst)
-  handler(ast: PromptRoleSkillAst, input$: Observable<any>, ctx: WorkflowGraphAst) {
+  handler(ast: PromptRoleSkillAst, input$: Observable<Record<string, unknown>>, ctx: WorkflowGraphAst) {
     return new Observable<NodeEvent>((obs) => {
       const abortController = new AbortController();
       ast.state = 'running';
@@ -33,7 +33,7 @@ export class PromptRoleSkillAstVisitor {
             obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } })
             if (inputData) {
               Object.keys(inputData).forEach(key => {
-                (ast as any)[key] = inputData[key];
+                (ast as unknown as Record<string, unknown>)[key] = inputData[key];
               });
             }
 

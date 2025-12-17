@@ -4,13 +4,15 @@ import { ChapterData } from '@sker/workflow-ast';
 import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
 
+import { StructuredToolInterface } from '@langchain/core/tools';
+
 /**
  * 故事工具工厂
  * 职责：创建 LangChain 工具（章节查询工具、搜索工具、节点工具）
  */
 @Injectable()
 export class StoryToolsFactory {
-  createChapterTools(chapters: ChapterData[]): any[] {
+  createChapterTools(chapters: ChapterData[]): StructuredToolInterface[] {
     const listChaptersTool = tool(
       async () => {
         console.log('call tool listChaptersTool');
@@ -99,14 +101,14 @@ export class StoryToolsFactory {
     return [listChaptersTool, retrieveChapterTool, searchContentTool];
   }
 
-  createNodeTools(ctx: WorkflowGraphAst, currentAstId: string): any[] {
+  createNodeTools(ctx: WorkflowGraphAst, currentAstId: string): StructuredToolInterface[] {
     const toolNodes = this.buildToolNodes(ctx, currentAstId);
 
     if (toolNodes.length > 0) {
       console.log(`[StoryToolsFactory] 构建工具节点池，共 ${toolNodes.length} 个节点`);
     }
 
-    const tools: any[] = [];
+    const tools: StructuredToolInterface[] = [];
     for (const node of toolNodes) {
       tools.push(...this.createNodeTool(node));
     }
@@ -132,7 +134,7 @@ export class StoryToolsFactory {
     });
   }
 
-  private createNodeTool(node: INode): any[] {
+  private createNodeTool(node: INode): StructuredToolInterface[] {
     const nodeType = findNodeType(node.type);
     if (!nodeType) {
       console.log(`[StoryToolsFactory] 节点类型 ${node.type} 未注册，跳过`);
@@ -146,7 +148,7 @@ export class StoryToolsFactory {
 
     console.log(`[StoryToolsFactory] 节点 ${node.id} (${node.type}) 有 ${toolMethods.length} 个工具方法`);
 
-    const tools: any[] = [];
+    const tools: StructuredToolInterface[] = [];
 
     for (const toolMethod of toolMethods) {
       try {
@@ -202,11 +204,12 @@ export class StoryToolsFactory {
         const index = text.indexOf(pattern);
         return {
           matched: index !== -1,
-          matches: index !== -1 ? [{ 0: pattern, index, input: text }] as any : undefined
+          matches: index !== -1 ? [Object.assign([pattern], { index, input: text })] : undefined
         };
       };
-    } catch (error: any) {
-      throw new Error(`搜索失败：${error.message}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`搜索失败：${message}`);
     }
   }
 

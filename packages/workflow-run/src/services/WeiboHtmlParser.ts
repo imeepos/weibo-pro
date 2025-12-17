@@ -95,7 +95,7 @@ export class WeiboHtmlParser {
 
     // 策略1（主）：从详情链接提取 mid、uid 和 postAt
     // 格式：//weibo.com/:uid/:mid
-    $('div.card').each((_index: number, element: any) => {
+    $('div.card').each((_index: number, element: Record<string, unknown>) => {
       const $card = $(element);
 
       // 正确的选择器：div.from > a（不是 p.from a）
@@ -127,7 +127,7 @@ export class WeiboHtmlParser {
 
     // 策略2（备用）：从 div[mid] 属性提取（数字型ID）
     if (posts.length === 0) {
-      $('div[action-type="feed_list_item"]').each((_index: number, element: any) => {
+      $('div[action-type="feed_list_item"]').each((_index: number, element: Record<string, unknown>) => {
         const $item = $(element);
         const mid = $item.attr('mid');
 
@@ -267,7 +267,7 @@ export class WeiboHtmlParser {
     let maxPage = 0;
 
     // 从分页列表中提取所有页码
-    $('div.m-page .s-scroll li a').each((_i: number, link: any) => {
+    $('div.m-page .s-scroll li a').each((_i: number, link: Record<string, unknown>) => {
       const text = $(link).text().trim();
       const match = text.match(/第(\d+)页/);
       if (match && match[1]) {

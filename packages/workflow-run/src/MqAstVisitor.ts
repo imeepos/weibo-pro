@@ -13,7 +13,7 @@ import { take, timeout, finalize, catchError, map, concatMap, mergeMap } from 'r
 @Injectable()
 export class MqPushAstVisitor {
   @Handler(MqPushAst)
-  visit(ast: MqPushAst, input$: Observable<any>, ctx: any): Observable<NodeEvent> {
+  visit(ast: MqPushAst, input$: Observable<Record<string, unknown>>, ctx: Record<string, unknown>): Observable<NodeEvent> {
     return new Observable<NodeEvent>(obs => {
       const abortController = new AbortController();
 
@@ -25,7 +25,7 @@ export class MqPushAstVisitor {
           ast.emitCount += 1;
           if (inputData) {
             Object.keys(inputData).forEach(key => {
-              (ast as any)[key] = inputData[key];
+              (ast as unknown as Record<string, unknown>)[key] = inputData[key];
             });
           }
 
@@ -87,7 +87,7 @@ export class MqPushAstVisitor {
 @Injectable()
 export class MqPullAstVisitor {
   @Handler(MqPullAst)
-  visit(ast: MqPullAst, input$: Observable<any>, ctx: any): Observable<NodeEvent> {
+  visit(ast: MqPullAst, input$: Observable<Record<string, unknown>>, ctx: Record<string, unknown>): Observable<NodeEvent> {
     return new Observable<NodeEvent>(obs => {
       const abortController = new AbortController();
 
@@ -99,7 +99,7 @@ export class MqPullAstVisitor {
         next: (inputData) => {
           if (inputData) {
             Object.keys(inputData).forEach(key => {
-              (ast as any)[key] = inputData[key];
+              (ast as unknown as Record<string, unknown>)[key] = inputData[key];
             });
           }
 

@@ -28,7 +28,7 @@ export class WeiboAjaxStatusesRepostTimelineAstVisitor extends WeiboApiClient {
     }
 
     @Handler(WeiboAjaxStatusesRepostTimelineAst)
-    visit(ast: WeiboAjaxStatusesRepostTimelineAst, input$: Observable<any>, ctx: any): Observable<NodeEvent> {
+    visit(ast: WeiboAjaxStatusesRepostTimelineAst, input$: Observable<Record<string, unknown>>, ctx: Record<string, unknown>): Observable<NodeEvent> {
         return new Observable<NodeEvent>(obs => {
             const abortController = new AbortController();
 
@@ -47,7 +47,7 @@ export class WeiboAjaxStatusesRepostTimelineAstVisitor extends WeiboApiClient {
 
                     if (inputData) {
                         Object.keys(inputData).forEach(key => {
-                            (ast as any)[key] = inputData[key];
+                            (ast as unknown as Record<string, unknown>)[key] = inputData[key];
                         });
                     }
 
@@ -73,11 +73,11 @@ export class WeiboAjaxStatusesRepostTimelineAstVisitor extends WeiboApiClient {
                                 new Map(body.data.map(item => [item.user.id, item.user])).values()
                             );
                             const users = uniqueUsers.map(user => m.create(WeiboUserEntity, user));
-                            await m.upsert(WeiboUserEntity, users as any[], ['id']);
+                            await m.upsert(WeiboUserEntity, users, ['id']);
 
                             const entities = body.data.map(item => m.create(WeiboRepostEntity, item));
                             console.log(`[WeiboAjaxStatusesRepostTimelineAstVisitor] ${page} 页 共${entities.length}条数据`);
-                            await m.upsert(WeiboRepostEntity, entities as any[], ['id']);
+                            await m.upsert(WeiboRepostEntity, entities, ['id']);
                         });
                     }
 

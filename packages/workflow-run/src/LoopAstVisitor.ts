@@ -11,7 +11,7 @@ import { concatMap, delay, mergeMap } from 'rxjs/operators'
 @Injectable()
 export class LoopAstVisitor {
     @Handler(LoopAst)
-    visit(ast: LoopAst, input$: Observable<any>, ctx: any) {
+    visit(ast: LoopAst, input$: Observable<Record<string, unknown>>, ctx: Record<string, unknown>) {
         return new Observable<NodeEvent>(obs => {
             ast.state = 'running';
             ast.total = 0;
@@ -23,11 +23,11 @@ export class LoopAstVisitor {
                     ast.emitCount += 1;
                     if (inputData) {
                         Object.keys(inputData).forEach(key => {
-                            (ast as any)[key] = inputData[key];
+                            (ast as unknown as Record<string, unknown>)[key] = inputData[key];
                         });
                     }
 
-                    let items: any[] = ast.items;
+                    let items: unknown[] = ast.items;
                     if (!Array.isArray(items)) {
                         items = [items];
                     }
@@ -49,7 +49,7 @@ export class LoopAstVisitor {
                         return events;
                     }
 
-                    const chunks: any[] = [];
+                    const chunks: unknown[] = [];
                     for (let i = 0; i < items.length; i += batchSize) {
                         chunks.push(
                             batchSize === 1

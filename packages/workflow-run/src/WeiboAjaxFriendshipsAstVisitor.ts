@@ -10,7 +10,7 @@ import { RateLimiterService } from "./services/rate-limiter.service";
 
 export interface WeiboAjaxFriendshipsResponse {
     ok: number;
-    data: any;
+    data: Record<string, unknown>;
 }
 
 @Injectable()
@@ -24,7 +24,7 @@ export class WeiboAjaxFriendshipsAstVisitor extends WeiboApiClient {
     }
 
     @Handler(WeiboAjaxFriendshipsAst)
-    visit(ast: WeiboAjaxFriendshipsAst, input$: Observable<any>, _ctx: any): Observable<NodeEvent> {
+    visit(ast: WeiboAjaxFriendshipsAst, input$: Observable<Record<string, unknown>>, _ctx: Record<string, unknown>): Observable<NodeEvent> {
         return new Observable<NodeEvent>(obs => {
             const abortController = new AbortController();
 
@@ -38,7 +38,7 @@ export class WeiboAjaxFriendshipsAstVisitor extends WeiboApiClient {
 
                     if (inputData) {
                         Object.keys(inputData).forEach(key => {
-                            (ast as any)[key] = inputData[key];
+                            (ast as unknown as Record<string, unknown>)[key] = inputData[key];
                         });
                     }
 

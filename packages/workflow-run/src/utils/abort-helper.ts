@@ -14,7 +14,7 @@
  * @param ast 节点实例
  * @returns 如果已取消返回 true，否则返回 false
  */
-export function checkAbortSignal(ctx: any, ast: any): boolean {
+export function checkAbortSignal(ctx: { abortSignal?: AbortSignal }, ast: Record<string, unknown>): boolean {
   if (ctx.abortSignal?.aborted) {
     ast.state = 'fail';
     ast.setError(new Error('工作流已取消'));
@@ -30,7 +30,7 @@ export function checkAbortSignal(ctx: any, ast: any): boolean {
  * @param ctx 工作流上下文
  * @throws Error 如果工作流已取消
  */
-export function throwIfAborted(ctx: any): void {
+export function throwIfAborted(ctx: Record<string, unknown>): void {
   if (ctx.abortSignal?.aborted) {
     throw new Error('工作流已取消');
   }

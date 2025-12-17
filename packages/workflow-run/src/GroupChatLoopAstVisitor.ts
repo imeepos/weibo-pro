@@ -20,7 +20,7 @@ import { Observable } from "rxjs";
 @Injectable()
 export class GroupChatLoopAstVisitor {
     @Handler(GroupChatLoopAst)
-    visit(ast: GroupChatLoopAst, input$: Observable<any>, ctx: any) {
+    visit(ast: GroupChatLoopAst, input$: Observable<Record<string, unknown>>, ctx: Record<string, unknown>) {
         return new Observable<NodeEvent>(obs => {
             ast.state = 'running';
             ast.count += 1;

@@ -10,7 +10,7 @@ export class WorkflowNodeGeneratorAstVisitor {
   @Handler(WorkflowNodeGeneratorAst)
   visit(
     ast: WorkflowNodeGeneratorAst,
-    input$: Observable<any>,
+    input$: Observable<Record<string, unknown>>,
     ctx: WorkflowGraphAst
   ): Observable<NodeEvent> {
     return new Observable<NodeEvent>((obs) => {
@@ -26,7 +26,7 @@ export class WorkflowNodeGeneratorAstVisitor {
             obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } })
             if (inputData) {
               Object.keys(inputData).forEach((key) => {
-                (ast as any)[key] = inputData[key];
+                (ast as unknown as Record<string, unknown>)[key] = inputData[key];
               });
             }
 
@@ -132,7 +132,7 @@ import { concatMap } from 'rxjs/operators';
 @Injectable()
 export class MyNodeAstVisitor {
   @Handler(MyNodeAst)
-  visit(ast: MyNodeAst, input$: Observable<any>, ctx: WorkflowGraphAst): Observable<NodeEvent> {
+  visit(ast: MyNodeAst, input$: Observable<Record<string, unknown>>, ctx: WorkflowGraphAst): Observable<NodeEvent> {
     return new Observable<NodeEvent>((obs) => {
       const abortController = new AbortController();
 
@@ -145,7 +145,7 @@ export class MyNodeAstVisitor {
           obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } })
           if (inputData) {
             Object.keys(inputData).forEach(key => {
-              (ast as any)[key] = inputData[key];
+              (ast as unknown as Record<string, unknown>)[key] = inputData[key];
             });
           }
 

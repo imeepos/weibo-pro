@@ -260,7 +260,16 @@ ${chapter.content.substring(0, 800)}${chapter.content.length > 800 ? '...' : ''}
         return { score: 70, issues: [] };
       }
 
-      let parsed: any;
+      interface ParsedQualityResult {
+        overallScore?: number;
+        chapter?: {
+          content?: string;
+          [key: string]: unknown;
+        };
+        [key: string]: unknown;
+      }
+
+      let parsed: ParsedQualityResult;
       try {
         // 尝试直接解析
         parsed = JSON.parse(jsonMatch[0]);
@@ -287,7 +296,7 @@ ${chapter.content.substring(0, 800)}${chapter.content.length > 800 ? '...' : ''}
       }
 
       // 转换 issues 格式
-      const issues: QualityIssue[] = (parsed.issues || []).map((issue: any) => ({
+      const issues: QualityIssue[] = (parsed.issues || []).map((issue: Record<string, unknown>) => ({
         type: issue.type || 'plot_progress',
         severity: issue.severity || 'medium',
         description: issue.description,

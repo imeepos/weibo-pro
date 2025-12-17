@@ -28,11 +28,15 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
     }
 
     @Handler(WeiboAjaxFeedHotTimelineAst)
-    visit(ast: WeiboAjaxFeedHotTimelineAst, input$: Observable<any>, _ctx: any): Observable<NodeEvent> {
+    visit(ast: WeiboAjaxFeedHotTimelineAst, input$: Observable<Record<string, unknown>>, _ctx: Record<string, unknown>): Observable<NodeEvent> {
         return new Observable<NodeEvent>(obs => {
             const abortController = new AbortController();
 
-            const wrappedCtx = {
+            interface WrappedContext extends Record<string, unknown> {
+                abortSignal: AbortSignal;
+            }
+
+            const wrappedCtx: WrappedContext = {
                 ..._ctx,
                 abortSignal: abortController.signal
             };
@@ -47,7 +51,7 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
 
                     if (inputData) {
                         Object.keys(inputData).forEach(key => {
-                            (ast as any)[key] = inputData[key];
+                            (ast as unknown as Record<string, unknown>)[key] = inputData[key];
                         });
                     }
 
@@ -78,7 +82,7 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
         });
     }
 
-    private async handler(ast: WeiboAjaxFeedHotTimelineAst, ctx: any): Promise<NodeEvent[]> {
+    private async handler(ast: WeiboAjaxFeedHotTimelineAst, ctx: { abortSignal?: AbortSignal }): Promise<NodeEvent[]> {
         const events: NodeEvent[] = [];
 
         // 检查取消信号
@@ -121,13 +125,13 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
                             .map(item => [item.user.id, item.user])
                     ).values()
                 );
-                const users = uniqueUsers.map(user => m.create(WeiboUserEntity, user as any));
+                const users = uniqueUsers.map(user => m.create(WeiboUserEntity, user));
 
                 if (users.length > 0) {
-                    await m.upsert(WeiboUserEntity, users as any[], ['id']);
+                    await m.upsert(WeiboUserEntity, users, ['id']);
                 }
-                const posts = statuses.map(item => m.create(WeiboPostEntity, item as any));
-                await m.upsert(WeiboPostEntity, posts as any[], ['id']);
+                const posts = statuses.map(item => m.create(WeiboPostEntity, item));
+                await m.upsert(WeiboPostEntity, posts, ['id']);
                 posts.map(post => {
                     // 流式输出：每条数据发射
                     ast.mblogid = post.mblogid;

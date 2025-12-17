@@ -12,7 +12,7 @@ import { RateLimiterService } from "./services/rate-limiter.service";
 export interface WeiboAjaxStatusesMymblogAstResponse {
     ok: number;
     data: {
-        list: any[];
+        list: unknown[];
     }
 }
 
@@ -27,7 +27,7 @@ export class WeiboAjaxStatusesMymblogAstVisitor extends WeiboApiClient {
     }
 
     @Handler(WeiboAjaxStatusesMymblogAst)
-    visit(ast: WeiboAjaxStatusesMymblogAst, input$: Observable<any>, ctx: any): Observable<NodeEvent> {
+    visit(ast: WeiboAjaxStatusesMymblogAst, input$: Observable<Record<string, unknown>>, ctx: Record<string, unknown>): Observable<NodeEvent> {
         return new Observable<NodeEvent>(obs => {
             const abortController = new AbortController();
 
@@ -46,7 +46,7 @@ export class WeiboAjaxStatusesMymblogAstVisitor extends WeiboApiClient {
 
                     if (inputData) {
                         Object.keys(inputData).forEach(key => {
-                            (ast as any)[key] = inputData[key];
+                            (ast as unknown as Record<string, unknown>)[key] = inputData[key];
                         });
                     }
 
@@ -65,7 +65,7 @@ export class WeiboAjaxStatusesMymblogAstVisitor extends WeiboApiClient {
 
                         await useEntityManager(async m => {
                             const posts = body.data.list.map(item => m.create(WeiboPostEntity, item));
-                            await m.upsert(WeiboPostEntity, posts as any, ['id']);
+                            await m.upsert(WeiboPostEntity, posts, ['id']);
                         });
                     }
 

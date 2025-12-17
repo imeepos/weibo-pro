@@ -11,6 +11,7 @@ import {
   EventTagRelationEntity,
   PostNLPResultEntity,
   WeiboPostSnapshotEntity,
+  WeiboPostEntity,
   useEntityManager,
 } from '@sker/entities';
 import type { EntityManager, SentimentScore } from '@sker/entities';
@@ -66,7 +67,7 @@ export class EventAutoCreatorVisitor {
   private async updateEventStatistics(
     m: EntityManager,
     event: EventEntity,
-    post: any,
+    post: WeiboPostEntity,
     sentiment: SentimentScore
   ): Promise<void> {
     const now = new Date();
@@ -201,7 +202,7 @@ export class EventAutoCreatorVisitor {
   }
 
   @Handler(EventAutoCreatorAst)
-  visit(ast: EventAutoCreatorAst, input$: Observable<any>, ctx: any): Observable<NodeEvent> {
+  visit(ast: EventAutoCreatorAst, input$: Observable<Record<string, unknown>>, ctx: Record<string, unknown>): Observable<NodeEvent> {
     return new Observable<NodeEvent>(obs => {
       const abortController = new AbortController();
 
@@ -213,7 +214,7 @@ export class EventAutoCreatorVisitor {
           ast.emitCount += 1;
           if (inputData) {
             Object.keys(inputData).forEach(key => {
-              (ast as any)[key] = inputData[key];
+              (ast as unknown as Record<string, unknown>)[key] = inputData[key];
             });
           }
 

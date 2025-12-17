@@ -2,16 +2,63 @@ import { Inject, Injectable } from '@sker/core';
 import { WorkflowGraphAst, NodeEvent } from '@sker/workflow';
 import { ChapterData, StoryWeaverAst } from '@sker/workflow-ast';
 import { Observable, of, from, throwError, Subject, merge } from 'rxjs';
-import { concatMap, expand, scan, last, map, catchError, tap, takeUntil, finalize } from 'rxjs/operators';
+import { concatMap, expand, scan, last, map, catchError, tap, takeUntil, finalize, filter } from 'rxjs/operators';
 import { z } from 'zod';
+import { ChatOpenAI, ChatOpenAICallOptions } from '@langchain/openai';
+import { BaseMessage } from '@langchain/core/messages';
+import { StructuredToolInterface } from '@langchain/core/tools';
+import { Runnable } from '@langchain/core/runnables';
+import { BaseLanguageModelInput } from '@langchain/core/language_models/base';
+import { AIMessageChunk } from '@langchain/core/messages';
 import { useLlmModel } from '../llm-client';
-import { ChapterQualityService, QualityCheckResult } from './ChapterQualityService';
+import { ChapterQualityService, QualityCheckResult, QualityIssue } from './ChapterQualityService';
 import { PromptBuilder } from './PromptBuilder';
 import { ContentValidator } from './ContentValidator';
 import { StoryContextService } from './StoryContextService';
 import { StoryToolsFactory } from './StoryToolsFactory';
 import { LlmInvoker } from './LlmInvoker';
 import { StreamingLlmInvoker, StreamChunk } from './StreamingLlmInvoker';
+
+interface AttemptResult {
+  chapter: ChapterData;
+  quality: QualityCheckResult;
+  attempt: number;
+}
+
+interface GenerationState {
+  attempt: number;
+  improvementHints: string;
+  allAttempts: AttemptResult[];
+  result?: AttemptResult | null;
+}
+
+interface MessageContent {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
+interface ParsedChapter {
+  title: string;
+  summary: string;
+  content: string;
+  clues?: Array<{
+    id: string;
+    description: string;
+    status: 'pending' | 'resolved';
+  }>;
+  resolvedClueIds?: string[];
+}
+
+interface ChapterEmitData {
+  title: string;
+  summary: string;
+  content: string;
+  chapterNumber: number;
+  chapterData: ChapterData;
+  previousChapters: ChapterData[];
+  isComplete: boolean;
+  nextPrompt?: string;
+}
 
 /**
  * 章节生成服务
@@ -79,8 +126,8 @@ export class ChapterGenerationService {
     const completionSubject = new Subject<void>();
 
     // 主处理流：重试 + 质检逻辑
-    const mainFlow$ = of({ attempt: 0, improvementHints: '', allAttempts: [] as Array<{ chapter: ChapterData; quality: QualityCheckResult; attempt: number }> }).pipe(
-      expand((state) => {
+    const mainFlow$ = of({ attempt: 0, improvementHints: '', allAttempts: [] as AttemptResult[] }).pipe(
+      expand((state: GenerationState) => {
         if (state.attempt >= (ast.maxRewriteRetries || 2)) {
           return of();
         }
@@ -103,7 +150,7 @@ export class ChapterGenerationService {
           streamEventSubject
         );
       }),
-      scan((acc, curr: any) => {
+      scan((acc: GenerationState, curr: GenerationState) => {
         if (curr.result && curr.result.chapter && curr.result.quality && typeof curr.result.quality.score === 'number') {
           acc.allAttempts.push(curr.result);
         } else {
@@ -115,7 +162,7 @@ export class ChapterGenerationService {
           improvementHints: curr.improvementHints || '',
           allAttempts: acc.allAttempts
         };
-      }, { attempt: 0, improvementHints: '', allAttempts: [] as Array<{ chapter: ChapterData; quality: QualityCheckResult; attempt: number }> }),
+      }, { attempt: 0, improvementHints: '', allAttempts: [] as AttemptResult[] }),
       last(),
       map((finalState) => this.selectBestAttempt(finalState, ast, nextChapterNumber)),
       finalize(() => {
@@ -141,19 +188,19 @@ export class ChapterGenerationService {
     ast: StoryWeaverAst,
     ctx: WorkflowGraphAst,
     signal: AbortSignal,
-    model: any,
-    baseModel: any,
+    model: ChatOpenAI<ChatOpenAICallOptions> | Runnable<BaseLanguageModelInput, AIMessageChunk, ChatOpenAICallOptions>,
+    baseModel: ChatOpenAI<ChatOpenAICallOptions>,
     systemPrompt: string,
     userPrompt: string,
-    state: any,
+    state: GenerationState,
     nextChapterNumber: number,
     existingTitles: Set<string>,
-    ChapterOutputSchema: any,
+    ChapterOutputSchema: z.ZodObject<z.ZodRawShape>,
     chapters: ChapterData[],
     useTools: boolean,
     enableStreaming: boolean,
     streamEventSubject: Subject<NodeEvent>
-  ): Observable<any> {
+  ): Observable<GenerationState> {
     let currentUserPrompt = userPrompt;
     if (state.improvementHints) {
       currentUserPrompt += `\n\n**⚠️ 上一版本质量问题（需改进）**：\n${state.improvementHints}`;
@@ -161,9 +208,9 @@ export class ChapterGenerationService {
 
     console.log(`[ChapterGeneration] 第${nextChapterNumber}章生成中...（第${state.attempt + 1}次尝试）${enableStreaming ? ' [流式模式]' : ''}`);
 
-    const initialMessages = [
+    const initialMessages: MessageContent[] = [
       { role: 'system', content: systemPrompt },
-      { role: 'human', content: currentUserPrompt }
+      { role: 'user', content: currentUserPrompt }
     ];
 
     const tools = useTools ? this.createTools(chapters, ctx, ast.id, useTools) : [];
@@ -209,11 +256,11 @@ export class ChapterGenerationService {
    * 流式调用 LLM（支持工具）
    */
   private invokeWithStreaming(
-    model: any,
-    initialMessages: any[],
+    model: ChatOpenAI<ChatOpenAICallOptions> | Runnable<BaseLanguageModelInput, AIMessageChunk, ChatOpenAICallOptions>,
+    initialMessages: MessageContent[],
     signal: AbortSignal,
     useTools: boolean,
-    tools: any[],
+    tools: StructuredToolInterface[],
     ast: StoryWeaverAst,
     streamEventSubject: Subject<NodeEvent>
   ): Observable<string> {
@@ -238,40 +285,31 @@ export class ChapterGenerationService {
     );
   }
 
-  private handleLlmError(error: any, useTools: boolean, chapters: ChapterData[]): Observable<never> {
-    const errorInfo: any = {
+  private handleLlmError(error: Error, useTools: boolean, chapters: ChapterData[]): Observable<never> {
+    const errorInfo = {
       message: error.message,
-      status: error.status,
-      statusText: error.statusText
+      status: (error as { status?: number }).status,
+      statusText: (error as { statusText?: string }).statusText,
+      rawError: JSON.stringify(error, null, 2).substring(0, 500)
     };
-
-    if (error.status === 400 && useTools) {
-      errorInfo.诊断 = '该 LLM Provider 可能不支持 function calling';
-      errorInfo.详情 = `当前已有 ${chapters.length} 章，超过阈值（10章）自动启用工具模式`;
-      errorInfo.建议 = [
-        '1. 更换支持 function calling 的 Provider（如 OpenAI、Anthropic）',
-        '2. 或暂时减少章节数量（<= 10章）以禁用工具模式',
-        '3. 检查 Provider 配置和 API 文档'
-      ];
-    }
-
     console.error(`[ChapterGeneration] LLM 调用失败:`, errorInfo);
     return throwError(() => error);
   }
 
   private extractStructuredContent(
-    baseModel: any,
+    baseModel: ChatOpenAI<ChatOpenAICallOptions>,
     rawText: string,
     signal: AbortSignal,
-    ChapterOutputSchema: any
-  ): Observable<any> {
+    ChapterOutputSchema: z.ZodObject<z.ZodRawShape>
+  ): Observable<ParsedChapter> {
     const extractionPrompt = this.promptBuilder.buildExtractionPrompt(rawText);
     const extractionModel = baseModel.withStructuredOutput(ChapterOutputSchema);
 
     return from(extractionModel.invoke([
       { role: 'system', content: '你是一个文本结构化提取专家，精确提取小说章节的元数据。' },
-      { role: 'human', content: extractionPrompt }
+      { role: 'user', content: extractionPrompt }
     ], { signal })).pipe(
+      map((result) => result as unknown as ParsedChapter),
       catchError((error) => {
         console.error(`[ChapterGeneration] 结构化提取失败:`, {
           message: error.message,
@@ -283,7 +321,7 @@ export class ChapterGenerationService {
   }
 
   private validateAndCleanContent(
-    parsed: any,
+    parsed: ParsedChapter,
     nextChapterNumber: number,
     existingTitles: Set<string>
   ): { chapter: ChapterData; attempt: number } {
@@ -300,7 +338,7 @@ export class ChapterGenerationService {
         title: parsed.title,
         summary: parsed.summary,
         content: cleanedContent,
-        clues: parsed.clues?.map((clue: any) => ({
+        clues: parsed.clues?.map((clue) => ({
           ...clue,
           chapterNumber: nextChapterNumber
         })),
@@ -376,14 +414,15 @@ export class ChapterGenerationService {
     chapter: ChapterData,
     quality: QualityCheckResult,
     attempt: number
-  ): any {
+  ): GenerationState {
     console.log(`[ChapterGeneration] 第${chapter.chapterNumber}章质量评分：${quality.score}/100`);
 
     if (quality.score >= ast.minQualityScore) {
       return {
         result: { chapter, quality, attempt },
         improvementHints: '',
-        attempt: ast.maxRewriteRetries ?? 2
+        attempt: ast.maxRewriteRetries ?? 2,
+        allAttempts: []
       };
     }
 
@@ -392,30 +431,32 @@ export class ChapterGenerationService {
     return {
       result: { chapter, quality, attempt },
       improvementHints,
-      attempt: attempt + 1
+      attempt: attempt + 1,
+      allAttempts: []
     };
   }
 
-  private handleTitleDuplicate(error: any, state: any): Observable<any> {
+  private handleTitleDuplicate(error: Error, state: GenerationState): Observable<GenerationState> {
     if (error.message.startsWith('TITLE_DUPLICATE:')) {
       const title = error.message.replace('TITLE_DUPLICATE:', '');
       const improvementHints = `❌ 标题重复："${title}"与已有章节标题重复，请重新构思一个完全不同的标题\n`;
       return of({
         result: null,
         improvementHints,
-        attempt: state.attempt + 1
+        attempt: state.attempt + 1,
+        allAttempts: []
       });
     }
     return throwError(() => error);
   }
 
   private selectBestAttempt(
-    finalState: any,
+    finalState: GenerationState,
     ast: StoryWeaverAst,
     nextChapterNumber: number
   ): NodeEvent[] {
     const bestAttempt = finalState.allAttempts.length > 0
-      ? finalState.allAttempts.reduce((best: any, current: any) =>
+      ? finalState.allAttempts.reduce((best, current) =>
           current.quality.score > best.quality.score ? current : best
         )
       : null;
@@ -431,7 +472,7 @@ export class ChapterGenerationService {
       console.log(`  - 综合评分：${qualityResult.score}/100`);
       console.log(`  - 质量问题数：${qualityResult.issues.length}`);
       if (qualityResult.issues.length > 0) {
-        qualityResult.issues.forEach((issue: any) => {
+        qualityResult.issues.forEach((issue: QualityIssue) => {
           console.log(`    [${issue.severity}] ${issue.type}: ${issue.description}`);
         });
       }
@@ -465,7 +506,7 @@ export class ChapterGenerationService {
   }
 
   private buildEmitEvent(ast: StoryWeaverAst, chapterData: ChapterData): NodeEvent {
-    const emitData: Record<string, any> = {
+    const emitData: ChapterEmitData = {
       title: chapterData.title,
       summary: chapterData.summary,
       content: chapterData.content,
@@ -482,7 +523,7 @@ export class ChapterGenerationService {
     return { type: 'node_emit', id: ast.id, data: emitData };
   }
 
-  private createTools(chapters: ChapterData[], ctx: WorkflowGraphAst, currentAstId: string, useTools: boolean): any[] {
+  private createTools(chapters: ChapterData[], ctx: WorkflowGraphAst, currentAstId: string, useTools: boolean): StructuredToolInterface[] {
     if (!useTools) return [];
 
     const chapterTools = this.toolsFactory.createChapterTools(chapters);

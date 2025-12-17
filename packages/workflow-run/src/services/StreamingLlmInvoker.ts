@@ -1,12 +1,47 @@
 import { Injectable } from '@sker/core';
 import { Observable, Subject, from, of, throwError, forkJoin } from 'rxjs';
 import { concatMap, expand, filter, take, map, catchError, finalize } from 'rxjs/operators';
+import { ChatOpenAI, ChatOpenAICallOptions } from '@langchain/openai';
+import { Runnable } from '@langchain/core/runnables';
+import { BaseLanguageModelInput } from '@langchain/core/language_models/base';
+import { AIMessage, AIMessageChunk, BaseMessage } from '@langchain/core/messages';
+import { StructuredToolInterface } from '@langchain/core/tools';
+
+interface MessageContent {
+  role: string;
+  content: string;
+}
+
+interface ToolCall {
+  id: string;
+  name: string;
+  args: Record<string, unknown>;
+}
+
+interface LlmResponse {
+  content: string;
+  tool_calls?: ToolCall[];
+  [key: string]: unknown;
+}
+
+interface ToolMessage {
+  role: 'tool';
+  content: string;
+  tool_call_id: string;
+  name: string;
+}
+
+interface RoundState {
+  messages: Array<MessageContent | LlmResponse | ToolMessage>;
+  round: number;
+  isDone: boolean;
+}
 
 export interface StreamChunk {
   type: 'delta' | 'complete' | 'tool_call'
   delta?: string
   fullText?: string
-  toolCalls?: any[]
+  toolCalls?: ToolCall[]
 }
 
 /**
@@ -20,11 +55,11 @@ export class StreamingLlmInvoker {
    * 返回 Observable<StreamChunk>，实时推送文本片段
    */
   streamWithTools(
-    model: any,
-    initialMessages: Array<{ role: string; content: string }>,
+    model: ChatOpenAI<ChatOpenAICallOptions> | Runnable<BaseLanguageModelInput, AIMessageChunk, ChatOpenAICallOptions>,
+    initialMessages: MessageContent[],
     signal: AbortSignal,
     useTools: boolean,
-    tools: any[] = []
+    tools: StructuredToolInterface[] = []
   ): Observable<StreamChunk> {
     if (!useTools) {
       return this.streamSimple(model, initialMessages, signal);
@@ -38,8 +73,8 @@ export class StreamingLlmInvoker {
    * 简单流式（无工具）
    */
   private streamSimple(
-    model: any,
-    messages: any[],
+    model: ChatOpenAI<ChatOpenAICallOptions> | Runnable<BaseLanguageModelInput, AIMessageChunk, ChatOpenAICallOptions>,
+    messages: MessageContent[],
     signal: AbortSignal
   ): Observable<StreamChunk> {
     return new Observable<StreamChunk>((observer) => {
@@ -53,7 +88,7 @@ export class StreamingLlmInvoker {
 
       signal.addEventListener('abort', handleAbort);
 
-      from(model.stream(messages, { signal }))
+      from((model.stream as unknown as (messages: unknown, options: unknown) => AsyncIterable<AIMessageChunk>)(messages, { signal }))
         .pipe(
           finalize(() => {
             signal.removeEventListener('abort', handleAbort);
@@ -64,10 +99,10 @@ export class StreamingLlmInvoker {
           })
         )
         .subscribe({
-          next: (chunk: any) => {
+          next: (chunk: AIMessageChunk) => {
             if (aborted) return;
 
-            const delta = chunk.content || chunk.text || '';
+            const delta = chunk.content as string || '';
             if (delta) {
               fullText += delta;
               observer.next({ type: 'delta', delta });
@@ -87,19 +122,13 @@ export class StreamingLlmInvoker {
    * 策略：工具调用轮次使用批量模式，最终文本生成使用流式
    */
   private streamWithToolRounds(
-    model: any,
-    initialMessages: any[],
+    model: ChatOpenAI<ChatOpenAICallOptions> | Runnable<BaseLanguageModelInput, AIMessageChunk, ChatOpenAICallOptions>,
+    initialMessages: MessageContent[],
     signal: AbortSignal,
-    tools: any[]
+    tools: StructuredToolInterface[]
   ): Observable<StreamChunk> {
     const MAX_ROUNDS = 10;
     const toolMap = new Map(tools.map(tool => [tool.name, tool]));
-
-    interface RoundState {
-      messages: any[];
-      round: number;
-      isDone: boolean;
-    }
 
     const subject = new Subject<StreamChunk>();
 
@@ -111,14 +140,25 @@ export class StreamingLlmInvoker {
           }
 
           console.log(`[StreamingLlmInvoker] 工具调用轮次 ${state.round + 1}/${MAX_ROUNDS}`);
+          console.log(`[StreamingLlmInvoker] 发送消息数量: ${state.messages.length}`);
+          console.log(`[StreamingLlmInvoker] 最后一条消息角色: ${state.messages[state.messages.length - 1]?.role}`);
 
           // 工具调用轮次：必须使用 invoke 获取完整响应
-          return from(model.invoke(state.messages, { signal })).pipe(
-            concatMap((response: any) => {
-              if (response.tool_calls && response.tool_calls.length > 0) {
+          return from((model.invoke as (messages: unknown, options: unknown) => Promise<unknown>)(state.messages, { signal })).pipe(
+            concatMap((response: unknown) => {
+              const llmResponse = response as LlmResponse;
+              console.log('[StreamingLlmInvoker] LLM 响应类型:', {
+                hasToolCalls: !!llmResponse.tool_calls,
+                toolCallsLength: llmResponse.tool_calls?.length,
+                responseKeys: Object.keys(llmResponse),
+                responseType: typeof llmResponse,
+                content: llmResponse.content ? `${String(llmResponse.content).substring(0, 100)}...` : null
+              });
+
+              if (llmResponse.tool_calls && llmResponse.tool_calls.length > 0) {
                 // 有工具调用，继续下一轮
-                subject.next({ type: 'tool_call', toolCalls: response.tool_calls });
-                return this.handleToolCalls(response, state, toolMap);
+                subject.next({ type: 'tool_call', toolCalls: llmResponse.tool_calls });
+                return this.handleToolCalls(llmResponse, state, toolMap);
               }
 
               // 无工具调用，进入流式输出模式
@@ -146,17 +186,17 @@ export class StreamingLlmInvoker {
    * 流式输出最终响应
    */
   private streamFinalResponse(
-    model: any,
-    messages: any[],
+    model: ChatOpenAI<ChatOpenAICallOptions> | Runnable<BaseLanguageModelInput, AIMessageChunk, ChatOpenAICallOptions>,
+    messages: Array<MessageContent | LlmResponse | ToolMessage>,
     signal: AbortSignal,
     subject: Subject<StreamChunk>
   ): Observable<void> {
     return new Observable<void>((observer) => {
       let fullText = '';
 
-      from(model.stream(messages, { signal })).subscribe({
-        next: (chunk: any) => {
-          const delta = chunk.content || chunk.text || '';
+      from((model.stream as unknown as (messages: unknown, options: unknown) => AsyncIterable<AIMessageChunk>)(messages, { signal })).subscribe({
+        next: (chunk: AIMessageChunk) => {
+          const delta = chunk.content as string || '';
           if (delta) {
             fullText += delta;
             subject.next({ type: 'delta', delta });
@@ -177,21 +217,21 @@ export class StreamingLlmInvoker {
   }
 
   private handleToolCalls(
-    response: any,
-    state: { messages: any[]; round: number; isDone: boolean },
-    toolMap: Map<string, any>
-  ): Observable<{ messages: any[]; round: number; isDone: boolean }> {
-    console.log(`[StreamingLlmInvoker] LLM 请求调用 ${response.tool_calls.length} 个工具`);
+    response: LlmResponse,
+    state: RoundState,
+    toolMap: Map<string, StructuredToolInterface>
+  ): Observable<RoundState> {
+    console.log(`[StreamingLlmInvoker] LLM 请求调用 ${response.tool_calls?.length || 0} 个工具`);
 
     const newMessages = [...state.messages, response];
 
-    const toolExecutions = response.tool_calls.map((toolCall: any) => {
+    const toolExecutions = (response.tool_calls || []).map((toolCall: ToolCall) => {
       console.log(`[StreamingLlmInvoker] 执行工具: ${toolCall.name}`);
 
       const tool = toolMap.get(toolCall.name);
       if (!tool) {
         return of({
-          role: 'tool',
+          role: 'tool' as const,
           content: `错误：未找到工具 ${toolCall.name}`,
           tool_call_id: toolCall.id,
           name: toolCall.name
@@ -199,13 +239,13 @@ export class StreamingLlmInvoker {
       }
 
       return from(tool.invoke(toolCall.args)).pipe(
-        map((result: any) => ({
+        map((result: unknown): ToolMessage => ({
           role: 'tool',
           content: String(result),
           tool_call_id: toolCall.id,
           name: toolCall.name
         })),
-        catchError((error) => of({
+        catchError((error): Observable<ToolMessage> => of({
           role: 'tool',
           content: `错误：${error.message}`,
           tool_call_id: toolCall.id,
@@ -218,8 +258,8 @@ export class StreamingLlmInvoker {
       return of({ messages: newMessages, round: state.round + 1, isDone: false });
     }
 
-    return (forkJoin(toolExecutions) as Observable<any[]>).pipe(
-      map((toolResults: any[]) => {
+    return forkJoin(toolExecutions).pipe(
+      map((toolResults: ToolMessage[]) => {
         toolResults.forEach(result => newMessages.push(result));
         return { messages: newMessages, round: state.round + 1, isDone: false };
       })

@@ -13,7 +13,7 @@ import { concatMap, mergeMap } from 'rxjs/operators';
 @Injectable()
 export class PostContextCollectorVisitor {
   @Handler(PostContextCollectorAst)
-  visit(ast: PostContextCollectorAst, input$: Observable<any>, ctx: any): Observable<NodeEvent> {
+  visit(ast: PostContextCollectorAst, input$: Observable<Record<string, unknown>>, ctx: Record<string, unknown>): Observable<NodeEvent> {
     return new Observable<NodeEvent>(obs => {
       const abortController = new AbortController();
 
@@ -33,7 +33,7 @@ export class PostContextCollectorVisitor {
 
           if (inputData) {
             Object.keys(inputData).forEach(key => {
-              (ast as any)[key] = inputData[key];
+              (ast as unknown as Record<string, unknown>)[key] = inputData[key];
             });
           }
 

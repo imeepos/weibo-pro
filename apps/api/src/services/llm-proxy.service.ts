@@ -323,6 +323,19 @@ export class LlmProxyService {
         }
       }
 
+      // 修复 tool 消息序列问题：如果最后一条消息是 tool 角色，添加提示消息
+      // 某些 API（如 DeepSeek）不接受以 tool 角色结尾的消息序列
+      if (proxyBody.messages && Array.isArray(proxyBody.messages)) {
+        const lastMessage = proxyBody.messages[proxyBody.messages.length - 1]
+        if (lastMessage?.role === 'tool') {
+          console.warn(`[LlmProxy] 检测到消息序列以 tool 结尾，添加继续生成提示以兼容 API`)
+          proxyBody.messages.push({
+            role: 'user',
+            content: '请基于上述工具调用结果继续生成回复。'
+          })
+        }
+      }
+
       // 转换 thinking 参数为 Claude API 期望的格式
       if (requiresThinking) {
         // 移除旧格式的参数
@@ -364,7 +377,8 @@ export class LlmProxyService {
           body: requestBody,
           signal: AbortSignal.timeout(TIMEOUT_MS)
         })
-
+        const { status, statusText } = response;
+        debugger;
         const durationMs = Date.now() - startTime
 
         // 记录响应状态
@@ -413,7 +427,6 @@ export class LlmProxyService {
         if (!isStreaming) {
           const responseData = await response.json()
           usage = responseData.usage
-          debugger;
           // 记录响应体（仅在非成功状态下）
           if (!response.ok) {
             console.error(`[LlmProxy] 响应体:`, {
@@ -422,30 +435,9 @@ export class LlmProxyService {
             })
           }
 
-          // 检测 400 错误中的 tools 不支持错误
-          if (response.status === 400 && body.tools && Array.isArray(body.tools) && body.tools.length > 0) {
-            const errorMessage = responseData?.error?.message || JSON.stringify(responseData)
-            const isToolsError =
-              errorMessage.includes('tools') ||
-              errorMessage.includes('function') ||
-              errorMessage.includes('tool_choice') ||
-              // 88code.ai 返回的异常响应格式
-              (!responseData.error && responseData.object === 'response' && !responseData.choices)
-
-            if (isToolsError) {
-              console.error(`[LlmProxy] ⚠️ 检测到可能不支持 tools/function calling:`, {
-                provider: provider.providerId,
-                model: provider.modelName,
-                errorMessage,
-                建议: '该 Provider 可能不支持 function calling，请检查 API 文档或更换 Provider'
-              })
-              // 降低评分，但不清零（可能只是临时问题）
-              await this.updateScore(provider.providerId, -300)
-            }
-          }
-
           // 检测 400 错误中的 thinking 模式不支持错误
-          if (response.status === 400 && requiresThinking) {
+          if (response.status === 400) {
+            debugger;
             const errorMessage = responseData?.error?.message || JSON.stringify(responseData)
             const isThinkingError =
               errorMessage.includes('thinking') &&

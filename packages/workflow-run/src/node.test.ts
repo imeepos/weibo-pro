@@ -147,8 +147,8 @@ describe('节点测试', () => {
           // 输出节点的关键属性
           const relevantProps = ['input', 'output', 'text', 'prompt', 'system', 'model', 'temperature']
           relevantProps.forEach(prop => {
-            if ((node as any)[prop] !== undefined) {
-              console.error(`       ${prop}: ${(node as any)[prop]}`)
+            if ((node as Record<string, unknown>)[prop] !== undefined) {
+              console.error(`       ${prop}: ${(node as Record<string, unknown>)[prop]}`)
             }
           })
         })

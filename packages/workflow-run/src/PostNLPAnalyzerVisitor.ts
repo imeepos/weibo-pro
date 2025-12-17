@@ -16,11 +16,15 @@ export class PostNLPAnalyzerVisitor {
   constructor(@Inject(NLPAnalyzer) private analyzer: NLPAnalyzer) { }
 
   @Handler(PostNLPAnalyzerAst)
-  visit(ast: PostNLPAnalyzerAst, input$: Observable<any>, ctx: any): Observable<NodeEvent> {
+  visit(ast: PostNLPAnalyzerAst, input$: Observable<Record<string, unknown>>, ctx: Record<string, unknown>): Observable<NodeEvent> {
     return new Observable<NodeEvent>(obs => {
       const abortController = new AbortController();
 
-      const wrappedCtx = {
+      interface WrappedContext extends Record<string, unknown> {
+        abortSignal: AbortSignal;
+      }
+
+      const wrappedCtx: WrappedContext = {
         ...ctx,
         abortSignal: abortController.signal
       };
@@ -35,7 +39,7 @@ export class PostNLPAnalyzerVisitor {
 
           if (inputData) {
             Object.keys(inputData).forEach(key => {
-              (ast as any)[key] = inputData[key];
+              (ast as unknown as Record<string, unknown>)[key] = inputData[key];
             });
           }
 
@@ -49,7 +53,18 @@ export class PostNLPAnalyzerVisitor {
               order: { sort: 'ASC' },
             });
 
-            const tags = await m.query(`
+            interface TagResult {
+              name: string;
+            }
+
+            interface EventResult {
+              title: string;
+              description: string;
+              hotness?: number;
+              occurred_at?: Date;
+            }
+
+            const tags = await m.query<TagResult[]>(`
               SELECT name FROM event_tags
               WHERE deleted_at IS NULL
               ORDER BY usage_count DESC
@@ -57,7 +72,7 @@ export class PostNLPAnalyzerVisitor {
             `);
 
             // 查询最近30天内的活跃事件，按热度和时间排序
-            const events = await m.query(`
+            const events = await m.query<EventResult[]>(`
               SELECT
                 e.title,
                 e.description,
@@ -72,17 +87,26 @@ export class PostNLPAnalyzerVisitor {
 
             return {
               availableCategories: categories.map((c) => c.name),
-              availableTags: tags.map((t: any) => t.name),
-              recentEvents: events.map((e: any) => ({
+              availableTags: tags.map((t) => t.name),
+              recentEvents: events.map((e) => ({
                 title: e.title,
                 description: e.description,
               })),
             };
           });
 
-          const subComments = ast.comments
+          interface SubComment {
+            text_raw?: string;
+            text?: string;
+          }
+
+          interface Comment extends SubComment {
+            comments?: SubComment[];
+          }
+
+          const subComments = (ast.comments as Comment[])
             .flatMap((c) => c.comments || [])
-            .map((sc: any) => sc.text_raw || sc.text)
+            .map((sc) => sc.text_raw || sc.text)
             .filter(Boolean);
 
           const context: PostContext = {

@@ -32,7 +32,7 @@ const SYSTEM_PROMPT = `你是搜索结果分析器，负责将搜索引擎返回
 export class SerpClusterAstVisitor {
 
     @Handler(SerpClusterAst)
-    handler(ast: SerpClusterAst, input$: Observable<any>, ctx: WorkflowGraphAst) {
+    handler(ast: SerpClusterAst, input$: Observable<Record<string, unknown>>, ctx: WorkflowGraphAst) {
         return new Observable<NodeEvent>((obs) => {
             const abortController = new AbortController();
 
@@ -45,7 +45,7 @@ export class SerpClusterAstVisitor {
                     obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } })
                     if (inputData) {
                         Object.keys(inputData).forEach(key => {
-                            (ast as any)[key] = inputData[key];
+                            (ast as unknown as Record<string, unknown>)[key] = inputData[key];
                         });
                     }
 

@@ -12,6 +12,13 @@ export interface NodeExecutionRecord {
   outputs?: Record<string, unknown>
 }
 
+/** 流式数据 */
+export interface StreamingData {
+  delta: string
+  accumulated: string
+  timestamp: number
+}
+
 interface ExecutionState {
   /** 是否正在执行 */
   isExecuting: boolean
@@ -21,6 +28,8 @@ interface ExecutionState {
   nodeStates: Record<string, IAstStates>
   /** 节点执行历史（按节点ID分组） */
   nodeHistory: Record<string, NodeExecutionRecord[]>
+  /** 节点流式数据（实时更新） */
+  streamingData: Record<string, StreamingData>
 
   /** 开始执行 */
   startExecution: () => void
@@ -41,6 +50,13 @@ interface ExecutionState {
   /** 获取节点执行历史 */
   getNodeHistory: (nodeId: string) => NodeExecutionRecord[]
 
+  /** 更新节点流式数据 */
+  updateStreamingData: (nodeId: string, delta: string, accumulated: string) => void
+  /** 清空节点流式数据 */
+  clearStreamingData: (nodeId: string) => void
+  /** 获取节点流式数据 */
+  getStreamingData: (nodeId: string) => StreamingData | undefined
+
   /** 重置执行状态 */
   resetExecution: () => void
 }
@@ -58,6 +74,7 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
   executionError: null,
   nodeStates: {},
   nodeHistory: {},
+  streamingData: {},
 
   startExecution: () =>
     set({ isExecuting: true, executionError: null }),
@@ -116,6 +133,22 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
 
   getNodeHistory: (nodeId) => get().nodeHistory[nodeId] || [],
 
+  updateStreamingData: (nodeId, delta, accumulated) =>
+    set((prev) => ({
+      streamingData: {
+        ...prev.streamingData,
+        [nodeId]: { delta, accumulated, timestamp: Date.now() },
+      },
+    })),
+
+  clearStreamingData: (nodeId) =>
+    set((prev) => {
+      const { [nodeId]: _, ...rest } = prev.streamingData
+      return { streamingData: rest }
+    }),
+
+  getStreamingData: (nodeId) => get().streamingData[nodeId],
+
   resetExecution: () =>
-    set({ isExecuting: false, executionError: null, nodeStates: {}, nodeHistory: {} }),
+    set({ isExecuting: false, executionError: null, nodeStates: {}, nodeHistory: {}, streamingData: {} }),
 }))

@@ -15,7 +15,7 @@ const QueryRewriteSchema = z.object({
 export class QueryRewriterAstVisitor {
 
   @Handler(QueryRewriterAst)
-  handler(ast: QueryRewriterAst, input$: Observable<any>, ctx: WorkflowGraphAst) {
+  handler(ast: QueryRewriterAst, input$: Observable<Record<string, unknown>>, ctx: WorkflowGraphAst) {
     return new Observable<NodeEvent>((obs) => {
       const abortController = new AbortController();
 
@@ -28,7 +28,7 @@ export class QueryRewriterAstVisitor {
           obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } })
           if (inputData) {
             Object.keys(inputData).forEach(key => {
-              (ast as any)[key] = inputData[key];
+              (ast as unknown as Record<string, unknown>)[key] = inputData[key];
             });
           }
 

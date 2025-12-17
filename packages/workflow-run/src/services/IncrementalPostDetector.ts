@@ -1,5 +1,6 @@
 import { Injectable } from "@sker/core";
 import { RedisClient } from "@sker/redis";
+import { WeiboPostEntity } from "@sker/entities";
 
 /**
  * 增量帖子检测器
@@ -32,13 +33,13 @@ export class IncrementalPostDetector {
    * - 多级去重机制
    * - 智能缓存管理
    */
-  async detectNewPosts(posts: any[]): Promise<any[]> {
+  async detectNewPosts(posts: Partial<WeiboPostEntity>[]): Promise<Partial<WeiboPostEntity>[]> {
     if (posts.length === 0) {
       return [];
     }
 
     const lastProcessedTime = await this.getLastProcessedTime();
-    const newPosts: any[] = [];
+    const newPosts: Partial<WeiboPostEntity>[] = [];
 
     for (const post of posts) {
       if (await this.isNewPost(post, lastProcessedTime)) {
@@ -63,7 +64,7 @@ export class IncrementalPostDetector {
    * - 缓存优化减少重复计算
    * - 时间比较精确可靠
    */
-  private async isNewPost(post: any, lastProcessedTime: Date): Promise<boolean> {
+  private async isNewPost(post: Partial<WeiboPostEntity>, lastProcessedTime: Date): Promise<boolean> {
     // 1. 检查帖子ID是否已处理
     if (this.processedPostsCache.has(post.id)) {
       return false;
@@ -170,11 +171,11 @@ export class IncrementalPostDetector {
    * - 避免不必要的排序
    * - 精确的时间计算
    */
-  private getLatestPostTime(posts: any[]): Date {
+  private getLatestPostTime(posts: Partial<WeiboPostEntity>[]): Date {
     let latestTime = new Date(0);
 
     for (const post of posts) {
-      const postTime = this.parsePostTime(post.created_at);
+      const postTime = this.parsePostTime(post.created_at || '');
       if (postTime > latestTime) {
         latestTime = postTime;
       }

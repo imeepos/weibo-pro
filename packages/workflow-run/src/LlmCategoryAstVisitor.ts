@@ -9,7 +9,7 @@ import { useLlmModel } from "./llm-client";
 export class LlmCategoryAstVisitor {
 
     @Handler(LlmCategoryAst)
-    visit(ast: LlmCategoryAst, input$: Observable<any>, ctx: WorkflowGraphAst) {
+    visit(ast: LlmCategoryAst, input$: Observable<Record<string, unknown>>, ctx: WorkflowGraphAst) {
         return new Observable<NodeEvent>((obs) => {
             const abortController = new AbortController();
 
@@ -22,7 +22,7 @@ export class LlmCategoryAstVisitor {
                     ast.emitCount += 1;
                     if (inputData) {
                         Object.keys(inputData).forEach(key => {
-                            (ast as any)[key] = inputData[key];
+                            (ast as unknown as Record<string, unknown>)[key] = inputData[key];
                         });
                     }
 

@@ -8,7 +8,7 @@ import { useLlmModel } from "./llm-client";
 export class LlmTextAgentAstVisitor {
 
     @Handler(LlmTextAgentAst)
-    visit(ast: LlmTextAgentAst, input$: Observable<any>, ctx: WorkflowGraphAst): Observable<NodeEvent> {
+    visit(ast: LlmTextAgentAst, input$: Observable<Record<string, unknown>>, ctx: WorkflowGraphAst): Observable<NodeEvent> {
         return new Observable<NodeEvent>((obs) => {
             const abortController = new AbortController();
 
@@ -20,7 +20,7 @@ export class LlmTextAgentAstVisitor {
                     ast.emitCount += 1;
                     if (inputData) {
                         Object.keys(inputData).forEach(key => {
-                            (ast as any)[key] = inputData[key];
+                            (ast as unknown as Record<string, unknown>)[key] = inputData[key];
                         });
                     }
 

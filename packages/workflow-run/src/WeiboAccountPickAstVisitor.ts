@@ -19,7 +19,7 @@ export class WeiboAccountPickAstVisitor {
     ) { }
 
     @Handler(WeiboAccountPickAst)
-    visit(ast: WeiboAccountPickAst, input$: Observable<any>, _ctx: any): Observable<NodeEvent> {
+    visit(ast: WeiboAccountPickAst, input$: Observable<Record<string, unknown>>, _ctx: Record<string, unknown>): Observable<NodeEvent> {
         return new Observable<NodeEvent>(obs => {
             const abortController = new AbortController();
 
@@ -33,7 +33,7 @@ export class WeiboAccountPickAstVisitor {
 
                     if (inputData) {
                         Object.keys(inputData).forEach(key => {
-                            (ast as any)[key] = inputData[key];
+                            (ast as unknown as Record<string, unknown>)[key] = inputData[key];
                         });
                     }
 

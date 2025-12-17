@@ -9,7 +9,7 @@ import { concatMap, mergeMap } from 'rxjs/operators'
 @Injectable()
 export class MergeAstVisitor {
     @Handler(MergeAst)
-    visit(ast: MergeAst, input$: Observable<any>, ctx: any) {
+    visit(ast: MergeAst, input$: Observable<Record<string, unknown>>, ctx: Record<string, unknown>) {
         return new Observable<NodeEvent>(obs => {
             ast.state = 'running';
             obs.next({ type: 'node_runing', id: ast.id });
@@ -20,7 +20,7 @@ export class MergeAstVisitor {
 
                     if (inputData) {
                         Object.keys(inputData).forEach(key => {
-                            (ast as any)[key] = inputData[key];
+                            (ast as unknown as Record<string, unknown>)[key] = inputData[key];
                         });
                     }
 
@@ -62,7 +62,7 @@ export class MergeAstVisitor {
         });
     }
 
-    private merge(inputs: any[], mode: MergeMode): any[] {
+    private merge(inputs: unknown[], mode: MergeMode): unknown[] {
         switch (mode) {
             case 'append':
                 return this.appendMerge(inputs)
@@ -80,7 +80,7 @@ export class MergeAstVisitor {
      * 追加模式：所有数据拼接
      * [[a, b], [c, d]] → [a, b, c, d]
      */
-    private appendMerge(inputs: any[]): any[] {
+    private appendMerge(inputs: unknown[]): unknown[] {
         return inputs.flat()
     }
 
@@ -88,7 +88,7 @@ export class MergeAstVisitor {
      * 组合模式：按索引配对
      * [[a1, a2], [b1, b2]] → [{0: a1, 1: b1}, {0: a2, 1: b2}]
      */
-    private combineMerge(inputs: any[]): any[] {
+    private combineMerge(inputs: unknown[]): unknown[] {
         const arrays = inputs.map(input =>
             Array.isArray(input) ? input : [input]
         )
@@ -96,10 +96,10 @@ export class MergeAstVisitor {
         if (arrays.length === 0) return []
 
         const maxLen = Math.max(...arrays.map(arr => arr.length))
-        const result: any[] = []
+        const result: unknown[] = []
 
         for (let i = 0; i < maxLen; i++) {
-            const combined: Record<number, any> = {}
+            const combined: Record<number, unknown> = {}
             arrays.forEach((arr, idx) => {
                 if (i < arr.length) {
                     combined[idx] = arr[i]
@@ -114,7 +114,7 @@ export class MergeAstVisitor {
     /**
      * 选择分支模式：取第一个非空分支
      */
-    private chooseBranchMerge(inputs: any[]): any[] {
+    private chooseBranchMerge(inputs: unknown[]): unknown[] {
         for (const input of inputs) {
             const arr = Array.isArray(input) ? input : [input]
             if (arr.length > 0 && arr.some(v => v != null)) {

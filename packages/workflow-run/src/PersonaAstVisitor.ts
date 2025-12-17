@@ -29,7 +29,7 @@ type ExtractedMemory = z.infer<typeof MemoryExtractionSchema>['memories'][number
 export class PersonaAstVisitor {
 
   @Handler(PersonaAst)
-  handler(ast: PersonaAst, input$: Observable<any>, ctx: WorkflowGraphAst) {
+  handler(ast: PersonaAst, input$: Observable<Record<string, unknown>>, ctx: WorkflowGraphAst) {
     return new Observable<NodeEvent>((obs) => {
       const abortController = new AbortController();
 
@@ -43,7 +43,7 @@ export class PersonaAstVisitor {
           obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } })
           if (inputData) {
             Object.keys(inputData).forEach(key => {
-              (ast as any)[key] = inputData[key];
+              (ast as unknown as Record<string, unknown>)[key] = inputData[key];
             });
           }
 

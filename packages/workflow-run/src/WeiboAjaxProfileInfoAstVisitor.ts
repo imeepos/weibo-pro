@@ -18,7 +18,7 @@ export interface WeiboAjaxProfileInfoAstResponse {
 
 export interface WeiboAjaxProfileDetailResponse {
     ok: number;
-    data: any;
+    data: Record<string, unknown>;
 }
 
 @Injectable()
@@ -32,11 +32,15 @@ export class WeiboAjaxProfileInfoAstVisitor extends WeiboApiClient {
     }
 
     @Handler(WeiboAjaxProfileInfoAst)
-    visit(ast: WeiboAjaxProfileInfoAst, input$: Observable<any>, _ctx: any): Observable<NodeEvent> {
+    visit(ast: WeiboAjaxProfileInfoAst, input$: Observable<Record<string, unknown>>, _ctx: Record<string, unknown>): Observable<NodeEvent> {
         return new Observable<NodeEvent>(obs => {
             const abortController = new AbortController();
 
-            const wrappedCtx = {
+            interface WrappedContext extends Record<string, unknown> {
+                abortSignal: AbortSignal;
+            }
+
+            const wrappedCtx: WrappedContext = {
                 ..._ctx,
                 abortSignal: abortController.signal
             };
@@ -51,7 +55,7 @@ export class WeiboAjaxProfileInfoAstVisitor extends WeiboApiClient {
 
                     if (inputData) {
                         Object.keys(inputData).forEach(key => {
-                            (ast as any)[key] = inputData[key];
+                            (ast as unknown as Record<string, unknown>)[key] = inputData[key];
                         });
                     }
 
@@ -72,9 +76,9 @@ export class WeiboAjaxProfileInfoAstVisitor extends WeiboApiClient {
                     }
 
                     await useEntityManager(async m => {
-                        const user = m.create(WeiboUserEntity, body.data.user as any);
+                        const user = m.create(WeiboUserEntity, body.data.user);
                         ast.uid = `${user.id}`;
-                        await m.upsert(WeiboUserEntity, user as any, ['id']);
+                        await m.upsert(WeiboUserEntity, user, ['id']);
                     });
 
                     await this.fetchDetail(ast, wrappedCtx);
@@ -110,7 +114,7 @@ export class WeiboAjaxProfileInfoAstVisitor extends WeiboApiClient {
         });
     }
 
-    private async fetchDetail(ast: WeiboAjaxProfileInfoAst, _ctx: any) {
+    private async fetchDetail(ast: WeiboAjaxProfileInfoAst, _ctx: { abortSignal?: AbortSignal }) {
         // 检查取消信号
         if (_ctx.abortSignal?.aborted) {
             console.log('[WeiboAjaxProfileInfoAstVisitor] fetchDetail 已取消');
@@ -125,7 +129,7 @@ export class WeiboAjaxProfileInfoAstVisitor extends WeiboApiClient {
 
         await useEntityManager(async m => {
             const user = m.create(WeiboUserEntity, { detail: body.data, id: Number(ast.uid) });
-            await m.upsert(WeiboUserEntity, user as any, ['id']);
+            await m.upsert(WeiboUserEntity, user, ['id']);
         });
     }
 }

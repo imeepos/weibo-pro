@@ -18,7 +18,7 @@ export class WeiboKeywordSearchAstVisitor {
     ) { }
 
     @Handler(WeiboKeywordSearchAst)
-    handler(ast: WeiboKeywordSearchAst, input$: Observable<any>, ctx: any): Observable<NodeEvent> {
+    handler(ast: WeiboKeywordSearchAst, input$: Observable<Record<string, unknown>>, ctx: Record<string, unknown>): Observable<NodeEvent> {
         return new Observable<NodeEvent>(obs => {
             const abortController = new AbortController();
 
@@ -40,7 +40,7 @@ export class WeiboKeywordSearchAstVisitor {
 
                     if (inputData) {
                         Object.keys(inputData).forEach(key => {
-                            (ast as any)[key] = inputData[key];
+                            (ast as unknown as Record<string, unknown>)[key] = inputData[key];
                         });
                     }
 
@@ -79,7 +79,7 @@ export class WeiboKeywordSearchAstVisitor {
 
     private async executeSearch(
         ast: WeiboKeywordSearchAst,
-        ctx: any,
+        ctx: { abortSignal?: AbortSignal },
         obs: Subscriber<NodeEvent>
     ): Promise<void> {
         if (ctx.abortSignal?.aborted) {

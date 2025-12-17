@@ -16,7 +16,7 @@ export class StoryWeaverAstVisitor {
   ) {}
 
   @Handler(StoryWeaverAst)
-  visit(ast: StoryWeaverAst, input$: Observable<any>, ctx: WorkflowGraphAst): Observable<NodeEvent> {
+  visit(ast: StoryWeaverAst, input$: Observable<Record<string, unknown>>, ctx: WorkflowGraphAst): Observable<NodeEvent> {
     return new Observable<NodeEvent>((obs) => {
       const abortController = new AbortController();
 
@@ -31,7 +31,7 @@ export class StoryWeaverAstVisitor {
 
           if (inputData) {
             Object.keys(inputData).forEach(key => {
-              (ast as any)[key] = inputData[key];
+              (ast as unknown as Record<string, unknown>)[key] = inputData[key];
             });
           }
 

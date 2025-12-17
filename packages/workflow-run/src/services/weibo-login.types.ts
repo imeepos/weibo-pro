@@ -13,7 +13,7 @@ export type WeiboLoginEventType = 'qrcode' | 'status' | 'scanned' | 'success' | 
  */
 export interface WeiboLoginEvent {
   type: WeiboLoginEventType;
-  data: any;
+  data: Record<string, unknown>;
   sessionId: string;
   timestamp: Date;
 }
@@ -68,11 +68,11 @@ export interface WeiboLoginEventEnvelope {
  * 会话存储接口
  */
 export interface SessionStorage {
-  createSession(userId: string, metadata?: any): Promise<{ sessionId: string; expiresAt: Date }>;
-  getSession(sessionId: string): Promise<any>;
+  createSession(userId: string, metadata?: Record<string, unknown>): Promise<{ sessionId: string; expiresAt: Date }>;
+  getSession(sessionId: string): Promise<Record<string, unknown>>;
   updateSessionEvent(sessionId: string, event: WeiboLoginEvent): Promise<void>;
   updateSessionStatus(sessionId: string, status: string): Promise<void>;
-  getStats(): Promise<any>;
+  getStats(): Promise<Record<string, unknown>>;
 }
 
 /**

@@ -22,7 +22,7 @@ export class DatabaseEventStore implements IEventStore {
             nodeId: event.id ?? '',
             eventType: this.toEventType(event.type),
             property: undefined,
-            data: event.type === 'node_emit' ? (event as any).data : undefined,
+            data: event.type === 'node_emit' ? (event as { data?: Record<string, unknown> }).data : undefined,
         });
     }
 
@@ -95,7 +95,7 @@ export class DatabaseEventStore implements IEventStore {
             case NodeEventType.RUNNING:
                 return { type: 'node_runing', id: log.nodeId };
             case NodeEventType.EMIT:
-                return { type: 'node_emit', id: log.nodeId, data: (log.data ?? {}) as Partial<any> };
+                return { type: 'node_emit', id: log.nodeId, data: (log.data ?? {}) as Record<string, unknown> };
             case NodeEventType.SUCCESS:
                 return { type: 'node_success', id: log.nodeId };
             case NodeEventType.FAIL:

@@ -26,7 +26,7 @@ export class WeiboError extends Error {
         public readonly type: WeiboErrorType,
         message: string,
         public readonly statusCode?: number,
-        public readonly response?: any,
+        public readonly response?: Record<string, unknown>,
     ) {
         super(message);
         this.name = 'WeiboError';
@@ -73,7 +73,7 @@ export class WeiboErrorHandler {
      */
     static async checkResponse(
         response: Response,
-        data?: any,
+        data?: Record<string, unknown>,
     ): Promise<WeiboError | null> {
         // 检查 HTTP 状态码
         if (!response.ok) {
@@ -193,7 +193,7 @@ export class WeiboErrorHandler {
      * @param originalError 原始错误
      * @param context 错误上下文（如操作的表名、ID等）
      */
-    static createDatabaseError(originalError: Error, context?: Record<string, any>): WeiboError {
+    static createDatabaseError(originalError: Error, context?: Record<string, unknown>): WeiboError {
         return new WeiboError(
             WeiboErrorType.DATABASE_ERROR,
             `数据库操作失败: ${originalError.message}`,

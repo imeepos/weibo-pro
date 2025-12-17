@@ -11,7 +11,7 @@ export class StoreGetAstVisitor {
   constructor(@Inject(RedisClient) private readonly redis: RedisClient) { }
 
   @Handler(StoreGetAst)
-  visit(ast: StoreGetAst, input$: Observable<any>, ctx: any): Observable<NodeEvent> {
+  visit(ast: StoreGetAst, input$: Observable<Record<string, unknown>>, ctx: Record<string, unknown>): Observable<NodeEvent> {
     return new Observable<NodeEvent>(obs => {
       const abortController = new AbortController();
 
@@ -24,7 +24,7 @@ export class StoreGetAstVisitor {
           obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } })
           if (inputData) {
             Object.keys(inputData).forEach(key => {
-              (ast as any)[key] = inputData[key];
+              (ast as unknown as Record<string, unknown>)[key] = inputData[key];
             });
           }
 
@@ -38,7 +38,7 @@ export class StoreGetAstVisitor {
           }
 
           const redisKey = `${WORKFLOW_STORE_PREFIX}${key}`;
-          ast.value = await this.redis.get<any>(redisKey);
+          ast.value = await this.redis.get<unknown>(redisKey);
 
           console.log(`[StoreGet] 读取成功: key=${key}, exists=${ast.value !== null}`);
 
@@ -77,7 +77,7 @@ export class StoreSetAstVisitor {
   constructor(@Inject(RedisClient) private readonly redis: RedisClient) { }
 
   @Handler(StoreSetAst)
-  visit(ast: StoreSetAst, input$: Observable<any>, ctx: any): Observable<NodeEvent> {
+  visit(ast: StoreSetAst, input$: Observable<Record<string, unknown>>, ctx: Record<string, unknown>): Observable<NodeEvent> {
     return new Observable<NodeEvent>(obs => {
       const abortController = new AbortController();
 
@@ -90,7 +90,7 @@ export class StoreSetAstVisitor {
           obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } })
           if (inputData) {
             Object.keys(inputData).forEach(key => {
-              (ast as any)[key] = inputData[key];
+              (ast as unknown as Record<string, unknown>)[key] = inputData[key];
             });
           }
 

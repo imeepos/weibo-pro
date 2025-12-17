@@ -31,7 +31,7 @@ export class WeiboAjaxStatusesLikeShowAstVisitor extends WeiboApiClient {
     }
 
     @Handler(WeiboAjaxStatusesLikeShowAst)
-    handler(ast: WeiboAjaxStatusesLikeShowAst, input$: Observable<any>, ctx: any): Observable<NodeEvent> {
+    handler(ast: WeiboAjaxStatusesLikeShowAst, input$: Observable<Record<string, unknown>>, ctx: Record<string, unknown>): Observable<NodeEvent> {
         return new Observable<NodeEvent>(obs => {
             const abortController = new AbortController();
 
@@ -50,7 +50,7 @@ export class WeiboAjaxStatusesLikeShowAstVisitor extends WeiboApiClient {
 
                     if (inputData) {
                         Object.keys(inputData).forEach(key => {
-                            (ast as any)[key] = inputData[key];
+                            (ast as unknown as Record<string, unknown>)[key] = inputData[key];
                         });
                     }
 
@@ -77,7 +77,7 @@ export class WeiboAjaxStatusesLikeShowAstVisitor extends WeiboApiClient {
                             );
                             const userEntities = uniqueUsers.map(user => m.create(WeiboUserEntity, user));
                             console.log(`[${page}]处理${userEntities.length}个用户`);
-                            await m.upsert(WeiboUserEntity, userEntities as any[], ['id']);
+                            await m.upsert(WeiboUserEntity, userEntities, ['id']);
 
                             const likeEntities = body.data.map(item =>
                                 m.create(WeiboLikeEntity, {
@@ -85,7 +85,7 @@ export class WeiboAjaxStatusesLikeShowAstVisitor extends WeiboApiClient {
                                     targetWeiboId: ast.mid
                                 })
                             );
-                            await m.upsert(WeiboLikeEntity, likeEntities as any[], ['userWeiboId', 'targetWeiboId']);
+                            await m.upsert(WeiboLikeEntity, likeEntities, ['userWeiboId', 'targetWeiboId']);
                             console.log(`[${page}]保存${likeEntities.length}条点赞记录`);
                         });
                     }
