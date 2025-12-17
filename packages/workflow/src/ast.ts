@@ -24,6 +24,11 @@ export interface Visitor {
     visit(ast: INode, input$: Observable<any>, ctx: WorkflowGraphAst): Observable<NodeEvent>;
 }
 
+
+export function astToLlmString(ast: Ast | INode) {
+    return JSON.stringify({ id: ast.id, title: ast.name, summary: ast.description })
+}
+
 // 抽象语法树的核心表达 - 状态与数据的统一
 export abstract class Ast implements INode {
     // 运行次数
