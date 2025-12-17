@@ -18,7 +18,5 @@ export function useLlmModel(options: LlmModelOptions = {}): ChatOpenAI<ChatOpenA
     maxTokens: 16384,
   }
 
-  console.log(`[LLM Client] 创建模型: ${modelName}, baseURL: ${LLM_PROXY_BASE_URL}, maxTokens: ${config.maxTokens}`)
-
   return new ChatOpenAI(config)
 }

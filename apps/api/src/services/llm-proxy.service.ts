@@ -330,12 +330,6 @@ export class LlmProxyService {
             console.warn(`[findProvider] modelProvider ${result.provider_id} 未关联标准模型`)
           }
 
-          const protocolInfo = result.provider_protocol === protocol
-            ? ''
-            : ` (${result.provider_protocol} → ${protocol})`
-
-          console.log(`[findProvider] ✓ [${requestedModel}] -> [${modelName}] via ${result.provider_base_url}${protocolInfo}`)
-
           return {
             providerId: result.provider_id,
             baseUrl: result.provider_base_url,
@@ -582,19 +576,8 @@ export class LlmProxyService {
           const responseData = await response.json()
           usage = responseData.usage
 
-          // 验证响应格式（仅在成功状态下）
           if (response.ok) {
-            // 检查 OpenAI 响应格式
             if (protocol === 'openai' && !responseData.choices && responseData.object !== 'error') {
-              console.error(`[LlmProxy] 检测到不完整的 OpenAI 响应:`, {
-                provider: provider.baseUrl,
-                hasChoices: !!responseData.choices,
-                hasObject: !!responseData.object,
-                hasModel: !!responseData.model,
-                responseKeys: Object.keys(responseData)
-              })
-
-              // 如果是 Codex 格式但不完整，返回错误
               if (responseData.object === 'response' && !responseData.output) {
                 return {
                   success: false,

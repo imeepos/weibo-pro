@@ -192,24 +192,10 @@ export class WorkflowController implements sdk.WorkflowController {
         parent = undefined;
       }
 
-      logger.info('开始执行', {
-        mode,
-        targetId: target.id,
-        targetType: target.type,
-        targetName: (target as any).name,
-        nodeCount: (target as any).nodes?.length,
-        edgeCount: (target as any).edges?.length,
-        hasParent: !!parent
-      });
-
-      // executeAst 统一处理三种场景
       const events$ = executeAst(target, input, parent);
-
-      logger.info('开始订阅执行事件流');
 
       const subscription = events$.subscribe({
         next: (event: NodeEvent) => {
-          logger.info('收到工作流事件', { type: event.type, nodeId: (event as any).id });
           res.write(`data: ${JSON.stringify(event)}\n\n`);
         },
         error: (error: any) => {
@@ -221,7 +207,6 @@ export class WorkflowController implements sdk.WorkflowController {
           res.end();
         },
         complete: () => {
-          logger.info('工作流执行完成');
           res.end();
         }
       })
