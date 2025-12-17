@@ -15,7 +15,6 @@ export class StoryToolsFactory {
   createChapterTools(chapters: ChapterData[]): StructuredToolInterface[] {
     const listChaptersTool = tool(
       async () => {
-        console.log('call tool listChaptersTool');
         return JSON.stringify(
           chapters.map(ch => ({
             chapterNumber: ch.chapterNumber,
@@ -35,7 +34,6 @@ export class StoryToolsFactory {
 
     const retrieveChapterTool = tool(
       async ({ chapterNumber }: { chapterNumber: number }) => {
-        console.log(`call tool retrieveChapterTool ${chapterNumber}`);
         const chapter = chapters.find(c => c.chapterNumber === chapterNumber);
         if (!chapter) {
           return `章节 ${chapterNumber} 不存在`;
@@ -53,8 +51,6 @@ export class StoryToolsFactory {
 
     const searchContentTool = tool(
       async ({ pattern, mode }: { pattern: string; mode?: 'literal' | 'regex' | 'glob' }) => {
-        console.log(`call tool searchContentTool pattern=${pattern} mode=${mode || 'literal'}`);
-
         const searchMode = mode || 'literal';
         const matcher = this.createMatcher(pattern, searchMode);
 
@@ -104,10 +100,6 @@ export class StoryToolsFactory {
   createNodeTools(ctx: WorkflowGraphAst, currentAstId: string): StructuredToolInterface[] {
     const toolNodes = this.buildToolNodes(ctx, currentAstId);
 
-    if (toolNodes.length > 0) {
-      console.log(`[StoryToolsFactory] 构建工具节点池，共 ${toolNodes.length} 个节点`);
-    }
-
     const tools: StructuredToolInterface[] = [];
     for (const node of toolNodes) {
       tools.push(...this.createNodeTool(node));
@@ -137,7 +129,6 @@ export class StoryToolsFactory {
   private createNodeTool(node: INode): StructuredToolInterface[] {
     const nodeType = findNodeType(node.type);
     if (!nodeType) {
-      console.log(`[StoryToolsFactory] 节点类型 ${node.type} 未注册，跳过`);
       return [];
     }
 
@@ -145,8 +136,6 @@ export class StoryToolsFactory {
     if (toolMethods.length === 0) {
       return [];
     }
-
-    console.log(`[StoryToolsFactory] 节点 ${node.id} (${node.type}) 有 ${toolMethods.length} 个工具方法`);
 
     const tools: StructuredToolInterface[] = [];
 
@@ -157,7 +146,6 @@ export class StoryToolsFactory {
 
         const langchainTool = tool(
           async () => {
-            console.log(`[Tool] 调用 ${node.type}.${methodName}() nodeId=${node.id}`);
             const result = toolInstance[methodName](node);
             return typeof result === 'string' ? result : JSON.stringify(result, null, 2);
           },

@@ -116,18 +116,14 @@ export class LlmProxyService {
       return null
     }
 
-    // 直接转换器（OpenAI ↔ Anthropic）
     if (fromProtocol === 'anthropic' && toProtocol === 'openai') {
-      console.log('[LlmProxy] 使用流式转换器: Anthropic → OpenAI')
       return createClaudeToOpenaiStreamConverter()
     }
 
     if (fromProtocol === 'openai' && toProtocol === 'anthropic') {
-      console.log('[LlmProxy] 使用流式转换器: OpenAI → Anthropic')
       return createOpenaiToClaudeStreamConverter()
     }
 
-    // Codex 相关的转换尚未实现
     if (fromProtocol === 'codex' || toProtocol === 'codex') {
       console.warn(`[LlmProxy] Codex 流式转换尚未实现: ${fromProtocol} → ${toProtocol}`)
       return null
@@ -248,44 +244,33 @@ export class LlmProxyService {
     if (candidates.length === 0) return undefined
     if (candidates.length === 1) return candidates[0]
 
-    // 加权随机：健康分数越高，被选中概率越大
-    // score 必须 > 0，否则跳过（前面的过滤条件已确保 score > 0）
     const totalScore = candidates.reduce((sum, c) => sum + c.provider_score, 0)
 
     if (totalScore === 0) {
-      // 所有分数都是0，随机选择一个
       const randomIndex = Math.floor(Math.random() * candidates.length)
       return candidates[randomIndex]
     }
 
-    // 加权随机选择
     let randomValue = Math.random() * totalScore
     for (const candidate of candidates) {
       randomValue -= candidate.provider_score
       if (randomValue <= 0) {
-        const probability = ((candidate.provider_score / totalScore) * 100).toFixed(1)
-        console.log(`[findProvider] 负载均衡: 从 ${candidates.length} 个候选中选择 (概率 ${probability}%)`)
         return candidate
       }
     }
 
-    // fallback（理论上不会到这里）
     return candidates[0]
   }
 
   async findProvider(requestedModel: string, protocol: string, excludeIds: Set<string> = new Set(), requiresThinking: boolean = false): Promise<ProviderInfo | null> {
     if (!requestedModel) return null
 
-    console.log(`[findProvider] 查询参数: model="${requestedModel}", protocol="${protocol}", thinking=${requiresThinking}, 排除=${excludeIds.size}个`)
-
     return useEntityManager(async m => {
-      // 模型名匹配条件：供应商模型名 或 标准模型名
       const modelMatchCondition = new Brackets(qb => {
         qb.where('mp.modelName = :requestedModel', { requestedModel })
           .orWhere('model.name = :requestedModel', { requestedModel })
       })
 
-      // 构建基础查询条件
       const buildBaseConditions = (qb: any) => {
         qb.andWhere('provider.score > 0')
           .andWhere('mp.enabled = true')
@@ -297,7 +282,6 @@ export class LlmProxyService {
         }
       }
 
-      // 1. 获取所有可用梯队
       const tierQuery = m.createQueryBuilder(LlmModelProvider, 'mp')
         .innerJoin('mp.provider', 'provider')
         .leftJoin('mp.model', 'model')
@@ -308,13 +292,10 @@ export class LlmProxyService {
       const availableTiers = await tierQuery.orderBy('tier', 'ASC').getRawMany()
 
       if (availableTiers.length === 0) {
-        console.warn(`[findProvider] 未找到任何可用梯队`)
+        console.warn(`[findProvider] 未找到可用 provider: model="${requestedModel}", protocol="${protocol}"`)
         return null
       }
 
-      console.log(`[findProvider] 可用梯队: ${availableTiers.map(t => `Tier ${t.tier}`).join(', ')}`)
-
-      // 2. 逐层查找最优 provider（优先相同协议，其次跨协议）
       for (const { tier } of availableTiers) {
         const providerQuery = m.createQueryBuilder(LlmModelProvider, 'mp')
           .innerJoin('mp.provider', 'provider')
@@ -330,26 +311,12 @@ export class LlmProxyService {
           .andWhere('mp.tierLevel = :tier', { tier })
         buildBaseConditions(providerQuery)
 
-        // 获取当前层所有可用 providers（按健康分数排序）
         const allCandidates = await providerQuery
           .addSelect(`CASE WHEN provider.protocol = :protocol THEN 0 ELSE 1 END`, 'protocol_priority')
           .setParameter('protocol', protocol)
           .orderBy('provider.score', 'DESC')
           .getRawMany()
 
-        if (allCandidates.length > 0) {
-          console.log(`[findProvider] Tier ${tier}: 找到 ${allCandidates.length} 个候选 provider:`)
-          allCandidates.forEach((candidate, index) => {
-            const protocolMatch = candidate.provider_protocol === protocol ? '✓协议匹配' : '✗需转换'
-            const scoreInfo = `score=${candidate.provider_score}`
-            const modelInfo = candidate.standard_model_name
-              ? `${candidate.standard_model_name} -> ${candidate.mp_model_name}`
-              : candidate.mp_model_name
-            console.log(`  ${index + 1}. [${protocolMatch}] [${scoreInfo}] ${modelInfo} (${candidate.provider_base_url})`)
-          })
-        }
-
-        // 负载均衡：在最优协议组中按健康分数加权随机选择
         const result = this.selectProviderWithLoadBalancing(allCandidates)
 
         if (result?.provider_id) {
@@ -359,21 +326,15 @@ export class LlmProxyService {
             continue
           }
 
-          // 诊断：检测是否缺少标准模型名配置
           if (!result.standard_model_name) {
-            console.warn(`[findProvider] 警告: modelProvider ${result.provider_id} 未关联标准模型，请检查数据配置`)
+            console.warn(`[findProvider] modelProvider ${result.provider_id} 未关联标准模型`)
           }
 
-          // 打印选择原因
-          const protocolReason = result.provider_protocol === protocol
-            ? '协议匹配'
-            : `协议转换 (${result.provider_protocol} -> ${protocol})`
-          const scoreReason = `健康分数 ${result.provider_score}`
-          const tierReason = `第${tier}梯队`
-          const balanceInfo = allCandidates.length > 1 ? ` | 负载均衡(${allCandidates.length}选1)` : ''
+          const protocolInfo = result.provider_protocol === protocol
+            ? ''
+            : ` (${result.provider_protocol} → ${protocol})`
 
-          console.log(`[findProvider] ✓ 选择: ${result.provider_base_url}`)
-          console.log(`[findProvider]   理由: ${tierReason} | ${protocolReason} | ${scoreReason}${balanceInfo}`)
+          console.log(`[findProvider] ✓ [${requestedModel}] -> [${modelName}] via ${result.provider_base_url}${protocolInfo}`)
 
           return {
             providerId: result.provider_id,
@@ -464,10 +425,8 @@ export class LlmProxyService {
       let proxyPath = apiPath
 
       if (needsConversion) {
-        console.log(`[LlmProxy] 请求转换: ${protocol} → ${provider.providerProtocol}`)
         proxyBody = this.convertRequest(protocol, provider.providerProtocol, { ...body, model: targetModel })
 
-        // 设置对应的 API 路径
         if (provider.providerProtocol === 'openai') {
           proxyPath = '/chat/completions'
         } else if (provider.providerProtocol === 'anthropic') {
@@ -550,8 +509,6 @@ export class LlmProxyService {
         }
       }
 
-      console.log(`[${provider.standardModelName || requestedModel}] -> [${provider.modelName}] via ${provider.baseUrl}${requiresThinking ? ' (thinking)' : ''}`)
-
       const reqHeaders: Record<string, string> = {}
       for (const [key, value] of Object.entries(headers)) {
         const lowerKey = key.toLowerCase()
@@ -619,7 +576,6 @@ export class LlmProxyService {
         }
 
         const isStreaming = body.stream === true
-        console.log(`[LlmProxy] isStreaming=${isStreaming}, body.stream=${body.stream}, response.ok=${response.ok}`)
         let usage: { input_tokens?: number; output_tokens?: number } | undefined
 
         if (!isStreaming) {
@@ -692,16 +648,13 @@ export class LlmProxyService {
             error: response.ok ? undefined : JSON.stringify(responseData)
           })
 
-          // 【响应后转换】从 provider.providerProtocol → protocol
           let finalResponse = responseData
           if (needsConversion && response.ok) {
             try {
-              console.log(`[LlmProxy] 响应转换: ${provider.providerProtocol} → ${protocol}`)
               finalResponse = this.convertResponse(provider.providerProtocol, protocol, responseData)
 
               if (!finalResponse) {
                 console.error(`[LlmProxy] 响应转换返回 null: ${provider.providerProtocol} → ${protocol}`)
-                console.error(`[LlmProxy] 使用原始响应数据作为降级方案`)
                 finalResponse = responseData
               }
             } catch (conversionError) {
@@ -727,8 +680,6 @@ export class LlmProxyService {
                 }
               }
 
-              // 其他转换错误：返回原始数据
-              console.error(`[LlmProxy] 使用原始响应数据作为降级方案`)
               finalResponse = responseData
             }
           }

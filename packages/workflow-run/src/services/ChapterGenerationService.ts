@@ -103,17 +103,11 @@ export class ChapterGenerationService {
     const isFirstChapter = chapters.length === 0;
     const nextChapterNumber = isFirstChapter ? 1 : Math.max(...chapters.map(c => c.chapterNumber)) + 1;
 
-    console.log(`[ChapterGeneration] 章节计算: previousChapters.length=${ast.previousChapters?.length ?? 0}, validChapters=${chapters.length}, nextChapter=${nextChapterNumber}`);
-
     const existingTitles = new Set(chapters.map(ch => this.contentValidator.normalizeTitle(ch.title)));
     const useTools = chapters.length > 10;
 
     const baseModel = useLlmModel({ model: ast.model, temperature: ast.temperature });
     const model = useTools ? baseModel.bindTools(this.createTools(chapters, ctx, ast.id, useTools)) : baseModel;
-
-    if (useTools) {
-      console.log(`[ChapterGeneration] 启用工具模式（已有 ${chapters.length} 章）`);
-    }
 
     const systemPrompt = this.promptBuilder.buildSystemPrompt(ast, chapters, isFirstChapter, nextChapterNumber, useTools);
     const prompts = Array.isArray(ast.prompt) ? ast.prompt.join('\n') : ast.prompt;

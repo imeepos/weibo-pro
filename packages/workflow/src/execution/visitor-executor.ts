@@ -29,25 +29,18 @@ export class VisitorExecutor implements Visitor {
     }
 
     visit(ast: INode, input$: Observable<any>, parent?: WorkflowGraphAst): Observable<NodeEvent> {
-        // 续跑支持：检查 eventStream 中是否已成功执行
         if (parent) {
             const runId = globalRuntime.getRunId(parent);
             const eventStream = runId ? globalRuntime.getEventStream(runId) : undefined;
 
             if (eventStream?.isNodeSuccess(ast.id)) {
                 const cachedEvents = eventStream.getNodeEvents(ast.id);
-                console.log(`[VisitorExecutor] 节点 ${ast.id} 已成功，重放 ${cachedEvents.length} 个事件`);
                 return from(cachedEvents);
             }
         }
 
-        console.log(`[VisitorExecutor] 开始执行节点 ${ast.id} (${ast.type})`);
-
         const type = findNodeType(ast.type);
-        console.log(`[VisitorExecutor] 解析节点类型: ${ast.type} -> ${type?.name || 'NOT FOUND'}`);
-
         const methods = root.get(HANDLER_METHOD, []);
-        console.log(`[VisitorExecutor] 全局注册了 ${methods.length} 个 Handler`);
 
         if (!methods || methods.length === 0) {
             console.error(`[VisitorExecutor] 未找到任何 Handler`);
@@ -57,14 +50,11 @@ export class VisitorExecutor implements Visitor {
         const method = methods.find(it => it.ast === type);
 
         if (!method) {
-            console.log(`[VisitorExecutor] 未找到节点 ${ast.type} 的 Handler，使用 DefaultVisitor`);
             return this.recordEvents(
                 this.useDefaultVisitor(ast, input$, parent),
                 parent
             );
         }
-
-        console.log(`[VisitorExecutor] 找到 Handler: ${method.target.name}.${String(method.property)}`);
 
         const instance = root.get(method.target);
         if (!method.property || typeof (instance as any)[method.property] !== 'function') {
@@ -75,19 +65,14 @@ export class VisitorExecutor implements Visitor {
         try {
             const handlerFn = (instance as any)[method.property];
             const handlerLength = handlerFn.length;
-            console.log(`[VisitorExecutor] Handler 参数数量: ${handlerLength}`);
 
             let execute$: Observable<NodeEvent>;
 
             if (handlerLength <= 2) {
-                console.log(`[VisitorExecutor] 使用新模式 handler(ast, parent)`);
-                // 新模式：input$ 的每次发射触发一次 handler 执行
-                // node_success 只在 input$ complete 时发射
                 execute$ = new Observable<NodeEvent>(obs => {
                     let started = false;
                     const sub = input$.subscribe({
                         next: inputData => {
-                            console.log(`[VisitorExecutor] 应用输入数据到节点 ${ast.id}:`, inputData);
                             Object.keys(inputData).forEach(key => {
                                 (ast as any)[key] = inputData[key];
                             });
@@ -98,14 +83,11 @@ export class VisitorExecutor implements Visitor {
                             }
                             try {
                                 const result = handlerFn.call(instance, ast, parent);
-                                // handler 只负责业务逻辑，只保留 node_emit
-                                // node_runing/node_success/node_fail 由 VisitorExecutor 统一管理
                                 this.normalizeResult(result, ast).subscribe({
                                     next: event => {
                                         if (event.type === 'node_emit') {
                                             obs.next(event);
                                         }
-                                        // 忽略 node_runing/node_success/node_fail
                                     },
                                     error: err => {
                                         ast.state = 'fail';
@@ -136,12 +118,10 @@ export class VisitorExecutor implements Visitor {
                     return () => sub.unsubscribe();
                 });
             } else {
-                console.log(`[VisitorExecutor] 使用旧模式 handler(ast, input$, parent)`);
                 const result = handlerFn.call(instance, ast, input$, parent);
                 execute$ = this.normalizeResult(result, ast);
             }
 
-            // 如果 ast 是工作流，记录到自己；否则记录到 parent
             const recordTarget = this.isWorkflowGraphAst(ast) ? (ast as WorkflowGraphAst) : parent;
             return this.recordEvents(execute$, recordTarget);
         } catch (error) {

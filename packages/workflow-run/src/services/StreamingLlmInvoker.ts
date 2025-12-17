@@ -139,21 +139,9 @@ export class StreamingLlmInvoker {
             return of();
           }
 
-          console.log(`[StreamingLlmInvoker] 工具调用轮次 ${state.round + 1}/${MAX_ROUNDS}`);
-          console.log(`[StreamingLlmInvoker] 发送消息数量: ${state.messages.length}`);
-          console.log(`[StreamingLlmInvoker] 最后一条消息角色: ${state.messages[state.messages.length - 1]?.role}`);
-
-          // 工具调用轮次：必须使用 invoke 获取完整响应
           return from((model.invoke as (messages: unknown, options: unknown) => Promise<unknown>)(state.messages, { signal })).pipe(
             concatMap((response: unknown) => {
               const llmResponse = response as LlmResponse;
-              console.log('[StreamingLlmInvoker] LLM 响应类型:', {
-                hasToolCalls: !!llmResponse.tool_calls,
-                toolCallsLength: llmResponse.tool_calls?.length,
-                responseKeys: Object.keys(llmResponse),
-                responseType: typeof llmResponse,
-                content: llmResponse.content ? `${String(llmResponse.content).substring(0, 100)}...` : null
-              });
 
               if (llmResponse.tool_calls && llmResponse.tool_calls.length > 0) {
                 // 有工具调用，继续下一轮
@@ -207,7 +195,6 @@ export class StreamingLlmInvoker {
           observer.error(err);
         },
         complete: () => {
-          console.log(`[StreamingLlmInvoker] 流式输出完成（${fullText.length} 字）`);
           subject.next({ type: 'complete', fullText });
           observer.next();
           observer.complete();
@@ -221,12 +208,9 @@ export class StreamingLlmInvoker {
     state: RoundState,
     toolMap: Map<string, StructuredToolInterface>
   ): Observable<RoundState> {
-    console.log(`[StreamingLlmInvoker] LLM 请求调用 ${response.tool_calls?.length || 0} 个工具`);
-
     const newMessages = [...state.messages, response];
 
     const toolExecutions = (response.tool_calls || []).map((toolCall: ToolCall) => {
-      console.log(`[StreamingLlmInvoker] 执行工具: ${toolCall.name}`);
 
       const tool = toolMap.get(toolCall.name);
       if (!tool) {
