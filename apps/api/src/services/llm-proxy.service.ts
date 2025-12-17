@@ -473,7 +473,7 @@ export class LlmProxyService {
         } else if (provider.providerProtocol === 'anthropic') {
           proxyPath = '/messages'
         } else if (provider.providerProtocol === 'codex') {
-          // codex 使用原始路径
+          proxyPath = '/responses'
         }
 
         if (!proxyBody) {
@@ -495,7 +495,8 @@ export class LlmProxyService {
         }
       }
 
-      // 清理工具参数中的 $schema 字段（OpenAI API 不支持）
+      // 清理工具参数中的 $schema 字段（仅 OpenAI 协议需要）
+      // Codex 和 Anthropic 协议不受影响
       if (proxyBody.tools && Array.isArray(proxyBody.tools) && provider.providerProtocol === 'openai') {
         proxyBody.tools = proxyBody.tools.map((tool: any) => {
           if (tool.function?.parameters) {
