@@ -67,7 +67,7 @@ export class WeiboAjaxStatusesLikeShowAstVisitor extends WeiboApiClient {
 
                     ast.is_end = true;
                     ast.emitCount += 1;
-                    obs.next({ type: 'node_emit', id: ast.id, property: 'is_end', value: ast.is_end });
+                    obs.next({ type: 'node_emit', id: ast.id, data: { is_end: ast.is_end } });
 
                     ast.state = 'success';
                     obs.next({ type: 'node_success', id: ast.id });

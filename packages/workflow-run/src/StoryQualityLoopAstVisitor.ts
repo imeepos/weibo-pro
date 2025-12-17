@@ -53,8 +53,7 @@ export class StoryQualityLoopAstVisitor {
               ast.finalChapter = undefined;
 
               return [
-                { type: 'node_emit' as const, id: ast.id, property: 'currentAttempt', value: 1 },
-                { type: 'node_emit' as const, id: ast.id, property: 'isComplete', value: false }
+                { type: 'node_emit' as const, id: ast.id, data: { currentAttempt: 1, isComplete: false } }
               ];
             }
 
@@ -77,9 +76,7 @@ export class StoryQualityLoopAstVisitor {
               ast.finalChapter = finalChapter;
 
               return [
-                { type: 'node_emit' as const, id: ast.id, property: 'finalChapter', value: finalChapter },
-                { type: 'node_emit' as const, id: ast.id, property: 'isComplete', value: true },
-                { type: 'node_emit' as const, id: ast.id, property: 'currentAttempt', value: ast.currentAttempt }
+                { type: 'node_emit' as const, id: ast.id, data: { finalChapter, isComplete: true, currentAttempt: ast.currentAttempt } }
               ];
             }
 
@@ -95,9 +92,7 @@ export class StoryQualityLoopAstVisitor {
               ast.finalChapter = finalChapter;
 
               return [
-                { type: 'node_emit' as const, id: ast.id, property: 'finalChapter', value: finalChapter },
-                { type: 'node_emit' as const, id: ast.id, property: 'isComplete', value: true },
-                { type: 'node_emit' as const, id: ast.id, property: 'currentAttempt', value: ast.currentAttempt }
+                { type: 'node_emit' as const, id: ast.id, data: { finalChapter, isComplete: true, currentAttempt: ast.currentAttempt } }
               ];
             }
 
@@ -115,9 +110,7 @@ export class StoryQualityLoopAstVisitor {
             ast.rewriteRequest = rewriteRequest;
 
             return [
-              { type: 'node_emit' as const, id: ast.id, property: 'rewriteRequest', value: rewriteRequest },
-              { type: 'node_emit' as const, id: ast.id, property: 'isComplete', value: false },
-              { type: 'node_emit' as const, id: ast.id, property: 'currentAttempt', value: ast.currentAttempt }
+              { type: 'node_emit' as const, id: ast.id, data: { rewriteRequest, isComplete: false, currentAttempt: ast.currentAttempt } }
             ];
           })
         )

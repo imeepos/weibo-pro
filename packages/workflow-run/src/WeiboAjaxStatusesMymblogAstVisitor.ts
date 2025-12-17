@@ -69,7 +69,7 @@ export class WeiboAjaxStatusesMymblogAstVisitor extends WeiboApiClient {
                         });
                     }
                     ast.isEnd = true;
-                    obs.next({ type: 'node_emit', id: ast.id, property: 'isEnd', value: ast.isEnd });
+                    obs.next({ type: 'node_emit', id: ast.id, data: { isEnd: ast.isEnd } });
 
                     ast.state = 'success';
                     obs.next({ type: 'node_success', id: ast.id });

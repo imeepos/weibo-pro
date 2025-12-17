@@ -42,7 +42,7 @@ export class StoreGetAstVisitor {
           console.log(`[StoreGet] 读取成功: key=${key}, exists=${ast.value !== null}`);
 
           return [
-            { type: 'node_emit' as const, id: ast.id, property: 'value', value: ast.value }
+            { type: 'node_emit' as const, id: ast.id, data: { value: ast.value } }
           ];
         }),
         mergeMap((events: NodeEvent[]) => from(events))
@@ -108,7 +108,7 @@ export class StoreSetAstVisitor {
           console.log(`[StoreSet] 写入成功: key=${key}, ttl=${ttl}s`);
 
           return [
-            { type: 'node_emit' as const, id: ast.id, property: 'value', value }
+            { type: 'node_emit' as const, id: ast.id, data: { value } }
           ];
         }),
         mergeMap((events: NodeEvent[]) => from(events))

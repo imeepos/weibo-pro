@@ -40,17 +40,18 @@ export class SwitchAstVisitor {
 
                     // 先评估所有普通分支，找出匹配的
                     let anyMatched = false
+                    const emitData: Record<string, any> = {}
+
                     normalOutputs.forEach(outputMeta => {
                         const propKey = String(outputMeta.property)
                         const matched = this.evaluateCondition(outputMeta.condition!, { $input: inputValue })
 
                         if (matched) {
                             anyMatched = true
-                            // 通过 node_emit 事件发射数据（新数据流模式）
-                            obs.next({ type: 'node_emit', id: ast.id, property: propKey, value: inputValue });
+                            emitData[propKey] = inputValue
                         } else {
                             // 条件不匹配：使用 ROUTE_SKIPPED 明确表示"这条路不走"
-                            obs.next({ type: 'node_emit', id: ast.id, property: propKey, value: ROUTE_SKIPPED });
+                            emitData[propKey] = ROUTE_SKIPPED
                         }
                     })
 
@@ -58,10 +59,11 @@ export class SwitchAstVisitor {
                     if (defaultOutput) {
                         const propKey = String(defaultOutput.property)
                         // 有其他分支匹配时，default 使用 ROUTE_SKIPPED
-                        const value = anyMatched ? ROUTE_SKIPPED : inputValue
-                        // 通过 node_emit 事件发射数据（新数据流模式）
-                        obs.next({ type: 'node_emit', id: ast.id, property: propKey, value });
+                        emitData[propKey] = anyMatched ? ROUTE_SKIPPED : inputValue
                     }
+
+                    // 批量发射所有路由结果
+                    obs.next({ type: 'node_emit', id: ast.id, data: emitData })
 
                     ast.state = 'success'
                     obs.next({ type: 'node_success', id: ast.id });

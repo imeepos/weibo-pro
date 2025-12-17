@@ -86,8 +86,7 @@ export class WeiboAjaxStatusesShowAstVisitor extends WeiboApiClient {
                     });
 
                     console.log(`[WeiboAjaxStatusesShowAstVisitor] 成功保存一条帖子`)
-                    obs.next({ type: 'node_emit', id: ast.id, property: 'uid', value: ast.uid });
-                    obs.next({ type: 'node_emit', id: ast.id, property: 'mid', value: ast.mid });
+                    obs.next({ type: 'node_emit', id: ast.id, data: { uid: ast.uid, mid: ast.mid } });
 
                     ast.state = 'success';
                     obs.next({ type: 'node_success', id: ast.id });

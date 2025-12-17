@@ -372,22 +372,22 @@ ${rawText}
           ast.nextPrompt = nextPrompt;
         }
 
-        const emitEvents: NodeEvent[] = [
-          { type: 'node_emit' as const, id: ast.id, property: 'title', value: chapterData.title },
-          { type: 'node_emit' as const, id: ast.id, property: 'summary', value: chapterData.summary },
-          { type: 'node_emit' as const, id: ast.id, property: 'content', value: chapterData.content },
-          { type: 'node_emit' as const, id: ast.id, property: 'chapterNumber', value: chapterData.chapterNumber },
-          { type: 'node_emit' as const, id: ast.id, property: 'chapterData', value: chapterData },
-          { type: 'node_emit' as const, id: ast.id, property: 'previousChapters', value: ast.previousChapters },
-          { type: 'node_emit' as const, id: ast.id, property: 'isComplete', value: isComplete }
-        ];
+        const emitData: Record<string, any> = {
+          title: chapterData.title,
+          summary: chapterData.summary,
+          content: chapterData.content,
+          chapterNumber: chapterData.chapterNumber,
+          chapterData,
+          previousChapters: ast.previousChapters,
+          isComplete
+        };
 
         // 只有未完成时才发射 nextPrompt（router 端口会过滤 undefined）
         if (!isComplete) {
-          emitEvents.push({ type: 'node_emit' as const, id: ast.id, property: 'nextPrompt', value: nextPrompt });
+          emitData.nextPrompt = nextPrompt;
         }
 
-        return emitEvents;
+        return [{ type: 'node_emit' as const, id: ast.id, data: emitData }];
       })
     );
   }
