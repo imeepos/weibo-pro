@@ -297,18 +297,49 @@ export class LlmProxyService {
 
       try {
         const url = `${provider.baseUrl}${proxyPath}`
-        const response = await fetch(url, {
+        const requestHeaders = {
+          Authorization: `Bearer ${provider.apiKey}`,
+          connection: `keep-alive`,
+          'content-type': reqHeaders['content-type'] || 'application/json',
+        }
+        const requestBody = JSON.stringify(proxyBody)
+
+        console.log(`[LlmProxy] 请求参数:`, {
+          url,
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${provider.apiKey}`,
-            connection: `keep-alive`,
-            'content-type': reqHeaders['content-type'] || 'application/json',
+            ...requestHeaders,
+            Authorization: `Bearer ${provider.apiKey.slice(0, 10)}...` // 脱敏
           },
-          body: JSON.stringify(proxyBody),
+          body: requestBody.slice(0, 500) // 只记录前 500 字符，避免过长
+        })
+
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: requestHeaders,
+          body: requestBody,
           signal: AbortSignal.timeout(TIMEOUT_MS)
         })
 
         const durationMs = Date.now() - startTime
+
+        // 记录响应状态
+        if (!response.ok) {
+          console.error(`[LlmProxy] HTTP ${response.status} 错误:`, {
+            provider: provider.providerId,
+            url,
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${provider.apiKey.slice(0, 10)}...`,
+              connection: 'keep-alive',
+              'content-type': reqHeaders['content-type'] || 'application/json',
+            },
+            requestBody: requestBody.slice(0, 500),
+            statusCode: response.status,
+            statusText: response.statusText,
+            durationMs
+          })
+        }
 
         if (response.status === 403 || response.status === 401) {
           await this.setScoreToZero(provider.providerId)
@@ -339,6 +370,14 @@ export class LlmProxyService {
         if (!isStreaming) {
           const responseData = await response.json()
           usage = responseData.usage
+
+          // 记录响应体（仅在非成功状态下）
+          if (!response.ok) {
+            console.error(`[LlmProxy] 响应体:`, {
+              statusCode: response.status,
+              responseData: JSON.stringify(responseData).slice(0, 1000) // 限制长度
+            })
+          }
 
           // 检测 400 错误中的 thinking 模式不支持错误
           if (response.status === 400 && requiresThinking) {
@@ -488,8 +527,23 @@ export class LlmProxyService {
       } catch (error) {
         const durationMs = Date.now() - startTime
         const isTimeout = error instanceof Error && error.name === 'TimeoutError'
+
+        console.error(`[LlmProxy] 请求失败（重试 ${attempt + 1}/${MAX_RETRIES}）:`, {
+          provider: provider.providerId,
+          url: `${provider.baseUrl}${proxyPath}`,
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${provider.apiKey.slice(0, 10)}...`,
+            connection: 'keep-alive',
+            'content-type': reqHeaders['content-type'] || 'application/json',
+          },
+          body: JSON.stringify(proxyBody).slice(0, 500),
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+          isTimeout
+        })
+
         await this.updateScore(provider.providerId, isTimeout ? -100 : -1000)
-        console.error(`重试 ${attempt + 1}/${MAX_RETRIES}: ${provider.providerId}`, error)
 
         await this.saveLog({
           providerId: provider.providerId,
