@@ -19,6 +19,7 @@ interface ProviderInfo {
   baseUrl: string
   apiKey: string
   modelName: string
+  standardModelName?: string
   providerProtocol: string
 }
 
@@ -29,14 +30,60 @@ interface ProxyResult {
 }
 
 const TIMEOUT_MS = 1000 * 3 * 60;
-const IDLE_TIMEOUT_MS = 1000 * 60;
 const MAX_RETRIES = 3
 
 @Injectable({ providedIn: 'root' })
 export class LlmProxyService {
 
+  /**
+   * 负载均衡选择器：在最优协议组中按健康分数加权随机选择
+   * @param candidates 已排序的候选列表（按 protocol_priority ASC, score DESC）
+   * @returns 选中的 provider，如果无候选则返回 undefined
+   */
+  private selectProviderWithLoadBalancing(candidates: any[]): any | undefined {
+    if (candidates.length === 0) return undefined
+    if (candidates.length === 1) return candidates[0]
+
+    // 找到最优协议优先级（第一个元素的 protocol_priority）
+    const bestProtocolPriority = candidates[0].protocol_priority
+
+    // 筛选出所有最优协议组的候选
+    const bestProtocolGroup = candidates.filter(c => c.protocol_priority === bestProtocolPriority)
+
+    // 如果只有一个最优候选，直接返回
+    if (bestProtocolGroup.length === 1) {
+      return bestProtocolGroup[0]
+    }
+
+    // 加权随机：健康分数越高，被选中概率越大
+    // score 必须 > 0，否则跳过（前面的过滤条件已确保 score > 0）
+    const totalScore = bestProtocolGroup.reduce((sum, c) => sum + c.provider_score, 0)
+
+    if (totalScore === 0) {
+      // 所有分数都是0，随机选择一个
+      const randomIndex = Math.floor(Math.random() * bestProtocolGroup.length)
+      return bestProtocolGroup[randomIndex]
+    }
+
+    // 加权随机选择
+    let randomValue = Math.random() * totalScore
+    for (const candidate of bestProtocolGroup) {
+      randomValue -= candidate.provider_score
+      if (randomValue <= 0) {
+        const probability = ((candidate.provider_score / totalScore) * 100).toFixed(1)
+        console.log(`[findProvider] 负载均衡: 从 ${bestProtocolGroup.length} 个候选中选择 (概率 ${probability}%)`)
+        return candidate
+      }
+    }
+
+    // fallback（理论上不会到这里）
+    return bestProtocolGroup[0]
+  }
+
   async findProvider(requestedModel: string, protocol: string, excludeIds: Set<string> = new Set(), requiresThinking: boolean = false): Promise<ProviderInfo | null> {
     if (!requestedModel) return null
+
+    console.log(`[findProvider] 查询参数: model="${requestedModel}", protocol="${protocol}", thinking=${requiresThinking}, 排除=${excludeIds.size}个`)
 
     return useEntityManager(async m => {
       // 模型名匹配条件：供应商模型名 或 标准模型名
@@ -67,6 +114,13 @@ export class LlmProxyService {
 
       const availableTiers = await tierQuery.orderBy('tier', 'ASC').getRawMany()
 
+      if (availableTiers.length === 0) {
+        console.warn(`[findProvider] 未找到任何可用梯队`)
+        return null
+      }
+
+      console.log(`[findProvider] 可用梯队: ${availableTiers.map(t => `Tier ${t.tier}`).join(', ')}`)
+
       // 2. 逐层查找最优 provider（优先相同协议，其次跨协议）
       for (const { tier } of availableTiers) {
         const providerQuery = m.createQueryBuilder(LlmModelProvider, 'mp')
@@ -76,18 +130,35 @@ export class LlmProxyService {
           .addSelect('provider.base_url', 'provider_base_url')
           .addSelect('provider.api_key', 'provider_api_key')
           .addSelect('provider.protocol', 'provider_protocol')
+          .addSelect('provider.score', 'provider_score')
           .addSelect('mp.model_name', 'mp_model_name')
+          .addSelect('model.name', 'standard_model_name')
           .where(modelMatchCondition)
           .andWhere('mp.tierLevel = :tier', { tier })
         buildBaseConditions(providerQuery)
 
-        // 优先相同协议（protocol_priority=0），其次跨协议（protocol_priority=1）
-        const result = await providerQuery
+        // 获取当前层所有可用 providers（用于日志）
+        const allCandidates = await providerQuery
           .addSelect(`CASE WHEN provider.protocol = :protocol THEN 0 ELSE 1 END`, 'protocol_priority')
           .setParameter('protocol', protocol)
           .orderBy('protocol_priority', 'ASC')
           .addOrderBy('provider.score', 'DESC')
-          .getRawOne()
+          .getRawMany()
+
+        if (allCandidates.length > 0) {
+          console.log(`[findProvider] Tier ${tier}: 找到 ${allCandidates.length} 个候选 provider:`)
+          allCandidates.forEach((candidate, index) => {
+            const protocolMatch = candidate.provider_protocol === protocol ? '✓协议匹配' : '✗需转换'
+            const scoreInfo = `score=${candidate.provider_score}`
+            const modelInfo = candidate.standard_model_name
+              ? `${candidate.standard_model_name} -> ${candidate.mp_model_name}`
+              : candidate.mp_model_name
+            console.log(`  ${index + 1}. [${protocolMatch}] [${scoreInfo}] ${modelInfo} (${candidate.provider_base_url})`)
+          })
+        }
+
+        // 负载均衡：在最优协议组中按健康分数加权随机选择
+        const result = this.selectProviderWithLoadBalancing(allCandidates)
 
         if (result?.provider_id) {
           const modelName = result.mp_model_name
@@ -96,11 +167,31 @@ export class LlmProxyService {
             continue
           }
 
+          // 诊断：检测是否缺少标准模型名配置
+          if (!result.standard_model_name) {
+            console.warn(`[findProvider] 警告: modelProvider ${result.provider_id} 未关联标准模型，请检查数据配置`)
+          }
+
+          // 打印选择原因
+          const protocolReason = result.provider_protocol === protocol
+            ? '协议匹配'
+            : `协议转换 (${result.provider_protocol} -> ${protocol})`
+          const scoreReason = `健康分数 ${result.provider_score}`
+          const tierReason = `第${tier}梯队`
+
+          // 计算当前协议组的总数
+          const sameProtocolCount = allCandidates.filter(c => c.protocol_priority === result.protocol_priority).length
+          const balanceInfo = sameProtocolCount > 1 ? ` | 负载均衡(${sameProtocolCount}选1)` : ''
+
+          console.log(`[findProvider] ✓ 选择: ${result.provider_base_url}`)
+          console.log(`[findProvider]   理由: ${tierReason} | ${protocolReason} | ${scoreReason}${balanceInfo}`)
+
           return {
             providerId: result.provider_id,
             baseUrl: result.provider_base_url,
             apiKey: result.provider_api_key,
             modelName,
+            standardModelName: result.standard_model_name,
             providerProtocol: result.provider_protocol
           }
         }
@@ -205,7 +296,7 @@ export class LlmProxyService {
         }
       }
 
-      console.log(`[${requestedModel}] -> [${provider.modelName}] via ${provider.baseUrl}${requiresThinking ? ' (thinking)' : ''}`)
+      console.log(`[${provider.standardModelName || requestedModel}] -> [${provider.modelName}] via ${provider.baseUrl}${requiresThinking ? ' (thinking)' : ''}`)
 
       const reqHeaders: Record<string, string> = {}
       for (const [key, value] of Object.entries(headers)) {
@@ -383,7 +474,10 @@ export class LlmProxyService {
                   controller.enqueue(chunk)
                   return
                 }
-              } catch { }
+              } catch (err) {
+                // 跳过无效的流式数据行
+                console.warn(`[LlmProxy] 流式数据解析失败，跳过: ${line.slice(0, 100)}`)
+              }
             }
           },
           flush: async () => {
