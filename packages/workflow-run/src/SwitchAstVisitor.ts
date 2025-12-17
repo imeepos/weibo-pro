@@ -15,7 +15,7 @@ export class SwitchAstVisitor {
             obs.next({ type: 'node_runing', id: ast.id });
 
             const subscription = input$.pipe(
-                concatMap((inputData) => {
+                concatMap(async (inputData) => {
                     ast.emitCount += 1;
                     obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } })
 

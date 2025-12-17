@@ -6,7 +6,9 @@ import { Handler, NodeEvent, setAstError } from '@sker/workflow'
 import { WeiboAjaxFeedHotTimelineAst } from '@sker/workflow-ast'
 import { useEntityManager, WeiboPostEntity, WeiboUserEntity } from "@sker/entities";
 import { WeiboApiClient } from "./services/weibo-api-client.base";
-import { Observable, Subscriber } from 'rxjs'
+import { Observable, from } from 'rxjs'
+import { concatMap, mergeMap } from 'rxjs/operators'
+
 export interface WeiboAjaxFeedHotTimelineResponse {
     readonly ok: number;
     statuses: WeiboPostEntity[];
@@ -38,16 +40,22 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
             ast.state = 'running';
             obs.next({ type: 'node_runing', id: ast.id });
 
-            input$.subscribe({
-                next: (inputData) => {
+            const subscription = input$.pipe(
+                concatMap(async (inputData) => {
                     ast.emitCount += 1;
                     obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } })
+
                     if (inputData) {
                         Object.keys(inputData).forEach(key => {
                             (ast as any)[key] = inputData[key];
                         });
                     }
-                },
+
+                    return await this.handler(ast, wrappedCtx);
+                }),
+                mergeMap((events: NodeEvent[]) => from(events))
+            ).subscribe({
+                next: (event: NodeEvent) => obs.next(event),
                 error: (error) => {
                     ast.state = 'fail';
                     setAstError(ast, error);
@@ -55,104 +63,89 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
                     obs.complete();
                 },
                 complete: () => {
-                    this.handler(ast, obs, wrappedCtx);
+                    ast.state = 'success';
+                    obs.next({ type: 'node_success', id: ast.id });
+                    obs.complete();
                 }
             });
 
             return () => {
                 console.log('[WeiboAjaxFeedHotTimelineAstVisitor] 订阅被取消，触发 AbortSignal');
+                subscription.unsubscribe();
                 abortController.abort();
                 obs.complete();
             };
         });
     }
 
-    private async handler(ast: WeiboAjaxFeedHotTimelineAst, obs: Subscriber<NodeEvent>, ctx: any) {
-        try {
-            // 检查取消信号
+    private async handler(ast: WeiboAjaxFeedHotTimelineAst, ctx: any): Promise<NodeEvent[]> {
+        const events: NodeEvent[] = [];
+
+        // 检查取消信号
+        if (ctx.abortSignal?.aborted) {
+            throw new Error('工作流已取消');
+        }
+
+        let pageCount = 0;
+
+        while (true) {
+            // 检查取消信号（循环开始）
             if (ctx.abortSignal?.aborted) {
-                ast.state = 'fail';
-                setAstError(ast, new Error('工作流已取消'));
-                obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-                return;
+                throw new Error('工作流已取消');
             }
 
-            let pageCount = 0;
+            pageCount++;
 
-            while (true) {
-                // 检查取消信号（循环开始）
-                if (ctx.abortSignal?.aborted) {
-                    ast.state = 'fail';
-                    setAstError(ast, new Error('工作流已取消'));
-                    obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-                    return;
-                }
+            const url = this.buildUrl(ast);
+            const body = await this.fetchApi<WeiboAjaxFeedHotTimelineResponse>({
+                url,
+                refererOptions: {}
+            });
 
-                pageCount++;
+            // 检查取消信号（网络请求后）
+            if (ctx.abortSignal?.aborted) {
+                throw new Error('工作流已取消');
+            }
 
-                const url = this.buildUrl(ast);
-                const body = await this.fetchApi<WeiboAjaxFeedHotTimelineResponse>({
-                    url,
-                    refererOptions: {}
-                });
-
-                // 检查取消信号（网络请求后）
-                if (ctx.abortSignal?.aborted) {
-                    ast.state = 'fail';
-                    setAstError(ast, new Error('工作流已取消'));
-                    obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-                    return;
-                }
-
-                const statuses = body?.statuses || [];
-                if (statuses.length === 0) {
-                    console.log(`[WeiboAjaxFeedHotTimelineAstVisitor] 没有更多数据，抓取完成`);
-                    break;
-                }
-
-                await useEntityManager(async m => {
-                    const uniqueUsers = Array.from(
-                        new Map(
-                            statuses
-                                .filter(item => item.user)
-                                .map(item => [item.user.id, item.user])
-                        ).values()
-                    );
-                    const users = uniqueUsers.map(user => m.create(WeiboUserEntity, user as any));
-
-                    if (users.length > 0) {
-                        await m.upsert(WeiboUserEntity, users as any[], ['id']);
-                    }
-                    const posts = statuses.map(item => m.create(WeiboPostEntity, item as any));
-                    await m.upsert(WeiboPostEntity, posts as any[], ['id']);
-                    posts.map(post => {
-                        // 流式输出：每条数据发射
-                        ast.mblogid = post.mblogid;
-                        ast.uid = post.user.idstr;
-                        obs.next({ type: 'node_runing', id: ast.id });
-                    });
-                    console.log(`[WeiboAjaxFeedHotTimelineAstVisitor] 成功入库 ${posts.length} 条微博，${users.length} 个用户`);
-                });
-
-                if (body.max_id) ast.max_id = body.max_id;
-                if (body.since_id) ast.since_id = body.since_id;
-
-                await this.delayService.randomDelay(3, 5);
+            const statuses = body?.statuses || [];
+            if (statuses.length === 0) {
+                console.log(`[WeiboAjaxFeedHotTimelineAstVisitor] 没有更多数据，抓取完成`);
                 break;
             }
 
-            console.log(`[WeiboAjaxFeedHotTimelineAstVisitor] 完成，共抓取 ${pageCount} 页数据`);
-            ast.state = 'success';  // 完成信号：不触发下游，仅更新工作流状态
-            obs.next({ type: 'node_success', id: ast.id });
-            obs.complete();
-        } catch (error) {
-            console.error(`[WeiboAjaxFeedHotTimelineAstVisitor] 抓取失败`, error);
-            ast.state = 'fail';
-            setAstError(ast, error);
-            obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-            obs.complete();
+            await useEntityManager(async m => {
+                const uniqueUsers = Array.from(
+                    new Map(
+                        statuses
+                            .filter(item => item.user)
+                            .map(item => [item.user.id, item.user])
+                    ).values()
+                );
+                const users = uniqueUsers.map(user => m.create(WeiboUserEntity, user as any));
+
+                if (users.length > 0) {
+                    await m.upsert(WeiboUserEntity, users as any[], ['id']);
+                }
+                const posts = statuses.map(item => m.create(WeiboPostEntity, item as any));
+                await m.upsert(WeiboPostEntity, posts as any[], ['id']);
+                posts.map(post => {
+                    // 流式输出：每条数据发射
+                    ast.mblogid = post.mblogid;
+                    ast.uid = post.user.idstr;
+                    events.push({ type: 'node_emit', id: ast.id, data: { mblogid: post.mblogid, uid: post.user.idstr } });
+                });
+                console.log(`[WeiboAjaxFeedHotTimelineAstVisitor] 成功入库 ${posts.length} 条微博，${users.length} 个用户`);
+            });
+
+            if (body.max_id) ast.max_id = body.max_id;
+            if (body.since_id) ast.since_id = body.since_id;
+
+            await this.delayService.randomDelay(3, 5);
+            break;
         }
-        return ast;
+
+        console.log(`[WeiboAjaxFeedHotTimelineAstVisitor] 完成，共抓取 ${pageCount} 页数据`);
+        return events;
     }
 
     private buildUrl(ast: WeiboAjaxFeedHotTimelineAst): string {
