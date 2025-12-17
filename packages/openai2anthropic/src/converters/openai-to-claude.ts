@@ -106,7 +106,14 @@ export function claudeResponseToOpenai(res: ClaudeResponse): OpenAIResponse {
   let textContent = '';
   const toolCalls: OpenAIResponse['choices'][0]['message']['tool_calls'] = [];
 
-  for (const block of res.content) {
+  // 容错处理：如果 content 是字符串，直接使用；如果不是数组，包装为数组
+  const contentBlocks = typeof res.content === 'string'
+    ? [{ type: 'text' as const, text: res.content }]
+    : Array.isArray(res.content)
+      ? res.content
+      : [];
+
+  for (const block of contentBlocks) {
     if (block.type === 'text') textContent += block.text;
     if (block.type === 'tool_use') {
       toolCalls.push({

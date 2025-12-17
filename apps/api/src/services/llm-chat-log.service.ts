@@ -8,7 +8,6 @@ import { createHash } from 'crypto';
 export class LlmChatLogService {
   async getStats(startDate?: string, endDate?: string, granularity?: 'minute' | 'hour' | 'day'): Promise<LlmChatLogStats> {
     return useEntityManager(async m => {
-      console.log('[LlmChatLogService] Getting stats with date range:', { startDate, endDate });
       const where: any = {};
       if (startDate && endDate) {
         where.createdAt = Between(new Date(startDate), new Date(endDate));
@@ -88,7 +87,6 @@ export class LlmChatLogService {
         const end = new Date(endDate);
         const diffHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
         granularityType = diffHours <= 1 ? 'minute' : diffHours <= 24 ? 'hour' : 'day';
-        console.log('[LlmChatLogService] Auto granularity:', { diffHours, granularityType });
       }
 
       const dateExpr = granularityType === 'minute'
@@ -108,17 +106,6 @@ export class LlmChatLogService {
 
       const failCount = totalRequests - successCount;
 
-      // 添加调试日志
-      console.log('[LlmChatLogService] Raw stats data:', {
-        totalRequests,
-        successCount,
-        tokenStats,
-        avgDuration,
-        modelStats: modelStats?.slice(0, 3), // 只显示前3个
-        providerStats: providerStats?.slice(0, 3),
-        statusCodeStats: statusCodeStats?.slice(0, 5),
-        timeStats: timeStats?.slice(0, 5)
-      });
 
       return {
         totalRequests,
@@ -245,30 +232,9 @@ export class LlmChatLogService {
         for (const log of logs) {
           try {
             const request = typeof log.request === 'string' ? JSON.parse(log.request) : log.request;
-
-            // 调试：记录第一个请求的结构
-            if (offset === 0 && logs.indexOf(log) === 0) {
-              const hasSystem = !!request.system;
-              const hasMessages = !!(request.messages && Array.isArray(request.messages));
-              const hasTools = !!(request.tools && Array.isArray(request.tools));
-
-              console.log('[LlmChatLogService] Sample request structure:', {
-                hasSystem,
-                hasMessages,
-                hasTools,
-                systemType: request.system ? (Array.isArray(request.system) ? 'array' : typeof request.system) : 'none',
-                messagesCount: request.messages?.length || 0,
-                toolsCount: request.tools?.length || 0,
-                messageRoles: request.messages?.map((m: any) => m.role).filter(Boolean),
-              });
-            }
-
             // 1. 提取 system 参数（Anthropic API）
             if (request.system) {
               const systemContents = this.extractSystemContent(request.system);
-              if (offset === 0 && logs.indexOf(log) === 0) {
-                console.log(`[LlmChatLogService] Extracted ${systemContents.length} system contents from first request`);
-              }
               for (const content of systemContents) {
                 if (!content || content.length === 0) continue;
                 const hash = this.hashContent(content);
@@ -303,7 +269,6 @@ export class LlmChatLogService {
                   type = 'user';
                 } else {
                   // 如果 role 不是标准值，默认为 user
-                  console.warn(`[LlmChatLogService] Unknown role: ${role}, defaulting to user`);
                   type = 'user';
                 }
 
@@ -375,7 +340,6 @@ export class LlmChatLogService {
         }
 
         offset += PAGE_SIZE;
-        console.log(`[LlmChatLogService] Analyzed ${offset} logs, found ${promptMap.size} unique prompts`);
       }
 
       // 转换为数组并按使用次数降序排序
@@ -408,12 +372,6 @@ export class LlmChatLogService {
         count: stat.count,
         usage: stat.usage,
       }));
-
-      console.log('[LlmChatLogService] Analysis complete:', {
-        total: items.length,
-        totalUsage,
-        byType,
-      });
 
       return {
         items,
