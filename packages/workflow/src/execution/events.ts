@@ -1,9 +1,9 @@
 /**
  * 节点事件类型，工作流也是一个节点
  */
-export type NodeEvent =
+export type NodeEvent<T = any> =
     | NodeRuningEvent
-    | NodeEmitEvent
+    | NodeEmitEvent<T>
     | NodeSuccessEvent
     | NodeFailEvent;
 
@@ -13,14 +13,13 @@ export interface NodeRuningEvent {
     id: string;
 }
 // 节点发射
-export interface NodeEmitEvent {
+export interface NodeEmitEvent<T = any> {
     type: 'node_emit';
     id: string;
-    property: string;
-    value: any;
+    data: Partial<T>;
 }
 // 节点成功
-export interface NodeSuccessEvent {
+export interface NodeSuccessEvent<T = any> {
     type: 'node_success';
     id: string;
 }

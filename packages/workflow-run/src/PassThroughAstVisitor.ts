@@ -27,6 +27,7 @@ export class PassThroughAstVisitor {
         // 使用 tap 处理副作用（状态更新、计数、日志）
         tap((inputData) => {
           ast.emitCount += 1;
+          obs.next({ type: 'node_emit', id: ast.id, property: 'emitCount', value: ast.emitCount })
 
           // 应用输入数据到 AST 实例
           if (inputData) {

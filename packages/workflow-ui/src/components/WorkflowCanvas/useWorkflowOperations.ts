@@ -219,7 +219,10 @@ export function useWorkflowOperations(
           next: (event) => {
             if (event.type !== 'node_success' && event.type !== 'node_fail') return
 
-            const updatedNode = event.data
+            // 从 mutableAst 中获取更新后的节点
+            const updatedNode = getNodeById(mutableAst.nodes, event.id)
+            if (!updatedNode) return
+
             workflow.workflowAst!.nodes = workflow.workflowAst!.nodes.map(originalNode => {
               if (originalNode.id !== updatedNode.id) return originalNode
 
@@ -321,14 +324,13 @@ export function useWorkflowOperations(
           next: (event) => {
             if (event.type !== 'node_success' && event.type !== 'node_fail') return
 
-            const updatedWorkflow = event.data as any
-            workflow.workflowAst!.state = updatedWorkflow.state
-            workflow.workflowAst!.error = updatedWorkflow.error
+            // 从 mutableAst 中获取更新后的状态
+            workflow.workflowAst!.state = mutableAst.state
+            workflow.workflowAst!.error = mutableAst.error
 
-            // 防御性检查：确保 nodes 存在
-            const updatedNodes = updatedWorkflow.nodes ?? []
+            // 从 mutableAst 中同步所有节点状态
             workflow.workflowAst!.nodes = workflow.workflowAst!.nodes.map(originalNode => {
-              const updatedNode = updatedNodes.find((n: any) => n.id === originalNode.id)
+              const updatedNode = getNodeById(mutableAst.nodes, originalNode.id)
               if (!updatedNode) return originalNode
 
               trackNodeExecution(originalNode, updatedNode, nodeRecordIds, recordNodeStart, recordNodeComplete)
@@ -581,38 +583,29 @@ export function useWorkflowOperations(
           .subscribe({
             next: (event) => {
               // 处理所有节点事件，包括 running 状态
-              if (event.type === 'node_success' || event.type === 'node_fail') {
-                const updatedNode = event.data as any
-
-                // 检查是否是工作流完成事件（不是单个节点）
-                if (!updatedNode.type) {
-                  // 这是工作流完成事件，更新工作流状态
-                  workflow.workflowAst!.state = updatedNode.state
-                  workflow.workflowAst!.error = updatedNode.error
-                  workflow.syncFromAst()
-                  return
-                }
-
-                // 当 event.data 是单个节点时，直接更新对应节点
+              if (event.type === 'node_success') {
                 workflow.workflowAst!.nodes = workflow.workflowAst!.nodes.map(originalNode => {
                   if (originalNode.id === event.id) {
-
-                    // 直接创建新节点对象，设置状态
-                    const newNode = Object.assign(
+                    return Object.assign(
                       Object.create(Object.getPrototypeOf(originalNode)),
                       originalNode,
-                      {
-                        state: updatedNode.state,
-                        error: updatedNode.error,
-                        count: updatedNode.count,
-                        emitCount: updatedNode.emitCount
-                      }
+                      { state: 'success' }
                     )
-                    return newNode
                   }
                   return originalNode
                 })
-
+                workflow.syncFromAst()
+              } else if (event.type === 'node_fail') {
+                workflow.workflowAst!.nodes = workflow.workflowAst!.nodes.map(originalNode => {
+                  if (originalNode.id === event.id) {
+                    return Object.assign(
+                      Object.create(Object.getPrototypeOf(originalNode)),
+                      originalNode,
+                      { state: 'fail', error: event.error }
+                    )
+                  }
+                  return originalNode
+                })
                 workflow.syncFromAst()
               } else if (event.type === 'node_runing') {
                 // 处理节点运行状态

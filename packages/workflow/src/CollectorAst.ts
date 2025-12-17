@@ -21,7 +21,7 @@ import { NodeEvent } from "./execution/events";
 export class CollectorVisitor {
     @Handler(CollectorAst)
     handler(ast: CollectorAst, input$: Observable<CollectorAst>, ctx: WorkflowGraphAst) {
-        return new Observable<NodeEvent>(obs => {
+        return new Observable<NodeEvent<CollectorAst>>(obs => {
             ast.state = 'running';
             obs.next({ type: 'node_runing', id: ast.id });
             input$.pipe(
@@ -29,7 +29,7 @@ export class CollectorVisitor {
                 map(asts => asts.flatMap(a => a.items || []).flat()),
                 tap(items => {
                     ast.result = items;
-                    obs.next({ type: 'node_emit', id: ast.id, property: 'result', value: items });
+                    obs.next({ type: 'node_emit', id: ast.id, data: { result: items } });
                     ast.state = 'success';
                     obs.next({ type: 'node_success', id: ast.id });
                 })

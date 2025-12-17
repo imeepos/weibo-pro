@@ -244,9 +244,9 @@ export class WorkflowGraphAstVisitor {
 
             return eventStream$.pipe(
                 filter((event): event is NodeEmitEvent =>
-                    event.type === 'node_emit' && event.property === edge.fromProperty
+                    event.type === 'node_emit' && edge.fromProperty! in (event.data || {})
                 ),
-                map(event => event.value)
+                map(event => event.data?.[edge.fromProperty!])
             );
         });
     }
@@ -427,11 +427,10 @@ export class WorkflowGraphAstVisitor {
                         if (completedCount === totalNodes) {
                             const hasError = Array.from(nodeStates.values()).some(s => s === 'fail');
                             workflow.state = hasError ? 'fail' : 'success';
-                            obs.next({
-                                type: hasError ? 'node_fail' : 'node_success',
-                                id: workflow.id,
-                                data: workflow
-                            } as NodeEvent);
+                            obs.next(hasError
+                                ? { type: 'node_fail', id: workflow.id, error: workflow.error?.message }
+                                : { type: 'node_success', id: workflow.id }
+                            );
                             obs.complete();
                         }
                     }

@@ -15,12 +15,14 @@ export class DefaultVisitor {
             input$.subscribe({
                 next: (data) => {
                     // 默认 一个输入 一个输出 输出直接等于输入
-                    ast.metadata?.inputs.map(input => {
-                        ast.metadata?.outputs.map(output => {
+                    const emitData: Record<string, any> = {};
+                    ast.metadata?.inputs.forEach(input => {
+                        ast.metadata?.outputs.forEach(output => {
                             ast[output.property] = data[input.property];
-                            obs.next({ type: 'node_emit', id: ast.id, property: output.property, value: ast[output.property] })
+                            emitData[output.property] = ast[output.property];
                         })
                     })
+                    obs.next({ type: 'node_emit', id: ast.id, data: emitData })
                 },
                 error: (error) => {
                     ast.state = 'fail';

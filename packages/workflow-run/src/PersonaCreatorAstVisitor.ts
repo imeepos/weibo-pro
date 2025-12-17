@@ -49,6 +49,7 @@ export class PersonaCreatorAstVisitor {
       const subscription = input$.pipe(
         concatMap(async (inputData) => {
           ast.emitCount +=1;
+          obs.next({ type: 'node_emit', id: ast.id, property: 'emitCount', value: ast.emitCount })
           if (inputData) {
             Object.keys(inputData).forEach(key => {
               (ast as any)[key] = inputData[key];

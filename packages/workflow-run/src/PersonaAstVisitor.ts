@@ -39,7 +39,8 @@ export class PersonaAstVisitor {
 
       const subscription = input$.pipe(
         concatMap(async (inputData) => {
-          ast.emitCount +=1;
+          ast.emitCount += 1;
+          obs.next({ type: 'node_emit', id: ast.id, property: 'emitCount', value: ast.emitCount })
           if (inputData) {
             Object.keys(inputData).forEach(key => {
               (ast as any)[key] = inputData[key];
@@ -55,23 +56,23 @@ export class PersonaAstVisitor {
           }
 
           await useEntityManager(async (manager) => {
-          const persona = await manager.findOneOrFail(PersonaEntity, {
-            where: { id: ast.roleId },
-          });
+            const persona = await manager.findOneOrFail(PersonaEntity, {
+              where: { id: ast.roleId },
+            });
 
-          ast.personaName = persona.name;
-          ast.personaAvatar = persona.avatar || undefined;
-          obs.next({ type: 'node_runing', id: ast.id });
+            ast.personaName = persona.name;
+            ast.personaAvatar = persona.avatar || undefined;
+            obs.next({ type: 'node_runing', id: ast.id });
 
-          // 记忆检索
-          const stimuli = Array.isArray(ast.stimuli) ? ast.stimuli : [ast.stimuli];
-          const searchTerms = stimuli.filter(Boolean).join(' ').toLowerCase();
-          const startTime = Date.now();
-          const timeoutMs = ast.retrievalTimeout * 1000;
+            // 记忆检索
+            const stimuli = Array.isArray(ast.stimuli) ? ast.stimuli : [ast.stimuli];
+            const searchTerms = stimuli.filter(Boolean).join(' ').toLowerCase();
+            const startTime = Date.now();
+            const timeoutMs = ast.retrievalTimeout * 1000;
 
-          // 根据刺激词搜索初始记忆
-          const initialMemories = searchTerms
-            ? await manager
+            // 根据刺激词搜索初始记忆
+            const initialMemories = searchTerms
+              ? await manager
                 .createQueryBuilder(MemoryEntity, 'm')
                 .where('m.persona_id = :personaId', { personaId: ast.roleId })
                 .andWhere(
@@ -81,177 +82,177 @@ export class PersonaAstVisitor {
                 .orderBy('m.created_at', 'DESC')
                 .limit(5)
                 .getMany()
-            : [];
+              : [];
 
-          const retrieved: Map<string, RetrievedMemory> = new Map();
-          const toExplore: Array<{ id: string; currentDepth: number }> = [];
+            const retrieved: Map<string, RetrievedMemory> = new Map();
+            const toExplore: Array<{ id: string; currentDepth: number }> = [];
 
-          for (const m of initialMemories) {
-            retrieved.set(m.id, {
-              id: m.id,
-              name: m.name,
-              content: m.content,
-              type: m.type,
-              depth: 0,
-            });
-            toExplore.push({ id: m.id, currentDepth: 0 });
-          }
+            for (const m of initialMemories) {
+              retrieved.set(m.id, {
+                id: m.id,
+                name: m.name,
+                content: m.content,
+                type: m.type,
+                depth: 0,
+              });
+              toExplore.push({ id: m.id, currentDepth: 0 });
+            }
 
-          // 层级检索
-          while (toExplore.length > 0 && (Date.now() - startTime) < timeoutMs) {
-            if (abortController.signal.aborted) break;
+            // 层级检索
+            while (toExplore.length > 0 && (Date.now() - startTime) < timeoutMs) {
+              if (abortController.signal.aborted) break;
 
-            const { id, currentDepth } = toExplore.shift()!;
-            if (currentDepth >= ast.retrievalDepth) continue;
+              const { id, currentDepth } = toExplore.shift()!;
+              if (currentDepth >= ast.retrievalDepth) continue;
 
-            const closures = await manager.find(MemoryClosureEntity, {
-              where: [
-                { ancestor_id: id, depth: 1 },
-                { descendant_id: id, depth: 1 },
-              ],
-            });
-
-            const relatedIds = closures
-              .map(c => c.ancestor_id === id ? c.descendant_id : c.ancestor_id)
-              .filter(rid => !retrieved.has(rid));
-
-            if (relatedIds.length > 0) {
-              const relatedMemories = await manager.find(MemoryEntity, {
-                where: { id: In(relatedIds) },
+              const closures = await manager.find(MemoryClosureEntity, {
+                where: [
+                  { ancestor_id: id, depth: 1 },
+                  { descendant_id: id, depth: 1 },
+                ],
               });
 
-              for (const m of relatedMemories) {
-                retrieved.set(m.id, {
-                  id: m.id,
-                  name: m.name,
-                  content: m.content,
-                  type: m.type,
-                  depth: currentDepth + 1,
+              const relatedIds = closures
+                .map(c => c.ancestor_id === id ? c.descendant_id : c.ancestor_id)
+                .filter(rid => !retrieved.has(rid));
+
+              if (relatedIds.length > 0) {
+                const relatedMemories = await manager.find(MemoryEntity, {
+                  where: { id: In(relatedIds) },
                 });
-                toExplore.push({ id: m.id, currentDepth: currentDepth + 1 });
+
+                for (const m of relatedMemories) {
+                  retrieved.set(m.id, {
+                    id: m.id,
+                    name: m.name,
+                    content: m.content,
+                    type: m.type,
+                    depth: currentDepth + 1,
+                  });
+                  toExplore.push({ id: m.id, currentDepth: currentDepth + 1 });
+                }
               }
             }
-          }
 
-          const memories = Array.from(retrieved.values()).sort((a, b) => a.depth - b.depth);
-          ast.retrievedMemories = memories;
+            const memories = Array.from(retrieved.values()).sort((a, b) => a.depth - b.depth);
+            ast.retrievedMemories = memories;
 
-          // 构建上下文
-          const contextParts: string[] = [];
-          contextParts.push(`【角色】${persona.name}`);
-          if (persona.description) contextParts.push(`【简介】${persona.description}`);
-          if (persona.background) contextParts.push(`【背景】${persona.background}`);
-          if (persona.traits?.length) contextParts.push(`【性格】${persona.traits.join('、')}`);
+            // 构建上下文
+            const contextParts: string[] = [];
+            contextParts.push(`【角色】${persona.name}`);
+            if (persona.description) contextParts.push(`【简介】${persona.description}`);
+            if (persona.background) contextParts.push(`【背景】${persona.background}`);
+            if (persona.traits?.length) contextParts.push(`【性格】${persona.traits.join('、')}`);
 
-          if (memories.length > 0) {
-            contextParts.push(`\n【相关记忆】`);
-            for (const m of memories) {
-              contextParts.push(`- [${m.type}] ${m.name}: ${m.content}`);
+            if (memories.length > 0) {
+              contextParts.push(`\n【相关记忆】`);
+              for (const m of memories) {
+                contextParts.push(`- [${m.type}] ${m.name}: ${m.content}`);
+              }
             }
-          }
 
-          ast.context = contextParts.join('\n');
-          obs.next({ type: 'node_runing', id: ast.id });
+            ast.context = contextParts.join('\n');
+            obs.next({ type: 'node_runing', id: ast.id });
 
-          if (abortController.signal.aborted) {
-            ast.state = 'fail';
-            setAstError(ast, new Error('工作流已取消'));
-            obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-            return;
-          }
+            if (abortController.signal.aborted) {
+              ast.state = 'fail';
+              setAstError(ast, new Error('工作流已取消'));
+              obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
+              return;
+            }
 
-          // LLM 生成回复
-          const model = useLlmModel({
-            model: ast.model,
-            temperature: ast.temperature,
-          });
+            // LLM 生成回复
+            const model = useLlmModel({
+              model: ast.model,
+              temperature: ast.temperature,
+            });
 
-          const systemPrompt = `你是${persona.name}。根据以下上下文信息，以第一人称回复用户的问题或刺激。
+            const systemPrompt = `你是${persona.name}。根据以下上下文信息，以第一人称回复用户的问题或刺激。
 保持角色一致性，回复应该自然、符合角色性格。
 
 ${ast.context}`;
 
-          const userPrompt = stimuli.filter(Boolean).join('\n');
+            const userPrompt = stimuli.filter(Boolean).join('\n');
 
-          const result = await model.invoke([
-            { role: 'system', content: systemPrompt },
-            { role: 'human', content: userPrompt },
-          ]);
+            const result = await model.invoke([
+              { role: 'system', content: systemPrompt },
+              { role: 'human', content: userPrompt },
+            ]);
 
-          const responseText = result.content as string;
-          ast.response = responseText;
+            const responseText = result.content as string;
+            ast.response = responseText;
 
-          if (abortController.signal.aborted) {
-            throw new Error('工作流已取消');
-          }
+            if (abortController.signal.aborted) {
+              throw new Error('工作流已取消');
+            }
 
-          // 智能提取记忆
-          const extractedMemories = await this.extractMemories(model, userPrompt, responseText);
+            // 智能提取记忆
+            const extractedMemories = await this.extractMemories(model, userPrompt, responseText);
 
-          if (extractedMemories.length === 0) {
-            return [
-              { type: 'node_emit' as const, id: ast.id, property: 'response', value: ast.response }
-            ];
-          }
+            if (extractedMemories.length === 0) {
+              return [
+                { type: 'node_emit' as const, id: ast.id, property: 'response', value: ast.response }
+              ];
+            }
 
-          // 批量创建记忆
-          const savedMemoryIds: string[] = [];
-          for (const em of extractedMemories) {
-            const memory = manager.create(MemoryEntity, {
-              persona_id: ast.roleId,
-              name: em.name,
-              description: em.description,
-              content: em.content,
-              type: em.type,
-            });
-            await manager.save(memory);
-            savedMemoryIds.push(memory.id);
-
-            // 自引用闭包
-            const selfClosure = manager.create(MemoryClosureEntity, {
-              ancestor_id: memory.id,
-              descendant_id: memory.id,
-              path: [memory.id],
-              depth: 0,
-            });
-            await manager.save(selfClosure);
-          }
-
-          // 关联到检索到的记忆
-          const relatedIds = memories.slice(0, 3).map(m => m.id);
-          for (const memoryId of savedMemoryIds) {
-            for (const relatedId of relatedIds) {
-              const relation = manager.create(MemoryRelationEntity, {
-                source_id: relatedId,
-                target_id: memoryId,
-                relation_type: 'related',
+            // 批量创建记忆
+            const savedMemoryIds: string[] = [];
+            for (const em of extractedMemories) {
+              const memory = manager.create(MemoryEntity, {
+                persona_id: ast.roleId,
+                name: em.name,
+                description: em.description,
+                content: em.content,
+                type: em.type,
               });
-              await manager.save(relation);
+              await manager.save(memory);
+              savedMemoryIds.push(memory.id);
 
-              const ancestorClosures = await manager.find(MemoryClosureEntity, {
-                where: { descendant_id: relatedId },
+              // 自引用闭包
+              const selfClosure = manager.create(MemoryClosureEntity, {
+                ancestor_id: memory.id,
+                descendant_id: memory.id,
+                path: [memory.id],
+                depth: 0,
               });
-              for (const ac of ancestorClosures) {
-                const newClosure = manager.create(MemoryClosureEntity, {
-                  ancestor_id: ac.ancestor_id,
-                  descendant_id: memoryId,
-                  path: [...ac.path, memoryId],
-                  depth: ac.depth + 1,
+              await manager.save(selfClosure);
+            }
+
+            // 关联到检索到的记忆
+            const relatedIds = memories.slice(0, 3).map(m => m.id);
+            for (const memoryId of savedMemoryIds) {
+              for (const relatedId of relatedIds) {
+                const relation = manager.create(MemoryRelationEntity, {
+                  source_id: relatedId,
+                  target_id: memoryId,
+                  relation_type: 'related',
                 });
-                await manager.save(newClosure);
+                await manager.save(relation);
+
+                const ancestorClosures = await manager.find(MemoryClosureEntity, {
+                  where: { descendant_id: relatedId },
+                });
+                for (const ac of ancestorClosures) {
+                  const newClosure = manager.create(MemoryClosureEntity, {
+                    ancestor_id: ac.ancestor_id,
+                    descendant_id: memoryId,
+                    path: [...ac.path, memoryId],
+                    depth: ac.depth + 1,
+                  });
+                  await manager.save(newClosure);
+                }
               }
             }
-          }
 
-          ast.newMemoryId = savedMemoryIds[0] || '';
-        });
+            ast.newMemoryId = savedMemoryIds[0] || '';
+          });
 
-        return [
-          { type: 'node_emit' as const, id: ast.id, property: 'response', value: ast.response },
-          { type: 'node_emit' as const, id: ast.id, property: 'newMemoryId', value: ast.newMemoryId }
-        ];
-      }),
-      mergeMap((events: NodeEvent[]) => from(events))
+          return [
+            { type: 'node_emit' as const, id: ast.id, property: 'response', value: ast.response },
+            { type: 'node_emit' as const, id: ast.id, property: 'newMemoryId', value: ast.newMemoryId }
+          ];
+        }),
+        mergeMap((events: NodeEvent[]) => from(events))
       ).subscribe({
         next: (event: NodeEvent) => {
           obs.next(event);

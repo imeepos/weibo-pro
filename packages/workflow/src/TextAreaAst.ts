@@ -31,6 +31,7 @@ export class TextAreaAstVisitor {
             console.log(`[TextAreaAstVisitor] 节点 ${ast.id} 发射 node_runing`);
             input$.subscribe({
                 next: (input) => {
+                    ast.emitCount += 1;
                     console.log(`[TextAreaAstVisitor] 节点 ${ast.id} input$ 发射值:`, input);
                     // 处理输入
                     let inputArray: string[];
@@ -43,11 +44,10 @@ export class TextAreaAstVisitor {
                     }
 
                     // 生成输出
-                    const value = inputArray.join('\n');
-                    ast.output = value;
-                    ast.emitCount += 1;
-                    obs.next({ type: 'node_emit', id: ast.id, property: 'output', value });
-                    console.log(`[TextAreaAstVisitor] 节点 ${ast.id} 发射 node_emit, output="${value}"`);
+                    const output = inputArray.join('\n');
+                    ast.output = output;
+                    obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount, output } });
+                    console.log(`[TextAreaAstVisitor] 节点 ${ast.id} 发射 node_emit, output="${output}"`);
                 },
                 error: (error) => {
                     console.error(`[TextAreaAstVisitor] 节点 ${ast.id} 发生错误:`, error);

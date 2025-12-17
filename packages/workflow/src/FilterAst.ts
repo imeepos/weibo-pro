@@ -97,8 +97,7 @@ export class FilterAstVisitor {
             } else {
                 matched = items.filter(Boolean)
             }
-            obs.next({ type: 'node_emit', id: ast.id, property: `matched`, value: matched })
-            obs.next({ type: 'node_emit', id: ast.id, property: `matchedCount`, value: matched.length })
+            obs.next({ type: 'node_emit', id: ast.id, data: { matched, matchedCount: matched.length } })
 
             ast.state = 'success'
             obs.next({ type: 'node_success', id: ast.id })
