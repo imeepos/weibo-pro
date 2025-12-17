@@ -88,12 +88,20 @@ ${categoryList}
 
                     const finalMatched = matched || categories.find(c => c.isDefault);
 
-                    const data: Record<string, any> = { rawOutput: result };
-                    for (const cat of categories) {
-                        data[cat.property] = cat === finalMatched ? ast.context : ROUTE_SKIPPED;
+                    // 只发射匹配的分支，不发射 ROUTE_SKIPPED
+                    const events: NodeEvent[] = [
+                        { type: 'node_emit' as const, id: ast.id, data: { rawOutput: result } }
+                    ];
+
+                    if (finalMatched) {
+                        events.push({
+                            type: 'node_emit' as const,
+                            id: ast.id,
+                            data: { [finalMatched.property]: ast.context }
+                        });
                     }
 
-                    return [{ type: 'node_emit' as const, id: ast.id, data }];
+                    return events;
                 }),
                 mergeMap((events: NodeEvent[]) => from(events))
             ).subscribe({

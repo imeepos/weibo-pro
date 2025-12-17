@@ -40,9 +40,9 @@ export class SwitchAstVisitor {
                         o.isRouter && o.condition && o.condition !== 'true' && o.property !== 'output_default'
                     )
 
-                    // 先评估所有普通分支，找出匹配的
+                    // 评估所有普通分支，只发射匹配的分支
                     let anyMatched = false
-                    const emitData: Record<string, any> = {}
+                    const events: NodeEvent[] = []
 
                     normalOutputs.forEach(outputMeta => {
                         const propKey = String(outputMeta.property)
@@ -50,24 +50,28 @@ export class SwitchAstVisitor {
 
                         if (matched) {
                             anyMatched = true
-                            emitData[propKey] = inputValue
-                        } else {
-                            // 条件不匹配：使用 ROUTE_SKIPPED 明确表示"这条路不走"
-                            emitData[propKey] = ROUTE_SKIPPED
+                            // 只发射匹配的分支，不发射 ROUTE_SKIPPED
+                            events.push({
+                                type: 'node_emit' as const,
+                                id: ast.id,
+                                data: { [propKey]: inputValue }
+                            })
                         }
+                        // 不匹配的分支不发射任何值
                     })
 
                     // default 分支：只有当所有普通分支都不匹配时才激活
-                    if (defaultOutput) {
+                    if (defaultOutput && !anyMatched) {
                         const propKey = String(defaultOutput.property)
-                        // 有其他分支匹配时，default 使用 ROUTE_SKIPPED
-                        emitData[propKey] = anyMatched ? ROUTE_SKIPPED : inputValue
+                        events.push({
+                            type: 'node_emit' as const,
+                            id: ast.id,
+                            data: { [propKey]: inputValue }
+                        })
                     }
 
-                    // 返回路由结果事件
-                    return [
-                        { type: 'node_emit' as const, id: ast.id, data: emitData }
-                    ];
+                    // 返回所有激活的分支事件
+                    return events;
                 }),
                 mergeMap((events: NodeEvent[]) => from(events))
             ).subscribe({

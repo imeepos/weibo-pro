@@ -5,7 +5,7 @@ import { NodeExecutor } from './executor';
 import { Handler } from './decorator';
 import { setAstError, WorkflowGraphAst } from './ast';
 import { NodeEmitEvent, NodeEvent } from './execution/events';
-import { EdgeMode, IEdge } from './types';
+import { EdgeMode, IEdge, ROUTE_SKIPPED } from './types';
 
 /**
  * 工作流节点执行器
@@ -223,8 +223,14 @@ export class WorkflowGraphAstVisitor {
         if (valueStream$ === EMPTY) return EMPTY;
 
         return valueStream$.pipe(
-            // router 边过滤空值
-            filter(value => value !== undefined && value !== null && value !== ''),
+            // router 边只过滤 ROUTE_SKIPPED（内部协议标记）
+            // 不过滤 undefined/null/''，因为这些可能是合法的业务数据
+            //
+            // 设计原则：
+            // - 分支是否激活由"是否发射事件"决定，而不是"值的内容"
+            // - 匹配的分支会发射 node_emit 事件，携带任意值（包括 '', null, undefined）
+            // - 不匹配的分支不会发射事件（自然不会触发下游）
+            filter(value => value !== ROUTE_SKIPPED),
             map(value => ({ [edge.toProperty!]: value }))
         );
     }
