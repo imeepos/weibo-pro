@@ -123,10 +123,18 @@ export class YourNodeAstRender {
 
 ## 装饰器说明
 
-- `@Node({ title })`: 节点中文标题
-- `@Input({ title, type })`: type 支持 'text', 'number', 'date'
-- `@Input({ isMulti: true })`: 多值输入，多条边聚合为数组
-- `@Output({ title })`: 输出属性
+- `@Node({ title, type, errorStrategy, maxRetries })`: 节点声明
+  - `title`: 节点中文标题
+  - `type`: 节点类型 ('llm', 'crawler', 'control', 'basic' 等)
+  - `errorStrategy`: 错误策略 ('retry', 'skip', 'fail', 'abort')
+  - `maxRetries`: 最大重试次数
+- `@Input({ title, type, defaultValue, mode })`: 输入端口
+  - `type` 支持 'text', 'number', 'date', 'textarea', 'select' 等
+  - `mode: IS_MULTI`: 多条边聚合为数组
+  - `mode: IS_BUFFER`: 单边多次发射聚合为数组
+- `@Output({ title, isRouter })`: 输出端口
+  - `isRouter: true`: 路由输出（过滤 undefined 值）
+- `@State({ title })`: 内部状态（不参与数据流）
 
 ## 关键要点
 

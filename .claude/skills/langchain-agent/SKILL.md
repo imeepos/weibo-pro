@@ -10,6 +10,7 @@ description: 创建 LangChain Agent 和工具，实现自主研究和数据分�
 ## 核心文件
 
 - Agent 实现：`packages/agent/src/ResearchAgent.ts`
+- 舆情分析 Agent：`packages/agent/src/OpinionAgent.ts`
 - 工具目录：`packages/agent/src/tools/`
 
 ## Agent 定义模板

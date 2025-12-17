@@ -10,7 +10,7 @@ description: 创建 NestJS 控制器和服务，实现 RESTful API 端点。当�
 ## 文件位置
 
 - 控制器：`apps/api/src/controllers/`
-- 服务：`apps/api/src/services/`
+- 服务：`apps/api/src/services/`（业务服务在 `services/data/` 下）
 - 模块：`apps/api/src/app.module.ts`
 
 ## 控制器模板
@@ -18,8 +18,9 @@ description: 创建 NestJS 控制器和服务，实现 RESTful API 端点。当�
 ```typescript
 import { Controller, Get, Post, Query, Param, Body } from '@nestjs/common';
 import { root } from '@sker/core';
-import { MyService } from '../services/my.service';
+import { MyService } from '../services/data/my.service';
 import * as sdk from '@sker/sdk';
+import { TimeRange } from '../services/data/types';
 
 @Controller('api/resources')
 export class ResourcesController implements sdk.ResourcesController {
@@ -46,8 +47,8 @@ export class ResourcesController implements sdk.ResourcesController {
   }
 
   private validateTimeRange(timeRange?: string): TimeRange {
-    const validRanges = ['1h', '6h', '12h', '24h', '7d', '30d'];
-    return validRanges.includes(timeRange as any) ? timeRange : '24h';
+    const validRanges: TimeRange[] = ['1h', '6h', '12h', '24h', '7d', '30d', '90d', '180d', '365d'];
+    return validRanges.includes(timeRange as TimeRange) ? (timeRange as TimeRange) : '24h';
   }
 }
 ```
@@ -136,4 +137,5 @@ export interface ResourcesController {
 ## 参考实现
 
 - `apps/api/src/controllers/events.controller.ts`
+- `apps/api/src/services/data/events.service.ts`
 - `apps/api/src/services/workflow.service.ts`

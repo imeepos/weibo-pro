@@ -5,7 +5,8 @@ import { Handler, NodeEvent, setAstError } from "@sker/workflow";
 import { WeiboAjaxStatusesCommentAst } from "@sker/workflow-ast";
 import { delay } from "./services/utils";
 import { WeiboApiClient } from "./services/weibo-api-client.base";
-import { Observable } from "rxjs";
+import { Observable, from } from "rxjs";
+import { concatMap, mergeMap } from "rxjs/operators";
 import { DelayService } from "./services/delay.service";
 import { RateLimiterService } from "./services/rate-limiter.service";
 
@@ -42,112 +43,102 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
             ast.state = 'running';
             obs.next({ type: 'node_runing', id: ast.id });
 
-            input$.subscribe({
-                next: (inputData) => {
+            const subscription = input$.pipe(
+                concatMap(async (inputData) => {
                     ast.emitCount += 1;
                     obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } })
+
                     if (inputData) {
                         Object.keys(inputData).forEach(key => {
                             (ast as any)[key] = inputData[key];
                         });
                     }
-                },
+
+                    return await this.handler(ast, wrappedCtx);
+                }),
+                mergeMap((events: NodeEvent[]) => from(events))
+            ).subscribe({
+                next: (event: NodeEvent) => obs.next(event),
                 error: (error) => {
+                    console.error(`[WeiboAjaxStatusesCommentAstVisitor] mid: ${ast.mid}`, error);
                     ast.state = 'fail';
-                    setAstError(ast, error);
+                    setAstError(ast, error, process.env.NODE_ENV === 'development');
                     obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
                     obs.complete();
                 },
-                complete: async () => {
-                    const handler = async () => {
-                        try {
-                            // 检查取消信号
-                            if (wrappedCtx.abortSignal?.aborted) {
-                                ast.state = 'fail';
-                                setAstError(ast, new Error('工作流已取消'));
-                                obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-                                return;
-                            }
-
-                            while (true) {
-                                // 检查取消信号（循环开始）
-                                if (wrappedCtx.abortSignal?.aborted) {
-                                    ast.state = 'fail';
-                                    setAstError(ast, new Error('工作流已取消'));
-                                    obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-                                    return;
-                                }
-
-                                const body = await this.fetchComments(ast);
-
-                                // 检查取消信号（网络请求后）
-                                if (wrappedCtx.abortSignal?.aborted) {
-                                    ast.state = 'fail';
-                                    setAstError(ast, new Error('工作流已取消'));
-                                    obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-                                    return;
-                                }
-
-                                const entities = await this.saveComments(body);
-
-                                console.log(`[WeiboAjaxStatusesCommentAstVisitor] 共${entities.length}个`);
-
-                                if (entities.length > 0) {
-                                    for (let child of entities) {
-                                        // 检查取消信号（子评论循环中）
-                                        if (wrappedCtx.abortSignal?.aborted) {
-                                            ast.state = 'fail';
-                                            setAstError(ast, new Error('工作流已取消'));
-                                            obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-                                            return;
-                                        }
-
-                                        if (child.more_info) {
-                                            const childAst = new WeiboAjaxStatusesCommentAst();
-                                            childAst.mid = `${child.id}`;
-                                            childAst.is_show_bulletin = 2;
-                                            childAst.is_mix = 1;
-                                            childAst.fetch_level = 1;
-                                            childAst.max_id = 0;
-                                            childAst.count = 20;
-                                            childAst.uid = ast.uid;
-                                            await this.visitChildren(childAst, wrappedCtx);
-                                        }
-                                    }
-                                }
-
-                                if (!body.max_id) {
-                                    break;
-                                }
-
-                                ast.max_id = body.max_id;
-                                ast.next_max_id = body.max_id;
-                                await delay();
-                            }
-                            ast.is_end = true;
-                            obs.next({ type: 'node_emit', id: ast.id, data: { is_end: ast.is_end } });
-
-                            ast.state = 'success';
-                            obs.next({ type: 'node_success', id: ast.id });
-                            obs.complete()
-                        } catch (error) {
-                            console.error(`[WeiboAjaxStatusesCommentAstVisitor] mid: ${ast.mid}`, error);
-                            ast.state = 'fail';
-                            setAstError(ast, error, process.env.NODE_ENV === 'development');
-                            obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-                            obs.complete()
-                        }
-                    };
-                    handler();
+                complete: () => {
+                    ast.state = 'success';
+                    obs.next({ type: 'node_success', id: ast.id });
+                    obs.complete();
                 }
             });
 
             return () => {
                 console.log('[WeiboAjaxStatusesCommentAstVisitor] 订阅被取消，触发 AbortSignal');
+                subscription.unsubscribe();
                 abortController.abort();
                 obs.complete();
             };
         });
+    }
+
+    private async handler(ast: WeiboAjaxStatusesCommentAst, wrappedCtx: any): Promise<NodeEvent[]> {
+        // 检查取消信号
+        if (wrappedCtx.abortSignal?.aborted) {
+            throw new Error('工作流已取消');
+        }
+
+        while (true) {
+            // 检查取消信号（循环开始）
+            if (wrappedCtx.abortSignal?.aborted) {
+                throw new Error('工作流已取消');
+            }
+
+            const body = await this.fetchComments(ast);
+
+            // 检查取消信号（网络请求后）
+            if (wrappedCtx.abortSignal?.aborted) {
+                throw new Error('工作流已取消');
+            }
+
+            const entities = await this.saveComments(body);
+
+            console.log(`[WeiboAjaxStatusesCommentAstVisitor] 共${entities.length}个`);
+
+            if (entities.length > 0) {
+                for (let child of entities) {
+                    // 检查取消信号（子评论循环中）
+                    if (wrappedCtx.abortSignal?.aborted) {
+                        throw new Error('工作流已取消');
+                    }
+
+                    if (child.more_info) {
+                        const childAst = new WeiboAjaxStatusesCommentAst();
+                        childAst.mid = `${child.id}`;
+                        childAst.is_show_bulletin = 2;
+                        childAst.is_mix = 1;
+                        childAst.fetch_level = 1;
+                        childAst.max_id = 0;
+                        childAst.count = 20;
+                        childAst.uid = ast.uid;
+                        await this.visitChildren(childAst, wrappedCtx);
+                    }
+                }
+            }
+
+            if (!body.max_id) {
+                break;
+            }
+
+            ast.max_id = body.max_id;
+            ast.next_max_id = body.max_id;
+            await delay();
+        }
+
+        ast.is_end = true;
+        return [
+            { type: 'node_emit' as const, id: ast.id, data: { is_end: ast.is_end } }
+        ];
     }
 
     async visitChildren(ast: WeiboAjaxStatusesCommentAst, _ctx: any) {

@@ -160,3 +160,5 @@ const posts = await useEntityManager(async (m) => {
 - `packages/entities/src/event.entity.ts`
 - `packages/entities/src/weibo-post.entity.ts`
 - `packages/entities/src/weibo-post.subscriber.ts`
+- `packages/entities/src/llm-provider.ts`
+- `packages/entities/src/prompt-role.entity.ts`
