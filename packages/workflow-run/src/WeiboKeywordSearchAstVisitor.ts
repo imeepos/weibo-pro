@@ -114,8 +114,11 @@ export class WeiboKeywordSearchAstVisitor {
                 }
                 ast.mblogid = post.mid;
                 ast.uid = post.uid;
-                obs.next({ type: 'node_emit', id: ast.id, property: 'mblogid', value: ast.mblogid });
-                obs.next({ type: 'node_emit', id: ast.id, property: 'uid', value: ast.uid });
+                obs.next({
+                    type: 'node_emit',
+                    id: ast.id,
+                    data: { mblogid: ast.mblogid, uid: ast.uid }
+                });
                 await this.delayService.randomDelay(ast.emitDelayMin || 1, ast.emitDelayMax || 3);
             }
 
@@ -155,8 +158,11 @@ export class WeiboKeywordSearchAstVisitor {
                             }
                             ast.mblogid = post.mid;
                             ast.uid = post.uid;
-                            obs.next({ type: 'node_emit', id: ast.id, property: 'mblogid', value: ast.mblogid });
-                            obs.next({ type: 'node_emit', id: ast.id, property: 'uid', value: ast.uid });
+                            obs.next({
+                                type: 'node_emit',
+                                id: ast.id,
+                                data: { mblogid: ast.mblogid, uid: ast.uid }
+                            });
                             await this.delayService.randomDelay(ast.emitDelayMin || 1, ast.emitDelayMax || 3);
                         }
 

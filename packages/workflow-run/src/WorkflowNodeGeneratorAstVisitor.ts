@@ -50,16 +50,20 @@ export class WorkflowNodeGeneratorAstVisitor {
             ast.visitorCode = visitorCode;
             ast.success = !!astCode && !!visitorCode;
 
-            return [
-              { type: 'node_emit' as const, id: ast.id, property: 'astCode', value: astCode },
-              { type: 'node_emit' as const, id: ast.id, property: 'visitorCode', value: visitorCode },
-              { type: 'node_emit' as const, id: ast.id, property: 'success', value: ast.success }
-            ];
+            return {
+              type: 'node_emit' as const,
+              id: ast.id,
+              data: {
+                astCode,
+                visitorCode,
+                success: ast.success
+              }
+            };
           })
         )
         .subscribe({
-          next: (events: NodeEvent[]) => {
-            events.forEach((event) => obs.next(event));
+          next: (event: NodeEvent) => {
+            obs.next(event);
           },
           error: (error) => {
             ast.state = 'fail';
@@ -151,13 +155,15 @@ export class MyNodeAstVisitor {
           const result = processData(ast.inputField);
           ast.outputField = result;
 
-          return [
-            { type: 'node_emit' as const, id: ast.id, property: 'outputField', value: result }
-          ];
+          return {
+            type: 'node_emit' as const,
+            id: ast.id,
+            data: { outputField: result }
+          };
         })
       ).subscribe({
-        next: (events: NodeEvent[]) => {
-          events.forEach(event => obs.next(event));
+        next: (event: NodeEvent) => {
+          obs.next(event);
         },
         error: (error) => {
           ast.state = 'fail';

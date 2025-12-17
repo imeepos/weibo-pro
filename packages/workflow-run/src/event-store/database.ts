@@ -95,7 +95,7 @@ export class DatabaseEventStore implements IEventStore {
             case NodeEventType.RUNNING:
                 return { type: 'node_runing', id: log.nodeId };
             case NodeEventType.EMIT:
-                return { type: 'node_emit', id: log.nodeId, data: log.data };
+                return { type: 'node_emit', id: log.nodeId, data: (log.data ?? {}) as Partial<any> };
             case NodeEventType.SUCCESS:
                 return { type: 'node_success', id: log.nodeId };
             case NodeEventType.FAIL:
