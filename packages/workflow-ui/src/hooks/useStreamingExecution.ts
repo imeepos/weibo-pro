@@ -27,6 +27,7 @@ export function useStreamingExecution() {
 
               case 'node_progress':
                 // 进度更新：工具调用、阶段性任务
+                console.log('[StreamingExecution] 收到 node_progress 事件', { id: event.id, data: event.data });
                 if (event.data?.stage && event.data?.message) {
                   updateNodeProgress(event.id, {
                     stage: event.data.stage,

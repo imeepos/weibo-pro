@@ -140,6 +140,7 @@ export class StreamingLlmInvoker {
     tools: StructuredToolInterface[]
   ): Observable<StreamChunk> {
     const MAX_ROUNDS = 10;
+    const MAX_TOOL_ROUNDS = 5; // 工具调用最多 5 轮
     const toolMap = new Map(tools.map(tool => [tool.name, tool]));
 
     const subject = new Subject<StreamChunk>();
@@ -165,6 +166,25 @@ export class StreamingLlmInvoker {
               });
 
               if (llmResponse.tool_calls && llmResponse.tool_calls.length > 0) {
+                // 检查是否已达到工具调用上限
+                if (state.round >= MAX_TOOL_ROUNDS) {
+                  console.warn(`[StreamingLlmInvoker] 已达到工具调用上限 (${MAX_TOOL_ROUNDS} 轮)，强制进入生成模式`);
+
+                  // 添加强制生成提示
+                  const forceGenerationMessages = [
+                    ...state.messages,
+                    llmResponse,
+                    {
+                      role: 'user',
+                      content: '⚠️ 已完成足够的信息查询。请不要再调用工具，直接基于已有信息完成章节内容的创作。输出格式：\n\n# 章节标题\n\n章节正文内容...'
+                    }
+                  ];
+
+                  return this.streamFinalResponse(model, forceGenerationMessages, signal, subject).pipe(
+                    map(() => ({ ...state, isDone: true }))
+                  );
+                }
+
                 // 有工具调用，继续下一轮
                 console.log(`[StreamingLlmInvoker] 检测到工具调用:`, llmResponse.tool_calls.map(tc => tc.name));
 
@@ -226,21 +246,45 @@ export class StreamingLlmInvoker {
                 return of({ ...state, isDone: true });
               }
 
-              // 如果没有内容，尝试流式调用
+              // ⚠️ 空响应检测：如果没有 content 也没有 tool_calls，说明 LLM 返回了无效响应
+              if (!llmResponse.content || llmResponse.content.trim().length === 0) {
+                console.error(`[StreamingLlmInvoker] 检测到空响应，消息数: ${state.messages.length}，轮次: ${state.round + 1}`);
+                console.error(`[StreamingLlmInvoker] 最后几条消息:`, JSON.stringify(state.messages.slice(-3), null, 2).slice(0, 1000));
+
+                // 尝试裁剪上下文后重试（如果还有重试机会）
+                if (state.round < MAX_ROUNDS - 1 && state.messages.length > 5) {
+                  console.warn(`[StreamingLlmInvoker] 尝试裁剪上下文后重试...`);
+
+                  const trimmedMessages = this.trimContextForRetry(state.messages);
+
+                  // 添加强制生成提示
+                  trimmedMessages.push({
+                    role: 'user',
+                    content: '⚠️ 请基于已查询的信息，立即开始创作章节内容。不要再调用工具，不要说"我先查看"等元对话。直接输出章节文本（格式：标题 + 正文）。'
+                  });
+
+                  return of({ messages: trimmedMessages, round: state.round + 1, isDone: false });
+                }
+
+                // 无法重试，抛出错误
+                const error = new Error('LLM 返回空响应，无法生成内容。可能原因：上下文过长、工具调用次数过多、或模型输出异常。');
+                subject.error(error);
+                return throwError(() => error);
+              }
+
+              // 如果走到这里，说明有未预期的情况
               console.log(`[StreamingLlmInvoker] 响应中无内容，尝试流式调用`);
 
-              // 将当前 LLM 响应添加到消息历史
-              const messagesWithResponse = [...state.messages, llmResponse];
+              // 将当前 LLM 响应添加到消息历史（确保不是空消息）
+              const messagesWithResponse = llmResponse.content && llmResponse.content.trim().length > 0
+                ? [...state.messages, llmResponse]
+                : state.messages;
 
-              // 检查最后一条消息是否为 tool 角色，如果是，添加提示消息
-              const lastMessage = messagesWithResponse[messagesWithResponse.length - 1];
-              if (lastMessage && 'role' in lastMessage && lastMessage.role === 'tool') {
-                console.log(`[StreamingLlmInvoker] 最后一条消息是 tool 角色，添加提示消息`);
-                messagesWithResponse.push({
-                  role: 'user',
-                  content: '请基于上述工具调用结果，完成章节内容的创作。'
-                });
-              }
+              // 添加提示消息确保 LLM 生成内容
+              messagesWithResponse.push({
+                role: 'user',
+                content: '请基于上述工具调用结果，完成章节内容的创作。输出格式：\n\n# 章节标题\n\n章节正文内容...'
+              });
 
               return this.streamFinalResponse(model, messagesWithResponse, signal, subject).pipe(
                 map(() => ({ ...state, isDone: true }))
@@ -421,5 +465,31 @@ export class StreamingLlmInvoker {
         return { messages: newMessages, round: state.round + 1, isDone: false };
       })
     );
+  }
+
+  /**
+   * 裁剪上下文以便重试
+   * 策略：保留 system/user 消息，裁剪过长的 tool 结果
+   */
+  private trimContextForRetry(messages: Array<MessageContent | LlmResponse | ToolMessage>): Array<MessageContent | LlmResponse | ToolMessage> {
+    const MAX_TOOL_RESULT_LENGTH = 800; // 每个工具结果最多保留 800 字符
+
+    console.log(`[StreamingLlmInvoker] 裁剪上下文，原始消息数: ${messages.length}`);
+
+    const trimmedMessages = messages.map(msg => {
+      // 类型守卫：检查是否为 ToolMessage
+      if ('role' in msg && msg.role === 'tool' && 'name' in msg && msg.content.length > MAX_TOOL_RESULT_LENGTH) {
+        const toolMsg = msg as ToolMessage;
+        console.log(`[StreamingLlmInvoker] 裁剪工具结果 ${toolMsg.name}，原长度: ${msg.content.length} → ${MAX_TOOL_RESULT_LENGTH}`);
+        return {
+          ...toolMsg,
+          content: msg.content.slice(0, MAX_TOOL_RESULT_LENGTH) + '\n\n...(结果已截断，如需完整内容请重新调用工具)'
+        };
+      }
+      return msg;
+    });
+
+    console.log(`[StreamingLlmInvoker] 裁剪后消息数: ${trimmedMessages.length}`);
+    return trimmedMessages;
   }
 }

@@ -23,6 +23,10 @@ export interface WorkflowNodeProps {
   status?: IAstStates
   statusCount?: number
 
+  // 执行进度
+  progressMessage?: string
+  progressStatus?: 'executing' | 'completed'
+
   // 端口
   inputs?: INodeInputMetadata[]
   outputs?: INodeOutputMetadata[]

@@ -22,8 +22,9 @@ import { useExecutionStore } from '../../store/execution.store'
  */
 export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNodeType>) => {
   // 从 execution store 获取节点的流式数据和进度
-  const streamingData = useExecutionStore((state) => state.getStreamingData(id))
-  const progressData = useExecutionStore((state) => state.getNodeProgress(id))
+  // 直接订阅状态值，而不是 getter 函数，这样才能触发重新渲染
+  const streamingData = useExecutionStore((state) => state.streamingData[id])
+  const progressData = useExecutionStore((state) => state.nodeProgress[id])
 
   // 确保节点已编译（包含 metadata）
   let nodeToUse: INode

@@ -169,12 +169,15 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
   getStreamingData: (nodeId) => get().streamingData[nodeId],
 
   updateNodeProgress: (nodeId, progress) =>
-    set((prev) => ({
-      nodeProgress: {
-        ...prev.nodeProgress,
-        [nodeId]: { ...progress, timestamp: Date.now() },
-      },
-    })),
+    set((prev) => {
+      console.log('[ExecutionStore] updateNodeProgress', { nodeId, progress });
+      return {
+        nodeProgress: {
+          ...prev.nodeProgress,
+          [nodeId]: { ...progress, timestamp: Date.now() },
+        },
+      };
+    }),
 
   clearNodeProgress: (nodeId) =>
     set((prev) => {

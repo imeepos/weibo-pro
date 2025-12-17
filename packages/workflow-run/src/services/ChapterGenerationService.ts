@@ -99,7 +99,41 @@ export class ChapterGenerationService {
       resolvedClueIds: z.array(z.string()).optional().describe('本章回填的伏笔ID列表（可选）')
     });
 
-    const chapters = (ast.previousChapters || []).filter(ch => ch.content && ch.content.trim().length > 0);
+    const chapters = (ast.previousChapters || []).filter(ch => {
+      // 过滤掉空章节
+      if (!ch.content || ch.content.trim().length === 0) {
+        console.warn(`[ChapterGeneration] 过滤空章节 ${ch.chapterNumber}`);
+        return false;
+      }
+
+      // 过滤掉异常章节（包含 LLM 的"思考过程"而非真实小说内容）
+      const suspiciousPatterns = [
+        '我先查看',
+        '让我查看',
+        '我需要了解',
+        '让我先',
+        '暂无明确章节标题',
+        '我先回顾',
+        '我将',
+        '叙述者回顾',
+        '叙述者表示'
+      ];
+
+      const titleSuspicious = suspiciousPatterns.some(pattern => ch.title.includes(pattern));
+      const contentSuspicious = suspiciousPatterns.some(pattern =>
+        ch.content.substring(0, 200).includes(pattern) // 只检查前200字
+      );
+
+      if (titleSuspicious || contentSuspicious) {
+        console.warn(`[ChapterGeneration] 检测到异常章节 ${ch.chapterNumber}，已过滤:`, {
+          title: ch.title,
+          contentPreview: ch.content.substring(0, 100)
+        });
+        return false;
+      }
+
+      return true;
+    });
     const isFirstChapter = chapters.length === 0;
     const nextChapterNumber = isFirstChapter ? 1 : Math.max(...chapters.map(c => c.chapterNumber)) + 1;
 
