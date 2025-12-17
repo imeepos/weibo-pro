@@ -262,10 +262,10 @@ export class LlmProxyService {
       if (needsConversion) {
         if (protocol === 'openai' && provider.providerProtocol === 'anthropic') {
           proxyBody = openaiRequestToClaude({ ...body, model: targetModel })
-          proxyPath = '/v1/messages'
+          proxyPath = '/messages'
         } else if (protocol === 'anthropic' && provider.providerProtocol === 'openai') {
           proxyBody = claudeRequestToOpenai({ ...body, model: targetModel })
-          proxyPath = '/v1/chat/completions'
+          proxyPath = '/chat/completions'
         }
       }
 
