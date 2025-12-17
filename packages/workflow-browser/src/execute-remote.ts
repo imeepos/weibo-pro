@@ -25,7 +25,18 @@ export function executeRemote(
     return controller.execute({ ast, workflow: parent, input }).pipe(
         tap(event => {
             if (event.type === 'node_emit') {
-                Reflect.set(ast, event.property, event.value)
+                Object.entries(event.data).forEach(([key, value]) => {
+                    Reflect.set(ast, key, value)
+                })
+            }
+            else if (event.type === 'node_fail') {
+                ast.state = 'fail';
+            }
+            else if (event.type === 'node_success') {
+                ast.state = 'success'
+            }
+            else if (event.type === 'node_runing') {
+                ast.state = 'running'
             }
         })
     )

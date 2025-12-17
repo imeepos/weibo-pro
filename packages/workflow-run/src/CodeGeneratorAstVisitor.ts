@@ -101,10 +101,7 @@ ${tasks.map((t, i) => `${i + 1}. ${t}`).join('\n')}
                         ast.currentTaskIndex += 1;
                         ast.isComplete = ast.currentTaskIndex >= tasks.length;
 
-                        obs.next({ type: 'node_emit', id: ast.id, property: 'generatedCode', value: ast.generatedCode });
-                        obs.next({ type: 'node_emit', id: ast.id, property: 'filePath', value: ast.filePath });
-                        obs.next({ type: 'node_emit', id: ast.id, property: 'operation', value: ast.operation });
-                        obs.next({ type: 'node_emit', id: ast.id, property: 'isComplete', value: ast.isComplete });
+                        obs.next({ type: 'node_emit', id: ast.id, data: { generatedCode: ast.generatedCode, filePath: ast.filePath, operation: ast.operation, isComplete: ast.isComplete } });
 
                         ast.state = 'success';
                         obs.next({ type: 'node_success', id: ast.id });

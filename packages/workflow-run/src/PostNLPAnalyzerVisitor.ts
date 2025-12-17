@@ -30,7 +30,7 @@ export class PostNLPAnalyzerVisitor {
       input$.subscribe({
         next: (inputData) => {
           ast.emitCount += 1;
-          obs.next({ type: 'node_emit', id: ast.id, property: 'emitCount', value: ast.emitCount })
+          obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } })
           if (inputData) {
             Object.keys(inputData).forEach(key => {
               (ast as any)[key] = inputData[key];
@@ -120,7 +120,7 @@ export class PostNLPAnalyzerVisitor {
             availableTags,
             recentEvents
           );
-          obs.next({ type: 'node_emit', id: ast.id, property: 'nlpResult', value: ast.nlpResult });
+          obs.next({ type: 'node_emit', id: ast.id, data: { nlpResult: ast.nlpResult } });
 
               ast.state = 'success';
               obs.next({ type: 'node_success', id: ast.id });

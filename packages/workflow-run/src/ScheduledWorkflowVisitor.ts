@@ -40,7 +40,7 @@ export class ScheduledWorkflowVisitor {
       input$.subscribe({
         next: (inputData) => {
           ast.emitCount += 1;
-          obs.next({ type: 'node_emit', id: ast.id, property: 'emitCount', value: ast.emitCount })
+          obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } })
           if (inputData) {
             Object.keys(inputData).forEach(key => {
               (ast as any)[key] = inputData[key];
@@ -132,8 +132,7 @@ export class ScheduledWorkflowVisitor {
           ast.scheduleId = schedule.id
           ast.nextRunAt = schedule.nextRunAt
           ast.status = schedule.status
-          obs.next({ type: 'node_emit', id: ast.id, property: 'scheduleId', value: ast.scheduleId })
-          obs.next({ type: 'node_emit', id: ast.id, property: 'nextRunAt', value: ast.nextRunAt })
+          obs.next({ type: 'node_emit', id: ast.id, data: { scheduleId: ast.scheduleId, nextRunAt: ast.nextRunAt } })
 
           ast.state = 'success'
           obs.next({ type: 'node_success', id: ast.id })

@@ -30,7 +30,7 @@ export class PromptRoleSkillAstVisitor {
           try {
 
             ast.emitCount += 1;
-            obs.next({ type: 'node_emit', id: ast.id, property: 'emitCount', value: ast.emitCount })
+            obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } })
             if (inputData) {
               Object.keys(inputData).forEach(key => {
                 (ast as any)[key] = inputData[key];
@@ -65,9 +65,7 @@ export class PromptRoleSkillAstVisitor {
                 ast.selectedSkillsList = [];
                 ast.skillContent = {};
                 ast.skillContentText = '';
-                obs.next({ type: 'node_emit', id: ast.id, property: 'selectedSkillsList', value: [] });
-                obs.next({ type: 'node_emit', id: ast.id, property: 'skillContent', value: {} });
-                obs.next({ type: 'node_emit', id: ast.id, property: 'skillContentText', value: '' });
+                obs.next({ type: 'node_emit', id: ast.id, data: { selectedSkillsList: [], skillContent: {}, skillContentText: '' } });
                 return;
               }
 
@@ -198,9 +196,7 @@ ${skillsDescription}
               }
 
               // 发射输出事件
-              obs.next({ type: 'node_emit', id: ast.id, property: 'selectedSkillsList', value: ast.selectedSkillsList });
-              obs.next({ type: 'node_emit', id: ast.id, property: 'skillContent', value: ast.skillContent });
-              obs.next({ type: 'node_emit', id: ast.id, property: 'skillContentText', value: ast.skillContentText });
+              obs.next({ type: 'node_emit', id: ast.id, data: { selectedSkillsList: ast.selectedSkillsList, skillContent: ast.skillContent, skillContentText: ast.skillContentText } });
             });
 
             return { success: true };

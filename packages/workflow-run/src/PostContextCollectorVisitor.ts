@@ -28,7 +28,7 @@ export class PostContextCollectorVisitor {
       input$.subscribe({
         next: (inputData) => {
           ast.emitCount += 1;
-          obs.next({ type: 'node_emit', id: ast.id, property: 'emitCount', value: ast.emitCount })
+          obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } })
           if (inputData) {
             Object.keys(inputData).forEach(key => {
               (ast as any)[key] = inputData[key];
@@ -97,9 +97,7 @@ export class PostContextCollectorVisitor {
             ast.post = post;
             ast.comments = comments;
             ast.reposts = reposts;
-            obs.next({ type: 'node_emit', id: ast.id, property: 'post', value: ast.post });
-            obs.next({ type: 'node_emit', id: ast.id, property: 'comments', value: ast.comments });
-            obs.next({ type: 'node_emit', id: ast.id, property: 'reposts', value: ast.reposts });
+            obs.next({ type: 'node_emit', id: ast.id, data: { post: ast.post, comments: ast.comments, reposts: ast.reposts } });
           });
 
               ast.state = 'success';

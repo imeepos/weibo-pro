@@ -49,7 +49,7 @@ export class PersonaCreatorAstVisitor {
       const subscription = input$.pipe(
         concatMap(async (inputData) => {
           ast.emitCount +=1;
-          obs.next({ type: 'node_emit', id: ast.id, property: 'emitCount', value: ast.emitCount })
+          obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } })
           if (inputData) {
             Object.keys(inputData).forEach(key => {
               (ast as any)[key] = inputData[key];
@@ -139,8 +139,7 @@ export class PersonaCreatorAstVisitor {
           });
 
           return [
-            { type: 'node_emit' as const, id: ast.id, property: 'personaId', value: ast.personaId },
-            { type: 'node_emit' as const, id: ast.id, property: 'personaName', value: ast.personaName }
+            { type: 'node_emit' as const, id: ast.id, data: { personaId: ast.personaId, personaName: ast.personaName } }
           ];
         }),
         mergeMap((events: NodeEvent[]) => from(events))

@@ -79,9 +79,7 @@ ${stepsText}`;
           ast.improvement = result.improvement;
 
           return [
-            { type: 'node_emit' as const, id: ast.id, property: 'recap', value: ast.recap },
-            { type: 'node_emit' as const, id: ast.id, property: 'blame', value: ast.blame },
-            { type: 'node_emit' as const, id: ast.id, property: 'improvement', value: ast.improvement }
+            { type: 'node_emit' as const, id: ast.id, data: { recap: ast.recap, blame: ast.blame, improvement: ast.improvement } }
           ];
         }),
         mergeMap((events: NodeEvent[]) => from(events))

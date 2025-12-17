@@ -40,7 +40,7 @@ export class PersonaAstVisitor {
       const subscription = input$.pipe(
         concatMap(async (inputData) => {
           ast.emitCount += 1;
-          obs.next({ type: 'node_emit', id: ast.id, property: 'emitCount', value: ast.emitCount })
+          obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } })
           if (inputData) {
             Object.keys(inputData).forEach(key => {
               (ast as any)[key] = inputData[key];
@@ -191,7 +191,7 @@ ${ast.context}`;
 
             if (extractedMemories.length === 0) {
               return [
-                { type: 'node_emit' as const, id: ast.id, property: 'response', value: ast.response }
+                { type: 'node_emit' as const, id: ast.id, data: { response: ast.response } }
               ];
             }
 
@@ -248,8 +248,7 @@ ${ast.context}`;
           });
 
           return [
-            { type: 'node_emit' as const, id: ast.id, property: 'response', value: ast.response },
-            { type: 'node_emit' as const, id: ast.id, property: 'newMemoryId', value: ast.newMemoryId }
+            { type: 'node_emit' as const, id: ast.id, data: { response: ast.response, newMemoryId: ast.newMemoryId } }
           ];
         }),
         mergeMap((events: NodeEvent[]) => from(events))

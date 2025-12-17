@@ -368,7 +368,7 @@ export class EventAutoCreatorVisitor {
             });
 
           return [
-            { type: 'node_emit' as const, id: ast.id, property: 'is_end', value: true }
+            { type: 'node_emit' as const, id: ast.id, data: { is_end: true } }
           ];
         }),
         mergeMap((events: NodeEvent[]) => from(events))

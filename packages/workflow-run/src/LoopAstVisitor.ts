@@ -39,11 +39,11 @@ export class LoopAstVisitor {
                     const total = items.length;
 
                     ast.total += total;
-                    obs.next({ type: 'node_emit', id: ast.id, property: 'total', value: ast.total });
+                    obs.next({ type: 'node_emit', id: ast.id, data: { total: ast.total } });
 
                     if (total === 0) {
                         ast.done = true;
-                        obs.next({ type: 'node_emit', id: ast.id, property: 'done', value: ast.done });
+                        obs.next({ type: 'node_emit', id: ast.id, data: { done: ast.done } });
                         return EMPTY;
                     }
 
@@ -63,8 +63,7 @@ export class LoopAstVisitor {
                                 tap(() => {
                                     ast.index = index * batchSize;
                                     ast.current = batch;
-                                    obs.next({ type: 'node_emit', id: ast.id, property: 'index', value: ast.index });
-                                    obs.next({ type: 'node_emit', id: ast.id, property: 'current', value: ast.current });
+                                    obs.next({ type: 'node_emit', id: ast.id, data: { index: ast.index, current: ast.current } });
                                 })
                             )
                         )
@@ -73,7 +72,7 @@ export class LoopAstVisitor {
                 finalize(() => {
                     ast.state = 'success';
                     ast.done = true;
-                    obs.next({ type: 'node_emit', id: ast.id, property: 'done', value: ast.done });
+                    obs.next({ type: 'node_emit', id: ast.id, data: { done: ast.done } });
                     obs.next({ type: 'node_success', id: ast.id });
                     obs.complete();
                 })

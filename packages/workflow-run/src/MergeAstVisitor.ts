@@ -25,8 +25,7 @@ export class MergeAstVisitor {
 
                     ast.result = result;
                     ast.totalCount = result.length;
-                    obs.next({ type: 'node_emit', id: ast.id, property: 'result', value: ast.result });
-                    obs.next({ type: 'node_emit', id: ast.id, property: 'totalCount', value: ast.totalCount });
+                    obs.next({ type: 'node_emit', id: ast.id, data: { result: ast.result, totalCount: ast.totalCount } });
                 },
                 error: (error) => {
                     ast.state = 'fail';

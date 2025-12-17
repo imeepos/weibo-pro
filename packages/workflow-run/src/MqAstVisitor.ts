@@ -40,7 +40,7 @@ export class MqPushAstVisitor {
           console.log(`[MqPush] 推送成功: queue=${queue.queueName}, data=`, ast.input);
 
           return [
-            { type: 'node_emit' as const, id: ast.id, property: 'success', value: ast.success }
+            { type: 'node_emit' as const, id: ast.id, data: { success: ast.success } }
           ];
         }),
         mergeMap((events: NodeEvent[]) => from(events))
@@ -129,7 +129,7 @@ export class MqPullAstVisitor {
               next: (envelope) => {
                 ast.output = envelope.message;
                 ast.emitCount += 1;
-                obs.next({ type: 'node_emit', id: ast.id, property: 'output', value: ast.output });
+                obs.next({ type: 'node_emit', id: ast.id, data: { output: ast.output } });
                 console.log(`[MqPull] 收到消息: queue=${normalizedQueueName}, emitCount=${ast.emitCount}`);
               },
               error: (error) => {

@@ -41,7 +41,7 @@ export class LlmCategoryAstVisitor {
                     const nonDefaultCategories = categories.filter(c => !c.isDefault);
                     if (nonDefaultCategories.length === 0) {
                         return [
-                            { type: 'node_emit' as const, id: ast.id, property: 'output_default', value: ast.context }
+                            { type: 'node_emit' as const, id: ast.id, data: { output_default: ast.context } }
                         ];
                     }
 
@@ -88,16 +88,12 @@ ${categoryList}
 
                     const finalMatched = matched || categories.find(c => c.isDefault);
 
-                    const events: NodeEvent[] = [
-                        { type: 'node_emit' as const, id: ast.id, property: 'rawOutput', value: result }
-                    ];
-
+                    const data: Record<string, any> = { rawOutput: result };
                     for (const cat of categories) {
-                        const value = cat === finalMatched ? ast.context : ROUTE_SKIPPED;
-                        events.push({ type: 'node_emit' as const, id: ast.id, property: cat.property, value });
+                        data[cat.property] = cat === finalMatched ? ast.context : ROUTE_SKIPPED;
                     }
 
-                    return events;
+                    return [{ type: 'node_emit' as const, id: ast.id, data }];
                 }),
                 mergeMap((events: NodeEvent[]) => from(events))
             ).subscribe({

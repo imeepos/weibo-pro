@@ -25,7 +25,7 @@ export class QueryRewriterAstVisitor {
       const subscription = input$.pipe(
         concatMap(async (inputData) => {
           ast.emitCount += 1;
-          obs.next({ type: 'node_emit', id: ast.id, property: 'emitCount', value: ast.emitCount })
+          obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } })
           if (inputData) {
             Object.keys(inputData).forEach(key => {
               (ast as any)[key] = inputData[key];
@@ -101,8 +101,7 @@ export class QueryRewriterAstVisitor {
           ast.subQueries = result.queries;
 
           return [
-            { type: 'node_emit' as const, id: ast.id, property: 'subQueries', value: ast.subQueries },
-            { type: 'node_emit' as const, id: ast.id, property: 'reasoning', value: ast.reasoning }
+            { type: 'node_emit' as const, id: ast.id, data: { subQueries: ast.subQueries, reasoning: ast.reasoning } }
           ];
         }),
         mergeMap((events: NodeEvent[]) => from(events))

@@ -88,7 +88,7 @@ export class AnswerFinalizerAstVisitor {
                     }
 
                     return [
-                        { type: 'node_emit' as const, id: ast.id, property: 'finalized', value: ast.finalized }
+                        { type: 'node_emit' as const, id: ast.id, data: { finalized: ast.finalized } }
                     ];
                 }),
                 mergeMap((events: NodeEvent[]) => from(events))

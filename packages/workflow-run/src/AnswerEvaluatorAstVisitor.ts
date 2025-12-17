@@ -121,9 +121,7 @@ export class AnswerEvaluatorAstVisitor {
           ast.passed = allPassed;
 
           return [
-            { type: 'node_emit' as const, id: ast.id, property: 'results', value: ast.results },
-            { type: 'node_emit' as const, id: ast.id, property: 'totalScore', value: ast.totalScore },
-            { type: 'node_emit' as const, id: ast.id, property: 'passed', value: ast.passed }
+            { type: 'node_emit' as const, id: ast.id, data: { results: ast.results, totalScore: ast.totalScore, passed: ast.passed } }
           ];
         }),
         mergeMap((events: NodeEvent[]) => from(events))

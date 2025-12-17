@@ -39,9 +39,7 @@ export class LlmTextAgentAstVisitor {
                     ]);
 
                     return [
-                        { type: 'node_emit' as const, id: ast.id, property: 'text', value: result.content },
-                        { type: 'node_emit' as const, id: ast.id, property: 'username', value: ast.username },
-                        { type: 'node_emit' as const, id: ast.id, property: 'profile', value: ast.profile }
+                        { type: 'node_emit' as const, id: ast.id, data: { text: result.content, username: ast.username, profile: ast.profile } }
                     ];
                 }),
                 mergeMap((events: NodeEvent[]) => from(events))

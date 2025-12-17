@@ -25,7 +25,7 @@ export class ResearchPlannerAstVisitor {
       const subscription = input$.pipe(
         concatMap(async (inputData) => {
           ast.emitCount += 1;
-          obs.next({ type: 'node_emit', id: ast.id, property: 'emitCount', value: ast.emitCount })
+          obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } })
           if (inputData) {
             Object.keys(inputData).forEach(key => {
               (ast as any)[key] = inputData[key];
@@ -126,8 +126,7 @@ ${soundbites}
           ast.subproblems = result.subproblems;
 
           return [
-            { type: 'node_emit' as const, id: ast.id, property: 'subproblems', value: ast.subproblems },
-            { type: 'node_emit' as const, id: ast.id, property: 'reasoning', value: ast.reasoning }
+            { type: 'node_emit' as const, id: ast.id, data: { subproblems: ast.subproblems, reasoning: ast.reasoning } }
           ];
         }),
         mergeMap((events: NodeEvent[]) => from(events))

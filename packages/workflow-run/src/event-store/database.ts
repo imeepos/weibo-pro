@@ -21,8 +21,8 @@ export class DatabaseEventStore implements IEventStore {
             runId: numericRunId,
             nodeId: event.id ?? '',
             eventType: this.toEventType(event.type),
-            property: event.type === 'node_emit' ? event.property : undefined,
-            data: event.type === 'node_emit' ? event.value : undefined,
+            property: undefined,
+            data: event.type === 'node_emit' ? (event as any).data : undefined,
         });
     }
 
@@ -95,7 +95,7 @@ export class DatabaseEventStore implements IEventStore {
             case NodeEventType.RUNNING:
                 return { type: 'node_runing', id: log.nodeId };
             case NodeEventType.EMIT:
-                return { type: 'node_emit', id: log.nodeId, property: log.property!, value: log.data };
+                return { type: 'node_emit', id: log.nodeId, data: log.data };
             case NodeEventType.SUCCESS:
                 return { type: 'node_success', id: log.nodeId };
             case NodeEventType.FAIL:

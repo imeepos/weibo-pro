@@ -54,15 +54,15 @@ export class LlmStructuredOutputAstVisitor {
                     const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, content];
                     const result = JSON.parse(jsonMatch[1]!.trim()) as Record<string, unknown>;
 
-                    const events: NodeEvent[] = [];
+                    const data: Record<string, unknown> = {};
                     for (const output of outputs) {
                         if (output.property in result) {
                             (ast as any)[output.property] = result[output.property];
-                            events.push({ type: 'node_emit' as const, id: ast.id, property: output.property, value: result[output.property] });
+                            data[output.property] = result[output.property];
                         }
                     }
 
-                    return events;
+                    return [{ type: 'node_emit' as const, id: ast.id, data }];
                 }),
                 mergeMap((events: NodeEvent[]) => from(events))
             ).subscribe({

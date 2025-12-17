@@ -37,8 +37,7 @@ export class GroupChatLoopAstVisitor {
                             timestamp: new Date().toISOString()
                         }];
                         ast.currentRound = 0;
-                        obs.next({ type: 'node_emit', id: ast.id, property: 'chatHistory', value: ast.chatHistory });
-                        obs.next({ type: 'node_emit', id: ast.id, property: 'currentRound', value: ast.currentRound });
+                        obs.next({ type: 'node_emit', id: ast.id, data: { chatHistory: ast.chatHistory, currentRound: ast.currentRound } });
                     }
                 },
                 error: (error) => {

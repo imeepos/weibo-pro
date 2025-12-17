@@ -42,7 +42,7 @@ export class SerpClusterAstVisitor {
             const subscription = input$.pipe(
                 concatMap(async (inputData) => {
                     ast.emitCount += 1;
-                    obs.next({ type: 'node_emit', id: ast.id, property: 'emitCount', value: ast.emitCount })
+                    obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } })
                     if (inputData) {
                         Object.keys(inputData).forEach(key => {
                             (ast as any)[key] = inputData[key];
@@ -74,7 +74,7 @@ export class SerpClusterAstVisitor {
                     ast.clusters = result.clusters || [];
 
                     return [
-                        { type: 'node_emit' as const, id: ast.id, property: 'clusters', value: ast.clusters }
+                        { type: 'node_emit' as const, id: ast.id, data: { clusters: ast.clusters } }
                     ];
                 }),
                 mergeMap((events: NodeEvent[]) => from(events))
