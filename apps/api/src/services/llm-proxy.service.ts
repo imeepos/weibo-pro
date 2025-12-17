@@ -257,12 +257,15 @@ export class LlmProxyService {
       // 协议转换：请求协议 vs Provider 协议
       const needsConversion = protocol !== provider.providerProtocol
       let proxyBody: any = { ...body, model: targetModel }
+      let proxyPath = apiPath
 
       if (needsConversion) {
         if (protocol === 'openai' && provider.providerProtocol === 'anthropic') {
           proxyBody = openaiRequestToClaude({ ...body, model: targetModel })
+          proxyPath = '/v1/messages'
         } else if (protocol === 'anthropic' && provider.providerProtocol === 'openai') {
           proxyBody = claudeRequestToOpenai({ ...body, model: targetModel })
+          proxyPath = '/v1/chat/completions'
         }
       }
 
@@ -293,7 +296,7 @@ export class LlmProxyService {
       const startTime = Date.now()
 
       try {
-        const url = `${provider.baseUrl}${apiPath}`
+        const url = `${provider.baseUrl}${proxyPath}`
         const response = await fetch(url, {
           method: 'POST',
           headers: {
