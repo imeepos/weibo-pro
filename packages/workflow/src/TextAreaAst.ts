@@ -1,5 +1,5 @@
 import { Ast, setAstError, WorkflowGraphAst } from "./ast";
-import { Input, Node, Output, Handler, IS_MULTI } from "./decorator";
+import { Input, Node, Output, Handler, IS_MULTI, Tool } from "./decorator";
 import { Injectable } from "@sker/core";
 import { isObservable, Observable } from "rxjs";
 import { NodeEvent } from "./execution/events";
@@ -64,5 +64,20 @@ export class TextAreaAstVisitor {
                 }
             });
         });
+    }
+}
+
+
+@Injectable()
+export class TextAreaAstTool {
+    @Tool(TextAreaAst)
+    handler(ast: TextAreaAst) {
+        return {
+            id: ast.id,
+            title: ast.name || '未命名文本',
+            summary: ast.description || '',
+            content: ast.output || '（内容为空）',
+            emitCount: ast.emitCount || 0
+        }
     }
 }

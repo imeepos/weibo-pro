@@ -26,6 +26,12 @@ export interface ChapterData {
   stateful: true
 })
 export class StoryWeaverAst extends Ast {
+  @Input({ title: '创作提示', type: 'textarea', defaultValue: '' })
+  prompt: string = '';
+
+  @Input({ title: '写作风格', type: 'text', defaultValue: '轻松幽默、节奏明快' })
+  style: string = '轻松幽默、节奏明快';
+
   @Input({ title: '字数要求', type: 'number', defaultValue: 1500 })
   wordCount: number = 1000;
 
