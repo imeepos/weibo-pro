@@ -16,7 +16,7 @@ export class LoopAstVisitor {
             ast.state = 'running';
             ast.total = 0; // 重置累加器
             ast.done = false;
-            obs.next({ type: 'node_runing', id: ast.id, data: ast });
+            obs.next({ type: 'node_runing', id: ast.id });
 
             input$.pipe(
                 tap(inputData => {
@@ -74,13 +74,13 @@ export class LoopAstVisitor {
                     ast.state = 'success';
                     ast.done = true;
                     obs.next({ type: 'node_emit', id: ast.id, property: 'done', value: ast.done });
-                    obs.next({ type: 'node_success', id: ast.id, data: ast });
+                    obs.next({ type: 'node_success', id: ast.id });
                     obs.complete();
                 })
             ).subscribe({
                 error: (error) => {
                     ast.state = 'fail';
-                    obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                    obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
                     obs.complete();
                 }
             });

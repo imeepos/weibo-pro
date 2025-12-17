@@ -44,13 +44,13 @@ export class WeiboAjaxStatusesRepostTimelineAstVisitor extends WeiboApiClient {
                     if (wrappedCtx.abortSignal?.aborted) {
                         ast.state = 'fail';
                         setAstError(ast, new Error('工作流已取消'));
-                        obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                        obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
                         return;
                     }
 
                     ast.state = 'running';
                     ast.count += 1;
-                    obs.next({ type: 'node_runing', id: ast.id, data: ast });
+                    obs.next({ type: 'node_runing', id: ast.id });
 
                     let page = 1;
                     for await (const body of this.fetchWithPagination<WeiboAjaxStatusesRepostTimelineResponse>({
@@ -65,7 +65,7 @@ export class WeiboAjaxStatusesRepostTimelineAstVisitor extends WeiboApiClient {
                         if (wrappedCtx.abortSignal?.aborted) {
                             ast.state = 'fail';
                             setAstError(ast, new Error('工作流已取消'));
-                            obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                            obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
                             return;
                         }
 
@@ -80,18 +80,18 @@ export class WeiboAjaxStatusesRepostTimelineAstVisitor extends WeiboApiClient {
                             console.log(`[WeiboAjaxStatusesRepostTimelineAstVisitor] ${page} 页 共${entities.length}条数据`);
                             await m.upsert(WeiboRepostEntity, entities as any[], ['id']);
                         });
-                    }
+                    }
                     ast.is_end = true;
                     obs.next({ type: 'node_emit', id: ast.id, property: 'is_end', value: ast.is_end });
 
                     ast.state = 'success';
-                    obs.next({ type: 'node_success', id: ast.id, data: ast });
+                    obs.next({ type: 'node_success', id: ast.id });
                     obs.complete()
                 } catch (error) {
                     console.error(`[WeiboAjaxStatusesRepostTimelineAstVisitor] mid: ${ast.mid}`, error);
                     ast.state = 'fail';
                     setAstError(ast, error, process.env.NODE_ENV === 'development');
-                    obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                    obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
                     obs.complete()
                 }
             };

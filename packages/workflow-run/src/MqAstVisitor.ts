@@ -18,7 +18,7 @@ export class MqPushAstVisitor {
       const abortController = new AbortController();
 
       ast.state = 'running';
-      obs.next({ type: 'node_runing', id: ast.id, data: ast });
+      obs.next({ type: 'node_runing', id: ast.id });
 
       const subscription = input$.pipe(
         concatMap(async (inputData) => {
@@ -53,12 +53,12 @@ export class MqPushAstVisitor {
           ast.state = 'fail';
           setAstError(ast, error, process.env.NODE_ENV === 'development');
           console.error(`[MqPushAstVisitor] queue=${ast.queueName}`, error);
-          obs.next({ type: 'node_fail', id: ast.id, data: ast });
+          obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
           obs.complete();
         },
         complete: () => {
           ast.state = 'success';
-          obs.next({ type: 'node_success', id: ast.id, data: ast });
+          obs.next({ type: 'node_success', id: ast.id });
           obs.complete();
         }
       });
@@ -93,7 +93,7 @@ export class MqPullAstVisitor {
 
       ast.state = 'running';
       ast.count += 1;
-      obs.next({ type: 'node_runing', id: ast.id, data: ast });
+      obs.next({ type: 'node_runing', id: ast.id });
 
       input$.subscribe({
         next: (inputData) => {
@@ -136,12 +136,12 @@ export class MqPullAstVisitor {
                 ast.state = 'fail';
                 setAstError(ast, error, process.env.NODE_ENV === 'development');
                 console.error(`[MqPullAstVisitor] queue=${normalizedQueueName}, 已发射=${ast.emitCount}条`, error);
-                obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
                 obs.complete();
               },
               complete: () => {
                 ast.state = 'success';
-                obs.next({ type: 'node_success', id: ast.id, data: ast });
+                obs.next({ type: 'node_success', id: ast.id });
                 obs.complete();
               }
             });
@@ -153,7 +153,7 @@ export class MqPullAstVisitor {
               subscription.unsubscribe();
               ast.state = 'fail';
               setAstError(ast, new Error('工作流已取消'));
-              obs.next({ type: 'node_fail', id: ast.id, data: ast });
+              obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
               obs.complete();
             });
           }
@@ -161,7 +161,7 @@ export class MqPullAstVisitor {
         error: (error) => {
           ast.state = 'fail';
           setAstError(ast, error, process.env.NODE_ENV === 'development');
-          obs.next({ type: 'node_fail', id: ast.id, data: ast });
+          obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
           obs.complete();
         },
         complete: () => {

@@ -80,7 +80,7 @@ export class FilterAstVisitor {
     handler(ast: FilterAst, workflow: WorkflowGraphAst): Observable<NodeEvent> {
         return new Observable<NodeEvent>(obs => {
             ast.state = 'running'
-            obs.next({ type: 'node_runing', id: ast.id, data: ast })
+            obs.next({ type: 'node_runing', id: ast.id })
 
             let items = ast.items || []
             if (!Array.isArray(items)) {
@@ -101,7 +101,7 @@ export class FilterAstVisitor {
             obs.next({ type: 'node_emit', id: ast.id, property: `matchedCount`, value: matched.length })
 
             ast.state = 'success'
-            obs.next({ type: 'node_success', id: ast.id, data: ast })
+            obs.next({ type: 'node_success', id: ast.id })
             obs.complete()
         })
     }

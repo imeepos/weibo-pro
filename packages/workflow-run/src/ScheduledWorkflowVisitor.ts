@@ -35,7 +35,7 @@ export class ScheduledWorkflowVisitor {
   visit(ast: ScheduledWorkflowAst, input$: Observable<any>, ctx: any): Observable<NodeEvent> {
     return new Observable<NodeEvent>((obs) => {
       ast.state = 'running';
-      obs.next({ type: 'node_runing', id: ast.id, data: ast });
+      obs.next({ type: 'node_runing', id: ast.id });
 
       input$.subscribe({
         next: (inputData) => {
@@ -49,7 +49,7 @@ export class ScheduledWorkflowVisitor {
         error: (error) => {
           ast.state = 'fail';
           setAstError(ast, error);
-          obs.next({ type: 'node_fail', id: ast.id, data: ast });
+          obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
           obs.complete();
         },
         complete: async () => {
@@ -135,7 +135,7 @@ export class ScheduledWorkflowVisitor {
           obs.next({ type: 'node_emit', id: ast.id, property: 'nextRunAt', value: ast.nextRunAt })
 
           ast.state = 'success'
-          obs.next({ type: 'node_success', id: ast.id, data: ast })
+          obs.next({ type: 'node_success', id: ast.id })
 
           logger.info('创建定时工作流成功', {
             scheduleId: schedule.id,
@@ -155,7 +155,7 @@ export class ScheduledWorkflowVisitor {
 
               ast.state = 'fail';
               setAstError(ast, error as Error);
-              obs.next({ type: 'node_fail', id: ast.id, data: ast });
+              obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
               obs.complete();
             }
           };

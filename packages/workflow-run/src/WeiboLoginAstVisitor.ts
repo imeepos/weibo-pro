@@ -19,7 +19,7 @@ export class WeiboLoginAstVisitor {
   handler(ast: WeiboLoginAst, input$: Observable<any>, ctx: any): Observable<NodeEvent> {
     return new Observable<NodeEvent>(obs => {
       ast.state = 'running';
-      obs.next({ type: 'node_runing', id: ast.id, data: ast });
+      obs.next({ type: 'node_runing', id: ast.id });
 
       input$.subscribe({
         next: (inputData) => {
@@ -33,7 +33,7 @@ export class WeiboLoginAstVisitor {
         error: (error) => {
           ast.state = 'fail';
           setAstError(ast, error);
-          obs.next({ type: 'node_fail', id: ast.id, data: ast });
+          obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
           obs.complete();
         },
         complete: () => {

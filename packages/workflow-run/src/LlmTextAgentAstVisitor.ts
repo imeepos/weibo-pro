@@ -13,7 +13,7 @@ export class LlmTextAgentAstVisitor {
             const abortController = new AbortController();
 
             ast.state = 'running';
-            obs.next({ type: 'node_runing', id: ast.id, data: ast });
+            obs.next({ type: 'node_runing', id: ast.id });
 
             const subscription = input$.pipe(
                 concatMap(async (inputData) => {
@@ -52,12 +52,12 @@ export class LlmTextAgentAstVisitor {
                 error: (error) => {
                     ast.state = 'fail';
                     setAstError(ast, error);
-                    obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                    obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
                     obs.complete();
                 },
                 complete: () => {
                     ast.state = 'success';
-                    obs.next({ type: 'node_success', id: ast.id, data: ast });
+                    obs.next({ type: 'node_success', id: ast.id });
                     obs.complete();
                 }
             });

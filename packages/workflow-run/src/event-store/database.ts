@@ -22,7 +22,7 @@ export class DatabaseEventStore implements IEventStore {
             nodeId: event.id ?? '',
             eventType: this.toEventType(event.type),
             property: event.type === 'node_emit' ? event.property : undefined,
-            data: event.type === 'node_emit' ? event.value : event.data,
+            data: event.type === 'node_emit' ? event.value : undefined,
         });
     }
 
@@ -93,13 +93,13 @@ export class DatabaseEventStore implements IEventStore {
     private toNodeEvent(log: WorkflowRunLogEntity): NodeEvent {
         switch (log.eventType) {
             case NodeEventType.RUNNING:
-                return { type: 'node_runing', id: log.nodeId, data: log.data as any };
+                return { type: 'node_runing', id: log.nodeId };
             case NodeEventType.EMIT:
                 return { type: 'node_emit', id: log.nodeId, property: log.property!, value: log.data };
             case NodeEventType.SUCCESS:
-                return { type: 'node_success', id: log.nodeId, data: log.data as any };
+                return { type: 'node_success', id: log.nodeId };
             case NodeEventType.FAIL:
-                return { type: 'node_fail', id: log.nodeId, data: log.data as any };
+                return { type: 'node_fail', id: log.nodeId, error: log.data as string | undefined };
         }
     }
 }

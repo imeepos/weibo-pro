@@ -608,14 +608,6 @@ export function useWorkflowOperations(
                         emitCount: updatedNode.emitCount
                       }
                     )
-
-                    // 收集输入和输出更新
-                    const inputUpdates = collectPropertyUpdates(originalNode.metadata?.inputs, updatedNode)
-                    const outputUpdates = collectPropertyUpdates(originalNode.metadata?.outputs, updatedNode)
-
-                    // 应用输入输出更新
-                    Object.assign(newNode, inputUpdates, outputUpdates)
-
                     return newNode
                   }
                   return originalNode

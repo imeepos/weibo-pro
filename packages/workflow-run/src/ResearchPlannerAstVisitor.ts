@@ -20,7 +20,7 @@ export class ResearchPlannerAstVisitor {
       const abortController = new AbortController();
 
       ast.state = 'running';
-      obs.next({ type: 'node_runing', id: ast.id, data: ast });
+      obs.next({ type: 'node_runing', id: ast.id });
 
       const subscription = input$.pipe(
         concatMap(async (inputData) => {
@@ -137,12 +137,12 @@ ${soundbites}
         error: (error) => {
           ast.state = 'fail';
           setAstError(ast, new Error(`研究规划失败: ${error instanceof Error ? error.message : '未知错误'}`));
-          obs.next({ type: 'node_fail', id: ast.id, data: ast });
+          obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
           obs.complete();
         },
         complete: () => {
           ast.state = 'success';
-          obs.next({ type: 'node_success', id: ast.id, data: ast });
+          obs.next({ type: 'node_success', id: ast.id });
           obs.complete();
         }
       });

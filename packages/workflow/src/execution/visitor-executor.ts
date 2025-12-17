@@ -94,7 +94,7 @@ export class VisitorExecutor implements Visitor {
                             if (!started) {
                                 started = true;
                                 ast.state = 'running';
-                                obs.next({ type: 'node_runing', id: ast.id, data: ast });
+                                obs.next({ type: 'node_runing', id: ast.id });
                             }
                             try {
                                 const result = handlerFn.call(instance, ast, parent);
@@ -110,26 +110,26 @@ export class VisitorExecutor implements Visitor {
                                     error: err => {
                                         ast.state = 'fail';
                                         setAstError(ast, err);
-                                        obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                                        obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
                                         obs.complete();
                                     }
                                 });
                             } catch (err) {
                                 ast.state = 'fail';
                                 setAstError(ast, err);
-                                obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                                obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
                                 obs.complete();
                             }
                         },
                         error: err => {
                             ast.state = 'fail';
                             setAstError(ast, err);
-                            obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                            obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
                             obs.complete();
                         },
                         complete: () => {
                             ast.state = 'success';
-                            obs.next({ type: 'node_success', id: ast.id, data: ast });
+                            obs.next({ type: 'node_success', id: ast.id });
                             obs.complete();
                         }
                     });
@@ -244,7 +244,7 @@ export class VisitorExecutor implements Visitor {
         const failedNode = { ...ast };
         failedNode.state = 'fail';
         setAstError(failedNode, error);
-        return { type: 'node_fail', id: ast.id, data: ast };
+        return { type: 'node_fail', id: ast.id, error: ast.error?.message };
     }
 
     /**

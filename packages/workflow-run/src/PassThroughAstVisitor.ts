@@ -20,7 +20,7 @@ export class PassThroughAstVisitor {
     return new Observable<NodeEvent>(obs => {
       // 设置运行状态
       ast.state = 'running';
-      obs.next({ type: 'node_runing', id: ast.id, data: ast });
+      obs.next({ type: 'node_runing', id: ast.id });
 
       // 使用函数式管道处理输入流
       const subscription = input$.pipe(
@@ -56,7 +56,7 @@ export class PassThroughAstVisitor {
         catchError((error) => {
           ast.state = 'fail';
           setAstError(ast, error);
-          obs.next({ type: 'node_fail', id: ast.id, data: ast });
+          obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
           obs.complete();
           return [];
         })
@@ -64,7 +64,7 @@ export class PassThroughAstVisitor {
         // 流完成时
         complete: () => {
           ast.state = 'success';
-          obs.next({ type: 'node_success', id: ast.id, data: ast });
+          obs.next({ type: 'node_success', id: ast.id });
           obs.complete();
         }
       });

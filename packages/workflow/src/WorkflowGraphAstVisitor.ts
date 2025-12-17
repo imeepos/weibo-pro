@@ -3,7 +3,7 @@ import { Observable, EMPTY, merge, defer, of, combineLatest, zip, isObservable }
 import { filter, map, catchError, shareReplay, concatMap, withLatestFrom } from 'rxjs/operators';
 import { NodeExecutor } from './executor';
 import { Handler } from './decorator';
-import { WorkflowGraphAst } from './ast';
+import { setAstError, WorkflowGraphAst } from './ast';
 import { NodeEmitEvent, NodeEvent } from './execution/events';
 import { EdgeMode, IEdge } from './types';
 
@@ -63,7 +63,7 @@ export class WorkflowGraphAstVisitor {
             catchError(error => {
                 ast.state = 'fail';
                 ast.error = error;
-                return of({ type: 'node_fail', id: ast.id, data: ast } as NodeEvent);
+                return of({ type: 'node_fail', id: ast.id, error: ast.error?.message } as NodeEvent);
             })
         );
     }
@@ -390,12 +390,12 @@ export class WorkflowGraphAstVisitor {
         nodeEventStreams: Map<string, Observable<NodeEvent>>
     ): Observable<NodeEvent> {
         return new Observable<NodeEvent>(obs => {
-            obs.next({ type: 'node_runing', id: workflow.id, data: workflow });
+            obs.next({ type: 'node_runing', id: workflow.id });
 
             const allStreams = Array.from(nodeEventStreams.values());
             if (allStreams.length === 0) {
                 workflow.state = 'success';
-                obs.next({ type: 'node_success', id: workflow.id, data: workflow });
+                obs.next({ type: 'node_success', id: workflow.id });
                 obs.complete();
                 return;
             }
@@ -417,7 +417,8 @@ export class WorkflowGraphAstVisitor {
                     error: err => {
                         workflow.state = 'fail';
                         workflow.error = err;
-                        obs.next({ type: 'node_fail', id: workflow.id, data: workflow });
+                        setAstError(workflow, err)
+                        obs.next({ type: 'node_fail', id: workflow.id, error: workflow.error?.message });
                         obs.complete();
                         subscriptions.forEach(sub => sub.unsubscribe());
                     },

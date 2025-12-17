@@ -24,7 +24,7 @@ export class GroupChatLoopAstVisitor {
         return new Observable<NodeEvent>(obs => {
             ast.state = 'running';
             ast.count += 1;
-            obs.next({ type: 'node_runing', id: ast.id, data: ast });
+            obs.next({ type: 'node_runing', id: ast.id });
 
             input$.subscribe({
                 next: () => {
@@ -43,12 +43,12 @@ export class GroupChatLoopAstVisitor {
                 },
                 error: (error) => {
                     ast.state = 'fail';
-                    obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                    obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
                     obs.complete();
                 },
                 complete: () => {
                     ast.state = 'success';
-                    obs.next({ type: 'node_success', id: ast.id, data: ast });
+                    obs.next({ type: 'node_success', id: ast.id });
                     obs.complete();
                 }
             });

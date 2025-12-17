@@ -23,7 +23,7 @@ export class PostContextCollectorVisitor {
 
       ast.state = 'running';
       ast.count += 1;
-      obs.next({ type: 'node_runing', id: ast.id, data: ast });
+      obs.next({ type: 'node_runing', id: ast.id });
 
       input$.subscribe({
         next: (inputData) => {
@@ -37,7 +37,7 @@ export class PostContextCollectorVisitor {
         error: (error) => {
           ast.state = 'fail';
           setAstError(ast, error);
-          obs.next({ type: 'node_fail', id: ast.id, data: ast });
+          obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
           obs.complete();
         },
         complete: async () => {
@@ -46,7 +46,7 @@ export class PostContextCollectorVisitor {
               if (wrappedCtx.abortSignal?.aborted) {
                 ast.state = 'fail';
                 setAstError(ast, new Error('工作流已取消'));
-                obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
                 return;
               }
 
@@ -64,7 +64,7 @@ export class PostContextCollectorVisitor {
           if (wrappedCtx.abortSignal?.aborted) {
             ast.state = 'fail';
             setAstError(ast, new Error('工作流已取消'));
-            obs.next({ type: 'node_fail', id: ast.id, data: ast });
+            obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
             return;
           }
 
@@ -102,13 +102,13 @@ export class PostContextCollectorVisitor {
           });
 
               ast.state = 'success';
-              obs.next({ type: 'node_success', id: ast.id, data: ast });
+              obs.next({ type: 'node_success', id: ast.id });
               obs.complete();
             } catch (error) {
               ast.state = 'fail';
               setAstError(ast, error, process.env.NODE_ENV === 'development');
               console.error(`[PostContextCollectorVisitor] postId: ${ast.postId}`, error);
-              obs.next({ type: 'node_fail', id: ast.id, data: ast });
+              obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
               obs.complete();
             }
           };

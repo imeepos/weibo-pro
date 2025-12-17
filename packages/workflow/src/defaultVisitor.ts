@@ -11,7 +11,7 @@ export class DefaultVisitor {
             if (!input$) throw new Error(`[DefaultVisitor.handler] input$ is empty`)
             if (!isObservable(input$)) throw new Error(`[DefaultVisitor.handler] input$ must be an Observable`)
             ast.state = 'running';
-            obs.next({ type: 'node_runing', id: ast.id, data: ast })
+            obs.next({ type: 'node_runing', id: ast.id })
             input$.subscribe({
                 next: (data) => {
                     // 默认 一个输入 一个输出 输出直接等于输入
@@ -25,12 +25,12 @@ export class DefaultVisitor {
                 error: (error) => {
                     ast.state = 'fail';
                     setAstError(ast, error)
-                    obs.next({ type: 'node_fail', id: ast.id, data: ast })
+                    obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message })
                     obs.complete();
                 },
                 complete: () => {
                     ast.state = 'success';
-                    obs.next({ type: 'node_success', id: ast.id, data: ast })
+                    obs.next({ type: 'node_success', id: ast.id })
                     obs.complete();
                 }
             })

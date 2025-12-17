@@ -34,7 +34,7 @@ export class CodeGeneratorAstVisitor {
             const abortController = new AbortController();
 
             ast.state = 'running';
-            obs.next({ type: 'node_runing', id: ast.id, data: ast });
+            obs.next({ type: 'node_runing', id: ast.id });
 
             input$.subscribe({
                 next: (inputData) => {
@@ -48,7 +48,7 @@ export class CodeGeneratorAstVisitor {
                 error: (error) => {
                     ast.state = 'fail';
                     setAstError(ast, error);
-                    obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                    obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
                     obs.complete();
                 },
                 complete: async () => {
@@ -107,12 +107,12 @@ ${tasks.map((t, i) => `${i + 1}. ${t}`).join('\n')}
                         obs.next({ type: 'node_emit', id: ast.id, property: 'isComplete', value: ast.isComplete });
 
                         ast.state = 'success';
-                        obs.next({ type: 'node_success', id: ast.id, data: ast });
+                        obs.next({ type: 'node_success', id: ast.id });
                         obs.complete();
                     } catch (error) {
                         ast.state = 'fail';
                         setAstError(ast, error);
-                        obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                        obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
                         obs.complete();
                     }
                 }

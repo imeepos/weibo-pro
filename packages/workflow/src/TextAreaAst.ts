@@ -27,7 +27,7 @@ export class TextAreaAstVisitor {
 
         return new Observable<NodeEvent>(obs => {
             ast.state = 'running';
-            obs.next({ type: 'node_runing', id: ast.id, data: ast });
+            obs.next({ type: 'node_runing', id: ast.id });
             console.log(`[TextAreaAstVisitor] 节点 ${ast.id} 发射 node_runing`);
             input$.subscribe({
                 next: (input) => {
@@ -53,13 +53,13 @@ export class TextAreaAstVisitor {
                     console.error(`[TextAreaAstVisitor] 节点 ${ast.id} 发生错误:`, error);
                     ast.state = 'fail';
                     setAstError(ast, error);
-                    obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                    obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
                     obs.complete();
                 },
                 complete: () => {
                     console.log(`[TextAreaAstVisitor] 节点 ${ast.id} input$ 完成`);
                     ast.state = 'success';
-                    obs.next({ type: 'node_success', id: ast.id, data: ast });
+                    obs.next({ type: 'node_success', id: ast.id });
                     obs.complete();
                 }
             });

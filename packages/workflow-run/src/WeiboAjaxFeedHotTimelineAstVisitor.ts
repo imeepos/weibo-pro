@@ -36,7 +36,7 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
             };
 
             ast.state = 'running';
-            obs.next({ type: 'node_runing', id: ast.id, data: ast });
+            obs.next({ type: 'node_runing', id: ast.id });
 
             input$.subscribe({
                 next: (inputData) => {
@@ -50,7 +50,7 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
                 error: (error) => {
                     ast.state = 'fail';
                     setAstError(ast, error);
-                    obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                    obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
                     obs.complete();
                 },
                 complete: () => {
@@ -72,7 +72,7 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
             if (ctx.abortSignal?.aborted) {
                 ast.state = 'fail';
                 setAstError(ast, new Error('工作流已取消'));
-                obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
                 return;
             }
 
@@ -83,7 +83,7 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
                 if (ctx.abortSignal?.aborted) {
                     ast.state = 'fail';
                     setAstError(ast, new Error('工作流已取消'));
-                    obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                    obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
                     return;
                 }
 
@@ -99,7 +99,7 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
                 if (ctx.abortSignal?.aborted) {
                     ast.state = 'fail';
                     setAstError(ast, new Error('工作流已取消'));
-                    obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                    obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
                     return;
                 }
 
@@ -128,7 +128,7 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
                         // 流式输出：每条数据发射
                         ast.mblogid = post.mblogid;
                         ast.uid = post.user.idstr;
-                        obs.next({ type: 'node_runing', id: ast.id, data: ast });
+                        obs.next({ type: 'node_runing', id: ast.id });
                     });
                     console.log(`[WeiboAjaxFeedHotTimelineAstVisitor] 成功入库 ${posts.length} 条微博，${users.length} 个用户`);
                 });
@@ -142,13 +142,13 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
 
             console.log(`[WeiboAjaxFeedHotTimelineAstVisitor] 完成，共抓取 ${pageCount} 页数据`);
             ast.state = 'success';  // 完成信号：不触发下游，仅更新工作流状态
-            obs.next({ type: 'node_success', id: ast.id, data: ast });
+            obs.next({ type: 'node_success', id: ast.id });
             obs.complete();
         } catch (error) {
             console.error(`[WeiboAjaxFeedHotTimelineAstVisitor] 抓取失败`, error);
             ast.state = 'fail';
             setAstError(ast, error);
-            obs.next({ type: 'node_fail', id: ast.id, data: ast });
+            obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
             obs.complete();
         }
         return ast;

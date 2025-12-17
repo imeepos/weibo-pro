@@ -102,9 +102,7 @@ export function executeWorkflowImmediate(workflow: WorkflowGraphAst, input?: any
 
         executeWorkflow(workflow, input).subscribe({
             next: (event) => {
-                if (event.type === 'node_success' && event.id === workflow.id) {
-                    finalWorkflow = event.data as WorkflowGraphAst;
-                }
+                console.log(`executeWorkflowImmediate next event is `, event)
             },
             complete: () => resolve(finalWorkflow),
             error: reject

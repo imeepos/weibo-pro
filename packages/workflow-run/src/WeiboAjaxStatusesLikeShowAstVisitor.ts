@@ -35,7 +35,7 @@ export class WeiboAjaxStatusesLikeShowAstVisitor extends WeiboApiClient {
             const handle = async () => {
                 try {
                     ast.state = 'running';
-                    obs.next({ type: 'node_runing', id: ast.id, data: ast });
+                    obs.next({ type: 'node_runing', id: ast.id });
 
                     let page = 1;
                     for await (const body of this.fetchWithPagination<WeiboStatusLikeShowResponse>({
@@ -70,13 +70,13 @@ export class WeiboAjaxStatusesLikeShowAstVisitor extends WeiboApiClient {
                     obs.next({ type: 'node_emit', id: ast.id, property: 'is_end', value: ast.is_end });
 
                     ast.state = 'success';
-                    obs.next({ type: 'node_success', id: ast.id, data: ast });
+                    obs.next({ type: 'node_success', id: ast.id });
                     obs.complete()
                 } catch (error) {
                     console.error(`[WeiboAjaxStatusesLikeShowAstVisitor] mid: ${ast.mid}`, error);
                     ast.state = 'fail';
                     setAstError(ast, error);
-                    obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                    obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
                     obs.complete()
                 }
             };

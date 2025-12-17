@@ -35,7 +35,7 @@ export class StoreGetAstVisitor {
       };
 
       ast.state = 'running';
-      obs.next({ type: 'node_runing', id: ast.id, data: ast });
+      obs.next({ type: 'node_runing', id: ast.id });
 
       input$.subscribe({
         next: (inputData) => {
@@ -49,7 +49,7 @@ export class StoreGetAstVisitor {
         error: (error) => {
           ast.state = 'fail';
           setAstError(ast, error);
-          obs.next({ type: 'node_fail', id: ast.id, data: ast });
+          obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
           obs.complete();
         },
         complete: async () => {
@@ -58,7 +58,7 @@ export class StoreGetAstVisitor {
               if (wrappedCtx.abortSignal?.aborted) {
                 ast.state = 'fail';
                 setAstError(ast, new Error('工作流已取消'));
-                obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
                 obs.complete();
                 return;
               }
@@ -73,18 +73,18 @@ export class StoreGetAstVisitor {
               const value = await this.redis.get<any>(redisKey);
 
               ast.value = value;
-              obs.next({ type: 'node_runing', id: ast.id, data: ast });
+              obs.next({ type: 'node_runing', id: ast.id });
 
               console.log(`[StoreGet] 读取成功: key=${key}, exists=${value !== null}`);
 
               ast.state = 'success';
-              obs.next({ type: 'node_success', id: ast.id, data: ast });
+              obs.next({ type: 'node_success', id: ast.id });
               obs.complete();
             } catch (error) {
               ast.state = 'fail';
               setAstError(ast, error, process.env.NODE_ENV === 'development');
               console.error(`[StoreGetAstVisitor] key=${ast.key}`, error);
-              obs.next({ type: 'node_fail', id: ast.id, data: ast });
+              obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
               obs.complete();
             }
           };
@@ -127,7 +127,7 @@ export class StoreSetAstVisitor {
       };
 
       ast.state = 'running';
-      obs.next({ type: 'node_runing', id: ast.id, data: ast });
+      obs.next({ type: 'node_runing', id: ast.id });
 
       input$.subscribe({
         next: (inputData) => {
@@ -141,7 +141,7 @@ export class StoreSetAstVisitor {
         error: (error) => {
           ast.state = 'fail';
           setAstError(ast, error);
-          obs.next({ type: 'node_fail', id: ast.id, data: ast });
+          obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
           obs.complete();
         },
         complete: async () => {
@@ -150,7 +150,7 @@ export class StoreSetAstVisitor {
               if (wrappedCtx.abortSignal?.aborted) {
                 ast.state = 'fail';
                 setAstError(ast, new Error('工作流已取消'));
-                obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
                 obs.complete();
                 return;
               }
@@ -166,18 +166,18 @@ export class StoreSetAstVisitor {
               // 默认7天过期时间，避免数据永久占用内存
               const ttl = 7 * 24 * 60 * 60; // 7 days
               await this.redis.set(redisKey, value, ttl);
-              obs.next({ type: 'node_runing', id: ast.id, data: ast });
+              obs.next({ type: 'node_runing', id: ast.id });
 
               console.log(`[StoreSet] 写入成功: key=${key}, ttl=${ttl}s`);
 
               ast.state = 'success';
-              obs.next({ type: 'node_success', id: ast.id, data: ast });
+              obs.next({ type: 'node_success', id: ast.id });
               obs.complete();
             } catch (error) {
               ast.state = 'fail';
               setAstError(ast, error, process.env.NODE_ENV === 'development');
               console.error(`[StoreSetAstVisitor] key=${ast.key}`, error);
-              obs.next({ type: 'node_fail', id: ast.id, data: ast });
+              obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
               obs.complete();
             }
           };

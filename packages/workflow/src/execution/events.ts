@@ -1,4 +1,3 @@
-import { INode } from "../types";
 /**
  * 节点事件类型，工作流也是一个节点
  */
@@ -12,7 +11,6 @@ export type NodeEvent =
 export interface NodeRuningEvent {
     type: 'node_runing';
     id: string;
-    data: INode;
 }
 // 节点发射
 export interface NodeEmitEvent {
@@ -24,12 +22,11 @@ export interface NodeEmitEvent {
 // 节点成功
 export interface NodeSuccessEvent {
     type: 'node_success';
-    id?: string;
-    data: INode;
+    id: string;
 }
 // 节点失败
 export interface NodeFailEvent {
     type: 'node_fail';
-    id?: string;
-    data: INode;
+    id: string;
+    error: string | undefined;
 }

@@ -23,8 +23,7 @@ export class CollectorVisitor {
     handler(ast: CollectorAst, input$: Observable<CollectorAst>, ctx: WorkflowGraphAst) {
         return new Observable<NodeEvent>(obs => {
             ast.state = 'running';
-            obs.next({ type: 'node_runing', id: ast.id, data: ast });
-
+            obs.next({ type: 'node_runing', id: ast.id });
             input$.pipe(
                 toArray(),
                 map(asts => asts.flatMap(a => a.items || []).flat()),
@@ -32,7 +31,7 @@ export class CollectorVisitor {
                     ast.result = items;
                     obs.next({ type: 'node_emit', id: ast.id, property: 'result', value: items });
                     ast.state = 'success';
-                    obs.next({ type: 'node_success', id: ast.id, data: ast });
+                    obs.next({ type: 'node_success', id: ast.id });
                 })
             ).subscribe({
                 complete: () => obs.complete()

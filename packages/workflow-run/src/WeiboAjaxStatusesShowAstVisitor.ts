@@ -40,12 +40,12 @@ export class WeiboAjaxStatusesShowAstVisitor extends WeiboApiClient {
                     if (wrappedCtx.abortSignal?.aborted) {
                         ast.state = 'fail';
                         setAstError(ast, new Error('工作流已取消'));
-                        obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                        obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
                         return;
                     }
 
                     ast.state = 'running';
-                    obs.next({ type: 'node_runing', id: ast.id, data: ast });
+                    obs.next({ type: 'node_runing', id: ast.id });
 
                     const url = `https://weibo.com/ajax/statuses/show?id=${ast.mblogid}&locale=zh-CN&isGetLongText=true`;
                     const body = await this.fetchApi<WeiboAjaxStatusesShowAstReponse>({
@@ -57,7 +57,7 @@ export class WeiboAjaxStatusesShowAstVisitor extends WeiboApiClient {
                     if (wrappedCtx.abortSignal?.aborted) {
                         ast.state = 'fail';
                         setAstError(ast, new Error('工作流已取消'));
-                        obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                        obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
                         return;
                     }
 
@@ -90,13 +90,13 @@ export class WeiboAjaxStatusesShowAstVisitor extends WeiboApiClient {
                     obs.next({ type: 'node_emit', id: ast.id, property: 'mid', value: ast.mid });
 
                     ast.state = 'success';
-                    obs.next({ type: 'node_success', id: ast.id, data: ast });
+                    obs.next({ type: 'node_success', id: ast.id });
                     obs.complete()
                 } catch (error) {
                     console.error(`[WeiboAjaxStatusesShowAstVisitor] postId: ${ast.id}`, error);
                     ast.state = 'fail';
                     setAstError(ast, error, process.env.NODE_ENV === 'development');
-                    obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                    obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
                     obs.complete()
                 }
             };

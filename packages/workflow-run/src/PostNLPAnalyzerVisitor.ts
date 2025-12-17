@@ -25,7 +25,7 @@ export class PostNLPAnalyzerVisitor {
       };
 
       ast.state = 'running';
-      obs.next({ type: 'node_runing', id: ast.id, data: ast });
+      obs.next({ type: 'node_runing', id: ast.id });
 
       input$.subscribe({
         next: (inputData) => {
@@ -39,7 +39,7 @@ export class PostNLPAnalyzerVisitor {
         error: (error) => {
           ast.state = 'fail';
           setAstError(ast, error);
-          obs.next({ type: 'node_fail', id: ast.id, data: ast });
+          obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
           obs.complete();
         },
         complete: async () => {
@@ -48,7 +48,7 @@ export class PostNLPAnalyzerVisitor {
               if (wrappedCtx.abortSignal?.aborted) {
                 ast.state = 'fail';
                 setAstError(ast, new Error('工作流已取消'));
-                obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
                 obs.complete();
                 return;
               }
@@ -122,13 +122,13 @@ export class PostNLPAnalyzerVisitor {
           obs.next({ type: 'node_emit', id: ast.id, property: 'nlpResult', value: ast.nlpResult });
 
               ast.state = 'success';
-              obs.next({ type: 'node_success', id: ast.id, data: ast });
+              obs.next({ type: 'node_success', id: ast.id });
               obs.complete();
             } catch (error) {
               ast.state = 'fail';
               setAstError(ast, error, process.env.NODE_ENV === 'development');
               console.error(`[PostNLPAnalyzerVisitor] postId: ${ast.post.id}`, error);
-              obs.next({ type: 'node_fail', id: ast.id, data: ast });
+              obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
               obs.complete();
             }
           };

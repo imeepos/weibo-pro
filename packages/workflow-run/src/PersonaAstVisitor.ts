@@ -35,7 +35,7 @@ export class PersonaAstVisitor {
 
       ast.state = 'running';
       ast.count += 1;
-      obs.next({ type: 'node_runing', id: ast.id, data: ast });
+      obs.next({ type: 'node_runing', id: ast.id });
 
       const subscription = input$.pipe(
         concatMap(async (inputData) => {
@@ -61,7 +61,7 @@ export class PersonaAstVisitor {
 
           ast.personaName = persona.name;
           ast.personaAvatar = persona.avatar || undefined;
-          obs.next({ type: 'node_runing', id: ast.id, data: ast });
+          obs.next({ type: 'node_runing', id: ast.id });
 
           // 记忆检索
           const stimuli = Array.isArray(ast.stimuli) ? ast.stimuli : [ast.stimuli];
@@ -151,12 +151,12 @@ export class PersonaAstVisitor {
           }
 
           ast.context = contextParts.join('\n');
-          obs.next({ type: 'node_runing', id: ast.id, data: ast });
+          obs.next({ type: 'node_runing', id: ast.id });
 
           if (abortController.signal.aborted) {
             ast.state = 'fail';
             setAstError(ast, new Error('工作流已取消'));
-            obs.next({ type: 'node_fail', id: ast.id, data: ast });
+            obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
             return;
           }
 
@@ -259,12 +259,12 @@ ${ast.context}`;
         error: (error) => {
           ast.state = 'fail';
           setAstError(ast, error instanceof Error ? error : new Error(String(error)));
-          obs.next({ type: 'node_fail', id: ast.id, data: ast });
+          obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
           obs.complete();
         },
         complete: () => {
           ast.state = 'success';
-          obs.next({ type: 'node_success', id: ast.id, data: ast });
+          obs.next({ type: 'node_success', id: ast.id });
           obs.complete();
         }
       });

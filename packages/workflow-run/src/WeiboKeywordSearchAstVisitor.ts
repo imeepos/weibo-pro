@@ -41,7 +41,7 @@ export class WeiboKeywordSearchAstVisitor {
                 error: (error) => {
                     ast.state = 'fail';
                     setAstError(ast, error);
-                    obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                    obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
                     obs.complete();
                 },
                 complete: () => {
@@ -66,7 +66,7 @@ export class WeiboKeywordSearchAstVisitor {
             if (ctx.abortSignal?.aborted) {
                 ast.state = 'fail';
                 setAstError(ast, new Error('工作流已取消'));
-                obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
                 return;
             }
 
@@ -74,7 +74,7 @@ export class WeiboKeywordSearchAstVisitor {
             if (!selection) {
                 ast.state = 'fail';
                 setAstError(ast, new Error('没有可用账号'));
-                obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
                 return;
             }
 
@@ -82,7 +82,7 @@ export class WeiboKeywordSearchAstVisitor {
             if (!keyword || !startDate || !endDate) {
                 ast.state = 'fail';
                 setAstError(ast, new NoRetryError(`WeiboSearchUrlBuilderAst 缺少必要参数: keyword:${keyword}, start:${startDate}, end:${endDate}`));
-                obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
                 return;
             }
 
@@ -93,12 +93,12 @@ export class WeiboKeywordSearchAstVisitor {
 
             ast.state = 'running';
             ast.currentPage = 1;
-            obs.next({ type: 'node_runing', id: ast.id, data: ast });
+            obs.next({ type: 'node_runing', id: ast.id });
 
             if (ctx.abortSignal?.aborted) {
                 ast.state = 'fail';
                 setAstError(ast, new Error('工作流已取消'));
-                obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
                 return;
             }
 
@@ -109,7 +109,7 @@ export class WeiboKeywordSearchAstVisitor {
                 if (ctx.abortSignal?.aborted) {
                     ast.state = 'fail';
                     setAstError(ast, new Error('工作流已取消'));
-                    obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                    obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
                     return;
                 }
                 ast.mblogid = post.mid;
@@ -126,7 +126,7 @@ export class WeiboKeywordSearchAstVisitor {
                 if (ctx.abortSignal?.aborted) {
                     ast.state = 'fail';
                     setAstError(ast, new Error('工作流已取消'));
-                    obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                    obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
                     return;
                 }
 
@@ -150,7 +150,7 @@ export class WeiboKeywordSearchAstVisitor {
                             if (ctx.abortSignal?.aborted) {
                                 ast.state = 'fail';
                                 setAstError(ast, new Error('工作流已取消'));
-                                obs.next({ type: 'node_fail', id: ast.id, data: ast });
+                                obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
                                 return;
                             }
                             ast.mblogid = post.mid;
@@ -193,7 +193,7 @@ export class WeiboKeywordSearchAstVisitor {
             }
 
             ast.state = 'success';
-            obs.next({ type: 'node_success', id: ast.id, data: ast });
+            obs.next({ type: 'node_success', id: ast.id });
             obs.complete()
         } catch (error) {
             console.error(`[WeiboKeywordSearchAstVisitor] 搜索失败: ${ast.keyword}`, error);
@@ -203,7 +203,7 @@ export class WeiboKeywordSearchAstVisitor {
             } else {
                 setAstError(ast, new Error(String(error)));
             }
-            obs.next({ type: 'node_fail', id: ast.id, data: ast });
+            obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
             obs.complete()
         }
     }
