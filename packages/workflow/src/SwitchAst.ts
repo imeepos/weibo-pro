@@ -1,5 +1,5 @@
-import { Ast, Node, Input, Output } from '@sker/workflow'
-
+import { Ast } from "./ast";
+import { Input, Node, Output } from "./decorator";
 @Node({ title: '分支路由器', type: 'control', dynamicOutputs: true })
 export class SwitchAst extends Ast {
     @Input({ title: '输入值', defaultValue: undefined })

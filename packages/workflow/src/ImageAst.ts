@@ -1,5 +1,5 @@
-import { Ast, Input, Node, Output } from "@sker/workflow";
-
+import { Ast } from "./ast";
+import { Input, Node, Output } from "./decorator";
 @Node({ title: '图片', type: 'basic' })
 export class ImageAst extends Ast {
     @Input({ title: '输入', type: 'image', defaultValue: '' })

@@ -19,10 +19,6 @@ export { LlmStructuredOutputAstVisitor } from './LlmStructuredOutputAstVisitor'
 export { LlmCategoryAstVisitor } from './LlmCategoryAstVisitor'
 export { StoryWeaverAstVisitor } from './StoryWeaverAstVisitor'
 
-// 控制流节点
-export { SwitchAstVisitor } from './SwitchAstVisitor'
-export { PassThroughAstVisitor } from './PassThroughAstVisitor'
-
 // 消息队列节点
 export { MqPushAstVisitor, MqPullAstVisitor } from './MqAstVisitor'
 

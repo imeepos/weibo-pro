@@ -1,6 +1,6 @@
 import { Injectable } from "@sker/core";
 import { Render } from "@sker/workflow";
-import { ImageAst } from "@sker/workflow-ast";
+import { ImageAst } from "@sker/workflow";
 import type { Annotation, CropArea } from "@sker/ui/components/ui/image-editor";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useUploadFile } from "@sker/ui/hooks/use-upload-file";

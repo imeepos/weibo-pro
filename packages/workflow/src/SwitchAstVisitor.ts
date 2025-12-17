@@ -1,8 +1,10 @@
-import { Handler, type DynamicOutput, NodeEvent, setAstError } from '@sker/workflow'
 import { Injectable } from '@sker/core'
-import { SwitchAst } from '@sker/workflow-ast'
+import { SwitchAst } from './SwitchAst'
 import { Observable, from } from 'rxjs'
 import { concatMap, mergeMap } from 'rxjs/operators'
+import { Handler } from './decorator'
+import { NodeEvent } from './execution/events'
+import { setAstError } from './ast-utils'
 
 @Injectable()
 export class SwitchAstVisitor {

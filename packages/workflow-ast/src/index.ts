@@ -29,19 +29,11 @@ export { LlmTextImage2ToVideoAst } from './LlmTextImage2ToVideoAst';
 export { StoryWeaverAst } from './StoryWeaverAst';
 export type { ChapterData, Clue } from './StoryWeaverAst';
 
-// 媒体节点
-export { ImageAst } from './ImageAst';
-export { VideoAst } from './VideoAst';
-export { AudioAst } from './AudioAst';
-
 export { WeiboAccountPickAst } from './WeiboAccountPickAst';
 
 export { ShareAst } from './ShareAst';
 export type { ChatMessage } from './ShareAst';
 
-// 控制流节点
-export { SwitchAst } from './SwitchAst';
-export { PassThroughAst } from './PassThroughAst';
 
 // 循环群聊节点
 export { GroupChatLoopAst } from './GroupChatLoopAst';

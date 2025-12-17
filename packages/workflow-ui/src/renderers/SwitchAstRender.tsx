@@ -1,6 +1,6 @@
 import { Render } from '@sker/workflow'
 import { Injectable } from '@sker/core'
-import { SwitchAst } from '@sker/workflow-ast'
+import { SwitchAst } from '@sker/workflow'
 import React from 'react'
 
 const SwitchComponent: React.FC<{ ast: SwitchAst }> = ({ ast }) => {

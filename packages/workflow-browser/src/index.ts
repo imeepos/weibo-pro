@@ -23,7 +23,6 @@ import "./LlmStructuredOutputAstVisitor.js";
 import "./LlmCategoryAstVisitor.js";
 import "./MergeAstVisitor.js";
 import "./LoopAstVisitor.js";
-import "./SwitchAstVisitor.js";
 import "./PersonaAstBrowserVisitor.js";
 import "./PersonaCreatorAstVisitor.js";
 import "./PromptRoleSkillAstVisitor.js";

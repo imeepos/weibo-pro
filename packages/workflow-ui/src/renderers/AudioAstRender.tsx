@@ -1,6 +1,6 @@
 import { Injectable } from "@sker/core";
 import { Render } from "@sker/workflow";
-import { AudioAst } from "@sker/workflow-ast";
+import { AudioAst } from "@sker/workflow";
 import React, { useRef, useState, useCallback } from "react";
 import { useUploadFile } from "@sker/ui/hooks/use-upload-file";
 import { Button } from "@sker/ui/components/ui/button";

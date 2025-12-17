@@ -1,5 +1,5 @@
-import { Ast, Input, Node, Output } from "@sker/workflow";
-import { BehaviorSubject } from "rxjs";
+import { Ast } from "./ast";
+import { Input, Node, Output } from "./decorator";
 
 /**
  * 视频节点 - 支持上传、输入、预览、播放

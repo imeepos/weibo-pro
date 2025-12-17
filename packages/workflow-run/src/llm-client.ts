@@ -12,5 +12,6 @@ export function useLlmModel(options: LlmModelOptions = {}): ChatOpenAI<ChatOpenA
     model: options.model || 'gpt-4o-mini',
     temperature: options.temperature ?? 0.7,
     configuration: { baseURL: LLM_PROXY_BASE_URL },
+    maxTokens: 1024 * 1024 * 100
   })
 }
