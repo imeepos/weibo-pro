@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@sker/core';
 import { Handler, NodeEvent, setAstError, WorkflowGraphAst } from '@sker/workflow';
 import { ChapterData, Clue, StoryWeaverAst } from '@sker/workflow-ast';
-import { Observable, from, of, throwError } from 'rxjs';
+import { Observable, from, of, throwError, forkJoin } from 'rxjs';
 import { concatMap, distinctUntilChanged, expand, map, catchError, scan, takeWhile, filter, tap, take, last } from 'rxjs/operators';
 import { useLlmModel } from './llm-client';
 import { tool } from '@langchain/core/tools';
@@ -143,17 +143,18 @@ ${prompts}${pendingCluesHint}`;
           currentUserPrompt += `\n\n**⚠️ 上一版本质量问题（需改进）**：\n${state.improvementHints}`;
         }
 
-        // 第一步：调用 LLM 生成章节（纯文本输出，可使用工具）
+        // 第一步：调用 LLM 生成章节（支持工具调用的多轮对话）
         console.log(`[StoryWeaver] 第${nextChapterNumber}章生成中...（第${state.attempt + 1}次尝试）`);
         console.log(`[StoryWeaver] 请求参数: model=${ast.model}, temperature=${ast.temperature}, systemPrompt长度=${systemPrompt.length}, userPrompt长度=${currentUserPrompt.length}`);
 
-        return from(model.invoke(
-          [
-            { role: 'system', content: systemPrompt },
-            { role: 'human', content: currentUserPrompt }
-          ],
-          { signal }
-        )).pipe(
+        const initialMessages = [
+          { role: 'system', content: systemPrompt },
+          { role: 'human', content: currentUserPrompt }
+        ];
+
+        const tools = useTools ? this.createStoryTools(chapters) : [];
+
+        return this.invokeWithTools(model, initialMessages, signal, useTools, tools).pipe(
           catchError((error) => {
             console.error(`[StoryWeaver] LLM 调用失败:`, {
               message: error.message,
@@ -165,8 +166,7 @@ ${prompts}${pendingCluesHint}`;
             return throwError(() => error);
           }),
           // 第二步：提取文本内容
-          concatMap((response: any) => {
-            const rawText = response.content || response.text || String(response);
+          concatMap((rawText: string) => {
             console.log(`[StoryWeaver] 生成文本长度: ${rawText.length} 字`);
 
             // 第三步：用结构化输出解析文本
@@ -903,5 +903,154 @@ ${extractedSettings}
 
       return `...${text.substring(start, end)}...`;
     });
+  }
+
+  /**
+   * 支持工具调用的多轮对话
+   *
+   * 处理流程：
+   * 1. 发送初始消息给 LLM
+   * 2. 检查响应是否包含工具调用
+   * 3. 如果有工具调用，执行工具并将结果添加到消息历史
+   * 4. 重复步骤 1-3，直到 LLM 返回最终文本内容（无工具调用）
+   * 5. 返回最终文本内容
+   *
+   * @param model LLM 模型（可能已绑定工具）
+   * @param initialMessages 初始消息列表
+   * @param signal 中止信号
+   * @param useTools 是否启用工具模式
+   * @param tools 工具列表（当 useTools 为 true 时必须提供）
+   * @returns Observable<string> 最终文本内容
+   */
+  private invokeWithTools(
+    model: any,
+    initialMessages: Array<{ role: string; content: string }>,
+    signal: AbortSignal,
+    useTools: boolean,
+    tools: any[] = []
+  ): Observable<string> {
+    // 如果未启用工具模式，直接调用模型
+    if (!useTools) {
+      return from(model.invoke(initialMessages, { signal })).pipe(
+        map((response: any) => response.content || response.text || String(response))
+      );
+    }
+
+    // 工具模式：使用 expand 实现多轮对话循环
+    const MAX_ROUNDS = 10; // 防止无限循环
+
+    // 创建工具映射表，方便通过名称查找工具
+    const toolMap = new Map(tools.map(tool => [tool.name, tool]));
+
+    interface RoundState {
+      messages: any[];
+      round: number;
+      finalText: string | null;
+    }
+
+    return of({ messages: initialMessages, round: 0, finalText: null } as RoundState).pipe(
+      expand((state: RoundState) => {
+        // 达到最大轮次或已获得最终文本，停止循环
+        if (state.finalText !== null || state.round >= MAX_ROUNDS) {
+          return of();
+        }
+
+        console.log(`[StoryWeaver] 工具调用轮次 ${state.round + 1}/${MAX_ROUNDS}`);
+
+        return from(model.invoke(state.messages, { signal })).pipe(
+          concatMap((response: any) => {
+            // 检查是否有工具调用
+            if (response.tool_calls && response.tool_calls.length > 0) {
+              console.log(`[StoryWeaver] LLM 请求调用 ${response.tool_calls.length} 个工具`);
+
+              // 将 AI 消息添加到历史（包含工具调用请求）
+              const newMessages = [...state.messages, response];
+
+              // 执行所有工具调用并收集结果
+              const toolExecutions = response.tool_calls.map((toolCall: any) => {
+                console.log(`[StoryWeaver] 执行工具: ${toolCall.name}，参数: ${JSON.stringify(toolCall.args)}`);
+
+                const tool = toolMap.get(toolCall.name);
+                if (!tool) {
+                  console.error(`[StoryWeaver] 未找到工具: ${toolCall.name}`);
+                  return of({
+                    role: 'tool',
+                    content: `错误：未找到工具 ${toolCall.name}`,
+                    tool_call_id: toolCall.id,
+                    name: toolCall.name
+                  });
+                }
+
+                // 执行工具并返回结果
+                return from(tool.invoke(toolCall.args)).pipe(
+                  map((result: any) => ({
+                    role: 'tool',
+                    content: String(result),
+                    tool_call_id: toolCall.id,
+                    name: toolCall.name
+                  })),
+                  catchError((error) => {
+                    console.error(`[StoryWeaver] 工具执行失败: ${toolCall.name}`, error);
+                    return of({
+                      role: 'tool',
+                      content: `错误：${error.message}`,
+                      tool_call_id: toolCall.id,
+                      name: toolCall.name
+                    });
+                  })
+                );
+              });
+
+              // 如果没有工具调用，直接返回
+              if (toolExecutions.length === 0) {
+                return of({
+                  messages: newMessages,
+                  round: state.round + 1,
+                  finalText: null
+                });
+              }
+
+              // 并行执行所有工具调用
+              return (forkJoin(toolExecutions) as Observable<any[]>).pipe(
+                map((toolResults: any[]) => {
+                  // 将工具结果添加到消息历史
+                  toolResults.forEach(result => newMessages.push(result));
+
+                  return {
+                    messages: newMessages,
+                    round: state.round + 1,
+                    finalText: null
+                  };
+                })
+              );
+            }
+
+            // 没有工具调用，提取最终文本
+            const finalText = response.content || response.text || String(response);
+            console.log(`[StoryWeaver] 工具调用完成，获得最终文本（${finalText.length} 字）`);
+
+            return of({
+              messages: state.messages,
+              round: state.round + 1,
+              finalText
+            });
+          }),
+          catchError((error) => {
+            console.error(`[StoryWeaver] 工具调用轮次 ${state.round + 1} 失败:`, error);
+            return throwError(() => error);
+          })
+        );
+      }),
+      // 过滤掉中间状态，只保留有最终文本的状态
+      filter((state: RoundState) => state.finalText !== null),
+      // 取第一个有最终文本的状态
+      take(1),
+      map((state: RoundState) => {
+        if (state.finalText === null) {
+          throw new Error(`工具调用未能在 ${MAX_ROUNDS} 轮内完成`);
+        }
+        return state.finalText;
+      })
+    );
   }
 }
