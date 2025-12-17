@@ -1,3 +1,6 @@
+// 导入工具类（自动触发装饰器注册）
+import './tools/TextAreaTool';
+
 export { WeiboAccountService } from './services/weibo-account.service'
 
 export { WeiboAjaxFeedHotTimelineAstVisitor } from './WeiboAjaxFeedHotTimelineAstVisitor'

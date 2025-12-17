@@ -130,6 +130,14 @@ export class WorkflowGraphAst extends Ast {
     edges: IEdge[] = [];
 
     /**
+     * 工具节点池：指定哪些节点作为 LLM 的可用工具
+     * - 这些节点无需连线也能被 LLM 访问
+     * - 配合上游成功节点构成完整的工具列表
+     */
+    @State({ title: '工具节点ID列表' })
+    toolNodeIds?: string[] = [];
+
+    /**
      * 视图窗口状态
      *
      * 优雅设计：

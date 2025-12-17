@@ -1,7 +1,7 @@
 import { Injectable, root } from "@sker/core";
 import { Ast } from "../ast";
 import { INode, INodeInputMetadata, INodeMetadata, INodeOutputMetadata, INodeStateMetadata, isNode } from "../types";
-import { findNodeType, INPUT, InputMetadata, NODE, NodeMetadata, OUTPUT, OutputMetadata, STATE, StateMetadata } from "../decorator";
+import { findNodeType, INPUT, InputMetadata, NODE, NodeMetadata, OUTPUT, OutputMetadata, STATE, StateMetadata, hasTool } from "../decorator";
 
 /**
  * 编译器 - 将 AST 实例编译为 INode
@@ -70,7 +70,13 @@ export class Compiler {
             title: metadata?.title,
             type: metadata?.type,
             dynamicInputs: metadata?.dynamicInputs,
-            dynamicOutputs: metadata?.dynamicOutputs
+            dynamicOutputs: metadata?.dynamicOutputs,
+            errorStrategy: metadata?.errorStrategy,
+            maxRetries: metadata?.maxRetries,
+            retryDelay: metadata?.retryDelay,
+            retryBackoff: metadata?.retryBackoff,
+            stateful: metadata?.stateful,
+            hasTool: hasTool(ctor as any)
         };
     }
 

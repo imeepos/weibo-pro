@@ -57,6 +57,12 @@ export interface INodeMetadata {
     retryBackoff?: number;
     /** 状态保留：true 时节点在工作流运行时保留数据，不重置为默认值 */
     stateful?: boolean;
+
+    /**
+     * 是否支持工具调用
+     * 由 Compiler 在编译时设置
+     */
+    hasTool?: boolean;
 }
 export interface INodeInputMetadata {
     property: string;
