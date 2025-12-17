@@ -3,6 +3,7 @@ import { Handler, NodeEvent } from "@sker/workflow";
 import { ShareAst, ChatMessage } from "@sker/workflow-ast";
 import { Observable, concatMap } from "rxjs";
 import { executeRemote } from "./execute-remote.js";
+import { handlerRemote } from './execute-remote.js';
 
 /**
  * 群聊节点执行器 - 收集和组织消息
@@ -20,17 +21,6 @@ import { executeRemote } from "./execute-remote.js";
 export class ShareAstVisitor {
     @Handler(ShareAst)
     handler(ast: ShareAst, $input: Observable<any>, ctx: any): Observable<NodeEvent> {
-        return new Observable(obs => {
-            obs.next({ type: 'node_runing', id: ast.id })
-            $input.pipe(concatMap(input => executeRemote(ast, ctx, input))).subscribe({
-                next: (event) => obs.next(event),
-                complete: () => {
-                    obs.next({ type: 'node_success', id: ast.id })
-                },
-                error: (error) => {
-                    obs.next({ type: 'node_fail', id: ast.id, error: error.message })
-                }
-            })
-        })
+        return handlerRemote(ast, $input, ctx)
     }
 }

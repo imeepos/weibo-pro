@@ -145,6 +145,8 @@ ${prompts}${pendingCluesHint}`;
 
         // 第一步：调用 LLM 生成章节（纯文本输出，可使用工具）
         console.log(`[StoryWeaver] 第${nextChapterNumber}章生成中...（第${state.attempt + 1}次尝试）`);
+        console.log(`[StoryWeaver] 请求参数: model=${ast.model}, temperature=${ast.temperature}, systemPrompt长度=${systemPrompt.length}, userPrompt长度=${currentUserPrompt.length}`);
+
         return from(model.invoke(
           [
             { role: 'system', content: systemPrompt },
@@ -152,6 +154,16 @@ ${prompts}${pendingCluesHint}`;
           ],
           { signal }
         )).pipe(
+          catchError((error) => {
+            console.error(`[StoryWeaver] LLM 调用失败:`, {
+              message: error.message,
+              status: error.status,
+              statusText: error.statusText,
+              response: error.response?.data || error.response,
+              stack: error.stack?.split('\n')[0]
+            });
+            return throwError(() => error);
+          }),
           // 第二步：提取文本内容
           concatMap((response: any) => {
             const rawText = response.content || response.text || String(response);
@@ -176,7 +188,16 @@ ${rawText}
             return from(extractionModel.invoke([
               { role: 'system', content: '你是一个文本结构化提取专家，精确提取小说章节的元数据。' },
               { role: 'human', content: extractionPrompt }
-            ], { signal }));
+            ], { signal })).pipe(
+              catchError((error) => {
+                console.error(`[StoryWeaver] 结构化提取失败:`, {
+                  message: error.message,
+                  status: error.status,
+                  response: error.response?.data || error.response
+                });
+                return throwError(() => error);
+              })
+            );
           }),
           // 清理和验证生成的内容
           map((parsed: z.infer<typeof ChapterOutputSchema>) => {

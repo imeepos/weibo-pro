@@ -1,6 +1,7 @@
 import { ChatOpenAI, ChatOpenAICallOptions } from '@langchain/openai'
 
-const LLM_PROXY_BASE_URL = process.env.LLM_PROXY_BASE_URL || 'http://localhost:8089/llm/openai'
+const OPENAI_BASE_URL = process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1'
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY
 
 export interface LlmModelOptions {
   model?: string
@@ -8,10 +9,18 @@ export interface LlmModelOptions {
 }
 
 export function useLlmModel(options: LlmModelOptions = {}): ChatOpenAI<ChatOpenAICallOptions> {
-  return new ChatOpenAI({
-    model: options.model || 'gpt-4o-mini',
+  const modelName = options.model || 'deepseek-ai/DeepSeek-V3.2'
+  const config = {
+    model: modelName,
     temperature: options.temperature ?? 0.7,
-    configuration: { baseURL: LLM_PROXY_BASE_URL },
-    maxTokens: 163840  // DeepSeek-V3 最大输出 token 限制
-  })
+    configuration: {
+      baseURL: OPENAI_BASE_URL,
+      apiKey: OPENAI_API_KEY
+    },
+    maxTokens: 16384
+  }
+
+  console.log(`[LLM Client] 创建模型: ${modelName}, baseURL: ${OPENAI_BASE_URL}, maxTokens: ${config.maxTokens}`)
+
+  return new ChatOpenAI(config)
 }
