@@ -146,8 +146,6 @@ export class ChapterGenerationService {
       scan((acc: GenerationState, curr: GenerationState) => {
         if (curr.result && curr.result.chapter && curr.result.quality && typeof curr.result.quality.score === 'number') {
           acc.allAttempts.push(curr.result);
-        } else {
-          console.warn(`[ChapterGeneration] 跳过无效的重试结果:`, curr);
         }
 
         return {
@@ -198,9 +196,6 @@ export class ChapterGenerationService {
     if (state.improvementHints) {
       currentUserPrompt += `\n\n**⚠️ 上一版本质量问题（需改进）**：\n${state.improvementHints}`;
     }
-
-    console.log(`[ChapterGeneration] 第${nextChapterNumber}章生成中...（第${state.attempt + 1}次尝试）${enableStreaming ? ' [流式模式]' : ''}`);
-
     const initialMessages: MessageContent[] = [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: currentUserPrompt }
@@ -221,7 +216,6 @@ export class ChapterGenerationService {
       ).pipe(
         catchError((error) => this.handleLlmError(error, useTools, chapters)),
         concatMap((rawText: string) => {
-          console.log(`[ChapterGeneration] 生成文本长度: ${rawText.length} 字`);
           return this.extractStructuredContent(baseModel, rawText, signal, ChapterOutputSchema);
         }),
         map((parsed) => this.validateAndCleanContent(parsed, nextChapterNumber, existingTitles)),
@@ -235,7 +229,6 @@ export class ChapterGenerationService {
     return this.llmInvoker.invokeWithTools(model, initialMessages, signal, useTools, tools).pipe(
       catchError((error) => this.handleLlmError(error, useTools, chapters)),
       concatMap((rawText: string) => {
-        console.log(`[ChapterGeneration] 生成文本长度: ${rawText.length} 字`);
         return this.extractStructuredContent(baseModel, rawText, signal, ChapterOutputSchema);
       }),
       map((parsed) => this.validateAndCleanContent(parsed, nextChapterNumber, existingTitles)),
@@ -269,8 +262,6 @@ export class ChapterGenerationService {
             id: ast.id,
             data: { delta: chunk.delta, accumulated: accumulatedText }
           });
-        } else if (chunk.type === 'tool_call') {
-          console.log(`[ChapterGeneration] LLM 请求调用工具: ${chunk.toolCalls?.length} 个`);
         }
       }),
       filter((chunk: StreamChunk) => chunk.type === 'complete'),
@@ -285,7 +276,6 @@ export class ChapterGenerationService {
       statusText: (error as { statusText?: string }).statusText,
       rawError: JSON.stringify(error, null, 2).substring(0, 500)
     };
-    console.error(`[ChapterGeneration] LLM 调用失败:`, errorInfo);
     return throwError(() => error);
   }
 
@@ -304,10 +294,6 @@ export class ChapterGenerationService {
     ], { signal })).pipe(
       map((result) => result as unknown as ParsedChapter),
       catchError((error) => {
-        console.error(`[ChapterGeneration] 结构化提取失败:`, {
-          message: error.message,
-          status: error.status
-        });
         return throwError(() => error);
       })
     );
@@ -356,11 +342,8 @@ export class ChapterGenerationService {
       });
     }
 
-    console.log(`[ChapterGeneration] 第${chapter.chapterNumber}章质检中...（第${attempt + 1}次尝试）`);
-
     return this.retryQualityCheck(chapter, chapters, ast.wordCount, signal, 0).pipe(
       map((qualityResult) => {
-        console.log(`[ChapterGeneration] 质检完成，最终评分: ${qualityResult.score}/100`);
         return { chapter, quality: qualityResult, attempt };
       })
     );
@@ -374,7 +357,6 @@ export class ChapterGenerationService {
     retryCount: number
   ): Observable<QualityCheckResult> {
     if (retryCount >= 3) {
-      console.warn(`[ChapterGeneration] 质检重试次数已达上限（3次），使用默认评分 70`);
       return of({
         score: 70,
         issues: [],
@@ -385,7 +367,6 @@ export class ChapterGenerationService {
 
     return from(this.qualityService.check(chapter, chapters, wordCount, signal)).pipe(
       catchError((error) => {
-        console.warn(`[ChapterGeneration] 质检失败（${retryCount + 1}/3）: ${error.message}`);
         if (retryCount < 2) {
           const backoffDelay = 1000 * Math.pow(2, retryCount);
           return from(new Promise<void>(resolve => setTimeout(resolve, backoffDelay))).pipe(
@@ -408,7 +389,6 @@ export class ChapterGenerationService {
     quality: QualityCheckResult,
     attempt: number
   ): GenerationState {
-    console.log(`[ChapterGeneration] 第${chapter.chapterNumber}章质量评分：${quality.score}/100`);
 
     if (quality.score >= ast.minQualityScore) {
       return {
@@ -461,9 +441,6 @@ export class ChapterGenerationService {
     const { chapter: chapterData, quality: qualityResult } = bestAttempt;
 
     if (ast.enableQualityCheck) {
-      console.log(`[ChapterGeneration] 第${nextChapterNumber}章质量报告（最佳版本，尝试 ${bestAttempt.attempt + 1}）：`);
-      console.log(`  - 综合评分：${qualityResult.score}/100`);
-      console.log(`  - 质量问题数：${qualityResult.issues.length}`);
       if (qualityResult.issues.length > 0) {
         qualityResult.issues.forEach((issue: QualityIssue) => {
           console.log(`    [${issue.severity}] ${issue.type}: ${issue.description}`);
@@ -521,9 +498,6 @@ export class ChapterGenerationService {
 
     const chapterTools = this.toolsFactory.createChapterTools(chapters);
     const nodeTools = this.toolsFactory.createNodeTools(ctx, currentAstId);
-
-    console.log(`[ChapterGeneration] 构建了 ${chapterTools.length + nodeTools.length} 个工具：${chapterTools.length} 个章节工具 + ${nodeTools.length} 个节点工具`);
-
     return [...chapterTools, ...nodeTools];
   }
 }

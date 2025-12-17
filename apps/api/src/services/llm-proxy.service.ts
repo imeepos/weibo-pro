@@ -521,6 +521,22 @@ export class LlmProxyService {
         }
         const requestBody = JSON.stringify(proxyBody)
 
+        // 保存请求参数到文件用于调试
+        if (provider.providerId === 'a9d28e2e-2bae-4ef1-946a-a19e3a4c1788') {
+          const fs = await import('fs/promises')
+          const debugData = {
+            timestamp: new Date().toISOString(),
+            url,
+            headers: requestHeaders,
+            body: proxyBody
+          }
+          await fs.writeFile(
+            'debug-llm-request.json',
+            JSON.stringify(debugData, null, 2),
+            'utf-8'
+          ).catch(err => console.error('保存调试文件失败:', err))
+        }
+
         const response = await fetch(url, {
           method: 'POST',
           headers: requestHeaders,
@@ -536,11 +552,11 @@ export class LlmProxyService {
             url,
             method: 'POST',
             headers: {
-              Authorization: `Bearer ${provider.apiKey.slice(0, 10)}...`,
+              Authorization: `Bearer ${provider.apiKey}`,
               connection: 'keep-alive',
               'content-type': reqHeaders['content-type'] || 'application/json',
             },
-            requestBody: requestBody.slice(0, 500),
+            requestBody: requestBody,
             statusCode: response.status,
             statusText: response.statusText,
             durationMs
@@ -772,11 +788,11 @@ export class LlmProxyService {
           url: `${provider.baseUrl}${proxyPath}`,
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${provider.apiKey.slice(0, 10)}...`,
+            Authorization: `Bearer ${provider.apiKey}`,
             connection: 'keep-alive',
             'content-type': reqHeaders['content-type'] || 'application/json',
           },
-          body: JSON.stringify(proxyBody).slice(0, 500),
+          body: JSON.stringify(proxyBody),
           error: error instanceof Error ? error.message : String(error),
           stack: error instanceof Error ? error.stack : undefined,
           isTimeout
