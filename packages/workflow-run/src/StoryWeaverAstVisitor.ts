@@ -28,6 +28,7 @@ export class StoryWeaverAstVisitor {
         distinctUntilChanged(),
         concatMap((inputData) => {
           ast.emitCount += 1;
+          obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } })
           if (inputData) {
             Object.keys(inputData).forEach(key => {
               (ast as any)[key] = inputData[key];

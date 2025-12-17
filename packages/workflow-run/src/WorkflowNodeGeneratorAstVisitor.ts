@@ -23,6 +23,7 @@ export class WorkflowNodeGeneratorAstVisitor {
         .pipe(
           concatMap(async (inputData) => {
             ast.emitCount += 1;
+            obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } })
             if (inputData) {
               Object.keys(inputData).forEach((key) => {
                 (ast as any)[key] = inputData[key];
@@ -141,6 +142,7 @@ export class MyNodeAstVisitor {
       const subscription = input$.pipe(
         concatMap(async (inputData) => {
           ast.emitCount += 1;
+          obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } })
           if (inputData) {
             Object.keys(inputData).forEach(key => {
               (ast as any)[key] = inputData[key];

@@ -30,7 +30,7 @@ export class StoryQualityLoopAstVisitor {
         .pipe(
           concatMap(async (inputData) => {
             ast.emitCount += 1;
-
+            obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } })
             // 应用输入数据
             if (inputData) {
               Object.keys(inputData).forEach((key) => {

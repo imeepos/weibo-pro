@@ -30,7 +30,7 @@ export class WeiboAjaxStatusesLikeShowAstVisitor extends WeiboApiClient {
     }
 
     @Handler(WeiboAjaxStatusesLikeShowAst)
-    handler(ast: WeiboAjaxStatusesLikeShowAst, _ctx: any): Observable<NodeEvent> {
+    handler(ast: WeiboAjaxStatusesLikeShowAst, $input: Observable<any>, _ctx: any): Observable<NodeEvent> {
         return new Observable<NodeEvent>(obs => {
             const handle = async () => {
                 try {
@@ -66,7 +66,7 @@ export class WeiboAjaxStatusesLikeShowAstVisitor extends WeiboApiClient {
                     }
 
                     ast.is_end = true;
-                    ast.emitCount += 1;
+                   
                     obs.next({ type: 'node_emit', id: ast.id, data: { is_end: ast.is_end } });
 
                     ast.state = 'success';

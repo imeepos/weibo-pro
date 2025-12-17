@@ -1,32 +1,34 @@
 import { Handler, type DynamicOutput, ROUTE_SKIPPED, NodeEvent, setAstError } from '@sker/workflow'
 import { Injectable } from '@sker/core'
 import { SwitchAst } from '@sker/workflow-ast'
-import { Observable } from 'rxjs'
+import { Observable, from } from 'rxjs'
+import { concatMap, mergeMap } from 'rxjs/operators'
 
 @Injectable()
 export class SwitchAstVisitor {
     @Handler(SwitchAst)
     handler(ast: SwitchAst, input$: Observable<any>, ctx: any) {
         return new Observable<NodeEvent>(obs => {
+            const abortController = new AbortController()
+
             ast.state = 'running'
             obs.next({ type: 'node_runing', id: ast.id });
 
-            input$.subscribe({
-                next: (inputData) => {
+            const subscription = input$.pipe(
+                concatMap((inputData) => {
                     ast.emitCount += 1;
+                    obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } })
+
                     if (inputData) {
                         Object.keys(inputData).forEach(key => {
                             (ast as any)[key] = inputData[key];
                         });
                     }
-                },
-                error: (error) => {
-                    ast.state = 'fail';
-                    setAstError(ast, error);
-                    obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-                    obs.complete();
-                },
-                complete: () => {
+
+                    if (abortController.signal.aborted) {
+                        throw new Error('工作流已取消');
+                    }
+
                     const inputValue = ast.value
                     const outputs = ast.metadata.outputs
 
@@ -62,14 +64,32 @@ export class SwitchAstVisitor {
                         emitData[propKey] = anyMatched ? ROUTE_SKIPPED : inputValue
                     }
 
-                    // 批量发射所有路由结果
-                    obs.next({ type: 'node_emit', id: ast.id, data: emitData })
-
+                    // 返回路由结果事件
+                    return [
+                        { type: 'node_emit' as const, id: ast.id, data: emitData }
+                    ];
+                }),
+                mergeMap((events: NodeEvent[]) => from(events))
+            ).subscribe({
+                next: (event: NodeEvent) => obs.next(event),
+                error: (error) => {
+                    ast.state = 'fail';
+                    setAstError(ast, error);
+                    obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
+                    obs.complete();
+                },
+                complete: () => {
                     ast.state = 'success'
                     obs.next({ type: 'node_success', id: ast.id });
                     obs.complete()
                 }
             })
+
+            return () => {
+                subscription.unsubscribe()
+                abortController.abort()
+                obs.complete()
+            }
         })
     }
 
