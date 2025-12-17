@@ -97,8 +97,6 @@ export class WorkflowService {
 
       await repository.save(workflow);
 
-      logger.info('Workflow saved', { id: workflow.id, name: params.name });
-
       return workflow;
     });
   }
@@ -117,8 +115,6 @@ export class WorkflowService {
       if (!workflow) {
         return null;
       }
-
-      logger.info('Workflow retrieved', { id: workflow.id, name });
 
       // 将实体转换为 WorkflowGraphAst
       return {

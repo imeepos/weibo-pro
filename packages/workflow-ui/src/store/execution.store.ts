@@ -19,6 +19,15 @@ export interface StreamingData {
   timestamp: number
 }
 
+/** 节点进度数据 */
+export interface NodeProgressData {
+  stage: string
+  message: string
+  round?: number
+  status?: 'executing' | 'completed'
+  timestamp: number
+}
+
 interface ExecutionState {
   /** 是否正在执行 */
   isExecuting: boolean
@@ -30,6 +39,8 @@ interface ExecutionState {
   nodeHistory: Record<string, NodeExecutionRecord[]>
   /** 节点流式数据（实时更新） */
   streamingData: Record<string, StreamingData>
+  /** 节点进度数据（工具调用、阶段性任务） */
+  nodeProgress: Record<string, NodeProgressData>
 
   /** 开始执行 */
   startExecution: () => void
@@ -57,6 +68,13 @@ interface ExecutionState {
   /** 获取节点流式数据 */
   getStreamingData: (nodeId: string) => StreamingData | undefined
 
+  /** 更新节点进度 */
+  updateNodeProgress: (nodeId: string, progress: Omit<NodeProgressData, 'timestamp'>) => void
+  /** 清空节点进度 */
+  clearNodeProgress: (nodeId: string) => void
+  /** 获取节点进度 */
+  getNodeProgress: (nodeId: string) => NodeProgressData | undefined
+
   /** 重置执行状态 */
   resetExecution: () => void
 }
@@ -75,6 +93,7 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
   nodeStates: {},
   nodeHistory: {},
   streamingData: {},
+  nodeProgress: {},
 
   startExecution: () =>
     set({ isExecuting: true, executionError: null }),
@@ -149,6 +168,29 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
 
   getStreamingData: (nodeId) => get().streamingData[nodeId],
 
+  updateNodeProgress: (nodeId, progress) =>
+    set((prev) => ({
+      nodeProgress: {
+        ...prev.nodeProgress,
+        [nodeId]: { ...progress, timestamp: Date.now() },
+      },
+    })),
+
+  clearNodeProgress: (nodeId) =>
+    set((prev) => {
+      const { [nodeId]: _, ...rest } = prev.nodeProgress
+      return { nodeProgress: rest }
+    }),
+
+  getNodeProgress: (nodeId) => get().nodeProgress[nodeId],
+
   resetExecution: () =>
-    set({ isExecuting: false, executionError: null, nodeStates: {}, nodeHistory: {}, streamingData: {} }),
+    set({
+      isExecuting: false,
+      executionError: null,
+      nodeStates: {},
+      nodeHistory: {},
+      streamingData: {},
+      nodeProgress: {}
+    }),
 }))

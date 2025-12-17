@@ -86,7 +86,6 @@ export class WorkflowController implements sdk.WorkflowController {
     // 1. 尝试从数据库获取现有工作流
     const workflow = await this.workflowService.getWorkflowByName(name);
     if (workflow) {
-      logger.info('工作流已存在', { name });
       return workflow;
     }
     // 3. 无模板，创建空工作流

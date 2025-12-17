@@ -216,6 +216,13 @@ export class ChapterGenerationService {
       ).pipe(
         catchError((error) => this.handleLlmError(error, useTools, chapters)),
         concatMap((rawText: string) => {
+          console.log(`[ChapterGeneration] 流式模式收到原始文本长度: ${rawText?.length || 0}`);
+          console.log(`[ChapterGeneration] 流式模式原始文本预览: ${rawText?.slice(0, 200)}...`);
+
+          if (!rawText || rawText.trim().length === 0) {
+            return throwError(() => new Error('流式模式：LLM 未生成任何内容，rawText 为空'));
+          }
+
           return this.extractStructuredContent(baseModel, rawText, signal, ChapterOutputSchema);
         }),
         map((parsed) => this.validateAndCleanContent(parsed, nextChapterNumber, existingTitles)),
@@ -229,6 +236,13 @@ export class ChapterGenerationService {
     return this.llmInvoker.invokeWithTools(model, initialMessages, signal, useTools, tools).pipe(
       catchError((error) => this.handleLlmError(error, useTools, chapters)),
       concatMap((rawText: string) => {
+        console.log(`[ChapterGeneration] 收到原始文本长度: ${rawText?.length || 0}`);
+        console.log(`[ChapterGeneration] 原始文本预览: ${rawText?.slice(0, 200)}...`);
+
+        if (!rawText || rawText.trim().length === 0) {
+          return throwError(() => new Error('LLM 未生成任何内容，rawText 为空'));
+        }
+
         return this.extractStructuredContent(baseModel, rawText, signal, ChapterOutputSchema);
       }),
       map((parsed) => this.validateAndCleanContent(parsed, nextChapterNumber, existingTitles)),
@@ -241,6 +255,18 @@ export class ChapterGenerationService {
   /**
    * 流式调用 LLM（支持工具）
    */
+  private async saveDebugLog(filename: string, data: any): Promise<void> {
+    try {
+      const fs = await import('fs/promises');
+      const path = await import('path');
+      const debugPath = path.join(process.cwd(), filename);
+      await fs.writeFile(debugPath, JSON.stringify(data, null, 2), 'utf-8');
+      console.log(`[ChapterGeneration] 已保存调试日志到: ${filename}`);
+    } catch (err) {
+      console.error('[ChapterGeneration] 保存调试日志失败:', err);
+    }
+  }
+
   private invokeWithStreaming(
     model: ChatOpenAI<ChatOpenAICallOptions> | Runnable<BaseLanguageModelInput, AIMessageChunk, ChatOpenAICallOptions>,
     initialMessages: MessageContent[],
@@ -252,6 +278,14 @@ export class ChapterGenerationService {
   ): Observable<string> {
     let accumulatedText = '';
 
+    // 保存生成请求
+    this.saveDebugLog('debug-chapter-generation-request.json', {
+      timestamp: new Date().toISOString(),
+      messages: initialMessages,
+      useTools,
+      tools: tools.map(t => ({ name: t.name, description: t.description }))
+    }).catch(console.error);
+
     return this.streamingLlmInvoker.streamWithTools(model, initialMessages, signal, useTools, tools).pipe(
       tap((chunk: StreamChunk) => {
         if (chunk.type === 'delta' && chunk.delta) {
@@ -262,10 +296,44 @@ export class ChapterGenerationService {
             id: ast.id,
             data: { delta: chunk.delta, accumulated: accumulatedText }
           });
+        } else if (chunk.type === 'tool_progress' && chunk.toolProgress) {
+          // 推送工具执行进度到前端
+          streamEventSubject.next({
+            type: 'node_progress',
+            id: ast.id,
+            data: {
+              stage: chunk.toolProgress.currentTool,
+              message: chunk.toolProgress.message,
+              round: chunk.toolProgress.round,
+              status: chunk.toolProgress.status
+            }
+          });
+        } else if (chunk.type === 'tool_result' && chunk.toolResult) {
+          // 推送工具执行结果到前端
+          streamEventSubject.next({
+            type: 'node_progress',
+            id: ast.id,
+            data: {
+              stage: chunk.toolResult.toolName,
+              message: `✓ ${chunk.toolResult.resultSummary}`,
+              status: 'completed'
+            }
+          });
         }
       }),
       filter((chunk: StreamChunk) => chunk.type === 'complete'),
-      map((chunk: StreamChunk) => chunk.fullText || accumulatedText)
+      map((chunk: StreamChunk) => {
+        const finalText = chunk.fullText || accumulatedText;
+
+        // 保存生成响应
+        this.saveDebugLog('debug-chapter-generation-response.json', {
+          timestamp: new Date().toISOString(),
+          fullText: finalText,
+          textLength: finalText?.length || 0
+        }).catch(console.error);
+
+        return finalText;
+      })
     );
   }
 
@@ -286,14 +354,56 @@ export class ChapterGenerationService {
     ChapterOutputSchema: z.ZodObject<z.ZodRawShape>
   ): Observable<ParsedChapter> {
     const extractionPrompt = this.promptBuilder.buildExtractionPrompt(rawText);
+    console.log(`[extractStructuredContent] 提取提示词长度: ${extractionPrompt?.length || 0}`);
+    console.log(`[extractStructuredContent] 提取提示词预览: ${extractionPrompt?.slice(0, 300)}...`);
+
+    // 保存提取请求
+    this.saveDebugLog('debug-chapter-extraction-request.json', {
+      timestamp: new Date().toISOString(),
+      rawTextLength: rawText?.length || 0,
+      rawTextPreview: rawText?.slice(0, 500),
+      extractionPromptLength: extractionPrompt?.length || 0,
+      extractionPrompt: extractionPrompt,
+      schema: ChapterOutputSchema.shape
+    }).catch(console.error);
+
     const extractionModel = baseModel.withStructuredOutput(ChapterOutputSchema);
 
     return from(extractionModel.invoke([
       { role: 'system', content: '你是一个文本结构化提取专家，精确提取小说章节的元数据。' },
       { role: 'user', content: extractionPrompt }
     ], { signal })).pipe(
-      map((result) => result as unknown as ParsedChapter),
+      map((result) => {
+        console.log(`[extractStructuredContent] LLM 返回结果:`, JSON.stringify(result).slice(0, 500));
+
+        // 保存提取响应
+        this.saveDebugLog('debug-chapter-extraction-response.json', {
+          timestamp: new Date().toISOString(),
+          result: result
+        }).catch(console.error);
+
+        return result as unknown as ParsedChapter;
+      }),
       catchError((error) => {
+        console.error(`[extractStructuredContent] 结构化提取失败:`, error);
+        console.error(`[extractStructuredContent] 错误详情:`, {
+          message: error.message,
+          name: error.name,
+          stack: error.stack
+        });
+
+        // 保存提取错误
+        this.saveDebugLog('debug-chapter-extraction-error.json', {
+          timestamp: new Date().toISOString(),
+          error: {
+            message: error.message,
+            name: error.name,
+            stack: error.stack
+          },
+          rawTextLength: rawText?.length || 0,
+          extractionPromptLength: extractionPrompt?.length || 0
+        }).catch(console.error);
+
         return throwError(() => error);
       })
     );

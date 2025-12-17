@@ -8,6 +8,7 @@ import { fromJson, WorkflowGraphAst, Compiler } from '@sker/workflow'
 import type { INode } from '@sker/workflow'
 import { root } from '@sker/core'
 import { BoxIcon } from 'lucide-react'
+import { useExecutionStore } from '../../store/execution.store'
 
 /**
  * BaseNode - 工作流节点数据适配器
@@ -17,8 +18,13 @@ import { BoxIcon } from 'lucide-react'
  * - 获取自定义渲染器
  * - 传递给 @sker/ui 的 WorkflowNode 进行渲染
  * - 处理工作流特定的交互事件
+ * - 显示实时执行进度
  */
 export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNodeType>) => {
+  // 从 execution store 获取节点的流式数据和进度
+  const streamingData = useExecutionStore((state) => state.getStreamingData(id))
+  const progressData = useExecutionStore((state) => state.getNodeProgress(id))
+
   // 确保节点已编译（包含 metadata）
   let nodeToUse: INode
 
@@ -99,7 +105,7 @@ export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNodeType
       id={id}
       type={data.type}
       label={data.name || metadata.class.title || data.type}
-      description={data.description}
+      description={progressData ? progressData.message : data.description}
       color={data.color}
       icon={<BoxIcon />}
       status={data.state}
@@ -113,7 +119,9 @@ export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNodeType
       onToggleCollapse={toggleCollapse}
       onContextMenu={handleContextMenu}
       onDoubleClick={handleDoubleClick}
-      className={`${data.type}`}
+      className={`${data.type} ${progressData ? 'has-progress' : ''}`}
+      progressMessage={progressData?.message}
+      progressStatus={progressData?.status}
     >
       {CustomRender}
     </WorkflowNode>

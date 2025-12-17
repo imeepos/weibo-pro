@@ -19,6 +19,7 @@ import type {
 import type { ClaudeContentBlock, ClaudeTool, ClaudeMessage, ClaudeTextContent, ClaudeImageContent, ClaudeToolUseContent, ClaudeToolResultContent } from "./types/claude";
 import type { OpenAIMessage, OpenAIContentPart } from "./types/openai";
 import { Injectable } from '@sker/core'
+import { CODEX_PROMPT } from "./tokens";
 export abstract class Ast {
     abstract visit(visitor: Visitor, ctx: any): any;
 }
@@ -205,14 +206,22 @@ export class ToCodexVisitor extends BaseVisitor {
             .map(block => block.text)
             .join('\n\n');
     }
-
     private convertClaudeToCodex(request: ClaudeRequest): CodexRequest {
-        const instructions = this.extractInstructions(request.system);
         const inputItems = this.convertMessages(request.messages);
+
+        // 将 system prompt 作为第一条用户消息插入到 input 开头
+        if (request.system) {
+            const systemText = this.extractInstructions(request.system);
+            inputItems.unshift({
+                type: 'message',
+                role: 'user',
+                content: [{ type: 'input_text', text: systemText }]
+            });
+        }
 
         return {
             model: request.model,
-            instructions,
+            instructions: CODEX_PROMPT,  // 固定的 Codex CLI 指令
             input: inputItems,
             tools: this.convertClaudeTools(request.tools || []),
             tool_choice: this.convertClaudeToolChoice(request.tool_choice),
@@ -365,10 +374,13 @@ export class ToCodexVisitor extends BaseVisitor {
 
         for (const block of response.content) {
             if (block.type === 'text') {
-                assistantMessage.content.push({
-                    type: 'output_text',
-                    text: block.text,
-                });
+                // 过滤空文本
+                if (block.text && block.text.trim()) {
+                    assistantMessage.content.push({
+                        type: 'output_text',
+                        text: block.text,
+                    });
+                }
             } else if (block.type === 'tool_use') {
                 output.push({
                     type: 'function_call',
@@ -424,7 +436,8 @@ export class ToCodexVisitor extends BaseVisitor {
                     .map(part => part.text || '')
                     .join('\n');
 
-            if (textContent) {
+            // 过滤空文本
+            if (textContent && textContent.trim()) {
                 assistantMessage.content.push({
                     type: 'output_text',
                     text: textContent,
@@ -804,10 +817,7 @@ export class ToOpenAiVisitor extends BaseVisitor {
     }
 
     visitClaudeStreamEventAst(ast: ClaudeStreamEventAst, ctx: any): OpenAIStreamResponse | null {
-        if (!ctx.claudeToOpenaiConverter) {
-            ctx.claudeToOpenaiConverter = createClaudeToOpenaiStreamConverter();
-        }
-        return ctx.claudeToOpenaiConverter(ast.streamEvent);
+        return this.convertClaudeStreamToOpenAI(ast.streamEvent, ctx);
     }
 
     private convertCodexToOpenAI(request: CodexRequest): OpenAIRequest {
@@ -965,6 +975,111 @@ export class ToOpenAiVisitor extends BaseVisitor {
             default:
                 return 'stop';
         }
+    }
+
+    /**
+     * Claude 流式事件转 OpenAI 流式响应
+     */
+    private convertClaudeStreamToOpenAI(
+        event: ClaudeStreamEvent,
+        ctx: any
+    ): OpenAIStreamResponse | null {
+        // 初始化流式状态
+        if (!ctx.streamState) {
+            ctx.streamState = {
+                id: '',
+                model: '',
+                created: 0,
+                toolCallIndex: -1,
+                toolCallArgs: new Map<number, string>(),
+            };
+        }
+
+        const state = ctx.streamState;
+
+        if (event.type === 'ping') return null;
+
+        if (event.type === 'message_start') {
+            state.id = event.message.id;
+            state.model = event.message.model;
+            state.created = Math.floor(Date.now() / 1000);
+            return {
+                id: state.id,
+                object: 'chat.completion.chunk' as const,
+                created: state.created,
+                model: state.model,
+                choices: [{ index: 0, delta: { role: 'assistant' }, finish_reason: null }],
+            };
+        }
+
+        if (event.type === 'content_block_start') {
+            if (event.content_block.type === 'tool_use') {
+                state.toolCallIndex++;
+                state.toolCallArgs.set(state.toolCallIndex, '');
+                return {
+                    id: state.id,
+                    object: 'chat.completion.chunk' as const,
+                    created: state.created,
+                    model: state.model,
+                    choices: [
+                        {
+                            index: 0,
+                            delta: {
+                                tool_calls: [{
+                                    id: event.content_block.id,
+                                    type: 'function' as const,
+                                    function: { name: event.content_block.name, arguments: '' }
+                                }],
+                            },
+                            finish_reason: null,
+                        },
+                    ],
+                };
+            }
+            return null;
+        }
+
+        if (event.type === 'content_block_delta') {
+            if (event.delta.type === 'text_delta') {
+                return {
+                    id: state.id,
+                    object: 'chat.completion.chunk' as const,
+                    created: state.created,
+                    model: state.model,
+                    choices: [{ index: 0, delta: { content: event.delta.text }, finish_reason: null }],
+                };
+            }
+            if (event.delta.type === 'input_json_delta') {
+                return {
+                    id: state.id,
+                    object: 'chat.completion.chunk' as const,
+                    created: state.created,
+                    model: state.model,
+                    choices: [
+                        {
+                            index: 0,
+                            delta: { tool_calls: [{ index: state.toolCallIndex, function: { arguments: event.delta.partial_json } }] },
+                            finish_reason: null,
+                        },
+                    ],
+                };
+            }
+        }
+
+        if (event.type === 'message_delta') {
+            const reason = event.delta.stop_reason;
+            const finishReason = reason === 'end_turn' ? 'stop' : reason === 'tool_use' ? 'tool_calls' : reason === 'max_tokens' ? 'length' : null;
+            return {
+                id: state.id,
+                object: 'chat.completion.chunk' as const,
+                created: state.created,
+                model: state.model,
+                choices: [{ index: 0, delta: {}, finish_reason: finishReason }],
+                usage: { prompt_tokens: 0, completion_tokens: event.usage.output_tokens, total_tokens: event.usage.output_tokens },
+            };
+        }
+
+        return null;
     }
 
     /**
@@ -1203,10 +1318,7 @@ export class ToAnthropicVisitor extends BaseVisitor {
     }
 
     visitOpenAIStreamResponseAst(ast: OpenAIStreamResponseAst, ctx: any): ClaudeStreamEvent[] {
-        if (!ctx.openaiToClaudeConverter) {
-            ctx.openaiToClaudeConverter = createOpenaiToClaudeStreamConverter();
-        }
-        return ctx.openaiToClaudeConverter(ast.streamEvent);
+        return this.convertOpenAIStreamToClaude(ast.streamEvent, ctx);
     }
 
     visitClaudeRequestAst(ast: ClaudeRequestAst, ctx: any): ClaudeRequest {
@@ -1397,6 +1509,112 @@ export class ToAnthropicVisitor extends BaseVisitor {
             default:
                 return 'end_turn';
         }
+    }
+
+    /**
+     * OpenAI 流式事件转 Claude 流式事件
+     */
+    private convertOpenAIStreamToClaude(
+        chunk: OpenAIStreamResponse,
+        ctx: any
+    ): ClaudeStreamEvent[] {
+        const events: ClaudeStreamEvent[] = [];
+
+        // 初始化流式状态
+        if (!ctx.streamState) {
+            ctx.streamState = {
+                id: '',
+                model: '',
+                inputTokens: 0,
+                outputTokens: 0,
+                contentIndex: 0,
+                currentToolId: '',
+                currentToolName: '',
+                toolArgs: '',
+                sentStart: false,
+                sentContentStart: false,
+            };
+        }
+
+        const state = ctx.streamState;
+
+        if (!state.sentStart) {
+            state.id = chunk.id;
+            state.model = chunk.model;
+            state.sentStart = true;
+            events.push({
+                type: 'message_start',
+                message: {
+                    id: state.id,
+                    type: 'message',
+                    role: 'assistant',
+                    model: state.model,
+                    content: [],
+                    usage: { input_tokens: 0, output_tokens: 0 },
+                },
+            });
+        }
+
+        for (const choice of chunk.choices) {
+            const delta = choice.delta;
+
+            if (delta.content) {
+                if (!state.sentContentStart) {
+                    state.sentContentStart = true;
+                    events.push({
+                        type: 'content_block_start',
+                        index: state.contentIndex,
+                        content_block: { type: 'text', text: '' },
+                    });
+                }
+                events.push({
+                    type: 'content_block_delta',
+                    index: state.contentIndex,
+                    delta: { type: 'text_delta', text: delta.content },
+                });
+            }
+
+            if (delta.tool_calls) {
+                for (const tc of delta.tool_calls) {
+                    if (tc.id && tc.function?.name) {
+                        if (state.sentContentStart) {
+                            events.push({ type: 'content_block_stop', index: state.contentIndex });
+                            state.contentIndex++;
+                            state.sentContentStart = false;
+                        }
+                        state.currentToolId = tc.id;
+                        state.currentToolName = tc.function.name;
+                        state.toolArgs = '';
+                        events.push({
+                            type: 'content_block_start',
+                            index: state.contentIndex,
+                            content_block: { type: 'tool_use', id: tc.id, name: tc.function.name, input: {} },
+                        });
+                    }
+                    if (tc.function?.arguments) {
+                        state.toolArgs += tc.function.arguments;
+                        events.push({
+                            type: 'content_block_delta',
+                            index: state.contentIndex,
+                            delta: { type: 'input_json_delta', partial_json: tc.function.arguments },
+                        });
+                    }
+                }
+            }
+
+            if (choice.finish_reason) {
+                events.push({ type: 'content_block_stop', index: state.contentIndex });
+                const stopReason = choice.finish_reason === 'tool_calls' ? 'tool_use' : choice.finish_reason === 'length' ? 'max_tokens' : 'end_turn';
+                events.push({
+                    type: 'message_delta',
+                    delta: { stop_reason: stopReason },
+                    usage: { output_tokens: chunk.usage?.completion_tokens ?? 0 },
+                });
+                events.push({ type: 'message_stop' });
+            }
+        }
+
+        return events;
     }
 
     /**

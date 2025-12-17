@@ -6,7 +6,8 @@ export type NodeEvent<T = any> =
     | NodeEmitEvent<T>
     | NodeSuccessEvent
     | NodeFailEvent
-    | NodeDeltaEvent;
+    | NodeDeltaEvent
+    | NodeProgressEvent;
 
 // 节点运行
 export interface NodeRuningEvent {
@@ -37,6 +38,18 @@ export interface NodeDeltaEvent {
     data: {
         delta: string;
         accumulated?: string;
+        [key: string]: any;
+    };
+}
+// 节点进度（工具调用、阶段性任务）
+export interface NodeProgressEvent {
+    type: 'node_progress';
+    id: string;
+    data: {
+        stage: string;
+        message: string;
+        round?: number;
+        status?: 'executing' | 'completed';
         [key: string]: any;
     };
 }

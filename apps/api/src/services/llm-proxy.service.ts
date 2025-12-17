@@ -2,8 +2,6 @@ import { Injectable } from '@sker/core';
 import { useEntityManager, LlmModelProvider, LlmProvider, LlmChatLog } from '@sker/entities';
 import { Brackets } from 'typeorm';
 import {
-  createClaudeToOpenaiStreamConverter,
-  createOpenaiToClaudeStreamConverter,
   type ClaudeResponse,
   type OpenAIResponse,
   type ClaudeStreamEvent,
@@ -21,8 +19,10 @@ import {
   ClaudeResponseAst,
   OpenAIStreamResponseAst,
   ClaudeStreamEventAst,
+  CodexStreamEventAst,
   type CodexRequest,
   type CodexResponse,
+  type CodexResponseEvent,
   Ast
 } from '@sker/openai2anthropic';
 
@@ -41,7 +41,7 @@ interface ProxyResult {
   error?: string
 }
 
-const TIMEOUT_MS = 1000 * 3 * 60;
+const TIMEOUT_MS = 1000 * 10 * 60; // 10 分钟超时
 const MAX_RETRIES = 3
 
 /**
@@ -105,32 +105,130 @@ export class LlmProxyService {
   private toAnthropicVisitor = new ToAnthropicVisitor();
 
   /**
-   * 选择流式转换器
+   * 使用 Visitor 转换流式事件
    * @param needsConversion 是否需要转换
    * @param fromProtocol 源协议（Provider 的协议）
    * @param toProtocol 目标协议（客户端期望的协议）
-   * @returns 流式转换器函数或 null
+   * @param data 流式事件数据
+   * @param ctx 上下文对象（用于维护流式状态）
+   * @returns 转换后的事件（可能是单个事件或事件数组）
    */
-  private selectStreamConverter(needsConversion: boolean, fromProtocol: string, toProtocol: string): any {
+  private convertStreamEvent(
+    needsConversion: boolean,
+    fromProtocol: string,
+    toProtocol: string,
+    data: any,
+    ctx: any
+  ): any {
     if (!needsConversion) {
-      return null
+      return data
     }
 
-    if (fromProtocol === 'anthropic' && toProtocol === 'openai') {
-      return createClaudeToOpenaiStreamConverter()
+    // 创建源协议的流式 AST
+    let ast: Ast
+    if (fromProtocol === 'openai') {
+      const openaiAst = new OpenAIStreamResponseAst()
+      openaiAst.streamEvent = data as OpenAIStreamResponse
+      ast = openaiAst
+    } else if (fromProtocol === 'anthropic') {
+      const claudeAst = new ClaudeStreamEventAst()
+      claudeAst.streamEvent = data as ClaudeStreamEvent
+      ast = claudeAst
+    } else if (fromProtocol === 'codex') {
+      const codexAst = new CodexStreamEventAst()
+      codexAst.streamEvent = data as CodexResponseEvent
+      ast = codexAst
+    } else {
+      console.warn(`[LlmProxy] 不支持的源协议: ${fromProtocol}`)
+      return data
     }
 
-    if (fromProtocol === 'openai' && toProtocol === 'anthropic') {
-      return createOpenaiToClaudeStreamConverter()
+    // 使用目标协议的 Visitor 转换
+    try {
+      if (toProtocol === 'openai') {
+        return this.toOpenAiVisitor.visit(ast, ctx)
+      } else if (toProtocol === 'anthropic') {
+        return this.toAnthropicVisitor.visit(ast, ctx)
+      } else if (toProtocol === 'codex') {
+        return this.toCodexVisitor.visit(ast, ctx)
+      } else {
+        console.warn(`[LlmProxy] 不支持的目标协议: ${toProtocol}`)
+        return data
+      }
+    } catch (error) {
+      console.error(`[LlmProxy] 流式转换失败 ${fromProtocol} → ${toProtocol}:`, error)
+      return data
+    }
+  }
+
+  /**
+   * 将 Codex 流式事件重建为完整响应
+   * @param chunks 流式事件数组
+   * @returns 完整的 Codex 响应对象
+   */
+  private buildCodexResponseFromStream(chunks: any[]): any {
+    if (chunks.length === 0) {
+      throw new Error('No stream chunks to build response from')
     }
 
-    if (fromProtocol === 'codex' || toProtocol === 'codex') {
-      console.warn(`[LlmProxy] Codex 流式转换尚未实现: ${fromProtocol} → ${toProtocol}`)
-      return null
+    // 查找包含完整响应的事件（通常是最后一个 response.completed 事件）
+    const completedEvent = chunks.find((chunk: any) => chunk.type === 'response.completed')
+
+    // 收集所有文本内容
+    const textChunks: string[] = []
+    let responseId = ''
+    let tokenUsage: any = null
+
+    for (const chunk of chunks) {
+      if (chunk.type === 'response.created' || chunk.type === 'response.output_item.added') {
+        // 初始化事件，可能包含 response_id
+        if (chunk.response_id) {
+          responseId = chunk.response_id
+        }
+      } else if (chunk.type === 'response.output_text.delta') {
+        // 文本增量
+        if (chunk.delta) {
+          textChunks.push(chunk.delta)
+        }
+      } else if (chunk.type === 'response.completed') {
+        // 完成事件，包含 token usage
+        if (chunk.response_id) {
+          responseId = chunk.response_id
+        }
+        if (chunk.token_usage) {
+          tokenUsage = chunk.token_usage
+        }
+      }
     }
 
-    console.warn(`[LlmProxy] 不支持的流式转换: ${fromProtocol} → ${toProtocol}`)
-    return null
+    // 构建完整响应
+    const fullText = textChunks.join('')
+
+    return {
+      id: responseId || `resp_${Date.now()}`,
+      object: 'response',
+      created_at: Date.now(),
+      status: 'completed',
+      output: [
+        {
+          type: 'message',
+          role: 'assistant',
+          content: [
+            {
+              type: 'output_text',
+              text: fullText
+            }
+          ]
+        }
+      ],
+      usage: tokenUsage || {
+        input_tokens: 0,
+        cached_input_tokens: 0,
+        output_tokens: 0,
+        reasoning_output_tokens: 0,
+        total_tokens: 0
+      }
+    }
   }
 
   /**
@@ -440,7 +538,6 @@ export class LlmProxyService {
       if (proxyBody.messages && Array.isArray(proxyBody.messages)) {
         const lastMessage = proxyBody.messages[proxyBody.messages.length - 1]
         if (lastMessage?.role === 'tool') {
-          console.warn(`[LlmProxy] 检测到消息序列以 tool 结尾，添加继续生成提示以兼容 API`)
           proxyBody.messages.push({
             role: 'user',
             content: '请基于上述工具调用结果继续生成回复。'
@@ -503,6 +600,14 @@ export class LlmProxyService {
         }
       }
 
+      // Codex 协议特殊处理：非流式模式不稳定，需要强制改为流式
+      let originalStreamMode = proxyBody.stream
+      let forceStreamForCodex = false
+      if (provider.providerProtocol === 'codex' && proxyBody.stream === false) {
+        proxyBody.stream = true
+        forceStreamForCodex = true
+      }
+
       const reqHeaders: Record<string, string> = {}
       for (const [key, value] of Object.entries(headers)) {
         const lowerKey = key.toLowerCase()
@@ -520,22 +625,6 @@ export class LlmProxyService {
           'content-type': reqHeaders['content-type'] || 'application/json',
         }
         const requestBody = JSON.stringify(proxyBody)
-
-        // 保存请求参数到文件用于调试
-        if (provider.providerId === 'a9d28e2e-2bae-4ef1-946a-a19e3a4c1788') {
-          const fs = await import('fs/promises')
-          const debugData = {
-            timestamp: new Date().toISOString(),
-            url,
-            headers: requestHeaders,
-            body: proxyBody
-          }
-          await fs.writeFile(
-            'debug-llm-request.json',
-            JSON.stringify(debugData, null, 2),
-            'utf-8'
-          ).catch(err => console.error('保存调试文件失败:', err))
-        }
 
         const response = await fetch(url, {
           method: 'POST',
@@ -561,6 +650,25 @@ export class LlmProxyService {
             statusText: response.statusText,
             durationMs
           })
+
+          // Codex 协议失败时保存请求参数用于调试
+          if (provider.providerProtocol === 'codex') {
+            try {
+              const fs = await import('fs/promises')
+              const path = await import('path')
+              const debugData = {
+                timestamp: new Date().toISOString(),
+                url,
+                headers: requestHeaders,
+                body: proxyBody
+              }
+              const debugPath = path.join(process.cwd(), 'debug-novel-request.json')
+              await fs.writeFile(debugPath, JSON.stringify(debugData, null, 2), 'utf-8')
+              console.log('[LlmProxy] 已保存失败的 Codex 请求到: debug-novel-request.json')
+            } catch (err) {
+              console.error('[LlmProxy] 保存调试文件失败:', err)
+            }
+          }
         }
 
         if (response.status === 403 || response.status === 401) {
@@ -585,7 +693,8 @@ export class LlmProxyService {
           return { success: true, response }
         }
 
-        const isStreaming = body.stream === true
+        // 使用实际发送的请求体判断是否流式（考虑 Codex 强制流式的情况）
+        const isStreaming = proxyBody.stream === true
         let usage: { input_tokens?: number; output_tokens?: number } | undefined
 
         if (!isStreaming) {
@@ -683,6 +792,31 @@ export class LlmProxyService {
             }
           }
 
+          // 打印最终响应预览（非流式）
+          const finalResponseStr = JSON.stringify(finalResponse)
+          const finalPreview = finalResponseStr.length > 100
+            ? `${finalResponseStr.slice(0, 50)}...${finalResponseStr.slice(-50)}`
+            : finalResponseStr
+
+          // 提取并打印文本内容
+          let textContent = ''
+          if (finalResponse.choices?.[0]?.message?.content) {
+            // OpenAI 格式
+            textContent = finalResponse.choices[0].message.content
+          } else if (finalResponse.output?.[0]?.content?.[0]?.text) {
+            // Codex 格式
+            textContent = finalResponse.output[0].content[0].text
+          } else if (finalResponse.content?.[0]?.text) {
+            // Claude 格式
+            textContent = finalResponse.content[0].text
+          }
+          if (textContent) {
+            const textPreview = textContent.length > 100
+              ? `${textContent.slice(0, 50)}...${textContent.slice(-50)}`
+              : textContent
+            console.log(`[LlmProxy] 返回文本: ${textPreview}`)
+          }
+
           return {
             success: true,
             response: new Response(JSON.stringify(finalResponse), {
@@ -704,8 +838,123 @@ export class LlmProxyService {
         const encoder = new TextEncoder()
         let thinkingErrorDetected = false
 
-        // 【流式响应转换】选择流式转换器
-        const streamConverter = this.selectStreamConverter(needsConversion, provider.providerProtocol, protocol)
+        // Codex 强制流式模式：收集完整响应后转为非流式
+        if (forceStreamForCodex) {
+          // 如果响应失败（HTTP 4xx/5xx），直接收集错误并返回
+          if (!response.ok) {
+            console.error('[LlmProxy] Codex 流式请求返回错误状态:', response.status)
+
+            const chunks: any[] = []
+            const reader = response.body
+              .pipeThrough(createSSELineStream())
+              .pipeThrough(createSSEDataStream())
+              .pipeThrough(createJSONParseStream())
+              .getReader()
+
+            try {
+              while (true) {
+                const { done, value } = await reader.read()
+                if (done) break
+                if (value && value !== '[DONE]') {
+                  chunks.push(value)
+                }
+              }
+
+              // 查找错误事件
+              const errorEvent = chunks.find((chunk: any) => chunk.type === 'error' || chunk.error)
+              const errorMessage = errorEvent?.message || errorEvent?.error?.message || 'Unknown error'
+
+              console.error('[LlmProxy] Codex 错误:', errorMessage)
+
+              // 返回错误响应，让外层重试逻辑处理
+              throw new Error(errorMessage)
+            } catch (streamError) {
+              console.error('[LlmProxy] Codex 错误流收集失败:', streamError)
+              throw streamError
+            }
+          }
+
+          const chunks: any[] = []
+          const reader = response.body
+            .pipeThrough(createSSELineStream())
+            .pipeThrough(createSSEDataStream())
+            .pipeThrough(createJSONParseStream())
+            .getReader()
+
+          try {
+            while (true) {
+              const { done, value } = await reader.read()
+              if (done) break
+              if (value && value !== '[DONE]') {
+                chunks.push(value)
+                // 提取 usage 信息
+                if (value.usage) {
+                  if (!usage) usage = {}
+                  if (value.usage.input_tokens) usage.input_tokens = value.usage.input_tokens
+                  if (value.usage.output_tokens) usage.output_tokens = value.output_tokens
+                }
+              }
+            }
+
+            // 将流式事件重建为完整响应
+            const fullResponse = this.buildCodexResponseFromStream(chunks)
+
+            // 如果需要协议转换，则转换
+            let finalResponse = fullResponse
+            if (needsConversion) {
+              finalResponse = this.convertResponse(provider.providerProtocol, protocol, fullResponse)
+            }
+
+            // 打印最终响应预览
+            const finalResponseStr = JSON.stringify(finalResponse)
+            const finalPreview = finalResponseStr.length > 100
+              ? `${finalResponseStr.slice(0, 50)}...${finalResponseStr.slice(-50)}`
+              : finalResponseStr
+
+            // 提取并打印文本内容
+            let textContent = ''
+            if (finalResponse.choices?.[0]?.message?.content) {
+              // OpenAI 格式
+              textContent = finalResponse.choices[0].message.content
+            } else if (finalResponse.output?.[0]?.content?.[0]?.text) {
+              // Codex 格式
+              textContent = finalResponse.output[0].content[0].text
+            } else if (finalResponse.content?.[0]?.text) {
+              // Claude 格式
+              textContent = finalResponse.content[0].text
+            }
+            if (textContent) {
+              const textPreview = textContent.length > 100
+                ? `${textContent.slice(0, 100)}...${textContent.slice(-100)}`
+                : textContent
+              console.log(`[LlmProxy] 返回文本: ${textPreview}`)
+            }
+
+            await this.saveLog({
+              providerId: provider.providerId,
+              modelName: requestedModel,
+              request: { ...proxyBody, stream: originalStreamMode }, // 记录原始 stream 模式
+              durationMs,
+              isSuccess: true,
+              statusCode: 200,
+              usage
+            })
+
+            return {
+              success: true,
+              response: new Response(JSON.stringify(finalResponse), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' }
+              })
+            }
+          } catch (streamError) {
+            console.error('[LlmProxy] Codex 流式响应收集失败:', streamError)
+            throw streamError
+          }
+        }
+
+        // 【流式响应转换】使用 Visitor 转换
+        const conversionCtx = {} // 上下文对象，用于维护流式状态
 
         // 流式处理管道：行解析 -> 数据提取 -> JSON 解析 -> 协议转换 -> 监控
         const monitoredBody = response.body
@@ -714,6 +963,14 @@ export class LlmProxyService {
           .pipeThrough(createJSONParseStream())
           .pipeThrough(new TransformStream({
             transform: (data, controller) => {
+              // 打印流数据概览（前10 + ... + 后10字符）
+              if (data && typeof data === 'object') {
+                const dataStr = JSON.stringify(data)
+                const preview = dataStr.length > 20
+                  ? `${dataStr.slice(0, 50)}...${dataStr.slice(-50)}`
+                  : dataStr
+              }
+
               // [DONE] 标记直接透传
               if (data === '[DONE]') {
                 controller.enqueue(encoder.encode('data: [DONE]\n\n'))
@@ -744,22 +1001,20 @@ export class LlmProxyService {
                 if (data.usage.output_tokens) usage.output_tokens = data.usage.output_tokens
               }
 
-              // 协议转换
-              if (streamConverter) {
-                if (protocol === 'openai' && provider.providerProtocol === 'anthropic') {
-                  const converted = (streamConverter as ReturnType<typeof createClaudeToOpenaiStreamConverter>)(data as ClaudeStreamEvent)
-                  if (converted) {
-                    controller.enqueue(encoder.encode(`data: ${JSON.stringify(converted)}\n\n`))
-                  }
-                } else if (protocol === 'anthropic' && provider.providerProtocol === 'openai') {
-                  const events = (streamConverter as ReturnType<typeof createOpenaiToClaudeStreamConverter>)(data as OpenAIStreamResponse)
-                  for (const event of events) {
+              // 协议转换（使用 Visitor）
+              const converted = this.convertStreamEvent(needsConversion, provider.providerProtocol, protocol, data, conversionCtx)
+
+              // 输出转换后的事件
+              if (converted !== null && converted !== undefined) {
+                if (Array.isArray(converted)) {
+                  // anthropic 返回的是事件数组
+                  for (const event of converted) {
                     controller.enqueue(encoder.encode(`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`))
                   }
+                } else {
+                  // openai/codex 返回单个事件
+                  controller.enqueue(encoder.encode(`data: ${JSON.stringify(converted)}\n\n`))
                 }
-              } else {
-                // 无需转换，直接输出
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`))
               }
             },
             flush: async () => {

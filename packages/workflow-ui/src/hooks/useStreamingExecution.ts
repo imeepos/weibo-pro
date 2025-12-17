@@ -8,7 +8,7 @@ import { useExecutionStore } from '../store/execution.store';
  * 订阅后端的 NodeEvent 流并更新前端状态
  */
 export function useStreamingExecution() {
-  const { updateStreamingData, clearStreamingData, updateNodeState } = useExecutionStore();
+  const { updateStreamingData, clearStreamingData, updateNodeState, updateNodeProgress, clearNodeProgress } = useExecutionStore();
 
   const subscribeToExecution = useCallback(
     (execution$: Observable<NodeEvent | NodeEvent[]>) => {
@@ -25,20 +25,35 @@ export function useStreamingExecution() {
                 }
                 break;
 
+              case 'node_progress':
+                // 进度更新：工具调用、阶段性任务
+                if (event.data?.stage && event.data?.message) {
+                  updateNodeProgress(event.id, {
+                    stage: event.data.stage,
+                    message: event.data.message,
+                    round: event.data.round,
+                    status: event.data.status
+                  });
+                }
+                break;
+
               case 'node_emit':
-                // 节点完成：清除流式数据
+                // 节点完成：清除流式数据和进度
                 clearStreamingData(event.id);
+                clearNodeProgress(event.id);
                 break;
 
               case 'node_success':
-                // 节点成功：清除流式数据
+                // 节点成功：清除流式数据和进度
                 clearStreamingData(event.id);
+                clearNodeProgress(event.id);
                 updateNodeState(event.id, 'success');
                 break;
 
               case 'node_fail':
-                // 节点失败：清除流式数据
+                // 节点失败：清除流式数据和进度
                 clearStreamingData(event.id);
+                clearNodeProgress(event.id);
                 updateNodeState(event.id, 'fail');
                 break;
 
@@ -59,7 +74,7 @@ export function useStreamingExecution() {
 
       return subscription;
     },
-    [updateStreamingData, clearStreamingData, updateNodeState]
+    [updateStreamingData, clearStreamingData, updateNodeState, updateNodeProgress, clearNodeProgress]
   );
 
   return { subscribeToExecution };
