@@ -504,7 +504,7 @@ export class WeiboAuthService implements OnDestroy {
     const sessionData = await this.redis.get<WeiboLoginSessionSnapshot>(key);
 
     if (sessionData) {
-      sessionData.status = status;
+      sessionData.status = status as any;
       await this.redis.set(key, sessionData);
     }
   }

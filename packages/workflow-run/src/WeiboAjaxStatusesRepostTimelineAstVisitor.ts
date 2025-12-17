@@ -72,12 +72,12 @@ export class WeiboAjaxStatusesRepostTimelineAstVisitor extends WeiboApiClient {
                             const uniqueUsers = Array.from(
                                 new Map(body.data.map(item => [item.user.id, item.user])).values()
                             );
-                            const users = uniqueUsers.map(user => m.create(WeiboUserEntity, user));
-                            await m.upsert(WeiboUserEntity, users, ['id']);
+                            const users = uniqueUsers.map(user => m.create(WeiboUserEntity, user as any));
+                            await m.upsert(WeiboUserEntity, users as any, ['id']);
 
-                            const entities = body.data.map(item => m.create(WeiboRepostEntity, item));
+                            const entities = body.data.map(item => m.create(WeiboRepostEntity, item as any));
                             console.log(`[WeiboAjaxStatusesRepostTimelineAstVisitor] ${page} 页 共${entities.length}条数据`);
-                            await m.upsert(WeiboRepostEntity, entities, ['id']);
+                            await m.upsert(WeiboRepostEntity, entities as any, ['id']);
                         });
                     }
 

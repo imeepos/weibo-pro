@@ -187,7 +187,7 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
             const userMap = new Map<number, WeiboUserEntity>();
             body.data.forEach(item => {
                 if (item.user?.id) {
-                    userMap.set(item.user.id as number, m.create(WeiboUserEntity, item.user));
+                    userMap.set(item.user.id as number, m.create(WeiboUserEntity, item.user as any));
                 }
             });
             const users = Array.from(userMap.values());
@@ -195,11 +195,11 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
                 const BATCH_SIZE = 5;
                 for (let i = 0; i < users.length; i += BATCH_SIZE) {
                     const batch = users.slice(i, i + BATCH_SIZE);
-                    await m.upsert(WeiboUserEntity, batch, ['id']);
+                    await m.upsert(WeiboUserEntity, batch as any, ['id']);
                 }
             }
-            const entities = body.data.map(item => m.create(WeiboCommentEntity, item));
-            await m.upsert(WeiboCommentEntity, entities, ['id']);
+            const entities = body.data.map(item => m.create(WeiboCommentEntity, item as any));
+            await m.upsert(WeiboCommentEntity, entities as any, ['id']);
             return entities;
         });
     }

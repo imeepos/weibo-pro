@@ -64,8 +64,8 @@ export class WeiboAjaxStatusesMymblogAstVisitor extends WeiboApiClient {
                         }
 
                         await useEntityManager(async m => {
-                            const posts = body.data.list.map(item => m.create(WeiboPostEntity, item));
-                            await m.upsert(WeiboPostEntity, posts, ['id']);
+                            const posts = body.data.list.map(item => m.create(WeiboPostEntity, item as any));
+                            await m.upsert(WeiboPostEntity, posts as any, ['id']);
                         });
                     }
 

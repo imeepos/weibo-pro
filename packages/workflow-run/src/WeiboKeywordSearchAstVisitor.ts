@@ -26,7 +26,7 @@ export class WeiboKeywordSearchAstVisitor {
                 ...ctx,
                 abortSignal: abortController.signal,
                 get isAborted() {
-                    return abortController.signal.aborted || ctx.abortSignal?.aborted;
+                    return abortController.signal.aborted || (ctx as any).abortSignal?.aborted;
                 }
             };
 

@@ -549,8 +549,7 @@ const LlmManagement: React.FC = () => {
             >
               <option value="anthropic">Anthropic</option>
               <option value="openai">OpenAI</option>
-              <option value="gemini">Gemini</option>
-              <option value="openrouter">OpenRouter</option>
+              <option value="codex">Codex</option>
             </select>
             <input
               placeholder="Base URL"

@@ -204,7 +204,7 @@ export class StoryToolsFactory {
         const index = text.indexOf(pattern);
         return {
           matched: index !== -1,
-          matches: index !== -1 ? [Object.assign([pattern], { index, input: text })] : undefined
+          matches: index !== -1 ? [Object.assign([pattern], { index, input: text })] as any : undefined
         };
       };
     } catch (error: unknown) {

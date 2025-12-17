@@ -262,6 +262,8 @@ ${chapter.content.substring(0, 800)}${chapter.content.length > 800 ? '...' : ''}
 
       interface ParsedQualityResult {
         overallScore?: number;
+        score?: number;
+        issues?: Array<Record<string, unknown>>;
         chapter?: {
           content?: string;
           [key: string]: unknown;
@@ -297,10 +299,10 @@ ${chapter.content.substring(0, 800)}${chapter.content.length > 800 ? '...' : ''}
 
       // 转换 issues 格式
       const issues: QualityIssue[] = (parsed.issues || []).map((issue: Record<string, unknown>) => ({
-        type: issue.type || 'plot_progress',
-        severity: issue.severity || 'medium',
-        description: issue.description,
-        location: issue.location
+        type: (issue.type as any) || 'plot_progress',
+        severity: (issue.severity as any) || 'medium',
+        description: issue.description as any,
+        location: issue.location as any
       }));
 
       return {

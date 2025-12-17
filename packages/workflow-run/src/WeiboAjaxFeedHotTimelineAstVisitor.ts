@@ -125,13 +125,13 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
                             .map(item => [item.user.id, item.user])
                     ).values()
                 );
-                const users = uniqueUsers.map(user => m.create(WeiboUserEntity, user));
+                const users = uniqueUsers.map(user => m.create(WeiboUserEntity, user as any));
 
                 if (users.length > 0) {
-                    await m.upsert(WeiboUserEntity, users, ['id']);
+                    await m.upsert(WeiboUserEntity, users as any, ['id']);
                 }
-                const posts = statuses.map(item => m.create(WeiboPostEntity, item));
-                await m.upsert(WeiboPostEntity, posts, ['id']);
+                const posts = statuses.map(item => m.create(WeiboPostEntity, item as any));
+                await m.upsert(WeiboPostEntity, posts as any, ['id']);
                 posts.map(post => {
                     // 流式输出：每条数据发射
                     ast.mblogid = post.mblogid;

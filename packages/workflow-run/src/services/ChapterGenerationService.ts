@@ -5,7 +5,6 @@ import { Observable, of, from, throwError, Subject, merge } from 'rxjs';
 import { concatMap, expand, scan, last, map, catchError, tap, takeUntil, finalize, filter } from 'rxjs/operators';
 import { z } from 'zod';
 import { ChatOpenAI, ChatOpenAICallOptions } from '@langchain/openai';
-import { BaseMessage } from '@langchain/core/messages';
 import { StructuredToolInterface } from '@langchain/core/tools';
 import { Runnable } from '@langchain/core/runnables';
 import { BaseLanguageModelInput } from '@langchain/core/language_models/base';

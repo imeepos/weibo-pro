@@ -107,7 +107,7 @@ export class PostNLPAnalyzerVisitor {
           const subComments = (ast.comments as Comment[])
             .flatMap((c) => c.comments || [])
             .map((sc) => sc.text_raw || sc.text)
-            .filter(Boolean);
+            .filter(Boolean) as string[];
 
           const context: PostContext = {
             postId: ast.post.id,

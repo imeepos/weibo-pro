@@ -87,13 +87,14 @@ export class ScheduledWorkflowVisitor {
             status: ScheduleStatus;
             cronExpression?: string;
             intervalMs?: number;
+            intervalSeconds?: number;
             nextRunAt?: Date;
           }
 
           const scheduleData: ScheduleData = {
             workflowId: workflow.id,
             name: ast.scheduleName || `调度-${ast.workflowName}`,
-            scheduleType: ast.scheduleType,
+            scheduleType: ast.scheduleType as any,
             inputs,
             startTime: ast.startTime || new Date(),
             endTime: ast.endTime,

@@ -79,7 +79,7 @@ export class StoryQualityLoopAstVisitor {
               }
 
               const finalChapter = (latestResult as QualityResult).chapter;
-              ast.finalChapter = finalChapter;
+              ast.finalChapter = finalChapter as any;
 
               return [
                 { type: 'node_emit' as const, id: ast.id, data: { finalChapter, isComplete: true, currentAttempt: ast.currentAttempt } }
@@ -95,7 +95,7 @@ export class StoryQualityLoopAstVisitor {
               ast.rewriteRequest = undefined;
 
               const finalChapter = (latestResult as QualityResult).chapter;
-              ast.finalChapter = finalChapter;
+              ast.finalChapter = finalChapter as any;
 
               return [
                 { type: 'node_emit' as const, id: ast.id, data: { finalChapter, isComplete: true, currentAttempt: ast.currentAttempt } }

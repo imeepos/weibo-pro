@@ -75,17 +75,17 @@ export class WeiboAjaxStatusesLikeShowAstVisitor extends WeiboApiClient {
                             const uniqueUsers = Array.from(
                                 new Map(body.data.map(item => [item.user.id, item.user])).values()
                             );
-                            const userEntities = uniqueUsers.map(user => m.create(WeiboUserEntity, user));
+                            const userEntities = uniqueUsers.map(user => m.create(WeiboUserEntity, user as any));
                             console.log(`[${page}]处理${userEntities.length}个用户`);
-                            await m.upsert(WeiboUserEntity, userEntities, ['id']);
+                            await m.upsert(WeiboUserEntity, userEntities as any, ['id']);
 
                             const likeEntities = body.data.map(item =>
                                 m.create(WeiboLikeEntity, {
                                     userWeiboId: String(item.user.id),
                                     targetWeiboId: ast.mid
-                                })
+                                } as any)
                             );
-                            await m.upsert(WeiboLikeEntity, likeEntities, ['userWeiboId', 'targetWeiboId']);
+                            await m.upsert(WeiboLikeEntity, likeEntities as any, ['userWeiboId', 'targetWeiboId']);
                             console.log(`[${page}]保存${likeEntities.length}条点赞记录`);
                         });
                     }

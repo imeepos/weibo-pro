@@ -2,16 +2,28 @@ import { Injectable } from '@sker/core';
 import { useEntityManager, LlmModelProvider, LlmProvider, LlmChatLog } from '@sker/entities';
 import { Brackets } from 'typeorm';
 import {
-  openaiRequestToClaude,
-  claudeResponseToOpenai,
   createClaudeToOpenaiStreamConverter,
-  claudeRequestToOpenai,
-  openaiResponseToClaude,
   createOpenaiToClaudeStreamConverter,
   type ClaudeResponse,
   type OpenAIResponse,
   type ClaudeStreamEvent,
   type OpenAIStreamResponse,
+} from '@sker/openai2anthropic';
+import {
+  ToCodexVisitor,
+  ToOpenAiVisitor,
+  ToAnthropicVisitor,
+  OpenAiRequestAst,
+  ClaudeRequestAst,
+  CodexRequestAst,
+  CodexResponseAst,
+  OpenAIResponseAst,
+  ClaudeResponseAst,
+  OpenAIStreamResponseAst,
+  ClaudeStreamEventAst,
+  type CodexRequest,
+  type CodexResponse,
+  Ast
 } from '@sker/openai2anthropic';
 
 interface ProviderInfo {
@@ -88,6 +100,144 @@ function createJSONParseStream<T = any>() {
 
 @Injectable({ providedIn: 'root' })
 export class LlmProxyService {
+  private toCodexVisitor = new ToCodexVisitor();
+  private toOpenAiVisitor = new ToOpenAiVisitor();
+  private toAnthropicVisitor = new ToAnthropicVisitor();
+
+  /**
+   * 选择流式转换器
+   * @param needsConversion 是否需要转换
+   * @param fromProtocol 源协议（Provider 的协议）
+   * @param toProtocol 目标协议（客户端期望的协议）
+   * @returns 流式转换器函数或 null
+   */
+  private selectStreamConverter(needsConversion: boolean, fromProtocol: string, toProtocol: string): any {
+    if (!needsConversion) {
+      return null
+    }
+
+    // 直接转换器（OpenAI ↔ Anthropic）
+    if (fromProtocol === 'anthropic' && toProtocol === 'openai') {
+      console.log('[LlmProxy] 使用流式转换器: Anthropic → OpenAI')
+      return createClaudeToOpenaiStreamConverter()
+    }
+
+    if (fromProtocol === 'openai' && toProtocol === 'anthropic') {
+      console.log('[LlmProxy] 使用流式转换器: OpenAI → Anthropic')
+      return createOpenaiToClaudeStreamConverter()
+    }
+
+    // Codex 相关的转换尚未实现
+    if (fromProtocol === 'codex' || toProtocol === 'codex') {
+      console.warn(`[LlmProxy] Codex 流式转换尚未实现: ${fromProtocol} → ${toProtocol}`)
+      return null
+    }
+
+    console.warn(`[LlmProxy] 不支持的流式转换: ${fromProtocol} → ${toProtocol}`)
+    return null
+  }
+
+  /**
+   * 请求协议转换（使用 Visitor 模式一步完成）
+   * @param fromProtocol 源协议
+   * @param toProtocol 目标协议
+   * @param request 请求体
+   * @returns 转换后的请求体
+   */
+  private convertRequest(fromProtocol: string, toProtocol: string, request: any): any {
+    // 协议相同，无需转换
+    if (fromProtocol === toProtocol) {
+      return request
+    }
+
+    // 创建源协议的 AST
+    let ast: Ast
+    if (fromProtocol === 'openai') {
+      const openaiAst = new OpenAiRequestAst()
+      openaiAst.request = request
+      ast = openaiAst
+    } else if (fromProtocol === 'anthropic') {
+      const claudeAst = new ClaudeRequestAst()
+      claudeAst.request = request
+      ast = claudeAst
+    } else if (fromProtocol === 'codex') {
+      const codexAst = new CodexRequestAst()
+      codexAst.request = request
+      ast = codexAst
+    } else {
+      console.error(`[convertRequest] 不支持的源协议: ${fromProtocol}`)
+      return null
+    }
+
+    // 使用目标协议的 Visitor 一步完成转换
+    try {
+      if (toProtocol === 'openai') {
+        return this.toOpenAiVisitor.visit(ast, {})
+      } else if (toProtocol === 'anthropic') {
+        return this.toAnthropicVisitor.visit(ast, {})
+      } else if (toProtocol === 'codex') {
+        return this.toCodexVisitor.visit(ast, {})
+      } else {
+        console.error(`[convertRequest] 不支持的目标协议: ${toProtocol}`)
+        return null
+      }
+    } catch (error) {
+      console.error(`[convertRequest] 转换失败 ${fromProtocol} → ${toProtocol}:`, error)
+      return null
+    }
+  }
+
+  /**
+   * 响应协议转换（使用 Visitor 模式一步完成）
+   * @param fromProtocol 源协议（Provider 的协议）
+   * @param toProtocol 目标协议（客户端期望的协议）
+   * @param response 响应体
+   * @returns 转换后的响应体
+   */
+  private convertResponse(fromProtocol: string, toProtocol: string, response: any): any {
+    // 协议相同，无需转换
+    if (fromProtocol === toProtocol) {
+      return response
+    }
+
+    // 创建源协议的 AST
+    let ast: Ast
+    if (fromProtocol === 'openai') {
+      const openaiAst = new OpenAIResponseAst()
+      openaiAst.response = response as OpenAIResponse
+      ast = openaiAst
+    } else if (fromProtocol === 'anthropic') {
+      const claudeAst = new ClaudeResponseAst()
+      claudeAst.response = response as ClaudeResponse
+      ast = claudeAst
+    } else if (fromProtocol === 'codex') {
+      const codexAst = new CodexResponseAst()
+      codexAst.response = response as CodexResponse
+      ast = codexAst
+    } else {
+      console.error(`[convertResponse] 不支持的源协议: ${fromProtocol}`)
+      return null
+    }
+
+    // 使用目标协议的 Visitor 一步完成转换
+    try {
+      if (toProtocol === 'openai') {
+        return this.toOpenAiVisitor.visit(ast, {})
+      } else if (toProtocol === 'anthropic') {
+        return this.toAnthropicVisitor.visit(ast, {})
+      } else if (toProtocol === 'codex') {
+        return this.toCodexVisitor.visit(ast, {})
+      } else {
+        console.error(`[convertResponse] 不支持的目标协议: ${toProtocol}`)
+        return null
+      }
+    } catch (error) {
+      console.error(`[convertResponse] 转换失败 ${fromProtocol} → ${toProtocol}:`, error)
+      console.error(`[convertResponse] 原始响应:`, JSON.stringify(response).slice(0, 1000))
+      // 重新抛出异常，让调用方知道转换失败
+      throw error
+    }
+  }
 
   /**
    * 负载均衡选择器：在同一 Tier 内按健康分数加权随机选择
@@ -308,18 +458,27 @@ export class LlmProxyService {
         continue
       }
 
-      // 协议转换：请求协议 vs Provider 协议
+      // 【请求前转换】从 protocol → provider.providerProtocol
       const needsConversion = protocol !== provider.providerProtocol
       let proxyBody: any = { ...body, model: targetModel }
       let proxyPath = apiPath
 
       if (needsConversion) {
-        if (protocol === 'openai' && provider.providerProtocol === 'anthropic') {
-          proxyBody = openaiRequestToClaude({ ...body, model: targetModel })
-          proxyPath = '/messages'
-        } else if (protocol === 'anthropic' && provider.providerProtocol === 'openai') {
-          proxyBody = claudeRequestToOpenai({ ...body, model: targetModel })
+        console.log(`[LlmProxy] 请求转换: ${protocol} → ${provider.providerProtocol}`)
+        proxyBody = this.convertRequest(protocol, provider.providerProtocol, { ...body, model: targetModel })
+
+        // 设置对应的 API 路径
+        if (provider.providerProtocol === 'openai') {
           proxyPath = '/chat/completions'
+        } else if (provider.providerProtocol === 'anthropic') {
+          proxyPath = '/messages'
+        } else if (provider.providerProtocol === 'codex') {
+          // codex 使用原始路径
+        }
+
+        if (!proxyBody) {
+          console.error(`[LlmProxy] 请求转换失败: ${protocol} → ${provider.providerProtocol}`)
+          continue
         }
       }
 
@@ -334,6 +493,45 @@ export class LlmProxyService {
             content: '请基于上述工具调用结果继续生成回复。'
           })
         }
+      }
+
+      // 清理工具参数中的 $schema 字段（OpenAI API 不支持）
+      if (proxyBody.tools && Array.isArray(proxyBody.tools) && provider.providerProtocol === 'openai') {
+        proxyBody.tools = proxyBody.tools.map((tool: any) => {
+          if (tool.function?.parameters) {
+            const cleanParameters = (params: any): any => {
+              if (typeof params !== 'object' || params === null) return params
+
+              const cleaned = { ...params }
+              delete cleaned.$schema
+
+              // 递归清理嵌套对象
+              if (cleaned.properties) {
+                cleaned.properties = Object.fromEntries(
+                  Object.entries(cleaned.properties).map(([key, value]) => [
+                    key,
+                    cleanParameters(value)
+                  ])
+                )
+              }
+
+              if (cleaned.items) {
+                cleaned.items = cleanParameters(cleaned.items)
+              }
+
+              return cleaned
+            }
+
+            return {
+              ...tool,
+              function: {
+                ...tool.function,
+                parameters: cleanParameters(tool.function.parameters)
+              }
+            }
+          }
+          return tool
+        })
       }
 
       // 转换 thinking 参数为 Claude API 期望的格式
@@ -377,8 +575,6 @@ export class LlmProxyService {
           body: requestBody,
           signal: AbortSignal.timeout(TIMEOUT_MS)
         })
-        const { status, statusText } = response;
-        debugger;
         const durationMs = Date.now() - startTime
 
         // 记录响应状态
@@ -422,11 +618,44 @@ export class LlmProxyService {
         }
 
         const isStreaming = body.stream === true
+        console.log(`[LlmProxy] isStreaming=${isStreaming}, body.stream=${body.stream}, response.ok=${response.ok}`)
         let usage: { input_tokens?: number; output_tokens?: number } | undefined
 
         if (!isStreaming) {
           const responseData = await response.json()
           usage = responseData.usage
+
+          // 验证响应格式（仅在成功状态下）
+          if (response.ok) {
+            // 检查 OpenAI 响应格式
+            if (protocol === 'openai' && !responseData.choices && responseData.object !== 'error') {
+              console.error(`[LlmProxy] 检测到不完整的 OpenAI 响应:`, {
+                provider: provider.baseUrl,
+                hasChoices: !!responseData.choices,
+                hasObject: !!responseData.object,
+                hasModel: !!responseData.model,
+                responseKeys: Object.keys(responseData)
+              })
+
+              // 如果是 Codex 格式但不完整，返回错误
+              if (responseData.object === 'response' && !responseData.output) {
+                return {
+                  success: false,
+                  response: new Response(JSON.stringify({
+                    error: {
+                      message: 'Provider returned incomplete response (missing output field)',
+                      type: 'api_error',
+                      code: 'incomplete_response'
+                    }
+                  }), {
+                    status: 502,
+                    headers: { 'Content-Type': 'application/json' }
+                  })
+                }
+              }
+            }
+          }
+
           // 记录响应体（仅在非成功状态下）
           if (!response.ok) {
             console.error(`[LlmProxy] 响应体:`, {
@@ -437,7 +666,6 @@ export class LlmProxyService {
 
           // 检测 400 错误中的 thinking 模式不支持错误
           if (response.status === 400) {
-            debugger;
             const errorMessage = responseData?.error?.message || JSON.stringify(responseData)
             const isThinkingError =
               errorMessage.includes('thinking') &&
@@ -463,13 +691,44 @@ export class LlmProxyService {
             error: response.ok ? undefined : JSON.stringify(responseData)
           })
 
-          // 响应协议转换
+          // 【响应后转换】从 provider.providerProtocol → protocol
           let finalResponse = responseData
           if (needsConversion && response.ok) {
-            if (protocol === 'openai' && provider.providerProtocol === 'anthropic') {
-              finalResponse = claudeResponseToOpenai(responseData as ClaudeResponse)
-            } else if (protocol === 'anthropic' && provider.providerProtocol === 'openai') {
-              finalResponse = openaiResponseToClaude(responseData as OpenAIResponse)
+            try {
+              console.log(`[LlmProxy] 响应转换: ${provider.providerProtocol} → ${protocol}`)
+              finalResponse = this.convertResponse(provider.providerProtocol, protocol, responseData)
+
+              if (!finalResponse) {
+                console.error(`[LlmProxy] 响应转换返回 null: ${provider.providerProtocol} → ${protocol}`)
+                console.error(`[LlmProxy] 使用原始响应数据作为降级方案`)
+                finalResponse = responseData
+              }
+            } catch (conversionError) {
+              console.error(`[LlmProxy] 响应转换异常:`, conversionError)
+              console.error(`[LlmProxy] Provider: ${provider.baseUrl}, 协议: ${provider.providerProtocol} → ${protocol}`)
+
+              // 检查是否是 BigModel 的非标准错误响应
+              if ((responseData as any).code && (responseData as any).success === false) {
+                console.warn(`[LlmProxy] 检测到 BigModel 非标准错误格式，将其转换为标准错误响应`)
+                // 转换为标准的 OpenAI 错误格式
+                return {
+                  success: false,
+                  response: new Response(JSON.stringify({
+                    error: {
+                      message: (responseData as any).msg || 'Unknown error',
+                      type: 'api_error',
+                      code: (responseData as any).code
+                    }
+                  }), {
+                    status: 400,
+                    headers: { 'Content-Type': 'application/json' }
+                  })
+                }
+              }
+
+              // 其他转换错误：返回原始数据
+              console.error(`[LlmProxy] 使用原始响应数据作为降级方案`)
+              finalResponse = responseData
             }
           }
 
@@ -494,14 +753,8 @@ export class LlmProxyService {
         const encoder = new TextEncoder()
         let thinkingErrorDetected = false
 
-        // 流式协议转换器
-        const streamConverter = needsConversion
-          ? protocol === 'openai' && provider.providerProtocol === 'anthropic'
-            ? createClaudeToOpenaiStreamConverter()
-            : protocol === 'anthropic' && provider.providerProtocol === 'openai'
-              ? createOpenaiToClaudeStreamConverter()
-              : null
-          : null
+        // 【流式响应转换】选择流式转换器
+        const streamConverter = this.selectStreamConverter(needsConversion, provider.providerProtocol, protocol)
 
         // 流式处理管道：行解析 -> 数据提取 -> JSON 解析 -> 协议转换 -> 监控
         const monitoredBody = response.body

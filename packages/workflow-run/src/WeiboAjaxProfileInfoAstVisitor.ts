@@ -76,9 +76,9 @@ export class WeiboAjaxProfileInfoAstVisitor extends WeiboApiClient {
                     }
 
                     await useEntityManager(async m => {
-                        const user = m.create(WeiboUserEntity, body.data.user);
+                        const user = m.create(WeiboUserEntity, body.data.user as any);
                         ast.uid = `${user.id}`;
-                        await m.upsert(WeiboUserEntity, user, ['id']);
+                        await m.upsert(WeiboUserEntity, user as any, ['id']);
                     });
 
                     await this.fetchDetail(ast, wrappedCtx);
@@ -128,8 +128,8 @@ export class WeiboAjaxProfileInfoAstVisitor extends WeiboApiClient {
         });
 
         await useEntityManager(async m => {
-            const user = m.create(WeiboUserEntity, { detail: body.data, id: Number(ast.uid) });
-            await m.upsert(WeiboUserEntity, user, ['id']);
+            const user = m.create(WeiboUserEntity, { detail: body.data, id: Number(ast.uid) } as any);
+            await m.upsert(WeiboUserEntity, user as any, ['id']);
         });
     }
 }
