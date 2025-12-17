@@ -196,14 +196,15 @@ const CenterNode = () => (
   </motion.div>
 );
 
+// 将 nodeTypes 定义在组件外部以避免每次渲染时重新创建
 const nodeTypes = {
   userNode: UserNode,
   centerNode: CenterNode,
 };
 
-const InfluenceNetworkFlow: React.FC<InfluenceNetworkFlowProps> = ({ 
-  users, 
-  className = '' 
+const InfluenceNetworkFlow: React.FC<InfluenceNetworkFlowProps> = ({
+  users,
+  className = ''
 }) => {
   // 创建节点数据
   const initialNodes: Node[] = useMemo(() => {

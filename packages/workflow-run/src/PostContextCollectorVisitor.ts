@@ -7,7 +7,8 @@ import {
   WeiboPostEntity,
   WeiboRepostEntity,
 } from '@sker/entities';
-import { Observable } from 'rxjs';
+import { Observable, from } from 'rxjs';
+import { concatMap, mergeMap } from 'rxjs/operators';
 
 @Injectable()
 export class PostContextCollectorVisitor {
@@ -25,35 +26,24 @@ export class PostContextCollectorVisitor {
       ast.count += 1;
       obs.next({ type: 'node_runing', id: ast.id });
 
-      input$.subscribe({
-        next: (inputData) => {
+      const subscription = input$.pipe(
+        concatMap(async (inputData) => {
           ast.emitCount += 1;
           obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } })
+
           if (inputData) {
             Object.keys(inputData).forEach(key => {
               (ast as any)[key] = inputData[key];
             });
           }
-        },
-        error: (error) => {
-          ast.state = 'fail';
-          setAstError(ast, error);
-          obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-          obs.complete();
-        },
-        complete: async () => {
-          const handler = async () => {
-            try {
-              if (wrappedCtx.abortSignal?.aborted) {
-                ast.state = 'fail';
-                setAstError(ast, new Error('工作流已取消'));
-                obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-                return;
-              }
+
+          if (wrappedCtx.abortSignal?.aborted) {
+            throw new Error('工作流已取消');
+          }
 
           if (ast.canStart && ast.canStart.length > 0) {
             const canStart = ast.canStart.every(it => !!it)
-            if (!canStart) return;
+            if (!canStart) return [];
           }
 
           // 验证 postId
@@ -63,10 +53,7 @@ export class PostContextCollectorVisitor {
 
           // 检查取消信号（数据库操作前）
           if (wrappedCtx.abortSignal?.aborted) {
-            ast.state = 'fail';
-            setAstError(ast, new Error('工作流已取消'));
-            obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-            return;
+            throw new Error('工作流已取消');
           }
 
           await useEntityManager(async (m) => {
@@ -97,26 +84,32 @@ export class PostContextCollectorVisitor {
             ast.post = post;
             ast.comments = comments;
             ast.reposts = reposts;
-            obs.next({ type: 'node_emit', id: ast.id, data: { post: ast.post, comments: ast.comments, reposts: ast.reposts } });
           });
 
-              ast.state = 'success';
-              obs.next({ type: 'node_success', id: ast.id });
-              obs.complete();
-            } catch (error) {
-              ast.state = 'fail';
-              setAstError(ast, error, process.env.NODE_ENV === 'development');
-              console.error(`[PostContextCollectorVisitor] postId: ${ast.postId}`, error);
-              obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-              obs.complete();
-            }
-          };
-          handler();
+          return [
+            { type: 'node_emit' as const, id: ast.id, data: { post: ast.post, comments: ast.comments, reposts: ast.reposts } }
+          ];
+        }),
+        mergeMap((events: NodeEvent[]) => from(events))
+      ).subscribe({
+        next: (event: NodeEvent) => obs.next(event),
+        error: (error) => {
+          ast.state = 'fail';
+          setAstError(ast, error, process.env.NODE_ENV === 'development');
+          console.error(`[PostContextCollectorVisitor] postId: ${ast.postId}`, error);
+          obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
+          obs.complete();
+        },
+        complete: () => {
+          ast.state = 'success';
+          obs.next({ type: 'node_success', id: ast.id });
+          obs.complete();
         }
       });
 
       return () => {
         console.log('[PostContextCollectorVisitor] 订阅被取消，触发 AbortSignal');
+        subscription.unsubscribe();
         abortController.abort();
         obs.complete();
       };

@@ -77,8 +77,16 @@ class ErrorBoundary extends React.Component<
   }
 }
 
-// 渲染应用
-ReactDOM.createRoot(document.getElementById('root')!).render(
+// 渲染应用（缓存 root 实例以避免 HMR 时重复创建）
+const rootElement = document.getElementById('root')!;
+const rootKey = '__react_root__';
+
+if (!(rootElement as any)[rootKey]) {
+  (rootElement as any)[rootKey] = ReactDOM.createRoot(rootElement);
+}
+
+const reactRoot = (rootElement as any)[rootKey];
+reactRoot.render(
   <ErrorBoundary>
     <App />
   </ErrorBoundary>

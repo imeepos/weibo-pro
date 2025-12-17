@@ -1,6 +1,7 @@
 import { Injectable } from '@sker/core'
-import { Handler, MergeAst, NodeEvent, type MergeMode } from '@sker/workflow'
-import { Observable } from 'rxjs'
+import { Handler, MergeAst, NodeEvent, type MergeMode, setAstError } from '@sker/workflow'
+import { Observable, from } from 'rxjs'
+import { concatMap, mergeMap } from 'rxjs/operators'
 
 /**
  * 合并节点执行器
@@ -13,9 +14,16 @@ export class MergeAstVisitor {
             ast.state = 'running';
             obs.next({ type: 'node_runing', id: ast.id });
 
-            input$.subscribe({
-                next: () => {
-                    ast.emitCount +=1;
+            const subscription = input$.pipe(
+                concatMap(async (inputData) => {
+                    ast.emitCount += 1;
+
+                    if (inputData) {
+                        Object.keys(inputData).forEach(key => {
+                            (ast as any)[key] = inputData[key];
+                        });
+                    }
+
                     let inputs = ast.inputs || [];
                     if (!Array.isArray(inputs)) {
                         inputs = [inputs];
@@ -25,10 +33,18 @@ export class MergeAstVisitor {
 
                     ast.result = result;
                     ast.totalCount = result.length;
-                    obs.next({ type: 'node_emit', id: ast.id, data: { result: ast.result, totalCount: ast.totalCount } });
-                },
+
+                    return [
+                        { type: 'node_emit' as const, id: ast.id, data: { emitCount: ast.emitCount } },
+                        { type: 'node_emit' as const, id: ast.id, data: { result: ast.result, totalCount: ast.totalCount } }
+                    ];
+                }),
+                mergeMap((events: NodeEvent[]) => from(events))
+            ).subscribe({
+                next: (event: NodeEvent) => obs.next(event),
                 error: (error) => {
                     ast.state = 'fail';
+                    setAstError(ast, error);
                     obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
                     obs.complete();
                 },
@@ -38,6 +54,11 @@ export class MergeAstVisitor {
                     obs.complete();
                 }
             });
+
+            return () => {
+                subscription.unsubscribe();
+                obs.complete();
+            };
         });
     }
 

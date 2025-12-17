@@ -1,7 +1,7 @@
 import { Injectable } from '@sker/core'
-import { Handler, LoopAst, NodeEvent } from '@sker/workflow'
+import { Handler, LoopAst, NodeEvent, setAstError } from '@sker/workflow'
 import { Observable, from, of, EMPTY } from 'rxjs'
-import { concatMap, delay, tap, finalize } from 'rxjs/operators'
+import { concatMap, delay, mergeMap } from 'rxjs/operators'
 
 /**
  * 循环节点执行器
@@ -14,20 +14,19 @@ export class LoopAstVisitor {
     visit(ast: LoopAst, input$: Observable<any>, ctx: any) {
         return new Observable<NodeEvent>(obs => {
             ast.state = 'running';
-            ast.total = 0; // 重置累加器
+            ast.total = 0;
             ast.done = false;
             obs.next({ type: 'node_runing', id: ast.id });
 
-            input$.pipe(
-                tap(inputData => {
+            const subscription = input$.pipe(
+                concatMap(async (inputData) => {
                     ast.emitCount += 1;
                     if (inputData) {
                         Object.keys(inputData).forEach(key => {
                             (ast as any)[key] = inputData[key];
                         });
                     }
-                }),
-                concatMap(() => {
+
                     let items: any[] = ast.items;
                     if (!Array.isArray(items)) {
                         items = [items];
@@ -39,12 +38,15 @@ export class LoopAstVisitor {
                     const total = items.length;
 
                     ast.total += total;
-                    obs.next({ type: 'node_emit', id: ast.id, data: { total: ast.total } });
+
+                    const events: NodeEvent[] = [
+                        { type: 'node_emit', id: ast.id, data: { total: ast.total } }
+                    ];
 
                     if (total === 0) {
                         ast.done = true;
-                        obs.next({ type: 'node_emit', id: ast.id, data: { done: ast.done } });
-                        return EMPTY;
+                        events.push({ type: 'node_emit', id: ast.id, data: { done: ast.done } });
+                        return events;
                     }
 
                     const chunks: any[] = [];
@@ -56,33 +58,46 @@ export class LoopAstVisitor {
                         );
                     }
 
-                    return from(chunks).pipe(
-                        concatMap((batch, index) =>
-                            of(batch).pipe(
-                                delay(index === 0 ? 0 : delayMs),
-                                tap(() => {
-                                    ast.index = index * batchSize;
-                                    ast.current = batch;
-                                    obs.next({ type: 'node_emit', id: ast.id, data: { index: ast.index, current: ast.current } });
-                                })
-                            )
-                        )
-                    );
-                }),
-                finalize(() => {
-                    ast.state = 'success';
+                    for (let index = 0; index < chunks.length; index++) {
+                        if (index > 0) {
+                            await new Promise(resolve => setTimeout(resolve, delayMs));
+                        }
+
+                        const batch = chunks[index];
+                        ast.index = index * batchSize;
+                        ast.current = batch;
+                        events.push({
+                            type: 'node_emit',
+                            id: ast.id,
+                            data: { index: ast.index, current: ast.current }
+                        });
+                    }
+
                     ast.done = true;
-                    obs.next({ type: 'node_emit', id: ast.id, data: { done: ast.done } });
-                    obs.next({ type: 'node_success', id: ast.id });
-                    obs.complete();
-                })
+                    events.push({ type: 'node_emit', id: ast.id, data: { done: ast.done } });
+
+                    return events;
+                }),
+                mergeMap((events: NodeEvent[]) => from(events))
             ).subscribe({
+                next: (event: NodeEvent) => obs.next(event),
                 error: (error) => {
                     ast.state = 'fail';
+                    setAstError(ast, error);
                     obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
+                    obs.complete();
+                },
+                complete: () => {
+                    ast.state = 'success';
+                    obs.next({ type: 'node_success', id: ast.id });
                     obs.complete();
                 }
             });
+
+            return () => {
+                subscription.unsubscribe();
+                obs.complete();
+            };
         });
     }
 }

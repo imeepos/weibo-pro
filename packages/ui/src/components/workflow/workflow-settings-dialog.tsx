@@ -3,7 +3,8 @@
 import React from 'react'
 import { X, Workflow, Palette, FileText, Tag, Loader2 } from 'lucide-react'
 import { cn } from '@sker/ui/lib/utils'
-import { Dialog, DialogContent, DialogOverlay, DialogPortal } from '../ui/dialog'
+import { Dialog, DialogContent, DialogOverlay, DialogPortal, DialogTitle } from '../ui/dialog'
+import { VisuallyHidden } from '../ui/visually-hidden'
 import { Input } from '../ui/input'
 import { Label } from '../ui/label'
 import { Button } from '../ui/button'
@@ -73,6 +74,9 @@ export function WorkflowSettingsDialog({
           showCloseButton={false}
           className="max-w-2xl bg-card border-border p-0 gap-0 shadow-2xl backdrop-blur-xl"
         >
+          <VisuallyHidden>
+            <DialogTitle>工作流设置</DialogTitle>
+          </VisuallyHidden>
           {/* 头部 */}
           <div className="flex items-center justify-between border-b border-border px-6 py-4">
             <div className="flex items-center gap-3">

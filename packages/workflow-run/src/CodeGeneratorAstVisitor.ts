@@ -1,7 +1,8 @@
 import { Injectable } from '@sker/core';
 import { Handler, NodeEvent, setAstError } from '@sker/workflow';
 import { CodeGeneratorAst } from '@sker/workflow-ast';
-import { Observable } from 'rxjs';
+import { Observable, from } from 'rxjs';
+import { concatMap, mergeMap } from 'rxjs/operators';
 import { useLlmModel } from './llm-client';
 
 const CODE_GENERATOR_SYSTEM_PROMPT = `你是一个代码艺术家，专注于生成优雅、简洁、可维护的代码。
@@ -36,32 +37,25 @@ export class CodeGeneratorAstVisitor {
             ast.state = 'running';
             obs.next({ type: 'node_runing', id: ast.id });
 
-            input$.subscribe({
-                next: (inputData) => {
+            const subscription = input$.pipe(
+                concatMap(async (inputData) => {
                     ast.emitCount += 1;
+
                     if (inputData) {
                         Object.keys(inputData).forEach(key => {
                             (ast as any)[key] = inputData[key];
                         });
                     }
-                },
-                error: (error) => {
-                    ast.state = 'fail';
-                    setAstError(ast, error);
-                    obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-                    obs.complete();
-                },
-                complete: async () => {
-                    try {
-                        if (abortController.signal.aborted) {
-                            throw new Error('工作流已取消');
-                        }
 
-                        const tasks = Array.isArray(ast.tasks) ? ast.tasks : [ast.tasks];
-                        const context = Array.isArray(ast.context) ? ast.context.join('\n\n') : ast.context;
-                        const existingCode = Array.isArray(ast.existingCode) ? ast.existingCode.join('\n\n---\n\n') : ast.existingCode;
+                    if (abortController.signal.aborted) {
+                        throw new Error('工作流已取消');
+                    }
 
-                        const prompt = `## 技术栈
+                    const tasks = Array.isArray(ast.tasks) ? ast.tasks : [ast.tasks];
+                    const context = Array.isArray(ast.context) ? ast.context.join('\n\n') : ast.context;
+                    const existingCode = Array.isArray(ast.existingCode) ? ast.existingCode.join('\n\n---\n\n') : ast.existingCode;
+
+                    const prompt = `## 技术栈
 ${ast.techStack || '根据上下文推断'}
 
 ## 项目上下文
@@ -75,47 +69,54 @@ ${tasks.map((t, i) => `${i + 1}. ${t}`).join('\n')}
 
 请为第 ${ast.currentTaskIndex + 1} 个任务生成代码。`;
 
-                        const model = useLlmModel({ model: ast.model, temperature: ast.temperature });
-                        const response = await model.invoke([
-                            { role: 'system', content: CODE_GENERATOR_SYSTEM_PROMPT },
-                            { role: 'user', content: prompt }
-                        ]);
+                    const model = useLlmModel({ model: ast.model, temperature: ast.temperature });
+                    const response = await model.invoke([
+                        { role: 'system', content: CODE_GENERATOR_SYSTEM_PROMPT },
+                        { role: 'user', content: prompt }
+                    ]);
 
-                        const content = typeof response.content === 'string'
-                            ? response.content
-                            : JSON.stringify(response.content);
+                    const content = typeof response.content === 'string'
+                        ? response.content
+                        : JSON.stringify(response.content);
 
-                        // 解析 JSON 响应
-                        const jsonMatch = content.match(/\{[\s\S]*\}/);
-                        if (jsonMatch) {
-                            const result = JSON.parse(jsonMatch[0]);
-                            ast.generatedCode = result.code || '';
-                            ast.filePath = result.filePath || '';
-                            ast.operation = result.operation || 'create';
-                        } else {
-                            ast.generatedCode = content;
-                            ast.filePath = '';
-                            ast.operation = 'create';
-                        }
-
-                        ast.currentTaskIndex += 1;
-                        ast.isComplete = ast.currentTaskIndex >= tasks.length;
-
-                        obs.next({ type: 'node_emit', id: ast.id, data: { generatedCode: ast.generatedCode, filePath: ast.filePath, operation: ast.operation, isComplete: ast.isComplete } });
-
-                        ast.state = 'success';
-                        obs.next({ type: 'node_success', id: ast.id });
-                        obs.complete();
-                    } catch (error) {
-                        ast.state = 'fail';
-                        setAstError(ast, error);
-                        obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-                        obs.complete();
+                    // 解析 JSON 响应
+                    const jsonMatch = content.match(/\{[\s\S]*\}/);
+                    if (jsonMatch) {
+                        const result = JSON.parse(jsonMatch[0]);
+                        ast.generatedCode = result.code || '';
+                        ast.filePath = result.filePath || '';
+                        ast.operation = result.operation || 'create';
+                    } else {
+                        ast.generatedCode = content;
+                        ast.filePath = '';
+                        ast.operation = 'create';
                     }
+
+                    ast.currentTaskIndex += 1;
+                    ast.isComplete = ast.currentTaskIndex >= tasks.length;
+
+                    return [
+                        { type: 'node_emit' as const, id: ast.id, data: { generatedCode: ast.generatedCode, filePath: ast.filePath, operation: ast.operation, isComplete: ast.isComplete } }
+                    ];
+                }),
+                mergeMap((events: NodeEvent[]) => from(events))
+            ).subscribe({
+                next: (event: NodeEvent) => obs.next(event),
+                error: (error) => {
+                    ast.state = 'fail';
+                    setAstError(ast, error);
+                    obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
+                    obs.complete();
+                },
+                complete: () => {
+                    ast.state = 'success';
+                    obs.next({ type: 'node_success', id: ast.id });
+                    obs.complete();
                 }
             });
 
             return () => {
+                subscription.unsubscribe();
                 abortController.abort();
                 obs.complete();
             };

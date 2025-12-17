@@ -4,7 +4,8 @@ import { WeiboAccountService } from "./services/weibo-account.service";
 import { Handler, NodeEvent, setAstError } from "@sker/workflow";
 import { WeiboAjaxStatusesRepostTimelineAst } from "@sker/workflow-ast";
 import { WeiboApiClient } from "./services/weibo-api-client.base";
-import { Observable } from "rxjs";
+import { Observable, from } from "rxjs";
+import { concatMap, mergeMap } from "rxjs/operators";
 import { DelayService } from "./services/delay.service";
 import { RateLimiterService } from "./services/rate-limiter.service";
 
@@ -27,30 +28,32 @@ export class WeiboAjaxStatusesRepostTimelineAstVisitor extends WeiboApiClient {
     }
 
     @Handler(WeiboAjaxStatusesRepostTimelineAst)
-    visit(ast: WeiboAjaxStatusesRepostTimelineAst, _ctx: any): Observable<NodeEvent> {
+    visit(ast: WeiboAjaxStatusesRepostTimelineAst, input$: Observable<any>, ctx: any): Observable<NodeEvent> {
         return new Observable<NodeEvent>(obs => {
-            // 创建专门的 AbortController
             const abortController = new AbortController();
 
-            // 包装 ctx
             const wrappedCtx = {
-                ..._ctx,
+                ...ctx,
                 abortSignal: abortController.signal
             };
 
-            const handler = async () => {
-                try {
-                    // 检查取消信号
-                    if (wrappedCtx.abortSignal?.aborted) {
-                        ast.state = 'fail';
-                        setAstError(ast, new Error('工作流已取消'));
-                        obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-                        return;
+            ast.state = 'running';
+            obs.next({ type: 'node_runing', id: ast.id });
+
+            const subscription = input$.pipe(
+                concatMap(async (inputData) => {
+                    ast.emitCount += 1;
+                    obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } });
+
+                    if (inputData) {
+                        Object.keys(inputData).forEach(key => {
+                            (ast as any)[key] = inputData[key];
+                        });
                     }
 
-                    ast.state = 'running';
-                    ast.count += 1;
-                    obs.next({ type: 'node_runing', id: ast.id });
+                    if (wrappedCtx.abortSignal?.aborted) {
+                        throw new Error('工作流已取消');
+                    }
 
                     let page = 1;
                     for await (const body of this.fetchWithPagination<WeiboAjaxStatusesRepostTimelineResponse>({
@@ -61,12 +64,8 @@ export class WeiboAjaxStatusesRepostTimelineAstVisitor extends WeiboApiClient {
                         refererOptions: { uid: ast.uid, mid: ast.mid },
                         shouldContinue: (data) => data.data.length > 0
                     })) {
-                        // 检查取消信号（每次分页后）
                         if (wrappedCtx.abortSignal?.aborted) {
-                            ast.state = 'fail';
-                            setAstError(ast, new Error('工作流已取消'));
-                            obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-                            return;
+                            throw new Error('工作流已取消');
                         }
 
                         await useEntityManager(async m => {
@@ -81,25 +80,32 @@ export class WeiboAjaxStatusesRepostTimelineAstVisitor extends WeiboApiClient {
                             await m.upsert(WeiboRepostEntity, entities as any[], ['id']);
                         });
                     }
-                    ast.is_end = true;
-                    obs.next({ type: 'node_emit', id: ast.id, data: { is_end: ast.is_end } });
 
-                    ast.state = 'success';
-                    obs.next({ type: 'node_success', id: ast.id });
-                    obs.complete()
-                } catch (error) {
+                    ast.is_end = true;
+                    return [
+                        { type: 'node_emit' as const, id: ast.id, data: { is_end: ast.is_end } }
+                    ];
+                }),
+                mergeMap((events: NodeEvent[]) => from(events))
+            ).subscribe({
+                next: (event: NodeEvent) => obs.next(event),
+                error: (error) => {
                     console.error(`[WeiboAjaxStatusesRepostTimelineAstVisitor] mid: ${ast.mid}`, error);
                     ast.state = 'fail';
                     setAstError(ast, error, process.env.NODE_ENV === 'development');
                     obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-                    obs.complete()
+                    obs.complete();
+                },
+                complete: () => {
+                    ast.state = 'success';
+                    obs.next({ type: 'node_success', id: ast.id });
+                    obs.complete();
                 }
-            };
-            handler();
+            });
 
-            // 返回清理函数
             return () => {
                 console.log('[WeiboAjaxStatusesRepostTimelineAstVisitor] 订阅被取消，触发 AbortSignal');
+                subscription.unsubscribe();
                 abortController.abort();
                 obs.complete();
             };

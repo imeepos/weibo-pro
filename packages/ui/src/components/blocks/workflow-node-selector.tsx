@@ -5,7 +5,9 @@ import { CheckIcon } from "lucide-react"
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
 } from "@sker/ui/components/ui/dialog"
+import { VisuallyHidden } from "@sker/ui/components/ui/visually-hidden"
 import {
   Command,
   CommandInput,
@@ -133,6 +135,9 @@ export function WorkflowNodeSelector({
 
         <Dialog open={open} onOpenChange={onOpenChange}>
           <DialogContent className="max-w-md p-0">
+            <VisuallyHidden>
+              <DialogTitle>选择工作流节点</DialogTitle>
+            </VisuallyHidden>
             <Command className="rounded-lg border">
               <CommandInput placeholder={placeholder} />
               <CommandList className="max-h-[400px]">

@@ -192,5 +192,8 @@ z.object({
 ## 参考实现
 
 - `packages/agent/src/ResearchAgent.ts`
+- `packages/agent/src/OpinionAgent.ts`
 - `packages/agent/src/tools/post-query.tool.ts`
-- `packages/agent/src/tools/nlp-analyze.tool.ts`
+- `packages/agent/src/tools/event-query.tool.ts`
+- `packages/agent/src/tools/event-analysis.tool.ts`
+- `packages/agent/src/tools/nlp-analysis.tool.ts`

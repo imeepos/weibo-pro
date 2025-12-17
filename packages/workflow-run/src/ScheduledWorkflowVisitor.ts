@@ -10,7 +10,8 @@ import {
 } from '@sker/entities'
 import { CronSchedulerService } from './services/CronSchedulerService'
 import { WorkflowExecutionService } from './services/WorkflowExecutionService'
-import { Observable } from 'rxjs'
+import { Observable, from } from 'rxjs'
+import { concatMap, mergeMap } from 'rxjs/operators'
 
 /**
  * ScheduledWorkflowAst 访问者
@@ -34,28 +35,25 @@ export class ScheduledWorkflowVisitor {
   @Handler(ScheduledWorkflowAst)
   visit(ast: ScheduledWorkflowAst, input$: Observable<any>, ctx: any): Observable<NodeEvent> {
     return new Observable<NodeEvent>((obs) => {
+      const abortController = new AbortController();
+
       ast.state = 'running';
       obs.next({ type: 'node_runing', id: ast.id });
 
-      input$.subscribe({
-        next: (inputData) => {
+      const subscription = input$.pipe(
+        concatMap(async (inputData) => {
           ast.emitCount += 1;
           obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } })
+
           if (inputData) {
             Object.keys(inputData).forEach(key => {
               (ast as any)[key] = inputData[key];
             });
           }
-        },
-        error: (error) => {
-          ast.state = 'fail';
-          setAstError(ast, error);
-          obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-          obs.complete();
-        },
-        complete: async () => {
-          const handler = async () => {
-            try {
+
+          if (abortController.signal.aborted) {
+            throw new Error('工作流已取消');
+          }
 
           // 解析输入参数
           let inputs: Record<string, unknown> = {}
@@ -132,10 +130,6 @@ export class ScheduledWorkflowVisitor {
           ast.scheduleId = schedule.id
           ast.nextRunAt = schedule.nextRunAt
           ast.status = schedule.status
-          obs.next({ type: 'node_emit', id: ast.id, data: { scheduleId: ast.scheduleId, nextRunAt: ast.nextRunAt } })
-
-          ast.state = 'success'
-          obs.next({ type: 'node_success', id: ast.id })
 
           logger.info('创建定时工作流成功', {
             scheduleId: schedule.id,
@@ -145,24 +139,37 @@ export class ScheduledWorkflowVisitor {
             nextRunAt: schedule.nextRunAt
           })
 
-              obs.complete();
-            } catch (error) {
-              logger.error('创建定时工作流失败', {
-                workflowName: ast.workflowName,
-                error: (error as Error).message,
-                stack: (error as Error).stack
-              });
+          return [
+            { type: 'node_emit' as const, id: ast.id, data: { scheduleId: ast.scheduleId, nextRunAt: ast.nextRunAt, status: ast.status } }
+          ];
+        }),
+        mergeMap((events: NodeEvent[]) => from(events))
+      ).subscribe({
+        next: (event: NodeEvent) => obs.next(event),
+        error: (error) => {
+          logger.error('创建定时工作流失败', {
+            workflowName: ast.workflowName,
+            error: (error as Error).message,
+            stack: (error as Error).stack
+          });
 
-              ast.state = 'fail';
-              setAstError(ast, error as Error);
-              obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-              obs.complete();
-            }
-          };
-
-          handler();
+          ast.state = 'fail';
+          setAstError(ast, error as Error);
+          obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
+          obs.complete();
+        },
+        complete: () => {
+          ast.state = 'success';
+          obs.next({ type: 'node_success', id: ast.id });
+          obs.complete();
         }
       });
+
+      return () => {
+        subscription.unsubscribe();
+        abortController.abort();
+        obs.complete();
+      };
     });
   }
 }

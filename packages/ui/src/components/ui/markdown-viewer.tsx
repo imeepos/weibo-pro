@@ -4,7 +4,8 @@ import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@udecode/cn";
-import { Dialog, DialogContent, DialogTrigger } from "./dialog";
+import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "./dialog";
+import { VisuallyHidden } from "./visually-hidden";
 import { MaximizeIcon } from "lucide-react";
 
 interface MarkdownViewerProps {
@@ -76,6 +77,9 @@ export function MarkdownViewer({
             maxHeight: '100vh'
           }}
         >
+          <VisuallyHidden>
+            <DialogTitle>Markdown 预览</DialogTitle>
+          </VisuallyHidden>
           <style dangerouslySetInnerHTML={{
             __html: `
             .markdown-fullscreen-scroll::-webkit-scrollbar {

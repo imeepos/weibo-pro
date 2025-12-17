@@ -274,8 +274,13 @@ export class WorkflowGraphAstVisitor {
 
         switch (mode) {
             case EdgeMode.MERGE:
-                return merge(...sources).pipe(
-                    map((value, index) => ({ [edges[index % edges.length]!.toProperty!]: value }))
+                // 修复：在 merge 前为每个源标记 toProperty，避免使用发射顺序 index
+                return merge(
+                    ...sources.map((source, sourceIndex) =>
+                        source.pipe(
+                            map(value => ({ [edges[sourceIndex]!.toProperty!]: value }))
+                        )
+                    )
                 );
             case EdgeMode.ZIP:
                 return zip(...sources).pipe(map(mapToObject));

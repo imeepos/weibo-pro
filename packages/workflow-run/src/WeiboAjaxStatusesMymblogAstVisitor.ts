@@ -4,7 +4,8 @@ import { WeiboAjaxStatusesMymblogAst } from "@sker/workflow-ast";
 import { Handler, NodeEvent, setAstError } from "@sker/workflow";
 import { useEntityManager, WeiboPostEntity } from "@sker/entities";
 import { WeiboApiClient } from "./services/weibo-api-client.base";
-import { Observable } from "rxjs";
+import { Observable, from } from "rxjs";
+import { concatMap, mergeMap } from "rxjs/operators";
 import { DelayService } from "./services/delay.service";
 import { RateLimiterService } from "./services/rate-limiter.service";
 
@@ -26,41 +27,40 @@ export class WeiboAjaxStatusesMymblogAstVisitor extends WeiboApiClient {
     }
 
     @Handler(WeiboAjaxStatusesMymblogAst)
-    visit(ast: WeiboAjaxStatusesMymblogAst, _ctx: any): Observable<NodeEvent> {
+    visit(ast: WeiboAjaxStatusesMymblogAst, input$: Observable<any>, ctx: any): Observable<NodeEvent> {
         return new Observable<NodeEvent>(obs => {
-            // 创建专门的 AbortController
             const abortController = new AbortController();
 
-            // 包装 ctx
             const wrappedCtx = {
-                ..._ctx,
+                ...ctx,
                 abortSignal: abortController.signal
             };
 
-            const handler = async () => {
-                try {
-                    // 检查取消信号
-                    if (wrappedCtx.abortSignal?.aborted) {
-                        ast.state = 'fail';
-                        setAstError(ast, new Error('工作流已取消'));
-                        obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-                        return;
+            ast.state = 'running';
+            obs.next({ type: 'node_runing', id: ast.id });
+
+            const subscription = input$.pipe(
+                concatMap(async (inputData) => {
+                    ast.emitCount += 1;
+                    obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } });
+
+                    if (inputData) {
+                        Object.keys(inputData).forEach(key => {
+                            (ast as any)[key] = inputData[key];
+                        });
                     }
 
-                    ast.state = 'running';
-                    obs.next({ type: 'node_runing', id: ast.id });
+                    if (wrappedCtx.abortSignal?.aborted) {
+                        throw new Error('工作流已取消');
+                    }
 
                     for await (const body of this.fetchWithPagination<WeiboAjaxStatusesMymblogAstResponse>({
                         buildUrl: (page) => `https://weibo.com/ajax/statuses/mymblog?uid=${ast.uid}&page=${page}&feature=0`,
                         refererOptions: { uid: ast.uid },
                         shouldContinue: (data) => data.data.list.length > 0
                     })) {
-                        // 检查取消信号（每次分页后）
                         if (wrappedCtx.abortSignal?.aborted) {
-                            ast.state = 'fail';
-                            setAstError(ast, new Error('工作流已取消'));
-                            obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-                            return;
+                            throw new Error('工作流已取消');
                         }
 
                         await useEntityManager(async m => {
@@ -68,25 +68,32 @@ export class WeiboAjaxStatusesMymblogAstVisitor extends WeiboApiClient {
                             await m.upsert(WeiboPostEntity, posts as any, ['id']);
                         });
                     }
-                    ast.isEnd = true;
-                    obs.next({ type: 'node_emit', id: ast.id, data: { isEnd: ast.isEnd } });
 
-                    ast.state = 'success';
-                    obs.next({ type: 'node_success', id: ast.id });
-                    obs.complete()
-                } catch (error) {
+                    ast.isEnd = true;
+                    return [
+                        { type: 'node_emit' as const, id: ast.id, data: { isEnd: ast.isEnd } }
+                    ];
+                }),
+                mergeMap((events: NodeEvent[]) => from(events))
+            ).subscribe({
+                next: (event: NodeEvent) => obs.next(event),
+                error: (error) => {
                     console.error(`[WeiboAjaxStatusesMymblogAstVisitor] uid: ${ast.uid}`, error);
                     ast.state = 'fail';
                     setAstError(ast, error);
                     obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-                    obs.complete()
+                    obs.complete();
+                },
+                complete: () => {
+                    ast.state = 'success';
+                    obs.next({ type: 'node_success', id: ast.id });
+                    obs.complete();
                 }
-            };
-            handler();
+            });
 
-            // 返回清理函数
             return () => {
                 console.log('[WeiboAjaxStatusesMymblogAstVisitor] 订阅被取消，触发 AbortSignal');
+                subscription.unsubscribe();
                 abortController.abort();
                 obs.complete();
             };

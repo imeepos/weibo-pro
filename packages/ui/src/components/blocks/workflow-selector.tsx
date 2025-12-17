@@ -3,7 +3,8 @@ import { CheckIcon } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import type { WorkflowSummary } from '@sker/sdk'
-import { Dialog, DialogContent } from '../ui/dialog'
+import { Dialog, DialogContent, DialogTitle } from '../ui/dialog'
+import { VisuallyHidden } from '../ui/visually-hidden'
 import { Command, CommandInput, CommandList, CommandEmpty, CommandItem } from '../ui/command'
 import { cn } from '@sker/ui/lib/utils'
 
@@ -58,6 +59,9 @@ export function WorkflowSelector({
 
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogContent className="max-w-md p-0">
+            <VisuallyHidden>
+              <DialogTitle>{label}</DialogTitle>
+            </VisuallyHidden>
             <Command className="rounded-lg border">
               <CommandInput placeholder="搜索工作流..." />
               <CommandList className="max-h-[400px]">
