@@ -1,7 +1,6 @@
 import { ChatOpenAI, ChatOpenAICallOptions } from '@langchain/openai'
 
-const OPENAI_BASE_URL = process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1'
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY
+const LLM_PROXY_BASE_URL = process.env.LLM_PROXY_BASE_URL || 'http://localhost:8089/llm/openai'
 
 export interface LlmModelOptions {
   model?: string
@@ -14,13 +13,12 @@ export function useLlmModel(options: LlmModelOptions = {}): ChatOpenAI<ChatOpenA
     model: modelName,
     temperature: options.temperature ?? 0.7,
     configuration: {
-      baseURL: OPENAI_BASE_URL,
-      apiKey: OPENAI_API_KEY
+      baseURL: LLM_PROXY_BASE_URL
     },
     maxTokens: 16384
   }
 
-  console.log(`[LLM Client] 创建模型: ${modelName}, baseURL: ${OPENAI_BASE_URL}, maxTokens: ${config.maxTokens}`)
+  console.log(`[LLM Client] 创建模型: ${modelName}, baseURL: ${LLM_PROXY_BASE_URL}, maxTokens: ${config.maxTokens}`)
 
   return new ChatOpenAI(config)
 }
