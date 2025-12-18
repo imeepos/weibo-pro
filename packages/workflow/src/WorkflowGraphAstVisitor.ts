@@ -132,9 +132,15 @@ export class WorkflowGraphAstVisitor {
                 }
             }
 
-            // 4. router 边：独立添加
+            // 4. router 边：独立添加，携带其他边的最新值
             routerEdges.forEach(edge => {
-                const routerInput$ = this.buildRouterEdgeInput(workflow, edge, nodeEventStreams);
+                const routerInput$ = this.buildRouterEdgeInput(
+                    workflow,
+                    edge,
+                    nodeEventStreams,
+                    node.id,
+                    edges
+                );
                 if (routerInput$ !== EMPTY) {
                     inputSources.push(routerInput$);
                 }
@@ -213,25 +219,65 @@ export class WorkflowGraphAstVisitor {
 
     /**
      * 构建 router 边的输入流（独立触发）
+     *
+     * Router 语义：
+     * - 作为主触发源，每次发射都重新触发目标节点
+     * - 携带其他输入边的最新值，保持节点的完整输入上下文
+     * - 类似 withLatestFrom 的主流，但router边可以有多个
      */
     private buildRouterEdgeInput(
         workflow: WorkflowGraphAst,
         edge: IEdge,
-        nodeEventStreams: Map<string, Observable<NodeEvent>>
+        nodeEventStreams: Map<string, Observable<NodeEvent>>,
+        targetNodeId: string,
+        allEdgesToTarget: IEdge[]
     ): Observable<any> {
         const valueStream$ = this.buildEdgeValueStream(workflow, edge, nodeEventStreams);
         if (valueStream$ === EMPTY) return EMPTY;
 
+        // 获取目标节点的其他非 router 输入边
+        const otherEdges = allEdgesToTarget.filter(e => {
+            if (e.id === edge.id) return false; // 排除自己
+            const sourceNode = workflow.nodes.find(n => n.id === e.from);
+            const outputMeta = sourceNode?.metadata?.outputs?.find(
+                (out: any) => out.property === e.fromProperty
+            );
+            return !outputMeta?.isRouter; // 只包含非 router 边
+        });
+
+        // 如果没有其他输入边，直接返回 router 边的值
+        if (otherEdges.length === 0) {
+            return valueStream$.pipe(
+                filter(value => value !== ROUTE_SKIPPED),
+                map(value => ({ [edge.toProperty!]: value }))
+            );
+        }
+
+        // 构建其他边的值流
+        const otherValueStreams = otherEdges.map(e =>
+            this.buildEdgeValueStream(workflow, e, nodeEventStreams)
+        ).filter(s => s !== EMPTY);
+
+        // Router 边作为主流，携带其他边的最新值
         return valueStream$.pipe(
-            // router 边只过滤 ROUTE_SKIPPED（内部协议标记）
-            // 不过滤 undefined/null/''，因为这些可能是合法的业务数据
-            //
-            // 设计原则：
-            // - 分支是否激活由"是否发射事件"决定，而不是"值的内容"
-            // - 匹配的分支会发射 node_emit 事件，携带任意值（包括 '', null, undefined）
-            // - 不匹配的分支不会发射事件（自然不会触发下游）
             filter(value => value !== ROUTE_SKIPPED),
-            map(value => ({ [edge.toProperty!]: value }))
+            withLatestFrom(...otherValueStreams),
+            map(([routerValue, ...otherValues]) => {
+                const result: Record<string, any> = {};
+
+                // Router 边的值
+                result[edge.toProperty!] = routerValue;
+
+                // 其他边的最新值
+                otherValues.forEach((value, index) => {
+                    const otherEdge = otherEdges[index];
+                    if (otherEdge?.toProperty) {
+                        result[otherEdge.toProperty] = value;
+                    }
+                });
+
+                return result;
+            })
         );
     }
 
