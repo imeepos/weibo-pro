@@ -368,64 +368,6 @@ export class ChapterGenerationService {
     );
   }
 
-  /**
-   * 流式调用 LLM（支持工具）
-   *
-   * 性能优化：使用节流减少前端 DOM 更新频率
-   * - delta 事件：150ms 节流（减少 99% 的渲染次数）
-   * - progress 事件：不节流（保证进度实时性）
-   */
-  private async saveDebugLog(filename: string, data: any): Promise<void> {
-    try {
-      const fs = await import('fs/promises');
-      const path = await import('path');
-      const debugPath = path.join(process.cwd(), filename);
-      await fs.writeFile(debugPath, JSON.stringify(data, null, 2), 'utf-8');
-      console.log(`[ChapterGeneration] 已保存调试日志到: ${filename}`);
-    } catch (err) {
-      console.error('[ChapterGeneration] 保存调试日志失败:', err);
-    }
-  }
-
-  /**
-   * 保存解析失败的 JSON 文本到 txt 文件，方便调试
-   */
-  private async saveFailedJsonToTxt(failedText: string, error: any): Promise<void> {
-    try {
-      const fs = await import('fs/promises');
-      const path = await import('path');
-
-      // 生成带时间戳的文件名
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const filename = `debug-json-parse-failed-${timestamp}.txt`;
-      const debugPath = path.join(process.cwd(), filename);
-
-      // 构造调试信息
-      const debugInfo = [
-        '='.repeat(80),
-        '解析失败的 JSON 文本',
-        '='.repeat(80),
-        '',
-        `时间: ${new Date().toISOString()}`,
-        `错误: ${error.message}`,
-        `错误类型: ${error.name}`,
-        '',
-        '原始文本:',
-        '-'.repeat(80),
-        failedText,
-        '-'.repeat(80),
-        '',
-        '错误堆栈:',
-        error.stack || '无堆栈信息',
-        ''
-      ].join('\n');
-
-      await fs.writeFile(debugPath, debugInfo, 'utf-8');
-      console.log(`[ChapterGeneration] 已保存解析失败的文本到: ${filename}`);
-    } catch (err) {
-      console.error('[ChapterGeneration] 保存失败文本失败:', err);
-    }
-  }
 
   private invokeWithStreaming(
     model: ChatOpenAI<ChatOpenAICallOptions> | Runnable<BaseLanguageModelInput, AIMessageChunk, ChatOpenAICallOptions>,
@@ -441,14 +383,6 @@ export class ChapterGenerationService {
     // 节流控制：减少前端 DOM 更新频率
     let lastDeltaEmitTime = 0;
     const DELTA_THROTTLE_MS = 150; // 150ms = ~6.7fps，肉眼流畅阈值
-
-    // 保存生成请求
-    this.saveDebugLog('debug-chapter-generation-request.json', {
-      timestamp: new Date().toISOString(),
-      messages: initialMessages,
-      useTools,
-      tools: tools.map(t => ({ name: t.name, description: t.description }))
-    }).catch(console.error);
 
     return this.streamingLlmInvoker.streamWithTools(model, initialMessages, signal, useTools, tools).pipe(
       tap((chunk: StreamChunk) => {
@@ -503,13 +437,6 @@ export class ChapterGenerationService {
           id: ast.id,
           data: { delta: '', accumulated: finalText }
         });
-
-        // 保存生成响应
-        this.saveDebugLog('debug-chapter-generation-response.json', {
-          timestamp: new Date().toISOString(),
-          fullText: finalText,
-          textLength: finalText?.length || 0
-        }).catch(console.error);
 
         return finalText;
       })
@@ -580,16 +507,6 @@ export class ChapterGenerationService {
   ): Observable<ParsedChapter> {
     const extractionPrompt = this.promptBuilder.buildExtractionPrompt(rawText);
 
-    // 保存提取请求
-    this.saveDebugLog('debug-chapter-extraction-request.json', {
-      timestamp: new Date().toISOString(),
-      rawTextLength: rawText?.length || 0,
-      rawTextPreview: rawText?.slice(0, 500),
-      extractionPromptLength: extractionPrompt?.length || 0,
-      extractionPrompt: extractionPrompt,
-      schema: ExtractionSchema.shape
-    }).catch(console.error);
-
     const startTime = Date.now();
 
     // 使用普通 invoke，让 LLM 返回 JSON 文本，然后用 json-harmony 解析
@@ -658,10 +575,6 @@ export class ChapterGenerationService {
             console.error(`[extractStructuredContent] json-harmony 二次解析仍然失败`);
             console.error(`[extractStructuredContent] 无法解析的文本: ${jsonText.slice(0, 500)}`);
 
-            // 保存解析失败的原文到 txt 文件，方便调试
-            const mockError = new Error('JSON 格式严重错误，json-harmony 尝试所有策略后仍无法解析');
-            this.saveFailedJsonToTxt(jsonText, mockError).catch(console.error);
-
             throw new Error('LLM 返回的 JSON 格式无效，json-harmony 尝试所有策略后仍无法解析为结构化数据，将触发重试');
           }
         }
@@ -699,13 +612,6 @@ export class ChapterGenerationService {
           resolvedClueIds: validated.resolvedClueIds
         };
 
-        // 保存提取响应
-        this.saveDebugLog('debug-chapter-extraction-response.json', {
-          timestamp: new Date().toISOString(),
-          result: parsedChapter,
-          parseStatistics: parseResult.statistics
-        }).catch(console.error);
-
         return parsedChapter;
       }),
       catchError((error) => {
@@ -713,17 +619,6 @@ export class ChapterGenerationService {
         if (signal.aborted) {
           return throwError(() => new Error('任务已被用户取消'));
         }
-
-        // 保存解析错误
-        this.saveDebugLog('debug-chapter-extraction-error.json', {
-          timestamp: new Date().toISOString(),
-          error: {
-            message: error.message,
-            name: error.name,
-            stack: error.stack
-          },
-          rawTextLength: rawText?.length || 0
-        }).catch(console.error);
 
         console.error(`[extractStructuredContent] 结构化提取失败:`, error);
         console.error(`[extractStructuredContent] 错误详情:`, {
