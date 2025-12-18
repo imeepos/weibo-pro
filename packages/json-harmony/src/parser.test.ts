@@ -337,6 +337,150 @@ features:
       }
     })
 
+    it('解析第一章数据（debug-json-parse-failed-2025-12-18T21-50-28-871Z.txt）', () => {
+      // 来自 2025-12-18T21:50:28.871Z 失败场景的实际数据
+      // 包含未转义的引号，测试 json-harmony 的自动修复能力
+      const chapterJson = `{
+    "title": "第一章：江湖第一课",
+    "summary": "衡山派弟子周子墨下山历练，在客栈遇神秘红衣女子，女子留下金豆布袋并盗走其腰牌，相约三日后城隍庙见。",
+    "contentStartMarker": "江南三月，草长莺飞。临安城西的悦来客栈二楼雅座，靠窗的位置上，一位白衣少年正对着面前的松鼠鳜鱼发愁。",
+    "contentEndMarker": "不然谁知道下次烧的是稻草堆，还是你的眉毛？",
+    "clues": [
+        {
+            "id": "clue_ch01_red_dress_surname",
+            "description": "红衣姑娘姓唐，可能与蜀中唐门有关联。",
+            "status": "pending"
+        },
+        {
+            "id": "clue_ch01_hengshan_token",
+            "description": "周子墨的衡山派青玉腰牌被红衣姑娘盗走。",
+            "status": "pending"
+        },
+        {
+            "id": "clue_ch01_gold_beans",
+            "description": "红衣姑娘留给周子墨的布袋中装有金豆子，来历不明。",
+            "status": "pending"
+        },
+        {
+            "id": "clue_ch01_three_men",
+            "description": "刀疤脸三人组在追踪红衣姑娘，真实身份与目的不明。",
+            "status": "pending"
+        },
+        {
+            "id": "clue_ch01_poem_hint",
+            "description": "竹筷上刻有诗句"金风玉露一相逢，便胜却人间无数"，暗示某种联系或约定。",
+            "status": "pending"
+        }
+    ],
+    "resolvedClueIds": []
+}`
+
+      const result = parse(chapterJson)
+
+      // 验证成功解析（自动修复未转义引号）
+      expect(result.data).toBeDefined()
+      expect(typeof result.data).toBe('object')
+
+      // 验证使用了 UnescapedQuotesFix 策略
+      expect(result.statistics.recoveryStrategiesUsed).toContain(
+        RecoveryStrategy.UnescapedQuotesFix,
+      )
+
+      // 验证结构和内容
+      const data = result.data as any
+      expect(data.title).toBe('第一章：江湖第一课')
+      expect(data.summary).toContain('衡山派弟子')
+      expect(data.contentStartMarker).toContain('江南三月')
+      expect(data.contentEndMarker).toContain('稻草堆')
+      expect(data.clues).toHaveLength(5)
+      expect(data.clues[0].id).toBe('clue_ch01_red_dress_surname')
+      // 验证未转义的引号被正确处理
+      expect(data.clues[4].description).toContain('金风玉露一相逢')
+      expect(data.resolvedClueIds).toEqual([])
+    })
+
+    it('容错处理：单独测试未转义引号修复', () => {
+      // 简化的损坏JSON，专注测试引号修复
+      const brokenJson = `{
+    "id": "clue_ch01_poem_hint",
+    "description": "竹筷上刻有诗句"金风玉露一相逢，便胜却人间无数"，暗示某种联系或约定。",
+    "status": "pending"
+}`
+
+      const result = parse(brokenJson)
+
+      // 应该成功解析（使用 UnescapedQuotesFix 策略）
+      expect(result.data).toBeDefined()
+      expect(typeof result.data).toBe('object')
+
+      const data = result.data as any
+      expect(data.id).toBe('clue_ch01_poem_hint')
+      expect(data.description).toContain('金风玉露一相逢')
+      expect(data.status).toBe('pending')
+
+      // 验证使用了引号修复策略
+      expect(result.statistics.recoveryStrategiesUsed).toContain(
+        RecoveryStrategy.UnescapedQuotesFix,
+      )
+    })
+
+    it('解析第八章数据（debug-json-parse-failed-2025-12-18T22-01-51-562Z.txt）', () => {
+      // 来自 2025-12-18T22:01:51.562Z 失败场景的实际数据
+      // 包含未转义的引号，测试 json-harmony 的自动修复能力
+      const chapterJson = `{
+  "title": "第八章：铜铃异响",
+  "summary": "周子墨在执法堂堂主黑凤处得知天机老人的预言，自己竟是破解黑风寨危机的关键，并获知破晓短剑和铜铃的秘密。胡一刀的人来袭，周子墨在黑凤掩护下逃离。",
+  "contentStartMarker": "周子墨踏入黑暗，身后木门缓缓关闭，发出沉闷的\\"咔嗒\\"声。门内一片漆黑，只有远处传来微弱的火光，",
+  "contentEndMarker": "周子墨深吸一口气，然后消失在夜色中。他不知道前方等待他的是什么，但他知道，自己的江湖之路，才刚刚开始。",
+  "clues": [
+    {
+      "id": "clue_ch08_sword_key",
+      "description": "破晓短剑不仅仅是武器，更是某种钥匙，暗示它有特殊功能",
+      "status": "pending"
+    },
+    {
+      "id": "clue_ch08_bloodline_secret",
+      "description": "周子墨的血脉似乎有特殊之处，与预言有关",
+      "status": "pending"
+    },
+    {
+      "id": "clue_ch08_seven_stars",
+      "description": "七星连珠是破解一切的关键，但具体含义未知",
+      "status": "pending"
+    },
+    {
+      "id": "clue_ch08_shadow_organization",
+      "description": "神秘的"影组织"正在暗中操控一切",
+      "status": "pending"
+    }
+  ],
+  "resolvedClueIds": []
+}`
+
+      const result = parse(chapterJson)
+
+      // 验证成功解析（自动修复未转义引号）
+      expect(result.data).toBeDefined()
+      expect(typeof result.data).toBe('object')
+
+      // 验证使用了 UnescapedQuotesFix 策略
+      expect(result.statistics.recoveryStrategiesUsed).toContain(
+        RecoveryStrategy.UnescapedQuotesFix,
+      )
+
+      // 验证结构和内容
+      const data = result.data as any
+      expect(data.title).toBe('第八章：铜铃异响')
+      expect(data.summary).toContain('周子墨')
+      expect(data.contentStartMarker).toContain('咔嗒')
+      expect(data.contentEndMarker).toContain('江湖之路')
+      expect(data.clues).toHaveLength(4)
+      expect(data.clues[3].id).toBe('clue_ch08_shadow_organization')
+      // 验证未转义的引号被正确处理
+      expect(data.clues[3].description).toContain('影组织')
+      expect(data.resolvedClueIds).toEqual([])
+    })
+
     it('解析修复后的章节 JSON', () => {
       // 修复转义问题后的有效 JSON
       const validChapterJson = {

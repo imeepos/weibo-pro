@@ -40,6 +40,8 @@ export interface ParserConfig {
 export enum RecoveryStrategy {
   /** 标准 JSON 解析 */
   StandardJson = 'StandardJson',
+  /** 修复未转义的引号 */
+  UnescapedQuotesFix = 'UnescapedQuotesFix',
   /** 手动修复 */
   ManualFix = 'ManualFix',
   /** 正则提取 */
