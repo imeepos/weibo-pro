@@ -35,15 +35,3 @@ import "./ErrorAnalyzerAstVisitor.js";
 import "./ResearchPlannerAstVisitor.js";
 import "./SerpClusterAstVisitor.js";
 import "./StoryWeaverAstVisitor.js";
-
-// EventStore - 注册浏览器端 LocalStorage 存储实现
-import { root } from '@sker/core'
-import { EVENT_STORE } from '@sker/workflow'
-import { LocalStorageEventStore } from './event-store/local-storage.js'
-
-root.set([
-    { provide: EVENT_STORE, useClass: LocalStorageEventStore }
-])
-
-// 导出初始化函数
-export { initBrowserWorkflowRuntime } from './init-runtime.js';

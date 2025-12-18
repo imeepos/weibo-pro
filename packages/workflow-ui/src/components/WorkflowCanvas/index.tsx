@@ -31,6 +31,8 @@ import { useFileOperations } from './hooks/useFileOperations'
 import { useNodeOperations } from './hooks/useNodeOperations'
 import { useEventHandlers } from './hooks/useEventHandlers'
 import { WorkflowOperationsContext, type WorkflowOperations } from '../../context/workflow-operations'
+import { useTimeTravel } from '../../hooks/useTimeTravel'
+import { TimeTravelDebugger } from './TimeTravelDebugger'
 
 // 纯展示组件（来自 @sker/ui）
 import { WorkflowControls, WorkflowMenubar, WorkflowEmptyState, WorkflowMinimap, WorkflowProgress } from '@sker/ui/components/workflow'
@@ -237,57 +239,20 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
 
   // ========== 事件存储开关状态管理 ==========
   const [eventStoreEnabled, setEventStoreEnabled] = useState(false)
-  const [eventStreamReady, setEventStreamReady] = useState(false)
 
-  // 确保 runId 在组件挂载时创建，并订阅 eventStream 状态
+  // 订阅全局 eventStream 的事件存储状态
   useEffect(() => {
-    const initRuntime = async () => {
-      const runId = await globalRuntime.createRun(workflow.workflowAst)
-      const eventStream = globalRuntime.getEventStream(runId)
+    const sub = globalRuntime.events.storeEnabled$.subscribe(enabled => {
+      setEventStoreEnabled(enabled)
+    })
 
-      if (eventStream) {
-        setEventStreamReady(true)
-        // 订阅事件存储状态
-        const sub = eventStream.storeEnabled$.subscribe(enabled => {
-          setEventStoreEnabled(enabled)
-        })
-
-        return () => sub.unsubscribe()
-      }
-    }
-
-    const cleanup = initRuntime()
-    return () => {
-      cleanup.then(unsub => unsub?.())
-    }
-  }, [workflow.workflowAst])
+    return () => sub.unsubscribe()
+  }, [])
 
   // 切换事件存储开关
   const handleEventStoreToggle = useCallback((enabled: boolean) => {
-    const runId = globalRuntime.getRunId(workflow.workflowAst)
-
-    if (!runId) {
-      showToast('error', '无法切换事件存储', '工作流尚未初始化')
-      return
-    }
-
-    const eventStream = globalRuntime.getEventStream(runId)
-
-    if (!eventStream) {
-      showToast('error', '无法切换事件存储', 'EventStream 不存在')
-      return
-    }
-
-    eventStream.setStoreEnabled(enabled)
-
-    showToast(
-      'success',
-      enabled ? '事件存储已开启' : '事件存储已关闭',
-      enabled
-        ? '工作流事件将被记录，支持时间旅行和续跑'
-        : '工作流事件将不被记录，减少内存占用'
-    )
-  }, [workflow.workflowAst, showToast])
+    globalRuntime.events.setStoreEnabled(enabled)
+  }, [showToast])
 
   // 监听主题变化
   useEffect(() => {
@@ -302,6 +267,57 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
 
     return () => observer.disconnect()
   }, [])
+
+  // 时间旅行功能
+  const timeTravel = useTimeTravel()
+
+  // 节点状态时间切片渲染（时间旅行核心逻辑）
+  useEffect(() => {
+    // 订阅 nodeStates$，实时更新节点状态
+    const sub = timeTravel.eventStream.nodeStates$.subscribe(nodeStates => {
+      // 批量更新节点状态
+      workflow.setNodes(prevNodes =>
+        prevNodes.map(node => {
+          const event = nodeStates.get(node.id)
+
+          if (event) {
+            // 根据事件类型更新节点状态
+            let newState: 'pending' | 'running' | 'success' | 'fail' = 'pending'
+
+            if (event.type === 'node_success') {
+              newState = 'success'
+            } else if (event.type === 'node_fail') {
+              newState = 'fail'
+            } else if (event.type === 'node_runing') {
+              newState = 'running'
+            } else if (event.type === 'node_emit') {
+              newState = 'running' // 发射数据时也显示为运行中
+            }
+
+            // 不可变更新节点数据
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                state: newState,
+              },
+            }
+          } else {
+            // 时间点之前的节点显示为 pending
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                state: 'pending',
+              },
+            }
+          }
+        })
+      )
+    })
+
+    return () => sub.unsubscribe()
+  }, [timeTravel.eventStream, workflow.setNodes])
 
   // 画布控制 - 先获取，供业务钩子使用
   const {
@@ -912,7 +928,7 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
               showToast('error', '请先保存工作流', '只有保存的工作流才能查看运行历史')
             }
           }}
-          onEventStoreToggle={eventStreamReady ? handleEventStoreToggle : undefined}
+          onEventStoreToggle={handleEventStoreToggle}
           eventStoreEnabled={eventStoreEnabled}
           onZoomIn={handleZoomIn}
           onZoomOut={handleZoomOut}
@@ -962,7 +978,7 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
               showToast('error', '请先保存工作流', '只有保存的工作流才能查看运行历史')
             }
           }}
-          onEventStoreToggle={eventStreamReady ? handleEventStoreToggle : undefined}
+          onEventStoreToggle={handleEventStoreToggle}
           eventStoreEnabled={eventStoreEnabled}
           onZoomIn={handleZoomIn}
           onZoomOut={handleZoomOut}
@@ -1115,6 +1131,15 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
         }}
         onCancel={closeRunConfigDialog}
       />
+
+      {/* 时间旅行调试器 - 只要开启事件存储就显示 */}
+      {eventStoreEnabled && (
+        <TimeTravelDebugger
+          className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[10]"
+          onLocateNode={handleLocateNode}
+          {...timeTravel}
+        />
+      )}
     </div>
     </WorkflowOperationsContext.Provider>
   )

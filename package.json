@@ -43,6 +43,9 @@
       "react-dom": "^19.1.1",
       "zod": "^4.0.0",
       "echarts": "^6.0.0"
+    },
+    "patchedDependencies": {
+      "@radix-ui/react-presence@1.1.5": "patches/@radix-ui__react-presence@1.1.5.patch"
     }
   }
 }

@@ -13,16 +13,24 @@ import {
 import type { ResearchTask, ResearchReport } from './types';
 import { InMemoryStore, MemorySaver } from '@langchain/langgraph';
 
+/**
+ * LLM 代理服务地址
+ * 使用本地代理统一处理 LLM 调用
+ */
+const LLM_PROXY_BASE_URL = 'http://localhost:8089/llm/openai';
+
+/**
+ * 默认模型配置
+ */
+const DEFAULT_MODEL = 'deepseek-ai/DeepSeek-V3.2';
+const DEFAULT_TEMPERATURE = 0.3;
+
 // 创建agent专用的日志记录器
 const logger = {
   info: (message: string, data?: any) => console.log(`[ResearchAgent] ${message}`, data || ''),
   warn: (message: string, data?: any) => console.warn(`[ResearchAgent] ${message}`, data || ''),
   error: (message: string, error?: any) => console.error(`[ResearchAgent] ${message}`, error || ''),
-  debug: (message: string, data?: any) => {
-    if (process.env.NODE_ENV === 'development') {
-      console.debug(`[ResearchAgent] ${message}`, data || '');
-    }
-  }
+  debug: (message: string, data?: any) => console.debug(`[ResearchAgent] ${message}`, data || '')
 };
 
 /**
@@ -42,23 +50,11 @@ export class ResearchAgent {
   constructor(@Inject(NLPAnalyzer) private analyzer: NLPAnalyzer) {
     logger.info('ResearchAgent 初始化开始');
 
-    // 验证环境变量
-    if (!process.env.OPENAI_API_KEY) {
-      const error = new Error('OPENAI_API_KEY 环境变量未设置。请检查 .env 文件或环境变量配置。');
-      logger.error('环境变量验证失败', error);
-      throw error;
-    }
-
-    if (!process.env.OPENAI_BASE_URL) {
-      logger.warn('OPENAI_BASE_URL 环境变量未设置，使用默认值: https://api.deepseek.com/v1');
-    }
-
     const model = new ChatOpenAI({
-      modelName: 'deepseek-ai/DeepSeek-V3.2',
-      temperature: 0.3,
-      apiKey: process.env.OPENAI_API_KEY,
+      modelName: DEFAULT_MODEL,
+      temperature: DEFAULT_TEMPERATURE,
       configuration: {
-        baseURL: process.env.OPENAI_BASE_URL || 'https://api.deepseek.com/v1',
+        baseURL: LLM_PROXY_BASE_URL,
       },
     });
 

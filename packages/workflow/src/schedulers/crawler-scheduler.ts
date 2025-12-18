@@ -36,30 +36,52 @@ export class ConcurrencyScheduler implements SchedulerLike {
         delay: number = 0,
         state?: T
     ): Subscription {
-        const wrappedWork = (action: SchedulerAction<T>, innerState?: T) => {
+        const scheduleWithToken = (): Subscription => {
             this.runningCount++;
 
-            try {
-                work.call(action, innerState);
-            } finally {
+            let released = false;
+            const release = () => {
+                if (released) return;
+                released = true;
                 this.runningCount--;
                 this.processQueue();
-            }
+            };
+
+            const wrappedWork = function (this: SchedulerAction<T>, innerState?: T) {
+                try {
+                    work.call(this, innerState);
+                } finally {
+                    release();
+                }
+            };
+
+            const innerSub = this.delegate.schedule(wrappedWork, delay, state);
+            innerSub.add(release);
+            return innerSub;
         };
 
         // 如果未达到并发上限，立即执行
         if (this.runningCount < this.maxConcurrency) {
-            return this.delegate.schedule(wrappedWork, delay, state);
+            return scheduleWithToken();
         }
 
         // 否则加入队列
-        return new Subscription(() => {
-            const executeTask = () => {
-                this.delegate.schedule(wrappedWork, delay, state);
-            };
-
-            this.taskQueue.push(executeTask);
+        let queued = true;
+        const subscription = new Subscription(() => {
+            if (!queued) return;
+            const idx = this.taskQueue.indexOf(executeTask);
+            if (idx >= 0) this.taskQueue.splice(idx, 1);
+            queued = false;
         });
+
+        const executeTask = () => {
+            if (subscription.closed) return;
+            queued = false;
+            subscription.add(scheduleWithToken());
+        };
+
+        this.taskQueue.push(executeTask);
+        return subscription;
     }
 
     private processQueue(): void {
@@ -92,11 +114,16 @@ export class ConcurrencyScheduler implements SchedulerLike {
 }
 
 /**
+ * 爬虫调度器默认并发度
+ */
+const DEFAULT_CRAWLER_CONCURRENCY = 1;
+
+/**
  * 全局爬虫调度器实例
  *
- * 默认并发度为 1（串行执行），可通过环境变量 CRAWLER_CONCURRENCY 配置
+ * 默认并发度为 1（串行执行）
  */
 export const crawlerScheduler = new ConcurrencyScheduler(
     asyncScheduler,
-    Number(process.env.CRAWLER_CONCURRENCY) || 1
+    DEFAULT_CRAWLER_CONCURRENCY
 );

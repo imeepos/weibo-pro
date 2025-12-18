@@ -34,21 +34,6 @@ export class NodeExecutor {
      */
     run<Input = any>(node: INode, input$: Observable<Input>, parent?: WorkflowGraphAst): Observable<NodeEvent> {
         return defer(() => {
-            // 如果 node 本身是工作流，确保创建运行实例
-            if (isWorkflowGraphAst(node)) {
-                const workflowNode = node as WorkflowGraphAst;
-                return from(globalRuntime.createRun(workflowNode)).pipe(
-                    switchMap((runId) => {
-                        console.log(`[NodeExecutor] 为工作流 ${workflowNode.id} 创建运行实例: ${runId}`);
-
-                        // 确保节点已编译
-                        const compiledNode = isNode(node) ? node : this.compiler.compile(node);
-                        const nodeInstance = this.cloneNode(compiledNode);
-                        return this.visitorExecutor.visit(nodeInstance, input$, parent);
-                    })
-                );
-            }
-
             // 确保节点已编译
             const compiledNode = isNode(node) ? node : this.compiler.compile(node);
             const nodeInstance = this.cloneNode(compiledNode);

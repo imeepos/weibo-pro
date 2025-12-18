@@ -29,14 +29,10 @@ export class VisitorExecutor implements Visitor {
     }
 
     visit(ast: INode, input$: Observable<any>, parent?: WorkflowGraphAst): Observable<NodeEvent> {
-        if (parent) {
-            const runId = globalRuntime.getRunId(parent);
-            const eventStream = runId ? globalRuntime.getEventStream(runId) : undefined;
-
-            if (eventStream?.isNodeSuccess(ast.id)) {
-                const cachedEvents = eventStream.getNodeEvents(ast.id);
-                return from(cachedEvents);
-            }
+        // 续跑支持：如果节点已成功执行，直接重放事件
+        if (parent && globalRuntime.events.isNodeSuccess(ast.id)) {
+            const cachedEvents = globalRuntime.events.getNodeEvents(ast.id);
+            return from(cachedEvents);
         }
 
         const type = findNodeType(ast.type);
@@ -135,8 +131,7 @@ export class VisitorExecutor implements Visitor {
      *
      * 设计哲学：
      * - 透明拦截：Handler 无需感知记录逻辑
-     * - 完整记录：保存所有事件到 eventStream
-     * - EventStore 持久化：支持跨会话续跑
+     * - 完整记录：保存所有事件到全局 eventStream
      */
     private recordEvents(
         source$: Observable<NodeEvent>,
@@ -146,25 +141,10 @@ export class VisitorExecutor implements Visitor {
             return source$;
         }
 
-        // 从 runtime 获取 runId 和 eventStream
-        const runId = globalRuntime.getRunId(workflow);
-        const eventStream = runId ? globalRuntime.getEventStream(runId) : undefined;
-
-        if (!eventStream) {
-            return source$;
-        }
-
         return source$.pipe(
             tap(event => {
-                // 记录到 eventStream
-                eventStream.emit(event);
-
-                // 持久化到 EventStore（异步，不阻塞执行）
-                if (this.eventStore && runId) {
-                    this.eventStore.append(runId, event).catch(err => {
-                        console.error(`[VisitorExecutor.recordEvents] EventStore 追加事件失败:`, err);
-                    });
-                }
+                // 记录到全局 eventStream（内部有 storeEnabled 开关检查）
+                globalRuntime.events.emit(event);
             })
         );
     }

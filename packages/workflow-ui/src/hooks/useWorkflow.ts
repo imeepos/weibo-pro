@@ -141,6 +141,11 @@ export function useWorkflow(
   useEffect(() => {
     if (!storeWorkflowAst) return
 
+    // 如果正在同步到 store，跳过此次更新（防止循环）
+    if (isSyncingFromStoreRef.current) {
+      return
+    }
+
     // 检查是否有节点状态变更（运行时状态：running, success, fail）
     let hasRuntimeUpdates = false
     storeWorkflowAst.nodes.forEach((storeNode) => {
@@ -164,8 +169,17 @@ export function useWorkflow(
     // 如果有运行时状态更新，同步到 React Flow
     if (hasRuntimeUpdates) {
       console.log('[useWorkflow] 应用状态更新到 React Flow')
+
+      // 设置标志位，防止触发循环同步
+      isSyncingFromStoreRef.current = true
+
       // 直接使用 store 的 nodes（已经包含更新后的 data）
       setNodes(storeNodes)
+
+      // 重置标志位（在下一个事件循环中）
+      setTimeout(() => {
+        isSyncingFromStoreRef.current = false
+      }, 0)
     }
   }, [storeWorkflowAst, storeNodes, workflowAst, setNodes])
 
@@ -181,6 +195,9 @@ export function useWorkflow(
 
   // 标记是否已完成初始化（用于防止初始测量覆盖保存的尺寸）
   const isInitializedRef = useRef(false)
+
+  // 标志位：防止 store 同步循环
+  const isSyncingFromStoreRef = useRef(false)
 
   // 订阅历史记录状态
   useEffect(() => {
@@ -220,6 +237,11 @@ export function useWorkflow(
   )
 
   useEffect(() => {
+    // 如果正在从 store 同步，跳过此次更新（防止循环）
+    if (isSyncingFromStoreRef.current) {
+      return
+    }
+
     let hasPositionChanged = false
 
     // 递归更新 AST 节点（不可变方式）

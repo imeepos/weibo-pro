@@ -20,8 +20,8 @@ export interface RunState {
  *
  * 设计原则：
  * - 前后端共用接口，不同实现
- * - 前端：LocalStorageEventStore
- * - 后端：DatabaseEventStore
+ * - 前端：MemoryEventStore（内存存储，无需持久化）
+ * - 后端：DatabaseEventStore（数据库存储）
  * - 测试：MemoryEventStore
  */
 export interface IEventStore {

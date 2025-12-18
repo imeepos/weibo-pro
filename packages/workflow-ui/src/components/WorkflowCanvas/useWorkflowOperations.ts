@@ -510,15 +510,6 @@ export function useWorkflowOperations(
           console.error('[runWorkflow] 执行前保存工作流失败:', error)
         }
 
-        // ✨ 清理旧的运行实例，防止缓存的 runId 导致节点不执行
-        // Bug 修复：globalRuntime.createRun() 会缓存 workflowId → runId 映射
-        // 第二次执行时会返回旧的 runId，导致 eventStream 已完成，节点不再执行
-        const oldRunId = await globalRuntime.getRunIdByWorkflowId(workflow.workflowAst.id)
-        if (oldRunId) {
-          console.log(`[runWorkflow] 清理旧的运行实例 runId=${oldRunId}`)
-          await globalRuntime.clearRun(oldRunId)
-        }
-
         // 创建新的取消 Subject（重置上一次的）
         cancelSubject$.current = new Subject<void>()
 
@@ -555,6 +546,8 @@ export function useWorkflowOperations(
         })
         workflow.syncFromAst()
 
+        // 🎬 开始录制事件（清空历史，开启存储）
+        globalRuntime.startRecording()
 
         onSetRunning?.(true)
 
@@ -563,7 +556,6 @@ export function useWorkflowOperations(
         const mutableAst = fromJson<WorkflowGraphAst>(
           JSON.parse(JSON.stringify(toJson(workflow.workflowAst)))
         )
-
 
         // 将 abortSignal 附加到工作流上下文
         mutableAst.abortSignal = abortController.signal
@@ -641,6 +633,48 @@ export function useWorkflowOperations(
                 if (!found) {
                   console.warn(`[runWorkflow] 未找到节点 ${event.id}，无法更新属性`)
                 }
+
+                workflow.syncFromAst()
+              } else if (event.type === 'node_progress') {
+                // 处理节点进度事件（工具调用、阶段性任务）
+                console.log(`[runWorkflow] node_progress 事件: nodeId=${event.id}`, (event as any).data)
+
+                workflow.workflowAst!.nodes = workflow.workflowAst!.nodes.map(originalNode => {
+                  if (originalNode.id === event.id) {
+                    // 保持 running 状态，只更新进度信息
+                    return Object.assign(
+                      Object.create(Object.getPrototypeOf(originalNode)),
+                      originalNode,
+                      {
+                        progress: (event as any).data,
+                        state: originalNode.state || 'running' // 确保状态为 running
+                      }
+                    )
+                  }
+                  return originalNode
+                })
+
+                workflow.syncFromAst()
+              } else if (event.type === 'node_delta') {
+                // 处理节点增量输出（流式数据）
+                console.log(`[runWorkflow] node_delta 事件: nodeId=${event.id}`)
+
+                workflow.workflowAst!.nodes = workflow.workflowAst!.nodes.map(originalNode => {
+                  if (originalNode.id === event.id) {
+                    const deltaData = (event as any).data
+                    // 累积流式数据
+                    return Object.assign(
+                      Object.create(Object.getPrototypeOf(originalNode)),
+                      originalNode,
+                      {
+                        delta: deltaData.delta,
+                        accumulated: deltaData.accumulated,
+                        state: originalNode.state || 'running' // 确保状态为 running
+                      }
+                    )
+                  }
+                  return originalNode
+                })
 
                 workflow.syncFromAst()
               }

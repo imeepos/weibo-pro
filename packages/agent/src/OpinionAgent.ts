@@ -7,11 +7,7 @@ const logger = {
   info: (message: string, data?: any) => console.log(`[OpinionAgent] ${message}`, data || ''),
   warn: (message: string, data?: any) => console.warn(`[OpinionAgent] ${message}`, data || ''),
   error: (message: string, error?: any) => console.error(`[OpinionAgent] ${message}`, error || ''),
-  debug: (message: string, data?: any) => {
-    if (process.env.NODE_ENV === 'development') {
-      console.debug(`[OpinionAgent] ${message}`, data || '');
-    }
-  }
+  debug: (message: string, data?: any) => console.debug(`[OpinionAgent] ${message}`, data || '')
 };
 
 @Injectable()
