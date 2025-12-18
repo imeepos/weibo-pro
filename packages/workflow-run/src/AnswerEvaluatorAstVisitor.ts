@@ -3,6 +3,7 @@ import { Handler, NodeEvent, setAstError, WorkflowGraphAst } from "@sker/workflo
 import { AnswerEvaluatorAst, EvaluationResult, EvaluationType } from "@sker/workflow-ast";
 import { Observable, from } from "rxjs";
 import { concatMap, mergeMap } from "rxjs/operators";
+import { parse as parseWithHarmony } from '@sker/json-harmony';
 import { useLlmModel } from "./llm-client";
 
 const EVALUATION_PROMPTS: Record<EvaluationType, string> = {
@@ -94,14 +95,26 @@ export class AnswerEvaluatorAstVisitor {
               const jsonMatch = content.match(/\{[\s\S]*\}/);
 
               if (jsonMatch) {
-                const evaluation = JSON.parse(jsonMatch[0]);
-                results.push({
-                  type,
-                  passed: evaluation.passed,
-                  score: evaluation.score,
-                  reason: evaluation.reason
-                });
-                totalScore += evaluation.score;
+                const parseResult = parseWithHarmony(jsonMatch[0]);
+
+                if (typeof parseResult.data === 'object' && parseResult.data !== null) {
+                  const evaluation = parseResult.data as any;
+                  results.push({
+                    type,
+                    passed: evaluation.passed,
+                    score: evaluation.score,
+                    reason: evaluation.reason
+                  });
+                  totalScore += evaluation.score;
+                } else {
+                  // 解析失败
+                  results.push({
+                    type,
+                    passed: false,
+                    score: 0,
+                    reason: '评估结果 JSON 格式无效'
+                  });
+                }
               }
             } catch (e) {
               results.push({

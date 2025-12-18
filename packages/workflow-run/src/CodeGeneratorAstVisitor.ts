@@ -3,6 +3,7 @@ import { Handler, NodeEvent, setAstError } from '@sker/workflow';
 import { CodeGeneratorAst } from '@sker/workflow-ast';
 import { Observable, from } from 'rxjs';
 import { concatMap, mergeMap } from 'rxjs/operators';
+import { parse as parseWithHarmony } from '@sker/json-harmony';
 import { useLlmModel } from './llm-client';
 
 const CODE_GENERATOR_SYSTEM_PROMPT = `你是一个代码艺术家，专注于生成优雅、简洁、可维护的代码。
@@ -79,13 +80,22 @@ ${tasks.map((t, i) => `${i + 1}. ${t}`).join('\n')}
                         ? response.content
                         : JSON.stringify(response.content);
 
-                    // 解析 JSON 响应
+                    // 解析 JSON 响应，使用 json-harmony 提供容错能力
                     const jsonMatch = content.match(/\{[\s\S]*\}/);
                     if (jsonMatch) {
-                        const result = JSON.parse(jsonMatch[0]);
-                        ast.generatedCode = result.code || '';
-                        ast.filePath = result.filePath || '';
-                        ast.operation = result.operation || 'create';
+                        const parseResult = parseWithHarmony(jsonMatch[0]);
+
+                        if (typeof parseResult.data === 'object' && parseResult.data !== null) {
+                            const result = parseResult.data as Record<string, any>;
+                            ast.generatedCode = result.code || '';
+                            ast.filePath = result.filePath || '';
+                            ast.operation = result.operation || 'create';
+                        } else {
+                            // 解析失败，使用原始内容
+                            ast.generatedCode = content;
+                            ast.filePath = '';
+                            ast.operation = 'create';
+                        }
                     } else {
                         ast.generatedCode = content;
                         ast.filePath = '';

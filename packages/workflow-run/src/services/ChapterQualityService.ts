@@ -1,5 +1,6 @@
 import { Injectable } from '@sker/core';
 import { ChapterData } from '@sker/workflow-ast';
+import { parse as parseWithHarmony } from '@sker/json-harmony';
 import { useLlmModel } from '../llm-client';
 
 /**
@@ -111,24 +112,21 @@ ${rawText}
 
       const content = typeof result.content === 'string' ? result.content : JSON.stringify(result.content);
 
-      // 提取 JSON
+      // 提取 JSON 并使用 json-harmony 解析
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (!jsonMatch?.[0]) {
         console.warn('[ChapterQualityService] LLM 返回格式不正确，使用默认评分');
         return { score: 70, issues: [], suggestions: ['LLM 返回格式错误'], passed: true };
       }
 
-      let parsed: any;
-      try {
-        parsed = JSON.parse(jsonMatch[0]);
-      } catch {
-        // 修复常见 JSON 格式问题
-        const fixed = jsonMatch[0]
-          .replace(/'([^']+)'(\s*:)/g, '"$1"$2')
-          .replace(/:\s*'([^']*)'/g, ': "$1"');
-        parsed = JSON.parse(fixed);
+      const parseResult = parseWithHarmony(jsonMatch[0]);
+
+      if (typeof parseResult.data !== 'object' || parseResult.data === null) {
+        console.warn('[ChapterQualityService] JSON 解析失败，使用默认评分');
+        return { score: 70, issues: [], suggestions: ['JSON 格式无效'], passed: true };
       }
 
+      const parsed = parseResult.data as any;
       console.log(`[ChapterQualityService] 原始文本 LLM 评分: ${parsed.score}`);
 
       return {
@@ -212,24 +210,21 @@ ${chapter.content}
 
       const content = typeof result.content === 'string' ? result.content : JSON.stringify(result.content);
 
-      // 提取 JSON
+      // 提取 JSON 并使用 json-harmony 解析
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (!jsonMatch?.[0]) {
         console.warn('[ChapterQualityService] LLM 返回格式不正确，使用默认评分');
         return { score: 70, issues: [], suggestions: ['LLM 返回格式错误'] };
       }
 
-      let parsed: any;
-      try {
-        parsed = JSON.parse(jsonMatch[0]);
-      } catch {
-        // 修复常见 JSON 格式问题
-        const fixed = jsonMatch[0]
-          .replace(/'([^']+)'(\s*:)/g, '"$1"$2')
-          .replace(/:\s*'([^']*)'/g, ': "$1"');
-        parsed = JSON.parse(fixed);
+      const parseResult = parseWithHarmony(jsonMatch[0]);
+
+      if (typeof parseResult.data !== 'object' || parseResult.data === null) {
+        console.warn('[ChapterQualityService] JSON 解析失败，使用默认评分');
+        return { score: 70, issues: [], suggestions: ['JSON 格式无效'] };
       }
 
+      const parsed = parseResult.data as any;
       console.log(`[ChapterQualityService] LLM 原始评分: ${parsed.score}`);
 
       return {

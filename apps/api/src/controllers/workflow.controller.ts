@@ -228,9 +228,12 @@ export class WorkflowController implements sdk.WorkflowController {
       return events$;
     } catch (error: any) {
       logger.error('execute error', { error: error.message, body });
+      // ✅ 发送标准 node_fail 事件（使用 workflow 或 ast 的 id）
+      const targetId = body.workflow?.id || body.ast?.id || 'unknown';
       res.write(`data: ${JSON.stringify({
-        type: 'workflow_error',
-        error: { message: error.message }
+        type: 'node_fail',
+        id: targetId,
+        error: error.message
       })}\n\n`);
       res.end();
       throw error;

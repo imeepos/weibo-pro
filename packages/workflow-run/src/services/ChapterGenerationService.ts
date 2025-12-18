@@ -138,7 +138,9 @@ export class ChapterGenerationService {
     const nextChapterNumber = isFirstChapter ? 1 : Math.max(...chapters.map(c => c.chapterNumber)) + 1;
 
     const existingTitles = new Set(chapters.map(ch => this.contentValidator.normalizeTitle(ch.title)));
-    const useTools = chapters.length > 10;
+    // 工具策略：当章节数量 > 10 时启用工具（用于查询前文章节）
+    // ⚠️ 临时修复：由于 useTools=false 时 LLM 不生成内容，暂时始终启用工具
+    const useTools = true; // 原逻辑：chapters.length > 10
 
     const baseModel = useLlmModel({ model: ast.model, temperature: ast.temperature });
     const model = useTools ? baseModel.bindTools(this.createTools(chapters, ctx, ast.id, useTools)) : baseModel;
@@ -641,19 +643,26 @@ export class ChapterGenerationService {
             console.log(`[extractStructuredContent] 提取代码块后: ${jsonText.slice(0, 300)}`);
           }
 
-          // 尝试标准 JSON 解析
-          try {
-            const manuallyParsed = JSON.parse(jsonText);
-            console.log(`[extractStructuredContent] 手动解析成功`);
-            parseResult.data = manuallyParsed;
-          } catch (parseError) {
-            console.error(`[extractStructuredContent] 手动解析失败:`, parseError);
+          // 再次使用 json-harmony 解析提取后的文本
+          // 因为 json-harmony 比原生 JSON.parse() 更强大，能修复更多格式错误
+          const retryResult = parseWithHarmony(jsonText);
+
+          console.log(`[extractStructuredContent] 二次解析恢复策略: ${retryResult.statistics.recoveryStrategiesUsed.join(', ')}`);
+
+          if (typeof retryResult.data !== 'string') {
+            // 二次解析成功，使用解析后的数据
+            console.log(`[extractStructuredContent] 二次解析成功`);
+            parseResult.data = retryResult.data;
+          } else {
+            // 如果 json-harmony 尝试了所有策略后还是返回字符串，说明 JSON 格式严重错误
+            console.error(`[extractStructuredContent] json-harmony 二次解析仍然失败`);
             console.error(`[extractStructuredContent] 无法解析的文本: ${jsonText.slice(0, 500)}`);
 
             // 保存解析失败的原文到 txt 文件，方便调试
-            this.saveFailedJsonToTxt(jsonText, parseError).catch(console.error);
+            const mockError = new Error('JSON 格式严重错误，json-harmony 尝试所有策略后仍无法解析');
+            this.saveFailedJsonToTxt(jsonText, mockError).catch(console.error);
 
-            throw new Error('LLM 返回的 JSON 格式无效，无法解析为结构化数据，将触发重试');
+            throw new Error('LLM 返回的 JSON 格式无效，json-harmony 尝试所有策略后仍无法解析为结构化数据，将触发重试');
           }
         }
 
@@ -761,28 +770,6 @@ export class ChapterGenerationService {
     };
   }
 
-  private performQualityCheck(
-    ast: StoryWeaverAst,
-    chapter: ChapterData,
-    attempt: number,
-    chapters: ChapterData[],
-    signal: AbortSignal
-  ): Observable<{ chapter: ChapterData; quality: QualityCheckResult; attempt: number }> {
-    if (!ast.enableQualityCheck) {
-      return of({
-        chapter,
-        quality: { score: 100, issues: [], suggestions: [], passed: true },
-        attempt
-      });
-    }
-
-    return this.retryQualityCheck(chapter, chapters, ast.wordCount, signal, 0).pipe(
-      map((qualityResult) => {
-        return { chapter, quality: qualityResult, attempt };
-      })
-    );
-  }
-
   private retryQualityCheck(
     chapter: ChapterData,
     chapters: ChapterData[],
@@ -815,32 +802,6 @@ export class ChapterGenerationService {
         });
       })
     );
-  }
-
-  private evaluateQuality(
-    ast: StoryWeaverAst,
-    chapter: ChapterData,
-    quality: QualityCheckResult,
-    attempt: number
-  ): GenerationState {
-
-    if (quality.score >= ast.minQualityScore) {
-      return {
-        result: { chapter, quality, attempt },
-        improvementHints: '',
-        attempt: ast.maxRewriteRetries ?? 2,
-        allAttempts: []
-      };
-    }
-
-    const improvementHints = this.promptBuilder.buildImprovementHints(quality);
-
-    return {
-      result: { chapter, quality, attempt },
-      improvementHints,
-      attempt: attempt + 1,
-      allAttempts: []
-    };
   }
 
   private handleTitleDuplicate(error: Error, state: GenerationState): Observable<GenerationState> {

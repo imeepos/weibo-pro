@@ -1,9 +1,8 @@
 import { Injectable } from '@sker/core';
 import { Render } from '@sker/workflow';
 import { StoryWeaverAst } from '@sker/workflow-ast';
-import { MarkdownViewer } from '@sker/ui/components/ui/markdown-viewer';
-import { SimplePagination } from '@sker/ui/components/ui/simple-pagination';
 import { Dialog, DialogContent, DialogTrigger } from '@sker/ui/components/ui/dialog';
+import { ScrollArea } from '@sker/ui/components/ui/scroll-area';
 import { BookOpenIcon, MaximizeIcon, ChevronLeftIcon, ChevronRightIcon, Sparkles } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
@@ -20,23 +19,22 @@ export class StoryWeaverAstRender {
 }
 
 function StoryWeaverContent({ ast }: { ast: StoryWeaverAst }) {
-  const streamingData = useExecutionStore((state) => state.getStreamingData(ast.id));
+  const streamingData = useExecutionStore((state) => state.streamingData[ast.id]);
   const chapters = ast.previousChapters || [];
   const hasContent = chapters.length > 0;
-  const isStreaming = !!streamingData;
 
   return (
     <div className="px-3 py-2">
-      {isStreaming && (
+      {streamingData && (
         <StreamingPreview
           accumulated={streamingData.accumulated}
           chapterNumber={ast.chapterNumber || chapters.length + 1}
         />
       )}
-      {hasContent && !isStreaming && (
+      {hasContent && !streamingData && (
         <NovelReader chapters={chapters} latestChapterNumber={ast.chapterNumber} />
       )}
-      {!hasContent && !isStreaming && (
+      {!hasContent && !streamingData && (
         <div className="text-sm text-muted-foreground flex items-center gap-2">
           <BookOpenIcon className="size-4" />
           <span>尚未创作章节</span>
@@ -103,14 +101,6 @@ function NovelReader({ chapters, latestChapterNumber }: NovelReaderProps) {
   const currentChapter = chapters[currentIndex];
   if (!currentChapter) return null;
 
-  const chapterMarkdown = `# 第 ${currentChapter.chapterNumber} 章：${currentChapter.title}
-
-**简介**：${currentChapter.summary}
-
----
-
-${currentChapter.content}`;
-
   return (
     <>
       <div className="relative group">
@@ -170,7 +160,7 @@ function FullscreenReader({ chapters, currentIndex, onChapterChange }: Fullscree
   const goToPrev = () => hasPrev && onChapterChange(currentIndex - 1);
   const goToNext = () => hasNext && onChapterChange(currentIndex + 1);
 
-  const chapterMarkdown = `# 第 ${currentChapter.chapterNumber} 章：${currentChapter.title}
+  const chapterMarkdown = `# ${currentChapter.title}
 
 **简介**：${currentChapter.summary}
 
@@ -182,55 +172,49 @@ ${currentChapter.content}`;
     <div className="w-full h-full flex bg-background">
       {/* 左侧章节目录 */}
       <div className="w-64 h-full border-r bg-muted/20 flex flex-col">
-        <div className="px-4 py-3 border-b bg-background/50 backdrop-blur-sm">
+        <div className="shrink-0 px-4 py-3 border-b bg-background/50 backdrop-blur-sm">
           <h3 className="font-semibold">目录</h3>
           <p className="text-xs text-muted-foreground mt-1">共 {chapters.length} 章</p>
         </div>
 
-        <div className="flex-1 overflow-y-auto chapter-list">
-          <div className="p-2 space-y-1">
-            {chapters.map((chapter, index) => (
-              <button
-                key={chapter.chapterNumber}
-                onClick={() => onChapterChange(index)}
-                className={cn(
-                  "w-full text-left px-3 py-2 rounded-md text-sm transition-colors",
-                  index === currentIndex
-                    ? "bg-primary text-primary-foreground font-medium"
-                    : "hover:bg-muted/50"
-                )}
-              >
-                <div className="truncate">第 {chapter.chapterNumber} 章：{chapter.title}</div>
-              </button>
-            ))}
+        {/* relative + absolute + ScrollArea 方案 */}
+        <div className="relative flex-1">
+          <div className="absolute inset-0">
+            <ScrollArea className="h-full">
+              <div className="p-2 space-y-1">
+                {chapters.map((chapter, index) => (
+                  <button
+                    key={chapter.chapterNumber}
+                    onClick={() => onChapterChange(index)}
+                    className={cn(
+                      "w-full text-left px-3 py-2 rounded-md text-sm transition-colors",
+                      index === currentIndex
+                        ? "bg-primary text-primary-foreground font-medium"
+                        : "hover:bg-muted/50"
+                    )}
+                  >
+                    <div className="truncate">{chapter.title}</div>
+                  </button>
+                ))}
+              </div>
+            </ScrollArea>
           </div>
         </div>
       </div>
 
       {/* 右侧阅读区域 */}
       <div className="flex-1 relative group">
-        <style dangerouslySetInnerHTML={{
-          __html: `
-          .reading-area::-webkit-scrollbar {
-            width: 6px;
-          }
-          .reading-area::-webkit-scrollbar-track {
-            background: transparent;
-          }
-          .reading-area::-webkit-scrollbar-thumb {
-            background: rgba(156, 163, 175, 0.5);
-            border-radius: 3px;
-          }
-          .reading-area::-webkit-scrollbar-thumb:hover {
-            background: rgba(107, 114, 128, 0.7);
-          }
-        `}} />
-        <div className="absolute inset-0 overflow-y-auto reading-area px-16 py-8">
-          <div className="max-w-3xl mx-auto prose prose-sm break-words [&_pre]:whitespace-pre-wrap [&_pre]:break-all [&_code]:break-all">
-            <ReactMarkdown remarkPlugins={[[remarkGfm, { singleTilde: false }]]}>
-              {chapterMarkdown}
-            </ReactMarkdown>
-          </div>
+        {/* relative + absolute + ScrollArea 方案 */}
+        <div className="absolute inset-0">
+          <ScrollArea className="h-full">
+            <div className="px-16 py-8">
+              <div className="max-w-3xl mx-auto prose prose-sm break-words [&_pre]:whitespace-pre-wrap [&_pre]:break-all [&_code]:break-all">
+                <ReactMarkdown remarkPlugins={[[remarkGfm, { singleTilde: false }]]}>
+                  {chapterMarkdown}
+                </ReactMarkdown>
+              </div>
+            </div>
+          </ScrollArea>
         </div>
 
         {/* 左侧悬浮按钮 - 上一章 */}

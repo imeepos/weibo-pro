@@ -26,7 +26,7 @@ export interface ChapterData {
   stateful: true
 })
 export class StoryWeaverAst extends Ast {
-  @Input({ title: '创作提示', type: 'textarea', defaultValue: '' })
+  @Input({ title: '创作提示', type: 'textarea', mode: IS_MULTI, defaultValue: '' })
   prompt: string = '';
 
   @Input({ title: '写作风格', type: 'text', defaultValue: '轻松幽默、节奏明快' })

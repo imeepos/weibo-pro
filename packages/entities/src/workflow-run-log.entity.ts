@@ -8,13 +8,13 @@ import { Entity } from './decorator';
 
 /**
  * NodeEvent 类型枚举
- * - node_running: 节点开始执行
+ * - node_runing: 节点开始执行
  * - node_emit: 节点输出属性值
  * - node_success: 节点执行成功
  * - node_fail: 节点执行失败
  */
 export enum NodeEventType {
-  RUNNING = 'node_running',
+  RUNNING = 'node_runing',
   EMIT = 'node_emit',
   SUCCESS = 'node_success',
   FAIL = 'node_fail',
@@ -50,7 +50,7 @@ export class WorkflowRunLogEntity {
   @Column({ type: 'varchar', length: 128, nullable: true })
   property?: string;
 
-  /** node_emit: 输出值 | node_running/success/fail: INode 数据 */
+  /** node_emit: 输出值 | node_runing/success/fail: INode 数据 */
   @Column({ type: 'jsonb', nullable: true })
   data?: unknown;
 

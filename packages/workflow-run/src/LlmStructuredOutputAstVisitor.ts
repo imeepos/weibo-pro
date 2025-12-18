@@ -3,6 +3,7 @@ import { Handler, INodeOutputMetadata, NodeEvent, setAstError, WorkflowGraphAst 
 import { LlmStructuredOutputAst } from "@sker/workflow-ast";
 import { Observable, from } from "rxjs";
 import { concatMap, mergeMap } from "rxjs/operators";
+import { parse as parseWithHarmony } from '@sker/json-harmony';
 import { useLlmModel } from "./llm-client";
 
 const buildJsonPrompt = (outputs: INodeOutputMetadata[]) => {
@@ -52,7 +53,13 @@ export class LlmStructuredOutputAstVisitor {
                     const content = typeof response.content === 'string' ? response.content : JSON.stringify(response.content);
 
                     const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, content];
-                    const result = JSON.parse(jsonMatch[1]!.trim()) as Record<string, unknown>;
+                    const parseResult = parseWithHarmony(jsonMatch[1]!.trim());
+
+                    if (typeof parseResult.data !== 'object' || parseResult.data === null) {
+                        throw new Error('LLM 返回的 JSON 格式无效，无法解析为结构化数据');
+                    }
+
+                    const result = parseResult.data as Record<string, unknown>;
 
                     const data: Record<string, unknown> = {};
                     for (const output of outputs) {

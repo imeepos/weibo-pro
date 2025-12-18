@@ -21,7 +21,6 @@ import {
   Edit3,
   Eye,
   Zap,
-  Database,
   FileCode,
   Bug,
 } from 'lucide-react'
@@ -49,7 +48,6 @@ export interface WorkflowMenubarProps {
   onSchedule?: () => void
   onScheduleList?: () => void
   onRunHistory?: () => void
-  onEventStoreToggle?: (enabled: boolean) => void
 
   // 视图控制
   onZoomIn?: () => void
@@ -70,7 +68,6 @@ export interface WorkflowMenubarProps {
   // 状态
   isRunning?: boolean
   isSaving?: boolean
-  eventStoreEnabled?: boolean
 
   // 样式
   className?: string
@@ -98,7 +95,6 @@ export const WorkflowMenubar: React.FC<WorkflowMenubarProps> = ({
   onSchedule,
   onScheduleList,
   onRunHistory,
-  onEventStoreToggle,
   onZoomIn,
   onZoomOut,
   onFitView,
@@ -111,7 +107,6 @@ export const WorkflowMenubar: React.FC<WorkflowMenubarProps> = ({
   canRedo = false,
   isRunning = false,
   isSaving = false,
-  eventStoreEnabled = false,
   className,
 }) => {
   return (
@@ -251,7 +246,7 @@ export const WorkflowMenubar: React.FC<WorkflowMenubarProps> = ({
       )}
 
       {/* 运行菜单 */}
-      {(onRun || onDebugRun || onCancel || onSchedule || onScheduleList || onRunHistory || onEventStoreToggle) && (
+      {(onRun || onDebugRun || onCancel || onSchedule || onScheduleList || onRunHistory) && (
         <MenubarMenu>
           <MenubarTrigger>
             <Zap className="mr-1.5 h-3.5 w-3.5" />
@@ -282,7 +277,7 @@ export const WorkflowMenubar: React.FC<WorkflowMenubarProps> = ({
                 调试运行工作流
               </MenubarItem>
             )}
-            {(onSchedule || onScheduleList || onRunHistory || onEventStoreToggle) && (onRun || onDebugRun || onCancel) && (
+            {(onSchedule || onScheduleList || onRunHistory) && (onRun || onDebugRun || onCancel) && (
               <MenubarSeparator />
             )}
             {onSchedule && (
@@ -301,17 +296,6 @@ export const WorkflowMenubar: React.FC<WorkflowMenubarProps> = ({
               <MenubarItem onSelect={onRunHistory}>
                 <History className="mr-2 h-4 w-4" />
                 运行历史
-              </MenubarItem>
-            )}
-            {onEventStoreToggle && (
-              <MenubarItem onSelect={() => onEventStoreToggle(!eventStoreEnabled)}>
-                <Database
-                  className={cn(
-                    "mr-2 h-4 w-4",
-                    eventStoreEnabled && "text-primary"
-                  )}
-                />
-                {eventStoreEnabled ? '关闭事件存储' : '开启事件存储'}
               </MenubarItem>
             )}
           </MenubarContent>

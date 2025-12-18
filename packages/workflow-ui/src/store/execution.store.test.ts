@@ -157,15 +157,15 @@ describe('Execution Store', () => {
       store.recordNodeComplete('node-1', recordId1, 'success')
       store.recordNodeComplete('node-1', recordId2, 'fail')
 
-      const history = store.getNodeHistory('node-1')
+      // 重新获取状态，因为 getState() 返回的是快照
+      const history = useExecutionStore.getState().nodeHistory['node-1'] ?? []
       expect(history).toHaveLength(2)
       expect(history![0]!.status).toBe('fail')
       expect(history![1]!.status).toBe('success')
     })
 
     it('应该返回空数组如果节点没有历史', () => {
-      const { getNodeHistory } = useExecutionStore.getState()
-      const history = getNodeHistory('unknown-node')
+      const history = useExecutionStore.getState().nodeHistory['unknown-node'] ?? []
 
       expect(history).toEqual([])
     })

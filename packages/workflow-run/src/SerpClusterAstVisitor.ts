@@ -3,6 +3,7 @@ import { Handler, NodeEvent, setAstError, WorkflowGraphAst } from "@sker/workflo
 import { SerpClusterAst } from "@sker/workflow-ast";
 import { Observable, from } from "rxjs";
 import { concatMap, mergeMap } from "rxjs/operators";
+import { parse as parseWithHarmony } from '@sker/json-harmony';
 import { useLlmModel } from "./llm-client";
 
 const SYSTEM_PROMPT = `你是搜索结果分析器，负责将搜索引擎返回的结果分组为有意义的集群。
@@ -65,12 +66,17 @@ export class SerpClusterAstVisitor {
                     const content = typeof response.content === 'string' ? response.content : JSON.stringify(response.content);
 
                     const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, content];
-                    const result = JSON.parse(jsonMatch[1]!.trim());
+                    const parseResult = parseWithHarmony(jsonMatch[1]!.trim());
 
                     if (abortController.signal.aborted) {
                         throw new Error('工作流已取消');
                     }
 
+                    if (typeof parseResult.data !== 'object' || parseResult.data === null) {
+                        throw new Error('LLM 返回的 JSON 格式无效，无法解析为结构化数据');
+                    }
+
+                    const result = parseResult.data as any;
                     ast.clusters = result.clusters || [];
 
                     return [

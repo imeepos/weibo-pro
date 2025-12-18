@@ -995,8 +995,6 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
               showToast('error', '请先保存工作流', '只有保存的工作流才能查看运行历史')
             }
           }}
-          onEventStoreToggle={handleEventStoreToggle}
-          eventStoreEnabled={eventStoreEnabled}
           onZoomIn={handleZoomIn}
           onZoomOut={handleZoomOut}
           onFitView={handleFitView}

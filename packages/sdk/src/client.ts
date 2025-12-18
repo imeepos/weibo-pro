@@ -96,6 +96,7 @@ function createControllerInstance<T>(controllerClass: new () => T, axiosInstance
                                     }
 
                                     const decoder = new TextDecoder();
+                                    let buffer = ''; // 消息缓冲区，用于处理跨 chunk 的数据行
 
                                     function read() {
                                         reader!.read().then(({ done, value }) => {
@@ -104,8 +105,13 @@ function createControllerInstance<T>(controllerClass: new () => T, axiosInstance
                                                 return;
                                             }
 
-                                            const chunk = decoder.decode(value);
-                                            const lines = chunk.split('\n');
+                                            // 将新数据追加到缓冲区
+                                            buffer += decoder.decode(value, { stream: true });
+
+                                            // 按行切分，但保留最后一个不完整的行
+                                            const lines = buffer.split('\n');
+                                            // 最后一个元素可能是不完整的行，保留在缓冲区
+                                            buffer = lines.pop() || '';
 
                                             for (const line of lines) {
                                                 const trimmedLine = line.trim();
@@ -116,9 +122,7 @@ function createControllerInstance<T>(controllerClass: new () => T, axiosInstance
                                                 }
 
                                                 // 跳过 SSE 注释行（心跳等）
-                                                // SSE 规范：冒号开头的行是注释，应该被忽略
                                                 if (trimmedLine.startsWith(':')) {
-                                                    // 心跳消息，保持连接活跃
                                                     continue;
                                                 }
 
@@ -129,12 +133,10 @@ function createControllerInstance<T>(controllerClass: new () => T, axiosInstance
                                                         const data = JSON.parse(jsonStr);
                                                         subscriber.next(data);
                                                     } catch (error) {
-                                                        // JSON 解析失败，可能是数据块不完整
-                                                        // 记录警告但不中断连接
+                                                        // JSON 解析失败时记录完整的行内容以便调试
                                                         console.warn('[SSE] JSON 解析失败，跳过该消息:', trimmedLine.slice(0, 100), error);
                                                     }
                                                 }
-                                                // 其他 SSE 字段（event:, id:, retry:）暂时忽略
                                             }
 
                                             read();

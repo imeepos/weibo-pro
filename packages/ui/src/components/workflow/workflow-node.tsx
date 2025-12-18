@@ -310,10 +310,12 @@ const WorkflowNodeComponent = ({
               )
             )}
 
-            {/* 自定义内容 */}
-            <div className="relative overflow-auto w-full max-h-[260px] px-2">
-              {children}
-            </div>
+            {/* 自定义内容 - 折叠时不渲染以优化性能和高度计算 */}
+            {!collapsed && (
+              <div className="relative overflow-auto w-full max-h-[260px] px-2">
+                {children}
+              </div>
+            )}
           </div>
         </CollapsibleContent>
       </div>

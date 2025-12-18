@@ -58,22 +58,16 @@ interface ExecutionState {
   recordNodeStart: (nodeId: string) => string
   /** 记录节点执行完成 */
   recordNodeComplete: (nodeId: string, recordId: string, status: IAstStates, error?: { message: string }, outputs?: Record<string, unknown>) => void
-  /** 获取节点执行历史 */
-  getNodeHistory: (nodeId: string) => NodeExecutionRecord[]
 
   /** 更新节点流式数据 */
   updateStreamingData: (nodeId: string, delta: string, accumulated: string) => void
   /** 清空节点流式数据 */
   clearStreamingData: (nodeId: string) => void
-  /** 获取节点流式数据 */
-  getStreamingData: (nodeId: string) => StreamingData | undefined
 
   /** 更新节点进度 */
   updateNodeProgress: (nodeId: string, progress: Omit<NodeProgressData, 'timestamp'>) => void
   /** 清空节点进度 */
   clearNodeProgress: (nodeId: string) => void
-  /** 获取节点进度 */
-  getNodeProgress: (nodeId: string) => NodeProgressData | undefined
 
   /** 重置执行状态 */
   resetExecution: () => void
@@ -150,8 +144,6 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
     })
   },
 
-  getNodeHistory: (nodeId) => get().nodeHistory[nodeId] || [],
-
   updateStreamingData: (nodeId, delta, accumulated) =>
     set((prev) => ({
       streamingData: {
@@ -165,8 +157,6 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
       const { [nodeId]: _, ...rest } = prev.streamingData
       return { streamingData: rest }
     }),
-
-  getStreamingData: (nodeId) => get().streamingData[nodeId],
 
   updateNodeProgress: (nodeId, progress) =>
     set((prev) => {
@@ -184,8 +174,6 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
       const { [nodeId]: _, ...rest } = prev.nodeProgress
       return { nodeProgress: rest }
     }),
-
-  getNodeProgress: (nodeId) => get().nodeProgress[nodeId],
 
   resetExecution: () =>
     set({
