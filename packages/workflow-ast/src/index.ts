@@ -10,6 +10,7 @@ export { WeiboKeywordSearchAst } from './WeiboKeywordSearchAst';
 export { PostContextCollectorAst } from './PostContextCollectorAst';
 export { PostNLPAnalyzerAst } from './PostNLPAnalyzerAst';
 export { EventAutoCreatorAst } from './EventAutoCreatorAst';
+export { EventAst } from './EventAst';
 export * from './sentiment';
 // 微博登录 AST
 export { WeiboLoginAst } from './WeiboLoginAst';
@@ -33,6 +34,8 @@ export { WeiboAccountPickAst } from './WeiboAccountPickAst';
 
 export { ShareAst } from './ShareAst';
 export type { ChatMessage } from './ShareAst';
+
+export { PropertySelectorAst } from './PropertySelectorAst';
 
 
 // 循环群聊节点

@@ -258,28 +258,49 @@ export class ChapterGenerationService {
             return throwError(() => new Error('流式模式：LLM 未生成任何内容，rawText 为空'));
           }
 
-          return this.extractStructuredContent(baseModel, rawText, signal, ExtractionSchema);
-        }),
-        map((parsed) => this.validateAndCleanContent(parsed, nextChapterNumber, existingTitles)),
-        concatMap(({ chapter, attempt }) => this.performQualityCheck(ast, chapter, attempt, chapters, signal)),
-        concatMap(({ chapter, quality, attempt }) => {
-          // ✅ 检查质量是否达标，如果达标则立即保存
-          const qualityPassed = quality.score >= ast.minQualityScore;
+          // 先对原始文本进行质量检查
+          return from(this.qualityService.checkRawText(rawText, nextChapterNumber, chapters, ast.wordCount, signal)).pipe(
+            concatMap((quality) => {
+              console.log(`[ChapterGeneration] 原始文本质检完成，评分: ${quality.score}/${ast.minQualityScore}`);
 
-          if (qualityPassed) {
-            console.log(`\n✅ [ChapterGeneration] 章节质量合格`);
-            console.log(`   评分: ${quality.score}/${ast.minQualityScore}`);
-            console.log(`   章节: 第${chapter.chapterNumber}章 - ${chapter.title}`);
-            this.updateAstState(ast, chapter, nextChapterNumber);
-          } else {
-            console.log(`\n❌ [ChapterGeneration] 章节质量不合格，将重试`);
-            console.log(`   评分: ${quality.score}/${ast.minQualityScore}`);
-            console.log(`   问题: ${quality.issues.map(i => i.description).join('; ')}`);
-            console.log(`   建议: ${quality.suggestions.slice(0, 2).join('; ')}`);
-          }
+              // 质量不合格，返回需要重试的状态
+              if (quality.score < ast.minQualityScore) {
+                console.log(`\n❌ [ChapterGeneration] 原始文本质量不合格，将重试`);
+                console.log(`   评分: ${quality.score}/${ast.minQualityScore}`);
+                console.log(`   问题: ${quality.issues.map(i => i.description).join('; ')}`);
+                console.log(`   建议: ${quality.suggestions.slice(0, 2).join('; ')}`);
 
-          // 评估质量并返回状态
-          return of(this.evaluateQuality(ast, chapter, quality, attempt));
+                const improvementHints = this.promptBuilder.buildImprovementHints(quality);
+                return of({
+                  result: null,
+                  improvementHints,
+                  attempt: state.attempt + 1,
+                  allAttempts: []
+                });
+              }
+
+              // 质量合格，提取结构化信息（带重试）
+              console.log(`\n✅ [ChapterGeneration] 原始文本质量合格，开始提取结构化信息`);
+              console.log(`   评分: ${quality.score}/${ast.minQualityScore}`);
+
+              return this.extractStructuredContentWithRetry(baseModel, rawText, signal, ExtractionSchema, 3).pipe(
+                map((parsed) => this.validateAndCleanContent(parsed, nextChapterNumber, existingTitles)),
+                map(({ chapter }) => {
+                  // 质量已经检查过，直接保存
+                  console.log(`\n✅ [ChapterGeneration] 结构化提取成功`);
+                  console.log(`   章节: 第${chapter.chapterNumber}章 - ${chapter.title}`);
+                  this.updateAstState(ast, chapter, nextChapterNumber);
+
+                  return {
+                    result: { chapter, quality, attempt: state.attempt },
+                    improvementHints: '',
+                    attempt: ast.maxRewriteRetries ?? 2,
+                    allAttempts: []
+                  };
+                })
+              );
+            })
+          );
         }),
         catchError((error) => this.handleTitleDuplicate(error, state))
       );
@@ -296,28 +317,49 @@ export class ChapterGenerationService {
           return throwError(() => new Error('LLM 未生成任何内容，rawText 为空'));
         }
 
-        return this.extractStructuredContent(baseModel, rawText, signal, ExtractionSchema);
-      }),
-      map((parsed) => this.validateAndCleanContent(parsed, nextChapterNumber, existingTitles)),
-      concatMap(({ chapter, attempt }) => this.performQualityCheck(ast, chapter, attempt, chapters, signal)),
-      concatMap(({ chapter, quality, attempt }) => {
-        // ✅ 检查质量是否达标，如果达标则立即保存
-        const qualityPassed = quality.score >= ast.minQualityScore;
+        // 先对原始文本进行质量检查
+        return from(this.qualityService.checkRawText(rawText, nextChapterNumber, chapters, ast.wordCount, signal)).pipe(
+          concatMap((quality) => {
+            console.log(`[ChapterGeneration] 原始文本质检完成，评分: ${quality.score}/${ast.minQualityScore}`);
 
-        if (qualityPassed) {
-          console.log(`\n✅ [ChapterGeneration] 章节质量合格`);
-          console.log(`   评分: ${quality.score}/${ast.minQualityScore}`);
-          console.log(`   章节: 第${chapter.chapterNumber}章 - ${chapter.title}`);
-          this.updateAstState(ast, chapter, nextChapterNumber);
-        } else {
-          console.log(`\n❌ [ChapterGeneration] 章节质量不合格，将重试`);
-          console.log(`   评分: ${quality.score}/${ast.minQualityScore}`);
-          console.log(`   问题: ${quality.issues.map(i => i.description).join('; ')}`);
-          console.log(`   建议: ${quality.suggestions.slice(0, 2).join('; ')}`);
-        }
+            // 质量不合格，返回需要重试的状态
+            if (quality.score < ast.minQualityScore) {
+              console.log(`\n❌ [ChapterGeneration] 原始文本质量不合格，将重试`);
+              console.log(`   评分: ${quality.score}/${ast.minQualityScore}`);
+              console.log(`   问题: ${quality.issues.map(i => i.description).join('; ')}`);
+              console.log(`   建议: ${quality.suggestions.slice(0, 2).join('; ')}`);
 
-        // 评估质量并返回状态
-        return of(this.evaluateQuality(ast, chapter, quality, attempt));
+              const improvementHints = this.promptBuilder.buildImprovementHints(quality);
+              return of({
+                result: null,
+                improvementHints,
+                attempt: state.attempt + 1,
+                allAttempts: []
+              });
+            }
+
+            // 质量合格，提取结构化信息（带重试）
+            console.log(`\n✅ [ChapterGeneration] 原始文本质量合格，开始提取结构化信息`);
+            console.log(`   评分: ${quality.score}/${ast.minQualityScore}`);
+
+            return this.extractStructuredContentWithRetry(baseModel, rawText, signal, ExtractionSchema, 3).pipe(
+              map((parsed) => this.validateAndCleanContent(parsed, nextChapterNumber, existingTitles)),
+              map(({ chapter }) => {
+                // 质量已经检查过，直接保存
+                console.log(`\n✅ [ChapterGeneration] 结构化提取成功`);
+                console.log(`   章节: 第${chapter.chapterNumber}章 - ${chapter.title}`);
+                this.updateAstState(ast, chapter, nextChapterNumber);
+
+                return {
+                  result: { chapter, quality, attempt: state.attempt },
+                  improvementHints: '',
+                  attempt: ast.maxRewriteRetries ?? 2,
+                  allAttempts: []
+                };
+              })
+            );
+          })
+        );
       }),
       catchError((error) => this.handleTitleDuplicate(error, state))
     );
@@ -413,6 +455,49 @@ export class ChapterGenerationService {
   }
 
   /**
+   * 提取结构化内容（带重试）
+   * 最多重试 maxRetries 次，每次重试间隔递增
+   */
+  private extractStructuredContentWithRetry(
+    baseModel: ChatOpenAI<ChatOpenAICallOptions>,
+    rawText: string,
+    signal: AbortSignal,
+    ExtractionSchema: z.ZodObject<z.ZodRawShape>,
+    maxRetries: number,
+    currentAttempt: number = 1
+  ): Observable<ParsedChapter> {
+    console.log(`[extractStructuredContentWithRetry] 开始第${currentAttempt}次提取尝试`);
+
+    return this.extractStructuredContent(baseModel, rawText, signal, ExtractionSchema).pipe(
+      catchError((error) => {
+        console.error(`[extractStructuredContentWithRetry] 第${currentAttempt}次提取失败:`, error.message);
+
+        if (currentAttempt >= maxRetries) {
+          console.error(`[extractStructuredContentWithRetry] 已达到最大重试次数 ${maxRetries}，放弃提取`);
+          return throwError(() => new Error(`结构化提取失败，已重试 ${maxRetries} 次：${error.message}`));
+        }
+
+        // 指数退避：1秒、2秒、4秒
+        const backoffDelay = 1000 * Math.pow(2, currentAttempt - 1);
+        console.log(`[extractStructuredContentWithRetry] ${backoffDelay}ms 后进行第${currentAttempt + 1}次尝试...`);
+
+        return timer(backoffDelay).pipe(
+          concatMap(() =>
+            this.extractStructuredContentWithRetry(
+              baseModel,
+              rawText,
+              signal,
+              ExtractionSchema,
+              maxRetries,
+              currentAttempt + 1
+            )
+          )
+        );
+      })
+    );
+  }
+
+  /**
    * 提取结构化内容
    * 使用 json-harmony 优雅地解析 LLM 返回的文本
    *
@@ -445,7 +530,14 @@ export class ChapterGenerationService {
     return from(baseModel.invoke([
       {
         role: 'system',
-        content: '你是一个文本结构化提取专家，精确提取小说章节的元数据。必须以标准 JSON 格式返回结果。'
+        content: `你是一个文本结构化提取专家，精确提取小说章节的元数据。
+
+**严格要求**：
+1. 只返回 JSON 对象，不要有任何其他文字说明
+2. JSON 必须完整且格式正确
+3. 使用标准 JSON 格式（双引号、正确的逗号）
+4. 不要截断 JSON，确保所有字段都完整
+5. 直接输出 JSON，可以使用 \`\`\`json 代码块包裹`
       },
       { role: 'user', content: extractionPrompt }
     ], { signal })).pipe(
@@ -469,6 +561,33 @@ export class ChapterGenerationService {
         console.log(`[extractStructuredContent] json-harmony 解析成功`);
         console.log(`[extractStructuredContent] 使用的恢复策略: ${parseResult.statistics.recoveryStrategiesUsed.join(', ')}`);
         console.log(`[extractStructuredContent] 解析耗时: ${parseResult.statistics.parseTimeMs}ms`);
+
+        // 检查 PreserveAsString 策略：如果返回字符串，尝试手动提取 JSON
+        if (typeof parseResult.data === 'string') {
+          console.warn(`[extractStructuredContent] json-harmony 降级为 PreserveAsString，尝试手动提取 JSON`);
+          console.log(`[extractStructuredContent] 字符串内容: ${parseResult.data.slice(0, 500)}`);
+
+          // 尝试手动提取 JSON（去除代码块标记、前后空白等）
+          let jsonText = parseResult.data.trim();
+
+          // 移除 Markdown 代码块标记
+          const codeBlockMatch = jsonText.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+          if (codeBlockMatch?.[1]) {
+            jsonText = codeBlockMatch[1].trim();
+            console.log(`[extractStructuredContent] 提取代码块后: ${jsonText.slice(0, 300)}`);
+          }
+
+          // 尝试标准 JSON 解析
+          try {
+            const manuallyParsed = JSON.parse(jsonText);
+            console.log(`[extractStructuredContent] 手动解析成功`);
+            parseResult.data = manuallyParsed;
+          } catch (parseError) {
+            console.error(`[extractStructuredContent] 手动解析失败:`, parseError);
+            console.error(`[extractStructuredContent] 无法解析的文本: ${jsonText.slice(0, 500)}`);
+            throw new Error('LLM 返回的 JSON 格式无效，无法解析为结构化数据，将触发重试');
+          }
+        }
 
         // 数据清洗：修复 LLM 可能返回的格式错误
         const sanitizedData = this.sanitizeChapterData(parseResult.data);
@@ -703,11 +822,12 @@ export class ChapterGenerationService {
     // 检查章节是否已经被保存
     const existingIndex = ast.previousChapters.findIndex(ch => ch.chapterNumber === nextChapterNumber);
     if (existingIndex >= 0) {
-      console.log(`[ChapterGeneration] 章节 ${nextChapterNumber} 已存在于 previousChapters，跳过保存（或覆盖）`);
-      // 注意：这里仍然调用 updateAstState，因为它会覆盖现有章节（如果最佳尝试更好）
-      // 但是由于我们已经在 generateSingleAttempt 中保存了质量合格的章节，这里通常不会执行
+      const existingChapter = ast.previousChapters[existingIndex];
+      console.log(`[ChapterGeneration] 章节 ${nextChapterNumber} 已存在，将覆盖为新版本`);
+      console.log(`[ChapterGeneration] 旧版本: ${existingChapter?.title}`);
+      console.log(`[ChapterGeneration] 新版本: ${chapterData.title}`);
     } else {
-      console.log(`[ChapterGeneration] 章节 ${nextChapterNumber} 不存在于 previousChapters，现在保存`);
+      console.log(`[ChapterGeneration] 章节 ${nextChapterNumber} 不存在，现在保存`);
     }
 
     this.updateAstState(ast, chapterData, nextChapterNumber);
@@ -718,8 +838,10 @@ export class ChapterGenerationService {
   private updateAstState(ast: StoryWeaverAst, chapterData: ChapterData, nextChapterNumber: number): void {
     const existingIndex = ast.previousChapters.findIndex(ch => ch.chapterNumber === nextChapterNumber);
     if (existingIndex >= 0) {
+      console.log(`[updateAstState] 覆盖章节 ${nextChapterNumber}，索引 ${existingIndex}`);
       ast.previousChapters[existingIndex] = chapterData;
     } else {
+      console.log(`[updateAstState] 新增章节 ${nextChapterNumber}，当前共 ${ast.previousChapters.length + 1} 章`);
       ast.previousChapters.push(chapterData);
     }
 

@@ -33,13 +33,13 @@ export class EventQueryService {
   ) {}
 
   async getEventList(
-    timeRange: TimeRange,
+    timeRange?: TimeRange,
     params?: { category?: string; search?: string; limit?: number }
   ): Promise<EventListItem[]> {
     const cacheKey = CacheService.buildKey(
       CACHE_KEYS.EVENT_DETAIL,
       'list',
-      timeRange,
+      timeRange || 'all',
       params?.category || '',
       params?.search || ''
     );
@@ -50,7 +50,9 @@ export class EventQueryService {
         const events = await findEventList(timeRange, params);
         const eventIds = events.map((e) => e.id);
 
-        const allStatistics = await this.getStatisticsBatch(eventIds, timeRange);
+        // 如果没有指定时间范围，使用默认的 24h 获取统计数据
+        const statsTimeRange = timeRange || '24h';
+        const allStatistics = await this.getStatisticsBatch(eventIds, statsTimeRange);
         const statsMap = new Map(allStatistics.map((s) => [s.event_id, s]));
 
         return events.map((event) => {

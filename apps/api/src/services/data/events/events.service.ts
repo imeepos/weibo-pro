@@ -27,7 +27,7 @@ export class EventsService {
   ) { }
 
   async getEventList(
-    timeRange: TimeRange,
+    timeRange?: TimeRange,
     params?: { category?: string; search?: string; limit?: number }
   ): Promise<EventListItem[]> {
     return this.queryService.getEventList(timeRange, params);

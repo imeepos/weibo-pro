@@ -1,8 +1,11 @@
 ## 需求
 
-修复bug: 当工作流运行成功后，再次点击运行，提示：成功执行0个节点
-刷新页面，点击执行，正常运行
+开发一个 属性选择器 节点
 
+功能：
+0. 一个属性选择器 选择一个key 将结构体中的数据提出来，支持 parent.key.key2 提取深层次的数据，如果为空，不触发 emit
+1. 实现 @sker/workflow-run @sker/workflow-ui @sker/workflow-browser @sker/workflow-ast
+2. 如果涉及到布局和样式 统一放到 @sker/ui 尽量复用现有的组件 支持多主题
 
 ## 子包的作用 
 

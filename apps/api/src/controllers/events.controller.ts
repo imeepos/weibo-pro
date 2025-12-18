@@ -14,7 +14,8 @@ export class EventsController implements sdk.EventsController{
 
   @Get('list')
   async getEventList(@Query('timeRange') timeRange?: string) {
-    const validTimeRange = this.validateTimeRange(timeRange);
+    // 如果传了 timeRange 参数，进行验证；否则传 undefined 表示不过滤时间
+    const validTimeRange = timeRange ? this.validateTimeRange(timeRange) : undefined;
     return this.eventsService.getEventList(validTimeRange);
   }
 

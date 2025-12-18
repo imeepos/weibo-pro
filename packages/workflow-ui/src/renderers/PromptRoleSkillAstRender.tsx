@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Injectable, root } from '@sker/core';
 import { Render, Setting } from '@sker/workflow';
 import { PromptRoleSkillAst } from '@sker/workflow-ast';
 import { PromptRolesController, type PromptRoleWithSkills } from '@sker/sdk';
 import type { PromptSkillType } from '@sker/entities';
+import { useAsyncData } from '../hooks';
 
 const SkillTypeColors: Record<PromptSkillType, string> = {
   thought: 'bg-blue-500/20 text-blue-400',
@@ -110,17 +111,14 @@ interface RoleSettingProps {
 }
 
 const RoleSetting: React.FC<RoleSettingProps> = ({ ast, onPropertyChange }) => {
-  const [roles, setRoles] = useState<PromptRoleWithSkills[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: roles, loading } = useAsyncData({
+    fetcher: async () => {
+      const controller = root.get(PromptRolesController);
+      return await controller.findAll();
+    },
+    deps: []
+  });
   const [search, setSearch] = useState('');
-
-  useEffect(() => {
-    const controller = root.get(PromptRolesController);
-    controller.findAll().then((list) => {
-      setRoles(list);
-      setLoading(false);
-    }).catch(() => setLoading(false));
-  }, []);
 
   const handleSelect = (roleId: string) => {
     onPropertyChange?.('roleId', roleId);
@@ -130,10 +128,10 @@ const RoleSetting: React.FC<RoleSettingProps> = ({ ast, onPropertyChange }) => {
     return <div className="py-4 text-center text-muted-foreground text-sm">加载中...</div>;
   }
 
-  const selectedRole = roles.find(r => r.id === ast.roleId);
-  const filteredRoles = search
+  const selectedRole = roles?.find(r => r.id === ast.roleId);
+  const filteredRoles = search && roles
     ? roles.filter(r => r.name.toLowerCase().includes(search.toLowerCase()) || r.description?.toLowerCase().includes(search.toLowerCase()))
-    : roles;
+    : roles || [];
 
   return (
     <div className="space-y-3 p-3">

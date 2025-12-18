@@ -11,3 +11,5 @@ export {
   useFailedNodes
 } from './useWorkflowExecution'
 export { useStreamingExecution } from './useStreamingExecution'
+export { useAsyncData } from './useAsyncData'
+export type { UseAsyncDataOptions, UseAsyncDataReturn } from './useAsyncData'

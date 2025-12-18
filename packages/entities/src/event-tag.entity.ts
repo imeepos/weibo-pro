@@ -17,8 +17,6 @@ export class EventTagEntity {
   })
   id!: string;
 
-  // @OneToOne()  // 暂时移除空的关联定义，后续添加正确的关联
-
   @Column({ type: 'varchar', length: 100, unique: true })
   name!: string;
 

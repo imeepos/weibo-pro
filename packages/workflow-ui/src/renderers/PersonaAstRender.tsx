@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Injectable, root } from '@sker/core';
 import { Render, Setting } from '@sker/workflow';
 import { PersonaAst, RetrievedMemory } from '@sker/workflow-ast';
 import { PersonaController } from '@sker/sdk';
 import { PersonaSelector, type PersonaItem } from '@sker/ui/components/ui';
+import { useAsyncData } from '../hooks';
 
 const MemoryTypeColors: Record<string, string> = {
   fact: 'bg-blue-500/20 text-blue-400',
@@ -108,25 +109,23 @@ interface PersonaSettingProps {
 }
 
 const PersonaSetting: React.FC<PersonaSettingProps> = ({ ast, onPropertyChange }) => {
-  const [personas, setPersonas] = useState<PersonaItem[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const controller = root.get(PersonaController);
-    controller.getPersonaList().then((list) => {
-      setPersonas(list.map(p => ({
+  const { data: personas, loading } = useAsyncData({
+    fetcher: async () => {
+      const controller = root.get(PersonaController);
+      const list = await controller.getPersonaList();
+      return list.map(p => ({
         id: p.id,
         name: p.name,
         avatar: p.avatar,
         description: p.description,
         memoryCount: p.memoryCount
-      })));
-      setLoading(false);
-    }).catch(() => setLoading(false));
-  }, []);
+      }));
+    },
+    deps: []
+  });
 
   const handleSelect = (personaId: string) => {
-    const persona = personas.find(p => p.id === personaId);
+    const persona = personas?.find(p => p.id === personaId);
     if (persona) {
       onPropertyChange?.('roleId', persona.id);
       onPropertyChange?.('personaName', persona.name);
@@ -144,7 +143,7 @@ const PersonaSetting: React.FC<PersonaSettingProps> = ({ ast, onPropertyChange }
 
   return (
     <PersonaSelector
-      personas={personas}
+      personas={personas || []}
       value={ast.roleId}
       onChange={handleSelect}
       placeholder="搜索角色..."

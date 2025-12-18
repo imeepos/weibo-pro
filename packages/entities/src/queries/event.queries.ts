@@ -160,18 +160,23 @@ export const findHotEvents = (timeRange: TimeRange, limit: number = 20): Promise
 
 /** 查询事件列表(支持分类、搜索、分页) */
 export const findEventList = (
-  timeRange: TimeRange = '24h',
+  timeRange?: TimeRange,
   options?: { category?: string; search?: string; limit?: number }
 ) =>
   useEntityManager(async m => {
-    const dateRange = getDateRangeByTimeRange(timeRange);
     let query = m
       .createQueryBuilder(EventEntity, 'event')
       .leftJoinAndSelect('event.category', 'category')
       .where('event.deleted_at IS NULL')
-      .andWhere('event.status = :status', { status: 'active' })
-      .andWhere('event.created_at >= :start', { start: dateRange.start })
-      .andWhere('event.created_at <= :end', { end: dateRange.end });
+      .andWhere('event.status = :status', { status: 'active' });
+
+    // 只有传了 timeRange 才按时间范围过滤
+    if (timeRange) {
+      const dateRange = getDateRangeByTimeRange(timeRange);
+      query = query
+        .andWhere('event.created_at >= :start', { start: dateRange.start })
+        .andWhere('event.created_at <= :end', { end: dateRange.end });
+    }
 
     if (options?.category) {
       query = query.andWhere('category.name = :category', { category: options.category });

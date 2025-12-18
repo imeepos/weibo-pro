@@ -1,4 +1,5 @@
 export * from './EventAutoCreatorAstRender'
+export * from './EventAstRender'
 export * from './PostContextCollectorAstRender'
 export * from './PostNLPAnalyzerAstRender'
 export * from './WeiboAjaxFeedHotTimelineAstRender'
@@ -22,6 +23,7 @@ export * from './StoryWeaverAstRender';
 export * from './TextAreaAstRender';
 export * from './DateAstRender';
 export * from './ShareAstVisitor';
+export * from './PropertySelectorAstRender';
 
 // IS_BUFFER 模式示例
 export * from './CollectorAstRender';

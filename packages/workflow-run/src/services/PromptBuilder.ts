@@ -113,20 +113,20 @@ ${prompts}${pendingCluesHint}`;
   }
 
   buildExtractionPrompt(rawText: string): string {
-    return `请从下面的小说文本中提取结构化元数据（注意：不需要重新输出正文内容，只需标注正文的起止位置）：
+    return `从下面的小说文本中提取结构化元数据（不需要重新输出正文内容，只需标注正文的起止位置）：
 
+---原始文本开始---
 ${rawText}
+---原始文本结束---
 
----
-
-请严格按照以下 JSON 格式返回（必须完全匹配此结构）：
+请严格按照以下 JSON Schema 返回（必须是完整且格式正确的 JSON）：
 
 \`\`\`json
 {
   "title": "章节标题",
   "summary": "章节简介（20-50字）",
-  "contentStartMarker": "正文开头的前20个字",
-  "contentEndMarker": "正文结尾的后20个字",
+  "contentStartMarker": "正文开头的前20个字（用于定位）",
+  "contentEndMarker": "正文结尾的后20个字（用于定位）",
   "clues": [
     {
       "id": "clue_ch17_mirror",
@@ -134,18 +134,23 @@ ${rawText}
       "status": "pending"
     }
   ],
-  "resolvedClueIds": ["clue_ch10_xxx", "clue_ch12_yyy"]
+  "resolvedClueIds": ["clue_ch10_xxx"]
 }
 \`\`\`
 
-**重要说明**：
-- **不要**在 JSON 中包含 content 字段（我们会根据标记从原文提取）
-- contentStartMarker: 正文第一段的前20个字（用于定位正文起始位置）
-- contentEndMarker: 正文最后一段的后20个字（用于定位正文结束位置）
-- 正文不包括：标题（# 开头）、简介、伏笔说明等元数据
-- clues: 数组，每个元素必须是对象（包含 id、description、status 三个字段）
-- resolvedClueIds: 字符串数组，只包含伏笔ID，不是完整描述
-- 如果没有伏笔，可省略 clues 和 resolvedClueIds 字段`;
+**字段说明**：
+- title: 从原文中提取章节标题
+- summary: 用 20-50 字简要概括本章内容
+- contentStartMarker: 复制正文第一段的前 20 个字（不是标题）
+- contentEndMarker: 复制正文最后一段的后 20 个字
+- clues: 如有伏笔，提取为对象数组；如无可省略
+- resolvedClueIds: 如回填了伏笔，提取其 ID；如无可省略
+
+**重要**：
+1. 只返回 JSON，不要有其他解释文字
+2. 确保 JSON 完整，不要截断
+3. 所有字符串用双引号
+4. contentStartMarker 和 contentEndMarker 必须从原文中精确复制`;
   }
 
   private buildToolsHint(): string {
