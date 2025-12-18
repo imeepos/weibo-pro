@@ -15,6 +15,9 @@ export class StoryToolsFactory {
   createChapterTools(chapters: ChapterData[]): StructuredToolInterface[] {
     const listChaptersTool = tool(
       async () => {
+        if (chapters.length === 0) {
+          return '暂无已创作章节';
+        }
         return JSON.stringify(
           chapters.map(ch => ({
             chapterNumber: ch.chapterNumber,
