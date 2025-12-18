@@ -15,7 +15,7 @@ export class PassThroughAst extends Ast {
   @Input({ title: '输入', defaultValue: '' })
   input: any = '';
 
-  @Output({ title: '输出', defaultValue: '' })
+  @Output({ title: '输出', defaultValue: '', isRouter: true })
   output: any = '';
 
   type: 'PassThroughAst' = 'PassThroughAst';

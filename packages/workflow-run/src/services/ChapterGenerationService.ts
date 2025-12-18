@@ -267,11 +267,15 @@ export class ChapterGenerationService {
           const qualityPassed = quality.score >= ast.minQualityScore;
 
           if (qualityPassed) {
-            console.log(`[ChapterGeneration] 章节质量合格（${quality.score}分 >= ${ast.minQualityScore}分），立即保存，章节号: ${chapter.chapterNumber}`);
+            console.log(`\n✅ [ChapterGeneration] 章节质量合格`);
+            console.log(`   评分: ${quality.score}/${ast.minQualityScore}`);
+            console.log(`   章节: 第${chapter.chapterNumber}章 - ${chapter.title}`);
             this.updateAstState(ast, chapter, nextChapterNumber);
-            console.log(`[ChapterGeneration] 章节已保存，当前 previousChapters 长度: ${ast.previousChapters.length}`);
           } else {
-            console.log(`[ChapterGeneration] 章节质量不合格（${quality.score}分 < ${ast.minQualityScore}分），不保存，将触发重试`);
+            console.log(`\n❌ [ChapterGeneration] 章节质量不合格，将重试`);
+            console.log(`   评分: ${quality.score}/${ast.minQualityScore}`);
+            console.log(`   问题: ${quality.issues.map(i => i.description).join('; ')}`);
+            console.log(`   建议: ${quality.suggestions.slice(0, 2).join('; ')}`);
           }
 
           // 评估质量并返回状态
@@ -301,11 +305,15 @@ export class ChapterGenerationService {
         const qualityPassed = quality.score >= ast.minQualityScore;
 
         if (qualityPassed) {
-          console.log(`[ChapterGeneration] 章节质量合格（${quality.score}分 >= ${ast.minQualityScore}分），立即保存，章节号: ${chapter.chapterNumber}`);
+          console.log(`\n✅ [ChapterGeneration] 章节质量合格`);
+          console.log(`   评分: ${quality.score}/${ast.minQualityScore}`);
+          console.log(`   章节: 第${chapter.chapterNumber}章 - ${chapter.title}`);
           this.updateAstState(ast, chapter, nextChapterNumber);
-          console.log(`[ChapterGeneration] 章节已保存，当前 previousChapters 长度: ${ast.previousChapters.length}`);
         } else {
-          console.log(`[ChapterGeneration] 章节质量不合格（${quality.score}分 < ${ast.minQualityScore}分），不保存，将触发重试`);
+          console.log(`\n❌ [ChapterGeneration] 章节质量不合格，将重试`);
+          console.log(`   评分: ${quality.score}/${ast.minQualityScore}`);
+          console.log(`   问题: ${quality.issues.map(i => i.description).join('; ')}`);
+          console.log(`   建议: ${quality.suggestions.slice(0, 2).join('; ')}`);
         }
 
         // 评估质量并返回状态
