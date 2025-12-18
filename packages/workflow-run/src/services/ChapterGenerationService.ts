@@ -78,10 +78,12 @@ export class ChapterGenerationService {
   ) {}
 
   /**
-   * 使用 RxJS 实现章节生成 + 质检 + 重试的完整流程（支持流式）
-   * 返回 Observable<NodeEvent>，包含：
-   * - node_delta: 实时文本片段（流式模式）
-   * - node_emit: 最终完整章节数据
+   * 简化版章节生成：草稿 → 改进 → 结构化（支持流式）
+   *
+   * 哲学：大道至简
+   * - 第1步：生成草稿
+   * - 第2步：自我改进
+   * - 第3步：提取结构化数据
    */
   generateChapterWithRetry(
     ast: StoryWeaverAst,
@@ -89,7 +91,6 @@ export class ChapterGenerationService {
     signal: AbortSignal,
     enableStreaming: boolean = true
   ): Observable<NodeEvent[] | NodeEvent> {
-    // 定义提取 Schema：只提取元数据 + 正文的起止标记
     const ExtractionSchema = z.object({
       title: z.string().describe('章节标题'),
       summary: z.string().describe('章节简介'),
@@ -104,43 +105,28 @@ export class ChapterGenerationService {
     });
 
     const chapters = (ast.previousChapters || []).filter(ch => {
-      // 过滤掉空章节
       if (!ch.content || ch.content.trim().length === 0) {
         console.warn(`[ChapterGeneration] 过滤空章节 ${ch.chapterNumber}`);
         return false;
       }
 
-      // 过滤掉异常章节（包含 LLM 的"思考过程"而非真实小说内容）
       const suspiciousPatterns = [
-        '我先查看',
-        '让我查看',
-        '我需要了解',
-        '让我先',
-        '暂无明确章节标题',
-        '我先回顾',
-        '我将',
-        '叙述者回顾',
-        '叙述者表示'
+        '我先查看', '让我查看', '我需要了解', '让我先',
+        '暂无明确章节标题', '我先回顾', '我将', '叙述者回顾', '叙述者表示'
       ];
 
       const titleSuspicious = suspiciousPatterns.some(pattern => ch.title.includes(pattern));
       const contentSuspicious = suspiciousPatterns.some(pattern =>
-        ch.content && ch.content.substring(0, 200).includes(pattern) // 只检查前200字
+        ch.content && ch.content.substring(0, 200).includes(pattern)
       );
 
-      if (titleSuspicious || contentSuspicious) {
-        return false;
-      }
-
-      return true;
+      return !titleSuspicious && !contentSuspicious;
     });
+
     const isFirstChapter = chapters.length === 0;
     const nextChapterNumber = isFirstChapter ? 1 : Math.max(...chapters.map(c => c.chapterNumber)) + 1;
-
     const existingTitles = new Set(chapters.map(ch => this.contentValidator.normalizeTitle(ch.title)));
-    // 工具策略：当章节数量 > 10 时启用工具（用于查询前文章节）
-    // ⚠️ 临时修复：由于 useTools=false 时 LLM 不生成内容，暂时始终启用工具
-    const useTools = true; // 原逻辑：chapters.length > 10
+    const useTools = true;
 
     const baseModel = useLlmModel({ model: ast.model, temperature: ast.temperature });
     const model = useTools ? baseModel.bindTools(this.createTools(chapters, ctx, ast.id, useTools)) : baseModel;
@@ -150,48 +136,32 @@ export class ChapterGenerationService {
     const pendingClues = this.contextService.collectPendingClues(chapters);
     const userPrompt = this.promptBuilder.buildUserPrompt(nextChapterNumber, ast.wordCount, prompts, pendingClues);
 
-    // 创建流式事件主题
     const streamEventSubject = new Subject<NodeEvent>();
     const completionSubject = new Subject<void>();
 
-    // 主处理流：重试 + 质检逻辑
-    const mainFlow$ = of({ attempt: 0, improvementHints: '', allAttempts: [] as AttemptResult[] }).pipe(
-      expand((state: GenerationState) => {
-        if (state.attempt >= (ast.maxRewriteRetries || 2)) {
-          return of();
-        }
-
-        return this.generateSingleAttempt(
-          ast,
-          ctx,
-          signal,
-          model,
-          baseModel,
-          systemPrompt,
-          userPrompt,
-          state,
-          nextChapterNumber,
-          existingTitles,
-          ExtractionSchema,
-          chapters,
-          useTools,
-          enableStreaming,
-          streamEventSubject
+    // 简化的三步流程：草稿 → 改进 → 结构化
+    const mainFlow$ = of(null).pipe(
+      concatMap(() => {
+        console.log('\n🌱 [Step 1/3] 生成草稿...');
+        return this.generateDraft(model, systemPrompt, userPrompt, signal, useTools, chapters, ctx, ast, streamEventSubject, enableStreaming);
+      }),
+      concatMap((draftText: string) => {
+        console.log(`\n✅ [Step 1/3] 草稿完成，长度: ${draftText.length}字`);
+        console.log('\n✨ [Step 2/3] 自我改进...');
+        return this.selfRefine(baseModel, draftText, ast.wordCount, signal, ast, streamEventSubject, enableStreaming);
+      }),
+      concatMap((refinedText: string) => {
+        console.log(`\n✅ [Step 2/3] 改进完成，长度: ${refinedText.length}字`);
+        console.log('\n🔍 [Step 3/3] 提取结构化数据...');
+        return this.extractStructuredContentWithRetry(baseModel, refinedText, signal, ExtractionSchema, 3).pipe(
+          map((parsed) => this.validateAndCleanContent(parsed, nextChapterNumber, existingTitles)),
+          map(({ chapter }) => {
+            console.log(`\n✅ [Step 3/3] 完成：第${chapter.chapterNumber}章《${chapter.title}》`);
+            this.updateAstState(ast, chapter, nextChapterNumber);
+            return [this.buildEmitEvent(ast, chapter)];
+          })
         );
       }),
-      scan((acc: GenerationState, curr: GenerationState) => {
-        if (curr.result && curr.result.chapter && curr.result.quality && typeof curr.result.quality.score === 'number') {
-          acc.allAttempts.push(curr.result);
-        }
-
-        return {
-          attempt: typeof curr.attempt === 'number' ? curr.attempt : acc.attempt,
-          improvementHints: curr.improvementHints || '',
-          allAttempts: acc.allAttempts
-        };
-      }, { attempt: 0, improvementHints: '', allAttempts: [] as AttemptResult[] }),
-      last(),
-      map((finalState) => this.selectBestAttempt(finalState, ast, nextChapterNumber)),
       finalize(() => {
         completionSubject.next();
         completionSubject.complete();
@@ -199,7 +169,6 @@ export class ChapterGenerationService {
       })
     );
 
-    // 流式模式：合并实时事件和最终结果
     if (enableStreaming) {
       return merge(
         streamEventSubject.asObservable().pipe(takeUntil(completionSubject)),
@@ -207,8 +176,99 @@ export class ChapterGenerationService {
       );
     }
 
-    // 批量模式：仅返回最终结果
     return mainFlow$;
+  }
+
+  /**
+   * Step 1: 生成草稿（流式）
+   */
+  private generateDraft(
+    model: ChatOpenAI<ChatOpenAICallOptions> | Runnable<BaseLanguageModelInput, AIMessageChunk, ChatOpenAICallOptions>,
+    systemPrompt: string,
+    userPrompt: string,
+    signal: AbortSignal,
+    useTools: boolean,
+    chapters: ChapterData[],
+    ctx: WorkflowGraphAst,
+    ast: StoryWeaverAst,
+    streamEventSubject: Subject<NodeEvent>,
+    enableStreaming: boolean
+  ): Observable<string> {
+    const initialMessages: MessageContent[] = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt }
+    ];
+
+    const tools = useTools ? this.createTools(chapters, ctx, ast.id, useTools) : [];
+
+    if (enableStreaming) {
+      return this.invokeWithStreaming(model, initialMessages, signal, useTools, tools, ast, streamEventSubject);
+    }
+
+    return this.llmInvoker.invokeWithTools(model, initialMessages, signal, useTools, tools);
+  }
+
+  /**
+   * Step 2: 自我改进（流式）
+   */
+  private selfRefine(
+    model: ChatOpenAI<ChatOpenAICallOptions>,
+    draftText: string,
+    wordCount: number,
+    signal: AbortSignal,
+    ast: StoryWeaverAst,
+    streamEventSubject: Subject<NodeEvent>,
+    enableStreaming: boolean
+  ): Observable<string> {
+    const refinePrompt = this.promptBuilder.buildSelfRefinePrompt(draftText, wordCount);
+
+    if (enableStreaming) {
+      let accumulatedText = '';
+      let lastDeltaEmitTime = 0;
+      const DELTA_THROTTLE_MS = 150;
+
+      return this.streamingLlmInvoker.streamWithTools(
+        model,
+        [{ role: 'user', content: refinePrompt }],
+        signal,
+        false,
+        []
+      ).pipe(
+        tap((chunk: StreamChunk) => {
+          if (chunk.type === 'delta' && chunk.delta) {
+            accumulatedText += chunk.delta;
+
+            const now = Date.now();
+            if ((now - lastDeltaEmitTime) >= DELTA_THROTTLE_MS) {
+              streamEventSubject.next({
+                type: 'node_delta',
+                id: ast.id,
+                data: { delta: chunk.delta, accumulated: accumulatedText }
+              });
+              lastDeltaEmitTime = now;
+            }
+          }
+        }),
+        filter((chunk: StreamChunk) => chunk.type === 'complete'),
+        map((chunk: StreamChunk) => {
+          const finalText = chunk.fullText || accumulatedText;
+
+          streamEventSubject.next({
+            type: 'node_delta',
+            id: ast.id,
+            data: { delta: '', accumulated: finalText }
+          });
+
+          return finalText;
+        })
+      );
+    }
+
+    return from(model.invoke([{ role: 'user', content: refinePrompt }], { signal })).pipe(
+      map((aiMessage) => {
+        return typeof aiMessage.content === 'string' ? aiMessage.content : JSON.stringify(aiMessage.content);
+      })
+    );
   }
 
   private generateSingleAttempt(

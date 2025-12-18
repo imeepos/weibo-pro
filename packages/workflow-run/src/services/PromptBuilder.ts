@@ -104,6 +104,29 @@ ${prompts}${pendingCluesHint}`;
     return hints.join('\n');
   }
 
+  buildSelfRefinePrompt(draftText: string, wordCount: number): string {
+    return `你是专业小说编辑。下面是你刚写的草稿，请改进它。
+
+**改进清单**（逐项检查）：
+□ Show Don't Tell：删除"他感到/觉得/明白/震惊"，改用动作、细节
+□ 对话精简：每轮对话≤2句，删除冗余提示语
+□ 删除装饰：删除无意义的比喻和形容词
+□ 分段合理：每300字左右分段
+□ 标点克制：省略号/感叹号不过度使用
+□ 字数控制：${wordCount}字±10%
+
+**要求**：
+- 直接输出改进后的章节，不要解释过程
+- 保留优秀部分，只改进问题部分
+- 输出格式与草稿相同
+
+---草稿开始---
+${draftText}
+---草稿结束---
+
+请输出改进版本：`;
+  }
+
   buildExtractionPrompt(rawText: string): string {
     return `从下面的小说文本中提取结构化元数据（不需要重新输出正文内容，只需标注正文的起止位置）：
 
