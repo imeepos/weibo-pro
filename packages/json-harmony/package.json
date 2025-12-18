@@ -1,0 +1,47 @@
+{
+  "name": "@sker/json-harmony",
+  "version": "0.0.0",
+  "private": true,
+  "description": "在混沌中寻找和谐：优雅地解析损坏的 JSON，自动处理 YAML 混合内容，将无序转化为秩序",
+  "keywords": [
+    "json",
+    "yaml",
+    "parser",
+    "tolerant",
+    "harmony",
+    "recovery",
+    "sker"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "types": "./dist/index.d.ts",
+  "main": "./dist/index.js",
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "claude": "claude --dangerously-skip-permissions",
+    "lint": "eslint . --max-warnings 0",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "yaml": "^2.8.1"
+  },
+  "devDependencies": {
+    "@sker/eslint-config": "workspace:*",
+    "@sker/typescript-config": "workspace:*",
+    "@types/node": "^22.15.3",
+    "eslint": "^9.38.0",
+    "tsup": "^8.4.0",
+    "typescript": "5.9.2",
+    "vitest": "^3.1.3"
+  }
+}

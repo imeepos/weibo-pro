@@ -40,6 +40,7 @@
     "@langchain/tavily": "^1.0.0",
     "@sker/core": "workspace:*",
     "@sker/entities": "workspace:*",
+    "@sker/json-harmony": "workspace:*",
     "@sker/mq": "workspace:*",
     "@sker/nlp": "workspace:*",
     "@sker/redis": "workspace:*",
