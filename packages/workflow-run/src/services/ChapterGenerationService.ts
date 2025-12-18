@@ -385,6 +385,46 @@ export class ChapterGenerationService {
     }
   }
 
+  /**
+   * 保存解析失败的 JSON 文本到 txt 文件，方便调试
+   */
+  private async saveFailedJsonToTxt(failedText: string, error: any): Promise<void> {
+    try {
+      const fs = await import('fs/promises');
+      const path = await import('path');
+
+      // 生成带时间戳的文件名
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `debug-json-parse-failed-${timestamp}.txt`;
+      const debugPath = path.join(process.cwd(), filename);
+
+      // 构造调试信息
+      const debugInfo = [
+        '='.repeat(80),
+        '解析失败的 JSON 文本',
+        '='.repeat(80),
+        '',
+        `时间: ${new Date().toISOString()}`,
+        `错误: ${error.message}`,
+        `错误类型: ${error.name}`,
+        '',
+        '原始文本:',
+        '-'.repeat(80),
+        failedText,
+        '-'.repeat(80),
+        '',
+        '错误堆栈:',
+        error.stack || '无堆栈信息',
+        ''
+      ].join('\n');
+
+      await fs.writeFile(debugPath, debugInfo, 'utf-8');
+      console.log(`[ChapterGeneration] 已保存解析失败的文本到: ${filename}`);
+    } catch (err) {
+      console.error('[ChapterGeneration] 保存失败文本失败:', err);
+    }
+  }
+
   private invokeWithStreaming(
     model: ChatOpenAI<ChatOpenAICallOptions> | Runnable<BaseLanguageModelInput, AIMessageChunk, ChatOpenAICallOptions>,
     initialMessages: MessageContent[],
@@ -609,6 +649,10 @@ export class ChapterGenerationService {
           } catch (parseError) {
             console.error(`[extractStructuredContent] 手动解析失败:`, parseError);
             console.error(`[extractStructuredContent] 无法解析的文本: ${jsonText.slice(0, 500)}`);
+
+            // 保存解析失败的原文到 txt 文件，方便调试
+            this.saveFailedJsonToTxt(jsonText, parseError).catch(console.error);
+
             throw new Error('LLM 返回的 JSON 格式无效，无法解析为结构化数据，将触发重试');
           }
         }

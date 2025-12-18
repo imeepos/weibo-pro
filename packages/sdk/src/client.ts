@@ -108,16 +108,33 @@ function createControllerInstance<T>(controllerClass: new () => T, axiosInstance
                                             const lines = chunk.split('\n');
 
                                             for (const line of lines) {
-                                                if (line.startsWith('data: ')) {
+                                                const trimmedLine = line.trim();
+
+                                                // 跳过空行
+                                                if (trimmedLine === '') {
+                                                    continue;
+                                                }
+
+                                                // 跳过 SSE 注释行（心跳等）
+                                                // SSE 规范：冒号开头的行是注释，应该被忽略
+                                                if (trimmedLine.startsWith(':')) {
+                                                    // 心跳消息，保持连接活跃
+                                                    continue;
+                                                }
+
+                                                // 处理数据行
+                                                if (trimmedLine.startsWith('data: ')) {
                                                     try {
-                                                        const data = JSON.parse(line.slice(6));
+                                                        const jsonStr = trimmedLine.slice(6);
+                                                        const data = JSON.parse(jsonStr);
                                                         subscriber.next(data);
                                                     } catch (error) {
-                                                        bodyData.state = 'fail'
-                                                        subscriber.next({ ...bodyData })
-                                                        subscriber.complete()
+                                                        // JSON 解析失败，可能是数据块不完整
+                                                        // 记录警告但不中断连接
+                                                        console.warn('[SSE] JSON 解析失败，跳过该消息:', trimmedLine.slice(0, 100), error);
                                                     }
                                                 }
+                                                // 其他 SSE 字段（event:, id:, retry:）暂时忽略
                                             }
 
                                             read();
@@ -171,11 +188,15 @@ function createControllerInstance<T>(controllerClass: new () => T, axiosInstance
                                     const data = JSON.parse(event.data);
                                     subscriber.next(data);
                                 } catch (error) {
-                                    subscriber.error(new Error(`Failed to parse SSE data: ${error}`));
+                                    // JSON 解析失败，记录警告但不中断连接
+                                    console.warn('[SSE] JSON 解析失败，跳过该消息:', event.data?.slice(0, 100), error);
                                 }
                             };
 
                             eventSource.onerror = (error) => {
+                                // EventSource 会在遇到错误时自动重连
+                                // 只有在无法重连时才 error
+                                console.error('[SSE] EventSource 错误:', error);
                                 subscriber.error(error);
                             };
 

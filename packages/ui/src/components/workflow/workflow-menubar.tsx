@@ -22,6 +22,8 @@ import {
   Eye,
   Zap,
   Database,
+  FileCode,
+  Bug,
 } from 'lucide-react'
 import { cn } from '@sker/ui/lib/utils'
 import {
@@ -37,9 +39,11 @@ import {
 export interface WorkflowMenubarProps {
   // 工作流操作
   onRun?: () => void
+  onDebugRun?: () => void
   onCancel?: () => void
   onSave?: () => void
   onExport?: () => void
+  onAiExport?: () => void
   onImport?: () => void
   onSettings?: () => void
   onSchedule?: () => void
@@ -84,9 +88,11 @@ export interface WorkflowMenubarProps {
  */
 export const WorkflowMenubar: React.FC<WorkflowMenubarProps> = ({
   onRun,
+  onDebugRun,
   onCancel,
   onSave,
   onExport,
+  onAiExport,
   onImport,
   onSettings,
   onSchedule,
@@ -111,7 +117,7 @@ export const WorkflowMenubar: React.FC<WorkflowMenubarProps> = ({
   return (
     <Menubar className={cn('shadow-lg shadow-black/20 dark:shadow-black/40', className)}>
       {/* 文件菜单 */}
-      {(onSave || onImport || onExport || onSettings) && (
+      {(onSave || onImport || onExport || onAiExport || onSettings) && (
         <MenubarMenu>
           <MenubarTrigger>
             <FileText className="mr-1.5 h-3.5 w-3.5" />
@@ -137,7 +143,13 @@ export const WorkflowMenubar: React.FC<WorkflowMenubarProps> = ({
                 导出工作流
               </MenubarItem>
             )}
-            {onSettings && (onSave || onImport || onExport) && <MenubarSeparator />}
+            {onAiExport && (
+              <MenubarItem onSelect={onAiExport}>
+                <FileCode className="mr-2 h-4 w-4" />
+                导出AI分析格式
+              </MenubarItem>
+            )}
+            {onSettings && (onSave || onImport || onExport || onAiExport) && <MenubarSeparator />}
             {onSettings && (
               <MenubarItem onSelect={onSettings}>
                 <SettingsIcon className="mr-2 h-4 w-4" />
@@ -239,7 +251,7 @@ export const WorkflowMenubar: React.FC<WorkflowMenubarProps> = ({
       )}
 
       {/* 运行菜单 */}
-      {(onRun || onCancel || onSchedule || onScheduleList || onRunHistory || onEventStoreToggle) && (
+      {(onRun || onDebugRun || onCancel || onSchedule || onScheduleList || onRunHistory || onEventStoreToggle) && (
         <MenubarMenu>
           <MenubarTrigger>
             <Zap className="mr-1.5 h-3.5 w-3.5" />
@@ -264,7 +276,13 @@ export const WorkflowMenubar: React.FC<WorkflowMenubarProps> = ({
                 )}
               </MenubarItem>
             )}
-            {(onSchedule || onScheduleList || onRunHistory || onEventStoreToggle) && (onRun || onCancel) && (
+            {onDebugRun && !isRunning && (
+              <MenubarItem onSelect={onDebugRun}>
+                <Bug className="mr-2 h-4 w-4" />
+                调试运行工作流
+              </MenubarItem>
+            )}
+            {(onSchedule || onScheduleList || onRunHistory || onEventStoreToggle) && (onRun || onDebugRun || onCancel) && (
               <MenubarSeparator />
             )}
             {onSchedule && (

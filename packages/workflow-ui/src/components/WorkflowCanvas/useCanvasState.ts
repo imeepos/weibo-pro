@@ -79,6 +79,11 @@ export function useCanvasState() {
     defaultInputs?: Record<string, unknown>
   }>({ visible: false })
 
+  // AI导出对话框状态
+  const [aiExportDialog, setAiExportDialog] = useState<{
+    visible: boolean
+  }>({ visible: false })
+
   /**
    * 显示 Toast 提示
    */
@@ -230,6 +235,20 @@ export function useCanvasState() {
     setRunConfigDialog({ visible: false })
   }, [])
 
+  /**
+   * 打开AI导出对话框
+   */
+  const openAiExportDialog = useCallback(() => {
+    setAiExportDialog({ visible: true })
+  }, [])
+
+  /**
+   * 关闭AI导出对话框
+   */
+  const closeAiExportDialog = useCallback(() => {
+    setAiExportDialog({ visible: false })
+  }, [])
+
   return {
     // 执行状态
     isRunning,
@@ -289,5 +308,10 @@ export function useCanvasState() {
     runConfigDialog,
     openRunConfigDialog,
     closeRunConfigDialog,
+
+    // AI导出对话框
+    aiExportDialog,
+    openAiExportDialog,
+    closeAiExportDialog,
   }
 }

@@ -193,6 +193,11 @@ export class WorkflowController implements sdk.WorkflowController {
 
       const events$ = executeAst(target, input, parent);
 
+      // 心跳保活：每 15 秒发送一次心跳，防止浏览器超时
+      const heartbeatInterval = setInterval(() => {
+        res.write(`: heartbeat\n\n`);
+      }, 15000);
+
       const subscription = events$.subscribe({
         next: (event: NodeEvent) => {
           res.write(`data: ${JSON.stringify(event)}\n\n`);
@@ -200,18 +205,23 @@ export class WorkflowController implements sdk.WorkflowController {
         error: (error: any) => {
           logger.error('工作流执行失败', { error: error.message, stack: error.stack });
           res.write(`data: ${JSON.stringify({
-            type: 'fail',
-            error: { message: error.message }
+            type: 'node_fail',
+            id: target.id,
+            error: error.message
           })}\n\n`);
+          clearInterval(heartbeatInterval);
           res.end();
         },
         complete: () => {
+          clearInterval(heartbeatInterval);
           res.end();
         }
       })
 
       // 处理客户端断开连接
       res.on('close', () => {
+        logger.info('客户端断开 SSE 连接');
+        clearInterval(heartbeatInterval);
         subscription.unsubscribe();
       });
 
@@ -260,13 +270,6 @@ export class WorkflowController implements sdk.WorkflowController {
 
       logger.info('开始执行单个节点', { nodeId, config });
 
-      // 发送开始事件
-      res.write(`data: ${JSON.stringify({
-        type: 'node_execution_started',
-        nodeId,
-        timestamp: new Date().toISOString()
-      })}\n\n`);
-
       // 反序列化工作流图
       const workflowAst = fromJson(workflow) as WorkflowGraphAst;
 
@@ -288,55 +291,38 @@ export class WorkflowController implements sdk.WorkflowController {
       targetNode.state = 'running';
       targetNode.error = undefined;
 
-      // 发送状态更新
-      res.write(`data: ${JSON.stringify({
-        type: 'state_changed',
-        nodeId,
-        state: 'running'
-      })}\n\n`);
-
+      // ✅ 执行时会自动发送 node_runing 事件，无需手动发送
       // 使用 executeAstWithWorkflowGraph 进行增量执行
       const nodeExecution$ = executeAstWithWorkflowGraph(targetNode, {}, workflowAst);
 
+      // 心跳保活：每 15 秒发送一次心跳
+      const heartbeatInterval = setInterval(() => {
+        res.write(`: heartbeat\n\n`);
+      }, 15000);
+
       const subscription = nodeExecution$.subscribe({
         next: (event: NodeEvent) => {
-          logger.debug('节点执行事件', { type: event.type, nodeId: (event as any).nodeId });
+          logger.debug('节点执行事件', { type: event.type, nodeId: (event as any).id });
 
-          // 发送执行进度
-          res.write(`data: ${JSON.stringify({
-            type: 'progress',
-            event,
-            workflow: workflowAst,
-            timestamp: new Date().toISOString()
-          })}\n\n`);
+          // ✅ 直接转发标准 NodeEvent，不做包装
+          res.write(`data: ${JSON.stringify(event)}\n\n`);
         },
         error: (error: any) => {
           logger.error('节点执行失败', { nodeId, error: error.message });
 
-          // 发送错误事件
+          // ✅ 发送标准 node_fail 事件
           res.write(`data: ${JSON.stringify({
-            type: 'error',
-            nodeId,
-            error: {
-              message: error.message,
-              stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-            },
-            timestamp: new Date().toISOString()
+            type: 'node_fail',
+            id: nodeId,
+            error: error.message
           })}\n\n`);
 
+          clearInterval(heartbeatInterval);
           res.end();
         },
         complete: () => {
           logger.info('节点执行完成', { nodeId });
-
-          // 发送完成事件
-          res.write(`data: ${JSON.stringify({
-            type: 'complete',
-            nodeId,
-            workflow: workflowAst,
-            timestamp: new Date().toISOString()
-          })}\n\n`);
-
+          clearInterval(heartbeatInterval);
           res.end();
         }
       });
@@ -344,6 +330,7 @@ export class WorkflowController implements sdk.WorkflowController {
       // 处理客户端断开连接
       res.on('close', () => {
         logger.info('客户端断开连接', { nodeId });
+        clearInterval(heartbeatInterval);
         subscription.unsubscribe();
       });
 
@@ -352,14 +339,11 @@ export class WorkflowController implements sdk.WorkflowController {
     } catch (error: any) {
       logger.error('执行单个节点失败', { nodeId: body?.nodeId, error: error.message });
 
-      // 发送错误事件
+      // ✅ 发送标准 node_fail 事件
       res.write(`data: ${JSON.stringify({
-        type: 'error',
-        error: {
-          message: error.message,
-          stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-        },
-        timestamp: new Date().toISOString()
+        type: 'node_fail',
+        id: body?.nodeId || 'unknown',
+        error: error.message
       })}\n\n`);
 
       res.end();
@@ -650,11 +634,7 @@ export class WorkflowController implements sdk.WorkflowController {
             }
           }
 
-          // 发送开始事件
-          res.write(`data: ${JSON.stringify({ type: 'fine_tune_started', nodeId, config: body.config })}
-
-`);
-
+          // ✅ 执行时会自动发送 node_runing 事件，无需手动发送
           // 使用 executeAstWithWorkflowGraph 执行节点微调
           const targetNode = getNodeById(ast.nodes, nodeId);
           if (!targetNode) {
@@ -665,32 +645,34 @@ export class WorkflowController implements sdk.WorkflowController {
           }
           const fineTune$ = executeAstWithWorkflowGraph(targetNode, {}, ast);
 
+          // 心跳保活：每 15 秒发送一次心跳
+          const heartbeatInterval = setInterval(() => {
+            res.write(`: heartbeat\n\n`);
+          }, 15000);
+
           const subscription = fineTune$.subscribe({
             next: (event: NodeEvent) => {
-              // 发送进度更新
-              res.write(`data: ${JSON.stringify({
-                type: 'progress',
-                event,
-                workflow: ast,
-                affectedNodes: Array.from(this.findAffectedNodesIds(ast, nodeId))
-              })}
-
-`);
+              // ✅ 直接转发标准 NodeEvent
+              res.write(`data: ${JSON.stringify(event)}\n\n`);
               observer.next(event);
             },
             error: (error: any) => {
               logger.error('节点微调失败', { runId, nodeId, error: error.message });
-              res.write(`data: ${JSON.stringify({ type: 'error', error: error.message })}
 
-`);
+              // ✅ 发送标准 node_fail 事件
+              res.write(`data: ${JSON.stringify({
+                type: 'node_fail',
+                id: nodeId,
+                error: error.message
+              })}\n\n`);
+
+              clearInterval(heartbeatInterval);
               res.end();
               observer.error(error);
             },
             complete: () => {
               logger.info('节点微调完成', { runId, nodeId });
-              res.write(`data: ${JSON.stringify({ type: 'complete', workflow: ast })}
-
-`);
+              clearInterval(heartbeatInterval);
               res.end();
               observer.complete();
             }
@@ -698,22 +680,34 @@ export class WorkflowController implements sdk.WorkflowController {
 
           // 处理客户端断开连接
           res.on('close', () => {
+            logger.info('客户端断开微调连接', { runId, nodeId });
+            clearInterval(heartbeatInterval);
             subscription.unsubscribe();
           });
         }).catch(error => {
           logger.error('获取运行实例失败', { runId, error: error.message });
-          res.write(`data: ${JSON.stringify({ type: 'error', error: error.message })}
 
-`);
+          // ✅ 发送标准 node_fail 事件
+          res.write(`data: ${JSON.stringify({
+            type: 'node_fail',
+            id: nodeId,
+            error: error.message
+          })}\n\n`);
+
           res.end();
           observer.error(error);
         });
       });
     } catch (error: any) {
       logger.error('节点微调初始化失败', { runId, nodeId, error: error.message });
-      res.write(`data: ${JSON.stringify({ type: 'error', error: error.message })}
 
-`);
+      // ✅ 发送标准 node_fail 事件
+      res.write(`data: ${JSON.stringify({
+        type: 'node_fail',
+        id: nodeId,
+        error: error.message
+      })}\n\n`);
+
       res.end();
       throw error;
     }

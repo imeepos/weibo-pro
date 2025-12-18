@@ -50,6 +50,7 @@ import { ScheduleDialog } from './ScheduleDialog'
 import { ScheduleList } from './ScheduleList'
 import { RunHistoryPanel } from './RunHistoryPanel'
 import { RunConfigDialog } from './RunConfigDialog'
+import { AiExportDialog } from './AiExportDialog'
 import { cn } from '../../utils/cn'
 import { getAllNodeTypes } from '../../adapters'
 
@@ -204,6 +205,9 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
     runConfigDialog,
     openRunConfigDialog,
     closeRunConfigDialog,
+    aiExportDialog,
+    openAiExportDialog,
+    closeAiExportDialog,
   } = useCanvasState()
 
   // 撤销/重做历史（直接从 workflow 实例获取）
@@ -775,6 +779,15 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
     }
   }, [hasConfigurableInputs, openRunConfigDialog, runWorkflow])
 
+  /**
+   * 调试运行工作流
+   * 自动开启事件存储并运行工作流
+   */
+  const handleDebugRun = useCallback(() => {
+    handleEventStoreToggle(true)
+    handleRunWorkflow()
+  }, [handleEventStoreToggle, handleRunWorkflow])
+
   const isCanvasEmpty = workflow.nodes.length === 0
 
   // 执行进度计算
@@ -899,9 +912,11 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
         <WorkflowControls
           className="absolute left-4 top-4 z-[5]"
           onRun={handleRunWorkflow}
+          onDebugRun={handleDebugRun}
           onCancel={cancelWorkflow}
           onSave={customOnSave || (() => saveWorkflow(workflow.workflowAst?.name || 'Untitled'))}
           onExport={exportWorkflow}
+          onAiExport={openAiExportDialog}
           onImport={importWorkflow}
           onSettings={openWorkflowSettingsDialog}
           onSchedule={() => {
@@ -949,9 +964,11 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
         <WorkflowMenubar
           className="absolute left-4 top-4 z-[5]"
           onRun={handleRunWorkflow}
+          onDebugRun={handleDebugRun}
           onCancel={cancelWorkflow}
           onSave={customOnSave || (() => saveWorkflow(workflow.workflowAst?.name || 'Untitled'))}
           onExport={exportWorkflow}
+          onAiExport={openAiExportDialog}
           onImport={importWorkflow}
           onSettings={openWorkflowSettingsDialog}
           onSchedule={() => {
@@ -1130,6 +1147,13 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
           runWorkflow(inputs)
         }}
         onCancel={closeRunConfigDialog}
+      />
+
+      {/* AI导出对话框 */}
+      <AiExportDialog
+        visible={aiExportDialog.visible}
+        workflow={workflow.workflowAst}
+        onClose={closeAiExportDialog}
       />
 
       {/* 时间旅行调试器 - 只要开启事件存储就显示 */}

@@ -18,6 +18,8 @@ import {
   Undo,
   Redo,
   Database,
+  FileCode,
+  Bug,
 } from 'lucide-react'
 import { cn } from '@sker/ui/lib/utils'
 import { Button } from '@sker/ui/components/ui/button'
@@ -25,9 +27,11 @@ import { Button } from '@sker/ui/components/ui/button'
 export interface WorkflowControlsProps {
   // 工作流操作
   onRun?: () => void
+  onDebugRun?: () => void
   onCancel?: () => void
   onSave?: () => void
   onExport?: () => void
+  onAiExport?: () => void
   onImport?: () => void
   onSettings?: () => void
   onSchedule?: () => void
@@ -67,9 +71,11 @@ export interface WorkflowControlsProps {
  */
 export const WorkflowControls: React.FC<WorkflowControlsProps> = ({
   onRun,
+  onDebugRun,
   onCancel,
   onSave,
   onExport,
+  onAiExport,
   onImport,
   onSettings,
   onSchedule,
@@ -118,6 +124,19 @@ export const WorkflowControls: React.FC<WorkflowControlsProps> = ({
           ) : (
             <PlayIcon className="h-4 w-4" strokeWidth={2} />
           )}
+        </Button>
+      )}
+
+      {/* 调试运行 */}
+      {onDebugRun && !isRunning && (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={onDebugRun}
+          title="调试运行工作流&#10;自动开启事件存储并运行"
+          className={cn(buttonClassName, 'text-primary/80 hover:text-primary')}
+        >
+          <Bug className="h-4 w-4" strokeWidth={2} />
         </Button>
       )}
 
@@ -293,6 +312,18 @@ export const WorkflowControls: React.FC<WorkflowControlsProps> = ({
           className={buttonClassName}
         >
           <Download className="h-4 w-4" strokeWidth={2} />
+        </Button>
+      )}
+
+      {onAiExport && (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={onAiExport}
+          title="导出AI分析格式&#10;自动截断长文本，方便复制到AI开发工具"
+          className={buttonClassName}
+        >
+          <FileCode className="h-4 w-4" strokeWidth={2} />
         </Button>
       )}
 
