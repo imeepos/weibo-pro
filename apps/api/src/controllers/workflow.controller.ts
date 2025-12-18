@@ -156,10 +156,11 @@ export class WorkflowController implements sdk.WorkflowController {
     // 设置 SSE 响应头
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
+      'Cache-Control': 'no-cache, no-transform',
       'Connection': 'keep-alive',
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Cache-Control'
+      'Access-Control-Allow-Headers': 'Cache-Control',
+      'X-Accel-Buffering': 'no' // 禁用 nginx 缓冲
     });
 
     try {
@@ -196,11 +197,18 @@ export class WorkflowController implements sdk.WorkflowController {
       // 心跳保活：每 15 秒发送一次心跳，防止浏览器超时
       const heartbeatInterval = setInterval(() => {
         res.write(`: heartbeat\n\n`);
+        if (typeof (res as any).flush === 'function') {
+          (res as any).flush();
+        }
       }, 15000);
 
       const subscription = events$.subscribe({
         next: (event: NodeEvent) => {
           res.write(`data: ${JSON.stringify(event)}\n\n`);
+          // 立即刷新缓冲区，确保事件实时发送
+          if (typeof (res as any).flush === 'function') {
+            (res as any).flush();
+          }
         },
         error: (error: any) => {
           logger.error('工作流执行失败', { error: error.message, stack: error.stack });
@@ -209,6 +217,9 @@ export class WorkflowController implements sdk.WorkflowController {
             id: target.id,
             error: error.message
           })}\n\n`);
+          if (typeof (res as any).flush === 'function') {
+            (res as any).flush();
+          }
           clearInterval(heartbeatInterval);
           res.end();
         },
@@ -258,10 +269,11 @@ export class WorkflowController implements sdk.WorkflowController {
     // 设置 SSE 响应头
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
+      'Cache-Control': 'no-cache, no-transform',
       'Connection': 'keep-alive',
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Cache-Control'
+      'Access-Control-Allow-Headers': 'Cache-Control',
+      'X-Accel-Buffering': 'no' // 禁用 nginx 缓冲
     });
 
     try {
@@ -309,6 +321,10 @@ export class WorkflowController implements sdk.WorkflowController {
 
           // ✅ 直接转发标准 NodeEvent，不做包装
           res.write(`data: ${JSON.stringify(event)}\n\n`);
+          // 立即刷新缓冲区，确保事件实时发送
+          if (typeof (res as any).flush === 'function') {
+            (res as any).flush();
+          }
         },
         error: (error: any) => {
           logger.error('节点执行失败', { nodeId, error: error.message });
@@ -319,6 +335,9 @@ export class WorkflowController implements sdk.WorkflowController {
             id: nodeId,
             error: error.message
           })}\n\n`);
+          if (typeof (res as any).flush === 'function') {
+            (res as any).flush();
+          }
 
           clearInterval(heartbeatInterval);
           res.end();
@@ -602,10 +621,11 @@ export class WorkflowController implements sdk.WorkflowController {
     // 设置 SSE 响应头
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
+      'Cache-Control': 'no-cache, no-transform',
       'Connection': 'keep-alive',
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Cache-Control'
+      'Access-Control-Allow-Headers': 'Cache-Control',
+      'X-Accel-Buffering': 'no' // 禁用 nginx 缓冲
     });
 
     try {
@@ -651,12 +671,19 @@ export class WorkflowController implements sdk.WorkflowController {
           // 心跳保活：每 15 秒发送一次心跳
           const heartbeatInterval = setInterval(() => {
             res.write(`: heartbeat\n\n`);
+            if (typeof (res as any).flush === 'function') {
+              (res as any).flush();
+            }
           }, 15000);
 
           const subscription = fineTune$.subscribe({
             next: (event: NodeEvent) => {
               // ✅ 直接转发标准 NodeEvent
               res.write(`data: ${JSON.stringify(event)}\n\n`);
+              // 立即刷新缓冲区，确保事件实时发送
+              if (typeof (res as any).flush === 'function') {
+                (res as any).flush();
+              }
               observer.next(event);
             },
             error: (error: any) => {
@@ -668,6 +695,9 @@ export class WorkflowController implements sdk.WorkflowController {
                 id: nodeId,
                 error: error.message
               })}\n\n`);
+              if (typeof (res as any).flush === 'function') {
+                (res as any).flush();
+              }
 
               clearInterval(heartbeatInterval);
               res.end();

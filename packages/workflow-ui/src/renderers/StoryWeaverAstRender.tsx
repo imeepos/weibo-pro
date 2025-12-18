@@ -3,7 +3,7 @@ import { Render } from '@sker/workflow';
 import { StoryWeaverAst } from '@sker/workflow-ast';
 import { Dialog, DialogContent, DialogTrigger } from '@sker/ui/components/ui/dialog';
 import { ScrollArea } from '@sker/ui/components/ui/scroll-area';
-import { BookOpenIcon, MaximizeIcon, ChevronLeftIcon, ChevronRightIcon, Sparkles } from 'lucide-react';
+import { BookOpenIcon, MaximizeIcon, ChevronLeftIcon, ChevronRightIcon, Sparkles, Download } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -20,11 +20,31 @@ export class StoryWeaverAstRender {
 
 function StoryWeaverContent({ ast }: { ast: StoryWeaverAst }) {
   const streamingData = useExecutionStore((state) => state.streamingData[ast.id]);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [prevChapterCount, setPrevChapterCount] = useState(0);
+
+  // 当流式数据清除时，强制重新读取AST数据（触发React重新渲染）
+  useEffect(() => {
+    if (!streamingData) {
+      setRefreshKey(prev => prev + 1);
+    }
+  }, [streamingData]);
+
+  // 监听章节数量变化，强制更新UI
+  useEffect(() => {
+    const currentCount = ast.previousChapters?.length || 0;
+    if (currentCount !== prevChapterCount) {
+      setPrevChapterCount(currentCount);
+      setRefreshKey(prev => prev + 1);
+    }
+  }, [ast.previousChapters?.length, prevChapterCount]);
+
+  // 每次refreshKey变化时都会重新读取最新的chapters
   const chapters = ast.previousChapters || [];
   const hasContent = chapters.length > 0;
 
   return (
-    <div className="px-3 py-2">
+    <div className="px-3 py-2" key={refreshKey}>
       {streamingData && (
         <StreamingPreview
           accumulated={streamingData.accumulated}
@@ -160,6 +180,31 @@ function FullscreenReader({ chapters, currentIndex, onChapterChange }: Fullscree
   const goToPrev = () => hasPrev && onChapterChange(currentIndex - 1);
   const goToNext = () => hasNext && onChapterChange(currentIndex + 1);
 
+  const downloadNovel = () => {
+    const content = chapters
+      .map((chapter) => `# ${chapter.title}
+
+**简介**：${chapter.summary}
+
+---
+
+${chapter.content}
+
+---
+`)
+      .join('\n\n');
+
+    const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `小说_${chapters.length}章_${new Date().toLocaleDateString()}.md`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const chapterMarkdown = `# ${currentChapter.title}
 
 **简介**：${currentChapter.summary}
@@ -173,8 +218,19 @@ ${currentChapter.content}`;
       {/* 左侧章节目录 */}
       <div className="w-64 h-full border-r bg-muted/20 flex flex-col">
         <div className="shrink-0 px-4 py-3 border-b bg-background/50 backdrop-blur-sm">
-          <h3 className="font-semibold">目录</h3>
-          <p className="text-xs text-muted-foreground mt-1">共 {chapters.length} 章</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold">目录</h3>
+              <p className="text-xs text-muted-foreground mt-1">共 {chapters.length} 章</p>
+            </div>
+            <button
+              onClick={downloadNovel}
+              className="p-2 rounded-md hover:bg-muted/50 transition-colors"
+              title="下载全部章节"
+            >
+              <Download className="size-4" />
+            </button>
+          </div>
         </div>
 
         {/* relative + absolute + ScrollArea 方案 */}
@@ -207,7 +263,7 @@ ${currentChapter.content}`;
         {/* relative + absolute + ScrollArea 方案 */}
         <div className="absolute inset-0">
           <ScrollArea className="h-full">
-            <div className="px-16 py-8">
+            <div className="px-16 py-20">
               <div className="max-w-3xl mx-auto prose prose-sm break-words [&_pre]:whitespace-pre-wrap [&_pre]:break-all [&_code]:break-all">
                 <ReactMarkdown remarkPlugins={[[remarkGfm, { singleTilde: false }]]}>
                   {chapterMarkdown}

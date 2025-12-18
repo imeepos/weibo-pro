@@ -864,12 +864,18 @@ export class ChapterGenerationService {
 
   private updateAstState(ast: StoryWeaverAst, chapterData: ChapterData, nextChapterNumber: number): void {
     const existingIndex = ast.previousChapters.findIndex(ch => ch.chapterNumber === nextChapterNumber);
+
+    // 不可变更新：创建新数组，触发React重新渲染
     if (existingIndex >= 0) {
       console.log(`[updateAstState] 覆盖章节 ${nextChapterNumber}，索引 ${existingIndex}`);
-      ast.previousChapters[existingIndex] = chapterData;
+      ast.previousChapters = [
+        ...ast.previousChapters.slice(0, existingIndex),
+        chapterData,
+        ...ast.previousChapters.slice(existingIndex + 1)
+      ];
     } else {
       console.log(`[updateAstState] 新增章节 ${nextChapterNumber}，当前共 ${ast.previousChapters.length + 1} 章`);
-      ast.previousChapters.push(chapterData);
+      ast.previousChapters = [...ast.previousChapters, chapterData];
     }
 
     ast.title = chapterData.title;
