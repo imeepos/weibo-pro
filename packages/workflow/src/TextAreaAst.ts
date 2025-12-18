@@ -4,6 +4,35 @@ import { Injectable } from "@sker/core";
 import { isObservable, Observable } from "rxjs";
 import { NodeEvent } from "./execution/events";
 
+/**
+ * 将任意类型序列化为字符串
+ * 设计哲学: 优雅即简约 - 每个类型都有其最佳的字符串表达形式
+ */
+export const serializeToString = (value: any): string => {
+    if (value === null) return 'null';
+    if (value === undefined) return 'undefined';
+
+    const type = typeof value;
+
+    if (type === 'string') return value;
+    if (type === 'number') return isNaN(value) ? 'NaN' : String(value);
+    if (type === 'boolean') return String(value);
+
+    if (Array.isArray(value)) {
+        return value.flat().map(item => serializeToString(item)).join('\n\n');
+    }
+
+    if (type === 'object') {
+        try {
+            return JSON.stringify(value, null, 2);
+        } catch {
+            return String(value);
+        }
+    }
+
+    return String(value);
+}
+
 @Node({ title: '文本节点', type: 'basic' })
 export class TextAreaAst extends Ast {
 
@@ -33,18 +62,9 @@ export class TextAreaAstVisitor {
                 next: (input) => {
                     ast.emitCount += 1;
                     console.log(`[TextAreaAstVisitor] 节点 ${ast.id} input$ 发射值:`, input);
-                    // 处理输入
-                    let inputArray: string[];
-                    if (Array.isArray(input.input)) {
-                        inputArray = input.input;
-                    } else if (typeof input.input === 'string') {
-                        inputArray = input.input ? [input.input] : [];
-                    } else {
-                        inputArray = [];
-                    }
 
-                    // 生成输出
-                    const output = inputArray.join('\n');
+                    // 序列化输入: 支持任意类型
+                    const output = serializeToString(input.input);
                     ast.output = output;
                     obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount, output } });
                     console.log(`[TextAreaAstVisitor] 节点 ${ast.id} 发射 node_emit, output="${output}"`);
