@@ -86,7 +86,9 @@ export abstract class WeiboApiClient {
 
             this.delayService.recordSuccess(accountKey);
 
-            await this.delayService.randomDelay(1, 3);
+            const minDelay = Number(process.env.WEIBO_REQUEST_DELAY_MIN) || 1;
+            const maxDelay = Number(process.env.WEIBO_REQUEST_DELAY_MAX) || 3;
+            await this.delayService.randomDelay(minDelay, maxDelay);
 
             return data;
         } catch (error) {
@@ -135,7 +137,9 @@ export abstract class WeiboApiClient {
             }
 
             page++;
-            await this.delayService.randomDelay(3, 5);
+            const pageDelayMin = Number(process.env.WEIBO_PAGE_DELAY_MIN) || 3;
+            const pageDelayMax = Number(process.env.WEIBO_PAGE_DELAY_MAX) || 5;
+            await this.delayService.randomDelay(pageDelayMin, pageDelayMax);
         }
     }
 }

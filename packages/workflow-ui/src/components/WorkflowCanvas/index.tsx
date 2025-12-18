@@ -13,7 +13,7 @@ import {
   useUpdateNodeInternals,
 } from '@xyflow/react'
 
-import { fromJson, INode, WorkflowGraphAst, toJson, createWorkflowGraphAst } from '@sker/workflow'
+import { fromJson, INode, WorkflowGraphAst, toJson, createWorkflowGraphAst, globalRuntime } from '@sker/workflow'
 import type { WorkflowNode, WorkflowEdge } from '../../types'
 import { createNodeTypes } from '../nodes'
 import { edgeTypes } from '../edges'
@@ -234,6 +234,60 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
   const [isDark, setIsDark] = useState(() =>
     document.documentElement.classList.contains('dark')
   )
+
+  // ========== 事件存储开关状态管理 ==========
+  const [eventStoreEnabled, setEventStoreEnabled] = useState(false)
+  const [eventStreamReady, setEventStreamReady] = useState(false)
+
+  // 确保 runId 在组件挂载时创建，并订阅 eventStream 状态
+  useEffect(() => {
+    const initRuntime = async () => {
+      const runId = await globalRuntime.createRun(workflow.workflowAst)
+      const eventStream = globalRuntime.getEventStream(runId)
+
+      if (eventStream) {
+        setEventStreamReady(true)
+        // 订阅事件存储状态
+        const sub = eventStream.storeEnabled$.subscribe(enabled => {
+          setEventStoreEnabled(enabled)
+        })
+
+        return () => sub.unsubscribe()
+      }
+    }
+
+    const cleanup = initRuntime()
+    return () => {
+      cleanup.then(unsub => unsub?.())
+    }
+  }, [workflow.workflowAst])
+
+  // 切换事件存储开关
+  const handleEventStoreToggle = useCallback((enabled: boolean) => {
+    const runId = globalRuntime.getRunId(workflow.workflowAst)
+
+    if (!runId) {
+      showToast('error', '无法切换事件存储', '工作流尚未初始化')
+      return
+    }
+
+    const eventStream = globalRuntime.getEventStream(runId)
+
+    if (!eventStream) {
+      showToast('error', '无法切换事件存储', 'EventStream 不存在')
+      return
+    }
+
+    eventStream.setStoreEnabled(enabled)
+
+    showToast(
+      'success',
+      enabled ? '事件存储已开启' : '事件存储已关闭',
+      enabled
+        ? '工作流事件将被记录，支持时间旅行和续跑'
+        : '工作流事件将不被记录，减少内存占用'
+    )
+  }, [workflow.workflowAst, showToast])
 
   // 监听主题变化
   useEffect(() => {
@@ -858,6 +912,8 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
               showToast('error', '请先保存工作流', '只有保存的工作流才能查看运行历史')
             }
           }}
+          onEventStoreToggle={eventStreamReady ? handleEventStoreToggle : undefined}
+          eventStoreEnabled={eventStoreEnabled}
           onZoomIn={handleZoomIn}
           onZoomOut={handleZoomOut}
           onFitView={handleFitView}
@@ -906,6 +962,8 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
               showToast('error', '请先保存工作流', '只有保存的工作流才能查看运行历史')
             }
           }}
+          onEventStoreToggle={eventStreamReady ? handleEventStoreToggle : undefined}
+          eventStoreEnabled={eventStoreEnabled}
           onZoomIn={handleZoomIn}
           onZoomOut={handleZoomOut}
           onFitView={handleFitView}

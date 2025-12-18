@@ -17,8 +17,12 @@ export class WorkflowEventStream {
     /** 回放索引（-1 = 实时模式，显示所有事件） */
     private _replayIndex$ = new BehaviorSubject<number>(-1);
 
+    /** 事件存储开关（默认关闭） */
+    private _storeEnabled$ = new BehaviorSubject<boolean>(false);
+
     /** 追加事件 */
     emit(event: NodeEvent): void {
+        if (!this._storeEnabled$.value) return;
         this._events$.next([...this._events$.value, event]);
     }
 
@@ -46,6 +50,21 @@ export class WorkflowEventStream {
     /** 是否处于回放模式 */
     get isReplaying(): boolean {
         return this._replayIndex$.value >= 0;
+    }
+
+    /** 事件存储是否开启 */
+    get storeEnabled(): boolean {
+        return this._storeEnabled$.value;
+    }
+
+    /** 事件存储开关状态（响应式） */
+    get storeEnabled$(): Observable<boolean> {
+        return this._storeEnabled$.asObservable();
+    }
+
+    /** 设置事件存储开关 */
+    setStoreEnabled(enabled: boolean): void {
+        this._storeEnabled$.next(enabled);
     }
 
     // ========== 时间旅行 ==========
@@ -202,18 +221,24 @@ export class WorkflowEventStream {
     // ========== 序列化 ==========
 
     /** 导出为 JSON（持久化） */
-    toJSON(): { events: NodeEvent[]; replayIndex: number } {
+    toJSON(): { events: NodeEvent[]; replayIndex: number; storeEnabled: boolean } {
         return {
             events: this._events$.value,
             replayIndex: this._replayIndex$.value,
+            storeEnabled: this._storeEnabled$.value,
         };
     }
 
     /** 从 JSON 恢复 */
-    static fromJSON(json: { events: NodeEvent[]; replayIndex?: number }): WorkflowEventStream {
+    static fromJSON(json: {
+        events: NodeEvent[];
+        replayIndex?: number;
+        storeEnabled?: boolean;
+    }): WorkflowEventStream {
         const stream = new WorkflowEventStream();
         stream._events$.next(json.events || []);
         stream._replayIndex$.next(json.replayIndex ?? -1);
+        stream._storeEnabled$.next(json.storeEnabled ?? false);
         return stream;
     }
 }

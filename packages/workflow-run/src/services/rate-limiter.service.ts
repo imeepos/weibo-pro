@@ -43,7 +43,10 @@ export class RateLimiterService {
   private accountBuckets = new Map<string, TokenBucket>();
 
   constructor() {
-    this.globalBucket = new TokenBucket(10, 10);
+    const globalCapacity = Number(process.env.WEIBO_GLOBAL_RATE_CAPACITY) || 2;
+    const globalRefillRate = Number(process.env.WEIBO_GLOBAL_RATE_REFILL) || 1;
+
+    this.globalBucket = new TokenBucket(globalCapacity, globalRefillRate);
   }
 
   async acquire(accountId?: string): Promise<void> {
@@ -61,7 +64,9 @@ export class RateLimiterService {
 
   private getAccountBucket(accountId: string): TokenBucket {
     if (!this.accountBuckets.has(accountId)) {
-      this.accountBuckets.set(accountId, new TokenBucket(5, 5));
+      const accountCapacity = Number(process.env.WEIBO_ACCOUNT_RATE_CAPACITY) || 1;
+      const accountRefillRate = Number(process.env.WEIBO_ACCOUNT_RATE_REFILL) || 0.5;
+      this.accountBuckets.set(accountId, new TokenBucket(accountCapacity, accountRefillRate));
     }
     return this.accountBuckets.get(accountId)!;
   }

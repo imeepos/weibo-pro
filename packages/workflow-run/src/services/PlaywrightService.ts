@@ -34,19 +34,30 @@ export class PlaywrightService {
             throw new Error('页面意外关闭，无法导航');
         }
         await this.page.goto(url, {
-            waitUntil: 'domcontentloaded', // 先等待DOM加载完成
-            timeout: 45000 // 增加超时时间
+            waitUntil: 'domcontentloaded',
+            timeout: 45000
         });
 
-        // 等待关键元素出现，确保页面真正加载完成
-        if (!this.page) {
-            throw new Error('页面意外关闭，无法等待元素');
+        // 等待关键元素出现，确保页面真正加载完成 - 带重试机制
+        const selectorMaxRetries = 2;
+        for (let retry = 0; retry < selectorMaxRetries; retry++) {
+            if (!this.page) {
+                throw new Error('页面意外关闭，无法等待元素');
+            }
+            try {
+                await this.page.waitForSelector('div.card, div.m-page, div[action-type="feed_list_item"]', {
+                    timeout: 20000
+                });
+                break;
+            } catch (error) {
+                if (retry === selectorMaxRetries - 1) {
+                    console.warn(`[PlaywrightService] 等待关键元素超时，但继续处理`);
+                } else {
+                    console.warn(`[PlaywrightService] 等待选择器失败，重试 ${retry + 1}/${selectorMaxRetries}`);
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+            }
         }
-        await this.page.waitForSelector('div.card, div.m-page, div[action-type="feed_list_item"]', {
-            timeout: 30000
-        }).catch(() => {
-            console.warn(`[PlaywrightService] 等待关键元素超时，但继续处理`);
-        });
 
         // 等待页面完全加载（但不等待网络空闲，避免无限等待）
         if (!this.page) {
@@ -59,15 +70,32 @@ export class PlaywrightService {
         // 额外的稳定性等待
         await delay();
 
-        // 检查页面是否真正稳定
-        if (!this.page) {
-            throw new Error('页面意外关闭，无法执行 evaluate');
+        // 等待页面真正稳定（无导航）- 使用重试机制处理临时性导航
+        let pageState: { readyState: string; hasContent: boolean; title: string } | null = null;
+        const maxRetries = 3;
+        for (let i = 0; i < maxRetries; i++) {
+            if (!this.page) {
+                throw new Error('页面意外关闭，无法执行 evaluate');
+            }
+
+            try {
+                pageState = await this.page.evaluate(() => ({
+                    readyState: document.readyState,
+                    hasContent: document.body?.innerText?.length > 0,
+                    title: document.title
+                }));
+                break; // 成功则退出循环
+            } catch (error) {
+                if (i === maxRetries - 1) throw error;
+
+                console.warn(`[PlaywrightService] 页面导航中，等待稳定... (${i + 1}/${maxRetries})`);
+                await new Promise(resolve => setTimeout(resolve, 2000)); // 等待导航完成
+            }
         }
-        const pageState = await this.page.evaluate(() => ({
-            readyState: document.readyState,
-            hasContent: document.body?.innerText?.length > 0,
-            title: document.title
-        }));
+
+        if (!pageState) {
+            throw new Error('无法获取页面状态');
+        }
 
         console.log(`[PlaywrightService] 页面状态: readyState=${pageState.readyState}, hasContent=${pageState.hasContent}, title=${pageState.title}`);
 

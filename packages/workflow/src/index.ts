@@ -35,3 +35,4 @@ export * from './PassThroughAst';
 export * from './ImageAst';
 export * from './AudioAst';
 export * from './VideoAst';
+export { crawlerScheduler, ConcurrencyScheduler } from './schedulers/crawler-scheduler';

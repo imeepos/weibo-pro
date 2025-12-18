@@ -17,6 +17,7 @@ import {
   History,
   Undo,
   Redo,
+  Database,
 } from 'lucide-react'
 import { cn } from '@sker/ui/lib/utils'
 import { Button } from '@sker/ui/components/ui/button'
@@ -32,6 +33,7 @@ export interface WorkflowControlsProps {
   onSchedule?: () => void
   onScheduleList?: () => void
   onRunHistory?: () => void
+  onEventStoreToggle?: (enabled: boolean) => void
 
   // 视图控制
   onZoomIn?: () => void
@@ -52,6 +54,7 @@ export interface WorkflowControlsProps {
   // 状态
   isRunning?: boolean
   isSaving?: boolean
+  eventStoreEnabled?: boolean
 
   // 样式
   className?: string
@@ -72,6 +75,7 @@ export const WorkflowControls: React.FC<WorkflowControlsProps> = ({
   onSchedule,
   onScheduleList,
   onRunHistory,
+  onEventStoreToggle,
   onZoomIn,
   onZoomOut,
   onFitView,
@@ -84,6 +88,7 @@ export const WorkflowControls: React.FC<WorkflowControlsProps> = ({
   canRedo = false,
   isRunning = false,
   isSaving = false,
+  eventStoreEnabled = false,
   className,
 }) => {
   const buttonClassName = 'h-9 w-9 text-muted-foreground hover:bg-accent hover:text-accent-foreground'
@@ -152,6 +157,26 @@ export const WorkflowControls: React.FC<WorkflowControlsProps> = ({
           className={buttonClassName}
         >
           <History className="h-4 w-4" strokeWidth={2} />
+        </Button>
+      )}
+
+      {/* 事件存储开关 */}
+      {onEventStoreToggle && (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => onEventStoreToggle(!eventStoreEnabled)}
+          title={
+            eventStoreEnabled
+              ? '关闭事件存储\n点击后将不再记录工作流事件'
+              : '开启事件存储\n支持时间旅行和续跑功能'
+          }
+          className={cn(
+            buttonClassName,
+            eventStoreEnabled && 'text-primary bg-primary/10 hover:bg-primary/20'
+          )}
+        >
+          <Database className="h-4 w-4" strokeWidth={2} />
         </Button>
       )}
 

@@ -796,16 +796,14 @@ export class ChapterGenerationService {
   ): NodeEvent[] {
     console.log(`[ChapterGeneration] selectBestAttempt 被调用，尝试次数: ${finalState.allAttempts.length}`);
 
-    const bestAttempt = finalState.allAttempts.length > 0
-      ? finalState.allAttempts.reduce((best, current) =>
-          current.quality.score > best.quality.score ? current : best
-        )
-      : null;
-
-    if (!bestAttempt) {
+    if (finalState.allAttempts.length === 0) {
       console.error(`[ChapterGeneration] 没有有效的尝试结果`);
       throw new Error(`第${nextChapterNumber}章生成失败：所有重试尝试都未产生有效结果`);
     }
+
+    const bestAttempt = finalState.allAttempts.reduce((best, current) =>
+      current.quality.score > best.quality.score ? current : best
+    );
 
     const { chapter: chapterData, quality: qualityResult } = bestAttempt;
 

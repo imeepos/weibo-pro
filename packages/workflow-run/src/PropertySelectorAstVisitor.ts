@@ -28,7 +28,7 @@ function getValueByPath(obj: any, path: string): any {
 @Injectable()
 export class PropertySelectorAstVisitor {
   @Handler(PropertySelectorAst)
-  handler(ast: PropertySelectorAst, input$: Observable<Record<string, unknown>>) {
+  handler(ast: PropertySelectorAst, input$: Observable<Record<string, unknown>>, ctx: any) {
     return new Observable<NodeEvent>(obs => {
       ast.state = 'running';
       ast.count += 1;
