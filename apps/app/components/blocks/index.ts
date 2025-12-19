@@ -1,1 +1,0 @@
-export { MediaCarousel } from './MediaCarousel';
