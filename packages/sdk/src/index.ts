@@ -16,6 +16,7 @@ export * from './controllers/workflow.controller'
 export * from './controllers/persona.controller'
 export * from './controllers/prompt-roles.controller'
 export * from './controllers/prompt-skills.controller'
+export * from './controllers/media-crawler.controller'
 export * from './types';
 export * from './tokens';
 export * from './client';

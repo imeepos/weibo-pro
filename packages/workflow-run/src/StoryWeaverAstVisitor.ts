@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@sker/core';
 import { Handler, NodeEvent, setAstError, WorkflowGraphAst } from '@sker/workflow';
 import { StoryWeaverAst } from '@sker/workflow-ast';
 import { Observable, throwError } from 'rxjs';
-import { concatMap, distinctUntilChanged, map } from 'rxjs/operators';
+import { concatMap, distinctUntilChanged, map, takeWhile } from 'rxjs/operators';
 import { ChapterGenerationService } from './services/ChapterGenerationService';
 
 /**
@@ -46,7 +46,10 @@ export class StoryWeaverAstVisitor {
             abortController.signal,
             true  // enableStreaming = true
           );
-        })
+        }),
+        // 检测完成条件：达到目标章节数后停止接收新输入
+        // inclusive=true 确保最后一章的数据能正确发出
+        takeWhile(() => !ast.isComplete, true)
       ).subscribe({
         next: (events: NodeEvent[] | NodeEvent) => {
           // 处理单个事件（流式 delta 事件）

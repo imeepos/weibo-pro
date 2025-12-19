@@ -11,6 +11,7 @@ import { SentimentController } from './controllers/sentiment.controller';
 import { WorkflowController } from './controllers/workflow.controller';
 import { LayoutController } from './controllers/layout.controller';
 import { UserRelationController } from './controllers/user-relation.controller';
+import { MediaCrawlerController } from './controllers/media-crawler.controller';
 import { CacheService } from './services/cache.service';
 import { OverviewService } from './services/data/overview.service';
 import { EventsService } from './services/data/events.service';
@@ -23,6 +24,7 @@ import { LayoutService } from './services/data/layout.service';
 import { UserRelationService } from './services/data/user-relation.service';
 import { WorkflowService } from './services/workflow.service';
 import { UploadService } from './services/upload.service';
+import { MediaCrawlerProxyService } from './services/media-crawler-proxy.service';
 import { UploadController } from './controllers/upload.controller';
 import { LlmProvidersController } from './controllers/llm-providers.controller';
 import { LlmModelsController } from './controllers/llm-models.controller';
@@ -70,6 +72,7 @@ import { PromptSkillService } from './services/prompt-skill.service';
     PersonaController,
     PromptRolesController,
     PromptSkillsController,
+    MediaCrawlerController,
   ],
   providers: [
     {
@@ -88,6 +91,7 @@ import { PromptSkillService } from './services/prompt-skill.service';
     { provide: LayoutService, useFactory: () => root.get(LayoutService) },
     { provide: WorkflowService, useFactory: () => root.get(WorkflowService) },
     { provide: UploadService, useFactory: () => root.get(UploadService) },
+    { provide: MediaCrawlerProxyService, useFactory: () => root.get(MediaCrawlerProxyService) },
     AppWebSocketGateway,
     { provide: EventQueryService, useFactory: () => root.get(EventQueryService) },
     { provide: EventAnalyticsService, useFactory: () => root.get(EventAnalyticsService) },
