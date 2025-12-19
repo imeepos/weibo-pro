@@ -17,7 +17,7 @@ const EmailRender: React.FC<{ ast: EmailD1Ast }> = ({ ast }) => {
             <div className="text-sm font-mono text-foreground select-all">{ast.email}</div>
           </div>
 
-          {ast.messages && ast.messages.length > 0 && (
+          {Array.isArray(ast.messages) && ast.messages.length > 0 && (
             <div className="space-y-2">
               <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                 <InboxIcon className="size-3" />
