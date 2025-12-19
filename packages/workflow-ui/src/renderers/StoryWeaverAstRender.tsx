@@ -182,15 +182,20 @@ function FullscreenReader({ chapters, currentIndex, onChapterChange }: Fullscree
 
   const downloadNovel = () => {
     const content = chapters
-      .map((chapter) => `# ${chapter.title}
+      .map((chapter) => {
+        // 统一换行符，然后将多个连续换行符合并为单个换行
+        const cleanContent = chapter.content
+          .replace(/\r\n/g, '\n')
+          .replace(/\r/g, '\n')
+          .replace(/\n+/g, '\n');
+        return `# ${chapter.title}
 
 **简介**：${chapter.summary}
 
 ---
-
-${chapter.content}
-
----`)
+${cleanContent}
+---`;
+      })
       .join('\n\n');
 
     const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
