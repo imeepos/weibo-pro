@@ -48,7 +48,7 @@ export class EmailD1AstVisitor {
             ast.email = email;
 
             // 轮询检查邮件（最多等待 30 秒）
-            const maxAttempts = 30;
+            const maxAttempts = 180;
             const pollInterval = 1000; // 1 秒
             for (let attempt = 0; attempt < maxAttempts; attempt++) {
               if (abortController.signal.aborted) {
@@ -62,7 +62,7 @@ export class EmailD1AstVisitor {
                 obs.next({
                   type: 'node_emit',
                   id: ast.id,
-                  data: { message: ast.message },
+                  data: { email: ast.email, message: ast.message },
                 });
                 return []
               }
