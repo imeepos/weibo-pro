@@ -47,13 +47,6 @@ export class EmailD1AstVisitor {
             const email = `${username}@${ast.domain}`;
             ast.email = email;
 
-            // 先输出邮箱地址
-            obs.next({
-              type: 'node_emit',
-              id: ast.id,
-              data: { email: ast.email },
-            });
-
             // 轮询检查邮件（最多等待 30 秒）
             const maxAttempts = 30;
             const pollInterval = 1000; // 1 秒
@@ -69,7 +62,7 @@ export class EmailD1AstVisitor {
                 obs.next({
                   type: 'node_emit',
                   id: ast.id,
-                  data: { email: ast.email },
+                  data: { message: ast.message },
                 });
                 return []
               }
