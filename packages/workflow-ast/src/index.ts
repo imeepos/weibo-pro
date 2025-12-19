@@ -86,3 +86,6 @@ export { CodeGeneratorAst } from './CodeGeneratorAst'
 
 // 工作流节点生成器
 export { WorkflowNodeGeneratorAst } from './WorkflowNodeGeneratorAst'
+
+// 临时邮箱节点
+export { EmailD1Ast } from './EmailD1Ast'

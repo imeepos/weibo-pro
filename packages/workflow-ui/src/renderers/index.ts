@@ -75,3 +75,6 @@ export * from './ErrorAnalyzerAstRender';
 
 // 答案评估器节点
 export * from './AnswerEvaluatorAstRender';
+
+// 临时邮箱节点
+export * from './EmailD1AstRender';

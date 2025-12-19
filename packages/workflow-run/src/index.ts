@@ -76,6 +76,9 @@ export { CodeGeneratorAstVisitor } from './CodeGeneratorAstVisitor'
 // 工作流节点生成器
 export { WorkflowNodeGeneratorAstVisitor } from './WorkflowNodeGeneratorAstVisitor'
 
+// 临时邮箱节点
+export { EmailD1AstVisitor } from './EmailD1AstVisitor'
+
 // 服务
 export { CronSchedulerService } from './services/CronSchedulerService'
 export { WorkflowExecutionService } from './services/WorkflowExecutionService'
