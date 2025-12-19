@@ -12,7 +12,7 @@ export class PromptBuilder {
   constructor(
     @Inject(StoryContextService) private contextService: StoryContextService
   ) {}
-
+  // step 1: 系统提示词
   buildSystemPrompt(
     ast: StoryWeaverAst,
     chapters: ChapterData[],
@@ -56,7 +56,7 @@ ${extractedSettings}
 - **人物弧光**：至少一个主要人物要有状态变化
 - **伏笔机制**：可选择回应或埋下伏笔`;
   }
-
+  // step1: 用户提示词
   buildUserPrompt(
     chapterNumber: number,
     wordCount: number,
@@ -79,31 +79,7 @@ ${extractedSettings}
 **创作要求**：
 ${prompts}${pendingCluesHint}`;
   }
-
-  buildImprovementHints(qualityResult: QualityCheckResult): string {
-    const hints: string[] = [];
-
-    const highIssues = qualityResult.issues.filter(i => i.severity === 'high');
-    const mediumIssues = qualityResult.issues.filter(i => i.severity === 'medium');
-
-    if (highIssues.length > 0) {
-      hints.push('**🔴 严重问题（必须修复）：**');
-      highIssues.forEach(issue => hints.push(`- ${issue.description}`));
-    }
-
-    if (mediumIssues.length > 0) {
-      hints.push('\n**🟡 次要问题（建议修复）：**');
-      mediumIssues.forEach(issue => hints.push(`- ${issue.description}`));
-    }
-
-    if (qualityResult.suggestions.length > 0) {
-      hints.push('\n**💡 改进建议：**');
-      qualityResult.suggestions.forEach(s => hints.push(`- ${s}`));
-    }
-
-    return hints.join('\n');
-  }
-
+  // step2: 改进提示词
   buildSelfRefinePrompt(draftText: string, wordCount: number): string {
     return `你是专业小说编辑。下面是你刚写的草稿，请改进它。
 
@@ -126,7 +102,7 @@ ${draftText}
 
 请输出改进版本：`;
   }
-
+  // step3: 结构化提示词
   buildExtractionPrompt(rawText: string): string {
     return `从下面的小说文本中提取结构化元数据（不需要重新输出正文内容，只需标注正文的起止位置）：
 
@@ -174,8 +150,30 @@ ${rawText}
 - list_chapters：列出所有章节
 - retrieve_chapter：检索特定章节
 - search_content：搜索关键词
+- revise_chapter：修订已有章节（解决矛盾）
 
-**⚠️ 约束**：
+**⚠️ 矛盾修正机制**：
+如果在查阅前文时发现与当前章节存在矛盾（人物设定、时间线、因果关系、逻辑错误等），可以使用 revise_chapter 工具修订前文章节：
+
+**修订时机**：
+- ✅ 发现前文与当前情节存在明显矛盾时（优先选择）
+- ✅ 前文逻辑不自洽，影响当前章节展开
+- ✅ 需要在前文埋下伏笔以支撑当前剧情
+- ❌ 不要为了"完美主义"反复修订前文
+- ❌ 不要修订超过3章之前的内容（影响范围太大）
+
+**修订原则**：
+- 优先修订最近的章节（影响最小）
+- 只修订必要的字段（title/summary/content），不需要修改的字段不要传
+- 必须说明修订理由（reason 字段）
+- 修订完成后立即继续创作当前章节，不要中断
+
+**示例工作流**：
+1. 查看前文 → retrieve_chapter 或 search_content
+2. 发现矛盾 → 调用 revise_chapter 修订
+3. 修订完成 → 继续创作当前章节
+
+**⚠️ 使用约束**：
 - 工具调用最多5轮，完成后立即创作
 - 直接输出章节内容，不要"我先查看..."等元对话
 - 不要返回空响应或思考过程

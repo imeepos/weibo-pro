@@ -1,6 +1,6 @@
 import { Injectable, root } from '@sker/core';
 import { WorkflowGraphAst, INode, getToolMethods, findNodeType } from '@sker/workflow';
-import { ChapterData } from '@sker/workflow-ast';
+import { ChapterData, StoryWeaverAst } from '@sker/workflow-ast';
 import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
 
@@ -8,11 +8,16 @@ import { StructuredToolInterface } from '@langchain/core/tools';
 
 /**
  * 故事工具工厂
- * 职责：创建 LangChain 工具（章节查询工具、搜索工具、节点工具）
+ * 职责：创建 LangChain 工具（章节查询工具、搜索工具、节点工具、章节修订工具）
  */
 @Injectable()
 export class StoryToolsFactory {
-  createChapterTools(chapters: ChapterData[]): StructuredToolInterface[] {
+  /**
+   * 创建章节工具（查询、搜索、修订）
+   * @param chapters 章节列表（向后兼容，实际使用 ast）
+   * @param ast 故事AST，用于修订章节时更新状态
+   */
+  createChapterTools(chapters: ChapterData[], ast?: StoryWeaverAst): StructuredToolInterface[] {
     const listChaptersTool = tool(
       async () => {
         if (chapters.length === 0) {
@@ -126,7 +131,92 @@ export class StoryToolsFactory {
       }
     );
 
-    return [listChaptersTool, retrieveChapterTool, searchContentTool];
+    // 章节修订工具（仅在提供 AST 时可用）
+    const tools: StructuredToolInterface[] = [listChaptersTool, retrieveChapterTool, searchContentTool];
+
+    if (ast) {
+      const reviseChapterTool = tool(
+        async ({ chapterNumber, revisions, reason }: {
+          chapterNumber: number;
+          revisions: {
+            title?: string;
+            summary?: string;
+            content?: string;
+          };
+          reason: string;
+        }) => {
+          // 查找要修订的章节
+          const chapterIndex = chapters.findIndex(ch => ch.chapterNumber === chapterNumber);
+
+          if (chapterIndex === -1) {
+            return JSON.stringify({
+              success: false,
+              error: `章节 ${chapterNumber} 不存在，无法修订`
+            });
+          }
+
+          const originalChapter = chapters[chapterIndex] as ChapterData;
+
+          // 应用修订（只更新提供的字段）
+          const revisedChapter: ChapterData = {
+            ...originalChapter,
+            ...(revisions.title && { title: revisions.title }),
+            ...(revisions.summary && { summary: revisions.summary }),
+            ...(revisions.content && { content: revisions.content })
+          };
+
+          // 更新 AST 中的章节（不可变更新）
+          ast.previousChapters = [
+            ...ast.previousChapters.slice(0, chapterIndex),
+            revisedChapter,
+            ...ast.previousChapters.slice(chapterIndex + 1)
+          ];
+
+          // 同时更新传入的 chapters 数组（保持引用一致性）
+          chapters.splice(chapterIndex, 1, revisedChapter);
+
+          console.log(`[revise_chapter] 修订第 ${chapterNumber} 章`);
+          console.log(`[revise_chapter] 修订原因: ${reason}`);
+          console.log(`[revise_chapter] 修订内容: ${Object.keys(revisions).join(', ')}`);
+
+          return JSON.stringify({
+            success: true,
+            chapterNumber,
+            revisedFields: Object.keys(revisions),
+            reason,
+            message: `第 ${chapterNumber} 章《${revisedChapter.title}》已修订完成`
+          }, null, 2);
+        },
+        {
+          name: 'revise_chapter',
+          description: `修订已有章节，用于解决剧情矛盾、设定冲突、逻辑错误等问题。
+
+⚠️ 使用场景：
+- 发现当前章节与之前章节存在矛盾（人物设定、时间线、因果关系等）
+- 前文逻辑不自洽，需要修正
+- 需要为当前章节铺垫伏笔，需要在前文埋下线索
+
+⚠️ 使用约束：
+- 优先修订最近的章节（修改影响最小）
+- 说明修订理由（reason 字段必填）
+- 只修订必要的字段（不需要修改的字段不要传）
+- 修订后不需要重新生成后续章节，继续创作当前章节即可`,
+          schema: z.object({
+            chapterNumber: z.number().describe('要修订的章节号'),
+            revisions: z.object({
+              title: z.string().optional().describe('新的章节标题（可选）'),
+              summary: z.string().optional().describe('新的章节简介（可选）'),
+              content: z.string().optional().describe('新的章节正文（可选）')
+            }).describe('要修订的字段（只提供需要修改的字段）'),
+            reason: z.string().describe('修订原因（必填，说明为什么要修订，解决了什么矛盾）')
+          })
+        }
+      );
+
+      tools.push(reviseChapterTool);
+    }
+
+    return tools;
   }
 
   createNodeTools(ctx: WorkflowGraphAst, currentAstId: string): StructuredToolInterface[] {

@@ -129,7 +129,7 @@ export class ChapterGenerationService {
     const useTools = true;
 
     const baseModel = useLlmModel({ model: ast.model, temperature: ast.temperature });
-    const model = useTools ? baseModel.bindTools(this.createTools(chapters, ctx, ast.id, useTools)) : baseModel;
+    const model = useTools ? baseModel.bindTools(this.createTools(chapters, ctx, ast, useTools)) : baseModel;
 
     const systemPrompt = this.promptBuilder.buildSystemPrompt(ast, chapters, isFirstChapter, nextChapterNumber, useTools);
     const prompts = Array.isArray(ast.prompt) ? ast.prompt.join('\n') : ast.prompt;
@@ -199,7 +199,7 @@ export class ChapterGenerationService {
       { role: 'user', content: userPrompt }
     ];
 
-    const tools = useTools ? this.createTools(chapters, ctx, ast.id, useTools) : [];
+    const tools = useTools ? this.createTools(chapters, ctx, ast, useTools) : [];
 
     if (enableStreaming) {
       return this.invokeWithStreaming(model, initialMessages, signal, useTools, tools, ast, streamEventSubject);
@@ -224,7 +224,7 @@ export class ChapterGenerationService {
     ctx: WorkflowGraphAst
   ): Observable<string> {
     const refinePrompt = this.promptBuilder.buildSelfRefinePrompt(draftText, wordCount);
-    const tools = this.createTools(chapters, ctx, ast.id, true);
+    const tools = this.createTools(chapters, ctx, ast, true);
 
     // 绑定工具
     const modelWithTools = model.bindTools(tools);
@@ -273,163 +273,6 @@ export class ChapterGenerationService {
     }
 
     return this.llmInvoker.invokeWithTools(modelWithTools, [{ role: 'user', content: refinePrompt }], signal, true, tools);
-  }
-
-  private generateSingleAttempt(
-    ast: StoryWeaverAst,
-    ctx: WorkflowGraphAst,
-    signal: AbortSignal,
-    model: ChatOpenAI<ChatOpenAICallOptions> | Runnable<BaseLanguageModelInput, AIMessageChunk, ChatOpenAICallOptions>,
-    baseModel: ChatOpenAI<ChatOpenAICallOptions>,
-    systemPrompt: string,
-    userPrompt: string,
-    state: GenerationState,
-    nextChapterNumber: number,
-    existingTitles: Set<string>,
-    ExtractionSchema: z.ZodObject<z.ZodRawShape>,
-    chapters: ChapterData[],
-    useTools: boolean,
-    enableStreaming: boolean,
-    streamEventSubject: Subject<NodeEvent>
-  ): Observable<GenerationState> {
-    let currentUserPrompt = userPrompt;
-    if (state.improvementHints) {
-      currentUserPrompt += `\n\n**⚠️ 上一版本质量问题（需改进）**：\n${state.improvementHints}`;
-    }
-    const initialMessages: MessageContent[] = [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: currentUserPrompt }
-    ];
-
-    const tools = useTools ? this.createTools(chapters, ctx, ast.id, useTools) : [];
-
-    console.log(`[ChapterGeneration] 开始生成尝试，章节号: ${nextChapterNumber}，尝试次数: ${state.attempt + 1}`);
-
-    // 流式模式
-    if (enableStreaming) {
-      return this.invokeWithStreaming(
-        model,
-        initialMessages,
-        signal,
-        useTools,
-        tools,
-        ast,
-        streamEventSubject
-      ).pipe(
-        catchError((error) => this.handleLlmError(error, useTools, chapters)),
-        concatMap((rawText: string) => {
-          console.log(`[ChapterGeneration] 流式模式收到原始文本长度: ${rawText?.length || 0}`);
-          console.log(`[ChapterGeneration] 流式模式原始文本预览: ${rawText?.slice(0, 200)}...`);
-
-          if (!rawText || rawText.trim().length === 0) {
-            return throwError(() => new Error('流式模式：LLM 未生成任何内容，rawText 为空'));
-          }
-
-          // 先对原始文本进行质量检查
-          return from(this.qualityService.checkRawText(rawText, nextChapterNumber, chapters, ast.wordCount, signal)).pipe(
-            concatMap((quality) => {
-              console.log(`[ChapterGeneration] 原始文本质检完成，评分: ${quality.score}/${ast.minQualityScore}`);
-
-              // 质量不合格，返回需要重试的状态
-              if (quality.score < ast.minQualityScore) {
-                console.log(`\n❌ [ChapterGeneration] 原始文本质量不合格，将重试`);
-                console.log(`   评分: ${quality.score}/${ast.minQualityScore}`);
-                console.log(`   问题: ${quality.issues.map(i => i.description).join('; ')}`);
-                console.log(`   建议: ${quality.suggestions.slice(0, 2).join('; ')}`);
-
-                const improvementHints = this.promptBuilder.buildImprovementHints(quality);
-                return of({
-                  result: null,
-                  improvementHints,
-                  attempt: state.attempt + 1,
-                  allAttempts: []
-                });
-              }
-
-              // 质量合格，提取结构化信息（带重试）
-              console.log(`\n✅ [ChapterGeneration] 原始文本质量合格，开始提取结构化信息`);
-              console.log(`   评分: ${quality.score}/${ast.minQualityScore}`);
-
-              return this.extractStructuredContentWithRetry(baseModel, rawText, signal, ExtractionSchema, 3).pipe(
-                map((parsed) => this.validateAndCleanContent(parsed, nextChapterNumber, existingTitles)),
-                map(({ chapter }) => {
-                  // 质量已经检查过，直接保存
-                  console.log(`\n✅ [ChapterGeneration] 结构化提取成功`);
-                  console.log(`   章节: 第${chapter.chapterNumber}章 - ${chapter.title}`);
-                  this.updateAstState(ast, chapter, nextChapterNumber);
-
-                  return {
-                    result: { chapter, quality, attempt: state.attempt },
-                    improvementHints: '',
-                    attempt: ast.maxRewriteRetries ?? 2,
-                    allAttempts: []
-                  };
-                })
-              );
-            })
-          );
-        }),
-        catchError((error) => this.handleTitleDuplicate(error, state))
-      );
-    }
-
-    // 批量模式（向后兼容）
-    return this.llmInvoker.invokeWithTools(model, initialMessages, signal, useTools, tools).pipe(
-      catchError((error) => this.handleLlmError(error, useTools, chapters)),
-      concatMap((rawText: string) => {
-        console.log(`[ChapterGeneration] 收到原始文本长度: ${rawText?.length || 0}`);
-        console.log(`[ChapterGeneration] 原始文本预览: ${rawText?.slice(0, 200)}...`);
-
-        if (!rawText || rawText.trim().length === 0) {
-          return throwError(() => new Error('LLM 未生成任何内容，rawText 为空'));
-        }
-
-        // 先对原始文本进行质量检查
-        return from(this.qualityService.checkRawText(rawText, nextChapterNumber, chapters, ast.wordCount, signal)).pipe(
-          concatMap((quality) => {
-            console.log(`[ChapterGeneration] 原始文本质检完成，评分: ${quality.score}/${ast.minQualityScore}`);
-
-            // 质量不合格，返回需要重试的状态
-            if (quality.score < ast.minQualityScore) {
-              console.log(`\n❌ [ChapterGeneration] 原始文本质量不合格，将重试`);
-              console.log(`   评分: ${quality.score}/${ast.minQualityScore}`);
-              console.log(`   问题: ${quality.issues.map(i => i.description).join('; ')}`);
-              console.log(`   建议: ${quality.suggestions.slice(0, 2).join('; ')}`);
-
-              const improvementHints = this.promptBuilder.buildImprovementHints(quality);
-              return of({
-                result: null,
-                improvementHints,
-                attempt: state.attempt + 1,
-                allAttempts: []
-              });
-            }
-
-            // 质量合格，提取结构化信息（带重试）
-            console.log(`\n✅ [ChapterGeneration] 原始文本质量合格，开始提取结构化信息`);
-            console.log(`   评分: ${quality.score}/${ast.minQualityScore}`);
-
-            return this.extractStructuredContentWithRetry(baseModel, rawText, signal, ExtractionSchema, 3).pipe(
-              map((parsed) => this.validateAndCleanContent(parsed, nextChapterNumber, existingTitles)),
-              map(({ chapter }) => {
-                // 质量已经检查过，直接保存
-                console.log(`\n✅ [ChapterGeneration] 结构化提取成功`);
-                console.log(`   章节: 第${chapter.chapterNumber}章 - ${chapter.title}`);
-                this.updateAstState(ast, chapter, nextChapterNumber);
-
-                return {
-                  result: { chapter, quality, attempt: state.attempt },
-                  improvementHints: '',
-                  attempt: ast.maxRewriteRetries ?? 2,
-                  allAttempts: []
-                };
-              })
-            );
-          })
-        );
-      }),
-      catchError((error) => this.handleTitleDuplicate(error, state))
-    );
   }
 
 
@@ -1024,11 +867,11 @@ export class ChapterGenerationService {
     return { type: 'node_emit', id: ast.id, data: emitData };
   }
 
-  private createTools(chapters: ChapterData[], ctx: WorkflowGraphAst, currentAstId: string, useTools: boolean): StructuredToolInterface[] {
+  private createTools(chapters: ChapterData[], ctx: WorkflowGraphAst, ast: StoryWeaverAst, useTools: boolean): StructuredToolInterface[] {
     if (!useTools) return [];
 
-    const chapterTools = this.toolsFactory.createChapterTools(chapters);
-    const nodeTools = this.toolsFactory.createNodeTools(ctx, currentAstId);
+    const chapterTools = this.toolsFactory.createChapterTools(chapters, ast);
+    const nodeTools = this.toolsFactory.createNodeTools(ctx, ast.id);
     return [...chapterTools, ...nodeTools];
   }
 }
