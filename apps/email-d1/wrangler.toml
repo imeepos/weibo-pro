@@ -1,0 +1,28 @@
+name = "email-d1"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+account_id = "67720b647ff2b55cf37ba3ef9e677083"
+
+# D1 数据库绑定
+[[d1_databases]]
+binding = "DB"
+database_name = "email-db"
+database_id = "ec445eb5-e231-4ea0-8839-f04fd52adec3"
+
+# Email 路由配置
+# 部署后需要在 Cloudflare Dashboard 配置 Email Routing
+
+[observability]
+enabled = false
+head_sampling_rate = 1
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+persist = true
+invocation_logs = true
+
+[observability.traces]
+enabled = false
+persist = true
+head_sampling_rate = 1

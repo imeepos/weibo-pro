@@ -1,11 +1,13 @@
 ## 需求
 
-开发一个 属性选择器 节点
+开发一个 首发电子邮件的 节点
+
+实现参考：packages\email\src\providers\emaild1.ts
 
 功能：
-0. 一个属性选择器 选择一个key 将结构体中的数据提出来，支持 parent.key.key2 提取深层次的数据，如果为空，不触发 emit
-1. 实现 @sker/workflow-run @sker/workflow-ui @sker/workflow-browser @sker/workflow-ast
-2. 如果涉及到布局和样式 统一放到 @sker/ui 尽量复用现有的组件 支持多主题
+0. 输入：apiUrl + domain
+1. 输出：email地址
+2. 收到邮箱内容后输出邮箱内容
 
 ## 子包的作用 
 
@@ -14,7 +16,6 @@
 @sker/workflow-browser 浏览器运行
 @sker/workflow-ui 前端UI，特殊设置使用@Setting
 @sker/ui 通用组件
-
 
 ## 最佳实践
 

@@ -1,0 +1,21 @@
+{
+  "name": "@sker/email-d1",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "d1:create": "wrangler d1 create email-db",
+    "d1:execute": "wrangler d1 execute email-db --file=./schema.sql",
+    "d1:execute-remote": "wrangler d1 execute email-db --remote --file=./schema.sql",
+    "check": "powershell -ExecutionPolicy Bypass -File ./check-config.ps1",
+    "tail": "wrangler tail",
+    "db:query": "wrangler d1 execute email-db --remote --command",
+    "db:list": "wrangler d1 execute email-db --remote --command \"SELECT * FROM emails ORDER BY received_at DESC LIMIT 10\""
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241127.0",
+    "wrangler": "3.78.12"
+  }
+}
