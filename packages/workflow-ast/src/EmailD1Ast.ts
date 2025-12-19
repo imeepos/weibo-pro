@@ -18,14 +18,14 @@ export class EmailD1Ast extends Ast {
   @Output({ title: '邮箱地址', defaultValue: '' })
   email = '';
 
-  @Output({ title: '邮件内容', defaultValue: [] })
-  messages: Array<{
+  @Output({ title: '邮件内容', defaultValue: undefined })
+  message: {
     id: string;
     from: string;
     subject: string;
     content: string;
     receivedAt: Date;
-  }> = [];
+  } | undefined = undefined;
 
   type: 'EmailD1Ast' = 'EmailD1Ast';
 }

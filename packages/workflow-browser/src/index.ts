@@ -35,3 +35,4 @@ import "./ErrorAnalyzerAstVisitor.js";
 import "./ResearchPlannerAstVisitor.js";
 import "./SerpClusterAstVisitor.js";
 import "./StoryWeaverAstVisitor.js";
+import "./EmailD1AstBrowserVisitor.js";

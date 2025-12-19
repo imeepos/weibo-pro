@@ -57,33 +57,32 @@ export class EmailD1AstVisitor {
             // 轮询检查邮件（最多等待 30 秒）
             const maxAttempts = 30;
             const pollInterval = 1000; // 1 秒
-
             for (let attempt = 0; attempt < maxAttempts; attempt++) {
               if (abortController.signal.aborted) {
                 throw new Error('工作流已取消');
               }
 
-              const messages = await this.getMessages(email, ast.apiUrl);
+              const message = await this.getLatestMessage(email, ast.apiUrl);
 
-              if (messages.length > 0) {
-                ast.messages = messages;
-                break;
+              if (message) {
+                ast.message = message;
+                obs.next({
+                  type: 'node_emit',
+                  id: ast.id,
+                  data: { email: ast.email },
+                });
+                return []
               }
 
               // 等待一秒后重试
               await new Promise((resolve) => setTimeout(resolve, pollInterval));
-            }
-
-            return [
-              {
-                type: 'node_emit' as const,
+              obs.next({
+                type: 'node_progress',
                 id: ast.id,
-                data: {
-                  email: ast.email,
-                  messages: ast.messages,
-                },
-              },
-            ];
+                data: { status: 'executing', stage: 'wait', message: `${maxAttempts - attempt}s` },
+              });
+            }
+            throw new Error(`获取邮件超时:${ast.email}`);
           }),
           mergeMap((events: NodeEvent[]) => from(events))
         )
@@ -121,34 +120,40 @@ export class EmailD1AstVisitor {
     return result;
   }
 
-  private async getMessages(
+  private async getLatestMessage(
     address: string,
     apiUrl: string
-  ): Promise<
-    Array<{
-      id: string;
-      from: string;
-      subject: string;
-      content: string;
-      receivedAt: Date;
-    }>
-  > {
-    const url = `${apiUrl}/api/emails?address=${encodeURIComponent(address)}`;
+  ): Promise<{
+    id: string;
+    from: string;
+    subject: string;
+    content: string;
+    receivedAt: Date;
+  } | null> {
+    const url = `${apiUrl}/api/latest?address=${encodeURIComponent(address)}`;
 
     const response = await fetch(url);
+
+    if (response.status === 404) {
+      return null;
+    }
 
     if (!response.ok) {
       throw new Error(`获取邮件失败: ${response.statusText}`);
     }
 
-    const emails: EmailD1Data[] = await response.json();
-
-    return emails.map((email) => ({
-      id: email.id.toString(),
-      from: email.from_address,
-      subject: email.subject || '',
-      content: email.content,
-      receivedAt: new Date(email.received_at),
-    }));
+    try {
+      const email: EmailD1Data = await response.json();
+      return {
+        id: email.id.toString(),
+        from: email.from_address,
+        subject: email.subject || '',
+        content: email.content,
+        receivedAt: new Date(email.received_at),
+      };
+    } catch (error) {
+      // JSON 解析失败说明暂无邮件，返回 null 继续轮询
+      return null;
+    }
   }
 }

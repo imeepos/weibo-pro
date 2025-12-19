@@ -1,7 +1,6 @@
-import React, { useMemo, useCallback } from 'react'
-import { TimeTravelDebugger as TimeTravelDebuggerUI, TimeTravelEvent } from '@sker/ui/components/workflow'
+import React from 'react'
+import { TimeTravelDebugger as TimeTravelDebuggerUI } from '@sker/ui/components/workflow'
 import { TimeTravelState, TimeTravelActions } from '../../../hooks/useTimeTravel'
-import { NodeEvent } from '@sker/workflow'
 
 /**
  * 时间旅行调试器 - 业务逻辑层
@@ -35,33 +34,12 @@ export const TimeTravelDebugger: React.FC<TimeTravelDebuggerProps> = React.memo(
   className,
   onLocateNode,
 }) => {
-  // 将 NodeEvent[] 转换为 TimeTravelEvent[]
-  const timeTravelEvents = useMemo<TimeTravelEvent[]>(() => {
-    return events.map((event: NodeEvent) => ({
-      id: event.id,
-      type: event.type,
-      timestamp: Date.now(), // NodeEvent 没有 timestamp，使用当前时间
-      data: 'data' in event ? event.data : undefined,
-    }))
-  }, [events])
-
-  // 将当前 NodeEvent 转换为 TimeTravelEvent
-  const currentTimeTravelEvent = useMemo<TimeTravelEvent | null>(() => {
-    if (!currentEvent) return null
-    return {
-      id: currentEvent.id,
-      type: currentEvent.type,
-      timestamp: Date.now(),
-      data: 'data' in currentEvent ? currentEvent.data : undefined,
-    }
-  }, [currentEvent])
-
   return (
     <TimeTravelDebuggerUI
-      events={timeTravelEvents}
+      events={events}
       currentIndex={currentIndex}
       totalEvents={totalEvents}
-      currentEvent={currentTimeTravelEvent}
+      currentEvent={currentEvent}
       isReplaying={isReplaying}
       replaySpeed={replaySpeed}
       onJumpTo={jumpTo}

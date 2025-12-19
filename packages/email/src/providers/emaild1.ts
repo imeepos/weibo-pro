@@ -29,23 +29,32 @@ export class EmailD1Provider extends BaseProvider {
   }
 
   async getMessages(address: EmailAddress): Promise<Message[]> {
-    const url = `${this.apiUrl}/api/emails?address=${encodeURIComponent(address.address)}`;
+    const url = `${this.apiUrl}/api/latest?address=${encodeURIComponent(address.address)}`;
 
     const response = await fetch(url);
+
+    if (response.status === 404) {
+      return [];
+    }
 
     if (!response.ok) {
       throw new Error(`获取邮件失败: ${response.statusText}`);
     }
 
-    const emails: EmailD1Data[] = await response.json();
+    try {
+      const email: EmailD1Data = await response.json();
 
-    return emails.map(email => ({
-      id: email.id.toString(),
-      from: email.from_address,
-      subject: email.subject || '',
-      content: email.content,
-      receivedAt: new Date(email.received_at)
-    }));
+      return [{
+        id: email.id.toString(),
+        from: email.from_address,
+        subject: email.subject || '',
+        content: email.content,
+        receivedAt: new Date(email.received_at)
+      }];
+    } catch (error) {
+      // JSON 解析失败说明暂无邮件，返回空数组
+      return [];
+    }
   }
 
   private generateRandomString(length: number): string {

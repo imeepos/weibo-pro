@@ -16,17 +16,60 @@ import { cn } from '@sker/ui/lib/utils'
 import { Button } from '@sker/ui/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@sker/ui/components/ui/select'
 import { Slider } from '@sker/ui/components/ui/slider'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@sker/ui/components/ui/collapsible'
 import { ScrollArea } from '@sker/ui/components/ui/scroll-area'
 
 /**
- * 事件类型定义
+ * 节点事件类型，工作流也是一个节点
  */
-export interface TimeTravelEvent {
-  id: string
-  type: 'node_success' | 'node_fail' | 'node_runing' | 'node_emit' | 'node_delta' | 'node_progress'
-  timestamp: number
-  data?: any
+export type TimeTravelEvent<T = any> =
+  | NodeRuningEvent
+  | NodeEmitEvent<T>
+  | NodeSuccessEvent
+  | NodeFailEvent
+  | NodeDeltaEvent
+  | NodeProgressEvent;
+
+// 节点运行
+export interface NodeRuningEvent {
+  type: 'node_runing';
+  id: string;
+}
+// 节点发射
+export interface NodeEmitEvent<T = any> {
+  type: 'node_emit';
+  id: string;
+  data: Partial<T>;
+}
+// 节点成功
+export interface NodeSuccessEvent<T = any> {
+  type: 'node_success';
+  id: string;
+}
+// 节点失败
+export interface NodeFailEvent {
+  type: 'node_fail';
+  id: string;
+  error: string | undefined;
+}
+// 节点增量输出（流式）
+export interface NodeDeltaEvent {
+  type: 'node_delta';
+  id: string;
+  data: {
+    delta: string;
+    accumulated?: string;
+    [key: string]: any;
+  };
+}
+// 节点进度（工具调用、阶段性任务）
+export interface NodeProgressEvent {
+  type: 'node_progress';
+  id: string;
+  data: {
+    round?: number;
+    status?: 'executing' | 'completed';
+    [key: string]: any;
+  };
 }
 
 /**
@@ -151,9 +194,28 @@ export const TimeTravelDebugger: React.FC<TimeTravelDebuggerProps> = ({
 
   // 格式化 JSON 数据
   const formattedData = useMemo(() => {
-    if (!currentEvent?.data) return null
-    return JSON.stringify(currentEvent.data, null, 2)
+    if (!currentEvent) return null
+    return JSON.stringify(currentEvent, null, 2)
   }, [currentEvent])
+
+  const renderData = (currentEvent: TimeTravelEvent) => {
+    switch (currentEvent.type) {
+      case 'node_delta':
+        return currentEvent.data.accumulated;
+      case 'node_emit':
+        return JSON.stringify(currentEvent.data).substring(0, 80);
+      case 'node_fail':
+        return currentEvent.error || '未知错误';
+      case 'node_progress':
+        return currentEvent.data.message;
+      case 'node_runing':
+        return `开始运行`;
+      case 'node_success':
+        return `运行成功`;
+      default:
+        return `未知类型`
+    }
+  }
 
   return (
     <div
@@ -334,20 +396,20 @@ export const TimeTravelDebugger: React.FC<TimeTravelDebuggerProps> = ({
             )}
 
             {/* 数据预览 - 可滚动 */}
-            {currentEvent.data && (
+            {currentEvent && (
               <>
                 <div className="h-3 w-px bg-border flex-shrink-0" />
                 <div className="flex items-center gap-2 flex-1 min-w-0">
                   <span className="text-muted-foreground flex-shrink-0">数据:</span>
                   <span className="font-mono text-foreground truncate text-[11px]">
-                    {JSON.stringify(currentEvent.data).substring(0, 80)}...
+                    {renderData(currentEvent)}
                   </span>
                 </div>
               </>
             )}
 
             {/* 展开/收起按钮 */}
-            {currentEvent.data && (
+            {currentEvent && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -363,7 +425,7 @@ export const TimeTravelDebugger: React.FC<TimeTravelDebuggerProps> = ({
       </div>
 
       {/* 展开区域：完整数据查看 */}
-      {currentEvent?.data && isExpanded && (
+      {isExpanded && (
         <div className="border-t border-border px-6 py-4 flex-1 min-h-0">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-foreground">完整数据</span>

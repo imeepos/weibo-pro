@@ -46,8 +46,6 @@ export interface NodeProgressEvent {
     type: 'node_progress';
     id: string;
     data: {
-        stage: string;
-        message: string;
         round?: number;
         status?: 'executing' | 'completed';
         [key: string]: any;

@@ -17,28 +17,26 @@ const EmailRender: React.FC<{ ast: EmailD1Ast }> = ({ ast }) => {
             <div className="text-sm font-mono text-foreground select-all">{ast.email}</div>
           </div>
 
-          {Array.isArray(ast.messages) && ast.messages.length > 0 && (
+          {ast.message && (
             <div className="space-y-2">
               <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                 <InboxIcon className="size-3" />
-                收到邮件 ({ast.messages.length})
+                收到邮件
               </div>
-              {ast.messages.map((message) => (
-                <div key={message.id} className="p-2 rounded-lg bg-muted/50 border border-border space-y-1">
-                  <div className="text-xs font-medium text-foreground">
-                    {message.subject || '(无主题)'}
-                  </div>
-                  <div className="text-[10px] text-muted-foreground">
-                    发件人: {message.from}
-                  </div>
-                  <div className="text-xs text-foreground line-clamp-3 mt-1">
-                    {message.content}
-                  </div>
-                  <div className="text-[10px] text-muted-foreground">
-                    {new Date(message.receivedAt).toLocaleString('zh-CN')}
-                  </div>
+              <div className="p-2 rounded-lg bg-muted/50 border border-border space-y-1">
+                <div className="text-xs font-medium text-foreground">
+                  {ast.message.subject || '(无主题)'}
                 </div>
-              ))}
+                <div className="text-[10px] text-muted-foreground">
+                  发件人: {ast.message.from}
+                </div>
+                <div className="text-xs text-foreground line-clamp-3 mt-1">
+                  {ast.message.content}
+                </div>
+                <div className="text-[10px] text-muted-foreground">
+                  {new Date(ast.message.receivedAt).toLocaleString('zh-CN')}
+                </div>
+              </div>
             </div>
           )}
         </>
