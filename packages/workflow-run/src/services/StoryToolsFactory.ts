@@ -36,18 +36,35 @@ export class StoryToolsFactory {
     );
 
     const retrieveChapterTool = tool(
-      async ({ chapterNumber }: { chapterNumber: number }) => {
-        const chapter = chapters.find(c => c.chapterNumber === chapterNumber);
-        if (!chapter) {
-          return `章节 ${chapterNumber} 不存在`;
+      async ({ chapterNumbers }: { chapterNumbers: number[] }) => {
+        if (!chapterNumbers || chapterNumbers.length === 0) {
+          return '请提供至少一个章节号';
         }
-        return JSON.stringify(chapter, null, 2);
+
+        const results = chapterNumbers.map(chapterNumber => {
+          const chapter = chapters.find(c => c.chapterNumber === chapterNumber);
+          if (!chapter) {
+            return {
+              chapterNumber,
+              error: `章节 ${chapterNumber} 不存在`
+            };
+          }
+          return chapter;
+        });
+
+        // 如果只查询一个章节，返回单个对象（向后兼容）
+        if (results.length === 1) {
+          return JSON.stringify(results[0], null, 2);
+        }
+
+        // 批量查询，返回数组
+        return JSON.stringify(results, null, 2);
       },
       {
         name: 'retrieve_chapter',
-        description: '检索特定章节的完整内容（包括标题、简介、正文）',
+        description: '批量检索章节的完整内容（包括标题、简介、正文）。可以一次性获取多个章节，提高效率。',
         schema: z.object({
-          chapterNumber: z.number().describe('章节号')
+          chapterNumbers: z.array(z.number()).describe('章节号数组，例如 [1, 2, 3] 表示获取第1、2、3章')
         })
       }
     );
