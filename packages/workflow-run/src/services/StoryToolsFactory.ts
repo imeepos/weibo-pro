@@ -49,7 +49,19 @@ export class StoryToolsFactory {
               error: `章节 ${chapterNumber} 不存在`
             };
           }
-          return chapter;
+
+          // 智能截断正文：头（300字）+ 中间（200字）+ 尾（300字）
+          const content = this.truncateContent(chapter.content);
+
+          return {
+            chapterNumber: chapter.chapterNumber,
+            title: chapter.title,
+            summary: chapter.summary,
+            content,
+            contentLength: chapter.content.length,
+            clues: chapter.clues,
+            resolvedClueIds: chapter.resolvedClueIds
+          };
         });
 
         // 如果只查询一个章节，返回单个对象（向后兼容）
@@ -62,7 +74,7 @@ export class StoryToolsFactory {
       },
       {
         name: 'retrieve_chapter',
-        description: '批量检索章节的完整内容（包括标题、简介、正文）。可以一次性获取多个章节，提高效率。',
+        description: '批量检索章节的摘要内容（头+中间+尾采样，避免上下文过长）。可以一次性获取多个章节，提高效率。',
         schema: z.object({
           chapterNumbers: z.array(z.number()).describe('章节号数组，例如 [1, 2, 3] 表示获取第1、2、3章')
         })
@@ -183,6 +195,38 @@ export class StoryToolsFactory {
     }
 
     return tools;
+  }
+
+  /**
+   * 智能截断内容：头 + 中间 + 尾
+   * 策略：头部300字 + 中间200字 + 尾部300字，避免上下文过长
+   */
+  private truncateContent(content: string): string {
+    const headLength = 300;
+    const middleLength = 200;
+    const tailLength = 300;
+    const minLength = headLength + middleLength + tailLength;
+
+    // 如果内容本身很短，直接返回
+    if (content.length <= minLength) {
+      return content;
+    }
+
+    // 截取头部
+    const head = content.substring(0, headLength);
+
+    // 截取中间（从正中间位置）
+    const middleStart = Math.floor((content.length - middleLength) / 2);
+    const middle = content.substring(middleStart, middleStart + middleLength);
+
+    // 截取尾部
+    const tail = content.substring(content.length - tailLength);
+
+    // 计算省略的字数
+    const omittedBefore = middleStart - headLength;
+    const omittedAfter = content.length - tailLength - (middleStart + middleLength);
+
+    return `${head}\n\n...【省略 ${omittedBefore} 字】...\n\n${middle}\n\n...【省略 ${omittedAfter} 字】...\n\n${tail}`;
   }
 
   private createMatcher(pattern: string, mode: string): (text: string) => { matched: boolean; matches?: RegExpMatchArray[] } {
