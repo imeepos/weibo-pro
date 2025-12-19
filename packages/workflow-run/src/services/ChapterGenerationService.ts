@@ -148,7 +148,7 @@ export class ChapterGenerationService {
       concatMap((draftText: string) => {
         console.log(`\n✅ [Step 1/3] 草稿完成，长度: ${draftText.length}字`);
         console.log('\n✨ [Step 2/3] 自我改进...');
-        return this.selfRefine(baseModel, draftText, ast.wordCount, signal, ast, streamEventSubject, enableStreaming);
+        return this.selfRefine(baseModel, draftText, ast.wordCount, signal, ast, streamEventSubject, enableStreaming, chapters, ctx);
       }),
       concatMap((refinedText: string) => {
         console.log(`\n✅ [Step 2/3] 改进完成，长度: ${refinedText.length}字`);
@@ -210,6 +210,7 @@ export class ChapterGenerationService {
 
   /**
    * Step 2: 自我改进（流式）
+   * 保持工具开启，虽然改进提示词通常不需要调用工具
    */
   private selfRefine(
     model: ChatOpenAI<ChatOpenAICallOptions>,
@@ -218,9 +219,15 @@ export class ChapterGenerationService {
     signal: AbortSignal,
     ast: StoryWeaverAst,
     streamEventSubject: Subject<NodeEvent>,
-    enableStreaming: boolean
+    enableStreaming: boolean,
+    chapters: ChapterData[],
+    ctx: WorkflowGraphAst
   ): Observable<string> {
     const refinePrompt = this.promptBuilder.buildSelfRefinePrompt(draftText, wordCount);
+    const tools = this.createTools(chapters, ctx, ast.id, true);
+
+    // 绑定工具
+    const modelWithTools = model.bindTools(tools);
 
     if (enableStreaming) {
       let accumulatedText = '';
@@ -228,11 +235,11 @@ export class ChapterGenerationService {
       const DELTA_THROTTLE_MS = 150;
 
       return this.streamingLlmInvoker.streamWithTools(
-        model,
+        modelWithTools,
         [{ role: 'user', content: refinePrompt }],
         signal,
-        false,
-        []
+        true,  // useTools = true，保持工具开启
+        tools
       ).pipe(
         tap((chunk: StreamChunk) => {
           if (chunk.type === 'delta' && chunk.delta) {
@@ -259,16 +266,13 @@ export class ChapterGenerationService {
             data: { delta: '', accumulated: finalText }
           });
 
+          console.log(`[selfRefine] 改进完成，长度: ${finalText.length}字`);
           return finalText;
         })
       );
     }
 
-    return from(model.invoke([{ role: 'user', content: refinePrompt }], { signal })).pipe(
-      map((aiMessage) => {
-        return typeof aiMessage.content === 'string' ? aiMessage.content : JSON.stringify(aiMessage.content);
-      })
-    );
+    return this.llmInvoker.invokeWithTools(modelWithTools, [{ role: 'user', content: refinePrompt }], signal, true, tools);
   }
 
   private generateSingleAttempt(
