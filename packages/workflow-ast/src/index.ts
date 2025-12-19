@@ -89,3 +89,6 @@ export { WorkflowNodeGeneratorAst } from './WorkflowNodeGeneratorAst'
 
 // 临时邮箱节点
 export { EmailD1Ast } from './EmailD1Ast'
+
+// 代理自动选择节点
+export { ProxyAutoSelectAst } from './ProxyAutoSelectAst'

@@ -79,6 +79,9 @@ export { WorkflowNodeGeneratorAstVisitor } from './WorkflowNodeGeneratorAstVisit
 // 临时邮箱节点
 export { EmailD1AstVisitor } from './EmailD1AstVisitor'
 
+// 代理自动选择节点
+export { ProxyAutoSelectAstVisitor } from './ProxyAutoSelectAstVisitor'
+
 // 服务
 export { CronSchedulerService } from './services/CronSchedulerService'
 export { WorkflowExecutionService } from './services/WorkflowExecutionService'

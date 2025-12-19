@@ -190,8 +190,7 @@ function FullscreenReader({ chapters, currentIndex, onChapterChange }: Fullscree
 
 ${chapter.content}
 
----
-`)
+---`)
       .join('\n\n');
 
     const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });

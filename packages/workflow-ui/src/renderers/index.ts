@@ -78,3 +78,6 @@ export * from './AnswerEvaluatorAstRender';
 
 // 临时邮箱节点
 export * from './EmailD1AstRender';
+
+// 代理自动选择节点
+export * from './ProxyAutoSelectAstRender';

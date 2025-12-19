@@ -1,0 +1,55 @@
+{
+  "name": "@sker/ip-proxy",
+  "version": "0.0.0",
+  "private": true,
+  "description": "IP proxy pool with Redis cache and multiple provider support for HTTP clients and browsers",
+  "keywords": [
+    "proxy",
+    "ip-pool",
+    "kuaidaili",
+    "redis",
+    "axios",
+    "playwright",
+    "proxy-rotation"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "default": "./dist/index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "types": "./dist/index.d.ts",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint": "eslint . --max-warnings 0",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@sker/core": "workspace:*",
+    "@sker/redis": "workspace:*",
+    "axios": "^1.7.9"
+  },
+  "devDependencies": {
+    "@sker/eslint-config": "workspace:*",
+    "@sker/typescript-config": "workspace:*",
+    "@types/node": "^22.10.5",
+    "playwright": "^1.49.1",
+    "tsup": "^8.4.0",
+    "typescript": "5.9.2"
+  },
+  "peerDependencies": {
+    "playwright": "^1.49.0"
+  },
+  "peerDependenciesMeta": {
+    "playwright": {
+      "optional": true
+    }
+  }
+}

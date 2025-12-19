@@ -696,6 +696,37 @@ importers:
         specifier: ^8.40.0
         version: 8.46.4(eslint@9.39.1(jiti@2.6.1))(typescript@5.9.2)
 
+  packages/ip-proxy:
+    dependencies:
+      '@sker/core':
+        specifier: workspace:*
+        version: link:../core
+      '@sker/redis':
+        specifier: workspace:*
+        version: link:../redis
+      axios:
+        specifier: ^1.7.9
+        version: 1.7.9
+    devDependencies:
+      '@sker/eslint-config':
+        specifier: workspace:*
+        version: link:../eslint-config
+      '@sker/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      '@types/node':
+        specifier: ^22.10.5
+        version: 22.19.0
+      playwright:
+        specifier: ^1.49.1
+        version: 1.56.1
+      tsup:
+        specifier: ^8.4.0
+        version: 8.5.0(@swc/core@1.15.3(@swc/helpers@0.5.17))(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.2)(yaml@2.8.2)
+      typescript:
+        specifier: 5.9.2
+        version: 5.9.2
+
   packages/json-harmony:
     dependencies:
       yaml:
@@ -1491,6 +1522,9 @@ importers:
       '@sker/entities':
         specifier: workspace:*
         version: link:../entities
+      '@sker/ip-proxy':
+        specifier: workspace:*
+        version: link:../ip-proxy
       '@sker/json-harmony':
         specifier: workspace:*
         version: link:../json-harmony

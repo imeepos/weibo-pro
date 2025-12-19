@@ -36,3 +36,4 @@ import "./ResearchPlannerAstVisitor.js";
 import "./SerpClusterAstVisitor.js";
 import "./StoryWeaverAstVisitor.js";
 import "./EmailD1AstBrowserVisitor.js";
+import "./ProxyAutoSelectAstBrowserVisitor.js";
