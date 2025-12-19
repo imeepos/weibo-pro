@@ -59,12 +59,8 @@ export function useTimeTravel(): TimeTravelState & TimeTravelActions {
         setCurrentIndex(totalEvents > 0 ? totalEvents - 1 : 0)
       }
     })
-
-    console.log('[useTimeTravel] ✅ 订阅全局 eventStream')
-
     return () => {
       eventsSub.unsubscribe()
-      console.log('[useTimeTravel] 🔌 取消订阅')
     }
   }, []) // 空依赖数组：永远不需要改变
 

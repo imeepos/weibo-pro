@@ -36,8 +36,6 @@ export class WorkflowGraphAstVisitor {
 
         return input$.pipe(
             concatMap(input => {
-                console.log(`[WorkflowGraphAstVisitor] workflow input is ${JSON.stringify(input)}`)
-
                 ast.state = 'running';
                 ast.error = undefined;
 
@@ -49,7 +47,6 @@ export class WorkflowGraphAstVisitor {
                 // 2. 为每个节点创建执行流
                 ast.nodes.forEach((node, index) => {
                     const nodeInput$ = nodeInputStreams.get(node.id) || EMPTY;
-                    console.log(`[WorkflowGraphAstVisitor] 创建节点 [${index + 1}/${ast.nodes.length}] ${node.id} (${node.type}) 的执行流`);
 
                     const eventStream$ = this.nodeExecutor.run(node, nodeInput$, ast).pipe(
                         shareReplay({ bufferSize: Infinity, refCount: true })

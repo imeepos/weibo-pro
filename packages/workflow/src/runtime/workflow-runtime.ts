@@ -28,7 +28,6 @@ export class WorkflowRuntime {
     startRecording(): void {
         this.eventStream.clear();
         this.eventStream.setStoreEnabled(true);
-        console.log('[WorkflowRuntime] 🎬 开始录制事件');
     }
 
     /**
@@ -39,7 +38,6 @@ export class WorkflowRuntime {
      */
     stopRecording(): void {
         this.eventStream.setStoreEnabled(false);
-        console.log('[WorkflowRuntime] ⏹️ 停止录制事件');
     }
 
     /**
@@ -47,7 +45,6 @@ export class WorkflowRuntime {
      */
     clearEvents(): void {
         this.eventStream.clear();
-        console.log('[WorkflowRuntime] 🗑️ 清空事件历史');
     }
 }
 
