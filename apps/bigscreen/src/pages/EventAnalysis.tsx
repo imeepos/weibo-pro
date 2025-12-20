@@ -7,7 +7,6 @@ import {
   MessageSquare,
   Users,
   Heart,
-  Eye,
   AlertTriangle,
   BarChart3,
   Clock,
@@ -20,7 +19,7 @@ import { createLogger } from '@sker/core';
 import { MetricCard } from '@sker/ui/components/ui/metric-card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@sker/ui/components/ui/select';
 import MiniTrendChart from '@/components/charts/MiniTrendChart';
-import { EventItem, TrendData } from '@/types';
+import { EventItem } from '@/types';
 import { EventsController, TrendDataSeries } from '@sker/sdk'
 import { root } from '@sker/core'
 import {
@@ -40,7 +39,6 @@ const EventAnalysis: React.FC = () => {
   const { selectedTimeRange } = useAppStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
   const [events, setEvents] = useState<EventItem[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [trendData, setTrendData] = useState<TrendDataSeries | null>(null);
@@ -350,7 +348,7 @@ const EventAnalysis: React.FC = () => {
       </div>
 
       {/* 分页组件 */}
-      {filteredEvents.length > 0 && totalPages > 1 && (
+      {totalPages > 1 && (
         <div className="flex justify-center mt-6">
           <Pagination>
             <PaginationContent>
@@ -365,36 +363,47 @@ const EventAnalysis: React.FC = () => {
                 />
               </PaginationItem>
 
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                if (
-                  page === 1 ||
-                  page === totalPages ||
-                  (page >= currentPage - 1 && page <= currentPage + 1)
-                ) {
-                  return (
-                    <PaginationItem key={page}>
+              {(() => {
+                const pages: (number | 'ellipsis')[] = [];
+                const showPages = new Set<number>();
+
+                // 始终显示首尾页和当前页附近
+                [1, totalPages, currentPage - 1, currentPage, currentPage + 1].forEach(p => {
+                  if (p >= 1 && p <= totalPages) showPages.add(p);
+                });
+
+                const sortedPages = Array.from(showPages).sort((a, b) => a - b);
+
+                sortedPages.forEach((page, idx) => {
+                  // 如果与前一个页码差距 > 1，插入省略号
+                  if (idx > 0 && page - sortedPages[idx - 1] > 1) {
+                    pages.push('ellipsis');
+                  }
+                  pages.push(page);
+                });
+
+                return pages.map((item, idx) =>
+                  item === 'ellipsis' ? (
+                    <PaginationItem key={`ellipsis-${idx}`}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  ) : (
+                    <PaginationItem key={item}>
                       <PaginationLink
                         href="#"
                         onClick={(e) => {
                           e.preventDefault();
-                          setCurrentPage(page);
+                          setCurrentPage(item);
                         }}
-                        isActive={currentPage === page}
+                        isActive={currentPage === item}
                         className="cursor-pointer"
                       >
-                        {page}
+                        {item}
                       </PaginationLink>
                     </PaginationItem>
-                  );
-                } else if (page === currentPage - 2 || page === currentPage + 2) {
-                  return (
-                    <PaginationItem key={page}>
-                      <PaginationEllipsis />
-                    </PaginationItem>
-                  );
-                }
-                return null;
-              })}
+                  )
+                );
+              })()}
 
               <PaginationItem>
                 <PaginationNext
@@ -411,79 +420,6 @@ const EventAnalysis: React.FC = () => {
         </div>
       )}
 
-      {/* 事件详情模态框 */}
-      {selectedEvent && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          onClick={() => setSelectedEvent(null)}
-        >
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="bg-card border border-border rounded-xl p-6 max-w-2xl w-full max-h-[80vh]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-foreground">{selectedEvent.title}</h2>
-              <button
-                onClick={() => setSelectedEvent(null)}
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <p className="text-muted-foreground">{selectedEvent.description}</p>
-
-              {/* 详细统计 */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-muted rounded-lg p-4">
-                  <div className="text-sm text-muted-foreground mb-1">贴子数量</div>
-                  <div className="text-lg font-bold text-foreground">{formatNumber(selectedEvent.postCount)}</div>
-                </div>
-                <div className="bg-muted rounded-lg p-4">
-                  <div className="text-sm text-muted-foreground mb-1">参与用户</div>
-                  <div className="text-lg font-bold text-foreground">{formatNumber(selectedEvent.userCount)}</div>
-                </div>
-              </div>
-
-              {/* 情感分析 */}
-              <div className="bg-muted rounded-lg p-4">
-                <div className="text-sm text-muted-foreground mb-3">情感分析</div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-success">正面</span>
-                    <span className="text-foreground">{selectedEvent.sentiment.positive}%</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-destructive">负面</span>
-                    <span className="text-foreground">{selectedEvent.sentiment.negative}%</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">中性</span>
-                    <span className="text-foreground">{selectedEvent.sentiment.neutral}%</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* 关键词 */}
-              <div>
-                <div className="text-sm text-muted-foreground mb-2">关键词</div>
-                <div className="flex flex-wrap gap-2">
-                  {selectedEvent.keywords.map(keyword => (
-                    <span key={keyword} className="px-3 py-1 bg-primary/20 text-primary text-sm rounded-full">
-                      #{keyword}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
     </div>
   );
 };
