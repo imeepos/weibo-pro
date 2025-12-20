@@ -61,9 +61,9 @@ export const findLatestEventStatistics = (eventId: string, timeRange: TimeRange)
 const calculatePostCount = (statistics: EventStatisticsEntity[]): number => {
   if (statistics && statistics.length > 0) {
     const latestStats = statistics[0];
-    return latestStats?.post_count ?? 1000;
+    return latestStats?.post_count ?? 0;
   }
-  return 1000;
+  return 0;
 };
 
 /** 获取情感分析数据 */
@@ -95,7 +95,7 @@ const calculateTrend = (statistics: EventStatisticsEntity[]): 'up' | 'down' | 's
 /** 生成趋势数据 */
 const generateTrendData = (statistics: EventStatisticsEntity[], currentHotness: number): number[] => {
   if (!statistics || statistics.length === 0) {
-    return [45, 52, 68, 72, 85, 88, currentHotness];
+    return [currentHotness];
   }
 
   return statistics
@@ -141,6 +141,9 @@ export const findHotEvents = (timeRange: TimeRange, limit: number = 20): Promise
     const events = await m
       .createQueryBuilder(EventEntity, 'event')
       .where('event.status = :status', { status: 'active' })
+      .andWhere('event.deleted_at IS NULL')
+      .andWhere('event.created_at >= :start', { start: dateRange.start })
+      .andWhere('event.created_at <= :end', { end: dateRange.end })
       .orderBy('event.hotness', 'DESC')
       .addOrderBy('event.created_at', 'DESC')
       .limit(limit)
