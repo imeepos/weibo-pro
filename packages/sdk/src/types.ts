@@ -1,5 +1,13 @@
 export type TimeRange = '1h' | '6h' | '12h' | '24h' | '7d' | '30d' | '90d' | '180d' | '365d'
 
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
 export interface ChartData {
   categories: string[];
   series: Array<{

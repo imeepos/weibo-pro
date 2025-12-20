@@ -164,7 +164,7 @@ export const findHotEvents = (timeRange: TimeRange, limit: number = 20): Promise
 /** 查询事件列表(支持分类、搜索、分页) */
 export const findEventList = (
   timeRange?: TimeRange,
-  options?: { category?: string; search?: string; limit?: number }
+  options?: { category?: string; search?: string; limit?: number; offset?: number }
 ) =>
   useEntityManager(async m => {
     const query = m
@@ -196,9 +196,13 @@ export const findEventList = (
       .orderBy('event.hotness', 'DESC')
       .addOrderBy('event.created_at', 'DESC');
 
-    // 只有明确传入 limit 才限制数量
+    // 支持分页
     if (options?.limit) {
       query.limit(options.limit);
+    }
+
+    if (options?.offset) {
+      query.offset(options.offset);
     }
 
     return await query.getMany();

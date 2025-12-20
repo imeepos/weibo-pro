@@ -45,23 +45,30 @@ const EventAnalysis: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
+  const [total, setTotal] = useState(0);
 
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true);
         const c = root.get(EventsController)
+
+        // 传递搜索和分类筛选参数到后端
+        const search = searchTerm || undefined;
+        const category = selectedCategory !== 'all' ? selectedCategory : undefined;
+
         const [eventsResult, categoriesResult, trendsResult] = await Promise.all([
-          c.getEventList(selectedTimeRange),
+          c.getEventList(selectedTimeRange, currentPage, pageSize, search, category),
           c.getEventCategories(selectedTimeRange),
           c.getTrendData(selectedTimeRange)
         ]);
 
-        // 确保数据为数组
-        const eventsArray = Array.isArray(eventsResult) ? eventsResult : [];
+        // 使用后端分页返回的数据
+        const eventsArray = Array.isArray(eventsResult.data) ? eventsResult.data : [];
         const categoriesArray = Array.isArray(categoriesResult) ? categoriesResult : [];
 
         setEvents(eventsArray);
+        setTotal(eventsResult.total);
 
         // 转换 EventCategory[] 为 string[]
         const categoryNames = ['all', ...categoriesArray.map(cat => cat.name)];
@@ -72,6 +79,7 @@ const EventAnalysis: React.FC = () => {
         logger.error('Failed to load events data:', error);
         // 设置默认值以防止UI崩溃
         setEvents([]);
+        setTotal(0);
         setCategories(['all']);
         setTrendData(null);
       } finally {
@@ -80,25 +88,19 @@ const EventAnalysis: React.FC = () => {
     };
 
     loadData();
-  }, [selectedTimeRange]);
+  }, [selectedTimeRange, currentPage, pageSize, searchTerm, selectedCategory]);
 
-  const filteredEvents = Array.isArray(events) ? events.filter(event => {
-    const matchesSearch = event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      event.keywords.some(keyword => keyword.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesCategory = selectedCategory === 'all' || event.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  }) : [];
+  // 使用后端分页，不再需要前端筛选和切片
+  const filteredEvents = events;
+  const paginatedEvents = events;
 
-  // 分页计算
-  const totalPages = Math.ceil(filteredEvents.length / pageSize);
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  const paginatedEvents = filteredEvents.slice(startIndex, endIndex);
+  // 计算总页数（使用后端返回的 total）
+  const totalPages = Math.ceil(total / pageSize);
 
-  // 重置页码当筛选条件变化时
+  // 重置页码当筛选条件或时间范围变化时
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedCategory]);
+  }, [searchTerm, selectedCategory, selectedTimeRange]);
 
   const getSentimentColor = (sentiment: EventItem['sentiment']) => {
     if (sentiment.positive > sentiment.negative && sentiment.positive > sentiment.neutral) {

@@ -28,9 +28,15 @@ export class EventsService {
 
   async getEventList(
     timeRange?: TimeRange,
-    params?: { category?: string; search?: string; limit?: number }
-  ): Promise<EventListItem[]> {
-    return this.queryService.getEventList(timeRange, params);
+    pagination?: { page: number; pageSize: number; search?: string; category?: string }
+  ): Promise<{
+    data: EventListItem[];
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  }> {
+    return this.queryService.getEventList(timeRange, pagination);
   }
 
   async getHotList(timeRange: TimeRange): Promise<HotEvent[]> {

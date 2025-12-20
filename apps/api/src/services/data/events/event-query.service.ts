@@ -32,37 +32,100 @@ export class EventQueryService {
 
   async getEventList(
     timeRange?: TimeRange,
-    params?: { category?: string; search?: string; limit?: number }
-  ): Promise<EventListItem[]> {
+    pagination?: { page: number; pageSize: number; search?: string; category?: string }
+  ): Promise<{
+    data: EventListItem[];
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  }> {
+    const page = pagination?.page || 1;
+    const pageSize = pagination?.pageSize || 10;
+    const search = pagination?.search;
+    const category = pagination?.category;
+
     const cacheKey = CacheService.buildKey(
       CACHE_KEYS.EVENT_DETAIL,
       'list',
       timeRange || 'all',
-      params?.category || '',
-      params?.search || ''
+      page.toString(),
+      pageSize.toString(),
+      search || '',
+      category || ''
     );
 
     return await this.cacheService.getOrSet(
       cacheKey,
       async () => {
-        const events = await findEventList(timeRange, params);
+        // 获取总数
+        const total = await this.getEventCount(timeRange, { search, category });
+
+        // 获取分页数据
+        const events = await findEventList(timeRange, {
+          limit: pageSize,
+          offset: (page - 1) * pageSize,
+          search,
+          category
+        });
+
         const eventIds = events.map((e) => e.id);
 
-        // 如果没有指定时间范围，使用默认的 24h 获取统计数据
         const statsTimeRange = timeRange || '24h';
         const allStatistics = await this.getStatisticsBatch(eventIds, statsTimeRange);
         const statsMap = new Map(allStatistics.map((s) => [s.event_id, s]));
 
-        return events.map((event) => {
+        const data = events.map((event) => {
           const stats = statsMap.get(event.id);
           return this.mapEventToListItem(
             event,
             stats ? [stats] : []
           );
         });
+
+        return {
+          data,
+          total,
+          page,
+          pageSize,
+          totalPages: Math.ceil(total / pageSize)
+        };
       },
       CACHE_TTL.SHORT
     );
+  }
+
+  private async getEventCount(
+    timeRange?: TimeRange,
+    filters?: { search?: string; category?: string }
+  ): Promise<number> {
+    return await useEntityManager(async (entityManager) => {
+      let query = entityManager
+        .createQueryBuilder('events', 'event')
+        .leftJoin('event.category', 'category')
+        .where('event.deleted_at IS NULL')
+        .andWhere('event.status = :status', { status: 'active' });
+
+      if (timeRange) {
+        const dateRange = getDateRangeByTimeRange(timeRange);
+        query = query
+          .andWhere('event.created_at >= :start', { start: dateRange.start })
+          .andWhere('event.created_at <= :end', { end: dateRange.end });
+      }
+
+      if (filters?.search) {
+        query = query.andWhere(
+          '(event.title ILIKE :search OR event.description ILIKE :search)',
+          { search: `%${filters.search}%` }
+        );
+      }
+
+      if (filters?.category) {
+        query = query.andWhere('category.name = :category', { category: filters.category });
+      }
+
+      return await query.getCount();
+    });
   }
 
   async getHotEvents(timeRange: TimeRange): Promise<HotEvent[]> {

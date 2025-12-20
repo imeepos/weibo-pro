@@ -94,8 +94,8 @@ const EventSetting: React.FC<EventSettingProps> = ({ ast, onPropertyChange }) =>
   const { data: events, loading } = useAsyncData({
     fetcher: async () => {
       const controller = root.get(EventsController);
-      const list = await controller.getEventList();
-      return list.map(e => ({
+      const result = await controller.getEventList();
+      return result.data.map(e => ({
         id: e.id,
         title: e.title,
         description: e.description,

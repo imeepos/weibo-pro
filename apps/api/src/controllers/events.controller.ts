@@ -5,7 +5,7 @@ import { TimeRange } from '../services/data/types';
 import * as sdk from '@sker/sdk';
 
 @Controller('api/events')
-export class EventsController implements sdk.EventsController{
+export class EventsController {
   private eventsService: EventsService;
 
   constructor() {
@@ -13,10 +13,23 @@ export class EventsController implements sdk.EventsController{
   }
 
   @Get('list')
-  async getEventList(@Query('timeRange') timeRange?: string) {
-    // 如果传了 timeRange 参数，进行验证；否则传 undefined 表示不过滤时间
+  async getEventList(
+    @Query('timeRange') timeRange?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+    @Query('search') search?: string,
+    @Query('category') category?: string
+  ) {
     const validTimeRange = timeRange ? this.validateTimeRange(timeRange) : undefined;
-    return this.eventsService.getEventList(validTimeRange);
+    const pageNum = page ? parseInt(page, 10) : 1;
+    const pageSizeNum = pageSize ? parseInt(pageSize, 10) : 10;
+
+    return this.eventsService.getEventList(validTimeRange, {
+      page: pageNum,
+      pageSize: pageSizeNum,
+      search,
+      category: category && category !== 'all' ? category : undefined
+    });
   }
 
   @Get('categories')

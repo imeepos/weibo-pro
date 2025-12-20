@@ -9,14 +9,21 @@ import type {
   GeographicDistribution,
   TimeSeriesData,
   TrendAnalysis,
-  TimeRange
+  TimeRange,
+  PaginatedResponse
 } from '../types'
 
 @Controller('api/events')
 export class EventsController {
 
   @Get('list')
-  getEventList(@Query('timeRange') timeRange?: TimeRange): Promise<EventListItem[]> {
+  getEventList(
+    @Query('timeRange') timeRange?: TimeRange,
+    @Query('page') page?: number,
+    @Query('pageSize') pageSize?: number,
+    @Query('search') search?: string,
+    @Query('category') category?: string
+  ): Promise<PaginatedResponse<EventListItem>> {
     throw new Error('method getEventList not implements')
   }
 
