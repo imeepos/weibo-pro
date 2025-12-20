@@ -167,7 +167,7 @@ export const findEventList = (
   options?: { category?: string; search?: string; limit?: number }
 ) =>
   useEntityManager(async m => {
-    let query = m
+    const query = m
       .createQueryBuilder(EventEntity, 'event')
       .leftJoinAndSelect('event.category', 'category')
       .where('event.deleted_at IS NULL')
@@ -176,27 +176,32 @@ export const findEventList = (
     // 只有传了 timeRange 才按时间范围过滤
     if (timeRange) {
       const dateRange = getDateRangeByTimeRange(timeRange);
-      query = query
+      query
         .andWhere('event.created_at >= :start', { start: dateRange.start })
         .andWhere('event.created_at <= :end', { end: dateRange.end });
     }
 
     if (options?.category) {
-      query = query.andWhere('category.name = :category', { category: options.category });
+      query.andWhere('category.name = :category', { category: options.category });
     }
 
     if (options?.search) {
-      query = query.andWhere(
+      query.andWhere(
         '(event.title ILIKE :search OR event.description ILIKE :search)',
         { search: `%${options.search}%` }
       );
     }
 
-    return await query
+    query
       .orderBy('event.hotness', 'DESC')
-      .addOrderBy('event.created_at', 'DESC')
-      .limit(options?.limit || 20)
-      .getMany();
+      .addOrderBy('event.created_at', 'DESC');
+
+    // 只有明确传入 limit 才限制数量
+    if (options?.limit) {
+      query.limit(options.limit);
+    }
+
+    return await query.getMany();
   });
 
 /** 获取事件分类统计 */
