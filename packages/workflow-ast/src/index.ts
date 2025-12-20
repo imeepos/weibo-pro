@@ -92,3 +92,7 @@ export { EmailD1Ast } from './EmailD1Ast'
 
 // 代理自动选择节点
 export { ProxyAutoSelectAst } from './ProxyAutoSelectAst'
+
+// HTTP 请求节点
+export { HttpAst } from './HttpAst'
+export type { HttpMethod, HttpHeader, HttpResponse } from './HttpAst'

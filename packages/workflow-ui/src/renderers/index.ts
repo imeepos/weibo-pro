@@ -81,3 +81,6 @@ export * from './EmailD1AstRender';
 
 // 代理自动选择节点
 export * from './ProxyAutoSelectAstRender';
+
+// HTTP 请求节点
+export * from './HttpAstRender';

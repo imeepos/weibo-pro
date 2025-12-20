@@ -10,7 +10,6 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@sker/ui/components/ui/select';
 import { BarChart3Icon, ServerIcon, CpuIcon, ClockIcon, CheckCircleIcon, XCircleIcon, ActivityIcon, TrendingUpIcon, RefreshCwIcon } from 'lucide-react';
 import { EChart } from '@sker/ui/components/ui/echart';
-import { TimeSeriesChart } from '@sker/ui/components/ui/time-series-chart';
 import { useAppStore } from '@/stores/useAppStore';
 import { getDateRangeByTimeRange, type TimeRange } from '@sker/entities';
 

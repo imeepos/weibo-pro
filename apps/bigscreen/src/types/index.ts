@@ -207,6 +207,9 @@ export interface AppError {
   details?: Record<string, unknown>;
 }
 
+// 导出SDK类型
+export type { OverviewSentiment } from '@sker/sdk';
+
 // 导出BLE Mesh相关类型
 export * from './bleMesh';
 

@@ -82,6 +82,9 @@ export { EmailD1AstVisitor } from './EmailD1AstVisitor'
 // 代理自动选择节点
 export { ProxyAutoSelectAstVisitor } from './ProxyAutoSelectAstVisitor'
 
+// HTTP 请求节点
+export { HttpAstVisitor } from './HttpAstVisitor'
+
 // 服务
 export { CronSchedulerService } from './services/CronSchedulerService'
 export { WorkflowExecutionService } from './services/WorkflowExecutionService'

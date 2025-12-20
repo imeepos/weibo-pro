@@ -1,21 +1,14 @@
 ## 需求
 
-开发一个 首发电子邮件的 节点
+设计开发一个 Http 请求的 节点 HttpAst
 
-实现参考：packages\email\src\providers\emaild1.ts
+## 实现列表 
 
-功能：
-0. 输入：apiUrl + domain
-1. 输出：email地址
-2. 收到邮箱内容后输出邮箱内容
-
-## 子包的作用 
-
-@sker/workflow-ast 节点定义
-@sker/workflow-run 服务端运行
-@sker/workflow-browser 浏览器运行
-@sker/workflow-ui 前端UI，特殊设置使用@Setting
-@sker/ui 通用组件
+@sker/workflow-ast 需实现节点定义
+@sker/workflow-run 需实现服务端运行
+@sker/workflow-browser 需实现浏览器运行
+@sker/workflow-ui 需实现 前端UI，特殊设置使用@Setting
+@sker/ui 需使用的通用组件
 
 ## 最佳实践
 
