@@ -2,6 +2,7 @@ import { Injectable, Inject } from '@sker/core';
 import {
   useEntityManager,
   EventStatisticsEntity,
+  EventEntity,
   PostNLPResultEntity,
   WeiboPostEntity,
   getDateRangeByTimeRange,
@@ -38,10 +39,22 @@ export class EventAnalyticsService {
           const dateRange = getDateRangeByTimeRange(timeRange);
           const granularity = TIME_RANGE_GRANULARITY[timeRange];
 
-          const trendData = await entityManager
+          // 从 events 表按时间分组统计事件数量
+          const eventTrendData = await entityManager
+            .createQueryBuilder(EventEntity, 'event')
+            .select(`DATE_TRUNC('${granularity}', event.created_at)`, 'date')
+            .addSelect('COUNT(event.id)', 'eventcount')
+            .where('event.deleted_at IS NULL')
+            .andWhere('event.created_at >= :start', { start: dateRange.start })
+            .andWhere('event.created_at <= :end', { end: dateRange.end })
+            .groupBy('date')
+            .orderBy('date', 'ASC')
+            .getRawMany();
+
+          // 从 event_statistics 表按时间分组统计帖子、用户、热度
+          const statsTrendData = await entityManager
             .createQueryBuilder(EventStatisticsEntity, 'stats')
             .select(`DATE_TRUNC('${granularity}', stats.snapshot_at)`, 'date')
-            .addSelect('COUNT(DISTINCT stats.event_id)', 'eventcount')
             .addSelect('SUM(stats.user_count)', 'usercount')
             .addSelect('SUM(stats.post_count)', 'postcount')
             .addSelect('AVG(stats.hotness)', 'hotness')
@@ -51,26 +64,45 @@ export class EventAnalyticsService {
             .orderBy('date', 'ASC')
             .getRawMany();
 
-          const categories = trendData.map((d: { date: Date }) =>
-            this.formatDate(d.date, granularity)
-          );
-          const eventCounts = trendData.map((d: { eventcount?: string }) =>
-            parseInt(d.eventcount || '0', 10)
-          );
-          const userCounts = trendData.map((d: { usercount?: string }) =>
-            parseInt(d.usercount || '0', 10)
-          );
-          const postCounts = trendData.map((d: { postcount?: string }) =>
-            parseInt(d.postcount || '0', 10)
-          );
-          const hotness = trendData.map((d: { hotness?: string }) =>
-            Math.round(parseFloat(d.hotness || '0'))
+          // 合并两个数据集，以事件趋势数据的时间点为基准
+          const statsMap = new Map(
+            statsTrendData.map((d: { date: Date; usercount?: string; postcount?: string; hotness?: string }) => [
+              new Date(d.date).getTime(),
+              d,
+            ])
           );
 
+          const categories = eventTrendData.map((d: { date: Date }) =>
+            this.formatDate(d.date, granularity)
+          );
+          const eventCounts = eventTrendData.map((d: { eventcount?: string }) =>
+            parseInt(d.eventcount || '0', 10)
+          );
+          const userCounts = eventTrendData.map((d: { date: Date }) => {
+            const stats = statsMap.get(new Date(d.date).getTime());
+            return parseInt(stats?.usercount || '0', 10);
+          });
+          const postCounts = eventTrendData.map((d: { date: Date }) => {
+            const stats = statsMap.get(new Date(d.date).getTime());
+            return parseInt(stats?.postcount || '0', 10);
+          });
+          const hotness = eventTrendData.map((d: { date: Date }) => {
+            const stats = statsMap.get(new Date(d.date).getTime());
+            return Math.round(parseFloat(stats?.hotness || '0'));
+          });
+
+          // 从 events 表直接查询事件总数
+          const eventCount = await entityManager
+            .createQueryBuilder(EventEntity, 'event')
+            .where('event.deleted_at IS NULL')
+            .andWhere('event.created_at >= :start', { start: dateRange.start })
+            .andWhere('event.created_at <= :end', { end: dateRange.end })
+            .getCount();
+
+          // 从 event_statistics 表查询帖子、用户、热度统计
           const totalStats = await entityManager
             .createQueryBuilder(EventStatisticsEntity, 'stats')
-            .select('COUNT(DISTINCT stats.event_id)', 'totalevents')
-            .addSelect('SUM(stats.post_count)', 'totalposts')
+            .select('SUM(stats.post_count)', 'totalposts')
             .addSelect('SUM(stats.user_count)', 'totalusers')
             .addSelect('AVG(stats.hotness)', 'avghotness')
             .where('stats.snapshot_at >= :start', { start: dateRange.start })
@@ -86,7 +118,7 @@ export class EventAnalyticsService {
               { name: '热度指数', data: hotness },
             ],
             totals: {
-              totalEvents: parseInt(totalStats?.totalevents || '0', 10),
+              totalEvents: eventCount,
               totalPosts: parseInt(totalStats?.totalposts || '0', 10),
               totalUsers: parseInt(totalStats?.totalusers || '0', 10),
               avgHotness: Math.round(parseFloat(totalStats?.avghotness || '0')),
