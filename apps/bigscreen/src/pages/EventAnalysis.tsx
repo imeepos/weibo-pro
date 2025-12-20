@@ -127,6 +127,15 @@ const EventAnalysis: React.FC = () => {
   const userTrendData = trendData?.series?.find(s => s.name === '参与用户')?.data || [];
   const hotnessTrendData = trendData?.series?.find(s => s.name === '热度指数')?.data || [];
 
+  // 计算变化率：比较最新值与前一个值
+  const calcChange = (data: number[]): number => {
+    if (data.length < 2) return 0;
+    const current = data[data.length - 1];
+    const previous = data[data.length - 2];
+    if (previous === 0) return current > 0 ? 100 : 0;
+    return Math.round(((current - previous) / previous) * 1000) / 10;
+  };
+
   // 计算总数统计（取最新值或累计值）
   const totalEvents = eventTrendData.length > 0 ? eventTrendData[eventTrendData.length - 1] : 0;
   const totalPosts = postTrendData.length > 0 ? postTrendData[postTrendData.length - 1] : 0;
@@ -134,6 +143,12 @@ const EventAnalysis: React.FC = () => {
   const avgHotness = hotnessTrendData.length > 0
     ? Math.round(hotnessTrendData.reduce((sum, val) => sum + val, 0) / hotnessTrendData.length)
     : 0;
+
+  // 计算各指标变化率
+  const eventChange = calcChange(eventTrendData);
+  const postChange = calcChange(postTrendData);
+  const userChange = calcChange(userTrendData);
+  const hotnessChange = calcChange(hotnessTrendData);
 
   if (loading) {
     return (
@@ -193,7 +208,7 @@ const EventAnalysis: React.FC = () => {
           title="事件总数"
           className='sentiment-overview-card'
           value={totalEvents}
-          change={12.5}
+          change={eventChange}
           icon={Activity}
           color="blue"
           chartComponent={<MiniTrendChart data={eventTrendData} color="#3b82f6" type="bar" />}
@@ -202,7 +217,7 @@ const EventAnalysis: React.FC = () => {
           title="贴子总数"
           className='sentiment-overview-card'
           value={totalPosts}
-          change={8.3}
+          change={postChange}
           icon={MessageSquare}
           color="green"
           chartComponent={<MiniTrendChart data={postTrendData} color="#10b981" type="line" />}
@@ -211,7 +226,7 @@ const EventAnalysis: React.FC = () => {
           title="参与用户"
           className='sentiment-overview-card'
           value={totalUsers}
-          change={5.7}
+          change={userChange}
           icon={Users}
           color="purple"
           chartComponent={<MiniTrendChart data={userTrendData} color="#8b5cf6" type="line" />}
@@ -220,7 +235,7 @@ const EventAnalysis: React.FC = () => {
           title="平均热度"
           className='sentiment-overview-card'
           value={avgHotness}
-          change={15.2}
+          change={hotnessChange}
           icon={Zap}
           color="red"
           chartComponent={<MiniTrendChart data={hotnessTrendData} color="#ef4444" type="bar" />}
@@ -313,15 +328,16 @@ const EventAnalysis: React.FC = () => {
                       <div className="text-sm text-muted-foreground">热度指数</div>
                     </div>
 
-                    {/* 热度直方图（简化版） */}
+                    {/* 热度直方图（使用真实趋势数据） */}
                     <div className="w-20 h-12 bg-muted/30 rounded-lg flex items-end space-x-1 p-2">
-                      {[...Array(7)].map((_, i) => {
-                        const height = 20 + Math.random() * 60;
+                      {(event.trendData?.slice(-7) || []).map((value, i) => {
+                        const maxVal = Math.max(...(event.trendData || [1]));
+                        const height = maxVal > 0 ? (value / maxVal) * 100 : 0;
                         return (
                           <div
                             key={i}
                             className="flex-1 bg-gradient-to-t from-primary/60 to-primary rounded-sm"
-                            style={{ height: `${height}%` }}
+                            style={{ height: `${Math.max(height, 5)}%` }}
                           ></div>
                         );
                       })}
