@@ -2,6 +2,8 @@ import { Injectable, Inject } from '@sker/core';
 import {
   useEntityManager,
   EventStatisticsEntity,
+  PostNLPResultEntity,
+  WeiboPostEntity,
   getDateRangeByTimeRange,
 } from '@sker/entities';
 import { CacheService, CACHE_TTL } from '../../cache.service';
@@ -16,7 +18,6 @@ import type {
 } from './types';
 import {
   TIME_RANGE_GRANULARITY,
-  PROPAGATION_USER_TYPES,
   SENTIMENT_WEIGHT,
   HOTNESS_CALCULATION_WEIGHTS,
 } from './constants';
@@ -199,15 +200,69 @@ export class EventAnalyticsService {
     );
   }
 
-  buildPropagationPath(event: EventWithCategory): EventPropagationPath[] {
-    const baseCount = event.hotness * 10;
+  async buildPropagationPath(eventId: string): Promise<EventPropagationPath[]> {
+    const cacheKey = CacheService.buildKey('event:propagation', eventId);
 
-    return Object.values(PROPAGATION_USER_TYPES).map((type) => ({
-      userType: type.label,
-      userCount: Math.floor(baseCount * type.userRatio),
-      postCount: Math.floor(baseCount * type.postRatio),
-      influence: type.influence,
-    }));
+    return await this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        return await useEntityManager(async (entityManager) => {
+          // 按用户粉丝数区分用户类型，统计真实数据
+          const userStats = await entityManager
+            .createQueryBuilder(PostNLPResultEntity, 'nlp')
+            .innerJoin('nlp.post', 'post')
+            .select(
+              `CASE
+                WHEN (jsonb_extract_path_text(post.user, 'followers_count'))::int >= 100000 THEN '意见领袖'
+                WHEN (jsonb_extract_path_text(post.user, 'followers_count'))::int >= 10000 THEN '活跃用户'
+                WHEN (jsonb_extract_path_text(post.user, 'followers_count'))::int >= 1000 THEN '普通用户'
+                ELSE '围观群众'
+              END`,
+              'usertype'
+            )
+            .addSelect('COUNT(DISTINCT jsonb_extract_path_text(post.user, \'id\'))', 'usercount')
+            .addSelect('COUNT(post.id)', 'postcount')
+            .addSelect(
+              'AVG(post.attitudes_count + post.comments_count + post.reposts_count)',
+              'avginteraction'
+            )
+            .where('nlp.event_id = :eventId', { eventId })
+            .andWhere('post.deleted_at IS NULL')
+            .groupBy('usertype')
+            .orderBy('usercount', 'DESC')
+            .getRawMany();
+
+          if (userStats.length === 0) {
+            return [];
+          }
+
+          const totalUsers = userStats.reduce(
+            (sum, s) => sum + parseInt(s.usercount || '0', 10),
+            0
+          );
+
+          return userStats.map((stat: {
+            usertype: string;
+            usercount: string;
+            postcount: string;
+            avginteraction: string;
+          }) => {
+            const userCount = parseInt(stat.usercount || '0', 10);
+            const avgInteraction = parseFloat(stat.avginteraction || '0');
+            // 影响力基于平均互动量计算
+            const influence = Math.min(100, Math.round(Math.log10(avgInteraction + 1) * 25));
+
+            return {
+              userType: stat.usertype,
+              userCount,
+              postCount: parseInt(stat.postcount || '0', 10),
+              influence: Math.max(influence, 10), // 最低影响力 10
+            };
+          });
+        });
+      },
+      CACHE_TTL.MEDIUM
+    );
   }
 
   private formatDate(

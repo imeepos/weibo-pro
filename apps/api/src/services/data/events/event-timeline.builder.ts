@@ -26,17 +26,22 @@ export class EventTimelineBuilder {
   ): EventTimelineNode[] {
     const timeline: EventTimelineNode[] = [];
     const startTime = event.occurred_at || event.created_at;
+    const firstStat = statistics[statistics.length - 1];
+    const maxHotness = Math.max(...statistics.map((s) => s.hotness), event.hotness);
+
+    // 基于热度计算影响力：热度/最大热度 * 100
+    const calcImpact = (hotness: number) => Math.min(100, Math.round((hotness / Math.max(maxHotness, 1)) * 100));
 
     timeline.push({
       time: startTime.toISOString(),
       event: '事件开始',
       type: 'start',
-      impact: 60,
+      impact: firstStat ? calcImpact(firstStat.hotness) : calcImpact(event.hotness * 0.3),
       description: `${event.title}事件开始发酵`,
       metrics: {
-        posts: statistics[statistics.length - 1]?.post_count || 100,
-        users: statistics[statistics.length - 1]?.user_count || 50,
-        sentiment: 0.5,
+        posts: firstStat?.post_count || 0,
+        users: firstStat?.user_count || 0,
+        sentiment: firstStat?.sentiment?.positive || 0.5,
       },
     });
 
@@ -56,12 +61,12 @@ export class EventTimelineBuilder {
             time: peakStat.snapshot_at.toISOString(),
             event: '热度峰值',
             type: 'peak',
-            impact: 95,
+            impact: calcImpact(peakStat.hotness),
             description: '事件达到传播高峰,引发广泛讨论',
             metrics: {
               posts: peakStat.post_count,
               users: peakStat.user_count,
-              sentiment: peakStat.sentiment?.positive || 0.6,
+              sentiment: peakStat.sentiment?.positive || 0.5,
             },
           });
         }
@@ -75,7 +80,7 @@ export class EventTimelineBuilder {
           time: midStat.snapshot_at.toISOString(),
           event: '关键转折',
           type: 'key_event',
-          impact: 75,
+          impact: calcImpact(midStat.hotness),
           description: '事件进入新阶段,舆论方向发生变化',
           metrics: {
             posts: midStat.post_count,
@@ -92,7 +97,7 @@ export class EventTimelineBuilder {
         time: latestStat.snapshot_at.toISOString(),
         event: '热度回落',
         type: 'decline',
-        impact: 40,
+        impact: calcImpact(latestStat.hotness),
         description: '事件热度逐渐降温,讨论趋于平静',
         metrics: {
           posts: latestStat.post_count,

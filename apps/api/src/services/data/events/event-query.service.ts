@@ -23,13 +23,11 @@ import type {
   GeographicDistribution,
 } from './types';
 import { TREND_THRESHOLD, INFLUENCE_WEIGHTS } from './constants';
-import { DataMockService } from './data-mock.service';
 
 @Injectable({ providedIn: 'root' })
 export class EventQueryService {
   constructor(
-    @Inject(CacheService) private readonly cacheService: CacheService,
-    @Inject(DataMockService) private readonly mockService: DataMockService
+    @Inject(CacheService) private readonly cacheService: CacheService
   ) {}
 
   async getEventList(
@@ -169,6 +167,10 @@ export class EventQueryService {
               'SUM(post.attitudes_count + post.comments_count + post.reposts_count)',
               'totalinteractions'
             )
+            .addSelect(
+              'AVG((nlp.sentiment->>\'positive_prob\')::numeric)',
+              'avgsentiment'
+            )
             .where('nlp.event_id = :eventId', { eventId })
             .andWhere('post.deleted_at IS NULL')
             .groupBy('userid, name, followers')
@@ -182,10 +184,12 @@ export class EventQueryService {
             followers: string;
             postcount: string;
             totalinteractions: string;
+            avgsentiment: string;
           }) => {
             const totalInteractions = parseInt(user.totalinteractions || '0', 10);
             const followers = parseInt(user.followers || '0', 10);
             const postCount = parseInt(user.postcount || '0', 10);
+            const avgSentiment = parseFloat(user.avgsentiment || '0.5');
 
             const influence = Math.min(
               100,
@@ -203,7 +207,7 @@ export class EventQueryService {
               postCount,
               followers,
               interactionCount: totalInteractions,
-              sentimentScore: 0.5,
+              sentimentScore: Math.round(avgSentiment * 100) / 100,
             };
           });
         });
@@ -313,10 +317,11 @@ export class EventQueryService {
             const postCount = parseInt(item.postcount || '0', 10);
             const avgSentiment = parseFloat(item.avgsentiment || '0');
 
+            // 将情感值 [-1, 1] 归一化到 [0, 1]，无数据时返回 0.5（中性）
             const normalizedSentiment =
               avgSentiment !== 0
                 ? Math.max(0, Math.min(1, (avgSentiment + 1) / 2))
-                : this.mockService.generateSentiment();
+                : 0.5;
 
             return {
               region: (item.location || '未知').replace('发布于 ', ''),
@@ -325,7 +330,7 @@ export class EventQueryService {
                 totalUsers > 0
                   ? Math.round((userCount / totalUsers) * 10000) / 100
                   : 0,
-              posts: postCount || this.mockService.estimatePostCount(userCount),
+              posts: postCount,
               sentiment: Math.round(normalizedSentiment * 100) / 100,
             };
           });

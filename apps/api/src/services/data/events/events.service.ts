@@ -59,7 +59,7 @@ export class EventsService {
     const keywordsData = await this.queryService.getEventKeywords(id);
 
     const timeline = this.timelineBuilder.buildTimeline(event, statistics);
-    const propagationPath = this.analyticsService.buildPropagationPath(event);
+    const propagationPath = await this.analyticsService.buildPropagationPath(id);
     const keyNodes = this.timelineBuilder.buildKeyNodes(timeline);
     const developmentPhases = this.timelineBuilder.buildDevelopmentPhases(
       event,

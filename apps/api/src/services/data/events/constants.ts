@@ -20,33 +20,6 @@ export const TIME_RANGE_GRANULARITY: Record<
   '365d': 'month',
 };
 
-export const PROPAGATION_USER_TYPES = {
-  LEADER: {
-    label: '意见领袖',
-    userRatio: 0.05,
-    postRatio: 0.15,
-    influence: 95,
-  },
-  ACTIVE: {
-    label: '活跃用户',
-    userRatio: 0.15,
-    postRatio: 0.35,
-    influence: 75,
-  },
-  NORMAL: {
-    label: '普通用户',
-    userRatio: 0.5,
-    postRatio: 0.4,
-    influence: 45,
-  },
-  OBSERVER: {
-    label: '围观群众',
-    userRatio: 0.3,
-    postRatio: 0.1,
-    influence: 20,
-  },
-} as const;
-
 export const HOTNESS_THRESHOLD = {
   VERY_HIGH: 80,
   HIGH: 50,

@@ -35,7 +35,6 @@ import { AppWebSocketGateway } from './gateways/websocket.gateway';
 import { EventQueryService } from './services/data/events/event-query.service';
 import { EventAnalyticsService } from './services/data/events/event-analytics.service';
 import { EventTimelineBuilder } from './services/data/events/event-timeline.builder';
-import { DataMockService } from './services/data/events/data-mock.service';
 import { root } from '@sker/core';
 import { DataSource } from '@sker/entities';
 import { LlmProviderService } from './services/llm-provider.service';
@@ -96,7 +95,6 @@ import { PromptSkillService } from './services/prompt-skill.service';
     { provide: EventQueryService, useFactory: () => root.get(EventQueryService) },
     { provide: EventAnalyticsService, useFactory: () => root.get(EventAnalyticsService) },
     { provide: EventTimelineBuilder, useFactory: () => root.get(EventTimelineBuilder) },
-    { provide: DataMockService, useFactory: () => root.get(DataMockService) },
     { provide: DataSource, useFactory: () => root.get(DataSource) },
     { provide: LlmProviderService, useFactory: () => root.get(LlmProviderService) },
     { provide: LlmModelService, useFactory: () => root.get(LlmModelService) },
