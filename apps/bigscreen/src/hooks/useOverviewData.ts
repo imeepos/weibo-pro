@@ -1,8 +1,3 @@
-/**
- * 概览数据获取Hook
- * 封装统计数据和情感数据的获取逻辑，提供缓存、重试、错误处理
- */
-
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { createLogger, root } from '@sker/core';
 import { OverviewController, type OverviewStatisticsData, type OverviewSentiment } from '@sker/sdk';
@@ -10,8 +5,10 @@ import { useAppStore } from '@/stores/useAppStore';
 
 const logger = createLogger('useOverviewData');
 
-const CACHE_TIME = 5 * 60 * 1000; // 5分钟缓存
+const CACHE_TIME = 5 * 60 * 1000;
 const RETRY_COUNT = 3;
+const INITIAL_RETRY_DELAY = 1000;
+const RETRY_DELAY_MULTIPLIER = 2;
 
 interface OverviewDataState {
   statsData: OverviewStatisticsData | null;
@@ -21,11 +18,6 @@ interface OverviewDataState {
   lastUpdated: number | null;
 }
 
-/**
- * 概览数据Hook
- *
- * @returns {Object} 包含数据、加载状态、错误信息和刷新方法
- */
 export const useOverviewData = () => {
   const { selectedTimeRange } = useAppStore();
   const controller = useMemo(() => root.get(OverviewController), []);
@@ -41,13 +33,11 @@ export const useOverviewData = () => {
   const retryCountRef = useRef(0);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // 检查数据是否过期
   const isStale = state.lastUpdated
     ? Date.now() - state.lastUpdated > CACHE_TIME
     : true;
 
   const fetchData = useCallback(async (): Promise<void> => {
-    // 取消之前的请求
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -62,7 +52,6 @@ export const useOverviewData = () => {
         controller.getSentiment(selectedTimeRange),
       ]);
 
-      // 检查请求是否被取消
       if (abortControllerRef.current?.signal.aborted) {
         return;
       }
@@ -77,22 +66,19 @@ export const useOverviewData = () => {
 
       retryCountRef.current = 0;
     } catch (error: any) {
-      // 检查请求是否被取消
       if (abortControllerRef.current?.signal.aborted) {
         return;
       }
 
       const errorMessage = error.message || '数据获取失败';
 
-      // 重试逻辑
       if (retryCountRef.current < RETRY_COUNT) {
         retryCountRef.current++;
         logger.warn(`数据获取失败，正在重试... (${retryCountRef.current}/${RETRY_COUNT})`, error);
 
-        // 指数退避重试
         setTimeout(() => {
           fetchData();
-        }, Math.pow(2, retryCountRef.current) * 1000);
+        }, INITIAL_RETRY_DELAY * Math.pow(RETRY_DELAY_MULTIPLIER, retryCountRef.current));
 
         return;
       }
@@ -107,17 +93,14 @@ export const useOverviewData = () => {
     }
   }, [controller, selectedTimeRange]);
 
-  // 手动刷新数据
   const refetch = useCallback(async (): Promise<void> => {
     retryCountRef.current = 0;
     await fetchData();
   }, [fetchData]);
 
-  // 自动获取数据（首次加载和时间范围变化时）
   useEffect(() => {
     fetchData();
 
-    // 清理函数
     return () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
@@ -125,7 +108,6 @@ export const useOverviewData = () => {
     };
   }, [fetchData]);
 
-  // 转换统计数据格式
   const statsOverviewData = useMemo(() => {
     if (!state.statsData) return null;
 

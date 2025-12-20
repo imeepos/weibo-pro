@@ -75,7 +75,7 @@ export class OverviewService {
       .getRepository(WeiboPostEntity)
       .createQueryBuilder('post')
       .select('COUNT(DISTINCT post.id)', 'postCount')
-      .addSelect('COUNT(DISTINCT post.user)', 'userCount')
+      .addSelect("COUNT(DISTINCT (post.user->>'id')::bigint)", 'userCount')
       .addSelect('SUM(post.comments_count + post.reposts_count + post.attitudes_count)', 'interactionCount')
       .where('post.ingested_at >= :start', { start })
       .andWhere('post.ingested_at <= :end', { end })
