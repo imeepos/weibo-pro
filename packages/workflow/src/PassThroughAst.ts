@@ -23,9 +23,10 @@ export class PassThroughAst extends Ast {
 
 
 import { Injectable } from '@sker/core';
-import { Handler, NodeEvent, setAstError } from '@sker/workflow';
-import { Observable, from } from 'rxjs';
-import { concatMap, mergeMap } from 'rxjs/operators';
+import { Handler } from './decorator';
+import { NodeEvent } from './execution/events';
+import { setAstError } from './ast-utils';
+import { Observable } from 'rxjs';
 
 /**
  * 透传节点执行器 - 接收输入立即原样输出
@@ -38,8 +39,8 @@ export class PassThroughAstVisitor {
       ast.state = 'running';
       obs.next({ type: 'node_runing', id: ast.id });
 
-      const subscription = input$.pipe(
-        concatMap(async (inputData) => {
+      const subscription = input$.subscribe({
+        next: (inputData) => {
           ast.emitCount += 1;
 
           if (inputData) {
@@ -50,14 +51,9 @@ export class PassThroughAstVisitor {
 
           ast.output = ast.input;
 
-          return [
-            { type: 'node_emit' as const, id: ast.id, data: { emitCount: ast.emitCount } },
-            { type: 'node_emit' as const, id: ast.id, data: { output: ast.output } }
-          ];
-        }),
-        mergeMap((events: NodeEvent[]) => from(events))
-      ).subscribe({
-        next: (event: NodeEvent) => obs.next(event),
+          obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } });
+          obs.next({ type: 'node_emit', id: ast.id, data: { output: ast.output } });
+        },
         error: (error) => {
           ast.state = 'fail';
           setAstError(ast, error);

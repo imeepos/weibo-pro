@@ -160,8 +160,6 @@ export class ChartsService {
       const { start, end } = getTimeRangeBoundaries(timeRange);
       const granularity = this.getTimeGranularity(timeRange);
 
-      this.logger.info('Fetching sentiment trend', { timeRange, start, end, granularity });
-
       const results = await manager.query(`
         SELECT
           DATE_TRUNC($1, post.ingested_at) as time_bucket,

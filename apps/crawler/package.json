@@ -4,7 +4,7 @@
   "private": true,
   "description": "Crawler service that consumes MQ tasks and executes crawling workflows",
   "scripts": {
-    "start": "tsx src/main.ts",
+    "dev": "tsx src/main.ts --watch",
     "build": "tsc",
     "check-types": "tsc --noEmit"
   },

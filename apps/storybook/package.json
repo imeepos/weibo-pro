@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "storybook dev -p 6007",
+    "start": "storybook dev -p 6007",
     "preview": "serve storybook-static",
     "check-types": "tsc --noEmit"
   },

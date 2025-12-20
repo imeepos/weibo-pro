@@ -58,8 +58,6 @@ export class ChartsAPI {
   // 获取情感趋势数据
   static getSentimentTrend = withErrorBoundary(
     async (hours: number = 24): Promise<SentimentTrendData[]> => {
-      logger.debug('Fetching sentiment trend data', { hours });
-
       // 后端返回 ChartData 格式，需要转换为 SentimentTrendData[]
       const response = await apiClient.get<{
         categories: string[];
