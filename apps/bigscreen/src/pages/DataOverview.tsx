@@ -41,18 +41,12 @@ const DataOverview: React.FC = () => {
     return <ErrorState error={error} onRetry={refetch} />;
   }
 
-  const hasData = statsOverviewData
-    && sentimentData
-    && (statsOverviewData.events.value > 0
-        || statsOverviewData.posts.value > 0
-        || statsOverviewData.users.value > 0
-        || statsOverviewData.interactions.value > 0);
-
-  if (!hasData) {
+  // 即使数据为 0 也显示完整页面，让用户看到可视化界面
+  if (!statsOverviewData || !sentimentData) {
     return (
       <EmptyState
         title="暂无数据"
-        description="当前时间范围内没有检测到任何活动"
+        description="无法加载数据"
       />
     );
   }

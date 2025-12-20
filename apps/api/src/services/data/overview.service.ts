@@ -61,12 +61,12 @@ export class OverviewService {
   }
 
   private async fetchStatisticsData(manager: any, start: Date, end: Date) {
-    // 查询事件数量
+    // 查询事件数量（occurred_at 为 null 时使用 created_at）
     const eventCount = await manager
       .getRepository(EventEntity)
       .createQueryBuilder('event')
-      .where('event.occurred_at >= :start', { start })
-      .andWhere('event.occurred_at <= :end', { end })
+      .where('COALESCE(event.occurred_at, event.created_at) >= :start', { start })
+      .andWhere('COALESCE(event.occurred_at, event.created_at) <= :end', { end })
       .andWhere('event.deleted_at IS NULL')
       .getCount();
 
