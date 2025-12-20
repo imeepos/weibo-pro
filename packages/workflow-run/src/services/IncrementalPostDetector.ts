@@ -65,6 +65,10 @@ export class IncrementalPostDetector {
    * - 时间比较精确可靠
    */
   private async isNewPost(post: Partial<WeiboPostEntity>, lastProcessedTime: Date): Promise<boolean> {
+    if (!post.id || !post.created_at) {
+      return false;
+    }
+
     // 1. 检查帖子ID是否已处理
     if (this.processedPostsCache.has(post.id)) {
       return false;

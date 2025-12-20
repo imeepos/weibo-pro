@@ -49,29 +49,39 @@ export class WorkflowReplayService {
         const events = await this.eventStore.getEvents(runId);
         const eventStream = WorkflowEventStream.fromJSON({ events });
 
-        // 3. 创建运行时实例
-        const newRunId = await globalRuntime.createRun(workflow);
-        globalRuntime.setEventStream(newRunId, eventStream);
+        // TODO: 重新实现续跑逻辑以适配新的 WorkflowRuntime API
+        // 旧 API (已移除):
+        //   const newRunId = await globalRuntime.createRun(workflow);
+        //   globalRuntime.setEventStream(newRunId, eventStream);
+        //
+        // 新 API 设计:
+        //   globalRuntime 使用单例全局事件流，不再支持多运行实例
+        //   需要重新设计续跑机制
+        throw new Error('续跑功能需要根据新的 WorkflowRuntime API 重新实现');
 
-        console.log(`[WorkflowReplayService] 续跑工作流: ${workflow.id}, newRunId: ${newRunId}, 恢复 ${events.length} 个事件`);
-
-        // 4. 创建新 run 记录
-        const newRun = this.db.create(WorkflowRunEntity, {
-            id: newRunId,
-            workflowId: run.workflowId,
-            scheduleId: run.scheduleId,
-            status: RunStatus.RUNNING,
-            graphSnapshot: run.graphSnapshot,
-            inputs: run.inputs,
-            nodeStates: {},
-            startedAt: new Date(),
-        });
-        await this.db.save(newRun);
-
-        // 5. 执行（成功节点会从 eventStream 中重放，自动跳过）
-        await executeWorkflowImmediate(workflow, run.inputs as Record<string, unknown>);
-
-        return newRunId;
+        // 注释掉的旧代码:
+        // const newRunId = await globalRuntime.createRun(workflow);
+        // globalRuntime.setEventStream(newRunId, eventStream);
+        //
+        // console.log(`[WorkflowReplayService] 续跑工作流: ${workflow.id}, newRunId: ${newRunId}, 恢复 ${events.length} 个事件`);
+        //
+        // // 4. 创建新 run 记录
+        // const newRun = this.db.create(WorkflowRunEntity, {
+        //     id: newRunId,
+        //     workflowId: run.workflowId,
+        //     scheduleId: run.scheduleId,
+        //     status: RunStatus.RUNNING,
+        //     graphSnapshot: run.graphSnapshot,
+        //     inputs: run.inputs,
+        //     nodeStates: {},
+        //     startedAt: new Date(),
+        // });
+        // await this.db.save(newRun);
+        //
+        // // 5. 执行（成功节点会从 eventStream 中重放，自动跳过）
+        // await executeWorkflowImmediate(workflow, run.inputs as Record<string, unknown>);
+        //
+        // return newRunId;
     }
 
     /**

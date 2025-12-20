@@ -7,6 +7,17 @@
  * - 减少代码重复
  */
 
+interface WorkflowContext {
+  abortSignal?: AbortSignal;
+  [key: string]: unknown;
+}
+
+interface WorkflowAst {
+  state?: string;
+  setError?: (error: Error) => void;
+  [key: string]: unknown;
+}
+
 /**
  * 检查 AbortSignal 是否已触发
  *
@@ -14,10 +25,10 @@
  * @param ast 节点实例
  * @returns 如果已取消返回 true，否则返回 false
  */
-export function checkAbortSignal(ctx: { abortSignal?: AbortSignal }, ast: Record<string, unknown>): boolean {
+export function checkAbortSignal(ctx: WorkflowContext, ast: WorkflowAst): boolean {
   if (ctx.abortSignal?.aborted) {
     ast.state = 'fail';
-    ast.setError(new Error('工作流已取消'));
+    ast.setError?.(new Error('工作流已取消'));
     return true;
   }
   return false;
@@ -30,7 +41,7 @@ export function checkAbortSignal(ctx: { abortSignal?: AbortSignal }, ast: Record
  * @param ctx 工作流上下文
  * @throws Error 如果工作流已取消
  */
-export function throwIfAborted(ctx: Record<string, unknown>): void {
+export function throwIfAborted(ctx: WorkflowContext): void {
   if (ctx.abortSignal?.aborted) {
     throw new Error('工作流已取消');
   }
