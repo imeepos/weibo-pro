@@ -2,6 +2,7 @@ import { Injectable, Inject, logger } from '@sker/core'
 import { RedisClient } from '@sker/redis'
 import { DataSource, WorkflowScheduleEntity, ScheduleStatus, ScheduleType } from '@sker/entities'
 import { WorkflowExecutionService } from './WorkflowExecutionService'
+import { withRetryOnNetworkError } from '../utils/retry-on-network-error'
 import nodeSchedule from 'node-schedule'
 
 /**
@@ -136,7 +137,12 @@ export class CronSchedulerService {
 
     try {
       // 🔒 尝试获取分布式锁（使用 SETNX + EXPIRE）
-      const locked = await this.tryLock(lockKey, this.lockTTL)
+      const locked = await withRetryOnNetworkError(
+        () => this.tryLock(lockKey, this.lockTTL),
+        3,
+        1000,
+        `获取分布式锁 [${schedule.name}]`
+      )
 
       if (!locked) {
         logger.debug('调度任务被其他实例执行中，跳过', {
@@ -148,10 +154,20 @@ export class CronSchedulerService {
 
       // 执行任务
       try {
-        await this.executionService.execute(schedule)
+        await withRetryOnNetworkError(
+          () => this.executionService.execute(schedule),
+          3,
+          1000,
+          `执行调度任务 [${schedule.name}]`
+        )
       } finally {
         // 释放锁
-        await this.redis.del(lockKey)
+        await withRetryOnNetworkError(
+          () => this.redis.del(lockKey),
+          3,
+          1000,
+          `释放分布式锁 [${schedule.name}]`
+        )
       }
     } catch (error) {
       logger.error('调度任务执行异常', {
@@ -191,9 +207,16 @@ export class CronSchedulerService {
    */
   async initializeSchedules(): Promise<void> {
     try {
-      const schedules = await this.dataSource.getRepository(WorkflowScheduleEntity).find({
-        where: { status: ScheduleStatus.ENABLED }
-      })
+      const schedules = await withRetryOnNetworkError(
+        async () => {
+          return await this.dataSource.getRepository(WorkflowScheduleEntity).find({
+            where: { status: ScheduleStatus.ENABLED }
+          })
+        },
+        3,
+        1000,
+        '加载调度任务列表'
+      )
 
       logger.info(`开始加载调度任务`, { count: schedules.length })
 

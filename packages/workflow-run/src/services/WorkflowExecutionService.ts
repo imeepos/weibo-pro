@@ -1,6 +1,7 @@
 import { Injectable, Inject, logger } from '@sker/core'
 import { DataSource, WorkflowScheduleEntity, WorkflowEntity, ScheduleStatus, ScheduleType } from '@sker/entities'
 import { executeAst, WorkflowGraphAst } from '@sker/workflow'
+import { withRetryOnNetworkError } from '../utils/retry-on-network-error'
 
 /**
  * 工作流执行服务
@@ -33,10 +34,17 @@ export class WorkflowExecutionService {
     const startTime = new Date()
 
     try {
-      // 获取工作流
-      const workflow = await this.dataSource
-        .getRepository(WorkflowEntity)
-        .findOne({ where: { id: schedule.workflowId } })
+      // 获取工作流（带重试）
+      const workflow = await withRetryOnNetworkError(
+        async () => {
+          return await this.dataSource
+            .getRepository(WorkflowEntity)
+            .findOne({ where: { id: schedule.workflowId } })
+        },
+        3,
+        1000,
+        `查询工作流 [${schedule.name}]`
+      )
 
       if (!workflow) {
         logger.error('工作流不存在', {
@@ -136,14 +144,21 @@ export class WorkflowExecutionService {
       })
     }
 
-    await this.dataSource.getRepository(WorkflowScheduleEntity).update(schedule.id, {
-      lastRunAt: now,
-      nextRunAt:
-        status === ScheduleStatus.DISABLED || status === ScheduleStatus.EXPIRED
-          ? undefined
-          : nextRunAt ?? undefined,
-      status
-    })
+    await withRetryOnNetworkError(
+      async () => {
+        await this.dataSource.getRepository(WorkflowScheduleEntity).update(schedule.id, {
+          lastRunAt: now,
+          nextRunAt:
+            status === ScheduleStatus.DISABLED || status === ScheduleStatus.EXPIRED
+              ? undefined
+              : nextRunAt ?? undefined,
+          status
+        })
+      },
+      3,
+      1000,
+      `更新调度状态 [${schedule.name}]`
+    )
   }
 
   /**
