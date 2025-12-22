@@ -9,6 +9,7 @@ export const TIME_RANGE_GRANULARITY: Record<
   TimeRange,
   'hour' | 'day' | 'week' | 'month'
 > = {
+  'all': 'month',
   '1h': 'hour',
   '6h': 'hour',
   '12h': 'hour',
