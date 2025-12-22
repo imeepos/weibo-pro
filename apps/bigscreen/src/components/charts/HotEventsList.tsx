@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  Minus, 
-  MessageSquare, 
+import {
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  MessageSquare,
   Heart,
   BarChart3,
   Eye
@@ -16,6 +16,7 @@ import { HotEvent } from '@/types';
 import { EventsController } from '@sker/sdk';
 import { root } from '@sker/core';
 import { ScrollArea } from '@sker/ui/components/ui/scroll-area';
+import { useAppStore } from '@/stores/useAppStore';
 
 interface HotEventsListProps {
   className?: string;
@@ -25,6 +26,7 @@ const logger = createLogger('HotEventsList');
 
 const HotEventsList: React.FC<HotEventsListProps> = ({ className = '' }) => {
   const navigate = useNavigate();
+  const { selectedTimeRange } = useAppStore();
   const [events, setEvents] = useState<HotEvent[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -33,7 +35,7 @@ const HotEventsList: React.FC<HotEventsListProps> = ({ className = '' }) => {
       try {
         setLoading(true);
         const c = root.get(EventsController)
-        const result = await c.getHotList();
+        const result = await c.getHotList(selectedTimeRange);
         // 确保返回的是数组并转换类型
         if (Array.isArray(result)) {
           const transformedEvents: HotEvent[] = result.map(event => ({
@@ -59,7 +61,7 @@ const HotEventsList: React.FC<HotEventsListProps> = ({ className = '' }) => {
     };
 
     fetchHotEvents();
-  }, []);
+  }, [selectedTimeRange]);
 
   const getSentimentColor = (sentiment: HotEvent['sentiment']) => {
     if (sentiment.positive > sentiment.negative && sentiment.positive > sentiment.neutral) {
