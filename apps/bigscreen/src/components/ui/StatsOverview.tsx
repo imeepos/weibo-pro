@@ -30,12 +30,24 @@ const StatsOverview: React.FC<StatsOverviewProps> = ({
   };
 
   const statsData = data || defaultData;
-  const formatValue = (value: number): number => {
-    if (value >= 1000) {
-      return Math.round(value / 100) / 10; // 转换为 K 单位，保留一位小数
+
+  // 格式化数值：保持原值，通过 CountUp 的 suffix 添加单位
+  const formatMetric = (value: number) => {
+    if (value >= 10000) {
+      return {
+        value: Math.round(value / 100) / 10,
+        suffix: 'K'
+      };
     }
-    return value;
+    return {
+      value,
+      suffix: ''
+    };
   };
+
+  const eventsMetric = formatMetric(statsData.events.value);
+  const postsMetric = formatMetric(statsData.posts.value);
+  const interactionsMetric = formatMetric(statsData.interactions.value);
 
   // 使用静态趋势数据
   const trendData = useMemo(() => ({
@@ -52,22 +64,24 @@ const StatsOverview: React.FC<StatsOverviewProps> = ({
     <div className={`grid grid-cols-2 gap-2 w-full ${className}`}>
       <MetricCard
         title="事件数"
-        value={formatValue(statsData.events.value)}
+        value={eventsMetric.value}
         change={statsData.events.change}
         icon={FileText}
         color="blue"
         loading={loading}
+        suffix={eventsMetric.suffix}
         chartComponent={<MiniTrendChart data={eventTrendData} color="#3b82f6" type="line" height={20} />}
         className="relative"
       />
 
       <MetricCard
         title="贴子数"
-        value={formatValue(statsData.posts.value)}
+        value={postsMetric.value}
         change={statsData.posts.change}
         icon={MessageCircle}
         color="green"
         loading={loading}
+        suffix={postsMetric.suffix}
         chartComponent={<MiniTrendChart data={postTrendData} color="#10b981" type="line" height={20} />}
         className="relative"
       />
@@ -85,11 +99,12 @@ const StatsOverview: React.FC<StatsOverviewProps> = ({
 
       <MetricCard
         title="互动数"
-        value={formatValue(statsData.interactions.value)}
+        value={interactionsMetric.value}
         change={statsData.interactions.change}
         icon={ThumbsUp}
         color="red"
         loading={loading}
+        suffix={interactionsMetric.suffix}
         chartComponent={<MiniTrendChart data={interactionTrendData} color="#ef4444" type="line" height={20} />}
         className="relative"
       />

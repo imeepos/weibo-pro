@@ -18,6 +18,7 @@ export interface MetricCardProps {
   loading?: boolean;
   chartComponent?: React.ReactNode;
   animated?: boolean;
+  suffix?: string;
   sentiment?: {
     type: SentimentType;
     level: SentimentLevel;
@@ -67,6 +68,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
   loading = false,
   chartComponent,
   animated = true,
+  suffix = '',
   sentiment,
 }) => {
   const colors = colorMap[color];
@@ -97,7 +99,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
               colors.gradient
             )}
           >
-            <CountUp end={value} animated={animated} />
+            <CountUp end={value} animated={animated} suffix={suffix} />
           </StatisticValue>
 
           {change !== undefined && (
