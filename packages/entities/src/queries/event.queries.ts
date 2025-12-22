@@ -2,7 +2,7 @@ import { useEntityManager } from '../utils';
 import { EventEntity } from '../event.entity'
 import { EventStatisticsEntity } from '../event-statistics.entity'
 import { SentimentScore } from '../types/sentiment';
-export type TimeRange = '1h' | '6h' | '12h' | '24h' | '7d' | '30d' | '90d' | '180d' | '365d';
+export type TimeRange = 'all' | '1h' | '6h' | '12h' | '24h' | '7d' | '30d' | '90d' | '180d' | '365d';
 
 export interface HotEvent {
   id: string;
@@ -19,6 +19,12 @@ export const getDateRangeByTimeRange = (timeRange: TimeRange = '24h'): { start: 
   const now = new Date();
   const end = new Date(now);
   const start = new Date(now);
+
+  // 处理 'all' - 返回从很久以前到现在的时间范围
+  if (timeRange === 'all') {
+    start.setFullYear(2000, 0, 1); // 从 2000-01-01 开始
+    return { start, end };
+  }
 
   // 解析时间范围字符串 (格式: '1h' | '6h' | '12h' | '24h' | '7d' | '30d' | '90d' | '180d' | '365d')
   const match = timeRange.match(/^(\d+)([hd])$/);

@@ -39,6 +39,7 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
 
   // 时间区间选项 - 与后端 @sker/entities TimeRange 保持一致
   const timeRangeOptions = [
+    { value: 'all', label: '全部' },
     { value: '1h', label: '近1小时' },
     { value: '6h', label: '近6小时' },
     { value: '12h', label: '近12小时' },
