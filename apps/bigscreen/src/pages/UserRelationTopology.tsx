@@ -8,9 +8,9 @@ import NodeDetailPanel from '../components/charts/NodeDetailPanel';
 import NetworkStatisticsCards from '../components/charts/NetworkStatisticsCards';
 import NodeTypeLegend from '../components/charts/NodeTypeLegend';
 import { useUserRelationNetwork } from '../hooks/useUserRelationNetwork';
+import { useAppStore } from '../stores/useAppStore';
 import type {
   UserRelationType,
-  TimeRange,
   UserRelationNode,
 } from '@sker/sdk';
 
@@ -22,15 +22,15 @@ const USER_TYPE_CONFIGS = [
 ];
 
 const UserRelationTopology: React.FC = () => {
+  const { selectedTimeRange, setSelectedTimeRange } = useAppStore();
   const [relationType, setRelationType] = useState<UserRelationType>('comprehensive');
-  const [timeRange, setTimeRange] = useState<TimeRange>('90d');
   const [minWeight, setMinWeight] = useState(1);
   const [limit, setLimit] = useState(5000);
   const [selectedNode, setSelectedNode] = useState<UserRelationNode | null>(null);
 
   const { network, isLoading, error, refetch } = useUserRelationNetwork({
     relationType,
-    timeRange,
+    timeRange: selectedTimeRange,
     minWeight,
     limit,
   });
@@ -146,8 +146,8 @@ const UserRelationTopology: React.FC = () => {
             <UserRelationControls
               relationType={relationType}
               onRelationTypeChange={setRelationType}
-              timeRange={timeRange}
-              onTimeRangeChange={setTimeRange}
+              timeRange={selectedTimeRange}
+              onTimeRangeChange={setSelectedTimeRange}
               minWeight={minWeight}
               onMinWeightChange={setMinWeight}
               limit={limit}
