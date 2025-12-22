@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Spinner } from "@sker/ui/components/ui/spinner";
 import EventTypeBarChart from "@/components/charts/EventTypeBarChart";
 import WordCloudChart from "@/components/charts/WordCloudChart";
@@ -13,10 +13,14 @@ import {
   RefreshIndicator
 } from "@/components/ui";
 import { LocationHeatMap, UserRelationOverview } from "@/components";
-import GeoHeatMap from "@sker/ui/components/ui/geo-heat-map";
+import GeoHeatMap, { type GeoDataPoint } from "@sker/ui/components/ui/geo-heat-map";
 import { useOverviewData } from "@/hooks/useOverviewData";
 import { useAppStore } from "@/stores/useAppStore";
-import { CHINA_CITIES_HEAT_DATA, MAX_WORD_CLOUD_WORDS } from "@/constants/mockData";
+import { MAX_WORD_CLOUD_WORDS } from "@/constants/mockData";
+import { OverviewController } from "@sker/sdk";
+import { root, createLogger } from "@sker/core";
+
+const logger = createLogger('DataOverview');
 
 const DataOverview: React.FC = () => {
   const { selectedTimeRange } = useAppStore();
@@ -28,6 +32,39 @@ const DataOverview: React.FC = () => {
     isStale,
     refetch
   } = useOverviewData();
+
+  const [locationData, setLocationData] = useState<GeoDataPoint[]>([]);
+  const [locationLoading, setLocationLoading] = useState(true);
+
+  // 获取地理位置数据
+  useEffect(() => {
+    const fetchLocationData = async () => {
+      try {
+        setLocationLoading(true);
+        const controller = root.get(OverviewController);
+        const locations = await controller.getLocations(selectedTimeRange);
+
+        // 转换 API 数据为 GeoDataPoint 格式
+        const geoData: GeoDataPoint[] = locations
+          .filter(loc => loc.coordinates && loc.coordinates.length === 2)
+          .map(loc => ({
+            name: loc.region,
+            coordinates: loc.coordinates!,
+            value: loc.count,
+            sentiment: 'neutral' as const  // API 暂时没有情感数据，使用默认值
+          }));
+
+        setLocationData(geoData);
+      } catch (err) {
+        logger.error('Failed to fetch location data:', err);
+        setLocationData([]);
+      } finally {
+        setLocationLoading(false);
+      }
+    };
+
+    fetchLocationData();
+  }, [selectedTimeRange]);
 
   if (loading) {
     return (
@@ -73,10 +110,16 @@ const DataOverview: React.FC = () => {
 
         <div className="flex-[1.5] min-w-0 flex flex-col gap-3 min-h-0">
           <div className="flex-1 bg-card border rounded-xl shadow-sm overflow-hidden">
-            <GeoHeatMap
-              data={CHINA_CITIES_HEAT_DATA}
-              title="全国舆情热度分布"
-            />
+            {locationLoading ? (
+              <div className="flex items-center justify-center h-full">
+                <Spinner className="size-6" />
+              </div>
+            ) : (
+              <GeoHeatMap
+                data={locationData}
+                title="全国舆情热度分布"
+              />
+            )}
           </div>
           <div className="flex-1 bg-card border rounded-xl shadow-sm overflow-hidden p-4">
             <UserRelationOverview />
