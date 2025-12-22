@@ -19,7 +19,6 @@
   },
   "devDependencies": {
     "@types/node-schedule": "^2.1.8",
-    "@types/uuid": "^11.0.0",
     "node-schedule": "^2.1.1",
     "prettier": "^3.7.4",
     "tsx": "^4.21.0",

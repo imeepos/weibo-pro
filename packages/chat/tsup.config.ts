@@ -7,5 +7,4 @@ export default defineConfig({
   clean: true,
   sourcemap: true,
   external: ['pg'],
-  noExternal: ['uuid'],
 });
