@@ -91,7 +91,7 @@ export class UsersService {
     return useEntityManager(async (manager) => {
       const { start, end } = getTimeRangeBoundaries(timeRange);
 
-      let results = await manager.query(`
+      const results = await manager.query(`
         WITH user_activity AS (
           SELECT
             (p.user->>'id')::bigint as user_id,
@@ -106,6 +106,16 @@ export class UsersService {
           WHERE p.ingested_at >= $1
             AND p.ingested_at <= $2
             AND p.deleted_at IS NULL
+            AND p.user->>'id' IS NOT NULL
+          GROUP BY (p.user->>'id')::bigint
+        ),
+        all_user_activity AS (
+          SELECT
+            (p.user->>'id')::bigint as user_id,
+            COUNT(p.id) as total_post_count,
+            MAX(p.ingested_at) as last_post_time
+          FROM weibo_posts p
+          WHERE p.deleted_at IS NULL
             AND p.user->>'id' IS NOT NULL
           GROUP BY (p.user->>'id')::bigint
         )
@@ -124,7 +134,7 @@ export class UsersService {
           COALESCE(ua.negative_count, 0) as sentiment_negative,
           COALESCE(ua.neutral_count, 0) as sentiment_neutral,
           COALESCE(ua.analyzed_count, 0) as analyzed_count,
-          COALESCE(ua.last_active, u.created_at::timestamptz) as last_active,
+          COALESCE(ua.last_active, aua.last_post_time, u.created_at::timestamptz) as last_active,
           CASE
             WHEN ua.analyzed_count > 0 AND (ua.negative_count::float / ua.analyzed_count) > 0.6 THEN 'high'
             WHEN ua.analyzed_count > 0 AND (ua.negative_count::float / ua.analyzed_count) > 0.3 THEN 'medium'
@@ -132,60 +142,18 @@ export class UsersService {
           END as risk_level,
           COALESCE(u.avatar_hd, u.avatar_large, u.profile_image_url) as avatar
         FROM weibo_users u
-        INNER JOIN user_activity ua ON ua.user_id = u.id
-        ORDER BY ua.post_count DESC, u.followers_count DESC
-        LIMIT 20
+        LEFT JOIN user_activity ua ON ua.user_id = u.id
+        LEFT JOIN all_user_activity aua ON aua.user_id = u.id
+        ORDER BY
+          COALESCE(ua.post_count, 0) DESC,
+          COALESCE(aua.total_post_count, 0) DESC,
+          u.followers_count DESC
+        LIMIT 100
       `, [start, end]);
-
-      if (results.length === 0) {
-        results = await manager.query(`
-          WITH user_activity AS (
-            SELECT
-              (p.user->>'id')::bigint as user_id,
-              COUNT(p.id) as post_count,
-              MAX(p.ingested_at) as last_active,
-              COUNT(DISTINCT CASE WHEN nlp.sentiment->>'overall' = 'positive' THEN nlp.id END) as positive_count,
-              COUNT(DISTINCT CASE WHEN nlp.sentiment->>'overall' = 'negative' THEN nlp.id END) as negative_count,
-              COUNT(DISTINCT CASE WHEN nlp.sentiment->>'overall' = 'neutral' THEN nlp.id END) as neutral_count,
-              COUNT(DISTINCT nlp.id) as analyzed_count
-            FROM weibo_posts p
-            LEFT JOIN post_nlp_results nlp ON nlp.post_id = p.id
-            WHERE p.deleted_at IS NULL
-              AND p.user->>'id' IS NOT NULL
-            GROUP BY (p.user->>'id')::bigint
-          )
-          SELECT
-            u.id,
-            u.idstr,
-            u.screen_name,
-            u.name,
-            u.followers_count,
-            u.friends_count,
-            u.statuses_count,
-            u.verified,
-            COALESCE(NULLIF(u.location, ''), NULLIF(u.province, ''), NULLIF(u.city, ''), '未知') as location,
-            COALESCE(ua.post_count, 0) as activity_posts,
-            COALESCE(ua.positive_count, 0) as sentiment_positive,
-            COALESCE(ua.negative_count, 0) as sentiment_negative,
-            COALESCE(ua.neutral_count, 0) as sentiment_neutral,
-            COALESCE(ua.analyzed_count, 0) as analyzed_count,
-            COALESCE(ua.last_active, u.created_at::timestamptz) as last_active,
-            CASE
-              WHEN ua.analyzed_count > 0 AND (ua.negative_count::float / ua.analyzed_count) > 0.6 THEN 'high'
-              WHEN ua.analyzed_count > 0 AND (ua.negative_count::float / ua.analyzed_count) > 0.3 THEN 'medium'
-              ELSE 'low'
-            END as risk_level,
-            COALESCE(u.avatar_hd, u.avatar_large, u.profile_image_url) as avatar
-          FROM weibo_users u
-          INNER JOIN user_activity ua ON ua.user_id = u.id
-          ORDER BY ua.last_active DESC, u.followers_count DESC
-          LIMIT 20
-        `);
-      }
 
       const totalResult = await manager.query(`
         SELECT COUNT(*) as total
-        FROM weibo_users
+        FROM weibo_users u
       `);
       const totalCount = parseInt(totalResult[0]?.total) || 0;
 
@@ -231,12 +199,13 @@ export class UsersService {
         };
       });
 
-      const totalPages = Math.ceil(totalCount / 20);
+      const pageSize = 100;
+      const totalPages = Math.ceil(totalCount / pageSize);
       return {
         users,
         total: totalCount,
         page: 1,
-        pageSize: 20,
+        pageSize,
         totalPages,
         hasMore: totalPages > 1
       };
@@ -257,11 +226,11 @@ export class UsersService {
       const { start, end } = getTimeRangeBoundaries(timeRange);
 
       const distribution = await manager.query(`
-        WITH user_risk AS (
+        WITH user_activity AS (
           SELECT
             (p.user->>'id')::bigint as user_id,
-            COUNT(DISTINCT CASE WHEN nlp.sentiment->>'overall' = 'negative' THEN nlp.id END)::float /
-              NULLIF(COUNT(DISTINCT nlp.id), 0) as negative_ratio
+            COUNT(DISTINCT CASE WHEN nlp.sentiment->>'overall' = 'negative' THEN nlp.id END) as negative_count,
+            COUNT(DISTINCT nlp.id) as analyzed_count
           FROM weibo_posts p
           LEFT JOIN post_nlp_results nlp ON nlp.post_id = p.id
           WHERE p.ingested_at >= $1
@@ -269,22 +238,23 @@ export class UsersService {
             AND p.deleted_at IS NULL
             AND p.user->>'id' IS NOT NULL
           GROUP BY (p.user->>'id')::bigint
-          HAVING COUNT(DISTINCT nlp.id) > 0
+        ),
+        user_risk AS (
+          SELECT
+            u.id as user_id,
+            CASE
+              WHEN ua.analyzed_count > 0 AND (ua.negative_count::float / ua.analyzed_count) > 0.6 THEN 'high'
+              WHEN ua.analyzed_count > 0 AND (ua.negative_count::float / ua.analyzed_count) > 0.3 THEN 'medium'
+              ELSE 'low'
+            END as risk_level
+          FROM weibo_users u
+          LEFT JOIN user_activity ua ON ua.user_id = u.id
         )
         SELECT
-          CASE
-            WHEN negative_ratio > 0.6 THEN 'high'
-            WHEN negative_ratio > 0.3 THEN 'medium'
-            ELSE 'low'
-          END as risk_level,
+          risk_level,
           COUNT(*) as count
         FROM user_risk
-        GROUP BY
-          CASE
-            WHEN negative_ratio > 0.6 THEN 'high'
-            WHEN negative_ratio > 0.3 THEN 'medium'
-            ELSE 'low'
-          END
+        GROUP BY risk_level
       `, [start, end]);
 
       const countMap = new Map<string, number>(
@@ -345,13 +315,17 @@ export class UsersService {
       const current = getTimeRangeBoundaries(timeRange);
       const previous = getPreviousTimeRangeBoundaries(timeRange);
 
+      const totalUsersResult = await manager.query(`
+        SELECT COUNT(*) as total FROM weibo_users
+      `);
+      const totalUsers = parseInt(totalUsersResult[0]?.total) || 0;
+
       const currentStats = await manager.query(`
-        WITH user_risk AS (
+        WITH user_activity AS (
           SELECT
             (p.user->>'id')::bigint as user_id,
             COUNT(DISTINCT nlp.id) as analyzed_count,
-            COUNT(DISTINCT CASE WHEN nlp.sentiment->>'overall' = 'negative' THEN nlp.id END)::float /
-              NULLIF(COUNT(DISTINCT nlp.id), 0) as negative_ratio
+            COUNT(DISTINCT CASE WHEN nlp.sentiment->>'overall' = 'negative' THEN nlp.id END) as negative_count
           FROM weibo_posts p
           LEFT JOIN post_nlp_results nlp ON nlp.post_id = p.id
           WHERE p.ingested_at >= $1
@@ -359,19 +333,35 @@ export class UsersService {
             AND p.deleted_at IS NULL
             AND p.user->>'id' IS NOT NULL
           GROUP BY (p.user->>'id')::bigint
+        ),
+        user_risk AS (
+          SELECT
+            u.id as user_id,
+            COALESCE(ua.analyzed_count, 0) as analyzed_count,
+            CASE
+              WHEN ua.analyzed_count > 0 AND (ua.negative_count::float / ua.analyzed_count) > 0.6 THEN 'high'
+              WHEN ua.analyzed_count > 0 AND (ua.negative_count::float / ua.analyzed_count) > 0.3 THEN 'medium'
+              ELSE 'low'
+            END as risk_level,
+            CASE
+              WHEN ua.analyzed_count > 0 THEN (ua.negative_count::float / ua.analyzed_count) * 100
+              ELSE 0
+            END as risk_score
+          FROM weibo_users u
+          LEFT JOIN user_activity ua ON ua.user_id = u.id
         )
         SELECT
-          COUNT(DISTINCT user_id) as total_active,
-          COUNT(DISTINCT CASE WHEN negative_ratio > 0.6 THEN user_id END) as high_risk,
-          COUNT(DISTINCT CASE WHEN negative_ratio > 0.3 AND negative_ratio <= 0.6 THEN user_id END) as medium_risk,
-          COUNT(DISTINCT CASE WHEN negative_ratio <= 0.3 THEN user_id END) as low_risk,
-          AVG(negative_ratio * 100) as avg_risk_score
+          COUNT(*) as total_users,
+          COUNT(CASE WHEN analyzed_count > 0 THEN 1 END) as total_active,
+          COUNT(CASE WHEN risk_level = 'high' THEN 1 END) as high_risk,
+          COUNT(CASE WHEN risk_level = 'medium' THEN 1 END) as medium_risk,
+          COUNT(CASE WHEN risk_level = 'low' THEN 1 END) as low_risk,
+          AVG(risk_score) as avg_risk_score
         FROM user_risk
-        WHERE analyzed_count > 0
       `, [current.start, current.end]);
 
       const previousStats = await manager.query(`
-        WITH user_risk AS (
+        WITH user_activity AS (
           SELECT
             (p.user->>'id')::bigint as user_id,
             COUNT(DISTINCT nlp.id) as analyzed_count
@@ -383,9 +373,10 @@ export class UsersService {
             AND p.user->>'id' IS NOT NULL
           GROUP BY (p.user->>'id')::bigint
         )
-        SELECT COUNT(DISTINCT user_id) as total_active
-        FROM user_risk
-        WHERE analyzed_count > 0
+        SELECT
+          COUNT(CASE WHEN ua.analyzed_count > 0 THEN 1 END) as total_active
+        FROM weibo_users u
+        LEFT JOIN user_activity ua ON ua.user_id = u.id
       `, [previous.start, previous.end]);
 
       const now = new Date();
@@ -417,7 +408,7 @@ export class UsersService {
         : 0;
 
       return {
-        total: totalActive,
+        total: totalUsers,
         active: totalActive,
         suspended: 0,
         banned: 0,
