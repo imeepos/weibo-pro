@@ -6,5 +6,6 @@ export default defineConfig({
   dts: true,
   clean: true,
   sourcemap: true,
-  external: ['pg', 'uuid'],
+  external: ['pg'],
+  noExternal: ['uuid'],
 });
