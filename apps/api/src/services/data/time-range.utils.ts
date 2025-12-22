@@ -16,8 +16,14 @@ export function getTimeRangeBoundaries(timeRange: TimeRange = '24h'): TimeRangeB
 
 /**
  * 获取前一个时间范围的起止时间（用于计算变化率）
+ * 对于 'all'，返回相同的时间范围，使变化率为0
  */
 export function getPreviousTimeRangeBoundaries(timeRange: TimeRange): TimeRangeBoundaries {
+  // 'all' 没有前一个时间范围的概念，返回相同范围使变化率为0
+  if (timeRange === 'all') {
+    return getTimeRangeBoundaries(timeRange);
+  }
+
   const current = getTimeRangeBoundaries(timeRange);
   const duration = current.end.getTime() - current.start.getTime();
 

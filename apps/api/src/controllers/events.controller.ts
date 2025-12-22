@@ -81,7 +81,7 @@ export class EventsController {
   }
 
   private validateTimeRange(timeRange?: string): TimeRange {
-    const validRanges: TimeRange[] = ['1h', '6h', '12h', '24h', '7d', '30d', '90d', '180d', '365d'];
+    const validRanges: TimeRange[] = ['all', '1h', '6h', '12h', '24h', '7d', '30d', '90d', '180d', '365d'];
 
     return validRanges.includes(timeRange as TimeRange)
       ? (timeRange as TimeRange)
