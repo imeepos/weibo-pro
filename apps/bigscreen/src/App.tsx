@@ -18,6 +18,7 @@ import HeroDemo from '@/pages/HeroDemo';
 import MemoryGraphPage from '@/pages/MemoryGraphPage';
 import PromptManagement from '@/pages/PromptManagement';
 import WorkflowManagement from '@/pages/WorkflowManagement';
+import { ChatPage } from '@/pages/ChatPage';
 import { useTheme } from '@/hooks/useTheme';
 import { cn, createLogger } from '@/utils';
 import { initializeApp } from '@/services/appInitialization';
@@ -397,6 +398,25 @@ const App: React.FC = () => {
                     </motion.div>
                   </AnimatePresence>
                 </Layout>
+              }
+            />
+            <Route
+              path="/chat"
+              element={
+                <FullscreenLayout>
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key="chat"
+                      className="h-full"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 1.05 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <ChatPage />
+                    </motion.div>
+                  </AnimatePresence>
+                </FullscreenLayout>
               }
             />
 

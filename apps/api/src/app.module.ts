@@ -48,6 +48,8 @@ import { PromptRolesController } from './controllers/prompt-roles.controller';
 import { PromptSkillsController } from './controllers/prompt-skills.controller';
 import { PromptRoleService } from './services/prompt-role.service';
 import { PromptSkillService } from './services/prompt-skill.service';
+import { ChatController } from './controllers/chat.controller';
+import { ChatService } from './services/chat.service';
 
 @Module({
   controllers: [
@@ -72,6 +74,7 @@ import { PromptSkillService } from './services/prompt-skill.service';
     PromptRolesController,
     PromptSkillsController,
     MediaCrawlerController,
+    ChatController,
   ],
   providers: [
     {
@@ -104,6 +107,7 @@ import { PromptSkillService } from './services/prompt-skill.service';
     { provide: PersonaService, useFactory: () => root.get(PersonaService) },
     { provide: PromptRoleService, useFactory: () => root.get(PromptRoleService) },
     { provide: PromptSkillService, useFactory: () => root.get(PromptSkillService) },
+    { provide: ChatService, useFactory: () => root.get(ChatService) },
   ],
 })
 export class AppModule { }
