@@ -146,8 +146,6 @@ const UserRelationTopology: React.FC = () => {
             <UserRelationControls
               relationType={relationType}
               onRelationTypeChange={setRelationType}
-              timeRange={selectedTimeRange}
-              onTimeRangeChange={setSelectedTimeRange}
               minWeight={minWeight}
               onMinWeightChange={setMinWeight}
               limit={limit}

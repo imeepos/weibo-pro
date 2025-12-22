@@ -1,12 +1,10 @@
 import React from 'react';
-import { RefreshCw, Link, ThumbsUp, MessageCircle, Share2, Lightbulb, Info } from 'lucide-react';
-import type { UserRelationType, TimeRange } from '@sker/sdk';
+import { RefreshCw, Link, ThumbsUp, MessageCircle, Share2 } from 'lucide-react';
+import type { UserRelationType } from '@sker/sdk';
 
 interface UserRelationControlsProps {
   relationType: UserRelationType;
   onRelationTypeChange: (type: UserRelationType) => void;
-  timeRange: TimeRange;
-  onTimeRangeChange: (range: TimeRange) => void;
   minWeight: number;
   onMinWeightChange: (weight: number) => void;
   limit: number;
@@ -18,8 +16,6 @@ interface UserRelationControlsProps {
 const UserRelationControls: React.FC<UserRelationControlsProps> = ({
   relationType,
   onRelationTypeChange,
-  timeRange,
-  onTimeRangeChange,
   minWeight,
   onMinWeightChange,
   limit,
@@ -32,13 +28,6 @@ const UserRelationControls: React.FC<UserRelationControlsProps> = ({
     { value: 'like', label: '点赞', icon: <ThumbsUp className="w-4 h-4" /> },
     { value: 'comment', label: '评论', icon: <MessageCircle className="w-4 h-4" /> },
     { value: 'repost', label: '转发', icon: <Share2 className="w-4 h-4" /> },
-  ];
-
-  const timeRanges: Array<{ value: TimeRange; label: string }> = [
-    { value: '24h', label: '最近24小时' },
-    { value: '7d', label: '最近7天' },
-    { value: '30d', label: '最近30天' },
-    { value: '90d', label: '最近90天' },
   ];
 
   return (
@@ -85,24 +74,6 @@ const UserRelationControls: React.FC<UserRelationControlsProps> = ({
               </button>
             ))}
           </div>
-        </div>
-
-        {/* 时间范围选择 */}
-        <div>
-          <label className="block text-xs font-medium text-muted-foreground mb-2">
-            时间范围
-          </label>
-          <select
-            value={timeRange}
-            onChange={(e) => onTimeRangeChange(e.target.value as TimeRange)}
-            className="w-full px-3 py-2 bg-secondary text-secondary-foreground rounded-md border border-border focus:outline-none focus:ring-1 focus:ring-primary transition-all text-sm"
-          >
-            {timeRanges.map((range) => (
-              <option key={range.value} value={range.value}>
-                {range.label}
-              </option>
-            ))}
-          </select>
         </div>
 
         {/* 最小权重 */}
