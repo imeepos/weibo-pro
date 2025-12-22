@@ -83,7 +83,7 @@ export const useAppStore = create<AppState>()(
     dashboardConfig: initialDashboardConfig,
     isLoading: false,
     error: null,
-    selectedTimeRange: '30d',
+    selectedTimeRange: 'all',
     isConnected: false,
     connectionRetries: 0,
 
@@ -155,7 +155,7 @@ export const useAppStore = create<AppState>()(
       dashboardConfig: initialDashboardConfig,
       isLoading: false,
       error: null,
-      selectedTimeRange: '30d',
+      selectedTimeRange: 'all',
       isConnected: false,
       connectionRetries: 0,
     }),
