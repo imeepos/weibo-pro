@@ -471,6 +471,12 @@ export interface UserStatistics {
   }
 }
 
+export interface UserListQueryParams {
+  timeRange?: TimeRange
+  page?: number
+  pageSize?: number
+}
+
 export interface UserListResponse {
   users: UserListItem[]
   total: number

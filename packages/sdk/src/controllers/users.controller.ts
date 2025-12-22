@@ -2,6 +2,7 @@ import { Controller, Get, Query } from '@sker/core'
 import type { TimeRange } from '@sker/entities';
 import type {
   UserListResponse,
+  UserListQueryParams,
   RiskLevelConfig,
   UserStatistics
 } from '../types'
@@ -10,7 +11,11 @@ import type {
 export class UsersController {
 
   @Get('list')
-  getUserList(@Query('timeRange') timeRange?: TimeRange): Promise<UserListResponse> {
+  getUserList(
+    @Query('timeRange') timeRange?: TimeRange,
+    @Query('page') page?: number,
+    @Query('pageSize') pageSize?: number
+  ): Promise<UserListResponse> {
     throw new Error('method getUserList not implements')
   }
 

@@ -39,6 +39,8 @@ const UserDetection: React.FC = () => {
 
   const { users, riskLevels, isLoading, error, refetch } = useUserDetection({
     timeRange: selectedTimeRange,
+    page: currentPage,
+    pageSize: DEFAULT_PAGE_SIZE,
   });
 
   const riskLevelLabels = useMemo(() => {
@@ -80,13 +82,12 @@ const UserDetection: React.FC = () => {
     });
   }, [userList, debouncedSearch, selectedRiskLevel]);
 
-  const totalPages = useMemo(() => Math.ceil(filteredUsers.length / DEFAULT_PAGE_SIZE), [filteredUsers.length]);
+  const totalPages = useMemo(() => {
+    if (!users || typeof users === 'undefined') return 1;
+    return Array.isArray(users) ? Math.ceil(users.length / DEFAULT_PAGE_SIZE) : (users.totalPages || 1);
+  }, [users]);
 
-  const paginatedUsers = useMemo(() => {
-    const startIndex = (currentPage - 1) * DEFAULT_PAGE_SIZE;
-    const endIndex = startIndex + DEFAULT_PAGE_SIZE;
-    return filteredUsers.slice(startIndex, endIndex);
-  }, [filteredUsers, currentPage]);
+  const displayUsers = filteredUsers;
 
   const usersByRisk = useMemo(() => ({
     high: (userList || []).filter(u => u.riskLevel === 'high').length,
@@ -202,11 +203,11 @@ const UserDetection: React.FC = () => {
         <UserListSkeleton />
       ) : error ? (
         <UserListError error={error} onRetry={refetch} />
-      ) : filteredUsers.length === 0 ? (
+      ) : displayUsers.length === 0 ? (
         <UserListEmpty searchTerm={debouncedSearch} />
       ) : (
         <div className="grid grid-cols-1 gap-4">
-          {paginatedUsers.map((user, index) => (
+          {displayUsers.map((user, index) => (
             <UserCard
               key={user.id}
               user={user}
@@ -218,7 +219,7 @@ const UserDetection: React.FC = () => {
         </div>
       )}
 
-      {filteredUsers.length > 0 && totalPages > 1 && (
+      {displayUsers.length > 0 && totalPages > 1 && (
         <div className="flex justify-center mt-6">
           <Pagination>
             <PaginationContent>

@@ -13,8 +13,12 @@ export class UsersController implements sdk.UsersController {
   }
 
   @Get('list')
-  async getUserList(@Query('timeRange') timeRange?: TimeRange) {
-    return this.usersService.getUserList(timeRange);
+  async getUserList(
+    @Query('timeRange') timeRange?: TimeRange,
+    @Query('page') page?: number,
+    @Query('pageSize') pageSize?: number
+  ) {
+    return this.usersService.getUserList(timeRange, page, pageSize);
   }
 
   @Get('risk-levels')

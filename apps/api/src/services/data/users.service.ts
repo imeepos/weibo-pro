@@ -78,18 +78,19 @@ export class UsersService {
     @Inject(CacheService) private readonly cacheService: CacheService
   ) {}
 
-  async getUserList(timeRange: TimeRange = '7d') {
-    const cacheKey = CacheService.buildKey(CACHE_KEYS.USERS_LIST, timeRange);
+  async getUserList(timeRange: TimeRange = '7d', page: number = 1, pageSize: number = 20) {
+    const cacheKey = CacheService.buildKey(CACHE_KEYS.USERS_LIST, timeRange, page, pageSize);
     return await this.cacheService.getOrSet(
       cacheKey,
-      () => this.fetchUserList(timeRange),
+      () => this.fetchUserList(timeRange, page, pageSize),
       CACHE_TTL.LONG
     );
   }
 
-  private async fetchUserList(timeRange: TimeRange) {
+  private async fetchUserList(timeRange: TimeRange, page: number = 1, pageSize: number = 20) {
     return useEntityManager(async (manager) => {
       const { start, end } = getTimeRangeBoundaries(timeRange);
+      const offset = (page - 1) * pageSize;
 
       const results = await manager.query(`
         WITH user_activity AS (
@@ -148,8 +149,8 @@ export class UsersService {
           COALESCE(ua.post_count, 0) DESC,
           COALESCE(aua.total_post_count, 0) DESC,
           u.followers_count DESC
-        LIMIT 100
-      `, [start, end]);
+        LIMIT $3 OFFSET $4
+      `, [start, end, pageSize, offset]);
 
       const totalResult = await manager.query(`
         SELECT COUNT(*) as total
@@ -199,15 +200,14 @@ export class UsersService {
         };
       });
 
-      const pageSize = 100;
       const totalPages = Math.ceil(totalCount / pageSize);
       return {
         users,
         total: totalCount,
-        page: 1,
+        page,
         pageSize,
         totalPages,
-        hasMore: totalPages > 1
+        hasMore: page < totalPages
       };
     });
   }

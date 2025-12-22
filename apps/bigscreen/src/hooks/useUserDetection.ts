@@ -7,6 +7,8 @@ const logger = createLogger('useUserDetection');
 
 interface UseUserDetectionParams {
   timeRange: TimeRange;
+  page?: number;
+  pageSize?: number;
 }
 
 interface UseUserDetectionReturn {
@@ -31,7 +33,7 @@ export function useUserDetection(params: UseUserDetectionParams): UseUserDetecti
       const controller = root.get(UsersController);
 
       const [usersResult, riskLevelsResult] = await Promise.all([
-        controller.getUserList(params.timeRange),
+        controller.getUserList(params.timeRange, params.page, params.pageSize),
         controller.getRiskLevels(params.timeRange)
       ]);
 
@@ -44,7 +46,7 @@ export function useUserDetection(params: UseUserDetectionParams): UseUserDetecti
     } finally {
       setIsLoading(false);
     }
-  }, [params.timeRange]);
+  }, [params.timeRange, params.page, params.pageSize]);
 
   useEffect(() => {
     fetchData();
