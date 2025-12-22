@@ -10,9 +10,8 @@ async function main() {
   });
 
   console.log('🚀 会话已创建:', session.sessionId);
-
   // 测试对话
-  const response = await session.sendMessage('写一个武侠小说的大纲，包括人物及人物管理，核心世界观设定，核心人物人物魅力个性，时间线等等，思考：实现一个小说都需要哪些流程设定才能实现一个出色的小说');
+  const response = await session.sendMessage(`回顾并汇报一下你现在已有的知识库`);
   console.log('🤖 回复:', response);
 
   await closeSqlPool();
