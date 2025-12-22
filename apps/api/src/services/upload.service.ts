@@ -1,7 +1,7 @@
 import { Injectable } from '@sker/core';
 import { promises as fs } from 'fs';
 import * as path from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import { generateRandomString } from '@sker/utils';
 
 @Injectable({ providedIn: 'root' })
 export class UploadService {
@@ -24,7 +24,7 @@ export class UploadService {
 
   async saveFile(buffer: Buffer, originalName: string, type = 'file'): Promise<string> {
     const ext = path.extname(originalName);
-    const filename = `${uuidv4()}${ext}`;
+    const filename = `${generateRandomString(32)}${ext}`;
     const date = this.formatDate();
     const dir = path.join(this.uploadDir, type, date);
 
@@ -39,7 +39,7 @@ export class UploadService {
     const ext = matches?.[1] ?? 'png';
     const base64 = matches?.[2] ?? base64Data;
     const buffer = Buffer.from(base64, 'base64');
-    const name = filename || `${uuidv4()}.${ext}`;
+    const name = filename || `${generateRandomString(32)}.${ext}`;
     const date = this.formatDate();
     const dir = path.join(this.uploadDir, type, date);
 

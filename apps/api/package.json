@@ -33,6 +33,7 @@
     "@sker/openai2anthropic": "workspace:*",
     "@sker/redis": "workspace:*",
     "@sker/sdk": "workspace:*",
+    "@sker/utils": "workspace:*",
     "@sker/workflow": "workspace:*",
     "@sker/workflow-ast": "workspace:*",
     "@sker/workflow-run": "workspace:*",
@@ -43,8 +44,7 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "socket.io": "^4.8.1",
-    "typeorm": "^0.3.20",
-    "uuid": "^13.0.0"
+    "typeorm": "^0.3.20"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",
@@ -57,7 +57,6 @@
     "@types/express": "^4.17.21",
     "@types/multer": "^2.0.0",
     "@types/node": "^22.15.3",
-    "@types/uuid": "^11.0.0",
     "eslint": "^9.38.0",
     "nodemon": "^3.1.0",
     "ts-node": "^10.9.2",

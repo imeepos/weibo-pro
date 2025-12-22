@@ -151,12 +151,12 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@types/three": "^0.181.0",
-    "@vitest/ui": "^2.1.9",
+    "@vitest/ui": "^4.0.16",
     "eslint": "^9.32.0",
     "jsdom": "^24.0.0",
     "tailwindcss": "^4.1.11",
     "typescript": "^5.9.2",
-    "vitest": "^2.1.9"
+    "vitest": "^4.0.16"
   },
   "exports": {
     "./globals.css": "./src/styles/globals.css",

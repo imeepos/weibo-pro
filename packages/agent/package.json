@@ -30,7 +30,7 @@
     "@sker/workflow-run": "workspace:*",
     "langchain": "^1.0.4",
     "typeorm": "^0.3.20",
-    "zod": "^3.23.8"
+    "zod": "^4.0.0"
   },
   "devDependencies": {
     "@sker/typescript-config": "workspace:*",
