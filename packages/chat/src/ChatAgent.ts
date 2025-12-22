@@ -4,6 +4,15 @@ import { createSqlTool } from './tools/sql';
 import { SYSTEM_PROMPT } from './prompt';
 import type { ChatMessage } from './types';
 
+const CONTINUE_EXPLORATION_PROMPT = `很好。现在继续下一轮探索：
+
+1. 还有哪些数据值得深入分析？
+2. 发现了什么新的关联或模式？
+3. 哪些假设需要验证？
+4. 下一步要探索什么？
+
+继续使用 SQL 工具探索。记住：探索永不停歇。`;
+
 export interface AgentConfig {
   baseURL?: string;
   modelName?: string;
@@ -34,11 +43,27 @@ export class ChatAgent {
 
     const allMessages: BaseMessage[] = [new SystemMessage(SYSTEM_PROMPT), ...baseMessages];
 
-    for (let i = 0; i < 20; i++) {
+    // 检查用户是否要求停止
+    const lastUserMessage = messages
+      .filter((m) => m.role === 'user')
+      .pop()?.content.toLowerCase() || '';
+    const shouldStop = lastUserMessage.includes('停止') || lastUserMessage.includes('结束');
+
+    for (let i = 0; i < 2000; i++) {
       const response = await modelWithTools.invoke(allMessages);
 
       if (!response.tool_calls?.length) {
-        return response.content as string;
+        const content = response.content as string;
+
+        // 如果用户要求停止，或响应中有明确的停止标记，则返回
+        if (shouldStop || content.includes('[STOP]')) {
+          return content;
+        }
+
+        // 否则继续探索：将响应添加到历史，然后添加引导消息
+        allMessages.push(response);
+        allMessages.push(new SystemMessage(CONTINUE_EXPLORATION_PROMPT));
+        continue;
       }
 
       allMessages.push(response);
