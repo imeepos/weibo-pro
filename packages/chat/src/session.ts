@@ -26,6 +26,10 @@ export class ChatSession {
   clearHistory(): void {
     this.messages = [];
   }
+
+  async close(): Promise<void> {
+    await this.agent.close();
+  }
 }
 
 export function createChatSession(databaseUrl: string, config?: AgentConfig): ChatSession {
