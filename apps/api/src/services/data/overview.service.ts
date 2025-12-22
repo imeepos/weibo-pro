@@ -1,10 +1,11 @@
-import { Injectable, Inject } from '@sker/core';
+import { Injectable, Inject, createLogger } from '@sker/core';
 import {
   EventEntity,
   WeiboPostEntity,
   WeiboCommentEntity,
   WeiboLikeEntity,
   WeiboRepostEntity,
+  WeiboUserEntity,
   PostNLPResultEntity,
   useEntityManager,
 } from '@sker/entities';
@@ -64,6 +65,10 @@ export class OverviewService {
   }
 
   private async fetchStatisticsData(manager: any, start: Date, end: Date) {
+    const logger = createLogger('OverviewService.fetchStatisticsData');
+
+    logger.info(`查询时间范围: ${start.toISOString()} - ${end.toISOString()}`);
+
     // 查询事件数量（occurred_at 为 null 时使用 created_at）
     const eventCount = await manager
       .getRepository(EventEntity)
@@ -72,6 +77,8 @@ export class OverviewService {
       .andWhere('COALESCE(event.occurred_at, event.created_at) <= :end', { end })
       .andWhere('event.deleted_at IS NULL')
       .getCount();
+
+    logger.info(`事件数: ${eventCount}`);
 
     // 查询帖子数量
     const postCount = await manager
@@ -82,33 +89,15 @@ export class OverviewService {
       .andWhere('post.deleted_at IS NULL')
       .getCount();
 
-    // 查询活跃用户数（发帖、评论、点赞、转发的所有用户）
-    const activeUsersQuery = `
-      SELECT COUNT(DISTINCT user_id) as user_count FROM (
-        SELECT DISTINCT (post.user->>'id')::bigint as user_id
-        FROM weibo_posts post
-        WHERE post.ingested_at >= $1
-          AND post.ingested_at <= $2
-          AND post.deleted_at IS NULL
-        UNION
-        SELECT DISTINCT (comment.user->>'id')::bigint as user_id
-        FROM weibo_comments comment
-        WHERE comment.ingested_at >= $1
-          AND comment.ingested_at <= $2
-        UNION
-        SELECT DISTINCT user_weibo_id::bigint as user_id
-        FROM weibo_likes
-        WHERE created_at >= $1
-          AND created_at <= $2
-        UNION
-        SELECT DISTINCT (repost.user->>'id')::bigint as user_id
-        FROM weibo_reposts repost
-        WHERE repost.ingested_at >= $1
-          AND repost.ingested_at <= $2
-      ) all_users
-    `;
-    const userCountResult = await manager.query(activeUsersQuery, [start, end]);
-    const userCount = parseInt(userCountResult[0]?.user_count || '0', 10);
+    logger.info(`帖子数: ${postCount}`);
+
+    // 查询用户总数
+    const userCount = await manager
+      .getRepository(WeiboUserEntity)
+      .createQueryBuilder('user')
+      .getCount();
+
+    logger.info(`用户总数: ${userCount}`);
 
     // 查询真实互动数（评论数 + 点赞数 + 转发数）
     const [commentCount, likeCount, repostCount] = await Promise.all([
@@ -133,6 +122,8 @@ export class OverviewService {
     ]);
 
     const interactionCount = commentCount + likeCount + repostCount;
+
+    logger.info(`互动统计 - 评论: ${commentCount}, 点赞: ${likeCount}, 转发: ${repostCount}, 总计: ${interactionCount}`);
 
     return {
       eventCount,
