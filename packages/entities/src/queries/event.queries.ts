@@ -148,10 +148,10 @@ export const findHotEvents = (timeRange: TimeRange, limit: number = 20): Promise
       .createQueryBuilder(EventEntity, 'event')
       .where('event.status = :status', { status: 'active' })
       .andWhere('event.deleted_at IS NULL')
-      .andWhere('event.created_at >= :start', { start: dateRange.start })
-      .andWhere('event.created_at <= :end', { end: dateRange.end })
+      .andWhere('COALESCE(event.occurred_at, event.created_at) >= :start', { start: dateRange.start })
+      .andWhere('COALESCE(event.occurred_at, event.created_at) <= :end', { end: dateRange.end })
       .orderBy('event.hotness', 'DESC')
-      .addOrderBy('event.created_at', 'DESC')
+      .addOrderBy('COALESCE(event.occurred_at, event.created_at)', 'DESC')
       .limit(limit)
       .getMany();
 
@@ -179,12 +179,12 @@ export const findEventList = (
       .where('event.deleted_at IS NULL')
       .andWhere('event.status = :status', { status: 'active' });
 
-    // 只有传了 timeRange 才按时间范围过滤
+    // 只有传了 timeRange 才按时间范围过滤（使用 COALESCE 优先事件发生时间）
     if (timeRange) {
       const dateRange = getDateRangeByTimeRange(timeRange);
       query
-        .andWhere('event.created_at >= :start', { start: dateRange.start })
-        .andWhere('event.created_at <= :end', { end: dateRange.end });
+        .andWhere('COALESCE(event.occurred_at, event.created_at) >= :start', { start: dateRange.start })
+        .andWhere('COALESCE(event.occurred_at, event.created_at) <= :end', { end: dateRange.end });
     }
 
     if (options?.category) {
@@ -226,8 +226,8 @@ export const getEventCategoryStats = (timeRange: TimeRange = '24h') =>
       .addSelect('COUNT(event.id)', 'count')
       .where('event.deleted_at IS NULL')
       .andWhere('event.status = :status', { status: 'active' })
-      .andWhere('event.created_at >= :start', { start: dateRange.start })
-      .andWhere('event.created_at <= :end', { end: dateRange.end })
+      .andWhere('COALESCE(event.occurred_at, event.created_at) >= :start', { start: dateRange.start })
+      .andWhere('COALESCE(event.occurred_at, event.created_at) <= :end', { end: dateRange.end })
       .groupBy('category.name')
       .orderBy('count', 'DESC');
 

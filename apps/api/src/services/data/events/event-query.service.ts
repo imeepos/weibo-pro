@@ -109,8 +109,8 @@ export class EventQueryService {
       if (timeRange) {
         const dateRange = getDateRangeByTimeRange(timeRange);
         query = query
-          .andWhere('event.created_at >= :start', { start: dateRange.start })
-          .andWhere('event.created_at <= :end', { end: dateRange.end });
+          .andWhere('COALESCE(event.occurred_at, event.created_at) >= :start', { start: dateRange.start })
+          .andWhere('COALESCE(event.occurred_at, event.created_at) <= :end', { end: dateRange.end });
       }
 
       if (filters?.search) {

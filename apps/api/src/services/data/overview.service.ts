@@ -69,13 +69,14 @@ export class OverviewService {
 
     logger.info(`查询时间范围: ${start.toISOString()} - ${end.toISOString()}`);
 
-    // 查询事件数量（occurred_at 为 null 时使用 created_at）
+    // 查询事件数量（occurred_at 为 null 时使用 created_at，只统计 active 状态）
     const eventCount = await manager
       .getRepository(EventEntity)
       .createQueryBuilder('event')
       .where('COALESCE(event.occurred_at, event.created_at) >= :start', { start })
       .andWhere('COALESCE(event.occurred_at, event.created_at) <= :end', { end })
       .andWhere('event.deleted_at IS NULL')
+      .andWhere('event.status = :status', { status: 'active' })
       .getCount();
 
     logger.info(`事件数: ${eventCount}`);
