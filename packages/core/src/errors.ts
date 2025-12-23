@@ -119,6 +119,24 @@ export class ValidationError extends AppError {
 }
 
 /**
+ * 400 Bad Request - 客户端请求错误（通用）
+ *
+ * 存在即合理：
+ * - ValidationError 用于数据验证错误（带字段详情）
+ * - BadRequestError 用于通用请求错误（不涉及字段验证）
+ *
+ * 使用场景：
+ * - 参数缺失："工作流名称不能为空"
+ * - 逻辑错误："必须提供 workflow 或 ast 字段"
+ * - 状态错误："运行实例状态不正确"
+ */
+export class BadRequestError extends AppError {
+  constructor(message: string, meta?: Record<string, unknown>) {
+    super("BAD_REQUEST", message, 400, meta);
+  }
+}
+
+/**
  * 401 Unauthorized - Authentication required
  */
 export class UnauthorizedError extends AppError {
@@ -346,3 +364,13 @@ export class ErrorFactory {
 }
 
 export const errorFactory = new ErrorFactory()
+
+/**
+ * 别名导出（兼容 NestJS 习惯）
+ *
+ * 注意：建议使用 *Error 后缀，但提供别名以兼容现有代码
+ */
+export const BadRequestException = BadRequestError;
+export const NotFoundException = NotFoundError;
+export const UnauthorizedException = UnauthorizedError;
+export const ForbiddenException = ForbiddenError;

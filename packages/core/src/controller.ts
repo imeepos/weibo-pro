@@ -113,6 +113,10 @@ export enum ParamType {
   BODY = 'body',
   HEADER = 'header',
   SESSION = 'session',
+  REQ = 'req',              // 注入完整的 Request 对象
+  RES = 'res',              // 注入完整的 Response 对象
+  HEADERS = 'headers',      // 注入所有请求头（作为对象）
+  UPLOADED_FILE = 'uploaded_file',  // 注入上传的文件
 }
 
 // 路由参数元数据键
@@ -120,6 +124,7 @@ export const ROUTE_ARGS_METADATA = 'route-args';
 
 // 中间件和 OpenAPI 元数据键
 export const MIDDLEWARE_METADATA = 'middleware';
+export const INTERCEPTORS_METADATA = 'interceptors';
 export const OPENAPI_DESCRIPTION_METADATA = 'openapi:description';
 export const OPENAPI_TAGS_METADATA = 'openapi:tags';
 
@@ -198,6 +203,77 @@ export const Header = createParamDecorator(ParamType.HEADER);
 export const Session = createParamDecorator(ParamType.SESSION);
 
 /**
+ * 注入完整的 Request 对象
+ *
+ * 存在即合理：
+ * - SSE 和流式响应需要完整的请求上下文
+ * - 访问原始请求对象进行底层操作
+ */
+export const Req = createParamDecorator(ParamType.REQ);
+
+/**
+ * 注入完整的 Response 对象
+ *
+ * 存在即合理：
+ * - SSE 需要直接操作响应流
+ * - 自定义响应头和状态码
+ * - 流式数据传输
+ */
+export const Res = createParamDecorator(ParamType.RES);
+
+/**
+ * 注入所有请求头（作为对象）
+ *
+ * 存在即合理：
+ * - 与 Header 区分：Header('key') 获取单个，Headers() 获取全部
+ * - 代理服务需要转发所有请求头
+ *
+ * @example
+ * @Post()
+ * async handler(@Headers() headers: Record<string, string>) {
+ *   const contentType = headers['content-type'];
+ * }
+ */
+export const Headers = createParamDecorator(ParamType.HEADERS);
+
+/**
+ * 注入上传的文件
+ *
+ * 存在即合理：
+ * - 配合 UseInterceptors(FileInterceptor('file')) 使用
+ * - 从请求中提取 Multer 处理后的文件对象
+ *
+ * @param fieldName 可选的文件字段名（用于多文件上传）
+ *
+ * @example
+ * @Post('upload')
+ * @UseInterceptors(FileInterceptor('file'))
+ * async upload(@UploadedFile() file: Express.Multer.File) {
+ *   return { filename: file.originalname };
+ * }
+ */
+export const UploadedFile = (fieldName?: string): ParameterDecorator => {
+  return (target: Object, propertyKey: string | symbol | undefined, parameterIndex: number) => {
+    if (!propertyKey) {
+      throw new Error('参数装饰器只能用于方法参数');
+    }
+
+    const methodTarget = target as Record<string | symbol, any>;
+    const existingMetadata = Reflect.getMetadata(ROUTE_ARGS_METADATA, methodTarget[propertyKey]) || {};
+
+    const metadataKey = `${ParamType.UPLOADED_FILE}:${parameterIndex}`;
+
+    existingMetadata[metadataKey] = {
+      index: parameterIndex,
+      type: ParamType.UPLOADED_FILE,
+      key: fieldName,
+    };
+
+    Reflect.defineMetadata(ROUTE_ARGS_METADATA, existingMetadata, methodTarget[propertyKey]);
+  };
+};
+
+/**
  * 权限装饰器
  *
  * 声明 endpoint 所需权限，自动应用 sessionMiddleware 和 permissionMiddleware
@@ -225,6 +301,44 @@ export function ApiDescription(description: string, tags?: string[]): MethodDeco
     Reflect.defineMetadata(OPENAPI_DESCRIPTION_METADATA, description, descriptor.value);
     if (tags) {
       Reflect.defineMetadata(OPENAPI_TAGS_METADATA, tags, descriptor.value);
+    }
+  };
+}
+
+/**
+ * 应用拦截器到方法或类
+ *
+ * 存在即合理：
+ * - 文件上传：FileInterceptor 处理 multipart/form-data
+ * - 响应转换：TransformInterceptor 统一响应格式
+ * - 日志记录：LoggingInterceptor 记录请求日志
+ *
+ * 优雅设计：
+ * - 支持单个或多个拦截器
+ * - 支持类级别和方法级别应用
+ * - 元数据存储拦截器实例或类
+ *
+ * @param interceptors 拦截器实例或类（可以是数组）
+ *
+ * @example
+ * // 方法级别
+ * @Post('upload')
+ * @UseInterceptors(FileInterceptor('file'))
+ * async upload(@UploadedFile() file: Express.Multer.File) {}
+ *
+ * // 类级别
+ * @Controller('api')
+ * @UseInterceptors(LoggingInterceptor, TransformInterceptor)
+ * export class ApiController {}
+ */
+export function UseInterceptors(...interceptors: any[]): MethodDecorator & ClassDecorator {
+  return (target: any, propertyKey?: string | symbol, descriptor?: PropertyDescriptor) => {
+    if (descriptor) {
+      // 方法装饰器
+      Reflect.defineMetadata(INTERCEPTORS_METADATA, interceptors, descriptor.value);
+    } else {
+      // 类装饰器
+      Reflect.defineMetadata(INTERCEPTORS_METADATA, interceptors, target);
     }
   };
 }

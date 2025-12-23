@@ -1,8 +1,19 @@
 import { z } from 'zod';
 
-export const zodToOpenAPI = (schema: any): any => {
-    const description = schema._def?.description || schema.description;
-    let result: any = {};
+interface OpenAPISchema {
+  type?: 'string' | 'number' | 'boolean' | 'object' | 'array';
+  format?: string;
+  properties?: Record<string, OpenAPISchema>;
+  required?: string[];
+  items?: OpenAPISchema;
+  enum?: unknown[];
+  nullable?: boolean;
+  description?: string;
+}
+
+export const zodToOpenAPI = (schema: z.ZodTypeAny): OpenAPISchema => {
+    const description = (schema._def as { description?: string })?.description;
+    let result: OpenAPISchema = {};
 
     if (schema instanceof z.ZodObject) {
         const shape = schema.shape;
@@ -35,7 +46,7 @@ export const zodToOpenAPI = (schema: any): any => {
     } else if (schema instanceof z.ZodArray) {
         result = {
             type: 'array',
-            items: zodToOpenAPI(schema.element),
+            items: zodToOpenAPI(schema.element as z.ZodTypeAny),
         };
     } else if (schema instanceof z.ZodEnum) {
         result = {
@@ -43,12 +54,12 @@ export const zodToOpenAPI = (schema: any): any => {
             enum: schema.options,
         };
     } else if (schema instanceof z.ZodOptional) {
-        result = zodToOpenAPI(schema.unwrap());
+        result = zodToOpenAPI(schema.unwrap() as z.ZodTypeAny);
     } else if (schema instanceof z.ZodNullable) {
-        const inner = zodToOpenAPI(schema.unwrap());
+        const inner = zodToOpenAPI(schema.unwrap() as z.ZodTypeAny);
         return { ...inner, nullable: true };
     } else if (schema instanceof z.ZodDefault) {
-        result = zodToOpenAPI(schema.unwrap());
+        result = zodToOpenAPI(schema.unwrap() as z.ZodTypeAny);
     } else if (schema instanceof z.ZodAny) {
         result = {};
     } else {

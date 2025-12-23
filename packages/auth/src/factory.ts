@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import { createAuthEndpoint, sessionMiddleware } from 'better-auth/api';
+import type { Endpoint } from 'better-auth';
 import {
   PATH_METADATA,
   METHOD_METADATA,
@@ -16,13 +17,69 @@ import { permissionMiddleware } from './permission';
 import { zodToOpenAPI } from './zod-to-openapi';
 import { z } from 'zod';
 
-export function controllerFactory(ControllerClass: any): Record<string, any> {
-  // 获取基类（如果实现类通过 @Controller(BaseClass) 注册）
+interface RouteParameter {
+  type: ParamType;
+  key?: string;
+  zod?: z.ZodTypeAny;
+  index: number;
+}
 
-  // 从基类读取 path 和装饰器元数据，从实现类读取方法列表
+interface MiddlewareMetadata {
+  permissions?: Record<string, unknown>;
+}
+
+interface OpenAPIParameter {
+  name: string;
+  in: 'query' | 'path' | 'header';
+  required: boolean;
+  schema: unknown;
+}
+
+interface EndpointConfig {
+  method: string;
+  use: unknown[];
+  metadata: {
+    openapi: {
+      description: string;
+      tags: string[];
+      requestBody?: {
+        content: {
+          'application/json': {
+            schema: unknown;
+          };
+        };
+      };
+      responses?: Record<number, {
+        description: string;
+        content: {
+          'application/json': {
+            schema: unknown;
+          };
+        };
+      }>;
+      parameters?: OpenAPIParameter[];
+    };
+  };
+  body?: unknown;
+  query?: unknown;
+}
+
+interface RequestContext {
+  body: unknown;
+  query: unknown;
+  params: unknown;
+  headers: Headers;
+  context: {
+    session: unknown;
+  };
+  json: (data: unknown) => Response;
+}
+
+type ControllerConstructor = new (...args: unknown[]) => unknown;
+
+export function controllerFactory(ControllerClass: ControllerConstructor): Record<string, Endpoint> {
   const controllerPath = Reflect.getMetadata(PATH_METADATA, ControllerClass) || '';
-
-  const endpoints: Record<string, any> = {};
+  const endpoints: Record<string, Endpoint> = {};
 
   // 获取所有方法（从实现类）
   const proto = ControllerClass.prototype;
@@ -42,27 +99,24 @@ export function controllerFactory(ControllerClass: any): Record<string, any> {
 
     const fullPath = `${controllerPath}${routePath}`;
     const httpMethod = getHttpMethod(Reflect.getMetadata(METHOD_METADATA, method));
-    const middlewareMeta = Reflect.getMetadata(MIDDLEWARE_METADATA, method);
-    const responseSchema = Reflect.getMetadata(RESPONSE_SCHEMA_METADATA, method);
-    const argsMetadata = Reflect.getMetadata(ROUTE_ARGS_METADATA, method) || {};
-    const description = Reflect.getMetadata(OPENAPI_DESCRIPTION_METADATA, method);
-    const tags = Reflect.getMetadata(OPENAPI_TAGS_METADATA, method);
+    const middlewareMeta = Reflect.getMetadata(MIDDLEWARE_METADATA, method) as MiddlewareMetadata | undefined;
+    const responseSchema = Reflect.getMetadata(RESPONSE_SCHEMA_METADATA, method) as z.ZodTypeAny | undefined;
+    const argsMetadata = Reflect.getMetadata(ROUTE_ARGS_METADATA, method) as Record<string, RouteParameter> || {};
+    const description = Reflect.getMetadata(OPENAPI_DESCRIPTION_METADATA, method) as string | undefined;
+    const tags = Reflect.getMetadata(OPENAPI_TAGS_METADATA, method) as string[] | undefined;
 
-    // 提取各类参数 schema
-    const bodyParams = Object.values(argsMetadata).filter((m: any) => m.type === ParamType.BODY) as any[];
-    const queryParams = Object.values(argsMetadata).filter((m: any) => m.type === ParamType.QUERY) as any[];
-    const pathParams = Object.values(argsMetadata).filter((m: any) => m.type === ParamType.PARAM) as any[];
-    const headerParams = Object.values(argsMetadata).filter((m: any) => m.type === ParamType.HEADER) as any[];
+    const bodyParams = Object.values(argsMetadata).filter(m => m.type === ParamType.BODY);
+    const queryParams = Object.values(argsMetadata).filter(m => m.type === ParamType.QUERY);
+    const pathParams = Object.values(argsMetadata).filter(m => m.type === ParamType.PARAM);
+    const headerParams = Object.values(argsMetadata).filter(m => m.type === ParamType.HEADER);
 
-    // 构建中间件数组
-    const middleware: any[] = [];
+    const middleware: unknown[] = [];
     if (middlewareMeta?.permissions) {
       middleware.push(sessionMiddleware);
       middleware.push(permissionMiddleware(middlewareMeta.permissions));
     }
 
-    // 构建 endpoint 配置
-    const endpointConfig: any = {
+    const endpointConfig: EndpointConfig = {
       method: httpMethod as any,
       use: middleware,
       metadata: {
@@ -75,10 +129,10 @@ export function controllerFactory(ControllerClass: any): Record<string, any> {
 
     // 添加 body schema（如果有）
     if (bodyParams.length > 0) {
-      if (bodyParams.length === 1 && !bodyParams[0].key) {
-        // 单个 @Body() 装饰器，使用整个 body schema
-        endpointConfig.body = bodyParams[0].zod;
-        const openApiSchema = zodToOpenAPI(bodyParams[0].zod);
+      const firstBodyParam = bodyParams[0];
+      if (bodyParams.length === 1 && !firstBodyParam?.key && firstBodyParam?.zod) {
+        endpointConfig.body = firstBodyParam.zod;
+        const openApiSchema = zodToOpenAPI(firstBodyParam.zod);
         endpointConfig.metadata.openapi.requestBody = {
           content: {
             'application/json': {
@@ -88,8 +142,8 @@ export function controllerFactory(ControllerClass: any): Record<string, any> {
         };
       } else {
         // 多个 @Body('key') 装饰器，合并为一个 object schema
-        const bodySchema: any = {};
-        bodyParams.forEach((param: any) => {
+        const bodySchema: Record<string, z.ZodTypeAny> = {};
+        bodyParams.forEach(param => {
           if (param.key && param.zod) {
             bodySchema[param.key] = param.zod;
           }
@@ -127,36 +181,32 @@ export function controllerFactory(ControllerClass: any): Record<string, any> {
 
     // 添加 query schema（如果有）
     if (queryParams.length > 0) {
-      // 如果有多个 query 参数，合并为一个 object schema
-      if (queryParams.length === 1 && !queryParams[0].key) {
-        // 单个 @Query() 装饰器，使用整个 query 对象
-        endpointConfig.query = queryParams[0].zod;
+      const firstQueryParam = queryParams[0];
+      if (queryParams.length === 1 && !firstQueryParam?.key && firstQueryParam?.zod) {
+        endpointConfig.query = firstQueryParam.zod;
 
-        // 添加到 OpenAPI metadata
-        if (queryParams[0].zod) {
-          const querySchema = zodToOpenAPI(queryParams[0].zod);
-          if (querySchema.properties) {
-            endpointConfig.metadata.openapi.parameters = Object.keys(querySchema.properties).map(key => ({
-              name: key,
-              in: 'query',
-              required: querySchema.required?.includes(key) || false,
-              schema: querySchema.properties[key]
-            }));
-          }
+        const querySchema = zodToOpenAPI(firstQueryParam.zod);
+        if (querySchema.properties) {
+          endpointConfig.metadata.openapi.parameters = Object.keys(querySchema.properties).map(key => ({
+            name: key,
+            in: 'query' as const,
+            required: querySchema.required?.includes(key) || false,
+            schema: querySchema.properties?.[key]
+          }));
         }
       } else {
         // 多个 @Query('key') 装饰器，构建 object schema
-        const querySchema: any = {};
-        const openapiParameters: any[] = [];
+        const querySchema: Record<string, z.ZodTypeAny> = {};
+        const openapiParameters: OpenAPIParameter[] = [];
 
-        queryParams.forEach((param: any) => {
+        queryParams.forEach(param => {
           if (param.key && param.zod) {
             querySchema[param.key] = param.zod;
 
             // 添加到 OpenAPI parameters
             openapiParameters.push({
               name: param.key,
-              in: 'query',
+              in: 'query' as const,
               required: !param.zod?.isOptional?.() || false,
               schema: zodToOpenAPI(param.zod)
             });
@@ -172,12 +222,12 @@ export function controllerFactory(ControllerClass: any): Record<string, any> {
 
     // 添加 path 参数到 OpenAPI（如果有）
     if (pathParams.length > 0) {
-      const pathParameters: any[] = [];
-      pathParams.forEach((param: any) => {
+      const pathParameters: OpenAPIParameter[] = [];
+      pathParams.forEach(param => {
         if (param.key && param.zod) {
           pathParameters.push({
             name: param.key,
-            in: 'path',
+            in: 'path' as const,
             required: true,
             schema: zodToOpenAPI(param.zod)
           });
@@ -185,9 +235,8 @@ export function controllerFactory(ControllerClass: any): Record<string, any> {
       });
 
       if (pathParameters.length > 0) {
-        // 合并到已有的 parameters（可能已有 query 参数）
         if (!endpointConfig.metadata.openapi.parameters) {
-          endpointConfig.metadata.openapi.parameters = [];
+          endpointConfig.metadata.openapi.parameters = [] as OpenAPIParameter[];
         }
         endpointConfig.metadata.openapi.parameters.push(...pathParameters);
       }
@@ -195,12 +244,12 @@ export function controllerFactory(ControllerClass: any): Record<string, any> {
 
     // 添加 header 参数到 OpenAPI（如果有）
     if (headerParams.length > 0) {
-      const headerParameters: any[] = [];
-      headerParams.forEach((param: any) => {
+      const headerParameters: OpenAPIParameter[] = [];
+      headerParams.forEach(param => {
         if (param.key && param.zod) {
           headerParameters.push({
             name: param.key,
-            in: 'header',
+            in: 'header' as const,
             required: !param.zod?.isOptional?.() || false,
             schema: zodToOpenAPI(param.zod)
           });
@@ -208,23 +257,25 @@ export function controllerFactory(ControllerClass: any): Record<string, any> {
       });
 
       if (headerParameters.length > 0) {
-        // 合并到已有的 parameters
         if (!endpointConfig.metadata.openapi.parameters) {
-          endpointConfig.metadata.openapi.parameters = [];
+          endpointConfig.metadata.openapi.parameters = [] as OpenAPIParameter[];
         }
         endpointConfig.metadata.openapi.parameters.push(...headerParameters);
       }
     }
 
-    // 创建 better-auth endpoint
     const endpoint = createAuthEndpoint(
       fullPath,
-      endpointConfig,
-      async (ctx) => {
-        const instance = root.get<any>(ControllerClass);
+      endpointConfig as never,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      async (ctx: any) => {
+        const instance = root.get(ControllerClass);
         const args = injectParameters(argsMetadata, ctx);
-        const method = Reflect.get(instance, methodName);
-        const result = await (method).bind(instance)(...args);
+        const method = Reflect.get(instance as object, methodName);
+        if (typeof method !== 'function') {
+          throw new Error(`Method ${methodName} is not a function`);
+        }
+        const result = await method.bind(instance)(...args);
         return ctx.json(result);
       }
     );
@@ -288,30 +339,32 @@ function pathToCamelCase(path: string): string {
  * - @Header('authorization', schema) - 请求头（支持多个，自动添加到 OpenAPI header parameters）
  * - @Session() - 当前会话
  */
-function injectParameters(argsMetadata: any, ctx: any): any[] {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function injectParameters(argsMetadata: Record<string, RouteParameter>, ctx: any): unknown[] {
   const sortedMetadata = Object.values(argsMetadata).sort(
-    (a: any, b: any) => a.index - b.index
+    (a, b) => a.index - b.index
   );
 
-  return sortedMetadata.map((metadata: any) => {
+  return sortedMetadata.map(metadata => {
     const { type, key: fieldKey, zod } = metadata;
+    const context = ctx as RequestContext;
 
     switch (type) {
       case ParamType.BODY:
-        const bodyValue = fieldKey ? ctx.body[fieldKey] : ctx.body;
+        const bodyValue = fieldKey ? (context.body as Record<string, unknown>)[fieldKey] : context.body;
         return zod ? zod.parse(bodyValue) : bodyValue;
 
       case ParamType.SESSION:
-        return ctx.context.session;
+        return context.context.session;
 
       case ParamType.QUERY:
-        return fieldKey ? ctx.query[fieldKey] : ctx.query;
+        return fieldKey ? (context.query as Record<string, unknown>)[fieldKey] : context.query;
 
       case ParamType.PARAM:
-        return fieldKey ? ctx.params[fieldKey] : ctx.params;
+        return fieldKey ? (context.params as Record<string, unknown>)[fieldKey] : context.params;
 
       case ParamType.HEADER:
-        return fieldKey ? ctx.headers.get(fieldKey) : ctx.headers;
+        return fieldKey ? context.headers.get(fieldKey) : context.headers;
 
       default:
         return undefined;

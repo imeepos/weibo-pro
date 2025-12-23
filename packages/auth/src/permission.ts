@@ -2,10 +2,19 @@ import { createMiddleware } from 'better-call';
 import { APIError } from 'better-auth/api';
 import { type UserWithRole } from 'better-auth/plugins/admin';
 
+type PermissionConnector = 'OR' | 'AND';
 
-export const permissionMiddleware = (permissions: any, connector: 'OR' | 'AND' = 'AND') => {
+interface SessionContext {
+  user: UserWithRole | null;
+  session: unknown;
+}
+
+export const permissionMiddleware = (
+  permissions: Record<string, unknown>,
+  connector: PermissionConnector = 'AND'
+) => {
     return createMiddleware(async ctx => {
-        const session = ctx.context.session as { user: UserWithRole | null; session: any };
+        const session = ctx.context.session as SessionContext;
         if (!session || !session.user) {
             throw new APIError('UNAUTHORIZED', {
                 message: 'User is not authenticated',
