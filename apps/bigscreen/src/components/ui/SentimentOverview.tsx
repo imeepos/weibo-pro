@@ -158,7 +158,7 @@ const SentimentOverview: React.FC<SentimentOverviewProps> = ({
           <span className={cn('text-xs font-medium', color)}>{label}</span>
         </div>
         <div className={cn('text-lg font-bold', color)}>
-          {value}
+          {value}%
         </div>
       </div>
     );
