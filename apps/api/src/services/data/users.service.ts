@@ -409,11 +409,11 @@ export class UsersService {
       // 计算过去7天的趋势数据
       const trendDataResult = await manager.query(`
         WITH RECURSIVE date_series AS (
-          SELECT $2::timestamptz - INTERVAL '6 days' as date
+          SELECT $1::timestamptz - INTERVAL '6 days' as date
           UNION ALL
           SELECT date + INTERVAL '1 day'
           FROM date_series
-          WHERE date < $2::timestamptz
+          WHERE date < $1::timestamptz
         ),
         daily_user_activity AS (
           SELECT
@@ -423,8 +423,8 @@ export class UsersService {
             COUNT(DISTINCT CASE WHEN nlp.sentiment->>'overall' = 'negative' THEN nlp.id END) as negative_count
           FROM weibo_posts p
           LEFT JOIN post_nlp_results nlp ON nlp.post_id = p.id
-          WHERE p.ingested_at >= $2::timestamptz - INTERVAL '6 days'
-            AND p.ingested_at <= $2::timestamptz
+          WHERE p.ingested_at >= $1::timestamptz - INTERVAL '6 days'
+            AND p.ingested_at <= $1::timestamptz
             AND p.deleted_at IS NULL
             AND p.user->>'id' IS NOT NULL
           GROUP BY DATE_TRUNC('day', p.ingested_at), (p.user->>'id')::bigint
@@ -459,7 +459,7 @@ export class UsersService {
           low_risk
         FROM daily_user_risk
         ORDER BY date
-      `, [current.start, current.end]);
+      `, [current.end]);
 
       const now = new Date();
       const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
