@@ -10,12 +10,15 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "better-auth": "^1.4.2",
+    "better-auth": "^1.4.8",
+    "better-call": "^1.1.7",
     "kysely": "^0.28.8",
     "@sker/core": "workspace:*",
-    "zod": "^4.0.0"
+    "reflect-metadata": "^0.2.2",
+    "zod": "^4.2.1"
   },
   "devDependencies": {
-    "@sker/typescript-config": "workspace:*"
+    "@sker/typescript-config": "workspace:*",
+    "@types/node": "^25.0.3"
   }
 }

@@ -27,7 +27,7 @@
     "dotenv": "^16.4.7",
     "langchain": "^1.0.4",
     "pg": "^8.11.3",
-    "zod": "^4.0.0"
+    "zod": "^4.2.1"
   },
   "devDependencies": {
     "@sker/typescript-config": "workspace:*",
