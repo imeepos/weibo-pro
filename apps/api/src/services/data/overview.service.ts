@@ -95,14 +95,15 @@ export class OverviewService {
     // 查询活跃用户数（在该时间范围内发帖、评论或转发的唯一用户）
     const activeUserIds = new Set<string>();
 
-    // 收集发帖用户
+    // 收集发帖用户（user 是 JSONB 字段，需要用 ->> 操作符提取 id）
     const postUsers = await manager
       .getRepository(WeiboPostEntity)
       .createQueryBuilder('post')
-      .select('DISTINCT post.user_id', 'user_id')
+      .select("DISTINCT post.user->>'id'", 'user_id')
       .where('post.ingested_at >= :start', { start })
       .andWhere('post.ingested_at <= :end', { end })
       .andWhere('post.deleted_at IS NULL')
+      .andWhere("post.user->>'id' IS NOT NULL")
       .getRawMany();
     postUsers.forEach((u: any) => u.user_id && activeUserIds.add(String(u.user_id)));
 
@@ -110,9 +111,10 @@ export class OverviewService {
     const commentUsers = await manager
       .getRepository(WeiboCommentEntity)
       .createQueryBuilder('comment')
-      .select('DISTINCT comment.user_id', 'user_id')
+      .select("DISTINCT comment.user->>'id'", 'user_id')
       .where('comment.ingested_at >= :start', { start })
       .andWhere('comment.ingested_at <= :end', { end })
+      .andWhere("comment.user->>'id' IS NOT NULL")
       .getRawMany();
     commentUsers.forEach((u: any) => u.user_id && activeUserIds.add(String(u.user_id)));
 
@@ -120,9 +122,10 @@ export class OverviewService {
     const repostUsers = await manager
       .getRepository(WeiboRepostEntity)
       .createQueryBuilder('repost')
-      .select('DISTINCT repost.user_id', 'user_id')
+      .select("DISTINCT repost.user->>'id'", 'user_id')
       .where('repost.ingested_at >= :start', { start })
       .andWhere('repost.ingested_at <= :end', { end })
+      .andWhere("repost.user->>'id' IS NOT NULL")
       .getRawMany();
     repostUsers.forEach((u: any) => u.user_id && activeUserIds.add(String(u.user_id)));
 
