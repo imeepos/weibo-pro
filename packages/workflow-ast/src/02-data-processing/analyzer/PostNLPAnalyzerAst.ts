@@ -20,8 +20,14 @@ export class PostNLPAnalyzerAst extends Ast {
   @Input({ title: '转发列表', defaultValue: [] })
   reposts!: WeiboRepostEntity[];
 
+  @Input({ title: '事件ID', defaultValue: '' })
+  event_id: string = '';
+
   @Output({ title: 'NLP 分析结果', defaultValue: '' })
   nlpResult: CompleteAnalysisResult | string = ``;
+
+  @Output({ title: '已关联事件', defaultValue: false })
+  event_associated = false;
 
   type: 'PostNLPAnalyzerAst' = 'PostNLPAnalyzerAst';
 }

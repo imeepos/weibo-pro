@@ -3,10 +3,11 @@ import { Handler, NodeEvent, setAstError } from '@sker/workflow';
 import { PostNLPAnalyzerAst } from '@sker/workflow-ast';
 import {
   EventCategoryEntity,
+  PostNLPResultEntity,
   useEntityManager,
 } from '@sker/entities';
 import { NLPAnalyzer } from '@sker/nlp';
-import type { PostContext } from '@sker/nlp';
+import type { PostContext, CompleteAnalysisResult } from '@sker/nlp';
 import { Observable, from } from 'rxjs';
 import { concatMap, mergeMap } from 'rxjs/operators';
 
@@ -134,8 +135,19 @@ export class PostNLPAnalyzerVisitor {
             recentEvents
           );
 
+          if (ast.event_id && typeof ast.nlpResult !== 'string') {
+            await this.associatePostWithEvent(ast, ast.nlpResult);
+          }
+
           return [
-            { type: 'node_emit' as const, id: ast.id, data: { nlpResult: ast.nlpResult } }
+            {
+              type: 'node_emit' as const,
+              id: ast.id,
+              data: {
+                nlpResult: ast.nlpResult,
+                event_associated: ast.event_associated,
+              }
+            }
           ];
         }),
         mergeMap((events: NodeEvent[]) => from(events))
@@ -161,6 +173,31 @@ export class PostNLPAnalyzerVisitor {
         abortController.abort();
         obs.complete();
       };
+    });
+  }
+
+  private async associatePostWithEvent(
+    ast: PostNLPAnalyzerAst,
+    nlpResult: CompleteAnalysisResult
+  ): Promise<void> {
+    await useEntityManager(async (manager) => {
+      await manager.upsert(
+        PostNLPResultEntity,
+        {
+          post_id: `${ast.post.id}`,
+          event_id: ast.event_id,
+          sentiment: nlpResult.sentiment as any,
+          keywords: nlpResult.keywords as any,
+          event_type: nlpResult.event,
+        },
+        ['post_id']
+      );
+
+      ast.event_associated = true;
+
+      console.log(
+        `[PostNLPAnalyzer] 帖子 ${ast.post.id} 已关联事件 ${ast.event_id}`
+      );
     });
   }
 }
