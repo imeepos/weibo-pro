@@ -28,6 +28,7 @@
     "@sker/entities": "workspace:*",
     "@sker/nlp": "workspace:*",
     "@sker/workflow-run": "workspace:*",
+    "glob": "^13.0.0",
     "langchain": "^1.0.4",
     "typeorm": "^0.3.20",
     "zod": "^4.2.1"
