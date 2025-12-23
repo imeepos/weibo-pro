@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Query, Param, Body } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Query, Param, Body } from '@sker/core';
 import { root } from '@sker/core';
 import { LayoutService, type CreateLayoutPayload, type UpdateLayoutPayload } from '../services/data/layout.service';
 import * as sdk from '@sker/sdk';

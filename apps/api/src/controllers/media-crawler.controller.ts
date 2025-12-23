@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Query } from '@nestjs/common'
+import { Controller, Get, Post, Body, Query } from '@sker/core'
 import { root } from '@sker/core'
 import * as sdk from '@sker/sdk'
 import { MediaCrawlerProxyService } from '../services/media-crawler-proxy.service'

@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query } from '@sker/core';
 import { root } from '@sker/core';
 import { UsersService } from '../services/data/users.service';
 import type { TimeRange } from '@sker/entities';

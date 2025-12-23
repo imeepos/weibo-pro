@@ -1,8 +1,7 @@
-import { Controller, Get, Query, Param } from '@nestjs/common';
+import { Controller, Get, Query, Param } from '@sker/core';
 import { root } from '@sker/core';
 import { EventsService } from '../services/data/events.service';
 import { TimeRange } from '../services/data/types';
-import * as sdk from '@sker/sdk';
 
 @Controller('api/events')
 export class EventsController {

@@ -18,7 +18,7 @@ import {
   OnGatewayDisconnect,
   OnGatewayInit,
 } from '@nestjs/websockets';
-import { Server, Socket } from 'socket.io';
+import { Socket } from 'socket.io';
 import { logger } from '@sker/core';
 
 @WebSocketGateway({

@@ -4,7 +4,7 @@ import {
   NotFoundException,
   ArgumentsHost,
   HttpStatus,
-} from '@nestjs/common';
+} from '@sker/core';
 import { Request, Response } from 'express';
 import { logger } from '@sker/core';
 

@@ -1,4 +1,4 @@
-import { Controller, Post, Param, Req, Res, Headers } from '@nestjs/common';
+import { Controller, Post, Param, Req, Res, Headers } from '@sker/core';
 import type { Request, Response } from 'express';
 import { LlmProxyService } from '../services/llm-proxy.service';
 import { Readable } from 'stream';

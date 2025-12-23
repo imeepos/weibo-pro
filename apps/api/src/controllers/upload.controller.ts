@@ -6,7 +6,7 @@ import {
   Body,
   BadRequestException,
   Req
-} from '@nestjs/common';
+} from '@sker/core';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UploadService } from '../services/upload.service';
 import type { Request } from 'express';

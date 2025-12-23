@@ -1,4 +1,4 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body } from '@sker/core';
 import { root } from '@sker/core';
 import { ChatService } from '../services/chat.service';
 import type { ChatMessage } from '@sker/chat';

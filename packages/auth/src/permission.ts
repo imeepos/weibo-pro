@@ -11,16 +11,11 @@ export const permissionMiddleware = (permissions: any, connector: 'OR' | 'AND' =
                 message: 'User is not authenticated',
             });
         }
-
-        // If no permissions requested, just requiring authentication is enough
         if (Object.keys(permissions).length === 0) {
             return;
         }
-
         const userRole = session.user.role;
         const roles: string[] = (userRole || 'user').split(',');
-
-
         throw new APIError('FORBIDDEN', {
             code: 'access.denied',
             message: `Role ${roles.join(',')} does not have access to ${JSON.stringify(permissions)}`,

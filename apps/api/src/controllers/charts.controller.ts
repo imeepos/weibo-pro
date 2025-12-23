@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query } from '@sker/core';
 import { root } from '@sker/core';
 import { ChartsService } from '../services/data/charts.service';
 import type { TimeRange } from '../services/data/types';

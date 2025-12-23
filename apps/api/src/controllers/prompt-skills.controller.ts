@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@sker/core';
 import { root } from '@sker/core';
 import { PromptSkillService } from '../services/prompt-skill.service';
 import * as sdk from '@sker/sdk';

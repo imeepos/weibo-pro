@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query } from '@sker/core';
 import { root } from '@sker/core';
 import { LlmChatLogService } from '../services/llm-chat-log.service';
 import * as sdk from '@sker/sdk';

@@ -16,7 +16,10 @@ import { killPortProcess } from 'kill-port-process';
 import { join } from 'path';
 import * as express from 'express';
 
+import { Hono } from 'hono'
+
 async function bootstrap() {
+  const hono = new Hono()
   const PORT = parseInt(process.env.PORT || `3000`);
   const logger = root.get(Logger)
 

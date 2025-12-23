@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post, Body } from '@nestjs/common';
+import { Controller, Get, Param, Post, Body } from '@sker/core';
 import { root } from '@sker/core';
 import { PersonaService } from '../services/data/persona.service';
 import * as sdk from '@sker/sdk';

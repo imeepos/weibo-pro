@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param } from '@sker/core';
 import { root } from '@sker/core';
 import { PromptRoleService } from '../services/prompt-role.service';
 import * as sdk from '@sker/sdk';

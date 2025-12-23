@@ -63,6 +63,9 @@ importers:
       '@sker/agent':
         specifier: workspace:*
         version: link:../../packages/agent
+      '@sker/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@sker/chat':
         specifier: workspace:*
         version: link:../../packages/chat
@@ -102,6 +105,9 @@ importers:
       dotenv:
         specifier: ^16.4.7
         version: 16.6.1
+      hono:
+        specifier: ^4.11.1
+        version: 4.11.1
       kill-port-process:
         specifier: ^3.2.1
         version: 3.2.1
@@ -582,6 +588,12 @@ importers:
       '@types/node':
         specifier: ^25.0.3
         version: 25.0.3
+      tsup:
+        specifier: ^8.4.0
+        version: 8.5.0(@swc/core@1.15.3(@swc/helpers@0.5.17))(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.2)(yaml@2.8.2)
+      typescript:
+        specifier: 5.9.2
+        version: 5.9.2
 
   packages/chat:
     dependencies:
@@ -8820,6 +8832,10 @@ packages:
 
   hoist-non-react-statics@3.3.2:
     resolution: {integrity: sha512-/gGivxi8JPKWNm/W0jSmzcMPpfpPLc3dY/6GxhX2hQ9iGj3aDfklV4ET7NjKpSinLpJ5vafa9iiGIEZg10SfBw==}
+
+  hono@4.11.1:
+    resolution: {integrity: sha512-KsFcH0xxHes0J4zaQgWbYwmz3UPOOskdqZmItstUG93+Wk1ePBLkLGwbP9zlmh1BFUiL8Qp+Xfu9P7feJWpGNg==}
+    engines: {node: '>=16.9.0'}
 
   html-encoding-sniffer@4.0.0:
     resolution: {integrity: sha512-Y22oTqIU4uuPgEemfz7NDJz6OeKf12Lsu+QC+s3BVpda64lTiMYCyGwg5ki4vFxkMwQdeZDl2adZoqUgdFuTgQ==}
@@ -21080,6 +21096,8 @@ snapshots:
   hoist-non-react-statics@3.3.2:
     dependencies:
       react-is: 16.13.1
+
+  hono@4.11.1: {}
 
   html-encoding-sniffer@4.0.0:
     dependencies:
