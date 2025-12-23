@@ -106,6 +106,7 @@ export const Put = createHttpMethodDecorator(RequestMethod.PUT);
 export const Delete = createHttpMethodDecorator(RequestMethod.DELETE);
 export const Patch = createHttpMethodDecorator(RequestMethod.PATCH);
 
+
 // 路由参数类型枚举
 export enum ParamType {
   PARAM = 'param',

@@ -1,19 +1,36 @@
+/**
+ * Better Auth Plugin Factory
+ *
+ * Creates a Better Auth plugin from decorated controllers
+ */
+
 import 'reflect-metadata';
-import type { BetterAuthPlugin } from 'better-auth';
+import type { BetterAuthPlugin, Endpoint } from 'better-auth';
 import { controllerFactory } from './factory';
-import { CONTROLLES, Provider, root } from '@sker/core';
+import { CONTROLLES, type Provider, root } from '@sker/core';
 
-export function createSkerAuthPlugin(
-  providers: Provider[],
-  options?: { id?: string }
-): BetterAuthPlugin {
+export interface SkerAuthPluginOptions {
+  /** Plugin identifier */
+  id?: string;
+}
+
+/**
+ * Create a Better Auth plugin from providers
+ *
+ * @param providers - DI providers including controllers
+ * @param options - Plugin configuration
+ */
+export function createSkerAuthPlugin(providers: Provider[], options?: SkerAuthPluginOptions): BetterAuthPlugin {
   const pluginId = options?.id || 'controllers';
-  const endpoints: Record<string, any> = {};
+  const endpoints: Record<string, Endpoint> = {};
 
+  // Register providers with DI container
   root.set([...providers]);
 
+  // Get all registered controllers
   const controllers = root.get(CONTROLLES, []);
 
+  // Convert controllers to endpoints
   for (const ControllerClass of controllers) {
     const controllerEndpoints = controllerFactory(ControllerClass);
     Object.assign(endpoints, controllerEndpoints);

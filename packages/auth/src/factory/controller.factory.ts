@@ -1,0 +1,161 @@
+/**
+ * Controller to Endpoint Factory
+ *
+ * Converts decorated NestJS-style controllers to Better Auth endpoints
+ */
+
+import 'reflect-metadata';
+import { createAuthEndpoint, sessionMiddleware } from 'better-auth/api';
+import type { Endpoint } from 'better-auth';
+import { ParamType, RequestMethod, root } from '@sker/core';
+
+import { permissionMiddleware } from '../permission';
+import type { ControllerConstructor, EndpointConfig, RequestContext, RouteParameter } from './factory.types';
+import {
+  extractControllerPath,
+  getControllerMethods,
+  extractRouteMetadata,
+  categorizeParameters,
+} from './metadata.extractor';
+import { buildEndpointSchemas } from './schema.builder';
+import { buildOpenAPIMetadata } from './openapi.builder';
+import { injectParameters } from './parameter.injector';
+
+/** HTTP method enum to string mapping */
+const HTTP_METHOD_MAP: Record<RequestMethod, EndpointConfig['method']> = {
+  [RequestMethod.GET]: 'GET',
+  [RequestMethod.POST]: 'POST',
+  [RequestMethod.PUT]: 'PUT',
+  [RequestMethod.DELETE]: 'DELETE',
+  [RequestMethod.PATCH]: 'PATCH',
+  [RequestMethod.SSE]: 'GET',
+};
+
+/**
+ * Convert path to camelCase endpoint key
+ *
+ * Examples:
+ * - /loomart/activity/get => loomartActivityGet
+ * - /loomart/activities/list => loomartActivitiesList
+ * - /loomart/activity/:id/update => loomartActivityUpdate
+ */
+function pathToCamelCase(path: string): string {
+  return path
+    .split('/')
+    .filter(segment => segment && !segment.startsWith(':'))
+    .map((segment, index) => (index === 0 ? segment : segment.charAt(0).toUpperCase() + segment.slice(1)))
+    .join('');
+}
+
+/**
+ * Build middleware array for endpoint
+ */
+function buildMiddleware(permissions?: Record<string, unknown>): unknown[] {
+  if (!permissions) {
+    return [];
+  }
+
+  return [sessionMiddleware, permissionMiddleware(permissions)];
+}
+
+/**
+ * Create endpoint handler
+ */
+function createEndpointHandler(
+  ControllerClass: ControllerConstructor,
+  methodName: string,
+  argsMetadata: Record<string, RouteParameter>
+) {
+  return async (ctx: RequestContext) => {
+    const instance = root.get(ControllerClass);
+    const args = await injectParameters(argsMetadata, ctx);
+
+    const method = Reflect.get(instance, methodName);
+    if (typeof method !== 'function') {
+      throw new Error(`Method ${methodName} is not a function`);
+    }
+
+    const result = await method.bind(instance)(...args);
+
+    // Wrap response in standard format
+    return ctx.json({
+      success: true,
+      data: result,
+      timestamp: new Date().toISOString(),
+    });
+  };
+}
+
+/**
+ * Convert a controller class to Better Auth endpoints
+ */
+export function controllerFactory(ControllerClass: ControllerConstructor): Record<string, Endpoint> {
+  const controllerPath = extractControllerPath(ControllerClass);
+  const endpoints: Record<string, Endpoint> = {};
+  const methodNames = getControllerMethods(ControllerClass);
+  const proto = ControllerClass.prototype as Record<string, (...args: unknown[]) => unknown>;
+
+  for (const methodName of methodNames) {
+    const method = proto[methodName];
+    if (typeof method !== 'function') {
+      continue;
+    }
+
+    const routeMetadata = extractRouteMetadata(method, controllerPath);
+
+    if (!routeMetadata) {
+      continue; // Skip non-route methods
+    }
+
+    const { path: fullPath, httpMethod, middlewareMeta, responseSchema, argsMetadata, description, tags } =
+      routeMetadata;
+
+    // Categorize parameters
+    const params = categorizeParameters(argsMetadata);
+
+    // Detect if endpoint needs file upload support
+    const hasFileUpload = Object.values(argsMetadata).some(
+      meta => meta.type === ParamType.UPLOADED_FILE
+    );
+
+    // Detect if endpoint needs request object
+    const needsRequest = hasFileUpload || Object.values(argsMetadata).some(
+      meta => meta.type === ParamType.REQ
+    );
+
+    // Build endpoint configuration
+    const endpointConfig: EndpointConfig = {
+      method: HTTP_METHOD_MAP[httpMethod] || 'GET',
+      use: buildMiddleware(middlewareMeta?.permissions),
+      metadata: {
+        openapi: buildOpenAPIMetadata(params, description, tags, responseSchema),
+      },
+    };
+
+    // Add requireRequest for endpoints that need Request object
+    if (needsRequest) {
+      (endpointConfig as unknown as Record<string, unknown>).requireRequest = true;
+    }
+
+    // Disable body parsing for file upload endpoints
+    if (hasFileUpload) {
+      (endpointConfig as unknown as Record<string, unknown>).disableBody = true;
+    }
+
+    // Add schemas
+    buildEndpointSchemas(params, endpointConfig);
+
+    // Create endpoint
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const endpoint = createAuthEndpoint(
+      fullPath,
+      endpointConfig as any,
+      createEndpointHandler(ControllerClass, methodName, argsMetadata) as any
+    );
+
+    const endpointKey = pathToCamelCase(fullPath);
+    endpoints[endpointKey] = endpoint;
+  }
+
+  return endpoints;
+}
