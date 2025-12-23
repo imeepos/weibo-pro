@@ -116,8 +116,8 @@ export class UsersService {
             COUNT(DISTINCT nlp.id) as analyzed_count
           FROM weibo_posts p
           LEFT JOIN post_nlp_results nlp ON nlp.post_id = p.id
-          WHERE p.ingested_at >= $1
-            AND p.ingested_at <= $2
+          WHERE p.ingested_at >= $1::timestamptz
+            AND p.ingested_at <= $2::timestamptz
             AND p.deleted_at IS NULL
             AND p.user->>'id' IS NOT NULL
           GROUP BY (p.user->>'id')::bigint
@@ -245,8 +245,8 @@ export class UsersService {
             COUNT(DISTINCT nlp.id) as analyzed_count
           FROM weibo_posts p
           LEFT JOIN post_nlp_results nlp ON nlp.post_id = p.id
-          WHERE p.ingested_at >= $1
-            AND p.ingested_at <= $2
+          WHERE p.ingested_at >= $1::timestamptz
+            AND p.ingested_at <= $2::timestamptz
             AND p.deleted_at IS NULL
             AND p.user->>'id' IS NOT NULL
           GROUP BY (p.user->>'id')::bigint
@@ -340,8 +340,8 @@ export class UsersService {
             COUNT(DISTINCT CASE WHEN nlp.sentiment->>'overall' = 'negative' THEN nlp.id END) as negative_count
           FROM weibo_posts p
           LEFT JOIN post_nlp_results nlp ON nlp.post_id = p.id
-          WHERE p.ingested_at >= $1
-            AND p.ingested_at <= $2
+          WHERE p.ingested_at >= $1::timestamptz
+            AND p.ingested_at <= $2::timestamptz
             AND p.deleted_at IS NULL
             AND p.user->>'id' IS NOT NULL
           GROUP BY (p.user->>'id')::bigint
@@ -380,8 +380,8 @@ export class UsersService {
             COUNT(DISTINCT CASE WHEN nlp.sentiment->>'overall' = 'negative' THEN nlp.id END) as negative_count
           FROM weibo_posts p
           LEFT JOIN post_nlp_results nlp ON nlp.post_id = p.id
-          WHERE p.ingested_at >= $1
-            AND p.ingested_at <= $2
+          WHERE p.ingested_at >= $1::timestamptz
+            AND p.ingested_at <= $2::timestamptz
             AND p.deleted_at IS NULL
             AND p.user->>'id' IS NOT NULL
           GROUP BY (p.user->>'id')::bigint
@@ -468,11 +468,11 @@ export class UsersService {
 
       const activityStats = await manager.query(`
         SELECT
-          COUNT(DISTINCT CASE WHEN p.ingested_at >= $1 THEN (p.user->>'id')::bigint END) as active_today,
-          COUNT(DISTINCT CASE WHEN p.ingested_at >= $2 THEN (p.user->>'id')::bigint END) as active_week,
-          COUNT(DISTINCT CASE WHEN p.ingested_at >= $3 THEN (p.user->>'id')::bigint END) as active_month
+          COUNT(DISTINCT CASE WHEN p.ingested_at >= $1::timestamptz THEN (p.user->>'id')::bigint END) as active_today,
+          COUNT(DISTINCT CASE WHEN p.ingested_at >= $2::timestamptz THEN (p.user->>'id')::bigint END) as active_week,
+          COUNT(DISTINCT CASE WHEN p.ingested_at >= $3::timestamptz THEN (p.user->>'id')::bigint END) as active_month
         FROM weibo_posts p
-        WHERE p.ingested_at >= $3
+        WHERE p.ingested_at >= $3::timestamptz
           AND p.deleted_at IS NULL
           AND p.user->>'id' IS NOT NULL
       `, [oneDayAgo, sevenDaysAgo, thirtyDaysAgo]);
