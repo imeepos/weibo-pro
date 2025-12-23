@@ -469,6 +469,18 @@ export interface UserStatistics {
     riskScoreChange: number
     newUsersGrowthRate: number
   }
+  trendData: {
+    total: number[]
+    highRisk: number[]
+    mediumRisk: number[]
+    lowRisk: number[]
+  }
+  changes: {
+    total: number
+    highRisk: number
+    mediumRisk: number
+    lowRisk: number
+  }
 }
 
 export interface UserListQueryParams {

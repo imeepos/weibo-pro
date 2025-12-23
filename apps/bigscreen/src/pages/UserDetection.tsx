@@ -37,7 +37,7 @@ const UserDetection: React.FC = () => {
 
   const debouncedSearch = useDebounce(searchTerm, 300);
 
-  const { users, riskLevels, isLoading, error, refetch } = useUserDetection({
+  const { users, riskLevels, statistics, isLoading, error, refetch } = useUserDetection({
     timeRange: selectedTimeRange,
     page: currentPage,
     pageSize: DEFAULT_PAGE_SIZE,
@@ -165,37 +165,37 @@ const UserDetection: React.FC = () => {
           title="总用户数"
           className='sentiment-overview-card'
           value={totalUsers}
-          change={8.5}
+          change={statistics?.changes.total}
           icon={Users}
           color="blue"
-          chartComponent={<MiniTrendChart data={[12, 19, 15, 25, 22, 30, 28]} color="#3b82f6" type="line" />}
+          chartComponent={<MiniTrendChart data={statistics?.trendData.total || []} color="#3b82f6" type="line" />}
         />
         <MetricCard
           title="高风险用户"
           className='sentiment-overview-card'
           value={usersByRisk.high}
-          change={-3.2}
+          change={statistics?.changes.highRisk}
           icon={AlertTriangle}
           color="red"
-          chartComponent={<MiniTrendChart data={[8, 12, 10, 15, 13, 11, 9]} color="#ef4444" type="bar" />}
+          chartComponent={<MiniTrendChart data={statistics?.trendData.highRisk || []} color="#ef4444" type="bar" />}
         />
         <MetricCard
           title="中风险用户"
           className='sentiment-overview-card'
           value={usersByRisk.medium}
-          change={1.8}
+          change={statistics?.changes.mediumRisk}
           icon={Eye}
           color="yellow"
-          chartComponent={<MiniTrendChart data={[15, 18, 16, 20, 19, 22, 21]} color="#eab308" type="line" />}
+          chartComponent={<MiniTrendChart data={statistics?.trendData.mediumRisk || []} color="#eab308" type="line" />}
         />
         <MetricCard
           title="低风险用户"
           className='sentiment-overview-card'
           value={usersByRisk.low}
-          change={12.3}
+          change={statistics?.changes.lowRisk}
           icon={Shield}
           color="green"
-          chartComponent={<MiniTrendChart data={[20, 25, 30, 35, 40, 45, 50]} color="#10b981" type="bar" />}
+          chartComponent={<MiniTrendChart data={statistics?.trendData.lowRisk || []} color="#10b981" type="bar" />}
         />
       </div>
 

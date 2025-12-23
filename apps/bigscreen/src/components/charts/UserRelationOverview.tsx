@@ -34,7 +34,7 @@ export const UserRelationOverview: React.FC<UserRelationOverviewProps> = ({
         'comprehensive' as UserRelationType,
         selectedTimeRange,
         1, // minWeight
-        5000 // limit - 支持2000个节点
+        3000 // limit - 支持2000个节点
       );
 
       setNetworkData(data);
