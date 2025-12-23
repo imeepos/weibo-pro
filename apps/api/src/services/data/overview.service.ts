@@ -92,13 +92,43 @@ export class OverviewService {
 
     logger.info(`帖子数: ${postCount}`);
 
-    // 查询用户总数
-    const userCount = await manager
-      .getRepository(WeiboUserEntity)
-      .createQueryBuilder('user')
-      .getCount();
+    // 查询活跃用户数（在该时间范围内发帖、评论或转发的唯一用户）
+    const activeUserIds = new Set<string>();
 
-    logger.info(`用户总数: ${userCount}`);
+    // 收集发帖用户
+    const postUsers = await manager
+      .getRepository(WeiboPostEntity)
+      .createQueryBuilder('post')
+      .select('DISTINCT post.user_id', 'user_id')
+      .where('post.ingested_at >= :start', { start })
+      .andWhere('post.ingested_at <= :end', { end })
+      .andWhere('post.deleted_at IS NULL')
+      .getRawMany();
+    postUsers.forEach((u: any) => u.user_id && activeUserIds.add(String(u.user_id)));
+
+    // 收集评论用户
+    const commentUsers = await manager
+      .getRepository(WeiboCommentEntity)
+      .createQueryBuilder('comment')
+      .select('DISTINCT comment.user_id', 'user_id')
+      .where('comment.ingested_at >= :start', { start })
+      .andWhere('comment.ingested_at <= :end', { end })
+      .getRawMany();
+    commentUsers.forEach((u: any) => u.user_id && activeUserIds.add(String(u.user_id)));
+
+    // 收集转发用户
+    const repostUsers = await manager
+      .getRepository(WeiboRepostEntity)
+      .createQueryBuilder('repost')
+      .select('DISTINCT repost.user_id', 'user_id')
+      .where('repost.ingested_at >= :start', { start })
+      .andWhere('repost.ingested_at <= :end', { end })
+      .getRawMany();
+    repostUsers.forEach((u: any) => u.user_id && activeUserIds.add(String(u.user_id)));
+
+    const userCount = activeUserIds.size;
+
+    logger.info(`活跃用户数: ${userCount}`);
 
     // 查询真实互动数（评论数 + 点赞数 + 转发数）
     const [commentCount, likeCount, repostCount] = await Promise.all([
