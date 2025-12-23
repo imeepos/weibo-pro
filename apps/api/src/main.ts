@@ -5,10 +5,10 @@ import "dotenv/config";
 import "@sker/workflow";
 import "@sker/workflow-ast";
 import "@sker/workflow-run";
+import "./controllers/index";
 import { Logger, root } from '@sker/core';
 import { entitiesProviders, seedNuwa, seedSentimentAnalyzer, seedContentAuditor, seedDataValidator, seedProgrammingAssistant, useTranslation } from "@sker/entities";
 import { killPortProcess } from 'kill-port-process';
-import { join } from 'path';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { serveStatic } from '@hono/node-server/serve-static';
@@ -17,7 +17,8 @@ import { createSkerAuthPlugin } from '@sker/auth';
 import { Server as SocketIOServer } from 'socket.io';
 import { createServer } from 'http';
 import type { IncomingMessage, ServerResponse } from 'http';
-
+import { bearer, admin, username, openAPI } from 'better-auth/plugins';
+import { Pool } from 'pg';
 async function bootstrap() {
   const PORT = parseInt(process.env.PORT || `3000`);
   const logger = root.get(Logger);
@@ -71,12 +72,15 @@ async function bootstrap() {
 
   // Better Auth 初始化
   const auth = betterAuth({
-    database: {
-      provider: 'postgres',
-      url: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/weibo'
-    },
+    database: new Pool({
+      connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/weibo'
+    }),
     plugins: [
-      createSkerAuthPlugin([])
+      createSkerAuthPlugin([]),
+      bearer(),
+      admin(),
+      username(),
+      openAPI()
     ]
   });
 
