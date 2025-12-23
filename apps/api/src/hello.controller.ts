@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get } from '@sker/core';
 import { root } from '@sker/core';
 import { HelloService } from './services/hello.service';
 import { ResearchAgent } from '@sker/agent'

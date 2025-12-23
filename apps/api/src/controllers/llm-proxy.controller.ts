@@ -1,5 +1,5 @@
-import { Controller, Post, Param, Req, Res, Headers } from '@sker/core';
-import type { Request, Response } from 'express';
+import { Controller, Post, Param, Req, Res, Headers, Body } from '@sker/core';
+import type { IncomingMessage, ServerResponse } from 'http';
 import { LlmProxyService } from '../services/llm-proxy.service';
 import { Readable } from 'stream';
 
@@ -10,50 +10,59 @@ export class LlmProxyController {
   @Post(':protocol/*')
   async proxyMessages(
     @Param('protocol') protocol: string,
-    @Req() req: Request,
-    @Res() res: Response,
+    @Body() body: any,
+    @Req() req: IncomingMessage,
+    @Res() res: ServerResponse,
     @Headers() headers: Record<string, string>
   ) {
-    const body = req.body
-    const contentLength = parseInt(headers['content-length'] || '0')
-    const apiPath = '/' + req.path.split('/').slice(3).join('/')
+    const contentLength = parseInt(headers['content-length'] || '0');
+    const url = new URL(req.url || '', `http://${req.headers.host}`);
+    const pathParts = url.pathname.split('/').filter(Boolean);
+    const apiPath = '/' + pathParts.slice(2).join('/'); // 跳过 'llm' 和 protocol
 
-    const result = await this.llmProxyService.proxyRequest(protocol, apiPath, body, headers, contentLength)
+    const result = await this.llmProxyService.proxyRequest(protocol, apiPath, body, headers, contentLength);
 
     if (!result.success) {
-      return res.status(503).json({ error: result.error })
+      res.statusCode = 503;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ error: result.error }));
+      return;
     }
 
     if (!result.response) {
-      return res.status(500).json({ error: '无响应' })
+      res.statusCode = 500;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ error: '无响应' }));
+      return;
     }
 
-    const response = result.response
-    res.status(response.status)
+    const response = result.response;
+    res.statusCode = response.status;
 
     response.headers.forEach((value, key) => {
       if (!['content-encoding', 'content-length', 'transfer-encoding'].includes(key.toLowerCase())) {
-        res.setHeader(key, value)
+        res.setHeader(key, value);
       }
-    })
+    });
 
     if (!response.body) {
-      const text = await response.text()
-      return res.send(text)
+      const text = await response.text();
+      res.end(text);
+      return;
     }
 
-    const reader = response.body.getReader()
+    const reader = response.body.getReader();
     const nodeStream = new Readable({
       async read() {
-        const { done, value } = await reader.read()
+        const { done, value } = await reader.read();
         if (done) {
-          this.push(null)
+          this.push(null);
         } else {
-          this.push(Buffer.from(value))
+          this.push(Buffer.from(value));
         }
       }
-    })
+    });
 
-    nodeStream.pipe(res)
+    nodeStream.pipe(res);
   }
 }

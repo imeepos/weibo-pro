@@ -276,7 +276,15 @@ export function controllerFactory(ControllerClass: ControllerConstructor): Recor
           throw new Error(`Method ${methodName} is not a function`);
         }
         const result = await method.bind(instance)(...args);
-        return ctx.json(result);
+
+        // 包装响应为标准格式
+        const wrappedResponse = {
+          success: true,
+          data: result,
+          timestamp: new Date().toISOString()
+        };
+
+        return ctx.json(wrappedResponse);
       }
     );
     const endpointKey = pathToCamelCase(fullPath);
