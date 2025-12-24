@@ -29,7 +29,7 @@ export class WeiboCrawler extends AbstractCrawler {
     let page = 1
 
     while (results.length < maxCount) {
-      const data = await this.client.searchByKeyword(keyword, page, searchType)
+      const data = await this.client.searchByKeyword(keyword, page, searchType) as any
       const cards = data.cards || []
 
       for (const card of cards) {
@@ -51,7 +51,7 @@ export class WeiboCrawler extends AbstractCrawler {
   }
 
   async getDetail(contentId: string): Promise<ContentItem> {
-    const data = await this.client.getNoteDetail(contentId)
+    const data = await this.client.getNoteDetail(contentId) as any
     if (!data?.mblog) {
       throw new Error(`Content not found: ${contentId}`)
     }
@@ -64,7 +64,7 @@ export class WeiboCrawler extends AbstractCrawler {
     let maxIdType = 0
 
     while (results.length < maxCount) {
-      const data = await this.client.getComments(contentId, maxId, maxIdType)
+      const data = await this.client.getComments(contentId, maxId, maxIdType) as any
       const comments = data.data || []
 
       for (const comment of comments) {
@@ -82,7 +82,7 @@ export class WeiboCrawler extends AbstractCrawler {
   }
 
   async getCreator(creatorId: string): Promise<CreatorItem> {
-    const data = await this.client.getCreatorInfo(creatorId)
+    const data = await this.client.getCreatorInfo(creatorId) as any
     const userInfo = data.userInfo
 
     return {

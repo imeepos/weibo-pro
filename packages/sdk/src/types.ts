@@ -705,6 +705,21 @@ export interface QRCodeData {
   qrUrl: string
 }
 
+export interface LoginStatusResponse {
+  status: 'pending' | 'success' | 'expired' | 'error'
+  message?: string
+  data?: {
+    accountId?: string
+    username?: string
+    cookie?: string
+  }
+}
+
+export interface CookieLoginRequest {
+  platform: MediaPlatform
+  cookies: string
+}
+
 export interface ExecutionCompleteData {
   nodeId: string
   result: {

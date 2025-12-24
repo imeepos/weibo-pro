@@ -19,3 +19,4 @@ export { UploadController } from './upload.controller';
 export { UserRelationController } from './user-relation.controller';
 export { UsersController } from './users.controller';
 export { WorkflowController } from './workflow.controller';
+export * from '../crawler';

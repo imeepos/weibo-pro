@@ -9,7 +9,11 @@ import type {
   DataFileListResponse,
   DataFileContentResponse,
   DataStats,
-  EnvCheckResult
+  EnvCheckResult,
+  QRCodeData,
+  LoginStatusResponse,
+  CookieLoginRequest,
+  MediaPlatform
 } from '@sker/sdk'
 
 @Injectable()
@@ -104,6 +108,25 @@ export class MediaCrawlerProxyService {
     saveOptions: ConfigOption[]
   }> {
     const response = await this.axiosInstance.get('/api/config/options')
+    return response.data
+  }
+
+  async getLoginQRCode(platform: MediaPlatform): Promise<QRCodeData> {
+    const response = await this.axiosInstance.get('/api/login/qrcode', {
+      params: { platform }
+    })
+    return response.data
+  }
+
+  async getLoginStatus(platform: MediaPlatform): Promise<LoginStatusResponse> {
+    const response = await this.axiosInstance.get('/api/login/status', {
+      params: { platform }
+    })
+    return response.data
+  }
+
+  async loginWithCookie(request: CookieLoginRequest): Promise<{ status: string; message: string }> {
+    const response = await this.axiosInstance.post('/api/login/cookie', request)
     return response.data
   }
 }

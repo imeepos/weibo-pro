@@ -61,4 +61,16 @@ export class MediaCrawlerController implements sdk.MediaCrawlerController {
   }> {
     return this.proxyService.getConfigOptions()
   }
+
+  async getLoginQRCode(@Query('platform') platform: sdk.MediaPlatform): Promise<sdk.QRCodeData> {
+    return this.proxyService.getLoginQRCode(platform)
+  }
+
+  async getLoginStatus(@Query('platform') platform: sdk.MediaPlatform): Promise<sdk.LoginStatusResponse> {
+    return this.proxyService.getLoginStatus(platform)
+  }
+
+  async loginWithCookie(@Body() request: sdk.CookieLoginRequest): Promise<{ status: string; message: string }> {
+    return this.proxyService.loginWithCookie(request)
+  }
 }

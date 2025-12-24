@@ -18,3 +18,7 @@ export {
 export * from './platforms/weibo'
 export * from './platforms/douyin'
 export * from './platforms/tieba'
+export * from './scheduler'
+export * from './wordcloud'
+export * from './analytics'
+export * from './workflow'
