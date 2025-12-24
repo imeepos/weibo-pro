@@ -63,7 +63,7 @@ export class ExcelUploadAstVisitor {
 
             if (ast.hasHeader) {
               headerRow = worksheet.getRow(startRow);
-              headerRow.eachCell((cell, colNumber) => {
+              headerRow.eachCell((cell: ExcelJS.Cell, colNumber: number) => {
                 const value = cell.value;
                 const columnName = value ? String(value) : `Column${colNumber}`;
                 columns.push(columnName);
@@ -84,13 +84,13 @@ export class ExcelUploadAstVisitor {
 
             const dataStartRow = ast.hasHeader ? startRow + 1 : startRow;
 
-            worksheet.eachRow((row, rowNumber) => {
+            worksheet.eachRow((row: ExcelJS.Row, rowNumber: number) => {
               if (rowNumber < dataStartRow) return;
 
               const rowData: Record<string, any> = {};
               let hasData = false;
 
-              row.eachCell((cell, colNumber) => {
+              row.eachCell((cell: ExcelJS.Cell, colNumber: number) => {
                 const columnIndex = colNumber - 1;
                 const columnName = columns[columnIndex] || `Column${colNumber}`;
 

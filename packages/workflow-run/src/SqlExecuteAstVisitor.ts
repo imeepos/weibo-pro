@@ -47,8 +47,6 @@ export class SqlExecuteAstVisitor {
             throw new Error('SQL 语句不能为空');
           }
 
-          const manager = await useEntityManager();
-
           // 构建参数对象
           const params: Record<string, any> = {};
           if (ast.parameters && ast.parameters.length > 0) {
@@ -62,63 +60,60 @@ export class SqlExecuteAstVisitor {
           console.log(`[SqlExecuteAstVisitor] 执行 SQL:`, ast.sql);
           console.log(`[SqlExecuteAstVisitor] 参数:`, params);
 
-          try {
+          const rawResults = await useEntityManager(async (manager) => {
             // 执行原生 SQL 查询
-            const rawResults = await manager.query(ast.sql, Object.values(params));
+            return await manager.query(ast.sql, Object.values(params));
+          });
 
-            if (wrappedCtx.abortSignal?.aborted) {
-              throw new Error('工作流已取消');
-            }
-
-            // 解析结果
-            let results: any[] = [];
-            let affectedRows = 0;
-            let columns: Array<{ name: string; type: string }> = [];
-
-            if (Array.isArray(rawResults)) {
-              // SELECT 查询返回数组
-              results = rawResults;
-              affectedRows = rawResults.length;
-
-              // 提取列信息
-              if (results.length > 0) {
-                const firstRow = results[0];
-                columns = Object.keys(firstRow).map(key => ({
-                  name: key,
-                  type: typeof firstRow[key]
-                }));
-              }
-            } else if (typeof rawResults === 'object' && rawResults !== null) {
-              // INSERT/UPDATE/DELETE 可能返回对象
-              if ('affectedRows' in rawResults) {
-                affectedRows = (rawResults as any).affectedRows;
-              } else if ('affected' in rawResults) {
-                affectedRows = (rawResults as any).affected;
-              }
-            }
-
-            // 更新 AST 输出
-            ast.results = results;
-            ast.affectedRows = affectedRows;
-            ast.columns = columns;
-
-            console.log(`[SqlExecuteAstVisitor] 执行成功，影响 ${affectedRows} 行`);
-
-            return [
-              {
-                type: 'node_emit' as const,
-                id: ast.id,
-                data: {
-                  results,
-                  affectedRows,
-                  columns
-                }
-              }
-            ];
-          } catch (error) {
-            console.error(`[SqlExecuteAstVisitor] SQL 执行失败:`, error);
-            throw error;
+          if (wrappedCtx.abortSignal?.aborted) {
+            throw new Error('工作流已取消');
           }
+
+          // 解析结果
+          let results: any[] = [];
+          let affectedRows = 0;
+          let columns: Array<{ name: string; type: string }> = [];
+
+          if (Array.isArray(rawResults)) {
+            // SELECT 查询返回数组
+            results = rawResults;
+            affectedRows = rawResults.length;
+
+            // 提取列信息
+            if (results.length > 0) {
+              const firstRow = results[0];
+              columns = Object.keys(firstRow).map(key => ({
+                name: key,
+                type: typeof firstRow[key]
+              }));
+            }
+          } else if (typeof rawResults === 'object' && rawResults !== null) {
+            // INSERT/UPDATE/DELETE 可能返回对象
+            if ('affectedRows' in rawResults) {
+              affectedRows = (rawResults as any).affectedRows;
+            } else if ('affected' in rawResults) {
+              affectedRows = (rawResults as any).affected;
+            }
+          }
+
+          // 更新 AST 输出
+          ast.results = results;
+          ast.affectedRows = affectedRows;
+          ast.columns = columns;
+
+          console.log(`[SqlExecuteAstVisitor] 执行成功，影响 ${affectedRows} 行`);
+
+          return [
+            {
+              type: 'node_emit' as const,
+              id: ast.id,
+              data: {
+                results,
+                affectedRows,
+                columns
+              }
+            }
+          ];
         }),
         mergeMap((events: NodeEvent[]) => from(events))
       ).subscribe({
