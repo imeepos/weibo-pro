@@ -1,29 +1,29 @@
 import { Injectable, root } from '@sker/core'
-import { MediaCrawlerProxyService } from '../services/media-crawler-proxy.service'
+import { MediaCrawlerService } from '../services/media-crawler.service'
 import type * as sdk from '@sker/sdk'
 
 @Injectable()
 export class CrawlerService {
-  private proxy: MediaCrawlerProxyService
+  private crawler: MediaCrawlerService
 
   constructor() {
-    this.proxy = root.get(MediaCrawlerProxyService)
+    this.crawler = root.get(MediaCrawlerService)
   }
 
   async start(request: sdk.CrawlerStartRequest) {
-    return this.proxy.startCrawler(request)
+    return this.crawler.startCrawler(request)
   }
 
   async stop(id: string) {
-    return this.proxy.stopCrawler()
+    return this.crawler.stopCrawler()
   }
 
   async getStatus(id: string) {
-    return this.proxy.getCrawlerStatus()
+    return this.crawler.getCrawlerStatus()
   }
 
   async list() {
-    const status = await this.proxy.getCrawlerStatus()
+    const status = await this.crawler.getCrawlerStatus()
     return {
       tasks: status.status !== 'idle' ? [{
         id: 'current',

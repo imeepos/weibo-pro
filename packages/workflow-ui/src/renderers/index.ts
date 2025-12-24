@@ -84,3 +84,12 @@ export * from './ProxyAutoSelectAstRender';
 
 // HTTP 请求节点
 export * from './HttpAstRender';
+
+// SQL 执行节点
+export * from './SqlExecuteAstRender';
+
+// Markdown 上传节点
+export * from './MarkdownUploadAstRender';
+
+// Excel 上传节点
+export * from './ExcelUploadAstRender';

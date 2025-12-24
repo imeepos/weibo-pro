@@ -85,6 +85,15 @@ export { ProxyAutoSelectAstVisitor } from './ProxyAutoSelectAstVisitor'
 // HTTP 请求节点
 export { HttpAstVisitor } from './HttpAstVisitor'
 
+// SQL 执行节点
+export { SqlExecuteAstVisitor } from './SqlExecuteAstVisitor'
+
+// Markdown 上传节点
+export { MarkdownUploadAstVisitor } from './MarkdownUploadAstVisitor'
+
+// Excel 上传节点
+export { ExcelUploadAstVisitor } from './ExcelUploadAstVisitor'
+
 // 服务
 export { CronSchedulerService } from './services/CronSchedulerService'
 export { WorkflowExecutionService } from './services/WorkflowExecutionService'

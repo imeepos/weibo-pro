@@ -1,24 +1,24 @@
 import { Injectable, root } from '@sker/core'
-import { MediaCrawlerProxyService } from '../services/media-crawler-proxy.service'
+import { MediaCrawlerService } from '../services/media-crawler.service'
 import type * as sdk from '@sker/sdk'
 
 @Injectable()
 export class LoginService {
-  private proxy: MediaCrawlerProxyService
+  private crawler: MediaCrawlerService
 
   constructor() {
-    this.proxy = root.get(MediaCrawlerProxyService)
+    this.crawler = root.get(MediaCrawlerService)
   }
 
   async getQRCode(platform: sdk.MediaPlatform) {
-    return this.proxy.getLoginQRCode(platform)
+    return this.crawler.getLoginQRCode(platform)
   }
 
   async getStatus(platform: sdk.MediaPlatform) {
-    return this.proxy.getLoginStatus(platform)
+    return this.crawler.getLoginStatus(platform)
   }
 
   async loginWithCookie(request: sdk.CookieLoginRequest) {
-    return this.proxy.loginWithCookie(request)
+    return this.crawler.loginWithCookie(request)
   }
 }

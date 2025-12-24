@@ -4,7 +4,6 @@ export * from './login.interface'
 export * from './store.interface'
 export * from './abstract-crawler'
 export * from './http'
-export * from './entities'
 export * from './store'
 export {
   BrowserManager,

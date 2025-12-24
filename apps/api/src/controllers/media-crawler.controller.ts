@@ -1,37 +1,37 @@
 import { Controller, Get, Post, Body, Query } from '@sker/core'
 import { root } from '@sker/core'
 import * as sdk from '@sker/sdk'
-import { MediaCrawlerProxyService } from '../services/media-crawler-proxy.service'
+import { MediaCrawlerService } from '../services/media-crawler.service'
 
 @Controller(sdk.MediaCrawlerController)
 export class MediaCrawlerController implements sdk.MediaCrawlerController {
-  private proxyService: MediaCrawlerProxyService
+  private crawlerService: MediaCrawlerService
 
   constructor() {
-    this.proxyService = root.get(MediaCrawlerProxyService)
+    this.crawlerService = root.get(MediaCrawlerService)
   }
 
   async startCrawler(@Body() request: sdk.CrawlerStartRequest): Promise<{ status: string; message: string }> {
-    return this.proxyService.startCrawler(request)
+    return this.crawlerService.startCrawler(request)
   }
 
   async stopCrawler(): Promise<{ status: string; message: string }> {
-    return this.proxyService.stopCrawler()
+    return this.crawlerService.stopCrawler()
   }
 
   async getCrawlerStatus(): Promise<sdk.CrawlerStatusResponse> {
-    return this.proxyService.getCrawlerStatus()
+    return this.crawlerService.getCrawlerStatus()
   }
 
   async getCrawlerLogs(@Query('limit') limit?: number): Promise<{ logs: sdk.CrawlerLogEntry[] }> {
-    return this.proxyService.getCrawlerLogs(limit)
+    return this.crawlerService.getCrawlerLogs(limit)
   }
 
   async getDataFiles(
     @Query('platform') platform?: string,
     @Query('file_type') fileType?: string
   ): Promise<sdk.DataFileListResponse> {
-    return this.proxyService.getDataFiles(platform, fileType)
+    return this.crawlerService.getDataFiles(platform, fileType)
   }
 
   async getDataFileContent(
@@ -39,19 +39,19 @@ export class MediaCrawlerController implements sdk.MediaCrawlerController {
     @Query('preview') preview?: boolean,
     @Query('limit') limit?: number
   ): Promise<sdk.DataFileContentResponse> {
-    return this.proxyService.getDataFileContent(filePath, preview, limit)
+    return this.crawlerService.getDataFileContent(filePath, preview, limit)
   }
 
   async getDataStats(): Promise<sdk.DataStats> {
-    return this.proxyService.getDataStats()
+    return this.crawlerService.getDataStats()
   }
 
   async checkEnvironment(): Promise<sdk.EnvCheckResult> {
-    return this.proxyService.checkEnvironment()
+    return this.crawlerService.checkEnvironment()
   }
 
   async getPlatforms(): Promise<{ platforms: sdk.PlatformInfo[] }> {
-    return this.proxyService.getPlatforms()
+    return this.crawlerService.getPlatforms()
   }
 
   async getConfigOptions(): Promise<{
@@ -59,18 +59,18 @@ export class MediaCrawlerController implements sdk.MediaCrawlerController {
     crawlerTypes: sdk.ConfigOption[]
     saveOptions: sdk.ConfigOption[]
   }> {
-    return this.proxyService.getConfigOptions()
+    return this.crawlerService.getConfigOptions()
   }
 
   async getLoginQRCode(@Query('platform') platform: sdk.MediaPlatform): Promise<sdk.QRCodeData> {
-    return this.proxyService.getLoginQRCode(platform)
+    return this.crawlerService.getLoginQRCode(platform)
   }
 
   async getLoginStatus(@Query('platform') platform: sdk.MediaPlatform): Promise<sdk.LoginStatusResponse> {
-    return this.proxyService.getLoginStatus(platform)
+    return this.crawlerService.getLoginStatus(platform)
   }
 
   async loginWithCookie(@Body() request: sdk.CookieLoginRequest): Promise<{ status: string; message: string }> {
-    return this.proxyService.loginWithCookie(request)
+    return this.crawlerService.loginWithCookie(request)
   }
 }

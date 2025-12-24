@@ -1,6 +1,14 @@
 ## 需求
 
-设计开发一个 Http 请求的 节点 HttpAst
+参考：
+packages\workflow\src\AudioAst.ts
+packages\workflow\src\ImageAst.ts
+packages\workflow\src\VideoAst.ts
+
+分配3个sub agent 实现，并行运行：
+1. 第一个sub agent 执行： excel 上传解析节点 
+2. 第二个sub agent 执行： markdown 上传解析节点
+3. 第三个sub agent 执行：  sql执行节点
 
 ## 实现列表 
 
