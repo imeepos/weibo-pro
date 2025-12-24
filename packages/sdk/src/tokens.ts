@@ -1,5 +1,7 @@
 import { InjectionToken } from "@sker/core";
-import { AxiosInstance, AxiosRequestConfig } from "axios";
+import { BetterFetchOption } from "@better-fetch/fetch";
 
-export const AXIOS = new InjectionToken<AxiosInstance>(`AXIOS`)
-export const AXIOS_CONFIG = new InjectionToken<AxiosRequestConfig>(`AXIOS_CONFIG`)
+type BetterFetchInstance = ReturnType<typeof import("@better-fetch/fetch").createFetch>;
+
+export const BETTER_FETCH = new InjectionToken<BetterFetchInstance>(`BETTER_FETCH`)
+export const BETTER_FETCH_CONFIG = new InjectionToken<BetterFetchOption>(`BETTER_FETCH_CONFIG`)

@@ -20,3 +20,4 @@ export * from './controllers/media-crawler.controller'
 export * from './types';
 export * from './tokens';
 export * from './client';
+export * from './auth';

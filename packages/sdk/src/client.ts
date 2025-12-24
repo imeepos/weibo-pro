@@ -1,36 +1,38 @@
 import { CONTROLLES, Provider, root, PATH_METADATA, METHOD_METADATA, ROUTE_ARGS_METADATA, RequestMethod, ParamType } from "@sker/core";
-import axios, { AxiosInstance, AxiosRequestConfig } from 'axios'
-import { AXIOS, AXIOS_CONFIG } from "./tokens";
+import { createFetch, type BetterFetchOption } from '@better-fetch/fetch'
+import { BETTER_FETCH, BETTER_FETCH_CONFIG } from "./tokens";
 import { Observable } from 'rxjs';
 import { clone } from '@sker/workflow';
 
-export const providers: (config?: AxiosRequestConfig) => Provider[] = (config = { baseURL: '/' }) => {
+type BetterFetchInstance = ReturnType<typeof createFetch>;
+
+export const providers: (config?: BetterFetchOption) => Provider[] = (config = { baseURL: '/' }) => {
     const controllers = root.get(CONTROLLES, [])
     return [
         {
-            provide: AXIOS,
-            useFactory: (config: AxiosRequestConfig) => {
-                return axios.create(config)
+            provide: BETTER_FETCH,
+            useFactory: (config: BetterFetchOption) => {
+                return createFetch(config)
             },
-            deps: [AXIOS_CONFIG]
+            deps: [BETTER_FETCH_CONFIG]
         },
         {
-            provide: AXIOS_CONFIG,
+            provide: BETTER_FETCH_CONFIG,
             useValue: config
         },
         ...controllers.map(controller => {
             return {
                 provide: controller,
-                useFactory: (axiosInstance: AxiosInstance) => {
-                    return createControllerInstance(controller, axiosInstance);
+                useFactory: (fetchInstance: BetterFetchInstance) => {
+                    return createControllerInstance(controller, fetchInstance);
                 },
-                deps: [AXIOS]
+                deps: [BETTER_FETCH]
             } as Provider
         })
     ]
 }
 
-function createControllerInstance<T>(controllerClass: new () => T, axiosInstance: AxiosInstance): T {
+function createControllerInstance<T>(controllerClass: new () => T, fetchInstance: BetterFetchInstance): T {
     const instance = Object.create(controllerClass.prototype);
 
     // 获取控制器前缀
@@ -57,12 +59,12 @@ function createControllerInstance<T>(controllerClass: new () => T, axiosInstance
                     const { urlParams, queryParams, bodyData } = extractParameters(args, routeArgs);
                     let finalUrl = replaceUrlParams(fullPath, urlParams);
 
-                    const axiosConfig = root.get(AXIOS_CONFIG, {})
-                    if (axiosConfig && axiosConfig.baseURL) {
+                    const fetchConfig = root.get(BETTER_FETCH_CONFIG, {})
+                    if (fetchConfig && fetchConfig.baseURL) {
                         if (!finalUrl.startsWith('/')) {
                             finalUrl = '/' + finalUrl;
                         }
-                        finalUrl = axiosConfig.baseURL + finalUrl
+                        finalUrl = fetchConfig.baseURL + finalUrl
                     }
 
                     // 检查是否有 body 数据，如果有则使用 POST SSE，否则使用 GET SSE
@@ -216,26 +218,37 @@ function createControllerInstance<T>(controllerClass: new () => T, axiosInstance
                     const { urlParams, queryParams, bodyData, headers } = extractParameters(args, routeArgs);
                     let finalUrl = replaceUrlParams(fullPath, urlParams);
 
-                    const axiosConfig = root.get(AXIOS_CONFIG, {})
-                    if (axiosConfig && axiosConfig.baseURL) {
+                    const fetchConfig = root.get(BETTER_FETCH_CONFIG, {})
+                    if (fetchConfig && fetchConfig.baseURL) {
                         if (!finalUrl.startsWith('/')) {
                             finalUrl = '/' + finalUrl;
                         }
-                        finalUrl = axiosConfig.baseURL + finalUrl
+                        finalUrl = fetchConfig.baseURL + finalUrl
                     }
 
-                    const config: AxiosRequestConfig = {
+                    // 使用 better-fetch 发送请求
+                    const { data, error } = await fetchInstance(finalUrl, {
                         method: getHttpMethodString(httpMethod),
-                        url: finalUrl,
-                        params: queryParams,
-                        data: bodyData ? clone(bodyData) : undefined,
-                        headers
-                    };
+                        query: queryParams,
+                        body: bodyData ? clone(bodyData) : undefined,
+                        headers,
+                        throw: false, // 不自动抛出错误，手动处理
+                    });
 
-                    const response = await axiosInstance.request(config);
-                    const data = response.data;
-                    if (data.success) return data.data;
-                    throw new Error(`api error: ${JSON.stringify(data)}`)
+                    if (error) {
+                        throw new Error(`API error: ${error.message || JSON.stringify(error)}`);
+                    }
+
+                    // 适配后端 API 响应格式 { success: boolean, data: any }
+                    if (data && typeof data === 'object' && 'success' in data) {
+                        const apiResponse = data as { success: boolean; data?: any };
+                        if (apiResponse.success) {
+                            return apiResponse.data;
+                        }
+                        throw new Error(`API error: ${JSON.stringify(data)}`);
+                    }
+
+                    return data;
                 };
             }
         }

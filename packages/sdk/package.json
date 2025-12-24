@@ -25,7 +25,8 @@
     "@sker/core": "workspace:*",
     "@sker/workflow": "workspace:*",
     "@sker/workflow-ast": "workspace:*",
-    "axios": "1.7.9"
+    "@better-fetch/fetch": "^1.1.21",
+    "better-auth": "^1.4.8"
   },
   "devDependencies": {
     "@sker/entities": "workspace:*",
