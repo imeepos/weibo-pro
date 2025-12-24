@@ -1,14 +1,9 @@
 ## 需求
 
-参考：
-packages\workflow\src\AudioAst.ts
-packages\workflow\src\ImageAst.ts
-packages\workflow\src\VideoAst.ts
+我发现：packages\crawler-core 中的代码并没有关联起来 只是一堆无关的功能块
+参考代码：MediaCrawler
 
-分配3个sub agent 实现，并行运行：
-1. 第一个sub agent 执行： excel 上传解析节点 
-2. 第二个sub agent 执行： markdown 上传解析节点
-3. 第三个sub agent 执行：  sql执行节点
+需要设计相关的工作流节点
 
 ## 实现列表 
 
