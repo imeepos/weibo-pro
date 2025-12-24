@@ -1,0 +1,41 @@
+{
+  "name": "@sker/crawler-core",
+  "version": "0.0.0",
+  "private": true,
+  "description": "HTTP client and core utilities for web crawling",
+  "keywords": ["crawler", "http-client", "axios"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "default": "./dist/index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "types": "./dist/index.d.ts",
+  "main": "./dist/index.js",
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "lint": "eslint . --max-warnings 0",
+    "check-types": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@sker/eslint-config": "workspace:*",
+    "@sker/typescript-config": "workspace:*",
+    "@types/node": "^22.15.3",
+    "@types/tough-cookie": "^4.0.5",
+    "eslint": "^9.38.0",
+    "tsup": "^8.4.0",
+    "typescript": "5.9.2"
+  },
+  "dependencies": {
+    "@sker/core": "workspace:*",
+    "axios": "^1.7.9",
+    "playwright": "^1.49.1",
+    "reflect-metadata": "^0.2.2",
+    "socks-proxy-agent": "^8.0.4",
+    "tough-cookie": "^5.0.0"
+  }
+}
