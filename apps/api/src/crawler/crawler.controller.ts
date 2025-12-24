@@ -3,7 +3,7 @@ import { root } from '@sker/core'
 import * as sdk from '@sker/sdk'
 import { CrawlerService } from './crawler.service'
 
-@Controller('crawler')
+@Controller(sdk.CrawlerController)
 export class CrawlerController {
   private service: CrawlerService
 

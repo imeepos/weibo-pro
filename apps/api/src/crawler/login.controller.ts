@@ -3,7 +3,7 @@ import { root } from '@sker/core'
 import * as sdk from '@sker/sdk'
 import { LoginService } from './login.service'
 
-@Controller('login')
+@Controller(sdk.LoginController)
 export class LoginController {
   private service: LoginService
 

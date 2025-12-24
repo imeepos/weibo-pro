@@ -3,7 +3,7 @@ import { root } from '@sker/core'
 import * as sdk from '@sker/sdk'
 import { ConfigService } from './config.service'
 
-@Controller('config')
+@Controller(sdk.ConfigController)
 export class ConfigController {
   private service: ConfigService
 
