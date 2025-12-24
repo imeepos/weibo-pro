@@ -63,12 +63,12 @@ importers:
       '@sker/entities':
         specifier: workspace:*
         version: link:../../packages/entities
+      '@sker/llm-protocol':
+        specifier: workspace:*
+        version: link:../../packages/llm-protocol
       '@sker/mq':
         specifier: workspace:*
         version: link:../../packages/mq
-      '@sker/openai2anthropic':
-        specifier: workspace:*
-        version: link:../../packages/openai2anthropic
       '@sker/redis':
         specifier: workspace:*
         version: link:../../packages/redis
@@ -677,6 +677,9 @@ importers:
       '@sker/nlp':
         specifier: workspace:*
         version: link:../nlp
+      '@sker/workflow':
+        specifier: workspace:*
+        version: link:../workflow
       axios:
         specifier: ^1.7.9
         version: 1.7.9
@@ -877,6 +880,31 @@ importers:
         specifier: ^4.0.16
         version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@22.19.0)(@vitest/ui@4.0.16)(jiti@2.6.1)(jsdom@27.2.0(canvas@3.2.0))(lightningcss@1.30.2)(sass@1.94.2)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.2)
 
+  packages/llm-protocol:
+    dependencies:
+      '@sker/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      '@sker/eslint-config':
+        specifier: workspace:*
+        version: link:../eslint-config
+      '@sker/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      '@types/node':
+        specifier: ^22.15.3
+        version: 22.19.0
+      eslint:
+        specifier: ^9.38.0
+        version: 9.39.1(jiti@2.6.1)
+      tsup:
+        specifier: ^8.4.0
+        version: 8.5.0(@swc/core@1.15.3(@swc/helpers@0.5.17))(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.2)(yaml@2.8.2)
+      typescript:
+        specifier: 5.9.2
+        version: 5.9.2
+
   packages/mq:
     dependencies:
       '@sker/core':
@@ -944,31 +972,6 @@ importers:
       openai:
         specifier: ^4.73.1
         version: 4.104.0(encoding@0.1.13)(ws@8.18.3)(zod@4.2.1)
-    devDependencies:
-      '@sker/eslint-config':
-        specifier: workspace:*
-        version: link:../eslint-config
-      '@sker/typescript-config':
-        specifier: workspace:*
-        version: link:../typescript-config
-      '@types/node':
-        specifier: ^22.15.3
-        version: 22.19.0
-      eslint:
-        specifier: ^9.38.0
-        version: 9.39.1(jiti@2.6.1)
-      tsup:
-        specifier: ^8.4.0
-        version: 8.5.0(@swc/core@1.15.3(@swc/helpers@0.5.17))(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.2)(yaml@2.8.2)
-      typescript:
-        specifier: 5.9.2
-        version: 5.9.2
-
-  packages/openai2anthropic:
-    dependencies:
-      '@sker/core':
-        specifier: workspace:*
-        version: link:../core
     devDependencies:
       '@sker/eslint-config':
         specifier: workspace:*

@@ -1,20 +1,19 @@
-import { Container } from '@sker/core'
+import { EnvironmentInjector } from '@sker/core'
 import { BrowserManager } from '../../browser'
 import { JsonStore } from '../../store'
 import { WeiboCrawler, WeiboLogin, WeiboClient } from './index'
 
 async function main() {
-  const container = new Container()
-
-  // 注册依赖
-  container.register(BrowserManager)
-  container.register(WeiboClient)
-  container.register(WeiboLogin)
-  container.register(JsonStore, { useValue: new JsonStore('./data/weibo') })
-  container.register(WeiboCrawler)
+  const injector = EnvironmentInjector.createWithAutoProviders([
+    { provide: BrowserManager, useClass: BrowserManager },
+    { provide: WeiboClient, useClass: WeiboClient },
+    { provide: WeiboLogin, useClass: WeiboLogin },
+    { provide: JsonStore, useValue: new JsonStore('./data/weibo') },
+    { provide: WeiboCrawler, useClass: WeiboCrawler },
+  ])
 
   // 获取爬虫实例
-  const crawler = container.resolve(WeiboCrawler)
+  const crawler = injector.get(WeiboCrawler)
 
   try {
     // 启动爬虫（会触发登录）
@@ -31,11 +30,11 @@ async function main() {
 
     // 获取详情
     if (contents.length > 0) {
-      const detail = await crawler.getDetail(contents[0].id)
+      const detail = await crawler.getDetail(contents[0]!.id)
       console.log('微博详情:', detail.content)
 
       // 获取评论
-      const comments = await crawler.getComments(contents[0].id, 20)
+      const comments = await crawler.getComments(contents[0]!.id, 20)
       console.log(`获取到 ${comments.length} 条评论`)
     }
 

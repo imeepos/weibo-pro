@@ -98,4 +98,16 @@ export class WeiboClient {
   async saveCookies(): Promise<string | undefined> {
     return this.httpClient.saveCookies()
   }
+
+  async search(options: { keyword: string; page?: number }) {
+    const data = await this.searchByKeyword(options.keyword, options.page) as any
+    return data?.cards?.map((card: any) => ({
+      id: card.mblog?.id || card.mblog?.mid,
+      ...card.mblog
+    })) || []
+  }
+
+  async getDetail(postId: string) {
+    return this.getNoteDetail(postId)
+  }
 }

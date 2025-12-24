@@ -4,9 +4,9 @@ import { SentimentAnalyzer, Statistics } from './index';
 
 async function main() {
   const injector = EnvironmentInjector.createWithAutoProviders([
-    NLPAnalyzer,
-    SentimentAnalyzer,
-    Statistics,
+    { provide: NLPAnalyzer, useClass: NLPAnalyzer },
+    { provide: SentimentAnalyzer, useClass: SentimentAnalyzer },
+    { provide: Statistics, useClass: Statistics },
   ]);
 
   const sentimentAnalyzer = injector.get(SentimentAnalyzer);
@@ -74,7 +74,7 @@ async function main() {
 
   // 示例 6: 传播路径
   const propagation = statistics.buildPropagationTree(
-    posts[0],
+    posts[0]!,
     [{ id: 'r1', postId: '1', userId: 'user2', username: '用户2', timestamp: new Date() }],
     [{ id: 'c1', postId: '1', userId: 'user3', username: '用户3', timestamp: new Date() }]
   );

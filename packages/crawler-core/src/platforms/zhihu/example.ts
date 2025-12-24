@@ -1,18 +1,18 @@
-import { Container } from '@sker/core'
+import { EnvironmentInjector } from '@sker/core'
 import { BrowserManager } from '../../browser'
 import { JsonStore } from '../../store'
 import { ZhihuClient, ZhihuCrawler, ZhihuLogin } from './index'
 
 async function main() {
-  const container = new Container()
-
-  container.register(BrowserManager)
-  container.register(ZhihuClient)
-  container.register(ZhihuLogin)
+  const injector = EnvironmentInjector.createWithAutoProviders([
+    { provide: BrowserManager, useClass: BrowserManager },
+    { provide: ZhihuClient, useClass: ZhihuClient },
+    { provide: ZhihuLogin, useClass: ZhihuLogin },
+  ])
 
   const store = new JsonStore('./data/zhihu')
-  const client = container.resolve(ZhihuClient)
-  const login = container.resolve(ZhihuLogin)
+  const client = injector.get(ZhihuClient)
+  const login = injector.get(ZhihuLogin)
   const crawler = new ZhihuCrawler(client, login, store)
 
   await crawler.start()
@@ -26,7 +26,7 @@ async function main() {
     console.log(`找到 ${contents.length} 条内容`)
 
     if (contents.length > 0) {
-      const firstContent = contents[0]
+      const firstContent = contents[0]!
       console.log(`\n获取内容详情: ${firstContent.title}`)
       await crawler.getDetail(firstContent.id)
 

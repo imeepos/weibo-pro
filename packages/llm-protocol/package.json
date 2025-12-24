@@ -1,9 +1,9 @@
 {
-  "name": "@sker/openai2anthropic",
+  "name": "@sker/llm-protocol",
   "version": "0.0.0",
   "private": true,
-  "description": "OpenAI and Anthropic Claude API protocol converter",
-  "keywords": ["openai", "anthropic", "claude", "converter", "api"],
+  "description": "LLM API protocol converter supporting OpenAI, Anthropic Claude, and Codex",
+  "keywords": ["llm", "openai", "anthropic", "claude", "codex", "converter", "api"],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

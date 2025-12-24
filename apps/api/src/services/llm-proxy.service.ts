@@ -6,7 +6,7 @@ import {
   type OpenAIResponse,
   type ClaudeStreamEvent,
   type OpenAIStreamResponse,
-} from '@sker/openai2anthropic';
+} from '@sker/llm-protocol';
 import {
   ToCodexVisitor,
   ToOpenAiVisitor,
@@ -24,7 +24,7 @@ import {
   type CodexResponse,
   type CodexResponseEvent,
   Ast
-} from '@sker/openai2anthropic';
+} from '@sker/llm-protocol';
 
 interface ProviderInfo {
   providerId: string

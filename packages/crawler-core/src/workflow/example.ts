@@ -1,5 +1,5 @@
-import { Container } from '@sker/core';
-import { Compiler, Scheduler } from '@sker/workflow';
+import { root } from '@sker/core';
+import { Compiler, executeWorkflow, createWorkflowGraphAst, EdgeMode } from '@sker/workflow';
 import { WeiboClient } from '../platforms/weibo/weibo-client';
 import {
   SearchNodeAst,
@@ -16,48 +16,46 @@ import {
  * 工作流使用示例
  */
 async function example() {
-  // 1. 初始化容器
-  const container = Container.getInstance();
+  // 1. 注册服务到根注入器
+  root.set([
+    WeiboClient,
+    SearchNodeVisitor,
+    DetailNodeVisitor,
+    CommentNodeVisitor,
+    StoreNodeVisitor,
+  ]);
 
-  // 2. 注册服务
-  container.register(WeiboClient);
-  container.register(SearchNodeVisitor);
-  container.register(DetailNodeVisitor);
-  container.register(CommentNodeVisitor);
-  container.register(StoreNodeVisitor);
-
-  // 3. 编译节点
+  // 2. 创建并编译节点
   const compiler = new Compiler();
-  compiler.compile(SearchNodeAst);
-  compiler.compile(DetailNodeAst);
-  compiler.compile(CommentNodeAst);
-  compiler.compile(StoreNodeAst);
 
-  // 4. 创建工作流
   const searchNode = new SearchNodeAst();
   searchNode.keyword = '人工智能';
   searchNode.page = 1;
+  compiler.compile(searchNode);
 
   const detailNode = new DetailNodeAst();
+  compiler.compile(detailNode);
+
   const commentNode = new CommentNodeAst();
   commentNode.maxComments = 50;
+  compiler.compile(commentNode);
 
   const storeNode = new StoreNodeAst();
   storeNode.storeType = 'json';
+  compiler.compile(storeNode);
 
-  // 5. 构建工作流图
-  const graph = {
+  // 3. 构建工作流图
+  const workflow = createWorkflowGraphAst({
     nodes: [searchNode, detailNode, commentNode, storeNode],
     edges: [
-      { source: searchNode.id, sourceHandle: 'postIds', target: detailNode.id, targetHandle: 'postId' },
-      { source: detailNode.id, sourceHandle: 'detail', target: commentNode.id, targetHandle: 'postId' },
-      { source: commentNode.id, sourceHandle: 'comments', target: storeNode.id, targetHandle: 'data' }
+      { id: '1', from: searchNode.id, fromProperty: 'postIds', to: detailNode.id, toProperty: 'postId', mode: EdgeMode.MERGE },
+      { id: '2', from: detailNode.id, fromProperty: 'detail', to: commentNode.id, toProperty: 'postId', mode: EdgeMode.MERGE },
+      { id: '3', from: commentNode.id, fromProperty: 'comments', to: storeNode.id, toProperty: 'data', mode: EdgeMode.MERGE }
     ]
-  };
+  });
 
-  // 6. 执行工作流
-  const scheduler = new Scheduler();
-  await scheduler.run(graph);
+  // 4. 执行工作流
+  await executeWorkflow(workflow);
 
   console.log('工作流执行完成');
 }

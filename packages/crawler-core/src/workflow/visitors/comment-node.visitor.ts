@@ -17,7 +17,7 @@ export class CommentNodeVisitor {
       }
 
       const comments = await this.weiboClient.getComments(ast.postId, ast.maxComments);
-      ast.comments = comments;
+      ast.comments = comments as any[];
 
       ast.state = 'success';
     } catch (error) {
