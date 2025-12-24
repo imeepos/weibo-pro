@@ -1,8 +1,8 @@
-import { Injectable } from "@sker/core";
+import { Injectable, root } from "@sker/core";
 import { Render } from "@sker/workflow";
 import { VideoAst } from "@sker/workflow";
 import React, { useState, useRef, useCallback } from "react";
-import { useUploadFile } from "@sker/ui/hooks/use-upload-file";
+import { UploadController } from "@sker/sdk";
 import { Button } from "@sker/ui/components/ui/button";
 import { Upload, X, Download, Play, Pause, Maximize } from "lucide-react";
 import { cn } from "@sker/ui/lib/utils";
@@ -30,18 +30,30 @@ const VideoComponent: React.FC<{ ast: VideoAst }> = ({ ast }) => {
         );
     }, [ast.id, setNodes]);
 
-    const { isUploading, progress, uploadFile } = useUploadFile({
-        endpoint: '/api/upload/file',
-        onSuccess: (file) => {
-            console.log('✅ 上传成功:', file);
-            updateNodeData({ uploadedVideo: file.url });
+    const [isUploading, setIsUploading] = useState(false);
+    const [progress, setProgress] = useState(0);
+
+    const uploadFile = useCallback(async (file: File) => {
+        setIsUploading(true);
+        setProgress(0);
+
+        try {
+            const controller = root.get(UploadController);
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const result = await controller.uploadFile(formData);
+            console.log('✅ 上传成功:', result);
+            updateNodeData({ uploadedVideo: result.url });
             setUpdateKey(prev => prev + 1);
-        },
-        onError: (error) => {
+        } catch (error) {
             console.error('❌ 视频上传失败:', error);
-            alert(`上传失败: ${error.message}`);
+            alert(`上传失败: ${error instanceof Error ? error.message : '未知错误'}`);
+        } finally {
+            setIsUploading(false);
+            setProgress(0);
         }
-    });
+    }, [updateNodeData]);
 
     const getCurrentVideo = () => {
         // uploadedVideo 可能来自：

@@ -7,6 +7,7 @@ import { Label } from '@sker/ui/components/ui/label';
 import { Button } from '@sker/ui/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@sker/ui/components/ui/select';
 import { Trash2, Plus } from 'lucide-react';
+import { cn } from '@sker/ui/lib/utils';
 
 const HttpPreview = ({ ast }: { ast: HttpAst }) => (
   <div className="flex flex-col items-center justify-center h-16 bg-slate-700/50">
@@ -88,9 +89,9 @@ const HttpSetting: React.FC<HttpSettingProps> = ({ ast, onPropertyChange }) => {
   return (
     <div className="space-y-4 p-4">
       <div className="space-y-2">
-        <Label className="text-sm font-medium">请求方法</Label>
+        <Label className="text-sm font-medium text-foreground">请求方法</Label>
         <Select value={ast.method} onValueChange={handleMethodChange}>
-          <SelectTrigger>
+          <SelectTrigger className="bg-background">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -106,18 +107,19 @@ const HttpSetting: React.FC<HttpSettingProps> = ({ ast, onPropertyChange }) => {
       </div>
 
       <div className="space-y-2">
-        <Label className="text-sm font-medium">请求 URL</Label>
+        <Label className="text-sm font-medium text-foreground">请求 URL</Label>
         <Input
           type="text"
           placeholder="https://api.example.com/endpoint"
           value={ast.url}
           onChange={handleUrlChange}
+          className="bg-background text-foreground"
         />
       </div>
 
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <Label className="text-sm font-medium">查询参数</Label>
+          <Label className="text-sm font-medium text-foreground">查询参数</Label>
           <Button type="button" size="sm" variant="outline" onClick={addQueryParam}>
             <Plus className="size-4 mr-1" />
             添加
@@ -129,11 +131,13 @@ const HttpSetting: React.FC<HttpSettingProps> = ({ ast, onPropertyChange }) => {
               placeholder="key"
               value={param.key}
               onChange={(e) => updateQueryParam(index, 'key', e.target.value)}
+              className="bg-background text-foreground"
             />
             <Input
               placeholder="value"
               value={param.value}
               onChange={(e) => updateQueryParam(index, 'value', e.target.value)}
+              className="bg-background text-foreground"
             />
             <Button
               type="button"
@@ -149,7 +153,7 @@ const HttpSetting: React.FC<HttpSettingProps> = ({ ast, onPropertyChange }) => {
 
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <Label className="text-sm font-medium">请求头</Label>
+          <Label className="text-sm font-medium text-foreground">请求头</Label>
           <Button type="button" size="sm" variant="outline" onClick={addHeader}>
             <Plus className="size-4 mr-1" />
             添加
@@ -161,11 +165,13 @@ const HttpSetting: React.FC<HttpSettingProps> = ({ ast, onPropertyChange }) => {
               placeholder="Header-Name"
               value={header.key}
               onChange={(e) => updateHeader(index, 'key', e.target.value)}
+              className="bg-background text-foreground"
             />
             <Input
               placeholder="Header-Value"
               value={header.value}
               onChange={(e) => updateHeader(index, 'value', e.target.value)}
+              className="bg-background text-foreground"
             />
             <Button
               type="button"
@@ -181,9 +187,12 @@ const HttpSetting: React.FC<HttpSettingProps> = ({ ast, onPropertyChange }) => {
 
       {['POST', 'PUT', 'PATCH', 'DELETE'].includes(ast.method) && (
         <div className="space-y-2">
-          <Label className="text-sm font-medium">请求体</Label>
+          <Label className="text-sm font-medium text-foreground">请求体</Label>
           <textarea
-            className="w-full min-h-[100px] p-2 rounded-md border bg-background text-sm font-mono"
+            className={cn(
+              "w-full min-h-[100px] p-2 rounded-md border text-sm font-mono",
+              "bg-background text-foreground"
+            )}
             placeholder='{"key": "value"}'
             value={ast.body || ''}
             onChange={handleBodyChange}
@@ -192,13 +201,14 @@ const HttpSetting: React.FC<HttpSettingProps> = ({ ast, onPropertyChange }) => {
       )}
 
       <div className="space-y-2">
-        <Label className="text-sm font-medium">超时时间 (ms)</Label>
+        <Label className="text-sm font-medium text-foreground">超时时间 (ms)</Label>
         <Input
           type="number"
           min="1000"
           step="1000"
           value={ast.timeout}
           onChange={handleTimeoutChange}
+          className="bg-background text-foreground"
         />
       </div>
     </div>

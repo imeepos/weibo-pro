@@ -3,7 +3,11 @@
   "version": "0.0.0",
   "private": true,
   "description": "HTTP client and core utilities for web crawling",
-  "keywords": ["crawler", "http-client", "axios"],
+  "keywords": [
+    "crawler",
+    "http-client",
+    "axios"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -19,7 +23,10 @@
   "scripts": {
     "build": "tsup",
     "lint": "eslint . --max-warnings 0",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "migration:generate": "typeorm migration:generate -d ormconfig.ts",
+    "migration:run": "typeorm migration:run -d ormconfig.ts",
+    "migration:revert": "typeorm migration:revert -d ormconfig.ts"
   },
   "devDependencies": {
     "@sker/eslint-config": "workspace:*",
@@ -33,9 +40,11 @@
   "dependencies": {
     "@sker/core": "workspace:*",
     "axios": "^1.7.9",
+    "exceljs": "^4.4.0",
     "playwright": "^1.49.1",
     "reflect-metadata": "^0.2.2",
     "socks-proxy-agent": "^8.0.4",
-    "tough-cookie": "^5.0.0"
+    "tough-cookie": "^5.0.0",
+    "typeorm": "^0.3.20"
   }
 }

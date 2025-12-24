@@ -19,6 +19,7 @@ import { createServer } from 'http';
 import type { IncomingMessage, ServerResponse } from 'http';
 import { bearer, admin, username, openAPI } from 'better-auth/plugins';
 import { Pool } from 'pg';
+import { UploadService } from './services/upload.service';
 
 async function bootstrap() {
   const PORT = parseInt(process.env.PORT || `3000`);
@@ -101,8 +102,50 @@ async function bootstrap() {
     ]
   });
 
-  // 注册 Better Auth 路由
-  app.on(['GET', 'POST'], '/api/auth/*', (c) => {
+  // 统一 Better Auth 路由处理
+  app.on(['GET', 'POST'], '/api/auth/*', async (c) => {
+    const contentType = c.req.header('content-type') || '';
+
+    if (contentType.includes('multipart/form-data')) {
+      logger.info('📤 拦截文件上传，转换为 JSON');
+      const formData = await c.req.formData();
+      const jsonBody: Record<string, any> = {};
+
+      const uploadService = root.get(UploadService);
+
+      for (const [key, value] of formData.entries()) {
+        if (value instanceof File) {
+          // 处理文件：使用 Stream 方式保存
+          const relativePath = await uploadService.saveFileStream(value.stream(), value.name, 'file');
+          const url = `${process.env.S3_BASE_URL || ''}${relativePath}`;
+
+          jsonBody[key] = {
+            url,
+            name: value.name,
+            size: value.size,
+            type: value.type
+          };
+          logger.info('✅ 文件已处理', { key, url });
+        } else {
+          jsonBody[key] = value;
+        }
+      }
+
+      // 重新构造 Request，使用 JSON body
+      const request = new Request(c.req.url, {
+        method: c.req.method,
+        headers: {
+          ...Object.fromEntries(c.req.raw.headers),
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify(jsonBody)
+      });
+
+      logger.info('🔄 转发 JSON 请求给 Better Auth', { body: jsonBody });
+      return auth.handler(request);
+    }
+
+    // 其他请求直接转发
     return auth.handler(c.req.raw);
   });
 

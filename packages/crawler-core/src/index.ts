@@ -4,6 +4,8 @@ export * from './login.interface'
 export * from './store.interface'
 export * from './abstract-crawler'
 export * from './http'
+export * from './entities'
+export * from './store'
 export {
   BrowserManager,
   CDPBrowser,
@@ -13,3 +15,6 @@ export {
   type BrowserInstance,
   type StorageState,
 } from './browser'
+export * from './platforms/weibo'
+export * from './platforms/douyin'
+export * from './platforms/tieba'

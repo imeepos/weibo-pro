@@ -1,7 +1,10 @@
 import { Injectable } from '@sker/core';
 import { promises as fs } from 'fs';
+import { createWriteStream } from 'fs';
 import * as path from 'path';
 import { generateRandomString } from '@sker/utils';
+import { Readable } from 'stream';
+import { pipeline } from 'stream/promises';
 
 @Injectable({ providedIn: 'root' })
 export class UploadService {
@@ -30,6 +33,22 @@ export class UploadService {
 
     await this.ensureDirectory(dir);
     await fs.writeFile(path.join(dir, filename), buffer);
+
+    return `/uploads/${type}/${date}/${filename}`;
+  }
+
+  async saveFileStream(stream: ReadableStream, originalName: string, type = 'file'): Promise<string> {
+    const ext = path.extname(originalName);
+    const filename = `${generateRandomString(32)}${ext}`;
+    const date = this.formatDate();
+    const dir = path.join(this.uploadDir, type, date);
+    const filepath = path.join(dir, filename);
+
+    await this.ensureDirectory(dir);
+
+    const nodeStream = Readable.fromWeb(stream as any);
+    const writeStream = createWriteStream(filepath);
+    await pipeline(nodeStream, writeStream);
 
     return `/uploads/${type}/${date}/${filename}`;
   }

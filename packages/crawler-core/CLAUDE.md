@@ -18,6 +18,13 @@ src/
 │   ├── cdp.ts                     # CDP 协议封装
 │   ├── stealth.ts                 # 反检测脚本
 │   └── types.ts                   # 类型定义
+├── store/                          # 存储策略模块
+│   ├── json.store.ts              # JSON 文件存储
+│   ├── csv.store.ts               # CSV 文件存储
+│   ├── excel.store.ts             # Excel 文件存储
+│   ├── database.store.ts          # 数据库存储
+│   ├── factory.ts                 # 存储工厂
+│   └── index.ts                   # 模块导出
 ├── abstract-crawler.ts             # 爬虫抽象基类
 ├── crawler.interface.ts            # 爬虫接口定义
 ├── login.interface.ts              # 登录接口定义
@@ -391,3 +398,102 @@ try {
   }
 }
 ```
+
+## 存储策略模块
+
+提供多种数据存储方式，支持 JSON、CSV、Excel 和数据库存储。
+
+### JsonStore JSON 文件存储
+
+```typescript
+import { JsonStore } from '@sker/crawler-core';
+
+const store = new JsonStore('./data');
+await store.storeContent(contentItem);
+```
+
+### CsvStore CSV 文件存储
+
+```typescript
+import { CsvStore } from '@sker/crawler-core';
+
+const store = new CsvStore('./data');
+await store.storeContent(contentItem);
+```
+
+### ExcelStore Excel 文件存储
+
+基于 exceljs 实现。
+
+```typescript
+import { ExcelStore } from '@sker/crawler-core';
+
+const store = new ExcelStore('./data');
+await store.storeContent(contentItem);
+```
+
+### DatabaseStore 数据库存储
+
+支持 TypeORM 所有数据库类型（SQLite、MySQL、PostgreSQL、MongoDB 等）。
+
+```typescript
+import { DatabaseStore } from '@sker/crawler-core';
+import { DataSource } from 'typeorm';
+
+const dataSource = new DataSource({
+  type: 'sqlite',
+  database: './data.db',
+  entities: [ContentEntity, CommentEntity, CreatorEntity],
+  synchronize: true
+});
+
+await dataSource.initialize();
+
+const store = new DatabaseStore(dataSource, {
+  content: ContentEntity,
+  comment: CommentEntity,
+  creator: CreatorEntity
+});
+
+await store.storeContent(contentItem);
+```
+
+### StoreFactory 存储工厂
+
+统一创建存储实例。
+
+```typescript
+import { StoreFactory } from '@sker/crawler-core';
+
+// JSON 存储
+const jsonStore = StoreFactory.create({
+  type: 'json',
+  baseDir: './data/json'
+});
+
+// CSV 存储
+const csvStore = StoreFactory.create({
+  type: 'csv',
+  baseDir: './data/csv'
+});
+
+// Excel 存储
+const excelStore = StoreFactory.create({
+  type: 'excel',
+  baseDir: './data/excel'
+});
+
+// 数据库存储
+const dbStore = StoreFactory.create({
+  type: 'database',
+  database: {
+    dataSource,
+    entities: {
+      content: ContentEntity,
+      comment: CommentEntity,
+      creator: CreatorEntity
+    }
+  }
+});
+```
+
