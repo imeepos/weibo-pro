@@ -14,9 +14,12 @@ export class XhsLogin implements ILogin {
   }
 
   async begin(): Promise<void> {
-    const browser = await this.browserManager.launch({ headless: false })
-    this.context = await browser.newContext()
-    this.page = await this.context.newPage()
+    const { browser, context } = await this.browserManager.launch({ headless: false })
+    this.context = context
+    this.page = await this.context?.newPage()
+    if (!this.page) {
+      throw new Error('Failed to create page')
+    }
     await this.page.goto('https://www.xiaohongshu.com')
   }
 

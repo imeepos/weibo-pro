@@ -37,12 +37,12 @@ export class KuaishouLogin implements ILogin {
   async loginByCookie(cookies: Record<string, string>): Promise<LoginResult> {
     try {
       for (const [name, value] of Object.entries(cookies)) {
-        await this.browserContext.addCookie({
+        await this.browserContext.addCookies([{
           name,
           value,
           domain: '.kuaishou.com',
           path: '/',
-        })
+        }])
       }
 
       await this.page.goto('https://www.kuaishou.com')

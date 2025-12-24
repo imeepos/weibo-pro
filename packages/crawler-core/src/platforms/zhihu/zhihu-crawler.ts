@@ -128,6 +128,9 @@ export class ZhihuCrawler extends AbstractCrawler {
 
   async getDetail(contentId: string): Promise<ContentItem> {
     const [questionId, answerId] = contentId.split('/')
+    if (!questionId || !answerId) {
+      throw new Error(`Invalid contentId: ${contentId}`)
+    }
     const detail = (await this.client.getAnswerDetail(questionId, answerId)) as any
 
     const contentItem: ContentItem = {
@@ -152,6 +155,9 @@ export class ZhihuCrawler extends AbstractCrawler {
   async getComments(contentId: string, maxCount = 100): Promise<CommentItem[]> {
     const results: CommentItem[] = []
     const [contentType, id] = contentId.split(':')
+    if (!contentType || !id) {
+      throw new Error(`Invalid contentId: ${contentId}`)
+    }
     let offset = ''
 
     while (results.length < maxCount) {

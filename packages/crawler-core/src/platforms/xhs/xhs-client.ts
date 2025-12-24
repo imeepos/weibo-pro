@@ -191,14 +191,14 @@ export class XhsClient {
   async getCreatorInfo(userId: string) {
     const uri = `/user/profile/${userId}`
     const html = await this.httpClient.get<string>(`${this.domain}${uri}`, {
-      headers: this.httpClient['axiosInstance'].defaults.headers as any,
+      headers: (this.httpClient as any).axiosInstance.defaults.headers as any,
     })
     return this.extractCreatorFromHtml(html.data)
   }
 
   private extractCreatorFromHtml(html: string): any {
     const match = html.match(/window\.__INITIAL_STATE__\s*=\s*({.+?})<\/script>/)
-    if (!match) return {}
+    if (!match || !match[1]) return {}
     try {
       const state = JSON.parse(match[1])
       return state.user?.userPageData || {}

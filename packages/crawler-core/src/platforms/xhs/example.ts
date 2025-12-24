@@ -17,7 +17,11 @@ async function main() {
 
     // 获取笔记详情
     if (notes.length > 0) {
-      const noteId = notes[0].id
+      const noteId = notes[0]?.id
+      if (!noteId) {
+        console.log('未找到有效笔记ID')
+        return
+      }
       console.log(`\n获取笔记详情: ${noteId}`)
       const detail = await crawler.getDetail(noteId)
       console.log('标题:', detail.title)
