@@ -19,6 +19,7 @@ import { createServer } from 'http';
 import type { IncomingMessage, ServerResponse } from 'http';
 import { bearer, admin, username, openAPI } from 'better-auth/plugins';
 import { Pool } from 'pg';
+
 async function bootstrap() {
   const PORT = parseInt(process.env.PORT || `3000`);
   const logger = root.get(Logger);

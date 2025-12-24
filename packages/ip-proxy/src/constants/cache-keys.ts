@@ -7,6 +7,9 @@ export enum CacheKeys {
 
   /** Hash Key 前缀: 代理元数据 */
   METADATA_PREFIX = 'ip_proxy:metadata:',
+
+  /** Hash Key 前缀: 代理质量评分 */
+  SCORE_PREFIX = 'ip_proxy:score:',
 }
 
 /**

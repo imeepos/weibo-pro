@@ -4,6 +4,8 @@ import type { KuaidailiConfig, ValidatorConfig } from './types'
 import { ProxyCache } from './core/proxy-cache'
 import { ProxyValidator, PROXY_VALIDATOR_CONFIG } from './core/proxy-validator'
 import { ProxyPool } from './core/proxy-pool'
+import { ProxyHealthChecker } from './core/proxy-health-checker'
+import { ProxyScorer } from './core/proxy-scorer'
 import { BaseProxyProvider } from './providers/base-provider'
 import { KuaidailiProvider, KUAIDAILI_CONFIG } from './providers/kuaidaili-provider'
 import { ProxyInterceptor } from './interceptors/axios-interceptor'
@@ -13,6 +15,8 @@ import { ProxyBrowserLauncher } from './interceptors/browser-launcher'
 export { ProxyCache }
 export { ProxyValidator, PROXY_VALIDATOR_CONFIG }
 export { ProxyPool }
+export { ProxyHealthChecker }
+export { ProxyScorer }
 
 // 提供商层
 export { BaseProxyProvider }
@@ -93,6 +97,8 @@ export function createProxyProviders(
     { provide: ProxyCache, useClass: ProxyCache },
     { provide: ProxyValidator, useClass: ProxyValidator },
     { provide: ProxyPool, useClass: ProxyPool },
+    { provide: ProxyHealthChecker, useClass: ProxyHealthChecker },
+    { provide: ProxyScorer, useClass: ProxyScorer },
 
     // 注册提供商
     {

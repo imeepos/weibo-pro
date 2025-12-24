@@ -192,11 +192,18 @@ function createMethodProxy(
     const { urlParams, queryParams, bodyData, headers } = extractParameters(args, routeArgs);
     const finalUrl = replaceUrlParams(fullPath, urlParams);
 
+    // 检测 FormData，不进行 clone 和 JSON 序列化
+    const isFormData = bodyData instanceof FormData;
+    const requestBody = isFormData ? bodyData : (bodyData ? clone(bodyData) : undefined);
+
+    // FormData 不设置 Content-Type，让浏览器自动设置 multipart/form-data boundary
+    const requestHeaders = isFormData ? {} : headers;
+
     const { data, error } = await $fetch(finalUrl, {
       method: getHttpMethodString(httpMethod),
       query: queryParams,
-      body: bodyData ? clone(bodyData) : undefined,
-      headers,
+      body: requestBody,
+      headers: requestHeaders,
       throw: false,
     });
 

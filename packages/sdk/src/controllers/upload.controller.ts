@@ -21,7 +21,7 @@ export interface UploadBase64Request {
 export class UploadController {
 
   @Post('file')
-  uploadFile(formData: FormData): Promise<UploadFileResponse> {
+  uploadFile(@Body() formData: FormData): Promise<UploadFileResponse> {
     throw new Error('method uploadFile not implements')
   }
 
