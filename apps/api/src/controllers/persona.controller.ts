@@ -3,7 +3,7 @@ import { root } from '@sker/core';
 import { PersonaService } from '../services/data/persona.service';
 import * as sdk from '@sker/sdk';
 
-@Controller('api/personas')
+@Controller(sdk.PersonaController)
 export class PersonaController implements sdk.PersonaController {
   private personaService: PersonaService;
 
@@ -11,22 +11,18 @@ export class PersonaController implements sdk.PersonaController {
     this.personaService = root.get(PersonaService);
   }
 
-  @Get()
   async getPersonaList() {
     return this.personaService.getPersonaList();
   }
 
-  @Get(':id/memory-graph')
   async getMemoryGraph(@Param('id') id: string) {
     return this.personaService.getMemoryGraph(id);
   }
 
-  @Post('retrieve-memories')
   async retrieveMemories(@Body() request: sdk.RetrieveMemoriesRequest) {
     return this.personaService.retrieveMemories(request);
   }
 
-  @Post(':id/memories')
   async createMemory(
     @Param('id') id: string,
     @Body() request: Omit<sdk.CreateMemoryRequest, 'personaId'>

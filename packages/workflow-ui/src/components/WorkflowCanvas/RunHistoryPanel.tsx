@@ -161,7 +161,7 @@ export function RunHistoryPanel({
           <FilterBar
             options={STATUS_FILTERS}
             value={statusFilter}
-            onChange={setStatusFilter}
+            onChange={(value) => setStatusFilter(value as RunStatus | undefined)}
           />
         </div>
 

@@ -1,4 +1,4 @@
-import type { EChartsOption } from 'echarts';
+import type { EChartsOption } from '@sker/ui/components/ui/echart';
 import type { TimeRange } from '@sker/entities';
 import { HTTP_OK, HTTP_CLIENT_ERROR } from './constants';
 

@@ -12,7 +12,7 @@ import type {
   EnvCheckResult
 } from '../types'
 
-@Controller('api/media-crawler')
+@Controller('media-crawler')
 export class MediaCrawlerController {
 
   @Post('crawler/start')

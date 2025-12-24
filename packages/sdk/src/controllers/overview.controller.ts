@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@sker/core'
+import { Controller, Get, Query, ApiDescription } from '@sker/core'
 import type { TimeRange } from '@sker/entities';
 import type {
   OverviewStatisticsData,
@@ -6,10 +6,11 @@ import type {
   OverviewLocation
 } from '../types'
 
-@Controller('api/overview')
+@Controller('overview')
 export class OverviewController {
 
   @Get('statistics')
+  @ApiDescription(``, ["overview"])
   getStatistics(@Query('timeRange') timeRange?: TimeRange): Promise<OverviewStatisticsData> {
     throw new Error('method getStatistics not implements')
   }

@@ -3,11 +3,10 @@
  * 统一管理所有图表数据的获取
  */
 
-import { apiClient } from './apiClient';
 import { withErrorBoundary } from '@/utils/errorHandler';
 import { createLogger } from '@sker/core';
 import { root } from '@sker/core'
-import { EventsController } from '@sker/sdk'
+import { ChartsController, type TimeRange } from '@sker/sdk'
 const logger = createLogger('ChartsAPI');
 import type {
   AgeDistributionData,
@@ -23,34 +22,31 @@ import type {
 export class ChartsAPI {
   // 获取年龄分布数据
   static getAgeDistribution = withErrorBoundary(
-    async (timeRange?: string): Promise<AgeDistributionData[]> => {
+    async (timeRange?: TimeRange): Promise<AgeDistributionData[]> => {
       logger.debug('Fetching age distribution data');
-      const params = timeRange ? `?timeRange=${timeRange}` : '';
-      const response = await apiClient.get<AgeDistributionData[]>(
-        `/charts/age-distribution${params}`,
-        {
-          retry: { count: 2, delay: 1000 },
-          timeout: 8000,
-        }
-      );
-      return response.data;
+      const chartsController = root.get(ChartsController);
+      const data = await chartsController.getAgeDistribution(timeRange);
+      return (data as any).series?.[0]?.data?.map((value: number, index: number) => ({
+        age: (data as any).categories?.[index] || '',
+        value,
+        percentage: 0
+      })) || [];
     },
     { component: 'ChartsAPI', action: 'getAgeDistribution' }
   );
 
   // 获取性别分布数据
   static getGenderDistribution = withErrorBoundary(
-    async (timeRange?: string): Promise<GenderDistributionData[]> => {
+    async (timeRange?: TimeRange): Promise<GenderDistributionData[]> => {
       logger.debug('Fetching gender distribution data');
-      const params = timeRange ? `?timeRange=${timeRange}` : '';
-      const response = await apiClient.get<GenderDistributionData[]>(
-        `/charts/gender-distribution${params}`,
-        {
-          retry: { count: 2, delay: 1000 },
-          timeout: 8000,
-        }
-      );
-      return response.data;
+      const chartsController = root.get(ChartsController);
+      const data = await chartsController.getGenderDistribution(timeRange);
+      return (data as any).series?.map((s: any) => ({
+        name: s.name,
+        value: s.data?.[0] || 0,
+        percentage: 0,
+        color: ''
+      })) || [];
     },
     { component: 'ChartsAPI', action: 'getGenderDistribution' }
   );
@@ -58,31 +54,26 @@ export class ChartsAPI {
   // 获取情感趋势数据
   static getSentimentTrend = withErrorBoundary(
     async (hours: number = 24): Promise<SentimentTrendData[]> => {
-      // 后端返回 ChartData 格式，需要转换为 SentimentTrendData[]
-      const response = await apiClient.get<{
-        categories: string[];
-        series: Array<{ name: string; data: number[] }>;
-      }>(
-        '/charts/sentiment-trend',
-        {
-          params: { hours },
-          retry: { count: 3, delay: 1000 },
-          timeout: 10000,
-        }
-      );
+      // 将 hours 转换为 TimeRange（保持前端 API 兼容性）
+      const timeRange: TimeRange = hours <= 1 ? '1h' :
+                                     hours <= 6 ? '6h' :
+                                     hours <= 12 ? '12h' :
+                                     hours <= 24 ? '24h' :
+                                     hours <= 168 ? '7d' : '30d';
 
-      const chartData = response.data;
+      const chartsController = root.get(ChartsController);
+      const chartData = await chartsController.getSentimentTrend(timeRange) as any;
 
       // 数据转换：ChartData → SentimentTrendData[]
       if (!chartData?.categories || !chartData?.series) {
         return [];
       }
 
-      const positiveIndex = chartData.series.findIndex(s => s.name === '正面');
-      const negativeIndex = chartData.series.findIndex(s => s.name === '负面');
-      const neutralIndex = chartData.series.findIndex(s => s.name === '中性');
+      const positiveIndex = chartData.series.findIndex((s: any) => s.name === '正面');
+      const negativeIndex = chartData.series.findIndex((s: any) => s.name === '负面');
+      const neutralIndex = chartData.series.findIndex((s: any) => s.name === '中性');
 
-      return chartData.categories.map((timestamp, index) => ({
+      return chartData.categories.map((timestamp: string, index: number) => ({
         timestamp,
         positive: positiveIndex >= 0 ? chartData.series[positiveIndex]?.data[index] || 0 : 0,
         negative: negativeIndex >= 0 ? chartData.series[negativeIndex]?.data[index] || 0 : 0,
@@ -97,51 +88,40 @@ export class ChartsAPI {
 
   // 获取地理分布数据
   static getGeographicData = withErrorBoundary(
-    async (timeRange?: string): Promise<GeographicData[]> => {
+    async (timeRange?: TimeRange): Promise<GeographicData[]> => {
       logger.debug('Fetching geographic data');
-      const params = timeRange ? `?timeRange=${timeRange}` : '';
-      const response = await apiClient.get<GeographicData[]>(
-        `/charts/geographic${params}`,
-        {
-          retry: { count: 2, delay: 1000 },
-          timeout: 12000, // 地理数据可能较大，给更长超时时间
-        }
-      );
-      return response.data;
+      const chartsController = root.get(ChartsController);
+      const data = await chartsController.getGeographic(timeRange);
+      return (data as any).series?.map((s: any, index: number) => ({
+        name: (data as any).categories?.[index] || s.name,
+        value: s.data?.[0] || 0
+      })) || [];
     },
     { component: 'ChartsAPI', action: 'getGeographicData' }
   );
 
   // 获取事件类型分布数据
   static getEventTypes = withErrorBoundary(
-    async (timeRange?: string): Promise<EventTypeData[]> => {
+    async (timeRange?: TimeRange): Promise<EventTypeData[]> => {
       logger.debug('Fetching event types data');
-      const params = timeRange ? `?timeRange=${timeRange}` : '';
-      const response = await apiClient.get<EventTypeData[]>(
-        `/charts/event-types${params}`,
-        {
-          retry: { count: 2, delay: 1000 },
-          timeout: 8000,
-        }
-      );
-      return response.data;
+      const chartsController = root.get(ChartsController);
+      const data = await chartsController.getEventTypes(timeRange);
+      return (data as any).series?.map((s: any, index: number) => ({
+        type: (data as any).categories?.[index] || s.name,
+        count: s.data?.[0] || 0,
+        percentage: 0
+      })) || [];
     },
     { component: 'ChartsAPI', action: 'getEventTypes' }
   );
 
   // 获取词云数据
   static getWordCloudData = withErrorBoundary(
-    async (count: number = 50, timeRange?: string): Promise<HotTopicData[]> => {
+    async (count: number = 50, timeRange?: TimeRange): Promise<HotTopicData[]> => {
       logger.debug('Fetching word cloud data', { count, timeRange });
-      const response = await apiClient.get<HotTopicData[]>(
-        '/charts/word-cloud',
-        {
-          params: { count, timeRange },
-          retry: { count: 2, delay: 1000 },
-          timeout: 8000,
-        }
-      );
-      return response.data;
+      const chartsController = root.get(ChartsController);
+      const data = await chartsController.getWordCloud(timeRange, count);
+      return data as HotTopicData[];
     },
     { component: 'ChartsAPI', action: 'getWordCloudData' }
   );
@@ -150,15 +130,18 @@ export class ChartsAPI {
   static getEventCountSeries = withErrorBoundary(
     async (days: number = 7): Promise<TimeSeriesDataPoint[]> => {
       logger.debug('Fetching event count series', { days });
-      const response = await apiClient.get<TimeSeriesDataPoint[]>(
-        '/charts/event-count-series',
-        {
-          params: { days },
-          retry: { count: 2, delay: 1000 },
-          timeout: 8000,
-        }
-      );
-      return response.data;
+      // 将 days 转换为 TimeRange（保持前端 API 兼容性）
+      const timeRange: TimeRange = days <= 1 ? '24h' :
+                                     days <= 7 ? '7d' :
+                                     days <= 30 ? '30d' :
+                                     days <= 90 ? '90d' :
+                                     days <= 180 ? '180d' : '365d';
+      const chartsController = root.get(ChartsController);
+      const data = await chartsController.getEventCountSeries(timeRange);
+      return (data as any).categories?.map((timestamp: string, index: number) => ({
+        timestamp,
+        value: (data as any).series?.[0]?.data?.[index] || 0
+      })) || [];
     },
     { component: 'ChartsAPI', action: 'getEventCountSeries' }
   );
@@ -167,49 +150,41 @@ export class ChartsAPI {
   static getPostCountSeries = withErrorBoundary(
     async (days: number = 7): Promise<TimeSeriesDataPoint[]> => {
       logger.debug('Fetching post count series', { days });
-      const response = await apiClient.get<TimeSeriesDataPoint[]>(
-        '/charts/post-count-series',
-        {
-          params: { days },
-          retry: { count: 2, delay: 1000 },
-          timeout: 8000,
-        }
-      );
-      return response.data;
+      // 将 days 转换为 TimeRange（保持前端 API 兼容性）
+      const timeRange: TimeRange = days <= 1 ? '24h' :
+                                     days <= 7 ? '7d' :
+                                     days <= 30 ? '30d' :
+                                     days <= 90 ? '90d' :
+                                     days <= 180 ? '180d' : '365d';
+      const chartsController = root.get(ChartsController);
+      const data = await chartsController.getPostCountSeries(timeRange);
+      return (data as any).categories?.map((timestamp: string, index: number) => ({
+        timestamp,
+        value: (data as any).series?.[0]?.data?.[index] || 0
+      })) || [];
     },
     { component: 'ChartsAPI', action: 'getPostCountSeries' }
   );
 
   // 获取简单情感分析数据
   static getSentimentData = withErrorBoundary(
-    async (timeRange?: string): Promise<{ positive: number; negative: number; neutral: number; total: number }> => {
+    async (timeRange?: TimeRange): Promise<{ positive: number; negative: number; neutral: number; total: number }> => {
       logger.debug('Fetching sentiment data');
-      const params = timeRange ? `?timeRange=${timeRange}` : '';
-      const response = await apiClient.get<{ positive: number; negative: number; neutral: number; total: number }>(
-        `/charts/sentiment-data${params}`,
-        {
-          retry: { count: 2, delay: 1000 },
-          timeout: 8000,
-        }
-      );
-      return response.data;
+      const chartsController = root.get(ChartsController);
+      const data = await chartsController.getSentimentData(timeRange);
+      return data as { positive: number; negative: number; neutral: number; total: number };
     },
     { component: 'ChartsAPI', action: 'getSentimentData' }
   );
 
   // 批量获取图表数据
   static getBatchChartData = withErrorBoundary(
-    async (chartTypes: string[]): Promise<Record<string, unknown>> => {
-      logger.debug('Fetching batch chart data', { chartTypes });
-      const response = await apiClient.get<Record<string, unknown>>(
-        '/charts/batch',
-        {
-          params: { types: chartTypes.join(',') },
-          retry: { count: 1, delay: 1000 },
-          timeout: 15000, // 批量数据需要更长时间
-        }
-      );
-      return response.data;
+    async (chartTypes: string[], timeRange?: TimeRange): Promise<Record<string, unknown>> => {
+      logger.debug('Fetching batch chart data', { chartTypes, timeRange });
+      // 注意：SDK 的 getBatchCharts 不支持 chartTypes 筛选，返回所有图表数据
+      const chartsController = root.get(ChartsController);
+      const data = await chartsController.getBatchCharts(timeRange);
+      return data as Record<string, unknown>;
     },
     { component: 'ChartsAPI', action: 'getBatchChartData' }
   );
@@ -230,7 +205,7 @@ export class ChartsAPI {
     return this.getEventCountSeries(days);
   }
 
-  static async getHotEvents(limit: number = 10, timeRange?: string) {
+  static async getHotEvents(limit: number = 10, timeRange?: TimeRange) {
     return this.getWordCloudData(limit, timeRange);
   }
 
@@ -243,7 +218,7 @@ export class ChartsAPI {
     return this.getEventTypes();
   }
 
-  static async getWordCloud(limit: number = 100, timeRange?: string) {
+  static async getWordCloud(limit: number = 100, timeRange?: TimeRange) {
     return this.getWordCloudData(limit, timeRange);
   }
 

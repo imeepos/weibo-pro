@@ -5,10 +5,10 @@ import type {
   TimeRange
 } from '../types'
 
-@Controller('api/user-relations')
+@Controller('user-relations')
 export class UserRelationController {
 
-  @Get()
+  @Get('list')
   getNetwork(
     @Query('type') type?: UserRelationType,
     @Query('timeRange') timeRange?: TimeRange,

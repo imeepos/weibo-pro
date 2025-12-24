@@ -484,6 +484,7 @@ export class ChartsService {
   // Helper methods
   private getTimeGranularity(timeRange: TimeRange): string {
     const granularityMap: Record<TimeRange, string> = {
+      'all': 'month',
       '1h': 'hour',
       '6h': 'hour',
       '12h': 'hour',

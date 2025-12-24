@@ -11,7 +11,7 @@ import type {
   ChartData
 } from '../types'
 
-@Controller('api/charts')
+@Controller('charts')
 export class ChartsController {
 
     @Get('age-distribution')

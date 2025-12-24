@@ -4,7 +4,7 @@ import { OverviewService } from '../services/data/overview.service';
 import { TimeRange } from '../services/data/types';
 import * as sdk from '@sker/sdk';
 
-@Controller('api/overview')
+@Controller(sdk.OverviewController)
 export class OverviewController implements sdk.OverviewController{
   private overviewService: OverviewService;
 
@@ -12,19 +12,16 @@ export class OverviewController implements sdk.OverviewController{
     this.overviewService = root.get(OverviewService);
   }
 
-  @Get('statistics')
   async getStatistics(@Query('timeRange') timeRange?: string) {
     const validTimeRange = this.validateTimeRange(timeRange);
     return this.overviewService.getStatistics(validTimeRange);
   }
 
-  @Get('sentiment')
   async getSentiment(@Query('timeRange') timeRange?: string) {
     const validTimeRange = this.validateTimeRange(timeRange);
     return this.overviewService.getSentiment(validTimeRange);
   }
 
-  @Get('locations')
   async getLocations(@Query('timeRange') timeRange?: string) {
     const validTimeRange = this.validateTimeRange(timeRange);
     return this.overviewService.getLocations(validTimeRange);

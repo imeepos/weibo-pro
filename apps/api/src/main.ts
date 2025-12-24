@@ -75,6 +75,22 @@ async function bootstrap() {
     database: new Pool({
       connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/weibo'
     }),
+    trustedOrigins: (request) => {
+      const allowedOrigins = [
+        'https://',
+        'http://',
+      ].filter(Boolean) as string[];
+
+      const origin = request.headers.get('origin') || request.headers.get('expo-origin');
+
+      if (!origin) return allowedOrigins;
+
+      const isAllowed = allowedOrigins.some(allowed =>
+        origin === allowed || origin.startsWith(allowed)
+      );
+
+      return isAllowed ? [origin] : allowedOrigins;
+    },
     plugins: [
       createSkerAuthPlugin([]),
       bearer(),

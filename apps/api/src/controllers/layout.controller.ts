@@ -3,7 +3,7 @@ import { root } from '@sker/core';
 import { LayoutService, type CreateLayoutPayload, type UpdateLayoutPayload } from '../services/data/layout.service';
 import * as sdk from '@sker/sdk';
 
-@Controller('api/layout')
+@Controller(sdk.LayoutController)
 export class LayoutController implements sdk.LayoutController{
   private layoutService: LayoutService;
 
@@ -11,39 +11,32 @@ export class LayoutController implements sdk.LayoutController{
     this.layoutService = root.get(LayoutService);
   }
 
-  @Get()
   async getLayouts(@Query('type') type?: string) {
     const validType = this.validateType(type);
     return this.layoutService.getLayoutConfigurations(validType);
   }
 
-  @Get('default')
   async getDefaultLayout(@Query('type') type?: string) {
     const validType = this.validateType(type);
     return this.layoutService.getDefaultLayout(validType);
   }
 
-  @Get(':id')
   async getLayoutById(@Param('id') id: string) {
     return this.layoutService.getLayoutById(id);
   }
 
-  @Post()
   async createLayout(@Body() payload: CreateLayoutPayload) {
     return this.layoutService.createLayout(payload);
   }
 
-  @Put(':id')
   async updateLayout(@Param('id') id: string, @Body() payload: UpdateLayoutPayload) {
     return this.layoutService.updateLayout(id, payload);
   }
 
-  @Delete(':id')
   async deleteLayout(@Param('id') id: string) {
     return this.layoutService.deleteLayout(id);
   }
 
-  @Put(':id/set-default')
   async setDefaultLayout(@Param('id') id: string, @Body('type') type?: string) {
     const validType = this.validateType(type);
     return this.layoutService.setDefaultLayout(id, validType);

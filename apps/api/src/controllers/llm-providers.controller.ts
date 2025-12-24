@@ -4,7 +4,7 @@ import { LlmProviderService } from '../services/llm-provider.service';
 import { LlmProvider } from '@sker/entities';
 import * as sdk from '@sker/sdk';
 
-@Controller('api/llm-providers')
+@Controller(sdk.LlmProvidersController)
 export class LlmProvidersController implements sdk.LlmProvidersController {
   private llmProviderService: LlmProviderService;
 
@@ -12,22 +12,18 @@ export class LlmProvidersController implements sdk.LlmProvidersController {
     this.llmProviderService = root.get(LlmProviderService);
   }
 
-  @Get()
   async findAll(): Promise<LlmProvider[]> {
     return this.llmProviderService.findAll();
   }
 
-  @Get(':id')
   async findOne(@Param('id') id: string): Promise<LlmProvider | null> {
     return this.llmProviderService.findOne(id);
   }
 
-  @Post()
   async create(@Body() createLlmProviderDto: Partial<LlmProvider>): Promise<LlmProvider> {
     return this.llmProviderService.create(createLlmProviderDto);
   }
 
-  @Put(':id')
   async update(
     @Param('id') id: string,
     @Body() updateLlmProviderDto: Partial<LlmProvider>
@@ -35,17 +31,14 @@ export class LlmProvidersController implements sdk.LlmProvidersController {
     return this.llmProviderService.update(id, updateLlmProviderDto);
   }
 
-  @Delete(':id')
   async remove(@Param('id') id: string): Promise<void> {
     return this.llmProviderService.remove(id);
   }
 
-  @Get('available/best')
   async getBestProvider(): Promise<LlmProvider | null> {
     return this.llmProviderService.getBestProvider();
   }
 
-  @Put(':id/score')
   async updateScore(
     @Param('id') id: string,
     @Body('score') score: number

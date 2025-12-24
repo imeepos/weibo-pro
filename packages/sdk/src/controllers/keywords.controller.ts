@@ -1,7 +1,7 @@
 import { Controller, Get, Query } from '@sker/core'
 import type { KeywordWordCloudItem } from '../types'
 
-@Controller('api/keywords')
+@Controller('keywords')
 export class KeywordsController {
 
   @Get('wordcloud')

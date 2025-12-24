@@ -35,12 +35,17 @@ export const CONTROLLES = new InjectionToken<Type<any>[]>(`CONTROLLES`)
 export function Controller(prefix?: string | Type<any>): ClassDecorator {
   return (target: any) => {
     if (typeof prefix === 'function') {
+      // 从 SDK Controller 提取路径元数据
+      const sdkControllerPath = Reflect.getMetadata(PATH_METADATA, prefix);
+      if (sdkControllerPath !== undefined) {
+        Reflect.defineMetadata(PATH_METADATA, sdkControllerPath, target);
+      }
       root.set([
         { provide: prefix, useClass: target },
         { provide: target, useClass: target },
       ]);
     } else {
-      Reflect.defineMetadata(PATH_METADATA, prefix || '', target);
+      Reflect.defineMetadata(PATH_METADATA, prefix || ``, target);
       root.set([
         { provide: CONTROLLES, multi: true, useValue: target }
       ]);

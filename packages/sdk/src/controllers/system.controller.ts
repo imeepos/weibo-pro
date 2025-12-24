@@ -5,7 +5,7 @@ import type {
   SystemHealth
 } from '../types'
 
-@Controller('api/system')
+@Controller('system')
 export class SystemController {
 
   @Get('status')

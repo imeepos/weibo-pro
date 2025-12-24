@@ -2,13 +2,14 @@ import { Controller, Post, Body } from '@sker/core';
 import { root } from '@sker/core';
 import { ChatService } from '../services/chat.service';
 import type { ChatMessage } from '@sker/chat';
+import * as sdk from '@sker/sdk';
 
 interface ChatRequestDto {
   messages: ChatMessage[];
   databaseUrl?: string;
 }
 
-@Controller('api/chat')
+@Controller(sdk.ChatController)
 export class ChatController {
   private service: ChatService;
 

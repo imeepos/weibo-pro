@@ -17,7 +17,7 @@ export interface UploadBase64Request {
  * - 提供类型安全的上传 API 调用
  * - 前端工作流节点上传图片
  */
-@Controller('api/upload')
+@Controller('upload')
 export class UploadController {
 
   @Post('file')

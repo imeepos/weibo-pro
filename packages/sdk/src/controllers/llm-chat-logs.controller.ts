@@ -69,6 +69,7 @@ export interface PromptAnalysisItem {
   hash: string;
   count: number;
   type: 'system' | 'user' | 'assistant' | 'tool';
+  name?: string;
 }
 
 export interface PromptAnalysisResult {
@@ -82,7 +83,7 @@ export interface PromptAnalysisResult {
   }>;
 }
 
-@Controller('api/llm-chat-logs')
+@Controller('llm-chat-logs')
 export class LlmChatLogsController {
   @Get('stats')
   getStats(
@@ -93,7 +94,7 @@ export class LlmChatLogsController {
     throw new Error('method getStats not implements');
   }
 
-  @Get()
+  @Get('/list')
   list(
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,

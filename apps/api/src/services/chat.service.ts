@@ -1,5 +1,5 @@
 import { Injectable } from '@sker/core';
-import { ChatAgent, type ChatMessage, type ChatResponse } from '@sker/chat';
+import { ChatAgent, type ChatMessage } from '@sker/chat';
 
 interface ChatRequest {
   messages: ChatMessage[];
@@ -16,20 +16,16 @@ export class ChatService {
     this.agent = new ChatAgent(databaseUrl);
   }
 
-  async chat(request: ChatRequest): Promise<ChatResponse> {
+  async chat(request: ChatRequest): Promise<string> {
     console.log('[ChatService] 收到聊天请求:', {
       messageCount: request.messages.length,
       hasDatabaseUrl: !!(request.databaseUrl || process.env.DATABASE_URL)
     });
 
     try {
-      const response = await this.agent.chat({
-        messages: request.messages,
-        databaseUrl: request.databaseUrl || process.env.DATABASE_URL || '',
-      });
+      const response = await this.agent.chat(request.messages);
       console.log('[ChatService] 聊天响应成功:', {
-        hasMessage: !!response.message,
-        toolCallCount: response.toolCalls?.length || 0
+        responseLength: response.length
       });
       return response;
     } catch (error) {

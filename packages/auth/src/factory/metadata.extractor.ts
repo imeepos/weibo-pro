@@ -52,8 +52,14 @@ export function extractRouteMetadata(
     return null; // Not a route method
   }
 
+  // Ensure there's a slash between controllerPath and routePath, and normalize multiple slashes
+  const fullPath = [controllerPath, routePath]
+    .filter(Boolean)
+    .join('/')
+    .replace(/\/+/g, '/');
+
   return {
-    path: `${controllerPath}${routePath}`,
+    path: fullPath,
     httpMethod: Reflect.getMetadata(METHOD_METADATA, method) as RequestMethod,
     middlewareMeta: Reflect.getMetadata(MIDDLEWARE_METADATA, method) as MiddlewareMetadata | undefined,
     responseSchema: Reflect.getMetadata(RESPONSE_SCHEMA_METADATA, method) as z.ZodTypeAny | undefined,

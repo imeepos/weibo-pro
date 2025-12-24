@@ -1,11 +1,13 @@
 export * from './controllers/charts.controller'
+export * from './controllers/chat.controller'
 export * from './controllers/events.controller'
 export * from './controllers/keywords.controller'
 export * from './controllers/layout.controller'
-export * from './controllers/llm-providers.controller'
-export * from './controllers/llm-models.controller'
-export * from './controllers/llm-model-providers.controller'
 export * from './controllers/llm-chat-logs.controller'
+export * from './controllers/llm-model-providers.controller'
+export * from './controllers/llm-models.controller'
+export * from './controllers/llm-providers.controller'
+export * from './controllers/llm-proxy.controller'
 export * from './controllers/overview.controller'
 export * from './controllers/sentiment.controller'
 export * from './controllers/system.controller'
@@ -19,5 +21,7 @@ export * from './controllers/prompt-skills.controller'
 export * from './controllers/media-crawler.controller'
 export * from './types';
 export * from './tokens';
-export * from './client';
-export * from './auth';
+export * from './client-plugin';
+
+// Re-export workflow types from @sker/workflow
+export type { WorkflowGraphAst, Ast, INode, NodeEvent } from '@sker/workflow';

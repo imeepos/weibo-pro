@@ -7,7 +7,7 @@ import {
 import { UploadService } from '../services/upload.service';
 import type { IncomingMessage } from 'http';
 import busboy from 'busboy';
-
+import * as sdk from '@sker/sdk'
 /**
  * 文件上传控制器
  *
@@ -15,11 +15,10 @@ import busboy from 'busboy';
  * - 支持 multipart/form-data 文件上传
  * - 支持 Base64 图片上传（工作流节点使用）
  */
-@Controller('api/upload')
+@Controller(sdk.UploadController)
 export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
 
-  @Post('file')
   async uploadFile(@Req() req: IncomingMessage) {
     const { file, fields } = await this.parseMultipartForm(req);
 
@@ -78,7 +77,6 @@ export class UploadController {
     });
   }
 
-  @Post('base64')
   async uploadBase64(
     @Body() body: { image: string; filename?: string; type?: string },
     @Req() req?: IncomingMessage

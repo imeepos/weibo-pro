@@ -9,10 +9,10 @@ export interface LlmModelProviderWithRelations extends Omit<LlmModelProvider, 'm
   enabled: boolean;
 }
 
-@Controller('api/llm-model-providers')
+@Controller('llm-model-providers')
 export class LlmModelProvidersController {
 
-  @Get()
+  @Get('/list')
   findAll(): Promise<LlmModelProviderWithRelations[]> {
     throw new Error('method findAll not implements');
   }

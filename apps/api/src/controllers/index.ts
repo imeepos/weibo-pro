@@ -1,3 +1,6 @@
+export { ChartsController } from './charts.controller';
+export { ChatController } from './chat.controller';
+export { EventsController } from './events.controller';
 export { KeywordsController } from './keywords.controller';
 export { LayoutController } from './layout.controller';
 export { LlmChatLogsController } from './llm-chat-logs.controller';

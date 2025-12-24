@@ -2,8 +2,9 @@
  * 用户相关API服务
  */
 
-import { apiUtils as apiClient } from './client';
-import type { ApiResponse, UserProfile } from '../../types';
+import { root } from '@sker/core';
+import { UsersController } from '@sker/sdk';
+import type { UserProfile } from '../../types';
 import type { BaseQueryParams, TimeRange } from './types';
 
 // 用户列表查询参数
@@ -72,35 +73,26 @@ export interface UsersListResponse {
 export const UsersAPI = {
   // 获取用户列表
   getUsersList: async (params?: UsersListParams): Promise<UsersListResponse> => {
-    const queryParams = new URLSearchParams();
-    if (params?.timeRange) queryParams.append('timeRange', params.timeRange);
-    if (params?.riskLevel) queryParams.append('riskLevel', params.riskLevel);
-    if (params?.search) queryParams.append('search', params.search);
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
-    if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
-
-    const url = `/users/list${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-    const response = await apiClient.get<UsersListResponse>(url);
-    return response;
+    const controller = root.get(UsersController);
+    const response = await controller.getUserList(
+      params?.timeRange,
+      params?.page,
+      params?.pageSize
+    );
+    return response as UsersListResponse;
   },
 
   // 获取风险等级配置
   getRiskLevels: async (params?: { timeRange?: TimeRange }): Promise<RiskLevel[]> => {
-    const queryParams = new URLSearchParams();
-    if (params?.timeRange) queryParams.append('timeRange', params.timeRange);
-    const url = `/users/risk-levels${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-    const response = await apiClient.get<RiskLevel[]>(url);
-    return response;
+    const controller = root.get(UsersController);
+    const response = await controller.getRiskLevels(params?.timeRange);
+    return response as RiskLevel[];
   },
 
   // 获取用户统计数据
   getStatistics: async (params?: { timeRange?: TimeRange }): Promise<UserStatistics> => {
-    const queryParams = new URLSearchParams();
-    if (params?.timeRange) queryParams.append('timeRange', params.timeRange);
-    const url = `/users/statistics${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-    const response = await apiClient.get<UserStatistics>(url);
-    return response;
+    const controller = root.get(UsersController);
+    const response = await controller.getStatistics(params?.timeRange);
+    return response as UserStatistics;
   },
 };
