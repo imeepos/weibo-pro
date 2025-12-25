@@ -30,7 +30,7 @@ import type { Provider, Type } from '@sker/core';
 import { CONTROLLES, PATH_METADATA, METHOD_METADATA, ROUTE_ARGS_METADATA, RequestMethod, ParamType, root } from '@sker/core';
 import { Observable } from 'rxjs';
 import { clone } from '@sker/workflow';
-import { BETTER_FETCH, BETTER_FETCH_CONFIG } from './tokens';
+import { BETTER_FETCH } from './tokens';
 
 type FetchFunction = (url: string, options?: any) => Promise<{ data: any; error: any }>;
 
