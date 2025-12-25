@@ -75,6 +75,11 @@ export { LlmTextImage2ToVideoAst } from './03-ai-capabilities/generation/media/L
 // 生成能力 - 工具生成
 export { WorkflowNodeGeneratorAst } from './03-ai-capabilities/generation/tools/WorkflowNodeGeneratorAst';
 
+// 代码工具
+export { ClaudeCodeAst } from './03-ai-capabilities/code-tools/ClaudeCodeAst';
+export { ClaudeCodeReviewAst } from './03-ai-capabilities/code-tools/ClaudeCodeReviewAst';
+export { ClaudeCodeRefactorAst } from './03-ai-capabilities/code-tools/ClaudeCodeRefactorAst';
+
 // 质量控制
 export { LlmCategoryAst } from './03-ai-capabilities/quality/LlmCategoryAst';
 export { QualityCheckerAst } from './03-ai-capabilities/quality/QualityCheckerAst';

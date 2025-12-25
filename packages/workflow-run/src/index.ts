@@ -94,7 +94,13 @@ export { MarkdownUploadAstVisitor } from './MarkdownUploadAstVisitor'
 // Excel 上传节点
 export { ExcelUploadAstVisitor } from './ExcelUploadAstVisitor'
 
+// Claude Code 节点
+export { ClaudeCodeAstVisitor } from './ClaudeCodeAstVisitor'
+export { ClaudeCodeReviewAstVisitor } from './ClaudeCodeReviewAstVisitor'
+export { ClaudeCodeRefactorAstVisitor } from './ClaudeCodeRefactorAstVisitor'
+
 // 服务
+export { ClaudeCodeService } from './services/claude-code.service'
 export { CronSchedulerService } from './services/CronSchedulerService'
 export { WorkflowExecutionService } from './services/WorkflowExecutionService'
 export { ChapterQualityService } from './services/ChapterQualityService'

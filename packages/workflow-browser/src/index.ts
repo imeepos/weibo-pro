@@ -41,3 +41,6 @@ import "./HttpAstBrowserVisitor.js";
 import "./SqlExecuteAstBrowserVisitor.js";
 import "./MarkdownUploadAstBrowserVisitor.js";
 import "./ExcelUploadAstBrowserVisitor.js";
+import "./ClaudeCodeAstBrowserVisitor.js";
+import "./ClaudeCodeReviewAstBrowserVisitor.js";
+import "./ClaudeCodeRefactorAstBrowserVisitor.js";
