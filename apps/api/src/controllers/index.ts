@@ -13,6 +13,7 @@ export { OverviewController } from './overview.controller';
 export { PersonaController } from './persona.controller';
 export { PromptRolesController } from './prompt-roles.controller';
 export { PromptSkillsController } from './prompt-skills.controller';
+export { PromptOptimizerController } from './prompt-optimizer.controller';
 export { SentimentController } from './sentiment.controller';
 export { SystemController } from './system.controller';
 export { UploadController } from './upload.controller';

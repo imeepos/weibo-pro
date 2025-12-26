@@ -99,6 +99,9 @@ export { ClaudeCodeAstVisitor } from './ClaudeCodeAstVisitor'
 export { ClaudeCodeReviewAstVisitor } from './ClaudeCodeReviewAstVisitor'
 export { ClaudeCodeRefactorAstVisitor } from './ClaudeCodeRefactorAstVisitor'
 
+// 提示词优化节点
+export { PromptOptimizerAstVisitor } from './PromptOptimizerAstVisitor'
+
 // 服务
 export { ClaudeCodeService } from './services/claude-code.service'
 export { CronSchedulerService } from './services/CronSchedulerService'

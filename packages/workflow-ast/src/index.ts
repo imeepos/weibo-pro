@@ -86,6 +86,8 @@ export { QualityCheckerAst } from './03-ai-capabilities/quality/QualityCheckerAs
 export type { QualityDimension, QualityResult } from './03-ai-capabilities/quality/QualityCheckerAst';
 export { StoryQualityLoopAst } from './03-ai-capabilities/quality/StoryQualityLoopAst';
 export type { RewriteRequest, ChapterData as QualityLoopChapterData } from './03-ai-capabilities/quality/StoryQualityLoopAst';
+export { PromptOptimizerAst } from './03-ai-capabilities/quality/PromptOptimizerAst';
+export type { EvaluationDimension, OptimizationResult, PromptVersionSummary } from './03-ai-capabilities/quality/PromptOptimizerAst';
 
 // 研究能力
 export { ResearchPlannerAst } from './03-ai-capabilities/research/ResearchPlannerAst';

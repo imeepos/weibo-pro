@@ -41,7 +41,11 @@
       "react": "^19.1.1",
       "react-dom": "^19.1.1",
       "zod": "^4.2.1",
-      "echarts": "^6.0.0"
+      "echarts": "^6.0.0",
+      "canvas": "npm:empty-package@1.0.0"
+    },
+    "peerDependencyRules": {
+      "ignoreMissing": ["canvas"]
     }
   }
 }

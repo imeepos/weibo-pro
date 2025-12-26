@@ -1,0 +1,471 @@
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  Param,
+  Query,
+  BadRequestException,
+  NotFoundException,
+  Sse,
+  Res,
+} from '@sker/core';
+import { Observable } from 'rxjs';
+import { logger, root } from '@sker/core';
+import { EntityManager } from 'typeorm';
+import { fromJson, executeAst, NodeEvent, WorkflowGraphAst } from '@sker/workflow';
+import { PromptOptimizerAst } from '@sker/workflow-ast';
+import {
+  PromptOptimizationTaskEntity,
+  PromptVersionEntity,
+  OptimizationTaskStatus,
+} from '@sker/entities';
+
+/**
+ * 提示词优化 API 控制器
+ *
+ * 存在即合理：
+ * - 提供提示词自动优化的 HTTP 接口
+ * - 管理优化任务的全生命周期
+ * - 支持 SSE 实时推送优化进度
+ */
+@Controller('/prompt-optimizer')
+export class PromptOptimizerController {
+  private readonly em: EntityManager;
+
+  constructor() {
+    this.em = root.get(EntityManager);
+  }
+
+  /**
+   * 创建优化任务
+   *
+   * @param body 任务配置
+   * @returns 创建的任务实体
+   */
+  @Post('/tasks')
+  async createTask(
+    @Body()
+    body: {
+      name: string;
+      targetOutput: string;
+      targetContext?: string;
+      initialPrompt?: string;
+      evaluationCriteria?: Record<string, number>;
+      optimizationConfig?: {
+        maxIterations?: number;
+        targetScore?: number;
+        model?: string;
+        temperature?: number;
+        testRuns?: number;
+      };
+    }
+  ): Promise<PromptOptimizationTaskEntity> {
+    if (!body.name || body.name.trim().length === 0) {
+      throw new BadRequestException('任务名称不能为空');
+    }
+
+    if (!body.targetOutput || body.targetOutput.trim().length === 0) {
+      throw new BadRequestException('目标输出不能为空');
+    }
+
+    const task = new PromptOptimizationTaskEntity();
+    task.name = body.name;
+    task.targetOutput = body.targetOutput;
+    task.targetContext = body.targetContext;
+    task.evaluationCriteria = body.evaluationCriteria || {
+      '语义相似度': 0.4,
+      '格式匹配': 0.3,
+      '关键词覆盖': 0.3,
+    };
+    task.optimizationConfig = {
+      maxIterations: body.optimizationConfig?.maxIterations || 5,
+      targetScore: body.optimizationConfig?.targetScore || 85,
+      model: body.optimizationConfig?.model || 'deepseek-ai/DeepSeek-V3.2',
+      temperature: body.optimizationConfig?.temperature || 0.7,
+      testRuns: body.optimizationConfig?.testRuns || 3,
+    };
+
+    // 如果提供了初始提示词，创建第一个版本
+    if (body.initialPrompt) {
+      const savedTask = await this.em.save(PromptOptimizationTaskEntity, task);
+
+      const version = new PromptVersionEntity();
+      version.taskId = savedTask.id;
+      version.versionNumber = 0;
+      version.prompt = body.initialPrompt;
+      version.optimizationRationale = '用户提供的初始提示词';
+      await this.em.save(PromptVersionEntity, version);
+
+      return savedTask;
+    }
+
+    return await this.em.save(PromptOptimizationTaskEntity, task);
+  }
+
+  /**
+   * 获取任务详情
+   */
+  @Get('/tasks/:taskId')
+  async getTask(@Param('taskId') taskId: string): Promise<PromptOptimizationTaskEntity> {
+    const task = await this.em.findOne(PromptOptimizationTaskEntity, {
+      where: { id: taskId },
+    });
+
+    if (!task) {
+      throw new NotFoundException(`任务不存在: ${taskId}`);
+    }
+
+    return task;
+  }
+
+  /**
+   * 列出所有任务
+   */
+  @Get('/tasks')
+  async listTasks(
+    @Query() query: { status?: OptimizationTaskStatus; page?: number; pageSize?: number }
+  ): Promise<{ tasks: PromptOptimizationTaskEntity[]; total: number }> {
+    const { status, page = 1, pageSize = 20 } = query;
+
+    const queryBuilder = this.em
+      .createQueryBuilder(PromptOptimizationTaskEntity, 'task')
+      .orderBy('task.createdAt', 'DESC');
+
+    if (status) {
+      queryBuilder.where('task.status = :status', { status });
+    }
+
+    const total = await queryBuilder.getCount();
+    const tasks = await queryBuilder
+      .skip((page - 1) * pageSize)
+      .take(pageSize)
+      .getMany();
+
+    return { tasks, total };
+  }
+
+  /**
+   * 执行优化任务 - SSE 版本
+   *
+   * 优雅设计：
+   * - 使用 SSE 实时推送优化进度
+   * - 支持取消优化
+   * - 自动保存优化结果
+   */
+  @Post('/tasks/:taskId/execute')
+  @Sse()
+  executeTask(@Param('taskId') taskId: string, @Res() res?: any): Observable<NodeEvent> {
+    // 设置 SSE 响应头
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Cache-Control',
+      'X-Accel-Buffering': 'no',
+    });
+
+    return new Observable((observer) => {
+      this.em
+        .findOne(PromptOptimizationTaskEntity, { where: { id: taskId } })
+        .then(async (task) => {
+          if (!task) {
+            const error = new NotFoundException(`任务不存在: ${taskId}`);
+            res.write(
+              `data: ${JSON.stringify({ type: 'error', error: error.message })}\n\n`
+            );
+            res.end();
+            observer.error(error);
+            return;
+          }
+
+          // 更新任务状态
+          task.status = OptimizationTaskStatus.RUNNING;
+          task.startedAt = new Date();
+          await this.em.save(PromptOptimizationTaskEntity, task);
+
+          // 构建 PromptOptimizerAst 节点
+          const ast = new PromptOptimizerAst();
+          ast.targetOutput = task.targetOutput;
+          ast.targetContext = task.targetContext || '';
+          ast.maxIterations = task.optimizationConfig.maxIterations;
+          ast.targetScore = task.optimizationConfig.targetScore;
+          ast.testRuns = task.optimizationConfig.testRuns;
+          ast.generatorModel = task.optimizationConfig.model;
+          ast.testerModel = task.optimizationConfig.model;
+          ast.evaluatorModel = task.optimizationConfig.model;
+          ast.generatorTemperature = task.optimizationConfig.temperature;
+
+          // 转换评估标准为评估维度
+          const dimensions = Object.entries(task.evaluationCriteria).map(
+            ([name, weight]) => ({
+              name,
+              weight: weight as number,
+              description: `${name}评估`,
+            })
+          );
+          ast.evaluationDimensions = dimensions;
+
+          // 检查是否有初始提示词
+          const initialVersion = await this.em.findOne(PromptVersionEntity, {
+            where: { taskId: task.id, versionNumber: 0 },
+          });
+          if (initialVersion) {
+            ast.initialPrompt = initialVersion.prompt;
+          }
+
+          // 心跳保活
+          const heartbeatInterval = setInterval(() => {
+            res.write(`: heartbeat\n\n`);
+            if (typeof res.flush === 'function') {
+              res.flush();
+            }
+          }, 15000);
+
+          // 执行优化
+          const events$ = executeAst(ast, {});
+
+          const subscription = events$.subscribe({
+            next: async (event: NodeEvent) => {
+              res.write(`data: ${JSON.stringify(event)}\n\n`);
+              if (typeof res.flush === 'function') {
+                res.flush();
+              }
+
+              // 记录每次迭代的版本
+              if (event.type === 'node_emit' && (event as any).data?.result) {
+                const result = (event as any).data.result;
+                if (result.versions) {
+                  for (const v of result.versions) {
+                    const existingVersion = await this.em.findOne(PromptVersionEntity, {
+                      where: { taskId: task.id, versionNumber: v.versionNumber },
+                    });
+                    if (!existingVersion) {
+                      const version = new PromptVersionEntity();
+                      version.taskId = task.id;
+                      version.versionNumber = v.versionNumber;
+                      version.prompt = v.prompt;
+                      version.totalScore = v.score;
+                      version.improvementSuggestions = v.improvements;
+                      await this.em.save(PromptVersionEntity, version);
+                    }
+                  }
+                }
+              }
+
+              observer.next(event);
+            },
+            error: async (error) => {
+              logger.error('优化任务执行失败', { taskId, error: error.message });
+
+              // 更新任务状态
+              task.status = OptimizationTaskStatus.FAILED;
+              task.errorMessage = error.message;
+              task.completedAt = new Date();
+              await this.em.save(PromptOptimizationTaskEntity, task);
+
+              res.write(
+                `data: ${JSON.stringify({
+                  type: 'node_fail',
+                  id: ast.id,
+                  error: error.message,
+                })}\n\n`
+              );
+
+              clearInterval(heartbeatInterval);
+              res.end();
+              observer.error(error);
+            },
+            complete: async () => {
+              logger.info('优化任务执行完成', { taskId });
+
+              // 更新任务状态
+              const result = ast.result;
+              if (result) {
+                task.status = result.success
+                  ? OptimizationTaskStatus.COMPLETED
+                  : OptimizationTaskStatus.COMPLETED;
+                task.bestScore = result.bestScore;
+                task.currentIteration = result.iterations;
+
+                // 标记最佳版本
+                const bestVersion = await this.em.findOne(PromptVersionEntity, {
+                  where: { taskId: task.id },
+                  order: { totalScore: 'DESC' },
+                });
+                if (bestVersion) {
+                  bestVersion.isBest = true;
+                  task.bestVersionId = bestVersion.id;
+                  await this.em.save(PromptVersionEntity, bestVersion);
+                }
+              }
+              task.completedAt = new Date();
+              await this.em.save(PromptOptimizationTaskEntity, task);
+
+              clearInterval(heartbeatInterval);
+              res.end();
+              observer.complete();
+            },
+          });
+
+          // 处理客户端断开连接
+          res.on('close', async () => {
+            logger.info('客户端断开连接', { taskId });
+
+            // 更新任务状态为取消
+            if (task.status === OptimizationTaskStatus.RUNNING) {
+              task.status = OptimizationTaskStatus.CANCELLED;
+              task.completedAt = new Date();
+              await this.em.save(PromptOptimizationTaskEntity, task);
+            }
+
+            clearInterval(heartbeatInterval);
+            subscription.unsubscribe();
+          });
+        })
+        .catch((error) => {
+          logger.error('获取任务失败', { taskId, error: error.message });
+          res.write(`data: ${JSON.stringify({ type: 'error', error: error.message })}\n\n`);
+          res.end();
+          observer.error(error);
+        });
+    });
+  }
+
+  /**
+   * 获取任务的所有版本
+   */
+  @Get('/tasks/:taskId/versions')
+  async getVersions(
+    @Param('taskId') taskId: string
+  ): Promise<PromptVersionEntity[]> {
+    const versions = await this.em.find(PromptVersionEntity, {
+      where: { taskId },
+      order: { versionNumber: 'ASC' },
+    });
+
+    return versions;
+  }
+
+  /**
+   * 获取特定版本详情
+   */
+  @Get('/tasks/:taskId/versions/:versionId')
+  async getVersion(
+    @Param('taskId') taskId: string,
+    @Param('versionId') versionId: string
+  ): Promise<PromptVersionEntity> {
+    const version = await this.em.findOne(PromptVersionEntity, {
+      where: { id: versionId, taskId },
+    });
+
+    if (!version) {
+      throw new NotFoundException(`版本不存在: ${versionId}`);
+    }
+
+    return version;
+  }
+
+  /**
+   * 获取最佳版本
+   */
+  @Get('/tasks/:taskId/best')
+  async getBestVersion(@Param('taskId') taskId: string): Promise<PromptVersionEntity | null> {
+    const version = await this.em.findOne(PromptVersionEntity, {
+      where: { taskId, isBest: true },
+    });
+
+    return version;
+  }
+
+  /**
+   * 快速优化 - 一键优化提示词
+   *
+   * 简化版 API，适合快速使用
+   */
+  @Post('/quick')
+  @Sse()
+  quickOptimize(
+    @Body()
+    body: {
+      targetOutput: string;
+      targetContext?: string;
+      initialPrompt?: string;
+      maxIterations?: number;
+      targetScore?: number;
+    },
+    @Res() res?: any
+  ): Observable<NodeEvent> {
+    // 设置 SSE 响应头
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Cache-Control',
+      'X-Accel-Buffering': 'no',
+    });
+
+    if (!body.targetOutput || body.targetOutput.trim().length === 0) {
+      res.write(
+        `data: ${JSON.stringify({ type: 'error', error: '目标输出不能为空' })}\n\n`
+      );
+      res.end();
+      throw new BadRequestException('目标输出不能为空');
+    }
+
+    // 构建 PromptOptimizerAst 节点
+    const ast = new PromptOptimizerAst();
+    ast.targetOutput = body.targetOutput;
+    ast.targetContext = body.targetContext || '';
+    ast.initialPrompt = body.initialPrompt || '';
+    ast.maxIterations = body.maxIterations || 3;
+    ast.targetScore = body.targetScore || 80;
+
+    // 心跳保活
+    const heartbeatInterval = setInterval(() => {
+      res.write(`: heartbeat\n\n`);
+      if (typeof res.flush === 'function') {
+        res.flush();
+      }
+    }, 15000);
+
+    // 执行优化
+    const events$ = executeAst(ast, {});
+
+    const subscription = events$.subscribe({
+      next: (event: NodeEvent) => {
+        res.write(`data: ${JSON.stringify(event)}\n\n`);
+        if (typeof res.flush === 'function') {
+          res.flush();
+        }
+      },
+      error: (error) => {
+        logger.error('快速优化失败', { error: error.message });
+        res.write(
+          `data: ${JSON.stringify({
+            type: 'node_fail',
+            id: ast.id,
+            error: error.message,
+          })}\n\n`
+        );
+        clearInterval(heartbeatInterval);
+        res.end();
+      },
+      complete: () => {
+        logger.info('快速优化完成', { score: ast.bestScore });
+        clearInterval(heartbeatInterval);
+        res.end();
+      },
+    });
+
+    // 处理客户端断开连接
+    res.on('close', () => {
+      clearInterval(heartbeatInterval);
+      subscription.unsubscribe();
+    });
+
+    return events$;
+  }
+}

@@ -152,7 +152,6 @@
     "@types/react-dom": "^19.0.0",
     "@types/three": "^0.181.0",
     "@vitest/ui": "^4.0.16",
-    "canvas": "^2.11.2",
     "eslint": "^9.32.0",
     "jsdom": "^24.0.0",
     "tailwindcss": "^4.1.11",
