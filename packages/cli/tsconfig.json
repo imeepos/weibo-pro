@@ -1,0 +1,10 @@
+{
+  "extends": "@sker/typescript-config/base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "emitDecoratorMetadata": true,
+    "emitDeclarationOnly": true
+  },
+  "include": ["src/**/*"]
+}

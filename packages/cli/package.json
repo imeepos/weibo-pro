@@ -1,0 +1,26 @@
+{
+  "name": "@sker/cli",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "dist/main.js",
+  "bin": {
+    "sker": "./dist/main.js"
+  },
+  "scripts": {
+    "dev": "tsx src/main.ts",
+    "build": "tsc",
+    "start": "node dist/main.js"
+  },
+  "dependencies": {
+    "@sker/core": "workspace:*",
+    "@sker/mq": "workspace:*",
+    "@sker/utils": "workspace:*",
+    "commander": "^12.0.0"
+  },
+  "devDependencies": {
+    "@sker/typescript-config": "workspace:*",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
