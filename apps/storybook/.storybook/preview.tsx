@@ -5,11 +5,16 @@ import 'reflect-metadata'
 import '@sker/workflow'
 import '@sker/workflow-ast'
 import '@sker/workflow-browser'
-import { root } from '@sker/core'
-import { providers } from '@sker/sdk'
+import '@sker/sdk'
+import { createAuthClient } from 'better-auth/client'
+import { createSkerClientPlugin } from '@sker/sdk'
 
-// 初始化 DI 容器
-root.set(providers({ baseURL: `http://localhost:8089` }))
+// 使用 Better Auth 插件初始化 SDK
+// 插件会自动执行李代桃僵，将所有 Controller 注册到 DI 容器
+const auth = createAuthClient({
+  baseURL: 'http://localhost:8089',
+  plugins: [createSkerClientPlugin()]
+})
 
 const preview: Preview = {
   tags: ['autodocs'],

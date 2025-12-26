@@ -90,7 +90,7 @@ export function useAutoSave(
             const { onSaveSuccess, onSaveError } = callbacksRef.current
             if (result.success) {
               onSaveSuccess?.()
-            } else {
+            } else if (!result.success && 'error' in result) {
               console.error('[AutoSave] 保存失败:', result.error)
               onSaveError?.(result.error as Error)
             }

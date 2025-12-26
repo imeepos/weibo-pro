@@ -24,8 +24,17 @@ export { HttpAst } from './01-data-sources/http/HttpAst';
 export type { HttpMethod, HttpHeader, HttpResponse } from './01-data-sources/http/HttpAst';
 export { ProxyAutoSelectAst } from './01-data-sources/http/ProxyAutoSelectAst';
 
+// 数据库数据源
+export { SqlExecuteAst } from './01-data-sources/database/SqlExecuteAst';
+export type { SqlParameter, SqlColumn } from './01-data-sources/database/SqlExecuteAst';
+
 // 系统工具数据源
 export { EmailD1Ast } from './01-data-sources/system/EmailD1Ast';
+
+// 文件数据源
+export { MarkdownUploadAst } from './01-data-sources/file/MarkdownUploadAst';
+export type { MarkdownHeading } from './01-data-sources/file/MarkdownUploadAst';
+export { ExcelUploadAst } from './01-data-sources/file/ExcelUploadAst';
 
 // === 02. 数据处理层 (Data Processing) ===
 // 用户要如何处理已有数据？
@@ -65,6 +74,11 @@ export { LlmTextImage2ToVideoAst } from './03-ai-capabilities/generation/media/L
 
 // 生成能力 - 工具生成
 export { WorkflowNodeGeneratorAst } from './03-ai-capabilities/generation/tools/WorkflowNodeGeneratorAst';
+
+// 代码工具
+export { ClaudeCodeAst } from './03-ai-capabilities/code-tools/ClaudeCodeAst';
+export { ClaudeCodeReviewAst } from './03-ai-capabilities/code-tools/ClaudeCodeReviewAst';
+export { ClaudeCodeRefactorAst } from './03-ai-capabilities/code-tools/ClaudeCodeRefactorAst';
 
 // 质量控制
 export { LlmCategoryAst } from './03-ai-capabilities/quality/LlmCategoryAst';

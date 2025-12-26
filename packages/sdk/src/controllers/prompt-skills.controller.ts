@@ -1,10 +1,10 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@sker/core';
 import type { PromptSkillEntity, PromptSkillType } from '@sker/entities';
 
-@Controller('api/prompt-skills')
+@Controller('prompt-skills')
 export class PromptSkillsController {
 
-  @Get()
+  @Get('list')
   findAll(@Query('type') type?: PromptSkillType): Promise<PromptSkillEntity[]> {
     throw new Error('method findAll not implements');
   }

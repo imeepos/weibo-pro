@@ -2,8 +2,9 @@ import { Controller, Get, Query, Param } from '@sker/core';
 import { root } from '@sker/core';
 import { EventsService } from '../services/data/events.service';
 import { TimeRange } from '../services/data/types';
+import * as sdk from '@sker/sdk';
 
-@Controller('api/events')
+@Controller(sdk.EventsController)
 export class EventsController {
   private eventsService: EventsService;
 
@@ -11,7 +12,6 @@ export class EventsController {
     this.eventsService = root.get(EventsService);
   }
 
-  @Get('list')
   async getEventList(
     @Query('timeRange') timeRange?: string,
     @Query('page') page?: string,
@@ -31,50 +31,41 @@ export class EventsController {
     });
   }
 
-  @Get('categories')
   async getEventCategories(@Query('timeRange') timeRange?: string) {
     const validTimeRange = this.validateTimeRange(timeRange);
     return this.eventsService.getEventCategories(validTimeRange);
   }
 
-  @Get('trend-data')
   async getTrendData(@Query('timeRange') timeRange?: string) {
     const validTimeRange = this.validateTimeRange(timeRange);
     return this.eventsService.getTrendData(validTimeRange);
   }
 
-  @Get('hot-list')
   async getHotList(@Query('timeRange') timeRange?: string) {
     const validTimeRange = this.validateTimeRange(timeRange);
     return this.eventsService.getHotList(validTimeRange);
   }
 
-  @Get(':id/timeseries')
   async getEventTimeSeries(@Param('id') id: string) {
     return this.eventsService.getEventTimeSeries(id);
   }
 
-  @Get(':id/trends')
   async getEventTrends(@Param('id') id: string) {
     return this.eventsService.getEventTrends(id);
   }
 
-  @Get(':id/influence-users')
   async getInfluenceUsers(@Param('id') id: string) {
     return this.eventsService.getInfluenceUsers(id);
   }
 
-  @Get(':id/geographic')
   async getEventGeographic(@Param('id') id: string) {
     return this.eventsService.getEventGeographic(id);
   }
 
-  @Get(':id/keywords')
   async getEventKeywords(@Param('id') id: string) {
     return this.eventsService.getEventKeywords(id);
   }
 
-  @Get(':id')
   async getEventDetail(@Param('id') id: string) {
     return this.eventsService.getEventDetail(id);
   }

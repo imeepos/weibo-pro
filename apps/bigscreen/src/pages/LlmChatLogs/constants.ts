@@ -9,6 +9,7 @@ export const HTTP_CLIENT_ERROR = 400;
 export const HTTP_SERVER_ERROR = 500;
 
 export const TIME_RANGE_LABELS: Record<TimeRange, string> = {
+  'all': '全部',
   '1h': '近1小时',
   '6h': '近6小时',
   '12h': '近12小时',

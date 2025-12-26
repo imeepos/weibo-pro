@@ -3,7 +3,7 @@ import { root } from '@sker/core';
 import { LlmChatLogService } from '../services/llm-chat-log.service';
 import * as sdk from '@sker/sdk';
 
-@Controller('api/llm-chat-logs')
+@Controller(sdk.LlmChatLogsController)
 export class LlmChatLogsController implements sdk.LlmChatLogsController {
   private service: LlmChatLogService;
 
@@ -11,7 +11,6 @@ export class LlmChatLogsController implements sdk.LlmChatLogsController {
     this.service = root.get(LlmChatLogService);
   }
 
-  @Get('stats')
   async getStats(
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
@@ -20,7 +19,6 @@ export class LlmChatLogsController implements sdk.LlmChatLogsController {
     return this.service.getStats(startDate, endDate, granularity);
   }
 
-  @Get('analyze-prompts')
   async analyzePrompts(
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
@@ -30,7 +28,6 @@ export class LlmChatLogsController implements sdk.LlmChatLogsController {
     return this.service.analyzePrompts(startDate, endDate, modelName, providerId);
   }
 
-  @Get()
   async list(
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,

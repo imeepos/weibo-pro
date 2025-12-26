@@ -5,23 +5,33 @@ export interface UploadFileResponse {
   name: string
 }
 
+export interface UploadFileRequest {
+  file: {
+    url: string
+    name: string
+    size: number
+    type: string
+  }
+}
+
 export interface UploadBase64Request {
   image: string
   filename?: string
+  type?: string
 }
 
 /**
  * 文件上传 SDK 控制器
  *
  * 存在即合理：
- * - 提供类型安全的上传 API 调用
- * - 前端工作流节点上传图片
+ * - 文件在 Hono 层已转换为 JSON（包含 url、name、size、type）
+ * - 前端发送 FormData，后端接收转换后的 JSON
  */
-@Controller('api/upload')
+@Controller('upload')
 export class UploadController {
 
   @Post('file')
-  uploadFile(formData: FormData): Promise<UploadFileResponse> {
+  uploadFile(@Body() formData: FormData): Promise<UploadFileResponse> {
     throw new Error('method uploadFile not implements')
   }
 

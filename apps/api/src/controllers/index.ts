@@ -1,3 +1,6 @@
+export { ChartsController } from './charts.controller';
+export { ChatController } from './chat.controller';
+export { EventsController } from './events.controller';
 export { KeywordsController } from './keywords.controller';
 export { LayoutController } from './layout.controller';
 export { LlmChatLogsController } from './llm-chat-logs.controller';
@@ -16,3 +19,4 @@ export { UploadController } from './upload.controller';
 export { UserRelationController } from './user-relation.controller';
 export { UsersController } from './users.controller';
 export { WorkflowController } from './workflow.controller';
+export * from '../crawler';

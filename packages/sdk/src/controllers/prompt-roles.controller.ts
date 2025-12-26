@@ -5,10 +5,10 @@ export interface PromptRoleWithSkills extends Omit<PromptRoleEntity, 'skill_refs
   skill_refs?: PromptRoleSkillRefEntity[];
 }
 
-@Controller('api/prompt-roles')
+@Controller('prompt-roles')
 export class PromptRolesController {
 
-  @Get()
+  @Get('list')
   findAll(): Promise<PromptRoleWithSkills[]> {
     throw new Error('method findAll not implements');
   }

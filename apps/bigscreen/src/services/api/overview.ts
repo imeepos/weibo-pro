@@ -2,8 +2,9 @@
  * 概览页面API服务
  */
 
-import { apiUtils as apiClient } from './client';
-import type { ApiResponse, OverviewStatisticsData } from '../../types';
+import { root } from '@sker/core';
+import { OverviewController, type TimeRange } from '@sker/sdk';
+import type { OverviewStatisticsData } from '../../types';
 
 // 使用统一的 OverviewStatisticsData 类型
 export type OverviewStatistics = OverviewStatisticsData;
@@ -34,23 +35,20 @@ export interface OverviewLocation {
 
 export const OverviewAPI = {
   // 获取统计数据
-  getStatistics: async (timeRange?: string): Promise<OverviewStatistics> => {
-    const params = timeRange ? `?timeRange=${timeRange}` : '';
-    const response = await apiClient.get<OverviewStatistics>(`/overview/statistics${params}`);
-    return response;
+  getStatistics: async (timeRange?: TimeRange): Promise<OverviewStatistics> => {
+    const overviewController = root.get(OverviewController);
+    return await overviewController.getStatistics(timeRange) as OverviewStatistics;
   },
 
   // 获取情感数据
-  getSentiment: async (timeRange?: string): Promise<OverviewSentiment> => {
-    const params = timeRange ? `?timeRange=${timeRange}` : '';
-    const response = await apiClient.get<OverviewSentiment>(`/overview/sentiment${params}`);
-    return response;
+  getSentiment: async (timeRange?: TimeRange): Promise<OverviewSentiment> => {
+    const overviewController = root.get(OverviewController);
+    return await overviewController.getSentiment(timeRange) as OverviewSentiment;
   },
 
   // 获取地理位置数据
-  getLocations: async (timeRange?: string): Promise<OverviewLocation[]> => {
-    const params = timeRange ? `?timeRange=${timeRange}` : '';
-    const response = await apiClient.get<OverviewLocation[]>(`/overview/locations${params}`);
-    return response;
+  getLocations: async (timeRange?: TimeRange): Promise<OverviewLocation[]> => {
+    const overviewController = root.get(OverviewController);
+    return await overviewController.getLocations(timeRange) as OverviewLocation[];
   },
 };

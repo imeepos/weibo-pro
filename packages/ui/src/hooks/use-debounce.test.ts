@@ -85,7 +85,7 @@ describe('useDebounce hook', () => {
   })
 
   it('应该在卸载时清理定时器', () => {
-    const clearTimeoutSpy = vi.spyOn(global, 'clearTimeout')
+    const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout')
     const { unmount, rerender } = renderHook(
       ({ value, delay }) => useDebounce(value, delay),
       { initialProps: { value: 'initial', delay: 500 } }

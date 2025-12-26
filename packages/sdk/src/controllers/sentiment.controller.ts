@@ -11,7 +11,7 @@ import type {
   SearchResult
 } from '../types'
 
-@Controller('api/sentiment')
+@Controller('sentiment')
 export class SentimentController {
 
   @Get('realtime')

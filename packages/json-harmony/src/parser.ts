@@ -1,5 +1,5 @@
 import { parse as parseYaml } from 'yaml'
-import type { ParseResult, ParserConfig, ParseStatistics } from './types'
+import type { ParseResult, ParserConfig } from './types'
 import { RecoveryStrategy } from './types'
 
 const DEFAULT_CONFIG: Required<ParserConfig> = {

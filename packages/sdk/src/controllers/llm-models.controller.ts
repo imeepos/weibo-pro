@@ -1,10 +1,10 @@
 import { Controller, Get, Post, Put, Delete, Body, Param } from '@sker/core';
 import type { LlmModel } from '@sker/entities';
 
-@Controller('api/llm-models')
+@Controller('llm-models')
 export class LlmModelsController {
 
-  @Get()
+  @Get('/list')
   findAll(): Promise<LlmModel[]> {
     throw new Error('method findAll not implements');
   }

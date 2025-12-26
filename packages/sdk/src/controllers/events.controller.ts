@@ -13,7 +13,7 @@ import type {
   PaginatedResponse
 } from '../types'
 
-@Controller('api/events')
+@Controller('events')
 export class EventsController {
 
   @Get('list')
@@ -24,6 +24,7 @@ export class EventsController {
     @Query('search') search?: string,
     @Query('category') category?: string
   ): Promise<PaginatedResponse<EventListItem>> {
+    console.log({timeRange, page, pageSize, search, category})
     throw new Error('method getEventList not implements')
   }
 

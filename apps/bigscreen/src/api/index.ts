@@ -3,8 +3,6 @@
  * 推荐使用 @/services/api 替代此文件
  */
 
-// 导出主要API客户端 - 保持向后兼容
-export { apiUtils as apiClient } from '@/services/api/client';
 
 // 导出所有API服务
 export { CommonAPI } from '@/services/api/common';

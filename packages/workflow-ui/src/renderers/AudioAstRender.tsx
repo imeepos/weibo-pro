@@ -1,8 +1,8 @@
-import { Injectable } from "@sker/core";
+import { Injectable, root } from "@sker/core";
 import { Render } from "@sker/workflow";
 import { AudioAst } from "@sker/workflow";
 import React, { useRef, useState, useCallback } from "react";
-import { useUploadFile } from "@sker/ui/hooks/use-upload-file";
+import { UploadController } from "@sker/sdk";
 import { Button } from "@sker/ui/components/ui/button";
 import { Upload, X, Download } from "lucide-react";
 import { cn } from "@sker/ui/lib/utils";
@@ -24,17 +24,30 @@ const AudioComponent: React.FC<{ ast: AudioAst }> = ({ ast }) => {
         );
     }, [ast.id, setNodes]);
 
-    const { isUploading, progress, uploadFile } = useUploadFile({
-        endpoint: '/api/upload/file',
-        onSuccess: (file) => {
-            updateNodeData({ uploadedAudio: file.url });
+    const [isUploading, setIsUploading] = useState(false);
+    const [progress, setProgress] = useState(0);
+
+    const uploadFile = useCallback(async (file: File) => {
+        setIsUploading(true);
+        setProgress(0);
+
+        try {
+            const controller = root.get(UploadController);
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const result = await controller.uploadFile(formData);
+            console.log('✅ 上传成功:', result);
+            updateNodeData({ uploadedAudio: result.url });
             setUpdateKey(prev => prev + 1);
-        },
-        onError: (error) => {
+        } catch (error) {
             console.error('❌ 音频上传失败:', error);
-            alert(`上传失败: ${error.message}`);
+            alert(`上传失败: ${error instanceof Error ? error.message : '未知错误'}`);
+        } finally {
+            setIsUploading(false);
+            setProgress(0);
         }
-    });
+    }, [updateNodeData]);
 
     const currentAudio = ast.uploadedAudio || '';
 

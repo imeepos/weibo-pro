@@ -19,7 +19,7 @@ import { WorkflowEntity, WorkflowRunEntity, RunStatus, WorkflowScheduleEntity } 
  * - 集成消息队列，确保任务可靠执行
  * - 管理工作流的持久化和分享
  */
-@Controller('api/workflow')
+@Controller(sdk.WorkflowController)
 export class WorkflowController implements sdk.WorkflowController {
   private readonly workflowService: WorkflowService;
   private readonly workflowRunService: WorkflowRunService;
@@ -40,7 +40,6 @@ export class WorkflowController implements sdk.WorkflowController {
    * - 委托给 WorkflowService 处理业务逻辑
    * - 统一的参数验证和异常处理
    */
-  @Post('save')
   async saveWorkflow(@Body() body: WorkflowGraphAst): Promise<WorkflowEntity> {
     const { name, edges, nodes } = body;
 
@@ -55,7 +54,6 @@ export class WorkflowController implements sdk.WorkflowController {
     return await this.workflowService.saveWorkflow(body);
   }
 
-  @Get('init')
   async initWorkflow(@Query() params: { name: string }): Promise<sdk.InitWorkflowResponse> {
     const { name } = params;
     // 2. 检查是否有对应的模板
@@ -77,7 +75,6 @@ export class WorkflowController implements sdk.WorkflowController {
    * - 如果存在则返回，不存在则检查是否有模板
    * - 有模板则使用模板初始化，无模板则创建空工作流
    */
-  @Get('get')
   async getWorkflow(@Query() params: { name: string }): Promise<WorkflowGraphAst | null> {
     const { name } = params;
     if (!name || name.trim().length === 0) {
@@ -103,7 +100,6 @@ export class WorkflowController implements sdk.WorkflowController {
    * - 让用户知道有哪些预定义模板可以使用
    * - 提供模板描述，帮助用户选择合适的模板
    */
-  @Get('templates')
   async listTemplates(): Promise<{ name: string; description: string }[]> {
     const templates = this.workflowTemplateService.getAvailableTemplates();
 
@@ -116,7 +112,6 @@ export class WorkflowController implements sdk.WorkflowController {
   /**
    * 列出所有工作流
    */
-  @Get('list')
   async listWorkflows(): Promise<sdk.WorkflowSummary[]> {
     return await this.workflowService.listWorkflows();
   }
@@ -124,7 +119,6 @@ export class WorkflowController implements sdk.WorkflowController {
   /**
    * 删除工作流
    */
-  @Delete('delete/:id')
   async deleteWorkflow(@Query() params: { id: string }): Promise<{ success: boolean }> {
     const { id } = params;
 
@@ -148,7 +142,6 @@ export class WorkflowController implements sdk.WorkflowController {
    * 1. 执行完整工作流：传递 workflow 字段
    * 2. 执行单个节点：传递 ast 字段（在 workflow 上下文中执行）
    */
-  @Post('execute')
   execute(
     @Body() body: { ast: Ast, workflow: WorkflowGraphAst; input?: Record<string, any> },
     @Res() res?: any
@@ -260,8 +253,6 @@ export class WorkflowController implements sdk.WorkflowController {
    * - 支持节点配置微调
    * - 错误隔离，不影响其他节点
    */
-  @Post('executeNode')
-  @Sse()
   executeNode(
     @Body() body: { workflow: INode, nodeId: string, config?: any },
     @Res() res?: any
@@ -382,7 +373,6 @@ export class WorkflowController implements sdk.WorkflowController {
    * - 保存工作流快照，确保运行独立性
    * - 返回运行实例 ID，用于后续查询和执行
    */
-  @Post(':id/runs')
   async createRun(
     @Body() body: { workflowId: string; inputs?: Record<string, unknown> },
   ): Promise<{ runId: string; run: WorkflowRunEntity }> {
@@ -412,7 +402,6 @@ export class WorkflowController implements sdk.WorkflowController {
    * - 记录执行耗时和错误信息
    * - 返回完整的运行结果
    */
-  @Post('runs/:runId/execute')
   async executeRun(@Body() body: { runId: string }): Promise<WorkflowRunEntity> {
     const { runId } = body;
 
@@ -511,7 +500,6 @@ export class WorkflowController implements sdk.WorkflowController {
    * - 返回完整的运行状态和数据
    * - 包括输入、输出、节点状态、错误信息
    */
-  @Get('runs/:runId')
   async getRun(@Param('runId') runId: string): Promise<WorkflowRunEntity> {
     if (!runId) {
       throw new BadRequestException('运行实例 ID 不能为空');
@@ -535,7 +523,6 @@ export class WorkflowController implements sdk.WorkflowController {
    * - 按创建时间倒序排列
    * - 返回总数和当前页数据
    */
-  @Get(':id/runs')
   async listRuns(
     @Query()
     query: {
@@ -571,7 +558,6 @@ export class WorkflowController implements sdk.WorkflowController {
    * - 只能取消 PENDING 或 RUNNING 状态的运行
    * - 记录取消时间
    */
-  @Post('runs/:runId/cancel')
   async cancelRun(@Body() body: { runId: string }): Promise<{ success: boolean }> {
     const { runId } = body;
 
@@ -610,8 +596,6 @@ export class WorkflowController implements sdk.WorkflowController {
    * - 流式缓存复用，避免重复计算
    * - 错误隔离，单个节点失败不影响整体
    */
-  @Post('runs/:runId/fine-tune/:nodeId')
-  @Sse()
   fineTuneNode(
     @Param('runId') runId: string,
     @Param('nodeId') nodeId: string,
@@ -746,27 +730,6 @@ export class WorkflowController implements sdk.WorkflowController {
     }
   }
 
-  /**
-   * 查找受影响节点的辅助方法
-   */
-  private findAffectedNodesIds(ast: WorkflowGraphAst, changedNodeId: string): Set<string> {
-    const affected = new Set<string>();
-    const visited = new Set<string>();
-
-    const findDownstream = (nodeId: string) => {
-      if (visited.has(nodeId)) return;
-      visited.add(nodeId);
-
-      affected.add(nodeId);
-      const downstreamEdges = ast.edges.filter(edge => edge.from === nodeId);
-      for (const edge of downstreamEdges) {
-        findDownstream(edge.to);
-      }
-    };
-
-    findDownstream(changedNodeId);
-    return affected;
-  }
 
   /**
    * 提取节点输出 - 基于 @Output 装饰器元数据
@@ -853,33 +816,11 @@ export class WorkflowController implements sdk.WorkflowController {
     return outputs;
   }
 
-  /**
-   * 提取节点配置 - 从节点对象中提取可配置的属性
-   *
-   * 智能提取：
-   * - 排除系统属性（id, type, state, error, position 等）
-   * - 提取业务相关的配置属性
-   * - 支持嵌套对象配置
-   */
-  private extractNodeConfig(node: INode): Record<string, any> {
-    const systemKeys = ['id', 'type', 'state', 'error', 'position', 'name', 'description'];
-    const config: Record<string, any> = {};
-
-    Object.keys(node).forEach(key => {
-      if (!systemKeys.includes(key) && node[key] !== undefined) {
-        config[key] = node[key];
-      }
-    });
-
-    return config;
-  }
-
   // ========== 调度相关方法 ==========
 
   /**
    * 创建调度
    */
-  @Post(':name/schedules')
   async createSchedule(
     @Param('name') workflowName: string,
     @Body() body: {
@@ -911,7 +852,6 @@ export class WorkflowController implements sdk.WorkflowController {
   /**
    * 列出调度
    */
-  @Get(':name/schedules')
   async listSchedules(@Param('name') workflowName: string): Promise<WorkflowScheduleEntity[]> {
     return this.workflowScheduleService.listSchedules(workflowName)
   }
@@ -919,7 +859,6 @@ export class WorkflowController implements sdk.WorkflowController {
   /**
    * 获取调度详情
    */
-  @Get('schedules/:scheduleId')
   async getSchedule(@Param('scheduleId') scheduleId: string): Promise<WorkflowScheduleEntity> {
     return this.workflowScheduleService.getSchedule(scheduleId)
   }
@@ -927,7 +866,6 @@ export class WorkflowController implements sdk.WorkflowController {
   /**
    * 更新调度
    */
-  @Put('schedules/:scheduleId')
   async updateSchedule(
     @Param('scheduleId') scheduleId: string,
     @Body() body: {
@@ -953,7 +891,6 @@ export class WorkflowController implements sdk.WorkflowController {
   /**
    * 删除调度
    */
-  @Delete('schedules/:scheduleId')
   async deleteSchedule(@Param('scheduleId') scheduleId: string): Promise<{ success: boolean }> {
     await this.workflowScheduleService.deleteSchedule(scheduleId)
     return { success: true }
@@ -962,7 +899,6 @@ export class WorkflowController implements sdk.WorkflowController {
   /**
    * 启用调度
    */
-  @Post('schedules/:scheduleId/enable')
   async enableSchedule(@Param('scheduleId') scheduleId: string): Promise<WorkflowScheduleEntity> {
     return this.workflowScheduleService.enableSchedule(scheduleId)
   }
@@ -970,7 +906,6 @@ export class WorkflowController implements sdk.WorkflowController {
   /**
    * 禁用调度
    */
-  @Post('schedules/:scheduleId/disable')
   async disableSchedule(@Param('scheduleId') scheduleId: string): Promise<WorkflowScheduleEntity> {
     return this.workflowScheduleService.disableSchedule(scheduleId)
   }
@@ -984,7 +919,6 @@ export class WorkflowController implements sdk.WorkflowController {
    * - 创建运行实例并立即执行
    * - 返回运行实例 ID，用于追踪执行状态
    */
-  @Post('schedules/:scheduleId/trigger')
   async triggerSchedule(
     @Param('scheduleId') scheduleId: string,
     @Body() body?: { inputs?: Record<string, unknown> }
@@ -1032,7 +966,6 @@ export class WorkflowController implements sdk.WorkflowController {
    * - 提取节点元数据（标题、类型等）
    * - 返回统一的节点信息列表
    */
-  @Get('nodes')
   async getAvailableNodes(): Promise<sdk.WorkflowNodeInfo[]> {
     const { NODE } = await import('@sker/workflow');
     const nodeMetadatas = root.get(NODE, []);

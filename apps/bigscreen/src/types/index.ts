@@ -210,6 +210,34 @@ export interface AppError {
 // 导出SDK类型
 export type { OverviewSentiment } from '@sker/sdk';
 
+// 情感时间序列数据类型
+export interface SentimentTimeSeriesItem {
+  timestamp: string;
+  positive: number;
+  negative: number;
+  neutral: number;
+  total: number;
+}
+
+// 搜索结果类型
+export interface SearchResult {
+  keyword: string;
+  totalResults: number;
+  sentimentDistribution: {
+    positive: number;
+    negative: number;
+    neutral: number;
+  };
+  posts: Array<{
+    id: string;
+    content: string;
+    sentiment: 'positive' | 'negative' | 'neutral';
+    confidence: number;
+    author: string;
+    timestamp: string;
+  }>;
+}
+
 // 导出BLE Mesh相关类型
 export * from './bleMesh';
 

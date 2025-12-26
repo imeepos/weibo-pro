@@ -9,10 +9,14 @@ import type {
   DataFileListResponse,
   DataFileContentResponse,
   DataStats,
-  EnvCheckResult
+  EnvCheckResult,
+  QRCodeData,
+  LoginStatusResponse,
+  CookieLoginRequest,
+  MediaPlatform
 } from '../types'
 
-@Controller('api/media-crawler')
+@Controller('media-crawler')
 export class MediaCrawlerController {
 
   @Post('crawler/start')
@@ -74,5 +78,20 @@ export class MediaCrawlerController {
     saveOptions: ConfigOption[]
   }> {
     throw new Error('method getConfigOptions not implements')
+  }
+
+  @Get('login/qrcode')
+  getLoginQRCode(@Query('platform') platform: MediaPlatform): Promise<QRCodeData> {
+    throw new Error('method getLoginQRCode not implements')
+  }
+
+  @Get('login/status')
+  getLoginStatus(@Query('platform') platform: MediaPlatform): Promise<LoginStatusResponse> {
+    throw new Error('method getLoginStatus not implements')
+  }
+
+  @Post('login/cookie')
+  loginWithCookie(@Body() request: CookieLoginRequest): Promise<{ status: string; message: string }> {
+    throw new Error('method loginWithCookie not implements')
   }
 }

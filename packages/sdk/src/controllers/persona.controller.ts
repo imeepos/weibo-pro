@@ -8,10 +8,10 @@ import type {
   MemoryNode
 } from '../types'
 
-@Controller('api/personas')
+@Controller('personas')
 export class PersonaController {
 
-  @Get()
+  @Get('list')
   getPersonaList(): Promise<PersonaListItem[]> {
     throw new Error('method getPersonaList not implements')
   }

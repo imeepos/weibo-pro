@@ -5,10 +5,10 @@ import type {
   UpdateLayoutPayload
 } from '../types'
 
-@Controller('api/layout')
+@Controller('layout')
 export class LayoutController {
 
-  @Get()
+  @Get('/list')
   getLayouts(@Query('type') type?: string): Promise<LayoutConfiguration[]> {
     throw new Error('method getLayouts not implements')
   }

@@ -13,6 +13,9 @@ export interface ProxyInfo {
 
   /** 创建时间戳（毫秒） */
   createdAt: number
+
+  /** 质量评分（0-100），可选 */
+  score?: number
 }
 
 /**
@@ -75,6 +78,18 @@ export interface ProxyManager {
 
   /** 刷新过期代理 */
   refreshExpired(): Promise<void>
+
+  /** 启动健康检查 */
+  startHealthCheck(intervalMs?: number): void
+
+  /** 停止健康检查 */
+  stopHealthCheck(): void
+
+  /** 记录代理使用结果（用于评分） */
+  recordResult(proxyUrl: string, success: boolean, latency: number): Promise<void>
+
+  /** 获取代理评分 */
+  getScore(proxyUrl: string): Promise<number>
 
   /** 创建带代理的Axios实例 */
   createAxios(config?: any): any

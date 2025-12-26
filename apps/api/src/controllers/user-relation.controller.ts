@@ -5,7 +5,7 @@ import type { TimeRange } from '@sker/entities';
 import type { UserRelationType } from '@sker/sdk';
 import * as sdk from '@sker/sdk';
 
-@Controller('api/user-relations')
+@Controller(sdk.UserRelationController)
 export class UserRelationController implements sdk.UserRelationController {
   private userRelationService: UserRelationService;
 
@@ -13,7 +13,6 @@ export class UserRelationController implements sdk.UserRelationController {
     this.userRelationService = root.get(UserRelationService);
   }
 
-  @Get()
   async getNetwork(
     @Query('type') type?: UserRelationType,
     @Query('timeRange') timeRange?: TimeRange,

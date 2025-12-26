@@ -7,7 +7,7 @@ import type {
   UserStatistics
 } from '../types'
 
-@Controller('api/users')
+@Controller('users')
 export class UsersController {
 
   @Get('list')

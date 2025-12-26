@@ -1,6 +1,8 @@
 import { root } from '@sker/core'
 import type { ProxyManager, ProxyOptions } from '../types'
 import { ProxyPool } from '../core/proxy-pool'
+import { ProxyHealthChecker } from '../core/proxy-health-checker'
+import { ProxyScorer } from '../core/proxy-scorer'
 import { ProxyInterceptor } from '../interceptors/axios-interceptor'
 import { ProxyBrowserLauncher } from '../interceptors/browser-launcher'
 
@@ -15,6 +17,8 @@ import { ProxyBrowserLauncher } from '../interceptors/browser-launcher'
 export function useProxy(options?: ProxyOptions): ProxyManager {
   // 从DI容器获取实例
   const proxyPool = root.get(ProxyPool)
+  const healthChecker = root.get(ProxyHealthChecker)
+  const scorer = root.get(ProxyScorer)
   const interceptor = root.get(ProxyInterceptor)
   const browserLauncher = root.get(ProxyBrowserLauncher)
 
@@ -45,6 +49,34 @@ export function useProxy(options?: ProxyOptions): ProxyManager {
      */
     async refreshExpired() {
       return proxyPool.refreshExpiredProxies()
+    },
+
+    /**
+     * 启动健康检查
+     */
+    startHealthCheck(intervalMs?: number) {
+      healthChecker.start(intervalMs)
+    },
+
+    /**
+     * 停止健康检查
+     */
+    stopHealthCheck() {
+      healthChecker.stop()
+    },
+
+    /**
+     * 记录代理使用结果（用于评分）
+     */
+    async recordResult(proxyUrl: string, success: boolean, latency: number) {
+      return scorer.recordResult(proxyUrl, success, latency)
+    },
+
+    /**
+     * 获取代理评分
+     */
+    async getScore(proxyUrl: string) {
+      return scorer.getScore(proxyUrl)
     },
 
     /**

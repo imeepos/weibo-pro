@@ -35,12 +35,17 @@ export const CONTROLLES = new InjectionToken<Type<any>[]>(`CONTROLLES`)
 export function Controller(prefix?: string | Type<any>): ClassDecorator {
   return (target: any) => {
     if (typeof prefix === 'function') {
+      // 从 SDK Controller 提取路径元数据
+      const sdkControllerPath = Reflect.getMetadata(PATH_METADATA, prefix);
+      if (sdkControllerPath !== undefined) {
+        Reflect.defineMetadata(PATH_METADATA, sdkControllerPath, target);
+      }
       root.set([
         { provide: prefix, useClass: target },
         { provide: target, useClass: target },
       ]);
     } else {
-      Reflect.defineMetadata(PATH_METADATA, prefix || '', target);
+      Reflect.defineMetadata(PATH_METADATA, prefix || ``, target);
       root.set([
         { provide: CONTROLLES, multi: true, useValue: target }
       ]);
@@ -50,6 +55,20 @@ export function Controller(prefix?: string | Type<any>): ClassDecorator {
 
 // 响应 schema 元数据键
 export const RESPONSE_SCHEMA_METADATA = 'response-schema';
+export const CONTENT_TYPE_METADATA = 'content-type';
+
+/**
+ * HTTP 方法配置接口
+ *
+ * 存在即合理：
+ * - 提供灵活的配置方式
+ * - 支持复杂场景的参数传递
+ */
+interface HttpMethodOptions {
+  path?: string;
+  schema?: any;
+  contentType?: string;
+}
 
 /**
  * 创建 HTTP 方法装饰器的工厂函数
@@ -58,36 +77,70 @@ export const RESPONSE_SCHEMA_METADATA = 'response-schema';
  * - 统一创建所有 HTTP 方法装饰器
  * - 避免重复代码，确保一致性
  * - 支持路径参数和元数据注入
+ * - 支持 contentType 配置，默认 application/json
+ *
+ * 使用方式：
+ * @Post('/demo', z.object({ name: z.string() }))
+ * @Post(z.object({ name: z.string() }))
+ * @Post('/demo', z.object({ name: z.string() }), 'multipart/form-data')
+ * @Post(z.object({ name: z.string() }), 'multipart/form-data')
+ * @Post({ path: '/demo', schema: z.object({ name: z.string() }), contentType: 'multipart/form-data' })
  */
-function createHttpMethodDecorator(method: RequestMethod): (path?: string | any, zod?: any) => MethodDecorator {
-  /**
-   * 支持两种方式使用，schema定义返回值和路径参数定义路径
-   * @Post('/demo', z.object({ name: z.string() }))
-   * @Post(z.object({ name: z.string() }))
-   */
-  return (path?: string | any, zod?: any) => (target: any, propertyKey: string | symbol, descriptor: PropertyDescriptor) => {
-    let routePath: string;
-    let responseSchema: any;
+function createHttpMethodDecorator(method: RequestMethod) {
+  return (
+    pathOrOptionsOrSchema?: string | HttpMethodOptions | any,
+    zodOrContentType?: any,
+    contentType?: string
+  ): MethodDecorator => {
+    return (target: any, propertyKey: string | symbol, descriptor: PropertyDescriptor) => {
+      let routePath: string;
+      let responseSchema: any;
+      let finalContentType: string = 'application/json';
 
-    // 检测第一个参数是否为 zod schema
-    const isZodSchema = path && typeof path === 'object' && ('_def' in path || 'parse' in path || 'safeParse' in path);
+      // 检测是否为配置对象
+      const isOptionsObject = pathOrOptionsOrSchema
+        && typeof pathOrOptionsOrSchema === 'object'
+        && !('_def' in pathOrOptionsOrSchema)
+        && !('parse' in pathOrOptionsOrSchema)
+        && !('safeParse' in pathOrOptionsOrSchema);
 
-    if (isZodSchema) {
-      // 模式 2: @Post(z.object({ name: z.string() }))
-      routePath = '/';
-      responseSchema = path;
-    } else {
-      // 模式 1: @Post('/demo', z.object({ name: z.string() }))
-      routePath = path || '/';
-      responseSchema = zod;
-    }
+      if (isOptionsObject) {
+        // 模式 3: 配置对象
+        const options = pathOrOptionsOrSchema as HttpMethodOptions;
+        routePath = options.path || '/';
+        responseSchema = options.schema;
+        finalContentType = options.contentType || 'application/json';
+      } else {
+        // 检测第一个参数是否为 zod schema
+        const isZodSchema = pathOrOptionsOrSchema
+          && typeof pathOrOptionsOrSchema === 'object'
+          && ('_def' in pathOrOptionsOrSchema || 'parse' in pathOrOptionsOrSchema || 'safeParse' in pathOrOptionsOrSchema);
 
-    Reflect.defineMetadata(PATH_METADATA, routePath, descriptor.value);
-    Reflect.defineMetadata(METHOD_METADATA, method, descriptor.value);
+        if (isZodSchema) {
+          // 模式 2: @Post(schema) 或 @Post(schema, contentType)
+          routePath = '/';
+          responseSchema = pathOrOptionsOrSchema;
+          finalContentType = typeof zodOrContentType === 'string'
+            ? zodOrContentType
+            : 'application/json';
+        } else {
+          // 模式 1: @Post(path, schema, contentType)
+          routePath = pathOrOptionsOrSchema || '/';
+          responseSchema = zodOrContentType && typeof zodOrContentType !== 'string'
+            ? zodOrContentType
+            : undefined;
+          finalContentType = contentType || 'application/json';
+        }
+      }
 
-    if (responseSchema) {
-      Reflect.defineMetadata(RESPONSE_SCHEMA_METADATA, responseSchema, descriptor.value);
-    }
+      Reflect.defineMetadata(PATH_METADATA, routePath, descriptor.value);
+      Reflect.defineMetadata(METHOD_METADATA, method, descriptor.value);
+      Reflect.defineMetadata(CONTENT_TYPE_METADATA, finalContentType, descriptor.value);
+
+      if (responseSchema) {
+        Reflect.defineMetadata(RESPONSE_SCHEMA_METADATA, responseSchema, descriptor.value);
+      }
+    };
   };
 }
 
@@ -238,43 +291,6 @@ export const Res = createParamDecorator(ParamType.RES);
 export const Headers = createParamDecorator(ParamType.HEADERS);
 
 /**
- * 注入上传的文件
- *
- * 存在即合理：
- * - 配合 UseInterceptors(FileInterceptor('file')) 使用
- * - 从请求中提取 Multer 处理后的文件对象
- *
- * @param fieldName 可选的文件字段名（用于多文件上传）
- *
- * @example
- * @Post('upload')
- * @UseInterceptors(FileInterceptor('file'))
- * async upload(@UploadedFile() file: Express.Multer.File) {
- *   return { filename: file.originalname };
- * }
- */
-export const UploadedFile = (fieldName?: string): ParameterDecorator => {
-  return (target: Object, propertyKey: string | symbol | undefined, parameterIndex: number) => {
-    if (!propertyKey) {
-      throw new Error('参数装饰器只能用于方法参数');
-    }
-
-    const methodTarget = target as Record<string | symbol, any>;
-    const existingMetadata = Reflect.getMetadata(ROUTE_ARGS_METADATA, methodTarget[propertyKey]) || {};
-
-    const metadataKey = `${ParamType.UPLOADED_FILE}:${parameterIndex}`;
-
-    existingMetadata[metadataKey] = {
-      index: parameterIndex,
-      type: ParamType.UPLOADED_FILE,
-      key: fieldName,
-    };
-
-    Reflect.defineMetadata(ROUTE_ARGS_METADATA, existingMetadata, methodTarget[propertyKey]);
-  };
-};
-
-/**
  * 权限装饰器
  *
  * 声明 endpoint 所需权限，自动应用 sessionMiddleware 和 permissionMiddleware
@@ -302,44 +318,6 @@ export function ApiDescription(description: string, tags?: string[]): MethodDeco
     Reflect.defineMetadata(OPENAPI_DESCRIPTION_METADATA, description, descriptor.value);
     if (tags) {
       Reflect.defineMetadata(OPENAPI_TAGS_METADATA, tags, descriptor.value);
-    }
-  };
-}
-
-/**
- * 应用拦截器到方法或类
- *
- * 存在即合理：
- * - 文件上传：FileInterceptor 处理 multipart/form-data
- * - 响应转换：TransformInterceptor 统一响应格式
- * - 日志记录：LoggingInterceptor 记录请求日志
- *
- * 优雅设计：
- * - 支持单个或多个拦截器
- * - 支持类级别和方法级别应用
- * - 元数据存储拦截器实例或类
- *
- * @param interceptors 拦截器实例或类（可以是数组）
- *
- * @example
- * // 方法级别
- * @Post('upload')
- * @UseInterceptors(FileInterceptor('file'))
- * async upload(@UploadedFile() file: Express.Multer.File) {}
- *
- * // 类级别
- * @Controller('api')
- * @UseInterceptors(LoggingInterceptor, TransformInterceptor)
- * export class ApiController {}
- */
-export function UseInterceptors(...interceptors: any[]): MethodDecorator & ClassDecorator {
-  return (target: any, propertyKey?: string | symbol, descriptor?: PropertyDescriptor) => {
-    if (descriptor) {
-      // 方法装饰器
-      Reflect.defineMetadata(INTERCEPTORS_METADATA, interceptors, descriptor.value);
-    } else {
-      // 类装饰器
-      Reflect.defineMetadata(INTERCEPTORS_METADATA, interceptors, target);
     }
   };
 }

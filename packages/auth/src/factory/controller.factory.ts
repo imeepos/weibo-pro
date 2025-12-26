@@ -67,22 +67,35 @@ function createEndpointHandler(
   argsMetadata: Record<string, RouteParameter>
 ) {
   return async (ctx: RequestContext) => {
-    const instance = root.get(ControllerClass);
-    const args = await injectParameters(argsMetadata, ctx);
+    try {
+      const instance = root.get(ControllerClass);
+      const args = await injectParameters(argsMetadata, ctx);
 
-    const method = Reflect.get(instance, methodName);
-    if (typeof method !== 'function') {
-      throw new Error(`Method ${methodName} is not a function`);
+      const method = Reflect.get(instance, methodName);
+      if (typeof method !== 'function') {
+        throw new Error(`Method ${methodName} is not a function`);
+      }
+
+      const result = await method.bind(instance)(...args);
+
+      // Wrap response in standard format
+      return ctx.json({
+        success: true,
+        data: result,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error(`[Controller Error] ${ControllerClass.name}.${methodName}:`, error);
+      ctx.setStatus(500);
+      return ctx.json({
+        success: false,
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: error instanceof Error ? error.message : String(error),
+          timestamp: new Date().toISOString(),
+        }
+      });
     }
-
-    const result = await method.bind(instance)(...args);
-
-    // Wrap response in standard format
-    return ctx.json({
-      success: true,
-      data: result,
-      timestamp: new Date().toISOString(),
-    });
   };
 }
 

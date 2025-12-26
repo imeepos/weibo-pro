@@ -49,7 +49,7 @@ export interface WorkflowNodeInfo {
   nodeType: string;
   description?: string;
 }
-@Controller('api/workflow')
+@Controller('workflow')
 export class WorkflowController {
   @Post('save')
   saveWorkflow(@Body() body: WorkflowGraphAst): Promise<WorkflowEntity> {

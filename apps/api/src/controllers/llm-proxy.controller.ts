@@ -2,8 +2,9 @@ import { Controller, Post, Param, Req, Res, Headers, Body } from '@sker/core';
 import type { IncomingMessage, ServerResponse } from 'http';
 import { LlmProxyService } from '../services/llm-proxy.service';
 import { Readable } from 'stream';
+import * as sdk from '@sker/sdk';
 
-@Controller('llm')
+@Controller(sdk.LlmProxyController)
 export class LlmProxyController {
   constructor(private readonly llmProxyService: LlmProxyService) { }
 
