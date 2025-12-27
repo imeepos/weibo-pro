@@ -6,4 +6,5 @@
 
 export { ClaudeService } from './claude.service';
 export { ClaudeGateway } from './claude.gateway';
+export { ClaudeController } from './claude.controller';
 export * from './types';

@@ -157,4 +157,16 @@ export class ClaudeGateway {
       activeClients: this.claudeService.getActiveClientCount(),
     };
   }
+
+  /**
+   * 获取在线客户端列表
+   */
+  getOnlineClients(): Array<{
+    clientId: string;
+    socketId: string;
+    connectedAt: number;
+    activeTaskCount: number;
+  }> {
+    return this.claudeService.getOnlineClients();
+  }
 }

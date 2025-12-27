@@ -174,6 +174,34 @@ export class ClaudeService {
   }
 
   /**
+   * 获取所有在线的 CLI 客户端列表
+   */
+  getOnlineClients(): Array<{
+    clientId: string;
+    socketId: string;
+    connectedAt: number;
+    activeTaskCount: number;
+  }> {
+    const clients: Array<{
+      clientId: string;
+      socketId: string;
+      connectedAt: number;
+      activeTaskCount: number;
+    }> = [];
+
+    this.clientConnections.forEach((connection, clientId) => {
+      clients.push({
+        clientId,
+        socketId: connection.socketId,
+        connectedAt: connection.connectedAt,
+        activeTaskCount: connection.activeTasks.size,
+      });
+    });
+
+    return clients.sort((a, b) => b.connectedAt - a.connectedAt);
+  }
+
+  /**
    * 处理响应消息
    */
   private handleResponse(response: ClaudeResponse): void {
