@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
 import { startDaemon, stopDaemon, getPid } from './daemon.js';
+import { sendMessage } from './send-message.js';
 import { join, dirname } from 'path';
 import { homedir } from 'os';
 import { spawn } from 'child_process';
@@ -34,5 +35,11 @@ program.command('logs').description('Tail logs').action(() => {
 
   spawn('tail', ['-f', logFile], { stdio: 'inherit' });
 });
+
+program
+  .command('send <message>')
+  .description('Send message to Claude')
+  .option('-c, --context <context>', 'Additional context for the message')
+  .action(sendMessage);
 
 program.parse();

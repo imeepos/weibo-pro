@@ -1,0 +1,182 @@
+/**
+ * Claude Types - 类型定义
+ *
+ * 存在即合理:
+ * - 统一的类型定义确保三层架构类型安全
+ * - 与 @anthropic-ai/claude-code SDK 兼容
+ * - 支持 RabbitMQ 消息序列化
+ */
+
+/**
+ * Claude 命令消息 - 从服务器发送到执行端
+ *
+ * 通过 RabbitMQ claude.commands 队列传输
+ */
+export interface ClaudeCommand {
+  /** 任务唯一标识符 */
+  taskId: string;
+  /** 客户端标识符（用于响应路由） */
+  clientId: string;
+  /** 会话 ID（用于恢复会话） */
+  sessionId?: string;
+  /** 用户输入的命令/提示词 */
+  command: string;
+  /** 工作目录 */
+  cwd?: string;
+  /** 使用的模型 */
+  model?: string;
+  /** 权限模式 */
+  permissionMode?: 'default' | 'plan' | 'bypassPermissions';
+  /** 时间戳 */
+  timestamp: number;
+}
+
+/**
+ * Claude 响应消息 - 从执行端发送到服务器
+ *
+ * 通过 RabbitMQ claude.responses 队列传输
+ */
+export interface ClaudeResponse {
+  /** 任务唯一标识符 */
+  taskId: string;
+  /** 客户端标识符 */
+  clientId: string;
+  /** 会话 ID */
+  sessionId: string;
+  /** 响应类型 */
+  type: ClaudeResponseType;
+  /** 响应数据 */
+  data: ClaudeResponseData;
+  /** 时间戳 */
+  timestamp: number;
+}
+
+/**
+ * 响应类型枚举
+ */
+export type ClaudeResponseType =
+  | 'session-created'  // 新会话创建
+  | 'message'          // 流式消息
+  | 'result'           // 最终结果
+  | 'complete'         // 任务完成
+  | 'error'            // 错误
+  | 'token-budget';    // Token 使用情况
+
+/**
+ * 响应数据联合类型
+ * 使用 unknown 类型以支持 SDK 返回的各种消息格式
+ */
+export type ClaudeResponseData =
+  | SessionCreatedData
+  | MessageData
+  | ResultData
+  | CompleteData
+  | ErrorData
+  | TokenBudgetData
+  | Record<string, unknown>;
+
+/**
+ * 会话创建数据
+ */
+export interface SessionCreatedData {
+  sessionId: string;
+}
+
+/**
+ * 流式消息数据 - 与 SDK 消息格式兼容
+ */
+export interface MessageData {
+  type: string;
+  [key: string]: unknown;
+}
+
+/**
+ * 结果数据
+ */
+export interface ResultData {
+  type: 'result';
+  modelUsage?: Record<string, ModelUsage>;
+  [key: string]: unknown;
+}
+
+/**
+ * 模型使用情况
+ */
+export interface ModelUsage {
+  inputTokens?: number;
+  outputTokens?: number;
+  cumulativeInputTokens?: number;
+  cumulativeOutputTokens?: number;
+  cacheReadInputTokens?: number;
+  cacheCreationInputTokens?: number;
+  cumulativeCacheReadInputTokens?: number;
+  cumulativeCacheCreationInputTokens?: number;
+}
+
+/**
+ * 完成数据
+ */
+export interface CompleteData {
+  exitCode: number;
+  isNewSession: boolean;
+}
+
+/**
+ * 错误数据
+ */
+export interface ErrorData {
+  message: string;
+  code?: string;
+  stack?: string;
+}
+
+/**
+ * Token 预算数据
+ */
+export interface TokenBudgetData {
+  used: number;
+  total: number;
+}
+
+/**
+ * SDK 查询选项 - 映射到 @anthropic-ai/claude-code
+ */
+export interface ClaudeSdkOptions {
+  /** 工作目录 */
+  cwd?: string;
+  /** 权限模式 */
+  permissionMode?: 'default' | 'plan' | 'bypassPermissions';
+  /** 允许的工具列表 */
+  allowedTools?: string[];
+  /** 禁止的工具列表 */
+  disallowedTools?: string[];
+  /** 使用的模型 */
+  model?: string;
+  /** 恢复会话 ID */
+  resume?: string;
+  /** 系统提示配置 */
+  systemPrompt?: {
+    type: 'preset';
+    preset: string;
+  };
+  /** 设置来源 */
+  settingSources?: string[];
+  /** MCP 服务器配置 */
+  mcpServers?: Record<string, unknown>;
+}
+
+/**
+ * 活动会话信息
+ */
+export interface ActiveSession {
+  /** SDK 查询实例 */
+  instance: AsyncIterable<unknown>;
+  /** 开始时间 */
+  startTime: number;
+  /** 会话状态 */
+  status: 'active' | 'completed' | 'aborted' | 'error';
+  /** 任务 ID */
+  taskId: string;
+  /** 客户端 ID */
+  clientId: string;
+}

@@ -1,7 +1,18 @@
+/**
+ * Worker - CLI Daemon 工作进程
+ *
+ * 存在即合理:
+ * - 后台运行的工作进程
+ * - 初始化 DI 容器和服务
+ * - 处理信号和优雅关闭
+ */
+
 import { root } from '@sker/core';
 import { ConfigService } from './config.js';
 import { TaskRegistry } from './task-registry.js';
 import { TaskExecutor } from './task-executor.js';
+import { ClaudeBridge } from './claude-bridge.js';
+import { ClaudeSdkService } from './services/claude-sdk.service.js';
 import { CLI_CONFIG } from './tokens.js';
 import { createLogger } from './logger.js';
 import { removePid } from './daemon.js';
@@ -15,28 +26,44 @@ console.error = (msg) => logger.error(String(msg));
 let heartbeatInterval: NodeJS.Timeout;
 
 async function bootstrap(): Promise<() => Promise<void>> {
+  // 加载配置
   const configService = root.get(ConfigService);
   const config = configService.load();
   process.env.RABBITMQ_URL = config.rabbitmq.url;
   root.set([{ provide: CLI_CONFIG, useValue: config }]);
 
+  // 注册任务
   const registry = root.get(TaskRegistry);
   registry.register('echo', async (payload) => {
     console.log('Echo: ' + JSON.stringify(payload));
   });
 
+  // 启动任务执行器
   const executor = root.get(TaskExecutor);
   executor.start();
+
+  // 初始化 Claude SDK 服务（确保被 DI 容器管理）
+  root.get(ClaudeSdkService);
+
+  // 启动 Claude 桥接器
+  const claudeBridge = root.get(ClaudeBridge);
+  claudeBridge.start();
+
   console.log('Worker started');
 
+  // 启动心跳
   heartbeatInterval = setInterval(() => {
     writeHeartbeat({ status: 'running' });
   }, 5000);
 
+  // 返回关闭函数
   return async () => {
     console.log('Shutting down...');
     clearInterval(heartbeatInterval);
-    await executor.shutdown();
+    await Promise.all([
+      executor.shutdown(),
+      claudeBridge.shutdown(),
+    ]);
     removePid();
     console.log('Shutdown complete');
   };

@@ -3,7 +3,13 @@
   "version": "0.0.1",
   "private": true,
   "description": "Weibo-Pro CLI daemon for task execution with RabbitMQ",
-  "keywords": ["cli", "daemon", "task", "rabbitmq", "sker"],
+  "keywords": [
+    "cli",
+    "daemon",
+    "task",
+    "rabbitmq",
+    "sker"
+  ],
   "author": "Weibo-Pro Team",
   "license": "MIT",
   "repository": {
@@ -43,10 +49,13 @@
     "start": "node dist/main.js",
     "lint": "eslint . --max-warnings 0",
     "check-types": "tsc --noEmit",
+    "test": "vitest",
+    "test:run": "vitest run",
     "clean": "rm -rf dist .turbo",
     "prepublishOnly": "pnpm build"
   },
   "dependencies": {
+    "@anthropic-ai/claude-code": "^2.0.76",
     "@sker/core": "workspace:*",
     "@sker/mq": "workspace:*",
     "@sker/utils": "workspace:*",
@@ -58,7 +67,8 @@
     "@types/node": "^22.15.3",
     "eslint": "^9.38.0",
     "tsx": "^4.19.2",
-    "typescript": "5.9.2"
+    "typescript": "5.9.2",
+    "vitest": "^4.0.16"
   },
   "engines": {
     "node": ">=18.0.0"

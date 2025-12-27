@@ -20,6 +20,7 @@ import type { IncomingMessage, ServerResponse } from 'http';
 import { bearer, admin, username, openAPI } from 'better-auth/plugins';
 import { Pool } from 'pg';
 import { UploadService } from './services/upload.service';
+import { ClaudeGateway } from './claude';
 
 async function bootstrap() {
   const PORT = parseInt(process.env.PORT || `3000`);
@@ -235,10 +236,16 @@ async function bootstrap() {
         'http://localhost:3002',
         'http://localhost:3003',
         'http://localhost:5173',
+        'exp://*',  // Expo 开发服务器
       ],
       credentials: true,
     }
   });
+
+  // 初始化 Claude Gateway
+  const claudeGateway = root.get(ClaudeGateway);
+  claudeGateway.initialize(io);
+  logger.info('✓ Claude Gateway initialized');
 
   let connectedClients = 0;
 
@@ -274,6 +281,7 @@ async function bootstrap() {
     logger.info(`🚀 Server started at http://localhost:${PORT}`);
     logger.info('✓ HTTP API ready');
     logger.info('✓ WebSocket ready at /ws');
+    logger.info('✓ Claude Gateway ready for mobile connections');
   });
 }
 
