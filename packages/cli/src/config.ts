@@ -41,8 +41,6 @@ export class ConfigService {
     return {
       ...global,
       ...local,
-      rabbitmq: { ...global.rabbitmq, ...local.rabbitmq },
-      queues: local.queues ?? global.queues
     };
   }
 
@@ -54,8 +52,7 @@ export class ConfigService {
       id: generateRandomString(16),
       name: 'default-worker',
       description: 'Default task worker',
-      rabbitmq: { url: 'amqp://localhost:5672' },
-      queues: [{ name: 'task_queue', prefetch: 1 }]
+      apiServer: 'http://localhost:3000',
     };
     writeFileSync(this.globalConfigPath, JSON.stringify(config, null, 2));
     return config;

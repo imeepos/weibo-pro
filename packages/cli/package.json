@@ -57,9 +57,9 @@
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.1.29",
     "@sker/core": "workspace:*",
-    "@sker/mq": "workspace:*",
     "@sker/utils": "workspace:*",
-    "commander": "^12.0.0"
+    "commander": "^12.0.0",
+    "socket.io-client": "^4.7.5"
   },
   "devDependencies": {
     "@sker/eslint-config": "workspace:*",

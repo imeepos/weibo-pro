@@ -249,8 +249,8 @@ export class ClaudeSdkService {
     if (command.permissionMode) {
       options.permissionMode = command.permissionMode;
     } else {
-      // 默认使用 default 模式（需要批准）
-      options.permissionMode = 'default';
+      // 默认使用 bypassPermissions 模式（不需要批准）
+      options.permissionMode = 'bypassPermissions';
     }
 
     console.log(`[ClaudeSdkService] 权限模式: ${options.permissionMode}`);

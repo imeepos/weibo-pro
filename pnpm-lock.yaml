@@ -665,15 +665,15 @@ importers:
       '@sker/core':
         specifier: workspace:*
         version: link:../core
-      '@sker/mq':
-        specifier: workspace:*
-        version: link:../mq
       '@sker/utils':
         specifier: workspace:*
         version: link:../utils
       commander:
         specifier: ^12.0.0
         version: 12.1.0
+      socket.io-client:
+        specifier: ^4.7.5
+        version: 4.8.3
     devDependencies:
       '@sker/eslint-config':
         specifier: workspace:*

@@ -4,8 +4,8 @@ export interface CliConfig {
   id: string;
   name: string;
   description: string;
-  rabbitmq: { url: string };
-  queues: Array<{ name: string; prefetch?: number }>;
+  /** API 服务器地址 */
+  apiServer: string;
 }
 
 export const CLI_CONFIG = new InjectionToken<CliConfig>('CLI_CONFIG');

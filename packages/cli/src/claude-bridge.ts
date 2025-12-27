@@ -1,35 +1,26 @@
 /**
- * Claude Bridge - RabbitMQ 消息桥接器
+ * Claude Bridge - Socket.IO 客户端桥接器
  *
  * 存在即合理:
- * - 连接 RabbitMQ 和 Claude SDK
- * - 消费 claude.commands 队列
- * - 将响应发送到 claude.responses 队列
+ * - 连接 API 服务器的 Socket.IO
+ * - 接收命令并调用 Claude SDK
+ * - 将响应发送回 API 服务器
  *
  * 优雅即简约:
  * - 单一职责：消息路由
  * - 解耦：SDK 逻辑在 ClaudeSdkService 中
- * - 可靠：支持消息确认和错误处理
+ * - 直连：替代 RabbitMQ 减少延迟
  */
 
 import { Injectable, Inject } from '@sker/core';
-import { useQueue, type MessageEnvelope } from '@sker/mq';
-import { Subscription } from 'rxjs';
+import { io, Socket } from 'socket.io-client';
 import { CLI_CONFIG, type CliConfig } from './tokens.js';
 import { ClaudeSdkService } from './services/claude-sdk.service.js';
 import type { ClaudeCommand, ClaudeResponse } from './types/index.js';
 
-/** 命令队列名称 */
-const COMMANDS_QUEUE = 'claude.commands';
-/** 响应队列名称 */
-const RESPONSES_QUEUE = 'claude.responses';
-/** 批准响应队列名称 */
-const APPROVALS_QUEUE = 'claude.approvals';
-
 @Injectable({ providedIn: 'auto' })
 export class ClaudeBridge {
-  private subscriptions: Subscription[] = [];
-  private responseQueue = useQueue<ClaudeResponse>(RESPONSES_QUEUE);
+  private socket: Socket | null = null;
   private isRunning = false;
 
   constructor(
@@ -46,89 +37,80 @@ export class ClaudeBridge {
       return;
     }
 
-    this.listenToCommandQueue();
-    this.listenToApprovalQueue();
+    this.connect();
     this.isRunning = true;
-    console.log('[ClaudeBridge] 启动完成，监听队列:', COMMANDS_QUEUE, APPROVALS_QUEUE);
+    console.log('[ClaudeBridge] 启动完成');
   }
 
   /**
-   * 关闭桥接器
+   * 连接到 API 服务器
    */
-  async shutdown(): Promise<void> {
-    console.log('[ClaudeBridge] 正在关闭...');
+  private connect(): void {
+    const serverUrl = this.config.apiServer || 'http://localhost:3000';
 
-    // 取消所有订阅
-    this.subscriptions.forEach(sub => sub.unsubscribe());
-    this.subscriptions = [];
+    console.log(`[ClaudeBridge] 连接到 API 服务器: ${serverUrl}/worker`);
 
-    // 中断所有活动会话
-    const activeSessions = this.claudeSdkService.getActiveSessions();
-    for (const sessionId of activeSessions) {
-      await this.claudeSdkService.abortSession(sessionId);
-    }
-
-    this.isRunning = false;
-    console.log('[ClaudeBridge] 关闭完成');
-  }
-
-  /**
-   * 监听命令队列
-   */
-  private listenToCommandQueue(): void {
-    const { consumer$ } = useQueue<ClaudeCommand>(COMMANDS_QUEUE);
-
-    const sub = consumer$.subscribe({
-      next: (envelope) => this.handleCommand(envelope),
-      error: (err) => {
-        console.error('[ClaudeBridge] 命令队列错误:', err.message);
-        // 尝试重新连接
-        setTimeout(() => this.listenToCommandQueue(), 5000);
-      },
+    this.socket = io(`${serverUrl}/worker`, {
+      path: '/ws',
+      transports: ['websocket'],
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
     });
 
-    this.subscriptions.push(sub);
+    this.setupEventHandlers();
   }
 
   /**
-   * 监听批准响应队列
+   * 设置事件处理器
    */
-  private listenToApprovalQueue(): void {
-    const { consumer$ } = useQueue<{ clientId: string; requestId: string; approved: boolean }>(APPROVALS_QUEUE);
+  private setupEventHandlers(): void {
+    if (!this.socket) return;
 
-    const sub = consumer$.subscribe({
-      next: (envelope) => this.handleApproval(envelope),
-      error: (err) => {
-        console.error('[ClaudeBridge] 批准队列错误:', err.message);
-        setTimeout(() => this.listenToApprovalQueue(), 5000);
-      },
+    this.socket.on('connect', () => {
+      console.log('[ClaudeBridge] 已连接到 API 服务器');
     });
 
-    this.subscriptions.push(sub);
+    this.socket.on('disconnect', (reason) => {
+      console.log(`[ClaudeBridge] 断开连接: ${reason}`);
+    });
+
+    this.socket.on('connect_error', (error) => {
+      console.error('[ClaudeBridge] 连接错误:', error.message);
+    });
+
+    this.socket.on('worker:connected', (data) => {
+      console.log('[ClaudeBridge] Worker 连接确认:', data);
+    });
+
+    // 监听命令
+    this.socket.on('worker:command', (command: ClaudeCommand) => {
+      this.handleCommand(command);
+    });
+
+    // 监听批准响应
+    this.socket.on('worker:approval', (data: { clientId: string; requestId: string; approved: boolean }) => {
+      this.handleApproval(data);
+    });
   }
 
   /**
    * 处理命令
    */
-  private async handleCommand(envelope: MessageEnvelope<ClaudeCommand>): Promise<void> {
-    const command = envelope.message;
+  private async handleCommand(command: ClaudeCommand): Promise<void> {
     console.log(`[ClaudeBridge] 收到命令: taskId=${command.taskId}, clientId=${command.clientId}`);
 
     try {
-      // 执行 Claude 查询
       await this.claudeSdkService.executeQuery(command, (response) => {
         this.sendResponse(response);
       });
 
-      // 确认消息处理成功
-      envelope.ack();
       console.log(`[ClaudeBridge] 命令处理完成: taskId=${command.taskId}`);
-
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error(`[ClaudeBridge] 命令处理失败: taskId=${command.taskId}, error=${errorMessage}`);
 
-      // 发送错误响应
       this.sendResponse({
         taskId: command.taskId,
         clientId: command.clientId,
@@ -140,41 +122,56 @@ export class ClaudeBridge {
         },
         timestamp: Date.now(),
       });
-
-      // 不重新入队（避免无限循环）
-      envelope.nack(false);
     }
   }
 
   /**
    * 处理批准响应
    */
-  private async handleApproval(
-    envelope: MessageEnvelope<{ clientId: string; requestId: string; approved: boolean }>
-  ): Promise<void> {
-    const { clientId, requestId, approved } = envelope.message;
-    console.log(`[ClaudeBridge] 📥 收到批准响应: clientId=${clientId}, requestId=${requestId}, approved=${approved}`);
+  private handleApproval(data: { clientId: string; requestId: string; approved: boolean }): void {
+    const { requestId, approved } = data;
+    console.log(`[ClaudeBridge] 收到批准响应: requestId=${requestId}, approved=${approved}`);
 
     try {
       this.claudeSdkService.handleApprovalResponse(requestId, approved);
-      envelope.ack();
-      console.log(`[ClaudeBridge] ✅ 批准响应处理成功`);
+      console.log('[ClaudeBridge] 批准响应处理成功');
     } catch (error) {
-      console.error('[ClaudeBridge] ❌ 批准响应处理失败:', error);
-      envelope.nack(false);
+      console.error('[ClaudeBridge] 批准响应处理失败:', error);
     }
   }
 
   /**
-   * 发送响应到响应队列
+   * 发送响应到 API 服务器
    */
   private sendResponse(response: ClaudeResponse): void {
-    try {
-      console.log(`[ClaudeBridge] 发送响应: taskId=${response.taskId}, type=${response.type}`);
-      this.responseQueue.producer.next(response);
-      console.log(`[ClaudeBridge] 响应已发送到队列: ${RESPONSES_QUEUE}`);
-    } catch (error) {
-      console.error('[ClaudeBridge] 发送响应失败:', error);
+    if (!this.socket?.connected) {
+      console.error('[ClaudeBridge] 未连接，无法发送响应');
+      return;
     }
+
+    console.log(`[ClaudeBridge] 发送响应: taskId=${response.taskId}, type=${response.type}`);
+    this.socket.emit('worker:response', response);
+  }
+
+  /**
+   * 关闭桥接器
+   */
+  async shutdown(): Promise<void> {
+    console.log('[ClaudeBridge] 正在关闭...');
+
+    // 中断所有活动会话
+    const activeSessions = this.claudeSdkService.getActiveSessions();
+    for (const sessionId of activeSessions) {
+      await this.claudeSdkService.abortSession(sessionId);
+    }
+
+    // 断开 Socket 连接
+    if (this.socket) {
+      this.socket.disconnect();
+      this.socket = null;
+    }
+
+    this.isRunning = false;
+    console.log('[ClaudeBridge] 关闭完成');
   }
 }

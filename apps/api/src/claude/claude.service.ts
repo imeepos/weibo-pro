@@ -3,19 +3,18 @@
  *
  * 存在即合理:
  * - 管理客户端连接映射
- * - 将客户端命令发送到 RabbitMQ
+ * - 通过 WorkerGateway 与 CLI Worker 通信
  * - 将执行端响应路由回正确的客户端
  *
  * 优雅即简约:
  * - 单一职责：消息路由和连接管理
- * - 使用 RxJS 处理消息流
+ * - 使用 Socket.IO 直连替代 RabbitMQ
  */
 
-import { Injectable, createLogger } from '@sker/core';
-import { useQueue, type MessageEnvelope } from '@sker/mq';
-import { Subscription } from 'rxjs';
+import { Injectable, Inject, createLogger } from '@sker/core';
 import type { Server as SocketIOServer, Socket } from 'socket.io';
 import { v4 as uuidv4 } from 'uuid';
+import { WorkerGateway } from './worker-gateway';
 import type {
   ClaudeCommand,
   ClaudeResponse,
@@ -23,13 +22,6 @@ import type {
   WsClaudeResponse,
   ClientConnection,
 } from './types';
-
-/** 命令队列名称 */
-const COMMANDS_QUEUE = 'claude.commands';
-/** 响应队列名称 */
-const RESPONSES_QUEUE = 'claude.responses';
-/** 批准响应队列名称 */
-const APPROVALS_QUEUE = 'claude.approvals';
 
 @Injectable({ providedIn: 'auto' })
 export class ClaudeService {
@@ -44,20 +36,13 @@ export class ClaudeService {
   /** 客户端连接信息 */
   private clientConnections = new Map<string, ClientConnection>();
 
-  /** 命令队列 */
-  private commandQueue = useQueue<ClaudeCommand>(COMMANDS_QUEUE);
-
-  /** 批准响应队列 */
-  private approvalQueue = useQueue<{ clientId: string; requestId: string; approved: boolean }>(APPROVALS_QUEUE);
-
-  /** 响应订阅 */
-  private responseSubscription: Subscription | null = null;
-
   /** Socket.IO 服务器实例 */
   private io: SocketIOServer | null = null;
 
   /** 是否已初始化 */
   private initialized = false;
+
+  constructor(@Inject(WorkerGateway) private workerGateway: WorkerGateway) {}
 
   /**
    * 初始化服务
@@ -69,7 +54,7 @@ export class ClaudeService {
     }
 
     this.io = io;
-    this.listenToResponseQueue();
+    this.workerGateway.initialize(io);
     this.initialized = true;
     this.logger.info('Claude 服务初始化完成');
   }
@@ -78,11 +63,7 @@ export class ClaudeService {
    * 关闭服务
    */
   shutdown(): void {
-    if (this.responseSubscription) {
-      this.responseSubscription.unsubscribe();
-      this.responseSubscription = null;
-    }
-
+    this.workerGateway.shutdown();
     this.clientSockets.clear();
     this.socketToClient.clear();
     this.clientConnections.clear();
@@ -94,10 +75,8 @@ export class ClaudeService {
    * 注册客户端连接
    */
   registerClient(socket: Socket): string {
-    // 生成客户端 ID
     const clientId = uuidv4();
 
-    // 保存映射
     this.clientSockets.set(clientId, socket);
     this.socketToClient.set(socket.id, clientId);
     this.clientConnections.set(clientId, {
@@ -133,10 +112,12 @@ export class ClaudeService {
       throw new Error(`客户端不存在: ${clientId}`);
     }
 
-    // 生成任务 ID
+    if (!this.workerGateway.isWorkerConnected()) {
+      throw new Error('Worker 未连接');
+    }
+
     const taskId = uuidv4();
 
-    // 构建命令消息
     const command: ClaudeCommand = {
       taskId,
       clientId,
@@ -148,16 +129,21 @@ export class ClaudeService {
       timestamp: Date.now(),
     };
 
-    // 记录活动任务
     const connection = this.clientConnections.get(clientId);
     if (connection) {
       connection.activeTasks.add(taskId);
     }
 
-    // 发送到命令队列
-    this.commandQueue.producer.next(command);
-    this.logger.info(`命令已发送: taskId=${taskId}, clientId=${clientId}`);
+    // 通过 WorkerGateway 发送命令
+    const sent = this.workerGateway.sendCommand(command, (response) => {
+      this.handleResponse(response);
+    });
 
+    if (!sent) {
+      throw new Error('发送命令失败');
+    }
+
+    this.logger.info(`命令已发送: taskId=${taskId}, clientId=${clientId}`);
     return taskId;
   }
 
@@ -167,12 +153,10 @@ export class ClaudeService {
   async sendApprovalResponse(clientId: string, data: { requestId: string; approved: boolean }): Promise<void> {
     this.logger.info(`发送批准响应: clientId=${clientId}, requestId=${data.requestId}, approved=${data.approved}`);
 
-    // 发送到批准响应队列
-    this.approvalQueue.producer.next({
-      clientId,
-      requestId: data.requestId,
-      approved: data.approved,
-    });
+    const sent = this.workerGateway.sendApproval(clientId, data);
+    if (!sent) {
+      this.logger.error('发送批准响应失败: Worker 未连接');
+    }
   }
 
   /**
@@ -190,43 +174,19 @@ export class ClaudeService {
   }
 
   /**
-   * 监听响应队列
-   */
-  private listenToResponseQueue(): void {
-    const { consumer$ } = useQueue<ClaudeResponse>(RESPONSES_QUEUE);
-
-    this.logger.info(`[DEBUG] 开始监听响应队列: ${RESPONSES_QUEUE}`);
-
-    this.responseSubscription = consumer$.subscribe({
-      next: (envelope) => this.handleResponse(envelope),
-      error: (err) => {
-        this.logger.error(`响应队列错误: ${err.message}`);
-        // 尝试重新连接
-        setTimeout(() => this.listenToResponseQueue(), 5000);
-      },
-    });
-  }
-
-  /**
    * 处理响应消息
    */
-  private handleResponse(envelope: MessageEnvelope<ClaudeResponse>): void {
-    const response = envelope.message;
+  private handleResponse(response: ClaudeResponse): void {
     const { taskId, clientId, sessionId, type, data } = response;
 
-    this.logger.info(`[DEBUG] 收到响应: taskId=${taskId}, clientId=${clientId}, type=${type}`);
-    this.logger.info(`[DEBUG] 当前客户端数量: ${this.clientSockets.size}`);
-    this.logger.info(`[DEBUG] 客户端列表: ${Array.from(this.clientSockets.keys()).join(', ')}`);
+    this.logger.debug(`收到响应: taskId=${taskId}, clientId=${clientId}, type=${type}`);
 
-    // 查找客户端 Socket
     const socket = this.clientSockets.get(clientId);
     if (!socket) {
       this.logger.warn(`客户端不存在，丢弃响应: clientId=${clientId}, taskId=${taskId}`);
-      envelope.ack();
       return;
     }
 
-    // 构建 WebSocket 响应
     const wsResponse: WsClaudeResponse = {
       taskId,
       sessionId,
@@ -234,10 +194,8 @@ export class ClaudeService {
       data,
     };
 
-    // 发送给客户端
     socket.emit('claude:response', wsResponse);
 
-    // 如果是完成或错误，清理活动任务
     if (type === 'complete' || type === 'error') {
       const connection = this.clientConnections.get(clientId);
       if (connection) {
@@ -245,8 +203,6 @@ export class ClaudeService {
       }
     }
 
-    // 确认消息
-    envelope.ack();
     this.logger.debug(`响应已转发: taskId=${taskId}, type=${type}`);
   }
 }
