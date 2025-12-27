@@ -2,15 +2,49 @@
   "name": "@sker/cli",
   "version": "0.0.1",
   "private": true,
+  "description": "Weibo-Pro CLI daemon for task execution with RabbitMQ",
+  "keywords": ["cli", "daemon", "task", "rabbitmq", "sker"],
+  "author": "Weibo-Pro Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/imeepos/weibo-pro.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/imeepos/weibo-pro/issues"
+  },
+  "homepage": "https://github.com/imeepos/weibo-pro/tree/main/packages/cli#readme",
   "type": "module",
   "main": "dist/main.js",
+  "types": "dist/main.d.ts",
   "bin": {
     "sker": "./dist/main.js"
   },
+  "exports": {
+    ".": {
+      "types": "./dist/main.d.ts",
+      "import": "./dist/main.js",
+      "default": "./dist/main.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "preferGlobal": true,
+  "publishConfig": {
+    "access": "restricted"
+  },
   "scripts": {
-    "dev": "tsx src/main.ts",
-    "build": "tsc",
-    "start": "node dist/main.js"
+    "dev": "tsx --watch src/main.ts",
+    "build": "tsc && chmod +x dist/main.js",
+    "start": "node dist/main.js",
+    "lint": "eslint . --max-warnings 0",
+    "check-types": "tsc --noEmit",
+    "clean": "rm -rf dist .turbo",
+    "prepublishOnly": "pnpm build"
   },
   "dependencies": {
     "@sker/core": "workspace:*",
@@ -19,8 +53,14 @@
     "commander": "^12.0.0"
   },
   "devDependencies": {
+    "@sker/eslint-config": "workspace:*",
     "@sker/typescript-config": "workspace:*",
+    "@types/node": "^22.15.3",
+    "eslint": "^9.38.0",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
+    "typescript": "5.9.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

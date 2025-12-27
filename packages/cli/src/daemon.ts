@@ -31,6 +31,28 @@ export function removePid(): void {
   if (existsSync(PID_FILE)) unlinkSync(PID_FILE);
 }
 
+function getTsxPath(): string {
+  // 在开发模式下，直接使用 tsx 的 CLI 入口
+  // 判断是否在开发模式（src 目录）或构建模式（dist 目录）
+  const isDev = __filename.endsWith('.ts');
+  const baseDir = isDev ? join(__dirname, '..') : __dirname;
+
+  // 尝试根目录的 node_modules (monorepo)
+  const rootTsxCli = join(baseDir, '../../node_modules/tsx/dist/cli.mjs');
+  if (existsSync(rootTsxCli)) {
+    return rootTsxCli;
+  }
+
+  // 尝试当前包的 node_modules
+  const localTsxCli = join(baseDir, 'node_modules/tsx/dist/cli.mjs');
+  if (existsSync(localTsxCli)) {
+    return localTsxCli;
+  }
+
+  // 降级方案：返回空字符串表示需要使用 process.execPath
+  return '';
+}
+
 export function startDaemon(): void {
   if (getPid()) {
     console.log('Daemon already running');
@@ -39,12 +61,28 @@ export function startDaemon(): void {
 
   const isDev = process.env.SKER_DAEMON !== '1' && __filename.endsWith('.ts');
   const watchdogPath = join(__dirname, isDev ? 'watchdog.ts' : 'watchdog.js');
-  const execArgs = isDev ? ['tsx', watchdogPath] : [watchdogPath];
-  const execPath = isDev ? process.execPath.replace('node', 'tsx') : process.execPath;
 
-  const child = spawn(isDev ? 'tsx' : process.execPath, isDev ? [watchdogPath] : [watchdogPath], {
+  let execPath: string;
+  let execArgs: string[];
+
+  if (isDev) {
+    const tsxCli = getTsxPath();
+    if (!tsxCli) {
+      console.error('tsx not found in node_modules');
+      process.exit(1);
+    }
+    // 使用 node 执行 tsx 的 CLI，然后传递 watchdog 文件
+    execPath = process.execPath;
+    execArgs = [tsxCli, watchdogPath];
+  } else {
+    execPath = process.execPath;
+    execArgs = [watchdogPath];
+  }
+
+  const child = spawn(execPath, execArgs, {
     detached: true,
     stdio: 'ignore',
+    windowsHide: true, // Windows: 隐藏控制台窗口
     env: { ...process.env, SKER_DAEMON: '1' }
   });
 

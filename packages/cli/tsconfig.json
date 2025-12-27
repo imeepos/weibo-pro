@@ -4,7 +4,8 @@
     "outDir": "dist",
     "rootDir": "src",
     "emitDecoratorMetadata": true,
-    "emitDeclarationOnly": true
+    "declaration": true,
+    "declarationMap": true
   },
   "include": ["src/**/*"]
 }
