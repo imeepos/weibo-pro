@@ -11,7 +11,7 @@
  * - 清晰的事件命名约定
  */
 
-import { Injectable, createLogger } from '@sker/core';
+import { Inject, Injectable, createLogger } from '@sker/core';
 import type { Server as SocketIOServer, Socket } from 'socket.io';
 import { ClaudeService } from './claude.service';
 import type { WsClaudeCommand } from './types';
@@ -21,7 +21,7 @@ export class ClaudeGateway {
   private logger = createLogger('ClaudeGateway');
   private io: SocketIOServer | null = null;
 
-  constructor(private claudeService: ClaudeService) {}
+  constructor(@Inject(ClaudeService) private claudeService: ClaudeService) {}
 
   /**
    * 初始化网关

@@ -2,9 +2,8 @@
  * ConnectionStatus - 连接状态指示器组件
  */
 
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import type { ConnectionStatus as ConnectionStatusType } from '../types';
+import { cn } from '@/lib/utils';
+import type { ConnectionStatus as ConnectionStatusType } from '@/types';
 
 interface ConnectionStatusProps {
   status: ConnectionStatusType;
@@ -13,19 +12,19 @@ interface ConnectionStatusProps {
 
 const STATUS_CONFIG = {
   disconnected: {
-    color: '#8E8E93',
+    color: 'bg-muted-foreground',
     text: '未连接',
   },
   connecting: {
-    color: '#FF9500',
+    color: 'bg-yellow-500',
     text: '连接中...',
   },
   connected: {
-    color: '#34C759',
+    color: 'bg-green-500',
     text: '已连接',
   },
   error: {
-    color: '#FF3B30',
+    color: 'bg-destructive',
     text: '连接错误',
   },
 };
@@ -34,38 +33,12 @@ export function ConnectionStatus({ status, clientId }: ConnectionStatusProps) {
   const config = STATUS_CONFIG[status];
 
   return (
-    <View style={styles.container}>
-      <View style={[styles.indicator, { backgroundColor: config.color }]} />
-      <Text style={styles.text}>{config.text}</Text>
+    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-secondary rounded-full">
+      <div className={cn('w-2 h-2 rounded-full', config.color)} />
+      <span className="text-xs text-muted-foreground">{config.text}</span>
       {clientId && status === 'connected' && (
-        <Text style={styles.clientId}>ID: {clientId.substring(0, 8)}...</Text>
+        <span className="text-[10px] text-muted-foreground/70 ml-2">ID: {clientId.substring(0, 8)}...</span>
       )}
-    </View>
+    </div>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: '#F2F2F7',
-    borderRadius: 16,
-  },
-  indicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 6,
-  },
-  text: {
-    fontSize: 12,
-    color: '#8E8E93',
-  },
-  clientId: {
-    fontSize: 10,
-    color: '#C7C7CC',
-    marginLeft: 8,
-  },
-});

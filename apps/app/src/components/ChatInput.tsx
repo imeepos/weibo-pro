@@ -2,15 +2,11 @@
  * ChatInput - 聊天输入框组件
  */
 
-import React, { useState } from 'react';
-import {
-  View,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { useState, useCallback, type KeyboardEvent } from 'react';
+import { Send, StopCircle } from 'lucide-react';
+import { Button } from '@/components/ui';
+import { Textarea } from '@/components/ui';
+import { cn } from '@/lib/utils';
 
 interface ChatInputProps {
   onSend: (message: string) => void;
@@ -21,94 +17,70 @@ interface ChatInputProps {
 export function ChatInput({ onSend, isLoading, onAbort }: ChatInputProps) {
   const [inputText, setInputText] = useState('');
 
-  const handleSend = () => {
+  const handleSend = useCallback(() => {
     const trimmedText = inputText.trim();
     if (trimmedText && !isLoading) {
       onSend(trimmedText);
       setInputText('');
     }
-  };
+  }, [inputText, isLoading, onSend]);
 
-  const handleAbort = () => {
+  const handleAbort = useCallback(() => {
     if (isLoading && onAbort) {
       onAbort();
     }
-  };
+  }, [isLoading, onAbort]);
+
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSend();
+      }
+    },
+    [handleSend]
+  );
 
   return (
-    <View style={styles.container}>
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
+    <div className="flex items-end gap-2 px-3 py-2 bg-background border-t border-border">
+      <div className="flex-1 min-h-[44px] max-h-[120px]">
+        <Textarea
           value={inputText}
-          onChangeText={setInputText}
+          onChange={(e) => setInputText(e.target.value)}
+          onKeyDown={handleKeyDown}
           placeholder="输入消息..."
-          placeholderTextColor="#8E8E93"
-          multiline
-          maxLength={4000}
-          editable={!isLoading}
+          disabled={isLoading}
+          className={cn(
+            'min-h-[44px] max-h-[100px] resize-none bg-secondary border-0 rounded-2xl px-4 py-3',
+            'focus-visible:ring-0 focus-visible:ring-offset-0',
+            'placeholder:text-muted-foreground'
+          )}
+          rows={1}
         />
-      </View>
+      </div>
       {isLoading ? (
-        <TouchableOpacity style={styles.abortButton} onPress={handleAbort}>
-          <Ionicons name="stop-circle" size={32} color="#FF3B30" />
-        </TouchableOpacity>
-      ) : (
-        <TouchableOpacity
-          style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]}
-          onPress={handleSend}
-          disabled={!inputText.trim()}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleAbort}
+          className="h-11 w-11 rounded-full text-destructive hover:text-destructive hover:bg-destructive/10"
         >
-          <Ionicons
-            name="send"
-            size={24}
-            color={inputText.trim() ? '#007AFF' : '#C7C7CC'}
-          />
-        </TouchableOpacity>
+          <StopCircle className="h-6 w-6" />
+        </Button>
+      ) : (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleSend}
+          disabled={!inputText.trim()}
+          className={cn(
+            'h-11 w-11 rounded-full',
+            inputText.trim() ? 'text-primary hover:text-primary hover:bg-primary/10' : 'text-muted-foreground'
+          )}
+        >
+          <Send className="h-6 w-6" />
+        </Button>
       )}
-    </View>
+    </div>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E5E5EA',
-  },
-  inputContainer: {
-    flex: 1,
-    backgroundColor: '#F2F2F7',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginRight: 8,
-    maxHeight: 120,
-  },
-  input: {
-    fontSize: 16,
-    color: '#000000',
-    maxHeight: 100,
-  },
-  sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sendButtonDisabled: {
-    opacity: 0.5,
-  },
-  abortButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});

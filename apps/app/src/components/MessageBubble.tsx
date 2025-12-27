@@ -2,9 +2,8 @@
  * MessageBubble - 消息气泡组件
  */
 
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import type { ChatMessage } from '../types';
+import { cn } from '@/lib/utils';
+import type { ChatMessage } from '@/types';
 
 interface MessageBubbleProps {
   message: ChatMessage;
@@ -14,65 +13,19 @@ export function MessageBubble({ message }: MessageBubbleProps) {
   const isUser = message.role === 'user';
 
   return (
-    <View style={[styles.container, isUser ? styles.userContainer : styles.assistantContainer]}>
-      <View style={[styles.bubble, isUser ? styles.userBubble : styles.assistantBubble]}>
-        <Text style={[styles.text, isUser ? styles.userText : styles.assistantText]}>
-          {message.content}
-        </Text>
-        {message.isStreaming && (
-          <Text style={styles.streamingIndicator}>...</Text>
+    <div className={cn('my-1 mx-3', isUser ? 'flex flex-col items-end' : 'flex flex-col items-start')}>
+      <div
+        className={cn(
+          'max-w-[80%] px-4 py-2.5 rounded-2xl',
+          isUser ? 'bg-primary text-primary-foreground rounded-br-sm' : 'bg-muted text-foreground rounded-bl-sm'
         )}
-      </View>
-      <Text style={styles.timestamp}>
+      >
+        <p className="text-base leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
+        {message.isStreaming && <span className="text-muted-foreground text-base animate-pulse">...</span>}
+      </div>
+      <span className="text-xs text-muted-foreground mt-1 mx-1">
         {new Date(message.timestamp).toLocaleTimeString()}
-      </Text>
-    </View>
+      </span>
+    </div>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    marginVertical: 4,
-    marginHorizontal: 12,
-  },
-  userContainer: {
-    alignItems: 'flex-end',
-  },
-  assistantContainer: {
-    alignItems: 'flex-start',
-  },
-  bubble: {
-    maxWidth: '80%',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 18,
-  },
-  userBubble: {
-    backgroundColor: '#007AFF',
-    borderBottomRightRadius: 4,
-  },
-  assistantBubble: {
-    backgroundColor: '#E9E9EB',
-    borderBottomLeftRadius: 4,
-  },
-  text: {
-    fontSize: 16,
-    lineHeight: 22,
-  },
-  userText: {
-    color: '#FFFFFF',
-  },
-  assistantText: {
-    color: '#000000',
-  },
-  timestamp: {
-    fontSize: 11,
-    color: '#8E8E93',
-    marginTop: 4,
-    marginHorizontal: 4,
-  },
-  streamingIndicator: {
-    color: '#8E8E93',
-    fontSize: 16,
-  },
-});

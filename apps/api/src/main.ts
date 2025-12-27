@@ -84,7 +84,7 @@ async function bootstrap() {
         'http://',
       ].filter(Boolean) as string[];
 
-      const origin = request.headers.get('origin') || request.headers.get('expo-origin');
+      const origin = request?.headers.get('origin') || request?.headers.get('expo-origin');
 
       if (!origin) return allowedOrigins;
 

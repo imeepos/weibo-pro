@@ -1,24 +1,13 @@
 /**
  * Socket Service - Socket.IO 客户端服务
  *
- * 存在即合理:
- * - 管理与服务器的 WebSocket 连接
- * - 发送命令和接收响应
- * - 提供连接状态和事件监听
- *
- * 优雅即简约:
- * - 使用 RxJS 进行事件流处理
- * - 自动重连机制
- * - 类型安全的消息传递
+ * 管理与服务器的 WebSocket 连接
+ * 使用 RxJS 进行事件流处理
  */
 
 import { io, Socket } from 'socket.io-client';
 import { BehaviorSubject, Subject, Observable } from 'rxjs';
-import type {
-  WsClaudeCommand,
-  WsClaudeResponse,
-  ConnectionStatus,
-} from '../types';
+import type { WsClaudeCommand, WsClaudeResponse, ConnectionStatus } from '@/types';
 
 /** 默认服务器地址 */
 const DEFAULT_SERVER_URL = 'http://localhost:3000';

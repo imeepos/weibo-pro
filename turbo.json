@@ -8,8 +8,10 @@
         "$TURBO_DEFAULT$",
         ".env*",
         "src/**/*.ts",
+        "src/**/*.tsx",
         "tsconfig.json",
         "tsup.config.ts",
+        "vite.config.ts",
         "nest-cli.json"
       ],
       "outputs": [
@@ -33,7 +35,7 @@
     },
     "check-types": {
       "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", "src/**/*.ts", "tsconfig.json"],
+      "inputs": ["$TURBO_DEFAULT$", "src/**/*.ts", "src/**/*.tsx", "tsconfig.json"],
       "cache": true,
       "outputs": []
     },

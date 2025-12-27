@@ -5,8 +5,8 @@
  */
 
 import { create } from 'zustand';
-import { socketService } from '../services';
-import type { ChatMessage, Session, ConnectionStatus, WsClaudeResponse } from '../types';
+import { socketService } from '@/services';
+import type { ChatMessage, Session, ConnectionStatus, WsClaudeResponse } from '@/types';
 
 interface ChatState {
   /** 连接状态 */
