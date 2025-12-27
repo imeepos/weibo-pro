@@ -352,7 +352,7 @@ export const useChatStore = create<ChatState>((set, get) => {
     messageSequence: 0,
     error: null,
     tokenUsage: null,
-    permissionMode: 'default',
+    permissionMode: 'bypassPermissions',
     pendingApproval: null,
 
     connect: (serverUrl?: string) => {
