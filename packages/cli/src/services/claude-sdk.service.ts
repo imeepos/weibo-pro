@@ -46,12 +46,19 @@ export class ClaudeSdkService {
       console.log(`[ClaudeSdkService] 开始执行: taskId=${taskId}, command=${command.command}`);
 
       const sdkOptions = this.mapCommandToSdkOptions(command);
+      console.log(`[ClaudeSdkService] SDK选项:`, JSON.stringify(sdkOptions, null, 2));
+
+      console.log(`[ClaudeSdkService] 调用 query()...`);
       const queryInstance = query({
         prompt: command.command,
         options: sdkOptions
       });
+      console.log(`[ClaudeSdkService] query() 返回成功，开始遍历消息...`);
 
+      let messageCount = 0;
       for await (const message of queryInstance) {
+        messageCount++;
+        console.log(`[ClaudeSdkService] 收到消息 #${messageCount}:`, JSON.stringify(message).substring(0, 200));
         if (message.session_id && !capturedSessionId) {
           capturedSessionId = message.session_id;
           this.addSession(capturedSessionId, queryInstance, taskId, clientId);
