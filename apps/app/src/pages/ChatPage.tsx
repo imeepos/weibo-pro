@@ -5,9 +5,8 @@
 import { useEffect, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useChatStore } from '@/store';
-import { MessageBubble, ChatInput, ConnectionStatus } from '@/components';
+import { MessageBubble, ChatInput, ConnectionStatus, TokenUsage, ChatSettings, ApprovalDialog } from '@/components';
 import { ScrollArea } from '@/components/ui';
-import type { ChatMessage } from '@/types';
 
 export function ChatPage() {
   const {
@@ -15,8 +14,9 @@ export function ChatPage() {
     clientId,
     messages,
     isLoading,
-    streamingContent,
     error,
+    tokenUsage,
+    pendingApproval,
     connect,
     sendMessage,
     abortCurrentTask,
@@ -24,42 +24,32 @@ export function ChatPage() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  console.log('[ChatPage] 渲染，pendingApproval:', pendingApproval);
+
   // 连接到服务器
   useEffect(() => {
-    connect(`ws://localhost:8089`);
+    connect('http://192.168.5.89:8089');
   }, [connect]);
 
   // 滚动到底部
   useEffect(() => {
-    if (messages.length > 0 || streamingContent) {
+    if (messages.length > 0) {
       setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
     }
-  }, [messages, streamingContent]);
-
-  // 构建显示的消息列表（包括流式消息）
-  const displayMessages: ChatMessage[] = [
-    ...messages,
-    ...(streamingContent
-      ? [
-          {
-            id: 'streaming',
-            role: 'assistant' as const,
-            content: streamingContent,
-            timestamp: Date.now(),
-            isStreaming: true,
-          },
-        ]
-      : []),
-  ];
+  }, [messages]);
 
   return (
     <div className="flex flex-col h-full bg-background">
       {/* 顶部状态栏 */}
       <header className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
         <h1 className="text-lg font-semibold text-foreground">Claude</h1>
-        <ConnectionStatus status={connectionStatus} clientId={clientId} />
+        <div className="flex items-center gap-3">
+          {tokenUsage && <TokenUsage {...tokenUsage} />}
+          <ConnectionStatus status={connectionStatus} clientId={clientId} />
+          <ChatSettings />
+        </div>
       </header>
 
       {/* 错误提示 */}
@@ -71,14 +61,14 @@ export function ChatPage() {
 
       {/* 消息列表 */}
       <ScrollArea className="flex-1">
-        {displayMessages.length === 0 ? (
+        {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full px-8">
             <h2 className="text-2xl font-semibold text-foreground mb-2">Claude 助手</h2>
             <p className="text-base text-muted-foreground text-center">发送消息开始对话</p>
           </div>
         ) : (
           <div className="py-3">
-            {displayMessages.map((message) => (
+            {messages.map((message) => (
               <MessageBubble key={message.id} message={message} />
             ))}
             <div ref={messagesEndRef} />
@@ -87,7 +77,7 @@ export function ChatPage() {
       </ScrollArea>
 
       {/* 加载指示器 */}
-      {isLoading && !streamingContent && (
+      {isLoading && (
         <div className="flex items-center justify-center gap-2 py-2 shrink-0">
           <Loader2 className="h-4 w-4 animate-spin text-primary" />
           <span className="text-sm text-muted-foreground">思考中...</span>
@@ -96,6 +86,9 @@ export function ChatPage() {
 
       {/* 输入框 */}
       <ChatInput onSend={sendMessage} isLoading={isLoading} onAbort={abortCurrentTask} />
+
+      {/* 批准对话框 */}
+      <ApprovalDialog />
     </div>
   );
 }

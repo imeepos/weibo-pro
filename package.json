@@ -2,7 +2,6 @@
   "name": "sker",
   "private": true,
   "scripts": {
-    "claude": "claude --dangerously-skip-permissions",
     "build": "turbo run build",
     "build:force": "turbo run build --force --no-cache",
     "build:deps": "pnpm run -r --filter=\"./packages/*\" build",
@@ -45,7 +44,9 @@
       "canvas": "npm:empty-package@1.0.0"
     },
     "peerDependencyRules": {
-      "ignoreMissing": ["canvas"]
+      "ignoreMissing": [
+        "canvas"
+      ]
     }
   }
 }

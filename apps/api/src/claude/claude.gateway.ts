@@ -66,6 +66,11 @@ export class ClaudeGateway {
       await this.handleAbort(socket, clientId, data.taskId);
     });
 
+    // 监听批准响应
+    socket.on('claude:approval', async (data: { requestId: string; approved: boolean }) => {
+      await this.handleApproval(socket, clientId, data);
+    });
+
     // 监听断开连接
     socket.on('disconnect', () => {
       this.handleDisconnect(socket);
@@ -120,6 +125,20 @@ export class ClaudeGateway {
 
     // TODO: 实现中断逻辑（需要通过 RabbitMQ 发送中断命令）
     socket.emit('claude:abort-ack', { taskId, success: true });
+  }
+
+  /**
+   * 处理批准响应
+   */
+  private async handleApproval(
+    socket: Socket,
+    clientId: string,
+    data: { requestId: string; approved: boolean }
+  ): Promise<void> {
+    this.logger.info(`批准响应: clientId=${clientId}, requestId=${data.requestId}, approved=${data.approved}`);
+
+    // 转发批准响应到 ClaudeService
+    await this.claudeService.sendApprovalResponse(clientId, data);
   }
 
   /**

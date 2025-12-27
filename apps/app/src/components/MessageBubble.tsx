@@ -11,7 +11,20 @@ interface MessageBubbleProps {
 
 export function MessageBubble({ message }: MessageBubbleProps) {
   const isUser = message.role === 'user';
+  const isSystem = message.role === 'system';
 
+  // 系统消息样式
+  if (isSystem) {
+    return (
+      <div className="my-2 mx-3 flex justify-center">
+        <div className="px-3 py-1.5 rounded-full bg-muted/50 border border-border/50">
+          <SystemMessageContent message={message} />
+        </div>
+      </div>
+    );
+  }
+
+  // 用户/助手消息样式
   return (
     <div className={cn('my-1 mx-3', isUser ? 'flex flex-col items-end' : 'flex flex-col items-start')}>
       <div
@@ -28,4 +41,33 @@ export function MessageBubble({ message }: MessageBubbleProps) {
       </span>
     </div>
   );
+}
+
+function SystemMessageContent({ message }: { message: ChatMessage }) {
+  const { messageType, metadata } = message;
+
+  switch (messageType) {
+    case 'system-init':
+      return <span className="text-xs text-muted-foreground">系统已就绪</span>;
+
+    case 'tool-use':
+      return (
+        <span className="text-xs text-muted-foreground">
+          工具: <span className="font-medium">{metadata?.toolName}</span>
+        </span>
+      );
+
+    case 'result':
+      return (
+        <span className="text-xs text-muted-foreground">
+          执行完成 {metadata?.duration && `(${(metadata.duration / 1000).toFixed(2)}s)`}
+        </span>
+      );
+
+    case 'complete':
+      return <span className="text-xs text-green-600 dark:text-green-400">任务完成</span>;
+
+    default:
+      return <span className="text-xs text-muted-foreground">{message.content}</span>;
+  }
 }

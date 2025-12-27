@@ -50,10 +50,12 @@ export interface ClaudeResponse {
 export type ClaudeResponseType =
   | 'session-created'
   | 'message'
+  | 'tool-use'
   | 'result'
   | 'complete'
   | 'error'
-  | 'token-budget';
+  | 'token-budget'
+  | 'approval-request';
 
 /**
  * WebSocket 客户端命令 - 从移动端发送
@@ -67,6 +69,8 @@ export interface WsClaudeCommand {
   cwd?: string;
   /** 使用的模型 */
   model?: string;
+  /** 权限模式 */
+  permissionMode?: 'default' | 'plan' | 'bypassPermissions';
 }
 
 /**

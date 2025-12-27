@@ -23,6 +23,8 @@ import type { ClaudeCommand, ClaudeResponse } from './types/index.js';
 const COMMANDS_QUEUE = 'claude.commands';
 /** 响应队列名称 */
 const RESPONSES_QUEUE = 'claude.responses';
+/** 批准响应队列名称 */
+const APPROVALS_QUEUE = 'claude.approvals';
 
 @Injectable({ providedIn: 'auto' })
 export class ClaudeBridge {
@@ -45,8 +47,9 @@ export class ClaudeBridge {
     }
 
     this.listenToCommandQueue();
+    this.listenToApprovalQueue();
     this.isRunning = true;
-    console.log('[ClaudeBridge] 启动完成，监听队列:', COMMANDS_QUEUE);
+    console.log('[ClaudeBridge] 启动完成，监听队列:', COMMANDS_QUEUE, APPROVALS_QUEUE);
   }
 
   /**
@@ -81,6 +84,23 @@ export class ClaudeBridge {
         console.error('[ClaudeBridge] 命令队列错误:', err.message);
         // 尝试重新连接
         setTimeout(() => this.listenToCommandQueue(), 5000);
+      },
+    });
+
+    this.subscriptions.push(sub);
+  }
+
+  /**
+   * 监听批准响应队列
+   */
+  private listenToApprovalQueue(): void {
+    const { consumer$ } = useQueue<{ clientId: string; requestId: string; approved: boolean }>(APPROVALS_QUEUE);
+
+    const sub = consumer$.subscribe({
+      next: (envelope) => this.handleApproval(envelope),
+      error: (err) => {
+        console.error('[ClaudeBridge] 批准队列错误:', err.message);
+        setTimeout(() => this.listenToApprovalQueue(), 5000);
       },
     });
 
@@ -127,11 +147,32 @@ export class ClaudeBridge {
   }
 
   /**
+   * 处理批准响应
+   */
+  private async handleApproval(
+    envelope: MessageEnvelope<{ clientId: string; requestId: string; approved: boolean }>
+  ): Promise<void> {
+    const { clientId, requestId, approved } = envelope.message;
+    console.log(`[ClaudeBridge] 📥 收到批准响应: clientId=${clientId}, requestId=${requestId}, approved=${approved}`);
+
+    try {
+      this.claudeSdkService.handleApprovalResponse(requestId, approved);
+      envelope.ack();
+      console.log(`[ClaudeBridge] ✅ 批准响应处理成功`);
+    } catch (error) {
+      console.error('[ClaudeBridge] ❌ 批准响应处理失败:', error);
+      envelope.nack(false);
+    }
+  }
+
+  /**
    * 发送响应到响应队列
    */
   private sendResponse(response: ClaudeResponse): void {
     try {
+      console.log(`[ClaudeBridge] 发送响应: taskId=${response.taskId}, type=${response.type}`);
       this.responseQueue.producer.next(response);
+      console.log(`[ClaudeBridge] 响应已发送到队列: ${RESPONSES_QUEUE}`);
     } catch (error) {
       console.error('[ClaudeBridge] 发送响应失败:', error);
     }

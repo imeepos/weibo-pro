@@ -3,6 +3,11 @@
  */
 
 /**
+ * 权限模式
+ */
+export type PermissionMode = 'default' | 'plan' | 'bypassPermissions';
+
+/**
  * WebSocket 客户端命令
  */
 export interface WsClaudeCommand {
@@ -14,6 +19,8 @@ export interface WsClaudeCommand {
   cwd?: string;
   /** 使用的模型 */
   model?: string;
+  /** 权限模式 */
+  permissionMode?: PermissionMode;
 }
 
 /**
@@ -36,10 +43,28 @@ export interface WsClaudeResponse {
 export type ClaudeResponseType =
   | 'session-created'
   | 'message'
+  | 'tool-use'
   | 'result'
   | 'complete'
   | 'error'
-  | 'token-budget';
+  | 'token-budget'
+  | 'approval-request';
+
+/**
+ * 批准请求数据
+ */
+export interface ApprovalRequest {
+  /** 请求 ID */
+  requestId: string;
+  /** 操作描述 */
+  description: string;
+  /** 命令内容 */
+  command?: string;
+  /** 工具名称 */
+  toolName?: string;
+  /** 风险级别 */
+  riskLevel?: 'low' | 'medium' | 'high';
+}
 
 /**
  * 连接状态
@@ -54,8 +79,17 @@ export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp: number;
+  sequence: number;
   taskId?: string;
   isStreaming?: boolean;
+  messageType?: 'text' | 'system-init' | 'tool-use' | 'result' | 'token-budget' | 'complete';
+  metadata?: {
+    toolName?: string;
+    duration?: number;
+    tokensUsed?: number;
+    tokensTotal?: number;
+    status?: 'success' | 'error';
+  };
 }
 
 /**

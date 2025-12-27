@@ -28,6 +28,8 @@ import type {
 const COMMANDS_QUEUE = 'claude.commands';
 /** 响应队列名称 */
 const RESPONSES_QUEUE = 'claude.responses';
+/** 批准响应队列名称 */
+const APPROVALS_QUEUE = 'claude.approvals';
 
 @Injectable({ providedIn: 'auto' })
 export class ClaudeService {
@@ -44,6 +46,9 @@ export class ClaudeService {
 
   /** 命令队列 */
   private commandQueue = useQueue<ClaudeCommand>(COMMANDS_QUEUE);
+
+  /** 批准响应队列 */
+  private approvalQueue = useQueue<{ clientId: string; requestId: string; approved: boolean }>(APPROVALS_QUEUE);
 
   /** 响应订阅 */
   private responseSubscription: Subscription | null = null;
@@ -139,6 +144,7 @@ export class ClaudeService {
       command: wsCommand.command,
       cwd: wsCommand.cwd,
       model: wsCommand.model,
+      permissionMode: wsCommand.permissionMode,
       timestamp: Date.now(),
     };
 
@@ -153,6 +159,20 @@ export class ClaudeService {
     this.logger.info(`命令已发送: taskId=${taskId}, clientId=${clientId}`);
 
     return taskId;
+  }
+
+  /**
+   * 发送批准响应到执行端
+   */
+  async sendApprovalResponse(clientId: string, data: { requestId: string; approved: boolean }): Promise<void> {
+    this.logger.info(`发送批准响应: clientId=${clientId}, requestId=${data.requestId}, approved=${data.approved}`);
+
+    // 发送到批准响应队列
+    this.approvalQueue.producer.next({
+      clientId,
+      requestId: data.requestId,
+      approved: data.approved,
+    });
   }
 
   /**
@@ -175,6 +195,8 @@ export class ClaudeService {
   private listenToResponseQueue(): void {
     const { consumer$ } = useQueue<ClaudeResponse>(RESPONSES_QUEUE);
 
+    this.logger.info(`[DEBUG] 开始监听响应队列: ${RESPONSES_QUEUE}`);
+
     this.responseSubscription = consumer$.subscribe({
       next: (envelope) => this.handleResponse(envelope),
       error: (err) => {
@@ -191,6 +213,10 @@ export class ClaudeService {
   private handleResponse(envelope: MessageEnvelope<ClaudeResponse>): void {
     const response = envelope.message;
     const { taskId, clientId, sessionId, type, data } = response;
+
+    this.logger.info(`[DEBUG] 收到响应: taskId=${taskId}, clientId=${clientId}, type=${type}`);
+    this.logger.info(`[DEBUG] 当前客户端数量: ${this.clientSockets.size}`);
+    this.logger.info(`[DEBUG] 客户端列表: ${Array.from(this.clientSockets.keys()).join(', ')}`);
 
     // 查找客户端 Socket
     const socket = this.clientSockets.get(clientId);

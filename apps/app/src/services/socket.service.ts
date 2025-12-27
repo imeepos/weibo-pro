@@ -10,7 +10,7 @@ import { BehaviorSubject, Subject, Observable } from 'rxjs';
 import type { WsClaudeCommand, WsClaudeResponse, ConnectionStatus } from '@/types';
 
 /** 默认服务器地址 */
-const DEFAULT_SERVER_URL = 'http://localhost:3000';
+const DEFAULT_SERVER_URL = 'http://localhost:8089';
 
 class SocketService {
   private socket: Socket | null = null;
@@ -105,6 +105,19 @@ class SocketService {
   }
 
   /**
+   * 发送批准/拒绝响应
+   */
+  sendApproval(requestId: string, approved: boolean): void {
+    if (!this.socket?.connected) {
+      console.error('[SocketService] 未连接，无法发送批准响应');
+      return;
+    }
+
+    console.log(`[SocketService] 发送批准响应: requestId=${requestId}, approved=${approved}`);
+    this.socket.emit('claude:approval', { requestId, approved });
+  }
+
+  /**
    * 获取连接状态 Observable
    */
   getConnectionStatus(): Observable<ConnectionStatus> {
@@ -187,6 +200,9 @@ class SocketService {
     // 收到响应
     this.socket.on('claude:response', (response: WsClaudeResponse) => {
       console.log(`[SocketService] 收到响应: type=${response.type}, taskId=${response.taskId}`);
+      if (response.type === 'approval-request') {
+        console.log('[SocketService] 🔔 收到授权请求:', response.data);
+      }
       this.response$.next(response);
     });
 

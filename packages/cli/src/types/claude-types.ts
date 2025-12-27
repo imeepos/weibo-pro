@@ -57,10 +57,12 @@ export interface ClaudeResponse {
 export type ClaudeResponseType =
   | 'session-created'  // 新会话创建
   | 'message'          // 流式消息
+  | 'tool-use'         // 工具执行请求
   | 'result'           // 最终结果
   | 'complete'         // 任务完成
   | 'error'            // 错误
-  | 'token-budget';    // Token 使用情况
+  | 'token-budget'     // Token 使用情况
+  | 'approval-request';// 批准请求
 
 /**
  * 响应数据联合类型
@@ -73,6 +75,7 @@ export type ClaudeResponseData =
   | CompleteData
   | ErrorData
   | TokenBudgetData
+  | ApprovalRequestData
   | Record<string, unknown>;
 
 /**
@@ -136,6 +139,29 @@ export interface ErrorData {
 export interface TokenBudgetData {
   used: number;
   total: number;
+  input: number;
+  output: number;
+  cacheRead: number;
+  cacheCreation: number;
+}
+
+/**
+ * 批准请求数据
+ */
+export interface ApprovalRequestData {
+  requestId: string;
+  description: string;
+  command?: string;
+  toolName?: string;
+  riskLevel?: 'low' | 'medium' | 'high';
+}
+
+/**
+ * 批准响应命令
+ */
+export interface ApprovalResponseCommand {
+  requestId: string;
+  approved: boolean;
 }
 
 /**
