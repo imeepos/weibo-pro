@@ -2,7 +2,7 @@
  * Claude SDK Service - Claude 代码助手 SDK 服务
  *
  * 存在即合理:
- * - 封装 @anthropic-ai/claude-code SDK 的复杂性
+ * - 封装 @anthropic-ai/claude-agent-sdk 的复杂性
  * - 提供会话管理和中断能力
  * - 将 SDK 消息转换为 RabbitMQ 消息格式
  *
@@ -13,19 +13,15 @@
  */
 
 import { Injectable } from '@sker/core';
-import { spawn } from 'child_process';
+import { query, type Options as SdkOptions } from '@anthropic-ai/claude-agent-sdk';
 import type {
   ClaudeCommand,
   ClaudeResponse,
   ClaudeResponseType,
-  ClaudeSdkOptions,
   ActiveSession,
   ModelUsage,
 } from '../types/index.js';
 
-/**
- * 响应发送回调类型
- */
 export type ResponseSender = (response: ClaudeResponse) => void;
 
 @Injectable({ providedIn: 'auto' })
@@ -44,20 +40,22 @@ export class ClaudeSdkService {
     sendResponse: ResponseSender
   ): Promise<void> {
     const { taskId, clientId, sessionId } = command;
-    const capturedSessionId = sessionId || `session-${taskId}`;
+    let capturedSessionId = sessionId;
 
-    return new Promise((resolve, reject) => {
-      try {
-        console.log(`[ClaudeSdkService] 开始执行: taskId=${taskId}, command=${command.command}`);
+    try {
+      console.log(`[ClaudeSdkService] 开始执行: taskId=${taskId}, command=${command.command}`);
 
-        // 构建 claude CLI 参数
-        const args = ['--non-interactive'];
-        if (command.cwd) args.push('--cwd', command.cwd);
-        if (command.model) args.push('--model', command.model);
-        if (sessionId) args.push('--resume', sessionId);
+      const sdkOptions = this.mapCommandToSdkOptions(command);
+      const queryInstance = query({
+        prompt: command.command,
+        options: sdkOptions
+      });
 
-        // 发送会话创建事件
-        if (!sessionId) {
+      for await (const message of queryInstance) {
+        if (message.session_id && !capturedSessionId) {
+          capturedSessionId = message.session_id;
+          this.addSession(capturedSessionId, queryInstance, taskId, clientId);
+
           sendResponse({
             taskId,
             clientId,
@@ -68,96 +66,70 @@ export class ClaudeSdkService {
           });
         }
 
-        // 启动 claude CLI 进程
-        const proc = spawn('claude', args, {
-          cwd: command.cwd || process.cwd(),
-          stdio: ['pipe', 'pipe', 'pipe'],
-        });
-
-        this.addSession(capturedSessionId, proc as any, taskId, clientId);
-
-        // 发送命令到 stdin
-        proc.stdin.write(command.command + '\n');
-        proc.stdin.end();
-
-        let outputBuffer = '';
-
-        // 处理 stdout
-        proc.stdout.on('data', (data: Buffer) => {
-          const text = data.toString();
-          outputBuffer += text;
-
-          sendResponse({
-            taskId,
-            clientId,
-            sessionId: capturedSessionId,
-            type: 'message',
-            data: { type: 'text', text },
-            timestamp: Date.now(),
-          });
-        });
-
-        // 处理 stderr
-        proc.stderr.on('data', (data: Buffer) => {
-          console.error(`[ClaudeSdkService] stderr: ${data.toString()}`);
-        });
-
-        // 处理进程退出
-        proc.on('close', (code) => {
-          this.removeSession(capturedSessionId);
-
-          sendResponse({
-            taskId,
-            clientId,
-            sessionId: capturedSessionId,
-            type: 'complete',
-            data: { exitCode: code || 0 },
-            timestamp: Date.now(),
-          });
-
-          console.log(`[ClaudeSdkService] 完成: taskId=${taskId}, exitCode=${code}`);
-          resolve();
-        });
-
-        // 处理错误
-        proc.on('error', (error) => {
-          this.removeSession(capturedSessionId);
-
-          sendResponse({
-            taskId,
-            clientId,
-            sessionId: capturedSessionId,
-            type: 'error',
-            data: {
-              message: error.message,
-              code: 'SPAWN_ERROR',
-            },
-            timestamp: Date.now(),
-          });
-
-          console.error(`[ClaudeSdkService] 错误: taskId=${taskId}, error=${error.message}`);
-          reject(error);
-        });
-
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        console.error(`[ClaudeSdkService] 失败: taskId=${taskId}, error=${errorMessage}`);
+        if (capturedSessionId && !this.activeSessions.has(capturedSessionId)) {
+          this.addSession(capturedSessionId, queryInstance, taskId, clientId);
+        }
 
         sendResponse({
           taskId,
           clientId,
-          sessionId: capturedSessionId,
-          type: 'error',
-          data: {
-            message: errorMessage,
-            code: 'QUERY_ERROR',
-          },
+          sessionId: capturedSessionId || `session-${taskId}`,
+          type: 'message',
+          data: message as any,
           timestamp: Date.now(),
         });
 
-        reject(error);
+        if (message.type === 'result') {
+          const tokenBudget = this.extractTokenBudget(message as Record<string, unknown>);
+          if (tokenBudget) {
+            sendResponse({
+              taskId,
+              clientId,
+              sessionId: capturedSessionId || `session-${taskId}`,
+              type: 'token-budget',
+              data: tokenBudget,
+              timestamp: Date.now(),
+            });
+          }
+        }
       }
-    });
+
+      if (capturedSessionId) {
+        this.removeSession(capturedSessionId);
+      }
+
+      sendResponse({
+        taskId,
+        clientId,
+        sessionId: capturedSessionId || `session-${taskId}`,
+        type: 'complete',
+        data: { exitCode: 0, isNewSession: !sessionId },
+        timestamp: Date.now(),
+      });
+
+      console.log(`[ClaudeSdkService] 完成: taskId=${taskId}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(`[ClaudeSdkService] 失败: taskId=${taskId}, error=${errorMessage}`);
+
+      if (capturedSessionId) {
+        this.removeSession(capturedSessionId);
+      }
+
+      sendResponse({
+        taskId,
+        clientId,
+        sessionId: capturedSessionId || `session-${taskId}`,
+        type: 'error',
+        data: {
+          message: errorMessage,
+          code: 'QUERY_ERROR',
+        },
+        timestamp: Date.now(),
+      });
+
+      throw error;
+    }
   }
 
   /**
@@ -177,12 +149,7 @@ export class ClaudeSdkService {
     try {
       console.log(`[ClaudeSdkService] 中断会话: ${sessionId}`);
 
-      // 杀死子进程
-      const proc = session.instance as any;
-      if (proc && proc.kill) {
-        proc.kill('SIGTERM');
-      }
-
+      await session.instance.interrupt();
       session.status = 'aborted';
       this.removeSession(sessionId);
 
@@ -213,33 +180,27 @@ export class ClaudeSdkService {
   /**
    * 映射命令到 SDK 选项
    */
-  private mapCommandToSdkOptions(command: ClaudeCommand): ClaudeSdkOptions {
-    const options: ClaudeSdkOptions = {};
+  private mapCommandToSdkOptions(command: ClaudeCommand): SdkOptions {
+    const options: SdkOptions = {};
 
-    // 工作目录
     if (command.cwd) {
       options.cwd = command.cwd;
     }
 
-    // 权限模式
     if (command.permissionMode && command.permissionMode !== 'default') {
       options.permissionMode = command.permissionMode;
     }
 
-    // 模型
     options.model = command.model || 'sonnet';
     console.log(`[ClaudeSdkService] 使用模型: ${options.model}`);
 
-    // 系统提示配置
     options.systemPrompt = {
       type: 'preset',
       preset: 'claude_code',
     };
 
-    // 设置来源
     options.settingSources = ['project', 'user', 'local'];
 
-    // 恢复会话
     if (command.sessionId) {
       options.resume = command.sessionId;
     }
@@ -289,7 +250,7 @@ export class ClaudeSdkService {
    */
   private addSession(
     sessionId: string,
-    instance: AsyncIterable<unknown>,
+    instance: AsyncIterable<unknown> & { interrupt: () => Promise<void> },
     taskId: string,
     clientId: string
   ): void {

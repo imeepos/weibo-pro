@@ -139,7 +139,7 @@ export interface TokenBudgetData {
 }
 
 /**
- * SDK 查询选项 - 映射到 @anthropic-ai/claude-code
+ * SDK 查询选项 - 映射到 @anthropic-ai/claude-agent-sdk
  */
 export interface ClaudeSdkOptions {
   /** 工作目录 */
@@ -162,7 +162,15 @@ export interface ClaudeSdkOptions {
   /** 设置来源 */
   settingSources?: string[];
   /** MCP 服务器配置 */
-  mcpServers?: Record<string, unknown>;
+  mcpServers?: Record<string, {
+    type?: 'stdio' | 'sse' | 'http' | 'sdk';
+    command?: string;
+    args?: string[];
+    env?: Record<string, string>;
+    url?: string;
+    headers?: Record<string, string>;
+    name?: string;
+  }>;
 }
 
 /**
@@ -170,7 +178,7 @@ export interface ClaudeSdkOptions {
  */
 export interface ActiveSession {
   /** SDK 查询实例 */
-  instance: AsyncIterable<unknown>;
+  instance: AsyncIterable<unknown> & { interrupt: () => Promise<void> };
   /** 开始时间 */
   startTime: number;
   /** 会话状态 */

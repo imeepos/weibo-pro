@@ -55,7 +55,7 @@
     "prepublishOnly": "pnpm build"
   },
   "dependencies": {
-    "@anthropic-ai/claude-code": "^2.0.76",
+    "@anthropic-ai/claude-agent-sdk": "^0.1.29",
     "@sker/core": "workspace:*",
     "@sker/mq": "workspace:*",
     "@sker/utils": "workspace:*",
