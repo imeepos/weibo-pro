@@ -12,7 +12,7 @@ import { ConfigService } from './config.js';
 import { TaskRegistry } from './task-registry.js';
 import { TaskExecutor } from './task-executor.js';
 import { ClaudeBridge } from './claude-bridge.js';
-import { ClaudeSdkService } from './services/claude-sdk.service.js';
+// import { ClaudeSdkService } from './services/claude-sdk.service.js';
 import { CLI_CONFIG } from './tokens.js';
 import { createLogger } from './logger.js';
 import { removePid } from './daemon.js';
@@ -43,7 +43,7 @@ async function bootstrap(): Promise<() => Promise<void>> {
   executor.start();
 
   // 初始化 Claude SDK 服务（确保被 DI 容器管理）
-  root.get(ClaudeSdkService);
+  // root.get(ClaudeSdkService);
 
   // 启动 Claude 桥接器
   const claudeBridge = root.get(ClaudeBridge);
