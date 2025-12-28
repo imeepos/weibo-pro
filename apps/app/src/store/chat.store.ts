@@ -5,6 +5,7 @@
  */
 
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { socketService } from '@/services';
 import type { ChatMessage, Session, ConnectionStatus, WsClaudeResponse, PermissionMode, ApprovalRequest } from '@/types';
 
@@ -50,7 +51,9 @@ interface ChatState {
   rejectRequest: (requestId: string) => void;
 }
 
-export const useChatStore = create<ChatState>((set, get) => {
+export const useChatStore = create<ChatState>()(
+  persist(
+    (set, get) => {
   let subscribed = false;
 
   const getTask = (taskId: string) => get().tasks.find(t => t.id === taskId || t.serverTaskId === taskId);
@@ -249,4 +252,24 @@ export const useChatStore = create<ChatState>((set, get) => {
       set({ pendingApproval: null });
     },
   };
-});
+},
+{
+  name: 'chat-store',
+  partialize: (state) => ({
+    tasks: state.tasks,
+    activeTaskId: state.activeTaskId,
+    permissionMode: state.permissionMode,
+  }),
+  onRehydrateStorage: () => (state) => {
+    if (state) {
+      state.tasks = state.tasks.map(t => ({
+        ...t,
+        isLoading: false,
+        streamingMessageId: null,
+        messages: t.messages.map(m => ({ ...m, isStreaming: false })),
+      }));
+    }
+  },
+}
+  )
+);
