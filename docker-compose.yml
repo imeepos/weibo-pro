@@ -5,10 +5,10 @@ services:
     ports:
       - "8088:80"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
-      - ./apps/bigscreen/dist:/usr/share/nginx/html:ro
-      - ./apps/app/dist:/usr/share/nginx/html/mobile:ro
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+      - ./apps/bigscreen/dist:/usr/share/nginx/html
+      - ./apps/app/dist:/usr/share/nginx/html/mobile
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/health"]
