@@ -9,8 +9,20 @@ import { MessageSquare, Users } from 'lucide-react';
 
 type Page = 'chat' | 'cli-list';
 
+interface SelectedClient {
+  clientId: string;
+  name?: string;
+  description?: string;
+}
+
 export function App() {
   const [currentPage, setCurrentPage] = useState<Page>('chat');
+  const [selectedClient, setSelectedClient] = useState<SelectedClient | null>(null);
+
+  const handleClientSelect = (client: SelectedClient) => {
+    setSelectedClient(client);
+    setCurrentPage('chat');
+  };
 
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col">
@@ -36,8 +48,8 @@ export function App() {
 
       {/* 页面内容 */}
       <div className="flex-1 overflow-hidden">
-        {currentPage === 'chat' && <ChatPage />}
-        {currentPage === 'cli-list' && <CliListPage />}
+        {currentPage === 'chat' && <ChatPage selectedClient={selectedClient} />}
+        {currentPage === 'cli-list' && <CliListPage onClientSelect={handleClientSelect} />}
       </div>
     </div>
   );

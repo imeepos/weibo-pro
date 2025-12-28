@@ -15,6 +15,11 @@ import type { ClaudeCommand, ClaudeResponse } from './types';
 interface WorkerConnection {
   socket: Socket;
   connectedAt: number;
+  cliConfig?: {
+    id: string;
+    name: string;
+    description: string;
+  };
 }
 
 @Injectable({ providedIn: 'auto' })
@@ -23,8 +28,7 @@ export class WorkerGateway {
   private io: SocketIOServer | null = null;
 
   /** Worker Socket 连接 */
-  private workerSocket: Socket | null = null;
-  private workerConnectedAt: number | null = null;
+  private workerConnection: WorkerConnection | null = null;
 
   /** 响应回调映射: taskId → callback */
   private responseCallbacks = new Map<string, (response: ClaudeResponse) => void>();
@@ -50,16 +54,20 @@ export class WorkerGateway {
     const workerNs = this.io.of('/worker');
 
     workerNs.on('connection', (socket: Socket) => {
-      this.logger.info(`Worker 已连接: socketId=${socket.id}`);
+      const cliConfig = socket.handshake.auth?.cliConfig;
+      this.logger.info(`Worker 已连接: socketId=${socket.id}, name=${cliConfig?.name || 'unknown'}`);
 
       // 只允许一个 Worker 连接
-      if (this.workerSocket) {
+      if (this.workerConnection) {
         this.logger.warn('已有 Worker 连接，断开旧连接');
-        this.workerSocket.disconnect();
+        this.workerConnection.socket.disconnect();
       }
 
-      this.workerSocket = socket;
-      this.workerConnectedAt = Date.now();
+      this.workerConnection = {
+        socket,
+        connectedAt: Date.now(),
+        cliConfig,
+      };
 
       // 监听 Worker 响应
       socket.on('worker:response', (response: ClaudeResponse) => {
@@ -69,9 +77,8 @@ export class WorkerGateway {
       // 监听断开连接
       socket.on('disconnect', () => {
         this.logger.info(`Worker 已断开: socketId=${socket.id}`);
-        if (this.workerSocket?.id === socket.id) {
-          this.workerSocket = null;
-          this.workerConnectedAt = null;
+        if (this.workerConnection?.socket.id === socket.id) {
+          this.workerConnection = null;
         }
       });
 
@@ -84,7 +91,7 @@ export class WorkerGateway {
    * 发送命令到 Worker
    */
   sendCommand(command: ClaudeCommand, onResponse: (response: ClaudeResponse) => void): boolean {
-    if (!this.workerSocket) {
+    if (!this.workerConnection) {
       this.logger.error('没有可用的 Worker 连接');
       return false;
     }
@@ -93,7 +100,7 @@ export class WorkerGateway {
     this.responseCallbacks.set(command.taskId, onResponse);
 
     // 发送命令
-    this.workerSocket.emit('worker:command', command);
+    this.workerConnection.socket.emit('worker:command', command);
     this.logger.info(`命令已发送到 Worker: taskId=${command.taskId}`);
 
     return true;
@@ -103,12 +110,12 @@ export class WorkerGateway {
    * 发送批准响应到 Worker
    */
   sendApproval(clientId: string, data: { requestId: string; approved: boolean }): boolean {
-    if (!this.workerSocket) {
+    if (!this.workerConnection) {
       this.logger.error('没有可用的 Worker 连接');
       return false;
     }
 
-    this.workerSocket.emit('worker:approval', { clientId, ...data });
+    this.workerConnection.socket.emit('worker:approval', { clientId, ...data });
     this.logger.info(`批准响应已发送: requestId=${data.requestId}, approved=${data.approved}`);
 
     return true;
@@ -138,7 +145,7 @@ export class WorkerGateway {
    * 检查 Worker 是否已连接
    */
   isWorkerConnected(): boolean {
-    return this.workerSocket !== null && this.workerSocket.connected;
+    return this.workerConnection !== null && this.workerConnection.socket.connected;
   }
 
   /**
@@ -147,11 +154,15 @@ export class WorkerGateway {
   getOnlineWorkers(): Array<{
     socketId: string;
     connectedAt: number;
+    name?: string;
+    description?: string;
   }> {
-    if (this.workerSocket && this.workerConnectedAt) {
+    if (this.workerConnection) {
       return [{
-        socketId: this.workerSocket.id,
-        connectedAt: this.workerConnectedAt,
+        socketId: this.workerConnection.socket.id,
+        connectedAt: this.workerConnection.connectedAt,
+        name: this.workerConnection.cliConfig?.name,
+        description: this.workerConnection.cliConfig?.description,
       }];
     }
     return [];
@@ -163,10 +174,9 @@ export class WorkerGateway {
   shutdown(): void {
     this.responseCallbacks.clear();
     this.approvalCallbacks.clear();
-    if (this.workerSocket) {
-      this.workerSocket.disconnect();
-      this.workerSocket = null;
-      this.workerConnectedAt = null;
+    if (this.workerConnection) {
+      this.workerConnection.socket.disconnect();
+      this.workerConnection = null;
     }
     this.logger.info('Worker Gateway 已关闭');
   }

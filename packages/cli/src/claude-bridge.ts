@@ -57,6 +57,13 @@ export class ClaudeBridge {
       reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
+      auth: {
+        cliConfig: {
+          id: this.config.id,
+          name: this.config.name,
+          description: this.config.description,
+        },
+      },
     });
 
     this.setupEventHandlers();

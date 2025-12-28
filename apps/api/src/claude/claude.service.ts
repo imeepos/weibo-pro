@@ -212,6 +212,8 @@ export class ClaudeService {
   getOnlineWorkers(): Array<{
     socketId: string;
     connectedAt: number;
+    name?: string;
+    description?: string;
   }> {
     return this.workerGateway.getOnlineWorkers();
   }

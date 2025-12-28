@@ -26,6 +26,8 @@ export class ClaudeController implements sdk.ClaudeController {
         socketId: worker.socketId,
         connectedAt: worker.connectedAt,
         activeTaskCount: 0, // Worker 不跟踪任务数
+        name: worker.name,
+        description: worker.description,
       })),
     };
   }

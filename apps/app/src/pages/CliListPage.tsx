@@ -13,9 +13,15 @@ interface CliClient {
   socketId: string;
   connectedAt: number;
   activeTaskCount: number;
+  name?: string;
+  description?: string;
 }
 
-export function CliListPage() {
+interface CliListPageProps {
+  onClientSelect: (client: { clientId: string; name?: string; description?: string }) => void;
+}
+
+export function CliListPage({ onClientSelect }: CliListPageProps) {
   const [clients, setClients] = useState<CliClient[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -117,15 +123,27 @@ export function CliListPage() {
             {clients.map((client) => (
               <div
                 key={client.clientId}
-                className="p-4 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors"
+                className="p-4 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors cursor-pointer"
+                onClick={() => onClientSelect({
+                  clientId: client.clientId,
+                  name: client.name,
+                  description: client.description,
+                })}
               >
                 {/* 客户端头部 */}
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <Circle className="h-2 w-2 fill-green-500 text-green-500" />
-                    <span className="font-mono text-sm font-medium text-foreground">
-                      {client.clientId.substring(0, 8)}...
-                    </span>
+                    <div className="flex flex-col">
+                      <span className="font-medium text-sm text-foreground">
+                        {client.name || '未命名客户端'}
+                      </span>
+                      {client.description && (
+                        <span className="text-xs text-muted-foreground">
+                          {client.description}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   {client.activeTaskCount > 0 && (
                     <span className="px-2 py-1 text-xs font-medium rounded-full bg-primary/10 text-primary">

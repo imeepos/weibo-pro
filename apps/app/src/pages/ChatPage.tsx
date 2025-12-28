@@ -8,7 +8,15 @@ import { useChatStore } from '@/store';
 import { MessageBubble, ChatInput, ConnectionStatus, TokenUsage, ChatSettings, ApprovalDialog } from '@/components';
 import { ScrollArea } from '@/components/ui';
 
-export function ChatPage() {
+interface ChatPageProps {
+  selectedClient?: {
+    clientId: string;
+    name?: string;
+    description?: string;
+  } | null;
+}
+
+export function ChatPage({ selectedClient }: ChatPageProps) {
   const {
     connectionStatus,
     clientId,
@@ -44,7 +52,14 @@ export function ChatPage() {
     <div className="flex flex-col h-full bg-background">
       {/* 顶部状态栏 */}
       <header className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
-        <h1 className="text-lg font-semibold text-foreground">Claude</h1>
+        <div className="flex flex-col">
+          <h1 className="text-lg font-semibold text-foreground">
+            {selectedClient?.name || 'Claude'}
+          </h1>
+          {selectedClient?.description && (
+            <p className="text-xs text-muted-foreground">{selectedClient.description}</p>
+          )}
+        </div>
         <div className="flex items-center gap-3">
           {tokenUsage && <TokenUsage {...tokenUsage} />}
           <ConnectionStatus status={connectionStatus} clientId={clientId} />
