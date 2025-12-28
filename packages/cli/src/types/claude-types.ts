@@ -214,3 +214,33 @@ export interface ActiveSession {
   /** 客户端 ID */
   clientId: string;
 }
+
+/**
+ * 任务状态枚举
+ */
+export type TaskStatus = 'pending' | 'running' | 'complete' | 'error' | 'aborted';
+
+/**
+ * 任务状态信息
+ */
+export interface TaskState {
+  /** 任务唯一标识符 */
+  id: string;
+  /** 任务名称 */
+  name: string;
+  /** 任务状态 */
+  status: TaskStatus;
+  /** 任务进度 (0-100) */
+  progress: number;
+  /** 任务消息列表 */
+  messages: string[];
+  /** 关联的会话 ID */
+  sessionId?: string;
+  /** 创建时间 */
+  createdAt: number;
+  /** 完成时间 */
+  completedAt?: number;
+  /** 任务命令 */
+  command: ClaudeCommand;
+}
+

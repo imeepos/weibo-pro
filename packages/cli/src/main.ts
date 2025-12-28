@@ -35,4 +35,30 @@ program.command('logs').description('Tail logs').action(() => {
   spawn('tail', ['-f', logFile], { stdio: 'inherit' });
 });
 
+program.command('tui').description('Launch task manager UI').action(async () => {
+  const { render } = await import('ink');
+  const React = await import('react');
+  const { Tui } = await import('./tui/index.js');
+  const { TaskManager } = await import('./task-manager.js');
+  const { TaskExecutor } = await import('./task-executor.js');
+
+  const taskManager = new TaskManager({ maxConcurrent: 3 });
+  const executor = new TaskExecutor(taskManager);
+
+  await executor.start();
+
+  const handleAddTask = (command: string) => {
+    const taskId = `task-${Date.now()}`;
+    taskManager.addTask({
+      taskId,
+      clientId: 'tui',
+      command,
+      timestamp: Date.now(),
+    });
+  };
+
+  render(React.createElement(Tui, { taskManager, onAddTask: handleAddTask }));
+});
+
 program.parse();
+
