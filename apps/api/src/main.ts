@@ -73,8 +73,17 @@ async function bootstrap() {
 
   // 静态文件服务 - /uploads 路径
   app.use('/uploads/*', serveStatic({ root: './' }));
-  // 静态文件服务 - /mobile 路径
-  app.use('/mobile/*', serveStatic({ root: './static/mobile' }));
+
+  // 处理 /mobile 重定向到 /mobile/
+  app.get('/mobile', (c) => {
+    return c.redirect('/mobile/');
+  });
+
+  // 静态文件服务 - /mobile 路径及其子路径
+  app.use('/mobile/*', serveStatic({
+    root: './static/mobile',
+    index: 'index.html'
+  }));
 
   // Better Auth 初始化
   const auth = betterAuth({

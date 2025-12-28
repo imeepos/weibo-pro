@@ -4,6 +4,7 @@ import path from 'path';
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: '/mobile/',
   plugins: [react()],
   resolve: {
     alias: {
@@ -21,7 +22,8 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: path.resolve(__dirname, '../api/static/mobile'),
+    outDir: 'dist',
     sourcemap: true,
+    emptyOutDir: true,
   },
 });
