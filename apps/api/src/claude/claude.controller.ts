@@ -15,9 +15,18 @@ export class ClaudeController implements sdk.ClaudeController {
    * GET /api/claude/clients
    */
   async getOnlineClients() {
+    // CLI Worker 连接到 /worker 命名空间
+    const workers = this.claudeGateway.getOnlineWorkers();
+
+    // 转换为客户端格式（Worker 没有 clientId 和 activeTaskCount）
     return {
       success: true,
-      data: this.claudeGateway.getOnlineClients(),
+      data: workers.map(worker => ({
+        clientId: worker.socketId, // 使用 socketId 作为 clientId
+        socketId: worker.socketId,
+        connectedAt: worker.connectedAt,
+        activeTaskCount: 0, // Worker 不跟踪任务数
+      })),
     };
   }
 

@@ -24,6 +24,7 @@ export class WorkerGateway {
 
   /** Worker Socket 连接 */
   private workerSocket: Socket | null = null;
+  private workerConnectedAt: number | null = null;
 
   /** 响应回调映射: taskId → callback */
   private responseCallbacks = new Map<string, (response: ClaudeResponse) => void>();
@@ -58,6 +59,7 @@ export class WorkerGateway {
       }
 
       this.workerSocket = socket;
+      this.workerConnectedAt = Date.now();
 
       // 监听 Worker 响应
       socket.on('worker:response', (response: ClaudeResponse) => {
@@ -69,6 +71,7 @@ export class WorkerGateway {
         this.logger.info(`Worker 已断开: socketId=${socket.id}`);
         if (this.workerSocket?.id === socket.id) {
           this.workerSocket = null;
+          this.workerConnectedAt = null;
         }
       });
 
@@ -139,6 +142,22 @@ export class WorkerGateway {
   }
 
   /**
+   * 获取在线 Worker 列表
+   */
+  getOnlineWorkers(): Array<{
+    socketId: string;
+    connectedAt: number;
+  }> {
+    if (this.workerSocket && this.workerConnectedAt) {
+      return [{
+        socketId: this.workerSocket.id,
+        connectedAt: this.workerConnectedAt,
+      }];
+    }
+    return [];
+  }
+
+  /**
    * 关闭网关
    */
   shutdown(): void {
@@ -147,6 +166,7 @@ export class WorkerGateway {
     if (this.workerSocket) {
       this.workerSocket.disconnect();
       this.workerSocket = null;
+      this.workerConnectedAt = null;
     }
     this.logger.info('Worker Gateway 已关闭');
   }

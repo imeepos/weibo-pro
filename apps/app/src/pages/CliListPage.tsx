@@ -5,6 +5,8 @@
 import { useEffect, useState } from 'react';
 import { RefreshCw, Circle, Activity } from 'lucide-react';
 import { Button, ScrollArea } from '@/components/ui';
+import { root } from '@sker/core';
+import { ClaudeController } from '@sker/sdk';
 
 interface CliClient {
   clientId: string;
@@ -23,8 +25,8 @@ export function CliListPage() {
     setError(null);
 
     try {
-      const response = await fetch('http://192.168.5.89:8089/api/claude/clients');
-      const result = await response.json();
+      const claudeController = root.get(ClaudeController);
+      const result = await claudeController.getOnlineClients();
 
       if (result.success) {
         setClients(result.data);

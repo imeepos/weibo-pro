@@ -69,6 +69,8 @@ export class AppModule {}
 
 ## 初始化流程
 
+### 后端初始化（NestJS）
+
 ```typescript
 // apps/api/src/main.ts
 import 'reflect-metadata';
@@ -86,6 +88,51 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   await app.listen(3000);
 }
+```
+
+### 前端初始化（React/Vite）
+
+```typescript
+// apps/app/src/main.tsx
+import 'reflect-metadata';
+import '@sker/sdk';
+// 上面的这些 import 必须要，加上会自动注册响应的controller到root
+
+// apps/app/src/lib/sdk.ts
+import { createAuthClient } from 'better-auth/client';
+import { createSkerClientPlugin } from '@sker/sdk';
+
+function getBaseUrl() {
+  const url = new URL(window.location.href);
+  if (url.port) {
+    return `${url.protocol}//${url.hostname}:${url.port}`;
+  }
+  return `${url.protocol}//${url.hostname}`;
+}
+
+const baseURL = getBaseUrl();
+
+/**
+ * 使用 Better Auth 插件初始化 SDK
+ * 插件会自动执行李代桃僵，将所有 Controller 注册到 DI 容器
+ */
+export const auth = createAuthClient({
+  baseURL,
+  plugins: [createSkerClientPlugin()],
+});
+```
+
+### 前端使用 SDK Controller
+
+```typescript
+import { root } from '@sker/core';
+import { ClaudeController } from '@sker/sdk';
+
+// 获取 Controller 实例
+const claudeController = root.get(ClaudeController);
+
+// 调用 API
+const result = await claudeController.getOnlineClients();
 ```
 
 ## 作用域选择
@@ -110,6 +157,12 @@ async function bootstrap() {
 
 ## 参考实现
 
+### 后端
 - `apps/api/src/main.ts`
 - `apps/api/src/app.module.ts`
 - `packages/entities/src/providers.ts`
+
+### 前端
+- `apps/bigscreen/src/main.tsx` - Better Auth + SDK 初始化示例
+- `apps/app/src/main.tsx` - React 应用 SDK 初始化
+- `apps/app/src/lib/sdk.ts` - SDK 配置文件

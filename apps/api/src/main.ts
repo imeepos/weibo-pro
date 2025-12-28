@@ -6,6 +6,7 @@ import "@sker/workflow";
 import "@sker/workflow-ast";
 import "@sker/workflow-run";
 import "./controllers/index";
+import "./claude/claude.controller";
 import { Logger, root } from '@sker/core';
 import { entitiesProviders, seedNuwa, seedSentimentAnalyzer, seedContentAuditor, seedDataValidator, seedProgrammingAssistant, useTranslation } from "@sker/entities";
 import { killPortProcess } from 'kill-port-process';

@@ -34,7 +34,7 @@ export class ClaudeService {
   private socketToClient = new Map<string, string>();
 
   /** 客户端连接信息 */
-  private clientConnections = new Map<string, ClientConnection>();
+  private clientConnections = new Map<string, ClientConnection & { clientType: string }>();
 
   /** Socket.IO 服务器实例 */
   private io: SocketIOServer | null = null;
@@ -74,7 +74,7 @@ export class ClaudeService {
   /**
    * 注册客户端连接
    */
-  registerClient(socket: Socket): string {
+  registerClient(socket: Socket, clientType: string = 'unknown'): string {
     const clientId = uuidv4();
 
     this.clientSockets.set(clientId, socket);
@@ -83,9 +83,10 @@ export class ClaudeService {
       socketId: socket.id,
       connectedAt: Date.now(),
       activeTasks: new Set(),
+      clientType,
     });
 
-    this.logger.info(`客户端已连接: clientId=${clientId}, socketId=${socket.id}`);
+    this.logger.info(`客户端已连接: clientId=${clientId}, socketId=${socket.id}, type=${clientType}`);
     return clientId;
   }
 
@@ -175,6 +176,7 @@ export class ClaudeService {
 
   /**
    * 获取所有在线的 CLI 客户端列表
+   * 注意：CLI Worker 连接到 /worker 命名空间，使用 getOnlineWorkers() 获取
    */
   getOnlineClients(): Array<{
     clientId: string;
@@ -190,15 +192,28 @@ export class ClaudeService {
     }> = [];
 
     this.clientConnections.forEach((connection, clientId) => {
-      clients.push({
-        clientId,
-        socketId: connection.socketId,
-        connectedAt: connection.connectedAt,
-        activeTaskCount: connection.activeTasks.size,
-      });
+      // 只返回 CLI 客户端（虽然实际上 CLI 在 /worker 命名空间）
+      if (connection.clientType === 'cli') {
+        clients.push({
+          clientId,
+          socketId: connection.socketId,
+          connectedAt: connection.connectedAt,
+          activeTaskCount: connection.activeTasks.size,
+        });
+      }
     });
 
     return clients.sort((a, b) => b.connectedAt - a.connectedAt);
+  }
+
+  /**
+   * 获取在线 CLI Worker 列表
+   */
+  getOnlineWorkers(): Array<{
+    socketId: string;
+    connectedAt: number;
+  }> {
+    return this.workerGateway.getOnlineWorkers();
   }
 
   /**

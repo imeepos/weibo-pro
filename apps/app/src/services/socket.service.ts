@@ -53,6 +53,9 @@ class SocketService {
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       timeout: 10000,
+      query: {
+        clientType: 'app',
+      },
     });
 
     this.setupEventHandlers();

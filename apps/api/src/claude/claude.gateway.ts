@@ -48,13 +48,16 @@ export class ClaudeGateway {
    * 处理新连接
    */
   private handleConnection(socket: Socket): void {
+    // 从握手查询参数获取客户端类型
+    const clientType = (socket.handshake.query.clientType as string) || 'unknown';
+
     // 注册客户端
-    const clientId = this.claudeService.registerClient(socket);
+    const clientId = this.claudeService.registerClient(socket, clientType);
 
     // 发送客户端 ID
     socket.emit('claude:connected', { clientId });
 
-    this.logger.info(`新连接: clientId=${clientId}, socketId=${socket.id}`);
+    this.logger.info(`新连接: clientId=${clientId}, socketId=${socket.id}, type=${clientType}`);
 
     // 监听命令事件
     socket.on('claude:command', async (data: WsClaudeCommand) => {
@@ -167,6 +170,18 @@ export class ClaudeGateway {
     connectedAt: number;
     activeTaskCount: number;
   }> {
+    // CLI 客户端连接到 /worker 命名空间，不在这里
+    // 这个方法返回的是移动端/Web 端客户端
     return this.claudeService.getOnlineClients();
+  }
+
+  /**
+   * 获取在线 CLI Worker 列表
+   */
+  getOnlineWorkers(): Array<{
+    socketId: string;
+    connectedAt: number;
+  }> {
+    return this.claudeService.getOnlineWorkers();
   }
 }

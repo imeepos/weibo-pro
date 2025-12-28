@@ -363,7 +363,8 @@ export class ClaudeSdkService {
     const cacheRead = modelData.cumulativeCacheReadInputTokens || modelData.cacheReadInputTokens || 0;
     const cacheCreation = modelData.cumulativeCacheCreationInputTokens || modelData.cacheCreationInputTokens || 0;
 
-    const used = input + output + cacheRead + cacheCreation;
+    // 计算单次请求的总 token 使用量（input 包含了 cache，不应重复计算）
+    const used = input + output;
     const total = parseInt(process.env.CONTEXT_WINDOW || '160000', 10);
 
     console.log(`[ClaudeSdkService] Token 使用: input=${input}, output=${output}, cache=${cacheRead + cacheCreation}, total=${used}/${total}`);
