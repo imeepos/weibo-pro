@@ -27,8 +27,8 @@ export class WorkerGateway {
   private logger = createLogger('WorkerGateway');
   private io: SocketIOServer | null = null;
 
-  /** Worker Socket 连接 */
-  private workerConnection: WorkerConnection | null = null;
+  /** Worker Socket 连接映射: socketId → WorkerConnection */
+  private workerConnections = new Map<string, WorkerConnection>();
 
   /** 响应回调映射: taskId → callback */
   private responseCallbacks = new Map<string, (response: ClaudeResponse) => void>();
@@ -57,17 +57,11 @@ export class WorkerGateway {
       const cliConfig = socket.handshake.auth?.cliConfig;
       this.logger.info(`Worker 已连接: socketId=${socket.id}, name=${cliConfig?.name || 'unknown'}`);
 
-      // 只允许一个 Worker 连接
-      if (this.workerConnection) {
-        this.logger.warn('已有 Worker 连接，断开旧连接');
-        this.workerConnection.socket.disconnect();
-      }
-
-      this.workerConnection = {
+      this.workerConnections.set(socket.id, {
         socket,
         connectedAt: Date.now(),
         cliConfig,
-      };
+      });
 
       // 监听 Worker 响应
       socket.on('worker:response', (response: ClaudeResponse) => {
@@ -77,9 +71,7 @@ export class WorkerGateway {
       // 监听断开连接
       socket.on('disconnect', () => {
         this.logger.info(`Worker 已断开: socketId=${socket.id}`);
-        if (this.workerConnection?.socket.id === socket.id) {
-          this.workerConnection = null;
-        }
+        this.workerConnections.delete(socket.id);
       });
 
       // 发送连接确认
@@ -88,10 +80,11 @@ export class WorkerGateway {
   }
 
   /**
-   * 发送命令到 Worker
+   * 发送命令到 Worker（发送到第一个可用的 Worker）
    */
   sendCommand(command: ClaudeCommand, onResponse: (response: ClaudeResponse) => void): boolean {
-    if (!this.workerConnection) {
+    const worker = Array.from(this.workerConnections.values())[0];
+    if (!worker) {
       this.logger.error('没有可用的 Worker 连接');
       return false;
     }
@@ -100,22 +93,23 @@ export class WorkerGateway {
     this.responseCallbacks.set(command.taskId, onResponse);
 
     // 发送命令
-    this.workerConnection.socket.emit('worker:command', command);
+    worker.socket.emit('worker:command', command);
     this.logger.info(`命令已发送到 Worker: taskId=${command.taskId}`);
 
     return true;
   }
 
   /**
-   * 发送批准响应到 Worker
+   * 发送批准响应到 Worker（发送到第一个可用的 Worker）
    */
   sendApproval(clientId: string, data: { requestId: string; approved: boolean }): boolean {
-    if (!this.workerConnection) {
+    const worker = Array.from(this.workerConnections.values())[0];
+    if (!worker) {
       this.logger.error('没有可用的 Worker 连接');
       return false;
     }
 
-    this.workerConnection.socket.emit('worker:approval', { clientId, ...data });
+    worker.socket.emit('worker:approval', { clientId, ...data });
     this.logger.info(`批准响应已发送: requestId=${data.requestId}, approved=${data.approved}`);
 
     return true;
@@ -145,7 +139,7 @@ export class WorkerGateway {
    * 检查 Worker 是否已连接
    */
   isWorkerConnected(): boolean {
-    return this.workerConnection !== null && this.workerConnection.socket.connected;
+    return this.workerConnections.size > 0;
   }
 
   /**
@@ -157,15 +151,12 @@ export class WorkerGateway {
     name?: string;
     description?: string;
   }> {
-    if (this.workerConnection) {
-      return [{
-        socketId: this.workerConnection.socket.id,
-        connectedAt: this.workerConnection.connectedAt,
-        name: this.workerConnection.cliConfig?.name,
-        description: this.workerConnection.cliConfig?.description,
-      }];
-    }
-    return [];
+    return Array.from(this.workerConnections.entries()).map(([socketId, connection]) => ({
+      socketId,
+      connectedAt: connection.connectedAt,
+      name: connection.cliConfig?.name,
+      description: connection.cliConfig?.description,
+    }));
   }
 
   /**
@@ -174,10 +165,10 @@ export class WorkerGateway {
   shutdown(): void {
     this.responseCallbacks.clear();
     this.approvalCallbacks.clear();
-    if (this.workerConnection) {
-      this.workerConnection.socket.disconnect();
-      this.workerConnection = null;
-    }
+    this.workerConnections.forEach(connection => {
+      connection.socket.disconnect();
+    });
+    this.workerConnections.clear();
     this.logger.info('Worker Gateway 已关闭');
   }
 }
