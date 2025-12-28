@@ -10,7 +10,21 @@ import { BehaviorSubject, Subject, Observable } from 'rxjs';
 import type { WsClaudeCommand, WsClaudeResponse, ConnectionStatus } from '@/types';
 
 /** 默认服务器地址 */
-const DEFAULT_SERVER_URL = 'http://localhost:8089';
+const DEFAULT_SERVER_URL = (() => {
+  // 优先使用环境变量
+  const envUrl = import.meta.env.VITE_WS_URL;
+  if (envUrl !== undefined && envUrl !== '') {
+    return envUrl;
+  }
+
+  // 开发环境使用 localhost:8089
+  if (import.meta.env.DEV) {
+    return 'http://localhost:8089';
+  }
+
+  // 生产环境使用当前域名
+  return window.location.origin;
+})();
 
 class SocketService {
   private socket: Socket | null = null;

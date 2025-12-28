@@ -249,6 +249,9 @@ async function bootstrap() {
         'http://localhost:3003',
         'http://localhost:5173',
         'exp://*',  // Expo 开发服务器
+        // 生产环境 origin
+        'http://43.240.223.138:8088',
+        'http://43.240.223.138',
       ],
       credentials: true,
     }

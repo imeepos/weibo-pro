@@ -40,7 +40,7 @@ export function ChatPage({ selectedClient }: ChatPageProps) {
   const activeTask = tasks.find(t => t.id === activeTaskId);
 
   useEffect(() => {
-    connect('http://192.168.5.89:8089');
+    connect();
     if (tasks.length === 0) {
       createTask('新任务');
     }

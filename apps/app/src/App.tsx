@@ -57,7 +57,7 @@ function Layout() {
 
 export function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/mobile">
       <Layout />
     </BrowserRouter>
   );
