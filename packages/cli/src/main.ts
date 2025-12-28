@@ -1,14 +1,10 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
 import { startDaemon, stopDaemon, getPid } from './daemon.js';
-import { join, dirname } from 'path';
+import { join } from 'path';
 import { homedir } from 'os';
 import { spawn } from 'child_process';
-import { fileURLToPath } from 'url';
 import { existsSync } from 'fs';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 const program = new Command();
 
@@ -38,7 +34,6 @@ program.command('logs').description('Tail logs').action(() => {
 program.command('tui').description('Launch task manager UI').action(async () => {
   const { render } = await import('ink');
   const React = await import('react');
-  const { Tui } = await import('./tui/index.js');
   const { TaskManager } = await import('./task-manager.js');
   const { TaskExecutor } = await import('./task-executor.js');
 
@@ -46,18 +41,6 @@ program.command('tui').description('Launch task manager UI').action(async () => 
   const executor = new TaskExecutor(taskManager);
 
   await executor.start();
-
-  const handleAddTask = (command: string) => {
-    const taskId = `task-${Date.now()}`;
-    taskManager.addTask({
-      taskId,
-      clientId: 'tui',
-      command,
-      timestamp: Date.now(),
-    });
-  };
-
-  render(React.createElement(Tui, { taskManager, onAddTask: handleAddTask }));
 });
 
 program.parse();
