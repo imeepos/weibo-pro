@@ -1,5 +1,6 @@
 export { ChartsController } from './charts.controller';
 export { ChatController } from './chat.controller';
+export { ClaudeController } from '../claude';
 export { EventsController } from './events.controller';
 export { KeywordsController } from './keywords.controller';
 export { LayoutController } from './layout.controller';

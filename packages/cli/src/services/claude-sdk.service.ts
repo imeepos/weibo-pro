@@ -174,19 +174,25 @@ export class ClaudeSdkService {
         this.removeSession(capturedSessionId);
       }
 
-      sendResponse({
-        taskId,
-        clientId,
-        sessionId: capturedSessionId || `session-${taskId}`,
-        type: 'error',
-        data: {
-          message: errorMessage,
-          code: 'QUERY_ERROR',
-        },
-        timestamp: Date.now(),
-      });
+      try {
+        sendResponse({
+          taskId,
+          clientId,
+          sessionId: capturedSessionId || `session-${taskId}`,
+          type: 'error',
+          data: {
+            message: errorMessage,
+            code: 'QUERY_ERROR',
+          },
+          timestamp: Date.now(),
+        });
+      } catch (sendError) {
+        // 发送响应失败也不应该中断 CLI
+        console.error(`[ClaudeSdkService] 发送错误响应失败:`, sendError);
+      }
 
-      throw error;
+      // 不再抛出错误，避免中断 CLI 执行
+      console.error(`[ClaudeSdkService] 错误已记录，继续运行`);
     }
   }
 

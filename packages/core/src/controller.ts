@@ -133,12 +133,15 @@ function createHttpMethodDecorator(method: RequestMethod) {
         }
       }
 
-      Reflect.defineMetadata(PATH_METADATA, routePath, descriptor.value);
-      Reflect.defineMetadata(METHOD_METADATA, method, descriptor.value);
-      Reflect.defineMetadata(CONTENT_TYPE_METADATA, finalContentType, descriptor.value);
+      // 使用 target[propertyKey] 而不是 descriptor.value
+      // 原因：抽象方法没有 descriptor.value，但仍需要附加元数据
+      const methodTarget = descriptor.value || target[propertyKey];
+      Reflect.defineMetadata(PATH_METADATA, routePath, methodTarget);
+      Reflect.defineMetadata(METHOD_METADATA, method, methodTarget);
+      Reflect.defineMetadata(CONTENT_TYPE_METADATA, finalContentType, methodTarget);
 
       if (responseSchema) {
-        Reflect.defineMetadata(RESPONSE_SCHEMA_METADATA, responseSchema, descriptor.value);
+        Reflect.defineMetadata(RESPONSE_SCHEMA_METADATA, responseSchema, methodTarget);
       }
     };
   };
@@ -300,7 +303,8 @@ export const Headers = createParamDecorator(ParamType.HEADERS);
  */
 export function RequirePermissions(permissions: any): MethodDecorator {
   return (target: any, propertyKey: string | symbol, descriptor: PropertyDescriptor) => {
-    Reflect.defineMetadata(MIDDLEWARE_METADATA, { permissions }, descriptor.value);
+    const methodTarget = descriptor.value || target[propertyKey];
+    Reflect.defineMetadata(MIDDLEWARE_METADATA, { permissions }, methodTarget);
   };
 }
 
@@ -315,9 +319,10 @@ export function RequirePermissions(permissions: any): MethodDecorator {
  */
 export function ApiDescription(description: string, tags?: string[]): MethodDecorator {
   return (target: any, propertyKey: string | symbol, descriptor: PropertyDescriptor) => {
-    Reflect.defineMetadata(OPENAPI_DESCRIPTION_METADATA, description, descriptor.value);
+    const methodTarget = descriptor.value || target[propertyKey];
+    Reflect.defineMetadata(OPENAPI_DESCRIPTION_METADATA, description, methodTarget);
     if (tags) {
-      Reflect.defineMetadata(OPENAPI_TAGS_METADATA, tags, descriptor.value);
+      Reflect.defineMetadata(OPENAPI_TAGS_METADATA, tags, methodTarget);
     }
   };
 }

@@ -103,25 +103,32 @@ export class ClaudeBridge {
 
     try {
       await this.claudeSdkService.executeQuery(command, (response) => {
+        // sendResponse 内部已经有错误处理，即使发送失败也不会抛出异常
         this.sendResponse(response);
       });
 
       console.log(`[ClaudeBridge] 命令处理完成: taskId=${command.taskId}`);
     } catch (error) {
+      // executeQuery 已经不再抛出异常，但保留兜底处理
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error(`[ClaudeBridge] 命令处理失败: taskId=${command.taskId}, error=${errorMessage}`);
 
-      this.sendResponse({
-        taskId: command.taskId,
-        clientId: command.clientId,
-        sessionId: command.sessionId || '',
-        type: 'error',
-        data: {
-          message: errorMessage,
-          code: 'COMMAND_HANDLER_ERROR',
-        },
-        timestamp: Date.now(),
-      });
+      // 尝试发送错误响应，但即使失败也不影响 CLI
+      try {
+        this.sendResponse({
+          taskId: command.taskId,
+          clientId: command.clientId,
+          sessionId: command.sessionId || '',
+          type: 'error',
+          data: {
+            message: errorMessage,
+            code: 'COMMAND_HANDLER_ERROR',
+          },
+          timestamp: Date.now(),
+        });
+      } catch (sendError) {
+        console.error('[ClaudeBridge] 发送错误响应失败:', sendError);
+      }
     }
   }
 
@@ -145,12 +152,17 @@ export class ClaudeBridge {
    */
   private sendResponse(response: ClaudeResponse): void {
     if (!this.socket?.connected) {
-      console.error('[ClaudeBridge] 未连接，无法发送响应');
+      console.error('[ClaudeBridge] Socket 未连接，无法发送响应，但不影响 CLI 继续运行');
+      console.error(`[ClaudeBridge] 丢弃的响应: taskId=${response.taskId}, type=${response.type}`);
       return;
     }
 
-    console.log(`[ClaudeBridge] 发送响应: taskId=${response.taskId}, type=${response.type}`);
-    this.socket.emit('worker:response', response);
+    try {
+      console.log(`[ClaudeBridge] 发送响应: taskId=${response.taskId}, type=${response.type}`);
+      this.socket.emit('worker:response', response);
+    } catch (error) {
+      console.error('[ClaudeBridge] 发送响应失败，但不影响 CLI 继续运行:', error);
+    }
   }
 
   /**

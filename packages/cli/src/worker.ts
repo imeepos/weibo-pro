@@ -62,6 +62,17 @@ bootstrap()
     process.exit(1);
   });
 
+// 全局错误处理：防止未捕获的异常导致进程崩溃
+process.on('uncaughtException', (error) => {
+  console.error('未捕获的异常，但 CLI 继续运行:', error);
+  // 不退出进程，让 CLI 继续运行
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('未处理的 Promise 拒绝，但 CLI 继续运行:', reason);
+  // 不退出进程，让 CLI 继续运行
+});
+
 process.on('SIGTERM', async () => {
   if (shutdown) await shutdown();
   process.exit(0);

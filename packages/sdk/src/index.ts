@@ -1,5 +1,6 @@
 export * from './controllers/charts.controller'
 export * from './controllers/chat.controller'
+export * from './controllers/claude.controller'
 export * from './controllers/config.controller'
 export * from './controllers/crawler.controller'
 export * from './controllers/events.controller'
