@@ -21,7 +21,7 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: 'dist',
+    outDir: path.resolve(__dirname, '../api/static/mobile'),
     sourcemap: true,
   },
 });
