@@ -88,7 +88,10 @@ export interface ChatMessage {
     duration?: number;
     tokensUsed?: number;
     tokensTotal?: number;
-    status?: 'success' | 'error';
+    status?: 'success' | 'error' | 'running';
+    command?: string;
+    startTime?: number;
+    endTime?: number;
   };
 }
 

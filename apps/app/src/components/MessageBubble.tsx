@@ -44,7 +44,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
 }
 
 function SystemMessageContent({ message }: { message: ChatMessage }) {
-  const { messageType, metadata } = message;
+  const { messageType, metadata, content } = message;
 
   switch (messageType) {
     case 'system-init':
@@ -52,9 +52,41 @@ function SystemMessageContent({ message }: { message: ChatMessage }) {
 
     case 'tool-use':
       return (
-        <span className="text-xs text-muted-foreground">
-          工具: <span className="font-medium">{metadata?.toolName}</span>
-        </span>
+        <div className="flex flex-col gap-1 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-foreground">{metadata?.toolName}</span>
+            <span
+              className={cn(
+                'px-1.5 py-0.5 rounded text-[10px] font-medium',
+                metadata?.status === 'success'
+                  ? 'bg-green-500/10 text-green-600 dark:text-green-400'
+                  : metadata?.status === 'error'
+                    ? 'bg-red-500/10 text-red-600 dark:text-red-400'
+                    : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+              )}
+            >
+              {metadata?.status || '执行中'}
+            </span>
+          </div>
+          {metadata?.command && (
+            <div className="text-muted-foreground font-mono text-[11px] max-w-[200px] truncate bg-muted/30 px-2 py-1 rounded">
+              {metadata.command}
+            </div>
+          )}
+          {content && !metadata?.command && (
+            <div className="text-muted-foreground font-mono text-[11px] max-w-[200px] truncate">{content}</div>
+          )}
+          {metadata?.duration && (
+            <div className="text-muted-foreground">
+              耗时: <span className="font-medium">{(metadata.duration / 1000).toFixed(2)}s</span>
+            </div>
+          )}
+          {metadata?.startTime && (
+            <div className="text-muted-foreground text-[10px]">
+              {new Date(metadata.startTime).toLocaleTimeString()}
+            </div>
+          )}
+        </div>
       );
 
     case 'result':
