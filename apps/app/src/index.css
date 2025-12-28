@@ -30,6 +30,14 @@
     @apply border-border;
   }
 
+  :root {
+    /* 移动端安全区域变量 */
+    --safe-area-inset-top: env(safe-area-inset-top, 0px);
+    --safe-area-inset-right: env(safe-area-inset-right, 0px);
+    --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-area-inset-left: env(safe-area-inset-left, 0px);
+  }
+
   body {
     @apply bg-background text-foreground;
     font-family:
@@ -53,6 +61,7 @@
   body,
   #root {
     height: 100%;
+    height: 100dvh; /* 动态视口高度 - 自动适应浏览器 UI */
     width: 100%;
     margin: 0;
     padding: 0;
@@ -72,5 +81,21 @@
 
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+
+  /* 移动端底部导航安全区域 */
+  .safe-bottom-nav {
+    padding-bottom: var(--safe-area-inset-bottom);
+  }
+
+  /* 动态视口高度容器 */
+  .h-screen-safe {
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  .w-screen-safe {
+    width: 100vw;
+    width: 100dvw;
   }
 }

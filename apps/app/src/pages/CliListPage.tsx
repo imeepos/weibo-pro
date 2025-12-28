@@ -123,7 +123,7 @@ export function CliListPage({ onClientSelect }: CliListPageProps) {
             {clients.map((client) => (
               <div
                 key={client.clientId}
-                className="p-4 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors cursor-pointer"
+                className="px-4 py-2 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors cursor-pointer"
                 onClick={() => onClientSelect({
                   clientId: client.clientId,
                   name: client.name,
@@ -131,7 +131,7 @@ export function CliListPage({ onClientSelect }: CliListPageProps) {
                 })}
               >
                 {/* 客户端头部 */}
-                <div className="flex items-start justify-between mb-3">
+                <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <Circle className="h-2 w-2 fill-green-500 text-green-500" />
                     <div className="flex flex-col">
@@ -150,26 +150,6 @@ export function CliListPage({ onClientSelect }: CliListPageProps) {
                       {client.activeTaskCount} 个任务
                     </span>
                   )}
-                </div>
-
-                {/* 客户端详情 */}
-                <div className="space-y-2 text-sm text-muted-foreground">
-                  <div className="flex items-center justify-between">
-                    <span>客户端 ID:</span>
-                    <span className="font-mono text-xs">{client.clientId}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Socket ID:</span>
-                    <span className="font-mono text-xs">{client.socketId}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>连接时间:</span>
-                    <span>{formatTime(client.connectedAt)}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>在线时长:</span>
-                    <span>{formatDuration(client.connectedAt)}</span>
-                  </div>
                 </div>
               </div>
             ))}

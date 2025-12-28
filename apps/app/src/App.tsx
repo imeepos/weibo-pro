@@ -5,7 +5,7 @@
 import { BrowserRouter, Routes, Route, NavLink, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { ChatPage, CliListPage } from '@/pages';
 import { Button } from '@/components/ui';
-import { MessageSquare, Users } from 'lucide-react';
+import { Users } from 'lucide-react';
 
 interface SelectedClient {
   clientId: string;
@@ -31,7 +31,7 @@ function Layout() {
   const showBottomNav = location.pathname !== '/chat';
 
   return (
-    <div className="h-screen w-screen overflow-hidden flex flex-col">
+    <div className="h-screen-safe w-screen-safe overflow-hidden flex flex-col">
       <div className="flex-1 overflow-hidden">
         <Routes>
           <Route path="/" element={<CliListPage onClientSelect={handleClientSelect} />} />
@@ -40,10 +40,10 @@ function Layout() {
       </div>
 
       {showBottomNav && (
-        <nav className="flex items-center justify-around px-4 py-3 border-t border-border bg-background shrink-0">
+        <nav className="flex items-center justify-around px-4 py-2 border-t border-border bg-background shrink-0 safe-bottom-nav">
         <NavLink to="/">
           {({ isActive }) => (
-            <Button variant="ghost" size="sm" className="flex flex-col items-center gap-1 h-auto py-2">
+            <Button variant="ghost" size="sm" className="flex flex-col items-center gap-1 h-auto py-1">
               <Users className={`h-5 w-5 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
               <span className={`text-xs ${isActive ? 'text-primary font-medium' : 'text-muted-foreground'}`}>Agents</span>
             </Button>
