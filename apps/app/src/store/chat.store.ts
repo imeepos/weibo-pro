@@ -65,6 +65,16 @@ export const useChatStore = create<ChatState>((set, get) => {
   // 订阅 Socket 事件
   let subscribed = false;
 
+  // 从 localStorage 恢复 session
+  const restoreSession = (): Session | null => {
+    try {
+      const saved = localStorage.getItem('chat-session');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  };
+
   // 辅助函数：添加消息
   const addMessage = (message: Omit<ChatMessage, 'sequence'>) => {
     const state = get();
@@ -110,14 +120,14 @@ export const useChatStore = create<ChatState>((set, get) => {
       switch (response.type) {
         case 'session-created': {
           const sessionData = response.data as { sessionId: string };
-          set({
-            currentSession: {
-              id: sessionData.sessionId,
-              createdAt: Date.now(),
-              lastMessageAt: Date.now(),
-              messages: [],
-            },
-          });
+          const session = {
+            id: sessionData.sessionId,
+            createdAt: Date.now(),
+            lastMessageAt: Date.now(),
+            messages: [],
+          };
+          set({ currentSession: session });
+          localStorage.setItem('chat-session', JSON.stringify(session));
           break;
         }
 
@@ -344,7 +354,7 @@ export const useChatStore = create<ChatState>((set, get) => {
   return {
     connectionStatus: 'disconnected',
     clientId: null,
-    currentSession: null,
+    currentSession: restoreSession(),
     messages: [],
     isLoading: false,
     streamingMessageId: null,
@@ -412,6 +422,7 @@ export const useChatStore = create<ChatState>((set, get) => {
     },
 
     clearContext: () => {
+      localStorage.removeItem('chat-session');
       set({
         messages: [],
         currentSession: null,
