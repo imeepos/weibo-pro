@@ -3,10 +3,11 @@
  */
 
 import { useEffect, useRef } from 'react';
-import { Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Loader2, ArrowLeft } from 'lucide-react';
 import { useChatStore } from '@/store';
 import { MessageBubble, ChatInput, ConnectionStatus, TokenUsage, ChatSettings, ApprovalDialog } from '@/components';
-import { ScrollArea } from '@/components/ui';
+import { ScrollArea, Button } from '@/components/ui';
 
 interface ChatPageProps {
   selectedClient?: {
@@ -17,6 +18,7 @@ interface ChatPageProps {
 }
 
 export function ChatPage({ selectedClient }: ChatPageProps) {
+  const navigate = useNavigate();
   const {
     connectionStatus,
     clientId,
@@ -51,16 +53,24 @@ export function ChatPage({ selectedClient }: ChatPageProps) {
   return (
     <div className="flex flex-col h-full bg-background">
       {/* 顶部状态栏 */}
-      <header className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
-        <div className="flex flex-col">
-          <h1 className="text-lg font-semibold text-foreground">
+      <header className="flex items-center gap-3 px-4 py-3 border-b border-border shrink-0">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate('/')}
+          className="shrink-0"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div className="flex flex-col flex-1 min-w-0">
+          <h1 className="text-lg font-semibold text-foreground truncate">
             {selectedClient?.name || 'Claude'}
           </h1>
           {selectedClient?.description && (
-            <p className="text-xs text-muted-foreground">{selectedClient.description}</p>
+            <p className="text-xs text-muted-foreground truncate">{selectedClient.description}</p>
           )}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 shrink-0">
           {tokenUsage && <TokenUsage {...tokenUsage} />}
           <ConnectionStatus status={connectionStatus} clientId={clientId} />
           <ChatSettings />

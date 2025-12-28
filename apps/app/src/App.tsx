@@ -2,7 +2,7 @@
  * App - 应用入口
  */
 
-import { BrowserRouter, Routes, Route, NavLink, useNavigate, useSearchParams } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, NavLink, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { ChatPage, CliListPage } from '@/pages';
 import { Button } from '@/components/ui';
 import { MessageSquare, Users } from 'lucide-react';
@@ -16,6 +16,7 @@ interface SelectedClient {
 function Layout() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
 
   const handleClientSelect = (client: SelectedClient) => {
     navigate(`/chat?clientId=${client.clientId}&name=${encodeURIComponent(client.name || '')}&description=${encodeURIComponent(client.description || '')}`);
@@ -27,6 +28,8 @@ function Layout() {
     description: searchParams.get('description') || undefined,
   } : null;
 
+  const showBottomNav = location.pathname !== '/chat';
+
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col">
       <div className="flex-1 overflow-hidden">
@@ -36,7 +39,8 @@ function Layout() {
         </Routes>
       </div>
 
-      <nav className="flex items-center justify-around px-4 py-3 border-t border-border bg-background shrink-0">
+      {showBottomNav && (
+        <nav className="flex items-center justify-around px-4 py-3 border-t border-border bg-background shrink-0">
         <NavLink to="/">
           {({ isActive }) => (
             <Button variant="ghost" size="sm" className="flex flex-col items-center gap-1 h-auto py-2">
@@ -45,15 +49,8 @@ function Layout() {
             </Button>
           )}
         </NavLink>
-        <NavLink to="/chat">
-          {({ isActive }) => (
-            <Button variant="ghost" size="sm" className="flex flex-col items-center gap-1 h-auto py-2">
-              <MessageSquare className={`h-5 w-5 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
-              <span className={`text-xs ${isActive ? 'text-primary font-medium' : 'text-muted-foreground'}`}>聊天</span>
-            </Button>
-          )}
-        </NavLink>
       </nav>
+      )}
     </div>
   );
 }
