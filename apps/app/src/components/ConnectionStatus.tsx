@@ -37,7 +37,7 @@ export function ConnectionStatus({ status, clientId }: ConnectionStatusProps) {
       <div className={cn('w-2 h-2 rounded-full', config.color)} />
       <span className="text-xs text-muted-foreground">{config.text}</span>
       {clientId && status === 'connected' && (
-        <span className="text-[10px] text-muted-foreground/70 ml-2">ID: {clientId.substring(0, 8)}...</span>
+        <span className="text-[10px] text-muted-foreground/70"></span>
       )}
     </div>
   );
