@@ -10,6 +10,7 @@ import type { ChatMessage, Session, ConnectionStatus, WsClaudeResponse, Permissi
 
 interface Task {
   id: string;
+  serverTaskId: string | null;
   name: string;
   messages: ChatMessage[];
   session: Session | null;
@@ -52,7 +53,7 @@ interface ChatState {
 export const useChatStore = create<ChatState>((set, get) => {
   let subscribed = false;
 
-  const getTask = (taskId: string) => get().tasks.find(t => t.id === taskId);
+  const getTask = (taskId: string) => get().tasks.find(t => t.id === taskId || t.serverTaskId === taskId);
   const getActiveTask = () => {
     const { tasks, activeTaskId } = get();
     return tasks.find(t => t.id === activeTaskId);
@@ -90,9 +91,9 @@ export const useChatStore = create<ChatState>((set, get) => {
     socketService.getClientId().subscribe(clientId => set({ clientId }));
 
     socketService.getTaskCreated().subscribe(({ taskId }) => {
-      const task = getTask(taskId);
-      if (task) {
-        set({ tasks: get().tasks.map(t => (t.id === taskId ? { ...t, isLoading: true } : t)) });
+      const activeTask = getActiveTask();
+      if (activeTask && !activeTask.serverTaskId) {
+        set({ tasks: get().tasks.map(t => (t.id === activeTask.id ? { ...t, serverTaskId: taskId, isLoading: true } : t)) });
       }
     });
 
@@ -189,6 +190,7 @@ export const useChatStore = create<ChatState>((set, get) => {
       const taskId = `task_${Date.now()}`;
       const newTask: Task = {
         id: taskId,
+        serverTaskId: null,
         name,
         messages: [],
         session: null,

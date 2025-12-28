@@ -104,7 +104,11 @@ export function ChatPage({ selectedClient }: ChatPageProps) {
         )}
       </ScrollArea>
 
-      {activeTask?.tokenUsage && <TokenUsage usage={activeTask.tokenUsage} />}
+      {activeTask?.tokenUsage && (
+        <div className="flex justify-center px-4 py-2 border-t">
+          <TokenUsage {...activeTask.tokenUsage} />
+        </div>
+      )}
 
       <div className="shrink-0 border-t">
         <ChatInput
