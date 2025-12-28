@@ -2,6 +2,8 @@
  * MessageBubble - 消息气泡组件
  */
 
+import { useState } from 'react';
+import { Copy, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ChatMessage } from '@/types';
 
@@ -12,6 +14,27 @@ interface MessageBubbleProps {
 export function MessageBubble({ message }: MessageBubbleProps) {
   const isUser = message.role === 'user';
   const isSystem = message.role === 'system';
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(message.content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      // Fallback for environments where clipboard API is not available
+      const textArea = document.createElement('textarea');
+      textArea.value = message.content;
+      textArea.style.position = 'fixed';
+      textArea.style.opacity = '0';
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   // 系统消息样式
   if (isSystem) {
@@ -29,12 +52,26 @@ export function MessageBubble({ message }: MessageBubbleProps) {
     <div className={cn('my-1 mx-3', isUser ? 'flex flex-col items-end' : 'flex flex-col items-start')}>
       <div
         className={cn(
-          'max-w-[80%] px-4 py-2.5 rounded-2xl',
+          'relative max-w-[80%] px-4 py-2.5 rounded-2xl',
           isUser ? 'bg-primary text-primary-foreground rounded-br-sm' : 'bg-muted text-foreground rounded-bl-sm'
         )}
       >
-        <p className="text-base leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
+        <p className="text-base leading-relaxed whitespace-pre-wrap break-words pr-8">{message.content}</p>
         {message.isStreaming && <span className="text-muted-foreground text-base animate-pulse">...</span>}
+        <button
+          onClick={handleCopy}
+          className={cn(
+            'absolute top-2 right-2 p-1 rounded transition-colors',
+            copied ? 'bg-green-500/20' : 'hover:bg-black/10 active:bg-black/20'
+          )}
+          aria-label="复制消息"
+        >
+          {copied ? (
+            <Check className="w-3.5 h-3.5 text-green-600 dark:text-green-500" />
+          ) : (
+            <Copy className="w-3.5 h-3.5 opacity-50" />
+          )}
+        </button>
       </div>
       <span className="text-xs text-muted-foreground mt-1 mx-1">
         {new Date(message.timestamp).toLocaleTimeString()}
