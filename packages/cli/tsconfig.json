@@ -1,11 +1,8 @@
 {
-  "extends": "@sker/typescript-config/base.json",
+  "extends": "@sker/typescript-config/react-library.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src",
-    "emitDecoratorMetadata": true,
-    "declaration": true,
-    "declarationMap": true
+    "rootDir": "src"
   },
   "include": ["src/**/*"]
 }

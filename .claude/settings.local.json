@@ -21,7 +21,8 @@
       "Bash(node:*)",
       "Bash(pnpm run start:*)",
       "Bash(echo:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(pnpm ensure-deps:*)"
     ],
     "deny": [],
     "ask": []

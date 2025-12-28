@@ -11,6 +11,7 @@ module.exports = {
   platform: 'node',
   minify: false,
   keepNames: true,
-  bundle: false,
+  bundle: true,
   skipNodeModulesBundle: true,
+  external: [/node_modules/],
 };
