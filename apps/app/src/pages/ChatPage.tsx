@@ -4,7 +4,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, ArrowLeft } from 'lucide-react';
+import { Loader2, ArrowLeft, MessageSquare } from 'lucide-react';
 import { useChatStore } from '@/store';
 import { MessageBubble, ChatInput, ConnectionStatus, TokenUsage, ChatSettings, ApprovalDialog } from '@/components';
 import { ScrollArea, Button } from '@/components/ui';
@@ -71,7 +71,6 @@ export function ChatPage({ selectedClient }: ChatPageProps) {
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {tokenUsage && <TokenUsage {...tokenUsage} />}
           <ConnectionStatus status={connectionStatus} clientId={clientId} />
           <ChatSettings />
         </div>
@@ -87,9 +86,14 @@ export function ChatPage({ selectedClient }: ChatPageProps) {
       {/* 消息列表 */}
       <ScrollArea className="flex-1">
         {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full px-8">
-            <h2 className="text-2xl font-semibold text-foreground mb-2">Claude 助手</h2>
-            <p className="text-base text-muted-foreground text-center">发送消息开始对话</p>
+          <div className="flex flex-col items-center justify-center h-full px-8 text-center">
+            <MessageSquare className="h-16 w-16 text-muted-foreground/40 mb-4" />
+            <h2 className="text-xl font-semibold text-foreground mb-2">
+              {selectedClient?.name || 'Claude 助手'}
+            </h2>
+            <p className="text-sm text-muted-foreground max-w-md">
+              {selectedClient?.description || '你好！我是 Claude，一个 AI 助手。有什么我可以帮助你的吗？'}
+            </p>
           </div>
         ) : (
           <div className="py-3">
@@ -106,6 +110,13 @@ export function ChatPage({ selectedClient }: ChatPageProps) {
         <div className="flex items-center justify-center gap-2 py-2 shrink-0">
           <Loader2 className="h-4 w-4 animate-spin text-primary" />
           <span className="text-sm text-muted-foreground">思考中...</span>
+        </div>
+      )}
+
+      {/* Token 使用统计 */}
+      {tokenUsage && (
+        <div className="flex items-center justify-center py-2 shrink-0">
+          <TokenUsage {...tokenUsage} />
         </div>
       )}
 
