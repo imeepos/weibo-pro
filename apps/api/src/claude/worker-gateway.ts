@@ -80,13 +80,24 @@ export class WorkerGateway {
   }
 
   /**
-   * 发送命令到 Worker（发送到第一个可用的 Worker）
+   * 发送命令到指定的 Worker
+   * @param socketId Worker 的 socketId，如果不指定则发送到第一个可用的 Worker
    */
-  sendCommand(command: ClaudeCommand, onResponse: (response: ClaudeResponse) => void): boolean {
-    const worker = Array.from(this.workerConnections.values())[0];
-    if (!worker) {
-      this.logger.error('没有可用的 Worker 连接');
-      return false;
+  sendCommand(command: ClaudeCommand, onResponse: (response: ClaudeResponse) => void, socketId?: string): boolean {
+    let worker: WorkerConnection | undefined;
+
+    if (socketId) {
+      worker = this.workerConnections.get(socketId);
+      if (!worker) {
+        this.logger.error(`Worker 不存在: socketId=${socketId}`);
+        return false;
+      }
+    } else {
+      worker = Array.from(this.workerConnections.values())[0];
+      if (!worker) {
+        this.logger.error('没有可用的 Worker 连接');
+        return false;
+      }
     }
 
     // 注册响应回调
@@ -94,23 +105,34 @@ export class WorkerGateway {
 
     // 发送命令
     worker.socket.emit('worker:command', command);
-    this.logger.info(`命令已发送到 Worker: taskId=${command.taskId}`);
+    this.logger.info(`命令已发送到 Worker: taskId=${command.taskId}, socketId=${worker.socket.id}`);
 
     return true;
   }
 
   /**
-   * 发送批准响应到 Worker（发送到第一个可用的 Worker）
+   * 发送批准响应到指定的 Worker
+   * @param socketId Worker 的 socketId，如果不指定则发送到第一个可用的 Worker
    */
-  sendApproval(clientId: string, data: { requestId: string; approved: boolean }): boolean {
-    const worker = Array.from(this.workerConnections.values())[0];
-    if (!worker) {
-      this.logger.error('没有可用的 Worker 连接');
-      return false;
+  sendApproval(clientId: string, data: { requestId: string; approved: boolean }, socketId?: string): boolean {
+    let worker: WorkerConnection | undefined;
+
+    if (socketId) {
+      worker = this.workerConnections.get(socketId);
+      if (!worker) {
+        this.logger.error(`Worker 不存在: socketId=${socketId}`);
+        return false;
+      }
+    } else {
+      worker = Array.from(this.workerConnections.values())[0];
+      if (!worker) {
+        this.logger.error('没有可用的 Worker 连接');
+        return false;
+      }
     }
 
     worker.socket.emit('worker:approval', { clientId, ...data });
-    this.logger.info(`批准响应已发送: requestId=${data.requestId}, approved=${data.approved}`);
+    this.logger.info(`批准响应已发送: requestId=${data.requestId}, approved=${data.approved}, socketId=${worker.socket.id}`);
 
     return true;
   }

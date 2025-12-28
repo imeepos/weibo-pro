@@ -36,6 +36,12 @@ export class ClaudeService {
   /** 客户端连接信息 */
   private clientConnections = new Map<string, ClientConnection & { clientType: string }>();
 
+  /** 任务 ID 到 Worker socketId 的映射（用于批准响应路由） */
+  private taskToWorker = new Map<string, string>();
+
+  /** 批准请求 ID 到任务 ID 的映射（用于批准响应路由） */
+  private requestToTask = new Map<string, string>();
+
   /** Socket.IO 服务器实例 */
   private io: SocketIOServer | null = null;
 
@@ -67,6 +73,8 @@ export class ClaudeService {
     this.clientSockets.clear();
     this.socketToClient.clear();
     this.clientConnections.clear();
+    this.taskToWorker.clear();
+    this.requestToTask.clear();
     this.initialized = false;
     this.logger.info('Claude 服务已关闭');
   }
@@ -135,16 +143,21 @@ export class ClaudeService {
       connection.activeTasks.add(taskId);
     }
 
-    // 通过 WorkerGateway 发送命令
+    // 通过 WorkerGateway 发送命令，传递目标 Worker 的 socketId
     const sent = this.workerGateway.sendCommand(command, (response) => {
       this.handleResponse(response);
-    });
+    }, wsCommand.workerSocketId);
 
     if (!sent) {
       throw new Error('发送命令失败');
     }
 
-    this.logger.info(`命令已发送: taskId=${taskId}, clientId=${clientId}`);
+    // 记录任务到 Worker 的映射（用于批准响应路由）
+    if (wsCommand.workerSocketId) {
+      this.taskToWorker.set(taskId, wsCommand.workerSocketId);
+    }
+
+    this.logger.info(`命令已发送: taskId=${taskId}, clientId=${clientId}, workerSocketId=${wsCommand.workerSocketId || 'default'}`);
     return taskId;
   }
 
@@ -154,9 +167,24 @@ export class ClaudeService {
   async sendApprovalResponse(clientId: string, data: { requestId: string; approved: boolean }): Promise<void> {
     this.logger.info(`发送批准响应: clientId=${clientId}, requestId=${data.requestId}, approved=${data.approved}`);
 
-    const sent = this.workerGateway.sendApproval(clientId, data);
+    // 通过 requestId 找到 taskId，再找到 workerSocketId
+    const taskId = this.requestToTask.get(data.requestId);
+    const workerSocketId = taskId ? this.taskToWorker.get(taskId) : undefined;
+
+    if (workerSocketId) {
+      this.logger.debug(`找到目标 Worker: requestId=${data.requestId} → taskId=${taskId} → workerSocketId=${workerSocketId}`);
+    } else {
+      this.logger.warn(`未找到目标 Worker，将发送到默认 Worker: requestId=${data.requestId}`);
+    }
+
+    const sent = this.workerGateway.sendApproval(clientId, data, workerSocketId);
     if (!sent) {
       this.logger.error('发送批准响应失败: Worker 未连接');
+    }
+
+    // 清理映射
+    if (taskId) {
+      this.requestToTask.delete(data.requestId);
     }
   }
 
@@ -226,6 +254,13 @@ export class ClaudeService {
 
     this.logger.debug(`收到响应: taskId=${taskId}, clientId=${clientId}, type=${type}`);
 
+    // 如果是批准请求，记录 requestId 到 taskId 的映射
+    if (type === 'approval-request' && data && typeof data === 'object' && 'requestId' in data) {
+      const requestId = (data as { requestId: string }).requestId;
+      this.requestToTask.set(requestId, taskId);
+      this.logger.debug(`记录批准请求映射: requestId=${requestId} → taskId=${taskId}`);
+    }
+
     const socket = this.clientSockets.get(clientId);
     if (!socket) {
       this.logger.warn(`客户端不存在，丢弃响应: clientId=${clientId}, taskId=${taskId}`);
@@ -246,6 +281,8 @@ export class ClaudeService {
       if (connection) {
         connection.activeTasks.delete(taskId);
       }
+      // 清理映射
+      this.taskToWorker.delete(taskId);
     }
 
     this.logger.debug(`响应已转发: taskId=${taskId}, type=${type}`);

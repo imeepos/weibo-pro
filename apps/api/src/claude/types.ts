@@ -71,6 +71,8 @@ export interface WsClaudeCommand {
   model?: string;
   /** 权限模式 */
   permissionMode?: 'default' | 'plan' | 'bypassPermissions';
+  /** 目标 Worker 的 socketId（可选，不指定则发送到第一个可用的 Worker） */
+  workerSocketId?: string;
 }
 
 /**
