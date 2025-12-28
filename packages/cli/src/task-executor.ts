@@ -18,15 +18,24 @@ export class TaskExecutor {
 
       const result = query({
         prompt: command.command,
-        cwd: command.cwd,
-        model: command.model,
-        permissionMode: command.permissionMode,
-        resume: command.sessionId,
+        options: {
+          cwd: command.cwd,
+          model: command.model,
+          permissionMode: command.permissionMode,
+          resume: command.sessionId,
+        },
       });
 
       for await (const message of result) {
-        if (message.type === 'text') {
-          this.taskManager.addMessage(command.taskId, message.text || '');
+        if (message.type === 'assistant') {
+          // Extract text from assistant message
+          const content = message.message.content;
+          if (Array.isArray(content)) {
+            const textContent = content.find((c) => c.type === 'text');
+            if (textContent && 'text' in textContent) {
+              this.taskManager.addMessage(command.taskId, textContent.text);
+            }
+          }
         } else if (message.type === 'result') {
           this.taskManager.updateProgress(command.taskId, 100);
         }
