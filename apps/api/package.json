@@ -33,6 +33,7 @@
     "@sker/utils": "workspace:*",
     "@sker/workflow": "workspace:*",
     "@sker/workflow-ast": "workspace:*",
+    "@sker/workflow-compiler": "workspace:*",
     "@sker/workflow-run": "workspace:*",
     "axios": "^1.6.0",
     "better-auth": "^1.4.8",

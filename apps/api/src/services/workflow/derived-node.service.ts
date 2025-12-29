@@ -20,7 +20,12 @@ export class DerivedNodeService {
     name: string;
     baseType: string;
     frozenInputs: Record<string, unknown>;
-    metadata?: Record<string, unknown>;
+    nodeMetadata: {
+      class: { title: string; type: string; description?: string };
+      inputs: Array<{ property: string; title: string; type?: string; defaultValue?: unknown }>;
+      outputs: Array<{ property: string; title: string; defaultValue?: unknown }>;
+      states?: Array<{ property: string; title: string }>;
+    };
     createdBy?: string;
   }): Promise<DerivedNodeEntity> {
     return useEntityManager(async (manager) => {
@@ -35,7 +40,7 @@ export class DerivedNodeService {
         name: params.name,
         baseType: params.baseType,
         frozenInputs: params.frozenInputs,
-        metadata: params.metadata,
+        nodeMetadata: params.nodeMetadata,
         status: DerivedNodeStatus.DRAFT,
         version: 1,
         createdBy: params.createdBy,
@@ -67,7 +72,7 @@ export class DerivedNodeService {
         name: node.name,
         baseType: node.baseType,
         frozenInputs: node.frozenInputs,
-        metadata: node.metadata,
+        nodeMetadata: node.nodeMetadata,
       });
 
       logger.info('派生节点已发布', { id, name: node.name });
@@ -91,7 +96,7 @@ export class DerivedNodeService {
             name: node.name,
             baseType: node.baseType,
             frozenInputs: node.frozenInputs,
-            metadata: node.metadata,
+            nodeMetadata: node.nodeMetadata,
           });
           logger.info('派生节点已加载', { name: node.name });
         } catch (error) {

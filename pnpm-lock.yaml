@@ -85,6 +85,9 @@ importers:
       '@sker/workflow-ast':
         specifier: workspace:*
         version: link:../../packages/workflow-ast
+      '@sker/workflow-compiler':
+        specifier: workspace:*
+        version: link:../../packages/workflow-compiler
       '@sker/workflow-run':
         specifier: workspace:*
         version: link:../../packages/workflow-run
@@ -645,6 +648,12 @@ importers:
       '@sker/nlp':
         specifier: workspace:*
         version: link:../nlp
+      '@sker/workflow':
+        specifier: workspace:*
+        version: link:../workflow
+      '@sker/workflow-compiler':
+        specifier: workspace:*
+        version: link:../workflow-compiler
       '@sker/workflow-run':
         specifier: workspace:*
         version: link:../workflow-run

@@ -14,6 +14,8 @@ export type { NodePaletteProps } from './components/NodePalette'
 export { PropertyPanel } from './components/PropertyPanel'
 export type { PropertyPanelProps } from './components/PropertyPanel'
 
+export { DerivedNodeWorkbench } from './components/DerivedNodeWorkbench'
+
 export { createNodeTypes } from './components/nodes'
 export { edgeTypes } from './components/edges'
 
@@ -26,6 +28,7 @@ export {
   useWorkflowStore,
   useSelectionStore,
   useExecutionStore,
+  useDerivedNodeWorkbench,
 } from './store'
 
 // 导出适配器

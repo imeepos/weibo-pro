@@ -29,6 +29,7 @@ export { GuardAgent } from './GuardAgent';
 export { FixerAgent } from './FixerAgent';
 export { DeployAgent } from './DeployAgent';
 export { TechResearchAgent } from './TechResearchAgent';
+export { WorkflowDSLGeneratorAgent } from './WorkflowDSLGeneratorAgent';
 
 // 工具导出
 export * from './tools';

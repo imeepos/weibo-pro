@@ -25,7 +25,12 @@ export class DerivedNodeController {
       name: string;
       baseType: string;
       frozenInputs: Record<string, unknown>;
-      metadata?: Record<string, unknown>;
+      nodeMetadata: {
+        class: { title: string; type: string; description?: string };
+        inputs: Array<{ property: string; title: string; type?: string; defaultValue?: unknown }>;
+        outputs: Array<{ property: string; title: string; type?: string }>;
+        states?: Array<{ property: string; title: string; type?: string; defaultValue?: unknown }>;
+      };
       createdBy?: string;
     }
   ): Promise<DerivedNodeEntity> {

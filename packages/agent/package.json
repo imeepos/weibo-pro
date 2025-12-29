@@ -27,6 +27,8 @@
     "@sker/core": "workspace:*",
     "@sker/entities": "workspace:*",
     "@sker/nlp": "workspace:*",
+    "@sker/workflow": "workspace:*",
+    "@sker/workflow-compiler": "workspace:*",
     "@sker/workflow-run": "workspace:*",
     "glob": "^13.0.0",
     "langchain": "^1.0.4",

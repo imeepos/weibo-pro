@@ -44,7 +44,6 @@
     "access": "restricted"
   },
   "scripts": {
-    "dev": "tsx --watch src/main.ts",
     "build": "tsc && chmod +x dist/main.js",
     "start": "node dist/main.js",
     "lint": "eslint . --max-warnings 0",

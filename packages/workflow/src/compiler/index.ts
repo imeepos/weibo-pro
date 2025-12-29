@@ -1,7 +1,7 @@
 import { Injectable, root } from "@sker/core";
 import { Ast } from "../ast";
 import { INode, INodeInputMetadata, INodeMetadata, INodeOutputMetadata, INodeStateMetadata, isNode } from "../types";
-import { findNodeType, INPUT, InputMetadata, NODE, NodeMetadata, OUTPUT, OutputMetadata, STATE, StateMetadata, hasTool } from "../decorator";
+import { findNodeType, INPUT, InputMetadata, NODE, NodeMetadata, OUTPUT, OutputMetadata, STATE, StateMetadata, hasTool, DERIVED_INPUT, DERIVED_OUTPUT, DerivedInputMetadata, DerivedOutputMetadata } from "../decorator";
 
 /**
  * 编译器 - 将 AST 实例编译为 INode
@@ -82,8 +82,21 @@ export class Compiler {
 
     /**
      * 提取 @Input 属性装饰器元数据
+     * 优先查找派生元数据，未找到时回退到基类装饰器
      */
     private extractInputMetadata(ctor: Function): INodeInputMetadata[] {
+        // 优先查找派生元数据
+        const allDerivedInputs = root.get(DERIVED_INPUT, []) as DerivedInputMetadata[];
+        const derivedMetadata = allDerivedInputs.find(m => m.target === ctor);
+
+        if (derivedMetadata) {
+            return derivedMetadata.inputs.map(input => ({
+                ...input,
+                isStatic: true
+            }));
+        }
+
+        // 回退到基类装饰器元数据
         const allInputMetadata = root.get(INPUT, []) as InputMetadata[];
         const targetInputs = allInputMetadata.filter(m => m.target === ctor);
 
@@ -100,16 +113,29 @@ export class Compiler {
 
     /**
      * 提取 @Output 属性装饰器元数据
+     * 优先查找派生元数据，未找到时回退到基类装饰器
      *
      * 增强：检测 BehaviorSubject 类型的属性并标记 isSubject
      */
     private extractOutputMetadata(ctor: Function, instance?: any): INodeOutputMetadata[] {
+        // 优先查找派生元数据
+        const allDerivedOutputs = root.get(DERIVED_OUTPUT, []) as DerivedOutputMetadata[];
+        const derivedMetadata = allDerivedOutputs.find(m => m.target === ctor);
+
+        if (derivedMetadata) {
+            return derivedMetadata.outputs.map(output => ({
+                ...output,
+                isStatic: true,
+                isSubject: false
+            }));
+        }
+
+        // 回退到基类装饰器元数据
         const allOutputMetadata = root.get(OUTPUT, []) as OutputMetadata[];
         const targetOutputs = allOutputMetadata.filter(m => m.target === ctor);
 
         return targetOutputs.map(output => {
             const key = String(output.propertyKey);
-            // 检测是否为 BehaviorSubject（需要实例）
             const isSubject = false;
 
             return {

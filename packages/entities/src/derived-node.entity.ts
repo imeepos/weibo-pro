@@ -29,8 +29,33 @@ export class DerivedNodeEntity {
   @Column({ type: 'jsonb', name: 'frozen_inputs', default: '{}' })
   frozenInputs!: Record<string, unknown>;
 
-  @Column({ type: 'jsonb', nullable: true })
-  metadata?: Record<string, unknown>;
+  @Column({ type: 'jsonb', name: 'node_metadata' })
+  nodeMetadata!: {
+    class: {
+      title: string;
+      type: string;
+      description?: string;
+      errorStrategy?: string;
+      maxRetries?: number;
+    };
+    inputs: Array<{
+      property: string;
+      title: string;
+      type?: string;
+      defaultValue?: unknown;
+      mode?: number;
+    }>;
+    outputs: Array<{
+      property: string;
+      title: string;
+      defaultValue?: unknown;
+      isRouter?: boolean;
+    }>;
+    states?: Array<{
+      property: string;
+      title: string;
+    }>;
+  };
 
   @Index()
   @Column({
