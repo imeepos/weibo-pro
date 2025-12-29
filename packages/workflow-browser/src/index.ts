@@ -38,6 +38,7 @@ import "./StoryWeaverAstVisitor.js";
 import "./EmailD1AstBrowserVisitor.js";
 import "./ProxyAutoSelectAstBrowserVisitor.js";
 import "./HttpAstBrowserVisitor.js";
+import "./HttpRequestAstBrowserVisitor.js";
 import "./SqlExecuteAstBrowserVisitor.js";
 import "./MarkdownUploadAstBrowserVisitor.js";
 import "./ExcelUploadAstBrowserVisitor.js";
