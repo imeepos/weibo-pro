@@ -200,7 +200,6 @@ function createMethodProxy(
     // FormData 不设置 Content-Type，让浏览器自动设置 multipart/form-data boundary
     const requestHeaders = isFormData ? {} : headers;
     const $fetch = root.get(BETTER_FETCH)
-    const options = root.get(BETTER_OPTIONS)
     const { data, error } = await $fetch(finalUrl, {
       method: getHttpMethodString(httpMethod),
       query: queryParams,

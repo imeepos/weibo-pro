@@ -21,6 +21,7 @@ export * from './LlmStructuredOutputAstRender';
 export * from './LlmCategoryAstRender';
 export * from './StoryWeaverAstRender';
 export * from './TextAreaAstRender';
+export * from './MarkdownAstRender';
 export * from './DateAstRender';
 export * from './ShareAstVisitor';
 export * from './PropertySelectorAstRender';

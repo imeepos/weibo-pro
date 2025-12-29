@@ -15,6 +15,7 @@ export { NoRetryError } from './errors'
 export * from './execution/events'
 export * from './utils';
 export * from './TextAreaAst';
+export * from './MarkdownAst';
 export * from './DateAst';
 export * from './ast-utils';
 export { Compiler } from './compiler/index';

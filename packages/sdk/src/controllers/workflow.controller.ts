@@ -82,7 +82,7 @@ export class WorkflowController {
   }
 
   @Sse('execute')
-  execute(@Body() body: ExecuteWorkflowPayload, res?: any): Observable<NodeEvent> {
+  execute(@Body() body: ExecuteWorkflowPayload): Observable<NodeEvent> {
     throw new Error('method execute not implements')
   }
 
@@ -230,7 +230,7 @@ export class WorkflowController {
    * 执行单个节点 - 微调执行
    */
   @Sse('executeNode')
-  executeNode(@Body() body: ExecuteNodePayload, res?: any): Observable<NodeEvent> {
+  executeNode(@Body() body: ExecuteNodePayload): Observable<NodeEvent> {
     throw new Error('method executeNode not implements')
   }
 
@@ -242,7 +242,6 @@ export class WorkflowController {
     @Param('runId') runId: string,
     @Param('nodeId') nodeId: string,
     @Body() body: FineTunePayload,
-    res?: any
   ): Observable<NodeEvent> {
     throw new Error('method fineTuneNode not implements')
   }

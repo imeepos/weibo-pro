@@ -36,10 +36,10 @@ export const serializeToString = (value: any): string => {
 @Node({ title: '文本节点', type: 'basic' })
 export class TextAreaAst extends Ast {
 
-    @Input({ title: '输入', type: 'richtext', mode: IS_MULTI, defaultValue: [] })
+    @Input({ title: '输入', type: 'textarea', mode: IS_MULTI, defaultValue: [] })
     input: string[] = []
 
-    @Output({ title: '输出', type: 'richtext', defaultValue: '' })
+    @Output({ title: '输出', type: 'textarea', defaultValue: '' })
     output: string = '';
 
     type: `TextAreaAst` = `TextAreaAst`
