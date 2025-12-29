@@ -68,7 +68,7 @@ export function CanvasRenderer({
   className = '',
 }: CanvasRendererProps) {
   const isCanvasEmpty = nodes.length === 0
-  const panOnDrag = [1, 2]
+  const panOnDrag = [1]
 
   return (
     <div

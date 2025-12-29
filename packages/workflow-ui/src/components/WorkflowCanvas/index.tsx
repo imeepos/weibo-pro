@@ -868,7 +868,7 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
         edgeTypes={edgeTypes}
         panOnScroll
         selectionOnDrag={true}
-        panOnDrag={[1, 2]}
+        panOnDrag={[1]}
         selectionMode={SelectionMode.Partial}
         fitView={!workflow.workflowAst.viewport}
         deleteKeyCode="Delete"
