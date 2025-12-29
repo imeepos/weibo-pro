@@ -270,26 +270,48 @@ function createPostSSEObservable<T>(url: string, queryParams: any, bodyData: any
   return new Observable<T>(subscriber => {
     const abortController = new AbortController();
     let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
-    const fetch = root.get(BETTER_FETCH)
-    fetch(url, {
+
+    // 获取 baseURL
+    const options = root.get(BETTER_OPTIONS);
+    const baseURL = options?.baseURL || '';
+
+    // 拼接完整 URL
+    let fullUrl = baseURL ? `${baseURL}${url}` : url;
+
+    // 构建带 query 参数的 URL
+    if (queryParams && Object.keys(queryParams).length > 0) {
+      const params = new URLSearchParams();
+      for (const [key, value] of Object.entries(queryParams)) {
+        if (value !== undefined && value !== null) {
+          params.append(key, String(value));
+        }
+      }
+      const queryString = params.toString();
+      fullUrl = queryString ? `${fullUrl}?${queryString}` : fullUrl;
+    }
+
+    // 使用原生 fetch，因为 better-fetch 会自动读取 body 导致 stream 被锁定
+    fetch(fullUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'text/event-stream',
         'Cache-Control': 'no-cache'
       },
-      query: queryParams || {},
       body: JSON.stringify(clone(bodyData)),
       signal: abortController.signal,
       credentials: 'include',
     })
-      .then(({ data, error }) => {
-        console.log({ data, error })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
 
-        reader = (data as any)?.getReader() ?? null;
-        if (!reader) {
+        if (!response.body) {
           throw new Error('Response body is not readable');
         }
+
+        reader = response.body.getReader();
 
         const decoder = new TextDecoder();
         let buffer = '';
@@ -348,36 +370,6 @@ function createPostSSEObservable<T>(url: string, queryParams: any, bodyData: any
   });
 }
 
-/**
- * 创建 GET SSE Observable
- */
-function createGetSSEObservable<T>(url: string, queryParams: Record<string, any>): Observable<T> {
-  const sseUrl = buildSSEUrl(url, queryParams);
-
-  return new Observable<T>(subscriber => {
-    if (typeof window === 'undefined' || !window.EventSource) {
-      subscriber.error(new Error('EventSource is not available'));
-      return;
-    }
-
-    const eventSource = new EventSource(sseUrl, { withCredentials: true });
-
-    eventSource.onmessage = (event) => {
-      try {
-        subscriber.next(JSON.parse(event.data));
-      } catch (error) {
-        console.warn('[SSE] JSON 解析失败:', event.data?.slice(0, 100), error);
-      }
-    };
-
-    eventSource.onerror = (error) => {
-      console.error('[SSE] EventSource 错误:', error);
-      subscriber.error(error);
-    };
-
-    return () => eventSource.close();
-  });
-}
 
 // ============ 工具函数 ============
 
@@ -444,15 +436,4 @@ function getHttpMethodString(method: RequestMethod): string {
     [RequestMethod.SSE]: 'GET',
   };
   return map[method] || 'GET';
-}
-
-function buildSSEUrl(baseUrl: string, queryParams: Record<string, any>): string {
-  const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(queryParams)) {
-    if (value !== undefined && value !== null) {
-      params.append(key, String(value));
-    }
-  }
-  const queryString = params.toString();
-  return queryString ? `${baseUrl}?${queryString}` : baseUrl;
 }
