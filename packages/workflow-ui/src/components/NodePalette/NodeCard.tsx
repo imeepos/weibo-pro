@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import { motion } from 'framer-motion'
 import { Plus, ArrowRight, ArrowLeft } from 'lucide-react'
 import type { NodeMetadata } from '../../types'
@@ -53,8 +54,8 @@ export function NodeCard({ metadata, onAddNode }: NodeCardProps) {
               <span className="font-medium">输入</span>
             </div>
             <ul className="space-y-0.5 pl-4">
-              {metadata.inputs.map((input) => (
-                <li key={input.property} className="text-slate-300 flex items-center gap-1">
+              {metadata.inputs.map((input, index) => (
+                <li key={input.property || `input-${index}`} className="text-slate-300 flex items-center gap-1">
                   <span className="w-1 h-1 rounded-full bg-[var(--workflow-primary)]" />
                   <span>{input.label}</span>
                   {input.isMulti && <span className="text-[var(--workflow-muted)] font-mono text-[10px]">[]</span>}
