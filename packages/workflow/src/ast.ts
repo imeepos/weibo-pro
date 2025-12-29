@@ -1,6 +1,6 @@
 import { Node, State } from "./decorator";
 import { NodeEvent } from "./execution/events";
-import { IAstStates, IEdge, INode, INodeInputMetadata, INodeOutputMetadata, INodeStateMetadata, INodeMetadata } from "./types";
+import { IAstStates, IEdge, INode, INodeInputMetadata, INodeOutputMetadata, INodeStateMetadata, INodeMetadata, CompiledNodeMetadata } from "./types";
 import { generateId } from "./utils";
 import { SerializedError } from "@sker/core";
 import { BehaviorSubject, Observable } from 'rxjs';
@@ -31,63 +31,22 @@ export function astToLlmString(ast: Ast | INode) {
 
 // 抽象语法树的核心表达 - 状态与数据的统一
 export abstract class Ast implements INode {
-    // 运行次数
     count: number = 0;
-    // 发射次数
     emitCount: number = 0;
-    // 唯一标识
     id: string = generateId();
-    // 标题
     name?: string;
-    // 简介
     description?: string;
-    // 自定义颜色
     color?: string;
-    // 折叠
     collapsed?: boolean;
-    // 宽度
     width?: number;
-    // 高度
     height?: number;
-    // 状态
     state: IAstStates = 'pending';
-    // 错误信息
     error: SerializedError | undefined;
-    // 类型-序列化的关键
     type!: string;
-    // 画布中的位置信息
     position: { x: number; y: number } = { x: 0, y: 0 }
-    // 父节点ID（用于分组）
     parentId?: string
+    metadata!: CompiledNodeMetadata
 
-    /**
-     * 编译后的元数据（由 Compiler 生成）
-     *
-     * 优雅设计：
-     * - 在运行时通过 Compiler.compile() 固化装饰器元数据
-     * - 自包含，无需依赖装饰器系统
-     * - 支持用户自定义修改节点行为
-     */
-    metadata!: {
-        class: INodeMetadata
-        inputs: INodeInputMetadata[]
-        outputs: INodeOutputMetadata[]
-        states: INodeStateMetadata[]
-    }
-
-    /**
-     * 自定义序列化：排除 BehaviorSubject 属性
-     *
-     * 设计哲学：
-     * - BehaviorSubject 是运行时响应式流，不应持久化
-     * - 序列化无意义的内部状态（observers, closed, isStopped 等）会污染数据
-     * - 反序列化后由 Compiler.compile() 自动重建 BehaviorSubject 实例
-     *
-     * 影响：
-     * - ✅ 序列化数据更简洁，只保留业务数据
-     * - ✅ 符合 BehaviorSubject 的运行时语义
-     * - ⚠️ BehaviorSubject._value（当前值）会丢失，但这通常是期望行为（运行时重新计算）
-     */
     toJSON(): Record<string, any> {
         const result: Record<string, any> = {};
 
@@ -129,22 +88,9 @@ export class WorkflowGraphAst extends Ast {
     @State({ title: "边列表" })
     edges: IEdge[] = [];
 
-    /**
-     * 工具节点池：指定哪些节点作为 LLM 的可用工具
-     * - 这些节点无需连线也能被 LLM 访问
-     * - 配合上游成功节点构成完整的工具列表
-     */
     @State({ title: '工具节点ID列表' })
     toolNodeIds?: string[] = [];
 
-    /**
-     * 视图窗口状态
-     *
-     * 优雅设计：
-     * - 保存用户的缩放级别和视图位置
-     * - 恢复工作流时用户回到之前的视图
-     * - 提升用户体验的连续性
-     */
     @State({ title: '视图状态' })
     viewport?: { x: number; y: number; zoom: number };
 
@@ -160,19 +106,8 @@ export class WorkflowGraphAst extends Ast {
 
     type: `WorkflowGraphAst` = `WorkflowGraphAst`
 
-    /**
-     * 工作流取消信号
-     *
-     * 优雅设计：
-     * - 使用标准 AbortSignal API
-     * - 支持取消长时间运行的操作
-     * - Handler 可选择性监听并响应取消
-     */
     abortSignal?: AbortSignal
 
-    /**
-     * 判断是否为分组节点
-     */
     get isGroup(): boolean {
         return this.isGroupNode === true
     }

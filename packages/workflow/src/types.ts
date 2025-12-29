@@ -94,6 +94,14 @@ export interface INodeStateMetadata {
 export function isNode(val: any): val is Required<INode> {
     return val && val.metadata
 }
+
+export interface CompiledNodeMetadata {
+    type: string;
+    class: INodeMetadata;
+    inputs: INodeInputMetadata[];
+    outputs: INodeOutputMetadata[];
+    states: INodeStateMetadata[];
+}
 export interface INode extends Record<string, any> {
     // 标题
     name?: string;
@@ -117,12 +125,7 @@ export interface INode extends Record<string, any> {
     // 父节点ID（用于分组）
     parentId?: string;
     // 元数据
-    metadata?: {
-        class: INodeMetadata;
-        inputs: INodeInputMetadata[];
-        outputs: INodeOutputMetadata[];
-        states: INodeStateMetadata[];
-    }
+    metadata?: CompiledNodeMetadata
 }
 
 // 边的流式合并模式 - 定义上游如何触发下游

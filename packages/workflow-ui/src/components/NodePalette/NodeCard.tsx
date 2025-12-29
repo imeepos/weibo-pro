@@ -3,7 +3,7 @@
 import React from 'react'
 import { motion } from 'framer-motion'
 import { Plus, ArrowRight, ArrowLeft } from 'lucide-react'
-import type { NodeMetadata } from '../../types'
+import { hasMultiMode, type NodeMetadata } from '@sker/workflow'
 import { cn } from '../../utils/cn'
 
 interface NodeCardProps {
@@ -34,7 +34,7 @@ export function NodeCard({ metadata, onAddNode }: NodeCardProps) {
     >
       <div className="flex items-start justify-between mb-2">
         <h4 className="text-sm font-semibold text-slate-200 group-hover:text-[var(--workflow-primary)] transition-colors">
-          {metadata.label}
+          {metadata.class?.title}
         </h4>
         <motion.div
           initial={{ scale: 0 }}
@@ -57,8 +57,8 @@ export function NodeCard({ metadata, onAddNode }: NodeCardProps) {
               {metadata.inputs.map((input, index) => (
                 <li key={input.property || `input-${index}`} className="text-slate-300 flex items-center gap-1">
                   <span className="w-1 h-1 rounded-full bg-[var(--workflow-primary)]" />
-                  <span>{input.label}</span>
-                  {input.isMulti && <span className="text-[var(--workflow-muted)] font-mono text-[10px]">[]</span>}
+                  <span>{input.title}({input.property})</span>
+                  {hasMultiMode(input.mode) && <span className="text-[var(--workflow-muted)] font-mono text-[10px]">[]</span>}
                 </li>
               ))}
             </ul>
@@ -75,7 +75,7 @@ export function NodeCard({ metadata, onAddNode }: NodeCardProps) {
               {metadata.outputs.map((output, index) => (
                 <li key={`${output.property}-${index}`} className="text-slate-300 flex items-center gap-1">
                   <span className="w-1 h-1 rounded-full bg-[var(--workflow-secondary)]" />
-                  <span>{output.label}</span>
+                  <span>{output.title}</span>
                 </li>
               ))}
             </ul>

@@ -1,8 +1,7 @@
 import { useMemo } from 'react'
-import { getAllNodeTypes, getNodeMetadata } from '../../adapters'
-import { Compiler } from '@sker/workflow'
+import { Compiler, NodeMetadata } from '@sker/workflow'
 import { root } from '@sker/core'
-import type { NodeMetadata } from '../../types'
+import { getAllNodeTypes } from '@sker/workflow'
 
 /**
  * 节点注册表 Hook
@@ -17,19 +16,12 @@ export function useNodeRegistry(): NodeMetadata[] {
       .map(NodeClass => {
         const tempAst = new NodeClass()
         const compiledNode = compiler.compile(tempAst)
-        const metadata = getNodeMetadata(compiledNode)
-
-        // Diagnostic: Check for undefined input properties
-        const undefinedInputs = metadata.inputs.filter(input => !input.property)
-        if (undefinedInputs.length > 0) {
-          console.log(`[NodeRegistry] Node "${metadata.type}" has ${undefinedInputs.length} input(s) with undefined property:`, undefinedInputs)
-        }
-
+        const metadata = compiledNode.metadata!
         return metadata
       })
       .filter(metadata => {
-        if (seen.has(metadata.type)) return false
-        seen.add(metadata.type)
+        if (seen.has(metadata.class.type!)) return false
+        seen.add(metadata.class.type!)
         return true
       })
   }, [])

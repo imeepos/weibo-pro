@@ -8,10 +8,10 @@ import { useWorkflowStore } from '../../store'
 import { useNodeRegistry } from './useNodeRegistry'
 import { NodeCard } from './NodeCard'
 import { getAllNodeTypes } from '../../adapters'
-import type { NodeMetadata, WorkflowNode } from '../../types'
 import { createCompiledNode } from '../../utils/createCompiledNode'
 import { cn } from '../../utils/cn'
-
+import { NodeMetadata } from '@sker/workflow'
+import { WorkflowNode } from '../../types'
 export interface NodePaletteProps {
   className?: string
 }
@@ -22,10 +22,7 @@ export function NodePalette({ className = '' }: NodePaletteProps) {
   const addNode = useWorkflowStore((state) => state.addNode)
   const { screenToFlowPosition } = useReactFlow()
 
-  const filteredNodes = nodeRegistry.filter((metadata) =>
-    metadata.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    metadata.type.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const filteredNodes = nodeRegistry
 
   const handleAddNode = useCallback(
     (metadata: NodeMetadata) => {
@@ -98,13 +95,16 @@ export function NodePalette({ className = '' }: NodePaletteProps) {
         ) : (
           <div className="space-y-2">
             <AnimatePresence mode="popLayout">
-              {filteredNodes.map((metadata) => (
-                <NodeCard
-                  key={metadata.type}
-                  metadata={metadata}
-                  onAddNode={handleAddNode}
-                />
-              ))}
+              {filteredNodes.map((metadata) => {
+                console.log({ metadata })
+                return (
+                  <NodeCard
+                    key={metadata.type}
+                    metadata={metadata}
+                    onAddNode={handleAddNode}
+                  />
+                )
+              })}
             </AnimatePresence>
           </div>
         )}

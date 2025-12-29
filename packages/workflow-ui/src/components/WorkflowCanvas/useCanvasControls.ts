@@ -188,7 +188,7 @@ export function useCanvasControls() {
    * 从上下文菜单添加节点
    */
   const handleAddNodeFromMenu = useCallback(
-    (metadata: NodeMetadata) => {
+    (metadata: UINodeMetadata) => {
       const nodeTypes = getAllNodeTypes()
       const NodeClass = nodeTypes.find((type) => type.name === metadata.type)
 
@@ -218,7 +218,7 @@ export function useCanvasControls() {
    * 从节点选择器添加节点
    */
   const handleAddNodeFromSelector = useCallback(
-    (metadata: NodeMetadata) => {
+    (metadata: UINodeMetadata) => {
       const nodeTypes = getAllNodeTypes()
       const NodeClass = nodeTypes.find((type) => type.name === metadata.type)
 

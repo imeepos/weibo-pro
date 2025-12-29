@@ -39,9 +39,9 @@ export interface WorkflowEdgeData extends Record<string, unknown> {
 export type WorkflowEdge = Edge<WorkflowEdgeData>
 
 /**
- * 节点元数据
+ * UI 层节点元数据（用于渲染）
  */
-export interface NodeMetadata {
+export interface UINodeMetadata {
   /** 节点类型名称 */
   type: string
   /** 节点显示标签 */

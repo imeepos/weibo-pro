@@ -45,7 +45,7 @@ export type {
   WorkflowEdge as IWorkflowEdge,
   WorkflowEdgeData,
   WorkflowCanvasState,
-  NodeMetadata,
+  UINodeMetadata,
   PortMetadata,
   NodeHandleConfig,
   EdgeValidation,

@@ -3,12 +3,12 @@
 import React from 'react'
 import { WorkflowNodeSelector } from '@sker/ui/components/workflow'
 import { useNodeRegistry } from '../NodePalette/useNodeRegistry'
-import type { NodeMetadata } from '../../types'
+import type { UINodeMetadata } from '../../types'
 
 export interface NodeSelectorProps {
   visible: boolean
   position: { x: number; y: number }
-  onSelect: (metadata: NodeMetadata) => void
+  onSelect: (metadata: UINodeMetadata) => void
   onClose: () => void
 }
 

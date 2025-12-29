@@ -1,6 +1,6 @@
 import { Injectable, root } from "@sker/core";
 import { Ast } from "../ast";
-import { INode, INodeInputMetadata, INodeMetadata, INodeOutputMetadata, INodeStateMetadata, isNode } from "../types";
+import { INode, INodeInputMetadata, INodeMetadata, INodeOutputMetadata, INodeStateMetadata, isNode, CompiledNodeMetadata } from "../types";
 import { findNodeType, INPUT, InputMetadata, NODE, NodeMetadata, OUTPUT, OutputMetadata, STATE, StateMetadata, hasTool, DERIVED_INPUT, DERIVED_OUTPUT, DerivedInputMetadata, DerivedOutputMetadata } from "../decorator";
 
 /**
@@ -43,18 +43,14 @@ export class Compiler {
         // 提取 @State 属性装饰器元数据
         const states = this.extractStateMetadata(ctor);
 
-        // 保留动态添加的 inputs/outputs（isStatic: false）
-        const existingMetadata = (ast as INode).metadata;
-        const dynamicInputs = existingMetadata?.inputs?.filter(i => i.isStatic === false) || [];
-        const dynamicOutputs = existingMetadata?.outputs?.filter(o => o.isStatic === false) || [];
-
         // 组装 INode：直接修改实例，保留原型链（确保 toJSON 方法生效）
         instance.metadata = {
+            type: ctor.name,
             class: classMetadata,
-            inputs: [...staticInputs, ...dynamicInputs],
-            outputs: [...staticOutputs, ...dynamicOutputs],
+            inputs: staticInputs,
+            outputs: staticOutputs,
             states
-        };
+        } as CompiledNodeMetadata;
 
         return instance;
     }
