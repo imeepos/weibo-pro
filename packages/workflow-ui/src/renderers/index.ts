@@ -96,3 +96,4 @@ export * from './ExcelUploadAstRender';
 export * from './ClaudeCodeAstRender';
 export * from './ClaudeCodeReviewAstRender';
 export * from './ClaudeCodeRefactorAstRender';
+export * from './HtmlDisplayAstRender'
