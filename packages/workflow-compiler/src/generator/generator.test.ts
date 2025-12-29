@@ -2,24 +2,24 @@ import { describe, it, expect, vi } from 'vitest'
 import { Lexer } from '../lexer'
 import { Parser } from '../parser'
 import { CodeGenerator, CodeGenError } from './index'
-import { Ast, Node, Input, Output } from '@sker/workflow'
+import { Ast } from '@sker/workflow'
 
-// Mock node for testing
-@Node({ title: 'TestNode' })
+// Mock node for testing - without decorators to avoid TS5.0+ decorator issues
 class TestNodeAst extends Ast {
-  @Input() keyword?: string
-  @Input() count?: number
-  @Output() result?: string
+  keyword?: string;
+  limit?: number;
+  result?: string;
+  type = 'TestNodeAst' as const;
 }
 
-@Node({ title: 'AnotherNode' })
 class AnotherNodeAst extends Ast {
-  @Input() input?: string
-  @Output() output?: string
+  input?: string;
+  output?: string;
+  type = 'AnotherNodeAst' as const;
 }
 
 describe('CodeGenerator', () => {
-  const compile = (code: string, options?: { nodeRegistry?: Map<string, typeof Ast> }) => {
+  const compile = (code: string, options?: { nodeRegistry?: Map<string, new (...args: any[]) => Ast> }) => {
     const lexer = new Lexer(code)
     const tokens = lexer.tokenize()
     const parser = new Parser(tokens)
@@ -31,7 +31,7 @@ describe('CodeGenerator', () => {
   describe('basic generation', () => {
     it('should generate empty workflow', () => {
       const graph = compile('workflow "test" {}', {
-        nodeRegistry: new Map([['TestNodeAst', TestNodeAst]]),
+        nodeRegistry: new Map<string, new (...args: any[]) => Ast>([['TestNodeAst', TestNodeAst]]),
       })
 
       expect(graph.name).toBe('test')
@@ -50,7 +50,7 @@ describe('CodeGenerator', () => {
           }
         }
       `, {
-        nodeRegistry: new Map([
+        nodeRegistry: new Map<string, new (...args: any[]) => Ast>([
           ['TestNodeAst', TestNodeAst],
           ['AnotherNodeAst', AnotherNodeAst],
         ]),
@@ -68,17 +68,17 @@ describe('CodeGenerator', () => {
             type: TestNodeAst
             inputs: {
               keyword: "AI"
-              count: 100
+              limit: 100
             }
           }
         }
       `, {
-        nodeRegistry: new Map([['TestNodeAst', TestNodeAst]]),
+        nodeRegistry: new Map<string, new (...args: any[]) => Ast>([['TestNodeAst', TestNodeAst]]),
       })
 
       const node = graph.nodes[0] as TestNodeAst
       expect(node.keyword).toBe('AI')
-      expect(node.count).toBe(100)
+      expect(node.limit).toBe(100)
     })
 
     it('should set node position', () => {
@@ -90,7 +90,7 @@ describe('CodeGenerator', () => {
           }
         }
       `, {
-        nodeRegistry: new Map([['TestNodeAst', TestNodeAst]]),
+        nodeRegistry: new Map<string, new (...args: any[]) => Ast>([['TestNodeAst', TestNodeAst]]),
       })
 
       expect(graph.nodes[0]!.position).toEqual({ x: 100, y: 200 })
@@ -110,7 +110,7 @@ describe('CodeGenerator', () => {
           test1.result -> test2.input
         }
       `, {
-        nodeRegistry: new Map([
+        nodeRegistry: new Map<string, new (...args: any[]) => Ast>([
           ['TestNodeAst', TestNodeAst],
           ['AnotherNodeAst', AnotherNodeAst],
         ]),
@@ -138,7 +138,7 @@ describe('CodeGenerator', () => {
           analyzer.result -> handler.input [when: $threshold > 0.5]
         }
       `, {
-        nodeRegistry: new Map([
+        nodeRegistry: new Map<string, new (...args: any[]) => Ast>([
           ['TestNodeAst', TestNodeAst],
           ['AnotherNodeAst', AnotherNodeAst],
         ]),
@@ -164,7 +164,7 @@ describe('CodeGenerator', () => {
           analyzer.result -> handler.input [when: $threshold > 0.5]
         }
       `, {
-        nodeRegistry: new Map([
+        nodeRegistry: new Map<string, new (...args: any[]) => Ast>([
           ['TestNodeAst', TestNodeAst],
           ['AnotherNodeAst', AnotherNodeAst],
         ]),
@@ -192,7 +192,7 @@ describe('CodeGenerator', () => {
           analyzer.result -> negative.input [when: $score < 0.3]
         }
       `, {
-        nodeRegistry: new Map([
+        nodeRegistry: new Map<string, new (...args: any[]) => Ast>([
           ['TestNodeAst', TestNodeAst],
           ['AnotherNodeAst', AnotherNodeAst],
         ]),
@@ -306,7 +306,7 @@ describe('CodeGenerator', () => {
           unknown.output -> test.input
         }
       `, {
-        nodeRegistry: new Map([['TestNodeAst', TestNodeAst]]),
+        nodeRegistry: new Map<string, new (...args: any[]) => Ast>([['TestNodeAst', TestNodeAst]]),
       })).toThrow('Unknown source node')
     })
 
@@ -319,7 +319,7 @@ describe('CodeGenerator', () => {
           test.output -> unknown.input
         }
       `, {
-        nodeRegistry: new Map([['TestNodeAst', TestNodeAst]]),
+        nodeRegistry: new Map<string, new (...args: any[]) => Ast>([['TestNodeAst', TestNodeAst]]),
       })).toThrow('Unknown target node')
     })
 
@@ -331,7 +331,7 @@ describe('CodeGenerator', () => {
           }
         }
       `, {
-        nodeRegistry: new Map([['TestNodeAst', TestNodeAst]]),
+        nodeRegistry: new Map<string, new (...args: any[]) => Ast>([['TestNodeAst', TestNodeAst]]),
       })).toThrow('requires number operands')
     })
 
@@ -343,7 +343,7 @@ describe('CodeGenerator', () => {
           }
         }
       `, {
-        nodeRegistry: new Map([['TestNodeAst', TestNodeAst]]),
+        nodeRegistry: new Map<string, new (...args: any[]) => Ast>([['TestNodeAst', TestNodeAst]]),
       })).toThrow('Division by zero')
     })
   })
