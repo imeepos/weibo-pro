@@ -103,6 +103,7 @@ export class Compiler {
             defaultValue: input.defaultValue,
             title: input.title,
             type: input.type,
+            options: input.options,
             isStatic: true
         }));
     }

@@ -72,6 +72,7 @@ export interface INodeInputMetadata {
     title?: string;
     description?: string;
     type?: InputFieldType;
+    options?: string[];  // 下拉选择框的选项列表（当 type 为 'select' 时使用）
     isStatic?: boolean;  // 装饰器定义的端口为 true，动态添加的为 false
 }
 export interface INodeOutputMetadata {

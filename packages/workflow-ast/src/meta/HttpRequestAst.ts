@@ -11,7 +11,12 @@ export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
   retryBackoff: 2
 })
 export class HttpRequestAst extends Ast {
-  @Input({ title: '请求方法', defaultValue: 'GET' })
+  @Input({
+    title: '请求方法',
+    defaultValue: 'GET',
+    type: 'select',
+    options: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']
+  })
   method: HttpMethod = 'GET';
 
   @Input({ title: 'URL', defaultValue: '' })

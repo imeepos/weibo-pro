@@ -228,6 +228,8 @@ export interface InputMetadata {
     defaultValue?: any;
     title?: string;
     type?: InputFieldType;
+    // 下拉选择框的选项列表（当 type 为 'select' 时使用）
+    options?: string[];
 }
 
 export const INPUT = new InjectionToken<InputMetadata[]>(`INPUT`)
@@ -252,7 +254,8 @@ export function Input(options?: InputOptions): PropertyDecorator {
                 required: options?.required,
                 defaultValue: options?.defaultValue,
                 title: options?.title,
-                type: options?.type
+                type: options?.type,
+                options: options?.options
             }
         }])
     };

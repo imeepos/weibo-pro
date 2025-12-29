@@ -36,6 +36,7 @@ export interface WorkflowFormFieldProps {
   disabled?: boolean
   className?: string
   uploadEndpoint?: string  // 图片上传接口
+  options?: string[]  // 下拉选择框的选项列表（当 type 为 'select' 时使用）
 }
 
 export function WorkflowFormField({
@@ -48,6 +49,7 @@ export function WorkflowFormField({
   disabled = false,
   className,
   uploadEndpoint,
+  options = [],
 }: WorkflowFormFieldProps) {
   const [localValue, setLocalValue] = useState(formatValueForInput(value, type))
   const [error, setError] = useState<string | null>(null)
@@ -605,6 +607,29 @@ export function WorkflowFormField({
             </div>
             <span className="ml-3 text-sm font-medium text-foreground">{label}</span>
           </label>
+        )
+
+      case 'select':
+        return (
+          <select
+            className={baseInputClass}
+            value={value || ''}
+            onChange={(e) => !disabled && onChange(e.target.value)}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            disabled={disabled}
+          >
+            {placeholder && (
+              <option value="" disabled>
+                {placeholder}
+              </option>
+            )}
+            {options.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
         )
 
       case 'number':

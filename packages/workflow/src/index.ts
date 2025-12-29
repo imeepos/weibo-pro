@@ -9,6 +9,8 @@ export { EdgeMode, isNode, ROUTE_SKIPPED, isRouteSkipped, extractSubjectValue, t
 export type { INode, IEdge, IAstStates, INodeMetadata, INodeInputMetadata, INodeOutputMetadata, INodeStateMetadata } from './types'
 export { executeAst, executeWorkflow, executeWorkflowImmediate, executeAstWithWorkflowGraph, executeNodeIsolated, NodeExecutor } from './executor'
 export { VisitorExecutor } from './execution/visitor-executor'
+export { DefaultVisitor, DEFAULT_VISITOR } from './defaultVisitor'
+export type { IDefaultVisitor } from './defaultVisitor'
 export { NoRetryError } from './errors'
 export * from './execution/events'
 export * from './utils';

@@ -29,7 +29,11 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "lint": "eslint . --max-warnings 0",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui"
   },
   "dependencies": {
     "@sker/core": "workspace:*",
@@ -40,9 +44,12 @@
     "@sker/eslint-config": "workspace:*",
     "@sker/typescript-config": "workspace:*",
     "@types/node": "^22.10.5",
+    "@vitest/coverage-v8": "^4.0.16",
+    "@vitest/ui": "^4.0.16",
     "playwright": "^1.49.1",
     "tsup": "^8.4.0",
-    "typescript": "5.9.2"
+    "typescript": "5.9.2",
+    "vitest": "^4.0.16"
   },
   "peerDependencies": {
     "playwright": "^1.49.0"

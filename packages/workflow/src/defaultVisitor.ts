@@ -3,8 +3,35 @@ import { INode } from "./types";
 import { NodeEvent } from "./execution/events";
 import { setAstError } from "./ast-utils";
 import { WorkflowGraphAst } from "./ast";
+import { InjectionToken, Injectable } from "@sker/core";
 
-export class DefaultVisitor {
+/**
+ * 默认访问者接口
+ *
+ * 当节点没有找到对应的 @Handler 时，使用默认访问者执行
+ *
+ * 双容器模式：
+ * - 后端：使用 DefaultVisitor（本地执行）
+ * - 前端：使用 RemoteDefaultVisitor（远程代理执行）
+ */
+export interface IDefaultVisitor {
+    visit(ast: INode, input$: Observable<INode>, workflow?: WorkflowGraphAst): Observable<NodeEvent>;
+}
+
+/**
+ * 默认访问者的 DI Token
+ */
+export const DEFAULT_VISITOR = new InjectionToken<IDefaultVisitor>('DEFAULT_VISITOR');
+
+/**
+ * 默认访问者实现 - 后端使用
+ *
+ * 简单的输入输出透传逻辑：
+ * - 将输入的所有属性复制到输出
+ * - 适用于没有特殊处理逻辑的节点
+ */
+@Injectable()
+export class DefaultVisitor implements IDefaultVisitor {
     visit(ast: INode, input$: Observable<INode>, workflow?: WorkflowGraphAst): Observable<NodeEvent> {
         return new Observable(obs => {
             console.log(`DefaultVisitor run ${ast.type}`)

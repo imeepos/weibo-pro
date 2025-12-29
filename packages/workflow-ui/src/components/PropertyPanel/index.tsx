@@ -200,8 +200,9 @@ export function PropertyPanel({
               </div>
               <SmartFormField
                 label=""
-                value={prop.defaultValue}
+                value={formData[prop.property] ?? (ast as any)[prop.property] ?? prop.defaultValue}
                 type={prop.type as InputFieldType}
+                options={prop.options}
                 onChange={(value) => handlePropertyChange(prop.property, value)}
               />
             </div>

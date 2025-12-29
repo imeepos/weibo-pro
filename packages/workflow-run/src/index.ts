@@ -112,9 +112,11 @@ export { StreamingLlmInvoker } from './services/StreamingLlmInvoker'
 
 // EventStore - 注册后端数据库存储实现
 import { root } from '@sker/core'
-import { EVENT_STORE } from '@sker/workflow'
+import { EVENT_STORE, DEFAULT_VISITOR, DefaultVisitor } from '@sker/workflow'
 import { DatabaseEventStore } from './event-store/database'
 
 root.set([
-    { provide: EVENT_STORE, useClass: DatabaseEventStore }
+    { provide: EVENT_STORE, useClass: DatabaseEventStore },
+    // 后端使用 DefaultVisitor（本地执行）
+    { provide: DEFAULT_VISITOR, useClass: DefaultVisitor }
 ])

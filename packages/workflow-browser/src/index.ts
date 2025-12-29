@@ -1,47 +1,29 @@
-// 导入即自动注册（通过 @Injectable 装饰器）
-import './WeiboLoginBrowserVisitor.js';
-import './WeiboKeywordSearchBrowserVisitor.js';
-import './WeiboAjaxStatusesShowBrowserVisitor.js';
-import './WeiboAjaxStatusesCommentBrowserVisitor.js';
-import './WeiboAjaxStatusesRepostTimelineBrowserVisitor.js';
-import './WeiboAjaxStatusesLikeShowBrowserVisitor.js';
-import './WeiboAjaxStatusesMymblogBrowserVisitor.js';
-import './WeiboAjaxProfileInfoBrowserVisitor.js';
-import './WeiboAjaxFriendshipsBrowserVisitor.js';
-import './WeiboAjaxFeedHotTimelineBrowserVisitor.js';
-import './PostContextCollectorBrowserVisitor.js';
-import './PostNLPAnalyzerBrowserVisitor.js';
-import './EventAutoCreatorBrowserVisitor.js';
-import './EventAstBrowserVisitor.js';
-import './WorkflowGraphBrowserVisitor.js';
-import "./WeiboUserDetectionAstVisitor.js";
-import "./LlmTextAgentAstVisitor.js";
-import "./WeiboAccountPickAstBrowserVisitor.js";
-import "./ShareAstVisitor.js";
-import "./PropertySelectorAstBrowserVisitor.js";
-import "./StoreVisitor.js";
-import "./MqVisitor.js";
-import "./LlmStructuredOutputAstVisitor.js";
-import "./LlmCategoryAstVisitor.js";
-import "./MergeAstVisitor.js";
-import "./LoopAstVisitor.js";
-import "./PersonaAstBrowserVisitor.js";
-import "./PersonaCreatorAstVisitor.js";
-import "./PromptRoleSkillAstVisitor.js";
-import "./QueryRewriterAstVisitor.js";
-import "./AnswerFinalizerAstVisitor.js";
-import "./AnswerEvaluatorAstVisitor.js";
-import "./ErrorAnalyzerAstVisitor.js";
-import "./ResearchPlannerAstVisitor.js";
-import "./SerpClusterAstVisitor.js";
-import "./StoryWeaverAstVisitor.js";
-import "./EmailD1AstBrowserVisitor.js";
-import "./ProxyAutoSelectAstBrowserVisitor.js";
-import "./HttpAstBrowserVisitor.js";
-import "./HttpRequestAstBrowserVisitor.js";
-import "./SqlExecuteAstBrowserVisitor.js";
-import "./MarkdownUploadAstBrowserVisitor.js";
-import "./ExcelUploadAstBrowserVisitor.js";
-import "./ClaudeCodeAstBrowserVisitor.js";
-import "./ClaudeCodeReviewAstBrowserVisitor.js";
-import "./ClaudeCodeRefactorAstBrowserVisitor.js";
+/**
+ * @sker/workflow-browser
+ *
+ * 浏览器端工作流执行器 - 前端运行时的 Visitor 实现层
+ *
+ * 架构设计：
+ * - 默认使用 RemoteDefaultVisitor（远程代理执行），减轻客户端压力
+ * - 所有节点默认通过 SSE 在后端执行，无需为每个节点编写前端 Visitor
+ * - 通过 handlerRemote 实时同步后端执行状态和输出
+ *
+ * 使用方式：
+ * 1. 在应用入口导入本包：import '@sker/workflow-browser'
+ * 2. RemoteDefaultVisitor 自动注册为 DEFAULT_VISITOR
+ * 3. 未找到 @Handler 的节点自动走远程执行
+ */
+
+import { root } from '@sker/core';
+import { DEFAULT_VISITOR } from '@sker/workflow';
+import { RemoteDefaultVisitor } from './RemoteDefaultVisitor.js';
+
+// 自动注册 RemoteDefaultVisitor（前端默认使用远程代理执行）
+root.set([{
+  provide: DEFAULT_VISITOR,
+  useClass: RemoteDefaultVisitor
+}]);
+
+// 导出工具
+export { RemoteDefaultVisitor } from './RemoteDefaultVisitor.js';
+export { executeRemote, handlerRemote } from './execute-remote.js';

@@ -4,7 +4,7 @@ import { findNodeType, HANDLER_METHOD } from '../decorator';
 import { Observable, of, from } from 'rxjs';
 import { catchError, switchMap, concatMap, tap } from 'rxjs/operators';
 import { INode } from '../types';
-import { DefaultVisitor } from '../defaultVisitor';
+import { IDefaultVisitor, DEFAULT_VISITOR, DefaultVisitor } from '../defaultVisitor';
 import { NodeEvent } from './events';
 import type { IEventStore } from '../event-store';
 import { EVENT_STORE, MemoryEventStore } from '../event-store';
@@ -20,12 +20,17 @@ import { globalRuntime } from '../runtime';
  * - Observable 流式输出，支持交互式执行
  * - 续跑支持：已成功节点直接重放 eventStream 中的事件
  * - EventStore 集成：持久化事件流，支持续跑和回放
+ * - 依赖注入 DefaultVisitor：前端使用 RemoteDefaultVisitor，后端使用 DefaultVisitor
  */
 @Injectable()
 export class VisitorExecutor implements Visitor {
     private eventStore: IEventStore
+    private defaultVisitor: IDefaultVisitor
+
     constructor() {
         this.eventStore = root.get(EVENT_STORE, new MemoryEventStore())
+        // 从 DI 容器获取 DefaultVisitor，如果未注册则使用本地的 DefaultVisitor
+        this.defaultVisitor = root.get(DEFAULT_VISITOR, new DefaultVisitor())
     }
 
     visit(ast: INode, input$: Observable<any>, parent?: WorkflowGraphAst): Observable<NodeEvent> {
@@ -187,8 +192,7 @@ export class VisitorExecutor implements Visitor {
     }
 
     private useDefaultVisitor(ast: INode, input$: Observable<any>, workflow?: WorkflowGraphAst): Observable<NodeEvent> {
-        const defaultVisitor = new DefaultVisitor();
-        return defaultVisitor.visit(ast, input$, workflow).pipe(
+        return this.defaultVisitor.visit(ast, input$, workflow).pipe(
             catchError(error => this.handleError(error, ast))
         );
     }
