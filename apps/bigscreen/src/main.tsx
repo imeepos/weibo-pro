@@ -19,9 +19,9 @@ const logger = createLogger('main');
 function getBaseUrl() {
   const url = new URL(window.location.href)
   if (url.port) {
-    return `${url.protocol}//${url.hostname}:${url.port}`
+    return `${url.protocol}//${url.hostname}:${url.port}/api/auth`
   }
-  return `${url.protocol}//${url.hostname}`
+  return `${url.protocol}//${url.hostname}/api/auth`
 }
 
 const baseURL = getBaseUrl();

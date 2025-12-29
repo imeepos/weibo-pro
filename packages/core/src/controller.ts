@@ -7,6 +7,7 @@
 import { root } from './environment-injector';
 import { InjectionToken } from './injection-token';
 import { Type } from './injector';
+import { Provider } from './provider';
 
 // HTTP 方法装饰器元数据键
 export const PATH_METADATA = 'path';
@@ -31,6 +32,7 @@ export enum RequestMethod {
  * - 支持嵌套路由和模块化设计
  */
 export const CONTROLLES = new InjectionToken<Type<any>[]>(`CONTROLLES`)
+export const FEATURE_PROVIDERS = new InjectionToken<Provider[][]>(`FEATURE_PROVIDERS`)
 
 export function Controller(prefix?: string | Type<any>): ClassDecorator {
   return (target: any) => {
@@ -43,6 +45,14 @@ export function Controller(prefix?: string | Type<any>): ClassDecorator {
       root.set([
         { provide: prefix, useClass: target },
         { provide: target, useClass: target },
+        {
+          provide: FEATURE_PROVIDERS,
+          useValue: [
+            { provide: prefix, useClass: target },
+            { provide: target, useClass: target },
+          ],
+          multi: true
+        }
       ]);
     } else {
       Reflect.defineMetadata(PATH_METADATA, prefix || ``, target);
@@ -162,7 +172,10 @@ export const Put = createHttpMethodDecorator(RequestMethod.PUT);
 export const Delete = createHttpMethodDecorator(RequestMethod.DELETE);
 export const Patch = createHttpMethodDecorator(RequestMethod.PATCH);
 
-
+export const REQUEST = new InjectionToken<any>(`REQUEST`)
+export const RESPOSNE = new InjectionToken<any>(`RESPOSNE`)
+export const CONTEXT = new InjectionToken<any>(`CONTEXT`)
+export const STREAM = new InjectionToken<any>(`STREAM`)
 // 路由参数类型枚举
 export enum ParamType {
   PARAM = 'param',

@@ -144,17 +144,7 @@ export class WorkflowController implements sdk.WorkflowController {
    */
   execute(
     @Body() body: { ast: Ast, workflow: WorkflowGraphAst; input?: Record<string, any> },
-    @Res() res?: any
   ): Observable<NodeEvent> {
-    // 设置 SSE 响应头
-    res.writeHead(200, {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache, no-transform',
-      'Connection': 'keep-alive',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Cache-Control',
-      'X-Accel-Buffering': 'no' // 禁用 nginx 缓冲
-    });
 
     try {
       const { ast, workflow: workflowJson, input = {} } = body;
@@ -186,60 +176,9 @@ export class WorkflowController implements sdk.WorkflowController {
       }
 
       const events$ = executeAst(target, input, parent);
-
-      // 心跳保活：每 15 秒发送一次心跳，防止浏览器超时
-      const heartbeatInterval = setInterval(() => {
-        res.write(`: heartbeat\n\n`);
-        if (typeof (res as any).flush === 'function') {
-          (res as any).flush();
-        }
-      }, 15000);
-
-      const subscription = events$.subscribe({
-        next: (event: NodeEvent) => {
-          res.write(`data: ${JSON.stringify(event)}\n\n`);
-          // 立即刷新缓冲区，确保事件实时发送
-          if (typeof (res as any).flush === 'function') {
-            (res as any).flush();
-          }
-        },
-        error: (error: any) => {
-          logger.error('工作流执行失败', { error: error.message, stack: error.stack });
-          res.write(`data: ${JSON.stringify({
-            type: 'node_fail',
-            id: target.id,
-            error: error.message
-          })}\n\n`);
-          if (typeof (res as any).flush === 'function') {
-            (res as any).flush();
-          }
-          clearInterval(heartbeatInterval);
-          res.end();
-        },
-        complete: () => {
-          clearInterval(heartbeatInterval);
-          res.end();
-        }
-      })
-
-      // 处理客户端断开连接
-      res.on('close', () => {
-        logger.info('客户端断开 SSE 连接');
-        clearInterval(heartbeatInterval);
-        subscription.unsubscribe();
-      });
-
       return events$;
     } catch (error: any) {
       logger.error('execute error', { error: error.message, body });
-      // ✅ 发送标准 node_fail 事件（使用 workflow 或 ast 的 id）
-      const targetId = body.workflow?.id || body.ast?.id || 'unknown';
-      res.write(`data: ${JSON.stringify({
-        type: 'node_fail',
-        id: targetId,
-        error: error.message
-      })}\n\n`);
-      res.end();
       throw error;
     }
   }
@@ -254,19 +193,8 @@ export class WorkflowController implements sdk.WorkflowController {
    * - 错误隔离，不影响其他节点
    */
   executeNode(
-    @Body() body: { workflow: INode, nodeId: string, config?: any },
-    @Res() res?: any
+    @Body() body: { workflow: INode, nodeId: string, config?: any }
   ): Observable<NodeEvent> {
-    // 设置 SSE 响应头
-    res.writeHead(200, {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache, no-transform',
-      'Connection': 'keep-alive',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Cache-Control',
-      'X-Accel-Buffering': 'no' // 禁用 nginx 缓冲
-    });
-
     try {
       const { workflow, nodeId, config } = body;
 
@@ -296,70 +224,8 @@ export class WorkflowController implements sdk.WorkflowController {
       // 设置节点初始状态
       targetNode.state = 'running';
       targetNode.error = undefined;
-
-      // ✅ 执行时会自动发送 node_runing 事件，无需手动发送
-      // 使用 executeAstWithWorkflowGraph 进行增量执行
-      const nodeExecution$ = executeAstWithWorkflowGraph(targetNode, {}, workflowAst);
-
-      // 心跳保活：每 15 秒发送一次心跳
-      const heartbeatInterval = setInterval(() => {
-        res.write(`: heartbeat\n\n`);
-      }, 15000);
-
-      const subscription = nodeExecution$.subscribe({
-        next: (event: NodeEvent) => {
-          logger.debug('节点执行事件', { type: event.type, nodeId: (event as any).id });
-
-          // ✅ 直接转发标准 NodeEvent，不做包装
-          res.write(`data: ${JSON.stringify(event)}\n\n`);
-          // 立即刷新缓冲区，确保事件实时发送
-          if (typeof (res as any).flush === 'function') {
-            (res as any).flush();
-          }
-        },
-        error: (error: any) => {
-          logger.error('节点执行失败', { nodeId, error: error.message });
-
-          // ✅ 发送标准 node_fail 事件
-          res.write(`data: ${JSON.stringify({
-            type: 'node_fail',
-            id: nodeId,
-            error: error.message
-          })}\n\n`);
-          if (typeof (res as any).flush === 'function') {
-            (res as any).flush();
-          }
-
-          clearInterval(heartbeatInterval);
-          res.end();
-        },
-        complete: () => {
-          logger.info('节点执行完成', { nodeId });
-          clearInterval(heartbeatInterval);
-          res.end();
-        }
-      });
-
-      // 处理客户端断开连接
-      res.on('close', () => {
-        logger.info('客户端断开连接', { nodeId });
-        clearInterval(heartbeatInterval);
-        subscription.unsubscribe();
-      });
-
-      return nodeExecution$;
-
+      return executeAstWithWorkflowGraph(targetNode, {}, workflowAst);
     } catch (error: any) {
-      logger.error('执行单个节点失败', { nodeId: body?.nodeId, error: error.message });
-
-      // ✅ 发送标准 node_fail 事件
-      res.write(`data: ${JSON.stringify({
-        type: 'node_fail',
-        id: body?.nodeId || 'unknown',
-        error: error.message
-      })}\n\n`);
-
-      res.end();
       throw error;
     }
   }

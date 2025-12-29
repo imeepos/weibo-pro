@@ -7,14 +7,14 @@ import "@sker/workflow-ast";
 import "@sker/workflow-run";
 import "./controllers/index";
 import "./claude/claude.controller";
-import { Logger, root } from '@sker/core';
+import { CONTEXT, createInjector, Injector, Logger, REQUEST, RESPOSNE, root, STREAM } from '@sker/core';
 import { entitiesProviders, seedNuwa, seedSentimentAnalyzer, seedContentAuditor, seedDataValidator, seedProgrammingAssistant, useTranslation } from "@sker/entities";
 import { killPortProcess } from 'kill-port-process';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { betterAuth } from 'better-auth';
-import { createSkerAuthPlugin } from '@sker/auth';
+import { createSkerAuthPlugin, BETTER_AUTH } from '@sker/auth';
 import { Server as SocketIOServer } from 'socket.io';
 import { createServer } from 'http';
 import type { IncomingMessage, ServerResponse } from 'http';
@@ -23,7 +23,7 @@ import { Pool } from 'pg';
 import { UploadService } from './services/upload.service';
 import { ClaudeGateway } from './claude';
 import { DerivedNodeService } from './services/workflow/derived-node.service';
-
+import { stream, streamText, streamSSE } from 'hono/streaming'
 async function bootstrap() {
   const PORT = parseInt(process.env.PORT || `3000`);
   const logger = root.get(Logger);
@@ -63,7 +63,7 @@ async function bootstrap() {
   }
 
   // 创建 Hono 应用
-  const app = new Hono();
+  const app = new Hono<{ Bindings: { injector: Injector } }>();
 
   // CORS 配置
   app.use('*', cors({
@@ -83,17 +83,6 @@ async function bootstrap() {
 
   // 静态文件服务 - /uploads 路径
   app.use('/uploads/*', serveStatic({ root: './' }));
-
-  // 处理 /mobile 重定向到 /mobile/
-  app.get('/mobile', (c) => {
-    return c.redirect('/mobile/');
-  });
-
-  // 静态文件服务 - /mobile 路径及其子路径
-  app.use('/mobile/*', serveStatic({
-    root: './static/mobile',
-    index: 'index.html'
-  }));
 
   // Better Auth 初始化
   const auth = betterAuth({
@@ -124,6 +113,9 @@ async function bootstrap() {
       openAPI()
     ]
   });
+
+  root.set([{ provide: BETTER_AUTH, useValue: auth }])
+
 
   // 统一 Better Auth 路由处理
   app.on(['GET', 'POST'], '/api/auth/*', async (c) => {
@@ -165,10 +157,14 @@ async function bootstrap() {
       });
 
       logger.info('🔄 转发 JSON 请求给 Better Auth', { body: jsonBody });
+      Reflect.set(request, 'injector', c.env.injector)
       return auth.handler(request);
     }
 
+    // SSE 不适用于认证端点 - 认证操作都是同步的请求-响应模式
+    // 如需 SSE，应在业务路由中实现，而非 /api/auth/* 路由
     // 其他请求直接转发
+    Reflect.set(c.req.raw, 'injector', c.env.injector)
     return auth.handler(c.req.raw);
   });
 
@@ -223,14 +219,19 @@ async function bootstrap() {
   // 创建 HTTP 服务器
   const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
     const url = new URL(req.url || '/', `http://${req.headers.host}`);
-
     const request = new Request(url.toString(), {
       method: req.method,
       headers: req.headers as HeadersInit,
       body: ['GET', 'HEAD'].includes(req.method || '') ? null : await getRequestBody(req)
     });
+    const reqInjector = createInjector([
+      { provide: REQUEST, useValue: req },
+      { provide: RESPOSNE, useValue: res },
+    ], root, 'feature');
+    const response = await app.fetch(request, { injector: reqInjector });
 
-    const response = await app.fetch(request);
+    // SSE 由 controller.factory 直接写入 res，跳过标准响应处理
+    if (res.headersSent) return;
 
     res.statusCode = response.status;
     response.headers.forEach((value, key) => {

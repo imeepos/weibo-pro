@@ -8,7 +8,7 @@
 export { createSkerAuthPlugin, type SkerAuthPluginOptions } from './plugin';
 
 // Factory
-export { controllerFactory } from './factory';
+export { controllerFactory, BETTER_AUTH, BETTER_AUTH_CONTEXT } from './factory';
 export type {
   ControllerConstructor,
   EndpointConfig,

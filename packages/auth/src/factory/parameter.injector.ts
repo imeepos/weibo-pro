@@ -5,13 +5,14 @@
 import { ParamType } from '@sker/core';
 import type { RouteParameter, RequestContext, ResponseController } from './factory.types';
 import { extractFileFromRequest } from './file.handler';
+import { EndpointContext } from 'better-auth';
 
 /**
  * Inject parameters from request context into method arguments
  */
 export async function injectParameters(
   argsMetadata: Record<string, RouteParameter>,
-  ctx: RequestContext
+  ctx: EndpointContext<string, any,any>
 ): Promise<unknown[]> {
   const sortedMetadata = Object.values(argsMetadata).sort((a, b) => a.index - b.index);
   const results: unknown[] = [];
@@ -43,7 +44,7 @@ export async function injectParameters(
       }
 
       case ParamType.HEADER:
-        results.push(fieldKey ? ctx.headers.get(fieldKey) : ctx.headers);
+        results.push(fieldKey ? ctx.headers?.get(fieldKey) : ctx.headers);
         break;
 
       case ParamType.REQ:
@@ -51,15 +52,7 @@ export async function injectParameters(
         break;
 
       case ParamType.RES: {
-        // Return response controller object
-        const responseController: ResponseController = {
-          json: ctx.json,
-          redirect: ctx.redirect,
-          setHeader: ctx.setHeader,
-          setStatus: ctx.setStatus,
-          setCookie: ctx.setCookie,
-        };
-        results.push(responseController);
+        results.push(ctx);
         break;
       }
 

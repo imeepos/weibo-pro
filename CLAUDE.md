@@ -87,3 +87,4 @@ pnpm clean:cache          # 清理 Turbo 缓存
 3. 根据关键词匹配对应的 agent
 4. 不确定时，询问用户或使用 `orchestrator` 分析任务
 
+简单任务直接使用 code-artisan 执行编码任务

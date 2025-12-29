@@ -6,8 +6,8 @@
 
 import 'reflect-metadata';
 import { createAuthEndpoint, sessionMiddleware } from 'better-auth/api';
-import type { Endpoint } from 'better-auth';
-import { ParamType, RequestMethod, root } from '@sker/core';
+import type { Endpoint, EndpointContext } from 'better-auth';
+import { ParamType, RequestMethod, root, FEATURE_PROVIDERS, createInjector, Injector, isObservable, RESPOSNE, isPOromise, REQUEST, logger } from '@sker/core';
 
 import { permissionMiddleware } from '../permission';
 import type { ControllerConstructor, EndpointConfig, RequestContext, RouteParameter } from './factory.types';
@@ -20,6 +20,8 @@ import {
 import { buildEndpointSchemas } from './schema.builder';
 import { buildOpenAPIMetadata } from './openapi.builder';
 import { injectParameters } from './parameter.injector';
+import { BETTER_AUTH_CONTEXT } from './tokens';
+import { ServerResponse } from 'http';
 
 /** HTTP method enum to string mapping */
 const HTTP_METHOD_MAP: Record<RequestMethod, EndpointConfig['method']> = {
@@ -28,7 +30,7 @@ const HTTP_METHOD_MAP: Record<RequestMethod, EndpointConfig['method']> = {
   [RequestMethod.PUT]: 'PUT',
   [RequestMethod.DELETE]: 'DELETE',
   [RequestMethod.PATCH]: 'PATCH',
-  [RequestMethod.SSE]: 'GET',
+  [RequestMethod.SSE]: 'POST',
 };
 
 /**
@@ -66,9 +68,16 @@ function createEndpointHandler(
   methodName: string,
   argsMetadata: Record<string, RouteParameter>
 ) {
-  return async (ctx: RequestContext) => {
+  return async (ctx: EndpointContext<string, any, { injector: Injector }>) => {
     try {
-      const instance = root.get(ControllerClass);
+      const inejctor = ctx.request ? Reflect.get(ctx.request, 'injector') : root;
+      const providers = root.get(FEATURE_PROVIDERS, [])
+      const reqInjector = createInjector([
+        { provide: BETTER_AUTH_CONTEXT, useValue: ctx },
+        ...providers.flat(),
+      ], inejctor, 'feature');
+      const instance = reqInjector.get(ControllerClass);
+
       const args = await injectParameters(argsMetadata, ctx);
 
       const method = Reflect.get(instance, methodName);
@@ -76,14 +85,61 @@ function createEndpointHandler(
         throw new Error(`Method ${methodName} is not a function`);
       }
 
-      const result = await method.bind(instance)(...args);
+      let result = await method.bind(instance)(...args);
+      if (isPOromise(result)) {
+        result = await result;
+      }
+      if (isObservable(result)) {
+        const req = reqInjector.get(REQUEST);
+        const res = reqInjector.get(RESPOSNE) as ServerResponse;
+        res.writeHead(200, {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache, no-transform',
+          'Connection': 'keep-alive',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Cache-Control',
+          'X-Accel-Buffering': 'no' // 禁用 nginx 缓冲
+        });
+        const subscription = result.subscribe({
+          next: (event: any) => {
+            res.write(`data: ${JSON.stringify(event)}\n\n`)
+            if (typeof (res as any).flush === 'function') {
+              (res as any).flush();
+            }
+          },
+          error: (error: any) => {
+            res.write(`data: ${JSON.stringify({
+              error: error.message
+            })}\n\n`);
+            if (typeof (res as any).flush === 'function') {
+              (res as any).flush();
+            }
+            res.end();
+          },
+          complete: () => {
+            res.end();
+          }
+        })
+        req.on('close', () => {
+          subscription.unsubscribe();
+        });
+        return res;
+      }
+      if (typeof result === 'object') {
+        // Wrap response in standard format
+        return ctx.json({
+          success: true,
+          data: result,
+          timestamp: new Date().toISOString(),
+        });
+      }
 
-      // Wrap response in standard format
       return ctx.json({
         success: true,
         data: result,
         timestamp: new Date().toISOString(),
       });
+
     } catch (error) {
       console.error(`[Controller Error] ${ControllerClass.name}.${methodName}:`, error);
       ctx.setStatus(500);

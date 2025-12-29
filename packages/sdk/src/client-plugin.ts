@@ -25,14 +25,14 @@
  * ```
  */
 
-import type { BetterAuthClientPlugin } from 'better-auth/client';
+import type { BetterAuthClientOptions, BetterAuthClientPlugin, BetterFetch, ClientStore } from 'better-auth/client';
 import type { Provider, Type } from '@sker/core';
 import { CONTROLLES, PATH_METADATA, METHOD_METADATA, ROUTE_ARGS_METADATA, RequestMethod, ParamType, root } from '@sker/core';
 import { Observable } from 'rxjs';
 import { clone } from '@sker/workflow';
-import { BETTER_FETCH } from './tokens';
+import { BETTER_FETCH, BETTER_OPTIONS, BETTER_STORE } from './tokens';
+import { BearerOptions } from 'better-auth/plugins';
 
-type FetchFunction = (url: string, options?: any) => Promise<{ data: any; error: any }>;
 
 /**
  * 创建 Sker 客户端插件
@@ -50,12 +50,12 @@ export function createSkerClientPlugin(): BetterAuthClientPlugin {
     // 插件初始化时执行李代桃僵
     $InferServerPlugin: {} as any,
 
-    getActions: ($fetch) => {
+    getActions: ($fetch, $store, options) => {
       // 李代桃僵：将 Controller 替换为 HTTP 代理
-      registerControllerProxies($fetch);
+      registerControllerProxies($fetch, $store, options);
 
       // 返回 Better Auth 风格的 actions
-      return buildBetterAuthActions(controllers, $fetch);
+      return buildBetterAuthActions(controllers);
     },
 
     pathMethods: generatePathMethods(controllers),
@@ -65,7 +65,7 @@ export function createSkerClientPlugin(): BetterAuthClientPlugin {
 /**
  * 李代桃僵核心：注册 Controller 代理到 DI 容器
  */
-function registerControllerProxies($fetch: FetchFunction): void {
+function registerControllerProxies($fetch: BetterFetch, $store: ClientStore, options?: BetterAuthClientOptions): void {
   const controllers = root.get(CONTROLLES, []);
   const providers: Provider[] = [];
 
@@ -74,6 +74,16 @@ function registerControllerProxies($fetch: FetchFunction): void {
     provide: BETTER_FETCH,
     useValue: $fetch,
   });
+
+  providers.push({
+    provide: BETTER_STORE,
+    useValue: $store
+  });
+
+  providers.push({
+    provide: BETTER_OPTIONS,
+    useValue: options
+  })
 
   // 为每个 Controller 创建代理 Provider
   for (const controllerClass of controllers) {
@@ -92,7 +102,6 @@ function registerControllerProxies($fetch: FetchFunction): void {
  */
 function buildBetterAuthActions(
   controllers: Type<any>[],
-  $fetch: FetchFunction
 ): Record<string, any> {
   const actions: Record<string, any> = {};
 
@@ -121,7 +130,6 @@ function buildBetterAuthActions(
         methodPath,
         httpMethod,
         routeArgs,
-        $fetch
       );
     }
   }
@@ -134,7 +142,7 @@ function buildBetterAuthActions(
  */
 function createControllerProxy<T>(
   controllerClass: Type<T>,
-  $fetch: FetchFunction
+  $fetch: BetterFetch
 ): T {
   const controllerPrefix = Reflect.getMetadata(PATH_METADATA, controllerClass) || '';
   const methodNames = Object.getOwnPropertyNames(controllerClass.prototype).filter(
@@ -156,7 +164,6 @@ function createControllerProxy<T>(
       methodPath,
       httpMethod,
       routeArgs,
-      $fetch
     );
   }
 
@@ -171,19 +178,15 @@ function createMethodProxy(
   methodPath: string,
   httpMethod: RequestMethod,
   routeArgs: Record<string, any>,
-  $fetch: FetchFunction
 ): (...args: any[]) => any {
   if (httpMethod === RequestMethod.SSE) {
     return (...args: any[]) => {
       const fullPath = buildFullPath(controllerPrefix, methodPath);
       const { urlParams, queryParams, bodyData } = extractParameters(args, routeArgs);
       const finalUrl = replaceUrlParams(fullPath, urlParams);
-
-      if (bodyData !== undefined) {
-        return createPostSSEObservable(finalUrl, bodyData);
-      } else {
-        return createGetSSEObservable(finalUrl, queryParams);
-      }
+      const options = root.get(BETTER_OPTIONS)
+      console.log({ finalUrl, options })
+      return createPostSSEObservable(finalUrl, queryParams, bodyData);
     };
   }
 
@@ -198,7 +201,8 @@ function createMethodProxy(
 
     // FormData 不设置 Content-Type，让浏览器自动设置 multipart/form-data boundary
     const requestHeaders = isFormData ? {} : headers;
-
+    const $fetch = root.get(BETTER_FETCH)
+    const options = root.get(BETTER_OPTIONS)
     const { data, error } = await $fetch(finalUrl, {
       method: getHttpMethodString(httpMethod),
       query: queryParams,
@@ -262,11 +266,11 @@ function getControllerName(path: string): string {
 /**
  * 创建 POST SSE Observable
  */
-function createPostSSEObservable<T>(url: string, bodyData: any): Observable<T> {
+function createPostSSEObservable<T>(url: string, queryParams: any, bodyData: any): Observable<T> {
   return new Observable<T>(subscriber => {
     const abortController = new AbortController();
     let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
-
+    const fetch = root.get(BETTER_FETCH)
     fetch(url, {
       method: 'POST',
       headers: {
@@ -274,16 +278,15 @@ function createPostSSEObservable<T>(url: string, bodyData: any): Observable<T> {
         'Accept': 'text/event-stream',
         'Cache-Control': 'no-cache'
       },
+      query: queryParams || {},
       body: JSON.stringify(clone(bodyData)),
       signal: abortController.signal,
       credentials: 'include',
     })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
+      .then(({ data, error }) => {
+        console.log({ data, error })
 
-        reader = response.body?.getReader() ?? null;
+        reader = (data as any)?.getReader() ?? null;
         if (!reader) {
           throw new Error('Response body is not readable');
         }
@@ -340,7 +343,7 @@ function createPostSSEObservable<T>(url: string, bodyData: any): Observable<T> {
 
     return () => {
       abortController.abort();
-      reader?.cancel().catch(() => {});
+      reader?.cancel().catch(() => { });
     };
   });
 }
