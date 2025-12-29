@@ -26,8 +26,8 @@ export enum WeiboAccountStatus {
 @Entity('weibo_accounts')
 @Index(['weiboUid'], { unique: true }) // 确保微博账号唯一性
 export class WeiboAccountEntity {
-  @PrimaryGeneratedColumn('increment')
-  id!: number;
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
 
   @Column({ type: 'varchar', length: 50, name: 'weibo_uid' })
   weiboUid!: string;

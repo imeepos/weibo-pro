@@ -155,20 +155,9 @@ export interface IEdge extends Record<string, any> {
     toProperty?: string;
     weight?: number;  // 多输入汇聚时的排序权重
 
-    // 条件执行
-    condition?: {
-        property: string;
-        value: any;
-    };
-
     // 流式合并模式
     mode?: EdgeMode;
     isPrimary?: boolean;  // 标记主流（用于 WITH_LATEST_FROM 模式）
-}
-
-// 辅助函数：检查边是否有条件
-export function hasCondition(edge: IEdge): boolean {
-    return edge.condition !== undefined;
 }
 
 // 辅助函数：检查边是否传递数据

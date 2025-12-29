@@ -27,4 +27,5 @@ export * from './llm-provider-selector';
 export * from './llm-model-selector';
 export * from './persona-selector';
 export * from './visually-hidden';
+export * from './weibo-account-list';
 export { toast } from 'sonner';

@@ -15,14 +15,11 @@ import { Label } from '../ui/label'
 import { ScrollArea } from '../ui/scroll-area'
 import { EdgeModeSelector, type EdgeModeOption } from './edge-mode-selector'
 import { EdgeDataMapping } from './edge-data-mapping'
-import { EdgeConditionConfig } from './edge-condition-config'
-import { EdgePreview, type EdgeModeStyle } from './edge-preview'
 
 export interface EdgeConfigDialogProps {
   open: boolean
   edge: IEdge | null
   modeOptions: EdgeModeOption[]
-  modeStyles: Record<EdgeMode, EdgeModeStyle>
   onOpenChange: (open: boolean) => void
   onSave: (edgeConfig: Partial<IEdge>) => void
 }
@@ -31,7 +28,6 @@ export function EdgeConfigDialog({
   open,
   edge,
   modeOptions,
-  modeStyles,
   onOpenChange,
   onSave
 }: EdgeConfigDialogProps) {
@@ -40,7 +36,6 @@ export function EdgeConfigDialog({
   const [toProperty, setToProperty] = useState('')
   const [weight, setWeight] = useState(1)
   const [isPrimary, setIsPrimary] = useState(false)
-  const [condition, setCondition] = useState<{ property: string; value: any } | undefined>(undefined)
 
   useEffect(() => {
     if (edge) {
@@ -49,7 +44,6 @@ export function EdgeConfigDialog({
       setToProperty(edge.toProperty || '')
       setWeight(edge.weight || 1)
       setIsPrimary(edge.isPrimary || false)
-      setCondition(edge.condition)
     }
   }, [edge])
 
@@ -59,7 +53,6 @@ export function EdgeConfigDialog({
       fromProperty: fromProperty || undefined,
       toProperty: toProperty || undefined,
       weight,
-      condition,
     }
 
     if (mode === EdgeMode.WITH_LATEST_FROM) {
@@ -110,12 +103,6 @@ export function EdgeConfigDialog({
               onWeightChange={setWeight}
             />
 
-            <EdgeConditionConfig
-              condition={condition}
-              onConditionChange={setCondition}
-            />
-
-            <EdgePreview mode={mode} modeStyles={modeStyles} />
           </div>
         </ScrollArea>
 

@@ -16,7 +16,7 @@ export class WeiboAccountPickAst extends Ast {
 
     @State({ title: '账号列表' })
     list: Array<{
-        id: number;
+        id: string;
         nickname: string;
         avatar: string;
         healthScore: number;
@@ -24,7 +24,7 @@ export class WeiboAccountPickAst extends Ast {
     }> = [];
 
     @State({ title: '选中账号ID' })
-    selectedId?: number;
+    selectedId?: string;
     // 注意：不使用BehaviorSubject
     @Output({ title: 'Cookies', defaultValue: '' })
     cookies = ``
