@@ -1,8 +1,9 @@
 'use client'
 
-import React from 'react'
+import React, { useMemo } from 'react'
 import { WorkflowNodeSelector } from '@sker/ui/components/workflow'
 import { useNodeRegistry } from '../NodePalette/useNodeRegistry'
+import { getNodeMetadata } from '../../adapters'
 import type { UINodeMetadata } from '../../types'
 
 export interface NodeSelectorProps {
@@ -26,19 +27,19 @@ export function NodeSelector({
   onSelect,
   onClose,
 }: NodeSelectorProps) {
-  const nodeRegistry = useNodeRegistry()
+  const compiledRegistry = useNodeRegistry()
 
-  // 将业务数据适配为展示层格式
-  const nodes = nodeRegistry.map((metadata) => ({
-    type: metadata.type,
-    label: metadata.label,
-    nodeType: metadata.nodeType,
-    inputs: metadata.inputs,
-    outputs: metadata.outputs,
-  }))
+  // 转换为 UI 元数据
+  const uiRegistry = useMemo(() =>
+    compiledRegistry.map(compiled => {
+      const tempNode = { type: compiled.type, metadata: compiled } as any
+      return getNodeMetadata(tempNode)
+    }),
+    [compiledRegistry]
+  )
 
   const handleSelect = (node: any) => {
-    const metadata = nodeRegistry.find((m) => m.type === node.type)
+    const metadata = uiRegistry.find((m) => m.type === node.type)
     if (metadata) {
       onSelect(metadata)
     }
@@ -48,7 +49,7 @@ export function NodeSelector({
     <WorkflowNodeSelector
       visible={visible}
       position={position}
-      nodes={nodes}
+      nodes={uiRegistry}
       onSelect={handleSelect}
       onClose={onClose}
     />

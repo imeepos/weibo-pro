@@ -8,7 +8,11 @@ export type AggregateOperation = 'sum' | 'avg' | 'min' | 'max' | 'count' | 'conc
   errorStrategy: 'fail'
 })
 export class AggregateAst extends Ast {
-  @State({ title: '聚合操作' })
+  @Input({
+    title: '聚合操作',
+    type: 'select',
+    options: ['sum', 'avg', 'min', 'max', 'count', 'concat', 'merge']
+  })
   operation: AggregateOperation = 'concat';
 
   @Input({ title: '输入数据', mode: IS_MULTI | IS_BUFFER, defaultValue: [] })

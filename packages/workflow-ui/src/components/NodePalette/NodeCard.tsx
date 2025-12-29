@@ -3,12 +3,12 @@
 import React from 'react'
 import { motion } from 'framer-motion'
 import { Plus, ArrowRight, ArrowLeft } from 'lucide-react'
-import { hasMultiMode, type NodeMetadata } from '@sker/workflow'
+import { hasMultiMode, type CompiledNodeMetadata } from '@sker/workflow'
 import { cn } from '../../utils/cn'
 
 interface NodeCardProps {
-  metadata: NodeMetadata
-  onAddNode: (metadata: NodeMetadata) => void
+  metadata: CompiledNodeMetadata
+  onAddNode: (metadata: CompiledNodeMetadata) => void
 }
 
 export function NodeCard({ metadata, onAddNode }: NodeCardProps) {

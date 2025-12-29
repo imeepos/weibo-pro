@@ -10,7 +10,7 @@ import { NodeCard } from './NodeCard'
 import { getAllNodeTypes } from '../../adapters'
 import { createCompiledNode } from '../../utils/createCompiledNode'
 import { cn } from '../../utils/cn'
-import { NodeMetadata } from '@sker/workflow'
+import { CompiledNodeMetadata } from '@sker/workflow'
 import { WorkflowNode } from '../../types'
 export interface NodePaletteProps {
   className?: string
@@ -25,7 +25,7 @@ export function NodePalette({ className = '' }: NodePaletteProps) {
   const filteredNodes = nodeRegistry
 
   const handleAddNode = useCallback(
-    (metadata: NodeMetadata) => {
+    (metadata: CompiledNodeMetadata) => {
       const nodeTypes = getAllNodeTypes()
       const NodeClass = nodeTypes.find((type) => type.name === metadata.type)
 

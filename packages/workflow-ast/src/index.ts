@@ -132,7 +132,7 @@ export type { HttpMethod as MetaHttpMethod } from './meta/HttpRequestAst';
 export { LlmInferenceAst } from './meta/LlmInferenceAst';
 export { MediaGenerateAst } from './meta/MediaGenerateAst';
 export type { MediaType } from './meta/MediaGenerateAst';
-export { LoopAst } from './meta/LoopAst';
+export { LoopAst } from '@sker/workflow';
 export { TransformAst } from './meta/TransformAst';
 export { AggregateAst } from './meta/AggregateAst';
 export type { AggregateOperation } from './meta/AggregateAst';

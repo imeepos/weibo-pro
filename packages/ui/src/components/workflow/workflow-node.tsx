@@ -76,14 +76,16 @@ const HandleWrapper = ({
   isCollapsed,
   portIndex,
   totalPorts,
+  disableHandles,
 }: {
   port?: INodeInputMetadata
   type: 'source' | 'target'
   isCollapsed?: boolean
   portIndex?: number
   totalPorts?: number
+  disableHandles?: boolean
 }) => {
-  if (!port) return null
+  if (!port || disableHandles) return null
 
   const isTarget = type === 'target'
 
@@ -119,11 +121,13 @@ const HandleWrapper = ({
 const PortRow = ({
   input,
   output,
-  isCollapsed
+  isCollapsed,
+  disableHandles
 }: {
   input?: INodeInputMetadata
   output?: INodeOutputMetadata,
   isCollapsed?: boolean
+  disableHandles?: boolean
 }) => {
   // 检查输入端口的聚合模式
   const inputIsMulti = input && hasMultiMode(input.mode)
@@ -134,7 +138,7 @@ const PortRow = ({
       <div className="flex items-center gap-1 relative">
         {input && (
           <>
-            <HandleWrapper port={input} type="target" isCollapsed={isCollapsed} />
+            <HandleWrapper port={input} type="target" isCollapsed={isCollapsed} disableHandles={disableHandles} />
             <span className="text-xs text-[hsl(var(--workflow-port-input-text))] font-medium truncate ml-3">
               {input.title || input.property}
             </span>
@@ -153,7 +157,7 @@ const PortRow = ({
             <span className="text-xs text-[hsl(var(--workflow-port-output-text))] font-medium truncate mr-3">
               {output.title || output.property}
             </span>
-            <HandleWrapper port={output as INodeInputMetadata} type="source" isCollapsed={isCollapsed} />
+            <HandleWrapper port={output as INodeInputMetadata} type="source" isCollapsed={isCollapsed} disableHandles={disableHandles} />
           </>
         )}
       </div>
@@ -182,6 +186,7 @@ const WorkflowNodeComponent = ({
   onContextMenu,
   onDoubleClick,
   className,
+  disableHandles = false,
 }: WorkflowNodeProps) => {
   const getBorderColor = () => {
     if (selected) return 'hsl(var(--primary))'
@@ -267,7 +272,7 @@ const WorkflowNodeComponent = ({
         </div>
 
         {/* 折叠状态下的 Handles - 始终渲染以保持边的连线 */}
-        {collapsed && (
+        {collapsed && !disableHandles && (
           <>
             {inputs.map((input, index) => (
               <HandleWrapper
@@ -277,6 +282,7 @@ const WorkflowNodeComponent = ({
                 isCollapsed={true}
                 portIndex={index}
                 totalPorts={inputs.length}
+                disableHandles={disableHandles}
               />
             ))}
             {outputs.map((output, index) => (
@@ -287,6 +293,7 @@ const WorkflowNodeComponent = ({
                 isCollapsed={true}
                 portIndex={index}
                 totalPorts={outputs.length}
+                disableHandles={disableHandles}
               />
             ))}
           </>
@@ -306,6 +313,7 @@ const WorkflowNodeComponent = ({
                   input={inputs[index]}
                   output={outputs[index]}
                   isCollapsed={collapsed}
+                  disableHandles={disableHandles}
                 />
               )
             )}

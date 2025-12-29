@@ -47,6 +47,9 @@ export interface WorkflowNodeProps {
   onContextMenu?: (e: React.MouseEvent) => void
   onDoubleClick?: (e: React.MouseEvent) => void
 
+  // 预览模式（不渲染 Handle）
+  disableHandles?: boolean
+
   className?: string
 }
 

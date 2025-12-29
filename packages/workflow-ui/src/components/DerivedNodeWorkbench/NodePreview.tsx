@@ -29,6 +29,7 @@ export function NodePreview() {
         color={preview.color}
         selected={false}
         collapsed={false}
+        disableHandles={true}
       />
     </div>
   )

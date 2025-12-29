@@ -2,10 +2,9 @@ import { useCallback, useEffect } from 'react'
 import { useReactFlow, type Connection, } from '@xyflow/react'
 import { useSelectionStore } from '../../store'
 import { getAllNodeTypes } from '../../adapters'
-import { generateId, Compiler } from '@sker/workflow'
-import { root } from '@sker/core'
+import { generateId } from '@sker/workflow'
 import { createCompiledNode } from '../../utils/createCompiledNode'
-import type { WorkflowEdge, WorkflowNode, NodeMetadata } from '../../types'
+import type { WorkflowEdge, WorkflowNode, UINodeMetadata } from '../../types'
 import { useContextMenu } from './useContextMenu'
 
 /**

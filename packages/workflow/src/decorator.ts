@@ -211,6 +211,8 @@ export interface InputOptions {
     // 节点简介 可以给大模型用
     description?: string;
     type?: InputFieldType;
+    // 下拉选择框的选项列表（当 type 为 'select' 时使用）
+    options?: string[];
     // 支持UI动态添加输入节点
     dynamic?: boolean;
     isAst?: boolean;

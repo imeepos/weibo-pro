@@ -42,7 +42,6 @@ export function MetaNodePicker() {
 
       <div className="flex-1 overflow-y-auto p-4 space-y-2">
         {filteredNodes.map((metadata) => {
-          console.log({metadata})
           return (
             <div key={metadata.type} onClick={() => handleSelectNode(metadata.type)}>
               <NodeCard metadata={metadata} onAddNode={() => handleSelectNode(metadata.type)} />
