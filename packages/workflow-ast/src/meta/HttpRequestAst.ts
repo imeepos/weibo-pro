@@ -34,5 +34,8 @@ export class HttpRequestAst extends Ast {
   @Output({ title: '状态码', defaultValue: 0 })
   status = 0;
 
+  @Output({ title: 'Content-Type', defaultValue: '' })
+  contentType = '';
+
   type: 'HttpRequestAst' = 'HttpRequestAst';
 }

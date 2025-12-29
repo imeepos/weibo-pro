@@ -1,0 +1,365 @@
+{
+  "moved": [
+    {
+      "file": "SqlExecuteAst.ts",
+      "from": "01-data-sources\\database\\SqlExecuteAst.ts",
+      "to": "basic/SqlExecuteAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "ExcelUploadAst.ts",
+      "from": "01-data-sources\\file\\ExcelUploadAst.ts",
+      "to": "basic/ExcelUploadAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "MarkdownUploadAst.ts",
+      "from": "01-data-sources\\file\\MarkdownUploadAst.ts",
+      "to": "basic/MarkdownUploadAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "HttpAst.ts",
+      "from": "01-data-sources\\http\\HttpAst.ts",
+      "to": "basic/HttpAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "ProxyAutoSelectAst.ts",
+      "from": "01-data-sources\\http\\ProxyAutoSelectAst.ts",
+      "to": "crawler/ProxyAutoSelectAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "EmailD1Ast.ts",
+      "from": "01-data-sources\\system\\EmailD1Ast.ts",
+      "to": "basic/EmailD1Ast.ts",
+      "status": "success"
+    },
+    {
+      "file": "WeiboAccountPickAst.ts",
+      "from": "01-data-sources\\weibo\\auth\\WeiboAccountPickAst.ts",
+      "to": "crawler/WeiboAccountPickAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "WeiboLoginAst.ts",
+      "from": "01-data-sources\\weibo\\auth\\WeiboLoginAst.ts",
+      "to": "crawler/WeiboLoginAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "WeiboUserDetectionAst.ts",
+      "from": "01-data-sources\\weibo\\auth\\WeiboUserDetectionAst.ts",
+      "to": "crawler/WeiboUserDetectionAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "WeiboAjaxStatusesCommentAst.ts",
+      "from": "01-data-sources\\weibo\\content\\WeiboAjaxStatusesCommentAst.ts",
+      "to": "crawler/WeiboAjaxStatusesCommentAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "WeiboAjaxStatusesLikeShowAst.ts",
+      "from": "01-data-sources\\weibo\\content\\WeiboAjaxStatusesLikeShowAst.ts",
+      "to": "crawler/WeiboAjaxStatusesLikeShowAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "WeiboAjaxStatusesMymblogAst.ts",
+      "from": "01-data-sources\\weibo\\content\\WeiboAjaxStatusesMymblogAst.ts",
+      "to": "crawler/WeiboAjaxStatusesMymblogAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "WeiboAjaxStatusesRepostTimelineAst.ts",
+      "from": "01-data-sources\\weibo\\content\\WeiboAjaxStatusesRepostTimelineAst.ts",
+      "to": "crawler/WeiboAjaxStatusesRepostTimelineAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "WeiboAjaxStatusesShowAst.ts",
+      "from": "01-data-sources\\weibo\\content\\WeiboAjaxStatusesShowAst.ts",
+      "to": "crawler/WeiboAjaxStatusesShowAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "WeiboAjaxFeedHotTimelineAst.ts",
+      "from": "01-data-sources\\weibo\\search\\WeiboAjaxFeedHotTimelineAst.ts",
+      "to": "crawler/WeiboAjaxFeedHotTimelineAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "WeiboKeywordSearchAst.ts",
+      "from": "01-data-sources\\weibo\\search\\WeiboKeywordSearchAst.ts",
+      "to": "crawler/WeiboKeywordSearchAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "WeiboAjaxFriendshipsAst.ts",
+      "from": "01-data-sources\\weibo\\user\\WeiboAjaxFriendshipsAst.ts",
+      "to": "crawler/WeiboAjaxFriendshipsAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "WeiboAjaxProfileInfoAst.ts",
+      "from": "01-data-sources\\weibo\\user\\WeiboAjaxProfileInfoAst.ts",
+      "to": "crawler/WeiboAjaxProfileInfoAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "ErrorAnalyzerAst.ts",
+      "from": "02-data-processing\\analyzer\\ErrorAnalyzerAst.ts",
+      "to": "llm/ErrorAnalyzerAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "PostNLPAnalyzerAst.ts",
+      "from": "02-data-processing\\analyzer\\PostNLPAnalyzerAst.ts",
+      "to": "crawler/PostNLPAnalyzerAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "SerpClusterAst.ts",
+      "from": "02-data-processing\\analyzer\\SerpClusterAst.ts",
+      "to": "analysis/SerpClusterAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "PostContextCollectorAst.ts",
+      "from": "02-data-processing\\collector\\PostContextCollectorAst.ts",
+      "to": "crawler/PostContextCollectorAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "EventAutoCreatorAst.ts",
+      "from": "02-data-processing\\creator\\EventAutoCreatorAst.ts",
+      "to": "crawler/EventAutoCreatorAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "ClaudeCodeAst.ts",
+      "from": "03-ai-capabilities\\code-tools\\ClaudeCodeAst.ts",
+      "to": "llm/ClaudeCodeAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "ClaudeCodeRefactorAst.ts",
+      "from": "03-ai-capabilities\\code-tools\\ClaudeCodeRefactorAst.ts",
+      "to": "llm/ClaudeCodeRefactorAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "ClaudeCodeReviewAst.ts",
+      "from": "03-ai-capabilities\\code-tools\\ClaudeCodeReviewAst.ts",
+      "to": "llm/ClaudeCodeReviewAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "GroupChatLoopAst.ts",
+      "from": "03-ai-capabilities\\conversation\\GroupChatLoopAst.ts",
+      "to": "llm/GroupChatLoopAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "LlmTextAgentAst.ts",
+      "from": "03-ai-capabilities\\conversation\\LlmTextAgentAst.ts",
+      "to": "llm/LlmTextAgentAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "ShareAst.ts",
+      "from": "03-ai-capabilities\\conversation\\ShareAst.ts",
+      "to": "basic/ShareAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "CodeGeneratorAst.ts",
+      "from": "03-ai-capabilities\\generation\\content\\CodeGeneratorAst.ts",
+      "to": "llm/CodeGeneratorAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "StoryWeaverAst.ts",
+      "from": "03-ai-capabilities\\generation\\content\\StoryWeaverAst.ts",
+      "to": "llm/StoryWeaverAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "LlmTextImage2ToVideoAst.ts",
+      "from": "03-ai-capabilities\\generation\\media\\LlmTextImage2ToVideoAst.ts",
+      "to": "llm/LlmTextImage2ToVideoAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "LlmTextImageToVideoAst.ts",
+      "from": "03-ai-capabilities\\generation\\media\\LlmTextImageToVideoAst.ts",
+      "to": "llm/LlmTextImageToVideoAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "LlmTextToAudioAst.ts",
+      "from": "03-ai-capabilities\\generation\\media\\LlmTextToAudioAst.ts",
+      "to": "llm/LlmTextToAudioAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "LlmTextToImageAst.ts",
+      "from": "03-ai-capabilities\\generation\\media\\LlmTextToImageAst.ts",
+      "to": "llm/LlmTextToImageAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "LlmTextToVideoAst.ts",
+      "from": "03-ai-capabilities\\generation\\media\\LlmTextToVideoAst.ts",
+      "to": "llm/LlmTextToVideoAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "WorkflowNodeGeneratorAst.ts",
+      "from": "03-ai-capabilities\\generation\\tools\\WorkflowNodeGeneratorAst.ts",
+      "to": "llm/WorkflowNodeGeneratorAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "LlmCategoryAst.ts",
+      "from": "03-ai-capabilities\\quality\\LlmCategoryAst.ts",
+      "to": "control/LlmCategoryAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "PromptOptimizerAst.ts",
+      "from": "03-ai-capabilities\\quality\\PromptOptimizerAst.ts",
+      "to": "llm/PromptOptimizerAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "QualityCheckerAst.ts",
+      "from": "03-ai-capabilities\\quality\\QualityCheckerAst.ts",
+      "to": "llm/QualityCheckerAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "StoryQualityLoopAst.ts",
+      "from": "03-ai-capabilities\\quality\\StoryQualityLoopAst.ts",
+      "to": "control/StoryQualityLoopAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "AnswerEvaluatorAst.ts",
+      "from": "03-ai-capabilities\\research\\AnswerEvaluatorAst.ts",
+      "to": "llm/AnswerEvaluatorAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "AnswerFinalizerAst.ts",
+      "from": "03-ai-capabilities\\research\\AnswerFinalizerAst.ts",
+      "to": "llm/AnswerFinalizerAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "QueryRewriterAst.ts",
+      "from": "03-ai-capabilities\\research\\QueryRewriterAst.ts",
+      "to": "llm/QueryRewriterAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "ResearchPlannerAst.ts",
+      "from": "03-ai-capabilities\\research\\ResearchPlannerAst.ts",
+      "to": "llm/ResearchPlannerAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "LlmImageToTextAst.ts",
+      "from": "03-ai-capabilities\\understanding\\LlmImageToTextAst.ts",
+      "to": "llm/LlmImageToTextAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "LlmStructuredOutputAst.ts",
+      "from": "03-ai-capabilities\\understanding\\LlmStructuredOutputAst.ts",
+      "to": "llm/LlmStructuredOutputAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "LlmVideoToTextAst.ts",
+      "from": "03-ai-capabilities\\understanding\\LlmVideoToTextAst.ts",
+      "to": "llm/LlmVideoToTextAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "PersonaAst.ts",
+      "from": "04-personas\\core\\PersonaAst.ts",
+      "to": "llm/PersonaAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "PersonaCreatorAst.ts",
+      "from": "04-personas\\core\\PersonaCreatorAst.ts",
+      "to": "llm/PersonaCreatorAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "PromptRoleSkillAst.ts",
+      "from": "04-personas\\core\\PromptRoleSkillAst.ts",
+      "to": "llm/PromptRoleSkillAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "InsightAgentAst.ts",
+      "from": "04-personas\\domain-experts\\InsightAgentAst.ts",
+      "to": "sentiment/InsightAgentAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "KeywordAgentAst.ts",
+      "from": "04-personas\\domain-experts\\KeywordAgentAst.ts",
+      "to": "sentiment/KeywordAgentAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "MediaAgentAst.ts",
+      "from": "04-personas\\domain-experts\\MediaAgentAst.ts",
+      "to": "sentiment/MediaAgentAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "QueryAgentAst.ts",
+      "from": "04-personas\\domain-experts\\QueryAgentAst.ts",
+      "to": "sentiment/QueryAgentAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "ReportAgentAst.ts",
+      "from": "04-personas\\domain-experts\\ReportAgentAst.ts",
+      "to": "sentiment/ReportAgentAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "ScheduledWorkflowAst.ts",
+      "from": "05-workflow-control\\schedule\\ScheduledWorkflowAst.ts",
+      "to": "scheduler/ScheduledWorkflowAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "EventAst.ts",
+      "from": "06-ui-components\\EventAst.ts",
+      "to": "basic/EventAst.ts",
+      "status": "success"
+    },
+    {
+      "file": "PropertySelectorAst.ts",
+      "from": "06-ui-components\\PropertySelectorAst.ts",
+      "to": "basic/PropertySelectorAst.ts",
+      "status": "success"
+    }
+  ],
+  "errors": [],
+  "summary": {
+    "total": 59,
+    "success": 59,
+    "skipped": 0,
+    "errors": 0
+  }
+}

@@ -17,102 +17,59 @@ AST 节点不是配置文件，而是类型化的类。装饰器不是注解，�
 
 ## 目录结构
 
-**组织原则：按应用场景分层，而非按技术实现**
+**组织原则：按 @Node 装饰器的 type 字段分类**
 
-用户通过"我要做什么"（应用场景）找节点，而非"这是什么技术"。
+用户通过节点类型快速定位，与 UI 中的节点分类保持一致。
 
 ```
 packages/workflow-ast/
 ├── src/
-│   ├── index.ts                                  # 统一导出（保持向后兼容）
+│   ├── index.ts                    # 统一导出（保持向后兼容）
 │   │
-│   ├── 01-data-sources/                          # 【数据源层】用户要从哪里获取数据？
-│   │   ├── weibo/                                # 微博数据源
-│   │   │   ├── auth/                             # 认证相关
-│   │   │   │   ├── WeiboLoginAst.ts              # 微博登录（扫码）
-│   │   │   │   ├── WeiboAccountPickAst.ts        # 账号选择
-│   │   │   │   └── WeiboUserDetectionAst.ts      # 用户探测
-│   │   │   ├── search/                           # 搜索相关
-│   │   │   │   ├── WeiboKeywordSearchAst.ts      # 关键词搜索
-│   │   │   │   └── WeiboAjaxFeedHotTimelineAst.ts # 热门时间线
-│   │   │   ├── content/                          # 内容获取
-│   │   │   │   ├── WeiboAjaxStatusesShowAst.ts   # 博文详情
-│   │   │   │   ├── WeiboAjaxStatusesCommentAst.ts # 评论列表
-│   │   │   │   ├── WeiboAjaxStatusesLikeShowAst.ts # 点赞列表
-│   │   │   │   ├── WeiboAjaxStatusesMymblogAst.ts # 用户微博
-│   │   │   │   └── WeiboAjaxStatusesRepostTimelineAst.ts # 转发列表
-│   │   │   └── user/                             # 用户相关
-│   │   │       ├── WeiboAjaxProfileInfoAst.ts    # 用户信息
-│   │   │       └── WeiboAjaxFriendshipsAst.ts    # 关注关系
-│   │   ├── http/                                 # 通用 HTTP 数据源
-│   │   │   ├── HttpAst.ts                        # HTTP 请求节点
-│   │   │   └── ProxyAutoSelectAst.ts             # 代理自动选择
-│   │   └── system/                               # 系统工具数据源
-│   │       └── EmailD1Ast.ts                     # 临时邮箱
+│   ├── llm/                        # 【LLM 节点】大模型相关 (26个)
+│   │   ├── LlmTextAgentAst.ts      # 文本大模型
+│   │   ├── PersonaAst.ts           # 角色记忆
+│   │   ├── GroupChatLoopAst.ts     # 循环群聊
+│   │   ├── LlmImageToTextAst.ts    # 图生文
+│   │   ├── LlmTextToImageAst.ts    # 文生图
+│   │   ├── CodeGeneratorAst.ts     # 代码生成器
+│   │   └── ...                     # 其他 LLM 节点
 │   │
-│   ├── 02-data-processing/                       # 【数据处理层】用户要如何处理已有数据？
-│   │   ├── collector/                            # 数据收集器
-│   │   │   └── PostContextCollectorAst.ts        # 帖子上下文收集器
-│   │   ├── analyzer/                             # 数据分析器
-│   │   │   ├── PostNLPAnalyzerAst.ts             # NLP 分析器
-│   │   │   ├── SerpClusterAst.ts                 # 搜索结果聚类
-│   │   │   └── ErrorAnalyzerAst.ts               # 错误分析器
-│   │   └── creator/                              # 数据创建器
-│   │       └── EventAutoCreatorAst.ts            # 事件自动创建器
+│   ├── crawler/                    # 【爬虫节点】数据采集 (16个)
+│   │   ├── WeiboLoginAst.ts        # 微博登录
+│   │   ├── WeiboKeywordSearchAst.ts # 关键词搜索
+│   │   ├── HttpAst.ts              # HTTP 请求
+│   │   └── ...                     # 其他爬虫节点
 │   │
-│   ├── 03-ai-capabilities/                       # 【AI 能力层】用户要用 AI 做什么？
-│   │   ├── conversation/                         # 对话能力
-│   │   │   ├── LlmTextAgentAst.ts                # 文本大模型（核心对话）
-│   │   │   ├── GroupChatLoopAst.ts               # 循环群聊
-│   │   │   └── ShareAst.ts                       # 群聊室
-│   │   ├── understanding/                        # 理解能力（输入→文本）
-│   │   │   ├── LlmImageToTextAst.ts              # 图生文
-│   │   │   ├── LlmVideoToTextAst.ts              # 视频生文
-│   │   │   └── LlmStructuredOutputAst.ts         # 结构化输出
-│   │   ├── generation/                           # 生成能力（文本→输出）
-│   │   │   ├── content/                          # 内容生成
-│   │   │   │   ├── StoryWeaverAst.ts             # 故事编织者
-│   │   │   │   └── CodeGeneratorAst.ts           # 代码生成器
-│   │   │   ├── media/                            # 媒体生成
-│   │   │   │   ├── LlmTextToImageAst.ts          # 文生图
-│   │   │   │   ├── LlmTextToVideoAst.ts          # 文生视频
-│   │   │   │   ├── LlmTextToAudioAst.ts          # 文生音频
-│   │   │   │   ├── LlmTextImageToVideoAst.ts     # 文+图生视频
-│   │   │   │   └── LlmTextImage2ToVideoAst.ts    # 文+多图生视频
-│   │   │   └── tools/                            # 工具生成
-│   │   │       └── WorkflowNodeGeneratorAst.ts   # 工作流节点生成器
-│   │   ├── quality/                              # 质量控制
-│   │   │   ├── LlmCategoryAst.ts                 # 文本分类器
-│   │   │   ├── QualityCheckerAst.ts              # 质量检查器
-│   │   │   └── StoryQualityLoopAst.ts            # 故事质量循环
-│   │   └── research/                             # 研究能力（RAG 管道）
-│   │       ├── ResearchPlannerAst.ts             # 研究规划器
-│   │       ├── QueryRewriterAst.ts               # 查询重写器
-│   │       ├── AnswerEvaluatorAst.ts             # 答案评估器
-│   │       └── AnswerFinalizerAst.ts             # 答案终稿器
+│   ├── basic/                      # 【基础节点】通用功能 (8个)
+│   │   ├── SqlExecuteAst.ts        # SQL 执行
+│   │   ├── ExcelUploadAst.ts       # Excel 上传
+│   │   ├── ShareAst.ts             # 分享
+│   │   └── ...                     # 其他基础节点
 │   │
-│   ├── 04-personas/                              # 【角色系统】用户要创建什么样的智能体？
-│   │   ├── core/                                 # 角色核心能力
-│   │   │   ├── PersonaAst.ts                     # 角色记忆（检索增强）
-│   │   │   ├── PersonaCreatorAst.ts              # 角色创建
-│   │   │   └── PromptRoleSkillAst.ts             # 角色技能
-│   │   └── domain-experts/                       # 领域专家（舆情分析）
-│   │       ├── KeywordAgentAst.ts                # 关键词专家
-│   │       ├── QueryAgentAst.ts                  # 查询专家
-│   │       ├── MediaAgentAst.ts                  # 媒体专家
-│   │       ├── ForumAgentAst.ts                  # 论坛主持人
-│   │       ├── InsightAgentAst.ts                # 洞察专家
-│   │       └── ReportAgentAst.ts                 # 报告专家
+│   ├── sentiment/                  # 【舆情节点】舆情分析专家 (6个)
+│   │   ├── KeywordAgentAst.ts      # 关键词专家
+│   │   ├── MediaAgentAst.ts        # 媒体专家
+│   │   ├── ForumAgentAst.ts        # 论坛主持人
+│   │   └── ...                     # 其他舆情节点
 │   │
-│   ├── 05-workflow-control/                      # 【工作流控制】用户要控制执行流程
-│   │   ├── loop/                                 # 循环控制（注：循环节点按主功能分类，见 conversation/quality）
-│   │   ├── branch/                               # 分支控制（待实现）
-│   │   └── schedule/                             # 调度控制
-│   │       └── ScheduledWorkflowAst.ts           # 定时工作流（Cron/间隔/一次性）
+│   ├── control/                    # 【控制节点】流程控制 (2个)
+│   │   ├── LlmCategoryAst.ts       # 分类器
+│   │   └── StoryQualityLoopAst.ts  # 质量循环
 │   │
-│   └── 06-ui-components/                         # 【UI 组件】用户需要手动选择/配置
-│       ├── EventAst.ts                           # 事件选择器
-│       └── PropertySelectorAst.ts                # 属性选择器
+│   ├── analysis/                   # 【分析节点】数据分析 (1个)
+│   │   └── SerpClusterAst.ts       # 搜索结果聚类
+│   │
+│   ├── scheduler/                  # 【调度节点】定时任务 (1个)
+│   │   └── ScheduledWorkflowAst.ts # 定时工作流
+│   │
+│   ├── meta/                       # Meta 节点（元编程）
+│   │   ├── LlmInferenceAst.ts      # LLM 推理
+│   │   ├── TransformAst.ts         # 数据转换
+│   │   └── ...
+│   │
+│   ├── types/                      # 类型定义
+│   └── templates/                  # 节点模板
 │
 ├── package.json
 ├── tsconfig.json
@@ -121,10 +78,11 @@ packages/workflow-ast/
 
 **设计理念：**
 
-1. **按应用场景分层**：数据源 → 数据处理 → AI 能力 → 角色系统 → 工作流控制 → UI 交互
-2. **降低认知负担**：用户通过"我要获取数据"找到 `01-data-sources`，通过"我要用 AI 生成内容"找到 `03-ai-capabilities/generation`
-3. **模块边界清晰**：每个目录代表一个独立的应用场景，职责单一
-4. **向后兼容**：`index.ts` 保持所有导出，现有代码无需修改
+1. **按 type 分类**：与 `@Node({ type: 'xxx' })` 装饰器保持一致
+2. **快速定位**：用户可以直接按节点类型找到对应文件
+3. **扩展性好**：新增节点只需放入对应 type 文件夹
+4. **与 UI 一致**：文件夹结构与 UI 中的节点分类保持一致
+5. **向后兼容**：`index.ts` 保持所有导出，现有代码无需修改
 
 ## 核心装饰器
 

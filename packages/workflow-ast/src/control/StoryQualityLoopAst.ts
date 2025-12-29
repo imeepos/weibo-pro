@@ -23,7 +23,7 @@
  */
 
 import { Ast, Input, IS_MULTI, IS_BUFFER, Node, Output } from '@sker/workflow';
-import type { QualityResult } from './QualityCheckerAst';
+import type { QualityResult } from '../llm/QualityCheckerAst';
 
 /**
  * 章节数据

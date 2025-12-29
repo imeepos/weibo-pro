@@ -83,7 +83,6 @@ export { EmailD1AstVisitor } from './EmailD1AstVisitor'
 export { ProxyAutoSelectAstVisitor } from './ProxyAutoSelectAstVisitor'
 
 // HTTP 请求节点
-export { HttpAstVisitor } from './HttpAstVisitor'
 export { HttpRequestAstVisitor } from './HttpRequestAstVisitor'
 
 // SQL 执行节点

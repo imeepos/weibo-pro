@@ -107,7 +107,7 @@ workflow "工作流名称" {
 - 变量名清晰表达用途
 
 ### 4. 常见节点类别
-- **数据源**: WeiboLoginAst, WeiboKeywordSearchAst, HttpAst
+- **数据源**: WeiboLoginAst, WeiboKeywordSearchAst, HttpRequestAst
 - **AI 能力**: LlmTextAgentAst, LlmStructuredOutputAst
 - **数据处理**: PostNLPAnalyzerAst, EventAutoCreatorAst, FilterNodeAst
 - **动作**: SaveNodeAst, NotifyNodeAst
