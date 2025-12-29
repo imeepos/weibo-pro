@@ -1,0 +1,41 @@
+{
+  "name": "@sker/aui",
+  "version": "0.0.0",
+  "private": true,
+  "description": "AI-first UI system where UI itself is AI context",
+  "keywords": ["aui", "ai-ui", "context", "serialization", "sker"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "default": "./dist/index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "types": "./dist/index.d.ts",
+  "main": "./dist/index.js",
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "lint": "eslint . --max-warnings 0",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@sker/store": "workspace:*",
+    "rxjs": "^7.8.1",
+    "tslib": "^2.0.0"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@sker/eslint-config": "workspace:*",
+    "@sker/typescript-config": "workspace:*",
+    "@types/node": "^22.15.3",
+    "@types/react": "^19.0.0",
+    "eslint": "^9.38.0",
+    "tsup": "^8.4.0",
+    "typescript": "5.9.2"
+  }
+}
