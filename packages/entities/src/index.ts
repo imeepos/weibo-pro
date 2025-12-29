@@ -36,6 +36,7 @@ export * from './prompt-skill.entity'
 export * from './prompt-role-skill-ref.entity'
 export * from './prompt-optimization-task.entity'
 export * from './prompt-version.entity'
+export * from './derived-node.entity'
 export * from './seeds'
 
 export { DataSource, EntityManager, Repository, In, type DataSourceOptions } from 'typeorm'

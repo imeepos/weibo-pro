@@ -1,5 +1,6 @@
 export { Node, Input, Output, State, Handler, getInputMetadata, getStateMetadata, NODE, Render, HANDLER_METHOD, RENDER_METHOD, SETTING_METHOD, Preview, Setting, PREVIEW_METHOD, resolveConstructor, getAllNodeTypes, findNodeType, IS_MULTI, IS_BUFFER, hasMultiMode, hasBufferMode } from './decorator';
 export type { InputOptions, InputMetadata, InputFieldType, StateOptions, StateMetadata, OutputOptions, OutputMetadata, Tool, TOOL_METHOD, ToolMethodMetadata, getToolMethods, hasTool } from './decorator';
+export { DynamicNodeRegistry } from './dynamic-node-registry';
 export { Ast, WorkflowGraphAst, createWorkflowGraphAst } from './ast'
 export type { Visitor, DynamicOutput } from './ast'
 export { fromJson, toJson } from './generate'

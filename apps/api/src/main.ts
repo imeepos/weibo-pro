@@ -22,6 +22,7 @@ import { bearer, admin, username, openAPI } from 'better-auth/plugins';
 import { Pool } from 'pg';
 import { UploadService } from './services/upload.service';
 import { ClaudeGateway } from './claude';
+import { DerivedNodeService } from './services/workflow/derived-node.service';
 
 async function bootstrap() {
   const PORT = parseInt(process.env.PORT || `3000`);
@@ -40,6 +41,15 @@ async function bootstrap() {
     await seedProgrammingAssistant(m);
     logger.info('✓ All seed roles initialized');
   });
+
+  // 加载派生节点
+  try {
+    const derivedNodeService = root.get(DerivedNodeService);
+    await derivedNodeService.loadAll();
+    logger.info('✓ Derived nodes loaded');
+  } catch (error) {
+    logger.warn('Failed to load derived nodes', error);
+  }
 
   // 开发环境端口清理
   if (process.env.DEV) {
