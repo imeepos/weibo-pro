@@ -263,7 +263,7 @@ export function PropertyPanel({
       description: '',
       type: 'string',
       isStatic: false,
-      ...(isControlNode && { isRouter: true, condition: '$input === ' })
+      condition: isControlNode ? '$input === ' : undefined
     }
     const outputs = [...currentDynamicOutputs, newOutput]
     handlePropertyChange('metadata', { ...metadata, outputs })

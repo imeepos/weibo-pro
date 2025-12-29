@@ -349,7 +349,7 @@ export function DynamicPortItem({
         placeholder="端口描述（可选）"
         className="h-7 text-xs bg-card text-foreground"
       />
-      {isRouter && (
+      {!isStatic && (isRouter || condition !== undefined) && (
         <div className="space-y-1.5">
           <div className="flex items-center gap-1 flex-wrap">
             <span className="text-xs text-muted-foreground">条件:</span>

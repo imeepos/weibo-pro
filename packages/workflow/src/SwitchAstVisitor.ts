@@ -36,10 +36,10 @@ export class SwitchAstVisitor {
 
                     // 分离 default 分支和普通分支
                     const defaultOutput = outputs.find(o =>
-                        o.isRouter && (o.condition === 'true' || o.property === 'output_default')
+                        o.condition && (o.condition === 'true' || o.property === 'output_default')
                     )
                     const normalOutputs = outputs.filter(o =>
-                        o.isRouter && o.condition && o.condition !== 'true' && o.property !== 'output_default'
+                        o.condition && o.condition !== 'true' && o.property !== 'output_default'
                     )
 
                     // 评估所有普通分支，只发射匹配的分支
