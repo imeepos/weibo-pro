@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "build": "turbo run build",
+    "cc": "claude  --dangerously-skip-permissions",
     "build:force": "turbo run build --force --no-cache",
     "build:deps": "pnpm run -r --filter=\"./packages/*\" build",
     "dev": "turbo run dev --concurrency=23",
