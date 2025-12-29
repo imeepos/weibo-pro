@@ -1,0 +1,44 @@
+{
+  "name": "@sker/workflow-compiler",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Workflow DSL compiler for Sker workflow engine.",
+  "keywords": [
+    "workflow",
+    "compiler",
+    "dsl",
+    "sker"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "default": "./dist/index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "types": "./dist/index.d.ts",
+  "main": "./dist/index.js",
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint": "eslint . --max-warnings 0",
+    "check-types": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@sker/workflow": "workspace:*"
+  },
+  "devDependencies": {
+    "@sker/eslint-config": "workspace:*",
+    "@sker/typescript-config": "workspace:*",
+    "@types/node": "^22.15.3",
+    "eslint": "^9.38.0",
+    "tsup": "^8.4.0",
+    "typescript": "5.9.2",
+    "vitest": "^4.0.16"
+  }
+}
