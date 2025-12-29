@@ -1,6 +1,6 @@
 import { Injectable } from "@sker/core";
 import { Handler, NodeEvent, setAstError } from "@sker/workflow";
-import { ShareAst, ChatMessage } from "@sker/workflow-ast";
+import { ShareAst } from "@sker/workflow-ast";
 import { Observable } from "rxjs";
 
 /**

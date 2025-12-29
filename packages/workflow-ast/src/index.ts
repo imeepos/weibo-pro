@@ -91,3 +91,5 @@ export { TransformAst } from './meta/TransformAst';
 export { RouteAst } from './meta/RouteAst';
 export { AggregateAst } from './meta/AggregateAst';
 export { HttpRequestAst } from './meta/HttpRequestAst';
+export { HtmlDisplayAst } from './meta/HtmlDisplayAst';
+export { JsonDisplayAst } from './meta/JsonDisplayAst';

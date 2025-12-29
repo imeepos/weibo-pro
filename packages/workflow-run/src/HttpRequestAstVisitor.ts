@@ -46,9 +46,16 @@ export class HttpRequestAstVisitor {
             throw new Error('URL 不能为空');
           }
 
+          const headers: Record<string, string> = {};
+          if (ast.headers && typeof ast.headers === 'object') {
+            Object.entries(ast.headers).forEach(([key, value]) => {
+              if (value) headers[key] = String(value);
+            });
+          }
+
           const requestInit: RequestInit = {
             method: ast.method,
-            headers: ast.headers,
+            headers: Object.keys(headers).length > 0 ? headers : undefined,
             signal: abortController.signal
           };
 
@@ -62,9 +69,11 @@ export class HttpRequestAstVisitor {
             throw new Error('工作流已取消');
           }
 
-          const contentType = response.headers.get('content-type');
+          const rawContentType = response.headers.get('content-type') || '';
+          const contentType = rawContentType.split(';')[0]!.trim();
+
           let responseBody: any;
-          if (contentType?.includes('application/json')) {
+          if (contentType.includes('application/json')) {
             responseBody = await response.json();
           } else {
             responseBody = await response.text();
@@ -72,6 +81,7 @@ export class HttpRequestAstVisitor {
 
           ast.response = responseBody;
           ast.status = response.status;
+          ast.contentType = contentType;
 
           return [
             {
@@ -79,7 +89,8 @@ export class HttpRequestAstVisitor {
               id: ast.id,
               data: {
                 response: responseBody,
-                status: response.status
+                status: response.status,
+                contentType: contentType
               }
             }
           ];
