@@ -19,6 +19,7 @@ import MemoryGraphPage from '@/pages/MemoryGraphPage';
 import PromptManagement from '@/pages/PromptManagement';
 import WorkflowManagement from '@/pages/WorkflowManagement';
 import { ChatPage } from '@/pages/ChatPage';
+import DerivedNodeWorkbench from '@/pages/DerivedNodeWorkbench';
 import { useTheme } from '@/hooks/useTheme';
 import { cn, createLogger } from '@/utils';
 import { initializeApp } from '@/services/appInitialization';
@@ -417,6 +418,25 @@ const App: React.FC = () => {
                     </motion.div>
                   </AnimatePresence>
                 </FullscreenLayout>
+              }
+            />
+            <Route
+              path="/derived-node-workbench"
+              element={
+                <Layout>
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key="derived-node-workbench"
+                      className="h-full"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 1.05 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <DerivedNodeWorkbench />
+                    </motion.div>
+                  </AnimatePresence>
+                </Layout>
               }
             />
 
