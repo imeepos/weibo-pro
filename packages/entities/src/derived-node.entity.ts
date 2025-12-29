@@ -1,4 +1,5 @@
-import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, CreateDateColumn, Index, PrimaryGeneratedColumn } from 'typeorm';
+import { Entity } from './decorator';
 
 export enum DerivedNodeStatus {
   DRAFT = 'draft',

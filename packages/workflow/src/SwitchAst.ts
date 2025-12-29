@@ -5,7 +5,7 @@ export class SwitchAst extends Ast {
     @Input({ title: '输入值', defaultValue: undefined })
     value: any = undefined
 
-    @Output({ title: 'Default', isRouter: true, condition: 'true', defaultValue: '' })
+    @Output({ title: 'Default', condition: 'true', defaultValue: '' })
     output_default = ``
 
     type: 'SwitchAst' = 'SwitchAst'

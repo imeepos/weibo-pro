@@ -2,9 +2,9 @@
  * ChatPage - 聊天页面（支持多任务）
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, ArrowLeft, MessageSquare } from 'lucide-react';
+import { ArrowLeft, MessageSquare } from 'lucide-react';
 import { useChatStore } from '@/store';
 import { MessageBubble, ChatInput, ConnectionStatus, TokenUsage, ChatSettings, ApprovalDialog, TaskTabs } from '@/components';
 import { ScrollArea, Button } from '@/components/ui';
@@ -35,7 +35,6 @@ export function ChatPage({ selectedClient }: ChatPageProps) {
   } = useChatStore();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [taskNameInput, setTaskNameInput] = useState('');
 
   const activeTask = tasks.find(t => t.id === activeTaskId);
 
@@ -118,7 +117,7 @@ export function ChatPage({ selectedClient }: ChatPageProps) {
         />
       </div>
 
-      {pendingApproval && <ApprovalDialog request={pendingApproval} />}
+      {pendingApproval && <ApprovalDialog />}
     </div>
   );
 }

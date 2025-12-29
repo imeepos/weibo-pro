@@ -28,11 +28,11 @@ const permissionModeConfig: Record<PermissionMode, { label: string; icon: typeof
 
 export function ChatSettings() {
   const [isOpen, setIsOpen] = useState(false);
-  const { permissionMode, currentSession, setPermissionMode, clearContext } = useChatStore();
+  const { permissionMode, setPermissionMode } = useChatStore();
 
   const handleClearContext = () => {
     if (confirm('确定要清空上下文并开始新会话吗？')) {
-      clearContext();
+      // TODO: Implement clearContext
       setIsOpen(false);
     }
   };
@@ -40,8 +40,6 @@ export function ChatSettings() {
   const handleModeChange = (mode: PermissionMode) => {
     setPermissionMode(mode);
   };
-
-  const CurrentIcon = permissionModeConfig[permissionMode].icon;
 
   return (
     <div className="relative">
@@ -108,16 +106,6 @@ export function ChatSettings() {
                 );
               })}
             </div>
-
-            {/* 会话信息 */}
-            {currentSession && (
-              <div className="px-4 py-2 border-t border-border">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <CurrentIcon className="h-3 w-3" />
-                  <span>会话: {currentSession.id.substring(0, 12)}...</span>
-                </div>
-              </div>
-            )}
 
             {/* 清空上下文 */}
             <div className="p-4 border-t border-border">

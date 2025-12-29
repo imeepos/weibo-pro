@@ -56,7 +56,7 @@ describe('ProxyCache', () => {
       const ttlCall = mockRedis.expire.mock.calls[0]
       expect(ttlCall).toBeDefined()
 
-      const [, ttl] = ttlCall
+      const [, ttl] = ttlCall!
       expect(ttl).toBeGreaterThan(0)
       expect(ttl).toBeLessThanOrEqual(120)
     })
@@ -73,7 +73,8 @@ describe('ProxyCache', () => {
       await cache.addProxy(proxy)
 
       const ttlCall = mockRedis.expire.mock.calls[0]
-      const [, ttl] = ttlCall
+      expect(ttlCall).toBeDefined()
+      const [, ttl] = ttlCall!
       expect(ttl).toBe(1) // Minimum TTL
     })
 

@@ -15,6 +15,9 @@ export class PassThroughAst extends Ast {
   @Input({ title: '输入', defaultValue: '' })
   input: any = '';
 
+  @Input({ title: '启用', defaultValue: false })
+  enable: boolean = false;
+
   @Output({ title: '输出', defaultValue: '', isRouter: true })
   output: any = '';
 
@@ -34,7 +37,7 @@ import { Observable } from 'rxjs';
 @Injectable()
 export class PassThroughAstVisitor {
   @Handler(PassThroughAst)
-  visit(ast: PassThroughAst, input$: Observable<any>): Observable<NodeEvent> {
+  visit(ast: PassThroughAst, input$: Observable<PassThroughAst>, ctx: any): Observable<NodeEvent> {
     return new Observable<NodeEvent>(obs => {
       ast.state = 'running';
       obs.next({ type: 'node_runing', id: ast.id });
@@ -42,17 +45,11 @@ export class PassThroughAstVisitor {
       const subscription = input$.subscribe({
         next: (inputData) => {
           ast.emitCount += 1;
-
-          if (inputData) {
-            Object.keys(inputData).forEach(key => {
-              (ast as any)[key] = inputData[key];
-            });
+          // 只要 enable 为 truthy 就透传
+          if (inputData.enable) {
+            ast.output = inputData.input;
+            obs.next({ type: 'node_emit', id: ast.id, data: { output: ast.output, emitCount: ast.emitCount } });
           }
-
-          ast.output = ast.input;
-
-          obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } });
-          obs.next({ type: 'node_emit', id: ast.id, data: { output: ast.output } });
         },
         error: (error) => {
           ast.state = 'fail';

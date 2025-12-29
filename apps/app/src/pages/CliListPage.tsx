@@ -55,32 +55,6 @@ export function CliListPage({ onClientSelect }: CliListPageProps) {
     return () => clearInterval(interval);
   }, []);
 
-  const formatTime = (timestamp: number) => {
-    const date = new Date(timestamp);
-    return date.toLocaleString('zh-CN', {
-      month: 'numeric',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    });
-  };
-
-  const formatDuration = (timestamp: number) => {
-    const duration = Date.now() - timestamp;
-    const seconds = Math.floor(duration / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-
-    if (hours > 0) {
-      return `${hours}小时${minutes % 60}分钟`;
-    } else if (minutes > 0) {
-      return `${minutes}分钟${seconds % 60}秒`;
-    } else {
-      return `${seconds}秒`;
-    }
-  };
-
   return (
     <div className="flex flex-col h-full bg-background">
       {/* 顶部标题栏 */}

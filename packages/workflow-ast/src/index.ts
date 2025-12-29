@@ -93,3 +93,13 @@ export { AggregateAst } from './meta/AggregateAst';
 export { HttpRequestAst } from './meta/HttpRequestAst';
 export { HtmlDisplayAst } from './meta/HtmlDisplayAst';
 export { JsonDisplayAst } from './meta/JsonDisplayAst';
+
+// 类型导出
+export type { ChapterData, Clue } from './llm/StoryWeaverAst';
+export type { RewriteRequest } from './control/StoryQualityLoopAst';
+export type { QualityResult, QualityDimension } from './llm/QualityCheckerAst';
+export type { EvaluationDimension, OptimizationResult, PromptVersionSummary } from './llm/PromptOptimizerAst';
+export type { EvaluationResult, EvaluationType } from './llm/AnswerEvaluatorAst';
+export type { MarkdownHeading } from './basic/MarkdownUploadAst';
+export type { RetrievedMemory } from './llm/PersonaAst';
+export type { SqlParameter, SqlColumn } from './basic/SqlExecuteAst';

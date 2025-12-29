@@ -46,7 +46,8 @@ describe('ProxyScorer', () => {
       await scorer.recordResult(proxyUrl, false, 5000)
 
       const hmsetCall = mockRedis.hmset.mock.calls[0]
-      const data = hmsetCall[1] as Record<string, string>
+      expect(hmsetCall).toBeDefined()
+      const data = hmsetCall![1] as Record<string, string>
 
       expect(data.totalRequests).toBe('1')
       expect(data.successRequests).toBe('0')
@@ -67,10 +68,11 @@ describe('ProxyScorer', () => {
       await scorer.recordResult(proxyUrl, true, 3000)
 
       const hmsetCall = mockRedis.hmset.mock.calls[1]
-      const data = hmsetCall[1] as Record<string, string>
+      expect(hmsetCall).toBeDefined()
+      const data = hmsetCall![1] as Record<string, string>
 
       // Average should be (1000 + 3000) / 2 = 2000
-      expect(parseFloat(data.avgLatency)).toBe(2000)
+      expect(parseFloat(data.avgLatency!)).toBe(2000)
     })
 
     it('should calculate score based on success rate and latency', async () => {
@@ -80,8 +82,9 @@ describe('ProxyScorer', () => {
       await scorer.recordResult(proxyUrl, true, 1000)
 
       const hmsetCall = mockRedis.hmset.mock.calls[0]
-      const data = hmsetCall[1] as Record<string, string>
-      const score = parseInt(data.score, 10)
+      expect(hmsetCall).toBeDefined()
+      const data = hmsetCall![1] as Record<string, string>
+      const score = parseInt(data.score!, 10)
 
       // Success rate contributes 70%, latency contributes 30%
       // successRate = 1.0 → 70 points
@@ -98,8 +101,9 @@ describe('ProxyScorer', () => {
       await scorer.recordResult(proxyUrl, true, 5000)
 
       const hmsetCall = mockRedis.hmset.mock.calls[0]
-      const data = hmsetCall[1] as Record<string, string>
-      const score = parseInt(data.score, 10)
+      expect(hmsetCall).toBeDefined()
+      const data = hmsetCall![1] as Record<string, string>
+      const score = parseInt(data.score!, 10)
 
       // High latency should reduce score
       expect(score).toBeLessThan(100)
@@ -128,8 +132,9 @@ describe('ProxyScorer', () => {
       await scorer.recordResult(proxyUrl, false, 1000)
 
       const hmsetCall = mockRedis.hmset.mock.calls[2]
-      const data = hmsetCall[1] as Record<string, string>
-      const score = parseInt(data.score, 10)
+      expect(hmsetCall).toBeDefined()
+      const data = hmsetCall![1] as Record<string, string>
+      const score = parseInt(data.score!, 10)
 
       // 33% success rate should give lower score
       expect(score).toBeLessThan(50)
@@ -142,8 +147,9 @@ describe('ProxyScorer', () => {
       await scorer.recordResult(proxyUrl, true, 1000)
 
       const hmsetCall = mockRedis.hmset.mock.calls[0]
-      const data = hmsetCall[1] as Record<string, string>
-      const lastUpdate = parseInt(data.lastUpdate, 10)
+      expect(hmsetCall).toBeDefined()
+      const data = hmsetCall![1] as Record<string, string>
+      const lastUpdate = parseInt(data.lastUpdate!, 10)
 
       expect(lastUpdate).toBeGreaterThanOrEqual(beforeTime)
       expect(lastUpdate).toBeLessThanOrEqual(Date.now())
@@ -165,10 +171,11 @@ describe('ProxyScorer', () => {
       await scorer.recordResult(proxyUrl, true, 0)
 
       const hmsetCall = mockRedis.hmset.mock.calls[0]
-      const data = hmsetCall[1] as Record<string, string>
+      expect(hmsetCall).toBeDefined()
+      const data = hmsetCall![1] as Record<string, string>
 
       expect(data.avgLatency).toBe('0')
-      expect(parseInt(data.score, 10)).toBeGreaterThan(0)
+      expect(parseInt(data.score!, 10)).toBeGreaterThan(0)
     })
 
     it('should handle very high latency (over 5000ms)', async () => {
@@ -177,8 +184,9 @@ describe('ProxyScorer', () => {
       await scorer.recordResult(proxyUrl, true, 10000)
 
       const hmsetCall = mockRedis.hmset.mock.calls[0]
-      const data = hmsetCall[1] as Record<string, string>
-      const score = parseInt(data.score, 10)
+      expect(hmsetCall).toBeDefined()
+      const data = hmsetCall![1] as Record<string, string>
+      const score = parseInt(data.score!, 10)
 
       // Latency score should be 0 or near 0 for very high latency
       expect(score).toBeLessThan(80) // Mainly from success rate (70)
@@ -248,9 +256,9 @@ describe('ProxyScorer', () => {
       const scores = await scorer.getScores(urls)
 
       expect(scores.size).toBe(3)
-      expect(scores.get(urls[0])).toBe(80)
-      expect(scores.get(urls[1])).toBe(90)
-      expect(scores.get(urls[2])).toBe(50) // Default
+      expect(scores.get(urls[0]!)).toBe(80)
+      expect(scores.get(urls[1]!)).toBe(90)
+      expect(scores.get(urls[2]!)).toBe(50) // Default
     })
 
     it('should handle empty array', async () => {
@@ -325,8 +333,9 @@ describe('ProxyScorer', () => {
       await scorer.recordResult(proxyUrl, false, 1000)
 
       const hmsetCall = mockRedis.hmset.mock.calls[0]
-      const data = hmsetCall[1] as Record<string, string>
-      const score = parseInt(data.score, 10)
+      expect(hmsetCall).toBeDefined()
+      const data = hmsetCall![1] as Record<string, string>
+      const score = parseInt(data.score!, 10)
 
       // 0% success contributes 0, latency contributes small amount
       expect(score).toBeLessThan(30)
@@ -344,8 +353,9 @@ describe('ProxyScorer', () => {
       await scorer.recordResult(proxyUrl, true, 500)
 
       const hmsetCall = mockRedis.hmset.mock.calls[0]
-      const data = hmsetCall[1] as Record<string, string>
-      const score = parseInt(data.score, 10)
+      expect(hmsetCall).toBeDefined()
+      const data = hmsetCall![1] as Record<string, string>
+      const score = parseInt(data.score!, 10)
 
       // 100% success + low latency = high score
       expect(score).toBeGreaterThan(90)
@@ -358,8 +368,9 @@ describe('ProxyScorer', () => {
       await scorer.recordResult(proxyUrl, true, 100000)
 
       const hmsetCall = mockRedis.hmset.mock.calls[0]
-      const data = hmsetCall[1] as Record<string, string>
-      const score = parseInt(data.score, 10)
+      expect(hmsetCall).toBeDefined()
+      const data = hmsetCall![1] as Record<string, string>
+      const score = parseInt(data.score!, 10)
 
       // Score should be around 70 (only from success rate)
       expect(score).toBeGreaterThanOrEqual(69)
@@ -373,8 +384,9 @@ describe('ProxyScorer', () => {
       await scorer.recordResult(proxyUrl, true, 10)
 
       const hmsetCall = mockRedis.hmset.mock.calls[0]
-      const data = hmsetCall[1] as Record<string, string>
-      const score = parseInt(data.score, 10)
+      expect(hmsetCall).toBeDefined()
+      const data = hmsetCall![1] as Record<string, string>
+      const score = parseInt(data.score!, 10)
 
       // Score should be near 100
       expect(score).toBeGreaterThan(95)

@@ -52,11 +52,11 @@ export class SwitchAstVisitor {
 
                         if (matched) {
                             anyMatched = true
-                            // 只发射匹配的分支，不发射 ROUTE_SKIPPED
+                            // 发射 true 表示分支激活
                             events.push({
                                 type: 'node_emit' as const,
                                 id: ast.id,
-                                data: { [propKey]: inputValue }
+                                data: { [propKey]: true }
                             })
                         }
                         // 不匹配的分支不发射任何值
@@ -68,7 +68,7 @@ export class SwitchAstVisitor {
                         events.push({
                             type: 'node_emit' as const,
                             id: ast.id,
-                            data: { [propKey]: inputValue }
+                            data: { [propKey]: true }
                         })
                     }
 

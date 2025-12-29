@@ -104,7 +104,7 @@ export abstract class WeiboApiClient {
      * @param accountId 账号 ID
      * @param accountKey 账号键（用于退避机制）
      */
-    private async handleWeiboError(error: WeiboError, accountId: number, accountKey: string): Promise<void> {
+    private async handleWeiboError(error: WeiboError, accountId: string, accountKey: string): Promise<void> {
         this.delayService.recordError(accountKey);
 
         if (error.type === WeiboErrorType.LOGIN_EXPIRED) {

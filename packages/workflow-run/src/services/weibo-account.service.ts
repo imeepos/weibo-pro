@@ -13,7 +13,7 @@ export interface RequestWithHeaders {
 }
 
 export interface WeiboAccountSelection {
-    id: number;
+    id: string;
     weiboUid?: string;
     nickname?: string;
     healthScore: number;
@@ -25,7 +25,7 @@ export interface WeiboAccountSelectionWithToken extends WeiboAccountSelection {
 }
 
 export interface WeiboLoginSuccessMessage {
-    id: number;
+    id: string;
     cookies: Array<{
         name: string;
         value: string;
@@ -76,18 +76,17 @@ export class WeiboAccountService {
         }
     }
 
-    async decreaseHealthScore(accountId: number, amount = 1): Promise<void> {
-        if (!Number.isFinite(accountId)) {
+    async decreaseHealthScore(accountId: string, amount = 1): Promise<void> {
+        if (!accountId) {
             return;
         }
 
-        const member = accountId.toString(10);
         const decrement = Math.abs(amount) * -1;
-        const updated = await this.redis.zincrby(this.healthKey, decrement, member);
+        const updated = await this.redis.zincrby(this.healthKey, decrement, accountId);
         const clamped = Math.max(updated, 0);
 
         if (clamped !== updated) {
-            await this.redis.zadd(this.healthKey, clamped, member);
+            await this.redis.zadd(this.healthKey, clamped, accountId);
         }
     }
 
@@ -100,9 +99,9 @@ export class WeiboAccountService {
                 break; // Redis中没有账号，进入回退逻辑
             }
 
-            const accountId = Number.parseInt(picked.member, 10);
+            const accountId = picked.member;
 
-            if (!Number.isFinite(accountId)) {
+            if (!accountId) {
                 await this.redis.zrem(this.healthKey, picked.member);
                 continue;
             }
@@ -272,7 +271,7 @@ export class WeiboAccountService {
         return account;
     }
 
-    private async markAccountAsInvalid(accountId: number): Promise<void> {
+    private async markAccountAsInvalid(accountId: string): Promise<void> {
         try {
             // 大幅降低健康评分，使其在后续选择中优先级降低
             await this.decreaseHealthScore(accountId, 50);
@@ -300,10 +299,10 @@ export class WeiboAccountService {
      *
      * @param accountId 账户 ID
      */
-    async markAccountAsExpired(accountId: number): Promise<void> {
+    async markAccountAsExpired(accountId: string): Promise<void> {
         try {
             // 从 Redis 中移除该账户
-            await this.redis.zrem(this.healthKey, accountId.toString());
+            await this.redis.zrem(this.healthKey, accountId);
 
             // 更新账号状态为 EXPIRED
             await useEntityManager(async m => {

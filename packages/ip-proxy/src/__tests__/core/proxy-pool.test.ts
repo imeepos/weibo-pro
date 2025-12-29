@@ -65,7 +65,7 @@ describe('ProxyPool', () => {
   describe('initialize', () => {
     it('should initialize pool with default count', async () => {
       const rawProxies = [createRawProxy(1), createRawProxy(2)]
-      vi.mocked(mockProvider.fetchProxies).mockResolvedValueOnce(rawProxies)
+      vi.mocked(mockProvider.fetchProxies!).mockResolvedValueOnce(rawProxies)
 
       await pool.initialize()
 
@@ -78,7 +78,7 @@ describe('ProxyPool', () => {
 
     it('should initialize pool with custom count', async () => {
       const rawProxies = Array.from({ length: 5 }, (_, i) => createRawProxy(i))
-      vi.mocked(mockProvider.fetchProxies).mockResolvedValueOnce(rawProxies)
+      vi.mocked(mockProvider.fetchProxies!).mockResolvedValueOnce(rawProxies)
 
       await pool.initialize(5)
 
@@ -88,7 +88,7 @@ describe('ProxyPool', () => {
 
     it('should skip if already initialized', async () => {
       const rawProxies = [createRawProxy(1)]
-      vi.mocked(mockProvider.fetchProxies).mockResolvedValueOnce(rawProxies)
+      vi.mocked(mockProvider.fetchProxies!).mockResolvedValueOnce(rawProxies)
 
       await pool.initialize()
       await pool.initialize()
@@ -111,7 +111,7 @@ describe('ProxyPool', () => {
 
     it('should throw error on provider failure', async () => {
       const error = new Error('Provider failed')
-      vi.mocked(mockProvider.fetchProxies).mockRejectedValueOnce(error)
+      vi.mocked(mockProvider.fetchProxies!).mockRejectedValueOnce(error)
 
       await expect(pool.initialize()).rejects.toThrow('Provider failed')
       expect(mockLogger.error).toHaveBeenCalled()
@@ -127,7 +127,7 @@ describe('ProxyPool', () => {
         expireTime: 120, // Relative seconds
       }
 
-      vi.mocked(mockProvider.fetchProxies).mockResolvedValueOnce([rawProxy])
+      vi.mocked(mockProvider.fetchProxies!).mockResolvedValueOnce([rawProxy])
 
       await pool.initialize(1)
 
@@ -148,7 +148,7 @@ describe('ProxyPool', () => {
         expireTime: futureTimestamp,
       }
 
-      vi.mocked(mockProvider.fetchProxies).mockResolvedValueOnce([rawProxy])
+      vi.mocked(mockProvider.fetchProxies!).mockResolvedValueOnce([rawProxy])
 
       await pool.initialize(1)
 
@@ -167,7 +167,7 @@ describe('ProxyPool', () => {
         expireTime: futureTimestamp,
       }
 
-      vi.mocked(mockProvider.fetchProxies).mockResolvedValueOnce([rawProxy])
+      vi.mocked(mockProvider.fetchProxies!).mockResolvedValueOnce([rawProxy])
 
       await pool.initialize(1)
 
@@ -186,7 +186,7 @@ describe('ProxyPool', () => {
         expireTime: isoString,
       }
 
-      vi.mocked(mockProvider.fetchProxies).mockResolvedValueOnce([rawProxy])
+      vi.mocked(mockProvider.fetchProxies!).mockResolvedValueOnce([rawProxy])
 
       await pool.initialize(1)
 
@@ -207,7 +207,7 @@ describe('ProxyPool', () => {
         createdAt: Date.now(),
       }
 
-      vi.mocked(mockProvider.fetchProxies).mockResolvedValueOnce(rawProxies)
+      vi.mocked(mockProvider.fetchProxies!).mockResolvedValueOnce(rawProxies)
       vi.mocked(mockCache.getLeastUsedProxy).mockResolvedValueOnce(mockProxy)
 
       const result = await pool.getProxy()
@@ -225,7 +225,7 @@ describe('ProxyPool', () => {
       }
 
       // Mock provider for initialization
-      vi.mocked(mockProvider.fetchProxies).mockResolvedValueOnce([createRawProxy(1)])
+      vi.mocked(mockProvider.fetchProxies!).mockResolvedValueOnce([createRawProxy(1)])
       vi.mocked(mockCache.getLeastUsedProxy).mockResolvedValueOnce(mockProxy)
 
       await pool.initialize(1)
@@ -237,7 +237,7 @@ describe('ProxyPool', () => {
 
     it('should throw when pool is exhausted', async () => {
       vi.mocked(mockCache.getLeastUsedProxy).mockResolvedValue(null)
-      vi.mocked(mockProvider.fetchProxies).mockResolvedValue([])
+      vi.mocked(mockProvider.fetchProxies!).mockResolvedValue([])
 
       await pool.initialize(0)
 
@@ -263,7 +263,7 @@ describe('ProxyPool', () => {
         .mockResolvedValueOnce(expiredProxy)
         .mockResolvedValueOnce(freshProxy)
 
-      vi.mocked(mockProvider.fetchProxies).mockResolvedValue([createRawProxy(2)])
+      vi.mocked(mockProvider.fetchProxies!).mockResolvedValue([createRawProxy(2)])
 
       await pool.initialize(1)
       const result = await pool.getProxy()
@@ -285,7 +285,7 @@ describe('ProxyPool', () => {
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(newProxy)
 
-      vi.mocked(mockProvider.fetchProxies).mockResolvedValue([rawProxy])
+      vi.mocked(mockProvider.fetchProxies!).mockResolvedValue([rawProxy])
 
       await pool.initialize(0)
       const result = await pool.getProxy()
@@ -312,7 +312,7 @@ describe('ProxyPool', () => {
         },
       ]
 
-      vi.mocked(mockProvider.fetchProxies).mockResolvedValueOnce([createRawProxy(1), createRawProxy(2)])
+      vi.mocked(mockProvider.fetchProxies!).mockResolvedValueOnce([createRawProxy(1), createRawProxy(2)])
       vi.mocked(mockCache.getLeastUsedProxy)
         .mockResolvedValueOnce(mockProxies[0]!)
         .mockResolvedValueOnce(mockProxies[1]!)
@@ -331,7 +331,7 @@ describe('ProxyPool', () => {
         createdAt: Date.now(),
       }
 
-      vi.mocked(mockProvider.fetchProxies).mockResolvedValueOnce([createRawProxy(1), createRawProxy(2)])
+      vi.mocked(mockProvider.fetchProxies!).mockResolvedValueOnce([createRawProxy(1), createRawProxy(2)])
       vi.mocked(mockCache.getLeastUsedProxy)
         .mockRejectedValueOnce(new Error('Failed'))
         .mockResolvedValueOnce(mockProxy)
@@ -345,7 +345,7 @@ describe('ProxyPool', () => {
     })
 
     it('should return empty array if all fail', async () => {
-      vi.mocked(mockProvider.fetchProxies).mockResolvedValueOnce([createRawProxy(1), createRawProxy(2)])
+      vi.mocked(mockProvider.fetchProxies!).mockResolvedValueOnce([createRawProxy(1), createRawProxy(2)])
       vi.mocked(mockCache.getLeastUsedProxy).mockRejectedValue(new Error('Failed'))
 
       await pool.initialize(2)
@@ -380,7 +380,7 @@ describe('ProxyPool', () => {
       const failedUrl = 'http://192.168.1.1:8080'
       const rawProxy = createRawProxy(2)
 
-      vi.mocked(mockProvider.fetchProxies).mockResolvedValue([rawProxy])
+      vi.mocked(mockProvider.fetchProxies!).mockResolvedValue([rawProxy])
 
       await pool.initialize(1)
       await pool.markProxyFailed(failedUrl)
@@ -391,7 +391,7 @@ describe('ProxyPool', () => {
 
     it('should log warning', async () => {
       const failedUrl = 'http://192.168.1.1:8080'
-      vi.mocked(mockProvider.fetchProxies).mockResolvedValue([createRawProxy(1)])
+      vi.mocked(mockProvider.fetchProxies!).mockResolvedValue([createRawProxy(1)])
 
       await pool.initialize(1)
       await pool.markProxyFailed(failedUrl)
@@ -422,7 +422,7 @@ describe('ProxyPool', () => {
         expiredProxy,
         validProxy,
       ])
-      vi.mocked(mockProvider.fetchProxies).mockResolvedValue([createRawProxy(3)])
+      vi.mocked(mockProvider.fetchProxies!).mockResolvedValue([createRawProxy(3)])
 
       await pool.initialize(2)
       await pool.refreshExpiredProxies()
@@ -439,7 +439,7 @@ describe('ProxyPool', () => {
         createdAt: Date.now(),
       }
 
-      vi.mocked(mockProvider.fetchProxies).mockResolvedValueOnce([createRawProxy(1)])
+      vi.mocked(mockProvider.fetchProxies!).mockResolvedValueOnce([createRawProxy(1)])
       vi.mocked(mockCache.getAllProxies).mockResolvedValue([validProxy])
 
       await pool.initialize(1)
@@ -463,7 +463,7 @@ describe('ProxyPool', () => {
         },
       ]
 
-      vi.mocked(mockProvider.fetchProxies).mockResolvedValueOnce([createRawProxy(1)])
+      vi.mocked(mockProvider.fetchProxies!).mockResolvedValueOnce([createRawProxy(1)])
       vi.mocked(mockCache.getAllProxies).mockResolvedValue(mockProxies)
 
       await pool.initialize(1)
@@ -502,7 +502,7 @@ describe('ProxyPool', () => {
         .mockResolvedValueOnce(expiredProxy2)
         .mockResolvedValueOnce(validProxy)
 
-      vi.mocked(mockProvider.fetchProxies).mockResolvedValue([])
+      vi.mocked(mockProvider.fetchProxies!).mockResolvedValue([])
 
       await pool.initialize(3)
       const result = await pool.getProxy()
@@ -512,7 +512,7 @@ describe('ProxyPool', () => {
     })
 
     it('should handle provider error during refetch', async () => {
-      vi.mocked(mockProvider.fetchProxies)
+      vi.mocked(mockProvider.fetchProxies!)
         .mockResolvedValueOnce([]) // First call for initialization
         .mockRejectedValueOnce(new Error('Provider error')) // Second call during refetch
 
@@ -531,7 +531,7 @@ describe('ProxyPool', () => {
         expireTime: 60,
       }
 
-      vi.mocked(mockProvider.fetchProxies).mockResolvedValue([rawProxy])
+      vi.mocked(mockProvider.fetchProxies!).mockResolvedValue([rawProxy])
 
       await pool.initialize(1)
 

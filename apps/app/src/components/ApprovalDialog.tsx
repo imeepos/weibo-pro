@@ -4,7 +4,6 @@
 
 import { AlertCircle, CheckCircle, XCircle } from 'lucide-react';
 import { useChatStore } from '@/store';
-import type { ApprovalRequest } from '@/types';
 
 const riskColors = {
   low: 'text-green-500',
