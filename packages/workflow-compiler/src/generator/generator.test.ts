@@ -5,14 +5,14 @@ import { CodeGenerator, CodeGenError } from './index'
 import { Ast, Node, Input, Output } from '@sker/workflow'
 
 // Mock node for testing
-@Node({ name: 'TestNode', description: 'Test node' })
+@Node({ title: 'TestNode' })
 class TestNodeAst extends Ast {
   @Input() keyword?: string
   @Input() count?: number
   @Output() result?: string
 }
 
-@Node({ name: 'AnotherNode', description: 'Another test node' })
+@Node({ title: 'AnotherNode' })
 class AnotherNodeAst extends Ast {
   @Input() input?: string
   @Output() output?: string
