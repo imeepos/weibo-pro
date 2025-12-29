@@ -158,6 +158,9 @@ export interface IEdge extends Record<string, any> {
     // 流式合并模式
     mode?: EdgeMode;
     isPrimary?: boolean;  // 标记主流（用于 WITH_LATEST_FROM 模式）
+
+    // 数据转换表达式
+    transform?: string;  // JS 表达式，使用 $input 引用输入值
 }
 
 // 辅助函数：检查边是否传递数据

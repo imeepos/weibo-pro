@@ -6,6 +6,7 @@ import { Handler } from './decorator';
 import { setAstError, WorkflowGraphAst } from './ast';
 import { NodeEmitEvent, NodeEvent } from './execution/events';
 import { EdgeMode, IEdge, ROUTE_SKIPPED } from './types';
+import { evaluateTransform } from './edge-transform';
 
 /**
  * 工作流节点执行器
@@ -295,7 +296,16 @@ export class WorkflowGraphAstVisitor {
                 filter((event): event is NodeEmitEvent =>
                     event.type === 'node_emit' && edge.fromProperty! in (event.data || {})
                 ),
-                map(event => event.data?.[edge.fromProperty!])
+                map(event => {
+                    let value = event.data?.[edge.fromProperty!];
+
+                    // 应用边转换表达式
+                    if (edge.transform) {
+                        value = evaluateTransform(value, edge.transform);
+                    }
+
+                    return value;
+                })
             );
         });
     }

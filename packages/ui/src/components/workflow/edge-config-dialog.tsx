@@ -12,6 +12,7 @@ import {
 import { Button } from '../ui/button'
 import { Checkbox } from '../ui/checkbox'
 import { Label } from '../ui/label'
+import { Input } from '../ui/input'
 import { ScrollArea } from '../ui/scroll-area'
 import { EdgeModeSelector, type EdgeModeOption } from './edge-mode-selector'
 import { EdgeDataMapping } from './edge-data-mapping'
@@ -36,6 +37,7 @@ export function EdgeConfigDialog({
   const [toProperty, setToProperty] = useState('')
   const [weight, setWeight] = useState(1)
   const [isPrimary, setIsPrimary] = useState(false)
+  const [transform, setTransform] = useState('')
 
   useEffect(() => {
     if (edge) {
@@ -44,6 +46,7 @@ export function EdgeConfigDialog({
       setToProperty(edge.toProperty || '')
       setWeight(edge.weight || 1)
       setIsPrimary(edge.isPrimary || false)
+      setTransform(edge.transform || '')
     }
   }, [edge])
 
@@ -53,6 +56,7 @@ export function EdgeConfigDialog({
       fromProperty: fromProperty || undefined,
       toProperty: toProperty || undefined,
       weight,
+      transform: transform || undefined,
     }
 
     if (mode === EdgeMode.WITH_LATEST_FROM) {
@@ -102,6 +106,22 @@ export function EdgeConfigDialog({
               onToPropertyChange={setToProperty}
               onWeightChange={setWeight}
             />
+
+            <div className="space-y-2">
+              <Label htmlFor="transform" className="text-sm font-medium">
+                数据转换表达式
+              </Label>
+              <Input
+                id="transform"
+                value={transform}
+                onChange={(e) => setTransform(e.target.value)}
+                placeholder="$input.map(it => `${it.name}=${it.value}`).join('; ')"
+                className="font-mono text-xs"
+              />
+              <p className="text-xs text-muted-foreground">
+                使用 $input 引用输入值，支持 JavaScript 表达式
+              </p>
+            </div>
 
           </div>
         </ScrollArea>
