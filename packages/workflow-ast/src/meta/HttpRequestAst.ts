@@ -1,4 +1,4 @@
-import { Ast, Input, Node, Output, State } from '@sker/workflow';
+import { Ast, Input, Node, Output } from '@sker/workflow';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 
@@ -11,16 +11,16 @@ export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
   retryBackoff: 2
 })
 export class HttpRequestAst extends Ast {
-  @State({ title: '请求方法' })
+  @Input({ title: '请求方法', defaultValue: 'GET' })
   method: HttpMethod = 'GET';
 
-  @State({ title: 'URL' })
+  @Input({ title: 'URL', defaultValue: '' })
   url = '';
 
-  @State({ title: '请求头' })
+  @Input({ title: '请求头', type: 'object', defaultValue: {} })
   headers: Record<string, string> = {};
 
-  @Input({ title: '请求体', defaultValue: null })
+  @Input({ title: '请求体', type: 'object', defaultValue: null })
   body: any = null;
 
   @Output({ title: '响应', defaultValue: null })
