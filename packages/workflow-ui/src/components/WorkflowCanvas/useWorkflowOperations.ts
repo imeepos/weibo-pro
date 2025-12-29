@@ -614,8 +614,6 @@ export function useWorkflowOperations(
                 workflow.syncFromAst()
               } else if (event.type === 'node_emit') {
                 // 处理属性实时更新（qrcode, message, account 等）
-                console.log(`[runWorkflow] node_emit 事件: ${JSON.stringify(event)}`)
-
                 let found = false
                 workflow.workflowAst!.nodes = workflow.workflowAst!.nodes.map(originalNode => {
                   if (originalNode.id === event.id) {

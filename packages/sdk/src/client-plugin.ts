@@ -184,8 +184,6 @@ function createMethodProxy(
       const fullPath = buildFullPath(controllerPrefix, methodPath);
       const { urlParams, queryParams, bodyData } = extractParameters(args, routeArgs);
       const finalUrl = replaceUrlParams(fullPath, urlParams);
-      const options = root.get(BETTER_OPTIONS)
-      console.log({ finalUrl, options })
       return createPostSSEObservable(finalUrl, queryParams, bodyData);
     };
   }
