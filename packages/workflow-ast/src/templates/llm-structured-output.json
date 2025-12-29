@@ -1,0 +1,11 @@
+{
+  "name": "LLM 结构化输出",
+  "description": "使用 LlmInferenceAst 生成结构化数据",
+  "node": "LlmInferenceAst",
+  "config": {
+    "system": ["请根据用户输入生成结构化数据，严格按照 JSON 格式输出"],
+    "prompt": ["{{userInput}}"],
+    "model": "deepseek-ai/DeepSeek-V3.2",
+    "temperature": 0.3
+  }
+}

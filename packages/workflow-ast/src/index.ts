@@ -124,5 +124,19 @@ export { ScheduledWorkflowAst } from './05-workflow-control/schedule/ScheduledWo
 export { EventAst } from './06-ui-components/EventAst';
 export { PropertySelectorAst } from './06-ui-components/PropertySelectorAst';
 
+// === 元节点 (Meta Nodes) ===
+// 通用的可复用节点
+
+export { HttpRequestAst } from './meta/HttpRequestAst';
+export type { HttpMethod as MetaHttpMethod } from './meta/HttpRequestAst';
+export { LlmInferenceAst } from './meta/LlmInferenceAst';
+export { MediaGenerateAst } from './meta/MediaGenerateAst';
+export type { MediaType } from './meta/MediaGenerateAst';
+export { LoopAst } from './meta/LoopAst';
+export { TransformAst } from './meta/TransformAst';
+export { AggregateAst } from './meta/AggregateAst';
+export type { AggregateOperation } from './meta/AggregateAst';
+export { RouteAst } from './meta/RouteAst';
+
 // === 工作流基础 (Workflow Foundation) ===
 export { WorkflowGraphAst } from '@sker/workflow';

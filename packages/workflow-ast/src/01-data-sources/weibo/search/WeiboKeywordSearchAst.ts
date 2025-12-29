@@ -1,6 +1,24 @@
 import { Ast, Input, Node, Output, State } from "@sker/workflow";
 
-
+/**
+ * @deprecated 使用 HttpRequestAst 替代
+ *
+ * 迁移示例：
+ * ```typescript
+ * // 旧节点
+ * WeiboKeywordSearchAst { keyword: '热搜' }
+ *
+ * // 新节点（使用 HttpRequestAst）
+ * HttpRequestAst {
+ *   method: 'GET',
+ *   urlTemplate: 'https://weibo.com/ajax/side/search',
+ *   queryParams: { q: '{{keyword}}', page: '{{page}}' },
+ *   headers: { Cookie: '{{cookie}}' }
+ * }
+ * ```
+ *
+ * 或使用配置模板：templates/weibo-keyword-search.json
+ */
 @Node({
     title: '微博检索',
     type: 'crawler',

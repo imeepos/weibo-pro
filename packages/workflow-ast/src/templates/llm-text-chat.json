@@ -1,0 +1,11 @@
+{
+  "name": "LLM 文本对话",
+  "description": "使用 LlmInferenceAst 进行文本对话",
+  "node": "LlmInferenceAst",
+  "config": {
+    "system": ["你是一个有帮助的AI助手"],
+    "prompt": ["{{userMessage}}"],
+    "model": "deepseek-ai/DeepSeek-V3.2",
+    "temperature": 0.7
+  }
+}
