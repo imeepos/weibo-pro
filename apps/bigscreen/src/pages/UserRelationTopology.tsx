@@ -23,11 +23,26 @@ const USER_TYPE_CONFIGS = [
 
 const UserRelationTopology: React.FC = () => {
   const { selectedTimeRange, setSelectedTimeRange } = useAppStore();
-  const [relationType, setRelationType] = useState<UserRelationType>('comprehensive');
-  const [minWeight, setMinWeight] = useState(1);
-  const [limit, setLimit] = useState(10000);
-  const [debouncedLimit, setDebouncedLimit] = useState(10000);
-  const [edgeThreshold, setEdgeThreshold] = useState(10);
+  const [relationType, setRelationType] = useState<UserRelationType>(() => {
+    const saved = localStorage.getItem('userRelation.relationType');
+    return (saved as UserRelationType) || 'comprehensive';
+  });
+  const [minWeight, setMinWeight] = useState(() => {
+    const saved = localStorage.getItem('userRelation.minWeight');
+    return saved ? parseInt(saved) : 1;
+  });
+  const [limit, setLimit] = useState(() => {
+    const saved = localStorage.getItem('userRelation.limit');
+    return saved ? parseInt(saved) : 10000;
+  });
+  const [debouncedLimit, setDebouncedLimit] = useState(() => {
+    const saved = localStorage.getItem('userRelation.limit');
+    return saved ? parseInt(saved) : 10000;
+  });
+  const [edgeThreshold, setEdgeThreshold] = useState(() => {
+    const saved = localStorage.getItem('userRelation.edgeThreshold');
+    return saved ? parseInt(saved) : 10;
+  });
   const [selectedNode, setSelectedNode] = useState<UserRelationNode | null>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const dragControls = useDragControls();
