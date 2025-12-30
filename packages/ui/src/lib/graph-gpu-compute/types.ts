@@ -2,7 +2,10 @@
  * GPU 计算模块类型定义
  */
 
-import type { SharedBuffers } from '../graph-data-stream';
+import type { SharedBuffers as SharedBuffersType } from '../graph-data-stream';
+
+// Re-export SharedBuffers so it can be imported from this module
+export type { SharedBuffersType as SharedBuffers };
 
 /**
  * 布局算法配置
@@ -42,7 +45,7 @@ export interface LayoutState {
  * LayoutWorker 消息类型（主线程 -> Worker）
  */
 export type LayoutWorkerMessage =
-  | { type: 'INIT'; buffers: SharedBuffers; nodeCount: number; edgeCount: number; config: LayoutConfig }
+  | { type: 'INIT'; buffers: SharedBuffersType; nodeCount: number; edgeCount: number; config: LayoutConfig }
   | { type: 'START' }
   | { type: 'STOP' }
   | { type: 'STEP'; iterations?: number }

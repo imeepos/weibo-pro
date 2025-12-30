@@ -7,14 +7,14 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateCol
 @Entity('statistics_progress')
 export class StatisticsProgress {
   @PrimaryGeneratedColumn('increment')
-  id: string;
+  id!: string;
 
   /**
    * 关系类型
    * 对应 UserRelationType: repost, comment, like
    */
   @Column({ type: 'varchar', length: 50, unique: true })
-  relationType: string;
+  relationType!: string;
 
   /**
    * 最后处理的源表记录ID
@@ -23,23 +23,23 @@ export class StatisticsProgress {
    * - like: weibo_likes.id
    */
   @Column({ type: 'bigint', default: '0' })
-  lastProcessedId: string;
+  lastProcessedId!: string;
 
   /**
    * 最后处理时间
    */
   @Column({ type: 'timestamptz', nullable: true })
-  lastProcessedAt: Date;
+  lastProcessedAt!: Date;
 
   /**
    * 本次处理的记录数
    */
   @Column({ type: 'integer', default: 0 })
-  processedCount: number;
+  processedCount!: number;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 }

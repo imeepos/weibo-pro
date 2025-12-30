@@ -2,7 +2,10 @@
  * OffscreenCanvas 渲染器类型定义
  */
 
-import type { SharedBuffers } from '../graph-data-stream/types';
+import type { SharedBuffers as SharedBuffersType } from '../graph-data-stream/types';
+
+// Re-export SharedBuffers so it can be imported from this module
+export type { SharedBuffersType as SharedBuffers };
 
 /**
  * 渲染器配置
