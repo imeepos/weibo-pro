@@ -38,7 +38,7 @@ async function bootstrap() {
 
       const result = await useEntityManager(manager =>
         UserRelationStatisticsQueries.runIncrementalStats(manager, {
-          maxRecords: 50000 // 每次处理5万条记录
+          maxRecords: 5000 // 每次处理5万条记录
         })
       );
 
