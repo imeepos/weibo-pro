@@ -14,7 +14,7 @@ echo "服务器 IP: $SERVER_IP"
 echo "1. 构建应用..."
 cd "$(dirname "$0")/.."
 pnpm build:deps
-turbo build --filter=@sker/bigscreen
+pnpm turbo build --filter=@sker/bigscreen
 
 # 2. 生成自签名证书
 echo "2. 生成自签名证书..."

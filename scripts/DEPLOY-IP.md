@@ -12,7 +12,7 @@ chmod +x scripts/*.sh
 ./scripts/deploy-bigscreen-ip.sh
 
 # 或指定 IP 地址
-./scripts/deploy-bigscreen-ip.sh 192.168.1.100
+./scripts/deploy-bigscreen-ip.sh 192.168.2.255
 ```
 
 ## 后续更新

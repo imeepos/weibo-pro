@@ -12,7 +12,7 @@ git pull
 # 2. 构建
 echo "2. 构建应用..."
 pnpm build:deps
-turbo build --filter=@sker/bigscreen
+pnpm turbo build --filter=@sker/bigscreen
 
 # 3. 部署
 echo "3. 部署静态文件..."
