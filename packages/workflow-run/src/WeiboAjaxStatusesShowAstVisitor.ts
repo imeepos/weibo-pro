@@ -73,6 +73,7 @@ export class WeiboAjaxStatusesShowAstVisitor extends WeiboApiClient {
                         await m.upsert(WeiboUserEntity, user as any, ['id']);
 
                         const post = m.create(WeiboPostEntity, body as any);
+                        ast.postId = post.id;
                         ast.mid = post.mid;
 
                         // 使用安全的 upsert 方式，处理可能的重复插入
@@ -91,10 +92,10 @@ export class WeiboAjaxStatusesShowAstVisitor extends WeiboApiClient {
                         }
                     });
 
-                    console.log(`[WeiboAjaxStatusesShowAstVisitor] 成功保存一条帖子`)
+                    console.log(`[WeiboAjaxStatusesShowAstVisitor] 成功保存一条帖子 id=${ast.postId}, mblogid=${ast.mblogid}`)
 
                     return [
-                        { type: 'node_emit' as const, id: ast.id, data: { uid: ast.uid, mid: ast.mid } }
+                        { type: 'node_emit' as const, id: ast.id, data: { uid: ast.uid, postId: ast.postId, mid: ast.mid } }
                     ];
                 }),
                 mergeMap((events: NodeEvent[]) => from(events))

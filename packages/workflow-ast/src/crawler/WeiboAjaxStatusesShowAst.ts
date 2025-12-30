@@ -16,7 +16,10 @@ export class WeiboAjaxStatusesShowAst extends Ast {
     @Input({ title: "用户ID", defaultValue: '' })
     uid = '';
 
-    @Output({ title: '帖子id', defaultValue: '' })
+    @Output({ title: '帖子数据库ID', defaultValue: '' })
+    postId = ``;
+
+    @Output({ title: '帖子mid', defaultValue: '' })
     mid = ``;
 
     type: `WeiboAjaxStatusesShowAst` = `WeiboAjaxStatusesShowAst`

@@ -20,11 +20,11 @@ function getLabel(mode?: EdgeMode) {
 
   switch (actualMode) {
     case EdgeMode.COMBINE_LATEST:
-      return `最新值聚合`
+      return ``
     case EdgeMode.ZIP:
-      return `配对执行`
+      return ``
     case EdgeMode.WITH_LATEST_FROM:
-      return `主流携带`
+      return ``
     case EdgeMode.MERGE:
       return ``
     default:
