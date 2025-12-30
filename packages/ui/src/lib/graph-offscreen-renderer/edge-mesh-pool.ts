@@ -36,12 +36,19 @@ export class EdgeMeshPool {
     this.positionAttribute.setUsage(THREE.DynamicDrawUsage);
     geometry.setAttribute('position', this.positionAttribute);
 
-    // 创建材质
+    // 添加颜色缓冲区（支持渐变色）
+    const colors = new Float32Array(this.maxEdges * 2 * 3);
+    const colorAttribute = new THREE.BufferAttribute(colors, 3);
+    colorAttribute.setUsage(THREE.DynamicDrawUsage);
+    geometry.setAttribute('color', colorAttribute);
+
+    // 创建材质 - 启用顶点颜色
     const material = new THREE.LineBasicMaterial({
-      color: 0x666666,
-      opacity: config.opacity ?? 0.3,
+      vertexColors: true, // 启用顶点颜色
+      opacity: config.opacity ?? 0.4, // 提高默认透明度
       transparent: true,
       depthWrite: false, // 性能优化
+      blending: THREE.AdditiveBlending, // 使用加法混合，让连线更亮
     });
 
     this.mesh = new THREE.LineSegments(geometry, material);

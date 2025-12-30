@@ -3,15 +3,15 @@ import type { UserRelationNode } from '@sker/sdk';
 export function getUserTypeColor(userType: string): string {
   switch (userType) {
     case 'official':
-      return '#ff5555';
+      return '#ff6b6b'; // 现代红色 - 官方权威
     case 'media':
-      return '#5599ff';
+      return '#4ecdc4'; // 青色 - 媒体专业
     case 'kol':
-      return '#dd88ff';
+      return '#a78bfa'; // 紫色 - KOL影响力
     case 'normal':
-      return '#55dd88';
+      return '#6ee7b7'; // 绿色 - 普通用户
     default:
-      return '#888888';
+      return '#94a3b8'; // 灰色
   }
 }
 
@@ -33,21 +33,22 @@ export function getUserTypeLabel(userType: string): string {
 export function getEdgeColor(type: string): string {
   switch (type) {
     case 'like':
-      return '#ff66aa';
+      return '#f472b6'; // 粉色 - 点赞
     case 'comment':
-      return '#5599ff';
+      return '#60a5fa'; // 蓝色 - 评论
     case 'repost':
-      return '#aa77ff';
+      return '#c084fc'; // 紫色 - 转发
     case 'comprehensive':
-      return '#ffaa44';
+      return '#fbbf24'; // 金色 - 综合
     default:
-      return '#888888';
+      return '#94a3b8'; // 灰色
   }
 }
 
 export function getEdgeOpacity(weight: number): number {
+  // 使用对数映射，让权重差异更明显
   const normalizedWeight = Math.min(weight / 100, 1);
-  return 0.3 + normalizedWeight * 0.7;
+  return 0.2 + normalizedWeight * 0.6; // 范围 0.2-0.8
 }
 
 export function formatNumber(num: number): string {

@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useDragControls } from 'framer-motion';
 import { Network } from 'lucide-react';
-import UserRelationGraph3D from '../components/charts/UserRelationGraph3D';
+import UserRelationGraph3DOffscreen from '../components/charts/UserRelationGraph3DOffscreen';
 import { getUserTypeColor } from '../components/charts/UserRelationGraph3D.utils';
 import UserRelationControls from '../components/charts/UserRelationControls';
 import NodeDetailPanel from '../components/charts/NodeDetailPanel';
@@ -29,6 +29,11 @@ const UserRelationTopology: React.FC = () => {
   const [debouncedLimit, setDebouncedLimit] = useState(10000);
   const [selectedNode, setSelectedNode] = useState<UserRelationNode | null>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  const dragControls = useDragControls();
+  const [position, setPosition] = useState(() => {
+    const saved = localStorage.getItem('controlPanel.position');
+    return saved ? JSON.parse(saved) : { x: 0, y: 0 };
+  });
 
   useEffect(() => {
     if (debounceTimerRef.current) {
@@ -84,12 +89,11 @@ const UserRelationTopology: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <UserRelationGraph3D
+              <UserRelationGraph3DOffscreen
                 network={network}
                 className="w-full h-full"
                 onNodeClick={handleNodeClick}
                 onNodeHover={handleNodeHover}
-                enableCommunities={true}
               />
             )}
           </div>
@@ -124,12 +128,31 @@ const UserRelationTopology: React.FC = () => {
 
         {/* 悬浮控制面板 - 左上角 */}
         <motion.div
-          initial={{ opacity: 0, x: -50 }}
-          animate={{ opacity: 1, x: 0 }}
+          drag
+          dragControls={dragControls}
+          dragMomentum={false}
+          dragElastic={0}
+          x={position.x}
+          y={position.y}
+          onDragEnd={(_, info) => {
+            const newPosition = { x: info.offset.x, y: info.offset.y };
+            setPosition(newPosition);
+            localStorage.setItem('controlPanel.position', JSON.stringify(newPosition));
+          }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
-          className="absolute top-12 left-6 w-72 max-h-[calc(100vh-160px)] overflow-y-auto"
+          className="absolute top-12 left-6 w-72"
         >
-          <div className="glass-card p-3">
+          <div
+            className="glass-card p-3"
+            onPointerDown={(e) => {
+              const target = e.target as HTMLElement;
+              if (target.closest('[data-drag-handle]')) {
+                dragControls.start(e);
+              }
+            }}
+          >
             <UserRelationControls
               relationType={relationType}
               onRelationTypeChange={setRelationType}

@@ -102,9 +102,10 @@ export class NodeMeshPool {
   private createMaterial(): THREE.Material {
     return new THREE.MeshStandardMaterial({
       color: 0xffffff,
-      metalness: 0.2,
-      roughness: 0.8,
+      metalness: 0.3, // 增加金属感
+      roughness: 0.6, // 降低粗糙度，更光滑
       emissive: 0x000000,
+      emissiveIntensity: 0.2, // 添加自发光强度
     });
   }
 

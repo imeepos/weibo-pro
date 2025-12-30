@@ -9,9 +9,9 @@ import {
   SharedBufferManager,
   DataStreamer,
   useGraphStore,
-} from '@sker/ui/lib/graph-data-stream';
-import { useOffscreenGraph } from '@sker/ui/lib/graph-offscreen-renderer';
-import { useGraphLayout } from '@sker/ui/lib/graph-gpu-compute';
+} from '@sker/ui/lib/graph-data-stream/index';
+import { useOffscreenGraph } from '@sker/ui/lib/graph-offscreen-renderer/index';
+import { useGraphLayout } from '@sker/ui/lib/graph-gpu-compute/index';
 
 interface UserRelationGraph3DOffscreenProps {
   network: UserRelationNetwork;
@@ -90,6 +90,10 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
     handleClick,
     setNodeCount: updateWorkerNodeCount,
     workerRef,
+    handleMouseDown,
+    handleMouseMove,
+    handleMouseUp,
+    handleWheel,
   } = useOffscreenGraph(canvasRef, sharedBuffers, {
     maxNodes: MAX_NODES,
     maxEdges: MAX_EDGES,
@@ -205,8 +209,13 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
       {/* 主渲染 Canvas */}
       <canvas
         ref={canvasRef}
-        className="w-full h-full"
+        className="w-full h-full cursor-grab active:cursor-grabbing"
         onClick={handleClick}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        onWheel={handleWheel}
         style={{ display: 'block' }}
       />
 
@@ -309,8 +318,21 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
 
       {/* 提示信息 */}
       {!isLoading && (
-        <div className="absolute bottom-4 right-4 bg-black/80 text-white p-2 text-xs rounded">
-          点击节点查看详情
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/80 text-white px-4 py-2 text-xs rounded-lg backdrop-blur-sm border border-white/10">
+          <div className="flex items-center gap-4">
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></span>
+              拖拽旋转
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block w-2 h-2 bg-purple-400 rounded-full animate-pulse"></span>
+              滚轮缩放
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block w-2 h-2 bg-pink-400 rounded-full animate-pulse"></span>
+              点击查看详情
+            </span>
+          </div>
         </div>
       )}
     </div>

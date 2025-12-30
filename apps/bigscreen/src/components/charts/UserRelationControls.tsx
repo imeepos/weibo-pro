@@ -1,5 +1,5 @@
-import React from 'react';
-import { RefreshCw, Link, ThumbsUp, MessageCircle, Share2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { RefreshCw, Link, ThumbsUp, MessageCircle, Share2, ChevronDown, ChevronUp } from 'lucide-react';
 import type { UserRelationType } from '@sker/sdk';
 
 interface UserRelationControlsProps {
@@ -23,6 +23,16 @@ const UserRelationControls: React.FC<UserRelationControlsProps> = ({
   onRefresh,
   isLoading = false,
 }) => {
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    const saved = localStorage.getItem('controlPanel.collapsed');
+    return saved ? JSON.parse(saved) : false;
+  });
+
+  const handleToggleCollapse = () => {
+    const newState = !isCollapsed;
+    setIsCollapsed(newState);
+    localStorage.setItem('controlPanel.collapsed', JSON.stringify(newState));
+  };
   const relationTypes: Array<{ value: UserRelationType; label: string; icon: React.ReactNode }> = [
     { value: 'comprehensive', label: '综合关系', icon: <Link className="w-4 h-4" /> },
     { value: 'like', label: '点赞', icon: <ThumbsUp className="w-4 h-4" /> },
@@ -31,13 +41,22 @@ const UserRelationControls: React.FC<UserRelationControlsProps> = ({
   ];
 
   return (
-    <div className="backdrop-blur-sm bg-background/50 rounded-lg p-4 shadow-lg">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-base font-semibold text-foreground">控制面板</h3>
+    <div className="backdrop-blur-sm bg-background/50 rounded-lg shadow-lg">
+      <div className="flex items-center justify-between p-4 pb-2 cursor-move" data-drag-handle>
+        <div className="flex items-center gap-2">
+          <h3 className="text-base font-semibold text-foreground">控制面板</h3>
+          <button
+            onClick={handleToggleCollapse}
+            className="p-1 hover:bg-secondary rounded transition-colors cursor-pointer"
+            title={isCollapsed ? '展开' : '收起'}
+          >
+            {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+          </button>
+        </div>
         <button
           onClick={onRefresh}
           disabled={isLoading}
-          className="px-3 py-1.5 bg-primary hover:bg-primary/90 disabled:bg-secondary text-primary-foreground rounded-md transition-colors duration-200 flex items-center gap-2 text-sm"
+          className="px-3 py-1.5 bg-primary hover:bg-primary/90 disabled:bg-secondary text-primary-foreground rounded-md transition-colors duration-200 flex items-center gap-2 text-sm cursor-pointer"
         >
           {isLoading ? (
             <>
@@ -53,68 +72,70 @@ const UserRelationControls: React.FC<UserRelationControlsProps> = ({
         </button>
       </div>
 
-      <div className="space-y-4">
-        {/* 关系类型选择 */}
-        <div>
-          <label className="block text-xs font-medium text-muted-foreground mb-2">
-            关系类型
-          </label>
-          <div className="grid grid-cols-2 gap-2">
-            {relationTypes.map((type) => (
-              <button
-                key={type.value}
-                onClick={() => onRelationTypeChange(type.value)}
-                className={`px-3 py-2 rounded-md transition-all duration-200 text-sm font-medium flex items-center justify-center gap-2 ${relationType === type.value
+      {!isCollapsed && (
+        <div className="space-y-4 p-4 pt-2">
+          {/* 关系类型选择 */}
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-2">
+              关系类型
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {relationTypes.map((type) => (
+                <button
+                  key={type.value}
+                  onClick={() => onRelationTypeChange(type.value)}
+                  className={`px-3 py-2 rounded-md transition-all duration-200 text-sm font-medium flex items-center justify-center gap-2 ${relationType === type.value
                     ? 'bg-primary text-primary-foreground shadow'
                     : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-                  }`}
-              >
-                {type.icon}
-                <span>{type.label}</span>
-              </button>
-            ))}
+                    }`}
+                >
+                  {type.icon}
+                  <span>{type.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* 最小权重 */}
-        <div>
-          <label className="block text-xs font-medium text-muted-foreground mb-2">
-            最小交互次数: {minWeight}
-          </label>
-          <input
-            type="range"
-            min="1"
-            max="100"
-            value={minWeight}
-            onChange={(e) => onMinWeightChange(parseInt(e.target.value))}
-            className="w-full h-1.5 bg-secondary rounded-md appearance-none cursor-pointer accent-primary"
-          />
-          <div className="flex justify-between text-xs text-muted-foreground mt-1">
-            <span>1次</span>
-            <span>10次</span>
+          {/* 最小权重 */}
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-2">
+              最小交互次数: {minWeight}
+            </label>
+            <input
+              type="range"
+              min="1"
+              max="100"
+              value={minWeight}
+              onChange={(e) => onMinWeightChange(parseInt(e.target.value))}
+              className="w-full h-1.5 bg-secondary rounded-md appearance-none cursor-pointer accent-primary touch-none"
+            />
+            <div className="flex justify-between text-xs text-muted-foreground mt-1">
+              <span>1次</span>
+              <span>10次</span>
+            </div>
           </div>
-        </div>
 
-        {/* 节点数量限制 */}
-        <div>
-          <label className="block text-xs font-medium text-muted-foreground mb-2">
-            最大节点数: {limit}
-          </label>
-          <input
-            type="range"
-            min="20"
-            max="20000"
-            step="20"
-            value={limit}
-            onChange={(e) => onLimitChange(parseInt(e.target.value))}
-            className="w-full h-1.5 bg-secondary rounded-md appearance-none cursor-pointer accent-primary"
-          />
-          <div className="flex justify-between text-xs text-muted-foreground mt-1">
-            <span>20个</span>
-            <span>20000个</span>
+          {/* 节点数量限制 */}
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-2">
+              最大节点数: {limit}
+            </label>
+            <input
+              type="range"
+              min="20"
+              max="20000"
+              step="20"
+              value={limit}
+              onChange={(e) => onLimitChange(parseInt(e.target.value))}
+              className="w-full h-1.5 bg-secondary rounded-md appearance-none cursor-pointer accent-primary touch-none"
+            />
+            <div className="flex justify-between text-xs text-muted-foreground mt-1">
+              <span>20个</span>
+              <span>20000个</span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

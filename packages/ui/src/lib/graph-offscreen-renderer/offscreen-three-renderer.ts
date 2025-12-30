@@ -79,10 +79,10 @@ export class OffscreenThreeRenderer {
    */
   private initScene(): void {
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(this.config.backgroundColor ?? 0x000000);
+    this.scene.background = new THREE.Color(this.config.backgroundColor ?? 0x0a0a0f); // 更深的背景色
 
-    // 添加雾效（可选）
-    // this.scene.fog = new THREE.Fog(0x000000, 500, 2000);
+    // 添加雾效，增加深度感
+    this.scene.fog = new THREE.FogExp2(0x0a0a0f, 0.0008);
   }
 
   /**
@@ -129,19 +129,29 @@ export class OffscreenThreeRenderer {
    * 初始化光照
    */
   private initLights(): void {
-    // 环境光
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    // 环境光 - 提供基础照明
+    const ambientLight = new THREE.AmbientLight(0x4a5568, 0.5);
     this.scene.add(ambientLight);
 
-    // 方向光
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    directionalLight.position.set(100, 100, 100);
-    this.scene.add(directionalLight);
+    // 主光源 - 从右上方照射
+    const mainLight = new THREE.DirectionalLight(0x60a5fa, 1.2);
+    mainLight.position.set(200, 200, 200);
+    this.scene.add(mainLight);
 
-    // 补光
-    const fillLight = new THREE.DirectionalLight(0xffffff, 0.3);
-    fillLight.position.set(-100, -100, -100);
+    // 补光 - 从左下方照射，使用暖色调
+    const fillLight = new THREE.DirectionalLight(0xf472b6, 0.6);
+    fillLight.position.set(-150, -150, -100);
     this.scene.add(fillLight);
+
+    // 背光 - 从后方照射，增加轮廓光
+    const backLight = new THREE.DirectionalLight(0xa78bfa, 0.8);
+    backLight.position.set(0, 0, -200);
+    this.scene.add(backLight);
+
+    // 点光源 - 中心发光，增加氛围
+    const pointLight = new THREE.PointLight(0x4ecdc4, 0.5, 1000);
+    pointLight.position.set(0, 0, 0);
+    this.scene.add(pointLight);
   }
 
   /**

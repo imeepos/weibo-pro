@@ -29,6 +29,12 @@ export function useOffscreenGraph(
   const setFPS = useGraphStore((state) => state.setFPS);
   const setLODStats = useGraphStore((state) => state.setLODStats);
 
+  // 相机控制状态
+  const isDragging = useRef(false);
+  const lastMousePos = useRef({ x: 0, y: 0 });
+  const cameraRotation = useRef({ theta: 0, phi: Math.PI / 4 });
+  const cameraDistance = useRef(500);
+
   /**
    * 初始化 Worker
    */
@@ -198,10 +204,77 @@ export function useOffscreenGraph(
     } as RenderWorkerMessage);
   }, []);
 
+  /**
+   * 更新相机位置（基于球坐标）
+   */
+  const updateCameraPosition = useCallback(() => {
+    const { theta, phi } = cameraRotation.current;
+    const distance = cameraDistance.current;
+
+    const x = distance * Math.sin(phi) * Math.cos(theta);
+    const y = distance * Math.cos(phi);
+    const z = distance * Math.sin(phi) * Math.sin(theta);
+
+    setCamera([x, y, z], [0, 0, 0]);
+  }, [setCamera]);
+
+  /**
+   * 鼠标按下事件
+   */
+  const handleMouseDown = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
+    isDragging.current = true;
+    lastMousePos.current = { x: event.clientX, y: event.clientY };
+  }, []);
+
+  /**
+   * 鼠标移动事件
+   */
+  const handleMouseMove = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDragging.current) return;
+
+    const deltaX = event.clientX - lastMousePos.current.x;
+    const deltaY = event.clientY - lastMousePos.current.y;
+
+    // 更新旋转角度
+    cameraRotation.current.theta -= deltaX * 0.005;
+    cameraRotation.current.phi = Math.max(
+      0.1,
+      Math.min(Math.PI - 0.1, cameraRotation.current.phi - deltaY * 0.005)
+    );
+
+    lastMousePos.current = { x: event.clientX, y: event.clientY };
+    updateCameraPosition();
+  }, [updateCameraPosition]);
+
+  /**
+   * 鼠标松开事件
+   */
+  const handleMouseUp = useCallback(() => {
+    isDragging.current = false;
+  }, []);
+
+  /**
+   * 鼠标滚轮事件
+   */
+  const handleWheel = useCallback((event: React.WheelEvent<HTMLCanvasElement>) => {
+    event.preventDefault();
+
+    // 缩放相机距离
+    const delta = event.deltaY * 0.5;
+    cameraDistance.current = Math.max(100, Math.min(2000, cameraDistance.current + delta));
+
+    updateCameraPosition();
+  }, [updateCameraPosition]);
+
   return {
     workerRef,
     handleClick,
     setCamera,
     setNodeCount,
+    // 相机控制事件
+    handleMouseDown,
+    handleMouseMove,
+    handleMouseUp,
+    handleWheel,
   };
 }
