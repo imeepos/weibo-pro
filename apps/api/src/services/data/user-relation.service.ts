@@ -25,18 +25,23 @@ export class UserRelationService {
       limit = 100,
     } = params;
 
+    const MAX_LIMIT = 20000;
+    const effectiveLimit = Math.min(limit, MAX_LIMIT);
+
     const cacheKey = CacheService.buildKey(
       CACHE_KEYS.USER_RELATIONS,
       type,
       timeRange,
       minWeight.toString(),
-      limit.toString()
+      effectiveLimit.toString()
     );
+
+    const cacheTTL = timeRange === 'all' ? CACHE_TTL.VERY_LONG : CACHE_TTL.MEDIUM;
 
     return await this.cacheService.getOrSet(
       cacheKey,
-      () => this.fetchNetwork(type, timeRange, minWeight, limit),
-      CACHE_TTL.MEDIUM
+      () => this.fetchNetwork(type, timeRange, minWeight, effectiveLimit),
+      cacheTTL
     );
   }
 
@@ -74,7 +79,7 @@ export class UserRelationService {
           source_user_id,
           target_user_id,
           weight
-        FROM user_like_relations_view
+        FROM user_like_relations_mv
         WHERE last_interaction_at >= $1
           AND last_interaction_at <= $2
           AND weight >= $3
@@ -102,7 +107,7 @@ export class UserRelationService {
           source_user_id,
           target_user_id,
           weight
-        FROM user_comment_relations_view
+        FROM user_comment_relations_mv
         WHERE last_interaction_at >= $1
           AND last_interaction_at <= $2
           AND weight >= $3
@@ -130,7 +135,7 @@ export class UserRelationService {
           source_user_id,
           target_user_id,
           weight
-        FROM user_repost_relations_view
+        FROM user_repost_relations_mv
         WHERE last_interaction_at >= $1
           AND last_interaction_at <= $2
           AND weight >= $3
@@ -175,7 +180,7 @@ export class UserRelationService {
             0 as like_count,
             weight as comment_count,
             0 as repost_count
-          FROM user_comment_relations_view
+          FROM user_comment_relations_mv
           WHERE last_interaction_at >= $1
             AND last_interaction_at <= $2
 
@@ -188,7 +193,7 @@ export class UserRelationService {
             0 as like_count,
             0 as comment_count,
             weight as repost_count
-          FROM user_repost_relations_view
+          FROM user_repost_relations_mv
           WHERE last_interaction_at >= $1
             AND last_interaction_at <= $2
         )
@@ -239,10 +244,18 @@ export class UserRelationService {
 
     const userIdsArray = Array.from(userIds);
 
-    const usersData = await manager.query(
-      `SELECT * FROM v_weibo_user_info WHERE id = ANY($1::bigint[])`,
-      [userIdsArray]
-    );
+    await manager.query('SET statement_timeout = 30000');
+
+    const BATCH_SIZE = 1000;
+    const usersData: any[] = [];
+    for (let i = 0; i < userIdsArray.length; i += BATCH_SIZE) {
+      const batch = userIdsArray.slice(i, i + BATCH_SIZE);
+      const batchResult = await manager.query(
+        `SELECT * FROM v_weibo_user_info WHERE id = ANY($1::bigint[])`,
+        [batch]
+      );
+      usersData.push(...batchResult);
+    }
 
     const usersMap = new Map<string, any>(
       usersData.map((u: any) => [u.id.toString(), u])

@@ -2,19 +2,20 @@ import { ViewColumn } from 'typeorm';
 import { ViewEntity } from './decorator';
 
 @ViewEntity({
-  name: 'user_like_relations_view',
+  name: 'user_like_relations_mv',
+  materialized: true,
   expression: `
     SELECT
       l.user_weibo_id as source_user_id,
-      (p.user->>'id')::numeric as target_user_id,
+      (p.user->>'id')::bigint as target_user_id,
       COUNT(*) as weight,
       MIN(l.created_at) as first_interaction_at,
       MAX(l.created_at) as last_interaction_at
     FROM weibo_likes l
     JOIN weibo_posts p ON l.target_weibo_id = p.id
-    WHERE l.user_weibo_id != (p.user->>'id')::numeric
+    WHERE l.user_weibo_id != (p.user->>'id')::bigint
       AND p.user->>'id' IS NOT NULL
-    GROUP BY l.user_weibo_id, (p.user->>'id')::numeric
+    GROUP BY l.user_weibo_id, (p.user->>'id')::bigint
   `,
 })
 export class UserLikeRelationView {
@@ -35,11 +36,12 @@ export class UserLikeRelationView {
 }
 
 @ViewEntity({
-  name: 'user_comment_relations_view',
+  name: 'user_comment_relations_mv',
+  materialized: true,
   expression: `
     SELECT
-      (c.user->>'id')::numeric as source_user_id,
-      (p.user->>'id')::numeric as target_user_id,
+      (c.user->>'id')::bigint as source_user_id,
+      (p.user->>'id')::bigint as target_user_id,
       COUNT(*) as weight,
       MIN(c.ingested_at) as first_interaction_at,
       MAX(c.ingested_at) as last_interaction_at
@@ -48,7 +50,7 @@ export class UserLikeRelationView {
     WHERE c.user->>'id' IS NOT NULL
       AND p.user->>'id' IS NOT NULL
       AND c.user->>'id' != p.user->>'id'
-    GROUP BY (c.user->>'id')::numeric, (p.user->>'id')::numeric
+    GROUP BY (c.user->>'id')::bigint, (p.user->>'id')::bigint
   `,
 })
 export class UserCommentRelationView {
@@ -69,11 +71,12 @@ export class UserCommentRelationView {
 }
 
 @ViewEntity({
-  name: 'user_repost_relations_view',
+  name: 'user_repost_relations_mv',
+  materialized: true,
   expression: `
     SELECT
-      (r.user->>'id')::numeric as source_user_id,
-      (r.retweeted_status->'user'->>'id')::numeric as target_user_id,
+      (r.user->>'id')::bigint as source_user_id,
+      (r.retweeted_status->'user'->>'id')::bigint as target_user_id,
       COUNT(*) as weight,
       MIN(r.ingested_at) as first_interaction_at,
       MAX(r.ingested_at) as last_interaction_at
@@ -82,7 +85,7 @@ export class UserCommentRelationView {
       AND r.user->>'id' IS NOT NULL
       AND r.retweeted_status->'user'->>'id' IS NOT NULL
       AND r.user->>'id' != r.retweeted_status->'user'->>'id'
-    GROUP BY (r.user->>'id')::numeric, (r.retweeted_status->'user'->>'id')::numeric
+    GROUP BY (r.user->>'id')::bigint, (r.retweeted_status->'user'->>'id')::bigint
   `,
 })
 export class UserRepostRelationView {
