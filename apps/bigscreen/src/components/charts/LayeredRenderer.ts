@@ -21,8 +21,8 @@ export interface LayeredData {
 }
 
 export const LAYER_THRESHOLDS = {
-  CORE: 500,
-  MIDDLE: 2000,
+  CORE: 2000,
+  MIDDLE: 10000,
 };
 
 /**

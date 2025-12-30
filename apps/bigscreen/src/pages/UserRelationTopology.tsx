@@ -25,7 +25,7 @@ const UserRelationTopology: React.FC = () => {
   const { selectedTimeRange, setSelectedTimeRange } = useAppStore();
   const [relationType, setRelationType] = useState<UserRelationType>('comprehensive');
   const [minWeight, setMinWeight] = useState(1);
-  const [limit, setLimit] = useState(2000);
+  const [limit, setLimit] = useState(10000);
   const [selectedNode, setSelectedNode] = useState<UserRelationNode | null>(null);
 
   const { network, isLoading, error, refetch } = useUserRelationNetwork({
