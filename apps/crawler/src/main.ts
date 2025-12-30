@@ -4,7 +4,7 @@ import "@sker/workflow";
 import "@sker/workflow-ast";
 import "@sker/workflow-run";
 import { root, logger } from '@sker/core';
-import { entitiesProviders, useEntityManager, UserRelationStatisticsQueries } from '@sker/entities';
+import { entitiesProviders, useEntityManager, UserRelationStatisticsQueries, OverviewStatisticsQueries } from '@sker/entities';
 import { CronSchedulerService } from '@sker/workflow-run';
 import * as schedule from 'node-schedule';
 
@@ -61,23 +61,55 @@ async function bootstrap() {
   // 每10分钟执行一次
   const statsJob = schedule.scheduleJob('*/10 * * * *', runUserRelationStats);
 
+  // 概览统计增量更新任务
+  const runOverviewStats = async () => {
+    try {
+      logger.info('🔄 开始执行概览增量统计...');
+      const startTime = Date.now();
+
+      const result = await useEntityManager(manager =>
+        OverviewStatisticsQueries.runIncrementalStats(manager)
+      );
+
+      const duration = Date.now() - startTime;
+      logger.info('✅ 概览增量统计完成', {
+        duration: `${duration}ms`,
+        hourly: result.hourly,
+        daily: result.daily
+      });
+    } catch (error: any) {
+      logger.error('❌ 概览增量统计失败', {
+        error: error.message,
+        stack: error.stack
+      });
+    }
+  };
+
+  const overviewStatsJob = schedule.scheduleJob('*/10 * * * *', runOverviewStats);
+
   // 启动时立即执行一次
   runUserRelationStats();
+  runOverviewStats();
 
   logger.info('✅ Crawler 服务启动成功', {
     schedulerType: 'node-schedule',
     activeJobs: scheduler.getJobCount(),
-    userStatsJob: statsJob ? 'scheduled' : 'failed'
+    userStatsJob: statsJob ? 'scheduled' : 'failed',
+    overviewStatsJob: overviewStatsJob ? 'scheduled' : 'failed'
   });
 
   // 优雅关闭
   const shutdown = async () => {
     logger.info('📴 Crawler 服务关闭中...');
 
-    // 取消用户关系统计任务
+    // 取消统计任务
     if (statsJob) {
       statsJob.cancel();
       logger.info('✅ 用户关系统计任务已取消');
+    }
+    if (overviewStatsJob) {
+      overviewStatsJob.cancel();
+      logger.info('✅ 概览统计任务已取消');
     }
 
     await scheduler.stopAll();

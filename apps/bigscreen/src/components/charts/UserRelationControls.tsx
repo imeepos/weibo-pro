@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { RefreshCw, Link, ThumbsUp, MessageCircle, Share2, ChevronDown, ChevronUp } from 'lucide-react';
 import type { UserRelationType } from '@sker/sdk';
 
@@ -31,6 +31,22 @@ const UserRelationControls: React.FC<UserRelationControlsProps> = ({
     const saved = localStorage.getItem('controlPanel.collapsed');
     return saved ? JSON.parse(saved) : false;
   });
+
+  useEffect(() => {
+    localStorage.setItem('userRelation.relationType', relationType);
+  }, [relationType]);
+
+  useEffect(() => {
+    localStorage.setItem('userRelation.minWeight', String(minWeight));
+  }, [minWeight]);
+
+  useEffect(() => {
+    localStorage.setItem('userRelation.limit', String(limit));
+  }, [limit]);
+
+  useEffect(() => {
+    localStorage.setItem('userRelation.edgeThreshold', String(edgeThreshold));
+  }, [edgeThreshold]);
 
   const handleToggleCollapse = () => {
     const newState = !isCollapsed;

@@ -8,6 +8,7 @@ import {
   WeiboUserEntity,
   PostNLPResultEntity,
   useEntityManager,
+  OverviewStatistics,
 } from '@sker/entities';
 import {
   OverviewStatisticsData,
@@ -45,11 +46,11 @@ export class OverviewService {
       const current = getTimeRangeBoundaries(timeRange);
       const previous = getPreviousTimeRangeBoundaries(timeRange);
 
-      // 查询当前时间范围的统计数据
-      const currentStats = await this.fetchStatisticsData(manager, current.start, current.end);
+      // 从统计表查询当前时间范围的数据
+      const currentStats = await this.fetchStatisticsFromTable(manager, current.start, current.end);
 
-      // 查询上一个时间范围的统计数据（用于计算变化率）
-      const previousStats = await this.fetchStatisticsData(manager, previous.start, previous.end);
+      // 从统计表查询上一个时间范围的数据
+      const previousStats = await this.fetchStatisticsFromTable(manager, previous.start, previous.end);
 
       return {
         eventCount: currentStats.eventCount,
@@ -62,6 +63,27 @@ export class OverviewService {
         interactionCountChange: calculateChangeRate(currentStats.interactionCount, previousStats.interactionCount),
       };
     });
+  }
+
+  private async fetchStatisticsFromTable(manager: any, start: Date, end: Date) {
+    // 从预聚合的统计表查询数据
+    const result = await manager
+      .getRepository(OverviewStatistics)
+      .createQueryBuilder('stats')
+      .select('SUM(stats.event_count)', 'eventCount')
+      .addSelect('SUM(stats.post_count)', 'postCount')
+      .addSelect('SUM(stats.user_count)', 'userCount')
+      .addSelect('SUM(stats.interaction_count)', 'interactionCount')
+      .where('stats.period_start >= :start', { start })
+      .andWhere('stats.period_start < :end', { end })
+      .getRawOne();
+
+    return {
+      eventCount: parseInt(result?.eventCount || '0', 10),
+      postCount: parseInt(result?.postCount || '0', 10),
+      userCount: parseInt(result?.userCount || '0', 10),
+      interactionCount: parseInt(result?.interactionCount || '0', 10),
+    };
   }
 
   private async fetchStatisticsData(manager: any, start: Date, end: Date) {
