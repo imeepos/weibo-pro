@@ -50,6 +50,7 @@ export type LayoutWorkerMessage =
   | { type: 'STOP' }
   | { type: 'STEP'; iterations?: number }
   | { type: 'SET_CONFIG'; config: Partial<LayoutConfig> }
+  | { type: 'SET_COMMUNITIES'; nodeCommunities: [number, number][] }
   | { type: 'DISPOSE' };
 
 /**

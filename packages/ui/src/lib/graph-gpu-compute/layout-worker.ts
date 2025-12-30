@@ -57,6 +57,10 @@ self.onmessage = (event: MessageEvent<LayoutWorkerMessage>) => {
         handleSetConfig(message.config);
         break;
 
+      case 'SET_COMMUNITIES':
+        handleSetCommunities(message.nodeCommunities);
+        break;
+
       case 'DISPOSE':
         handleDispose();
         break;
@@ -170,6 +174,17 @@ function handleStep(iterations: number = 1): void {
 function handleSetConfig(config: Partial<LayoutConfig>): void {
   // TODO: 实现配置更新
   console.log('⚙️ LayoutWorker: 更新配置', config);
+}
+
+/**
+ * 设置社群信息
+ */
+function handleSetCommunities(nodeCommunities: [number, number][]): void {
+  if (!layout || !(layout instanceof SimpleForceLayout)) return;
+
+  const communityMap = new Map<number, number>(nodeCommunities);
+  layout.setCommunities(communityMap);
+  console.log(`🎨 LayoutWorker: 设置社群信息，共 ${communityMap.size} 个节点`);
 }
 
 /**

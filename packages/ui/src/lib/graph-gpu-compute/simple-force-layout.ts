@@ -45,6 +45,10 @@ export class SimpleForceLayout implements IForceLayout {
   private barnesHutTree: BarnesHutTree | null = null;
   private useBarnesHut: boolean = false;
 
+  // 社群信息
+  private nodeCommunities: Map<number, number> = new Map();
+  private communityMultiplier: number = 3.0;
+
   constructor() {
     this.config = { ...DEFAULT_CONFIG };
     this.positions = new Float32Array(0);
@@ -170,6 +174,7 @@ export class SimpleForceLayout implements IForceLayout {
 
   /**
    * 计算斥力（Coulomb's Law）- 直接 O(n²) 版本
+   * 支持社群感知：不同社群间的斥力更强
    */
   private calculateRepulsion(): void {
     const { repulsionStrength } = this.config;
@@ -191,8 +196,15 @@ export class SimpleForceLayout implements IForceLayout {
         const distSq = dx * dx + dy * dy + dz * dz + 0.01; // 避免除零
         const dist = Math.sqrt(distSq);
 
+        // 社群感知：不同社群间增强斥力
+        const iCommunity = this.nodeCommunities.get(i);
+        const jCommunity = this.nodeCommunities.get(j);
+        const multiplier = (iCommunity !== undefined && jCommunity !== undefined && iCommunity !== jCommunity)
+          ? this.communityMultiplier
+          : 1.0;
+
         // 计算斥力 F = k / r²
-        const force = repulsionStrength / distSq;
+        const force = (repulsionStrength * multiplier) / distSq;
 
         // 归一化方向
         const fx = (force * dx) / dist;
@@ -312,5 +324,12 @@ export class SimpleForceLayout implements IForceLayout {
     this.masses = new Float32Array(0);
     this.barnesHutTree?.clear();
     this.barnesHutTree = null;
+  }
+
+  /**
+   * 设置节点社群信息
+   */
+  setCommunities(nodeCommunities: Map<number, number>): void {
+    this.nodeCommunities = nodeCommunities;
   }
 }

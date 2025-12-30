@@ -148,6 +148,18 @@ export function useGraphLayout(options: UseGraphLayoutOptions) {
     } as LayoutWorkerMessage);
   }, []);
 
+  /**
+   * 设置社群信息
+   */
+  const setCommunities = useCallback((nodeCommunities: Map<number, number>) => {
+    if (!workerRef.current) return;
+
+    workerRef.current.postMessage({
+      type: 'SET_COMMUNITIES',
+      nodeCommunities: Array.from(nodeCommunities.entries()),
+    } as LayoutWorkerMessage);
+  }, []);
+
   return {
     workerRef,
     isLayouting,
@@ -155,5 +167,6 @@ export function useGraphLayout(options: UseGraphLayoutOptions) {
     startLayout,
     stopLayout,
     stepLayout,
+    setCommunities,
   };
 }

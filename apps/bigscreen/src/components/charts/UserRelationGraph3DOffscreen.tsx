@@ -63,6 +63,7 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
     layoutState,
     startLayout,
     stopLayout,
+    setCommunities,
   } = useGraphLayout({
     buffers: sharedBuffers,
     nodeCount,
@@ -165,6 +166,11 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
             // 通知 Worker 更新节点数量
             updateWorkerNodeCount(totalNodesLoaded);
 
+            // 第一批数据加载完成后就显示画布
+            if (totalNodesLoaded > 0 && isLoading) {
+              setIsLoading(false);
+            }
+
             console.log(`📦 已加载 ${totalNodesLoaded} 个节点`);
           }
 
@@ -203,6 +209,18 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
           });
         });
 
+        // 创建节点索引到社区的映射（用于布局算法）
+        const nodeIndexToCommunity = new Map<number, number>();
+        for (let i = 0; i < totalNodesLoaded; i++) {
+          const nodeId = allMetadata[i]?.id;
+          if (nodeId) {
+            const communityId = nodeToCommunity.get(nodeId);
+            if (communityId !== undefined) {
+              nodeIndexToCommunity.set(i, communityId);
+            }
+          }
+        }
+
         // 用社区颜色覆盖节点颜色
         for (let i = 0; i < totalNodesLoaded; i++) {
           const nodeId = allMetadata[i]?.id;
@@ -224,12 +242,14 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
           }
         }
 
+        // 将社群信息传递给布局引擎
+        setCommunities(nodeIndexToCommunity);
+
         // 数据加载完成后，启动布局计算
         console.log('🚀 启动布局计算...');
         startLayout();
       } catch (error) {
         console.error('❌ 数据加载失败:', error);
-      } finally {
         setIsLoading(false);
       }
     };
@@ -256,18 +276,18 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
         style={{ display: 'block' }}
       />
 
-      {/* 加载进度 */}
-      {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm">
-          <div className="text-foreground text-center">
-            <div className="inline-block w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mb-2"></div>
-            <p className="text-sm">加载中... {loadProgress.toLocaleString()} 节点</p>
+      {/* 加载进度 - 改为角落提示 */}
+      {loadProgress < nodeCount && nodeCount > 0 && (
+        <div className="absolute top-4 right-4 bg-background/90 backdrop-blur-sm text-foreground px-3 py-2 text-xs rounded-lg shadow-lg border border-border">
+          <div className="flex items-center gap-2">
+            <div className="inline-block w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+            <span>加载中 {loadProgress.toLocaleString()} 节点</span>
           </div>
         </div>
       )}
 
       {/* 调试 HUD */}
-      {showDebugHud && !isLoading && (
+      {showDebugHud && nodeCount > 0 && (
         <div className="absolute top-4 left-4 bg-background/80 backdrop-blur-sm text-foreground p-3 text-xs font-mono rounded shadow-lg space-y-2 border border-border">
           <div className="font-bold text-primary">🎨 OffscreenCanvas 渲染器</div>
           <div className="grid grid-cols-2 gap-x-4 gap-y-1">
@@ -354,7 +374,7 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
       )}
 
       {/* 提示信息 */}
-      {!isLoading && (
+      {nodeCount > 0 && (
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-background/80 text-foreground px-4 py-2 text-xs rounded-lg backdrop-blur-sm border border-border">
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1.5">

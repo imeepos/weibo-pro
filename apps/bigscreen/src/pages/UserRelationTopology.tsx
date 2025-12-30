@@ -65,14 +65,14 @@ const UserRelationTopology: React.FC = () => {
   }, []);
 
   return (
-    <div className="h-full bg-background text-foreground relative overflow-hidden flex flex-col">
+    <div className="h-full bg-gray-50 dark:bg-gray-950 text-foreground relative overflow-hidden flex flex-col">
       {/* 背景网格 */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]" />
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:24px_24px]" />
 
       {/* 未来感渐变光晕 - 多层叠加 */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-gradient-to-br from-cyan/20 via-primary/10 to-transparent blur-3xl rounded-full animate-pulse-slow" />
-      <div className="absolute top-20 left-1/4 w-[300px] h-[300px] bg-gradient-to-br from-violet/15 to-transparent blur-3xl rounded-full" />
-      <div className="absolute top-20 right-1/4 w-[300px] h-[300px] bg-gradient-to-br from-fuchsia/15 to-transparent blur-3xl rounded-full" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-gradient-to-br from-cyan-500/20 via-primary/10 to-transparent dark:from-cyan-500/30 dark:via-primary/20 blur-3xl rounded-full animate-pulse-slow" />
+      <div className="absolute top-20 left-1/4 w-[300px] h-[300px] bg-gradient-to-br from-violet-500/15 to-transparent dark:from-violet-500/25 blur-3xl rounded-full" />
+      <div className="absolute top-20 right-1/4 w-[300px] h-[300px] bg-gradient-to-br from-fuchsia-500/15 to-transparent dark:from-fuchsia-500/25 blur-3xl rounded-full" />
 
       {/* 主内容区 - flex布局占满剩余空间 */}
       <div className="relative flex-1 overflow-hidden">
@@ -81,9 +81,9 @@ const UserRelationTopology: React.FC = () => {
           <div className="absolute inset-0">
             {network.nodes.length === 0 ? (
               <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <div className="text-5xl mb-3 text-muted-foreground">—</div>
-                  <div className="text-lg text-muted-foreground mb-1">暂无数据</div>
+                <div className="text-center backdrop-blur-md bg-background/80 dark:bg-background/60 rounded-xl shadow-2xl border border-border/50 p-8">
+                  <div className="text-6xl mb-4 text-muted-foreground">—</div>
+                  <div className="text-xl font-semibold text-foreground mb-2">暂无数据</div>
                   <div className="text-muted-foreground text-sm">
                     尝试调整筛选条件或扩大时间范围
                   </div>
@@ -103,24 +103,25 @@ const UserRelationTopology: React.FC = () => {
 
         {/* 加载状态 */}
         {isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center">
-              <div className="inline-block w-12 h-12 border-3 border-primary border-t-transparent rounded-full animate-spin mb-3" />
-              <div className="text-lg text-muted-foreground">加载网络数据中...</div>
+          <div className="absolute inset-0 flex items-center justify-center backdrop-blur-sm bg-background/30">
+            <div className="text-center backdrop-blur-md bg-background/80 dark:bg-background/60 rounded-xl shadow-2xl border border-border/50 p-8">
+              <div className="inline-block w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
+              <div className="text-lg font-semibold text-foreground">加载网络数据中...</div>
+              <div className="text-sm text-muted-foreground mt-2">正在构建关系图谱</div>
             </div>
           </div>
         )}
 
         {/* 错误状态 */}
         {error && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center max-w-md p-6">
-              <div className="text-2xl font-bold mb-1 text-destructive">错误</div>
-              <div className="text-lg text-destructive mb-2">加载失败</div>
-              <div className="text-muted-foreground mb-4 text-sm">{error}</div>
+          <div className="absolute inset-0 flex items-center justify-center backdrop-blur-sm bg-background/30">
+            <div className="text-center max-w-md backdrop-blur-md bg-background/80 dark:bg-background/60 rounded-xl shadow-2xl border border-border/50 p-8">
+              <div className="text-3xl font-bold mb-2 text-destructive">错误</div>
+              <div className="text-lg text-destructive mb-3">加载失败</div>
+              <div className="text-muted-foreground mb-6 text-sm bg-destructive/10 rounded-lg p-3">{error}</div>
               <button
                 onClick={refetch}
-                className="px-5 py-2.5 bg-primary hover:bg-primary/90 rounded-md transition-colors text-primary-foreground font-medium text-sm"
+                className="px-6 py-3 bg-primary hover:bg-primary/90 rounded-lg transition-all duration-200 text-primary-foreground font-medium text-sm shadow-md hover:shadow-lg"
               >
                 重试
               </button>
