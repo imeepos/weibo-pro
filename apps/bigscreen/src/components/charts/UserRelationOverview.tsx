@@ -20,7 +20,7 @@ export const UserRelationOverview: React.FC<UserRelationOverviewProps> = ({
   const [networkData, setNetworkData] = useState<UserRelationNetwork | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { selectedTimeRange } = useAppStore()
+  const selectedTimeRange = useAppStore((state) => state.selectedTimeRange);
   // 获取真实数据
   const fetchNetwork = useCallback(async () => {
     setLoading(true);

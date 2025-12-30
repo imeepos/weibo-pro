@@ -77,16 +77,10 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
   enableCommunities = false,
 }) => {
   const fgRef = useRef<ForceGraph3DHandle>(null);
-  const [hoverNode, setHoverNode] = useState<UserRelationNode | null>(null);
   const [highlightNodes, setHighlightNodes] = useState<Set<string>>(new Set());
-  const [fps, setFps] = useState(60);
-  const frameCountRef = useRef(0);
-  const lastTimeRef = useRef(performance.now());
-  const fpsUpdateIntervalRef = useRef<any>(null);
 
   // 交互增强状态
   const [currentWeights, setCurrentWeights] = useState<NodeSizeWeights>(nodeSizeWeights);
-  const [currentLinkConfig, setCurrentLinkConfig] = useState<LinkDistanceConfig>(linkDistanceConfig);
   const [currentVisualization, setCurrentVisualization] = useState({
     enableNodeShapes,
     enableNodeOpacity,
@@ -98,12 +92,10 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
   const [performanceConfig, setPerformanceConfig] = useState<PerformanceConfig>(DEFAULT_PERFORMANCE_CONFIG);
   const frameRateMonitorRef = useRef(new FrameRateMonitor());
   const memoryMonitorRef = useRef(new MemoryMonitor());
-  const [sampledData, setSampledData] = useState<{ nodes: any[]; edges: any[] } | null>(null);
 
   // 社群检测状态
   const [communityMapping, setCommunityMapping] = useState<CommunityMapping | null>(null);
   const [interCommunityRelations, setInterCommunityRelations] = useState<any[]>([]);
-  const [layerStats, setLayerStats] = useState<any>(null);
 
   const { nodeThreeObject } = useForceGraphNodeRenderer({
     highlightNodes,
@@ -185,7 +177,6 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
 
     // 应用分层渲染策略
     const renderData = getRenderData(nodesWithScores, processedEdges, 'compositeScore');
-    setLayerStats(renderData.stats || null);
 
     // 应用性能优化采样（仅在分层后仍然节点过多时）
     if (performanceConfig.enableSampling && renderData.nodes.length > LAYER_THRESHOLDS.CORE) {
@@ -195,7 +186,6 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
         performanceConfig,
         (a, b) => (b.compositeScore || 0) - (a.compositeScore || 0)
       );
-      setSampledData({ nodes: sampled.nodes, edges: sampled.edges });
       return {
         nodes: sampled.nodes,
         links: sampled.edges.map(edge => ({
@@ -207,7 +197,6 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
       };
     }
 
-    setSampledData(null);
     return {
       nodes: renderData.nodes,
       links: renderData.edges.map(edge => ({
@@ -292,36 +281,6 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
     }
   }, [network.nodes, network.edges, currentVisualization.enableCommunities]);
 
-  useEffect(() => {
-    if (!showDebugHud) return;
-
-    if (fpsUpdateIntervalRef.current) {
-      clearInterval(fpsUpdateIntervalRef.current);
-    }
-
-    fpsUpdateIntervalRef.current = setInterval(() => {
-      const currentTime = performance.now();
-      const deltaTime = currentTime - lastTimeRef.current;
-
-      if (deltaTime > 0 && frameCountRef.current > 0) {
-        const avgFrameTime = deltaTime / frameCountRef.current;
-        const currentFps = Math.round(1000 / avgFrameTime);
-
-        setFps(currentFps);
-      }
-
-      frameCountRef.current = 0;
-      lastTimeRef.current = currentTime;
-    }, 500);
-
-    return () => {
-      if (fpsUpdateIntervalRef.current) {
-        clearInterval(fpsUpdateIntervalRef.current);
-      }
-    };
-  }, [showDebugHud]);
-
-
   // 性能优化：简化点击效果，禁用相机动画和复杂聚焦计算
   const handleNodeClick = useCallback((node: any) => {
     if (onNodeClick) {
@@ -333,11 +292,8 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
 
   // 性能优化：简化悬停效果，避免频繁计算邻居节点
   const handleNodeHover = useCallback((node: any) => {
-    const typedNode = node as UserRelationNode | null;
-    setHoverNode(typedNode);
-
     if (onNodeHover) {
-      onNodeHover(typedNode);
+      onNodeHover(node as UserRelationNode | null);
     }
 
     // 性能优化：禁用悬停高亮邻居节点，减少大数据量场景下的实时计算
@@ -412,41 +368,6 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
               onValueChange={(v) => setCurrentWeights({ ...currentWeights, [key]: v / 100 })}
             />
           ))}
-        </ControlGroup>
-
-        <ControlGroup
-          title="连线设置"
-          onReset={() => setCurrentLinkConfig(DEFAULT_LINK_CONFIG)}
-        >
-          <SwitchControl
-            label="动态连线长度"
-            checked={currentLinkConfig.useDynamicDistance}
-            onCheckedChange={(checked) =>
-              setCurrentLinkConfig({ ...currentLinkConfig, useDynamicDistance: checked })
-            }
-          />
-          {currentLinkConfig.useDynamicDistance && (
-            <>
-              <SliderControl
-                label="最小距离"
-                value={currentLinkConfig.minDistance}
-                min={20}
-                max={100}
-                onValueChange={(v) =>
-                  setCurrentLinkConfig({ ...currentLinkConfig, minDistance: v })
-                }
-              />
-              <SliderControl
-                label="最大距离"
-                value={currentLinkConfig.maxDistance}
-                min={100}
-                max={300}
-                onValueChange={(v) =>
-                  setCurrentLinkConfig({ ...currentLinkConfig, maxDistance: v })
-                }
-              />
-            </>
-          )}
         </ControlGroup>
 
         <ControlGroup title="可视化效果">
