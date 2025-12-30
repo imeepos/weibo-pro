@@ -21,12 +21,12 @@ export const createDatabaseConfig = (): DataSourceOptions => {
         timezone: 'UTC',
         max: 30,
         min: 5,
-        idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 10000,
-        statement_timeout: 120000,
-        query_timeout: 120000,
+        idleTimeoutMillis: 30 * 1000,
+        connectionTimeoutMillis: 30 * 1000,
+        statement_timeout: 10 * 60 * 1000,
+        query_timeout: 30 * 60 * 1000,
         keepAlive: true,
-        keepAliveInitialDelayMillis: 10000,
+        keepAliveInitialDelayMillis: 10 * 1000,
       },
     };
   }
