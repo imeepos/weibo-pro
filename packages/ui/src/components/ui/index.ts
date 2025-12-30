@@ -29,4 +29,5 @@ export * from './persona-selector';
 export * from './visually-hidden';
 export * from './weibo-account-list';
 export * from './use-instanced-node-renderer';
+export * from './use-points-renderer';
 export { toast } from 'sonner';

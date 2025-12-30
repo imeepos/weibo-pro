@@ -23,6 +23,7 @@ export interface LayeredData {
 export const LAYER_THRESHOLDS = {
   CORE: 2000,
   MIDDLE: 10000,
+  BACKGROUND: 100000,
 };
 
 /**
@@ -70,12 +71,18 @@ export function stratifyNodes(
 
 /**
  * 获取渲染数据（根据节点数量自动选择策略）
+ *
+ * 策略：
+ * - ≤2000: 全量渲染
+ * - 2000-10000: 核心层 + 中间层
+ * - 10000-100000: 仅核心层（中间层和背景层使用点云）
+ * - >100000: 核心层 + 采样（背景层使用点云）
  */
 export function getRenderData(
   nodes: any[],
   edges: any[],
   scoreKey: string = 'compositeScore'
-): { nodes: any[]; edges: any[]; isLayered: boolean; stats?: any } {
+): { nodes: any[]; edges: any[]; isLayered: boolean; stats?: any; backgroundNodes?: any[] } {
   if (nodes.length <= LAYER_THRESHOLDS.CORE) {
     return { nodes, edges, isLayered: false };
   }
@@ -91,10 +98,12 @@ export function getRenderData(
     };
   }
 
+  // 超过 10000 节点：核心层用 InstancedMesh，背景层用点云
   return {
     nodes: layered.coreNodes,
     edges: layered.coreEdges,
     isLayered: true,
     stats: layered.stats,
+    backgroundNodes: [...layered.middleNodes, ...layered.backgroundNodes],
   };
 }
