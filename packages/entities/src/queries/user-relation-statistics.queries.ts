@@ -147,8 +147,9 @@ export class UserRelationStatisticsQueries {
           c.id,
           c.ingested_at
         FROM weibo_comments c
-        JOIN weibo_posts p ON c.rootidstr = p.idstr
+        JOIN weibo_posts p ON (regexp_match(c.analysis_extra, 'mid:([0-9]+)'))[1] = p.mid
         WHERE c.id > $1
+          AND c.analysis_extra IS NOT NULL
           AND c."user"->>'id' IS NOT NULL
           AND p."user"->>'id' IS NOT NULL
           AND c."user"->>'id' != p."user"->>'id'
@@ -246,14 +247,14 @@ export class UserRelationStatisticsQueries {
       `
       WITH source_data AS (
         SELECT
-          l.user_weibo_id as source_user_id,
+          l.user_weibo_id::bigint as source_user_id,
           (p."user"->>'id')::bigint as target_user_id,
-          l.id,
+          l.id::bigint,
           l.created_at
         FROM weibo_likes l
-        JOIN weibo_posts p ON l.target_weibo_id::text = p.id::text
-        WHERE l.id > $1
-          AND l.user_weibo_id != (p."user"->>'id')::bigint
+        JOIN weibo_posts p ON l.target_weibo_id::bigint = p.id
+        WHERE l.id::bigint > $1
+          AND l.user_weibo_id::bigint != (p."user"->>'id')::bigint
           AND p."user"->>'id' IS NOT NULL
         ORDER BY l.id ASC
         LIMIT $2
