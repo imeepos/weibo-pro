@@ -58,8 +58,8 @@ async function bootstrap() {
     }
   };
 
-  // 每小时执行一次（在每小时的第5分钟执行，避免整点高峰）
-  const statsJob = schedule.scheduleJob('5 * * * *', runUserRelationStats);
+  // 每10分钟执行一次
+  const statsJob = schedule.scheduleJob('*/10 * * * *', runUserRelationStats);
 
   // 启动时立即执行一次
   runUserRelationStats();
