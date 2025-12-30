@@ -5,6 +5,7 @@
 
 import * as THREE from 'three';
 import { NodeMeshPool } from './node-mesh-pool';
+import { EdgeMeshPool } from './edge-mesh-pool';
 import type { RendererConfig, RenderConfig, SharedBuffers } from './types';
 
 const DEFAULT_RENDER_CONFIG: RenderConfig = {
@@ -21,11 +22,14 @@ export class OffscreenThreeRenderer {
   private scene: THREE.Scene;
   private camera: THREE.PerspectiveCamera;
   private nodeMeshPool: NodeMeshPool;
+  private edgeMeshPool: EdgeMeshPool | null = null;
 
   // 共享缓冲区视图
   private positions: Float32Array | null = null;
   private colors: Float32Array | null = null;
   private sizes: Float32Array | null = null;
+  private edgeIndices: Uint32Array | null = null;
+  private edgeWeights: Float32Array | null = null;
 
   // 渲染配置
   private config: RendererConfig;
@@ -36,8 +40,9 @@ export class OffscreenThreeRenderer {
   private frameCount: number = 0;
   private fps: number = 0;
 
-  // 节点数量
+  // 节点和边数量
   private nodeCount: number = 0;
+  private edgeCount: number = 0;
 
   constructor(canvas: OffscreenCanvas, config: RendererConfig) {
     this.canvas = canvas;
@@ -103,6 +108,15 @@ export class OffscreenThreeRenderer {
     });
 
     this.scene.add(this.nodeMeshPool.getMesh());
+
+    // 初始化边池（如果启用）
+    if (this.renderConfig.enableEdges) {
+      this.edgeMeshPool = new EdgeMeshPool({
+        maxEdges: this.config.maxEdges,
+        opacity: this.renderConfig.edgeOpacity,
+      });
+      this.scene.add(this.edgeMeshPool.getMesh());
+    }
   }
 
   /**
@@ -131,6 +145,8 @@ export class OffscreenThreeRenderer {
     this.positions = new Float32Array(buffers.position);
     this.colors = new Float32Array(buffers.color);
     this.sizes = new Float32Array(buffers.size);
+    this.edgeIndices = new Uint32Array(buffers.edgeIndex);
+    this.edgeWeights = new Float32Array(buffers.edgeWeight);
   }
 
   /**
@@ -139,6 +155,16 @@ export class OffscreenThreeRenderer {
   setNodeCount(count: number): void {
     this.nodeCount = count;
     this.nodeMeshPool.setNodeCount(count);
+  }
+
+  /**
+   * 设置边数量
+   */
+  setEdgeCount(count: number): void {
+    this.edgeCount = count;
+    if (this.edgeMeshPool) {
+      this.edgeMeshPool.setEdgeCount(count);
+    }
   }
 
   /**
@@ -156,6 +182,15 @@ export class OffscreenThreeRenderer {
       this.sizes,
       this.nodeCount
     );
+
+    // 更新边
+    if (this.edgeMeshPool && this.edgeIndices && this.edgeCount > 0) {
+      this.edgeMeshPool.updateFromBuffers(
+        this.positions,
+        this.edgeIndices,
+        this.edgeCount
+      );
+    }
   }
 
   /**
@@ -242,6 +277,7 @@ export class OffscreenThreeRenderer {
    */
   dispose(): void {
     this.nodeMeshPool.dispose();
+    this.edgeMeshPool?.dispose();
     this.renderer.dispose();
   }
 }

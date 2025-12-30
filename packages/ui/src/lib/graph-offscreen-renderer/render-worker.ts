@@ -40,7 +40,7 @@ self.onmessage = (event: MessageEvent<RenderWorkerMessage>) => {
         break;
 
       case 'UPDATE_EDGE_COUNT':
-        // 暂时不处理边
+        handleUpdateEdgeCount(message.count);
         break;
 
       case 'UPDATE_VISIBILITY':
@@ -107,6 +107,14 @@ function handleUpdateBuffers(buffers: SharedBuffers): void {
 function handleUpdateNodeCount(count: number): void {
   if (!renderer) return;
   renderer.setNodeCount(count);
+}
+
+/**
+ * 更新边数量
+ */
+function handleUpdateEdgeCount(count: number): void {
+  if (!renderer) return;
+  renderer.setEdgeCount(count);
 }
 
 /**

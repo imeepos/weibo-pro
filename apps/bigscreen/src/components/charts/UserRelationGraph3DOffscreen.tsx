@@ -11,6 +11,7 @@ import {
   useGraphStore,
 } from '@sker/ui/lib/graph-data-stream';
 import { useOffscreenGraph } from '@sker/ui/lib/graph-offscreen-renderer';
+import { useGraphLayout } from '@sker/ui/lib/graph-gpu-compute';
 
 interface UserRelationGraph3DOffscreenProps {
   network: UserRelationNetwork;
@@ -52,27 +53,58 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
     setNodeIdMap,
   } = useGraphStore();
 
+  // 布局 Hook
+  const {
+    isLayouting,
+    layoutState,
+    startLayout,
+    stopLayout,
+  } = useGraphLayout({
+    buffers: sharedBuffers,
+    nodeCount,
+    edgeCount,
+    autoStart: false, // 手动控制
+    config: {
+      maxIterations: 300,
+      repulsionStrength: 100,
+      attractionStrength: 0.1,
+      damping: 0.85,
+    },
+    onProgress: (state) => {
+      // 每 20 次迭代输出一次进度
+      if (state.iteration % 20 === 0) {
+        console.log(`🔄 布局进度: ${state.iteration}/${state.iteration}`, {
+          energy: state.energy.toFixed(2),
+          delta: state.delta.toFixed(4),
+        });
+      }
+    },
+    onConverged: (state) => {
+      console.log('✅ 布局收敛完成', state);
+    },
+  });
+
   // OffscreenCanvas Hook
-  const { handleClick, setNodeCount: updateWorkerNodeCount } = useOffscreenGraph(
-    canvasRef,
-    sharedBuffers,
-    {
-      maxNodes: MAX_NODES,
-      maxEdges: MAX_EDGES,
-      onReady: () => {
-        console.log('✅ OffscreenCanvas 渲染器已就绪');
-      },
-      onError: (error) => {
-        console.error('❌ 渲染器错误:', error);
-      },
-      onNodeClick: (nodeIndex) => {
-        const node = nodeMetadata[nodeIndex];
-        if (node && onNodeClick) {
-          onNodeClick(node as any);
-        }
-      },
-    }
-  );
+  const {
+    handleClick,
+    setNodeCount: updateWorkerNodeCount,
+    workerRef,
+  } = useOffscreenGraph(canvasRef, sharedBuffers, {
+    maxNodes: MAX_NODES,
+    maxEdges: MAX_EDGES,
+    onReady: () => {
+      console.log('✅ OffscreenCanvas 渲染器已就绪');
+    },
+    onError: (error) => {
+      console.error('❌ 渲染器错误:', error);
+    },
+    onNodeClick: (nodeIndex) => {
+      const node = nodeMetadata[nodeIndex];
+      if (node && onNodeClick) {
+        onNodeClick(node as any);
+      }
+    },
+  });
 
   /**
    * 加载图数据
@@ -133,12 +165,25 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
             manager.batchUpdateEdgeIndices(binaryEdges.indices);
             manager.batchUpdateEdgeWeights(binaryEdges.weights);
 
-            setEdgeCount(edgeChunk.progress);
+            const currentEdgeCount = edgeChunk.progress;
+            setEdgeCount(currentEdgeCount);
+
+            // 通知渲染 Worker 更新边数量
+            if (workerRef.current) {
+              workerRef.current.postMessage({
+                type: 'UPDATE_EDGE_COUNT',
+                count: currentEdgeCount,
+              });
+            }
           }
         }
 
         setNodeMetadata(allMetadata);
         console.log(`✅ 数据加载完成: ${totalNodesLoaded} 节点, ${network.edges.length} 边`);
+
+        // 数据加载完成后，启动布局计算
+        console.log('🚀 启动布局计算...');
+        startLayout();
       } catch (error) {
         console.error('❌ 数据加载失败:', error);
       } finally {
@@ -149,6 +194,7 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
     loadData();
 
     return () => {
+      stopLayout();
       bufferManager?.dispose();
     };
   }, [network]);
@@ -175,8 +221,8 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
 
       {/* 调试 HUD */}
       {showDebugHud && !isLoading && (
-        <div className="absolute top-4 left-4 bg-black/80 text-white p-3 text-xs font-mono rounded shadow-lg">
-          <div className="mb-1 font-bold text-primary">🎨 OffscreenCanvas 渲染器</div>
+        <div className="absolute top-4 left-4 bg-black/80 text-white p-3 text-xs font-mono rounded shadow-lg space-y-2">
+          <div className="font-bold text-primary">🎨 OffscreenCanvas 渲染器</div>
           <div className="grid grid-cols-2 gap-x-4 gap-y-1">
             <div>FPS:</div>
             <div className="text-right">{fps.toFixed(1)}</div>
@@ -192,6 +238,32 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
               MB
             </div>
           </div>
+
+          {/* 布局状态 */}
+          {layoutState && (
+            <>
+              <div className="border-t border-white/20 pt-2"></div>
+              <div className="font-bold text-green-400">⚡ 布局计算</div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                <div>状态:</div>
+                <div className="text-right">
+                  {isLayouting ? (
+                    <span className="text-yellow-400">计算中...</span>
+                  ) : layoutState.isConverged ? (
+                    <span className="text-green-400">已收敛</span>
+                  ) : (
+                    <span className="text-gray-400">已停止</span>
+                  )}
+                </div>
+                <div>迭代:</div>
+                <div className="text-right">{layoutState.iteration}</div>
+                <div>能量:</div>
+                <div className="text-right">{layoutState.energy.toFixed(2)}</div>
+                <div>耗时:</div>
+                <div className="text-right">{(layoutState.elapsedTime / 1000).toFixed(1)}s</div>
+              </div>
+            </>
+          )}
         </div>
       )}
 

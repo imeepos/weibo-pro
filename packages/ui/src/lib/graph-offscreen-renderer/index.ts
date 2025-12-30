@@ -5,6 +5,7 @@
 
 export { useOffscreenGraph } from './use-offscreen-graph';
 export { NodeMeshPool } from './node-mesh-pool';
+export { EdgeMeshPool } from './edge-mesh-pool';
 export { OffscreenThreeRenderer } from './offscreen-three-renderer';
 
 export type {
@@ -15,5 +16,7 @@ export type {
   CameraConfig,
   NodeMeshPoolConfig,
 } from './types';
+
+export type { EdgeMeshPoolConfig } from './edge-mesh-pool';
 
 export type { UseOffscreenGraphOptions } from './use-offscreen-graph';
