@@ -24,7 +24,7 @@ export const useInstancedNodeRenderer = <TNode extends { id: string | number; va
   } = config;
 
   const meshRef = useRef<THREE.InstancedMesh | null>(null);
-  const dummy = useMemo(() => new THREE.Object3D(), []);
+  const dummyRef = useRef<THREE.Object3D>(new THREE.Object3D());
   const colorArray = useRef<Float32Array | null>(null);
 
   // 创建共享几何体和材质
@@ -62,6 +62,7 @@ export const useInstancedNodeRenderer = <TNode extends { id: string | number; va
   useEffect(() => {
     if (!meshRef.current || !colorArray.current) return;
 
+    const dummy = dummyRef.current;
     nodes.forEach((node, i) => {
       // 更新位置和缩放
       const x = node.x ?? 0;
@@ -94,7 +95,7 @@ export const useInstancedNodeRenderer = <TNode extends { id: string | number; va
     if (meshRef.current.instanceColor) {
       meshRef.current.instanceColor.needsUpdate = true;
     }
-  }, [nodes, getNodeRadius, getNodeColor, highlightNodes, dummy]);
+  }, [nodes, getNodeRadius, getNodeColor, highlightNodes]);
 
   return {
     instancedMesh: meshRef.current,

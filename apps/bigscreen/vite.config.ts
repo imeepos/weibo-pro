@@ -56,6 +56,11 @@ export default defineConfig(({ command }) => {
     },
     server: {
       host: true,
+      // SharedArrayBuffer 支持所需的安全头
+      headers: {
+        'Cross-Origin-Opener-Policy': 'same-origin',
+        'Cross-Origin-Embedder-Policy': 'require-corp',
+      },
       proxy: {
         // SSE 专用代理配置 - 必须在普通 API 之前
         '/api/sse': {
@@ -180,6 +185,30 @@ export default defineConfig(({ command }) => {
       exclude: ['echarts', 'web-vitals', '@sker/core', '@sker/workflow', '@sker/workflow-ui'],
       esbuildOptions: {
         target: 'es2020',
+      },
+    },
+
+    // Web Worker 支持
+    worker: {
+      format: 'es',
+      plugins: () => [
+        react() as PluginOption,
+        swc({
+          swcOptions: {
+            jsc: {
+              target: 'es2022',
+              parser: {
+                syntax: 'typescript',
+                tsx: false, // Worker 中不使用 TSX
+              },
+            },
+          },
+        }) as PluginOption,
+      ],
+      rollupOptions: {
+        output: {
+          format: 'es',
+        },
       },
     },
 

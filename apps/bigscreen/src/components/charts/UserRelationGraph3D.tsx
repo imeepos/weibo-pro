@@ -91,8 +91,14 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
 
   // 性能优化状态
   const [performanceConfig, setPerformanceConfig] = useState<PerformanceConfig>(DEFAULT_PERFORMANCE_CONFIG);
+  const performanceConfigRef = useRef<PerformanceConfig>(performanceConfig);
   const frameRateMonitorRef = useRef(new FrameRateMonitor());
   const memoryMonitorRef = useRef(new MemoryMonitor());
+
+  // 同步 performanceConfig 到 ref（避免在 useMemo 中使用 state）
+  useEffect(() => {
+    performanceConfigRef.current = performanceConfig;
+  }, [performanceConfig]);
 
   // 社群检测状态
   const [communityMapping, setCommunityMapping] = useState<CommunityMapping | null>(null);
@@ -116,8 +122,15 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
   }, []);
 
   const graphData = useMemo(() => {
+    const startTime = performance.now();
+
     let processedNodes = network.nodes;
     let processedEdges = network.edges;
+
+    // 性能监控：记录原始数据量
+    if (showDebugHud) {
+      console.log(`📊 图数据处理开始: ${processedNodes.length} 节点, ${processedEdges.length} 边`);
+    }
 
     // 计算连接数和综合得分
     const connectionCountMap = calculateConnectionCounts(processedEdges);
@@ -138,14 +151,17 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
     const renderData = getRenderData(nodesWithScores, processedEdges, 'compositeScore');
 
     // 应用性能优化采样（仅在分层后仍然节点过多时）
-    if (performanceConfig.enableSampling && renderData.nodes.length > LAYER_THRESHOLDS.CORE) {
+    // 使用 ref 避免依赖 performanceConfig state
+    const currentPerfConfig = performanceConfigRef.current;
+    let finalData;
+    if (currentPerfConfig.enableSampling && renderData.nodes.length > LAYER_THRESHOLDS.CORE) {
       const sampled = createSamplingStrategy(
         renderData.nodes,
         renderData.edges,
-        performanceConfig,
+        currentPerfConfig,
         (a, b) => (b.compositeScore || 0) - (a.compositeScore || 0)
       );
-      return {
+      finalData = {
         nodes: sampled.nodes,
         links: sampled.edges.map(edge => ({
           source: edge.source,
@@ -155,19 +171,30 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
         })),
         backgroundNodes: renderData.backgroundNodes || [],
       };
+    } else {
+      finalData = {
+        nodes: renderData.nodes,
+        links: renderData.edges.map(edge => ({
+          source: edge.source,
+          target: edge.target,
+          value: edge.weight,
+          type: edge.type,
+        })),
+        backgroundNodes: renderData.backgroundNodes || [],
+      };
     }
 
-    return {
-      nodes: renderData.nodes,
-      links: renderData.edges.map(edge => ({
-        source: edge.source,
-        target: edge.target,
-        value: edge.weight,
-        type: edge.type,
-      })),
-      backgroundNodes: renderData.backgroundNodes || [],
-    };
-  }, [network, currentWeights, performanceConfig]);
+    // 性能监控：记录处理时间
+    const duration = performance.now() - startTime;
+    if (showDebugHud) {
+      console.log(`✅ 图数据处理完成: ${finalData.nodes.length} 节点 (耗时 ${duration.toFixed(1)}ms)`);
+    }
+    if (duration > 500) {
+      console.warn(`⚠️ 图数据处理耗时过长: ${duration.toFixed(0)}ms`);
+    }
+
+    return finalData;
+  }, [network, currentWeights, showDebugHud]); // 移除 performanceConfig 依赖，使用 ref
 
   const { instancedMesh } = useInstancedNodeRenderer(graphData.nodes, {
     getNodeColor: (node: any) => {
@@ -240,7 +267,8 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
       const memoryUsageMB = memoryStats ? memoryStats.current / (1024 * 1024) : 0;
 
       if (currentFPS < 25 || memoryUsageMB > 400) {
-        const newConfig = getAdaptivePerformanceConfig(performanceConfig, currentFPS, memoryUsageMB);
+        // 使用 ref 获取最新的性能配置，避免循环依赖
+        const newConfig = getAdaptivePerformanceConfig(performanceConfigRef.current, currentFPS, memoryUsageMB);
         setPerformanceConfig(newConfig);
       }
     }, 1000);
@@ -248,15 +276,29 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
     return () => {
       clearInterval(monitorInterval);
     };
-  }, [showDebugHud, performanceConfig]);
+  }, [showDebugHud]); // 移除 performanceConfig 依赖
 
-  // 社群检测
+  // 社群检测（优化：添加节点数量限制和性能警告）
   useEffect(() => {
     if (currentVisualization.enableCommunities && network.nodes.length > 0 && network.edges.length > 0) {
-      setTimeout(() => {
+      // 性能保护：节点数超过 3000 时警告用户
+      if (network.nodes.length > 3000) {
+        console.warn(`⚠️ 社群检测：节点数量 ${network.nodes.length} 较大，可能影响性能`);
+      }
+
+      // 使用 requestIdleCallback 在浏览器空闲时执行（降低优先级）
+      const callback = window.requestIdleCallback || ((cb: any) => setTimeout(cb, 0));
+
+      const handle = callback(() => {
         try {
+          const startTime = performance.now();
           const detector = new LouvainCommunityDetector(network.nodes, network.edges);
           const communities = detector.detectCommunities();
+          const duration = performance.now() - startTime;
+
+          if (duration > 1000) {
+            console.warn(`⚠️ 社群检测耗时 ${duration.toFixed(0)}ms，建议减少节点数量`);
+          }
 
           const nodeToCommunity = new Map<string, number>();
           for (const community of communities) {
@@ -276,9 +318,17 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
           setInterCommunityRelations(relations);
 
         } catch (error) {
-          console.warn('社群检测失败:', error);
+          console.warn('❌ 社群检测失败:', error);
+          setCommunityMapping(null);
+          setInterCommunityRelations([]);
         }
-      }, 0);
+      });
+
+      return () => {
+        if ('cancelIdleCallback' in window && typeof handle === 'number') {
+          window.cancelIdleCallback(handle);
+        }
+      };
     } else {
       setCommunityMapping(null);
       setInterCommunityRelations([]);
@@ -349,9 +399,9 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
         enableNodeDrag={true}
         enableNavigationControls={true}
         enablePointerInteraction={true}
-        warmupTicks={100}
-        cooldownTicks={200}
-        cooldownTime={3000}
+        warmupTicks={50}
+        cooldownTicks={100}
+        cooldownTime={2000}
       />
 
       {/* 控制面板 */}

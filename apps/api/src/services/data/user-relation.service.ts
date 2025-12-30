@@ -79,8 +79,9 @@ export class UserRelationService {
           source_user_id,
           target_user_id,
           weight
-        FROM user_like_relations_mv
-        WHERE last_interaction_at >= $1
+        FROM user_relation_statistics
+        WHERE relation_type = 'like'
+          AND last_interaction_at >= $1
           AND last_interaction_at <= $2
           AND weight >= $3
         ORDER BY weight DESC
@@ -107,8 +108,9 @@ export class UserRelationService {
           source_user_id,
           target_user_id,
           weight
-        FROM user_comment_relations_mv
-        WHERE last_interaction_at >= $1
+        FROM user_relation_statistics
+        WHERE relation_type = 'comment'
+          AND last_interaction_at >= $1
           AND last_interaction_at <= $2
           AND weight >= $3
         ORDER BY weight DESC
@@ -135,8 +137,9 @@ export class UserRelationService {
           source_user_id,
           target_user_id,
           weight
-        FROM user_repost_relations_mv
-        WHERE last_interaction_at >= $1
+        FROM user_relation_statistics
+        WHERE relation_type = 'repost'
+          AND last_interaction_at >= $1
           AND last_interaction_at <= $2
           AND weight >= $3
         ORDER BY weight DESC
@@ -159,52 +162,16 @@ export class UserRelationService {
 
       const edgesData = await manager.query(
         `
-        WITH all_relations AS (
-          SELECT
-            source_user_id,
-            target_user_id,
-            weight,
-            weight as like_count,
-            0 as comment_count,
-            0 as repost_count
-          FROM user_like_relations_view
-          WHERE last_interaction_at >= $1
-            AND last_interaction_at <= $2
-
-          UNION ALL
-
-          SELECT
-            source_user_id,
-            target_user_id,
-            weight,
-            0 as like_count,
-            weight as comment_count,
-            0 as repost_count
-          FROM user_comment_relations_mv
-          WHERE last_interaction_at >= $1
-            AND last_interaction_at <= $2
-
-          UNION ALL
-
-          SELECT
-            source_user_id,
-            target_user_id,
-            weight,
-            0 as like_count,
-            0 as comment_count,
-            weight as repost_count
-          FROM user_repost_relations_mv
-          WHERE last_interaction_at >= $1
-            AND last_interaction_at <= $2
-        )
         SELECT
           source_user_id,
           target_user_id,
-          SUM(like_count) as like_count,
-          SUM(comment_count) as comment_count,
-          SUM(repost_count) as repost_count,
+          SUM(CASE WHEN relation_type = 'like' THEN weight ELSE 0 END) as like_count,
+          SUM(CASE WHEN relation_type = 'comment' THEN weight ELSE 0 END) as comment_count,
+          SUM(CASE WHEN relation_type = 'repost' THEN weight ELSE 0 END) as repost_count,
           SUM(weight) as weight
-        FROM all_relations
+        FROM user_relation_statistics
+        WHERE last_interaction_at >= $1
+          AND last_interaction_at <= $2
         GROUP BY source_user_id, target_user_id
         HAVING SUM(weight) >= $3
         ORDER BY weight DESC
