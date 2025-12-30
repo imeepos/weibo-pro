@@ -1,7 +1,7 @@
 import { WorkflowDSLGeneratorAgent } from '@sker/agent';
 import { getAllNodeTypes, findNodeType, NODE } from '@sker/workflow';
 import { compile } from '@sker/workflow-compiler';
-import { v4 as uuidv4 } from 'uuid';
+import { generateRandomString } from '@sker/utils';
 import { logger, root } from '@sker/core';
 
 /**
@@ -58,7 +58,7 @@ export class WorkflowDSLService {
     errors?: string[];
   }> {
     // 创建或获取会话
-    const sid = sessionId || uuidv4();
+    const sid = sessionId || generateRandomString(21);
     let session = this.sessions.get(sid);
 
     if (!session) {
@@ -74,7 +74,7 @@ export class WorkflowDSLService {
 
     // 创建任务和上下文
     const task = {
-      id: uuidv4(),
+      id: generateRandomString(21),
       type: 'research' as const,
       description: `生成工作流 DSL: ${description}`,
       input: { description },

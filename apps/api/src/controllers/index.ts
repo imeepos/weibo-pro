@@ -12,6 +12,7 @@ export { LlmProxyController } from './llm-proxy.controller';
 export { MediaCrawlerController } from './media-crawler.controller';
 export { OverviewController } from './overview.controller';
 export { PersonaController } from './persona.controller';
+export { ProxyController } from './proxy.controller';
 export { PromptRolesController } from './prompt-roles.controller';
 export { PromptSkillsController } from './prompt-skills.controller';
 export { PromptOptimizerController } from './prompt-optimizer.controller';

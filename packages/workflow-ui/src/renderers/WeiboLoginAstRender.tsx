@@ -97,6 +97,7 @@ const WeiboLoginRender: React.FC<{ ast: WeiboLoginAst }> = ({ ast }) => {
             src={ast.qrcode}
             alt="微博登录二维码"
             className="w-48 h-48 rounded-lg border border-slate-600"
+            crossOrigin="anonymous"
           />
           <p className="text-xs text-slate-400 mt-2">请使用微博 App 扫码登录</p>
         </div>

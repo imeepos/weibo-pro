@@ -172,7 +172,9 @@ export class WeiboAuthService implements OnDestroy {
 
           if (data.data?.image) {
             console.log('[WeiboAuthService] 发射 qrcode 事件:', data.data.image);
-            ast.qrcode = data.data.image;
+            const apiBase = process.env.API_BASE_URL || 'http://localhost:3000';
+            const proxyUrl = `${apiBase}/api/auth/proxy/qrcode?url=${encodeURIComponent(data.data.image)}`;
+            ast.qrcode = proxyUrl;
             // 只发射 qrcode，让 ImageAst 节点显示二维码
             obs.next({ type: 'node_emit', id: ast.id, data: { qrcode: ast.qrcode } })
             // 不发射 account 事件，直到登录成功

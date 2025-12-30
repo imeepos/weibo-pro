@@ -13,7 +13,7 @@
 
 import { Injectable, Inject, createLogger } from '@sker/core';
 import type { Server as SocketIOServer, Socket } from 'socket.io';
-import { v4 as uuidv4 } from 'uuid';
+import { generateRandomString } from '@sker/utils';
 import { WorkerGateway } from './worker-gateway';
 import type {
   ClaudeCommand,
@@ -83,7 +83,7 @@ export class ClaudeService {
    * 注册客户端连接
    */
   registerClient(socket: Socket, clientType: string = 'unknown'): string {
-    const clientId = uuidv4();
+    const clientId = generateRandomString(21);
 
     this.clientSockets.set(clientId, socket);
     this.socketToClient.set(socket.id, clientId);
@@ -125,7 +125,7 @@ export class ClaudeService {
       throw new Error('Worker 未连接');
     }
 
-    const taskId = uuidv4();
+    const taskId = generateRandomString(21);
 
     const command: ClaudeCommand = {
       taskId,

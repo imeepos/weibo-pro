@@ -123,7 +123,7 @@ export class OverviewStatisticsQueries {
         repost_count = EXCLUDED.repost_count,
         interaction_count = EXCLUDED.interaction_count,
         updated_at = NOW()
-      RETURNING 1
+      RETURNING period_start
     `;
 
     const result = await manager.query(sql, [lastProcessedTime]);
@@ -131,7 +131,14 @@ export class OverviewStatisticsQueries {
     const processedCount = result.length;
 
     if (processedCount > 0) {
-      progress.lastProcessedAt = new Date();
+      // 使用实际处理的最大时间，而不是当前系统时间
+      const maxPeriodStart = result.reduce((max: Date, row: any) => {
+        const periodStart = new Date(row.period_start);
+        return periodStart > max ? periodStart : max;
+      }, new Date(0));
+
+      // 加1小时，表示已经处理到这个小时的结束
+      progress.lastProcessedAt = new Date(maxPeriodStart.getTime() + 60 * 60 * 1000);
       progress.processedCount = processedCount;
       await manager.save(progress);
     }
@@ -259,7 +266,7 @@ export class OverviewStatisticsQueries {
         repost_count = EXCLUDED.repost_count,
         interaction_count = EXCLUDED.interaction_count,
         updated_at = NOW()
-      RETURNING 1
+      RETURNING period_start
     `;
 
     const result = await manager.query(sql, [lastProcessedTime]);
@@ -267,7 +274,14 @@ export class OverviewStatisticsQueries {
     const processedCount = result.length;
 
     if (processedCount > 0) {
-      progress.lastProcessedAt = new Date();
+      // 使用实际处理的最大时间，而不是当前系统时间
+      const maxPeriodStart = result.reduce((max: Date, row: any) => {
+        const periodStart = new Date(row.period_start);
+        return periodStart > max ? periodStart : max;
+      }, new Date(0));
+
+      // 加1天，表示已经处理到这一天的结束
+      progress.lastProcessedAt = new Date(maxPeriodStart.getTime() + 24 * 60 * 60 * 1000);
       progress.processedCount = processedCount;
       await manager.save(progress);
     }
