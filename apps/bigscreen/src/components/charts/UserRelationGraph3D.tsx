@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { Info } from 'lucide-react';
+import * as THREE from 'three';
 import type {
   UserRelationNetwork,
   UserRelationNode,
@@ -155,7 +156,6 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
   });
 
   const linkMaterial = useCallback((link: any) => {
-    const THREE = require('three');
     const weight = link.value || 1;
     const opacity = getEdgeOpacity(weight);
     const color = getEdgeColor(link.type);
@@ -229,15 +229,13 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
 
   useEffect(() => {
     if (fgRef.current) {
-      // 性能优化：简化力模拟参数
-      fgRef.current.d3Force('charge').strength(-100); // 降低斥力（从-200到-100）
-      fgRef.current.d3Force('link').distance(80); // 使用固定距离，禁用动态计算
+      // 增加斥力和距离，避免节点重叠
+      fgRef.current.d3Force('charge').strength(-300);
+      fgRef.current.d3Force('link').distance(120);
 
       // 初始化力导向图后，自动调整视图以适应所有节点
       setTimeout(() => {
         if (fgRef.current) {
-          // 使用 zoomToFit 自动调整相机距离和位置，确保所有节点可见
-          // 参数：duration=0ms（禁用动画减少卡顿）, padding=50px（适中边距，镜头距离更近）
           fgRef.current.zoomToFit(0, 50);
         }
       }, 100);

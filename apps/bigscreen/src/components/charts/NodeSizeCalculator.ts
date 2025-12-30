@@ -46,8 +46,8 @@ export const calculateCompositeScore = (
  */
 export const calculateNodeSize = (
   compositeScore: number,
-  baseSize: number = 2,
-  maxSize: number = 35
+  baseSize: number = 1,
+  maxSize: number = 12
 ): number => {
   const enhancedScore = Math.pow(compositeScore, 0.7);
   return baseSize + enhancedScore * (maxSize - baseSize);
