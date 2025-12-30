@@ -13,7 +13,7 @@ const DEFAULT_RENDER_CONFIG: RenderConfig = {
   enableEdges: true,
   enableLabels: false,
   enableGlow: false,
-  edgeOpacity: 0.3,
+  edgeOpacity: 0.6,
   nodeOpacity: 1.0,
 };
 
@@ -92,7 +92,7 @@ export class OffscreenThreeRenderer {
     this.camera = new THREE.PerspectiveCamera(
       75,
       this.config.width / this.config.height,
-      1,
+      10,
       10000
     );
     this.camera.position.z = 500;

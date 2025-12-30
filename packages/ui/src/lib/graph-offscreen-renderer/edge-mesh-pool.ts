@@ -45,10 +45,11 @@ export class EdgeMeshPool {
     // 创建材质 - 启用顶点颜色
     const material = new THREE.LineBasicMaterial({
       vertexColors: true, // 启用顶点颜色
-      opacity: config.opacity ?? 0.4, // 提高默认透明度
+      opacity: config.opacity ?? 0.6,
       transparent: true,
-      depthWrite: false, // 性能优化
-      blending: THREE.AdditiveBlending, // 使用加法混合，让连线更亮
+      depthWrite: false,
+      depthTest: true,
+      blending: THREE.AdditiveBlending,
     });
 
     this.mesh = new THREE.LineSegments(geometry, material);
