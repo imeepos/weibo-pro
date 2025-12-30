@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { UserRelationGraph3D } from './UserRelationGraph3D';
-import type { UserRelationNetwork, UserRelationType } from '@sker/sdk';
-import { UserRelationController } from '@sker/sdk';
-import { root } from '@sker/core';
+import React, { useState, useCallback, useMemo } from 'react';
+import UserRelationGraph3DOffscreen from './UserRelationGraph3DOffscreen';
+import { useUserRelationNetwork } from '../../hooks/useUserRelationNetwork';
 import { useAppStore } from '@/stores/useAppStore';
+import type { UserRelationType, UserRelationNode } from '@sker/sdk';
 
 interface UserRelationOverviewProps {
   className?: string;
@@ -17,95 +16,26 @@ interface UserRelationOverviewProps {
 export const UserRelationOverview: React.FC<UserRelationOverviewProps> = ({
   className = ''
 }) => {
-  const [networkData, setNetworkData] = useState<UserRelationNetwork | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const selectedTimeRange = useAppStore((state) => state.selectedTimeRange);
+  const [relationType] = useState<UserRelationType>('comprehensive');
+  const [edgeThreshold] = useState(10);
 
-  // 获取真实数据
-  useEffect(() => {
-    const fetchNetwork = async () => {
-      setLoading(true);
-      setError(null);
+  const { network, isLoading, error, refetch } = useUserRelationNetwork({
+    relationType,
+    timeRange: selectedTimeRange,
+    minWeight: 1,
+    limit: 5000,
+  });
 
-      try {
-        const controller = root.get(UserRelationController);
-
-        const data = await controller.getNetwork(
-          'comprehensive' as UserRelationType,
-          selectedTimeRange,
-          1, // minWeight
-          5000 // limit - 平衡性能与数据完整性（分层渲染 + InstancedMesh 优化）
-        );
-
-        setNetworkData(data);
-      } catch (err) {
-        console.error('❌ 获取数据失败:', err);
-        console.error('❌ 错误堆栈:', err instanceof Error ? err.stack : '无堆栈信息');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchNetwork();
-  }, [selectedTimeRange]);
-
-  // 重试函数
-  const refetch = useCallback(() => {
-    setLoading(true);
-    setError(null);
-
-    const fetchNetwork = async () => {
-      try {
-        const controller = root.get(UserRelationController);
-        const data = await controller.getNetwork(
-          'comprehensive' as UserRelationType,
-          selectedTimeRange,
-          1,
-          5000
-        );
-        setNetworkData(data);
-      } catch (err) {
-        console.error('❌ 获取数据失败:', err);
-        console.error('❌ 错误堆栈:', err instanceof Error ? err.stack : '无堆栈信息');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchNetwork();
-  }, [selectedTimeRange]);
-
-  // 大屏幕专用配置 - 使用 useMemo 稳定引用
-  const bigScreenConfig = useMemo(() => ({
-    nodeSizeWeights: {
-      followers: 0.5,
-      influence: 0.3,
-      postCount: 0.2,
-      connections: 0
-    },
-    linkDistanceConfig: {
-      minDistance: 10,
-      maxDistance: 60,
-      useDynamicDistance: true
-    },
-    enableNodeShapes: true,
-    enableNodeOpacity: true,
-    enableNodePulse: false,
-    enableCommunities: true, // 启用社群检测，提供更丰富的视觉效果（与 UserRelationTopology 保持一致）
-    showDebugHud: true
-  }), []);
-
-  const handleNodeClick = useCallback((node: any) => {
+  const handleNodeClick = useCallback((node: UserRelationNode) => {
     console.log('大屏幕节点点击:', node);
   }, []);
 
-  const handleNodeHover = useCallback(() => {
-    // 悬停效果保持
+  const handleNodeHover = useCallback((node: UserRelationNode | null) => {
   }, []);
 
   // 加载状态 - 简洁的大屏幕样式
-  if (loading) {
+  if (isLoading) {
     return (
       <div className={`flex items-center justify-center h-full w-full ${className}`}>
         <div className="text-center">
@@ -134,7 +64,7 @@ export const UserRelationOverview: React.FC<UserRelationOverviewProps> = ({
   }
 
   // 无数据状态
-  if (!networkData || networkData.nodes.length === 0) {
+  if (!network || network.nodes.length === 0) {
     return (
       <div className={`flex items-center justify-center h-full w-full ${className}`}>
         <div className="text-center text-muted-foreground">
@@ -147,14 +77,13 @@ export const UserRelationOverview: React.FC<UserRelationOverviewProps> = ({
 
   return (
     <div className={`h-full w-full overflow-hidden relative ${className}`}>
-      {/* 纯可视化区域 - 无标题、无边框、无统计信息 */}
       <div className="w-full h-full">
-        <UserRelationGraph3D
-          network={networkData}
+        <UserRelationGraph3DOffscreen
+          network={network}
           className="w-full h-full"
-          {...bigScreenConfig}
           onNodeClick={handleNodeClick}
           onNodeHover={handleNodeHover}
+          edgeThreshold={edgeThreshold}
         />
       </div>
     </div>
