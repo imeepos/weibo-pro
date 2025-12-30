@@ -29,7 +29,7 @@ export const useInstancedNodeRenderer = <TNode extends { id: string | number; va
 
   // 创建共享几何体和材质
   const geometry = useMemo(() => new THREE.SphereGeometry(1, 8, 6), []);
-  const material = useMemo(() => new THREE.MeshLambertMaterial({
+  const material = useMemo(() => new THREE.MeshBasicMaterial({
     vertexColors: true,
     transparent: false,
   }), []);
