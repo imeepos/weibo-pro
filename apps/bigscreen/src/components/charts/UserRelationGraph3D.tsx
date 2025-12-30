@@ -181,6 +181,7 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
       return getUserTypeColor(node.userType);
     },
     getNodeRadius: (node: any) => node.val || 5,
+    highlightNodes,
   });
 
   const { pointsObject } = usePointsRenderer(graphData.backgroundNodes, {
