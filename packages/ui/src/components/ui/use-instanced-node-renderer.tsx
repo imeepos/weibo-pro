@@ -29,7 +29,10 @@ export const useInstancedNodeRenderer = <TNode extends { id: string | number; va
 
   // 创建共享几何体和材质
   const geometry = useMemo(() => new THREE.SphereGeometry(1, 8, 6), []);
-  const material = useMemo(() => new THREE.MeshBasicMaterial({ vertexColors: true }), []);
+  const material = useMemo(() => new THREE.MeshLambertMaterial({
+    vertexColors: true,
+    transparent: false,
+  }), []);
 
   // 初始化 InstancedMesh
   useEffect(() => {
@@ -56,8 +59,14 @@ export const useInstancedNodeRenderer = <TNode extends { id: string | number; va
       const z = node.z ?? 0;
       const radius = getNodeRadius(node);
 
-      dummy.position.set(x, y, z);
-      dummy.scale.setScalar(radius);
+      // 如果节点没有位置，隐藏它（缩放为0）
+      if (node.x === undefined && node.y === undefined && node.z === undefined) {
+        dummy.scale.setScalar(0);
+      } else {
+        dummy.position.set(x, y, z);
+        dummy.scale.setScalar(radius);
+      }
+
       dummy.updateMatrix();
       meshRef.current!.setMatrixAt(i, dummy.matrix);
 
