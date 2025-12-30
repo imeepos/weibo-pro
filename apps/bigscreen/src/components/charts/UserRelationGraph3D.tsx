@@ -10,7 +10,8 @@ import {
   ForceGraph3D,
   type ForceGraph3DHandle
 } from '@sker/ui/components/ui/force-graph-3d';
-import { useForceGraphNodeRenderer } from '@sker/ui/components/ui/use-force-graph-node-renderer';
+import { useInstancedNodeRenderer } from '@sker/ui/components/ui/use-instanced-node-renderer';
+import { usePointsRenderer } from '@sker/ui/components/ui/use-points-renderer';
 import { useForceGraphLinkRenderer } from '@sker/ui/components/ui/use-force-graph-link-renderer';
 import { getUserTypeColor, getEdgeColor, getEdgeOpacity } from './UserRelationGraph3D.utils';
 import {
@@ -97,18 +98,7 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
   const [communityMapping, setCommunityMapping] = useState<CommunityMapping | null>(null);
   const [interCommunityRelations, setInterCommunityRelations] = useState<any[]>([]);
 
-  const { nodeThreeObject } = useForceGraphNodeRenderer({
-    highlightNodes,
-    getNodeShape: (node: any) => {
-      if (!currentVisualization.enableNodeShapes) return 'sphere';
-      const shapeMap: Record<string, 'sphere' | 'cube' | 'cylinder' | 'dodecahedron'> = {
-        'official': 'sphere',
-        'media': 'sphere',
-        'kol': 'sphere',
-        'normal': 'sphere'
-      };
-      return shapeMap[node.userType] || 'sphere';
-    },
+  const { nodeThreeObject } = useInstancedNodeRenderer(graphData.nodes, {
     getNodeColor: (node: any) => {
       if (currentVisualization.enableCommunities && communityMapping) {
         const communityId = communityMapping.nodeToCommunity.get(node.id);
@@ -119,16 +109,13 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
       }
       return getUserTypeColor(node.userType);
     },
-    getNodeOpacity: (node: any) => {
-      if (!currentVisualization.enableNodeOpacity) return 1.0;
-      if (!node.lastActive) return 1.0;
-      const daysSinceActive = Math.floor((Date.now() - new Date(node.lastActive).getTime()) / (1000 * 60 * 60 * 24));
-      if (daysSinceActive <= 1) return 1.0;
-      if (daysSinceActive <= 7) return 0.8;
-      if (daysSinceActive <= 30) return 0.6;
-      return 0.3;
-    },
-    enablePulse: currentVisualization.enableNodePulse,
+    getNodeRadius: (node: any) => node.val || 5,
+  });
+
+  const { pointsObject } = usePointsRenderer(graphData.backgroundNodes, {
+    getNodeColor: () => '#888888',
+    pointSize: 2,
+    sizeAttenuation: true,
   });
 
   const {
@@ -191,6 +178,7 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
           value: edge.weight,
           type: edge.type,
         })),
+        backgroundNodes: renderData.backgroundNodes || [],
       };
     }
 
@@ -202,6 +190,7 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
         value: edge.weight,
         type: edge.type,
       })),
+      backgroundNodes: renderData.backgroundNodes || [],
     };
   }, [network, currentWeights, performanceConfig]);
 
@@ -219,6 +208,17 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
       }, 100);
     }
   }, []); // 空依赖数组，只在挂载时执行一次
+
+  // 添加点云到场景
+  useEffect(() => {
+    if (fgRef.current && pointsObject) {
+      const scene = fgRef.current.scene();
+      scene.add(pointsObject);
+      return () => {
+        scene.remove(pointsObject);
+      };
+    }
+  }, [pointsObject]);
 
   // 性能监控和自适应优化
   useEffect(() => {
