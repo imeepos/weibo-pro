@@ -105,9 +105,14 @@ export class OffscreenThreeRenderer {
     this.nodeMeshPool = new NodeMeshPool({
       maxNodes: this.config.maxNodes,
       instancedRendering: true,
+      lodLevels: 5, // 5 个 LOD 层级
     });
 
-    this.scene.add(this.nodeMeshPool.getMesh());
+    // 添加所有 LOD 层级的 meshes 到场景
+    const meshes = this.nodeMeshPool.getMeshes();
+    for (const mesh of meshes) {
+      this.scene.add(mesh);
+    }
 
     // 初始化边池（如果启用）
     if (this.renderConfig.enableEdges) {
@@ -165,6 +170,20 @@ export class OffscreenThreeRenderer {
     if (this.edgeMeshPool) {
       this.edgeMeshPool.setEdgeCount(count);
     }
+  }
+
+  /**
+   * 更新 LOD
+   */
+  updateLOD(lodAssignments: Map<number, number>, visibleIndices: Set<number>): void {
+    this.nodeMeshPool.updateLOD(lodAssignments, visibleIndices);
+  }
+
+  /**
+   * 获取相机（用于 LOD 计算）
+   */
+  getCamera(): THREE.Camera {
+    return this.camera;
   }
 
   /**

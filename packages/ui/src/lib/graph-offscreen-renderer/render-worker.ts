@@ -1,11 +1,12 @@
 /**
  * Render Worker
- * 在独立线程中运行 Three.js 渲染，避免阻塞主线程
+ * 在独立线程中运行 Three.js 渲染和 LOD 管理，避免阻塞主线程
  */
 
 /// <reference lib="webworker" />
 
 import { OffscreenThreeRenderer } from './offscreen-three-renderer';
+import { LODManager } from '../graph-lod-manager';
 import type {
   RenderWorkerMessage,
   RenderWorkerResponse,
@@ -16,8 +17,11 @@ import type { SharedBuffers } from '../graph-data-stream/types';
 declare const self: DedicatedWorkerGlobalScope;
 
 let renderer: OffscreenThreeRenderer | null = null;
+let lodManager: LODManager | null = null;
 let animationFrameId: number | null = null;
 let isRunning = false;
+let enableLOD = true; // 是否启用 LOD（可配置）
+let sharedBuffers: SharedBuffers | null = null; // 缓存 SharedBuffers 引用
 
 /**
  * 消息处理器
@@ -45,6 +49,10 @@ self.onmessage = (event: MessageEvent<RenderWorkerMessage>) => {
 
       case 'UPDATE_VISIBILITY':
         // handleUpdateVisibility(message.visibilityMask);
+        break;
+
+      case 'UPDATE_LOD':
+        handleUpdateLOD(message.lodAssignments, message.visibleIndices);
         break;
 
       case 'SET_CAMERA':
@@ -98,6 +106,7 @@ function handleInit(canvas: OffscreenCanvas, config: RendererConfig): void {
  */
 function handleUpdateBuffers(buffers: SharedBuffers): void {
   if (!renderer) return;
+  sharedBuffers = buffers; // 缓存引用
   renderer.setBuffers(buffers);
 }
 
@@ -107,6 +116,28 @@ function handleUpdateBuffers(buffers: SharedBuffers): void {
 function handleUpdateNodeCount(count: number): void {
   if (!renderer) return;
   renderer.setNodeCount(count);
+
+  // 初始化 LOD 管理器
+  if (enableLOD && !lodManager && count > 0 && sharedBuffers) {
+    const positions = new Float32Array(sharedBuffers.position);
+    lodManager = new LODManager({
+      enableFrustumCulling: true,
+      enableOcclusion: false,
+    });
+    lodManager.init(positions, count);
+    console.log('🎯 LODManager 已初始化');
+  }
+}
+
+/**
+ * 更新 LOD
+ */
+function handleUpdateLOD(
+  lodAssignments: Map<number, number>,
+  visibleIndices: Set<number>
+): void {
+  if (!renderer) return;
+  renderer.updateLOD(lodAssignments, visibleIndices);
 }
 
 /**
@@ -186,8 +217,19 @@ function startRenderLoop(): void {
   if (isRunning) return;
   isRunning = true;
 
+  let frameCount = 0;
+
   const render = () => {
     if (!isRunning || !renderer) return;
+
+    // 每 5 帧更新一次 LOD（降低计算频率）
+    if (enableLOD && lodManager && frameCount % 5 === 0) {
+      const camera = renderer.getCamera();
+      const lodResult = lodManager.update(camera);
+
+      // 应用 LOD 更新到渲染器
+      renderer.updateLOD(lodResult.lodAssignments, lodResult.visibleNodeIndices);
+    }
 
     const fps = renderer.render();
 
@@ -197,6 +239,7 @@ function startRenderLoop(): void {
       fps,
     } as RenderWorkerResponse);
 
+    frameCount++;
     animationFrameId = requestAnimationFrame(render);
   };
 

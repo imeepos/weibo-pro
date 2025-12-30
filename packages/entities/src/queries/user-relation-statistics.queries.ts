@@ -34,59 +34,77 @@ export class UserRelationStatisticsQueries {
 
     const lastId = progress.lastProcessedId;
 
-    // 分批统计新数据
+    // 分批统计新数据，使用 CTE 获取最大ID
     const result = await manager.query(
       `
-      INSERT INTO user_relation_statistics (
-        source_user_id,
-        target_user_id,
-        relation_type,
-        weight,
-        first_interaction_at,
-        last_interaction_at,
-        last_processed_id,
-        last_processed_at
+      WITH source_data AS (
+        SELECT
+          (r.user->>'id')::bigint as source_user_id,
+          (r.retweeted_status->'user'->>'id')::bigint as target_user_id,
+          r.id,
+          r.ingested_at
+        FROM weibo_reposts r
+        WHERE r.id > $1
+          AND r.retweeted_status IS NOT NULL
+          AND r.user->>'id' IS NOT NULL
+          AND r.retweeted_status->'user'->>'id' IS NOT NULL
+          AND r.user->>'id' != r.retweeted_status->'user'->>'id'
+        ORDER BY r.id ASC
+        LIMIT $2
+      ),
+      aggregated AS (
+        SELECT
+          source_user_id,
+          target_user_id,
+          COUNT(*) as weight,
+          MIN(ingested_at) as first_interaction_at,
+          MAX(ingested_at) as last_interaction_at,
+          MAX(id) as last_processed_id
+        FROM source_data
+        GROUP BY source_user_id, target_user_id
+      ),
+      upserted AS (
+        INSERT INTO user_relation_statistics (
+          source_user_id,
+          target_user_id,
+          relation_type,
+          weight,
+          first_interaction_at,
+          last_interaction_at,
+          last_processed_id,
+          last_processed_at
+        )
+        SELECT
+          source_user_id,
+          target_user_id,
+          'repost' as relation_type,
+          weight,
+          first_interaction_at,
+          last_interaction_at,
+          last_processed_id,
+          NOW() as last_processed_at
+        FROM aggregated
+        ON CONFLICT (source_user_id, target_user_id, relation_type)
+        DO UPDATE SET
+          weight = user_relation_statistics.weight + EXCLUDED.weight,
+          first_interaction_at = LEAST(user_relation_statistics.first_interaction_at, EXCLUDED.first_interaction_at),
+          last_interaction_at = GREATEST(user_relation_statistics.last_interaction_at, EXCLUDED.last_interaction_at),
+          last_processed_id = GREATEST(user_relation_statistics.last_processed_id, EXCLUDED.last_processed_id),
+          last_processed_at = NOW(),
+          updated_at = NOW()
+        RETURNING 1
       )
       SELECT
-        (r.user->>'id')::bigint as source_user_id,
-        (r.retweeted_status->'user'->>'id')::bigint as target_user_id,
-        'repost' as relation_type,
-        COUNT(*) as weight,
-        MIN(r.ingested_at) as first_interaction_at,
-        MAX(r.ingested_at) as last_interaction_at,
-        MAX(r.id) as last_processed_id,
-        NOW() as last_processed_at
-      FROM weibo_reposts r
-      WHERE r.id > $1
-        AND r.retweeted_status IS NOT NULL
-        AND r.user->>'id' IS NOT NULL
-        AND r.retweeted_status->'user'->>'id' IS NOT NULL
-        AND r.user->>'id' != r.retweeted_status->'user'->>'id'
-      GROUP BY (r.user->>'id')::bigint, (r.retweeted_status->'user'->>'id')::bigint
-      LIMIT $2
-      ON CONFLICT (source_user_id, target_user_id, relation_type)
-      DO UPDATE SET
-        weight = user_relation_statistics.weight + EXCLUDED.weight,
-        first_interaction_at = LEAST(user_relation_statistics.first_interaction_at, EXCLUDED.first_interaction_at),
-        last_interaction_at = GREATEST(user_relation_statistics.last_interaction_at, EXCLUDED.last_interaction_at),
-        last_processed_id = GREATEST(user_relation_statistics.last_processed_id, EXCLUDED.last_processed_id),
-        last_processed_at = NOW(),
-        updated_at = NOW()
-    `,
-      [lastId, maxRecords]
+        (SELECT COUNT(*) FROM upserted) as row_count,
+        (SELECT MAX(id) FROM source_data) as max_id
+    `,[lastId, maxRecords]
     );
 
-    const processedCount = result.rowCount || 0;
+    const processedCount = parseInt(result[0]?.row_count || '0');
+    const newLastId = result[0]?.max_id;
 
     // 更新全局进度
-    if (processedCount > 0) {
-      // 获取本批次处理的最大ID
-      const maxIdResult = await manager.query(
-        `SELECT MAX(id) as max_id FROM weibo_reposts WHERE id > $1 LIMIT $2`,
-        [lastId, maxRecords]
-      );
-      const newLastId = maxIdResult[0]?.max_id || lastId;
-
+    if (processedCount > 0 && newLastId) {
       progress.lastProcessedId = newLastId;
       progress.lastProcessedAt = new Date();
       progress.processedCount = processedCount;
@@ -122,55 +140,75 @@ export class UserRelationStatisticsQueries {
 
     const result = await manager.query(
       `
-      INSERT INTO user_relation_statistics (
-        source_user_id,
-        target_user_id,
-        relation_type,
-        weight,
-        first_interaction_at,
-        last_interaction_at,
-        last_processed_id,
-        last_processed_at
+      WITH source_data AS (
+        SELECT
+          (c.user->>'id')::bigint as source_user_id,
+          (p.user->>'id')::bigint as target_user_id,
+          c.id,
+          c.ingested_at
+        FROM weibo_comments c
+        JOIN weibo_posts p ON c.rootid = p.id
+        WHERE c.id > $1
+          AND c.user->>'id' IS NOT NULL
+          AND p.user->>'id' IS NOT NULL
+          AND c.user->>'id' != p.user->>'id'
+        ORDER BY c.id ASC
+        LIMIT $2
+      ),
+      aggregated AS (
+        SELECT
+          source_user_id,
+          target_user_id,
+          COUNT(*) as weight,
+          MIN(ingested_at) as first_interaction_at,
+          MAX(ingested_at) as last_interaction_at,
+          MAX(id) as last_processed_id
+        FROM source_data
+        GROUP BY source_user_id, target_user_id
+      ),
+      upserted AS (
+        INSERT INTO user_relation_statistics (
+          source_user_id,
+          target_user_id,
+          relation_type,
+          weight,
+          first_interaction_at,
+          last_interaction_at,
+          last_processed_id,
+          last_processed_at
+        )
+        SELECT
+          source_user_id,
+          target_user_id,
+          'comment' as relation_type,
+          weight,
+          first_interaction_at,
+          last_interaction_at,
+          last_processed_id,
+          NOW() as last_processed_at
+        FROM aggregated
+        ON CONFLICT (source_user_id, target_user_id, relation_type)
+        DO UPDATE SET
+          weight = user_relation_statistics.weight + EXCLUDED.weight,
+          first_interaction_at = LEAST(user_relation_statistics.first_interaction_at, EXCLUDED.first_interaction_at),
+          last_interaction_at = GREATEST(user_relation_statistics.last_interaction_at, EXCLUDED.last_interaction_at),
+          last_processed_id = GREATEST(user_relation_statistics.last_processed_id, EXCLUDED.last_processed_id),
+          last_processed_at = NOW(),
+          updated_at = NOW()
+        RETURNING 1
       )
       SELECT
-        (c.user->>'id')::bigint as source_user_id,
-        (p.user->>'id')::bigint as target_user_id,
-        'comment' as relation_type,
-        COUNT(*) as weight,
-        MIN(c.ingested_at) as first_interaction_at,
-        MAX(c.ingested_at) as last_interaction_at,
-        MAX(c.id) as last_processed_id,
-        NOW() as last_processed_at
-      FROM weibo_comments c
-      JOIN weibo_posts p ON c.rootid = p.id
-      WHERE c.id > $1
-        AND c.user->>'id' IS NOT NULL
-        AND p.user->>'id' IS NOT NULL
-        AND c.user->>'id' != p.user->>'id'
-      GROUP BY (c.user->>'id')::bigint, (p.user->>'id')::bigint
-      LIMIT $2
-      ON CONFLICT (source_user_id, target_user_id, relation_type)
-      DO UPDATE SET
-        weight = user_relation_statistics.weight + EXCLUDED.weight,
-        first_interaction_at = LEAST(user_relation_statistics.first_interaction_at, EXCLUDED.first_interaction_at),
-        last_interaction_at = GREATEST(user_relation_statistics.last_interaction_at, EXCLUDED.last_interaction_at),
-        last_processed_id = GREATEST(user_relation_statistics.last_processed_id, EXCLUDED.last_processed_id),
-        last_processed_at = NOW(),
-        updated_at = NOW()
+        (SELECT COUNT(*) FROM upserted) as row_count,
+        (SELECT MAX(id) FROM source_data) as max_id
     `,
       [lastId, maxRecords]
     );
 
-    const processedCount = result.rowCount || 0;
+    const processedCount = parseInt(result[0]?.row_count || '0');
+    const newLastId = result[0]?.max_id;
 
     // 更新全局进度
-    if (processedCount > 0) {
-      const maxIdResult = await manager.query(
-        `SELECT MAX(id) as max_id FROM weibo_comments WHERE id > $1 LIMIT $2`,
-        [lastId, maxRecords]
-      );
-      const newLastId = maxIdResult[0]?.max_id || lastId;
-
+    if (processedCount > 0 && newLastId) {
       progress.lastProcessedId = newLastId;
       progress.lastProcessedAt = new Date();
       progress.processedCount = processedCount;
@@ -206,54 +244,74 @@ export class UserRelationStatisticsQueries {
 
     const result = await manager.query(
       `
-      INSERT INTO user_relation_statistics (
-        source_user_id,
-        target_user_id,
-        relation_type,
-        weight,
-        first_interaction_at,
-        last_interaction_at,
-        last_processed_id,
-        last_processed_at
+      WITH source_data AS (
+        SELECT
+          l.user_weibo_id as source_user_id,
+          (p.user->>'id')::bigint as target_user_id,
+          l.id,
+          l.created_at
+        FROM weibo_likes l
+        JOIN weibo_posts p ON l.target_weibo_id = p.id
+        WHERE l.id > $1
+          AND l.user_weibo_id != (p.user->>'id')::bigint
+          AND p.user->>'id' IS NOT NULL
+        ORDER BY l.id ASC
+        LIMIT $2
+      ),
+      aggregated AS (
+        SELECT
+          source_user_id,
+          target_user_id,
+          COUNT(*) as weight,
+          MIN(created_at) as first_interaction_at,
+          MAX(created_at) as last_interaction_at,
+          MAX(id) as last_processed_id
+        FROM source_data
+        GROUP BY source_user_id, target_user_id
+      ),
+      upserted AS (
+        INSERT INTO user_relation_statistics (
+          source_user_id,
+          target_user_id,
+          relation_type,
+          weight,
+          first_interaction_at,
+          last_interaction_at,
+          last_processed_id,
+          last_processed_at
+        )
+        SELECT
+          source_user_id,
+          target_user_id,
+          'like' as relation_type,
+          weight,
+          first_interaction_at,
+          last_interaction_at,
+          last_processed_id,
+          NOW() as last_processed_at
+        FROM aggregated
+        ON CONFLICT (source_user_id, target_user_id, relation_type)
+        DO UPDATE SET
+          weight = user_relation_statistics.weight + EXCLUDED.weight,
+          first_interaction_at = LEAST(user_relation_statistics.first_interaction_at, EXCLUDED.first_interaction_at),
+          last_interaction_at = GREATEST(user_relation_statistics.last_interaction_at, EXCLUDED.last_interaction_at),
+          last_processed_id = GREATEST(user_relation_statistics.last_processed_id, EXCLUDED.last_processed_id),
+          last_processed_at = NOW(),
+          updated_at = NOW()
+        RETURNING 1
       )
       SELECT
-        l.user_weibo_id as source_user_id,
-        (p.user->>'id')::bigint as target_user_id,
-        'like' as relation_type,
-        COUNT(*) as weight,
-        MIN(l.created_at) as first_interaction_at,
-        MAX(l.created_at) as last_interaction_at,
-        MAX(l.id) as last_processed_id,
-        NOW() as last_processed_at
-      FROM weibo_likes l
-      JOIN weibo_posts p ON l.target_weibo_id = p.id
-      WHERE l.id > $1
-        AND l.user_weibo_id != (p.user->>'id')::bigint
-        AND p.user->>'id' IS NOT NULL
-      GROUP BY l.user_weibo_id, (p.user->>'id')::bigint
-      LIMIT $2
-      ON CONFLICT (source_user_id, target_user_id, relation_type)
-      DO UPDATE SET
-        weight = user_relation_statistics.weight + EXCLUDED.weight,
-        first_interaction_at = LEAST(user_relation_statistics.first_interaction_at, EXCLUDED.first_interaction_at),
-        last_interaction_at = GREATEST(user_relation_statistics.last_interaction_at, EXCLUDED.last_interaction_at),
-        last_processed_id = GREATEST(user_relation_statistics.last_processed_id, EXCLUDED.last_processed_id),
-        last_processed_at = NOW(),
-        updated_at = NOW()
+        (SELECT COUNT(*) FROM upserted) as row_count,
+        (SELECT MAX(id) FROM source_data) as max_id
     `,
       [lastId, maxRecords]
     );
 
-    const processedCount = result.rowCount || 0;
+    const processedCount = parseInt(result[0]?.row_count || '0');
+    const newLastId = result[0]?.max_id;
 
     // 更新全局进度
-    if (processedCount > 0) {
-      const maxIdResult = await manager.query(
-        `SELECT MAX(id) as max_id FROM weibo_likes WHERE id > $1 LIMIT $2`,
-        [lastId, maxRecords]
-      );
-      const newLastId = maxIdResult[0]?.max_id || lastId;
-
+    if (processedCount > 0 && newLastId) {
       progress.lastProcessedId = newLastId;
       progress.lastProcessedAt = new Date();
       progress.processedCount = processedCount;
