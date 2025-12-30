@@ -6,7 +6,18 @@ echo "=== Bigscreen IP 部署脚本 ==="
 # 配置变量
 SERVER_IP=${1:-$(hostname -I | awk '{print $1}')}
 DEPLOY_DIR="/var/www/bigscreen"
-NGINX_CONFIG="/etc/nginx/sites-available/bigscreen.conf"
+
+# 检测 Nginx 配置目录
+if [ -d "/etc/nginx/sites-available" ]; then
+    NGINX_CONFIG="/etc/nginx/sites-available/bigscreen.conf"
+    NGINX_ENABLED="/etc/nginx/sites-enabled/bigscreen.conf"
+elif [ -d "/etc/nginx/conf.d" ]; then
+    NGINX_CONFIG="/etc/nginx/conf.d/bigscreen.conf"
+    NGINX_ENABLED=""
+else
+    echo "错误: 找不到 Nginx 配置目录"
+    exit 1
+fi
 
 echo "服务器 IP: $SERVER_IP"
 
@@ -29,7 +40,9 @@ sudo chown -R www-data:www-data $DEPLOY_DIR
 # 4. 配置 Nginx
 echo "4. 配置 Nginx..."
 sudo cp scripts/nginx/bigscreen-ip.conf $NGINX_CONFIG
-sudo ln -sf $NGINX_CONFIG /etc/nginx/sites-enabled/bigscreen.conf
+if [ -n "$NGINX_ENABLED" ]; then
+    sudo ln -sf $NGINX_CONFIG $NGINX_ENABLED
+fi
 
 # 5. 测试 Nginx 配置
 echo "5. 测试 Nginx 配置..."
