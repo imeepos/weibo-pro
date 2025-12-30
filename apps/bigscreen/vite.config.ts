@@ -181,7 +181,7 @@ export default defineConfig(({ command }) => {
     // 优化依赖预构建
     optimizeDeps: {
       force: true,
-      include: ['react', 'react-dom', 'react-router-dom', 'axios', 'dayjs', 'clsx', 'tailwind-merge', 'zustand', 'lucide-react'],
+      include: ['react', 'react-dom', 'react-router-dom', 'axios', 'dayjs', 'clsx', 'tailwind-merge', 'zustand', 'lucide-react', 'rxjs', 'rxjs/operators'],
       exclude: ['echarts', 'web-vitals', '@sker/core', '@sker/workflow', '@sker/workflow-ui'],
       esbuildOptions: {
         target: 'es2020',
