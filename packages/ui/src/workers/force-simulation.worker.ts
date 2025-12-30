@@ -104,7 +104,7 @@ self.onmessage = (event: MessageEvent<WorkerMessage>) => {
             positions: positions.buffer,
             alpha: simulation!.alpha(),
             tickCount,
-          }, [positions.buffer]);
+          }, { transfer: [positions.buffer] });
         }
 
         // 达到最大 tick 数后停止
