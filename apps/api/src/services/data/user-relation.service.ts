@@ -238,30 +238,10 @@ export class UserRelationService {
     });
 
     const userIdsArray = Array.from(userIds);
-    const placeholders = userIdsArray.map((_, i) => `$${i + 1}`).join(',');
 
     const usersData = await manager.query(
-      `
-      SELECT
-        u.id,
-        u.idstr,
-        u.screen_name,
-        u.name,
-        u.followers_count,
-        u.statuses_count,
-        u.verified,
-        COALESCE(NULLIF(u.location, ''), NULLIF(u.province, ''), NULLIF(u.city, ''), '未知') as location,
-        COALESCE(u.avatar_hd, u.avatar_large, u.profile_image_url) as avatar,
-        CASE
-          WHEN u.verified_type IN (0, 1, 2, 3) THEN 'official'
-          WHEN u.followers_count > 100000 THEN 'kol'
-          WHEN u.verified = true THEN 'media'
-          ELSE 'normal'
-        END as user_type
-      FROM weibo_users u
-      WHERE u.id IN (${placeholders})
-    `,
-      userIdsArray
+      `SELECT * FROM v_weibo_user_info WHERE id = ANY($1::bigint[])`,
+      [userIdsArray]
     );
 
     const usersMap = new Map<string, any>(
