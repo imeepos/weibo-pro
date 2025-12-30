@@ -92,7 +92,7 @@ export class OffscreenThreeRenderer {
     this.camera = new THREE.PerspectiveCamera(
       75,
       this.config.width / this.config.height,
-      10,
+      1,
       10000
     );
     this.camera.position.z = 500;

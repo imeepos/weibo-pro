@@ -12,6 +12,7 @@ import {
 } from '@sker/ui/lib/graph-data-stream/index';
 import { useOffscreenGraph } from '@sker/ui/lib/graph-offscreen-renderer/index';
 import { useGraphLayout } from '@sker/ui/lib/graph-gpu-compute/index';
+import { LouvainCommunityDetector } from '@sker/ui/lib/graph-community-detector';
 
 interface UserRelationGraph3DOffscreenProps {
   network: UserRelationNetwork;
@@ -66,10 +67,10 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
     edgeCount,
     autoStart: false, // 手动控制
     config: {
-      maxIterations: 300,
-      repulsionStrength: 100,
-      attractionStrength: 0.1,
-      damping: 0.85,
+      maxIterations: 500, // 增加迭代次数以更好地形成群组
+      repulsionStrength: 50, // 降低斥力，让节点更容易聚集
+      attractionStrength: 0.3, // 增加引力，让有连接的节点更紧密
+      damping: 0.8, // 降低阻尼，让节点移动更快
     },
     onProgress: (state) => {
       // 每 20 次迭代输出一次进度
@@ -185,6 +186,41 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
 
         setNodeMetadata(allMetadata);
         console.log(`✅ 数据加载完成: ${totalNodesLoaded} 节点, ${network.edges.length} 边`);
+
+        // 执行社区检测
+        console.log('🔍 开始社区检测...');
+        const detector = new LouvainCommunityDetector(network.nodes, network.edges);
+        const communities = detector.detectCommunities();
+        console.log(`✅ 检测到 ${communities.length} 个社区群组`);
+
+        // 创建节点ID到社区的映射
+        const nodeToCommunity = new Map<string, number>();
+        communities.forEach((community) => {
+          community.nodes.forEach((nodeId) => {
+            nodeToCommunity.set(nodeId, community.id);
+          });
+        });
+
+        // 用社区颜色覆盖节点颜色
+        for (let i = 0; i < totalNodesLoaded; i++) {
+          const nodeId = allMetadata[i]?.id;
+          if (nodeId) {
+            const communityId = nodeToCommunity.get(nodeId);
+            if (communityId !== undefined) {
+              const community = communities.find((c) => c.id === communityId);
+              if (community) {
+                // 将十六进制颜色转换为 RGB
+                const hex = community.color.replace('#', '');
+                const r = parseInt(hex.substring(0, 2), 16) / 255;
+                const g = parseInt(hex.substring(2, 4), 16) / 255;
+                const b = parseInt(hex.substring(4, 6), 16) / 255;
+
+                // 更新颜色缓冲区
+                manager.batchUpdateColors(new Float32Array([r, g, b]), i * 3);
+              }
+            }
+          }
+        }
 
         // 数据加载完成后，启动布局计算
         console.log('🚀 启动布局计算...');

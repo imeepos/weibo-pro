@@ -126,23 +126,25 @@ const UserRelationTopology: React.FC = () => {
           </div>
         )}
 
-        {/* 悬浮控制面板 - 左上角 */}
+        {/* 悬浮控制面板 - 可拖拽 */}
         <motion.div
           drag
           dragControls={dragControls}
           dragMomentum={false}
           dragElastic={0}
-          x={position.x}
-          y={position.y}
+          style={{ left: 24, top: 48, x: position.x, y: position.y }}
           onDragEnd={(_, info) => {
-            const newPosition = { x: info.offset.x, y: info.offset.y };
+            const newPosition = {
+              x: position.x + info.offset.x,
+              y: position.y + info.offset.y
+            };
             setPosition(newPosition);
             localStorage.setItem('controlPanel.position', JSON.stringify(newPosition));
           }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
-          className="absolute top-12 left-6 w-72"
+          className="absolute w-72"
         >
           <div
             className="glass-card p-3"
