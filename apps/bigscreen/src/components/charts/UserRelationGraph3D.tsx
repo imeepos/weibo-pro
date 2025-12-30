@@ -27,11 +27,6 @@ import {
 import { GraphFloatingButton } from '@sker/ui/components/ui/graph-floating-button';
 import { Popover, PopoverTrigger, PopoverContent } from '@sker/ui/components/ui/popover';
 import {
-  PerformanceHud,
-  getPerformanceLevel,
-  getFpsColor,
-} from '@sker/ui/components/ui/performance-hud';
-import {
   calculateCompositeScore,
   calculateNodeSize,
   calculateConnectionCounts,
@@ -39,11 +34,9 @@ import {
   type NodeSizeWeights
 } from './NodeSizeCalculator';
 import {
-  calculateAllLinkDistances,
   DEFAULT_LINK_CONFIG,
   type LinkDistanceConfig
 } from './LinkDistanceCalculator';
-import { smartFocusAlgorithm } from '@sker/ui/lib/graph-focus-system';
 import {
   DEFAULT_PERFORMANCE_CONFIG,
   type PerformanceConfig,
@@ -87,7 +80,6 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
   const [hoverNode, setHoverNode] = useState<UserRelationNode | null>(null);
   const [highlightNodes, setHighlightNodes] = useState<Set<string>>(new Set());
   const [fps, setFps] = useState(60);
-  const [frameTime, setFrameTime] = useState(16.67);
   const frameCountRef = useRef(0);
   const lastTimeRef = useRef(performance.now());
   const fpsUpdateIntervalRef = useRef<any>(null);
@@ -316,7 +308,6 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
         const currentFps = Math.round(1000 / avgFrameTime);
 
         setFps(currentFps);
-        setFrameTime(parseFloat(avgFrameTime.toFixed(2)));
       }
 
       frameCountRef.current = 0;
@@ -476,33 +467,6 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
           ))}
         </ControlGroup>
       </GraphControlPanel>
-
-      {/* 性能监控 */}
-      <PerformanceHud
-        visible={showDebugHud}
-        title="性能监控"
-        level={getPerformanceLevel(fps)}
-        position="top-left"
-        metrics={[
-          { label: 'FPS', value: fps, color: getFpsColor(fps) },
-          { label: '帧时间', value: frameTime, suffix: 'ms' },
-          {
-            label: '节点',
-            value: layerStats
-              ? `${graphData.nodes.length}/${layerStats.total} (${((graphData.nodes.length / layerStats.total) * 100).toFixed(0)}%)`
-              : sampledData
-              ? `${graphData.nodes.length} (${((graphData.nodes.length / network.nodes.length) * 100).toFixed(1)}%)`
-              : graphData.nodes.length,
-          },
-          {
-            label: '边',
-            value: sampledData
-              ? `${graphData.links.length} (${((graphData.links.length / network.edges.length) * 100).toFixed(1)}%)`
-              : graphData.links.length,
-          },
-          ...(layerStats ? [{ label: '分层', value: '已启用', color: '#55dd88' }] : []),
-        ]}
-      />
 
       {/* 社群信息面板 */}
       {currentVisualization.enableCommunities && communityMapping && (

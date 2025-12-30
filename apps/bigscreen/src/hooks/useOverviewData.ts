@@ -110,14 +110,15 @@ export const useOverviewData = () => {
   }, [fetchData]);
 
   useEffect(() => {
-    fetchData();
+    const hasData = state.statsData !== null || state.sentimentData !== null;
+    fetchData(hasData);
 
     return () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
     };
-  }, [fetchData]);
+  }, [selectedTimeRange]);
 
   const statsOverviewData = useMemo(() => {
     if (!state.statsData) return null;
