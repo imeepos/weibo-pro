@@ -132,9 +132,6 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
   });
 
   const {
-    linkDirectionalParticles,
-    linkDirectionalParticleWidth,
-    linkDirectionalParticleSpeed,
   } = useForceGraphLinkRenderer({
     getLinkColor: (link: any) => getEdgeColor(link.type),
   });

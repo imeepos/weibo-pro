@@ -83,7 +83,8 @@ export const usePointsRenderer = <TNode extends { id: string | number; x?: numbe
     updatePositions: (newPositions: Float32Array) => {
       if (geometryRef.current) {
         geometryRef.current.setAttribute('position', new THREE.BufferAttribute(newPositions, 3));
-        geometryRef.current.attributes.position.needsUpdate = true;
+        const posAttr = geometryRef.current.getAttribute('position');
+        if (posAttr) posAttr.needsUpdate = true;
       }
     },
   };
