@@ -19,6 +19,7 @@ const DEFAULT_CONFIG: Required<DataLoadConfig> = {
   enableStreaming: true,
   maxNodes: 1000000,
   maxEdges: 5000000,
+  edgeThreshold: 20,
 };
 
 /**
@@ -97,10 +98,11 @@ export class DataStreamer {
       await new Promise((resolve) => setTimeout(resolve, 0));
     }
 
-    // 过滤有效边（两端节点都存在）
+    // 过滤有效边(两端节点都存在)并按权重排序
     const validEdges = edges
       .filter((edge) => nodeIdMap.has(edge.source) && nodeIdMap.has(edge.target))
-      .slice(0, maxEdges);
+      .sort((a, b) => (b.weight || 0) - (a.weight || 0)) // 按权重降序
+      .slice(0, Math.min(maxEdges, Math.ceil(edges.length * (this.config.edgeThreshold / 100)))); // 根据阈值保留边
 
     // 分块加载边
     for (let i = 0; i < validEdges.length; i += chunkSize) {

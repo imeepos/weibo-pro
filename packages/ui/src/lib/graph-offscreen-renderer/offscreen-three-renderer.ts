@@ -79,10 +79,9 @@ export class OffscreenThreeRenderer {
    */
   private initScene(): void {
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(this.config.backgroundColor ?? 0x0a0a0f); // 更深的背景色
-
-    // 添加雾效，增加深度感
-    this.scene.fog = new THREE.FogExp2(0x0a0a0f, 0.0008);
+    const bgColor = this.config.backgroundColor ?? 0x0a0a0f;
+    this.scene.background = new THREE.Color(bgColor);
+    this.scene.fog = new THREE.FogExp2(bgColor, 0.0008);
   }
 
   /**

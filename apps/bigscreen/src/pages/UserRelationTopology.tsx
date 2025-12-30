@@ -27,6 +27,7 @@ const UserRelationTopology: React.FC = () => {
   const [minWeight, setMinWeight] = useState(1);
   const [limit, setLimit] = useState(10000);
   const [debouncedLimit, setDebouncedLimit] = useState(10000);
+  const [edgeThreshold, setEdgeThreshold] = useState(10);
   const [selectedNode, setSelectedNode] = useState<UserRelationNode | null>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const dragControls = useDragControls();
@@ -94,6 +95,7 @@ const UserRelationTopology: React.FC = () => {
                 className="w-full h-full"
                 onNodeClick={handleNodeClick}
                 onNodeHover={handleNodeHover}
+                edgeThreshold={edgeThreshold}
               />
             )}
           </div>
@@ -162,6 +164,8 @@ const UserRelationTopology: React.FC = () => {
               onMinWeightChange={setMinWeight}
               limit={limit}
               onLimitChange={setLimit}
+              edgeThreshold={edgeThreshold}
+              onEdgeThresholdChange={setEdgeThreshold}
               onRefresh={refetch}
               isLoading={isLoading}
             />

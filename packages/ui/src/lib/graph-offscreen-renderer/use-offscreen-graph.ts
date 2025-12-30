@@ -86,6 +86,7 @@ export function useOffscreenGraph(
 
     // 发送初始化消息
     const rect = canvas.getBoundingClientRect();
+    const isDark = document.documentElement.classList.contains('dark');
     const config: RendererConfig = {
       width: rect.width || canvas.width,
       height: rect.height || canvas.height,
@@ -93,7 +94,7 @@ export function useOffscreenGraph(
       maxEdges: options.maxEdges,
       pixelRatio: window.devicePixelRatio,
       antialias: false,
-      backgroundColor: 0x000000,
+      backgroundColor: isDark ? 0x0a0a0f : 0xf9fafb,
     };
 
     worker.postMessage(
@@ -254,16 +255,27 @@ export function useOffscreenGraph(
   }, []);
 
   /**
-   * 鼠标滚轮事件
+   * 鼠标滚轮事件（直接附加到 DOM 以支持 preventDefault）
    */
-  const handleWheel = useCallback((event: React.WheelEvent<HTMLCanvasElement>) => {
-    event.preventDefault();
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
 
-    // 缩放相机距离
-    const delta = event.deltaY * 0.5;
-    cameraDistance.current = Math.max(100, Math.min(2000, cameraDistance.current + delta));
+    const handleWheel = (event: WheelEvent) => {
+      event.preventDefault();
 
-    updateCameraPosition();
+      // 缩放相机距离
+      const delta = event.deltaY * 0.5;
+      cameraDistance.current = Math.max(100, Math.min(2000, cameraDistance.current + delta));
+
+      updateCameraPosition();
+    };
+
+    canvas.addEventListener('wheel', handleWheel, { passive: false });
+
+    return () => {
+      canvas.removeEventListener('wheel', handleWheel);
+    };
   }, [updateCameraPosition]);
 
   return {
@@ -275,6 +287,5 @@ export function useOffscreenGraph(
     handleMouseDown,
     handleMouseMove,
     handleMouseUp,
-    handleWheel,
   };
 }

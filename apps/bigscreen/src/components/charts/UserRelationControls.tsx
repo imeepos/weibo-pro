@@ -9,6 +9,8 @@ interface UserRelationControlsProps {
   onMinWeightChange: (weight: number) => void;
   limit: number;
   onLimitChange: (limit: number) => void;
+  edgeThreshold: number;
+  onEdgeThresholdChange: (threshold: number) => void;
   onRefresh: () => void;
   isLoading?: boolean;
 }
@@ -20,6 +22,8 @@ const UserRelationControls: React.FC<UserRelationControlsProps> = ({
   onMinWeightChange,
   limit,
   onLimitChange,
+  edgeThreshold,
+  onEdgeThresholdChange,
   onRefresh,
   isLoading = false,
 }) => {
@@ -41,13 +45,13 @@ const UserRelationControls: React.FC<UserRelationControlsProps> = ({
   ];
 
   return (
-    <div className="backdrop-blur-sm bg-background/50 rounded-lg shadow-lg">
+    <div className="backdrop-blur-md bg-background/80 dark:bg-background/60 rounded-xl shadow-2xl border border-border/50">
       <div className="flex items-center justify-between p-4 pb-2 cursor-move" data-drag-handle>
         <div className="flex items-center gap-2">
           <h3 className="text-base font-semibold text-foreground">控制面板</h3>
           <button
             onClick={handleToggleCollapse}
-            className="p-1 hover:bg-secondary rounded transition-colors cursor-pointer"
+            className="p-1 hover:bg-accent/50 rounded transition-colors cursor-pointer text-muted-foreground hover:text-foreground"
             title={isCollapsed ? '展开' : '收起'}
           >
             {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
@@ -56,7 +60,7 @@ const UserRelationControls: React.FC<UserRelationControlsProps> = ({
         <button
           onClick={onRefresh}
           disabled={isLoading}
-          className="px-3 py-1.5 bg-primary hover:bg-primary/90 disabled:bg-secondary text-primary-foreground rounded-md transition-colors duration-200 flex items-center gap-2 text-sm cursor-pointer"
+          className="px-3 py-1.5 bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground rounded-lg transition-all duration-200 flex items-center gap-2 text-sm cursor-pointer shadow-sm hover:shadow-md"
         >
           {isLoading ? (
             <>
@@ -84,9 +88,9 @@ const UserRelationControls: React.FC<UserRelationControlsProps> = ({
                 <button
                   key={type.value}
                   onClick={() => onRelationTypeChange(type.value)}
-                  className={`px-3 py-2 rounded-md transition-all duration-200 text-sm font-medium flex items-center justify-center gap-2 ${relationType === type.value
-                    ? 'bg-primary text-primary-foreground shadow'
-                    : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                  className={`px-3 py-2 rounded-lg transition-all duration-200 text-sm font-medium flex items-center justify-center gap-2 ${relationType === type.value
+                    ? 'bg-primary text-primary-foreground shadow-md ring-2 ring-primary/20'
+                    : 'bg-accent/50 text-foreground hover:bg-accent border border-border/50'
                     }`}
                 >
                   {type.icon}
@@ -99,7 +103,7 @@ const UserRelationControls: React.FC<UserRelationControlsProps> = ({
           {/* 最小权重 */}
           <div>
             <label className="block text-xs font-medium text-muted-foreground mb-2">
-              最小交互次数: {minWeight}
+              最小交互次数: <span className="text-foreground font-semibold">{minWeight}</span>
             </label>
             <input
               type="range"
@@ -107,18 +111,18 @@ const UserRelationControls: React.FC<UserRelationControlsProps> = ({
               max="100"
               value={minWeight}
               onChange={(e) => onMinWeightChange(parseInt(e.target.value))}
-              className="w-full h-1.5 bg-secondary rounded-md appearance-none cursor-pointer accent-primary touch-none"
+              className="w-full h-2 bg-accent/50 rounded-lg appearance-none cursor-pointer accent-primary touch-none [&::-webkit-slider-thumb]:shadow-md"
             />
             <div className="flex justify-between text-xs text-muted-foreground mt-1">
               <span>1次</span>
-              <span>10次</span>
+              <span>100次</span>
             </div>
           </div>
 
           {/* 节点数量限制 */}
           <div>
             <label className="block text-xs font-medium text-muted-foreground mb-2">
-              最大节点数: {limit}
+              最大节点数: <span className="text-foreground font-semibold">{limit.toLocaleString()}</span>
             </label>
             <input
               type="range"
@@ -127,11 +131,31 @@ const UserRelationControls: React.FC<UserRelationControlsProps> = ({
               step="20"
               value={limit}
               onChange={(e) => onLimitChange(parseInt(e.target.value))}
-              className="w-full h-1.5 bg-secondary rounded-md appearance-none cursor-pointer accent-primary touch-none"
+              className="w-full h-2 bg-accent/50 rounded-lg appearance-none cursor-pointer accent-primary touch-none [&::-webkit-slider-thumb]:shadow-md"
             />
             <div className="flex justify-between text-xs text-muted-foreground mt-1">
               <span>20个</span>
-              <span>20000个</span>
+              <span>20,000个</span>
+            </div>
+          </div>
+
+          {/* 边显示阈值 */}
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-2">
+              边显示比例: <span className="text-foreground font-semibold">{edgeThreshold}%</span>
+            </label>
+            <input
+              type="range"
+              min="5"
+              max="100"
+              step="5"
+              value={edgeThreshold}
+              onChange={(e) => onEdgeThresholdChange(parseInt(e.target.value))}
+              className="w-full h-2 bg-accent/50 rounded-lg appearance-none cursor-pointer accent-primary touch-none [&::-webkit-slider-thumb]:shadow-md"
+            />
+            <div className="flex justify-between text-xs text-muted-foreground mt-1">
+              <span>5%</span>
+              <span>100%</span>
             </div>
           </div>
         </div>

@@ -95,6 +95,7 @@ export interface DataLoadConfig {
   enableStreaming?: boolean; // 启用流式加载（默认 true）
   maxNodes?: number;         // 最大节点数（默认 1000000）
   maxEdges?: number;         // 最大边数（默认 5000000）
+  edgeThreshold?: number;    // 边显示比例（默认 20，表示20%）
 }
 
 /**

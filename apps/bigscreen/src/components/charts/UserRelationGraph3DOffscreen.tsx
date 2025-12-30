@@ -20,6 +20,7 @@ interface UserRelationGraph3DOffscreenProps {
   onNodeClick?: (node: UserRelationNode) => void;
   onNodeHover?: (node: UserRelationNode | null) => void;
   showDebugHud?: boolean;
+  edgeThreshold?: number;
 }
 
 const MAX_NODES = 100000;
@@ -30,6 +31,7 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
   className = '',
   onNodeClick,
   showDebugHud = true,
+  edgeThreshold = 20,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -65,12 +67,12 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
     buffers: sharedBuffers,
     nodeCount,
     edgeCount,
-    autoStart: false, // 手动控制
+    autoStart: false,
     config: {
-      maxIterations: 500, // 增加迭代次数以更好地形成群组
-      repulsionStrength: 50, // 降低斥力，让节点更容易聚集
-      attractionStrength: 0.3, // 增加引力，让有连接的节点更紧密
-      damping: 0.8, // 降低阻尼，让节点移动更快
+      maxIterations: 500,
+      repulsionStrength: 30,
+      attractionStrength: 0.5,
+      damping: 0.8,
     },
     onProgress: (state) => {
       // 每 20 次迭代输出一次进度
@@ -94,7 +96,6 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
     handleMouseDown,
     handleMouseMove,
     handleMouseUp,
-    handleWheel,
   } = useOffscreenGraph(canvasRef, sharedBuffers, {
     maxNodes: MAX_NODES,
     maxEdges: MAX_EDGES,
@@ -133,6 +134,7 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
           chunkSize: 5000,
           maxNodes: MAX_NODES,
           maxEdges: MAX_EDGES,
+          edgeThreshold,
         });
 
         // 3. 构建节点 ID 映射
@@ -238,7 +240,7 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
       stopLayout();
       bufferManager?.dispose();
     };
-  }, [network]);
+  }, [network, edgeThreshold]);
 
   return (
     <div ref={containerRef} className={`relative ${className}`}>
@@ -251,14 +253,13 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
-        onWheel={handleWheel}
         style={{ display: 'block' }}
       />
 
       {/* 加载进度 */}
       {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-          <div className="text-white text-center">
+        <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm">
+          <div className="text-foreground text-center">
             <div className="inline-block w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mb-2"></div>
             <p className="text-sm">加载中... {loadProgress.toLocaleString()} 节点</p>
           </div>
@@ -267,7 +268,7 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
 
       {/* 调试 HUD */}
       {showDebugHud && !isLoading && (
-        <div className="absolute top-4 left-4 bg-black/80 text-white p-3 text-xs font-mono rounded shadow-lg space-y-2">
+        <div className="absolute top-4 left-4 bg-background/80 backdrop-blur-sm text-foreground p-3 text-xs font-mono rounded shadow-lg space-y-2 border border-border">
           <div className="font-bold text-primary">🎨 OffscreenCanvas 渲染器</div>
           <div className="grid grid-cols-2 gap-x-4 gap-y-1">
             <div>FPS:</div>
@@ -354,7 +355,7 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
 
       {/* 提示信息 */}
       {!isLoading && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/80 text-white px-4 py-2 text-xs rounded-lg backdrop-blur-sm border border-white/10">
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-background/80 text-foreground px-4 py-2 text-xs rounded-lg backdrop-blur-sm border border-border">
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1.5">
               <span className="inline-block w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></span>
