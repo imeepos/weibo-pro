@@ -98,31 +98,6 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
   const [communityMapping, setCommunityMapping] = useState<CommunityMapping | null>(null);
   const [interCommunityRelations, setInterCommunityRelations] = useState<any[]>([]);
 
-  const { nodeThreeObject } = useInstancedNodeRenderer(graphData.nodes, {
-    getNodeColor: (node: any) => {
-      if (currentVisualization.enableCommunities && communityMapping) {
-        const communityId = communityMapping.nodeToCommunity.get(node.id);
-        if (communityId !== undefined) {
-          const community = communityMapping.communities.find(c => c.id === communityId);
-          if (community) return community.color;
-        }
-      }
-      return getUserTypeColor(node.userType);
-    },
-    getNodeRadius: (node: any) => node.val || 5,
-  });
-
-  const { pointsObject } = usePointsRenderer(graphData.backgroundNodes, {
-    getNodeColor: () => '#888888',
-    pointSize: 2,
-    sizeAttenuation: true,
-  });
-
-  const {
-  } = useForceGraphLinkRenderer({
-    getLinkColor: (link: any) => getEdgeColor(link.type),
-  });
-
   const linkMaterial = useCallback((link: any) => {
     const weight = link.value || 1;
     const opacity = getEdgeOpacity(weight);
@@ -194,6 +169,26 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
     };
   }, [network, currentWeights, performanceConfig]);
 
+  const { instancedMesh } = useInstancedNodeRenderer(graphData.nodes, {
+    getNodeColor: (node: any) => {
+      if (currentVisualization.enableCommunities && communityMapping) {
+        const communityId = communityMapping.nodeToCommunity.get(node.id);
+        if (communityId !== undefined) {
+          const community = communityMapping.communities.find(c => c.id === communityId);
+          if (community) return community.color;
+        }
+      }
+      return getUserTypeColor(node.userType);
+    },
+    getNodeRadius: (node: any) => node.val || 5,
+  });
+
+  const { pointsObject } = usePointsRenderer(graphData.backgroundNodes, {
+    getNodeColor: () => '#888888',
+    pointSize: 2,
+    sizeAttenuation: true,
+  });
+
   useEffect(() => {
     if (fgRef.current) {
       // 只在初始化时配置一次力导向参数
@@ -219,6 +214,17 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
       };
     }
   }, [pointsObject]);
+
+  // 添加 InstancedMesh 到场景
+  useEffect(() => {
+    if (fgRef.current && instancedMesh) {
+      const scene = fgRef.current.scene();
+      scene.add(instancedMesh);
+      return () => {
+        scene.remove(instancedMesh);
+      };
+    }
+  }, [instancedMesh]);
 
   // 性能监控和自适应优化
   useEffect(() => {
@@ -329,7 +335,6 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
             </div>
           `;
         }}
-        nodeThreeObject={nodeThreeObject}
         linkMaterial={linkMaterial}
         linkWidth={linkWidth}
         linkDirectionalParticles={0}

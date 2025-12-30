@@ -59,6 +59,7 @@ export interface ForceGraph3DHandle {
   centerAt: (x?: number, y?: number, transitionDuration?: number) => void;
   zoom: (distance: number, transitionDuration?: number) => void;
   zoomToFit: (duration?: number, padding?: number, ...filters: any[]) => void;
+  scene: () => any;
 }
 
 export const ForceGraph3D = forwardRef<ForceGraph3DHandle, ForceGraph3DProps>(({
@@ -150,6 +151,10 @@ export const ForceGraph3D = forwardRef<ForceGraph3DHandle, ForceGraph3DProps>(({
     zoomToFit: (duration, padding, ...filters) => {
       if (!fgRef.current) return;
       fgRef.current.zoomToFit(duration, padding, ...filters);
+    },
+    scene: () => {
+      if (!fgRef.current) return null;
+      return (fgRef.current as any).scene();
     },
   }));
 
