@@ -3,6 +3,7 @@
  * 用于小规模图或作为 GPU 版本的降级方案
  */
 
+import { BarnesHutTree } from './barnes-hut-tree';
 import type { LayoutConfig, LayoutState, IForceLayout } from './types';
 
 const DEFAULT_CONFIG: LayoutConfig = {
@@ -38,6 +39,11 @@ export class SimpleForceLayout implements IForceLayout {
 
   // 临时数组（避免重复分配）
   private forces: Float32Array;
+  private masses: Float32Array;
+
+  // Barnes-Hut 树（可选）
+  private barnesHutTree: BarnesHutTree | null = null;
+  private useBarnesHut: boolean = false;
 
   constructor() {
     this.config = { ...DEFAULT_CONFIG };
@@ -46,6 +52,7 @@ export class SimpleForceLayout implements IForceLayout {
     this.edgeIndices = new Uint32Array(0);
     this.edgeWeights = new Float32Array(0);
     this.forces = new Float32Array(0);
+    this.masses = new Float32Array(0);
   }
 
   init(
@@ -68,6 +75,16 @@ export class SimpleForceLayout implements IForceLayout {
     // 分配力数组
     this.forces = new Float32Array(nodeCount * 3);
 
+    // 初始化质量（所有节点质量为 1）
+    this.masses = new Float32Array(nodeCount).fill(1);
+
+    // 启用 Barnes-Hut（节点数 > 5000 时）
+    this.useBarnesHut = nodeCount > 5000;
+    if (this.useBarnesHut) {
+      this.barnesHutTree = new BarnesHutTree(this.config.theta);
+      console.log(`🌲 启用 Barnes-Hut 优化（节点数: ${nodeCount}）`);
+    }
+
     // 重置状态
     this.iteration = 0;
     this.startTime = performance.now();
@@ -81,8 +98,12 @@ export class SimpleForceLayout implements IForceLayout {
     // 1. 清空力
     this.forces.fill(0);
 
-    // 2. 计算斥力（所有节点对）
-    this.calculateRepulsion();
+    // 2. 计算斥力（Barnes-Hut 或直接计算）
+    if (this.useBarnesHut && this.barnesHutTree) {
+      this.calculateRepulsionBarnesHut();
+    } else {
+      this.calculateRepulsion();
+    }
 
     // 3. 计算引力（边）
     this.calculateAttraction();
@@ -122,7 +143,33 @@ export class SimpleForceLayout implements IForceLayout {
   }
 
   /**
-   * 计算斥力（Coulomb's Law）
+   * 计算斥力（Barnes-Hut 优化版）
+   */
+  private calculateRepulsionBarnesHut(): void {
+    if (!this.barnesHutTree) return;
+
+    const { repulsionStrength } = this.config;
+
+    // 重建树（每次迭代位置都变了）
+    this.barnesHutTree.build(this.positions, this.masses, this.nodeCount);
+
+    // 对每个节点计算力
+    for (let i = 0; i < this.nodeCount; i++) {
+      const ix = i * 3;
+      const x = this.positions[ix];
+      const y = this.positions[ix + 1];
+      const z = this.positions[ix + 2];
+
+      const force = this.barnesHutTree.calculateForce(x, y, z, repulsionStrength);
+
+      this.forces[ix] += force.fx;
+      this.forces[ix + 1] += force.fy;
+      this.forces[ix + 2] += force.fz;
+    }
+  }
+
+  /**
+   * 计算斥力（Coulomb's Law）- 直接 O(n²) 版本
    */
   private calculateRepulsion(): void {
     const { repulsionStrength } = this.config;
@@ -262,5 +309,8 @@ export class SimpleForceLayout implements IForceLayout {
   dispose(): void {
     // TypedArray 会自动 GC
     this.forces = new Float32Array(0);
+    this.masses = new Float32Array(0);
+    this.barnesHutTree?.clear();
+    this.barnesHutTree = null;
   }
 }

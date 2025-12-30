@@ -1,5 +1,6 @@
 import { EntityManager } from 'typeorm';
 import { UserRelationStatistics, UserRelationType } from '../user-relation-statistics.entity';
+import { StatisticsProgress } from '../statistics-progress.entity';
 
 interface IncrementalStatsOptions {
   batchSize?: number;
@@ -17,15 +18,21 @@ export class UserRelationStatisticsQueries {
   ): Promise<number> {
     const { batchSize = 10000, maxRecords = 100000 } = options;
 
-    // 获取最后处理的ID
-    const lastProcessed = await manager
-      .createQueryBuilder(UserRelationStatistics, 'stats')
-      .where('stats.relationType = :type', { type: UserRelationType.REPOST })
-      .orderBy('stats.lastProcessedId', 'DESC')
-      .limit(1)
-      .getOne();
+    // 从全局进度表获取最后处理的ID
+    let progress = await manager.findOne(StatisticsProgress, {
+      where: { relationType: UserRelationType.REPOST },
+    });
 
-    const lastId = lastProcessed?.lastProcessedId || '0';
+    if (!progress) {
+      // 首次运行，创建进度记录
+      progress = manager.create(StatisticsProgress, {
+        relationType: UserRelationType.REPOST,
+        lastProcessedId: '0',
+      });
+      await manager.save(progress);
+    }
+
+    const lastId = progress.lastProcessedId;
 
     // 分批统计新数据
     const result = await manager.query(
@@ -69,7 +76,24 @@ export class UserRelationStatisticsQueries {
       [lastId, maxRecords]
     );
 
-    return result.rowCount || 0;
+    const processedCount = result.rowCount || 0;
+
+    // 更新全局进度
+    if (processedCount > 0) {
+      // 获取本批次处理的最大ID
+      const maxIdResult = await manager.query(
+        `SELECT MAX(id) as max_id FROM weibo_reposts WHERE id > $1 LIMIT $2`,
+        [lastId, maxRecords]
+      );
+      const newLastId = maxIdResult[0]?.max_id || lastId;
+
+      progress.lastProcessedId = newLastId;
+      progress.lastProcessedAt = new Date();
+      progress.processedCount = processedCount;
+      await manager.save(progress);
+    }
+
+    return processedCount;
   }
 
   /**
@@ -81,14 +105,20 @@ export class UserRelationStatisticsQueries {
   ): Promise<number> {
     const { batchSize = 10000, maxRecords = 100000 } = options;
 
-    const lastProcessed = await manager
-      .createQueryBuilder(UserRelationStatistics, 'stats')
-      .where('stats.relationType = :type', { type: UserRelationType.COMMENT })
-      .orderBy('stats.lastProcessedId', 'DESC')
-      .limit(1)
-      .getOne();
+    // 从全局进度表获取最后处理的ID
+    let progress = await manager.findOne(StatisticsProgress, {
+      where: { relationType: UserRelationType.COMMENT },
+    });
 
-    const lastId = lastProcessed?.lastProcessedId || '0';
+    if (!progress) {
+      progress = manager.create(StatisticsProgress, {
+        relationType: UserRelationType.COMMENT,
+        lastProcessedId: '0',
+      });
+      await manager.save(progress);
+    }
+
+    const lastId = progress.lastProcessedId;
 
     const result = await manager.query(
       `
@@ -131,7 +161,23 @@ export class UserRelationStatisticsQueries {
       [lastId, maxRecords]
     );
 
-    return result.rowCount || 0;
+    const processedCount = result.rowCount || 0;
+
+    // 更新全局进度
+    if (processedCount > 0) {
+      const maxIdResult = await manager.query(
+        `SELECT MAX(id) as max_id FROM weibo_comments WHERE id > $1 LIMIT $2`,
+        [lastId, maxRecords]
+      );
+      const newLastId = maxIdResult[0]?.max_id || lastId;
+
+      progress.lastProcessedId = newLastId;
+      progress.lastProcessedAt = new Date();
+      progress.processedCount = processedCount;
+      await manager.save(progress);
+    }
+
+    return processedCount;
   }
 
   /**
@@ -143,14 +189,20 @@ export class UserRelationStatisticsQueries {
   ): Promise<number> {
     const { batchSize = 10000, maxRecords = 100000 } = options;
 
-    const lastProcessed = await manager
-      .createQueryBuilder(UserRelationStatistics, 'stats')
-      .where('stats.relationType = :type', { type: UserRelationType.LIKE })
-      .orderBy('stats.lastProcessedId', 'DESC')
-      .limit(1)
-      .getOne();
+    // 从全局进度表获取最后处理的ID
+    let progress = await manager.findOne(StatisticsProgress, {
+      where: { relationType: UserRelationType.LIKE },
+    });
 
-    const lastId = lastProcessed?.lastProcessedId || '0';
+    if (!progress) {
+      progress = manager.create(StatisticsProgress, {
+        relationType: UserRelationType.LIKE,
+        lastProcessedId: '0',
+      });
+      await manager.save(progress);
+    }
+
+    const lastId = progress.lastProcessedId;
 
     const result = await manager.query(
       `
@@ -192,7 +244,23 @@ export class UserRelationStatisticsQueries {
       [lastId, maxRecords]
     );
 
-    return result.rowCount || 0;
+    const processedCount = result.rowCount || 0;
+
+    // 更新全局进度
+    if (processedCount > 0) {
+      const maxIdResult = await manager.query(
+        `SELECT MAX(id) as max_id FROM weibo_likes WHERE id > $1 LIMIT $2`,
+        [lastId, maxRecords]
+      );
+      const newLastId = maxIdResult[0]?.max_id || lastId;
+
+      progress.lastProcessedId = newLastId;
+      progress.lastProcessedAt = new Date();
+      progress.processedCount = processedCount;
+      await manager.save(progress);
+    }
+
+    return processedCount;
   }
 
   /**
@@ -217,17 +285,30 @@ export class UserRelationStatisticsQueries {
    * 获取统计进度
    */
   static async getStatisticsProgress(manager: EntityManager) {
-    const progress = await manager.query(`
+    // 从全局进度表获取处理进度
+    const progressRecords = await manager.find(StatisticsProgress);
+
+    // 从统计表获取汇总信息
+    const stats = await manager.query(`
       SELECT
         relation_type,
         COUNT(*) as total_relations,
-        SUM(weight) as total_interactions,
-        MAX(last_processed_id) as last_processed_id,
-        MAX(last_processed_at) as last_processed_at
+        SUM(weight) as total_interactions
       FROM user_relation_statistics
       GROUP BY relation_type
     `);
 
-    return progress;
+    // 合并进度和统计信息
+    return progressRecords.map((progress) => {
+      const stat = stats.find((s: any) => s.relation_type === progress.relationType);
+      return {
+        relationType: progress.relationType,
+        lastProcessedId: progress.lastProcessedId,
+        lastProcessedAt: progress.lastProcessedAt,
+        processedCount: progress.processedCount,
+        totalRelations: stat?.total_relations || 0,
+        totalInteractions: stat?.total_interactions || 0,
+      };
+    });
   }
 }

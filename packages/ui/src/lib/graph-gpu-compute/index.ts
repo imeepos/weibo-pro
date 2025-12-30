@@ -4,6 +4,7 @@
  */
 
 export { SimpleForceLayout } from './simple-force-layout';
+export { BarnesHutTree } from './barnes-hut-tree';
 export { useGraphLayout } from './use-graph-layout';
 
 export type {

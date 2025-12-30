@@ -26,6 +26,7 @@ export type RenderWorkerMessage =
   | { type: 'UPDATE_NODE_COUNT'; count: number }
   | { type: 'UPDATE_EDGE_COUNT'; count: number }
   | { type: 'UPDATE_VISIBILITY'; visibilityMask: Uint8Array }
+  | { type: 'UPDATE_LOD'; lodAssignments: Map<number, number>; visibleIndices: Set<number> }
   | { type: 'SET_CAMERA'; position: [number, number, number]; target: [number, number, number] }
   | { type: 'PICK'; x: number; y: number; requestId: number }
   | { type: 'RESIZE'; width: number; height: number; pixelRatio: number }
