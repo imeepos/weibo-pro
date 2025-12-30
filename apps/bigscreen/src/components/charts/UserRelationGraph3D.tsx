@@ -309,6 +309,7 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
       <ForceGraph3D
         ref={fgRef}
         graphData={graphData}
+        nodeThreeObject={() => new THREE.Object3D()}
         nodeLabel={(node: any) => {
           const formatNumber = (num: number): string => {
             if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
