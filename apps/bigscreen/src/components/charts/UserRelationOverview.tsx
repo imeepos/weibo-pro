@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { UserRelationGraph3D } from './UserRelationGraph3D';
 import type { UserRelationNetwork, UserRelationType, TimeRange } from '@sker/sdk';
 import { UserRelationController } from '@sker/sdk';
@@ -21,37 +21,63 @@ export const UserRelationOverview: React.FC<UserRelationOverviewProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const selectedTimeRange = useAppStore((state) => state.selectedTimeRange);
+
   // 获取真实数据
-  const fetchNetwork = useCallback(async () => {
+  useEffect(() => {
+    const fetchNetwork = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const controller = root.get(UserRelationController);
+
+        const data = await controller.getNetwork(
+          'comprehensive' as UserRelationType,
+          selectedTimeRange,
+          1, // minWeight
+          100000 // limit - 支持10万节点（分层渲染自动优化）
+        );
+
+        setNetworkData(data);
+      } catch (err) {
+        console.error('❌ 获取数据失败:', err);
+        console.error('❌ 错误堆栈:', err instanceof Error ? err.stack : '无堆栈信息');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchNetwork();
+  }, [selectedTimeRange]);
+
+  // 重试函数
+  const refetch = useCallback(() => {
     setLoading(true);
     setError(null);
 
-    try {
+    const fetchNetwork = async () => {
+      try {
+        const controller = root.get(UserRelationController);
+        const data = await controller.getNetwork(
+          'comprehensive' as UserRelationType,
+          selectedTimeRange,
+          1,
+          100000
+        );
+        setNetworkData(data);
+      } catch (err) {
+        console.error('❌ 获取数据失败:', err);
+        console.error('❌ 错误堆栈:', err instanceof Error ? err.stack : '无堆栈信息');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      const controller = root.get(UserRelationController);
-
-      const data = await controller.getNetwork(
-        'comprehensive' as UserRelationType,
-        selectedTimeRange,
-        1, // minWeight
-        100000 // limit - 支持10万节点（分层渲染自动优化）
-      );
-
-      setNetworkData(data);
-    } catch (err) {
-      console.error('❌ 获取数据失败:', err);
-      console.error('❌ 错误堆栈:', err instanceof Error ? err.stack : '无堆栈信息');
-    } finally {
-      setLoading(false);
-    }
+    fetchNetwork();
   }, [selectedTimeRange]);
 
-  useEffect(() => {
-    fetchNetwork();
-  }, [fetchNetwork]);
-
-  // 大屏幕专用配置 - 最大化可视化区域
-  const bigScreenConfig = {
+  // 大屏幕专用配置 - 使用 useMemo 稳定引用
+  const bigScreenConfig = useMemo(() => ({
     nodeSizeWeights: {
       followers: 0.5,
       influence: 0.3,
@@ -67,8 +93,16 @@ export const UserRelationOverview: React.FC<UserRelationOverviewProps> = ({
     enableNodeOpacity: true,
     enableNodePulse: false,
     enableCommunities: true,
-    showDebugHud: true // 启用性能监控
-  };
+    showDebugHud: true
+  }), []);
+
+  const handleNodeClick = useCallback((node: any) => {
+    console.log('大屏幕节点点击:', node);
+  }, []);
+
+  const handleNodeHover = useCallback(() => {
+    // 悬停效果保持
+  }, []);
 
   // 加载状态 - 简洁的大屏幕样式
   if (loading) {
@@ -89,7 +123,7 @@ export const UserRelationOverview: React.FC<UserRelationOverviewProps> = ({
         <div className="text-center text-muted-foreground">
           <div className="text-sm">数据加载失败</div>
           <button
-            onClick={fetchNetwork}
+            onClick={refetch}
             className="mt-2 px-3 py-1 text-xs bg-primary hover:bg-primary/90 rounded transition-colors text-primary-foreground"
           >
             重试
@@ -119,13 +153,8 @@ export const UserRelationOverview: React.FC<UserRelationOverviewProps> = ({
           network={networkData}
           className="w-full h-full"
           {...bigScreenConfig}
-          onNodeClick={(node) => {
-            // 大屏幕点击节点可记录日志，但不做跳转
-            console.log('大屏幕节点点击:', node);
-          }}
-          onNodeHover={(node) => {
-            // 悬停效果保持
-          }}
+          onNodeClick={handleNodeClick}
+          onNodeHover={handleNodeHover}
         />
       </div>
     </div>

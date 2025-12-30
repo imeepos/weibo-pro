@@ -210,18 +210,18 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
 
   useEffect(() => {
     if (fgRef.current) {
-      // 增加斥力和距离，避免节点重叠
+      // 只在初始化时配置一次力导向参数
       fgRef.current.d3Force('charge').strength(-300);
       fgRef.current.d3Force('link').distance(120);
 
-      // 初始化力导向图后，自动调整视图以适应所有节点
+      // 初始化后自动调整视图
       setTimeout(() => {
         if (fgRef.current) {
           fgRef.current.zoomToFit(0, 50);
         }
       }, 100);
     }
-  }, [network.edges, network.nodes]);
+  }, []); // 空依赖数组，只在挂载时执行一次
 
   // 性能监控和自适应优化
   useEffect(() => {
