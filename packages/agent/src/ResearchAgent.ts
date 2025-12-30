@@ -17,7 +17,9 @@ import { InMemoryStore, MemorySaver } from '@langchain/langgraph';
  * LLM 代理服务地址
  * 使用本地代理统一处理 LLM 调用
  */
-const LLM_PROXY_BASE_URL = 'http://localhost:8089/llm/openai';
+const LLM_PROXY_BASE_URL = process.env.API_BASE_URL
+  ? `${process.env.API_BASE_URL}/api/auth/llm/openai`
+  : 'http://localhost:8089/api/auth/llm/openai';
 
 /**
  * 默认模型配置

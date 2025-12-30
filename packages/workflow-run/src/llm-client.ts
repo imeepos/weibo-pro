@@ -1,6 +1,8 @@
 import { ChatOpenAI, ChatOpenAICallOptions } from '@langchain/openai'
 
-const LLM_PROXY_BASE_URL = process.env.LLM_PROXY_BASE_URL || 'http://localhost:8089/llm/openai'
+const LLM_PROXY_BASE_URL = process.env.API_BASE_URL
+  ? `${process.env.API_BASE_URL}/api/auth/llm/openai`
+  : 'http://localhost:8089/api/auth/llm/openai'
 
 export interface LlmModelOptions {
   model?: string

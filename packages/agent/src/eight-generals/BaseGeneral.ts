@@ -12,7 +12,9 @@ import type {
 import { createMessage, GENERAL_META } from './types';
 
 /** LLM 配置 */
-const LLM_PROXY_BASE_URL = 'http://localhost:8089/llm/openai';
+const LLM_PROXY_BASE_URL = process.env.API_BASE_URL
+  ? `${process.env.API_BASE_URL}/api/auth/llm/openai`
+  : 'http://localhost:8089/api/auth/llm/openai';
 const DEFAULT_MODEL = 'deepseek-ai/DeepSeek-V3.2';
 
 /**
