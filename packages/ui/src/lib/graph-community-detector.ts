@@ -36,10 +36,14 @@ const shuffleArray = <T>(array: T[]): void => {
 export class LouvainCommunityDetector<N extends GraphNode, E extends GraphEdge> {
   private nodes: Map<string, N>;
   private adjacency: Map<string, Map<string, number>>;
+  private nodeDegrees: Map<string, number>;
+  private totalWeight: number;
 
   constructor(nodes: N[], edges: E[]) {
     this.nodes = new Map(nodes.map(node => [node.id, node]));
     this.adjacency = this.buildAdjacencyMatrix(edges);
+    this.nodeDegrees = this.precomputeDegrees();
+    this.totalWeight = this.calculateTotalWeight();
   }
 
   private buildAdjacencyMatrix(edges: E[]): Map<string, Map<string, number>> {
@@ -63,15 +67,20 @@ export class LouvainCommunityDetector<N extends GraphNode, E extends GraphEdge> 
     return adjacency;
   }
 
-  private calculateDegree(nodeId: string): number {
-    const neighbors = this.adjacency.get(nodeId);
-    if (!neighbors) return 0;
-
-    let degree = 0;
-    for (const weight of neighbors.values()) {
-      degree += weight;
+  private precomputeDegrees(): Map<string, number> {
+    const degrees = new Map<string, number>();
+    for (const [nodeId, neighbors] of this.adjacency) {
+      let degree = 0;
+      for (const weight of neighbors.values()) {
+        degree += weight;
+      }
+      degrees.set(nodeId, degree);
     }
-    return degree;
+    return degrees;
+  }
+
+  private getDegree(nodeId: string): number {
+    return this.nodeDegrees.get(nodeId) || 0;
   }
 
   private calculateTotalWeight(): number {
@@ -87,27 +96,21 @@ export class LouvainCommunityDetector<N extends GraphNode, E extends GraphEdge> 
   private calculateDeltaModularity(
     nodeId: string,
     targetCommunity: number,
-    communities: Map<string, number>
+    communities: Map<string, number>,
+    communityMembers: Map<number, Set<string>>,
+    communitySumTot: Map<number, number>
   ): number {
-    const m = this.calculateTotalWeight();
-    const degree = this.calculateDegree(nodeId);
+    const degree = this.getDegree(nodeId);
 
     let sumIn = 0;
-    let sumTot = 0;
-
-    for (const [otherNodeId, weight] of this.adjacency.get(nodeId) || new Map()) {
-      if (communities.get(otherNodeId) === targetCommunity) {
+    for (const [neighborId, weight] of this.adjacency.get(nodeId) || new Map()) {
+      if (communities.get(neighborId) === targetCommunity) {
         sumIn += weight;
       }
     }
 
-    for (const [otherNodeId, community] of communities) {
-      if (community === targetCommunity) {
-        sumTot += this.calculateDegree(otherNodeId);
-      }
-    }
-
-    return (sumIn - (sumTot * degree) / (2 * m)) / m;
+    const sumTot = communitySumTot.get(targetCommunity) || 0;
+    return (sumIn - (sumTot * degree) / (2 * this.totalWeight)) / this.totalWeight;
   }
 
   private getNeighborCommunities(nodeId: string, communities: Map<string, number>): Set<number> {
@@ -148,14 +151,10 @@ export class LouvainCommunityDetector<N extends GraphNode, E extends GraphEdge> 
 
   private calculateCommunityCentrality(community: Community): number {
     let totalCentrality = 0;
-    let nodeCount = 0;
-
     for (const nodeId of community.nodes) {
-      totalCentrality += this.calculateDegree(nodeId);
-      nodeCount++;
+      totalCentrality += this.getDegree(nodeId);
     }
-
-    return nodeCount > 0 ? totalCentrality / nodeCount : 0;
+    return community.nodes.size > 0 ? totalCentrality / community.nodes.size : 0;
   }
 
   private buildCommunityObjects(communities: Map<string, number>): Community[] {
@@ -193,6 +192,19 @@ export class LouvainCommunityDetector<N extends GraphNode, E extends GraphEdge> 
       communities.set(nodeId, communityId++);
     }
 
+    // 初始化社群成员索引和总度数缓存
+    const communityMembers = new Map<number, Set<string>>();
+    const communitySumTot = new Map<number, number>();
+
+    for (const [nodeId, commId] of communities) {
+      if (!communityMembers.has(commId)) {
+        communityMembers.set(commId, new Set());
+        communitySumTot.set(commId, 0);
+      }
+      communityMembers.get(commId)!.add(nodeId);
+      communitySumTot.set(commId, communitySumTot.get(commId)! + this.getDegree(nodeId));
+    }
+
     let improved = true;
     let iterations = 0;
 
@@ -205,14 +217,29 @@ export class LouvainCommunityDetector<N extends GraphNode, E extends GraphEdge> 
 
       for (const nodeId of nodes) {
         const currentCommunity = communities.get(nodeId)!;
+        const nodeDegree = this.getDegree(nodeId);
         let bestCommunity = currentCommunity;
         let bestDeltaQ = 0;
 
-        const currentDeltaQ = this.calculateDeltaModularity(nodeId, currentCommunity, communities);
+        const currentDeltaQ = this.calculateDeltaModularity(
+          nodeId,
+          currentCommunity,
+          communities,
+          communityMembers,
+          communitySumTot
+        );
 
         const neighborCommunities = this.getNeighborCommunities(nodeId, communities);
         for (const neighborCommunity of neighborCommunities) {
-          const deltaQ = this.calculateDeltaModularity(nodeId, neighborCommunity, communities);
+          if (neighborCommunity === currentCommunity) continue;
+
+          const deltaQ = this.calculateDeltaModularity(
+            nodeId,
+            neighborCommunity,
+            communities,
+            communityMembers,
+            communitySumTot
+          );
           if (deltaQ > bestDeltaQ) {
             bestDeltaQ = deltaQ;
             bestCommunity = neighborCommunity;
@@ -220,7 +247,21 @@ export class LouvainCommunityDetector<N extends GraphNode, E extends GraphEdge> 
         }
 
         if (bestCommunity !== currentCommunity && bestDeltaQ > currentDeltaQ) {
+          // 更新社群分配
           communities.set(nodeId, bestCommunity);
+
+          // 更新索引
+          communityMembers.get(currentCommunity)!.delete(nodeId);
+          if (!communityMembers.has(bestCommunity)) {
+            communityMembers.set(bestCommunity, new Set());
+            communitySumTot.set(bestCommunity, 0);
+          }
+          communityMembers.get(bestCommunity)!.add(nodeId);
+
+          // 更新总度数缓存
+          communitySumTot.set(currentCommunity, communitySumTot.get(currentCommunity)! - nodeDegree);
+          communitySumTot.set(bestCommunity, communitySumTot.get(bestCommunity)! + nodeDegree);
+
           improved = true;
         }
       }
@@ -243,21 +284,23 @@ export const analyzeInterCommunityRelations = <E extends GraphEdge>(
 ): InterCommunityRelation[] => {
   const relationMap = new Map<string, { weight: number; count: number }>();
 
+  // 构建节点到社群的映射
+  const nodeToCommunity = new Map<string, number>();
+  for (const community of communities) {
+    for (const nodeId of community.nodes) {
+      nodeToCommunity.set(nodeId, community.id);
+    }
+  }
+
   for (const edge of edges) {
     const sourceId = normalizeId(edge.source);
     const targetId = normalizeId(edge.target);
     const weight = edge.weight || 1;
 
-    let sourceCommunity: number | null = null;
-    let targetCommunity: number | null = null;
+    const sourceCommunity = nodeToCommunity.get(sourceId);
+    const targetCommunity = nodeToCommunity.get(targetId);
 
-    for (const community of communities) {
-      if (community.nodes.has(sourceId)) sourceCommunity = community.id;
-      if (community.nodes.has(targetId)) targetCommunity = community.id;
-      if (sourceCommunity !== null && targetCommunity !== null) break;
-    }
-
-    if (sourceCommunity !== null && targetCommunity !== null && sourceCommunity !== targetCommunity) {
+    if (sourceCommunity !== undefined && targetCommunity !== undefined && sourceCommunity !== targetCommunity) {
       const key = `${Math.min(sourceCommunity, targetCommunity)}-${Math.max(sourceCommunity, targetCommunity)}`;
 
       if (!relationMap.has(key)) {

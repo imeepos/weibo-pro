@@ -14,7 +14,7 @@
  * ```
  */
 
-import { LouvainCommunityDetector, analyzeInterCommunityRelations } from '@sker/ui/lib/graph-community-detector';
+import { LouvainCommunityDetector } from '@sker/ui/lib/graph-community-detector';
 import type { UserRelationNode, UserRelationEdge } from '@sker/sdk';
 
 interface WorkerInput {
@@ -23,18 +23,20 @@ interface WorkerInput {
 }
 
 interface WorkerOutput {
-  communities: Array<{
-    id: number;
-    nodes: string[];
-    size: number;
-    density: number;
-    color: string;
-  }>;
-  relations: Array<{
-    sourceCommunity: number;
-    targetCommunity: number;
-    edgeCount: number;
-  }>;
+  graphData: {
+    nodes: Array<{
+      id: string;
+      name: string;
+      val: number;
+      color: string;
+      communityId?: number;
+    }>;
+    links: Array<{
+      source: string;
+      target: string;
+      value: number;
+    }>;
+  };
   duration: number;
 }
 
@@ -49,16 +51,53 @@ self.addEventListener('message', (event: MessageEvent<WorkerInput>) => {
     const detector = new LouvainCommunityDetector(nodes, edges);
     const communities = detector.detectCommunities();
 
-    // 分析社群间关系
-    const relations = analyzeInterCommunityRelations(communities, edges);
+    // 构建节点到社群的映射
+    const nodeToCommunity = new Map<string, number>();
+    const communityMap = new Map<number, { color: string }>();
+
+    communities.forEach((community) => {
+      communityMap.set(community.id, { color: community.color });
+      community.nodes.forEach((nodeId) => {
+        nodeToCommunity.set(nodeId, community.id);
+      });
+    });
+
+    // 计算节点度数
+    const nodeDegree = new Map<string, number>();
+    edges.forEach((edge) => {
+      nodeDegree.set(edge.source, (nodeDegree.get(edge.source) || 0) + 1);
+      nodeDegree.set(edge.target, (nodeDegree.get(edge.target) || 0) + 1);
+    });
+
+    // 构建图数据
+    const graphNodes = nodes.map((node) => {
+      const communityId = nodeToCommunity.get(node.id);
+      const community = communityId !== undefined ? communityMap.get(communityId) : undefined;
+      const degree = nodeDegree.get(node.id) || 1;
+      return {
+        id: node.id,
+        name: node.name,
+        val: degree,
+        color: community?.color || '#888',
+        communityId,
+      };
+    });
+
+    const graphLinks = edges.map((edge) => ({
+      source: edge.source,
+      target: edge.target,
+      value: edge.weight,
+    }));
 
     const duration = performance.now() - startTime;
     console.log(`[Worker] 社群检测完成: 耗时 ${duration.toFixed(0)}ms, 发现 ${communities.length} 个社群`);
 
     // 返回结果
     const result: WorkerOutput = {
-      communities,
-      relations,
+      graphData: {
+        nodes: graphNodes,
+        links: graphLinks,
+      },
       duration,
     };
 

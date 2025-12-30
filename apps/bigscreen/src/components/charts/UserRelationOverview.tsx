@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { UserRelationGraph3D } from './UserRelationGraph3D';
-import type { UserRelationNetwork, UserRelationType, TimeRange } from '@sker/sdk';
+import type { UserRelationNetwork, UserRelationType } from '@sker/sdk';
 import { UserRelationController } from '@sker/sdk';
 import { root } from '@sker/core';
 import { useAppStore } from '@/stores/useAppStore';

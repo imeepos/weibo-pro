@@ -1,51 +1,11 @@
-/**
- * 社群检测 Web Worker Hook
- *
- * 在独立线程中执行社群检测，避免阻塞主线程
- *
- * @example
- * ```typescript
- * const { detect, isDetecting, communities, relations, error } = useCommunityDetectorWorker();
- *
- * // 触发检测
- * useEffect(() => {
- *   if (enabled && nodes.length > 0 && edges.length > 0) {
- *     detect(nodes, edges);
- *   }
- * }, [nodes, edges, enabled, detect]);
- *
- * // 使用结果
- * if (communities) {
- *   // 渲染社群
- * }
- * ```
- */
-
 import { useRef, useCallback, useState } from 'react';
 import type { UserRelationNode, UserRelationEdge } from '@sker/sdk';
-
-interface CommunityMapping {
-  nodeToCommunity: Map<string, number>;
-  communities: Array<{
-    id: number;
-    nodes: string[];
-    size: number;
-    density: number;
-    color: string;
-  }>;
-}
-
-interface InterCommunityRelation {
-  sourceCommunity: number;
-  targetCommunity: number;
-  edgeCount: number;
-}
+import type { GraphData } from '@sker/ui/components/ui/force-graph-3d';
 
 export const useCommunityDetectorWorker = () => {
   const workerRef = useRef<Worker | null>(null);
   const [isDetecting, setIsDetecting] = useState(false);
-  const [communities, setCommunities] = useState<CommunityMapping | null>(null);
-  const [relations, setRelations] = useState<InterCommunityRelation[]>([]);
+  const [graphData, setGraphData] = useState<GraphData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const detect = useCallback((nodes: UserRelationNode[], edges: UserRelationEdge[]) => {
@@ -60,12 +20,7 @@ export const useCommunityDetectorWorker = () => {
 
     // 创建 Worker（如果不存在）
     if (!workerRef.current) {
-      // 注意：实际使用时需要配置 Vite/Webpack 支持 Worker
-      // Vite: new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' })
-      // Webpack: new Worker(new URL('./worker.ts', import.meta.url))
-
       try {
-        // 这里使用占位符，实际项目中需要根据打包工具调整
         workerRef.current = new Worker(
           new URL('../workers/community-detector.worker.ts', import.meta.url),
           { type: 'module' }
@@ -80,22 +35,10 @@ export const useCommunityDetectorWorker = () => {
             return;
           }
 
-          // 构建节点到社群的映射
-          const nodeToCommunity = new Map<string, number>();
-          for (const community of data.communities) {
-            for (const nodeId of community.nodes) {
-              nodeToCommunity.set(nodeId, community.id);
-            }
-          }
-
-          setCommunities({
-            nodeToCommunity,
-            communities: data.communities,
-          });
-          setRelations(data.relations);
+          setGraphData(data.graphData);
           setIsDetecting(false);
 
-          console.log(`✅ 社群检测完成 (Worker): ${data.communities.length} 个社群, 耗时 ${data.duration.toFixed(0)}ms`);
+          console.log(`✅ 社群检测完成 (Worker): 耗时 ${data.duration.toFixed(0)}ms`);
         };
 
         workerRef.current.onerror = (err) => {
@@ -118,8 +61,7 @@ export const useCommunityDetectorWorker = () => {
   }, []);
 
   const reset = useCallback(() => {
-    setCommunities(null);
-    setRelations([]);
+    setGraphData(null);
     setError(null);
     setIsDetecting(false);
   }, []);
@@ -138,8 +80,7 @@ export const useCommunityDetectorWorker = () => {
     reset,
     terminate,
     isDetecting,
-    communities,
-    relations,
+    graphData,
     error,
   };
 };

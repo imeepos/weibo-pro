@@ -12,7 +12,6 @@ import {
 } from '@sker/ui/components/ui/force-graph-3d';
 import { useInstancedNodeRenderer } from '@sker/ui/components/ui/use-instanced-node-renderer';
 import { usePointsRenderer } from '@sker/ui/components/ui/use-points-renderer';
-import { useForceGraphLinkRenderer } from '@sker/ui/components/ui/use-force-graph-link-renderer';
 import { getUserTypeColor, getEdgeColor, getEdgeOpacity } from './UserRelationGraph3D.utils';
 import {
   GraphControlPanel,
