@@ -36,16 +36,26 @@ export const useInstancedNodeRenderer = <TNode extends { id: string | number; va
 
   // 初始化 InstancedMesh
   useEffect(() => {
-    if (!meshRef.current && nodes.length > 0) {
-      const mesh = new THREE.InstancedMesh(geometry, material, nodes.length);
-      mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-      meshRef.current = mesh;
+    if (nodes.length === 0) return;
 
-      // 初始化颜色数组
-      colorArray.current = new Float32Array(nodes.length * 3);
-      const colors = new THREE.InstancedBufferAttribute(colorArray.current, 3);
-      mesh.instanceColor = colors;
+    // 每次节点数量变化时重新创建 mesh
+    if (meshRef.current) {
+      meshRef.current.geometry.dispose();
+      if (Array.isArray(meshRef.current.material)) {
+        meshRef.current.material.forEach(m => m.dispose());
+      } else {
+        meshRef.current.material.dispose();
+      }
     }
+
+    const mesh = new THREE.InstancedMesh(geometry, material, nodes.length);
+    mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    meshRef.current = mesh;
+
+    // 初始化颜色数组
+    colorArray.current = new Float32Array(nodes.length * 3);
+    const colors = new THREE.InstancedBufferAttribute(colorArray.current, 3);
+    mesh.instanceColor = colors;
   }, [nodes.length, geometry, material]);
 
   // 更新节点位置、缩放和颜色
