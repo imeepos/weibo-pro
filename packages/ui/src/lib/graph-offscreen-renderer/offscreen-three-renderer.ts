@@ -6,7 +6,8 @@
 import * as THREE from 'three';
 import { NodeMeshPool } from './node-mesh-pool';
 import { EdgeMeshPool } from './edge-mesh-pool';
-import type { RendererConfig, RenderConfig, SharedBuffers } from './types';
+import type { RendererConfig, RenderConfig } from './types';
+import type { SharedBuffers } from '../graph-data-stream/types';
 
 const DEFAULT_RENDER_CONFIG: RenderConfig = {
   enableEdges: true,

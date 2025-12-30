@@ -25,7 +25,7 @@ export interface RendererConfig {
  */
 export type RenderWorkerMessage =
   | { type: 'INIT'; canvas: OffscreenCanvas; config: RendererConfig }
-  | { type: 'UPDATE_BUFFERS'; buffers: SharedBuffers }
+  | { type: 'UPDATE_BUFFERS'; buffers: SharedBuffersType }
   | { type: 'UPDATE_NODE_COUNT'; count: number }
   | { type: 'UPDATE_EDGE_COUNT'; count: number }
   | { type: 'UPDATE_VISIBILITY'; visibilityMask: Uint8Array }
