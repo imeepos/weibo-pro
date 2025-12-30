@@ -47,7 +47,7 @@ export class PostContextCollectorVisitor {
           }
 
           // 验证 postId
-          if (!ast.postId || ast.postId.trim().length === 0) {
+          if (!ast.postId || String(ast.postId).trim().length === 0) {
             throw new Error('postId 不能为空');
           }
 
@@ -57,27 +57,30 @@ export class PostContextCollectorVisitor {
           }
 
           await useEntityManager(async (m) => {
+            // 确保 postId 是字符串
+            const postIdStr = String(ast.postId);
+
             // 优化查询逻辑：id 通常是 16-19 位的长数字，mblogid 通常较短
-            const isLongId = /^\d{16,}$/.test(ast.postId);
+            const isLongId = /^\d{16,}$/.test(postIdStr);
             const firstQuery = isLongId ? 'id' : 'mblogid';
 
-            console.log(`[PostContextCollector] 尝试查询: ${firstQuery}=${ast.postId}`);
+            console.log(`[PostContextCollector] 尝试查询: ${firstQuery}=${postIdStr}`);
 
             let post = await m.findOne(WeiboPostEntity, {
-              where: isLongId ? { id: ast.postId } : { mblogid: ast.postId },
+              where: isLongId ? { id: postIdStr } : { mblogid: postIdStr },
             });
 
             // 如果第一次查询失败，尝试另一种方式
             if (!post && !isLongId) {
               console.log(`[PostContextCollector] ${firstQuery} 查询失败，尝试使用 id 查询`);
               post = await m.findOne(WeiboPostEntity, {
-                where: { id: ast.postId },
+                where: { id: postIdStr },
               });
             }
 
             if (!post) {
-              console.error(`[PostContextCollector] 查询失败，postId=${ast.postId}, 尝试的字段: ${firstQuery}`);
-              throw new Error(`Post not found: ${ast.postId}`);
+              console.error(`[PostContextCollector] 查询失败，postId=${postIdStr}, 尝试的字段: ${firstQuery}`);
+              throw new Error(`Post not found: ${postIdStr}`);
             }
 
             console.log(`[PostContextCollector] 收集 post.id=${post.id}, post.mblogid=${post.mblogid}`);

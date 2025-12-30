@@ -116,7 +116,7 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
                         throw new Error('工作流已取消');
                     }
 
-                    if (child.more_info) {
+                    if (child.comments && child.comments.length > 0) {
                         const childAst = new WeiboAjaxStatusesCommentAst();
                         childAst.mid = `${child.id}`;
                         childAst.is_show_bulletin = 2;
