@@ -29,13 +29,25 @@ const HotEventsList: React.FC<HotEventsListProps> = ({ className = '' }) => {
   const { selectedTimeRange } = useAppStore();
   const [events, setEvents] = useState<HotEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
-    const fetchHotEvents = async () => {
+    let isCancelled = false;
+
+    const fetchHotEvents = async (isBackgroundRefresh = false) => {
       try {
-        setLoading(true);
+        // 如果是后台刷新且已有数据，只设置 isRefreshing
+        if (isBackgroundRefresh && events.length > 0) {
+          setIsRefreshing(true);
+        } else {
+          setLoading(true);
+        }
+
         const c = root.get(EventsController)
         const result = await c.getHotList(selectedTimeRange);
+
+        if (isCancelled) return;
+
         // 确保返回的是数组并转换类型
         if (Array.isArray(result)) {
           const transformedEvents: HotEvent[] = result.map(event => ({
@@ -50,17 +62,28 @@ const HotEventsList: React.FC<HotEventsListProps> = ({ className = '' }) => {
           setEvents(transformedEvents);
         } else {
           logger.warn('Hot events data is not an array:', result);
-          setEvents([]);
+          if (!isBackgroundRefresh) {
+            setEvents([]);
+          }
         }
       } catch (error) {
         logger.error('Failed to fetch hot events:', error);
-        setEvents([]);
+        if (!isBackgroundRefresh) {
+          setEvents([]);
+        }
       } finally {
-        setLoading(false);
+        if (!isCancelled) {
+          setLoading(false);
+          setIsRefreshing(false);
+        }
       }
     };
 
     fetchHotEvents();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [selectedTimeRange]);
 
   const getSentimentColor = (sentiment: HotEvent['sentiment']) => {

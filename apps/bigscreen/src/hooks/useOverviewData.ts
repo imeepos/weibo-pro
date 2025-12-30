@@ -16,6 +16,7 @@ interface OverviewDataState {
   loading: boolean;
   error: string | null;
   lastUpdated: number | null;
+  isRefreshing: boolean; // 后台刷新状态
 }
 
 export const useOverviewData = () => {
@@ -28,6 +29,7 @@ export const useOverviewData = () => {
     loading: false,
     error: null,
     lastUpdated: null,
+    isRefreshing: false,
   });
 
   const retryCountRef = useRef(0);
@@ -37,14 +39,21 @@ export const useOverviewData = () => {
     ? Date.now() - state.lastUpdated > CACHE_TIME
     : true;
 
-  const fetchData = useCallback(async (): Promise<void> => {
+  const fetchData = useCallback(async (isBackgroundRefresh = false): Promise<void> => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
 
     abortControllerRef.current = new AbortController();
 
-    setState(prev => ({ ...prev, loading: true, error: null }));
+    // 如果是后台刷新且已有数据，只设置 isRefreshing
+    setState(prev => {
+      const hasData = prev.statsData !== null || prev.sentimentData !== null;
+      if (isBackgroundRefresh && hasData) {
+        return { ...prev, isRefreshing: true, error: null };
+      }
+      return { ...prev, loading: true, error: null, isRefreshing: false };
+    });
 
     try {
       const [statisticsResult, sentimentResult] = await Promise.all([
@@ -62,6 +71,7 @@ export const useOverviewData = () => {
         loading: false,
         error: null,
         lastUpdated: Date.now(),
+        isRefreshing: false,
       });
 
       retryCountRef.current = 0;
@@ -77,7 +87,7 @@ export const useOverviewData = () => {
         logger.warn(`数据获取失败，正在重试... (${retryCountRef.current}/${RETRY_COUNT})`, error);
 
         setTimeout(() => {
-          fetchData();
+          fetchData(isBackgroundRefresh);
         }, INITIAL_RETRY_DELAY * Math.pow(RETRY_DELAY_MULTIPLIER, retryCountRef.current));
 
         return;
@@ -89,13 +99,14 @@ export const useOverviewData = () => {
         ...prev,
         loading: false,
         error: errorMessage,
+        isRefreshing: false,
       }));
     }
   }, [controller, selectedTimeRange]);
 
   const refetch = useCallback(async (): Promise<void> => {
     retryCountRef.current = 0;
-    await fetchData();
+    await fetchData(true); // 后台刷新，保留旧数据
   }, [fetchData]);
 
   useEffect(() => {
@@ -138,6 +149,7 @@ export const useOverviewData = () => {
     loading: state.loading,
     error: state.error,
     isStale,
+    isRefreshing: state.isRefreshing,
     refetch,
   };
 };

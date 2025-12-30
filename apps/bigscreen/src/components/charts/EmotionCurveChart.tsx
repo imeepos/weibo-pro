@@ -30,18 +30,28 @@ const EmotionCurveChart: React.FC<EmotionCurveChartProps> = ({
     negativeData: [],
     neutralData: []
   });
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
 
-    const fetchData = async () => {
+    const fetchData = async (isBackgroundRefresh = false) => {
       try {
+        // 如果是后台刷新且已有数据，只设置 isRefreshing
+        if (isBackgroundRefresh && emotionData.hours.length > 0) {
+          setIsRefreshing(true);
+        }
+
         const data = await CommonAPI.getEmotionCurve(selectedTimeRange);
         if (cancelled) return;
         setEmotionData(data);
       } catch (error) {
         if (cancelled) return;
         logger.error('Failed to fetch emotion curve data', error);
+      } finally {
+        if (!cancelled) {
+          setIsRefreshing(false);
+        }
       }
     };
 

@@ -14,6 +14,7 @@ export interface DataState<T> {
   loading: boolean;
   error: string | null;
   lastUpdated: number | null;
+  isRefreshing: boolean; // 区分首次加载和后台刷新
 }
 
 const logger = createLogger('useChartData');
@@ -39,6 +40,7 @@ function useAsyncData<T>(
     loading: false,
     error: null,
     lastUpdated: null,
+    isRefreshing: false,
   });
 
   const retryCountRef = useRef(0);
@@ -55,7 +57,7 @@ function useAsyncData<T>(
     ? Date.now() - state.lastUpdated > cacheTime
     : true;
 
-  const fetchData = useCallback(async (): Promise<void> => {
+  const fetchData = useCallback(async (isBackgroundRefresh = false): Promise<void> => {
     // 取消之前的请求
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -64,7 +66,14 @@ function useAsyncData<T>(
     // 创建新的AbortController
     abortControllerRef.current = new AbortController();
 
-    setState(prev => ({ ...prev, loading: true, error: null }));
+    // 如果是后台刷新且已有数据，只设置 isRefreshing
+    setState(prev => {
+      const hasData = prev.data !== null;
+      if (isBackgroundRefresh && hasData) {
+        return { ...prev, isRefreshing: true, error: null };
+      }
+      return { ...prev, loading: true, error: null, isRefreshing: false };
+    });
 
     try {
       const data = await fetchFnRef.current();
@@ -79,6 +88,7 @@ function useAsyncData<T>(
         loading: false,
         error: null,
         lastUpdated: Date.now(),
+        isRefreshing: false,
       });
 
       retryCountRef.current = 0;
@@ -97,7 +107,7 @@ function useAsyncData<T>(
 
         // 延迟重试
         setTimeout(() => {
-          fetchData();
+          fetchData(isBackgroundRefresh);
         }, Math.pow(2, retryCountRef.current) * 1000);
 
         return;
@@ -107,15 +117,16 @@ function useAsyncData<T>(
         ...prev,
         loading: false,
         error: errorMessage,
+        isRefreshing: false,
       }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...dependencies]);
 
-  // 手动刷新数据
+  // 手动刷新数据（后台刷新模式）
   const refetch = useCallback(async (): Promise<void> => {
     retryCountRef.current = 0;
-    await fetchData();
+    await fetchData(true); // 后台刷新，保留旧数据
   }, [fetchData]);
 
   // 自动获取数据
