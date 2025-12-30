@@ -36,7 +36,7 @@ export class OverviewService {
     return await this.cacheService.getOrSet(
       cacheKey,
       () => this.fetchStatistics(timeRange),
-      CACHE_TTL.SHORT // 统计数据实时性要求高，1分钟缓存
+      CACHE_TTL.MEDIUM // 统计数据使用5分钟缓存，减少数据库压力
     );
   }
 
@@ -276,9 +276,13 @@ export class OverviewService {
   }
 
   async getLocations(timeRange: TimeRange): Promise<OverviewLocation[]> {
-    const cacheKey = CacheService.buildKey('overview:locations', timeRange);
+    const cacheKey = CacheService.buildKey(CACHE_KEYS.OVERVIEW_LOCATIONS, timeRange);
 
-    return await this.fetchLocationsData(timeRange)
+    return await this.cacheService.getOrSet(
+      cacheKey,
+      () => this.fetchLocationsData(timeRange),
+      CACHE_TTL.MEDIUM // 地域数据使用5分钟缓存
+    );
   }
 
   private async fetchLocationsData(timeRange: TimeRange): Promise<OverviewLocation[]> {
