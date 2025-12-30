@@ -43,7 +43,7 @@ const UserRelationTopology: React.FC = () => {
   }, []);
 
   return (
-    <div className="h-screen bg-background text-foreground relative overflow-hidden flex flex-col">
+    <div className="h-full bg-background text-foreground relative overflow-hidden flex flex-col">
       {/* 背景网格 */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]" />
 
@@ -51,35 +51,6 @@ const UserRelationTopology: React.FC = () => {
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-gradient-to-br from-cyan/20 via-primary/10 to-transparent blur-3xl rounded-full animate-pulse-slow" />
       <div className="absolute top-20 left-1/4 w-[300px] h-[300px] bg-gradient-to-br from-violet/15 to-transparent blur-3xl rounded-full" />
       <div className="absolute top-20 right-1/4 w-[300px] h-[300px] bg-gradient-to-br from-fuchsia/15 to-transparent blur-3xl rounded-full" />
-
-      {/* 头部 - 保持不变 */}
-      <div className="relative z-10 px-6 py-4 flex-shrink-0">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between"
-        >
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <Network className="w-6 h-6 text-primary" />
-              <h1 className="text-2xl font-bold">
-                用户关系网络 3D 可视化
-              </h1>
-            </div>
-            <p className="text-muted-foreground text-sm">
-              基于微博数据的用户交互关系分析与可视化
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="text-right">
-              <div className="text-xl font-bold text-primary">
-                {network?.statistics.totalUsers || 0}
-              </div>
-              <div className="text-xs text-muted-foreground">活跃用户</div>
-            </div>
-          </div>
-        </motion.div>
-      </div>
 
       {/* 主内容区 - flex布局占满剩余空间 */}
       <div className="relative flex-1 overflow-hidden">

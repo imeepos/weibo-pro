@@ -45,6 +45,9 @@ export interface ForceGraph3DProps {
   enableNavigationControls?: boolean;
   enablePointerInteraction?: boolean;
   onEngineStop?: () => void;
+  warmupTicks?: number;
+  cooldownTicks?: number;
+  cooldownTime?: number;
 }
 
 export interface ForceGraph3DHandle {
@@ -83,6 +86,9 @@ export const ForceGraph3D = forwardRef<ForceGraph3DHandle, ForceGraph3DProps>(({
   enableNavigationControls = true,
   enablePointerInteraction = true,
   onEngineStop,
+  warmupTicks,
+  cooldownTicks,
+  cooldownTime,
 }, ref) => {
   const fgRef = useRef<ForceGraphMethods<NodeObject<GraphNode>, LinkObject<GraphNode, GraphLink>>>(undefined!);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -180,7 +186,9 @@ export const ForceGraph3D = forwardRef<ForceGraph3DHandle, ForceGraph3DProps>(({
         enableNavigationControls={enableNavigationControls}
         enablePointerInteraction={enablePointerInteraction}
         onEngineStop={onEngineStop}
-        cooldownTicks={50}
+        warmupTicks={warmupTicks}
+        cooldownTicks={cooldownTicks ?? 50}
+        cooldownTime={cooldownTime}
         d3AlphaDecay={0.05}
         d3VelocityDecay={0.4}
         rendererConfig={{

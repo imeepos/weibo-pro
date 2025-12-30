@@ -345,6 +345,9 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
         enableNodeDrag={true}
         enableNavigationControls={true}
         enablePointerInteraction={true}
+        warmupTicks={100}
+        cooldownTicks={200}
+        cooldownTime={3000}
       />
 
       {/* 控制面板 */}
