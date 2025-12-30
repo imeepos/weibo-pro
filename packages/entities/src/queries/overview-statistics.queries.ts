@@ -45,7 +45,7 @@ export class OverviewStatisticsQueries {
         SELECT
           date_trunc('hour', p.ingested_at) as period_start,
           COUNT(*) as post_count,
-          COUNT(DISTINCT (p.\"user\"->>'id')) as user_count
+          COUNT(DISTINCT (p."user"->>'id')) as user_count
         FROM weibo_posts p
         WHERE p.ingested_at >= $1
           AND p.deleted_at IS NULL
