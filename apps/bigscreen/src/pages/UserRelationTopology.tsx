@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Network } from 'lucide-react';
 import UserRelationGraph3D from '../components/charts/UserRelationGraph3D';
@@ -26,13 +26,29 @@ const UserRelationTopology: React.FC = () => {
   const [relationType, setRelationType] = useState<UserRelationType>('comprehensive');
   const [minWeight, setMinWeight] = useState(1);
   const [limit, setLimit] = useState(10000);
+  const [debouncedLimit, setDebouncedLimit] = useState(10000);
   const [selectedNode, setSelectedNode] = useState<UserRelationNode | null>(null);
+  const debounceTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
+
+  useEffect(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    debounceTimerRef.current = setTimeout(() => {
+      setDebouncedLimit(limit);
+    }, 500);
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [limit]);
 
   const { network, isLoading, error, refetch } = useUserRelationNetwork({
     relationType,
     timeRange: selectedTimeRange,
     minWeight,
-    limit,
+    limit: debouncedLimit,
   });
 
   const handleNodeClick = useCallback((node: UserRelationNode) => {

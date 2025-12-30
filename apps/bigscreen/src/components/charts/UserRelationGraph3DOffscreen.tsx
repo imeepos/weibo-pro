@@ -45,6 +45,7 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
     fps,
     sharedBuffers,
     nodeMetadata,
+    lodStats,
     setNodeCount,
     setEdgeCount,
     setLoadProgress,
@@ -261,6 +262,45 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
                 <div className="text-right">{layoutState.energy.toFixed(2)}</div>
                 <div>耗时:</div>
                 <div className="text-right">{(layoutState.elapsedTime / 1000).toFixed(1)}s</div>
+              </div>
+            </>
+          )}
+
+          {/* LOD 统计 */}
+          {lodStats && (
+            <>
+              <div className="border-t border-white/20 pt-2"></div>
+              <div className="font-bold text-blue-400">🎯 LOD 系统</div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                <div>可见节点:</div>
+                <div className="text-right text-green-400">
+                  {lodStats.visibleNodes.toLocaleString()}
+                </div>
+                <div>剔除节点:</div>
+                <div className="text-right text-red-400">
+                  {lodStats.culledNodes.toLocaleString()}
+                </div>
+                <div>剔除率:</div>
+                <div className="text-right">
+                  {lodStats.totalNodes > 0
+                    ? ((lodStats.culledNodes / lodStats.totalNodes) * 100).toFixed(1)
+                    : 0}%
+                </div>
+              </div>
+
+              {/* LOD 分布 */}
+              <div className="mt-2 text-xs">
+                <div className="text-white/70 mb-1">LOD 分布:</div>
+                {Object.entries(lodStats.lodDistribution).map(([level, count]) => {
+                  if (count === 0) return null;
+                  const levelNames = ['Ultra', 'High', 'Med', 'Low', 'Dist'];
+                  return (
+                    <div key={level} className="flex justify-between items-center mb-0.5">
+                      <span className="text-white/60">L{level} ({levelNames[parseInt(level)]}):</span>
+                      <span className="text-white">{count.toLocaleString()}</span>
+                    </div>
+                  );
+                })}
               </div>
             </>
           )}

@@ -39,16 +39,16 @@ export class UserRelationStatisticsQueries {
       `
       WITH source_data AS (
         SELECT
-          (r.user->>'id')::bigint as source_user_id,
+          (r."user"->>'id')::bigint as source_user_id,
           (r.retweeted_status->'user'->>'id')::bigint as target_user_id,
           r.id,
           r.ingested_at
         FROM weibo_reposts r
         WHERE r.id > $1
           AND r.retweeted_status IS NOT NULL
-          AND r.user->>'id' IS NOT NULL
+          AND r."user"->>'id' IS NOT NULL
           AND r.retweeted_status->'user'->>'id' IS NOT NULL
-          AND r.user->>'id' != r.retweeted_status->'user'->>'id'
+          AND r."user"->>'id' != r.retweeted_status->'user'->>'id'
         ORDER BY r.id ASC
         LIMIT $2
       ),
@@ -142,16 +142,16 @@ export class UserRelationStatisticsQueries {
       `
       WITH source_data AS (
         SELECT
-          (c.user->>'id')::bigint as source_user_id,
-          (p.user->>'id')::bigint as target_user_id,
+          (c."user"->>'id')::bigint as source_user_id,
+          (p."user"->>'id')::bigint as target_user_id,
           c.id,
           c.ingested_at
         FROM weibo_comments c
-        JOIN weibo_posts p ON c.rootid = p.id
+        JOIN weibo_posts p ON c.rootidstr = p.idstr
         WHERE c.id > $1
-          AND c.user->>'id' IS NOT NULL
-          AND p.user->>'id' IS NOT NULL
-          AND c.user->>'id' != p.user->>'id'
+          AND c."user"->>'id' IS NOT NULL
+          AND p."user"->>'id' IS NOT NULL
+          AND c."user"->>'id' != p."user"->>'id'
         ORDER BY c.id ASC
         LIMIT $2
       ),
@@ -247,14 +247,14 @@ export class UserRelationStatisticsQueries {
       WITH source_data AS (
         SELECT
           l.user_weibo_id as source_user_id,
-          (p.user->>'id')::bigint as target_user_id,
+          (p."user"->>'id')::bigint as target_user_id,
           l.id,
           l.created_at
         FROM weibo_likes l
-        JOIN weibo_posts p ON l.target_weibo_id = p.id
+        JOIN weibo_posts p ON l.target_weibo_id::text = p.id::text
         WHERE l.id > $1
-          AND l.user_weibo_id != (p.user->>'id')::bigint
-          AND p.user->>'id' IS NOT NULL
+          AND l.user_weibo_id != (p."user"->>'id')::bigint
+          AND p."user"->>'id' IS NOT NULL
         ORDER BY l.id ASC
         LIMIT $2
       ),

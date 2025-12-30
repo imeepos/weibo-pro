@@ -239,6 +239,20 @@ function startRenderLoop(): void {
       fps,
     } as RenderWorkerResponse);
 
+    // 每 30 帧发送一次 LOD 统计（约每 0.5 秒）
+    if (frameCount % 30 === 0) {
+      const lodStats = renderer.getLODStats();
+      self.postMessage({
+        type: 'LOD_STATS',
+        stats: {
+          totalNodes: lodStats.totalNodes,
+          visibleNodes: lodStats.visibleNodes,
+          culledNodes: lodStats.totalNodes - lodStats.visibleNodes,
+          lodDistribution: lodStats.lodDistribution,
+        },
+      } as RenderWorkerResponse);
+    }
+
     frameCount++;
     animationFrameId = requestAnimationFrame(render);
   };

@@ -27,6 +27,7 @@ export function useOffscreenGraph(
 ) {
   const workerRef = useRef<Worker | null>(null);
   const setFPS = useGraphStore((state) => state.setFPS);
+  const setLODStats = useGraphStore((state) => state.setLODStats);
 
   /**
    * 初始化 Worker
@@ -58,6 +59,10 @@ export function useOffscreenGraph(
 
         case 'FRAME_RENDERED':
           setFPS(message.fps);
+          break;
+
+        case 'LOD_STATS':
+          setLODStats(message.stats);
           break;
 
         case 'PICK_RESULT':

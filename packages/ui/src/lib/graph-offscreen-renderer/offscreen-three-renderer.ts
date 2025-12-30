@@ -188,6 +188,13 @@ export class OffscreenThreeRenderer {
   }
 
   /**
+   * 获取 LOD 统计信息
+   */
+  getLODStats() {
+    return this.nodeMeshPool.getStats();
+  }
+
+  /**
    * 更新渲染（从 SharedArrayBuffer 读取数据）
    */
   update(): void {

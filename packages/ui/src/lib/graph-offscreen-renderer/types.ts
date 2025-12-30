@@ -37,11 +37,22 @@ export type RenderWorkerMessage =
   | { type: 'DISPOSE' };
 
 /**
+ * LOD 统计信息
+ */
+export interface LODStats {
+  totalNodes: number;
+  visibleNodes: number;
+  culledNodes: number;
+  lodDistribution: Record<number, number>;
+}
+
+/**
  * Worker 响应类型（Worker -> 主线程）
  */
 export type RenderWorkerResponse =
   | { type: 'READY' }
   | { type: 'FRAME_RENDERED'; fps: number }
+  | { type: 'LOD_STATS'; stats: LODStats }
   | { type: 'PICK_RESULT'; requestId: number; nodeId: string | null; nodeIndex: number }
   | { type: 'ERROR'; error: string };
 

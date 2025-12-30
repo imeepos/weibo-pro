@@ -6,6 +6,7 @@
 export { SharedBufferManager } from './shared-buffer-manager';
 export { DataStreamer } from './data-streamer';
 export { useGraphStore, selectNodeById, selectNodeByIndex } from './graph-store';
+export type { LODStats } from './graph-store';
 
 export type {
   SharedBuffers,

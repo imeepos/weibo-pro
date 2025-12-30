@@ -6,6 +6,16 @@
 import { create } from 'zustand';
 import type { SharedBuffers, GraphStats, NodeMetadata } from './types';
 
+/**
+ * LOD 统计信息
+ */
+export interface LODStats {
+  totalNodes: number;
+  visibleNodes: number;
+  culledNodes: number;
+  lodDistribution: Record<number, number>;
+}
+
 export interface GraphStoreState {
   // 数据状态
   nodeCount: number;
@@ -27,6 +37,9 @@ export interface GraphStoreState {
   fps: number;
   memoryUsage: number;
 
+  // LOD 状态
+  lodStats: LODStats | null;
+
   // Actions
   setNodeCount: (count: number) => void;
   setEdgeCount: (count: number) => void;
@@ -38,6 +51,7 @@ export interface GraphStoreState {
   setStats: (stats: GraphStats) => void;
   setFPS: (fps: number) => void;
   setMemoryUsage: (usage: number) => void;
+  setLODStats: (stats: LODStats) => void;
   reset: () => void;
 }
 
@@ -52,6 +66,7 @@ const initialState = {
   stats: null,
   fps: 0,
   memoryUsage: 0,
+  lodStats: null,
 };
 
 export const useGraphStore = create<GraphStoreState>((set) => ({
@@ -67,6 +82,7 @@ export const useGraphStore = create<GraphStoreState>((set) => ({
   setStats: (stats) => set({ stats: stats }),
   setFPS: (fps) => set({ fps: fps }),
   setMemoryUsage: (usage) => set({ memoryUsage: usage }),
+  setLODStats: (stats) => set({ lodStats: stats }),
   reset: () => set(initialState),
 }));
 
