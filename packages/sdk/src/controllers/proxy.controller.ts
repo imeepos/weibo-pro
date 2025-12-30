@@ -4,6 +4,6 @@ import { Controller, Get, Query } from '@sker/core'
 export class ProxyController {
   @Get('qrcode')
   proxyQRCode(@Query('url') url: string): Promise<Response> {
-    return this.proxyQRCode(url)
+    throw new Error('method proxyQRCode not implements')
   }
 }

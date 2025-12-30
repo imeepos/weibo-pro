@@ -1,6 +1,7 @@
 import { Controller, Get, Query } from '@sker/core';
+import * as sdk from '@sker/sdk';
 
-@Controller()
+@Controller(sdk.ProxyController)
 export class ProxyController {
   @Get('/proxy/qrcode')
   async proxyQRCode(@Query('url') url: string) {
