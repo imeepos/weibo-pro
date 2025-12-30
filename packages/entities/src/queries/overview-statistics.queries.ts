@@ -22,8 +22,7 @@ export class OverviewStatisticsQueries {
 
     const lastProcessedTime = progress.lastProcessedAt || new Date('2020-01-01');
 
-    const result = await manager.query(
-      `
+    const sql = `
       WITH hourly_periods AS (
         SELECT generate_series(
           date_trunc('hour', $1::timestamp),
@@ -45,7 +44,7 @@ export class OverviewStatisticsQueries {
         SELECT
           date_trunc('hour', p.ingested_at) as period_start,
           COUNT(*) as post_count,
-          COUNT(DISTINCT (p."user"->>'id')) as user_count
+          COUNT(DISTINCT CAST(p."user"->>'id' AS bigint)) as user_count
         FROM weibo_posts p
         WHERE p.ingested_at >= $1
           AND p.deleted_at IS NULL
@@ -81,14 +80,14 @@ export class OverviewStatisticsQueries {
           COALESCE(es.event_count, 0) as event_count,
           COALESCE(ps.post_count, 0) as post_count,
           COALESCE(ps.user_count, 0) as user_count,
-          COALESCE(is.comment_count, 0) as comment_count,
+          COALESCE(ins.comment_count, 0) as comment_count,
           COALESCE(ls.like_count, 0) as like_count,
           COALESCE(rs.repost_count, 0) as repost_count,
-          COALESCE(is.comment_count, 0) + COALESCE(ls.like_count, 0) + COALESCE(rs.repost_count, 0) as interaction_count
+          COALESCE(ins.comment_count, 0) + COALESCE(ls.like_count, 0) + COALESCE(rs.repost_count, 0) as interaction_count
         FROM hourly_periods hp
         LEFT JOIN event_stats es ON hp.period_start = es.period_start
         LEFT JOIN post_stats ps ON hp.period_start = ps.period_start
-        LEFT JOIN interaction_stats is ON hp.period_start = is.period_start
+        LEFT JOIN interaction_stats ins ON hp.period_start = ins.period_start
         LEFT JOIN like_stats ls ON hp.period_start = ls.period_start
         LEFT JOIN repost_stats rs ON hp.period_start = rs.period_start
       )
@@ -125,9 +124,9 @@ export class OverviewStatisticsQueries {
         interaction_count = EXCLUDED.interaction_count,
         updated_at = NOW()
       RETURNING 1
-    `,
-      [lastProcessedTime]
-    );
+    `;
+
+    const result = await manager.query(sql, [lastProcessedTime]);
 
     const processedCount = result.length;
 
@@ -159,8 +158,7 @@ export class OverviewStatisticsQueries {
 
     const lastProcessedTime = progress.lastProcessedAt || new Date('2020-01-01');
 
-    const result = await manager.query(
-      `
+    const sql = `
       WITH daily_periods AS (
         SELECT generate_series(
           date_trunc('day', $1::timestamp),
@@ -182,7 +180,7 @@ export class OverviewStatisticsQueries {
         SELECT
           date_trunc('day', p.ingested_at) as period_start,
           COUNT(*) as post_count,
-          COUNT(DISTINCT (p."user"->>'id')) as user_count
+          COUNT(DISTINCT CAST(p."user"->>'id' AS bigint)) as user_count
         FROM weibo_posts p
         WHERE p.ingested_at >= $1
           AND p.deleted_at IS NULL
@@ -218,14 +216,14 @@ export class OverviewStatisticsQueries {
           COALESCE(es.event_count, 0) as event_count,
           COALESCE(ps.post_count, 0) as post_count,
           COALESCE(ps.user_count, 0) as user_count,
-          COALESCE(is.comment_count, 0) as comment_count,
+          COALESCE(ins.comment_count, 0) as comment_count,
           COALESCE(ls.like_count, 0) as like_count,
           COALESCE(rs.repost_count, 0) as repost_count,
-          COALESCE(is.comment_count, 0) + COALESCE(ls.like_count, 0) + COALESCE(rs.repost_count, 0) as interaction_count
+          COALESCE(ins.comment_count, 0) + COALESCE(ls.like_count, 0) + COALESCE(rs.repost_count, 0) as interaction_count
         FROM daily_periods dp
         LEFT JOIN event_stats es ON dp.period_start = es.period_start
         LEFT JOIN post_stats ps ON dp.period_start = ps.period_start
-        LEFT JOIN interaction_stats is ON dp.period_start = is.period_start
+        LEFT JOIN interaction_stats ins ON dp.period_start = ins.period_start
         LEFT JOIN like_stats ls ON dp.period_start = ls.period_start
         LEFT JOIN repost_stats rs ON dp.period_start = rs.period_start
       )
@@ -262,9 +260,9 @@ export class OverviewStatisticsQueries {
         interaction_count = EXCLUDED.interaction_count,
         updated_at = NOW()
       RETURNING 1
-    `,
-      [lastProcessedTime]
-    );
+    `;
+
+    const result = await manager.query(sql, [lastProcessedTime]);
 
     const processedCount = result.length;
 
