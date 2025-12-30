@@ -124,23 +124,23 @@ export const CITY_COORDINATES: CityCoordinates = {
  */
 export function getCoordinates(location: string | null | undefined): [number, number] {
   if (!location) {
-    return CITY_COORDINATES['北京']!;
+    return [...CITY_COORDINATES['北京']!];
   }
 
   // 直接匹配
   if (CITY_COORDINATES[location]) {
-    return CITY_COORDINATES[location]!;
+    return [...CITY_COORDINATES[location]!];
   }
 
   // 模糊匹配：尝试从字符串中提取城市名
   for (const [city, coords] of Object.entries(CITY_COORDINATES)) {
     if (location.includes(city)) {
-      return coords;
+      return [...coords];
     }
   }
 
   // 默认返回北京坐标
-  return CITY_COORDINATES['北京']!;
+  return [...CITY_COORDINATES['北京']!];
 }
 
 /**
