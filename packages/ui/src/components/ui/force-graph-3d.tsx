@@ -52,6 +52,7 @@ export interface ForceGraph3DProps {
 
 export interface ForceGraph3DHandle {
   d3Force: (forceName: string, force?: any) => any;
+  d3ReheatSimulation: () => void;
   cameraPosition: (position: { x: number; y: number; z: number }, lookAt?: { x: number; y: number; z: number }, transitionDuration?: number) => void;
   refresh: () => void;
   pauseAnimation: () => void;
@@ -123,6 +124,10 @@ export const ForceGraph3D = forwardRef<ForceGraph3DHandle, ForceGraph3DProps>(({
     d3Force: (forceName: string, force?: any) => {
       if (!fgRef.current) return null;
       return fgRef.current.d3Force(forceName as any, force);
+    },
+    d3ReheatSimulation: () => {
+      if (!fgRef.current) return;
+      fgRef.current.d3ReheatSimulation();
     },
     cameraPosition: (position, lookAt, transitionDuration) => {
       if (!fgRef.current) return;

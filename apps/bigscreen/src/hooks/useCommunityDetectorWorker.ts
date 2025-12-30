@@ -1,4 +1,5 @@
 import { useRef, useCallback, useState } from 'react';
+import { useMemoizedFn } from '@sker/ui/hooks/use-memoized-fn';
 import type { UserRelationNode, UserRelationEdge } from '@sker/sdk';
 import type { GraphData } from '@sker/ui/components/ui/force-graph-3d';
 
@@ -8,7 +9,7 @@ export const useCommunityDetectorWorker = () => {
   const [graphData, setGraphData] = useState<GraphData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const detect = useCallback((nodes: UserRelationNode[], edges: UserRelationEdge[]) => {
+  const detect = useMemoizedFn((nodes: UserRelationNode[], edges: UserRelationEdge[]) => {
     // 性能保护：节点数超过 10000 时拒绝执行
     if (nodes.length > 10000) {
       setError(`节点数量过多 (${nodes.length})，建议 < 10000`);
@@ -57,8 +58,7 @@ export const useCommunityDetectorWorker = () => {
 
     // 发送数据到 Worker
     workerRef.current.postMessage({ nodes, edges });
-
-  }, []);
+  });
 
   const reset = useCallback(() => {
     setGraphData(null);

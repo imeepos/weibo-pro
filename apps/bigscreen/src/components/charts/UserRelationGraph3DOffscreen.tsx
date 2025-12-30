@@ -1,9 +1,11 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useMemo } from 'react';
 import type { UserRelationNetwork, UserRelationNode } from '@sker/sdk';
 import { ForceGraph3D, type ForceGraph3DHandle } from '@sker/ui/components/ui/force-graph-3d';
 import { useCommunityDetectorWorker } from '@/hooks/useCommunityDetectorWorker';
 import { useTheme } from '@/hooks/useTheme';
 import * as d3Force from 'd3-force-3d';
+import { Subject, combineLatest } from 'rxjs';
+import { filter, take } from 'rxjs/operators';
 
 interface UserRelationGraph3DOffscreenProps {
   network: UserRelationNetwork;
@@ -23,27 +25,53 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
   const graphRef = useRef<ForceGraph3DHandle>(null);
   const { detect, isDetecting, graphData } = useCommunityDetectorWorker();
 
+  const graphDataReady$ = useRef(new Subject<boolean>());
+  const engineStopped$ = useRef(new Subject<boolean>());
+
+  const networkKey = useMemo(
+    () => `${network.nodes.length}-${network.edges.length}`,
+    [network.nodes.length, network.edges.length]
+  );
+
   useEffect(() => {
     if (network.nodes.length > 0 && network.edges.length > 0) {
       detect(network.nodes, network.edges);
     }
-  }, [network, detect]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [networkKey]);
 
   useEffect(() => {
-    if (!graphData) return;
-
-    setTimeout(() => {
-      if (!graphRef.current) return;
-
-      graphRef.current.d3Force('radial', d3Force.forceRadial(600, 0, 0, 0).strength(0.3));
-      graphRef.current.d3Force('charge', d3Force.forceManyBody().strength(-150));
-
-      const linkForce = graphRef.current.d3Force('link');
-      if (linkForce) {
-        linkForce.distance(30).strength(0.1);
-      }
-    }, 100);
+    if (graphData && graphData.nodes.length > 0) {
+      graphDataReady$.current.next(true);
+    }
   }, [graphData]);
+
+  useEffect(() => {
+    const subscription = combineLatest([
+      graphDataReady$.current.pipe(filter(Boolean)),
+      engineStopped$.current.pipe(filter(Boolean))
+    ])
+      .pipe(take(1))
+      .subscribe(() => {
+        if (!graphRef.current) return;
+
+        graphRef.current.d3Force('radial', d3Force.forceRadial(600, 0, 0, 0).strength(0.3));
+        graphRef.current.d3Force('charge', d3Force.forceManyBody().strength(-150));
+
+        const linkForce = graphRef.current.d3Force('link');
+        if (linkForce) {
+          linkForce.distance(30).strength(0.1);
+        }
+
+        graphRef.current.d3ReheatSimulation();
+      });
+
+    return () => subscription.unsubscribe();
+  }, [networkKey]);
+
+  const handleEngineStop = () => {
+    engineStopped$.current.next(true);
+  };
 
   return (
     <div className={`relative ${className}`}>
@@ -58,6 +86,7 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
         linkWidth={(link: any) => Math.max(0.5, (link.value || 1) * 0.5)}
         onNodeClick={(node: any) => onNodeClick?.(node as any)}
         onNodeHover={(node: any) => onNodeHover?.(node as any)}
+        onEngineStop={handleEngineStop}
         enableNodeDrag={true}
         enableNavigationControls={true}
         warmupTicks={100}
