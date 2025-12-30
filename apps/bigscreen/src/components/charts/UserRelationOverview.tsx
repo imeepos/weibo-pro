@@ -34,7 +34,7 @@ export const UserRelationOverview: React.FC<UserRelationOverviewProps> = ({
         'comprehensive' as UserRelationType,
         selectedTimeRange,
         1, // minWeight
-        1000 // limit - 支持2000个节点
+        100000 // limit - 支持10万节点（分层渲染自动优化）
       );
 
       setNetworkData(data);
@@ -65,9 +65,9 @@ export const UserRelationOverview: React.FC<UserRelationOverviewProps> = ({
     },
     enableNodeShapes: true,
     enableNodeOpacity: true,
-    enableNodePulse: false, // 禁用脉动动画减少卡顿
-    enableCommunities: true, // 开启社群颜色区分
-    showDebugHud: false
+    enableNodePulse: false,
+    enableCommunities: true,
+    showDebugHud: true // 启用性能监控
   };
 
   // 加载状态 - 简洁的大屏幕样式

@@ -11,7 +11,7 @@ import {
 } from '@sker/ui/components/ui/force-graph-3d';
 import { useForceGraphNodeRenderer } from '@sker/ui/components/ui/use-force-graph-node-renderer';
 import { useForceGraphLinkRenderer } from '@sker/ui/components/ui/use-force-graph-link-renderer';
-import { getUserTypeColor, getEdgeColor } from './UserRelationGraph3D.utils';
+import { getUserTypeColor, getEdgeColor, getEdgeOpacity } from './UserRelationGraph3D.utils';
 import {
   GraphControlPanel,
   ControlGroup,
@@ -52,6 +52,7 @@ import {
   getAdaptivePerformanceConfig
 } from '@sker/ui/lib/graph-performance-optimizer';
 import { LouvainCommunityDetector, analyzeInterCommunityRelations } from '@sker/ui/lib/graph-community-detector';
+import { getRenderData, LAYER_THRESHOLDS } from './LayeredRenderer';
 import type { CommunityMapping } from './NodeShapeUtils';
 
 interface UserRelationGraph3DProps {
@@ -109,6 +110,7 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
   // 社群检测状态
   const [communityMapping, setCommunityMapping] = useState<CommunityMapping | null>(null);
   const [interCommunityRelations, setInterCommunityRelations] = useState<any[]>([]);
+  const [layerStats, setLayerStats] = useState<any>(null);
 
   const { nodeThreeObject } = useForceGraphNodeRenderer({
     highlightNodes,
@@ -145,8 +147,6 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
   });
 
   const {
-    linkMaterial,
-    linkWidth,
     linkDirectionalParticles,
     linkDirectionalParticleWidth,
     linkDirectionalParticleSpeed,
@@ -154,42 +154,71 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
     getLinkColor: (link: any) => getEdgeColor(link.type),
   });
 
+  const linkMaterial = useCallback((link: any) => {
+    const THREE = require('three');
+    const weight = link.value || 1;
+    const opacity = getEdgeOpacity(weight);
+    const color = getEdgeColor(link.type);
+    return new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity,
+    });
+  }, []);
+
+  const linkWidth = useCallback((link: any) => {
+    const weight = link.value || 1;
+    const normalizedWeight = Math.min(weight / 100, 1);
+    return 0.5 + normalizedWeight * 3;
+  }, []);
+
   const graphData = useMemo(() => {
-    // 应用性能优化采样
     let processedNodes = network.nodes;
     let processedEdges = network.edges;
 
-    if (performanceConfig.enableSampling) {
+    // 计算连接数和综合得分
+    const connectionCountMap = calculateConnectionCounts(processedEdges);
+    const nodesWithScores = processedNodes.map(node => {
+      const connectionCount = connectionCountMap.get(node.id.toString()) || 0;
+      const compositeScore = calculateCompositeScore(node, connectionCount, currentWeights);
+      const nodeSize = calculateNodeSize(compositeScore);
+
+      return {
+        ...node,
+        connectionCount,
+        compositeScore,
+        val: nodeSize,
+      };
+    });
+
+    // 应用分层渲染策略
+    const renderData = getRenderData(nodesWithScores, processedEdges, 'compositeScore');
+    setLayerStats(renderData.stats || null);
+
+    // 应用性能优化采样（仅在分层后仍然节点过多时）
+    if (performanceConfig.enableSampling && renderData.nodes.length > LAYER_THRESHOLDS.CORE) {
       const sampled = createSamplingStrategy(
-        network.nodes,
-        network.edges,
+        renderData.nodes,
+        renderData.edges,
         performanceConfig,
-        (a, b) => (b.influence || 0) - (a.influence || 0)
+        (a, b) => (b.compositeScore || 0) - (a.compositeScore || 0)
       );
-      processedNodes = sampled.nodes;
-      processedEdges = sampled.edges;
-      setSampledData({ nodes: processedNodes, edges: processedEdges });
-    } else {
-      setSampledData(null);
+      setSampledData({ nodes: sampled.nodes, edges: sampled.edges });
+      return {
+        nodes: sampled.nodes,
+        links: sampled.edges.map(edge => ({
+          source: edge.source,
+          target: edge.target,
+          value: edge.weight,
+          type: edge.type,
+        })),
+      };
     }
 
-    // 计算每个节点的连接数
-    const connectionCountMap = calculateConnectionCounts(processedEdges);
-
+    setSampledData(null);
     return {
-      nodes: processedNodes.map(node => {
-        const connectionCount = connectionCountMap.get(node.id.toString()) || 0;
-        const compositeScore = calculateCompositeScore(node, connectionCount, currentWeights);
-        const nodeSize = calculateNodeSize(compositeScore);
-
-        return {
-          ...node,
-          connectionCount,
-          compositeScore,
-          val: nodeSize,
-        };
-      }),
-      links: processedEdges.map(edge => ({
+      nodes: renderData.nodes,
+      links: renderData.edges.map(edge => ({
         source: edge.source,
         target: edge.target,
         value: edge.weight,
@@ -361,7 +390,6 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
         nodeThreeObject={nodeThreeObject}
         linkMaterial={linkMaterial}
         linkWidth={linkWidth}
-        linkOpacity={0.4}
         linkDirectionalParticles={0}
         linkCurvature={0.1}
         onNodeClick={handleNodeClick}
@@ -462,7 +490,9 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
           { label: '帧时间', value: frameTime, suffix: 'ms' },
           {
             label: '节点',
-            value: sampledData
+            value: layerStats
+              ? `${graphData.nodes.length}/${layerStats.total} (${((graphData.nodes.length / layerStats.total) * 100).toFixed(0)}%)`
+              : sampledData
               ? `${graphData.nodes.length} (${((graphData.nodes.length / network.nodes.length) * 100).toFixed(1)}%)`
               : graphData.nodes.length,
           },
@@ -472,6 +502,7 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
               ? `${graphData.links.length} (${((graphData.links.length / network.edges.length) * 100).toFixed(1)}%)`
               : graphData.links.length,
           },
+          ...(layerStats ? [{ label: '分层', value: '已启用', color: '#55dd88' }] : []),
         ]}
       />
 

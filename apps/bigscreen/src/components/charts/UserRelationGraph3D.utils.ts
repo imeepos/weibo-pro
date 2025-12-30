@@ -3,15 +3,15 @@ import type { UserRelationNode } from '@sker/sdk';
 export function getUserTypeColor(userType: string): string {
   switch (userType) {
     case 'official':
-      return '#ef4444';
+      return '#ff5555';
     case 'media':
-      return '#3b82f6';
+      return '#5599ff';
     case 'kol':
-      return '#a855f7';
+      return '#dd88ff';
     case 'normal':
-      return '#10b981';
+      return '#55dd88';
     default:
-      return '#6b7280';
+      return '#888888';
   }
 }
 
@@ -33,16 +33,21 @@ export function getUserTypeLabel(userType: string): string {
 export function getEdgeColor(type: string): string {
   switch (type) {
     case 'like':
-      return '#ec4899';
+      return '#ff66aa';
     case 'comment':
-      return '#3b82f6';
+      return '#5599ff';
     case 'repost':
-      return '#8b5cf6';
+      return '#aa77ff';
     case 'comprehensive':
-      return '#f59e0b';
+      return '#ffaa44';
     default:
-      return '#6b7280';
+      return '#888888';
   }
+}
+
+export function getEdgeOpacity(weight: number): number {
+  const normalizedWeight = Math.min(weight / 100, 1);
+  return 0.3 + normalizedWeight * 0.7;
 }
 
 export function formatNumber(num: number): string {

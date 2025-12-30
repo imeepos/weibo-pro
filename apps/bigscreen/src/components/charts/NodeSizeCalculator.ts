@@ -42,13 +42,15 @@ export const calculateCompositeScore = (
 
 /**
  * 基于综合影响力计算节点大小
+ * 使用指数曲线增强视觉差异
  */
 export const calculateNodeSize = (
   compositeScore: number,
-  baseSize: number = 3,
-  maxSize: number = 25
+  baseSize: number = 2,
+  maxSize: number = 35
 ): number => {
-  return baseSize + compositeScore * (maxSize - baseSize);
+  const enhancedScore = Math.pow(compositeScore, 0.7);
+  return baseSize + enhancedScore * (maxSize - baseSize);
 };
 
 /**

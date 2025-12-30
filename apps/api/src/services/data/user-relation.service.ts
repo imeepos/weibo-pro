@@ -36,7 +36,7 @@ export class UserRelationService {
     return await this.cacheService.getOrSet(
       cacheKey,
       () => this.fetchNetwork(type, timeRange, minWeight, limit),
-      CACHE_TTL.LONG
+      CACHE_TTL.MEDIUM
     );
   }
 

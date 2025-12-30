@@ -13,10 +13,15 @@ interface UseUserRelationNetworkParams {
 export function useUserRelationNetwork(params: UseUserRelationNetworkParams) {
   const [network, setNetwork] = useState<UserRelationNetwork | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchNetwork = useCallback(async () => {
-    setIsLoading(true);
+  const fetchNetwork = useCallback(async (isBackgroundRefresh = false) => {
+    if (isBackgroundRefresh && network) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
     setError(null);
 
     try {
@@ -34,12 +39,17 @@ export function useUserRelationNetwork(params: UseUserRelationNetworkParams) {
       console.error('Failed to fetch network:', err);
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
-  }, [params.relationType, params.timeRange, params.minWeight, params.limit]);
+  }, [params.relationType, params.timeRange, params.minWeight, params.limit, network]);
+
+  const refetch = useCallback(async () => {
+    await fetchNetwork(true);
+  }, [fetchNetwork]);
 
   useEffect(() => {
     fetchNetwork();
-  }, [fetchNetwork]);
+  }, [params.relationType, params.timeRange, params.minWeight, params.limit]);
 
-  return { network, isLoading, error, refetch: fetchNetwork };
+  return { network, isLoading, isRefreshing, error, refetch };
 }
