@@ -17,7 +17,7 @@ export class LlmProxyController {
     @Param('protocol') protocol: string,
     @Body() body: any
   ) {
-    const headers = Object.fromEntries(this.req.headers as any);
+    const headers = this.req.headers as Record<string, any>;
     const contentLength = parseInt(headers['content-length'] || '0');
     const url = new URL(this.req.url || '', `http://${this.req.headers.host}`);
     const pathParts = url.pathname.split('/').filter(Boolean);
