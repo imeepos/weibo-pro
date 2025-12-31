@@ -26,6 +26,7 @@ import type {
     ClaudeStreamEventAst,
     CodexStreamEventAst,
 } from './nodes';
+import { isUnknownRequest, UnknownRequest } from '../types/unknown';
 
 @Injectable()
 export class ToAnthropicVisitor extends BaseVisitor {
@@ -45,10 +46,26 @@ export class ToAnthropicVisitor extends BaseVisitor {
         return this.convertOpenAIResponseToClaude(ast.response);
     }
 
+    private convertUnknownRequestToClaude(req: UnknownRequest): ClaudeRequest {
+        return {
+            model: req.model,
+            messages: [{ role: 'user', content: req.prompt }],
+            max_tokens: req.max_tokens ?? 4096,
+            ...(req.temperature !== undefined && { temperature: req.temperature }),
+            ...(req.top_p !== undefined && { top_p: req.top_p }),
+            ...(req.stop?.length && { stop_sequences: req.stop }),
+        };
+    }
+
     private convertOpenAIRequestToClaude(req: OpenAIRequest): ClaudeRequest {
         const messages: ClaudeMessage[] = [];
         let system: string | undefined;
-
+        if (!Array.isArray(req.messages)) {
+            if (isUnknownRequest(req)) {
+                return this.convertUnknownRequestToClaude(req)
+            }
+            console.log(JSON.stringify({ req }))
+        }
         for (const msg of req.messages) {
             if (msg.role === 'system') {
                 system = typeof msg.content === 'string' ? msg.content : msg.content?.map((p) => (p as OpenAIContentPart).text).join('\n');
