@@ -19,5 +19,8 @@ export function getOpenAiConfig(): ClientOptions {
   return {
     baseURL: LLM_PROXY_BASE_URL,
     apiKey: 'xxx',
+    timeout: 60000,
+    maxRetries: 3,
+    httpAgent: undefined,
   };
 }

@@ -817,10 +817,14 @@ export class LlmProxyService {
             console.log(`[LlmProxy] 返回文本: ${textPreview}`)
           }
 
+          const responseBody = JSON.stringify(finalResponse)
+          console.log(`[LlmProxy] 最终响应体长度: ${responseBody.length}`)
+          console.log(`[LlmProxy] 最终响应体: ${responseBody}`)
+
           return {
             success: true,
-            response: new Response(JSON.stringify(finalResponse), {
-              status: response.status,
+            response: new Response(responseBody, {
+              status: 200,
               headers: { 'Content-Type': 'application/json' }
             })
           }

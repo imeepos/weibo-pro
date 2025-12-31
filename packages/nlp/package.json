@@ -29,6 +29,7 @@
   },
   "dependencies": {
     "@sker/core": "workspace:*",
+    "@sker/json-harmony": "workspace:*",
     "openai": "^4.73.1"
   },
   "devDependencies": {

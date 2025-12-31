@@ -1,4 +1,3 @@
-export * from './EventAutoCreatorAstRender'
 export * from './EventAstRender'
 export * from './PostContextCollectorAstRender'
 export * from './PostNLPAnalyzerAstRender'

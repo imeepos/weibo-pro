@@ -11,7 +11,6 @@ export { WeiboAjaxStatusesShowAstVisitor } from './WeiboAjaxStatusesShowAstVisit
 export { WeiboKeywordSearchAstVisitor } from './WeiboKeywordSearchAstVisitor'
 export { PostContextCollectorVisitor } from './PostContextCollectorVisitor'
 export { PostNLPAnalyzerVisitor } from './PostNLPAnalyzerVisitor'
-export { EventAutoCreatorVisitor } from './EventAutoCreatorVisitor'
 export { EventAstVisitor } from './EventAstVisitor'
 export { WeiboLoginAstVisitor } from './WeiboLoginAstVisitor'
 export { WeiboAccountPickAstVisitor } from './WeiboAccountPickAstVisitor'

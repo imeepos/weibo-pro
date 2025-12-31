@@ -20,7 +20,7 @@ importers:
     dependencies:
       better-auth:
         specifier: ^1.4.8
-        version: 1.4.9(pg@8.16.3)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(vitest@4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.0.3)(@vitest/ui@4.0.16)(jiti@2.6.1)(jsdom@27.4.0)(lightningcss@1.30.2)(sass@1.51.0)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.2))
+        version: 1.4.9(pg@8.16.3)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(vitest@4.0.16(@opentelemetry/api@1.9.0)(@types/node@20.19.27)(@vitest/ui@4.0.16)(jiti@2.6.1)(jsdom@27.4.0)(lightningcss@1.30.2)(sass@1.51.0)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.2))
       graphology:
         specifier: ^0.26.0
         version: 0.26.0(graphology-types@0.24.8)
@@ -1185,6 +1185,9 @@ importers:
       '@sker/core':
         specifier: workspace:*
         version: link:../core
+      '@sker/json-harmony':
+        specifier: workspace:*
+        version: link:../json-harmony
       openai:
         specifier: ^4.73.1
         version: 4.104.0(ws@8.18.3)(zod@4.2.1)
@@ -15946,6 +15949,7 @@ snapshots:
       magic-string: 0.30.21
     optionalDependencies:
       vite: 6.4.1(@types/node@25.0.3)(jiti@2.6.1)(lightningcss@1.30.2)(sass@1.51.0)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.2)
+    optional: true
 
   '@vitest/pretty-format@4.0.16':
     dependencies:
@@ -15973,7 +15977,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 3.0.3
-      vitest: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.0.3)(@vitest/ui@4.0.16)(jiti@2.6.1)(jsdom@27.4.0)(lightningcss@1.30.2)(sass@1.51.0)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.2)
+      vitest: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@22.19.3)(@vitest/ui@4.0.16)(jiti@2.6.1)(jsdom@27.4.0)(lightningcss@1.30.2)(sass@1.51.0)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.2)
 
   '@vitest/utils@4.0.16':
     dependencies:
@@ -16299,6 +16303,26 @@ snapshots:
       react: 19.2.3
       react-dom: 19.2.3(react@19.2.3)
       vitest: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@20.19.27)(@vitest/ui@4.0.16)(jiti@2.6.1)(jsdom@24.1.3)(lightningcss@1.30.2)(sass@1.51.0)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.2)
+
+  better-auth@1.4.9(pg@8.16.3)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(vitest@4.0.16(@opentelemetry/api@1.9.0)(@types/node@20.19.27)(@vitest/ui@4.0.16)(jiti@2.6.1)(jsdom@27.4.0)(lightningcss@1.30.2)(sass@1.51.0)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.2)):
+    dependencies:
+      '@better-auth/core': 1.4.9(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.7(zod@4.2.1))(jose@6.1.3)(kysely@0.28.9)(nanostores@1.1.0)
+      '@better-auth/telemetry': 1.4.9(@better-auth/core@1.4.9(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.7(zod@4.2.1))(jose@6.1.3)(kysely@0.28.9)(nanostores@1.1.0))
+      '@better-auth/utils': 0.3.0
+      '@better-fetch/fetch': 1.1.21
+      '@noble/ciphers': 2.1.1
+      '@noble/hashes': 2.0.1
+      better-call: 1.1.7(zod@4.2.1)
+      defu: 6.1.4
+      jose: 6.1.3
+      kysely: 0.28.9
+      nanostores: 1.1.0
+      zod: 4.2.1
+    optionalDependencies:
+      pg: 8.16.3
+      react: 19.2.3
+      react-dom: 19.2.3(react@19.2.3)
+      vitest: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@20.19.27)(@vitest/ui@4.0.16)(jiti@2.6.1)(jsdom@27.4.0)(lightningcss@1.30.2)(sass@1.51.0)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.2)
 
   better-auth@1.4.9(pg@8.16.3)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(vitest@4.0.16(@opentelemetry/api@1.9.0)(@types/node@22.19.3)(@vitest/ui@4.0.16)(jiti@2.6.1)(jsdom@27.4.0)(lightningcss@1.30.2)(sass@1.51.0)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.2)):
     dependencies:
@@ -17033,10 +17057,6 @@ snapshots:
   date-fns@4.1.0: {}
 
   dayjs@1.11.19: {}
-
-  debug@4.4.3:
-    dependencies:
-      ms: 2.1.3
 
   debug@4.4.3(supports-color@5.5.0):
     dependencies:
@@ -18197,7 +18217,7 @@ snapshots:
   http-proxy-agent@7.0.2:
     dependencies:
       agent-base: 7.1.4
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@5.5.0)
     transitivePeerDependencies:
       - supports-color
 
@@ -18209,7 +18229,7 @@ snapshots:
   https-proxy-agent@7.0.6:
     dependencies:
       agent-base: 7.1.4
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@5.5.0)
     transitivePeerDependencies:
       - supports-color
 
@@ -22164,6 +22184,7 @@ snapshots:
       terser: 5.44.1
       tsx: 4.21.0
       yaml: 2.8.2
+    optional: true
 
   vitest@4.0.16(@opentelemetry/api@1.9.0)(@types/node@20.19.27)(@vitest/ui@4.0.16)(jiti@2.6.1)(jsdom@24.1.3)(lightningcss@1.30.2)(sass@1.51.0)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.2):
     dependencies:
@@ -22364,6 +22385,7 @@ snapshots:
       - terser
       - tsx
       - yaml
+    optional: true
 
   w3c-xmlserializer@5.0.0:
     dependencies:

@@ -48,54 +48,6 @@ export class PostNLPAnalyzerVisitor {
             throw new Error('工作流已取消');
           }
 
-          const { availableCategories, availableTags, recentEvents } = await useEntityManager(async (m) => {
-            const categories = await m.find(EventCategoryEntity, {
-              where: { status: 'active' },
-              order: { sort: 'ASC' },
-            });
-
-            interface TagResult {
-              name: string;
-            }
-
-            interface EventResult {
-              title: string;
-              description: string;
-              hotness?: number;
-              occurred_at?: Date;
-            }
-
-            const tags = await m.query<TagResult[]>(`
-              SELECT name FROM event_tags
-              WHERE deleted_at IS NULL
-              ORDER BY usage_count DESC
-              LIMIT 200
-            `);
-
-            // 查询最近30天内的活跃事件，按热度和时间排序
-            const events = await m.query<EventResult[]>(`
-              SELECT
-                e.title,
-                e.description,
-                e.hotness,
-                e.occurred_at
-              FROM events e
-              WHERE e.status = 'active'
-                AND e.occurred_at >= NOW() - INTERVAL '30 days'
-              ORDER BY e.hotness DESC, e.occurred_at DESC
-              LIMIT 100
-            `);
-
-            return {
-              availableCategories: categories.map((c) => c.name),
-              availableTags: tags.map((t) => t.name),
-              recentEvents: events.map((e) => ({
-                title: e.title,
-                description: e.description,
-              })),
-            };
-          });
-
           interface SubComment {
             text_raw?: string;
             text?: string;
@@ -111,30 +63,15 @@ export class PostNLPAnalyzerVisitor {
             .filter(Boolean) as string[];
 
           const context: PostContext = {
-            postId: ast.post.id,
-            content: ast.post.text_raw,
+            postId: ast.post?.id,
+            content: ast.post?.text_raw,
             comments: ast.comments.map((c) => c.text_raw),
             subComments,
             reposts: ast.reposts.map((r) => r.text),
           };
-
-          console.log(`[PostNLPAnalyzer] postId=${ast.post.id}, 内容统计:`, {
-            postLength: context.content?.length || 0,
-            commentsCount: context.comments.length,
-            commentsChars: context.comments.join('').length,
-            subCommentsCount: context.subComments.length,
-            subCommentsChars: context.subComments.join('').length,
-            repostsCount: context.reposts.length,
-            repostsChars: context.reposts.join('').length,
-          });
-
           ast.nlpResult = await this.analyzer.analyze(
             context,
-            availableCategories,
-            availableTags,
-            recentEvents
           );
-
           if (ast.event_id && typeof ast.nlpResult !== 'string') {
             await this.associatePostWithEvent(ast, ast.nlpResult);
           }
@@ -155,8 +92,7 @@ export class PostNLPAnalyzerVisitor {
         next: (event: NodeEvent) => obs.next(event),
         error: (error) => {
           ast.state = 'fail';
-          setAstError(ast, error, process.env.NODE_ENV === 'development');
-          console.error(`[PostNLPAnalyzerVisitor] postId: ${ast.post.id}`, error);
+          setAstError(ast, error);
           obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
           obs.complete();
         },
@@ -180,24 +116,20 @@ export class PostNLPAnalyzerVisitor {
     ast: PostNLPAnalyzerAst,
     nlpResult: CompleteAnalysisResult
   ): Promise<void> {
-    await useEntityManager(async (manager) => {
-      await manager.upsert(
-        PostNLPResultEntity,
-        {
-          post_id: `${ast.post.id}`,
-          event_id: ast.event_id,
-          sentiment: nlpResult.sentiment as any,
-          keywords: nlpResult.keywords as any,
-          event_type: nlpResult.event,
-        },
-        ['post_id']
-      );
-
-      ast.event_associated = true;
-
-      console.log(
-        `[PostNLPAnalyzer] 帖子 ${ast.post.id} 已关联事件 ${ast.event_id}`
-      );
-    });
+    if (ast.post && ast.post.id && ast.event_id) {
+      await useEntityManager(async (manager) => {
+        await manager.upsert(
+          PostNLPResultEntity,
+          {
+            post_id: `${ast.post.id}`,
+            event_id: ast.event_id,
+            sentiment: nlpResult.sentiment as any,
+            keywords: nlpResult.keywords as any,
+          },
+          ['post_id']
+        );
+        ast.event_associated = true;
+      });
+    }
   }
 }

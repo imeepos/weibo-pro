@@ -16,7 +16,7 @@ export class LlmProxyController {
   async proxyMessages(
     @Param('protocol') protocol: string,
     @Body() body: any
-  ) {
+  ): Promise<void> {
     const headers = this.req.headers as Record<string, any>;
     const contentLength = parseInt(headers['content-length'] || '0');
     const url = new URL(this.req.url || '', `http://${this.req.headers.host}`);
@@ -27,7 +27,15 @@ export class LlmProxyController {
     }
     const result = await this.llmProxyService.proxyRequest(protocol, apiPath, body, headers, contentLength);
 
+    console.log('[LlmProxyController] proxyRequest 结果:', {
+      success: result.success,
+      hasResponse: !!result.response,
+      responseStatus: result.response?.status,
+      error: result.error
+    });
+
     if (!result.success) {
+      console.log('[LlmProxyController] 返回 503 错误');
       this.res.statusCode = 503;
       this.res.setHeader('Content-Type', 'application/json');
       this.res.end(JSON.stringify({ error: result.error }));
@@ -35,6 +43,7 @@ export class LlmProxyController {
     }
 
     if (!result.response) {
+      console.log('[LlmProxyController] 返回 500 错误: 无响应');
       this.res.statusCode = 500;
       this.res.setHeader('Content-Type', 'application/json');
       this.res.end(JSON.stringify({ error: '无响应' }));
@@ -50,6 +59,16 @@ export class LlmProxyController {
       }
     });
 
+    const isStreaming = body.stream === true;
+
+    if (!isStreaming) {
+      const text = await response.text();
+      console.log('[LlmProxyController] 返回非流式响应，长度:', text.length);
+      this.res.end(text);
+      return;
+    }
+
+    console.log('[LlmProxyController] 返回流式响应');
     if (!response.body) {
       const text = await response.text();
       this.res.end(text);
@@ -67,7 +86,6 @@ export class LlmProxyController {
         }
       }
     });
-
     nodeStream.pipe(this.res);
   }
 }

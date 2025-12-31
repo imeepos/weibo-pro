@@ -49,16 +49,21 @@ export default function HeroDemo() {
             className="text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-bold tracking-tight mb-6"
           >
             <span className="block text-foreground">实时洞察</span>
-            <span onClick={async ()=>{
+            <span onClick={async () => {
+              const prompt = `hello`
               const req = await fetch(`/api/auth/llm/openai/chat/completions`, {
                 method: 'post',
                 headers: {
                   [`Content-Type`]: 'application/json',
                 },
-                body: JSON.stringify({})
+                body: JSON.stringify({
+                  model: 'deepseek-ai/DeepSeek-V3.2',
+                  messages: [{ role: 'user', content: prompt }],
+                  temperature: 0.2,
+                })
               })
               const json = await req.json()
-              console.log({json})
+              console.log({ json })
             }} className="block bg-gradient-to-r from-cyan via-primary to-violet bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,217,255,0.3)] dark:drop-shadow-[0_0_50px_rgba(0,217,255,0.5)]">
               舆情态势
             </span>

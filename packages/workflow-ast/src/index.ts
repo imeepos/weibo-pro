@@ -55,7 +55,6 @@ export { WeiboAjaxFriendshipsAst } from './crawler/WeiboAjaxFriendshipsAst';
 export { WeiboAjaxProfileInfoAst } from './crawler/WeiboAjaxProfileInfoAst';
 export { PostNLPAnalyzerAst } from './crawler/PostNLPAnalyzerAst';
 export { PostContextCollectorAst } from './crawler/PostContextCollectorAst';
-export { EventAutoCreatorAst } from './crawler/EventAutoCreatorAst';
 
 // BASIC 节点 (7个)
 export { SqlExecuteAst } from './basic/SqlExecuteAst';

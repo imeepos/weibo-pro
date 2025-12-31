@@ -31,10 +31,7 @@ export class SentimentAnalyzer {
     }
   ): Promise<CompleteAnalysisResult> {
     return this.nlpAnalyzer.analyze(
-      context,
-      options?.availableCategories,
-      options?.availableTags,
-      options?.recentEvents
+      context
     );
   }
 }
