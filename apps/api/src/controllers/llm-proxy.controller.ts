@@ -21,7 +21,7 @@ export class LlmProxyController {
     const contentLength = parseInt(headers['content-length'] || '0');
     const url = new URL(this.req.url || '', `http://${this.req.headers.host}`);
     const pathParts = url.pathname.split('/').filter(Boolean);
-    const apiPath = '/' + pathParts.slice(2).join('/'); // 跳过 'llm' 和 protocol
+    const apiPath = '/' + pathParts.slice(4).join('/'); // 跳过 '/api/auth/llm/:protocol'
 
     const result = await this.llmProxyService.proxyRequest(protocol, apiPath, body, headers, contentLength);
 
