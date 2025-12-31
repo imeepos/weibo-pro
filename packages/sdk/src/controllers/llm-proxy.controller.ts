@@ -3,7 +3,7 @@ import { Observable } from 'rxjs';
 
 @Controller('llm')
 export class LlmProxyController {
-  @Post(':protocol/*')
+  @Post(':protocol/**')
   proxyMessages(
     @Param('protocol') protocol: string,
     @Body() body: any

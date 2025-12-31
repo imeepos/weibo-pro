@@ -50,7 +50,7 @@ export default function HeroDemo() {
           >
             <span className="block text-foreground">实时洞察</span>
             <span onClick={async ()=>{
-              const req = await fetch(`/api/auth/llm/openai`, {
+              const req = await fetch(`/api/auth/llm/openai/chat/completions`, {
                 method: 'post',
                 headers: {
                   [`Content-Type`]: 'application/json',
