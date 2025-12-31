@@ -2,6 +2,85 @@
 
 优雅的 API 客户端 SDK - 数字时代的艺术品
 
+## 核心职责
+
+**@sker/sdk 是前后端共享类型的唯一来源**，负责：
+1. 定义 API 接口规范（路径、方法、参数、返回值）
+2. 提供类型安全的客户端调用
+3. 确保前后端类型一致，无需重复定义
+
+## 开发规范
+
+## API 开发规范 - SDK 驱动开发
+
+本项目采用 **SDK 驱动开发**模式，前后端共享类型定义，确保类型安全。
+
+### 开发流程（三步走）
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│  第一步: SDK    │ ──▶ │  第二步: API    │ ──▶ │  第三步: 调用   │
+│  定义接口规范   │     │  实现接口       │     │  前端/后端调用  │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+```
+
+#### 第一步：在 @sker/sdk 定义接口规范
+
+```typescript
+// packages/sdk/src/controllers/keywords.controller.ts
+import { Controller, Get, Query } from '@sker/core'
+import type { KeywordWordCloudItem } from '../types'
+
+@Controller('keywords')
+export class KeywordsController {
+  @Get('wordcloud')
+  getWordCloud(@Query('maxWords', z.number()) maxWords?: number): Promise<KeywordWordCloudItem[]> {
+    throw new Error('method getWordCloud not implements')
+  }
+}
+```
+
+
+#### 第二步：在 @sker/api 实现接口
+
+```typescript
+// apps/api/src/controllers/keywords.controller.ts
+import { Controller, Get, Query } from '@sker/core'
+import { root } from '@sker/core'
+import { KeywordsService } from '../services/data/keywords.service'
+import * as sdk from '@sker/sdk'
+
+// ⚠️ 必须使用 sdk.KeywordsController 作为路径，否则会 404！
+@Controller(sdk.KeywordsController)
+export class KeywordsController implements sdk.KeywordsController {
+  constructor(@Inject(KeywordsService) private keywordsService: KeywordsService) {
+  }
+  async getWordCloud(maxWords?: number) {
+    return this.keywordsService.getWordCloud(maxWords || 100)
+  }
+}
+```
+
+#### 第三步：调用接口
+
+```typescript
+// 前端或其他服务调用
+import { KeywordsController } from '@sker/sdk'
+import { root } from '@sker/core'
+
+// 获取词云数据
+const keywordsCtrl = root.get(KeywordsController)
+const wordCloud = await keywordsCtrl.getWordCloud(100)
+// wordCloud 自动推断为 KeywordWordCloudItem[] 类型
+```
+
+### 重要规则
+
+1. **SDK 是唯一的类型来源** - 前后端都从 @sker/sdk 导入类型
+2. **不要做多余的类型转换** - SDK 的目的就是让前后端共用类型
+3. **API 必须使用 `sdk.controller`** - 否则路由不匹配会导致 404
+4. **使用 `root.get()` 获取实例** - 不要直接 new Controller
+
 ## 概述
 
 `@sker/sdk` 是 Weibo-Pro 平台的类型安全 API 客户端，基于装饰器元数据和依赖注入实现自动化客户端代码生成。每个 Controller 类通过装饰器定义 API 接口，SDK 在运行时自动将其转换为可调用的客户端方法。
