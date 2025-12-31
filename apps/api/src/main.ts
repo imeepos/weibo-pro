@@ -116,7 +116,6 @@ async function bootstrap() {
 
   root.set([{ provide: BETTER_AUTH, useValue: auth }])
 
-
   // 统一 Better Auth 路由处理
   app.on(['GET', 'POST'], '/api/auth/*', async (c) => {
     const contentType = c.req.header('content-type') || '';

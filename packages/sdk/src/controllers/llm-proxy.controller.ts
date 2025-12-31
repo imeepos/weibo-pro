@@ -1,4 +1,5 @@
-import { Controller, Post, Param, Body, Headers } from '@sker/core';
+import { Controller, Post, Param, Body, Headers, Sse } from '@sker/core';
+import { Observable } from 'rxjs';
 
 @Controller('llm')
 export class LlmProxyController {
@@ -7,7 +8,7 @@ export class LlmProxyController {
     @Param('protocol') protocol: string,
     @Body() body: any,
     @Headers() headers: Record<string, string>
-  ): Promise<any> {
+  ): Promise<any> | Observable<any> {
     throw new Error('method proxyMessages not implements');
   }
 }

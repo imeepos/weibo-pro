@@ -3,8 +3,7 @@ import * as sdk from '@sker/sdk';
 
 @Controller(sdk.ProxyController)
 export class ProxyController {
-  @Get('/proxy/qrcode')
-  async proxyQRCode(@Query('url') url: string) {
+  async proxyQRCode(url: string) {
     const response = await fetch(url);
     const buffer = await response.arrayBuffer();
 

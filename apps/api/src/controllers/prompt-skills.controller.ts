@@ -8,11 +8,11 @@ import type { PromptSkillType } from '@sker/entities';
 export class PromptSkillsController implements sdk.PromptSkillsController {
   private service = root.get(PromptSkillService);
 
-  findAll(@Query('type') type?: PromptSkillType) {
+  findAll(type?: PromptSkillType) {
     return this.service.findAll(type);
   }
 
-  findOne(@Param('id') id: string) {
+  findOne(id: string) {
     return this.service.findOne(id);
   }
 

@@ -6,6 +6,8 @@
 
 BASE_URL 是 /api/auth
 
+如果是：sse 则返回 Observable即可
+
 ## API 开发规范 - SDK 驱动开发
 
 本项目采用 **SDK 驱动开发**模式，前后端共享类型定义，确保类型安全。
