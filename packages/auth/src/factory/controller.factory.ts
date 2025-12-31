@@ -133,13 +133,7 @@ function createEndpointHandler(
           timestamp: new Date().toISOString(),
         });
       }
-
-      return ctx.json({
-        success: true,
-        data: result,
-        timestamp: new Date().toISOString(),
-      });
-
+      return;
     } catch (error) {
       console.error(`[Controller Error] ${ControllerClass.name}.${methodName}:`, error);
       ctx.setStatus(500);

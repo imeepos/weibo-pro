@@ -19,7 +19,7 @@ export class LlmProvidersController {
     throw new Error('method create not implements');
   }
 
-  @Put(':id')
+  @Post(':id')
   update(
     @Param('id') id: string,
     @Body() updateLlmProviderDto: Partial<LlmProvider>
@@ -27,7 +27,7 @@ export class LlmProvidersController {
     throw new Error('method update not implements');
   }
 
-  @Delete(':id')
+  @Post(':id')
   remove(@Param('id') id: string): Promise<void> {
     throw new Error('method remove not implements');
   }
@@ -37,7 +37,7 @@ export class LlmProvidersController {
     throw new Error('method getBestProvider not implements');
   }
 
-  @Put(':id/score')
+  @Post(':id/score')
   updateScore(
     @Param('id') id: string,
     @Body('score') score: number
