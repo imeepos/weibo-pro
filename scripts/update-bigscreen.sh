@@ -18,8 +18,28 @@ pnpm turbo build --filter=@sker/bigscreen
 echo "3. 部署静态文件..."
 sudo cp -r apps/bigscreen/dist/* /var/www/bigscreen/
 
-# 4. 重启 Nginx
-echo "4. 重启 Nginx..."
+# 4. 更新 Nginx 配置
+echo "4. 更新 Nginx 配置..."
+if [ -d "/etc/nginx/sites-available" ]; then
+    NGINX_CONFIG="/etc/nginx/sites-available/bigscreen.conf"
+elif [ -d "/etc/nginx/conf.d" ]; then
+    NGINX_CONFIG="/etc/nginx/conf.d/bigscreen.conf"
+else
+    echo "警告: 找不到 Nginx 配置目录，跳过配置更新"
+    NGINX_CONFIG=""
+fi
+
+if [ -n "$NGINX_CONFIG" ]; then
+    sudo cp scripts/nginx/bigscreen-ip.conf $NGINX_CONFIG
+    echo "Nginx 配置已更新"
+fi
+
+# 5. 测试 Nginx 配置
+echo "5. 测试 Nginx 配置..."
+sudo nginx -t
+
+# 6. 重启 Nginx
+echo "6. 重启 Nginx..."
 sudo systemctl reload nginx
 
 echo ""
