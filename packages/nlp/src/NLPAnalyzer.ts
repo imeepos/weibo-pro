@@ -1,5 +1,5 @@
 import type { CompleteAnalysisResult, PostContext } from './types';
-import { useOpenAi } from './openai';
+import { getOpenAiConfig, useOpenAi } from './openai';
 import { Injectable } from '@sker/core';
 
 /**
@@ -54,7 +54,8 @@ export class NLPAnalyzer {
     } catch (error) {
       console.error('NLP 分析失败:', {
         error: error instanceof Error ? error.message : '未知错误',
-        contextLength: context.content?.length || 0
+        contextLength: context.content?.length || 0,
+        config: getOpenAiConfig()
       });
       throw new Error(`NLP 分析失败: ${error instanceof Error ? error.message : '未知错误'}`);
     }
