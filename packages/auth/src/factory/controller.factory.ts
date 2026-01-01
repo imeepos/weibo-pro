@@ -7,10 +7,10 @@
 import 'reflect-metadata';
 import { createAuthEndpoint, sessionMiddleware } from 'better-auth/api';
 import type { Endpoint, EndpointContext } from 'better-auth';
-import { ParamType, RequestMethod, root, FEATURE_PROVIDERS, createInjector, Injector, isObservable, RESPONSE, isPromise, REQUEST, logger } from '@sker/core';
+import { ParamType, RequestMethod, root, FEATURE_PROVIDERS, createInjector, Injector, isObservable, RESPONSE, isPromise, REQUEST } from '@sker/core';
 
 import { permissionMiddleware } from '../permission';
-import type { ControllerConstructor, EndpointConfig, RequestContext, RouteParameter } from './factory.types';
+import type { ControllerConstructor, EndpointConfig, RouteParameter } from './factory.types';
 import {
   extractControllerPath,
   getControllerMethods,

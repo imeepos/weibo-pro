@@ -1,6 +1,6 @@
 {
   "name": "@sker/auth",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "publishConfig": {
     "access": "public",
     "registry": "http://43.240.223.138:4873"
@@ -20,7 +20,7 @@
   "main": "./dist/index.js",
   "sideEffects": false,
   "scripts": {
-    "build": "tsup",
+    "build:deps": "tsup",
     "dev": "tsup --watch",
     "check-types": "tsc --noEmit"
   },
