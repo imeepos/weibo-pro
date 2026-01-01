@@ -12,10 +12,10 @@ import type { WorkflowGraphAst, Ast, INode, NodeEvent } from '@sker/workflow';
 import type { WorkflowEntity, WorkflowScheduleEntity } from '@sker/entities';
 
 export interface MessageEvent {
-    data: string | object;
-    id?: string;
-    type?: string;
-    retry?: number;
+  data: string | object;
+  id?: string;
+  type?: string;
+  retry?: number;
 }
 
 export interface WorkflowTemplate {
@@ -81,7 +81,7 @@ export class WorkflowController {
     throw new Error('method deleteWorkflow not implements')
   }
 
-  @Post('execute')
+  @Post({path: 'execute', sse: true})
   execute(@Body() body: ExecuteWorkflowPayload): Observable<NodeEvent> {
     throw new Error('method execute not implements')
   }
@@ -229,7 +229,7 @@ export class WorkflowController {
   /**
    * 执行单个节点 - 微调执行
    */
-  @Post('executeNode')
+  @Post({path: 'executeNode', sse: true})
   executeNode(@Body() body: ExecuteNodePayload): Observable<NodeEvent> {
     throw new Error('method executeNode not implements')
   }
@@ -237,7 +237,7 @@ export class WorkflowController {
   /**
    * 节点微调 - 基于响应式流的智能重放
    */
-  @Post('runs/:runId/fine-tune/:nodeId')
+  @Post({ path: `'runs/:runId/fine-tune/:nodeId'`, sse: true })
   fineTuneNode(
     @Param('runId') runId: string,
     @Param('nodeId') nodeId: string,
