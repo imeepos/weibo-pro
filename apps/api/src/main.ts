@@ -23,7 +23,7 @@ import { Pool } from 'pg';
 import { UploadService } from './services/upload.service';
 import { ClaudeGateway } from './claude';
 import { DerivedNodeService } from './services/workflow/derived-node.service';
-import { stream, streamText, streamSSE } from 'hono/streaming'
+import { BetterAuthWrapper } from './utils/auth-wrapper';
 async function bootstrap() {
   const PORT = parseInt(process.env.PORT || `3000`);
   const logger = root.get(Logger);
@@ -116,57 +116,18 @@ async function bootstrap() {
 
   root.set([{ provide: BETTER_AUTH, useValue: auth }])
 
-  // 统一 Better Auth 路由处理
+  // 创建 Better Auth 包装器
+  const uploadService = root.get(UploadService);
+  const authWrapper = new BetterAuthWrapper(auth, { uploadService, logger });
+
+  // Better Auth 路由（支持所有请求格式）
   app.on(['GET', 'POST', "PUT", "DELETE", "PATCH"], '/api/auth/*', async (c) => {
-    const contentType = c.req.header('content-type') || '';
+    // 注入 injector 到请求对象
+    Reflect.set(c.req.raw, 'injector', c.env.injector);
 
-    if (contentType.includes('multipart/form-data')) {
-      logger.info('📤 拦截文件上传，转换为 JSON');
-      const formData = await c.req.formData();
-      const jsonBody: Record<string, any> = {};
-
-      const uploadService = root.get(UploadService);
-
-      for (const [key, value] of formData.entries()) {
-        if (value instanceof File) {
-          // 处理文件：使用 Stream 方式保存
-          const relativePath = await uploadService.saveFileStream(value.stream(), value.name, 'file');
-          const url = `${process.env.S3_BASE_URL || ''}${relativePath}`;
-
-          jsonBody[key] = {
-            url,
-            name: value.name,
-            size: value.size,
-            type: value.type
-          };
-          logger.info('✅ 文件已处理', { key, url });
-        } else {
-          jsonBody[key] = value;
-        }
-      }
-
-      // 重新构造 Request，使用 JSON body
-      const request = new Request(c.req.url, {
-        method: c.req.method,
-        headers: {
-          ...Object.fromEntries(c.req.raw.headers),
-          'content-type': 'application/json'
-        },
-        body: JSON.stringify(jsonBody)
-      });
-
-      logger.info('🔄 转发 JSON 请求给 Better Auth', { body: jsonBody });
-      Reflect.set(request, 'injector', c.env.injector)
-      return auth.handler(request);
-    }
-
-    // SSE 不适用于认证端点 - 认证操作都是同步的请求-响应模式
-    // 如需 SSE，应在业务路由中实现，而非 /api/auth/* 路由
-    // 其他请求直接转发
-    Reflect.set(c.req.raw, 'injector', c.env.injector)
-    return auth.handler(c.req.raw);
+    // 使用包装器处理请求
+    return authWrapper.handle(c.req.raw);
   });
-
   // 404 处理
   app.notFound((c) => {
     logger.warn('API route not found', {

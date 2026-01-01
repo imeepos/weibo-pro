@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, BadRequestException, Query, Delete, NotFoundException, Sse, Res, Param, Put } from '@sker/core';
+import { Controller, Body, BadRequestException, Query, NotFoundException, Param } from '@sker/core';
 import { Observable } from 'rxjs';
 import { Ast, fromJson, generateId, INode, resolveConstructor, type OutputMetadata, getNodeById, executeAstWithWorkflowGraph, executeWorkflowImmediate, NodeEvent, executeAst } from '@sker/workflow';
 import { WorkflowGraphAst } from '@sker/workflow';
@@ -466,18 +466,7 @@ export class WorkflowController implements sdk.WorkflowController {
     @Param('runId') runId: string,
     @Param('nodeId') nodeId: string,
     @Body() body: { config: any },
-    @Res() res?: any
   ): Observable<NodeEvent> {
-    // 设置 SSE 响应头
-    res.writeHead(200, {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache, no-transform',
-      'Connection': 'keep-alive',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Cache-Control',
-      'X-Accel-Buffering': 'no' // 禁用 nginx 缓冲
-    });
-
     try {
       logger.info('开始节点微调', { runId, nodeId, config: body.config });
 
@@ -489,7 +478,6 @@ export class WorkflowController implements sdk.WorkflowController {
           if (!run) {
             const error = new NotFoundException(`运行实例不存在: ${runId}`);
             observer.error(error);
-            res.end();
             return;
           }
 
@@ -513,85 +501,17 @@ export class WorkflowController implements sdk.WorkflowController {
           if (!targetNode) {
             const error = new NotFoundException(`节点不存在: ${nodeId}`);
             observer.error(error);
-            res.end();
             return;
           }
           const fineTune$ = executeAstWithWorkflowGraph(targetNode, {}, ast);
-
-          // 心跳保活：每 15 秒发送一次心跳
-          const heartbeatInterval = setInterval(() => {
-            res.write(`: heartbeat\n\n`);
-            if (typeof (res as any).flush === 'function') {
-              (res as any).flush();
-            }
-          }, 15000);
-
-          const subscription = fineTune$.subscribe({
-            next: (event: NodeEvent) => {
-              // ✅ 直接转发标准 NodeEvent
-              res.write(`data: ${JSON.stringify(event)}\n\n`);
-              // 立即刷新缓冲区，确保事件实时发送
-              if (typeof (res as any).flush === 'function') {
-                (res as any).flush();
-              }
-              observer.next(event);
-            },
-            error: (error: any) => {
-              logger.error('节点微调失败', { runId, nodeId, error: error.message });
-
-              // ✅ 发送标准 node_fail 事件
-              res.write(`data: ${JSON.stringify({
-                type: 'node_fail',
-                id: nodeId,
-                error: error.message
-              })}\n\n`);
-              if (typeof (res as any).flush === 'function') {
-                (res as any).flush();
-              }
-
-              clearInterval(heartbeatInterval);
-              res.end();
-              observer.error(error);
-            },
-            complete: () => {
-              logger.info('节点微调完成', { runId, nodeId });
-              clearInterval(heartbeatInterval);
-              res.end();
-              observer.complete();
-            }
-          });
-
-          // 处理客户端断开连接
-          res.on('close', () => {
-            logger.info('客户端断开微调连接', { runId, nodeId });
-            clearInterval(heartbeatInterval);
-            subscription.unsubscribe();
-          });
+          return fineTune$.subscribe(observer);
         }).catch(error => {
           logger.error('获取运行实例失败', { runId, error: error.message });
-
-          // ✅ 发送标准 node_fail 事件
-          res.write(`data: ${JSON.stringify({
-            type: 'node_fail',
-            id: nodeId,
-            error: error.message
-          })}\n\n`);
-
-          res.end();
           observer.error(error);
         });
       });
     } catch (error: any) {
       logger.error('节点微调初始化失败', { runId, nodeId, error: error.message });
-
-      // ✅ 发送标准 node_fail 事件
-      res.write(`data: ${JSON.stringify({
-        type: 'node_fail',
-        id: nodeId,
-        error: error.message
-      })}\n\n`);
-
-      res.end();
       throw error;
     }
   }

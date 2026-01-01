@@ -27,12 +27,10 @@
 
 import type { BetterAuthClientOptions, BetterAuthClientPlugin, BetterFetch, ClientStore } from 'better-auth/client';
 import type { Provider, Type } from '@sker/core';
-import { CONTROLLES, PATH_METADATA, METHOD_METADATA, ROUTE_ARGS_METADATA, RequestMethod, ParamType, root } from '@sker/core';
+import { CONTROLLES, PATH_METADATA, METHOD_METADATA, ROUTE_ARGS_METADATA, SSE_METADATA, RequestMethod, ParamType, root } from '@sker/core';
 import { Observable } from 'rxjs';
 import { clone } from '@sker/workflow';
 import { BETTER_FETCH, BETTER_OPTIONS, BETTER_STORE } from './tokens';
-import { BearerOptions } from 'better-auth/plugins';
-
 
 /**
  * 创建 Sker 客户端插件
@@ -122,6 +120,7 @@ function buildBetterAuthActions(
       const methodPath = Reflect.getMetadata(PATH_METADATA, originalMethod) || '/';
       const httpMethod = Reflect.getMetadata(METHOD_METADATA, originalMethod);
       const routeArgs = Reflect.getMetadata(ROUTE_ARGS_METADATA, originalMethod) || {};
+      const isSse = Reflect.getMetadata(SSE_METADATA, originalMethod) === true;
 
       if (httpMethod === undefined) continue;
 
@@ -130,6 +129,7 @@ function buildBetterAuthActions(
         methodPath,
         httpMethod,
         routeArgs,
+        isSse
       );
     }
   }
@@ -156,6 +156,7 @@ function createControllerProxy<T>(
     const methodPath = Reflect.getMetadata(PATH_METADATA, originalMethod) || '/';
     const httpMethod = Reflect.getMetadata(METHOD_METADATA, originalMethod);
     const routeArgs = Reflect.getMetadata(ROUTE_ARGS_METADATA, originalMethod) || {};
+    const isSse = Reflect.getMetadata(SSE_METADATA, originalMethod) === true;
 
     if (httpMethod === undefined) continue;
 
@@ -164,6 +165,7 @@ function createControllerProxy<T>(
       methodPath,
       httpMethod,
       routeArgs,
+      isSse
     );
   }
 
@@ -178,8 +180,9 @@ function createMethodProxy(
   methodPath: string,
   httpMethod: RequestMethod,
   routeArgs: Record<string, any>,
+  isSse: boolean
 ): (...args: any[]) => any {
-  if (httpMethod === RequestMethod.SSE) {
+  if (isSse) {
     return (...args: any[]) => {
       const fullPath = buildFullPath(controllerPrefix, methodPath);
       const { urlParams, queryParams, bodyData } = extractParameters(args, routeArgs);
@@ -241,8 +244,9 @@ function generatePathMethods(controllers: any[]): Record<string, 'GET' | 'POST'>
       const originalMethod = controllerClass.prototype[methodName];
       const methodPath = Reflect.getMetadata(PATH_METADATA, originalMethod) || '/';
       const httpMethod = Reflect.getMetadata(METHOD_METADATA, originalMethod);
+      const isSse = Reflect.getMetadata(SSE_METADATA, originalMethod) === true;
 
-      if (httpMethod !== undefined && httpMethod !== RequestMethod.SSE) {
+      if (httpMethod !== undefined && !isSse) {
         const fullPath = buildFullPath(controllerPrefix, methodPath);
         pathMethods[fullPath] = httpMethod === RequestMethod.GET ? 'GET' : 'POST';
       }
@@ -430,7 +434,6 @@ function getHttpMethodString(method: RequestMethod): string {
     [RequestMethod.PUT]: 'PUT',
     [RequestMethod.DELETE]: 'DELETE',
     [RequestMethod.PATCH]: 'PATCH',
-    [RequestMethod.SSE]: 'GET',
   };
   return map[method] || 'GET';
 }

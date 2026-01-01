@@ -41,6 +41,7 @@ export function Controller(prefix?: string | Type<any>): ClassDecorator {
 // 响应 schema 元数据键
 export const RESPONSE_SCHEMA_METADATA = 'response-schema';
 export const CONTENT_TYPE_METADATA = 'content-type';
+export const SSE_METADATA = 'sse';
 
 /**
  * HTTP 方法配置接口
@@ -53,6 +54,7 @@ interface HttpMethodOptions {
   path?: string;
   schema?: any;
   contentType?: string;
+  sse?: boolean;
 }
 
 /**
@@ -95,6 +97,12 @@ function createHttpMethodDecorator(method: RequestMethod) {
         routePath = options.path || '/';
         responseSchema = options.schema;
         finalContentType = options.contentType || 'application/json';
+
+        // 处理 SSE 标识
+        if (options.sse) {
+          const methodTarget = descriptor.value || target[propertyKey];
+          Reflect.defineMetadata(SSE_METADATA, true, methodTarget);
+        }
       } else {
         // 检测第一个参数是否为 zod schema
         const isZodSchema = pathOrOptionsOrSchema

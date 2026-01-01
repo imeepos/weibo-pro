@@ -2,7 +2,6 @@ import { Controller, Get, Query } from '@sker/core'
 import type { TimeRange } from '@sker/entities';
 import type {
   UserListResponse,
-  UserListQueryParams,
   RiskLevelConfig,
   UserStatistics
 } from '../types'

@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Session } from '@sker/core';
+import { Controller, Post, Body } from '@sker/core';
 import * as sdk from '@sker/sdk';
 
 /**
@@ -24,16 +24,11 @@ export class UploadController {
 
   @Post('base64')
   async uploadBase64(
-    @Session() session: any,
     @Body() body: { image: string; filename?: string; type?: string }
   ) {
-    if (!session) {
-      throw new Error('Unauthorized');
-    }
     if (!body.image) {
       throw new Error('未提供图片数据');
     }
-
     // Base64 上传暂不支持，需要在 Hono 层处理
     throw new Error('Base64 上传暂未实现');
   }

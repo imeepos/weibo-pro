@@ -1,4 +1,4 @@
-import { Controller, Post, Param, Req, Res, Headers, Body, Inject, REQUEST, RESPONSE } from '@sker/core';
+import { Controller, Post, Param, Body, Inject, REQUEST, RESPONSE } from '@sker/core';
 import type { IncomingMessage, ServerResponse } from 'http';
 import { LlmProxyService } from '../services/llm-proxy.service';
 import { Readable } from 'stream';

@@ -1,4 +1,4 @@
-import { Controller, Post, Sse, Body, Get, Query, Delete, Param, Put } from '@sker/core'
+import { Controller, Post, Body, Get, Query, Delete, Param, Put } from '@sker/core'
 import type {
   WorkflowSummary,
   CreateRunResult,
@@ -81,7 +81,7 @@ export class WorkflowController {
     throw new Error('method deleteWorkflow not implements')
   }
 
-  @Sse('execute')
+  @Post('execute')
   execute(@Body() body: ExecuteWorkflowPayload): Observable<NodeEvent> {
     throw new Error('method execute not implements')
   }
@@ -229,7 +229,7 @@ export class WorkflowController {
   /**
    * 执行单个节点 - 微调执行
    */
-  @Sse('executeNode')
+  @Post('executeNode')
   executeNode(@Body() body: ExecuteNodePayload): Observable<NodeEvent> {
     throw new Error('method executeNode not implements')
   }
@@ -237,7 +237,7 @@ export class WorkflowController {
   /**
    * 节点微调 - 基于响应式流的智能重放
    */
-  @Sse('runs/:runId/fine-tune/:nodeId')
+  @Post('runs/:runId/fine-tune/:nodeId')
   fineTuneNode(
     @Param('runId') runId: string,
     @Param('nodeId') nodeId: string,

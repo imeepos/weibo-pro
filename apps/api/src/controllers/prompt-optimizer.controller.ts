@@ -7,8 +7,6 @@ import {
   Query,
   BadRequestException,
   NotFoundException,
-  Sse,
-  Res,
 } from '@sker/core';
 import { Observable } from 'rxjs';
 import { logger, root } from '@sker/core';
@@ -154,28 +152,13 @@ export class PromptOptimizerController {
    * - 自动保存优化结果
    */
   @Post('/tasks/:taskId/execute')
-  @Sse()
-  executeTask(@Param('taskId') taskId: string, @Res() res?: any): Observable<NodeEvent> {
-    // 设置 SSE 响应头
-    res.writeHead(200, {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache, no-transform',
-      Connection: 'keep-alive',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Cache-Control',
-      'X-Accel-Buffering': 'no',
-    });
-
+  executeTask(@Param('taskId') taskId: string): Observable<NodeEvent> {
     return new Observable((observer) => {
       this.em
         .findOne(PromptOptimizationTaskEntity, { where: { id: taskId } })
         .then(async (task) => {
           if (!task) {
             const error = new NotFoundException(`任务不存在: ${taskId}`);
-            res.write(
-              `data: ${JSON.stringify({ type: 'error', error: error.message })}\n\n`
-            );
-            res.end();
             observer.error(error);
             return;
           }
@@ -214,120 +197,11 @@ export class PromptOptimizerController {
           if (initialVersion) {
             ast.initialPrompt = initialVersion.prompt;
           }
-
-          // 心跳保活
-          const heartbeatInterval = setInterval(() => {
-            res.write(`: heartbeat\n\n`);
-            if (typeof res.flush === 'function') {
-              res.flush();
-            }
-          }, 15000);
-
           // 执行优化
-          const events$ = executeAst(ast, {});
-
-          const subscription = events$.subscribe({
-            next: async (event: NodeEvent) => {
-              res.write(`data: ${JSON.stringify(event)}\n\n`);
-              if (typeof res.flush === 'function') {
-                res.flush();
-              }
-
-              // 记录每次迭代的版本
-              if (event.type === 'node_emit' && (event as any).data?.result) {
-                const result = (event as any).data.result;
-                if (result.versions) {
-                  for (const v of result.versions) {
-                    const existingVersion = await this.em.findOne(PromptVersionEntity, {
-                      where: { taskId: task.id, versionNumber: v.versionNumber },
-                    });
-                    if (!existingVersion) {
-                      const version = new PromptVersionEntity();
-                      version.taskId = task.id;
-                      version.versionNumber = v.versionNumber;
-                      version.prompt = v.prompt;
-                      version.totalScore = v.score;
-                      version.improvementSuggestions = v.improvements;
-                      await this.em.save(PromptVersionEntity, version);
-                    }
-                  }
-                }
-              }
-
-              observer.next(event);
-            },
-            error: async (error) => {
-              logger.error('优化任务执行失败', { taskId, error: error.message });
-
-              // 更新任务状态
-              task.status = OptimizationTaskStatus.FAILED;
-              task.errorMessage = error.message;
-              task.completedAt = new Date();
-              await this.em.save(PromptOptimizationTaskEntity, task);
-
-              res.write(
-                `data: ${JSON.stringify({
-                  type: 'node_fail',
-                  id: ast.id,
-                  error: error.message,
-                })}\n\n`
-              );
-
-              clearInterval(heartbeatInterval);
-              res.end();
-              observer.error(error);
-            },
-            complete: async () => {
-              logger.info('优化任务执行完成', { taskId });
-
-              // 更新任务状态
-              const result = ast.result;
-              if (result) {
-                task.status = result.success
-                  ? OptimizationTaskStatus.COMPLETED
-                  : OptimizationTaskStatus.COMPLETED;
-                task.bestScore = result.bestScore;
-                task.currentIteration = result.iterations;
-
-                // 标记最佳版本
-                const bestVersion = await this.em.findOne(PromptVersionEntity, {
-                  where: { taskId: task.id },
-                  order: { totalScore: 'DESC' },
-                });
-                if (bestVersion) {
-                  bestVersion.isBest = true;
-                  task.bestVersionId = bestVersion.id;
-                  await this.em.save(PromptVersionEntity, bestVersion);
-                }
-              }
-              task.completedAt = new Date();
-              await this.em.save(PromptOptimizationTaskEntity, task);
-
-              clearInterval(heartbeatInterval);
-              res.end();
-              observer.complete();
-            },
-          });
-
-          // 处理客户端断开连接
-          res.on('close', async () => {
-            logger.info('客户端断开连接', { taskId });
-
-            // 更新任务状态为取消
-            if (task.status === OptimizationTaskStatus.RUNNING) {
-              task.status = OptimizationTaskStatus.CANCELLED;
-              task.completedAt = new Date();
-              await this.em.save(PromptOptimizationTaskEntity, task);
-            }
-
-            clearInterval(heartbeatInterval);
-            subscription.unsubscribe();
-          });
+          return executeAst(ast, {}).subscribe(observer);
         })
         .catch((error) => {
           logger.error('获取任务失败', { taskId, error: error.message });
-          res.write(`data: ${JSON.stringify({ type: 'error', error: error.message })}\n\n`);
-          res.end();
           observer.error(error);
         });
     });
@@ -385,7 +259,6 @@ export class PromptOptimizerController {
    * 简化版 API，适合快速使用
    */
   @Post('/quick')
-  @Sse()
   quickOptimize(
     @Body()
     body: {
@@ -395,23 +268,9 @@ export class PromptOptimizerController {
       maxIterations?: number;
       targetScore?: number;
     },
-    @Res() res?: any
   ): Observable<NodeEvent> {
-    // 设置 SSE 响应头
-    res.writeHead(200, {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache, no-transform',
-      Connection: 'keep-alive',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Cache-Control',
-      'X-Accel-Buffering': 'no',
-    });
 
     if (!body.targetOutput || body.targetOutput.trim().length === 0) {
-      res.write(
-        `data: ${JSON.stringify({ type: 'error', error: '目标输出不能为空' })}\n\n`
-      );
-      res.end();
       throw new BadRequestException('目标输出不能为空');
     }
 
@@ -423,49 +282,8 @@ export class PromptOptimizerController {
     ast.maxIterations = body.maxIterations || 3;
     ast.targetScore = body.targetScore || 80;
 
-    // 心跳保活
-    const heartbeatInterval = setInterval(() => {
-      res.write(`: heartbeat\n\n`);
-      if (typeof res.flush === 'function') {
-        res.flush();
-      }
-    }, 15000);
-
     // 执行优化
     const events$ = executeAst(ast, {});
-
-    const subscription = events$.subscribe({
-      next: (event: NodeEvent) => {
-        res.write(`data: ${JSON.stringify(event)}\n\n`);
-        if (typeof res.flush === 'function') {
-          res.flush();
-        }
-      },
-      error: (error) => {
-        logger.error('快速优化失败', { error: error.message });
-        res.write(
-          `data: ${JSON.stringify({
-            type: 'node_fail',
-            id: ast.id,
-            error: error.message,
-          })}\n\n`
-        );
-        clearInterval(heartbeatInterval);
-        res.end();
-      },
-      complete: () => {
-        logger.info('快速优化完成', { score: ast.bestScore });
-        clearInterval(heartbeatInterval);
-        res.end();
-      },
-    });
-
-    // 处理客户端断开连接
-    res.on('close', () => {
-      clearInterval(heartbeatInterval);
-      subscription.unsubscribe();
-    });
-
     return events$;
   }
 }

@@ -1,4 +1,4 @@
-import { Controller, Post, Param, Body, Headers, Sse } from '@sker/core';
+import { Controller, Post, Param, Body } from '@sker/core';
 import { Observable } from 'rxjs';
 
 @Controller('llm')
