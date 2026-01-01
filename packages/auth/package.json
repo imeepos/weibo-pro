@@ -21,7 +21,6 @@
   "sideEffects": false,
   "scripts": {
     "build:deps": "tsup",
-    "dev": "tsup --watch",
     "check-types": "tsc --noEmit"
   },
   "dependencies": {

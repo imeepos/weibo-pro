@@ -7,7 +7,7 @@
 import 'reflect-metadata';
 import { createAuthEndpoint, sessionMiddleware } from 'better-auth/api';
 import type { Endpoint, EndpointContext } from 'better-auth';
-import { ParamType, RequestMethod, root, FEATURE_PROVIDERS, createInjector, Injector, isObservable, RESPONSE, isPromise, REQUEST } from '@sker/core';
+import { RequestMethod, root, FEATURE_PROVIDERS, createInjector, Injector, isObservable, RESPONSE, isPromise, REQUEST } from '@sker/core';
 
 import { permissionMiddleware } from '../permission';
 import type { ControllerConstructor, EndpointConfig, RouteParameter } from './factory.types';
@@ -29,8 +29,7 @@ const HTTP_METHOD_MAP: Record<RequestMethod, EndpointConfig['method']> = {
   [RequestMethod.POST]: 'POST',
   [RequestMethod.PUT]: 'PUT',
   [RequestMethod.DELETE]: 'DELETE',
-  [RequestMethod.PATCH]: 'PATCH',
-  [RequestMethod.SSE]: 'POST',
+  [RequestMethod.PATCH]: 'PATCH'
 };
 
 /**
@@ -78,7 +77,7 @@ function createEndpointHandler(
       ], inejctor, 'feature');
       const instance = reqInjector.get(ControllerClass);
 
-      const args = await injectParameters(argsMetadata, ctx);
+      const args = await injectParameters(argsMetadata, reqInjector);
 
       const method = Reflect.get(instance, methodName);
       if (typeof method !== 'function') {
@@ -201,15 +200,6 @@ export function controllerFactory(ControllerClass: ControllerConstructor): Recor
     // Categorize parameters
     const params = categorizeParameters(argsMetadata);
 
-    // Detect if endpoint needs file upload support
-    const hasFileUpload = Object.values(argsMetadata).some(
-      meta => meta.type === ParamType.UPLOADED_FILE
-    );
-
-    // Detect if endpoint needs request object
-    const needsRequest = hasFileUpload || Object.values(argsMetadata).some(
-      meta => meta.type === ParamType.REQ
-    );
 
     // Build endpoint configuration
     const endpointConfig: EndpointConfig = {
@@ -219,17 +209,6 @@ export function controllerFactory(ControllerClass: ControllerConstructor): Recor
         openapi: buildOpenAPIMetadata(params, description, tags, responseSchema),
       },
     };
-
-    // Add requireRequest for endpoints that need Request object
-    if (needsRequest) {
-      (endpointConfig as unknown as Record<string, unknown>).requireRequest = true;
-    }
-
-    // Disable body parsing for file upload endpoints
-    if (hasFileUpload) {
-      (endpointConfig as unknown as Record<string, unknown>).disableBody = true;
-    }
-
     // Add schemas
     buildEndpointSchemas(params, endpointConfig);
 

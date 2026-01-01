@@ -2,18 +2,18 @@
  * Parameter Injection for Controller Methods
  */
 
-import { ParamType } from '@sker/core';
-import type { RouteParameter, RequestContext, ResponseController } from './factory.types';
-import { extractFileFromRequest } from './file.handler';
-import { EndpointContext } from 'better-auth';
+import { Injector, ParamType } from '@sker/core';
+import type { RouteParameter } from './factory.types';
+import { BETTER_AUTH_CONTEXT } from './tokens';
 
 /**
  * Inject parameters from request context into method arguments
  */
 export async function injectParameters(
   argsMetadata: Record<string, RouteParameter>,
-  ctx: EndpointContext<string, any,any>
+  injector: Injector
 ): Promise<unknown[]> {
+  const ctx = injector.get(BETTER_AUTH_CONTEXT);
   const sortedMetadata = Object.values(argsMetadata).sort((a, b) => a.index - b.index);
   const results: unknown[] = [];
 
@@ -26,10 +26,6 @@ export async function injectParameters(
         results.push(zod ? zod.parse(bodyValue) : bodyValue);
         break;
       }
-
-      case ParamType.SESSION:
-        results.push(ctx.context.session);
-        break;
 
       case ParamType.QUERY: {
         const queryValue = fieldKey ? (ctx.query as Record<string, unknown>)[fieldKey] : ctx.query;
@@ -46,38 +42,6 @@ export async function injectParameters(
       case ParamType.HEADER:
         results.push(fieldKey ? ctx.headers?.get(fieldKey) : ctx.headers);
         break;
-
-      case ParamType.REQ:
-        results.push(ctx.request);
-        break;
-
-      case ParamType.RES: {
-        results.push(ctx);
-        break;
-      }
-
-      case ParamType.HEADERS: {
-        // Return all headers as Record<string, string>
-        const headersObj: Record<string, string> = {};
-        if (ctx.headers) {
-          ctx.headers.forEach((value, key) => {
-            headersObj[key] = value;
-          });
-        }
-        results.push(headersObj);
-        break;
-      }
-
-      case ParamType.UPLOADED_FILE: {
-        // Extract file from request FormData
-        if (ctx.request) {
-          const file = await extractFileFromRequest(ctx.request, fieldKey);
-          results.push(file);
-        } else {
-          results.push(undefined);
-        }
-        break;
-      }
 
       default:
         results.push(undefined);
