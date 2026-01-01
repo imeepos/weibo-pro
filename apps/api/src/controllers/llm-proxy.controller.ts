@@ -1,4 +1,4 @@
-import { Controller, Post, Param, Req, Res, Headers, Body, Inject, REQUEST, RESPOSNE } from '@sker/core';
+import { Controller, Post, Param, Req, Res, Headers, Body, Inject, REQUEST, RESPONSE } from '@sker/core';
 import type { IncomingMessage, ServerResponse } from 'http';
 import { LlmProxyService } from '../services/llm-proxy.service';
 import { Readable } from 'stream';
@@ -9,7 +9,7 @@ export class LlmProxyController {
   constructor(
     @Inject(LlmProxyService) private readonly llmProxyService: LlmProxyService,
     @Inject(REQUEST) private req: IncomingMessage,
-    @Inject(RESPOSNE) private res: ServerResponse
+    @Inject(RESPONSE) private res: ServerResponse
   ) { }
 
   @Post(':protocol/*')

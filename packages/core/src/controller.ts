@@ -173,7 +173,7 @@ export const Delete = createHttpMethodDecorator(RequestMethod.DELETE);
 export const Patch = createHttpMethodDecorator(RequestMethod.PATCH);
 
 export const REQUEST = new InjectionToken<any>(`REQUEST`)
-export const RESPOSNE = new InjectionToken<any>(`RESPOSNE`)
+export const RESPONSE = new InjectionToken<any>(`RESPONSE`)
 export const CONTEXT = new InjectionToken<any>(`CONTEXT`)
 export const STREAM = new InjectionToken<any>(`STREAM`)
 // 路由参数类型枚举

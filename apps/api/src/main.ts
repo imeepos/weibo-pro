@@ -7,7 +7,7 @@ import "@sker/workflow-ast";
 import "@sker/workflow-run";
 import "./controllers/index";
 import "./claude/claude.controller";
-import { CONTEXT, createInjector, Injector, Logger, REQUEST, RESPOSNE, root, STREAM } from '@sker/core';
+import { CONTEXT, createInjector, Injector, Logger, REQUEST, RESPONSE, root, STREAM } from '@sker/core';
 import { entitiesProviders, seedNuwa, seedSentimentAnalyzer, seedContentAuditor, seedDataValidator, seedProgrammingAssistant, useTranslation } from "@sker/entities";
 import { killPortProcess } from 'kill-port-process';
 import { Hono } from 'hono';
@@ -117,7 +117,7 @@ async function bootstrap() {
   root.set([{ provide: BETTER_AUTH, useValue: auth }])
 
   // 统一 Better Auth 路由处理
-  app.on(['GET', 'POST'], '/api/auth/*', async (c) => {
+  app.on(['GET', 'POST', "PUT", "DELETE", "PATCH"], '/api/auth/*', async (c) => {
     const contentType = c.req.header('content-type') || '';
 
     if (contentType.includes('multipart/form-data')) {
@@ -225,7 +225,7 @@ async function bootstrap() {
     });
     const reqInjector = createInjector([
       { provide: REQUEST, useValue: req },
-      { provide: RESPOSNE, useValue: res },
+      { provide: RESPONSE, useValue: res },
     ], root, 'feature');
     const response = await app.fetch(request, { injector: reqInjector });
 

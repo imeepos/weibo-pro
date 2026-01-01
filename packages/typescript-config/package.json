@@ -1,8 +1,11 @@
 {
   "name": "@sker/typescript-config",
-  "version": "0.0.0",
-  "private": true,
+  "version": "2.0.0",
   "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "registry": "http://43.240.223.138:4873"
+  },
   "exports": {
     "./base.json": "./base.json",
     "./nextjs.json": "./nextjs.json",
@@ -10,8 +13,5 @@
   },
   "scripts": {
     "claude": "claude --dangerously-skip-permissions"
-  },
-  "publishConfig": {
-    "access": "public"
   }
 }

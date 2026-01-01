@@ -7,7 +7,7 @@
 import 'reflect-metadata';
 import { createAuthEndpoint, sessionMiddleware } from 'better-auth/api';
 import type { Endpoint, EndpointContext } from 'better-auth';
-import { ParamType, RequestMethod, root, FEATURE_PROVIDERS, createInjector, Injector, isObservable, RESPOSNE, isPOromise, REQUEST, logger } from '@sker/core';
+import { ParamType, RequestMethod, root, FEATURE_PROVIDERS, createInjector, Injector, isObservable, RESPONSE, isPromise, REQUEST, logger } from '@sker/core';
 
 import { permissionMiddleware } from '../permission';
 import type { ControllerConstructor, EndpointConfig, RequestContext, RouteParameter } from './factory.types';
@@ -86,12 +86,29 @@ function createEndpointHandler(
       }
 
       let result = await method.bind(instance)(...args);
-      if (isPOromise(result)) {
+      if (isPromise(result)) {
         result = await result;
+      }
+      if(result instanceof Response){
+        const res = reqInjector.get(RESPONSE) as ServerResponse;
+
+        // 设置状态码
+        res.statusCode = result.status;
+
+        // 设置响应头
+        result.headers.forEach((value, key) => {
+          res.setHeader(key, value);
+        });
+
+        // 写入响应体
+        const body = await result.text();
+        res.end(body);
+
+        return;
       }
       if (isObservable(result)) {
         const req = reqInjector.get(REQUEST);
-        const res = reqInjector.get(RESPOSNE) as ServerResponse;
+        const res = reqInjector.get(RESPONSE) as ServerResponse;
         res.writeHead(200, {
           'Content-Type': 'text/event-stream',
           'Cache-Control': 'no-cache, no-transform',
@@ -125,8 +142,16 @@ function createEndpointHandler(
         });
         return res;
       }
-      if (typeof result === 'object') {
+      if (typeof result === 'object' && result !== null) {
         // Wrap response in standard format
+        return ctx.json({
+          success: true,
+          data: result,
+          timestamp: new Date().toISOString(),
+        });
+      }
+      if (result !== undefined) {
+        // Handle primitive types (string, number, boolean)
         return ctx.json({
           success: true,
           data: result,

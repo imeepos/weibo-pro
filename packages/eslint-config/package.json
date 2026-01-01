@@ -1,8 +1,11 @@
 {
   "name": "@sker/eslint-config",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
-  "private": true,
+  "publishConfig": {
+    "access": "public",
+    "registry": "http://43.240.223.138:4873"
+  },
   "scripts": {
     "claude": "claude --dangerously-skip-permissions"
   },

@@ -10,21 +10,21 @@ import { Ast, Input, IS_MULTI, Node, Output } from "@sker/workflow";
  * - 识别关键事件节点和传播路径
  */
 @Node({
-    title: 'Query Agent',
-    type: 'sentiment',
-    errorStrategy: 'retry',
-    maxRetries: 3
+   title: '新闻搜索与分析专家',
+   type: 'sentiment',
+   errorStrategy: 'retry',
+   maxRetries: 3
 })
 export class QueryAgentAst extends Ast {
 
-    @Output({ title: '温度', defaultValue: 0.7 })
-    temperature = 0.7;
+   @Output({ title: '温度', defaultValue: 0.7 })
+   temperature = 0.7;
 
-    @Output({ title: 'topP', defaultValue: 0.9 })
-    top_p = 0.9;
+   @Output({ title: 'topP', defaultValue: 0.9 })
+   top_p = 0.9;
 
-    @Output({ title: '系统提示词', defaultValue: '' })
-    systemPrompt = `你是一位专业的新闻分析师和深度内容创作专家。你将获得搜索查询、搜索结果以及你正在研究的报告段落。
+   @Output({ title: '系统提示词', defaultValue: '' })
+   systemPrompt = `你是一位专业的新闻分析师和深度内容创作专家。你将获得搜索查询、搜索结果以及你正在研究的报告段落。
 
 ## 核心任务
 
@@ -80,16 +80,16 @@ export class QueryAgentAst extends Ast {
 
 仔细核查新闻中的可疑点，破除谣言和误导，尽力还原事件原貌。`;
 
-    @Input({ title: '分析主题', defaultValue: '' })
-    topic: string = '';
+   @Input({ title: '分析主题', defaultValue: '' })
+   topic: string = '';
 
-    @Input({ title: '发言记录', mode: IS_MULTI, defaultValue: [] })
-    speechesText: string[] = [];
+   @Input({ title: '发言记录', mode: IS_MULTI, defaultValue: [] })
+   speechesText: string[] = [];
 
-    @Input()
-    get userPrompt(): string {
-        const speeches = this.speechesText.join('\n\n');
-        return `分析主题：${this.topic}
+   @Input({ title: '用户输入' })
+   get userPrompt(): string {
+      const speeches = this.speechesText.join('\n\n');
+      return `分析主题：${this.topic}
 
 ${speeches ? `参考其他Agent的发言：\n${speeches}\n\n` : ''}请作为Query Agent，搜索并分析与该主题相关的新闻报道，提供：
 
@@ -100,10 +100,10 @@ ${speeches ? `参考其他Agent的发言：\n${speeches}\n\n` : ''}请作为Quer
 5. **发展趋势判断**：基于现有信息的趋势分析
 
 请确保内容信息密集、数据丰富、分析深入。`;
-    }
+   }
 
-    @Output({ title: '分析结果', defaultValue: '' })
-    analysisResult = '';
+   @Output({ title: '分析结果', defaultValue: '' })
+   analysisResult = '';
 
-    type: 'QueryAgentAst' = 'QueryAgentAst';
+   type: 'QueryAgentAst' = 'QueryAgentAst';
 }
