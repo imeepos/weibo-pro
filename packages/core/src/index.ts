@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-export { InjectionToken, type InjectionTokenOptions } from './injection-token';
+export { InjectionToken, RecordInjectionToken, MapInjectionToken, SetInjectionToken, type InjectionTokenOptions } from './injection-token';
 export {
   HostAttributeToken,
   isHostAttributeToken,
@@ -25,6 +25,7 @@ export {
   type ConstructorProvider,
   type LazyClassProvider,
   type LazyFactoryProvider,
+  type MultiType,
 } from './provider';
 export {
   Injectable,

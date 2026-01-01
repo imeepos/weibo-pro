@@ -69,10 +69,78 @@ export class EnvironmentInjectorUtils {
   }
 
   /**
-   * 检查是否为多值提供者
+   * 检查是否为多值提供者（数组或 Record）
    */
   static isMultiProvider(providers: Provider[]): boolean {
     return providers.some((p) => p.multi);
+  }
+
+  /**
+   * 检查是否为 Record 类型多值提供者
+   */
+  static isRecordProvider(providers: Provider[]): boolean {
+    return providers.some((p) => p.multi === 'record');
+  }
+
+  /**
+   * 检查是否为数组类型多值提供者
+   */
+  static isArrayProvider(providers: Provider[]): boolean {
+    return providers.some((p) => p.multi === true);
+  }
+
+  /**
+   * 检查是否为 Map 类型多值提供者
+   */
+  static isMapProvider(providers: Provider[]): boolean {
+    return providers.some((p) => p.multi === 'map');
+  }
+
+  /**
+   * 检查是否为 Set 类型多值提供者
+   */
+  static isSetProvider(providers: Provider[]): boolean {
+    return providers.some((p) => p.multi === 'set');
+  }
+
+  /**
+   * 验证 Record Provider 配置
+   */
+  static validateRecordProvider(provider: Provider): void {
+    if (provider.multi === 'record' && !provider.key) {
+      throw new Error(
+        `Record provider for ${this.getTokenName(provider.provide)} requires a 'key' field`
+      );
+    }
+  }
+
+  /**
+   * 验证 Map Provider 配置
+   */
+  static validateMapProvider(provider: Provider): void {
+    if (provider.multi === 'map' && provider.mapKey === undefined) {
+      throw new Error(
+        `Map provider for ${this.getTokenName(provider.provide)} requires a 'mapKey' field`
+      );
+    }
+  }
+
+  /**
+   * 验证 Provider 一致性（不允许混合数组、Record、Map 和 Set）
+   */
+  static validateProviderConsistency(providers: Provider[]): void {
+    const hasArray = providers.some(p => p.multi === true);
+    const hasRecord = providers.some(p => p.multi === 'record');
+    const hasMap = providers.some(p => p.multi === 'map');
+    const hasSet = providers.some(p => p.multi === 'set');
+
+    const modes = [hasArray, hasRecord, hasMap, hasSet].filter(Boolean).length;
+
+    if (modes > 1) {
+      throw new Error(
+        'Cannot mix different multi provider types (array/record/map/set) for the same token'
+      );
+    }
   }
 
   /**

@@ -293,7 +293,10 @@ export class EnvironmentInjector extends Injector {
   private setupProviders(providers: Provider[]): void {
     providers.forEach((provider) => {
       const existing = this.providers.get(provider.provide) || [];
-      this.providers.set(provider.provide, [...existing, provider]);
+      const updated = [...existing, provider];
+      // 验证 Provider 一致性
+      EnvironmentInjectorUtils.validateProviderConsistency(updated);
+      this.providers.set(provider.provide, updated);
     });
   }
 
@@ -314,8 +317,45 @@ export class EnvironmentInjector extends Injector {
     _token: InjectionTokenType<T>,
     providers: Provider[],
   ): T {
-    if (EnvironmentInjectorUtils.isMultiProvider(providers)) {
-      return providers.map((p) => this.createSingleInstance(p)) as any;
+    // Set 模式
+    if (EnvironmentInjectorUtils.isSetProvider(providers)) {
+      const set = new Set<any>();
+      for (const p of providers) {
+        if (p.multi !== 'set') continue;
+        set.add(this.createSingleInstance(p));
+      }
+      return set as T;
+    }
+
+    // Map 模式
+    if (EnvironmentInjectorUtils.isMapProvider(providers)) {
+      const map = new Map<any, any>();
+      for (const p of providers) {
+        if (p.multi !== 'map') continue;
+        EnvironmentInjectorUtils.validateMapProvider(p);
+        // 后注册的覆盖先注册的（与单值行为一致）
+        map.set(p.mapKey, this.createSingleInstance(p));
+      }
+      return map as T;
+    }
+
+    // Record 模式
+    if (EnvironmentInjectorUtils.isRecordProvider(providers)) {
+      const record: Record<string, any> = {};
+      for (const p of providers) {
+        if (p.multi !== 'record') continue;
+        EnvironmentInjectorUtils.validateRecordProvider(p);
+        // 后注册的覆盖先注册的（与单值行为一致）
+        record[p.key!] = this.createSingleInstance(p);
+      }
+      return record as T;
+    }
+
+    // 数组模式（原有逻辑）
+    if (EnvironmentInjectorUtils.isArrayProvider(providers)) {
+      return providers
+        .filter(p => p.multi === true)
+        .map((p) => this.createSingleInstance(p)) as any;
     }
 
     // 对于非多值注入，使用最后注册的提供者（后面的覆盖前面的）

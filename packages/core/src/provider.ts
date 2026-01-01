@@ -2,12 +2,23 @@ import { InjectionTokenType } from './injector';
 import { ForwardRef } from './forward-ref';
 
 /**
+ * 多值注入类型
+ * - true: 数组模式 T[]
+ * - 'record': Record 模式 Record<string, T>
+ * - 'map': Map 模式 Map<K, T>
+ * - 'set': Set 模式 Set<T>
+ */
+export type MultiType = boolean | 'record' | 'map' | 'set';
+
+/**
  * 基础提供者接口，定义所有提供者的共同属性
  * @template T 提供的值的类型
  */
 export interface BaseProvider<T> {
   provide: InjectionTokenType<T>;
-  multi?: boolean;
+  multi?: MultiType;
+  key?: string; // 仅当 multi: 'record' 时有效
+  mapKey?: any; // 仅当 multi: 'map' 时有效
 }
 
 /**
