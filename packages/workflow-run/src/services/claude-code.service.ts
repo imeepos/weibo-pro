@@ -1,13 +1,18 @@
 import { Injectable } from '@sker/core';
-import { execa } from 'execa';
 
 @Injectable({ providedIn: 'root' })
 export class ClaudeCodeService {
+  private async getExeca() {
+    const { execa } = await import('execa');
+    return execa;
+  }
+
   async execute(prompt: string, options?: {
     cwd?: string;
     files?: string[];
     dangerouslySkipPermissions?: boolean;
   }) {
+    const execa = await this.getExeca();
     const args = [
       '--print',
       '--output-format', 'json',
