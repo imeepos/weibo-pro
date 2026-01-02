@@ -20,6 +20,12 @@ export default {
     '@sker/workflow',
     '@sker/workflow-ast',
     '@sker/workflow-compiler',
-    '@sker/workflow-run'
+    '@sker/workflow-run',
+    'pg',
+    'typeorm',
+    'better-auth',
+    'socket.io',
+    'node-cron',
+    'busboy'
   ]
 }

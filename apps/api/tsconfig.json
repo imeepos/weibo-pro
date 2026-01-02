@@ -9,6 +9,7 @@
     },
     "esModuleInterop": true,
     "skipLibCheck": true,
+    "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "types": ["node"]
   },

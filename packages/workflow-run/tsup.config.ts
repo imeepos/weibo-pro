@@ -10,5 +10,6 @@ export default defineConfig({
   splitting: false,
   sourcemap: true,
   target: 'node18',
-  external: ['execa'],
+  external: ['execa', 'node-schedule', 'playwright', 'playwright-core'],
+  noExternal: [],
 })
