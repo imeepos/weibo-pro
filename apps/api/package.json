@@ -9,7 +9,7 @@
     "build": "tsup",
     "start": "node dist/main.js",
     "start:prod": "node dist/main",
-    "pm2:start": "pm2 start ecosystem.config.js --env production",
+    "pm2:start": "pm2 start dist/main.js --name sker-api",
     "pm2:stop": "pm2 stop sker-api",
     "pm2:restart": "pm2 restart sker-api",
     "pm2:delete": "pm2 delete sker-api",
