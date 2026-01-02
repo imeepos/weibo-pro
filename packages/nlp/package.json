@@ -29,7 +29,9 @@
   },
   "dependencies": {
     "@sker/core": "workspace:*",
+    "@sker/ip-proxy": "workspace:*",
     "@sker/json-harmony": "workspace:*",
+    "https-proxy-agent": "^7.0.6",
     "openai": "^4.73.1"
   },
   "devDependencies": {

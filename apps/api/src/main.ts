@@ -9,6 +9,7 @@ import "./controllers/index";
 import "./claude/claude.controller";
 import { CONTEXT, createInjector, Injector, Logger, REQUEST, RESPONSE, root, STREAM } from '@sker/core';
 import { entitiesProviders, seedNuwa, seedSentimentAnalyzer, seedContentAuditor, seedDataValidator, seedProgrammingAssistant, useTranslation } from "@sker/entities";
+import { createProxyProviders } from '@sker/ip-proxy';
 import { killPortProcess } from 'kill-port-process';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
@@ -29,7 +30,21 @@ async function bootstrap() {
   const logger = root.get(Logger);
 
   // 初始化 DI 容器
-  root.set([...entitiesProviders]);
+  root.set([
+    ...entitiesProviders,
+    ...createProxyProviders({
+      kuaidaili: {
+        secretId: process.env.KUAIDAILI_SECRET_ID!,
+        secretKey: process.env.KUAIDAILI_SECRET_KEY!,
+        username: process.env.KUAIDAILI_USERNAME!,
+        password: process.env.KUAIDAILI_PASSWORD!,
+      },
+      validator: {
+        testUrl: 'https://httpbin.org/ip',
+        timeout: 5000,
+      },
+    })
+  ]);
   await root.init();
 
   // 种子数据初始化

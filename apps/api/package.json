@@ -27,6 +27,7 @@
     "@sker/chat": "workspace:*",
     "@sker/core": "workspace:*",
     "@sker/entities": "workspace:*",
+    "@sker/ip-proxy": "workspace:*",
     "@sker/mq": "workspace:*",
     "@sker/llm-protocol": "workspace:*",
     "@sker/redis": "workspace:*",

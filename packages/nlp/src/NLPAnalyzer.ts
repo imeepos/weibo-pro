@@ -1,5 +1,5 @@
 import type { CompleteAnalysisResult, PostContext } from './types';
-import { getOpenAiConfig, useOpenAi } from './openai';
+import { useOpenAi } from './openai';
 import { Injectable } from '@sker/core';
 import { parse } from '@sker/json-harmony'
 /**
@@ -22,7 +22,7 @@ export class NLPAnalyzer {
     const mergedText = this.buildContext(context);
     const prompt = this.buildPrompt(mergedText);
     try {
-      const client = useOpenAi();
+      const client = await useOpenAi();
       const response = await client.chat.completions.create({
         model: 'deepseek-ai/DeepSeek-V3.2',
         messages: [{ role: 'user', content: prompt }],
