@@ -1,17 +1,25 @@
-/** @type {import('tsup').Options} */
-module.exports = {
+export default {
   entry: ['src/main.ts'],
-  format: ['cjs'],
+  format: ['esm'],
+  dts: false,
+  sourcemap: true,
+  clean: true,
   target: 'node20',
   outDir: 'dist',
-  clean: true,
-  sourcemap: true,
-  dts: false,
-  splitting: false,
-  platform: 'node',
-  minify: false,
-  keepNames: true,
-  bundle: true,
-  skipNodeModulesBundle: true,
-  external: [/node_modules/],
-};
+  external: [
+    '@sker/agent',
+    '@sker/auth',
+    '@sker/chat',
+    '@sker/core',
+    '@sker/entities',
+    '@sker/mq',
+    '@sker/llm-protocol',
+    '@sker/redis',
+    '@sker/sdk',
+    '@sker/utils',
+    '@sker/workflow',
+    '@sker/workflow-ast',
+    '@sker/workflow-compiler',
+    '@sker/workflow-run'
+  ]
+}
