@@ -162,8 +162,7 @@ export const STREAM = new InjectionToken<any>(`STREAM`)
 export enum ParamType {
   PARAM = 'param',
   QUERY = 'query',
-  BODY = 'body',
-  HEADER = 'header'
+  BODY = 'body'
 }
 
 // 路由参数元数据键
@@ -230,7 +229,6 @@ function createParamDecorator(type: ParamType): (key?: string | any, zod?: any) 
 export const Param = createParamDecorator(ParamType.PARAM);
 export const Query = createParamDecorator(ParamType.QUERY);
 export const Body = createParamDecorator(ParamType.BODY);
-export const Header = createParamDecorator(ParamType.HEADER);
 
 export function RequirePermissions(permissions: any): MethodDecorator {
   return (target: any, propertyKey: string | symbol, descriptor: PropertyDescriptor) => {

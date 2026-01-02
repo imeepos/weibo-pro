@@ -202,7 +202,7 @@ controller.executeWorkflow({ id: '123' }).subscribe({
 SDK 通过读取 Controller 类的装饰器元数据自动生成客户端方法：
 
 1. **路径解析**：读取 `@Controller()` 和 `@Get/@Post` 等装饰器的路径
-2. **参数提取**：解析 `@Param()`, `@Query()`, `@Body()`, `@Header()` 装饰器
+2. **参数提取**：解析 `@Param()`, `@Query()`, `@Body()` 装饰器
 3. **方法生成**：动态生成对应的 HTTP 请求方法
 4. **类型推断**：保留完整的 TypeScript 类型信息
 
