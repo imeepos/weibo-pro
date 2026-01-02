@@ -16,6 +16,12 @@ export async function transformRequest(
   logger: Logger
 ): Promise<TransformedRequest> {
   const contentType = originalRequest.headers.get('content-type') || '';
+  const method = originalRequest.method.toUpperCase();
+
+  // GET/HEAD 请求不能有 body，直接返回
+  if (method === 'GET' || method === 'HEAD') {
+    return { request: originalRequest, transformed: false };
+  }
 
   // 已经是 JSON 请求，直接返回
   if (contentType.includes('application/json')) {
