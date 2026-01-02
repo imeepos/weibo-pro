@@ -260,7 +260,6 @@ ${ast.context}`;
           ast.state = 'fail';
           setAstError(ast, error instanceof Error ? error : new Error(String(error)));
           obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-          obs.complete();
         },
         complete: () => {
           ast.state = 'success';

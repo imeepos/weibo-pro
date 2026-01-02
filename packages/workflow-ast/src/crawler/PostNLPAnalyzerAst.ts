@@ -29,5 +29,11 @@ export class PostNLPAnalyzerAst extends Ast {
   @Output({ title: '已关联事件', defaultValue: false })
   event_associated = false;
 
+  @Output({ title: '失败数量', defaultValue: 0 })
+  failedCount: number = 0;
+
+  @Output({ title: '错误详情', defaultValue: [] })
+  errors: Array<{ postId?: string; error: string }> = [];
+
   type: 'PostNLPAnalyzerAst' = 'PostNLPAnalyzerAst';
 }

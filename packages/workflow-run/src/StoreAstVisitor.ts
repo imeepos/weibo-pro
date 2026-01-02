@@ -54,7 +54,6 @@ export class StoreGetAstVisitor {
           setAstError(ast, error, process.env.NODE_ENV === 'development');
           console.error(`[StoreGetAstVisitor] key=${ast.key}`, error);
           obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-          obs.complete();
         },
         complete: () => {
           ast.state = 'success';
@@ -121,7 +120,6 @@ export class StoreSetAstVisitor {
           setAstError(ast, error, process.env.NODE_ENV === 'development');
           console.error(`[StoreSetAstVisitor] key=${ast.key}`, error);
           obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-          obs.complete();
         },
         complete: () => {
           ast.state = 'success';

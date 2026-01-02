@@ -54,7 +54,6 @@ export class MqPushAstVisitor {
           setAstError(ast, error, process.env.NODE_ENV === 'development');
           console.error(`[MqPushAstVisitor] queue=${ast.queueName}`, error);
           obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-          obs.complete();
         },
         complete: () => {
           ast.state = 'success';
@@ -137,7 +136,6 @@ export class MqPullAstVisitor {
                 setAstError(ast, error, process.env.NODE_ENV === 'development');
                 console.error(`[MqPullAstVisitor] queue=${normalizedQueueName}, 已发射=${ast.emitCount}条`, error);
                 obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-                obs.complete();
               },
               complete: () => {
                 ast.state = 'success';

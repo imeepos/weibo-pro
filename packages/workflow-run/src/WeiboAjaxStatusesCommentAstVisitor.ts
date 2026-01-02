@@ -68,7 +68,6 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
                     ast.state = 'fail';
                     setAstError(ast, error, process.env.NODE_ENV === 'development');
                     obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-                    obs.complete();
                 },
                 complete: () => {
                     ast.state = 'success';

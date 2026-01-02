@@ -65,7 +65,6 @@ export function handlerRemote(ast: Ast, $input: Observable<any>, ctx: any): Obse
                 ast.state = 'fail';
                 setAstError(ast, error)
                 obs.next({ type: 'node_fail', id: ast.id, error: error.message })
-                obs.complete();
             }
         })
     })

@@ -116,7 +116,6 @@ export class WeiboAuthService implements OnDestroy {
       ast.state = 'fail'
       obs.next({ type: 'node_emit', id: ast.id, data: { message: ast.message } })
       obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message })
-      obs.complete()
       this.cleanupSession(sessionId);
     }, this.config.sessionTimeout);
 
@@ -145,7 +144,6 @@ export class WeiboAuthService implements OnDestroy {
         ast.message = `打开登录页面失败`
         obs.next({ type: 'node_emit', id: ast.id, data: { message: ast.message } })
         obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message })
-        obs.complete()
         await this.cleanupSession(sessionId);
       }
     });

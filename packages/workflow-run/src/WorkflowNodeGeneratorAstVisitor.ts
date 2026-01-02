@@ -70,7 +70,6 @@ export class WorkflowNodeGeneratorAstVisitor {
             ast.state = 'fail';
             setAstError(ast, error);
             obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-            obs.complete();
           },
           complete: () => {
             ast.state = 'success';
@@ -171,7 +170,6 @@ export class MyNodeAstVisitor {
           ast.state = 'fail';
           setAstError(ast, error);
           obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-          obs.complete();
         },
         complete: () => {
           ast.state = 'success';

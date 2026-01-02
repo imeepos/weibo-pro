@@ -38,67 +38,90 @@ export class PostNLPAnalyzerVisitor {
           ast.emitCount += 1;
           obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } })
 
-          if (inputData) {
-            Object.keys(inputData).forEach(key => {
-              (ast as unknown as Record<string, unknown>)[key] = inputData[key];
-            });
-          }
-
-          if (wrappedCtx.abortSignal?.aborted) {
-            throw new Error('工作流已取消');
-          }
-
-          interface SubComment {
-            text_raw?: string;
-            text?: string;
-          }
-
-          interface Comment extends SubComment {
-            comments?: SubComment[];
-          }
-
-          const subComments = (ast.comments as Comment[])
-            .flatMap((c) => c.comments || [])
-            .map((sc) => sc.text_raw || sc.text)
-            .filter(Boolean) as string[];
-
-          const context: PostContext = {
-            postId: ast.post?.id,
-            content: ast.post?.text_raw,
-            comments: ast.comments.map((c) => c.text_raw),
-            subComments,
-            reposts: ast.reposts.map((r) => r.text),
-          };
-          ast.nlpResult = await this.analyzer.analyze(
-            context,
-          );
-          if (ast.event_id && typeof ast.nlpResult !== 'string') {
-            await this.associatePostWithEvent(ast, ast.nlpResult);
-          }
-
-          return [
-            {
-              type: 'node_emit' as const,
-              id: ast.id,
-              data: {
-                nlpResult: ast.nlpResult,
-                event_associated: ast.event_associated,
-              }
+          try {
+            if (inputData) {
+              Object.keys(inputData).forEach(key => {
+                (ast as unknown as Record<string, unknown>)[key] = inputData[key];
+              });
             }
-          ];
+
+            if (wrappedCtx.abortSignal?.aborted) {
+              throw new Error('工作流已取消');
+            }
+
+            interface SubComment {
+              text_raw?: string;
+              text?: string;
+            }
+
+            interface Comment extends SubComment {
+              comments?: SubComment[];
+            }
+
+            const subComments = (ast.comments as Comment[])
+              .flatMap((c) => c.comments || [])
+              .map((sc) => sc.text_raw || sc.text)
+              .filter(Boolean) as string[];
+
+            const context: PostContext = {
+              postId: ast.post?.id,
+              content: ast.post?.text_raw,
+              comments: ast.comments.map((c) => c.text_raw),
+              subComments,
+              reposts: ast.reposts.map((r) => r.text),
+            };
+            ast.nlpResult = await this.analyzer.analyze(
+              context,
+            );
+            if (ast.event_id && typeof ast.nlpResult !== 'string') {
+              await this.associatePostWithEvent(ast, ast.nlpResult);
+            }
+
+            return [
+              {
+                type: 'node_emit' as const,
+                id: ast.id,
+                data: {
+                  nlpResult: ast.nlpResult,
+                  event_associated: ast.event_associated,
+                }
+              }
+            ];
+          } catch (error: any) {
+            // 记录失败但不抛出，让流继续
+            ast.failedCount = (ast.failedCount || 0) + 1;
+            ast.errors = ast.errors || [];
+            ast.errors.push({
+              postId: ast.post?.id,
+              error: error?.message || String(error)
+            });
+
+            return [
+              {
+                type: 'node_emit' as const,
+                id: ast.id,
+                data: {
+                  error: error?.message || String(error),
+                  postId: ast.post?.id,
+                  emitCount: ast.emitCount,
+                  failedCount: ast.failedCount
+                }
+              }
+            ];
+          }
         }),
         mergeMap((events: NodeEvent[]) => from(events))
       ).subscribe({
         next: (event: NodeEvent) => obs.next(event),
-        error: (error) => {
-          ast.state = 'fail';
-          setAstError(ast, error);
-          obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-          obs.complete();
-        },
         complete: () => {
-          ast.state = 'success';
-          obs.next({ type: 'node_success', id: ast.id });
+          if (ast.failedCount && ast.failedCount > 0) {
+            ast.state = 'fail';
+            setAstError(ast, new Error(`${ast.failedCount} 个帖子分析失败`));
+            obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
+          } else {
+            ast.state = 'success';
+            obs.next({ type: 'node_success', id: ast.id });
+          }
           obs.complete();
         }
       });

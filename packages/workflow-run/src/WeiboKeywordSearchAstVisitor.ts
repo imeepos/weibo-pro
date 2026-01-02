@@ -59,7 +59,6 @@ export class WeiboKeywordSearchAstVisitor {
                         setAstError(ast, new Error(String(error)));
                     }
                     obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-                    obs.complete();
                 },
                 complete: () => {
                     ast.state = 'success';

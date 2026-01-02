@@ -130,7 +130,6 @@ export class PromptOptimizerAstVisitor {
               id: ast.id,
               error: ast.error?.message,
             });
-            obs.complete();
           },
           complete: () => {
             ast.state = 'success';

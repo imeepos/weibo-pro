@@ -35,7 +35,6 @@ export class WeiboLoginAstVisitor {
           ast.state = 'fail';
           setAstError(ast, error);
           obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-          obs.complete();
         },
         complete: () => {
           this.authService.startLogin(ast, obs);

@@ -113,7 +113,6 @@ export class QueryRewriterAstVisitor {
           ast.state = 'fail';
           setAstError(ast, new Error(`查询重写失败: ${error instanceof Error ? error.message : '未知错误'}`));
           obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-          obs.complete();
         },
         complete: () => {
           ast.state = 'success';

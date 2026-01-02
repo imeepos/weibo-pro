@@ -41,7 +41,6 @@ export class ArrayEmitterAstVisitor {
                 error: (error) => {
                     ast.state = 'fail';
                     obs.next({ type: 'node_fail', id: ast.id, error: error.message });
-                    obs.complete();
                 },
                 complete: () => {
                     ast.state = 'success';
