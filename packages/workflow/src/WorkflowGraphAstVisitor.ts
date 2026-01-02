@@ -5,7 +5,7 @@ import { NodeExecutor } from './executor';
 import { Handler } from './decorator';
 import { setAstError, WorkflowGraphAst } from './ast';
 import { NodeEmitEvent, NodeEvent } from './execution/events';
-import { EdgeMode, IEdge, ROUTE_SKIPPED } from './types';
+import { EdgeMode, IEdge, ROUTE_SKIPPED, EDGE_MODE_PRIORITY } from './types';
 import { evaluateTransform } from './edge-transform';
 
 /**
@@ -67,6 +67,89 @@ export class WorkflowGraphAstVisitor {
     }
 
     /**
+     * 验证端口的边数量是否符合 isMulti 标记
+     */
+    private validatePortEdges(node: any, edges: IEdge[]): void {
+        const inputs = node.metadata?.inputs || [];
+        const edgesByPort = new Map<string, IEdge[]>();
+
+        edges.forEach(edge => {
+            if (!edge.toProperty) return;
+            if (!edgesByPort.has(edge.toProperty)) {
+                edgesByPort.set(edge.toProperty, []);
+            }
+            edgesByPort.get(edge.toProperty)!.push(edge);
+        });
+
+        edgesByPort.forEach((portEdges, portName) => {
+            if (portEdges.length <= 1) return;
+
+            const inputMeta = inputs.find((i: any) => i.property === portName);
+            if (!inputMeta?.isMulti) {
+                throw new Error(
+                    `[WorkflowGraphAstVisitor] 节点 ${node.id} 的端口 "${portName}" ` +
+                    `有 ${portEdges.length} 条边，但未标记 isMulti: true`
+                );
+            }
+        });
+    }
+
+    /**
+     * 按 EdgeMode 分组边
+     */
+    private groupEdgesByMode(edges: IEdge[]): Map<EdgeMode, IEdge[]> {
+        const groups = new Map<EdgeMode, IEdge[]>();
+
+        edges.forEach(edge => {
+            const mode = edge.mode ?? EdgeMode.COMBINE_LATEST;
+            if (!groups.has(mode)) {
+                groups.set(mode, []);
+            }
+            groups.get(mode)!.push(edge);
+        });
+
+        return groups;
+    }
+
+    /**
+     * 按优先级合并模式组
+     */
+    private combineGroupsByPriority(
+        workflow: WorkflowGraphAst,
+        edges: IEdge[],
+        nodeEventStreams: Map<string, Observable<NodeEvent>>
+    ): Observable<any> {
+        if (edges.length === 0) return EMPTY;
+
+        const modeGroups = this.groupEdgesByMode(edges);
+        const groupStreams: Array<{ mode: EdgeMode; priority: number; stream$: Observable<any> }> = [];
+
+        modeGroups.forEach((edgesInMode, mode) => {
+            const sources = edgesInMode.map(edge =>
+                this.buildEdgeValueStream(workflow, edge, nodeEventStreams)
+            ).filter(s => s !== EMPTY);
+
+            if (sources.length === 0) return;
+
+            const stream$ = this.combineEdgeSources(mode, sources, edgesInMode);
+            groupStreams.push({
+                mode,
+                priority: EDGE_MODE_PRIORITY[mode],
+                stream$
+            });
+        });
+
+        if (groupStreams.length === 0) return EMPTY;
+        if (groupStreams.length === 1) return groupStreams[0]!.stream$;
+
+        groupStreams.sort((a, b) => a.priority - b.priority);
+
+        return combineLatest(groupStreams.map(g => g.stream$)).pipe(
+            map(results => Object.assign({}, ...results))
+        );
+    }
+
+    /**
      * 构建每个节点的输入流
      *
      * 核心设计：nodeInput$ = mergeWithCompletion(input$, router$, ...)
@@ -124,7 +207,7 @@ export class WorkflowGraphAstVisitor {
 
             // 3. 普通边：按 EdgeMode 组合
             if (normalEdges.length > 0) {
-                const normalInput$ = this.buildNormalEdgesInput(workflow, normalEdges, nodeEventStreams);
+                const normalInput$ = this.buildNormalEdgesInput(workflow, normalEdges, nodeEventStreams, node);
                 if (normalInput$ !== EMPTY) {
                     inputSources.push(normalInput$);
                 }
@@ -197,22 +280,13 @@ export class WorkflowGraphAstVisitor {
     private buildNormalEdgesInput(
         workflow: WorkflowGraphAst,
         edges: IEdge[],
-        nodeEventStreams: Map<string, Observable<NodeEvent>>
+        nodeEventStreams: Map<string, Observable<NodeEvent>>,
+        targetNode: any
     ): Observable<any> {
         if (edges.length === 0) return EMPTY;
 
-        const mode = edges[0]?.mode ?? EdgeMode.COMBINE_LATEST;
-        const sources = edges.map(edge => this.buildEdgeValueStream(workflow, edge, nodeEventStreams));
-        const validSources = sources.filter(s => s !== EMPTY);
-
-        if (validSources.length === 0) return EMPTY;
-        if (validSources.length === 1) {
-            return validSources[0]!.pipe(
-                map(value => ({ [edges[0]!.toProperty!]: value }))
-            );
-        }
-
-        return this.combineEdgeSources(mode, validSources, edges);
+        this.validatePortEdges(targetNode, edges);
+        return this.combineGroupsByPriority(workflow, edges, nodeEventStreams);
     }
 
     /**

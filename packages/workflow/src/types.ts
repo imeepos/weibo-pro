@@ -74,6 +74,7 @@ export interface INodeInputMetadata {
     type?: InputFieldType;
     options?: string[];  // 下拉选择框的选项列表（当 type 为 'select' 时使用）
     isStatic?: boolean;  // 装饰器定义的端口为 true，动态添加的为 false
+    isMulti?: boolean;  // 标记该输入端口是否允许多条边连接
 }
 export interface INodeOutputMetadata {
     property: string;
@@ -143,6 +144,14 @@ export enum EdgeMode {
     /** 主流触发，携带其他流的最新值（适合主从依赖场景） */
     WITH_LATEST_FROM = 'withLatestFrom'
 }
+
+// EdgeMode 优先级映射（越严苛的越后执行）
+export const EDGE_MODE_PRIORITY: Record<EdgeMode, number> = {
+    [EdgeMode.MERGE]: 1,
+    [EdgeMode.COMBINE_LATEST]: 2,
+    [EdgeMode.WITH_LATEST_FROM]: 3,
+    [EdgeMode.ZIP]: 4
+};
 
 // 统一的边类型
 export interface IEdge extends Record<string, any> {
