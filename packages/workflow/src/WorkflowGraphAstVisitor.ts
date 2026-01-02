@@ -85,7 +85,7 @@ export class WorkflowGraphAstVisitor {
             if (portEdges.length <= 1) return;
 
             const inputMeta = inputs.find((i: any) => i.property === portName);
-            const isMulti = inputMeta?.isMulti ?? hasMultiMode(inputMeta?.mode);
+            const isMulti = hasMultiMode(inputMeta?.mode);
             if (!isMulti) {
                 throw new Error(
                     `[WorkflowGraphAstVisitor] 节点 ${node.id} 的端口 "${portName}" ` +

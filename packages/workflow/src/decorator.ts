@@ -199,11 +199,6 @@ export interface InputOptions {
      * @Input({ mode: IS_MULTI | IS_BUFFER }) // 全部聚合
      */
     mode?: number;
-    /**
-     * @deprecated 使用 mode: IS_MULTI 替代
-     * 向后兼容：isMulti: true 等价于 mode: IS_MULTI
-     */
-    isMulti?: boolean;
 
     required?: boolean;
     defaultValue?: any;
@@ -239,9 +234,6 @@ export function Input(options?: InputOptions): PropertyDecorator {
 
         // 向后兼容：isMulti: true → mode: IS_MULTI
         let mode = options?.mode;
-        if (mode === undefined && options?.isMulti === true) {
-            mode = IS_MULTI;
-        }
 
         root.set([{
             provide: INPUT,
@@ -250,7 +242,6 @@ export function Input(options?: InputOptions): PropertyDecorator {
                 target: ctor,
                 propertyKey,
                 mode,
-                isMulti: options?.isMulti ?? false,  // 保留旧字段以向后兼容
                 required: options?.required,
                 defaultValue: options?.defaultValue,
                 title: options?.title,

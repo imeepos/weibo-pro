@@ -65,7 +65,6 @@ function toPortMetadata(
   return {
     property,
     type: metadata.type || 'any',
-    isMulti: metadata.isMulti,
     mode: metadata.mode,
     label,
   }
