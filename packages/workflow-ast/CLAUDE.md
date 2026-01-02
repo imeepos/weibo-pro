@@ -167,8 +167,6 @@ messages: string[] = [];
 @Input({ mode: IS_MULTI | IS_BUFFER })   // 所有边所有发射全部聚合
 allInputs: any[] = [];
 
-// 向后兼容（deprecated）
-@Input({ isMulti: true })                 // 等价于 mode: IS_MULTI
 ```
 
 **典型用法**：

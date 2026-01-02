@@ -1,4 +1,4 @@
-import { Ast, Input, Node, Output } from '@sker/workflow';
+import { Ast, Input, IS_MULTI, Node, Output } from '@sker/workflow';
 import type {
   WeiboCommentEntity,
   WeiboPostEntity,
@@ -10,7 +10,7 @@ export class PostContextCollectorAst extends Ast {
   @Input({ title: '帖子ID', defaultValue: '' })
   postId: string = '';
 
-  @Input({ isMulti: true, title: '开始', defaultValue: [] })
+  @Input({ mode: IS_MULTI, title: '开始', defaultValue: [] })
   canStart: boolean[] = [];
 
   @Output({ title: '帖子实体', defaultValue: '' })

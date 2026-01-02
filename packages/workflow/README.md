@@ -234,7 +234,7 @@ interface Visitor {
 ### `/src/execution/data-flow-manager.ts` - 数据流管理
 `DataFlowManager` 处理节点间的数据传递：
 - **属性映射**：支持嵌套属性路径 `user.profile.name`
-- **多值聚合**：`@Input({ isMulti: true })` 属性汇聚多个源的数据
+- **多值聚合**：`@Input({ mode: IS_MULTI })` 属性汇聚多个源的数据
 - **权重排序**：多源数据按 `weight` 排序合并
 - **上下文初始化**：从外部 context 注入初始数据
 - **输出提取**：提取节点的 `@Output` 属性供下游使用
@@ -257,7 +257,7 @@ interface Visitor {
 ```typescript
 @Node({ title: '数据融合' })
 export class MergeAst extends Ast {
-  @Input({ title: '数据列表', isMulti: true })
+  @Input({ title: '数据列表', mode: IS_MULTI })
   items: any[] = [];  // 会自动汇聚成数组
 
   @Output({ title: '融合结果' })

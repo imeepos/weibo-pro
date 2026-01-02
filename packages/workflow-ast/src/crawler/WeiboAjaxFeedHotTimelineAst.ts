@@ -1,4 +1,4 @@
-import { Ast, Input, Node, Output, State } from "@sker/workflow";
+import { Ast, Input, IS_MULTI, Node, Output, State } from "@sker/workflow";
 import { BehaviorSubject } from 'rxjs';
 
 
@@ -12,7 +12,7 @@ import { BehaviorSubject } from 'rxjs';
 })
 export class WeiboAjaxFeedHotTimelineAst extends Ast {
 
-    @Input({ isMulti: true, title: '开始', defaultValue: [] })
+    @Input({ mode: IS_MULTI, title: '开始', defaultValue: [] })
     next: boolean[] = [];
 
     @State({ title: "组ID" })

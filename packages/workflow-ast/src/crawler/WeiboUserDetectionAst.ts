@@ -1,4 +1,4 @@
-import { Ast, Input, Node, Output } from "@sker/workflow";
+import { Ast, Input, IS_MULTI, Node, Output } from "@sker/workflow";
 
 @Node({
     title: '账号检测',
@@ -13,7 +13,7 @@ export class WeiboUserDetectionAst extends Ast {
     @Input({ title: '用户id', defaultValue: '' })
     uid: string = ``
 
-    @Input({ isMulti: true, title: '开始', defaultValue: [] })
+    @Input({ mode: IS_MULTI, title: '开始', defaultValue: [] })
     canStart: boolean[] = [];
 
     @Output({ title: '结束', defaultValue: false })

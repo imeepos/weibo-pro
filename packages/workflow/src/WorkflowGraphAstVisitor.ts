@@ -89,7 +89,7 @@ export class WorkflowGraphAstVisitor {
             if (!isMulti) {
                 throw new Error(
                     `[WorkflowGraphAstVisitor] 节点 ${node.id} 的端口 "${portName}" ` +
-                    `有 ${portEdges.length} 条边，但未标记 isMulti: true`
+                    `有 ${portEdges.length} 条边，但未标记 mode: IS_MULTI`
                 );
             }
         });

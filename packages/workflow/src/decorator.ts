@@ -232,7 +232,6 @@ export function Input(options?: InputOptions): PropertyDecorator {
     return (target, propertyKey) => {
         const ctor = resolveConstructor(target);
 
-        // 向后兼容：isMulti: true → mode: IS_MULTI
         let mode = options?.mode;
 
         root.set([{

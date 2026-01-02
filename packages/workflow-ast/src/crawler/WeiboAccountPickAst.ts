@@ -1,4 +1,4 @@
-import { Ast, Input, Node, Output, State } from "@sker/workflow";
+import { Ast, Input, IS_MULTI, Node, Output, State } from "@sker/workflow";
 import { BehaviorSubject } from 'rxjs';
 
 @Node({
@@ -11,7 +11,7 @@ import { BehaviorSubject } from 'rxjs';
 })
 export class WeiboAccountPickAst extends Ast {
 
-    @Input({ title: '扫码登录', isMulti: true, defaultValue: [] })
+    @Input({ title: '扫码登录', mode: IS_MULTI, defaultValue: [] })
     scanQrCodeLogin: any[] = [];
 
     @State({ title: '账号列表' })
