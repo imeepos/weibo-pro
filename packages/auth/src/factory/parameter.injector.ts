@@ -39,10 +39,6 @@ export async function injectParameters(
         break;
       }
 
-      case ParamType.HEADER:
-        results.push(fieldKey ? ctx.headers?.get(fieldKey) : ctx.headers);
-        break;
-
       default:
         results.push(undefined);
     }
