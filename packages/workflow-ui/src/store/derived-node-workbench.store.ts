@@ -1,3 +1,4 @@
+import type { WritableDraft } from 'immer'
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 import type { INode, INodeInputMetadata, INodeOutputMetadata } from '@sker/workflow'
@@ -36,7 +37,10 @@ const initialMetadata: NodeMetadata = {
   description: ''
 }
 
-export const useDerivedNodeWorkbench = create<DerivedNodeWorkbenchState>()(
+export const useDerivedNodeWorkbench: {
+  (): DerivedNodeWorkbenchState
+  <T>(selector: (state: DerivedNodeWorkbenchState) => T): T
+} = create<DerivedNodeWorkbenchState>()(
   immer((set, get) => ({
     baseNode: null,
     frozenInputs: {},

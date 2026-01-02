@@ -7,6 +7,7 @@
  * 3. 类型安全的 actions
  */
 
+import type { WritableDraft } from 'immer'
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 import type { WorkflowGraphAst, INode } from '@sker/workflow'
@@ -79,17 +80,16 @@ interface IWorkflowState {
  * - 在 set 函数中可以直接"修改" draft state
  * - Immer 会自动创建新对象，确保不可变性
  */
-export const useWorkflowStore = create<IWorkflowState>()(
-  immer((set, get) => {
-    // ✨ 获取核心服务（单例）
-    // const workflowState = root.get(WorkflowState)
-    // const eventBus = root.get(WorkflowEventBus)
-    // const nodeExecutionManager = root.get(NodeExecutionManager)
+const recordHistory = (get: () => IWorkflowState) => {
+  const { nodes, edges } = get()
+  historyManager.push(nodes, edges)
+}
 
-    const recordHistory = () => {
-      const { nodes, edges } = get()
-      historyManager.push(nodes, edges)
-    }
+export const useWorkflowStore: {
+  (): IWorkflowState
+  <T>(selector: (state: IWorkflowState) => T): T
+} = create<IWorkflowState>()(
+  immer((set, get) => ({
 
     // 🔧 监听节点执行完成事件，同步节点状态到前端 store
     // eventBus.ofType(
@@ -137,16 +137,15 @@ export const useWorkflowStore = create<IWorkflowState>()(
     //     })
     //   })
 
-    return {
-      // ==================== Initial State ====================
-      workflowAst: null,
-      nodes: [],
-      edges: [],
-      hasUnsavedChanges: false,
+    // ==================== Initial State ====================
+    workflowAst: null,
+    nodes: [],
+    edges: [],
+    hasUnsavedChanges: false,
 
-      // ==================== Actions ====================
+    // ==================== Actions ====================
 
-      initWorkflow: (ast: WorkflowGraphAst) => {
+    initWorkflow: (ast: WorkflowGraphAst) => {
         set((draft) => {
           draft.workflowAst = ast
           draft.nodes = astToFlowNodes(ast)
@@ -174,7 +173,7 @@ export const useWorkflowStore = create<IWorkflowState>()(
         }
 
         if (shouldRecordHistory) {
-          setTimeout(() => recordHistory(), 0)
+          setTimeout(() => recordHistory(get), 0)
         }
       },
 
@@ -194,7 +193,7 @@ export const useWorkflowStore = create<IWorkflowState>()(
         }
 
         if (shouldRecordHistory) {
-          setTimeout(() => recordHistory(), 0)
+          setTimeout(() => recordHistory(get), 0)
         }
       },
 
@@ -280,7 +279,7 @@ export const useWorkflowStore = create<IWorkflowState>()(
         //   // 可以在UI显示一个"重新执行"按钮
         // }
 
-        recordHistory()
+        recordHistory(get)
       },
 
       addNode: (node) => {
@@ -288,7 +287,7 @@ export const useWorkflowStore = create<IWorkflowState>()(
           draft.nodes.push(node)
           draft.hasUnsavedChanges = true
         })
-        recordHistory()
+        recordHistory(get)
       },
 
       removeNode: (nodeId) => {
@@ -299,7 +298,7 @@ export const useWorkflowStore = create<IWorkflowState>()(
           )
           draft.hasUnsavedChanges = true
         })
-        recordHistory()
+        recordHistory(get)
       },
 
       addEdge: (edge) => {
@@ -307,7 +306,7 @@ export const useWorkflowStore = create<IWorkflowState>()(
           draft.edges.push(edge)
           draft.hasUnsavedChanges = true
         })
-        recordHistory()
+        recordHistory(get)
       },
 
       removeEdge: (edgeId) => {
@@ -315,7 +314,7 @@ export const useWorkflowStore = create<IWorkflowState>()(
           draft.edges = draft.edges.filter((e) => e.id !== edgeId)
           draft.hasUnsavedChanges = true
         })
-        recordHistory()
+        recordHistory(get)
       },
 
       syncFromAst: () => {
@@ -373,9 +372,8 @@ export const useWorkflowStore = create<IWorkflowState>()(
         // 回退：如果 workflowAst 不存在，从 React Flow 数据重新构建
         const { nodes, edges } = get()
         return flowToAst(nodes, edges)
-      },
-    }
-  })
+      }
+  }))
 )
 
 /**

@@ -1,10 +1,32 @@
-import { defineConfig, type PluginOption } from 'vite'
+import { defineConfig, type PluginOption, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react-swc'
 import tailwindcss from '@tailwindcss/vite'
 import swc from 'vite-plugin-swc-transform'
 import path, { join, resolve } from 'path'
 import { homedir } from 'os'
 import { cpSync, existsSync, mkdirSync, rmSync } from 'fs'
+
+// 修复 three.js 解析问题的插件
+function fixThreeJsPlugin(): Plugin {
+  return {
+    name: 'fix-three-js',
+    enforce: 'pre',
+    resolveId(id) {
+      if (id === 'three') {
+        // 使用 src/Three.js 作为入口（因为 build 目录不存在）
+        const threePath = resolve(__dirname, '../../node_modules/three/src/Three.js')
+        return { id: threePath, external: false }
+      }
+
+      // 处理 three/examples/jsm/* 子路径导入
+      if (id.startsWith('three/examples/jsm/')) {
+        const subPath = id.replace('three/', '')
+        const fullPath = resolve(__dirname, '../../node_modules/three', subPath)
+        return { id: fullPath, external: false }
+      }
+    },
+  }
+}
 
 // https://vitejs.dev/config/
 export default defineConfig(({ command }) => {
@@ -28,6 +50,7 @@ export default defineConfig(({ command }) => {
 
   return {
     plugins: [
+      fixThreeJsPlugin(),
       react() as PluginOption,
       tailwindcss() as PluginOption,
       swc({
@@ -182,10 +205,15 @@ export default defineConfig(({ command }) => {
     optimizeDeps: {
       force: true,
       include: ['react', 'react-dom', 'react-router-dom', 'axios', 'dayjs', 'clsx', 'tailwind-merge', 'zustand', 'lucide-react', 'rxjs', 'rxjs/operators'],
-      exclude: ['echarts', 'web-vitals', '@sker/core', '@sker/workflow', '@sker/workflow-ui'],
+      exclude: ['echarts', 'web-vitals', '@sker/core', '@sker/workflow', '@sker/workflow-ui', 'three'],
       esbuildOptions: {
         target: 'es2020',
       },
+    },
+
+    // SSR 配置 - 强制 three.js 使用 ESM
+    ssr: {
+      noExternal: ['three'],
     },
 
     // Web Worker 支持
