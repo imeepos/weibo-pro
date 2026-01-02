@@ -79,6 +79,6 @@ export function categorizeParameters(argsMetadata: Record<string, RouteParameter
     body: params.filter(m => m.type === ParamType.BODY),
     query: params.filter(m => m.type === ParamType.QUERY),
     path: params.filter(m => m.type === ParamType.PARAM),
-    header: params.filter(m => m.type === ParamType.HEADER),
+    header: [],
   };
 }
