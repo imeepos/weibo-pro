@@ -45,6 +45,11 @@ export class NodeExecutor {
      * 克隆节点（stateful 节点跳过克隆以保留累积状态）
      */
     private cloneNode(node: INode): INode {
+        // WorkflowGraphAst 不克隆，保持状态同步
+        if (isWorkflowGraphAst(node)) {
+            return node;
+        }
+
         if (node.metadata?.class?.stateful) {
             return node;
         }

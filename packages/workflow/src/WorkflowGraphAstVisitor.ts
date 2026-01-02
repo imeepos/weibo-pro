@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@sker/core';
-import { Observable, EMPTY, merge, defer, of, combineLatest, zip, isObservable } from 'rxjs';
+import { Observable, EMPTY, merge, defer, of, combineLatest, zip, isObservable, concat, throwError } from 'rxjs';
 import { filter, map, catchError, shareReplay, concatMap, withLatestFrom } from 'rxjs/operators';
 import { NodeExecutor } from './executor';
 import { Handler } from './decorator';
@@ -50,7 +50,7 @@ export class WorkflowGraphAstVisitor {
                     const nodeInput$ = nodeInputStreams.get(node.id) || EMPTY;
 
                     const eventStream$ = this.nodeExecutor.run(node, nodeInput$, ast).pipe(
-                        shareReplay({ bufferSize: Infinity, refCount: true })
+                        shareReplay({ bufferSize: Infinity, refCount: false })
                     );
                     nodeEventStreams.set(node.id, eventStream$);
                 });
@@ -61,7 +61,7 @@ export class WorkflowGraphAstVisitor {
             catchError(error => {
                 ast.state = 'fail';
                 ast.error = error;
-                return of({ type: 'node_fail', id: ast.id, error: ast.error?.message } as NodeEvent);
+                return throwError(() => error);
             })
         );
     }
@@ -541,13 +541,17 @@ export class WorkflowGraphAstVisitor {
             let completedCount = 0;
             const totalNodes = allStreams.length;
             const nodeStates = new Map<string, 'success' | 'fail'>();
+            const subscriptions: any[] = [];
 
-            const subscriptions = allStreams.map(nodeStream =>
-                nodeStream.subscribe({
+            allStreams.forEach(nodeStream => {
+                const sub = nodeStream.subscribe({
                     next: event => {
                         obs.next(event);
                         if (event.type === 'node_fail') {
                             nodeStates.set(event.id!, 'fail');
+                            if (event.error && !workflow.error) {
+                                setAstError(workflow, new Error(event.error))
+                            }
                         } else if (event.type === 'node_success') {
                             nodeStates.set(event.id!, 'success');
                         }
@@ -557,23 +561,27 @@ export class WorkflowGraphAstVisitor {
                         workflow.error = err;
                         setAstError(workflow, err)
                         obs.next({ type: 'node_fail', id: workflow.id, error: workflow.error?.message });
-                        obs.complete();
                         subscriptions.forEach(sub => sub.unsubscribe());
+                        obs.error(err);
                     },
                     complete: () => {
                         completedCount++;
                         if (completedCount === totalNodes) {
                             const hasError = Array.from(nodeStates.values()).some(s => s === 'fail');
                             workflow.state = hasError ? 'fail' : 'success';
-                            obs.next(hasError
-                                ? { type: 'node_fail', id: workflow.id, error: workflow.error?.message }
-                                : { type: 'node_success', id: workflow.id }
-                            );
-                            obs.complete();
+                            if (hasError) {
+                                const error = workflow.error || new Error('Workflow failed');
+                                obs.next({ type: 'node_fail', id: workflow.id, error: error.message });
+                                obs.error(error);
+                            } else {
+                                obs.next({ type: 'node_success', id: workflow.id });
+                                obs.complete();
+                            }
                         }
                     }
-                })
-            );
+                });
+                subscriptions.push(sub);
+            });
 
             return () => subscriptions.forEach(sub => sub.unsubscribe());
         });

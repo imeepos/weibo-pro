@@ -94,21 +94,24 @@ export class VisitorExecutor implements Visitor {
                                         ast.state = 'fail';
                                         setAstError(ast, err);
                                         obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-                                        obs.complete();
+                                        obs.error(err);
+                                    },
+                                    complete: () => {
+                                        // Handler completed without error
                                     }
                                 });
                             } catch (err) {
                                 ast.state = 'fail';
                                 setAstError(ast, err);
                                 obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-                                obs.complete();
+                                obs.error(err);
                             }
                         },
                         error: err => {
                             ast.state = 'fail';
                             setAstError(ast, err);
                             obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-                            obs.complete();
+                            obs.error(err);
                         },
                         complete: () => {
                             ast.state = 'success';
@@ -216,10 +219,13 @@ export class VisitorExecutor implements Visitor {
      *
      * 优雅设计：
      * - 设置节点状态为 fail
-     * - 返回失败状态的节点（作为 Observable 完成）
+     * - 发射 node_fail 事件后抛出错误，让上层决定如何处理
      */
     private handleError(error: unknown, ast: INode): Observable<NodeEvent> {
-        return of(this.createFailedNode(ast, error));
+        return new Observable(obs => {
+            obs.next(this.createFailedNode(ast, error));
+            obs.error(error);
+        });
     }
 
     /**

@@ -1,7 +1,7 @@
 import { Injectable, root } from "@sker/core";
 import { Ast } from "../ast";
 import { INode, INodeInputMetadata, INodeMetadata, INodeOutputMetadata, INodeStateMetadata, isNode, CompiledNodeMetadata } from "../types";
-import { findNodeType, INPUT, InputMetadata, NODE, NodeMetadata, OUTPUT, OutputMetadata, STATE, StateMetadata, hasTool, DERIVED_INPUT, DERIVED_OUTPUT, DerivedInputMetadata, DerivedOutputMetadata } from "../decorator";
+import { findNodeType, INPUT, InputMetadata, NODE, NodeMetadata, OUTPUT, OutputMetadata, STATE, StateMetadata, hasTool, DERIVED_INPUT, DERIVED_OUTPUT, DerivedInputMetadata, DerivedOutputMetadata, hasMultiMode, hasBufferMode } from "../decorator";
 
 /**
  * 编译器 - 将 AST 实例编译为 INode
@@ -26,10 +26,14 @@ export class Compiler {
             throw new Error(`compiler error: ast type ${ast.type} not found`)
         }
 
-        const instance = new (ctor as new () => any)();
+        // 如果 ast 已经是正确类型的实例，直接在原实例上添加 metadata
+        const instance = ast instanceof ctor ? ast : new (ctor as new () => any)();
 
-        for (const [key, value] of Object.entries(ast)) {
-            instance[key] = value;
+        // 只在创建新实例时复制属性
+        if (instance !== ast) {
+            for (const [key, value] of Object.entries(ast)) {
+                instance[key] = value;
+            }
         }
 
         // 提取 @Node 类装饰器元数据
@@ -99,6 +103,8 @@ export class Compiler {
         return targetInputs.map(input => ({
             property: String(input.propertyKey),
             mode: input.mode,
+            isMulti: hasMultiMode(input.mode),
+            isBuffer: hasBufferMode(input.mode),
             required: input.required,
             defaultValue: input.defaultValue,
             title: input.title,
