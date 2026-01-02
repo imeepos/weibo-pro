@@ -2,7 +2,7 @@ import { Injectable, Inject } from '@sker/core';
 import { Observable, EMPTY, merge, defer, of, combineLatest, zip, isObservable, concat, throwError } from 'rxjs';
 import { filter, map, catchError, shareReplay, concatMap, withLatestFrom } from 'rxjs/operators';
 import { NodeExecutor } from './executor';
-import { Handler } from './decorator';
+import { Handler, hasMultiMode } from './decorator';
 import { setAstError, WorkflowGraphAst } from './ast';
 import { NodeEmitEvent, NodeEvent } from './execution/events';
 import { EdgeMode, IEdge, ROUTE_SKIPPED, EDGE_MODE_PRIORITY } from './types';
@@ -85,7 +85,8 @@ export class WorkflowGraphAstVisitor {
             if (portEdges.length <= 1) return;
 
             const inputMeta = inputs.find((i: any) => i.property === portName);
-            if (!inputMeta?.isMulti) {
+            const isMulti = inputMeta?.isMulti ?? hasMultiMode(inputMeta?.mode);
+            if (!isMulti) {
                 throw new Error(
                     `[WorkflowGraphAstVisitor] 节点 ${node.id} 的端口 "${portName}" ` +
                     `有 ${portEdges.length} 条边，但未标记 isMulti: true`
