@@ -1,6 +1,6 @@
 import { Injectable, Inject } from '@sker/core';
 import { Observable, EMPTY, merge, defer, of, combineLatest, zip, isObservable, concat, throwError } from 'rxjs';
-import { filter, map, catchError, shareReplay, concatMap, withLatestFrom } from 'rxjs/operators';
+import { filter, map, catchError, shareReplay, concatMap, withLatestFrom, tap } from 'rxjs/operators';
 import { NodeExecutor } from './executor';
 import { Handler, hasMultiMode } from './decorator';
 import { setAstError, WorkflowGraphAst } from './ast';
@@ -257,14 +257,23 @@ export class WorkflowGraphAstVisitor {
         return new Observable(subscriber => {
             let completedCount = 0;
             const total = sources.length;
+            console.log(`[mergeWithCompletion] 开始合并 ${total} 个源流`);
 
-            const subscriptions = sources.map(source =>
+            const subscriptions = sources.map((source, index) =>
                 source.subscribe({
-                    next: value => subscriber.next(value),
-                    error: err => subscriber.error(err),
+                    next: value => {
+                        console.log(`[mergeWithCompletion] 源流 ${index} 发射值:`, JSON.stringify(value).substring(0, 100));
+                        subscriber.next(value);
+                    },
+                    error: err => {
+                        console.log(`[mergeWithCompletion] 源流 ${index} 发生错误:`, err?.message);
+                        subscriber.error(err);
+                    },
                     complete: () => {
                         completedCount++;
+                        console.log(`[mergeWithCompletion] 源流 ${index} 完成，已完成 ${completedCount}/${total}`);
                         if (completedCount === total) {
+                            console.log(`[mergeWithCompletion] 所有源流都已完成，触发 complete`);
                             subscriber.complete();
                         }
                     }
@@ -371,6 +380,9 @@ export class WorkflowGraphAstVisitor {
                 filter((event): event is NodeEmitEvent =>
                     event.type === 'node_emit' && edge.fromProperty! in (event.data || {})
                 ),
+                tap(() => {
+                    console.log(`[buildEdgeValueStream] 边 ${edge.fromProperty} → ${edge.toProperty} 收到值`);
+                }),
                 map(event => {
                     let value = event.data?.[edge.fromProperty!];
 
@@ -406,23 +418,32 @@ export class WorkflowGraphAstVisitor {
             return result;
         };
 
+        console.log(`[combineEdgeSources] 组合模式: ${mode}, 边数量: ${edges.length}, 边属性: ${edges.map(e => e.toProperty).join(', ')}`);
+
         switch (mode) {
             case EdgeMode.MERGE:
                 // 修复：在 merge 前为每个源标记 toProperty，避免使用发射顺序 index
                 return merge(
                     ...sources.map((source, sourceIndex) =>
                         source.pipe(
+                            tap(() => console.log(`[combineEdgeSources MERGE] 边 ${edges[sourceIndex]!.toProperty} 发射值`)),
                             map(value => ({ [edges[sourceIndex]!.toProperty!]: value }))
                         )
                     )
                 );
             case EdgeMode.ZIP:
-                return zip(...sources).pipe(map(mapToObject));
+                return zip(...sources).pipe(
+                    tap(() => console.log(`[combineEdgeSources ZIP] 所有边都发射了值`)),
+                    map(mapToObject)
+                );
             case EdgeMode.WITH_LATEST_FROM:
                 return this.buildWithLatestFrom(sources, edges);
             case EdgeMode.COMBINE_LATEST:
             default:
-                return combineLatest(sources).pipe(map(mapToObject));
+                return combineLatest(sources).pipe(
+                    tap(() => console.log(`[combineEdgeSources COMBINE_LATEST] 所有边都至少发射了一次值`)),
+                    map(mapToObject)
+                );
         }
     }
 

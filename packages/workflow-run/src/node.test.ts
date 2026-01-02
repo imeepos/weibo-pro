@@ -57,16 +57,9 @@ describe('节点测试', () => {
       try {
         // 执行工作流，设置超时时间
         const executionPromise = new Promise<WorkflowGraphAst>((resolve, reject) => {
-          let finalWorkflow = ast;
-
           const subscription = executeWorkflow(ast, {}).subscribe({
             next: (event) => {
               console.log(`[Event] ${event.type} - ${event.id}`);
-
-              // 当工作流节点成功完成时，保存最终状态
-              if (event.type === 'node_success' && event.id === ast.id) {
-                finalWorkflow = event.data as WorkflowGraphAst;
-              }
             },
             error: (error) => {
               console.error(`[Error] ${error}`);
@@ -75,7 +68,7 @@ describe('节点测试', () => {
             complete: () => {
               const duration = Date.now() - startTime;
               console.log(`✅ 工作流 ${fileName} 执行完成，耗时: ${duration}ms`);
-              resolve(finalWorkflow);
+              resolve(ast);
             }
           });
 

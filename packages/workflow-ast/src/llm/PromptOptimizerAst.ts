@@ -84,7 +84,11 @@ export class PromptOptimizerAst extends Ast {
       { name: '关键词覆盖', weight: 0.3, description: '是否包含目标中的关键信息' },
     ],
   })
-  evaluationDimensions: EvaluationDimension[] = [];
+  evaluationDimensions: EvaluationDimension[] = [
+    { name: '语义相似度', weight: 0.4, description: '输出与目标的语义匹配程度' },
+    { name: '格式匹配', weight: 0.3, description: '输出格式是否符合目标格式' },
+    { name: '关键词覆盖', weight: 0.3, description: '是否包含目标中的关键信息' },
+  ];
 
   // === LLM 配置 ===
 

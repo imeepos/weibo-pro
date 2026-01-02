@@ -109,7 +109,10 @@ export class PostContextCollectorVisitor {
         }),
         mergeMap((events: NodeEvent[]) => from(events))
       ).subscribe({
-        next: (event: NodeEvent) => obs.next(event),
+        next: (event: NodeEvent) => {
+          console.log('[PostContextCollectorVisitor] subscribe.next 发射事件，emitCount:', ast.emitCount);
+          obs.next(event);
+        },
         error: (error) => {
           ast.state = 'fail';
           setAstError(ast, error, process.env.NODE_ENV === 'development');
