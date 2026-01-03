@@ -10,7 +10,7 @@ import type { LocationData } from '@/types';
 /**
  * 最大词云词数
  */
-export const MAX_WORD_CLOUD_WORDS = 200;
+export const MAX_WORD_CLOUD_WORDS = 800;
 
 /**
  * 中国主要城市热度分布数据
