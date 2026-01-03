@@ -143,10 +143,15 @@ export class WorkflowController implements sdk.WorkflowController {
    * 2. 执行单个节点：传递 ast 字段（在 workflow 上下文中执行）
    */
   execute(
-    @Body() body: { ast: Ast, workflow: WorkflowGraphAst; input?: Record<string, any> },
+    @Body() body: sdk.ExecuteWorkflowPayload,
   ): Observable<NodeEvent> {
 
     try {
+      // 添加 body 验证
+      if (!body) {
+        throw new BadRequestException('请求体不能为空');
+      }
+
       const { ast, workflow: workflowJson, input = {} } = body;
 
       if (!workflowJson && !ast) {

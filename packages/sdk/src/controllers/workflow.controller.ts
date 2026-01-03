@@ -28,8 +28,8 @@ export interface InitWorkflowResponse {
 }
 
 export interface ExecuteWorkflowPayload {
-  ast: Ast;
-  workflow: WorkflowGraphAst,
+  ast?: Ast;
+  workflow?: WorkflowGraphAst,
   input?: Record<string, any>;
 }
 
