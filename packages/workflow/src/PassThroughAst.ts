@@ -12,7 +12,7 @@ import { Input, IS_MULTI, Node, Output } from "./decorator";
   type: 'basic'
 })
 export class PassThroughAst extends Ast {
-  @Input({ title: '输入', defaultValue: '' })
+  @Input({ title: '输入', defaultValue: '', mode: IS_MULTI })
   input: any = '';
 
   @Input({ title: '启用条件', defaultValue: [], mode: IS_MULTI })
