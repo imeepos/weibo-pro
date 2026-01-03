@@ -9,10 +9,8 @@ import {
   SentimentOverview,
   ErrorState,
   EmptyState,
-  TimeRangeDisplay,
-  RefreshIndicator
 } from "@/components/ui";
-import { LocationHeatMap, UserRelationOverview } from "@/components";
+import { UserRelationOverview } from "@/components";
 import GeoHeatMap, { type GeoDataPoint } from "@sker/ui/components/ui/geo-heat-map";
 import { useOverviewData } from "@/hooks/useOverviewData";
 import { useAppStore } from "@/stores/useAppStore";
@@ -90,11 +88,6 @@ const DataOverview: React.FC = () => {
 
   return (
     <div className="h-[calc(100vh-6rem)] w-full flex flex-col gap-3 p-4 overflow-hidden">
-      <div className="flex items-center justify-between flex-shrink-0">
-        <TimeRangeDisplay timeRange={selectedTimeRange} />
-        <RefreshIndicator isStale={isStale} onRefresh={refetch} />
-      </div>
-
       <div className="flex-1 flex gap-3 min-h-0">
         <div className="flex-1 min-w-0 flex flex-col gap-3 min-h-0">
           <div className="flex-shrink-0">
