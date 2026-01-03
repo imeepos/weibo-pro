@@ -193,12 +193,27 @@ export class WeiboKeywordSearchAstVisitor {
     }
 }
 
-const formatDate = (date: Date) => {
-    const time = new Date(date)
+const formatDate = (date: Date | string | number) => {
+    // 确保转换为有效的 Date 对象
+    const time = new Date(date);
+
+    // 检查日期是否有效
+    if (isNaN(time.getTime())) {
+        logger.error(`[formatDate] 无效的日期值: ${date}`);
+        // 返回当前日期作为后备
+        const now = new Date();
+        return [
+            now.getFullYear(),
+            String(now.getMonth() + 1).padStart(2, '0'),
+            String(now.getDate()).padStart(2, '0'),
+            String(now.getHours()).padStart(2, '0'),
+        ].join('-');
+    }
+
     return [
         time.getFullYear(),
         String(time.getMonth() + 1).padStart(2, '0'),
         String(time.getDate()).padStart(2, '0'),
         String(time.getHours()).padStart(2, '0'),
-    ].join('-')
+    ].join('-');
 };
