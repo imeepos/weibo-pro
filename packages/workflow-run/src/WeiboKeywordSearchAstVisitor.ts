@@ -1,4 +1,4 @@
-import { Inject, Injectable, NoRetryError } from "@sker/core";
+import { Inject, Injectable, NoRetryError, createLogger } from "@sker/core";
 import { Handler, NodeEvent, setAstError } from "@sker/workflow";
 import { WeiboKeywordSearchAst } from "@sker/workflow-ast";
 import { WeiboHtmlParser } from "./services/WeiboHtmlParser";
@@ -8,6 +8,8 @@ import { DelayService } from "./services/delay.service";
 import { Observable, Subscriber, from } from "rxjs";
 import { concatMap, mergeMap } from "rxjs/operators";
 import { ErrorHandlerOperators } from "./utils/error-handler.util";
+
+const logger = createLogger('WeiboKeywordSearchAstVisitor');
 
 @Injectable()
 export class WeiboKeywordSearchAstVisitor {
