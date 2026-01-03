@@ -1,4 +1,4 @@
-import { Ast } from "./ast";
+import { Ast, WorkflowGraphAst } from "./ast";
 import { Input, IS_MULTI, Node, Output } from "./decorator";
 /**
  * 透传节点 - 接收输入立即发射，用于形成循环
@@ -18,14 +18,16 @@ export class PassThroughAst extends Ast {
   @Input({ title: '启用条件', defaultValue: [], mode: IS_MULTI })
   enable: boolean[] = [];
 
-  @Input({ title: '条件模式', defaultValue: 'every' })
-  mode: 'some' | 'every' | 'none' | 'majority' | 'count' | 'xor' | 'ratio' | 'first' | 'sequential' = 'every';
+  @Input({
+    title: '条件模式',
+    defaultValue: 'every',
+    type: 'select',
+    options: ['every', 'some', 'none', 'majority', 'count', 'xor', 'ratio', 'first', 'sequential', 'weighted']
+  })
+  mode: 'some' | 'every' | 'none' | 'majority' | 'count' | 'xor' | 'ratio' | 'first' | 'sequential' | 'weighted' = 'some';
 
-  @Input({ title: '阈值数量', defaultValue: 1 })
-  threshold: number = 1;
-
-  @Input({ title: '比例阈值', defaultValue: 0.5 })
-  ratioThreshold: number = 0.5;
+  @Input({ title: '阈值', defaultValue: 0.5 })
+  threshold: number = 0.5;
 
   @Output({ title: '输出', defaultValue: '', isRouter: true })
   output: any = '';
@@ -65,8 +67,23 @@ export class PassThroughAstVisitor {
     return false;
   }
 
+  /**
+   * 从工作流图中获取连接到指定节点端口的边权重
+   */
+  private getEdgeWeights(ast: PassThroughAst, ctx: WorkflowGraphAst | undefined, portName: string): number[] {
+    if (!ctx || !ctx.edges) return [];
+
+    // 找到连接到当前节点 enable 端口的所有边
+    const enableEdges = ctx.edges.filter(edge =>
+      edge.to === ast.id && edge.toProperty === portName
+    );
+
+    // 提取权重，默认为 1
+    return enableEdges.map(edge => edge.weight ?? 1);
+  }
+
   @Handler(PassThroughAst)
-  visit(ast: PassThroughAst, input$: Observable<PassThroughAst>, ctx: any): Observable<NodeEvent> {
+  visit(ast: PassThroughAst, input$: Observable<PassThroughAst>, ctx: WorkflowGraphAst): Observable<NodeEvent> {
     return new Observable<NodeEvent>(obs => {
       ast.state = 'running';
       obs.next({ type: 'node_runing', id: ast.id });
@@ -76,8 +93,7 @@ export class PassThroughAstVisitor {
           // 根据 mode 决定条件判断逻辑
           const enableConditions = Array.isArray(inputData.enable) ? inputData.enable : [inputData.enable];
           const mode = inputData.mode || 'every';
-          const threshold = inputData.threshold || 1;
-          const ratioThreshold = inputData.ratioThreshold || 0.5;
+          const threshold = inputData.threshold ?? 0.5;
 
           let shouldPass = false;
 
@@ -110,7 +126,7 @@ export class PassThroughAstVisitor {
                 break;
 
               case 'count':
-                // 满足指定数量的条件为 true
+                // 满足指定数量的条件为 true（threshold 表示数量）
                 shouldPass = trueCount >= threshold;
                 break;
 
@@ -120,8 +136,8 @@ export class PassThroughAstVisitor {
                 break;
 
               case 'ratio':
-                // 满足指定比例的条件为 true
-                shouldPass = (trueCount / totalCount) >= ratioThreshold;
+                // 满足指定比例的条件为 true（threshold 表示比例 0-1）
+                shouldPass = (trueCount / totalCount) >= threshold;
                 break;
 
               case 'first':
@@ -130,8 +146,26 @@ export class PassThroughAstVisitor {
                 break;
 
               case 'sequential':
-                // 连续 threshold 个条件为 true
-                shouldPass = this.hasSequentialTrue(enableConditions, threshold);
+                // 连续 threshold 个条件为 true（threshold 表示连续数量）
+                shouldPass = this.hasSequentialTrue(enableConditions, Math.floor(threshold));
+                break;
+
+              case 'weighted':
+                // 加权模式：根据边权重计算加权分数（threshold 表示加权比例 0-1）
+                const weights = this.getEdgeWeights(ast, ctx, 'enable');
+
+                if (weights.length === 0 || weights.length !== enableConditions.length) {
+                  // 没有边权重或数量不匹配，回退到 every 模式
+                  shouldPass = trueCount === totalCount;
+                } else {
+                  // 计算加权总分
+                  const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+                  const actualWeight = enableConditions.reduce((sum, condition, i) => {
+                    return sum + (condition ? weights[i]! : 0);
+                  }, 0);
+                  const weightedScore = totalWeight > 0 ? actualWeight / totalWeight : 0;
+                  shouldPass = weightedScore >= threshold;
+                }
                 break;
 
               default:
