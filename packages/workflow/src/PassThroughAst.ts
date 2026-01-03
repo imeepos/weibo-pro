@@ -174,8 +174,12 @@ export class PassThroughAstVisitor {
           }
 
           if (shouldPass) {
-            ast.output = inputData.input;
             ast.emitCount += 1;
+            if (Array.isArray(inputData.input) && inputData.input.length === 1) {
+              ast.output = inputData.input[0]
+            } else {
+              ast.output = inputData.input;
+            }
             obs.next({ type: 'node_emit', id: ast.id, data: { output: ast.output, emitCount: ast.emitCount } });
           }
         },
