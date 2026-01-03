@@ -194,7 +194,6 @@ const HotEventsList: React.FC<HotEventsListProps> = ({ className = '' }) => {
 
               <div className="flex items-center space-x-3 ml-4">
                 <div className="text-right">
-                  <div className="text-xs text-muted-foreground mb-1">7天热度</div>
                   {renderMiniChart(event.trendData)}
                 </div>
 
