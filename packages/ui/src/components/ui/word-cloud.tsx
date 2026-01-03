@@ -28,7 +28,7 @@ export interface WordCloudProps {
 }
 
 // 常量默认值，避免每次渲染创建新数组
-const DEFAULT_SIZE_RANGE: [number, number] = [12, 60]
+const DEFAULT_SIZE_RANGE: [number, number] = [12, 40]
 const DEFAULT_ROTATION_RANGE: [number, number] = [-45, 45]
 
 function WordCloud({
@@ -87,16 +87,17 @@ function WordCloud({
       series: [
         {
           type: "wordCloud" as const,
-          gridSize: 8,
+          gridSize: 2,
           sizeRange: JSON.parse(sizeRangeKey),
           rotationRange: JSON.parse(rotationRangeKey),
           rotationStep: 15,
           shape,
-          width: "90%",
-          height: "90%",
+          width: "100%",
+          height: "100%",
           left: "center",
           top: "center",
-          drawOutOfBound: true,
+          drawOutOfBound: false,
+          shrinkToFit: true,
           layoutAnimation: true,
           textStyle: {
             fontFamily: "Inter, sans-serif",
