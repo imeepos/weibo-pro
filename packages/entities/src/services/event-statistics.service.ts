@@ -1,13 +1,11 @@
 import { Injectable, Inject } from '@sker/core'
-import { DataSource } from '../data-source'
-import { useEntityManager } from '../use-entity-manager'
-import { EventStatisticsEntity } from '../entities/event-statistics.entity'
-import { EventEntity } from '../entities/event.entity'
-import { PostNLPResultEntity } from '../entities/post-nlp-result.entity'
-import { WeiboPostEntity } from '../entities/weibo-post.entity'
+import { DataSource } from 'typeorm'
+import { useEntityManager } from '../utils'
+import { EventStatisticsEntity } from '../event-statistics.entity'
+import { EventEntity } from '../event.entity'
 import { EventStatisticsQueries } from '../queries/event-statistics.queries'
 import { logger } from '@sker/core'
-import type { SentimentScore } from '../types'
+import type { SentimentScore } from '../types/sentiment'
 
 interface StatisticsMetrics {
   post_count: number
@@ -264,7 +262,7 @@ export class EventStatisticsService {
     sourceGranularity: 'hourly' | 'daily' | 'weekly',
     startTime: Date,
     endTime: Date
-  ): Promise<Omit<EventStatisticsEntity, 'id' | 'event_id' | 'granularity' | 'snapshot_at' | 'created_at'> | null> {
+  ): Promise<Omit<EventStatisticsEntity, 'id' | 'event_id' | 'granularity' | 'snapshot_at' | 'created_at' | 'event'> | null> {
     return await useEntityManager(async manager => {
       const result = await EventStatisticsQueries.buildAggregateStatsQuery(
         manager.createQueryBuilder(EventStatisticsEntity, 'stats'),

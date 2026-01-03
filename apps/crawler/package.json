@@ -6,6 +6,14 @@
   "scripts": {
     "dev": "tsx src/main.ts --watch",
     "build": "tsc",
+    "start": "node dist/main.js",
+    "start:prod": "node dist/main",
+    "pm2:start": "pm2 start dist/main.js --name sker-crawler",
+    "pm2:stop": "pm2 stop sker-crawler",
+    "pm2:restart": "pm2 restart sker-crawler",
+    "pm2:delete": "pm2 delete sker-crawler",
+    "pm2:logs": "pm2 logs sker-crawler",
+    "pm2:monit": "pm2 monit",
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
