@@ -67,6 +67,7 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
             ).subscribe({
                 next: (event: NodeEvent) => obs.next(event),
                 error: (error) => {
+                    obs.next({ type: 'node_emit', id: ast.id, data: { is_end: false } });
                     obs.next({ type: 'node_fail', id: ast.id, error: error?.message });
                 },
                 complete: () => {

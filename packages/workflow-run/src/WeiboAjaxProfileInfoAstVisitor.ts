@@ -95,6 +95,7 @@ export class WeiboAjaxProfileInfoAstVisitor extends WeiboApiClient {
             ).subscribe({
                 next: (event: NodeEvent) => obs.next(event),
                 error: (error) => {
+                    obs.next({ type: 'node_emit', id: ast.id, data: { isEnd: false } });
                     obs.next({ type: 'node_fail', id: ast.id, error: error?.message });
                 },
                 complete: () => {
