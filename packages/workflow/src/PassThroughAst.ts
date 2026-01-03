@@ -92,7 +92,7 @@ export class PassThroughAstVisitor {
         next: (inputData) => {
           // 根据 mode 决定条件判断逻辑
           const enableConditions = Array.isArray(inputData.enable) ? inputData.enable : [inputData.enable];
-          const mode = inputData.mode || 'every';
+          const mode = inputData.mode || 'some';
           const threshold = inputData.threshold ?? 0.5;
 
           let shouldPass = false;
