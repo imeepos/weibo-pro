@@ -4,7 +4,14 @@ import "@sker/workflow";
 import "@sker/workflow-ast";
 import "@sker/workflow-run";
 import { root, logger } from '@sker/core';
-import { entitiesProviders, useEntityManager, UserRelationStatisticsQueries, OverviewStatisticsQueries } from '@sker/entities';
+import {
+  entitiesProviders,
+  useEntityManager,
+  UserRelationStatisticsQueries,
+  OverviewStatisticsQueries,
+  EventStatisticsService,
+  EventEntity
+} from '@sker/entities';
 import { CronSchedulerService } from '@sker/workflow-run';
 import * as schedule from 'node-schedule';
 
@@ -87,15 +94,59 @@ async function bootstrap() {
 
   const overviewStatsJob = schedule.scheduleJob('*/10 * * * *', runOverviewStats);
 
+  // 事件统计小时级任务
+  const runHourlyEventStats = async () => {
+    try {
+      logger.info('🔄 开始执行事件统计（小时级）...');
+      const startTime = Date.now();
+
+      const statsService = root.get(EventStatisticsService);
+      const snapshotTime = new Date();
+
+      // 获取所有活跃事件
+      const activeEvents = await useEntityManager(async manager => {
+        return manager.find(EventEntity, { where: { status: 'active' } });
+      });
+
+      // 批量处理（每批5个事件）
+      const batchSize = 5;
+      let successCount = 0;
+
+      for (let i = 0; i < activeEvents.length; i += batchSize) {
+        const batch = activeEvents.slice(i, i + batchSize);
+        const results = await Promise.allSettled(
+          batch.map(event => statsService.calculateHourlyStatistics(event.id, snapshotTime))
+        );
+        successCount += results.filter(r => r.status === 'fulfilled').length;
+      }
+
+      const duration = Date.now() - startTime;
+      logger.info('✅ 事件统计（小时级）完成', {
+        duration: `${duration}ms`,
+        total: activeEvents.length,
+        success: successCount
+      });
+    } catch (error: any) {
+      logger.error('❌ 事件统计（小时级）失败', {
+        error: error.message,
+        stack: error.stack
+      });
+    }
+  };
+
+  const hourlyEventStatsJob = schedule.scheduleJob('0 * * * *', runHourlyEventStats);
+
   // 启动时立即执行一次
   runUserRelationStats();
   runOverviewStats();
+  runHourlyEventStats();
 
   logger.info('✅ Crawler 服务启动成功', {
     schedulerType: 'node-schedule',
     activeJobs: scheduler.getJobCount(),
     userStatsJob: statsJob ? 'scheduled' : 'failed',
-    overviewStatsJob: overviewStatsJob ? 'scheduled' : 'failed'
+    overviewStatsJob: overviewStatsJob ? 'scheduled' : 'failed',
+    eventStatsJob: hourlyEventStatsJob ? 'scheduled' : 'failed'
   });
 
   // 优雅关闭
@@ -110,6 +161,10 @@ async function bootstrap() {
     if (overviewStatsJob) {
       overviewStatsJob.cancel();
       logger.info('✅ 概览统计任务已取消');
+    }
+    if (hourlyEventStatsJob) {
+      hourlyEventStatsJob.cancel();
+      logger.info('✅ 事件统计任务已取消');
     }
 
     await scheduler.stopAll();

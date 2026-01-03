@@ -4,3 +4,4 @@ export * from './weibo-post.queries';
 export * from './weibo-comment.queries';
 export * from './user-relation-statistics.queries';
 export * from './overview-statistics.queries';
+export * from './event-statistics.queries';
