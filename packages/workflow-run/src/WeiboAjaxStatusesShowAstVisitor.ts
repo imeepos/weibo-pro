@@ -8,6 +8,7 @@ import { WeiboAjaxStatusesShowAst } from "@sker/workflow-ast";
 import { WeiboApiClient } from "./services/weibo-api-client.base";
 import { Observable, from } from "rxjs";
 import { concatMap, mergeMap } from "rxjs/operators";
+import { ErrorHandlerOperators } from "./utils/error-handler.util";
 
 export interface WeiboAjaxStatusesShowAstReponse extends WeiboPostEntity {
     ok: number;
@@ -98,14 +99,13 @@ export class WeiboAjaxStatusesShowAstVisitor extends WeiboApiClient {
                         { type: 'node_emit' as const, id: ast.id, data: { uid: ast.uid, postId: ast.postId, mid: ast.mid } }
                     ];
                 }),
+                ErrorHandlerOperators.createRetryOperator<NodeEvent[]>(ast, { logPrefix: '[WeiboAjaxStatusesShowAstVisitor]' }),
+                ErrorHandlerOperators.createCatchErrorOperator<NodeEvent[]>(ast, { logPrefix: '[WeiboAjaxStatusesShowAstVisitor]' }),
                 mergeMap((events: NodeEvent[]) => from(events))
             ).subscribe({
                 next: (event: NodeEvent) => obs.next(event),
                 error: (error) => {
-                    console.error(`[WeiboAjaxStatusesShowAstVisitor] postId: ${ast.id}`, error);
-                    ast.state = 'fail';
-                    setAstError(ast, error, process.env.NODE_ENV === 'development');
-                    obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
+                    obs.next({ type: 'node_fail', id: ast.id, error: error?.message });
                 },
                 complete: () => {
                     ast.state = 'success';

@@ -8,6 +8,7 @@ import { Observable, from } from "rxjs";
 import { concatMap, mergeMap } from "rxjs/operators";
 import { DelayService } from "./services/delay.service";
 import { RateLimiterService } from "./services/rate-limiter.service";
+import { ErrorHandlerOperators } from "./utils/error-handler.util";
 
 export interface WeiboAjaxStatusesRepostTimelineResponse {
     readonly ok: number
@@ -86,14 +87,13 @@ export class WeiboAjaxStatusesRepostTimelineAstVisitor extends WeiboApiClient {
                         { type: 'node_emit' as const, id: ast.id, data: { is_end: ast.is_end } }
                     ];
                 }),
+                ErrorHandlerOperators.createRetryOperator<NodeEvent[]>(ast, { logPrefix: '[WeiboAjaxStatusesRepostTimelineAstVisitor]' }),
+                ErrorHandlerOperators.createCatchErrorOperator<NodeEvent[]>(ast, { logPrefix: '[WeiboAjaxStatusesRepostTimelineAstVisitor]' }),
                 mergeMap((events: NodeEvent[]) => from(events))
             ).subscribe({
                 next: (event: NodeEvent) => obs.next(event),
                 error: (error) => {
-                    console.error(`[WeiboAjaxStatusesRepostTimelineAstVisitor] mid: ${ast.mid}`, error);
-                    ast.state = 'fail';
-                    setAstError(ast, error, process.env.NODE_ENV === 'development');
-                    obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
+                    obs.next({ type: 'node_fail', id: ast.id, error: error?.message });
                 },
                 complete: () => {
                     ast.state = 'success';

@@ -8,6 +8,7 @@ import { useEntityManager, WeiboPostEntity, WeiboUserEntity } from "@sker/entiti
 import { WeiboApiClient } from "./services/weibo-api-client.base";
 import { Observable, from } from 'rxjs'
 import { concatMap, mergeMap } from 'rxjs/operators'
+import { ErrorHandlerOperators } from "./utils/error-handler.util";
 
 export interface WeiboAjaxFeedHotTimelineResponse {
     readonly ok: number;
@@ -57,13 +58,13 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
 
                     return await this.handler(ast, wrappedCtx);
                 }),
+                ErrorHandlerOperators.createRetryOperator<NodeEvent[]>(ast, { logPrefix: '[WeiboAjaxFeedHotTimelineAstVisitor]' }),
+                ErrorHandlerOperators.createCatchErrorOperator<NodeEvent[]>(ast, { logPrefix: '[WeiboAjaxFeedHotTimelineAstVisitor]' }),
                 mergeMap((events: NodeEvent[]) => from(events))
             ).subscribe({
                 next: (event: NodeEvent) => obs.next(event),
                 error: (error) => {
-                    ast.state = 'fail';
-                    setAstError(ast, error);
-                    obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
+                    obs.next({ type: 'node_fail', id: ast.id, error: error?.message });
                 },
                 complete: () => {
                     ast.state = 'success';

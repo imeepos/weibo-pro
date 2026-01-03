@@ -1,9 +1,10 @@
 import { Injectable } from "@sker/core";
-import { Handler, NodeEvent, setAstError, WorkflowGraphAst } from "@sker/workflow";
+import { Handler, NodeEvent, WorkflowGraphAst } from "@sker/workflow";
 import { LlmTextAgentAst } from "@sker/workflow-ast";
 import { Observable, from } from "rxjs";
 import { concatMap, mergeMap } from "rxjs/operators";
 import { useLlmModel } from "./llm-client";
+import { ErrorHandlerOperators } from "./utils/error-handler.util";
 @Injectable()
 export class LlmTextAgentAstVisitor {
 
@@ -16,7 +17,7 @@ export class LlmTextAgentAstVisitor {
             obs.next({ type: 'node_runing', id: ast.id });
 
             const subscription = input$.pipe(
-                concatMap(async (inputData) => {
+                concatMap(async (inputData): Promise<NodeEvent[]> => {
                     ast.emitCount += 1;
                     if (inputData) {
                         Object.keys(inputData).forEach(key => {
@@ -42,14 +43,15 @@ export class LlmTextAgentAstVisitor {
                         { type: 'node_emit' as const, id: ast.id, data: { text: result.content, username: ast.username, profile: ast.profile } }
                     ];
                 }),
-                mergeMap((events: NodeEvent[]) => from(events))
+                ErrorHandlerOperators.createRetryOperator<NodeEvent[]>(ast, { logPrefix: '[LlmTextAgentAstVisitor]' }),
+                ErrorHandlerOperators.createCatchErrorOperator<NodeEvent[]>(ast, { logPrefix: '[LlmTextAgentAstVisitor]' }),
+                mergeMap((events: NodeEvent[]) => from(events)),
             ).subscribe({
                 next: (event: NodeEvent) => {
                     obs.next(event);
                 },
                 error: (error) => {
-                    ast.state = 'fail';
-                    setAstError(ast, error);
+                    // 错误已在 catchError 中处理，这里只需要发送失败事件
                     obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
                 },
                 complete: () => {

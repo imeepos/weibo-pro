@@ -7,6 +7,7 @@ import { Observable, from } from "rxjs";
 import { concatMap, mergeMap } from "rxjs/operators";
 import { DelayService } from "./services/delay.service";
 import { RateLimiterService } from "./services/rate-limiter.service";
+import { ErrorHandlerOperators } from "./utils/error-handler.util";
 
 export interface WeiboAjaxFriendshipsResponse {
     ok: number;
@@ -58,14 +59,13 @@ export class WeiboAjaxFriendshipsAstVisitor extends WeiboApiClient {
                         { type: 'node_emit' as const, id: ast.id, data: { isEnd: true, data: body.data } }
                     ];
                 }),
+                ErrorHandlerOperators.createRetryOperator<NodeEvent[]>(ast, { logPrefix: '[WeiboAjaxFriendshipsAstVisitor]' }),
+                ErrorHandlerOperators.createCatchErrorOperator<NodeEvent[]>(ast, { logPrefix: '[WeiboAjaxFriendshipsAstVisitor]' }),
                 mergeMap((events: NodeEvent[]) => from(events))
             ).subscribe({
                 next: (event: NodeEvent) => obs.next(event),
                 error: (error) => {
-                    console.error(`[WeiboAjaxFriendshipsAstVisitor] uid: ${ast.uid}`, error);
-                    ast.state = 'fail';
-                    setAstError(ast, error);
-                    obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
+                    obs.next({ type: 'node_fail', id: ast.id, error: error?.message });
                 },
                 complete: () => {
                     ast.state = 'success';

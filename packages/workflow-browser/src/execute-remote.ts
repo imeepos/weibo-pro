@@ -39,7 +39,7 @@ export function executeRemote(
         }),
         mergeMap((event: NodeEvent) => {
             if (event.id === ast.id && event.type === 'node_fail') {
-                return throwError(() => new Error(event.error || '执行失败'));
+                return [event];
             }
             // 只允许 node_emit、node_progress、node_delta 通过
             if (event.type === 'node_emit' || event.type === 'node_progress' || event.type === 'node_delta') {

@@ -7,6 +7,7 @@ import { WeiboAccountService } from "./services/weibo-account.service";
 import { DelayService } from "./services/delay.service";
 import { Observable, Subscriber, from } from "rxjs";
 import { concatMap, mergeMap } from "rxjs/operators";
+import { ErrorHandlerOperators } from "./utils/error-handler.util";
 
 @Injectable()
 export class WeiboKeywordSearchAstVisitor {
@@ -47,18 +48,13 @@ export class WeiboKeywordSearchAstVisitor {
                     await this.executeSearch(ast, wrappedCtx, obs);
                     return [];
                 }),
+                ErrorHandlerOperators.createRetryOperator<NodeEvent[]>(ast, { logPrefix: '[WeiboKeywordSearchAstVisitor]' }),
+                ErrorHandlerOperators.createCatchErrorOperator<NodeEvent[]>(ast, { logPrefix: '[WeiboKeywordSearchAstVisitor]' }),
                 mergeMap((events: NodeEvent[]) => from(events))
             ).subscribe({
                 next: (event: NodeEvent) => obs.next(event),
                 error: (error) => {
-                    console.error(`[WeiboKeywordSearchAstVisitor] 搜索失败: ${ast.keyword}`, error);
-                    ast.state = 'fail';
-                    if (error instanceof Error) {
-                        setAstError(ast, error, process.env.NODE_ENV === 'development');
-                    } else {
-                        setAstError(ast, new Error(String(error)));
-                    }
-                    obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
+                    obs.next({ type: 'node_fail', id: ast.id, error: error?.message });
                 },
                 complete: () => {
                     ast.state = 'success';

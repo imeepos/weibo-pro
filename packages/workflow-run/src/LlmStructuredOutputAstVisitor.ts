@@ -1,10 +1,11 @@
 import { Injectable } from "@sker/core";
-import { Handler, INodeOutputMetadata, NodeEvent, setAstError, WorkflowGraphAst } from "@sker/workflow";
+import { Handler, INodeOutputMetadata, NodeEvent, WorkflowGraphAst } from "@sker/workflow";
 import { LlmStructuredOutputAst } from "@sker/workflow-ast";
 import { Observable, from } from "rxjs";
 import { concatMap, mergeMap } from "rxjs/operators";
 import { parse as parseWithHarmony } from '@sker/json-harmony';
 import { useLlmModel } from "./llm-client";
+import { ErrorHandlerOperators } from "./utils/error-handler.util";
 
 const buildJsonPrompt = (outputs: INodeOutputMetadata[]) => {
     const fields = outputs.map(o => {
@@ -27,7 +28,7 @@ export class LlmStructuredOutputAstVisitor {
             obs.next({ type: 'node_runing', id: ast.id });
 
             const subscription = input$.pipe(
-                concatMap(async (inputData) => {
+                concatMap(async (inputData): Promise<NodeEvent[]> => {
                     ast.emitCount += 1;
                     if (inputData) {
                         Object.keys(inputData).forEach(key => {
@@ -71,16 +72,15 @@ export class LlmStructuredOutputAstVisitor {
 
                     return [{ type: 'node_emit' as const, id: ast.id, data }];
                 }),
+                ErrorHandlerOperators.createRetryOperator<NodeEvent[]>(ast, { logPrefix: '[LlmStructuredOutputAst]' }),
+                ErrorHandlerOperators.createCatchErrorOperator<NodeEvent[]>(ast, { logPrefix: '[LlmStructuredOutputAst]' }),
                 mergeMap((events: NodeEvent[]) => from(events))
             ).subscribe({
                 next: (event: NodeEvent) => {
                     obs.next(event);
                 },
                 error: (error) => {
-                    console.error('[LlmStructuredOutputAst] 执行失败:', error);
-                    ast.state = 'fail';
-                    setAstError(ast, error);
-                    obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
+                    obs.next({ type: 'node_fail', id: ast.id, error: error?.message });
                 },
                 complete: () => {
                     ast.state = 'success';

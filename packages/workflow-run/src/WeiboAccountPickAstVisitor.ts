@@ -9,6 +9,7 @@ import {
 import { RedisClient } from '@sker/redis';
 import { Observable, from } from 'rxjs';
 import { concatMap, mergeMap } from 'rxjs/operators';
+import { ErrorHandlerOperators } from './utils/error-handler.util';
 
 @Injectable()
 export class WeiboAccountPickAstVisitor {
@@ -88,13 +89,13 @@ export class WeiboAccountPickAstVisitor {
                         { type: 'node_emit' as const, id: ast.id, data: { list: accountsWithScore, selectedId: selected.id, cookies: selectedAccount.cookies } }
                     ];
                 }),
+                ErrorHandlerOperators.createRetryOperator<NodeEvent[]>(ast, { logPrefix: '[WeiboAccountPickAstVisitor]' }),
+                ErrorHandlerOperators.createCatchErrorOperator<NodeEvent[]>(ast, { logPrefix: '[WeiboAccountPickAstVisitor]' }),
                 mergeMap((events: NodeEvent[]) => from(events))
             ).subscribe({
                 next: (event: NodeEvent) => obs.next(event),
                 error: (error) => {
-                    ast.state = 'fail';
-                    setAstError(ast, error, process.env.NODE_ENV === 'development');
-                    obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
+                    obs.next({ type: 'node_fail', id: ast.id, error: error?.message });
                 },
                 complete: () => {
                     ast.state = 'success';

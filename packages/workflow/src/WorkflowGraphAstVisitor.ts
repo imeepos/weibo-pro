@@ -164,6 +164,7 @@ export class WorkflowGraphAstVisitor {
         nodeEventStreams: Map<string, Observable<NodeEvent>>
     ): Map<string, Observable<any>> {
         const nodeInputStreams = new Map<string, Observable<any>>();
+        // 识别入口节点
         const entryIds = workflow.entryNodeIds?.length
             ? workflow.entryNodeIds
             : this.findEntryNodes(workflow);
