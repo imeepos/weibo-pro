@@ -158,17 +158,17 @@ const HotEventsList: React.FC<HotEventsListProps> = ({ className = '' }) => {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: index * 0.1 }}
-            className="bg-muted/30 hover:bg-muted/50 rounded-lg p-2 cursor-pointer transition-all duration-300"
+            className="bg-muted/30 hover:bg-muted/50 rounded-lg p-4 cursor-pointer transition-all duration-300"
             onClick={() => handleEventClick(event.id)}
           >
-            <div className="flex items-start justify-between">
-              <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 min-w-0 max-w-[60%]">
                 <div className="flex items-center space-x-2 mb-2">
                   <span className="text-sm font-bold text-primary">#{index + 1}</span>
                   <h4 className="text-sm font-medium text-foreground truncate">{event.title}</h4>
                 </div>
 
-                <div className="flex items-center space-x-4 text-xs text-muted-foreground">
+                <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                   <div className="flex items-center space-x-1">
                     <MessageSquare className="w-3 h-3" />
                     <span>{formatNumber(event.postCount)}</span>
@@ -192,17 +192,17 @@ const HotEventsList: React.FC<HotEventsListProps> = ({ className = '' }) => {
                 </div>
               </div>
 
-              <div className="flex items-center space-x-3 ml-4">
-                <div className="text-right">
+              <div className="flex items-center space-x-4 flex-shrink-0">
+                <div className="flex items-center justify-center">
                   {renderMiniChart(event.trendData)}
                 </div>
 
-                <div className="text-right">
+                <div className="text-right min-w-[60px]">
                   <div className="text-lg font-bold text-foreground">{event.hotness}</div>
                   <div className="text-xs text-muted-foreground">热度</div>
                 </div>
 
-                <button className="p-2 rounded-lg hover:bg-accent transition-colors group">
+                <button className="p-2 rounded-lg hover:bg-accent transition-colors group flex-shrink-0">
                   <Eye className="w-4 h-4 text-muted-foreground group-hover:text-foreground" />
                 </button>
               </div>
