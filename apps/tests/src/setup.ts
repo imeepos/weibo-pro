@@ -1,9 +1,11 @@
-import { root } from '@sker/core'
-
-// 配置 API 基础 URL
-const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:3000'
+import "@sker/sdk";
+import { createSkerClientPlugin } from '@sker/sdk';
+import { createAuthClient } from 'better-auth/client'
 
 // 全局设置
 beforeAll(() => {
-  console.log(`Testing API at: ${API_BASE_URL}`)
+  createAuthClient({
+    baseURL: `http://localhost:9088/api/auth`,
+    plugins: [createSkerClientPlugin()]
+  })
 })

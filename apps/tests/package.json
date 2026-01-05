@@ -9,7 +9,13 @@
     "test:ui": "vitest --ui"
   },
   "dependencies": {
-    "@sker/sdk": "workspace:*"
+    "@sker/sdk": "workspace:*",
+    "@sker/core": "workspace:*",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1",
+    "amqplib": "^0.10.5",
+    "zod": "^4.2.1",
+    "better-auth": "^1.4.8"
   },
   "devDependencies": {
     "@sker/typescript-config": "workspace:*",

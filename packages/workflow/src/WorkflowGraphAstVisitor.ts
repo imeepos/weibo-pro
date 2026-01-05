@@ -234,55 +234,16 @@ export class WorkflowGraphAstVisitor {
                 // 没有输入源：使用节点自身的静态值作为初始输入
                 // 场景：辅流节点（如风格配置），不连接任何上游，只提供静态值
                 const staticInput = this.buildNodeInput(node, {});
-                console.log(`[buildNodeInputStreams] 节点 ${node.id} 无输入源，使用静态值:`, staticInput);
                 nodeInputStreams.set(node.id, of(staticInput));
+            } else if (inputSources.length === 1) {
+                nodeInputStreams.set(node.id, inputSources[0]!);
             } else {
-                nodeInputStreams.set(node.id, this.mergeWithCompletion(inputSources));
+                // RxJS merge: 合并所有源的值，只有当所有源都 complete 时才 complete
+                nodeInputStreams.set(node.id, merge(...inputSources));
             }
         });
 
         return nodeInputStreams;
-    }
-
-    /**
-     * 合并多个输入流，只有当所有流都 complete 时才 complete
-     *
-     * 与普通 merge 的区别：
-     * - merge: 任一流 complete 不影响其他流，但整体 complete 时机不确定
-     * - mergeWithCompletion: 合并所有值，只有当所有流都 complete 时才 complete
-     */
-    private mergeWithCompletion(sources: Observable<any>[]): Observable<any> {
-        if (sources.length === 0) return EMPTY;
-        if (sources.length === 1) return sources[0]!;
-
-        return new Observable(subscriber => {
-            let completedCount = 0;
-            const total = sources.length;
-            console.log(`[mergeWithCompletion] 开始合并 ${total} 个源流`);
-
-            const subscriptions = sources.map((source, index) =>
-                source.subscribe({
-                    next: value => {
-                        console.log(`[mergeWithCompletion] 源流 ${index} 发射值:`, JSON.stringify(value).substring(0, 100));
-                        subscriber.next(value);
-                    },
-                    error: err => {
-                        console.log(`[mergeWithCompletion] 源流 ${index} 发生错误:`, err?.message);
-                        subscriber.error(err);
-                    },
-                    complete: () => {
-                        completedCount++;
-                        console.log(`[mergeWithCompletion] 源流 ${index} 完成，已完成 ${completedCount}/${total}`);
-                        if (completedCount === total) {
-                            console.log(`[mergeWithCompletion] 所有源流都已完成，触发 complete`);
-                            subscriber.complete();
-                        }
-                    }
-                })
-            );
-
-            return () => subscriptions.forEach(sub => sub.unsubscribe());
-        });
     }
 
     /**
@@ -381,9 +342,6 @@ export class WorkflowGraphAstVisitor {
                 filter((event): event is NodeEmitEvent =>
                     event.type === 'node_emit' && edge.fromProperty! in (event.data || {})
                 ),
-                tap(() => {
-                    console.log(`[buildEdgeValueStream] 边 ${edge.fromProperty} → ${edge.toProperty} 收到值`);
-                }),
                 map(event => {
                     let value = event.data?.[edge.fromProperty!];
 
@@ -399,52 +357,46 @@ export class WorkflowGraphAstVisitor {
     }
 
     /**
+     * 将值数组按边定义映射为对象
+     * 支持同一属性多值时合并为数组
+     */
+    private mapValuesToObject(values: any[], edges: IEdge[]): Record<string, any> {
+        const result: Record<string, any> = {};
+        values.forEach((value, index) => {
+            const prop = edges[index]?.toProperty;
+            if (prop) {
+                if (result[prop] === undefined) {
+                    result[prop] = value;
+                } else if (Array.isArray(result[prop])) {
+                    result[prop].push(value);
+                } else {
+                    result[prop] = [result[prop], value];
+                }
+            }
+        });
+        return result;
+    }
+
+    /**
      * 按 EdgeMode 组合多个边的值流
      */
     private combineEdgeSources(mode: EdgeMode, sources: Observable<any>[], edges: IEdge[]): Observable<any> {
-        const mapToObject = (values: any[]) => {
-            const result: Record<string, any> = {};
-            values.forEach((value, index) => {
-                const prop = edges[index]?.toProperty;
-                if (prop) {
-                    if (result[prop] === undefined) {
-                        result[prop] = value;
-                    } else if (Array.isArray(result[prop])) {
-                        result[prop].push(value);
-                    } else {
-                        result[prop] = [result[prop], value];
-                    }
-                }
-            });
-            return result;
-        };
-
-        console.log(`[combineEdgeSources] 组合模式: ${mode}, 边数量: ${edges.length}, 边属性: ${edges.map(e => e.toProperty).join(', ')}`);
-
         switch (mode) {
             case EdgeMode.MERGE:
-                // 修复：在 merge 前为每个源标记 toProperty，避免使用发射顺序 index
                 return merge(
                     ...sources.map((source, sourceIndex) =>
                         source.pipe(
-                            tap(() => console.log(`[combineEdgeSources MERGE] 边 ${edges[sourceIndex]!.toProperty} 发射值`)),
                             map(value => ({ [edges[sourceIndex]!.toProperty!]: value }))
                         )
                     )
                 );
             case EdgeMode.ZIP:
-                return zip(...sources).pipe(
-                    tap(() => console.log(`[combineEdgeSources ZIP] 所有边都发射了值`)),
-                    map(mapToObject)
-                );
+                return zip(...sources).pipe(map(values => this.mapValuesToObject(values, edges)));
             case EdgeMode.WITH_LATEST_FROM:
                 return this.buildWithLatestFrom(sources, edges);
             case EdgeMode.COMBINE_LATEST:
             default:
-                return combineLatest(sources).pipe(
-                    tap(() => console.log(`[combineEdgeSources COMBINE_LATEST] 所有边都至少发射了一次值`)),
-                    map(mapToObject)
-                );
+                return combineLatest(sources).pipe(map(values => this.mapValuesToObject(values, edges)));
         }
     }
 
@@ -465,16 +417,9 @@ export class WorkflowGraphAstVisitor {
         const primaryIndex = edges.findIndex(edge => edge.isPrimary === true);
 
         if (primaryIndex === -1) {
-            console.warn('[buildWithLatestFrom] 未找到主流（isPrimary=true），回退到 combineLatest');
+            // 未找到主流（isPrimary=true），回退到 combineLatest
             return combineLatest(sources).pipe(
-                map(values => {
-                    const result: Record<string, any> = {};
-                    values.forEach((value, index) => {
-                        const prop = edges[index]?.toProperty;
-                        if (prop) result[prop] = value;
-                    });
-                    return result;
-                })
+                map(values => this.mapValuesToObject(values, edges))
             );
         }
 
@@ -546,67 +491,66 @@ export class WorkflowGraphAstVisitor {
         return entryNodes;
     }
 
+    /**
+     * 合并所有节点事件流，追踪工作流最终状态
+     *
+     * 使用 RxJS merge 简化多流管理：
+     * - merge 自动处理所有订阅的生命周期
+     * - 只有当所有流都 complete 时才触发 complete
+     */
     private mergeNodeEventStreams(
         workflow: WorkflowGraphAst,
         nodeEventStreams: Map<string, Observable<NodeEvent>>
     ): Observable<NodeEvent> {
-        return new Observable<NodeEvent>(obs => {
-            obs.next({ type: 'node_runing', id: workflow.id });
+        const allStreams = Array.from(nodeEventStreams.values());
 
-            const allStreams = Array.from(nodeEventStreams.values());
-            if (allStreams.length === 0) {
-                workflow.state = 'success';
-                obs.next({ type: 'node_success', id: workflow.id });
-                obs.complete();
-                return;
-            }
+        // 空流：直接成功
+        if (allStreams.length === 0) {
+            workflow.state = 'success';
+            return of(
+                { type: 'node_runing', id: workflow.id } as NodeEvent,
+                { type: 'node_success', id: workflow.id } as NodeEvent
+            );
+        }
 
-            let completedCount = 0;
-            const totalNodes = allStreams.length;
-            const nodeStates = new Map<string, 'success' | 'fail'>();
-            const subscriptions: any[] = [];
+        let hasError = false;
 
-            allStreams.forEach(nodeStream => {
-                const sub = nodeStream.subscribe({
-                    next: event => {
-                        obs.next(event);
-                        if (event.type === 'node_fail') {
-                            nodeStates.set(event.id!, 'fail');
-                            if (event.error && !workflow.error) {
-                                setAstError(workflow, new Error(event.error))
-                            }
-                        } else if (event.type === 'node_success') {
-                            nodeStates.set(event.id!, 'success');
-                        }
-                    },
-                    error: err => {
-                        workflow.state = 'fail';
-                        workflow.error = err;
-                        setAstError(workflow, err)
-                        obs.next({ type: 'node_fail', id: workflow.id, error: workflow.error?.message });
-                        subscriptions.forEach(sub => sub.unsubscribe());
-                        obs.error(err);
-                    },
-                    complete: () => {
-                        completedCount++;
-                        if (completedCount === totalNodes) {
-                            const hasError = Array.from(nodeStates.values()).some(s => s === 'fail');
-                            workflow.state = hasError ? 'fail' : 'success';
-                            if (hasError) {
-                                const error = workflow.error || new Error('Workflow failed');
-                                obs.next({ type: 'node_fail', id: workflow.id, error: error.message });
-                                obs.error(error);
-                            } else {
-                                obs.next({ type: 'node_success', id: workflow.id });
-                                obs.complete();
-                            }
+        return new Observable<NodeEvent>(subscriber => {
+            // 1. 发送 running 事件
+            subscriber.next({ type: 'node_runing', id: workflow.id });
+
+            // 2. 使用 merge 合并所有子流（自动管理订阅）
+            const subscription = merge(...allStreams).pipe(
+                tap(event => {
+                    if (event.type === 'node_fail') {
+                        hasError = true;
+                        if (event.error && !workflow.error) {
+                            setAstError(workflow, new Error(event.error));
                         }
                     }
-                });
-                subscriptions.push(sub);
+                })
+            ).subscribe({
+                next: event => subscriber.next(event),
+                error: err => {
+                    workflow.state = 'fail';
+                    setAstError(workflow, err);
+                    subscriber.next({ type: 'node_fail', id: workflow.id, error: err.message });
+                    subscriber.error(err);
+                },
+                complete: () => {
+                    workflow.state = hasError ? 'fail' : 'success';
+                    if (hasError) {
+                        const error = workflow.error || new Error('Workflow failed');
+                        subscriber.next({ type: 'node_fail', id: workflow.id, error: error.message });
+                        subscriber.error(error);
+                    } else {
+                        subscriber.next({ type: 'node_success', id: workflow.id });
+                        subscriber.complete();
+                    }
+                }
             });
 
-            return () => subscriptions.forEach(sub => sub.unsubscribe());
+            return () => subscription.unsubscribe();
         });
     }
 }
