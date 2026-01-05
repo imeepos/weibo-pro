@@ -57,12 +57,13 @@ export class WorkflowEventMerger {
                         }
                     },
                     error: err => {
+                        // 节点错误不中断工作流，记录错误后继续
+                        nodeStates.set(workflow.id, 'fail');
                         workflow.state = 'fail';
                         workflow.error = err;
                         setAstError(workflow, err);
                         obs.next({ type: 'node_fail', id: workflow.id, error: workflow.error?.message });
-                        subscriptions.forEach(sub => sub.unsubscribe());
-                        obs.error(err);
+                        // 不调用 obs.error，让其他节点继续执行
                     },
                     complete: () => {
                         completedCount++;
@@ -72,7 +73,8 @@ export class WorkflowEventMerger {
                             if (hasError) {
                                 const error = workflow.error || new Error('Workflow failed');
                                 obs.next({ type: 'node_fail', id: workflow.id, error: error.message });
-                                obs.error(error);
+                                // 改为 complete 而不是 error，让工作流正常结束
+                                obs.complete();
                             } else {
                                 obs.next({ type: 'node_success', id: workflow.id });
                                 obs.complete();

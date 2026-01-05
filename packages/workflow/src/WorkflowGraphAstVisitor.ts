@@ -76,7 +76,11 @@ export class WorkflowGraphAstVisitor {
             catchError(error => {
                 ast.state = 'fail';
                 ast.error = error;
-                return throwError(() => error);
+                // 发射 node_fail 事件和包含 null 的 node_emit 事件，让下游节点继续处理
+                return of(
+                    { type: 'node_fail' as const, id: ast.id, error: (error as Error).message },
+                    { type: 'node_emit' as const, id: ast.id, data: {} }
+                );
             })
         );
     }

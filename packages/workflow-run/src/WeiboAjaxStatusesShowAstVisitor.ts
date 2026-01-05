@@ -106,6 +106,13 @@ export class WeiboAjaxStatusesShowAstVisitor extends WeiboApiClient {
                 next: (event: NodeEvent) => obs.next(event),
                 error: (error) => {
                     obs.next({ type: 'node_fail', id: ast.id, error: error?.message });
+                    // 发射 null 数据让下游节点可以继续处理
+                    obs.next({
+                        type: 'node_emit',
+                        id: ast.id,
+                        data: { uid: null, postId: null, mid: null }
+                    });
+                    obs.complete();
                 },
                 complete: () => {
                     ast.state = 'success';

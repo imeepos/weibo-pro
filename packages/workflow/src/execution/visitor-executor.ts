@@ -163,12 +163,30 @@ export class VisitorExecutor implements Visitor {
      *
      * 优雅设计：
      * - 设置节点状态为 fail
-     * - 发射 node_fail 事件后抛出错误，让上层决定如何处理
+     * - 发射 node_fail 和 node_emit 事件后完成流（错误不中断运行，下游节点可继续处理）
      */
     private handleError(error: unknown, ast: INode): Observable<NodeEvent> {
         return new Observable(obs => {
+            // 1. 发射失败事件
             obs.next(this.createFailedNode(ast, error));
-            obs.error(error);
+
+            // 2. 发射一个包含 null 值的 emit 事件，让下游节点可以继续处理
+            // 根据节点的输出元数据，为每个输出属性发射 null
+            const outputs = ast.metadata?.outputs || [];
+            if (outputs.length > 0) {
+                const emitData: Record<string, any> = {};
+                outputs.forEach((output: any) => {
+                    emitData[output.property] = null;
+                });
+                obs.next({
+                    type: 'node_emit',
+                    id: ast.id,
+                    data: emitData
+                });
+            }
+
+            // 3. 完成流，不中断整个工作流
+            obs.complete();
         });
     }
 

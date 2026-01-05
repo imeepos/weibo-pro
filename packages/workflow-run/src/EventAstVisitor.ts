@@ -88,6 +88,19 @@ export class EventAstVisitor {
           ast.state = 'fail';
           setAstError(ast, error instanceof Error ? error : new Error(String(error)));
           obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
+          // 发射包含 null 的数据事件，让下游节点可以继续处理
+          obs.next({
+            type: 'node_emit',
+            id: ast.id,
+            data: {
+              event: null,
+              event_id: null,
+              event_title: null,
+              keywords: null,
+              keywords_str: null,
+            }
+          });
+          obs.complete();
         },
         complete: () => {
           ast.state = 'success';

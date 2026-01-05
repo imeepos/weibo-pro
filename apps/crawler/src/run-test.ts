@@ -4,6 +4,7 @@ import "@sker/workflow";
 import "@sker/workflow-ast";
 import "@sker/workflow-run";
 import { WorkflowGraphAst, executeWorkflow, fromJson } from '@sker/workflow'
+import { catchError, EMPTY } from 'rxjs'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { root } from '@sker/core'
@@ -71,7 +72,16 @@ async function main() {
 
   try {
     await new Promise<void>((resolve, reject) => {
-      const subscription = executeWorkflow(ast, {}).subscribe({
+      const subscription = executeWorkflow(ast, {}).pipe(
+        catchError((error) => {
+          const duration = Date.now() - startTime
+          console.error(`\n❌ 工作流执行失败，耗时: ${duration}ms`)
+          console.error(`[Error] ${error}`)
+          printStats()
+          // 不中断，返回 EMPTY 继续执行
+          return EMPTY
+        })
+      ).subscribe({
         next: (event) => {
           const stats = nodeStats.get(event.id)
           if (!stats) return
@@ -98,13 +108,6 @@ async function main() {
               console.log(`[NLP] 第 ${stats.totalEmitCount} 次 emit 事件 (ast.emitCount: ${stats.inputCount}, ${isCountEvent ? '计数事件' : '数据事件'})`)
             }
           }
-        },
-        error: (error) => {
-          const duration = Date.now() - startTime
-          console.error(`\n❌ 工作流执行失败，耗时: ${duration}ms`)
-          console.error(`[Error] ${error}`)
-          printStats()
-          reject(error)
         },
         complete: () => {
           const duration = Date.now() - startTime
