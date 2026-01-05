@@ -259,11 +259,7 @@ export class ClaudeSdkService {
       options.permissionMode = 'bypassPermissions';
     }
 
-    console.log(`[ClaudeSdkService] 权限模式: ${options.permissionMode}`);
-
     options.model = command.model || 'sonnet';
-    console.log(`[ClaudeSdkService] 使用模型: ${options.model}`);
-
     options.systemPrompt = {
       type: 'preset',
       preset: 'claude_code',
