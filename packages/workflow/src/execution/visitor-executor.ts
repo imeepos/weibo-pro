@@ -65,66 +65,10 @@ export class VisitorExecutor implements Visitor {
 
         try {
             const handlerFn = (instance as any)[method.property];
-            const handlerLength = handlerFn.length;
 
-            let execute$: Observable<NodeEvent>;
-
-            if (handlerLength <= 2) {
-                execute$ = new Observable<NodeEvent>(obs => {
-                    let started = false;
-                    const sub = input$.subscribe({
-                        next: inputData => {
-                            Object.keys(inputData).forEach(key => {
-                                (ast as any)[key] = inputData[key];
-                            });
-                            if (!started) {
-                                started = true;
-                                ast.state = 'running';
-                                obs.next({ type: 'node_runing', id: ast.id });
-                            }
-                            try {
-                                const result = handlerFn.call(instance, ast, parent);
-                                this.normalizeResult(result, ast).subscribe({
-                                    next: event => {
-                                        if (event.type === 'node_emit') {
-                                            obs.next(event);
-                                        }
-                                    },
-                                    error: err => {
-                                        ast.state = 'fail';
-                                        setAstError(ast, err);
-                                        obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-                                        obs.error(err);
-                                    },
-                                    complete: () => {
-                                        // Handler completed without error
-                                    }
-                                });
-                            } catch (err) {
-                                ast.state = 'fail';
-                                setAstError(ast, err);
-                                obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-                                obs.error(err);
-                            }
-                        },
-                        error: err => {
-                            ast.state = 'fail';
-                            setAstError(ast, err);
-                            obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
-                            obs.error(err);
-                        },
-                        complete: () => {
-                            ast.state = 'success';
-                            obs.next({ type: 'node_success', id: ast.id });
-                            obs.complete();
-                        }
-                    });
-                    return () => sub.unsubscribe();
-                });
-            } else {
-                const result = handlerFn.call(instance, ast, input$, parent);
-                execute$ = this.normalizeResult(result, ast);
-            }
+            // 始终将第二个参数作为流传递给 handler
+            const result = handlerFn.call(instance, ast, input$, parent);
+            const execute$ = this.normalizeResult(result, ast);
 
             const recordTarget = this.isWorkflowGraphAst(ast) ? (ast as WorkflowGraphAst) : parent;
             return this.recordEvents(execute$, recordTarget);

@@ -32,7 +32,8 @@ export class EventStatisticsService {
    */
   async calculateHourlyStatistics(
     eventId: string,
-    snapshotTime: Date
+    snapshotTime: Date,
+    silent = false
   ): Promise<EventStatisticsEntity | null> {
     try {
       // 计算时间范围：当前小时的开始和结束
@@ -41,15 +42,10 @@ export class EventStatisticsService {
       const endTime = new Date(startTime)
       endTime.setHours(endTime.getHours() + 1)
 
-      logger.info(
-        `Calculating hourly statistics for event ${eventId} from ${startTime.toISOString()} to ${endTime.toISOString()}`
-      )
-
       // 获取基础指标
       const metrics = await this.getBasicMetrics(eventId, startTime, endTime)
 
       if (metrics.post_count === 0) {
-        logger.info(`No posts found for event ${eventId} in time range, skipping statistics`)
         return null
       }
 
@@ -74,7 +70,9 @@ export class EventStatisticsService {
         trend_metrics: null,
       })
 
-      logger.info(`Successfully calculated hourly statistics for event ${eventId}`)
+      if (!silent) {
+        logger.info(`Successfully calculated hourly statistics for event ${eventId}`)
+      }
       return statistics
     } catch (error) {
       logger.error(`Failed to calculate hourly statistics for event ${eventId}:`, error)
@@ -311,25 +309,26 @@ export class EventStatisticsService {
     const targetTime = snapshotTime || new Date()
 
     try {
-      logger.info(`Starting hourly statistics generation for all events at ${targetTime.toISOString()}`)
-
       const activeEvents = await useEntityManager(async manager => {
         return manager.find(EventEntity, {
           where: { status: 'active' },
         })
       })
 
-      logger.info(`Found ${activeEvents.length} active events`)
+      logger.info(`Found ${activeEvents.length} active events for hourly statistics`)
 
       const batchSize = 5
+      let successCount = 0
+
       for (let i = 0; i < activeEvents.length; i += batchSize) {
         const batch = activeEvents.slice(i, i + batchSize)
-        await Promise.allSettled(
-          batch.map(event => this.calculateHourlyStatistics(event.id, targetTime))
+        const results = await Promise.allSettled(
+          batch.map(event => this.calculateHourlyStatistics(event.id, targetTime, true))
         )
+        successCount += results.filter(r => r.status === 'fulfilled' && r.value !== null).length
       }
 
-      logger.info('Completed hourly statistics generation for all events')
+      logger.info(`Completed hourly statistics: ${successCount}/${activeEvents.length} events had data`)
     } catch (error) {
       logger.error('Failed to generate hourly statistics for all events:', error)
       throw error

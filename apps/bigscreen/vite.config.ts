@@ -11,19 +11,10 @@ function fixThreeJsPlugin(): Plugin {
   return {
     name: 'fix-three-js',
     enforce: 'pre',
-    resolveId(id) {
-      if (id === 'three') {
-        // 使用 src/Three.js 作为入口（因为 build 目录不存在）
-        const threePath = resolve(__dirname, '../../node_modules/three/src/Three.js')
-        return { id: threePath, external: false }
-      }
-
-      // 处理 three/examples/jsm/* 子路径导入
-      if (id.startsWith('three/examples/jsm/')) {
-        const subPath = id.replace('three/', '')
-        const fullPath = resolve(__dirname, '../../node_modules/three', subPath)
-        return { id: fullPath, external: false }
-      }
+    resolveId(id, importer, options) {
+      // 让 Vite 自然解析 three，不需要手动干预
+      // 因为 package.json 的 exports 字段会正确指向入口
+      return null
     },
   }
 }
@@ -149,20 +140,43 @@ export default defineConfig(({ command }) => {
       chunkSizeWarningLimit: 1000, // 提高警告阈值到 1MB
       rollupOptions: {
         output: {
-          // 优化代码分割策略
+          // 优化代码分割策略 - 更细粒度的 chunk 分割
           manualChunks(id) {
-            // 将 node_modules 中的依赖分割到 vendor chunk
+            // 将 node_modules 中的依赖分割到不同 chunk
             if (id.includes('node_modules')) {
-              // 大型库单独分割
-              if (id.includes('echarts')) {
+              // ECharts 相关 - 通常很大(~600KB)
+              if (id.includes('echarts') || id.includes('zrender')) {
                 return 'vendor-echarts'
               }
+              // Monaco Editor - 代码编辑器
               if (id.includes('monaco-editor')) {
                 return 'vendor-monaco'
               }
-              if (id.includes('@xyflow') || id.includes('react-flow')) {
+              // React Flow / XYFlow - 工作流编辑器
+              if (id.includes('@xyflow') || id.includes('reactflow') || id.includes('react-flow')) {
                 return 'vendor-workflow'
               }
+              // Three.js - 3D 渲染 (~150KB)
+              if (id.includes('three') || id.includes('d3-force-3d') || id.includes('react-force-graph')) {
+                return 'vendor-3d'
+              }
+              // Framer Motion - 动画库 (~100KB)
+              if (id.includes('framer-motion') || id.includes('motion')) {
+                return 'vendor-animation'
+              }
+              // React 核心
+              if (id.includes('react-dom') || id.includes('react-router') || id.includes('scheduler')) {
+                return 'vendor-react'
+              }
+              // 编辑器相关 (Plate.js, Slate)
+              if (id.includes('@udecode') || id.includes('slate') || id.includes('lexical')) {
+                return 'vendor-editor'
+              }
+              // 工具库 (较小，可合并)
+              if (id.includes('lodash') || id.includes('dayjs') || id.includes('axios') || id.includes('zustand')) {
+                return 'vendor-utils'
+              }
+              // 其他第三方库
               return 'vendor'
             }
           },

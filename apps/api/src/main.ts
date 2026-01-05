@@ -9,6 +9,7 @@ import "./controllers/index";
 import "./claude/claude.controller";
 import { CONTEXT, createInjector, Injector, Logger, REQUEST, RESPONSE, root, STREAM } from '@sker/core';
 import { entitiesProviders, seedNuwa, seedSentimentAnalyzer, seedContentAuditor, seedDataValidator, seedProgrammingAssistant, useTranslation } from "@sker/entities";
+import { EdgeModeStrategyProviders } from '@sker/workflow';
 import { createProxyProviders } from '@sker/ip-proxy';
 import { killPortProcess } from 'kill-port-process';
 import { Hono } from 'hono';
@@ -32,6 +33,7 @@ async function bootstrap() {
   // 初始化 DI 容器
   root.set([
     ...entitiesProviders,
+    ...EdgeModeStrategyProviders,
     ...createProxyProviders({
       kuaidaili: {
         secretId: process.env.KUAIDAILI_SECRET_ID!,

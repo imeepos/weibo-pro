@@ -1,5 +1,5 @@
 {
-  "name": "@sker/cli",
+  "name": "@sker/cli-v2",
   "version": "0.0.1",
   "private": true,
   "description": "Weibo-Pro CLI daemon for task execution with RabbitMQ",

@@ -12,6 +12,7 @@ import {
   EventStatisticsService,
   EventEntity
 } from '@sker/entities';
+import { EdgeModeStrategyProviders } from '@sker/workflow';
 import { CronSchedulerService } from '@sker/workflow-run';
 import * as schedule from 'node-schedule';
 
@@ -29,7 +30,7 @@ import * as schedule from 'node-schedule';
  * - 优雅关闭，清理所有调度任务
  */
 async function bootstrap() {
-  root.set([...entitiesProviders]);
+  root.set([...entitiesProviders, ...EdgeModeStrategyProviders]);
   await root.init();
 
   const scheduler = root.get(CronSchedulerService);
@@ -101,30 +102,11 @@ async function bootstrap() {
       const startTime = Date.now();
 
       const statsService = root.get(EventStatisticsService);
-      const snapshotTime = new Date();
-
-      // 获取所有活跃事件
-      const activeEvents = await useEntityManager(async manager => {
-        return manager.find(EventEntity, { where: { status: 'active' } });
-      });
-
-      // 批量处理（每批5个事件）
-      const batchSize = 5;
-      let successCount = 0;
-
-      for (let i = 0; i < activeEvents.length; i += batchSize) {
-        const batch = activeEvents.slice(i, i + batchSize);
-        const results = await Promise.allSettled(
-          batch.map(event => statsService.calculateHourlyStatistics(event.id, snapshotTime))
-        );
-        successCount += results.filter(r => r.status === 'fulfilled').length;
-      }
+      await statsService.generateHourlyStatisticsForAllEvents();
 
       const duration = Date.now() - startTime;
       logger.info('✅ 事件统计（小时级）完成', {
-        duration: `${duration}ms`,
-        total: activeEvents.length,
-        success: successCount
+        duration: `${duration}ms`
       });
     } catch (error: any) {
       logger.error('❌ 事件统计（小时级）失败', {

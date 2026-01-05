@@ -14,7 +14,7 @@ interface SentimentPieChartProps {
   showPercentage?: boolean;
 }
 
-const SentimentPieChart: React.FC<SentimentPieChartProps> = ({
+const SentimentPieChart: React.FC<SentimentPieChartProps> = React.memo(({
   title = "情感分析分布",
   className,
   showPercentage = true,
@@ -256,6 +256,8 @@ const SentimentPieChart: React.FC<SentimentPieChartProps> = ({
       )}
     </motion.div>
   );
-};
+});
+
+SentimentPieChart.displayName = 'SentimentPieChart';
 
 export default SentimentPieChart;

@@ -15,7 +15,7 @@ interface HotTopicsChartProps {
   orientation?: "horizontal" | "vertical";
 }
 
-const HotTopicsChart: React.FC<HotTopicsChartProps> = ({
+const HotTopicsChart: React.FC<HotTopicsChartProps> = React.memo(({
   data,
   title = "热点话题排行",
   height = 0,
@@ -286,6 +286,8 @@ const HotTopicsChart: React.FC<HotTopicsChartProps> = ({
       )}
     </motion.div>
   );
-};
+});
+
+HotTopicsChart.displayName = 'HotTopicsChart';
 
 export default HotTopicsChart;

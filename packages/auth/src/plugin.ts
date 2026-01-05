@@ -40,9 +40,6 @@ export function createSkerAuthPlugin(providers: Provider[], options?: SkerAuthPl
       console.error(`[Better Auth Plugin] Failed to create endpoints for ${ControllerClass.name}:`, error);
     }
   }
-
-  console.log(`[Better Auth Plugin] Total endpoints registered: ${Object.keys(endpoints).length}`);
-
   return {
     id: pluginId,
     endpoints,
