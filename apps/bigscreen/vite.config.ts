@@ -115,7 +115,7 @@ export default defineConfig(({ command }) => {
     build: {
       outDir: projectOutDir,
       target: 'es2020',
-      sourcemap: false, // 禁用 sourcemap 减少内存使用
+      sourcemap: true, // 启用 sourcemap 用于调试
       cssCodeSplit: true, // 启用CSS代码分割
       assetsInlineLimit: 4096, // 小于4KB的资源内联
 
@@ -142,6 +142,11 @@ export default defineConfig(({ command }) => {
         output: {
           // 优化代码分割策略 - 更细粒度的 chunk 分割
           manualChunks(id) {
+            // @sker/* 包不分割，保持在主 bundle 中以确保正确的初始化顺序
+            if (id.includes('@sker/')) {
+              return undefined; // 不分割
+            }
+
             // 将 node_modules 中的依赖分割到不同 chunk
             if (id.includes('node_modules')) {
               // ECharts 相关 - 通常很大(~600KB)
@@ -208,7 +213,12 @@ export default defineConfig(({ command }) => {
 
         // Tree shaking优化
         treeshake: {
-          moduleSideEffects: true, // 必须设为 true，否则 React 组件会被 tree-shake 掉
+          moduleSideEffects: (id) => {
+            // 排除测试文件的副作用
+            if (id.includes('.test.') || id.includes('.spec.')) return false;
+            // 其他所有模块保留副作用（默认行为）
+            return true;
+          },
           propertyReadSideEffects: false,
           tryCatchDeoptimization: false,
         },
