@@ -9,7 +9,12 @@ import { Injectable, InjectionToken, MapInjectionToken, Provider } from '@sker/c
 export interface IEdgeModeStrategy {
     combine(sources: Observable<any>[], edges: IEdge[]): Observable<any>;
 }
-export const EDGE_MODE_STRATEGY = new MapInjectionToken<EdgeMode, IEdgeModeStrategy>(`EDGE_MODE_STRATEGY`)
+export const EDGE_MODE_STRATEGY = new MapInjectionToken<EdgeMode, IEdgeModeStrategy>(`EDGE_MODE_STRATEGY`, {
+    factory: () => {
+        const map = new Map()
+        return map;
+    }
+})
 /**
  * MERGE 模式策略
  * 任一边发射值时立即触发，不等待其他边

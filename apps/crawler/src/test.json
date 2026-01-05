@@ -1,0 +1,1602 @@
+{
+  "workflow": {
+    "count": 0,
+    "emitCount": 0,
+    "id": "75070b5b-2117-4322-8a95-d30489004b88",
+    "name": "default-3",
+    "description": null,
+    "color": null,
+    "collapsed": false,
+    "width": null,
+    "state": "pending",
+    "type": "WorkflowGraphAst",
+    "position": {
+      "x": 0,
+      "y": 0
+    },
+    "nodes": [
+      {
+        "id": "383c0cca-757a-456d-880a-62b9ea012703",
+        "type": "EventAst",
+        "count": 0,
+        "event": {
+          "id": "d47c67d2-54a8-4dcf-8ff0-b2d71639cdef",
+          "title": "用户参与多层转发互动表达赞同态度",
+          "status": "active",
+          "hotness": "1.00",
+          "peak_at": {},
+          "category": {
+            "id": "dfc1b971-cace-468c-9872-18e62fb2edda",
+            "code": "_2047",
+            "icon": null,
+            "name": "个人生活",
+            "sort": 2,
+            "color": null,
+            "status": "active",
+            "name_en": null,
+            "created_at": {},
+            "deleted_at": null,
+            "updated_at": {},
+            "description": "由 NLP 自动创建的分类"
+          },
+          "seed_url": "https://weibo.com/7825672235/Qfmsnwvst",
+          "sentiment": {
+            "neutral": 0.1,
+            "negative": 0.05,
+            "positive": 0.85
+          },
+          "created_at": {},
+          "deleted_at": null,
+          "updated_at": {},
+          "category_id": "dfc1b971-cace-468c-9872-18e62fb2edda",
+          "description": "用户在微博上参与了多层转发互动，通过重复的'当然啦'表达对原始内容的强烈赞同和支持。这一内容属于典型的社交媒体互动行为，展现了用户通过简洁重复的表达方式参与话题讨论和情感共鸣的普遍模式。事件背景是普通用户的日常社交参与，关键点包括多层转发链的形成、统一回复内容的使用以及通过社交媒体进行情感支持和认同表达的行为特点。整体情感倾向积极正面，体现了社交媒体用户在网络空间进行简单互动和情感传递的常见现象。",
+          "occurred_at": {},
+          "tagRelations": [
+            {
+              "id": "07e74cfd-6bab-41d9-b91b-2e64c87a1816",
+              "tag": {
+                "id": "6484b678-3450-4f85-8034-fea47d9d5a27",
+                "name": "日常分享",
+                "type": "topic",
+                "color": null,
+                "created_at": {},
+                "deleted_at": null,
+                "updated_at": {},
+                "description": "由 NLP 自动创建的标签",
+                "usage_count": 71
+              },
+              "source": "nlp",
+              "tag_id": "6484b678-3450-4f85-8034-fea47d9d5a27",
+              "event_id": "d47c67d2-54a8-4dcf-8ff0-b2d71639cdef",
+              "created_at": {},
+              "relevance_score": "1.00"
+            },
+            {
+              "id": "0804105e-32d3-4898-a945-10d878d0a65e",
+              "tag": {
+                "id": "ad1e4ace-f186-453f-9fee-e86b4b5f1b35",
+                "name": "互动传播",
+                "type": "topic",
+                "color": null,
+                "created_at": {},
+                "deleted_at": null,
+                "updated_at": {},
+                "description": "由 NLP 自动创建的标签",
+                "usage_count": 6
+              },
+              "source": "nlp",
+              "tag_id": "ad1e4ace-f186-453f-9fee-e86b4b5f1b35",
+              "event_id": "d47c67d2-54a8-4dcf-8ff0-b2d71639cdef",
+              "created_at": {},
+              "relevance_score": "1.00"
+            },
+            {
+              "id": "216b0736-08b0-432d-9c6e-15034ce34830",
+              "tag": {
+                "id": "3026719c-0780-4313-9f63-c9896b776003",
+                "name": "积极情感",
+                "type": "keyword",
+                "color": null,
+                "created_at": {},
+                "deleted_at": null,
+                "updated_at": {},
+                "description": "由 NLP 自动创建的标签",
+                "usage_count": 16
+              },
+              "source": "nlp",
+              "tag_id": "3026719c-0780-4313-9f63-c9896b776003",
+              "event_id": "d47c67d2-54a8-4dcf-8ff0-b2d71639cdef",
+              "created_at": {},
+              "relevance_score": "1.00"
+            },
+            {
+              "id": "d8df1910-f995-4502-ba70-309199583429",
+              "tag": {
+                "id": "a70112c6-134e-4edb-8e48-cf70748b726b",
+                "name": "简洁内容",
+                "type": "keyword",
+                "color": null,
+                "created_at": {},
+                "deleted_at": null,
+                "updated_at": {},
+                "description": "由 NLP 自动创建的标签",
+                "usage_count": 22
+              },
+              "source": "nlp",
+              "tag_id": "a70112c6-134e-4edb-8e48-cf70748b726b",
+              "event_id": "d47c67d2-54a8-4dcf-8ff0-b2d71639cdef",
+              "created_at": {},
+              "relevance_score": "1.00"
+            },
+            {
+              "id": "76982d86-0258-448e-a5a6-d6fd0044c740",
+              "tag": {
+                "id": "032019c3-fbff-48fd-93ed-71c83494f21e",
+                "name": "重复表达",
+                "type": "keyword",
+                "color": null,
+                "created_at": {},
+                "deleted_at": null,
+                "updated_at": {},
+                "description": "由 NLP 自动创建的标签",
+                "usage_count": 1
+              },
+              "source": "nlp",
+              "tag_id": "032019c3-fbff-48fd-93ed-71c83494f21e",
+              "event_id": "d47c67d2-54a8-4dcf-8ff0-b2d71639cdef",
+              "created_at": {},
+              "relevance_score": "1.00"
+            }
+          ]
+        },
+        "state": "success",
+        "width": 320,
+        "height": 467,
+        "eventId": "d47c67d2-54a8-4dcf-8ff0-b2d71639cdef",
+        "trigger": true,
+        "event_id": "d47c67d2-54a8-4dcf-8ff0-b2d71639cdef",
+        "keywords": [
+          "日常分享",
+          "互动传播",
+          "积极情感",
+          "简洁内容",
+          "重复表达"
+        ],
+        "metadata": {
+          "type": "EventAst",
+          "class": {
+            "type": "basic",
+            "title": "事件选择器",
+            "hasTool": false,
+            "errorStrategy": "fail"
+          },
+          "inputs": [
+            {
+              "title": "触发",
+              "isMulti": false,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "trigger",
+              "defaultValue": true
+            }
+          ],
+          "states": [
+            {
+              "title": "事件ID",
+              "propertyKey": "eventId"
+            },
+            {
+              "title": "事件标题",
+              "propertyKey": "eventTitle"
+            },
+            {
+              "title": "事件分类",
+              "propertyKey": "eventCategory"
+            }
+          ],
+          "outputs": [
+            {
+              "title": "事件",
+              "isStatic": true,
+              "property": "event",
+              "isSubject": false
+            },
+            {
+              "title": "事件ID",
+              "isStatic": true,
+              "property": "event_id",
+              "isSubject": false
+            },
+            {
+              "title": "事件标题",
+              "isStatic": true,
+              "property": "event_title",
+              "isSubject": false
+            },
+            {
+              "title": "关键字列表",
+              "isStatic": true,
+              "property": "keywords",
+              "isSubject": false
+            },
+            {
+              "title": "关键字字符串",
+              "isStatic": true,
+              "property": "keywords_str",
+              "isSubject": false
+            }
+          ]
+        },
+        "position": {
+          "x": -668.7851616407611,
+          "y": -160.26412146493985
+        },
+        "emitCount": 1,
+        "eventTitle": "用户参与多层转发互动表达赞同态度",
+        "portLabels": {},
+        "event_title": "用户参与多层转发互动表达赞同态度",
+        "keywords_str": "日常分享,互动传播,积极情感,简洁内容,重复表达",
+        "eventCategory": "个人生活"
+      },
+      {
+        "id": "20a3c6f5-bed9-4bc7-ab8e-04d1c6bfd4ae",
+        "uid": "3511727907",
+        "page": 1,
+        "type": "WeiboKeywordSearchAst",
+        "count": 0,
+        "isEnd": false,
+        "state": "success",
+        "width": 240,
+        "height": 235,
+        "endDate": {},
+        "keyword": "",
+        "mblogid": "QlAE4wfLc",
+        "metadata": {
+          "type": "WeiboKeywordSearchAst",
+          "class": {
+            "type": "crawler",
+            "title": "微博检索",
+            "hasTool": false,
+            "maxRetries": 3,
+            "retryDelay": 2000,
+            "retryBackoff": 2,
+            "errorStrategy": "retry"
+          },
+          "inputs": [
+            {
+              "type": "text",
+              "title": "关键字",
+              "isMulti": false,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "keyword",
+              "defaultValue": ""
+            },
+            {
+              "type": "date",
+              "title": "开始日期",
+              "isMulti": false,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "startDate",
+              "defaultValue": {}
+            },
+            {
+              "type": "number",
+              "title": "发射最小延迟(秒)",
+              "isMulti": false,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "emitDelayMin",
+              "defaultValue": 1
+            },
+            {
+              "type": "number",
+              "title": "发射最大延迟(秒)",
+              "isMulti": false,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "emitDelayMax",
+              "defaultValue": 3
+            },
+            {
+              "type": "number",
+              "title": "翻页最小延迟(秒)",
+              "isMulti": false,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "pageDelayMin",
+              "defaultValue": 3
+            },
+            {
+              "type": "number",
+              "title": "翻页最大延迟(秒)",
+              "isMulti": false,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "pageDelayMax",
+              "defaultValue": 5
+            }
+          ],
+          "states": [
+            {
+              "type": "date",
+              "title": "结束日期",
+              "propertyKey": "endDate"
+            },
+            {
+              "type": "number",
+              "title": "页码",
+              "propertyKey": "page"
+            },
+            {
+              "title": "当前页码",
+              "propertyKey": "currentPage"
+            },
+            {
+              "title": "总页数",
+              "propertyKey": "totalPages"
+            }
+          ],
+          "outputs": [
+            {
+              "title": "帖子id",
+              "isStatic": true,
+              "property": "mblogid",
+              "isSubject": false
+            },
+            {
+              "title": "用户id",
+              "isStatic": true,
+              "property": "uid",
+              "isSubject": false
+            },
+            {
+              "title": "是否结束",
+              "isStatic": true,
+              "property": "isEnd",
+              "isSubject": false
+            }
+          ]
+        },
+        "position": {
+          "x": -119.92121845997086,
+          "y": -345.34614881660167
+        },
+        "emitCount": 1,
+        "startDate": {},
+        "totalPages": 1,
+        "currentPage": 1,
+        "emitDelayMax": 3,
+        "emitDelayMin": 1,
+        "pageDelayMax": 5,
+        "pageDelayMin": 3
+      },
+      {
+        "id": "7ba1bc21-df2f-4f8c-89d9-9a5ef27a9769",
+        "mid": "5251457567687082",
+        "uid": "3511727907",
+        "type": "WeiboAjaxStatusesShowAst",
+        "count": 0,
+        "state": "success",
+        "width": 240,
+        "height": 151,
+        "postId": 5251457567687082,
+        "mblogid": "",
+        "metadata": {
+          "type": "WeiboAjaxStatusesShowAst",
+          "class": {
+            "type": "crawler",
+            "title": "微博博文详情",
+            "hasTool": false,
+            "maxRetries": 3,
+            "retryDelay": 2000,
+            "retryBackoff": 2,
+            "errorStrategy": "retry"
+          },
+          "inputs": [
+            {
+              "title": "帖子短id",
+              "isMulti": false,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "mblogid",
+              "defaultValue": ""
+            },
+            {
+              "title": "用户ID",
+              "isMulti": false,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "uid",
+              "defaultValue": ""
+            }
+          ],
+          "states": [],
+          "outputs": [
+            {
+              "title": "用户ID",
+              "isStatic": true,
+              "property": "uid",
+              "isSubject": false
+            },
+            {
+              "title": "帖子数据库ID",
+              "isStatic": true,
+              "property": "postId",
+              "isSubject": false
+            },
+            {
+              "title": "帖子mid",
+              "isStatic": true,
+              "property": "mid",
+              "isSubject": false
+            }
+          ]
+        },
+        "position": {
+          "x": 305.1292305614318,
+          "y": -314.71188222046453
+        },
+        "emitCount": 5
+      },
+      {
+        "id": "69f1d4ec-fcb2-497a-9ae2-33a28e3f6748",
+        "post": {
+          "id": "5251457567687082",
+          "ok": 1,
+          "mid": "5251457567687082",
+          "rid": "0_0_0_2022510897243317556_0_0_0",
+          "isAd": false,
+          "mark": null,
+          "text": "狂欢过后不会只剩下寂寞，因为在这三个多小时里，我们把自己真正地打开了！<br />谢谢来到《房间里的大象》的房客们，谢谢你们带着故事入场、带着共鸣散场。你们的眼神与合唱，让这个房间有了温度与生命。<br />我想说，门我们一起推开了，以后也要一直亮着灯，好吗？<br />谢谢南昌！<br />我们下个房间见🫶🏻 <br /><a href=\"//s.weibo.com/weibo?q=%23%E6%9D%A8%E4%B8%9E%E7%90%B3%E6%88%BF%E9%97%B4%E9%87%8C%E7%9A%84%E5%A4%A7%E8%B1%A1%E4%B8%96%E7%95%8C%E5%B7%A1%E5%9B%9E%E6%BC%94%E5%94%B1%E4%BC%9A%23\" target=\"_blank\">#杨丞琳房间里的大象世界巡回演唱会#</a> <a target=\"_blank\" href=\"https://video.weibo.com/show?fid=1034:5251454311792771\"><img class=\"icon-link\" title=\"http://t.cn/AXbGURjQ\" src=\"https://h5.sinaimg.cn/upload/2015/09/25/3/timeline_card_small_video_default.png\"/>楊丞琳的微博视频</a> ",
+          "user": {
+            "id": 3511727907,
+            "idstr": "3511727907",
+            "domain": "",
+            "mbrank": 10,
+            "mbtype": 12,
+            "pc_new": 7,
+            "v_plus": 0,
+            "weihao": "",
+            "verified": true,
+            "avatar_hd": "https://tvax2.sinaimg.cn/crop.0.0.1080.1080.1024/003PEQQHly8i6gpybto2fj60u00u0jxl02.jpg?KID=imgbed,tva&Expires=1767641168&ssig=%2FMX%2FChSJ64",
+            "follow_me": false,
+            "following": false,
+            "icon_list": [
+              {
+                "data": {
+                  "svip": 1,
+                  "vvip": 0,
+                  "mbrank": 10,
+                  "mbtype": 12
+                },
+                "type": "vip"
+              }
+            ],
+            "profile_url": "/u/3511727907",
+            "screen_name": "楊丞琳",
+            "avatar_large": "https://tvax2.sinaimg.cn/crop.0.0.1080.1080.180/003PEQQHly8i6gpybto2fj60u00u0jxl02.jpg?KID=imgbed,tva&Expires=1767641168&ssig=Q4GYjM%2FzA3",
+            "planet_video": false,
+            "user_ability": 3957256,
+            "verified_type": 0,
+            "profile_image_url": "https://tvax2.sinaimg.cn/crop.0.0.1080.1080.50/003PEQQHly8i6gpybto2fj60u00u0jxl02.jpg?KID=imgbed,tva&Expires=1767641168&ssig=x96nzGoUkE",
+            "verified_type_ext": 1,
+            "status_total_counter": {
+              "like_cnt": "73,987,613",
+              "total_cnt": "93,435,166",
+              "repost_cnt": "13,333,027",
+              "comment_cnt": "6,114,526",
+              "total_cnt_format": "9343.5万"
+            }
+          },
+          "idstr": "5251457567687082",
+          "title": {
+            "text": "公开",
+            "icon_url": "http://h5.sinaimg.cn/upload/2015/07/14/34/timeline_title_public.png",
+            "base_color": 1
+          },
+          "cardid": "star_1545",
+          "mlevel": 0,
+          "rcList": [],
+          "source": "<a target=\"_blank\" href=\"https://t.sina.com.cn\" rel=\"nofollow\">微博视频号</a>",
+          "is_paid": false,
+          "mblogid": "QlAE4wfLc",
+          "pic_ids": null,
+          "pic_num": 1,
+          "visible": {
+            "type": 0,
+            "list_id": 0
+          },
+          "can_edit": false,
+          "text_raw": "狂欢过后不会只剩下寂寞，因为在这三个多小时里，我们把自己真正地打开了！\n谢谢来到《房间里的大象》的房客们，谢谢你们带着故事入场、带着共鸣散场。你们的眼神与合唱，让这个房间有了温度与生命。\n我想说，门我们一起推开了，以后也要一直亮着灯，好吗？\n谢谢南昌！\n我们下个房间见🫶🏻 \n#杨丞琳房间里的大象世界巡回演唱会# http://t.cn/AXbGURjQ ",
+          "favorited": false,
+          "mblogtype": 0,
+          "page_info": {
+            "oid": "3511727907",
+            "type": "11",
+            "warn": "",
+            "page_id": "2304445251454311792771",
+            "authorid": "3511727907",
+            "content1": "楊丞琳的微博视频",
+            "content2": "狂欢过后不会只剩下寂寞，因为在这三个多小时里，我们把自己真正地打开了！\n谢谢来到《房间里的大象》的房客们，谢谢你们带着故事入场、带着共鸣散场。你们的眼神与合唱，让这个房间有了温度与生命。\n我想说，门我们一起推开了，以后也要一直亮着灯，好吗？\n谢谢南昌！\n我们下个房间见🫶🏻",
+            "page_pic": "https://wx4.sinaimg.cn/orj480/003PEQQHly1i8yymwv1iwj62yo1o0x6p02.jpg",
+            "page_url": "sinaweibo://infopage?containerid=2304445251454311792771&containerid=2304445251454311792771&url_type=39&object_type=video&pos=2",
+            "pic_info": {
+              "pic_big": {
+                "url": "https://wx4.sinaimg.cn/orj480/003PEQQHly1i8yymwv1iwj62yo1o0x6p02.jpg",
+                "width": "852",
+                "height": "480"
+              },
+              "pic_small": {
+                "url": "https://wx4.sinaimg.cn/orj480/003PEQQHly1i8yymwv1iwj62yo1o0x6p02.jpg",
+                "width": "852",
+                "height": "480"
+              },
+              "pic_middle": {
+                "url": "https://wx4.sinaimg.cn/orj480/003PEQQHly1i8yymwv1iwj62yo1o0x6p02.jpg",
+                "width": "852",
+                "height": "480"
+              }
+            },
+            "actionlog": {
+              "ext": "uid:7773345519|mid:5251457567687082|objectid:1034%3A5251454311792771|from:1|object_duration:243.856|miduid:3511727907|rootuid:3511727907|rootmid:5251457567687082|authorid:3511727907|video_orientation:horizontal|third_vid:|is_album:1|is_contribution:0|video_tags:|isfan:0|ua:Mozilla/5.0 (Windows NT 10.0%3B Win64%3B x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 WeiboPro/1.0.0|sceneid:feed|uuid:5251457149567633|detail:native|contribution:0|short_video:1|st_video:0|author_mid:5251457567687082|cluster_type_status:|is_ad_weibo:0|analysis_card:page_info",
+              "fid": "",
+              "mid": "5251457567687082",
+              "oid": "1034:5251454311792771",
+              "uuid": 5251457149567633,
+              "source": "video",
+              "lcardid": "",
+              "act_code": 799,
+              "act_type": 1
+            },
+            "author_id": "3511727907",
+            "object_id": "1034:5251454311792771",
+            "short_url": "http://t.cn/AXbGURjQ",
+            "type_icon": "",
+            "act_status": 1,
+            "media_info": {
+              "ttl": 3600,
+              "name": "楊丞琳的微博视频",
+              "format": "mp4",
+              "h5_url": "https://video.weibo.com/show?fid=1034:5251454311792771",
+              "jump_to": 6,
+              "duration": 243,
+              "ext_info": {
+                "video_orientation": "horizontal"
+              },
+              "media_id": "5251454311792771",
+              "protocol": "general,dash",
+              "kol_title": "狂欢过后不会只剩下寂寞，因为在这三个多小时里，我们把自己真正地打开了！\n谢谢来到《房间里的大象》的房客们，谢谢你们带着故事入场、带着共鸣散场。你们的眼神与合唱，让这个房间有了温度与生命。\n我想说，门我们一起推开了，以后也要一直亮着灯，好吗？\n谢谢南昌！\n我们下个房间见🫶🏻",
+              "act_status": 1,
+              "author_mid": "5251457567687082",
+              "extra_info": {
+                "sceneid": "feed"
+              },
+              "media_type": "video",
+              "mp4_hd_url": "http://f.video.weibocdn.com/o0/VveHzAtvlx08uhW79W0801041202kfln0E010.mp4?label=mp4_hd&template=852x480.25.0&ori=0&ps=1CwnkDw1GXwCQx&Expires=1767633968&ssig=UbOZ%2BNt34J&KID=unistore,video",
+              "mp4_sd_url": "http://f.video.weibocdn.com/o0/vkY8Jwkzlx08uhW7EHUY01041201pn6i0E010.mp4?label=mp4_ld&template=640x360.25.0&ori=0&ps=1CwnkDw1GXwCQx&Expires=1767633968&ssig=aIbG3LfXWY&KID=unistore,video",
+              "next_title": "狂欢过后不会只剩下寂寞，因为在这三个多小时里，我们把自己真正地打开了！\n谢谢来到《房间里的大象》的房客们，谢谢你们带着故事入场、带着共鸣散场。你们的眼神与合唱，让这个房间有了温度与生命。\n我想说，门我们一起推开了，以后也要一直亮着灯，好吗？\n谢谢南昌！\n我们下个房间见🫶🏻",
+              "stream_url": "http://f.video.weibocdn.com/o0/vkY8Jwkzlx08uhW7EHUY01041201pn6i0E010.mp4?label=mp4_ld&template=640x360.25.0&ori=0&ps=1CwnkDw1GXwCQx&Expires=1767633968&ssig=aIbG3LfXWY&KID=unistore,video",
+              "author_info": {
+                "id": 3511727907,
+                "url": "",
+                "svip": 1,
+                "vvip": 0,
+                "idstr": "3511727907",
+                "domain": "",
+                "gender": "f",
+                "mbrank": 10,
+                "mbtype": 12,
+                "pc_new": 7,
+                "v_plus": 0,
+                "weihao": "",
+                "location": "台湾",
+                "verified": true,
+                "avatar_hd": "https://tvax2.sinaimg.cn/crop.0.0.1080.1080.1024/003PEQQHly8i6gpybto2fj60u00u0jxl02.jpg?KID=imgbed,tva&Expires=1767641168&ssig=%2FMX%2FChSJ64",
+                "follow_me": false,
+                "following": false,
+                "description": "工作洽談：treeandskyline@163.com",
+                "profile_url": "/u/3511727907",
+                "screen_name": "楊丞琳",
+                "avatar_large": "https://tvax2.sinaimg.cn/crop.0.0.1080.1080.180/003PEQQHly8i6gpybto2fj60u00u0jxl02.jpg?KID=imgbed,tva&Expires=1767641168&ssig=Q4GYjM%2FzA3",
+                "planet_video": false,
+                "user_ability": 3957256,
+                "friends_count": 233,
+                "verified_type": 0,
+                "statuses_count": 3985,
+                "followers_count": 14460732,
+                "verified_reason": "演員、歌手",
+                "cover_image_phone": "https://wx3.sinaimg.cn/crop.0.0.640.640.640/003PEQQHgy1i6lfdchtd9j60rs0rstaz02.jpg",
+                "profile_image_url": "https://tvax2.sinaimg.cn/crop.0.0.1080.1080.50/003PEQQHly8i6gpybto2fj60u00u0jxl02.jpg?KID=imgbed,tva&Expires=1767641168&ssig=x96nzGoUkE",
+                "verified_type_ext": 1,
+                "followers_count_str": "1446.1万",
+                "status_total_counter": {
+                  "like_cnt": "73,987,613",
+                  "total_cnt": "93,435,166",
+                  "repost_cnt": "13,333,027",
+                  "comment_cnt": "6,114,526",
+                  "total_cnt_format": "9343.5万"
+                }
+              },
+              "author_name": "楊丞琳",
+              "h265_mp4_hd": "",
+              "h265_mp4_ld": "",
+              "big_pic_info": {
+                "pic_big": {
+                  "url": "https://wx4.sinaimg.cn/orj1080/003PEQQHly1i8yymwv1iwj62yo1o0x6p02.jpg",
+                  "width": 1920,
+                  "height": 1080
+                },
+                "pic_small": {
+                  "url": "https://wx4.sinaimg.cn/or180/003PEQQHly1i8yymwv1iwj62yo1o0x6p02.jpg",
+                  "width": 266,
+                  "height": 150
+                },
+                "pic_middle": {
+                  "url": "https://wx4.sinaimg.cn/or360/003PEQQHly1i8yymwv1iwj62yo1o0x6p02.jpg",
+                  "width": 480,
+                  "height": 270
+                }
+              },
+              "mp4_720p_mp4": "http://f.video.weibocdn.com/o0/asHJ1frSlx08uhW84oo801041204h2Mu0E020.mp4?label=mp4_720p&template=1280x720.25.0&ori=0&ps=1CwnkDw1GXwCQx&Expires=1767633968&ssig=nLDD%2BOPnvq&KID=unistore,video",
+              "online_users": "8万次观看",
+              "storage_type": "oss",
+              "vote_is_show": 0,
+              "hevc_mp4_720p": "",
+              "inch_4_mp4_hd": "",
+              "inch_5_mp4_hd": "",
+              "playback_list": [
+                {
+                  "meta": {
+                    "type": 1,
+                    "label": "mp4_2160p",
+                    "is_hidden": false,
+                    "quality_desc": "超清",
+                    "quality_class": "HD",
+                    "quality_group": 2160,
+                    "quality_index": 2160,
+                    "quality_label": "4K"
+                  },
+                  "play_info": {
+                    "fps": 25,
+                    "sar": "1.0",
+                    "url": "https://f.video.weibocdn.com/o0/diXiO7FSlx08uhWa5DvG0104120qai750E0a0.mp4?label=mp4_2160p&template=3840x2160.25.0&media_id=5251454311792771&tp=8x8A3El:YTkl0eM8&us=0&ori=1&bf=2&ot=h&lp=00002FYc76&ps=mZ6WB&uid=8u4agD&ab=,15568-g4,8012-g2,3601-g42,8013-g0&Expires=1767633968&ssig=gPtI4tx7JX&KID=unistore,video",
+                    "mime": "video/mp4",
+                    "size": 386637647,
+                    "type": 1,
+                    "label": "mp4_2160p",
+                    "width": 3840,
+                    "height": 2160,
+                    "bitrate": 12684129,
+                    "duration": 243.856,
+                    "protocol": "general",
+                    "extension": {
+                      "transcode_info": {
+                        "pcdn_jank": 0,
+                        "pcdn_rule_id": 0,
+                        "ab_strategies": ",15568-g4,8012-g2,3601-g42,8013-g0",
+                        "origin_video_dr": "SDR"
+                      }
+                    },
+                    "watermark": "original",
+                    "dolby_atmos": false,
+                    "audio_codecs": "mp4a.40.5",
+                    "quality_desc": "超清",
+                    "stereo_video": 0,
+                    "video_codecs": "avc1.640033",
+                    "quality_class": "HD",
+                    "quality_label": "4K",
+                    "video_decoder": "hard",
+                    "audio_channels": 2,
+                    "color_transfer": "bt709",
+                    "prefetch_range": "0-4996025",
+                    "audio_sample_fmt": "fltp",
+                    "prefetch_enabled": false,
+                    "audio_sample_rate": 44100,
+                    "first_pkt_end_pos": 335520,
+                    "tcp_receive_buffer": 262144,
+                    "audio_bits_per_sample": 0
+                  }
+                },
+                {
+                  "meta": {
+                    "type": 1,
+                    "label": "mp4_1440p",
+                    "is_hidden": false,
+                    "quality_desc": "超清",
+                    "quality_class": "HD",
+                    "quality_group": 1440,
+                    "quality_index": 1440,
+                    "quality_label": "2K"
+                  },
+                  "play_info": {
+                    "fps": 25,
+                    "sar": "1.0",
+                    "url": "https://f.video.weibocdn.com/o0/lgYoOJrElx08uhWdd4zK0104120bA7ee0E050.mp4?label=mp4_1440p&template=2560x1440.25.0&media_id=5251454311792771&tp=8x8A3El:YTkl0eM8&us=0&ori=1&bf=2&ot=h&lp=00002FYc76&ps=mZ6WB&uid=8u4agD&ab=,15568-g4,8012-g2,3601-g42,8013-g0&Expires=1767633968&ssig=ptJfuDlV02&KID=unistore,video",
+                    "mime": "video/mp4",
+                    "size": 171147294,
+                    "type": 1,
+                    "label": "mp4_1440p",
+                    "width": 2560,
+                    "height": 1440,
+                    "bitrate": 5614700,
+                    "duration": 243.856,
+                    "protocol": "general",
+                    "extension": {
+                      "transcode_info": {
+                        "pcdn_jank": 0,
+                        "pcdn_rule_id": 0,
+                        "ab_strategies": ",15568-g4,8012-g2,3601-g42,8013-g0",
+                        "origin_video_dr": "SDR"
+                      }
+                    },
+                    "watermark": "original",
+                    "dolby_atmos": false,
+                    "audio_codecs": "mp4a.40.5",
+                    "quality_desc": "超清",
+                    "stereo_video": 0,
+                    "video_codecs": "avc1.640032",
+                    "quality_class": "HD",
+                    "quality_label": "2K",
+                    "video_decoder": "hard",
+                    "audio_channels": 2,
+                    "color_transfer": "bt709",
+                    "prefetch_range": "0-2342594",
+                    "audio_sample_fmt": "fltp",
+                    "prefetch_enabled": false,
+                    "audio_sample_rate": 44100,
+                    "first_pkt_end_pos": 237543,
+                    "tcp_receive_buffer": 262144,
+                    "audio_bits_per_sample": 0
+                  }
+                },
+                {
+                  "meta": {
+                    "type": 1,
+                    "label": "mp4_1080p",
+                    "is_hidden": false,
+                    "quality_desc": "高清",
+                    "quality_class": "HD",
+                    "quality_group": 1080,
+                    "quality_index": 1080,
+                    "quality_label": "1080p"
+                  },
+                  "play_info": {
+                    "fps": 25,
+                    "sar": "1.0",
+                    "url": "https://f.video.weibocdn.com/o0/DZOY9TW9lx08uhWaIPjO01041207z7Jv0E030.mp4?label=mp4_1080p&template=1920x1080.25.0&media_id=5251454311792771&tp=8x8A3El:YTkl0eM8&us=0&ori=1&bf=2&ot=h&lp=00002FYc76&ps=mZ6WB&uid=8u4agD&ab=,15568-g4,8012-g2,3601-g42,8013-g0&Expires=1767633968&ssig=SGdwMv0TKx&KID=unistore,video",
+                    "mime": "video/mp4",
+                    "size": 111805561,
+                    "type": 1,
+                    "label": "mp4_1080p",
+                    "width": 1920,
+                    "height": 1080,
+                    "bitrate": 3667920,
+                    "duration": 243.856,
+                    "protocol": "general",
+                    "extension": {
+                      "transcode_info": {
+                        "pcdn_jank": 0,
+                        "pcdn_rule_id": 0,
+                        "ab_strategies": ",15568-g4,8012-g2,3601-g42,8013-g0",
+                        "origin_video_dr": "SDR"
+                      }
+                    },
+                    "watermark": "original",
+                    "dolby_atmos": false,
+                    "audio_codecs": "mp4a.40.5",
+                    "quality_desc": "高清",
+                    "stereo_video": 0,
+                    "video_codecs": "avc1.640032",
+                    "quality_class": "HD",
+                    "quality_label": "1080p",
+                    "video_decoder": "hard",
+                    "audio_channels": 2,
+                    "color_transfer": "bt709",
+                    "prefetch_range": "0-1598032",
+                    "audio_sample_fmt": "fltp",
+                    "prefetch_enabled": false,
+                    "audio_sample_rate": 44100,
+                    "first_pkt_end_pos": 210711,
+                    "tcp_receive_buffer": 262144,
+                    "audio_bits_per_sample": 0
+                  }
+                },
+                {
+                  "meta": {
+                    "type": 1,
+                    "label": "mp4_720p",
+                    "is_hidden": false,
+                    "quality_desc": "高清",
+                    "quality_class": "HD",
+                    "quality_group": 720,
+                    "quality_index": 720,
+                    "quality_label": "720p"
+                  },
+                  "play_info": {
+                    "fps": 25,
+                    "sar": "1.0",
+                    "url": "https://f.video.weibocdn.com/o0/asHJ1frSlx08uhW84oo801041204h2Mu0E020.mp4?label=mp4_720p&template=1280x720.25.0&media_id=5251454311792771&tp=8x8A3El:YTkl0eM8&us=0&ori=1&bf=2&ot=h&lp=00002FYc76&ps=mZ6WB&uid=8u4agD&ab=,15568-g4,8012-g2,3601-g42,8013-g0&Expires=1767633968&ssig=nLDD%2BOPnvq&KID=unistore,video",
+                    "mime": "video/mp4",
+                    "size": 63167614,
+                    "type": 1,
+                    "label": "mp4_720p",
+                    "width": 1280,
+                    "height": 720,
+                    "bitrate": 2072292,
+                    "duration": 243.856,
+                    "protocol": "general",
+                    "extension": {
+                      "transcode_info": {
+                        "pcdn_jank": 0,
+                        "pcdn_rule_id": 0,
+                        "ab_strategies": ",15568-g4,8012-g2,3601-g42,8013-g0",
+                        "origin_video_dr": "SDR"
+                      }
+                    },
+                    "watermark": "original",
+                    "dolby_atmos": false,
+                    "audio_codecs": "mp4a.40.5",
+                    "quality_desc": "高清",
+                    "stereo_video": 0,
+                    "video_codecs": "avc1.64001f",
+                    "quality_class": "HD",
+                    "quality_label": "720p",
+                    "video_decoder": "hard",
+                    "audio_channels": 2,
+                    "color_transfer": "bt709",
+                    "prefetch_range": "0-949834",
+                    "audio_sample_fmt": "fltp",
+                    "prefetch_enabled": false,
+                    "audio_sample_rate": 44100,
+                    "first_pkt_end_pos": 189667,
+                    "tcp_receive_buffer": 262144,
+                    "audio_bits_per_sample": 0
+                  }
+                },
+                {
+                  "meta": {
+                    "type": 1,
+                    "label": "mp4_hd",
+                    "is_hidden": false,
+                    "quality_desc": "标清",
+                    "quality_class": "SD",
+                    "quality_group": 480,
+                    "quality_index": 480,
+                    "quality_label": "480p"
+                  },
+                  "play_info": {
+                    "fps": 25,
+                    "sar": "1.001565",
+                    "url": "https://f.video.weibocdn.com/o0/VveHzAtvlx08uhW79W0801041202kfln0E010.mp4?label=mp4_hd&template=852x480.25.0&media_id=5251454311792771&tp=8x8A3El:YTkl0eM8&us=0&ori=1&bf=2&ot=h&lp=00002FYc76&ps=mZ6WB&uid=8u4agD&ab=,15568-g4,8012-g2,3601-g42,8013-g0&Expires=1767633968&ssig=UbOZ%2BNt34J&KID=unistore,video",
+                    "mime": "video/mp4",
+                    "size": 34378217,
+                    "type": 1,
+                    "label": "mp4_hd",
+                    "width": 852,
+                    "height": 480,
+                    "bitrate": 1127820,
+                    "duration": 243.856,
+                    "protocol": "general",
+                    "extension": {
+                      "transcode_info": {
+                        "pcdn_jank": 0,
+                        "pcdn_rule_id": 0,
+                        "ab_strategies": ",15568-g4,8012-g2,3601-g42,8013-g0",
+                        "origin_video_dr": "SDR"
+                      }
+                    },
+                    "watermark": "original",
+                    "dolby_atmos": false,
+                    "audio_codecs": "mp4a.40.5",
+                    "quality_desc": "标清",
+                    "stereo_video": 0,
+                    "video_codecs": "avc1.64001e",
+                    "quality_class": "SD",
+                    "quality_label": "480p",
+                    "video_decoder": "hard",
+                    "audio_channels": 2,
+                    "color_transfer": "bt709",
+                    "prefetch_range": "0-513372",
+                    "audio_sample_fmt": "fltp",
+                    "prefetch_enabled": false,
+                    "audio_sample_rate": 44100,
+                    "first_pkt_end_pos": 170221,
+                    "tcp_receive_buffer": 262144,
+                    "audio_bits_per_sample": 0
+                  }
+                },
+                {
+                  "meta": {
+                    "type": 3,
+                    "label": "scrubber_hd",
+                    "is_hidden": false,
+                    "quality_desc": "标清",
+                    "quality_class": "SD",
+                    "quality_group": 480,
+                    "quality_index": 480,
+                    "quality_label": "480p"
+                  },
+                  "play_info": {
+                    "col": 3,
+                    "row": 30,
+                    "url": "https://wx1.sinaimg.cn/large/003PEQQHly1i8yyp0ygfvj60qo460qe802.jpg?media_id=5251454311792771&tp=8x8A3El:YTkl0eM8&us=0&ori=1&bf=2&ot=h&lp=00002FYc76&ps=mZ6WB&uid=8u4agD&ab=,15568-g4,8012-g2,3601-g42,8013-g0&Expires=1767633968&ssig=PZll8SmKAy&KID=unistore,video",
+                    "mime": "image/jpeg",
+                    "type": 3,
+                    "urls": [
+                      "http://wx4.sinaimg.cn/large/003PEQQHly1i8yyp0ygfvj60qo460qe802.jpg",
+                      "http://wx4.sinaimg.cn/large/003PEQQHly1i8yyp16kckj60qo46044902.jpg"
+                    ],
+                    "label": "scrubber_hd",
+                    "width": 320,
+                    "height": 180,
+                    "offset": 1,
+                    "interval": 2,
+                    "protocol": "general",
+                    "extension": {
+                      "transcode_info": {
+                        "pcdn_jank": 0,
+                        "pcdn_rule_id": 0,
+                        "ab_strategies": ",15568-g4,8012-g2,3601-g42,8013-g0",
+                        "origin_video_dr": "SDR"
+                      }
+                    },
+                    "quality_desc": "标清",
+                    "quality_class": "SD",
+                    "quality_label": "480p",
+                    "video_decoder": "hard",
+                    "prefetch_range": "0-512000",
+                    "prefetch_enabled": false,
+                    "tcp_receive_buffer": 262144
+                  }
+                }
+              ],
+              "prefetch_size": 262144,
+              "prefetch_type": 1,
+              "search_scheme": "sinaweibo://svssearch?containerid=232080",
+              "stream_url_hd": "http://f.video.weibocdn.com/o0/VveHzAtvlx08uhW79W0801041202kfln0E010.mp4?label=mp4_hd&template=852x480.25.0&ori=0&ps=1CwnkDw1GXwCQx&Expires=1767633968&ssig=UbOZ%2BNt34J&KID=unistore,video",
+              "is_short_video": 1,
+              "play_loop_type": 0,
+              "inch_5_5_mp4_hd": "",
+              "forward_strategy": -1,
+              "show_mute_button": true,
+              "belong_collection": 0,
+              "show_progress_bar": 1,
+              "video_orientation": "horizontal",
+              "video_publish_time": 1767528414,
+              "has_recommend_video": 1,
+              "online_users_number": 80826,
+              "titles_display_time": "3",
+              "origin_total_bitrate": 46808672,
+              "is_keep_current_mblog": 0,
+              "play_completion_actions": [
+                {
+                  "icon": "https://h5.sinaimg.cn/upload/100/1413/2021/12/22/feed_video_icon_replay.png",
+                  "link": "",
+                  "text": "重播",
+                  "type": "1",
+                  "btn_code": 1000,
+                  "actionlog": {
+                    "oid": "2304445251454311792771",
+                    "source": "video",
+                    "act_code": 1221,
+                    "act_type": 0
+                  },
+                  "show_position": 1
+                },
+                {
+                  "ext": {
+                    "uid": "3511727907",
+                    "level": 3,
+                    "verified": true,
+                    "user_name": "楊丞琳",
+                    "verified_type": 0,
+                    "followers_count": 14460733,
+                    "verified_reason": "演員、歌手",
+                    "verified_type_ext": 1
+                  },
+                  "icon": "https://tvax2.sinaimg.cn/crop.0.0.1080.1080.180/003PEQQHly8i6gpybto2fj60u00u0jxl02.jpg?KID=imgbed,tva&Expires=1767641168&ssig=Q4GYjM%2FzA3",
+                  "link": "",
+                  "text": "",
+                  "type": 6,
+                  "scheme": "",
+                  "btn_code": 1009,
+                  "actionlog": {
+                    "ext": "mid:5251457567687082|oid:1034:5251454311792771|muid:3511727907|authorid:3511727907",
+                    "oid": "2304445251454311792771",
+                    "source": "video",
+                    "act_code": 91,
+                    "act_type": 0
+                  },
+                  "display_mode": 2,
+                  "display_type": 0,
+                  "show_position": 48,
+                  "countdown_time": 5,
+                  "display_endtime": 99999,
+                  "display_starttime": 5
+                }
+              ],
+              "video_download_strategy": {
+                "abandon_download": 0
+              }
+            },
+            "page_title": "楊丞琳的微博视频",
+            "object_type": "video"
+          },
+          "created_at": "Sun Jan 04 20:08:33 +0800 2026",
+          "deleted_at": null,
+          "isLongText": true,
+          "pic_bg_new": "http://vip.storage.weibo.com/feed_cover/star_1545_mobile_new.png?version=2025081101",
+          "textLength": 308,
+          "updated_at": {},
+          "url_struct": [
+            {
+              "ttl": 3600,
+              "hide": 0,
+              "result": false,
+              "ori_url": "sinaweibo://video/vvs?mid=5251457567687082&object_id=1034:5251454311792771&url_type=39&object_type=video&pos=1",
+              "page_id": "2304445251454311792771",
+              "long_url": "https://video.weibo.com/show?fid=1034:5251454311792771",
+              "url_type": 39,
+              "actionlog": {
+                "ext": "mid:5251457567687082|rid:|short_url:http://t.cn/AXbGURjQ|long_url:https://video.weibo.com/show?fid=1034:5251454311792771|comment_id:|miduid:3511727907|rootmid:5251457567687082|rootuid:3511727907|authorid:3511727907|uuid:5251457149567633|is_ad_weibo:0|oid:1034:5251454311792771|analysis_card:url_struct",
+                "fid": "",
+                "oid": "1034:5251454311792771",
+                "lfid": "",
+                "uuid": 5251457149567633,
+                "cardid": "",
+                "uicode": "",
+                "lcardid": "",
+                "luicode": "",
+                "act_code": 300,
+                "act_type": 1
+              },
+              "short_url": "http://t.cn/AXbGURjQ",
+              "url_title": "楊丞琳的微博视频",
+              "object_type": "",
+              "storage_type": "oss",
+              "url_type_pic": "https://h5.sinaimg.cn/upload/2015/09/25/3/timeline_card_small_video.png",
+              "h5_target_url": "https://video.weibo.com/show?fid=1034:5251454311792771&from=1FFFF96039&weiboauthoruid=3511727907",
+              "need_save_obj": 0
+            }
+          ],
+          "annotations": [
+            {
+              "photo_sub_type": ""
+            },
+            {
+              "client_mblogid": "iPhone-5F11AC7B-77A8-4F72-8CC8-499966D700B0"
+            },
+            {
+              "phone_id": "",
+              "source_text": ""
+            },
+            {
+              "mapi_request": true
+            }
+          ],
+          "ingested_at": {},
+          "mixed_count": 0,
+          "region_name": "发布于 北京",
+          "content_auth": 0,
+          "readtimetype": "mblog",
+          "title_source": null,
+          "topic_struct": [
+            {
+              "title": "",
+              "actionlog": {
+                "ext": "mid:5251457567687082|rid:|short_url:|long_url:|comment_id:|miduid:3511727907|rootmid:5251457567687082|rootuid:3511727907|authorid:|uuid:5216539183153318|is_ad_weibo:0|oid:1022:2315223756fcfecebaf04dcd33421a6f4d6efa",
+                "fid": "",
+                "oid": "1022:2315223756fcfecebaf04dcd33421a6f4d6efa",
+                "lfid": "",
+                "uuid": 5216539183153318,
+                "cardid": "",
+                "uicode": "",
+                "lcardid": "",
+                "luicode": "",
+                "act_code": 300,
+                "act_type": 1
+              },
+              "topic_url": "sinaweibo://searchall?containerid=231522&q=%23%E6%9D%A8%E4%B8%9E%E7%90%B3%E6%88%BF%E9%97%B4%E9%87%8C%E7%9A%84%E5%A4%A7%E8%B1%A1%E4%B8%96%E7%95%8C%E5%B7%A1%E5%9B%9E%E6%BC%94%E5%94%B1%E4%BC%9A%23&extparam=%23%E6%9D%A8%E4%B8%9E%E7%90%B3%E6%88%BF%E9%97%B4%E9%87%8C%E7%9A%84%E5%A4%A7%E8%B1%A1%E4%B8%96%E7%95%8C%E5%B7%A1%E5%9B%9E%E6%BC%94%E5%94%B1%E4%BC%9A%23",
+              "topic_title": "杨丞琳房间里的大象世界巡回演唱会"
+            }
+          ],
+          "common_struct": null,
+          "is_show_mixed": false,
+          "reposts_count": 3595,
+          "analysis_extra": "",
+          "comments_count": 453,
+          "mblog_vip_type": 0,
+          "showFeedRepost": false,
+          "attitudes_count": 21912,
+          "showFeedComment": false,
+          "attitudes_status": 0,
+          "isSinglePayAudio": false,
+          "is_show_bulletin": 2,
+          "pictureViewerSign": false,
+          "share_repost_type": 0,
+          "showPictureViewer": false,
+          "comment_manage_info": {
+            "comment_sort_type": 0,
+            "approval_comment_type": 0,
+            "comment_permission_type": -1
+          },
+          "screen_name_suffix_new": [],
+          "number_display_strategy": {
+            "display_text": "100万+",
+            "apply_scenario_flag": 19,
+            "display_text_min_number": 1000000
+          },
+          "mblog_feed_back_menus_format": []
+        },
+        "type": "PostContextCollectorAst",
+        "count": 0,
+        "state": "success",
+        "width": 240,
+        "height": 151,
+        "postId": "",
+        "reposts": [],
+        "canStart": [],
+        "comments": [],
+        "metadata": {
+          "type": "PostContextCollectorAst",
+          "class": {
+            "type": "crawler",
+            "title": "帖子上下文收集器",
+            "hasTool": false
+          },
+          "inputs": [
+            {
+              "title": "帖子ID",
+              "isMulti": false,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "postId",
+              "defaultValue": ""
+            },
+            {
+              "mode": 1,
+              "title": "开始",
+              "isMulti": true,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "canStart",
+              "defaultValue": []
+            }
+          ],
+          "states": [],
+          "outputs": [
+            {
+              "title": "帖子实体",
+              "isStatic": true,
+              "property": "post",
+              "isSubject": false
+            },
+            {
+              "title": "评论列表",
+              "isStatic": true,
+              "property": "comments",
+              "isSubject": false
+            },
+            {
+              "title": "转发列表",
+              "isStatic": true,
+              "property": "reposts",
+              "isSubject": false
+            }
+          ]
+        },
+        "position": {
+          "x": 389.373463700809,
+          "y": 166.50138889385624
+        },
+        "emitCount": 5
+      },
+      {
+        "id": "2a733a6d-c270-4f9c-8fc5-958c7e6ba7f5",
+        "post": null,
+        "type": "PostNLPAnalyzerAst",
+        "count": 0,
+        "state": "success",
+        "width": 240,
+        "errors": [],
+        "height": 179,
+        "reposts": [],
+        "comments": [],
+        "event_id": "",
+        "metadata": {
+          "type": "PostNLPAnalyzerAst",
+          "class": {
+            "type": "crawler",
+            "title": "帖子 NLP 分析器",
+            "hasTool": false,
+            "maxRetries": 3,
+            "retryDelay": 1000,
+            "retryBackoff": 2,
+            "errorStrategy": "retry"
+          },
+          "inputs": [
+            {
+              "title": "帖子实体",
+              "isMulti": false,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "post",
+              "defaultValue": null
+            },
+            {
+              "title": "评论列表",
+              "isMulti": false,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "comments",
+              "defaultValue": []
+            },
+            {
+              "title": "转发列表",
+              "isMulti": false,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "reposts",
+              "defaultValue": []
+            },
+            {
+              "title": "事件ID",
+              "isMulti": false,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "event_id",
+              "defaultValue": ""
+            }
+          ],
+          "states": [],
+          "outputs": [
+            {
+              "title": "NLP 分析结果",
+              "isStatic": true,
+              "property": "nlpResult",
+              "isSubject": false
+            },
+            {
+              "title": "已关联事件",
+              "isStatic": true,
+              "property": "event_associated",
+              "isSubject": false
+            },
+            {
+              "title": "失败数量",
+              "isStatic": true,
+              "property": "failedCount",
+              "isSubject": false
+            },
+            {
+              "title": "错误详情",
+              "isStatic": true,
+              "property": "errors",
+              "isSubject": false
+            }
+          ]
+        },
+        "position": {
+          "x": 888.4567236628762,
+          "y": 109.06213902609908
+        },
+        "emitCount": 5,
+        "nlpResult": {
+          "keywords": [
+            {
+              "pos": "verb",
+              "count": 3,
+              "weight": 1,
+              "keyword": "谢谢",
+              "sentiment": "positive"
+            },
+            {
+              "pos": "noun",
+              "count": 1,
+              "weight": 0.98,
+              "keyword": "杨丞琳",
+              "sentiment": "positive"
+            },
+            {
+              "pos": "noun",
+              "count": 2,
+              "weight": 0.95,
+              "keyword": "房间里的大象",
+              "sentiment": "positive"
+            },
+            {
+              "pos": "noun",
+              "count": 1,
+              "weight": 0.92,
+              "keyword": "演唱会",
+              "sentiment": "positive"
+            },
+            {
+              "pos": "noun",
+              "count": 1,
+              "weight": 0.9,
+              "keyword": "南昌",
+              "sentiment": "positive"
+            },
+            {
+              "pos": "noun",
+              "count": 1,
+              "weight": 0.88,
+              "keyword": "房客",
+              "sentiment": "positive"
+            },
+            {
+              "pos": "noun",
+              "count": 1,
+              "weight": 0.85,
+              "keyword": "共鸣",
+              "sentiment": "positive"
+            },
+            {
+              "pos": "noun",
+              "count": 1,
+              "weight": 0.82,
+              "keyword": "温度",
+              "sentiment": "positive"
+            },
+            {
+              "pos": "noun",
+              "count": 1,
+              "weight": 0.8,
+              "keyword": "生命",
+              "sentiment": "positive"
+            },
+            {
+              "pos": "noun",
+              "count": 1,
+              "weight": 0.78,
+              "keyword": "故事",
+              "sentiment": "neutral"
+            },
+            {
+              "pos": "noun",
+              "count": 1,
+              "weight": 0.75,
+              "keyword": "合唱",
+              "sentiment": "positive"
+            },
+            {
+              "pos": "noun",
+              "count": 1,
+              "weight": 0.72,
+              "keyword": "世界巡回",
+              "sentiment": "neutral"
+            },
+            {
+              "pos": "noun",
+              "count": 1,
+              "weight": 0.7,
+              "keyword": "狂欢",
+              "sentiment": "positive"
+            },
+            {
+              "pos": "verb",
+              "count": 1,
+              "weight": 0.68,
+              "keyword": "打开",
+              "sentiment": "positive"
+            },
+            {
+              "pos": "noun",
+              "count": 1,
+              "weight": 0.65,
+              "keyword": "眼神",
+              "sentiment": "neutral"
+            },
+            {
+              "pos": "noun",
+              "count": 3,
+              "weight": 0.63,
+              "keyword": "房间",
+              "sentiment": "neutral"
+            },
+            {
+              "pos": "noun",
+              "count": 1,
+              "weight": 0.6,
+              "keyword": "门",
+              "sentiment": "neutral"
+            },
+            {
+              "pos": "noun",
+              "count": 1,
+              "weight": 0.58,
+              "keyword": "灯",
+              "sentiment": "positive"
+            },
+            {
+              "pos": "verb",
+              "count": 1,
+              "weight": 0.55,
+              "keyword": "散场",
+              "sentiment": "neutral"
+            },
+            {
+              "pos": "verb",
+              "count": 1,
+              "weight": 0.53,
+              "keyword": "入场",
+              "sentiment": "neutral"
+            },
+            {
+              "pos": "adj",
+              "count": 1,
+              "weight": 0.5,
+              "keyword": "寂寞",
+              "sentiment": "negative"
+            },
+            {
+              "pos": "adv",
+              "count": 1,
+              "weight": 0.45,
+              "keyword": "真正",
+              "sentiment": "neutral"
+            },
+            {
+              "pos": "noun",
+              "count": 1,
+              "weight": 0.4,
+              "keyword": "以后",
+              "sentiment": "neutral"
+            },
+            {
+              "pos": "adv",
+              "count": 1,
+              "weight": 0.38,
+              "keyword": "一直",
+              "sentiment": "neutral"
+            },
+            {
+              "pos": "verb",
+              "count": 1,
+              "weight": 0.35,
+              "keyword": "推开",
+              "sentiment": "positive"
+            },
+            {
+              "pos": "verb",
+              "count": 1,
+              "weight": 0.32,
+              "keyword": "亮着",
+              "sentiment": "positive"
+            },
+            {
+              "pos": "noun",
+              "count": 1,
+              "weight": 0.3,
+              "keyword": "三个多小时",
+              "sentiment": "neutral"
+            },
+            {
+              "pos": "verb",
+              "count": 1,
+              "weight": 0.28,
+              "keyword": "不会",
+              "sentiment": "neutral"
+            },
+            {
+              "pos": "verb",
+              "count": 1,
+              "weight": 0.25,
+              "keyword": "剩下",
+              "sentiment": "neutral"
+            },
+            {
+              "pos": "pron",
+              "count": 4,
+              "weight": 0.22,
+              "keyword": "我们",
+              "sentiment": "neutral"
+            }
+          ],
+          "sentiment": {
+            "overall": "positive",
+            "confidence": 0.98,
+            "neutral_prob": 0.03,
+            "negative_prob": 0.01,
+            "positive_prob": 0.96
+          }
+        },
+        "failedCount": 0,
+        "event_associated": true
+      }
+    ],
+    "entryNodeIds": [
+      "383c0cca-757a-456d-880a-62b9ea012703"
+    ],
+    "endNodeIds": [
+      "2a733a6d-c270-4f9c-8fc5-958c7e6ba7f5"
+    ],
+    "edges": [
+      {
+        "id": "edge-595d4138-569e-43d1-80d2-171b5300e8e4",
+        "to": "20a3c6f5-bed9-4bc7-ab8e-04d1c6bfd4ae",
+        "from": "383c0cca-757a-456d-880a-62b9ea012703",
+        "type": "data",
+        "toProperty": "keyword",
+        "fromProperty": "keywords_str"
+      },
+      {
+        "id": "edge-4c970023-4b8d-4884-b54e-5966091e313d",
+        "to": "7ba1bc21-df2f-4f8c-89d9-9a5ef27a9769",
+        "from": "20a3c6f5-bed9-4bc7-ab8e-04d1c6bfd4ae",
+        "mode": "zip",
+        "type": "data",
+        "weight": 1,
+        "toProperty": "mblogid",
+        "fromProperty": "mblogid"
+      },
+      {
+        "id": "edge-8afb88d9-879a-4a6d-aacc-dc202652ec94",
+        "to": "7ba1bc21-df2f-4f8c-89d9-9a5ef27a9769",
+        "from": "20a3c6f5-bed9-4bc7-ab8e-04d1c6bfd4ae",
+        "mode": "zip",
+        "type": "data",
+        "weight": 1,
+        "toProperty": "uid",
+        "fromProperty": "uid"
+      },
+      {
+        "id": "edge-f0d0c881-b032-4baa-8a24-c584d2f0cef1",
+        "to": "69f1d4ec-fcb2-497a-9ae2-33a28e3f6748",
+        "from": "7ba1bc21-df2f-4f8c-89d9-9a5ef27a9769",
+        "type": "data",
+        "toProperty": "postId",
+        "fromProperty": "postId"
+      },
+      {
+        "id": "edge-3b442d27-8fe9-4ac3-8573-dac49789c5ed",
+        "to": "2a733a6d-c270-4f9c-8fc5-958c7e6ba7f5",
+        "from": "69f1d4ec-fcb2-497a-9ae2-33a28e3f6748",
+        "mode": "zip",
+        "type": "data",
+        "weight": 1,
+        "toProperty": "post",
+        "fromProperty": "post"
+      },
+      {
+        "id": "edge-8969fb9c-8bff-40b9-88f3-31131b153c89",
+        "to": "2a733a6d-c270-4f9c-8fc5-958c7e6ba7f5",
+        "from": "69f1d4ec-fcb2-497a-9ae2-33a28e3f6748",
+        "mode": "zip",
+        "type": "data",
+        "weight": 1,
+        "toProperty": "comments",
+        "fromProperty": "comments"
+      },
+      {
+        "id": "edge-dd5bda67-5fbc-48a9-8028-1bcb3497c631",
+        "to": "2a733a6d-c270-4f9c-8fc5-958c7e6ba7f5",
+        "from": "69f1d4ec-fcb2-497a-9ae2-33a28e3f6748",
+        "mode": "zip",
+        "type": "data",
+        "weight": 1,
+        "toProperty": "reposts",
+        "fromProperty": "reposts"
+      },
+      {
+        "id": "edge-c00ef88f-f94f-4d1e-a2fe-5325041224ad",
+        "to": "2a733a6d-c270-4f9c-8fc5-958c7e6ba7f5",
+        "from": "383c0cca-757a-456d-880a-62b9ea012703",
+        "type": "data",
+        "toProperty": "event_id",
+        "fromProperty": "event_id"
+      }
+    ],
+    "toolNodeIds": [],
+    "viewport": {
+      "x": 576.9506494796327,
+      "y": 299.55674878286675,
+      "zoom": 0.7834364150577156
+    },
+    "tags": [],
+    "isGroupNode": false
+  }
+}

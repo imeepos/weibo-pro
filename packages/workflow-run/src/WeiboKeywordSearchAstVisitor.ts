@@ -195,13 +195,24 @@ export class WeiboKeywordSearchAstVisitor {
     }
 }
 
-const formatDate = (date: Date | string | number) => {
+const formatDate = (date: Date | string | number | object | undefined | null) => {
+    // 处理空对象、null、undefined 的情况 - 静默使用当前时间
+    if (date == null || (typeof date === 'object' && Object.keys(date as object).length === 0)) {
+        const now = new Date();
+        return [
+            now.getFullYear(),
+            String(now.getMonth() + 1).padStart(2, '0'),
+            String(now.getDate()).padStart(2, '0'),
+            String(now.getHours()).padStart(2, '0'),
+        ].join('-');
+    }
+
     // 确保转换为有效的 Date 对象
-    const time = new Date(date);
+    const time = new Date(date as string | number | Date);
 
     // 检查日期是否有效
     if (isNaN(time.getTime())) {
-        logger.error(`[formatDate] 无效的日期值: ${date}`);
+        logger.error(`[formatDate] 无效的日期值: ${typeof date === 'object' ? JSON.stringify(date) : date}`);
         // 返回当前日期作为后备
         const now = new Date();
         return [

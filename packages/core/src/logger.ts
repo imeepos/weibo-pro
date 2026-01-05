@@ -8,7 +8,9 @@ export enum LoggerLevel {
     warn = 3,
     error = 4
 }
-export const LOGGER_LEVEL = new InjectionToken<LoggerLevel>(`LOGGER_LEVEL`)
+export const LOGGER_LEVEL = new InjectionToken<LoggerLevel>(`LOGGER_LEVEL`, {
+    factory: () => LoggerLevel.info
+})
 @Injectable()
 export class Logger {
     name: string = `default`
