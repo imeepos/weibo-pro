@@ -67,6 +67,8 @@ export default defineConfig(({ command }) => {
       alias: {
         '@': path.resolve(__dirname, './src'),
       },
+      // 确保所有模块使用同一个 React 实例，避免 "Cannot access 'React' before initialization" 错误
+      dedupe: ['react', 'react-dom'],
     },
     server: {
       host: true,
@@ -182,8 +184,8 @@ export default defineConfig(({ command }) => {
               if (id.includes('framer-motion') || id.includes('motion')) {
                 return 'vendor-animation'
               }
-              // React 核心
-              if (id.includes('react-dom') || id.includes('react-router') || id.includes('scheduler')) {
+              // React 核心 - react 必须明确包含，否则会和 zustand 分开导致初始化顺序问题
+              if (id.includes('/react/') || id.includes('react-dom') || id.includes('react-router') || id.includes('scheduler')) {
                 return 'vendor-react'
               }
               // 编辑器相关 (Plate.js, Slate)
