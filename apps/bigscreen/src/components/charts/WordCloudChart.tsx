@@ -17,7 +17,7 @@ interface WordCloudChartProps {
   data?: KeywordData[] | null; // 支持外部传入数据
 }
 
-const WordCloudChart: React.FC<WordCloudChartProps> = ({
+const WordCloudChart: React.FC<WordCloudChartProps> = React.memo(({
   title = "关键词词云",
   height = 0,
   className,
@@ -97,6 +97,8 @@ const WordCloudChart: React.FC<WordCloudChartProps> = ({
       />
     </ChartState>
   )
-}
+});
+
+WordCloudChart.displayName = 'WordCloudChart';
 
 export default WordCloudChart

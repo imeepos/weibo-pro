@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
+import { useShallow } from 'zustand/react/shallow';
 import {
   RealTimeData,
   SystemStatus,
@@ -161,3 +162,68 @@ export const useAppStore = create<AppState>()(
     }),
   }))
 );
+
+// ============================================
+// 细粒度 Selector Hooks - 避免不必要的重渲染
+// ============================================
+
+/** 仅订阅统计数据 */
+export const useStatistics = () => useAppStore((state) => state.realTimeData?.statistics ?? null);
+
+/** 仅订阅热点话题 */
+export const useHotTopics = () => useAppStore((state) => state.realTimeData?.hotTopics ?? []);
+
+/** 仅订阅关键词数据 */
+export const useKeywords = () => useAppStore((state) => state.realTimeData?.keywords ?? []);
+
+/** 仅订阅时间序列数据 */
+export const useTimeSeries = () => useAppStore((state) => state.realTimeData?.timeSeries ?? []);
+
+/** 仅订阅位置数据 */
+export const useLocations = () => useAppStore((state) => state.realTimeData?.locations ?? []);
+
+/** 仅订阅最近帖子 */
+export const useRecentPosts = () => useAppStore((state) => state.realTimeData?.recentPosts ?? []);
+
+/** 仅订阅系统状态 */
+export const useSystemStatus = () => useAppStore((state) => state.systemStatus);
+
+/** 仅订阅仪表盘配置 */
+export const useDashboardConfig = () => useAppStore((state) => state.dashboardConfig);
+
+/** 仅订阅加载状态 */
+export const useIsLoading = () => useAppStore((state) => state.isLoading);
+
+/** 仅订阅错误状态 */
+export const useError = () => useAppStore((state) => state.error);
+
+/** 仅订阅连接状态 */
+export const useConnectionStatus = () => useAppStore((state) => state.isConnected);
+
+/** 仅订阅时间范围 */
+export const useSelectedTimeRange = () => useAppStore((state) => state.selectedTimeRange);
+
+/** 订阅多个状态（使用 shallow 比较） */
+export const useAppStoreShallow = <T>(selector: (state: AppState) => T) =>
+  useAppStore(useShallow(selector));
+
+/** 仅订阅 actions（不会触发重渲染） */
+export const useAppActions = () => useAppStore(useShallow((state) => ({
+  setRealTimeData: state.setRealTimeData,
+  updateStatistics: state.updateStatistics,
+  updateHotTopics: state.updateHotTopics,
+  updateKeywords: state.updateKeywords,
+  updateTimeSeries: state.updateTimeSeries,
+  updateLocations: state.updateLocations,
+  addRecentPost: state.addRecentPost,
+  setSystemStatus: state.setSystemStatus,
+  setDashboardConfig: state.setDashboardConfig,
+  setLoading: state.setLoading,
+  setError: state.setError,
+  setSelectedTimeRange: state.setSelectedTimeRange,
+  setConnectionStatus: state.setConnectionStatus,
+  incrementRetries: state.incrementRetries,
+  resetRetries: state.resetRetries,
+  clearData: state.clearData,
+  reset: state.reset,
+})));
