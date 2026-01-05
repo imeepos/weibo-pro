@@ -1,12 +1,17 @@
 import { Injectable, Inject } from '@sker/core';
-import { Observable, EMPTY, merge, defer, of, combineLatest, zip, isObservable, concat, throwError } from 'rxjs';
-import { filter, map, catchError, shareReplay, concatMap, withLatestFrom, tap } from 'rxjs/operators';
+import { Observable, EMPTY, of, isObservable, throwError, merge, zip, combineLatest } from 'rxjs';
+import { map, catchError, shareReplay, concatMap, filter, tap } from 'rxjs/operators';
 import { NodeExecutor } from './executor';
-import { Handler, hasMultiMode } from './decorator';
-import { setAstError, WorkflowGraphAst } from './ast';
-import { NodeEmitEvent, NodeEvent } from './execution/events';
-import { EdgeMode, IEdge, ROUTE_SKIPPED, EDGE_MODE_PRIORITY } from './types';
-import { evaluateTransform } from './edge-transform';
+import { Handler } from './decorator';
+import { WorkflowGraphAst } from './ast';
+import { NodeEvent } from './execution/events';
+import { EdgeMode, IEdge, ROUTE_SKIPPED } from './types';
+import { NodeInputBuilder } from './execution/NodeInputBuilder';
+import { EdgeStreamBuilder } from './execution/EdgeStreamBuilder';
+import { EdgeCombiner } from './execution/EdgeCombiner';
+import { StreamMerger } from './execution/StreamMerger';
+import { WorkflowEventMerger } from './execution/WorkflowEventMerger';
+import { MergeStrategy, ZipStrategy, CombineLatestStrategy } from './execution/EdgeModeStrategy';
 
 /**
  * 工作流节点执行器
@@ -23,9 +28,26 @@ import { evaluateTransform } from './edge-transform';
  * - 递归优雅：子工作流也通过同样的机制执行
  * - 职责分离：NodeExecutor 仅负责调度，Visitor 负责具体逻辑
  * - 循环依赖解决：通过构造函数注入 NodeExecutor（DI 容器延迟解析）
+ *
+ * 重构后职责：
+ * - 协调各个辅助类完成工作流执行
+ * - 保持 handler 方法简洁清晰
  */
 @Injectable()
 export class WorkflowGraphAstVisitor {
+    private nodeInputBuilder = new NodeInputBuilder();
+    private edgeStreamBuilder = new EdgeStreamBuilder();
+    private edgeCombiner = new EdgeCombiner();
+    private streamMerger = new StreamMerger();
+    private workflowEventMerger = new WorkflowEventMerger();
+
+    // 边模式策略
+    private strategies = new Map<EdgeMode, any>([
+        [EdgeMode.MERGE, new MergeStrategy()],
+        [EdgeMode.ZIP, new ZipStrategy()],
+        [EdgeMode.COMBINE_LATEST, new CombineLatestStrategy()]
+    ]);
+
     constructor(
         @Inject(NodeExecutor) private nodeExecutor: NodeExecutor
     ) { }
@@ -56,7 +78,7 @@ export class WorkflowGraphAstVisitor {
                 });
 
                 // 3. 合并所有事件流
-                return this.mergeNodeEventStreams(ast, nodeEventStreams);
+                return this.workflowEventMerger.mergeNodeEventStreams(ast, nodeEventStreams);
             }),
             catchError(error => {
                 ast.state = 'fail';
@@ -66,89 +88,6 @@ export class WorkflowGraphAstVisitor {
         );
     }
 
-    /**
-     * 验证端口的边数量是否符合 isMulti 标记
-     */
-    private validatePortEdges(node: any, edges: IEdge[]): void {
-        const inputs = node.metadata?.inputs || [];
-        const edgesByPort = new Map<string, IEdge[]>();
-
-        edges.forEach(edge => {
-            if (!edge.toProperty) return;
-            if (!edgesByPort.has(edge.toProperty)) {
-                edgesByPort.set(edge.toProperty, []);
-            }
-            edgesByPort.get(edge.toProperty)!.push(edge);
-        });
-
-        edgesByPort.forEach((portEdges, portName) => {
-            if (portEdges.length <= 1) return;
-
-            const inputMeta = inputs.find((i: any) => i.property === portName);
-            const isMulti = hasMultiMode(inputMeta?.mode);
-            if (!isMulti) {
-                throw new Error(
-                    `[WorkflowGraphAstVisitor] 节点 ${node.id} 的端口 "${portName}" ` +
-                    `有 ${portEdges.length} 条边，但未标记 mode: IS_MULTI`
-                );
-            }
-        });
-    }
-
-    /**
-     * 按 EdgeMode 分组边
-     */
-    private groupEdgesByMode(edges: IEdge[]): Map<EdgeMode, IEdge[]> {
-        const groups = new Map<EdgeMode, IEdge[]>();
-
-        edges.forEach(edge => {
-            const mode = edge.mode ?? EdgeMode.COMBINE_LATEST;
-            if (!groups.has(mode)) {
-                groups.set(mode, []);
-            }
-            groups.get(mode)!.push(edge);
-        });
-
-        return groups;
-    }
-
-    /**
-     * 按优先级合并模式组
-     */
-    private combineGroupsByPriority(
-        workflow: WorkflowGraphAst,
-        edges: IEdge[],
-        nodeEventStreams: Map<string, Observable<NodeEvent>>
-    ): Observable<any> {
-        if (edges.length === 0) return EMPTY;
-
-        const modeGroups = this.groupEdgesByMode(edges);
-        const groupStreams: Array<{ mode: EdgeMode; priority: number; stream$: Observable<any> }> = [];
-
-        modeGroups.forEach((edgesInMode, mode) => {
-            const sources = edgesInMode.map(edge =>
-                this.buildEdgeValueStream(workflow, edge, nodeEventStreams)
-            ).filter(s => s !== EMPTY);
-
-            if (sources.length === 0) return;
-
-            const stream$ = this.combineEdgeSources(mode, sources, edgesInMode);
-            groupStreams.push({
-                mode,
-                priority: EDGE_MODE_PRIORITY[mode],
-                stream$
-            });
-        });
-
-        if (groupStreams.length === 0) return EMPTY;
-        if (groupStreams.length === 1) return groupStreams[0]!.stream$;
-
-        groupStreams.sort((a, b) => a.priority - b.priority);
-
-        return combineLatest(groupStreams.map(g => g.stream$)).pipe(
-            map(results => Object.assign({}, ...results))
-        );
-    }
 
     /**
      * 构建每个节点的输入流
@@ -164,19 +103,14 @@ export class WorkflowGraphAstVisitor {
         nodeEventStreams: Map<string, Observable<NodeEvent>>
     ): Map<string, Observable<any>> {
         const nodeInputStreams = new Map<string, Observable<any>>();
+
         // 识别入口节点
         const entryIds = workflow.entryNodeIds?.length
             ? workflow.entryNodeIds
-            : this.findEntryNodes(workflow);
+            : this.nodeInputBuilder.findEntryNodes(workflow);
 
         // 按目标节点分组边
-        const edgesByTarget = new Map<string, IEdge[]>();
-        workflow.edges.forEach(edge => {
-            if (!edgesByTarget.has(edge.to)) {
-                edgesByTarget.set(edge.to, []);
-            }
-            edgesByTarget.get(edge.to)!.push(edge);
-        });
+        const edgesByTarget = this.nodeInputBuilder.groupEdgesByTarget(workflow.edges);
 
         workflow.nodes.forEach(node => {
             const edges = edgesByTarget.get(node.id) || [];
@@ -186,26 +120,13 @@ export class WorkflowGraphAstVisitor {
             // 1. 入口节点：添加系统输入流
             if (isEntry) {
                 const entryInput$ = systemInput$.pipe(
-                    map(input => this.buildNodeInput(node, input))
+                    map(input => this.nodeInputBuilder.buildNodeInput(node, input))
                 );
                 inputSources.push(entryInput$);
             }
 
             // 2. 分离普通边和 router 边
-            const normalEdges: IEdge[] = [];
-            const routerEdges: IEdge[] = [];
-
-            edges.forEach(edge => {
-                const sourceNode = workflow.nodes.find(n => n.id === edge.from);
-                const outputMeta = sourceNode?.metadata?.outputs?.find(
-                    (out: any) => out.property === edge.fromProperty
-                );
-                if (outputMeta?.isRouter) {
-                    routerEdges.push(edge);
-                } else {
-                    normalEdges.push(edge);
-                }
-            });
+            const { normalEdges, routerEdges } = this.nodeInputBuilder.separateEdgesByType(edges, workflow);
 
             // 3. 普通边：按 EdgeMode 组合
             if (normalEdges.length > 0) {
@@ -232,58 +153,17 @@ export class WorkflowGraphAstVisitor {
             // 5. 合并所有输入源（等待所有源 complete）
             if (inputSources.length === 0) {
                 // 没有输入源：使用节点自身的静态值作为初始输入
-                // 场景：辅流节点（如风格配置），不连接任何上游，只提供静态值
-                const staticInput = this.buildNodeInput(node, {});
+                const staticInput = this.nodeInputBuilder.buildNodeInput(node, {});
                 console.log(`[buildNodeInputStreams] 节点 ${node.id} 无输入源，使用静态值:`, staticInput);
                 nodeInputStreams.set(node.id, of(staticInput));
             } else {
-                nodeInputStreams.set(node.id, this.mergeWithCompletion(inputSources));
+                nodeInputStreams.set(node.id, this.streamMerger.mergeWithCompletion(inputSources));
             }
         });
 
         return nodeInputStreams;
     }
 
-    /**
-     * 合并多个输入流，只有当所有流都 complete 时才 complete
-     *
-     * 与普通 merge 的区别：
-     * - merge: 任一流 complete 不影响其他流，但整体 complete 时机不确定
-     * - mergeWithCompletion: 合并所有值，只有当所有流都 complete 时才 complete
-     */
-    private mergeWithCompletion(sources: Observable<any>[]): Observable<any> {
-        if (sources.length === 0) return EMPTY;
-        if (sources.length === 1) return sources[0]!;
-
-        return new Observable(subscriber => {
-            let completedCount = 0;
-            const total = sources.length;
-            console.log(`[mergeWithCompletion] 开始合并 ${total} 个源流`);
-
-            const subscriptions = sources.map((source, index) =>
-                source.subscribe({
-                    next: value => {
-                        console.log(`[mergeWithCompletion] 源流 ${index} 发射值:`, JSON.stringify(value).substring(0, 100));
-                        subscriber.next(value);
-                    },
-                    error: err => {
-                        console.log(`[mergeWithCompletion] 源流 ${index} 发生错误:`, err?.message);
-                        subscriber.error(err);
-                    },
-                    complete: () => {
-                        completedCount++;
-                        console.log(`[mergeWithCompletion] 源流 ${index} 完成，已完成 ${completedCount}/${total}`);
-                        if (completedCount === total) {
-                            console.log(`[mergeWithCompletion] 所有源流都已完成，触发 complete`);
-                            subscriber.complete();
-                        }
-                    }
-                })
-            );
-
-            return () => subscriptions.forEach(sub => sub.unsubscribe());
-        });
-    }
 
     /**
      * 构建普通边的输入流（按 EdgeMode 组合）
@@ -296,8 +176,15 @@ export class WorkflowGraphAstVisitor {
     ): Observable<any> {
         if (edges.length === 0) return EMPTY;
 
-        this.validatePortEdges(targetNode, edges);
-        return this.combineGroupsByPriority(workflow, edges, nodeEventStreams);
+        // 验证端口边数量
+        this.nodeInputBuilder.validatePortEdges(targetNode, edges);
+
+        // 按 EdgeMode 分组并组合
+        const modeGroups = this.edgeCombiner.groupEdgesByMode(edges);
+        return this.edgeCombiner.combineGroupsByPriority(
+            modeGroups,
+            (mode, edgesInMode) => this.combineEdgesByMode(workflow, mode, edgesInMode, nodeEventStreams)
+        );
     }
 
     /**
@@ -315,298 +202,110 @@ export class WorkflowGraphAstVisitor {
         targetNodeId: string,
         allEdgesToTarget: IEdge[]
     ): Observable<any> {
-        const valueStream$ = this.buildEdgeValueStream(workflow, edge, nodeEventStreams);
+        const valueStream$ = this.edgeStreamBuilder.buildEdgeValueStream(edge, nodeEventStreams);
         if (valueStream$ === EMPTY) return EMPTY;
 
+        // 过滤 ROUTE_SKIPPED
+        const filteredStream$ = this.edgeStreamBuilder.filterRouteSkipped(valueStream$);
+
         // 获取目标节点的其他非 router 输入边
-        const otherEdges = allEdgesToTarget.filter(e => {
-            if (e.id === edge.id) return false; // 排除自己
+        const otherEdges = this.getOtherNonRouterEdges(workflow, edge, allEdgesToTarget);
+
+        // 如果没有其他输入边，直接返回 router 边的值
+        if (otherEdges.length === 0) {
+            return filteredStream$.pipe(
+                map(value => ({ [edge.toProperty!]: value }))
+            );
+        }
+
+        // 构建其他边的值流并携带
+        return this.buildRouterWithOtherEdges(filteredStream$, edge, otherEdges, nodeEventStreams);
+    }
+
+    /**
+     * 获取其他非 router 边
+     */
+    private getOtherNonRouterEdges(
+        workflow: WorkflowGraphAst,
+        currentEdge: IEdge,
+        allEdges: IEdge[]
+    ): IEdge[] {
+        return allEdges.filter(e => {
+            if (e.id === currentEdge.id) return false; // 排除自己
             const sourceNode = workflow.nodes.find(n => n.id === e.from);
             const outputMeta = sourceNode?.metadata?.outputs?.find(
                 (out: any) => out.property === e.fromProperty
             );
             return !outputMeta?.isRouter; // 只包含非 router 边
         });
-
-        // 如果没有其他输入边，直接返回 router 边的值
-        if (otherEdges.length === 0) {
-            return valueStream$.pipe(
-                filter(value => value !== ROUTE_SKIPPED),
-                map(value => ({ [edge.toProperty!]: value }))
-            );
-        }
-
-        // 构建其他边的值流
-        const otherValueStreams = otherEdges.map(e =>
-            this.buildEdgeValueStream(workflow, e, nodeEventStreams)
-        ).filter(s => s !== EMPTY);
-
-        // Router 边作为主流，携带其他边的最新值
-        return valueStream$.pipe(
-            filter(value => value !== ROUTE_SKIPPED),
-            withLatestFrom(...otherValueStreams),
-            map(([routerValue, ...otherValues]) => {
-                const result: Record<string, any> = {};
-
-                // Router 边的值
-                result[edge.toProperty!] = routerValue;
-
-                // 其他边的最新值
-                otherValues.forEach((value, index) => {
-                    const otherEdge = otherEdges[index];
-                    if (otherEdge?.toProperty) {
-                        result[otherEdge.toProperty] = value;
-                    }
-                });
-
-                return result;
-            })
-        );
     }
 
     /**
-     * 从边构建值流（提取 node_emit 事件的值）
+     * 构建 router 边携带其他边的值流
      */
-    private buildEdgeValueStream(
-        workflow: WorkflowGraphAst,
-        edge: IEdge,
+    private buildRouterWithOtherEdges(
+        routerStream$: Observable<any>,
+        routerEdge: IEdge,
+        otherEdges: IEdge[],
         nodeEventStreams: Map<string, Observable<NodeEvent>>
     ): Observable<any> {
-        // 使用 defer 延迟获取 eventStream，解决循环依赖
-        return defer(() => {
-            const eventStream$ = nodeEventStreams.get(edge.from);
-            if (!eventStream$) return EMPTY;
+        const otherValueStreams = otherEdges
+            .map(e => this.edgeStreamBuilder.buildEdgeValueStream(e, nodeEventStreams))
+            .filter(s => s !== EMPTY);
 
-            return eventStream$.pipe(
-                filter((event): event is NodeEmitEvent =>
-                    event.type === 'node_emit' && edge.fromProperty! in (event.data || {})
-                ),
-                tap(() => {
-                    console.log(`[buildEdgeValueStream] 边 ${edge.fromProperty} → ${edge.toProperty} 收到值`);
-                }),
-                map(event => {
-                    let value = event.data?.[edge.fromProperty!];
-
-                    // 应用边转换表达式
-                    if (edge.transform) {
-                        value = evaluateTransform(value, edge.transform);
-                    }
-
-                    return value;
-                })
-            );
-        });
-    }
-
-    /**
-     * 按 EdgeMode 组合多个边的值流
-     */
-    private combineEdgeSources(mode: EdgeMode, sources: Observable<any>[], edges: IEdge[]): Observable<any> {
-        const mapToObject = (values: any[]) => {
-            const result: Record<string, any> = {};
-            values.forEach((value, index) => {
-                const prop = edges[index]?.toProperty;
-                if (prop) {
-                    if (result[prop] === undefined) {
-                        result[prop] = value;
-                    } else if (Array.isArray(result[prop])) {
-                        result[prop].push(value);
-                    } else {
-                        result[prop] = [result[prop], value];
-                    }
-                }
-            });
-            return result;
-        };
-
-        console.log(`[combineEdgeSources] 组合模式: ${mode}, 边数量: ${edges.length}, 边属性: ${edges.map(e => e.toProperty).join(', ')}`);
-
-        switch (mode) {
-            case EdgeMode.MERGE:
-                // 修复：在 merge 前为每个源标记 toProperty，避免使用发射顺序 index
-                return merge(
-                    ...sources.map((source, sourceIndex) =>
-                        source.pipe(
-                            tap(() => console.log(`[combineEdgeSources MERGE] 边 ${edges[sourceIndex]!.toProperty} 发射值`)),
-                            map(value => ({ [edges[sourceIndex]!.toProperty!]: value }))
-                        )
-                    )
-                );
-            case EdgeMode.ZIP:
-                return zip(...sources).pipe(
-                    tap(() => console.log(`[combineEdgeSources ZIP] 所有边都发射了值`)),
-                    map(mapToObject)
-                );
-            case EdgeMode.WITH_LATEST_FROM:
-                return this.buildWithLatestFrom(sources, edges);
-            case EdgeMode.COMBINE_LATEST:
-            default:
-                return combineLatest(sources).pipe(
-                    tap(() => console.log(`[combineEdgeSources COMBINE_LATEST] 所有边都至少发射了一次值`)),
-                    map(mapToObject)
-                );
-        }
-    }
-
-    /**
-     * 构建 withLatestFrom：主流触发，携带辅流最新值
-     *
-     * 场景示例：
-     * - 关键词节点（主流 isPrimary=true）→ 每次发射都触发下游
-     * - 风格节点（辅流 isPrimary=false）→ 只提供配置值，不主动触发
-     *
-     * 行为：
-     * 主流: ----A--------B--------C---
-     * 辅流: --1-----2---------3------
-     * 结果: ----A1-------B2-------C3--
-     */
-    private buildWithLatestFrom(sources: Observable<any>[], edges: IEdge[]): Observable<any> {
-        // 找到主流（isPrimary === true）
-        const primaryIndex = edges.findIndex(edge => edge.isPrimary === true);
-
-        if (primaryIndex === -1) {
-            console.warn('[buildWithLatestFrom] 未找到主流（isPrimary=true），回退到 combineLatest');
-            return combineLatest(sources).pipe(
-                map(values => {
-                    const result: Record<string, any> = {};
-                    values.forEach((value, index) => {
-                        const prop = edges[index]?.toProperty;
-                        if (prop) result[prop] = value;
-                    });
-                    return result;
-                })
+        if (otherValueStreams.length === 0) {
+            return routerStream$.pipe(
+                map(value => ({ [routerEdge.toProperty!]: value }))
             );
         }
 
-        // 分离主流和辅流
-        const primarySource = sources[primaryIndex]!;
-        const secondarySources = sources.filter((_, i) => i !== primaryIndex);
-        const primaryEdge = edges[primaryIndex]!;
-        const secondaryEdges = edges.filter((_, i) => i !== primaryIndex);
+        return routerStream$.pipe(
+            tap(() => console.log(`[buildRouterWithOtherEdges] Router 边 ${routerEdge.toProperty} 触发`)),
+            filter(() => otherValueStreams.length > 0),
+            concatMap(routerValue => {
+                // 使用 combineLatest 获取其他边的最新值
+                return combineLatest(otherValueStreams).pipe(
+                    map(otherValues => {
+                        const result: Record<string, any> = {};
+                        result[routerEdge.toProperty!] = routerValue;
 
-        // 主流 + withLatestFrom(辅流1, 辅流2, ...)
-        return primarySource.pipe(
-            withLatestFrom(...secondarySources),
-            map(([primaryValue, ...secondaryValues]) => {
-                const result: Record<string, any> = {};
+                        otherValues.forEach((value, index) => {
+                            const otherEdge = otherEdges[index];
+                            if (otherEdge?.toProperty) {
+                                result[otherEdge.toProperty] = value;
+                            }
+                        });
 
-                // 主流值
-                if (primaryEdge.toProperty) {
-                    result[primaryEdge.toProperty] = primaryValue;
-                }
-
-                // 辅流值
-                secondaryValues.forEach((value, index) => {
-                    const prop = secondaryEdges[index]?.toProperty;
-                    if (prop) result[prop] = value;
-                });
-
-                return result;
+                        return result;
+                    })
+                );
             })
         );
     }
 
     /**
-     * 为入口节点构建输入对象
+     * 按 EdgeMode 组合边的值流
      */
-    private buildNodeInput(node: any, input: any): Record<string, any> {
-        const nodeInput: Record<string, any> = {};
-        const inputs = node.metadata?.inputs || [];
-
-        inputs.forEach((inputMeta: any) => {
-            const property = String(inputMeta.property);
-            const propertyKey = `${node.id}.${property}`;
-
-            if (input[propertyKey] !== undefined) {
-                nodeInput[property] = input[propertyKey];
-            } else if (input[node.id]?.[property] !== undefined) {
-                nodeInput[property] = input[node.id][property];
-            } else if (node[property] !== undefined) {
-                nodeInput[property] = node[property];
-            } else if (inputMeta.defaultValue !== undefined) {
-                nodeInput[property] = inputMeta.defaultValue;
-            }
-        });
-
-        return nodeInput;
-    }
-
-    private findEntryNodes(workflow: WorkflowGraphAst): string[] {
-        const inDegrees = new Map<string, number>();
-        workflow.nodes.forEach(node => inDegrees.set(node.id, 0));
-        workflow.edges.forEach(edge => {
-            inDegrees.set(edge.to, (inDegrees.get(edge.to) ?? 0) + 1);
-        });
-
-
-        const entryNodes = Array.from(inDegrees.entries())
-            .filter(([_, degree]) => degree === 0)
-            .map(([nodeId]) => nodeId);
-
-        return entryNodes;
-    }
-
-    private mergeNodeEventStreams(
+    private combineEdgesByMode(
         workflow: WorkflowGraphAst,
+        mode: EdgeMode,
+        edges: IEdge[],
         nodeEventStreams: Map<string, Observable<NodeEvent>>
-    ): Observable<NodeEvent> {
-        return new Observable<NodeEvent>(obs => {
-            obs.next({ type: 'node_runing', id: workflow.id });
+    ): Observable<any> {
+        const sources = edges
+            .map(edge => this.edgeStreamBuilder.buildEdgeValueStream(edge, nodeEventStreams))
+            .filter(s => s !== EMPTY);
 
-            const allStreams = Array.from(nodeEventStreams.values());
-            if (allStreams.length === 0) {
-                workflow.state = 'success';
-                obs.next({ type: 'node_success', id: workflow.id });
-                obs.complete();
-                return;
-            }
+        if (sources.length === 0) return EMPTY;
 
-            let completedCount = 0;
-            const totalNodes = allStreams.length;
-            const nodeStates = new Map<string, 'success' | 'fail'>();
-            const subscriptions: any[] = [];
+        console.log(`[combineEdgesByMode] 组合模式: ${mode}, 边数量: ${edges.length}`);
 
-            allStreams.forEach(nodeStream => {
-                const sub = nodeStream.subscribe({
-                    next: event => {
-                        obs.next(event);
-                        if (event.type === 'node_fail') {
-                            nodeStates.set(event.id!, 'fail');
-                            if (event.error && !workflow.error) {
-                                setAstError(workflow, new Error(event.error))
-                            }
-                        } else if (event.type === 'node_success') {
-                            nodeStates.set(event.id!, 'success');
-                        }
-                    },
-                    error: err => {
-                        workflow.state = 'fail';
-                        workflow.error = err;
-                        setAstError(workflow, err)
-                        obs.next({ type: 'node_fail', id: workflow.id, error: workflow.error?.message });
-                        subscriptions.forEach(sub => sub.unsubscribe());
-                        obs.error(err);
-                    },
-                    complete: () => {
-                        completedCount++;
-                        if (completedCount === totalNodes) {
-                            const hasError = Array.from(nodeStates.values()).some(s => s === 'fail');
-                            workflow.state = hasError ? 'fail' : 'success';
-                            if (hasError) {
-                                const error = workflow.error || new Error('Workflow failed');
-                                obs.next({ type: 'node_fail', id: workflow.id, error: error.message });
-                                obs.error(error);
-                            } else {
-                                obs.next({ type: 'node_success', id: workflow.id });
-                                obs.complete();
-                            }
-                        }
-                    }
-                });
-                subscriptions.push(sub);
-            });
+        // 使用策略模式处理 MERGE, ZIP, COMBINE_LATEST
+        if (mode === EdgeMode.WITH_LATEST_FROM) {
+            return this.edgeCombiner.buildWithLatestFrom(sources, edges);
+        }
 
-            return () => subscriptions.forEach(sub => sub.unsubscribe());
-        });
+        const strategy = this.strategies.get(mode) || this.strategies.get(EdgeMode.COMBINE_LATEST);
+        return strategy!.combine(sources, edges);
     }
 }

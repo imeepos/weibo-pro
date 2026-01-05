@@ -20,7 +20,7 @@
   "main": "./dist/index.js",
   "sideEffects": false,
   "scripts": {
-    "build:deps": "tsup",
+    "build": "tsup",
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
