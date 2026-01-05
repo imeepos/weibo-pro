@@ -1,6 +1,7 @@
 import { Observable } from 'rxjs';
 import { WorkflowGraphAst, setAstError } from '../ast';
 import { NodeEvent } from './events';
+import { Injectable } from '@sker/core';
 
 /**
  * 工作流事件合并器
@@ -10,6 +11,7 @@ import { NodeEvent } from './events';
  * - 管理工作流状态（running → success/fail）
  * - 监听子节点完成状态
  */
+@Injectable()
 export class WorkflowEventMerger {
     /**
      * 合并所有节点事件流，管理工作流状态

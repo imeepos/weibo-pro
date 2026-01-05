@@ -28,6 +28,7 @@ export * from './MergeAst';
 export * from './SwitchAst';
 export * from './SwitchAstVisitor';
 export { WorkflowGraphAstVisitor } from './WorkflowGraphAstVisitor';
+export { providers as EdgeModeStrategyProviders, EDGE_MODE_STRATEGY } from './execution/EdgeModeStrategy';
 export * from './FilterAst';
 export * from './MergeAst';
 export * from './LoopAst';

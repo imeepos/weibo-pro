@@ -3,6 +3,7 @@ import { filter, map, tap } from 'rxjs/operators';
 import { IEdge, ROUTE_SKIPPED } from '../types';
 import { NodeEmitEvent, NodeEvent } from './events';
 import { evaluateTransform } from '../edge-transform';
+import { Injectable } from '@sker/core';
 
 /**
  * 边流构建器
@@ -12,6 +13,7 @@ import { evaluateTransform } from '../edge-transform';
  * - 应用边转换表达式
  * - 处理 ROUTE_SKIPPED 逻辑
  */
+@Injectable()
 export class EdgeStreamBuilder {
     /**
      * 从边构建值流

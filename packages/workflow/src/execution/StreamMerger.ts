@@ -1,3 +1,4 @@
+import { Injectable } from '@sker/core';
 import { Observable, EMPTY } from 'rxjs';
 
 /**
@@ -6,6 +7,7 @@ import { Observable, EMPTY } from 'rxjs';
  * 职责：
  * - 合并多个流，等待所有流完成才完成
  */
+@Injectable()
 export class StreamMerger {
     /**
      * 合并多个输入流，只有当所有流都 complete 时才 complete

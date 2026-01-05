@@ -4,6 +4,7 @@ import { WorkflowGraphAst } from '../ast';
 import { IEdge, ROUTE_SKIPPED } from '../types';
 import { NodeEvent } from './events';
 import { hasMultiMode } from '../decorator';
+import { Injectable } from '@sker/core';
 
 /**
  * 节点输入构建器
@@ -15,6 +16,7 @@ import { hasMultiMode } from '../decorator';
  * - 分离普通边和 router 边
  * - 验证端口边数量
  */
+@Injectable()
 export class NodeInputBuilder {
     /**
      * 识别入口节点（入度为 0 的节点）

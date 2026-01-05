@@ -15,14 +15,18 @@
  */
 
 import { root } from '@sker/core';
-import { DEFAULT_VISITOR } from '@sker/workflow';
+import { DEFAULT_VISITOR, EdgeModeStrategyProviders } from '@sker/workflow';
 import { RemoteDefaultVisitor } from './RemoteDefaultVisitor.js';
 
 // 自动注册 RemoteDefaultVisitor（前端默认使用远程代理执行）
-root.set([{
-  provide: DEFAULT_VISITOR,
-  useClass: RemoteDefaultVisitor
-}]);
+// 同时注册 EdgeModeStrategy providers（前端也需要执行工作流）
+root.set([
+  {
+    provide: DEFAULT_VISITOR,
+    useClass: RemoteDefaultVisitor
+  },
+  ...EdgeModeStrategyProviders
+]);
 
 // 导出工具
 export { RemoteDefaultVisitor } from './RemoteDefaultVisitor.js';

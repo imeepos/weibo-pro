@@ -5,13 +5,13 @@ import { NodeExecutor } from './executor';
 import { Handler } from './decorator';
 import { WorkflowGraphAst } from './ast';
 import { NodeEvent } from './execution/events';
-import { EdgeMode, IEdge, ROUTE_SKIPPED } from './types';
+import { EdgeMode, IEdge, ROUTE_SKIPPED, EDGE_MODE_PRIORITY } from './types';
 import { NodeInputBuilder } from './execution/NodeInputBuilder';
 import { EdgeStreamBuilder } from './execution/EdgeStreamBuilder';
 import { EdgeCombiner } from './execution/EdgeCombiner';
 import { StreamMerger } from './execution/StreamMerger';
 import { WorkflowEventMerger } from './execution/WorkflowEventMerger';
-import { MergeStrategy, ZipStrategy, CombineLatestStrategy } from './execution/EdgeModeStrategy';
+import { EDGE_MODE_STRATEGY, IEdgeModeStrategy } from './execution/EdgeModeStrategy';
 
 /**
  * 工作流节点执行器
@@ -35,21 +35,14 @@ import { MergeStrategy, ZipStrategy, CombineLatestStrategy } from './execution/E
  */
 @Injectable()
 export class WorkflowGraphAstVisitor {
-    private nodeInputBuilder = new NodeInputBuilder();
-    private edgeStreamBuilder = new EdgeStreamBuilder();
-    private edgeCombiner = new EdgeCombiner();
-    private streamMerger = new StreamMerger();
-    private workflowEventMerger = new WorkflowEventMerger();
-
-    // 边模式策略
-    private strategies = new Map<EdgeMode, any>([
-        [EdgeMode.MERGE, new MergeStrategy()],
-        [EdgeMode.ZIP, new ZipStrategy()],
-        [EdgeMode.COMBINE_LATEST, new CombineLatestStrategy()]
-    ]);
-
     constructor(
-        @Inject(NodeExecutor) private nodeExecutor: NodeExecutor
+        @Inject(NodeExecutor) private nodeExecutor: NodeExecutor,
+        @Inject(NodeInputBuilder) private nodeInputBuilder: NodeInputBuilder,
+        @Inject(EdgeStreamBuilder) private edgeStreamBuilder: EdgeStreamBuilder,
+        @Inject(EdgeCombiner) private edgeCombiner: EdgeCombiner,
+        @Inject(StreamMerger) private streamMerger: StreamMerger,
+        @Inject(WorkflowEventMerger) private workflowEventMerger: WorkflowEventMerger,
+        @Inject(EDGE_MODE_STRATEGY) private strategies: Map<EdgeMode, IEdgeModeStrategy>,
     ) { }
 
     @Handler(WorkflowGraphAst)
@@ -179,11 +172,31 @@ export class WorkflowGraphAstVisitor {
         // 验证端口边数量
         this.nodeInputBuilder.validatePortEdges(targetNode, edges);
 
-        // 按 EdgeMode 分组并组合
+        // 按 EdgeMode 分组
         const modeGroups = this.edgeCombiner.groupEdgesByMode(edges);
-        return this.edgeCombiner.combineGroupsByPriority(
-            modeGroups,
-            (mode, edgesInMode) => this.combineEdgesByMode(workflow, mode, edgesInMode, nodeEventStreams)
+
+        // 为每个模式组构建流
+        const groupStreams: Array<{ mode: EdgeMode; priority: number; stream$: Observable<any> }> = [];
+
+        modeGroups.forEach((edgesInMode, mode) => {
+            const stream$ = this.combineEdgesByMode(workflow, mode, edgesInMode, nodeEventStreams);
+            if (stream$ !== EMPTY) {
+                groupStreams.push({
+                    mode,
+                    priority: EDGE_MODE_PRIORITY[mode],
+                    stream$
+                });
+            }
+        });
+
+        // 按优先级合并所有模式组
+        if (groupStreams.length === 0) return EMPTY;
+        if (groupStreams.length === 1) return groupStreams[0]!.stream$;
+
+        groupStreams.sort((a, b) => a.priority - b.priority);
+
+        return combineLatest(groupStreams.map(g => g.stream$)).pipe(
+            map(results => Object.assign({}, ...results))
         );
     }
 
@@ -300,11 +313,7 @@ export class WorkflowGraphAstVisitor {
 
         console.log(`[combineEdgesByMode] 组合模式: ${mode}, 边数量: ${edges.length}`);
 
-        // 使用策略模式处理 MERGE, ZIP, COMBINE_LATEST
-        if (mode === EdgeMode.WITH_LATEST_FROM) {
-            return this.edgeCombiner.buildWithLatestFrom(sources, edges);
-        }
-
+        // 使用策略模式处理所有 EdgeMode
         const strategy = this.strategies.get(mode) || this.strategies.get(EdgeMode.COMBINE_LATEST);
         return strategy!.combine(sources, edges);
     }
