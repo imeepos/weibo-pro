@@ -119,23 +119,23 @@ export default defineConfig(({ command }) => {
       cssCodeSplit: true, // 启用CSS代码分割
       assetsInlineLimit: 4096, // 小于4KB的资源内联
 
-      // 压缩配置
-      minify: 'terser',
-      terserOptions: {
-        compress: {
-          drop_console: true, // 移除console
-          drop_debugger: true, // 移除debugger
-          pure_funcs: ['console.log', 'console.debug'], // 移除特定函数
-          reduce_vars: true,
-          reduce_funcs: true,
-        },
-        mangle: {
-          safari10: true,
-        },
-        format: {
-          comments: false, // 移除注释
-        },
-      },
+      // 压缩配置 - 临时禁用以调试初始化顺序问题
+      minify: false,
+      // terserOptions: {
+      //   compress: {
+      //     drop_console: true,
+      //     drop_debugger: true,
+      //     pure_funcs: ['console.log', 'console.debug'],
+      //     reduce_vars: true,
+      //     reduce_funcs: true,
+      //   },
+      //   mangle: {
+      //     safari10: true,
+      //   },
+      //   format: {
+      //     comments: false,
+      //   },
+      // },
 
       chunkSizeWarningLimit: 1000, // 提高警告阈值到 1MB
       rollupOptions: {
