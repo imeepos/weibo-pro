@@ -119,6 +119,7 @@ class Logger {
     return {
       debug: (message: string, data?: unknown) => this.debug(message, data, source),
       info: (message: string, data?: unknown) => this.info(message, data, source),
+      log: (message: string, data?: unknown) => this.info(message, data, source), // log 是 info 的别名
       warn: (message: string, data?: unknown) => this.warn(message, data, source),
       error: (message: string, error?: Error | unknown) => this.error(message, error, source)
     };

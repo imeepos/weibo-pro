@@ -121,28 +121,30 @@ export default defineConfig(({ command }) => {
       cssCodeSplit: true, // 启用CSS代码分割
       assetsInlineLimit: 4096, // 小于4KB的资源内联
 
-      // 压缩配置 - 临时禁用以调试初始化顺序问题
-      minify: false,
-      // terserOptions: {
-      //   compress: {
-      //     drop_console: true,
-      //     drop_debugger: true,
-      //     pure_funcs: ['console.log', 'console.debug'],
-      //     reduce_vars: true,
-      //     reduce_funcs: true,
-      //   },
-      //   mangle: {
-      //     safari10: true,
-      //   },
-      //   format: {
-      //     comments: false,
-      //   },
-      // },
+      // 压缩配置 - 启用以减小生产包体积
+      minify: 'terser',
+      terserOptions: {
+        compress: {
+          drop_console: false, // 保留 console 用于生产调试
+          drop_debugger: true,
+          reduce_vars: true,
+          reduce_funcs: true,
+          passes: 2, // 多次压缩以获得更好的效果
+        },
+        mangle: {
+          safari10: true,
+          toplevel: true, // 顶级作用域变量名混淆
+        },
+        format: {
+          comments: false,
+        },
+      },
 
       chunkSizeWarningLimit: 1000, // 提高警告阈值到 1MB
       rollupOptions: {
         output: {
-          // 优化代码分割策略 - 更细粒度的 chunk 分割
+          // 简化代码分割策略 - 只分离真正独立的大型库
+          // 避免复杂的 chunk 分割导致的循环依赖问题
           manualChunks(id) {
             // @sker/* 包不分割，保持在主 bundle 中以确保正确的初始化顺序
             if (id.includes('@sker/')) {
@@ -154,10 +156,13 @@ export default defineConfig(({ command }) => {
               return undefined; // 不分割
             }
 
-            // 将 node_modules 中的依赖分割到不同 chunk
+            // 只分离真正独立的大型库
             if (id.includes('node_modules')) {
-              // Three.js 相关的库必须按顺序打包到同一个 chunk 中
-              // 顺序：three -> three-* -> d3-force-3d -> force-graph -> react-force-graph
+              // ECharts - 完全独立的图表库
+              if (id.includes('echarts') || id.includes('zrender')) {
+                return 'vendor-echarts'
+              }
+              // Three.js 相关 - 完全独立的 3D 库
               if (
                 id.includes('/three/') ||
                 id.includes('three-') ||
@@ -165,40 +170,11 @@ export default defineConfig(({ command }) => {
                 id.includes('force-graph') ||
                 id.includes('react-force-graph')
               ) {
-                return 'vendor-3d'  // 所有 3D 相关库打包在一起
+                return 'vendor-3d'
               }
-
-              // ECharts 相关 - 通常很大(~600KB)
-              if (id.includes('echarts') || id.includes('zrender')) {
-                return 'vendor-echarts'
-              }
-              // Monaco Editor - 代码编辑器
-              if (id.includes('monaco-editor')) {
-                return 'vendor-monaco'
-              }
-              // React Flow / XYFlow - 工作流编辑器
-              if (id.includes('@xyflow') || id.includes('reactflow') || id.includes('react-flow')) {
-                return 'vendor-workflow'
-              }
-              // Framer Motion - 动画库 (~100KB)
-              if (id.includes('framer-motion') || id.includes('motion')) {
-                return 'vendor-animation'
-              }
-              // React 核心 - react 必须明确包含，否则会和 zustand 分开导致初始化顺序问题
-              if (id.includes('/react/') || id.includes('react-dom') || id.includes('react-router') || id.includes('scheduler')) {
-                return 'vendor-react'
-              }
-              // 编辑器相关 (Plate.js, Slate)
-              if (id.includes('@udecode') || id.includes('slate') || id.includes('lexical')) {
-                return 'vendor-editor'
-              }
-              // 工具库 (较小，可合并)
-              if (id.includes('lodash') || id.includes('dayjs') || id.includes('axios') || id.includes('zustand')) {
-                return 'vendor-utils'
-              }
-              // 其他第三方库
-              return 'vendor'
             }
+            // 其他所有依赖保持在主 bundle 中，避免循环依赖
+            return undefined;
           },
 
           // 文件命名优化

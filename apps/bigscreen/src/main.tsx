@@ -35,7 +35,7 @@ let auth: any = null;
       baseURL,
       plugins: [createSkerClientPlugin()]
     });
-    logger.log('Auth client initialized');
+    logger.info('Auth client initialized');
   } catch (error) {
     logger.error('Failed to initialize auth client', error);
   }
