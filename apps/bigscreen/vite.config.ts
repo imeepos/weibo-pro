@@ -147,6 +147,11 @@ export default defineConfig(({ command }) => {
               return undefined; // 不分割
             }
 
+            // better-auth 也不分割，避免初始化顺序问题
+            if (id.includes('better-auth')) {
+              return undefined; // 不分割
+            }
+
             // 将 node_modules 中的依赖分割到不同 chunk
             if (id.includes('node_modules')) {
               // ECharts 相关 - 通常很大(~600KB)
@@ -228,7 +233,20 @@ export default defineConfig(({ command }) => {
     // 优化依赖预构建
     optimizeDeps: {
       force: true,
-      include: ['react', 'react-dom', 'react-router-dom', 'axios', 'dayjs', 'clsx', 'tailwind-merge', 'zustand', 'lucide-react', 'rxjs', 'rxjs/operators'],
+      include: [
+        'react',
+        'react-dom',
+        'react-router-dom',
+        'axios',
+        'dayjs',
+        'clsx',
+        'tailwind-merge',
+        'zustand',
+        'lucide-react',
+        'rxjs',
+        'rxjs/operators',
+        'better-auth/client'  // 强制预构建 better-auth
+      ],
       exclude: ['echarts', 'web-vitals', '@sker/core', '@sker/workflow', '@sker/workflow-ui', 'three'],
       esbuildOptions: {
         target: 'es2020',

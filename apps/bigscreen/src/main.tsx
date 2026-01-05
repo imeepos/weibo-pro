@@ -6,8 +6,6 @@ import "@sker/sdk";
 // 上面的这些 import 必须要，加上会自动注册响应的controller到root
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { createAuthClient } from 'better-auth/client'
-import { createSkerClientPlugin } from '@sker/sdk'
 
 import App from './App';
 import '@sker/ui/globals.css'
@@ -26,12 +24,22 @@ function getBaseUrl() {
 
 const baseURL = getBaseUrl();
 
-// 使用 Better Auth 插件初始化 SDK
-// 插件会自动执行李代桃僵，将所有 Controller 注册到 DI 容器
-const auth = createAuthClient({
-  baseURL,
-  plugins: [createSkerClientPlugin()]
-});
+// 异步初始化 Better Auth（避免打包时的初始化顺序问题）
+let auth: any = null;
+(async () => {
+  try {
+    const { createAuthClient } = await import('better-auth/client');
+    const { createSkerClientPlugin } = await import('@sker/sdk');
+
+    auth = createAuthClient({
+      baseURL,
+      plugins: [createSkerClientPlugin()]
+    });
+    logger.log('Auth client initialized');
+  } catch (error) {
+    logger.error('Failed to initialize auth client', error);
+  }
+})();
 
 // Mock服务现在由vite-plugin-mock处理
 
