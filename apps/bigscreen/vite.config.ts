@@ -154,6 +154,18 @@ export default defineConfig(({ command }) => {
 
             // 将 node_modules 中的依赖分割到不同 chunk
             if (id.includes('node_modules')) {
+              // Three.js 相关的库必须按顺序打包到同一个 chunk 中
+              // 顺序：three -> three-* -> d3-force-3d -> force-graph -> react-force-graph
+              if (
+                id.includes('/three/') ||
+                id.includes('three-') ||
+                id.includes('d3-force') ||
+                id.includes('force-graph') ||
+                id.includes('react-force-graph')
+              ) {
+                return 'vendor-3d'  // 所有 3D 相关库打包在一起
+              }
+
               // ECharts 相关 - 通常很大(~600KB)
               if (id.includes('echarts') || id.includes('zrender')) {
                 return 'vendor-echarts'
@@ -165,10 +177,6 @@ export default defineConfig(({ command }) => {
               // React Flow / XYFlow - 工作流编辑器
               if (id.includes('@xyflow') || id.includes('reactflow') || id.includes('react-flow')) {
                 return 'vendor-workflow'
-              }
-              // Three.js - 3D 渲染 (~150KB)
-              if (id.includes('three') || id.includes('d3-force-3d') || id.includes('react-force-graph')) {
-                return 'vendor-3d'
               }
               // Framer Motion - 动画库 (~100KB)
               if (id.includes('framer-motion') || id.includes('motion')) {
