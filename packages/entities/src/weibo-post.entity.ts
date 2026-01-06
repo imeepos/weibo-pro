@@ -3,10 +3,13 @@ import {
   CreateDateColumn,
   DeleteDateColumn,
   Index,
+  JoinColumn,
+  ManyToOne,
   PrimaryColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { Entity } from './decorator';
+import { EventEntity } from './event.entity';
 
 interface Visible {
   type: number;
@@ -419,9 +422,17 @@ interface PageInfo {
 @Entity('weibo_posts')
 @Index(['id'], { unique: true })
 @Index(['mid'], { unique: true })
+@Index(['event_id'])
 export class WeiboPostEntity {
   @PrimaryColumn({ type: 'bigint', unsigned: true })
   id!: string;
+
+  @Column({ type: 'uuid', name: 'event_id', nullable: true })
+  event_id!: string | null;
+
+  @ManyToOne(() => EventEntity)
+  @JoinColumn({ name: 'event_id' })
+  event!: EventEntity | null;
 
   @Column({ type: 'jsonb', name: 'visible', nullable: true })
   visible!: Visible;

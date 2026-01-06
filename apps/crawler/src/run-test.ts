@@ -122,7 +122,7 @@ async function main() {
         subscription.unsubscribe()
         printStats()
         reject(new Error('工作流执行超时'))
-      }, 120000)
+      }, 1200000)
     })
   } catch (error) {
     // 确保即使有异常也能输出统计

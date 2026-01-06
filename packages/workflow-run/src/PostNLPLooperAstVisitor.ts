@@ -81,6 +81,14 @@ export class PostNLPLooperAstVisitor {
               ast.cursorId = posts.at(-1)!.id;
             }
 
+            // 发射 hasMore：如果返回数量等于 pageSize，可能还有更多数据
+            ast.hasMore = posts.length >= ast.pageSize;
+            events.push({
+              type: 'node_emit',
+              id: ast.id,
+              data: { hasMore: ast.hasMore },
+            });
+
             return events;
           }),
           ErrorHandlerOperators.createRetryOperator(ast, { logPrefix: '[PostNLPLooperAstVisitor]' }),
