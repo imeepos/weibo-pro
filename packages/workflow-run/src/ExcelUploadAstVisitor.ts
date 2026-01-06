@@ -117,23 +117,56 @@ export class ExcelUploadAstVisitor {
               }
             });
 
-            ast.data = data;
             ast.columns = columns;
             ast.rowCount = data.length;
 
             console.log(`[ExcelUploadAstVisitor] 解析完成，共 ${data.length} 行数据`);
-
-            return [
-              {
-                type: 'node_emit' as const,
-                id: ast.id,
-                data: {
-                  data,
-                  columns,
-                  rowCount: data.length
-                }
+            const events: NodeEvent[] = [];
+            events.push({
+              type: 'node_emit' as const, id: ast.id, data: {
+                columns,
+                rowCount: data.length,
               }
-            ];
+            })
+
+            data.forEach((row, index) => {
+              const isFirst = index === 0;
+              const isLast = index === data.length - 1;
+
+              // 首行发射
+              if (isFirst) {
+                events.push({
+                  type: 'node_emit' as const,
+                  id: ast.id,
+                  data: {
+                    data: row,
+                    rowIndex: index,
+                    isFirst: true
+                  }
+                });
+              } else if (isLast) {
+                events.push({
+                  type: 'node_emit' as const,
+                  id: ast.id,
+                  data: {
+                    data: row,
+                    rowIndex: index,
+                    isLast: true
+                  }
+                });
+              } else {
+                events.push({
+                  type: 'node_emit' as const,
+                  id: ast.id,
+                  data: {
+                    data: row,
+                    rowIndex: index,
+                  }
+                });
+              }
+            });
+
+            return events;
           }),
           ErrorHandlerOperators.createRetryOperator(ast, { logPrefix: '[ExcelUploadAstVisitor]' }),
           ErrorHandlerOperators.createCatchErrorOperator(ast, { logPrefix: '[ExcelUploadAstVisitor]' }),

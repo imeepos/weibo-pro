@@ -116,3 +116,7 @@ const wordCloud = await keywordsCtrl.getWordCloud(100)
 2. **不要做多余的类型转换** - SDK 的目的就是让前后端共用类型
 3. **API 必须使用 `sdk.controller`** - 否则路由不匹配会导致 404
 4. **使用 `root.get()` 获取实例** - 不要直接 new Controller
+
+
+每次用户多次指正修复的问题，尽量总结成skill，放到当前项目目录下的 .claude\skills，下次碰到同类问题的时候，优先查看skill
+当然，有些skill会随着代码的更新逐渐失效，当发现失效的skill时应及时修正错误，移除已废弃的skill

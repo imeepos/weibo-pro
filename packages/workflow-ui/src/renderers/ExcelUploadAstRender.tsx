@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef } from 'react';
 import { Injectable, root } from '@sker/core';
 import { Render, Setting, Preview } from '@sker/workflow';
 import { ExcelUploadAst } from '@sker/workflow-ast';
@@ -7,10 +7,7 @@ import { Label } from '@sker/ui/components/ui/label';
 import { Button } from '@sker/ui/components/ui/button';
 import { UploadController } from '@sker/sdk';
 import { FileSpreadsheet, Upload, X } from 'lucide-react';
-import { cn } from '@sker/ui/lib/utils';
-import { SimplePagination } from '@sker/ui/components/ui/simple-pagination';
 import { Switch } from '@sker/ui/components/ui/switch';
-import { useReactFlow } from '@xyflow/react';
 
 const ExcelPreview = ({ ast }: { ast: ExcelUploadAst }) => (
   <div className="flex flex-col items-center justify-center h-16 bg-slate-700/50">
@@ -68,7 +65,7 @@ const ExcelSetting: React.FC<ExcelSettingProps> = ({ ast, onPropertyChange }) =>
   const handleDelete = () => {
     onPropertyChange?.('fileUrl', '');
     onPropertyChange?.('sheetName', '');
-    onPropertyChange?.('data', []);
+    onPropertyChange?.('data', null);
     onPropertyChange?.('columns', []);
     onPropertyChange?.('rowCount', 0);
   };
@@ -158,87 +155,7 @@ const ExcelSetting: React.FC<ExcelSettingProps> = ({ ast, onPropertyChange }) =>
 };
 
 const ExcelRender: React.FC<{ ast: ExcelUploadAst }> = ({ ast }) => {
-  const [page, setPage] = useState(1);
-  const pageSize = 10;
-
-  if (ast.state === 'pending' || !ast.data || ast.data.length === 0) {
-    return null;
-  }
-
-  const startIndex = (page - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  const paginatedData = ast.data.slice(startIndex, endIndex);
-  const totalPages = Math.ceil(ast.data.length / pageSize);
-
-  return (
-    <div className="p-4 space-y-3">
-      <div className="flex gap-4">
-        <div className="space-y-2">
-          <div className="text-xs font-medium text-muted-foreground">总行数</div>
-          <div className="text-sm font-mono px-2 py-1 rounded bg-green-900/30 text-green-400 inline-block">
-            {ast.rowCount} 行
-          </div>
-        </div>
-        <div className="space-y-2">
-          <div className="text-xs font-medium text-muted-foreground">列数</div>
-          <div className="text-sm font-mono px-2 py-1 rounded bg-blue-900/30 text-blue-400 inline-block">
-            {ast.columns.length} 列
-          </div>
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <div className="text-xs font-medium text-muted-foreground">数据预览</div>
-        <div className="max-h-[400px] overflow-auto rounded-lg border border-border">
-          <table className="min-w-full divide-y divide-border">
-            <thead className="bg-accent/50 sticky top-0">
-              <tr>
-                <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  #
-                </th>
-                {ast.columns.map((col) => (
-                  <th
-                    key={col}
-                    className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
-                  >
-                    {col}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="bg-background divide-y divide-border">
-              {paginatedData.map((row, rowIndex) => (
-                <tr key={rowIndex} className="hover:bg-accent/20 transition-colors">
-                  <td className="px-3 py-2 text-xs font-mono text-muted-foreground whitespace-nowrap">
-                    {startIndex + rowIndex + 1}
-                  </td>
-                  {ast.columns.map((col) => (
-                    <td
-                      key={col}
-                      className="px-3 py-2 text-xs font-mono text-foreground whitespace-nowrap"
-                    >
-                      {row[col] !== null && row[col] !== undefined && row[col] !== ''
-                        ? String(row[col])
-                        : <span className="text-muted-foreground italic">-</span>
-                      }
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {totalPages > 1 && (
-          <SimplePagination
-            currentPage={page}
-            totalPages={totalPages}
-            onPageChange={setPage}
-          />
-        )}
-      </div>
-    </div>
-  );
+  return null;
 };
 
 @Injectable()

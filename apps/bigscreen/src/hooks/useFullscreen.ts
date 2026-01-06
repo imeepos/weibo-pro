@@ -110,9 +110,20 @@ export const useFullscreen = () => {
       return false;
     }
 
+    // 检查是否处于全屏状态
+    const doc = document as Document & DocumentFullscreenAPI;
+    const fullscreenElement =
+      doc.fullscreenElement ||
+      doc.webkitFullscreenElement ||
+      doc.mozFullScreenElement ||
+      doc.msFullscreenElement;
+
+    if (!fullscreenElement) {
+      // 已经不在全屏状态，无需退出
+      return true;
+    }
+
     try {
-      const doc = document as Document & DocumentFullscreenAPI;
-      
       if (doc.exitFullscreen) {
         await doc.exitFullscreen();
       } else if (doc.webkitExitFullscreen) {
@@ -122,7 +133,7 @@ export const useFullscreen = () => {
       } else if (doc.msExitFullscreen) {
         await doc.msExitFullscreen();
       }
-      
+
       return true;
     } catch (error) {
       logger.error('退出全屏失败:', error);

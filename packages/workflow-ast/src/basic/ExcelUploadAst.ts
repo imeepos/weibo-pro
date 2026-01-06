@@ -15,10 +15,10 @@ export class ExcelUploadAst extends Ast {
   @Input({ title: '文件 URL', defaultValue: '' })
   fileUrl: string = '';
 
-  @State({ title: '工作表名称' })
-  sheetName: string = '';
+  @Input({ title: '工作表名称', defaultValue: `Sheet1`, type: 'string' })
+  sheetName: string = 'Sheet1';
 
-  @State({ title: '起始行' })
+  @Input({ title: '起始行', defaultValue: 1, type: 'number' })
   startRow: number = 1;
 
   @State({ title: '包含表头' })
@@ -32,6 +32,15 @@ export class ExcelUploadAst extends Ast {
 
   @Output({ title: '行数', defaultValue: 0 })
   rowCount: number = 0;
+
+  @Output({ title: '行索引', defaultValue: 0 })
+  rowIndex: number = 0;
+
+  @Output({ title: '是否首行', defaultValue: false })
+  isFirst: boolean = false;
+
+  @Output({ title: '是否末行', defaultValue: false })
+  isLast: boolean = false;
 
   type: 'ExcelUploadAst' = 'ExcelUploadAst';
 }
