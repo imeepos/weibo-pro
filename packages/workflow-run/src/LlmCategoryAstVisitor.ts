@@ -3,6 +3,7 @@ import { Handler, NodeEvent, ROUTE_SKIPPED, setAstError, WorkflowGraphAst } from
 import { LlmCategoryAst } from "@sker/workflow-ast";
 import { Observable, from } from "rxjs";
 import { concatMap, mergeMap } from "rxjs/operators";
+import { ErrorHandlerOperators } from './utils/error-handler.util';
 import { useLlmModel } from "./llm-client";
 
 @Injectable()
@@ -103,6 +104,8 @@ ${categoryList}
 
                     return events;
                 }),
+                ErrorHandlerOperators.createRetryOperator(ast, { logPrefix: '[LlmCategoryAstVisitor]' }),
+                ErrorHandlerOperators.createCatchErrorOperator(ast, { logPrefix: '[LlmCategoryAstVisitor]' }),
                 mergeMap((events: NodeEvent[]) => from(events))
             ).subscribe({
                 next: (event: NodeEvent) => {

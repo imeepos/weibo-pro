@@ -3,6 +3,7 @@ import { Handler, NodeEvent, setAstError } from '@sker/workflow';
 import { MarkdownUploadAst, type MarkdownHeading } from '@sker/workflow-ast';
 import { Observable, from } from 'rxjs';
 import { concatMap, mergeMap } from 'rxjs/operators';
+import { ErrorHandlerOperators } from './utils/error-handler.util';
 import { marked } from 'marked';
 
 @Injectable()
@@ -83,6 +84,8 @@ export class MarkdownUploadAstVisitor {
             }
           ];
         }),
+        ErrorHandlerOperators.createRetryOperator(ast, { logPrefix: '[MarkdownUploadAstVisitor]' }),
+        ErrorHandlerOperators.createCatchErrorOperator(ast, { logPrefix: '[MarkdownUploadAstVisitor]' }),
         mergeMap((events: NodeEvent[]) => from(events))
       ).subscribe({
         next: (event: NodeEvent) => obs.next(event),

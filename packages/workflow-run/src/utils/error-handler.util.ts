@@ -1,6 +1,6 @@
 import { Observable, throwError, of } from 'rxjs';
 import { catchError, retry, tap } from 'rxjs/operators';
-import { Ast, setAstError } from '@sker/workflow';
+import { Ast, NodeEvent, setAstError } from '@sker/workflow';
 
 /**
  * 错误类型分类
@@ -161,14 +161,14 @@ export class ErrorHandlerOperators {
      * @param config - 错误处理配置
      * @returns RxJS retry 操作符配置
      */
-    static createRetryOperator<T>(ast: Ast, config: ErrorHandlerConfig = {}) {
+    static createRetryOperator(ast: Ast, config: ErrorHandlerConfig = {}) {
         const maxRetries = config.maxRetries ?? ast.metadata?.class?.maxRetries ?? 3;
         const baseDelay = config.baseDelay ?? ast.metadata?.class?.retryDelay ?? 1000;
         const backoff = config.backoff ?? ast.metadata?.class?.retryBackoff ?? 2;
         const maxDelay = config.maxDelay ?? 30000;
         const logPrefix = config.logPrefix ?? `[${ast.type}]`;
 
-        return retry<T>({
+        return retry<NodeEvent[]>({
             count: maxRetries,
             delay: (error, retryCount) => {
                 const isRetryable = ErrorClassifier.isRetryable(error);
@@ -202,10 +202,10 @@ export class ErrorHandlerOperators {
      * @param config - 错误处理配置
      * @returns RxJS catchError 操作符
      */
-    static createCatchErrorOperator<T>(ast: Ast, config: ErrorHandlerConfig = {}) {
+    static createCatchErrorOperator(ast: Ast, config: ErrorHandlerConfig = {}) {
         const logPrefix = config.logPrefix ?? `[${ast.type}]`;
 
-        return catchError<T, Observable<T>>((error: any) => {
+        return catchError<NodeEvent[], Observable<NodeEvent[]>>((error: any) => {
             console.error(`${logPrefix} 操作失败:`, error);
 
             const errorMessage = ErrorFormatter.format(error);
@@ -214,7 +214,14 @@ export class ErrorHandlerOperators {
             ast.state = 'fail';
             setAstError(ast, new Error(`${errorMessage} (${category})`));
 
-            return throwError(() => error);
+            // 发射错误事件，而不是终止流，允许后续数据继续处理
+            return of([
+                {
+                    type: 'node_fail',
+                    id: ast.id,
+                    error: errorMessage
+                }
+            ]);
         });
     }
 }

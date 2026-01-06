@@ -50,8 +50,8 @@ export class WeiboKeywordSearchAstVisitor {
                     await this.executeSearch(ast, wrappedCtx, obs);
                     return [];
                 }),
-                ErrorHandlerOperators.createRetryOperator<NodeEvent[]>(ast, { logPrefix: '[WeiboKeywordSearchAstVisitor]' }),
-                ErrorHandlerOperators.createCatchErrorOperator<NodeEvent[]>(ast, { logPrefix: '[WeiboKeywordSearchAstVisitor]' }),
+                ErrorHandlerOperators.createRetryOperator(ast, { logPrefix: '[WeiboKeywordSearchAstVisitor]' }),
+                ErrorHandlerOperators.createCatchErrorOperator(ast, { logPrefix: '[WeiboKeywordSearchAstVisitor]' }),
                 mergeMap((events: NodeEvent[]) => from(events))
             ).subscribe({
                 next: (event: NodeEvent) => obs.next(event),

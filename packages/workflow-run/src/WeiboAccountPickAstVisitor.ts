@@ -89,8 +89,8 @@ export class WeiboAccountPickAstVisitor {
                         { type: 'node_emit' as const, id: ast.id, data: { list: accountsWithScore, selectedId: selected.id, cookies: selectedAccount.cookies } }
                     ];
                 }),
-                ErrorHandlerOperators.createRetryOperator<NodeEvent[]>(ast, { logPrefix: '[WeiboAccountPickAstVisitor]' }),
-                ErrorHandlerOperators.createCatchErrorOperator<NodeEvent[]>(ast, { logPrefix: '[WeiboAccountPickAstVisitor]' }),
+                ErrorHandlerOperators.createRetryOperator(ast, { logPrefix: '[WeiboAccountPickAstVisitor]' }),
+                ErrorHandlerOperators.createCatchErrorOperator(ast, { logPrefix: '[WeiboAccountPickAstVisitor]' }),
                 mergeMap((events: NodeEvent[]) => from(events))
             ).subscribe({
                 next: (event: NodeEvent) => obs.next(event),

@@ -75,8 +75,8 @@ export class WeiboAjaxStatusesMymblogAstVisitor extends WeiboApiClient {
                         { type: 'node_emit' as const, id: ast.id, data: { isEnd: ast.isEnd } }
                     ];
                 }),
-                ErrorHandlerOperators.createRetryOperator<NodeEvent[]>(ast, { logPrefix: '[WeiboAjaxStatusesLikeShowAstVisitor]' }),
-                ErrorHandlerOperators.createCatchErrorOperator<NodeEvent[]>(ast, { logPrefix: '[WeiboAjaxStatusesLikeShowAstVisitor]' }),
+                ErrorHandlerOperators.createRetryOperator(ast, { logPrefix: '[WeiboAjaxStatusesLikeShowAstVisitor]' }),
+                ErrorHandlerOperators.createCatchErrorOperator(ast, { logPrefix: '[WeiboAjaxStatusesLikeShowAstVisitor]' }),
                 mergeMap((events: NodeEvent[]) => from(events))
             ).subscribe({
                 next: (event: NodeEvent) => obs.next(event),

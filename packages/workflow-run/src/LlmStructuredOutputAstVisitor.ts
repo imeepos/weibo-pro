@@ -72,8 +72,8 @@ export class LlmStructuredOutputAstVisitor {
 
                     return [{ type: 'node_emit' as const, id: ast.id, data }];
                 }),
-                ErrorHandlerOperators.createRetryOperator<NodeEvent[]>(ast, { logPrefix: '[LlmStructuredOutputAst]' }),
-                ErrorHandlerOperators.createCatchErrorOperator<NodeEvent[]>(ast, { logPrefix: '[LlmStructuredOutputAst]' }),
+                ErrorHandlerOperators.createRetryOperator(ast, { logPrefix: '[LlmStructuredOutputAst]' }),
+                ErrorHandlerOperators.createCatchErrorOperator(ast, { logPrefix: '[LlmStructuredOutputAst]' }),
                 mergeMap((events: NodeEvent[]) => from(events))
             ).subscribe({
                 next: (event: NodeEvent) => {

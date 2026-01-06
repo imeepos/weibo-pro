@@ -5,6 +5,7 @@ import { Observable, from } from "rxjs";
 import { concatMap, mergeMap } from "rxjs/operators";
 import { parse as parseWithHarmony } from '@sker/json-harmony';
 import { useLlmModel } from "./llm-client";
+import { ErrorHandlerOperators } from "./utils/error-handler.util";
 
 const EVALUATION_PROMPTS: Record<EvaluationType, string> = {
   definitive: `评估答案是否明确。拒绝以下模式：
@@ -137,6 +138,8 @@ export class AnswerEvaluatorAstVisitor {
             { type: 'node_emit' as const, id: ast.id, data: { results: ast.results, totalScore: ast.totalScore, passed: ast.passed } }
           ];
         }),
+        ErrorHandlerOperators.createRetryOperator(ast, { logPrefix: '[AnswerEvaluatorAstVisitor]' }),
+        ErrorHandlerOperators.createCatchErrorOperator(ast, { logPrefix: '[AnswerEvaluatorAstVisitor]' }),
         mergeMap((events: NodeEvent[]) => from(events))
       ).subscribe({
         next: (event: NodeEvent) => {

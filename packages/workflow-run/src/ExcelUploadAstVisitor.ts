@@ -3,6 +3,7 @@ import { Handler, NodeEvent, setAstError } from '@sker/workflow';
 import { ExcelUploadAst } from '@sker/workflow-ast';
 import { Observable, from } from 'rxjs';
 import { concatMap, mergeMap } from 'rxjs/operators';
+import { ErrorHandlerOperators } from './utils/error-handler.util';
 import ExcelJS from 'exceljs';
 
 @Injectable()
@@ -134,6 +135,8 @@ export class ExcelUploadAstVisitor {
               }
             ];
           }),
+          ErrorHandlerOperators.createRetryOperator(ast, { logPrefix: '[ExcelUploadAstVisitor]' }),
+          ErrorHandlerOperators.createCatchErrorOperator(ast, { logPrefix: '[ExcelUploadAstVisitor]' }),
           mergeMap((events: NodeEvent[]) => from(events))
         )
         .subscribe({

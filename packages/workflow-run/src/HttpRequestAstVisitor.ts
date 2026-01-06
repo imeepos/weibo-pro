@@ -3,6 +3,7 @@ import { Handler, NodeEvent, setAstError } from '@sker/workflow';
 import { HttpRequestAst } from '@sker/workflow-ast';
 import { Observable, from } from 'rxjs';
 import { concatMap, mergeMap } from 'rxjs/operators';
+import { ErrorHandlerOperators } from './utils/error-handler.util';
 
 @Injectable()
 export class HttpRequestAstVisitor {
@@ -95,6 +96,8 @@ export class HttpRequestAstVisitor {
             }
           ];
         }),
+        ErrorHandlerOperators.createRetryOperator(ast, { logPrefix: '[HttpRequestAstVisitor]' }),
+        ErrorHandlerOperators.createCatchErrorOperator(ast, { logPrefix: '[HttpRequestAstVisitor]' }),
         mergeMap((events: NodeEvent[]) => from(events))
       ).subscribe({
         next: (event: NodeEvent) => obs.next(event),

@@ -2,6 +2,7 @@ import { Injectable } from '@sker/core'
 import { Handler, LoopAst, NodeEvent, setAstError } from '@sker/workflow'
 import { Observable, from, of, EMPTY } from 'rxjs'
 import { concatMap, delay, mergeMap } from 'rxjs/operators'
+import { ErrorHandlerOperators } from './utils/error-handler.util'
 
 /**
  * 循环节点执行器
@@ -78,6 +79,8 @@ export class LoopAstVisitor {
 
                     return events;
                 }),
+                ErrorHandlerOperators.createRetryOperator(ast, { logPrefix: '[LoopAstVisitor]' }),
+                ErrorHandlerOperators.createCatchErrorOperator(ast, { logPrefix: '[LoopAstVisitor]' }),
                 mergeMap((events: NodeEvent[]) => from(events))
             ).subscribe({
                 next: (event: NodeEvent) => obs.next(event),

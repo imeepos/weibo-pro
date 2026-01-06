@@ -58,8 +58,8 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
 
                     return await this.handler(ast, wrappedCtx);
                 }),
-                ErrorHandlerOperators.createRetryOperator<NodeEvent[]>(ast, { logPrefix: '[WeiboAjaxFeedHotTimelineAstVisitor]' }),
-                ErrorHandlerOperators.createCatchErrorOperator<NodeEvent[]>(ast, { logPrefix: '[WeiboAjaxFeedHotTimelineAstVisitor]' }),
+                ErrorHandlerOperators.createRetryOperator(ast, { logPrefix: '[WeiboAjaxFeedHotTimelineAstVisitor]' }),
+                ErrorHandlerOperators.createCatchErrorOperator(ast, { logPrefix: '[WeiboAjaxFeedHotTimelineAstVisitor]' }),
                 mergeMap((events: NodeEvent[]) => from(events))
             ).subscribe({
                 next: (event: NodeEvent) => obs.next(event),

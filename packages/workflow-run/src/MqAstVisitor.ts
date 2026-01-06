@@ -3,6 +3,7 @@ import { Handler, NodeEvent, setAstError, MqPushAst, MqPullAst } from '@sker/wor
 import { useQueue } from '@sker/mq';
 import { Observable, EMPTY, from } from 'rxjs';
 import { take, timeout, finalize, catchError, map, concatMap, mergeMap } from 'rxjs/operators';
+import { ErrorHandlerOperators } from './utils/error-handler.util';
 
 /**
  * 消息队列推送节点执行器
@@ -43,6 +44,8 @@ export class MqPushAstVisitor {
             { type: 'node_emit' as const, id: ast.id, data: { success: ast.success } }
           ];
         }),
+        ErrorHandlerOperators.createRetryOperator(ast, { logPrefix: '[MqPushAstVisitor]' }),
+        ErrorHandlerOperators.createCatchErrorOperator(ast, { logPrefix: '[MqPushAstVisitor]' }),
         mergeMap((events: NodeEvent[]) => from(events))
       ).subscribe({
         next: (event: NodeEvent) => {

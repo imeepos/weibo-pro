@@ -4,6 +4,7 @@ import { EmailD1Ast } from '@sker/workflow-ast';
 import { Observable } from 'rxjs';
 import { concatMap, mergeMap } from 'rxjs/operators';
 import { from } from 'rxjs';
+import { ErrorHandlerOperators } from './utils/error-handler.util';
 
 interface EmailD1Data {
   id: number;
@@ -77,6 +78,8 @@ export class EmailD1AstVisitor {
             }
             throw new Error(`获取邮件超时:${ast.email}`);
           }),
+          ErrorHandlerOperators.createRetryOperator(ast, { logPrefix: '[EmailD1AstVisitor]' }),
+          ErrorHandlerOperators.createCatchErrorOperator(ast, { logPrefix: '[EmailD1AstVisitor]' }),
           mergeMap((events: NodeEvent[]) => from(events))
         )
         .subscribe({

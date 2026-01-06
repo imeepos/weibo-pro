@@ -43,8 +43,8 @@ export class LlmTextAgentAstVisitor {
                         { type: 'node_emit' as const, id: ast.id, data: { text: result.content, username: ast.username, profile: ast.profile } }
                     ];
                 }),
-                ErrorHandlerOperators.createRetryOperator<NodeEvent[]>(ast, { logPrefix: '[LlmTextAgentAstVisitor]' }),
-                ErrorHandlerOperators.createCatchErrorOperator<NodeEvent[]>(ast, { logPrefix: '[LlmTextAgentAstVisitor]' }),
+                ErrorHandlerOperators.createRetryOperator(ast, { logPrefix: '[LlmTextAgentAstVisitor]' }),
+                ErrorHandlerOperators.createCatchErrorOperator(ast, { logPrefix: '[LlmTextAgentAstVisitor]' }),
                 mergeMap((events: NodeEvent[]) => from(events)),
             ).subscribe({
                 next: (event: NodeEvent) => {

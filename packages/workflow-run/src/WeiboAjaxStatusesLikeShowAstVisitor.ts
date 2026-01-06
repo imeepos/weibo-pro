@@ -59,6 +59,15 @@ export class WeiboAjaxStatusesLikeShowAstVisitor extends WeiboApiClient {
                         throw new Error('工作流已取消');
                     }
 
+                    // 检查必要参数
+                    if (!ast.mid || ast.mid === 'null' || !ast.uid || ast.uid === 'null') {
+                        console.warn(`[WeiboAjaxStatusesLikeShowAstVisitor] 参数无效，跳过处理: mid=${ast.mid}, uid=${ast.uid}`);
+                        ast.is_end = true;
+                        return [
+                            { type: 'node_emit' as const, id: ast.id, data: { is_end: ast.is_end } }
+                        ];
+                    }
+
                     let page = 1;
                     for await (const body of this.fetchWithPagination<WeiboStatusLikeShowResponse>({
                         buildUrl: (p) => {
@@ -96,8 +105,8 @@ export class WeiboAjaxStatusesLikeShowAstVisitor extends WeiboApiClient {
                         { type: 'node_emit' as const, id: ast.id, data: { is_end: ast.is_end } }
                     ];
                 }),
-                ErrorHandlerOperators.createRetryOperator<NodeEvent[]>(ast, { logPrefix: '[WeiboAjaxStatusesLikeShowAstVisitor]' }),
-                ErrorHandlerOperators.createCatchErrorOperator<NodeEvent[]>(ast, { logPrefix: '[WeiboAjaxStatusesLikeShowAstVisitor]' }),
+                ErrorHandlerOperators.createRetryOperator(ast, { logPrefix: '[WeiboAjaxStatusesLikeShowAstVisitor]' }),
+                ErrorHandlerOperators.createCatchErrorOperator(ast, { logPrefix: '[WeiboAjaxStatusesLikeShowAstVisitor]' }),
                 mergeMap((events: NodeEvent[]) => from(events))
             ).subscribe({
                 next: (event: NodeEvent) => obs.next(event),

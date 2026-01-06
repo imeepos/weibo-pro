@@ -7,7 +7,7 @@ import {
   WeiboKeywordSearchAst,
   WeiboAjaxStatusesShowAst,
   PostNLPAnalyzerAst,
-  EventAutoCreatorAst,
+  EventAst,
   WeiboLoginAst,
 } from '@sker/workflow-ast'
 import { Button } from '@sker/ui/components/ui/button'
@@ -130,7 +130,7 @@ export const DataCollectionWorkflow: Story = {
     nlpNode.position = { x: 700, y: 200 }
 
     // 节点 4: 事件生成
-    const eventNode = new EventAutoCreatorAst()
+    const eventNode = new EventAst()
     eventNode.id = 'event-1'
     eventNode.position = { x: 1000, y: 200 }
 
@@ -493,7 +493,7 @@ export const ComplexWorkflow: Story = {
     nlp2.position = { x: 700, y: 450 }
 
     // 第四层：事件生成节点（汇总）
-    const eventCreator = new EventAutoCreatorAst()
+    const eventCreator = new EventAst()
     eventCreator.id = 'event-1'
     eventCreator.position = { x: 1000, y: 350 }
 

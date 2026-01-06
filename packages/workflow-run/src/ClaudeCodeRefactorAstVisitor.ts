@@ -3,6 +3,7 @@ import { Handler, NodeEvent, setAstError, WorkflowGraphAst } from '@sker/workflo
 import { ClaudeCodeRefactorAst } from '@sker/workflow-ast';
 import { Observable, from } from 'rxjs';
 import { concatMap, mergeMap } from 'rxjs/operators';
+import { ErrorHandlerOperators } from './utils/error-handler.util';
 import { ClaudeCodeService } from './services/claude-code.service';
 
 @Injectable()
@@ -36,6 +37,8 @@ export class ClaudeCodeRefactorAstVisitor {
             { type: 'node_emit' as const, id: ast.id, data: { refactoredCode: result.content || result.text || JSON.stringify(result) } }
           ];
         }),
+        ErrorHandlerOperators.createRetryOperator(ast, { logPrefix: '[ClaudeCodeRefactorAstVisitor]' }),
+        ErrorHandlerOperators.createCatchErrorOperator(ast, { logPrefix: '[ClaudeCodeRefactorAstVisitor]' }),
         mergeMap((events: NodeEvent[]) => from(events))
       ).subscribe({
         next: (event: NodeEvent) => {

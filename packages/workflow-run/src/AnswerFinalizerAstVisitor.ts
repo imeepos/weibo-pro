@@ -4,6 +4,7 @@ import { AnswerFinalizerAst } from "@sker/workflow-ast";
 import { Observable, from } from "rxjs";
 import { concatMap, mergeMap } from "rxjs/operators";
 import { useLlmModel } from "./llm-client";
+import { ErrorHandlerOperators } from "./utils/error-handler.util";
 
 const SYSTEM_PROMPT = `You are a senior editor with multiple best-selling books and columns published in top magazines. You break conventional thinking, establish unique cross-disciplinary connections, and bring new perspectives to the user.
 
@@ -91,6 +92,8 @@ export class AnswerFinalizerAstVisitor {
                         { type: 'node_emit' as const, id: ast.id, data: { finalized: ast.finalized } }
                     ];
                 }),
+                ErrorHandlerOperators.createRetryOperator(ast, { logPrefix: '[AnswerFinalizerAstVisitor]' }),
+                ErrorHandlerOperators.createCatchErrorOperator(ast, { logPrefix: '[AnswerFinalizerAstVisitor]' }),
                 mergeMap((events: NodeEvent[]) => from(events))
             ).subscribe({
                 next: (event: NodeEvent) => {

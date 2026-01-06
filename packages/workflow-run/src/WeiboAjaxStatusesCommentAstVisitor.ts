@@ -61,8 +61,8 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
 
                     return await this.handler(ast, wrappedCtx);
                 }),
-                ErrorHandlerOperators.createRetryOperator<NodeEvent[]>(ast, { logPrefix: '[WeiboAjaxStatusesCommentAstVisitor]' }),
-                ErrorHandlerOperators.createCatchErrorOperator<NodeEvent[]>(ast, { logPrefix: '[WeiboAjaxStatusesCommentAstVisitor]' }),
+                ErrorHandlerOperators.createRetryOperator(ast, { logPrefix: '[WeiboAjaxStatusesCommentAstVisitor]' }),
+                ErrorHandlerOperators.createCatchErrorOperator(ast, { logPrefix: '[WeiboAjaxStatusesCommentAstVisitor]' }),
                 mergeMap((events: NodeEvent[]) => from(events))
             ).subscribe({
                 next: (event: NodeEvent) => obs.next(event),
@@ -90,6 +90,15 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
         // 检查取消信号
         if (wrappedCtx.abortSignal?.aborted) {
             throw new Error('工作流已取消');
+        }
+
+        // 检查必要参数
+        if (!ast.mid || ast.mid === 'null' || !ast.uid || ast.uid === 'null') {
+            console.warn(`[WeiboAjaxStatusesCommentAstVisitor] 参数无效，跳过处理: mid=${ast.mid}, uid=${ast.uid}`);
+            ast.is_end = true;
+            return [
+                { type: 'node_emit' as const, id: ast.id, data: { is_end: ast.is_end } }
+            ];
         }
 
         while (true) {

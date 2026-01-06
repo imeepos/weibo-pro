@@ -4,6 +4,7 @@ import { EventAst } from '@sker/workflow-ast';
 import { useEntityManager, EventEntity } from '@sker/entities';
 import { Observable, from } from 'rxjs';
 import { concatMap, mergeMap } from 'rxjs/operators';
+import { ErrorHandlerOperators } from './utils/error-handler.util';
 
 @Injectable()
 export class EventAstVisitor {
@@ -47,7 +48,10 @@ export class EventAstVisitor {
             });
 
             if (!event) {
-              throw new Error(`事件不存在: ${ast.eventId}`);
+              console.warn(`[EventAstVisitor] 事件不存在，跳过处理: ${ast.eventId}`);
+              // 事件不存在时直接 complete，不传递任何数据给下游节点
+              ast.state = 'success';
+              return [];
             }
 
             // 提取关键字
@@ -79,6 +83,8 @@ export class EventAstVisitor {
             }
           ];
         }),
+        ErrorHandlerOperators.createRetryOperator(ast, { logPrefix: '[EventAstVisitor]' }),
+        ErrorHandlerOperators.createCatchErrorOperator(ast, { logPrefix: '[EventAstVisitor]' }),
         mergeMap((events: NodeEvent[]) => from(events))
       ).subscribe({
         next: (event: NodeEvent) => {

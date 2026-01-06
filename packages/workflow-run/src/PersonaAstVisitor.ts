@@ -11,6 +11,7 @@ import {
 } from '@sker/entities';
 import { Observable, from } from 'rxjs';
 import { concatMap, mergeMap } from 'rxjs/operators';
+import { ErrorHandlerOperators } from './utils/error-handler.util';
 import { z } from 'zod';
 import { useLlmModel } from './llm-client';
 
@@ -251,6 +252,8 @@ ${ast.context}`;
             { type: 'node_emit' as const, id: ast.id, data: { response: ast.response, newMemoryId: ast.newMemoryId } }
           ];
         }),
+        ErrorHandlerOperators.createRetryOperator(ast, { logPrefix: '[PersonaAstVisitor]' }),
+        ErrorHandlerOperators.createCatchErrorOperator(ast, { logPrefix: '[PersonaAstVisitor]' }),
         mergeMap((events: NodeEvent[]) => from(events))
       ).subscribe({
         next: (event: NodeEvent) => {

@@ -3,6 +3,7 @@ import { Handler, NodeEvent, setAstError } from '@sker/workflow';
 import { CodeGeneratorAst } from '@sker/workflow-ast';
 import { Observable, from } from 'rxjs';
 import { concatMap, mergeMap } from 'rxjs/operators';
+import { ErrorHandlerOperators } from './utils/error-handler.util';
 import { parse as parseWithHarmony } from '@sker/json-harmony';
 import { useLlmModel } from './llm-client';
 
@@ -109,6 +110,8 @@ ${tasks.map((t, i) => `${i + 1}. ${t}`).join('\n')}
                         { type: 'node_emit' as const, id: ast.id, data: { generatedCode: ast.generatedCode, filePath: ast.filePath, operation: ast.operation, isComplete: ast.isComplete } }
                     ];
                 }),
+                ErrorHandlerOperators.createRetryOperator(ast, { logPrefix: '[CodeGeneratorAstVisitor]' }),
+                ErrorHandlerOperators.createCatchErrorOperator(ast, { logPrefix: '[CodeGeneratorAstVisitor]' }),
                 mergeMap((events: NodeEvent[]) => from(events))
             ).subscribe({
                 next: (event: NodeEvent) => obs.next(event),

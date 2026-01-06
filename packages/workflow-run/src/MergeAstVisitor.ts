@@ -2,6 +2,7 @@ import { Injectable } from '@sker/core'
 import { Handler, MergeAst, NodeEvent, type MergeMode, setAstError } from '@sker/workflow'
 import { Observable, from } from 'rxjs'
 import { concatMap, mergeMap } from 'rxjs/operators'
+import { ErrorHandlerOperators } from './utils/error-handler.util'
 
 /**
  * 合并节点执行器
@@ -39,6 +40,8 @@ export class MergeAstVisitor {
                         { type: 'node_emit' as const, id: ast.id, data: { result: ast.result, totalCount: ast.totalCount } }
                     ];
                 }),
+                ErrorHandlerOperators.createRetryOperator(ast, { logPrefix: '[MergeAstVisitor]' }),
+                ErrorHandlerOperators.createCatchErrorOperator(ast, { logPrefix: '[MergeAstVisitor]' }),
                 mergeMap((events: NodeEvent[]) => from(events))
             ).subscribe({
                 next: (event: NodeEvent) => obs.next(event),

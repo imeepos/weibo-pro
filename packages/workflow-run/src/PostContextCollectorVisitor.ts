@@ -9,6 +9,7 @@ import {
 } from '@sker/entities';
 import { Observable, from } from 'rxjs';
 import { concatMap, mergeMap } from 'rxjs/operators';
+import { ErrorHandlerOperators } from './utils/error-handler.util';
 
 @Injectable()
 export class PostContextCollectorVisitor {
@@ -46,9 +47,10 @@ export class PostContextCollectorVisitor {
             if (!canStart) return [];
           }
 
-          // 验证 postId
+          // 验证 postId - 如果为空则返回空数组（上游节点可能失败）
           if (!ast.postId || String(ast.postId).trim().length === 0) {
-            throw new Error('postId 不能为空');
+            console.warn(`[PostContextCollector] postId 为空，跳过处理`);
+            return [];
           }
 
           // 检查取消信号（数据库操作前）
@@ -107,6 +109,8 @@ export class PostContextCollectorVisitor {
             { type: 'node_emit' as const, id: ast.id, data: { post: ast.post, comments: ast.comments, reposts: ast.reposts } }
           ];
         }),
+        ErrorHandlerOperators.createRetryOperator(ast, { logPrefix: '[PostContextCollectorVisitor]' }),
+        ErrorHandlerOperators.createCatchErrorOperator(ast, { logPrefix: '[PostContextCollectorVisitor]' }),
         mergeMap((events: NodeEvent[]) => from(events))
       ).subscribe({
         next: (event: NodeEvent) => {

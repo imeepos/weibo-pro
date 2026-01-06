@@ -39,7 +39,7 @@ export { PersonaAst } from './llm/PersonaAst';
 export { PersonaCreatorAst } from './llm/PersonaCreatorAst';
 export { PromptRoleSkillAst } from './llm/PromptRoleSkillAst';
 
-// CRAWLER 节点 (16个)
+// CRAWLER 节点 (17个)
 export { ProxyAutoSelectAst } from './crawler/ProxyAutoSelectAst';
 export { WeiboAccountPickAst } from './crawler/WeiboAccountPickAst';
 export { WeiboLoginAst } from './crawler/WeiboLoginAst';
@@ -55,6 +55,7 @@ export { WeiboAjaxFriendshipsAst } from './crawler/WeiboAjaxFriendshipsAst';
 export { WeiboAjaxProfileInfoAst } from './crawler/WeiboAjaxProfileInfoAst';
 export { PostNLPAnalyzerAst } from './crawler/PostNLPAnalyzerAst';
 export { PostContextCollectorAst } from './crawler/PostContextCollectorAst';
+export { PostNLPLooperAst } from './crawler/PostNLPLooperAst';
 
 // BASIC 节点 (7个)
 export { SqlExecuteAst } from './basic/SqlExecuteAst';

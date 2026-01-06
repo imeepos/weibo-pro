@@ -3,6 +3,7 @@ import { Handler, NodeEvent, setAstError, WorkflowGraphAst } from '@sker/workflo
 import { ErrorAnalyzerAst } from '@sker/workflow-ast';
 import { Observable, from } from 'rxjs';
 import { concatMap, mergeMap } from 'rxjs/operators';
+import { ErrorHandlerOperators } from './utils/error-handler.util';
 import { z } from 'zod';
 import { useLlmModel } from './llm-client';
 
@@ -82,6 +83,8 @@ ${stepsText}`;
             { type: 'node_emit' as const, id: ast.id, data: { recap: ast.recap, blame: ast.blame, improvement: ast.improvement } }
           ];
         }),
+        ErrorHandlerOperators.createRetryOperator(ast, { logPrefix: '[ErrorAnalyzerAstVisitor]' }),
+        ErrorHandlerOperators.createCatchErrorOperator(ast, { logPrefix: '[ErrorAnalyzerAstVisitor]' }),
         mergeMap((events: NodeEvent[]) => from(events))
       ).subscribe({
         next: (event: NodeEvent) => {
