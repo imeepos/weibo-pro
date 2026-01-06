@@ -56,8 +56,9 @@ export { WeiboAjaxProfileInfoAst } from './crawler/WeiboAjaxProfileInfoAst';
 export { PostNLPAnalyzerAst } from './crawler/PostNLPAnalyzerAst';
 export { PostContextCollectorAst } from './crawler/PostContextCollectorAst';
 export { PostNLPLooperAst } from './crawler/PostNLPLooperAst';
+export { EventAuthGenerateAst } from './crawler/EventAuthGenerateAst';
 
-// BASIC 节点 (7个)
+// BASIC 节点 (8个)
 export { SqlExecuteAst } from './basic/SqlExecuteAst';
 export { ExcelUploadAst } from './basic/ExcelUploadAst';
 export { MarkdownUploadAst } from './basic/MarkdownUploadAst';
@@ -65,6 +66,7 @@ export { EmailD1Ast } from './basic/EmailD1Ast';
 export { ShareAst } from './basic/ShareAst';
 export { EventAst } from './basic/EventAst';
 export { PropertySelectorAst } from './basic/PropertySelectorAst';
+export { LastAst } from './basic/LastAst';
 
 // CONTROL 节点 (2个)
 export { LlmCategoryAst } from './control/LlmCategoryAst';

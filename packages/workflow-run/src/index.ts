@@ -12,6 +12,7 @@ export { WeiboKeywordSearchAstVisitor } from './WeiboKeywordSearchAstVisitor'
 export { PostContextCollectorVisitor } from './PostContextCollectorVisitor'
 export { PostNLPAnalyzerVisitor } from './PostNLPAnalyzerVisitor'
 export { PostNLPLooperAstVisitor } from './PostNLPLooperAstVisitor'
+export { EventAuthGenerateAstVisitor } from './EventAuthGenerateAstVisitor'
 export { EventAstVisitor } from './EventAstVisitor'
 export { WeiboLoginAstVisitor } from './WeiboLoginAstVisitor'
 export { WeiboAccountPickAstVisitor } from './WeiboAccountPickAstVisitor'
@@ -36,6 +37,9 @@ export { GroupChatLoopAstVisitor } from './GroupChatLoopAstVisitor'
 
 // 属性选择器节点
 export { PropertySelectorAstVisitor } from './PropertySelectorAstVisitor'
+
+// 取最后值节点
+export { LastAstVisitor } from './LastAstVisitor'
 
 // 故事质量循环节点
 export { StoryQualityLoopAstVisitor } from './StoryQualityLoopAstVisitor'
