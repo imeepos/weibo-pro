@@ -51,7 +51,7 @@ export class EventAstVisitor {
 
             // 提取关键字（直接从 keywords 字段）
             const keywords = event.keywords || [];
-            const keywords_str = keywords.join(',');
+            const keywords_str = keywords.join('|');
 
             ast.event = event;
             ast.event_id = event.id;
@@ -60,6 +60,9 @@ export class EventAstVisitor {
             ast.eventCategory = event.category?.name;
             ast.keywords = keywords;
             ast.keywords_str = keywords_str;
+            if (event.occurred_at) {
+              ast.startTime = event.occurred_at?.toISOString();
+            }
 
             obs.next({ type: 'node_runing', id: ast.id });
           });
@@ -74,6 +77,7 @@ export class EventAstVisitor {
                 event_title: ast.event_title,
                 keywords: ast.keywords,
                 keywords_str: ast.keywords_str,
+                startTime: ast.startTime
               }
             }
           ];

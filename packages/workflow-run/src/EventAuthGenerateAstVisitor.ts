@@ -810,16 +810,12 @@ ${formattedInput}
   }
 
   /**
-   * 判断描述是否需要更新
+   * 判断描述是否需要更新（有新描述就更新）
    */
   private shouldUpdateDescription(
     existingDesc: string | null | undefined,
     newDesc: string | null | undefined
   ): boolean {
-    if (!newDesc || newDesc.length === 0) return false;
-    if (!existingDesc || existingDesc.length === 0) return true;
-    // 如果新描述明显更长更详细
-    if (newDesc.length > existingDesc.length * 1.5) return true;
-    return false;
+    return !!(newDesc && newDesc.length > 0);
   }
 }

@@ -28,6 +28,9 @@ export class EventAst extends Ast {
   @Output({ title: '事件标题', defaultValue: '' })
   event_title = '';
 
+  @Output({ title: '开始时间', defaultValue: '' })
+  startTime = '';
+
   @Output({ title: '关键字列表', defaultValue: [] })
   keywords: string[] = [];
 
