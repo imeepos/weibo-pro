@@ -22,6 +22,8 @@ import { buildOpenAPIMetadata } from './openapi.builder';
 import { injectParameters } from './parameter.injector';
 import { BETTER_AUTH_CONTEXT } from './tokens';
 import { ServerResponse } from 'http';
+import type { IncomingMessage } from 'http';
+import { addCorsHeaders } from '@sker/core';
 
 /** HTTP method enum to string mapping */
 const HTTP_METHOD_MAP: Record<RequestMethod, EndpointConfig['method']> = {
@@ -90,13 +92,19 @@ function createEndpointHandler(
       }
       if(result instanceof Response){
         const res = reqInjector.get(RESPONSE) as ServerResponse;
+        const req = reqInjector.get(REQUEST) as IncomingMessage;
+
+        // 添加 CORS 头
+        addCorsHeaders(res, req);
 
         // 设置状态码
         res.statusCode = result.status;
 
-        // 设置响应头
+        // 设置响应头 (跳过 CORS 头，避免覆盖)
         result.headers.forEach((value, key) => {
-          res.setHeader(key, value);
+          if (!key.toLowerCase().startsWith('access-control-')) {
+            res.setHeader(key, value);
+          }
         });
 
         // 写入响应体
@@ -108,12 +116,14 @@ function createEndpointHandler(
       if (isObservable(result)) {
         const req = reqInjector.get(REQUEST);
         const res = reqInjector.get(RESPONSE) as ServerResponse;
+
+        // 使用共享的 CORS 配置
+        addCorsHeaders(res, req);
+
         res.writeHead(200, {
           'Content-Type': 'text/event-stream',
           'Cache-Control': 'no-cache, no-transform',
           'Connection': 'keep-alive',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Cache-Control',
           'X-Accel-Buffering': 'no' // 禁用 nginx 缓冲
         });
         const subscription = result.subscribe({

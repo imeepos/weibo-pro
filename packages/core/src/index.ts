@@ -75,4 +75,5 @@ export * from './root';
 export * from './controller';
 export * from './logger';
 export * from './error-handler';
-export * from './util'
+export * from './util';
+export * from './cors';
