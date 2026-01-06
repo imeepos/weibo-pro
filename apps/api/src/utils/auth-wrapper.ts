@@ -1,7 +1,7 @@
 import { Logger } from '@sker/core';
 import { UploadService } from '../services/upload.service';
 import { transformRequest } from './request-transformer';
-
+import { Auth } from 'better-auth'
 export interface BetterAuthWrapperOptions {
   uploadService: UploadService;
   logger: Logger;
@@ -13,7 +13,7 @@ export interface BetterAuthWrapperOptions {
  */
 export class BetterAuthWrapper {
   constructor(
-    private auth: any,
+    private auth: Auth,
     private options: BetterAuthWrapperOptions
   ) {}
 

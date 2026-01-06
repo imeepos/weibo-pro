@@ -96,7 +96,6 @@ function createEndpointHandler(
 
         // 添加 CORS 头
         addCorsHeaders(res, req);
-
         // 设置状态码
         res.statusCode = result.status;
 
@@ -108,8 +107,8 @@ function createEndpointHandler(
         });
 
         // 写入响应体
-        const body = await result.text();
-        res.end(body);
+        const body = await result.arrayBuffer();
+        res.end(Buffer.from(body));
 
         return;
       }
