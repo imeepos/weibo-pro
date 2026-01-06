@@ -5,6 +5,7 @@ import {
   Index,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -433,6 +434,9 @@ export class WeiboPostEntity {
   @ManyToOne(() => EventEntity)
   @JoinColumn({ name: 'event_id' })
   event!: EventEntity | null;
+
+  @OneToMany('PostNLPResultEntity', 'post')
+  nlpResults!: unknown[];
 
   @Column({ type: 'jsonb', name: 'visible', nullable: true })
   visible!: Visible;

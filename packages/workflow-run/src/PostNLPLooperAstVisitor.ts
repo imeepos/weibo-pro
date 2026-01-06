@@ -45,21 +45,20 @@ export class PostNLPLooperAstVisitor {
               const qb = manager
                 .createQueryBuilder(WeiboPostEntity, 'post')
                 .leftJoin(
-                  PostNLPResultEntity,
-                  'nlp',
-                  'nlp.post_id = CAST(post.id AS VARCHAR)'
+                  'post.nlpResults',
+                  'nlp'
                 )
                 .where(
                   'nlp.id IS NULL OR nlp.keywords IS NULL OR jsonb_array_length(nlp.keywords) = 0 OR nlp.sentiment IS NULL'
                 )
                 .andWhere('post.deleted_at IS NULL')
-                .orderBy('post.id', 'DESC')
+                .orderBy('post.ingested_at', 'ASC')
                 .limit(ast.pageSize);
 
               // 游标分页
               if (ast.cursorId) {
-                qb.andWhere('CAST(post.id AS BIGINT) < :cursorId', {
-                  cursorId: ast.cursorId,
+                qb.andWhere('post.ingested_at > :cursorId', {
+                  cursorId: new Date(ast.cursorId),
                 });
               }
 
@@ -78,7 +77,7 @@ export class PostNLPLooperAstVisitor {
 
             // 更新游标
             if (posts.length > 0) {
-              ast.cursorId = posts.at(-1)!.id;
+              ast.cursorId = posts.at(-1)!.ingested_at.toISOString();
             }
 
             // 发射 hasMore：如果返回数量等于 pageSize，可能还有更多数据
