@@ -17,13 +17,14 @@ interface LLMGeneratedEvent {
   title: string;
   description?: string;
   category_id: string;
+  category_name?: string; // LLM 提供的分类中文名称
   sentiment?: SentimentScore;
   hotness?: number;
   status?: 'active' | 'inactive' | 'archived';
   seed_url?: string;
   occurred_at?: string;
   peak_at?: string;
-  keywords?: string[]; // 新增：关键词数组
+  keywords?: string[];
   reasoning?: string;
   alreadyExists?: boolean;
   existingEventId?: string;
@@ -49,7 +50,8 @@ export class EventAuthGenerateAstVisitor {
 {
   "title": "事件标题（必填，255字符以内）",
   "description": "事件详细描述（可选，text类型）",
-  "category_id": "事件分类的 UUID（必填，需从可用分类中选择）",
+  "category_id": "分类编码（必填，snake_case格式）",
+  "category_name": "分类中文名称（必填，如：科技互联网、社会民生）",
   "sentiment": {
     "positive": 0.0,
     "negative": 0.0,
@@ -58,8 +60,8 @@ export class EventAuthGenerateAstVisitor {
   "hotness": 0.0,
   "status": "active",
   "seed_url": null,
-  "occurred_at": "ISO 8601格式时间戳或null",
-  "peak_at": "ISO 8601格式时间戳或null",
+  "occurred_at": "2026-01-04 16:54:00",
+  "peak_at": "2026-01-04 18:00:00",
   "keywords": ["关键词1", "关键词2", "关键词3"],
   "reasoning": "生成理由（用于日志记录）",
   "alreadyExists": false,
@@ -69,9 +71,79 @@ export class EventAuthGenerateAstVisitor {
 
 ## 字段说明
 
-- **title**：简洁的事件标题，如"腾讯回应元宝AI辱骂用户"，必填
-- **description**：事件背景、经过、影响等详细说明，可选
-- **category_id**：必须从【可用分类列表】中选择最合适的 UUID，必填
+- **title**：事件标题（必填，20字以内）
+
+<title-rules>
+  <principle>主体+动作，一眼看懂发生了什么</principle>
+  <good-examples>
+    <example>杨振宁逝世</example>
+    <example>王暖暖离婚案宣判</example>
+    <example>小红书被立案调查</example>
+    <example>春秋航空招聘已婚已育空嫂</example>
+  </good-examples>
+  <forbidden>
+    <item>媒体名称（人民日报主持、央视新闻曝光）</item>
+    <item>话题符号（#xxx#）</item>
+  </forbidden>
+</title-rules>
+- **description**：事件核心事实（可选）
+
+<description-rules>
+  <principle>一句话说清核心事实，不要评价，只陈述</principle>
+
+  <requirements>
+    <item>50字以内，最多不超过100字</item>
+    <item>包含核心5W：谁(Who)、做了什么(What)、结果(Result)</item>
+    <item>直接陈述事实，不加修饰语</item>
+  </requirements>
+
+  <forbidden>
+    <item>"据报道"、"该事件涉及"、"引发全网关注"等套话</item>
+    <item>"具有重要意义"、"性质恶劣"等评价性语言</item>
+    <item>阅读量、讨论量等数据（这些放在hotness字段）</item>
+    <item>重复标题内容</item>
+  </forbidden>
+
+  <good-examples>
+    <example title="泰国孕妇坠崖案离婚宣判">王暖暖离婚案宣判，法院判决离婚</example>
+    <example title="新疆沙漠发现盐水丰年虾">科研人员在塔克拉玛干沙漠首次发现该物种</example>
+    <example title="小红书被查">小红书因内容违规被监管部门立案调查</example>
+  </good-examples>
+
+  <bad-examples>
+    <example reason="套话+评价">据报道，该事件涉及...引发全网对...的广泛关注</example>
+    <example reason="重复+冗余">该事件标志着...体现了...具有重要意义</example>
+  </bad-examples>
+</description-rules>
+
+- **category_id**：分类编码（必填），使用 snake_case 格式
+
+<category-rules>
+  <principle>根据事件内容选择最合适的分类，若现有分类不合适可创建新分类</principle>
+
+  <existing-categories>优先从【可用分类列表】中选择</existing-categories>
+
+  <common-categories>
+    <!-- 行业类 -->
+    agriculture(农林牧渔)、mining(采矿业)、manufacturing(制造业)、
+    energy_utility(电力热力燃气水务)、construction(建筑业)、
+    retail_wholesale(批发零售)、transportation(交通运输仓储邮政)、
+    hospitality(住宿餐饮)、tech_internet(信息技术互联网)、
+    finance(金融业)、real_estate(房地产)、business_service(商务服务)、
+    science_research(科研技术服务)、environment(环境公共设施)、
+    life_service(居民服务)、education(教育)、health_social(卫生社会工作)、
+    culture_sports(文化体育娱乐)、public_admin(公共管理社会组织)、
+    international_org(国际组织)
+    <!-- 舆情特有类 -->
+    politics(政治)、military(军事)、legal(法律司法)、
+    disaster(灾害事故)、celebrity(明星名人)、social(社会民生)
+  </common-categories>
+
+  <create-new>若以上都不合适，可创建新编码（snake_case格式，如：public_safety、celebrity_news）</create-new>
+
+  <forbidden>禁止使用 UUID 格式作为分类编码</forbidden>
+</category-rules>
+
 - **sentiment**：情感分析（正负中立概率，总和为1.0）
   - positive: 正面情感概率（0-1）
   - negative: 负面情感概率（0-1）
@@ -79,13 +151,31 @@ export class EventAuthGenerateAstVisitor {
 - **hotness**：热度评分（0-100），基于阅读数、讨论量等综合计算
 - **status**：事件状态，默认为"active"
 - **seed_url**：事件源链接（如有）
-- **occurred_at**：事件发生时间（ISO 8601格式或null）
-- **peak_at**：热度峰值时间（ISO 8601格式或null）
-- **keywords**：关键词数组，提取3-5个最重要的关键词（必填）
-  - 应该是名词或名词短语
-  - 优先提取品牌名、产品名、人名、机构名等实体
-  - 每个关键词 2-10 个字
-  - 示例：["腾讯", "元宝AI", "用户投诉", "AI安全"]
+- **occurred_at**：事件发生时间，**必须从用户输入中提取**（如 onboard_time、time、created_at 等字段），格式：YYYY-MM-DD HH:mm:ss
+- **peak_at**：热度峰值时间，格式同上，可与 occurred_at 相同
+- **keywords**：微博搜索关键词（精确3个）
+
+<keyword-rules>
+  <principle>想象你是普通网友，你会用什么词搜索这个事件？</principle>
+
+  <structure>
+    <slot name="主体">人名/品牌/产品（如：杨某媛、腾讯、元宝AI）</slot>
+    <slot name="动作">发生了什么（如：骂人、坠崖、偷税、被查）</slot>
+    <slot name="场景">地点或背景（如：武汉大学、新疆）</slot>
+  </structure>
+
+  <good-examples>
+    <example event="腾讯AI骂人">["元宝AI", "骂人", "腾讯"]</example>
+    <example event="泰国坠崖案">["王暖暖", "坠崖", "泰国"]</example>
+    <example event="幼儿园关停">["幼儿园", "关停", "倒闭"]</example>
+  </good-examples>
+
+  <forbidden>
+    <category name="媒体名">央视新闻、人民日报、新华社、红星新闻、观察者网</category>
+    <category name="抽象标签">社会民生、正能量、国家认同、文化展示、科研成就、生物多样性、互联网合规、平台监管、内容审核、AI安全、公共安全、校园安全、两岸关系、国际外交、太空探索、科学界、教育温情、国际法、师德师风、消费者权益</category>
+    <category name="学术词汇">舆情、传播、倾向、监管、合规</category>
+  </forbidden>
+</keyword-rules>
 - **reasoning**：解释为什么生成这个事件，以及如何选择各个字段
 - **alreadyExists**：如果认为已存在高度相似的事件，设为 true
 - **existingEventId**：如果已存在相似事件，填写该事件的 ID（如果已知）
@@ -224,11 +314,17 @@ ${eventListText}
               // 优先使用 LLM 判断的结果
               if (generatedEvent.alreadyExists && generatedEvent.existingEventId) {
                 console.log('[EventAuthGenerateAstVisitor] LLM 判断已存在相似事件:', generatedEvent.existingEventId);
-                existingEvent = await this.findEventById(generatedEvent.existingEventId);
 
-                // 如果 LLM 返回的 ID 无效，使用传统方法二次确认
+                // 验证 UUID 格式后再查询
+                if (this.isValidUUID(generatedEvent.existingEventId)) {
+                  existingEvent = await this.findEventById(generatedEvent.existingEventId);
+                } else {
+                  console.warn('[EventAuthGenerateAstVisitor] LLM 返回的事件 ID 格式无效，跳过 ID 查询');
+                }
+
+                // 如果 LLM 返回的 ID 无效或找不到，使用传统方法二次确认
                 if (!existingEvent) {
-                  console.warn('[EventAuthGenerateAstVisitor] LLM 返回的事件 ID 无效，使用传统方法验证');
+                  console.warn('[EventAuthGenerateAstVisitor] 使用关键词匹配方法验证');
                   existingEvent = this.findSimilarEventByKeywords(generatedEvent, recentEvents);
                 }
               }
@@ -238,21 +334,25 @@ ${eventListText}
                 existingEvent = this.findSimilarEventByKeywords(generatedEvent, recentEvents);
               }
 
-              // 如果找到相似事件，返回已有事件
+              // 如果找到相似事件，检查是否需要更新属性
               if (existingEvent) {
-                console.log('[EventAuthGenerateAstVisitor] 发现相似事件，跳过插入:', existingEvent.id);
+                console.log('[EventAuthGenerateAstVisitor] 发现相似事件:', existingEvent.id);
+
+                // 更新现有事件的属性（如果 LLM 生成的更合理）
+                const updatedEvent = await this.updateEventIfNeeded(existingEvent, generatedEvent);
+
                 ast.alreadyExists = true;
-                ast.event = existingEvent;
-                ast.event_id = existingEvent.id;
-                ast.event_title = existingEvent.title;
+                ast.event = updatedEvent;
+                ast.event_id = updatedEvent.id;
+                ast.event_title = updatedEvent.title;
 
                 return [{
                   type: 'node_emit' as const,
                   id: ast.id,
                   data: {
-                    event: existingEvent,
-                    event_id: existingEvent.id,
-                    event_title: existingEvent.title,
+                    event: updatedEvent,
+                    event_id: updatedEvent.id,
+                    event_title: updatedEvent.title,
                     insertSuccess: false,
                     alreadyExists: true,
                     errorMessage: ''
@@ -348,10 +448,11 @@ ${formattedInput}
 ## 任务要求
 
 1. 分析用户输入，提取关键信息
-2. 合理推断缺失的字段（如 description, sentiment, hotness 等）
-3. 从可用分类列表中选择最合适的 category_id
-4. 判断是否应该生成新事件（检查是否与现有事件高度相似）
-5. 返回完整的 JSON 格式事件记录
+2. **时间提取**：从用户输入中提取事件发生时间（如 onboard_time、time、created_at 等字段），作为 occurred_at
+3. 合理推断缺失的字段（如 description, sentiment, hotness 等）
+4. 从可用分类列表中选择最合适的 category_id
+5. 判断是否应该生成新事件（检查是否与现有事件高度相似）
+6. 返回完整的 JSON 格式事件记录
 
 请开始处理：`;
   }
@@ -393,7 +494,11 @@ ${formattedInput}
     }
 
     // 验证并解析 category_id
-    const resolvedCategoryId = await this.resolveOrCreateCategory(event.category_id, availableCategories);
+    const resolvedCategoryId = await this.resolveOrCreateCategory(
+      event.category_id,
+      availableCategories,
+      event.category_name
+    );
     event.category_id = resolvedCategoryId;
 
     // 验证 sentiment
@@ -503,8 +608,8 @@ ${formattedInput}
       eventEntity.hotness = generatedEvent.hotness ?? 0;
       eventEntity.status = generatedEvent.status || 'active';
       eventEntity.seed_url = generatedEvent.seed_url || null;
-      eventEntity.occurred_at = generatedEvent.occurred_at ? new Date(generatedEvent.occurred_at) : null;
-      eventEntity.peak_at = generatedEvent.peak_at ? new Date(generatedEvent.peak_at) : null;
+      eventEntity.occurred_at = this.parseBeijingTime(generatedEvent.occurred_at);
+      eventEntity.peak_at = this.parseBeijingTime(generatedEvent.peak_at);
       eventEntity.keywords = generatedEvent.keywords || [];
 
       // 保存到数据库
@@ -532,31 +637,39 @@ ${formattedInput}
    */
   private async resolveOrCreateCategory(
     categoryIdOrCode: string,
-    availableCategories: EventCategoryEntity[]
+    availableCategories: EventCategoryEntity[],
+    categoryName?: string
   ): Promise<string> {
-    // 1. 尝试通过 UUID 匹配
+    // 1. 尝试通过 UUID 匹配现有分类
     const categoryById = availableCategories.find(cat => cat.id === categoryIdOrCode);
     if (categoryById) {
       return categoryById.id;
     }
 
-    // 2. 尝试通过编码（code）匹配
+    // 2. 尝试通过编码（code）匹配现有分类
     const categoryByCode = availableCategories.find(cat => cat.code === categoryIdOrCode);
     if (categoryByCode) {
       console.log(`[EventAuthGenerateAstVisitor] 自动修正 category_id: "${categoryIdOrCode}" -> "${categoryByCode.id}"`);
       return categoryByCode.id;
     }
 
-    // 3. 分类不存在，自动创建
+    // 3. 检查是否是 UUID 格式（UUID 不能作为分类编码）
+    if (this.isValidUUID(categoryIdOrCode)) {
+      console.warn(`[EventAuthGenerateAstVisitor] LLM 返回了无效的 UUID 作为分类: "${categoryIdOrCode}"，使用默认分类 "other"`);
+      const otherCategory = await this.createCategory('other', '其他');
+      return otherCategory.id;
+    }
+
+    // 4. 合法的分类编码，自动创建新分类
     console.log(`[EventAuthGenerateAstVisitor] 分类 "${categoryIdOrCode}" 不存在，自动创建...`);
-    const newCategory = await this.createCategory(categoryIdOrCode);
+    const newCategory = await this.createCategory(categoryIdOrCode, categoryName);
     return newCategory.id;
   }
 
   /**
    * 创建新分类
    */
-  private async createCategory(code: string): Promise<EventCategoryEntity> {
+  private async createCategory(code: string, name?: string): Promise<EventCategoryEntity> {
     return await useEntityManager(async (manager) => {
       // 先检查是否已存在（防止并发创建）
       const existing = await manager.findOne(EventCategoryEntity, { where: { code } });
@@ -566,10 +679,10 @@ ${formattedInput}
 
       const category = new EventCategoryEntity();
       category.code = code;
-      category.name = this.generateCategoryName(code);
+      category.name = name || this.generateCategoryName(code);
       category.name_en = code;
       category.status = 'active';
-      category.sort = 100; // 默认排序靠后
+      category.sort = 100;
 
       const saved = await manager.save(EventCategoryEntity, category);
       console.log(`[EventAuthGenerateAstVisitor] 新分类已创建: ${saved.id} (${saved.code} - ${saved.name})`);
@@ -578,51 +691,135 @@ ${formattedInput}
   }
 
   /**
-   * 根据 code 生成中文分类名称
+   * 根据 code 生成中文分类名称（简单转换，主要依赖 LLM 判断）
    */
   private generateCategoryName(code: string): string {
-    const nameMap: Record<string, string> = {
-      'tech_internet': '科技互联网',
-      'entertainment': '娱乐',
-      'sports': '体育',
-      'politics': '政治',
-      'finance': '财经',
-      'social': '社会',
-      'education': '教育',
-      'health': '健康医疗',
-      'culture': '文化',
-      'military': '军事',
-      'international': '国际',
-      'science': '科学',
-      'automobile': '汽车',
-      'real_estate': '房产',
-      'travel': '旅游',
-      'food': '美食',
-      'fashion': '时尚',
-      'game': '游戏',
-      'music': '音乐',
-      'movie': '电影',
-      'tv': '电视',
-      'ai': '人工智能',
-      'crypto': '加密货币',
-      'startup': '创业',
-      'ecommerce': '电商',
-      'other': '其他',
-    };
-
-    // 优先使用映射表
-    if (nameMap[code]) {
-      return nameMap[code];
-    }
-
-    // 尝试模糊匹配
-    for (const [key, name] of Object.entries(nameMap)) {
-      if (code.includes(key) || key.includes(code)) {
-        return name;
-      }
-    }
-
-    // 默认：将下划线转为空格，首字母大写
+    // 将 snake_case 转为可读格式
     return code.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  /**
+   * 验证 UUID 格式
+   */
+  private isValidUUID(str: string): boolean {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(str);
+  }
+
+  /**
+   * 解析北京时间字符串为 Date 对象
+   * 支持格式：YYYY-MM-DD HH:mm:ss 或 YYYY-MM-DDTHH:mm:ss
+   */
+  private parseBeijingTime(timeStr: string | undefined | null): Date | null {
+    if (!timeStr) return null;
+
+    // 如果已经带时区信息，直接解析
+    if (timeStr.includes('+') || timeStr.endsWith('Z')) {
+      return new Date(timeStr);
+    }
+
+    // 简单格式，按北京时间（UTC+8）处理
+    // 将 "2026-01-04 16:54:00" 转换为 "2026-01-04T16:54:00+08:00"
+    const normalized = timeStr.replace(' ', 'T') + '+08:00';
+    const date = new Date(normalized);
+
+    return isNaN(date.getTime()) ? null : date;
+  }
+
+  /**
+   * 检查并更新已存在事件的不合理属性
+   */
+  private async updateEventIfNeeded(
+    existingEvent: EventEntity,
+    generatedEvent: LLMGeneratedEvent
+  ): Promise<EventEntity> {
+    try {
+      const updates: Partial<EventEntity> = {};
+      const reasons: string[] = [];
+
+      // 1. 检查关键词是否需要更新
+      if (this.shouldUpdateKeywords(existingEvent.keywords, generatedEvent.keywords)) {
+        updates.keywords = generatedEvent.keywords || [];
+        reasons.push('关键词');
+      }
+
+      // 2. 检查描述是否需要更新（现有为空或太短）
+      if (this.shouldUpdateDescription(existingEvent.description, generatedEvent.description)) {
+        updates.description = generatedEvent.description || null;
+        reasons.push('描述');
+      }
+
+      // 3. 检查热度是否需要更新（新的更高）
+      if (generatedEvent.hotness && generatedEvent.hotness > (existingEvent.hotness || 0)) {
+        updates.hotness = generatedEvent.hotness;
+        reasons.push('热度');
+      }
+
+      // 4. 检查时间是否需要更新（现有为空）
+      if (!existingEvent.occurred_at && generatedEvent.occurred_at) {
+        const parsedTime = this.parseBeijingTime(generatedEvent.occurred_at);
+        if (parsedTime) {
+          updates.occurred_at = parsedTime;
+          reasons.push('发生时间');
+        }
+      }
+
+      if (!existingEvent.peak_at && generatedEvent.peak_at) {
+        const parsedTime = this.parseBeijingTime(generatedEvent.peak_at);
+        if (parsedTime) {
+          updates.peak_at = parsedTime;
+          reasons.push('峰值时间');
+        }
+      }
+
+      // 如果没有需要更新的，直接返回
+      if (Object.keys(updates).length === 0) {
+        console.log('[EventAuthGenerateAstVisitor] 现有事件属性合理，无需更新');
+        return existingEvent;
+      }
+
+      // 执行更新
+      console.log(`[EventAuthGenerateAstVisitor] 更新事件属性: ${reasons.join(', ')}`);
+
+      return await useEntityManager(async (manager) => {
+        await manager.update(EventEntity, existingEvent.id, updates);
+        const updated = await manager.findOne(EventEntity, { where: { id: existingEvent.id } });
+        // 如果查询失败，返回原事件（合并更新字段）
+        if (!updated) {
+          console.warn('[EventAuthGenerateAstVisitor] 更新后查询失败，返回合并数据');
+          return { ...existingEvent, ...updates } as EventEntity;
+        }
+        return updated;
+      });
+    } catch (error) {
+      // 更新失败不应该中断流程，返回原事件
+      console.error('[EventAuthGenerateAstVisitor] 更新事件属性失败:', error);
+      return existingEvent;
+    }
+  }
+
+  /**
+   * 判断关键词是否需要更新（简化逻辑：有新关键词就更新）
+   */
+  private shouldUpdateKeywords(
+    existingKeywords: string[] | null | undefined,
+    newKeywords: string[] | null | undefined
+  ): boolean {
+    // 有新关键词就更新
+    return !!(newKeywords && newKeywords.length > 0);
+  }
+
+  /**
+   * 判断描述是否需要更新
+   */
+  private shouldUpdateDescription(
+    existingDesc: string | null | undefined,
+    newDesc: string | null | undefined
+  ): boolean {
+    if (!newDesc || newDesc.length === 0) return false;
+    if (!existingDesc || existingDesc.length === 0) return true;
+    // 如果新描述明显更长更详细
+    if (newDesc.length > existingDesc.length * 1.5) return true;
+    return false;
   }
 }
