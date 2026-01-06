@@ -6,12 +6,10 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
   ManyToOne,
-  OneToMany,
   JoinColumn,
 } from 'typeorm';
 import { Entity } from './decorator';
 import { EventCategoryEntity } from './event-category.entity';
-import { EventTagRelationEntity } from './event-tag-relation.entity';
 import { type SentimentScore } from './types/sentiment';
 
 @Entity('events')
@@ -36,9 +34,6 @@ export class EventEntity {
   @JoinColumn({ name: 'category_id' })
   category!: EventCategoryEntity;
 
-  @OneToMany(() => EventTagRelationEntity, relation => relation.event)
-  tagRelations!: EventTagRelationEntity[];
-
   @Column({ type: 'jsonb', name: 'sentiment' })
   sentiment!: SentimentScore;
 
@@ -60,6 +55,9 @@ export class EventEntity {
 
   @Column({ type: 'timestamptz', nullable: true, name: 'peak_at' })
   peak_at!: Date | null;
+
+  @Column({ type: 'jsonb', nullable: true, default: () => "'[]'" })
+  keywords!: string[];
 
   @CreateDateColumn({
     type: 'timestamptz',

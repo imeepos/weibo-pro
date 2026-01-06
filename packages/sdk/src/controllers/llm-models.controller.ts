@@ -4,7 +4,7 @@ import type { LlmModel } from '@sker/entities';
 @Controller('llm-models')
 export class LlmModelsController {
 
-  @Get('/list')
+  @Get('list')
   findAll(): Promise<LlmModel[]> {
     throw new Error('method findAll not implements');
   }
@@ -14,7 +14,7 @@ export class LlmModelsController {
     throw new Error('method findOne not implements');
   }
 
-  @Post()
+  @Post(`create`)
   create(@Body() dto: Partial<LlmModel>): Promise<LlmModel> {
     throw new Error('method create not implements');
   }

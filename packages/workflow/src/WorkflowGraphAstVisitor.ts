@@ -52,6 +52,7 @@ export class WorkflowGraphAstVisitor {
 
         return input$.pipe(
             concatMap(input => {
+                console.log(`[WorkflowGraphAstVisitor] concatMap 触发，外部输入:`, input);
                 ast.state = 'running';
                 ast.error = undefined;
 
@@ -140,7 +141,8 @@ export class WorkflowGraphAstVisitor {
                     edge,
                     nodeEventStreams,
                     node.id,
-                    edges
+                    edges,
+                    node
                 );
                 if (routerInput$ !== EMPTY) {
                     inputSources.push(routerInput$);
@@ -184,7 +186,7 @@ export class WorkflowGraphAstVisitor {
         const groupStreams: Array<{ mode: EdgeMode; priority: number; stream$: Observable<any> }> = [];
 
         modeGroups.forEach((edgesInMode, mode) => {
-            const stream$ = this.combineEdgesByMode(workflow, mode, edgesInMode, nodeEventStreams);
+            const stream$ = this.combineEdgesByMode(workflow, mode, edgesInMode, nodeEventStreams, targetNode);
             if (stream$ !== EMPTY) {
                 groupStreams.push({
                     mode,
@@ -218,9 +220,10 @@ export class WorkflowGraphAstVisitor {
         edge: IEdge,
         nodeEventStreams: Map<string, Observable<NodeEvent>>,
         targetNodeId: string,
-        allEdgesToTarget: IEdge[]
+        allEdgesToTarget: IEdge[],
+        targetNode?: any
     ): Observable<any> {
-        const valueStream$ = this.edgeStreamBuilder.buildEdgeValueStream(edge, nodeEventStreams);
+        const valueStream$ = this.edgeStreamBuilder.buildEdgeValueStream(edge, nodeEventStreams, targetNode);
         if (valueStream$ === EMPTY) return EMPTY;
 
         // 过滤 ROUTE_SKIPPED
@@ -237,7 +240,7 @@ export class WorkflowGraphAstVisitor {
         }
 
         // 构建其他边的值流并携带
-        return this.buildRouterWithOtherEdges(filteredStream$, edge, otherEdges, nodeEventStreams);
+        return this.buildRouterWithOtherEdges(filteredStream$, edge, otherEdges, nodeEventStreams, targetNode);
     }
 
     /**
@@ -265,10 +268,11 @@ export class WorkflowGraphAstVisitor {
         routerStream$: Observable<any>,
         routerEdge: IEdge,
         otherEdges: IEdge[],
-        nodeEventStreams: Map<string, Observable<NodeEvent>>
+        nodeEventStreams: Map<string, Observable<NodeEvent>>,
+        targetNode?: any
     ): Observable<any> {
         const otherValueStreams = otherEdges
-            .map(e => this.edgeStreamBuilder.buildEdgeValueStream(e, nodeEventStreams))
+            .map(e => this.edgeStreamBuilder.buildEdgeValueStream(e, nodeEventStreams, targetNode))
             .filter(s => s !== EMPTY);
 
         if (otherValueStreams.length === 0) {
@@ -308,16 +312,14 @@ export class WorkflowGraphAstVisitor {
         workflow: WorkflowGraphAst,
         mode: EdgeMode,
         edges: IEdge[],
-        nodeEventStreams: Map<string, Observable<NodeEvent>>
+        nodeEventStreams: Map<string, Observable<NodeEvent>>,
+        targetNode?: any
     ): Observable<any> {
         const sources = edges
-            .map(edge => this.edgeStreamBuilder.buildEdgeValueStream(edge, nodeEventStreams))
+            .map(edge => this.edgeStreamBuilder.buildEdgeValueStream(edge, nodeEventStreams, targetNode))
             .filter(s => s !== EMPTY);
 
         if (sources.length === 0) return EMPTY;
-
-        console.log(`[combineEdgesByMode] 组合模式: ${mode}, 边数量: ${edges.length}`);
-
         // 使用策略模式处理所有 EdgeMode
         const strategy = this.strategies.get(mode) || this.strategies.get(EdgeMode.COMBINE_LATEST);
         return strategy!.combine(sources, edges);

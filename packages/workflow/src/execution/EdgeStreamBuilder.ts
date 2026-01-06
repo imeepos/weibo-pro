@@ -1,9 +1,10 @@
 import { Observable, EMPTY, defer } from 'rxjs';
-import { filter, map, tap } from 'rxjs/operators';
-import { IEdge, ROUTE_SKIPPED } from '../types';
+import { filter, map, tap, toArray } from 'rxjs/operators';
+import { IEdge, INode, ROUTE_SKIPPED } from '../types';
 import { NodeEmitEvent, NodeEvent } from './events';
 import { evaluateTransform } from '../edge-transform';
 import { Injectable } from '@sker/core';
+import { hasBufferMode } from '../decorator';
 
 /**
  * 边流构建器
@@ -20,26 +21,39 @@ export class EdgeStreamBuilder {
      *
      * @param edge 边定义
      * @param nodeEventStreams 所有节点的事件流映射
+     * @param targetNode 目标节点，用于检查 IS_BUFFER 模式
      * @returns 边的值流
      */
     buildEdgeValueStream(
         edge: IEdge,
-        nodeEventStreams: Map<string, Observable<NodeEvent>>
+        nodeEventStreams: Map<string, Observable<NodeEvent>>,
+        targetNode?: INode
     ): Observable<any> {
         // 使用 defer 延迟获取 eventStream，解决循环依赖
         return defer(() => {
             const eventStream$ = nodeEventStreams.get(edge.from);
-            if (!eventStream$) return EMPTY;
+            if (!eventStream$) {
+                return EMPTY;
+            }
 
-            return eventStream$.pipe(
+            let valueStream$ = eventStream$.pipe(
                 filter((event): event is NodeEmitEvent =>
                     event.type === 'node_emit' && edge.fromProperty! in (event.data || {})
                 ),
-                tap(() => {
-                    console.log(`[EdgeStreamBuilder] 边 ${edge.fromProperty} → ${edge.toProperty} 收到值`);
-                }),
                 map(event => this.extractAndTransformValue(event, edge))
             );
+
+            // 检查目标端口是否有 IS_BUFFER 模式
+            if (targetNode) {
+                const inputMeta = targetNode.metadata?.inputs?.find(
+                    (input: any) => input.property === edge.toProperty
+                );
+                if (hasBufferMode(inputMeta?.mode)) {
+                    valueStream$ = valueStream$.pipe(toArray());
+                }
+            }
+
+            return valueStream$;
         });
     }
 

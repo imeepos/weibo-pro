@@ -72,7 +72,6 @@ export class ZipStrategy implements IEdgeModeStrategy {
 export class CombineLatestStrategy implements IEdgeModeStrategy {
     combine(sources: Observable<any>[], edges: IEdge[]): Observable<any> {
         return combineLatest(sources).pipe(
-            tap(() => console.log(`[CombineLatestStrategy] 所有边都至少发射了一次值`)),
             map(values => this.mapToObject(values, edges))
         );
     }

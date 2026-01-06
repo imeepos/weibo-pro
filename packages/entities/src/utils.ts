@@ -7,13 +7,18 @@ import { WeiboPostSubscriber } from './weibo-post.subscriber';
 export const createDatabaseConfig = (): DataSourceOptions => {
   const databaseUrl = process.env.DATABASE_URL;
   const entities = [...new Set(root.get(ENTITY, []))]
+
+  // 只允许显式开启 synchronize 的应用执行表同步
+  // 避免多个应用并发 synchronize 导致类型冲突
+  const shouldSync = process.env.TYPEORM_SYNCHRONIZE === 'true';
+
   if (databaseUrl) {
     return {
       type: 'postgres',
       url: databaseUrl,
       entities,
       subscribers: [WeiboPostSubscriber],
-      synchronize: true,
+      synchronize: shouldSync,
       logging: false,
       poolSize: 30,
       connectTimeoutMS: 10000,
@@ -79,11 +84,13 @@ export const useDataSource = async () => {
       throw error;
     }
   }
+
   const start = Date.now();
   ds = createDataSource();
   try {
     await ds.initialize();
-    console.log(`[DataSource] created and initialized in ${Date.now() - start}ms`);
+    const syncStatus = process.env.TYPEORM_SYNCHRONIZE === 'true' ? '🔄 with sync' : '📌 without sync';
+    console.log(`[DataSource] initialized in ${Date.now() - start}ms ${syncStatus}`);
     return ds;
   } catch (error) {
     console.error('[DataSource] creation failed:', error);

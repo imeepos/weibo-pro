@@ -17,7 +17,6 @@ import { handlerRemote } from './execute-remote.js';
 @Injectable()
 export class RemoteDefaultVisitor implements IDefaultVisitor {
     visit(ast: Ast, input$: Observable<any>, workflow?: WorkflowGraphAst): Observable<NodeEvent> {
-        console.log(`RemoteDefaultVisitor run ${ast.type}`)
         return handlerRemote(ast, input$, workflow);
     }
 }

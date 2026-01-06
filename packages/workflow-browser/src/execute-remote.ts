@@ -1,7 +1,8 @@
 import { root } from '@sker/core';
 import { WorkflowController } from '@sker/sdk';
 import { Ast, INode, NodeEvent, setAstError, WorkflowGraphAst } from '@sker/workflow';
-import { concatMap, filter, mergeMap, Observable, tap, throwError } from 'rxjs';
+import { concatMap, filter, from, map, mergeMap, Observable, tap, throwError } from 'rxjs';
+import { ErrorHandlerOperators } from './error-handler.util.js';
 /**
  * 统一的远程执行器
  *
@@ -17,7 +18,7 @@ export function executeRemote(
     ast: Ast,
     parent: WorkflowGraphAst,
     input: Record<string, any> = {}
-): Observable<NodeEvent> {
+): Observable<NodeEvent[]> {
     const controller = root.get(WorkflowController);
     if (!controller) {
         throw new Error('WorkflowController 未注入，请确保已配置 SDK providers');
@@ -37,7 +38,7 @@ export function executeRemote(
                     break;
             }
         }),
-        mergeMap((event: NodeEvent) => {
+        map((event: NodeEvent) => {
             if (event.id === ast.id && event.type === 'node_fail') {
                 return [event];
             }
@@ -53,7 +54,12 @@ export function handlerRemote(ast: Ast, $input: Observable<any>, ctx: any): Obse
     return new Observable(obs => {
         ast.state = 'running'
         obs.next({ type: 'node_runing', id: ast.id })
-        $input.pipe(concatMap(input => executeRemote(ast, ctx, input))).subscribe({
+        $input.pipe(
+            concatMap(input => executeRemote(ast, ctx, input)),
+            ErrorHandlerOperators.createRetryOperator(ast, { logPrefix: '[ClaudeCodeRefactorAstVisitor]' }),
+            ErrorHandlerOperators.createCatchErrorOperator(ast, { logPrefix: '[ClaudeCodeRefactorAstVisitor]' }),
+            mergeMap((events: NodeEvent[]) => from(events))
+        ).subscribe({
             next: (event) => obs.next(event),
             complete: () => {
                 ast.state = 'success';

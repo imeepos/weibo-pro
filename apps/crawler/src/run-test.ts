@@ -92,20 +92,22 @@ async function main() {
 
             const eventData = (event as any).data
 
-            // 如果事件数据中只包含 emitCount，说明这是计数事件（不是真实数据）
-            const isCountEvent = eventData?.emitCount !== undefined && Object.keys(eventData).length === 1
-
-            if (isCountEvent) {
-              // 这是计数事件，更新 inputCount
+            // 更新 inputCount：如果事件数据包含 emitCount，提取并更新
+            if (eventData?.emitCount !== undefined) {
               stats.inputCount = eventData.emitCount
-            } else {
-              // 这是真实数据事件
+            }
+
+            // 如果事件数据中只包含 emitCount，说明这是纯计数事件（不包含真实数据）
+            const isCountOnlyEvent = eventData?.emitCount !== undefined && Object.keys(eventData).length === 1
+
+            if (!isCountOnlyEvent) {
+              // 这是包含真实数据的事件
               stats.dataEmitCount++
             }
 
             // 打印 NLP 节点的执行日志
             if (stats.type === 'PostNLPAnalyzerAst') {
-              console.log(`[NLP] 第 ${stats.totalEmitCount} 次 emit 事件 (ast.emitCount: ${stats.inputCount}, ${isCountEvent ? '计数事件' : '数据事件'})`)
+              console.log(`[NLP] 第 ${stats.totalEmitCount} 次 emit 事件 (ast.emitCount: ${stats.inputCount}, ${isCountOnlyEvent ? '纯计数事件' : '数据事件'})`)
             }
           }
         },

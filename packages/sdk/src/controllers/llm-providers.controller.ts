@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param } from '@sker/core';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@sker/core';
 import type { LlmProvider } from '@sker/entities';
 
 @Controller('llm-providers')
@@ -14,21 +14,21 @@ export class LlmProvidersController {
     throw new Error('method findOne not implements');
   }
 
-  @Post()
+  @Post('create')
   create(@Body() createLlmProviderDto: Partial<LlmProvider>): Promise<LlmProvider> {
     throw new Error('method create not implements');
   }
 
-  @Post(':id')
+  @Post('update')
   update(
-    @Param('id') id: string,
+    @Query('id') id: string,
     @Body() updateLlmProviderDto: Partial<LlmProvider>
   ): Promise<LlmProvider> {
     throw new Error('method update not implements');
   }
 
-  @Post(':id')
-  remove(@Param('id') id: string): Promise<void> {
+  @Post('remove')
+  remove(@Body('id') id: string): Promise<void> {
     throw new Error('method remove not implements');
   }
 

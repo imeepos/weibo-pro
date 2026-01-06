@@ -39,12 +39,7 @@ export class EventAstVisitor {
           await useEntityManager(async (manager) => {
             const event = await manager.findOne(EventEntity, {
               where: { id: ast.eventId },
-              relations: ['category', 'tagRelations', 'tagRelations.tag'],
-              order: {
-                tagRelations: {
-                  relevance_score: 'DESC',
-                },
-              },
+              relations: ['category'],
             });
 
             if (!event) {
@@ -54,8 +49,8 @@ export class EventAstVisitor {
               return [];
             }
 
-            // 提取关键字
-            const keywords = event.tagRelations?.map(relation => relation.tag.name) || [];
+            // 提取关键字（直接从 keywords 字段）
+            const keywords = event.keywords || [];
             const keywords_str = keywords.join(',');
 
             ast.event = event;

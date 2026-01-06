@@ -34,8 +34,8 @@ export class JsonHarmonyParser {
       object: /\{[\s\S]*\}/,
       // JSON 数组（简化的贪婪匹配）
       array: /\[[\s\S]*\]/,
-      // 无引号的键
-      unquotedKey: /(\w+):/g,
+      // 无引号的键：只匹配在 { 或 , 后面的无引号键（避免匹配字符串值内的 word: 模式）
+      unquotedKey: /([{,]\s*)(\w+)(\s*:)/g,
       // 尾随逗号
       trailingComma: /,\s*([}\]])/g,
       // YAML 键值对结构
@@ -242,7 +242,7 @@ export class JsonHarmonyParser {
       if (this.config.enableUnquotedKeys) {
         const unquotedKeyPattern = this.patterns.unquotedKey
         if (unquotedKeyPattern) {
-          fixed = fixed.replace(unquotedKeyPattern, '"$1":')
+          fixed = fixed.replace(unquotedKeyPattern, '$1"$2"$3')
         }
       }
 
@@ -347,7 +347,7 @@ export class JsonHarmonyParser {
     // 修复无引号的键
     const unquotedKeyPattern = this.patterns.unquotedKey
     if (unquotedKeyPattern) {
-      fixed = fixed.replace(unquotedKeyPattern, '"$1":')
+      fixed = fixed.replace(unquotedKeyPattern, '$1"$2"$3')
     }
 
     // 移除尾随逗号

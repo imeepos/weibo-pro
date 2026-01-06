@@ -767,11 +767,11 @@ export class LlmProxyService {
               }
             } catch (conversionError) {
               console.error(`[LlmProxy] 响应转换异常:`, conversionError)
-              console.error(`[LlmProxy] Provider: ${provider.baseUrl}, 协议: ${provider.providerProtocol} → ${protocol}`)
+              console.error(`[LlmProxy] 请求详情: URL=${url}, 模型=${proxyBody.model}, 协议: ${provider.providerProtocol} → ${protocol}`)
 
               // 检查是否是 BigModel 的非标准错误响应
               if ((responseData as any).code && (responseData as any).success === false) {
-                console.warn(`[LlmProxy] 检测到 BigModel 非标准错误格式，将其转换为标准错误响应`)
+                console.warn(`[LlmProxy] 检测到非标准错误格式: URL=${url}, 模型=${proxyBody.model}`)
                 // 转换为标准的 OpenAI 错误格式
                 return {
                   success: false,

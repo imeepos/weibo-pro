@@ -22,14 +22,18 @@ export class EventTagRelationEntity {
   @Column({ type: 'uuid', name: 'event_id' })
   event_id!: string;
 
-  @ManyToOne(() => EventEntity)
+  @ManyToOne(() => EventEntity, {
+    createForeignKeyConstraints: false
+  })
   @JoinColumn({ name: 'event_id' })
   event!: EventEntity;
 
   @Column({ type: 'uuid', name: 'tag_id' })
   tag_id!: string;
 
-  @ManyToOne(() => EventTagEntity)
+  @ManyToOne(() => EventTagEntity, {
+    createForeignKeyConstraints: false
+  })
   @JoinColumn({ name: 'tag_id' })
   tag!: EventTagEntity;
 

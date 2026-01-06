@@ -65,7 +65,6 @@ export class VisitorExecutor implements Visitor {
 
         try {
             const handlerFn = (instance as any)[method.property];
-
             // 始终将第二个参数作为流传递给 handler
             const result = handlerFn.call(instance, ast, input$, parent);
             const execute$ = this.normalizeResult(result, ast);

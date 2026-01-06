@@ -23,6 +23,7 @@ interface LLMGeneratedEvent {
   seed_url?: string;
   occurred_at?: string;
   peak_at?: string;
+  keywords?: string[]; // 新增：关键词数组
   reasoning?: string;
   alreadyExists?: boolean;
   existingEventId?: string;
@@ -35,7 +36,7 @@ export class EventAuthGenerateAstVisitor {
 
 ## 核心原则
 
-1. **数据完整性**：必须生成所有必填字段（title, category_id, sentiment）
+1. **数据完整性**：必须生成所有必填字段（title, category_id, sentiment, keywords）
 2. **智能补全**：根据用户输入合理推断缺失的信息
 3. **去重判断**：判断是否应该生成新事件，还是忽略已存在的类似事件
 4. **分类准确性**：选择最合适的 category_id
@@ -59,6 +60,7 @@ export class EventAuthGenerateAstVisitor {
   "seed_url": null,
   "occurred_at": "ISO 8601格式时间戳或null",
   "peak_at": "ISO 8601格式时间戳或null",
+  "keywords": ["关键词1", "关键词2", "关键词3"],
   "reasoning": "生成理由（用于日志记录）",
   "alreadyExists": false,
   "existingEventId": null
@@ -79,6 +81,11 @@ export class EventAuthGenerateAstVisitor {
 - **seed_url**：事件源链接（如有）
 - **occurred_at**：事件发生时间（ISO 8601格式或null）
 - **peak_at**：热度峰值时间（ISO 8601格式或null）
+- **keywords**：关键词数组，提取3-5个最重要的关键词（必填）
+  - 应该是名词或名词短语
+  - 优先提取品牌名、产品名、人名、机构名等实体
+  - 每个关键词 2-10 个字
+  - 示例：["腾讯", "元宝AI", "用户投诉", "AI安全"]
 - **reasoning**：解释为什么生成这个事件，以及如何选择各个字段
 - **alreadyExists**：如果认为已存在高度相似的事件，设为 true
 - **existingEventId**：如果已存在相似事件，填写该事件的 ID（如果已知）
@@ -138,23 +145,37 @@ export class EventAuthGenerateAstVisitor {
             }
 
             // 验证输入
-            if (!ast.userInput || typeof ast.userInput !== 'string') {
+            let userInputString: string;
+            if (typeof ast.userInput === 'string' && ast.userInput.trim()) {
+              userInputString = ast.userInput;
+            } else if (ast.userInput && typeof ast.userInput === 'object') {
+              // 自动将对象转换为 JSON 字符串
+              userInputString = JSON.stringify(ast.userInput);
+            } else {
               throw new Error('用户输入数据不能为空');
             }
 
             // 解析用户输入的 JSON
             let userInputData: Record<string, any>;
             try {
-              userInputData = JSON.parse(ast.userInput);
+              userInputData = JSON.parse(userInputString);
             } catch (parseError) {
               throw new Error(`用户输入 JSON 解析失败: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
             }
 
-            // 构建系统提示词（包含可用分类列表）
+            // 构建系统提示词（包含可用分类列表和现有事件列表）
             const availableCategories = await this.fetchAvailableCategories();
             const categoryList = availableCategories.map(cat =>
               `- ${cat.name} (ID: ${cat.id}, 编码: ${cat.code})${cat.description ? `: ${cat.description}` : ''}`
             ).join('\n');
+
+            // 获取最近的事件列表用于去重
+            const recentEvents = await this.fetchRecentEvents();
+            const eventListText = recentEvents.length > 0
+              ? recentEvents.map((e, idx) =>
+                  `${idx + 1}. ID: ${e.id}\n   标题: ${e.title}\n   描述: ${e.description || '无'}\n   创建时间: ${e.created_at.toLocaleString('zh-CN')}`
+                ).join('\n\n')
+              : '暂无现有事件';
 
             const systemPrompt = ast.systemPromptTemplate && ast.systemPromptTemplate.trim()
               ? ast.systemPromptTemplate
@@ -166,7 +187,13 @@ export class EventAuthGenerateAstVisitor {
 
 ${categoryList}
 
-**请根据事件内容，从上述分类中选择最合适的一个，使用其 UUID 作为 category_id。**`;
+**请根据事件内容，从上述分类中选择最合适的一个，使用其 UUID 作为 category_id。**
+
+## 现有事件列表（用于去重判断）
+
+${eventListText}
+
+**请仔细检查新事件是否与现有事件高度相似。如果相似，设置 alreadyExists: true 并填写 existingEventId。**`;
 
             // 构建用户提示词
             const userPrompt = this.buildUserPrompt(userInputData);
@@ -188,25 +215,33 @@ ${categoryList}
             const generatedEvent = this.parseLLMResponse(responseContent);
 
             // 验证必填字段
-            this.validateGeneratedEvent(generatedEvent, availableCategories);
+            await this.validateGeneratedEvent(generatedEvent, availableCategories);
 
-            // 如果 LLM 判断已存在相似事件
-            if (generatedEvent.alreadyExists && !ast.forceInsert) {
-              console.log('[EventAuthGenerateAstVisitor] LLM 判断已存在相似事件，跳过插入');
-              ast.alreadyExists = true;
-
-              // 如果 LLM 提供了已存在的事件 ID，尝试查询
+            // 处理去重逻辑
+            if (!ast.forceInsert) {
               let existingEvent: EventEntity | null = null;
-              if (generatedEvent.existingEventId) {
+
+              // 优先使用 LLM 判断的结果
+              if (generatedEvent.alreadyExists && generatedEvent.existingEventId) {
+                console.log('[EventAuthGenerateAstVisitor] LLM 判断已存在相似事件:', generatedEvent.existingEventId);
                 existingEvent = await this.findEventById(generatedEvent.existingEventId);
+
+                // 如果 LLM 返回的 ID 无效，使用传统方法二次确认
+                if (!existingEvent) {
+                  console.warn('[EventAuthGenerateAstVisitor] LLM 返回的事件 ID 无效，使用传统方法验证');
+                  existingEvent = this.findSimilarEventByKeywords(generatedEvent, recentEvents);
+                }
               }
 
-              // 如果没有找到，尝试通过相似度查找
+              // 如果 LLM 没有判断为重复，使用传统方法兜底检查
               if (!existingEvent) {
-                existingEvent = await this.findSimilarEvent(generatedEvent);
+                existingEvent = this.findSimilarEventByKeywords(generatedEvent, recentEvents);
               }
 
+              // 如果找到相似事件，返回已有事件
               if (existingEvent) {
+                console.log('[EventAuthGenerateAstVisitor] 发现相似事件，跳过插入:', existingEvent.id);
+                ast.alreadyExists = true;
                 ast.event = existingEvent;
                 ast.event_id = existingEvent.id;
                 ast.event_title = existingEvent.title;
@@ -224,9 +259,6 @@ ${categoryList}
                   }
                 }];
               }
-
-              // 没有找到已存在事件，继续生成新事件
-              console.log('[EventAuthGenerateAstVisitor] 未找到已存在事件，继续生成新事件');
             }
 
             // 插入数据库
@@ -328,14 +360,12 @@ ${formattedInput}
    * 解析 LLM 响应
    */
   private parseLLMResponse(responseContent: string): LLMGeneratedEvent {
-    // 尝试提取 JSON（可能包裹在 ```json ``` 中）
-    const jsonMatch = responseContent.match(/```(?:json)?\s*([\s\S]*?)```/);
-    const jsonStr = jsonMatch ? jsonMatch[1]!.trim() : responseContent.trim();
-
     // 使用 json-harmony 解析（容错性强）
-    const parseResult = parseWithHarmony(jsonStr);
+    const parseResult = parseWithHarmony(responseContent);
 
     if (typeof parseResult.data !== 'object' || parseResult.data === null) {
+      console.error('[EventAuthGenerateAstVisitor] JSON 解析失败，原始文本:');
+      console.error(responseContent);
       throw new Error('LLM 返回的 JSON 格式无效');
     }
 
@@ -345,10 +375,10 @@ ${formattedInput}
   /**
    * 验证生成的事件数据
    */
-  private validateGeneratedEvent(
+  private async validateGeneratedEvent(
     event: LLMGeneratedEvent,
     availableCategories: EventCategoryEntity[]
-  ): void {
+  ): Promise<void> {
     // 验证必填字段
     if (!event.title || typeof event.title !== 'string') {
       throw new Error('事件标题缺失或无效');
@@ -362,11 +392,9 @@ ${formattedInput}
       throw new Error('category_id 缺失或无效');
     }
 
-    // 验证 category_id 是否在可用列表中
-    const categoryExists = availableCategories.some(cat => cat.id === event.category_id);
-    if (!categoryExists) {
-      throw new Error(`category_id "${event.category_id}" 不在可用分类列表中`);
-    }
+    // 验证并解析 category_id
+    const resolvedCategoryId = await this.resolveOrCreateCategory(event.category_id, availableCategories);
+    event.category_id = resolvedCategoryId;
 
     // 验证 sentiment
     if (event.sentiment) {
@@ -388,6 +416,20 @@ ${formattedInput}
   }
 
   /**
+   * 获取最近的事件列表
+   */
+  private async fetchRecentEvents(): Promise<EventEntity[]> {
+    return await useEntityManager(async (manager) => {
+      return await manager.find(EventEntity, {
+        where: { status: 'active' },
+        order: { created_at: 'DESC' },
+        take: 30, // 取最近 30 个事件
+        select: ['id', 'title', 'description', 'created_at']
+      });
+    });
+  }
+
+  /**
    * 通过 ID 查找事件
    */
   private async findEventById(eventId: string): Promise<EventEntity | null> {
@@ -397,21 +439,23 @@ ${formattedInput}
   }
 
   /**
-   * 查找相似事件（去重）
+   * 传统关键词匹配去重（兜底方案）
    */
-  private async findSimilarEvent(event: LLMGeneratedEvent): Promise<EventEntity | null> {
-    return await useEntityManager(async (manager) => {
-      // 查找标题相似的事件（使用简单的模糊匹配）
-      const events = await manager.find(EventEntity, {
-        where: { status: 'active' },
-        order: { created_at: 'DESC' },
-        take: 100 // 只检查最近100个事件
-      });
+  private findSimilarEventByKeywords(event: LLMGeneratedEvent, existingEvents: EventEntity[]): EventEntity | null {
+    const normalizedTitle = event.title.trim().toLowerCase();
 
-      // 简单相似度检查：标题包含相同的关键词
+    for (const existingEvent of existingEvents) {
+      const existingTitle = existingEvent.title.trim().toLowerCase();
+
+      // 1. 精确匹配（忽略大小写和前后空格）
+      if (normalizedTitle === existingTitle) {
+        console.log(`[EventAuthGenerateAstVisitor] 发现完全相同事件: ${existingEvent.id} - ${existingEvent.title}`);
+        return existingEvent;
+      }
+
+      // 2. 相似度检查：标题包含相同的关键词
       const keywords = event.title.split(/[\s,，。]+/).filter(w => w.length > 2);
-
-      for (const existingEvent of events) {
+      if (keywords.length > 0) {
         let matchCount = 0;
         for (const keyword of keywords) {
           if (existingEvent.title.includes(keyword)) {
@@ -420,14 +464,14 @@ ${formattedInput}
         }
 
         // 如果有50%以上的关键词匹配，认为是相似事件
-        if (keywords.length > 0 && matchCount >= keywords.length * 0.5) {
+        if (matchCount >= keywords.length * 0.5) {
           console.log(`[EventAuthGenerateAstVisitor] 发现相似事件: ${existingEvent.id} - ${existingEvent.title}`);
           return existingEvent;
         }
       }
+    }
 
-      return null;
-    });
+    return null;
   }
 
   /**
@@ -461,6 +505,7 @@ ${formattedInput}
       eventEntity.seed_url = generatedEvent.seed_url || null;
       eventEntity.occurred_at = generatedEvent.occurred_at ? new Date(generatedEvent.occurred_at) : null;
       eventEntity.peak_at = generatedEvent.peak_at ? new Date(generatedEvent.peak_at) : null;
+      eventEntity.keywords = generatedEvent.keywords || [];
 
       // 保存到数据库
       const savedEvent = await manager.save(EventEntity, eventEntity);
@@ -480,5 +525,104 @@ ${formattedInput}
         order: { sort: 'ASC', name: 'ASC' }
       });
     });
+  }
+
+  /**
+   * 解析或创建分类，返回有效的 category_id (UUID)
+   */
+  private async resolveOrCreateCategory(
+    categoryIdOrCode: string,
+    availableCategories: EventCategoryEntity[]
+  ): Promise<string> {
+    // 1. 尝试通过 UUID 匹配
+    const categoryById = availableCategories.find(cat => cat.id === categoryIdOrCode);
+    if (categoryById) {
+      return categoryById.id;
+    }
+
+    // 2. 尝试通过编码（code）匹配
+    const categoryByCode = availableCategories.find(cat => cat.code === categoryIdOrCode);
+    if (categoryByCode) {
+      console.log(`[EventAuthGenerateAstVisitor] 自动修正 category_id: "${categoryIdOrCode}" -> "${categoryByCode.id}"`);
+      return categoryByCode.id;
+    }
+
+    // 3. 分类不存在，自动创建
+    console.log(`[EventAuthGenerateAstVisitor] 分类 "${categoryIdOrCode}" 不存在，自动创建...`);
+    const newCategory = await this.createCategory(categoryIdOrCode);
+    return newCategory.id;
+  }
+
+  /**
+   * 创建新分类
+   */
+  private async createCategory(code: string): Promise<EventCategoryEntity> {
+    return await useEntityManager(async (manager) => {
+      // 先检查是否已存在（防止并发创建）
+      const existing = await manager.findOne(EventCategoryEntity, { where: { code } });
+      if (existing) {
+        return existing;
+      }
+
+      const category = new EventCategoryEntity();
+      category.code = code;
+      category.name = this.generateCategoryName(code);
+      category.name_en = code;
+      category.status = 'active';
+      category.sort = 100; // 默认排序靠后
+
+      const saved = await manager.save(EventCategoryEntity, category);
+      console.log(`[EventAuthGenerateAstVisitor] 新分类已创建: ${saved.id} (${saved.code} - ${saved.name})`);
+      return saved;
+    });
+  }
+
+  /**
+   * 根据 code 生成中文分类名称
+   */
+  private generateCategoryName(code: string): string {
+    const nameMap: Record<string, string> = {
+      'tech_internet': '科技互联网',
+      'entertainment': '娱乐',
+      'sports': '体育',
+      'politics': '政治',
+      'finance': '财经',
+      'social': '社会',
+      'education': '教育',
+      'health': '健康医疗',
+      'culture': '文化',
+      'military': '军事',
+      'international': '国际',
+      'science': '科学',
+      'automobile': '汽车',
+      'real_estate': '房产',
+      'travel': '旅游',
+      'food': '美食',
+      'fashion': '时尚',
+      'game': '游戏',
+      'music': '音乐',
+      'movie': '电影',
+      'tv': '电视',
+      'ai': '人工智能',
+      'crypto': '加密货币',
+      'startup': '创业',
+      'ecommerce': '电商',
+      'other': '其他',
+    };
+
+    // 优先使用映射表
+    if (nameMap[code]) {
+      return nameMap[code];
+    }
+
+    // 尝试模糊匹配
+    for (const [key, name] of Object.entries(nameMap)) {
+      if (code.includes(key) || key.includes(code)) {
+        return name;
+      }
+    }
+
+    // 默认：将下划线转为空格，首字母大写
+    return code.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   }
 }
