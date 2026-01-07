@@ -1,14 +1,13 @@
 import { Inject, Injectable } from "@sker/core";
 import { useEntityManager, WeiboRepostEntity, WeiboUserEntity } from "@sker/entities";
 import { WeiboAccountService } from "./services/weibo-account.service";
-import { Handler, NodeEvent, setAstError } from "@sker/workflow";
+import { Handler, NodeEvent } from "@sker/workflow";
 import { WeiboAjaxStatusesRepostTimelineAst } from "@sker/workflow-ast";
 import { WeiboApiClient } from "./services/weibo-api-client.base";
 import { Observable, from } from "rxjs";
 import { concatMap, mergeMap } from "rxjs/operators";
 import { DelayService } from "./services/delay.service";
 import { RateLimiterService } from "./services/rate-limiter.service";
-import { ErrorHandlerOperators } from "./utils/error-handler.util";
 
 export interface WeiboAjaxStatusesRepostTimelineResponse {
     readonly ok: number
@@ -46,58 +45,58 @@ export class WeiboAjaxStatusesRepostTimelineAstVisitor extends WeiboApiClient {
                     ast.emitCount += 1;
                     obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } });
 
-                    if (inputData) {
-                        Object.keys(inputData).forEach(key => {
-                            (ast as unknown as Record<string, unknown>)[key] = inputData[key];
-                        });
-                    }
+                    const events: NodeEvent[] = [];
+                    try {
+                        if (inputData) {
+                            Object.keys(inputData).forEach(key => {
+                                (ast as unknown as Record<string, unknown>)[key] = inputData[key];
+                            });
+                        }
 
-                    if (wrappedCtx.abortSignal?.aborted) {
-                        throw new Error('工作流已取消');
-                    }
-
-                    // 检查必要参数
-                    if (!ast.mid || ast.mid === 'null' || !ast.uid || ast.uid === 'null') {
-                        console.warn(`[WeiboAjaxStatusesRepostTimelineAstVisitor] 参数无效，跳过处理: mid=${ast.mid}, uid=${ast.uid}`);
-                        ast.is_end = true;
-                        return [
-                            { type: 'node_emit' as const, id: ast.id, data: { is_end: ast.is_end } }
-                        ];
-                    }
-
-                    let page = 1;
-                    for await (const body of this.fetchWithPagination<WeiboAjaxStatusesRepostTimelineResponse>({
-                        buildUrl: (p) => {
-                            page = p;
-                            return `https://weibo.com/ajax/statuses/repostTimeline?id=${ast.mid}&page=${p}&moduleID=feed&count=10`;
-                        },
-                        refererOptions: { uid: ast.uid, mid: ast.mid },
-                        shouldContinue: (data) => data.data.length > 0
-                    })) {
                         if (wrappedCtx.abortSignal?.aborted) {
                             throw new Error('工作流已取消');
                         }
 
-                        await useEntityManager(async m => {
-                            const uniqueUsers = Array.from(
-                                new Map(body.data.map(item => [item.user.id, item.user])).values()
-                            );
-                            const users = uniqueUsers.map(user => m.create(WeiboUserEntity, user as any));
-                            await m.upsert(WeiboUserEntity, users as any, ['id']);
+                        // 检查必要参数
+                        if (!ast.mid || ast.mid === 'null' || !ast.uid || ast.uid === 'null') {
+                            console.warn(`[WeiboAjaxStatusesRepostTimelineAstVisitor] 参数无效，跳过处理: mid=${ast.mid}, uid=${ast.uid}`);
+                        } else {
+                            let page = 1;
+                            for await (const body of this.fetchWithPagination<WeiboAjaxStatusesRepostTimelineResponse>({
+                                buildUrl: (p) => {
+                                    page = p;
+                                    return `https://weibo.com/ajax/statuses/repostTimeline?id=${ast.mid}&page=${p}&moduleID=feed&count=10`;
+                                },
+                                refererOptions: { uid: ast.uid, mid: ast.mid },
+                                shouldContinue: (data) => data.data.length > 0
+                            })) {
+                                if (wrappedCtx.abortSignal?.aborted) {
+                                    throw new Error('工作流已取消');
+                                }
 
-                            const entities = body.data.map(item => m.create(WeiboRepostEntity, item as any));
-                            console.log(`[WeiboAjaxStatusesRepostTimelineAstVisitor] ${page} 页 共${entities.length}条数据`);
-                            await m.upsert(WeiboRepostEntity, entities as any, ['id']);
-                        });
+                                await useEntityManager(async m => {
+                                    const uniqueUsers = Array.from(
+                                        new Map(body.data.map(item => [item.user.id, item.user])).values()
+                                    );
+                                    const users = uniqueUsers.map(user => m.create(WeiboUserEntity, user as any));
+                                    await m.upsert(WeiboUserEntity, users as any, ['id']);
+
+                                    const entities = body.data.map(item => m.create(WeiboRepostEntity, item as any));
+                                    console.log(`[WeiboAjaxStatusesRepostTimelineAstVisitor] ${page} 页 共${entities.length}条数据`);
+                                    await m.upsert(WeiboRepostEntity, entities as any, ['id']);
+                                });
+                            }
+                        }
+                    } catch (e) {
+                        console.error('[WeiboAjaxStatusesRepostTimelineAstVisitor] 处理失败:', e);
+                        events.push({ type: 'node_fail' as const, id: ast.id, error: (e as Error)?.message });
+                    } finally {
+                        ast.is_end = true;
+                        events.push({ type: 'node_emit' as const, id: ast.id, data: { is_end: true } });
                     }
 
-                    ast.is_end = true;
-                    return [
-                        { type: 'node_emit' as const, id: ast.id, data: { is_end: ast.is_end } }
-                    ];
+                    return events;
                 }),
-                ErrorHandlerOperators.createRetryOperator(ast, { logPrefix: '[WeiboAjaxStatusesRepostTimelineAstVisitor]' }),
-                ErrorHandlerOperators.createCatchErrorOperator(ast, { logPrefix: '[WeiboAjaxStatusesRepostTimelineAstVisitor]' }),
                 mergeMap((events: NodeEvent[]) => from(events))
             ).subscribe({
                 next: (event: NodeEvent) => obs.next(event),

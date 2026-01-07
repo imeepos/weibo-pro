@@ -1,14 +1,13 @@
 import { Inject, Injectable } from "@sker/core";
 import { useEntityManager, WeiboUserEntity, WeiboLikeEntity } from "@sker/entities";
 import { WeiboAccountService } from "./services/weibo-account.service";
-import { Handler, NodeEvent, setAstError } from "@sker/workflow";
+import { Handler, NodeEvent } from "@sker/workflow";
 import { WeiboAjaxStatusesLikeShowAst } from "@sker/workflow-ast";
 import { WeiboApiClient } from "./services/weibo-api-client.base";
 import { Observable, from } from "rxjs";
 import { concatMap, mergeMap } from "rxjs/operators";
 import { DelayService } from "./services/delay.service";
 import { RateLimiterService } from "./services/rate-limiter.service";
-import { ErrorHandlerOperators } from "./utils/error-handler.util";
 
 export interface WeiboStatusAttitude {
     readonly user: WeiboUserEntity;
@@ -49,64 +48,64 @@ export class WeiboAjaxStatusesLikeShowAstVisitor extends WeiboApiClient {
                     ast.emitCount += 1;
                     obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } });
 
-                    if (inputData) {
-                        Object.keys(inputData).forEach(key => {
-                            (ast as unknown as Record<string, unknown>)[key] = inputData[key];
-                        });
-                    }
+                    const events: NodeEvent[] = [];
+                    try {
+                        if (inputData) {
+                            Object.keys(inputData).forEach(key => {
+                                (ast as unknown as Record<string, unknown>)[key] = inputData[key];
+                            });
+                        }
 
-                    if (wrappedCtx.abortSignal?.aborted) {
-                        throw new Error('工作流已取消');
-                    }
-
-                    // 检查必要参数
-                    if (!ast.mid || ast.mid === 'null' || !ast.uid || ast.uid === 'null') {
-                        console.warn(`[WeiboAjaxStatusesLikeShowAstVisitor] 参数无效，跳过处理: mid=${ast.mid}, uid=${ast.uid}`);
-                        ast.is_end = true;
-                        return [
-                            { type: 'node_emit' as const, id: ast.id, data: { is_end: ast.is_end } }
-                        ];
-                    }
-
-                    let page = 1;
-                    for await (const body of this.fetchWithPagination<WeiboStatusLikeShowResponse>({
-                        buildUrl: (p) => {
-                            page = p;
-                            return `https://weibo.com/ajax/statuses/likeShow?id=${ast.mid}&attitude_type=${ast.attitude_type}&attitude_enable=${ast.attitude_enable}&page=${p}&count=${ast.count}`;
-                        },
-                        refererOptions: { uid: ast.uid, mid: ast.mid },
-                        shouldContinue: (data) => data.data.length > 0
-                    })) {
                         if (wrappedCtx.abortSignal?.aborted) {
                             throw new Error('工作流已取消');
                         }
 
-                        await useEntityManager(async m => {
-                            const uniqueUsers = Array.from(
-                                new Map(body.data.map(item => [item.user.id, item.user])).values()
-                            );
-                            const userEntities = uniqueUsers.map(user => m.create(WeiboUserEntity, user as any));
-                            console.log(`[${page}]处理${userEntities.length}个用户`);
-                            await m.upsert(WeiboUserEntity, userEntities as any, ['id']);
+                        // 检查必要参数
+                        if (!ast.mid || ast.mid === 'null' || !ast.uid || ast.uid === 'null') {
+                            console.warn(`[WeiboAjaxStatusesLikeShowAstVisitor] 参数无效，跳过处理: mid=${ast.mid}, uid=${ast.uid}`);
+                        } else {
+                            let page = 1;
+                            for await (const body of this.fetchWithPagination<WeiboStatusLikeShowResponse>({
+                                buildUrl: (p) => {
+                                    page = p;
+                                    return `https://weibo.com/ajax/statuses/likeShow?id=${ast.mid}&attitude_type=${ast.attitude_type}&attitude_enable=${ast.attitude_enable}&page=${p}&count=${ast.count}`;
+                                },
+                                refererOptions: { uid: ast.uid, mid: ast.mid },
+                                shouldContinue: (data) => data.data.length > 0
+                            })) {
+                                if (wrappedCtx.abortSignal?.aborted) {
+                                    throw new Error('工作流已取消');
+                                }
 
-                            const likeEntities = body.data.map(item =>
-                                m.create(WeiboLikeEntity, {
-                                    userWeiboId: String(item.user.id),
-                                    targetWeiboId: ast.mid
-                                } as any)
-                            );
-                            await m.upsert(WeiboLikeEntity, likeEntities as any, ['userWeiboId', 'targetWeiboId']);
-                            console.log(`[${page}]保存${likeEntities.length}条点赞记录`);
-                        });
+                                await useEntityManager(async m => {
+                                    const uniqueUsers = Array.from(
+                                        new Map(body.data.map(item => [item.user.id, item.user])).values()
+                                    );
+                                    const userEntities = uniqueUsers.map(user => m.create(WeiboUserEntity, user as any));
+                                    console.log(`[${page}]处理${userEntities.length}个用户`);
+                                    await m.upsert(WeiboUserEntity, userEntities as any, ['id']);
+
+                                    const likeEntities = body.data.map(item =>
+                                        m.create(WeiboLikeEntity, {
+                                            userWeiboId: String(item.user.id),
+                                            targetWeiboId: ast.mid
+                                        } as any)
+                                    );
+                                    await m.upsert(WeiboLikeEntity, likeEntities as any, ['userWeiboId', 'targetWeiboId']);
+                                    console.log(`[${page}]保存${likeEntities.length}条点赞记录`);
+                                });
+                            }
+                        }
+                    } catch (e) {
+                        console.error('[WeiboAjaxStatusesLikeShowAstVisitor] 处理失败:', e);
+                        events.push({ type: 'node_fail' as const, id: ast.id, error: (e as Error)?.message });
+                    } finally {
+                        ast.is_end = true;
+                        events.push({ type: 'node_emit' as const, id: ast.id, data: { is_end: true } });
                     }
 
-                    ast.is_end = true;
-                    return [
-                        { type: 'node_emit' as const, id: ast.id, data: { is_end: ast.is_end } }
-                    ];
+                    return events;
                 }),
-                ErrorHandlerOperators.createRetryOperator(ast, { logPrefix: '[WeiboAjaxStatusesLikeShowAstVisitor]' }),
-                ErrorHandlerOperators.createCatchErrorOperator(ast, { logPrefix: '[WeiboAjaxStatusesLikeShowAstVisitor]' }),
                 mergeMap((events: NodeEvent[]) => from(events))
             ).subscribe({
                 next: (event: NodeEvent) => obs.next(event),

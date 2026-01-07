@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@sker/core";
 import { useEntityManager, WeiboCommentEntity, WeiboUserEntity } from "@sker/entities";
 import { WeiboAccountService } from "./services/weibo-account.service";
-import { Handler, NodeEvent, setAstError } from "@sker/workflow";
+import { Handler, NodeEvent } from "@sker/workflow";
 import { WeiboAjaxStatusesCommentAst } from "@sker/workflow-ast";
 import { delay } from "./services/utils";
 import { WeiboApiClient } from "./services/weibo-api-client.base";
@@ -9,7 +9,6 @@ import { Observable, from } from "rxjs";
 import { concatMap, mergeMap } from "rxjs/operators";
 import { DelayService } from "./services/delay.service";
 import { RateLimiterService } from "./services/rate-limiter.service";
-import { ErrorHandlerOperators } from "./utils/error-handler.util";
 
 export interface WeiboAjaxStatusesComponentAstResponse {
     readonly ok: number
@@ -53,16 +52,25 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
                     ast.emitCount += 1;
                     obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } })
 
-                    if (inputData) {
-                        Object.keys(inputData).forEach(key => {
-                            (ast as unknown as Record<string, unknown>)[key] = inputData[key];
-                        });
+                    const events: NodeEvent[] = [];
+                    try {
+                        if (inputData) {
+                            Object.keys(inputData).forEach(key => {
+                                (ast as unknown as Record<string, unknown>)[key] = inputData[key];
+                            });
+                        }
+
+                        await this.executeHandler(ast, wrappedCtx);
+                    } catch (e) {
+                        console.error('[WeiboAjaxStatusesCommentAstVisitor] 处理失败:', e);
+                        events.push({ type: 'node_fail' as const, id: ast.id, error: (e as Error)?.message });
+                    } finally {
+                        ast.is_end = true;
+                        events.push({ type: 'node_emit' as const, id: ast.id, data: { is_end: true } });
                     }
 
-                    return await this.handler(ast, wrappedCtx);
+                    return events;
                 }),
-                ErrorHandlerOperators.createRetryOperator(ast, { logPrefix: '[WeiboAjaxStatusesCommentAstVisitor]' }),
-                ErrorHandlerOperators.createCatchErrorOperator(ast, { logPrefix: '[WeiboAjaxStatusesCommentAstVisitor]' }),
                 mergeMap((events: NodeEvent[]) => from(events))
             ).subscribe({
                 next: (event: NodeEvent) => obs.next(event),
@@ -86,7 +94,7 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
         });
     }
 
-    private async handler(ast: WeiboAjaxStatusesCommentAst, wrappedCtx: { abortSignal?: AbortSignal }): Promise<NodeEvent[]> {
+    private async executeHandler(ast: WeiboAjaxStatusesCommentAst, wrappedCtx: { abortSignal?: AbortSignal }): Promise<void> {
         // 检查取消信号
         if (wrappedCtx.abortSignal?.aborted) {
             throw new Error('工作流已取消');
@@ -95,10 +103,7 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
         // 检查必要参数
         if (!ast.mid || ast.mid === 'null' || !ast.uid || ast.uid === 'null') {
             console.warn(`[WeiboAjaxStatusesCommentAstVisitor] 参数无效，跳过处理: mid=${ast.mid}, uid=${ast.uid}`);
-            ast.is_end = true;
-            return [
-                { type: 'node_emit' as const, id: ast.id, data: { is_end: ast.is_end } }
-            ];
+            return;
         }
 
         while (true) {
@@ -147,11 +152,6 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
             ast.next_max_id = body.max_id;
             await delay();
         }
-
-        ast.is_end = true;
-        return [
-            { type: 'node_emit' as const, id: ast.id, data: { is_end: ast.is_end } }
-        ];
     }
 
     async visitChildren(ast: WeiboAjaxStatusesCommentAst, _ctx: { abortSignal?: AbortSignal }) {
