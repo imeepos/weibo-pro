@@ -12,6 +12,25 @@ import {
 import { Entity } from './decorator';
 import { EventEntity } from './event.entity';
 
+/**
+ * 帖子处理状态位标志
+ * 6 位二进制，每位代表一种处理状态
+ */
+export const PostProcessFlags = {
+  /** 000001 - 已完成 NLP 分析 */
+  NLP_COMPLETED: 1 << 0,
+  /** 000010 - 预留 */
+  RESERVED_1: 1 << 1,
+  /** 000100 - 预留 */
+  RESERVED_2: 1 << 2,
+  /** 001000 - 预留 */
+  RESERVED_3: 1 << 3,
+  /** 010000 - 预留 */
+  RESERVED_4: 1 << 4,
+  /** 100000 - 预留 */
+  RESERVED_5: 1 << 5,
+} as const;
+
 interface Visible {
   type: number;
   list_id: number;
@@ -614,10 +633,33 @@ export class WeiboPostEntity {
   })
   updated_at!: Date;
 
+  /**
+   * 处理状态位标志 (6 位二进制)
+   * 使用 PostProcessFlags 常量进行位运算
+   */
+  @Column({ type: 'smallint', name: 'process_flags', default: 0 })
+  @Index()
+  process_flags!: number;
+
   @DeleteDateColumn({
     type: 'timestamptz',
     name: 'deleted_at',
     nullable: true,
   })
   deleted_at!: Date | null;
+
+  /** 检查是否设置了指定标志 */
+  hasFlag(flag: number): boolean {
+    return (this.process_flags & flag) !== 0;
+  }
+
+  /** 设置标志（返回新值，不修改实体） */
+  static setFlag(current: number, flag: number): number {
+    return current | flag;
+  }
+
+  /** 清除标志（返回新值，不修改实体） */
+  static clearFlag(current: number, flag: number): number {
+    return current & ~flag;
+  }
 }

@@ -1,7 +1,7 @@
 import { Injectable } from '@sker/core';
 import { Handler, NodeEvent, WorkflowGraphAst } from '@sker/workflow';
 import { PostNLPLooperAst } from '@sker/workflow-ast';
-import { PostNLPResultEntity, useEntityManager, WeiboPostEntity } from '@sker/entities';
+import { PostProcessFlags, useEntityManager, WeiboPostEntity } from '@sker/entities';
 import { Observable, from } from 'rxjs';
 import { concatMap } from 'rxjs/operators';
 import { ErrorHandlerOperators } from './utils/error-handler.util';
@@ -40,22 +40,17 @@ export class PostNLPLooperAstVisitor {
 
             const events: NodeEvent[] = [];
 
-            // 查询一批没有 NLP 的帖子
+            // 查询未完成 NLP 的帖子（位标志判断）
             const posts = await useEntityManager(async (manager) => {
               const qb = manager
                 .createQueryBuilder(WeiboPostEntity, 'post')
-                .leftJoin(
-                  'post.nlpResults',
-                  'nlp'
-                )
-                .where(
-                  'nlp.id IS NULL OR nlp.keywords IS NULL OR jsonb_array_length(nlp.keywords) = 0 OR nlp.sentiment IS NULL'
-                )
+                .where('(post.process_flags & :nlpFlag) = 0', {
+                  nlpFlag: PostProcessFlags.NLP_COMPLETED,
+                })
                 .andWhere('post.deleted_at IS NULL')
                 .orderBy('post.ingested_at', 'ASC')
                 .limit(ast.pageSize);
 
-              // 游标分页
               if (ast.cursorId) {
                 qb.andWhere('post.ingested_at > :cursorId', {
                   cursorId: new Date(ast.cursorId),

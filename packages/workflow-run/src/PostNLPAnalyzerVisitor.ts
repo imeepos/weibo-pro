@@ -2,9 +2,10 @@ import { Inject, Injectable } from '@sker/core';
 import { Handler, NodeEvent, setAstError } from '@sker/workflow';
 import { PostNLPAnalyzerAst } from '@sker/workflow-ast';
 import {
-  EventCategoryEntity,
   PostNLPResultEntity,
+  PostProcessFlags,
   useEntityManager,
+  WeiboPostEntity,
 } from '@sker/entities';
 import { NLPAnalyzer } from '@sker/nlp';
 import type { PostContext, CompleteAnalysisResult } from '@sker/nlp';
@@ -172,16 +173,17 @@ export class PostNLPAnalyzerVisitor {
     if (ast.post && ast.post.id && ast.event_id) {
       try {
         await useEntityManager(async (manager) => {
-          // 先查询是否已存在
+          const postId = `${ast.post.id}`;
+
+          // 保存 NLP 结果
           const existing = await manager.findOne(PostNLPResultEntity, {
-            where: { post_id: `${ast.post.id}` }
+            where: { post_id: postId }
           });
 
           if (existing) {
-            // 更新现有记录
             await manager.update(
               PostNLPResultEntity,
-              { post_id: `${ast.post.id}` },
+              { post_id: postId },
               {
                 event_id: ast.event_id,
                 sentiment: nlpResult.sentiment as any,
@@ -189,15 +191,25 @@ export class PostNLPAnalyzerVisitor {
               }
             );
           } else {
-            // 插入新记录
             await manager.insert(PostNLPResultEntity, {
-              post_id: `${ast.post.id}`,
+              post_id: postId,
               event_id: ast.event_id,
               sentiment: nlpResult.sentiment as any,
               keywords: nlpResult.keywords as any,
-              event_type: { type: 'unknown', confidence: 0 } as any, // 提供默认值
+              event_type: { type: 'unknown', confidence: 0 } as any,
             });
           }
+
+          // 更新帖子的 process_flags，标记 NLP 已完成
+          await manager
+            .createQueryBuilder()
+            .update(WeiboPostEntity)
+            .set({
+              process_flags: () => `process_flags | ${PostProcessFlags.NLP_COMPLETED}`,
+            })
+            .where('id = :id', { id: postId })
+            .execute();
+
           ast.event_associated = true;
         });
       } catch (error: any) {
@@ -206,7 +218,7 @@ export class PostNLPAnalyzerVisitor {
         console.error('  post_id:', ast.post.id);
         console.error('  错误:', error?.message);
         console.error('  堆栈:', error?.stack);
-        throw error; // 重新抛出错误，让外层 catch 处理
+        throw error;
       }
     }
   }
