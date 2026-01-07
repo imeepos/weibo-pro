@@ -139,9 +139,9 @@ export class WorkflowController {
   /**
    * 创建调度
    */
-  @Post(':name/schedules')
+  @Post('schedules')
   createSchedule(
-    @Param('name') workflowName: string,
+    @Query('name') workflowName: string,
     @Body() body: {
       name: string;
       scheduleType: string;

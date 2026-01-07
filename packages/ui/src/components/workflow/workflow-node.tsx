@@ -64,7 +64,7 @@ const StatusBadge = ({
         borderColor: NODE_STATE_COLORS[status],
       }}
     >
-      {NODE_STATE_LABELS[status]}({count})
+      {NODE_STATE_LABELS[status]}&nbsp;{count}
     </Badge>
   )
 }

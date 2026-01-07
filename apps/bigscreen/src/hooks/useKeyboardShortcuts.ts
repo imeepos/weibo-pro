@@ -26,7 +26,7 @@ export const useKeyboardShortcuts = (
   const { enabled = true, preventDefault = true } = options;
 
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
-    if (!enabled) return;
+    if (!enabled || !event.key) return;
 
     const matchedShortcut = shortcuts.find(shortcut => {
       const keyMatch = shortcut.key.toLowerCase() === event.key.toLowerCase();
