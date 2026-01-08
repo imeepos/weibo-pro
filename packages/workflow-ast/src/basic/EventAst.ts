@@ -37,5 +37,14 @@ export class EventAst extends Ast {
   @Output({ title: '关键字字符串', defaultValue: '' })
   keywords_str = '';
 
+  @Output({ title: '帖子最早时间', defaultValue: '' })
+  post_min_time = '';
+
+  @Output({ title: '帖子最晚时间', defaultValue: '' })
+  post_max_time = '';
+
+  @Output({ title: '爬取完成', defaultValue: false })
+  is_crawl_complete = false;
+
   type: 'EventAst' = 'EventAst';
 }

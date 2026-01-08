@@ -1,7 +1,7 @@
 import { Injectable } from '@sker/core';
 import { Handler, NodeEvent, setAstError, WorkflowGraphAst } from '@sker/workflow';
 import { EventAst } from '@sker/workflow-ast';
-import { useEntityManager, EventEntity } from '@sker/entities';
+import { useEntityManager, EventEntity, WeiboPostEntity } from '@sker/entities';
 import { Observable, from } from 'rxjs';
 import { concatMap, mergeMap } from 'rxjs/operators';
 import { ErrorHandlerOperators } from './utils/error-handler.util';
@@ -53,6 +53,31 @@ export class EventAstVisitor {
             const keywords = event.keywords || [];
             const keywords_str = keywords.join('|');
 
+            // 查询帖子时间区间
+            const timeRange = await manager
+              .createQueryBuilder(WeiboPostEntity, 'post')
+              .select('MIN(post.created_at)', 'min')
+              .addSelect('MAX(post.created_at)', 'max')
+              .where('post.event_id = :eventId', { eventId: ast.eventId })
+              .andWhere('post.created_at IS NOT NULL')
+              .getRawOne<{ min: Date; max: Date }>();
+
+            // 计算帖子时间区间
+            const post_min_time = timeRange?.min ? timeRange.min.toISOString() : '';
+            const post_max_time = timeRange?.max ? timeRange.max.toISOString() : '';
+            let is_crawl_complete = false;
+
+            // 小时精度比较：判断爬取是否完成
+            if (event.occurred_at && timeRange?.min) {
+              const eventStart = new Date(event.occurred_at);
+              const postMin = timeRange.min;
+              is_crawl_complete =
+                eventStart.getFullYear() === postMin.getFullYear() &&
+                eventStart.getMonth() === postMin.getMonth() &&
+                eventStart.getDate() === postMin.getDate() &&
+                eventStart.getHours() === postMin.getHours();
+            }
+
             ast.event = event;
             ast.event_id = event.id;
             ast.event_title = event.title;
@@ -63,6 +88,9 @@ export class EventAstVisitor {
             if (event.occurred_at) {
               ast.startTime = event.occurred_at?.toISOString();
             }
+            ast.post_min_time = post_min_time;
+            ast.post_max_time = post_max_time;
+            ast.is_crawl_complete = is_crawl_complete;
 
             obs.next({ type: 'node_runing', id: ast.id });
           });
@@ -77,7 +105,10 @@ export class EventAstVisitor {
                 event_title: ast.event_title,
                 keywords: ast.keywords,
                 keywords_str: ast.keywords_str,
-                startTime: ast.startTime
+                startTime: ast.startTime,
+                post_min_time: ast.post_min_time,
+                post_max_time: ast.post_max_time,
+                is_crawl_complete: ast.is_crawl_complete
               }
             }
           ];

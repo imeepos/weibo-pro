@@ -437,8 +437,8 @@ export class WeiboPostEntity {
   @Column({ type: 'jsonb', name: 'visible', nullable: true })
   visible!: Visible;
 
-  @Column({ type: 'varchar', length: 255, name: 'created_at', nullable: true, comment: '微博发布时间（来源数据，字符串格式）' })
-  created_at!: string;
+  @Column({ type: 'timestamptz', nullable: true, name: 'created_at', comment: '微博发布时间' })
+  created_at!: Date | null;
 
   @Column({ type: 'varchar', length: 64, name: 'idstr', nullable: true })
   idstr!: string;
