@@ -3,6 +3,10 @@ import { DataSource, DataSourceOptions, EntityManager } from 'typeorm';
 import { ENTITY } from "./decorator";
 import { APP_INITIALIZER, Initializer, Provider, root } from '@sker/core'
 import { WeiboPostSubscriber } from './weibo-post.subscriber';
+import { WeiboPostHourlySubscriber } from './subscribers/weibo-post-hourly.subscriber';
+import { WeiboCommentHourlySubscriber } from './subscribers/weibo-comment-hourly.subscriber';
+import { WeiboLikeHourlySubscriber } from './subscribers/weibo-like-hourly.subscriber';
+import { WeiboRepostHourlySubscriber } from './subscribers/weibo-repost-hourly.subscriber';
 
 export const createDatabaseConfig = (): DataSourceOptions => {
   const databaseUrl = process.env.DATABASE_URL;
@@ -17,7 +21,13 @@ export const createDatabaseConfig = (): DataSourceOptions => {
       type: 'postgres',
       url: databaseUrl,
       entities,
-      subscribers: [WeiboPostSubscriber],
+      subscribers: [
+  WeiboPostSubscriber,
+  WeiboPostHourlySubscriber,
+  WeiboCommentHourlySubscriber,
+  WeiboLikeHourlySubscriber,
+  WeiboRepostHourlySubscriber,
+],
       synchronize: shouldSync,
       logging: false,
       poolSize: 30,
