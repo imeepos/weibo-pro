@@ -294,16 +294,16 @@ export class ChartsService {
     });
   }
 
-  async getWordCloud(timeRange: TimeRange = '12h', limit: number = 50) {
-    const cacheKey = CacheService.buildKey(CACHE_KEYS.CHART_WORDCLOUD, timeRange, limit);
+  async getWordCloud(timeRange: TimeRange = '12h', limit: number = 50, sentiment?: 'positive' | 'negative' | 'neutral') {
+    const cacheKey = CacheService.buildKey(CACHE_KEYS.CHART_WORDCLOUD, timeRange, limit, sentiment || 'all');
     return await this.cacheService.getOrSet(
       cacheKey,
-      () => this.fetchWordCloud(timeRange, limit),
+      () => this.fetchWordCloud(timeRange, limit, sentiment),
       CACHE_TTL.MEDIUM
     );
   }
 
-  private async fetchWordCloud(timeRange: TimeRange, limit: number) {
+  private async fetchWordCloud(timeRange: TimeRange, limit: number, sentiment?: 'positive' | 'negative' | 'neutral') {
     return useEntityManager(async (manager) => {
       const { start, end } = getTimeRangeBoundaries(timeRange);
 
@@ -320,10 +320,11 @@ export class ChartsService {
         WHERE post.ingested_at >= $1
           AND post.ingested_at <= $2
           AND post.deleted_at IS NULL
+          ${sentiment ? `AND keyword_elem->>'sentiment' = $3` : ''}
         GROUP BY keyword_elem->>'keyword', keyword_elem->>'sentiment'
         ORDER BY count DESC
-        LIMIT $3
-      `, [start, end, limit]);
+        LIMIT $${sentiment ? 4 : 3}
+      `, sentiment ? [start, end, sentiment, limit] : [start, end, limit]);
 
       return results.map((row: any) => ({
         keyword: row.keyword,

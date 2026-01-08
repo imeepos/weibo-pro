@@ -8,6 +8,11 @@ import { DelayService } from "./services/delay.service";
 import { Observable, Subscriber, from } from "rxjs";
 import { concatMap, mergeMap } from "rxjs/operators";
 import { ErrorHandlerOperators } from "./utils/error-handler.util";
+import {
+  useEntityManager,
+  WeiboPostEntity,
+  WeiboPostSnapshotEntity,
+} from "@sker/entities";
 
 const logger = createLogger('WeiboKeywordSearchAstVisitor');
 
@@ -119,6 +124,42 @@ export class WeiboKeywordSearchAstVisitor {
             if (ctx.abortSignal?.aborted) {
                 throw new Error('工作流已取消');
             }
+
+            // 检查帖子是否在12小时内已有快照
+            const shouldSkip = await useEntityManager(async (m: import('@sker/entities').EntityManager) => {
+                // 根据帖子ID查找帖子记录
+                const isLongId = /^\d{16,}$/.test(post.mid);
+                const postEntity = await m.findOne(WeiboPostEntity, {
+                    where: isLongId ? { id: post.mid } : { mblogid: post.mid }
+                });
+
+                if (!postEntity) {
+                    // 帖子不存在，正常发射
+                    return false;
+                }
+
+                // 查询最新快照时间
+                const latestSnapshot = await m.findOne(WeiboPostSnapshotEntity, {
+                    where: { post_id: postEntity.id },
+                    order: { snapshot_at: 'DESC' }
+                });
+
+                if (!latestSnapshot) {
+                    // 无快照，正常发射
+                    return false;
+                }
+
+                // 检查是否小于12小时
+                const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
+                return latestSnapshot.snapshot_at > twelveHoursAgo;
+            });
+
+            // 如果需要跳过，则跳过
+            if (shouldSkip) {
+                continue;
+            }
+
+            // 正常发射帖子事件
             ast.mblogid = post.mid;
             ast.uid = post.uid;
             obs.next({
@@ -157,6 +198,42 @@ export class WeiboKeywordSearchAstVisitor {
                         if (ctx.abortSignal?.aborted) {
                             throw new Error('工作流已取消');
                         }
+
+                        // 检查帖子是否在12小时内已有快照
+                        const shouldSkip = await useEntityManager(async (m: import('@sker/entities').EntityManager) => {
+                            // 根据帖子ID查找帖子记录
+                            const isLongId = /^\d{16,}$/.test(post.mid);
+                            const postEntity = await m.findOne(WeiboPostEntity, {
+                                where: isLongId ? { id: post.mid } : { mblogid: post.mid }
+                            });
+
+                            if (!postEntity) {
+                                // 帖子不存在，正常发射
+                                return false;
+                            }
+
+                            // 查询最新快照时间
+                            const latestSnapshot = await m.findOne(WeiboPostSnapshotEntity, {
+                                where: { post_id: postEntity.id },
+                                order: { snapshot_at: 'DESC' }
+                            });
+
+                            if (!latestSnapshot) {
+                                // 无快照，正常发射
+                                return false;
+                            }
+
+                            // 检查是否小于12小时
+                            const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
+                            return latestSnapshot.snapshot_at > twelveHoursAgo;
+                        });
+
+                        // 如果需要跳过，则跳过
+                        if (shouldSkip) {
+                            continue;
+                        }
+
+                        // 正常发射帖子事件
                         ast.mblogid = post.mid;
                         ast.uid = post.uid;
                         obs.next({

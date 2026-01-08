@@ -29,6 +29,7 @@ const PromptManagement = lazy(() => import('@/pages/PromptManagement'));
 const WorkflowManagement = lazy(() => import('@/pages/WorkflowManagement'));
 const ChatPage = lazy(() => import('@/pages/ChatPage').then(m => ({ default: m.ChatPage })));
 const DerivedNodeWorkbench = lazy(() => import('@/pages/DerivedNodeWorkbench'));
+const WordCloudPage = lazy(() => import('@/pages/WordCloudPage'));
 
 // 页面加载占位组件
 const PageLoader: React.FC = () => (
@@ -132,6 +133,7 @@ const App: React.FC = () => {
             <Route path="/prompt-management" element={<Layout><AnimatedPage pageKey="prompt-mgmt"><PromptManagement /></AnimatedPage></Layout>} />
             <Route path="/workflow-management" element={<Layout><AnimatedPage pageKey="workflow-mgmt"><WorkflowManagement /></AnimatedPage></Layout>} />
             <Route path="/derived-node-workbench" element={<Layout><AnimatedPage pageKey="derived-node"><DerivedNodeWorkbench /></AnimatedPage></Layout>} />
+            <Route path="/word-cloud" element={<Layout><AnimatedPage pageKey="word-cloud"><WordCloudPage /></AnimatedPage></Layout>} />
           </Routes>
         </div>
       </Router>

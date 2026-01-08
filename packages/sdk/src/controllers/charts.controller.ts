@@ -40,7 +40,11 @@ export class ChartsController {
     }
 
     @Get('word-cloud')
-    getWordCloud(@Query('timeRange') timeRange?: TimeRange, @Query('limit') limit?: number): Promise<WordCloudItem[]> {
+    getWordCloud(
+        @Query('timeRange') timeRange?: TimeRange,
+        @Query('limit') limit?: number,
+        @Query('sentiment') sentiment?: 'positive' | 'negative' | 'neutral'
+    ): Promise<WordCloudItem[]> {
         throw new Error('method getWordCloud not implements')
     }
 

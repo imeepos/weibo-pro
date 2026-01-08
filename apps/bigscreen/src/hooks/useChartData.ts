@@ -204,12 +204,12 @@ export function useEventTypes() {
 }
 
 // 词云数据Hook
-export function useWordCloudData(count: number = 50) {
+export function useWordCloudData(count: number = 50, sentiment?: 'positive' | 'negative' | 'neutral') {
   const { selectedTimeRange } = useAppStore();
 
   return useAsyncData(
-    () => ChartsAPI.getWordCloudData(count, selectedTimeRange),
-    [count, selectedTimeRange],
+    () => ChartsAPI.getWordCloudData(count, selectedTimeRange, sentiment),
+    [count, selectedTimeRange, sentiment],
     { cacheTime: 3 * 60 * 1000 }
   );
 }

@@ -11,7 +11,7 @@ export class KeywordsController implements sdk.KeywordsController{
     this.keywordsService = root.get(KeywordsService);
   }
 
-  async getWordCloud(@Query('maxWords') maxWords?: number) {
-    return this.keywordsService.getWordCloud(maxWords || 100);
+  async getWordCloud(maxWords?: number, sentiment?: 'positive' | 'negative' | 'neutral') {
+    return this.keywordsService.getWordCloud(maxWords || 100, sentiment);
   }
 }

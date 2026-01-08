@@ -17,6 +17,7 @@ import { useAppStore } from "@/stores/useAppStore";
 import { MAX_WORD_CLOUD_WORDS } from "@/constants/mockData";
 import { OverviewController } from "@sker/sdk";
 import { root, createLogger } from "@sker/core";
+import { useWordCloudData } from "@/hooks/useChartData";
 
 const logger = createLogger('DataOverview');
 
@@ -30,6 +31,8 @@ const DataOverview: React.FC = () => {
     isStale,
     refetch
   } = useOverviewData();
+
+  const { data: wordCloudData } = useWordCloudData(MAX_WORD_CLOUD_WORDS);
 
   const [locationData, setLocationData] = useState<GeoDataPoint[]>([]);
   const [locationLoading, setLocationLoading] = useState(true);
@@ -97,7 +100,7 @@ const DataOverview: React.FC = () => {
             <HotEventsList />
           </div>
           <div className="flex-1 bg-card border rounded-xl shadow-sm overflow-hidden p-4">
-            <WordCloudChart maxWords={MAX_WORD_CLOUD_WORDS} />
+            <WordCloudChart data={wordCloudData} maxWords={MAX_WORD_CLOUD_WORDS} />
           </div>
         </div>
 

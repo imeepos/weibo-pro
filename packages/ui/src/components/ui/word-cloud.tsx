@@ -3,7 +3,6 @@
 import * as React from "react"
 import * as echarts from "echarts"
 import type { EChartsOption } from "echarts"
-import { motion } from "framer-motion"
 import { cn } from "@sker/ui/lib/utils"
 import { EChartNative } from "./echart-native"
 
@@ -27,11 +26,26 @@ export interface WordCloudProps {
   onWordClick?: (item: WordCloudItem) => void
 }
 
-// 常量默认值，避免每次渲染创建新数组
+export interface WordCloudRef {
+  exportAsPNG: (filename?: string) => void
+}
+
+// 常量默认值
 const DEFAULT_SIZE_RANGE: [number, number] = [12, 40]
 const DEFAULT_ROTATION_RANGE: [number, number] = [-45, 45]
 
-function WordCloud({
+// 简单哈希函数
+function hashData(data: WordCloudItem[]): string {
+  if (data.length === 0) return 'empty'
+  let hash = 0
+  for (let i = 0; i < Math.min(data.length, 50); i++) {
+    const item = data[i]
+    hash = (((hash << 5) - hash) + item.name.length + item.value) | 0
+  }
+  return `${data.length}-${hash}`
+}
+
+const WordCloud = React.forwardRef<WordCloudRef, WordCloudProps>(({
   data,
   height,
   className,
@@ -41,9 +55,27 @@ function WordCloud({
   animated = true,
   tooltipFormatter,
   onWordClick,
-}: WordCloudProps) {
+}, ref) => {
   const dataRef = React.useRef(data)
   const tooltipFormatterRef = React.useRef(tooltipFormatter)
+  const chartRef = React.useRef<echarts.ECharts | null>(null)
+
+  // 暴露导出方法
+  React.useImperativeHandle(ref, () => ({
+    exportAsPNG: (filename?: string) => {
+      const chart = chartRef.current
+      if (!chart) return
+      const url = chart.getDataURL({
+        type: 'png',
+        pixelRatio: 2,
+        backgroundColor: '#fff'
+      })
+      const link = document.createElement('a')
+      link.href = url
+      link.download = filename || `词云_${new Date().toLocaleDateString()}.png`
+      link.click()
+    }
+  }))
 
   // 更新 refs
   React.useEffect(() => {
@@ -51,13 +83,7 @@ function WordCloud({
     tooltipFormatterRef.current = tooltipFormatter
   }, [data, tooltipFormatter])
 
-  // 使用深度比较稳定所有数组引用
-  const dataKey = React.useMemo(() => {
-    return JSON.stringify(data.map(item => [item.name, item.value, item.color]))
-  }, [data])
-
-  const sizeRangeKey = React.useMemo(() => JSON.stringify(sizeRange), [sizeRange])
-  const rotationRangeKey = React.useMemo(() => JSON.stringify(rotationRange), [rotationRange])
+  const dataHash = React.useMemo(() => hashData(data), [data])
 
   const option = React.useMemo(() => {
     const currentData = dataRef.current
@@ -67,7 +93,8 @@ function WordCloud({
       textStyle: item.color ? { color: item.color } : undefined,
     }))
 
-    return {
+    const newOption: EChartsOption = {
+      backgroundColor: '#ffffff',
       tooltip: {
         trigger: "item" as const,
         backgroundColor: "rgba(0, 0, 0, 0.8)",
@@ -87,9 +114,9 @@ function WordCloud({
       series: [
         {
           type: "wordCloud" as const,
-          gridSize: 2,
-          sizeRange: JSON.parse(sizeRangeKey),
-          rotationRange: JSON.parse(rotationRangeKey),
+          gridSize: 4,
+          sizeRange,
+          rotationRange,
           rotationStep: 15,
           shape,
           width: "100%",
@@ -98,7 +125,7 @@ function WordCloud({
           top: "center",
           drawOutOfBound: false,
           shrinkToFit: true,
-          layoutAnimation: true,
+          layoutAnimation: animated,
           textStyle: {
             fontFamily: "Inter, sans-serif",
             fontWeight: "bold",
@@ -118,12 +145,14 @@ function WordCloud({
           data: processedData,
         },
       ],
-      animation: true,
-      animationDuration: 1000,
+      animation: animated,
+      animationDuration: animated ? 300 : 0,
       animationEasing: "cubicOut" as const,
-    } as any as EChartsOption
+    }
+
+    return newOption
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dataKey, shape, sizeRangeKey, rotationRangeKey])
+  }, [dataHash, shape, sizeRange[0], sizeRange[1], rotationRange[0], rotationRange[1], animated])
 
   const onWordClickRef = React.useRef(onWordClick)
 
@@ -133,6 +162,7 @@ function WordCloud({
 
   const handleChartReady = React.useCallback(
     (chart: echarts.ECharts) => {
+      chartRef.current = chart
       if (onWordClickRef.current) {
         chart.on("click", (params: any) => {
           const item = dataRef.current.find((d) => d.name === params.name)
@@ -145,7 +175,7 @@ function WordCloud({
     []
   )
 
-  const content = (
+  return (
     <EChartNative
       option={option}
       height={height ? `${height}px` : "100%"}
@@ -153,24 +183,11 @@ function WordCloud({
       renderer="canvas"
       animated={false}
       onChartReady={handleChartReady}
-      className="w-full h-full"
+      className={cn("w-full h-full", className)}
     />
   )
+})
 
-  if (!animated) {
-    return <div className={cn("w-full h-full", className)}>{content}</div>
-  }
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.5 }}
-      className={cn("w-full h-full", className)}
-    >
-      {content}
-    </motion.div>
-  )
-}
+WordCloud.displayName = 'WordCloud'
 
 export { WordCloud }

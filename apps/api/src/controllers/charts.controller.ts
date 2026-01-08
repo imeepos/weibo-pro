@@ -31,8 +31,12 @@ export class ChartsController implements sdk.ChartsController{
     return this.chartsService.getEventTypes(timeRange);
   }
 
-  async getWordCloud(@Query('timeRange') timeRange?: TimeRange, @Query('limit') limit?: number) {
-    return this.chartsService.getWordCloud(timeRange, limit);
+  async getWordCloud(
+    @Query('timeRange') timeRange?: TimeRange,
+    @Query('limit') limit?: number,
+    @Query('sentiment') sentiment?: 'positive' | 'negative' | 'neutral'
+  ) {
+    return this.chartsService.getWordCloud(timeRange, limit, sentiment);
   }
 
   async getEventCountSeries(@Query('timeRange') timeRange?: TimeRange) {

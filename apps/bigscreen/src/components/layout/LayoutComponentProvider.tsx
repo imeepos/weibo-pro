@@ -1,6 +1,7 @@
 import React from "react";
 import { KeywordData } from "@/types";
 import { TrendingUp } from "lucide-react";
+import { useWordCloudData } from "@/hooks/useChartData";
 
 // 导入所有可用的真实组件
 // Charts 组件
@@ -144,6 +145,21 @@ const generateComponentData = (timeRange?: string) => {
   };
 };
 
+// 词云数据提供者组件（用于在工厂函数中使用 hooks）
+const WordCloudProvider: React.FC<{ children: React.ReactNode; maxWords?: number }> = ({
+  children,
+  maxWords = 100
+}) => {
+  const { data: wordCloudData } = useWordCloudData(maxWords);
+
+  // 使用 React.cloneElement 传递数据给子组件
+  const child = children as React.ReactElement<any>;
+  return React.cloneElement(child, {
+    ...child.props,
+    data: wordCloudData
+  });
+};
+
 // 组件包装器 - 为每个组件提供适当的数据和配置
 export const componentWrappers = {
   // 情感趋势图
@@ -158,7 +174,11 @@ export const componentWrappers = {
 
   // 词云图
   "word-cloud": () => {
-    return <WordCloudChart className="w-full h-full flex-1" />;
+    return (
+      <WordCloudProvider maxWords={100}>
+        <WordCloudChart className="w-full h-full flex-1" />
+      </WordCloudProvider>
+    );
   },
 
   // 地理分布图
@@ -300,7 +320,11 @@ export const componentWrappers = {
   },
 
   "WordCloudChart": () => {
-    return <WordCloudChart className="w-full h-full flex-1" />;
+    return (
+      <WordCloudProvider maxWords={100}>
+        <WordCloudChart className="w-full h-full flex-1" />
+      </WordCloudProvider>
+    );
   },
 
   "GeographicChart": () => {
@@ -365,7 +389,11 @@ export const legacyComponentMap: Record<string, React.ComponentType<any>> = {
   },
   SentimentTrendChart: () => <SentimentTrendChart className="flex-1" />,
   WordCloudChart: () => {
-    return <WordCloudChart className="flex-1" />;
+    return (
+      <WordCloudProvider maxWords={100}>
+        <WordCloudChart className="flex-1" />
+      </WordCloudProvider>
+    );
   },
   GeographicChart: () => <GeographicChart className="flex-1" />,
   HotEventsList: () => <HotEventsList className="flex-1" />,

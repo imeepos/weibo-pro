@@ -117,10 +117,14 @@ export class ChartsAPI {
 
   // 获取词云数据
   static getWordCloudData = withErrorBoundary(
-    async (count: number = 50, timeRange?: TimeRange): Promise<HotTopicData[]> => {
-      logger.debug('Fetching word cloud data', { count, timeRange });
+    async (
+      count: number = 50,
+      timeRange?: TimeRange,
+      sentiment?: 'positive' | 'negative' | 'neutral'
+    ): Promise<HotTopicData[]> => {
+      logger.debug('Fetching word cloud data', { count, timeRange, sentiment });
       const chartsController = root.get(ChartsController);
-      const data = await chartsController.getWordCloud(timeRange, count);
+      const data = await chartsController.getWordCloud(timeRange, count, sentiment);
       return data as HotTopicData[];
     },
     { component: 'ChartsAPI', action: 'getWordCloudData' }

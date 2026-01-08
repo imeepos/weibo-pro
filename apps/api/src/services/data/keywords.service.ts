@@ -10,17 +10,17 @@ export class KeywordsService {
     @Inject(CacheService) private readonly cacheService: CacheService
   ) {}
 
-  async getWordCloud(maxWords: number): Promise<KeywordData[]> {
-    const cacheKey = CacheService.buildKey(CACHE_KEYS.HOT_KEYWORDS, maxWords);
+  async getWordCloud(maxWords: number, sentiment?: 'positive' | 'negative' | 'neutral'): Promise<KeywordData[]> {
+    const cacheKey = CacheService.buildKey(CACHE_KEYS.HOT_KEYWORDS, maxWords, sentiment || 'all');
 
     return await this.cacheService.getOrSet(
       cacheKey,
-      () => this.fetchWordCloud(maxWords),
-      CACHE_TTL.MEDIUM // 关键词词云5分钟缓存
+      () => this.fetchWordCloud(maxWords, sentiment),
+      CACHE_TTL.MEDIUM
     );
   }
 
-  private async fetchWordCloud(maxWords: number): Promise<KeywordData[]> {
+  private async fetchWordCloud(maxWords: number, sentiment?: 'positive' | 'negative' | 'neutral'): Promise<KeywordData[]> {
     return useEntityManager(async (manager) => {
       const results = await manager
         .getRepository(PostNLPResultEntity)
@@ -46,16 +46,20 @@ export class KeywordsService {
         });
       });
 
-      const keywords = Array.from(keywordMap.entries())
+      let keywords = Array.from(keywordMap.entries())
         .map(([keyword, data]) => ({
           keyword,
           weight: Math.round(data.weight * 100),
           sentiment: this.calculateOverallSentiment(data.sentiments)
         }))
-        .sort((a, b) => b.weight - a.weight)
-        .slice(0, maxWords);
+        .sort((a, b) => b.weight - a.weight);
 
-      return keywords;
+      // 根据情感筛选
+      if (sentiment) {
+        keywords = keywords.filter(k => k.sentiment === sentiment);
+      }
+
+      return keywords.slice(0, maxWords);
     });
   }
 

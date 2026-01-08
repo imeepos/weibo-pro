@@ -1,8 +1,8 @@
 import React from "react"
 import { cn, getSentimentColorHex } from "@/utils"
-import { useWordCloudData } from "@/hooks/useChartData"
-import { WordCloud, type WordCloudItem } from "@sker/ui/components/ui/word-cloud"
+import { WordCloud, type WordCloudItem, type WordCloudRef } from "@sker/ui/components/ui/word-cloud"
 import { ChartState } from '@sker/ui/components/ui/chart-state'
+
 interface KeywordData {
   keyword: string;
   weight: number;
@@ -14,48 +14,56 @@ interface WordCloudChartProps {
   height?: number
   className?: string
   maxWords?: number
-  data?: KeywordData[] | null; // 支持外部传入数据
+  data?: KeywordData[] | null
 }
 
-const WordCloudChart: React.FC<WordCloudChartProps> = React.memo(({
+export interface WordCloudChartRef {
+  exportAsPNG: (filename?: string) => void
+}
+
+// 简单哈希函数
+function hashData(data: KeywordData[] | null, maxWords: number): string {
+  if (!data || data.length === 0) return 'empty'
+  const len = Math.min(data.length, maxWords)
+  let hash = 0
+  for (let i = 0; i < Math.min(len, 30); i++) {
+    const item = data[i]
+    hash = (((hash << 5) - hash) + item.keyword.length + item.weight) | 0
+  }
+  return `${len}-${hash}`
+}
+
+const WordCloudChart = React.forwardRef<WordCloudChartRef, WordCloudChartProps>(({
   title = "关键词词云",
   height = 0,
   className,
   maxWords = 100,
-  data: propData
-}) => {
-  const hookData = useWordCloudData(maxWords);
-
-  // 优先使用 props 数据，否则使用 hook 数据
-  const data = propData ?? hookData.data;
-  const loading = propData === undefined ? hookData.loading : false;
-  const error = propData === undefined ? hookData.error : null;
-  const refetch = hookData.refetch;
-
+  data
+}, ref) => {
   const dataRef = React.useRef(data)
+  const wordCloudRef = React.useRef<WordCloudRef>(null)
 
-  // 更新 data ref
   React.useEffect(() => {
     dataRef.current = data
   }, [data])
 
-  // 使用 JSON 序列化进行深度比较，避免引用变化导致重新计算
-  const dataKey = React.useMemo(() => {
-    if (!data) return 'empty'
-    return JSON.stringify(data.slice(0, maxWords).map(item => [item.keyword, item.weight, item.sentiment]))
-  }, [data, maxWords])
+  const dataHash = React.useMemo(() => hashData(data, maxWords), [data, maxWords])
 
   const wordCloudData: WordCloudItem[] = React.useMemo(() => {
     if (!data) return []
-    return data.slice(0, maxWords).map((item) => ({
-      name: item.keyword,
-      value: item.weight,
-      color: getSentimentColorHex(item.sentiment || "neutral"),
-    }))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dataKey, maxWords])
+    const limit = Math.min(data.length, maxWords)
+    const result: WordCloudItem[] = new Array(limit)
+    for (let i = 0; i < limit; i++) {
+      const item = data[i]
+      result[i] = {
+        name: item.keyword,
+        value: item.weight,
+        color: getSentimentColorHex(item.sentiment || "neutral"),
+      }
+    }
+    return result
+  }, [dataHash, maxWords])
 
-  // 稳定的 tooltipFormatter（不依赖 data）
   const tooltipFormatter = React.useCallback(
     (item: WordCloudItem) => {
       const currentData = dataRef.current
@@ -78,17 +86,25 @@ const WordCloudChart: React.FC<WordCloudChartProps> = React.memo(({
     []
   )
 
+  // 暴露导出方法
+  React.useImperativeHandle(ref, () => ({
+    exportAsPNG: (filename?: string) => {
+      wordCloudRef.current?.exportAsPNG(filename)
+    }
+  }))
+
   return (
     <ChartState
-      loading={loading}
-      error={error}
+      loading={false}
+      error={null}
       empty={!data || data.length === 0}
       loadingText="加载词云数据..."
       emptyText="暂无词云数据"
-      onRetry={refetch}
+      onRetry={() => {}}
       className={className}
     >
       <WordCloud
+        ref={wordCloudRef}
         data={wordCloudData}
         height={height || undefined}
         className={cn("w-full h-full", className)}
@@ -97,8 +113,8 @@ const WordCloudChart: React.FC<WordCloudChartProps> = React.memo(({
       />
     </ChartState>
   )
-});
+})
 
-WordCloudChart.displayName = 'WordCloudChart';
+WordCloudChart.displayName = 'WordCloudChart'
 
-export default WordCloudChart
+export default (WordCloudChart as any)
