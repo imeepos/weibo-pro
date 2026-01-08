@@ -295,6 +295,7 @@ export function Output(options: OutputOptions = {}): PropertyDecorator {
 export interface StateOptions {
     title?: string;
     type?: string;
+    defaultValue?: any;
 }
 
 export interface StateMetadata {
@@ -302,13 +303,14 @@ export interface StateMetadata {
     propertyKey: string | symbol;
     title?: string;
     type?: string;
+    defaultValue?: any;
 }
 
 export const STATE = new InjectionToken<StateMetadata[]>(`STATE`)
 export function State(options?: StateOptions): PropertyDecorator {
     return (target, propertyKey) => {
         const ctor = resolveConstructor(target);
-        root.set([{ provide: STATE, multi: true, useValue: { target: ctor, type: options?.type, propertyKey, title: options?.title } }])
+        root.set([{ provide: STATE, multi: true, useValue: { target: ctor, type: options?.type, propertyKey, title: options?.title, defaultValue: options?.defaultValue } }])
     };
 }
 

@@ -74,7 +74,7 @@ export function LeftDrawer({ visible, onClose, onRunNode, onLocateNode, onAutoSa
       // 提取所有状态参数（供 @Setting 组件使用）
       metadata.states?.forEach((state) => {
         const key = String(state.propertyKey)
-        initialData[key] = selectedNode.data[key]
+        initialData[key] = selectedNode.data[key] ?? state.defaultValue
       })
 
       setFormData(initialData as INode)

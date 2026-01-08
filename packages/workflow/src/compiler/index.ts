@@ -164,7 +164,8 @@ export class Compiler {
         return targetStates.map(state => ({
             propertyKey: state.propertyKey,
             title: state.title,
-            type: state.type
+            type: state.type,
+            defaultValue: state.defaultValue
         }));
     }
 }

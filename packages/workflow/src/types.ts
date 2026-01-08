@@ -92,6 +92,7 @@ export interface INodeStateMetadata {
     propertyKey: string | symbol;
     title?: string;
     type?: string;
+    defaultValue?: any;
 }
 export function isNode(val: any): val is Required<INode> {
     return val && val.metadata
