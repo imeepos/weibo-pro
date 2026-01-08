@@ -5,10 +5,14 @@
 import { Controller, Inject } from '@sker/core';
 import * as sdk from '@sker/sdk';
 import { ClaudeGateway } from './claude.gateway';
+import { ClaudeTaskService } from './claude-task.service';
 
 @Controller(sdk.ClaudeController)
 export class ClaudeController implements sdk.ClaudeController {
-  constructor(@Inject(ClaudeGateway) private claudeGateway: ClaudeGateway) {}
+  constructor(
+    @Inject(ClaudeGateway) private claudeGateway: ClaudeGateway,
+    @Inject(ClaudeTaskService) private taskService: ClaudeTaskService,
+  ) {}
 
   /**
    * 获取所有在线的 CLI 客户端
@@ -41,5 +45,38 @@ export class ClaudeController implements sdk.ClaudeController {
       success: true,
       data: this.claudeGateway.getStats(),
     };
+  }
+
+  /**
+   * 获取下一个待执行任务
+   * GET /api/claude/tasks/next
+   */
+  async getNextTask(sessionId?: string) {
+    return this.taskService.getNextTask(sessionId);
+  }
+
+  /**
+   * 添加待执行任务
+   * POST /api/claude/tasks
+   */
+  async addTask(task: { task: string; priority?: 'low' | 'normal' | 'high' }) {
+    return this.taskService.addTask(task);
+  }
+
+  /**
+   * 获取所有待执行任务
+   * GET /api/claude/tasks
+   */
+  async getTasks() {
+    return this.taskService.getTasks();
+  }
+
+  /**
+   * 标记任务完成
+   * POST /api/claude/tasks/:id/complete
+   */
+  async completeTask(taskId: string) {
+    const success = this.taskService.completeTask(taskId);
+    return { success };
   }
 }
