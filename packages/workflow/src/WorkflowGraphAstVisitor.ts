@@ -1,6 +1,6 @@
 import { Injectable, Inject } from '@sker/core';
 import { Observable, EMPTY, of, isObservable, throwError, merge, zip, combineLatest } from 'rxjs';
-import { map, catchError, shareReplay, concatMap, filter, tap } from 'rxjs/operators';
+import { map, catchError, shareReplay, concatMap, filter, tap, withLatestFrom, startWith } from 'rxjs/operators';
 import { NodeExecutor } from './executor';
 import { Handler } from './decorator';
 import { WorkflowGraphAst } from './ast';
@@ -271,7 +271,9 @@ export class WorkflowGraphAstVisitor {
     ): Observable<any> {
         const otherValueStreams = otherEdges
             .map(e => this.edgeStreamBuilder.buildEdgeValueStream(e, nodeEventStreams, targetNode))
-            .filter(s => s !== EMPTY);
+            .filter(s => s !== EMPTY)
+            // 关键：给每个流添加 startWith(undefined)，确保 withLatestFrom 不会等待
+            .map(s => s.pipe(startWith(undefined)));
 
         if (otherValueStreams.length === 0) {
             return routerStream$.pipe(
@@ -279,26 +281,33 @@ export class WorkflowGraphAstVisitor {
             );
         }
 
+        // 使用 withLatestFrom 而不是 combineLatest
+        // withLatestFrom 只在主流（router）发射时触发，并携带其他流的最新值
+        // startWith(undefined) 确保即使其他流还没发射过值，router 也能立即触发
         return routerStream$.pipe(
-            tap(() => console.log(`[buildRouterWithOtherEdges] Router 边 ${routerEdge.toProperty} 触发`)),
-            filter(() => otherValueStreams.length > 0),
-            concatMap(routerValue => {
-                // 使用 combineLatest 获取其他边的最新值
-                return combineLatest(otherValueStreams).pipe(
-                    map(otherValues => {
-                        const result: Record<string, any> = {};
-                        result[routerEdge.toProperty!] = routerValue;
+            tap((routerValue) => {
+                console.log(`[buildRouterWithOtherEdges] Router 边 ${routerEdge.toProperty} 触发, 值:`, routerValue);
+                console.log(`[buildRouterWithOtherEdges] 其他边数量:`, otherEdges.length);
+                otherEdges.forEach((e, i) => {
+                    console.log(`[buildRouterWithOtherEdges] 其他边[${i}]: ${e.fromProperty} → ${e.toProperty}`);
+                });
+            }),
+            withLatestFrom(...otherValueStreams),
+            map(([routerValue, ...otherValues]) => {
+                const result: Record<string, any> = {};
+                result[routerEdge.toProperty!] = routerValue;
 
-                        otherValues.forEach((value, index) => {
-                            const otherEdge = otherEdges[index];
-                            if (otherEdge?.toProperty) {
-                                result[otherEdge.toProperty] = value;
-                            }
-                        });
+                console.log(`[buildRouterWithOtherEdges] Router 值:`, routerValue);
+                otherValues.forEach((value, index) => {
+                    const otherEdge = otherEdges[index];
+                    console.log(`[buildRouterWithOtherEdges] 其他边[${index}] ${otherEdge?.toProperty} 值:`, value);
+                    if (otherEdge?.toProperty && value !== undefined) {
+                        result[otherEdge.toProperty] = value;
+                    }
+                });
 
-                        return result;
-                    })
-                );
+                console.log(`[buildRouterWithOtherEdges] 最终合并结果:`, JSON.stringify(result));
+                return result;
             })
         );
     }

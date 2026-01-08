@@ -24,7 +24,7 @@ export * from './MarkdownAstRender';
 export * from './DateAstRender';
 export * from './ShareAstVisitor';
 export * from './PropertySelectorAstRender';
-
+export * from './NotAstRender'
 // IS_BUFFER 模式示例
 export * from './CollectorAstRender';
 
@@ -96,3 +96,4 @@ export * from './ClaudeCodeAstRender';
 export * from './ClaudeCodeReviewAstRender';
 export * from './ClaudeCodeRefactorAstRender';
 export * from './HtmlDisplayAstRender'
+export * from './BooleanAstRender'

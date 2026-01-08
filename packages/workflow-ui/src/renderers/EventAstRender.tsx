@@ -3,8 +3,7 @@ import { Injectable, root } from '@sker/core';
 import { Render, Setting } from '@sker/workflow';
 import { EventAst } from '@sker/workflow-ast';
 import { EventsController } from '@sker/sdk';
-import { EventSelector, type EventItem } from '@sker/ui/components/ui';
-import { CalendarIcon, TrendingUpIcon, TagIcon } from 'lucide-react';
+import { EventSelector } from '@sker/ui/components/ui';
 import { useAsyncData } from '../hooks';
 
 const EventRender: React.FC<{ ast: EventAst }> = ({ ast }) => {
@@ -29,57 +28,6 @@ const EventRender: React.FC<{ ast: EventAst }> = ({ ast }) => {
             </div>
           )}
         </div>
-      )}
-
-      {ast.keywords && ast.keywords.length > 0 && (
-        <div className="space-y-1.5">
-          <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-            <TagIcon className="size-3" />
-            关键字
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {ast.keywords.map((keyword, idx) => (
-              <span
-                key={idx}
-                className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium"
-              >
-                {keyword}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {event && (
-        <>
-          {event.description && (
-            <div className="space-y-1.5">
-              <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-                事件描述
-              </div>
-              <div className="p-2 rounded-lg bg-muted/50 border border-border">
-                <div className="text-xs text-foreground line-clamp-3">
-                  {event.description}
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            {event.occurred_at && (
-              <span className="flex items-center gap-1">
-                <CalendarIcon className="size-3" />
-                {new Date(event.occurred_at).toLocaleDateString('zh-CN')}
-              </span>
-            )}
-            {typeof event.hotness === 'number' && (
-              <span className="flex items-center gap-1">
-                <TrendingUpIcon className="size-3" />
-                热度 {event.hotness}
-              </span>
-            )}
-          </div>
-        </>
       )}
     </div>
   );

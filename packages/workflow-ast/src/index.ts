@@ -58,7 +58,7 @@ export { PostContextCollectorAst } from './crawler/PostContextCollectorAst';
 export { PostNLPLooperAst } from './crawler/PostNLPLooperAst';
 export { EventAuthGenerateAst } from './crawler/EventAuthGenerateAst';
 
-// BASIC 节点 (8个)
+// BASIC 节点 (9个)
 export { SqlExecuteAst } from './basic/SqlExecuteAst';
 export { ExcelUploadAst } from './basic/ExcelUploadAst';
 export { MarkdownUploadAst } from './basic/MarkdownUploadAst';
@@ -67,7 +67,6 @@ export { ShareAst } from './basic/ShareAst';
 export { EventAst } from './basic/EventAst';
 export { PropertySelectorAst } from './basic/PropertySelectorAst';
 export { LastAst } from './basic/LastAst';
-
 // CONTROL 节点 (2个)
 export { LlmCategoryAst } from './control/LlmCategoryAst';
 export { StoryQualityLoopAst } from './control/StoryQualityLoopAst';
