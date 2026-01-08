@@ -195,8 +195,8 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
         return await useEntityManager(async m => {
             const userMap = new Map<number, WeiboUserEntity>();
             body.data.forEach(item => {
-                if (item.user?.id) {
-                    userMap.set(item.user.id as number, m.create(WeiboUserEntity, item.user as any));
+                if ((item as any).user?.id) {
+                    userMap.set((item as any).user.id as number, m.create(WeiboUserEntity, (item as any).user as any));
                 }
             });
             const users = Array.from(userMap.values());
@@ -207,7 +207,30 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
                     await m.upsert(WeiboUserEntity, batch as any, ['id']);
                 }
             }
-            const entities = body.data.map(item => m.create(WeiboCommentEntity, item as any));
+            const entities = body.data.map(item => {
+                const { user, ...rest } = item as any;
+
+                // 从 analysis_extra 解析 post_author_id
+                const authorMatch = rest.analysis_extra?.match(/author_uid:(\d+)/);
+                const postAuthorId = authorMatch ? parseInt(authorMatch[1], 10) : null;
+
+                // 解析 reply_to_user_id
+                let replyToUserId: number | null = null;
+                if (rest.reply_comment?.user?.id) {
+                    // 子评论：回复某用户的评论
+                    replyToUserId = rest.reply_comment.user.id;
+                } else {
+                    // 一级评论：回复帖子作者
+                    replyToUserId = postAuthorId;
+                }
+
+                return m.create(WeiboCommentEntity, {
+                    ...rest,
+                    user_id: user?.id || null,
+                    post_author_id: postAuthorId,
+                    reply_to_user_id: replyToUserId,
+                });
+            });
             await m.upsert(WeiboCommentEntity, entities as any, ['id']);
             return entities;
         });

@@ -69,11 +69,16 @@ export class WeiboAjaxStatusesShowAstVisitor extends WeiboApiClient {
                     }
 
                     await useEntityManager(async m => {
-                        const user = m.create(WeiboUserEntity, body.user as any);
+                        const userData = (body as any).user;
+                        const user = m.create(WeiboUserEntity, userData as any);
                         ast.uid = `${user.id}`;
                         await m.upsert(WeiboUserEntity, user as any, ['id']);
 
-                        const post = m.create(WeiboPostEntity, body as any);
+                        const { user: _, ...postData } = body as any;
+                        const post = m.create(WeiboPostEntity, {
+                            ...postData,
+                            user_id: userData?.id || null,
+                        });
                         // 从 AST 输入中获取事件 ID 并设置到帖子
                         if (ast.eventId) {
                             post.event_id = ast.eventId;

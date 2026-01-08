@@ -107,7 +107,7 @@ export class UsersService {
       const results = await manager.query(`
         WITH user_activity AS (
           SELECT
-            (p.user->>'id')::bigint as user_id,
+            p.user_id as user_id,
             COUNT(p.id) as post_count,
             MAX(p.ingested_at) as last_active,
             COUNT(DISTINCT CASE WHEN nlp.sentiment->>'overall' = 'positive' THEN nlp.id END) as positive_count,
@@ -119,18 +119,18 @@ export class UsersService {
           WHERE p.ingested_at >= $1::timestamptz
             AND p.ingested_at <= $2::timestamptz
             AND p.deleted_at IS NULL
-            AND p.user->>'id' IS NOT NULL
-          GROUP BY (p.user->>'id')::bigint
+            AND p.user_id IS NOT NULL
+          GROUP BY p.user_id
         ),
         all_user_activity AS (
           SELECT
-            (p.user->>'id')::bigint as user_id,
+            p.user_id as user_id,
             COUNT(p.id) as total_post_count,
             MAX(p.ingested_at) as last_post_time
           FROM weibo_posts p
           WHERE p.deleted_at IS NULL
-            AND p.user->>'id' IS NOT NULL
-          GROUP BY (p.user->>'id')::bigint
+            AND p.user_id IS NOT NULL
+          GROUP BY p.user_id
         )
         SELECT
           u.id,
@@ -240,7 +240,7 @@ export class UsersService {
       const distribution = await manager.query(`
         WITH user_activity AS (
           SELECT
-            (p.user->>'id')::bigint as user_id,
+            p.user_id as user_id,
             COUNT(DISTINCT CASE WHEN nlp.sentiment->>'overall' = 'negative' THEN nlp.id END) as negative_count,
             COUNT(DISTINCT nlp.id) as analyzed_count
           FROM weibo_posts p
@@ -248,8 +248,8 @@ export class UsersService {
           WHERE p.ingested_at >= $1::timestamptz
             AND p.ingested_at <= $2::timestamptz
             AND p.deleted_at IS NULL
-            AND p.user->>'id' IS NOT NULL
-          GROUP BY (p.user->>'id')::bigint
+            AND p.user_id IS NOT NULL
+          GROUP BY p.user_id
         ),
         user_risk AS (
           SELECT
@@ -335,7 +335,7 @@ export class UsersService {
       const currentStats = await manager.query(`
         WITH user_activity AS (
           SELECT
-            (p.user->>'id')::bigint as user_id,
+            p.user_id as user_id,
             COUNT(DISTINCT nlp.id) as analyzed_count,
             COUNT(DISTINCT CASE WHEN nlp.sentiment->>'overall' = 'negative' THEN nlp.id END) as negative_count
           FROM weibo_posts p
@@ -343,8 +343,8 @@ export class UsersService {
           WHERE p.ingested_at >= $1::timestamptz
             AND p.ingested_at <= $2::timestamptz
             AND p.deleted_at IS NULL
-            AND p.user->>'id' IS NOT NULL
-          GROUP BY (p.user->>'id')::bigint
+            AND p.user_id IS NOT NULL
+          GROUP BY p.user_id
         ),
         user_risk AS (
           SELECT
@@ -375,7 +375,7 @@ export class UsersService {
       const previousStats = await manager.query(`
         WITH user_activity AS (
           SELECT
-            (p.user->>'id')::bigint as user_id,
+            p.user_id as user_id,
             COUNT(DISTINCT nlp.id) as analyzed_count,
             COUNT(DISTINCT CASE WHEN nlp.sentiment->>'overall' = 'negative' THEN nlp.id END) as negative_count
           FROM weibo_posts p
@@ -383,8 +383,8 @@ export class UsersService {
           WHERE p.ingested_at >= $1::timestamptz
             AND p.ingested_at <= $2::timestamptz
             AND p.deleted_at IS NULL
-            AND p.user->>'id' IS NOT NULL
-          GROUP BY (p.user->>'id')::bigint
+            AND p.user_id IS NOT NULL
+          GROUP BY p.user_id
         ),
         user_risk AS (
           SELECT
@@ -418,7 +418,7 @@ export class UsersService {
         daily_user_activity AS (
           SELECT
             DATE_TRUNC('day', p.ingested_at) as day,
-            (p.user->>'id')::bigint as user_id,
+            p.user_id as user_id,
             COUNT(DISTINCT nlp.id) as analyzed_count,
             COUNT(DISTINCT CASE WHEN nlp.sentiment->>'overall' = 'negative' THEN nlp.id END) as negative_count
           FROM weibo_posts p
@@ -426,8 +426,8 @@ export class UsersService {
           WHERE p.ingested_at >= $1::timestamptz - INTERVAL '6 days'
             AND p.ingested_at <= $1::timestamptz
             AND p.deleted_at IS NULL
-            AND p.user->>'id' IS NOT NULL
-          GROUP BY DATE_TRUNC('day', p.ingested_at), (p.user->>'id')::bigint
+            AND p.user_id IS NOT NULL
+          GROUP BY DATE_TRUNC('day', p.ingested_at), p.user_id
         ),
         daily_user_risk AS (
           SELECT
@@ -468,13 +468,13 @@ export class UsersService {
 
       const activityStats = await manager.query(`
         SELECT
-          COUNT(DISTINCT CASE WHEN p.ingested_at >= $1::timestamptz THEN (p.user->>'id')::bigint END) as active_today,
-          COUNT(DISTINCT CASE WHEN p.ingested_at >= $2::timestamptz THEN (p.user->>'id')::bigint END) as active_week,
-          COUNT(DISTINCT CASE WHEN p.ingested_at >= $3::timestamptz THEN (p.user->>'id')::bigint END) as active_month
+          COUNT(DISTINCT CASE WHEN p.ingested_at >= $1::timestamptz THEN p.user_id END) as active_today,
+          COUNT(DISTINCT CASE WHEN p.ingested_at >= $2::timestamptz THEN p.user_id END) as active_week,
+          COUNT(DISTINCT CASE WHEN p.ingested_at >= $3::timestamptz THEN p.user_id END) as active_month
         FROM weibo_posts p
         WHERE p.ingested_at >= $3::timestamptz
           AND p.deleted_at IS NULL
-          AND p.user->>'id' IS NOT NULL
+          AND p.user_id IS NOT NULL
       `, [oneDayAgo, sevenDaysAgo, thirtyDaysAgo]);
 
       const row = currentStats[0] || {};

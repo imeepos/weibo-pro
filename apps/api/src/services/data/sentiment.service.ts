@@ -285,7 +285,7 @@ export class SentimentService {
         SELECT
           keyword_elem->>'keyword' as topic,
           COUNT(DISTINCT nlp.post_id) as post_count,
-          COUNT(DISTINCT post.user->>'id') as user_count,
+          COUNT(DISTINCT post.user_id) as user_count,
           keyword_elem->>'sentiment' as sentiment,
           AVG((keyword_elem->>'weight')::numeric) as heat_score
         FROM post_nlp_results nlp
@@ -369,7 +369,7 @@ export class SentimentService {
         SELECT
           COALESCE(
             NULLIF(post.region_name, ''),
-            NULLIF(post.user->>'location', ''),
+            NULLIF(u.location, ''),
             '未知'
           ) as region,
           COUNT(*) as total,
@@ -378,6 +378,7 @@ export class SentimentService {
           SUM(CASE WHEN nlp.sentiment->>'overall' = 'neutral' THEN 1 ELSE 0 END) as neutral
         FROM post_nlp_results nlp
         INNER JOIN weibo_posts post ON post.id = nlp.post_id
+        LEFT JOIN weibo_users u ON u.id = post.user_id
         WHERE post.ingested_at >= $1
           AND post.ingested_at <= $2
           AND post.deleted_at IS NULL
@@ -415,11 +416,12 @@ export class SentimentService {
         .getRepository(PostNLPResultEntity)
         .createQueryBuilder('nlp')
         .innerJoin(WeiboPostEntity, 'post', 'post.id = nlp.post_id')
+        .leftJoin('weibo_users', 'u', 'u.id = post.user_id')
         .select('post.id', 'id')
         .addSelect('post.text', 'content')
         .addSelect("nlp.sentiment->>'overall'", 'sentiment')
         .addSelect("nlp.sentiment->>'confidence'", 'confidence')
-        .addSelect("post.user->>'screen_name'", 'author')
+        .addSelect('u.screen_name', 'author')
         .addSelect('post.attitudes_count', 'likes')
         .addSelect('post.comments_count', 'comments')
         .addSelect('post.ingested_at', 'timestamp')
@@ -465,10 +467,11 @@ export class SentimentService {
           post.text as content,
           nlp.sentiment->>'overall' as sentiment,
           nlp.sentiment->>'confidence' as confidence,
-          post.user->>'screen_name' as author,
+          u.screen_name as author,
           post.ingested_at as timestamp
         FROM post_nlp_results nlp
         INNER JOIN weibo_posts post ON post.id = nlp.post_id
+        LEFT JOIN weibo_users u ON u.id = post.user_id
         WHERE (post.text ILIKE $1 OR post.text_raw ILIKE $1)
           AND post.ingested_at >= $2
           AND post.ingested_at <= $3

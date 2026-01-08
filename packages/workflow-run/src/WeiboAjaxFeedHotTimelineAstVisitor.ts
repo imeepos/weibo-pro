@@ -121,8 +121,8 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
                 const uniqueUsers = Array.from(
                     new Map(
                         statuses
-                            .filter(item => item.user)
-                            .map(item => [item.user.id, item.user])
+                            .filter(item => (item as any).user?.id)
+                            .map(item => [(item as any).user.id, (item as any).user])
                     ).values()
                 );
                 const users = uniqueUsers.map(user => m.create(WeiboUserEntity, user as any));
@@ -130,13 +130,26 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
                 if (users.length > 0) {
                     await m.upsert(WeiboUserEntity, users as any, ['id']);
                 }
-                const posts = statuses.map(item => m.create(WeiboPostEntity, item as any));
+
+                const posts = statuses.map(item => {
+                    const { user, ...rest } = item as any;
+                    return m.create(WeiboPostEntity, {
+                        ...rest,
+                        user_id: user?.id || null,
+                    });
+                });
                 await m.upsert(WeiboPostEntity, posts as any, ['id']);
-                posts.map(post => {
-                    // 流式输出：每条数据发射
-                    ast.mblogid = post.mblogid;
-                    ast.uid = post.user.idstr;
-                    events.push({ type: 'node_emit', id: ast.id, data: { mblogid: post.mblogid, uid: post.user.idstr } });
+
+                // 创建一个 user ID 到 user 的映射，用于后续获取 uid
+                const userMap = new Map(uniqueUsers.map(u => [u.id, u]));
+
+                posts.forEach(post => {
+                    const user = userMap.get(post.user_id);
+                    if (user) {
+                        ast.mblogid = post.mblogid;
+                        ast.uid = user.idstr;
+                        events.push({ type: 'node_emit', id: ast.id, data: { mblogid: post.mblogid, uid: user.idstr } });
+                    }
                 });
                 console.log(`[WeiboAjaxFeedHotTimelineAstVisitor] 成功入库 ${posts.length} 条微博，${users.length} 个用户`);
             });

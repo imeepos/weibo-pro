@@ -34,6 +34,7 @@ export class WeiboLikeEntity {
     type: 'timestamptz',
     name: 'created_at',
     default: () => 'CURRENT_TIMESTAMP',
+    comment: '数据入库时间',
   })
   createdAt!: Date;
 }

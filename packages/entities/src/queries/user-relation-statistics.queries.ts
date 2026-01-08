@@ -116,6 +116,7 @@ export class UserRelationStatisticsQueries {
 
   /**
    * 增量统计评论关系
+   * 优化: 直接使用 reply_to_user_id 字段，无需 JOIN 帖子表
    */
   static async incrementalCommentStats(
     manager: EntityManager,
@@ -142,17 +143,15 @@ export class UserRelationStatisticsQueries {
       `
       WITH source_data AS (
         SELECT
-          (c."user"->>'id')::bigint as source_user_id,
-          (p."user"->>'id')::bigint as target_user_id,
+          c.user_id as source_user_id,
+          c.reply_to_user_id as target_user_id,
           c.id,
           c.ingested_at
         FROM weibo_comments c
-        JOIN weibo_posts p ON (regexp_match(c.analysis_extra, 'mid:([0-9]+)'))[1] = p.mid
         WHERE c.id > $1
-          AND c.analysis_extra IS NOT NULL
-          AND c."user"->>'id' IS NOT NULL
-          AND p."user"->>'id' IS NOT NULL
-          AND c."user"->>'id' != p."user"->>'id'
+          AND c.reply_to_user_id IS NOT NULL
+          AND c.user_id IS NOT NULL
+          AND c.user_id != c.reply_to_user_id
         ORDER BY c.id ASC
         LIMIT $2
       ),

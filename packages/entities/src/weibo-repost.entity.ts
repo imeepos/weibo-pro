@@ -2,16 +2,20 @@ import {
   Column,
   CreateDateColumn,
   Index,
+  JoinColumn,
+  ManyToOne,
   PrimaryColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { Entity } from './decorator';
+import { WeiboUserEntity } from './weibo-user.entity';
 
 @Entity('weibo_reposts')
 @Index(['id'], { unique: true })
 @Index(['mid'], { unique: true })
 @Index(['mblogid'], { unique: true })
 @Index(['created_at'])
+@Index(['user_id'])
 export class WeiboRepostEntity {
   @PrimaryColumn({ type: 'bigint' })
   id!: number;
@@ -25,8 +29,12 @@ export class WeiboRepostEntity {
   @Column({ type: 'varchar', length: 64 })
   mblogid!: string;
 
-  @Column({ type: 'jsonb' })
-  user!: Record<string, unknown>;
+  @Column({ type: 'bigint', name: 'user_id', nullable: true, comment: '转发用户 ID' })
+  user_id!: number | null;
+
+  @ManyToOne(() => WeiboUserEntity)
+  @JoinColumn({ name: 'user_id' })
+  user!: WeiboUserEntity | null;
 
   @Column({ type: 'jsonb', nullable: true })
   visible!: Record<string, unknown> | null;
@@ -163,18 +171,20 @@ export class WeiboRepostEntity {
   @Column({ type: 'jsonb', nullable: true })
   page_info!: Record<string, unknown> | null;
 
-  @Column({ type: 'timestamptz' })
+  @Column({ type: 'timestamptz', comment: '微博转发时间（来源数据）' })
   created_at!: Date;
 
   @CreateDateColumn({
     type: 'timestamptz',
     default: () => 'CURRENT_TIMESTAMP',
+    comment: '数据入库时间',
   })
   ingested_at!: Date;
 
   @UpdateDateColumn({
     type: 'timestamptz',
     default: () => 'CURRENT_TIMESTAMP',
+    comment: '记录更新时间',
   })
   updated_at!: Date;
 }

@@ -16,9 +16,15 @@ export const createBatchDetectAbnormalUsersTool = () =>
         const results = await m
           .getRepository(PostNLPResultEntity)
           .createQueryBuilder('nlp')
-          .leftJoinAndSelect('nlp.post', 'post')
+          .leftJoin('nlp.post', 'post')
+          .leftJoin('weibo_users', 'u', 'u.id = post.user_id')
+          .select('nlp.*')
+          .addSelect('post.*')
+          .addSelect('u.screen_name', 'user_screen_name')
+          .addSelect('u.verified', 'user_verified')
+          .addSelect('u.id', 'user_id')
           .where('nlp.event_id = :eventId', { eventId })
-          .getMany();
+          .getRawMany();
 
         if (results.length === 0) {
           return JSON.stringify({
@@ -30,15 +36,23 @@ export const createBatchDetectAbnormalUsersTool = () =>
 
         const userPostsMap = new Map<
           string,
-          Array<{ post: WeiboPostEntity; nlp: PostNLPResultEntity }>
+          Array<{ post: any; nlp: any; userInfo: any }>
         >();
 
         results.forEach((r) => {
-          const userId = String(r.post.user.id);
+          const userId = String(r.post_user_id);
           if (!userPostsMap.has(userId)) {
             userPostsMap.set(userId, []);
           }
-          userPostsMap.get(userId)!.push({ post: r.post, nlp: r });
+          userPostsMap.get(userId)!.push({
+            post: r,
+            nlp: r,
+            userInfo: {
+              screen_name: r.user_screen_name,
+              verified: r.user_verified,
+              id: r.user_id,
+            },
+          });
         });
 
         const usersToAnalyze = Array.from(userPostsMap.entries())
@@ -48,9 +62,9 @@ export const createBatchDetectAbnormalUsersTool = () =>
         const abnormalUsers = [];
 
         for (const [userId, userPosts] of usersToAnalyze) {
+          const userInfo = userPosts[0]!.userInfo;
           const posts = userPosts.map((up) => up.post);
           const nlpResults = userPosts.map((up) => up.nlp);
-          const userInfo = posts[0]!.user;
 
           const abnormalSignals: Array<{
             type: string;
@@ -59,7 +73,7 @@ export const createBatchDetectAbnormalUsersTool = () =>
           }> = [];
 
           // 时间行为分析
-          const postTimes = posts.map((p) => new Date(p.created_at));
+          const postTimes = posts.map((p) => new Date(p.post_created_at));
           const intervals: number[] = [];
 
           for (let i = 1; i < postTimes.length; i++) {
@@ -103,7 +117,7 @@ export const createBatchDetectAbnormalUsersTool = () =>
           }
 
           // 文本相似度
-          const texts = posts.map((p) => p.text);
+          const texts = posts.map((p) => p.post_text);
           const textSimilarity = calculateTextSimilarity(texts);
 
           if (textSimilarity > 0.7) {
@@ -115,7 +129,7 @@ export const createBatchDetectAbnormalUsersTool = () =>
           }
 
           // 情感极端化
-          const sentiments = nlpResults.map((r) => r.sentiment.overall);
+          const sentiments = nlpResults.map((r) => r.nlp_sentiment?.overall || 'neutral');
           const positiveCount = sentiments.filter(
             (s) => s === 'positive'
           ).length;

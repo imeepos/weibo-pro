@@ -2,28 +2,49 @@ import {
   Column,
   CreateDateColumn,
   Index,
+  JoinColumn,
+  ManyToOne,
   PrimaryColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { Entity } from './decorator';
+import { WeiboUserEntity } from './weibo-user.entity';
 
+/**
+ * 微博评论实体
+ *
+ * 评论层级判断：
+ * - 一级评论：id === rootid，floor_number > 0，reply_comment = null
+ * - 子评论：id !== rootid，floor_number = 0，reply_comment 包含被回复评论
+ *
+ * 用户评论关系：user_id → reply_to_user_id
+ * - 一级评论：评论者 → 帖子作者（reply_to_user_id = post_author_id）
+ * - 子评论：评论者 → 被回复用户（reply_to_user_id 从 reply_comment.user.id 解析）
+ */
 @Entity('weibo_comments')
 @Index(['id'], { unique: true })
 @Index(['mid'], { unique: true })
+@Index(['user_id'])
+@Index(['post_author_id'])
+@Index(['reply_to_user_id'])
+@Index(['user_id', 'reply_to_user_id'])
 export class WeiboCommentEntity {
 
-  @Column({ type: 'varchar', length: 64, nullable: true })
+  @Column({ type: 'varchar', length: 64, nullable: true, comment: '微博评论时间（来源数据，字符串格式）' })
   created_at!: string;
 
+  /** 评论唯一 ID */
   @PrimaryColumn({ type: 'bigint' })
   id!: number;
 
+  /** 根评论 ID，一级评论时 rootid === id，子评论时指向所属的一级评论 */
   @Column({ type: 'bigint', nullable: true })
   rootid!: number;
 
   @Column({ type: 'varchar', length: 64, nullable: true })
   rootidstr!: string;
 
+  /** 楼层号，一级评论为正整数，子评论为 0 */
   @Column({ type: 'integer', nullable: true })
   floor_number!: number;
 
@@ -45,8 +66,32 @@ export class WeiboCommentEntity {
   @Column({ type: 'varchar', length: 128, nullable: true })
   source!: string;
 
-  @Column({ type: 'jsonb', nullable: true })
-  user!: Record<string, unknown>;
+  @Column({ type: 'bigint', name: 'user_id', nullable: true, comment: '评论用户 ID' })
+  user_id!: number | null;
+
+  @ManyToOne(() => WeiboUserEntity)
+  @JoinColumn({ name: 'user_id' })
+  user!: WeiboUserEntity | null;
+
+  /** 帖子作者 ID，从 analysis_extra 中解析 */
+  @Column({ type: 'bigint', name: 'post_author_id', nullable: true })
+  post_author_id!: number | null;
+
+  @ManyToOne(() => WeiboUserEntity)
+  @JoinColumn({ name: 'post_author_id' })
+  postAuthor!: WeiboUserEntity | null;
+
+  /**
+   * 被回复用户 ID
+   * - 一级评论：等于 post_author_id（评论帖子作者）
+   * - 子评论：从 reply_comment.user.id 解析（回复某用户的评论）
+   */
+  @Column({ type: 'bigint', name: 'reply_to_user_id', nullable: true })
+  reply_to_user_id!: number | null;
+
+  @ManyToOne(() => WeiboUserEntity)
+  @JoinColumn({ name: 'reply_to_user_id' })
+  replyToUser!: WeiboUserEntity | null;
 
   @Column({ type: 'varchar', length: 64, nullable: true })
   mid!: string;
@@ -111,6 +156,7 @@ export class WeiboCommentEntity {
   @Column({ type: 'jsonb', nullable: true })
   topic_struct!: unknown[];
 
+  /** 被回复的评论，一级评论为 null，子评论包含被回复评论的完整信息 */
   @Column({ type: 'jsonb', nullable: true })
   reply_comment!: unknown[];
 
@@ -133,6 +179,7 @@ export class WeiboCommentEntity {
     type: 'timestamptz',
     name: 'ingested_at',
     default: () => 'CURRENT_TIMESTAMP',
+    comment: '数据入库时间',
   })
   ingestedAt!: Date;
 
@@ -140,6 +187,7 @@ export class WeiboCommentEntity {
     type: 'timestamptz',
     name: 'updated_at',
     default: () => 'CURRENT_TIMESTAMP',
+    comment: '记录更新时间',
   })
   updatedAt!: Date;
 }

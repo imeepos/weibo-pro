@@ -31,7 +31,7 @@ export class EventStatisticsQueries {
     endTime: Date
   ): SelectQueryBuilder<any> {
     return qb
-      .select('COUNT(DISTINCT post.user->>\'id\')', 'user_count')
+      .select('COUNT(DISTINCT post.user_id)', 'user_count')
       .from(PostNLPResultEntity, 'nlp')
       .innerJoin(WeiboPostEntity, 'post', 'post.id = nlp.post_id')
       .where('nlp.event_id = :eventId', { eventId })

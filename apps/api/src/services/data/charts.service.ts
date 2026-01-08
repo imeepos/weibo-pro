@@ -41,12 +41,12 @@ export class ChartsService {
       // 根据微博用户注册时间估算账号年龄
       const results = await manager.query(`
         WITH user_posts AS (
-          SELECT DISTINCT (post.user->>'id')::bigint as uid
+          SELECT DISTINCT post.user_id as uid
           FROM weibo_posts post
           WHERE post.ingested_at >= $1
             AND post.ingested_at <= $2
             AND post.deleted_at IS NULL
-            AND post.user->>'id' IS NOT NULL
+            AND post.user_id IS NOT NULL
         ),
         user_ages AS (
           SELECT
@@ -108,12 +108,12 @@ export class ChartsService {
       // 查询发帖用户的性别分布
       const results = await manager.query(`
         WITH user_posts AS (
-          SELECT DISTINCT (post.user->>'id')::bigint as uid
+          SELECT DISTINCT post.user_id as uid
           FROM weibo_posts post
           WHERE post.ingested_at >= $1
             AND post.ingested_at <= $2
             AND post.deleted_at IS NULL
-            AND post.user->>'id' IS NOT NULL
+            AND post.user_id IS NOT NULL
         )
         SELECT
           CASE
@@ -211,12 +211,12 @@ export class ChartsService {
       // 查询发帖用户的地理位置分布
       const results = await manager.query(`
         WITH user_posts AS (
-          SELECT DISTINCT (post.user->>'id')::bigint as uid
+          SELECT DISTINCT post.user_id as uid
           FROM weibo_posts post
           WHERE post.ingested_at >= $1
             AND post.ingested_at <= $2
             AND post.deleted_at IS NULL
-            AND post.user->>'id' IS NOT NULL
+            AND post.user_id IS NOT NULL
         )
         SELECT
           COALESCE(NULLIF(u.province, ''), NULLIF(u.city, ''), NULLIF(u.location, ''), '未知') as location,

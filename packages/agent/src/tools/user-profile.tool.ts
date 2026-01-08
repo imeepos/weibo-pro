@@ -13,15 +13,21 @@ export const createAnalyzeUserBehaviorTool = () =>
   tool(
     async ({ userId, limit }) => {
       return useEntityManager(async (m) => {
-        const posts = await m
+        const result = await m
           .getRepository(WeiboPostEntity)
           .createQueryBuilder('post')
-          .where("post.user ->> 'id' = :userId", { userId: String(userId) })
+          .leftJoin('weibo_users', 'u', 'u.id = post.user_id')
+          .select('post.*')
+          .addSelect('u.screen_name', 'user_screen_name')
+          .addSelect('u.verified', 'user_verified')
+          .addSelect('u.verified_type', 'user_verified_type')
+          .addSelect('u.status_total_counter', 'user_status_total_counter')
+          .where("post.user_id = :userId", { userId: String(userId) })
           .orderBy('post.created_at', 'DESC')
           .limit(limit)
-          .getMany();
+          .getRawMany();
 
-        if (posts.length === 0) {
+        if (result.length === 0) {
           return JSON.stringify({
             userId,
             message: '未找到该用户的帖子数据',
@@ -29,7 +35,22 @@ export const createAnalyzeUserBehaviorTool = () =>
           });
         }
 
-        const userInfo = posts[0]!.user;
+        const userInfo = {
+          screen_name: result[0]!.user_screen_name,
+          verified: result[0]!.user_verified,
+          verified_type: result[0]!.user_verified_type,
+          status_total_counter: result[0]!.user_status_total_counter,
+        };
+
+        const posts = result.map(r => ({
+          ...r,
+          created_at: r.created_at,
+          text: r.text,
+          reposts_count: r.reposts_count,
+          comments_count: r.comments_count,
+          attitudes_count: r.attitudes_count,
+          source: r.source,
+        }));
 
         // 时间行为分析
         const postTimes = posts.map((p) => new Date(p.created_at));
@@ -168,15 +189,21 @@ export const createDetectAbnormalUserTool = () =>
   tool(
     async ({ userId, limit, sensitivity }) => {
       return useEntityManager(async (m) => {
-        const posts = await m
+        const result = await m
           .getRepository(WeiboPostEntity)
           .createQueryBuilder('post')
-          .where("post.user ->> 'id' = :userId", { userId: String(userId) })
+          .leftJoin('weibo_users', 'u', 'u.id = post.user_id')
+          .select('post.*')
+          .addSelect('u.screen_name', 'user_screen_name')
+          .addSelect('u.verified', 'user_verified')
+          .addSelect('u.verified_type', 'user_verified_type')
+          .addSelect('u.status_total_counter', 'user_status_total_counter')
+          .where("post.user_id = :userId", { userId: String(userId) })
           .orderBy('post.created_at', 'DESC')
           .limit(limit)
-          .getMany();
+          .getRawMany();
 
-        if (posts.length === 0) {
+        if (result.length === 0) {
           return JSON.stringify({
             userId,
             isAbnormal: false,
@@ -185,14 +212,29 @@ export const createDetectAbnormalUserTool = () =>
           });
         }
 
-        const userInfo = posts[0]!.user;
+        const userInfo = {
+          screen_name: result[0]!.user_screen_name,
+          verified: result[0]!.user_verified,
+          verified_type: result[0]!.user_verified_type,
+          status_total_counter: result[0]!.user_status_total_counter,
+        };
+
+        const posts = result.map(r => ({
+          ...r,
+          created_at: r.created_at,
+          text: r.text,
+          reposts_count: r.reposts_count,
+          comments_count: r.comments_count,
+          attitudes_count: r.attitudes_count,
+          source: r.source,
+        }));
 
         // 获取该用户的NLP分析结果
         const nlpResults = await m
           .getRepository(PostNLPResultEntity)
           .createQueryBuilder('nlp')
-          .leftJoinAndSelect('nlp.post', 'post')
-          .where("post.user ->> 'id' = :userId", { userId: String(userId) })
+          .leftJoin('nlp.post', 'post')
+          .where("post.user_id = :userId", { userId: String(userId) })
           .limit(limit)
           .getMany();
 

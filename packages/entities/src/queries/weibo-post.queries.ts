@@ -89,7 +89,13 @@ export const upsertWeiboData = (statuses: any[]) =>
       await m.upsert(WeiboUserEntity, users as any[], ['id']);
     }
 
-    const posts = statuses.map(item => m.create(WeiboPostEntity, item as any));
+    const posts = statuses.map(item => {
+      const { user, ...rest } = item;
+      return m.create(WeiboPostEntity, {
+        ...rest,
+        user_id: user?.id || null,
+      });
+    });
     await m.upsert(WeiboPostEntity, posts as any[], ['id']);
 
     return { userCount: users.length, postCount: posts.length };

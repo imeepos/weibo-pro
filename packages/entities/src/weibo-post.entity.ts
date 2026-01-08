@@ -11,6 +11,7 @@ import {
 } from 'typeorm';
 import { Entity } from './decorator';
 import { EventEntity } from './event.entity';
+import { WeiboUserEntity } from './weibo-user.entity';
 
 /**
  * 帖子处理状态位标志
@@ -54,31 +55,6 @@ interface IconData {
 interface IconListItem {
   type: string;
   data: IconData;
-}
-
-interface User {
-  id: number;
-  idstr: string;
-  pc_new: number;
-  screen_name: string;
-  profile_image_url: string;
-  profile_url: string;
-  verified: boolean;
-  verified_type: number;
-  domain: string;
-  weihao: string;
-  verified_type_ext: number;
-  status_total_counter: StatusTotalCounter;
-  avatar_large: string;
-  avatar_hd: string;
-  follow_me: boolean;
-  following: boolean;
-  mbrank: number;
-  mbtype: number;
-  v_plus: number;
-  user_ability: number;
-  planet_video: boolean;
-  icon_list: IconListItem[];
 }
 
 interface Annotation {
@@ -443,6 +419,7 @@ interface PageInfo {
 @Index(['id'], { unique: true })
 @Index(['mid'], { unique: true })
 @Index(['event_id'])
+@Index(['user_id'])
 export class WeiboPostEntity {
   @PrimaryColumn({ type: 'bigint', unsigned: true })
   id!: string;
@@ -460,7 +437,7 @@ export class WeiboPostEntity {
   @Column({ type: 'jsonb', name: 'visible', nullable: true })
   visible!: Visible;
 
-  @Column({ type: 'varchar', length: 255, name: 'created_at', nullable: true })
+  @Column({ type: 'varchar', length: 255, name: 'created_at', nullable: true, comment: '微博发布时间（来源数据，字符串格式）' })
   created_at!: string;
 
   @Column({ type: 'varchar', length: 64, name: 'idstr', nullable: true })
@@ -472,8 +449,12 @@ export class WeiboPostEntity {
   @Column({ type: 'varchar', length: 64, name: 'mblogid', nullable: true })
   mblogid!: string;
 
-  @Column({ type: 'jsonb', name: 'user', nullable: true })
-  user!: User;
+  @Column({ type: 'bigint', name: 'user_id', nullable: true, comment: '发帖用户 ID' })
+  user_id!: number | null;
+
+  @ManyToOne(() => WeiboUserEntity)
+  @JoinColumn({ name: 'user_id' })
+  user!: WeiboUserEntity | null;
 
   @Column({ type: 'boolean', name: 'can_edit', nullable: true })
   can_edit!: boolean;
@@ -623,6 +604,7 @@ export class WeiboPostEntity {
     type: 'timestamptz',
     name: 'ingested_at',
     default: () => 'CURRENT_TIMESTAMP',
+    comment: '数据入库时间',
   })
   ingested_at!: Date;
 
@@ -630,6 +612,7 @@ export class WeiboPostEntity {
     type: 'timestamptz',
     name: 'updated_at',
     default: () => 'CURRENT_TIMESTAMP',
+    comment: '记录更新时间',
   })
   updated_at!: Date;
 
@@ -645,6 +628,7 @@ export class WeiboPostEntity {
     type: 'timestamptz',
     name: 'deleted_at',
     nullable: true,
+    comment: '软删除时间',
   })
   deleted_at!: Date | null;
 

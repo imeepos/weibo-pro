@@ -15,9 +15,16 @@ export const createAnalyzeEventInfluencersTool = () =>
         const results = await m
           .getRepository(PostNLPResultEntity)
           .createQueryBuilder('nlp')
-          .leftJoinAndSelect('nlp.post', 'post')
+          .leftJoin('nlp.post', 'post')
+          .leftJoin('weibo_users', 'u', 'u.id = post.user_id')
+          .select('nlp.*')
+          .addSelect('post.*')
+          .addSelect('u.screen_name', 'user_screen_name')
+          .addSelect('u.verified', 'user_verified')
+          .addSelect('u.verified_type', 'user_verified_type')
+          .addSelect('u.status_total_counter', 'user_status_total_counter')
           .where('nlp.event_id = :eventId', { eventId })
-          .getMany();
+          .getRawMany();
 
         if (results.length === 0) {
           return JSON.stringify({
@@ -52,47 +59,46 @@ export const createAnalyzeEventInfluencersTool = () =>
         >();
 
         results.forEach((r) => {
-          const post = r.post;
-          const userId = String(post.user.id);
+          const userId = String(r.post_user_id);
           const interactions =
-            post.reposts_count + post.comments_count + post.attitudes_count;
+            (r.post_reposts_count || 0) + (r.post_comments_count || 0) + (r.post_attitudes_count || 0);
 
           if (userMap.has(userId)) {
             const user = userMap.get(userId)!;
             user.postCount++;
             user.totalInteractions += interactions;
-            user.totalReposts += post.reposts_count;
-            user.totalComments += post.comments_count;
-            user.totalLikes += post.attitudes_count;
+            user.totalReposts += r.post_reposts_count || 0;
+            user.totalComments += r.post_comments_count || 0;
+            user.totalLikes += r.post_attitudes_count || 0;
             user.posts.push({
-              postId: post.id,
-              text: post.text,
-              createdAt: post.created_at,
+              postId: r.post_id,
+              text: r.post_text,
+              createdAt: r.post_created_at,
               interactions,
-              sentiment: r.sentiment.overall,
+              sentiment: r.nlp_sentiment?.overall || 'neutral',
             });
           } else {
             userMap.set(userId, {
               userId,
-              userName: post.user.screen_name,
-              verified: post.user.verified,
-              verifiedType: post.user.verified_type,
-              followersCount: post.user.status_total_counter?.total_cnt
-                ? parseInt(post.user.status_total_counter.total_cnt)
+              userName: r.user_screen_name || '未知用户',
+              verified: r.user_verified || false,
+              verifiedType: r.user_verified_type || 0,
+              followersCount: r.user_status_total_counter?.total_cnt
+                ? parseInt(r.user_status_total_counter.total_cnt)
                 : 0,
               postCount: 1,
               totalInteractions: interactions,
-              totalReposts: post.reposts_count,
-              totalComments: post.comments_count,
-              totalLikes: post.attitudes_count,
+              totalReposts: r.post_reposts_count || 0,
+              totalComments: r.post_comments_count || 0,
+              totalLikes: r.post_attitudes_count || 0,
               avgInteractions: 0,
               posts: [
                 {
-                  postId: post.id,
-                  text: post.text,
-                  createdAt: post.created_at,
+                  postId: r.post_id,
+                  text: r.post_text,
+                  createdAt: r.post_created_at,
                   interactions,
-                  sentiment: r.sentiment.overall,
+                  sentiment: r.nlp_sentiment?.overall || 'neutral',
                 },
               ],
             });
@@ -171,10 +177,15 @@ export const createQueryUserPostsInEventTool = () =>
         const qb = m
           .getRepository(PostNLPResultEntity)
           .createQueryBuilder('nlp')
-          .leftJoinAndSelect('nlp.post', 'post')
+          .leftJoin('nlp.post', 'post')
+          .leftJoin('weibo_users', 'u', 'u.id = post.user_id')
+          .select('nlp.*')
+          .addSelect('post.*')
+          .addSelect('u.screen_name', 'user_screen_name')
+          .addSelect('u.verified', 'user_verified')
+          .addSelect('u.status_total_counter', 'user_status_total_counter')
           .where('nlp.event_id = :eventId', { eventId })
-          .andWhere('post.user ->> :userIdKey = :userId', {
-            userIdKey: 'id',
+          .andWhere('post.user_id = :userId', {
             userId: String(userId),
           });
 
@@ -189,7 +200,7 @@ export const createQueryUserPostsInEventTool = () =>
           qb.orderBy('post.created_at', 'DESC');
         }
 
-        const results = await qb.getMany();
+        const results = await qb.getRawMany();
 
         if (results.length === 0) {
           return JSON.stringify({
@@ -200,7 +211,11 @@ export const createQueryUserPostsInEventTool = () =>
           });
         }
 
-        const userInfo = results[0]!.post.user;
+        const userInfo = {
+          screen_name: results[0]!.user_screen_name,
+          verified: results[0]!.user_verified,
+          status_total_counter: results[0]!.user_status_total_counter,
+        };
 
         return JSON.stringify({
           eventId,
@@ -210,22 +225,22 @@ export const createQueryUserPostsInEventTool = () =>
           followersCount: userInfo.status_total_counter?.total_cnt || '0',
           postCount: results.length,
           posts: results.map((r) => ({
-            postId: r.post.id,
-            text: r.post.text,
-            createdAt: r.post.created_at,
+            postId: r.post_id,
+            text: r.post_text,
+            createdAt: r.post_created_at,
             interactions: {
-              reposts: r.post.reposts_count,
-              comments: r.post.comments_count,
-              likes: r.post.attitudes_count,
+              reposts: r.post_reposts_count,
+              comments: r.post_comments_count,
+              likes: r.post_attitudes_count,
               total:
-                r.post.reposts_count +
-                r.post.comments_count +
-                r.post.attitudes_count,
+                r.post_reposts_count +
+                r.post_comments_count +
+                r.post_attitudes_count,
             },
             nlp: {
-              sentiment: r.sentiment.overall,
-              keywords: r.keywords,
-              eventType: r.event_type,
+              sentiment: r.nlp_sentiment?.overall || r.sentiment?.overall,
+              keywords: r.nlp_keywords || r.keywords,
+              eventType: r.nlp_event_type || r.event_type,
             },
           })),
         });
