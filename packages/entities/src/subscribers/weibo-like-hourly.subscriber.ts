@@ -33,7 +33,7 @@ export class WeiboLikeHourlySubscriber implements EntitySubscriberInterface<Weib
       event.manager,
       post.event_id,
       timeDimensions,
-      { like_count: 1 }
+      { like_count: 1, user_count: 1 }
     );
   }
 }

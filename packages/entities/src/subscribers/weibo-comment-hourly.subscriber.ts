@@ -33,7 +33,7 @@ export class WeiboCommentHourlySubscriber implements EntitySubscriberInterface<W
       event.manager,
       eventId,
       timeDimensions,
-      { comment_count: 1 }
+      { comment_count: 1, user_count: 1 }
     );
   }
 }

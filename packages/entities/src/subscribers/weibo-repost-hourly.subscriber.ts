@@ -32,7 +32,7 @@ export class WeiboRepostHourlySubscriber implements EntitySubscriberInterface<We
       event.manager,
       eventId,
       timeDimensions,
-      { repost_count: 1 }
+      { repost_count: 1, user_count: 1 }
     );
   }
 }
