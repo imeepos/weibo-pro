@@ -19,7 +19,7 @@ export class WeiboPostHourlySubscriber implements EntitySubscriberInterface<Weib
     const post = event.entity;
     if (!post?.event_id || !post?.created_at) return;
 
-    const postTime = new Date(Number(post.created_at));
+    const postTime = new Date(post.created_at);
     const timeDimensions = HourlyStatisticsHelper.getTimeDimensions(postTime);
 
     await HourlyStatisticsHelper.upsertStatistics(

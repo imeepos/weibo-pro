@@ -172,4 +172,60 @@ export class HourlyStatisticsHelper {
       )
       .execute();
   }
+
+  /**
+   * UPSERT NLP 情感统计数据
+   */
+  static async upsertNLPStatistics(
+    manager: EntityManager,
+    eventId: string,
+    timeDimensions: ReturnType<typeof HourlyStatisticsHelper.getTimeDimensions>
+  ): Promise<void> {
+    const { year, month, day, hour } = timeDimensions;
+    const startTime = new Date(year, month - 1, day, hour, 0, 0);
+    const endTime = new Date(startTime);
+    endTime.setHours(endTime.getHours() + 1);
+
+    // 聚合情感
+    const sentiment = await this.aggregateSentiment(manager, eventId, startTime, endTime);
+
+    // 查询现有统计
+    const existing = await manager.findOne(EventHourlyStatisticsEntity, {
+      where: { event_id: eventId, ...timeDimensions }
+    });
+
+    // 重新计算热度值（情感变化不影响热度，保持原值）
+    const hotness = existing
+      ? this.calculateHotness(
+          existing.post_count,
+          existing.comment_count,
+          existing.repost_count,
+          existing.like_count
+        )
+      : 0;
+
+    // UPSERT 仅更新情感字段
+    await manager
+      .createQueryBuilder()
+      .insert()
+      .into(EventHourlyStatisticsEntity)
+      .values({
+        event_id: eventId,
+        ...timeDimensions,
+        post_count: existing?.post_count || 0,
+        comment_count: existing?.comment_count || 0,
+        repost_count: existing?.repost_count || 0,
+        like_count: existing?.like_count || 0,
+        user_count: existing?.user_count || 0,
+        hotness,
+        sentiment_positive: sentiment.positive,
+        sentiment_negative: sentiment.negative,
+        sentiment_neutral: sentiment.neutral
+      })
+      .orUpdate(
+        ['sentiment_positive', 'sentiment_negative', 'sentiment_neutral', 'updated_at'],
+        ['event_id', 'year', 'month', 'day', 'hour']
+      )
+      .execute();
+  }
 }

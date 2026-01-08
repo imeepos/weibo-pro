@@ -26,7 +26,7 @@ export class WeiboCommentHourlySubscriber implements EntitySubscriberInterface<W
 
     if (!eventId) return;
 
-    const commentTime = new Date(Number(comment.created_at));
+    const commentTime = new Date(comment.created_at);
     const timeDimensions = HourlyStatisticsHelper.getTimeDimensions(commentTime);
 
     await HourlyStatisticsHelper.upsertStatistics(
