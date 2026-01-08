@@ -88,7 +88,8 @@ export class WeiboAjaxStatusesLikeShowAstVisitor extends WeiboApiClient {
                                     const likeEntities = body.data.map(item =>
                                         m.create(WeiboLikeEntity, {
                                             userWeiboId: String(item.user.id),
-                                            targetWeiboId: ast.mid
+                                            targetWeiboId: ast.mid,
+                                            targetUserWeiboId: ast.uid
                                         } as any)
                                     );
                                     await m.upsert(WeiboLikeEntity, likeEntities as any, ['userWeiboId', 'targetWeiboId']);
