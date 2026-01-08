@@ -7,6 +7,7 @@ import { WeiboPostHourlySubscriber } from './subscribers/weibo-post-hourly.subsc
 import { WeiboCommentHourlySubscriber } from './subscribers/weibo-comment-hourly.subscriber';
 import { WeiboLikeHourlySubscriber } from './subscribers/weibo-like-hourly.subscriber';
 import { WeiboRepostHourlySubscriber } from './subscribers/weibo-repost-hourly.subscriber';
+import { PostNLPHourlySubscriber } from './subscribers/post-nlp-hourly.subscriber';
 
 export const createDatabaseConfig = (): DataSourceOptions => {
   const databaseUrl = process.env.DATABASE_URL;
@@ -27,6 +28,7 @@ export const createDatabaseConfig = (): DataSourceOptions => {
   WeiboCommentHourlySubscriber,
   WeiboLikeHourlySubscriber,
   WeiboRepostHourlySubscriber,
+  PostNLPHourlySubscriber,
 ],
       synchronize: shouldSync,
       logging: false,

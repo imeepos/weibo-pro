@@ -37,7 +37,7 @@ export class HourlyStatisticsHelper {
   }
 
   /**
-   * 聚合情感数据
+   * 聚合情感数据（基于帖子发布时间）
    */
   static async aggregateSentiment(
     manager: EntityManager,
@@ -47,12 +47,13 @@ export class HourlyStatisticsHelper {
   ): Promise<{ positive: number; negative: number; neutral: number }> {
     const result = await manager
       .createQueryBuilder(PostNLPResultEntity, 'nlp')
+      .innerJoin(WeiboPostEntity, 'post', 'nlp.post_id = post.id')
       .select('AVG((nlp.sentiment->>\'positive_prob\')::float)', 'positive')
       .addSelect('AVG((nlp.sentiment->>\'negative_prob\')::float)', 'negative')
       .addSelect('AVG((nlp.sentiment->>\'neutral_prob\')::float)', 'neutral')
       .where('nlp.event_id = :eventId', { eventId })
-      .andWhere('nlp.created_at >= :startTime', { startTime })
-      .andWhere('nlp.created_at < :endTime', { endTime })
+      .andWhere('post.created_at >= :startTime', { startTime })
+      .andWhere('post.created_at < :endTime', { endTime })
       .getRawOne();
 
     return {
