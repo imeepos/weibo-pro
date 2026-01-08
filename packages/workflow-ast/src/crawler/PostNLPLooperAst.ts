@@ -24,13 +24,16 @@ export class PostNLPLooperAst extends Ast {
   pageSize: number = 10;
 
   /**
-   * 游标：最后处理的帖子 ID
+   * 输入游标：用于分页查询的起始位置
    */
-  @State({ title: '游标' })
-  cursorId: string | null = null;
+  @Input({ title: '输入游标', defaultValue: null, type: 'string' })
+  inputCursor: string | null = null;
 
-  @Input({ title: '下一页', type: 'boolean', defaultValue: true })
-  nextPage: boolean = true;
+  /**
+   * 输出游标：当前批次最后一条记录的时间戳
+   */
+  @Output({ title: '输出游标' })
+  outputCursor: string | null = null;
 
   /**
    * 发射的帖子
