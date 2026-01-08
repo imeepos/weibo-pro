@@ -1,6 +1,16 @@
 import { Controller, Post, Body, Get, Query, BadRequestException } from '@sker/core';
 import { WorkflowDSLService } from '../services/workflow-dsl.service';
 import { logger } from '@sker/core';
+import * as sdk from '@sker/sdk';
+import type {
+  GenerateDSLPayload,
+  GenerateDSLResult,
+  RefineDSLPayload,
+  CompileDSLPayload,
+  CompileDSLResult,
+  NodeTypeInfo,
+  NodeSchemaInfo
+} from '@sker/sdk';
 
 /**
  * 工作流 DSL 生成控制器
@@ -10,32 +20,16 @@ import { logger } from '@sker/core';
  * - 支持交互式优化和迭代
  * - 管理生成会话状态
  */
-@Controller('/workflow-dsl')
-export class WorkflowDSLController {
+@Controller(sdk.WorkflowDSLController)
+export class WorkflowDSLController implements sdk.WorkflowDSLController {
   private readonly workflowDSLService: WorkflowDSLService;
 
   constructor() {
     this.workflowDSLService = new WorkflowDSLService();
   }
 
-  /**
-   * 从自然语言生成工作流 DSL
-   *
-   * @param body - 包含任务描述和可选会话 ID
-   * @returns 生成的 DSL 代码、说明和编译状态
-   */
   @Post('/generate')
-  async generate(
-    @Body() body: { description: string; sessionId?: string }
-  ): Promise<{
-    sessionId: string;
-    dslCode: string;
-    explanation: string;
-    nodeCount: number;
-    complexity: string;
-    compilationStatus: 'success' | 'error';
-    errors?: string[];
-  }> {
+  async generate(@Body() body: GenerateDSLPayload): Promise<GenerateDSLResult> {
     const { description, sessionId } = body;
 
     if (!description || description.trim().length === 0) {
@@ -65,24 +59,8 @@ export class WorkflowDSLController {
     }
   }
 
-  /**
-   * 基于用户反馈优化 DSL
-   *
-   * @param body - 包含会话 ID 和用户反馈
-   * @returns 优化后的 DSL 代码和编译状态
-   */
   @Post('/refine')
-  async refine(
-    @Body() body: { sessionId: string; feedback: string }
-  ): Promise<{
-    sessionId: string;
-    dslCode: string;
-    explanation: string;
-    nodeCount: number;
-    complexity: string;
-    compilationStatus: 'success' | 'error';
-    errors?: string[];
-  }> {
+  async refine(@Body() body: RefineDSLPayload): Promise<GenerateDSLResult> {
     const { sessionId, feedback } = body;
 
     if (!sessionId || sessionId.trim().length === 0) {
@@ -115,20 +93,8 @@ export class WorkflowDSLController {
     }
   }
 
-  /**
-   * 编译 DSL 代码
-   *
-   * @param body - 包含 DSL 代码
-   * @returns 编译结果
-   */
   @Post('/compile')
-  async compile(
-    @Body() body: { dslCode: string }
-  ): Promise<{
-    success: boolean;
-    workflowGraph?: any;
-    errors?: Array<{ message: string; line?: number; column?: number; phase?: string }>;
-  }> {
+  async compile(@Body() body: CompileDSLPayload): Promise<CompileDSLResult> {
     const { dslCode } = body;
 
     if (!dslCode || dslCode.trim().length === 0) {
@@ -152,16 +118,8 @@ export class WorkflowDSLController {
     }
   }
 
-  /**
-   * 列出所有可用的节点类型
-   *
-   * @param query - 可选的类别筛选
-   * @returns 节点类型列表
-   */
   @Get('/nodes')
-  async listNodes(
-    @Query() query: { category?: 'data-sources' | 'ai-capabilities' | 'data-processing' | 'all' }
-  ): Promise<Array<{ name: string; title: string; type: string; description: string }>> {
+  async listNodes(@Query() query: { category?: 'data-sources' | 'ai-capabilities' | 'data-processing' | 'all' }): Promise<NodeTypeInfo[]> {
     const { category = 'all' } = query;
 
     logger.info('列出可用节点类型', { category });
@@ -181,22 +139,8 @@ export class WorkflowDSLController {
     }
   }
 
-  /**
-   * 获取指定节点的 Schema
-   *
-   * @param query - 节点类型名称
-   * @returns 节点的输入输出 Schema
-   */
   @Get('/node-schema')
-  async getNodeSchema(
-    @Query() query: { nodeType: string }
-  ): Promise<{
-    name: string;
-    title: string;
-    description: string;
-    inputs: Array<{ name: string; type: string; required: boolean; description: string }>;
-    outputs: Array<{ name: string; type: string; description: string }>;
-  }> {
+  async getNodeSchema(@Query() query: { nodeType: string }): Promise<NodeSchemaInfo> {
     const { nodeType } = query;
 
     if (!nodeType || nodeType.trim().length === 0) {

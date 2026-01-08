@@ -18,6 +18,12 @@ import {
   PromptVersionEntity,
   OptimizationTaskStatus,
 } from '@sker/entities';
+import * as sdk from '@sker/sdk';
+import type {
+  CreateOptimizationTaskPayload,
+  ListTasksResult,
+  QuickOptimizePayload
+} from '@sker/sdk';
 
 /**
  * 提示词优化 API 控制器
@@ -27,8 +33,8 @@ import {
  * - 管理优化任务的全生命周期
  * - 支持 SSE 实时推送优化进度
  */
-@Controller('/prompt-optimizer')
-export class PromptOptimizerController {
+@Controller(sdk.PromptOptimizerController)
+export class PromptOptimizerController implements sdk.PromptOptimizerController {
   private readonly em: EntityManager;
 
   constructor() {
@@ -42,23 +48,7 @@ export class PromptOptimizerController {
    * @returns 创建的任务实体
    */
   @Post('/tasks')
-  async createTask(
-    @Body()
-    body: {
-      name: string;
-      targetOutput: string;
-      targetContext?: string;
-      initialPrompt?: string;
-      evaluationCriteria?: Record<string, number>;
-      optimizationConfig?: {
-        maxIterations?: number;
-        targetScore?: number;
-        model?: string;
-        temperature?: number;
-        testRuns?: number;
-      };
-    }
-  ): Promise<PromptOptimizationTaskEntity> {
+  async createTask(@Body() body: CreateOptimizationTaskPayload): Promise<PromptOptimizationTaskEntity> {
     if (!body.name || body.name.trim().length === 0) {
       throw new BadRequestException('任务名称不能为空');
     }
@@ -123,7 +113,7 @@ export class PromptOptimizerController {
   @Get('/tasks')
   async listTasks(
     @Query() query: { status?: OptimizationTaskStatus; page?: number; pageSize?: number }
-  ): Promise<{ tasks: PromptOptimizationTaskEntity[]; total: number }> {
+  ): Promise<ListTasksResult> {
     const { status, page = 1, pageSize = 20 } = query;
 
     const queryBuilder = this.em
@@ -151,7 +141,7 @@ export class PromptOptimizerController {
    * - 支持取消优化
    * - 自动保存优化结果
    */
-  @Post('/tasks/:taskId/execute')
+  @Post({ path: '/tasks/:taskId/execute', sse: true })
   executeTask(@Param('taskId') taskId: string): Observable<NodeEvent> {
     return new Observable((observer) => {
       this.em
@@ -258,17 +248,8 @@ export class PromptOptimizerController {
    *
    * 简化版 API，适合快速使用
    */
-  @Post('/quick')
-  quickOptimize(
-    @Body()
-    body: {
-      targetOutput: string;
-      targetContext?: string;
-      initialPrompt?: string;
-      maxIterations?: number;
-      targetScore?: number;
-    },
-  ): Observable<NodeEvent> {
+  @Post({ path: '/quick', sse: true })
+  quickOptimize(@Body() body: QuickOptimizePayload): Observable<NodeEvent> {
 
     if (!body.targetOutput || body.targetOutput.trim().length === 0) {
       throw new BadRequestException('目标输出不能为空');

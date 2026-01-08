@@ -1,7 +1,9 @@
 import { Controller, Post, Body, Get, Put, Param } from '@sker/core';
 import { root } from '@sker/core';
 import { DerivedNodeService } from '../../services/workflow/derived-node.service';
-import { DerivedNodeEntity } from '@sker/entities';
+import type { DerivedNodeEntity } from '@sker/entities';
+import * as sdk from '@sker/sdk';
+import type { CreateDerivedNodePayload } from '@sker/sdk';
 
 /**
  * 派生节点控制器
@@ -10,8 +12,8 @@ import { DerivedNodeEntity } from '@sker/entities';
  * - 提供派生节点的 REST API
  * - 支持保存、发布、列表操作
  */
-@Controller('/api/derived-nodes')
-export class DerivedNodeController {
+@Controller(sdk.DerivedNodeController)
+export class DerivedNodeController implements sdk.DerivedNodeController {
   private readonly service: DerivedNodeService;
 
   constructor() {
@@ -19,21 +21,7 @@ export class DerivedNodeController {
   }
 
   @Post('/')
-  async create(
-    @Body()
-    body: {
-      name: string;
-      baseType: string;
-      frozenInputs: Record<string, unknown>;
-      nodeMetadata: {
-        class: { title: string; type: string; description?: string };
-        inputs: Array<{ property: string; title: string; type?: string; defaultValue?: unknown }>;
-        outputs: Array<{ property: string; title: string; type?: string }>;
-        states?: Array<{ property: string; title: string; type?: string; defaultValue?: unknown }>;
-      };
-      createdBy?: string;
-    }
-  ): Promise<DerivedNodeEntity> {
+  async create(@Body() body: CreateDerivedNodePayload): Promise<DerivedNodeEntity> {
     return this.service.saveAsNode(body);
   }
 
