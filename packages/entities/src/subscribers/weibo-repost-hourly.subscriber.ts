@@ -17,7 +17,7 @@ export class WeiboRepostHourlySubscriber implements EntitySubscriberInterface<We
 
   async afterInsert(event: InsertEvent<WeiboRepostEntity>) {
     const repost = event.entity;
-    if (!repost?.mid) return;
+    if (!repost?.mid || !repost?.created_at) return;
 
     const eventId = await HourlyStatisticsHelper.getEventIdByPostMid(
       event.manager,
@@ -26,7 +26,7 @@ export class WeiboRepostHourlySubscriber implements EntitySubscriberInterface<We
 
     if (!eventId) return;
 
-    const timeDimensions = HourlyStatisticsHelper.getTimeDimensions(repost.ingested_at);
+    const timeDimensions = HourlyStatisticsHelper.getTimeDimensions(repost.created_at);
 
     await HourlyStatisticsHelper.upsertStatistics(
       event.manager,

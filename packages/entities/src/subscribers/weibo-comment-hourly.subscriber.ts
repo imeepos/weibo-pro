@@ -17,7 +17,7 @@ export class WeiboCommentHourlySubscriber implements EntitySubscriberInterface<W
 
   async afterInsert(event: InsertEvent<WeiboCommentEntity>) {
     const comment = event.entity;
-    if (!comment?.mid) return;
+    if (!comment?.mid || !comment?.created_at) return;
 
     const eventId = await HourlyStatisticsHelper.getEventIdByPostMid(
       event.manager,
@@ -26,7 +26,8 @@ export class WeiboCommentHourlySubscriber implements EntitySubscriberInterface<W
 
     if (!eventId) return;
 
-    const timeDimensions = HourlyStatisticsHelper.getTimeDimensions(comment.ingestedAt);
+    const commentTime = new Date(Number(comment.created_at));
+    const timeDimensions = HourlyStatisticsHelper.getTimeDimensions(commentTime);
 
     await HourlyStatisticsHelper.upsertStatistics(
       event.manager,
