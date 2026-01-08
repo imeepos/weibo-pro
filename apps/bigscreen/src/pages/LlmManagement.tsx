@@ -95,7 +95,7 @@ const LlmManagement: React.FC = () => {
   };
 
   const handleResetScore = async (id: string) => {
-    await providersCtrl.updateScore(id, 10000);
+    await providersCtrl.updateScore(id, 1000000);
     loadData();
   };
 
@@ -111,7 +111,7 @@ const LlmManagement: React.FC = () => {
   const handleIncreaseScore = async (id: string, amount: number = 1000) => {
     const provider = providers.find(p => p.id === id);
     if (provider) {
-      const newScore = Math.min(10000, provider.score + amount);
+      const newScore = Math.min(1000000, provider.score + amount);
       await providersCtrl.updateScore(id, newScore);
       loadData();
     }
@@ -276,7 +276,7 @@ const LlmManagement: React.FC = () => {
                             onChange={(e) => setEditingScoreValue(Number(e.target.value))}
                             className="w-20 rounded border bg-background px-2 py-1 text-xs"
                             min="0"
-                            max="10000"
+                            max="1000000"
                             autoFocus
                           />
                           <button

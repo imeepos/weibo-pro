@@ -43,6 +43,7 @@ interface ProxyResult {
 
 const TIMEOUT_MS = 1000 * 10 * 60; // 10 分钟超时
 const MAX_RETRIES = 3
+const RATE_LIMIT_COOLDOWN_MS = 60 * 1000 // 429 冷却时间：1 分钟
 
 /**
  * SSE 行解析流：处理跨 chunk 的行缓冲
@@ -103,6 +104,26 @@ export class LlmProxyService {
   private toCodexVisitor = new ToCodexVisitor();
   private toOpenAiVisitor = new ToOpenAiVisitor();
   private toAnthropicVisitor = new ToAnthropicVisitor();
+
+  /** 被限流的 provider，value 为解锁时间戳 */
+  private rateLimitedProviders = new Map<string, number>();
+
+  private isRateLimited(providerId: string): boolean {
+    const unlockTime = this.rateLimitedProviders.get(providerId)
+    if (!unlockTime) return false
+    if (Date.now() >= unlockTime) {
+      this.rateLimitedProviders.delete(providerId)
+      console.log(`[LlmProxy] Provider ${providerId} 冷却结束，已解锁`)
+      return false
+    }
+    return true
+  }
+
+  private setRateLimited(providerId: string): void {
+    const unlockTime = Date.now() + RATE_LIMIT_COOLDOWN_MS
+    this.rateLimitedProviders.set(providerId, unlockTime)
+    console.warn(`[LlmProxy] Provider ${providerId} 被限流，冷却至 ${new Date(unlockTime).toLocaleTimeString()}`)
+  }
 
   /**
    * 使用 Visitor 转换流式事件
@@ -369,14 +390,18 @@ export class LlmProxyService {
           .orWhere('model.name = :requestedModel', { requestedModel })
       })
 
+      // 收集被限流的 provider ID
+      const rateLimitedIds = [...this.rateLimitedProviders.keys()].filter(id => this.isRateLimited(id))
+
       const buildBaseConditions = (qb: any) => {
         qb.andWhere('provider.score > 0')
           .andWhere('mp.enabled = true')
         if (requiresThinking) {
           qb.andWhere('mp.supportsThinking = :supportsThinking', { supportsThinking: true })
         }
-        if (excludeIds.size > 0) {
-          qb.andWhere('provider.id NOT IN (:...excludeIds)', { excludeIds: [...excludeIds] })
+        const allExcludeIds = [...excludeIds, ...rateLimitedIds]
+        if (allExcludeIds.length > 0) {
+          qb.andWhere('provider.id NOT IN (:...excludeIds)', { excludeIds: allExcludeIds })
         }
       }
 
@@ -618,7 +643,9 @@ export class LlmProxyService {
       const startTime = Date.now()
 
       try {
-        const url = `${provider.baseUrl}${proxyPath}`
+        const baseUrl = provider.baseUrl.trim().replace(/\/+$/, '')
+        const path = proxyPath.startsWith('/') ? proxyPath : `/${proxyPath}`
+        const url = `${baseUrl}${path}`
         const requestHeaders = {
           Authorization: `Bearer ${provider.apiKey}`,
           connection: `keep-alive`,
@@ -634,50 +661,15 @@ export class LlmProxyService {
         })
         const durationMs = Date.now() - startTime
 
-        // 记录响应状态
-        if (!response.ok) {
-          console.error(`[LlmProxy] HTTP ${response.status} 错误:`, {
-            provider: provider.providerId,
-            url,
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${provider.apiKey}`,
-              connection: 'keep-alive',
-              'content-type': reqHeaders['content-type'] || 'application/json',
-            },
-            requestBody: requestBody,
-            statusCode: response.status,
-            statusText: response.statusText,
-            durationMs
-          })
-
-          // Codex 协议失败时保存请求参数用于调试
-          if (provider.providerProtocol === 'codex') {
-            try {
-              const fs = await import('fs/promises')
-              const path = await import('path')
-              const debugData = {
-                timestamp: new Date().toISOString(),
-                url,
-                headers: requestHeaders,
-                body: proxyBody
-              }
-              const debugPath = path.join(process.cwd(), 'debug-novel-request.json')
-              await fs.writeFile(debugPath, JSON.stringify(debugData, null, 2), 'utf-8')
-              console.log('[LlmProxy] 已保存失败的 Codex 请求到: debug-novel-request.json')
-            } catch (err) {
-              console.error('[LlmProxy] 保存调试文件失败:', err)
-            }
-          }
-        }
-
         if (response.status === 403 || response.status === 401) {
           await this.setScoreToZero(provider.providerId)
           console.warn(`${response.status} 权限错误，健康分清零: ${provider.providerId}`)
         } else if (response.status === 404) {
           await this.setScoreToZero(provider.providerId)
           console.warn(`404 配置错误，健康分清零: ${provider.providerId}`)
-        } else if (response.status === 429 || response.status === 400) {
+        } else if (response.status === 429) {
+          this.setRateLimited(provider.providerId)
+        } else if (response.status === 400) {
           await this.updateScore(provider.providerId, -500)
         } else if (response.status === 500) {
           await this.updateScore(provider.providerId, -1000)
@@ -791,13 +783,6 @@ export class LlmProxyService {
               finalResponse = responseData
             }
           }
-
-          // 打印最终响应预览（非流式）
-          const finalResponseStr = JSON.stringify(finalResponse)
-          const finalPreview = finalResponseStr.length > 100
-            ? `${finalResponseStr.slice(0, 50)}...${finalResponseStr.slice(-50)}`
-            : finalResponseStr
-
           // 提取并打印文本内容
           let textContent = ''
           if (finalResponse.choices?.[0]?.message?.content) {
@@ -810,17 +795,7 @@ export class LlmProxyService {
             // Claude 格式
             textContent = finalResponse.content[0].text
           }
-          if (textContent) {
-            const textPreview = textContent.length > 100
-              ? `${textContent.slice(0, 50)}...${textContent.slice(-50)}`
-              : textContent
-            console.log(`[LlmProxy] 返回文本: ${textPreview}`)
-          }
-
           const responseBody = JSON.stringify(finalResponse)
-          console.log(`[LlmProxy] 最终响应体长度: ${responseBody.length}`)
-          console.log(`[LlmProxy] 最终响应体: ${responseBody}`)
-
           return {
             success: true,
             response: new Response(responseBody, {

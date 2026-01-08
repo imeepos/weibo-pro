@@ -26,14 +26,6 @@ export class LlmProxyController {
       apiPath = apiPath.replace('/v1', '/');
     }
     const result = await this.llmProxyService.proxyRequest(protocol, apiPath, body, headers, contentLength);
-
-    console.log('[LlmProxyController] proxyRequest 结果:', {
-      success: result.success,
-      hasResponse: !!result.response,
-      responseStatus: result.response?.status,
-      error: result.error
-    });
-
     if (!result.success) {
       console.log('[LlmProxyController] 返回 503 错误');
       this.res.statusCode = 503;
@@ -63,12 +55,10 @@ export class LlmProxyController {
 
     if (!isStreaming) {
       const text = await response.text();
-      console.log('[LlmProxyController] 返回非流式响应，长度:', text.length);
       this.res.end(text);
       return;
     }
 
-    console.log('[LlmProxyController] 返回流式响应');
     if (!response.body) {
       const text = await response.text();
       this.res.end(text);
