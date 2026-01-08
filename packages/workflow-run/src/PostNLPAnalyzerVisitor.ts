@@ -86,10 +86,10 @@ export class PostNLPAnalyzerVisitor {
               context,
             );
             console.log('[PostNLPAnalyzerVisitor] NLP 分析成功，第', ast.emitCount, '次，postId:', ast.post?.id);
-            if (ast.event_id && typeof ast.nlpResult !== 'string') {
-              console.log('[PostNLPAnalyzerVisitor] 开始关联事件，event_id:', ast.event_id, 'postId:', ast.post?.id);
-              await this.associatePostWithEvent(ast, ast.nlpResult);
-              console.log('[PostNLPAnalyzerVisitor] 事件关联成功');
+            if (typeof ast.nlpResult !== 'string') {
+              console.log('[PostNLPAnalyzerVisitor] 开始保存 NLP 结果，event_id:', ast.event_id, 'postId:', ast.post?.id);
+              await this.saveNLPResult(ast, ast.nlpResult);
+              console.log('[PostNLPAnalyzerVisitor] NLP 结果保存成功');
             }
 
             return [
@@ -166,60 +166,68 @@ export class PostNLPAnalyzerVisitor {
     });
   }
 
-  private async associatePostWithEvent(
+  private async saveNLPResult(
     ast: PostNLPAnalyzerAst,
     nlpResult: CompleteAnalysisResult
   ): Promise<void> {
-    if (ast.post && ast.post.id && ast.event_id) {
-      try {
-        await useEntityManager(async (manager) => {
-          const postId = `${ast.post.id}`;
+    if (!ast.post?.id) return;
 
-          // 保存 NLP 结果
-          const existing = await manager.findOne(PostNLPResultEntity, {
-            where: { post_id: postId }
+    try {
+      await useEntityManager(async (manager) => {
+        const postId = `${ast.post.id}`;
+
+        // 如果 ast 没有 event_id，从 post 表中获取
+        let eventId: string | null | undefined = ast.event_id;
+        if (!eventId) {
+          const post = await manager.findOne(WeiboPostEntity, {
+            where: { id: postId },
+            select: ['event_id']
           });
+          eventId = post?.event_id;
+        }
 
-          if (existing) {
-            await manager.update(
-              PostNLPResultEntity,
-              { post_id: postId },
-              {
-                event_id: ast.event_id,
-                sentiment: nlpResult.sentiment as any,
-                keywords: nlpResult.keywords as any,
-              }
-            );
-          } else {
-            await manager.insert(PostNLPResultEntity, {
-              post_id: postId,
-              event_id: ast.event_id,
+        const existing = await manager.findOne(PostNLPResultEntity, {
+          where: { post_id: postId }
+        });
+
+        if (existing) {
+          await manager.update(
+            PostNLPResultEntity,
+            { post_id: postId },
+            {
+              event_id: eventId ?? null,
               sentiment: nlpResult.sentiment as any,
               keywords: nlpResult.keywords as any,
-              event_type: { type: 'unknown', confidence: 0 } as any,
-            });
-          }
+            }
+          );
+        } else {
+          await manager.insert(PostNLPResultEntity, {
+            post_id: postId,
+            event_id: eventId ?? null,
+            sentiment: nlpResult.sentiment as any,
+            keywords: nlpResult.keywords as any,
+            event_type: { type: 'unknown', confidence: 0 } as any,
+          });
+        }
 
-          // 更新帖子的 process_flags，标记 NLP 已完成
-          await manager
-            .createQueryBuilder()
-            .update(WeiboPostEntity)
-            .set({
-              process_flags: () => `process_flags | ${PostProcessFlags.NLP_COMPLETED}`,
-            })
-            .where('id = :id', { id: postId })
-            .execute();
+        await manager
+          .createQueryBuilder()
+          .update(WeiboPostEntity)
+          .set({
+            process_flags: () => `process_flags | ${PostProcessFlags.NLP_COMPLETED}`,
+          })
+          .where('id = :id', { id: postId })
+          .execute();
 
-          ast.event_associated = true;
-        });
-      } catch (error: any) {
-        console.error('[PostNLPAnalyzerVisitor] ❌ 关联事件失败');
-        console.error('  event_id:', ast.event_id);
-        console.error('  post_id:', ast.post.id);
-        console.error('  错误:', error?.message);
-        console.error('  堆栈:', error?.stack);
-        throw error;
-      }
+        ast.event_associated = !!eventId;
+      });
+    } catch (error: any) {
+      console.error('[PostNLPAnalyzerVisitor] ❌ 保存 NLP 结果失败');
+      console.error('  event_id:', ast.event_id);
+      console.error('  post_id:', ast.post.id);
+      console.error('  错误:', error?.message);
+      console.error('  堆栈:', error?.stack);
+      throw error;
     }
   }
 }
