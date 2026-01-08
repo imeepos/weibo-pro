@@ -22,5 +22,8 @@ export class PostContextCollectorAst extends Ast {
   @Output({ title: '转发列表', defaultValue: [] })
   reposts: WeiboRepostEntity[] = [];
 
+  @Output({ title: '事件ID', defaultValue: '' })
+  event_id: string = '';
+
   type: 'PostContextCollectorAst' = 'PostContextCollectorAst';
 }

@@ -66,8 +66,6 @@ export class PostContextCollectorVisitor {
             const isLongId = /^\d{16,}$/.test(postIdStr);
             const firstQuery = isLongId ? 'id' : 'mblogid';
 
-            console.log(`[PostContextCollector] 尝试查询: ${firstQuery}=${postIdStr}`);
-
             let post = await m.findOne(WeiboPostEntity, {
               where: isLongId ? { id: postIdStr } : { mblogid: postIdStr },
             });
@@ -85,8 +83,6 @@ export class PostContextCollectorVisitor {
               throw new Error(`Post not found: ${postIdStr}`);
             }
 
-            console.log(`[PostContextCollector] 收集 post.id=${post.id}, post.mblogid=${post.mblogid}`);
-
             const comments = await m.find(WeiboCommentEntity, {
               where: { rootid: Number(post.id) },
               order: { like_counts: 'DESC' },
@@ -98,15 +94,14 @@ export class PostContextCollectorVisitor {
               .where("r.retweeted_status->>'id' = :postId", { postId: String(post.id) })
               .getMany();
 
-            console.log(`[PostContextCollector] 收集到 ${comments.length} 条评论, ${reposts.length} 条转发`);
-
             ast.post = post;
             ast.comments = comments;
             ast.reposts = reposts;
+            ast.event_id = post.event_id || '';
           });
 
           return [
-            { type: 'node_emit' as const, id: ast.id, data: { post: ast.post, comments: ast.comments, reposts: ast.reposts } }
+            { type: 'node_emit' as const, id: ast.id, data: { post: ast.post, comments: ast.comments, reposts: ast.reposts, event_id: ast.event_id } }
           ];
         }),
         ErrorHandlerOperators.createRetryOperator(ast, { logPrefix: '[PostContextCollectorVisitor]' }),
