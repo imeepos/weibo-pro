@@ -19,7 +19,7 @@ export class PostNLPHourlySubscriber implements EntitySubscriberInterface<PostNL
 
   async afterInsert(event: InsertEvent<PostNLPResultEntity>) {
     const nlpResult = event.entity;
-    if (!nlpResult?.event_id || !nlpResult?.post_id) return;
+    if (!nlpResult?.event_id || !nlpResult?.post_id || !nlpResult?.sentiment) return;
 
     // 获取帖子发布时间
     const post = await event.manager.findOne(WeiboPostEntity, {
@@ -31,10 +31,11 @@ export class PostNLPHourlySubscriber implements EntitySubscriberInterface<PostNL
     const postTime = new Date(post.created_at);
     const timeDimensions = HourlyStatisticsHelper.getTimeDimensions(postTime);
 
-    await HourlyStatisticsHelper.upsertNLPStatistics(
+    await HourlyStatisticsHelper.upsertNLPStatisticsIncremental(
       event.manager,
       nlpResult.event_id,
-      timeDimensions
+      timeDimensions,
+      nlpResult.sentiment
     );
   }
 }

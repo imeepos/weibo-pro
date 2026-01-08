@@ -229,4 +229,67 @@ export class HourlyStatisticsHelper {
       )
       .execute();
   }
+
+  /**
+   * UPSERT NLP 情感统计数据（增量计算）
+   *
+   * 新平均值 = (旧平均值 × 旧数量 + 新值) / (旧数量 + 1)
+   */
+  static async upsertNLPStatisticsIncremental(
+    manager: EntityManager,
+    eventId: string,
+    timeDimensions: ReturnType<typeof HourlyStatisticsHelper.getTimeDimensions>,
+    newSentiment: PostNLPResultEntity['sentiment']
+  ): Promise<void> {
+    // 查询现有统计
+    const existing = await manager.findOne(EventHourlyStatisticsEntity, {
+      where: { event_id: eventId, ...timeDimensions }
+    });
+
+    const currentPostCount = existing?.post_count || 0;
+
+    let positive = newSentiment.positive_prob;
+    let negative = newSentiment.negative_prob;
+    let neutral = newSentiment.neutral_prob;
+
+    if (currentPostCount > 0 && existing) {
+      // 新平均值 = (旧平均值 × 旧数量 + 新值) / (旧数量 + 1)
+      positive = (existing.sentiment_positive * currentPostCount + positive) / (currentPostCount + 1);
+      negative = (existing.sentiment_negative * currentPostCount + negative) / (currentPostCount + 1);
+      neutral = (existing.sentiment_neutral * currentPostCount + neutral) / (currentPostCount + 1);
+    }
+
+    const hotness = existing
+      ? this.calculateHotness(
+          existing.post_count,
+          existing.comment_count,
+          existing.repost_count,
+          existing.like_count
+        )
+      : 0;
+
+    // UPSERT 仅更新情感字段
+    await manager
+      .createQueryBuilder()
+      .insert()
+      .into(EventHourlyStatisticsEntity)
+      .values({
+        event_id: eventId,
+        ...timeDimensions,
+        post_count: existing?.post_count || 0,
+        comment_count: existing?.comment_count || 0,
+        repost_count: existing?.repost_count || 0,
+        like_count: existing?.like_count || 0,
+        user_count: existing?.user_count || 0,
+        hotness,
+        sentiment_positive: positive,
+        sentiment_negative: negative,
+        sentiment_neutral: neutral
+      })
+      .orUpdate(
+        ['sentiment_positive', 'sentiment_negative', 'sentiment_neutral', 'updated_at'],
+        ['event_id', 'year', 'month', 'day', 'hour']
+      )
+      .execute();
+  }
 }
