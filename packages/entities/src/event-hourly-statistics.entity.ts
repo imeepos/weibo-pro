@@ -63,13 +63,16 @@ export class EventHourlyStatisticsEntity {
   @Column({ type: 'decimal', precision: 5, scale: 2, default: 0, comment: '热度值，由 post_count、comment_count、repost_count、like_count、user_count 加权计算' })
   hotness!: number;
 
+  @Column({ type: 'integer', default: 0, name: 'nlp_count', comment: 'NLP 结果数量，用于情感增量计算' })
+  nlp_count!: number;
+
   @Column({ type: 'decimal', precision: 5, scale: 2, default: 0, name: 'sentiment_positive', comment: '正面情感评分，来自 post_nlp_results 表聚合' })
   sentiment_positive!: number;
 
   @Column({ type: 'decimal', precision: 5, scale: 2, default: 0, name: 'sentiment_negative', comment: '负面情感评分，来自 post_nlp_results 表聚合' })
   sentiment_negative!: number;
 
-  @Column({ type: 'decimal', precision: 5, scale: 2, default: 0, name: 'sentiment_neutral', comment: '中性情感评分，来自 post_nlp_results 表聚合' })
+  @Column({ type: 'decimal', precision: 5, scale: 2, default: 1, name: 'sentiment_neutral', comment: '中性情感评分，来自 post_nlp_results 表聚合' })
   sentiment_neutral!: number;
 
   @CreateDateColumn({

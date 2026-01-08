@@ -8,7 +8,7 @@ import { HourlyStatisticsHelper } from './hourly-statistics.helper';
  *
  * 存在即合理：
  * - 监听点赞插入，自动更新小时级统计
- * - 通过 targetWeiboId 关联到帖子，再获取 event_id 和帖子发布时间
+ * - 使用点赞入库时间作为时间维度（统计某小时内的点赞数）
  */
 @EventSubscriber()
 export class WeiboLikeHourlySubscriber implements EntitySubscriberInterface<WeiboLikeEntity> {
@@ -18,17 +18,16 @@ export class WeiboLikeHourlySubscriber implements EntitySubscriberInterface<Weib
 
   async afterInsert(event: InsertEvent<WeiboLikeEntity>) {
     const like = event.entity;
-    if (!like?.targetWeiboId) return;
+    if (!like?.targetWeiboId || !like?.createdAt) return;
 
     const post = await event.manager.findOne(WeiboPostEntity, {
       where: { id: like.targetWeiboId },
-      select: ['event_id', 'created_at']
+      select: ['event_id']
     });
 
-    if (!post?.event_id || !post?.created_at) return;
+    if (!post?.event_id) return;
 
-    const postTime = new Date(post.created_at);
-    const timeDimensions = HourlyStatisticsHelper.getTimeDimensions(postTime);
+    const timeDimensions = HourlyStatisticsHelper.getTimeDimensions(like.createdAt);
 
     await HourlyStatisticsHelper.upsertStatistics(
       event.manager,

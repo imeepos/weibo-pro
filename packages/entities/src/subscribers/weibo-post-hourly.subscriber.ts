@@ -26,7 +26,8 @@ export class WeiboPostHourlySubscriber implements EntitySubscriberInterface<Weib
       event.manager,
       post.event_id,
       timeDimensions,
-      { post_count: 1 }
+      { post_count: 1 },
+      { updateUserCount: true }
     );
   }
 }

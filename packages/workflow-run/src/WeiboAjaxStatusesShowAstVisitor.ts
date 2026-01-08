@@ -105,7 +105,7 @@ export class WeiboAjaxStatusesShowAstVisitor extends WeiboApiClient {
                     console.log(`[WeiboAjaxStatusesShowAstVisitor] 成功保存一条帖子 id=${ast.postId}, mblogid=${ast.mblogid}`)
 
                     return [
-                        { type: 'node_emit' as const, id: ast.id, data: { uid: ast.uid, postId: ast.postId, mid: ast.mid } }
+                        { type: 'node_emit' as const, id: ast.id, data: { uid: ast.uid, postId: ast.postId, mid: ast.mid, eventId: ast.eventId } }
                     ];
                 }),
                 ErrorHandlerOperators.createRetryOperator(ast, { logPrefix: '[WeiboAjaxStatusesShowAstVisitor]' }),

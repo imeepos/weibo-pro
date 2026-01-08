@@ -37,33 +37,6 @@ export class HourlyStatisticsHelper {
   }
 
   /**
-   * 聚合情感数据（基于帖子发布时间）
-   */
-  static async aggregateSentiment(
-    manager: EntityManager,
-    eventId: string,
-    startTime: Date,
-    endTime: Date
-  ): Promise<{ positive: number; negative: number; neutral: number }> {
-    const result = await manager
-      .createQueryBuilder(PostNLPResultEntity, 'nlp')
-      .innerJoin(WeiboPostEntity, 'post', 'nlp.post_id = post.id')
-      .select('AVG((nlp.sentiment->>\'positive_prob\')::float)', 'positive')
-      .addSelect('AVG((nlp.sentiment->>\'negative_prob\')::float)', 'negative')
-      .addSelect('AVG((nlp.sentiment->>\'neutral_prob\')::float)', 'neutral')
-      .where('nlp.event_id = :eventId', { eventId })
-      .andWhere('post.created_at >= :startTime', { startTime })
-      .andWhere('post.created_at < :endTime', { endTime })
-      .getRawOne();
-
-    return {
-      positive: Number(result?.positive) || 0,
-      negative: Number(result?.negative) || 0,
-      neutral: Number(result?.neutral) || 0
-    };
-  }
-
-  /**
    * 聚合用户数（去重）
    */
   static async aggregateUserCount(
@@ -112,7 +85,9 @@ export class HourlyStatisticsHelper {
   }
 
   /**
-   * UPSERT 统计数据
+   * UPSERT 统计数据（纯增量）
+   *
+   * user_count 只在帖子插入时更新（通过 updateUserCount 参数）
    */
   static async upsertStatistics(
     manager: EntityManager,
@@ -123,17 +98,9 @@ export class HourlyStatisticsHelper {
       comment_count?: number;
       repost_count?: number;
       like_count?: number;
-    }
+    },
+    options?: { updateUserCount?: boolean }
   ): Promise<void> {
-    const { year, month, day, hour } = timeDimensions;
-    const startTime = new Date(year, month - 1, day, hour, 0, 0);
-    const endTime = new Date(startTime);
-    endTime.setHours(endTime.getHours() + 1);
-
-    // 聚合情感和用户数
-    const sentiment = await this.aggregateSentiment(manager, eventId, startTime, endTime);
-    const userCount = await this.aggregateUserCount(manager, eventId, startTime, endTime);
-
     // 查询现有统计
     const existing = await manager.findOne(EventHourlyStatisticsEntity, {
       where: { event_id: eventId, ...timeDimensions }
@@ -144,6 +111,16 @@ export class HourlyStatisticsHelper {
     const commentCount = (existing?.comment_count || 0) + (increments.comment_count || 0);
     const repostCount = (existing?.repost_count || 0) + (increments.repost_count || 0);
     const likeCount = (existing?.like_count || 0) + (increments.like_count || 0);
+
+    // user_count: 只在需要时聚合（帖子插入时）
+    let userCount = existing?.user_count || 0;
+    if (options?.updateUserCount) {
+      const { year, month, day, hour } = timeDimensions;
+      const startTime = new Date(year, month - 1, day, hour, 0, 0);
+      const endTime = new Date(startTime);
+      endTime.setHours(endTime.getHours() + 1);
+      userCount = await this.aggregateUserCount(manager, eventId, startTime, endTime);
+    }
 
     const hotness = this.calculateHotness(postCount, commentCount, repostCount, likeCount);
 
@@ -161,70 +138,14 @@ export class HourlyStatisticsHelper {
         like_count: likeCount,
         user_count: userCount,
         hotness,
-        sentiment_positive: sentiment.positive,
-        sentiment_negative: sentiment.negative,
-        sentiment_neutral: sentiment.neutral
+        nlp_count: existing?.nlp_count || 0,
+        sentiment_positive: existing?.sentiment_positive || 0,
+        sentiment_negative: existing?.sentiment_negative || 0,
+        sentiment_neutral: existing?.sentiment_neutral || 1
       })
       .orUpdate(
         ['post_count', 'comment_count', 'repost_count', 'like_count',
-          'user_count', 'hotness', 'sentiment_positive', 'sentiment_negative',
-          'sentiment_neutral', 'updated_at'],
-        ['event_id', 'year', 'month', 'day', 'hour']
-      )
-      .execute();
-  }
-
-  /**
-   * UPSERT NLP 情感统计数据
-   */
-  static async upsertNLPStatistics(
-    manager: EntityManager,
-    eventId: string,
-    timeDimensions: ReturnType<typeof HourlyStatisticsHelper.getTimeDimensions>
-  ): Promise<void> {
-    const { year, month, day, hour } = timeDimensions;
-    const startTime = new Date(year, month - 1, day, hour, 0, 0);
-    const endTime = new Date(startTime);
-    endTime.setHours(endTime.getHours() + 1);
-
-    // 聚合情感
-    const sentiment = await this.aggregateSentiment(manager, eventId, startTime, endTime);
-
-    // 查询现有统计
-    const existing = await manager.findOne(EventHourlyStatisticsEntity, {
-      where: { event_id: eventId, ...timeDimensions }
-    });
-
-    // 重新计算热度值（情感变化不影响热度，保持原值）
-    const hotness = existing
-      ? this.calculateHotness(
-          existing.post_count,
-          existing.comment_count,
-          existing.repost_count,
-          existing.like_count
-        )
-      : 0;
-
-    // UPSERT 仅更新情感字段
-    await manager
-      .createQueryBuilder()
-      .insert()
-      .into(EventHourlyStatisticsEntity)
-      .values({
-        event_id: eventId,
-        ...timeDimensions,
-        post_count: existing?.post_count || 0,
-        comment_count: existing?.comment_count || 0,
-        repost_count: existing?.repost_count || 0,
-        like_count: existing?.like_count || 0,
-        user_count: existing?.user_count || 0,
-        hotness,
-        sentiment_positive: sentiment.positive,
-        sentiment_negative: sentiment.negative,
-        sentiment_neutral: sentiment.neutral
-      })
-      .orUpdate(
-        ['sentiment_positive', 'sentiment_negative', 'sentiment_neutral', 'updated_at'],
+          'user_count', 'hotness', 'updated_at'],
         ['event_id', 'year', 'month', 'day', 'hour']
       )
       .execute();
@@ -246,17 +167,18 @@ export class HourlyStatisticsHelper {
       where: { event_id: eventId, ...timeDimensions }
     });
 
-    const currentPostCount = existing?.post_count || 0;
+    const currentNlpCount = existing?.nlp_count || 0;
+    const newNlpCount = currentNlpCount + 1;
 
     let positive = newSentiment.positive_prob;
     let negative = newSentiment.negative_prob;
     let neutral = newSentiment.neutral_prob;
 
-    if (currentPostCount > 0 && existing) {
+    if (currentNlpCount > 0 && existing) {
       // 新平均值 = (旧平均值 × 旧数量 + 新值) / (旧数量 + 1)
-      positive = (existing.sentiment_positive * currentPostCount + positive) / (currentPostCount + 1);
-      negative = (existing.sentiment_negative * currentPostCount + negative) / (currentPostCount + 1);
-      neutral = (existing.sentiment_neutral * currentPostCount + neutral) / (currentPostCount + 1);
+      positive = (existing.sentiment_positive * currentNlpCount + positive) / newNlpCount;
+      negative = (existing.sentiment_negative * currentNlpCount + negative) / newNlpCount;
+      neutral = (existing.sentiment_neutral * currentNlpCount + neutral) / newNlpCount;
     }
 
     const hotness = existing
@@ -268,7 +190,7 @@ export class HourlyStatisticsHelper {
         )
       : 0;
 
-    // UPSERT 仅更新情感字段
+    // UPSERT 更新情感字段和 nlp_count
     await manager
       .createQueryBuilder()
       .insert()
@@ -282,12 +204,13 @@ export class HourlyStatisticsHelper {
         like_count: existing?.like_count || 0,
         user_count: existing?.user_count || 0,
         hotness,
+        nlp_count: newNlpCount,
         sentiment_positive: positive,
         sentiment_negative: negative,
         sentiment_neutral: neutral
       })
       .orUpdate(
-        ['sentiment_positive', 'sentiment_negative', 'sentiment_neutral', 'updated_at'],
+        ['nlp_count', 'sentiment_positive', 'sentiment_negative', 'sentiment_neutral', 'updated_at'],
         ['event_id', 'year', 'month', 'day', 'hour']
       )
       .execute();
