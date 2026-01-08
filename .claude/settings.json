@@ -2,13 +2,7 @@
   "hooks": {
     "Stop": [
       {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node .claude/hooks/before-stop.js",
-            "timeout": 300
-          }
-        ]
+        "hooks": []
       }
     ]
   },
