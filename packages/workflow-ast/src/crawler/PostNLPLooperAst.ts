@@ -38,6 +38,9 @@ export class PostNLPLooperAst extends Ast {
   @Output({ title: '帖子ID' })
   postId!: string;
 
+  @Output({ title: '事件ID', defaultValue: null })
+  event_id!: string | null;
+
   @Output({ title: '是否有下一页', isRouter: true, defaultValue: true })
   hasMore!: boolean;
 

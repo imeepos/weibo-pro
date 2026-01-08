@@ -60,13 +60,14 @@ export class PostNLPLooperAstVisitor {
               return await qb.getMany();
             });
 
-            // 逐个发射 postId
+            // 逐个发射 postId 和 event_id
             for (const post of posts) {
               ast.postId = post.id;
+              ast.event_id = post.event_id;
               events.push({
                 type: 'node_emit',
                 id: ast.id,
-                data: { postId: post.id },
+                data: { postId: post.id, event_id: post.event_id },
               });
             }
 
