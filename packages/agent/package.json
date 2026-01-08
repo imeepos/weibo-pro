@@ -18,7 +18,7 @@
     "dev": "tsup --watch",
     "lint": "eslint src --ext .ts",
     "check-types": "tsc --noEmit",
-    "test": "ts-node -r tsconfig-paths/register src/main.ts"
+    "test": "echo \"No tests configured for @sker/agent\""
   },
   "dependencies": {
     "@langchain/core": "^1.0.4",

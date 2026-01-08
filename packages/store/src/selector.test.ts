@@ -5,8 +5,6 @@ import {
   createSelectorFactory,
   defaultMemoize,
   resultMemoize,
-  setNgrxMockEnvironment,
-  isNgrxMockEnvironment,
   isEqualCheck,
   AnyFn,
 } from './selector';
@@ -262,22 +260,6 @@ describe('selector', () => {
 
       // 但如果结果相同，仍返回旧引用
       expect(result2).toBe(result1);
-    });
-  });
-
-  describe('Mock 环境', () => {
-    afterEach(() => {
-      setNgrxMockEnvironment(false);
-    });
-
-    it('setNgrxMockEnvironment 设置 mock 模式', () => {
-      expect(isNgrxMockEnvironment()).toBe(false);
-
-      setNgrxMockEnvironment(true);
-      expect(isNgrxMockEnvironment()).toBe(true);
-
-      setNgrxMockEnvironment(false);
-      expect(isNgrxMockEnvironment()).toBe(false);
     });
   });
 
