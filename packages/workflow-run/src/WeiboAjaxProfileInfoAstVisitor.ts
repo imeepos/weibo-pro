@@ -106,7 +106,6 @@ export class WeiboAjaxProfileInfoAstVisitor extends WeiboApiClient {
             });
 
             return () => {
-                console.log('[WeiboAjaxProfileInfoAstVisitor] 订阅被取消，触发 AbortSignal');
                 subscription.unsubscribe();
                 abortController.abort();
                 obs.complete();

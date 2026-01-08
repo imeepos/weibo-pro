@@ -86,6 +86,7 @@ export class WeiboAjaxStatusesRepostTimelineAstVisitor extends WeiboApiClient {
                                         return m.create(WeiboRepostEntity, {
                                             ...rest,
                                             user_id: user?.id || null,
+                                            post_id: ast.mid,
                                         });
                                     });
                                     console.log(`[WeiboAjaxStatusesRepostTimelineAstVisitor] ${page} 页 共${entities.length}条数据`);
@@ -118,7 +119,6 @@ export class WeiboAjaxStatusesRepostTimelineAstVisitor extends WeiboApiClient {
             });
 
             return () => {
-                console.log('[WeiboAjaxStatusesRepostTimelineAstVisitor] 订阅被取消，触发 AbortSignal');
                 subscription.unsubscribe();
                 abortController.abort();
                 obs.complete();

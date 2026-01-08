@@ -97,20 +97,16 @@ export class PlaywrightService {
             throw new Error('无法获取页面状态');
         }
 
-        console.log(`[PlaywrightService] 页面状态: readyState=${pageState.readyState}, hasContent=${pageState.hasContent}, title=${pageState.title}`);
-
         // 检查页面内容，检测登录失效
         if (!this.page) {
             throw new Error('页面意外关闭，无法获取URL');
         }
         const currentUrl = this.page.url();
-        console.log(`[PlaywrightService] 当前页面URL: ${currentUrl}`);
 
         if (!this.page) {
             throw new Error('页面意外关闭，无法获取内容');
         }
         const html = await this.page.content();
-        console.log(`[PlaywrightService] 成功获取页面内容，长度: ${html.length}`);
         return html;
     }
     private async setCookiesForPage(cookiesInput: string, url: string): Promise<void> {

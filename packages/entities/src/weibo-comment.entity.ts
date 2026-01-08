@@ -25,6 +25,7 @@ import { WeiboUserEntity } from './weibo-user.entity';
 @Index(['id'], { unique: true })
 @Index(['mid'], { unique: true })
 @Index(['user_id'])
+@Index(['post_id'])
 @Index(['post_author_id'])
 @Index(['reply_to_user_id'])
 @Index(['user_id', 'reply_to_user_id'])
@@ -95,6 +96,10 @@ export class WeiboCommentEntity {
 
   @Column({ type: 'varchar', length: 64, nullable: true })
   mid!: string;
+
+  /** 评论所属的帖子 ID */
+  @Column({ type: 'varchar', length: 64, name: 'post_id', nullable: true, comment: '评论所属的帖子 ID' })
+  post_id!: string | null;
 
   @Column({ type: 'varchar', length: 64, nullable: true })
   idstr!: string;

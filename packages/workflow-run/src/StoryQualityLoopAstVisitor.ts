@@ -142,7 +142,6 @@ export class StoryQualityLoopAstVisitor {
         });
 
       return () => {
-        console.log('[StoryQualityLoopAstVisitor] 订阅被取消');
         subscription.unsubscribe();
         abortController.abort();
         obs.complete();

@@ -42,7 +42,6 @@ export class WeiboLoginAstVisitor {
       });
 
       return () => {
-        console.log('[WeiboLoginAstVisitor] 订阅被取消，清理登录会话');
         this.authService.cancelSession(ast.id);
         obs.complete();
       };

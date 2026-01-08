@@ -16,6 +16,7 @@ import { WeiboUserEntity } from './weibo-user.entity';
 @Index(['mblogid'], { unique: true })
 @Index(['created_at'])
 @Index(['user_id'])
+@Index(['post_id'])
 export class WeiboRepostEntity {
   @PrimaryColumn({ type: 'bigint' })
   id!: number;
@@ -35,6 +36,10 @@ export class WeiboRepostEntity {
   @ManyToOne(() => WeiboUserEntity)
   @JoinColumn({ name: 'user_id' })
   user!: WeiboUserEntity | null;
+
+  /** 被转发的帖子 ID */
+  @Column({ type: 'varchar', length: 64, name: 'post_id', nullable: true, comment: '被转发的帖子 ID' })
+  post_id!: string | null;
 
   @Column({ type: 'jsonb', nullable: true })
   visible!: Record<string, unknown> | null;

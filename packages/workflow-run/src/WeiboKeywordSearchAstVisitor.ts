@@ -73,7 +73,6 @@ export class WeiboKeywordSearchAstVisitor {
             });
 
             return () => {
-                console.log('[WeiboKeywordSearchAstVisitor] 订阅被取消，触发 AbortSignal');
                 subscription.unsubscribe();
                 abortController.abort();
                 obs.complete();

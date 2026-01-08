@@ -27,18 +27,13 @@ export class WeiboHtmlParser {
         html.includes('扫描二维码登录');                      // 登录页面文本
 
       if (isLoginPage) {
-        console.log('[WeiboHtmlParser] 检测到登录失效（登录页面）');
         throw new Error('LOGIN_EXPIRED');
       }
-
-      console.log(`[WeiboHtmlParser] 开始解析 HTML，长度: ${html.length}`);
 
       const $ = cheerio.load(html);
 
       const posts = this.extractPostsInfo($);
       const postIds = posts.map((p) => p.mid);
-
-      console.log(`[WeiboHtmlParser] 提取到 ${posts.length} 条微博`);
 
       // 从 posts 数组中找出最早的时间（即最后一条微博的时间）
       const lastPostTime = posts.reduce<Date | null>((earliest, post) => {
@@ -52,12 +47,8 @@ export class WeiboHtmlParser {
       const currentPage = this.extractCurrentPage($);
       const totalPage = this.extractTotalPage($);
 
-      console.log(`[WeiboHtmlParser] 分页信息: currentPage=${currentPage}, totalPage=${totalPage}, nextPageLink=${nextPageLink}`);
-
       // 修复逻辑：只有在有 posts 且有 nextPageLink 时才认为有下一页
       const hasNextPage = posts.length > 0 && !!nextPageLink && currentPage < totalPage;
-
-      console.log(`[WeiboHtmlParser] hasNextPage=${hasNextPage}`);
 
       return {
         posts,

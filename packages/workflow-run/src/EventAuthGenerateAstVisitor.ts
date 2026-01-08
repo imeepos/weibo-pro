@@ -425,7 +425,6 @@ ${eventListText}
       });
 
       return () => {
-        console.log('[EventAuthGenerateAstVisitor] 订阅被取消，触发 AbortSignal');
         subscription.unsubscribe();
         abortController.abort();
         obs.complete();

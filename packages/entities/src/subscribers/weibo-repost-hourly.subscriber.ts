@@ -7,7 +7,7 @@ import { HourlyStatisticsHelper } from './hourly-statistics.helper';
  *
  * 存在即合理：
  * - 监听转发插入，自动更新小时级统计
- * - 从 analysis_extra 解析帖子 mid，再获取 event_id
+ * - 直接使用 post_id 字段获取 event_id
  */
 @EventSubscriber()
 export class WeiboRepostHourlySubscriber implements EntitySubscriberInterface<WeiboRepostEntity> {
@@ -17,18 +17,11 @@ export class WeiboRepostHourlySubscriber implements EntitySubscriberInterface<We
 
   async afterInsert(event: InsertEvent<WeiboRepostEntity>) {
     const repost = event.entity;
-    if (!repost?.created_at || !repost?.analysis_extra) return;
-
-    // 从 analysis_extra 解析被转发的帖子 mid
-    // 格式: mblog_rt_mid:5252554427467840
-    const midMatch = repost.analysis_extra.match(/mblog_rt_mid:(\d+)/);
-    if (!midMatch) return;
-
-    const postMid = midMatch[1]!;
+    if (!repost?.created_at || !repost?.post_id) return;
 
     const eventId = await HourlyStatisticsHelper.getEventIdByPostMid(
       event.manager,
-      postMid
+      repost.post_id
     );
 
     if (!eventId) return;

@@ -86,7 +86,6 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
             });
 
             return () => {
-                console.log('[WeiboAjaxStatusesCommentAstVisitor] 订阅被取消，触发 AbortSignal');
                 subscription.unsubscribe();
                 abortController.abort();
                 obs.complete();
@@ -119,7 +118,7 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
                 throw new Error('工作流已取消');
             }
 
-            const entities = await this.saveComments(body);
+            const entities = await this.saveComments(body, ast.mid);
 
             console.log(`[WeiboAjaxStatusesCommentAstVisitor] 共${entities.length}个`);
 
@@ -139,7 +138,8 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
                         childAst.max_id = 0;
                         childAst.count = 20;
                         childAst.uid = ast.uid;
-                        await this.visitChildren(childAst, wrappedCtx);
+                        // 传递帖子 ID 供子评论使用
+                        await this.visitChildren(childAst, wrappedCtx, ast.mid);
                     }
                 }
             }
@@ -154,7 +154,7 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
         }
     }
 
-    async visitChildren(ast: WeiboAjaxStatusesCommentAst, _ctx: { abortSignal?: AbortSignal }) {
+    async visitChildren(ast: WeiboAjaxStatusesCommentAst, _ctx: { abortSignal?: AbortSignal }, postId?: string) {
         try {
             while (true) {
                 // 检查取消信号
@@ -164,7 +164,7 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
                 }
 
                 const body = await this.fetchComments(ast);
-                await this.saveComments(body);
+                await this.saveComments(body, postId);
 
                 if (!body.max_id) {
                     break;
@@ -191,7 +191,7 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
         });
     }
 
-    private async saveComments(body: WeiboAjaxStatusesComponentAstResponse): Promise<WeiboCommentEntity[]> {
+    private async saveComments(body: WeiboAjaxStatusesComponentAstResponse, postId?: string): Promise<WeiboCommentEntity[]> {
         return await useEntityManager(async m => {
             const userMap = new Map<number, WeiboUserEntity>();
             body.data.forEach(item => {
@@ -227,6 +227,7 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
                 return m.create(WeiboCommentEntity, {
                     ...rest,
                     user_id: user?.id || null,
+                    post_id: postId || null,
                     post_author_id: postAuthorId,
                     reply_to_user_id: replyToUserId,
                 });

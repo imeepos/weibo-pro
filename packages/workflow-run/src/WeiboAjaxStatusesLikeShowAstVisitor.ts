@@ -122,7 +122,6 @@ export class WeiboAjaxStatusesLikeShowAstVisitor extends WeiboApiClient {
             });
 
             return () => {
-                console.log('[WeiboAjaxStatusesLikeShowAstVisitor] 订阅被取消，触发 AbortSignal');
                 subscription.unsubscribe();
                 abortController.abort();
                 obs.complete();
