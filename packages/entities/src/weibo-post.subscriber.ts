@@ -31,9 +31,19 @@ export class WeiboPostSubscriber implements EntitySubscriberInterface<WeiboPostE
 
   /**
    * 帖子更新后：创建新快照
+   * 只在业务数据更新时创建，process_flags 等内部字段更新不创建
    */
   async afterUpdate(event: UpdateEvent<WeiboPostEntity>) {
-    if (!event.entity) return;
+    if (!event.entity || !event.entity.id) return;
+
+    // 只在实际业务数据（评论/转发/点赞数）更新时创建快照
+    const businessColumns = ['comments_count', 'reposts_count', 'attitudes_count'];
+    const hasBusinessUpdate = event.updatedColumns.some(col =>
+      businessColumns.includes(col.propertyName)
+    );
+
+    if (!hasBusinessUpdate) return;
+
     await this.createSnapshot(event.entity as WeiboPostEntity, event.manager);
   }
 
