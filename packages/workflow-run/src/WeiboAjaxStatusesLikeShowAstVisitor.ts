@@ -65,6 +65,8 @@ export class WeiboAjaxStatusesLikeShowAstVisitor extends WeiboApiClient {
                             console.warn(`[WeiboAjaxStatusesLikeShowAstVisitor] 参数无效，跳过处理: mid=${ast.mid}, uid=${ast.uid}`);
                         } else {
                             let page = 1;
+                            let consecutiveExistingCount = 0;
+
                             for await (const body of this.fetchWithPagination<WeiboStatusLikeShowResponse>({
                                 buildUrl: (p) => {
                                     page = p;
@@ -92,9 +94,33 @@ export class WeiboAjaxStatusesLikeShowAstVisitor extends WeiboApiClient {
                                             targetUserWeiboId: ast.uid
                                         } as any)
                                     );
+
+                                    // 检查是否有新数据
+                                    const existingCount = await m.count(WeiboLikeEntity, {
+                                        where: likeEntities.map(e => ({
+                                            userWeiboId: e.userWeiboId,
+                                            targetWeiboId: e.targetWeiboId
+                                        }))
+                                    });
+                                    const newCount = likeEntities.length - existingCount;
+
+                                    console.log(`[${page}]保存${likeEntities.length}条点赞记录，新增${newCount}条`);
+
+                                    if (newCount === 0) {
+                                        consecutiveExistingCount++;
+                                        console.log(`[WeiboAjaxStatusesLikeShowAstVisitor] 连续${consecutiveExistingCount}页无新数据`);
+                                    } else {
+                                        consecutiveExistingCount = 0;
+                                    }
+
                                     await m.upsert(WeiboLikeEntity, likeEntities as any, ['userWeiboId', 'targetWeiboId']);
-                                    console.log(`[${page}]保存${likeEntities.length}条点赞记录`);
                                 });
+
+                                // 连续5页无新数据，提前结束
+                                if (consecutiveExistingCount >= 5) {
+                                    console.log(`[WeiboAjaxStatusesLikeShowAstVisitor] 连续5页无新数据，停止爬取`);
+                                    break;
+                                }
                             }
                         }
                     } catch (e) {

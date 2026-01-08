@@ -62,6 +62,8 @@ export class WeiboAjaxStatusesRepostTimelineAstVisitor extends WeiboApiClient {
                             console.warn(`[WeiboAjaxStatusesRepostTimelineAstVisitor] 参数无效，跳过处理: mid=${ast.mid}, uid=${ast.uid}`);
                         } else {
                             let page = 1;
+                            let consecutiveExistingCount = 0;
+
                             for await (const body of this.fetchWithPagination<WeiboAjaxStatusesRepostTimelineResponse>({
                                 buildUrl: (p) => {
                                     page = p;
@@ -89,9 +91,31 @@ export class WeiboAjaxStatusesRepostTimelineAstVisitor extends WeiboApiClient {
                                             post_id: ast.mid,
                                         });
                                     });
-                                    console.log(`[WeiboAjaxStatusesRepostTimelineAstVisitor] ${page} 页 共${entities.length}条数据`);
+
+                                    // 检查是否有新数据
+                                    const ids = entities.map(e => e.id).filter(Boolean);
+                                    const existingCount = ids.length > 0
+                                        ? await m.count(WeiboRepostEntity, { where: ids.map(id => ({ id })) })
+                                        : 0;
+                                    const newCount = entities.length - existingCount;
+
+                                    console.log(`[WeiboAjaxStatusesRepostTimelineAstVisitor] ${page} 页 共${entities.length}条数据，新增${newCount}条`);
+
+                                    if (newCount === 0) {
+                                        consecutiveExistingCount++;
+                                        console.log(`[WeiboAjaxStatusesRepostTimelineAstVisitor] 连续${consecutiveExistingCount}页无新数据`);
+                                    } else {
+                                        consecutiveExistingCount = 0;
+                                    }
+
                                     await m.upsert(WeiboRepostEntity, entities as any, ['id']);
                                 });
+
+                                // 连续5页无新数据，提前结束
+                                if (consecutiveExistingCount >= 5) {
+                                    console.log(`[WeiboAjaxStatusesRepostTimelineAstVisitor] 连续5页无新数据，停止爬取`);
+                                    break;
+                                }
                             }
                         }
                     } catch (e) {

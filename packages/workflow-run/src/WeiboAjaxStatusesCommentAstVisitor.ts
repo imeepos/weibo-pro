@@ -105,6 +105,8 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
             return;
         }
 
+        let consecutiveExistingCount = 0;
+
         while (true) {
             // 检查取消信号（循环开始）
             if (wrappedCtx.abortSignal?.aborted) {
@@ -118,7 +120,14 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
                 throw new Error('工作流已取消');
             }
 
-            const entities = await this.saveComments(body, ast.mid);
+            const entities = await this.saveComments(body, ast.mid, (newCount) => {
+                if (newCount === 0) {
+                    consecutiveExistingCount++;
+                    console.log(`[WeiboAjaxStatusesCommentAstVisitor] 连续${consecutiveExistingCount}次无新数据`);
+                } else {
+                    consecutiveExistingCount = 0;
+                }
+            });
 
             console.log(`[WeiboAjaxStatusesCommentAstVisitor] 共${entities.length}个`);
 
@@ -142,6 +151,12 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
                         await this.visitChildren(childAst, wrappedCtx, ast.mid);
                     }
                 }
+            }
+
+            // 连续5次无新数据，提前结束
+            if (consecutiveExistingCount >= 5) {
+                console.log(`[WeiboAjaxStatusesCommentAstVisitor] 连续5次无新数据，停止爬取`);
+                break;
             }
 
             if (!body.max_id) {
@@ -191,7 +206,11 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
         });
     }
 
-    private async saveComments(body: WeiboAjaxStatusesComponentAstResponse, postId?: string): Promise<WeiboCommentEntity[]> {
+    private async saveComments(
+        body: WeiboAjaxStatusesComponentAstResponse,
+        postId?: string,
+        onNewCount?: (newCount: number) => void
+    ): Promise<WeiboCommentEntity[]> {
         return await useEntityManager(async m => {
             const userMap = new Map<number, WeiboUserEntity>();
             body.data.forEach(item => {
@@ -232,6 +251,20 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
                     reply_to_user_id: replyToUserId,
                 });
             });
+
+            // 检查是否有新数据
+            if (onNewCount && entities.length > 0) {
+                const ids = entities.map(e => e.id).filter(Boolean);
+                if (ids.length > 0) {
+                    const existingCount = await m.count(WeiboCommentEntity, {
+                        where: ids.map(id => ({ id }))
+                    });
+                    onNewCount(entities.length - existingCount);
+                } else {
+                    onNewCount(0);
+                }
+            }
+
             await m.upsert(WeiboCommentEntity, entities as any, ['id']);
             return entities;
         });
