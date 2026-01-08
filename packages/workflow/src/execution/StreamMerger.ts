@@ -28,23 +28,18 @@ export class StreamMerger {
         return new Observable(subscriber => {
             let completedCount = 0;
             const total = sources.length;
-            console.log(`[StreamMerger] 开始合并 ${total} 个源流`);
 
             const subscriptions = sources.map((source, index) =>
                 source.subscribe({
                     next: value => {
-                        console.log(`[StreamMerger] 源流 ${index} 发射值:`, JSON.stringify(value).substring(0, 100));
                         subscriber.next(value);
                     },
                     error: err => {
-                        console.log(`[StreamMerger] 源流 ${index} 发生错误:`, err?.message);
                         subscriber.error(err);
                     },
                     complete: () => {
                         completedCount++;
-                        console.log(`[StreamMerger] 源流 ${index} 完成，已完成 ${completedCount}/${total}`);
                         if (completedCount === total) {
-                            console.log(`[StreamMerger] 所有源流都已完成，触发 complete`);
                             subscriber.complete();
                         }
                     }

@@ -58,14 +58,14 @@ describe('Error Handling', () => {
       entryNodeIds: ['n1']
     });
 
-    try {
-      await firstValueFrom(
-        executeWorkflow(workflow, {}).pipe(toArray())
-      );
-      expect.fail('Should have thrown error');
-    } catch (error: any) {
-      expect(error.message).toContain('Test error');
-    }
+    const events = await firstValueFrom(
+      executeWorkflow(workflow, {}).pipe(toArray())
+    );
+
+    // 验证 node_fail 事件被发射
+    expect(events.some(e => e.type === 'node_fail' && e.id === 'n1')).toBe(true);
+    // 验证工作流状态为失败
+    expect(workflow.state).toBe('fail');
   });
 
   it('workflow fails when node fails', async () => {

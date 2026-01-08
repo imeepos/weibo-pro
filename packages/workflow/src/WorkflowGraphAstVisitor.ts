@@ -52,7 +52,6 @@ export class WorkflowGraphAstVisitor {
 
         return input$.pipe(
             concatMap(input => {
-                console.log(`[WorkflowGraphAstVisitor] concatMap 触发，外部输入:`, input);
                 ast.state = 'running';
                 ast.error = undefined;
 
@@ -153,7 +152,6 @@ export class WorkflowGraphAstVisitor {
             if (inputSources.length === 0) {
                 // 没有输入源：使用节点自身的静态值作为初始输入
                 const staticInput = this.nodeInputBuilder.buildNodeInput(node, {});
-                console.log(`[buildNodeInputStreams] 节点 ${node.id} 无输入源，使用静态值:`, staticInput);
                 nodeInputStreams.set(node.id, of(staticInput));
             } else if (inputSources.length === 1) {
                 nodeInputStreams.set(node.id, inputSources[0]!);

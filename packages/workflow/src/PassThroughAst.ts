@@ -180,7 +180,6 @@ export class PassThroughAstVisitor {
             } else {
               ast.output = inputData.input;
             }
-            console.log({ output: ast.output })
             obs.next({ type: 'node_emit', id: ast.id, data: { output: ast.output, emitCount: ast.emitCount } });
           }
         },

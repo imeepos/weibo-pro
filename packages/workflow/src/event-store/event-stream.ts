@@ -14,6 +14,9 @@ export class WorkflowEventStream {
     /** 完整事件流 */
     private _events$ = new BehaviorSubject<NodeEvent[]>([]);
 
+    /** 最大事件数（循环覆盖） */
+    private static readonly MAX_EVENTS = 1000;
+
     /** 回放索引（-1 = 实时模式，显示所有事件） */
     private _replayIndex$ = new BehaviorSubject<number>(-1);
 
@@ -23,7 +26,12 @@ export class WorkflowEventStream {
     /** 追加事件 */
     emit(event: NodeEvent): void {
         if (!this._storeEnabled$.value) return;
-        this._events$.next([...this._events$.value, event]);
+        const currentEvents = this._events$.value;
+        // 超过1000条时，移除最旧的，保持最新1000条
+        const newEvents = currentEvents.length >= WorkflowEventStream.MAX_EVENTS
+            ? [...currentEvents.slice(1), event]
+            : [...currentEvents, event];
+        this._events$.next(newEvents);
     }
 
     /** 批量追加事件（恢复时使用） */

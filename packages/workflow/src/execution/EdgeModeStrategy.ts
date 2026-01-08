@@ -25,7 +25,6 @@ export class MergeStrategy implements IEdgeModeStrategy {
         return merge(
             ...sources.map((source, sourceIndex) =>
                 source.pipe(
-                    tap(() => console.log(`[MergeStrategy] 边 ${edges[sourceIndex]!.toProperty} 发射值`)),
                     map(value => ({ [edges[sourceIndex]!.toProperty!]: value }))
                 )
             )
@@ -41,7 +40,6 @@ export class MergeStrategy implements IEdgeModeStrategy {
 export class ZipStrategy implements IEdgeModeStrategy {
     combine(sources: Observable<any>[], edges: IEdge[]): Observable<any> {
         return zip(...sources).pipe(
-            tap(() => console.log(`[ZipStrategy] 所有边都发射了值`)),
             map(values => this.mapToObject(values, edges))
         );
     }
