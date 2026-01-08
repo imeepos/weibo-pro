@@ -19,9 +19,9 @@ export class WeiboRepostHourlySubscriber implements EntitySubscriberInterface<We
     const repost = event.entity;
     if (!repost?.created_at || !repost?.analysis_extra) return;
 
-    // 从 analysis_extra 解析帖子 mid
-    // 格式: author_uid:3340034844|mid:5252774730141085|rid:5226413623670630324
-    const midMatch = repost.analysis_extra.match(/\bmid:(\d+)/);
+    // 从 analysis_extra 解析被转发的帖子 mid
+    // 格式: mblog_rt_mid:5252554427467840
+    const midMatch = repost.analysis_extra.match(/mblog_rt_mid:(\d+)/);
     if (!midMatch) return;
 
     const postMid = midMatch[1]!;
