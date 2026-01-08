@@ -17,11 +17,18 @@ export class WeiboCommentHourlySubscriber implements EntitySubscriberInterface<W
 
   async afterInsert(event: InsertEvent<WeiboCommentEntity>) {
     const comment = event.entity;
-    if (!comment?.mid || !comment?.created_at) return;
+    if (!comment?.created_at || !comment?.analysis_extra) return;
+
+    // 从 analysis_extra 解析帖子 mid
+    // 格式: author_uid:3340034844|mid:5252774730141085|rid:5226413623670630324
+    const midMatch = comment.analysis_extra.match(/\bmid:(\d+)/);
+    if (!midMatch) return;
+
+    const postMid = midMatch[1]!;
 
     const eventId = await HourlyStatisticsHelper.getEventIdByPostMid(
       event.manager,
-      comment.mid
+      postMid
     );
 
     if (!eventId) return;
