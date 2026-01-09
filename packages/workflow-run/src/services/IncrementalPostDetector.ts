@@ -94,8 +94,13 @@ export class IncrementalPostDetector {
    * - 优雅的格式转换
    * - 可靠的错误处理
    */
-  private parsePostTime(timeStr: string): Date {
+  private parsePostTime(time: string | Date): Date {
     try {
+      if (time instanceof Date) {
+        return time;
+      }
+
+      const timeStr = time;
       // 微博时间格式："Mon Dec 11 15:30:00 +0800 2023"
       if (timeStr.includes('+0800')) {
         return new Date(timeStr);
@@ -116,7 +121,7 @@ export class IncrementalPostDetector {
       console.warn(`[IncrementalDetector] 无法解析时间格式: ${timeStr}`);
       return new Date();
     } catch (error) {
-      console.warn(`[IncrementalDetector] 时间解析失败: ${timeStr}`, error);
+      console.warn(`[IncrementalDetector] 时间解析失败: ${time}`, error);
       return new Date();
     }
   }

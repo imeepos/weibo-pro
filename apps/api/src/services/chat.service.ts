@@ -12,8 +12,18 @@ export class ChatService {
 
   constructor() {
     const databaseUrl = process.env.DATABASE_URL || '';
-    console.log('[ChatService] 初始化，数据库 URL:', databaseUrl ? '已配置' : '未配置');
-    this.agent = new ChatAgent(databaseUrl);
+    // API 服务内部调用，直接使用相对路径或 localhost
+    const llmProxyUrl = 'http://localhost:8089/api/auth/llm/openai';
+
+    console.log('[ChatService] 初始化:', {
+      databaseUrl: databaseUrl ? '已配置' : '未配置',
+      llmProxyUrl
+    });
+
+    this.agent = new ChatAgent(databaseUrl, {
+      baseURL: llmProxyUrl,
+      modelName: 'deepseek-ai/DeepSeek-V3.2'
+    });
   }
 
   async chat(request: ChatRequest): Promise<string> {

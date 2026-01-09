@@ -4,6 +4,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import type { WorkflowGraphAst } from '@sker/workflow'
 import { Subject, merge, debounceTime, distinctUntilChanged, filter, map, tap } from 'rxjs'
 import { WorkflowSettingsDialog as WorkflowSettingsDialogUI } from '@sker/ui/components/workflow'
+import { exportWorkflowForAi } from '../../utils/ai-export'
+import { generateWorkflowSettings } from '../../utils/ai-fill'
 
 export interface WorkflowSettingsDialogProps {
   visible: boolean
@@ -43,6 +45,7 @@ export function WorkflowSettingsDialog({
   const [newTag, setNewTag] = useState('')
   const [nameError, setNameError] = useState('')
   const [saving, setSaving] = useState(false)
+  const [aiFilling, setAiFilling] = useState(false)
 
   // 表单验证流（仅处理验证，不影响输入框值）
   const nameValidation$ = nameInput$.pipe(
@@ -160,6 +163,32 @@ export function WorkflowSettingsDialog({
     }
   }, [name, description, customColor, color, tags, workflow, onSave, onClose])
 
+  const handleAiFill = useCallback(async () => {
+    if (!workflow) return
+
+    setAiFilling(true)
+    setNameError('')
+
+    try {
+      const workflowJson = exportWorkflowForAi(workflow, { maxTextLength: 50 })
+      const result = await generateWorkflowSettings(workflowJson)
+
+      if (result.name) setName(result.name)
+      if (result.description) setDescription(result.description)
+      if (result.color) {
+        setColor(result.color)
+        setCustomColor('')
+      }
+      if (result.tags?.length) setTags(result.tags.slice(0, 10))
+
+    } catch (error) {
+      console.error('AI 自动填充失败:', error)
+      setNameError('AI 自动填充失败，请重试')
+    } finally {
+      setAiFilling(false)
+    }
+  }, [workflow])
+
   // 事件处理函数
   const handleNameChange = (value: string) => {
     setName(value)
@@ -212,6 +241,7 @@ export function WorkflowSettingsDialog({
       newTag={newTag}
       nameError={nameError}
       saving={saving}
+      aiFilling={aiFilling}
       onNameChange={handleNameChange}
       onDescriptionChange={handleDescriptionChange}
       onColorChange={handleColorChange}
@@ -220,6 +250,7 @@ export function WorkflowSettingsDialog({
       onAddTag={handleAddTag}
       onRemoveTag={handleRemoveTag}
       onSave={handleSave}
+      onAiFill={handleAiFill}
       onKeyDown={handleKeyDown}
     />
   )

@@ -47,6 +47,7 @@
     "@radix-ui/react-switch": "^1.1.5",
     "@radix-ui/react-tooltip": "^1.1.9",
     "@sker/core": "workspace:*",
+    "@sker/json-harmony": "workspace:*",
     "@sker/sdk": "workspace:*",
     "@sker/ui": "workspace:*",
     "@sker/workflow": "workspace:*",

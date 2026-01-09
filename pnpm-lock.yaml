@@ -2144,6 +2144,9 @@ importers:
       '@sker/core':
         specifier: workspace:*
         version: link:../core
+      '@sker/json-harmony':
+        specifier: workspace:*
+        version: link:../json-harmony
       '@sker/sdk':
         specifier: workspace:*
         version: link:../sdk

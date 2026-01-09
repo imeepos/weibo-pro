@@ -40,7 +40,9 @@ function hashData(data: WordCloudItem[]): string {
   let hash = 0
   for (let i = 0; i < Math.min(data.length, 50); i++) {
     const item = data[i]
-    hash = (((hash << 5) - hash) + item.name.length + item.value) | 0
+    if (item) {
+      hash = (((hash << 5) - hash) + item.name.length + item.value) | 0
+    }
   }
   return `${data.length}-${hash}`
 }
@@ -124,24 +126,15 @@ const WordCloud = React.forwardRef<WordCloudRef, WordCloudProps>(({
           left: "center",
           top: "center",
           drawOutOfBound: false,
-          shrinkToFit: true,
           layoutAnimation: animated,
           textStyle: {
             fontFamily: "Inter, sans-serif",
             fontWeight: "bold",
             color: "#6b7280",
-            emphasis: {
-              shadowBlur: 10,
-              shadowColor: "#333",
-            },
           },
           emphasis: {
             focus: "self" as const,
-            textStyle: {
-              shadowBlur: 10,
-              shadowColor: "rgba(0, 0, 0, 0.5)",
-            },
-          },
+          } as any,
           data: processedData,
         },
       ],

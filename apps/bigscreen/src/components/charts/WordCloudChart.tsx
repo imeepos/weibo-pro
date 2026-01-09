@@ -1,4 +1,6 @@
 import React from "react"
+import { useNavigate } from "react-router-dom"
+import { Maximize2 } from "lucide-react"
 import { cn, getSentimentColorHex } from "@/utils"
 import { WordCloud, type WordCloudItem, type WordCloudRef } from "@sker/ui/components/ui/word-cloud"
 import { ChartState } from '@sker/ui/components/ui/chart-state'
@@ -40,8 +42,13 @@ const WordCloudChart = React.forwardRef<WordCloudChartRef, WordCloudChartProps>(
   maxWords = 100,
   data
 }, ref) => {
+  const navigate = useNavigate()
   const dataRef = React.useRef(data)
   const wordCloudRef = React.useRef<WordCloudRef>(null)
+
+  const handleFullscreen = () => {
+    navigate('/word-cloud')
+  }
 
   React.useEffect(() => {
     dataRef.current = data
@@ -94,24 +101,34 @@ const WordCloudChart = React.forwardRef<WordCloudChartRef, WordCloudChartProps>(
   }))
 
   return (
-    <ChartState
-      loading={false}
-      error={null}
-      empty={!data || data.length === 0}
-      loadingText="加载词云数据..."
-      emptyText="暂无词云数据"
-      onRetry={() => {}}
-      className={className}
-    >
-      <WordCloud
-        ref={wordCloudRef}
-        data={wordCloudData}
-        height={height || undefined}
-        className={cn("w-full h-full", className)}
-        tooltipFormatter={tooltipFormatter}
-        animated={true}
-      />
-    </ChartState>
+    <div className="relative h-full w-full">
+      <button
+        onClick={handleFullscreen}
+        className="absolute top-2 right-2 z-10 p-2 rounded-lg bg-background/80 hover:bg-background transition-opacity opacity-0 hover:opacity-100 group"
+        title="全屏查看"
+      >
+        <Maximize2 className="w-4 h-4 text-foreground" />
+      </button>
+
+      <ChartState
+        loading={false}
+        error={null}
+        empty={!data || data.length === 0}
+        loadingText="加载词云数据..."
+        emptyText="暂无词云数据"
+        onRetry={() => {}}
+        className={className}
+      >
+        <WordCloud
+          ref={wordCloudRef}
+          data={wordCloudData}
+          height={height || undefined}
+          className={cn("w-full h-full", className)}
+          tooltipFormatter={tooltipFormatter}
+          animated={true}
+        />
+      </ChartState>
+    </div>
   )
 })
 

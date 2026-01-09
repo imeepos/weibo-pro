@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { X, Workflow, Palette, FileText, Tag, Loader2 } from 'lucide-react'
+import { X, Workflow, Palette, FileText, Tag, Loader2, WandSparkles } from 'lucide-react'
 import { cn } from '@sker/ui/lib/utils'
 import { Dialog, DialogContent, DialogOverlay, DialogPortal, DialogTitle } from '../ui/dialog'
 import { VisuallyHidden } from '../ui/visually-hidden'
@@ -21,6 +21,7 @@ export interface WorkflowSettingsDialogProps {
   newTag: string
   nameError?: string
   saving: boolean
+  aiFilling?: boolean
   onNameChange: (value: string) => void
   onDescriptionChange: (value: string) => void
   onColorChange: (color: string) => void
@@ -29,6 +30,7 @@ export interface WorkflowSettingsDialogProps {
   onAddTag: () => void
   onRemoveTag: (tag: string) => void
   onSave: () => void
+  onAiFill?: () => void
   onKeyDown?: (e: React.KeyboardEvent) => void
 }
 
@@ -54,6 +56,7 @@ export function WorkflowSettingsDialog({
   newTag,
   nameError,
   saving,
+  aiFilling,
   onNameChange,
   onDescriptionChange,
   onColorChange,
@@ -62,6 +65,7 @@ export function WorkflowSettingsDialog({
   onAddTag,
   onRemoveTag,
   onSave,
+  onAiFill,
   onKeyDown,
 }: WorkflowSettingsDialogProps) {
   if (!open) return null
@@ -105,15 +109,33 @@ export function WorkflowSettingsDialog({
           <div className="max-h-[70vh] space-y-6 overflow-y-auto p-6">
             {/* 名称 */}
             <div className="space-y-2">
-              <Label className="text-foreground">
-                <FileText className="h-4 w-4 text-blue-400" />
-                工作流名称
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label className="text-foreground">
+                  <FileText className="h-4 w-4 text-blue-400" />
+                  工作流名称
+                </Label>
+                {onAiFill && (
+                  <Button
+                    onClick={onAiFill}
+                    disabled={aiFilling}
+                    variant="outline"
+                    size="sm"
+                    className="h-7 gap-1.5 text-xs border-purple-200 text-purple-700 hover:bg-purple-50 dark:border-purple-800 dark:text-purple-300 dark:hover:bg-purple-950"
+                  >
+                    {aiFilling ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <WandSparkles className="h-3 w-3" />
+                    )}
+                    AI 自动填充
+                  </Button>
+                )}
+              </div>
               <Input
                 type="text"
                 value={name}
                 onChange={(e) => onNameChange(e.target.value)}
-                placeholder="请输入工作流名称"
+                placeholder="请输入工作流名称或使用 AI 自动生成"
                 aria-invalid={!!nameError}
                 className={cn(
                   'bg-background border-input',
