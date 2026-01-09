@@ -285,28 +285,16 @@ export class WorkflowGraphAstVisitor {
         // withLatestFrom 只在主流（router）发射时触发，并携带其他流的最新值
         // startWith(undefined) 确保即使其他流还没发射过值，router 也能立即触发
         return routerStream$.pipe(
-            tap((routerValue) => {
-                console.log(`[buildRouterWithOtherEdges] Router 边 ${routerEdge.toProperty} 触发, 值:`, routerValue);
-                console.log(`[buildRouterWithOtherEdges] 其他边数量:`, otherEdges.length);
-                otherEdges.forEach((e, i) => {
-                    console.log(`[buildRouterWithOtherEdges] 其他边[${i}]: ${e.fromProperty} → ${e.toProperty}`);
-                });
-            }),
             withLatestFrom(...otherValueStreams),
             map(([routerValue, ...otherValues]) => {
                 const result: Record<string, any> = {};
                 result[routerEdge.toProperty!] = routerValue;
-
-                console.log(`[buildRouterWithOtherEdges] Router 值:`, routerValue);
                 otherValues.forEach((value, index) => {
                     const otherEdge = otherEdges[index];
-                    console.log(`[buildRouterWithOtherEdges] 其他边[${index}] ${otherEdge?.toProperty} 值:`, value);
                     if (otherEdge?.toProperty && value !== undefined) {
                         result[otherEdge.toProperty] = value;
                     }
                 });
-
-                console.log(`[buildRouterWithOtherEdges] 最终合并结果:`, JSON.stringify(result));
                 return result;
             })
         );

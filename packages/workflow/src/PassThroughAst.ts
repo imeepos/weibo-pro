@@ -90,12 +90,10 @@ export class PassThroughAstVisitor {
 
       const subscription = input$.subscribe({
         next: (inputData) => {
-          console.log(`[PassThroughAst] 接收到输入:`, JSON.stringify(inputData));
           // 根据 mode 决定条件判断逻辑
           const enableConditions = Array.isArray(inputData.enable) ? inputData.enable : [inputData.enable];
           const mode = inputData.mode || 'some';
           const threshold = inputData.threshold ?? 0.5;
-          console.log(`[PassThroughAst] enable条件:`, enableConditions, `mode: ${mode}`);
 
           let shouldPass = false;
 
@@ -175,7 +173,6 @@ export class PassThroughAstVisitor {
             }
           }
 
-          console.log(`[PassThroughAst] shouldPass:`, shouldPass);
           if (shouldPass) {
             ast.emitCount += 1;
             if (Array.isArray(inputData.input) && inputData.input.length === 1) {
@@ -183,10 +180,7 @@ export class PassThroughAstVisitor {
             } else {
               ast.output = inputData.input;
             }
-            console.log(`[PassThroughAst] 发射输出:`, ast.output, `emitCount: ${ast.emitCount}`);
             obs.next({ type: 'node_emit', id: ast.id, data: { output: ast.output, emitCount: ast.emitCount } });
-          } else {
-            console.log(`[PassThroughAst] 条件不满足，不发射`);
           }
         },
         error: (error) => {

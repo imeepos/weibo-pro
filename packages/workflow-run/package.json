@@ -47,6 +47,7 @@
     "@sker/redis": "workspace:*",
     "@sker/workflow": "workspace:*",
     "@sker/workflow-ast": "workspace:*",
+    "@sker/sdk": "workspace:*",
     "cheerio": "^1.1.2",
     "deepagents": "^1.1.1",
     "execa": "^8.0.0",

@@ -2050,6 +2050,9 @@ importers:
       '@sker/redis':
         specifier: workspace:*
         version: link:../redis
+      '@sker/sdk':
+        specifier: workspace:*
+        version: link:../sdk
       '@sker/workflow':
         specifier: workspace:*
         version: link:../workflow
