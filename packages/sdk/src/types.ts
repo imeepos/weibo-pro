@@ -198,6 +198,54 @@ export interface EventDetail {
   successFactors: EventSuccessFactor[];
 }
 
+// 新增：事件 NLP 深度分析类型
+export interface EventSentimentHotness {
+  postId: string
+  sentimentScore: number // -1 到 1，负数负面，正数正面
+  hotness: number
+  timestamp: string
+}
+
+export interface EventSentimentDistribution {
+  positive: { count: number; percentage: number }
+  negative: { count: number; percentage: number }
+  neutral: { count: number; percentage: number }
+}
+
+export interface EventSentimentIntensity {
+  confidence: number
+  count: number
+}
+
+export interface EventKeywordTimeSeries {
+  keyword: string
+  timeData: Array<{
+    timestamp: string
+    weight: number
+  }>
+}
+
+export interface EventKeywordBySentiment {
+  keyword: string
+  weight: number
+  sentiment: 'positive' | 'negative' | 'neutral'
+  count: number
+}
+
+export interface EventNegativeKeywordAlert {
+  keyword: string
+  weight: number
+  count: number
+  trend: 'rising' | 'stable' | 'falling'
+}
+
+export interface EventEventTypeDistribution {
+  eventType: string
+  count: number
+  confidence: number
+  avgSentiment: number
+}
+
 export interface InfluenceUser {
   userId: string;
   username: string;

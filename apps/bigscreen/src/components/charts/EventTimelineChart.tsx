@@ -123,7 +123,7 @@ const EventTimelineChart: React.FC<EventTimelineChartProps> = ({
                     <div className="flex-1">
                       <div className="flex items-center space-x-3 mb-2">
                         <span className="text-sm font-medium text-primary bg-primary/10 px-2 py-1 rounded">
-                          {item.time}
+                          {item.time instanceof Date ? item.time.toLocaleString() : item.time}
                         </span>
                         <span className={cn(
                           'px-2 py-1 text-xs rounded-full',

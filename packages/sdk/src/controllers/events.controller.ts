@@ -10,7 +10,14 @@ import type {
   TimeSeriesData,
   TrendAnalysis,
   TimeRange,
-  PaginatedResponse
+  PaginatedResponse,
+  EventSentimentHotness,
+  EventSentimentDistribution,
+  EventSentimentIntensity,
+  EventKeywordTimeSeries,
+  EventKeywordBySentiment,
+  EventNegativeKeywordAlert,
+  EventEventTypeDistribution
 } from '../types'
 
 @Controller('events')
@@ -71,5 +78,42 @@ export class EventsController {
   @Get(':id')
   getEventDetail(@Param('id') id: string): Promise<EventDetail> {
     throw new Error('method getEventDetail not implements')
+  }
+
+  // 新增：NLP 深度分析接口
+
+  @Get(':id/sentiment-hotness')
+  getSentimentHotness(@Param('id') id: string): Promise<EventSentimentHotness[]> {
+    throw new Error('method getSentimentHotness not implements')
+  }
+
+  @Get(':id/sentiment-distribution')
+  getSentimentDistribution(@Param('id') id: string): Promise<EventSentimentDistribution> {
+    throw new Error('method getSentimentDistribution not implements')
+  }
+
+  @Get(':id/sentiment-intensity')
+  getSentimentIntensity(@Param('id') id: string): Promise<EventSentimentIntensity[]> {
+    throw new Error('method getSentimentIntensity not implements')
+  }
+
+  @Get(':id/keywords-timeseries')
+  getKeywordsTimeSeries(@Param('id') id: string, @Query('topN') topN?: number): Promise<EventKeywordTimeSeries[]> {
+    throw new Error('method getKeywordsTimeSeries not implements')
+  }
+
+  @Get(':id/keywords-by-sentiment')
+  getKeywordsBySentiment(@Param('id') id: string): Promise<EventKeywordBySentiment[]> {
+    throw new Error('method getKeywordsBySentiment not implements')
+  }
+
+  @Get(':id/negative-keywords')
+  getNegativeKeywords(@Param('id') id: string, @Query('threshold') threshold?: number): Promise<EventNegativeKeywordAlert[]> {
+    throw new Error('method getNegativeKeywords not implements')
+  }
+
+  @Get(':id/event-types')
+  getEventTypes(@Param('id') id: string): Promise<EventEventTypeDistribution[]> {
+    throw new Error('method getEventTypes not implements')
   }
 }

@@ -10,6 +10,13 @@ import type {
   TrendAnalysis,
   InfluenceUser,
   GeographicDistribution,
+  EventSentimentHotness,
+  EventSentimentDistribution,
+  EventSentimentIntensity,
+  EventKeywordTimeSeries,
+  EventKeywordBySentiment,
+  EventNegativeKeywordAlert,
+  EventEventTypeDistribution,
 } from './types';
 import { EventQueryService } from './event-query.service';
 import { EventAnalyticsService } from './event-analytics.service';
@@ -144,5 +151,35 @@ export class EventsService {
     id: string
   ): Promise<Array<{ keyword: string; weight: number; sentiment: string }>> {
     return await this.queryService.getEventKeywords(id);
+  }
+
+  // 新增：NLP 深度分析接口
+
+  async getSentimentHotness(id: string): Promise<EventSentimentHotness[]> {
+    return await this.queryService.getSentimentHotness(id);
+  }
+
+  async getSentimentDistribution(id: string): Promise<EventSentimentDistribution> {
+    return await this.queryService.getSentimentDistribution(id);
+  }
+
+  async getSentimentIntensity(id: string): Promise<EventSentimentIntensity[]> {
+    return await this.queryService.getSentimentIntensity(id);
+  }
+
+  async getKeywordsTimeSeries(id: string, topN?: number): Promise<EventKeywordTimeSeries[]> {
+    return await this.queryService.getKeywordsTimeSeries(id, topN);
+  }
+
+  async getKeywordsBySentiment(id: string): Promise<EventKeywordBySentiment[]> {
+    return await this.queryService.getKeywordsBySentiment(id);
+  }
+
+  async getNegativeKeywords(id: string, threshold?: number): Promise<EventNegativeKeywordAlert[]> {
+    return await this.queryService.getNegativeKeywords(id, threshold);
+  }
+
+  async getEventTypes(id: string): Promise<EventEventTypeDistribution[]> {
+    return await this.queryService.getEventTypes(id);
   }
 }

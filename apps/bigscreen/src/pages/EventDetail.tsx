@@ -37,6 +37,9 @@ import PropagationPathChart from '@/components/charts/PropagationPathChart';
 import EventTimelineChart from '@/components/charts/EventTimelineChart';
 import EventDevelopmentChart from '@/components/charts/EventDevelopmentChart';
 import InfluenceNetworkFlow from '@/components/charts/InfluenceNetworkFlow';
+import KeywordHeatmapChart from '@/components/charts/KeywordHeatmapChart';
+import SentimentHotnessScatterChart from '@/components/charts/SentimentHotnessScatterChart';
+import SentimentIntensityChart from '@/components/charts/SentimentIntensityChart';
 
 // 时间序列数据接口 - 与 TimeSeriesChart 组件期望的格式匹配
 interface TimeSeriesDataPoint {
@@ -154,7 +157,14 @@ const EventDetail: React.FC = () => {
   const [influenceUsers, setInfluenceUsers] = useState<InfluenceUser[]>([]);
   const [geographicData, setGeographicData] = useState<GeographicDataPoint[]>([]);
   const [keywordData, setKeywordData] = useState<Array<{ keyword: string; weight: number; sentiment: 'positive' | 'negative' | 'neutral' }>>([]);
-  type EventTab = 'overview' | 'timeline' | 'propagation' | 'analysis' | 'development';
+
+  // 新增状态
+  const [sentimentHotnessData, setSentimentHotnessData] = useState<Array<{ postId: string; sentimentScore: number; hotness: number; timestamp: string }>>([]);
+  const [sentimentIntensityData, setSentimentIntensityData] = useState<Array<{ confidence: number; count: number }>>([]);
+  const [keywordTimeSeriesData, setKeywordTimeSeriesData] = useState<Array<{ keyword: string; timeData: Array<{ timestamp: string; weight: number }> }>>([]);
+  const [keywordsBySentimentData, setKeywordsBySentimentData] = useState<Array<{ keyword: string; weight: number; sentiment: 'positive' | 'negative' | 'neutral'; count: number }>>([]);
+
+  type EventTab = 'overview' | 'timeline' | 'propagation' | 'analysis' | 'development' | 'sentiment';
   const [activeTab, setActiveTab] = useState<EventTab>('overview');
   const sentimentLevels = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
   const toSentimentLevel = (value: number) => {
@@ -167,6 +177,7 @@ const EventDetail: React.FC = () => {
     { id: 'timeline', label: '发展时间线', icon: Clock },
     { id: 'propagation', label: '传播路径', icon: Network },
     { id: 'development', label: '发展路径', icon: Activity },
+    { id: 'sentiment', label: '情感深度', icon: Heart },
     { id: 'analysis', label: '深度分析', icon: Target }
   ];
 
@@ -282,6 +293,38 @@ const EventDetail: React.FC = () => {
         }));
         // 将关键词数据存储到状态中，以便传递给 WordCloudChart
         setKeywordData(convertedKeywords);
+
+        // 新增：获取情感-热度散点图数据
+        try {
+          const sentimentHotness = await (c as any).getSentimentHotness(eventId);
+          setSentimentHotnessData(sentimentHotness || []);
+        } catch (e) {
+          logger.warn('Failed to fetch sentiment hotness data:', e);
+        }
+
+        // 新增：获取情感强度谱数据
+        try {
+          const sentimentIntensity = await (c as any).getSentimentIntensity(eventId);
+          setSentimentIntensityData(sentimentIntensity || []);
+        } catch (e) {
+          logger.warn('Failed to fetch sentiment intensity data:', e);
+        }
+
+        // 新增：获取关键词时间序列数据
+        try {
+          const keywordTimeSeries = await (c as any).getKeywordsTimeSeries(eventId, 20);
+          setKeywordTimeSeriesData(keywordTimeSeries || []);
+        } catch (e) {
+          logger.warn('Failed to fetch keyword timeseries data:', e);
+        }
+
+        // 新增：获取按情感分类的关键词数据
+        try {
+          const keywordsBySentiment = await (c as any).getKeywordsBySentiment(eventId);
+          setKeywordsBySentimentData(keywordsBySentiment || []);
+        } catch (e) {
+          logger.warn('Failed to fetch keywords by sentiment data:', e);
+        }
       } catch (error) {
         logger.error('Failed to fetch event data:', error);
       }
@@ -771,6 +814,56 @@ const EventDetail: React.FC = () => {
                   <div className="text-muted-foreground text-sm">暂无成功因素分析</div>
                 )}
               </div>
+            </div>
+          </motion.div>
+        </TabsContent>
+
+        {/* 新增：情感深度标签页 */}
+        <TabsContent value="sentiment" className="p-6 mt-0">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
+            {/* 情感-热度散点图 */}
+            <div className="bg-muted/30 rounded-lg p-6">
+              <SentimentHotnessScatterChart
+                title="情感-热度关联分析"
+                height={350}
+                data={sentimentHotnessData}
+              />
+            </div>
+
+            {/* 情感强度谱 + 情感化词云 */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-muted/30 rounded-lg p-6">
+                <SentimentIntensityChart
+                  title="情感强度谱"
+                  height={300}
+                  data={sentimentIntensityData}
+                />
+              </div>
+              <div className="bg-muted/30 rounded-lg p-6">
+                <h3 className="text-foreground mb-4 flex items-center">
+                  <Target className="w-5 h-5 mr-2" />
+                  情感化关键词
+                </h3>
+                <WordCloudChart
+                  title=""
+                  height={250}
+                  maxWords={30}
+                  data={keywordsBySentimentData}
+                />
+              </div>
+            </div>
+
+            {/* 关键词-时间演变热力图 */}
+            <div className="bg-muted/30 rounded-lg p-6">
+              <KeywordHeatmapChart
+                title="关键词-时间演变热力图"
+                height={400}
+                data={keywordTimeSeriesData}
+              />
             </div>
           </motion.div>
         </TabsContent>

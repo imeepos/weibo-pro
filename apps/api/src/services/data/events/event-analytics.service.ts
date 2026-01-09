@@ -243,16 +243,17 @@ export class EventAnalyticsService {
           const userStats = await entityManager
             .createQueryBuilder(PostNLPResultEntity, 'nlp')
             .innerJoin('nlp.post', 'post')
+            .innerJoin('post.user', 'user')
             .select(
               `CASE
-                WHEN (jsonb_extract_path_text(post.user, 'followers_count'))::int >= 100000 THEN '意见领袖'
-                WHEN (jsonb_extract_path_text(post.user, 'followers_count'))::int >= 10000 THEN '活跃用户'
-                WHEN (jsonb_extract_path_text(post.user, 'followers_count'))::int >= 1000 THEN '普通用户'
+                WHEN user.followers_count >= 100000 THEN '意见领袖'
+                WHEN user.followers_count >= 10000 THEN '活跃用户'
+                WHEN user.followers_count >= 1000 THEN '普通用户'
                 ELSE '围观群众'
               END`,
               'usertype'
             )
-            .addSelect('COUNT(DISTINCT jsonb_extract_path_text(post.user, \'id\'))', 'usercount')
+            .addSelect('COUNT(DISTINCT user.id)', 'usercount')
             .addSelect('COUNT(post.id)', 'postcount')
             .addSelect(
               'AVG(post.attitudes_count + post.comments_count + post.reposts_count)',
