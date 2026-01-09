@@ -17,6 +17,10 @@ import type {
   EventKeywordBySentiment,
   EventNegativeKeywordAlert,
   EventEventTypeDistribution,
+  EventEngagementTrend,
+  EventAnomaly,
+  EventPeak,
+  UserRelationNetwork,
 } from './types';
 import { EventQueryService } from './event-query.service';
 import { EventAnalyticsService } from './event-analytics.service';
@@ -118,25 +122,11 @@ export class EventsService {
   }
 
   async getEventTimeSeries(id: string): Promise<TimeSeriesData> {
-    const statistics = await this.queryService.getAllEventStatistics(id);
-    const data = await this.analyticsService.getEventTimeSeries(
-      id,
-      '30d',
-      statistics
-    );
-
-    return data
+    return await this.analyticsService.getEventTimeSeries(id, '30d');
   }
 
   async getEventTrends(id: string): Promise<TrendAnalysis> {
-    const statistics = await this.queryService.getAllEventStatistics(id);
-    const data = await this.analyticsService.getEventTrends(
-      id,
-      '30d',
-      statistics
-    );
-
-    return data;
+    return await this.analyticsService.getEventTrends(id, '30d');
   }
 
   async getInfluenceUsers(id: string): Promise<InfluenceUser[]> {
@@ -181,5 +171,23 @@ export class EventsService {
 
   async getEventTypes(id: string): Promise<EventEventTypeDistribution[]> {
     return await this.queryService.getEventTypes(id);
+  }
+
+  // 新增：基于 EventHourlyStatisticsEntity 的互动指标接口
+
+  async getEngagementTrend(id: string, limit?: number): Promise<EventEngagementTrend[]> {
+    return await this.queryService.getEngagementTrend(id, limit);
+  }
+
+  async getAnomalies(id: string, limit?: number): Promise<EventAnomaly[]> {
+    return await this.queryService.getAnomalies(id, limit);
+  }
+
+  async getPeaks(id: string, limit?: number): Promise<EventPeak[]> {
+    return await this.queryService.getPeaks(id, limit);
+  }
+
+  async getEventUserRelations(id: string): Promise<UserRelationNetwork> {
+    return await this.queryService.getEventUserRelations(id);
   }
 }

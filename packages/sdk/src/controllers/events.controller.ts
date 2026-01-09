@@ -17,7 +17,14 @@ import type {
   EventKeywordTimeSeries,
   EventKeywordBySentiment,
   EventNegativeKeywordAlert,
-  EventEventTypeDistribution
+  EventEventTypeDistribution,
+  EventEngagementTrend,
+  EventAnomaly,
+  EventPeak,
+  EventHourlySummary,
+  MultiMetricTrendData,
+  EngagementBreakdown,
+  UserRelationNetwork
 } from '../types'
 
 @Controller('events')
@@ -115,5 +122,27 @@ export class EventsController {
   @Get(':id/event-types')
   getEventTypes(@Param('id') id: string): Promise<EventEventTypeDistribution[]> {
     throw new Error('method getEventTypes not implements')
+  }
+
+  // 新增：基于 EventHourlyStatisticsEntity 的互动指标接口
+
+  @Get(':id/engagement-trend')
+  getEngagementTrend(@Param('id') id: string, @Query('limit') limit?: number): Promise<EventEngagementTrend[]> {
+    throw new Error('method getEngagementTrend not implements')
+  }
+
+  @Get(':id/anomalies')
+  getAnomalies(@Param('id') id: string, @Query('limit') limit?: number): Promise<EventAnomaly[]> {
+    throw new Error('method getAnomalies not implements')
+  }
+
+  @Get(':id/peaks')
+  getPeaks(@Param('id') id: string, @Query('limit') limit?: number): Promise<EventPeak[]> {
+    throw new Error('method getPeaks not implements')
+  }
+
+  @Get(':id/user-relations')
+  getEventUserRelations(@Param('id') id: string): Promise<UserRelationNetwork> {
+    throw new Error('method getEventUserRelations not implements')
   }
 }

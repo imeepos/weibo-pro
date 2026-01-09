@@ -102,6 +102,27 @@ export class EventsController {
     return this.eventsService.getEventTypes(id);
   }
 
+  // 新增：基于 EventHourlyStatisticsEntity 的互动指标接口
+
+  async getEngagementTrend(@Param('id') id: string, @Query('limit') limit?: string) {
+    const limitNum = limit ? parseInt(limit, 10) : 168;
+    return this.eventsService.getEngagementTrend(id, limitNum);
+  }
+
+  async getAnomalies(@Param('id') id: string, @Query('limit') limit?: string) {
+    const limitNum = limit ? parseInt(limit, 10) : 168;
+    return this.eventsService.getAnomalies(id, limitNum);
+  }
+
+  async getPeaks(@Param('id') id: string, @Query('limit') limit?: string) {
+    const limitNum = limit ? parseInt(limit, 10) : 168;
+    return this.eventsService.getPeaks(id, limitNum);
+  }
+
+  async getEventUserRelations(@Param('id') id: string) {
+    return this.eventsService.getEventUserRelations(id);
+  }
+
   private validateTimeRange(timeRange?: string): TimeRange {
     const validRanges: TimeRange[] = ['all', '1h', '6h', '12h', '24h', '7d', '30d', '90d', '180d', '365d'];
 

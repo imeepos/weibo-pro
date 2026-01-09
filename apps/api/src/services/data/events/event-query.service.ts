@@ -2,6 +2,7 @@ import { Injectable, Inject } from '@sker/core';
 import {
   useEntityManager,
   EventStatisticsEntity,
+  EventHourlyStatisticsEntity,
   WeiboPostEntity,
   PostNLPResultEntity,
   findHotEvents,
@@ -28,6 +29,9 @@ import type {
   EventKeywordBySentiment,
   EventNegativeKeywordAlert,
   EventEventTypeDistribution,
+  EventEngagementTrend,
+  EventAnomaly,
+  EventPeak,
 } from './types';
 import { TREND_THRESHOLD, INFLUENCE_WEIGHTS } from './constants';
 
@@ -739,6 +743,249 @@ export class EventQueryService {
             confidence: Math.round(parseFloat(row.avgConfidence || '0') * 100) / 100,
             avgSentiment: Math.round(parseFloat(row.avgSentiment || '0') * 100) / 100,
           }));
+        });
+      },
+      CACHE_TTL.MEDIUM
+    );
+  }
+
+  // 新增：基于 EventHourlyStatisticsEntity 的互动指标查询
+
+  async getEngagementTrend(eventId: string, limit: number = 168): Promise<EventEngagementTrend[]> {
+    const cacheKey = CacheService.buildKey('event:engagement_trend', eventId, limit.toString());
+
+    return await this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        return await useEntityManager(async (entityManager) => {
+          const stats = await entityManager
+            .createQueryBuilder(EventHourlyStatisticsEntity, 'stats')
+            .where('stats.event_id = :eventId', { eventId })
+            .orderBy('stats.year', 'DESC')
+            .addOrderBy('stats.month', 'DESC')
+            .addOrderBy('stats.day', 'DESC')
+            .addOrderBy('stats.hour', 'DESC')
+            .limit(limit)
+            .getMany();
+
+          return stats.map(s => {
+            const engagementRate = s.post_count > 0
+              ? (s.comment_count + s.repost_count + s.like_count) / s.post_count
+              : 0;
+
+            return {
+              timestamp: new Date(s.year, s.month - 1, s.day, s.hour).toISOString(),
+              post_count: s.post_count,
+              comment_count: s.comment_count,
+              repost_count: s.repost_count,
+              like_count: s.like_count,
+              user_count: s.user_count,
+              hotness: parseFloat(s.hotness.toString()),
+              engagement_rate: Math.round(engagementRate * 100) / 100,
+            };
+          }).reverse();
+        });
+      },
+      CACHE_TTL.SHORT
+    );
+  }
+
+  async getAnomalies(eventId: string, limit: number = 168): Promise<EventAnomaly[]> {
+    const cacheKey = CacheService.buildKey('event:anomalies', eventId, limit.toString());
+
+    return await this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        return await useEntityManager(async (entityManager) => {
+          const stats = await entityManager
+            .createQueryBuilder(EventHourlyStatisticsEntity, 'stats')
+            .where('stats.event_id = :eventId', { eventId })
+            .orderBy('stats.year', 'DESC')
+            .addOrderBy('stats.month', 'DESC')
+            .addOrderBy('stats.day', 'DESC')
+            .addOrderBy('stats.hour', 'DESC')
+            .limit(limit)
+            .getMany();
+
+          const anomalies: EventAnomaly[] = [];
+          const reversedStats = stats.reverse();
+
+          for (let i = 1; i < reversedStats.length - 1; i++) {
+            const current = reversedStats[i];
+            const prev = reversedStats[i - 1];
+            const nextStat = reversedStats[i + 1];
+
+            // 计算局部平均值
+            const avgPostCount = (prev.post_count + current.post_count + nextStat.post_count) / 3;
+            const stdDev = Math.sqrt(
+              (
+                Math.pow(prev.post_count - avgPostCount, 2) +
+                Math.pow(current.post_count - avgPostCount, 2) +
+                Math.pow(nextStat.post_count - avgPostCount, 2)
+              ) / 3
+            );
+
+            // 检测峰值（超过 2 倍标准差）
+            if (current.post_count > avgPostCount + 2 * stdDev) {
+              anomalies.push({
+                timestamp: new Date(current.year, current.month - 1, current.day, current.hour).toISOString(),
+                type: 'spike',
+                metric: 'post_count',
+                value: current.post_count,
+                expected: Math.round(avgPostCount),
+                confidence: Math.min(1, (current.post_count - avgPostCount) / (3 * stdDev)),
+              });
+            }
+
+            // 检测低谷（低于 2 倍标准差）
+            if (current.post_count < avgPostCount - 2 * stdDev && avgPostCount > 10) {
+              anomalies.push({
+                timestamp: new Date(current.year, current.month - 1, current.day, current.hour).toISOString(),
+                type: 'drop',
+                metric: 'post_count',
+                value: current.post_count,
+                expected: Math.round(avgPostCount),
+                confidence: Math.min(1, (avgPostCount - current.post_count) / (3 * stdDev)),
+              });
+            }
+
+            // 检测情感突变
+            const sentimentChange = Math.abs(current.sentiment_positive - prev.sentiment_positive);
+            if (sentimentChange > 0.3) {
+              anomalies.push({
+                timestamp: new Date(current.year, current.month - 1, current.day, current.hour).toISOString(),
+                type: 'sentiment_shift',
+                metric: 'sentiment_positive',
+                value: parseFloat(current.sentiment_positive.toString()),
+                expected: parseFloat(prev.sentiment_positive.toString()),
+                confidence: Math.min(1, sentimentChange / 0.5),
+              });
+            }
+          }
+
+          return anomalies;
+        });
+      },
+      CACHE_TTL.SHORT
+    );
+  }
+
+  async getPeaks(eventId: string, limit: number = 168): Promise<EventPeak[]> {
+    const cacheKey = CacheService.buildKey('event:peaks', eventId, limit.toString());
+
+    return await this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        return await useEntityManager(async (entityManager) => {
+          const stats = await entityManager
+            .createQueryBuilder(EventHourlyStatisticsEntity, 'stats')
+            .where('stats.event_id = :eventId', { eventId })
+            .orderBy('stats.year', 'DESC')
+            .addOrderBy('stats.month', 'DESC')
+            .addOrderBy('stats.day', 'DESC')
+            .addOrderBy('stats.hour', 'DESC')
+            .limit(limit)
+            .getMany();
+
+          const peaks: EventPeak[] = [];
+          const reversedStats = stats.reverse();
+
+          // 找到全局最大值
+          const maxHotness = Math.max(...reversedStats.map(s => parseFloat(s.hotness.toString())));
+          const globalPeak = reversedStats.find(s => parseFloat(s.hotness.toString()) === maxHotness);
+
+          if (globalPeak) {
+            const engagementRate = globalPeak.post_count > 0
+              ? (globalPeak.comment_count + globalPeak.repost_count + globalPeak.like_count) / globalPeak.post_count
+              : 0;
+
+            peaks.push({
+              timestamp: new Date(globalPeak.year, globalPeak.month - 1, globalPeak.day, globalPeak.hour).toISOString(),
+              hotness: parseFloat(globalPeak.hotness.toString()),
+              peak_type: 'global',
+              metrics: {
+                post_count: globalPeak.post_count,
+                user_count: globalPeak.user_count,
+                engagement_rate: Math.round(engagementRate * 100) / 100,
+              },
+            });
+          }
+
+          // 查找局部峰值（使用简单的峰值检测算法）
+          for (let i = 2; i < reversedStats.length - 2; i++) {
+            const current = reversedStats[i];
+            const neighbors = [
+              reversedStats[i - 2],
+              reversedStats[i - 1],
+              reversedStats[i + 1],
+              reversedStats[i + 2],
+            ];
+
+            const isLocalPeak = neighbors.every(
+              neighbor => parseFloat(neighbor.hotness.toString()) < parseFloat(current.hotness.toString())
+            );
+
+            if (isLocalPeak && parseFloat(current.hotness.toString()) > maxHotness * 0.5) {
+              const engagementRate = current.post_count > 0
+                ? (current.comment_count + current.repost_count + current.like_count) / current.post_count
+                : 0;
+
+              peaks.push({
+                timestamp: new Date(current.year, current.month - 1, current.day, current.hour).toISOString(),
+                hotness: parseFloat(current.hotness.toString()),
+                peak_type: 'local',
+                metrics: {
+                  post_count: current.post_count,
+                  user_count: current.user_count,
+                  engagement_rate: Math.round(engagementRate * 100) / 100,
+                },
+              });
+            }
+          }
+
+          return peaks.sort((a, b) => b.hotness - a.hotness).slice(0, 10);
+        });
+      },
+      CACHE_TTL.MEDIUM
+    );
+  }
+
+  async getEventUserRelations(eventId: string): Promise<UserRelationNetwork> {
+    const cacheKey = CacheService.buildKey('event:user-relations', eventId);
+
+    return await this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        return await useEntityManager(async (entityManager) => {
+          const posts = await entityManager
+            .createQueryBuilder(PostEntity, 'post')
+            .where('post.event_id = :eventId', { eventId })
+            .getMany();
+
+          const userIds = [...new Set(posts.map(p => p.user_id))];
+          const nodes = userIds.map(userId => ({
+            id: userId,
+            label: userId,
+            type: 'user' as const,
+            weight: posts.filter(p => p.user_id === userId).length,
+          }));
+
+          const edges: Array<{ source: string; target: string; weight: number; type: string }> = [];
+          const edgeMap = new Map<string, number>();
+
+          for (const post of posts) {
+            if (post.repost_user_id) {
+              const key = `${post.user_id}-${post.repost_user_id}`;
+              edgeMap.set(key, (edgeMap.get(key) || 0) + 1);
+            }
+          }
+
+          edgeMap.forEach((weight, key) => {
+            const [source, target] = key.split('-');
+            edges.push({ source: source!, target: target!, weight, type: 'repost' });
+          });
+
+          return { nodes, edges };
         });
       },
       CACHE_TTL.MEDIUM
