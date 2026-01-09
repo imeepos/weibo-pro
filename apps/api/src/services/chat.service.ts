@@ -12,8 +12,9 @@ export class ChatService {
 
   constructor() {
     const databaseUrl = process.env.DATABASE_URL || '';
-    // API 服务内部调用，直接使用相对路径或 localhost
-    const llmProxyUrl = 'http://localhost:8089/api/auth/llm/openai';
+    const llmProxyUrl = process.env.API_BASE_URL
+      ? `${process.env.API_BASE_URL}/api/auth/llm/openai`
+      : 'http://localhost:8089/api/auth/llm/openai';
 
     console.log('[ChatService] 初始化:', {
       databaseUrl: databaseUrl ? '已配置' : '未配置',
