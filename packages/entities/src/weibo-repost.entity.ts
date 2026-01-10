@@ -65,7 +65,7 @@ export class WeiboRepostEntity {
   @Column({ type: 'jsonb', nullable: true })
   pic_ids!: string[] | null;
 
-  @Column({ type: 'smallint', default: 0 })
+  @Column({ type: 'integer', default: 0 })
   pic_num!: number;
 
   @Column({ type: 'boolean', default: false })
@@ -74,7 +74,7 @@ export class WeiboRepostEntity {
   @Column({ type: 'text', nullable: true })
   pic_bg_new!: string | null;
 
-  @Column({ type: 'smallint', default: 0 })
+  @Column({ type: 'integer', default: 0 })
   mblog_vip_type!: number;
 
   @Column({ type: 'jsonb', nullable: true })
@@ -92,19 +92,19 @@ export class WeiboRepostEntity {
   @Column({ type: 'integer', default: 0 })
   attitudes_count!: number;
 
-  @Column({ type: 'smallint', default: 0 })
+  @Column({ type: 'integer', default: 0 })
   attitudes_status!: number;
 
   @Column({ type: 'boolean', default: false })
   isLongText!: boolean;
 
-  @Column({ type: 'smallint', default: 0 })
+  @Column({ type: 'integer', default: 0 })
   mlevel!: number;
 
-  @Column({ type: 'smallint', default: 0 })
+  @Column({ type: 'integer', default: 0 })
   content_auth!: number;
 
-  @Column({ type: 'smallint', default: 0 })
+  @Column({ type: 'integer', default: 0 })
   is_show_bulletin!: number;
 
   @Column({ type: 'jsonb', nullable: true })
@@ -113,10 +113,10 @@ export class WeiboRepostEntity {
   @Column({ type: 'jsonb', nullable: true })
   screen_name_suffix_new!: Array<Record<string, unknown>> | null;
 
-  @Column({ type: 'smallint', default: 0 })
+  @Column({ type: 'integer', default: 0 })
   repost_type!: number;
 
-  @Column({ type: 'smallint', default: 0 })
+  @Column({ type: 'integer', default: 0 })
   share_repost_type!: number;
 
   @Column({ type: 'jsonb', nullable: true })
@@ -125,7 +125,7 @@ export class WeiboRepostEntity {
   @Column({ type: 'jsonb', nullable: true })
   url_struct!: Array<Record<string, unknown>> | null;
 
-  @Column({ type: 'smallint', default: 0 })
+  @Column({ type: 'integer', default: 0 })
   mblogtype!: number;
 
   @Column({ type: 'boolean', default: false })
