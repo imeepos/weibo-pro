@@ -8,6 +8,9 @@ import { WeiboCommentHourlySubscriber } from './subscribers/weibo-comment-hourly
 import { WeiboLikeHourlySubscriber } from './subscribers/weibo-like-hourly.subscriber';
 import { WeiboRepostHourlySubscriber } from './subscribers/weibo-repost-hourly.subscriber';
 import { PostNLPHourlySubscriber } from './subscribers/post-nlp-hourly.subscriber';
+import { WeiboRepostRelationSubscriber } from './subscribers/weibo-repost-relation.subscriber';
+import { WeiboLikeRelationSubscriber } from './subscribers/weibo-like-relation.subscriber';
+import { WeiboCommentRelationSubscriber } from './subscribers/weibo-comment-relation.subscriber';
 
 export const createDatabaseConfig = (): DataSourceOptions => {
   const databaseUrl = process.env.DATABASE_URL;
@@ -23,13 +26,16 @@ export const createDatabaseConfig = (): DataSourceOptions => {
       url: databaseUrl,
       entities,
       subscribers: [
-  WeiboPostSubscriber,
-  WeiboPostHourlySubscriber,
-  WeiboCommentHourlySubscriber,
-  WeiboLikeHourlySubscriber,
-  WeiboRepostHourlySubscriber,
-  PostNLPHourlySubscriber,
-],
+        WeiboPostSubscriber,
+        WeiboPostHourlySubscriber,
+        WeiboCommentHourlySubscriber,
+        WeiboLikeHourlySubscriber,
+        WeiboRepostHourlySubscriber,
+        PostNLPHourlySubscriber,
+        WeiboRepostRelationSubscriber,
+        WeiboLikeRelationSubscriber,
+        WeiboCommentRelationSubscriber,
+      ],
       synchronize: shouldSync,
       logging: false,
       poolSize: 30,
