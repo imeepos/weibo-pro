@@ -1,6 +1,6 @@
 import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
-import { EventEntity, EventStatisticsEntity, useEntityManager } from '@sker/entities';
+import { EventEntity, EventHourlyStatisticsEntity, useEntityManager } from '@sker/entities';
 
 /**
  * 查询数据库中已记录的事件（包含统计信息）
@@ -12,8 +12,8 @@ export const createQueryEventsTool = () =>
         const qb = m
           .getRepository(EventEntity)
           .createQueryBuilder('event')
-          .leftJoinAndSelect(
-            EventStatisticsEntity,
+          .leftJoin(
+            EventHourlyStatisticsEntity,
             'stats',
             'stats.event_id = event.id'
           )
@@ -23,9 +23,10 @@ export const createQueryEventsTool = () =>
             'stats.comment_count',
             'stats.repost_count',
             'stats.like_count',
-            'stats.sentiment',
+            'stats.sentiment_positive',
+            'stats.sentiment_negative',
+            'stats.sentiment_neutral',
             'stats.hotness',
-            'stats.trend_metrics',
           ]);
 
         if (keyword) {
@@ -46,7 +47,10 @@ export const createQueryEventsTool = () =>
         }
 
         qb.orderBy('event.created_at', 'DESC')
-          .addOrderBy('stats.snapshot_at', 'DESC')
+          .addOrderBy('stats.year', 'DESC')
+          .addOrderBy('stats.month', 'DESC')
+          .addOrderBy('stats.day', 'DESC')
+          .addOrderBy('stats.hour', 'DESC')
           .limit(limit);
 
         const events = await qb.getRawAndEntities();
@@ -60,16 +64,19 @@ export const createQueryEventsTool = () =>
               description: e.description,
               category: e.category,
               createdAt: e.created_at,
-              statistics: stats?.stats_post_count
+              statistics: stats?.stats_post_count !== undefined && stats?.stats_post_count !== null
                 ? {
                     postCount: stats.stats_post_count,
                     userCount: stats.stats_user_count,
                     commentCount: stats.stats_comment_count,
                     repostCount: stats.stats_repost_count,
                     likeCount: stats.stats_like_count,
-                    sentiment: stats.stats_sentiment,
+                    sentiment: {
+                      positive: stats.stats_sentiment_positive,
+                      negative: stats.stats_sentiment_negative,
+                      neutral: stats.stats_sentiment_neutral,
+                    },
                     hotness: stats.stats_hotness,
-                    trendMetrics: stats.stats_trend_metrics,
                   }
                 : null,
             };
@@ -81,7 +88,7 @@ export const createQueryEventsTool = () =>
       name: 'query_events',
       description: `查询数据库中已记录的舆情事件。
 事件是对多条帖子的聚合分析结果，包含标题、描述、分类等。
-【优化】自动关联事件统计信息，包括帖子数、用户数、互动数、情感分布、热度、趋势等。
+【优化】自动关联事件统计信息，包括帖子数、用户数、互动数、情感分布、热度等。
 可用于了解历史舆情事件，避免重复分析。`,
       schema: z.object({
         keyword: z

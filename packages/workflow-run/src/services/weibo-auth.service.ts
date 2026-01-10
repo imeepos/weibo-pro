@@ -164,7 +164,7 @@ export class WeiboAuthService implements OnDestroy {
           const data = await response.json();
 
           if (data.data?.image) {
-            const apiBase = process.env.API_BASE_URL || 'http://localhost:3000';
+            const apiBase = process.env.API_BASE_URL || 'http://localhost:8089';
             const proxyUrl = `${apiBase}/api/auth/proxy/qrcode?url=${encodeURIComponent(data.data.image)}`;
             ast.qrcode = proxyUrl;
             // 只发射 qrcode，让 ImageAst 节点显示二维码
@@ -385,7 +385,7 @@ export class WeiboAuthService implements OnDestroy {
       return savedAccount;
     });
 
-    await this.redis.zadd('weibo:account:health', 1000, savedAccount.id.toString());
+    await this.redis.zadd('weibo:account:health', 10000, savedAccount.id.toString());
 
     return savedAccount;
   }

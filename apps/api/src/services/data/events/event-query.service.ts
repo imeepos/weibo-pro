@@ -1,7 +1,7 @@
 import { Injectable, Inject } from '@sker/core';
 import {
   useEntityManager,
-  EventStatisticsEntity,
+  EventEntity,
   EventHourlyStatisticsEntity,
   WeiboPostEntity,
   PostNLPResultEntity,
@@ -34,6 +34,7 @@ import type {
   EventPeak,
 } from './types';
 import { TREND_THRESHOLD, INFLUENCE_WEIGHTS } from './constants';
+import { UserRelationNetwork } from '@sker/sdk';
 
 @Injectable({ providedIn: 'root' })
 export class EventQueryService {
@@ -168,13 +169,29 @@ export class EventQueryService {
   ): Promise<EventStatistics | null> {
     return await useEntityManager(async (entityManager) => {
       const stats = await entityManager
-        .createQueryBuilder(EventStatisticsEntity, 'stats')
+        .createQueryBuilder(EventHourlyStatisticsEntity, 'stats')
         .where('stats.event_id = :id', { id: eventId })
-        .orderBy('stats.snapshot_at', 'DESC')
+        .orderBy('stats.year', 'DESC')
+        .addOrderBy('stats.month', 'DESC')
+        .addOrderBy('stats.day', 'DESC')
+        .addOrderBy('stats.hour', 'DESC')
         .limit(1)
         .getOne();
 
-      return stats as EventStatistics | null;
+      if (!stats) return null;
+
+      return {
+        event_id: stats.event_id,
+        post_count: stats.post_count,
+        user_count: stats.user_count,
+        sentiment: {
+          positive: parseFloat(stats.sentiment_positive.toString()),
+          negative: parseFloat(stats.sentiment_negative.toString()),
+          neutral: parseFloat(stats.sentiment_neutral.toString())
+        },
+        hotness: parseFloat(stats.hotness.toString()),
+        snapshot_at: new Date(stats.year, stats.month - 1, stats.day, stats.hour)
+      } as EventStatistics;
     });
   }
 
@@ -189,12 +206,26 @@ export class EventQueryService {
   async getAllEventStatistics(eventId: string): Promise<EventStatistics[]> {
     return await useEntityManager(async (entityManager) => {
       const stats = await entityManager
-        .createQueryBuilder(EventStatisticsEntity, 'stats')
+        .createQueryBuilder(EventHourlyStatisticsEntity, 'stats')
         .where('stats.event_id = :id', { id: eventId })
-        .orderBy('stats.snapshot_at', 'ASC')
+        .orderBy('stats.year', 'ASC')
+        .addOrderBy('stats.month', 'ASC')
+        .addOrderBy('stats.day', 'ASC')
+        .addOrderBy('stats.hour', 'ASC')
         .getMany();
 
-      return stats as EventStatistics[];
+      return stats.map(s => ({
+        event_id: s.event_id,
+        post_count: s.post_count,
+        user_count: s.user_count,
+        sentiment: {
+          positive: parseFloat(s.sentiment_positive.toString()),
+          negative: parseFloat(s.sentiment_negative.toString()),
+          neutral: parseFloat(s.sentiment_neutral.toString())
+        },
+        hotness: parseFloat(s.hotness.toString()),
+        snapshot_at: new Date(s.year, s.month - 1, s.day, s.hour)
+      })) as EventStatistics[];
     });
   }
 
@@ -286,7 +317,8 @@ export class EventQueryService {
   }
 
   async getEventKeywords(
-    eventId: string
+    eventId: string,
+    limit: number = 1000
   ): Promise<Array<{ keyword: string; weight: number; sentiment: string }>> {
     const cacheKey = CacheService.buildKey('event:keywords', eventId);
 
@@ -328,7 +360,7 @@ export class EventQueryService {
               sentiment: data.sentiment,
             }))
             .sort((a, b) => b.weight - a.weight)
-            .slice(0, 100);
+            .slice(0, limit);
         });
       },
       CACHE_TTL.MEDIUM
@@ -417,17 +449,37 @@ export class EventQueryService {
       const dateRange = getDateRangeByTimeRange(timeRange);
 
       const results = await entityManager
-        .createQueryBuilder(EventStatisticsEntity, 'stats')
+        .createQueryBuilder(EventHourlyStatisticsEntity, 'stats')
         .where('stats.event_id IN (:...eventIds)', { eventIds })
-        .andWhere('stats.snapshot_at >= :start', { start: dateRange.start })
-        .andWhere('stats.snapshot_at <= :end', { end: dateRange.end })
-        .orderBy('stats.snapshot_at', 'DESC')
+        .andWhere(
+          `make_timestamp(stats.year, stats.month, stats.day, stats.hour, 0, 0) >= :start`,
+          { start: dateRange.start }
+        )
+        .andWhere(
+          `make_timestamp(stats.year, stats.month, stats.day, stats.hour, 0, 0) <= :end`,
+          { end: dateRange.end }
+        )
+        .orderBy('stats.year', 'DESC')
+        .addOrderBy('stats.month', 'DESC')
+        .addOrderBy('stats.day', 'DESC')
+        .addOrderBy('stats.hour', 'DESC')
         .getMany();
 
       const latestByEvent = new Map<string, EventStatistics>();
       results.forEach((stat) => {
         if (!latestByEvent.has(stat.event_id)) {
-          latestByEvent.set(stat.event_id, stat as EventStatistics);
+          latestByEvent.set(stat.event_id, {
+            event_id: stat.event_id,
+            post_count: stat.post_count,
+            user_count: stat.user_count,
+            sentiment: {
+              positive: parseFloat(stat.sentiment_positive.toString()),
+              negative: parseFloat(stat.sentiment_negative.toString()),
+              neutral: parseFloat(stat.sentiment_neutral.toString())
+            },
+            hotness: parseFloat(stat.hotness.toString()),
+            snapshot_at: new Date(stat.year, stat.month - 1, stat.day, stat.hour)
+          } as EventStatistics);
         }
       });
 
@@ -492,16 +544,18 @@ export class EventQueryService {
       cacheKey,
       async () => {
         return await useEntityManager(async (entityManager) => {
+          // 获取 NLP 结果和帖子互动数据，计算每个帖子的热度
           const results = await entityManager
             .createQueryBuilder(PostNLPResultEntity, 'nlp')
             .innerJoin('nlp.post', 'post')
-            .innerJoin(EventStatisticsEntity, 'stats', 'stats.event_id = nlp.event_id')
             .select('nlp.post_id', 'postId')
             .addSelect(
               '(nlp.sentiment->>\'positive_prob\')::numeric - (nlp.sentiment->>\'negative_prob\')::numeric',
               'sentimentScore'
             )
-            .addSelect('stats.hotness', 'hotness')
+            .addSelect('COALESCE(post.reposts_count, 0)', 'reposts')
+            .addSelect('COALESCE(post.comments_count, 0)', 'comments')
+            .addSelect('COALESCE(post.attitudes_count, 0)', 'attitudes')
             .addSelect('nlp.created_at', 'timestamp')
             .where('nlp.event_id = :eventId', { eventId })
             .andWhere('post.deleted_at IS NULL')
@@ -509,17 +563,36 @@ export class EventQueryService {
             .limit(500)
             .getRawMany();
 
+          // 计算热度值：转发权重最高，评论次之，点赞最低
+          // 使用对数缩放避免极端值，同时保留差异
           return results.map((row: {
             postId: string;
             sentimentScore: string;
-            hotness: string;
+            reposts: string;
+            comments: string;
+            attitudes: string;
             timestamp: Date;
-          }) => ({
-            postId: row.postId,
-            sentimentScore: parseFloat(row.sentimentScore || '0'),
-            hotness: parseFloat(row.hotness || '0'),
-            timestamp: row.timestamp.toISOString(),
-          }));
+          }) => {
+            const reposts = parseFloat(row.reposts || '0');
+            const comments = parseFloat(row.comments || '0');
+            const attitudes = parseFloat(row.attitudes || '0');
+
+            // 热度计算公式：转发*5 + 评论*2 + 点赞*1
+            // 使用 Math.log1p 避免对数计算时的极端值
+            const rawHotness = reposts * 5 + comments * 2 + attitudes * 1;
+
+            // 使用对数缩放，加 1 避免log(0)，结果范围约在 0-100 之间
+            const hotness = rawHotness > 0
+              ? Math.min(100, Math.log10(rawHotness + 1) * 25)
+              : 0;
+
+            return {
+              postId: row.postId,
+              sentimentScore: parseFloat(row.sentimentScore || '0'),
+              hotness: Math.round(hotness * 100) / 100,
+              timestamp: row.timestamp.toISOString(),
+            };
+          });
         });
       },
       CACHE_TTL.MEDIUM
@@ -570,29 +643,42 @@ export class EventQueryService {
   }
 
   async getSentimentIntensity(eventId: string): Promise<EventSentimentIntensity[]> {
-    const cacheKey = CacheService.buildKey('event:sentiment_intensity', eventId);
+    return await useEntityManager(async (entityManager) => {
+      const stats = await entityManager
+        .createQueryBuilder(EventHourlyStatisticsEntity, 'stats')
+        .select('stats.sentiment_positive', 'positive')
+        .addSelect('stats.sentiment_negative', 'negative')
+        .addSelect('stats.sentiment_neutral', 'neutral')
+        .where('stats.event_id = :eventId', { eventId })
+        .orderBy('stats.year', 'DESC')
+        .addOrderBy('stats.month', 'DESC')
+        .addOrderBy('stats.day', 'DESC')
+        .addOrderBy('stats.hour', 'DESC')
+        .limit(168)
+        .getRawMany();
 
-    return await this.cacheService.getOrSet(
-      cacheKey,
-      async () => {
-        return await useEntityManager(async (entityManager) => {
-          const results = await entityManager
-            .createQueryBuilder(PostNLPResultEntity, 'nlp')
-            .select('ROUND((nlp.sentiment->>\'confidence\')::numeric * 10) / 10', 'confidence')
-            .addSelect('COUNT(*)', 'count')
-            .where('nlp.event_id = :eventId', { eventId })
-            .groupBy('ROUND((nlp.sentiment->>\'confidence\')::numeric * 10) / 10')
-            .orderBy('confidence', 'ASC')
-            .getRawMany();
+      const intensityMap = new Map<number, number>();
 
-          return results.map((row: { confidence: string; count: string }) => ({
-            confidence: parseFloat(row.confidence || '0'),
-            count: parseInt(row.count || '0', 10),
-          }));
-        });
-      },
-      CACHE_TTL.MEDIUM
-    );
+      stats.forEach((row: any) => {
+        const positive = parseFloat(row.positive || '0');
+        const negative = parseFloat(row.negative || '0');
+        const neutral = parseFloat(row.neutral || '0');
+        const total = positive + negative + neutral;
+
+        if (total > 0) {
+          const intensity = Math.abs(positive - negative) / total;
+          const bucket = Math.round(intensity * 10) / 10;
+          intensityMap.set(bucket, (intensityMap.get(bucket) || 0) + 1);
+        }
+      });
+
+      return Array.from(intensityMap.entries())
+        .map(([intensity, count]) => ({
+          intensity,
+          count
+        }))
+        .sort((a, b) => a.intensity - b.intensity);
+    });
   }
 
   async getKeywordsTimeSeries(eventId: string, topN: number = 20): Promise<EventKeywordTimeSeries[]> {
@@ -810,55 +896,59 @@ export class EventQueryService {
           const anomalies: EventAnomaly[] = [];
           const reversedStats = stats.reverse();
 
-          for (let i = 1; i < reversedStats.length - 1; i++) {
-            const current = reversedStats[i];
-            const prev = reversedStats[i - 1];
-            const nextStat = reversedStats[i + 1];
+          // 使用移动窗口（7个点）计算更稳定的基准值
+          const windowSize = 7;
 
-            // 计算局部平均值
-            const avgPostCount = (prev.post_count + current.post_count + nextStat.post_count) / 3;
-            const stdDev = Math.sqrt(
-              (
-                Math.pow(prev.post_count - avgPostCount, 2) +
-                Math.pow(current.post_count - avgPostCount, 2) +
-                Math.pow(nextStat.post_count - avgPostCount, 2)
-              ) / 3
-            );
+          for (let i = windowSize; i < reversedStats.length; i++) {
+            const current = reversedStats[i]!;
 
-            // 检测峰值（超过 2 倍标准差）
-            if (current.post_count > avgPostCount + 2 * stdDev) {
+            // 获取窗口内的数据点
+            const windowStart = Math.max(0, i - windowSize);
+            const windowData = reversedStats.slice(windowStart, i);
+
+            // 计算窗口内的平均值和标准差
+            const postCounts = windowData.map(d => d.post_count);
+            const avgPostCount = postCounts.reduce((a, b) => a + b, 0) / postCounts.length;
+            const variance = postCounts.reduce((sum, val) => sum + Math.pow(val - avgPostCount, 2), 0) / postCounts.length;
+            const stdDev = Math.sqrt(variance);
+
+            // 避免除零
+            const safeStdDev = stdDev < 1 ? 1 : stdDev;
+
+            // 检测峰值（超过 1.5 倍标准差，阈值降低）
+            if (current.post_count > avgPostCount + 1.5 * safeStdDev) {
               anomalies.push({
                 timestamp: new Date(current.year, current.month - 1, current.day, current.hour).toISOString(),
                 type: 'spike',
                 metric: 'post_count',
                 value: current.post_count,
                 expected: Math.round(avgPostCount),
-                confidence: Math.min(1, (current.post_count - avgPostCount) / (3 * stdDev)),
+                confidence: Math.min(1, (current.post_count - avgPostCount) / (2.5 * safeStdDev)),
               });
             }
-
-            // 检测低谷（低于 2 倍标准差）
-            if (current.post_count < avgPostCount - 2 * stdDev && avgPostCount > 10) {
+            // 检测低谷（低于 1.5 倍标准差，且平均值足够大）
+            else if (current.post_count < avgPostCount - 1.5 * safeStdDev && avgPostCount > 5) {
               anomalies.push({
                 timestamp: new Date(current.year, current.month - 1, current.day, current.hour).toISOString(),
                 type: 'drop',
                 metric: 'post_count',
                 value: current.post_count,
                 expected: Math.round(avgPostCount),
-                confidence: Math.min(1, (avgPostCount - current.post_count) / (3 * stdDev)),
+                confidence: Math.min(1, (avgPostCount - current.post_count) / (2.5 * safeStdDev)),
               });
             }
 
-            // 检测情感突变
+            // 检测情感突变（阈值提高，减少误判）
+            const prev = reversedStats[i - 1]!;
             const sentimentChange = Math.abs(current.sentiment_positive - prev.sentiment_positive);
-            if (sentimentChange > 0.3) {
+            if (sentimentChange > 0.4) {
               anomalies.push({
                 timestamp: new Date(current.year, current.month - 1, current.day, current.hour).toISOString(),
                 type: 'sentiment_shift',
                 metric: 'sentiment_positive',
                 value: parseFloat(current.sentiment_positive.toString()),
                 expected: parseFloat(prev.sentiment_positive.toString()),
-                confidence: Math.min(1, sentimentChange / 0.5),
+                confidence: Math.min(1, sentimentChange / 0.6),
               });
             }
           }
@@ -913,12 +1003,12 @@ export class EventQueryService {
 
           // 查找局部峰值（使用简单的峰值检测算法）
           for (let i = 2; i < reversedStats.length - 2; i++) {
-            const current = reversedStats[i];
+            const current = reversedStats[i]!;
             const neighbors = [
-              reversedStats[i - 2],
-              reversedStats[i - 1],
-              reversedStats[i + 1],
-              reversedStats[i + 2],
+              reversedStats[i - 2]!,
+              reversedStats[i - 1]!,
+              reversedStats[i + 1]!,
+              reversedStats[i + 2]!,
             ];
 
             const isLocalPeak = neighbors.every(
@@ -957,35 +1047,129 @@ export class EventQueryService {
       cacheKey,
       async () => {
         return await useEntityManager(async (entityManager) => {
-          const posts = await entityManager
-            .createQueryBuilder(PostEntity, 'post')
-            .where('post.event_id = :eventId', { eventId })
-            .getMany();
+          // 从 user_relation_statistics 表获取事件相关的边数据
+          const edgesData = await entityManager.query(
+            `
+            SELECT
+              source_user_id,
+              target_user_id,
+              SUM(CASE WHEN relation_type = 'like' THEN weight ELSE 0 END) as like_count,
+              SUM(CASE WHEN relation_type = 'comment' THEN weight ELSE 0 END) as comment_count,
+              SUM(CASE WHEN relation_type = 'repost' THEN weight ELSE 0 END) as repost_count,
+              SUM(weight) as weight
+            FROM user_relation_statistics
+            WHERE event_id = $1
+            GROUP BY source_user_id, target_user_id
+            ORDER BY weight DESC
+          `,
+            [eventId]
+          );
 
-          const userIds = [...new Set(posts.map(p => p.user_id))];
-          const nodes = userIds.map(userId => ({
-            id: userId,
-            label: userId,
-            type: 'user' as const,
-            weight: posts.filter(p => p.user_id === userId).length,
-          }));
-
-          const edges: Array<{ source: string; target: string; weight: number; type: string }> = [];
-          const edgeMap = new Map<string, number>();
-
-          for (const post of posts) {
-            if (post.repost_user_id) {
-              const key = `${post.user_id}-${post.repost_user_id}`;
-              edgeMap.set(key, (edgeMap.get(key) || 0) + 1);
-            }
+          if (edgesData.length === 0) {
+            return {
+              nodes: [],
+              edges: [],
+              statistics: {
+                totalUsers: 0,
+                totalRelations: 0,
+                avgDegree: 0,
+                density: 0,
+              },
+            };
           }
 
-          edgeMap.forEach((weight, key) => {
-            const [source, target] = key.split('-');
-            edges.push({ source: source!, target: target!, weight, type: 'repost' });
+          // 收集所有用户 ID
+          const userIds = new Set<string>();
+          edgesData.forEach((edge: any) => {
+            userIds.add(edge.source_user_id);
+            userIds.add(edge.target_user_id);
           });
 
-          return { nodes, edges };
+          const userIdsArray = Array.from(userIds);
+
+          // 批量获取用户信息
+          await entityManager.query('SET statement_timeout = 30000');
+
+          const BATCH_SIZE = 1000;
+          const usersData: any[] = [];
+          for (let i = 0; i < userIdsArray.length; i += BATCH_SIZE) {
+            const batch = userIdsArray.slice(i, i + BATCH_SIZE);
+            const batchResult = await entityManager.query(
+              `SELECT * FROM v_weibo_user_info WHERE id = ANY($1::bigint[])`,
+              [batch]
+            );
+            usersData.push(...batchResult);
+          }
+
+          const usersMap = new Map<string, any>(
+            usersData.map((u: any) => [u.id.toString(), u])
+          );
+
+          // 构建节点
+          const nodes = Array.from(userIds).map((userId) => {
+            const userData = usersMap.get(userId);
+            if (!userData) {
+              return {
+                id: userId,
+                name: `用户_${userId}`,
+                followers: 0,
+                influence: 0,
+                postCount: 0,
+                verified: false,
+                userType: 'normal' as const,
+              };
+            }
+
+            const followers = parseInt(userData.followers_count) || 0;
+            const posts = parseInt(userData.statuses_count) || 0;
+            const influence = Math.min(
+              100,
+              Math.floor((Math.log10(followers + 1) * 10 + Math.log10(posts + 1) * 5) * 2)
+            );
+
+            return {
+              id: userId,
+              name: userData.screen_name || userData.name || `用户_${userId}`,
+              avatar: userData.avatar,
+              followers,
+              influence,
+              postCount: posts,
+              verified: userData.verified || false,
+              userType: (userData.user_type || 'normal') as 'normal' | 'official' | 'media' | 'kol',
+              location: userData.location,
+            };
+          });
+
+          // 构建边
+          const edges = edgesData.map((edge: any) => ({
+            source: edge.source_user_id,
+            target: edge.target_user_id,
+            weight: parseInt(edge.weight),
+            type: 'comprehensive',
+            interactions: {
+              likes: edge.like_count ? parseInt(edge.like_count) : undefined,
+              comments: edge.comment_count ? parseInt(edge.comment_count) : undefined,
+              reposts: edge.repost_count ? parseInt(edge.repost_count) : undefined,
+            },
+          }));
+
+          // 计算网络统计指标
+          const totalUsers = nodes.length;
+          const totalRelations = edges.length;
+          const avgDegree = totalUsers > 0 ? (totalRelations * 2) / totalUsers : 0;
+          const maxPossibleEdges = (totalUsers * (totalUsers - 1)) / 2;
+          const density = maxPossibleEdges > 0 ? totalRelations / maxPossibleEdges : 0;
+
+          return {
+            nodes,
+            edges,
+            statistics: {
+              totalUsers,
+              totalRelations,
+              avgDegree: Number(avgDegree.toFixed(2)),
+              density: Number(density.toFixed(4)),
+            },
+          };
         });
       },
       CACHE_TTL.MEDIUM

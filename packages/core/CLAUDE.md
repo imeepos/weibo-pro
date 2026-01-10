@@ -209,7 +209,7 @@ constructor(
 // 创建类型安全的注入令牌
 export const CONFIG = new InjectionToken<AppConfig>('app.config', {
   providedIn: 'root',
-  factory: () => ({ apiUrl: 'http://localhost:3000' })
+  factory: () => ({ apiUrl: 'http://localhost:8089' })
 });
 
 // 使用

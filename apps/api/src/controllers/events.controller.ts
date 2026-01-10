@@ -62,8 +62,9 @@ export class EventsController {
     return this.eventsService.getEventGeographic(id);
   }
 
-  async getEventKeywords(@Param('id') id: string) {
-    return this.eventsService.getEventKeywords(id);
+  async getEventKeywords(@Param('id') id: string, @Query('limit') limit?: string) {
+    const limitNum = limit ? parseInt(limit, 10) : 1000;
+    return this.eventsService.getEventKeywords(id, limitNum);
   }
 
   async getEventDetail(@Param('id') id: string) {

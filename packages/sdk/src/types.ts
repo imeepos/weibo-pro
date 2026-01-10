@@ -213,7 +213,7 @@ export interface EventSentimentDistribution {
 }
 
 export interface EventSentimentIntensity {
-  confidence: number
+  intensity: number
   count: number
 }
 

@@ -46,7 +46,7 @@ export class ClaudeBridge {
    * 连接到 API 服务器
    */
   private connect(): void {
-    const serverUrl = this.config.apiServer || 'http://localhost:3000';
+    const serverUrl = this.config.apiServer || 'http://localhost:8089';
 
     console.log(`[ClaudeBridge] 连接到 API 服务器: ${serverUrl}/worker`);
 

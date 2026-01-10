@@ -78,7 +78,7 @@ export class EventsController {
   }
 
   @Get(':id/keywords')
-  getEventKeywords(@Param('id') id: string): Promise<Array<{ keyword: string; weight: number; sentiment: string }>> {
+  getEventKeywords(@Param('id') id: string, @Query('limit') limit?: number): Promise<Array<{ keyword: string; weight: number; sentiment: string }>> {
     throw new Error('method getEventKeywords not implements')
   }
 

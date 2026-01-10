@@ -138,9 +138,10 @@ export class EventsService {
   }
 
   async getEventKeywords(
-    id: string
+    id: string,
+    limit?: number
   ): Promise<Array<{ keyword: string; weight: number; sentiment: string }>> {
-    return await this.queryService.getEventKeywords(id);
+    return await this.queryService.getEventKeywords(id, limit);
   }
 
   // 新增：NLP 深度分析接口

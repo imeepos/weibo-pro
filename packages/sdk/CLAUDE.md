@@ -142,7 +142,7 @@ import { root } from '@sker/core'
 // 配置客户端
 root.set([
   ...providers({
-    baseURL: 'http://localhost:3000/api'
+    baseURL: 'http://localhost:8089/api'
   })
 ])
 
@@ -161,7 +161,7 @@ import { root } from '@sker/core'
 
 // 创建认证客户端
 const auth = createAuthClient({
-  baseURL: 'http://localhost:3000'
+  baseURL: 'http://localhost:8089'
 })
 
 // 登录
@@ -172,7 +172,7 @@ await auth.signIn.email({
 
 // 配置带认证的 SDK
 const { createAuthenticatedFetchConfig } = createAuthenticatedClientConfig({
-  baseURL: 'http://localhost:3000'
+  baseURL: 'http://localhost:8089'
 })
 
 root.set([
@@ -255,7 +255,7 @@ const providers = (config?: BetterFetchOption) => Provider[]
 
 ```typescript
 const auth = createAuthClient({
-  baseURL: 'http://localhost:3000'
+  baseURL: 'http://localhost:8089'
 })
 
 // 登录
@@ -274,7 +274,7 @@ const { data: session } = auth.useSession()
 
 ```typescript
 const { authClient, createAuthenticatedFetchConfig } = createAuthenticatedClientConfig({
-  baseURL: 'http://localhost:3000',
+  baseURL: 'http://localhost:8089',
   tokenStorage: {
     getToken: () => localStorage.getItem('token'),
     setToken: (token) => localStorage.setItem('token', token),

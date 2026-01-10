@@ -54,17 +54,6 @@ interface TrendChartData {
   userData: number[];
 }
 
-// 影响力用户接口
-interface InfluenceUser {
-  id: string;
-  name: string;
-  type: string;
-  influence: number;
-  followers: string;
-  posts: number;
-  engagement: string;
-}
-
 // 地理分布数据接口
 interface GeographicDataPoint {
   region: string;
@@ -156,7 +145,7 @@ const EventDetail: React.FC = () => {
 
   // 新增状态
   const [sentimentHotnessData, setSentimentHotnessData] = useState<Array<{ postId: string; sentimentScore: number; hotness: number; timestamp: string }>>([]);
-  const [sentimentIntensityData, setSentimentIntensityData] = useState<Array<{ confidence: number; count: number }>>([]);
+  const [sentimentIntensityData, setSentimentIntensityData] = useState<Array<{ intensity: number; count: number }>>([]);
 
   // 新增：基于 EventHourlyStatisticsEntity 的互动指标状态
   const [engagementTrendData, setEngagementTrendData] = useState<Array<{
@@ -177,13 +166,6 @@ const EventDetail: React.FC = () => {
     expected: number;
     confidence: number;
   }>>([]);
-
-  const sentimentLevels = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
-  const toSentimentLevel = (value: number) => {
-    const normalized = Math.round(value / 10);
-    const index = Math.min(sentimentLevels.length - 1, Math.max(0, normalized - 1));
-    return sentimentLevels[index]!;
-  };
 
   useEffect(() => {
     const fetchEventData = async () => {
@@ -333,21 +315,6 @@ const EventDetail: React.FC = () => {
     }
   };
 
-  // 使用从 API 获取的趋势数据
-  const trendChartData = useMemo<TrendChartData>(() => {
-    if (!trendData) {
-      return {
-        hotnessData: [],
-        sentimentData: [],
-        postData: [],
-        userData: []
-      };
-    }
-    return trendData;
-  }, [trendData]);
-
-  const { hotnessData, sentimentData, postData, userData } = trendChartData;
-
   if (!eventData) {
     return (
       <div className="h-full overflow-y-auto overflow-x-hidden space-y-8 p-6">
@@ -468,50 +435,6 @@ const EventDetail: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* 核心统计指标 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-        <MetricCard
-          title="贴子数量"
-          className='sentiment-overview-card'
-          value={eventData.postCount}
-          change={25.3}
-          icon={MessageSquare}
-          color="green"
-          chartComponent={<MiniTrendChart data={postData} color="#10b981" type="bar" />}
-        />
-        <MetricCard
-          title="参与用户"
-          className='sentiment-overview-card'
-          value={eventData.userCount}
-          change={18.7}
-          icon={Users}
-          color="purple"
-          chartComponent={<MiniTrendChart data={userData} color="#8b5cf6" type="line" />}
-        />
-        <MetricCard
-          title="热度趋势"
-          className='sentiment-overview-card'
-          value={eventData.hotness}
-          change={15.2}
-          icon={Zap}
-          color="red"
-          chartComponent={<MiniTrendChart data={hotnessData} color="#ef4444" type="line" />}
-        />
-        <MetricCard
-          title="情感指数"
-          className='sentiment-overview-card'
-          value={eventData.sentiment.positive}
-          change={8.5}
-          icon={Heart}
-          color="green"
-          sentiment={{
-            type: 'positive',
-            level: toSentimentLevel(eventData.sentiment.positive)
-          }}
-          chartComponent={<MiniTrendChart data={sentimentData.map((v: number) => v * 100)} color="#10b981" type="line" />}
-        />
-      </div>
-
       {/* 单页内容布局 */}
       <div className="space-y-6">
         {/* 用户关系网络 */}
@@ -590,7 +513,7 @@ const EventDetail: React.FC = () => {
             <WordCloudChart
               title=""
               height={320}
-              maxWords={50}
+              maxWords={1000}
               data={keywordData}
             />
           </div>

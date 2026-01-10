@@ -1,31 +1,33 @@
 import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
-import { EventStatisticsEntity, useEntityManager } from '@sker/entities';
+import { EventHourlyStatisticsEntity, useEntityManager } from '@sker/entities';
 
 /**
  * 查询事件的时间线演化数据
  */
 export const createQueryEventTimelineTool = () =>
   tool(
-    async ({ eventId, granularity }) => {
+    async ({ eventId }) => {
       return useEntityManager(async (m) => {
-        const qb = m
-          .getRepository(EventStatisticsEntity)
-          .createQueryBuilder('stats')
-          .where('stats.event_id = :eventId', { eventId })
-          .andWhere('stats.granularity = :granularity', { granularity })
-          .orderBy('stats.snapshot_at', 'ASC');
-
-        const stats = await qb.getMany();
+        const stats = await m
+          .getRepository(EventHourlyStatisticsEntity)
+          .find({
+            where: { event_id: eventId },
+            order: { year: 'ASC', month: 'ASC', day: 'ASC', hour: 'ASC' },
+          });
 
         return JSON.stringify({
           eventId,
-          granularity,
+          granularity: 'hourly',
           dataPoints: stats.length,
           timeline: stats.map((s) => ({
-            time: s.snapshot_at,
+            time: new Date(s.year, s.month - 1, s.day, s.hour),
             hotness: Number(s.hotness),
-            sentiment: s.sentiment,
+            sentiment: {
+              positive: Number(s.sentiment_positive),
+              negative: Number(s.sentiment_negative),
+              neutral: Number(s.sentiment_neutral),
+            },
             postCount: s.post_count,
             userCount: s.user_count,
             interactions: {
@@ -34,7 +36,6 @@ export const createQueryEventTimelineTool = () =>
               likes: s.like_count,
               total: s.comment_count + s.repost_count + s.like_count,
             },
-            trendMetrics: s.trend_metrics,
           })),
         });
       });
@@ -43,15 +44,11 @@ export const createQueryEventTimelineTool = () =>
       name: 'query_event_timeline',
       description: `查询事件的时间线演化数据。
 【核心】获取事件随时间变化的完整数据，包括热度、情感、互动量的变化趋势。
-【粒度】支持小时、天、周、月级别的时间粒度。
+【粒度】小时级别时间粒度。
 【用途】分析事件的发展轨迹、识别爆发点、评估影响力变化。
 这是理解事件"来龙去脉"的关键工具。`,
       schema: z.object({
         eventId: z.string().describe('事件 ID（必填）'),
-        granularity: z
-          .enum(['hourly', 'daily', 'weekly', 'monthly'])
-          .default('daily')
-          .describe('时间粒度：hourly=小时, daily=天, weekly=周, monthly=月'),
       }),
     }
   );
@@ -61,13 +58,13 @@ export const createQueryEventTimelineTool = () =>
  */
 export const createAnalyzeEventMilestonesTool = () =>
   tool(
-    async ({ eventId, granularity }) => {
+    async ({ eventId }) => {
       return useEntityManager(async (m) => {
         const stats = await m
-          .getRepository(EventStatisticsEntity)
+          .getRepository(EventHourlyStatisticsEntity)
           .find({
-            where: { event_id: eventId, granularity },
-            order: { snapshot_at: 'ASC' },
+            where: { event_id: eventId },
+            order: { year: 'ASC', month: 'ASC', day: 'ASC', hour: 'ASC' },
           });
 
         if (stats.length < 2) {
@@ -95,7 +92,7 @@ export const createAnalyzeEventMilestonesTool = () =>
             if (growth > 0.5) {
               milestones.push({
                 type: 'hotness_surge',
-                time: curr.snapshot_at,
+                time: new Date(curr.year, curr.month - 1, curr.day, curr.hour),
                 description: `热度暴增 ${(growth * 100).toFixed(1)}%`,
                 metrics: {
                   prevHotness: prevHotness,
@@ -112,17 +109,17 @@ export const createAnalyzeEventMilestonesTool = () =>
           const prev = stats[i - 1];
           const curr = stats[i];
 
-          if (!prev || !curr || !prev.sentiment || !curr.sentiment) continue;
+          if (!prev || !curr) continue;
 
-          const prevPositive = prev.sentiment.positive || 0;
-          const prevNegative = prev.sentiment.negative || 0;
-          const currPositive = curr.sentiment.positive || 0;
-          const currNegative = curr.sentiment.negative || 0;
+          const prevPositive = Number(prev.sentiment_positive);
+          const prevNegative = Number(prev.sentiment_negative);
+          const currPositive = Number(curr.sentiment_positive);
+          const currNegative = Number(curr.sentiment_negative);
 
           if (prevPositive > prevNegative && currNegative > currPositive) {
             milestones.push({
               type: 'sentiment_reversal',
-              time: curr.snapshot_at,
+              time: new Date(curr.year, curr.month - 1, curr.day, curr.hour),
               description: '情感反转：正面转负面',
               metrics: {
                 prevSentiment: { positive: prevPositive, negative: prevNegative },
@@ -134,7 +131,7 @@ export const createAnalyzeEventMilestonesTool = () =>
           if (prevNegative > prevPositive && currPositive > currNegative) {
             milestones.push({
               type: 'sentiment_reversal',
-              time: curr.snapshot_at,
+              time: new Date(curr.year, curr.month - 1, curr.day, curr.hour),
               description: '情感反转：负面转正面',
               metrics: {
                 prevSentiment: { positive: prevPositive, negative: prevNegative },
@@ -156,7 +153,7 @@ export const createAnalyzeEventMilestonesTool = () =>
             if (growth > 1.0) {
               milestones.push({
                 type: 'viral_spread',
-                time: curr.snapshot_at,
+                time: new Date(curr.year, curr.month - 1, curr.day, curr.hour),
                 description: `转发量激增 ${(growth * 100).toFixed(0)}%`,
                 metrics: {
                   prevReposts: prev.repost_count,
@@ -174,7 +171,7 @@ export const createAnalyzeEventMilestonesTool = () =>
         if (peakStat) {
           milestones.push({
             type: 'peak',
-            time: peakStat.snapshot_at,
+            time: new Date(peakStat.year, peakStat.month - 1, peakStat.day, peakStat.hour),
             description: `事件热度峰值 (${maxHotness.toFixed(2)})`,
             metrics: {
               hotness: maxHotness,
@@ -209,10 +206,6 @@ export const createAnalyzeEventMilestonesTool = () =>
 【用途】快速定位事件发展的关键转折点，是分析"关键节点"的核心工具。`,
       schema: z.object({
         eventId: z.string().describe('事件 ID（必填）'),
-        granularity: z
-          .enum(['hourly', 'daily', 'weekly', 'monthly'])
-          .default('daily')
-          .describe('分析时间粒度，建议使用 daily'),
       }),
     }
   );

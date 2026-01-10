@@ -12,7 +12,7 @@
  *
  * // 创建带 Sker 插件的 Auth 客户端
  * const auth = createAuthClient({
- *   baseURL: 'http://localhost:3000',
+ *   baseURL: 'http://localhost:8089',
  *   plugins: [createSkerClientPlugin()]
  * })
  *

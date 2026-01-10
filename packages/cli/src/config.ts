@@ -52,7 +52,7 @@ export class ConfigService {
       id: generateRandomString(16),
       name: 'default-worker',
       description: 'Default task worker',
-      apiServer: 'http://localhost:3000',
+      apiServer: 'http://localhost:8089',
     };
     writeFileSync(this.globalConfigPath, JSON.stringify(config, null, 2));
     return config;

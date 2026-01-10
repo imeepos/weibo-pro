@@ -20,7 +20,7 @@ pnpm test:ui
 创建 `.env` 文件：
 
 ```bash
-API_BASE_URL=http://localhost:3000
+API_BASE_URL=http://localhost:8089
 ```
 
 ## 添加新测试

@@ -11,7 +11,7 @@ pnpm dev
 ## 访问
 
 ```bash
-curl http://localhost:3000
+curl http://localhost:8089
 ```
 
 返回：`Hello World from @sker/core!`

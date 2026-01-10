@@ -190,7 +190,7 @@ export interface EventSentimentDistribution {
 }
 
 export interface EventSentimentIntensity {
-  confidence: number
+  intensity: number
   count: number
 }
 
@@ -254,3 +254,6 @@ export interface EventPeak {
     engagement_rate: number
   }
 }
+
+// 从 SDK 重新导出 UserRelationNetwork
+export type { UserRelationNetwork } from '@sker/sdk'

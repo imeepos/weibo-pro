@@ -1,6 +1,6 @@
 import { useEntityManager } from '../utils';
 import { EventEntity } from '../event.entity'
-import { EventStatisticsEntity } from '../event-statistics.entity'
+import { EventHourlyStatisticsEntity } from '../event-hourly-statistics.entity'
 import { SentimentScore } from '../types/sentiment';
 export type TimeRange = 'all' | '1h' | '6h' | '12h' | '24h' | '7d' | '30d' | '90d' | '180d' | '365d';
 
@@ -53,18 +53,46 @@ export const findLatestEventStatistics = (eventId: string, timeRange: TimeRange)
   useEntityManager(async m => {
     const dateRange = getDateRangeByTimeRange(timeRange);
 
-    return await m
-      .createQueryBuilder(EventStatisticsEntity, 'statistics')
-      .where('statistics.event_id = :eventId', { eventId })
-      .andWhere('statistics.snapshot_at >= :startDate', { startDate: dateRange.start })
-      .andWhere('statistics.snapshot_at <= :endDate', { endDate: dateRange.end })
-      .orderBy('statistics.snapshot_at', 'DESC')
+    const result = await m
+      .createQueryBuilder(EventHourlyStatisticsEntity, 'stats')
+      .where('stats.event_id = :eventId', { eventId })
+      .andWhere(
+        `make_timestamp(stats.year, stats.month, stats.day, stats.hour, 0, 0) >= :startDate`,
+        { startDate: dateRange.start }
+      )
+      .andWhere(
+        `make_timestamp(stats.year, stats.month, stats.day, stats.hour, 0, 0) <= :endDate`,
+        { endDate: dateRange.end }
+      )
+      .orderBy('stats.year', 'DESC')
+      .addOrderBy('stats.month', 'DESC')
+      .addOrderBy('stats.day', 'DESC')
+      .addOrderBy('stats.hour', 'DESC')
       .limit(7)
       .getMany();
+
+    // 转换为兼容 EventStatisticsEntity 的格式
+    return result.map(s => ({
+      event_id: s.event_id,
+      post_count: s.post_count,
+      user_count: s.user_count,
+      sentiment: {
+        positive: parseFloat(s.sentiment_positive.toString()),
+        negative: parseFloat(s.sentiment_negative.toString()),
+        neutral: parseFloat(s.sentiment_neutral.toString())
+      },
+      hotness: parseFloat(s.hotness.toString()),
+      snapshot_at: new Date(s.year, s.month - 1, s.day, s.hour)
+    }));
   });
 
 /** 基于事件统计计算帖子数量 */
-const calculatePostCount = (statistics: EventStatisticsEntity[]): number => {
+const calculatePostCount = (statistics: Array<{
+  post_count: number;
+  user_count: number;
+  hotness: number;
+  sentiment: SentimentScore;
+}>): number => {
   if (statistics && statistics.length > 0) {
     const latestStats = statistics[0];
     return latestStats?.post_count ?? 0;
@@ -73,7 +101,12 @@ const calculatePostCount = (statistics: EventStatisticsEntity[]): number => {
 };
 
 /** 获取情感分析数据 */
-const getSentiment = (event: EventEntity, statistics: EventStatisticsEntity[]): SentimentScore => {
+const getSentiment = (event: EventEntity, statistics: Array<{
+  post_count: number;
+  user_count: number;
+  hotness: number;
+  sentiment: SentimentScore;
+}>): SentimentScore => {
   if (statistics && statistics.length > 0) {
     const latestStats = statistics[0];
     return latestStats?.sentiment ?? event.sentiment;
@@ -82,7 +115,12 @@ const getSentiment = (event: EventEntity, statistics: EventStatisticsEntity[]): 
 };
 
 /** 基于热度变化计算趋势 */
-const calculateTrend = (statistics: EventStatisticsEntity[]): 'up' | 'down' | 'stable' => {
+const calculateTrend = (statistics: Array<{
+  post_count: number;
+  user_count: number;
+  hotness: number;
+  sentiment: SentimentScore;
+}>): 'up' | 'down' | 'stable' => {
   if (!statistics || statistics.length < 2) {
     return 'stable';
   }
@@ -99,7 +137,12 @@ const calculateTrend = (statistics: EventStatisticsEntity[]): 'up' | 'down' | 's
 };
 
 /** 生成趋势数据 */
-const generateTrendData = (statistics: EventStatisticsEntity[], currentHotness: number): number[] => {
+const generateTrendData = (statistics: Array<{
+  post_count: number;
+  user_count: number;
+  hotness: number;
+  sentiment: SentimentScore;
+}>, currentHotness: number): number[] => {
   if (!statistics || statistics.length === 0) {
     return [currentHotness];
   }
@@ -111,7 +154,12 @@ const generateTrendData = (statistics: EventStatisticsEntity[], currentHotness: 
 };
 
 /** 将数据库实体映射为前端需要的HotEvent格式 */
-const mapEventToHotEvent = (event: EventEntity, statistics: EventStatisticsEntity[]) => {
+const mapEventToHotEvent = (event: EventEntity, statistics: Array<{
+  post_count: number;
+  user_count: number;
+  hotness: number;
+  sentiment: SentimentScore;
+}>) => {
   const sentimentScore = getSentiment(event, statistics);
 
   // 根据情感分数确定主导情感

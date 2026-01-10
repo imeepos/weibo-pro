@@ -2,7 +2,7 @@ import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
 import {
   PostNLPResultEntity,
-  EventStatisticsEntity,
+  EventHourlyStatisticsEntity,
   useEntityManager,
 } from '@sker/entities';
 
@@ -11,14 +11,14 @@ import {
  */
 export const createExtractKeyOpinionsTool = () =>
   tool(
-    async ({ eventId, granularity, topN }) => {
+    async ({ eventId, topN }) => {
       return useEntityManager(async (m) => {
-        // 先获取关键时间点
+        // 先获取关键时间点（从小时级统计表）
         const stats = await m
-          .getRepository(EventStatisticsEntity)
+          .getRepository(EventHourlyStatisticsEntity)
           .find({
-            where: { event_id: eventId, granularity },
-            order: { snapshot_at: 'ASC' },
+            where: { event_id: eventId },
+            order: { year: 'ASC', month: 'ASC', day: 'ASC', hour: 'ASC' },
           });
 
         if (stats.length < 2) {
@@ -49,7 +49,7 @@ export const createExtractKeyOpinionsTool = () =>
             if (growth > 0.5) {
               milestones.push({
                 type: 'hotness_surge',
-                time: curr.snapshot_at,
+                time: new Date(curr.year, curr.month - 1, curr.day, curr.hour),
                 description: `热度暴增 ${(growth * 100).toFixed(1)}%`,
               });
             }
@@ -60,17 +60,17 @@ export const createExtractKeyOpinionsTool = () =>
         for (let i = 1; i < stats.length; i++) {
           const prev = stats[i - 1];
           const curr = stats[i];
-          if (!prev || !curr || !prev.sentiment || !curr.sentiment) continue;
+          if (!prev || !curr) continue;
 
-          const prevPositive = prev.sentiment.positive || 0;
-          const prevNegative = prev.sentiment.negative || 0;
-          const currPositive = curr.sentiment.positive || 0;
-          const currNegative = curr.sentiment.negative || 0;
+          const prevPositive = Number(prev.sentiment_positive);
+          const prevNegative = Number(prev.sentiment_negative);
+          const currPositive = Number(curr.sentiment_positive);
+          const currNegative = Number(curr.sentiment_negative);
 
           if (prevPositive > prevNegative && currNegative > currPositive) {
             milestones.push({
               type: 'sentiment_reversal',
-              time: curr.snapshot_at,
+              time: new Date(curr.year, curr.month - 1, curr.day, curr.hour),
               description: '情感反转：正面转负面',
             });
           }
@@ -78,7 +78,7 @@ export const createExtractKeyOpinionsTool = () =>
           if (prevNegative > prevPositive && currPositive > currNegative) {
             milestones.push({
               type: 'sentiment_reversal',
-              time: curr.snapshot_at,
+              time: new Date(curr.year, curr.month - 1, curr.day, curr.hour),
               description: '情感反转：负面转正面',
             });
           }
@@ -90,7 +90,7 @@ export const createExtractKeyOpinionsTool = () =>
         if (peakStat) {
           milestones.push({
             type: 'peak',
-            time: peakStat.snapshot_at,
+            time: new Date(peakStat.year, peakStat.month - 1, peakStat.day, peakStat.hour),
             description: `事件热度峰值`,
           });
         }
@@ -105,16 +105,9 @@ export const createExtractKeyOpinionsTool = () =>
             const timeWindowStart = new Date(milestone.time);
             const timeWindowEnd = new Date(milestone.time);
 
-            if (granularity === 'hourly') {
-              timeWindowStart.setHours(timeWindowStart.getHours() - 1);
-              timeWindowEnd.setHours(timeWindowEnd.getHours() + 1);
-            } else if (granularity === 'daily') {
-              timeWindowStart.setHours(0, 0, 0, 0);
-              timeWindowEnd.setHours(23, 59, 59, 999);
-            } else if (granularity === 'weekly') {
-              timeWindowStart.setDate(timeWindowStart.getDate() - 3);
-              timeWindowEnd.setDate(timeWindowEnd.getDate() + 3);
-            }
+            // 使用小时级时间窗口（前后各1小时）
+            timeWindowStart.setHours(timeWindowStart.getHours() - 1);
+            timeWindowEnd.setHours(timeWindowEnd.getHours() + 1);
 
             const results = await m
               .getRepository(PostNLPResultEntity)
@@ -198,10 +191,6 @@ export const createExtractKeyOpinionsTool = () =>
 【用途】快速定位"在什么时间，谁说了什么关键的话"，是分析事件演变的核心工具。`,
       schema: z.object({
         eventId: z.string().describe('事件 ID（必填）'),
-        granularity: z
-          .enum(['hourly', 'daily', 'weekly'])
-          .default('daily')
-          .describe('时间粒度，决定时间窗口大小'),
         topN: z
           .number()
           .default(5)

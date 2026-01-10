@@ -4,7 +4,7 @@ import { ChartState } from '@sker/ui/components/ui/chart-state'
 import * as echarts from 'echarts'
 
 interface SentimentIntensityData {
-  confidence: number
+  intensity: number
   count: number
 }
 
@@ -27,7 +27,7 @@ const SentimentIntensityChart: React.FC<SentimentIntensityChartProps> = ({
   const chartData = useMemo(() => {
     if (!data || data.length === 0) return []
     return data.map(d => ({
-      name: `${d.confidence.toFixed(1)}`,
+      name: `${d.intensity.toFixed(1)}`,
       value: d.count
     }))
   }, [data])
@@ -52,7 +52,7 @@ const SentimentIntensityChart: React.FC<SentimentIntensityChartProps> = ({
           const param = params[0]
           return `
             <div style="padding: 8px;">
-              <div style="font-weight: bold; margin-bottom: 4px;">置信度: ${param.name}</div>
+              <div style="font-weight: bold; margin-bottom: 4px;">情感极化度: ${param.name}</div>
               <div>数量: <span style="font-weight: bold;">${param.value}</span></div>
               <div>占比: <span style="font-weight: bold;">${((param.value / maxValue) * 100).toFixed(1)}%</span></div>
             </div>
@@ -61,7 +61,7 @@ const SentimentIntensityChart: React.FC<SentimentIntensityChartProps> = ({
       },
       xAxis: {
         type: 'category',
-        name: '置信度',
+        name: '情感极化度',
         nameLocation: 'middle',
         nameGap: 25,
         data: chartData.map(d => d.name),

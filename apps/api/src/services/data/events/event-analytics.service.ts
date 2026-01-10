@@ -1,11 +1,9 @@
 import { Injectable, Inject } from '@sker/core';
 import {
   useEntityManager,
-  EventStatisticsEntity,
   EventHourlyStatisticsEntity,
   EventEntity,
   PostNLPResultEntity,
-  WeiboPostEntity,
   getDateRangeByTimeRange,
 } from '@sker/entities';
 import { CacheService, CACHE_TTL } from '../../cache.service';
@@ -52,15 +50,21 @@ export class EventAnalyticsService {
             .orderBy('date', 'ASC')
             .getRawMany();
 
-          // 从 event_statistics 表按时间分组统计帖子、用户、热度
+          // 从 event_hourly_statistics 表按时间分组统计帖子、用户、热度
           const statsTrendData = await entityManager
-            .createQueryBuilder(EventStatisticsEntity, 'stats')
-            .select(`DATE_TRUNC('${granularity}', stats.snapshot_at)`, 'date')
+            .createQueryBuilder(EventHourlyStatisticsEntity, 'stats')
+            .select(`DATE_TRUNC('${granularity}', make_timestamp(stats.year, stats.month, stats.day, stats.hour, 0, 0))`, 'date')
             .addSelect('SUM(stats.user_count)', 'usercount')
             .addSelect('SUM(stats.post_count)', 'postcount')
             .addSelect('AVG(stats.hotness)', 'hotness')
-            .where('stats.snapshot_at >= :start', { start: dateRange.start })
-            .andWhere('stats.snapshot_at <= :end', { end: dateRange.end })
+            .where(
+              `make_timestamp(stats.year, stats.month, stats.day, stats.hour, 0, 0) >= :start`,
+              { start: dateRange.start }
+            )
+            .andWhere(
+              `make_timestamp(stats.year, stats.month, stats.day, stats.hour, 0, 0) <= :end`,
+              { end: dateRange.end }
+            )
             .groupBy('date')
             .orderBy('date', 'ASC')
             .getRawMany();
@@ -100,14 +104,20 @@ export class EventAnalyticsService {
             .andWhere('event.created_at <= :end', { end: dateRange.end })
             .getCount();
 
-          // 从 event_statistics 表查询帖子、用户、热度统计
+          // 从 event_hourly_statistics 表查询帖子、用户、热度统计
           const totalStats = await entityManager
-            .createQueryBuilder(EventStatisticsEntity, 'stats')
+            .createQueryBuilder(EventHourlyStatisticsEntity, 'stats')
             .select('SUM(stats.post_count)', 'totalposts')
             .addSelect('SUM(stats.user_count)', 'totalusers')
             .addSelect('AVG(stats.hotness)', 'avghotness')
-            .where('stats.snapshot_at >= :start', { start: dateRange.start })
-            .andWhere('stats.snapshot_at <= :end', { end: dateRange.end })
+            .where(
+              `make_timestamp(stats.year, stats.month, stats.day, stats.hour, 0, 0) >= :start`,
+              { start: dateRange.start }
+            )
+            .andWhere(
+              `make_timestamp(stats.year, stats.month, stats.day, stats.hour, 0, 0) <= :end`,
+              { end: dateRange.end }
+            )
             .getRawOne();
 
           return {
