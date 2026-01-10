@@ -198,6 +198,88 @@ export interface EventDetail {
   successFactors: EventSuccessFactor[];
 }
 
+// 新增：事件 NLP 深度分析类型
+export interface EventSentimentHotness {
+  postId: string
+  sentimentScore: number // -1 到 1，负数负面，正数正面
+  hotness: number
+  timestamp: string
+}
+
+export interface EventSentimentDistribution {
+  positive: { count: number; percentage: number }
+  negative: { count: number; percentage: number }
+  neutral: { count: number; percentage: number }
+}
+
+export interface EventSentimentIntensity {
+  confidence: number
+  count: number
+}
+
+export interface EventKeywordTimeSeries {
+  keyword: string
+  timeData: Array<{
+    timestamp: string
+    weight: number
+  }>
+}
+
+export interface EventKeywordBySentiment {
+  keyword: string
+  weight: number
+  sentiment: 'positive' | 'negative' | 'neutral'
+  count: number
+}
+
+export interface EventNegativeKeywordAlert {
+  keyword: string
+  weight: number
+  count: number
+  trend: 'rising' | 'stable' | 'falling'
+}
+
+export interface EventEventTypeDistribution {
+  eventType: string
+  count: number
+  confidence: number
+  avgSentiment: number
+}
+
+// 互动指标趋势数据（基于 EventHourlyStatisticsEntity）
+export interface EventEngagementTrend {
+  timestamp: string
+  post_count: number
+  comment_count: number
+  repost_count: number
+  like_count: number
+  user_count: number
+  hotness: number
+  engagement_rate: number // 互动率：(comment + repost + like) / post
+}
+
+// 异常检测数据
+export interface EventAnomaly {
+  timestamp: string
+  type: 'spike' | 'drop' | 'sentiment_shift'
+  metric: string
+  value: number
+  expected: number
+  confidence: number
+}
+
+// 峰值识别数据
+export interface EventPeak {
+  timestamp: string
+  hotness: number
+  peak_type: 'global' | 'local'
+  metrics: {
+    post_count: number
+    user_count: number
+    engagement_rate: number
+  }
+}
+
 export interface InfluenceUser {
   userId: string;
   username: string;
@@ -923,4 +1005,40 @@ export interface EnvCheckResult {
   message: string
   output?: string
   error?: string
+}
+
+// 小时级统计数据汇总（用于顶部指标卡）
+export interface EventHourlySummary {
+  totalHours: number
+  avgPostCount: number
+  avgUserCount: number
+  avgHotness: number
+  peakHour: string
+  peakHotness: number
+}
+
+// 多指标趋势数据
+export interface MultiMetricTrendData {
+  timestamp: string
+  metrics: {
+    posts: number
+    users: number
+    hotness: number
+    engagement: number
+  }
+  sentiment: {
+    positive: number
+    negative: number
+    neutral: number
+  }
+}
+
+// 互动指标分解数据
+export interface EngagementBreakdown {
+  timestamp: string
+  comments: number
+  reposts: number
+  likes: number
+  total: number
+  rate: number
 }

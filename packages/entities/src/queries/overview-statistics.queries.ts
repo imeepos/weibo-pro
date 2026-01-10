@@ -1,26 +1,18 @@
 import { EntityManager } from 'typeorm';
 import { OverviewStatistics, StatisticsPeriod } from '../overview-statistics.entity';
-import { StatisticsProgress } from '../statistics-progress.entity';
 
 export class OverviewStatisticsQueries {
   /**
    * 增量统计小时级数据
    */
   static async incrementalHourlyStats(manager: EntityManager): Promise<number> {
-    const progressKey = 'overview_hourly';
-    let progress = await manager.findOne(StatisticsProgress, {
-      where: { relationType: progressKey },
+    // 从 overview_statistics 表获取最后处理的时间
+    const lastRecord = await manager.findOne(OverviewStatistics, {
+      where: { period: StatisticsPeriod.HOURLY },
+      order: { periodStart: 'DESC' }
     });
 
-    if (!progress) {
-      progress = manager.create(StatisticsProgress, {
-        relationType: progressKey,
-        lastProcessedId: '0',
-      });
-      await manager.save(progress);
-    }
-
-    const lastProcessedTime = progress.lastProcessedAt || new Date('2020-01-01');
+    const lastProcessedTime = lastRecord?.periodStart || new Date('2020-01-01');
 
     const sql = `
       WITH hourly_periods AS (
@@ -127,43 +119,20 @@ export class OverviewStatisticsQueries {
     `;
 
     const result = await manager.query(sql, [lastProcessedTime]);
-
-    const processedCount = result.length;
-
-    if (processedCount > 0) {
-      // 使用实际处理的最大时间，而不是当前系统时间
-      const maxPeriodStart = result.reduce((max: Date, row: any) => {
-        const periodStart = new Date(row.period_start);
-        return periodStart > max ? periodStart : max;
-      }, new Date(0));
-
-      // 加1小时，表示已经处理到这个小时的结束
-      progress.lastProcessedAt = new Date(maxPeriodStart.getTime() + 60 * 60 * 1000);
-      progress.processedCount = processedCount;
-      await manager.save(progress);
-    }
-
-    return processedCount;
+    return result.length;
   }
 
   /**
    * 增量统计天级数据
    */
   static async incrementalDailyStats(manager: EntityManager): Promise<number> {
-    const progressKey = 'overview_daily';
-    let progress = await manager.findOne(StatisticsProgress, {
-      where: { relationType: progressKey },
+    // 从 overview_statistics 表获取最后处理的时间
+    const lastRecord = await manager.findOne(OverviewStatistics, {
+      where: { period: StatisticsPeriod.DAILY },
+      order: { periodStart: 'DESC' }
     });
 
-    if (!progress) {
-      progress = manager.create(StatisticsProgress, {
-        relationType: progressKey,
-        lastProcessedId: '0',
-      });
-      await manager.save(progress);
-    }
-
-    const lastProcessedTime = progress.lastProcessedAt || new Date('2020-01-01');
+    const lastProcessedTime = lastRecord?.periodStart || new Date('2020-01-01');
 
     const sql = `
       WITH daily_periods AS (
@@ -270,23 +239,7 @@ export class OverviewStatisticsQueries {
     `;
 
     const result = await manager.query(sql, [lastProcessedTime]);
-
-    const processedCount = result.length;
-
-    if (processedCount > 0) {
-      // 使用实际处理的最大时间，而不是当前系统时间
-      const maxPeriodStart = result.reduce((max: Date, row: any) => {
-        const periodStart = new Date(row.period_start);
-        return periodStart > max ? periodStart : max;
-      }, new Date(0));
-
-      // 加1天，表示已经处理到这一天的结束
-      progress.lastProcessedAt = new Date(maxPeriodStart.getTime() + 24 * 60 * 60 * 1000);
-      progress.processedCount = processedCount;
-      await manager.save(progress);
-    }
-
-    return processedCount;
+    return result.length;
   }
 
   /**

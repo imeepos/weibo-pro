@@ -174,3 +174,83 @@ export interface TrendAnalysis {
   userEngagement: number[];
   hotnessData: number[];
 }
+
+// 新增：NLP 深度分析类型
+export interface EventSentimentHotness {
+  postId: string
+  sentimentScore: number
+  hotness: number
+  timestamp: string
+}
+
+export interface EventSentimentDistribution {
+  positive: { count: number; percentage: number }
+  negative: { count: number; percentage: number }
+  neutral: { count: number; percentage: number }
+}
+
+export interface EventSentimentIntensity {
+  confidence: number
+  count: number
+}
+
+export interface EventKeywordTimeSeries {
+  keyword: string
+  timeData: Array<{
+    timestamp: string
+    weight: number
+  }>
+}
+
+export interface EventKeywordBySentiment {
+  keyword: string
+  weight: number
+  sentiment: 'positive' | 'negative' | 'neutral'
+  count: number
+}
+
+export interface EventNegativeKeywordAlert {
+  keyword: string
+  weight: number
+  count: number
+  trend: 'rising' | 'stable' | 'falling'
+}
+
+export interface EventEventTypeDistribution {
+  eventType: string
+  count: number
+  confidence: number
+  avgSentiment: number
+}
+
+// 新增：基于 EventHourlyStatisticsEntity 的互动指标类型
+export interface EventEngagementTrend {
+  timestamp: string
+  post_count: number
+  comment_count: number
+  repost_count: number
+  like_count: number
+  user_count: number
+  hotness: number
+  engagement_rate: number
+}
+
+export interface EventAnomaly {
+  timestamp: string
+  type: 'spike' | 'drop' | 'sentiment_shift'
+  metric: string
+  value: number
+  expected: number
+  confidence: number
+}
+
+export interface EventPeak {
+  timestamp: string
+  hotness: number
+  peak_type: 'global' | 'local'
+  metrics: {
+    post_count: number
+    user_count: number
+    engagement_rate: number
+  }
+}

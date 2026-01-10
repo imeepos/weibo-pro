@@ -2,6 +2,7 @@ import { Injectable, Inject } from '@sker/core';
 import {
   useEntityManager,
   EventStatisticsEntity,
+  EventHourlyStatisticsEntity,
   EventEntity,
   PostNLPResultEntity,
   WeiboPostEntity,
@@ -132,8 +133,7 @@ export class EventAnalyticsService {
 
   async getEventTimeSeries(
     eventId: string,
-    timeRange: TimeRange,
-    statistics: EventStatistics[]
+    timeRange: TimeRange
   ): Promise<TimeSeriesData> {
     const cacheKey = CacheService.buildKey(
       'event:timeseries',
@@ -144,38 +144,39 @@ export class EventAnalyticsService {
     return await this.cacheService.getOrSet(
       cacheKey,
       async () => {
-        const granularity = TIME_RANGE_GRANULARITY[timeRange];
+        return await useEntityManager(async (entityManager) => {
+          const granularity = TIME_RANGE_GRANULARITY[timeRange];
 
-        const categories = statistics
-          .map((s) => this.formatDate(s.snapshot_at, granularity))
-          .reverse();
+          const stats = await entityManager
+            .createQueryBuilder(EventHourlyStatisticsEntity, 'stats')
+            .where('stats.event_id = :eventId', { eventId })
+            .orderBy('stats.year', 'ASC')
+            .addOrderBy('stats.month', 'ASC')
+            .addOrderBy('stats.day', 'ASC')
+            .addOrderBy('stats.hour', 'ASC')
+            .getMany();
 
-        const postData = statistics
-          .map((s) => s?.post_count || 0)
-          .reverse();
-        const userData = statistics
-          .map((s) => s?.user_count || 0)
-          .reverse();
-        const positiveData = statistics
-          .map((s) => s?.sentiment?.positive || 0)
-          .reverse();
-        const negativeData = statistics
-          .map((s) => s?.sentiment?.negative || 0)
-          .reverse();
-        const neutralData = statistics
-          .map((s) => s?.sentiment?.neutral || 0)
-          .reverse();
+          const categories = stats.map((s) =>
+            new Date(s.year, s.month - 1, s.day, s.hour).toISOString()
+          );
 
-        return {
-          categories,
-          series: [
-            { name: '帖子数量', data: postData },
-            { name: '用户参与', data: userData },
-            { name: '正面情绪', data: positiveData },
-            { name: '负面情绪', data: negativeData },
-            { name: '中性情绪', data: neutralData },
-          ],
-        };
+          const postData = stats.map((s) => s.post_count || 0);
+          const userData = stats.map((s) => s.user_count || 0);
+          const positiveData = stats.map((s) => s.sentiment_positive || 0);
+          const negativeData = stats.map((s) => s.sentiment_negative || 0);
+          const neutralData = stats.map((s) => s.sentiment_neutral || 0);
+
+          return {
+            categories,
+            series: [
+              { name: '帖子数量', data: postData },
+              { name: '用户参与', data: userData },
+              { name: '正面情绪', data: positiveData },
+              { name: '负面情绪', data: negativeData },
+              { name: '中性情绪', data: neutralData },
+            ],
+          };
+        });
       },
       CACHE_TTL.SHORT
     );
@@ -183,50 +184,54 @@ export class EventAnalyticsService {
 
   async getEventTrends(
     eventId: string,
-    timeRange: TimeRange,
-    statistics: EventStatistics[]
+    timeRange: TimeRange
   ): Promise<TrendAnalysis> {
     const cacheKey = CacheService.buildKey('event:trends', eventId, timeRange);
 
     return await this.cacheService.getOrSet(
       cacheKey,
       async () => {
-        const granularity = TIME_RANGE_GRANULARITY[timeRange];
+        return await useEntityManager(async (entityManager) => {
+          const granularity = TIME_RANGE_GRANULARITY[timeRange];
 
-        const timeline = statistics
-          .map((s) => this.formatDate(s.snapshot_at, granularity))
-          .reverse();
+          const stats = await entityManager
+            .createQueryBuilder(EventHourlyStatisticsEntity, 'stats')
+            .where('stats.event_id = :eventId', { eventId })
+            .orderBy('stats.year', 'ASC')
+            .addOrderBy('stats.month', 'ASC')
+            .addOrderBy('stats.day', 'ASC')
+            .addOrderBy('stats.hour', 'ASC')
+            .getMany();
 
-        const postVolume = statistics
-          .map((s) => s?.post_count || 0)
-          .reverse();
-        const userEngagement = statistics
-          .map((s) => s?.user_count || 0)
-          .reverse();
-
-        const sentimentScores = statistics
-          .map((s) => {
-            const positive = s?.sentiment?.positive || 0;
-            const negative = s?.sentiment?.negative || 0;
-            return Math.round((positive - negative) * 50 + 50);
-          })
-          .reverse();
-
-        const hotnessData = postVolume.map((posts, index) => {
-          const users = userEngagement[index] || 0;
-          return Math.round(
-            posts * HOTNESS_CALCULATION_WEIGHTS.POSTS +
-              users * HOTNESS_CALCULATION_WEIGHTS.USERS
+          const timeline = stats.map((s) =>
+            this.formatDate(new Date(s.year, s.month - 1, s.day, s.hour), granularity)
           );
-        });
 
-        return {
-          timeline,
-          postVolume,
-          sentimentScores,
-          userEngagement,
-          hotnessData,
-        };
+          const postVolume = stats.map((s) => s.post_count || 0);
+          const userEngagement = stats.map((s) => s.user_count || 0);
+
+          const sentimentScores = stats.map((s) => {
+            const positive = s.sentiment_positive || 0;
+            const negative = s.sentiment_negative || 0;
+            return Math.round((positive - negative) * 50 + 50);
+          });
+
+          const hotnessData = postVolume.map((posts, index) => {
+            const users = userEngagement[index] || 0;
+            return Math.round(
+              posts * HOTNESS_CALCULATION_WEIGHTS.POSTS +
+                users * HOTNESS_CALCULATION_WEIGHTS.USERS
+            );
+          });
+
+          return {
+            timeline,
+            postVolume,
+            sentimentScores,
+            userEngagement,
+            hotnessData,
+          };
+        });
       },
       CACHE_TTL.MEDIUM
     );
@@ -243,16 +248,17 @@ export class EventAnalyticsService {
           const userStats = await entityManager
             .createQueryBuilder(PostNLPResultEntity, 'nlp')
             .innerJoin('nlp.post', 'post')
+            .innerJoin('post.user', 'user')
             .select(
               `CASE
-                WHEN (jsonb_extract_path_text(post.user, 'followers_count'))::int >= 100000 THEN '意见领袖'
-                WHEN (jsonb_extract_path_text(post.user, 'followers_count'))::int >= 10000 THEN '活跃用户'
-                WHEN (jsonb_extract_path_text(post.user, 'followers_count'))::int >= 1000 THEN '普通用户'
+                WHEN user.followers_count >= 100000 THEN '意见领袖'
+                WHEN user.followers_count >= 10000 THEN '活跃用户'
+                WHEN user.followers_count >= 1000 THEN '普通用户'
                 ELSE '围观群众'
               END`,
               'usertype'
             )
-            .addSelect('COUNT(DISTINCT jsonb_extract_path_text(post.user, \'id\'))', 'usercount')
+            .addSelect('COUNT(DISTINCT user.id)', 'usercount')
             .addSelect('COUNT(post.id)', 'postcount')
             .addSelect(
               'AVG(post.attitudes_count + post.comments_count + post.reposts_count)',

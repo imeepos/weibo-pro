@@ -10,7 +10,21 @@ import type {
   TimeSeriesData,
   TrendAnalysis,
   TimeRange,
-  PaginatedResponse
+  PaginatedResponse,
+  EventSentimentHotness,
+  EventSentimentDistribution,
+  EventSentimentIntensity,
+  EventKeywordTimeSeries,
+  EventKeywordBySentiment,
+  EventNegativeKeywordAlert,
+  EventEventTypeDistribution,
+  EventEngagementTrend,
+  EventAnomaly,
+  EventPeak,
+  EventHourlySummary,
+  MultiMetricTrendData,
+  EngagementBreakdown,
+  UserRelationNetwork
 } from '../types'
 
 @Controller('events')
@@ -71,5 +85,64 @@ export class EventsController {
   @Get(':id')
   getEventDetail(@Param('id') id: string): Promise<EventDetail> {
     throw new Error('method getEventDetail not implements')
+  }
+
+  // 新增：NLP 深度分析接口
+
+  @Get(':id/sentiment-hotness')
+  getSentimentHotness(@Param('id') id: string): Promise<EventSentimentHotness[]> {
+    throw new Error('method getSentimentHotness not implements')
+  }
+
+  @Get(':id/sentiment-distribution')
+  getSentimentDistribution(@Param('id') id: string): Promise<EventSentimentDistribution> {
+    throw new Error('method getSentimentDistribution not implements')
+  }
+
+  @Get(':id/sentiment-intensity')
+  getSentimentIntensity(@Param('id') id: string): Promise<EventSentimentIntensity[]> {
+    throw new Error('method getSentimentIntensity not implements')
+  }
+
+  @Get(':id/keywords-timeseries')
+  getKeywordsTimeSeries(@Param('id') id: string, @Query('topN') topN?: number): Promise<EventKeywordTimeSeries[]> {
+    throw new Error('method getKeywordsTimeSeries not implements')
+  }
+
+  @Get(':id/keywords-by-sentiment')
+  getKeywordsBySentiment(@Param('id') id: string): Promise<EventKeywordBySentiment[]> {
+    throw new Error('method getKeywordsBySentiment not implements')
+  }
+
+  @Get(':id/negative-keywords')
+  getNegativeKeywords(@Param('id') id: string, @Query('threshold') threshold?: number): Promise<EventNegativeKeywordAlert[]> {
+    throw new Error('method getNegativeKeywords not implements')
+  }
+
+  @Get(':id/event-types')
+  getEventTypes(@Param('id') id: string): Promise<EventEventTypeDistribution[]> {
+    throw new Error('method getEventTypes not implements')
+  }
+
+  // 新增：基于 EventHourlyStatisticsEntity 的互动指标接口
+
+  @Get(':id/engagement-trend')
+  getEngagementTrend(@Param('id') id: string, @Query('limit') limit?: number): Promise<EventEngagementTrend[]> {
+    throw new Error('method getEngagementTrend not implements')
+  }
+
+  @Get(':id/anomalies')
+  getAnomalies(@Param('id') id: string, @Query('limit') limit?: number): Promise<EventAnomaly[]> {
+    throw new Error('method getAnomalies not implements')
+  }
+
+  @Get(':id/peaks')
+  getPeaks(@Param('id') id: string, @Query('limit') limit?: number): Promise<EventPeak[]> {
+    throw new Error('method getPeaks not implements')
+  }
+
+  @Get(':id/user-relations')
+  getEventUserRelations(@Param('id') id: string): Promise<UserRelationNetwork> {
+    throw new Error('method getEventUserRelations not implements')
   }
 }

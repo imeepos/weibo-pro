@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
 import { EventsController } from '@sker/sdk'
+import type { UserRelationNetwork } from '@sker/sdk'
 import { root } from '@sker/core'
 import {
   ArrowLeft,
@@ -16,9 +17,7 @@ import {
   Zap,
   Target,
   Minus,
-  Globe,
-  Network,
-  Clock
+  Globe
 } from 'lucide-react';
 import { cn, formatNumber, formatRelativeTime } from '@/utils';
 import { createLogger } from '@sker/core';
@@ -26,17 +25,17 @@ import { MetricCard } from '@sker/ui/components/ui/metric-card';
 import { Button } from '@sker/ui/components/ui/button';
 import { Badge } from '@sker/ui/components/ui/badge';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@sker/ui/components/ui/card';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@sker/ui/components/ui/tabs';
 import { Skeleton } from '@sker/ui/components/ui/skeleton';
 
 import MiniTrendChart from '@/components/charts/MiniTrendChart';
 import TimeSeriesChart from '@/components/charts/TimeSeriesChart';
 import WordCloudChart from '@/components/charts/WordCloudChart';
-import GeographicChart from '@/components/charts/GeographicChart';
-import PropagationPathChart from '@/components/charts/PropagationPathChart';
-import EventTimelineChart from '@/components/charts/EventTimelineChart';
-import EventDevelopmentChart from '@/components/charts/EventDevelopmentChart';
-import InfluenceNetworkFlow from '@/components/charts/InfluenceNetworkFlow';
+import UserRelationGraph3DOffscreen from '@/components/charts/UserRelationGraph3DOffscreen';
+import SentimentHotnessScatterChart from '@/components/charts/SentimentHotnessScatterChart';
+import SentimentIntensityChart from '@/components/charts/SentimentIntensityChart';
+import EngagementTrendChart from '@/components/charts/EngagementTrendChart';
+import MultiMetricTrendChart from '@/components/charts/MultiMetricTrendChart';
+import AnomalyTimelineChart from '@/components/charts/AnomalyTimelineChart';
 
 // 时间序列数据接口 - 与 TimeSeriesChart 组件期望的格式匹配
 interface TimeSeriesDataPoint {
@@ -151,24 +150,40 @@ const EventDetail: React.FC = () => {
   const [eventData, setEventData] = useState<EventDetailData | null>(null);
   const [timeSeriesData, setTimeSeriesData] = useState<TimeSeriesDataPoint[]>([]);
   const [trendData, setTrendData] = useState<TrendChartData | null>(null);
-  const [influenceUsers, setInfluenceUsers] = useState<InfluenceUser[]>([]);
+  const [userRelationNetwork, setUserRelationNetwork] = useState<UserRelationNetwork | null>(null);
   const [geographicData, setGeographicData] = useState<GeographicDataPoint[]>([]);
   const [keywordData, setKeywordData] = useState<Array<{ keyword: string; weight: number; sentiment: 'positive' | 'negative' | 'neutral' }>>([]);
-  type EventTab = 'overview' | 'timeline' | 'propagation' | 'analysis' | 'development';
-  const [activeTab, setActiveTab] = useState<EventTab>('overview');
+
+  // 新增状态
+  const [sentimentHotnessData, setSentimentHotnessData] = useState<Array<{ postId: string; sentimentScore: number; hotness: number; timestamp: string }>>([]);
+  const [sentimentIntensityData, setSentimentIntensityData] = useState<Array<{ confidence: number; count: number }>>([]);
+
+  // 新增：基于 EventHourlyStatisticsEntity 的互动指标状态
+  const [engagementTrendData, setEngagementTrendData] = useState<Array<{
+    timestamp: string;
+    post_count: number;
+    comment_count: number;
+    repost_count: number;
+    like_count: number;
+    user_count: number;
+    hotness: number;
+    engagement_rate: number;
+  }>>([]);
+  const [anomaliesData, setAnomaliesData] = useState<Array<{
+    timestamp: string;
+    type: 'spike' | 'drop' | 'sentiment_shift';
+    metric: string;
+    value: number;
+    expected: number;
+    confidence: number;
+  }>>([]);
+
   const sentimentLevels = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
   const toSentimentLevel = (value: number) => {
     const normalized = Math.round(value / 10);
     const index = Math.min(sentimentLevels.length - 1, Math.max(0, normalized - 1));
     return sentimentLevels[index]!;
   };
-  const tabs: ReadonlyArray<{ id: EventTab; label: string; icon: typeof BarChart3 }> = [
-    { id: 'overview', label: '概览分析', icon: BarChart3 },
-    { id: 'timeline', label: '发展时间线', icon: Clock },
-    { id: 'propagation', label: '传播路径', icon: Network },
-    { id: 'development', label: '发展路径', icon: Activity },
-    { id: 'analysis', label: '深度分析', icon: Target }
-  ];
 
   useEffect(() => {
     const fetchEventData = async () => {
@@ -176,7 +191,6 @@ const EventDetail: React.FC = () => {
         navigate('/events');
         return;
       }
-
       try {
         // 获取事件详情数据
         const c = root.get(EventsController)
@@ -209,12 +223,9 @@ const EventDetail: React.FC = () => {
         logger.debug('原始时间序列数据:', timeSeriesData);
 
         // 转换为 TimeSeriesDataPoint 格式
-        // API 返回的是 { categories: string[], series: Array<{name, data}> } 格式
         const convertedTimeSeries: TimeSeriesDataPoint[] = [];
         if (timeSeriesData?.categories && Array.isArray(timeSeriesData.categories)) {
           const categories = timeSeriesData.categories;
-          const postSeries = timeSeriesData.series?.find(s => s.name === '帖子数量')?.data || [];
-          const userSeries = timeSeriesData.series?.find(s => s.name === '用户参与')?.data || [];
           const positiveSeries = timeSeriesData.series?.find(s => s.name === '正面情绪')?.data || [];
           const negativeSeries = timeSeriesData.series?.find(s => s.name === '负面情绪')?.data || [];
           const neutralSeries = timeSeriesData.series?.find(s => s.name === '中性情绪')?.data || [];
@@ -222,7 +233,7 @@ const EventDetail: React.FC = () => {
           for (let i = 0; i < categories.length; i++) {
             convertedTimeSeries.push({
               timestamp: categories[i] || '',
-              value: (postSeries[i] || 0) + (userSeries[i] || 0),
+              value: (positiveSeries[i] || 0) + (negativeSeries[i] || 0) + (neutralSeries[i] || 0),
               positive: positiveSeries[i] || 0,
               negative: negativeSeries[i] || 0,
               neutral: neutralSeries[i] || 0
@@ -246,21 +257,9 @@ const EventDetail: React.FC = () => {
         };
         setTrendData(convertedTrendData);
 
-        // 获取影响力用户数据
-        const influenceUsersData = await c.getInfluenceUsers(eventId);
-        // 转换为页面期望的 InfluenceUser 格式，添加防御性检查
-        const convertedInfluenceUsers: InfluenceUser[] = influenceUsersData
-          .filter(user => user?.userId && user?.username) // 过滤掉无效数据
-          .map(user => ({
-            id: user.userId,
-            name: user.username,
-            type: 'user',
-            influence: user.influence ?? 0,
-            followers: (user.followers ?? 0).toString(),
-            posts: user.postCount ?? 0,
-            engagement: (user.interactionCount ?? 0).toString()
-          }));
-        setInfluenceUsers(convertedInfluenceUsers);
+        // 获取用户关系网络数据
+        const userRelationData = await c.getEventUserRelations(eventId);
+        setUserRelationNetwork(userRelationData);
 
         // 获取地理分布数据
         const geographicData = await c.getEventGeographic(eventId);
@@ -282,6 +281,37 @@ const EventDetail: React.FC = () => {
         }));
         // 将关键词数据存储到状态中，以便传递给 WordCloudChart
         setKeywordData(convertedKeywords);
+
+        // 新增：获取情感-热度散点图数据
+        try {
+          const sentimentHotness = await c.getSentimentHotness(eventId);
+          setSentimentHotnessData(sentimentHotness || []);
+        } catch (e) {
+          logger.warn('Failed to fetch sentiment hotness data:', e);
+        }
+
+        // 新增：获取情感强度谱数据
+        try {
+          const sentimentIntensity = await c.getSentimentIntensity(eventId);
+          setSentimentIntensityData(sentimentIntensity || []);
+        } catch (e) {
+          logger.warn('Failed to fetch sentiment intensity data:', e);
+        }
+
+        // 新增：获取基于 EventHourlyStatisticsEntity 的互动指标数据
+        try {
+          const engagementTrend = await c.getEngagementTrend(eventId, 168);
+          setEngagementTrendData(engagementTrend || []);
+        } catch (e) {
+          logger.warn('Failed to fetch engagement trend data:', e);
+        }
+
+        try {
+          const anomalies = await c.getAnomalies(eventId, 168);
+          setAnomaliesData(anomalies || []);
+        } catch (e) {
+          logger.warn('Failed to fetch anomalies data:', e);
+        }
       } catch (error) {
         logger.error('Failed to fetch event data:', error);
       }
@@ -317,7 +347,6 @@ const EventDetail: React.FC = () => {
   }, [trendData]);
 
   const { hotnessData, sentimentData, postData, userData } = trendChartData;
-
 
   if (!eventData) {
     return (
@@ -374,7 +403,7 @@ const EventDetail: React.FC = () => {
         <Card>
           <CardContent className="p-6">
             <div className="flex gap-8 mb-6">
-              {[1, 2, 3, 4, 5].map((i) => (
+              {[1, 2, 3].map((i) => (
                 <Skeleton key={i} className="h-10 w-24" />
               ))}
             </div>
@@ -413,7 +442,7 @@ const EventDetail: React.FC = () => {
 
       {/* 事件基本信息 */}
       <Card className="sentiment-overview-card">
-        <CardContent className="p-8">
+        <CardContent className="p-4">
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <div className="flex items-center space-x-4 mb-3">
@@ -430,13 +459,6 @@ const EventDetail: React.FC = () => {
                 )}
               </div>
               <p className="text-muted-foreground text-lg mb-4">{eventData.description}</p>
-              <div className="flex flex-wrap gap-2">
-                {eventData.keywords.map(keyword => (
-                  <Badge key={keyword} variant="outline" className="bg-primary/10 text-primary">
-                    #{keyword}
-                  </Badge>
-                ))}
-              </div>
             </div>
             <div className="text-right">
               <div className="text-3xl font-bold text-foreground mb-2">{eventData.hotness}</div>
@@ -490,291 +512,115 @@ const EventDetail: React.FC = () => {
         />
       </div>
 
-      {/* 标签页导航 */}
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as EventTab)} className="w-full">
-        <div className="border-b px-0">
-          <TabsList className="h-auto bg-transparent p-0">
-            {tabs.map(tab => (
-              <TabsTrigger
-                key={tab.id}
-                value={tab.id}
-                className={cn(
-                  'flex items-center font-medium text-sm transition-colors',
-                  'bg-transparent shadow-none rounded-none',
-                  'data-[state=active]:text-primary data-[state=active]:bg-transparent',
-                  'data-[state=inactive]:text-muted-foreground',
-                  'hover:text-foreground'
-                )}
-              >
-                <tab.icon className="w-4 h-4" />
-                <span>{tab.label}</span>
-              </TabsTrigger>
-            ))}
-          </TabsList>
+      {/* 单页内容布局 */}
+      <div className="space-y-6">
+        {/* 用户关系网络 */}
+        <div className="bg-muted/20 rounded-lg p-6">
+          <h4 className="text-lg font-semibold text-foreground mb-4 flex items-center">
+            <Users className="w-5 h-5 mr-2" />
+            用户关系网络
+          </h4>
+          {userRelationNetwork && userRelationNetwork.nodes.length > 0 ? (
+            <div className="h-[500px]">
+              <UserRelationGraph3DOffscreen
+                network={userRelationNetwork}
+                className="w-full h-full"
+                edgeThreshold={10}
+              />
+            </div>
+          ) : (
+            <div className="h-[500px] flex items-center justify-center text-muted-foreground">
+              暂无用户关系数据
+            </div>
+          )}
         </div>
 
-        {/* 标签页内容 */}
-        <TabsContent value="overview" className="p-6 mt-0">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-6"
-          >
+        {/* 时间趋势区域 */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col gap-6"
+        >
+          {/* 核心指标时间趋势图（MultiMetricTrendChart） */}
+            <div className="bg-muted/30 rounded-lg p-6">
+              <h3 className="text-foreground mb-4 flex items-center">
+                <Activity className="w-5 h-5 mr-2" />
+                核心指标时间趋势
+              </h3>
+              <MultiMetricTrendChart data={engagementTrendData} height={320} />
+            </div>
 
-            {/* 趋势图表 */}
+            {/* 互动指标分解图（EngagementTrendChart） */}
             <div className="bg-muted/30 rounded-lg p-6">
               <h3 className="text-foreground mb-4 flex items-center">
                 <BarChart3 className="w-5 h-5 mr-2" />
-                热度趋势分析
+                互动指标分解
+              </h3>
+              <EngagementTrendChart data={engagementTrendData} height={280} />
+            </div>
+
+            {/* 情感趋势图 */}
+            <div className="bg-muted/30 rounded-lg p-6">
+              <h3 className="text-foreground mb-4 flex items-center">
+                <Heart className="w-5 h-5 mr-2" />
+                情感变化趋势
               </h3>
               <TimeSeriesChart
                 data={timeSeriesData}
                 title=""
-                height={300}
+                height={250}
               />
             </div>
 
-            {/* 图表分析区域 */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* 关键词分析 */}
-              <div className="bg-muted/30 rounded-lg p-6">
-                <h3 className="text-foreground mb-4 flex items-center">
-                  <Target className="w-5 h-5 mr-2" />
-                  关键词热度
-                </h3>
-                <WordCloudChart
-                  title=""
-                  height={250}
-                  maxWords={20}
-                  data={keywordData}
-                />
-              </div>
-
-              {/* 地理分布分析 */}
-              <div className="bg-muted/30 rounded-lg p-6">
-                <h3 className="text-foreground mb-4 flex items-center">
-                  <Globe className="w-5 h-5 mr-2" />
-                  地理分布
-                </h3>
-                <GeographicChart
-                  data={geographicData.map(item => ({
-                    name: item.region,
-                    value: item.users
-                  }))}
-                />
-              </div>
-            </div>
-          </motion.div>
-        </TabsContent>
-
-        <TabsContent value="timeline" className="p-6 mt-0">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-6"
-          >
-            <EventTimelineChart data={eventData.timeline} />
-          </motion.div>
-        </TabsContent>
-
-        <TabsContent value="propagation" className="p-6 mt-0">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-6"
-          >
-            <PropagationPathChart data={eventData.propagationPath} />
-
-            {/* 影响力用户网络 */}
-            <div className="bg-muted/20 rounded-lg p-6">
-              <h4 className="text-lg font-semibold text-foreground mb-4 flex items-center">
-                <Users className="w-5 h-5 mr-2" />
-                用户影响力排名
-              </h4>
-              {/* 影响力网络图 */}
-              <InfluenceNetworkFlow
-                users={influenceUsers}
-              />
-            </div>
-
-            {/* 地理传播分析 */}
-            <div className="bg-muted/20 rounded-lg p-6">
-              <h4 className="text-lg font-semibold text-foreground mb-4 flex items-center">
-                <Globe className="w-5 h-5 mr-2" />
-                地理传播分析
-              </h4>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div>
-                  <GeographicChart
-                    data={geographicData.map(item => ({
-                      name: item.region,
-                      value: item.users
-                    }))}
-                  />
-                </div>
-                <div className="space-y-4">
-                  <h5 className="font-medium text-foreground">传播热点地区</h5>
-                  <div className="space-y-3">
-                    {geographicData.map((region: GeographicDataPoint, index: number) => (
-                      <div key={region.region} className="flex items-center justify-between p-3 bg-card/50 rounded-lg">
-                        <div className="flex items-center space-x-3">
-                          <span className="text-sm font-medium text-primary">#{index + 1}</span>
-                          <span className="text-foreground">{region.region}</span>
-                        </div>
-                        <div className="flex items-center space-x-4 text-sm">
-                          <span className="text-muted-foreground">{region.posts.toLocaleString()} 贴子</span>
-                          <span className="text-muted-foreground">{region.users.toLocaleString()} 用户</span>
-                          <span className={cn(
-                            'font-semibold',
-                            region.sentiment > 0.6 ? 'text-green-400' :
-                              region.sentiment < 0.4 ? 'text-red-400' : 'text-yellow-400'
-                          )}>
-                            {(region.sentiment * 100).toFixed(0)}% 正面
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        </TabsContent>
-
-        <TabsContent value="development" className="p-6 mt-0">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-6"
-          >
-            <EventDevelopmentChart phases={eventData.developmentPhases} />
-          </motion.div>
-        </TabsContent>
-
-        <TabsContent value="analysis" className="p-6 mt-0">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-6"
-          >
-            {/* 关键节点分析 */}
-            <div className="bg-muted/20 rounded-lg p-6">
-              <h3 className="text-foreground mb-6 flex items-center">
-                <Target className="w-5 h-5 mr-2" />
-                关键节点分析
+            {/* 异常检测时间线（AnomalyTimelineChart） */}
+            <div className="bg-muted/30 rounded-lg p-6">
+              <h3 className="text-foreground mb-4 flex items-center">
+                <AlertTriangle className="w-5 h-5 mr-2" />
+                异常检测时间线
               </h3>
-
-              <div className="space-y-4">
-                {eventData.keyNodes.map((node, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="bg-card/50 rounded-lg p-6"
-                  >
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-3 mb-2">
-                          <Badge variant="outline" className="text-primary bg-primary/10">
-                            {node.time}
-                          </Badge>
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              node.impact === 'high' && 'bg-red-500/20 text-red-400 border-red-500/30',
-                              node.impact === 'medium' && 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-                              node.impact === 'low' && 'bg-green-500/20 text-green-400 border-green-500/30'
-                            )}
-                          >
-                            {node.impact === 'high' ? '高影响' : node.impact === 'medium' ? '中影响' : '低影响'}
-                          </Badge>
-                        </div>
-                        <p className="text-foreground mb-4 text-base">{node.description}</p>
-                        <div className="flex items-center space-x-8 text-sm">
-                          <div className="flex items-center space-x-2">
-                            <MessageSquare className="w-4 h-4 text-muted-foreground" />
-                            <span className="text-foreground font-semibold">{formatNumber(node.metrics.posts)}</span>
-                            <span className="text-muted-foreground">贴子</span>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Users className="w-4 h-4 text-muted-foreground" />
-                            <span className="text-foreground font-semibold">{formatNumber(node.metrics.users)}</span>
-                            <span className="text-muted-foreground">用户</span>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Heart className="w-4 h-4 text-muted-foreground" />
-                            <span className="text-foreground font-semibold">{(node.metrics.sentiment * 100).toFixed(1)}%</span>
-                            <span className="text-muted-foreground">正面情感</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
+              <AnomalyTimelineChart data={anomaliesData} height={250} />
             </div>
 
-            {/* 深度分析洞察 */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-muted/20 rounded-lg p-6">
-                <h4 className="text-lg font-semibold text-foreground mb-4 flex items-center">
-                  <Activity className="w-5 h-5 mr-2" />
-                  事件发展模式
-                </h4>
-                {eventData.developmentPattern ? (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-3 bg-card/50 rounded-lg">
-                      <span className="text-foreground">爆发速度</span>
-                      <span className="text-green-400 font-semibold">{eventData.developmentPattern.outbreakSpeed}</span>
-                    </div>
-                    <div className="flex items-center justify-between p-3 bg-card/50 rounded-lg">
-                      <span className="text-foreground">传播范围</span>
-                      <span className="text-blue-400 font-semibold">{eventData.developmentPattern.propagationScope}</span>
-                    </div>
-                    <div className="flex items-center justify-between p-3 bg-card/50 rounded-lg">
-                      <span className="text-foreground">持续时间</span>
-                      <span className="text-yellow-400 font-semibold">{eventData.developmentPattern.duration}</span>
-                    </div>
-                    <div className="flex items-center justify-between p-3 bg-card/50 rounded-lg">
-                      <span className="text-foreground">影响深度</span>
-                      <span className="text-red-400 font-semibold">{eventData.developmentPattern.impactDepth}</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-muted-foreground text-sm">暂无发展模式数据</div>
-                )}
-              </div>
+          {/* 事件关键词云 */}
+          <div className="bg-muted/30 rounded-lg p-6">
+            <h3 className="text-foreground mb-4 flex items-center">
+              <Globe className="w-5 h-5 mr-2" />
+              事件关键词云
+            </h3>
+            <WordCloudChart
+              title=""
+              height={320}
+              maxWords={50}
+              data={keywordData}
+            />
+          </div>
+        </motion.div>
 
-              <div className="bg-muted/20 rounded-lg p-6">
-                <h4 className="text-lg font-semibold text-foreground mb-4 flex items-center">
-                  <Zap className="w-5 h-5 mr-2" />
-                  关键成功因素
-                </h4>
-                {eventData.successFactors && eventData.successFactors.length > 0 ? (
-                  <div className="space-y-3">
-                    {eventData.successFactors.map((factor, index) => {
-                      const colors = ['green', 'blue', 'purple', 'yellow', 'red'];
-                      const color = colors[index % colors.length];
-                      return (
-                        <div key={index} className="flex items-start space-x-3">
-                          <div className={`w-2 h-2 bg-${color}-400 rounded-full mt-2`}></div>
-                          <div>
-                            <div className="text-foreground font-medium">{factor.title}</div>
-                            <div className="text-muted-foreground text-sm">{factor.description}</div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="text-muted-foreground text-sm">暂无成功因素分析</div>
-                )}
-              </div>
+        {/* 深度洞察区域 */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-6"
+        >
+          {/* 情感分析 */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-muted/30 rounded-lg p-6">
+              <SentimentHotnessScatterChart
+                title="情感-热度关联分析"
+                height={320}
+                data={sentimentHotnessData}
+              />
             </div>
-          </motion.div>
-        </TabsContent>
-      </Tabs>
+            <div className="bg-muted/30 rounded-lg p-6">
+              <SentimentIntensityChart
+                title="情感强度谱"
+                height={320}
+                data={sentimentIntensityData}
+              />
+            </div>
+          </div>
+        </motion.div>
+      </div>
     </div>
   );
 };

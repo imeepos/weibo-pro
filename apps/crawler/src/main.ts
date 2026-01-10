@@ -7,7 +7,6 @@ import { root, logger } from '@sker/core';
 import {
   entitiesProviders,
   useEntityManager,
-  UserRelationStatisticsQueries,
   OverviewStatisticsQueries,
   EventStatisticsService,
   EventEntity
@@ -37,37 +36,6 @@ async function bootstrap() {
 
   // 初始化调度器（从数据库加载所有启用的调度）
   await scheduler.initializeSchedules();
-
-  // 用户关系统计增量更新任务
-  const runUserRelationStats = async () => {
-    try {
-      logger.info('🔄 开始执行用户关系增量统计...');
-      const startTime = Date.now();
-
-      const result = await useEntityManager(manager =>
-        UserRelationStatisticsQueries.runIncrementalStats(manager, {
-          maxRecords: 5000 // 每次处理5万条记录
-        })
-      );
-
-      const duration = Date.now() - startTime;
-      logger.info('✅ 用户关系增量统计完成', {
-        duration: `${duration}ms`,
-        repost: result.repost,
-        comment: result.comment,
-        like: result.like,
-        total: result.repost + result.comment + result.like
-      });
-    } catch (error: any) {
-      logger.error('❌ 用户关系增量统计失败', {
-        error: error.message,
-        stack: error.stack
-      });
-    }
-  };
-
-  // 每10分钟执行一次
-  const statsJob = schedule.scheduleJob('*/10 * * * *', runUserRelationStats);
 
   // 概览统计增量更新任务
   const runOverviewStats = async () => {
@@ -119,14 +87,12 @@ async function bootstrap() {
   const hourlyEventStatsJob = schedule.scheduleJob('0 * * * *', runHourlyEventStats);
 
   // 启动时立即执行一次
-  runUserRelationStats();
   runOverviewStats();
   runHourlyEventStats();
 
   logger.info('✅ Crawler 服务启动成功', {
     schedulerType: 'node-schedule',
     activeJobs: scheduler.getJobCount(),
-    userStatsJob: statsJob ? 'scheduled' : 'failed',
     overviewStatsJob: overviewStatsJob ? 'scheduled' : 'failed',
     eventStatsJob: hourlyEventStatsJob ? 'scheduled' : 'failed'
   });
@@ -136,10 +102,6 @@ async function bootstrap() {
     logger.info('📴 Crawler 服务关闭中...');
 
     // 取消统计任务
-    if (statsJob) {
-      statsJob.cancel();
-      logger.info('✅ 用户关系统计任务已取消');
-    }
     if (overviewStatsJob) {
       overviewStatsJob.cancel();
       logger.info('✅ 概览统计任务已取消');

@@ -2,6 +2,7 @@ import { Injectable, Inject } from '@sker/core';
 import {
   useEntityManager,
   EventStatisticsEntity,
+  EventHourlyStatisticsEntity,
   WeiboPostEntity,
   PostNLPResultEntity,
   findHotEvents,
@@ -21,6 +22,16 @@ import type {
   EventCategoryStats,
   InfluenceUser,
   GeographicDistribution,
+  EventSentimentHotness,
+  EventSentimentDistribution,
+  EventSentimentIntensity,
+  EventKeywordTimeSeries,
+  EventKeywordBySentiment,
+  EventNegativeKeywordAlert,
+  EventEventTypeDistribution,
+  EventEngagementTrend,
+  EventAnomaly,
+  EventPeak,
 } from './types';
 import { TREND_THRESHOLD, INFLUENCE_WEIGHTS } from './constants';
 
@@ -216,15 +227,10 @@ export class EventQueryService {
           const topUsers = await entityManager
             .createQueryBuilder(PostNLPResultEntity, 'nlp')
             .innerJoin('nlp.post', 'post')
-            .select('jsonb_extract_path_text(post.user, \'id\')', 'userid')
-            .addSelect(
-              'jsonb_extract_path_text(post.user, \'screen_name\')',
-              'name'
-            )
-            .addSelect(
-              'jsonb_extract_path_text(post.user, \'followers_count\')',
-              'followers'
-            )
+            .innerJoin('post.user', 'user')
+            .select('user.id', 'userid')
+            .addSelect('user.screen_name', 'name')
+            .addSelect('user.followers_count', 'followers')
             .addSelect('COUNT(post.id)', 'postcount')
             .addSelect(
               'SUM(post.attitudes_count + post.comments_count + post.reposts_count)',
@@ -236,7 +242,7 @@ export class EventQueryService {
             )
             .where('nlp.event_id = :eventId', { eventId })
             .andWhere('post.deleted_at IS NULL')
-            .groupBy('userid, name, followers')
+            .groupBy('user.id, user.screen_name, user.followers_count')
             .orderBy('totalinteractions', 'DESC')
             .limit(10)
             .getRawMany();
@@ -340,19 +346,17 @@ export class EventQueryService {
         return await useEntityManager(async (entityManager) => {
           const locationData = await entityManager
             .createQueryBuilder(WeiboPostEntity, 'post')
+            .innerJoin('post.user', 'user')
             .innerJoin(PostNLPResultEntity, 'nlp', 'nlp.post_id = post.id')
             .select(
               `COALESCE(
                 NULLIF(post.region_name, ''),
-                NULLIF(jsonb_extract_path_text(post.user, 'location'), ''),
+                NULLIF(user.location, ''),
                 '未知'
               )`,
               'location'
             )
-            .addSelect(
-              'COUNT(DISTINCT jsonb_extract_path_text(post.user, \'id\'))',
-              'usercount'
-            )
+            .addSelect('COUNT(DISTINCT user.id)', 'usercount')
             .addSelect('COUNT(post.id)', 'postcount')
             .addSelect(
               'AVG((nlp.sentiment->>\'positive_prob\')::numeric - (nlp.sentiment->>\'negative_prob\')::numeric)',
@@ -360,7 +364,7 @@ export class EventQueryService {
             )
             .where('nlp.event_id = :eventId', { eventId })
             .andWhere('post.deleted_at IS NULL')
-            .groupBy('location')
+            .groupBy('COALESCE(NULLIF(post.region_name, \'\'), NULLIF(user.location, \'\'), \'未知\')')
             .orderBy('usercount', 'DESC')
             .limit(20)
             .getRawMany();
@@ -477,5 +481,514 @@ export class EventQueryService {
     if (change > TREND_THRESHOLD.UP) return 'up';
     if (change < TREND_THRESHOLD.DOWN) return 'down';
     return 'stable';
+  }
+
+  // 新增：NLP 深度分析查询方法
+
+  async getSentimentHotness(eventId: string): Promise<EventSentimentHotness[]> {
+    const cacheKey = CacheService.buildKey('event:sentiment_hotness', eventId);
+
+    return await this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        return await useEntityManager(async (entityManager) => {
+          const results = await entityManager
+            .createQueryBuilder(PostNLPResultEntity, 'nlp')
+            .innerJoin('nlp.post', 'post')
+            .innerJoin(EventStatisticsEntity, 'stats', 'stats.event_id = nlp.event_id')
+            .select('nlp.post_id', 'postId')
+            .addSelect(
+              '(nlp.sentiment->>\'positive_prob\')::numeric - (nlp.sentiment->>\'negative_prob\')::numeric',
+              'sentimentScore'
+            )
+            .addSelect('stats.hotness', 'hotness')
+            .addSelect('nlp.created_at', 'timestamp')
+            .where('nlp.event_id = :eventId', { eventId })
+            .andWhere('post.deleted_at IS NULL')
+            .orderBy('nlp.created_at', 'DESC')
+            .limit(500)
+            .getRawMany();
+
+          return results.map((row: {
+            postId: string;
+            sentimentScore: string;
+            hotness: string;
+            timestamp: Date;
+          }) => ({
+            postId: row.postId,
+            sentimentScore: parseFloat(row.sentimentScore || '0'),
+            hotness: parseFloat(row.hotness || '0'),
+            timestamp: row.timestamp.toISOString(),
+          }));
+        });
+      },
+      CACHE_TTL.MEDIUM
+    );
+  }
+
+  async getSentimentDistribution(eventId: string): Promise<EventSentimentDistribution> {
+    const cacheKey = CacheService.buildKey('event:sentiment_distribution', eventId);
+
+    return await this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        return await useEntityManager(async (entityManager) => {
+          const results = await entityManager
+            .createQueryBuilder(PostNLPResultEntity, 'nlp')
+            .select('nlp.sentiment->>\'overall\'', 'overall')
+            .addSelect('COUNT(*)', 'count')
+            .where('nlp.event_id = :eventId', { eventId })
+            .groupBy('nlp.sentiment->>\'overall\'')
+            .getRawMany();
+
+          const distribution = {
+            positive: { count: 0, percentage: 0 },
+            negative: { count: 0, percentage: 0 },
+            neutral: { count: 0, percentage: 0 },
+          };
+
+          let total = 0;
+          results.forEach((row: { overall: string; count: string }) => {
+            const count = parseInt(row.count || '0', 10);
+            total += count;
+            if (row.overall in distribution) {
+              distribution[row.overall as keyof typeof distribution].count = count;
+            }
+          });
+
+          if (total > 0) {
+            distribution.positive.percentage = Math.round((distribution.positive.count / total) * 10000) / 100;
+            distribution.negative.percentage = Math.round((distribution.negative.count / total) * 10000) / 100;
+            distribution.neutral.percentage = Math.round((distribution.neutral.count / total) * 10000) / 100;
+          }
+
+          return distribution;
+        });
+      },
+      CACHE_TTL.MEDIUM
+    );
+  }
+
+  async getSentimentIntensity(eventId: string): Promise<EventSentimentIntensity[]> {
+    const cacheKey = CacheService.buildKey('event:sentiment_intensity', eventId);
+
+    return await this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        return await useEntityManager(async (entityManager) => {
+          const results = await entityManager
+            .createQueryBuilder(PostNLPResultEntity, 'nlp')
+            .select('ROUND((nlp.sentiment->>\'confidence\')::numeric * 10) / 10', 'confidence')
+            .addSelect('COUNT(*)', 'count')
+            .where('nlp.event_id = :eventId', { eventId })
+            .groupBy('ROUND((nlp.sentiment->>\'confidence\')::numeric * 10) / 10')
+            .orderBy('confidence', 'ASC')
+            .getRawMany();
+
+          return results.map((row: { confidence: string; count: string }) => ({
+            confidence: parseFloat(row.confidence || '0'),
+            count: parseInt(row.count || '0', 10),
+          }));
+        });
+      },
+      CACHE_TTL.MEDIUM
+    );
+  }
+
+  async getKeywordsTimeSeries(eventId: string, topN: number = 20): Promise<EventKeywordTimeSeries[]> {
+    const cacheKey = CacheService.buildKey('event:keywords_timeseries', eventId, topN.toString());
+
+    return await this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        return await useEntityManager(async (entityManager) => {
+          const nlpResults = await entityManager
+            .createQueryBuilder(PostNLPResultEntity, 'nlp')
+            .where('nlp.event_id = :eventId', { eventId })
+            .orderBy('nlp.created_at', 'ASC')
+            .getMany();
+
+          const keywordTimeMap = new Map<string, Array<{ timestamp: string; weight: number }>>();
+
+          nlpResults.forEach((result) => {
+            const keywords = result.keywords || [];
+            const timestamp = result.created_at.toISOString();
+
+            keywords.forEach((kw) => {
+              if (!keywordTimeMap.has(kw.keyword)) {
+                keywordTimeMap.set(kw.keyword, []);
+              }
+              keywordTimeMap.get(kw.keyword)!.push({ timestamp, weight: kw.weight });
+            });
+          });
+
+          const topKeywords = Array.from(keywordTimeMap.entries())
+            .map(([keyword, data]) => ({
+              keyword,
+              totalWeight: data.reduce((sum, d) => sum + d.weight, 0),
+            }))
+            .sort((a, b) => b.totalWeight - a.totalWeight)
+            .slice(0, topN)
+            .map((k) => k.keyword);
+
+          return topKeywords.map((keyword) => ({
+            keyword,
+            timeData: keywordTimeMap.get(keyword)!,
+          }));
+        });
+      },
+      CACHE_TTL.MEDIUM
+    );
+  }
+
+  async getKeywordsBySentiment(eventId: string): Promise<EventKeywordBySentiment[]> {
+    const cacheKey = CacheService.buildKey('event:keywords_by_sentiment', eventId);
+
+    return await this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        return await useEntityManager(async (entityManager) => {
+          const nlpResults = await entityManager
+            .createQueryBuilder(PostNLPResultEntity, 'nlp')
+            .where('nlp.event_id = :eventId', { eventId })
+            .getMany();
+
+          const keywordMap = new Map<string, { totalWeight: number; sentiment: string; count: number }>();
+
+          nlpResults.forEach((result) => {
+            const keywords = result.keywords || [];
+            keywords.forEach((kw) => {
+              const existing = keywordMap.get(kw.keyword);
+              if (existing) {
+                existing.totalWeight += kw.weight;
+                existing.count += 1;
+              } else {
+                keywordMap.set(kw.keyword, {
+                  totalWeight: kw.weight,
+                  sentiment: kw.sentiment || 'neutral',
+                  count: 1,
+                });
+              }
+            });
+          });
+
+          return Array.from(keywordMap.entries())
+            .map(([keyword, data]) => ({
+              keyword,
+              weight: Math.round(data.totalWeight * 100) / 100,
+              sentiment: data.sentiment as 'positive' | 'negative' | 'neutral',
+              count: data.count,
+            }))
+            .sort((a, b) => b.weight - a.weight);
+        });
+      },
+      CACHE_TTL.MEDIUM
+    );
+  }
+
+  async getNegativeKeywords(eventId: string, threshold: number = 0.5): Promise<EventNegativeKeywordAlert[]> {
+    const cacheKey = CacheService.buildKey('event:negative_keywords', eventId, threshold.toString());
+
+    return await this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const keywordsBySentiment = await this.getKeywordsBySentiment(eventId);
+
+        return keywordsBySentiment
+          .filter((kw) => kw.sentiment === 'negative' && kw.weight >= threshold)
+          .map((kw) => ({
+            keyword: kw.keyword,
+            weight: kw.weight,
+            count: kw.count,
+            trend: 'stable' as const,
+          }))
+          .sort((a, b) => b.weight - a.weight)
+          .slice(0, 20);
+      },
+      CACHE_TTL.SHORT
+    );
+  }
+
+  async getEventTypes(eventId: string): Promise<EventEventTypeDistribution[]> {
+    const cacheKey = CacheService.buildKey('event:event_types', eventId);
+
+    return await this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        return await useEntityManager(async (entityManager) => {
+          const results = await entityManager
+            .createQueryBuilder(PostNLPResultEntity, 'nlp')
+            .select('nlp.event_type->>\'type\'', 'eventType')
+            .addSelect('COUNT(*)', 'count')
+            .addSelect('AVG((nlp.event_type->>\'confidence\')::numeric)', 'avgConfidence')
+            .addSelect(
+              'AVG((nlp.sentiment->>\'positive_prob\')::numeric - (nlp.sentiment->>\'negative_prob\')::numeric)',
+              'avgSentiment'
+            )
+            .where('nlp.event_id = :eventId', { eventId })
+            .andWhere("nlp.event_type->>\'type\' IS NOT NULL")
+            .andWhere("nlp.event_type->>\'type\' != ''")
+            .groupBy('nlp.event_type->>\'type\'')
+            .orderBy('count', 'DESC')
+            .getRawMany();
+
+          return results.map((row: {
+            eventType: string;
+            count: string;
+            avgConfidence: string;
+            avgSentiment: string;
+          }) => ({
+            eventType: row.eventType || '未知',
+            count: parseInt(row.count || '0', 10),
+            confidence: Math.round(parseFloat(row.avgConfidence || '0') * 100) / 100,
+            avgSentiment: Math.round(parseFloat(row.avgSentiment || '0') * 100) / 100,
+          }));
+        });
+      },
+      CACHE_TTL.MEDIUM
+    );
+  }
+
+  // 新增：基于 EventHourlyStatisticsEntity 的互动指标查询
+
+  async getEngagementTrend(eventId: string, limit: number = 168): Promise<EventEngagementTrend[]> {
+    const cacheKey = CacheService.buildKey('event:engagement_trend', eventId, limit.toString());
+
+    return await this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        return await useEntityManager(async (entityManager) => {
+          const stats = await entityManager
+            .createQueryBuilder(EventHourlyStatisticsEntity, 'stats')
+            .where('stats.event_id = :eventId', { eventId })
+            .orderBy('stats.year', 'DESC')
+            .addOrderBy('stats.month', 'DESC')
+            .addOrderBy('stats.day', 'DESC')
+            .addOrderBy('stats.hour', 'DESC')
+            .limit(limit)
+            .getMany();
+
+          return stats.map(s => {
+            const engagementRate = s.post_count > 0
+              ? (s.comment_count + s.repost_count + s.like_count) / s.post_count
+              : 0;
+
+            return {
+              timestamp: new Date(s.year, s.month - 1, s.day, s.hour).toISOString(),
+              post_count: s.post_count,
+              comment_count: s.comment_count,
+              repost_count: s.repost_count,
+              like_count: s.like_count,
+              user_count: s.user_count,
+              hotness: parseFloat(s.hotness.toString()),
+              engagement_rate: Math.round(engagementRate * 100) / 100,
+            };
+          }).reverse();
+        });
+      },
+      CACHE_TTL.SHORT
+    );
+  }
+
+  async getAnomalies(eventId: string, limit: number = 168): Promise<EventAnomaly[]> {
+    const cacheKey = CacheService.buildKey('event:anomalies', eventId, limit.toString());
+
+    return await this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        return await useEntityManager(async (entityManager) => {
+          const stats = await entityManager
+            .createQueryBuilder(EventHourlyStatisticsEntity, 'stats')
+            .where('stats.event_id = :eventId', { eventId })
+            .orderBy('stats.year', 'DESC')
+            .addOrderBy('stats.month', 'DESC')
+            .addOrderBy('stats.day', 'DESC')
+            .addOrderBy('stats.hour', 'DESC')
+            .limit(limit)
+            .getMany();
+
+          const anomalies: EventAnomaly[] = [];
+          const reversedStats = stats.reverse();
+
+          for (let i = 1; i < reversedStats.length - 1; i++) {
+            const current = reversedStats[i];
+            const prev = reversedStats[i - 1];
+            const nextStat = reversedStats[i + 1];
+
+            // 计算局部平均值
+            const avgPostCount = (prev.post_count + current.post_count + nextStat.post_count) / 3;
+            const stdDev = Math.sqrt(
+              (
+                Math.pow(prev.post_count - avgPostCount, 2) +
+                Math.pow(current.post_count - avgPostCount, 2) +
+                Math.pow(nextStat.post_count - avgPostCount, 2)
+              ) / 3
+            );
+
+            // 检测峰值（超过 2 倍标准差）
+            if (current.post_count > avgPostCount + 2 * stdDev) {
+              anomalies.push({
+                timestamp: new Date(current.year, current.month - 1, current.day, current.hour).toISOString(),
+                type: 'spike',
+                metric: 'post_count',
+                value: current.post_count,
+                expected: Math.round(avgPostCount),
+                confidence: Math.min(1, (current.post_count - avgPostCount) / (3 * stdDev)),
+              });
+            }
+
+            // 检测低谷（低于 2 倍标准差）
+            if (current.post_count < avgPostCount - 2 * stdDev && avgPostCount > 10) {
+              anomalies.push({
+                timestamp: new Date(current.year, current.month - 1, current.day, current.hour).toISOString(),
+                type: 'drop',
+                metric: 'post_count',
+                value: current.post_count,
+                expected: Math.round(avgPostCount),
+                confidence: Math.min(1, (avgPostCount - current.post_count) / (3 * stdDev)),
+              });
+            }
+
+            // 检测情感突变
+            const sentimentChange = Math.abs(current.sentiment_positive - prev.sentiment_positive);
+            if (sentimentChange > 0.3) {
+              anomalies.push({
+                timestamp: new Date(current.year, current.month - 1, current.day, current.hour).toISOString(),
+                type: 'sentiment_shift',
+                metric: 'sentiment_positive',
+                value: parseFloat(current.sentiment_positive.toString()),
+                expected: parseFloat(prev.sentiment_positive.toString()),
+                confidence: Math.min(1, sentimentChange / 0.5),
+              });
+            }
+          }
+
+          return anomalies;
+        });
+      },
+      CACHE_TTL.SHORT
+    );
+  }
+
+  async getPeaks(eventId: string, limit: number = 168): Promise<EventPeak[]> {
+    const cacheKey = CacheService.buildKey('event:peaks', eventId, limit.toString());
+
+    return await this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        return await useEntityManager(async (entityManager) => {
+          const stats = await entityManager
+            .createQueryBuilder(EventHourlyStatisticsEntity, 'stats')
+            .where('stats.event_id = :eventId', { eventId })
+            .orderBy('stats.year', 'DESC')
+            .addOrderBy('stats.month', 'DESC')
+            .addOrderBy('stats.day', 'DESC')
+            .addOrderBy('stats.hour', 'DESC')
+            .limit(limit)
+            .getMany();
+
+          const peaks: EventPeak[] = [];
+          const reversedStats = stats.reverse();
+
+          // 找到全局最大值
+          const maxHotness = Math.max(...reversedStats.map(s => parseFloat(s.hotness.toString())));
+          const globalPeak = reversedStats.find(s => parseFloat(s.hotness.toString()) === maxHotness);
+
+          if (globalPeak) {
+            const engagementRate = globalPeak.post_count > 0
+              ? (globalPeak.comment_count + globalPeak.repost_count + globalPeak.like_count) / globalPeak.post_count
+              : 0;
+
+            peaks.push({
+              timestamp: new Date(globalPeak.year, globalPeak.month - 1, globalPeak.day, globalPeak.hour).toISOString(),
+              hotness: parseFloat(globalPeak.hotness.toString()),
+              peak_type: 'global',
+              metrics: {
+                post_count: globalPeak.post_count,
+                user_count: globalPeak.user_count,
+                engagement_rate: Math.round(engagementRate * 100) / 100,
+              },
+            });
+          }
+
+          // 查找局部峰值（使用简单的峰值检测算法）
+          for (let i = 2; i < reversedStats.length - 2; i++) {
+            const current = reversedStats[i];
+            const neighbors = [
+              reversedStats[i - 2],
+              reversedStats[i - 1],
+              reversedStats[i + 1],
+              reversedStats[i + 2],
+            ];
+
+            const isLocalPeak = neighbors.every(
+              neighbor => parseFloat(neighbor.hotness.toString()) < parseFloat(current.hotness.toString())
+            );
+
+            if (isLocalPeak && parseFloat(current.hotness.toString()) > maxHotness * 0.5) {
+              const engagementRate = current.post_count > 0
+                ? (current.comment_count + current.repost_count + current.like_count) / current.post_count
+                : 0;
+
+              peaks.push({
+                timestamp: new Date(current.year, current.month - 1, current.day, current.hour).toISOString(),
+                hotness: parseFloat(current.hotness.toString()),
+                peak_type: 'local',
+                metrics: {
+                  post_count: current.post_count,
+                  user_count: current.user_count,
+                  engagement_rate: Math.round(engagementRate * 100) / 100,
+                },
+              });
+            }
+          }
+
+          return peaks.sort((a, b) => b.hotness - a.hotness).slice(0, 10);
+        });
+      },
+      CACHE_TTL.MEDIUM
+    );
+  }
+
+  async getEventUserRelations(eventId: string): Promise<UserRelationNetwork> {
+    const cacheKey = CacheService.buildKey('event:user-relations', eventId);
+
+    return await this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        return await useEntityManager(async (entityManager) => {
+          const posts = await entityManager
+            .createQueryBuilder(PostEntity, 'post')
+            .where('post.event_id = :eventId', { eventId })
+            .getMany();
+
+          const userIds = [...new Set(posts.map(p => p.user_id))];
+          const nodes = userIds.map(userId => ({
+            id: userId,
+            label: userId,
+            type: 'user' as const,
+            weight: posts.filter(p => p.user_id === userId).length,
+          }));
+
+          const edges: Array<{ source: string; target: string; weight: number; type: string }> = [];
+          const edgeMap = new Map<string, number>();
+
+          for (const post of posts) {
+            if (post.repost_user_id) {
+              const key = `${post.user_id}-${post.repost_user_id}`;
+              edgeMap.set(key, (edgeMap.get(key) || 0) + 1);
+            }
+          }
+
+          edgeMap.forEach((weight, key) => {
+            const [source, target] = key.split('-');
+            edges.push({ source: source!, target: target!, weight, type: 'repost' });
+          });
+
+          return { nodes, edges };
+        });
+      },
+      CACHE_TTL.MEDIUM
+    );
   }
 }
