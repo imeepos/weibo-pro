@@ -129,7 +129,7 @@ export class WeiboAjaxStatusesRepostTimelineAstVisitor extends WeiboApiClient {
                                                     sourceUserId,
                                                     targetUserId,
                                                     UserRelationType.REPOST,
-                                                    repost.ingested_at,
+                                                    repost.created_at,
                                                     post.event_id
                                                 );
                                             }

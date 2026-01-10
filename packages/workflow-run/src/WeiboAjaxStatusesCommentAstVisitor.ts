@@ -286,7 +286,7 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
                                 sourceUserId,
                                 targetUserId,
                                 UserRelationType.COMMENT,
-                                comment.ingestedAt,
+                                new Date(comment.created_at),
                                 post.event_id
                             );
                         }
