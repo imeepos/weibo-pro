@@ -48,7 +48,7 @@ export class UserRelationStatisticsHelper {
         lastInteractionAt,
       })
       .orUpdate(
-        ['weight', 'firstInteractionAt', 'lastInteractionAt', 'updatedAt'],
+        ['weight', 'first_interaction_at', 'last_interaction_at', 'updated_at'],
         ['source_user_id', 'target_user_id', 'relation_type', 'event_id']
       )
       .updateEntity(false)
