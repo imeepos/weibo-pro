@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@sker/core";
-import { useEntityManager, WeiboPostEntity, WeiboUserEntity } from "@sker/entities";
+import { useEntityManager, WeiboPostEntity, WeiboUserEntity, HourlyStatisticsHelper, PostSnapshotHelper } from "@sker/entities";
 import { WeiboAccountService } from "./services/weibo-account.service";
 import { DelayService } from "./services/delay.service";
 import { RateLimiterService } from "./services/rate-limiter.service";
@@ -99,6 +99,22 @@ export class WeiboAjaxStatusesShowAstVisitor extends WeiboApiClient {
                             } else {
                                 throw error;
                             }
+                        }
+
+                        // 入库后创建快照
+                        await PostSnapshotHelper.createSnapshot(m, post);
+
+                        // 入库后触发小时统计
+                        if (post.event_id && post.created_at) {
+                            const postTime = new Date(post.created_at);
+                            const timeDimensions = HourlyStatisticsHelper.getTimeDimensions(postTime);
+
+                            await HourlyStatisticsHelper.upsertStatistics(
+                                m,
+                                post.event_id,
+                                timeDimensions,
+                                { post_count: 1, user_count: 1 }
+                            );
                         }
                     });
 

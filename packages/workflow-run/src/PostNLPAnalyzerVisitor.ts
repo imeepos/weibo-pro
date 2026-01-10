@@ -6,6 +6,7 @@ import {
   PostProcessFlags,
   useEntityManager,
   WeiboPostEntity,
+  HourlyStatisticsHelper,
 } from '@sker/entities';
 import { NLPAnalyzer } from '@sker/nlp';
 import type { PostContext, CompleteAnalysisResult } from '@sker/nlp';
@@ -207,6 +208,26 @@ export class PostNLPAnalyzerVisitor {
             keywords: nlpResult.keywords as any,
             event_type: { type: 'unknown', confidence: 0 } as any,
           });
+        }
+
+        // 入库后触发小时统计
+        if (eventId && nlpResult.sentiment) {
+          const post = await manager.findOne(WeiboPostEntity, {
+            where: { id: postId },
+            select: ['created_at']
+          });
+
+          if (post?.created_at) {
+            const postTime = new Date(post.created_at);
+            const timeDimensions = HourlyStatisticsHelper.getTimeDimensions(postTime);
+
+            await HourlyStatisticsHelper.upsertNLPStatisticsIncremental(
+              manager,
+              eventId,
+              timeDimensions,
+              nlpResult.sentiment
+            );
+          }
         }
 
         await manager

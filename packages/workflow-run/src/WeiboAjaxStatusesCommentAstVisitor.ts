@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@sker/core";
-import { useEntityManager, WeiboCommentEntity, WeiboUserEntity } from "@sker/entities";
+import { useEntityManager, WeiboCommentEntity, WeiboUserEntity, WeiboPostEntity, UserRelationStatisticsHelper, UserRelationType, HourlyStatisticsHelper } from "@sker/entities";
 import { WeiboAccountService } from "./services/weibo-account.service";
 import { Handler, NodeEvent } from "@sker/workflow";
 import { WeiboAjaxStatusesCommentAst } from "@sker/workflow-ast";
@@ -266,6 +266,47 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
             }
 
             await m.upsert(WeiboCommentEntity, entities as any, ['id']);
+
+            // 入库后触发统计
+            if (postId) {
+                const post = await m.findOne(WeiboPostEntity, {
+                    where: { id: postId },
+                    select: ['event_id']
+                });
+
+                if (post?.event_id) {
+                    // 用户关系统计
+                    for (const comment of entities) {
+                        const sourceUserId = comment.user_id?.toString();
+                        const targetUserId = comment.reply_to_user_id?.toString();
+
+                        if (sourceUserId && targetUserId && sourceUserId !== targetUserId) {
+                            await UserRelationStatisticsHelper.upsertRelation(
+                                m,
+                                sourceUserId,
+                                targetUserId,
+                                UserRelationType.COMMENT,
+                                comment.ingestedAt,
+                                post.event_id
+                            );
+                        }
+                    }
+
+                    // 小时统计
+                    for (const comment of entities) {
+                        if (comment.created_at) {
+                            const timeDimensions = HourlyStatisticsHelper.getTimeDimensions(new Date(comment.created_at));
+                            await HourlyStatisticsHelper.upsertStatistics(
+                                m,
+                                post.event_id,
+                                timeDimensions,
+                                { comment_count: 1, user_count: 1 }
+                            );
+                        }
+                    }
+                }
+            }
+
             return entities;
         });
     }

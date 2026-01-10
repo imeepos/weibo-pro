@@ -2,7 +2,7 @@ import { Inject, Injectable } from "@sker/core";
 import { WeiboAccountService } from "./services/weibo-account.service";
 import { WeiboAjaxStatusesMymblogAst } from "@sker/workflow-ast";
 import { Handler, NodeEvent, setAstError } from "@sker/workflow";
-import { useEntityManager, WeiboPostEntity } from "@sker/entities";
+import { useEntityManager, WeiboPostEntity, PostSnapshotHelper } from "@sker/entities";
 import { WeiboApiClient } from "./services/weibo-api-client.base";
 import { Observable, from } from "rxjs";
 import { concatMap, mergeMap } from "rxjs/operators";
@@ -67,6 +67,9 @@ export class WeiboAjaxStatusesMymblogAstVisitor extends WeiboApiClient {
                         await useEntityManager(async m => {
                             const posts = body.data.list.map(item => m.create(WeiboPostEntity, item as any));
                             await m.upsert(WeiboPostEntity, posts as any, ['id']);
+
+                            // 入库后创建快照
+                            await PostSnapshotHelper.createSnapshots(m, posts);
                         });
                     }
 

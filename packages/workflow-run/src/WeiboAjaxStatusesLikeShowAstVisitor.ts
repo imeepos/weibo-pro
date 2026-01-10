@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@sker/core";
-import { useEntityManager, WeiboUserEntity, WeiboLikeEntity } from "@sker/entities";
+import { useEntityManager, WeiboUserEntity, WeiboLikeEntity, WeiboPostEntity, UserRelationStatisticsHelper, UserRelationType, HourlyStatisticsHelper } from "@sker/entities";
 import { WeiboAccountService } from "./services/weibo-account.service";
 import { Handler, NodeEvent } from "@sker/workflow";
 import { WeiboAjaxStatusesLikeShowAst } from "@sker/workflow-ast";
@@ -114,6 +114,41 @@ export class WeiboAjaxStatusesLikeShowAstVisitor extends WeiboApiClient {
                                     }
 
                                     await m.upsert(WeiboLikeEntity, likeEntities as any, ['userWeiboId', 'targetWeiboId']);
+
+                                    // 入库后触发统计
+                                    const post = await m.findOne(WeiboPostEntity, {
+                                        where: { id: ast.mid },
+                                        select: ['event_id']
+                                    });
+
+                                    if (post?.event_id) {
+                                        // 用户关系统计
+                                        for (const like of likeEntities) {
+                                            if (like.userWeiboId !== like.targetUserWeiboId) {
+                                                await UserRelationStatisticsHelper.upsertRelation(
+                                                    m,
+                                                    like.userWeiboId,
+                                                    like.targetUserWeiboId,
+                                                    UserRelationType.LIKE,
+                                                    like.createdAt,
+                                                    post.event_id
+                                                );
+                                            }
+                                        }
+
+                                        // 小时统计
+                                        for (const like of likeEntities) {
+                                            if (like.createdAt) {
+                                                const timeDimensions = HourlyStatisticsHelper.getTimeDimensions(like.createdAt);
+                                                await HourlyStatisticsHelper.upsertStatistics(
+                                                    m,
+                                                    post.event_id,
+                                                    timeDimensions,
+                                                    { like_count: 1, user_count: 1 }
+                                                );
+                                            }
+                                        }
+                                    }
                                 });
 
                                 // 连续5页无新数据，提前结束

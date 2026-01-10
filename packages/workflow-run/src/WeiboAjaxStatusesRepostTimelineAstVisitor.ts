@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@sker/core";
-import { useEntityManager, WeiboRepostEntity, WeiboUserEntity } from "@sker/entities";
+import { useEntityManager, WeiboRepostEntity, WeiboUserEntity, WeiboPostEntity, UserRelationStatisticsHelper, UserRelationType, HourlyStatisticsHelper } from "@sker/entities";
 import { WeiboAccountService } from "./services/weibo-account.service";
 import { Handler, NodeEvent } from "@sker/workflow";
 import { WeiboAjaxStatusesRepostTimelineAst } from "@sker/workflow-ast";
@@ -109,6 +109,45 @@ export class WeiboAjaxStatusesRepostTimelineAstVisitor extends WeiboApiClient {
                                     }
 
                                     await m.upsert(WeiboRepostEntity, entities as any, ['id']);
+
+                                    // 入库后触发统计
+                                    const post = await m.findOne(WeiboPostEntity, {
+                                        where: { id: ast.mid },
+                                        select: ['event_id']
+                                    });
+
+                                    if (post?.event_id) {
+                                        // 用户关系统计
+                                        for (const repost of entities) {
+                                            const sourceUserId = repost.user_id?.toString();
+                                            const targetUser = (repost.retweeted_status as Record<string, unknown> | null)?.user as Record<string, unknown> | undefined;
+                                            const targetUserId = targetUser?.id?.toString();
+
+                                            if (sourceUserId && targetUserId && sourceUserId !== targetUserId) {
+                                                await UserRelationStatisticsHelper.upsertRelation(
+                                                    m,
+                                                    sourceUserId,
+                                                    targetUserId,
+                                                    UserRelationType.REPOST,
+                                                    repost.ingested_at,
+                                                    post.event_id
+                                                );
+                                            }
+                                        }
+
+                                        // 小时统计
+                                        for (const repost of entities) {
+                                            if (repost.created_at) {
+                                                const timeDimensions = HourlyStatisticsHelper.getTimeDimensions(repost.created_at);
+                                                await HourlyStatisticsHelper.upsertStatistics(
+                                                    m,
+                                                    post.event_id,
+                                                    timeDimensions,
+                                                    { repost_count: 1, user_count: 1 }
+                                                );
+                                            }
+                                        }
+                                    }
                                 });
 
                                 // 连续5页无新数据，提前结束

@@ -4,7 +4,7 @@ import { DelayService } from "./services/delay.service";
 import { RateLimiterService } from "./services/rate-limiter.service";
 import { Handler, NodeEvent, setAstError } from '@sker/workflow'
 import { WeiboAjaxFeedHotTimelineAst } from '@sker/workflow-ast'
-import { useEntityManager, WeiboPostEntity, WeiboUserEntity } from "@sker/entities";
+import { useEntityManager, WeiboPostEntity, WeiboUserEntity, PostSnapshotHelper } from "@sker/entities";
 import { WeiboApiClient } from "./services/weibo-api-client.base";
 import { Observable, from } from 'rxjs'
 import { concatMap, mergeMap } from 'rxjs/operators'
@@ -138,6 +138,9 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
                     });
                 });
                 await m.upsert(WeiboPostEntity, posts as any, ['id']);
+
+                // 入库后创建快照
+                await PostSnapshotHelper.createSnapshots(m, posts);
 
                 // 创建一个 user ID 到 user 的映射，用于后续获取 uid
                 const userMap = new Map(uniqueUsers.map(u => [u.id, u]));
