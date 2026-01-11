@@ -1,6 +1,6 @@
 import { config } from 'dotenv'
 import { useEntityManager } from '@sker/entities'
-import { EventEntity, EventStatisticsEntity, PostNLPResultEntity, WeiboPostEntity, EventHourlyStatisticsEntity } from '@sker/entities'
+import { EventEntity, PostNLPResultEntity, WeiboPostEntity, EventHourlyStatisticsEntity } from '@sker/entities'
 import { EventQueryService } from '../services/data/events/event-query.service'
 import { root } from '@sker/core'
 
@@ -142,33 +142,33 @@ async function testWeiboPosts(eventId: string): Promise<TestResult> {
 async function testEventStatistics(eventId: string): Promise<TestResult> {
   try {
     const stats = await useEntityManager(async (em) => {
-      return await em.find(EventStatisticsEntity, {
+      return await em.find(EventHourlyStatisticsEntity, {
         where: { event_id: eventId },
-        order: { snapshot_at: 'DESC' },
+        order: { year: 'DESC', month: 'DESC', day: 'DESC', hour: 'DESC' },
         take: 3
       })
     })
 
     if (stats.length === 0) {
       return {
-        name: 'EventStatisticsEntity 数据',
+        name: 'EventHourlyStatisticsEntity 数据',
         success: false,
         message: '没有找到事件统计数据'
       }
     }
 
     return {
-      name: 'EventStatisticsEntity 数据',
+      name: 'EventHourlyStatisticsEntity 数据',
       success: true,
       message: `找到 ${stats.length} 条统计记录`,
       data: stats.map(s => ({
         hotness: s.hotness,
-        snapshot_at: s.snapshot_at,
+        snapshot_at: `${s.year}-${s.month}-${s.day} ${s.hour}:00`,
         post_count: s.post_count
       }))
     }
   } catch (error) {
-    return { name: 'EventStatisticsEntity 数据', success: false, message: `查询失败: ${error}` }
+    return { name: 'EventHourlyStatisticsEntity 数据', success: false, message: `查询失败: ${error}` }
   }
 }
 
@@ -213,7 +213,7 @@ async function testSentimentHotnessQuery(eventId: string): Promise<TestResult> {
       return await em
         .createQueryBuilder(PostNLPResultEntity, 'nlp')
         .innerJoin('nlp.post', 'post')
-        .innerJoin(EventStatisticsEntity, 'stats', 'stats.event_id = nlp.event_id')
+        .innerJoin(EventHourlyStatisticsEntity, 'stats', 'stats.event_id = nlp.event_id')
         .select('nlp.post_id', 'postId')
         .addSelect(
           '(nlp.sentiment->>\'positive_prob\')::numeric - (nlp.sentiment->>\'negative_prob\')::numeric',
@@ -314,10 +314,10 @@ async function diagnoseSentimentHotnessIssue(eventId: string): Promise<TestResul
     }
 
     const statsCount = await useEntityManager(async (em) => {
-      return await em.count(EventStatisticsEntity, { where: { event_id: eventId } })
+      return await em.count(EventHourlyStatisticsEntity, { where: { event_id: eventId } })
     })
     if (statsCount === 0) {
-      diagnoses.push(' EventStatisticsEntity 中没有该事件的统计数据')
+      diagnoses.push(' EventHourlyStatisticsEntity 中没有该事件的统计数据')
     }
 
     if (diagnoses.length === 0) {

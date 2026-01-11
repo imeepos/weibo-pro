@@ -30,7 +30,9 @@ async function main() {
   })
 
   console.log('==========================================')
-  console.log(`测试命令: pnpm test:event ${events[0].id}`)
+  if (events[0]) {
+    console.log(`测试命令: pnpm test:event ${events[0].id}`)
+  }
   console.log('==========================================\n')
 }
 

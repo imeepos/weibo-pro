@@ -1,6 +1,5 @@
 import type {
   EventEntity,
-  EventStatisticsEntity,
   TimeRange,
   HotEvent,
 } from '@sker/entities';
@@ -73,34 +72,6 @@ export interface EventKeyNode {
   };
 }
 
-export interface EventDevelopmentPhase {
-  phase: string;
-  timeRange: string;
-  description: string;
-  keyEvents: string[];
-  keyTasks: string[];
-  keyMeasures: string[];
-  metrics: {
-    hotness: number;
-    posts: number;
-    users: number;
-    sentiment: number;
-  };
-  status: 'completed' | 'ongoing' | 'planned';
-}
-
-export interface EventDevelopmentPattern {
-  outbreakSpeed: string;
-  propagationScope: string;
-  duration: string;
-  impactDepth: string;
-}
-
-export interface EventSuccessFactor {
-  title: string;
-  description: string;
-}
-
 export interface EventDetail {
   id: string;
   title: string;
@@ -117,9 +88,6 @@ export interface EventDetail {
   timeline: EventTimelineNode[];
   propagationPath: EventPropagationPath[];
   keyNodes: EventKeyNode[];
-  developmentPhases: EventDevelopmentPhase[];
-  developmentPattern: EventDevelopmentPattern;
-  successFactors: EventSuccessFactor[];
 }
 
 export interface InfluenceUser {

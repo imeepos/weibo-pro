@@ -7,7 +7,4 @@ export type {
   EventTimelineNode,
   EventPropagationPath,
   EventKeyNode,
-  EventDevelopmentPhase,
-  EventDevelopmentPattern,
-  EventSuccessFactor,
 } from './events/types';
