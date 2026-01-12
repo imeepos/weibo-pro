@@ -1,4 +1,4 @@
-import { Ast, Input, Node, Output, State } from '@sker/workflow'
+import { Ast, Input, IS_MULTI, Node, Output, State } from '@sker/workflow'
 
 /** Claude Code 流式输出事件类型 */
 export type ClaudeStreamEventType =
@@ -16,6 +16,11 @@ export type ClaudeStreamEventType =
   | 'content_block_stop'
   | 'ping'
   | 'result'            // 执行结果（最终输出）
+
+export interface AssistantMessageEvent {
+  type: 'assistant'
+  content: ClaudeMessage
+}
 
 /** 内容块类型 */
 export type ContentType =
@@ -190,8 +195,8 @@ export class ClaudeCodeAst extends Ast {
     '--output-format', 'stream-json', '--verbose', '--permission-prompt-tool', 'stdio', '--dangerously-skip-permissions'
   ]
 
-  @Input({ title: 'stdin 输入', required: false })
-  stdin?: string
+  @Input({ title: 'stdin 输入', required: false, defaultValue: [], mode: IS_MULTI })
+  stdin: string[] = [];
 
   @State({ title: '进程ID' })
   pid: number = 0

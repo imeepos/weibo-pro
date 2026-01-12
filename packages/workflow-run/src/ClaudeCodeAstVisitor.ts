@@ -81,18 +81,18 @@ export class ClaudeCodeAstVisitor {
       const sub = processSubject.subscribe({
         next: (data: unknown) => {
           const streamEvent = data as ClaudeStreamEvent
-
+          let message = ''
           // 非 result 类型时，实时发送 node_emit（stdout 端口）
-          if (streamEvent.type !== 'result') {
+          const type = streamEvent.type;
+          if (type !== 'result') {
             const content = streamEvent?.message?.content
-            let message = ''
             if (Array.isArray(content)) {
               const msg = content[0]!
               message = msg.text || ''
             } else if (typeof content === 'string') {
               message = content
             } else {
-              message = streamEvent.type
+              message = JSON.stringify(streamEvent, null, 2)
             }
             // 更新 ast.stdout 并发射
             ast.stdout = message;
@@ -116,7 +116,7 @@ export class ClaudeCodeAstVisitor {
       })
 
       if (ast.stdin) {
-        processSubject.next(ast.stdin)
+        processSubject.next(Array.isArray(ast.stdin) ? ast.stdin.join('\n') : ast.stdin)
       } else {
         processSubject.complete()
       }
