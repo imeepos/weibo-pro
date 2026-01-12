@@ -17,17 +17,20 @@ export class EventsController {
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
     @Query('search') search?: string,
-    @Query('category') category?: string
+    @Query('category') category?: string,
+    @Query('lambda') lambda?: string
   ) {
     const validTimeRange = timeRange ? this.validateTimeRange(timeRange) : undefined;
     const pageNum = page ? parseInt(page, 10) : 1;
     const pageSizeNum = pageSize ? parseInt(pageSize, 10) : 10;
+    const lambdaNum = lambda ? parseFloat(lambda) : undefined;
 
     return this.eventsService.getEventList(validTimeRange, {
       page: pageNum,
       pageSize: pageSizeNum,
       search,
-      category: category && category !== 'all' ? category : undefined
+      category: category && category !== 'all' ? category : undefined,
+      lambda: lambdaNum
     });
   }
 

@@ -39,7 +39,7 @@ export class EventsService {
 
   async getEventList(
     timeRange?: TimeRange,
-    pagination?: { page: number; pageSize: number; search?: string; category?: string }
+    pagination?: { page: number; pageSize: number; search?: string; category?: string; lambda?: number }
   ): Promise<{
     data: EventListItem[];
     total: number;

@@ -129,7 +129,7 @@ export class OverviewService {
         currentSentiment = await this.fetchSentimentFromStatistics(manager, current.start, current.end);
         previousSentiment = await this.fetchSentimentFromStatistics(manager, previous.start, previous.end);
       } catch (error) {
-        this.logger?.warn('Statistics table query failed, fallback to NLP results', error);
+        console.warn('Statistics table query failed, fallback to NLP results', error);
         currentSentiment = await this.fetchSentimentFromNLPResults(manager, current.start, current.end);
         previousSentiment = await this.fetchSentimentFromNLPResults(manager, previous.start, previous.end);
       }

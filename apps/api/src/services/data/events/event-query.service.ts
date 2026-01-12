@@ -10,6 +10,7 @@ import {
   findLatestEventStatistics,
   getEventCategoryStats,
   getDateRangeByTimeRange,
+  HourlyStatisticsHelper,
 } from '@sker/entities';
 import { CacheService, CACHE_KEYS, CACHE_TTL } from '../../cache.service';
 import type {
@@ -44,7 +45,7 @@ export class EventQueryService {
 
   async getEventList(
     timeRange?: TimeRange,
-    pagination?: { page: number; pageSize: number; search?: string; category?: string }
+    pagination?: { page: number; pageSize: number; search?: string; category?: string; lambda?: number }
   ): Promise<{
     data: EventListItem[];
     total: number;
@@ -56,6 +57,7 @@ export class EventQueryService {
     const pageSize = pagination?.pageSize || 10;
     const search = pagination?.search;
     const category = pagination?.category;
+    const lambda = pagination?.lambda ?? 0.05; // 默认衰减系数：半衰期约14小时
 
     const cacheKey = CacheService.buildKey(
       CACHE_KEYS.EVENT_DETAIL,
@@ -64,7 +66,8 @@ export class EventQueryService {
       page.toString(),
       pageSize.toString(),
       search || '',
-      category || ''
+      category || '',
+      lambda.toString()
     );
 
     return await this.cacheService.getOrSet(
@@ -85,15 +88,26 @@ export class EventQueryService {
 
         const statsTimeRange = timeRange || '24h';
         const allStatistics = await this.getStatisticsBatch(eventIds, statsTimeRange);
-        const statsMap = new Map(allStatistics.map((s) => [s.event_id, s]));
+
+        // 计算每个事件的展示热度（带时间衰减）
+        const displayHotnessMap = await this.calculateDecayedHotnessForEvents(
+          eventIds,
+          statsTimeRange,
+          lambda
+        );
 
         const data = events.map((event) => {
-          const stats = statsMap.get(event.id);
+          const stats = allStatistics.find(s => s.event_id === event.id);
+          const displayHotness = displayHotnessMap.get(event.id) ?? 0;
           return this.mapEventToListItem(
             event,
-            stats ? [stats] : []
+            stats ? [stats] : [],
+            displayHotness
           );
         });
+
+        // 按展示热度降序排列
+        data.sort((a, b) => b.hotness - a.hotness);
 
         return {
           data,
@@ -487,9 +501,70 @@ export class EventQueryService {
     });
   }
 
+  /**
+   * 计算事件的展示热度（带时间衰减）
+   *
+   * 查询时动态计算，根据统计记录的新旧程度应用时间衰减权重
+   * 越新的数据权重越高，实现"热度随时间衰减"的效果
+   *
+   * @param eventIds 事件ID数组
+   * @param timeRange 时间范围
+   * @param lambda 衰减系数（默认 0.05，半衰期约14小时）
+   * @returns Map<eventId, displayHotness>
+   */
+  private async calculateDecayedHotnessForEvents(
+    eventIds: string[],
+    timeRange: TimeRange,
+    lambda: number = 0.05
+  ): Promise<Map<string, number>> {
+    if (eventIds.length === 0) return new Map();
+
+    return useEntityManager(async (entityManager) => {
+      const dateRange = getDateRangeByTimeRange(timeRange);
+      const currentTime = new Date();
+
+      // 获取所有统计记录
+      const results = await entityManager
+        .createQueryBuilder(EventHourlyStatisticsEntity, 'stats')
+        .where('stats.event_id IN (:...eventIds)', { eventIds })
+        .andWhere(
+          `make_timestamp(stats.year, stats.month, stats.day, stats.hour, 0, 0) >= :start`,
+          { start: dateRange.start }
+        )
+        .andWhere(
+          `make_timestamp(stats.year, stats.month, stats.day, stats.hour, 0, 0) <= :end`,
+          { end: dateRange.end }
+        )
+        .getMany();
+
+      // 按 event_id 分组
+      const statsByEvent = new Map<string, EventHourlyStatisticsEntity[]>();
+      results.forEach(stat => {
+        if (!statsByEvent.has(stat.event_id)) {
+          statsByEvent.set(stat.event_id, []);
+        }
+        statsByEvent.get(stat.event_id)!.push(stat);
+      });
+
+      // 计算每个事件的展示热度
+      const decayedHotnessMap = new Map<string, number>();
+      statsByEvent.forEach((stats, eventId) => {
+        const displayHotness = HourlyStatisticsHelper.calculateEventDisplayHotness(
+          stats,
+          currentTime,
+          lambda
+        );
+        decayedHotnessMap.set(eventId, displayHotness);
+      });
+
+      return decayedHotnessMap;
+    });
+  }
+
   private mapEventToListItem(
     event: EventWithCategory,
-    statistics: EventStatistics[]
+    statistics: EventStatistics[],
+    displayHotness: number
   ): EventListItem {
     const latestStats =
       statistics && statistics.length > 0 ? statistics[0] : null;
@@ -507,7 +582,7 @@ export class EventQueryService {
           negative: 0,
           neutral: 0,
         },
-      hotness: event.hotness,
+      hotness: displayHotness, // 使用展示热度（带时间衰减）
       trend: this.calculateTrend(statistics),
       category: event.category?.name || '未分类',
       keywords: [],

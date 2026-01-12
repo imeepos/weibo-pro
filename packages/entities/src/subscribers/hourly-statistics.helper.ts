@@ -37,6 +37,57 @@ export class HourlyStatisticsHelper {
   }
 
   /**
+   * 计算带时间衰减的展示热度（查询时动态计算）
+   *
+   * 存在即合理：
+   * - 存储层 hotness 保持不变，只存储基础热度
+   * - 查询时动态应用时间衰减，实现"越新的数据权重越高"
+   *
+   * @param baseHotness 存储的基础热度值
+   * @param statsTime 统计记录的时间
+   * @param currentTime 当前时间（默认为现在）
+   * @param lambda 衰减系数（默认 0.05，半衰期约14小时）
+   * @returns 展示热度（不存储）
+   */
+  static calculateDisplayHotness(
+    baseHotness: number,
+    statsTime: Date,
+    currentTime: Date = new Date(),
+    lambda: number = 0.05
+  ): number {
+    const hoursAgo = (currentTime.getTime() - statsTime.getTime()) / (1000 * 60 * 60);
+    const decayWeight = Math.exp(-lambda * hoursAgo);
+    return baseHotness * decayWeight;
+  }
+
+  /**
+   * 从多条统计记录计算事件总展示热度（带时间衰减）
+   *
+   * 用于查询时聚合事件的热度值，时间越久的数据权重越低
+   *
+   * @param statistics 小时级统计数组
+   * @param currentTime 当前时间
+   * @param lambda 衰减系数
+   * @returns 事件总展示热度
+   */
+  static calculateEventDisplayHotness(
+    statistics: Array<{
+      hotness: number;
+      year: number;
+      month: number;
+      day: number;
+      hour: number;
+    }>,
+    currentTime: Date = new Date(),
+    lambda: number = 0.05
+  ): number {
+    return statistics.reduce((sum, stats) => {
+      const statsTime = new Date(stats.year, stats.month - 1, stats.day, stats.hour);
+      return sum + this.calculateDisplayHotness(stats.hotness, statsTime, currentTime, lambda);
+    }, 0);
+  }
+
+  /**
    * 通过 post.mid 获取 event_id
    */
   static async getEventIdByPostMid(

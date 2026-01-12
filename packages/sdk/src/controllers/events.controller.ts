@@ -36,9 +36,10 @@ export class EventsController {
     @Query('page') page?: number,
     @Query('pageSize') pageSize?: number,
     @Query('search') search?: string,
-    @Query('category') category?: string
+    @Query('category') category?: string,
+    @Query('lambda') lambda?: number
   ): Promise<PaginatedResponse<EventListItem>> {
-    console.log({timeRange, page, pageSize, search, category})
+    console.log({timeRange, page, pageSize, search, category, lambda})
     throw new Error('method getEventList not implements')
   }
 
