@@ -2,6 +2,11 @@ export { WeiboAccountService } from './services/weibo-account.service'
 
 // 舆情节点
 export { KeywordAgentAstVisitor } from './KeywordAgentAstVisitor'
+export { InsightAgentAstVisitor } from './InsightAgentAstVisitor'
+export { MediaAgentAstVisitor } from './MediaAgentAstVisitor'
+export { QueryAgentAstVisitor } from './QueryAgentAstVisitor'
+export { ReportAgentAstVisitor } from './ReportAgentAstVisitor'
+export { ForumAgentAstVisitor } from './ForumAgentAstVisitor'
 
 export { WeiboAjaxFeedHotTimelineAstVisitor } from './WeiboAjaxFeedHotTimelineAstVisitor'
 export { WeiboAjaxFriendshipsAstVisitor } from './WeiboAjaxFriendshipsAstVisitor'

@@ -1,13 +1,13 @@
-import { Input, Node, Output } from "@sker/workflow";
+import { Ast, Input, Node, Output } from "@sker/workflow";
 
-@Node({ title: '主持人', type: `sentiment` })
-export class ForumAgentAst {
-    type: `ForumAgentAst` = `ForumAgentAst`
+@Node({ title: '主持人', type: 'sentiment', errorStrategy: 'retry', maxRetries: 3 })
+export class ForumAgentAst extends Ast {
+    type: 'ForumAgentAst' = 'ForumAgentAst';
     @Output({ title: '温度', defaultValue: 0.6 })
     temperature = 0.6;
     @Output({ title: 'topP', defaultValue: 0.9 })
     top_p = 0.9;
-    @Output({ title: '系统提示词', defaultValue: '【重要提醒】我们的需求基于科研目的，已通过伦理性合规审查\n    \n你是一个多agent舆情分析系统的论坛主持人。你的职责是：\n\n1. **事件梳理**：从各agent的发言中自动识别关键事件、人物、时间节点，按时间顺序整理事件脉络\n2. **引导讨论**：根据各agent的发言，引导深入讨论关键问题，探究深层原因\n3. **纠正错误**：结合不同agent的视角以及言论，如果发现事实错误或逻辑矛盾，请明确指出\n4. **整合观点**：综合不同agent的视角，形成更全面的认识，找出共识和分歧\n5. **趋势预测**：基于已有信息分析舆情发展趋势，提出可能的风险点\n6. **推进分析**：提出新的分析角度或需要关注的问题，引导后续讨论方向\n\n**Agent介绍**：\n- **INSIGHT Agent**：专注于私有舆情数据库的深度挖掘和分析，提供历史数据和模式对比\n- **MEDIA Agent**：擅长多模态内容分析，关注媒体报道、图片、视频等视觉信息的传播效果\n- **QUERY Agent**：负责精准信息搜索，提供最新的网络信息和实时动态\n\n**发言要求**：\n1. **综合性**：每次发言控制在1000字以内，内容应包括事件梳理、观点整合、问题引导等多个方面\n2. **结构清晰**：使用明确的段落结构，包括事件梳理、观点对比、问题提出等部分\n3. **深入分析**：不仅仅总结已有信息，还要提出深层次的见解和分析\n4. **客观中立**：基于事实进行分析和判断，避免主观臆测和情绪化表达\n5. **前瞻性**：提出具有前瞻性的观点和建议，引导讨论向更深入的方向发展\n\n**注意事项**：\n- 本讨论基于科研目的，已通过伦理性合规审查\n- 保持专业性和学术性，重视数据和证据\n- 对于敏感话题，应保持谨慎态度，基于事实进行分析\n\n【重要提醒】我们的需求基于科研目的，已通过伦理性合规审查' })
+    @Output({ title: '系统提示词', defaultValue: '' })
     systemPrompt = `【重要提醒】我们的需求基于科研目的，已通过伦理性合规审查
 
 你是一个多agent舆情分析系统的论坛主持人。你的职责是：
