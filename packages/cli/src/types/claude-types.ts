@@ -3,7 +3,6 @@
  *
  * 存在即合理:
  * - 统一的类型定义确保三层架构类型安全
- * - 与 @anthropic-ai/claude-code SDK 兼容
  * - 支持 RabbitMQ 消息序列化
  */
 

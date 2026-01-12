@@ -20,7 +20,6 @@
 
 ```json
 {
-  "@anthropic-ai/claude-code": "^2.0.71",   // Claude Code CLI（通过子进程调用）
   "@sker/workflow": "workspace:*",          // 工作流引擎
   "@sker/workflow-ast": "workspace:*",      // 节点定义
   "@sker/workflow-run": "workspace:*",      // 执行器

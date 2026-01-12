@@ -14,17 +14,17 @@ export interface ProcessEnvironmentVariable {
   retryBackoff: 2
 })
 export class ProcessExecuteAst extends Ast {
-  @State({ title: '命令路径/名称' })
+  @Input({ title: '命令路径/名称' })
   command: string = ''
 
-  @State({ title: '命令参数' })
-  args: string[] = []
-
-  @State({ title: '工作目录' })
-  cwd?: string
-
-  @State({ title: '环境变量' })
-  envVars?: ProcessEnvironmentVariable[]
+  @State({
+    title: '命令参数', defaultValue: [
+      '--output-format', 'stream-json', '--verbose', '--permission-prompt-tool', 'stdio', '--dangerously-skip-permissions'
+    ]
+  })
+  args: string[] = [
+    '--output-format', 'stream-json', '--verbose', '--permission-prompt-tool', 'stdio', '--dangerously-skip-permissions'
+  ]
 
   @Input({ title: 'stdin 输入', required: false })
   stdin?: string
@@ -34,6 +34,12 @@ export class ProcessExecuteAst extends Ast {
 
   @Output({ title: '执行耗时（毫秒）' })
   duration: number = 0
+
+  @Output({ title: '输出' })
+  stdout: any | null = null;
+
+  @Output({ title: '错误' })
+  stderr: any | null = null;
 
   type: 'ProcessExecuteAst' = 'ProcessExecuteAst'
 }

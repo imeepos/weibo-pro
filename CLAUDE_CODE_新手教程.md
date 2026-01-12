@@ -54,16 +54,6 @@ irm https://claude.ai/install.ps1 | iex
 curl -fsSL https://claude.ai/install.sh | bash
 ```
 
-**使用 Homebrew（MacOS）：**
-```bash
-brew install --cask claude-code
-```
-
-**使用 NPM（需要 Node.js 18+）：**
-```bash
-npm install -g @anthropic-ai/claude-code
-```
-
 ### 2. 验证安装
 
 打开终端，输入：
@@ -632,12 +622,6 @@ plugins/
 ### Q10: 如何升级 Claude Code？
 
 ```bash
-# NPM 安装的用户
-npm update -g @anthropic-ai/claude-code
-
-# Homebrew 用户（MacOS）
-brew upgrade claude-code
-
 # Windows 用户
 # 重新运行安装脚本即可
 irm https://claude.ai/install.ps1 | iex

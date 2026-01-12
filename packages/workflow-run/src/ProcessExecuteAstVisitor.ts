@@ -2,9 +2,9 @@ import { Injectable } from '@sker/core'
 import { Handler, NodeEvent, setAstError } from '@sker/workflow'
 import { ProcessExecuteAst } from '@sker/workflow-ast'
 import { ProcessSubject } from './core/ProcessSubject.js'
-import { Observable, Subscriber } from 'rxjs'
-import { ErrorHandlerOperators } from './utils/error-handler.util.js'
-import type { SpawnOptionsWithoutStdio } from 'child_process'
+import { Observable, from } from 'rxjs'
+import { concatMap, mergeMap } from 'rxjs/operators'
+import { ErrorHandlerOperators } from './utils/error-handler.util'
 
 @Injectable()
 export class ProcessExecuteAstVisitor {
@@ -29,8 +29,8 @@ export class ProcessExecuteAstVisitor {
       ast.state = 'running'
       obs.next({ type: 'node_runing', id: ast.id })
 
-      const subscription = input$.subscribe({
-        next: (inputData) => {
+      const subscription = input$.pipe(
+        concatMap(async (inputData) => {
           ast.emitCount += 1
           obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } })
 
@@ -41,43 +41,26 @@ export class ProcessExecuteAstVisitor {
           }
 
           if (wrappedCtx.abortSignal?.aborted) {
-            ast.state = 'fail'
-            setAstError(ast, new Error('工作流已取消'))
-            obs.next({ type: 'node_fail', id: ast.id, error: '工作流已取消' })
-            obs.complete()
-            return
+            throw new Error('工作流已取消')
           }
 
           if (!ast.command) {
-            ast.state = 'fail'
-            setAstError(ast, new Error('命令不能为空'))
-            obs.next({ type: 'node_fail', id: ast.id, error: '命令不能为空' })
-            obs.complete()
-            return
+            throw new Error('命令不能为空')
           }
 
           const startTime = Date.now()
+          console.log(`[ProcessExecuteAstVisitor] 准备启动进程:`, { command: ast.command, args: ast.args })
 
-          const env: Record<string, string> = { ...process.env } as Record<string, string>
-          if (ast.envVars && Array.isArray(ast.envVars)) {
-            ast.envVars.forEach(({ key, value }) => {
-              if (key) env[key] = value
-            })
-          }
-
-          const spawnOptions: SpawnOptionsWithoutStdio = {
-            cwd: ast.cwd || process.cwd(),
-            env,
-            signal: wrappedCtx.abortSignal,
-            shell: process.platform === 'win32'
-          }
-
-          this.executeProcess(ast, obs, spawnOptions, startTime)
-        },
+          const events = await this.executeProcess(ast, startTime)
+          return events
+        }),
+        ErrorHandlerOperators.createRetryOperator(ast, { logPrefix: '[ProcessExecuteAstVisitor]' }),
+        ErrorHandlerOperators.createCatchErrorOperator(ast, { logPrefix: '[ProcessExecuteAstVisitor]' }),
+        mergeMap((events: NodeEvent[]) => from(events))
+      ).subscribe({
+        next: (event: NodeEvent) => obs.next(event),
         error: (error) => {
-          ast.state = 'fail'
-          setAstError(ast, error instanceof Error ? error : new Error(String(error)))
-          obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message })
+          obs.next({ type: 'node_fail', id: ast.id, error: error?.message })
         },
         complete: () => {
           ast.state = 'success'
@@ -96,37 +79,46 @@ export class ProcessExecuteAstVisitor {
 
   private executeProcess(
     ast: ProcessExecuteAst,
-    obs: Subscriber<NodeEvent>,
-    spawnOptions: SpawnOptionsWithoutStdio,
     startTime: number
-  ): void {
-    const processSubject = new ProcessSubject(ast.command, ast.args || [], spawnOptions)
-    ast.pid = processSubject.child.pid ?? 0
+  ): Promise<NodeEvent[]> {
+    return new Promise((resolve) => {
+      const events: NodeEvent[] = []
+      console.log(`[ProcessExecuteAstVisitor] 创建 ProcessSubject`)
+      const processSubject = new ProcessSubject(ast.command, ast.args || [])
+      ast.pid = processSubject.child.pid ?? 0
+      console.log(`[ProcessExecuteAstVisitor] 进程已启动, PID: ${ast.pid}`)
 
-    obs.next({ type: 'node_emit', id: ast.id, data: { pid: ast.pid } })
+      events.push({ type: 'node_emit', id: ast.id, data: { pid: ast.pid } })
 
-    processSubject.subscribe({
-      next: (data: unknown) => {
-        obs.next({ type: 'node_emit', id: ast.id, data: { stdout: data } })
-      },
-      error: (error: unknown) => {
-        const errorMsg = error instanceof Error ? error.message : String(error)
-        obs.next({ type: 'node_emit', id: ast.id, data: { stderr: errorMsg } })
-      },
-      complete: () => {
-        ast.duration = Date.now() - startTime
-        obs.next({
-          type: 'node_emit',
-          id: ast.id,
-          data: { pid: ast.pid, duration: ast.duration }
-        })
+      processSubject.subscribe({
+        next: (data: unknown) => {
+          console.log(`[ProcessExecuteAstVisitor] 收到进程输出:`, data)
+          events.push({ type: 'node_emit', id: ast.id, data: { stdout: data } })
+        },
+        error: (error: unknown) => {
+          const errorMsg = error instanceof Error ? error.message : String(error)
+          console.log(`[ProcessExecuteAstVisitor] 收到进程错误 (stderr):`, errorMsg)
+          events.push({ type: 'node_emit', id: ast.id, data: { stderr: errorMsg } })
+        },
+        complete: () => {
+          ast.duration = Date.now() - startTime
+          console.log(`[ProcessExecuteAstVisitor] 进程完成, 耗时: ${ast.duration}ms`)
+          events.push({
+            type: 'node_emit',
+            id: ast.id,
+            data: { pid: ast.pid, duration: ast.duration }
+          })
+          resolve(events)
+        }
+      })
+
+      if (ast.stdin) {
+        console.log(`[ProcessExecuteAstVisitor] 写入 stdin:`, ast.stdin)
+        processSubject.next(ast.stdin)
+      } else {
+        console.log(`[ProcessExecuteAstVisitor] 无 stdin，关闭进程输入`)
+        processSubject.complete()
       }
     })
-
-    if (ast.stdin) {
-      processSubject.next(ast.stdin)
-    } else {
-      processSubject.complete()
-    }
   }
 }

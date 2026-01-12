@@ -26,6 +26,10 @@ import { UploadService } from './services/upload.service';
 import { ClaudeGateway } from './claude';
 import { DerivedNodeService } from './services/workflow/derived-node.service';
 import { BetterAuthWrapper } from './utils/auth-wrapper';
+
+Reflect.set(global, 'window', {
+  WebSocket: WebSocket
+})
 async function bootstrap() {
   const PORT = parseInt(process.env.PORT || `3000`);
   const logger = root.get(Logger);

@@ -2,7 +2,6 @@
  * Claude SDK Service Tests
  *
  * 测试 ClaudeSdkService 的协议和消息结构
- * 由于 @anthropic-ai/claude-code 是特殊的 SDK，我们只测试消息结构
  */
 
 import { describe, it, expect } from 'vitest';
