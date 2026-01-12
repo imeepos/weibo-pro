@@ -90,17 +90,12 @@ export class ClaudeCodeAstVisitor {
 
           // 非 result 类型时，发射 node_progress
           if (streamEvent.type !== 'result') {
-            const content = streamEvent?.message?.content[0]
-            if (content) {
-              if (typeof content === 'string') {
-                events.push({ type: 'node_progress', id: ast.id, data: { message: content } })
-              }
-              else if (content.type === 'text') {
-                events.push({ type: 'node_progress', id: ast.id, data: { message: content.text } })
-              }
-              else {
-                events.push({ type: 'node_progress', id: ast.id, data: { message: JSON.stringify(content) } })
-              }
+            const content = streamEvent?.message?.content
+            if (Array.isArray(content)) {
+              const msg = content[0]!
+              events.push({ type: 'node_progress', id: ast.id, data: { message: msg.text } })
+            } else {
+              events.push({ type: 'node_progress', id: ast.id, data: { message: content } })
             }
             return
           }
