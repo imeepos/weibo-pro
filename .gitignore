@@ -48,3 +48,7 @@ yarn-error.log*
 MediaCrawler/
 cloudflare_temp_email/
 claudecodeui/
+
+# Debug files
+*.json.debug
+1.json

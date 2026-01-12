@@ -4,7 +4,7 @@ import { map, takeUntil, mergeMap, filter } from 'rxjs/operators'
 import type { Subscriber, TeardownLogic } from 'rxjs'
 import type { ChildProcessWithoutNullStreams, SpawnOptionsWithoutStdio } from 'child_process'
 import { Observable } from '@sker/core'
-import { writeFileSync } from 'fs'
+
 export class ProcessSubject<T = string> extends Subject<string> {
     readonly output$: Observable<T>
     readonly signal: AbortSignal
@@ -18,24 +18,13 @@ export class ProcessSubject<T = string> extends Subject<string> {
         super()
         this.controller = new AbortController()
         this.signal = this.controller.signal
-        const env = process.env;
-        const { DEV, ...otherEnv} = env;
-        writeFileSync(`1.json`, JSON.stringify({
-            cwd: process.cwd(),
-            stdio: ['pipe', 'pipe', 'pipe'],
-            env: {
-                ...otherEnv
-            },
-            signal: this.signal,
-            shell: process.platform === 'win32'
-        }))
+        const env = process.env
+        const { DEV, ...otherEnv } = env
 
         this.child = spawn(cmd, args, {
             cwd: process.cwd(),
             stdio: ['pipe', 'pipe', 'pipe'],
-            env: {
-                ...otherEnv
-            },
+            env: otherEnv,
             signal: this.signal,
             shell: process.platform === 'win32'
         })

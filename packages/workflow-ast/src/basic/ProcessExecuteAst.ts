@@ -13,7 +13,7 @@ export interface ProcessEnvironmentVariable {
   retryDelay: 1000,
   retryBackoff: 2
 })
-export class ProcessExecuteAst extends Ast {
+export class ClaudeCodeAst extends Ast {
   @Input({ title: '命令路径/名称' })
   command: string = ''
 
