@@ -13,7 +13,6 @@
 
 // LLM 节点 (26个)
 export { ErrorAnalyzerAst } from './llm/ErrorAnalyzerAst';
-export { ClaudeCodeAst } from './llm/ClaudeCodeAst';
 export { ClaudeCodeRefactorAst } from './llm/ClaudeCodeRefactorAst';
 export { ClaudeCodeReviewAst } from './llm/ClaudeCodeReviewAst';
 export { GroupChatLoopAst } from './llm/GroupChatLoopAst';
@@ -67,8 +66,7 @@ export { ShareAst } from './basic/ShareAst';
 export { EventAst } from './basic/EventAst';
 export { PropertySelectorAst } from './basic/PropertySelectorAst';
 export { LastAst } from './basic/LastAst';
-export { ProcessExecuteAst } from './basic/ProcessExecuteAst';
-export type { ProcessEnvironmentVariable } from './basic/ProcessExecuteAst';
+export { ClaudeCodeAst, type ClaudeStreamEvent } from './basic/ClaudeCodeAst';
 // CONTROL 节点 (2个)
 export { LlmCategoryAst } from './control/LlmCategoryAst';
 export { StoryQualityLoopAst } from './control/StoryQualityLoopAst';

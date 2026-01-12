@@ -96,7 +96,7 @@ export { HttpRequestAstVisitor } from './HttpRequestAstVisitor'
 export { SqlExecuteAstVisitor } from './SqlExecuteAstVisitor'
 
 // 进程执行节点
-export { ProcessExecuteAstVisitor } from './ProcessExecuteAstVisitor'
+export { ClaudeCodeAstVisitor } from './ClaudeCodeAstVisitor'
 
 // Markdown 上传节点
 export { MarkdownUploadAstVisitor } from './MarkdownUploadAstVisitor'
@@ -105,7 +105,6 @@ export { MarkdownUploadAstVisitor } from './MarkdownUploadAstVisitor'
 export { ExcelUploadAstVisitor } from './ExcelUploadAstVisitor'
 
 // Claude Code 节点
-export { ClaudeCodeAstVisitor } from './ClaudeCodeAstVisitor'
 export { ClaudeCodeReviewAstVisitor } from './ClaudeCodeReviewAstVisitor'
 export { ClaudeCodeRefactorAstVisitor } from './ClaudeCodeRefactorAstVisitor'
 

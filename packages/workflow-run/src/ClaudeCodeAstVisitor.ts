@@ -1,71 +1,130 @@
-import { Injectable } from '@sker/core';
-import { Handler, NodeEvent, setAstError, WorkflowGraphAst } from '@sker/workflow';
-import { ClaudeCodeAst } from '@sker/workflow-ast';
-import { Observable, from } from 'rxjs';
-import { concatMap, mergeMap } from 'rxjs/operators';
-import { ErrorHandlerOperators } from './utils/error-handler.util';
-import { ClaudeCodeService } from './services/claude-code.service';
+import { Injectable } from '@sker/core'
+import { Handler, NodeEvent } from '@sker/workflow'
+import { ClaudeCodeAst, ClaudeStreamEvent } from '@sker/workflow-ast'
+import { ProcessSubject } from './core/ProcessSubject.js'
+import { Observable, from } from 'rxjs'
+import { concatMap, mergeMap } from 'rxjs/operators'
+import { ErrorHandlerOperators } from './utils/error-handler.util'
 
 @Injectable()
 export class ClaudeCodeAstVisitor {
-  constructor(private claudeCode: ClaudeCodeService) {}
-
   @Handler(ClaudeCodeAst)
-  visit(ast: ClaudeCodeAst, input$: Observable<Record<string, unknown>>, ctx: WorkflowGraphAst): Observable<NodeEvent> {
-    return new Observable<NodeEvent>((obs) => {
-      const abortController = new AbortController();
+  handler(
+    ast: ClaudeCodeAst,
+    input$: Observable<Record<string, unknown>>,
+    ctx: Record<string, unknown>
+  ): Observable<NodeEvent> {
+    return new Observable<NodeEvent>(obs => {
+      const abortController = new AbortController()
 
-      ast.state = 'running';
-      obs.next({ type: 'node_runing', id: ast.id });
+      interface WrappedContext extends Record<string, unknown> {
+        abortSignal: AbortSignal
+      }
+
+      const wrappedCtx: WrappedContext = {
+        ...ctx,
+        abortSignal: abortController.signal
+      }
+
+      ast.state = 'running'
+      obs.next({ type: 'node_runing', id: ast.id })
 
       const subscription = input$.pipe(
         concatMap(async (inputData) => {
-          ast.emitCount += 1;
+          ast.emitCount += 1
+          obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } })
+
           if (inputData) {
             Object.keys(inputData).forEach(key => {
-              (ast as unknown as Record<string, unknown>)[key] = inputData[key];
-            });
+              ; (ast as unknown as Record<string, unknown>)[key] = inputData[key]
+            })
           }
 
-          if (abortController.signal.aborted) {
-            throw new Error('工作流已取消');
+          if (wrappedCtx.abortSignal?.aborted) {
+            throw new Error('工作流已取消')
           }
 
-          const files = ast.files ? ast.files.split('\n').filter(f => f.trim()) : undefined;
-          const result = await this.claudeCode.execute(ast.prompt, {
-            cwd: ast.cwd || undefined,
-            files,
-            dangerouslySkipPermissions: true
-          });
+          if (!ast.command) {
+            throw new Error('命令不能为空')
+          }
 
-          return [
-            { type: 'node_emit' as const, id: ast.id, data: { response: result.content || result.text || JSON.stringify(result) } }
-          ];
+          const startTime = Date.now()
+          const events = await this.executeProcess(ast, startTime)
+          return events
         }),
         ErrorHandlerOperators.createRetryOperator(ast, { logPrefix: '[ClaudeCodeAstVisitor]' }),
         ErrorHandlerOperators.createCatchErrorOperator(ast, { logPrefix: '[ClaudeCodeAstVisitor]' }),
         mergeMap((events: NodeEvent[]) => from(events))
       ).subscribe({
-        next: (event: NodeEvent) => {
-          obs.next(event);
-        },
+        next: (event: NodeEvent) => obs.next(event),
         error: (error) => {
-          ast.state = 'fail';
-          setAstError(ast, error);
-          obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
+          obs.next({ type: 'node_fail', id: ast.id, error: error?.message })
         },
         complete: () => {
-          ast.state = 'success';
-          obs.next({ type: 'node_success', id: ast.id });
-          obs.complete();
+          ast.state = 'success'
+          obs.next({ type: 'node_success', id: ast.id })
+          obs.complete()
         }
-      });
+      })
 
       return () => {
-        subscription.unsubscribe();
-        abortController.abort();
-        obs.complete();
-      };
-    });
+        subscription.unsubscribe()
+        abortController.abort()
+        obs.complete()
+      }
+    })
+  }
+
+  private executeProcess(
+    ast: ClaudeCodeAst,
+    startTime: number
+  ): Promise<NodeEvent[]> {
+    return new Promise((resolve) => {
+      const events: NodeEvent[] = []
+      const processSubject = new ProcessSubject(ast.command, ast.args || [])
+      ast.pid = processSubject.child.pid ?? 0
+
+      processSubject.subscribe({
+        next: (data: unknown) => {
+          const streamEvent = data as ClaudeStreamEvent
+
+          // 非 result 类型时，发射 node_progress
+          if (streamEvent.type !== 'result') {
+            const content = streamEvent?.message?.content[0]
+            if (content) {
+              if (typeof content === 'string') {
+                events.push({ type: 'node_progress', id: ast.id, data: { message: content } })
+              }
+              else if (content.type === 'text') {
+                events.push({ type: 'node_progress', id: ast.id, data: { message: content.text } })
+              }
+              else {
+                events.push({ type: 'node_progress', id: ast.id, data: { message: JSON.stringify(content) } })
+              }
+            }
+            return
+          }
+
+          // result 类型时，发射 node_emit
+          ast.result = streamEvent.result!;
+          events.push({ type: 'node_emit', id: ast.id, data: { result: streamEvent.result } })
+        },
+        error: (error: unknown) => {
+          const errorMsg = error instanceof Error ? error.message : String(error)
+          ast.stderr = errorMsg
+          events.push({ type: 'node_emit', id: ast.id, data: { stderr: errorMsg } })
+        },
+        complete: () => {
+          ast.duration = Date.now() - startTime
+          resolve(events)
+        }
+      })
+
+      if (ast.stdin) {
+        processSubject.next(ast.stdin)
+      } else {
+        processSubject.complete()
+      }
+    })
   }
 }
