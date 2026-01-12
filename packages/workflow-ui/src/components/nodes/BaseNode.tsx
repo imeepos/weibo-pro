@@ -77,13 +77,33 @@ export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNodeType
 
   // 切换节点折叠状态
   const toggleCollapse = () => {
+    const newCollapsed = !isCollapsed
     setNodes((nodes) =>
       nodes.map((node) =>
         node.id === id
-          ? { ...node, data: { ...node.data, collapsed: !isCollapsed } }
+          ? { ...node, data: { ...node.data, collapsed: newCollapsed } }
           : node
       )
     )
+    // 使用双重 requestAnimationFrame 确保 DOM 更新完成后再测量
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        // 通过 DOM 查询节点元素并测量高度
+        const nodeElement = document.querySelector(`[data-id="${id}"]`)
+        if (nodeElement) {
+          const height = nodeElement.getBoundingClientRect().height
+          const width = nodeElement.getBoundingClientRect().width
+          // 手动更新节点尺寸
+          setNodes((nodes) =>
+            nodes.map((node) =>
+              node.id === id
+                ? { ...node, height, measured: { width, height } }
+                : node
+            )
+          )
+        }
+      })
+    })
   }
 
   // 右键菜单事件
