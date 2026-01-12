@@ -95,6 +95,9 @@ export { HttpRequestAstVisitor } from './HttpRequestAstVisitor'
 // SQL 执行节点
 export { SqlExecuteAstVisitor } from './SqlExecuteAstVisitor'
 
+// 进程执行节点
+export { ProcessExecuteAstVisitor } from './ProcessExecuteAstVisitor'
+
 // Markdown 上传节点
 export { MarkdownUploadAstVisitor } from './MarkdownUploadAstVisitor'
 
