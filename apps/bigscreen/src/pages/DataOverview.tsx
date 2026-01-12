@@ -96,7 +96,7 @@ const DataOverview: React.FC = () => {
           <div className="flex-shrink-0">
             <StatsOverview data={statsOverviewData} />
           </div>
-          <div className="flex-1 bg-card border rounded-xl shadow-sm overflow-hidden p-4">
+          <div className="flex-1 bg-card border rounded-xl shadow-sm overflow-hidden p-0">
             <HotEventsList />
           </div>
           <div className="flex-1 bg-card border rounded-xl shadow-sm overflow-hidden p-4">
