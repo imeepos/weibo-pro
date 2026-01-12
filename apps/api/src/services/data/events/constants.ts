@@ -21,68 +21,9 @@ export const TIME_RANGE_GRANULARITY: Record<
   '365d': 'month',
 };
 
-export const HOTNESS_THRESHOLD = {
-  VERY_HIGH: 80,
-  HIGH: 50,
-  MEDIUM: 30,
-} as const;
-
 export const IMPACT_THRESHOLD = {
   HIGH: 80,
   MEDIUM: 50,
-} as const;
-
-export const DEVELOPMENT_PHASES = {
-  EARLY: {
-    name: '萌芽期',
-    description: '事件初步曝光，小范围传播',
-    keyEvents: ['事件首次曝光', '初期讨论开始'],
-    keyTasks: ['监测舆情动向', '识别关键信息'],
-    keyMeasures: ['加强信息收集', '准备应对预案'],
-  },
-  OUTBREAK: {
-    name: '爆发期',
-    description: '事件快速发酵，引发广泛关注',
-    keyEvents: ['媒体大量报道', '舆论快速升温', '话题登上热搜'],
-    keyTasks: ['实时监控舆情', '及时回应关切'],
-    keyMeasures: ['发布官方声明', '引导舆论方向'],
-  },
-  STABLE: {
-    name: '平稳期',
-    description: '事件热度回落，逐步平息',
-    keyEvents: ['讨论趋于理性', '热度逐步降温'],
-    keyTasks: ['总结经验教训', '持续跟踪监测'],
-    keyMeasures: ['完善应对机制', '优化舆情管理'],
-  },
-} as const;
-
-export const SPREAD_SPEED_THRESHOLD = {
-  FAST: 20,
-  MEDIUM: 10,
-} as const;
-
-export const DURATION_THRESHOLD = {
-  LONG: 30,
-  MEDIUM: 7,
-} as const;
-
-export const SUCCESS_FACTORS = {
-  TOPIC_SENSITIVITY: {
-    title: '话题敏感性',
-    description: '事件涉及公众关注的敏感话题,容易引发共鸣',
-  },
-  TIMING: {
-    title: '传播时机',
-    description: '事件发生时机恰当,与社会热点相契合',
-  },
-  INFLUENCE: {
-    title: '参与者影响力',
-    description: '关键参与者具有较强的社会影响力',
-  },
-  MEDIA_PUSH: {
-    title: '媒体推动',
-    description: '主流媒体和自媒体的广泛报道放大了传播效果',
-  },
 } as const;
 
 export const INFLUENCE_WEIGHTS = {

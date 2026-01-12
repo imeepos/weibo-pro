@@ -218,7 +218,7 @@ export class UserRelationService {
     for (let i = 0; i < userIdsArray.length; i += BATCH_SIZE) {
       const batch = userIdsArray.slice(i, i + BATCH_SIZE);
       const batchResult = await manager.query(
-        `SELECT * FROM v_weibo_user_info WHERE id = ANY($1::bigint[])`,
+        `SELECT * FROM weibo_users WHERE id = ANY($1::bigint[])`,
         [batch]
       );
       usersData.push(...batchResult);

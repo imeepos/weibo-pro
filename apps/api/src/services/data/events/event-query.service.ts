@@ -1047,113 +1047,96 @@ export class EventQueryService {
       cacheKey,
       async () => {
         return await useEntityManager(async (entityManager) => {
-          // 从 user_relation_statistics 表获取事件相关的边数据
-          const edgesData = await entityManager.query(
+          // 一次 JOIN 查询获取边和用户信息
+          const result = await entityManager.query(
             `
             SELECT
-              source_user_id,
-              target_user_id,
-              SUM(CASE WHEN relation_type = 'like' THEN weight ELSE 0 END) as like_count,
-              SUM(CASE WHEN relation_type = 'comment' THEN weight ELSE 0 END) as comment_count,
-              SUM(CASE WHEN relation_type = 'repost' THEN weight ELSE 0 END) as repost_count,
-              SUM(weight) as weight
-            FROM user_relation_statistics
-            WHERE event_id = $1
-            GROUP BY source_user_id, target_user_id
-            ORDER BY weight DESC
+              urs.source_user_id,
+              urs.target_user_id,
+              urs.like_count,
+              urs.comment_count,
+              urs.repost_count,
+              urs.weight,
+              u1.screen_name as src_name,
+              u1.followers_count as src_followers,
+              u1.statuses_count as src_posts,
+              u1.verified as src_verified,
+              u1.location as src_location,
+              u1.profile_image_url as src_avatar,
+              u2.screen_name as tgt_name,
+              u2.followers_count as tgt_followers,
+              u2.statuses_count as tgt_posts,
+              u2.verified as tgt_verified,
+              u2.location as tgt_location,
+              u2.profile_image_url as tgt_avatar
+            FROM (
+              SELECT
+                source_user_id,
+                target_user_id,
+                SUM(CASE WHEN relation_type = 'like' THEN weight ELSE 0 END) as like_count,
+                SUM(CASE WHEN relation_type = 'comment' THEN weight ELSE 0 END) as comment_count,
+                SUM(CASE WHEN relation_type = 'repost' THEN weight ELSE 0 END) as repost_count,
+                SUM(weight) as weight
+              FROM user_relation_statistics
+              WHERE event_id = $1
+              GROUP BY source_user_id, target_user_id
+            ) urs
+            LEFT JOIN weibo_users u1 ON urs.source_user_id::bigint = u1.id
+            LEFT JOIN weibo_users u2 ON urs.target_user_id::bigint = u2.id
+            ORDER BY urs.weight DESC
           `,
             [eventId]
           );
 
-          if (edgesData.length === 0) {
-            return {
-              nodes: [],
-              edges: [],
-              statistics: {
-                totalUsers: 0,
-                totalRelations: 0,
-                avgDegree: 0,
-                density: 0,
-              },
-            };
+          if (result.length === 0) {
+            return { nodes: [], edges: [], statistics: { totalUsers: 0, totalRelations: 0, avgDegree: 0, density: 0 } };
           }
 
-          // 收集所有用户 ID
-          const userIds = new Set<string>();
-          edgesData.forEach((edge: any) => {
-            userIds.add(edge.source_user_id);
-            userIds.add(edge.target_user_id);
-          });
-
-          const userIdsArray = Array.from(userIds);
-
-          // 批量获取用户信息
-          await entityManager.query('SET statement_timeout = 30000');
-
-          const BATCH_SIZE = 1000;
-          const usersData: any[] = [];
-          for (let i = 0; i < userIdsArray.length; i += BATCH_SIZE) {
-            const batch = userIdsArray.slice(i, i + BATCH_SIZE);
-            const batchResult = await entityManager.query(
-              `SELECT * FROM v_weibo_user_info WHERE id = ANY($1::bigint[])`,
-              [batch]
-            );
-            usersData.push(...batchResult);
-          }
-
-          const usersMap = new Map<string, any>(
-            usersData.map((u: any) => [u.id.toString(), u])
-          );
-
-          // 构建节点
-          const nodes = Array.from(userIds).map((userId) => {
-            const userData = usersMap.get(userId);
-            if (!userData) {
-              return {
-                id: userId,
-                name: `用户_${userId}`,
-                followers: 0,
-                influence: 0,
-                postCount: 0,
-                verified: false,
-                userType: 'normal' as const,
-              };
-            }
-
-            const followers = parseInt(userData.followers_count) || 0;
-            const posts = parseInt(userData.statuses_count) || 0;
-            const influence = Math.min(
-              100,
-              Math.floor((Math.log10(followers + 1) * 10 + Math.log10(posts + 1) * 5) * 2)
-            );
+          // 从查询结果构建用户信息 Map
+          const buildUserInfo = (userId: string, prefix: 'src' | 'tgt', row: any) => {
+            const name = row[`${prefix}_name`] || `用户_${userId}`;
+            const followers = parseInt(row[`${prefix}_followers`]) || 0;
+            const posts = parseInt(row[`${prefix}_posts`]) || 0;
+            const influence = Math.min(100, Math.floor((Math.log10(followers + 1) * 10 + Math.log10(posts + 1) * 5) * 2));
+            const verified = row[`${prefix}_verified`] || false;
 
             return {
               id: userId,
-              name: userData.screen_name || userData.name || `用户_${userId}`,
-              avatar: userData.avatar,
+              name,
+              avatar: row[`${prefix}_avatar`],
               followers,
               influence,
               postCount: posts,
-              verified: userData.verified || false,
-              userType: (userData.user_type || 'normal') as 'normal' | 'official' | 'media' | 'kol',
-              location: userData.location,
+              verified,
+              userType: verified ? 'official' : 'normal',
+              location: row[`${prefix}_location`],
             };
-          });
+          };
+
+          // 收集所有节点（去重）
+          const nodesMap = new Map<string, any>();
+          for (const row of result) {
+            const sourceId = row.source_user_id;
+            const targetId = row.target_user_id;
+
+            if (!nodesMap.has(sourceId)) nodesMap.set(sourceId, buildUserInfo(sourceId, 'src', row));
+            if (!nodesMap.has(targetId)) nodesMap.set(targetId, buildUserInfo(targetId, 'tgt', row));
+          }
 
           // 构建边
-          const edges = edgesData.map((edge: any) => ({
-            source: edge.source_user_id,
-            target: edge.target_user_id,
-            weight: parseInt(edge.weight),
-            type: 'comprehensive',
+          const edges = result.map((row: any) => ({
+            source: row.source_user_id,
+            target: row.target_user_id,
+            weight: parseInt(row.weight),
+            type: 'comprehensive' as const,
             interactions: {
-              likes: edge.like_count ? parseInt(edge.like_count) : undefined,
-              comments: edge.comment_count ? parseInt(edge.comment_count) : undefined,
-              reposts: edge.repost_count ? parseInt(edge.repost_count) : undefined,
+              likes: row.like_count ? parseInt(row.like_count) : undefined,
+              comments: row.comment_count ? parseInt(row.comment_count) : undefined,
+              reposts: row.repost_count ? parseInt(row.repost_count) : undefined,
             },
           }));
 
-          // 计算网络统计指标
+          const nodes = Array.from(nodesMap.values());
           const totalUsers = nodes.length;
           const totalRelations = edges.length;
           const avgDegree = totalUsers > 0 ? (totalRelations * 2) / totalUsers : 0;

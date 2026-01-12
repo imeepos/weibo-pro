@@ -8,7 +8,7 @@ import {
   WeiboUserEntity,
   PostNLPResultEntity,
   useEntityManager,
-  OverviewStatistics,
+  EventHourlyStatisticsEntity,
 } from '@sker/entities';
 import {
   OverviewStatisticsData,
@@ -66,23 +66,47 @@ export class OverviewService {
   }
 
   private async fetchStatisticsFromTable(manager: any, start: Date, end: Date) {
-    // 从预聚合的统计表查询数据
-    const result = await manager
-      .getRepository(OverviewStatistics)
+    // 从 event_hourly_statistics 表查询数据
+    const stats = await manager
+      .getRepository(EventHourlyStatisticsEntity)
       .createQueryBuilder('stats')
-      .select('SUM(stats.event_count)', 'eventCount')
-      .addSelect('SUM(stats.post_count)', 'postCount')
-      .addSelect('SUM(stats.user_count)', 'userCount')
-      .addSelect('SUM(stats.interaction_count)', 'interactionCount')
-      .where('stats.period_start >= :start', { start })
-      .andWhere('stats.period_start < :end', { end })
+      .select('COALESCE(SUM(stats.post_count), 0)', 'postCount')
+      .addSelect('COALESCE(SUM(stats.user_count), 0)', 'userCount')
+      .addSelect('COALESCE(SUM(stats.comment_count), 0)', 'commentCount')
+      .addSelect('COALESCE(SUM(stats.like_count), 0)', 'likeCount')
+      .addSelect('COALESCE(SUM(stats.repost_count), 0)', 'repostCount')
+      .where(
+        `make_timestamp(stats.year, stats.month, stats.day, stats.hour, 0, 0) >= :start`,
+        { start }
+      )
+      .andWhere(
+        `make_timestamp(stats.year, stats.month, stats.day, stats.hour, 0, 0) < :end`,
+        { end }
+      )
       .getRawOne();
 
+    const postCount = parseInt(stats?.postCount || '0', 10);
+    const userCount = parseInt(stats?.userCount || '0', 10);
+    const commentCount = parseInt(stats?.commentCount || '0', 10);
+    const likeCount = parseInt(stats?.likeCount || '0', 10);
+    const repostCount = parseInt(stats?.repostCount || '0', 10);
+    const interactionCount = commentCount + likeCount + repostCount;
+
+    // event_count 需要从 events 表单独查询
+    const eventCount = await manager
+      .getRepository(EventEntity)
+      .createQueryBuilder('event')
+      .where('COALESCE(event.occurred_at, event.created_at) >= :start', { start })
+      .andWhere('COALESCE(event.occurred_at, event.created_at) <= :end', { end })
+      .andWhere('event.deleted_at IS NULL')
+      .andWhere('event.status = :status', { status: 'active' })
+      .getCount();
+
     return {
-      eventCount: parseInt(result?.eventCount || '0', 10),
-      postCount: parseInt(result?.postCount || '0', 10),
-      userCount: parseInt(result?.userCount || '0', 10),
-      interactionCount: parseInt(result?.interactionCount || '0', 10),
+      eventCount,
+      postCount,
+      userCount,
+      interactionCount,
     };
   }
 

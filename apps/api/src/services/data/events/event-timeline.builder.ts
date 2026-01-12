@@ -4,18 +4,9 @@ import type {
   EventStatistics,
   EventTimelineNode,
   EventKeyNode,
-  EventDevelopmentPhase,
-  EventDevelopmentPattern,
-  EventSuccessFactor,
-  TimeRange,
 } from './types';
 import {
-  HOTNESS_THRESHOLD,
   IMPACT_THRESHOLD,
-  DEVELOPMENT_PHASES,
-  SPREAD_SPEED_THRESHOLD,
-  DURATION_THRESHOLD,
-  SUCCESS_FACTORS,
 } from './constants';
 
 @Injectable({ providedIn: 'root' })
@@ -128,143 +119,6 @@ export class EventTimelineBuilder {
       })) as EventKeyNode[];
   }
 
-  buildDevelopmentPhases(
-    event: EventWithCategory,
-    statistics: EventStatistics[]
-  ): EventDevelopmentPhase[] {
-    const phases: EventDevelopmentPhase[] = [];
-    const totalStats = statistics.length;
-
-    if (totalStats > 0) {
-      const earlyStats = statistics.slice(-Math.ceil(totalStats * 0.3));
-      const avgHotness =
-        earlyStats.reduce((sum, s) => sum + s.hotness, 0) / earlyStats.length;
-
-      const firstStat = earlyStats[earlyStats.length - 1];
-      const lastStat = earlyStats[0];
-      if (firstStat && lastStat) {
-        phases.push({
-          phase: DEVELOPMENT_PHASES.EARLY.name,
-          timeRange: `${this.formatDate(firstStat.snapshot_at)} - ${this.formatDate(lastStat.snapshot_at)}`,
-          description: DEVELOPMENT_PHASES.EARLY.description,
-          keyEvents: [...DEVELOPMENT_PHASES.EARLY.keyEvents],
-          keyTasks: [...DEVELOPMENT_PHASES.EARLY.keyTasks],
-          keyMeasures: [...DEVELOPMENT_PHASES.EARLY.keyMeasures],
-          metrics: {
-            hotness: Math.round(avgHotness),
-            posts: lastStat.post_count || 0,
-            users: lastStat.user_count || 0,
-            sentiment: lastStat.sentiment?.positive || 0.5,
-          },
-          status: 'completed',
-        });
-      }
-    }
-
-    if (totalStats > 3) {
-      const midStats = statistics.slice(
-        Math.floor(totalStats * 0.3),
-        Math.floor(totalStats * 0.7)
-      );
-      const avgHotness =
-        midStats.reduce((sum, s) => sum + s.hotness, 0) / midStats.length;
-
-      const firstMidStat = midStats[midStats.length - 1];
-      const lastMidStat = midStats[0];
-      if (firstMidStat && lastMidStat) {
-        phases.push({
-          phase: DEVELOPMENT_PHASES.OUTBREAK.name,
-          timeRange: `${this.formatDate(firstMidStat.snapshot_at)} - ${this.formatDate(lastMidStat.snapshot_at)}`,
-          description: DEVELOPMENT_PHASES.OUTBREAK.description,
-          keyEvents: [...DEVELOPMENT_PHASES.OUTBREAK.keyEvents],
-          keyTasks: [...DEVELOPMENT_PHASES.OUTBREAK.keyTasks],
-          keyMeasures: [...DEVELOPMENT_PHASES.OUTBREAK.keyMeasures],
-          metrics: {
-            hotness: Math.round(avgHotness),
-            posts: lastMidStat.post_count || 0,
-            users: lastMidStat.user_count || 0,
-            sentiment: lastMidStat.sentiment?.positive || 0.5,
-          },
-          status: totalStats <= 5 ? 'ongoing' : 'completed',
-        });
-      }
-    }
-
-    if (totalStats > 5) {
-      const lateStats = statistics.slice(0, Math.ceil(totalStats * 0.3));
-      const avgHotness =
-        lateStats.reduce((sum, s) => sum + s.hotness, 0) / lateStats.length;
-
-      const firstLateStat = lateStats[lateStats.length - 1];
-      const lastLateStat = lateStats[0];
-      if (firstLateStat && lastLateStat) {
-        phases.push({
-          phase: DEVELOPMENT_PHASES.STABLE.name,
-          timeRange: `${this.formatDate(firstLateStat.snapshot_at)} - ${this.formatDate(lastLateStat.snapshot_at)}`,
-          description: DEVELOPMENT_PHASES.STABLE.description,
-          keyEvents: [...DEVELOPMENT_PHASES.STABLE.keyEvents],
-          keyTasks: [...DEVELOPMENT_PHASES.STABLE.keyTasks],
-          keyMeasures: [...DEVELOPMENT_PHASES.STABLE.keyMeasures],
-          metrics: {
-            hotness: Math.round(avgHotness),
-            posts: lastLateStat.post_count || 0,
-            users: lastLateStat.user_count || 0,
-            sentiment: lastLateStat.sentiment?.positive || 0.5,
-          },
-          status: 'ongoing',
-        });
-      }
-    }
-
-    return phases;
-  }
-
-  buildDevelopmentPattern(
-    event: EventWithCategory,
-    statistics: EventStatistics[]
-  ): EventDevelopmentPattern {
-    const totalDuration = statistics.length;
-    const peakHotness = Math.max(...statistics.map((s) => s.hotness));
-    const spreadSpeed =
-      peakHotness / (statistics.findIndex((s) => s.hotness === peakHotness) + 1);
-
-    return {
-      outbreakSpeed:
-        spreadSpeed > SPREAD_SPEED_THRESHOLD.FAST
-          ? '快速'
-          : spreadSpeed > SPREAD_SPEED_THRESHOLD.MEDIUM
-            ? '中速'
-            : '缓慢',
-      propagationScope:
-        event.hotness >= HOTNESS_THRESHOLD.VERY_HIGH
-          ? '广泛'
-          : event.hotness >= HOTNESS_THRESHOLD.HIGH
-            ? '较广'
-            : '有限',
-      duration:
-        totalDuration >= DURATION_THRESHOLD.LONG
-          ? '长期'
-          : totalDuration >= DURATION_THRESHOLD.MEDIUM
-            ? '中期'
-            : '短期',
-      impactDepth:
-        peakHotness >= 90 ? '深度' : peakHotness >= 60 ? '中度' : '浅层',
-    };
-  }
-
-  buildSuccessFactors(event: EventWithCategory): EventSuccessFactor[] {
-    const factors: EventSuccessFactor[] = [
-      SUCCESS_FACTORS.TOPIC_SENSITIVITY,
-      SUCCESS_FACTORS.TIMING,
-      SUCCESS_FACTORS.INFLUENCE,
-    ];
-
-    if (event.hotness >= HOTNESS_THRESHOLD.VERY_HIGH) {
-      factors.push(SUCCESS_FACTORS.MEDIA_PUSH);
-    }
-
-    return factors;
-  }
 
   private formatDate(date: Date): string {
     const d = new Date(date);

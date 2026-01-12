@@ -59,7 +59,7 @@ export class PostNLPLooperAstVisitor {
                   id: ast.id,
                   data: { hasMore: ast.hasMore, outputCursor: ast.outputCursor, emitCount: ast.emitCount },
                 });
-                await new Promise(resolve => setTimeout(resolve, 1000 * Math.random()));
+                await new Promise(resolve => setTimeout(resolve, 1000 * 5 * Math.random()));
                 // 不要 complete，等待下一次输入
               } else {
                 ast.state = 'success';

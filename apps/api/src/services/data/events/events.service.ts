@@ -78,15 +78,6 @@ export class EventsService {
     const timeline = this.timelineBuilder.buildTimeline(event, statistics);
     const propagationPath = await this.analyticsService.buildPropagationPath(id);
     const keyNodes = this.timelineBuilder.buildKeyNodes(timeline);
-    const developmentPhases = this.timelineBuilder.buildDevelopmentPhases(
-      event,
-      statistics
-    );
-    const developmentPattern = this.timelineBuilder.buildDevelopmentPattern(
-      event,
-      statistics
-    );
-    const successFactors = this.timelineBuilder.buildSuccessFactors(event);
 
     const trend =
       statistics.length >= 2 && statistics[0] && statistics[1]
@@ -115,9 +106,6 @@ export class EventsService {
       timeline,
       propagationPath,
       keyNodes,
-      developmentPhases,
-      developmentPattern,
-      successFactors,
     };
   }
 

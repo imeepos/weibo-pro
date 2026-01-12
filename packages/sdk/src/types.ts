@@ -193,9 +193,6 @@ export interface EventDetail {
   timeline: EventTimelineNode[];
   propagationPath: EventPropagationPath[];
   keyNodes: EventKeyNode[];
-  developmentPhases: EventDevelopmentPhase[];
-  developmentPattern: EventDevelopmentPattern;
-  successFactors: EventSuccessFactor[];
 }
 
 // 新增：事件 NLP 深度分析类型

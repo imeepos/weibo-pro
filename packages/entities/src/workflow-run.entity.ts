@@ -33,7 +33,7 @@ export class WorkflowRunEntity {
   workflowId!: string;
 
   @Index()
-  @Column({ name: 'schedule_id', nullable: true })
+  @Column({ name: 'schedule_id', type: 'uuid', nullable: true })
   scheduleId?: string;
 
   @Index()

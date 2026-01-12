@@ -6,14 +6,9 @@ import "@sker/workflow-run";
 import { root, logger } from '@sker/core';
 import {
   entitiesProviders,
-  useEntityManager,
-  OverviewStatisticsQueries,
-  EventStatisticsService,
-  EventEntity
 } from '@sker/entities';
 import { EdgeModeStrategyProviders } from '@sker/workflow';
 import { CronSchedulerService } from '@sker/workflow-run';
-import * as schedule from 'node-schedule';
 
 /**
  * Crawler 服务启动入口
@@ -37,79 +32,9 @@ async function bootstrap() {
   // 初始化调度器（从数据库加载所有启用的调度）
   await scheduler.initializeSchedules();
 
-  // 概览统计增量更新任务
-  const runOverviewStats = async () => {
-    try {
-      logger.info('🔄 开始执行概览增量统计...');
-      const startTime = Date.now();
-
-      const result = await useEntityManager(manager =>
-        OverviewStatisticsQueries.runIncrementalStats(manager)
-      );
-
-      const duration = Date.now() - startTime;
-      logger.info('✅ 概览增量统计完成', {
-        duration: `${duration}ms`,
-        hourly: result.hourly,
-        daily: result.daily
-      });
-    } catch (error: any) {
-      logger.error('❌ 概览增量统计失败', {
-        error: error.message,
-        stack: error.stack
-      });
-    }
-  };
-
-  const overviewStatsJob = schedule.scheduleJob('*/10 * * * *', runOverviewStats);
-
-  // 事件统计小时级任务
-  const runHourlyEventStats = async () => {
-    try {
-      logger.info('🔄 开始执行事件统计（小时级）...');
-      const startTime = Date.now();
-
-      const statsService = root.get(EventStatisticsService);
-      await statsService.generateHourlyStatisticsForAllEvents();
-
-      const duration = Date.now() - startTime;
-      logger.info('✅ 事件统计（小时级）完成', {
-        duration: `${duration}ms`
-      });
-    } catch (error: any) {
-      logger.error('❌ 事件统计（小时级）失败', {
-        error: error.message,
-        stack: error.stack
-      });
-    }
-  };
-
-  const hourlyEventStatsJob = schedule.scheduleJob('0 * * * *', runHourlyEventStats);
-
-  // 启动时立即执行一次
-  runOverviewStats();
-  runHourlyEventStats();
-
-  logger.info('✅ Crawler 服务启动成功', {
-    schedulerType: 'node-schedule',
-    activeJobs: scheduler.getJobCount(),
-    overviewStatsJob: overviewStatsJob ? 'scheduled' : 'failed',
-    eventStatsJob: hourlyEventStatsJob ? 'scheduled' : 'failed'
-  });
-
   // 优雅关闭
   const shutdown = async () => {
     logger.info('📴 Crawler 服务关闭中...');
-
-    // 取消统计任务
-    if (overviewStatsJob) {
-      overviewStatsJob.cancel();
-      logger.info('✅ 概览统计任务已取消');
-    }
-    if (hourlyEventStatsJob) {
-      hourlyEventStatsJob.cancel();
-      logger.info('✅ 事件统计任务已取消');
-    }
 
     await scheduler.stopAll();
     logger.info('✅ Crawler 服务已关闭');
