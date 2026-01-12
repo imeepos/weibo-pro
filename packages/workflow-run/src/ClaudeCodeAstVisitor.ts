@@ -82,21 +82,25 @@ export class ClaudeCodeAstVisitor {
         next: (data: unknown) => {
           const streamEvent = data as ClaudeStreamEvent
 
-          // 非 result 类型时，实时发送 node_emit
+          // 非 result 类型时，实时发送 node_emit（stdout 端口）
           if (streamEvent.type !== 'result') {
             const content = streamEvent?.message?.content
+            let message = ''
             if (Array.isArray(content)) {
               const msg = content[0]!
-              obs.next({ type: 'node_emit', id: ast.id, data: { message: msg.text } })
+              message = msg.text || ''
             } else if (typeof content === 'string') {
-              obs.next({ type: 'node_emit', id: ast.id, data: { message: content } })
+              message = content
             } else {
-              obs.next({ type: 'node_emit', id: ast.id, data: { message: streamEvent.type } })
+              message = streamEvent.type
             }
+            // 更新 ast.stdout 并发射
+            ast.stdout = message;
+            obs.next({ type: 'node_emit', id: ast.id, data: { stdout: message } })
             return
           }
 
-          // result 类型时，发送最终结果
+          // result 类型时，发送最终结果（result 端口）
           ast.result = streamEvent.result!
           obs.next({ type: 'node_emit', id: ast.id, data: { result: streamEvent.result } })
         },

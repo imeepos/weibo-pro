@@ -200,7 +200,7 @@ export class ClaudeCodeAst extends Ast {
   duration: number = 0
 
   @Output({ title: '流式事件输出' })
-  message: string | null = null;
+  stdout: string | null = null;
 
   @Output({ title: '错误' })
   stderr: any | null = null;
