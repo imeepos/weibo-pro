@@ -912,6 +912,9 @@ importers:
       commander:
         specifier: ^12.0.0
         version: 12.1.0
+      rxjs:
+        specifier: ^7.8.1
+        version: 7.8.2
       socket.io-client:
         specifier: ^4.7.5
         version: 4.8.3
