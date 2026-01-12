@@ -1,11 +1,12 @@
 import React, { memo } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { ChevronDown, ChevronUp, Play, Square } from 'lucide-react'
+import { ChevronDown, ChevronUp, Play, Square, Copy, Trash2, Info } from 'lucide-react'
 
 import { cn } from '@sker/ui/lib/utils'
 import { Badge } from '@sker/ui/components/ui/badge'
 import { Button } from '@sker/ui/components/ui/button'
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@sker/ui/components/ui/collapsible'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@sker/ui/components/ui/tooltip'
 import { NODE_STATE_COLORS, NODE_STATE_LABELS } from '../../constants/workflow'
 import type { WorkflowNodeProps } from './types/workflow-nodes'
 import { INodeInputMetadata, INodeOutputMetadata } from '@sker/workflow'
@@ -185,6 +186,9 @@ const WorkflowNodeComponent = ({
   children,
   onContextMenu,
   onDoubleClick,
+  onDuplicate,
+  onDelete,
+  onShowInfo,
   className,
   disableHandles = false,
 }: WorkflowNodeProps) => {
@@ -253,12 +257,71 @@ const WorkflowNodeComponent = ({
               </div>
             )}
           </div>
+
+          {/* 操作按钮组 */}
+          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            {onDuplicate && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="h-7 w-7"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onDuplicate()
+                    }}
+                  >
+                    <Copy className="size-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>复制节点</TooltipContent>
+              </Tooltip>
+            )}
+            {onDelete && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="h-7 w-7 text-destructive hover:text-destructive"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onDelete()
+                    }}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>删除节点</TooltipContent>
+              </Tooltip>
+            )}
+            {onShowInfo && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="h-7 w-7"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onShowInfo()
+                    }}
+                  >
+                    <Info className="size-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>节点信息</TooltipContent>
+              </Tooltip>
+            )}
+          </div>
+
           {onToggleCollapse && (
             <CollapsibleTrigger asChild>
               <Button
                 variant="secondary"
                 size="icon-sm"
-                className="ml-2"
+                className="ml-1"
                 title={collapsed ? '展开节点' : '折叠节点'}
               >
                 {collapsed ? (
@@ -303,7 +366,7 @@ const WorkflowNodeComponent = ({
         <CollapsibleContent asChild>
           <div
             className={cn(
-              'flex flex-col gap-1 relative border-t transition-all duration-200 py-2'
+              'flex flex-col gap-1 relative border-t py-2'
             )}
           >
             {Array.from({ length: Math.max(inputs.length, outputs.length) }).map(

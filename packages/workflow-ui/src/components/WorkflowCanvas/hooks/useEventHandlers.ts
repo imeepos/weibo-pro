@@ -7,6 +7,8 @@ export interface EventHandlers {
   onOpenEdgeConfig?: (edgeId: string) => void
   onNodeDoubleClick?: (nodeId: string) => void
   onNodeSelected?: (nodeId: string) => void
+  onNodeDuplicate?: (nodeId: string) => void
+  onNodeDelete?: (nodeId: string) => void
 }
 
 /**
@@ -24,7 +26,9 @@ export const useEventHandlers = (handlers: EventHandlers, deps: React.Dependency
     onOpenSettingPanel,
     onOpenEdgeConfig,
     onNodeDoubleClick,
-    onNodeSelected
+    onNodeSelected,
+    onNodeDuplicate,
+    onNodeDelete
   } = handlers
 
   /**
@@ -152,4 +156,36 @@ export const useEventHandlers = (handlers: EventHandlers, deps: React.Dependency
     window.addEventListener('node-selected', handleNodeClick)
     return () => window.removeEventListener('node-selected', handleNodeClick)
   }, [onNodeSelected, ...deps])
+
+  /**
+   * 监听节点复制事件
+   */
+  useEffect(() => {
+    if (!onNodeDuplicate) return
+
+    const handleDuplicate = (e: Event) => {
+      const customEvent = e as CustomEvent
+      const { nodeId } = customEvent.detail
+      onNodeDuplicate(nodeId)
+    }
+
+    window.addEventListener('node-duplicate', handleDuplicate)
+    return () => window.removeEventListener('node-duplicate', handleDuplicate)
+  }, [onNodeDuplicate, ...deps])
+
+  /**
+   * 监听节点删除事件
+   */
+  useEffect(() => {
+    if (!onNodeDelete) return
+
+    const handleDelete = (e: Event) => {
+      const customEvent = e as CustomEvent
+      const { nodeId } = customEvent.detail
+      onNodeDelete(nodeId)
+    }
+
+    window.addEventListener('node-delete', handleDelete)
+    return () => window.removeEventListener('node-delete', handleDelete)
+  }, [onNodeDelete, ...deps])
 }

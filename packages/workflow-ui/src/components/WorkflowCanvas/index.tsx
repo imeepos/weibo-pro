@@ -423,6 +423,24 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
     onNodeDoubleClick: useCallback((nodeId: string) => {
       openDrawer(nodeId)
     }, [openDrawer]),
+
+    onNodeDuplicate: useCallback((nodeId: string) => {
+      // 选中当前节点并复制
+      workflow.setNodes((nodes) =>
+        nodes.map((n) => ({ ...n, selected: n.id === nodeId }))
+      )
+      copyNodes()
+      // 立即粘贴到原位置附近
+      const node = workflow.nodes.find((n) => n.id === nodeId)
+      if (node) {
+        const offsetPosition = { x: node.position.x + 50, y: node.position.y + 50 }
+        pasteNodes(offsetPosition)
+      }
+    }, [workflow, copyNodes, pasteNodes]),
+
+    onNodeDelete: useCallback((nodeId: string) => {
+      workflow.removeNode(nodeId)
+    }, [workflow]),
   })
 
   // 恢复视图窗口状态

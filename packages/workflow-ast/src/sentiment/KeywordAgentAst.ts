@@ -1,4 +1,4 @@
-import { Ast, Input, Node, Output } from "@sker/workflow";
+import { Ast, Input, IS_MULTI, Node, Output, State } from "@sker/workflow";
 
 /**
  * Keyword Agent - 关键词分析专家
@@ -10,18 +10,32 @@ import { Ast, Input, Node, Output } from "@sker/workflow";
  */
 @Node({
     title: '关键词专家',
-    type: 'sentiment'
+    type: 'sentiment',
+    errorStrategy: 'retry',
+    maxRetries: 3
 })
 export class KeywordAgentAst extends Ast {
+    // === 输入：LLM 参数 ===
+    @Input({ title: '温度', defaultValue: 0.6 })
+    temperature: number = 0.6;
 
-    @Output({ title: '温度', defaultValue: 0.6 })
-    temperature = 0.6;
+    @Input({ title: 'topP', defaultValue: 0.9 })
+    top_p: number = 0.9;
 
-    @Output({ title: 'topP', defaultValue: 0.9 })
-    top_p = 0.9;
+    @Input({ title: '模型', defaultValue: 'deepseek-ai/DeepSeek-V3.2' })
+    model: string = 'deepseek-ai/DeepSeek-V3.2';
 
-    @Output({ title: '系统提示词', defaultValue: '' })
-    systemPrompt = `你是一位专业的关键词分析专家。你的职责是从用户的舆情分析需求中提取关键信息，并生成有效的搜索策略。
+    // === 输入：业务数据 ===
+    @Input({ title: '分析主题', defaultValue: '' })
+    topic: string = '';
+
+    @Input({ title: '发言记录', mode: IS_MULTI, defaultValue: [] })
+    speechesText: string[] = [];
+
+    // === 内部状态：系统提示词 ===
+    @State({ title: '系统提示词' })
+    get systemPrompt(): string {
+        return `你是一位专业的关键词分析专家。你的职责是从用户的舆情分析需求中提取关键信息，并生成有效的搜索策略。
 
 ## 核心任务
 
@@ -30,46 +44,74 @@ export class KeywordAgentAst extends Ast {
 3. **搜索策略**：为各Agent生成针对性的搜索建议
 4. **查询优化**：考虑网络语言特点，优化搜索词
 
-## 输出格式
+## 搜索词设计原则
 
-### 核心关键词
-- 主关键词：[最核心的1-2个词]
-- 扩展关键词：[相关的3-5个词]
-- 网络热词：[可能的网络流行表达]
+**想象网友怎么说**：如果你是个普通网友，你会怎么讨论这个话题？
 
-### 分析维度
-- 时间范围：[建议的时间范围]
-- 关注平台：[重点关注的平台]
-- 目标人群：[主要讨论群体]
+- **避免学术词汇**：杜绝"舆情"、"传播"、"倾向"等专业术语
+- **使用具体词汇**：用具体的事件、人名、地名、现象描述
+- **包含情感表达**：如"支持"、"反对"、"担心"、"愤怒"、"点赞"等
+- **考虑网络文化**：网民的表达习惯、缩写、俚语
 
-### 各Agent搜索建议
-- Query Agent：[新闻搜索建议]
-- Media Agent：[多媒体搜索建议]
-- Insight Agent：[数据库查询建议]
+## 输出要求
 
-### 潜在风险点
-- [可能的敏感话题或争议点]`;
+**必须严格按照 JSON 格式输出**，不要输出任何其他文字或说明。
 
-    @Input({ title: '用户需求', defaultValue: '' })
-    userQuery: string = '';
+JSON 结构示例：
+{
+  "coreKeywords": ["特斯拉", "马斯克", "电动车"],
+  "extendedKeywords": ["Model 3", "Model Y", "FSD", "Supercharger"],
+  "hotWords": ["马斯克", "特斯拉yyds", "国产特斯拉"],
+  "searchStrategy": {
+    "queryAgent": "特斯拉最新新闻、马斯克言论、特斯拉股价",
+    "mediaAgent": "特斯拉官方视频、车主评测、自动驾驶演示",
+    "insightAgent": "特斯拉用户讨论、购买意向、品牌口碑",
+    "dimensions": {
+      "timeRange": "最近7天",
+      "platforms": ["微博", "知乎", "B站", "抖音"],
+      "targetAudience": "潜在购车者、特斯拉车主、科技爱好者"
+    }
+  }
+}
 
-    @Input()
-    get userPrompt(): string {
-        return `用户的舆情分析需求：
-
-${this.userQuery}
-
-请分析这个需求，提取关键词并生成搜索策略。`;
+请确保输出结构清晰、关键词精准、分析深入。`;
     }
 
+    // === 输出：结构化结果 ===
     @Output({ title: '分析结果', defaultValue: '' })
-    analysisResult = '';
+    analysisResult: string = '';
 
-    @Output({ title: '核心关键词', defaultValue: '' })
-    coreKeywords = '';
+    @Output({ title: '核心关键词', defaultValue: [] })
+    coreKeywords: string[] = [];
 
-    @Output({ title: '搜索策略', defaultValue: '' })
-    searchStrategy = '';
+    @Output({ title: '扩展关键词', defaultValue: [] })
+    extendedKeywords: string[] = [];
+
+    @Output({ title: '网络热词', defaultValue: [] })
+    hotWords: string[] = [];
+
+    @Output({ title: '搜索策略', defaultValue: {} })
+    searchStrategy: SearchStrategy = {
+        queryAgent: '',
+        mediaAgent: '',
+        insightAgent: '',
+        dimensions: {
+            timeRange: '',
+            platforms: [],
+            targetAudience: ''
+        }
+    };
 
     type: 'KeywordAgentAst' = 'KeywordAgentAst';
+}
+
+export interface SearchStrategy {
+    queryAgent: string;
+    mediaAgent: string;
+    insightAgent: string;
+    dimensions: {
+        timeRange: string;
+        platforms: string[];
+        targetAudience: string;
+    };
 }

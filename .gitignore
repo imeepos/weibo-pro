@@ -13,6 +13,7 @@ BettaFish
 .env.development.local
 .env.test.local
 .env.production.local
+tmpclaude-*
 uploads
 nul
 todo.md
