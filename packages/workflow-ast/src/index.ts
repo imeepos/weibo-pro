@@ -74,6 +74,7 @@ export { StoryQualityLoopAst } from './control/StoryQualityLoopAst';
 // SENTIMENT 节点 (6个)
 export { InsightAgentAst } from './sentiment/InsightAgentAst';
 export { KeywordAgentAst } from './sentiment/KeywordAgentAst';
+export type { SearchStrategy } from './sentiment/KeywordAgentAst';
 export { MediaAgentAst } from './sentiment/MediaAgentAst';
 export { QueryAgentAst } from './sentiment/QueryAgentAst';
 export { ReportAgentAst } from './sentiment/ReportAgentAst';

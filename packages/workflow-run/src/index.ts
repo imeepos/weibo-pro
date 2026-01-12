@@ -1,5 +1,8 @@
 export { WeiboAccountService } from './services/weibo-account.service'
 
+// 舆情节点
+export { KeywordAgentAstVisitor } from './KeywordAgentAstVisitor'
+
 export { WeiboAjaxFeedHotTimelineAstVisitor } from './WeiboAjaxFeedHotTimelineAstVisitor'
 export { WeiboAjaxFriendshipsAstVisitor } from './WeiboAjaxFriendshipsAstVisitor'
 export { WeiboAjaxProfileInfoAstVisitor } from './WeiboAjaxProfileInfoAstVisitor'
