@@ -1,4 +1,4 @@
-import { isNode, INode, Compiler } from '@sker/workflow'
+import { isNode, INode, Compiler, hasMultiMode, hasBufferMode } from '@sker/workflow'
 import { root } from '@sker/core'
 import type { UINodeMetadata, PortMetadata } from '../types'
 import { getExposedInputs, getExposedOutputs } from '../utils/workflow-ports'
@@ -27,7 +27,8 @@ export function getNodeMetadata(node: INode): UINodeMetadata {
       property: `${input.nodeId}.${input.property}`,
       type: input.type || 'any',
       label: input.title || formatPortLabel(input.property),
-      isMulti: false
+      isMulti: false,
+      mode: input.mode
     }))
 
     const exposedOutputs = getExposedOutputs(node)
@@ -35,7 +36,8 @@ export function getNodeMetadata(node: INode): UINodeMetadata {
       property: `${output.nodeId}.${output.property}`,
       type: output.type || 'any',
       label: output.title || formatPortLabel(output.property),
-      isMulti: false
+      isMulti: false,
+      mode: output.mode
     }))
   }
 
@@ -62,10 +64,16 @@ function toPortMetadata(
   // 优先级：实例自定义标签 > 装饰器 title > 属性名格式化
   const label = portLabels[property] || metadata.title || formatPortLabel(property)
 
+  // 从 mode 位标志计算 isMulti 和 isBuffer
+  const mode = metadata.mode ?? 0
+  const isMulti = hasMultiMode(mode)
+  const isBuffer = hasBufferMode(mode)
+
   return {
     property,
     type: metadata.type || 'any',
-    mode: metadata.mode,
+    mode,
+    isMulti,
     label,
   }
 }

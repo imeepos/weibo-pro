@@ -117,6 +117,18 @@ export { ExcelUploadAstVisitor } from './ExcelUploadAstVisitor'
 export { ClaudeCodeReviewAstVisitor } from './ClaudeCodeReviewAstVisitor'
 export { ClaudeCodeRefactorAstVisitor } from './ClaudeCodeRefactorAstVisitor'
 
+// 显示节点
+export { DisplayAstVisitor } from './DisplayAstVisitor'
+
+// 多模态 LLM 节点
+export { LlmMultimodalAstVisitor } from './LlmMultimodalAstVisitor'
+
+// 质量检查器节点
+export { QualityCheckerAstVisitor } from './QualityCheckerAstVisitor'
+
+// 微博账号检测节点
+export { WeiboUserDetectionAstVisitor } from './WeiboUserDetectionAstVisitor'
+
 // 提示词优化节点
 export { PromptOptimizerAstVisitor } from './PromptOptimizerAstVisitor'
 

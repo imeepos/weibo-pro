@@ -9,7 +9,8 @@
 
 import { root } from '@sker/core'
 import { DerivedNodeController } from '@sker/sdk'
-import type { DerivedNodeEntity, CreateDerivedNodePayload } from '@sker/sdk'
+import type { CreateDerivedNodePayload } from '@sker/sdk'
+import type { DerivedNodeEntity } from '@sker/entities'
 
 /**
  * 保存派生节点

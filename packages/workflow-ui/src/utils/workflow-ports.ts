@@ -9,6 +9,7 @@ export interface PortInfo {
   title?: string
   type?: string
   required?: boolean
+  mode?: number
 }
 
 /**
