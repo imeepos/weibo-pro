@@ -121,11 +121,18 @@ export class OverviewService {
       const current = getTimeRangeBoundaries(timeRange);
       const previous = getPreviousTimeRangeBoundaries(timeRange);
 
-      // 查询当前时间范围的情感数据
-      const currentSentiment = await this.fetchSentiment(manager, current.start, current.end);
+      // 优先从统计表查询，降级到 NLP 结果表
+      let currentSentiment: { positive: number; negative: number; neutral: number };
+      let previousSentiment: { positive: number; negative: number; neutral: number };
 
-      // 查询上一个时间范围的情感数据
-      const previousSentiment = await this.fetchSentiment(manager, previous.start, previous.end);
+      try {
+        currentSentiment = await this.fetchSentimentFromStatistics(manager, current.start, current.end);
+        previousSentiment = await this.fetchSentimentFromStatistics(manager, previous.start, previous.end);
+      } catch (error) {
+        this.logger?.warn('Statistics table query failed, fallback to NLP results', error);
+        currentSentiment = await this.fetchSentimentFromNLPResults(manager, current.start, current.end);
+        previousSentiment = await this.fetchSentimentFromNLPResults(manager, previous.start, previous.end);
+      }
 
       // 计算总数
       const total = currentSentiment.positive + currentSentiment.negative + currentSentiment.neutral;
@@ -173,8 +180,45 @@ export class OverviewService {
     return 'stable';
   }
 
-  private async fetchSentiment(manager: any, start: Date, end: Date) {
-    // 从 PostNLPResultEntity 聚合情感数据
+  private async fetchSentimentFromStatistics(manager: any, start: Date, end: Date): Promise<{ positive: number; negative: number; neutral: number }> {
+    // 从 EventHourlyStatisticsEntity 聚合情感数据
+    const stats = await manager
+      .getRepository(EventHourlyStatisticsEntity)
+      .createQueryBuilder('stats')
+      .select('COALESCE(SUM(stats.nlp_count), 0)', 'total')
+      .addSelect('COALESCE(SUM(stats.sentiment_positive), 0)', 'positive')
+      .addSelect('COALESCE(SUM(stats.sentiment_negative), 0)', 'negative')
+      .addSelect('COALESCE(SUM(stats.sentiment_neutral), 0)', 'neutral')
+      .where(
+        `make_timestamp(stats.year, stats.month, stats.day, stats.hour, 0, 0) >= :start`,
+        { start }
+      )
+      .andWhere(
+        `make_timestamp(stats.year, stats.month, stats.day, stats.hour, 0, 0) < :end`,
+        { end }
+      )
+      .andWhere('stats.nlp_count > 0')
+      .getRawOne();
+
+    const total = parseInt(stats?.total || '0', 10);
+    const positive = parseInt(stats?.positive || '0', 10);
+    const negative = parseInt(stats?.negative || '0', 10);
+    const neutral = parseInt(stats?.neutral || '0', 10);
+
+    if (total === 0) {
+      return { positive: 0, negative: 0, neutral: 0 };
+    }
+
+    // 计算百分比
+    return {
+      positive: Math.round((positive / total) * 100),
+      negative: Math.round((negative / total) * 100),
+      neutral: Math.round((neutral / total) * 100),
+    };
+  }
+
+  private async fetchSentimentFromNLPResults(manager: any, start: Date, end: Date): Promise<{ positive: number; negative: number; neutral: number }> {
+    // 从 PostNLPResultEntity 聚合情感数据（降级备选）
     const sentimentData = await manager
       .getRepository(PostNLPResultEntity)
       .createQueryBuilder('nlp')
@@ -202,7 +246,6 @@ export class OverviewService {
     const negativeCount = parseInt(sentimentData?.negativeCount || '0', 10);
     const neutralCount = parseInt(sentimentData?.neutralCount || '0', 10);
 
-    // 计算百分比
     if (total === 0) {
       return { positive: 0, negative: 0, neutral: 0 };
     }
