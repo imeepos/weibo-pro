@@ -26,13 +26,23 @@ import { UploadService } from './services/upload.service';
 import { ClaudeGateway } from './claude';
 import { DerivedNodeService } from './services/workflow/derived-node.service';
 import { BetterAuthWrapper } from './utils/auth-wrapper';
+import { validateEnv, getEnv } from './config/env.config';
+import { runStartupChecks } from './config/startup-check';
 
 Reflect.set(global, 'window', {
   WebSocket: WebSocket
 })
 async function bootstrap() {
-  const PORT = parseInt(process.env.PORT || `3000`);
+  const env = validateEnv();
+  const PORT = env.PORT;
+
+  console.log(`🔧 环境: ${env.NODE_ENV}`);
+  console.log(`🔧 端口: ${PORT}`);
+  console.log(`🔧 时区: ${env.TZ}`);
+
   const logger = root.get(Logger);
+
+  await runStartupChecks(env, logger);
 
   // 初始化 DI 容器
   root.set([
@@ -40,10 +50,10 @@ async function bootstrap() {
     ...EdgeModeStrategyProviders,
     ...createProxyProviders({
       kuaidaili: {
-        secretId: process.env.KUAIDAILI_SECRET_ID!,
-        secretKey: process.env.KUAIDAILI_SECRET_KEY!,
-        username: process.env.KUAIDAILI_USERNAME!,
-        password: process.env.KUAIDAILI_PASSWORD!,
+        secretId: env.KUAIDAILI_SECRET_ID!,
+        secretKey: env.KUAIDAILI_SECRET_KEY!,
+        username: env.KUAIDAILI_USERNAME!,
+        password: env.KUAIDAILI_PASSWORD!,
       },
       validator: {
         testUrl: 'https://httpbin.org/ip',
