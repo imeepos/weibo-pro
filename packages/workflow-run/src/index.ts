@@ -33,6 +33,10 @@ export { StoreGetAstVisitor, StoreSetAstVisitor } from './StoreAstVisitor'
 // 数据处理节点
 export { MergeAstVisitor } from './MergeAstVisitor'
 export { LoopAstVisitor } from './LoopAstVisitor'
+export { TransformAstVisitor } from './TransformAstVisitor'
+export { RouteAstVisitor } from './RouteAstVisitor'
+export { AggregateAstVisitor } from './AggregateAstVisitor'
+export { LlmInferenceAstVisitor } from './LlmInferenceAstVisitor'
 
 // 群聊节点
 export { ShareAstVisitor } from './ShareAstVisitor'

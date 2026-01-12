@@ -1,31 +1,36 @@
 /**
  * 派生节点 API 服务
+ *
+ * 存在即合理：
+ * - 封装派生节点的 REST API 调用
+ * - 提供类型安全的接口
+ * - 支持保存、发布、列表操作
  */
 
-interface DerivedNodePayload {
-  baseNodeType: string
-  frozenInputs: Record<string, unknown>
-  exposedInputs: string[]
-  customOutputs: any[]
-  metadata: {
-    name: string
-    title: string
-    type: string
-    description: string
-  }
+import { root } from '@sker/core'
+import { DerivedNodeController } from '@sker/sdk'
+import type { DerivedNodeEntity, CreateDerivedNodePayload } from '@sker/sdk'
+
+/**
+ * 保存派生节点
+ */
+export async function saveDerivedNode(payload: CreateDerivedNodePayload): Promise<DerivedNodeEntity> {
+  const controller = root.get(DerivedNodeController)
+  return controller.create(payload)
 }
 
-export async function saveDerivedNode(payload: DerivedNodePayload): Promise<void> {
-  // TODO: 实现 API 调用
-  console.log('保存派生节点:', payload)
+/**
+ * 发布派生节点
+ */
+export async function publishDerivedNode(id: string): Promise<{ success: boolean }> {
+  const controller = root.get(DerivedNodeController)
+  return controller.publish(id)
 }
 
-export async function loadDerivedNodes(): Promise<DerivedNodePayload[]> {
-  // TODO: 实现 API 调用
-  return []
-}
-
-export async function deleteDerivedNode(id: string): Promise<void> {
-  // TODO: 实现 API 调用
-  console.log('删除派生节点:', id)
+/**
+ * 加载所有派生节点
+ */
+export async function loadDerivedNodes(): Promise<DerivedNodeEntity[]> {
+  const controller = root.get(DerivedNodeController)
+  return controller.list()
 }

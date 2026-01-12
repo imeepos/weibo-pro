@@ -105,3 +105,4 @@ export type { EvaluationResult, EvaluationType } from './llm/AnswerEvaluatorAst'
 export type { MarkdownHeading } from './basic/MarkdownUploadAst';
 export type { RetrievedMemory } from './llm/PersonaAst';
 export type { SqlParameter, SqlColumn } from './basic/SqlExecuteAst';
+export type { AggregateOperation } from './meta/AggregateAst';
