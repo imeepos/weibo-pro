@@ -50,6 +50,11 @@ export interface WorkflowNodeProps {
   // 预览模式（不渲染 Handle）
   disableHandles?: boolean
 
+  // 操作按钮
+  onDuplicate?: () => void
+  onDelete?: () => void
+  onShowInfo?: () => void
+
   className?: string
 }
 

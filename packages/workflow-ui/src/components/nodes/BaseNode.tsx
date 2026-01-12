@@ -1,4 +1,4 @@
-import React, { memo, useEffect } from 'react'
+import React, { memo, useEffect, useState, useCallback } from 'react'
 import { useUpdateNodeInternals, useReactFlow } from '@xyflow/react'
 import type { NodeProps } from '@xyflow/react'
 import { WorkflowNode } from '@sker/ui/components/workflow'
@@ -9,6 +9,7 @@ import type { INode } from '@sker/workflow'
 import { root } from '@sker/core'
 import { BoxIcon } from 'lucide-react'
 import { useExecutionStore } from '../../store/execution.store'
+import { NodeInfoDialog } from './NodeInfoDialog'
 
 /**
  * BaseNode - 工作流节点数据适配器
@@ -19,12 +20,16 @@ import { useExecutionStore } from '../../store/execution.store'
  * - 传递给 @sker/ui 的 WorkflowNode 进行渲染
  * - 处理工作流特定的交互事件
  * - 显示实时执行进度
+ * - 提供节点操作：复制、删除、查看信息
  */
 export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNodeType>) => {
   // 从 execution store 获取节点的流式数据和进度
   // 直接订阅状态值，而不是 getter 函数，这样才能触发重新渲染
   const streamingData = useExecutionStore((state) => state.streamingData[id])
   const progressData = useExecutionStore((state) => state.nodeProgress[id])
+
+  // 节点信息对话框状态
+  const [showInfoDialog, setShowInfoDialog] = useState(false)
 
   // 确保节点已编译（包含 metadata）
   let nodeToUse: INode
@@ -100,32 +105,65 @@ export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNodeType
     window.dispatchEvent(customEvent)
   }
 
+  // 复制节点
+  const handleDuplicate = useCallback(() => {
+    const customEvent = new CustomEvent('node-duplicate', {
+      detail: { nodeId: id, nodeData: data },
+    })
+    window.dispatchEvent(customEvent)
+  }, [id, data])
+
+  // 删除节点
+  const handleDelete = useCallback(() => {
+    const customEvent = new CustomEvent('node-delete', {
+      detail: { nodeId: id, nodeData: data },
+    })
+    window.dispatchEvent(customEvent)
+  }, [id, data])
+
+  // 显示节点信息对话框
+  const handleShowInfo = useCallback(() => {
+    setShowInfoDialog(true)
+  }, [])
+
   // 调用 @sker/ui 的 WorkflowNode 进行渲染
   return (
-    <WorkflowNode
-      id={id}
-      type={data.type}
-      label={data.name || metadata.class.title || data.type}
-      description={progressData ? progressData.message : data.description}
-      color={data.color}
-      icon={<BoxIcon />}
-      status={data.state}
-      statusCount={data.emitCount || 0}
-      inputs={inputs}
-      outputs={outputs}
-      selected={selected}
-      collapsed={isCollapsed}
-      isEntryNode={isEntryNode}
-      isEndNode={isEndNode}
-      onToggleCollapse={toggleCollapse}
-      onContextMenu={handleContextMenu}
-      onDoubleClick={handleDoubleClick}
-      className={`${data.type} ${progressData ? 'has-progress' : ''}`}
-      progressMessage={progressData?.message}
-      progressStatus={progressData?.status}
-    >
-      {CustomRender}
-    </WorkflowNode>
+    <>
+      <WorkflowNode
+        id={id}
+        type={data.type}
+        label={data.name || metadata.class.title || data.type}
+        description={progressData ? progressData.message : data.description}
+        color={data.color}
+        icon={<BoxIcon />}
+        status={data.state}
+        statusCount={data.emitCount || 0}
+        inputs={inputs}
+        outputs={outputs}
+        selected={selected}
+        collapsed={isCollapsed}
+        isEntryNode={isEntryNode}
+        isEndNode={isEndNode}
+        onToggleCollapse={toggleCollapse}
+        onContextMenu={handleContextMenu}
+        onDoubleClick={handleDoubleClick}
+        onDuplicate={handleDuplicate}
+        onDelete={handleDelete}
+        onShowInfo={handleShowInfo}
+        className={`${data.type} ${progressData ? 'has-progress' : ''}`}
+        progressMessage={progressData?.message}
+        progressStatus={progressData?.status}
+      >
+        {CustomRender}
+      </WorkflowNode>
+
+      {/* 节点信息对话框 */}
+      <NodeInfoDialog
+        open={showInfoDialog}
+        onOpenChange={setShowInfoDialog}
+        node={nodeToUse}
+      />
+    </>
   )
 })
 
