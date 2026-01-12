@@ -169,7 +169,7 @@ export class PassThroughAstVisitor {
                 break;
 
               default:
-                shouldPass = false;
+                shouldPass = true;
             }
           }
 
