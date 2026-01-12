@@ -121,6 +121,38 @@ const wordCloud = await keywordsCtrl.getWordCloud(100)
 每次用户多次指正修复的问题，尽量总结成skill，放到当前项目目录下的 .claude\skills，下次碰到同类问题的时候，优先查看skill
 当然，有些skill会随着代码的更新逐渐失效，当发现失效的skill时应及时修正错误，移除已废弃的skill
 
+## 最近更新
+
+### 2025-01-12 - 部署和监控改进
+
+**新增功能:**
+- Docker Compose 完整配置（PostgreSQL, Redis, RabbitMQ, MongoDB, API, Nginx）
+- 环境变量 Zod 验证 (`config/env.config.ts`)
+- 启动时服务健康检查 (`config/startup-check.ts`)
+- 统一 API 响应格式 (`utils/api-response.ts`)
+- 结构化日志记录 (`utils/logger.ts`)
+- 性能监控和指标采集 (`utils/monitoring.ts`)
+- 健康检查端点 (`/health`, `/health/detailed`)
+- Prometheus 格式指标导出 (`/metrics/prometheus`)
+
+**新增文档:**
+- `DEPLOYMENT.md` - 部署文档和环境变量清单
+- `apps/api/API_EXAMPLES.md` - API 使用示例
+- `scripts/init-db.sql` - 数据库初始化脚本
+
+**使用方式:**
+```bash
+# 启动所有服务
+docker-compose up -d
+
+# 检查健康状态
+curl http://localhost:8089/health/detailed
+
+# 查看指标
+curl http://localhost:8089/metrics
+curl http://localhost:8089/metrics/prometheus
+```
+
 
 ---
 name: code-artisan

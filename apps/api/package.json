@@ -48,29 +48,37 @@
     "rxjs": "^7.8.1",
     "socket.io": "^4.8.1",
     "typeorm": "^0.3.20",
-    "uuid": "^11.1.0"
+    "uuid": "^11.1.0",
+    "zod": "^4.2.1"
   },
   "devDependencies": {
+    "@hono/zod-openapi": "^1.2.0",
     "@sker/eslint-config": "workspace:*",
     "@sker/typescript-config": "workspace:*",
     "@swc-node/register": "^1.11.1",
     "@swc/cli": "^0.4.0",
     "@swc/core": "^1.9.3",
+    "@types/amqplib": "^0.10.5",
     "@types/busboy": "^1.5.4",
+    "@types/mongodb": "^4.0.7",
     "@types/node": "^22.15.3",
     "@types/pg": "^8.11.0",
     "@vitest/ui": "^4.0.16",
+    "amqplib": "^0.10.5",
     "chokidar": "^3.6.0",
     "cross-env": "^10.1.0",
     "eslint": "^9.38.0",
     "eventsource": "^2.0.2",
+    "mongodb": "^7.0.0",
     "nodemon": "^3.1.0",
+    "redis": "^5.10.0",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "tsup": "^8.4.0",
     "tsx": "^4.20.6",
     "typescript": "5.9.2",
     "vite": "^6.0.7",
-    "vitest": "^4.0.16"
+    "vitest": "^4.0.16",
+    "zod-openapi": "^5.4.6"
   }
 }
