@@ -2,10 +2,6 @@ import { Injectable, Inject, createLogger } from '@sker/core';
 import {
   EventEntity,
   WeiboPostEntity,
-  WeiboCommentEntity,
-  WeiboLikeEntity,
-  WeiboRepostEntity,
-  WeiboUserEntity,
   PostNLPResultEntity,
   useEntityManager,
   EventHourlyStatisticsEntity,
@@ -101,109 +97,6 @@ export class OverviewService {
       .andWhere('event.deleted_at IS NULL')
       .andWhere('event.status = :status', { status: 'active' })
       .getCount();
-
-    return {
-      eventCount,
-      postCount,
-      userCount,
-      interactionCount,
-    };
-  }
-
-  private async fetchStatisticsData(manager: any, start: Date, end: Date) {
-    const logger = createLogger('OverviewService.fetchStatisticsData');
-
-    logger.info(`查询时间范围: ${start.toISOString()} - ${end.toISOString()}`);
-
-    // 查询事件数量（occurred_at 为 null 时使用 created_at，只统计 active 状态）
-    const eventCount = await manager
-      .getRepository(EventEntity)
-      .createQueryBuilder('event')
-      .where('COALESCE(event.occurred_at, event.created_at) >= :start', { start })
-      .andWhere('COALESCE(event.occurred_at, event.created_at) <= :end', { end })
-      .andWhere('event.deleted_at IS NULL')
-      .andWhere('event.status = :status', { status: 'active' })
-      .getCount();
-
-    logger.info(`事件数: ${eventCount}`);
-
-    // 查询帖子数量
-    const postCount = await manager
-      .getRepository(WeiboPostEntity)
-      .createQueryBuilder('post')
-      .where('post.ingested_at >= :start', { start })
-      .andWhere('post.ingested_at <= :end', { end })
-      .andWhere('post.deleted_at IS NULL')
-      .getCount();
-
-    logger.info(`帖子数: ${postCount}`);
-
-    // 查询活跃用户数（在该时间范围内发帖、评论或转发的唯一用户）
-    const activeUserIds = new Set<string>();
-
-    // 收集发帖用户
-    const postUsers = await manager
-      .getRepository(WeiboPostEntity)
-      .createQueryBuilder('post')
-      .select('DISTINCT post.user_id', 'user_id')
-      .where('post.ingested_at >= :start', { start })
-      .andWhere('post.ingested_at <= :end', { end })
-      .andWhere('post.deleted_at IS NULL')
-      .andWhere('post.user_id IS NOT NULL')
-      .getRawMany();
-    postUsers.forEach((u: any) => u.user_id && activeUserIds.add(String(u.user_id)));
-
-    // 收集评论用户
-    const commentUsers = await manager
-      .getRepository(WeiboCommentEntity)
-      .createQueryBuilder('comment')
-      .select('DISTINCT comment.user_id', 'user_id')
-      .where('comment.ingested_at >= :start', { start })
-      .andWhere('comment.ingested_at <= :end', { end })
-      .andWhere('comment.user_id IS NOT NULL')
-      .getRawMany();
-    commentUsers.forEach((u: any) => u.user_id && activeUserIds.add(String(u.user_id)));
-
-    // 收集转发用户
-    const repostUsers = await manager
-      .getRepository(WeiboRepostEntity)
-      .createQueryBuilder('repost')
-      .select('DISTINCT repost.user_id', 'user_id')
-      .where('repost.ingested_at >= :start', { start })
-      .andWhere('repost.ingested_at <= :end', { end })
-      .andWhere('repost.user_id IS NOT NULL')
-      .getRawMany();
-    repostUsers.forEach((u: any) => u.user_id && activeUserIds.add(String(u.user_id)));
-
-    const userCount = activeUserIds.size;
-
-    logger.info(`活跃用户数: ${userCount}`);
-
-    // 查询真实互动数（评论数 + 点赞数 + 转发数）
-    const [commentCount, likeCount, repostCount] = await Promise.all([
-      manager
-        .getRepository(WeiboCommentEntity)
-        .createQueryBuilder('comment')
-        .where('comment.ingested_at >= :start', { start })
-        .andWhere('comment.ingested_at <= :end', { end })
-        .getCount(),
-      manager
-        .getRepository(WeiboLikeEntity)
-        .createQueryBuilder('like')
-        .where('like.created_at >= :start', { start })
-        .andWhere('like.created_at <= :end', { end })
-        .getCount(),
-      manager
-        .getRepository(WeiboRepostEntity)
-        .createQueryBuilder('repost')
-        .where('repost.ingested_at >= :start', { start })
-        .andWhere('repost.ingested_at <= :end', { end })
-        .getCount(),
-    ]);
-
-    const interactionCount = commentCount + likeCount + repostCount;
-
-    logger.info(`互动统计 - 评论: ${commentCount}, 点赞: ${likeCount}, 转发: ${repostCount}, 总计: ${interactionCount}`);
 
     return {
       eventCount,
