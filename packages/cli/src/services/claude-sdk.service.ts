@@ -96,7 +96,7 @@ export class ClaudeSdkService {
         const msgType = (message as any).type;
         console.log(`[ClaudeSdkService] 收到消息 #${messageCount}: type=${msgType}`, JSON.stringify(message).substring(0, 300));
 
-        if (message.session_id && !capturedSessionId) {
+        if ('session_id' in message && message.session_id && !capturedSessionId) {
           capturedSessionId = message.session_id;
           this.addSession(capturedSessionId, queryInstance, taskId, clientId);
 
@@ -272,7 +272,7 @@ export class ClaudeSdkService {
     }
 
     // 添加权限处理回调
-    options.canUseTool = async (toolName, input, opts) => {
+    options.canUseTool = async (toolName: string, input: Record<string, unknown>, opts) => {
       const requestId = `approval_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const requestStartTime = Date.now();
 
