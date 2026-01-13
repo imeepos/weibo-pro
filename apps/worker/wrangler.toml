@@ -13,3 +13,8 @@ head_sampling_rate = 1
 [observability.traces]
 enabled = true
 head_sampling_rate = 1
+
+# Streams 管道配置（替换 YOUR_PIPELINE_ID）
+[[pipelines]]
+pipeline = "YOUR_PIPELINE_ID"  # 从 Cloudflare Dashboard 复制
+binding = "LOGS_STREAM"

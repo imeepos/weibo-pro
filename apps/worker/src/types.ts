@@ -53,9 +53,18 @@ export interface ProxyError {
 }
 
 /**
+ * Streams 发送器
+ */
+export interface StreamSender {
+  send(events: Array<{ value: Record<string, unknown> }>): Promise<void>;
+}
+
+/**
  * 环境变量
  */
 export interface Env {
-  // Cloudflare Workers 环境变量
-  // 如需 D1 数据库或其他绑定，在此定义
+  /** Cloudflare Workers 环境变量 */
+
+  /** Streams 日志管道绑定 */
+  LOGS_STREAM?: StreamSender;
 }

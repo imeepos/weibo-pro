@@ -19,12 +19,12 @@ export default {
       }
 
       if (path === '/proxy' && request.method === 'POST') {
-        const response = await ProxyHandler.handle(request);
+        const response = await ProxyHandler.handle(request, env);
         return CorsHandler.addCorsHeaders(response, request);
       }
 
       if (path === '/weibo-proxy' && request.method === 'POST') {
-        const response = await WeiboProxyHandler.handle(request);
+        const response = await WeiboProxyHandler.handle(request, env);
         return CorsHandler.addCorsHeaders(response, request);
       }
 
