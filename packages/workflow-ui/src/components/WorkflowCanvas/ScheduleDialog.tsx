@@ -85,7 +85,7 @@ export function ScheduleDialog({
   })
   const [workflowAst, setWorkflowAst] = useState<WorkflowGraphAst | null>(null)
 
-  const client = root.get<WorkflowController>(WorkflowController) as any
+  const client = root.get<WorkflowController>(WorkflowController)
   const isEditMode = !!schedule
 
   /**
@@ -338,7 +338,8 @@ export function ScheduleDialog({
           endTime: formData.endTime,
         })
       } else {
-        await client.createSchedule(workflowName, {
+        await client.createSchedule({
+          code: workflowName,
           name: formData.name.trim(),
           scheduleType: formData.scheduleType,
           cronExpression: cronExpr,

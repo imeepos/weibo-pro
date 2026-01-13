@@ -201,7 +201,8 @@ export class WorkflowAPI {
   /**
    * 创建调度
    */
-  static async createSchedule(workflowName: string, params: {
+  static async createSchedule(params: {
+    code: string;
     name: string
     scheduleType: string
     cronExpression?: string
@@ -210,9 +211,8 @@ export class WorkflowAPI {
     startTime?: Date
     endTime?: Date
   }) {
-    logger.debug('Creating workflow schedule', { workflowName, scheduleName: params.name })
     const controller = root.get(WorkflowController)
-    return controller.createSchedule(workflowName, params)
+    return controller.createSchedule(params)
   }
 
   /**

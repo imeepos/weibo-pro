@@ -2,6 +2,7 @@ import "reflect-metadata";
 // 强制使用UTC时区
 process.env.TZ = 'UTC';
 import "dotenv/config";
+import "@sker/sdk";
 import "@sker/workflow";
 import "@sker/workflow-ast";
 import "@sker/workflow-run";

@@ -613,8 +613,8 @@ export class WorkflowController implements sdk.WorkflowController {
    * 创建调度
    */
   async createSchedule(
-    @Param('name') workflowName: string,
-    @Body() body: {
+    body: {
+      code: string;
       name: string;
       scheduleType: string;
       cronExpression?: string;
@@ -624,12 +624,12 @@ export class WorkflowController implements sdk.WorkflowController {
       endTime?: Date;
     }
   ): Promise<WorkflowScheduleEntity> {
-    if (!workflowName) {
+    if (!body.name) {
       throw new BadRequestException('工作流名称不能为空')
     }
 
     return this.workflowScheduleService.createSchedule({
-      workflowName,
+      workflowName: body.code,
       name: body.name,
       scheduleType: body.scheduleType as any,
       cronExpression: body.cronExpression,

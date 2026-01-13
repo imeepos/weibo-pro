@@ -20,7 +20,6 @@ export class HealthController {
       checkPostgreSQL(env.DATABASE_URL || ''),
       checkRedis(env.REDIS_URL || ''),
       checkRabbitMQ(env.RABBITMQ_URL || ''),
-      checkMongoDB(env.MONGODB_URL || ''),
     ])
 
     const allHealthy = checks.every(c => c.status === 'healthy')

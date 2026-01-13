@@ -76,12 +76,12 @@ export class WorkflowController {
     throw new Error('method listTemplates not implements')
   }
 
-  @Delete('delete/:id')
-  deleteWorkflow(@Query() params: { id: string }): Promise<{ success: boolean }> {
+  @Delete('deleteWorkflow')
+  deleteWorkflow(@Body() params: { id: string }): Promise<{ success: boolean }> {
     throw new Error('method deleteWorkflow not implements')
   }
 
-  @Post({path: 'execute', sse: true})
+  @Post({ path: 'execute', sse: true })
   execute(@Body() body: ExecuteWorkflowPayload): Observable<NodeEvent> {
     throw new Error('method execute not implements')
   }
@@ -139,10 +139,10 @@ export class WorkflowController {
   /**
    * 创建调度
    */
-  @Post('schedules')
+  @Post('createSchedule')
   createSchedule(
-    @Query('name') workflowName: string,
     @Body() body: {
+      code: string;
       name: string;
       scheduleType: string;
       cronExpression?: string;
@@ -158,25 +158,25 @@ export class WorkflowController {
   /**
    * 列出调度
    */
-  @Get(':name/schedules')
-  listSchedules(@Param('name') workflowName: string): Promise<WorkflowScheduleEntity[]> {
+  @Get('listSchedules')
+  listSchedules(@Query('name') workflowName: string): Promise<WorkflowScheduleEntity[]> {
     throw new Error('method listSchedules not implements')
   }
 
   /**
    * 获取调度详情
    */
-  @Get('schedules/:scheduleId')
-  getSchedule(@Param('scheduleId') scheduleId: string): Promise<WorkflowScheduleEntity> {
+  @Get('getSchedule')
+  getSchedule(@Query('scheduleId') scheduleId: string): Promise<WorkflowScheduleEntity> {
     throw new Error('method getSchedule not implements')
   }
 
   /**
    * 更新调度
    */
-  @Put('schedules/:scheduleId')
+  @Put('updateSchedule')
   updateSchedule(
-    @Param('scheduleId') scheduleId: string,
+    @Query('scheduleId') scheduleId: string,
     @Body() body: {
       name?: string;
       scheduleType?: string;
@@ -194,33 +194,33 @@ export class WorkflowController {
   /**
    * 删除调度
    */
-  @Delete('schedules/:scheduleId')
-  deleteSchedule(@Param('scheduleId') scheduleId: string): Promise<{ success: boolean }> {
+  @Post('deleteSchedule')
+  deleteSchedule(@Body('scheduleId') scheduleId: string): Promise<{ success: boolean }> {
     throw new Error('method deleteSchedule not implements')
   }
 
   /**
    * 启用调度
    */
-  @Post('schedules/:scheduleId/enable')
-  enableSchedule(@Param('scheduleId') scheduleId: string): Promise<WorkflowScheduleEntity> {
+  @Post('enableSchedule')
+  enableSchedule(@Body('scheduleId') scheduleId: string): Promise<WorkflowScheduleEntity> {
     throw new Error('method enableSchedule not implements')
   }
 
   /**
    * 禁用调度
    */
-  @Post('schedules/:scheduleId/disable')
-  disableSchedule(@Param('scheduleId') scheduleId: string): Promise<WorkflowScheduleEntity> {
+  @Post('disableSchedule')
+  disableSchedule(@Body('scheduleId') scheduleId: string): Promise<WorkflowScheduleEntity> {
     throw new Error('method disableSchedule not implements')
   }
 
   /**
    * 手动触发调度
    */
-  @Post('schedules/:scheduleId/trigger')
+  @Post('triggerSchedule')
   triggerSchedule(
-    @Param('scheduleId') scheduleId: string,
+    @Query('scheduleId') scheduleId: string,
     @Body() body?: { inputs?: Record<string, unknown> }
   ): Promise<{ success: boolean; runId: string; run: WorkflowRunEntity }> {
     throw new Error('method triggerSchedule not implements')
@@ -229,7 +229,7 @@ export class WorkflowController {
   /**
    * 执行单个节点 - 微调执行
    */
-  @Post({path: 'executeNode', sse: true})
+  @Post({ path: 'executeNode', sse: true })
   executeNode(@Body() body: ExecuteNodePayload): Observable<NodeEvent> {
     throw new Error('method executeNode not implements')
   }
@@ -237,10 +237,10 @@ export class WorkflowController {
   /**
    * 节点微调 - 基于响应式流的智能重放
    */
-  @Post({ path: `'runs/:runId/fine-tune/:nodeId'`, sse: true })
+  @Post({ path: `fineTuneNode`, sse: true })
   fineTuneNode(
-    @Param('runId') runId: string,
-    @Param('nodeId') nodeId: string,
+    @Query('runId') runId: string,
+    @Query('nodeId') nodeId: string,
     @Body() body: FineTunePayload,
   ): Observable<NodeEvent> {
     throw new Error('method fineTuneNode not implements')
@@ -249,7 +249,7 @@ export class WorkflowController {
   /**
    * 获取所有可用节点类型
    */
-  @Get('nodes')
+  @Get('getAvailableNodes')
   getAvailableNodes(): Promise<WorkflowNodeInfo[]> {
     throw new Error('method getAvailableNodes not implements')
   }

@@ -26,6 +26,11 @@ export default {
     'better-auth',
     'socket.io',
     'node-cron',
-    'busboy'
+    'busboy',
+    'redis',
+    '@redis/client',
+    '@redis/client/lib/lua-script',
+    'amqplib',
+    'mongodb'
   ]
 }

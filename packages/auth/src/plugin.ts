@@ -34,7 +34,6 @@ export function createSkerAuthPlugin(providers: Provider[], options?: SkerAuthPl
   for (const ControllerClass of controllers) {
     try {
       const controllerEndpoints = controllerFactory(ControllerClass);
-      const endpointCount = Object.keys(controllerEndpoints).length;
       Object.assign(endpoints, controllerEndpoints);
     } catch (error) {
       console.error(`[Better Auth Plugin] Failed to create endpoints for ${ControllerClass.name}:`, error);
