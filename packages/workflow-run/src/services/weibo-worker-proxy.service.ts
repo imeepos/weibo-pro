@@ -1,5 +1,4 @@
-import { Injectable, Inject } from '@sker/core';
-import { ConfigService } from '@sker/core';
+import { Injectable } from '@sker/core';
 
 /**
  * 微博 Worker 代理服务
@@ -10,9 +9,9 @@ export class WeiboWorkerProxyService {
     private readonly enabled: boolean;
     private readonly workerUrl: string;
 
-    constructor(@Inject(ConfigService) private readonly config: ConfigService) {
-        this.enabled = this.config.get('WEIBO_WORKER_PROXY_ENABLED', 'true') === 'true';
-        this.workerUrl = this.config.get('WEIBO_WORKER_PROXY_URL', 'https://api.sker.us/weibo-proxy');
+    constructor() {
+        this.enabled = process.env.WEIBO_WORKER_PROXY_ENABLED !== 'false';
+        this.workerUrl = process.env.WEIBO_WORKER_PROXY_URL || 'https://api.sker.us/weibo-proxy';
     }
 
     /**
@@ -20,11 +19,9 @@ export class WeiboWorkerProxyService {
      */
     async fetch(url: string, headers: Record<string, string>): Promise<Response> {
         if (!this.enabled) {
-            // 直接请求
             return fetch(url, { headers });
         }
 
-        // 通过 Worker 代理
         const cookies = this.extractCookiesFromHeaders(headers);
 
         const proxyResponse = await fetch(this.workerUrl, {
@@ -44,7 +41,6 @@ export class WeiboWorkerProxyService {
 
         const proxyData = await proxyResponse.json();
 
-        // 构造模拟 Response
         return new Response(proxyData.body, {
             status: proxyData.status,
             statusText: proxyData.statusText,
@@ -61,9 +57,15 @@ export class WeiboWorkerProxyService {
             return [];
         }
 
-        return cookieHeader.split(';').map(cookie => {
-            const [name, value] = cookie.split('=').map(s => s.trim());
-            return { name, value };
-        }).filter(cookie => cookie.name && cookie.value);
+        return cookieHeader.split(';')
+            .map(cookie => {
+                const parts = cookie.split('=');
+                if (parts.length < 2) return null;
+                const name = parts[0]?.trim();
+                const value = parts.slice(1).join('=').trim();
+                if (!name || !value) return null;
+                return { name, value };
+            })
+            .filter((cookie): cookie is { name: string; value: string } => cookie !== null);
     }
 }

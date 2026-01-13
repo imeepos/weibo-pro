@@ -2,6 +2,7 @@ import { Inject, Injectable } from "@sker/core";
 import { WeiboAccountService } from "./services/weibo-account.service";
 import { DelayService } from "./services/delay.service";
 import { RateLimiterService } from "./services/rate-limiter.service";
+import { WeiboWorkerProxyService } from "./services/weibo-worker-proxy.service";
 import { Handler, NodeEvent, setAstError } from '@sker/workflow'
 import { WeiboAjaxFeedHotTimelineAst } from '@sker/workflow-ast'
 import { useEntityManager, WeiboPostEntity, WeiboUserEntity, PostSnapshotHelper } from "@sker/entities";
@@ -23,9 +24,10 @@ export class WeiboAjaxFeedHotTimelineAstVisitor extends WeiboApiClient {
     constructor(
         @Inject(WeiboAccountService) accountService: WeiboAccountService,
         @Inject(DelayService) delayService: DelayService,
-        @Inject(RateLimiterService) rateLimiter: RateLimiterService
+        @Inject(RateLimiterService) rateLimiter: RateLimiterService,
+        @Inject(WeiboWorkerProxyService) workerProxy: WeiboWorkerProxyService
     ) {
-        super(accountService, delayService, rateLimiter);
+        super(accountService, delayService, rateLimiter, workerProxy);
     }
 
     @Handler(WeiboAjaxFeedHotTimelineAst)

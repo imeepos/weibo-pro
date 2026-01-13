@@ -1,4 +1,5 @@
 export { WeiboAccountService } from './services/weibo-account.service'
+export { WeiboWorkerProxyService } from './services/weibo-worker-proxy.service'
 
 // 舆情节点
 export { KeywordAgentAstVisitor } from './KeywordAgentAstVisitor'

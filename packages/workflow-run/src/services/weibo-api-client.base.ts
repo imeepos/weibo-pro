@@ -5,6 +5,7 @@ import { WeiboRefererBuilder } from './weibo-referer.builder';
 import { WeiboErrorHandler, WeiboError, WeiboErrorType } from './weibo-error.handler';
 import { DelayService } from './delay.service';
 import { RateLimiterService } from './rate-limiter.service';
+import { WeiboWorkerProxyService } from './weibo-worker-proxy.service';
 
 export interface FetchApiOptions {
     url: string;
@@ -34,6 +35,7 @@ export abstract class WeiboApiClient {
         @Inject(WeiboAccountService) protected readonly accountService: WeiboAccountService,
         @Inject(DelayService) protected readonly delayService: DelayService,
         @Inject(RateLimiterService) protected readonly rateLimiter: RateLimiterService,
+        @Inject(WeiboWorkerProxyService) protected readonly workerProxy: WeiboWorkerProxyService,
     ) {}
 
     /**
@@ -67,7 +69,7 @@ export abstract class WeiboApiClient {
         });
 
         try {
-            const response = await fetch(options.url, { headers });
+            const response = await this.workerProxy.fetch(options.url, headers);
 
             if (!response.ok) {
                 const error = await WeiboErrorHandler.checkResponse(response);

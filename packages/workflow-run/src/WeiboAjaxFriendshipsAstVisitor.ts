@@ -7,6 +7,7 @@ import { Observable, from } from "rxjs";
 import { concatMap, mergeMap } from "rxjs/operators";
 import { DelayService } from "./services/delay.service";
 import { RateLimiterService } from "./services/rate-limiter.service";
+import { WeiboWorkerProxyService } from "./services/weibo-worker-proxy.service";
 import { ErrorHandlerOperators } from "./utils/error-handler.util";
 
 export interface WeiboAjaxFriendshipsResponse {
@@ -19,9 +20,10 @@ export class WeiboAjaxFriendshipsAstVisitor extends WeiboApiClient {
     constructor(
         @Inject(WeiboAccountService) accountService: WeiboAccountService,
         @Inject(DelayService) delayService: DelayService,
-        @Inject(RateLimiterService) rateLimiter: RateLimiterService
+        @Inject(RateLimiterService) rateLimiter: RateLimiterService,
+        @Inject(WeiboWorkerProxyService) workerProxy: WeiboWorkerProxyService
     ) {
-        super(accountService, delayService, rateLimiter);
+        super(accountService, delayService, rateLimiter, workerProxy);
     }
 
     @Handler(WeiboAjaxFriendshipsAst)

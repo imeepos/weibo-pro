@@ -3,6 +3,7 @@ import { useEntityManager, WeiboPostEntity, WeiboUserEntity, HourlyStatisticsHel
 import { WeiboAccountService } from "./services/weibo-account.service";
 import { DelayService } from "./services/delay.service";
 import { RateLimiterService } from "./services/rate-limiter.service";
+import { WeiboWorkerProxyService } from "./services/weibo-worker-proxy.service";
 import { Handler, NodeEvent, setAstError } from "@sker/workflow";
 import { WeiboAjaxStatusesShowAst } from "@sker/workflow-ast";
 import { WeiboApiClient } from "./services/weibo-api-client.base";
@@ -19,9 +20,10 @@ export class WeiboAjaxStatusesShowAstVisitor extends WeiboApiClient {
     constructor(
         @Inject(WeiboAccountService) accountService: WeiboAccountService,
         @Inject(DelayService) delayService: DelayService,
-        @Inject(RateLimiterService) rateLimiter: RateLimiterService
+        @Inject(RateLimiterService) rateLimiter: RateLimiterService,
+        @Inject(WeiboWorkerProxyService) workerProxy: WeiboWorkerProxyService
     ) {
-        super(accountService, delayService, rateLimiter);
+        super(accountService, delayService, rateLimiter, workerProxy);
     }
 
     @Handler(WeiboAjaxStatusesShowAst)
