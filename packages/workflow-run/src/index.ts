@@ -121,7 +121,13 @@ export { ClaudeCodeRefactorAstVisitor } from './ClaudeCodeRefactorAstVisitor'
 export { DisplayAstVisitor } from './DisplayAstVisitor'
 
 // 多模态 LLM 节点
-export { LlmMultimodalAstVisitor } from './LlmMultimodalAstVisitor'
+export { LlmImageToTextAstVisitor } from './LlmImageToTextAstVisitor'
+export { LlmVideoToTextAstVisitor } from './LlmVideoToTextAstVisitor'
+export { LlmTextToAudioAstVisitor } from './LlmTextToAudioAstVisitor'
+export { LlmTextToVideoAstVisitor } from './LlmTextToVideoAstVisitor'
+export { LlmTextImageToVideoAstVisitor } from './LlmTextImageToVideoAstVisitor'
+export { LlmTextImage2ToVideoAstVisitor } from './LlmTextImage2ToVideoAstVisitor'
+export { LlmTextToImageAstVisitor } from './LlmTextToImageAstVisitor'
 
 // 质量检查器节点
 export { QualityCheckerAstVisitor } from './QualityCheckerAstVisitor'

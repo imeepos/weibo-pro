@@ -72,7 +72,7 @@ async function main() {
 
   try {
     await new Promise<void>((resolve, reject) => {
-      const subscription = executeWorkflow(ast, {}).pipe(
+      executeWorkflow(ast, {}).pipe(
         catchError((error) => {
           const duration = Date.now() - startTime
           console.error(`\n❌ 工作流执行失败，耗时: ${duration}ms`)
@@ -118,13 +118,6 @@ async function main() {
           resolve()
         }
       })
-
-      // 超时处理
-      setTimeout(() => {
-        subscription.unsubscribe()
-        printStats()
-        reject(new Error('工作流执行超时'))
-      }, 1200000)
     })
   } catch (error) {
     // 确保即使有异常也能输出统计

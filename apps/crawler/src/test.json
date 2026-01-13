@@ -19,11 +19,11 @@
         "id": "4b94659b-6bad-4177-a8e9-4047fd80f22f",
         "type": "TextAreaAst",
         "count": 0,
-        "input": "分析当前项目，制定下一步开发计划，关注与@sker/workflow-ast 和 @sker/workflow-run @sker/workflow-ui 实现未完成的功能",
+        "input": "分析当前项目，制定下一步开发计划，关注与@sker/workflow-ast 和 @sker/workflow-run @sker/workflow-ui 实现未完成的功能或需要优化的功能，注意每次执行只关注与1-3个核心问题",
         "state": "success",
         "width": 320,
         "height": 167,
-        "output": "分析当前项目，制定下一步开发计划，关注与@sker/workflow-ast 和 @sker/workflow-run @sker/workflow-ui 实现未完成的功能",
+        "output": "分析当前项目，制定下一步开发计划，关注与@sker/workflow-ast 和 @sker/workflow-run @sker/workflow-ui 实现未完成的功能或需要优化的功能，注意每次执行只关注与1-3个核心问题",
         "metadata": {
           "type": "TextAreaAst",
           "class": {
@@ -65,11 +65,11 @@
         "id": "400d9303-4123-4b3a-b5cc-ee6b8e035b91",
         "type": "TextAreaAst",
         "count": 0,
-        "input": "按计划实施",
+        "input": "严格按工作计划实施",
         "state": "success",
         "width": 240,
         "height": 119,
-        "output": "按计划实施",
+        "output": "严格按工作计划实施",
         "metadata": {
           "type": "TextAreaAst",
           "class": {
