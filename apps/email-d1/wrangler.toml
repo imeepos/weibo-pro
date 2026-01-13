@@ -1,13 +1,13 @@
 name = "email-d1"
 main = "src/index.ts"
 compatibility_date = "2024-01-01"
-account_id = "67720b647ff2b55cf37ba3ef9e677083"
+account_id = "768c876155e77e3a6e52a855489a6c8a"
 
 # D1 数据库绑定
 [[d1_databases]]
 binding = "DB"
 database_name = "email-db"
-database_id = "ec445eb5-e231-4ea0-8839-f04fd52adec3"
+database_id = "08dba157-c84e-479e-9ec2-67b5b9ce4ec0"
 
 # Email 路由配置
 # 部署后需要在 Cloudflare Dashboard 配置 Email Routing

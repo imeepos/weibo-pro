@@ -1,0 +1,17 @@
+{
+  "name": "@sker/worker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpx wrangler@latest dev",
+    "deploy": "pnpx wrangler@latest deploy",
+    "tail": "pnpx wrangler@latest tail"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241127.0",
+    "typescript": "^5.3.3",
+    "wrangler": "3.114.0",
+    "zod": "^3.23.8"
+  }
+}
