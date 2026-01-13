@@ -97,3 +97,43 @@ export * from './ClaudeCodeReviewAstRender';
 export * from './ClaudeCodeRefactorAstRender';
 export * from './HtmlDisplayAstRender'
 export * from './BooleanAstRender'
+
+// ===== 新增渲染器 =====
+
+// 控制流节点
+export * from './StoryQualityLoopAstRender'
+export * from './RouteAstRender'
+
+// Meta 节点
+export * from './LlmInferenceAstRender'
+export * from './HttpRequestAstRender'
+export * from './TransformAstRender'
+export * from './AggregateAstRender'
+export * from './JsonDisplayAstRender'
+
+// LLM 节点
+export * from './LlmTextToImageAstRender'
+export * from './LlmImageToTextAstRender'
+export * from './LlmTextToVideoAstRender'
+export * from './LlmVideoToTextAstRender'
+export * from './LlmTextToAudioAstRender'
+export * from './LlmTextImageToVideoAstRender'
+export * from './LlmTextImage2ToVideoAstRender'
+export * from './CodeGeneratorAstRender'
+export * from './PromptOptimizerAstRender'
+export * from './QualityCheckerAstRender'
+export * from './WorkflowNodeGeneratorAstRender'
+
+// 舆情分析 Agent 节点
+export * from './InsightAgentAstRender'
+export * from './KeywordAgentAstRender'
+export * from './MediaAgentAstRender'
+export * from './QueryAgentAstRender'
+export * from './ReportAgentAstRender'
+export * from './ForumAgentAstRender'
+
+// 基础节点
+export * from './LastAstRender'
+
+// 爬虫节点
+export * from './EventAuthGenerateAstRender'
