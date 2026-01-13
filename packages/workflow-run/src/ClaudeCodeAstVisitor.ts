@@ -111,7 +111,7 @@ export class ClaudeCodeAstVisitor {
         },
         complete: () => {
           ast.duration = Date.now() - startTime
-          obs.complete()
+          obs.next({ type: 'node_emit', id: ast.id, data: { duration: ast.duration } })
         }
       })
 
