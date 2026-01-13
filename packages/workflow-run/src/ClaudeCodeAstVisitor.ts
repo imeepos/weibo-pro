@@ -81,6 +81,7 @@ export class ClaudeCodeAstVisitor {
       const sub = processSubject.subscribe({
         next: (data: unknown) => {
           const streamEvent = data as ClaudeStreamEvent
+          console.log(`[executeProcess] ${streamEvent.type}`)
           let message = ''
           // 非 result 类型时，实时发送 node_emit（stdout 端口）
           const type = streamEvent.type;
