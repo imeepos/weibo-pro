@@ -385,10 +385,8 @@ export class LlmProxyService {
     if (!requestedModel) return null
 
     return useEntityManager(async m => {
-      const modelMatchCondition = new Brackets(qb => {
-        qb.where('mp.modelName = :requestedModel', { requestedModel })
-          .orWhere('model.name = :requestedModel', { requestedModel })
-      })
+      // 通过 llm_models.name 匹配请求的模型，mp.modelName 是调用 provider 时使用的模型名
+      const modelMatchCondition = 'model.name = :requestedModel'
 
       // 收集被限流的 provider ID
       const rateLimitedIds = [...this.rateLimitedProviders.keys()].filter(id => this.isRateLimited(id))
@@ -407,9 +405,9 @@ export class LlmProxyService {
 
       const tierQuery = m.createQueryBuilder(LlmModelProvider, 'mp')
         .innerJoin('mp.provider', 'provider')
-        .leftJoin('mp.model', 'model')
+        .innerJoin('mp.model', 'model')
         .select('DISTINCT mp.tierLevel', 'tier')
-        .where(modelMatchCondition)
+        .where(modelMatchCondition, { requestedModel })
       buildBaseConditions(tierQuery)
 
       const availableTiers = await tierQuery.orderBy('tier', 'ASC').getRawMany()
@@ -422,7 +420,7 @@ export class LlmProxyService {
       for (const { tier } of availableTiers) {
         const providerQuery = m.createQueryBuilder(LlmModelProvider, 'mp')
           .innerJoin('mp.provider', 'provider')
-          .leftJoin('mp.model', 'model')
+          .innerJoin('mp.model', 'model')
           .select('provider.id', 'provider_id')
           .addSelect('provider.base_url', 'provider_base_url')
           .addSelect('provider.api_key', 'provider_api_key')
@@ -430,7 +428,7 @@ export class LlmProxyService {
           .addSelect('provider.score', 'provider_score')
           .addSelect('mp.model_name', 'mp_model_name')
           .addSelect('model.name', 'standard_model_name')
-          .where(modelMatchCondition)
+          .where(modelMatchCondition, { requestedModel })
           .andWhere('mp.tierLevel = :tier', { tier })
         buildBaseConditions(providerQuery)
 
@@ -547,7 +545,7 @@ export class LlmProxyService {
         if (provider.providerProtocol === 'openai') {
           proxyPath = '/chat/completions'
         } else if (provider.providerProtocol === 'anthropic') {
-          proxyPath = '/messages'
+          proxyPath = '/v1/messages'  // BigModel 等 Anthropic 兼容接口使用 /v1/messages
         } else if (provider.providerProtocol === 'codex') {
           proxyPath = '/responses'
         }
@@ -643,8 +641,16 @@ export class LlmProxyService {
       const startTime = Date.now()
 
       try {
-        const baseUrl = provider.baseUrl.trim().replace(/\/+$/, '')
-        const path = proxyPath.startsWith('/') ? proxyPath : `/${proxyPath}`
+        let baseUrl = provider.baseUrl.trim().replace(/\/+$/, '')
+        let path = proxyPath.startsWith('/') ? proxyPath : `/${proxyPath}`
+
+        // 检查 baseUrl 是否以 /v1 结尾，避免路径重复
+        if (baseUrl.endsWith('/v1') && path.startsWith('/v1/')) {
+          path = path.slice(3) // 去掉 /v1 前缀
+        } else if (baseUrl === '/v1' && path.startsWith('/v1/')) {
+          path = path.slice(3)
+        }
+
         const url = `${baseUrl}${path}`
         const requestHeaders = {
           Authorization: `Bearer ${provider.apiKey}`,
@@ -669,6 +675,16 @@ export class LlmProxyService {
           console.warn(`404 配置错误，健康分清零: ${provider.providerId}`)
         } else if (response.status === 429) {
           this.setRateLimited(provider.providerId)
+          // 打印 429 错误的详细信息
+          const url = `${baseUrl}${path}`
+          const bodyStr = JSON.stringify(proxyBody)
+          const bodyPreview = bodyStr.length > 100
+            ? `${bodyStr.slice(0, 50)}...${bodyStr.slice(-50)}`
+            : bodyStr
+          console.error(`[LlmProxy] 429 限流错误:`)
+          console.error(`  URL: ${url}`)
+          console.error(`  请求头: Authorization=Bearer ${provider.apiKey.slice(0, 20)}...`)
+          console.error(`  请求体: ${bodyPreview}`)
         } else if (response.status === 400) {
           await this.updateScore(provider.providerId, -500)
         } else if (response.status === 500) {
@@ -1017,20 +1033,18 @@ export class LlmProxyService {
         const durationMs = Date.now() - startTime
         const isTimeout = error instanceof Error && error.name === 'TimeoutError'
 
-        console.error(`[LlmProxy] 请求失败（重试 ${attempt + 1}/${MAX_RETRIES}）:`, {
-          provider: provider.providerId,
-          url: `${provider.baseUrl}${proxyPath}`,
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${provider.apiKey}`,
-            connection: 'keep-alive',
-            'content-type': reqHeaders['content-type'] || 'application/json',
-          },
-          body: JSON.stringify(proxyBody),
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined,
-          isTimeout
-        })
+        const url = `${provider.baseUrl}${proxyPath}`
+        const bodyStr = JSON.stringify(proxyBody)
+        const bodyPreview = bodyStr.length > 100
+          ? `${bodyStr.slice(0, 50)}...${bodyStr.slice(-50)}`
+          : bodyStr
+
+        console.error(`[LlmProxy] 请求失败（重试 ${attempt + 1}/${MAX_RETRIES}）`)
+        console.error(`  URL: ${url}`)
+        console.error(`  请求头: Authorization=Bearer ${provider.apiKey.slice(0, 20)}...`)
+        console.error(`  请求体: ${bodyPreview}`)
+        console.error(`  错误: ${error instanceof Error ? error.message : String(error)}`)
+        console.error(`  超时: ${isTimeout}`)
 
         await this.updateScore(provider.providerId, isTimeout ? -100 : -1000)
 

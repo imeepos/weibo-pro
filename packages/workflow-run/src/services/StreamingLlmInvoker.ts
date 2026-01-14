@@ -197,8 +197,20 @@ export class StreamingLlmInvoker {
     messages: Array<MessageContent | LlmResponse | ToolMessage>,
     signal: AbortSignal
   ): Promise<LlmResponse> {
-    const response = await (model.invoke as any)(messages, { signal })
-    return response as LlmResponse
+    try {
+      const response = await (model.invoke as any)(messages, { signal })
+      return response as LlmResponse
+    } catch (error) {
+      // 增强 LangChain 错误信息，便于调试
+      const messagesStr = JSON.stringify(messages).slice(0, 200)
+      console.error('[StreamingLlmInvoker] invokeModel 失败:')
+      console.error('  消息预览:', messagesStr.length > 200 ? `${messagesStr.slice(0, 100)}...${messagesStr.slice(-100)}` : messagesStr)
+      console.error('  错误:', error instanceof Error ? error.message : String(error))
+      if (error instanceof Error && error.cause) {
+        console.error('  原因:', error.cause)
+      }
+      throw error
+    }
   }
 
   /**

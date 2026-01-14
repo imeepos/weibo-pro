@@ -129,14 +129,14 @@ export class SmartAstV1Visitor {
     const inEdges = getEdgesByNode(ctx.edges || [], ast.id, 'in')
 
     for (const edge of inEdges) {
-      const inputMeta = ast.metadata?.inputs?.find((i: any) => i.property === edge.toPort)
+      const inputMeta = ast.metadata?.inputs?.find((i: any) => i.property === edge.toProperty)
       if (!inputMeta) continue
 
       contexts.push({
-        property: edge.toPort,
-        title: inputMeta.title || edge.toPort,
+        property: edge.toProperty!,
+        title: inputMeta.title || edge.toProperty!,
         description: inputMeta.description || '',
-        content: inputData[edge.toPort]
+        content: inputData[edge.toProperty!]
       })
     }
 
@@ -148,12 +148,12 @@ export class SmartAstV1Visitor {
     const outEdges = getEdgesByNode(ctx.edges || [], ast.id, 'out')
 
     for (const edge of outEdges) {
-      const outputMeta = ast.metadata?.outputs?.find((o: any) => o.property === edge.fromPort)
+      const outputMeta = ast.metadata?.outputs?.find((o: any) => o.property === edge.fromProperty)
       if (!outputMeta || outputMeta.property === 'dispatchComplete') continue
 
       contexts.push({
-        property: edge.fromPort,
-        title: outputMeta.title || edge.fromPort,
+        property: edge.fromProperty!,
+        title: outputMeta.title || edge.fromProperty!,
         description: outputMeta.description || '',
         type: outputMeta.type,
         defaultValue: outputMeta.defaultValue
