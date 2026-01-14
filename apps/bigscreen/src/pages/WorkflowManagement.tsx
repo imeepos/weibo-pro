@@ -16,7 +16,12 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
+  DialogDescription,
 } from '@sker/ui/components/ui/dialog'
+import { Label } from '@sker/ui/components/ui/label'
+import { Textarea } from '@sker/ui/components/ui/textarea'
+import { PlusIcon } from 'lucide-react'
 import {
   WorkflowList,
 } from '@sker/ui/components/blocks/workflow-list'
@@ -45,7 +50,9 @@ export default function WorkflowManagement() {
   const [loading, setLoading] = useState(true)
   const [searchKeyword, setSearchKeyword] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [dialogType, setDialogType] = useState<'schedules' | 'runs'>('schedules')
+  const [dialogType, setDialogType] = useState<'schedules' | 'runs' | 'create'>('schedules')
+  const [newWorkflowName, setNewWorkflowName] = useState('')
+  const [newWorkflowDescription, setNewWorkflowDescription] = useState('')
 
   useEffect(() => {
     loadWorkflows()
@@ -161,6 +168,30 @@ export default function WorkflowManagement() {
     }
   }
 
+  const handleCreateWorkflow = () => {
+    if (!newWorkflowName.trim()) {
+      alert('请输入工作流名称')
+      return
+    }
+    navigate(`/workflow-editor/${encodeURIComponent(newWorkflowName)}`)
+    setDialogOpen(false)
+    setNewWorkflowName('')
+    setNewWorkflowDescription('')
+  }
+
+  const handleOpenCreateDialog = () => {
+    setDialogType('create')
+    setDialogOpen(true)
+  }
+
+  const handleDialogClose = (open: boolean) => {
+    if (!open) {
+      setNewWorkflowName('')
+      setNewWorkflowDescription('')
+    }
+    setDialogOpen(open)
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -183,6 +214,10 @@ export default function WorkflowManagement() {
           </Button>
           <h1 className="text-2xl font-bold">工作流管理</h1>
         </div>
+        <Button onClick={handleOpenCreateDialog}>
+          <PlusIcon className="w-4 h-4 mr-2" />
+          新增工作流
+        </Button>
       </div>
 
       <Card>
@@ -234,15 +269,43 @@ export default function WorkflowManagement() {
         </CardContent>
       </Card>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="!max-w-[90vw] !w-[90vw] max-h-[85vh] overflow-y-auto">
+      <Dialog open={dialogOpen} onOpenChange={handleDialogClose}>
+        <DialogContent className={dialogType === 'create' ? 'max-w-md' : '!max-w-[90vw] !w-[90vw] max-h-[85vh] overflow-y-auto'}>
           <DialogHeader>
             <DialogTitle>
-              {selectedWorkflow?.name} - {dialogType === 'schedules' ? '调度配置' : '执行记录'}
+              {dialogType === 'create' ? '新增工作流' : `${selectedWorkflow?.name} - ${dialogType === 'schedules' ? '调度配置' : '执行记录'}`}
             </DialogTitle>
+            {dialogType === 'create' && (
+              <DialogDescription>
+                填写工作流基本信息后跳转到编辑器
+              </DialogDescription>
+            )}
           </DialogHeader>
           <div className="mt-4">
-            {dialogType === 'schedules' ? (
+            {dialogType === 'create' ? (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="workflow-name">工作流名称 *</Label>
+                  <Input
+                    id="workflow-name"
+                    placeholder="输入工作流名称"
+                    value={newWorkflowName}
+                    onChange={(e) => setNewWorkflowName(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleCreateWorkflow()}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="workflow-description">描述</Label>
+                  <Textarea
+                    id="workflow-description"
+                    placeholder="输入工作流描述（可选）"
+                    value={newWorkflowDescription}
+                    onChange={(e) => setNewWorkflowDescription(e.target.value)}
+                    rows={3}
+                  />
+                </div>
+              </div>
+            ) : dialogType === 'schedules' ? (
               <WorkflowScheduleList
                 schedules={schedules}
                 onTrigger={handleTriggerSchedule}
@@ -259,6 +322,16 @@ export default function WorkflowManagement() {
               />
             )}
           </div>
+          {dialogType === 'create' && (
+            <DialogFooter>
+              <Button variant="outline" onClick={() => handleDialogClose(false)}>
+                取消
+              </Button>
+              <Button onClick={handleCreateWorkflow}>
+                创建并编辑
+              </Button>
+            </DialogFooter>
+          )}
         </DialogContent>
       </Dialog>
     </div>
