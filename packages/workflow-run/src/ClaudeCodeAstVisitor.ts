@@ -2,8 +2,8 @@ import { Injectable, logger } from '@sker/core'
 import { Handler, NodeEvent } from '@sker/workflow'
 import { ClaudeCodeAst, ClaudeStreamEvent } from '@sker/workflow-ast'
 import { ProcessSubject } from './core/ProcessSubject.js'
-import { Observable } from 'rxjs'
-import { mergeMap } from 'rxjs/operators'
+import { Observable, Subject } from 'rxjs'
+import { mergeMap, takeUntil } from 'rxjs/operators'
 
 @Injectable()
 export class ClaudeCodeAstVisitor {
@@ -77,33 +77,37 @@ export class ClaudeCodeAstVisitor {
     return new Observable<NodeEvent>(obs => {
       const processSubject = new ProcessSubject(ast.command, ast.args || [])
       ast.pid = processSubject.child.pid ?? 0
+      const stop$ = new Subject<void>()
 
-      const sub = processSubject.subscribe({
+      const sub = processSubject.pipe(
+        takeUntil(stop$)
+      ).subscribe({
         next: (data: unknown) => {
           const streamEvent = data as ClaudeStreamEvent
-          let message = ''
-          // 非 result 类型时，实时发送 node_emit（stdout 端口）
-          const type = streamEvent.type;
-          if (type !== 'result') {
-            const content = streamEvent?.message?.content
-            if (Array.isArray(content)) {
-              const msg = content[0]!
-              message = msg.text || ''
-            } else if (typeof content === 'string') {
-              message = content
-            } else {
-              message = JSON.stringify(streamEvent, null, 2)
-            }
-            // 更新 ast.stdout 并发射
-            ast.stdout = message;
-            logger.info(`[executeProcess] ${streamEvent.type} ${message}`)
-            obs.next({ type: 'node_emit', id: ast.id, data: { stdout: message } })
+          if (streamEvent.type === 'result') {
+            ast.duration = Date.now() - startTime
+            ast.result = streamEvent.result!
+            obs.next({ type: 'node_emit', id: ast.id, data: { result: streamEvent.result, duration: ast.duration } })
+            stop$.next()
+            stop$.complete()
+            processSubject.complete()
+            obs.complete()
             return
           }
 
-          // result 类型时，发送最终结果（result 端口）
-          ast.result = streamEvent.result!
-          obs.next({ type: 'node_emit', id: ast.id, data: { result: streamEvent.result } })
+          // 非 result 类型，实时发送 node_emit（stdout 端口）
+          const content = streamEvent?.message?.content
+          let message = ''
+          if (Array.isArray(content)) {
+            message = content[0]?.text || ''
+          } else if (typeof content === 'string') {
+            message = content
+          } else {
+            message = JSON.stringify(streamEvent, null, 2)
+          }
+          ast.stdout = message
+          logger.info(`[executeProcess] ${streamEvent.type} ${message}`)
+          obs.next({ type: 'node_emit', id: ast.id, data: { stdout: message } })
         },
         error: (error: unknown) => {
           const errorMsg = error instanceof Error ? error.message : String(error)
@@ -113,6 +117,7 @@ export class ClaudeCodeAstVisitor {
         complete: () => {
           ast.duration = Date.now() - startTime
           obs.next({ type: 'node_emit', id: ast.id, data: { duration: ast.duration } })
+          obs.complete()
         }
       })
 
@@ -123,7 +128,10 @@ export class ClaudeCodeAstVisitor {
       }
 
       return () => {
+        stop$.next()
+        stop$.complete()
         sub.unsubscribe()
+        processSubject.complete()
       }
     })
   }
