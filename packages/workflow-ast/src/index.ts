@@ -13,8 +13,6 @@
 
 // LLM 节点 (26个)
 export { ErrorAnalyzerAst } from './llm/ErrorAnalyzerAst';
-export { ClaudeCodeRefactorAst } from './llm/ClaudeCodeRefactorAst';
-export { ClaudeCodeReviewAst } from './llm/ClaudeCodeReviewAst';
 export { GroupChatLoopAst } from './llm/GroupChatLoopAst';
 export { LlmTextAgentAst } from './llm/LlmTextAgentAst';
 export { CodeGeneratorAst } from './llm/CodeGeneratorAst';

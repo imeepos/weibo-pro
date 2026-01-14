@@ -707,13 +707,14 @@ export class WorkflowController implements sdk.WorkflowController {
    * 优雅设计：
    * - 为手动类型调度提供即时触发能力
    * - 支持动态传递运行参数（覆盖调度中保存的参数）
-   * - 创建运行实例并立即执行
+   * - 创建运行实例后立即返回 runId，不等待执行完成
+   * - 后台异步执行，避免长时间阻塞请求
    * - 返回运行实例 ID，用于追踪执行状态
    */
   async triggerSchedule(
     @Param('scheduleId') scheduleId: string,
     @Body() body?: { inputs?: Record<string, unknown> }
-  ): Promise<{ success: boolean; runId: string; run: WorkflowRunEntity }> {
+  ): Promise<{ success: boolean; runId: string }> {
     if (!scheduleId) {
       throw new BadRequestException('调度 ID 不能为空')
     }
@@ -739,13 +740,16 @@ export class WorkflowController implements sdk.WorkflowController {
     // 更新调度的最后运行时间
     await this.workflowScheduleService.updateLastRunTime(scheduleId)
 
-    // 立即执行
-    const executedRun = await this.executeRun({ runId: run.id })
+    // 异步执行，不等待结果
+    setImmediate(() => {
+      this.executeRun({ runId: run.id }).catch(error => {
+        logger.error('异步执行工作流失败', { runId: run.id, error: error.message })
+      })
+    })
 
     return {
       success: true,
-      runId: run.id,
-      run: executedRun
+      runId: run.id
     }
   }
 

@@ -217,12 +217,13 @@ export class WorkflowController {
 
   /**
    * 手动触发调度
+   * 返回 runId，后台异步执行
    */
   @Post('triggerSchedule')
   triggerSchedule(
     @Query('scheduleId') scheduleId: string,
     @Body() body?: { inputs?: Record<string, unknown> }
-  ): Promise<{ success: boolean; runId: string; run: WorkflowRunEntity }> {
+  ): Promise<{ success: boolean; runId: string }> {
     throw new Error('method triggerSchedule not implements')
   }
 

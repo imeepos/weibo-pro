@@ -175,7 +175,7 @@ export interface ClaudeStreamEvent {
 }
 
 @Node({
-  title: 'Claude Code 执行',
+  title: '编程助手',
   type: 'basic',
   errorStrategy: 'retry',
   maxRetries: 2,

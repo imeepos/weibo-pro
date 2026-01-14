@@ -93,8 +93,6 @@ export * from './ExcelUploadAstRender';
 
 // Claude Code 节点
 export * from './ClaudeCodeAstRender';
-export * from './ClaudeCodeReviewAstRender';
-export * from './ClaudeCodeRefactorAstRender';
 export * from './HtmlDisplayAstRender'
 export * from './BooleanAstRender'
 
