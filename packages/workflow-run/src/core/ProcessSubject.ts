@@ -112,8 +112,8 @@ export class ProcessSubject<T = string> extends Subject<string> {
 
         // 订阅输出流
         const outputSubscription = this.output$.subscribe({
-            next: (data) => subscriber.next(data),
-            error: (err) => subscriber.error(err),
+            next: (data: T) => subscriber.next(data),
+            error: (err: unknown) => subscriber.error(err),
             complete: () => {
                 // output$ 完成时不做任何处理，等待 exit 事件处理
             }
