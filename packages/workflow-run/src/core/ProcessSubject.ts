@@ -1,9 +1,9 @@
 import { spawn } from 'child_process'
-import { from, Subject, merge, fromEvent } from 'rxjs'
-import { map, takeUntil, filter } from 'rxjs/operators'
+import { from, Subject, fromEvent, Observable } from 'rxjs'
+import { takeUntil, tap } from 'rxjs/operators'
 import type { Subscriber, TeardownLogic } from 'rxjs'
-import type { ChildProcessWithoutNullStreams, SpawnOptionsWithoutStdio } from 'child_process'
-import { Observable, logger } from '@sker/core'
+import type { ChildProcessWithoutNullStreams } from 'child_process'
+import { logger } from '@sker/core'
 
 export class ProcessSubject<T = string> extends Subject<string> {
     readonly output$: Observable<T>
@@ -49,33 +49,32 @@ export class ProcessSubject<T = string> extends Subject<string> {
 
         // exit$ 用于在进程退出时停止输出流
         const exit$ = fromEvent(this.child, 'exit')
-        const stdout$ = from(this.child.stdout).pipe(
-            map(b => this.parseOutput<T>(b.toString()))
-        )
-        const stderr$ = from(this.child.stderr).pipe(
-            map(b => {
-                const parsed = this.parseOutput<T>(b.toString())
-                if (parsed !== null) {
-                    logger.warn(`[ProcessSubject] stderr: ${String(parsed)}`)
-                }
-                return parsed
-            })
-        )
-        this.output$ = merge(stdout$, stderr$).pipe(
-            filter((data): data is T => data !== null),
-            takeUntil(exit$)
-        ) as Observable<T>
-    }
 
-    private parseOutput<T>(data: string): T | null {
-        const trimmed = data.trim()
-        if (!trimmed) return null
-        try {
-            return JSON.parse(trimmed) as T
-        } catch (err) {
-            logger.debug(`[ProcessSubject] JSON 解析失败，返回原始字符串: ${trimmed}`)
-            return trimmed as unknown as T
-        }
+        // 创建增量解析的输出流
+        this.output$ = new Observable<T>(subscriber => {
+            const stdoutBuffer = new IncrementalJsonBuffer<T>('stdout', subscriber)
+            const stderrBuffer = new IncrementalJsonBuffer<T>('stderr', subscriber)
+
+            const stdoutHandler = (chunk: Buffer) => stdoutBuffer.append(chunk.toString())
+            const stderrHandler = (chunk: Buffer) => stderrBuffer.append(chunk.toString())
+
+            this.child.stdout.on('data', stdoutHandler)
+            this.child.stderr.on('data', stderrHandler)
+
+            const exitHandler = () => {
+                stdoutBuffer.flush()
+                stderrBuffer.flush()
+                subscriber.complete()
+            }
+
+            this.child.once('exit', exitHandler)
+
+            return () => {
+                this.child.stdout.off('data', stdoutHandler)
+                this.child.stderr.off('data', stderrHandler)
+                this.child.off('exit', exitHandler)
+            }
+        }).pipe(takeUntil(exit$)) as Observable<T>
     }
 
     next(value: string): void {
@@ -96,9 +95,7 @@ export class ProcessSubject<T = string> extends Subject<string> {
     }
 
     protected _subscribe(subscriber: Subscriber<T>): TeardownLogic {
-        // 监听 exit 事件，在进程退出后决定发送 error 还是 complete
         const exitHandler = () => {
-            // 使用 setTimeout 确保 exitCode 已经被设置
             setTimeout(() => {
                 if (this.exitCode !== 0 && this.exitCode !== null) {
                     subscriber.error(new Error(`Process exited with code ${this.exitCode}`))
@@ -110,18 +107,85 @@ export class ProcessSubject<T = string> extends Subject<string> {
 
         this.child.once('exit', exitHandler)
 
-        // 订阅输出流
         const outputSubscription = this.output$.subscribe({
             next: (data: T) => subscriber.next(data),
             error: (err: unknown) => subscriber.error(err),
-            complete: () => {
-                // output$ 完成时不做任何处理，等待 exit 事件处理
-            }
+            complete: () => {}
         })
 
         return () => {
             this.child.off('exit', exitHandler)
             outputSubscription.unsubscribe()
+        }
+    }
+}
+
+/**
+ * 增量 JSON 解析器
+ *
+ * 优雅设计：
+ * - 累积未完成的 JSON 行
+ * - 每次有新数据时尝试解析
+ * - 只发出新解析的 JSON 对象
+ * - stderr 只记录日志，不发出事件
+ */
+class IncrementalJsonBuffer<T> {
+    private buffer = ''
+
+    constructor(
+        private readonly streamName: string,
+        private readonly subscriber: Subscriber<T>
+    ) {}
+
+    append(chunk: string): void {
+        this.buffer += chunk
+        this.parse()
+    }
+
+    private parse(): void {
+        const lines = this.buffer.split('\n')
+        // 保留最后一个可能不完整的行
+        this.buffer = lines.pop() || ''
+
+        for (const line of lines) {
+            const trimmed = line.trim()
+            if (!trimmed) continue
+
+            try {
+                const parsed = JSON.parse(trimmed) as T
+                // stdout 才发出事件，stderr 只记录日志
+                if (this.streamName === 'stdout') {
+                    this.subscriber.next(parsed)
+                } else {
+                    logger.warn(`[ProcessSubject] stderr JSON: ${JSON.stringify(parsed)}`)
+                }
+            } catch (err) {
+                // stderr 的非 JSON 输出记录为警告
+                if (this.streamName === 'stderr') {
+                    logger.warn(`[ProcessSubject] stderr: ${trimmed}`)
+                } else {
+                    logger.debug(`[ProcessSubject] stdout JSON 解析失败: ${trimmed}`)
+                }
+            }
+        }
+    }
+
+    flush(): void {
+        if (this.buffer.trim()) {
+            this.parse()
+            // 如果还有剩余的 buffer，尝试最后解析一次
+            if (this.buffer.trim()) {
+                try {
+                    const parsed = JSON.parse(this.buffer.trim()) as T
+                    if (this.streamName === 'stdout') {
+                        this.subscriber.next(parsed)
+                    }
+                } catch (err) {
+                    if (this.streamName === 'stderr') {
+                        logger.warn(`[ProcessSubject] stderr (剩余): ${this.buffer}`)
+                    }
+                }
+            }
         }
     }
 }
