@@ -7,6 +7,7 @@ import {
 } from './time-range.utils';
 import { CacheService, CACHE_KEYS, CACHE_TTL } from '../cache.service';
 import type { TimeRange } from './types';
+import { toInt, toFloat } from '../../utils/type-converter';
 
 export interface ChartData {
   categories: string[];
@@ -78,7 +79,7 @@ export class ChartsService {
       `, [start, end]);
 
       const categories = results.map((r: any) => r.age_range);
-      const data = results.map((r: any) => parseInt(r.count));
+      const data = results.map((r: any) => toInt(r.count));
 
       return {
         categories,
@@ -129,7 +130,7 @@ export class ChartsService {
       `, [start, end]);
 
       const genderOrder = ['男性', '女性', '未知'];
-      const genderMap = new Map<string, number>(results.map((r: any) => [r.gender, parseInt(r.count)]));
+      const genderMap = new Map<string, number>(results.map((r: any) => [r.gender, toInt(r.count)]));
 
       const categories = genderOrder;
       const data: number[] = genderOrder.map(g => genderMap.get(g) ?? 0);
@@ -192,9 +193,9 @@ export class ChartsService {
     this.logger?.info('Sentiment trend from statistics completed', { resultCount: results.length });
 
     const categories = results.map((r: any) => this.formatTimeLabel(r.time_bucket, granularity));
-    const positiveData = results.map((r: any) => parseInt(r.positive) || 0);
-    const negativeData = results.map((r: any) => parseInt(r.negative) || 0);
-    const neutralData = results.map((r: any) => parseInt(r.neutral) || 0);
+    const positiveData = results.map((r: any) => toInt(r.positive, 0));
+    const negativeData = results.map((r: any) => toInt(r.negative, 0));
+    const neutralData = results.map((r: any) => toInt(r.neutral, 0));
 
     return {
       categories,
@@ -226,9 +227,9 @@ export class ChartsService {
     this.logger?.info('Sentiment trend from NLP results completed', { resultCount: results.length });
 
     const categories = results.map((r: any) => this.formatTimeLabel(r.time_bucket, granularity));
-    const positiveData = results.map((r: any) => parseInt(r.positive));
-    const negativeData = results.map((r: any) => parseInt(r.negative));
-    const neutralData = results.map((r: any) => parseInt(r.neutral));
+    const positiveData = results.map((r: any) => toInt(r.positive));
+    const negativeData = results.map((r: any) => toInt(r.negative));
+    const neutralData = results.map((r: any) => toInt(r.neutral));
 
     return {
       categories,
@@ -275,7 +276,7 @@ export class ChartsService {
       `, [start, end]);
 
       const categories = results.map((r: any) => r.location);
-      const data = results.map((r: any) => parseInt(r.count));
+      const data = results.map((r: any) => toInt(r.count));
 
       return {
         categories,
@@ -325,7 +326,7 @@ export class ChartsService {
       });
 
       const categories = results.map((r: any) => r.category);
-      const data = results.map((r: any) => parseInt(r.count));
+      const data = results.map((r: any) => toInt(r.count));
 
       return {
         categories,
@@ -373,9 +374,9 @@ export class ChartsService {
 
       return results.map((row: any) => ({
         keyword: row.keyword,
-        count: parseInt(row.count),
+        count: toInt(row.count),
         sentiment: row.sentiment,
-        weight: parseFloat(row.weight || '0'),
+        weight: toFloat(row.weight),
       }));
     });
   }
@@ -407,7 +408,7 @@ export class ChartsService {
       `, [granularity, start, end]);
 
       const categories = results.map((r: any) => this.formatTimeLabel(r.time_bucket, granularity));
-      const data = results.map((r: any) => parseInt(r.count));
+      const data = results.map((r: any) => toInt(r.count));
 
       return {
         categories,
@@ -443,7 +444,7 @@ export class ChartsService {
       `, [granularity, start, end]);
 
       const categories = results.map((r: any) => this.formatTimeLabel(r.time_bucket, granularity));
-      const data = results.map((r: any) => parseInt(r.count));
+      const data = results.map((r: any) => toInt(r.count));
 
       return {
         categories,
@@ -479,10 +480,10 @@ export class ChartsService {
       `, [start, end]);
 
       const row = result[0];
-      const total = parseInt(row.total) || 0;
-      const positive = parseInt(row.positive) || 0;
-      const negative = parseInt(row.negative) || 0;
-      const neutral = parseInt(row.neutral) || 0;
+      const total = toInt(row.total);
+      const positive = toInt(row.positive);
+      const negative = toInt(row.negative);
+      const neutral = toInt(row.neutral);
 
       return {
         positive,

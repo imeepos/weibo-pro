@@ -33,13 +33,12 @@ export class EventsController {
   @Get('list')
   getEventList(
     @Query('timeRange') timeRange?: TimeRange,
-    @Query('page') page?: number,
-    @Query('pageSize') pageSize?: number,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
     @Query('search') search?: string,
     @Query('category') category?: string,
-    @Query('lambda') lambda?: number
+    @Query('lambda') lambda?: string
   ): Promise<PaginatedResponse<EventListItem>> {
-    console.log({timeRange, page, pageSize, search, category, lambda})
     throw new Error('method getEventList not implements')
   }
 
@@ -79,7 +78,7 @@ export class EventsController {
   }
 
   @Get(':id/keywords')
-  getEventKeywords(@Param('id') id: string, @Query('limit') limit?: number): Promise<Array<{ keyword: string; weight: number; sentiment: string }>> {
+  getEventKeywords(@Param('id') id: string, @Query('limit') limit?: string): Promise<Array<{ keyword: string; weight: number; sentiment: string }>> {
     throw new Error('method getEventKeywords not implements')
   }
 
@@ -106,7 +105,7 @@ export class EventsController {
   }
 
   @Get(':id/keywords-timeseries')
-  getKeywordsTimeSeries(@Param('id') id: string, @Query('topN') topN?: number): Promise<EventKeywordTimeSeries[]> {
+  getKeywordsTimeSeries(@Param('id') id: string, @Query('topN') topN?: string): Promise<EventKeywordTimeSeries[]> {
     throw new Error('method getKeywordsTimeSeries not implements')
   }
 
@@ -116,7 +115,7 @@ export class EventsController {
   }
 
   @Get(':id/negative-keywords')
-  getNegativeKeywords(@Param('id') id: string, @Query('threshold') threshold?: number): Promise<EventNegativeKeywordAlert[]> {
+  getNegativeKeywords(@Param('id') id: string, @Query('threshold') threshold?: string): Promise<EventNegativeKeywordAlert[]> {
     throw new Error('method getNegativeKeywords not implements')
   }
 
@@ -128,17 +127,17 @@ export class EventsController {
   // 新增：基于 EventHourlyStatisticsEntity 的互动指标接口
 
   @Get(':id/engagement-trend')
-  getEngagementTrend(@Param('id') id: string, @Query('limit') limit?: number): Promise<EventEngagementTrend[]> {
+  getEngagementTrend(@Param('id') id: string, @Query('limit') limit?: string): Promise<EventEngagementTrend[]> {
     throw new Error('method getEngagementTrend not implements')
   }
 
   @Get(':id/anomalies')
-  getAnomalies(@Param('id') id: string, @Query('limit') limit?: number): Promise<EventAnomaly[]> {
+  getAnomalies(@Param('id') id: string, @Query('limit') limit?: string): Promise<EventAnomaly[]> {
     throw new Error('method getAnomalies not implements')
   }
 
   @Get(':id/peaks')
-  getPeaks(@Param('id') id: string, @Query('limit') limit?: number): Promise<EventPeak[]> {
+  getPeaks(@Param('id') id: string, @Query('limit') limit?: string): Promise<EventPeak[]> {
     throw new Error('method getPeaks not implements')
   }
 

@@ -77,7 +77,7 @@ export class LayoutService {
             .getOne();
 
           if (!layout) {
-            return new Error(`布局配置不存在`);
+            throw new Error(`布局配置不存在`);
           }
 
           return this.mapLayoutToResponse(layout);
@@ -164,19 +164,18 @@ export class LayoutService {
         throw new Error('布局配置不存在');
       }
 
-      // 取消该类型下所有布局的默认状态
-      await entityManager
-        .createQueryBuilder()
-        .update(LayoutConfigurationEntity)
-        .set({ isDefault: false })
-        .where('type = :type', { type })
-        .execute();
+      await entityManager.transaction(async transactionalEntityManager => {
+        await transactionalEntityManager
+          .createQueryBuilder()
+          .update(LayoutConfigurationEntity)
+          .set({ isDefault: false })
+          .where('type = :type', { type })
+          .execute();
 
-      // 设置当前布局为默认
-      layout.isDefault = true;
-      await entityManager.save(layout);
+        layout.isDefault = true;
+        await transactionalEntityManager.save(layout);
+      });
 
-      // 清除缓存
       await this.clearLayoutCache(type, id);
 
       return this.mapLayoutToResponse(layout);

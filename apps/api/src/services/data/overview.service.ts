@@ -1,4 +1,4 @@
-import { Injectable, Inject, createLogger } from '@sker/core';
+import { Injectable, Inject, createLogger, Logger, Optional } from '@sker/core';
 import {
   EventEntity,
   WeiboPostEntity,
@@ -6,6 +6,7 @@ import {
   useEntityManager,
   EventHourlyStatisticsEntity,
 } from '@sker/entities';
+import { toInt } from '../../utils/type-converter';
 import {
   OverviewStatisticsData,
   OverviewSentiment,
@@ -24,7 +25,9 @@ import { CacheService, CACHE_KEYS, CACHE_TTL } from '../cache.service';
 @Injectable({ providedIn: 'root' })
 export class OverviewService {
   constructor(
-    @Inject(CacheService) private readonly cacheService: CacheService
+    @Inject(CacheService) private readonly cacheService: CacheService,
+    @Inject(Logger, {optional: true})
+    private readonly logger?: Logger
   ) {}
 
   async getStatistics(timeRange: TimeRange): Promise<OverviewStatisticsData> {
@@ -81,11 +84,11 @@ export class OverviewService {
       )
       .getRawOne();
 
-    const postCount = parseInt(stats?.postCount || '0', 10);
-    const userCount = parseInt(stats?.userCount || '0', 10);
-    const commentCount = parseInt(stats?.commentCount || '0', 10);
-    const likeCount = parseInt(stats?.likeCount || '0', 10);
-    const repostCount = parseInt(stats?.repostCount || '0', 10);
+    const postCount = toInt(stats?.postCount);
+    const userCount = toInt(stats?.userCount);
+    const commentCount = toInt(stats?.commentCount);
+    const likeCount = toInt(stats?.likeCount);
+    const repostCount = toInt(stats?.repostCount);
     const interactionCount = commentCount + likeCount + repostCount;
 
     // event_count 需要从 events 表单独查询
@@ -129,7 +132,7 @@ export class OverviewService {
         currentSentiment = await this.fetchSentimentFromStatistics(manager, current.start, current.end);
         previousSentiment = await this.fetchSentimentFromStatistics(manager, previous.start, previous.end);
       } catch (error) {
-        console.warn('Statistics table query failed, fallback to NLP results', error);
+        this.logger?.warn('Statistics table query failed, fallback to NLP results', error);
         currentSentiment = await this.fetchSentimentFromNLPResults(manager, current.start, current.end);
         previousSentiment = await this.fetchSentimentFromNLPResults(manager, previous.start, previous.end);
       }
@@ -200,10 +203,10 @@ export class OverviewService {
       .andWhere('stats.nlp_count > 0')
       .getRawOne();
 
-    const total = parseInt(stats?.total || '0', 10);
-    const positive = parseInt(stats?.positive || '0', 10);
-    const negative = parseInt(stats?.negative || '0', 10);
-    const neutral = parseInt(stats?.neutral || '0', 10);
+    const total = toInt(stats?.total);
+    const positive = toInt(stats?.positive);
+    const negative = toInt(stats?.negative);
+    const neutral = toInt(stats?.neutral);
 
     if (total === 0) {
       return { positive: 0, negative: 0, neutral: 0 };
@@ -241,10 +244,10 @@ export class OverviewService {
       .andWhere('post.deleted_at IS NULL')
       .getRawOne();
 
-    const total = parseInt(sentimentData?.total || '0', 10);
-    const positiveCount = parseInt(sentimentData?.positiveCount || '0', 10);
-    const negativeCount = parseInt(sentimentData?.negativeCount || '0', 10);
-    const neutralCount = parseInt(sentimentData?.neutralCount || '0', 10);
+    const total = toInt(sentimentData?.total);
+    const positiveCount = toInt(sentimentData?.positiveCount);
+    const negativeCount = toInt(sentimentData?.negativeCount);
+    const neutralCount = toInt(sentimentData?.neutralCount);
 
     if (total === 0) {
       return { positive: 0, negative: 0, neutral: 0 };
@@ -331,7 +334,7 @@ export class OverviewService {
 
     return locationData.map((item: any) => {
       const region = (item.location || '未知').replace('发布于', '').trim();
-      const count = parseInt(item.count || '0', 10);
+      const count = toInt(item.count);
 
       // 从地域名称提取坐标
       const coordinates = getCoordinatesFromProvinceCity(region, null);

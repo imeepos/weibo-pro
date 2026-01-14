@@ -1,11 +1,12 @@
 import { Controller, Get, Query, Param } from '@sker/core';
-import { root } from '@sker/core';
+import { root, Inject } from '@sker/core';
 import { EventsService } from '../services/data/events.service';
-import { TimeRange } from '../services/data/types';
 import * as sdk from '@sker/sdk';
+import { validateTimeRange } from '../utils/validators';
+import { toInt, toFloat } from '../utils/type-converter';
 
 @Controller(sdk.EventsController)
-export class EventsController {
+export class EventsController implements sdk.EventsController {
   private eventsService: EventsService;
 
   constructor() {
@@ -20,10 +21,10 @@ export class EventsController {
     @Query('category') category?: string,
     @Query('lambda') lambda?: string
   ) {
-    const validTimeRange = timeRange ? this.validateTimeRange(timeRange) : undefined;
-    const pageNum = page ? parseInt(page, 10) : 1;
-    const pageSizeNum = pageSize ? parseInt(pageSize, 10) : 10;
-    const lambdaNum = lambda ? parseFloat(lambda) : undefined;
+    const validTimeRange = timeRange ? validateTimeRange(timeRange) : undefined;
+    const pageNum = toInt(page, 1);
+    const pageSizeNum = toInt(pageSize, 10);
+    const lambdaNum = lambda ? toFloat(lambda) : undefined;
 
     return this.eventsService.getEventList(validTimeRange, {
       page: pageNum,
@@ -35,17 +36,17 @@ export class EventsController {
   }
 
   async getEventCategories(@Query('timeRange') timeRange?: string) {
-    const validTimeRange = this.validateTimeRange(timeRange);
+    const validTimeRange = validateTimeRange(timeRange);
     return this.eventsService.getEventCategories(validTimeRange);
   }
 
   async getTrendData(@Query('timeRange') timeRange?: string) {
-    const validTimeRange = this.validateTimeRange(timeRange);
+    const validTimeRange = validateTimeRange(timeRange);
     return this.eventsService.getTrendData(validTimeRange);
   }
 
   async getHotList(@Query('timeRange') timeRange?: string) {
-    const validTimeRange = this.validateTimeRange(timeRange);
+    const validTimeRange = validateTimeRange(timeRange);
     return this.eventsService.getHotList(validTimeRange);
   }
 
@@ -66,7 +67,7 @@ export class EventsController {
   }
 
   async getEventKeywords(@Param('id') id: string, @Query('limit') limit?: string) {
-    const limitNum = limit ? parseInt(limit, 10) : 1000;
+    const limitNum = toInt(limit, 1000);
     return this.eventsService.getEventKeywords(id, limitNum);
   }
 
@@ -89,7 +90,7 @@ export class EventsController {
   }
 
   async getKeywordsTimeSeries(@Param('id') id: string, @Query('topN') topN?: string) {
-    const topNNum = topN ? parseInt(topN, 10) : 20;
+    const topNNum = toInt(topN, 20);
     return this.eventsService.getKeywordsTimeSeries(id, topNNum);
   }
 
@@ -98,7 +99,7 @@ export class EventsController {
   }
 
   async getNegativeKeywords(@Param('id') id: string, @Query('threshold') threshold?: string) {
-    const thresholdNum = threshold ? parseFloat(threshold) : 0.5;
+    const thresholdNum = toFloat(threshold, 0.5);
     return this.eventsService.getNegativeKeywords(id, thresholdNum);
   }
 
@@ -109,29 +110,21 @@ export class EventsController {
   // 新增：基于 EventHourlyStatisticsEntity 的互动指标接口
 
   async getEngagementTrend(@Param('id') id: string, @Query('limit') limit?: string) {
-    const limitNum = limit ? parseInt(limit, 10) : 168;
+    const limitNum = toInt(limit, 168);
     return this.eventsService.getEngagementTrend(id, limitNum);
   }
 
   async getAnomalies(@Param('id') id: string, @Query('limit') limit?: string) {
-    const limitNum = limit ? parseInt(limit, 10) : 168;
+    const limitNum = toInt(limit, 168);
     return this.eventsService.getAnomalies(id, limitNum);
   }
 
   async getPeaks(@Param('id') id: string, @Query('limit') limit?: string) {
-    const limitNum = limit ? parseInt(limit, 10) : 168;
+    const limitNum = toInt(limit, 168);
     return this.eventsService.getPeaks(id, limitNum);
   }
 
   async getEventUserRelations(@Param('id') id: string) {
     return this.eventsService.getEventUserRelations(id);
-  }
-
-  private validateTimeRange(timeRange?: string): TimeRange {
-    const validRanges: TimeRange[] = ['all', '1h', '6h', '12h', '24h', '7d', '30d', '90d', '180d', '365d'];
-
-    return validRanges.includes(timeRange as TimeRange)
-      ? (timeRange as TimeRange)
-      : '24h';
   }
 }

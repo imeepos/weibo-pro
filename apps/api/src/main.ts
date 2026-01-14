@@ -37,11 +37,8 @@ async function bootstrap() {
   const env = validateEnv();
   const PORT = env.PORT;
 
-  console.log(`🔧 环境: ${env.NODE_ENV}`);
-  console.log(`🔧 端口: ${PORT}`);
-  console.log(`🔧 时区: ${env.TZ}`);
-
   const logger = root.get(Logger);
+  logger.info('API 启动中', { NODE_ENV: env.NODE_ENV, PORT, TZ: env.TZ });
 
   await runStartupChecks(env, logger);
 
