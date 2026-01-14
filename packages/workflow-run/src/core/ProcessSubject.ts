@@ -29,7 +29,8 @@ export class ProcessSubject<T = string> extends Subject<string> {
             stdio: ['pipe', 'pipe', 'pipe'],
             env: otherEnv,
             signal: this.signal,
-            shell: process.platform === 'win32'
+            shell: process.platform === 'win32',
+            windowsHide: true
         })
 
         this.child.on('error', (err) => {
