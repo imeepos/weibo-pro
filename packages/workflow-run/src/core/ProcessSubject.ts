@@ -3,7 +3,7 @@ import { from, Subject, merge, fromEvent, throwError, EMPTY } from 'rxjs'
 import { map, takeUntil, mergeMap, filter } from 'rxjs/operators'
 import type { Subscriber, TeardownLogic } from 'rxjs'
 import type { ChildProcessWithoutNullStreams, SpawnOptionsWithoutStdio } from 'child_process'
-import { Observable } from '@sker/core'
+import { Observable, logger } from '@sker/core'
 
 export class ProcessSubject<T = string> extends Subject<string> {
     readonly output$: Observable<T>
@@ -21,6 +21,8 @@ export class ProcessSubject<T = string> extends Subject<string> {
         const env = process.env
         const { DEV, ...otherEnv } = env
 
+        logger.info(`[ProcessSubject] 启动子进程: ${cmd} ${args.join(' ')}`)
+
         this.child = spawn(cmd, args, {
             cwd: process.cwd(),
             stdio: ['pipe', 'pipe', 'pipe'],
@@ -28,6 +30,15 @@ export class ProcessSubject<T = string> extends Subject<string> {
             signal: this.signal,
             shell: process.platform === 'win32'
         })
+
+        this.child.on('error', (err) => {
+            logger.error(`[ProcessSubject] 子进程错误: ${cmd} ${args.join(' ')}`, err)
+        })
+
+        this.child.on('exit', (code, signal) => {
+            logger.info(`[ProcessSubject] 子进程退出: ${cmd} ${args.join(' ')}, code: ${code}, signal: ${signal}`)
+        })
+
         const exit$ = merge(
             fromEvent(this.child, 'exit'),
             fromEvent(this.child, 'error')
@@ -39,6 +50,7 @@ export class ProcessSubject<T = string> extends Subject<string> {
             map(b => this.parseOutput<T>(b.toString())),
             mergeMap(data => {
                 if (data === null) return EMPTY
+                logger.error(`[ProcessSubject] stderr 输出: ${String(data)}`)
                 return throwError(() => data instanceof Error ? data : new Error(String(data)))
             })
         )
@@ -53,7 +65,8 @@ export class ProcessSubject<T = string> extends Subject<string> {
         if (!trimmed) return null
         try {
             return JSON.parse(trimmed) as T
-        } catch {
+        } catch (err) {
+            logger.debug(`[ProcessSubject] JSON 解析失败，返回原始字符串: ${trimmed}`)
             return trimmed as unknown as T
         }
     }
@@ -64,11 +77,13 @@ export class ProcessSubject<T = string> extends Subject<string> {
     }
 
     error(err: any): void {
+        logger.error(`[ProcessSubject] Subject error:`, err)
         this.controller.abort(err)
         super.error(err)
     }
 
     complete(): void {
+        logger.debug(`[ProcessSubject] Subject complete`)
         this.controller.abort()
         super.complete()
     }
