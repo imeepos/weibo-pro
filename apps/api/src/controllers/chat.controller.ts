@@ -1,11 +1,9 @@
 import { Controller, Post, Body } from '@sker/core';
 import { root } from '@sker/core';
 import { ChatService } from '../services/chat.service';
-import type { ChatMessage } from '@sker/chat';
 import * as sdk from '@sker/sdk';
 
 interface ChatRequestDto {
-  messages: ChatMessage[];
   databaseUrl?: string;
 }
 
@@ -19,6 +17,6 @@ export class ChatController {
 
   @Post()
   async chat(@Body() request: ChatRequestDto) {
-    return this.service.chat(request);
+    throw new Error('method chat not implements');
   }
 }

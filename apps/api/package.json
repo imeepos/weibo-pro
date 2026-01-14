@@ -23,7 +23,6 @@
     "@hono/node-server": "^1.14.3",
     "@sker/agent": "workspace:*",
     "@sker/auth": "workspace:*",
-    "@sker/chat": "workspace:*",
     "@sker/core": "workspace:*",
     "@sker/entities": "workspace:*",
     "@sker/ip-proxy": "workspace:*",

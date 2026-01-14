@@ -9,7 +9,6 @@ export default {
   external: [
     '@sker/agent',
     '@sker/auth',
-    '@sker/chat',
     '@sker/core',
     '@sker/entities',
     '@sker/mq',
