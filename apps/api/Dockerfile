@@ -7,15 +7,21 @@ RUN apk add --no-cache libc6-compat
 # 设置工作目录
 WORKDIR /app
 
-# 复制依赖文件
-COPY package.json pnpm-lock.yaml ./
+# 先复制 package.json 和 pnpm-workspace.yaml
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+
+# 安装 pnpm 并配置国内源
+RUN npm install -g pnpm@9 --registry=https://registry.npmmirror.com
+RUN pnpm config set registry https://registry.npmmirror.com
+
+# 安装依赖（使用 --ignore-scripts 避免在安装时执行脚本）
+RUN pnpm install --frozen-lockfile --ignore-scripts
+
+# 复制源代码
 COPY packages packages
 COPY apps apps
 
-# 安装 pnpm
-RUN npm install -g pnpm
-
-# 安装依赖
+# 安装所有依赖（确保子包的依赖也被安装）
 RUN pnpm install --frozen-lockfile
 
 # 构建所有依赖包

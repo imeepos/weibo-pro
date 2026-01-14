@@ -33,6 +33,7 @@
   "main": "./dist/index.js",
   "sideEffects": false,
   "scripts": {
+    "build": "tsup",
     "build:deps": "tsup",
     "claude": "claude --dangerously-skip-permissions",
     "lint": "eslint . --max-warnings 0",
