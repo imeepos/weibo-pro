@@ -81,7 +81,6 @@ export class ClaudeCodeAstVisitor {
       const sub = processSubject.subscribe({
         next: (data: unknown) => {
           const streamEvent = data as ClaudeStreamEvent
-          console.log(`[executeProcess] ${streamEvent.type}`)
           let message = ''
           // 非 result 类型时，实时发送 node_emit（stdout 端口）
           const type = streamEvent.type;
@@ -97,6 +96,7 @@ export class ClaudeCodeAstVisitor {
             }
             // 更新 ast.stdout 并发射
             ast.stdout = message;
+            console.log(`[executeProcess] ${streamEvent.type} ${message}`)
             obs.next({ type: 'node_emit', id: ast.id, data: { stdout: message } })
             return
           }

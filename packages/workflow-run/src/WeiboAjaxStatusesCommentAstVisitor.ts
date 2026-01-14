@@ -258,10 +258,11 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
             if (onNewCount && entities.length > 0) {
                 const ids = entities.map(e => e.id).filter(Boolean);
                 if (ids.length > 0) {
-                    const existingCount = await m.count(WeiboCommentEntity, {
+                    const existingRecords = await m.find(WeiboCommentEntity, {
                         where: ids.map(id => ({ id }))
                     });
-                    onNewCount(entities.length - existingCount);
+                    const existingIds = new Set(existingRecords.map(r => r.id));
+                    onNewCount(entities.filter(e => !existingIds.has(e.id)).length);
                 } else {
                     onNewCount(0);
                 }

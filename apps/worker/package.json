@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "pnpx wrangler@latest dev",
+    "dev:start": "pnpx wrangler@latest dev",
     "deploy": "pnpx wrangler@latest deploy",
     "tail": "pnpx wrangler@latest tail"
   },

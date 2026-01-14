@@ -94,12 +94,13 @@ export class WeiboAjaxStatusesRepostTimelineAstVisitor extends WeiboApiClient {
                                         });
                                     });
 
-                                    // 检查是否有新数据
+                                    // 检查是否有新数据：查询当前批次中已存在的记录
                                     const ids = entities.map(e => e.id).filter(Boolean);
-                                    const existingCount = ids.length > 0
-                                        ? await m.count(WeiboRepostEntity, { where: ids.map(id => ({ id })) })
-                                        : 0;
-                                    const newCount = entities.length - existingCount;
+                                    const existingRecords = ids.length > 0
+                                        ? await m.find(WeiboRepostEntity, { where: ids.map(id => ({ id })) })
+                                        : [];
+                                    const existingIds = new Set(existingRecords.map(r => r.id));
+                                    const newCount = entities.filter(e => !existingIds.has(e.id)).length;
 
                                     console.log(`[WeiboAjaxStatusesRepostTimelineAstVisitor] ${page} 页 共${entities.length}条数据，新增${newCount}条`);
 

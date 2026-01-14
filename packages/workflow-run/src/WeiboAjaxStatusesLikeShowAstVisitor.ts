@@ -97,14 +97,19 @@ export class WeiboAjaxStatusesLikeShowAstVisitor extends WeiboApiClient {
                                         } as any)
                                     );
 
-                                    // 检查是否有新数据
-                                    const existingCount = await m.count(WeiboLikeEntity, {
+                                    // 检查是否有新数据：查询当前批次中已存在的记录
+                                    const existingRecords = await m.find(WeiboLikeEntity, {
                                         where: likeEntities.map(e => ({
                                             userWeiboId: e.userWeiboId,
                                             targetWeiboId: e.targetWeiboId
                                         }))
                                     });
-                                    const newCount = likeEntities.length - existingCount;
+                                    const existingKeys = new Set(
+                                        existingRecords.map(r => `${r.userWeiboId}:${r.targetWeiboId}`)
+                                    );
+                                    const newCount = likeEntities.filter(e =>
+                                        !existingKeys.has(`${e.userWeiboId}:${e.targetWeiboId}`)
+                                    ).length;
 
                                     console.log(`[${page}]保存${likeEntities.length}条点赞记录，新增${newCount}条`);
 
