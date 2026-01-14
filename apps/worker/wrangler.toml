@@ -14,7 +14,6 @@ head_sampling_rate = 1
 enabled = true
 head_sampling_rate = 1
 
-# Streams 管道配置（替换 YOUR_PIPELINE_ID）
 [[pipelines]]
-pipeline = "YOUR_PIPELINE_ID"  # 从 Cloudflare Dashboard 复制
+pipeline = "8d3e4e99b9834e08a7130e61c34999be"
 binding = "LOGS_STREAM"
