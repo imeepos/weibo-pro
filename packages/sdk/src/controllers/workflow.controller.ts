@@ -89,7 +89,7 @@ export class WorkflowController {
   /**
    * 创建工作流运行实例
    */
-  @Post(':id/runs')
+  @Post('createRun')
   createRun(@Body() body: { workflowId: string; inputs?: Record<string, unknown> }): Promise<CreateRunResult> {
     throw new Error('method createRun not implements')
   }
@@ -97,7 +97,7 @@ export class WorkflowController {
   /**
    * 执行工作流运行实例
    */
-  @Post('runs/:runId/execute')
+  @Post('executeRun')
   executeRun(@Body() body: { runId: string }): Promise<WorkflowRunEntity> {
     throw new Error('method executeRun not implements')
   }
@@ -105,15 +105,15 @@ export class WorkflowController {
   /**
    * 获取运行实例详情
    */
-  @Get('runs/:runId')
-  getRun(@Param('runId') runId: string): Promise<WorkflowRunEntity> {
+  @Get('getRun')
+  getRun(@Query('runId') runId: string): Promise<WorkflowRunEntity> {
     throw new Error('method getRun not implements')
   }
 
   /**
    * 列出工作流的运行历史
    */
-  @Get(':id/runs')
+  @Get('listRuns')
   listRuns(
     @Query() query: {
       workflowId: string;
@@ -129,7 +129,7 @@ export class WorkflowController {
   /**
    * 取消运行实例
    */
-  @Post('runs/:runId/cancel')
+  @Post('cancelRun')
   cancelRun(@Body() body: { runId: string }): Promise<{ success: boolean }> {
     throw new Error('method cancelRun not implements')
   }
