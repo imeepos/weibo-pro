@@ -65,7 +65,9 @@ export { EventAst } from './basic/EventAst';
 export { PropertySelectorAst } from './basic/PropertySelectorAst';
 export { LastAst } from './basic/LastAst';
 export { ClaudeCodeAst, type ClaudeStreamEvent } from './basic/ClaudeCodeAst';
-// CONTROL 节点 (2个)
+export { SmartAstV1, type DataItem, type MetadataSummary, type ParseStatus } from './basic/SmartAstV1';
+
+// CONTROL 节点 (3个)
 export { LlmCategoryAst } from './control/LlmCategoryAst';
 export { StoryQualityLoopAst } from './control/StoryQualityLoopAst';
 

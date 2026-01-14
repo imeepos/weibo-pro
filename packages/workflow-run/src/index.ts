@@ -108,15 +108,17 @@ export { SqlExecuteAstVisitor } from './SqlExecuteAstVisitor'
 // 进程执行节点
 export { ClaudeCodeAstVisitor } from './ClaudeCodeAstVisitor'
 
+// 智能分发节点
+export { SmartAstV1Visitor } from './SmartAstV1Visitor'
+
+// 服务
+export { SmartToolsFactory } from './services/SmartToolsFactory'
+
 // Markdown 上传节点
 export { MarkdownUploadAstVisitor } from './MarkdownUploadAstVisitor'
 
 // Excel 上传节点
 export { ExcelUploadAstVisitor } from './ExcelUploadAstVisitor'
-
-// Claude Code 节点
-export { ClaudeCodeReviewAstVisitor } from './ClaudeCodeReviewAstVisitor'
-export { ClaudeCodeRefactorAstVisitor } from './ClaudeCodeRefactorAstVisitor'
 
 // 显示节点
 export { DisplayAstVisitor } from './DisplayAstVisitor'
