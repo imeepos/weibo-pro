@@ -1,22 +1,40 @@
 import { Inject, Injectable } from '@sker/core'
-import { Handler, NodeEvent, setAstError, WorkflowGraphAst } from '@sker/workflow'
-import { SmartAstV1, DataItem, MetadataSummary } from '@sker/workflow-ast'
+import { Handler, NodeEvent, setAstError, WorkflowGraphAst, getEdgesByNode } from '@sker/workflow'
+import { SmartAstV1 } from '@sker/workflow-ast'
 import { Observable, from, of } from 'rxjs'
 import { concatMap, mergeMap, catchError, finalize, tap } from 'rxjs/operators'
 import { useLlmModel } from './llm-client'
 import { StreamingLlmInvoker, StreamChunk } from './services/StreamingLlmInvoker'
 import { SmartToolsFactory } from './services/SmartToolsFactory'
+import { StructuredToolInterface } from '@langchain/core/tools'
 
 interface MessageContent {
   role: 'system' | 'user' | 'assistant' | 'tool'
   content: string
-  tool_call_id?: string
-  name?: string
+}
+
+interface InputContext {
+  property: string
+  title: string
+  description: string
+  content: unknown
+}
+
+interface OutputContext {
+  property: string
+  title: string
+  description: string
+  type?: string
+  defaultValue?: unknown
 }
 
 /**
  * SmartAstV1 节点访问器
- * 职责：协调 LLM 和工具，实现智能数据分发
+ *
+ * 核心逻辑：
+ * 1. 输入上下文：(title, description, content) 三元组
+ * 2. 输出上下文：(title, description, type) 定义
+ * 3. LLM 根据上下文生成数据，调用 dispatch 分发
  */
 @Injectable()
 export class SmartAstV1Visitor {
@@ -35,7 +53,6 @@ export class SmartAstV1Visitor {
       const abortController = new AbortController()
 
       ast.state = 'running'
-      ast.parseStatus = 'analyzing'
       obs.next({ type: 'node_runing', id: ast.id })
 
       const subscription = input$.pipe(
@@ -43,82 +60,43 @@ export class SmartAstV1Visitor {
           ast.emitCount += 1
           obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } })
 
-          if (inputData) {
-            Object.keys(inputData).forEach(key => {
-              ;(ast as unknown as Record<string, unknown>)[key] = inputData[key]
-            })
-          }
-
           if (abortController.signal.aborted) {
             throw new Error('工作流已取消')
           }
 
-          const startTime = Date.now()
+          const inputContexts = this.buildInputContexts(ast, inputData, ctx)
+          const outputContexts = this.buildOutputContexts(ast, ctx)
 
-          // 分发项收集器
-          const dispatchItems: DataItem[] = []
-
-          // 设置分发项回调
-          this.smartToolsFactory.setDispatchItemCallback((item: DataItem) => {
-            dispatchItems.push(item)
-
-            // 立即发射分发项
+          this.smartToolsFactory.setDispatchCallback((outputPort: string, data: unknown) => {
             obs.next({
               type: 'node_emit',
               id: ast.id,
-              data: { dispatchItem: item }
+              data: { [outputPort]: data }
             })
-
-            ast.dispatchedItems = dispatchItems.length
-
-            console.log(`[SmartAstV1] 发射分发项: ${item.id} - ${item.summary || '(无描述)'}`)
+            console.log(`[SmartAstV1] 分发到 ${outputPort}:`, typeof data === 'object' ? JSON.stringify(data).slice(0, 100) : data)
           })
 
           try {
-            // 创建工具集
-            const dataTools = this.smartToolsFactory.createDataTools(
-              ast.inputData,
-              ast.maxItems,
-              ctx,
-              ast
-            )
-            const nodeTools = this.smartToolsFactory.createNodeTools(ctx, ast.id)
-            const allTools = [...dataTools, ...nodeTools]
+            const tools = this.smartToolsFactory.createTools(outputContexts)
 
-            // 准备 LLM
             const model = useLlmModel({
               model: ast.model,
               temperature: ast.temperature
-            }).bindTools(allTools)
-
-            // 构建消息
-            const systemPrompt = this.buildSystemPrompt(ast)
-            const userPrompt = this.buildUserPrompt(ast)
+            }).bindTools(tools)
 
             const messages: MessageContent[] = [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: userPrompt }
+              { role: 'system', content: this.buildSystemPrompt(inputContexts, outputContexts) },
+              { role: 'user', content: this.buildUserPrompt(inputContexts, outputContexts) }
             ]
 
-            // 调用 LLM
-            return await this.executeDispatchLoop(
-              ast,
-              model,
-              messages,
-              abortController.signal,
-              obs,
-              startTime,
-              dispatchItems
-            )
+            return await this.executeDispatchLoop(ast, model, messages, tools, abortController.signal, obs)
           } catch (error) {
-            ast.parseStatus = 'failed'
             ast.state = 'fail'
             setAstError(ast, error)
             obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message })
             throw error
           } finally {
-            // 清除回调
-            this.smartToolsFactory.clearDispatchItemCallback()
+            this.smartToolsFactory.clearDispatchCallback()
           }
         }),
         mergeMap((events) => from(events)),
@@ -146,91 +124,117 @@ export class SmartAstV1Visitor {
     })
   }
 
-  /**
-   * 构建系统提示词
-   */
-  private buildSystemPrompt(ast: SmartAstV1): string {
-    return `${ast.systemPrompt}
+  private buildInputContexts(ast: SmartAstV1, inputData: Record<string, unknown>, ctx: WorkflowGraphAst): InputContext[] {
+    const contexts: InputContext[] = []
+    const inEdges = getEdgesByNode(ctx.edges || [], ast.id, 'in')
+
+    for (const edge of inEdges) {
+      const inputMeta = ast.metadata?.inputs?.find((i: any) => i.property === edge.toPort)
+      if (!inputMeta) continue
+
+      contexts.push({
+        property: edge.toPort,
+        title: inputMeta.title || edge.toPort,
+        description: inputMeta.description || '',
+        content: inputData[edge.toPort]
+      })
+    }
+
+    return contexts
+  }
+
+  private buildOutputContexts(ast: SmartAstV1, ctx: WorkflowGraphAst): OutputContext[] {
+    const contexts: OutputContext[] = []
+    const outEdges = getEdgesByNode(ctx.edges || [], ast.id, 'out')
+
+    for (const edge of outEdges) {
+      const outputMeta = ast.metadata?.outputs?.find((o: any) => o.property === edge.fromPort)
+      if (!outputMeta || outputMeta.property === 'dispatchComplete') continue
+
+      contexts.push({
+        property: edge.fromPort,
+        title: outputMeta.title || edge.fromPort,
+        description: outputMeta.description || '',
+        type: outputMeta.type,
+        defaultValue: outputMeta.defaultValue
+      })
+    }
+
+    return contexts
+  }
+
+  private buildSystemPrompt(inputContexts: InputContext[], outputContexts: OutputContext[]): string {
+    const inputList = inputContexts.map(i =>
+      `- ${i.property}:\n  标题: ${i.title}\n  描述: ${i.description || '(无)'}`
+    ).join('\n')
+
+    const outputList = outputContexts.map(o =>
+      `- ${o.property}:\n  标题: ${o.title}\n  描述: ${o.description || '(无)'}\n  类型: ${o.type || 'any'}`
+    ).join('\n')
+
+    return `你是智能数据分发控制决策中心。根据输入数据的要求，为每个输出端口生成合适的内容。
+
+【输入端口上下文】
+${inputList || '(无)'}
+
+【输出端口上下文】
+${outputList || '(无)'}
 
 【可用工具】
-- detect_data_structure: 检测输入数据的结构类型
-- search_data_content: 在数据中搜索关键词
-- extract_data_segment: 提取数据片段
-- list_downstream_nodes: 查看可用的下游节点
-- create_dispatch_item: 创建分发项并发射到下游
+- dispatch(outputPort, data): 将数据分发到指定输出端口
 
 【工作流程】
-1. 使用 detect_data_structure 分析输入数据结构
-2. 使用 list_downstream_nodes 查看下游节点能力
-3. 根据数据结构和用户需求，调用 create_dispatch_item 创建分发项
-4. 每次调用 create_dispatch_item 会触发一次 node_emit，下游节点独立执行
+1. 分析输入数据
+2. 根据输出端口的 title、description、type 生成合适的数据
+3. 调用 dispatch 分发数据
 
-【分发原则】
-- 每次只分发一个数据项
-- 根据 maxItems 限制控制分发数量
-- 确保每个数据项可以被下游节点独立处理
-
-【输出格式】
-完成分发后，输出 JSON 格式的摘要：
-\`\`\`json
-{
-  "dataType": "数据类型",
-  "structure": "结构描述",
-  "totalCount": 分发项总数,
-  "keyFields": ["关键字段1", "关键字段2"]
-}
-\`\`\`
+【重要】
+- 输出数据类型应与输出端口的 type 匹配
+- 输出数据内容应符合输出端口的 description
 `
   }
 
-  /**
-   * 构建用户提示词
-   */
-  private buildUserPrompt(ast: SmartAstV1): string {
-    const dataPreview = this.getDataPreview(ast.inputData, 500)
+  private buildUserPrompt(inputContexts: InputContext[], outputContexts: OutputContext[]): string {
+    const inputList = inputContexts.map(i => {
+      const preview = this.preview(i.content, 300)
+      return `- **${i.property}** (${i.title}):\n  ${i.description || '(无描述)'}\n  内容: ${preview}`
+    }).join('\n\n')
 
-    return `请分析以下数据，并将其拆分为可独立处理的分发项：
+    const outputHints = outputContexts.map(o =>
+      `- **${o.property}** (${o.title}): ${o.description || '(无描述)'} (类型: ${o.type || 'any'})`
+    ).join('\n')
 
+    return `
 【输入数据】
-\`\`\`
-${dataPreview}
-\`\`\`
+${inputList || '(无)'}
 
-【最大项数】
-${ast.maxItems}
+【输出端口要求】
+${outputHints || '(无)'}
 
-请开始分析...`
+请开始分发...`
   }
 
-  /**
-   * 获取数据预览
-   */
-  private getDataPreview(data: unknown, maxLength: number = 500): string {
-    const dataStr = typeof data === 'string'
-      ? data
-      : JSON.stringify(data, null, 2)
-
-    if (dataStr.length <= maxLength) {
-      return dataStr
+  private preview(value: unknown, maxLength: number = 200): string {
+    if (value === null || value === undefined) return 'null'
+    if (typeof value === 'string') {
+      return value.length <= maxLength ? value : value.slice(0, maxLength) + '...'
     }
-
-    return dataStr.slice(0, maxLength) + '\n...(数据已截断)'
+    if (typeof value === 'object') {
+      const str = JSON.stringify(value)
+      return str.length <= maxLength ? str : str.slice(0, maxLength) + '...'
+    }
+    return String(value)
   }
 
-  /**
-   * 执行分发循环
-   */
   private async executeDispatchLoop(
     ast: SmartAstV1,
     model: any,
     messages: MessageContent[],
+    tools: StructuredToolInterface[],
     signal: AbortSignal,
-    obs: any,
-    startTime: number,
-    dispatchItems: DataItem[]
+    obs: any
   ): Promise<NodeEvent[]> {
     const events: NodeEvent[] = []
-    let fullOutput = ''
 
     return new Promise((resolve, reject) => {
       const subscription = this.streamingLlmInvoker.streamWithTools(
@@ -238,15 +242,10 @@ ${ast.maxItems}
         messages as any,
         signal,
         true,
-        []
+        tools
       ).pipe(
         tap((chunk: StreamChunk) => {
-          // 处理流式文本
           if (chunk.type === 'delta' && chunk.delta) {
-            fullOutput += chunk.delta
-            ast.stdout = fullOutput
-
-            // 发射流式输出事件
             obs.next({
               type: 'node_emit',
               id: ast.id,
@@ -254,47 +253,13 @@ ${ast.maxItems}
             })
           }
 
-          // 处理完成
           if (chunk.type === 'complete') {
-            ast.analysisDuration = Date.now() - startTime
-            ast.allItems = dispatchItems
-            ast.totalItems = dispatchItems.length
-
-            // 提取元数据摘要
-            const metadataSummary = this.extractMetadataSummary(fullOutput)
-            ast.metadataSummary = metadataSummary
-
-            if (metadataSummary) {
-              ast.detectedDataType = metadataSummary.dataType
-            }
-
-            // 发射最终状态
-            events.push({
-              type: 'node_emit',
-              id: ast.id,
-              data: { allItems: dispatchItems }
-            })
-
-            events.push({
-              type: 'node_emit',
-              id: ast.id,
-              data: { metadataSummary }
-            })
-
             ast.dispatchComplete = true
-            ast.parseStatus = 'completed'
-
-            events.push({
-              type: 'node_emit',
-              id: ast.id,
-              data: { dispatchComplete: true }
-            })
-
-            console.log(`[SmartAstV1] 分发完成，共 ${dispatchItems.length} 项，耗时 ${ast.analysisDuration}ms`)
+            events.push({ type: 'node_emit', id: ast.id, data: { dispatchComplete: true } })
+            console.log(`[SmartAstV1] 分发完成`)
           }
         }),
         catchError((error) => {
-          ast.parseStatus = 'failed'
           console.error('[SmartAstV1] 执行失败:', error)
           return of()
         }),
@@ -305,33 +270,5 @@ ${ast.maxItems}
         error: (err) => reject(err)
       })
     })
-  }
-
-  /**
-   * 从响应中提取元数据摘要
-   */
-  private extractMetadataSummary(rawOutput: string): MetadataSummary | null {
-    const jsonMatch = rawOutput.match(/```json\s*([\s\S]*?)\s*```/) ||
-                      rawOutput.match(/\{[\s\S]*?\}/)
-
-    if (!jsonMatch) return null
-
-    try {
-      const parsed = JSON.parse(jsonMatch[1] || jsonMatch[0])
-
-      // 验证必需字段
-      if (parsed.dataType && parsed.structure) {
-        return {
-          dataType: parsed.dataType,
-          totalCount: parsed.totalCount || 0,
-          structure: parsed.structure,
-          keyFields: parsed.keyFields || []
-        }
-      }
-    } catch {
-      // 解析失败，返回 null
-    }
-
-    return null
   }
 }

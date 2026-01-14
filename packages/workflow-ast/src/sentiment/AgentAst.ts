@@ -1,4 +1,4 @@
-import { Ast, Input, IS_MULTI, Node, Output, State } from '@sker/workflow';
+import { Ast, Input, IS_MULTI, Node, Output } from '@sker/workflow';
 
 /**
  * AgentAst - 舆情分析 Agent 基类
@@ -15,8 +15,7 @@ import { Ast, Input, IS_MULTI, Node, Output, State } from '@sker/workflow';
     title: '舆情分析基类',
     type: 'sentiment',
     errorStrategy: 'retry',
-    maxRetries: 3,
-    abstract: true
+    maxRetries: 3
 })
 export abstract class AgentAst extends Ast {
     // === 输入：LLM 参数 ===
@@ -36,8 +35,7 @@ export abstract class AgentAst extends Ast {
     @Input({ title: '发言记录', mode: IS_MULTI, defaultValue: [] })
     speechesText: string[] = [];
 
-    // === 内部状态：系统提示词（子类实现） ===
-    @State({ title: '系统提示词' })
+    // 子类实现：系统提示词
     abstract get systemPrompt(): string;
 
     // === 输出：结构化结果 ===
@@ -47,6 +45,6 @@ export abstract class AgentAst extends Ast {
     @Output({ title: '原始数据', defaultValue: null })
     rawData: unknown = null;
 
-    @Output({ title: '建议', mode: IS_MULTI, defaultValue: [] })
+    @Output({ title: '建议', defaultValue: [] })
     suggestions: string[] = [];
 }
