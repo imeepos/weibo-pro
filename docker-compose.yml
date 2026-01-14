@@ -94,8 +94,6 @@ services:
       - ./nginx/ssl:/etc/nginx/ssl
       - ./apps/bigscreen/dist:/usr/share/nginx/html
       - ./apps/app/dist:/usr/share/nginx/html/mobile
-    depends_on:
-      - api
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/health"]
