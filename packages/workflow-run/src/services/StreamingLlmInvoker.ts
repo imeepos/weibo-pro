@@ -1,5 +1,5 @@
 import { Injectable } from '@sker/core';
-import { Observable, Subject, from, of, throwError } from 'rxjs';
+import { Observable, Subject, from, of, throwError, forkJoin } from 'rxjs';
 import { concatMap, expand, take, map, catchError, finalize } from 'rxjs/operators';
 import { ChatOpenAI, ChatOpenAICallOptions } from '@langchain/openai';
 import { Runnable } from '@langchain/core/runnables';
@@ -300,7 +300,6 @@ export class StreamingLlmInvoker {
     });
 
     // ForkJoin 所有工具执行
-    const { forkJoin } = require('rxjs');
     return forkJoin(toolExecutions).pipe(
       map((toolResults: ToolMessage[]) => {
         toolResults.forEach(result => {

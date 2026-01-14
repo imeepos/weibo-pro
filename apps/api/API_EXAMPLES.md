@@ -206,7 +206,6 @@ curl http://localhost:8089/health/detailed
 ### 连接到 WebSocket
 
 ```javascript
-const io = require('socket.io-client');
 
 const socket = io('http://localhost:8089/ws', {
   auth: {

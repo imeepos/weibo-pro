@@ -1,4 +1,4 @@
-import { Logger } from '@sker/core'
+import { Logger, root } from '@sker/core'
 
 export enum LogLevel {
   DEBUG = 'DEBUG',
@@ -23,7 +23,7 @@ export interface LogContext {
 }
 
 export class StructuredLogger {
-  constructor(private logger: Logger) {}
+  constructor(private logger: Logger) { }
 
   private format(context: LogContext): LogContext {
     return {
@@ -129,7 +129,6 @@ let loggerInstance: StructuredLogger | null = null
 
 export function getStructuredLogger(): StructuredLogger {
   if (!loggerInstance) {
-    const { root, Logger } = require('@sker/core')
     loggerInstance = new StructuredLogger(root.get(Logger))
   }
   return loggerInstance

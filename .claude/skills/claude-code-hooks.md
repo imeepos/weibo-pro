@@ -90,7 +90,6 @@ process.exit(0);  // 成功退出，Claude 继续
 ### 4.1 质量检查门卫（Quality Gate）
 ```javascript
 #!/usr/bin/env node
-const { execSync } = require('child_process');
 
 function exec(command) {
   return execSync(command, { encoding: 'utf8', stdio: 'inherit' });
@@ -113,7 +112,6 @@ try {
 ### 4.2 自动修复 + 提交
 ```javascript
 #!/usr/bin/env node
-const { execSync } = require('child_process');
 
 function exec(command, options = {}) {
   return execSync(command, {
@@ -141,7 +139,6 @@ process.exit(0);
 ### 4.3 条件性阻止
 ```javascript
 #!/usr/bin/env node
-const { execSync } = require('child_process');
 
 function exec(command, options = {}) {
   try {
@@ -180,7 +177,6 @@ process.exit(0);
 ### 5.1 推荐的 Stop Hook 结构
 ```javascript
 #!/usr/bin/env node
-const { execSync } = require('child_process');
 
 function exec(command, options = {}) {
   try {
@@ -263,7 +259,6 @@ echo %ERRORLEVEL%  # Windows
 ### 6.2 Hook 日志
 ```javascript
 // 在 hook 中添加日志
-const fs = require('fs');
 const logFile = '.claude/hooks/debug.log';
 
 function log(message) {

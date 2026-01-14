@@ -70,7 +70,6 @@ await cdp.setExtraHeaders({ 'X-Custom': 'value' });
 await manager.saveStorage(context, './storage.json');
 
 // 加载
-const state = require('./storage.json');
 await manager.loadStorage(context, state);
 ```
 
