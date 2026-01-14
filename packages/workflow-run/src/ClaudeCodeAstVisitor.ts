@@ -1,4 +1,4 @@
-import { Injectable } from '@sker/core'
+import { Injectable, logger } from '@sker/core'
 import { Handler, NodeEvent } from '@sker/workflow'
 import { ClaudeCodeAst, ClaudeStreamEvent } from '@sker/workflow-ast'
 import { ProcessSubject } from './core/ProcessSubject.js'
@@ -96,7 +96,7 @@ export class ClaudeCodeAstVisitor {
             }
             // 更新 ast.stdout 并发射
             ast.stdout = message;
-            console.log(`[executeProcess] ${streamEvent.type} ${message}`)
+            logger.info(`[executeProcess] ${streamEvent.type} ${message}`)
             obs.next({ type: 'node_emit', id: ast.id, data: { stdout: message } })
             return
           }

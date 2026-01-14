@@ -15,26 +15,35 @@ export const LOGGER_LEVEL = new InjectionToken<LoggerLevel>(`LOGGER_LEVEL`, {
 export class Logger {
     name: string = `default`
     constructor(@Inject(LOGGER_LEVEL, { optional: true }) private level: LoggerLevel = LoggerLevel.info) { }
+    private timestamp(): string {
+        const now = new Date()
+        const iso = now.toISOString()
+        return iso.replace('T', ' ').slice(0, 19)
+    }
+
     _log(level: LoggerLevel, ...args: any[]) {
         if (level >= this.level) {
+            const ts = this.timestamp()
+            const prefix = `[${ts}]`
+            const taggedArgs = args.map(arg => typeof arg === 'string' ? `${prefix} ${arg}` : arg)
             switch (level) {
                 case LoggerLevel.trace:
-                    console.trace(...args)
+                    console.trace(...taggedArgs)
                     break;
                 case LoggerLevel.debug:
-                    console.debug(...args)
+                    console.debug(...taggedArgs)
                     break;
                 case LoggerLevel.info:
-                    console.info(...args)
+                    console.info(...taggedArgs)
                     break;
                 case LoggerLevel.warn:
-                    console.warn(...args)
+                    console.warn(...taggedArgs)
                     break;
                 case LoggerLevel.error:
-                    console.error(...args)
+                    console.error(...taggedArgs)
                     break;
                 default:
-                    console.log(...args)
+                    console.log(...taggedArgs)
                     break;
             }
         }
