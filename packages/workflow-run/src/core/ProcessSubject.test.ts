@@ -84,37 +84,59 @@ describe('ProcessSubject', () => {
   })
 
   describe('错误处理', () => {
-    it('应该能够捕获 stderr 文本错误', async () => {
+    it('应该能够捕获 stderr 文本输出（exit code=0 时正常完成）', async () => {
       const scriptPath = join(tmpdir(), `test-${Date.now()}.js`)
       writeFileSync(scriptPath, 'console.error("test error message")')
 
       const process$ = new ProcessSubject('node', [scriptPath])
 
-      const errorPromise = firstValueFrom(process$.pipe(
-        timeout(5000),
-        catchError(err => {
-          return Promise.resolve(err)
-        })
-      ))
+      const results: string[] = []
+      let completed = false
 
-      const error = await errorPromise
+      const subscription = process$.subscribe({
+        next: data => results.push(String(data)),
+        complete: () => {
+          completed = true
+        }
+      })
+
+      // 等待进程完成
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      subscription.unsubscribe()
       if (existsSync(scriptPath)) unlinkSync(scriptPath)
-      expect(error).toBeInstanceOf(Error)
-      expect(error.message).toContain('test error message')
+
+      // stderr 现在作为正常数据处理，进程正常完成
+      expect(results).toContain('test error message')
+      expect(completed).toBe(true)
     })
 
-    it('应该能够捕获命令不存在错误', async () => {
+    it('应该能够捕获命令不存在错误（exit code≠0）', async () => {
       const process$ = new ProcessSubject('nonexistent-commandXYZ', [])
 
-      const errorPromise = firstValueFrom(process$.pipe(
-        timeout(5000),
-        catchError(err => {
-          return Promise.resolve(err)
-        })
-      ))
+      let error: Error | null = null
+      let completed = false
 
-      const error = await errorPromise
+      const subscription = process$.subscribe({
+        next: data => {
+          // stderr 作为正常数据处理
+        },
+        complete: () => {
+          completed = true
+        },
+        error: (err: Error) => {
+          error = err
+        }
+      })
+
+      // 等待进程完成
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      subscription.unsubscribe()
+
       expect(error).toBeInstanceOf(Error)
+      expect(error?.message).toContain('exited with code')
+      expect(completed).toBe(false)
     })
 
     it('应该能够通过 AbortSignal 取消进程', async () => {
