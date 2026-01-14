@@ -1,6 +1,6 @@
 import { Controller, Body, BadRequestException, Query, NotFoundException, Param } from '@sker/core';
 import { Observable } from 'rxjs';
-import { Ast, fromJson, generateId, INode, resolveConstructor, type OutputMetadata, getNodeById, executeAstWithWorkflowGraph, executeWorkflowImmediate, NodeEvent, executeAst } from '@sker/workflow';
+import { Ast, fromJson, generateId, INode, resolveConstructor, type OutputMetadata, type INodeOutputMetadata, getNodeById, executeAstWithWorkflowGraph, executeWorkflowImmediate, NodeEvent, executeAst } from '@sker/workflow';
 import { WorkflowGraphAst } from '@sker/workflow';
 import { logger, root } from '@sker/core';
 import * as sdk from '@sker/sdk';
@@ -8,7 +8,7 @@ import { WorkflowService } from '../services/workflow.service';
 import { WorkflowRunService } from '../services/workflow-run.service';
 import { WorkflowTemplateService } from '../services/workflow-template.service';
 import { WorkflowScheduleService } from '../services/workflow-schedule.service';
-import { WorkflowEntity, WorkflowRunEntity, RunStatus, WorkflowScheduleEntity } from '@sker/entities';
+import { WorkflowEntity, WorkflowRunEntity, RunStatus, WorkflowScheduleEntity, ScheduleType, ScheduleStatus } from '@sker/entities';
 
 /**
  * 爬虫工作流触发控制器
@@ -182,8 +182,8 @@ export class WorkflowController implements sdk.WorkflowController {
 
       const events$ = executeAst(target, input, parent);
       return events$;
-    } catch (error: any) {
-      logger.error('execute error', { error: error.message, body });
+    } catch (error: unknown) {
+      logger.error('execute error', { error: error instanceof Error ? error.message : String(error), body });
       throw error;
     }
   }
@@ -221,7 +221,7 @@ export class WorkflowController implements sdk.WorkflowController {
       // 如果提供了配置，应用到节点上
       if (config) {
         Object.keys(config).forEach(key => {
-          (targetNode as any)[key] = config[key];
+          (targetNode as Record<string, unknown>)[key] = config[key];
         });
         logger.info('应用节点配置', { nodeId, config });
       }
@@ -230,7 +230,7 @@ export class WorkflowController implements sdk.WorkflowController {
       targetNode.state = 'running';
       targetNode.error = undefined;
       return executeAstWithWorkflowGraph(targetNode, {}, workflowAst);
-    } catch (error: any) {
+    } catch (error: unknown) {
       throw error;
     }
   }
@@ -305,7 +305,7 @@ export class WorkflowController implements sdk.WorkflowController {
       const nodeStates: Record<string, unknown> = {};
       logger.info('执行结果', { hasNodes: !!ast.nodes, nodeCount: ast.nodes?.length });
       if (ast.nodes) {
-        ast.nodes.forEach((node: any) => {
+        ast.nodes.forEach((node: INode) => {
           nodeStates[node.id] = {
             state: node.state,
             error: node.error,
@@ -342,19 +342,22 @@ export class WorkflowController implements sdk.WorkflowController {
       // 返回更新后的运行实例
       const updatedRun = await this.workflowRunService.getRun(runId);
       return updatedRun!;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      const stack = error instanceof Error ? error.stack : undefined;
+
       logger.error('工作流运行实例执行失败', {
         runId,
-        error: error.message,
-        stack: error.stack,
+        error: message,
+        stack,
       });
 
       // 更新运行状态为失败
       await this.workflowRunService.completeRun(runId, {
         success: false,
         error: {
-          message: error.message || '执行失败',
-          stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+          message: message || '执行失败',
+          stack: process.env.NODE_ENV === 'development' ? stack : undefined,
         },
       });
 
@@ -442,13 +445,14 @@ export class WorkflowController implements sdk.WorkflowController {
       logger.info('运行实例已取消', { runId });
 
       return { success: true };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
       logger.error('取消运行实例失败', {
         runId,
-        error: error.message,
+        error: message,
       });
 
-      throw new BadRequestException(error.message);
+      throw new BadRequestException(message);
     }
   }
 
@@ -494,7 +498,7 @@ export class WorkflowController implements sdk.WorkflowController {
             const targetNode = getNodeById(ast.nodes, nodeId);
             if (targetNode) {
               Object.keys(body.config).forEach(key => {
-                (targetNode as any)[key] = body.config[key];
+                (targetNode as Record<string, unknown>)[key] = body.config[key];
               });
               logger.info('应用节点配置', { nodeId, config: body.config });
             }
@@ -515,8 +519,9 @@ export class WorkflowController implements sdk.WorkflowController {
           observer.error(error);
         });
       });
-    } catch (error: any) {
-      logger.error('节点微调初始化失败', { runId, nodeId, error: error.message });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error('节点微调初始化失败', { runId, nodeId, error: message });
       throw error;
     }
   }
@@ -530,7 +535,7 @@ export class WorkflowController implements sdk.WorkflowController {
    * - 通过元数据确保输出结构的明确性
    * - 避免提取内部状态和配置属性
    */
-  private extractNodeOutputs(node: any): Record<string, unknown> {
+  private extractNodeOutputs(node: INode): Record<string, unknown> {
     const outputs: Record<string, unknown> = {};
 
     try {
@@ -541,8 +546,8 @@ export class WorkflowController implements sdk.WorkflowController {
       const nodeOutputs = node.metadata?.outputs || [];
 
       // 提取输出属性的值
-      nodeOutputs.forEach((meta: OutputMetadata) => {
-        const propertyKey = meta.propertyKey as string;
+      nodeOutputs.forEach((meta: INodeOutputMetadata) => {
+        const propertyKey = meta.property as string;
         const value = node[propertyKey];
 
         if (value !== undefined) {
@@ -598,7 +603,7 @@ export class WorkflowController implements sdk.WorkflowController {
       if (Object.keys(nodeOutputs).length > 0) {
         outputs[node.id] = {
           nodeType: node.type,
-          nodeName: (node as any).name || node.id,
+          nodeName: (node as { name?: string }).name || node.id,
           outputs: nodeOutputs
         };
       }
@@ -631,7 +636,7 @@ export class WorkflowController implements sdk.WorkflowController {
     return this.workflowScheduleService.createSchedule({
       workflowName: body.code,
       name: body.name,
-      scheduleType: body.scheduleType as any,
+      scheduleType: body.scheduleType as ScheduleType,
       cronExpression: body.cronExpression,
       intervalSeconds: body.intervalSeconds,
       inputs: body.inputs || {},
@@ -672,8 +677,8 @@ export class WorkflowController implements sdk.WorkflowController {
   ): Promise<WorkflowScheduleEntity> {
     return this.workflowScheduleService.updateSchedule(scheduleId, {
       ...body,
-      scheduleType: body.scheduleType as any,
-      status: body.status as any,
+      scheduleType: body.scheduleType as ScheduleType,
+      status: body.status as ScheduleStatus,
       startTime: body.startTime ? new Date(body.startTime) : undefined,
       endTime: body.endTime ? new Date(body.endTime) : undefined,
     })
@@ -742,8 +747,9 @@ export class WorkflowController implements sdk.WorkflowController {
 
     // 异步执行，不等待结果
     setImmediate(() => {
-      this.executeRun({ runId: run.id }).catch(error => {
-        logger.error('异步执行工作流失败', { runId: run.id, error: error.message })
+      this.executeRun({ runId: run.id }).catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error);
+        logger.error('异步执行工作流失败', { runId: run.id, error: message })
       })
     })
 
@@ -765,7 +771,7 @@ export class WorkflowController implements sdk.WorkflowController {
     const { NODE } = await import('@sker/workflow');
     const nodeMetadatas = root.get(NODE, []);
 
-    return nodeMetadatas.map((metadata: any) => ({
+    return nodeMetadatas.map((metadata: { target: { name: string }; title?: string; type?: string; description?: string }) => ({
       type: metadata.target.name,
       title: metadata.title || metadata.target.name,
       nodeType: metadata.type || 'basic',

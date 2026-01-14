@@ -1,4 +1,4 @@
-import { Injectable } from '@sker/core';
+import { Injectable, logger } from '@sker/core';
 import { useEntityManager, LlmModelProvider, LlmProvider, LlmChatLog } from '@sker/entities';
 import { Brackets } from 'typeorm';
 import {
@@ -6,6 +6,8 @@ import {
   type OpenAIResponse,
   type ClaudeStreamEvent,
   type OpenAIStreamResponse,
+  type ClaudeRequest,
+  type OpenAIRequest,
 } from '@sker/llm-protocol';
 import {
   ToCodexVisitor,
@@ -28,11 +30,11 @@ import {
 
 interface ProviderInfo {
   providerId: string
-  baseUrl: string
-  apiKey: string
+  baseUrl?: string
+  apiKey?: string
   modelName: string
   standardModelName?: string
-  providerProtocol: string
+  providerProtocol?: string
 }
 
 interface ProxyResult {
@@ -82,18 +84,18 @@ function createSSEDataStream() {
 /**
  * JSON 解析流：容错处理
  */
-function createJSONParseStream<T = any>() {
+function createJSONParseStream<T = unknown>() {
   return new TransformStream<string, T>({
     transform(jsonStr, controller) {
       if (jsonStr === '[DONE]') {
-        controller.enqueue('[DONE]' as any)
+        controller.enqueue('[DONE]' as T)
         return
       }
 
       try {
         controller.enqueue(JSON.parse(jsonStr))
       } catch (err) {
-        console.warn(`[SSE] JSON 解析失败: ${jsonStr.slice(0, 100)}...`)
+        logger.warn(`SSE JSON 解析失败`, { snippet: jsonStr.slice(0, 100) })
       }
     }
   })
@@ -113,7 +115,7 @@ export class LlmProxyService {
     if (!unlockTime) return false
     if (Date.now() >= unlockTime) {
       this.rateLimitedProviders.delete(providerId)
-      console.log(`[LlmProxy] Provider ${providerId} 冷却结束，已解锁`)
+      logger.info(`Provider ${providerId} 冷却结束，已解锁`)
       return false
     }
     return true
@@ -122,7 +124,7 @@ export class LlmProxyService {
   private setRateLimited(providerId: string): void {
     const unlockTime = Date.now() + RATE_LIMIT_COOLDOWN_MS
     this.rateLimitedProviders.set(providerId, unlockTime)
-    console.warn(`[LlmProxy] Provider ${providerId} 被限流，冷却至 ${new Date(unlockTime).toLocaleTimeString()}`)
+    logger.warn(`Provider ${providerId} 被限流`, { unlockTime: new Date(unlockTime).toLocaleTimeString() })
   }
 
   /**
@@ -138,9 +140,9 @@ export class LlmProxyService {
     needsConversion: boolean,
     fromProtocol: string,
     toProtocol: string,
-    data: any,
-    ctx: any
-  ): any {
+    data: unknown,
+    ctx: Record<string, unknown>
+  ): unknown {
     if (!needsConversion) {
       return data
     }
@@ -160,7 +162,7 @@ export class LlmProxyService {
       codexAst.streamEvent = data as CodexResponseEvent
       ast = codexAst
     } else {
-      console.warn(`[LlmProxy] 不支持的源协议: ${fromProtocol}`)
+      logger.warn(`不支持的源协议`, { protocol: fromProtocol })
       return data
     }
 
@@ -173,11 +175,11 @@ export class LlmProxyService {
       } else if (toProtocol === 'codex') {
         return this.toCodexVisitor.visit(ast, ctx)
       } else {
-        console.warn(`[LlmProxy] 不支持的目标协议: ${toProtocol}`)
+        logger.warn(`不支持的目标协议`, { protocol: toProtocol })
         return data
       }
     } catch (error) {
-      console.error(`[LlmProxy] 流式转换失败 ${fromProtocol} → ${toProtocol}:`, error)
+      logger.error(`流式转换失败`, { from: fromProtocol, to: toProtocol, error })
       return data
     }
   }
@@ -187,37 +189,38 @@ export class LlmProxyService {
    * @param chunks 流式事件数组
    * @returns 完整的 Codex 响应对象
    */
-  private buildCodexResponseFromStream(chunks: any[]): any {
+  private buildCodexResponseFromStream(chunks: unknown[]): Record<string, unknown> {
     if (chunks.length === 0) {
       throw new Error('No stream chunks to build response from')
     }
 
     // 查找包含完整响应的事件（通常是最后一个 response.completed 事件）
-    const completedEvent = chunks.find((chunk: any) => chunk.type === 'response.completed')
+    const completedEvent = chunks.find((chunk: unknown) => (chunk as { type?: string }).type === 'response.completed')
 
     // 收集所有文本内容
     const textChunks: string[] = []
     let responseId = ''
-    let tokenUsage: any = null
+    let tokenUsage: Record<string, unknown> | null = null
 
     for (const chunk of chunks) {
-      if (chunk.type === 'response.created' || chunk.type === 'response.output_item.added') {
+      const c = chunk as { type?: string; response_id?: string; delta?: string; token_usage?: Record<string, unknown> }
+      if (c.type === 'response.created' || c.type === 'response.output_item.added') {
         // 初始化事件，可能包含 response_id
-        if (chunk.response_id) {
-          responseId = chunk.response_id
+        if (c.response_id) {
+          responseId = c.response_id
         }
-      } else if (chunk.type === 'response.output_text.delta') {
+      } else if (c.type === 'response.output_text.delta') {
         // 文本增量
-        if (chunk.delta) {
-          textChunks.push(chunk.delta)
+        if (c.delta) {
+          textChunks.push(c.delta)
         }
-      } else if (chunk.type === 'response.completed') {
+      } else if (c.type === 'response.completed') {
         // 完成事件，包含 token usage
-        if (chunk.response_id) {
-          responseId = chunk.response_id
+        if (c.response_id) {
+          responseId = c.response_id
         }
-        if (chunk.token_usage) {
-          tokenUsage = chunk.token_usage
+        if (c.token_usage) {
+          tokenUsage = c.token_usage
         }
       }
     }
@@ -259,7 +262,7 @@ export class LlmProxyService {
    * @param request 请求体
    * @returns 转换后的请求体
    */
-  private convertRequest(fromProtocol: string, toProtocol: string, request: any): any {
+  private convertRequest(fromProtocol: string, toProtocol: string, request: Record<string, unknown>): Record<string, unknown> | null {
     // 协议相同，无需转换
     if (fromProtocol === toProtocol) {
       return request
@@ -269,18 +272,18 @@ export class LlmProxyService {
     let ast: Ast
     if (fromProtocol === 'openai') {
       const openaiAst = new OpenAiRequestAst()
-      openaiAst.request = request
+      openaiAst.request = request as unknown as OpenAIRequest
       ast = openaiAst
     } else if (fromProtocol === 'anthropic') {
       const claudeAst = new ClaudeRequestAst()
-      claudeAst.request = request
+      claudeAst.request = request as unknown as ClaudeRequest
       ast = claudeAst
     } else if (fromProtocol === 'codex') {
       const codexAst = new CodexRequestAst()
-      codexAst.request = request
+      codexAst.request = request as unknown as CodexRequest
       ast = codexAst
     } else {
-      console.error(`[convertRequest] 不支持的源协议: ${fromProtocol}`)
+      logger.error(`不支持的源协议`, { protocol: fromProtocol })
       return null
     }
 
@@ -293,11 +296,11 @@ export class LlmProxyService {
       } else if (toProtocol === 'codex') {
         return this.toCodexVisitor.visit(ast, {})
       } else {
-        console.error(`[convertRequest] 不支持的目标协议: ${toProtocol}`)
+        logger.error(`不支持的目标协议`, { protocol: toProtocol })
         return null
       }
     } catch (error) {
-      console.error(`[convertRequest] 转换失败 ${fromProtocol} → ${toProtocol}:`, error)
+      logger.error(`转换失败`, { from: fromProtocol, to: toProtocol, error })
       return null
     }
   }
@@ -309,7 +312,7 @@ export class LlmProxyService {
    * @param response 响应体
    * @returns 转换后的响应体
    */
-  private convertResponse(fromProtocol: string, toProtocol: string, response: any): any {
+  private convertResponse(fromProtocol: string, toProtocol: string, response: Record<string, unknown>): Record<string, unknown> | null {
     // 协议相同，无需转换
     if (fromProtocol === toProtocol) {
       return response
@@ -319,18 +322,18 @@ export class LlmProxyService {
     let ast: Ast
     if (fromProtocol === 'openai') {
       const openaiAst = new OpenAIResponseAst()
-      openaiAst.response = response as OpenAIResponse
+      openaiAst.response = response as unknown as OpenAIResponse
       ast = openaiAst
     } else if (fromProtocol === 'anthropic') {
       const claudeAst = new ClaudeResponseAst()
-      claudeAst.response = response as ClaudeResponse
+      claudeAst.response = response as unknown as ClaudeResponse
       ast = claudeAst
     } else if (fromProtocol === 'codex') {
       const codexAst = new CodexResponseAst()
-      codexAst.response = response as CodexResponse
+      codexAst.response = response as unknown as CodexResponse
       ast = codexAst
     } else {
-      console.error(`[convertResponse] 不支持的源协议: ${fromProtocol}`)
+      logger.error(`不支持的源协议`, { protocol: fromProtocol })
       return null
     }
 
@@ -343,12 +346,11 @@ export class LlmProxyService {
       } else if (toProtocol === 'codex') {
         return this.toCodexVisitor.visit(ast, {})
       } else {
-        console.error(`[convertResponse] 不支持的目标协议: ${toProtocol}`)
+        logger.error(`不支持的目标协议`, { protocol: toProtocol })
         return null
       }
     } catch (error) {
-      console.error(`[convertResponse] 转换失败 ${fromProtocol} → ${toProtocol}:`, error)
-      console.error(`[convertResponse] 原始响应:`, JSON.stringify(response).slice(0, 1000))
+      logger.error(`转换失败`, { from: fromProtocol, to: toProtocol, error, response: JSON.stringify(response).slice(0, 1000) })
       // 重新抛出异常，让调用方知道转换失败
       throw error
     }
@@ -359,7 +361,23 @@ export class LlmProxyService {
    * @param candidates 已排序的候选列表（按 score DESC）
    * @returns 选中的 provider，如果无候选则返回 undefined
    */
-  private selectProviderWithLoadBalancing(candidates: any[]): any | undefined {
+  private selectProviderWithLoadBalancing(candidates: {
+    provider_score: number;
+    provider_id: string;
+    mp_model_name?: string;
+    standard_model_name?: string;
+    provider_base_url?: string;
+    provider_api_key?: string;
+    provider_protocol?: string;
+  }[]): {
+    provider_score: number;
+    provider_id: string;
+    mp_model_name?: string;
+    standard_model_name?: string;
+    provider_base_url?: string;
+    provider_api_key?: string;
+    provider_protocol?: string;
+  } | undefined {
     if (candidates.length === 0) return undefined
     if (candidates.length === 1) return candidates[0]
 
@@ -391,7 +409,7 @@ export class LlmProxyService {
       // 收集被限流的 provider ID
       const rateLimitedIds = [...this.rateLimitedProviders.keys()].filter(id => this.isRateLimited(id))
 
-      const buildBaseConditions = (qb: any) => {
+      const buildBaseConditions = (qb: { andWhere: (condition: string, params?: Record<string, unknown>) => { andWhere: (condition: string, params?: Record<string, unknown>) => any; orderBy: (column: string, direction: string) => any; getRawMany: () => Promise<{ tier: number }[]> } }) => {
         qb.andWhere('provider.score > 0')
           .andWhere('mp.enabled = true')
         if (requiresThinking) {
@@ -413,7 +431,7 @@ export class LlmProxyService {
       const availableTiers = await tierQuery.orderBy('tier', 'ASC').getRawMany()
 
       if (availableTiers.length === 0) {
-        console.warn(`[findProvider] 未找到可用 provider: model="${requestedModel}", protocol="${protocol}"`)
+        logger.warn(`未找到可用 provider`, { model: requestedModel, protocol })
         return null
       }
 
@@ -443,12 +461,12 @@ export class LlmProxyService {
         if (result?.provider_id) {
           const modelName = result.mp_model_name
           if (!modelName) {
-            console.warn(`[findProvider] provider ${result.provider_id} 的 modelName 为空，跳过`)
+            logger.warn(`provider 的 modelName 为空，跳过`, { providerId: result.provider_id })
             continue
           }
 
           if (!result.standard_model_name) {
-            console.warn(`[findProvider] modelProvider ${result.provider_id} 未关联标准模型`)
+            logger.warn(`modelProvider 未关联标准模型`, { providerId: result.provider_id })
           }
 
           return {
@@ -495,7 +513,7 @@ export class LlmProxyService {
         .andWhere('modelName = :modelName', { modelName })
         .execute()
     })
-    console.warn(`已自动禁用 thinking 支持: provider=${providerId}, model=${modelName}`)
+    logger.warn(`已自动禁用 thinking 支持`, { providerId, modelName })
   }
 
   private calcPenalty(responseMs: number, contentLength: number): number {
@@ -504,7 +522,7 @@ export class LlmProxyService {
     return Math.min(10, Math.max(1, raw))
   }
 
-  async proxyRequest(protocol: string, apiPath: string, body: any, headers: Record<string, string>, contentLength: number): Promise<ProxyResult> {
+  async proxyRequest(protocol: string, apiPath: string, body: Record<string, unknown> & { model?: string }, headers: Record<string, string>, contentLength: number): Promise<ProxyResult> {
     if (!body || typeof body !== 'object') {
       return { success: false, error: '请求体不能为空' }
     }
@@ -530,17 +548,17 @@ export class LlmProxyService {
       // 确保 model 字段不为空，优先使用 provider.modelName，否则 fallback 到原始请求的 model
       const targetModel = provider.modelName || requestedModel
       if (!targetModel) {
-        console.error(`[proxyRequest] model 字段为空，跳过 provider ${provider.providerId}`)
+        logger.error(`model 字段为空，跳过 provider`, { providerId: provider.providerId })
         continue
       }
 
       // 【请求前转换】从 protocol → provider.providerProtocol
       const needsConversion = protocol !== provider.providerProtocol
-      let proxyBody: any = { ...body, model: targetModel }
+      let proxyBody: Record<string, unknown> = { ...body, model: targetModel }
       let proxyPath = apiPath
 
       if (needsConversion) {
-        proxyBody = this.convertRequest(protocol, provider.providerProtocol, { ...body, model: targetModel })
+        const convertedBody = this.convertRequest(protocol, provider.providerProtocol || 'openai', { ...body, model: targetModel })
 
         if (provider.providerProtocol === 'openai') {
           proxyPath = '/chat/completions'
@@ -550,10 +568,11 @@ export class LlmProxyService {
           proxyPath = '/responses'
         }
 
-        if (!proxyBody) {
-          console.error(`[LlmProxy] 请求转换失败: ${protocol} → ${provider.providerProtocol}`)
+        if (!convertedBody) {
+          logger.error(`请求转换失败`, { from: protocol, to: provider.providerProtocol })
           continue
         }
+        proxyBody = convertedBody
       }
 
       // 修复 tool 消息序列问题：如果最后一条消息是 tool 角色，添加提示消息
@@ -571,12 +590,12 @@ export class LlmProxyService {
       // 清理工具参数中的 $schema 字段（仅 OpenAI 协议需要）
       // Codex 和 Anthropic 协议不受影响
       if (proxyBody.tools && Array.isArray(proxyBody.tools) && provider.providerProtocol === 'openai') {
-        proxyBody.tools = proxyBody.tools.map((tool: any) => {
+        proxyBody.tools = proxyBody.tools.map((tool: { function?: { parameters?: Record<string, unknown> } }) => {
           if (tool.function?.parameters) {
-            const cleanParameters = (params: any): any => {
+            const cleanParameters = (params: Record<string, unknown>): Record<string, unknown> => {
               if (typeof params !== 'object' || params === null) return params
 
-              const cleaned = { ...params }
+              const cleaned: Record<string, unknown> = { ...params }
               delete cleaned.$schema
 
               // 递归清理嵌套对象
@@ -590,7 +609,7 @@ export class LlmProxyService {
               }
 
               if (cleaned.items) {
-                cleaned.items = cleanParameters(cleaned.items)
+                cleaned.items = cleanParameters(cleaned.items as Record<string, unknown>)
               }
 
               return cleaned
@@ -600,7 +619,7 @@ export class LlmProxyService {
               ...tool,
               function: {
                 ...tool.function,
-                parameters: cleanParameters(tool.function.parameters)
+                parameters: cleanParameters(tool.function.parameters as Record<string, unknown>) as Record<string, unknown>
               }
             }
           }
@@ -615,7 +634,7 @@ export class LlmProxyService {
         delete proxyBody.enable_thinking
 
         // 如果 thinking 不是对象或格式不正确，转换为标准格式
-        if (typeof proxyBody.thinking !== 'object' || !proxyBody.thinking?.type) {
+        if (typeof proxyBody.thinking !== 'object' || proxyBody.thinking === null || !(proxyBody.thinking as Record<string, unknown>).type) {
           proxyBody.thinking = {
             type: 'enabled',
             budget_tokens: 10000
@@ -641,7 +660,7 @@ export class LlmProxyService {
       const startTime = Date.now()
 
       try {
-        let baseUrl = provider.baseUrl.trim().replace(/\/+$/, '')
+        let baseUrl = (provider.baseUrl || '').trim().replace(/\/+$/, '')
         let path = proxyPath.startsWith('/') ? proxyPath : `/${proxyPath}`
 
         // 检查 baseUrl 是否以 /v1 结尾，避免路径重复
@@ -669,10 +688,10 @@ export class LlmProxyService {
 
         if (response.status === 403 || response.status === 401) {
           await this.setScoreToZero(provider.providerId)
-          console.warn(`${response.status} 权限错误，健康分清零: ${provider.providerId}`)
+          logger.warn(`权限错误，健康分清零`, { status: response.status, providerId: provider.providerId })
         } else if (response.status === 404) {
           await this.setScoreToZero(provider.providerId)
-          console.warn(`404 配置错误，健康分清零: ${provider.providerId}`)
+          logger.warn(`404 配置错误，健康分清零`, { providerId: provider.providerId })
         } else if (response.status === 429) {
           this.setRateLimited(provider.providerId)
           // 打印 429 错误的详细信息
@@ -681,10 +700,7 @@ export class LlmProxyService {
           const bodyPreview = bodyStr.length > 100
             ? `${bodyStr.slice(0, 50)}...${bodyStr.slice(-50)}`
             : bodyStr
-          console.error(`[LlmProxy] 429 限流错误:`)
-          console.error(`  URL: ${url}`)
-          console.error(`  请求头: Authorization=Bearer ${provider.apiKey.slice(0, 20)}...`)
-          console.error(`  请求体: ${bodyPreview}`)
+          logger.error(`429 限流错误`, { url, auth: provider.apiKey ? `Bearer ${provider.apiKey.slice(0, 20)}...` : 'N/A', body: bodyPreview })
         } else if (response.status === 400) {
           await this.updateScore(provider.providerId, -500)
         } else if (response.status === 500) {
@@ -731,7 +747,7 @@ export class LlmProxyService {
 
           // 记录响应体（仅在非成功状态下）
           if (!response.ok) {
-            console.error(`[LlmProxy] 响应体:`, {
+            logger.error(`响应体`, {
               statusCode: response.status,
               responseData: JSON.stringify(responseData, null, 2) // 完整输出，便于调试
             })
@@ -749,7 +765,7 @@ export class LlmProxyService {
 
             if (isThinkingError) {
               await this.disableThinkingSupport(provider.providerId, provider.modelName)
-              console.error(`检测到 thinking 模式不支持错误，已自动禁用: ${provider.modelName}`)
+              logger.error(`检测到 thinking 模式不支持错误，已自动禁用`, { modelName: provider.modelName })
             }
           }
 
@@ -767,19 +783,18 @@ export class LlmProxyService {
           let finalResponse = responseData
           if (needsConversion && response.ok) {
             try {
-              finalResponse = this.convertResponse(provider.providerProtocol, protocol, responseData)
+              finalResponse = this.convertResponse(provider.providerProtocol || 'openai', protocol, responseData)
 
               if (!finalResponse) {
-                console.error(`[LlmProxy] 响应转换返回 null: ${provider.providerProtocol} → ${protocol}`)
+                logger.error(`响应转换返回 null`, { from: provider.providerProtocol, to: protocol })
                 finalResponse = responseData
               }
             } catch (conversionError) {
-              console.error(`[LlmProxy] 响应转换异常:`, conversionError)
-              console.error(`[LlmProxy] 请求详情: URL=${url}, 模型=${proxyBody.model}, 协议: ${provider.providerProtocol} → ${protocol}`)
+              logger.error(`响应转换异常`, { error: conversionError, url, model: proxyBody.model, protocol: `${provider.providerProtocol} → ${protocol}` })
 
               // 检查是否是 BigModel 的非标准错误响应
-              if ((responseData as any).code && (responseData as any).success === false) {
-                console.warn(`[LlmProxy] 检测到非标准错误格式: URL=${url}, 模型=${proxyBody.model}`)
+              if ((responseData as { code?: unknown; success?: boolean }).code && (responseData as { code?: unknown; success?: boolean }).success === false) {
+                logger.warn(`检测到非标准错误格式`, { url, model: proxyBody.model })
                 // 转换为标准的 OpenAI 错误格式
                 return {
                   success: false,
@@ -837,9 +852,9 @@ export class LlmProxyService {
         if (forceStreamForCodex) {
           // 如果响应失败（HTTP 4xx/5xx），直接收集错误并返回
           if (!response.ok) {
-            console.error('[LlmProxy] Codex 流式请求返回错误状态:', response.status)
+            logger.error('Codex 流式请求返回错误状态', { status: response.status })
 
-            const chunks: any[] = []
+            const chunks: unknown[] = []
             const reader = response.body
               .pipeThrough(createSSELineStream())
               .pipeThrough(createSSEDataStream())
@@ -856,20 +871,20 @@ export class LlmProxyService {
               }
 
               // 查找错误事件
-              const errorEvent = chunks.find((chunk: any) => chunk.type === 'error' || chunk.error)
-              const errorMessage = errorEvent?.message || errorEvent?.error?.message || 'Unknown error'
+              const errorEvent = chunks.find((chunk: unknown) => (chunk as { type?: string; error?: unknown }).type === 'error' || (chunk as { error?: unknown }).error)
+              const errorMessage = (errorEvent as { message?: string; error?: { message?: string } })?.message || (errorEvent as { error?: { message?: string } })?.error?.message || 'Unknown error'
 
-              console.error('[LlmProxy] Codex 错误:', errorMessage)
+              logger.error('Codex 错误', { message: errorMessage })
 
               // 返回错误响应，让外层重试逻辑处理
               throw new Error(errorMessage)
             } catch (streamError) {
-              console.error('[LlmProxy] Codex 错误流收集失败:', streamError)
+              logger.error('Codex 错误流收集失败', { error: streamError })
               throw streamError
             }
           }
 
-          const chunks: any[] = []
+          const chunks: unknown[] = []
           const reader = response.body
             .pipeThrough(createSSELineStream())
             .pipeThrough(createSSEDataStream())
@@ -882,11 +897,11 @@ export class LlmProxyService {
               if (done) break
               if (value && value !== '[DONE]') {
                 chunks.push(value)
-                // 提取 usage 信息
-                if (value.usage) {
+                const v = value as { usage?: { input_tokens?: number; output_tokens?: number } }
+                if (v.usage) {
                   if (!usage) usage = {}
-                  if (value.usage.input_tokens) usage.input_tokens = value.usage.input_tokens
-                  if (value.usage.output_tokens) usage.output_tokens = value.output_tokens
+                  if (v.usage.input_tokens) usage.input_tokens = v.usage.input_tokens
+                  if (v.usage.output_tokens) usage.output_tokens = v.usage.output_tokens
                 }
               }
             }
@@ -897,7 +912,10 @@ export class LlmProxyService {
             // 如果需要协议转换，则转换
             let finalResponse = fullResponse
             if (needsConversion) {
-              finalResponse = this.convertResponse(provider.providerProtocol, protocol, fullResponse)
+              const converted = this.convertResponse(provider.providerProtocol || 'openai', protocol, fullResponse)
+              if (converted) {
+                finalResponse = converted
+              }
             }
 
             // 打印最终响应预览
@@ -908,21 +926,28 @@ export class LlmProxyService {
 
             // 提取并打印文本内容
             let textContent = ''
-            if (finalResponse.choices?.[0]?.message?.content) {
-              // OpenAI 格式
-              textContent = finalResponse.choices[0].message.content
-            } else if (finalResponse.output?.[0]?.content?.[0]?.text) {
-              // Codex 格式
-              textContent = finalResponse.output[0].content[0].text
-            } else if (finalResponse.content?.[0]?.text) {
-              // Claude 格式
-              textContent = finalResponse.content[0].text
+            const resp = finalResponse as Record<string, unknown>
+            if (resp.choices && Array.isArray(resp.choices) && resp.choices[0]) {
+              const choice0 = resp.choices[0] as { message?: { content?: string } }
+              if (choice0.message?.content) {
+                textContent = choice0.message.content
+              }
+            } else if (resp.output && Array.isArray(resp.output) && resp.output[0]) {
+              const output0 = resp.output[0] as { content?: Array<{ text?: string }> }
+              if (output0.content && output0.content[0]?.text) {
+                textContent = output0.content[0].text
+              }
+            } else if (resp.content && Array.isArray(resp.content) && resp.content[0]) {
+              const content0 = resp.content[0] as { text?: string }
+              if (content0.text) {
+                textContent = content0.text
+              }
             }
             if (textContent) {
               const textPreview = textContent.length > 100
                 ? `${textContent.slice(0, 100)}...${textContent.slice(-100)}`
                 : textContent
-              console.log(`[LlmProxy] 返回文本: ${textPreview}`)
+              logger.info(`返回文本`, { preview: textPreview })
             }
 
             await this.saveLog({
@@ -943,7 +968,7 @@ export class LlmProxyService {
               })
             }
           } catch (streamError) {
-            console.error('[LlmProxy] Codex 流式响应收集失败:', streamError)
+            logger.error('Codex 流式响应收集失败', { error: streamError })
             throw streamError
           }
         }
@@ -957,7 +982,7 @@ export class LlmProxyService {
           .pipeThrough(createSSEDataStream())
           .pipeThrough(createJSONParseStream())
           .pipeThrough(new TransformStream({
-            transform: (data, controller) => {
+            transform: (data: unknown, controller) => {
               // 打印流数据概览（前10 + ... + 后10字符）
               if (data && typeof data === 'object') {
                 const dataStr = JSON.stringify(data)
@@ -972,9 +997,12 @@ export class LlmProxyService {
                 return
               }
 
+              const d = data as Record<string, unknown>
+
               // 检测流式响应中的 thinking 错误
-              if (!thinkingErrorDetected && response.status === 400 && requiresThinking && data.error) {
-                const errorMessage = data.error.message || JSON.stringify(data.error)
+              if (!thinkingErrorDetected && response.status === 400 && requiresThinking && d.error) {
+                const errorObj = d.error as { message?: string } | string
+                const errorMessage = typeof errorObj === 'string' ? errorObj : (errorObj.message || JSON.stringify(errorObj))
                 const isThinkingError =
                   errorMessage.includes('thinking') &&
                   (errorMessage.includes('Expected `thinking`') ||
@@ -984,20 +1012,21 @@ export class LlmProxyService {
 
                 if (isThinkingError) {
                   thinkingErrorDetected = true
-                  this.disableThinkingSupport(provider.providerId, provider.modelName).catch(console.error)
-                  console.error(`检测到 thinking 模式不支持错误（流式），已自动禁用: ${provider.modelName}`)
+                  this.disableThinkingSupport(provider.providerId, provider.modelName).catch((err: unknown) => logger.error('禁用 thinking 支持失败', { error: err }))
+                  logger.error(`检测到 thinking 模式不支持错误（流式），已自动禁用`, { modelName: provider.modelName })
                 }
               }
 
               // 提取 usage 信息
-              if (data.usage) {
+              if (d.usage) {
+                const usageObj = d.usage as { input_tokens?: number; output_tokens?: number }
                 if (!usage) usage = {}
-                if (data.usage.input_tokens) usage.input_tokens = data.usage.input_tokens
-                if (data.usage.output_tokens) usage.output_tokens = data.usage.output_tokens
+                if (usageObj.input_tokens) usage.input_tokens = usageObj.input_tokens
+                if (usageObj.output_tokens) usage.output_tokens = usageObj.output_tokens
               }
 
               // 协议转换（使用 Visitor）
-              const converted = this.convertStreamEvent(needsConversion, provider.providerProtocol, protocol, data, conversionCtx)
+              const converted = this.convertStreamEvent(needsConversion, provider.providerProtocol || 'openai', protocol, data, conversionCtx)
 
               // 输出转换后的事件
               if (converted !== null && converted !== undefined) {
@@ -1039,12 +1068,13 @@ export class LlmProxyService {
           ? `${bodyStr.slice(0, 50)}...${bodyStr.slice(-50)}`
           : bodyStr
 
-        console.error(`[LlmProxy] 请求失败（重试 ${attempt + 1}/${MAX_RETRIES}）`)
-        console.error(`  URL: ${url}`)
-        console.error(`  请求头: Authorization=Bearer ${provider.apiKey.slice(0, 20)}...`)
-        console.error(`  请求体: ${bodyPreview}`)
-        console.error(`  错误: ${error instanceof Error ? error.message : String(error)}`)
-        console.error(`  超时: ${isTimeout}`)
+        logger.error(`请求失败（重试 ${attempt + 1}/${MAX_RETRIES}）`, {
+          url,
+          auth: provider.apiKey ? `Bearer ${provider.apiKey.slice(0, 20)}...` : 'N/A',
+          body: bodyPreview,
+          error: error instanceof Error ? error.message : String(error),
+          isTimeout
+        })
 
         await this.updateScore(provider.providerId, isTimeout ? -100 : -1000)
 
@@ -1066,7 +1096,7 @@ export class LlmProxyService {
   private async saveLog(params: {
     providerId: string
     modelName: string
-    request: any
+    request: Record<string, unknown>
     durationMs: number
     isSuccess: boolean
     statusCode: number
@@ -1090,7 +1120,7 @@ export class LlmProxyService {
         return log.id
       })
     } catch (err) {
-      console.error('日志记录失败:', err)
+      logger.error('日志记录失败', { error: err })
       return undefined
     }
   }
@@ -1105,7 +1135,7 @@ export class LlmProxyService {
         })
       })
     } catch (err) {
-      console.error('更新 token 失败:', err)
+      logger.error('更新 token 失败', { error: err })
     }
   }
 }

@@ -5,6 +5,7 @@ import * as path from 'path';
 import { generateRandomString } from '@sker/utils';
 import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
+import { logger } from '@sker/core';
 
 @Injectable({ providedIn: 'root' })
 export class UploadService {
@@ -74,8 +75,8 @@ export class UploadService {
 
     try {
       await fs.unlink(filepath);
-    } catch {
-      // 文件不存在时忽略
+    } catch (error) {
+      logger.warn('文件删除失败', { filepath, error: error instanceof Error ? error.message : String(error) });
     }
   }
 }
