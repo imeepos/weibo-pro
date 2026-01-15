@@ -17,7 +17,11 @@ import {
   Zap,
   Target,
   Minus,
-  Globe
+  Globe,
+  Network,
+  TrendingUp as TrendIcon,
+  Sprout,
+  Ghost
 } from 'lucide-react';
 import { cn, formatNumber, formatRelativeTime } from '@/utils';
 import { createLogger } from '@sker/core';
@@ -26,6 +30,7 @@ import { Button } from '@sker/ui/components/ui/button';
 import { Badge } from '@sker/ui/components/ui/badge';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@sker/ui/components/ui/card';
 import { Skeleton } from '@sker/ui/components/ui/skeleton';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@sker/ui/components/ui/tabs';
 
 import MiniTrendChart from '@/components/charts/MiniTrendChart';
 import TimeSeriesChart from '@/components/charts/TimeSeriesChart';
@@ -435,54 +440,102 @@ const EventDetail: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* 单页内容布局 */}
-      <div className="space-y-6">
-        {/* 用户关系网络 */}
-        <div className="bg-muted/20 rounded-lg p-6">
-          <h4 className="text-lg font-semibold text-foreground mb-4 flex items-center">
-            <Users className="w-5 h-5 mr-2" />
-            用户关系网络
-          </h4>
-          {userRelationNetwork && userRelationNetwork.nodes.length > 0 ? (
-            <div className="h-[500px]">
-              <UserRelationGraph3DOffscreen
-                network={userRelationNetwork}
-                className="w-full h-full"
-                edgeThreshold={10}
-              />
-            </div>
-          ) : (
-            <div className="h-[500px] flex items-center justify-center text-muted-foreground">
-              暂无用户关系数据
-            </div>
-          )}
-        </div>
+      {/* 图表分析区域 - Tab 切换 */}
+      <Tabs defaultValue="network" className="w-full">
+        <TabsList className="grid w-full grid-cols-4 bg-muted/20">
+          <TabsTrigger value="network" className="data-[state=active]:bg-primary/20">
+            <Network className="w-4 h-4 mr-2" />
+            关系网络
+          </TabsTrigger>
+          <TabsTrigger value="trend" className="data-[state=active]:bg-primary/20">
+            <TrendIcon className="w-4 h-4 mr-2" />
+            趋势分析
+          </TabsTrigger>
+          <TabsTrigger value="sentiment" className="data-[state=active]:bg-primary/20">
+            <Heart className="w-4 h-4 mr-2" />
+            情感分析
+          </TabsTrigger>
+          <TabsTrigger value="content" className="data-[state=active]:bg-primary/20">
+            <Sprout className="w-4 h-4 mr-2" />
+            内容分析
+          </TabsTrigger>
+        </TabsList>
 
-        {/* 时间趋势区域 */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col gap-6"
-        >
-          {/* 核心指标时间趋势图（MultiMetricTrendChart） */}
+        {/* 关系网络 Tab */}
+        <TabsContent value="network" className="mt-6">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <div className="bg-muted/20 rounded-lg p-6">
+              <h4 className="text-lg font-semibold text-foreground mb-4 flex items-center">
+                <Users className="w-5 h-5 mr-2" />
+                用户关系网络
+              </h4>
+              {userRelationNetwork && userRelationNetwork.nodes.length > 0 ? (
+                <div className="h-[600px]">
+                  <UserRelationGraph3DOffscreen
+                    network={userRelationNetwork}
+                    className="w-full h-full"
+                    edgeThreshold={10}
+                  />
+                </div>
+              ) : (
+                <div className="h-[600px] flex items-center justify-center text-muted-foreground">
+                  暂无用户关系数据
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </TabsContent>
+
+        {/* 趋势分析 Tab */}
+        <TabsContent value="trend" className="mt-6">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
+            className="space-y-6"
+          >
+            {/* 核心指标时间趋势图 */}
             <div className="bg-muted/30 rounded-lg p-6">
               <h3 className="text-foreground mb-4 flex items-center">
                 <Activity className="w-5 h-5 mr-2" />
                 核心指标时间趋势
               </h3>
-              <MultiMetricTrendChart data={engagementTrendData} height={320} />
+              <MultiMetricTrendChart data={engagementTrendData} height={400} />
             </div>
 
-            {/* 互动指标分解图（EngagementTrendChart） */}
+            {/* 互动指标分解图 */}
             <div className="bg-muted/30 rounded-lg p-6">
               <h3 className="text-foreground mb-4 flex items-center">
                 <BarChart3 className="w-5 h-5 mr-2" />
                 互动指标分解
               </h3>
-              <EngagementTrendChart data={engagementTrendData} height={280} />
+              <EngagementTrendChart data={engagementTrendData} height={350} />
             </div>
 
-            {/* 情感趋势图 */}
+            {/* 异常检测时间线 */}
+            <div className="bg-muted/30 rounded-lg p-6">
+              <h3 className="text-foreground mb-4 flex items-center">
+                <AlertTriangle className="w-5 h-5 mr-2" />
+                异常检测时间线
+              </h3>
+              <AnomalyTimelineChart data={anomaliesData} height={300} />
+            </div>
+          </motion.div>
+        </TabsContent>
+
+        {/* 情感分析 Tab */}
+        <TabsContent value="sentiment" className="mt-6">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
+            className="space-y-6"
+          >
+            {/* 情感变化趋势图 */}
             <div className="bg-muted/30 rounded-lg p-6">
               <h3 className="text-foreground mb-4 flex items-center">
                 <Heart className="w-5 h-5 mr-2" />
@@ -491,59 +544,52 @@ const EventDetail: React.FC = () => {
               <TimeSeriesChart
                 data={timeSeriesData}
                 title=""
-                height={250}
+                height={350}
               />
             </div>
 
-            {/* 异常检测时间线（AnomalyTimelineChart） */}
+            {/* 情感分析散点图和强度谱 */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-muted/30 rounded-lg p-6">
+                <SentimentHotnessScatterChart
+                  title="情感-热度关联分析"
+                  height={400}
+                  data={sentimentHotnessData}
+                />
+              </div>
+              <div className="bg-muted/30 rounded-lg p-6">
+                <SentimentIntensityChart
+                  title="情感强度谱"
+                  height={400}
+                  data={sentimentIntensityData}
+                />
+              </div>
+            </div>
+          </motion.div>
+        </TabsContent>
+
+        {/* 内容分析 Tab */}
+        <TabsContent value="content" className="mt-6">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
+          >
             <div className="bg-muted/30 rounded-lg p-6">
               <h3 className="text-foreground mb-4 flex items-center">
-                <AlertTriangle className="w-5 h-5 mr-2" />
-                异常检测时间线
+                <Globe className="w-5 h-5 mr-2" />
+                事件关键词云
               </h3>
-              <AnomalyTimelineChart data={anomaliesData} height={250} />
-            </div>
-
-          {/* 事件关键词云 */}
-          <div className="bg-muted/30 rounded-lg p-6">
-            <h3 className="text-foreground mb-4 flex items-center">
-              <Globe className="w-5 h-5 mr-2" />
-              事件关键词云
-            </h3>
-            <WordCloudChart
-              title=""
-              height={320}
-              maxWords={1000}
-              data={keywordData}
-            />
-          </div>
-        </motion.div>
-
-        {/* 深度洞察区域 */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-6"
-        >
-          {/* 情感分析 */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-muted/30 rounded-lg p-6">
-              <SentimentHotnessScatterChart
-                title="情感-热度关联分析"
-                height={320}
-                data={sentimentHotnessData}
+              <WordCloudChart
+                title=""
+                height={600}
+                maxWords={1000}
+                data={keywordData}
               />
             </div>
-            <div className="bg-muted/30 rounded-lg p-6">
-              <SentimentIntensityChart
-                title="情感强度谱"
-                height={320}
-                data={sentimentIntensityData}
-              />
-            </div>
-          </div>
-        </motion.div>
-      </div>
+          </motion.div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
