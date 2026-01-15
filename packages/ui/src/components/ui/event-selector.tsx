@@ -87,7 +87,10 @@ function EventSelector({
               <div
                 key={event.id}
                 data-slot="event-item"
-                onClick={() => handleSelect(event.id)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleSelect(event.id)
+                }}
                 className={cn(
                   "border-border flex cursor-pointer items-start gap-3 border-b p-3 transition-colors last:border-b-0",
                   selected
