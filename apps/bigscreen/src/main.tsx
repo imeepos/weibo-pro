@@ -11,6 +11,8 @@ import App from './App';
 import '@sker/ui/globals.css'
 import '@sker/workflow-ui/styles'
 import { createLogger } from './utils';
+import { createAuthClient } from 'better-auth/client';
+import { createSkerClientPlugin } from '@sker/sdk';
 
 const logger = createLogger('main');
 
@@ -28,9 +30,6 @@ const baseURL = getBaseUrl();
 let auth: any = null;
 (async () => {
   try {
-    const { createAuthClient } = await import('better-auth/client');
-    const { createSkerClientPlugin } = await import('@sker/sdk');
-
     auth = createAuthClient({
       baseURL,
       plugins: [createSkerClientPlugin()]
