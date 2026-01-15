@@ -43,7 +43,7 @@ export class BrowserRenderHandler {
 
       // 设置 Cookie
       if (req.cookies) {
-        const cookies = this.parseCookieString(req.cookies);
+        const cookies = this.parseCookieString(req.cookies, req.url);
         if (cookies.length > 0) {
           await page.setCookie(...cookies);
         }
@@ -92,14 +92,25 @@ export class BrowserRenderHandler {
     }
   }
 
-  private static parseCookieString(cookieString: string): Array<{ name: string; value: string }> {
-    const cookies: Array<{ name: string; value: string }> = [];
+  private static parseCookieString(cookieString: string, url?: string): Array<{ name: string; value: string; domain?: string }> {
+    const cookies: Array<{ name: string; value: string; domain?: string }> = [];
     if (!cookieString?.trim()) return cookies;
+
+    // 从 URL 提取 domain
+    let domain: string | undefined;
+    if (url) {
+      try {
+        const urlObj = new URL(url);
+        domain = urlObj.hostname;
+      } catch {
+        // URL 解析失败，忽略 domain
+      }
+    }
 
     cookieString.split(';').forEach(cookie => {
       const [name, ...valueParts] = cookie.trim().split('=');
       if (name && valueParts.length > 0) {
-        cookies.push({ name: name.trim(), value: valueParts.join('=').trim() });
+        cookies.push({ name: name.trim(), value: valueParts.join('=').trim(), domain });
       }
     });
     return cookies;
