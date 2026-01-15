@@ -67,8 +67,7 @@ export { LastAst } from './basic/LastAst';
 export { ClaudeCodeAst, type ClaudeStreamEvent } from './basic/ClaudeCodeAst';
 export { SmartAstV1 } from './basic/SmartAstV1';
 
-// CONTROL 节点 (3个)
-export { LlmCategoryAst } from './control/LlmCategoryAst';
+// CONTROL 节点 (1个)
 export { StoryQualityLoopAst } from './control/StoryQualityLoopAst';
 
 // SENTIMENT 节点 (6个)

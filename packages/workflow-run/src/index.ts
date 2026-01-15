@@ -27,7 +27,6 @@ export { WeiboLoginAstVisitor } from './WeiboLoginAstVisitor'
 export { WeiboAccountPickAstVisitor } from './WeiboAccountPickAstVisitor'
 export { LlmTextAgentAstVisitor } from './LlmTextAgentAstVisitor'
 export { LlmStructuredOutputAstVisitor } from './LlmStructuredOutputAstVisitor'
-export { LlmCategoryAstVisitor } from './LlmCategoryAstVisitor'
 export { StoryWeaverAstVisitor } from './StoryWeaverAstVisitor'
 
 // 消息队列节点
