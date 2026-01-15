@@ -88,15 +88,19 @@ export class EventsService {
             : 'stable'
         : ('stable' as const);
 
+    // 如果 stats 的 sentiment 是默认值且没有实际数据，fallback 到 event.sentiment
+    const hasValidSentiment = latestStats?.sentiment && latestStats.sentiment.positive + latestStats.sentiment.negative > 0.01;
+    const sentiment = hasValidSentiment
+      ? latestStats!.sentiment
+      : event.sentiment || { positive: 0, negative: 0, neutral: 0 };
+
     return {
       id: event.id,
       title: event.title,
       description: event.description || '',
       postCount: latestStats?.post_count || 0,
       userCount: latestStats?.user_count || 0,
-      sentiment:
-        latestStats?.sentiment ||
-        event.sentiment || { positive: 0, negative: 0, neutral: 0 },
+      sentiment,
       hotness: event.hotness,
       trend,
       category: event.category?.name || '未分类',

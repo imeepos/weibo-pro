@@ -98,7 +98,7 @@ export class EventQueryService {
 
         const data = events.map((event) => {
           const stats = allStatistics.find(s => s.event_id === event.id);
-          const displayHotness = displayHotnessMap.get(event.id) ?? 0;
+          const displayHotness = Math.round((displayHotnessMap.get(event.id) ?? 0) * 100) / 100;
           return this.mapEventToListItem(
             event,
             stats ? [stats] : [],
@@ -569,20 +569,20 @@ export class EventQueryService {
     const latestStats =
       statistics && statistics.length > 0 ? statistics[0] : null;
 
+    // 如果 stats 的 sentiment 是默认值且没有实际数据，fallback 到 event.sentiment
+    const hasValidSentiment = latestStats?.sentiment && latestStats.sentiment.positive + latestStats.sentiment.negative > 0.01;
+    const sentiment = hasValidSentiment
+      ? latestStats!.sentiment
+      : (event.sentiment as SentimentScore) || { positive: 0, negative: 0, neutral: 0 };
+
     return {
       id: event.id,
       title: event.title,
       description: event.description || '',
       postCount: latestStats?.post_count || 0,
       userCount: latestStats?.user_count || 0,
-      sentiment:
-        latestStats?.sentiment ||
-        (event.sentiment as SentimentScore) || {
-          positive: 0,
-          negative: 0,
-          neutral: 0,
-        },
-      hotness: displayHotness, // 使用展示热度（带时间衰减）
+      sentiment,
+      hotness: displayHotness,
       trend: this.calculateTrend(statistics),
       category: event.category?.name || '未分类',
       keywords: [],

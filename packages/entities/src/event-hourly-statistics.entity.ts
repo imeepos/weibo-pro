@@ -60,7 +60,7 @@ export class EventHourlyStatisticsEntity {
   @Column({ type: 'integer', default: 0, name: 'user_count', comment: '去重用户数' })
   user_count!: number;
 
-  @Column({ type: 'decimal', precision: 5, scale: 2, default: 0, comment: '热度值，由 post_count、comment_count、repost_count、like_count、user_count 加权计算' })
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0, comment: '热度值，由 post_count、comment_count、repost_count、like_count、user_count 加权计算' })
   hotness!: number;
 
   @Column({ type: 'integer', default: 0, name: 'nlp_count', comment: 'NLP 结果数量，用于情感增量计算' })
