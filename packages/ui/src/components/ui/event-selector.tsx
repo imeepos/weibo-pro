@@ -87,7 +87,8 @@ function EventSelector({
               <div
                 key={event.id}
                 data-slot="event-item"
-                onClick={(e) => {
+                onPointerDown={(e) => {
+                  e.preventDefault()
                   e.stopPropagation()
                   handleSelect(event.id)
                 }}
