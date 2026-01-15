@@ -7,7 +7,7 @@
     "dev": "pnpm exec vite --port 9088",
     "build": "pnpm exec vite build",
     "build:cloudflare": "tsx scripts/build-cloudflare.ts",
-    "deploy": "pnpx wrangler@latest deploy",
+    "deploy": "pnpm run build && pnpx wrangler@latest deploy",
     "test": "vitest run",
     "test:run": "vitest run",
     "test:ui": "vitest --ui",
