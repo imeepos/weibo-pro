@@ -119,6 +119,10 @@ async function bootstrap() {
     database: new Pool({
       connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/weibo'
     }),
+    // 禁用全局限流
+    rateLimit: {
+      enabled: false,
+    },
     trustedOrigins: (request) => {
       const allowedOrigins = [
         'https://',
@@ -253,6 +257,8 @@ async function bootstrap() {
         // 生产环境 origin
         'http://43.240.223.138:8088',
         'http://43.240.223.138',
+        'https://wb.sker.us',
+        'https://*.sker.us',
       ],
       credentials: true,
     }
