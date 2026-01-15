@@ -60,6 +60,35 @@ export interface StreamSender {
 }
 
 /**
+ * 浏览器渲染请求
+ */
+export interface BrowserRenderRequest {
+  url: string;
+  cookies?: string;
+  userAgent?: string;
+  timeout?: number;
+  waitForSelector?: string;
+}
+
+/**
+ * 浏览器渲染响应
+ */
+export interface BrowserRenderResponse {
+  html: string;
+  title?: string;
+  url?: string;
+}
+
+/**
+ * 浏览器渲染错误
+ */
+export interface BrowserRenderError {
+  error: string;
+  message: string;
+  details?: unknown;
+}
+
+/**
  * 环境变量
  */
 export interface Env {
@@ -67,4 +96,7 @@ export interface Env {
 
   /** Streams 日志管道绑定 */
   LOGS_STREAM?: StreamSender;
+
+  /** Browser Rendering API 绑定 */
+  BROWSER?: any;
 }

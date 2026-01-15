@@ -3,6 +3,7 @@ import { Handler, NodeEvent, setAstError } from "@sker/workflow";
 import { WeiboKeywordSearchAst } from "@sker/workflow-ast";
 import { WeiboHtmlParser } from "./services/WeiboHtmlParser";
 import { PlaywrightService } from "./services/PlaywrightService";
+import { WorkerBrowserService } from "./services/WorkerBrowserService";
 import { WeiboAccountService } from "./services/weibo-account.service";
 import { DelayService } from "./services/delay.service";
 import { Observable, Subscriber, from } from "rxjs";
@@ -21,6 +22,7 @@ export class WeiboKeywordSearchAstVisitor {
     constructor(
         @Inject(WeiboHtmlParser) private parser: WeiboHtmlParser,
         @Inject(PlaywrightService) private playwright: PlaywrightService,
+        @Inject(WorkerBrowserService) private workerBrowser: WorkerBrowserService,
         @Inject(WeiboAccountService) private account: WeiboAccountService,
         @Inject(DelayService) private delayService: DelayService
     ) { }
@@ -117,7 +119,7 @@ export class WeiboKeywordSearchAstVisitor {
             throw new Error('工作流已取消');
         }
 
-        let html = await this.playwright.getHtml(url, selection.cookieHeader, `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36`);
+        let html = await this.getHtmlWithFallback(url, selection.cookieHeader, `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36`);
         let result = this.parser.parseSearchResultHtml(html);
 
         for (const post of result.posts) {
@@ -190,7 +192,7 @@ export class WeiboKeywordSearchAstVisitor {
                         throw new Error('下一页链接为空');
                     }
 
-                    html = await this.playwright.getHtml(result.nextPageLink, selection.cookieHeader, `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36`);
+                    html = await this.getHtmlWithFallback(result.nextPageLink, selection.cookieHeader, `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36`);
                     result = this.parser.parseSearchResultHtml(html);
 
                     ast.currentPage = currentPageNum;
@@ -313,3 +315,21 @@ const formatDate = (date: Date | string | number | object | undefined | null) =>
         String(time.getHours()).padStart(2, '0'),
     ].join('-');
 };
+
+private async getHtmlWithFallback(url: string, cookies: string, ua: string): Promise<string> {
+    const workerEnabled = process.env.WORKER_BROWSER_ENABLED === 'true';
+
+    if (workerEnabled) {
+        try {
+            return await this.workerBrowser.getHtml(url, cookies, ua);
+        } catch (error) {
+            logger.warn('[WorkerBrowser] 失败，降级到本地 Playwright', {
+                url,
+                error: (error as Error).message
+            });
+        }
+    }
+
+    // 降级到本地 Playwright
+    return await this.playwright.getHtml(url, cookies, ua);
+}

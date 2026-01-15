@@ -2,6 +2,7 @@ import type { Env } from './types';
 import { ProxyHandler } from './handlers/proxy.handler';
 import { WeiboProxyHandler } from './handlers/weibo-proxy.handler';
 import { HealthHandler } from './handlers/health.handler';
+import { BrowserRenderHandler } from './handlers/browser-render.handler';
 import { CorsHandler } from './utils/cors';
 
 export default {
@@ -28,6 +29,11 @@ export default {
         return CorsHandler.addCorsHeaders(response, request);
       }
 
+      if (path === '/browser-render' && request.method === 'POST') {
+        const response = await BrowserRenderHandler.handle(request, env);
+        return CorsHandler.addCorsHeaders(response, request);
+      }
+
       return new Response(JSON.stringify({
         error: 'Not Found',
         message: 'Endpoint not found',
@@ -35,6 +41,7 @@ export default {
           'GET /health - Health check',
           'POST /proxy - Generic proxy',
           'POST /weibo-proxy - Weibo专用代理',
+          'POST /browser-render - Browser rendering',
         ],
       }), {
         status: 404,

@@ -1,0 +1,36 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "weibo-proxy-worker",
+  "main": "src/index.ts",
+  "compatibility_date": "2024-01-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "account_id": "768c876155e77e3a6e52a855489a6c8a",
+
+  // 可观测性配置
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1
+    },
+    "traces": {
+      "enabled": true,
+      "head_sampling_rate": 1
+    }
+  },
+
+  // 日志管道
+  "pipelines": [
+    {
+      "pipeline": "8d3e4e99b9834e08a7130e61c34999be",
+      "binding": "LOGS_STREAM"
+    }
+  ],
+
+  // 浏览器渲染绑定
+  "browser_rendering": [
+    {
+      "binding": "BROWSER"
+    }
+  ]
+}
