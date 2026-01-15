@@ -27,10 +27,7 @@
     }
   ],
 
-  // 浏览器渲染绑定
-  "browser_rendering": [
-    {
-      "binding": "BROWSER"
-    }
-  ]
+  // 浏览器渲染绑定 (需要在 dashboard 中手动启用)
+  // https://developers.cloudflare.com/browser-rendering/
+  // 绑定名称: BROWSER
 }
