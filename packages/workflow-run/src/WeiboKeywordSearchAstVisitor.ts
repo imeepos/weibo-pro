@@ -278,6 +278,24 @@ export class WeiboKeywordSearchAstVisitor {
             }
         }
     }
+
+    private async getHtmlWithFallback(url: string, cookies: string, ua: string): Promise<string> {
+        const workerEnabled = process.env.WORKER_BROWSER_ENABLED === 'true';
+
+        if (workerEnabled) {
+            try {
+                return await this.workerBrowser.getHtml(url, cookies, ua);
+            } catch (error) {
+                logger.warn('[WorkerBrowser] 失败，降级到本地 Playwright', {
+                    url,
+                    error: (error as Error).message
+                });
+            }
+        }
+
+        // 降级到本地 Playwright
+        return await this.playwright.getHtml(url, cookies, ua);
+    }
 }
 
 const formatDate = (date: Date | string | number | object | undefined | null) => {
@@ -315,21 +333,3 @@ const formatDate = (date: Date | string | number | object | undefined | null) =>
         String(time.getHours()).padStart(2, '0'),
     ].join('-');
 };
-
-private async getHtmlWithFallback(url: string, cookies: string, ua: string): Promise<string> {
-    const workerEnabled = process.env.WORKER_BROWSER_ENABLED === 'true';
-
-    if (workerEnabled) {
-        try {
-            return await this.workerBrowser.getHtml(url, cookies, ua);
-        } catch (error) {
-            logger.warn('[WorkerBrowser] 失败，降级到本地 Playwright', {
-                url,
-                error: (error as Error).message
-            });
-        }
-    }
-
-    // 降级到本地 Playwright
-    return await this.playwright.getHtml(url, cookies, ua);
-}
