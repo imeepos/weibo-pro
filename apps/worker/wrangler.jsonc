@@ -12,17 +12,13 @@
     "logs": {
       "enabled": true,
       "head_sampling_rate": 1
-    },
-    "traces": {
-      "enabled": true,
-      "head_sampling_rate": 1
     }
   },
 
-  // 日志管道
+  // In your wrangler.json
   "pipelines": [
     {
-      "pipeline": "f40b5245b39a4eafb4fdf734aa71b072",
+      "pipeline": "8d3e4e99b9834e08a7130e61c34999be",
       "binding": "LOGS_STREAM"
     }
   ],

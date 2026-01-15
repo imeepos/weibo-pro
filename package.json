@@ -19,11 +19,13 @@
   },
   "devDependencies": {
     "@types/node-schedule": "^2.1.8",
+    "@vitest/ui": "4.0.16",
     "node-schedule": "^2.1.1",
     "prettier": "^3.7.4",
     "tsx": "^4.21.0",
     "turbo": "^2.6.3",
     "typescript": "5.9.3",
+    "vitest": "4.0.16",
     "zod": "^3.23.8"
   },
   "packageManager": "pnpm@9.0.0",
