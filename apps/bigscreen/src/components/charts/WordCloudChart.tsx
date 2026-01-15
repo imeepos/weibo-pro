@@ -25,7 +25,7 @@ export interface WordCloudChartRef {
 
 // 简单哈希函数
 function hashData(data: KeywordData[] | null | undefined, maxWords: number): string {
-  if (!data || data.length === 0) return 'empty'
+  if (!data?.length) return 'empty'
   const len = Math.min(data.length, maxWords)
   let hash = 0
   for (let i = 0; i < Math.min(len, 30); i++) {
