@@ -104,7 +104,8 @@ async function bootstrap() {
       'X-Requested-With',
       'X-Request-ID',
       'Accept',
-      'Origin'
+      'Origin',
+      'Cache-Control'
     ],
     credentials: true,
     maxAge: 86400,
