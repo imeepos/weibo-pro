@@ -253,6 +253,8 @@ async function bootstrap() {
         // 生产环境 origin
         'http://43.240.223.138:8088',
         'http://43.240.223.138',
+        'https://wb.sker.us',
+        'https://*.sker.us',
       ],
       credentials: true,
     }
