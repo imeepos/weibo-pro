@@ -147,51 +147,37 @@ export function RunConfigDialog({
   }, [workflow])
 
   // 获取节点的 @Setting 渲染器（复用 PropertyPanel 的逻辑）
+  // 使用 ref 避免重新创建导致无限渲染
+  const settingRenderersRef = useRef<Map<string, NodeSettingRenderer> | null>(null)
   const settingRenderers = useMemo(() => {
-    const renderers = new Map<string, NodeSettingRenderer>()
+    if (!settingRenderersRef.current) {
+      const renderers = new Map<string, NodeSettingRenderer>()
 
-    // 调试：打印所有已注册的 SETTING_METHOD
-    const allSettings = root.get(SETTING_METHOD, [])
-    console.debug('[RunConfigDialog] 所有已注册的 @Setting 方法:', allSettings.map(s => ({
-      astName: s.ast?.name,
-      targetName: s.target?.name,
-      property: s.property
-    })))
-
-    inputNodes.forEach((node: any) => {
-      try {
-        const ctor = resolveConstructor(node)
-        console.debug('[RunConfigDialog] 解析节点构造函数:', {
-          nodeId: node.id,
-          nodeType: node.type,
-          ctorName: ctor?.name,
-          ctor
-        })
-        const settings = root.get(SETTING_METHOD, [])
-        // 修复：通过类的 name 属性比较，而不是引用比较
-        // 这样可以避免由于模块加载顺序导致的引用不一致问题
-        const setting = settings.find((s: any) => s.ast?.name === ctor?.name)
-        if (setting) {
-          const instance = root.get(setting.target)
-          renderers.set(node.id, (instance as any)[setting.property].bind(instance))
-        } else {
-          console.debug('[RunConfigDialog] 未找到 @Setting 渲染器:', {
+      inputNodes.forEach((node: any) => {
+        try {
+          const ctor = resolveConstructor(node)
+          const settings = root.get(SETTING_METHOD, [])
+          const setting = settings.find((s: any) => s.ast?.name === ctor?.name)
+          if (setting) {
+            const instance = root.get(setting.target)
+            renderers.set(node.id, (ast: any, onPropertyChange: (prop: string, value: any) => void) => {
+              // 使用稳定引用的回调，避免无限渲染
+              return (instance as any)[setting.property].call(instance, ast, onPropertyChange)
+            })
+          }
+        } catch (error) {
+          console.error('[RunConfigDialog] 获取 @Setting 渲染器失败:', {
             nodeId: node.id,
             nodeType: node.type,
-            ctorName: ctor?.name,
-            allSettings: settings.map(s => ({ ast: s.ast?.name, target: s.target?.name, property: s.property }))
+            error
           })
         }
-      } catch (error) {
-        console.error('[RunConfigDialog] 获取 @Setting 渲染器失败:', {
-          nodeId: node.id,
-          nodeType: node.type,
-          error
-        })
-      }
-    })
+      })
 
-    return renderers
+      settingRenderersRef.current = renderers
+    }
+
+    return settingRenderersRef.current
   }, [inputNodes])
 
   // 提取所有带 @Input 装饰器的字段
@@ -248,22 +234,15 @@ export function RunConfigDialog({
   if (!visible) return null
 
   const handleInputChange = (fullKey: string, value: any) => {
-    console.log('[RunConfigDialog] handleInputChange called', { fullKey, value, isInitialized })
     // 防止在初始化期间触发 onChange 导致数据被清空
     if (!isInitialized) {
-      console.warn('[RunConfigDialog] Ignoring change - not initialized yet')
       return
     }
 
-    console.log('[RunConfigDialog] Updating inputs:', { prev: inputs, fullKey, value })
-    setInputs((prev) => {
-      const next = {
-        ...prev,
-        [fullKey]: value,
-      }
-      console.log('[RunConfigDialog] New inputs state:', next)
-      return next
-    })
+    setInputs((prev) => ({
+      ...prev,
+      [fullKey]: value,
+    }))
   }
 
   const handleConfirm = () => {
@@ -326,14 +305,10 @@ export function RunConfigDialog({
                     <div className="pl-4">
                       {customSetting && node ? (
                         // 使用 @Setting 渲染器
-                        (() => {
-                          console.log('[RunConfigDialog] Using customSetting renderer', { nodeId, nodeType: node.type })
-                          return customSetting(node, (prop, value) => {
-                            // 确保使用完整格式 ${nodeId}.${propKey} 更新 inputs
-                            console.log('[RunConfigDialog] customSetting callback', { nodeId, prop, value })
-                            handleInputChange(`${nodeId}.${prop}`, value)
-                          })
-                        })()
+                        customSetting(node, (prop, value) => {
+                          // 确保使用完整格式 ${nodeId}.${propKey} 更新 inputs
+                          handleInputChange(`${nodeId}.${prop}`, value)
+                        })
                       ) : (
                         // 回退到 WorkflowFormField
                         <div className="space-y-3">
