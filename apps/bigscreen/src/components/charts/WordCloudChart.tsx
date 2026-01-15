@@ -24,13 +24,15 @@ export interface WordCloudChartRef {
 }
 
 // 简单哈希函数
-function hashData(data: KeywordData[] | null, maxWords: number): string {
+function hashData(data: KeywordData[] | null | undefined, maxWords: number): string {
   if (!data || data.length === 0) return 'empty'
   const len = Math.min(data.length, maxWords)
   let hash = 0
   for (let i = 0; i < Math.min(len, 30); i++) {
     const item = data[i]
-    hash = (((hash << 5) - hash) + item.keyword.length + item.weight) | 0
+    if (item) {
+      hash = (((hash << 5) - hash) + (item.keyword?.length || 0) + (item.weight || 0)) | 0
+    }
   }
   return `${len}-${hash}`
 }
@@ -57,15 +59,17 @@ const WordCloudChart = React.forwardRef<WordCloudChartRef, WordCloudChartProps>(
   const dataHash = React.useMemo(() => hashData(data, maxWords), [data, maxWords])
 
   const wordCloudData: WordCloudItem[] = React.useMemo(() => {
-    if (!data) return []
+    if (!data || data.length === 0) return []
     const limit = Math.min(data.length, maxWords)
-    const result: WordCloudItem[] = new Array(limit)
+    const result: WordCloudItem[] = []
     for (let i = 0; i < limit; i++) {
       const item = data[i]
-      result[i] = {
-        name: item.keyword,
-        value: item.weight,
-        color: getSentimentColorHex(item.sentiment || "neutral"),
+      if (item?.keyword) {
+        result.push({
+          name: item.keyword,
+          value: item.weight ?? 0,
+          color: getSentimentColorHex(item.sentiment || "neutral"),
+        })
       }
     }
     return result

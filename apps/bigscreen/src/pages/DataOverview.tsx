@@ -46,13 +46,13 @@ const DataOverview: React.FC = () => {
         const locations = await controller.getLocations(selectedTimeRange);
 
         // 转换 API 数据为 GeoDataPoint 格式
-        const geoData: GeoDataPoint[] = locations
+        const geoData: GeoDataPoint[] = (locations || [])
           .filter(loc => loc.coordinates && loc.coordinates.length === 2)
           .map(loc => ({
             name: loc.region,
             coordinates: loc.coordinates!,
             value: loc.count,
-            sentiment: 'neutral' as const  // API 暂时没有情感数据，使用默认值
+            sentiment: 'neutral' as const
           }));
 
         setLocationData(geoData);
