@@ -1,7 +1,7 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
-import { Clock } from 'lucide-react'
+import React, { useState, useEffect, useMemo } from 'react'
+import { Clock, Settings } from 'lucide-react'
 import { WorkflowController } from '@sker/sdk'
 import type { WorkflowScheduleEntity } from '@sker/entities'
 import { root } from '@sker/core'
@@ -23,8 +23,13 @@ import {
   type CronTemplate,
   type IntervalUnit,
 } from '@sker/ui/components/ui/schedule-form'
-import { WorkflowGraphAst, fromJson, getInputMetadata, resolveConstructor, type IEdge } from '@sker/workflow'
+import { WorkflowGraphAst, fromJson, getInputMetadata, resolveConstructor, SETTING_METHOD, type IEdge, Ast } from '@sker/workflow'
 import { CronExpressionParser } from 'cron-parser'
+
+// 类型定义
+interface NodeSettingRenderer {
+  (ast: any, onPropertyChange: (property: string, value: any) => void): React.ReactNode
+}
 
 /**
  * 调度对话框
@@ -139,6 +144,58 @@ export function ScheduleDialog({
     })
 
     return defaultInputs
+  }
+
+  // 获取入口节点和 @Setting 渲染器
+  const entryNodes = useMemo(() => {
+    if (!workflowAst?.nodes || !workflowAst?.edges) {
+      return []
+    }
+
+    // 优先使用 entryNodeIds，为空时回退到无入边节点
+    return workflowAst.entryNodeIds?.length
+      ? workflowAst.nodes.filter((node) => workflowAst.entryNodeIds.includes(node.id))
+      : workflowAst.nodes.filter((node) => {
+          const hasIncomingEdges = workflowAst.edges.some((edge: IEdge) => edge.to === node.id)
+          return !hasIncomingEdges
+        })
+  }, [workflowAst])
+
+  // 获取 @Setting 渲染器
+  const settingRenderers = useMemo(() => {
+    const renderers = new Map<string, NodeSettingRenderer>()
+
+    entryNodes.forEach((node: any) => {
+      try {
+        const ctor = resolveConstructor(node)
+        const settings = root.get(SETTING_METHOD, [])
+        const setting = settings.find((s: any) => s.ast === ctor)
+        if (setting) {
+          const instance = root.get(setting.target)
+          renderers.set(node.id, (instance as any)[setting.property].bind(instance))
+        }
+      } catch {
+        // 忽略错误，回退到默认表单
+      }
+    })
+
+    return renderers
+  }, [entryNodes])
+
+  // 解析当前 inputs JSON 为对象
+  const parsedInputs = useMemo(() => {
+    try {
+      return JSON.parse(formData.inputs)
+    } catch {
+      return {}
+    }
+  }, [formData.inputs])
+
+  // 处理输入参数变化
+  const handleInputChange = (fullKey: string, value: any) => {
+    const newInputs = { ...parsedInputs }
+    newInputs[fullKey] = value
+    setFormData(prev => ({ ...prev, inputs: JSON.stringify(newInputs, null, 2) }))
   }
 
   // 获取工作流 AST（用于提取默认输入）
@@ -403,6 +460,39 @@ export function ScheduleDialog({
             cronTemplates={CRON_TEMPLATES}
             intervalUnits={INTERVAL_UNITS}
           />
+
+          {/* 可视化参数配置区域 */}
+          {settingRenderers.size > 0 && (
+            <div className="mt-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Settings className="h-4 w-4 text-primary" strokeWidth={1.8} />
+                  <h3 className="text-sm font-semibold">参数配置</h3>
+                </div>
+              </div>
+
+              {entryNodes.map((node: any) => {
+                const customSetting = settingRenderers.get(node.id)
+                const nodeName = node.name || node.metadata?.class?.title || node.type || '未命名节点'
+
+                if (!customSetting) return null
+
+                return (
+                  <div key={node.id} className="space-y-3">
+                    <div className="flex items-center gap-2 pb-2 border-b border-border/50">
+                      <div className="h-2 w-2 rounded-full bg-primary" />
+                      <h4 className="text-sm font-medium">{nodeName}</h4>
+                    </div>
+                    <div className="pl-4">
+                      {customSetting(node, (prop, value) => {
+                        handleInputChange(`${node.id}.${prop}`, value)
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         <DialogFooter>

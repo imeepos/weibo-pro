@@ -3,11 +3,12 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Play, Settings } from 'lucide-react'
-import { WorkflowGraphAst, getInputMetadata, resolveConstructor } from '@sker/workflow'
+import { WorkflowGraphAst, getInputMetadata, resolveConstructor, SETTING_METHOD } from '@sker/workflow'
 import { IEdge } from '@sker/workflow'
 import { WorkflowFormField, type InputFieldType } from '@sker/ui/components/workflow/workflow-form-field'
 import { EmptyState } from '@sker/ui/components/ui'
 import { Button } from '@sker/ui/components/ui/button'
+import { root } from '@sker/core'
 
 /**
  * 运行配置对话框
@@ -36,6 +37,10 @@ interface InputField {
   type: InputFieldType
   value: any
   fullKey: string
+}
+
+interface NodeSettingRenderer {
+  (ast: any, onPropertyChange: (property: string, value: any) => void): React.ReactNode
 }
 
 /**
@@ -140,6 +145,27 @@ export function RunConfigDialog({
           return !hasIncomingEdges
         })
   }, [workflow])
+
+  // 获取节点的 @Setting 渲染器（复用 PropertyPanel 的逻辑）
+  const settingRenderers = useMemo(() => {
+    const renderers = new Map<string, NodeSettingRenderer>()
+
+    inputNodes.forEach((node: any) => {
+      try {
+        const ctor = resolveConstructor(node)
+        const settings = root.get(SETTING_METHOD, [])
+        const setting = settings.find((s: any) => s.ast === ctor)
+        if (setting) {
+          const instance = root.get(setting.target)
+          renderers.set(node.id, (instance as any)[setting.property].bind(instance))
+        }
+      } catch {
+        // 忽略错误，回退到默认表单
+      }
+    })
+
+    return renderers
+  }, [inputNodes])
 
   // 提取所有带 @Input 装饰器的字段
   const inputFields = useMemo(() => {
@@ -252,27 +278,43 @@ export function RunConfigDialog({
           ) : (
             <div className="space-y-6">
               {/* 按节点分组显示 */}
-              {groupFieldsByNode(inputFields).map(({ nodeName, fields }) => (
-                <div key={fields[0]!.nodeId} className="space-y-4">
-                  <div className="flex items-center gap-2 pb-2 border-b border-border/50">
-                    <div className="h-2 w-2 rounded-full bg-primary" />
-                    <h4 className="text-sm font-semibold text-foreground">{nodeName}</h4>
-                    <span className="text-xs text-muted-foreground">({fields.length} 个参数)</span>
+              {groupFieldsByNode(inputFields).map(({ nodeId, nodeName, fields }) => {
+                const customSetting = settingRenderers.get(nodeId)
+                const node = workflow?.nodes.find((n: any) => n.id === nodeId)
+
+                return (
+                  <div key={nodeId} className="space-y-4">
+                    <div className="flex items-center gap-2 pb-2 border-b border-border/50">
+                      <div className="h-2 w-2 rounded-full bg-primary" />
+                      <h4 className="text-sm font-semibold text-foreground">{nodeName}</h4>
+                      <span className="text-xs text-muted-foreground">({fields.length} 个参数)</span>
+                    </div>
+                    <div className="pl-4">
+                      {customSetting && node ? (
+                        // 使用 @Setting 渲染器
+                        customSetting(node, (prop, value) => {
+                          // 确保使用完整格式 ${nodeId}.${propKey} 更新 inputs
+                          handleInputChange(`${nodeId}.${prop}`, value)
+                        })
+                      ) : (
+                        // 回退到 WorkflowFormField
+                        <div className="space-y-3">
+                          {fields.map((field) => (
+                            <WorkflowFormField
+                              key={field.fullKey}
+                              label={field.propertyLabel}
+                              value={field.value}
+                              type={field.type}
+                              onChange={(value) => handleInputChange(field.fullKey, value)}
+                              placeholder={getPlaceholder(field.propertyKey, field.type)}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className="pl-4 space-y-3">
-                    {fields.map((field) => (
-                      <WorkflowFormField
-                        key={field.fullKey}
-                        label={field.propertyLabel}
-                        value={field.value}
-                        type={field.type}
-                        onChange={(value) => handleInputChange(field.fullKey, value)}
-                        placeholder={getPlaceholder(field.propertyKey, field.type)}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
@@ -483,7 +525,7 @@ function getPlaceholder(propKey: string, type: InputFieldType): string {
 /**
  * 按节点分组字段
  */
-function groupFieldsByNode(fields: InputField[]): Array<{ nodeName: string; fields: InputField[] }> {
+function groupFieldsByNode(fields: InputField[]): Array<{ nodeId: string; nodeName: string; fields: InputField[] }> {
   const grouped = new Map<string, InputField[]>()
 
   fields.forEach((field) => {
@@ -495,6 +537,7 @@ function groupFieldsByNode(fields: InputField[]): Array<{ nodeName: string; fiel
   })
 
   return Array.from(grouped.entries()).map(([key, fields]) => ({
+    nodeId: fields[0]!.nodeId,
     nodeName: fields[0]!.nodeName,
     fields,
   }))
