@@ -248,15 +248,22 @@ export function RunConfigDialog({
   if (!visible) return null
 
   const handleInputChange = (fullKey: string, value: any) => {
+    console.log('[RunConfigDialog] handleInputChange called', { fullKey, value, isInitialized })
     // 防止在初始化期间触发 onChange 导致数据被清空
     if (!isInitialized) {
+      console.warn('[RunConfigDialog] Ignoring change - not initialized yet')
       return
     }
 
-    setInputs((prev) => ({
-      ...prev,
-      [fullKey]: value,
-    }))
+    console.log('[RunConfigDialog] Updating inputs:', { prev: inputs, fullKey, value })
+    setInputs((prev) => {
+      const next = {
+        ...prev,
+        [fullKey]: value,
+      }
+      console.log('[RunConfigDialog] New inputs state:', next)
+      return next
+    })
   }
 
   const handleConfirm = () => {
@@ -319,10 +326,14 @@ export function RunConfigDialog({
                     <div className="pl-4">
                       {customSetting && node ? (
                         // 使用 @Setting 渲染器
-                        customSetting(node, (prop, value) => {
-                          // 确保使用完整格式 ${nodeId}.${propKey} 更新 inputs
-                          handleInputChange(`${nodeId}.${prop}`, value)
-                        })
+                        (() => {
+                          console.log('[RunConfigDialog] Using customSetting renderer', { nodeId, nodeType: node.type })
+                          return customSetting(node, (prop, value) => {
+                            // 确保使用完整格式 ${nodeId}.${propKey} 更新 inputs
+                            console.log('[RunConfigDialog] customSetting callback', { nodeId, prop, value })
+                            handleInputChange(`${nodeId}.${prop}`, value)
+                          })
+                        })()
                       ) : (
                         // 回退到 WorkflowFormField
                         <div className="space-y-3">

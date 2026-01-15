@@ -39,10 +39,13 @@ interface EventSettingProps {
 }
 
 const EventSetting: React.FC<EventSettingProps> = ({ ast, onPropertyChange }) => {
+  console.log('[EventSetting] render', { ast, onPropertyChangeExists: !!onPropertyChange })
+
   const { data: events, loading } = useAsyncData({
     fetcher: async () => {
       const controller = root.get(EventsController);
       const result = await controller.getEventList();
+      console.log('[EventSetting] fetched events', { count: result.data.length })
       return result.data.map(e => ({
         id: e.id,
         title: e.title,
@@ -57,14 +60,19 @@ const EventSetting: React.FC<EventSettingProps> = ({ ast, onPropertyChange }) =>
   });
 
   const handleSelect = (eventId: string | string[]) => {
+    console.log('[EventSetting] handleSelect called', { eventId, onPropertyChangeExists: !!onPropertyChange })
     const id = Array.isArray(eventId) ? eventId[0] : eventId;
     const event = events?.find(e => e.id === id);
 
+    console.log('[EventSetting] found event', { event, id })
+
     if (event) {
+      console.log('[EventSetting] calling onPropertyChange with event data')
       onPropertyChange?.('eventId', event.id);
       onPropertyChange?.('eventTitle', event.title);
       onPropertyChange?.('eventCategory', event.category?.name);
     } else {
+      console.log('[EventSetting] clearing event data')
       onPropertyChange?.('eventId', undefined);
       onPropertyChange?.('eventTitle', undefined);
       onPropertyChange?.('eventCategory', undefined);
