@@ -88,8 +88,8 @@ services:
     image: nginx:alpine
     container_name: weibo-pro-nginx
     ports:
-      - "8088:80"
-      - "8443:443"
+      - "18088:80"
+      - "18443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
       - ./nginx/ssl:/etc/nginx/ssl
