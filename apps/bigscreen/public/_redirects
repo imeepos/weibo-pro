@@ -1,7 +1,2 @@
-# Cloudflare Pages Redirects
-# API 代理 - 替换为你的后端 API 地址
-/api/* https://your-api-domain.com/api/:splat 200
-/ws/* https://your-api-domain.com/ws/:splat 200
-
 # SPA 路由 - 所有路由重定向到 index.html
 /* /index.html 200
