@@ -17,7 +17,6 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "@sker/typescript-config": "workspace:*",
-    "vitest": "^2.0.0"
+    "@sker/typescript-config": "workspace:*"
   }
 }
