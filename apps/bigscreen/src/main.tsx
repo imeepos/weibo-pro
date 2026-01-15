@@ -21,7 +21,7 @@ function getBaseUrl() {
   if (url.protocol.startsWith('https')) {
     return `https://43.240.223.138:18443/api/auth`
   }
-  return `https://43.240.223.138:18088/api/auth`
+  return `http://43.240.223.138:18088/api/auth`
 }
 
 const baseURL = getBaseUrl();
