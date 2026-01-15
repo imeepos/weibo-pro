@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useSelectedNode } from './useSelectedNode'
 import { SmartFormField } from './SmartFormField'
 import { ErrorDetailPanel } from '../ErrorDetail'
@@ -48,19 +48,36 @@ export function PropertyPanel({
   const [currentDynamicOutputs, setCurrentDynamicOutputs] = useState<INodeOutputMetadata[]>([])
 
   // 获取节点的 @Setting 渲染器
+  // 使用 ref 避免重新创建导致无限渲染
+  const settingRendererRef = useRef<any>(null)
+  const settingRendererKey = useMemo(() => selectedNode?.data?.type, [selectedNode?.data?.type])
+
   const settingRenderer = useMemo(() => {
     if (!selectedNode?.data) return null
+    if (settingRendererRef.current && settingRendererKey) {
+      return settingRendererRef.current
+    }
+
     try {
       const ctor = resolveConstructor(selectedNode.data)
       const settings = root.get(SETTING_METHOD, [])
       const setting = settings.find(s => s.ast === ctor)
-      if (!setting) return null
+      if (!setting) {
+        settingRendererRef.current = null
+        return null
+      }
       const instance = root.get(setting.target)
-      return (instance as any)[setting.property].bind(instance)
+      // 不使用 bind，直接返回一个调用包装函数
+      const renderer = (ast: any, onPropertyChange: (prop: string, value: any) => void) => {
+        return (instance as any)[setting.property].call(instance, ast, onPropertyChange)
+      }
+      settingRendererRef.current = renderer
+      return renderer
     } catch {
+      settingRendererRef.current = null
       return null
     }
-  }, [selectedNode?.data])
+  }, [selectedNode?.data, settingRendererKey])
 
   const formData: INode = (externalFormData ?? internalFormData) as INode;
   const handlePropertyChange = externalOnPropertyChange ?? ((property: string, value: any) => {
