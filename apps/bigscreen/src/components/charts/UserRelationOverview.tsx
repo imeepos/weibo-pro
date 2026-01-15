@@ -83,7 +83,7 @@ export const UserRelationOverview: React.FC<UserRelationOverviewProps> = ({
   }
 
   // 无数据状态
-  if (!network || network.nodes.length === 0) {
+  if (!network?.nodes?.length) {
     return (
       <div className={`flex items-center justify-center h-full w-full relative ${className}`}>
         {fullscreenButton}

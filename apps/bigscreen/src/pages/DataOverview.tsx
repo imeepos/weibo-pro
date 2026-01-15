@@ -46,7 +46,7 @@ const DataOverview: React.FC = () => {
         const locations = await controller.getLocations(selectedTimeRange);
 
         // 转换 API 数据为 GeoDataPoint 格式
-        const geoData: GeoDataPoint[] = (locations || [])
+        const geoData: GeoDataPoint[] = (Array.isArray(locations) ? locations : [])
           .filter(loc => loc.coordinates && loc.coordinates.length === 2)
           .map(loc => ({
             name: loc.region,
