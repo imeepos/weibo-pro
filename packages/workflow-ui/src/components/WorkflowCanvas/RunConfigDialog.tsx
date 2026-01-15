@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo, useEffect, useRef } from 'react'
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Play, Settings } from 'lucide-react'
 import { WorkflowGraphAst, getInputMetadata, resolveConstructor, SETTING_METHOD } from '@sker/workflow'
@@ -100,7 +100,7 @@ function collectInputsFromWorkflow(
   return normalizedInputs
 }
 
-export function RunConfigDialog({
+function RunConfigDialog({
   visible,
   workflow,
   defaultInputs = {},
@@ -109,27 +109,64 @@ export function RunConfigDialog({
 }: RunConfigDialogProps) {
   const [inputs, setInputs] = useState<Record<string, unknown>>({})
   const [isInitialized, setIsInitialized] = useState(false)
-  const prevVisibleRef = useRef(false)
+  const dialogVisibleRef = useRef(false)
+  const renderCountRef = useRef(0)
+  const lastRenderReasonRef = useRef<string>('initial')
+
+  // 渲染计数器（用于调试）
+  renderCountRef.current++
+
+  // 检测渲染原因
+  const prevWorkflowRef = useRef<typeof workflow | null>(null)
+  const prevInputsRef = useRef<typeof inputs | null>(null)
+  const prevVisibleRef = useRef<boolean>(!visible)
+
+  let renderReason = 'unknown'
+  if (prevVisibleRef.current !== visible) renderReason = `visible changed: ${prevVisibleRef.current} -> ${visible}`
+  else if (prevWorkflowRef.current !== workflow) renderReason = 'workflow prop changed'
+  else if (prevInputsRef.current !== inputs) renderReason = 'inputs state changed'
+  else if (isInitialized) renderReason = 'isInitialized changed'
+
+  prevWorkflowRef.current = workflow
+  prevInputsRef.current = inputs
+  prevVisibleRef.current = visible
+  lastRenderReasonRef.current = renderReason
+
+  useEffect(() => {
+    console.log('[RunConfigDialog] component rendered, total renders:', renderCountRef.current, 'reason:', renderReason)
+    console.log('[RunConfigDialog] current inputs:', inputs)
+  })
 
   // 每次打开对话框时，从工作流获取最新状态
   useEffect(() => {
-    const isOpening = visible && !prevVisibleRef.current
+    const isOpening = visible && !dialogVisibleRef.current
+
+    console.log('[RunConfigDialog] useEffect triggered:', {
+      visible,
+      dialogVisibleRefCurrent: dialogVisibleRef.current,
+      isOpening,
+      isInitialized
+    })
 
     if (!visible) {
+      console.log('[RunConfigDialog] useEffect: !visible, resetting state')
       setIsInitialized(false)
-      prevVisibleRef.current = false
+      dialogVisibleRef.current = false
       return
     }
 
     if (!isOpening) {
+      console.log('[RunConfigDialog] useEffect: !isOpening, skipping initialization')
       return
     }
 
+    console.log('[RunConfigDialog] useEffect: opening dialog, initializing...')
     // 从当前工作流 AST 收集最新的输入值
     const latestInputs = collectInputsFromWorkflow(workflow, defaultInputs)
+    console.log('[RunConfigDialog] useEffect: collected inputs:', latestInputs)
     setInputs(latestInputs)
     setIsInitialized(true)
-    prevVisibleRef.current = true
+    dialogVisibleRef.current = true
   }, [visible, workflow, defaultInputs])
 
   // 识别入口节点（优先使用 entryNodeIds，为空时回退到无入边节点）
@@ -180,8 +217,50 @@ export function RunConfigDialog({
     return settingRenderersRef.current
   }, [inputNodes])
 
+  if (!visible) return null
+
+  const handleInputChange = useCallback((fullKey: string, value: any) => {
+    console.log('[RunConfigDialog] handleInputChange called:', {
+      fullKey,
+      value
+    })
+    console.log('[RunConfigDialog] updating inputs state')
+    setInputs((prev) => ({
+      ...prev,
+      [fullKey]: value,
+    }))
+  }, [])
+
+  // 为每个节点创建稳定的 propChangeWrapper，同时存储最新的 node 引用
+  const nodeRefsRef = useRef<Map<string, any>>(new Map())
+  const propChangeWrappersRef = useRef<Map<string, (prop: string, value: any) => void>>(new Map())
+  const getPropChangeWrapper = useCallback((nodeId: string, node: any) => {
+    // 更新 node 引用
+    nodeRefsRef.current.set(nodeId, node)
+
+    if (!propChangeWrappersRef.current.has(nodeId)) {
+      propChangeWrappersRef.current.set(nodeId, (prop: string, value: any) => {
+        console.log('[RunConfigDialog] propChangeWrapper called:', {
+          nodeId,
+          prop,
+          value,
+          fullKey: `${nodeId}.${prop}`
+        })
+        // 从 ref 获取最新的 node 引用
+        const currentNode = nodeRefsRef.current.get(nodeId)
+        if (currentNode) {
+          currentNode[prop] = value
+        }
+        // 强制触发重新渲染
+        setInputs((prev) => ({ ...prev, [`${nodeId}.${prop}`]: value }))
+      })
+    }
+    return propChangeWrappersRef.current.get(nodeId)!
+  }, [])
+
   // 提取所有带 @Input 装饰器的字段
   const inputFields = useMemo(() => {
+    console.log('[RunConfigDialog] inputFields recalculating...')
     const fields: InputField[] = []
 
     inputNodes.forEach((node: any) => {
@@ -231,20 +310,6 @@ export function RunConfigDialog({
     return fields
   }, [inputNodes, inputs])
 
-  if (!visible) return null
-
-  const handleInputChange = (fullKey: string, value: any) => {
-    // 防止在初始化期间触发 onChange 导致数据被清空
-    if (!isInitialized) {
-      return
-    }
-
-    setInputs((prev) => ({
-      ...prev,
-      [fullKey]: value,
-    }))
-  }
-
   const handleConfirm = () => {
     onConfirm(inputs)
   }
@@ -253,7 +318,7 @@ export function RunConfigDialog({
     // 清空输入状态，避免下次打开时残留旧数据
     setInputs({})
     setIsInitialized(false)
-    prevVisibleRef.current = false
+    dialogVisibleRef.current = false
     onCancel()
   }
 
@@ -282,7 +347,7 @@ export function RunConfigDialog({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 min-h-0 overflow-y-auto p-6">
           {inputFields.length === 0 ? (
             <EmptyState
               icon={Settings}
@@ -294,6 +359,7 @@ export function RunConfigDialog({
               {groupFieldsByNode(inputFields).map(({ nodeId, nodeName, fields }) => {
                 const customSetting = settingRenderers.get(nodeId)
                 const node = workflow?.nodes.find((n: any) => n.id === nodeId)
+                const propChangeWrapper = getPropChangeWrapper(nodeId, node)
 
                 return (
                   <div key={nodeId} className="space-y-4">
@@ -304,11 +370,8 @@ export function RunConfigDialog({
                     </div>
                     <div className="pl-4">
                       {customSetting && node ? (
-                        // 使用 @Setting 渲染器
-                        customSetting(node, (prop, value) => {
-                          // 确保使用完整格式 ${nodeId}.${propKey} 更新 inputs
-                          handleInputChange(`${nodeId}.${prop}`, value)
-                        })
+                        // 使用稳定的 propChangeWrapper 调用 @Setting 渲染器
+                        customSetting(node, propChangeWrapper)
                       ) : (
                         // 回退到 WorkflowFormField
                         <div className="space-y-3">
@@ -356,6 +419,21 @@ export function RunConfigDialog({
     ? createPortal(dialogContent, document.body)
     : null
 }
+
+// 使用 React.memo 优化，只在 props 变化时重新渲染
+const MemoizedRunConfigDialog = React.memo(RunConfigDialog, (prevProps, nextProps) => {
+  // 自定义比较函数，避免不必要的重新渲染
+  return (
+    prevProps.visible === nextProps.visible &&
+    prevProps.workflow === nextProps.workflow &&
+    prevProps.defaultInputs === nextProps.defaultInputs
+    // onConfirm 和 onCancel 是函数引用，不需要比较（应该使用 useCallback）
+  )
+})
+
+// 同时提供命名导出和默认导出
+export { MemoizedRunConfigDialog as RunConfigDialog }
+export default MemoizedRunConfigDialog
 
 /**
  * 智能推断字段类型

@@ -57,14 +57,30 @@ const EventSetting: React.FC<EventSettingProps> = ({ ast, onPropertyChange }) =>
   });
 
   const handleSelect = (eventId: string | string[]) => {
+    console.log('[EventAstRender] handleSelect called:', {
+      eventId,
+      hasOnPropertyChange: !!onPropertyChange,
+      eventsCount: events?.length
+    })
     const id = Array.isArray(eventId) ? eventId[0] : eventId;
     const event = events?.find(e => e.id === id);
 
+    console.log('[EventAstRender] found event:', {
+      id,
+      event: event ? { id: event.id, title: event.title } : null
+    })
+
     if (event) {
+      console.log('[EventAstRender] calling onPropertyChange with:', {
+        eventId: event.id,
+        eventTitle: event.title,
+        eventCategory: event.category?.name
+      })
       onPropertyChange?.('eventId', event.id);
       onPropertyChange?.('eventTitle', event.title);
       onPropertyChange?.('eventCategory', event.category?.name);
     } else {
+      console.log('[EventAstRender] clearing event properties')
       onPropertyChange?.('eventId', undefined);
       onPropertyChange?.('eventTitle', undefined);
       onPropertyChange?.('eventCategory', undefined);

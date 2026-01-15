@@ -20,9 +20,10 @@ import {
   type CronTemplate,
   type IntervalUnit,
 } from '@sker/ui/components/ui/schedule-form'
-import { WorkflowGraphAst, fromJson } from '@sker/workflow'
+import { WorkflowGraphAst, fromJson, getInputMetadata, resolveConstructor } from '@sker/workflow'
 import { CronExpressionParser } from 'cron-parser'
 import { RunConfigDialog } from './RunConfigDialog'
+import { cn } from '@sker/ui/lib/utils'
 
 /**
  * 调度对话框
@@ -325,10 +326,27 @@ export function ScheduleDialog({
     return entryNodes.length > 0
   }, [workflowAst])
 
+  // 当 RunConfigDialog 打开时，完全隐藏 ScheduleDialog
+  const shouldShowScheduleDialog = open && !showRunConfig
+
+  // 处理 Dialog 关闭事件
+  const handleDialogOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      setShowRunConfig(false)
+    }
+    // 只有当不是因为打开 RunConfigDialog 而关闭时，才通知父组件
+    if (newOpen || !showRunConfig) {
+      onOpenChange?.(newOpen)
+    }
+  }
+
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0">
+      <Dialog open={shouldShowScheduleDialog} onOpenChange={handleDialogOpenChange}>
+        <DialogContent
+          className="max-w-2xl flex flex-col p-0"
+          style={{ maxHeight: '90vh' }}
+        >
           <DialogHeader className="border-b border-border px-6 pb-4 pt-6">
             <div className="flex items-center gap-3">
               <div className="bg-secondary text-primary flex h-10 w-10 items-center justify-center rounded-xl">
@@ -345,7 +363,7 @@ export function ScheduleDialog({
             </div>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto px-6 py-4">
+          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
             {error && (
               <div className="border-destructive/30 bg-destructive/10 mb-4 rounded-lg border p-4">
                 <p className="text-destructive text-sm">{error}</p>
@@ -357,6 +375,7 @@ export function ScheduleDialog({
               onChange={(updates) => setFormData(prev => ({ ...prev, ...updates }))}
               cronTemplates={CRON_TEMPLATES}
               intervalUnits={INTERVAL_UNITS}
+              showInputsField={!hasInputParams}
             />
 
             {/* 参数配置按钮 */}
@@ -409,7 +428,7 @@ export function ScheduleDialog({
 }
 
 /**
- * 提取工作流入口节点的默认输入值
+ * 提取工作流入口节点的默认输入值（只提取 @Input 装饰器标记的属性）
  */
 function extractDefaultInputs(workflow: WorkflowGraphAst): Record<string, unknown> {
   const defaultInputs: Record<string, unknown> = {}
@@ -423,14 +442,25 @@ function extractDefaultInputs(workflow: WorkflowGraphAst): Record<string, unknow
     : workflow.nodes.filter((node) => !workflow.edges.some((edge: any) => edge.to === node.id))
 
   entryNodes.forEach((astNode: any) => {
-    Object.keys(astNode).forEach(key => {
-      if (key !== 'id' && key !== 'type' && key !== 'metadata' && key !== 'name' && !key.startsWith('_')) {
-        const value = astNode[key]
-        if (value !== undefined && value !== null && typeof value !== 'object') {
-          defaultInputs[`${astNode.id}.${key}`] = value
+    try {
+      const ctor = resolveConstructor(astNode)
+      const inputMetadatas = getInputMetadata(ctor)
+      const metadataArray = Array.isArray(inputMetadatas) ? inputMetadatas : [inputMetadatas]
+
+      metadataArray.forEach((metadata) => {
+        const propKey = String(metadata.propertyKey)
+        const fullKey = `${astNode.id}.${propKey}`
+        const value = astNode[propKey]
+
+        // 使用装饰器默认值或节点当前值
+        const finalValue = value !== undefined ? value : metadata.defaultValue
+        if (finalValue !== undefined) {
+          defaultInputs[fullKey] = finalValue
         }
-      }
-    })
+      })
+    } catch (error) {
+      console.warn('[extractDefaultInputs] 处理节点失败:', error)
+    }
   })
 
   return defaultInputs

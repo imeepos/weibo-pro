@@ -49,6 +49,7 @@ export interface ScheduleFormProps {
   cronTemplates?: CronTemplate[]
   intervalUnits?: IntervalUnit[]
   className?: string
+  showInputsField?: boolean  // 是否显示输入参数 JSON 字段（默认 true）
 }
 
 const DEFAULT_CRON_TEMPLATES: CronTemplate[] = [
@@ -73,6 +74,7 @@ function ScheduleForm({
   cronTemplates = DEFAULT_CRON_TEMPLATES,
   intervalUnits = DEFAULT_INTERVAL_UNITS,
   className,
+  showInputsField = true,
 }: ScheduleFormProps) {
   /**
    * 将 Date 转换为本地时间的 datetime-local input 格式 (YYYY-MM-DDTHH:mm)
@@ -250,20 +252,22 @@ function ScheduleForm({
         </Alert>
       )}
 
-      <div className="space-y-2">
-        <Label htmlFor="schedule-inputs">输入参数(JSON 格式)</Label>
-        <Textarea
-          id="schedule-inputs"
-          placeholder='{"keyword": "微博", "limit": 100}'
-          value={data.inputs}
-          onChange={(e) => onChange({ inputs: e.target.value })}
-          rows={4}
-          className="font-mono"
-        />
-        <p className="text-muted-foreground text-xs">
-          工作流执行时使用的输入参数,JSON 对象格式
-        </p>
-      </div>
+      {showInputsField && (
+        <div className="space-y-2">
+          <Label htmlFor="schedule-inputs">输入参数(JSON 格式)</Label>
+          <Textarea
+            id="schedule-inputs"
+            placeholder='{"keyword": "微博", "limit": 100}'
+            value={data.inputs}
+            onChange={(e) => onChange({ inputs: e.target.value })}
+            rows={4}
+            className="font-mono"
+          />
+          <p className="text-muted-foreground text-xs">
+            工作流执行时使用的输入参数,JSON 对象格式
+          </p>
+        </div>
+      )}
 
       {/* 时间范围控制 - 根据调度类型显示不同字段 */}
       {data.scheduleType === 'manual' && (

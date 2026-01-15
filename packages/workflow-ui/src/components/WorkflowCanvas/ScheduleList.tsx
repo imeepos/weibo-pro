@@ -206,6 +206,20 @@ export function ScheduleList({ workflowName, className = '', onClose, apiBaseUrl
       // 反序列化工作流 AST
       const ast = fromJson<WorkflowGraphAst>(workflow)
 
+      // 将保存的 inputs 同步到 workflowAst 的节点对象中
+      // 这样 EventSelector 等组件能正确显示当前选中的值
+      if (schedule.inputs && ast.nodes) {
+        Object.entries(schedule.inputs).forEach(([key, value]) => {
+          const [nodeId, propKey] = key.split('.')
+          if (nodeId && propKey) {
+            const node = ast.nodes.find((n: any) => n.id === nodeId)
+            if (node) {
+              node[propKey] = value
+            }
+          }
+        })
+      }
+
       // 设置工作流 AST 和调度信息
       setWorkflowAst(ast)
       setTriggerDialogSchedule(schedule)

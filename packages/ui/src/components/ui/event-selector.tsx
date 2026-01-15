@@ -57,14 +57,25 @@ function EventSelector({
   }, [events, search])
 
   const handleSelect = (id: string) => {
+    console.log('[EventSelector] handleSelect called:', {
+      id,
+      selectedSet: Array.from(selectedSet),
+      hasId: selectedSet.has(id),
+      multiple,
+      hasOnChange: !!onChange,
+      currentValue: value
+    })
     if (!onChange) return
     if (multiple) {
       const next = selectedSet.has(id)
         ? [...selectedSet].filter((v) => v !== id)
         : [...selectedSet, id]
+      console.log('[EventSelector] calling onChange (multiple):', next)
       onChange(next)
     } else {
-      onChange(selectedSet.has(id) ? "" : id)
+      const newValue = selectedSet.has(id) ? "" : id
+      console.log('[EventSelector] calling onChange (single):', newValue)
+      onChange(newValue)
     }
   }
 
@@ -88,6 +99,13 @@ function EventSelector({
                 key={event.id}
                 data-slot="event-item"
                 onPointerDown={(e) => {
+                  console.log('[EventSelector] onPointerDown triggered:', {
+                    eventId: event.id,
+                    eventTitle: event.title,
+                    button: e.button,
+                    pointerType: e.pointerType,
+                    target: (e.target as HTMLElement).className
+                  })
                   e.preventDefault()
                   e.stopPropagation()
                   handleSelect(event.id)
