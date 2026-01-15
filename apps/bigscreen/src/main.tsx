@@ -15,11 +15,7 @@ import { createLogger } from './utils';
 const logger = createLogger('main');
 
 function getBaseUrl() {
-  const url = new URL(window.location.href)
-  if (url.port) {
-    return `${url.protocol}//${url.hostname}:${url.port}/api/auth`
-  }
-  return `${url.protocol}//${url.hostname}/api/auth`
+  return `https://43.240.223.138:8443/api/auth`
 }
 
 const baseURL = getBaseUrl();
