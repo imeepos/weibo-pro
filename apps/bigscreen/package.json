@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "pnpm exec vite --port 9088",
     "build": "pnpm exec vite build",
+    "build:cloudflare": "tsx scripts/build-cloudflare.ts",
+    "deploy": "pnpx wrangler@latest deploy",
     "test": "vitest run",
     "test:run": "vitest run",
     "test:ui": "vitest --ui",
@@ -76,7 +78,8 @@
     "typescript": "~5.8.0",
     "vite": "^5.4.18",
     "vite-plugin-swc-transform": "^1.1.1",
-    "vitest": "^4.0.16"
+    "vitest": "^4.0.16",
+    "tsx": "^4.19.0"
   },
   "lint-staged": {
     "*.{ts,tsx}": [

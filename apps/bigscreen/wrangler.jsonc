@@ -1,0 +1,34 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "wb",
+  "account_id": "768c876155e77e3a6e52a855489a6c8a",
+  "compatibility_date": "2025-04-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // 可观测性
+  "observability": {
+    "enabled": true
+  },
+
+  // Source Maps 上传
+  "upload_source_maps": true,
+
+  // 静态资源配置
+  "assets": {
+    "directory": "dist",
+    "not_found_handling": "single-page-application"
+  },
+
+  // 自定义域名
+  "routes": [
+    {
+      "pattern": "wb.sker.us",
+      "custom_domain": true
+    }
+  ],
+
+  // 环境变量
+  "vars": {
+    "NODE_ENV": "production"
+  }
+}
