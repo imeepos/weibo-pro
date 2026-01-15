@@ -150,17 +150,44 @@ export function RunConfigDialog({
   const settingRenderers = useMemo(() => {
     const renderers = new Map<string, NodeSettingRenderer>()
 
+    // 调试：打印所有已注册的 SETTING_METHOD
+    const allSettings = root.get(SETTING_METHOD, [])
+    console.debug('[RunConfigDialog] 所有已注册的 @Setting 方法:', allSettings.map(s => ({
+      astName: s.ast?.name,
+      targetName: s.target?.name,
+      property: s.property
+    })))
+
     inputNodes.forEach((node: any) => {
       try {
         const ctor = resolveConstructor(node)
+        console.debug('[RunConfigDialog] 解析节点构造函数:', {
+          nodeId: node.id,
+          nodeType: node.type,
+          ctorName: ctor?.name,
+          ctor
+        })
         const settings = root.get(SETTING_METHOD, [])
-        const setting = settings.find((s: any) => s.ast === ctor)
+        // 修复：通过类的 name 属性比较，而不是引用比较
+        // 这样可以避免由于模块加载顺序导致的引用不一致问题
+        const setting = settings.find((s: any) => s.ast?.name === ctor?.name)
         if (setting) {
           const instance = root.get(setting.target)
           renderers.set(node.id, (instance as any)[setting.property].bind(instance))
+        } else {
+          console.debug('[RunConfigDialog] 未找到 @Setting 渲染器:', {
+            nodeId: node.id,
+            nodeType: node.type,
+            ctorName: ctor?.name,
+            allSettings: settings.map(s => ({ ast: s.ast?.name, target: s.target?.name, property: s.property }))
+          })
         }
-      } catch {
-        // 忽略错误，回退到默认表单
+      } catch (error) {
+        console.error('[RunConfigDialog] 获取 @Setting 渲染器失败:', {
+          nodeId: node.id,
+          nodeType: node.type,
+          error
+        })
       }
     })
 
