@@ -52,7 +52,7 @@ class MockEntityManager {
         if (!this.data.has(entityName)) {
             this.data.set(entityName, new Map());
         }
-        return this;
+        return this.data.get(entityName);
     }
 
     create(entityLike: any) {
@@ -67,13 +67,27 @@ class MockEntityManager {
     }
 
     async find(options?: any) {
-        const repo = this.getRepository('default');
-        const results = Array.from(repo.values());
+        // Get entity name from first argument if it's a class
+        let entityName = 'default';
+        if (arguments.length > 0 && typeof arguments[0] === 'function') {
+            entityName = arguments[0].name || 'default';
+        }
+        const repo = this.data.get(entityName);
+        const results = repo ? Array.from(repo.values()) : [];
         if (options?.order) {
             results.sort((a, b) => {
                 for (const [key, direction] of Object.entries(options.order)) {
                     if (a[key] !== b[key]) {
-                        return direction === 'desc' ? b[key] - a[key] : a[key] - b[key];
+                        // Check if values are numbers
+                        const aNum = typeof a[key] === 'number';
+                        const bNum = typeof b[key] === 'number';
+                        if (aNum && bNum) {
+                            return direction === 'desc' ? b[key] - a[key] : a[key] - b[key];
+                        }
+                        // For non-numbers, use comparison operators
+                        return direction === 'desc'
+                            ? (b[key] > a[key] ? 1 : b[key] < a[key] ? -1 : 0)
+                            : (a[key] > b[key] ? 1 : a[key] < b[key] ? -1 : 0);
                     }
                 }
                 return 0;
@@ -82,10 +96,22 @@ class MockEntityManager {
         return results;
     }
 
-    async findOne(options: any) {
-        const results = await this.find();
-        if (options?.where?.id) {
-            return results.find(r => r.id === options.where.id) || null;
+    async findOne(entity: any, options?: any) {
+        // Get entity name from first argument
+        let entityName = 'default';
+        let actualOptions = options;
+
+        if (typeof entity === 'function') {
+            entityName = entity.name || 'default';
+        } else if (typeof entity === 'object') {
+            actualOptions = entity;
+        }
+
+        const repo = this.data.get(entityName);
+        const results = repo ? Array.from(repo.values()) : [];
+
+        if (actualOptions?.where?.id) {
+            return results.find(r => r.id === actualOptions.where.id) || null;
         }
         return results[0] || null;
     }
@@ -96,21 +122,23 @@ class MockEntityManager {
     }
 
     async update(entity: any, id: string, updates: any) {
-        const repo = this.getRepository(entity.name);
-        const existing = repo.get(id);
-        if (existing) {
+        const repo = this.data.get(entity.name || 'default');
+        if (repo && repo.has(id)) {
+            const existing = repo.get(id);
             repo.set(id, { ...existing, ...updates });
         }
     }
 
     async delete(entity: any, ids: string | string[]) {
         const idArray = Array.isArray(ids) ? ids : [ids];
-        const repo = this.getRepository(entity.name || 'default');
+        const repo = this.data.get(entity.name || 'default');
         let count = 0;
-        for (const id of idArray) {
-            if (repo.has(id)) {
-                repo.delete(id);
-                count++;
+        if (repo) {
+            for (const id of idArray) {
+                if (repo.has(id)) {
+                    repo.delete(id);
+                    count++;
+                }
             }
         }
         return { affected: count };
@@ -136,7 +164,7 @@ class MockEntityManager {
         return [];
     }
 
-    delete() {
+    deleteQuery() {
         return this;
     }
 

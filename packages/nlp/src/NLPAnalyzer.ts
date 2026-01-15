@@ -1,7 +1,10 @@
 import type { CompleteAnalysisResult, PostContext } from './types';
 import { useOpenAi } from './openai';
 import { Injectable } from '@sker/core';
-import { parse } from '@sker/json-harmony'
+import { parse } from '@sker/json-harmony';
+
+const BASE_RETRY_DELAY_MS = 30000; // 基础重试延迟 30 秒
+const MAX_RETRIES = 3;
 /**
  * NLP 分析器：一次调用获取情感分析、关键词提取、事件分类
  */
@@ -21,23 +24,49 @@ export class NLPAnalyzer {
   ): Promise<CompleteAnalysisResult> {
     const mergedText = this.buildContext(context);
     const prompt = this.buildPrompt(mergedText);
-    try {
-      const client = await useOpenAi();
-      const response = await client.chat.completions.create({
-        model: 'deepseek-ai/DeepSeek-V3.2',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.2
-      });
-      const content = response.choices[0]?.message?.content;
-      if (!content) {
-        throw new Error('LLM 未返回有效内容');
+
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        const client = await useOpenAi();
+        const response = await client.chat.completions.create({
+          model: 'deepseek-ai/DeepSeek-V3.2',
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.2
+        });
+        const content = response.choices[0]?.message?.content;
+        if (!content) {
+          throw new Error('LLM 未返回有效内容');
+        }
+        const result = parse(content);
+        return result.data as any;
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+
+        // 判断是否为可重试的错误（429 限流、503 服务不可用、网络错误）
+        const isRetriableError =
+          errorMsg.includes('429') ||
+          errorMsg.includes('503') ||
+          errorMsg.includes('无可用 provider') ||
+          errorMsg.includes('rate limit') ||
+          errorMsg.includes('ECONNREFUSED') ||
+          errorMsg.includes('ETIMEDOUT') ||
+          errorMsg.includes('TimeoutError');
+
+        if (isRetriableError && attempt < MAX_RETRIES - 1) {
+          const waitTime = BASE_RETRY_DELAY_MS * Math.pow(2, attempt);
+          console.warn(`[NLPAnalyzer] 分析失败，${waitTime / 1000}秒后重试 (${attempt + 1}/${MAX_RETRIES})`, {
+            error: errorMsg,
+            nextRetryIn: `${waitTime / 1000}s`
+          });
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+          continue;
+        }
+
+        throw new Error(`NLP 分析失败: ${errorMsg}`);
       }
-      const result = parse(content);
-      return result.data as any;
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : '未知错误';
-      throw new Error(`NLP 分析失败: ${errorMsg}`);
     }
+
+    throw new Error('NLP 分析失败: 达到最大重试次数');
   }
 
   /**

@@ -1,3 +1,3 @@
-import baseConfig from '@sker/eslint-config/base.js';
+import { config } from '@sker/eslint-config/base.js';
 
-export default [...baseConfig];
+export default [...config];

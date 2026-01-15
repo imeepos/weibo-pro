@@ -34,7 +34,14 @@ describe('LlmProviderService', () => {
                 { id: '2', name: 'Provider B', score: 100 },
                 { id: '3', name: 'Provider C', score: 90 },
             ];
-            mockEntityManager.find = vi.fn(() => Promise.resolve(providers));
+
+            // Mock find to return the providers directly with proper entity name
+            mockEntityManager.find = vi.fn((entity: any, options?: any) => {
+                if (options?.order?.score === 'desc') {
+                    return Promise.resolve([...providers].sort((a, b) => b.score - a.score));
+                }
+                return Promise.resolve(providers);
+            });
 
             const result = await service.findAll();
             expect(result).toHaveLength(3);

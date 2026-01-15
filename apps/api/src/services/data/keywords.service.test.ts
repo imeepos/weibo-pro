@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { KeywordsService } from './keywords.service';
-import { CacheService } from '../../cache.service';
+import { CacheService } from '../cache.service';
 import { mockEntityManager, mockRedis } from '../../test-setup';
 import { PostNLPResultEntity } from '@sker/entities';
 
@@ -16,24 +16,35 @@ vi.mock('@sker/entities', async () => {
 describe('KeywordsService', () => {
     let service: KeywordsService;
     let cacheService: CacheService;
+    let mockQueryBuilder: any;
 
     beforeEach(() => {
-        // 创建 mock cache service
+        // 创建 mock query builder
+        mockQueryBuilder = {
+            select: vi.fn().mockReturnThis(),
+            where: vi.fn().mockReturnThis(),
+            andWhere: vi.fn().mockReturnThis(),
+            getMany: vi.fn().mockResolvedValue([]),
+        };
+
+        // Mock getRepository to return query builder
+        vi.spyOn(mockEntityManager, 'getRepository').mockReturnValue({
+            createQueryBuilder: vi.fn(() => mockQueryBuilder),
+        });
+
+        // 创建 mock cache service 并 spy getOrSet
         cacheService = new CacheService(mockRedis as any);
+        vi.spyOn(cacheService, 'getOrSet').mockImplementation(async (key, fn, ttl) => {
+            return fn();
+        });
+
         service = new KeywordsService(cacheService);
         vi.clearAllMocks();
     });
 
     describe('getWordCloud', () => {
         it('should return empty array when no keywords exist', async () => {
-            mockEntityManager.getRepository = vi.fn(() => ({
-                createQueryBuilder: vi.fn(() => ({
-                    select: vi.fn().mockReturnThis(),
-                    where: vi.fn().mockReturnThis(),
-                    andWhere: vi.fn().mockReturnThis(),
-                    getMany: vi.fn().mockResolvedValue([]),
-                })),
-            }));
+            mockQueryBuilder.getMany.mockResolvedValueOnce([]);
 
             const result = await service.getWordCloud(100);
             expect(result).toEqual([]);
@@ -55,14 +66,7 @@ describe('KeywordsService', () => {
                 },
             ];
 
-            mockEntityManager.getRepository = vi.fn(() => ({
-                createQueryBuilder: vi.fn(() => ({
-                    select: vi.fn().mockReturnThis(),
-                    where: vi.fn().mockReturnThis(),
-                    andWhere: vi.fn().mockReturnThis(),
-                    getMany: vi.fn().mockResolvedValue(mockResults),
-                })),
-            }));
+            mockQueryBuilder.getMany.mockResolvedValueOnce(mockResults);
 
             const result = await service.getWordCloud(100);
 
@@ -81,14 +85,7 @@ describe('KeywordsService', () => {
                 },
             ];
 
-            mockEntityManager.getRepository = vi.fn(() => ({
-                createQueryBuilder: vi.fn(() => ({
-                    select: vi.fn().mockReturnThis(),
-                    where: vi.fn().mockReturnThis(),
-                    andWhere: vi.fn().mockReturnThis(),
-                    getMany: vi.fn().mockResolvedValue(mockResults),
-                })),
-            }));
+            mockQueryBuilder.getMany.mockResolvedValueOnce(mockResults);
 
             const result = await service.getWordCloud(100, 'positive');
             expect(result).toHaveLength(1);
@@ -106,14 +103,7 @@ describe('KeywordsService', () => {
                 },
             ];
 
-            mockEntityManager.getRepository = vi.fn(() => ({
-                createQueryBuilder: vi.fn(() => ({
-                    select: vi.fn().mockReturnThis(),
-                    where: vi.fn().mockReturnThis(),
-                    andWhere: vi.fn().mockReturnThis(),
-                    getMany: vi.fn().mockResolvedValue(mockResults),
-                })),
-            }));
+            mockQueryBuilder.getMany.mockResolvedValueOnce(mockResults);
 
             const result = await service.getWordCloud(50);
             expect(result.length).toBeLessThanOrEqual(50);
@@ -144,14 +134,7 @@ describe('KeywordsService', () => {
                 },
             ];
 
-            mockEntityManager.getRepository = vi.fn(() => ({
-                createQueryBuilder: vi.fn(() => ({
-                    select: vi.fn().mockReturnThis(),
-                    where: vi.fn().mockReturnThis(),
-                    andWhere: vi.fn().mockReturnThis(),
-                    getMany: vi.fn().mockResolvedValue(mockResults),
-                })),
-            }));
+            mockQueryBuilder.getMany.mockResolvedValueOnce(mockResults);
 
             const result = await service.getWordCloud(100);
             const testKeyword = result.find(k => k.keyword === '测试');
@@ -163,14 +146,7 @@ describe('KeywordsService', () => {
 
     describe('CacheService integration', () => {
         it('should respect cache TTL', async () => {
-            mockEntityManager.getRepository = vi.fn(() => ({
-                createQueryBuilder: vi.fn(() => ({
-                    select: vi.fn().mockReturnThis(),
-                    where: vi.fn().mockReturnThis(),
-                    andWhere: vi.fn().mockReturnThis(),
-                    getMany: vi.fn().mockResolvedValue([]),
-                })),
-            }));
+            mockQueryBuilder.getMany.mockResolvedValueOnce([]);
 
             await service.getWordCloud(100);
 

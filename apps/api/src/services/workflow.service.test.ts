@@ -250,8 +250,11 @@ describe('WorkflowService', () => {
         it('should create share with token', async () => {
             const workflow = { id: 'wf-1', name: 'Test Workflow' };
             mockWorkflowRepo.findOne.mockResolvedValue(workflow);
-            mockShareRepo.create.mockReturnValue({ token: 'abc123' });
+            mockShareRepo.create.mockReturnValue({});
             mockShareRepo.save.mockResolvedValue({});
+
+            // Mock generateShareToken to return fixed value
+            const generateTokenSpy = vi.spyOn(service as any, 'generateShareToken').mockReturnValue('abc123');
 
             const result = await service.createShare({
                 workflowId: 'wf-1',
@@ -259,6 +262,8 @@ describe('WorkflowService', () => {
 
             expect(result.shareToken).toBe('abc123');
             expect(result.shareUrl).toBe('/workflow/shared/abc123');
+
+            generateTokenSpy.mockRestore();
         });
 
         it('should find workflow by code if ID not found', async () => {
@@ -266,8 +271,10 @@ describe('WorkflowService', () => {
             mockWorkflowRepo.findOne
                 .mockResolvedValueOnce(null) // by ID
                 .mockResolvedValueOnce(workflow); // by code
-            mockShareRepo.create.mockReturnValue({ token: 'abc123' });
+            mockShareRepo.create.mockReturnValue({});
             mockShareRepo.save.mockResolvedValue({});
+
+            const generateTokenSpy = vi.spyOn(service as any, 'generateShareToken').mockReturnValue('abc123');
 
             const result = await service.createShare({
                 workflowId: 'test-workflow',
@@ -275,6 +282,8 @@ describe('WorkflowService', () => {
 
             expect(result.shareToken).toBeDefined();
             expect(mockWorkflowRepo.findOne).toHaveBeenCalledTimes(2);
+
+            generateTokenSpy.mockRestore();
         });
 
         it('should throw error when workflow not found', async () => {
@@ -290,8 +299,10 @@ describe('WorkflowService', () => {
             const expiresAt = '2024-12-31T23:59:59Z';
 
             mockWorkflowRepo.findOne.mockResolvedValue(workflow);
-            mockShareRepo.create.mockReturnValue({ token: 'abc123' });
+            mockShareRepo.create.mockReturnValue({});
             mockShareRepo.save.mockResolvedValue({});
+
+            const generateTokenSpy = vi.spyOn(service as any, 'generateShareToken').mockReturnValue('abc123');
 
             await service.createShare({
                 workflowId: 'wf-1',
@@ -303,6 +314,8 @@ describe('WorkflowService', () => {
                     expiresAt: new Date(expiresAt),
                 })
             );
+
+            generateTokenSpy.mockRestore();
         });
     });
 
