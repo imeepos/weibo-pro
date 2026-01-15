@@ -35,7 +35,7 @@ export class WeiboKeywordSearchAst extends Ast {
     @Input({ title: '开始日期', type: 'date', defaultValue: new Date() })
     startDate: Date = new Date()
 
-    @State({ title: '结束日期', type: 'date' })
+    @Input({ title: '结束日期', type: 'date', defaultValue: new Date() })
     endDate: Date = new Date();
 
     @State({ title: '页码', type: 'number' })
@@ -58,7 +58,6 @@ export class WeiboKeywordSearchAst extends Ast {
 
     @Output({ title: '用户id', defaultValue: '' })
     uid = ''
-
 
     @Output({ title: '是否结束', defaultValue: false })
     isEnd = false;

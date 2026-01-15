@@ -7,7 +7,7 @@ import type { EventEntity } from '@sker/entities';
   errorStrategy: 'fail',
 })
 export class EventAst extends Ast {
-  @State({ title: '事件ID' })
+  @Input({ title: '事件ID' })
   eventId?: string;
 
   @State({ title: '事件标题' })
