@@ -72,7 +72,6 @@ export default defineConfig(({ command }) => {
     },
     server: {
       host: true,
-      watch: null, // 禁用文件监听
       // SharedArrayBuffer 支持所需的安全头
       headers: {
         'Cross-Origin-Opener-Policy': 'same-origin',

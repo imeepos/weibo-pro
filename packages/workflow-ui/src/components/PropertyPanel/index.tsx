@@ -16,6 +16,7 @@ import {
 } from '@sker/ui/components/workflow'
 import { Button } from '@sker/ui/components/ui/button'
 import { INode, INodeInputMetadata, INodeOutputMetadata, SETTING_METHOD, resolveConstructor } from '@sker/workflow'
+import { PortDialog } from './PortDialog'
 
 function extractValue(value: any): any {
   if (value && typeof value === 'object') {
@@ -46,6 +47,13 @@ export function PropertyPanel({
   const [internalFormData, setInternalFormData] = useState<Record<string, any>>({})
   const [currentDynamicInputs, setCurrentDynamicInputs] = useState<INodeInputMetadata[]>([])
   const [currentDynamicOutputs, setCurrentDynamicOutputs] = useState<INodeOutputMetadata[]>([])
+
+  // 弹框状态
+  const [portDialogOpen, setPortDialogOpen] = useState(false)
+  const [portDialogMode, setPortDialogMode] = useState<'add' | 'edit'>('add')
+  const [currentPortType, setCurrentPortType] = useState<'input' | 'output'>('input')
+  const [editingPortProperty, setEditingPortProperty] = useState<string>()
+  const [editValues, setEditValues] = useState<Partial<INodeInputMetadata | INodeOutputMetadata>>()
 
   // 获取节点的 @Setting 渲染器
   // 使用 ref 避免重新创建导致无限渲染
@@ -315,6 +323,56 @@ export function PropertyPanel({
     setCurrentDynamicOutputs(nowUpdateOutputs)
   }
 
+  // 添加端口
+  const handleAddPort = (portType: 'input' | 'output') => {
+    setPortDialogMode('add')
+    setCurrentPortType(portType)
+    setEditValues(undefined)
+    setPortDialogOpen(true)
+  }
+
+  // 编辑端口
+  const handleEditPort = (property: string, portType: 'input' | 'output') => {
+    const ports = portType === 'input' ? currentDynamicInputs : currentDynamicOutputs
+    const port = ports.find((p: { property: string }) => p.property === property)
+    if (port) {
+      setPortDialogMode('edit')
+      setCurrentPortType(portType)
+      setEditingPortProperty(property)
+      setEditValues(port)
+      setPortDialogOpen(true)
+    }
+  }
+
+  // 保存端口（添加或更新）
+  const handleSavePort = (port: INodeInputMetadata | INodeOutputMetadata) => {
+    if (currentPortType === 'input') {
+      if (portDialogMode === 'add') {
+        const updatedInputs = [...currentDynamicInputs, port as INodeInputMetadata]
+        handlePropertyChange('metadata', { ...metadata, inputs: updatedInputs })
+        setCurrentDynamicInputs(updatedInputs)
+      } else {
+        const updatedInputs = currentDynamicInputs.map((item: INodeInputMetadata) =>
+          item.property === editingPortProperty ? (port as INodeInputMetadata) : item
+        )
+        handlePropertyChange('metadata', { ...metadata, inputs: updatedInputs })
+        setCurrentDynamicInputs(updatedInputs)
+      }
+    } else {
+      if (portDialogMode === 'add') {
+        const updatedOutputs = [...currentDynamicOutputs, port as INodeOutputMetadata]
+        handlePropertyChange('metadata', { ...metadata, outputs: updatedOutputs })
+        setCurrentDynamicOutputs(updatedOutputs)
+      } else {
+        const updatedOutputs = currentDynamicOutputs.map((item: INodeOutputMetadata) =>
+          item.property === editingPortProperty ? (port as INodeOutputMetadata) : item
+        )
+        handlePropertyChange('metadata', { ...metadata, outputs: updatedOutputs })
+        setCurrentDynamicOutputs(updatedOutputs)
+      }
+    }
+  }
+
   sections.push({
     id: 'dynamic-ports',
     title: '动态端口管理',
@@ -325,7 +383,7 @@ export function PropertyPanel({
         <div className="space-y-2">
           {supportsDynamicInputs && <div className="flex items-center justify-between">
             <span className="text-xs font-medium">输入端口 ({currentDynamicInputs.length})</span>
-            <Button variant="outline" size="sm" onClick={() => handleConfirmAddInput()}>
+            <Button variant="outline" size="sm" onClick={() => handleAddPort('input')}>
               添加输入
             </Button>
           </div>}
@@ -334,14 +392,13 @@ export function PropertyPanel({
             <DynamicPortItem
               key={`${input.property}-${index}`}
               property={input.property}
-              title={input.title || input.property}
-              description={input.description || ''}
-              type={input.type || 'string'}
+              title={input.title}
+              description={input.description}
+              type={input.type}
               isStatic={input.isStatic !== false}
-              onPropertyChange={(value) => handleUpdateInput(input.property, 'property', value)}
-              onTitleChange={(value) => handleUpdateInput(input.property, 'title', value)}
-              onDescriptionChange={(value) => handleUpdateInput(input.property, 'description', value)}
-              onTypeChange={(value) => handleUpdateInput(input.property, 'type', value)}
+              required={input.required}
+              defaultValue={input.defaultValue}
+              onEdit={() => handleEditPort(input.property, 'input')}
               onRemove={input.isStatic !== false ? undefined : () => handleRemoveInput(input.property)}
             />
           ))}
@@ -349,27 +406,23 @@ export function PropertyPanel({
         <div className="space-y-2">
           {supportsDynamicOutputs && <div className="flex items-center justify-between">
             <span className="text-xs font-medium">输出端口 ({currentDynamicOutputs.length})</span>
-            <Button variant="outline" size="sm" onClick={() => handleConfirmAddOutput()}>
+            <Button variant="outline" size="sm" onClick={() => handleAddPort('output')}>
               添加输出
             </Button>
           </div>}
-
 
           {currentDynamicOutputs.map((output, index) => (
             <DynamicPortItem
               key={`${output.property}-${index}`}
               property={output.property}
-              title={output.title || output.property}
-              description={output.description || ''}
-              type={output.type || 'string'}
+              title={output.title}
+              description={output.description}
+              type={output.type}
               isStatic={output.isStatic !== false}
               isRouter={output.isRouter}
               condition={output.condition}
-              onPropertyChange={(value) => handleUpdateOutput(output.property, 'property', value)}
-              onTitleChange={(value) => handleUpdateOutput(output.property, 'title', value)}
-              onDescriptionChange={(value) => handleUpdateOutput(output.property, 'description', value)}
-              onTypeChange={(value) => handleUpdateOutput(output.property, 'type', value)}
-              onConditionChange={(value) => handleUpdateOutput(output.property, 'condition', value)}
+              defaultValue={output.defaultValue}
+              onEdit={() => handleEditPort(output.property, 'output')}
               onRemove={output.isStatic !== false ? undefined : () => handleRemoveOutput(output.property)}
             />
           ))}
@@ -404,5 +457,22 @@ export function PropertyPanel({
     ),
   })
 
-  return <WorkflowPropertyPanel sections={sections} className={className} />
+  // 获取现有属性名列表（用于验证唯一性）
+  const getInputProperties = () => currentDynamicInputs.map((i: { property: string }) => i.property)
+  const getOutputProperties = () => currentDynamicOutputs.map((o: { property: string }) => o.property)
+
+  return (
+    <>
+      <WorkflowPropertyPanel sections={sections} className={className} />
+      <PortDialog
+        open={portDialogOpen}
+        onOpenChange={setPortDialogOpen}
+        mode={portDialogMode}
+        portType={currentPortType}
+        initialValues={editValues}
+        existingProperties={currentPortType === 'input' ? getInputProperties() : getOutputProperties()}
+        onSave={handleSavePort}
+      />
+    </>
+  )
 }

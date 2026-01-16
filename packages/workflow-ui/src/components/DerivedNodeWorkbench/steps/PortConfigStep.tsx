@@ -47,10 +47,7 @@ export function PortConfigStep() {
             description={output.description || ''}
             type={output.type || 'string'}
             isStatic={false}
-            onPropertyChange={() => {}}
-            onTitleChange={() => {}}
-            onDescriptionChange={() => {}}
-            onTypeChange={() => {}}
+            onEdit={() => {}}
             onRemove={() => removeCustomOutput(output.property)}
           />
         ))}

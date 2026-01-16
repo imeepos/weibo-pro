@@ -1,6 +1,7 @@
 'use client'
 
-import React, { ReactNode, useRef } from 'react'
+import React, { ReactNode } from 'react'
+import { Edit2, Trash2, Lock, GitBranch, Hash, Type } from 'lucide-react'
 import { cn } from '@udecode/cn'
 import {
   Accordion,
@@ -8,8 +9,8 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from '../ui/accordion'
-import { Input } from '../ui/input'
 import { Button } from '../ui/button'
+import { Badge } from '../ui/badge'
 
 export interface PropertySection {
   id: string
@@ -195,194 +196,145 @@ export function NodeStateBadge({ state, className }: NodeStateBadgeProps) {
 }
 
 export interface DynamicPortItemProps {
-  title: string
+  property: string
+  title?: string
   description?: string
   type?: string
   isStatic?: boolean
   isRouter?: boolean
   condition?: string
-  property: string
-  onPropertyChange: (value: string) => void
-  onTitleChange: (value: string) => void
-  onDescriptionChange?: (value: string) => void
-  onTypeChange?: (value: string) => void
-  onConditionChange?: (value: string) => void
+  required?: boolean
+  defaultValue?: any
+  onEdit: () => void
   onRemove?: () => void
   className?: string
   children?: ReactNode
 }
 
-const PORT_TYPES = ['string', 'number', 'boolean', 'object', 'array'] as const
+function getPortTypeIcon(type: string) {
+  return <Type className="h-3 w-3 text-muted-foreground" />
+}
 
-const CONDITION_PRESETS = [
-  { label: '等于', template: '$input === ' },
-  { label: '不等于', template: '$input !== ' },
-  { label: '大于', template: '$input > ' },
-  { label: '小于', template: '$input < ' },
-  { label: '包含', template: '$input.includes(' },
-  { label: '默认', template: 'true' },
-] as const
+function getPortTypeLabel(type: string): string {
+  const typeLabels: Record<string, string> = {
+    string: '字符串',
+    text: '多行文本',
+    number: '数字',
+    boolean: '布尔值',
+    date: '日期',
+    select: '选择',
+    image: '图片',
+    video: '视频',
+    audio: '音频',
+    object: '对象',
+    array: '数组',
+    any: '任意',
+  }
+  return typeLabels[type] || type
+}
 
 export function DynamicPortItem({
-  title,
   property,
-  onPropertyChange,
+  title,
   description = '',
   type = 'string',
   isStatic = false,
   isRouter = false,
   condition = '',
-  onTitleChange,
-  onDescriptionChange,
-  onTypeChange,
-  onConditionChange,
+  required = false,
+  defaultValue,
+  onEdit,
   onRemove,
   className,
   children,
 }: DynamicPortItemProps) {
-  const propertyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const titleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const descriptionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const typeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const conditionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const [propertyValue, setPropertyValue] = React.useState(property)
-  const [titleValue, setTitleValue] = React.useState(title)
-  const [descriptionValue, setDescriptionValue] = React.useState(description)
-  const [typeValue, setTypeValue] = React.useState(type)
-  const [conditionValue, setConditionValue] = React.useState(condition)
-
-  React.useEffect(() => setPropertyValue(property), [property])
-  React.useEffect(() => setTitleValue(title), [title])
-  React.useEffect(() => setDescriptionValue(description), [description])
-  React.useEffect(() => setTypeValue(type), [type])
-  React.useEffect(() => setConditionValue(condition), [condition])
-
-  const handlePropertyChange = (value: string) => {
-    setPropertyValue(value)
-    if (propertyTimeoutRef.current) clearTimeout(propertyTimeoutRef.current)
-    propertyTimeoutRef.current = setTimeout(() => onPropertyChange(value), 300)
-  }
-
-  const handleTitleChange = (value: string) => {
-    setTitleValue(value)
-    if (titleTimeoutRef.current) clearTimeout(titleTimeoutRef.current)
-    titleTimeoutRef.current = setTimeout(() => onTitleChange(value), 300)
-  }
-
-  const handleDescriptionChange = (value: string) => {
-    setDescriptionValue(value)
-    if (descriptionTimeoutRef.current) clearTimeout(descriptionTimeoutRef.current)
-    descriptionTimeoutRef.current = setTimeout(() => onDescriptionChange?.(value), 300)
-  }
-
-  const handleTypeChange = (value: string) => {
-    setTypeValue(value)
-    if (typeTimeoutRef.current) clearTimeout(typeTimeoutRef.current)
-    typeTimeoutRef.current = setTimeout(() => onTypeChange?.(value), 300)
-  }
-
-  const handleConditionChange = (value: string) => {
-    setConditionValue(value)
-    if (conditionTimeoutRef.current) clearTimeout(conditionTimeoutRef.current)
-    conditionTimeoutRef.current = setTimeout(() => onConditionChange?.(value), 300)
-  }
-
-  const applyPreset = (template: string) => {
-    if (template === 'true') {
-      handleConditionChange('true')
-    } else {
-      setConditionValue(template)
-    }
-  }
-
   return (
     <div className={cn(
-      'flex flex-col gap-2 p-3 rounded-lg',
+      'flex flex-col gap-2 p-3 rounded-lg transition-colors',
       'bg-accent/50 dark:bg-accent/30',
+      'hover:bg-accent/70 dark:hover:bg-accent/50',
       isStatic && 'border-l-2 border-primary/50',
       isRouter && 'border-l-2 border-amber-500/50',
       className
     )}>
-      <div className="flex items-center gap-2">
-        <Input
-          value={propertyValue}
-          onChange={(e) => handlePropertyChange(e.target.value)}
-          placeholder="属性名"
-          className="h-7 text-xs flex-1 bg-card text-foreground"
-        />
-        <Input
-          value={titleValue}
-          onChange={(e) => handleTitleChange(e.target.value)}
-          placeholder="端口名称"
-          className="h-7 text-xs flex-1 bg-card text-foreground"
-        />
-        {!isStatic && (
-          <select
-            value={typeValue}
-            onChange={(e) => handleTypeChange(e.target.value)}
-            className="h-7 text-xs px-2 rounded border border-border bg-card text-foreground"
-          >
-            {PORT_TYPES.map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
-        )}
-        {isStatic && (
-          <span className="h-7 text-xs px-2 flex items-center text-muted-foreground">{type}</span>
-        )}
-        {onRemove && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={onRemove}
-            className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-          >
-            删除
-          </Button>
-        )}
-      </div>
-      <Input
-        value={descriptionValue}
-        onChange={(e) => handleDescriptionChange(e.target.value)}
-        placeholder="端口描述（可选）"
-        className="h-7 text-xs bg-card text-foreground"
-      />
-      {!isStatic && (isRouter || condition !== undefined) && (
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-1 flex-wrap">
-            <span className="text-xs text-muted-foreground">条件:</span>
-            {CONDITION_PRESETS.map((preset) => (
-              <Button
-                key={preset.label}
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => applyPreset(preset.template)}
-                className={cn(
-                  'h-5 px-1.5 text-[10px]',
-                  conditionValue === preset.template && 'bg-amber-500/20 border-amber-500/50'
-                )}
-              >
-                {preset.label}
-              </Button>
-            ))}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          {getPortTypeIcon(type)}
+          <div className="flex flex-col min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-foreground truncate">
+                {title || property}
+              </span>
+              <Badge variant="outline" className="text-[10px] h-4 px-1">
+                {type}
+              </Badge>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Hash className="h-3 w-3" />
+              <span className="font-mono truncate">{property}</span>
+            </div>
           </div>
-          <Input
-            value={conditionValue}
-            onChange={(e) => handleConditionChange(e.target.value)}
-            placeholder="$input === 1"
-            className={cn(
-              'h-7 text-xs font-mono bg-card text-foreground',
-              conditionValue === 'true' && 'border-green-500/50'
-            )}
-          />
-          <p className="text-[10px] text-muted-foreground">
-            使用 $input 引用输入值，如: $input === 1, $input {'>'} 10
-          </p>
+        </div>
+        <div className="flex items-center gap-1">
+          {isRouter && (
+            <GitBranch className="h-3 w-3 text-amber-500" />
+          )}
+          {required && (
+            <Badge variant="destructive" className="text-[9px] h-4 px-1">
+              必填
+            </Badge>
+          )}
+          {isStatic && (
+            <Lock className="h-3 w-3 text-muted-foreground" />
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onEdit}
+            className="h-6 w-6"
+          >
+            <Edit2 className="h-3 w-3" />
+          </Button>
+          {!isStatic && onRemove && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onRemove}
+              className="h-6 w-6 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {description && (
+        <p className="text-xs text-muted-foreground line-clamp-2">
+          {description}
+        </p>
+      )}
+
+      {condition && (
+        <div className="flex items-center gap-1 text-[10px] text-muted-foreground bg-card/50 px-2 py-1 rounded">
+          <span>条件:</span>
+          <code className="font-mono text-amber-600 dark:text-amber-400">{condition}</code>
         </div>
       )}
+
+      {defaultValue !== undefined && defaultValue !== '' && (
+        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+          <span>默认:</span>
+          <code className="font-mono">{String(defaultValue)}</code>
+        </div>
+      )}
+
+      {isStatic && (
+        <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+          <Lock className="h-3 w-3" />
+          装饰器定义（不可删除）
+        </div>
+      )}
+
       {children}
     </div>
   )

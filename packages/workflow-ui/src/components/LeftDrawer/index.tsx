@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState, useCallback } from 'react'
 import { PropertyPanel } from '../PropertyPanel'
-import { Workflow, Settings, History, Play, Crosshair, Save } from 'lucide-react'
+import { Workflow, Settings, History, Crosshair, Save } from 'lucide-react'
 import { useSelectedNode } from '../PropertyPanel/useSelectedNode'
 import {
   WorkflowPropertyDrawer,
@@ -140,14 +140,6 @@ export function LeftDrawer({ visible, onClose, onRunNode, onLocateNode, onAutoSa
         variant: 'success',
       },
       {
-        id: 'run',
-        icon: Play,
-        label: '运行此节点',
-        onClick: () => selectedNode && onRunNode?.(selectedNode.id),
-        disabled: !selectedNode || !onRunNode,
-        variant: 'primary',
-      },
-      {
         id: 'locate',
         icon: Crosshair,
         label: '定位到此节点',
@@ -156,7 +148,7 @@ export function LeftDrawer({ visible, onClose, onRunNode, onLocateNode, onAutoSa
         variant: 'default',
       },
     ],
-    [selectedNode, onRunNode, onLocateNode, hasChanges, handleSave]
+    [selectedNode, onLocateNode, hasChanges, handleSave]
   )
 
   return (
