@@ -25,6 +25,7 @@ import type {
 import { EventQueryService } from './event-query.service';
 import { EventAnalyticsService } from './event-analytics.service';
 import { EventTimelineBuilder } from './event-timeline.builder';
+import { DataSource, EventEntity } from '@sker/entities';
 
 @Injectable({ providedIn: 'root' })
 export class EventsService {
@@ -34,7 +35,8 @@ export class EventsService {
     @Inject(EventAnalyticsService)
     private readonly analyticsService: EventAnalyticsService,
     @Inject(EventTimelineBuilder)
-    private readonly timelineBuilder: EventTimelineBuilder
+    private readonly timelineBuilder: EventTimelineBuilder,
+    @Inject(DataSource) private dataSource: DataSource
   ) { }
 
   async getEventList(
@@ -182,5 +184,11 @@ export class EventsService {
 
   async getEventUserRelations(id: string): Promise<UserRelationNetwork> {
     return await this.queryService.getEventUserRelations(id);
+  }
+
+  async updateEventKeywords(id: string, keywords: string[]): Promise<{ success: boolean }> {
+    const repo = this.dataSource.getRepository(EventEntity);
+    await repo.update({ id }, { keywords });
+    return { success: true };
   }
 }

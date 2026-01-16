@@ -11,7 +11,8 @@ import {
   BarChart3,
   Clock,
   Activity,
-  Zap
+  Zap,
+  Pencil
 } from 'lucide-react';
 import { useAppStore } from '@/stores/useAppStore';
 import { cn, formatNumber, formatRelativeTime } from '@/utils';
@@ -31,6 +32,17 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@sker/ui/components/ui/pagination';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@sker/ui/components/ui/dialog';
+import { Button } from '@sker/ui/components/ui/button';
+import { Input } from '@sker/ui/components/ui/input';
 
 const logger = createLogger('EventAnalysis');
 
@@ -46,6 +58,10 @@ const EventAnalysis: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
   const [total, setTotal] = useState(0);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const [editingKeywords, setEditingKeywords] = useState<string[]>([]);
+  const [keywordInput, setKeywordInput] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -58,7 +74,7 @@ const EventAnalysis: React.FC = () => {
         const category = selectedCategory !== 'all' ? selectedCategory : undefined;
 
         const [eventsResult, categoriesResult, trendsResult] = await Promise.all([
-          c.getEventList(selectedTimeRange, currentPage, pageSize, search, category),
+          c.getEventList(selectedTimeRange, `${currentPage}`, `${pageSize}`, search, category),
           c.getEventCategories(selectedTimeRange),
           c.getTrendData(selectedTimeRange)
         ]);
@@ -160,6 +176,55 @@ const EventAnalysis: React.FC = () => {
 
   const handleEventClick = (eventId: string) => {
     navigate(`/event-analysis/${eventId}`);
+  };
+
+  const openEditDialog = (event: EventItem, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingEventId(event.id);
+    setEditingKeywords([...event.keywords]);
+    setKeywordInput('');
+  };
+
+  const closeEditDialog = () => {
+    setEditingEventId(null);
+    setEditingKeywords([]);
+    setKeywordInput('');
+  };
+
+  const addKeyword = () => {
+    const trimmed = keywordInput.trim();
+    if (trimmed && !editingKeywords.includes(trimmed)) {
+      setEditingKeywords([...editingKeywords, trimmed]);
+      setKeywordInput('');
+    }
+  };
+
+  const removeKeyword = (keyword: string) => {
+    setEditingKeywords(editingKeywords.filter(k => k !== keyword));
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addKeyword();
+    }
+  };
+
+  const saveKeywords = async () => {
+    if (!editingEventId) return;
+    setIsSaving(true);
+    try {
+      const c = root.get(EventsController);
+      await c.updateEventKeywords(editingEventId, { keywords: editingKeywords });
+      setEvents(events.map(e =>
+        e.id === editingEventId ? { ...e, keywords: editingKeywords } : e
+      ));
+      closeEditDialog();
+    } catch (error) {
+      logger.error('Failed to update keywords:', error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -312,12 +377,78 @@ const EventAnalysis: React.FC = () => {
                     </div>
 
                     <div className="flex items-center justify-between mt-2">
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         {event.keywords.slice(0, 6).map(keyword => (
                           <span key={keyword} className="px-3 py-1 bg-primary/10 text-primary text-sm rounded-full font-medium">
                             #{keyword}
                           </span>
                         ))}
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              className="h-6 w-6 hover:bg-primary/20"
+                              onClick={(e) => openEditDialog(event, e)}
+                            >
+                              <Pencil className="h-3 w-3 text-muted-foreground" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="sm:max-w-md">
+                            <DialogHeader>
+                              <DialogTitle>编辑事件关键字</DialogTitle>
+                              <DialogDescription>
+                                调整事件的关键字以优化监测和分类
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-4 py-4">
+                              <div className="flex flex-wrap gap-2 min-h-[60px] p-3 bg-muted/50 rounded-lg">
+                                {editingKeywords.length === 0 ? (
+                                  <span className="text-sm text-muted-foreground">暂无关键字</span>
+                                ) : (
+                                  editingKeywords.map(keyword => (
+                                    <span
+                                      key={keyword}
+                                      className="px-3 py-1 bg-primary/20 text-primary text-sm rounded-full flex items-center gap-1 group"
+                                    >
+                                      #{keyword}
+                                      <button
+                                        onClick={() => removeKeyword(keyword)}
+                                        className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity hover:text-destructive"
+                                      >
+                                        ×
+                                      </button>
+                                    </span>
+                                  ))
+                                )}
+                              </div>
+                              <div className="flex gap-2">
+                                <Input
+                                  placeholder="输入新关键字"
+                                  value={keywordInput}
+                                  onChange={(e) => setKeywordInput(e.target.value)}
+                                  onKeyDown={handleKeyDown}
+                                />
+                                <Button
+                                  type="button"
+                                  variant="secondary"
+                                  onClick={addKeyword}
+                                  disabled={!keywordInput.trim()}
+                                >
+                                  添加
+                                </Button>
+                              </div>
+                            </div>
+                            <DialogFooter>
+                              <Button variant="outline" onClick={closeEditDialog}>
+                                取消
+                              </Button>
+                              <Button onClick={saveKeywords} disabled={isSaving || editingKeywords.length === 0}>
+                                {isSaving ? '保存中...' : '保存'}
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
                       </div>
                     </div>
                   </div>

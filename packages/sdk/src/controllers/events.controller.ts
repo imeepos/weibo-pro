@@ -1,4 +1,4 @@
-import { Controller, Get, Query, Param } from '@sker/core'
+import { Controller, Get, Post, Patch, Query, Param, Body } from '@sker/core'
 import type {
   EventListItem,
   EventCategoryStats,
@@ -144,5 +144,10 @@ export class EventsController {
   @Get(':id/user-relations')
   getEventUserRelations(@Param('id') id: string): Promise<UserRelationNetwork> {
     throw new Error('method getEventUserRelations not implements')
+  }
+
+  @Patch(':id/keywords')
+  updateEventKeywords(@Param('id') id: string, @Body() body: { keywords: string[] }): Promise<{ success: boolean }> {
+    throw new Error('method updateEventKeywords not implements')
   }
 }

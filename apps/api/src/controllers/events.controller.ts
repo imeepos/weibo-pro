@@ -1,4 +1,4 @@
-import { Controller, Get, Query, Param } from '@sker/core';
+import { Controller, Get, Patch, Query, Param, Body } from '@sker/core';
 import { root, Inject } from '@sker/core';
 import { EventsService } from '../services/data/events.service';
 import * as sdk from '@sker/sdk';
@@ -126,5 +126,9 @@ export class EventsController implements sdk.EventsController {
 
   async getEventUserRelations(@Param('id') id: string) {
     return this.eventsService.getEventUserRelations(id);
+  }
+
+  async updateEventKeywords(@Param('id') id: string, @Body() body: { keywords: string[] }) {
+    return this.eventsService.updateEventKeywords(id, body.keywords);
   }
 }
