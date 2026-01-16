@@ -197,7 +197,7 @@ export class PostNLPAnalyzerVisitor {
             {
               event_id: eventId ?? null,
               sentiment: nlpResult.sentiment as any,
-              keywords: nlpResult.keywords as any,
+              keywords: (nlpResult.keywords || []) as any,
             }
           );
         } else {
@@ -205,7 +205,7 @@ export class PostNLPAnalyzerVisitor {
             post_id: postId,
             event_id: eventId ?? null,
             sentiment: nlpResult.sentiment as any,
-            keywords: nlpResult.keywords as any,
+            keywords: (nlpResult.keywords || []) as any,
             event_type: { type: 'unknown', confidence: 0 } as any,
           });
         }
