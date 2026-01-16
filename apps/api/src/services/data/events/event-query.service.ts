@@ -455,49 +455,86 @@ export class EventQueryService {
 
   private async getStatisticsBatch(
     eventIds: string[],
-    timeRange: TimeRange
+    timeRange?: TimeRange
   ): Promise<EventStatistics[]> {
     if (eventIds.length === 0) return [];
 
     return await useEntityManager(async (entityManager) => {
-      const dateRange = getDateRangeByTimeRange(timeRange);
-
       const results = await entityManager
         .createQueryBuilder(EventHourlyStatisticsEntity, 'stats')
         .where('stats.event_id IN (:...eventIds)', { eventIds })
-        .andWhere(
-          `make_timestamp(stats.year, stats.month, stats.day, stats.hour, 0, 0) >= :start`,
-          { start: dateRange.start }
-        )
-        .andWhere(
-          `make_timestamp(stats.year, stats.month, stats.day, stats.hour, 0, 0) <= :end`,
-          { end: dateRange.end }
-        )
         .orderBy('stats.year', 'DESC')
         .addOrderBy('stats.month', 'DESC')
         .addOrderBy('stats.day', 'DESC')
         .addOrderBy('stats.hour', 'DESC')
         .getMany();
 
-      const latestByEvent = new Map<string, EventStatistics>();
+      // 聚合统计：累加所有时间段的 post_count、user_count 等
+      const aggregatedByEvent = new Map<string, {
+        event_id: string;
+        post_count: number;
+        user_count: number;
+        nlp_weight: number;
+        sentiment_positive: number;
+        sentiment_negative: number;
+        sentiment_neutral: number;
+        hotness: number;
+        latestTimestamp: Date;
+      }>();
+
       results.forEach((stat) => {
-        if (!latestByEvent.has(stat.event_id)) {
-          latestByEvent.set(stat.event_id, {
+        if (!aggregatedByEvent.has(stat.event_id)) {
+          aggregatedByEvent.set(stat.event_id, {
             event_id: stat.event_id,
-            post_count: stat.post_count,
-            user_count: stat.user_count,
-            sentiment: {
-              positive: parseFloat(stat.sentiment_positive.toString()),
-              negative: parseFloat(stat.sentiment_negative.toString()),
-              neutral: parseFloat(stat.sentiment_neutral.toString())
-            },
-            hotness: parseFloat(stat.hotness.toString()),
-            snapshot_at: new Date(stat.year, stat.month - 1, stat.day, stat.hour)
-          } as EventStatistics);
+            post_count: 0,
+            user_count: 0,
+            nlp_weight: 0,
+            sentiment_positive: 0,
+            sentiment_negative: 0,
+            sentiment_neutral: 0,
+            hotness: 0,
+            latestTimestamp: new Date(stat.year, stat.month - 1, stat.day, stat.hour)
+          });
+        }
+        const agg = aggregatedByEvent.get(stat.event_id)!;
+
+        // 累加帖子数和用户数
+        agg.post_count += stat.post_count;
+        agg.user_count = Math.max(agg.user_count, stat.user_count);
+
+        // 情感加权平均（使用 nlp_count 作为权重）
+        const weight = stat.nlp_count || 1;
+        agg.nlp_weight += weight;
+        agg.sentiment_positive += parseFloat(stat.sentiment_positive.toString()) * weight;
+        agg.sentiment_negative += parseFloat(stat.sentiment_negative.toString()) * weight;
+        agg.sentiment_neutral += parseFloat(stat.sentiment_neutral.toString()) * weight;
+
+        // 热度保留最大值
+        agg.hotness = Math.max(agg.hotness, parseFloat(stat.hotness.toString()));
+
+        // 更新时间戳为最新
+        const currentTimestamp = new Date(stat.year, stat.month - 1, stat.day, stat.hour);
+        if (currentTimestamp > agg.latestTimestamp) {
+          agg.latestTimestamp = currentTimestamp;
         }
       });
 
-      return Array.from(latestByEvent.values());
+      // 转换为 EventStatistics 格式
+      return Array.from(aggregatedByEvent.values()).map((agg) => {
+        const totalWeight = agg.nlp_weight || 1;
+        return {
+          event_id: agg.event_id,
+          post_count: agg.post_count,
+          user_count: agg.user_count,
+          sentiment: {
+            positive: parseFloat((agg.sentiment_positive / totalWeight).toFixed(4)),
+            negative: parseFloat((agg.sentiment_negative / totalWeight).toFixed(4)),
+            neutral: parseFloat((agg.sentiment_neutral / totalWeight).toFixed(4))
+          },
+          hotness: parseFloat(agg.hotness.toString()),
+          snapshot_at: agg.latestTimestamp
+        };
+      });
     });
   }
 
@@ -585,7 +622,7 @@ export class EventQueryService {
       hotness: displayHotness,
       trend: this.calculateTrend(statistics),
       category: event.category?.name || '未分类',
-      keywords: [],
+      keywords: event.keywords || [],
       createdAt: event.created_at.toISOString(),
       lastUpdate: event.updated_at.toISOString(),
       trendData:

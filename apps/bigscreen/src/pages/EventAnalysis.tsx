@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -12,13 +12,23 @@ import {
   Clock,
   Activity,
   Zap,
-  Pencil
+  Pencil,
+  Filter,
+  Calendar,
+  ArrowUpRight,
+  ArrowDownRight,
+  Minus,
+  RefreshCw
 } from 'lucide-react';
 import { useAppStore } from '@/stores/useAppStore';
 import { cn, formatNumber, formatRelativeTime } from '@/utils';
 import { createLogger } from '@sker/core';
 import { MetricCard } from '@sker/ui/components/ui/metric-card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@sker/ui/components/ui/select';
+import { Input } from '@sker/ui/components/ui/input';
+import { Button } from '@sker/ui/components/ui/button';
+import { Badge } from '@sker/ui/components/ui/badge';
+import { Skeleton } from '@sker/ui/components/ui/skeleton';
 import MiniTrendChart from '@/components/charts/MiniTrendChart';
 import { EventItem } from '@/types';
 import { EventsController, TrendDataSeries } from '@sker/sdk'
@@ -41,14 +51,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@sker/ui/components/ui/dialog';
-import { Button } from '@sker/ui/components/ui/button';
-import { Input } from '@sker/ui/components/ui/input';
 
 const logger = createLogger('EventAnalysis');
 
 const EventAnalysis: React.FC = () => {
   const navigate = useNavigate();
-  const { selectedTimeRange } = useAppStore();
+  const { selectedTimeRange, setSelectedTimeRange } = useAppStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [events, setEvents] = useState<EventItem[]>([]);
@@ -62,88 +70,64 @@ const EventAnalysis: React.FC = () => {
   const [editingKeywords, setEditingKeywords] = useState<string[]>([]);
   const [keywordInput, setKeywordInput] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // 加载数据
+  const loadData = async (showRefresh = false) => {
+    try {
+      if (showRefresh) setIsRefreshing(true);
+      else setLoading(true);
+
+      const c = root.get(EventsController)
+      const search = searchTerm || undefined;
+      const category = selectedCategory !== 'all' ? selectedCategory : undefined;
+
+      const [eventsResult, categoriesResult, trendsResult] = await Promise.all([
+        c.getEventList(selectedTimeRange, `${currentPage}`, `${pageSize}`, search, category),
+        c.getEventCategories(selectedTimeRange),
+        c.getTrendData(selectedTimeRange)
+      ]);
+
+      const eventsArray = Array.isArray(eventsResult.data) ? eventsResult.data : [];
+      const categoriesArray = Array.isArray(categoriesResult) ? categoriesResult : [];
+
+      setEvents(eventsArray);
+      setTotal(eventsResult.total);
+      setCategories(['all', ...categoriesArray.map(cat => cat.name)]);
+      setTrendData(trendsResult);
+    } catch (error) {
+      logger.error('Failed to load events data:', error);
+      setEvents([]);
+      setTotal(0);
+      setCategories(['all']);
+      setTrendData(null);
+    } finally {
+      setLoading(false);
+      setIsRefreshing(false);
+    }
+  };
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        const c = root.get(EventsController)
-
-        // 传递搜索和分类筛选参数到后端
-        const search = searchTerm || undefined;
-        const category = selectedCategory !== 'all' ? selectedCategory : undefined;
-
-        const [eventsResult, categoriesResult, trendsResult] = await Promise.all([
-          c.getEventList(selectedTimeRange, `${currentPage}`, `${pageSize}`, search, category),
-          c.getEventCategories(selectedTimeRange),
-          c.getTrendData(selectedTimeRange)
-        ]);
-
-        // 使用后端分页返回的数据
-        const eventsArray = Array.isArray(eventsResult.data) ? eventsResult.data : [];
-        const categoriesArray = Array.isArray(categoriesResult) ? categoriesResult : [];
-
-        setEvents(eventsArray);
-        setTotal(eventsResult.total);
-
-        // 转换 EventCategory[] 为 string[]
-        const categoryNames = ['all', ...categoriesArray.map(cat => cat.name)];
-        setCategories(categoryNames);
-
-        setTrendData(trendsResult);
-      } catch (error) {
-        logger.error('Failed to load events data:', error);
-        // 设置默认值以防止UI崩溃
-        setEvents([]);
-        setTotal(0);
-        setCategories(['all']);
-        setTrendData(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadData();
   }, [selectedTimeRange, currentPage, pageSize, searchTerm, selectedCategory]);
 
-  // 使用后端分页，不再需要前端筛选和切片
-  const filteredEvents = events;
-  const paginatedEvents = events;
-
-  // 计算总页数（使用后端返回的 total）
-  const totalPages = Math.ceil(total / pageSize);
-
-  // 重置页码当筛选条件或时间范围变化时
+  // 筛选条件变化时重置页码
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, selectedCategory, selectedTimeRange]);
 
-  const getSentimentColor = (sentiment: EventItem['sentiment']) => {
-    if (sentiment.positive > sentiment.negative && sentiment.positive > sentiment.neutral) {
-      return 'text-success';
-    } else if (sentiment.negative > sentiment.positive && sentiment.negative > sentiment.neutral) {
-      return 'text-destructive';
-    }
-    return 'text-muted-foreground';
-  };
+  // 提取趋势数据
+  const trendSeries = useMemo(() => {
+    if (!trendData?.series) return {};
+    return {
+      events: trendData.series.find(s => s.name === '事件数量')?.data || [],
+      posts: trendData.series.find(s => s.name === '贴子数量')?.data || [],
+      users: trendData.series.find(s => s.name === '参与用户')?.data || [],
+      hotness: trendData.series.find(s => s.name === '热度指数')?.data || [],
+    };
+  }, [trendData]);
 
-  const getTrendIcon = (trend: EventItem['trend']) => {
-    switch (trend) {
-      case 'up':
-        return <TrendingUp className="w-4 h-4 text-green-400" />;
-      case 'down':
-        return <TrendingUp className="w-4 h-4 text-red-400 rotate-180" />;
-      default:
-        return <div className="w-4 h-4 bg-gray-400 rounded-full"></div>;
-    }
-  };
-  // 从趋势数据中提取序列
-  const eventTrendData = trendData?.series?.find(s => s.name === '事件数量')?.data || [];
-  const postTrendData = trendData?.series?.find(s => s.name === '贴子数量')?.data || [];
-  const userTrendData = trendData?.series?.find(s => s.name === '参与用户')?.data || [];
-  const hotnessTrendData = trendData?.series?.find(s => s.name === '热度指数')?.data || [];
-
-  // 计算变化率：比较最新值与前一个值
+  // 计算变化率
   const calcChange = (data: number[]): number => {
     if (data.length < 2) return 0;
     const current = data[data.length - 1];
@@ -152,27 +136,37 @@ const EventAnalysis: React.FC = () => {
     return Math.round(((current - previous) / previous) * 1000) / 10;
   };
 
-  // 计算总数统计（取最新值或累计值）
-  const totalEvents = eventTrendData.length > 0 ? eventTrendData[eventTrendData.length - 1] : 0;
-  const totalPosts = postTrendData.length > 0 ? postTrendData[postTrendData.length - 1] : 0;
-  const totalUsers = userTrendData.length > 0 ? userTrendData[userTrendData.length - 1] : 0;
-  const avgHotness = hotnessTrendData.length > 0
-    ? Math.round(hotnessTrendData.reduce((sum, val) => sum + val, 0) / hotnessTrendData.length)
-    : 0;
+  // 统计数据
+  const stats = useMemo(() => {
+    const { events: e = [], posts: p = [], users: u = [], hotness: h = [] } = trendSeries;
+    return {
+      totalEvents: e.length > 0 ? e[e.length - 1] : 0,
+      totalPosts: p.length > 0 ? p[p.length - 1] : 0,
+      totalUsers: u.length > 0 ? u[u.length - 1] : 0,
+      avgHotness: h.length > 0 ? Math.round(h.reduce((sum, v) => sum + v, 0) / h.length) : 0,
+      eventChange: calcChange(e),
+      postChange: calcChange(p),
+      userChange: calcChange(u),
+      hotnessChange: calcChange(h),
+    };
+  }, [trendSeries]);
 
-  // 计算各指标变化率
-  const eventChange = calcChange(eventTrendData);
-  const postChange = calcChange(postTrendData);
-  const userChange = calcChange(userTrendData);
-  const hotnessChange = calcChange(hotnessTrendData);
+  const getSentimentConfig = (sentiment: EventItem['sentiment']) => {
+    if (sentiment.positive > sentiment.negative && sentiment.positive > sentiment.neutral) {
+      return { color: 'text-success', label: '正面', icon: Heart };
+    } else if (sentiment.negative > sentiment.positive && sentiment.negative > sentiment.neutral) {
+      return { color: 'text-destructive', label: '负面', icon: Heart };
+    }
+    return { color: 'text-muted-foreground', label: '中性', icon: Minus };
+  };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-muted-foreground">加载中...</div>
-      </div>
-    );
-  }
+  const getTrendConfig = (trend: EventItem['trend']) => {
+    switch (trend) {
+      case 'up': return { icon: ArrowUpRight, color: 'text-green-400', bg: 'bg-green-400/10' };
+      case 'down': return { icon: ArrowDownRight, color: 'text-red-400', bg: 'bg-red-400/10' };
+      default: return { icon: Minus, color: 'text-muted-foreground', bg: 'bg-muted/30' };
+    }
+  };
 
   const handleEventClick = (eventId: string) => {
     navigate(`/event-analysis/${eventId}`);
@@ -181,7 +175,6 @@ const EventAnalysis: React.FC = () => {
   const openEditDialog = (event: EventItem, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditingEventId(event.id);
-    setEditingKeywords([...event.keywords]);
     setKeywordInput('');
   };
 
@@ -227,272 +220,407 @@ const EventAnalysis: React.FC = () => {
     }
   };
 
+  // 渲染迷你趋势图
+  const renderMiniChart = (data: number[] = []) => {
+    if (data.length === 0) return null;
+    const max = Math.max(...data);
+    const min = Math.min(...data);
+    const range = max - min || 1;
+
+    return (
+      <div className="flex items-end gap-0.5 h-8 w-14">
+        {data.slice(-7).map((value, index) => {
+          const height = ((value - min) / range) * 100;
+          return (
+            <div
+              key={index}
+              className="flex-1 bg-gradient-to-t from-primary/70 to-primary rounded-sm transition-all duration-300"
+              style={{ height: `${Math.max(height, 8)}%` }}
+            />
+          );
+        })}
+      </div>
+    );
+  };
+
+  // 加载状态
+  if (loading) {
+    return (
+      <div className="space-y-6 px-6 py-6">
+        {/* 头部骨架 */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-40" />
+            <Skeleton className="h-4 w-60" />
+          </div>
+          <div className="flex gap-3">
+            <Skeleton className="h-10 w-64" />
+            <Skeleton className="h-10 w-36" />
+          </div>
+        </div>
+        {/* 统计卡片骨架 */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {Array(4).fill(0).map((_, i) => (
+            <Skeleton key={i} className="h-28 rounded-xl" />
+          ))}
+        </div>
+        {/* 列表骨架 */}
+        <div className="space-y-4">
+          {Array(3).fill(0).map((_, i) => (
+            <Skeleton key={i} className="h-32 rounded-xl" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const totalPages = Math.ceil(total / pageSize);
+
   return (
-    <div className="space-y-6 px-4 py-4">
-      {/* 页面标题和筛选区域 */}
+    <div className="space-y-6 px-6 py-6">
+      {/* 页面头部 */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">事件分析面板</h1>
-          <p className="text-muted-foreground mt-1">
-            当前时间区间: {selectedTimeRange} | 事件监测与趋势分析
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-primary/10">
+            <Activity className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold text-foreground">事件分析</h1>
+            <p className="text-sm text-muted-foreground">
+              共 <span className="text-foreground font-medium">{total}</span> 个事件
+            </p>
+          </div>
         </div>
 
-        <div className="flex items-center space-x-4">
+        <div className="flex flex-wrap items-center gap-3">
           {/* 搜索框 */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input
+          <div className="relative group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+            <Input
               type="text"
-              placeholder="搜索事件或关键词..."
+              placeholder="搜索事件..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 bg-muted rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
+              className="pl-10 w-56 bg-muted/30 border-muted hover:bg-muted/50 focus:bg-muted transition-all"
             />
           </div>
 
           {/* 分类筛选 */}
           <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="min-w-[150px]">
-              <SelectValue placeholder="选择分类" />
+            <SelectTrigger className="w-36 bg-muted/30 border-muted hover:bg-muted/50 focus:bg-muted transition-all">
+              <Filter className="w-4 h-4 mr-2 text-muted-foreground" />
+              <SelectValue placeholder="分类" />
             </SelectTrigger>
             <SelectContent>
-              {(categories.length ? categories : ['all']).map(category => (
+              {categories.map(category => (
                 <SelectItem key={category} value={category}>
                   {category === 'all' ? '全部分类' : category}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
+
+          {/* 刷新按钮 */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => loadData(true)}
+            disabled={isRefreshing}
+            className="bg-muted/30 border-muted hover:bg-muted/50"
+          >
+            <RefreshCw className={cn("w-4 h-4 transition-transform", isRefreshing && "animate-spin")} />
+          </Button>
         </div>
       </div>
 
-      {/* 统计概览卡片 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* 统计概览 - 2x2 网格 */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
           title="事件总数"
-          className='sentiment-overview-card'
-          value={totalEvents}
-          change={eventChange}
+          value={stats.totalEvents}
+          change={stats.eventChange}
           icon={Activity}
           color="blue"
-          chartComponent={<MiniTrendChart data={eventTrendData} color="#3b82f6" type="bar" />}
+          chartComponent={<MiniTrendChart data={trendSeries.events} color="#3b82f6" type="line" />}
+          className="group hover:border-primary/30 transition-all duration-300"
         />
         <MetricCard
           title="贴子总数"
-          className='sentiment-overview-card'
-          value={totalPosts}
-          change={postChange}
+          value={stats.totalPosts}
+          change={stats.postChange}
           icon={MessageSquare}
           color="green"
-          chartComponent={<MiniTrendChart data={postTrendData} color="#10b981" type="line" />}
+          chartComponent={<MiniTrendChart data={trendSeries.posts} color="#10b981" type="line" />}
+          className="group hover:border-primary/30 transition-all duration-300"
         />
         <MetricCard
           title="参与用户"
-          className='sentiment-overview-card'
-          value={totalUsers}
-          change={userChange}
+          value={stats.totalUsers}
+          change={stats.userChange}
           icon={Users}
           color="purple"
-          chartComponent={<MiniTrendChart data={userTrendData} color="#8b5cf6" type="line" />}
+          chartComponent={<MiniTrendChart data={trendSeries.users} color="#8b5cf6" type="line" />}
+          className="group hover:border-primary/30 transition-all duration-300"
         />
         <MetricCard
           title="平均热度"
-          className='sentiment-overview-card'
-          value={avgHotness}
-          change={hotnessChange}
+          value={stats.avgHotness}
+          change={stats.hotnessChange}
           icon={Zap}
           color="red"
-          chartComponent={<MiniTrendChart data={hotnessTrendData} color="#ef4444" type="bar" />}
+          chartComponent={<MiniTrendChart data={trendSeries.hotness} color="#ef4444" type="bar" />}
+          className="group hover:border-primary/30 transition-all duration-300"
         />
       </div>
 
       {/* 事件列表 */}
-      <div className="grid grid-cols-1 gap-4">
-          {paginatedEvents.length === 0 ? (
-            <div className="glass-card p-8 text-center">
-              <div className="text-muted-foreground text-lg">暂无事件数据</div>
-              <div className="text-sm text-muted-foreground mt-2">请尝试调整筛选条件</div>
+      <div className="space-y-4">
+        {events.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="p-4 rounded-full bg-muted/30 mb-4">
+              <Filter className="w-8 h-8 text-muted-foreground/50" />
             </div>
-          ) : (
-            paginatedEvents.map((event, index) => (
-              <motion.div
-                key={event.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="glass-card p-4 hover:bg-card/90 transition-all duration-300 cursor-pointer"
-                onClick={() => handleEventClick(event.id)}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-2">
-                      <h3 className="text-lg font-bold text-foreground">{event.title}</h3>
-                      <span className="px-3 py-1 bg-primary/20 text-primary text-sm rounded-full font-medium">
-                        {event.category}
-                      </span>
-                      {getTrendIcon(event.trend)}
-                      {/* 热度等级指示器 */}
-                      {event.hotness >= 90 && (
-                        <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded-full flex items-center">
-                          <AlertTriangle className="w-3 h-3 mr-1" />
-                          高热度
-                        </span>
-                      )}
-                    </div>
+            <h3 className="text-lg font-medium text-foreground mb-1">暂无事件数据</h3>
+            <p className="text-sm text-muted-foreground">请尝试调整筛选条件</p>
+          </div>
+        ) : (
+          events.map((event, index) => {
+            const sentimentConfig = getSentimentConfig(event.sentiment);
+            const trendConfig = getTrendConfig(event.trend);
+            const TrendIcon = trendConfig.icon;
 
-                    <p className="text-muted-foreground mb-3 text-sm">{event.description}</p>
+            return (
+              <React.Fragment key={event.id}>
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.06, duration: 0.3 }}
+                  className="group relative overflow-hidden rounded-xl bg-muted/20 border border-border/40 hover:border-primary/30 transition-all duration-300 cursor-pointer"
+                  onClick={() => handleEventClick(event.id)}
+                >
+                  {/* 悬停光效 */}
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
+                    <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent" />
+                  </div>
 
-                    <div className="flex items-center space-x-8 text-sm">
-                      <div className="flex items-center space-x-2">
-                        <MessageSquare className="w-5 h-5 text-muted-foreground" />
-                        <span className="text-foreground font-semibold">{formatNumber(event.postCount)}</span>
-                        <span className="text-muted-foreground">贴子</span>
+                  <div className="relative flex items-stretch p-4 gap-4">
+                    {/* 左侧：排名和热度 */}
+                    <div className="flex flex-col items-center justify-between w-20 py-1">
+                      <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 text-primary font-semibold text-lg">
+                        {index + 1}
                       </div>
-
-                      <div className="flex items-center space-x-2">
-                        <Users className="w-5 h-5 text-muted-foreground" />
-                        <span className="text-foreground font-semibold">{formatNumber(event.userCount)}</span>
-                        <span className="text-muted-foreground">用户</span>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <BarChart3 className="w-5 h-5 text-muted-foreground" />
-                        <span className="text-foreground font-semibold">{event.hotness}</span>
-                        <span className="text-muted-foreground">热度</span>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <Heart className={cn('w-5 h-5', getSentimentColor(event.sentiment))} />
-                        <span className={cn('font-semibold', getSentimentColor(event.sentiment))}>
-                          {event.sentiment.positive > event.sentiment.negative ? '正面' :
-                            event.sentiment.negative > event.sentiment.positive ? '负面' : '中性'}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <Clock className="w-5 h-5 text-muted-foreground" />
-                        <span className="text-muted-foreground">{formatRelativeTime(event.lastUpdate)}</span>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-foreground">{event.hotness}</div>
+                        <div className="text-xs text-muted-foreground">热度</div>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between mt-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        {event.keywords.slice(0, 6).map(keyword => (
-                          <span key={keyword} className="px-3 py-1 bg-primary/10 text-primary text-sm rounded-full font-medium">
-                            #{keyword}
-                          </span>
-                        ))}
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              className="h-6 w-6 hover:bg-primary/20"
-                              onClick={(e) => openEditDialog(event, e)}
+                    {/* 中间：主要内容 */}
+                    <div className="flex-1 flex flex-col justify-between min-w-0">
+                      {/* 标题和标签 */}
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="text-base font-semibold text-foreground truncate">{event.title}</h3>
+                          {event.hotness >= 90 && (
+                            <Badge variant="destructive" className="text-xs gap-1">
+                              <AlertTriangle className="w-3 h-3" />
+                              热门
+                            </Badge>
+                          )}
+                          <Badge variant="secondary" className="text-xs">
+                            {event.category}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground line-clamp-1">{event.description}</p>
+                      </div>
+
+                      {/* 指标和关键词 */}
+                      <div className="flex flex-wrap items-center gap-4 mt-3">
+                        {/* 核心指标 */}
+                        <div className="flex items-center gap-4 text-sm">
+                          <div className="flex items-center gap-1.5">
+                            <MessageSquare className="w-4 h-4 text-muted-foreground" />
+                            <span className="font-medium text-foreground">{formatNumber(event.postCount)}</span>
+                            <span className="text-muted-foreground text-xs">贴子</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <Users className="w-4 h-4 text-muted-foreground" />
+                            <span className="font-medium text-foreground">{formatNumber(event.userCount)}</span>
+                            <span className="text-muted-foreground text-xs">用户</span>
+                          </div>
+                          <div className={cn("flex items-center gap-1.5", sentimentConfig.color)}>
+                            <sentimentConfig.icon className="w-4 h-4" />
+                            <span className="font-medium">{sentimentConfig.label}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <Clock className="w-4 h-4 text-muted-foreground" />
+                            <span className="text-muted-foreground text-xs">{formatRelativeTime(event.lastUpdate)}</span>
+                          </div>
+                        </div>
+
+                        {/* 关键词 */}
+                        <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
+                          {event.keywords.slice(0, 4).map(keyword => (
+                            <span
+                              key={keyword}
+                              className="px-2 py-0.5 text-xs rounded-full bg-primary/10 text-primary"
                             >
-                              <Pencil className="h-3 w-3 text-muted-foreground" />
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="sm:max-w-md">
-                            <DialogHeader>
-                              <DialogTitle>编辑事件关键字</DialogTitle>
-                              <DialogDescription>
-                                调整事件的关键字以优化监测和分类
-                              </DialogDescription>
-                            </DialogHeader>
-                            <div className="space-y-4 py-4">
-                              <div className="flex flex-wrap gap-2 min-h-[60px] p-3 bg-muted/50 rounded-lg">
-                                {editingKeywords.length === 0 ? (
-                                  <span className="text-sm text-muted-foreground">暂无关键字</span>
-                                ) : (
-                                  editingKeywords.map(keyword => (
-                                    <span
-                                      key={keyword}
-                                      className="px-3 py-1 bg-primary/20 text-primary text-sm rounded-full flex items-center gap-1 group"
-                                    >
-                                      #{keyword}
-                                      <button
-                                        onClick={() => removeKeyword(keyword)}
-                                        className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity hover:text-destructive"
-                                      >
-                                        ×
-                                      </button>
-                                    </span>
-                                  ))
-                                )}
-                              </div>
-                              <div className="flex gap-2">
-                                <Input
-                                  placeholder="输入新关键字"
-                                  value={keywordInput}
-                                  onChange={(e) => setKeywordInput(e.target.value)}
-                                  onKeyDown={handleKeyDown}
-                                />
-                                <Button
-                                  type="button"
-                                  variant="secondary"
-                                  onClick={addKeyword}
-                                  disabled={!keywordInput.trim()}
-                                >
-                                  添加
-                                </Button>
-                              </div>
-                            </div>
-                            <DialogFooter>
-                              <Button variant="outline" onClick={closeEditDialog}>
-                                取消
-                              </Button>
-                              <Button onClick={saveKeywords} disabled={isSaving || editingKeywords.length === 0}>
-                                {isSaving ? '保存中...' : '保存'}
-                              </Button>
-                            </DialogFooter>
-                          </DialogContent>
-                        </Dialog>
+                              #{keyword}
+                            </span>
+                          ))}
+                          {event.keywords.length > 4 && (
+                            <span className="text-xs text-muted-foreground">+{event.keywords.length - 4}</span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="ml-8 flex flex-col items-end space-y-4">
-                    <div className="text-right">
-                      <div className="text-3xl font-bold text-foreground">{event.hotness}</div>
-                      <div className="text-sm text-muted-foreground">热度指数</div>
-                    </div>
-
-                    {/* 热度直方图（使用真实趋势数据） */}
-                    <div className="w-20 h-12 bg-muted/30 rounded-lg flex items-end space-x-1 p-2">
-                      {(event.trendData?.slice(-7) || []).map((value, i) => {
-                        const maxVal = Math.max(...(event.trendData || [1]));
-                        const height = maxVal > 0 ? (value / maxVal) * 100 : 0;
-                        return (
-                          <div
-                            key={i}
-                            className="flex-1 bg-gradient-to-t from-primary/60 to-primary rounded-sm"
-                            style={{ height: `${Math.max(height, 5)}%` }}
-                          ></div>
-                        );
-                      })}
+                    {/* 右侧：趋势图和操作 */}
+                    <div className="flex flex-col items-end justify-between w-28 py-1">
+                      <div className={cn("flex items-center gap-1 px-2 py-1 rounded-full", trendConfig.bg)}>
+                        <TrendIcon className={cn("w-3.5 h-3.5", trendConfig.color)} />
+                        <span className={cn("text-xs font-medium", trendConfig.color)}>
+                          {event.trend === 'up' ? '上升' : event.trend === 'down' ? '下降' : '平稳'}
+                        </span>
+                      </div>
+                      {renderMiniChart(event.trendData)}
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openEditDialog(event, e);
+                        }}
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
                     </div>
                   </div>
-                </div>
-              </motion.div>
-            ))
-          )}
+                </motion.div>
+
+                {/* Dialog 放在卡片外面，独立渲染 */}
+                {editingEventId === event.id && (
+                  <Dialog open={true} onOpenChange={(open) => {
+                    if (!open) closeEditDialog();
+                  }}>
+                    <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
+                      <DialogHeader>
+                        <DialogTitle>编辑事件关键字</DialogTitle>
+                        <DialogDescription>
+                          调整事件的关键字以优化监测和分类
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        {/* 调试信息 */}
+                        <div className="text-xs text-muted-foreground mb-2">
+                          event.id: {event.id}<br/>
+                          event.keywords: {JSON.stringify(event.keywords)}<br/>
+                          event.keywords?.length: {event.keywords?.length}
+                        </div>
+                        <div className="flex flex-wrap gap-2 min-h-[60px] p-3 bg-muted/30 rounded-lg">
+                          {event.keywords && event.keywords.length > 0 ? (
+                            event.keywords.map(keyword => (
+                              <span
+                                key={keyword}
+                                className="px-3 py-1 bg-primary/15 text-primary text-sm rounded-full flex items-center gap-1 group"
+                              >
+                                #{keyword}
+                                <button
+                                  onClick={() => {
+                                    setEvents(events.map(e =>
+                                      e.id === event.id
+                                        ? { ...e, keywords: e.keywords.filter(k => k !== keyword) }
+                                        : e
+                                    ));
+                                  }}
+                                  className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity hover:text-destructive"
+                                >
+                                  ×
+                                </button>
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-sm text-muted-foreground">暂无关键字</span>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder="输入新关键字"
+                            value={keywordInput}
+                            onChange={(e) => setKeywordInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && keywordInput.trim()) {
+                                setEvents(events.map(e =>
+                                  e.id === event.id
+                                    ? { ...e, keywords: [...(e.keywords || []), keywordInput.trim()] }
+                                    : e
+                                ));
+                                setKeywordInput('');
+                              }
+                            }}
+                          />
+                          <Button
+                            variant="secondary"
+                            onClick={() => {
+                              if (keywordInput.trim()) {
+                                setEvents(events.map(e =>
+                                  e.id === event.id
+                                    ? { ...e, keywords: [...(e.keywords || []), keywordInput.trim()] }
+                                    : e
+                                ));
+                                setKeywordInput('');
+                              }
+                            }}
+                            disabled={!keywordInput.trim()}
+                          >
+                            添加
+                          </Button>
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={closeEditDialog}>取消</Button>
+                        <Button
+                          onClick={async () => {
+                            const keywords = events.find(e => e.id === event.id)?.keywords || [];
+                            setIsSaving(true);
+                            try {
+                              const c = root.get(EventsController);
+                              await c.updateEventKeywords(event.id, { keywords });
+                              closeEditDialog();
+                            } catch (error) {
+                              logger.error('Failed to save keywords:', error);
+                            } finally {
+                              setIsSaving(false);
+                            }
+                          }}
+                          disabled={isSaving}
+                        >
+                          {isSaving ? '保存中...' : '保存'}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                )}
+              </React.Fragment>
+            );
+          })
+        )}
       </div>
 
-      {/* 分页组件 */}
+      {/* 分页 */}
       {totalPages > 1 && (
-        <div className="flex justify-center mt-6">
+        <div className="flex justify-center py-4">
           <Pagination>
-            <PaginationContent>
+            <PaginationContent className="gap-1">
               <PaginationItem>
                 <PaginationPrevious
                   href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    if (currentPage > 1) setCurrentPage(currentPage - 1);
-                  }}
-                  className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                  onClick={(e) => { e.preventDefault(); currentPage > 1 && setCurrentPage(currentPage - 1); }}
+                  className={cn(
+                    "transition-colors",
+                    currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer hover:bg-muted"
+                  )}
                 />
               </PaginationItem>
 
@@ -500,7 +628,6 @@ const EventAnalysis: React.FC = () => {
                 const pages: (number | 'ellipsis')[] = [];
                 const showPages = new Set<number>();
 
-                // 始终显示首尾页和当前页附近
                 [1, totalPages, currentPage - 1, currentPage, currentPage + 1].forEach(p => {
                   if (p >= 1 && p <= totalPages) showPages.add(p);
                 });
@@ -508,10 +635,7 @@ const EventAnalysis: React.FC = () => {
                 const sortedPages = Array.from(showPages).sort((a, b) => a - b);
 
                 sortedPages.forEach((page, idx) => {
-                  // 如果与前一个页码差距 > 1，插入省略号
-                  if (idx > 0 && page - sortedPages[idx - 1] > 1) {
-                    pages.push('ellipsis');
-                  }
+                  if (idx > 0 && page - sortedPages[idx - 1] > 1) pages.push('ellipsis');
                   pages.push(page);
                 });
 
@@ -524,12 +648,12 @@ const EventAnalysis: React.FC = () => {
                     <PaginationItem key={item}>
                       <PaginationLink
                         href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setCurrentPage(item);
-                        }}
+                        onClick={(e) => { e.preventDefault(); setCurrentPage(item); }}
                         isActive={currentPage === item}
-                        className="cursor-pointer"
+                        className={cn(
+                          "cursor-pointer transition-all",
+                          currentPage === item && "bg-primary text-primary-foreground hover:bg-primary/90"
+                        )}
                       >
                         {item}
                       </PaginationLink>
@@ -541,18 +665,17 @@ const EventAnalysis: React.FC = () => {
               <PaginationItem>
                 <PaginationNext
                   href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    if (currentPage < totalPages) setCurrentPage(currentPage + 1);
-                  }}
-                  className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                  onClick={(e) => { e.preventDefault(); currentPage < totalPages && setCurrentPage(currentPage + 1); }}
+                  className={cn(
+                    "transition-colors",
+                    currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer hover:bg-muted"
+                  )}
                 />
               </PaginationItem>
             </PaginationContent>
           </Pagination>
         </div>
       )}
-
     </div>
   );
 };
