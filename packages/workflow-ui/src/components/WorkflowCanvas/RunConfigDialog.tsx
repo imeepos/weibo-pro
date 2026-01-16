@@ -110,60 +110,23 @@ function RunConfigDialog({
   const [inputs, setInputs] = useState<Record<string, unknown>>({})
   const [isInitialized, setIsInitialized] = useState(false)
   const dialogVisibleRef = useRef(false)
-  const renderCountRef = useRef(0)
-  const lastRenderReasonRef = useRef<string>('initial')
-
-  // 渲染计数器（用于调试）
-  renderCountRef.current++
-
-  // 检测渲染原因
-  const prevWorkflowRef = useRef<typeof workflow | null>(null)
-  const prevInputsRef = useRef<typeof inputs | null>(null)
-  const prevVisibleRef = useRef<boolean>(!visible)
-
-  let renderReason = 'unknown'
-  if (prevVisibleRef.current !== visible) renderReason = `visible changed: ${prevVisibleRef.current} -> ${visible}`
-  else if (prevWorkflowRef.current !== workflow) renderReason = 'workflow prop changed'
-  else if (prevInputsRef.current !== inputs) renderReason = 'inputs state changed'
-  else if (isInitialized) renderReason = 'isInitialized changed'
-
-  prevWorkflowRef.current = workflow
-  prevInputsRef.current = inputs
-  prevVisibleRef.current = visible
-  lastRenderReasonRef.current = renderReason
-
-  useEffect(() => {
-    console.log('[RunConfigDialog] component rendered, total renders:', renderCountRef.current, 'reason:', renderReason)
-    console.log('[RunConfigDialog] current inputs:', inputs)
-  })
 
   // 每次打开对话框时，从工作流获取最新状态
   useEffect(() => {
     const isOpening = visible && !dialogVisibleRef.current
 
-    console.log('[RunConfigDialog] useEffect triggered:', {
-      visible,
-      dialogVisibleRefCurrent: dialogVisibleRef.current,
-      isOpening,
-      isInitialized
-    })
-
     if (!visible) {
-      console.log('[RunConfigDialog] useEffect: !visible, resetting state')
       setIsInitialized(false)
       dialogVisibleRef.current = false
       return
     }
 
     if (!isOpening) {
-      console.log('[RunConfigDialog] useEffect: !isOpening, skipping initialization')
       return
     }
 
-    console.log('[RunConfigDialog] useEffect: opening dialog, initializing...')
     // 从当前工作流 AST 收集最新的输入值
     const latestInputs = collectInputsFromWorkflow(workflow, defaultInputs)
-    console.log('[RunConfigDialog] useEffect: collected inputs:', latestInputs)
     setInputs(latestInputs)
     setIsInitialized(true)
     dialogVisibleRef.current = true
@@ -218,11 +181,6 @@ function RunConfigDialog({
   }, [inputNodes])
 
   const handleInputChange = useCallback((fullKey: string, value: any) => {
-    console.log('[RunConfigDialog] handleInputChange called:', {
-      fullKey,
-      value
-    })
-    console.log('[RunConfigDialog] updating inputs state')
     setInputs((prev) => ({
       ...prev,
       [fullKey]: value,
@@ -238,12 +196,6 @@ function RunConfigDialog({
 
     if (!propChangeWrappersRef.current.has(nodeId)) {
       propChangeWrappersRef.current.set(nodeId, (prop: string, value: any) => {
-        console.log('[RunConfigDialog] propChangeWrapper called:', {
-          nodeId,
-          prop,
-          value,
-          fullKey: `${nodeId}.${prop}`
-        })
         // 从 ref 获取最新的 node 引用
         const currentNode = nodeRefsRef.current.get(nodeId)
         if (currentNode) {
@@ -258,7 +210,6 @@ function RunConfigDialog({
 
   // 提取所有带 @Input 装饰器的字段
   const inputFields = useMemo(() => {
-    console.log('[RunConfigDialog] inputFields recalculating...')
     const fields: InputField[] = []
 
     inputNodes.forEach((node: any) => {
@@ -426,8 +377,9 @@ const MemoizedRunConfigDialog = React.memo(RunConfigDialog, (prevProps, nextProp
   return (
     prevProps.visible === nextProps.visible &&
     prevProps.workflow === nextProps.workflow &&
-    prevProps.defaultInputs === nextProps.defaultInputs
-    // onConfirm 和 onCancel 是函数引用，不需要比较（应该使用 useCallback）
+    prevProps.defaultInputs === nextProps.defaultInputs &&
+    prevProps.onConfirm === nextProps.onConfirm &&
+    prevProps.onCancel === nextProps.onCancel
   )
 })
 
