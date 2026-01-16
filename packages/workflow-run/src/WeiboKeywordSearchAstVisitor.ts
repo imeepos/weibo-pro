@@ -203,7 +203,7 @@ export class WeiboKeywordSearchAstVisitor {
                         }
 
                         // 检查帖子是否在12小时内已有快照
-                        const shouldSkip = await useEntityManager(async (m: import('@sker/entities').EntityManager) => {
+                        const shouldSkip = await useEntityManager(async (m: EntityManager) => {
                             // 根据帖子ID查找帖子记录
                             const isLongId = /^\d{16,}$/.test(post.mid);
                             const postEntity = await m.findOne(WeiboPostEntity, {

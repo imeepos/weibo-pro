@@ -62,7 +62,7 @@ export class EventAuthGenerateAstVisitor {
   "seed_url": null,
   "occurred_at": "2026-01-04 16:54:00",
   "peak_at": "2026-01-04 18:00:00",
-  "keywords": ["关键词1", "关键词2", "关键词3"],
+  "keywords": ["关键词1", "关键词2"],
   "reasoning": "生成理由（用于日志记录）",
   "alreadyExists": false,
   "existingEventId": null
@@ -165,9 +165,9 @@ export class EventAuthGenerateAstVisitor {
   </structure>
 
   <good-examples>
-    <example event="腾讯AI骂人">["元宝AI", "骂人", "腾讯"]</example>
-    <example event="泰国坠崖案">["王暖暖", "坠崖", "泰国"]</example>
-    <example event="幼儿园关停">["幼儿园", "关停", "倒闭"]</example>
+    <example event="腾讯AI骂人">["元宝AI", "骂人"]</example>
+    <example event="泰国坠崖案">["王暖暖", "坠崖"]</example>
+    <example event="幼儿园关停">["幼儿园", "关停"]</example>
   </good-examples>
 
   <forbidden>
