@@ -217,8 +217,6 @@ function RunConfigDialog({
     return settingRenderersRef.current
   }, [inputNodes])
 
-  if (!visible) return null
-
   const handleInputChange = useCallback((fullKey: string, value: any) => {
     console.log('[RunConfigDialog] handleInputChange called:', {
       fullKey,
@@ -310,17 +308,19 @@ function RunConfigDialog({
     return fields
   }, [inputNodes, inputs])
 
-  const handleConfirm = () => {
+  const handleConfirm = useCallback(() => {
     onConfirm(inputs)
-  }
+  }, [inputs, onConfirm])
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     // 清空输入状态，避免下次打开时残留旧数据
     setInputs({})
     setIsInitialized(false)
     dialogVisibleRef.current = false
     onCancel()
-  }
+  }, [onCancel])
+
+  if (!visible) return null
 
   const dialogContent = (
     <>
