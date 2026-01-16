@@ -1,22 +1,24 @@
-import { Controller, Post, Body } from '@sker/core';
-import { root } from '@sker/core';
-import { ChatService } from '../services/chat.service';
-import * as sdk from '@sker/sdk';
+import { Controller, Post, Body } from '@sker/core'
+import { root } from '@sker/core'
+import { ChatService } from '../services/chat.service'
+import type { ChatMessage } from '@sker/workflow-run'
+import * as sdk from '@sker/sdk'
 
 interface ChatRequestDto {
-  databaseUrl?: string;
+  messages: ChatMessage[]
+  databaseUrl?: string
 }
 
 @Controller(sdk.ChatController)
-export class ChatController {
-  private service: ChatService;
+export class ChatController implements sdk.ChatController {
+  private service: ChatService
 
   constructor() {
-    this.service = root.get(ChatService);
+    this.service = root.get(ChatService)
   }
 
   @Post()
   async chat(@Body() request: ChatRequestDto) {
-    throw new Error('method chat not implements');
+    return this.service.chat(request)
   }
 }

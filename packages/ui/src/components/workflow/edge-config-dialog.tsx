@@ -74,8 +74,8 @@ export function EdgeConfigDialog({
           <DialogTitle>边配置</DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[60vh] pr-4">
-          <div className="space-y-6">
+        <ScrollArea className="flex-1 min-h-0">
+          <div className="space-y-6 pr-4">
             <EdgeModeSelector
               value={mode}
               options={modeOptions}

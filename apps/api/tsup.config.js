@@ -30,6 +30,8 @@ export default {
     '@redis/client',
     '@redis/client/lib/lua-script',
     'amqplib',
-    'mongodb'
+    'mongodb',
+    '@langchain/*',
+    'langchain*'
   ]
 }

@@ -17,7 +17,7 @@ export function useLlmModel(options: LlmModelOptions = {}): ChatOpenAI<ChatOpenA
     configuration: {
       baseURL: LLM_PROXY_BASE_URL
     },
-    maxTokens: 16384,
+    maxTokens: 163840,
   }
 
   return new ChatOpenAI(config)

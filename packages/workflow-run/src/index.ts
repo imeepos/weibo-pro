@@ -66,6 +66,9 @@ export { PersonaCreatorAstVisitor } from './PersonaCreatorAstVisitor'
 // LLM 客户端
 export { useLlmModel } from './llm-client'
 
+// Chat Agent
+export { ChatAgent, type ChatMessage, type AgentConfig } from './chat'
+
 // 角色技能节点
 export { PromptRoleSkillAstVisitor } from './PromptRoleSkillAstVisitor'
 
