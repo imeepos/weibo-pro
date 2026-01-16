@@ -2,14 +2,14 @@
 
 import React, { useEffect, useMemo, useState, useCallback } from 'react'
 import { PropertyPanel } from '../PropertyPanel'
-import { Workflow, Settings, History, Crosshair, Save } from 'lucide-react'
+import { Workflow, Settings, Crosshair, Save } from 'lucide-react'
 import { useSelectedNode } from '../PropertyPanel/useSelectedNode'
 import {
   WorkflowPropertyDrawer,
   type DrawerTab,
   type DrawerAction,
 } from '@sker/ui/components/workflow'
-import { NodeRunHistory } from './NodeRunHistory'
+// import { NodeRunHistory } from './NodeRunHistory'
 import { INode } from '@sker/workflow'
 
 // ✨ 稳定的设置面板包装器，避免因 formData 改变而重新挂载
@@ -119,14 +119,14 @@ export function LeftDrawer({ visible, onClose, onRunNode, onLocateNode, onAutoSa
       icon: Settings,
       content: <SettingsTabContent formData={formData} onPropertyChange={handlePropertyChange} />,
     },
-    {
-      id: 'history',
-      label: '历史',
-      icon: History,
-      content: selectedNode ? (
-        <NodeRunHistory nodeId={selectedNode.id} />
-      ) : null,
-    },
+    // {
+    //   id: 'history',
+    //   label: '历史',
+    //   icon: History,
+    //   content: selectedNode ? (
+    //     <NodeRunHistory nodeId={selectedNode.id} />
+    //   ) : null,
+    // },
   ]
 
   const actions: DrawerAction[] = useMemo(
