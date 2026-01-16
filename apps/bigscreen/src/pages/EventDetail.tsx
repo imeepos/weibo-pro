@@ -199,9 +199,9 @@ const EventDetail: React.FC = () => {
           timeline: eventData.timeline || [],
           propagationPath: eventData.propagationPath || [],
           keyNodes: eventData.keyNodes || [],
-          developmentPhases: eventData.developmentPhases || [],
-          developmentPattern: eventData.developmentPattern,
-          successFactors: eventData.successFactors
+          developmentPhases: (eventData as any).developmentPhases || [],
+          developmentPattern: (eventData as any).developmentPattern,
+          successFactors: (eventData as any).successFactors
         };
         setEventData(convertedEventData);
 
@@ -287,14 +287,14 @@ const EventDetail: React.FC = () => {
 
         // 新增：获取基于 EventHourlyStatisticsEntity 的互动指标数据
         try {
-          const engagementTrend = await c.getEngagementTrend(eventId, 168);
+          const engagementTrend = await c.getEngagementTrend(eventId, '168');
           setEngagementTrendData(engagementTrend || []);
         } catch (e) {
           logger.warn('Failed to fetch engagement trend data:', e);
         }
 
         try {
-          const anomalies = await c.getAnomalies(eventId, 168);
+          const anomalies = await c.getAnomalies(eventId, '168');
           setAnomaliesData(anomalies || []);
         } catch (e) {
           logger.warn('Failed to fetch anomalies data:', e);

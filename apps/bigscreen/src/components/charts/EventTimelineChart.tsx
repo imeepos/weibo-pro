@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 
 interface TimelineEvent {
-  time: string;
+  time: string | Date;
   event: string;
   type: 'start' | 'peak' | 'decline' | 'key_event' | 'milestone' | 'crisis';
   impact: number;

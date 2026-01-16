@@ -16,6 +16,7 @@ const CustomDataOverview = lazy(() => import('@/pages/CustomDataOverview'));
 const EventAnalysis = lazy(() => import('@/pages/EventAnalysis'));
 const EventDetail = lazy(() => import('@/pages/EventDetail'));
 const UserDetection = lazy(() => import('@/pages/UserDetection'));
+const UserDetection3D = lazy(() => import('@/pages/UserDetection3D'));
 const UserRelationTopology = lazy(() => import('@/pages/UserRelationTopology'));
 const LayoutDemo = lazy(() => import('@/pages/LayoutDemo').then(m => ({ default: m.LayoutDemo })));
 const BleMeshTopology = lazy(() => import('@/pages/BleMeshTopology'));
@@ -121,6 +122,7 @@ const App: React.FC = () => {
             <Route path="/data-overview" element={<Layout><AnimatedPage pageKey="data-overview"><DataOverview /></AnimatedPage></Layout>} />
             <Route path="/event-analysis" element={<Layout><AnimatedPage pageKey="event-analysis"><EventAnalysis /></AnimatedPage></Layout>} />
             <Route path="/user-detection" element={<Layout><AnimatedPage pageKey="user-detection"><UserDetection /></AnimatedPage></Layout>} />
+            <Route path="/user-detection-3d" element={<FullscreenLayout><AnimatedPage pageKey="user-detection-3d"><UserDetection3D /></AnimatedPage></FullscreenLayout>} />
             <Route path="/custom-overview" element={<Layout><AnimatedPage pageKey="custom-overview"><CustomDataOverview /></AnimatedPage></Layout>} />
             <Route path="/layout-editor" element={<Layout><AnimatedPage pageKey="layout-editor"><LayoutDemo /></AnimatedPage></Layout>} />
             <Route path="/ble-mesh-topology" element={<Layout><AnimatedPage pageKey="ble-mesh"><BleMeshTopology /></AnimatedPage></Layout>} />

@@ -221,7 +221,7 @@ export class PerformanceTester {
  */
 export const generateTestNetwork = (nodeCount: number): UserRelationNetwork => {
   const nodes = Array.from({ length: nodeCount }, (_, i) => ({
-    id: i,
+    id: `user-${i}`,
     name: `User ${i}`,
     userType: ['official', 'media', 'kol', 'normal'][i % 4] as any,
     followers: Math.floor(Math.random() * 100000),
@@ -232,14 +232,33 @@ export const generateTestNetwork = (nodeCount: number): UserRelationNetwork => {
 
   // 生成边（每个节点平均 5 条边）
   const edgeCount = Math.floor(nodeCount * 5);
-  const edges = Array.from({ length: edgeCount }, (_, i) => ({
-    source: Math.floor(Math.random() * nodeCount),
-    target: Math.floor(Math.random() * nodeCount),
-    weight: Math.floor(Math.random() * 100),
-    type: ['like', 'comment', 'repost', 'comprehensive'][i % 4] as any,
-  }));
+  const edges = Array.from({ length: edgeCount }, (_, i) => {
+    const sourceIndex = Math.floor(Math.random() * nodeCount);
+    const targetIndex = Math.floor(Math.random() * nodeCount);
+    return {
+      source: `user-${sourceIndex}`,
+      target: `user-${targetIndex}`,
+      weight: Math.floor(Math.random() * 100),
+      type: ['like', 'comment', 'repost', 'comprehensive'][i % 4] as any,
+      interactions: {
+        likes: Math.floor(Math.random() * 100),
+        comments: Math.floor(Math.random() * 50),
+        reposts: Math.floor(Math.random() * 30),
+      },
+    };
+  });
 
-  return { nodes, edges };
+  return {
+    nodes,
+    edges,
+    statistics: {
+      totalUsers: nodeCount,
+      totalRelations: edgeCount,
+      avgDegree: (edgeCount * 2) / nodeCount,
+      density: edgeCount / (nodeCount * (nodeCount - 1)),
+      communities: Math.floor(Math.random() * 10) + 1,
+    },
+  };
 };
 
 /**
