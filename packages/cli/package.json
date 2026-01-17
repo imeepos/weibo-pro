@@ -64,8 +64,10 @@
   "devDependencies": {
     "@sker/eslint-config": "workspace:*",
     "@sker/typescript-config": "workspace:*",
+    "@types/minimatch": "^6.0.0",
     "@types/node": "^22.15.3",
     "eslint": "^9.38.0",
+    "minimatch": "^10.1.1",
     "tsx": "^4.19.2",
     "typescript": "5.9.2",
     "vitest": "^4.0.16"

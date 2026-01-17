@@ -32,9 +32,11 @@
   "devDependencies": {
     "@sker/eslint-config": "workspace:*",
     "@sker/typescript-config": "workspace:*",
+    "@types/minimatch": "^6.0.0",
     "@types/node": "^22.15.3",
     "@types/react": "^19.0.0",
     "eslint": "^9.38.0",
+    "minimatch": "^10.1.1",
     "tsup": "^8.4.0",
     "typescript": "5.9.2"
   }
