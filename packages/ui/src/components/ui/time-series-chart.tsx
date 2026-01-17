@@ -91,11 +91,11 @@ export function TimeSeriesChart({
       }
     }
 
-    const timestamps = data.map((item) => item.timestamp)
-    const values = data.map((item) => item.value)
-    const positiveValues = data.map((item) => item.positive || 0)
-    const negativeValues = data.map((item) => item.negative || 0)
-    const neutralValues = data.map((item) => item.neutral || 0)
+    // time 类型需要 [timestamp, value] 二维数组格式
+    const values: [number, number | null][] = data.map((item) => [new Date(item.timestamp).getTime(), item.value ?? null])
+    const positiveValues: [number, number | null][] = data.map((item) => [new Date(item.timestamp).getTime(), item.positive ?? null])
+    const negativeValues: [number, number | null][] = data.map((item) => [new Date(item.timestamp).getTime(), item.negative ?? null])
+    const neutralValues: [number, number | null][] = data.map((item) => [new Date(item.timestamp).getTime(), item.neutral ?? null])
 
     const legendData = []
     if (showTotal) legendData.push(totalLabel)
@@ -110,6 +110,7 @@ export function TimeSeriesChart({
         type: 'line',
         data: values,
         smooth: true,
+        connectNulls: false,
         lineStyle: {
           color: '#3b82f6',
           width: 3,
@@ -140,6 +141,7 @@ export function TimeSeriesChart({
           type: 'line',
           data: positiveValues,
           smooth: true,
+          connectNulls: false,
           lineStyle: {
             color: '#10b981',
             width: 2,
@@ -153,6 +155,7 @@ export function TimeSeriesChart({
           type: 'line',
           data: negativeValues,
           smooth: true,
+          connectNulls: false,
           lineStyle: {
             color: '#ef4444',
             width: 2,
@@ -166,6 +169,7 @@ export function TimeSeriesChart({
           type: 'line',
           data: neutralValues,
           smooth: true,
+          connectNulls: false,
           lineStyle: {
             color: '#6b7280',
             width: 2,
@@ -175,6 +179,35 @@ export function TimeSeriesChart({
           },
         },
       )
+    }
+
+    const xAxisConfig = {
+      type: 'time' as const,
+      boundaryGap: false,
+      axisLine: {
+        lineStyle: {
+          color: colors.border,
+        },
+      },
+      axisLabel: {
+        color: colors.text,
+        formatter: (value: any) => {
+          const numValue = typeof value === 'number' ? value : new Date(value).getTime();
+          const date = new Date(numValue)
+          const month = date.getMonth() + 1
+          const day = date.getDate()
+          const hours = date.getHours()
+          const minutes = date.getMinutes().toString().padStart(2, '0')
+          return `${month}/${day} ${hours}:${minutes}`
+        },
+      },
+      splitLine: {
+        show: true,
+        lineStyle: {
+          color: colors.splitLine,
+          type: 'dashed',
+        },
+      },
     }
 
     return {
@@ -197,14 +230,25 @@ export function TimeSeriesChart({
         formatter: (params: any) => {
           if (!Array.isArray(params) || params.length === 0) return ''
 
-          let result = `<div style="margin-bottom: 8px; font-weight: bold;">${params[0].axisValue}</div>`
+          // 格式化时间戳
+          const timestamp = params[0].axisValue
+          const date = new Date(typeof timestamp === 'number' ? timestamp : new Date(timestamp).getTime())
+          const month = date.getMonth() + 1
+          const day = date.getDate()
+          const hours = date.getHours()
+          const minutes = date.getMinutes().toString().padStart(2, '0')
+          const timeLabel = `${month}/${day} ${hours}:${minutes}`
+
+          let result = `<div style="margin-bottom: 8px; font-weight: bold;">${timeLabel}</div>`
           params.forEach((param: any) => {
             const { color, value, seriesName } = param
+            // value 是 [timestamp, value] 数组，取第二个元素
+            const displayValue = Array.isArray(value) ? value[1] : value
             result += `
               <div style="display: flex; align-items: center; margin-bottom: 4px;">
                 <span style="display: inline-block; width: 10px; height: 10px; background-color: ${color}; border-radius: 50%; margin-right: 8px;"></span>
                 <span style="margin-right: 8px;">${seriesName}:</span>
-                <span style="font-weight: bold;">${value}</span>
+                <span style="font-weight: bold;">${displayValue}</span>
               </div>
             `
           })
@@ -251,27 +295,7 @@ export function TimeSeriesChart({
             },
           }
         : undefined,
-      xAxis: {
-        type: 'category',
-        boundaryGap: false,
-        data: timestamps,
-        axisLine: {
-          lineStyle: {
-            color: colors.border,
-          },
-        },
-        axisLabel: {
-          color: colors.text,
-          formatter: timeFormatter,
-        },
-        splitLine: {
-          show: true,
-          lineStyle: {
-            color: colors.splitLine,
-            type: 'dashed',
-          },
-        },
-      },
+      xAxis: xAxisConfig,
       yAxis: {
         type: 'value',
         axisLine: {
