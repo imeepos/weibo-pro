@@ -31,7 +31,7 @@ const FullscreenLayout: React.FC<FullscreenLayoutProps> = ({ children, className
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.5 }}
         className={cn(
-          'flex-1 relative overflow-hidden',
+          'flex-1 relative overflow-y-auto scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent hover:scrollbar-thumb-muted-foreground/40',
           'p-1'
         )}
       >

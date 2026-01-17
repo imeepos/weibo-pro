@@ -27,7 +27,11 @@ import {
   Layers,
   LineChart,
   Pencil,
-  X
+  X,
+  MessageCircle,
+  Share2,
+  ThumbsUp,
+  TrendingUp
 } from 'lucide-react';
 import { cn, formatNumber, formatRelativeTime } from '@/utils';
 import { createLogger } from '@sker/core';
@@ -150,16 +154,31 @@ const EventDetail: React.FC = () => {
       const convertedTimeSeries: TimeSeriesDataPoint[] = [];
       if (timeSeriesData?.categories && Array.isArray(timeSeriesData.categories)) {
         const categories = timeSeriesData.categories;
+        const postCountSeries = timeSeriesData.series?.find((s: any) => s.name === '帖子数量')?.data || [];
         const positiveSeries = timeSeriesData.series?.find((s: any) => s.name === '正面情绪')?.data || [];
         const negativeSeries = timeSeriesData.series?.find((s: any) => s.name === '负面情绪')?.data || [];
         const neutralSeries = timeSeriesData.series?.find((s: any) => s.name === '中性情绪')?.data || [];
         for (let i = 0; i < categories.length; i++) {
-          convertedTimeSeries.push({
-            timestamp: categories[i] || '',
-            value: (positiveSeries[i] || 0) + (negativeSeries[i] || 0) + (neutralSeries[i] || 0),
-            positive: positiveSeries[i] || 0, negative: negativeSeries[i] || 0, neutral: neutralSeries[i] || 0
-          });
+          const postCount = postCountSeries[i] != null ? Number(postCountSeries[i]) : 0;
+          const positiveRatio = positiveSeries[i] != null ? Number(positiveSeries[i]) : null;
+          const negativeRatio = negativeSeries[i] != null ? Number(negativeSeries[i]) : null;
+          const neutralRatio = neutralSeries[i] != null ? Number(neutralSeries[i]) : null;
+
+          // 计算绝对数量 = 帖子总数 × 情感比例
+          const positive = postCount > 0 && positiveRatio !== null ? Math.round(postCount * positiveRatio) : null;
+          const negative = postCount > 0 && negativeRatio !== null ? Math.round(postCount * negativeRatio) : null;
+          const neutral = postCount > 0 && neutralRatio !== null ? Math.round(postCount * neutralRatio) : null;
+
+          if (postCount > 0) {
+            convertedTimeSeries.push({
+              timestamp: categories[i] || '',
+              value: postCount,
+              positive, negative, neutral
+            });
+          }
         }
+        // 按时间戳排序
+        convertedTimeSeries.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
       }
       setTimeSeriesData(convertedTimeSeries);
 
@@ -256,14 +275,35 @@ const EventDetail: React.FC = () => {
 
   // 统计计算
   const stats = useMemo(() => {
-    if (!trendData) return null;
-    return {
-      totalPosts: trendData.postData.reduce((a, b) => a + b, 0),
-      totalUsers: trendData.userData.reduce((a, b) => a + b, 0),
-      avgHotness: Math.round(trendData.hotnessData.reduce((a, b) => a + b, 0) / (trendData.hotnessData.length || 1)),
-      avgSentiment: Math.round(trendData.sentimentData.reduce((a, b) => a + b, 0) / (trendData.sentimentData.length || 1) * 100),
-    };
+    if (!trendData) {
+      return null;
+    }
+    const hasData = trendData.hotnessData.length > 0 || trendData.sentimentData.length > 0;
+    const totalPosts = trendData.postData.reduce((a, b) => a + b, 0);
+    const totalUsers = trendData.userData.reduce((a, b) => a + b, 0);
+    const avgHotness = hasData && trendData.hotnessData.length > 0
+      ? Math.round(trendData.hotnessData.reduce((a, b) => a + b, 0) / trendData.hotnessData.length)
+      : null;
+    const avgSentiment = hasData && trendData.sentimentData.length > 0
+      ? Math.round(trendData.sentimentData.reduce((a, b) => a + b, 0) / trendData.sentimentData.length)
+      : null;
+
+    return { totalPosts, totalUsers, avgHotness, avgSentiment };
   }, [trendData]);
+
+  // 互动指标统计
+  const engagementStats = useMemo(() => {
+    if (!engagementTrendData.length) {
+      return null;
+    }
+    const totalComments = engagementTrendData.reduce((sum, d) => sum + d.comment_count, 0);
+    const totalReposts = engagementTrendData.reduce((sum, d) => sum + d.repost_count, 0);
+    const totalLikes = engagementTrendData.reduce((sum, d) => sum + d.like_count, 0);
+    const totalEngagement = totalComments + totalReposts + totalLikes;
+    const avgEngagementRate = engagementTrendData.reduce((sum, d) => sum + (d.engagement_rate || 0), 0) / engagementTrendData.length;
+
+    return { totalComments, totalReposts, totalLikes, totalEngagement, avgEngagementRate };
+  }, [engagementTrendData]);
 
   // 加载骨架
   if (!eventData) {
@@ -527,33 +567,78 @@ const EventDetail: React.FC = () => {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
           title="贴子总数"
-          value={formatNumber(stats?.totalPosts || eventData.postCount)}
+          value={stats?.totalPosts ?? eventData.postCount ?? 0}
           icon={MessageSquare}
           color="blue"
           className="group hover:border-primary/30 transition-all duration-300"
         />
         <MetricCard
           title="参与用户"
-          value={formatNumber(stats?.totalUsers || eventData.userCount)}
+          value={stats?.totalUsers ?? eventData.userCount ?? 0}
           icon={Users}
           color="green"
           className="group hover:border-primary/30 transition-all duration-300"
         />
         <MetricCard
           title="平均热度"
-          value={stats?.avgHotness || eventData.hotness}
+          value={stats?.avgHotness ?? Number(eventData.hotness) ?? 0}
           icon={Zap}
           color="red"
           className="group hover:border-primary/30 transition-all duration-300"
         />
         <MetricCard
           title="情感得分"
-          value={`${stats?.avgSentiment || Math.round(eventData.sentiment.positive * 100)}%`}
+          value={stats?.avgSentiment ?? (eventData.sentiment?.positive ?? 0) * 100}
+          suffix="%"
           icon={Heart}
           color="purple"
           className="group hover:border-primary/30 transition-all duration-300"
         />
       </div>
+
+      {/* 互动指标 - 4列网格 */}
+      {engagementStats && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
+            <TrendingUp className="w-4 h-4" />
+            互动指标
+          </h3>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <MetricCard
+              title="评论总数"
+              value={engagementStats.totalComments}
+              icon={MessageCircle}
+              color="blue"
+              className="group hover:border-primary/30 transition-all duration-300"
+            />
+            <MetricCard
+              title="点赞总数"
+              value={engagementStats.totalLikes}
+              icon={ThumbsUp}
+              color="red"
+              className="group hover:border-primary/30 transition-all duration-300"
+            />
+            <MetricCard
+              title="转发总数"
+              value={engagementStats.totalReposts}
+              icon={Share2}
+              color="green"
+              className="group hover:border-primary/30 transition-all duration-300"
+            />
+            <MetricCard
+              title="互动总量"
+              value={engagementStats.totalEngagement}
+              icon={Activity}
+              color="yellow"
+              className="group hover:border-primary/30 transition-all duration-300"
+            />
+          </div>
+        </motion.div>
+      )}
 
       {/* Tab 导航 */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -596,6 +681,14 @@ const EventDetail: React.FC = () => {
                 </h3>
                 <WordCloudChart title="" height={280} maxWords={100} data={keywordData} />
               </div>
+            </div>
+            {/* 互动指标分解 */}
+            <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
+              <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
+                <TrendingUp className="w-4 h-4" />
+                互动指标趋势
+              </h3>
+              <EngagementTrendChart data={engagementTrendData} height={280} />
             </div>
           </motion.div>
         </TabsContent>

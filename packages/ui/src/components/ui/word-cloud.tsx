@@ -8,6 +8,30 @@ import { EChartNative } from "./echart-native"
 
 import "echarts-wordcloud"
 
+// 主题检测 hook
+function useDarkMode() {
+  const [isDark, setIsDark] = React.useState(false)
+
+  React.useEffect(() => {
+    const root = document.documentElement
+    const checkDark = () => root.classList.contains('dark')
+    setIsDark(checkDark())
+
+    const observer = new MutationObserver(() => {
+      setIsDark(checkDark())
+    })
+
+    observer.observe(root, {
+      attributes: true,
+      attributeFilter: ['class']
+    })
+
+    return () => observer.disconnect()
+  }, [])
+
+  return isDark
+}
+
 export interface WordCloudItem {
   name: string
   value: number
@@ -61,6 +85,7 @@ const WordCloud = React.forwardRef<WordCloudRef, WordCloudProps>(({
   const dataRef = React.useRef(data)
   const tooltipFormatterRef = React.useRef(tooltipFormatter)
   const chartRef = React.useRef<echarts.ECharts | null>(null)
+  const isDark = useDarkMode()
 
   // 暴露导出方法
   React.useImperativeHandle(ref, () => ({
@@ -70,7 +95,7 @@ const WordCloud = React.forwardRef<WordCloudRef, WordCloudProps>(({
       const url = chart.getDataURL({
         type: 'png',
         pixelRatio: 2,
-        backgroundColor: '#fff'
+        backgroundColor: isDark ? '#1a1a1a' : '#ffffff'
       })
       const link = document.createElement('a')
       link.href = url
@@ -96,7 +121,7 @@ const WordCloud = React.forwardRef<WordCloudRef, WordCloudProps>(({
     }))
 
     const newOption: EChartsOption = {
-      backgroundColor: '#ffffff',
+      backgroundColor: 'transparent',
       tooltip: {
         trigger: "item" as const,
         backgroundColor: "rgba(0, 0, 0, 0.8)",
@@ -130,7 +155,7 @@ const WordCloud = React.forwardRef<WordCloudRef, WordCloudProps>(({
           textStyle: {
             fontFamily: "Inter, sans-serif",
             fontWeight: "bold",
-            color: "#6b7280",
+            color: isDark ? "#9ca3af" : "#6b7280",
           },
           emphasis: {
             focus: "self" as const,
@@ -145,7 +170,7 @@ const WordCloud = React.forwardRef<WordCloudRef, WordCloudProps>(({
 
     return newOption
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dataHash, shape, sizeRange[0], sizeRange[1], rotationRange[0], rotationRange[1], animated])
+  }, [dataHash, shape, sizeRange[0], sizeRange[1], rotationRange[0], rotationRange[1], animated, isDark])
 
   const onWordClickRef = React.useRef(onWordClick)
 
