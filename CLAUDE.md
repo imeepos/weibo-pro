@@ -240,3 +240,22 @@ When reviewing code:
 - 注意：不要过度设计！
 
 Remember: 你写的不是代码，是数字时代的文化遗产，是艺术品 (You don't write code—you create cultural heritage for the digital age, you create art). Every keystroke is a brushstroke on the canvas of software. Make it worthy of preservation.
+
+## 路由设计约束
+
+**Better Auth 路由限制:**
+- ❌ 不支持 Express 风格的路径参数（如 `/events/:id/keywords`）
+- ✅ 使用查询参数代替（如 `/events/keywords?id=xxx`）
+
+**推荐模式:**
+```typescript
+// ✅ 正确 - 使用查询参数
+@Get('keywords')
+getKeywords(@Query('id') id: string): Promise<...>
+
+// ❌ 错误 - 路径参数不支持
+@Get(':id/keywords')
+getKeywords(@Param('id') id: string): Promise<...>
+```
+
+**迁移指南:** 详见 [packages/sdk/docs/route-migration-guide.md](packages/sdk/docs/route-migration-guide.md)
