@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Query, Param, Body } from '@sker/core'
+import { Controller, Get, Post, Patch, Query, Body } from '@sker/core'
 import type {
   EventListItem,
   EventCategoryStats,
@@ -57,97 +57,97 @@ export class EventsController {
     throw new Error('method getHotList not implements')
   }
 
-  @Get(':id/timeseries')
-  getEventTimeSeries(@Param('id') id: string): Promise<TimeSeriesData> {
+  @Get('timeseries')
+  getEventTimeSeries(@Query('id') id: string): Promise<TimeSeriesData> {
     throw new Error('method getEventTimeSeries not implements')
   }
 
-  @Get(':id/trends')
-  getEventTrends(@Param('id') id: string): Promise<TrendAnalysis> {
+  @Get('trends')
+  getEventTrends(@Query('id') id: string): Promise<TrendAnalysis> {
     throw new Error('method getEventTrends not implements')
   }
 
-  @Get(':id/influence-users')
-  getInfluenceUsers(@Param('id') id: string): Promise<InfluenceUser[]> {
+  @Get('influence-users')
+  getInfluenceUsers(@Query('id') id: string): Promise<InfluenceUser[]> {
     throw new Error('method getInfluenceUsers not implements')
   }
 
-  @Get(':id/geographic')
-  getEventGeographic(@Param('id') id: string): Promise<GeographicDistribution[]> {
+  @Get('geographic')
+  getEventGeographic(@Query('id') id: string): Promise<GeographicDistribution[]> {
     throw new Error('method getEventGeographic not implements')
   }
 
-  @Get(':id/keywords')
-  getEventKeywords(@Param('id') id: string, @Query('limit') limit?: string): Promise<Array<{ keyword: string; weight: number; sentiment: string }>> {
+  @Get('keywords')
+  getEventKeywords(@Query('id') id: string, @Query('limit') limit?: string): Promise<Array<{ keyword: string; weight: number; sentiment: string }>> {
     throw new Error('method getEventKeywords not implements')
   }
 
-  @Get(':id')
-  getEventDetail(@Param('id') id: string): Promise<EventDetail> {
+  @Get('detail')
+  getEventDetail(@Query('id') id: string): Promise<EventDetail> {
     throw new Error('method getEventDetail not implements')
   }
 
   // 新增：NLP 深度分析接口
 
-  @Get(':id/sentiment-hotness')
-  getSentimentHotness(@Param('id') id: string): Promise<EventSentimentHotness[]> {
+  @Get('sentiment-hotness')
+  getSentimentHotness(@Query('id') id: string): Promise<EventSentimentHotness[]> {
     throw new Error('method getSentimentHotness not implements')
   }
 
-  @Get(':id/sentiment-distribution')
-  getSentimentDistribution(@Param('id') id: string): Promise<EventSentimentDistribution> {
+  @Get('sentiment-distribution')
+  getSentimentDistribution(@Query('id') id: string): Promise<EventSentimentDistribution> {
     throw new Error('method getSentimentDistribution not implements')
   }
 
-  @Get(':id/sentiment-intensity')
-  getSentimentIntensity(@Param('id') id: string): Promise<EventSentimentIntensity[]> {
+  @Get('sentiment-intensity')
+  getSentimentIntensity(@Query('id') id: string): Promise<EventSentimentIntensity[]> {
     throw new Error('method getSentimentIntensity not implements')
   }
 
-  @Get(':id/keywords-timeseries')
-  getKeywordsTimeSeries(@Param('id') id: string, @Query('topN') topN?: string): Promise<EventKeywordTimeSeries[]> {
+  @Get('keywords-timeseries')
+  getKeywordsTimeSeries(@Query('id') id: string, @Query('topN') topN?: string): Promise<EventKeywordTimeSeries[]> {
     throw new Error('method getKeywordsTimeSeries not implements')
   }
 
-  @Get(':id/keywords-by-sentiment')
-  getKeywordsBySentiment(@Param('id') id: string): Promise<EventKeywordBySentiment[]> {
+  @Get('keywords-by-sentiment')
+  getKeywordsBySentiment(@Query('id') id: string): Promise<EventKeywordBySentiment[]> {
     throw new Error('method getKeywordsBySentiment not implements')
   }
 
-  @Get(':id/negative-keywords')
-  getNegativeKeywords(@Param('id') id: string, @Query('threshold') threshold?: string): Promise<EventNegativeKeywordAlert[]> {
+  @Get('negative-keywords')
+  getNegativeKeywords(@Query('id') id: string, @Query('threshold') threshold?: string): Promise<EventNegativeKeywordAlert[]> {
     throw new Error('method getNegativeKeywords not implements')
   }
 
-  @Get(':id/event-types')
-  getEventTypes(@Param('id') id: string): Promise<EventEventTypeDistribution[]> {
+  @Get('event-types')
+  getEventTypes(@Query('id') id: string): Promise<EventEventTypeDistribution[]> {
     throw new Error('method getEventTypes not implements')
   }
 
   // 新增：基于 EventHourlyStatisticsEntity 的互动指标接口
 
-  @Get(':id/engagement-trend')
-  getEngagementTrend(@Param('id') id: string, @Query('limit') limit?: string): Promise<EventEngagementTrend[]> {
+  @Get('engagement-trend')
+  getEngagementTrend(@Query('id') id: string, @Query('limit') limit?: string): Promise<EventEngagementTrend[]> {
     throw new Error('method getEngagementTrend not implements')
   }
 
-  @Get(':id/anomalies')
-  getAnomalies(@Param('id') id: string, @Query('limit') limit?: string): Promise<EventAnomaly[]> {
+  @Get('anomalies')
+  getAnomalies(@Query('id') id: string, @Query('limit') limit?: string): Promise<EventAnomaly[]> {
     throw new Error('method getAnomalies not implements')
   }
 
-  @Get(':id/peaks')
-  getPeaks(@Param('id') id: string, @Query('limit') limit?: string): Promise<EventPeak[]> {
+  @Get('peaks')
+  getPeaks(@Query('id') id: string, @Query('limit') limit?: string): Promise<EventPeak[]> {
     throw new Error('method getPeaks not implements')
   }
 
-  @Get(':id/user-relations')
-  getEventUserRelations(@Param('id') id: string): Promise<UserRelationNetwork> {
+  @Get('user-relations')
+  getEventUserRelations(@Query('id') id: string): Promise<UserRelationNetwork> {
     throw new Error('method getEventUserRelations not implements')
   }
 
-  @Patch(':id/keywords')
-  updateEventKeywords(@Param('id') id: string, @Body() body: { keywords: string[] }): Promise<{ success: boolean }> {
+  @Patch('keywords')
+  updateEventKeywords(@Query('id') id: string, @Body() body: { keywords: string[] }): Promise<{ success: boolean }> {
     throw new Error('method updateEventKeywords not implements')
   }
 }

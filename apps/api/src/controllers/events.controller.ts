@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Query, Param, Body } from '@sker/core';
+import { Controller, Get, Patch, Query, Body } from '@sker/core';
 import { root, Inject } from '@sker/core';
 import { EventsService } from '../services/data/events.service';
 import * as sdk from '@sker/sdk';
@@ -50,85 +50,85 @@ export class EventsController implements sdk.EventsController {
     return this.eventsService.getHotList(validTimeRange);
   }
 
-  async getEventTimeSeries(@Param('id') id: string) {
+  async getEventTimeSeries(@Query('id') id: string) {
     return this.eventsService.getEventTimeSeries(id);
   }
 
-  async getEventTrends(@Param('id') id: string) {
+  async getEventTrends(@Query('id') id: string) {
     return this.eventsService.getEventTrends(id);
   }
 
-  async getInfluenceUsers(@Param('id') id: string) {
+  async getInfluenceUsers(@Query('id') id: string) {
     return this.eventsService.getInfluenceUsers(id);
   }
 
-  async getEventGeographic(@Param('id') id: string) {
+  async getEventGeographic(@Query('id') id: string) {
     return this.eventsService.getEventGeographic(id);
   }
 
-  async getEventKeywords(@Param('id') id: string, @Query('limit') limit?: string) {
+  async getEventKeywords(@Query('id') id: string, @Query('limit') limit?: string) {
     const limitNum = toInt(limit, 1000);
     return this.eventsService.getEventKeywords(id, limitNum);
   }
 
-  async getEventDetail(@Param('id') id: string) {
+  async getEventDetail(@Query('id') id: string) {
     return this.eventsService.getEventDetail(id);
   }
 
   // 新增：NLP 深度分析接口
 
-  async getSentimentHotness(@Param('id') id: string) {
+  async getSentimentHotness(@Query('id') id: string) {
     return this.eventsService.getSentimentHotness(id);
   }
 
-  async getSentimentDistribution(@Param('id') id: string) {
+  async getSentimentDistribution(@Query('id') id: string) {
     return this.eventsService.getSentimentDistribution(id);
   }
 
-  async getSentimentIntensity(@Param('id') id: string) {
+  async getSentimentIntensity(@Query('id') id: string) {
     return this.eventsService.getSentimentIntensity(id);
   }
 
-  async getKeywordsTimeSeries(@Param('id') id: string, @Query('topN') topN?: string) {
+  async getKeywordsTimeSeries(@Query('id') id: string, @Query('topN') topN?: string) {
     const topNNum = toInt(topN, 20);
     return this.eventsService.getKeywordsTimeSeries(id, topNNum);
   }
 
-  async getKeywordsBySentiment(@Param('id') id: string) {
+  async getKeywordsBySentiment(@Query('id') id: string) {
     return this.eventsService.getKeywordsBySentiment(id);
   }
 
-  async getNegativeKeywords(@Param('id') id: string, @Query('threshold') threshold?: string) {
+  async getNegativeKeywords(@Query('id') id: string, @Query('threshold') threshold?: string) {
     const thresholdNum = toFloat(threshold, 0.5);
     return this.eventsService.getNegativeKeywords(id, thresholdNum);
   }
 
-  async getEventTypes(@Param('id') id: string) {
+  async getEventTypes(@Query('id') id: string) {
     return this.eventsService.getEventTypes(id);
   }
 
   // 新增：基于 EventHourlyStatisticsEntity 的互动指标接口
 
-  async getEngagementTrend(@Param('id') id: string, @Query('limit') limit?: string) {
+  async getEngagementTrend(@Query('id') id: string, @Query('limit') limit?: string) {
     const limitNum = toInt(limit, 168);
     return this.eventsService.getEngagementTrend(id, limitNum);
   }
 
-  async getAnomalies(@Param('id') id: string, @Query('limit') limit?: string) {
+  async getAnomalies(@Query('id') id: string, @Query('limit') limit?: string) {
     const limitNum = toInt(limit, 168);
     return this.eventsService.getAnomalies(id, limitNum);
   }
 
-  async getPeaks(@Param('id') id: string, @Query('limit') limit?: string) {
+  async getPeaks(@Query('id') id: string, @Query('limit') limit?: string) {
     const limitNum = toInt(limit, 168);
     return this.eventsService.getPeaks(id, limitNum);
   }
 
-  async getEventUserRelations(@Param('id') id: string) {
+  async getEventUserRelations(@Query('id') id: string) {
     return this.eventsService.getEventUserRelations(id);
   }
 
-  async updateEventKeywords(@Param('id') id: string, @Body() body: { keywords: string[] }) {
+  async updateEventKeywords(@Query('id') id: string, @Body() body: { keywords: string[] }) {
     return this.eventsService.updateEventKeywords(id, body.keywords);
   }
 }
