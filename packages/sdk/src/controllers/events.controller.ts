@@ -77,7 +77,7 @@ export class EventsController {
     throw new Error('method getEventGeographic not implements')
   }
 
-  @Get('keywords')
+  @Get('getEventKeywords')
   getEventKeywords(@Query('id') id: string, @Query('limit') limit?: string): Promise<Array<{ keyword: string; weight: number; sentiment: string }>> {
     throw new Error('method getEventKeywords not implements')
   }

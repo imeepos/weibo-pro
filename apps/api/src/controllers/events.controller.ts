@@ -66,7 +66,7 @@ export class EventsController implements sdk.EventsController {
     return this.eventsService.getEventGeographic(id);
   }
 
-  async getEventKeywords(@Query('id') id: string, @Query('limit') limit?: string) {
+  async getEventKeywords(id: string, limit?: string) {
     const limitNum = toInt(limit, 1000);
     return this.eventsService.getEventKeywords(id, limitNum);
   }
