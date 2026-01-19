@@ -36,6 +36,18 @@ export class BrowserRenderHandler {
 
       const page = await browser.newPage();
 
+      // 拦截无关资源，提升性能
+      await page.setRequestInterception(true);
+      page.on('request', (req) => {
+        const resourceType = req.resourceType();
+        // 只允许 document、script、xhr、fetch，其他全部拦截
+        if (['document', 'script', 'xhr', 'fetch'].includes(resourceType)) {
+          req.continue();
+        } else {
+          req.abort();
+        }
+      });
+
       // 设置 User Agent
       if (req.userAgent) {
         await page.setUserAgent(req.userAgent);

@@ -10,6 +10,7 @@ export { LlmModelProvidersController } from './llm-model-providers.controller';
 export { LlmModelsController } from './llm-models.controller';
 export { LlmProvidersController } from './llm-providers.controller';
 export { LlmProxyController } from './llm-proxy.controller';
+export { MarkdownController } from './markdown.controller';
 export { MediaCrawlerController } from './media-crawler.controller';
 export { OverviewController } from './overview.controller';
 export { PostsController } from './posts.controller';

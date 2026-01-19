@@ -22,6 +22,10 @@ const envSchema = z.object({
   KUAIDAILI_SECRET_KEY: z.string().optional(),
   KUAIDAILI_USERNAME: z.string().optional(),
   KUAIDAILI_PASSWORD: z.string().optional(),
+
+  // Cloudflare Browser Rendering API 配置
+  CLOUDFLARE_ACCOUNT_ID: z.string().optional(),
+  CLOUDFLARE_API_TOKEN: z.string().optional(),
 })
 
 export type Env = z.infer<typeof envSchema>
