@@ -135,7 +135,7 @@ class IncrementalJsonBuffer<T> {
 
     constructor(
         private readonly streamName: string,
-        private readonly subscriber: Subscriber<T>
+        private readonly subscriber: Subscriber<any>
     ) {}
 
     append(chunk: string): void {
@@ -161,6 +161,8 @@ class IncrementalJsonBuffer<T> {
                     logger.warn(`[ProcessSubject] stderr JSON: ${JSON.stringify(parsed)}`)
                 }
             } catch (err) {
+                // JSON 解析失败时，发出原始文本
+                this.subscriber.next(trimmed)
                 // stderr 的非 JSON 输出记录为警告
                 if (this.streamName === 'stderr') {
                     logger.warn(`[ProcessSubject] stderr: ${trimmed}`)
@@ -182,6 +184,8 @@ class IncrementalJsonBuffer<T> {
                         this.subscriber.next(parsed)
                     }
                 } catch (err) {
+                    // JSON 解析失败时，发出原始文本
+                    this.subscriber.next(this.buffer.trim())
                     if (this.streamName === 'stderr') {
                         logger.warn(`[ProcessSubject] stderr (剩余): ${this.buffer}`)
                     }

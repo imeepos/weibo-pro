@@ -14,6 +14,7 @@
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types",
+    "test": "turbo run test",
     "ensure-deps": "./scripts/ensure-deps-built.sh",
     "clean:cache": "tsx ./scripts/clean-cache.ts"
   },

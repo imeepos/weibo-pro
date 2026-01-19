@@ -90,7 +90,18 @@ describe('Edge Validator', () => {
       edge2.sourceHandle = 'output2'
       edge2.targetHandle = 'input2'
 
-      const nodes = [createMockNode('node-1'), createMockNode('node-2')]
+      const nodes = [
+        createMockNode('node-1', {
+          metadata: {
+            ...createMockNode('node-1').metadata,
+            outputs: [
+              { property: 'output1', mode: 0 },
+              { property: 'output2', mode: 0 },
+            ],
+          },
+        }),
+        createMockNode('node-2'),
+      ]
       const edges = [edge1]
 
       const result = validateEdge(edge2, nodes, edges)
@@ -246,12 +257,13 @@ describe('Edge Validator', () => {
   })
 
   describe('EDGE_VALIDATION_RULES', () => {
-    it('应该包含 4 条内置规则', () => {
-      expect(EDGE_VALIDATION_RULES).toHaveLength(4)
+    it('应该包含 5 条内置规则', () => {
+      expect(EDGE_VALIDATION_RULES).toHaveLength(5)
       expect(EDGE_VALIDATION_RULES.map(r => r.name)).toEqual([
         'nodes-exist',
         'no-self-connection',
         'no-duplicate',
+        'handles-exist',
         'input-single-connection',
       ])
     })

@@ -5,6 +5,7 @@ import { root, Injectable } from '@sker/core'
 import { TextAreaAst } from '@sker/workflow'
 import { firstValueFrom, Observable } from 'rxjs'
 import { Handler } from '@sker/workflow'
+import { ReactiveScheduler } from './test-utils'
 
 /**
  * 端到端测试：实际执行工作流并验证导出结果
@@ -50,6 +51,9 @@ describe('WorkflowStore E2E - 完整执行流程', () => {
   })
 
   beforeEach(() => {
+    // 注册 mock 服务
+    root.set([{ provide: ReactiveScheduler, useClass: ReactiveScheduler }])
+
     // 重置 store
     useWorkflowStore.getState().clear()
 

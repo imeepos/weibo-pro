@@ -152,7 +152,7 @@ describe('KuaidailiProvider', () => {
         },
       }
 
-      mockAxiosCreate.get.mockResolvedValueOnce(apiResponse)
+      mockAxiosCreate.get.mockResolvedValue(apiResponse)
 
       await expect(provider.fetchProxies(1)).rejects.toThrow(ProxyFetchError)
       await expect(provider.fetchProxies(1)).rejects.toThrow(
@@ -170,7 +170,7 @@ describe('KuaidailiProvider', () => {
         },
       }
 
-      mockAxiosCreate.get.mockResolvedValueOnce(apiResponse)
+      mockAxiosCreate.get.mockResolvedValue(apiResponse)
 
       await expect(provider.fetchProxies(1)).rejects.toThrow(ProxyFetchError)
       await expect(provider.fetchProxies(1)).rejects.toThrow('快代理返回空列表')

@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { useWorkflowStore } from './workflow.store'
 import { WorkflowGraphAst, Compiler } from '@sker/workflow'
 import { root } from '@sker/core'
-// import { WorkflowEventBus, WorkflowEventType } from '@sker/workflow'
 import { TextAreaAst } from '@sker/workflow'
+import { WorkflowEventBus } from './test-utils'
 
 /**
  * 单元测试：验证 workflow.store 监听 NODE_SUCCESS 事件并正确更新节点状态
@@ -18,6 +18,9 @@ describe('WorkflowStore - NODE_SUCCESS 事件监听', () => {
   let compiler: Compiler
 
   beforeEach(() => {
+    // 注册 mock 服务
+    root.set([{ provide: WorkflowEventBus, useClass: WorkflowEventBus }])
+
     // 重置 store 状态
     useWorkflowStore.getState().clear()
 
