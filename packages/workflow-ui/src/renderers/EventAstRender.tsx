@@ -78,6 +78,12 @@ const EventSetting: React.FC<EventSettingProps> = ({ ast, onPropertyChange }) =>
 
   const handleSelect = (eventId: string | string[]) => {
     const id = Array.isArray(eventId) ? eventId[0] : eventId;
+    if (!id) {
+      onPropertyChange?.('eventId', undefined);
+      onPropertyChange?.('eventTitle', undefined);
+      onPropertyChange?.('eventCategory', undefined);
+      return;
+    }
     // 先从原始列表查找，再从搜索结果中查找
     const event = events?.find(e => e.id === id) || searchResultsRef.current.get(id);
 
