@@ -4,9 +4,12 @@ import { MemorySystem } from './memory.js'
 export class FileWatcher {
   private listeners: Map<string, Set<(event: WatchEvent) => void>> = new Map()
   private memory: MemorySystem
+  private unsubscribe: (() => void) | null = null
 
   constructor(memory: MemorySystem) {
     this.memory = memory
+    // 订阅 MemorySystem 的变化事件
+    this.unsubscribe = this.memory.subscribe((event) => this.notify(event))
   }
 
   watch(path: Path, callback: (event: WatchEvent) => void, options: WatchOptions = {}): () => void {
@@ -76,6 +79,10 @@ export class FileWatcher {
   }
 
   dispose(): void {
+    if (this.unsubscribe) {
+      this.unsubscribe()
+      this.unsubscribe = null
+    }
     this.listeners.clear()
   }
 }

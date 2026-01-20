@@ -231,4 +231,8 @@ export class MemorySystem {
 
     rebuildPathIndex(this.index, '')
   }
+
+  subscribe(listener: (event: HashTreeChangeEvent) => void): () => void {
+    return this.tree.subscribe(listener)
+  }
 }

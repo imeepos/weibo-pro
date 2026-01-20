@@ -20,6 +20,7 @@ describe('MarkdownController', () => {
   describe('convertToMarkdown', () => {
     /**
      * RED 阶段 - 测试应该失败，因为方法未实现
+     * 注意：SDK 中方法同步抛出错误，所以使用普通 expect 而不是 rejects
      */
     it('应该将 URL 转换为 Markdown', async () => {
       const request: MarkdownRequest = {
@@ -27,7 +28,7 @@ describe('MarkdownController', () => {
       };
 
       // 此时应该抛出 "not implements" 错误
-      await expect(controller.convertToMarkdown(request)).rejects.toThrow('not implements');
+      expect(() => controller.convertToMarkdown(request)).toThrow(/not implements/i);
     });
 
     it('应该将 HTML 转换为 Markdown', async () => {
@@ -35,7 +36,7 @@ describe('MarkdownController', () => {
         html: '<div>Hello World</div>'
       };
 
-      await expect(controller.convertToMarkdown(request)).rejects.toThrow('not implements');
+      expect(() => controller.convertToMarkdown(request)).toThrow(/not implements/i);
     });
 
     it('应该支持 rejectRequestPattern 参数', async () => {
@@ -44,7 +45,7 @@ describe('MarkdownController', () => {
         rejectRequestPattern: ['/^.*\\.(css)/']
       };
 
-      await expect(controller.convertToMarkdown(request)).rejects.toThrow('not implements');
+      expect(() => controller.convertToMarkdown(request)).toThrow(/not implements/i);
     });
 
     it('应该支持 gotoOptions 参数', async () => {
@@ -56,7 +57,7 @@ describe('MarkdownController', () => {
         }
       };
 
-      await expect(controller.convertToMarkdown(request)).rejects.toThrow('not implements');
+      expect(() => controller.convertToMarkdown(request)).toThrow(/not implements/i);
     });
 
     it('应该支持 waitForSelector 参数', async () => {
@@ -65,7 +66,7 @@ describe('MarkdownController', () => {
         waitForSelector: '.content'
       };
 
-      await expect(controller.convertToMarkdown(request)).rejects.toThrow('not implements');
+      expect(() => controller.convertToMarkdown(request)).toThrow(/not implements/i);
     });
 
     it('应该支持自定义 userAgent', async () => {
@@ -74,7 +75,7 @@ describe('MarkdownController', () => {
         userAgent: 'CustomBot/1.0'
       };
 
-      await expect(controller.convertToMarkdown(request)).rejects.toThrow('not implements');
+      expect(() => controller.convertToMarkdown(request)).toThrow(/not implements/i);
     });
 
     /**

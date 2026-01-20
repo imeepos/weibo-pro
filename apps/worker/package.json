@@ -10,7 +10,10 @@
     "test": "vitest",
     "test:watch": "vitest --watch"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@sker/core": "workspace:*",
+    "@sker/sdk": "workspace:*"
+  },
   "devDependencies": {
     "@cloudflare/puppeteer": "^1.0.4",
     "@cloudflare/workers-types": "^4.20241127.0",
