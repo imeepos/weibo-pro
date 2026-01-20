@@ -85,7 +85,7 @@ export class SmartAstV1Visitor {
             }).bindTools(tools)
 
             const messages: MessageContent[] = [
-              { role: 'system', content: this.buildSystemPrompt(inputContexts, outputContexts) },
+              { role: 'system', content: this.buildSystemPrompt(ast, inputContexts, outputContexts) },
               { role: 'user', content: this.buildUserPrompt(inputContexts, outputContexts) }
             ]
 
@@ -163,7 +163,7 @@ export class SmartAstV1Visitor {
     return contexts
   }
 
-  private buildSystemPrompt(inputContexts: InputContext[], outputContexts: OutputContext[]): string {
+  private buildSystemPrompt(ast: SmartAstV1, inputContexts: InputContext[], outputContexts: OutputContext[]): string {
     const inputList = inputContexts.map(i =>
       `- ${i.property}:\n  标题: ${i.title}\n  描述: ${i.description || '(无)'}`
     ).join('\n')
@@ -172,7 +172,7 @@ export class SmartAstV1Visitor {
       `- ${o.property}:\n  标题: ${o.title}\n  描述: ${o.description || '(无)'}\n  类型: ${o.type || 'any'}`
     ).join('\n')
 
-    return `你是智能数据分发控制决策中心。根据输入数据的要求，为每个输出端口生成合适的内容。
+    let prompt = `你是智能数据分发控制决策中心。根据输入数据的要求，为每个输出端口生成合适的内容。
 
 【输入端口上下文】
 ${inputList || '(无)'}
@@ -181,7 +181,7 @@ ${inputList || '(无)'}
 ${outputList || '(无)'}
 
 【可用工具】
-- dispatch(outputPort, data): 将数据分发到指定输出端口
+- dispatch(outputPort, data): 将数据分发到指定输出端口，data 的类型必须与输出端口类型匹配
 
 【工作流程】
 1. 分析输入数据
@@ -189,29 +189,38 @@ ${outputList || '(无)'}
 3. 调用 dispatch 分发数据
 
 【重要】
-- 输出数据类型应与输出端口的 type 匹配
+- 输出数据类型应与输出端口的 type 匹配（string 必须是字符串，number 必须是数字）
 - 输出数据内容应符合输出端口的 description
+- 空字符串 ""、空对象 {}、null 都是有效值，但要根据类型正确输出
 `
+
+    // 如果用户提供了自定义 prompt，追加到系统提示
+    if (ast.prompt && ast.prompt.trim()) {
+      prompt += `\n【用户自定义指令】\n${ast.prompt.trim()}\n`
+    }
+
+    return prompt
   }
 
   private buildUserPrompt(inputContexts: InputContext[], outputContexts: OutputContext[]): string {
     const inputList = inputContexts.map(i => {
       const preview = this.preview(i.content, 300)
-      return `- **${i.property}** (${i.title}):\n  ${i.description || '(无描述)'}\n  内容: ${preview}`
+      return `- **${i.property}** (${i.title}):\n  描述: ${i.description || '(无描述)'}\n  值: ${preview}`
     }).join('\n\n')
 
-    const outputHints = outputContexts.map(o =>
-      `- **${o.property}** (${o.title}): ${o.description || '(无描述)'} (类型: ${o.type || 'any'})`
-    ).join('\n')
+    const outputHints = outputContexts.map(o => {
+      const typeHint = o.type ? ` [类型: ${o.type}]` : ''
+      return `- **${o.property}** (${o.title}): ${o.description || '(无描述)'}${typeHint}`
+    }).join('\n')
 
     return `
-【输入数据】
+【当前输入数据】
 ${inputList || '(无)'}
 
-【输出端口要求】
+【需要生成的输出】
 ${outputHints || '(无)'}
 
-请开始分发...`
+请分析输入数据，为每个输出端口生成符合要求的数据值，然后调用 dispatch 工具分发。`
   }
 
   private preview(value: unknown, maxLength: number = 200): string {
