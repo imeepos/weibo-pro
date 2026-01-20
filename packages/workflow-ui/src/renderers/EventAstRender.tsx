@@ -3,7 +3,7 @@ import { Injectable, root } from '@sker/core';
 import { Render, Setting } from '@sker/workflow';
 import { EventAst } from '@sker/workflow-ast';
 import { EventsController } from '@sker/sdk';
-import { EventSelector } from '@sker/ui/components/ui';
+import { EventSelector, type EventItem } from '@sker/ui/components/ui';
 import { useAsyncData } from '../hooks';
 
 const EventRender: React.FC<{ ast: EventAst }> = ({ ast }) => {
@@ -56,10 +56,13 @@ const EventSetting: React.FC<EventSettingProps> = ({ ast, onPropertyChange }) =>
     deps: []
   });
 
+  // 存储搜索结果的事件，用于 handleSelect 查找
+  const searchResultsRef = React.useRef<Map<string, EventItem>>(new Map());
+
   const handleSearch = async (keyword: string, page?: number) => {
     const controller = root.get(EventsController);
     const result = await controller.getEventList(undefined, page ? `${page}` : undefined, undefined, keyword);
-    return result.data.map(e => ({
+    const items = result.data.map(e => ({
       id: e.id,
       title: e.title,
       description: e.description,
@@ -68,33 +71,21 @@ const EventSetting: React.FC<EventSettingProps> = ({ ast, onPropertyChange }) =>
       occurred_at: e.createdAt,
       created_at: e.createdAt,
     }));
+    // 缓存搜索结果
+    items.forEach(item => searchResultsRef.current.set(item.id, item));
+    return items;
   };
 
   const handleSelect = (eventId: string | string[]) => {
-    console.log('[EventAstRender] handleSelect called:', {
-      eventId,
-      hasOnPropertyChange: !!onPropertyChange,
-      eventsCount: events?.length
-    })
     const id = Array.isArray(eventId) ? eventId[0] : eventId;
-    const event = events?.find(e => e.id === id);
-
-    console.log('[EventAstRender] found event:', {
-      id,
-      event: event ? { id: event.id, title: event.title } : null
-    })
+    // 先从原始列表查找，再从搜索结果中查找
+    const event = events?.find(e => e.id === id) || searchResultsRef.current.get(id);
 
     if (event) {
-      console.log('[EventAstRender] calling onPropertyChange with:', {
-        eventId: event.id,
-        eventTitle: event.title,
-        eventCategory: event.category?.name
-      })
       onPropertyChange?.('eventId', event.id);
       onPropertyChange?.('eventTitle', event.title);
       onPropertyChange?.('eventCategory', event.category?.name);
     } else {
-      console.log('[EventAstRender] clearing event properties')
       onPropertyChange?.('eventId', undefined);
       onPropertyChange?.('eventTitle', undefined);
       onPropertyChange?.('eventCategory', undefined);
