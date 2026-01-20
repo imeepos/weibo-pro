@@ -4,6 +4,7 @@ import * as React from "react"
 import { CheckIcon, UserIcon, BrainCircuitIcon } from "lucide-react"
 import { cn } from "@sker/ui/lib/utils"
 import { SearchInput } from "./search-input"
+import { useDebounce } from "@sker/ui/hooks/use-debounce"
 
 export interface PersonaItem {
   id: string
@@ -31,17 +32,18 @@ function PersonaSelector({
   defaultLimit = 3,
 }: PersonaSelectorProps) {
   const [search, setSearch] = React.useState("")
+  const debouncedSearch = useDebounce(search, 300)
   const [expanded, setExpanded] = React.useState(false)
 
   const filtered = React.useMemo(() => {
-    if (!search.trim()) return personas
-    const keyword = search.toLowerCase()
+    if (!debouncedSearch.trim()) return personas
+    const keyword = debouncedSearch.toLowerCase()
     return personas.filter(
       (p) =>
         p.name.toLowerCase().includes(keyword) ||
         p.description?.toLowerCase().includes(keyword)
     )
-  }, [personas, search])
+  }, [personas, debouncedSearch])
 
   // 搜索时显示全部，否则受限于 defaultLimit
   const isSearching = search.trim().length > 0

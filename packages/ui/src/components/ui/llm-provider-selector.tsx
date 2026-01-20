@@ -4,6 +4,7 @@ import * as React from "react"
 import { CheckIcon, ServerIcon, ActivityIcon } from "lucide-react"
 import { cn } from "@sker/ui/lib/utils"
 import { SearchInput } from "./search-input"
+import { useDebounce } from "@sker/ui/hooks/use-debounce"
 
 export interface LlmProviderItem {
   id: string
@@ -28,16 +29,17 @@ function LlmProviderSelector({
   className,
 }: LlmProviderSelectorProps) {
   const [search, setSearch] = React.useState("")
+  const debouncedSearch = useDebounce(search, 300)
 
   const filtered = React.useMemo(() => {
-    if (!search.trim()) return providers
-    const keyword = search.toLowerCase()
+    if (!debouncedSearch.trim()) return providers
+    const keyword = debouncedSearch.toLowerCase()
     return providers.filter(
       (p) =>
         p.name.toLowerCase().includes(keyword) ||
         p.base_url.toLowerCase().includes(keyword)
     )
-  }, [providers, search])
+  }, [providers, debouncedSearch])
 
   const handleSelect = (id: string) => {
     onChange?.(value === id ? "" : id)

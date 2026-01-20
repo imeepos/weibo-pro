@@ -34,6 +34,7 @@ import {
   AlertDialogTitle,
 } from '@sker/ui/components/ui/alert-dialog'
 import { WorkflowGraphAst, fromJson } from '@sker/workflow'
+import { useDebounce } from '@sker/ui/hooks/use-debounce'
 
 /**
  * 调度列表
@@ -125,6 +126,7 @@ export function ScheduleList({ workflowName, className = '', onClose, apiBaseUrl
   const [editSchedule, setEditSchedule] = useState<WorkflowScheduleEntity | null>(null)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const debouncedSearchQuery = useDebounce(searchQuery, 300)
   const [currentPage, setCurrentPage] = useState(1)
   const [sortField, setSortField] = useState<SortField>('createdAt')
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
@@ -316,8 +318,8 @@ export function ScheduleList({ workflowName, className = '', onClose, apiBaseUrl
   const filteredAndSortedSchedules = useMemo(() => {
     let result = [...schedules]
 
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase()
+    if (debouncedSearchQuery.trim()) {
+      const query = debouncedSearchQuery.toLowerCase()
       result = result.filter(schedule =>
         schedule.name.toLowerCase().includes(query) ||
         getScheduleDescription(schedule).toLowerCase().includes(query)
@@ -348,7 +350,7 @@ export function ScheduleList({ workflowName, className = '', onClose, apiBaseUrl
     })
 
     return result
-  }, [schedules, searchQuery, sortField, sortOrder])
+  }, [schedules, debouncedSearchQuery, sortField, sortOrder])
 
   const totalPages = Math.ceil(filteredAndSortedSchedules.length / ITEMS_PER_PAGE)
   const paginatedSchedules = filteredAndSortedSchedules.slice(
@@ -358,7 +360,7 @@ export function ScheduleList({ workflowName, className = '', onClose, apiBaseUrl
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchQuery, sortField, sortOrder])
+  }, [debouncedSearchQuery, sortField, sortOrder])
 
   if (loading) {
     return (

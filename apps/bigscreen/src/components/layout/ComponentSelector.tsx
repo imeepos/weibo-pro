@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  BarChart3, 
-  PieChart, 
-  Activity, 
+import {
+  BarChart3,
+  PieChart,
+  Activity,
   Map,
   Users,
   Calendar,
@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { twMerge } from 'tailwind-merge';
 import { renderComponent } from './LayoutComponentProvider';
+import { useDebounce } from '@sker/ui/hooks/use-debounce';
 
 export interface ComponentOption {
   id: string;
@@ -195,28 +196,31 @@ export const ComponentSelector: React.FC<ComponentSelectorProps> = ({
   className
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedComponent, setSelectedComponent] = useState<string | null>(currentComponent || null);
 
   // 过滤组件
-  const filteredComponents = availableComponents.filter(component => {
-    // 文本搜索
-    const matchesSearch = component.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         component.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         component.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredComponents = useMemo(() => {
+    return availableComponents.filter(component => {
+      // 文本搜索
+      const matchesSearch = component.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+                           component.description.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+                           component.tags.some(tag => tag.toLowerCase().includes(debouncedSearchTerm.toLowerCase()));
 
-    // 分类过滤
-    const matchesCategory = selectedCategory === 'all' || component.category === selectedCategory;
+      // 分类过滤
+      const matchesCategory = selectedCategory === 'all' || component.category === selectedCategory;
 
-    // 允许的组件列表
-    const isAllowed = !allowedComponents || allowedComponents.includes(component.id);
+      // 允许的组件列表
+      const isAllowed = !allowedComponents || allowedComponents.includes(component.id);
 
-    // 尺寸适配检查
-    const fitsSize = !areaSize || !component.minSize || 
-                    (areaSize.w >= component.minSize.w && areaSize.h >= component.minSize.h);
+      // 尺寸适配检查
+      const fitsSize = !areaSize || !component.minSize ||
+                      (areaSize.w >= component.minSize.w && areaSize.h >= component.minSize.h);
 
-    return matchesSearch && matchesCategory && isAllowed && fitsSize;
-  });
+      return matchesSearch && matchesCategory && isAllowed && fitsSize;
+    });
+  }, [debouncedSearchTerm, selectedCategory, allowedComponents, areaSize]);
 
   const categories = Array.from(new Set(availableComponents.map(c => c.category)));
 

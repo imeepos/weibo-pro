@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useReactFlow } from '@xyflow/react'
 import { Search, Package } from 'lucide-react'
@@ -12,17 +12,27 @@ import { createCompiledNode } from '../../utils/createCompiledNode'
 import { cn } from '../../utils/cn'
 import { CompiledNodeMetadata } from '@sker/workflow'
 import { WorkflowNode } from '../../types'
+import { useDebounce } from '@sker/ui/hooks/use-debounce'
 export interface NodePaletteProps {
   className?: string
 }
 
 export function NodePalette({ className = '' }: NodePaletteProps) {
   const [searchQuery, setSearchQuery] = useState('')
+  const debouncedSearchQuery = useDebounce(searchQuery, 300)
   const nodeRegistry = useNodeRegistry()
   const addNode = useWorkflowStore((state) => state.addNode)
   const { screenToFlowPosition } = useReactFlow()
 
-  const filteredNodes = nodeRegistry
+  const filteredNodes = useMemo(() => {
+    if (!debouncedSearchQuery.trim()) return nodeRegistry
+    const query = debouncedSearchQuery.toLowerCase()
+    return nodeRegistry.filter((node) =>
+      node.label?.toLowerCase().includes(query) ||
+      node.type?.toLowerCase().includes(query) ||
+      node.description?.toLowerCase().includes(query)
+    )
+  }, [nodeRegistry, debouncedSearchQuery])
 
   const handleAddNode = useCallback(
     (metadata: CompiledNodeMetadata) => {

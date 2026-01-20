@@ -4,6 +4,7 @@ import * as React from "react"
 import { CheckIcon, CpuIcon } from "lucide-react"
 import { cn } from "@sker/ui/lib/utils"
 import { SearchInput } from "./search-input"
+import { useDebounce } from "@sker/ui/hooks/use-debounce"
 
 export interface LlmModelItem {
   id: string
@@ -26,12 +27,13 @@ function LlmModelSelector({
   className,
 }: LlmModelSelectorProps) {
   const [search, setSearch] = React.useState("")
+  const debouncedSearch = useDebounce(search, 300)
 
   const filtered = React.useMemo(() => {
-    if (!search.trim()) return models
-    const keyword = search.toLowerCase()
+    if (!debouncedSearch.trim()) return models
+    const keyword = debouncedSearch.toLowerCase()
     return models.filter((m) => m.name.toLowerCase().includes(keyword))
-  }, [models, search])
+  }, [models, debouncedSearch])
 
   const handleSelect = (id: string) => {
     onChange?.(value === id ? "" : id)
