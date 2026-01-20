@@ -85,8 +85,10 @@ export class EventAstVisitor {
             ast.eventCategory = event.category?.name;
             ast.keywords = keywords;
             ast.keywords_str = keywords_str;
-            if (event.occurred_at) {
-              ast.startTime = event.occurred_at?.toISOString();
+            // 优先使用 occurred_at，为 null 时使用 created_at
+            const eventTime = event.occurred_at || event.created_at;
+            if (eventTime) {
+              ast.startTime = eventTime.toISOString();
             }
             ast.post_min_time = post_min_time;
             ast.post_max_time = post_max_time;
