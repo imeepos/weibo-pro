@@ -69,16 +69,24 @@ export class WeiboErrorHandler {
      *
      * @param response fetch Response 对象
      * @param data 已解析的响应数据（可选）
+     * @param requestUrl 原始请求 URL（用于诊断）
      * @returns 成功时返回 null，失败时返回 WeiboError
      */
     static async checkResponse(
         response: Response,
         data?: Record<string, unknown>,
+        requestUrl?: string,
     ): Promise<WeiboError | null> {
         // 检查 HTTP 状态码
         if (!response.ok) {
-            // 4xx 错误通常不需要重试
+            // 4xx 错误详细日志
             if (response.status >= 400 && response.status < 500) {
+                console.warn(`[WeiboErrorHandler] 4xx 错误详情:
+  statusCode: ${response.status}
+  requestUrl: ${requestUrl || response.url}
+  responseUrl: ${response.url}
+  contentType: ${response.headers.get('content-type')}
+`);
                 return new WeiboError(
                     WeiboErrorType.HTTP_ERROR,
                     `HTTP ${response.status}: ${response.statusText} url: ${response.url}`,

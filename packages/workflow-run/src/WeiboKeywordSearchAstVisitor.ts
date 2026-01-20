@@ -11,9 +11,10 @@ import { concatMap, mergeMap } from "rxjs/operators";
 import { ErrorHandlerOperators } from "./utils/error-handler.util";
 import {
     EntityManager,
-  useEntityManager,
-  WeiboPostEntity,
-  WeiboPostSnapshotEntity,
+    useEntityManager,
+    WeiboPostEntity,
+    WeiboPostSnapshotEntity,
+    EventEntity,
 } from "@sker/entities";
 
 const logger = createLogger('WeiboKeywordSearchAstVisitor');
@@ -63,7 +64,18 @@ export class WeiboKeywordSearchAstVisitor {
                 mergeMap((events: NodeEvent[]) => from(events))
             ).subscribe({
                 next: (event: NodeEvent) => obs.next(event),
-                error: (error) => {
+                error: async (error) => {
+                    // 记录错误原因到事件
+                    await useEntityManager(async (manager) => {
+                        if (ast.event_id) {
+                            const event = await manager.findOne(EventEntity, { where: { id: ast.event_id } });
+                            if (event) {
+                                event.crawl_end_reason = `搜索出错：${(error as Error).message}`;
+                                await manager.save(EventEntity, event);
+                            }
+                        }
+                    });
+
                     obs.next({ type: 'node_fail', id: ast.id, error: error?.message });
                     // 发射 null 数据让下游节点可以继续处理
                     obs.next({
@@ -278,6 +290,35 @@ export class WeiboKeywordSearchAstVisitor {
                 return await this.executeSearch(ast, ctx, obs);
             }
         }
+
+        // 正常退出时更新事件爬取结束原因
+        await useEntityManager(async (manager) => {
+            if (ast.event_id) {
+                const event = await manager.findOne(EventEntity, { where: { id: ast.event_id } });
+                if (event) {
+                    const reasons: string[] = [];
+
+                    if (!result.hasNextPage) {
+                        reasons.push('无更多数据');
+                    }
+
+                    if (result.totalCount) {
+                        reasons.push('微博已返回全部数据');
+                    }
+
+                    if (result.totalPage >= 50) {
+                        reasons.push('达到50页上限');
+                    }
+
+                    if (reasons.length === 0) {
+                        reasons.push('搜索完成');
+                    }
+
+                    event.crawl_end_reason = `${reasons.join('，')}。关键词：${ast.keyword}，当前页：${result.currentPage}/${result.totalPage}`;
+                    await manager.save(EventEntity, event);
+                }
+            }
+        });
     }
 
     private async getHtmlWithFallback(url: string, cookies: string, ua: string): Promise<string> {

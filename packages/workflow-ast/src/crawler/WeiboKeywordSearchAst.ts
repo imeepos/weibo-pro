@@ -29,6 +29,9 @@ import { Ast, Input, Node, Output, State } from "@sker/workflow";
 })
 export class WeiboKeywordSearchAst extends Ast {
 
+    @Input({ title: '事件ID', type: 'text', defaultValue: '' })
+    event_id: string = ''
+
     @Input({ title: '关键字', type: 'text', defaultValue: '' })
     keyword: string = ``
 

@@ -39,6 +39,19 @@ export abstract class WeiboApiClient {
     ) {}
 
     /**
+     * Cookie 摘要（脱敏）
+     *
+     * @param cookie 完整 Cookie
+     * @returns Cookie 摘要
+     */
+    private sanitizeCookie(cookie: string): string {
+        if (!cookie) return 'EMPTY';
+        // 只显示 Cookie 的关键部分，隐藏敏感信息
+        const parts = cookie.split(';').slice(0, 3);
+        return parts.join(';') + (cookie.split(';').length > 3 ? '...' : '');
+    }
+
+    /**
      * 单次 API 请求
      *
      * @param options 请求配置
@@ -72,7 +85,18 @@ export abstract class WeiboApiClient {
             const response = await this.workerProxy.fetch(options.url, headers);
 
             if (!response.ok) {
-                const error = await WeiboErrorHandler.checkResponse(response);
+                // HTTP 错误响应日志（包含完整请求上下文）
+                console.error(`[WeiboApiClient] HTTP 错误响应:
+  statusCode: ${response.status}
+  statusText: ${response.statusText}
+  requestUrl: ${options.url}
+  responseUrl: ${response.url}
+  accountId: ${selection.id}
+  cookie摘要: ${this.sanitizeCookie(selection.cookieHeader)}
+  xsrfToken: ${selection.xsrfToken ? selection.xsrfToken.substring(0, 10) + '...' : 'MISSING'}
+  referer: ${referer}
+`);
+                const error = await WeiboErrorHandler.checkResponse(response, undefined, options.url);
                 if (error) {
                     await this.handleWeiboError(error, selection.id, accountKey);
                     throw WeiboErrorHandler.toNoRetryErrorIfNeeded(error);
@@ -80,7 +104,7 @@ export abstract class WeiboApiClient {
             }
 
             const data = await response.json();
-            const error = await WeiboErrorHandler.checkResponse(response, data);
+            const error = await WeiboErrorHandler.checkResponse(response, data, options.url);
             if (error) {
                 await this.handleWeiboError(error, selection.id, accountKey);
                 throw WeiboErrorHandler.toNoRetryErrorIfNeeded(error);

@@ -512,12 +512,6 @@ const EventAnalysis: React.FC = () => {
                         </DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4 py-4">
-                        {/* 调试信息 */}
-                        <div className="text-xs text-muted-foreground mb-2">
-                          event.id: {event.id}<br/>
-                          event.keywords: {JSON.stringify(event.keywords)}<br/>
-                          event.keywords?.length: {event.keywords?.length}
-                        </div>
                         <div className="flex flex-wrap gap-2 min-h-[60px] p-3 bg-muted/30 rounded-lg">
                           {event.keywords && event.keywords.length > 0 ? (
                             event.keywords.map(keyword => (

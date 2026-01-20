@@ -79,4 +79,11 @@ export class EventEntity {
     nullable: true,
   })
   deleted_at!: Date | null;
+
+  @Column({
+    type: 'text',
+    nullable: true,
+    name: 'crawl_end_reason'
+  })
+  crawl_end_reason!: string | null;
 }
