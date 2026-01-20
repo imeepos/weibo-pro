@@ -61,7 +61,7 @@ const UserDetection3D: React.FC = () => {
     autoRotate: false,
   });
 
-  const debouncedSearch = useDebounce(searchTerm, 300);
+  const debouncedSearch = useDebounce(searchTerm, 1000);
   const fgRef = useRef<ForceGraph3DHandle>(null);
 
   const { users, riskLevels, statistics, isLoading, error, refetch } = useUserDetection({

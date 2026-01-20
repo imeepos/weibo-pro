@@ -59,7 +59,7 @@ const EventAnalysis: React.FC = () => {
   const navigate = useNavigate();
   const { selectedTimeRange, setSelectedTimeRange } = useAppStore();
   const [searchTerm, setSearchTerm] = useState('');
-  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  const debouncedSearchTerm = useDebounce(searchTerm, 1000);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [events, setEvents] = useState<EventItem[]>([]);
   const [categories, setCategories] = useState<string[]>([]);

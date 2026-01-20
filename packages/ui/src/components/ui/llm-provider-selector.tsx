@@ -29,7 +29,7 @@ function LlmProviderSelector({
   className,
 }: LlmProviderSelectorProps) {
   const [search, setSearch] = React.useState("")
-  const debouncedSearch = useDebounce(search, 300)
+  const debouncedSearch = useDebounce(search, 1000)
 
   const filtered = React.useMemo(() => {
     if (!debouncedSearch.trim()) return providers

@@ -196,7 +196,7 @@ export const ComponentSelector: React.FC<ComponentSelectorProps> = ({
   className
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  const debouncedSearchTerm = useDebounce(searchTerm, 1000);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedComponent, setSelectedComponent] = useState<string | null>(currentComponent || null);
 

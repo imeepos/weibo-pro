@@ -32,7 +32,7 @@ function PersonaSelector({
   defaultLimit = 3,
 }: PersonaSelectorProps) {
   const [search, setSearch] = React.useState("")
-  const debouncedSearch = useDebounce(search, 300)
+  const debouncedSearch = useDebounce(search, 1000)
   const [expanded, setExpanded] = React.useState(false)
 
   const filtered = React.useMemo(() => {

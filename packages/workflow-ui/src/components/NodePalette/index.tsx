@@ -19,7 +19,7 @@ export interface NodePaletteProps {
 
 export function NodePalette({ className = '' }: NodePaletteProps) {
   const [searchQuery, setSearchQuery] = useState('')
-  const debouncedSearchQuery = useDebounce(searchQuery, 300)
+  const debouncedSearchQuery = useDebounce(searchQuery, 1000)
   const nodeRegistry = useNodeRegistry()
   const addNode = useWorkflowStore((state) => state.addNode)
   const { screenToFlowPosition } = useReactFlow()

@@ -41,7 +41,7 @@ export const useLlmLogs = (timeRange: TimeRange): UseLlmLogsResult => {
   const controller = root.get(LlmChatLogsController);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const debouncedFilters = useDebounce(filters, 500);
+  const debouncedFilters = useDebounce(filters, 1000);
 
   const fetchLogs = useCallback(async () => {
     if (abortControllerRef.current) {

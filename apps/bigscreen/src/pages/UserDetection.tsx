@@ -35,7 +35,7 @@ const UserDetection: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const debouncedSearch = useDebounce(searchTerm, 300);
+  const debouncedSearch = useDebounce(searchTerm, 1000);
 
   const { users, riskLevels, statistics, isLoading, error, refetch } = useUserDetection({
     timeRange: selectedTimeRange,
