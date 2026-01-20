@@ -121,7 +121,7 @@ export class WeiboKeywordSearchAstVisitor {
 
         const base = 'https://s.weibo.com/weibo';
         const params = new URLSearchParams({ q: keyword, typeall: `1`, suball: `1`, page: String(page), Refer: `g` });
-        params.set('timescope', `custom:${formatDate(startDate)}:${formatDate(endDate)}`);
+        params.set('timescope', `custom:${formatDate(endDate)}:${formatDate(startDate)}`);
         const url = `${base}?${params.toString()}`;
 
         ast.state = 'running';
