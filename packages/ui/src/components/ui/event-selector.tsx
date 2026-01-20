@@ -1,9 +1,10 @@
 "use client"
 
 import * as React from "react"
-import { CheckIcon, CalendarIcon, TrendingUpIcon } from "lucide-react"
+import { CheckIcon, CalendarIcon, TrendingUpIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
 import { cn } from "@sker/ui/lib/utils"
 import { SearchInput } from "./search-input"
+import { Button } from "./button"
 
 export interface EventItem {
   id: string
@@ -23,6 +24,8 @@ export interface EventSelectorProps {
   placeholder?: string
   className?: string
   onSearch?: (keyword: string) => EventItem[] | Promise<EventItem[]>
+  pageSize?: number
+  onPageChange?: (page: number) => void
 }
 
 function formatDate(date: Date | string | null | undefined): string {
@@ -39,10 +42,13 @@ function EventSelector({
   placeholder = "搜索事件...",
   className,
   onSearch,
+  pageSize,
+  onPageChange,
 }: EventSelectorProps) {
   const [search, setSearch] = React.useState("")
   const [searchResults, setSearchResults] = React.useState<EventItem[] | null>(null)
   const [isLoading, setIsLoading] = React.useState(false)
+  const [currentPage, setCurrentPage] = React.useState(1)
 
   const selectedSet = React.useMemo(() => {
     if (!value) return new Set<string>()
@@ -61,8 +67,14 @@ function EventSelector({
     )
   }, [events, search, onSearch, searchResults])
 
+  const totalPages = pageSize ? Math.ceil(filtered.length / pageSize) : 1
+  const paginatedEvents = pageSize
+    ? filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+    : filtered
+
   const handleSearchChange = async (keyword: string) => {
     setSearch(keyword)
+    setCurrentPage(1)
     if (onSearch) {
       if (!keyword.trim()) {
         setSearchResults(null)
@@ -77,6 +89,11 @@ function EventSelector({
         setIsLoading(false)
       }
     }
+  }
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+    onPageChange?.(page)
   }
 
   const handleSelect = (id: string) => {
@@ -108,7 +125,7 @@ function EventSelector({
             无匹配事件
           </div>
         ) : (
-          filtered.map((event) => {
+          paginatedEvents.map((event) => {
             const selected = selectedSet.has(event.id)
             return (
               <div
@@ -168,6 +185,33 @@ function EventSelector({
           })
         )}
       </div>
+      {pageSize && filtered.length > pageSize && (
+        <div className="flex items-center justify-between gap-2 text-sm">
+          <span className="text-muted-foreground">
+            第 {currentPage} 页 / 共 {totalPages} 页
+          </span>
+          <div className="flex gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage === 1}
+              onClick={() => handlePageChange(currentPage - 1)}
+            >
+              <ChevronLeftIcon className="size-4" />
+              上一页
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage === totalPages}
+              onClick={() => handlePageChange(currentPage + 1)}
+            >
+              下一页
+              <ChevronRightIcon className="size-4" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
