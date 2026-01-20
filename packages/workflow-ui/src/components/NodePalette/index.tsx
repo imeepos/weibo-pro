@@ -28,9 +28,9 @@ export function NodePalette({ className = '' }: NodePaletteProps) {
     if (!debouncedSearchQuery.trim()) return nodeRegistry
     const query = debouncedSearchQuery.toLowerCase()
     return nodeRegistry.filter((node) =>
-      node.label?.toLowerCase().includes(query) ||
-      node.type?.toLowerCase().includes(query) ||
-      node.description?.toLowerCase().includes(query)
+      node.class?.title?.toLowerCase().includes(query) ||
+      node.class?.type?.toLowerCase().includes(query) ||
+      node.type?.toLowerCase().includes(query)
     )
   }, [nodeRegistry, debouncedSearchQuery])
 
