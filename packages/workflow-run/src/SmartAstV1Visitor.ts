@@ -175,7 +175,7 @@ export class SmartAstV1Visitor {
     const systemTime = new Date().toISOString()
     let prompt = `你是智能数据分发控制决策中心。根据输入数据的要求，为每个输出端口生成合适的内容。
 
-【系统时间】${systemTime}
+【当前时间】${systemTime}
 
 【输入端口上下文】
 ${inputList || '(无)'}
