@@ -172,7 +172,10 @@ export class SmartAstV1Visitor {
       `- ${o.property}:\n  标题: ${o.title}\n  描述: ${o.description || '(无)'}\n  类型: ${o.type || 'any'}`
     ).join('\n')
 
+    const systemTime = new Date().toISOString()
     let prompt = `你是智能数据分发控制决策中心。根据输入数据的要求，为每个输出端口生成合适的内容。
+
+【系统时间】${systemTime}
 
 【输入端口上下文】
 ${inputList || '(无)'}
