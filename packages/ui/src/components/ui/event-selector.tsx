@@ -5,6 +5,7 @@ import { CheckIcon, CalendarIcon, TrendingUpIcon, ChevronLeftIcon, ChevronRightI
 import { cn } from "@sker/ui/lib/utils"
 import { SearchInput } from "./search-input"
 import { Button } from "./button"
+import { useDebounceFn } from "@sker/ui/hooks/use-debounce-fn"
 
 export interface EventItem {
   id: string
@@ -23,9 +24,10 @@ export interface EventSelectorProps {
   multiple?: boolean
   placeholder?: string
   className?: string
-  onSearch?: (keyword: string) => EventItem[] | Promise<EventItem[]>
+  onSearch?: (keyword: string, page?: number) => EventItem[] | Promise<EventItem[]>
   pageSize?: number
   onPageChange?: (page: number) => void
+  debounceMs?: number
 }
 
 function formatDate(date: Date | string | null | undefined): string {
@@ -44,11 +46,46 @@ function EventSelector({
   onSearch,
   pageSize,
   onPageChange,
+  debounceMs = 0,
 }: EventSelectorProps) {
   const [search, setSearch] = React.useState("")
   const [searchResults, setSearchResults] = React.useState<EventItem[] | null>(null)
   const [isLoading, setIsLoading] = React.useState(false)
   const [currentPage, setCurrentPage] = React.useState(1)
+
+  const performSearch = React.useCallback(async (keyword: string, page: number) => {
+    if (!onSearch) return
+    if (!keyword.trim()) {
+      setSearchResults(null)
+      setIsLoading(false)
+      return
+    }
+    setIsLoading(true)
+    try {
+      const results = await onSearch(keyword, page)
+      setSearchResults(results)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [onSearch])
+
+  const { run: debouncedSearch } = useDebounceFn(
+    (keyword: string, page: number) => performSearch(keyword, page),
+    debounceMs > 0 ? debounceMs : undefined
+  )
+
+  const handleSearchChange = (keyword: string) => {
+    setSearch(keyword)
+    const page = 1
+    setCurrentPage(page)
+    if (onSearch) {
+      if (debounceMs > 0) {
+        debouncedSearch(keyword, page)
+      } else {
+        performSearch(keyword, page)
+      }
+    }
+  }
 
   const selectedSet = React.useMemo(() => {
     if (!value) return new Set<string>()
@@ -72,28 +109,16 @@ function EventSelector({
     ? filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize)
     : filtered
 
-  const handleSearchChange = async (keyword: string) => {
-    setSearch(keyword)
-    setCurrentPage(1)
-    if (onSearch) {
-      if (!keyword.trim()) {
-        setSearchResults(null)
-        setIsLoading(false)
-        return
-      }
-      setIsLoading(true)
-      try {
-        const results = await onSearch(keyword)
-        setSearchResults(results)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-  }
-
   const handlePageChange = (page: number) => {
     setCurrentPage(page)
     onPageChange?.(page)
+    if (onSearch && search.trim()) {
+      if (debounceMs > 0) {
+        debouncedSearch(search, page)
+      } else {
+        performSearch(search, page)
+      }
+    }
   }
 
   const handleSelect = (id: string) => {

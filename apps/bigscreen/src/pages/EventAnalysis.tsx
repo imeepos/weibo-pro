@@ -51,6 +51,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@sker/ui/components/ui/dialog';
+import { useDebounce } from '@sker/ui/hooks/use-debounce';
 
 const logger = createLogger('EventAnalysis');
 
@@ -58,6 +59,7 @@ const EventAnalysis: React.FC = () => {
   const navigate = useNavigate();
   const { selectedTimeRange, setSelectedTimeRange } = useAppStore();
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [events, setEvents] = useState<EventItem[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
@@ -79,7 +81,7 @@ const EventAnalysis: React.FC = () => {
       else setLoading(true);
 
       const c = root.get(EventsController)
-      const search = searchTerm || undefined;
+      const search = debouncedSearchTerm || undefined;
       const category = selectedCategory !== 'all' ? selectedCategory : undefined;
 
       const [eventsResult, categoriesResult, trendsResult] = await Promise.all([
@@ -109,12 +111,12 @@ const EventAnalysis: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, [selectedTimeRange, currentPage, pageSize, searchTerm, selectedCategory]);
+  }, [selectedTimeRange, currentPage, pageSize, debouncedSearchTerm, selectedCategory]);
 
   // 筛选条件变化时重置页码
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedCategory, selectedTimeRange]);
+  }, [debouncedSearchTerm, selectedCategory, selectedTimeRange]);
 
   // 提取趋势数据
   const trendSeries = useMemo(() => {

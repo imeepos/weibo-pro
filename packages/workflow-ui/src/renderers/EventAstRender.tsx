@@ -56,9 +56,9 @@ const EventSetting: React.FC<EventSettingProps> = ({ ast, onPropertyChange }) =>
     deps: []
   });
 
-  const handleSearch = async (keyword: string) => {
+  const handleSearch = async (keyword: string, page?: number) => {
     const controller = root.get(EventsController);
-    const result = await controller.getEventList(undefined, undefined, undefined, keyword);
+    const result = await controller.getEventList(undefined, page ? `${page}` : undefined, undefined, keyword);
     return result.data.map(e => ({
       id: e.id,
       title: e.title,
@@ -112,6 +112,7 @@ const EventSetting: React.FC<EventSettingProps> = ({ ast, onPropertyChange }) =>
       onChange={handleSelect}
       onSearch={handleSearch}
       placeholder="搜索事件..."
+      debounceMs={300}
     />
   );
 };
