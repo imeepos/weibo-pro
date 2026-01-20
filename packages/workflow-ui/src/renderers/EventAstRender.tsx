@@ -56,6 +56,20 @@ const EventSetting: React.FC<EventSettingProps> = ({ ast, onPropertyChange }) =>
     deps: []
   });
 
+  const handleSearch = async (keyword: string) => {
+    const controller = root.get(EventsController);
+    const result = await controller.getEventList(undefined, undefined, undefined, keyword);
+    return result.data.map(e => ({
+      id: e.id,
+      title: e.title,
+      description: e.description,
+      category: e.category ? { name: e.category } : null,
+      hotness: e.hotness,
+      occurred_at: e.createdAt,
+      created_at: e.createdAt,
+    }));
+  };
+
   const handleSelect = (eventId: string | string[]) => {
     console.log('[EventAstRender] handleSelect called:', {
       eventId,
@@ -96,6 +110,7 @@ const EventSetting: React.FC<EventSettingProps> = ({ ast, onPropertyChange }) =>
       events={events || []}
       value={ast.eventId}
       onChange={handleSelect}
+      onSearch={handleSearch}
       placeholder="搜索事件..."
     />
   );
