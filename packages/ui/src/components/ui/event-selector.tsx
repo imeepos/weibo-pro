@@ -22,6 +22,7 @@ export interface EventSelectorProps {
   multiple?: boolean
   placeholder?: string
   className?: string
+  onSearch?: (keyword: string) => EventItem[] | Promise<EventItem[]>
 }
 
 function formatDate(date: Date | string | null | undefined): string {
@@ -37,8 +38,11 @@ function EventSelector({
   multiple = false,
   placeholder = "搜索事件...",
   className,
+  onSearch,
 }: EventSelectorProps) {
   const [search, setSearch] = React.useState("")
+  const [searchResults, setSearchResults] = React.useState<EventItem[] | null>(null)
+  const [isLoading, setIsLoading] = React.useState(false)
 
   const selectedSet = React.useMemo(() => {
     if (!value) return new Set<string>()
@@ -47,6 +51,7 @@ function EventSelector({
 
   const filtered = React.useMemo(() => {
     if (!search.trim()) return events
+    if (onSearch && searchResults !== null) return searchResults
     const keyword = search.toLowerCase()
     return events.filter(
       (e) =>
@@ -54,28 +59,35 @@ function EventSelector({
         e.description?.toLowerCase().includes(keyword) ||
         e.category?.name.toLowerCase().includes(keyword)
     )
-  }, [events, search])
+  }, [events, search, onSearch, searchResults])
+
+  const handleSearchChange = async (keyword: string) => {
+    setSearch(keyword)
+    if (onSearch) {
+      if (!keyword.trim()) {
+        setSearchResults(null)
+        setIsLoading(false)
+        return
+      }
+      setIsLoading(true)
+      try {
+        const results = await onSearch(keyword)
+        setSearchResults(results)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+  }
 
   const handleSelect = (id: string) => {
-    console.log('[EventSelector] handleSelect called:', {
-      id,
-      selectedSet: Array.from(selectedSet),
-      hasId: selectedSet.has(id),
-      multiple,
-      hasOnChange: !!onChange,
-      currentValue: value
-    })
     if (!onChange) return
     if (multiple) {
       const next = selectedSet.has(id)
         ? [...selectedSet].filter((v) => v !== id)
         : [...selectedSet, id]
-      console.log('[EventSelector] calling onChange (multiple):', next)
       onChange(next)
     } else {
-      const newValue = selectedSet.has(id) ? "" : id
-      console.log('[EventSelector] calling onChange (single):', newValue)
-      onChange(newValue)
+      onChange(selectedSet.has(id) ? "" : id)
     }
   }
 
@@ -84,10 +96,14 @@ function EventSelector({
       <SearchInput
         placeholder={placeholder}
         value={search}
-        onChange={(e) => setSearch(e.target.value)}
+        onChange={(e) => handleSearchChange(e.target.value)}
       />
       <div className="border-border max-h-80 overflow-y-auto rounded-md border">
-        {filtered.length === 0 ? (
+        {isLoading ? (
+          <div className="text-muted-foreground py-8 text-center text-sm">
+            加载中...
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="text-muted-foreground py-8 text-center text-sm">
             无匹配事件
           </div>
@@ -99,13 +115,6 @@ function EventSelector({
                 key={event.id}
                 data-slot="event-item"
                 onPointerDown={(e) => {
-                  console.log('[EventSelector] onPointerDown triggered:', {
-                    eventId: event.id,
-                    eventTitle: event.title,
-                    button: e.button,
-                    pointerType: e.pointerType,
-                    target: (e.target as HTMLElement).className
-                  })
                   e.preventDefault()
                   e.stopPropagation()
                   handleSelect(event.id)
