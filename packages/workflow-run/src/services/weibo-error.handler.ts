@@ -160,7 +160,9 @@ export class WeiboErrorHandler {
 
             case WeiboErrorType.HTTP_ERROR:
                 // 5xx 服务器错误：可以重试
-                // 4xx 客户端错误：不重试
+                // 418 反爬虫错误：可重试（临时限流，需切换账号或稍后重试）
+                // 其他 4xx 客户端错误：不重试
+                if (error.statusCode === 418) return true;
                 return error.statusCode ? error.statusCode >= 500 : false;
 
             case WeiboErrorType.LOGIN_EXPIRED:
