@@ -51,7 +51,7 @@ export class EventAstVisitor {
 
             // 提取关键字（直接从 keywords 字段）
             const keywords = event.keywords || [];
-            const keywords_str = keywords.join('|');
+            const keywords_str = keywords.join(' ');
 
             // 查询帖子时间区间
             const timeRange = await manager
