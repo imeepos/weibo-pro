@@ -17,7 +17,13 @@ export interface AnthropicContentTextBlock {
     text: string;
     type: `text`;
 }
-export type AnthropicContentBlock = AnthropicContentTextBlock | AnthropicContentThinkingBlock;
+export interface AnthropicToolUseBlock {
+    type: 'tool_use';
+    id: string;
+    name: string;
+    input: Record<string, any>;
+}
+export type AnthropicContentBlock = AnthropicContentTextBlock | AnthropicContentThinkingBlock | AnthropicToolUseBlock;
 
 export class AnthropicResponseAst extends Ast {
     id!: string;
@@ -44,7 +50,7 @@ export class AnthropicMessageStartAst extends Ast {
 export class AnthropicContentBlockDeltaAst extends Ast {
     type!: 'content_block_delta';
     index!: number;
-    delta!: { type: string; text?: string; thinking?: string; signature?: string };
+    delta!: { type: string; text?: string; thinking?: string; signature?: string; partial_json?: string };
     visit(visitor: Visitor, ctx: any) {
         return visitor.visitAnthropicContentBlockDeltaAst(this, ctx);
     }
@@ -53,7 +59,7 @@ export class AnthropicContentBlockDeltaAst extends Ast {
 export class AnthropicContentBlockStartAst extends Ast {
     type!: 'content_block_start';
     index!: number;
-    content_block!: { type: string; text?: string; thinking?: string };
+    content_block!: { type: string; text?: string; thinking?: string; id?: string; name?: string };
     visit(visitor: Visitor, ctx: any) {
         return visitor.visitAnthropicContentBlockStartAst(this, ctx);
     }
@@ -83,10 +89,20 @@ export class AnthropicMessageStopAst extends Ast {
     }
 }
 export type OpenAIRole = `assistant`;
+export interface OpenAiToolCall {
+    index: number;
+    id?: string;
+    type?: string;
+    function?: {
+        name?: string;
+        arguments?: string;
+    };
+}
 export interface OpenAiDelta {
     content: string;
     role: OpenAIRole;
     reasoning_content: string | null;
+    tool_calls?: OpenAiToolCall[];
 }
 export interface OpenAiChoice {
     index: number;

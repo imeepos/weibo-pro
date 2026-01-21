@@ -10,9 +10,9 @@ export interface ToolMetadata extends ToolOptions {
     target: any;
     propertyKey: string | symbol;
 }
-export const ToolMetadataKey = new InjectionToken<ToolMetadata>(`ToolMetadataKey`)
+export const ToolMetadataKey = new InjectionToken<ToolMetadata[]>(`ToolMetadataKey`)
 export const Tool = (options: ToolOptions): MethodDecorator => {
-    return (target, propertyKey, descriptor) => {
+    return ((target: Object, propertyKey: string | symbol, descriptor?: PropertyDescriptor) => {
         root.set([
             {
                 provide: ToolMetadataKey,
@@ -20,29 +20,37 @@ export const Tool = (options: ToolOptions): MethodDecorator => {
                     target: target.constructor,
                     propertyKey,
                     ...options
-                }
+                },
+                multi: true
             }
         ])
-    }
+        return descriptor
+    }) as MethodDecorator
 }
 export interface ToolArgMetadata {
     target: any;
     propertyKey: string | symbol;
     parameterIndex: number;
     zod: any;
+    paramName?: string;
 }
-export const ToolArgMetadataKey = new InjectionToken<ToolArgMetadata>(`ToolArgMetadataKey`)
-export const ToolArg = (zod: any): ParameterDecorator => {
+export const ToolArgMetadataKey = new InjectionToken<ToolArgMetadata[]>(`ToolArgMetadataKey`)
+export interface ToolArgOptions {
+    zod: any;
+    paramName: string;
+}
+export const ToolArg = (options: ToolArgOptions): ParameterDecorator => {
     return (target, propertyKey, parameterIndex) => {
         root.set([
             {
-                provide: ToolArgMetadataKey, 
+                provide: ToolArgMetadataKey,
                 useValue: {
                     target: target.constructor,
                     propertyKey,
                     parameterIndex,
-                    zod
-                }
+                    ...options
+                },
+                multi: true
             }
         ])
     }
