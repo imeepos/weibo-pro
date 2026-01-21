@@ -5,6 +5,18 @@ import { WorkflowExecutionService } from './WorkflowExecutionService'
 import { withRetryOnNetworkError } from '../utils/retry-on-network-error'
 import nodeSchedule from 'node-schedule'
 
+type ScheduleChangeType = 'insert' | 'update' | 'delete'
+
+interface ScheduleChangeMessage {
+  type: ScheduleChangeType
+  scheduleId: string
+}
+
+interface ScheduleWatcher {
+  stop: () => Promise<void>
+  isStopped: () => boolean
+}
+
 /**
  * Cron 调度服务（基于 node-schedule + 分布式锁）
  *
@@ -263,5 +275,96 @@ export class CronSchedulerService {
    */
   getScheduleIds(): string[] {
     return Array.from(this.scheduleJobs.keys())
+  }
+
+  /**
+   * 启动监听数据库变更（Redis Pub/Sub）
+   */
+  async startWatching(): Promise<ScheduleWatcher> {
+    let stopped = false
+
+    try {
+      // 使用 Redis 订阅 workflow_schedule_change 通道
+      const unsubscribe = this.redis.subscribe(
+        'workflow_schedule_change',
+        async (_channel: string, message: string) => {
+          if (stopped) return
+
+          try {
+            const { type, scheduleId } = JSON.parse(message) as ScheduleChangeMessage
+            await this.handleScheduleChange(type, scheduleId)
+          } catch (error) {
+            logger.error('处理调度变更通知失败', {
+              error: (error as Error).message,
+              message
+            })
+          }
+        }
+      )
+
+      logger.info('✅ 已启动 Redis 调度变更监听')
+    } catch (error) {
+      logger.error('启动 Redis 监听失败', {
+        error: (error as Error).message
+      })
+      throw error
+    }
+
+    return {
+      stop: async () => {
+        if (stopped) return
+        stopped = true
+        logger.info('已停止 Redis 调度变更监听')
+      },
+      isStopped: () => stopped
+    }
+  }
+
+  /**
+   * 重新加载单个调度
+   */
+  async reloadSchedule(scheduleId: string): Promise<void> {
+    const repository = this.dataSource.getRepository(WorkflowScheduleEntity)
+    const schedule = await repository.findOne({ where: { id: scheduleId } })
+
+    if (!schedule) {
+      // 调度不存在，移除
+      this.removeSchedule(scheduleId)
+      logger.info('调度已删除，移除任务', { scheduleId })
+      return
+    }
+
+    if (schedule.status !== ScheduleStatus.ENABLED) {
+      // 调度已禁用，移除
+      this.removeSchedule(scheduleId)
+      logger.info('调度已禁用，移除任务', { scheduleId })
+      return
+    }
+
+    // 重新添加调度（会先移除旧的）
+    await this.addSchedule(schedule)
+    logger.info('重新加载调度', { scheduleId, name: schedule.name })
+  }
+
+  /**
+   * 处理调度变更通知
+   */
+  async handleScheduleChange(type: ScheduleChangeType, scheduleId: string): Promise<void> {
+    logger.debug('收到调度变更通知', { type, scheduleId })
+
+    switch (type) {
+      case 'insert':
+      case 'update':
+        await this.reloadSchedule(scheduleId)
+        break
+
+      case 'delete':
+        this.removeSchedule(scheduleId)
+        logger.info('删除调度任务', { scheduleId })
+        break
+
+      default:
+        logger.warn('未知的调度变更类型', { type, scheduleId })
+    }
   }
 }

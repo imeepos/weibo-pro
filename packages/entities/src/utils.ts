@@ -1,7 +1,9 @@
 
 import { DataSource, DataSourceOptions, EntityManager } from 'typeorm';
 import { ENTITY } from "./decorator";
-import { APP_INITIALIZER, Initializer, Provider, root } from '@sker/core'
+import { APP_INITIALIZER, Initializer, Provider, root, Inject } from '@sker/core';
+import { RedisClient } from '@sker/redis';
+import { WorkflowScheduleSubscriber } from './subscribers/workflow-schedule.subscriber';
 
 export const createDatabaseConfig = (): DataSourceOptions => {
   const databaseUrl = process.env.DATABASE_URL;
@@ -155,5 +157,24 @@ export const entitiesProviders: Provider[] = [
       return ds.createEntityManager()
     },
     deps: [DataSource]
+  },
+  {
+    provide: APP_INITIALIZER,
+    useFactory: (dataSource: DataSource, redis: RedisClient) => {
+      return {
+        init: async () => {
+          // 动态注册 WorkflowScheduleSubscriber
+          try {
+            const subscriber = new WorkflowScheduleSubscriber(redis)
+            dataSource.subscribers.push(subscriber)
+            console.log('✅ WorkflowScheduleSubscriber 已注册')
+          } catch (error) {
+            console.error('注册 WorkflowScheduleSubscriber 失败:', error)
+          }
+        }
+      } as Initializer
+    },
+    multi: true,
+    deps: [DataSource, RedisClient]
   }
 ]

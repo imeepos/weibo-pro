@@ -32,10 +32,14 @@ async function bootstrap() {
   // 初始化调度器（从数据库加载所有启用的调度）
   await scheduler.initializeSchedules();
 
+  // 启动数据库变更监听（实现动态加载调度）
+  const watcher = await scheduler.startWatching();
+
   // 优雅关闭
   const shutdown = async () => {
     logger.info('📴 Crawler 服务关闭中...');
 
+    await watcher.stop();
     await scheduler.stopAll();
     logger.info('✅ Crawler 服务已关闭');
     process.exit(0);

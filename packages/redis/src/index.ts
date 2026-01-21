@@ -265,6 +265,31 @@ export class RedisClient {
     pipeline(): RedisPipeline {
         return new RedisPipeline(this.client.pipeline());
     }
+
+    // Pub/Sub operations
+    async publish(channel: string, message: string): Promise<number> {
+        return await this.client.publish(channel, message);
+    }
+
+    subscribe(
+        channel: string,
+        callback: (channel: string, message: string) => void | Promise<void>
+    ): () => void {
+        const subscriber = new Redis(this.client.options);
+
+        subscriber.subscribe(channel);
+        subscriber.on('message', (ch: string, message: string) => {
+            if (ch === channel) {
+                callback(ch, message);
+            }
+        });
+
+        // 返回取消订阅函数
+        return () => {
+            subscriber.unsubscribe(channel).catch(() => {});
+            subscriber.quit().catch(() => {});
+        };
+    }
 }
 
 export const redisConfigFactory = (): string => {
