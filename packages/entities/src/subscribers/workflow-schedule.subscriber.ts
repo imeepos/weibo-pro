@@ -1,6 +1,7 @@
-import { EntitySubscriber, EventSubscriber, InsertEvent, UpdateEvent, RemoveEvent } from 'typeorm'
+import { EntitySubscriberInterface, EventSubscriber, InsertEvent, UpdateEvent, RemoveEvent } from 'typeorm'
 import { WorkflowScheduleEntity } from '../workflow-schedule.entity'
 import { RedisClient } from '@sker/redis'
+import { root } from '@sker/core'
 
 type ScheduleChangeType = 'insert' | 'update' | 'delete'
 
@@ -18,12 +19,7 @@ interface ScheduleChangeMessage {
  * - 实现调度动态加载，无需重启
  */
 @EventSubscriber()
-export class WorkflowScheduleSubscriber extends EntitySubscriber<WorkflowScheduleEntity> {
-  constructor(private redis: RedisClient) {
-    super()
-    // 注意：RedisClient 通过依赖注入传入
-  }
-
+export class WorkflowScheduleSubscriber implements EntitySubscriberInterface<WorkflowScheduleEntity> {
   /**
    * 指定监听的实体
    */
@@ -60,7 +56,8 @@ export class WorkflowScheduleSubscriber extends EntitySubscriber<WorkflowSchedul
   private async publishChange(type: ScheduleChangeType, scheduleId: string): Promise<void> {
     try {
       const message: ScheduleChangeMessage = { type, scheduleId }
-      await this.redis.publish('workflow_schedule_change', JSON.stringify(message))
+      const redis = root.get(RedisClient)
+      await redis.publish('workflow_schedule_change', JSON.stringify(message))
     } catch (error) {
       console.error('发布调度变更消息失败:', error)
     }
