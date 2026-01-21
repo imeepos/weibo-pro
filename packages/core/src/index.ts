@@ -13,6 +13,7 @@ export {
   type StringToken,
   type SymbolToken,
 } from './injector';
+export * from './mcp';
 export { NullInjector } from './null-injector';
 export { EnvironmentInjector, root } from './environment-injector';
 export {

@@ -1,7 +1,19 @@
-import { root } from '@sker/core'
+import { Injectable, root, Tool, ToolArg } from '@sker/core'
 import { ParserVisitor } from '../src'
 import { Observable } from 'rxjs'
 import { createWriteStream } from 'fs'
+
+
+@Injectable()
+export class ReadFile {
+
+    @Tool({
+        name: 'read file',
+        description: ``
+    })
+    readFile() { }
+}
+
 async function main() {
     const response = await fetch('https://api.siliconflow.cn/v1/messages', {
         method: 'POST',
@@ -24,9 +36,7 @@ async function main() {
     const stream = createWriteStream(`1.log`)
 
     if (result instanceof Observable) {
-        result.pipe(
-            
-        ).subscribe({
+        result.subscribe({
             next: (ast) => stream.write(JSON.stringify(ast, null, 2)),
             error: (err) => console.error('Error:', err),
             complete: () => console.log('Stream completed')
