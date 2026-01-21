@@ -1,7 +1,7 @@
 import { root } from '@sker/core'
 import { ParserVisitor } from '../src'
 import { Observable } from 'rxjs'
-
+import { createWriteStream } from 'fs'
 async function main() {
     const response = await fetch('https://api.siliconflow.cn/v1/messages', {
         method: 'POST',
@@ -21,9 +21,13 @@ async function main() {
     const visitor = root.get(ParserVisitor)
     const result = await visitor.visitResponse(response)
 
+    const stream = createWriteStream(`1.log`)
+
     if (result instanceof Observable) {
-        result.subscribe({
-            next: (ast) => console.log(JSON.stringify(ast, null, 2)),
+        result.pipe(
+            
+        ).subscribe({
+            next: (ast) => stream.write(JSON.stringify(ast, null, 2)),
             error: (err) => console.error('Error:', err),
             complete: () => console.log('Stream completed')
         })
