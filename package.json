@@ -55,13 +55,24 @@
       "vitest": "^4.0.16",
       "@vitest/ui": "^4.0.16",
       "@vitest/runner": "^4.0.16",
-      "@vitest/utils": "^4.0.16"
+      "@vitest/utils": "^4.0.16",
+      "better-call": "1.1.8",
+      "@better-auth/passkey": "1.4.13",
+      "@better-auth/sso": "1.4.13",
+      "@svta/cml-utils": "1.1.0",
+      "@svta/cml-cta": "1.0.2",
+      "@svta/cml-structured-field-values": "1.0.2"
     },
     "peerDependencyRules": {
       "ignoreMissing": [
         "canvas",
         "mongodb"
-      ]
+      ],
+      "allowedVersions": {
+        "mongodb": "7",
+        "better-call": "1.1.8",
+        "@better-auth/core": "1.4.13"
+      }
     }
   }
 }

@@ -8,3 +8,8 @@
 ```ts
 output = llm(input)
 ```
+
+sk-dffnwnzqutsirejrqkchbeszuabikgxzwrvicrbnwsnclzfp
+openai: https://api.siliconflow.cn/v1/chat/completions
+anthropic: https://api.siliconflow.cn/v1/messages
+superbase: 2pfJOf3RGypmagC5
