@@ -12,6 +12,10 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
+      "browser": {
+        "types": "./dist/browser/browser.d.ts",
+        "import": "./dist/browser/browser.mjs"
+      },
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     },
