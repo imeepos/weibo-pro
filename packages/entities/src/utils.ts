@@ -165,7 +165,7 @@ export const entitiesProviders: Provider[] = [
         init: async () => {
           // 动态注册 WorkflowScheduleSubscriber
           try {
-            const subscriber = new WorkflowScheduleSubscriber(redis)
+            const subscriber = new WorkflowScheduleSubscriber()
             dataSource.subscribers.push(subscriber)
             console.log('✅ WorkflowScheduleSubscriber 已注册')
           } catch (error) {
