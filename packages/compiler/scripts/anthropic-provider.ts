@@ -1,7 +1,6 @@
 import { root } from '@sker/core'
-import { ParserVisitor, buildAnthropicTools } from '../src'
+import { ParserVisitor, buildAnthropicTools, AggregatedMessage } from '../src'
 import { BaseProvider, Message, AgentMessage } from './base-provider'
-import { Observable } from 'rxjs'
 import { ToolCall } from './tool-executor'
 
 export class AnthropicProvider extends BaseProvider {
@@ -36,9 +35,8 @@ export class AnthropicProvider extends BaseProvider {
     }
   }
 
-  async parseResponse(response: Response): Promise<Observable<AgentMessage> | AgentMessage> {
-    const result = await this.visitor.visitResponse(response)
-    return result
+  async parseResponse(response: Response): Promise<AgentMessage> {
+    return await this.visitor.visitResponseAggregated(response)
   }
 
   formatAssistantMessage(message: AgentMessage): Message {
@@ -48,7 +46,7 @@ export class AnthropicProvider extends BaseProvider {
     }
   }
 
-  formatToolResult(toolCallId: string, toolName: string, result: string, toolCall?: any): Message {
+  formatToolResult(toolCallId: string, toolName: string, result: string, toolCall?: any, isError?: boolean): Message {
     return {
       role: 'user',
       content: [
@@ -56,14 +54,14 @@ export class AnthropicProvider extends BaseProvider {
           type: 'tool_result',
           tool_use_id: toolCallId,
           content: result,
-          is_error: false
+          is_error: isError || false
         }
       ]
     }
   }
 
   shouldStop(message: AgentMessage): boolean {
-    return message.stop_reason !== null
+    return message.stop_reason === 'end_turn' || message.stop_reason === 'stop_sequence'
   }
 
   extractToolCalls(message: AgentMessage): ToolCall[] {

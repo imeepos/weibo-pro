@@ -1,7 +1,6 @@
 import { root } from '@sker/core'
-import { ParserVisitor, buildOpenAITools } from '../src'
+import { ParserVisitor, buildOpenAITools, AggregatedMessage } from '../src'
 import { BaseProvider, Message, AgentMessage } from './base-provider'
-import { Observable } from 'rxjs'
 import { ToolCall } from './tool-executor'
 
 export class OpenAIProvider extends BaseProvider {
@@ -34,9 +33,8 @@ export class OpenAIProvider extends BaseProvider {
     }
   }
 
-  async parseResponse(response: Response): Promise<Observable<AgentMessage> | AgentMessage> {
-    const result = await this.visitor.visitResponse(response)
-    return result
+  async parseResponse(response: Response): Promise<AgentMessage> {
+    return await this.visitor.visitResponseAggregated(response)
   }
 
   formatAssistantMessage(message: AgentMessage): Message {
@@ -48,7 +46,7 @@ export class OpenAIProvider extends BaseProvider {
     if (message.tool_calls && message.tool_calls.length > 0) {
       assistantMessage.tool_calls = message.tool_calls.map(tc => ({
         id: tc.id,
-        type: tc.type,
+        type: tc.type || 'function',
         function: {
           name: tc.function.name,
           arguments: tc.function.arguments
@@ -59,11 +57,11 @@ export class OpenAIProvider extends BaseProvider {
     return assistantMessage
   }
 
-  formatToolResult(toolCallId: string, toolName: string, result: string, toolCall?: any): Message {
+  formatToolResult(toolCallId: string, toolName: string, result: string, toolCall?: any, isError?: boolean): Message {
     return {
       role: 'tool',
       tool_call_id: toolCallId,
-      content: result
+      content: isError ? `Error: ${result}` : result
     }
   }
 

@@ -1,5 +1,3 @@
-import { Observable } from 'rxjs'
-
 export interface Message {
   role: string
   content: any
@@ -16,9 +14,9 @@ export interface AgentMessage {
 
 export abstract class BaseProvider {
   abstract buildRequest(messages: Message[], tools: any[]): Promise<RequestInit & { url: string }>
-  abstract parseResponse(response: Response): Promise<Observable<AgentMessage> | AgentMessage>
+  abstract parseResponse(response: Response): Promise<AgentMessage>
   abstract formatAssistantMessage(message: AgentMessage): Message
-  abstract formatToolResult(toolCallId: string, toolName: string, result: string, toolCall?: any): Message
+  abstract formatToolResult(toolCallId: string, toolName: string, result: string, toolCall?: any, isError?: boolean): Message
   abstract shouldStop(message: AgentMessage): boolean
   abstract extractToolCalls(message: AgentMessage): any[]
 }

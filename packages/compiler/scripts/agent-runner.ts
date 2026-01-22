@@ -1,4 +1,3 @@
-import { Observable, firstValueFrom } from 'rxjs'
 import { BaseProvider, Message } from './base-provider'
 import { ToolExecutor } from './tool-executor'
 
@@ -14,14 +13,7 @@ export class AgentRunner {
     while (true) {
       const { url, ...init } = await this.provider.buildRequest(messages, tools)
       const response = await fetch(url, init)
-      const result = await this.provider.parseResponse(response)
-
-      let message: any
-      if (result instanceof Observable) {
-        message = await firstValueFrom(result)
-      } else {
-        message = result
-      }
+      const message = await this.provider.parseResponse(response)
 
       finalMessage = message
       console.log('=== Aggregated Message ===')
@@ -36,8 +28,16 @@ export class AgentRunner {
       if (toolCalls.length === 0) break
 
       for (const toolCall of toolCalls) {
-        const result = this.toolExecutor.execute(toolCall)
-        messages.push(this.provider.formatToolResult(toolCall.id, toolCall.function.name, result, toolCall))
+        let result: string
+        let isError = false
+        try {
+          result = this.toolExecutor.execute(toolCall)
+        } catch (error) {
+          result = error instanceof Error ? error.message : String(error)
+          isError = true
+          console.log(`Tool execution error: ${result}`)
+        }
+        messages.push(this.provider.formatToolResult(toolCall.id, toolCall.function.name, result, toolCall, isError))
       }
     }
 
