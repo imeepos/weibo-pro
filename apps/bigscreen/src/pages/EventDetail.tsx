@@ -60,6 +60,7 @@ import SentimentIntensityChart from '@/components/charts/SentimentIntensityChart
 import EngagementTrendChart from '@/components/charts/EngagementTrendChart';
 import MultiMetricTrendChart from '@/components/charts/MultiMetricTrendChart';
 import AnomalyTimelineChart from '@/components/charts/AnomalyTimelineChart';
+import GeographicDistributionChart, { type GeographicDataItem } from '@/components/charts/GeographicDistributionChart';
 
 interface TimeSeriesDataPoint {
   timestamp: string;
@@ -78,8 +79,9 @@ interface TrendChartData {
 
 interface GeographicDataPoint {
   region: string;
+  count: number;
+  percentage: number;
   posts: number;
-  users: number;
   sentiment: number;
 }
 
@@ -190,7 +192,7 @@ const EventDetail: React.FC = () => {
       setUserRelationNetwork(userRelationData);
 
       const geographicData = await c.getEventGeographic(eventId);
-      setGeographicData(geographicData.map(item => ({ region: item.region, posts: item.posts, users: item.count, sentiment: item.sentiment })));
+      setGeographicData(geographicData.map(item => ({ region: item.region, count: item.count, percentage: item.percentage, posts: item.posts, sentiment: item.sentiment })));
 
       const keywordsData = await c.getEventKeywords(eventId);
       setKeywordData(keywordsData.map(item => ({ keyword: item.keyword, weight: item.weight, sentiment: item.sentiment as 'positive' | 'negative' | 'neutral' })));
@@ -639,7 +641,7 @@ const EventDetail: React.FC = () => {
 
       {/* Tab 导航 */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4 bg-muted/20 p-1">
+        <TabsList className="grid w-full grid-cols-5 bg-muted/20 p-1">
           <TabsTrigger value="overview" className="data-[state=active]:bg-primary/20 gap-2">
             <Layers className="w-4 h-4" />
             <span className="hidden sm:inline">总览</span>
@@ -647,6 +649,10 @@ const EventDetail: React.FC = () => {
           <TabsTrigger value="network" className="data-[state=active]:bg-primary/20 gap-2">
             <Network className="w-4 h-4" />
             <span className="hidden sm:inline">关系网络</span>
+          </TabsTrigger>
+          <TabsTrigger value="geographic" className="data-[state=active]:bg-primary/20 gap-2">
+            <Globe className="w-4 h-4" />
+            <span className="hidden sm:inline">地理分布</span>
           </TabsTrigger>
           <TabsTrigger value="trend" className="data-[state=active]:bg-primary/20 gap-2">
             <LineChart className="w-4 h-4" />
@@ -707,6 +713,24 @@ const EventDetail: React.FC = () => {
                   暂无用户关系数据
                 </div>
               )}
+            </div>
+          </motion.div>
+        </TabsContent>
+
+        {/* 地理分布 Tab */}
+        <TabsContent value="geographic" className="mt-6">
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+            <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
+              <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
+                <Globe className="w-4 h-4" />
+                地理分布分析
+              </h3>
+              <GeographicDistributionChart
+                data={geographicData}
+                height={400}
+                showTable={true}
+                maxItems={20}
+              />
             </div>
           </motion.div>
         </TabsContent>
