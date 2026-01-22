@@ -10,6 +10,8 @@ export interface ParsedSearchResult {
   nextPageLink: string | undefined;
   currentPage: number;
   totalPage: number;
+  /** 标识搜索结果为空（"抱歉，未找到相关结果"） */
+  isEmptyResult: boolean;
 }
 
 @Injectable()
@@ -31,6 +33,10 @@ export class WeiboHtmlParser {
       }
 
       const $ = cheerio.load(html);
+
+      // 检测"未找到相关结果"（无结果页面）
+      const isEmptyResult = $('.card-no-result').length > 0 ||
+                           html.includes('抱歉，未找到相关结果');
 
       const posts = this.extractPostsInfo($);
       const postIds = posts.map((p) => p.mid);
@@ -58,6 +64,7 @@ export class WeiboHtmlParser {
         nextPageLink,
         currentPage,
         totalPage,
+        isEmptyResult,
       };
     } catch (error) {
       // 如果是登录失效错误，向上抛出
@@ -76,6 +83,7 @@ export class WeiboHtmlParser {
         nextPageLink: undefined,
         currentPage: 1,
         totalPage: 0,
+        isEmptyResult: true,
       };
     }
   }

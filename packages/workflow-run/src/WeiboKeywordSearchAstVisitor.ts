@@ -139,6 +139,17 @@ export class WeiboKeywordSearchAstVisitor {
         let html = await this.getHtmlWithFallback(url, selection.cookieHeader, `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36`);
         let result = this.parser.parseSearchResultHtml(html);
 
+        // 如果无结果（"抱歉，未找到相关结果"），直接发射空结果并结束
+        if (result.isEmptyResult) {
+            console.log(`[WeiboKeywordSearchAst] 关键词 "${keyword}" 在时间区间 ${formatDate(start)} - ${formatDate(end)} 内无帖子`);
+            obs.next({
+                type: 'node_emit',
+                id: ast.id,
+                data: { mblogid: null, uid: null, isEmptyResult: true }
+            });
+            return;
+        }
+
         for (const post of result.posts) {
             if (ctx.abortSignal?.aborted) {
                 throw new Error('工作流已取消');
