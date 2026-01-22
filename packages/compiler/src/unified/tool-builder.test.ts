@@ -13,7 +13,7 @@ import {
   unifiedToolsToOpenAI,
   unifiedToolsToGoogle
 } from './tool-builder'
-import { UnifiedTool } from './types'
+import { UnifiedTool } from '../ast'
 
 describe('unified-tool-builder', () => {
   describe('buildUnifiedTools', () => {

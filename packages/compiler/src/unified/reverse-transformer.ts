@@ -4,9 +4,7 @@
  * @version 2.0
  */
 
-import { Ast } from '../ast';
-import { UnifiedResponseAst } from './ast';
-import { UnifiedContent, UnifiedStopReason, UnifiedUsage } from './types';
+import { Ast, UnifiedResponseAst, UnifiedContent, UnifiedStopReason, UnifiedUsage } from '../ast';
 import {
   AnthropicResponseAst,
   AnthropicContentBlock,

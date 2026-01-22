@@ -18,9 +18,10 @@ import {
   UnifiedMessage,
   UnifiedTool,
   UnifiedToolParameters,
-  UnifiedUsage
-} from './types'
-import { UnifiedRequestAst, UnifiedResponseAst } from './ast'
+  UnifiedUsage,
+  UnifiedRequestAst,
+  UnifiedResponseAst
+} from '../ast'
 import {
   UnifiedToAnthropicTransformer,
   UnifiedToOpenAITransformer,

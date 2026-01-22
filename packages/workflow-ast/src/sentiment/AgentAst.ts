@@ -45,6 +45,7 @@ export abstract class AgentAst extends Ast {
     @Output({ title: '原始数据', defaultValue: null })
     rawData: unknown = null;
 
+
     @Output({ title: '建议', defaultValue: [] })
     suggestions: string[] = [];
 }

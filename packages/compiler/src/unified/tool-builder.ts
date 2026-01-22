@@ -7,8 +7,7 @@
 import { root, ToolMetadataKey, ToolArgMetadataKey, Type } from '@sker/core'
 import { ToolMetadata, ToolArgMetadata } from '@sker/core'
 import { z } from 'zod'
-import { AnthropicTool, OpenAITool, GoogleTool, GoogleToolFunctionDeclaration } from '../ast'
-import { UnifiedTool, UnifiedToolParameters } from './types'
+import { AnthropicTool, OpenAITool, GoogleTool, GoogleToolFunctionDeclaration, UnifiedTool, UnifiedToolParameters } from '../ast'
 
 // ==================== 辅助函数（复用现有逻辑） ====================
 

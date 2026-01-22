@@ -256,4 +256,13 @@ export class ToolExecutorVisitor implements Visitor {
     visitAnthropicMessageStopAst(ast: AnthropicMessageStopAst, ctx: any) {
         throw new Error("Method not implemented.");
     }
+    visitUnifiedRequestAst(ast: any, ctx: any): any {
+        throw new Error("Method not implemented.");
+    }
+    visitUnifiedResponseAst(ast: any, ctx: any): any {
+        throw new Error("Method not implemented.");
+    }
+    visitUnifiedStreamEventAst(ast: any, ctx: any): any {
+        throw new Error("Method not implemented.");
+    }
 }

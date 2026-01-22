@@ -132,6 +132,18 @@ export class ParserVisitor implements Visitor {
         return ast;
     }
 
+    visitUnifiedRequestAst(ast: any, ctx: any): any {
+        return ast;
+    }
+
+    visitUnifiedResponseAst(ast: any, ctx: any): any {
+        return ast;
+    }
+
+    visitUnifiedStreamEventAst(ast: any, ctx: any): any {
+        return ast;
+    }
+
     async visitResponse(response: Response): Promise<Ast | Observable<Ast>> {
         if (!response.ok) {
             const error = await response.text()

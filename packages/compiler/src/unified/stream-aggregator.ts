@@ -6,17 +6,7 @@
 
 import { Injectable } from '@sker/core';
 import { Observable, reduce, firstValueFrom, scan } from 'rxjs';
-import { Ast } from '../ast';
-import {
-  UnifiedResponseAst,
-  UnifiedStreamEventAst
-} from './ast';
-import {
-  UnifiedContent,
-  UnifiedProvider,
-  UnifiedStopReason,
-  UnifiedUsage
-} from './types';
+import { Ast, UnifiedResponseAst, UnifiedStreamEventAst, UnifiedContent, UnifiedProvider, UnifiedStopReason, UnifiedUsage } from '../ast';
 import {
   AnthropicMessageStartAst,
   AnthropicContentBlockStartAst,

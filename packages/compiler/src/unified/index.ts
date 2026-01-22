@@ -4,8 +4,8 @@
  * @version 2.0
  */
 
-export * from './types';
-export * from './ast';
+export * from '../ast';
 export * from './request-transformer';
 export * from './response-transformer';
-export * from './tool-builder';
+export * from './reverse-transformer';
+export * from './stream-aggregator';
