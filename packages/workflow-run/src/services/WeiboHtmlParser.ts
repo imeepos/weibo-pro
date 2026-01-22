@@ -20,15 +20,18 @@ export class WeiboHtmlParser {
 
   parseSearchResultHtml(html: string): ParsedSearchResult {
     try {
+      console.log('[WeiboHtmlParser] 开始解析搜索结果 HTML，HTML 长度:', html.length);
+
       // 检测登录失效：多特征检测（兼容新旧版本登录页面）
       const isLoginPage =
-        html.includes(`Sina Visitor System`) || 
+        html.includes(`Sina Visitor System`) ||
         html.includes('passport.weibo.com/sso/signin') ||  // 旧版登录页
         html.includes('h5.sinaimg.cn/m/login/') ||          // 新版登录页资源
         html.includes('<title>登录 - 微博</title>') ||      // 登录页标题
         html.includes('扫描二维码登录');                      // 登录页面文本
 
       if (isLoginPage) {
+        console.error('[WeiboHtmlParser] 检测到登录失效页面');
         throw new Error('LOGIN_EXPIRED');
       }
 
@@ -37,6 +40,10 @@ export class WeiboHtmlParser {
       // 检测"未找到相关结果"（无结果页面）
       const isEmptyResult = $('.card-no-result').length > 0 ||
                            html.includes('抱歉，未找到相关结果');
+
+      if (isEmptyResult) {
+        console.log('[WeiboHtmlParser] 检测到空结果页面');
+      }
 
       const posts = this.extractPostsInfo($);
       const postIds = posts.map((p) => p.mid);
@@ -56,7 +63,7 @@ export class WeiboHtmlParser {
       // 修复逻辑：只有在有 posts 且有 nextPageLink 时才认为有下一页
       const hasNextPage = posts.length > 0 && !!nextPageLink && currentPage < totalPage;
 
-      return {
+      const result = {
         posts,
         hasNextPage,
         lastPostTime,
@@ -66,6 +73,18 @@ export class WeiboHtmlParser {
         totalPage,
         isEmptyResult,
       };
+
+      console.log('[WeiboHtmlParser] 解析完成:', {
+        postsCount: posts.length,
+        hasNextPage,
+        currentPage,
+        totalPage,
+        nextPageLink: nextPageLink ? '存在' : '不存在',
+        isEmptyResult,
+        samplePosts: posts.slice(0, 3).map(p => ({ mid: p.mid, uid: p.uid }))
+      });
+
+      return result;
     } catch (error) {
       // 如果是登录失效错误，向上抛出
       if (error instanceof Error && error.message === 'LOGIN_EXPIRED') {
@@ -92,14 +111,23 @@ export class WeiboHtmlParser {
     const posts: Array<{ uid: string; mid: string; postAt: Date | null }> = [];
     const seenMids = new Set<string>();
 
+    console.log('[WeiboHtmlParser.extractPostsInfo] 开始提取帖子信息');
+
     // 策略1（主）：从详情链接提取 mid、uid 和 postAt
     // 格式：//weibo.com/:uid/:mid
+    const $cards = $('div.card');
+    console.log('[WeiboHtmlParser.extractPostsInfo] 找到 div.card 元素数量:', $cards.length);
+
     $('div.card').each((_index: number, element: any) => {
       const $card = $(element);
 
       // 正确的选择器：div.from > a（不是 p.from a）
       const detailLink = $card.find('div.from > a[href*="/weibo.com/"]').first();
       const href = detailLink.attr('href');
+
+      if (_index === 0) {
+        console.log('[WeiboHtmlParser.extractPostsInfo] 第一个卡片详情链接:', href);
+      }
 
       if (href) {
         // 匹配格式：//weibo.com/:uid/:mid
@@ -126,6 +154,7 @@ export class WeiboHtmlParser {
 
     // 策略2（备用）：从 div[mid] 属性提取（数字型ID）
     if (posts.length === 0) {
+      console.log('[WeiboHtmlParser.extractPostsInfo] 策略1未找到帖子，尝试策略2（从 div[mid] 属性提取）');
       $('div[action-type="feed_list_item"]').each((_index: number, element: any) => {
         const $item = $(element);
         const mid = $item.attr('mid');
@@ -146,8 +175,10 @@ export class WeiboHtmlParser {
           posts.push({ uid, mid, postAt });
         }
       });
+      console.log('[WeiboHtmlParser.extractPostsInfo] 策略2提取到帖子数量:', posts.length);
     }
 
+    console.log('[WeiboHtmlParser.extractPostsInfo] 总共提取到帖子数量:', posts.length);
     return posts;
   }
 
