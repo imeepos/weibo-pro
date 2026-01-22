@@ -3,6 +3,102 @@
 export abstract class Ast {
     abstract visit(visitor: Visitor, ctx: any): any;
 }
+
+// ==================== Anthropic Request Types ====================
+export type AnthropicRequestRole = 'user' | 'assistant';
+
+export interface AnthropicRequestMessage {
+    role: AnthropicRequestRole;
+    content: string | AnthropicContentBlock[];
+}
+
+export interface AnthropicToolInputSchema {
+    type: 'object';
+    properties: Record<string, any>;
+    required?: string[];
+}
+
+export interface AnthropicTool {
+    name: string;
+    description: string;
+    input_schema: AnthropicToolInputSchema;
+}
+
+export class AnthropicRequestAst extends Ast {
+    model!: string;
+    messages!: AnthropicRequestMessage[];
+    max_tokens!: number;
+    system?: string;
+    temperature?: number;
+    tools?: AnthropicTool[];
+    stream?: boolean;
+    visit(visitor: Visitor, ctx: any) {
+        return visitor.visitAnthropicRequestAst(this, ctx);
+    }
+}
+
+// ==================== OpenAI Request Types ====================
+export type OpenAIRequestRole = 'system' | 'user' | 'assistant' | 'tool';
+
+export interface OpenAIRequestMessage {
+    role: OpenAIRequestRole;
+    content: string;
+    name?: string;
+    tool_calls?: OpenAiToolCall[];
+    tool_call_id?: string;
+}
+
+export interface OpenAIFunction {
+    name: string;
+    description: string;
+    parameters: Record<string, any>;
+}
+
+export interface OpenAITool {
+    type: 'function';
+    function: OpenAIFunction;
+}
+
+export class OpenAIRequestAst extends Ast {
+    model!: string;
+    messages!: OpenAIRequestMessage[];
+    temperature?: number;
+    max_tokens?: number;
+    tools?: OpenAITool[];
+    stream?: boolean;
+    visit(visitor: Visitor, ctx: any) {
+        return visitor.visitOpenAIRequestAst(this, ctx);
+    }
+}
+
+// ==================== Google Request Types ====================
+export interface GoogleGenerationConfig {
+    temperature?: number;
+    maxOutputTokens?: number;
+    topP?: number;
+    topK?: number;
+}
+
+export interface GoogleToolFunctionDeclaration {
+    name: string;
+    description: string;
+    parameters: Record<string, any>;
+}
+
+export interface GoogleTool {
+    functionDeclarations: GoogleToolFunctionDeclaration[];
+}
+
+export class GoogleRequestAst extends Ast {
+    contents!: GoogleContent[];
+    generationConfig?: GoogleGenerationConfig;
+    tools?: GoogleTool[];
+    visit(visitor: Visitor, ctx: any) {
+        return visitor.visitGoogleRequestAst(this, ctx);
+    }
+}
+
+// ==================== Anthropic Response Types ====================
 export type AnthropicRole = `assistant`
 export interface AnthropicUsage {
     input_tokens: number;
@@ -209,6 +305,9 @@ export class GoogleResponseAst extends Ast {
 
 export interface Visitor {
     visit(ast: Ast, ctx: any): any;
+    visitAnthropicRequestAst(ast: AnthropicRequestAst, ctx: any): any;
+    visitOpenAIRequestAst(ast: OpenAIRequestAst, ctx: any): any;
+    visitGoogleRequestAst(ast: GoogleRequestAst, ctx: any): any;
     visitOpenAiResponseAst(ast: OpenAiResponseAst, ctx: any): any;
     visitGoogleResponseAst(ast: GoogleResponseAst, ctx: any): any;
     visitAnthropicResponseAst(ast: AnthropicResponseAst, ctx: any): any;

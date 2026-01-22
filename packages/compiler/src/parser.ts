@@ -1,6 +1,7 @@
 import { Injectable } from '@sker/core'
 import { Observable } from 'rxjs'
 import {
+    AnthropicRequestAst,
     AnthropicResponseAst,
     AnthropicMessageStartAst,
     AnthropicContentBlockDeltaAst,
@@ -9,7 +10,9 @@ import {
     AnthropicMessageDeltaAst,
     AnthropicMessageStopAst,
     Ast,
+    OpenAIRequestAst,
     OpenAiResponseAst,
+    GoogleRequestAst,
     GoogleResponseAst,
     Visitor
 } from "./ast";
@@ -18,6 +21,34 @@ import {
 export class ParserVisitor implements Visitor {
     visit(ast: Ast, ctx: any) {
         return ast.visit(this, ctx)
+    }
+
+    visitAnthropicRequestAst(ast: AnthropicRequestAst, ctx: any) {
+        ast.model = ctx.model;
+        ast.messages = ctx.messages;
+        ast.max_tokens = ctx.max_tokens;
+        ast.system = ctx.system;
+        ast.temperature = ctx.temperature;
+        ast.tools = ctx.tools;
+        ast.stream = ctx.stream;
+        return ast;
+    }
+
+    visitOpenAIRequestAst(ast: OpenAIRequestAst, ctx: any) {
+        ast.model = ctx.model;
+        ast.messages = ctx.messages;
+        ast.temperature = ctx.temperature;
+        ast.max_tokens = ctx.max_tokens;
+        ast.tools = ctx.tools;
+        ast.stream = ctx.stream;
+        return ast;
+    }
+
+    visitGoogleRequestAst(ast: GoogleRequestAst, ctx: any) {
+        ast.contents = ctx.contents;
+        ast.generationConfig = ctx.generationConfig;
+        ast.tools = ctx.tools;
+        return ast;
     }
 
     visitOpenAiResponseAst(ast: OpenAiResponseAst, ctx: any) {

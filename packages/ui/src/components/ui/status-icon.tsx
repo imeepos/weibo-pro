@@ -59,6 +59,12 @@ function StatusIcon({
   ...props
 }: StatusIconProps) {
   const config = statusIconMap[status]
+
+  if (!config) {
+    console.warn(`Unknown status type: ${status}`)
+    return null
+  }
+
   const Icon = config.icon
 
   return (

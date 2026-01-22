@@ -1,28 +1,6 @@
 import { root, ToolMetadataKey, ToolArgMetadataKey, ToolMetadata, ToolArgMetadata, Type } from '@sker/core'
 import { z } from 'zod'
-
-export interface AnthropicTool {
-    name: string
-    description: string
-    input_schema: {
-        type: 'object'
-        properties: Record<string, any>
-        required?: string[]
-    }
-}
-
-export interface OpenAITool {
-    type: 'function'
-    function: {
-        name: string
-        description: string
-        parameters: {
-            type: 'object'
-            properties: Record<string, any>
-            required?: string[]
-        }
-    }
-}
+import { AnthropicTool, OpenAITool } from './ast'
 
 function zodToJsonSchema(zodSchema: any): any {
     if (zodSchema instanceof z.ZodString) {
@@ -70,7 +48,7 @@ function isOptionalParam(zodSchema: any): boolean {
     return zodSchema instanceof z.ZodOptional || zodSchema instanceof z.ZodDefault
 }
 
-export function buildAnthropicTools(tools: Type<any>[]): AnthropicTool[] {
+export function buildAnthropicTools(tools: Type<any>[] = []): AnthropicTool[] {
     const toolMetadatas = root.get(ToolMetadataKey) ?? []
     const toolArgMetadatas = root.get(ToolArgMetadataKey) ?? []
 
@@ -110,7 +88,7 @@ export function buildAnthropicTools(tools: Type<any>[]): AnthropicTool[] {
     })
 }
 
-export function buildOpenAITools(tools: Type<any>[]): OpenAITool[] {
+export function buildOpenAITools(tools: Type<any>[] = []): OpenAITool[] {
     const toolMetadatas = (root.get(ToolMetadataKey) ?? []).filter((m: any) => m?.target)
     const toolArgMetadatas = (root.get(ToolArgMetadataKey) ?? []).filter((m: any) => m?.target)
 

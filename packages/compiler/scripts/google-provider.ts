@@ -1,7 +1,7 @@
 import { root } from '@sker/core'
-import { ParserVisitor, buildOpenAITools, aggregateOpenAIStreamNative, google } from '../src'
+import { ParserVisitor, buildOpenAITools, google } from '../src'
 import { BaseProvider, Message, AgentMessage } from './base-provider'
-import { Observable, firstValueFrom } from 'rxjs'
+import { Observable } from 'rxjs'
 import { GoogleResponseAst } from '../src/ast'
 import { ToolCall } from './tool-executor'
 
@@ -79,6 +79,9 @@ export class GoogleProvider extends BaseProvider {
 
     if (result instanceof GoogleResponseAst) {
       const candidate = result.candidates[0]
+      if (!candidate) {
+        return { content: '', finish_reason: 'stop' }
+      }
       const content = candidate.content
 
       const textParts = content.parts.filter((p: any) => 'text' in p)
@@ -86,7 +89,7 @@ export class GoogleProvider extends BaseProvider {
 
       const message: AgentMessage = {
         content: textParts.map((p: any) => p.text).join(''),
-        finish_reason: functionCalls.length > 0 ? null : (candidate.finishReason === 'STOP' ? 'stop' : null)
+        finish_reason: functionCalls.length > 0 ? undefined : (candidate.finishReason === 'STOP' ? 'stop' : undefined)
       }
 
       if (functionCalls.length > 0) {
@@ -102,10 +105,6 @@ export class GoogleProvider extends BaseProvider {
       }
 
       return message
-    }
-
-    if (result instanceof Observable) {
-      return result.pipe(aggregateOpenAIStreamNative())
     }
 
     return result

@@ -1,7 +1,7 @@
 import { root } from '@sker/core'
-import { ParserVisitor, buildAnthropicTools, aggregateAnthropicStream, extractToolCalls, executeTools } from '../src'
+import { ParserVisitor, buildAnthropicTools } from '../src'
 import { BaseProvider, Message, AgentMessage } from './base-provider'
-import { Observable, firstValueFrom } from 'rxjs'
+import { Observable } from 'rxjs'
 import { ToolCall } from './tool-executor'
 
 export class AnthropicProvider extends BaseProvider {
@@ -38,11 +38,6 @@ export class AnthropicProvider extends BaseProvider {
 
   async parseResponse(response: Response): Promise<Observable<AgentMessage> | AgentMessage> {
     const result = await this.visitor.visitResponse(response)
-
-    if (result instanceof Observable) {
-      return result.pipe(aggregateAnthropicStream())
-    }
-
     return result
   }
 

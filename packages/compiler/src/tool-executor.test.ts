@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { root, Injectable, Tool, ToolArg } from '@sker/core'
 import { z } from 'zod'
-import { executeTools, ToolResult } from './tool-executor'
+import { ToolExecutorVisitor } from './tool'
+import { AnthropicResponseAst } from './ast'
 
 @Injectable()
 class TestTool {
@@ -16,13 +17,21 @@ class TestTool {
     }
 }
 
-describe('executeTools', () => {
+describe('ToolExecutorVisitor', () => {
     beforeEach(() => {
         root.set([TestTool])
     })
 
     it('returns error when required parameter is missing from input', () => {
-        const toolUses = [
+        const ast = new AnthropicResponseAst()
+        ast.id = 'msg_123'
+        ast.model = 'claude-3-5-sonnet-20241022'
+        ast.role = 'assistant'
+        ast.stop_reason = 'tool_use'
+        ast.stop_sequence = null
+        ast.type = 'message'
+        ast.usage = { input_tokens: 100, output_tokens: 50 }
+        ast.content = [
             {
                 type: 'tool_use' as const,
                 id: 'test-id',
@@ -31,7 +40,8 @@ describe('executeTools', () => {
             }
         ]
 
-        const results = executeTools(toolUses)
+        const visitor = new ToolExecutorVisitor()
+        const results = visitor.visitAnthropicResponseAst(ast, {})
 
         expect(results).toHaveLength(1)
         const result = results[0]!
@@ -41,7 +51,15 @@ describe('executeTools', () => {
     })
 
     it('executes tool successfully when all required parameters provided', () => {
-        const toolUses = [
+        const ast = new AnthropicResponseAst()
+        ast.id = 'msg_123'
+        ast.model = 'claude-3-5-sonnet-20241022'
+        ast.role = 'assistant'
+        ast.stop_reason = 'tool_use'
+        ast.stop_sequence = null
+        ast.type = 'message'
+        ast.usage = { input_tokens: 100, output_tokens: 50 }
+        ast.content = [
             {
                 type: 'tool_use' as const,
                 id: 'test-id',
@@ -50,7 +68,8 @@ describe('executeTools', () => {
             }
         ]
 
-        const results = executeTools(toolUses)
+        const visitor = new ToolExecutorVisitor()
+        const results = visitor.visitAnthropicResponseAst(ast, {})
 
         expect(results).toHaveLength(1)
         const result = results[0]!

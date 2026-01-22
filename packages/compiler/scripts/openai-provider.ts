@@ -1,7 +1,7 @@
 import { root } from '@sker/core'
-import { ParserVisitor, buildOpenAITools, aggregateOpenAIStreamNative } from '../src'
+import { ParserVisitor, buildOpenAITools } from '../src'
 import { BaseProvider, Message, AgentMessage } from './base-provider'
-import { Observable, firstValueFrom } from 'rxjs'
+import { Observable } from 'rxjs'
 import { ToolCall } from './tool-executor'
 
 export class OpenAIProvider extends BaseProvider {
@@ -36,11 +36,6 @@ export class OpenAIProvider extends BaseProvider {
 
   async parseResponse(response: Response): Promise<Observable<AgentMessage> | AgentMessage> {
     const result = await this.visitor.visitResponse(response)
-
-    if (result instanceof Observable) {
-      return result.pipe(aggregateOpenAIStreamNative())
-    }
-
     return result
   }
 

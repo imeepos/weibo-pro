@@ -1,4 +1,3 @@
-import { tools } from '../src'
 import { AgentRunner } from './agent-runner'
 import { AnthropicProvider } from './anthropic-provider'
 
@@ -12,7 +11,7 @@ async function main() {
 
     await runner.run(
         '查看1.log文件的内容。请使用 read_file 工具来读取文件。',
-        [tools.ReadFile]
+        []  // 工具现在通过 DI 容器注入，无需在此处传递
     )
 }
 
