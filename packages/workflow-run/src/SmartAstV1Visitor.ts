@@ -242,7 +242,7 @@ ${inputList || '(无)'}
 【需要生成的输出】
 ${outputHints || '(无)'}
 
-请分析输入数据，为每个输出端口生成符合要求的数据值，然后调用 dispatch 工具分发。`
+请分析输入数据，为每个输出端口生成符合要求的数据值，然后使用批量模式一次性调用 dispatch({ outputs: { ... } }) 分发所有端口数据`
   }
 
   private preview(value: unknown, maxLength: number = 200): string {
