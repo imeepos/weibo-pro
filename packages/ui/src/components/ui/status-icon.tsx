@@ -14,6 +14,7 @@ import { cn } from "@sker/ui/lib/utils"
 export type StatusType =
   | "success"
   | "error"
+  | "failed"
   | "running"
   | "pending"
   | "timeout"
@@ -25,6 +26,10 @@ const statusIconMap: Record<StatusType, { icon: LucideIcon; className: string }>
     className: "text-green-400"
   },
   error: {
+    icon: XCircle,
+    className: "text-red-400"
+  },
+  failed: {
     icon: XCircle,
     className: "text-red-400"
   },
