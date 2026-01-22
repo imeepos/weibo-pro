@@ -356,7 +356,16 @@ const formatDate = (date: Date | string | number | object | undefined | null) =>
         ].join('-');
     }
 
-    // 确保转换为有效的 Date 对象
+    // 如果是带时区偏移的字符串，直接解析字符串（完全不依赖运行环境）
+    const dateStr = String(date);
+    const match = dateStr.match(/(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})\.\d{3}\s+([+-]\d{4})/);
+    if (match) {
+        const [, year, month, day, hour] = match;
+        // 直接返回解析出的年月日小时（不依赖运行环境）
+        return `${year}-${month}-${day}-${hour}`;
+    }
+
+    // 如果没有时区偏移，使用 Date 对象（回退方案）
     const time = new Date(date as string | number | Date);
 
     // 检查日期是否有效
@@ -372,6 +381,7 @@ const formatDate = (date: Date | string | number | object | undefined | null) =>
         ].join('-');
     }
 
+    // 回退到 Date 对象方法（依赖运行环境，但这种情况很少）
     return [
         time.getFullYear(),
         String(time.getMonth() + 1).padStart(2, '0'),
