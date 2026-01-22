@@ -16,6 +16,12 @@ import {
     WeiboPostSnapshotEntity,
     EventEntity,
 } from "@sker/entities";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 const logger = createLogger('WeiboKeywordSearchAstVisitor');
 
@@ -356,15 +362,9 @@ export class WeiboKeywordSearchAstVisitor {
 }
 
 const formatDate = (date: Date | string | number | object | undefined | null) => {
-    // 处理空对象、null、undefined 的情况 - 静默使用当前时间
-    if (date == null || (typeof date === 'object' && Object.keys(date as object).length === 0)) {
-        const now = new Date();
-        return [
-            now.getFullYear(),
-            String(now.getMonth() + 1).padStart(2, '0'),
-            String(now.getDate()).padStart(2, '0'),
-            String(now.getHours()).padStart(2, '0'),
-        ].join('-');
+    // 处理空对象、null、undefined 的情况 - 静默使用当前时间（北京时间）
+    if (date == null || (typeof date === 'object' && !(date instanceof Date) && Object.keys(date as object).length === 0)) {
+        return dayjs().tz('Asia/Shanghai').format('YYYY-MM-DD-HH');
     }
 
     // 如果是带时区偏移的字符串，直接解析字符串（完全不依赖运行环境）
@@ -376,27 +376,14 @@ const formatDate = (date: Date | string | number | object | undefined | null) =>
         return `${year}-${month}-${day}-${hour}`;
     }
 
-    // 如果没有时区偏移，使用 Date 对象（回退方案）
-    const time = new Date(date as string | number | Date);
+    // 使用 dayjs 解析并转换为北京时间
+    const time = dayjs(date as string | number | Date);
 
-    // 检查日期是否有效
-    if (isNaN(time.getTime())) {
+    if (!time.isValid()) {
         logger.error(`[formatDate] 无效的日期值: ${typeof date === 'object' ? JSON.stringify(date) : date}`);
-        // 返回当前日期作为后备
-        const now = new Date();
-        return [
-            now.getFullYear(),
-            String(now.getMonth() + 1).padStart(2, '0'),
-            String(now.getDate()).padStart(2, '0'),
-            String(now.getHours()).padStart(2, '0'),
-        ].join('-');
+        return dayjs().tz('Asia/Shanghai').format('YYYY-MM-DD-HH');
     }
 
-    // 回退到 Date 对象方法（依赖运行环境，但这种情况很少）
-    return [
-        time.getFullYear(),
-        String(time.getMonth() + 1).padStart(2, '0'),
-        String(time.getDate()).padStart(2, '0'),
-        String(time.getHours()).padStart(2, '0'),
-    ].join('-');
+    // 明确转换为北京时间
+    return time.tz('Asia/Shanghai').format('YYYY-MM-DD-HH');
 };
