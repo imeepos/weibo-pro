@@ -1,4 +1,4 @@
-import { root, ToolMetadataKey, ToolArgMetadataKey, ToolMetadata, ToolArgMetadata } from '@sker/core'
+import { root, ToolMetadataKey, ToolArgMetadataKey, ToolMetadata, ToolArgMetadata, Type } from '@sker/core'
 import { z } from 'zod'
 
 export interface AnthropicTool {
@@ -70,7 +70,7 @@ function isOptionalParam(zodSchema: any): boolean {
     return zodSchema instanceof z.ZodOptional || zodSchema instanceof z.ZodDefault
 }
 
-export function buildAnthropicTools(): AnthropicTool[] {
+export function buildAnthropicTools(tools: Type<any>[]): AnthropicTool[] {
     const toolMetadatas = root.get(ToolMetadataKey) ?? []
     const toolArgMetadatas = root.get(ToolArgMetadataKey) ?? []
 
@@ -110,7 +110,7 @@ export function buildAnthropicTools(): AnthropicTool[] {
     })
 }
 
-export function buildOpenAITools(): OpenAITool[] {
+export function buildOpenAITools(tools: Type<any>[]): OpenAITool[] {
     const toolMetadatas = (root.get(ToolMetadataKey) ?? []).filter((m: any) => m?.target)
     const toolArgMetadatas = (root.get(ToolArgMetadataKey) ?? []).filter((m: any) => m?.target)
 

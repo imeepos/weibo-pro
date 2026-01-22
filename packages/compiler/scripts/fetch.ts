@@ -1,22 +1,15 @@
-import { root } from '@sker/core'
-import { ParserVisitor } from '../src'
+import { tools } from '../src'
+import { AgentRunner } from './agent-runner'
+import { GoogleProvider } from './google-provider'
 
 async function main() {
-    const response = await fetch('https://api.siliconflow.cn/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer sk-dffnwnzqutsirejrqkchbeszuabikgxzwrvicrbnwsnclzfp',
-        },
-        body: JSON.stringify({
-            model: 'deepseek-ai/DeepSeek-V3.2',
-            messages: [{ role: 'user', content: 'Hello World' }],
-        }),
-    })
+    const provider = new GoogleProvider('google/gemini-3-flash-preview')
+    const runner = new AgentRunner(provider)
 
-    const visitor = root.get(ParserVisitor)
-    const ast = await visitor.visitResponse(response)
-    console.log({ ast })
+    await runner.run(
+        '查看1.log文件的内容。请使用 read_file 工具来读取文件。',
+        [tools.ReadFile]
+    )
 }
 
 main()

@@ -10,6 +10,7 @@ import {
     AnthropicMessageStopAst,
     Ast,
     OpenAiResponseAst,
+    GoogleResponseAst,
     Visitor
 } from "./ast";
 
@@ -27,6 +28,13 @@ export class ParserVisitor implements Visitor {
         ast.system_fingerprint = ctx.system_fingerprint;
         ast.usage = ctx.usage;
         ast.choices = ctx.choices;
+        return ast;
+    }
+
+    visitGoogleResponseAst(ast: GoogleResponseAst, ctx: any) {
+        ast.candidates = ctx.candidates;
+        ast.usageMetadata = ctx.usageMetadata;
+        ast.modelVersion = ctx.modelVersion;
         return ast;
     }
 
@@ -175,6 +183,10 @@ export class ParserVisitor implements Visitor {
 
         if (data.content || data.type === 'message') {
             return this.visitAnthropicResponseAst(new AnthropicResponseAst(), data)
+        }
+
+        if (data.candidates) {
+            return this.visitGoogleResponseAst(new GoogleResponseAst(), data)
         }
 
         throw new Error(`Unknown response format: ${JSON.stringify(data)}`)
