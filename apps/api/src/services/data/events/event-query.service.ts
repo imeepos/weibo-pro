@@ -969,8 +969,8 @@ export class EventQueryService {
 
   // 新增：基于 EventHourlyStatisticsEntity 的互动指标查询
 
-  async getEngagementTrend(eventId: string, limit: number = 168): Promise<EventEngagementTrend[]> {
-    const cacheKey = CacheService.buildKey('event:engagement_trend', eventId, limit.toString());
+  async getEngagementTrend(eventId: string): Promise<EventEngagementTrend[]> {
+    const cacheKey = CacheService.buildKey('event:engagement_trend', eventId);
 
     return await this.cacheService.getOrSet(
       cacheKey,
@@ -979,11 +979,10 @@ export class EventQueryService {
           const stats = await entityManager
             .createQueryBuilder(EventHourlyStatisticsEntity, 'stats')
             .where('stats.event_id = :eventId', { eventId })
-            .orderBy('stats.year', 'DESC')
-            .addOrderBy('stats.month', 'DESC')
-            .addOrderBy('stats.day', 'DESC')
-            .addOrderBy('stats.hour', 'DESC')
-            .limit(limit)
+            .orderBy('stats.year', 'ASC')
+            .addOrderBy('stats.month', 'ASC')
+            .addOrderBy('stats.day', 'ASC')
+            .addOrderBy('stats.hour', 'ASC')
             .getMany();
 
           return stats.map(s => {
@@ -1001,15 +1000,15 @@ export class EventQueryService {
               hotness: parseFloat(s.hotness.toString()),
               engagement_rate: Math.round(engagementRate * 100) / 100,
             };
-          }).reverse();
+          });
         });
       },
       CACHE_TTL.SHORT
     );
   }
 
-  async getAnomalies(eventId: string, limit: number = 168): Promise<EventAnomaly[]> {
-    const cacheKey = CacheService.buildKey('event:anomalies', eventId, limit.toString());
+  async getAnomalies(eventId: string): Promise<EventAnomaly[]> {
+    const cacheKey = CacheService.buildKey('event:anomalies', eventId);
 
     return await this.cacheService.getOrSet(
       cacheKey,
@@ -1018,25 +1017,23 @@ export class EventQueryService {
           const stats = await entityManager
             .createQueryBuilder(EventHourlyStatisticsEntity, 'stats')
             .where('stats.event_id = :eventId', { eventId })
-            .orderBy('stats.year', 'DESC')
-            .addOrderBy('stats.month', 'DESC')
-            .addOrderBy('stats.day', 'DESC')
-            .addOrderBy('stats.hour', 'DESC')
-            .limit(limit)
+            .orderBy('stats.year', 'ASC')
+            .addOrderBy('stats.month', 'ASC')
+            .addOrderBy('stats.day', 'ASC')
+            .addOrderBy('stats.hour', 'ASC')
             .getMany();
 
           const anomalies: EventAnomaly[] = [];
-          const reversedStats = stats.reverse();
 
           // 使用移动窗口（7个点）计算更稳定的基准值
           const windowSize = 7;
 
-          for (let i = windowSize; i < reversedStats.length; i++) {
-            const current = reversedStats[i]!;
+          for (let i = windowSize; i < stats.length; i++) {
+            const current = stats[i]!;
 
             // 获取窗口内的数据点
             const windowStart = Math.max(0, i - windowSize);
-            const windowData = reversedStats.slice(windowStart, i);
+            const windowData = stats.slice(windowStart, i);
 
             // 计算窗口内的平均值和标准差
             const postCounts = windowData.map(d => d.post_count);
@@ -1071,7 +1068,7 @@ export class EventQueryService {
             }
 
             // 检测情感突变（阈值提高，减少误判）
-            const prev = reversedStats[i - 1]!;
+            const prev = stats[i - 1]!;
             const sentimentChange = Math.abs(current.sentiment_positive - prev.sentiment_positive);
             if (sentimentChange > 0.4) {
               anomalies.push({

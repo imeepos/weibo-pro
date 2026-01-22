@@ -109,14 +109,12 @@ export class EventsController implements sdk.EventsController {
 
   // 新增：基于 EventHourlyStatisticsEntity 的互动指标接口
 
-  async getEngagementTrend(@Query('id') id: string, @Query('limit') limit?: string) {
-    const limitNum = toInt(limit, 168);
-    return this.eventsService.getEngagementTrend(id, limitNum);
+  async getEngagementTrend(@Query('id') id: string) {
+    return this.eventsService.getEngagementTrend(id);
   }
 
-  async getAnomalies(@Query('id') id: string, @Query('limit') limit?: string) {
-    const limitNum = toInt(limit, 168);
-    return this.eventsService.getAnomalies(id, limitNum);
+  async getAnomalies(@Query('id') id: string) {
+    return this.eventsService.getAnomalies(id);
   }
 
   async getPeaks(@Query('id') id: string, @Query('limit') limit?: string) {

@@ -197,8 +197,8 @@ const EventDetail: React.FC = () => {
 
       try { setSentimentHotnessData(await c.getSentimentHotness(eventId) || []); } catch (e) { logger.warn('Failed to fetch sentiment hotness:', e); }
       try { setSentimentIntensityData(await c.getSentimentIntensity(eventId) || []); } catch (e) { logger.warn('Failed to fetch sentiment intensity:', e); }
-      try { setEngagementTrendData(await c.getEngagementTrend(eventId, '168') || []); } catch (e) { logger.warn('Failed to fetch engagement trend:', e); }
-      try { setAnomaliesData(await c.getAnomalies(eventId, '168') || []); } catch (e) { logger.warn('Failed to fetch anomalies:', e); }
+      try { setEngagementTrendData(await c.getEngagementTrend(eventId) || []); } catch (e) { logger.warn('Failed to fetch engagement trend:', e); }
+      try { setAnomaliesData(await c.getAnomalies(eventId) || []); } catch (e) { logger.warn('Failed to fetch anomalies:', e); }
     } catch (error) {
       logger.error('Failed to fetch event data:', error);
     } finally {

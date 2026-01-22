@@ -127,12 +127,12 @@ export class EventsController {
   // 新增：基于 EventHourlyStatisticsEntity 的互动指标接口
 
   @Get('engagement-trend')
-  getEngagementTrend(@Query('id') id: string, @Query('limit') limit?: string): Promise<EventEngagementTrend[]> {
+  getEngagementTrend(@Query('id') id: string): Promise<EventEngagementTrend[]> {
     throw new Error('method getEngagementTrend not implements')
   }
 
   @Get('anomalies')
-  getAnomalies(@Query('id') id: string, @Query('limit') limit?: string): Promise<EventAnomaly[]> {
+  getAnomalies(@Query('id') id: string): Promise<EventAnomaly[]> {
     throw new Error('method getAnomalies not implements')
   }
 
