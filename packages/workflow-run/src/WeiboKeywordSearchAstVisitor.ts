@@ -148,6 +148,18 @@ export class WeiboKeywordSearchAstVisitor {
         // 如果无结果（"抱歉，未找到相关结果"），直接发射空结果并结束
         if (result.isEmptyResult) {
             console.log(`[WeiboKeywordSearchAst] 关键词 "${keyword}" 在时间区间 ${formatDate(start)} - ${formatDate(end)} 内无帖子`);
+
+            // 设置 crawl_end_reason
+            await useEntityManager(async (manager) => {
+                if (ast.event_id) {
+                    const event = await manager.findOne(EventEntity, { where: { id: ast.event_id } });
+                    if (event) {
+                        event.crawl_end_reason = `无搜索结果。关键词：${ast.keyword}，时间范围：${formatDate(start)}-${formatDate(end)}`;
+                        await manager.save(EventEntity, event);
+                    }
+                }
+            });
+
             obs.next({
                 type: 'node_emit',
                 id: ast.id,
@@ -219,7 +231,19 @@ export class WeiboKeywordSearchAstVisitor {
 
             while (pageRetryCount < maxPageRetries && !pageSuccess) {
                 try {
-                    if (!result.nextPageLink) return;
+                    if (!result.nextPageLink) {
+                        // 设置 crawl_end_reason
+                        await useEntityManager(async (manager) => {
+                            if (ast.event_id) {
+                                const event = await manager.findOne(EventEntity, { where: { id: ast.event_id } });
+                                if (event) {
+                                    event.crawl_end_reason = `分页链接为空，搜索结束。关键词：${ast.keyword}，当前页：${currentPageNum}`;
+                                    await manager.save(EventEntity, event);
+                                }
+                            }
+                        });
+                        return;
+                    }
                     currentPageNum++;
 
                     if (!result.nextPageLink) {

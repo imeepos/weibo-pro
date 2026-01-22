@@ -1,4 +1,5 @@
 import { Injectable, Inject } from '@sker/core';
+import { createLogger } from '@sker/core';
 import type {
   HotEvent,
   TimeRange,
@@ -29,6 +30,8 @@ import { DataSource, EventEntity } from '@sker/entities';
 
 @Injectable({ providedIn: 'root' })
 export class EventsService {
+  private readonly logger = createLogger('EventsService');
+
   constructor(
     @Inject(EventQueryService)
     private readonly queryService: EventQueryService,
@@ -196,5 +199,70 @@ export class EventsService {
     const repo = this.dataSource.getRepository(EventEntity);
     await repo.update({ id }, { occurred_at: occurredAt ? new Date(occurredAt) : null });
     return { success: true };
+  }
+
+  async refreshCache(eventId: string): Promise<{ success: boolean; clearedKeys: string[] }> {
+    // 获取所有与该事件相关的缓存键
+    const cacheKeys = [
+      // 事件详情相关缓存
+      `events:detail:${eventId}`,
+      `event:timeseries:${eventId}`,
+      `event:trend:${eventId}`,
+      `event:influence_users:${eventId}`,
+      `event:geographic:${eventId}`,
+      `event:keywords:${eventId}`,
+      `event:sentiment_hotness:${eventId}`,
+      `event:sentiment_distribution:${eventId}`,
+      `event:keywords_timeseries:${eventId}`,
+      `event:keywords_by_sentiment:${eventId}`,
+      `event:negative_keywords:${eventId}`,
+      `event:event_types:${eventId}`,
+      `event:engagement_trend:${eventId}`,
+      `event:anomalies:${eventId}`,
+      `event:peaks:${eventId}`,
+      `event:user-relations:${eventId}`,
+      // 事件列表缓存（需要清除所有可能的列表缓存）
+      `events:detail:list:all:1:10::::0.05`,
+      `events:detail:list:all:1:10:::all::0.05`,
+      `events:detail:list:24h:1:10::::0.05`,
+      `events:detail:list:24h:1:10:::all::0.05`,
+      `events:detail:list:7d:1:10::::0.05`,
+      `events:detail:list:7d:1:10:::all::0.05`,
+      `events:detail:list:30d:1:10::::0.05`,
+      `events:detail:list:30d:1:10:::all::0.05`,
+      // 更多可能的列表缓存组合
+      `events:detail:list:all:1:10::test::0.05`,
+      `events:detail:list:24h:1:10::test::0.05`,
+      `events:detail:list:7d:1:10::test::0.05`,
+      `events:detail:list:30d:1:10::test::0.05`,
+      `events:detail:list:all:1:20::::0.05`,
+      `events:detail:list:24h:1:20::::0.05`,
+      `events:detail:list:7d:1:20::::0.05`,
+      `events:detail:list:30d:1:20::::0.05`,
+      `events:detail:list:all:1:20:::all::0.05`,
+      `events:detail:list:24h:1:20:::all::0.05`,
+      `events:detail:list:7d:1:20:::all::0.05`,
+      `events:detail:list:30d:1:20:::all::0.05`
+    ];
+
+    const clearedKeys: string[] = [];
+
+    // 逐个清除缓存
+    for (const key of cacheKeys) {
+      try {
+        await this.queryService.clearCacheByPattern(key);
+        clearedKeys.push(key);
+      } catch (error) {
+        // 忽略清除失败的单键错误
+        this.logger.warn(`Failed to clear cache key: ${key}`, error);
+      }
+    }
+
+    this.logger.info(`Cache cleared for event ${eventId}, cleared ${clearedKeys.length} keys`);
+
+    return {
+      success: true,
+      clearedKeys
+    };
   }
 }

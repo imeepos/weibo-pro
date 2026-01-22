@@ -135,4 +135,8 @@ export class EventsController implements sdk.EventsController {
   async updateEventOccurredAt(@Query('id') id: string, @Body() body: { occurredAt: string | null }) {
     return this.eventsService.updateEventOccurredAt(id, body.occurredAt);
   }
+
+  async refreshCache(@Query('id') id: string) {
+    return this.eventsService.refreshCache(id);
+  }
 }

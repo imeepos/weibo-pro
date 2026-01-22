@@ -155,4 +155,9 @@ export class EventsController {
   updateEventOccurredAt(@Query('id') id: string, @Body() body: { occurredAt: string | null }): Promise<{ success: boolean }> {
     throw new Error('method updateEventOccurredAt not implements')
   }
+
+  @Post('cache/refresh')
+  refreshCache(@Query('id') id: string): Promise<{ success: boolean; clearedKeys: string[] }> {
+    throw new Error('method refreshCache not implements')
+  }
 }

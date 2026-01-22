@@ -121,6 +121,7 @@ const EventDetail: React.FC = () => {
   const [anomaliesData, setAnomaliesData] = useState<Array<{ timestamp: string; type: 'spike' | 'drop' | 'sentiment_shift'; metric: string; value: number; expected: number; confidence: number; }>>([]);
   const [activeTab, setActiveTab] = useState('overview');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isRefreshingCache, setIsRefreshingCache] = useState(false);
   const [editingKeywords, setEditingKeywords] = useState<string[]>([]);
   const [keywordInput, setKeywordInput] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -255,6 +256,22 @@ const EventDetail: React.FC = () => {
     }
   };
 
+  const handleRefreshCache = async () => {
+    if (!eventId) return;
+    setIsRefreshingCache(true);
+    try {
+      const c = root.get(EventsController);
+      const result = await c.refreshCache(eventId);
+      logger.info('Cache refreshed successfully', result);
+      // 清除缓存后，重新加载数据
+      await fetchEventData(true);
+    } catch (error) {
+      logger.error('Failed to refresh cache:', error);
+    } finally {
+      setIsRefreshingCache(false);
+    }
+  };
+
   const getTrendConfig = (trend: EventDetailData['trend']) => {
     switch (trend) {
       case 'up': return { icon: ArrowUpRight, color: 'text-green-400', bg: 'bg-green-400/10', label: '上升' };
@@ -356,15 +373,27 @@ const EventDetail: React.FC = () => {
             </div>
           </div>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => fetchEventData(true)}
-          disabled={isRefreshing}
-          className="h-9 w-9 hover:bg-muted/50"
-        >
-          <RefreshCw className={cn("w-4 h-4", isRefreshing && "animate-spin")} />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefreshCache}
+            disabled={isRefreshingCache}
+            className="gap-2"
+          >
+            <RefreshCw className={cn("w-3.5 h-3.5", isRefreshingCache && "animate-spin")} />
+            {isRefreshingCache ? '清除中...' : '更新缓存'}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => fetchEventData(true)}
+            disabled={isRefreshing}
+            className="h-9 w-9 hover:bg-muted/50"
+          >
+            <RefreshCw className={cn("w-4 h-4", isRefreshing && "animate-spin")} />
+          </Button>
+        </div>
       </div>
 
       {/* 事件信息卡片 */}
@@ -373,11 +402,9 @@ const EventDetail: React.FC = () => {
         animate={{ opacity: 1, y: 0 }}
         className="relative overflow-hidden rounded-xl bg-muted/20 border border-border/40"
         onClick={(e) => {
-          console.log('[motion.div] onClick');
           e.stopPropagation();
         }}
         onPointerDown={(e) => {
-          console.log('[motion.div] onPointerDown');
           e.stopPropagation();
         }}
       >
@@ -385,11 +412,9 @@ const EventDetail: React.FC = () => {
         <div
           className="relative p-5"
           onClick={(e) => {
-            console.log('[card content] onClick');
             e.stopPropagation();
           }}
           onPointerDown={(e) => {
-            console.log('[card content] onPointerDown');
             e.stopPropagation();
           }}
         >
@@ -413,23 +438,15 @@ const EventDetail: React.FC = () => {
                 <Dialog
                   open={editDialogOpen}
                   onOpenChange={(open) => {
-                    console.log('[Dialog] onOpenChange:', open);
                     setEditDialogOpen(open);
                   }}
                   modal={true}
-                  onPointerDownOutside={(e) => {
-                    console.log('[Dialog] onPointerDownOutside:', e.target.outerHTML?.slice(0, 100));
-                    // e.preventDefault();
-                  }}
                 >
                   <DialogTrigger asChild>
                     <Button
                       variant="ghost"
                       size="icon-sm"
                       className="h-6 w-6 text-muted-foreground hover:text-foreground"
-                      onClick={(e) => {
-                        console.log('[Pencil Button] onClick');
-                      }}
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </Button>
@@ -437,12 +454,7 @@ const EventDetail: React.FC = () => {
                   <DialogContent
                     className="sm:max-w-lg"
                     onPointerDownOutside={(e) => {
-                      console.log('[DialogContent] onPointerDownOutside:', e.target.outerHTML?.slice(0, 100));
                       e.preventDefault();
-                      e.stopPropagation();
-                    }}
-                    onClick={(e) => {
-                      console.log('[DialogContent] onClick:', e.target.outerHTML?.slice(0, 100));
                       e.stopPropagation();
                     }}
                   >
@@ -471,7 +483,6 @@ const EventDetail: React.FC = () => {
                               <button
                                 type="button"
                                 onClick={(e) => {
-                                  console.log('[Remove keyword] onClick:', keyword);
                                   e.preventDefault();
                                   e.stopPropagation();
                                   removeKeyword(keyword);
@@ -490,22 +501,8 @@ const EventDetail: React.FC = () => {
                           type="text"
                           placeholder="输入新关键字"
                           value={keywordInput}
-                          onChange={(e) => {
-                            console.log('[native input] onChange');
-                            setKeywordInput(e.target.value);
-                          }}
-                          onKeyDown={(e) => {
-                            console.log('[native input] onKeyDown:', e.key);
-                            handleKeyDown(e);
-                          }}
-                          onMouseDown={(e) => {
-                            console.log('[native input] onMouseDown');
-                            e.preventDefault();
-                          }}
-                          onFocus={(e) => {
-                            console.log('[native input] onFocus');
-                            e.preventDefault();
-                          }}
+                          onChange={(e) => setKeywordInput(e.target.value)}
+                          onKeyDown={handleKeyDown}
                           className="flex-1 h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                         />
                           <Button

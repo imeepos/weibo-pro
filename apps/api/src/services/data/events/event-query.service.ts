@@ -43,6 +43,15 @@ export class EventQueryService {
     @Inject(CacheService) private readonly cacheService: CacheService
   ) {}
 
+  /**
+   * 根据模式清空缓存
+   */
+  async clearCacheByPattern(pattern: string): Promise<void> {
+    // 将完整的缓存键转换为模式（移除具体的事件ID等参数）
+    // 对于精确匹配的单键，直接删除
+    await this.cacheService.del(pattern);
+  }
+
   async getEventList(
     timeRange?: TimeRange,
     pagination?: { page: number; pageSize: number; search?: string; category?: string; lambda?: number }
