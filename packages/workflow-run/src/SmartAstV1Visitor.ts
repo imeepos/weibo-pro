@@ -67,13 +67,25 @@ export class SmartAstV1Visitor {
           const inputContexts = this.buildInputContexts(ast, inputData, ctx)
           const outputContexts = this.buildOutputContexts(ast, ctx)
 
-          this.smartToolsFactory.setDispatchCallback((outputPort: string, data: unknown) => {
-            obs.next({
-              type: 'node_emit',
-              id: ast.id,
-              data: { [outputPort]: data }
-            })
-            console.log(`[SmartAstV1] 分发到 ${outputPort}:`, typeof data === 'object' ? JSON.stringify(data).slice(0, 100) : data)
+          this.smartToolsFactory.setDispatchCallback((outputPort: string | null, data: unknown) => {
+            // 批量模式：outputPort 为 null，data 是 { port1: data1, port2: data2 } 的映射
+            if (outputPort === null && typeof data === 'object' && data !== null) {
+              obs.next({
+                type: 'node_emit',
+                id: ast.id,
+                data: data as Record<string, unknown>
+              })
+              const ports = Object.keys(data)
+              console.log(`[SmartAstV1] 批量分发到 ${ports.length} 个端口:`, ports.join(', '))
+            } else if (outputPort) {
+              // 单端口模式
+              obs.next({
+                type: 'node_emit',
+                id: ast.id,
+                data: { [outputPort]: data }
+              })
+              console.log(`[SmartAstV1] 分发到 ${outputPort}:`, typeof data === 'object' ? JSON.stringify(data).slice(0, 100) : data)
+            }
           })
 
           try {
@@ -184,14 +196,21 @@ ${inputList || '(无)'}
 ${outputList || '(无)'}
 
 【可用工具】
-- dispatch(outputPort, data): 将数据分发到指定输出端口，data 的类型必须与输出端口类型匹配
+dispatch 工具支持两种模式：
+
+1. 批量模式（推荐）：一次发射所有输出端口
+   dispatch({ outputs: { 端口1: 数据1, 端口2: 数据2, ... } })
+
+2. 单端口模式：只发射一个端口（适合条件分支场景）
+   dispatch({ outputPort: "端口名", data: 数据 })
 
 【工作流程】
 1. 分析输入数据
 2. 根据输出端口的 title、description、type 生成合适的数据
-3. 调用 dispatch 分发数据
+3. 优先使用批量模式，一次性调用 dispatch 分发所有端口数据
 
 【重要】
+- 优先使用批量模式，减少工具调用次数
 - 输出数据类型应与输出端口的 type 匹配（string 必须是字符串，number 必须是数字）
 - 输出数据内容应符合输出端口的 description
 - 空字符串 ""、空对象 {}、null 都是有效值，但要根据类型正确输出

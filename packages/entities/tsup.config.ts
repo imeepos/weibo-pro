@@ -11,6 +11,12 @@ export default defineConfig([
     sourcemap: true,
     target: 'node18',
     external: ['typeorm', '@sker/core', '@sker/redis', 'ioredis', 'reflect-metadata'],
+    // 避免某些优化可能导致的问题
+    treeshake: false,
+    // 确保正确退出
+    onSuccess: async () => {
+      // 空钩子，确保正确退出
+    },
   },
   // 浏览器构建（仅类型和纯函数）
   {
@@ -25,5 +31,7 @@ export default defineConfig([
     external: [],
     // browser 构建不清理 dist，避免覆盖主构建
     clean: false,
+    // 避免某些优化可能导致的问题
+    treeshake: false,
   },
 ])
