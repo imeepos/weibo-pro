@@ -151,13 +151,5 @@ export { WorkflowExecutionService } from './services/WorkflowExecutionService'
 export { ChapterQualityService } from './services/ChapterQualityService'
 export { StreamingLlmInvoker } from './services/StreamingLlmInvoker'
 
-// EventStore - 注册后端数据库存储实现
-import { root } from '@sker/core'
-import { EVENT_STORE, DEFAULT_VISITOR, DefaultVisitor } from '@sker/workflow'
-import { DatabaseEventStore } from './event-store/database'
-
-root.set([
-    { provide: EVENT_STORE, useClass: DatabaseEventStore },
-    // 后端使用 DefaultVisitor（本地执行）
-    { provide: DEFAULT_VISITOR, useClass: DefaultVisitor }
-])
+// EventStore - 导出 providers 供应用层注册
+export { DatabaseEventStore } from './event-store/database'

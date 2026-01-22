@@ -10,7 +10,8 @@ import "./controllers/index";
 import "./claude/claude.controller";
 import { CONTEXT, createInjector, Injector, Logger, REQUEST, RESPONSE, root, STREAM } from '@sker/core';
 import { entitiesProviders, seedNuwa, seedSentimentAnalyzer, seedContentAuditor, seedDataValidator, seedProgrammingAssistant, useTranslation } from "@sker/entities";
-import { EdgeModeStrategyProviders } from '@sker/workflow';
+import { EdgeModeStrategyProviders, EVENT_STORE, DEFAULT_VISITOR, DefaultVisitor } from '@sker/workflow';
+import { DatabaseEventStore } from '@sker/workflow-run';
 import { createProxyProviders } from '@sker/ip-proxy';
 import { killPortProcess } from 'kill-port-process';
 import { Hono } from 'hono';
@@ -46,6 +47,9 @@ async function bootstrap() {
   root.set([
     ...entitiesProviders,
     ...EdgeModeStrategyProviders,
+    // 工作流相关 providers（必须在 entitiesProviders 之后，因为 DatabaseEventStore 依赖 EntityManager）
+    { provide: EVENT_STORE, useClass: DatabaseEventStore },
+    { provide: DEFAULT_VISITOR, useClass: DefaultVisitor },
     ...createProxyProviders({
       kuaidaili: {
         secretId: env.KUAIDAILI_SECRET_ID!,
