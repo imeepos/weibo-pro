@@ -21,21 +21,21 @@ interface GeographicDistributionChartProps {
   maxItems?: number;
 }
 
-// 根据情感值获取颜色
+// 根据情感值获取颜色 (sentiment 范围: 0-1, 0.5为中性)
 const getSentimentColor = (sentiment: number): string => {
-  if (sentiment >= 0.3) return '#22c55e'; // 正面 - 绿色
-  if (sentiment >= 0.1) return '#84cc16'; // 轻微正面 - 浅绿
-  if (sentiment >= -0.1) return '#eab308'; // 中性 - 黄色
-  if (sentiment >= -0.3) return '#f97316'; // 轻微负面 - 橙色
+  if (sentiment >= 0.65) return '#22c55e'; // 正面 - 绿色
+  if (sentiment >= 0.55) return '#84cc16'; // 轻微正面 - 浅绿
+  if (sentiment >= 0.45) return '#eab308'; // 中性 - 黄色
+  if (sentiment >= 0.35) return '#f97316'; // 轻微负面 - 橙色
   return '#ef4444'; // 负面 - 红色
 };
 
 // 情感标签
 const getSentimentLabel = (sentiment: number): string => {
-  if (sentiment >= 0.3) return '正面';
-  if (sentiment >= 0.1) return '偏正';
-  if (sentiment >= -0.1) return '中性';
-  if (sentiment >= -0.3) return '偏负';
+  if (sentiment >= 0.65) return '正面';
+  if (sentiment >= 0.55) return '偏正';
+  if (sentiment >= 0.45) return '中性';
+  if (sentiment >= 0.35) return '偏负';
   return '负面';
 };
 
