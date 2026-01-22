@@ -134,6 +134,17 @@ export const useTranslation = async <T>(h: (m: EntityManager) => Promise<T>) => 
   })
 }
 
+/**
+ * 获取已初始化的 DataSource（同步）
+ * 如果未初始化则抛出错误
+ */
+const getInitializedDataSource = (): DataSource => {
+  if (!ds || !ds.isInitialized) {
+    throw new Error('DataSource not initialized. Please ensure entitiesProviders is registered and APP_INITIALIZER has run.')
+  }
+  return ds
+}
+
 export const entitiesProviders: Provider[] = [
   {
     provide: APP_INITIALIZER,
@@ -148,8 +159,8 @@ export const entitiesProviders: Provider[] = [
   },
   {
     provide: DataSource,
-    useFactory: async () => {
-      return await useDataSource()
+    useFactory: () => {
+      return getInitializedDataSource()
     },
     deps: []
   },

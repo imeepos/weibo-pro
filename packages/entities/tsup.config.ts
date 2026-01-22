@@ -8,4 +8,5 @@ export default defineConfig({
   splitting: false,
   sourcemap: true,
   target: 'node18',
+  external: ['typeorm', '@sker/core', '@sker/redis', 'ioredis', 'reflect-metadata'],
 })
