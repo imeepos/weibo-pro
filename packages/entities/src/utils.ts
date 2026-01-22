@@ -18,7 +18,7 @@ export const createDatabaseConfig = (): DataSourceOptions => {
       type: 'postgres',
       url: databaseUrl,
       entities,
-      subscribers: [],
+      subscribers: [WorkflowScheduleSubscriber],
       synchronize: shouldSync,
       logging: false,
       poolSize: 30,
@@ -148,7 +148,9 @@ export const entitiesProviders: Provider[] = [
   },
   {
     provide: DataSource,
-    useFactory: () => ds!,
+    useFactory: async () => {
+      return await useDataSource()
+    },
     deps: []
   },
   {
@@ -157,24 +159,5 @@ export const entitiesProviders: Provider[] = [
       return ds.createEntityManager()
     },
     deps: [DataSource]
-  },
-  {
-    provide: APP_INITIALIZER,
-    useFactory: (dataSource: DataSource, redis: RedisClient) => {
-      return {
-        init: async () => {
-          // 动态注册 WorkflowScheduleSubscriber
-          try {
-            const subscriber = new WorkflowScheduleSubscriber()
-            dataSource.subscribers.push(subscriber)
-            console.log('✅ WorkflowScheduleSubscriber 已注册')
-          } catch (error) {
-            console.error('注册 WorkflowScheduleSubscriber 失败:', error)
-          }
-        }
-      } as Initializer
-    },
-    multi: true,
-    deps: [DataSource, RedisClient]
   }
 ]

@@ -39,6 +39,7 @@ interface ScheduleWatcher {
 @Injectable()
 export class CronSchedulerService {
   private scheduleJobs = new Map<string, nodeSchedule.Job>()
+  private intervalTimers = new Map<string, NodeJS.Timeout>()
   private readonly lockTTL = 300 // 锁过期时间（秒），根据任务最长执行时间调整
 
   constructor(
@@ -77,22 +78,18 @@ export class CronSchedulerService {
           logger.error('间隔调度缺少间隔时间', { scheduleId: schedule.id })
           return
         }
-        // node-schedule 使用 RecurrenceRule 实现间隔调度
-        const rule = new nodeSchedule.RecurrenceRule()
+        // 使用 setInterval 实现精确间隔调度，避免时间漂移
         const intervalMs = schedule.intervalSeconds * 1000
-
-        // 简化处理：使用 setInterval + node-schedule 的 scheduleJob
-        job = nodeSchedule.scheduleJob(new Date(Date.now() + intervalMs), async () => {
+        const timer = setInterval(async () => {
           await this.executeWithLock(schedule)
-          // 重新调度下次执行
-          await this.addSchedule(schedule)
-        })
+        }, intervalMs)
+        this.intervalTimers.set(schedule.id, timer)
         logger.info('添加间隔调度', {
           scheduleId: schedule.id,
           scheduleName: schedule.name,
           intervalSeconds: schedule.intervalSeconds
         })
-        break
+        return
 
       case ScheduleType.ONCE:
         if (!schedule.startTime) {
@@ -132,11 +129,20 @@ export class CronSchedulerService {
    * 移除调度任务
    */
   removeSchedule(scheduleId: string): void {
+    // 清理 cron/once 类型的 node-schedule 任务
     const job = this.scheduleJobs.get(scheduleId)
     if (job) {
       job.cancel()
       this.scheduleJobs.delete(scheduleId)
       logger.debug('移除调度任务', { scheduleId })
+    }
+
+    // 清理 interval 类型的定时器
+    const timer = this.intervalTimers.get(scheduleId)
+    if (timer) {
+      clearInterval(timer)
+      this.intervalTimers.delete(scheduleId)
+      logger.debug('移除间隔定时器', { scheduleId })
     }
   }
 
@@ -239,7 +245,7 @@ export class CronSchedulerService {
 
       logger.info(`✅ 调度任务加载完成`, {
         total: schedules.length,
-        loaded: this.scheduleJobs.size
+        loaded: this.getJobCount()
       })
     } catch (error) {
       logger.error('加载调度任务失败', {
@@ -253,14 +259,23 @@ export class CronSchedulerService {
    * 停止所有调度任务
    */
   async stopAll(): Promise<void> {
-    logger.info('停止所有调度任务', { count: this.scheduleJobs.size })
+    const totalCount = this.scheduleJobs.size + this.intervalTimers.size
+    logger.info('停止所有调度任务', { count: totalCount })
 
+    // 清理 node-schedule 任务
     for (const [scheduleId, job] of this.scheduleJobs) {
       job.cancel()
       logger.debug('取消调度任务', { scheduleId })
     }
-
     this.scheduleJobs.clear()
+
+    // 清理 interval 定时器
+    for (const [scheduleId, timer] of this.intervalTimers) {
+      clearInterval(timer)
+      logger.debug('取消间隔定时器', { scheduleId })
+    }
+    this.intervalTimers.clear()
+
     logger.info('✅ 所有调度任务已停止')
   }
 
@@ -268,14 +283,14 @@ export class CronSchedulerService {
    * 获取当前运行的调度任务数量
    */
   getJobCount(): number {
-    return this.scheduleJobs.size
+    return this.scheduleJobs.size + this.intervalTimers.size
   }
 
   /**
    * 获取所有调度任务ID
    */
   getScheduleIds(): string[] {
-    return Array.from(this.scheduleJobs.keys())
+    return Array.from(new Set([...this.scheduleJobs.keys(), ...this.intervalTimers.keys()]))
   }
 
   /**
