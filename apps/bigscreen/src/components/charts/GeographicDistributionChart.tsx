@@ -206,7 +206,7 @@ const GeographicDistributionChart: React.FC<GeographicDistributionChartProps> = 
           >
             <div className="flex items-center gap-2 text-purple-400 text-xs mb-1">
               <Users className="w-3 h-3" />
-              <span>总用户数</span>
+              <span>发帖用户数</span>
             </div>
             <div className="text-xl font-bold text-purple-400">{summary.totalUsers}</div>
           </motion.div>
