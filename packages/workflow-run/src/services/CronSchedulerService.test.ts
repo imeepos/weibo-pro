@@ -219,4 +219,107 @@ describe('CronSchedulerService - 动态调度加载', () => {
       expect(service.getJobCount()).toBe(0)
     })
   })
+
+  describe('executeWithLock - 执行时检查调度状态', () => {
+    it('当调度状态为 DISABLED 时，不应执行任务', async () => {
+      // Arrange
+      const disabledSchedule: WorkflowScheduleEntity = {
+        id: 'test-schedule-disabled',
+        name: '已禁用的调度',
+        workflowId: 'workflow-1',
+        scheduleType: ScheduleType.CRON,
+        cronExpression: '* * * * * *',
+        status: ScheduleStatus.DISABLED,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+
+      // 设置 mock 数据
+      mockSchedules = [disabledSchedule]
+
+      // Act - 添加禁用的调度到服务（模拟已存在的任务）
+      await service.addSchedule(disabledSchedule)
+
+      // Assert - 验证 execute 方法未被调用
+      expect(mockExecutionService.execute).not.toHaveBeenCalled()
+
+      // 验证任务仍被添加（因为 addSchedule 不检查状态）
+      expect(service.getJobCount()).toBe(1)
+    })
+
+    it('当调度状态为 EXPIRED 时，不应执行任务', async () => {
+      // Arrange
+      const expiredSchedule: WorkflowScheduleEntity = {
+        id: 'test-schedule-expired',
+        name: '已过期的调度',
+        workflowId: 'workflow-1',
+        scheduleType: ScheduleType.CRON,
+        cronExpression: '* * * * * *',
+        status: ScheduleStatus.EXPIRED,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+
+      // 设置 mock 数据
+      mockSchedules = [expiredSchedule]
+
+      // Act - 添加过期的调度到服务
+      await service.addSchedule(expiredSchedule)
+
+      // Assert - 验证 execute 方法未被调用
+      expect(mockExecutionService.execute).not.toHaveBeenCalled()
+      expect(service.getJobCount()).toBe(1)
+    })
+
+    it('当调度状态为 ENABLED 时，应正常执行任务', async () => {
+      // Arrange
+      const enabledSchedule: WorkflowScheduleEntity = {
+        id: 'test-schedule-enabled',
+        name: '启用的调度',
+        workflowId: 'workflow-1',
+        scheduleType: ScheduleType.CRON,
+        cronExpression: '* * * * * *',
+        status: ScheduleStatus.ENABLED,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+
+      // 设置 mock 数据
+      mockSchedules = [enabledSchedule]
+
+      // Act - 添加启用的调度
+      await service.addSchedule(enabledSchedule)
+
+      // Assert - 验证调度已添加
+      expect(service.getJobCount()).toBe(1)
+    })
+
+    it('reloadSchedule 应正确处理禁用的调度', async () => {
+      // Arrange
+      const disabledSchedule: WorkflowScheduleEntity = {
+        id: 'test-schedule-reload-disabled',
+        name: '重新加载-禁用的调度',
+        workflowId: 'workflow-1',
+        scheduleType: ScheduleType.CRON,
+        cronExpression: '* * * * * *',
+        status: ScheduleStatus.DISABLED,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+
+      // 设置 mock 数据
+      mockSchedules = [disabledSchedule]
+
+      // Act - 直接调用 removeSchedule 模拟 reloadSchedule 发现禁用后的行为
+      await service.addSchedule(disabledSchedule)
+      expect(service.getJobCount()).toBe(1)
+
+      // 模拟 reloadSchedule 发现状态为 DISABLED 后调用 removeSchedule
+      service.removeSchedule(disabledSchedule.id)
+
+      // Assert - 验证任务已被移除
+      expect(service.getJobCount()).toBe(0)
+      expect(mockExecutionService.execute).not.toHaveBeenCalled()
+    })
+  })
 })

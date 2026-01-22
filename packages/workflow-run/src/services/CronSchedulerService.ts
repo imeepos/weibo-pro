@@ -153,6 +153,46 @@ export class CronSchedulerService {
   }
 
   /**
+   * 检查调度状态是否可以执行
+   * @returns 返回最新调度信息，如果不可执行则返回 null
+   */
+  private async validateScheduleStatus(scheduleId: string, scheduleName: string): Promise<WorkflowScheduleEntity | null> {
+    const latestSchedule = await withRetryOnNetworkError(
+      async () => {
+        return await useEntityManager(async (manager) => {
+          return await manager.findOne(WorkflowScheduleEntity, { where: { id: scheduleId } })
+        })
+      },
+      3,
+      1000,
+      `检查调度状态 [${scheduleName}]`
+    )
+
+    // 如果调度不存在，取消执行
+    if (!latestSchedule) {
+      logger.warn('⚠️ 调度不存在，取消执行', {
+        scheduleId,
+        scheduleName
+      })
+      this.removeSchedule(scheduleId)
+      return null
+    }
+
+    // 如果调度已被禁用或过期，取消执行
+    if (latestSchedule.status !== ScheduleStatus.ENABLED) {
+      logger.warn('⚠️ 调度已被禁用或过期，取消执行', {
+        scheduleId,
+        scheduleName,
+        status: latestSchedule.status
+      })
+      this.removeSchedule(scheduleId)
+      return null
+    }
+
+    return latestSchedule
+  }
+
+  /**
    * 使用分布式锁执行任务
    */
   private async executeWithLock(schedule: WorkflowScheduleEntity): Promise<void> {
@@ -167,6 +207,12 @@ export class CronSchedulerService {
     })
 
     try {
+      // 🔍 在执行前检查调度状态（从数据库获取最新状态）
+      const latestSchedule = await this.validateScheduleStatus(schedule.id, schedule.name)
+      if (!latestSchedule) {
+        return
+      }
+
       // 🔒 尝试获取分布式锁（使用 SETNX + EXPIRE）
       const locked = await withRetryOnNetworkError(
         () => this.tryLock(lockKey, this.lockTTL),
@@ -192,7 +238,7 @@ export class CronSchedulerService {
       // 执行任务
       try {
         await withRetryOnNetworkError(
-          () => this.executionService.execute(schedule),
+          () => this.executionService.execute(latestSchedule),
           3,
           1000,
           `执行调度任务 [${schedule.name}]`
