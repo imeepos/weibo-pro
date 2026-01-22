@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { RefreshCw, Link, ThumbsUp, MessageCircle, Share2, ChevronDown, ChevronUp } from 'lucide-react';
 import type { UserRelationType } from '@sker/sdk';
+import { EventSelector, type EventItem } from '@sker/ui/components/ui';
 
 interface UserRelationControlsProps {
   relationType: UserRelationType;
   onRelationTypeChange: (type: UserRelationType) => void;
+  eventId?: string;
+  onEventIdChange?: (eventId: string | undefined) => void;
   minWeight: number;
   onMinWeightChange: (weight: number) => void;
   limit: number;
@@ -18,6 +21,8 @@ interface UserRelationControlsProps {
 const UserRelationControls: React.FC<UserRelationControlsProps> = ({
   relationType,
   onRelationTypeChange,
+  eventId,
+  onEventIdChange,
   minWeight,
   onMinWeightChange,
   limit,
@@ -31,6 +36,9 @@ const UserRelationControls: React.FC<UserRelationControlsProps> = ({
     const saved = localStorage.getItem('controlPanel.collapsed');
     return saved ? JSON.parse(saved) : false;
   });
+
+  const [events, setEvents] = useState<EventItem[]>([]);
+  const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
 
   useEffect(() => {
     localStorage.setItem('userRelation.relationType', relationType);
@@ -53,6 +61,7 @@ const UserRelationControls: React.FC<UserRelationControlsProps> = ({
     setIsCollapsed(newState);
     localStorage.setItem('controlPanel.collapsed', JSON.stringify(newState));
   };
+
   const relationTypes: Array<{ value: UserRelationType; label: string; icon: React.ReactNode }> = [
     { value: 'comprehensive', label: '综合关系', icon: <Link className="w-4 h-4" /> },
     { value: 'like', label: '点赞', icon: <ThumbsUp className="w-4 h-4" /> },
@@ -93,7 +102,52 @@ const UserRelationControls: React.FC<UserRelationControlsProps> = ({
       </div>
 
       {!isCollapsed && (
-        <div className="space-y-4 p-4 pt-2">
+        <div className="space-y-4 p-4 pt-2 max-h-[60vh] overflow-y-auto">
+          {/* 事件选择 */}
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-2">
+              事件筛选 <span className="text-xs opacity-70">(可选)</span>
+            </label>
+            <EventSelector
+              events={events}
+              value={eventId}
+              onChange={(value) => {
+                const id = typeof value === 'string' ? value : value[0];
+                onEventIdChange?.(id || undefined);
+              }}
+              onSearch={async (keyword, page) => {
+                const { EventsController } = await import('@sker/sdk');
+                const { root } = await import('@sker/core');
+                const controller = root.get(EventsController);
+                const result = await controller.getEventList(undefined, page ? `${page}` : undefined, undefined, keyword);
+                const items = result.data.map(e => ({
+                  id: e.id,
+                  title: e.title,
+                  description: e.description,
+                  category: e.category ? { name: e.category } : null,
+                  hotness: e.hotness,
+                  occurred_at: e.occurredAt,
+                  created_at: e.createdAt,
+                }));
+                if (page === 1) {
+                  setEvents(items);
+                }
+                return items;
+              }}
+              placeholder="搜索事件..."
+              debounceMs={300}
+              pageSize={10}
+            />
+            {eventId && (
+              <button
+                onClick={() => onEventIdChange?.(undefined)}
+                className="mt-2 text-xs text-muted-foreground hover:text-destructive transition-colors"
+              >
+                清除事件筛选
+              </button>
+            )}
+          </div>
+
           {/* 关系类型选择 */}
           <div>
             <label className="block text-xs font-medium text-muted-foreground mb-2">

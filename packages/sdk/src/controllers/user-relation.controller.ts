@@ -12,6 +12,7 @@ export class UserRelationController {
   getNetwork(
     @Query('type') type?: UserRelationType,
     @Query('timeRange') timeRange?: TimeRange,
+    @Query('eventId') eventId?: string,
     @Query('minWeight') minWeight?: number,
     @Query('limit') limit?: number
   ): Promise<UserRelationNetwork> {

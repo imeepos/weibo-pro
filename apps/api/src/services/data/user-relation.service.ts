@@ -21,6 +21,7 @@ export class UserRelationService {
     const {
       type = 'comprehensive',
       timeRange = '7d',
+      eventId,
       minWeight = 1,
       limit = 100,
     } = params;
@@ -32,6 +33,7 @@ export class UserRelationService {
       CACHE_KEYS.USER_RELATIONS,
       type,
       timeRange,
+      eventId || 'none',
       minWeight.toString(),
       effectiveLimit.toString()
     );
@@ -40,7 +42,7 @@ export class UserRelationService {
 
     return await this.cacheService.getOrSet(
       cacheKey,
-      () => this.fetchNetwork(type, timeRange, minWeight, effectiveLimit),
+      () => this.fetchNetwork(type, timeRange, eventId, minWeight, effectiveLimit),
       cacheTTL
     );
   }
@@ -48,138 +50,222 @@ export class UserRelationService {
   private async fetchNetwork(
     type: UserRelationType,
     timeRange: TimeRange,
+    eventId: string | undefined,
     minWeight: number,
     limit: number
   ): Promise<UserRelationNetwork> {
     switch (type) {
       case 'like':
-        return this.buildLikeNetwork(timeRange, minWeight, limit);
+        return this.buildLikeNetwork(timeRange, eventId, minWeight, limit);
       case 'comment':
-        return this.buildCommentNetwork(timeRange, minWeight, limit);
+        return this.buildCommentNetwork(timeRange, eventId, minWeight, limit);
       case 'repost':
-        return this.buildRepostNetwork(timeRange, minWeight, limit);
+        return this.buildRepostNetwork(timeRange, eventId, minWeight, limit);
       case 'comprehensive':
-        return this.buildComprehensiveNetwork(timeRange, minWeight, limit);
+        return this.buildComprehensiveNetwork(timeRange, eventId, minWeight, limit);
       default:
-        return this.buildComprehensiveNetwork(timeRange, minWeight, limit);
+        return this.buildComprehensiveNetwork(timeRange, eventId, minWeight, limit);
     }
   }
 
   private async buildLikeNetwork(
     timeRange: TimeRange,
+    eventId: string | undefined,
     minWeight: number,
     limit: number
   ): Promise<UserRelationNetwork> {
     return useEntityManager(async (manager) => {
       const { start, end } = getTimeRangeBoundaries(timeRange);
 
-      const edgesData = await manager.query(
-        `
+      let query = `
         SELECT
-          source_user_id,
-          target_user_id,
-          weight
-        FROM user_relation_statistics
-        WHERE relation_type = 'like'
-          AND last_interaction_at >= $1
-          AND last_interaction_at <= $2
-          AND weight >= $3
-        ORDER BY weight DESC
-        LIMIT $4
-      `,
-        [start, end, minWeight, limit]
-      );
+          urs.source_user_id,
+          urs.target_user_id,
+          urs.weight
+        FROM user_relation_statistics urs
+      `;
+      const params: any[] = [];
+      const conditions: string[] = [];
 
+      conditions.push("urs.relation_type = 'like'");
+      conditions.push("urs.last_interaction_at >= $1");
+      params.push(start);
+      conditions.push("urs.last_interaction_at <= $2");
+      params.push(end);
+      conditions.push("urs.weight >= $3");
+      params.push(minWeight);
+
+      // 如果指定了事件，通过微博关联过滤
+      if (eventId) {
+        query += `
+          INNER JOIN weibo_posts wp ON (
+            (wp.user_id::bigint = urs.source_user_id OR wp.user_id::bigint = urs.target_user_id)
+            AND wp.event_id = $${params.length + 1}
+          )
+        `;
+        params.push(eventId);
+      }
+
+      query += ` WHERE ${conditions.join(' AND ')}`;
+      query += `
+        ORDER BY urs.weight DESC
+        LIMIT $${params.length + 1}
+      `;
+      params.push(limit);
+
+      const edgesData = await manager.query(query, params);
       return this.buildNetworkFromEdges(edgesData, 'like', manager);
     });
   }
 
   private async buildCommentNetwork(
     timeRange: TimeRange,
+    eventId: string | undefined,
     minWeight: number,
     limit: number
   ): Promise<UserRelationNetwork> {
     return useEntityManager(async (manager) => {
       const { start, end } = getTimeRangeBoundaries(timeRange);
 
-      const edgesData = await manager.query(
-        `
+      let query = `
         SELECT
-          source_user_id,
-          target_user_id,
-          weight
-        FROM user_relation_statistics
-        WHERE relation_type = 'comment'
-          AND last_interaction_at >= $1
-          AND last_interaction_at <= $2
-          AND weight >= $3
-        ORDER BY weight DESC
-        LIMIT $4
-      `,
-        [start, end, minWeight, limit]
-      );
+          urs.source_user_id,
+          urs.target_user_id,
+          urs.weight
+        FROM user_relation_statistics urs
+      `;
+      const params: any[] = [];
+      const conditions: string[] = [];
 
+      conditions.push("urs.relation_type = 'comment'");
+      conditions.push("urs.last_interaction_at >= $1");
+      params.push(start);
+      conditions.push("urs.last_interaction_at <= $2");
+      params.push(end);
+      conditions.push("urs.weight >= $3");
+      params.push(minWeight);
+
+      if (eventId) {
+        query += `
+          INNER JOIN weibo_posts wp ON (
+            (wp.user_id::bigint = urs.source_user_id OR wp.user_id::bigint = urs.target_user_id)
+            AND wp.event_id = $${params.length + 1}
+          )
+        `;
+        params.push(eventId);
+      }
+
+      query += ` WHERE ${conditions.join(' AND ')}`;
+      query += `
+        ORDER BY urs.weight DESC
+        LIMIT $${params.length + 1}
+      `;
+      params.push(limit);
+
+      const edgesData = await manager.query(query, params);
       return this.buildNetworkFromEdges(edgesData, 'comment', manager);
     });
   }
 
   private async buildRepostNetwork(
     timeRange: TimeRange,
+    eventId: string | undefined,
     minWeight: number,
     limit: number
   ): Promise<UserRelationNetwork> {
     return useEntityManager(async (manager) => {
       const { start, end } = getTimeRangeBoundaries(timeRange);
 
-      const edgesData = await manager.query(
-        `
+      let query = `
         SELECT
-          source_user_id,
-          target_user_id,
-          weight
-        FROM user_relation_statistics
-        WHERE relation_type = 'repost'
-          AND last_interaction_at >= $1
-          AND last_interaction_at <= $2
-          AND weight >= $3
-        ORDER BY weight DESC
-        LIMIT $4
-      `,
-        [start, end, minWeight, limit]
-      );
+          urs.source_user_id,
+          urs.target_user_id,
+          urs.weight
+        FROM user_relation_statistics urs
+      `;
+      const params: any[] = [];
+      const conditions: string[] = [];
 
+      conditions.push("urs.relation_type = 'repost'");
+      conditions.push("urs.last_interaction_at >= $1");
+      params.push(start);
+      conditions.push("urs.last_interaction_at <= $2");
+      params.push(end);
+      conditions.push("urs.weight >= $3");
+      params.push(minWeight);
+
+      if (eventId) {
+        query += `
+          INNER JOIN weibo_posts wp ON (
+            (wp.user_id::bigint = urs.source_user_id OR wp.user_id::bigint = urs.target_user_id)
+            AND wp.event_id = $${params.length + 1}
+          )
+        `;
+        params.push(eventId);
+      }
+
+      query += ` WHERE ${conditions.join(' AND ')}`;
+      query += `
+        ORDER BY urs.weight DESC
+        LIMIT $${params.length + 1}
+      `;
+      params.push(limit);
+
+      const edgesData = await manager.query(query, params);
       return this.buildNetworkFromEdges(edgesData, 'repost', manager);
     });
   }
 
   private async buildComprehensiveNetwork(
     timeRange: TimeRange,
+    eventId: string | undefined,
     minWeight: number,
     limit: number
   ): Promise<UserRelationNetwork> {
     return useEntityManager(async (manager) => {
       const { start, end } = getTimeRangeBoundaries(timeRange);
 
-      const edgesData = await manager.query(
-        `
+      let query = `
         SELECT
-          source_user_id,
-          target_user_id,
-          SUM(CASE WHEN relation_type = 'like' THEN weight ELSE 0 END) as like_count,
-          SUM(CASE WHEN relation_type = 'comment' THEN weight ELSE 0 END) as comment_count,
-          SUM(CASE WHEN relation_type = 'repost' THEN weight ELSE 0 END) as repost_count,
-          SUM(weight) as weight
-        FROM user_relation_statistics
-        WHERE last_interaction_at >= $1
-          AND last_interaction_at <= $2
-        GROUP BY source_user_id, target_user_id
-        HAVING SUM(weight) >= $3
-        ORDER BY weight DESC
-        LIMIT $4
-      `,
-        [start, end, minWeight, limit]
-      );
+          urs.source_user_id,
+          urs.target_user_id,
+          SUM(CASE WHEN urs.relation_type = 'like' THEN urs.weight ELSE 0 END) as like_count,
+          SUM(CASE WHEN urs.relation_type = 'comment' THEN urs.weight ELSE 0 END) as comment_count,
+          SUM(CASE WHEN urs.relation_type = 'repost' THEN urs.weight ELSE 0 END) as repost_count,
+          SUM(urs.weight) as weight
+        FROM user_relation_statistics urs
+      `;
+      const params: any[] = [];
+      const conditions: string[] = [];
 
+      conditions.push("urs.last_interaction_at >= $1");
+      params.push(start);
+      conditions.push("urs.last_interaction_at <= $2");
+      params.push(end);
+
+      if (eventId) {
+        query += `
+          INNER JOIN weibo_posts wp ON (
+            (wp.user_id::bigint = urs.source_user_id OR wp.user_id::bigint = urs.target_user_id)
+            AND wp.event_id = $${params.length + 1}
+          )
+        `;
+        params.push(eventId);
+      }
+
+      query += ` WHERE ${conditions.join(' AND ')}`;
+      query += `
+        GROUP BY urs.source_user_id, urs.target_user_id
+        HAVING SUM(urs.weight) >= $${params.length + 1}
+      `;
+      params.push(minWeight);
+      query += `
+        ORDER BY weight DESC
+        LIMIT $${params.length + 1}
+      `;
+      params.push(limit);
+
+      const edgesData = await manager.query(query, params);
       return this.buildNetworkFromEdges(edgesData, 'comprehensive', manager);
     });
   }

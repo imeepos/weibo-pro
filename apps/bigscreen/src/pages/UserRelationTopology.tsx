@@ -27,6 +27,10 @@ const UserRelationTopology: React.FC = () => {
     const saved = localStorage.getItem('userRelation.relationType');
     return (saved as UserRelationType) || 'comprehensive';
   });
+  const [eventId, setEventId] = useState<string | undefined>(() => {
+    const saved = localStorage.getItem('userRelation.eventId');
+    return saved || undefined;
+  });
   const [minWeight, setMinWeight] = useState(() => {
     const saved = localStorage.getItem('userRelation.minWeight');
     return saved ? parseInt(saved) : 1;
@@ -65,9 +69,18 @@ const UserRelationTopology: React.FC = () => {
     };
   }, [limit]);
 
+  useEffect(() => {
+    if (eventId) {
+      localStorage.setItem('userRelation.eventId', eventId);
+    } else {
+      localStorage.removeItem('userRelation.eventId');
+    }
+  }, [eventId]);
+
   const { network, isLoading, error, refetch } = useUserRelationNetwork({
     relationType,
     timeRange: selectedTimeRange,
+    eventId,
     minWeight,
     limit: debouncedLimit,
   });
@@ -176,6 +189,8 @@ const UserRelationTopology: React.FC = () => {
             <UserRelationControls
               relationType={relationType}
               onRelationTypeChange={setRelationType}
+              eventId={eventId}
+              onEventIdChange={setEventId}
               minWeight={minWeight}
               onMinWeightChange={setMinWeight}
               limit={limit}

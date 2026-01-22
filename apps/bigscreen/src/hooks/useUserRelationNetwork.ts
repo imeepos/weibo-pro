@@ -6,6 +6,7 @@ import type { UserRelationNetwork, UserRelationType, TimeRange } from '@sker/sdk
 interface UseUserRelationNetworkParams {
   relationType: UserRelationType;
   timeRange: TimeRange;
+  eventId?: string;
   minWeight: number;
   limit: number;
 }
@@ -28,7 +29,7 @@ function setCachedData(data: UserRelationNetwork) {
 }
 
 export function useUserRelationNetwork(params: UseUserRelationNetworkParams) {
-  const { relationType, timeRange, minWeight, limit } = params;
+  const { relationType, timeRange, eventId, minWeight, limit } = params;
   const [network, setNetwork] = useState<UserRelationNetwork | null>(() => getCachedData());
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -48,6 +49,7 @@ export function useUserRelationNetwork(params: UseUserRelationNetworkParams) {
       const data = await controller.getNetwork(
         relationType,
         timeRange,
+        eventId,
         minWeight,
         limit
       );
@@ -61,7 +63,7 @@ export function useUserRelationNetwork(params: UseUserRelationNetworkParams) {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [relationType, timeRange, minWeight, limit]);
+  }, [relationType, timeRange, eventId, minWeight, limit]);
 
   const refetch = useCallback(async () => {
     await fetchNetwork(true);
