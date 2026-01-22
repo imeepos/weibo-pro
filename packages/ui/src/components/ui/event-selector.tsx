@@ -180,9 +180,9 @@ function EventSelector({
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="truncate font-medium">{event.title}</span>
+                    <span className="truncate font-medium text-foreground">{event.title}</span>
                     {event.category && (
-                      <span className="bg-muted text-muted-foreground shrink-0 rounded px-1.5 py-0.5 text-xs">
+                      <span className="bg-secondary text-secondary-foreground shrink-0 rounded px-1.5 py-0.5 text-xs border border-border">
                         {event.category.name}
                       </span>
                     )}
