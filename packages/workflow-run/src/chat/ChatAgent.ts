@@ -105,7 +105,7 @@ export class ChatAgent {
 
   constructor(databaseUrl?: string, config?: AgentConfig) {
     this.model = useLlmModel({
-      model: config?.model || 'deepseek-ai/DeepSeek-V3',
+      model: config?.model || 'deepseek-ai/DeepSeek-V3.2',
       temperature: config?.temperature ?? 0.3
     })
     this.hasDatabase = !!databaseUrl
