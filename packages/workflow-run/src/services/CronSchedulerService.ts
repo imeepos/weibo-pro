@@ -59,23 +59,24 @@ export class CronSchedulerService {
     switch (schedule.scheduleType) {
       case ScheduleType.CRON:
         if (!schedule.cronExpression) {
-          logger.error('Cron 调度缺少表达式', { scheduleId: schedule.id })
+          logger.error('❌ Cron 调度缺少表达式', { scheduleId: schedule.id })
           return
         }
         job = nodeSchedule.scheduleJob(
           schedule.cronExpression,
           async () => await this.executeWithLock(schedule)
         )
-        logger.info('添加 Cron 调度', {
+        logger.info('📅 Cron 调度已启动', {
           scheduleId: schedule.id,
           scheduleName: schedule.name,
-          cronExpression: schedule.cronExpression
+          cronExpression: schedule.cronExpression,
+          workflowId: schedule.workflowId
         })
         break
 
       case ScheduleType.INTERVAL:
         if (!schedule.intervalSeconds) {
-          logger.error('间隔调度缺少间隔时间', { scheduleId: schedule.id })
+          logger.error('❌ 间隔调度缺少间隔时间', { scheduleId: schedule.id })
           return
         }
         // 使用 setInterval 实现精确间隔调度，避免时间漂移
@@ -84,36 +85,41 @@ export class CronSchedulerService {
           await this.executeWithLock(schedule)
         }, intervalMs)
         this.intervalTimers.set(schedule.id, timer)
-        logger.info('添加间隔调度', {
+        logger.info('⏱️ 间隔调度已启动', {
           scheduleId: schedule.id,
           scheduleName: schedule.name,
-          intervalSeconds: schedule.intervalSeconds
+          intervalSeconds: schedule.intervalSeconds,
+          intervalMs,
+          workflowId: schedule.workflowId
         })
         return
 
       case ScheduleType.ONCE:
         if (!schedule.startTime) {
-          logger.error('一次性调度缺少开始时间', { scheduleId: schedule.id })
+          logger.error('❌ 一次性调度缺少开始时间', { scheduleId: schedule.id })
           return
         }
         job = nodeSchedule.scheduleJob(
           new Date(schedule.startTime),
           async () => await this.executeWithLock(schedule)
         )
-        logger.info('添加一次性调度', {
+        const executeDate = new Date(schedule.startTime)
+        logger.info('🎯 一次性调度已设置', {
           scheduleId: schedule.id,
           scheduleName: schedule.name,
-          startTime: schedule.startTime
+          startTime: schedule.startTime,
+          executeAt: executeDate.toLocaleString('zh-CN'),
+          workflowId: schedule.workflowId
         })
         break
 
       case ScheduleType.MANUAL:
         // 手动触发不需要调度
-        logger.debug('手动触发类型，跳过调度', { scheduleId: schedule.id })
+        logger.debug('🖐️ 手动触发类型，跳过调度', { scheduleId: schedule.id })
         return
 
       default:
-        logger.error('不支持的调度类型', {
+        logger.error('❌ 不支持的调度类型', {
           scheduleId: schedule.id,
           scheduleType: schedule.scheduleType
         })
@@ -151,6 +157,14 @@ export class CronSchedulerService {
    */
   private async executeWithLock(schedule: WorkflowScheduleEntity): Promise<void> {
     const lockKey = `schedule:lock:${schedule.id}`
+    const startTime = Date.now()
+
+    logger.info('⏰ 调度任务触发', {
+      scheduleId: schedule.id,
+      scheduleName: schedule.name,
+      scheduleType: schedule.scheduleType,
+      workflowId: schedule.workflowId
+    })
 
     try {
       // 🔒 尝试获取分布式锁（使用 SETNX + EXPIRE）
@@ -162,12 +176,18 @@ export class CronSchedulerService {
       )
 
       if (!locked) {
-        logger.debug('调度任务被其他实例执行中，跳过', {
+        logger.debug('⏭️ 调度任务被其他实例执行中，跳过', {
           scheduleId: schedule.id,
           scheduleName: schedule.name
         })
         return
       }
+
+      logger.debug('🔒 获取分布式锁成功，开始执行', {
+        scheduleId: schedule.id,
+        scheduleName: schedule.name,
+        lockTTL: this.lockTTL
+      })
 
       // 执行任务
       try {
@@ -177,6 +197,13 @@ export class CronSchedulerService {
           1000,
           `执行调度任务 [${schedule.name}]`
         )
+
+        const duration = Date.now() - startTime
+        logger.info('✅ 调度任务执行成功', {
+          scheduleId: schedule.id,
+          scheduleName: schedule.name,
+          duration: `${duration}ms`
+        })
       } finally {
         // 释放锁
         await withRetryOnNetworkError(
@@ -187,8 +214,11 @@ export class CronSchedulerService {
         )
       }
     } catch (error) {
-      logger.error('调度任务执行异常', {
+      const duration = Date.now() - startTime
+      logger.error('❌ 调度任务执行异常', {
         scheduleId: schedule.id,
+        scheduleName: schedule.name,
+        duration: `${duration}ms`,
         error: (error as Error).message,
         stack: (error as Error).stack
       })
@@ -237,7 +267,7 @@ export class CronSchedulerService {
         '加载调度任务列表'
       )
 
-      logger.info(`开始加载调度任务`, { count: schedules.length })
+      logger.info(`🚀 开始加载调度任务`, { count: schedules.length })
 
       for (const schedule of schedules) {
         await this.addSchedule(schedule)
@@ -245,7 +275,9 @@ export class CronSchedulerService {
 
       logger.info(`✅ 调度任务加载完成`, {
         total: schedules.length,
-        loaded: this.getJobCount()
+        loaded: this.getJobCount(),
+        cronJobs: this.scheduleJobs.size,
+        intervalTimers: this.intervalTimers.size
       })
     } catch (error) {
       logger.error('加载调度任务失败', {
@@ -260,12 +292,16 @@ export class CronSchedulerService {
    */
   async stopAll(): Promise<void> {
     const totalCount = this.scheduleJobs.size + this.intervalTimers.size
-    logger.info('停止所有调度任务', { count: totalCount })
+    logger.info('🛑 停止所有调度任务', {
+      count: totalCount,
+      cronJobs: this.scheduleJobs.size,
+      intervalTimers: this.intervalTimers.size
+    })
 
     // 清理 node-schedule 任务
     for (const [scheduleId, job] of this.scheduleJobs) {
       job.cancel()
-      logger.debug('取消调度任务', { scheduleId })
+      logger.debug('取消 Cron 调度', { scheduleId })
     }
     this.scheduleJobs.clear()
 
