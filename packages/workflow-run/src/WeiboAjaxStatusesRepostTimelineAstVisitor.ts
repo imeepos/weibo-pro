@@ -119,9 +119,12 @@ export class WeiboAjaxStatusesRepostTimelineAstVisitor extends WeiboApiClient {
                                         select: ['event_id']
                                     });
 
-                                    if (post?.event_id) {
-                                        // 用户关系统计
-                                        for (const repost of entities) {
+                                    // 过滤出新数据（利用已有的 existingIds）
+                                    const newReposts = entities.filter(e => !existingIds.has(e.id));
+
+                                    if (post?.event_id && newReposts.length > 0) {
+                                        // 用户关系统计 - 只对新数据
+                                        for (const repost of newReposts) {
                                             const sourceUserId = repost.user_id?.toString();
                                             const targetUser = (repost.retweeted_status as Record<string, unknown> | null)?.user as Record<string, unknown> | undefined;
                                             const targetUserId = targetUser?.id?.toString();
@@ -138,8 +141,8 @@ export class WeiboAjaxStatusesRepostTimelineAstVisitor extends WeiboApiClient {
                                             }
                                         }
 
-                                        // 小时统计
-                                        for (const repost of entities) {
+                                        // 小时统计 - 只对新数据
+                                        for (const repost of newReposts) {
                                             if (repost.created_at) {
                                                 const timeDimensions = HourlyStatisticsHelper.getTimeDimensions(repost.created_at);
                                                 await HourlyStatisticsHelper.upsertStatistics(

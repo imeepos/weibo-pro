@@ -255,16 +255,21 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
             });
 
             // 检查是否有新数据
-            if (onNewCount && entities.length > 0) {
+            let existingIds = new Set<number>();
+            if (entities.length > 0) {
                 const ids = entities.map(e => e.id).filter(Boolean);
                 if (ids.length > 0) {
                     const existingRecords = await m.find(WeiboCommentEntity, {
                         where: ids.map(id => ({ id }))
                     });
-                    const existingIds = new Set(existingRecords.map(r => r.id));
-                    onNewCount(entities.filter(e => !existingIds.has(e.id)).length);
+                    existingIds = new Set(existingRecords.map(r => r.id));
+                    if (onNewCount) {
+                        onNewCount(entities.filter(e => !existingIds.has(e.id)).length);
+                    }
                 } else {
-                    onNewCount(0);
+                    if (onNewCount) {
+                        onNewCount(0);
+                    }
                 }
             }
 
@@ -278,8 +283,11 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
                 });
 
                 if (post?.event_id) {
-                    // 用户关系统计
-                    for (const comment of entities) {
+                    // 获取新评论列表（利用已有的 existingIds）
+                    const newComments = entities.filter(e => !existingIds.has(e.id));
+
+                    // 用户关系统计 - 只对新评论
+                    for (const comment of newComments) {
                         const sourceUserId = comment.user_id?.toString();
                         const targetUserId = comment.reply_to_user_id?.toString();
 
@@ -295,8 +303,8 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
                         }
                     }
 
-                    // 小时统计
-                    for (const comment of entities) {
+                    // 小时统计 - 只对新评论
+                    for (const comment of newComments) {
                         if (comment.created_at) {
                             const timeDimensions = HourlyStatisticsHelper.getTimeDimensions(new Date(comment.created_at));
                             await HourlyStatisticsHelper.upsertStatistics(

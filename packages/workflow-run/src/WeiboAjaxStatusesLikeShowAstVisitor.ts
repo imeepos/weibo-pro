@@ -122,15 +122,20 @@ export class WeiboAjaxStatusesLikeShowAstVisitor extends WeiboApiClient {
 
                                     await m.upsert(WeiboLikeEntity, likeEntities as any, ['userWeiboId', 'targetWeiboId']);
 
-                                    // 入库后触发统计
+                                    // 入库后触发统计（只对新数据）
                                     const post = await m.findOne(WeiboPostEntity, {
                                         where: { id: ast.mid },
                                         select: ['event_id']
                                     });
 
-                                    if (post?.event_id) {
-                                        // 用户关系统计
-                                        for (const like of likeEntities) {
+                                    // 过滤出新数据（利用已有的 existingKeys）
+                                    const newLikes = likeEntities.filter(e =>
+                                        !existingKeys.has(`${e.userWeiboId}:${e.targetWeiboId}`)
+                                    );
+
+                                    if (post?.event_id && newLikes.length > 0) {
+                                        // 用户关系统计 - 只对新数据
+                                        for (const like of newLikes) {
                                             if (like.userWeiboId !== like.targetUserWeiboId) {
                                                 await UserRelationStatisticsHelper.upsertRelation(
                                                     m,
@@ -143,8 +148,8 @@ export class WeiboAjaxStatusesLikeShowAstVisitor extends WeiboApiClient {
                                             }
                                         }
 
-                                        // 小时统计
-                                        for (const like of likeEntities) {
+                                        // 小时统计 - 只对新数据
+                                        for (const like of newLikes) {
                                             if (like.createdAt) {
                                                 const timeDimensions = HourlyStatisticsHelper.getTimeDimensions(like.createdAt);
                                                 await HourlyStatisticsHelper.upsertStatistics(

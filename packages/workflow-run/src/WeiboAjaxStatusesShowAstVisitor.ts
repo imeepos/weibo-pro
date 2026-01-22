@@ -88,14 +88,16 @@ export class WeiboAjaxStatusesShowAstVisitor extends WeiboApiClient {
                         ast.postId = post.id;
                         ast.mid = post.mid;
 
+                        // 检查帖子是否已存在（用于判断是否需要更新统计）
+                        const existingPost = await m.findOne(WeiboPostEntity, {
+                            where: { id: post.id }
+                        });
+                        const isNewPost = !existingPost;
+
                         // 使用安全的 upsert 方式，处理可能的重复插入
                         try {
                             await m.upsert(WeiboPostEntity, post as any, ['id']);
                         } catch (error) {
-                            const existingPost = await m.findOne(WeiboPostEntity, {
-                                where: { id: post.id }
-                            });
-
                             if (existingPost) {
                                 await m.update(WeiboPostEntity, { id: post.id }, post as any);
                             } else {
@@ -106,8 +108,8 @@ export class WeiboAjaxStatusesShowAstVisitor extends WeiboApiClient {
                         // 入库后创建快照
                         await PostSnapshotHelper.createSnapshot(m, post);
 
-                        // 入库后触发小时统计
-                        if (post.event_id && post.created_at) {
+                        // 入库后触发小时统计（只对新数据）
+                        if (isNewPost && post.event_id && post.created_at) {
                             const postTime = new Date(post.created_at);
                             const timeDimensions = HourlyStatisticsHelper.getTimeDimensions(postTime);
 
