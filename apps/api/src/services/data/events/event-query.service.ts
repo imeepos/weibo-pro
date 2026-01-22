@@ -109,6 +109,16 @@ export class EventQueryService {
         // 按展示热度降序排列
         data.sort((a, b) => b.hotness - a.hotness);
 
+        // 持久化实时热度到数据库
+        await useEntityManager(async (entityManager) => {
+          for (const event of events) {
+            const newHotness = displayHotnessMap.get(event.id);
+            if (newHotness !== undefined) {
+              await entityManager.update(EventEntity, event.id, { hotness: newHotness });
+            }
+          }
+        });
+
         return {
           data,
           total,

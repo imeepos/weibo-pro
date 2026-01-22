@@ -320,7 +320,7 @@ export class WeiboKeywordSearchAstVisitor {
                     const reasons: string[] = [];
 
                     if (!result.hasNextPage) {
-                        reasons.push('无更多数据');
+                        reasons.push(`${ast.startDate}-${ast.endDate}: 无更多数据`);
                     }
 
                     if (result.totalCount) {
