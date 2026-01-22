@@ -119,7 +119,14 @@ export interface AnthropicToolUseBlock {
     name: string;
     input: Record<string, any>;
 }
-export type AnthropicContentBlock = AnthropicContentTextBlock | AnthropicContentThinkingBlock | AnthropicToolUseBlock;
+export interface AnthropicToolResultBlock {
+    type: 'tool_result';
+    tool_use_id: string;
+    content: string;
+    is_error?: boolean;
+}
+
+export type AnthropicContentBlock = AnthropicContentTextBlock | AnthropicContentThinkingBlock | AnthropicToolUseBlock | AnthropicToolResultBlock;
 
 export class AnthropicResponseAst extends Ast {
     id!: string;
@@ -317,4 +324,7 @@ export interface Visitor {
     visitAnthropicContentBlockStopAst(ast: AnthropicContentBlockStopAst, ctx: any): any;
     visitAnthropicMessageDeltaAst(ast: AnthropicMessageDeltaAst, ctx: any): any;
     visitAnthropicMessageStopAst(ast: AnthropicMessageStopAst, ctx: any): any;
+    visitUnifiedRequestAst?(ast: any, ctx: any): any;
+    visitUnifiedResponseAst?(ast: any, ctx: any): any;
+    visitUnifiedStreamEventAst?(ast: any, ctx: any): any;
 }
