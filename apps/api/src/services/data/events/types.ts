@@ -3,14 +3,9 @@ import type {
   TimeRange,
   HotEvent,
 } from '@sker/entities';
+import type { EventListItem, SentimentScore } from '@sker/sdk';
 
-export type { HotEvent, TimeRange };
-
-export interface SentimentScore {
-  positive: number;
-  negative: number;
-  neutral: number;
-}
+export type { HotEvent, TimeRange, EventListItem, SentimentScore };
 
 export interface EventWithCategory extends Omit<EventEntity, 'category'> {
   category?: { name: string } | null;
@@ -23,22 +18,6 @@ export interface EventStatistics {
   sentiment: SentimentScore;
   hotness: number;
   snapshot_at: Date;
-}
-
-export interface EventListItem {
-  id: string;
-  title: string;
-  description: string;
-  postCount: number;
-  userCount: number;
-  sentiment: SentimentScore;
-  hotness: number;
-  trend: 'up' | 'down' | 'stable';
-  category: string;
-  keywords: string[];
-  createdAt: string;
-  lastUpdate: string;
-  trendData: number[];
 }
 
 export interface EventTimelineNode {
