@@ -144,16 +144,59 @@ export class WorkflowExecutionService {
       })
     }
 
+    // 详细日志：更新前的数据
+    logger.info('[WorkflowExecutionService] 准备更新调度时间', {
+      scheduleId: schedule.id,
+      scheduleName: schedule.name,
+      success,
+      currentTime: now.toISOString(),
+      lastRunAt: now.toISOString(),
+      nextRunAt: nextRunAt?.toISOString(),
+      newStatus: status,
+      statusReason:
+        status === ScheduleStatus.DISABLED && schedule.scheduleType === ScheduleType.ONCE
+          ? '一次性任务完成'
+          : status === ScheduleStatus.EXPIRED
+            ? '已过期'
+            : '正常运行'
+    })
+
     await withRetryOnNetworkError(
       async () => {
+        // 使用事务确保数据持久化
+        // useTransaction 内部使用 manager.transaction()，会自动提交
         await useEntityManager(async (manager) => {
-          await manager.update(WorkflowScheduleEntity, schedule.id, {
-            lastRunAt: now,
-            nextRunAt:
-              status === ScheduleStatus.DISABLED || status === ScheduleStatus.EXPIRED
-                ? undefined
-                : nextRunAt ?? undefined,
-            status
+          // 在事务中执行更新
+          const updateResult = await manager.transaction(async (txManager) => {
+            return await txManager.update(WorkflowScheduleEntity, schedule.id, {
+              lastRunAt: now,
+              nextRunAt:
+                status === ScheduleStatus.DISABLED || status === ScheduleStatus.EXPIRED
+                  ? undefined
+                  : nextRunAt ?? undefined,
+              status
+            })
+          })
+
+          // 详细日志：更新操作结果
+          logger.info('[WorkflowExecutionService] 数据库 update 操作完成', {
+            scheduleId: schedule.id,
+            affected: updateResult.affected || updateResult.generatedMaps?.length || 'unknown'
+          })
+
+          // 验证查询：确认数据已写入（使用新的 manager 确保读取到已提交的数据）
+          const verified = await manager.findOne(WorkflowScheduleEntity, {
+            where: { id: schedule.id }
+          })
+          logger.info('[WorkflowExecutionService] 数据写入验证', {
+            scheduleId: schedule.id,
+            verifiedLastRunAt: verified?.lastRunAt?.toISOString() || 'null',
+            verifiedNextRunAt: verified?.nextRunAt?.toISOString() || 'null',
+            verifiedStatus: verified?.status || 'null',
+            match:
+              verified?.lastRunAt?.getTime() === now.getTime() &&
+              (verified?.nextRunAt?.getTime() === nextRunAt?.getTime() ||
+                (!verified?.nextRunAt && !nextRunAt))
           })
         })
       },

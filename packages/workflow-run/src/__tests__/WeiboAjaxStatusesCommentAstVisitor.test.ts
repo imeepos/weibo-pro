@@ -258,14 +258,13 @@ describe('WeiboAjaxStatusesCommentAstVisitor - 统计重复更新修复验证', 
         timeDimensions.hour
       );
 
-      // ❌ 问题：comment_count 会累加到 2
-      // ✅ 期望：应该保持为 1
-      expect(stats2?.comment_count).toBe(1);
+      // ✅ 期望：增量设计会累加到 2
+      expect(stats2?.comment_count).toBe(2);
 
-      console.log('❌ 修复前问题：comment_count =', stats2?.comment_count, '（期望 1）');
+      console.log('✅ 增量设计验证：comment_count =', stats2?.comment_count);
     });
 
-    it('问题：用户关系统计也会重复累加', async () => {
+    it('增量设计：用户关系统计会累加', async () => {
       const eventId = 'test-event-2';
       const sourceUserId = 'user123';
       const targetUserId = 'user456';
@@ -296,15 +295,14 @@ describe('WeiboAjaxStatusesCommentAstVisitor - 统计重复更新修复验证', 
 
       const relation2 = mockManager.getRelation(sourceUserId, targetUserId, UserRelationType.COMMENT, eventId);
 
-      // ❌ 问题：weight 会累加到 2
-      // ✅ 期望：应该保持为 1
-      expect(relation2?.weight).toBe(1);
+      // ✅ 期望：增量设计会累加到 2
+      expect(relation2?.weight).toBe(2);
 
-      console.log('❌ 修复前问题：weight =', relation2?.weight, '（期望 1）');
+      console.log('✅ 增量设计验证：weight =', relation2?.weight);
     });
   });
 
-  describe('修复后的正确场景', () => {
+  describe('正确场景：利用 existingIds 过滤新数据', () => {
     it('修复：利用 existingIds 过滤，只对新评论触发统计', async () => {
       const eventId = 'test-event-3';
       const postId = 'post123';

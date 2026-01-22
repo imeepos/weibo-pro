@@ -38,8 +38,26 @@ export class WorkflowScheduleSubscriber implements EntitySubscriberInterface<Wor
    * UPDATE 事件
    */
   async afterUpdate(event: UpdateEvent<WorkflowScheduleEntity>): Promise<void> {
-    if (!event.entity) return
-    await this.publishChange('update', event.entity.id)
+    // 修复：使用 databaseEntity 作为备选
+    // event.entity 可能为空，但 databaseEntity 包含更新后的数据
+    const entity = event.entity || event.databaseEntity;
+    if (!entity) {
+      // UpdateEvent 中没有 entityId，使用 metadata 记录
+      console.warn('[WorkflowScheduleSubscriber] afterUpdate: entity is null,无法发布更新通知', {
+        metadata: event.metadata?.tableName
+      });
+      return;
+    }
+
+    console.log('[WorkflowScheduleSubscriber] 发布调度更新通知', {
+      scheduleId: entity.id,
+      scheduleName: entity.name,
+      lastRunAt: entity.lastRunAt?.toISOString(),
+      nextRunAt: entity.nextRunAt?.toISOString(),
+      status: entity.status
+    });
+
+    await this.publishChange('update', entity.id);
   }
 
   /**
