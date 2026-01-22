@@ -623,8 +623,9 @@ export class EventQueryService {
       trend: this.calculateTrend(statistics),
       category: event.category?.name || '未分类',
       keywords: event.keywords || [],
+      occurredAt: event.occurred_at ? event.occurred_at.toISOString() : null,
       createdAt: event.created_at.toISOString(),
-      lastUpdate: event.updated_at.toISOString(),
+      updatedAt: event.updated_at.toISOString(),
       trendData:
         statistics
           ?.slice(0, 7)
