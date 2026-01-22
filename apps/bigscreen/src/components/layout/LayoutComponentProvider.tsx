@@ -175,7 +175,7 @@ export const componentWrappers = {
   // 词云图
   "word-cloud": () => {
     return (
-      <WordCloudProvider maxWords={100}>
+      <WordCloudProvider maxWords={1000}>
         <WordCloudChart className="w-full h-full flex-1" />
       </WordCloudProvider>
     );
@@ -321,7 +321,7 @@ export const componentWrappers = {
 
   "WordCloudChart": () => {
     return (
-      <WordCloudProvider maxWords={100}>
+      <WordCloudProvider maxWords={1000}>
         <WordCloudChart className="w-full h-full flex-1" />
       </WordCloudProvider>
     );
@@ -390,7 +390,7 @@ export const legacyComponentMap: Record<string, React.ComponentType<any>> = {
   SentimentTrendChart: () => <SentimentTrendChart className="flex-1" />,
   WordCloudChart: () => {
     return (
-      <WordCloudProvider maxWords={100}>
+      <WordCloudProvider maxWords={1000}>
         <WordCloudChart className="flex-1" />
       </WordCloudProvider>
     );

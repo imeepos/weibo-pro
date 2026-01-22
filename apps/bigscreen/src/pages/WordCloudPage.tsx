@@ -3,6 +3,7 @@ import WordCloudChart, { type WordCloudChartRef } from "@/components/charts/Word
 import { useWordCloudData } from "@/hooks/useChartData"
 import { Button } from "@sker/ui/components/ui/button"
 import { Download } from "lucide-react"
+import { MAX_WORD_CLOUD_WORDS } from "@/constants/mockData"
 
 interface KeywordData {
   keyword: string
@@ -58,7 +59,7 @@ const exportToJSON = (data: KeywordData[]) => {
 }
 
 const WordCloudPage: React.FC = () => {
-  const { data: rawData } = useWordCloudData(500)
+  const { data: rawData } = useWordCloudData(MAX_WORD_CLOUD_WORDS)
   const chartRef = useRef<WordCloudChartRef>(null)
 
   const displayData = rawData?.slice(0, 500) || null

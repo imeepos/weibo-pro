@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { createLogger } from '@sker/core';
 import { ChartsAPI, CommonAPI } from '@/services/api';
 import { useAppStore } from '@/stores/useAppStore';
+import { MAX_WORD_CLOUD_WORDS } from '@/constants/mockData';
 
 // 通用数据状态类型
 export interface DataState<T> {
@@ -259,7 +260,7 @@ export function useDashboardData() {
   const sentimentTrend = useSentimentTrend();
   const geographic = useGeographicData();
   const eventTypes = useEventTypes();
-  const wordCloud = useWordCloudData();
+  const wordCloud = useWordCloudData(MAX_WORD_CLOUD_WORDS);
 
   // 计算总体加载状态
   const loading = [
