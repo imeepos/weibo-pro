@@ -65,7 +65,8 @@ export class EventAstVisitor {
             // 计算帖子时间区间
             const post_min_time = timeRange?.min ? timeRange.min.toISOString() : '';
             const post_max_time = timeRange?.max ? timeRange.max.toISOString() : '';
-            let is_crawl_complete = event.crawl_end_reason ? true : false;
+            event.crawl_end_reason = event.crawl_end_reason || 'null'
+            let is_crawl_complete = event.crawl_end_reason === 'null' ? false : true;
 
             ast.event = event;
             ast.event_id = event.id;
