@@ -119,9 +119,13 @@ export class WeiboKeywordSearchAstVisitor {
             throw new NoRetryError(`WeiboSearchUrlBuilderAst 缺少必要参数: keyword:${keyword}, start:${startDate}, end:${endDate}`);
         }
 
+        // 确保 startDate <= endDate
+        const start = startDate < endDate ? startDate : endDate;
+        const end = startDate < endDate ? endDate : startDate;
+
         const base = 'https://s.weibo.com/weibo';
         const params = new URLSearchParams({ q: keyword, typeall: `1`, suball: `1`, page: String(page), Refer: `g` });
-        params.set('timescope', `custom:${formatDate(endDate)}:${formatDate(startDate)}`);
+        params.set('timescope', `custom:${formatDate(start)}:${formatDate(end)}`);
         const url = `${base}?${params.toString()}`;
 
         ast.state = 'running';
