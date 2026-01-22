@@ -131,4 +131,8 @@ export class EventsController implements sdk.EventsController {
   async updateEventKeywords(@Query('id') id: string, @Body() body: { keywords: string[] }) {
     return this.eventsService.updateEventKeywords(id, body.keywords);
   }
+
+  async updateEventOccurredAt(@Query('id') id: string, @Body() body: { occurredAt: string | null }) {
+    return this.eventsService.updateEventOccurredAt(id, body.occurredAt);
+  }
 }

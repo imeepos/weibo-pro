@@ -52,6 +52,8 @@ import {
   DialogTrigger,
 } from '@sker/ui/components/ui/dialog';
 import { useDebounce } from '@sker/ui/hooks/use-debounce';
+import { DatePicker } from '@sker/ui/components/ui/date-picker';
+import { Label } from '@sker/ui/components/ui/label';
 
 const logger = createLogger('EventAnalysis');
 
@@ -71,6 +73,7 @@ const EventAnalysis: React.FC = () => {
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [editingKeywords, setEditingKeywords] = useState<string[]>([]);
   const [keywordInput, setKeywordInput] = useState('');
+  const [editingOccurredAt, setEditingOccurredAt] = useState<Date | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -177,13 +180,16 @@ const EventAnalysis: React.FC = () => {
   const openEditDialog = (event: EventItem, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditingEventId(event.id);
+    setEditingKeywords(event.keywords || []);
     setKeywordInput('');
+    setEditingOccurredAt(event.occurredAt ? new Date(event.occurredAt) : null);
   };
 
   const closeEditDialog = () => {
     setEditingEventId(null);
     setEditingKeywords([]);
     setKeywordInput('');
+    setEditingOccurredAt(null);
   };
 
   const addKeyword = () => {
@@ -205,18 +211,24 @@ const EventAnalysis: React.FC = () => {
     }
   };
 
-  const saveKeywords = async () => {
+  const saveChanges = async () => {
     if (!editingEventId) return;
     setIsSaving(true);
     try {
       const c = root.get(EventsController);
-      await c.updateEventKeywords(editingEventId, { keywords: editingKeywords });
+      // 并发更新关键词和时间
+      await Promise.all([
+        c.updateEventKeywords(editingEventId, { keywords: editingKeywords }),
+        c.updateEventOccurredAt(editingEventId, { occurredAt: editingOccurredAt?.toISOString() || null })
+      ]);
       setEvents(events.map(e =>
-        e.id === editingEventId ? { ...e, keywords: editingKeywords } : e
+        e.id === editingEventId
+          ? { ...e, keywords: editingKeywords, occurredAt: editingOccurredAt?.toISOString() || null }
+          : e
       ));
       closeEditDialog();
     } catch (error) {
-      logger.error('Failed to update keywords:', error);
+      logger.error('Failed to save changes:', error);
     } finally {
       setIsSaving(false);
     }
@@ -454,9 +466,19 @@ const EventAnalysis: React.FC = () => {
                             <sentimentConfig.icon className="w-4 h-4" />
                             <span className="font-medium">{sentimentConfig.label}</span>
                           </div>
-                          <div className="flex items-center gap-1.5">
-                            <Clock className="w-4 h-4 text-muted-foreground" />
-                            <span className="text-muted-foreground text-xs">{formatRelativeTime(event.lastUpdate)}</span>
+                        </div>
+
+                        {/* 时间信息 */}
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                          {event.occurredAt && (
+                            <div className="flex items-center gap-1" title="事件发生时间">
+                              <Calendar className="w-3.5 h-3.5 text-primary" />
+                              <span>{formatRelativeTime(event.occurredAt)}</span>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-1" title="创建时间">
+                            <Clock className="w-3.5 h-3.5" />
+                            <span>{formatRelativeTime(event.createdAt)}</span>
                           </div>
                         </div>
 
@@ -508,90 +530,80 @@ const EventAnalysis: React.FC = () => {
                   }}>
                     <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
                       <DialogHeader>
-                        <DialogTitle>编辑事件关键字</DialogTitle>
+                        <DialogTitle>编辑事件</DialogTitle>
                         <DialogDescription>
-                          调整事件的关键字以优化监测和分类
+                          调整事件的关键字和发生时间
                         </DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4 py-4">
-                        <div className="flex flex-wrap gap-2 min-h-[60px] p-3 bg-muted/30 rounded-lg">
-                          {event.keywords && event.keywords.length > 0 ? (
-                            event.keywords.map(keyword => (
-                              <span
-                                key={keyword}
-                                className="px-3 py-1 bg-primary/15 text-primary text-sm rounded-full flex items-center gap-1 group"
-                              >
-                                #{keyword}
-                                <button
-                                  onClick={() => {
-                                    setEvents(events.map(e =>
-                                      e.id === event.id
-                                        ? { ...e, keywords: e.keywords.filter(k => k !== keyword) }
-                                        : e
-                                    ));
-                                  }}
-                                  className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity hover:text-destructive"
+                        {/* 关键词编辑 */}
+                        <div className="space-y-2">
+                          <Label>关键词</Label>
+                          <div className="flex flex-wrap gap-2 min-h-[60px] p-3 bg-muted/30 rounded-lg">
+                            {editingKeywords.length > 0 ? (
+                              editingKeywords.map(keyword => (
+                                <span
+                                  key={keyword}
+                                  className="px-3 py-1 bg-primary/15 text-primary text-sm rounded-full flex items-center gap-1 group"
                                 >
-                                  ×
-                                </button>
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-sm text-muted-foreground">暂无关键字</span>
-                          )}
+                                  #{keyword}
+                                  <button
+                                    onClick={() => {
+                                      setEditingKeywords(editingKeywords.filter(k => k !== keyword))
+                                    }}
+                                    className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity hover:text-destructive"
+                                  >
+                                    ×
+                                  </button>
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-sm text-muted-foreground">暂无关键字</span>
+                            )}
+                          </div>
+                          <div className="flex gap-2">
+                            <Input
+                              placeholder="输入新关键字"
+                              value={keywordInput}
+                              onChange={(e) => setKeywordInput(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && keywordInput.trim()) {
+                                  setEditingKeywords([...editingKeywords, keywordInput.trim()]);
+                                  setKeywordInput('');
+                                }
+                              }}
+                            />
+                            <Button
+                              variant="secondary"
+                              onClick={() => {
+                                if (keywordInput.trim()) {
+                                  setEditingKeywords([...editingKeywords, keywordInput.trim()]);
+                                  setKeywordInput('');
+                                }
+                              }}
+                              disabled={!keywordInput.trim()}
+                            >
+                              添加
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex gap-2">
-                          <Input
-                            placeholder="输入新关键字"
-                            value={keywordInput}
-                            onChange={(e) => setKeywordInput(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' && keywordInput.trim()) {
-                                setEvents(events.map(e =>
-                                  e.id === event.id
-                                    ? { ...e, keywords: [...(e.keywords || []), keywordInput.trim()] }
-                                    : e
-                                ));
-                                setKeywordInput('');
-                              }
-                            }}
+
+                        {/* 事件发生时间 */}
+                        <div className="space-y-2">
+                          <Label>事件发生时间</Label>
+                          <DatePicker
+                            date={editingOccurredAt}
+                            onSelect={(date) => setEditingOccurredAt(date)}
+                            placeholder="选择事件发生时间"
                           />
-                          <Button
-                            variant="secondary"
-                            onClick={() => {
-                              if (keywordInput.trim()) {
-                                setEvents(events.map(e =>
-                                  e.id === event.id
-                                    ? { ...e, keywords: [...(e.keywords || []), keywordInput.trim()] }
-                                    : e
-                                ));
-                                setKeywordInput('');
-                              }
-                            }}
-                            disabled={!keywordInput.trim()}
-                          >
-                            添加
-                          </Button>
+                          <p className="text-xs text-muted-foreground">
+                            设置事件的最初发生时间，用于事件溯源和分析
+                          </p>
                         </div>
                       </div>
                       <DialogFooter>
                         <Button variant="outline" onClick={closeEditDialog}>取消</Button>
-                        <Button
-                          onClick={async () => {
-                            const keywords = events.find(e => e.id === event.id)?.keywords || [];
-                            setIsSaving(true);
-                            try {
-                              const c = root.get(EventsController);
-                              await c.updateEventKeywords(event.id, { keywords });
-                              closeEditDialog();
-                            } catch (error) {
-                              logger.error('Failed to save keywords:', error);
-                            } finally {
-                              setIsSaving(false);
-                            }
-                          }}
-                          disabled={isSaving}
-                        >
+                        <Button onClick={saveChanges} disabled={isSaving}>
                           {isSaving ? '保存中...' : '保存'}
                         </Button>
                       </DialogFooter>

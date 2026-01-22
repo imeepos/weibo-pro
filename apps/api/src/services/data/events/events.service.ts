@@ -191,4 +191,10 @@ export class EventsService {
     await repo.update({ id }, { keywords });
     return { success: true };
   }
+
+  async updateEventOccurredAt(id: string, occurredAt: string | null): Promise<{ success: boolean }> {
+    const repo = this.dataSource.getRepository(EventEntity);
+    await repo.update({ id }, { occurred_at: occurredAt ? new Date(occurredAt) : null });
+    return { success: true };
+  }
 }

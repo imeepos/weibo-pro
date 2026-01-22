@@ -87,8 +87,9 @@ export interface EventItem {
   trend: 'up' | 'down' | 'stable';
   category: string;
   keywords: string[];
+  occurredAt: string | null;
   createdAt: string;
-  lastUpdate: string;
+  updatedAt: string;
   trendData: number[];
 }
 

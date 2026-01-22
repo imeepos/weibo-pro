@@ -150,4 +150,9 @@ export class EventsController {
   updateEventKeywords(@Query('id') id: string, @Body() body: { keywords: string[] }): Promise<{ success: boolean }> {
     throw new Error('method updateEventKeywords not implements')
   }
+
+  @Patch('occurred-at')
+  updateEventOccurredAt(@Query('id') id: string, @Body() body: { occurredAt: string | null }): Promise<{ success: boolean }> {
+    throw new Error('method updateEventOccurredAt not implements')
+  }
 }
