@@ -676,7 +676,7 @@ const EventDetail: React.FC = () => {
                   <Sprout className="w-4 h-4" />
                   事件关键词云
                 </h3>
-                <WordCloudChart title="" height={280} maxWords={100} data={keywordData} />
+                <WordCloudChart title="" height={280} maxWords={1000} data={keywordData} />
               </div>
             </div>
             {/* 互动指标分解 */}
