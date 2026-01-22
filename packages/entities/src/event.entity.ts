@@ -37,7 +37,7 @@ export class EventEntity {
   @Column({ type: 'jsonb', name: 'sentiment' })
   sentiment!: SentimentScore;
 
-  @Column({ type: 'decimal', precision: 5, scale: 2, default: 0 })
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   hotness!: number;
 
   @Column({
