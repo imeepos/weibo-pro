@@ -1,5 +1,5 @@
 import { Injectable, Inject, logger } from '@sker/core'
-import { DataSource, WorkflowScheduleEntity, WorkflowEntity, ScheduleStatus, ScheduleType } from '@sker/entities'
+import { useEntityManager, WorkflowScheduleEntity, WorkflowEntity, ScheduleStatus, ScheduleType } from '@sker/entities'
 import { executeAst, WorkflowGraphAst } from '@sker/workflow'
 import { withRetryOnNetworkError } from '../utils/retry-on-network-error'
 
@@ -19,7 +19,7 @@ import { withRetryOnNetworkError } from '../utils/retry-on-network-error'
  */
 @Injectable()
 export class WorkflowExecutionService {
-  constructor(@Inject(DataSource) private dataSource: DataSource) {}
+  constructor() {}
 
   /**
    * 执行调度任务
@@ -37,9 +37,9 @@ export class WorkflowExecutionService {
       // 获取工作流（带重试）
       const workflow = await withRetryOnNetworkError(
         async () => {
-          return await this.dataSource
-            .getRepository(WorkflowEntity)
-            .findOne({ where: { id: schedule.workflowId } })
+          return await useEntityManager(async (manager) => {
+            return await manager.findOne(WorkflowEntity, { where: { id: schedule.workflowId } })
+          })
         },
         3,
         1000,
@@ -146,13 +146,15 @@ export class WorkflowExecutionService {
 
     await withRetryOnNetworkError(
       async () => {
-        await this.dataSource.getRepository(WorkflowScheduleEntity).update(schedule.id, {
-          lastRunAt: now,
-          nextRunAt:
-            status === ScheduleStatus.DISABLED || status === ScheduleStatus.EXPIRED
-              ? undefined
-              : nextRunAt ?? undefined,
-          status
+        await useEntityManager(async (manager) => {
+          await manager.update(WorkflowScheduleEntity, schedule.id, {
+            lastRunAt: now,
+            nextRunAt:
+              status === ScheduleStatus.DISABLED || status === ScheduleStatus.EXPIRED
+                ? undefined
+                : nextRunAt ?? undefined,
+            status
+          })
         })
       },
       3,

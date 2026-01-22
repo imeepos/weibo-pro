@@ -19,6 +19,7 @@
   },
   "types": "./dist/index.d.ts",
   "main": "./dist/index.js",
+  "browser": "./dist/browser.mjs",
   "sideEffects": false,
   "scripts": {
     "build": "tsup",

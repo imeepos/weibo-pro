@@ -1,6 +1,6 @@
 import { Injectable, Inject, logger } from '@sker/core'
 import { RedisClient } from '@sker/redis'
-import { DataSource, WorkflowScheduleEntity, ScheduleStatus, ScheduleType } from '@sker/entities'
+import { useEntityManager, WorkflowScheduleEntity, ScheduleStatus, ScheduleType } from '@sker/entities'
 import { WorkflowExecutionService } from './WorkflowExecutionService'
 import { withRetryOnNetworkError } from '../utils/retry-on-network-error'
 import nodeSchedule from 'node-schedule'
@@ -43,8 +43,7 @@ export class CronSchedulerService {
 
   constructor(
     @Inject(WorkflowExecutionService) private executionService: WorkflowExecutionService,
-    @Inject(RedisClient) private redis: RedisClient,
-    @Inject(DataSource) private dataSource: DataSource
+    @Inject(RedisClient) private redis: RedisClient
   ) {}
 
   /**
@@ -221,8 +220,10 @@ export class CronSchedulerService {
     try {
       const schedules = await withRetryOnNetworkError(
         async () => {
-          return await this.dataSource.getRepository(WorkflowScheduleEntity).find({
-            where: { status: ScheduleStatus.ENABLED }
+          return await useEntityManager(async (manager) => {
+            return await manager.find(WorkflowScheduleEntity, {
+              where: { status: ScheduleStatus.ENABLED }
+            })
           })
         },
         3,
@@ -324,8 +325,9 @@ export class CronSchedulerService {
    * 重新加载单个调度
    */
   async reloadSchedule(scheduleId: string): Promise<void> {
-    const repository = this.dataSource.getRepository(WorkflowScheduleEntity)
-    const schedule = await repository.findOne({ where: { id: scheduleId } })
+    const schedule = await useEntityManager(async (manager) => {
+      return await manager.findOne(WorkflowScheduleEntity, { where: { id: scheduleId } })
+    })
 
     if (!schedule) {
       // 调度不存在，移除
