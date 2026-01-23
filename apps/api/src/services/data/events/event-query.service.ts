@@ -409,11 +409,13 @@ export class EventQueryService {
       cacheKey,
       async () => {
         return await useEntityManager(async (entityManager) => {
-          // 第一步：查询所有地区的真实总帖子数（从 EventHourlyStatisticsEntity 获取，与顶部统计保持一致）
+          // 第一步：查询真实的总帖子数（直接从 WeiboPostEntity 查询，确保数据准确）
           const totalStats = await entityManager
-            .createQueryBuilder(EventHourlyStatisticsEntity, 'stats')
-            .select('SUM(stats.post_count)', 'totalpostcount')
-            .where('stats.event_id = :eventId', { eventId })
+            .createQueryBuilder(WeiboPostEntity, 'post')
+            .innerJoin(PostNLPResultEntity, 'nlp', 'nlp.post_id = post.id')
+            .select('COUNT(post.id)', 'totalpostcount')
+            .where('nlp.event_id = :eventId', { eventId })
+            .andWhere('post.deleted_at IS NULL')
             .getRawOne();
 
           const realTotalPosts = parseInt(totalStats?.totalpostcount || '0', 10);
@@ -658,7 +660,9 @@ export class EventQueryService {
       hotness: displayHotness,
       trend: this.calculateTrend(statistics),
       category: event.category?.name || '未分类',
-      keywords: event.keywords || [],
+      keywords: Array.isArray(event.keywords)
+        ? event.keywords.map(k => String(k)).filter(k => k && k !== 'undefined' && k !== 'null')
+        : [],
       occurredAt: event.occurred_at ? event.occurred_at.toISOString() : null,
       createdAt: event.created_at.toISOString(),
       updatedAt: event.updated_at.toISOString(),

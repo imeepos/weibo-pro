@@ -112,7 +112,7 @@ export class EventsService {
       hotness: event.hotness,
       trend,
       category: event.category?.name || '未分类',
-      keywords: keywordsData.map((kw) => kw.keyword),
+      keywords: keywordsData.map((kw) => String(kw.keyword)).filter(k => k && k !== 'undefined' && k !== 'null'),
       createdAt: event.created_at.toISOString(),
       lastUpdate: event.updated_at.toISOString(),
       timeline,
