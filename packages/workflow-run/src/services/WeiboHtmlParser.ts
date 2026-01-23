@@ -38,11 +38,20 @@ export class WeiboHtmlParser {
       const $ = cheerio.load(html);
 
       // 检测"未找到相关结果"（无结果页面）
-      const isEmptyResult = $('.card-no-result').length > 0 ||
-                           html.includes('未找到相关结果');
+      // 注意：需要检查是否有 card-no-result 且没有实际搜索结果的卡片
+      // 微博会在空结果页面显示"以下是您可能感兴趣的微博"，但这些不是搜索结果
+      const hasNoResultCard = $('.card-no-result').length > 0 ||
+                             html.includes('未找到相关结果');
+
+      // 检查是否存在搜索时间范围提示（有时空的搜索结果会显示时间范围）
+      const hasTimeRangeTip = $('.m-filtertab .ctips').length > 0;
+
+      // 当有空结果卡片且有时间范围提示时，说明是真的没有搜索结果
+      // 否则可能只是推荐内容
+      const isEmptyResult = hasNoResultCard && hasTimeRangeTip;
 
       if (isEmptyResult) {
-        console.log('[WeiboHtmlParser] 检测到空结果页面');
+        console.log('[WeiboHtmlParser] 检测到空结果页面（无搜索结果）');
       }
 
       // 当检测到空结果时，直接返回清空的数据
