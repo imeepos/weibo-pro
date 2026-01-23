@@ -22,6 +22,7 @@ export { PromptRolesController } from './prompt-roles.controller';
 export { PromptSkillsController } from './prompt-skills.controller';
 export { PromptOptimizerController } from './prompt-optimizer.controller';
 export { SentimentController } from './sentiment.controller';
+export { SentimentTransitionController } from './sentiment-transition.controller';
 export { SystemController } from './system.controller';
 export { UploadController } from './upload.controller';
 export { UserRelationController } from './user-relation.controller';
