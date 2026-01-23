@@ -23,7 +23,7 @@ export class UserRelationService {
       timeRange = '7d',
       eventId,
       minWeight = 1,
-      limit = 100,
+      limit = 10000,
     } = params;
 
     const MAX_LIMIT = 20000;
