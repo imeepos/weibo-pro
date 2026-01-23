@@ -12,8 +12,8 @@ export interface CreateScheduleDto {
   cronExpression?: string
   intervalSeconds?: number
   inputs: Record<string, unknown>
-  startTime?: Date
-  endTime?: Date
+  startTime?: Date | string  // 支持字符串或 Date
+  endTime?: Date | string
 }
 
 export interface UpdateScheduleDto {
@@ -22,8 +22,8 @@ export interface UpdateScheduleDto {
   cronExpression?: string
   intervalSeconds?: number
   inputs?: Record<string, unknown>
-  startTime?: Date
-  endTime?: Date
+  startTime?: Date | string  // 支持字符串或 Date
+  endTime?: Date | string
   status?: ScheduleStatus
   nextRunAt?: Date | null
 }
@@ -33,6 +33,14 @@ export class WorkflowScheduleService {
   constructor(
     @Inject(WorkflowRunService) private workflowRunService: WorkflowRunService
   ) {}
+
+  /**
+   * 将字符串或 Date 对象转换为 Date
+   */
+  private toDate(value?: Date | string): Date | undefined {
+    if (!value) return undefined
+    return typeof value === 'string' ? new Date(value) : value
+  }
 
   async createSchedule(dto: CreateScheduleDto): Promise<WorkflowScheduleEntity> {
     return await useEntityManager(async m => {
@@ -47,14 +55,22 @@ export class WorkflowScheduleService {
 
       const workflowId = workflow.id
 
+      // 转换时间字符串为 Date 对象
+      const startTime = this.toDate(dto.startTime)
+      const endTime = this.toDate(dto.endTime)
+
       // 验证调度参数
-      this.validateSchedule(dto)
+      this.validateSchedule({
+        ...dto,
+        startTime,
+        endTime,
+      })
 
       // 计算下次执行时间
       const nextRunAt = this.calculateNextRunTime(dto.scheduleType, {
         cronExpression: dto.cronExpression,
         intervalSeconds: dto.intervalSeconds,
-        startTime: dto.startTime
+        startTime
       })
 
       const schedule = m.create(WorkflowScheduleEntity, {
@@ -64,8 +80,8 @@ export class WorkflowScheduleService {
         cronExpression: dto.cronExpression,
         intervalSeconds: dto.intervalSeconds,
         inputs: dto.inputs,
-        startTime: dto.startTime || new Date(),
-        endTime: dto.endTime,
+        startTime: startTime || new Date(),
+        endTime,
         nextRunAt: nextRunAt ?? undefined,
         status: ScheduleStatus.ENABLED
       })
@@ -82,12 +98,16 @@ export class WorkflowScheduleService {
         throw new Error(`Schedule ${id} not found`)
       }
 
+      // 转换时间字符串为 Date 对象
+      const startTime = this.toDate(dto.startTime)
+      const endTime = this.toDate(dto.endTime)
+
       // 如果修改了调度参数，重新计算下次执行时间
       if (dto.scheduleType || dto.cronExpression || dto.intervalSeconds || dto.startTime) {
         const scheduleType = dto.scheduleType || schedule.scheduleType
         const cronExpression = dto.cronExpression || schedule.cronExpression
         const intervalSeconds = dto.intervalSeconds || schedule.intervalSeconds
-        const startTime = dto.startTime || schedule.startTime
+        const resolvedStartTime = startTime !== undefined ? startTime : schedule.startTime
 
         // 通过工作流ID查询工作流名称
         const workflow = await m.findOne(WorkflowEntity, {
@@ -105,26 +125,30 @@ export class WorkflowScheduleService {
           cronExpression,
           intervalSeconds,
           inputs: dto.inputs || schedule.inputs,
-          startTime,
-          endTime: dto.endTime || schedule.endTime
+          startTime: resolvedStartTime,
+          endTime: endTime !== undefined ? endTime : schedule.endTime
         })
 
         dto.nextRunAt = this.calculateNextRunTime(scheduleType, {
           cronExpression,
           intervalSeconds,
-          startTime
+          startTime: resolvedStartTime
         })
 
         // 如果调度已过期但新的下次执行时间有效，重新启用
-        const endTime = dto.endTime !== undefined ? dto.endTime : schedule.endTime
+        const resolvedEndTime = endTime !== undefined ? endTime : schedule.endTime
         if (schedule.status === ScheduleStatus.EXPIRED && dto.nextRunAt) {
-          if (!endTime || dto.nextRunAt <= endTime) {
+          if (!resolvedEndTime || dto.nextRunAt <= resolvedEndTime) {
             dto.status = ScheduleStatus.ENABLED
           }
         }
       }
 
-      const updateData: any = { ...dto }
+      const updateData: any = {
+        ...dto,
+        startTime,
+        endTime,
+      }
       if (dto.nextRunAt === null) {
         updateData.nextRunAt = null
       }

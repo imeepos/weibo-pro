@@ -247,6 +247,10 @@ export function ScheduleDialog({
         ? formData.startTime
         : undefined
 
+      // 将 Date 对象转换为 ISO 字符串用于网络传输
+      const startTimeIso = startTime?.toISOString()
+      const endTimeIso = formData.endTime?.toISOString()
+
       if (isEditMode && schedule) {
         await client.updateSchedule(schedule.id, {
           name: formData.name.trim(),
@@ -254,8 +258,8 @@ export function ScheduleDialog({
           cronExpression: cronExpr,
           intervalSeconds,
           inputs: JSON.parse(formData.inputs),
-          startTime,
-          endTime: formData.endTime,
+          startTime: startTimeIso,
+          endTime: endTimeIso,
         })
       } else {
         await client.createSchedule({
@@ -265,8 +269,8 @@ export function ScheduleDialog({
           cronExpression: cronExpr,
           intervalSeconds,
           inputs: JSON.parse(formData.inputs),
-          startTime,
-          endTime: formData.endTime,
+          startTime: startTimeIso,
+          endTime: endTimeIso,
         })
       }
 
