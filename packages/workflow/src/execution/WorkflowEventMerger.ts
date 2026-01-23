@@ -65,13 +65,13 @@ export class WorkflowEventMerger {
                                 const nodeState = ctx.getNodeState(event.id!);
                                 nodeState.state = 'fail';
                                 if (event.error) {
-                                    nodeState.error = { message: event.error };
+                                    nodeState.error = { name: 'Error', message: event.error };
                                 }
                             }
                             if (event.error && !workflow.error) {
                                 setAstError(workflow, new Error(event.error));
                                 if (ctx) {
-                                    ctx.getNodeState(workflow.id).error = { message: event.error };
+                                    ctx.getNodeState(workflow.id).error = { name: 'Error', message: event.error };
                                 }
                             }
                         } else if (event.type === 'node_success') {
@@ -110,7 +110,7 @@ export class WorkflowEventMerger {
                             if (hasError) {
                                 const error = workflow.error || new Error('Workflow failed');
                                 if (ctx && !ctx.getNodeState(workflow.id).error) {
-                                    ctx.getNodeState(workflow.id).error = { message: error.message };
+                                    ctx.getNodeState(workflow.id).error = { name: 'Error', message: error.message };
                                 }
                                 obs.next({ type: 'node_fail', id: workflow.id, error: error.message });
                                 // 改为 complete 而不是 error，让工作流正常结束
