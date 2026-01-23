@@ -4,28 +4,7 @@ import { CommentThreadTree } from './CommentThreadTree';
 import type { CommentDepthAnalysis } from '@sker/sdk';
 import * as echarts from 'echarts';
 
-// Mock ECharts - 必须在顶层且直接返回对象
-const mockSetOption = vi.fn();
-vi.mock('echarts', () => {
-  const mockChartInstance = {
-    setOption: mockSetOption,
-    resize: vi.fn(),
-    dispose: vi.fn(),
-    on: vi.fn(),
-    off: vi.fn(),
-  };
-
-  return {
-    default: {
-      init: vi.fn(() => mockChartInstance),
-    },
-    graphic: {
-      LinearGradient: vi.fn(),
-    },
-  };
-});
-
-// Mock useEChartTheme hook
+// Mock useEChartTheme hook - 必须在echarts mock之前
 const mockColors = {
   text: '#ffffff',
   textMuted: '#9ca3af',
@@ -43,6 +22,24 @@ vi.mock('@sker/ui/hooks/use-echart-theme', () => ({
     isDark: true,
     colors: mockColors,
   })),
+}));
+
+// Mock ECharts
+const mockChartInstance = {
+  setOption: vi.fn(),
+  resize: vi.fn(),
+  dispose: vi.fn(),
+  on: vi.fn(),
+  off: vi.fn(),
+};
+
+vi.mock('echarts', () => ({
+  default: {
+    init: vi.fn(() => mockChartInstance),
+  },
+  graphic: {
+    LinearGradient: vi.fn(),
+  },
 }));
 
 // Mock data
@@ -162,11 +159,11 @@ describe('CommentThreadTree Component', () => {
       render(<CommentThreadTree data={mockCommentDepthData} />);
 
       await waitFor(() => {
-        expect(mockSetOption).toHaveBeenCalled();
+        expect(mockChartInstance.setOption).toHaveBeenCalled();
       });
 
       // 验证ECharts配置使用了主题颜色
-      const chartOption = mockSetOption.mock.calls[0][0];
+      const chartOption = mockChartInstance.setOption.mock.calls[0][0];
       expect(chartOption.title.textStyle.color).toBe(mockColors.text);
     });
 
@@ -174,10 +171,10 @@ describe('CommentThreadTree Component', () => {
       render(<CommentThreadTree data={mockCommentDepthData} />);
 
       await waitFor(() => {
-        expect(mockSetOption).toHaveBeenCalled();
+        expect(mockChartInstance.setOption).toHaveBeenCalled();
       });
 
-      const chartOption = mockSetOption.mock.calls[0][0];
+      const chartOption = mockChartInstance.setOption.mock.calls[0][0];
       expect(chartOption.title.textStyle.color).toBe(mockColors.text);
     });
 
@@ -185,10 +182,10 @@ describe('CommentThreadTree Component', () => {
       render(<CommentThreadTree data={mockCommentDepthData} />);
 
       await waitFor(() => {
-        expect(mockSetOption).toHaveBeenCalled();
+        expect(mockChartInstance.setOption).toHaveBeenCalled();
       });
 
-      const chartOption = mockSetOption.mock.calls[0][0];
+      const chartOption = mockChartInstance.setOption.mock.calls[0][0];
       expect(chartOption.xAxis.axisLabel.color).toBe(mockColors.textMuted);
     });
 
@@ -196,10 +193,10 @@ describe('CommentThreadTree Component', () => {
       render(<CommentThreadTree data={mockCommentDepthData} />);
 
       await waitFor(() => {
-        expect(mockSetOption).toHaveBeenCalled();
+        expect(mockChartInstance.setOption).toHaveBeenCalled();
       });
 
-      const chartOption = mockSetOption.mock.calls[0][0];
+      const chartOption = mockChartInstance.setOption.mock.calls[0][0];
       expect(chartOption.yAxis.axisLabel.color).toBe(mockColors.textMuted);
     });
 
@@ -207,10 +204,10 @@ describe('CommentThreadTree Component', () => {
       render(<CommentThreadTree data={mockCommentDepthData} />);
 
       await waitFor(() => {
-        expect(mockSetOption).toHaveBeenCalled();
+        expect(mockChartInstance.setOption).toHaveBeenCalled();
       });
 
-      const chartOption = mockSetOption.mock.calls[0][0];
+      const chartOption = mockChartInstance.setOption.mock.calls[0][0];
       expect(chartOption.yAxis.splitLine.lineStyle.color).toBe(mockColors.splitLine);
     });
 
@@ -218,10 +215,10 @@ describe('CommentThreadTree Component', () => {
       render(<CommentThreadTree data={mockCommentDepthData} />);
 
       await waitFor(() => {
-        expect(mockSetOption).toHaveBeenCalled();
+        expect(mockChartInstance.setOption).toHaveBeenCalled();
       });
 
-      const chartOption = mockSetOption.mock.calls[0][0];
+      const chartOption = mockChartInstance.setOption.mock.calls[0][0];
       expect(chartOption.xAxis.axisLine.lineStyle.color).toBe(mockColors.border);
       expect(chartOption.yAxis.axisLine.lineStyle.color).toBe(mockColors.border);
     });
@@ -230,10 +227,10 @@ describe('CommentThreadTree Component', () => {
       render(<CommentThreadTree data={mockCommentDepthData} />);
 
       await waitFor(() => {
-        expect(mockSetOption).toHaveBeenCalled();
+        expect(mockChartInstance.setOption).toHaveBeenCalled();
       });
 
-      const chartOption = mockSetOption.mock.calls[0][0];
+      const chartOption = mockChartInstance.setOption.mock.calls[0][0];
       expect(chartOption.series[0].label.color).toBe(mockColors.text);
     });
 
