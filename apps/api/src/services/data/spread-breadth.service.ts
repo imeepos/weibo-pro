@@ -34,13 +34,13 @@ export class SpreadBreadthService {
           .createQueryBuilder('post')
           .select('post.id', 'postId')
           .where('post.event_id = :eventId', { eventId })
-          .getMany();
+          .getRawMany<{ postId: string }>();
 
         if (posts.length === 0) {
           return this.getDefaultBreadthAnalysis();
         }
 
-        const postIds = posts.map((p) => p.id);
+        const postIds = posts.map((p) => String(p.postId));
 
         // 查询所有转发记录，并关联用户信息
         const reposts = await manager

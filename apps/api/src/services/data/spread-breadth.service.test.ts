@@ -49,7 +49,7 @@ describe('SpreadBreadthService', () => {
     vi.clearAllMocks();
   });
 
-  const mockPosts = (ids: string[]) => ids.map(id => ({ id }));
+  const mockPosts = (ids: string[]) => ids.map(id => ({ postId: id }));
 
   describe('空数据处理', () => {
     it('应该返回默认结构当事件没有转发数据', async () => {
