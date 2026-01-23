@@ -28,19 +28,27 @@ export class SpreadBreadthService {
   private async fetchBreadthAnalysis(eventId: string): Promise<SpreadBreadthAnalysis> {
     try {
       return await useEntityManager(async (manager) => {
-        // 查询事件相关的所有帖子
+        // 查询事件相关的所有帖子，并关联作者信息
         const posts = await manager
           .getRepository(WeiboPostEntity)
           .createQueryBuilder('post')
           .select('post.id', 'postId')
+          .addSelect('postUser.screen_name', 'postAuthorName')
+          .leftJoin(WeiboUserEntity, 'postUser', 'postUser.id = post.user_id')
           .where('post.event_id = :eventId', { eventId })
-          .getRawMany<{ postId: string }>();
+          .getRawMany<{ postId: string; postAuthorName: string }>();
 
         if (posts.length === 0) {
           return this.getDefaultBreadthAnalysis();
         }
 
         const postIds = posts.map((p) => String(p.postId));
+
+        // 创建帖子ID到作者名称的映射
+        const postAuthorMap = new Map<string, string>();
+        for (const post of posts) {
+          postAuthorMap.set(String(post.postId), post.postAuthorName || `帖子${post.postId}`);
+        }
 
         // 查询所有转发记录，并关联用户信息
         const reposts = await manager
@@ -82,8 +90,8 @@ export class SpreadBreadthService {
           spreadWidth
         );
 
-        // 构建传播路径（限制数量防止性能问题）
-        const propagationPaths = this.buildPropagationPaths(leveledReposts, 500);
+        // 构建传播路径（限制数量防止性能问题），传入帖子作者映射
+        const propagationPaths = this.buildPropagationPaths(leveledReposts, 500, postAuthorMap);
 
         // 生成传播时间线
         const spreadTimeline = this.buildSpreadTimeline(reposts);
@@ -227,17 +235,20 @@ export class SpreadBreadthService {
    */
   private buildPropagationPaths(
     leveledReposts: Array<any & { level: number; rootPostId: string }>,
-    maxPaths: number
+    maxPaths: number,
+    postAuthorMap: Map<string, string>
   ): PropagationPath[] {
     const paths: PropagationPath[] = [];
     const limit = Math.min(leveledReposts.length, maxPaths);
 
     for (let i = 0; i < limit; i++) {
       const repost = leveledReposts[i];
+      // 使用帖子作者名称而不是帖子ID
+      const postAuthor = postAuthorMap.get(String(repost.postId)) || `帖子${repost.postId}`;
       // 使用 screenName 而不是 userId，如果没有 screenName 则使用 userId 作为后备
       const userName = repost.screenName || `用户${repost.userId}`;
       paths.push({
-        source: repost.postId,
+        source: postAuthor,
         target: userName,
         weight: 1, // 可以根据需要计算权重
         level: repost.level,

@@ -43,7 +43,7 @@ const SpreadBreadthChart: React.FC<SpreadBreadthChartProps> = ({
     if (!data || data.propagationPaths.length === 0) return {};
 
     // 构建节点和边
-    const nodes = new Map<string, { name: string; itemStyle: { color: string } }>();
+    const nodes = new Map<string, { name: string; itemStyle: { color: string }; originalName: string }>();
     const links: Array<{ source: string; target: string; value: number; lineStyle: { color: string } }> = [];
 
     // 根据层级分配颜色（使用主题感知的颜色）
@@ -52,31 +52,34 @@ const SpreadBreadthChart: React.FC<SpreadBreadthChartProps> = ({
       return themeColors[level % themeColors.length];
     };
 
-    // 辅助函数：截断长文本
-    const truncateText = (text: string, maxLength: number = 15): string => {
+    // 辅助函数：截断长文本用于显示
+    const truncateText = (text: string, maxLength: number = 12): string => {
       if (text.length <= maxLength) return text;
       return text.substring(0, maxLength) + '...';
     };
 
     for (const path of data.propagationPaths) {
-      const sourceName = truncateText(path.source);
-      const targetName = truncateText(path.target);
+      // source 是帖子ID，target 是用户名
+      const sourceDisplay = truncateText(path.source, 8); // 帖子ID显示前8位
+      const targetDisplay = truncateText(path.target, 12); // 用户名显示前12位
 
       if (!nodes.has(path.source)) {
         nodes.set(path.source, {
-          name: sourceName,
+          name: sourceDisplay,
           itemStyle: { color: getLevelColor(path.level) },
+          originalName: path.source,
         });
       }
       if (!nodes.has(path.target)) {
         nodes.set(path.target, {
-          name: targetName,
+          name: targetDisplay,
           itemStyle: { color: getLevelColor(path.level + 1) },
+          originalName: path.target,
         });
       }
       links.push({
-        source: sourceName,
-        target: targetName,
+        source: sourceDisplay,
+        target: targetDisplay,
         value: path.weight,
         lineStyle: { color: getLevelColor(path.level) },
       });
@@ -100,6 +103,16 @@ const SpreadBreadthChart: React.FC<SpreadBreadthChartProps> = ({
         borderColor: colors.tooltipBorder,
         textStyle: {
           color: colors.text,
+        },
+        formatter: (params: any) => {
+          if (params.dataType === 'node') {
+            // 节点悬停：显示完整名称
+            return params.name;
+          } else if (params.dataType === 'edge') {
+            // 连线悬停：显示传播关系
+            return `${params.data.source} → ${params.data.target}<br/>权重: ${params.value}`;
+          }
+          return params.name;
         },
       },
       toolbox: {
@@ -140,7 +153,7 @@ const SpreadBreadthChart: React.FC<SpreadBreadthChartProps> = ({
             curveness: 0.5,
           },
           label: {
-            show: true,
+            show: false, // 默认不显示标签
             position: 'right',
             formatter: '{b}',
             color: colors.text,
@@ -148,6 +161,11 @@ const SpreadBreadthChart: React.FC<SpreadBreadthChartProps> = ({
           },
           emphasis: {
             focus: 'adjacency',
+            label: {
+              show: true, // 鼠标悬停时显示标签
+              fontSize: 14,
+              fontWeight: 'bold',
+            },
           },
         },
       ],
