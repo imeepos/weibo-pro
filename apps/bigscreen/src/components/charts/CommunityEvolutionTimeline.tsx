@@ -310,24 +310,25 @@ export const CommunityEvolutionTimeline: React.FC<CommunityEvolutionTimelineProp
             >
               全部 ({data.evolutionEvents.length})
             </button>
-            {Object.keys(EVENT_TYPE_MAP).map(type => {
-              const count = data.evolutionEvents.filter(e => e.type === type).length;
-              if (count === 0) return null;
-              return (
-                <button
-                  key={type}
-                  onClick={() => setSelectedEventFilter(type)}
-                  className={`text-xs px-2 py-1 rounded transition-colors ${
-                    selectedEventFilter === type
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted text-muted-foreground hover:bg-muted/70'
-                  }`}
-                  data-testid={`filter-${type}`}
-                >
-                  {EVENT_TYPE_MAP[type]} ({count})
-                </button>
-              );
-            })}
+            {Object.keys(EVENT_TYPE_MAP)
+              .filter(type => data.evolutionEvents.filter(e => e.type === type).length > 0)
+              .map(type => {
+                const count = data.evolutionEvents.filter(e => e.type === type).length;
+                return (
+                  <button
+                    key={type}
+                    onClick={() => setSelectedEventFilter(type)}
+                    className={`text-xs px-2 py-1 rounded transition-colors ${
+                      selectedEventFilter === type
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted text-muted-foreground hover:bg-muted/70'
+                    }`}
+                    data-testid={`filter-${type}`}
+                  >
+                    {EVENT_TYPE_MAP[type]} ({count})
+                  </button>
+                );
+              })}
           </div>
 
           {/* 演化事件列表 */}
