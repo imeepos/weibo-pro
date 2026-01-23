@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useMemo, useState } from 'react';
+import React, { useRef, useEffect, useMemo, useState, useCallback } from 'react';
 import type { UserRelationNetwork, UserRelationNode } from '@sker/sdk';
 import { ForceGraph3D, type ForceGraph3DHandle } from '@sker/ui/components/ui/force-graph-3d';
 import { useCommunityDetectorWorker } from '@/hooks/useCommunityDetectorWorker';
@@ -63,18 +63,62 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
     setIsSimulating(false);
   };
 
+  // 生成微博个人主页 URL
+  const getWeiboUrl = useCallback((node: UserRelationNode) => {
+    return `https://weibo.com/${node.id}?refer_flag=1001030103_`;
+  }, []);
+
+  // 生成节点悬停提示信息
+  const getNodeLabel = useCallback((node: any) => {
+    const userRelationNode = node as UserRelationNode;
+    const verifiedBadge = userRelationNode.verified ? ' ✓' : '';
+    const userTypeMap = {
+      official: '官方',
+      media: '媒体',
+      kol: 'KOL',
+      normal: '普通用户'
+    };
+
+    return `
+      <div style="padding: 12px; min-width: 200px;">
+        <div style="font-size: 16px; font-weight: bold; margin-bottom: 8px; color: #ff8200;">
+          ${userRelationNode.name}${verifiedBadge}
+        </div>
+        <div style="font-size: 12px; color: #999; margin-bottom: 8px;">
+          ${userTypeMap[userRelationNode.userType]} ${userRelationNode.location ? '· ' + userRelationNode.location : ''}
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 4px; font-size: 13px;">
+          <div><span style="color: #999;">粉丝数:</span> <span style="color: #333; font-weight: 500;">${userRelationNode.followers.toLocaleString()}</span></div>
+          <div><span style="color: #999;">影响力:</span> <span style="color: #333; font-weight: 500;">${userRelationNode.influence.toFixed(2)}</span></div>
+          <div><span style="color: #999;">发帖数:</span> <span style="color: #333; font-weight: 500;">${userRelationNode.postCount.toLocaleString()}</span></div>
+        </div>
+        <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid #eee; font-size: 11px; color: #666;">
+          点击跳转到微博主页 →
+        </div>
+      </div>
+    `;
+  }, []);
+
+  // 处理节点点击 - 跳转到微博主页
+  const handleNodeClick = useCallback((node: any) => {
+    const userRelationNode = node as UserRelationNode;
+    const weiboUrl = getWeiboUrl(userRelationNode);
+    window.open(weiboUrl, '_blank');
+    onNodeClick?.(userRelationNode);
+  }, [getWeiboUrl, onNodeClick]);
+
   return (
     <div className={`relative ${className}`}>
       <ForceGraph3D
         ref={graphRef}
         graphData={graphData || { nodes: [], links: [] }}
         backgroundColor={isDark ? 'rgba(10, 10, 15, 1)' : 'rgba(249, 250, 251, 1)'}
-        nodeLabel={(node: any) => node.name}
+        nodeLabel={getNodeLabel}
         nodeAutoColorBy="color"
         nodeOpacity={0.9}
         linkOpacity={isDark ? 0.3 : 0.2}
         linkWidth={(link: any) => Math.min(3, Math.max(0.5, (link.value || 1) * 0.1))}
-        onNodeClick={(node: any) => onNodeClick?.(node as any)}
+        onNodeClick={handleNodeClick}
         onNodeHover={(node: any) => onNodeHover?.(node as any)}
         onEngineStop={handleEngineStop}
         enableNodeDrag={true}
