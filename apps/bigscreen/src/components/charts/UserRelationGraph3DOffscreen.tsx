@@ -2,7 +2,9 @@ import React, { useRef, useEffect, useMemo, useState, useCallback } from 'react'
 import type { UserRelationNetwork, UserRelationNode } from '@sker/sdk';
 import { ForceGraph3D, type ForceGraph3DHandle } from '@sker/ui/components/ui/force-graph-3d';
 import { useCommunityDetectorWorker } from '@/hooks/useCommunityDetectorWorker';
+import { useGraphStatistics } from '@/hooks/useGraphStatistics';
 import { useTheme } from '@/hooks/useTheme';
+import { GraphStatisticsPanel } from './GraphStatisticsPanel';
 import * as d3Force from 'd3-force-3d';
 import { Subject } from 'rxjs';
 
@@ -24,6 +26,9 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
   const graphRef = useRef<ForceGraph3DHandle>(null);
   const { detect, isDetecting, graphData } = useCommunityDetectorWorker();
   const [isSimulating, setIsSimulating] = useState(false);
+
+  // 计算统计数据
+  const { communityStats, topUsers, locationStats } = useGraphStatistics(graphData, network.nodes);
 
   const graphDataReady$ = useRef(new Subject<boolean>());
   const engineStopped$ = useRef(new Subject<boolean>());
@@ -107,6 +112,12 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
     onNodeClick?.(userRelationNode);
   }, [getWeiboUrl, onNodeClick]);
 
+  // 处理统计面板中用户点击
+  const handleStatUserClick = useCallback((user: { id: string }) => {
+    const weiboUrl = `https://weibo.com/${user.id}?refer_flag=1001030103_`;
+    window.open(weiboUrl, '_blank');
+  }, []);
+
   return (
     <div className={`relative ${className}`}>
       <ForceGraph3D
@@ -128,12 +139,22 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
       />
 
       {(isDetecting || isSimulating) && (
-        <div className="absolute top-4 right-4 bg-background/90 backdrop-blur-sm text-foreground px-3 py-2 text-xs rounded-lg shadow-lg border border-border">
+        <div className="absolute top-4 left-4 bg-background/90 backdrop-blur-sm text-foreground px-3 py-2 text-xs rounded-lg shadow-lg border border-border">
           <div className="flex items-center gap-2">
             <div className="inline-block w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
             <span>{isDetecting ? '加载中...' : '计算布局中...'}</span>
           </div>
         </div>
+      )}
+
+      {/* 统计信息面板 */}
+      {!isDetecting && !isSimulating && graphData && graphData.nodes.length > 0 && (
+        <GraphStatisticsPanel
+          communityStats={communityStats}
+          topUsers={topUsers}
+          locationStats={locationStats}
+          onUserClick={handleStatUserClick}
+        />
       )}
     </div>
   );
