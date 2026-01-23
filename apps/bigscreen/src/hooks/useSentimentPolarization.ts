@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { SentimentController } from '@sker/sdk';
 import { root } from '@sker/core';
-import type { SentimentPolarization, TimeRange } from '@sker/entities';
+import type { SentimentPolarization } from '@sker/sdk';
+import type { TimeRange } from '@sker/entities';
 
 interface UseSentimentPolarizationResult {
   data: SentimentPolarization | null;

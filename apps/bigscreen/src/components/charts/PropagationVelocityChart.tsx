@@ -39,7 +39,7 @@ const PropagationVelocityChart: React.FC<PropagationVelocityChartProps> = ({
   if (isLoading) {
     return (
       <div className={cn('bg-gray-900/50 backdrop-blur-sm rounded-lg p-6', className)}>
-        <ChartState.Loading />
+        <ChartState loading loadingText="加载中..." />
       </div>
     );
   }
@@ -47,7 +47,7 @@ const PropagationVelocityChart: React.FC<PropagationVelocityChartProps> = ({
   if (error) {
     return (
       <div className={cn('bg-gray-900/50 backdrop-blur-sm rounded-lg p-6', className)}>
-        <ChartState.Error message={error.message} />
+        <ChartState error={error.message} />
       </div>
     );
   }
@@ -55,7 +55,7 @@ const PropagationVelocityChart: React.FC<PropagationVelocityChartProps> = ({
   if (!data) {
     return (
       <div className={cn('bg-gray-900/50 backdrop-blur-sm rounded-lg p-6', className)}>
-        <ChartState.Empty message="暂无传播速度数据" />
+        <ChartState empty emptyText="暂无传播速度数据" />
       </div>
     );
   }
@@ -111,24 +111,17 @@ const PropagationVelocityChart: React.FC<PropagationVelocityChartProps> = ({
           </div>
         </div>
 
-        {/* 爆发点 */}
+        {/* 爆发点预测 */}
         <div className="bg-gray-800/50 rounded-lg p-4">
-          <div className="text-sm text-gray-400 mb-3">爆发点</div>
-          {data.burstPoints.length > 0 ? (
-            <div className="space-y-2">
-              {data.burstPoints.map((burst, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between text-sm bg-gray-700/30 rounded px-3 py-2"
-                >
-                  <span className="text-gray-300">{burst.reason}</span>
-                  <span className="text-gray-400">{burst.velocity} 转发/小时</span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center text-muted-foreground text-xs">
-              暂无爆发点
+          <div className="text-sm text-gray-400 mb-2">爆发点预测</div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-300">爆发概率</span>
+            <span className="text-blue-400 font-bold">{(data.burstProbability * 100).toFixed(1)}%</span>
+          </div>
+          {data.predictedBurstTime && (
+            <div className="flex items-center justify-between text-sm mt-2">
+              <span className="text-gray-300">预测爆发时间</span>
+              <span className="text-gray-400">{new Date(data.predictedBurstTime).toLocaleString()}</span>
             </div>
           )}
         </div>

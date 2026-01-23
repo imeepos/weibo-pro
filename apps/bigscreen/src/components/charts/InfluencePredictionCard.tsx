@@ -55,7 +55,7 @@ const InfluencePredictionCard: React.FC<InfluencePredictionCardProps> = ({
   if (isLoading) {
     return (
       <div className={cn('bg-gray-900/50 backdrop-blur-sm rounded-lg p-6', className)}>
-        <ChartState.Loading />
+        <ChartState loading loadingText="加载中..." />
       </div>
     );
   }
@@ -63,7 +63,7 @@ const InfluencePredictionCard: React.FC<InfluencePredictionCardProps> = ({
   if (error) {
     return (
       <div className={cn('bg-gray-900/50 backdrop-blur-sm rounded-lg p-6', className)}>
-        <ChartState.Error message={error.message} />
+        <ChartState error={error.message} />
       </div>
     );
   }
@@ -71,7 +71,7 @@ const InfluencePredictionCard: React.FC<InfluencePredictionCardProps> = ({
   if (!data) {
     return (
       <div className={cn('bg-gray-900/50 backdrop-blur-sm rounded-lg p-6', className)}>
-        <ChartState.Empty message="暂无影响力预测数据" />
+        <ChartState empty emptyText="暂无影响力预测数据" />
       </div>
     );
   }

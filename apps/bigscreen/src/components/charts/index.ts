@@ -142,3 +142,9 @@ export { default as EventTimelineChart } from './EventTimelineChart';
 export { PropagationVelocityChart, default as PropagationVelocityChartDefault } from './PropagationVelocityChart';
 export { default as InfluencePredictionCard } from './InfluencePredictionCard';
 export { CommunityEvolutionTimeline } from './CommunityEvolutionTimeline';
+
+// P1 用户和内容分析组件
+export { default as UserEngagementFunnel } from './UserEngagementFunnel';
+export { CommentThreadTree } from './CommentThreadTree';
+export { default as PostingTimeHeatmap } from './PostingTimeHeatmap';
+export { default as NetworkCentralityGraph } from './NetworkCentralityGraph';

@@ -1,7 +1,19 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
-import { EventsController } from '@sker/sdk'
+import {
+  EventsController,
+  SpreadBreadthController,
+  MediaTypeController,
+  CommunityDetectionController,
+  PropagationVelocityController,
+  InfluencePredictionController,
+  CommunityEvolutionController,
+  UserStratificationController,
+  CommentDepthController,
+  PostingTimeController,
+  NetworkCentralityController
+} from '@sker/sdk'
 import type { UserRelationNetwork } from '@sker/sdk'
 import { root } from '@sker/core'
 import {
@@ -78,6 +90,16 @@ import { CommunityEvolutionTimeline } from '@/components/charts/CommunityEvoluti
 import { usePropagationVelocity } from '@/hooks/usePropagationVelocity';
 import { useInfluencePrediction } from '@/hooks/useInfluencePrediction';
 import { useCommunityEvolution } from '@/hooks/useCommunityEvolution';
+// P1 组件导入
+import UserEngagementFunnel from '@/components/charts/UserEngagementFunnel';
+import { CommentThreadTree } from '@/components/charts/CommentThreadTree';
+import PostingTimeHeatmap from '@/components/charts/PostingTimeHeatmap';
+import NetworkCentralityGraph from '@/components/charts/NetworkCentralityGraph';
+// P1 hooks 导入
+import { useUserStratification } from '@/hooks/useUserStratification';
+import { useCommentDepth } from '@/hooks/useCommentDepth';
+import { usePostingTimeHeatmap } from '@/hooks/usePostingTimeHeatmap';
+import { useNetworkCentrality } from '@/hooks/useNetworkCentrality';
 
 interface TimeSeriesDataPoint {
   timestamp: string;
@@ -146,6 +168,11 @@ const EventDetail: React.FC = () => {
   const [propagationVelocityData, setPropagationVelocityData] = useState<any>(null);
   const [influencePredictionData, setInfluencePredictionData] = useState<any>(null);
   const [communityEvolutionData, setCommunityEvolutionData] = useState<any>(null);
+  // P1 组件数据 state
+  const [userStratificationData, setUserStratificationData] = useState<any>(null);
+  const [commentDepthData, setCommentDepthData] = useState<any>(null);
+  const [postingTimeData, setPostingTimeData] = useState<any>(null);
+  const [networkCentralityData, setNetworkCentralityData] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isRefreshingCache, setIsRefreshingCache] = useState(false);
@@ -226,38 +253,49 @@ const EventDetail: React.FC = () => {
       try { setSentimentIntensityData(await c.getSentimentIntensity(eventId) || []); } catch (e) { logger.warn('Failed to fetch sentiment intensity:', e); }
       try { setEngagementTrendData(await c.getEngagementTrend(eventId) || []); } catch (e) { logger.warn('Failed to fetch engagement trend:', e); }
       try { setAnomaliesData(await c.getAnomalies(eventId) || []); } catch (e) { logger.warn('Failed to fetch anomalies:', e); }
-      // P2 组件数据获取
+      // P2 组件数据获取 - 使用专门的 Controller
       try {
-        if (c.getSpreadBreadthAnalysis) {
-          setSpreadBreadthData(await c.getSpreadBreadthAnalysis(eventId));
-        }
+        const spreadBreadthController = root.get(SpreadBreadthController);
+        setSpreadBreadthData(await spreadBreadthController.getAnalysis(eventId));
       } catch (e) { logger.warn('Failed to fetch spread breadth:', e); }
       try {
-        if (c.getMediaTypeDistribution) {
-          setMediaTypeData(await c.getMediaTypeDistribution(eventId));
-        }
+        const mediaTypeController = root.get(MediaTypeController);
+        setMediaTypeData(await mediaTypeController.getDistribution(eventId));
       } catch (e) { logger.warn('Failed to fetch media type distribution:', e); }
       try {
-        if (c.getCommunityAnalysis) {
-          setCommunityData(await c.getCommunityAnalysis(eventId));
-        }
+        const communityDetectionController = root.get(CommunityDetectionController);
+        setCommunityData(await communityDetectionController.getAnalysis(eventId));
       } catch (e) { logger.warn('Failed to fetch community analysis:', e); }
       // P3 组件数据获取
       try {
-        if (c.getPropagationVelocityAnalysis) {
-          setPropagationVelocityData(await c.getPropagationVelocityAnalysis(eventId));
-        }
+        const propagationVelocityController = root.get(PropagationVelocityController);
+        setPropagationVelocityData(await propagationVelocityController.getVelocity(eventId));
       } catch (e) { logger.warn('Failed to fetch propagation velocity:', e); }
       try {
-        if (c.getInfluencePrediction) {
-          setInfluencePredictionData(await c.getInfluencePrediction(eventId));
-        }
+        const influencePredictionController = root.get(InfluencePredictionController);
+        setInfluencePredictionData(await influencePredictionController.getInfluencePrediction(eventId));
       } catch (e) { logger.warn('Failed to fetch influence prediction:', e); }
       try {
-        if (c.getCommunityEvolution) {
-          setCommunityEvolutionData(await c.getCommunityEvolution(eventId));
-        }
+        const communityEvolutionController = root.get(CommunityEvolutionController);
+        setCommunityEvolutionData(await communityEvolutionController.getAnalysis(eventId));
       } catch (e) { logger.warn('Failed to fetch community evolution:', e); }
+      // P1 组件数据获取
+      try {
+        const userStratificationController = root.get(UserStratificationController);
+        setUserStratificationData(await userStratificationController.getStratification(eventId));
+      } catch (e) { logger.warn('Failed to fetch user stratification:', e); }
+      try {
+        const commentDepthController = root.get(CommentDepthController);
+        setCommentDepthData(await commentDepthController.getAnalysis(eventId));
+      } catch (e) { logger.warn('Failed to fetch comment depth:', e); }
+      try {
+        const postingTimeController = root.get(PostingTimeController);
+        setPostingTimeData(await postingTimeController.getHeatmap(eventId));
+      } catch (e) { logger.warn('Failed to fetch posting time:', e); }
+      try {
+        const networkCentralityController = root.get(NetworkCentralityController);
+        setNetworkCentralityData(await networkCentralityController.getAnalysis(eventId));
+      } catch (e) { logger.warn('Failed to fetch network centrality:', e); }
     } catch (error) {
       logger.error('Failed to fetch event data:', error);
     } finally {
@@ -712,7 +750,7 @@ const EventDetail: React.FC = () => {
 
       {/* Tab 导航 */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-6 bg-muted/20 p-1">
+        <TabsList className="grid w-full grid-cols-8 bg-muted/20 p-1">
           <TabsTrigger value="overview" className="data-[state=active]:bg-primary/20 gap-2">
             <Layers className="w-4 h-4" />
             <span className="hidden sm:inline">总览</span>
@@ -736,6 +774,14 @@ const EventDetail: React.FC = () => {
           <TabsTrigger value="advanced" className="data-[state=active]:bg-primary/20 gap-2">
             <Target className="w-4 h-4" />
             <span className="hidden sm:inline">高级分析</span>
+          </TabsTrigger>
+          <TabsTrigger value="user-analysis" className="data-[state=active]:bg-primary/20 gap-2">
+            <Users className="w-4 h-4" />
+            <span className="hidden sm:inline">用户分析</span>
+          </TabsTrigger>
+          <TabsTrigger value="content-analysis" className="data-[state=active]:bg-primary/20 gap-2">
+            <MessageSquare className="w-4 h-4" />
+            <span className="hidden sm:inline">内容分析</span>
           </TabsTrigger>
         </TabsList>
 
@@ -945,6 +991,68 @@ const EventDetail: React.FC = () => {
                   isLoading={!communityEvolutionData}
                 />
               </div>
+            </div>
+          </motion.div>
+        </TabsContent>
+
+        {/* 用户分析 Tab */}
+        <TabsContent value="user-analysis" className="mt-6">
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+            {/* P1: 用户参与度分层 */}
+            <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
+              <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                用户参与度分层
+              </h3>
+              <UserEngagementFunnel
+                data={userStratificationData}
+                isLoading={!userStratificationData}
+                height={400}
+              />
+            </div>
+
+            {/* P1: 网络中心性分析 */}
+            <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
+              <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
+                <Network className="w-4 h-4" />
+                网络中心性分析
+              </h3>
+              <NetworkCentralityGraph
+                data={networkCentralityData}
+                isLoading={!networkCentralityData}
+                height={500}
+              />
+            </div>
+          </motion.div>
+        </TabsContent>
+
+        {/* 内容分析 Tab */}
+        <TabsContent value="content-analysis" className="mt-6">
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+            {/* P1: 发帖时间热力图 */}
+            <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
+              <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                发帖时间热力图
+              </h3>
+              <PostingTimeHeatmap
+                data={postingTimeData}
+                isLoading={!postingTimeData}
+                height={400}
+              />
+            </div>
+
+            {/* P1: 评论深度分析 */}
+            <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
+              <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
+                <MessageCircle className="w-4 h-4" />
+                评论深度分析
+              </h3>
+              <CommentThreadTree
+                data={commentDepthData}
+                isLoading={!commentDepthData}
+                height={400}
+              />
             </div>
           </motion.div>
         </TabsContent>

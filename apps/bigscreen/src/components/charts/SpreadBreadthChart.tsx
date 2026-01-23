@@ -166,11 +166,10 @@ const SpreadBreadthChart: React.FC<SpreadBreadthChartProps> = ({
     return (
       <div className={cn('w-full', className)} style={{ height }}>
         <ChartState
-          isLoading={isLoading}
-          error={error}
-          isEmpty={!data || data.propagationPaths.length === 0}
-          height={height}
-          title={title}
+          loading={isLoading}
+          error={error?.message}
+          empty={!data || data.propagationPaths.length === 0}
+          emptyText="暂无传播广度数据"
         />
       </div>
     );

@@ -130,7 +130,7 @@ const CommunityGraph: React.FC<CommunityGraphProps> = ({
         width: Math.min(5, Math.max(1, link.weight / 2)),
         opacity: 0.4,
         curveness: 0.2,
-        type: 'dashed',
+        type: 'dashed' as const,
       },
       weight: link.weight,
     }));

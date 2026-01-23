@@ -220,7 +220,7 @@ const KOLBubbleChart: React.FC<KOLBubbleChartProps> = ({
   if (!data || data.topKOLs.length === 0) {
     return (
       <div className={cn('w-full bg-gray-900/50 rounded-lg', className)} style={{ height }}>
-        <ChartState type="empty" message="暂无 KOL 数据" />
+        <ChartState empty emptyText="暂无 KOL 数据" />
       </div>
     )
   }

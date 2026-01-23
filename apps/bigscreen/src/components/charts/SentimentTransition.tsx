@@ -86,17 +86,16 @@ function renderSankeyChart(data: SentimentTransitionAnalysis, container: HTMLEle
   const chart = echarts.init(container);
   const matrix = data.transitionMatrix;
 
+  // 使用节点名称而不是索引，确保 ECharts 正确解析
   const nodes = ['Positive', 'Negative', 'Neutral'];
   const links = [
-    { source: 0, target: 0, value: matrix.positiveToPositive },
-    { source: 0, target: 1, value: matrix.positiveToNegative },
-    { source: 0, target: 2, value: matrix.positiveToNeutral },
-    { source: 1, target: 0, value: matrix.negativeToPositive },
-    { source: 1, target: 1, value: matrix.negativeToNegative },
-    { source: 1, target: 2, value: matrix.negativeToNeutral },
-    { source: 2, target: 0, value: matrix.neutralToPositive },
-    { source: 2, target: 1, value: matrix.neutralToNegative },
-    { source: 2, target: 2, value: matrix.neutralToNeutral },
+    // 排除自环（source === target），避免 ECharts 检测到循环
+    { source: 'Positive', target: 'Negative', value: matrix.positiveToNegative },
+    { source: 'Positive', target: 'Neutral', value: matrix.positiveToNeutral },
+    { source: 'Negative', target: 'Positive', value: matrix.negativeToPositive },
+    { source: 'Negative', target: 'Neutral', value: matrix.negativeToNeutral },
+    { source: 'Neutral', target: 'Positive', value: matrix.neutralToPositive },
+    { source: 'Neutral', target: 'Negative', value: matrix.neutralToNegative },
   ];
 
   const option = {

@@ -157,8 +157,8 @@ const MediaTypeDistribution: React.FC<MediaTypeDistributionProps> = ({
 
   return (
     <ChartState
-      isLoading={isLoading}
-      error={error}
+      loading={isLoading}
+      error={error?.message}
       empty={isEmpty}
       emptyText="暂无媒体类型数据"
     >
