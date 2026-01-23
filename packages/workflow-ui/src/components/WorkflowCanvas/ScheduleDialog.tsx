@@ -166,8 +166,14 @@ export function ScheduleDialog({
           calculatedNextRun = undefined
         } else {
           try {
+            // 修复：使用当前时间或未来的 startTime 作为基准，避免使用过去的时间
+            const now = new Date()
+            const baseDate = formData.startTime && formData.startTime > now
+              ? formData.startTime
+              : now
+
             const interval = CronExpressionParser.parse(formData.cronExpression, {
-              currentDate: formData.startTime || new Date(),
+              currentDate: baseDate,
               tz: Intl.DateTimeFormat().resolvedOptions().timeZone
             })
             const next = interval.next()
