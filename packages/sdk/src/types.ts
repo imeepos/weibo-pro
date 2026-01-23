@@ -1192,3 +1192,151 @@ export interface CentralityAnalysis {
   networkStats: NetworkStats
   topInfluencers: TopInfluencer[]
 }
+
+// 情感转变追踪相关类型
+export type SentimentType = 'positive' | 'negative' | 'neutral'
+
+export interface SentimentTimePoint {
+  timestamp: string
+  positive: number
+  negative: number
+  neutral: number
+  dominantSentiment: SentimentType
+  volatility: number
+}
+
+export interface TransitionMatrix {
+  positiveToPositive: number
+  positiveToNegative: number
+  positiveToNeutral: number
+  negativeToPositive: number
+  negativeToNegative: number
+  negativeToNeutral: number
+  neutralToPositive: number
+  neutralToNegative: number
+  neutralToNeutral: number
+}
+
+export interface TurningPoint {
+  timestamp: string
+  fromSentiment: SentimentType
+  toSentiment: SentimentType
+  magnitude: number
+  triggerKeywords: string[]
+  triggerPosts: string[]
+}
+
+export interface SentimentTransitionAnalysis {
+  timeline: SentimentTimePoint[]
+  transitionMatrix: TransitionMatrix
+  turningPoints: TurningPoint[]
+  stabilityIndex: number
+  polarizationIndex: number
+}
+
+// 媒体类型分布相关类型
+export type MediaType = 'text' | 'image' | 'video' | 'link' | 'mixed'
+
+export interface MediaTypeItem {
+  type: MediaType
+  count: number
+  percentage: number
+  avgEngagement: number
+}
+
+export interface MediaTypeTrend {
+  timestamp: string
+  types: {
+    text: number
+    image: number
+    video: number
+    link: number
+    mixed: number
+  }
+}
+
+export interface MediaEngagement {
+  type: MediaType
+  avgLikes: number
+  avgComments: number
+  avgReposts: number
+}
+
+export interface MediaTypeAnalysis {
+  distribution: MediaTypeItem[]
+  totalPosts: number
+  trend: MediaTypeTrend[]
+  engagementByType: MediaEngagement[]
+}
+
+// 传播广度分析相关类型
+export interface PropagationPath {
+  source: string
+  target: string
+  weight: number
+  level: number
+}
+
+export interface SpreadTimelinePoint {
+  timestamp: string
+  count: number
+  cumulative: number
+}
+
+export interface UserTypeDistribution {
+  type: 'vip' | 'ordinary' | 'verified'
+  count: number
+  percentage: number
+}
+
+export interface SpreadBreadthAnalysis {
+  totalReposts: number
+  uniqueReposters: number
+  spreadDepth: number
+  spreadWidth: number
+  breadthIndex: number
+  propagationPaths: PropagationPath[]
+  spreadTimeline: SpreadTimelinePoint[]
+  repostByUserType: UserTypeDistribution[]
+}
+
+// 社区发现相关类型
+export interface CommunityMember {
+  userId: string
+  screenName: string
+  role: 'leader' | 'active' | 'peripheral'
+  inDegree: number
+  outDegree: number
+}
+
+export interface Community {
+  id: string
+  name: string
+  members: CommunityMember[]
+  size: number
+  density: number
+  avgInfluence: number
+  topKeywords: string[]
+  sentiment: { positive: number; negative: number; neutral: number }
+}
+
+export interface CommunityLink {
+  sourceCommunity: string
+  targetCommunity: string
+  weight: number
+}
+
+export interface BridgeUser {
+  userId: string
+  screenName: string
+  communities: string[]
+  bridgeScore: number
+}
+
+export interface CommunityAnalysis {
+  communities: Community[]
+  modularity: number
+  totalCommunities: number
+  interCommunityLinks: CommunityLink[]
+  bridgeUsers: BridgeUser[]
+}
