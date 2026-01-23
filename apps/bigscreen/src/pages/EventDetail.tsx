@@ -909,83 +909,6 @@ const EventDetail: React.FC = () => {
         </div>
       </motion.div>
 
-      {/* 核心指标 - 4列网格 */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard
-          title="贴子总数"
-          value={stats?.totalPosts ?? eventData.postCount ?? 0}
-          icon={MessageSquare}
-          color="blue"
-          className="group hover:border-primary/30 transition-all duration-300"
-        />
-        <MetricCard
-          title="参与用户"
-          value={stats?.totalUsers ?? eventData.userCount ?? 0}
-          icon={Users}
-          color="green"
-          className="group hover:border-primary/30 transition-all duration-300"
-        />
-        <MetricCard
-          title="平均热度"
-          value={stats?.avgHotness ?? Number(eventData.hotness) ?? 0}
-          icon={Zap}
-          color="red"
-          className="group hover:border-primary/30 transition-all duration-300"
-        />
-        <MetricCard
-          title="情感得分"
-          value={stats?.avgSentiment ?? (eventData.sentiment?.positive ?? 0) * 100}
-          suffix="%"
-          icon={Heart}
-          color="purple"
-          className="group hover:border-primary/30 transition-all duration-300"
-        />
-      </div>
-
-      {/* 互动指标 - 4列网格 */}
-      {engagementStats && (
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
-            <TrendingUp className="w-4 h-4" />
-            互动指标
-          </h3>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <MetricCard
-              title="评论总数"
-              value={engagementStats.totalComments}
-              icon={MessageCircle}
-              color="blue"
-              className="group hover:border-primary/30 transition-all duration-300"
-            />
-            <MetricCard
-              title="点赞总数"
-              value={engagementStats.totalLikes}
-              icon={ThumbsUp}
-              color="red"
-              className="group hover:border-primary/30 transition-all duration-300"
-            />
-            <MetricCard
-              title="转发总数"
-              value={engagementStats.totalReposts}
-              icon={Share2}
-              color="green"
-              className="group hover:border-primary/30 transition-all duration-300"
-            />
-            <MetricCard
-              title="互动总量"
-              value={engagementStats.totalEngagement}
-              icon={Activity}
-              color="yellow"
-              className="group hover:border-primary/30 transition-all duration-300"
-            />
-          </div>
-        </motion.div>
-      )}
-
       {/* Tab 导航 */}
       <Tabs value={activeTab} onValueChange={handleTabChange}>
         <TabsList className="grid w-full grid-cols-8 bg-muted/20 p-1">
@@ -1047,6 +970,79 @@ const EventDetail: React.FC = () => {
         {/* 总览 Tab */}
         <TabsContent value="overview" className="mt-6">
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+            {/* 核心指标 - 4列网格 */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <MetricCard
+                title="贴子总数"
+                value={stats?.totalPosts ?? eventData.postCount ?? 0}
+                icon={MessageSquare}
+                color="blue"
+                className="group hover:border-primary/30 transition-all duration-300"
+              />
+              <MetricCard
+                title="参与用户"
+                value={stats?.totalUsers ?? eventData.userCount ?? 0}
+                icon={Users}
+                color="green"
+                className="group hover:border-primary/30 transition-all duration-300"
+              />
+              <MetricCard
+                title="平均热度"
+                value={stats?.avgHotness ?? Number(eventData.hotness) ?? 0}
+                icon={Zap}
+                color="red"
+                className="group hover:border-primary/30 transition-all duration-300"
+              />
+              <MetricCard
+                title="情感得分"
+                value={stats?.avgSentiment ?? (eventData.sentiment?.positive ?? 0) * 100}
+                suffix="%"
+                icon={Heart}
+                color="purple"
+                className="group hover:border-primary/30 transition-all duration-300"
+              />
+            </div>
+
+            {/* 互动指标 - 4列网格 */}
+            {engagementStats && (
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4" />
+                  互动指标
+                </h3>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <MetricCard
+                    title="评论总数"
+                    value={engagementStats.totalComments}
+                    icon={MessageCircle}
+                    color="blue"
+                    className="group hover:border-primary/30 transition-all duration-300"
+                  />
+                  <MetricCard
+                    title="点赞总数"
+                    value={engagementStats.totalLikes}
+                    icon={ThumbsUp}
+                    color="red"
+                    className="group hover:border-primary/30 transition-all duration-300"
+                  />
+                  <MetricCard
+                    title="转发总数"
+                    value={engagementStats.totalReposts}
+                    icon={Share2}
+                    color="green"
+                    className="group hover:border-primary/30 transition-all duration-300"
+                  />
+                  <MetricCard
+                    title="互动总量"
+                    value={engagementStats.totalEngagement}
+                    icon={Activity}
+                    color="yellow"
+                    className="group hover:border-primary/30 transition-all duration-300"
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* 情感趋势 */}
               <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
