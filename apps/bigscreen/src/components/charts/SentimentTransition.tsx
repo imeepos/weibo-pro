@@ -86,19 +86,46 @@ function renderSankeyChart(data: SentimentTransitionAnalysis, container: HTMLEle
   const chart = echarts.init(container);
   const matrix = data.transitionMatrix;
 
-  // 使用节点名称而不是索引，确保 ECharts 正确解析
-  const nodes = ['Positive', 'Negative', 'Neutral'];
+  // 将每个情感状态拆分为源节点和目标节点，避免循环
+  // 例如：Positive 作为源只能流向其他节点，Positive_out -> Negative_in
+  const sourceNodes = ['Positive_out', 'Negative_out', 'Neutral_out'];
+  const targetNodes = ['Positive_in', 'Negative_in', 'Neutral_in'];
+
   const links = [
-    // 排除自环（source === target），避免 ECharts 检测到循环
-    { source: 'Positive', target: 'Negative', value: matrix.positiveToNegative },
-    { source: 'Positive', target: 'Neutral', value: matrix.positiveToNeutral },
-    { source: 'Negative', target: 'Positive', value: matrix.negativeToPositive },
-    { source: 'Negative', target: 'Neutral', value: matrix.negativeToNeutral },
-    { source: 'Neutral', target: 'Positive', value: matrix.neutralToPositive },
-    { source: 'Neutral', target: 'Negative', value: matrix.neutralToNegative },
+    // 从 Positive 流向其他节点
+    { source: 'Positive_out', target: 'Negative_in', value: matrix.positiveToNegative },
+    { source: 'Positive_out', target: 'Neutral_in', value: matrix.positiveToNeutral },
+    // 从 Negative 流向其他节点
+    { source: 'Negative_out', target: 'Positive_in', value: matrix.negativeToPositive },
+    { source: 'Negative_out', target: 'Neutral_in', value: matrix.negativeToNeutral },
+    // 从 Neutral 流向其他节点
+    { source: 'Neutral_out', target: 'Positive_in', value: matrix.neutralToPositive },
+    { source: 'Neutral_out', target: 'Negative_in', value: matrix.neutralToNegative },
+    // 添加自保持连接（状态保持不变）
+    { source: 'Positive_out', target: 'Positive_in', value: matrix.positiveToPositive },
+    { source: 'Negative_out', target: 'Negative_in', value: matrix.negativeToNegative },
+    { source: 'Neutral_out', target: 'Neutral_in', value: matrix.neutralToNeutral },
+  ];
+
+  // 过滤掉值为 0 的连接
+  const validLinks = links.filter((link) => link.value > 0);
+
+  // 创建节点，包含显示名称
+  const nodes = [
+    { name: 'Positive', category: 'source' },
+    { name: 'Negative', category: 'source' },
+    { name: 'Neutral', category: 'source' },
   ];
 
   const option = {
+    title: {
+      text: 'Sentiment Transition Flow',
+      left: 'center',
+    },
+    tooltip: {
+      trigger: 'item',
+      triggerOn: 'mousemove',
+    },
     series: [
       {
         type: 'sankey',
@@ -106,11 +133,60 @@ function renderSankeyChart(data: SentimentTransitionAnalysis, container: HTMLEle
         emphasis: {
           focus: 'adjacency',
         },
-        data: nodes.map((name) => ({ name })),
-        links: links.filter((link) => link.value > 0),
-        top: '20%',
+        data: nodes,
+        // 过滤掉可能导致循环的边，只保留单向流动
+        links: (() => {
+          const filteredLinks: typeof links = [];
+          const processedPairs = new Set<string>();
+
+          for (const link of validLinks) {
+            const source = link.source.replace('_out', '').replace('_in', '');
+            const target = link.target.replace('_out', '').replace('_in', '');
+
+            // 保留自环
+            if (source === target) {
+              filteredLinks.push(link);
+              continue;
+            }
+
+            // 创建排序后的键，用于检测双向流动
+            const pairKey = [source, target].sort().join('-');
+
+            if (processedPairs.has(pairKey)) {
+              // 已处理过这对节点，跳过
+              continue;
+            }
+
+            // 查找反向链接
+            const reverseLink = validLinks.find(
+              (l) => {
+                const revSource = l.source.replace('_out', '').replace('_in', '');
+                const revTarget = l.target.replace('_out', '').replace('_in', '');
+                return revSource === target && revTarget === source;
+              }
+            );
+
+            if (reverseLink) {
+              // 有双向流动，只保留流量较大的方向
+              if (link.value >= reverseLink.value) {
+                filteredLinks.push(link);
+              }
+              processedPairs.add(pairKey);
+            } else {
+              // 单向流动，保留
+              filteredLinks.push(link);
+            }
+          }
+
+          return filteredLinks.map((link) => ({
+            source: link.source.replace('_out', '').replace('_in', ''),
+            target: link.target.replace('_out', '').replace('_in', ''),
+            value: link.value,
+          }));
+        })(),
+        top: '10%',
         right: '10%',
-        bottom: '20%',
+        bottom: '10%',
         left: '10%',
         nodeWidth: 20,
         nodeGap: 8,

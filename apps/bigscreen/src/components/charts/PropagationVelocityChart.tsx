@@ -73,21 +73,21 @@ const PropagationVelocityChart: React.FC<PropagationVelocityChartProps> = ({
           <div className="bg-gray-800/50 rounded-lg p-4">
             <div className="text-sm text-gray-400 mb-1">当前速度</div>
             <div className="text-2xl font-bold text-white">
-              {data.currentVelocity.toLocaleString()}
+              {data.currentVelocity != null ? data.currentVelocity.toLocaleString() : '-'}
             </div>
             <div className="text-xs text-gray-500">转发/小时</div>
           </div>
           <div className="bg-gray-800/50 rounded-lg p-4">
             <div className="text-sm text-gray-400 mb-1">峰值速度</div>
             <div className="text-2xl font-bold text-white">
-              {data.peakVelocity.toLocaleString()}
+              {data.peakVelocity != null ? data.peakVelocity.toLocaleString() : '-'}
             </div>
             <div className="text-xs text-gray-500">转发/小时</div>
           </div>
           <div className="bg-gray-800/50 rounded-lg p-4">
             <div className="text-sm text-gray-400 mb-1">平均速度</div>
             <div className="text-2xl font-bold text-white">
-              {data.avgVelocity.toLocaleString()}
+              {data.avgVelocity != null ? data.avgVelocity.toLocaleString() : '-'}
             </div>
             <div className="text-xs text-gray-500">转发/小时</div>
           </div>
