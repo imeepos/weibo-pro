@@ -204,3 +204,6 @@ export interface EventPeak {
 
 // 从 SDK 重新导出 UserRelationNetwork
 export type { UserRelationNetwork } from '@sker/sdk'
+
+// 从 SDK 重新导出 KOLAnalysisResult
+export type { KOLAnalysisResult, KOLData } from '@sker/sdk'

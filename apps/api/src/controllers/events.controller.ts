@@ -126,6 +126,10 @@ export class EventsController implements sdk.EventsController {
     return this.eventsService.getEventUserRelations(id);
   }
 
+  async getKOLAnalysis(@Query('id') id: string) {
+    return this.eventsService.getKOLAnalysis(id);
+  }
+
   async updateEventKeywords(@Query('id') id: string, @Body() body: { keywords: string[] }) {
     return this.eventsService.updateEventKeywords(id, body.keywords);
   }

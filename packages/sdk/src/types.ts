@@ -446,6 +446,36 @@ export interface SearchResult {
   }>
 }
 
+/**
+ * 情感极化指数数据
+ * 用于衡量舆论的分裂程度
+ */
+export interface SentimentPolarization {
+  /** 极化指数 (0-1, 越高越极化) */
+  polarizationIndex: number
+  /** 双峰系数 */
+  bimodalityCoefficient: number
+  /** 极端情感占比 (0-1) */
+  extremeRatio: number
+  /** 中性情感占比 (0-1) */
+  neutralRatio: number
+  /** 情感方差 */
+  sentimentVariance: number
+  /** 情感标准差 */
+  sentimentStdDev: number
+  /** 情感分布 */
+  distribution: {
+    positive: number
+    negative: number
+    neutral: number
+    total: number
+  }
+  /** 极化等级描述 */
+  polarizationLevel: string
+  /** 极化等级对应的颜色 */
+  polarizationColor: string
+}
+
 // 系统相关类型
 export interface ComponentStatus {
   name: string
@@ -1039,4 +1069,20 @@ export interface EngagementBreakdown {
   likes: number
   total: number
   rate: number
+}
+
+// KOL 影响力分布数据
+export interface KOLData {
+  userId: string
+  screenName: string
+  influenceScore: number
+  followers: number
+  engagementRate: number
+  sentimentImpact: number
+}
+
+export interface KOLAnalysisResult {
+  topKOLs: KOLData[]
+  kolContributionRatio: number
+  paretoIndex: number
 }

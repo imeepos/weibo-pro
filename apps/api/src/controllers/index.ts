@@ -14,6 +14,7 @@ export { MarkdownController } from './markdown.controller';
 export { MediaCrawlerController } from './media-crawler.controller';
 export { OverviewController } from './overview.controller';
 export { PostsController } from './posts.controller';
+export { PropagationVelocityController } from './propagation-velocity.controller';
 export { PersonaController } from './persona.controller';
 export { ProxyController } from './proxy.controller';
 export { PromptRolesController } from './prompt-roles.controller';

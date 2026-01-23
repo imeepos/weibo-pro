@@ -101,6 +101,7 @@ export const CACHE_KEYS = {
     SENTIMENT_LOCATIONS: 'sentiment:locations',
     SENTIMENT_RECENT_POSTS: 'sentiment:recent-posts',
     SENTIMENT_SEARCH: 'sentiment:search',
+    SENTIMENT_POLARIZATION: 'sentiment:polarization',
     CHART_AGE: 'chart:age',
     CHART_GENDER: 'chart:gender',
     CHART_SENTIMENT_TREND: 'chart:sentiment-trend',

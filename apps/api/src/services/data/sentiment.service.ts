@@ -537,4 +537,53 @@ export class SentimentService {
       return 'week';                       // 更长时间按周
     }
   }
+
+  // 获取情感极化指数
+  async getPolarization(timeRange: TimeRange = '12h') {
+    const cacheKey = CacheService.buildKey(CACHE_KEYS.SENTIMENT_POLARIZATION, timeRange);
+
+    return await this.cacheService.getOrSet(
+      cacheKey,
+      () => this.fetchPolarization(timeRange),
+      CACHE_TTL.MEDIUM // 统计数据: 5分钟缓存
+    );
+  }
+
+  private async fetchPolarization(timeRange: TimeRange) {
+    // 导入计算工具函数
+    const { calculateSentimentPolarization, getPolarizationLevel, getPolarizationColor } = await import('../../utils/sentiment-polarization.utils');
+
+    return useEntityManager(async (manager) => {
+      const { start, end } = getTimeRangeBoundaries(timeRange);
+
+      // 查询情感分布
+      const result = await manager.query(`
+        SELECT
+          COUNT(*) as total,
+          SUM(CASE WHEN nlp.sentiment->>'overall' = 'positive' THEN 1 ELSE 0 END) as positive,
+          SUM(CASE WHEN nlp.sentiment->>'overall' = 'negative' THEN 1 ELSE 0 END) as negative,
+          SUM(CASE WHEN nlp.sentiment->>'overall' = 'neutral' THEN 1 ELSE 0 END) as neutral
+        FROM post_nlp_results nlp
+        INNER JOIN weibo_posts post ON post.id = nlp.post_id
+        WHERE post.ingested_at >= $1
+          AND post.ingested_at <= $2
+          AND post.deleted_at IS NULL
+      `, [start, end]);
+
+      const row = result[0];
+      const positive = parseInt(row?.positive || '0');
+      const negative = parseInt(row?.negative || '0');
+      const neutral = parseInt(row?.neutral || '0');
+
+      // 计算极化指数
+      const polarizationResult = calculateSentimentPolarization(positive, negative, neutral);
+
+      // 添加等级和颜色信息
+      return {
+        ...polarizationResult,
+        polarizationLevel: getPolarizationLevel(polarizationResult.polarizationIndex),
+        polarizationColor: getPolarizationColor(polarizationResult.polarizationIndex),
+      };
+    });
+  }
 }

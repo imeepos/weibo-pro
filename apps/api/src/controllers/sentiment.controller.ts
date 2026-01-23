@@ -43,4 +43,8 @@ export class SentimentController implements sdk.SentimentController {
   async search(@Body() searchData: { keyword: string; timeRange?: TimeRange }) {
     return this.sentimentService.search(searchData.keyword, searchData.timeRange);
   }
+
+  async getPolarization(@Query('timeRange') timeRange: TimeRange = `12h`) {
+    return this.sentimentService.getPolarization(timeRange);
+  }
 }

@@ -8,7 +8,8 @@ import type {
   SentimentTimeSeriesItem,
   SentimentLocationData,
   RecentPost,
-  SearchResult
+  SearchResult,
+  SentimentPolarization
 } from '../types'
 
 @Controller('sentiment')
@@ -52,5 +53,10 @@ export class SentimentController {
   @Post('search')
   search(@Body() searchData: { keyword: string; timeRange?: TimeRange }): Promise<SearchResult> {
     throw new Error('method search not implements')
+  }
+
+  @Get('polarization')
+  getPolarization(@Query('timeRange') timeRange: TimeRange = '12h'): Promise<SentimentPolarization> {
+    throw new Error('method getPolarization not implements')
   }
 }

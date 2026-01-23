@@ -27,6 +27,8 @@ import { EventQueryService } from './event-query.service';
 import { EventAnalyticsService } from './event-analytics.service';
 import { EventTimelineBuilder } from './event-timeline.builder';
 import { DataSource, EventEntity } from '@sker/entities';
+import { KOLAnalysisService } from '../kol-analysis.service';
+import type { KOLAnalysisResult } from './types';
 
 @Injectable({ providedIn: 'root' })
 export class EventsService {
@@ -39,7 +41,8 @@ export class EventsService {
     private readonly analyticsService: EventAnalyticsService,
     @Inject(EventTimelineBuilder)
     private readonly timelineBuilder: EventTimelineBuilder,
-    @Inject(DataSource) private dataSource: DataSource
+    @Inject(DataSource) private dataSource: DataSource,
+    @Inject(KOLAnalysisService) private readonly kolAnalysisService: KOLAnalysisService
   ) { }
 
   async getEventList(
@@ -264,5 +267,9 @@ export class EventsService {
       success: true,
       clearedKeys
     };
+  }
+
+  async getKOLAnalysis(eventId: string): Promise<KOLAnalysisResult> {
+    return this.kolAnalysisService.getKOLAnalysis(eventId);
   }
 }

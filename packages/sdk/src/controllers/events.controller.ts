@@ -24,7 +24,8 @@ import type {
   EventHourlySummary,
   MultiMetricTrendData,
   EngagementBreakdown,
-  UserRelationNetwork
+  UserRelationNetwork,
+  KOLAnalysisResult
 } from '../types'
 
 @Controller('events')
@@ -144,6 +145,11 @@ export class EventsController {
   @Get('user-relations')
   getEventUserRelations(@Query('id') id: string): Promise<UserRelationNetwork> {
     throw new Error('method getEventUserRelations not implements')
+  }
+
+  @Get('kol-analysis')
+  getKOLAnalysis(@Query('id') id: string): Promise<KOLAnalysisResult> {
+    throw new Error('method getKOLAnalysis not implements')
   }
 
   @Patch('keywords')
