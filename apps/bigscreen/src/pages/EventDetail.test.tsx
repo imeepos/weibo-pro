@@ -4,6 +4,7 @@
  * - 数据加载和渲染
  * - 关键字编辑对话框交互
  * - Tab 切换
+ * - Tab 懒加载
  * - 滚动行为（防止事件冒泡）
  * - 刷新功能
  * - 导航功能
@@ -693,7 +694,7 @@ describe('EventDetail', () => {
    * Tab 切换测试
    */
   describe('Tab 切换', () => {
-    it('应该显示四个 Tab', async () => {
+    it('应该显示八个 Tab', async () => {
       render(
         <MemoryRouter initialEntries={[`/event/${mockEventId}`]}>
           <EventDetail />
@@ -706,8 +707,12 @@ describe('EventDetail', () => {
 
       expect(screen.getByText('总览')).toBeInTheDocument();
       expect(screen.getByText('关系网络')).toBeInTheDocument();
+      expect(screen.getByText('地理分布')).toBeInTheDocument();
       expect(screen.getByText('趋势分析')).toBeInTheDocument();
       expect(screen.getByText('情感分析')).toBeInTheDocument();
+      expect(screen.getByText('高级分析')).toBeInTheDocument();
+      expect(screen.getByText('用户分析')).toBeInTheDocument();
+      expect(screen.getByText('内容分析')).toBeInTheDocument();
     });
 
     it('应该默认选中总览 Tab', async () => {
@@ -760,8 +765,8 @@ describe('EventDetail', () => {
       fireEvent.click(trendTab);
 
       await waitFor(() => {
+        expect(screen.getByText('传播广度分析')).toBeInTheDocument();
         expect(screen.getByText('核心指标时间趋势')).toBeInTheDocument();
-        expect(screen.getByText('互动指标分解')).toBeInTheDocument();
         expect(screen.getByText('异常检测时间线')).toBeInTheDocument();
       });
     });
@@ -785,6 +790,193 @@ describe('EventDetail', () => {
         expect(screen.getByText('情感-热度关联')).toBeInTheDocument();
         expect(screen.getByText('情感强度谱')).toBeInTheDocument();
       });
+    });
+  });
+
+  /**
+   * Tab 懒加载测试
+   */
+  describe('Tab 懒加载', () => {
+    it('应该只在初始化时加载 P0 数据（基础数据 + overview Tab）', async () => {
+      render(
+        <MemoryRouter initialEntries={[`/event/${mockEventId}`]}>
+          <EventDetail />
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('测试事件标题')).toBeInTheDocument();
+      });
+
+      // 验证只调用了 P0 数据的 API
+      expect(mockEventsController.getEventDetail).toHaveBeenCalledTimes(1);
+      expect(mockEventsController.getEventTimeSeries).toHaveBeenCalledTimes(1);
+      expect(mockEventsController.getEventTrends).toHaveBeenCalledTimes(1);
+      expect(mockEventsController.getEventKeywords).toHaveBeenCalledTimes(1);
+      expect(mockEventsController.getEngagementTrend).toHaveBeenCalledTimes(1);
+
+      // P1 数据不应该被加载
+      expect(mockEventsController.getEventUserRelations).not.toHaveBeenCalled();
+      expect(mockEventsController.getEventGeographic).not.toHaveBeenCalled();
+      expect(mockEventsController.getSentimentHotness).not.toHaveBeenCalled();
+      expect(mockEventsController.getSentimentIntensity).not.toHaveBeenCalled();
+      expect(mockEventsController.getAnomalies).not.toHaveBeenCalled();
+    });
+
+    it('应该在切换到 network Tab 时加载关系网络数据', async () => {
+      render(
+        <MemoryRouter initialEntries={[`/event/${mockEventId}`]}>
+          <EventDetail />
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('测试事件标题')).toBeInTheDocument();
+      });
+
+      // 切换到关系网络 Tab
+      const networkTab = screen.getByText('关系网络');
+      fireEvent.click(networkTab);
+
+      // 应该显示加载指示器
+      await waitFor(() => {
+        expect(screen.getByText('加载关系网络数据中...')).toBeInTheDocument();
+      });
+
+      // 等待数据加载完成
+      await waitFor(() => {
+        expect(mockEventsController.getEventUserRelations).toHaveBeenCalledTimes(1);
+        expect(screen.getByText('用户关系网络')).toBeInTheDocument();
+      });
+    });
+
+    it('应该在切换到 geographic Tab 时加载地理分布数据', async () => {
+      render(
+        <MemoryRouter initialEntries={[`/event/${mockEventId}`]}>
+          <EventDetail />
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('测试事件标题')).toBeInTheDocument();
+      });
+
+      const geographicTab = screen.getByText('地理分布');
+      fireEvent.click(geographicTab);
+
+      await waitFor(() => {
+        expect(mockEventsController.getEventGeographic).toHaveBeenCalledTimes(1);
+        expect(screen.getByText('地理分布分析')).toBeInTheDocument();
+      });
+    });
+
+    it('应该在切换到 sentiment Tab 时加载情感分析数据', async () => {
+      render(
+        <MemoryRouter initialEntries={[`/event/${mockEventId}`]}>
+          <EventDetail />
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('测试事件标题')).toBeInTheDocument();
+      });
+
+      const sentimentTab = screen.getByText('情感分析');
+      fireEvent.click(sentimentTab);
+
+      await waitFor(() => {
+        expect(mockEventsController.getSentimentHotness).toHaveBeenCalledTimes(1);
+        expect(mockEventsController.getSentimentIntensity).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it('应该缓存已加载的 Tab 数据（不重复请求）', async () => {
+      render(
+        <MemoryRouter initialEntries={[`/event/${mockEventId}`]}>
+          <EventDetail />
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('测试事件标题')).toBeInTheDocument();
+      });
+
+      // 切换到关系网络 Tab
+      const networkTab = screen.getByText('关系网络');
+      fireEvent.click(networkTab);
+
+      await waitFor(() => {
+        expect(mockEventsController.getEventUserRelations).toHaveBeenCalledTimes(1);
+      });
+
+      // 切换回总览 Tab
+      const overviewTab = screen.getByText('总览');
+      fireEvent.click(overviewTab);
+
+      await waitFor(() => {
+        expect(screen.getByText('情感变化趋势')).toBeInTheDocument();
+      });
+
+      // 再次切换到关系网络 Tab
+      fireEvent.click(networkTab);
+
+      await waitFor(() => {
+        expect(screen.getByText('用户关系网络')).toBeInTheDocument();
+      });
+
+      // 验证 API 仍然只被调用了 1 次（使用了缓存）
+      expect(mockEventsController.getEventUserRelations).toHaveBeenCalledTimes(1);
+    });
+
+    it('应该在加载失败时显示错误状态和重试按钮', async () => {
+      mockEventsController.getEventUserRelations.mockRejectedValue(new Error('Network error'));
+
+      render(
+        <MemoryRouter initialEntries={[`/event/${mockEventId}`]}>
+          <EventDetail />
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('测试事件标题')).toBeInTheDocument();
+      });
+
+      const networkTab = screen.getByText('关系网络');
+      fireEvent.click(networkTab);
+
+      await waitFor(() => {
+        expect(screen.getByText('加载失败')).toBeInTheDocument();
+        expect(screen.getByText('重试')).toBeInTheDocument();
+      });
+    });
+
+    it('应该支持快速切换多个 Tab 而不重复加载', async () => {
+      render(
+        <MemoryRouter initialEntries={[`/event/${mockEventId}`]}>
+          <EventDetail />
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('测试事件标题')).toBeInTheDocument();
+      });
+
+      // 快速切换多个 Tab
+      const tabs = ['关系网络', '地理分布', '趋势分析', '情感分析'];
+      for (const tabName of tabs) {
+        const tab = screen.getByText(tabName);
+        fireEvent.click(tab);
+        await waitFor(() => {
+          // 等待 Tab 切换完成
+          expect(tab.closest('button')).toHaveAttribute('data-state', 'active');
+        });
+      }
+
+      // 验证每个 API 只被调用一次
+      expect(mockEventsController.getEventUserRelations).toHaveBeenCalledTimes(1);
+      expect(mockEventsController.getEventGeographic).toHaveBeenCalledTimes(1);
+      expect(mockEventsController.getSentimentHotness).toHaveBeenCalledTimes(1);
+      expect(mockEventsController.getSentimentIntensity).toHaveBeenCalledTimes(1);
     });
   });
 

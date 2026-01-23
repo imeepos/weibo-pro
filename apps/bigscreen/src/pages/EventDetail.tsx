@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -16,6 +16,8 @@ import {
 } from '@sker/sdk'
 import type { UserRelationNetwork } from '@sker/sdk'
 import { root } from '@sker/core'
+import type { TabId, TabsDataManager } from '@/types/tab-loading';
+import { createInitialTabsState } from '@/types/tab-loading';
 import {
   ArrowLeft,
   MessageSquare,
@@ -173,13 +175,15 @@ const EventDetail: React.FC = () => {
   const [commentDepthData, setCommentDepthData] = useState<any>(null);
   const [postingTimeData, setPostingTimeData] = useState<any>(null);
   const [networkCentralityData, setNetworkCentralityData] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isRefreshingCache, setIsRefreshingCache] = useState(false);
   const [editingKeywords, setEditingKeywords] = useState<string[]>([]);
   const [keywordInput, setKeywordInput] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  // Tab 懒加载状态管理
+  const [tabsState, setTabsState] = useState<TabsDataManager>(createInitialTabsState());
 
   const fetchEventData = async (showRefresh = false) => {
     if (!eventId) {
@@ -190,7 +194,15 @@ const EventDetail: React.FC = () => {
       if (showRefresh) setIsRefreshing(true);
       const c = root.get(EventsController)
 
-      const eventData = await c.getEventDetail(eventId);
+      // P0: 只加载基础数据和 overview Tab 数据
+      const [eventData, timeSeriesData, trendData, keywordsData] = await Promise.all([
+        c.getEventDetail(eventId),
+        c.getEventTimeSeries(eventId),
+        c.getEventTrends(eventId),
+        c.getEventKeywords(eventId),
+      ]);
+
+      // 转换事件基础数据
       const convertedEventData: EventDetailData = {
         id: eventData.id, title: eventData.title, description: eventData.description || '',
         postCount: eventData.postCount, userCount: eventData.userCount,
@@ -205,7 +217,7 @@ const EventDetail: React.FC = () => {
       };
       setEventData(convertedEventData);
 
-      const timeSeriesData = await c.getEventTimeSeries(eventId);
+      // 转换时间序列数据
       const convertedTimeSeries: TimeSeriesDataPoint[] = [];
       if (timeSeriesData?.categories && Array.isArray(timeSeriesData.categories)) {
         const categories = timeSeriesData.categories;
@@ -237,71 +249,237 @@ const EventDetail: React.FC = () => {
       }
       setTimeSeriesData(convertedTimeSeries);
 
-      const trendData = await c.getEventTrends(eventId);
-      setTrendData({ hotnessData: trendData.hotnessData || [], sentimentData: trendData.sentimentScores || [], postData: trendData.postVolume || [], userData: trendData.userEngagement || [] });
+      // 转换趋势数据
+      setTrendData({
+        hotnessData: trendData.hotnessData || [],
+        sentimentData: trendData.sentimentScores || [],
+        postData: trendData.postVolume || [],
+        userData: trendData.userEngagement || []
+      });
 
-      const userRelationData = await c.getEventUserRelations(eventId);
-      setUserRelationNetwork(userRelationData);
+      // 转换关键词数据
+      setKeywordData(keywordsData.map(item => ({
+        keyword: item.keyword,
+        weight: item.weight,
+        sentiment: item.sentiment as 'positive' | 'negative' | 'neutral'
+      })));
 
-      const geographicData = await c.getEventGeographic(eventId);
-      setGeographicData(geographicData.map(item => ({ region: item.region, count: item.count, percentage: item.percentage, posts: item.posts, sentiment: item.sentiment })));
+      // P0: overview Tab 的额外数据（可选）
+      try {
+        setEngagementTrendData(await c.getEngagementTrend(eventId) || []);
+      } catch (e) {
+        logger.warn('Failed to fetch engagement trend:', e);
+      }
 
-      const keywordsData = await c.getEventKeywords(eventId);
-      setKeywordData(keywordsData.map(item => ({ keyword: item.keyword, weight: item.weight, sentiment: item.sentiment as 'positive' | 'negative' | 'neutral' })));
+      // 标记 overview 为已加载
+      setTabsState(prev => ({
+        ...prev,
+        overview: { loadingState: 'success', error: null, lastLoadedAt: Date.now() }
+      }));
 
-      try { setSentimentHotnessData(await c.getSentimentHotness(eventId) || []); } catch (e) { logger.warn('Failed to fetch sentiment hotness:', e); }
-      try { setSentimentIntensityData(await c.getSentimentIntensity(eventId) || []); } catch (e) { logger.warn('Failed to fetch sentiment intensity:', e); }
-      try { setEngagementTrendData(await c.getEngagementTrend(eventId) || []); } catch (e) { logger.warn('Failed to fetch engagement trend:', e); }
-      try { setAnomaliesData(await c.getAnomalies(eventId) || []); } catch (e) { logger.warn('Failed to fetch anomalies:', e); }
-      // P2 组件数据获取 - 使用专门的 Controller
-      try {
-        const spreadBreadthController = root.get(SpreadBreadthController);
-        setSpreadBreadthData(await spreadBreadthController.getAnalysis(eventId));
-      } catch (e) { logger.warn('Failed to fetch spread breadth:', e); }
-      try {
-        const mediaTypeController = root.get(MediaTypeController);
-        setMediaTypeData(await mediaTypeController.getDistribution(eventId));
-      } catch (e) { logger.warn('Failed to fetch media type distribution:', e); }
-      try {
-        const communityDetectionController = root.get(CommunityDetectionController);
-        setCommunityData(await communityDetectionController.getAnalysis(eventId));
-      } catch (e) { logger.warn('Failed to fetch community analysis:', e); }
-      // P3 组件数据获取
-      try {
-        const propagationVelocityController = root.get(PropagationVelocityController);
-        setPropagationVelocityData(await propagationVelocityController.getVelocity(eventId));
-      } catch (e) { logger.warn('Failed to fetch propagation velocity:', e); }
-      try {
-        const influencePredictionController = root.get(InfluencePredictionController);
-        setInfluencePredictionData(await influencePredictionController.getInfluencePrediction(eventId));
-      } catch (e) { logger.warn('Failed to fetch influence prediction:', e); }
-      try {
-        const communityEvolutionController = root.get(CommunityEvolutionController);
-        setCommunityEvolutionData(await communityEvolutionController.getAnalysis(eventId));
-      } catch (e) { logger.warn('Failed to fetch community evolution:', e); }
-      // P1 组件数据获取
-      try {
-        const userStratificationController = root.get(UserStratificationController);
-        setUserStratificationData(await userStratificationController.getStratification(eventId));
-      } catch (e) { logger.warn('Failed to fetch user stratification:', e); }
-      try {
-        const commentDepthController = root.get(CommentDepthController);
-        setCommentDepthData(await commentDepthController.getAnalysis(eventId));
-      } catch (e) { logger.warn('Failed to fetch comment depth:', e); }
-      try {
-        const postingTimeController = root.get(PostingTimeController);
-        setPostingTimeData(await postingTimeController.getHeatmap(eventId));
-      } catch (e) { logger.warn('Failed to fetch posting time:', e); }
-      try {
-        const networkCentralityController = root.get(NetworkCentralityController);
-        setNetworkCentralityData(await networkCentralityController.getAnalysis(eventId));
-      } catch (e) { logger.warn('Failed to fetch network centrality:', e); }
+      // 如果当前 Tab 不是 overview，加载当前 Tab 数据
+      if (activeTab !== 'overview') {
+        await loadTabData(activeTab);
+      }
     } catch (error) {
       logger.error('Failed to fetch event data:', error);
+      setTabsState(prev => ({
+        ...prev,
+        overview: { loadingState: 'error', error: error as Error, lastLoadedAt: null }
+      }));
     } finally {
       setIsRefreshing(false);
     }
   };
+
+  // 按 Tab 加载数据
+  const loadDataForTab = useCallback(async (tabId: TabId) => {
+    if (!eventId) return;
+    const c = root.get(EventsController);
+
+    switch (tabId) {
+      case 'overview':
+        // overview 已在 fetchEventData 中加载
+        break;
+
+      case 'network':
+        // 加载关系网络和社区发现数据
+        await Promise.all([
+          (async () => {
+            if (!userRelationNetwork) {
+              const data = await c.getEventUserRelations(eventId);
+              setUserRelationNetwork(data);
+            }
+          })(),
+          (async () => {
+            if (!communityData) {
+              const controller = root.get(CommunityDetectionController);
+              const data = await controller.getAnalysis(eventId);
+              setCommunityData(data);
+            }
+          })(),
+        ]);
+        break;
+
+      case 'geographic':
+        // 加载地理分布数据
+        if (!geographicData.length) {
+          const data = await c.getEventGeographic(eventId);
+          setGeographicData(data.map(item => ({
+            region: item.region,
+            count: item.count,
+            percentage: item.percentage,
+            posts: item.posts,
+            sentiment: item.sentiment
+          })));
+        }
+        break;
+
+      case 'trend':
+        // 加载趋势分析数据
+        await Promise.all([
+          (async () => {
+            if (!spreadBreadthData) {
+              const controller = root.get(SpreadBreadthController);
+              const data = await controller.getAnalysis(eventId);
+              setSpreadBreadthData(data);
+            }
+          })(),
+          (async () => {
+            if (!mediaTypeData) {
+              const controller = root.get(MediaTypeController);
+              const data = await controller.getDistribution(eventId);
+              setMediaTypeData(data);
+            }
+          })(),
+          (async () => {
+            if (!anomaliesData.length) {
+              const data = await c.getAnomalies(eventId);
+              setAnomaliesData(data || []);
+            }
+          })(),
+        ]);
+        break;
+
+      case 'sentiment':
+        // 加载情感分析数据
+        await Promise.all([
+          (async () => {
+            if (!sentimentHotnessData.length) {
+              const data = await c.getSentimentHotness(eventId);
+              setSentimentHotnessData(data || []);
+            }
+          })(),
+          (async () => {
+            if (!sentimentIntensityData.length) {
+              const data = await c.getSentimentIntensity(eventId);
+              setSentimentIntensityData(data || []);
+            }
+          })(),
+        ]);
+        break;
+
+      case 'advanced':
+        // 加载高级分析数据
+        await Promise.all([
+          (async () => {
+            if (!propagationVelocityData) {
+              const controller = root.get(PropagationVelocityController);
+              const data = await controller.getVelocity(eventId);
+              setPropagationVelocityData(data);
+            }
+          })(),
+          (async () => {
+            if (!influencePredictionData) {
+              const controller = root.get(InfluencePredictionController);
+              const data = await controller.getInfluencePrediction(eventId);
+              setInfluencePredictionData(data);
+            }
+          })(),
+          (async () => {
+            if (!communityEvolutionData) {
+              const controller = root.get(CommunityEvolutionController);
+              const data = await controller.getAnalysis(eventId);
+              setCommunityEvolutionData(data);
+            }
+          })(),
+        ]);
+        break;
+
+      case 'user-analysis':
+        // 加载用户分析数据
+        if (!userStratificationData) {
+          const controller = root.get(UserStratificationController);
+          const data = await controller.getStratification(eventId);
+          setUserStratificationData(data);
+        }
+        break;
+
+      case 'content-analysis':
+        // 加载内容分析数据
+        await Promise.all([
+          (async () => {
+            if (!postingTimeData) {
+              const controller = root.get(PostingTimeController);
+              const data = await controller.getHeatmap(eventId);
+              setPostingTimeData(data);
+            }
+          })(),
+          (async () => {
+            if (!commentDepthData) {
+              const controller = root.get(CommentDepthController);
+              const data = await controller.getAnalysis(eventId);
+              setCommentDepthData(data);
+            }
+          })(),
+        ]);
+        break;
+    }
+  }, [eventId, userRelationNetwork, communityData, geographicData, spreadBreadthData, mediaTypeData, anomaliesData, sentimentHotnessData, sentimentIntensityData, propagationVelocityData, influencePredictionData, communityEvolutionData, userStratificationData, postingTimeData, commentDepthData]);
+
+  // Tab 懒加载核心逻辑
+  const loadTabData = useCallback(async (tabId: TabId, force = false) => {
+    // 检查缓存
+    if (!force && tabsState[tabId].loadingState === 'success') {
+      return; // 已加载，跳过
+    }
+
+    // 检查是否正在加载
+    if (tabsState[tabId].loadingState === 'loading') {
+      return; // 正在加载，避免重复请求
+    }
+
+    // 更新为加载中
+    setTabsState(prev => ({
+      ...prev,
+      [tabId]: { ...prev[tabId], loadingState: 'loading', error: null }
+    }));
+
+    try {
+      // 根据 Tab ID 加载对应数据
+      await loadDataForTab(tabId);
+
+      // 更新为成功
+      setTabsState(prev => ({
+        ...prev,
+        [tabId]: { loadingState: 'success', error: null, lastLoadedAt: Date.now() }
+      }));
+    } catch (error) {
+      logger.error(`Failed to load tab data for ${tabId}:`, error);
+      // 更新为失败
+      setTabsState(prev => ({
+        ...prev,
+        [tabId]: { loadingState: 'error', error: error as Error, lastLoadedAt: null }
+      }));
+    }
+  }, [tabsState, loadDataForTab]);
+
+  // Tab 切换处理
+  const handleTabChange = useCallback((newTab: string) => {
+    const tabId = newTab as TabId;
+    setActiveTab(tabId);
+    loadTabData(tabId);
+  }, [loadTabData]);
 
   useEffect(() => { fetchEventData(); }, [eventId]);
 
@@ -374,6 +552,27 @@ const EventDetail: React.FC = () => {
       const c = root.get(EventsController);
       const result = await c.refreshCache(eventId);
       logger.info('Cache refreshed successfully', result);
+
+      // 清除所有 Tab 的加载状态
+      setTabsState(createInitialTabsState());
+
+      // 清除所有数据状态
+      setUserRelationNetwork(null);
+      setGeographicData([]);
+      setSpreadBreadthData(null);
+      setMediaTypeData(null);
+      setCommunityData(null);
+      setAnomaliesData([]);
+      setSentimentHotnessData([]);
+      setSentimentIntensityData([]);
+      setPropagationVelocityData(null);
+      setInfluencePredictionData(null);
+      setCommunityEvolutionData(null);
+      setUserStratificationData(null);
+      setCommentDepthData(null);
+      setPostingTimeData(null);
+      setNetworkCentralityData(null);
+
       // 清除缓存后，重新加载数据
       await fetchEventData(true);
     } catch (error) {
@@ -749,7 +948,7 @@ const EventDetail: React.FC = () => {
       )}
 
       {/* Tab 导航 */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
         <TabsList className="grid w-full grid-cols-8 bg-muted/20 p-1">
           <TabsTrigger value="overview" className="data-[state=active]:bg-primary/20 gap-2">
             <Layers className="w-4 h-4" />
@@ -758,30 +957,51 @@ const EventDetail: React.FC = () => {
           <TabsTrigger value="network" className="data-[state=active]:bg-primary/20 gap-2">
             <Network className="w-4 h-4" />
             <span className="hidden sm:inline">关系网络</span>
+            {tabsState.network.loadingState === 'loading' && (
+              <RefreshCw className="w-3 h-3 animate-spin" />
+            )}
           </TabsTrigger>
           <TabsTrigger value="geographic" className="data-[state=active]:bg-primary/20 gap-2">
             <Globe className="w-4 h-4" />
             <span className="hidden sm:inline">地理分布</span>
+            {tabsState.geographic.loadingState === 'loading' && (
+              <RefreshCw className="w-3 h-3 animate-spin" />
+            )}
           </TabsTrigger>
           <TabsTrigger value="trend" className="data-[state=active]:bg-primary/20 gap-2">
             <LineChart className="w-4 h-4" />
             <span className="hidden sm:inline">趋势分析</span>
+            {tabsState.trend.loadingState === 'loading' && (
+              <RefreshCw className="w-3 h-3 animate-spin" />
+            )}
           </TabsTrigger>
           <TabsTrigger value="sentiment" className="data-[state=active]:bg-primary/20 gap-2">
             <Heart className="w-4 h-4" />
             <span className="hidden sm:inline">情感分析</span>
+            {tabsState.sentiment.loadingState === 'loading' && (
+              <RefreshCw className="w-3 h-3 animate-spin" />
+            )}
           </TabsTrigger>
           <TabsTrigger value="advanced" className="data-[state=active]:bg-primary/20 gap-2">
             <Target className="w-4 h-4" />
             <span className="hidden sm:inline">高级分析</span>
+            {tabsState.advanced.loadingState === 'loading' && (
+              <RefreshCw className="w-3 h-3 animate-spin" />
+            )}
           </TabsTrigger>
           <TabsTrigger value="user-analysis" className="data-[state=active]:bg-primary/20 gap-2">
             <Users className="w-4 h-4" />
             <span className="hidden sm:inline">用户分析</span>
+            {tabsState['user-analysis'].loadingState === 'loading' && (
+              <RefreshCw className="w-3 h-3 animate-spin" />
+            )}
           </TabsTrigger>
           <TabsTrigger value="content-analysis" className="data-[state=active]:bg-primary/20 gap-2">
             <MessageSquare className="w-4 h-4" />
             <span className="hidden sm:inline">内容分析</span>
+            {tabsState['content-analysis'].loadingState === 'loading' && (
+              <RefreshCw className="w-3 h-3 animate-spin" />
+            )}
           </TabsTrigger>
         </TabsList>
 
@@ -819,229 +1039,336 @@ const EventDetail: React.FC = () => {
 
         {/* 关系网络 Tab */}
         <TabsContent value="network" className="mt-6">
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-            <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
-              <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                用户关系网络
-              </h3>
-              {userRelationNetwork && userRelationNetwork.nodes.length > 0 ? (
-                <div className="h-[550px]">
-                  <UserRelationGraph3DOffscreen network={userRelationNetwork} className="w-full h-full" edgeThreshold={10} />
-                </div>
-              ) : (
-                <div className="h-[550px] flex items-center justify-center text-muted-foreground">
-                  暂无用户关系数据
-                </div>
-              )}
+          {tabsState.network.loadingState === 'loading' ? (
+            <div className="flex items-center justify-center h-[600px]">
+              <div className="text-center space-y-4">
+                <RefreshCw className="w-8 h-8 animate-spin mx-auto text-primary" />
+                <p className="text-sm text-muted-foreground">加载关系网络数据中...</p>
+              </div>
             </div>
-            {/* P2: 社区发现 */}
-            <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
-              <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
-                <Network className="w-4 h-4" />
-                社区发现分析
-              </h3>
-              <CommunityGraph
-                data={communityData}
-                isLoading={!communityData}
-                height={500}
-              />
+          ) : tabsState.network.loadingState === 'error' ? (
+            <div className="flex items-center justify-center h-[600px]">
+              <div className="text-center space-y-4">
+                <AlertTriangle className="w-8 h-8 mx-auto text-destructive" />
+                <p className="text-sm text-destructive">加载失败</p>
+                <Button onClick={() => loadTabData('network', true)}>重试</Button>
+              </div>
             </div>
-          </motion.div>
+          ) : (
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+              <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
+                <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  用户关系网络
+                </h3>
+                {userRelationNetwork && userRelationNetwork.nodes.length > 0 ? (
+                  <div className="h-[550px]">
+                    <UserRelationGraph3DOffscreen network={userRelationNetwork} className="w-full h-full" edgeThreshold={10} />
+                  </div>
+                ) : (
+                  <div className="h-[550px] flex items-center justify-center text-muted-foreground">
+                    暂无用户关系数据
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
         </TabsContent>
 
         {/* 地理分布 Tab */}
         <TabsContent value="geographic" className="mt-6">
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-            <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
-              <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
-                <Globe className="w-4 h-4" />
-                地理分布分析
-              </h3>
-              <GeographicDistributionChart
-                data={geographicData}
-                height={400}
-                showTable={true}
-                maxItems={20}
-              />
+          {tabsState.geographic.loadingState === 'loading' ? (
+            <div className="flex items-center justify-center h-[600px]">
+              <div className="text-center space-y-4">
+                <RefreshCw className="w-8 h-8 animate-spin mx-auto text-primary" />
+                <p className="text-sm text-muted-foreground">加载地理分布数据中...</p>
+              </div>
             </div>
-          </motion.div>
+          ) : tabsState.geographic.loadingState === 'error' ? (
+            <div className="flex items-center justify-center h-[600px]">
+              <div className="text-center space-y-4">
+                <AlertTriangle className="w-8 h-8 mx-auto text-destructive" />
+                <p className="text-sm text-destructive">加载失败</p>
+                <Button onClick={() => loadTabData('geographic', true)}>重试</Button>
+              </div>
+            </div>
+          ) : (
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+              <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
+                <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
+                  <Globe className="w-4 h-4" />
+                  地理分布分析
+                </h3>
+                <GeographicDistributionChart
+                  data={geographicData}
+                  height={400}
+                  showTable={true}
+                  maxItems={20}
+                />
+              </div>
+            </motion.div>
+          )}
         </TabsContent>
 
         {/* 趋势分析 Tab */}
         <TabsContent value="trend" className="mt-6">
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-            {/* P2: 传播广度分析 */}
-            <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
-              <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
-                <Activity className="w-4 h-4" />
-                传播广度分析
-              </h3>
-              <SpreadBreadthChart
-                data={spreadBreadthData}
-                isLoading={!spreadBreadthData}
-                height={400}
-              />
+          {tabsState.trend.loadingState === 'loading' ? (
+            <div className="flex items-center justify-center h-[600px]">
+              <div className="text-center space-y-4">
+                <RefreshCw className="w-8 h-8 animate-spin mx-auto text-primary" />
+                <p className="text-sm text-muted-foreground">加载趋势分析数据中...</p>
+              </div>
             </div>
-            <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
-              <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
-                <Activity className="w-4 h-4" />
-                核心指标时间趋势
-              </h3>
-              <MultiMetricTrendChart data={engagementTrendData} height={380} />
+          ) : tabsState.trend.loadingState === 'error' ? (
+            <div className="flex items-center justify-center h-[600px]">
+              <div className="text-center space-y-4">
+                <AlertTriangle className="w-8 h-8 mx-auto text-destructive" />
+                <p className="text-sm text-destructive">加载失败</p>
+                <Button onClick={() => loadTabData('trend', true)}>重试</Button>
+              </div>
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* P2: 媒体类型分布 */}
+          ) : (
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+              {/* P2: 传播广度分析 */}
               <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
                 <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4" />
-                  媒体类型分布
+                  <Activity className="w-4 h-4" />
+                  传播广度分析
                 </h3>
-                <MediaTypeDistribution
-                  data={mediaTypeData}
-                  isLoading={!mediaTypeData}
-                  height={350}
+                <SpreadBreadthChart
+                  data={spreadBreadthData}
+                  isLoading={!spreadBreadthData}
+                  height={400}
                 />
               </div>
               <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
                 <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4" />
-                  异常检测时间线
+                  <Activity className="w-4 h-4" />
+                  核心指标时间趋势
                 </h3>
-                <AnomalyTimelineChart data={anomaliesData} height={350} />
+                <MultiMetricTrendChart data={engagementTrendData} height={380} />
               </div>
-            </div>
-          </motion.div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* P2: 媒体类型分布 */}
+                <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
+                  <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
+                    <BarChart3 className="w-4 h-4" />
+                    媒体类型分布
+                  </h3>
+                  <MediaTypeDistribution
+                    data={mediaTypeData}
+                    isLoading={!mediaTypeData}
+                    height={350}
+                  />
+                </div>
+                <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
+                  <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4" />
+                    异常检测时间线
+                  </h3>
+                  <AnomalyTimelineChart data={anomaliesData} height={350} />
+                </div>
+              </div>
+            </motion.div>
+          )}
         </TabsContent>
 
         {/* 情感分析 Tab */}
         <TabsContent value="sentiment" className="mt-6">
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-            {/* P2: 情感转变追踪 */}
-            <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
-              <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
-                <Heart className="w-4 h-4" />
-                情感转变追踪
-              </h3>
-              {eventId && <SentimentTransition eventId={eventId} />}
+          {tabsState.sentiment.loadingState === 'loading' ? (
+            <div className="flex items-center justify-center h-[600px]">
+              <div className="text-center space-y-4">
+                <RefreshCw className="w-8 h-8 animate-spin mx-auto text-primary" />
+                <p className="text-sm text-muted-foreground">加载情感分析数据中...</p>
+              </div>
             </div>
-            <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
-              <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
-                <Heart className="w-4 h-4" />
-                情感变化趋势
-              </h3>
-              <TimeSeriesChart data={timeSeriesData} title="" height={320} />
+          ) : tabsState.sentiment.loadingState === 'error' ? (
+            <div className="flex items-center justify-center h-[600px]">
+              <div className="text-center space-y-4">
+                <AlertTriangle className="w-8 h-8 mx-auto text-destructive" />
+                <p className="text-sm text-destructive">加载失败</p>
+                <Button onClick={() => loadTabData('sentiment', true)}>重试</Button>
+              </div>
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          ) : (
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+              {/* P2: 情感转变追踪 */}
               <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
                 <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
-                  <Target className="w-4 h-4" />
-                  情感-热度关联
+                  <Heart className="w-4 h-4" />
+                  情感转变追踪
                 </h3>
-                <SentimentHotnessScatterChart title="" height={350} data={sentimentHotnessData} />
+                {eventId && <SentimentTransition eventId={eventId} />}
               </div>
               <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
                 <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
-                  <Zap className="w-4 h-4" />
-                  情感强度谱
+                  <Heart className="w-4 h-4" />
+                  情感变化趋势
                 </h3>
-                <SentimentIntensityChart title="" height={350} data={sentimentIntensityData} />
+                <TimeSeriesChart data={timeSeriesData} title="" height={320} />
               </div>
-            </div>
-          </motion.div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
+                  <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
+                    <Target className="w-4 h-4" />
+                    情感-热度关联
+                  </h3>
+                  <SentimentHotnessScatterChart title="" height={350} data={sentimentHotnessData} />
+                </div>
+                <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
+                  <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
+                    <Zap className="w-4 h-4" />
+                    情感强度谱
+                  </h3>
+                  <SentimentIntensityChart title="" height={350} data={sentimentIntensityData} />
+                </div>
+              </div>
+            </motion.div>
+          )}
         </TabsContent>
 
         {/* 高级分析 Tab */}
         <TabsContent value="advanced" className="mt-6">
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-            {/* P3: 传播速度分析 */}
-            <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
-              <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
-                <Zap className="w-4 h-4" />
-                传播速度分析
-              </h3>
-              <PropagationVelocityChart
-                data={propagationVelocityData}
-                isLoading={!propagationVelocityData}
-                height={400}
-              />
+          {tabsState.advanced.loadingState === 'loading' ? (
+            <div className="flex items-center justify-center h-[600px]">
+              <div className="text-center space-y-4">
+                <RefreshCw className="w-8 h-8 animate-spin mx-auto text-primary" />
+                <p className="text-sm text-muted-foreground">加载高级分析数据中...</p>
+              </div>
             </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* P3: 影响力预测 */}
+          ) : tabsState.advanced.loadingState === 'error' ? (
+            <div className="flex items-center justify-center h-[600px]">
+              <div className="text-center space-y-4">
+                <AlertTriangle className="w-8 h-8 mx-auto text-destructive" />
+                <p className="text-sm text-destructive">加载失败</p>
+                <Button onClick={() => loadTabData('advanced', true)}>重试</Button>
+              </div>
+            </div>
+          ) : (
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+              {/* P3: 传播速度分析 */}
               <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
                 <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4" />
-                  影响力预测
+                  <Zap className="w-4 h-4" />
+                  传播速度分析
                 </h3>
-                <InfluencePredictionCard
-                  data={influencePredictionData}
-                  isLoading={!influencePredictionData}
+                <PropagationVelocityChart
+                  data={propagationVelocityData}
+                  isLoading={!propagationVelocityData}
+                  height={400}
                 />
               </div>
 
-              {/* P3: 社区演化追踪 */}
-              <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
-                <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
-                  <Clock className="w-4 h-4" />
-                  社区演化追踪
-                </h3>
-                <CommunityEvolutionTimeline
-                  data={communityEvolutionData}
-                  isLoading={!communityEvolutionData}
-                />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* P3: 影响力预测 */}
+                <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
+                  <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4" />
+                    影响力预测
+                  </h3>
+                  <InfluencePredictionCard
+                    data={influencePredictionData}
+                    isLoading={!influencePredictionData}
+                  />
+                </div>
+
+                {/* P3: 社区演化追踪 */}
+                <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
+                  <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    社区演化追踪
+                  </h3>
+                  <CommunityEvolutionTimeline
+                    data={communityEvolutionData}
+                    isLoading={!communityEvolutionData}
+                  />
+                </div>
               </div>
-            </div>
-          </motion.div>
+            </motion.div>
+          )}
         </TabsContent>
 
         {/* 用户分析 Tab */}
         <TabsContent value="user-analysis" className="mt-6">
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-            {/* P1: 用户参与度分层 */}
-            <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
-              <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                用户参与度分层
-              </h3>
-              <UserEngagementFunnel
-                data={userStratificationData}
-                isLoading={!userStratificationData}
-                height={400}
-              />
+          {tabsState['user-analysis'].loadingState === 'loading' ? (
+            <div className="flex items-center justify-center h-[600px]">
+              <div className="text-center space-y-4">
+                <RefreshCw className="w-8 h-8 animate-spin mx-auto text-primary" />
+                <p className="text-sm text-muted-foreground">加载用户分析数据中...</p>
+              </div>
             </div>
-          </motion.div>
+          ) : tabsState['user-analysis'].loadingState === 'error' ? (
+            <div className="flex items-center justify-center h-[600px]">
+              <div className="text-center space-y-4">
+                <AlertTriangle className="w-8 h-8 mx-auto text-destructive" />
+                <p className="text-sm text-destructive">加载失败</p>
+                <Button onClick={() => loadTabData('user-analysis', true)}>重试</Button>
+              </div>
+            </div>
+          ) : (
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+              {/* P1: 用户参与度分层 */}
+              <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
+                <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  用户参与度分层
+                </h3>
+                <UserEngagementFunnel
+                  data={userStratificationData}
+                  isLoading={!userStratificationData}
+                  height={400}
+                />
+              </div>
+            </motion.div>
+          )}
         </TabsContent>
 
         {/* 内容分析 Tab */}
         <TabsContent value="content-analysis" className="mt-6">
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-            {/* P1: 发帖时间热力图 */}
-            <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
-              <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
-                <Clock className="w-4 h-4" />
-                发帖时间热力图
-              </h3>
-              <PostingTimeHeatmap
-                data={postingTimeData}
-                isLoading={!postingTimeData}
-                height={400}
-              />
+          {tabsState['content-analysis'].loadingState === 'loading' ? (
+            <div className="flex items-center justify-center h-[600px]">
+              <div className="text-center space-y-4">
+                <RefreshCw className="w-8 h-8 animate-spin mx-auto text-primary" />
+                <p className="text-sm text-muted-foreground">加载内容分析数据中...</p>
+              </div>
             </div>
+          ) : tabsState['content-analysis'].loadingState === 'error' ? (
+            <div className="flex items-center justify-center h-[600px]">
+              <div className="text-center space-y-4">
+                <AlertTriangle className="w-8 h-8 mx-auto text-destructive" />
+                <p className="text-sm text-destructive">加载失败</p>
+                <Button onClick={() => loadTabData('content-analysis', true)}>重试</Button>
+              </div>
+            </div>
+          ) : (
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+              {/* P1: 发帖时间热力图 */}
+              <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
+                <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  发帖时间热力图
+                </h3>
+                <PostingTimeHeatmap
+                  data={postingTimeData}
+                  isLoading={!postingTimeData}
+                  height={400}
+                />
+              </div>
 
-            {/* P1: 评论深度分析 */}
-            <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
-              <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
-                <MessageCircle className="w-4 h-4" />
-                评论深度分析
-              </h3>
-              <CommentThreadTree
-                data={commentDepthData}
-                isLoading={!commentDepthData}
-                height={400}
-              />
-            </div>
-          </motion.div>
+              {/* P1: 评论深度分析 */}
+              <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
+                <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
+                  <MessageCircle className="w-4 h-4" />
+                  评论深度分析
+                </h3>
+                <CommentThreadTree
+                  data={commentDepthData}
+                  isLoading={!commentDepthData}
+                  height={400}
+                />
+              </div>
+            </motion.div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
