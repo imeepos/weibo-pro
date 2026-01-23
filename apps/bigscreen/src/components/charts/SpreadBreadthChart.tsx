@@ -419,44 +419,6 @@ const SpreadBreadthChart: React.FC<SpreadBreadthChartProps> = ({
       </div>
       {/* 图表 */}
       <div ref={chartRef} style={{ width: '100%', flex: 1 }} />
-      {/* 层级统计展示 - 仅在有聚合数据时显示 */}
-      {hasAggregatedData && data?.aggregatedPropagation?.levelStats && (
-        <div className="mt-4 bg-card border rounded-lg p-4">
-          <div className="text-sm font-medium mb-3">层级分布</div>
-          <div className="flex flex-wrap gap-4">
-            {data.aggregatedPropagation.levelStats
-              .filter((stat) => stat.level > 0)
-              .map((stat) => (
-                <div key={stat.level} className="flex-1 min-w-[200px]">
-                  <div className="text-sm font-medium mb-2">第{stat.level}层</div>
-                  <div className="text-xs text-muted-foreground space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: NODE_COLORS.vip }}
-                      />
-                      <span>VIP: {stat.byUserType.vip.count}人</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: NODE_COLORS.ordinary }}
-                      />
-                      <span>普通: {stat.byUserType.ordinary.count}人</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: NODE_COLORS.verified }}
-                      />
-                      <span>认证: {stat.byUserType.verified.count}人</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 };
