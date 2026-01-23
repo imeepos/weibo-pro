@@ -26,28 +26,28 @@ const NetworkStatisticsCards: React.FC<NetworkStatisticsCardsProps> = ({
     >
       <div className="backdrop-blur-md bg-background/80 dark:bg-background/60 rounded-xl shadow-lg border border-border/50 p-3">
         <div className="text-lg font-bold text-primary leading-tight">
-          {statistics.totalUsers.toLocaleString()}
+          {statistics.totalUsers != null ? statistics.totalUsers.toLocaleString() : '-'}
         </div>
         <div className="text-[10px] text-muted-foreground leading-tight mt-0.5">节点</div>
       </div>
 
       <div className="backdrop-blur-md bg-background/80 dark:bg-background/60 rounded-xl shadow-lg border border-border/50 p-3">
         <div className="text-lg font-bold text-violet-500 leading-tight">
-          {statistics.totalRelations.toLocaleString()}
+          {statistics.totalRelations != null ? statistics.totalRelations.toLocaleString() : '-'}
         </div>
         <div className="text-[10px] text-muted-foreground leading-tight mt-0.5">连接</div>
       </div>
 
       <div className="backdrop-blur-md bg-background/80 dark:bg-background/60 rounded-xl shadow-lg border border-border/50 p-3">
         <div className="text-lg font-bold text-cyan-500 leading-tight">
-          {statistics.avgDegree.toFixed(0)}
+          {statistics.avgDegree != null ? statistics.avgDegree.toFixed(0) : '-'}
         </div>
         <div className="text-[10px] text-muted-foreground leading-tight mt-0.5">平均度</div>
       </div>
 
       <div className="backdrop-blur-md bg-background/80 dark:bg-background/60 rounded-xl shadow-lg border border-border/50 p-3">
         <div className="text-lg font-bold text-fuchsia-500 leading-tight">
-          {(statistics.density * 100).toFixed(0)}%
+          {statistics.density != null ? (statistics.density * 100).toFixed(0) : '-'}%
         </div>
         <div className="text-[10px] text-muted-foreground leading-tight mt-0.5">密度</div>
       </div>

@@ -121,7 +121,7 @@ const PropagationPathChart: React.FC<PropagationPathChartProps> = ({
                       <span className="text-xs">用户数量</span>
                     </div>
                     <div className="text-lg font-bold text-foreground">
-                      {userGroup.userCount.toLocaleString()}
+                      {userGroup.userCount != null ? userGroup.userCount.toLocaleString() : '-'}
                     </div>
                   </div>
 
@@ -131,7 +131,7 @@ const PropagationPathChart: React.FC<PropagationPathChartProps> = ({
                       <span className="text-xs">发帖数量</span>
                     </div>
                     <div className="text-lg font-bold text-foreground">
-                      {userGroup.postCount.toLocaleString()}
+                      {userGroup.postCount != null ? userGroup.postCount.toLocaleString() : '-'}
                     </div>
                   </div>
 

@@ -86,19 +86,19 @@ const InfluencePredictionCard: React.FC<InfluencePredictionCardProps> = ({
           <div className="bg-gray-800/50 rounded-lg p-4">
             <div className="text-sm text-gray-400 mb-1">预测触达</div>
             <div className="text-2xl font-bold text-white">
-              {data.predictedReach.toLocaleString()}
+              {data.predictedReach != null ? data.predictedReach.toLocaleString() : '-'}
             </div>
           </div>
           <div className="bg-gray-800/50 rounded-lg p-4">
             <div className="text-sm text-gray-400 mb-1">预测转发</div>
             <div className="text-2xl font-bold text-white">
-              {data.predictedReposts.toLocaleString()}
+              {data.predictedReposts != null ? data.predictedReposts.toLocaleString() : '-'}
             </div>
           </div>
           <div className="bg-gray-800/50 rounded-lg p-4">
             <div className="text-sm text-gray-400 mb-1">预测互动</div>
             <div className="text-2xl font-bold text-white">
-              {data.predictedEngagement.toLocaleString()}
+              {data.predictedEngagement != null ? data.predictedEngagement.toLocaleString() : '-'}
             </div>
           </div>
         </div>
@@ -126,9 +126,9 @@ const InfluencePredictionCard: React.FC<InfluencePredictionCardProps> = ({
         <div className="bg-gray-800/50 rounded-lg p-4">
           <div className="text-sm text-gray-400 mb-2">预测区间</div>
           <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-500">最小: {data.predictionRange.min.toLocaleString()}</span>
-            <span className="text-white font-semibold">{data.predictionRange.expected.toLocaleString()}</span>
-            <span className="text-gray-500">最大: {data.predictionRange.max.toLocaleString()}</span>
+            <span className="text-gray-500">最小: {data.predictionRange.min != null ? data.predictionRange.min.toLocaleString() : '-'}</span>
+            <span className="text-white font-semibold">{data.predictionRange.expected != null ? data.predictionRange.expected.toLocaleString() : '-'}</span>
+            <span className="text-gray-500">最大: {data.predictionRange.max != null ? data.predictionRange.max.toLocaleString() : '-'}</span>
           </div>
           <div className="mt-2 w-full bg-gray-700 rounded-full h-2 relative">
             <div
@@ -181,7 +181,7 @@ const InfluencePredictionCard: React.FC<InfluencePredictionCardProps> = ({
                 <div key={index} className="flex items-center justify-between text-sm bg-gray-700/30 rounded px-3 py-2">
                   <span className="text-gray-300">案例 {index + 1}</span>
                   <span className="text-gray-400">相似度: {(similarCase.similarity * 100).toFixed(0)}%</span>
-                  <span className="text-gray-400">实际触达: {similarCase.actualReach.toLocaleString()}</span>
+                  <span className="text-gray-400">实际触达: {similarCase.actualReach != null ? similarCase.actualReach.toLocaleString() : '-'}</span>
                 </div>
               ))}
             </div>

@@ -222,17 +222,17 @@ const EventDevelopmentChart: React.FC<EventDevelopmentChartProps> = ({
               <div className="flex items-center space-x-8">
                 <div className="flex items-center space-x-2">
                   <MessageSquare className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-foreground font-semibold">{phase.metrics.posts.toLocaleString()}</span>
+                  <span className="text-foreground font-semibold">{phase.metrics.posts != null ? phase.metrics.posts.toLocaleString() : '-'}</span>
                   <span className="text-muted-foreground text-sm">贴子</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Users className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-foreground font-semibold">{phase.metrics.users.toLocaleString()}</span>
+                  <span className="text-foreground font-semibold">{phase.metrics.users != null ? phase.metrics.users.toLocaleString() : '-'}</span>
                   <span className="text-muted-foreground text-sm">用户</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Activity className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-foreground font-semibold">{phase.metrics.hotness}</span>
+                  <span className="text-foreground font-semibold">{phase.metrics.hotness != null ? phase.metrics.hotness : '-'}</span>
                   <span className="text-muted-foreground text-sm">热度峰值</span>
                 </div>
               </div>

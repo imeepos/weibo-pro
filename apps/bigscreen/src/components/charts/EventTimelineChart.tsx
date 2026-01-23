@@ -148,14 +148,14 @@ const EventTimelineChart: React.FC<EventTimelineChartProps> = ({
                   {/* 指标数据 */}
                   {item.metrics && (
                     <div className="flex items-center space-x-6 pt-3 border-t border-border/30">
-                      {item.metrics.posts && (
+                      {item.metrics.posts != null && (
                         <div className="flex items-center space-x-2">
                           <MessageSquare className="w-4 h-4 text-muted-foreground" />
                           <span className="text-sm text-foreground">{item.metrics.posts.toLocaleString()}</span>
                           <span className="text-xs text-muted-foreground">贴子</span>
                         </div>
                       )}
-                      {item.metrics.users && (
+                      {item.metrics.users != null && (
                         <div className="flex items-center space-x-2">
                           <Users className="w-4 h-4 text-muted-foreground" />
                           <span className="text-sm text-foreground">{item.metrics.users.toLocaleString()}</span>
