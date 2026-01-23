@@ -39,10 +39,25 @@ export class WeiboHtmlParser {
 
       // 检测"未找到相关结果"（无结果页面）
       const isEmptyResult = $('.card-no-result').length > 0 ||
-                           html.includes('抱歉，未找到相关结果');
+                           html.includes('未找到相关结果');
 
       if (isEmptyResult) {
         console.log('[WeiboHtmlParser] 检测到空结果页面');
+      }
+
+      // 当检测到空结果时，直接返回清空的数据
+      if (isEmptyResult) {
+        console.log('[WeiboHtmlParser] 空结果页面，返回清空数据');
+        return {
+          posts: [],
+          hasNextPage: false,
+          lastPostTime: null,
+          totalCount: 0,
+          nextPageLink: undefined,
+          currentPage: 1,
+          totalPage: 0,
+          isEmptyResult: true,
+        };
       }
 
       const posts = this.extractPostsInfo($);
