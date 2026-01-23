@@ -173,16 +173,16 @@ const GeographicDistributionChart: React.FC<GeographicDistributionChartProps> = 
   const summary = useMemo(() => {
     if (processedData.length === 0) return null;
 
-    // 优先使用 prop 传入的真实统计数据，fallback 使用原始 data 的总数（而非 processedData 的前N条）
-    const totalUsers = propTotalUsers ?? data.reduce((sum, d) => sum + d.count, 0);
-    const totalPosts = propTotalPosts ?? data.reduce((sum, d) => sum + d.posts, 0);
-    const regionCount = propTotalRegions ?? data.length;
+    // 必须使用 prop 传入的真实统计数据（后端返回），前端累加 top N 数据是不准确的
+    const totalUsers = propTotalUsers ?? 0;
+    const totalPosts = propTotalPosts ?? 0;
+    const regionCount = propTotalRegions ?? 0;
 
     const localTotalUsers = processedData.reduce((sum, d) => sum + d.count, 0);
     const avgSentiment = processedData.reduce((sum, d) => sum + d.sentiment * d.count, 0) / localTotalUsers;
     const topRegion = processedData[0];
     return { totalUsers, totalPosts, avgSentiment, topRegion, regionCount };
-  }, [data, processedData, propTotalPosts, propTotalUsers, propTotalRegions]);
+  }, [processedData, propTotalPosts, propTotalUsers, propTotalRegions]);
 
   if (!data || data.length === 0) {
     return (

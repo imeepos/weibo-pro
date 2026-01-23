@@ -464,7 +464,7 @@ export class SpreadBreadthService {
 
       for (const repost of levelReposts) {
         const userType = this.getUserType(repost);
-        typeGroups[userType].push(repost);
+        typeGroups[userType]!.push(repost);
       }
 
       // 计算层级统计
@@ -473,9 +473,9 @@ export class SpreadBreadthService {
         totalUsers: levelReposts.length,
         totalReposts: levelReposts.length,
         byUserType: {
-          vip: { count: typeGroups.vip.length, reposts: typeGroups.vip.length },
-          ordinary: { count: typeGroups.ordinary.length, reposts: typeGroups.ordinary.length },
-          verified: { count: typeGroups.verified.length, reposts: typeGroups.verified.length },
+          vip: { count: typeGroups?.vip?.length || 0, reposts: typeGroups?.vip?.length || 0 },
+          ordinary: { count: typeGroups.ordinary?.length || 0, reposts: typeGroups.ordinary?.length || 0 },
+          verified: { count: typeGroups.verified?.length || 0, reposts: typeGroups.verified?.length || 0 },
         },
       };
       levelStats.push(levelStat);

@@ -24,9 +24,7 @@ interface WorkerInput {
 
 interface WorkerOutput {
   graphData: {
-    nodes: Array<{
-      id: string;
-      name: string;
+    nodes: Array<UserRelationNode & {
       val: number;
       color: string;
       communityId?: number;
@@ -69,12 +67,13 @@ self.addEventListener('message', (event: MessageEvent<WorkerInput>) => {
       nodeDegree.set(edge.target, (nodeDegree.get(edge.target) || 0) + 1);
     });
 
-    // 构建图数据
+    // 构建图数据 - 保留原始节点的所有属性
     const graphNodes = nodes.map((node) => {
       const communityId = nodeToCommunity.get(node.id);
       const community = communityId !== undefined ? communityMap.get(communityId) : undefined;
       const degree = nodeDegree.get(node.id) || 1;
       return {
+        ...node, // 保留原始节点的所有属性（followers, influence, postCount, verified, userType, location 等）
         id: node.id,
         name: node.name,
         val: degree,
