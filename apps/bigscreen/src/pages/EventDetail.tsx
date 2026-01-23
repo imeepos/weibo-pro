@@ -258,10 +258,24 @@ const EventDetail: React.FC = () => {
     }
   };
 
+  const clearEventLocalCache = () => {
+    try {
+      const cacheKey = 'user_relation_network_cache';
+      localStorage.removeItem(cacheKey);
+      logger.info(`Local cache cleared: ${cacheKey}`);
+    } catch (error) {
+      // 静默处理 localStorage 错误（如隐私模式、配额超限等）
+      logger.warn('Failed to clear local cache:', error);
+    }
+  };
+
   const handleRefreshCache = async () => {
     if (!eventId) return;
     setIsRefreshingCache(true);
     try {
+      // 先清理本地 localStorage 缓存
+      clearEventLocalCache();
+
       const c = root.get(EventsController);
       const result = await c.refreshCache(eventId);
       logger.info('Cache refreshed successfully', result);

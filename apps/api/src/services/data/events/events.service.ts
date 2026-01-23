@@ -174,11 +174,11 @@ export class EventsService {
   // 新增：基于 EventHourlyStatisticsEntity 的互动指标接口
 
   async getEngagementTrend(id: string, limit?: number): Promise<EventEngagementTrend[]> {
-    return await this.queryService.getEngagementTrend(id, limit);
+    return await this.queryService.getEngagementTrend(id);
   }
 
   async getAnomalies(id: string, limit?: number): Promise<EventAnomaly[]> {
-    return await this.queryService.getAnomalies(id, limit);
+    return await this.queryService.getAnomalies(id);
   }
 
   async getPeaks(id: string, limit?: number): Promise<EventPeak[]> {
