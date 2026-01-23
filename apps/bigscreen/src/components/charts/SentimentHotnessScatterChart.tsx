@@ -2,6 +2,7 @@ import React, { useMemo } from 'react'
 import { cn } from '@/utils'
 import { ChartState } from '@sker/ui/components/ui/chart-state'
 import * as echarts from 'echarts'
+import { useChartTheme } from '@/hooks/useChartConfig'
 
 interface SentimentHotnessData {
   postId: string
@@ -25,6 +26,7 @@ const SentimentHotnessScatterChart: React.FC<SentimentHotnessScatterChartProps> 
 }) => {
   const chartRef = React.useRef<HTMLDivElement>(null)
   const chartInstance = React.useRef<echarts.ECharts | null>(null)
+  const chartTheme = useChartTheme()
 
   const chartData = useMemo(() => {
     if (!data || data.length === 0) return []
@@ -38,6 +40,8 @@ const SentimentHotnessScatterChart: React.FC<SentimentHotnessScatterChartProps> 
   const option = useMemo(() => {
     if (chartData.length === 0) return {}
 
+    const { sentimentColors, axisStyle, tooltipStyle } = chartTheme
+
     return {
       grid: {
         left: '10%',
@@ -47,14 +51,18 @@ const SentimentHotnessScatterChart: React.FC<SentimentHotnessScatterChartProps> 
       },
       tooltip: {
         trigger: 'item',
+        backgroundColor: tooltipStyle.backgroundColor,
+        borderColor: tooltipStyle.borderColor,
+        textStyle: { color: tooltipStyle.textColor },
         formatter: (params: any) => {
           const data = params.data as { value: number[]; timestamp: string; postId: string }
+          const sentimentColor = data.value[0] > 0 ? sentimentColors.positive : data.value[0] < 0 ? sentimentColors.negative : sentimentColors.neutral
           return `
             <div style="padding: 8px;">
               <div style="font-weight: bold; margin-bottom: 4px;">帖子 ${data.postId.slice(-6)}</div>
-              <div>情感值: <span style="color: ${data.value[0] > 0 ? '#10b981' : data.value[0] < 0 ? '#ef4444' : '#6b7280'}; font-weight: bold;">${data.value[0].toFixed(2)}</span></div>
+              <div>情感值: <span style="color: ${sentimentColor}; font-weight: bold;">${data.value[0].toFixed(2)}</span></div>
               <div>热度: <span style="font-weight: bold;">${data.value[1].toFixed(2)}</span></div>
-              <div style="font-size: 11px; color: #999; margin-top: 4px;">${new Date(data.timestamp).toLocaleString('zh-CN')}</div>
+              <div style="font-size: 11px; opacity: 0.7; margin-top: 4px;">${new Date(data.timestamp).toLocaleString('zh-CN')}</div>
             </div>
           `
         }
@@ -66,18 +74,18 @@ const SentimentHotnessScatterChart: React.FC<SentimentHotnessScatterChartProps> 
         nameGap: 25,
         min: -1,
         max: 1,
-        axisLine: { lineStyle: { color: '#6b7280' } },
-        axisLabel: { color: '#9ca3af' },
-        splitLine: { lineStyle: { color: '#374151', type: 'dashed' } }
+        axisLine: { lineStyle: { color: axisStyle.lineColor } },
+        axisLabel: { color: axisStyle.labelColor },
+        splitLine: { lineStyle: { color: axisStyle.splitLineColor, type: 'dashed' } }
       },
       yAxis: {
         type: 'value',
         name: '热度',
         nameLocation: 'middle',
         nameGap: 40,
-        axisLine: { lineStyle: { color: '#6b7280' } },
-        axisLabel: { color: '#9ca3af' },
-        splitLine: { lineStyle: { color: '#374151', type: 'dashed' } }
+        axisLine: { lineStyle: { color: axisStyle.lineColor } },
+        axisLabel: { color: axisStyle.labelColor },
+        splitLine: { lineStyle: { color: axisStyle.splitLineColor, type: 'dashed' } }
       },
       series: [{
         type: 'scatter',
@@ -85,9 +93,9 @@ const SentimentHotnessScatterChart: React.FC<SentimentHotnessScatterChartProps> 
         itemStyle: {
           color: (params: any) => {
             const sentiment = params.data.value[0]
-            if (sentiment > 0.2) return '#10b981'
-            if (sentiment < -0.2) return '#ef4444'
-            return '#6b7280'
+            if (sentiment > 0.2) return sentimentColors.positive
+            if (sentiment < -0.2) return sentimentColors.negative
+            return sentimentColors.neutral
           },
           opacity: 0.7
         },
@@ -98,11 +106,11 @@ const SentimentHotnessScatterChart: React.FC<SentimentHotnessScatterChartProps> 
         min: -1,
         max: 1,
         inRange: {
-          color: ['#ef4444', '#6b7280', '#10b981']
+          color: [sentimentColors.negative, sentimentColors.neutral, sentimentColors.positive]
         }
       }
     }
-  }, [chartData])
+  }, [chartData, chartTheme])
 
   React.useEffect(() => {
     if (!chartRef.current) return

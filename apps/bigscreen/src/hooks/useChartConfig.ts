@@ -17,22 +17,50 @@ const getCSSVar = (varName: string): string => {
 };
 
 /**
+ * 扩展的图表主题类型
+ */
+export interface ExtendedChartTheme extends ChartTheme {
+  sentimentColors: {
+    positive: string;
+    negative: string;
+    neutral: string;
+  };
+  tooltipStyle: {
+    backgroundColor: string;
+    textColor: string;
+    borderColor: string;
+  };
+  axisStyle: {
+    lineColor: string;
+    labelColor: string;
+    splitLineColor: string;
+  };
+  seriesColors: {
+    comment: string;
+    repost: string;
+    like: string;
+    total: string;
+  };
+}
+
+/**
  * 获取主题相关的图表配置
  */
-export function useChartTheme(): ChartTheme {
+export function useChartTheme(): ExtendedChartTheme {
   const { theme } = useTheme();
 
   return useMemo(() => {
     const backgroundColor = getCSSVar('--color-card');
     const textColor = getCSSVar('--color-card-foreground');
     const gridColor = getCSSVar('--color-border');
+    const isDark = theme === 'dark';
 
     return {
-      isDark: theme === 'dark',
+      isDark,
       backgroundColor,
       textColor,
       gridColor,
-      colors: theme === 'dark'
+      colors: isDark
         ? [
             // 暗色主题 - 明亮色彩
             '#a78bfa', '#c084fc', '#d8b4fe', '#e9d5ff', '#f3e8ff',
@@ -48,7 +76,32 @@ export function useChartTheme(): ChartTheme {
             '#16a34a', '#22c55e', '#4ade80', '#86efac', '#bbf7d0',
             '#d97706', '#f59e0b', '#fbbf24', '#fcd34d', '#fde68a',
             '#dc2626', '#ef4444', '#f87171', '#fca5a5', '#fecaca'
-          ]
+          ],
+      // 情感颜色 - 适配亮色/暗色主题
+      sentimentColors: {
+        positive: isDark ? '#34d399' : '#10b981',
+        negative: isDark ? '#f87171' : '#ef4444',
+        neutral: isDark ? '#9ca3af' : '#6b7280',
+      },
+      // Tooltip 样式 - 适配亮色/暗色主题
+      tooltipStyle: {
+        backgroundColor: isDark ? '#1f2937' : '#ffffff',
+        textColor: isDark ? '#f3f4f6' : '#1f2937',
+        borderColor: isDark ? '#374151' : '#e5e7eb',
+      },
+      // 坐标轴样式 - 适配亮色/暗色主题
+      axisStyle: {
+        lineColor: isDark ? '#374151' : '#e5e7eb',
+        labelColor: isDark ? '#9ca3af' : '#6b7280',
+        splitLineColor: isDark ? '#374151' : '#e5e7eb',
+      },
+      // 系列颜色 - 用于互动趋势图等
+      seriesColors: {
+        comment: isDark ? '#60a5fa' : '#3b82f6',
+        repost: isDark ? '#34d399' : '#10b981',
+        like: isDark ? '#f472b6' : '#ec4899',
+        total: isDark ? '#fbbf24' : '#f59e0b',
+      },
     };
   }, [theme]);
 }

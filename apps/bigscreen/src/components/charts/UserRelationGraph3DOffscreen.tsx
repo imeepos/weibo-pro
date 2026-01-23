@@ -4,6 +4,7 @@ import { ForceGraph3D, type ForceGraph3DHandle } from '@sker/ui/components/ui/fo
 import { useCommunityDetectorWorker } from '@/hooks/useCommunityDetectorWorker';
 import { useGraphStatistics } from '@/hooks/useGraphStatistics';
 import { useTheme } from '@/hooks/useTheme';
+import { useChartTheme } from '@/hooks/useChartConfig';
 import { GraphStatisticsPanel } from './GraphStatisticsPanel';
 import * as d3Force from 'd3-force-3d';
 import { Subject } from 'rxjs';
@@ -23,6 +24,7 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
   onNodeHover,
 }) => {
   const { isDark } = useTheme();
+  const chartTheme = useChartTheme();
   const graphRef = useRef<ForceGraph3DHandle>(null);
   const { detect, isDetecting, graphData } = useCommunityDetectorWorker();
   const [isSimulating, setIsSimulating] = useState(false);
@@ -84,25 +86,32 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
       normal: '普通用户'
     };
 
+    // 使用主题感知的颜色
+    const { tooltipStyle, axisStyle, seriesColors } = chartTheme;
+    const highlightColor = seriesColors.total; // 高亮色
+    const secondaryTextColor = axisStyle.labelColor; // 次要文字色
+    const primaryTextColor = tooltipStyle.textColor; // 主要文字色
+    const borderColor = tooltipStyle.borderColor; // 边框色
+
     return `
       <div style="padding: 12px; min-width: 200px;">
-        <div style="font-size: 16px; font-weight: bold; margin-bottom: 8px; color: #ff8200;">
+        <div style="font-size: 16px; font-weight: bold; margin-bottom: 8px; color: ${highlightColor};">
           ${userRelationNode.name}${verifiedBadge}
         </div>
-        <div style="font-size: 12px; color: #999; margin-bottom: 8px;">
+        <div style="font-size: 12px; color: ${secondaryTextColor}; margin-bottom: 8px;">
           ${userTypeMap[userRelationNode.userType]} ${userRelationNode.location ? '· ' + userRelationNode.location : ''}
         </div>
         <div style="display: flex; flex-direction: column; gap: 4px; font-size: 13px;">
-          ${userRelationNode.followers != null ? `<div><span style="color: #999;">粉丝数:</span> <span style="color: #333; font-weight: 500;">${userRelationNode.followers.toLocaleString()}</span></div>` : ''}
-          ${userRelationNode.influence != null ? `<div><span style="color: #999;">影响力:</span> <span style="color: #333; font-weight: 500;">${userRelationNode.influence.toFixed(2)}</span></div>` : ''}
-          ${userRelationNode.postCount != null ? `<div><span style="color: #999;">发帖数:</span> <span style="color: #333; font-weight: 500;">${userRelationNode.postCount.toLocaleString()}</span></div>` : ''}
+          ${userRelationNode.followers != null ? `<div><span style="color: ${secondaryTextColor};">粉丝数:</span> <span style="color: ${primaryTextColor}; font-weight: 500;">${userRelationNode.followers.toLocaleString()}</span></div>` : ''}
+          ${userRelationNode.influence != null ? `<div><span style="color: ${secondaryTextColor};">影响力:</span> <span style="color: ${primaryTextColor}; font-weight: 500;">${userRelationNode.influence.toFixed(2)}</span></div>` : ''}
+          ${userRelationNode.postCount != null ? `<div><span style="color: ${secondaryTextColor};">发帖数:</span> <span style="color: ${primaryTextColor}; font-weight: 500;">${userRelationNode.postCount.toLocaleString()}</span></div>` : ''}
         </div>
-        <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid #eee; font-size: 11px; color: #666;">
+        <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid ${borderColor}; font-size: 11px; color: ${secondaryTextColor};">
           点击跳转到微博主页 →
         </div>
       </div>
     `;
-  }, []);
+  }, [chartTheme]);
 
   // 处理节点点击 - 跳转到微博主页
   const handleNodeClick = useCallback((node: any) => {

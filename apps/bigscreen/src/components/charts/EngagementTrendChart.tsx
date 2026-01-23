@@ -1,7 +1,7 @@
 import React from 'react'
 import { EChart } from '@sker/ui/components/ui/echart'
 import { motion } from 'framer-motion'
-import { useTheme } from '@/hooks/useTheme'
+import { useChartTheme } from '@/hooks/useChartConfig'
 
 interface EngagementTrendDataPoint {
   timestamp: string
@@ -26,7 +26,7 @@ const EngagementTrendChart: React.FC<EngagementTrendChartProps> = ({
   height = 300,
   className = ''
 }) => {
-  const { isDark } = useTheme()
+  const chartTheme = useChartTheme()
 
   const option = React.useMemo(() => {
     if (!data || data.length === 0) {
@@ -50,14 +50,14 @@ const EngagementTrendChart: React.FC<EngagementTrendChartProps> = ({
     return {
       tooltip: {
         trigger: 'axis',
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-        borderColor: 'rgba(255, 255, 255, 0.2)',
-        textStyle: { color: '#ffffff' },
+        backgroundColor: chartTheme.tooltipStyle.backgroundColor,
+        borderColor: chartTheme.tooltipStyle.borderColor,
+        textStyle: { color: chartTheme.tooltipStyle.textColor },
         axisPointer: { type: 'cross', label: { backgroundColor: '#6a7985' } }
       },
       legend: {
         data: ['评论', '转发', '点赞', '总量'],
-        textStyle: { color: isDark ? '#f3f4f6' : '#111827' },
+        textStyle: { color: chartTheme.textColor },
         top: 10
       },
       grid: {
@@ -70,15 +70,15 @@ const EngagementTrendChart: React.FC<EngagementTrendChartProps> = ({
         type: 'category',
         boundaryGap: false,
         data: timeLabels,
-        axisLine: { lineStyle: { color: isDark ? '#374151' : '#e5e7eb' } },
-        axisLabel: { color: isDark ? '#9ca3af' : '#6b7280' }
+        axisLine: { lineStyle: { color: chartTheme.axisStyle.lineColor } },
+        axisLabel: { color: chartTheme.axisStyle.labelColor }
       },
       yAxis: {
         type: 'value',
         name: '数量',
-        axisLine: { lineStyle: { color: isDark ? '#374151' : '#e5e7eb' } },
-        axisLabel: { color: isDark ? '#9ca3af' : '#6b7280' },
-        splitLine: { lineStyle: { color: isDark ? '#374151' : '#e5e7eb' } }
+        axisLine: { lineStyle: { color: chartTheme.axisStyle.lineColor } },
+        axisLabel: { color: chartTheme.axisStyle.labelColor },
+        splitLine: { lineStyle: { color: chartTheme.axisStyle.splitLineColor } }
       },
       series: [
         {
@@ -88,8 +88,8 @@ const EngagementTrendChart: React.FC<EngagementTrendChartProps> = ({
           smooth: true,
           stack: 'engagement',
           areaStyle: { opacity: 0.3 },
-          lineStyle: { color: '#3b82f6', width: 2 },
-          itemStyle: { color: '#3b82f6' },
+          lineStyle: { color: chartTheme.seriesColors.comment, width: 2 },
+          itemStyle: { color: chartTheme.seriesColors.comment },
           symbol: 'circle',
           symbolSize: 4
         },
@@ -100,8 +100,8 @@ const EngagementTrendChart: React.FC<EngagementTrendChartProps> = ({
           smooth: true,
           stack: 'engagement',
           areaStyle: { opacity: 0.3 },
-          lineStyle: { color: '#10b981', width: 2 },
-          itemStyle: { color: '#10b981' },
+          lineStyle: { color: chartTheme.seriesColors.repost, width: 2 },
+          itemStyle: { color: chartTheme.seriesColors.repost },
           symbol: 'circle',
           symbolSize: 4
         },
@@ -112,8 +112,8 @@ const EngagementTrendChart: React.FC<EngagementTrendChartProps> = ({
           smooth: true,
           stack: 'engagement',
           areaStyle: { opacity: 0.3 },
-          lineStyle: { color: '#ec4899', width: 2 },
-          itemStyle: { color: '#ec4899' },
+          lineStyle: { color: chartTheme.seriesColors.like, width: 2 },
+          itemStyle: { color: chartTheme.seriesColors.like },
           symbol: 'circle',
           symbolSize: 4
         },
@@ -122,14 +122,14 @@ const EngagementTrendChart: React.FC<EngagementTrendChartProps> = ({
           type: 'line',
           data: totalData,
           smooth: true,
-          lineStyle: { color: '#f59e0b', width: 3 },
-          itemStyle: { color: '#f59e0b' },
+          lineStyle: { color: chartTheme.seriesColors.total, width: 3 },
+          itemStyle: { color: chartTheme.seriesColors.total },
           symbol: 'circle',
           symbolSize: 6
         }
       ]
     }
-  }, [data, isDark])
+  }, [data, chartTheme])
 
   if (!data || data.length === 0) {
     return (
