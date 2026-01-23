@@ -12,6 +12,7 @@ import { EdgeCombiner } from './execution/EdgeCombiner';
 import { StreamMerger } from './execution/StreamMerger';
 import { WorkflowEventMerger } from './execution/WorkflowEventMerger';
 import { EDGE_MODE_STRATEGY, IEdgeModeStrategy } from './execution/EdgeModeStrategy';
+import { ExecutionContext } from './execution/ExecutionContext';
 
 /**
  * 工作流节点执行器
@@ -52,6 +53,13 @@ export class WorkflowGraphAstVisitor {
 
         return input$.pipe(
             concatMap(input => {
+                // 创建执行上下文，隔离每次执行的状态
+                const ctx = new ExecutionContext();
+                const workflowState = ctx.getNodeState(ast.id);
+                workflowState.state = 'running';
+                workflowState.error = undefined;
+
+                // 同步状态到 AST（用于 UI 显示）
                 ast.state = 'running';
                 ast.error = undefined;
 
@@ -70,8 +78,8 @@ export class WorkflowGraphAstVisitor {
                     nodeEventStreams.set(node.id, eventStream$);
                 });
 
-                // 3. 合并所有事件流
-                return this.workflowEventMerger.mergeNodeEventStreams(ast, nodeEventStreams);
+                // 3. 合并所有事件流（传入执行上下文）
+                return this.workflowEventMerger.mergeNodeEventStreams(ast, nodeEventStreams, ctx);
             }),
             catchError(error => {
                 ast.state = 'fail';

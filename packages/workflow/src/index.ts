@@ -13,6 +13,8 @@ export { DefaultVisitor, DEFAULT_VISITOR } from './defaultVisitor'
 export type { IDefaultVisitor } from './defaultVisitor'
 export { NoRetryError } from './errors'
 export * from './execution/events'
+export { ExecutionContext } from './execution/ExecutionContext';
+export type { NodeExecutionState } from './execution/ExecutionContext';
 export * from './utils';
 export * from './TextAreaAst';
 export * from './MarkdownAst';

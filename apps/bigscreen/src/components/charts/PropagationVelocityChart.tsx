@@ -80,17 +80,17 @@ const PropagationVelocityChart: React.FC<PropagationVelocityChartProps> = ({
     return {
       tooltip: {
         trigger: 'axis',
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-        borderColor: '#333',
-        textStyle: { color: '#fff' },
+        backgroundColor: chartTheme.tooltipStyle.backgroundColor,
+        borderColor: chartTheme.tooltipStyle.borderColor,
+        textStyle: { color: chartTheme.tooltipStyle.textColor },
         axisPointer: {
           type: 'cross',
-          crossStyle: { color: '#999' },
+          crossStyle: { color: chartTheme.axisStyle.labelColor },
         },
       },
       legend: {
         data: ['传播速度', '加速度'],
-        textStyle: { color: '#9ca3af' },
+        textStyle: { color: chartTheme.axisStyle.labelColor },
         top: 0,
       },
       grid: {
@@ -103,25 +103,25 @@ const PropagationVelocityChart: React.FC<PropagationVelocityChartProps> = ({
       xAxis: {
         type: 'category',
         data: timestamps,
-        axisLine: { lineStyle: { color: '#4b5563' } },
-        axisLabel: { color: '#9ca3af', fontSize: 10 },
+        axisLine: { lineStyle: { color: chartTheme.axisStyle.lineColor } },
+        axisLabel: { color: chartTheme.axisStyle.labelColor, fontSize: 10 },
         boundaryGap: false,
       },
       yAxis: [
         {
           type: 'value',
           name: '速度',
-          nameTextStyle: { color: '#9ca3af' },
-          axisLine: { lineStyle: { color: '#4b5563' } },
-          axisLabel: { color: '#9ca3af' },
-          splitLine: { lineStyle: { color: '#374151', type: 'dashed' } },
+          nameTextStyle: { color: chartTheme.axisStyle.labelColor },
+          axisLine: { lineStyle: { color: chartTheme.axisStyle.lineColor } },
+          axisLabel: { color: chartTheme.axisStyle.labelColor },
+          splitLine: { lineStyle: { color: chartTheme.axisStyle.splitLineColor, type: 'dashed' } },
         },
         {
           type: 'value',
           name: '加速度',
-          nameTextStyle: { color: '#9ca3af' },
-          axisLine: { lineStyle: { color: '#4b5563' } },
-          axisLabel: { color: '#9ca3af' },
+          nameTextStyle: { color: chartTheme.axisStyle.labelColor },
+          axisLine: { lineStyle: { color: chartTheme.axisStyle.lineColor } },
+          axisLabel: { color: chartTheme.axisStyle.labelColor },
           splitLine: { show: false },
         },
       ],
@@ -133,15 +133,15 @@ const PropagationVelocityChart: React.FC<PropagationVelocityChartProps> = ({
           smooth: true,
           symbol: 'circle',
           symbolSize: 6,
-          lineStyle: { color: '#3b82f6', width: 2 },
-          itemStyle: { color: '#3b82f6' },
+          lineStyle: { color: chartTheme.seriesColors.comment, width: 2 },
+          itemStyle: { color: chartTheme.seriesColors.comment },
           areaStyle: {
             color: {
               type: 'linear',
               x: 0, y: 0, x2: 0, y2: 1,
               colorStops: [
-                { offset: 0, color: 'rgba(59, 130, 246, 0.3)' },
-                { offset: 1, color: 'rgba(59, 130, 246, 0.05)' },
+                { offset: 0, color: chartTheme.isDark ? 'rgba(96, 165, 250, 0.3)' : 'rgba(59, 130, 246, 0.3)' },
+                { offset: 1, color: chartTheme.isDark ? 'rgba(96, 165, 250, 0.05)' : 'rgba(59, 130, 246, 0.05)' },
               ],
             },
           },
@@ -154,47 +154,47 @@ const PropagationVelocityChart: React.FC<PropagationVelocityChartProps> = ({
           smooth: true,
           symbol: 'diamond',
           symbolSize: 6,
-          lineStyle: { color: '#f59e0b', width: 2, type: 'dashed' },
-          itemStyle: { color: '#f59e0b' },
+          lineStyle: { color: chartTheme.seriesColors.total, width: 2, type: 'dashed' },
+          itemStyle: { color: chartTheme.seriesColors.total },
         },
       ],
     };
-  }, [data.velocityTimeline]);
+  }, [data.velocityTimeline, chartTheme]);
 
   return (
-    <div className={cn('bg-gray-900/50 backdrop-blur-sm rounded-lg p-6', className)}>
-      <h3 className="text-lg font-semibold text-white mb-4">{title}</h3>
+    <div className={cn('bg-card/50 backdrop-blur-sm rounded-lg p-6', className)}>
+      <h3 className="text-lg font-semibold text-foreground mb-4">{title}</h3>
 
       <div className="space-y-6">
         {/* 基础指标 */}
         <div className="grid grid-cols-3 gap-4">
-          <div className="bg-gray-800/50 rounded-lg p-4">
-            <div className="text-sm text-gray-400 mb-1">当前速度</div>
-            <div className="text-2xl font-bold text-white">
+          <div className="bg-muted/50 rounded-lg p-4">
+            <div className="text-sm text-muted-foreground mb-1">当前速度</div>
+            <div className="text-2xl font-bold text-foreground">
               {data.currentVelocity != null ? data.currentVelocity.toLocaleString() : '-'}
             </div>
-            <div className="text-xs text-gray-500">转发/小时</div>
+            <div className="text-xs text-muted-foreground">转发/小时</div>
           </div>
-          <div className="bg-gray-800/50 rounded-lg p-4">
-            <div className="text-sm text-gray-400 mb-1">峰值速度</div>
-            <div className="text-2xl font-bold text-white">
+          <div className="bg-muted/50 rounded-lg p-4">
+            <div className="text-sm text-muted-foreground mb-1">峰值速度</div>
+            <div className="text-2xl font-bold text-foreground">
               {data.peakVelocity != null ? data.peakVelocity.toLocaleString() : '-'}
             </div>
-            <div className="text-xs text-gray-500">转发/小时</div>
+            <div className="text-xs text-muted-foreground">转发/小时</div>
           </div>
-          <div className="bg-gray-800/50 rounded-lg p-4">
-            <div className="text-sm text-gray-400 mb-1">平均速度</div>
-            <div className="text-2xl font-bold text-white">
+          <div className="bg-muted/50 rounded-lg p-4">
+            <div className="text-sm text-muted-foreground mb-1">平均速度</div>
+            <div className="text-2xl font-bold text-foreground">
               {data.avgVelocity != null ? data.avgVelocity.toLocaleString() : '-'}
             </div>
-            <div className="text-xs text-gray-500">转发/小时</div>
+            <div className="text-xs text-muted-foreground">转发/小时</div>
           </div>
         </div>
 
         {/* 加速度分析 */}
-        <div className="bg-gray-800/50 rounded-lg p-4">
+        <div className="bg-muted/50 rounded-lg p-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-400">加速度</span>
+            <span className="text-sm text-muted-foreground">加速度</span>
             <span className="text-lg font-bold text-blue-400">
               {data.acceleration} {accelerationTrendText}
             </span>
@@ -202,31 +202,31 @@ const PropagationVelocityChart: React.FC<PropagationVelocityChartProps> = ({
         </div>
 
         {/* 传播阶段 */}
-        <div className="bg-gray-800/50 rounded-lg p-4">
-          <div className="text-sm text-gray-400 mb-2">传播阶段</div>
+        <div className="bg-muted/50 rounded-lg p-4">
+          <div className="text-sm text-muted-foreground mb-2">传播阶段</div>
           <div className="text-xl font-semibold text-green-400">
             {phaseText}
           </div>
         </div>
 
         {/* 爆发点预测 */}
-        <div className="bg-gray-800/50 rounded-lg p-4">
-          <div className="text-sm text-gray-400 mb-2">爆发点预测</div>
+        <div className="bg-muted/50 rounded-lg p-4">
+          <div className="text-sm text-muted-foreground mb-2">爆发点预测</div>
           <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-300">爆发概率</span>
+            <span className="text-muted-foreground">爆发概率</span>
             <span className="text-blue-400 font-bold">{(data.burstProbability * 100).toFixed(1)}%</span>
           </div>
           {data.predictedBurstTime && (
             <div className="flex items-center justify-between text-sm mt-2">
-              <span className="text-gray-300">预测爆发时间</span>
-              <span className="text-gray-400">{new Date(data.predictedBurstTime).toLocaleString()}</span>
+              <span className="text-muted-foreground">预测爆发时间</span>
+              <span className="text-muted-foreground">{new Date(data.predictedBurstTime).toLocaleString()}</span>
             </div>
           )}
         </div>
 
         {/* 速度曲线图表 */}
-        <div className="bg-gray-800/50 rounded-lg p-4">
-          <div className="text-sm text-gray-400 mb-2">速度曲线</div>
+        <div className="bg-muted/50 rounded-lg p-4">
+          <div className="text-sm text-muted-foreground mb-2">速度曲线</div>
           {data.velocityTimeline && data.velocityTimeline.length > 0 ? (
             <EChart
               option={chartOption}
