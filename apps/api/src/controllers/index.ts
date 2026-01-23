@@ -13,6 +13,7 @@ export { LlmProxyController } from './llm-proxy.controller';
 export { MarkdownController } from './markdown.controller';
 export { MediaCrawlerController } from './media-crawler.controller';
 export { OverviewController } from './overview.controller';
+export { PostingTimeController } from './posting-time.controller';
 export { PostsController } from './posts.controller';
 export { PropagationVelocityController } from './propagation-velocity.controller';
 export { PersonaController } from './persona.controller';

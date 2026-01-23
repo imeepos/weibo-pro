@@ -1086,3 +1086,109 @@ export interface KOLAnalysisResult {
   kolContributionRatio: number
   paretoIndex: number
 }
+
+// 用户参与度分层数据
+export interface UserStratificationLayer {
+  name: 'core' | 'active' | 'casual' | 'lurker'
+  count: number
+  percentage: number
+  avgEngagement: number
+  color: string
+}
+
+export interface UserStratificationSummary {
+  coreRatio: number
+  activeRatio: number
+  paretoIndex: number
+}
+
+export interface UserStratification {
+  layers: UserStratificationLayer[]
+  engagementGini: number
+  totalUsers: number
+  summary: UserStratificationSummary
+}
+
+// 发帖时间热力图数据
+export interface PostingTimeHeatmap {
+  hourlyDistribution: number[]   // 24小时分布 [0-23]
+  weekdayDistribution: number[]  // 7天分布 [0-6, 0=周日]
+  heatmapMatrix: number[][]      // 7x24 热力矩阵（归一化 0-1）
+  peakTime: {
+    hour: number
+    weekday: number
+    count: number
+    label: string
+  }
+  offPeakTime: {
+    hour: number
+    weekday: number
+    count: number
+    label: string
+  }
+  totalPosts: number
+  insights: string[]
+}
+
+// 评论深度分析数据
+export interface CommentDepthDistribution {
+  depth: number
+  count: number
+  percentage: number
+}
+
+export interface DiscussionHotspot {
+  rootCommentId: string
+  rootCommentText: string
+  replyCount: number
+  maxDepth: number
+  participants: number
+}
+
+export interface CommentDepthAnalysis {
+  avgThreadDepth: number
+  maxThreadDepth: number
+  replyRatio: number
+  totalRootComments: number
+  totalReplies: number
+  depthDistribution: CommentDepthDistribution[]
+  discussionHotspots: DiscussionHotspot[]
+}
+
+// 网络中心性分析相关类型
+export interface CentralityNode {
+  userId: string
+  screenName: string
+  degreeCentrality: number      // 度中心性 (0-1)
+  weightedDegree: number        // 加权度
+  influenceScore: number        // 综合影响力
+  nodeSize: number              // 可视化节点大小
+}
+
+export interface CentralityEdge {
+  source: string                // 源用户ID
+  target: string                // 目标用户ID
+  weight: number                // 边权重
+}
+
+export interface NetworkStats {
+  nodeCount: number             // 节点总数
+  edgeCount: number             // 边总数
+  avgDegree: number             // 平均度数
+  maxDegree: number             // 最大度数
+  density: number               // 网络密度 (0-1)
+}
+
+export interface TopInfluencer {
+  userId: string
+  screenName: string
+  score: number
+  rank: number
+}
+
+export interface CentralityAnalysis {
+  nodes: CentralityNode[]
+  edges: CentralityEdge[]
+  networkStats: NetworkStats
+  topInfluencers: TopInfluencer[]
+}
