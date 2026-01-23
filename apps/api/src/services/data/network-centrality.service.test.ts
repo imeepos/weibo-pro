@@ -51,8 +51,18 @@ describe('NetworkCentralityService', () => {
 
   describe('基础功能测试', () => {
     it('应该返回默认结构当事件没有网络数据', async () => {
-      // TODO: 实现测试
-      expect(true).toBe(true);
+      mockQueryBuilder.getRawMany.mockResolvedValueOnce([]);
+
+      const result = await service.getCentralityAnalysis('event-123');
+
+      expect(result.nodes).toEqual([]);
+      expect(result.edges).toEqual([]);
+      expect(result.networkStats.nodeCount).toBe(0);
+      expect(result.networkStats.edgeCount).toBe(0);
+      expect(result.networkStats.avgDegree).toBe(0);
+      expect(result.networkStats.maxDegree).toBe(0);
+      expect(result.networkStats.density).toBe(0);
+      expect(result.topInfluencers).toEqual([]);
     });
 
     it('应该正确处理单节点网络', async () => {
