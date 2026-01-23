@@ -330,13 +330,14 @@ const EventDetail: React.FC = () => {
         // 加载地理分布数据
         if (!geographicData.length) {
           const data = await c.getEventGeographic(eventId);
+          
           // 保存后端附加的统计数据
           setGeographicStats({
-            totalPosts: (data as any).totalPosts,
-            totalUsers: (data as any).totalUsers,
-            totalRegions: (data as any).totalRegions,
+            totalPosts: data.statistics.postCount,
+            totalUsers: data.statistics.userCount,
+            totalRegions: data.statistics.regionCount,
           });
-          setGeographicData(data.map(item => ({
+          setGeographicData(data.distributions.map(item => ({
             region: item.region,
             count: item.count,
             percentage: item.percentage,

@@ -87,15 +87,20 @@ describe('CommentThreadTree Component', () => {
     it('1. 组件正常渲染', () => {
       render(<CommentThreadTree data={mockCommentDepthData} />);
 
-      expect(screen.getByText('评论深度分析')).toBeInTheDocument();
+      // 验证统计卡片渲染
+      expect(screen.getByText('平均讨论深度')).toBeInTheDocument();
     });
 
     it('2. 树状图显示正确', async () => {
       render(<CommentThreadTree data={mockCommentDepthData} />);
 
       await waitFor(() => {
-        expect(echarts.init).toHaveBeenCalled();
+        expect(mockChartInstance.setOption).toHaveBeenCalled();
       });
+
+      // 验证ECharts配置中包含标题
+      const chartOption = mockChartInstance.setOption.mock.calls[0][0];
+      expect(chartOption.title.text).toBe('评论深度分析');
     });
 
     it('3. 显示深度分布统计', () => {
@@ -108,7 +113,8 @@ describe('CommentThreadTree Component', () => {
     it('4. 显示热门讨论', () => {
       render(<CommentThreadTree data={mockCommentDepthData} />);
 
-      expect(screen.getByText(/热门讨论/i)).toBeInTheDocument();
+      // 使用getAllByText因为"热门讨论"会匹配多个元素
+      expect(screen.getAllByText(/热门讨论/i).length).toBeGreaterThan(0);
       expect(screen.getByText('热门讨论话题1')).toBeInTheDocument();
       expect(screen.getByText('热门讨论话题2')).toBeInTheDocument();
     });
