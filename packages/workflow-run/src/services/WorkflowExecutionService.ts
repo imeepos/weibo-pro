@@ -73,7 +73,7 @@ export class WorkflowExecutionService {
       }
 
       // 执行工作流
-      const result = await executeAst(ast, ast as WorkflowGraphAst).toPromise()
+      const result = await executeAst(ast, inputs, ast as WorkflowGraphAst).toPromise()
 
       if (result) {
         const state = result.type === 'node_success' ? 'success'
