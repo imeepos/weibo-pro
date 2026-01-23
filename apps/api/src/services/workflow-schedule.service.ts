@@ -36,10 +36,28 @@ export class WorkflowScheduleService {
 
   /**
    * 将字符串或 Date 对象转换为 Date
+   * 如果值无效，返回 undefined 而不是 Invalid Date
    */
   private toDate(value?: Date | string): Date | undefined {
     if (!value) return undefined
-    return typeof value === 'string' ? new Date(value) : value
+    if (typeof value === 'string') {
+      // 空字符串视为无值
+      if (value.trim() === '') return undefined
+      const date = new Date(value)
+      // 验证日期是否有效 - isNaN 检查可以捕获 Invalid Date
+      if (isNaN(date.getTime())) {
+        return undefined
+      }
+      return date
+    }
+    // 对于已经是 Date 对象的输入，也需要验证
+    if (value instanceof Date) {
+      if (isNaN(value.getTime())) {
+        return undefined
+      }
+      return value
+    }
+    return undefined
   }
 
   async createSchedule(dto: CreateScheduleDto): Promise<WorkflowScheduleEntity> {

@@ -207,8 +207,8 @@ describe('unified-tool-builder', () => {
       const googleTool = unifiedToolsToGoogle(unifiedTools)
 
       expect(googleTool.functionDeclarations.length).toBe(2)
-      expect(googleTool.functionDeclarations[0].name).toBe('tool1')
-      expect(googleTool.functionDeclarations[1].name).toBe('tool2')
+      expect(googleTool.functionDeclarations[0]!.name).toBe('tool1')
+      expect(googleTool.functionDeclarations[1]!.name).toBe('tool2')
     })
   })
 })
