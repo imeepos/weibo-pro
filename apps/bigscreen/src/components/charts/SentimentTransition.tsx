@@ -69,12 +69,17 @@ export const SentimentTransition: React.FC<SentimentTransitionProps> = ({ eventI
         <div className="turning-points">
           <h4>转折点</h4>
           <ul>
-            {data.turningPoints.map((point, index) => (
-              <li key={index}>
-                {point.timestamp}: {point.fromSentiment} → {point.toSentiment}
-                (幅度: {point.magnitude.toFixed(2)})
-              </li>
-            ))}
+            {data.turningPoints.map((point, index) => {
+              const timestamp = point.timestamp instanceof Date
+                ? point.timestamp.toISOString()
+                : String(point.timestamp);
+              return (
+                <li key={index}>
+                  {timestamp}: {point.fromSentiment} → {point.toSentiment}
+                  (幅度: {point.magnitude.toFixed(2)})
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}
