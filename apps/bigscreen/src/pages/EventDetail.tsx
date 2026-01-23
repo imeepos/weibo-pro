@@ -553,8 +553,8 @@ const EventDetail: React.FC = () => {
       const result = await c.refreshCache(eventId);
       logger.info('Cache refreshed successfully', result);
 
-      // 清除所有 Tab 的加载状态
-      setTabsState(createInitialTabsState());
+      // 保存当前的 activeTab
+      const currentTab = activeTab;
 
       // 清除所有数据状态
       setUserRelationNetwork(null);
@@ -573,8 +573,23 @@ const EventDetail: React.FC = () => {
       setPostingTimeData(null);
       setNetworkCentralityData(null);
 
-      // 清除缓存后，重新加载数据
+      // 清除所有 Tab 的加载状态
+      setTabsState(createInitialTabsState());
+
+      // 切换到 overview Tab，避免在当前 Tab 状态不一致时重新加载
+      setActiveTab('overview');
+
+      // 清除缓存后，重新加载基础数据
       await fetchEventData(true);
+
+      // 如果之前不在 overview Tab，切换回去并重新加载该 Tab 数据
+      if (currentTab !== 'overview') {
+        setActiveTab(currentTab);
+        // 使用 setTimeout 确保状态更新完成后再加载 Tab 数据
+        setTimeout(() => {
+          loadTabData(currentTab, true);
+        }, 0);
+      }
     } catch (error) {
       logger.error('Failed to refresh cache:', error);
     } finally {

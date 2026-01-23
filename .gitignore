@@ -8,6 +8,8 @@ storybook-static
 # Local env files
 .env
 .wrangler
+*empclaude-*
+*.md
 logs
 BettaFish
 .env.local

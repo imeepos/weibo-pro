@@ -167,7 +167,11 @@ const GeographicDistributionChart: React.FC<GeographicDistributionChartProps> = 
   const summary = useMemo(() => {
     if (processedData.length === 0) return null;
     const totalUsers = processedData.reduce((sum, d) => sum + d.count, 0);
-    const totalPosts = processedData.reduce((sum, d) => sum + d.posts, 0);
+
+    // 优先使用后端返回的真实总帖子数（与顶部统计保持一致）
+    const totalPosts = (processedData as any).totalPosts ||
+                       processedData.reduce((sum, d) => sum + d.posts, 0);
+
     const avgSentiment = processedData.reduce((sum, d) => sum + d.sentiment * d.count, 0) / totalUsers;
     const topRegion = processedData[0];
     return { totalUsers, totalPosts, avgSentiment, topRegion, regionCount: processedData.length };
@@ -221,6 +225,9 @@ const GeographicDistributionChart: React.FC<GeographicDistributionChartProps> = 
               <span>总帖子数</span>
             </div>
             <div className="text-xl font-bold text-violet-400">{summary.totalPosts}</div>
+            <div className="text-[10px] text-muted-foreground mt-0.5">
+              与顶部统计一致
+            </div>
           </motion.div>
           <motion.div
             initial={{ opacity: 0, y: 10 }}

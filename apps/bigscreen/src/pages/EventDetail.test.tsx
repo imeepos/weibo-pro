@@ -257,9 +257,10 @@ describe('EventDetail', () => {
       getEventTimeSeries: vi.fn().mockResolvedValue({
         categories: ['2025-01-15T00:00:00Z', '2025-01-15T01:00:00Z', '2025-01-15T02:00:00Z'],
         series: [
-          { name: '正面情绪', data: [60, 70, 90] },
-          { name: '负面情绪', data: [20, 30, 40] },
-          { name: '中性情绪', data: [20, 20, 20] },
+          { name: '帖子数量', data: [100, 120, 150] },
+          { name: '正面情绪', data: [0.6, 0.7, 0.9] },
+          { name: '负面情绪', data: [0.2, 0.3, 0.4] },
+          { name: '中性情绪', data: [0.2, 0.2, 0.2] },
         ],
       }),
       getEventTrends: vi.fn().mockResolvedValue({
@@ -276,6 +277,7 @@ describe('EventDetail', () => {
       getEngagementTrend: vi.fn().mockResolvedValue(mockEngagementTrendData),
       getAnomalies: vi.fn().mockResolvedValue(mockAnomaliesData),
       updateEventKeywords: vi.fn().mockResolvedValue({ success: true }),
+      refreshCache: vi.fn().mockResolvedValue({ success: true }),
       // P2 API methods
       getSpreadBreadthAnalysis: vi.fn().mockResolvedValue({
         totalReposts: 100,
@@ -300,10 +302,99 @@ describe('EventDetail', () => {
       }),
     };
 
-    // Always return the mock controller when EventsController is requested
-    vi.mocked(root.get).mockImplementation((token) => {
+    // Mock all controllers
+    vi.mocked(root.get).mockImplementation((token: any) => {
       if (token === EventsController) {
         return mockEventsController as any;
+      }
+      // Mock P2/P3/P1 controllers
+      if (token.name === 'SpreadBreadthController') {
+        return {
+          getAnalysis: vi.fn().mockResolvedValue({
+            totalReposts: 100,
+            uniqueReposters: 80,
+            spreadDepth: 5,
+            spreadWidth: 4.5,
+            breadthIndex: 0.75,
+            propagationPaths: [],
+            spreadTimeline: [],
+            repostByUserType: [],
+          }),
+        } as any;
+      }
+      if (token.name === 'MediaTypeController') {
+        return {
+          getDistribution: vi.fn().mockResolvedValue({
+            totalPosts: 1000,
+            distribution: [],
+          }),
+        } as any;
+      }
+      if (token.name === 'CommunityDetectionController') {
+        return {
+          getAnalysis: vi.fn().mockResolvedValue({
+            totalCommunities: 3,
+            modularity: 0.75,
+            communities: [],
+            bridgeUsers: [],
+            interCommunityLinks: [],
+          }),
+        } as any;
+      }
+      if (token.name === 'PropagationVelocityController') {
+        return {
+          getVelocity: vi.fn().mockResolvedValue({
+            velocityScore: 0.8,
+            timeline: [],
+          }),
+        } as any;
+      }
+      if (token.name === 'InfluencePredictionController') {
+        return {
+          getInfluencePrediction: vi.fn().mockResolvedValue({
+            predictedReach: 10000,
+            confidence: 0.85,
+          }),
+        } as any;
+      }
+      if (token.name === 'CommunityEvolutionController') {
+        return {
+          getAnalysis: vi.fn().mockResolvedValue({
+            stability: 0.75,
+            timeline: [],
+          }),
+        } as any;
+      }
+      if (token.name === 'UserStratificationController') {
+        return {
+          getStratification: vi.fn().mockResolvedValue({
+            layers: [],
+            giniCoefficient: 0.6,
+          }),
+        } as any;
+      }
+      if (token.name === 'CommentDepthController') {
+        return {
+          getAnalysis: vi.fn().mockResolvedValue({
+            maxDepth: 5,
+            avgDepth: 2.5,
+          }),
+        } as any;
+      }
+      if (token.name === 'PostingTimeController') {
+        return {
+          getHeatmap: vi.fn().mockResolvedValue({
+            data: [],
+            peakHour: 14,
+          }),
+        } as any;
+      }
+      if (token.name === 'NetworkCentralityController') {
+        return {
+          getAnalysis: vi.fn().mockResolvedValue({
+            nodes: [],
+          }),
+        } as any;
       }
       return {} as any;
     });
@@ -1330,6 +1421,159 @@ describe('EventDetail', () => {
       await waitFor(() => {
         expect(screen.getByText('测试事件标题')).toBeInTheDocument();
       });
+    });
+  });
+
+  /**
+   * 缓存刷新测试
+   */
+  describe('缓存刷新功能', () => {
+    it('应该能够在高级分析 Tab 点击更新缓存', async () => {
+      render(
+        <MemoryRouter initialEntries={[`/event/${mockEventId}`]}>
+          <EventDetail />
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('测试事件标题')).toBeInTheDocument();
+      });
+
+      // 切换到高级分析 Tab
+      const advancedTab = screen.getByText('高级分析');
+      fireEvent.click(advancedTab);
+
+      await waitFor(() => {
+        expect(screen.getByText('传播速度分析')).toBeInTheDocument();
+      });
+
+      // 点击更新缓存按钮
+      const refreshCacheButton = screen.getByText('更新缓存');
+      expect(refreshCacheButton).toBeInTheDocument();
+
+      fireEvent.click(refreshCacheButton);
+
+      await waitFor(() => {
+        expect(mockEventsController.refreshCache).toHaveBeenCalledWith(mockEventId);
+      });
+    });
+
+    it('应该在更新缓存后重新加载当前 Tab 数据', async () => {
+      render(
+        <MemoryRouter initialEntries={[`/event/${mockEventId}`]}>
+          <EventDetail />
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('测试事件标题')).toBeInTheDocument();
+      });
+
+      // 切换到高级分析 Tab
+      const advancedTab = screen.getByText('高级分析');
+      fireEvent.click(advancedTab);
+
+      await waitFor(() => {
+        expect(screen.getByText('传播速度分析')).toBeInTheDocument();
+      });
+
+      // 清除之前的调用记录
+      mockEventsController.getEventDetail.mockClear();
+      mockEventsController.getEventTimeSeries.mockClear();
+      mockEventsController.getEventTrends.mockClear();
+
+      // 点击更新缓存按钮
+      const refreshCacheButton = screen.getByText('更新缓存');
+      fireEvent.click(refreshCacheButton);
+
+      // 等待缓存刷新完成
+      await waitFor(() => {
+        expect(mockEventsController.refreshCache).toHaveBeenCalled();
+      });
+
+      // 验证重新加载了基础数据
+      await waitFor(() => {
+        expect(mockEventsController.getEventDetail).toHaveBeenCalled();
+        expect(mockEventsController.getEventTimeSeries).toHaveBeenCalled();
+        expect(mockEventsController.getEventTrends).toHaveBeenCalled();
+      });
+    });
+
+    it('应该在更新缓存时清除所有 Tab 状态', async () => {
+      render(
+        <MemoryRouter initialEntries={[`/event/${mockEventId}`]}>
+          <EventDetail />
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('测试事件标题')).toBeInTheDocument();
+      });
+
+      // 先加载几个 Tab 的数据
+      const networkTab = screen.getByText('关系网络');
+      fireEvent.click(networkTab);
+
+      await waitFor(() => {
+        expect(mockEventsController.getEventUserRelations).toHaveBeenCalled();
+      });
+
+      const advancedTab = screen.getByText('高级分析');
+      fireEvent.click(advancedTab);
+
+      await waitFor(() => {
+        expect(screen.getByText('传播速度分析')).toBeInTheDocument();
+      });
+
+      // 清除调用记录
+      mockEventsController.getEventUserRelations.mockClear();
+
+      // 点击更新缓存
+      const refreshCacheButton = screen.getByText('更新缓存');
+      fireEvent.click(refreshCacheButton);
+
+      await waitFor(() => {
+        expect(mockEventsController.refreshCache).toHaveBeenCalled();
+      });
+
+      // 切换回 network Tab，应该重新加载数据
+      fireEvent.click(networkTab);
+
+      await waitFor(() => {
+        expect(mockEventsController.getEventUserRelations).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it('应该在更新缓存失败时不崩溃', async () => {
+      mockEventsController.refreshCache.mockRejectedValue(new Error('Cache refresh failed'));
+
+      render(
+        <MemoryRouter initialEntries={[`/event/${mockEventId}`]}>
+          <EventDetail />
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('测试事件标题')).toBeInTheDocument();
+      });
+
+      const advancedTab = screen.getByText('高级分析');
+      fireEvent.click(advancedTab);
+
+      await waitFor(() => {
+        expect(screen.getByText('传播速度分析')).toBeInTheDocument();
+      });
+
+      const refreshCacheButton = screen.getByText('更新缓存');
+      fireEvent.click(refreshCacheButton);
+
+      // 应该不崩溃
+      await waitFor(() => {
+        expect(mockEventsController.refreshCache).toHaveBeenCalled();
+      });
+
+      // 页面应该仍然可用
+      expect(screen.getByText('测试事件标题')).toBeInTheDocument();
     });
   });
 

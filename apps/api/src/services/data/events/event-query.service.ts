@@ -409,6 +409,16 @@ export class EventQueryService {
       cacheKey,
       async () => {
         return await useEntityManager(async (entityManager) => {
+          // 第一步：查询所有地区的真实总帖子数（从 EventHourlyStatisticsEntity 获取，与顶部统计保持一致）
+          const totalStats = await entityManager
+            .createQueryBuilder(EventHourlyStatisticsEntity, 'stats')
+            .select('SUM(stats.post_count)', 'totalpostcount')
+            .where('stats.event_id = :eventId', { eventId })
+            .getRawOne();
+
+          const realTotalPosts = parseInt(totalStats?.totalpostcount || '0', 10);
+
+          // 第二步：查询前20个地区的详细数据
           const locationData = await entityManager
             .createQueryBuilder(WeiboPostEntity, 'post')
             .innerJoin('post.user', 'user')
@@ -439,7 +449,7 @@ export class EventQueryService {
             0
           );
 
-          return locationData.map((item: {
+          const result = locationData.map((item: {
             location: string;
             usercount: string;
             postcount: string;
@@ -466,6 +476,13 @@ export class EventQueryService {
               sentiment: Math.round(normalizedSentiment * 100) / 100,
             };
           });
+
+          // 第三步：在结果数组上附加真实总帖子数（与顶部统计保持一致）
+          if (result.length > 0) {
+            (result as any).totalPosts = realTotalPosts;
+          }
+
+          return result;
         });
       },
       CACHE_TTL.MEDIUM
