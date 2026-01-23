@@ -1,6 +1,6 @@
 import { Injectable, Inject } from '@sker/core';
 import { useEntityManager } from '@sker/entities';
-import { WeiboCommentEntity } from '@sker/entities';
+import { WeiboCommentEntity, WeiboPostEntity } from '@sker/entities';
 import { CacheService, CACHE_TTL } from '../cache.service';
 
 export interface CommentDepthDistribution {
@@ -56,10 +56,11 @@ export class CommentDepthService {
 
   private async fetchCommentDepth(eventId: string): Promise<CommentDepthAnalysis> {
     return useEntityManager(async (manager) => {
-      // 查询所有评论（简化查询）
+      // 通过帖子关联查询特定事件的评论
       const comments = await manager
         .createQueryBuilder(WeiboCommentEntity, 'comment')
-        .where('comment.post_id IS NOT NULL')
+        .innerJoin(WeiboPostEntity, 'post', 'comment.post_id = CAST(post.id AS VARCHAR)')
+        .where('post.event_id = :eventId', { eventId })
         .orderBy('comment.created_at', 'ASC')
         .limit(10000)
         .getMany();

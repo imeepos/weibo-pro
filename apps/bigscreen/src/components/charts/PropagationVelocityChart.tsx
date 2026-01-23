@@ -3,6 +3,7 @@ import { cn } from '@/utils';
 import { ChartState } from '@sker/ui/components/ui/chart-state';
 import { EChart, type EChartsOption } from '@sker/ui/components/ui/echart';
 import type { PropagationVelocityAnalysis } from '@sker/sdk';
+import { useChartTheme } from '@/hooks/useChartConfig';
 
 interface PropagationVelocityChartProps {
   title?: string;
@@ -37,9 +38,11 @@ const PropagationVelocityChart: React.FC<PropagationVelocityChartProps> = ({
   error = null,
   height = 400,
 }) => {
+  const chartTheme = useChartTheme();
+
   if (isLoading) {
     return (
-      <div className={cn('bg-gray-900/50 backdrop-blur-sm rounded-lg p-6', className)}>
+      <div className={cn('bg-card/50 backdrop-blur-sm rounded-lg p-6', className)}>
         <ChartState loading loadingText="加载中..." />
       </div>
     );
@@ -47,7 +50,7 @@ const PropagationVelocityChart: React.FC<PropagationVelocityChartProps> = ({
 
   if (error) {
     return (
-      <div className={cn('bg-gray-900/50 backdrop-blur-sm rounded-lg p-6', className)}>
+      <div className={cn('bg-card/50 backdrop-blur-sm rounded-lg p-6', className)}>
         <ChartState error={error.message} />
       </div>
     );
@@ -55,7 +58,7 @@ const PropagationVelocityChart: React.FC<PropagationVelocityChartProps> = ({
 
   if (!data) {
     return (
-      <div className={cn('bg-gray-900/50 backdrop-blur-sm rounded-lg p-6', className)}>
+      <div className={cn('bg-card/50 backdrop-blur-sm rounded-lg p-6', className)}>
         <ChartState empty emptyText="暂无传播速度数据" />
       </div>
     );
