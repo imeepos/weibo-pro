@@ -30,7 +30,13 @@ export class LlmProxyController {
       console.log('[LlmProxyController] 返回 503 错误');
       this.res.statusCode = 503;
       this.res.setHeader('Content-Type', 'application/json');
-      this.res.end(JSON.stringify({ error: result.error }));
+      this.res.end(JSON.stringify({
+        error: {
+          message: result.error || 'Service unavailable',
+          type: 'service_unavailable',
+          code: 'service_unavailable'
+        }
+      }));
       return;
     }
 
@@ -38,7 +44,13 @@ export class LlmProxyController {
       console.log('[LlmProxyController] 返回 500 错误: 无响应');
       this.res.statusCode = 500;
       this.res.setHeader('Content-Type', 'application/json');
-      this.res.end(JSON.stringify({ error: '无响应' }));
+      this.res.end(JSON.stringify({
+        error: {
+          message: '无响应',
+          type: 'api_error',
+          code: 'no_response'
+        }
+      }));
       return;
     }
 

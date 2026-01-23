@@ -1,13 +1,14 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { CommentThreadTree } from './CommentThreadTree';
 import type { CommentDepthAnalysis } from '@sker/sdk';
 import * as echarts from 'echarts';
 
 // Mock ECharts - 必须在顶层且直接返回对象
+const mockSetOption = vi.fn();
 vi.mock('echarts', () => {
   const mockChartInstance = {
-    setOption: vi.fn(),
+    setOption: mockSetOption,
     resize: vi.fn(),
     dispose: vi.fn(),
     on: vi.fn(),
@@ -23,6 +24,26 @@ vi.mock('echarts', () => {
     },
   };
 });
+
+// Mock useEChartTheme hook
+const mockColors = {
+  text: '#ffffff',
+  textMuted: '#9ca3af',
+  border: 'rgba(255, 255, 255, 0.3)',
+  splitLine: 'rgba(255, 255, 255, 0.1)',
+  tooltipBg: 'rgba(0, 0, 0, 0.8)',
+  tooltipBorder: 'rgba(255, 255, 255, 0.2)',
+  toolbox: '#ffffff',
+  emphasis: '#3b82f6',
+  chartBg: '#1e293b',
+};
+
+vi.mock('@sker/ui/hooks/use-echart-theme', () => ({
+  useEChartTheme: vi.fn(() => ({
+    isDark: true,
+    colors: mockColors,
+  })),
+}));
 
 // Mock data
 const mockCommentDepthData: CommentDepthAnalysis = {
@@ -133,6 +154,111 @@ describe('CommentThreadTree Component', () => {
       render(<CommentThreadTree data={null} error={error} />);
 
       expect(screen.getByText(/Network error/i)).toBeInTheDocument();
+    });
+  });
+
+  describe('主题适配测试', () => {
+    it('9. 使用useEChartTheme hook', async () => {
+      render(<CommentThreadTree data={mockCommentDepthData} />);
+
+      await waitFor(() => {
+        expect(mockSetOption).toHaveBeenCalled();
+      });
+
+      // 验证ECharts配置使用了主题颜色
+      const chartOption = mockSetOption.mock.calls[0][0];
+      expect(chartOption.title.textStyle.color).toBe(mockColors.text);
+    });
+
+    it('10. 图表标题使用主题颜色', async () => {
+      render(<CommentThreadTree data={mockCommentDepthData} />);
+
+      await waitFor(() => {
+        expect(mockSetOption).toHaveBeenCalled();
+      });
+
+      const chartOption = mockSetOption.mock.calls[0][0];
+      expect(chartOption.title.textStyle.color).toBe(mockColors.text);
+    });
+
+    it('11. X轴标签使用主题颜色', async () => {
+      render(<CommentThreadTree data={mockCommentDepthData} />);
+
+      await waitFor(() => {
+        expect(mockSetOption).toHaveBeenCalled();
+      });
+
+      const chartOption = mockSetOption.mock.calls[0][0];
+      expect(chartOption.xAxis.axisLabel.color).toBe(mockColors.textMuted);
+    });
+
+    it('12. Y轴标签使用主题颜色', async () => {
+      render(<CommentThreadTree data={mockCommentDepthData} />);
+
+      await waitFor(() => {
+        expect(mockSetOption).toHaveBeenCalled();
+      });
+
+      const chartOption = mockSetOption.mock.calls[0][0];
+      expect(chartOption.yAxis.axisLabel.color).toBe(mockColors.textMuted);
+    });
+
+    it('13. 分割线使用主题颜色', async () => {
+      render(<CommentThreadTree data={mockCommentDepthData} />);
+
+      await waitFor(() => {
+        expect(mockSetOption).toHaveBeenCalled();
+      });
+
+      const chartOption = mockSetOption.mock.calls[0][0];
+      expect(chartOption.yAxis.splitLine.lineStyle.color).toBe(mockColors.splitLine);
+    });
+
+    it('14. 轴线使用主题颜色', async () => {
+      render(<CommentThreadTree data={mockCommentDepthData} />);
+
+      await waitFor(() => {
+        expect(mockSetOption).toHaveBeenCalled();
+      });
+
+      const chartOption = mockSetOption.mock.calls[0][0];
+      expect(chartOption.xAxis.axisLine.lineStyle.color).toBe(mockColors.border);
+      expect(chartOption.yAxis.axisLine.lineStyle.color).toBe(mockColors.border);
+    });
+
+    it('15. 柱状图标签使用主题颜色', async () => {
+      render(<CommentThreadTree data={mockCommentDepthData} />);
+
+      await waitFor(() => {
+        expect(mockSetOption).toHaveBeenCalled();
+      });
+
+      const chartOption = mockSetOption.mock.calls[0][0];
+      expect(chartOption.series[0].label.color).toBe(mockColors.text);
+    });
+
+    it('16. 统计卡片使用语义化CSS类', () => {
+      const { container } = render(<CommentThreadTree data={mockCommentDepthData} />);
+
+      // 验证统计卡片使用bg-card而不是bg-gray-800
+      const cards = container.querySelectorAll('.bg-card');
+      expect(cards.length).toBeGreaterThan(0);
+    });
+
+    it('17. 统计卡片标签使用语义化CSS类', () => {
+      const { container } = render(<CommentThreadTree data={mockCommentDepthData} />);
+
+      // 验证标签使用text-muted-foreground
+      const labels = container.querySelectorAll('.text-muted-foreground');
+      expect(labels.length).toBeGreaterThan(0);
+    });
+
+    it('18. 热门讨论标题使用语义化CSS类', () => {
+      const { container } = render(<CommentThreadTree data={mockCommentDepthData} />);
+
+      // 验证热门讨论标题使用text-foreground
+      const title = container.querySelector('h3.text-foreground');
+      expect(title).toBeInTheDocument();
     });
   });
 });
