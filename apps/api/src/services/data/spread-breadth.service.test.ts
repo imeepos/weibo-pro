@@ -83,17 +83,20 @@ describe('SpreadBreadthService', () => {
   describe('传播深度计算', () => {
     it('应该正确计算单层传播深度', async () => {
       // 原始帖子 -> 用户A
+      const mockPosts = [{ id: 'post1' }];
       const mockReposts = [{
         postId: 'post1',
         repostId: 'repost1',
-        userId: 'userA',
+        userId: '100001',
         screenName: 'User A',
         userClass: null, // ordinary
         verified: false,
         createdAt: new Date('2024-01-01T10:00:00Z'),
-        rootPostId: 'post1',
       }];
 
+      // Mock 查询帖子
+      mockQueryBuilder.getMany.mockResolvedValueOnce(mockPosts);
+      // Mock 查询转发
       mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockReposts);
 
       const result = await service.getBreadthAnalysis('event-123');
@@ -105,39 +108,40 @@ describe('SpreadBreadthService', () => {
 
     it('应该正确计算多层传播深度', async () => {
       // 原始帖子 -> 用户A -> 用户B -> 用户C
+      const mockPosts = [{ id: 'post1' }];
       const mockReposts = [
         {
           postId: 'post1', // 原始帖子
           repostId: 'repost1',
-          userId: 'userA',
+          userId: '100001',
           screenName: 'User A',
           userClass: null,
           verified: false,
           createdAt: new Date('2024-01-01T10:00:00Z'),
-          rootPostId: 'post1',
         },
         {
           postId: 'repost1', // 用户A的转发被用户B转发
           repostId: 'repost2',
-          userId: 'userB',
+          userId: '100002',
           screenName: 'User B',
           userClass: null,
           verified: false,
           createdAt: new Date('2024-01-01T11:00:00Z'),
-          rootPostId: 'post1',
         },
         {
           postId: 'repost2', // 用户B的转发被用户C转发
           repostId: 'repost3',
-          userId: 'userC',
+          userId: '100003',
           screenName: 'User C',
           userClass: null,
           verified: false,
           createdAt: new Date('2024-01-01T12:00:00Z'),
-          rootPostId: 'post1',
         },
       ];
 
+      // Mock 查询帖子
+      mockQueryBuilder.getMany.mockResolvedValueOnce(mockPosts);
+      // Mock 查询转发
       mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockReposts);
 
       const result = await service.getBreadthAnalysis('event-123');

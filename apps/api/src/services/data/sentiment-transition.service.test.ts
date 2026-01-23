@@ -1,11 +1,15 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { SentimentTransitionService } from './sentiment-transition.service';
 import { CacheService } from '../cache.service';
-import { useEntityManager } from '@sker/entities';
+import { useEntityManager, PostNLPResultEntity } from '@sker/entities';
 
-vi.mock('@sker/entities', () => ({
-  useEntityManager: vi.fn(),
-}));
+vi.mock('@sker/entities', async () => {
+  const actual = await vi.importActual('@sker/entities');
+  return {
+    ...actual,
+    useEntityManager: vi.fn(),
+  };
+});
 
 describe('SentimentTransitionService', () => {
   let service: SentimentTransitionService;
@@ -34,6 +38,11 @@ describe('SentimentTransitionService', () => {
             }),
           }),
         });
+      });
+
+      // 让缓存调用回调函数
+      mockCacheService.getOrSet.mockImplementation(async (key, factory) => {
+        return factory();
       });
 
       const result = await service.getSentimentTransitionAnalysis('test-event-id');
@@ -87,6 +96,10 @@ describe('SentimentTransitionService', () => {
         });
       });
 
+      mockCacheService.getOrSet.mockImplementation(async (key, factory) => {
+        return factory();
+      });
+
       const result = await service.getSentimentTransitionAnalysis('test-event-id');
 
       expect(result.transitionMatrix).toBeDefined();
@@ -98,9 +111,15 @@ describe('SentimentTransitionService', () => {
     });
 
     it('should detect turning points', async () => {
+      // 提供足够的数据点以检测转折点（至少需要 7 个点，windowSize=3）
       const mockData = [
         { hour: '2024-01-01 10:00:00', positive: 15, negative: 2, neutral: 1 },
-        { hour: '2024-01-01 11:00:00', positive: 3, negative: 14, neutral: 1 },
+        { hour: '2024-01-01 11:00:00', positive: 14, negative: 3, neutral: 1 },
+        { hour: '2024-01-01 12:00:00', positive: 13, negative: 4, neutral: 1 },
+        { hour: '2024-01-01 13:00:00', positive: 3, negative: 14, neutral: 1 }, // 转折点
+        { hour: '2024-01-01 14:00:00', positive: 2, negative: 15, neutral: 1 },
+        { hour: '2024-01-01 15:00:00', positive: 2, negative: 16, neutral: 1 },
+        { hour: '2024-01-01 16:00:00', positive: 1, negative: 17, neutral: 1 },
       ];
 
       vi.mocked(useEntityManager).mockImplementation(async (callback) => {
@@ -117,6 +136,10 @@ describe('SentimentTransitionService', () => {
             }),
           }),
         });
+      });
+
+      mockCacheService.getOrSet.mockImplementation(async (key, factory) => {
+        return factory();
       });
 
       const result = await service.getSentimentTransitionAnalysis('test-event-id');
