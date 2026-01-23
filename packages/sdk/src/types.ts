@@ -1225,6 +1225,11 @@ export interface TurningPoint {
   magnitude: number
   triggerKeywords: string[]
   triggerPosts: string[]
+  confidence?: number
+  sentimentDistribution?: {
+    before: { positive: number; negative: number; neutral: number }
+    after: { positive: number; negative: number; neutral: number }
+  }
 }
 
 export interface SentimentTransitionAnalysis {
@@ -1233,6 +1238,12 @@ export interface SentimentTransitionAnalysis {
   turningPoints: TurningPoint[]
   stabilityIndex: number
   polarizationIndex: number
+  metadata?: {
+    totalTimePoints: number
+    analyzedTimePoints: number
+    skippedBoundaryPoints: number
+    calculationMethod: string
+  }
 }
 
 // 媒体类型分布相关类型

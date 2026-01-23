@@ -209,34 +209,9 @@ export class WeiboKeywordSearchAstVisitor {
 
                 if (!postEntity) {
                     console.log('[WeiboKeywordSearch] 帖子不存在，正常发射');
-                    // 帖子不存在，正常发射
                     return false;
                 }
-
-                console.log('[WeiboKeywordSearch] 帖子已存在，postEntity.id:', postEntity.id);
-
-                // 查询最新快照时间
-                const latestSnapshot = await m.findOne(WeiboPostSnapshotEntity, {
-                    where: { post_id: postEntity.id },
-                    order: { snapshot_at: 'DESC' }
-                });
-
-                if (!latestSnapshot) {
-                    console.log('[WeiboKeywordSearch] 无快照，正常发射');
-                    // 无快照，正常发射
-                    return false;
-                }
-
-                // 检查是否小于12小时
-                const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
-                const isRecent = latestSnapshot.snapshot_at > twelveHoursAgo;
-                console.log('[WeiboKeywordSearch] 快照检查结果:', {
-                    latestSnapshotAt: latestSnapshot.snapshot_at,
-                    twelveHoursAgo,
-                    isRecent,
-                    shouldSkip: isRecent
-                });
-                return isRecent;
+                return true;
             });
 
             // 如果需要跳过，则跳过
@@ -309,26 +284,11 @@ export class WeiboKeywordSearchAstVisitor {
                             const postEntity = await m.findOne(WeiboPostEntity, {
                                 where: isLongId ? { id: post.mid } : { mblogid: post.mid }
                             });
-
                             if (!postEntity) {
                                 // 帖子不存在，正常发射
                                 return false;
                             }
-
-                            // 查询最新快照时间
-                            const latestSnapshot = await m.findOne(WeiboPostSnapshotEntity, {
-                                where: { post_id: postEntity.id },
-                                order: { snapshot_at: 'DESC' }
-                            });
-
-                            if (!latestSnapshot) {
-                                // 无快照，正常发射
-                                return false;
-                            }
-
-                            // 检查是否小于12小时
-                            const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
-                            return latestSnapshot.snapshot_at > twelveHoursAgo;
+                            return true;
                         });
 
                         // 如果需要跳过，则跳过

@@ -3,13 +3,16 @@ import { useEntityManager } from '@sker/entities';
 import { CacheService, CACHE_TTL } from '../cache.service';
 import type { SentimentTransitionAnalysis, SentimentTimePoint, TransitionMatrix, TurningPoint } from '@sker/sdk';
 import { PostNLPResultEntity } from '@sker/entities';
+import { SentimentTransitionLLMAnalyzerService } from './sentiment-transition-llm-analyzer.service';
+import { SENTIMENT_TRANSITION_CONFIG } from './events/sentiment-transition-constants';
 
 type SentimentType = 'positive' | 'negative' | 'neutral';
 
 @Injectable({ providedIn: 'root' })
 export class SentimentTransitionService {
   constructor(
-    @Inject(CacheService) private readonly cacheService: CacheService
+    @Inject(CacheService) private readonly cacheService: CacheService,
+    @Inject(SentimentTransitionLLMAnalyzerService) private readonly llmAnalyzer: SentimentTransitionLLMAnalyzerService
   ) {}
 
   async getSentimentTransitionAnalysis(eventId: string): Promise<SentimentTransitionAnalysis> {
@@ -65,8 +68,8 @@ export class SentimentTransitionService {
       // 计算转变矩阵
       const transitionMatrix = this.calculateTransitionMatrix(timeline);
 
-      // 检测转折点
-      const turningPoints = this.detectTurningPoints(timeline, hourlyData);
+      // 检测转折点（使用增强版本）
+      const turningPoints = await this.detectTurningPointsEnhanced(timeline, hourlyData, eventId);
 
       // 计算稳定性指数
       const stabilityIndex = this.calculateStabilityIndex(timeline);
@@ -80,6 +83,12 @@ export class SentimentTransitionService {
         turningPoints,
         stabilityIndex,
         polarizationIndex,
+        metadata: {
+          totalTimePoints: timeline.length,
+          analyzedTimePoints: this.getAnalyzedPointsCount(timeline),
+          skippedBoundaryPoints: this.getSkippedPointsCount(timeline),
+          calculationMethod: SENTIMENT_TRANSITION_CONFIG.CALCULATION_METHOD,
+        },
       };
     });
   }
@@ -89,6 +98,235 @@ export class SentimentTransitionService {
     if (max === positive) return 'positive';
     if (max === negative) return 'negative';
     return 'neutral';
+  }
+
+  /**
+   * 改进的情感判断（支持中性情感）
+   */
+  private getDominantSentimentInWindow(
+    positive: number,
+    negative: number,
+    neutral: number
+  ): SentimentType {
+    const max = Math.max(positive, negative, neutral);
+    if (max === positive) return 'positive';
+    if (max === negative) return 'negative';
+    return 'neutral';
+  }
+
+  /**
+   * 获取窗口数据（支持不同边界策略）
+   */
+  private getWindow(
+    timeline: SentimentTimePoint[],
+    index: number,
+    windowSize: number
+  ): {
+    before: SentimentTimePoint[];
+    after: SentimentTimePoint[];
+    shouldSkip: boolean;
+  } {
+    const strategy = SENTIMENT_TRANSITION_CONFIG.BOUNDARY_STRATEGY;
+
+    if (strategy === 'skip') {
+      // 原有逻辑：跳过边界
+      if (index < windowSize || index >= timeline.length - windowSize) {
+        return { before: [], after: [], shouldSkip: true };
+      }
+      return {
+        before: timeline.slice(index - windowSize, index),
+        after: timeline.slice(index + 1, index + 1 + windowSize),
+        shouldSkip: false,
+      };
+    }
+
+    // partial 策略：使用可用的数据点
+    const before = timeline.slice(Math.max(0, index - windowSize), index);
+    const after = timeline.slice(
+      index + 1,
+      Math.min(timeline.length, index + 1 + windowSize)
+    );
+
+    return {
+      before,
+      after,
+      shouldSkip: before.length === 0 || after.length === 0,
+    };
+  }
+
+  /**
+   * 计算窗口平均值
+   */
+  private calculateWindowAverage(window: SentimentTimePoint[]): {
+    positive: number;
+    negative: number;
+    neutral: number;
+  } {
+    if (window.length === 0) {
+      return { positive: 0, negative: 0, neutral: 0 };
+    }
+
+    const sum = window.reduce(
+      (acc, point) => ({
+        positive: acc.positive + point.positive,
+        negative: acc.negative + point.negative,
+        neutral: acc.neutral + point.neutral,
+      }),
+      { positive: 0, negative: 0, neutral: 0 }
+    );
+
+    return {
+      positive: sum.positive / window.length,
+      negative: sum.negative / window.length,
+      neutral: sum.neutral / window.length,
+    };
+  }
+
+  /**
+   * 计算情感变化率（支持多种计算方法）
+   */
+  private calculateChangeRate(
+    before: { positive: number; negative: number; neutral: number },
+    after: { positive: number; negative: number; neutral: number }
+  ): number {
+    const method = SENTIMENT_TRANSITION_CONFIG.CALCULATION_METHOD;
+
+    if (method === 'positive_only') {
+      // 原有逻辑：仅基于正面情感（向后兼容）
+      return Math.abs(after.positive - before.positive) / (before.positive || 1);
+    }
+
+    // comprehensive 方法：欧氏距离
+    const totalBefore = before.positive + before.negative + before.neutral;
+    const totalAfter = after.positive + after.negative + after.neutral;
+
+    if (totalBefore === 0 || totalAfter === 0) return 0;
+
+    const beforeRatio = {
+      positive: before.positive / totalBefore,
+      negative: before.negative / totalBefore,
+      neutral: before.neutral / totalBefore,
+    };
+
+    const afterRatio = {
+      positive: after.positive / totalAfter,
+      negative: after.negative / totalAfter,
+      neutral: after.neutral / totalAfter,
+    };
+
+    // 欧氏距离
+    return Math.sqrt(
+      Math.pow(afterRatio.positive - beforeRatio.positive, 2) +
+      Math.pow(afterRatio.negative - beforeRatio.negative, 2) +
+      Math.pow(afterRatio.neutral - beforeRatio.neutral, 2)
+    );
+  }
+
+  /**
+   * 计算置信度
+   */
+  private calculateConfidence(changeRate: number, threshold: number): number {
+    // 变化率越大，置信度越高
+    // 使用 sigmoid 函数映射到 0-1
+    const normalized = (changeRate - threshold) / threshold;
+    return 1 / (1 + Math.exp(-normalized));
+  }
+
+  /**
+   * 增强的转折点检测算法
+   */
+  private async detectTurningPointsEnhanced(
+    timeline: SentimentTimePoint[],
+    rawData: any[],
+    eventId: string
+  ): Promise<TurningPoint[]> {
+    const turningPoints: TurningPoint[] = [];
+    const windowSize = SENTIMENT_TRANSITION_CONFIG.WINDOW_SIZE;
+    const threshold = SENTIMENT_TRANSITION_CONFIG.CHANGE_RATE_THRESHOLD;
+
+    for (let i = 0; i < timeline.length; i++) {
+      const { before, after, shouldSkip } = this.getWindow(timeline, i, windowSize);
+      if (shouldSkip) continue;
+
+      const current = timeline[i];
+      const avgBefore = this.calculateWindowAverage(before);
+      const avgAfter = this.calculateWindowAverage(after);
+
+      // 使用配置的计算方法
+      const changeRate = this.calculateChangeRate(avgBefore, avgAfter);
+
+      if (changeRate > threshold) {
+        const fromSentiment = this.getDominantSentimentInWindow(
+          avgBefore.positive,
+          avgBefore.negative,
+          avgBefore.neutral
+        );
+        const toSentiment = this.getDominantSentimentInWindow(
+          avgAfter.positive,
+          avgAfter.negative,
+          avgAfter.neutral
+        );
+
+        // 只有情感类型改变时才记录
+        if (fromSentiment !== toSentiment) {
+          // 使用 LLM 提取关键词和触发帖子
+          const analysis = await this.llmAnalyzer.analyzeTurningPoint(
+            eventId,
+            {
+              timestamp: typeof current.timestamp === 'string' ? current.timestamp : String(current.timestamp),
+              fromSentiment,
+              toSentiment,
+            },
+            windowSize
+          );
+
+          turningPoints.push({
+            timestamp: typeof current.timestamp === 'string' ? current.timestamp : String(current.timestamp),
+            fromSentiment,
+            toSentiment,
+            magnitude: changeRate,
+            triggerKeywords: analysis.triggerKeywords,
+            triggerPosts: analysis.triggerPosts,
+            confidence: this.calculateConfidence(changeRate, threshold),
+            sentimentDistribution: {
+              before: avgBefore,
+              after: avgAfter,
+            },
+          });
+        }
+      }
+    }
+
+    return turningPoints;
+  }
+
+  /**
+   * 获取分析的时间点数量
+   */
+  private getAnalyzedPointsCount(timeline: SentimentTimePoint[]): number {
+    const windowSize = SENTIMENT_TRANSITION_CONFIG.WINDOW_SIZE;
+    const strategy = SENTIMENT_TRANSITION_CONFIG.BOUNDARY_STRATEGY;
+
+    if (strategy === 'skip') {
+      return Math.max(0, timeline.length - 2 * windowSize);
+    }
+
+    // partial 策略分析所有点
+    return timeline.length;
+  }
+
+  /**
+   * 获取跳过的边界点数量
+   */
+  private getSkippedPointsCount(timeline: SentimentTimePoint[]): number {
+    const windowSize = SENTIMENT_TRANSITION_CONFIG.WINDOW_SIZE;
+    const strategy = SENTIMENT_TRANSITION_CONFIG.BOUNDARY_STRATEGY;
+
+    if (strategy === 'skip') {
+      return Math.min(2 * windowSize, timeline.length);
+    }
+
+    return 0;
   }
 
   private calculateTransitionMatrix(timeline: SentimentTimePoint[]): TransitionMatrix {
@@ -132,6 +370,8 @@ export class SentimentTransitionService {
   }
 
   private detectTurningPoints(timeline: SentimentTimePoint[], rawData: any[]): TurningPoint[] {
+    // 已被 detectTurningPointsEnhanced 替代，保留用于向后兼容
+    console.warn('detectTurningPoints is deprecated, use detectTurningPointsEnhanced instead');
     const turningPoints: TurningPoint[] = [];
     const windowSize = 3;
 
