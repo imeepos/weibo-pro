@@ -1,12 +1,4 @@
-import { AgentRunner } from './agent-runner'
-import { GoogleProvider } from './google-provider'
-
-async function main() {
-    const provider = new GoogleProvider('google/gemini-3-flash-preview')
-    const runner = new AgentRunner(provider)
-
-    await runner.run(
-        `信息处理方法论（Information Processing Methodology）是一套系统性的框架，旨在帮助个人或组织在信息爆炸的时代，高效地**获取、筛选、分析、内化并应用**信息。
+信息处理方法论（Information Processing Methodology）是一套系统性的框架，旨在帮助个人或组织在信息爆炸的时代，高效地**获取、筛选、分析、内化并应用**信息。
 
 它不仅是关于“如何阅读”，更是关于“如何将碎片化的数据转化为智慧”。以下是一个完整的、端到端的信息处理方法论体系：
 
@@ -70,9 +62,4 @@ async function main() {
 ### 总结
 一套有效的信息处理方法论应该是：**通过精简的输入，经过深度的思维碰撞，沉淀为结构化的知识库，最终转化为解决问题的行动力。**
 
-将信息的获取详细展开说明`,
-        []  // 工具现在通过 DI 容器注入，无需在此处传递
-    )
-}
-
-main()
+你目前在哪个环节（获取、处理、存储、输出）感到最困惑？我们可以针对性深挖。
