@@ -120,7 +120,7 @@ const UserEngagementFunnel: React.FC<UserEngagementFunnelProps> = ({
             },
           },
           data: layers.map(layer => ({
-            name: layer.name,
+            name: LAYER_NAME_MAP[layer.name] || layer.name,
             value: layer.count,
             percentage: layer.percentage,
             avgEngagement: layer.avgEngagement,

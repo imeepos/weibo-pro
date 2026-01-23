@@ -116,6 +116,7 @@ interface TrendChartData {
   sentimentData: number[];
   postData: number[];
   userData: number[];
+  totalPosts?: number;
 }
 
 interface GeographicDataPoint {
@@ -254,7 +255,8 @@ const EventDetail: React.FC = () => {
         hotnessData: trendData.hotnessData || [],
         sentimentData: trendData.sentimentScores || [],
         postData: trendData.postVolume || [],
-        userData: trendData.userEngagement || []
+        userData: trendData.userEngagement || [],
+        totalPosts: trendData.totalPosts // 保存真实的总帖子数
       });
 
       // 转换关键词数据
@@ -621,7 +623,9 @@ const EventDetail: React.FC = () => {
       return null;
     }
     const hasData = trendData.hotnessData.length > 0 || trendData.sentimentData.length > 0;
-    const totalPosts = trendData.postData.reduce((a, b) => a + b, 0);
+
+    // 优先使用后端返回的真实总帖子数，确保与地理分布统计一致
+    const totalPosts = trendData.totalPosts ?? trendData.postData.reduce((a, b) => a + b, 0);
     const totalUsers = trendData.userData.reduce((a, b) => a + b, 0);
     const avgHotness = hasData && trendData.hotnessData.length > 0
       ? Math.round(trendData.hotnessData.reduce((a, b) => a + b, 0) / trendData.hotnessData.length)

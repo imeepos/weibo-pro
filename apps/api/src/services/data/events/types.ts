@@ -120,6 +120,7 @@ export interface TrendAnalysis {
   sentimentScores: number[];
   userEngagement: number[];
   hotnessData: number[];
+  totalPosts?: number; // 真实的总帖子数（从 WeiboPostEntity 查询）
 }
 
 // 新增：NLP 深度分析类型

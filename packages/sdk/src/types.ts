@@ -90,6 +90,7 @@ export interface TrendAnalysis {
   sentimentScores: number[]
   userEngagement: number[]
   hotnessData: number[]
+  totalPosts?: number
 }
 
 export interface HotListItem {

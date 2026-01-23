@@ -234,12 +234,24 @@ export class EventAnalyticsService {
             );
           });
 
+          // 查询真实的总帖子数（直接从 WeiboPostEntity 查询，确保与地理分布统计一致）
+          const totalPostsResult = await entityManager
+            .createQueryBuilder(PostNLPResultEntity, 'nlp')
+            .innerJoin('nlp.post', 'post')
+            .select('COUNT(DISTINCT post.id)', 'totalpostcount')
+            .where('nlp.event_id = :eventId', { eventId })
+            .andWhere('post.deleted_at IS NULL')
+            .getRawOne();
+
+          const totalPosts = parseInt(totalPostsResult?.totalpostcount || '0', 10);
+
           return {
             timeline,
             postVolume,
             sentimentScores,
             userEngagement,
             hotnessData,
+            totalPosts, // 添加真实的总帖子数
           };
         });
       },
