@@ -23,6 +23,7 @@ import type {
   EventCategoryStats,
   InfluenceUser,
   GeographicDistribution,
+  GeographicResponse,
   EventSentimentHotness,
   EventSentimentDistribution,
   EventSentimentIntensity,
@@ -402,17 +403,18 @@ export class EventQueryService {
 
   async getGeographicDistribution(
     eventId: string
-  ): Promise<GeographicDistribution[]> {
+  ): Promise<GeographicResponse> {
     const cacheKey = CacheService.buildKey('event:geographic', eventId);
 
     return await this.cacheService.getOrSet(
       cacheKey,
       async () => {
         return await useEntityManager(async (entityManager) => {
-          // 第一步：查询真实的总帖子数、总用户数、总地区数
+          // 第一步：查询真实的总帖子数、总用户数、总地区数和全局平均情感
           const totalStats = await entityManager
             .createQueryBuilder(WeiboPostEntity, 'post')
             .innerJoin('post.user', 'user')
+            .leftJoin(PostNLPResultEntity, 'nlp', 'nlp.post_id = post.id')
             .select('COUNT(post.id)', 'totalpostcount')
             .addSelect('COUNT(DISTINCT user.id)', 'totalusercount')
             .addSelect(`COUNT(DISTINCT COALESCE(
@@ -420,6 +422,10 @@ export class EventQueryService {
               NULLIF(user.location, ''),
               '未知'
             ))`, 'totalregioncount')
+            .addSelect(
+              'AVG((nlp.sentiment->>\'positive_prob\')::numeric - (nlp.sentiment->>\'negative_prob\')::numeric)',
+              'globalavgsentiment'
+            )
             .where('post.event_id = :eventId', { eventId })
             .andWhere('post.deleted_at IS NULL')
             .getRawOne();
@@ -427,6 +433,11 @@ export class EventQueryService {
           const realTotalPosts = parseInt(totalStats?.totalpostcount || '0', 10);
           const realTotalUsers = parseInt(totalStats?.totalusercount || '0', 10);
           const realTotalRegions = parseInt(totalStats?.totalregioncount || '0', 10);
+          const globalAvgSentiment = parseFloat(totalStats?.globalavgsentiment || '0');
+          // 将全局情感值 [-1, 1] 归一化到 [0, 1]，无数据时返回 0.5（中性）
+          const normalizedGlobalSentiment = globalAvgSentiment !== 0
+            ? Math.round(Math.max(0, Math.min(1, (globalAvgSentiment + 1) / 2)) * 100) / 100
+            : 0.5;
 
           // 第二步：查询前20个地区的详细数据
           const locationData = await entityManager
@@ -487,14 +498,16 @@ export class EventQueryService {
             };
           });
 
-          // 第三步：在结果数组上附加真实统计数据（与顶部统计保持一致）
-          if (result.length > 0) {
-            (result as any).totalPosts = realTotalPosts;
-            (result as any).totalUsers = realTotalUsers;
-            (result as any).totalRegions = realTotalRegions;
-          }
-
-          return result;
+          // 返回 GeographicResponse 格式
+          return {
+            statistics: {
+              regionCount: realTotalRegions,
+              userCount: realTotalUsers,
+              postCount: realTotalPosts,
+              avgSentiment: normalizedGlobalSentiment,
+            },
+            distributions: result,
+          };
         });
       },
       CACHE_TTL.MEDIUM

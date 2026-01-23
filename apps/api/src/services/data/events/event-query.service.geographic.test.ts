@@ -31,7 +31,7 @@ describe('EventQueryService - 地理分布数据一致性', () => {
     expect(queryServiceCode).toMatch(/post\.deleted_at IS NULL/i);
   });
 
-  it('应该在 getGeographicDistribution 方法中附加真实总帖子数', () => {
+  it('应该在 getGeographicDistribution 方法中返回统计数据', () => {
     // 检查 getGeographicDistribution 方法定义
     const methodStart = queryServiceCode.indexOf('async getGeographicDistribution');
     expect(methodStart).toBeGreaterThan(-1);
@@ -43,8 +43,8 @@ describe('EventQueryService - 地理分布数据一致性', () => {
     expect(methodBody).toContain('totalStats');
     expect(methodBody).toContain('realTotalPosts');
 
-    // 验证将真实总帖子数附加到结果数组
-    expect(methodBody).toMatch(/\.totalPosts\s*=\s*realTotalPosts/);
+    // 验证返回 statistics 对象包含 postCount
+    expect(methodBody).toMatch(/statistics[\s\S]*postCount:\s*realTotalPosts/);
   });
 
   it('应该保持前20个地区的限制', () => {
@@ -96,12 +96,13 @@ describe('EventQueryService - 地理分布数据一致性', () => {
     expect(methodBody).toMatch(/return\s*\{[\s\S]*totalPosts[\s\S]*\}/);
   });
 
-  it('应该正确处理空数据情况', () => {
+  it('应该正确处理空数据情况并返回默认统计', () => {
     const methodStart = queryServiceCode.indexOf('async getGeographicDistribution');
     const methodBody = queryServiceCode.substring(methodStart);
 
-    // 验证在附加 totalPosts 之前检查结果长度
-    expect(methodBody).toMatch(/if\s*\(\s*result\.length\s*>\s*0\s*\)/);
+    // 验证返回结构包含 statistics 和 distributions
+    expect(methodBody).toContain('statistics');
+    expect(methodBody).toContain('distributions');
   });
 
   it('两个查询应该使用相同的查询条件', () => {
@@ -120,5 +121,79 @@ describe('EventQueryService - 地理分布数据一致性', () => {
     // 两个查询都应该包含 deleted_at IS NULL 条件
     expect(geoMethodBody).toMatch(/deleted_at IS NULL/i);
     expect(trendMethodBody).toMatch(/deleted_at IS NULL/i);
+  });
+});
+
+/**
+ * GeographicResponse 统计数据测试
+ *
+ * 测试 getEventGeographic API 返回包含统计数据的 GeographicResponse 类型
+ */
+describe('EventQueryService - GeographicResponse 统计数据', () => {
+  let queryServiceCode: string;
+  let sdkTypesCode: string;
+  let sdkControllerCode: string;
+
+  beforeAll(() => {
+    const queryFilePath = path.resolve(__dirname, './event-query.service.ts');
+    const sdkTypesPath = path.resolve(__dirname, '../../../../../../packages/sdk/src/types.ts');
+    const sdkControllerPath = path.resolve(__dirname, '../../../../../../packages/sdk/src/controllers/events.controller.ts');
+    queryServiceCode = fs.readFileSync(queryFilePath, 'utf-8');
+    sdkTypesCode = fs.readFileSync(sdkTypesPath, 'utf-8');
+    sdkControllerCode = fs.readFileSync(sdkControllerPath, 'utf-8');
+  });
+
+  describe('SDK 类型定义', () => {
+    it('应该定义 GeographicStatistics 接口', () => {
+      expect(sdkTypesCode).toContain('interface GeographicStatistics');
+      expect(sdkTypesCode).toContain('regionCount: number');
+      expect(sdkTypesCode).toContain('userCount: number');
+      expect(sdkTypesCode).toContain('postCount: number');
+      expect(sdkTypesCode).toContain('avgSentiment: number');
+    });
+
+    it('应该定义 GeographicResponse 接口', () => {
+      expect(sdkTypesCode).toContain('interface GeographicResponse');
+      expect(sdkTypesCode).toContain('statistics: GeographicStatistics');
+      expect(sdkTypesCode).toContain('distributions: GeographicDistribution[]');
+    });
+
+    it('SDK Controller 应该返回 GeographicResponse 类型', () => {
+      expect(sdkControllerCode).toContain('GeographicResponse');
+      expect(sdkControllerCode).toMatch(/getEventGeographic.*Promise<GeographicResponse>/);
+    });
+  });
+
+  describe('Service 实现', () => {
+    it('应该返回 GeographicResponse 类型', () => {
+      expect(queryServiceCode).toMatch(/getGeographicDistribution[\s\S]*?Promise<GeographicResponse>/);
+    });
+
+    it('应该计算并返回 statistics 对象', () => {
+      const methodStart = queryServiceCode.indexOf('async getGeographicDistribution');
+      const methodBody = queryServiceCode.substring(methodStart);
+
+      // 验证返回对象包含 statistics
+      expect(methodBody).toContain('statistics');
+      expect(methodBody).toContain('distributions');
+    });
+
+    it('应该计算平均情感值 avgSentiment', () => {
+      const methodStart = queryServiceCode.indexOf('async getGeographicDistribution');
+      const methodBody = queryServiceCode.substring(methodStart);
+
+      // 验证计算平均情感
+      expect(methodBody).toMatch(/avgSentiment/);
+    });
+
+    it('统计数据应该基于全部数据而非前20个地区', () => {
+      const methodStart = queryServiceCode.indexOf('async getGeographicDistribution');
+      const methodBody = queryServiceCode.substring(methodStart);
+
+      // 验证使用 totalStats 中的真实统计数据
+      expect(methodBody).toContain('realTotalPosts');
+      expect(methodBody).toContain('realTotalUsers');
+      expect(methodBody).toContain('realTotalRegions');
+    });
   });
 });

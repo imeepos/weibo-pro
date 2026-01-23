@@ -7,6 +7,7 @@ import type {
   EventDetail,
   InfluenceUser,
   GeographicDistribution,
+  GeographicResponse,
   TimeSeriesData,
   TrendAnalysis,
   TimeRange,
@@ -74,7 +75,7 @@ export class EventsController {
   }
 
   @Get('geographic')
-  getEventGeographic(@Query('id') id: string): Promise<GeographicDistribution[]> {
+  getEventGeographic(@Query('id') id: string): Promise<GeographicResponse> {
     throw new Error('method getEventGeographic not implements')
   }
 

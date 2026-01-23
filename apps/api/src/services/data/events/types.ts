@@ -3,9 +3,9 @@ import type {
   TimeRange,
   HotEvent,
 } from '@sker/entities';
-import type { EventListItem, SentimentScore } from '@sker/sdk';
+import type { EventListItem, SentimentScore, GeographicResponse } from '@sker/sdk';
 
-export type { HotEvent, TimeRange, EventListItem, SentimentScore };
+export type { HotEvent, TimeRange, EventListItem, SentimentScore, GeographicResponse };
 
 export interface EventWithCategory extends Omit<EventEntity, 'category'> {
   category?: { name: string } | null;

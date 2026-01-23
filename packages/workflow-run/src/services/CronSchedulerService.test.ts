@@ -3,6 +3,7 @@ import { CronSchedulerService } from './CronSchedulerService'
 import { WorkflowExecutionService } from './WorkflowExecutionService'
 import { RedisClient } from '@sker/redis'
 import { DataSource, WorkflowScheduleEntity, ScheduleStatus, ScheduleType } from '@sker/entities'
+import { logger } from '@sker/core'
 
 describe('CronSchedulerService - 动态调度加载', () => {
   let service: CronSchedulerService
@@ -217,6 +218,72 @@ describe('CronSchedulerService - 动态调度加载', () => {
 
       // Assert
       expect(service.getJobCount()).toBe(0)
+    })
+  })
+
+  describe('addSchedule - 日志应包含下一次执行时间', () => {
+    it('Cron 调度日志应包含 nextRunAt 字段', async () => {
+      // Arrange
+      const loggerInfoSpy = vi.spyOn(logger, 'info')
+      const schedule: WorkflowScheduleEntity = {
+        id: 'test-schedule-next-run',
+        name: '测试下一次执行时间',
+        workflowId: 'workflow-1',
+        scheduleType: ScheduleType.CRON,
+        cronExpression: '0 * * * *', // 每小时执行
+        status: ScheduleStatus.ENABLED,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+
+      // Act
+      await service.addSchedule(schedule)
+
+      // Assert
+      expect(loggerInfoSpy).toHaveBeenCalledWith(
+        '📅 Cron 调度已启动',
+        expect.objectContaining({
+          scheduleId: schedule.id,
+          scheduleName: schedule.name,
+          cronExpression: schedule.cronExpression,
+          workflowId: schedule.workflowId,
+          nextRunAt: expect.any(String)
+        })
+      )
+
+      loggerInfoSpy.mockRestore()
+    })
+
+    it('间隔调度日志应包含 nextRunAt 字段', async () => {
+      // Arrange
+      const loggerInfoSpy = vi.spyOn(logger, 'info')
+      const schedule: WorkflowScheduleEntity = {
+        id: 'test-schedule-interval-next-run',
+        name: '测试间隔调度下一次执行时间',
+        workflowId: 'workflow-1',
+        scheduleType: ScheduleType.INTERVAL,
+        intervalSeconds: 3600, // 每小时执行
+        status: ScheduleStatus.ENABLED,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+
+      // Act
+      await service.addSchedule(schedule)
+
+      // Assert
+      expect(loggerInfoSpy).toHaveBeenCalledWith(
+        '⏱️ 间隔调度已启动',
+        expect.objectContaining({
+          scheduleId: schedule.id,
+          scheduleName: schedule.name,
+          intervalSeconds: schedule.intervalSeconds,
+          workflowId: schedule.workflowId,
+          nextRunAt: expect.any(String)
+        })
+      )
+
+      loggerInfoSpy.mockRestore()
     })
   })
 

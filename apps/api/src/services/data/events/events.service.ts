@@ -11,6 +11,7 @@ import type {
   TrendAnalysis,
   InfluenceUser,
   GeographicDistribution,
+  GeographicResponse,
   EventSentimentHotness,
   EventSentimentDistribution,
   EventSentimentIntensity,
@@ -133,7 +134,7 @@ export class EventsService {
     return await this.queryService.getInfluenceUsers(id);
   }
 
-  async getEventGeographic(id: string): Promise<GeographicDistribution[]> {
+  async getEventGeographic(id: string): Promise<GeographicResponse> {
     return await this.queryService.getGeographicDistribution(id);
   }
 

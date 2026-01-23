@@ -66,11 +66,13 @@ export class CronSchedulerService {
           schedule.cronExpression,
           async () => await this.executeWithLock(schedule)
         )
+        const nextInvocation = job?.nextInvocation()
         logger.info('📅 Cron 调度已启动', {
           scheduleId: schedule.id,
           scheduleName: schedule.name,
           cronExpression: schedule.cronExpression,
-          workflowId: schedule.workflowId
+          workflowId: schedule.workflowId,
+          nextRunAt: nextInvocation ? nextInvocation.toLocaleString('zh-CN') : '无'
         })
         break
 
@@ -85,12 +87,14 @@ export class CronSchedulerService {
           await this.executeWithLock(schedule)
         }, intervalMs)
         this.intervalTimers.set(schedule.id, timer)
+        const nextIntervalRun = new Date(Date.now() + intervalMs)
         logger.info('⏱️ 间隔调度已启动', {
           scheduleId: schedule.id,
           scheduleName: schedule.name,
           intervalSeconds: schedule.intervalSeconds,
           intervalMs,
-          workflowId: schedule.workflowId
+          workflowId: schedule.workflowId,
+          nextRunAt: nextIntervalRun.toLocaleString('zh-CN')
         })
         return
 

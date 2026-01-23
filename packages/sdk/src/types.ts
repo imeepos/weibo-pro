@@ -120,6 +120,20 @@ export interface GeographicDistribution {
   sentiment: number
 }
 
+// 地理分布统计数据
+export interface GeographicStatistics {
+  regionCount: number      // 地区总数
+  userCount: number        // 发帖用户数
+  postCount: number        // 帖子总数
+  avgSentiment: number     // 平均情感 (0-1)
+}
+
+// 地理分布响应（包含统计数据和分布列表）
+export interface GeographicResponse {
+  statistics: GeographicStatistics
+  distributions: GeographicDistribution[]
+}
+
 export interface EventTimelineNode {
   time: string;
   event: string;
