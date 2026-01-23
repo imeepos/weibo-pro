@@ -1157,7 +1157,7 @@ const EventDetail: React.FC = () => {
                 <SpreadBreadthChart
                   data={spreadBreadthData}
                   isLoading={!spreadBreadthData}
-                  height={600}
+                  height={1800}
                 />
               </div>
               <div className="bg-muted/20 rounded-xl p-5 border border-border/40">

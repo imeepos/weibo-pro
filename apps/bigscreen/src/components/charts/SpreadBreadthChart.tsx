@@ -52,22 +52,31 @@ const SpreadBreadthChart: React.FC<SpreadBreadthChartProps> = ({
       return themeColors[level % themeColors.length];
     };
 
+    // 辅助函数：截断长文本
+    const truncateText = (text: string, maxLength: number = 15): string => {
+      if (text.length <= maxLength) return text;
+      return text.substring(0, maxLength) + '...';
+    };
+
     for (const path of data.propagationPaths) {
+      const sourceName = truncateText(path.source);
+      const targetName = truncateText(path.target);
+
       if (!nodes.has(path.source)) {
         nodes.set(path.source, {
-          name: path.source,
+          name: sourceName,
           itemStyle: { color: getLevelColor(path.level) },
         });
       }
       if (!nodes.has(path.target)) {
         nodes.set(path.target, {
-          name: path.target,
+          name: targetName,
           itemStyle: { color: getLevelColor(path.level + 1) },
         });
       }
       links.push({
-        source: path.source,
-        target: path.target,
+        source: sourceName,
+        target: targetName,
         value: path.weight,
         lineStyle: { color: getLevelColor(path.level) },
       });
@@ -87,6 +96,28 @@ const SpreadBreadthChart: React.FC<SpreadBreadthChartProps> = ({
       tooltip: {
         trigger: 'item',
         triggerOn: 'mousemove',
+        backgroundColor: colors.tooltipBg,
+        borderColor: colors.tooltipBorder,
+        textStyle: {
+          color: colors.text,
+        },
+      },
+      toolbox: {
+        feature: {
+          saveAsImage: {
+            title: '保存为图片',
+            name: '传播广度分析',
+            backgroundColor: colors.chartBg,
+          },
+        },
+        iconStyle: {
+          borderColor: colors.toolbox,
+        },
+        emphasis: {
+          iconStyle: {
+            borderColor: colors.emphasis,
+          },
+        },
       },
       series: [
         {
@@ -94,6 +125,12 @@ const SpreadBreadthChart: React.FC<SpreadBreadthChartProps> = ({
           layout: 'none',
           data: nodeArray,
           links: links,
+          top: '5%',
+          bottom: '5%',
+          left: '5%',
+          right: '5%',
+          nodeWidth: 20,
+          nodeGap: 12,
           itemStyle: {
             color: '#1f77b4',
             borderColor: '#1f77b4',
@@ -107,6 +144,7 @@ const SpreadBreadthChart: React.FC<SpreadBreadthChartProps> = ({
             position: 'right',
             formatter: '{b}',
             color: colors.text,
+            fontSize: 12,
           },
           emphasis: {
             focus: 'adjacency',

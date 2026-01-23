@@ -234,9 +234,11 @@ export class SpreadBreadthService {
 
     for (let i = 0; i < limit; i++) {
       const repost = leveledReposts[i];
+      // 使用 screenName 而不是 userId，如果没有 screenName 则使用 userId 作为后备
+      const userName = repost.screenName || `用户${repost.userId}`;
       paths.push({
         source: repost.postId,
-        target: repost.userId,
+        target: userName,
         weight: 1, // 可以根据需要计算权重
         level: repost.level,
       });

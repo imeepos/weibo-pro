@@ -133,6 +133,10 @@ describe('SpreadBreadthChart', () => {
 
       // 验证标签颜色使用主题颜色
       expect(chartOption.series[0].label.color).toBe('#111827');
+
+      // 验证工具箱配置
+      expect(chartOption.toolbox).toBeDefined();
+      expect(chartOption.toolbox.iconStyle.borderColor).toBe('#111827');
     });
 
     it('应该在深色主题下使用正确的文本颜色', () => {

@@ -4,6 +4,7 @@ import {
   EventHourlyStatisticsEntity,
   EventEntity,
   PostNLPResultEntity,
+  WeiboPostEntity,
   getDateRangeByTimeRange,
 } from '@sker/entities';
 import { CacheService, CACHE_TTL } from '../../cache.service';
