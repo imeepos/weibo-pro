@@ -121,46 +121,6 @@ export const SentimentTransition: React.FC<SentimentTransitionProps> = ({ eventI
                       </span>
                     </div>
 
-                    {/* 显示情感分布 */}
-                    {point.sentimentDistribution && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-3 bg-muted rounded-md">
-                        <div>
-                          <h5 className="m-0 mb-2 text-[13px] font-semibold text-foreground">转折前</h5>
-                          <div className="flex flex-col gap-1.5">
-                            <div className="flex justify-between items-center px-2.5 py-1.5 bg-background rounded text-xs">
-                              <span className="text-muted-foreground">正面:</span>
-                              <span className="font-semibold text-green-500">{formatNumber(Math.round(point.sentimentDistribution.before.positive))}</span>
-                            </div>
-                            <div className="flex justify-between items-center px-2.5 py-1.5 bg-background rounded text-xs">
-                              <span className="text-muted-foreground">负面:</span>
-                              <span className="font-semibold text-red-500">{formatNumber(Math.round(point.sentimentDistribution.before.negative))}</span>
-                            </div>
-                            <div className="flex justify-between items-center px-2.5 py-1.5 bg-background rounded text-xs">
-                              <span className="text-muted-foreground">中性:</span>
-                              <span className="font-semibold text-yellow-500">{formatNumber(Math.round(point.sentimentDistribution.before.neutral))}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div>
-                          <h5 className="m-0 mb-2 text-[13px] font-semibold text-foreground">转折后</h5>
-                          <div className="flex flex-col gap-1.5">
-                            <div className="flex justify-between items-center px-2.5 py-1.5 bg-background rounded text-xs">
-                              <span className="text-muted-foreground">正面:</span>
-                              <span className="font-semibold text-green-500">{formatNumber(Math.round(point.sentimentDistribution.after.positive))}</span>
-                            </div>
-                            <div className="flex justify-between items-center px-2.5 py-1.5 bg-background rounded text-xs">
-                              <span className="text-muted-foreground">负面:</span>
-                              <span className="font-semibold text-red-500">{formatNumber(Math.round(point.sentimentDistribution.after.negative))}</span>
-                            </div>
-                            <div className="flex justify-between items-center px-2.5 py-1.5 bg-background rounded text-xs">
-                              <span className="text-muted-foreground">中性:</span>
-                              <span className="font-semibold text-yellow-500">{formatNumber(Math.round(point.sentimentDistribution.after.neutral))}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
                     {/* 显示关键词 */}
                     {point.triggerKeywords && point.triggerKeywords.length > 0 && (
                       <div className="p-3 bg-muted rounded-md">
