@@ -12,7 +12,8 @@ import {
   UserStratificationController,
   CommentDepthController,
   PostingTimeController,
-  NetworkCentralityController
+  NetworkCentralityController,
+  UserRelationController
 } from '@sker/sdk'
 import type { UserRelationNetwork } from '@sker/sdk'
 import { root } from '@sker/core'
@@ -97,6 +98,7 @@ import UserEngagementFunnel from '@/components/charts/UserEngagementFunnel';
 import { CommentThreadTree } from '@/components/charts/CommentThreadTree';
 import PostingTimeHeatmap from '@/components/charts/PostingTimeHeatmap';
 import NetworkCentralityGraph from '@/components/charts/NetworkCentralityGraph';
+import { UserRelationWordCloud } from '@/components/charts/UserRelationWordCloud';
 // P1 hooks 导入
 import { useUserStratification } from '@/hooks/useUserStratification';
 import { useCommentDepth } from '@/hooks/useCommentDepth';
@@ -417,11 +419,22 @@ const EventDetail: React.FC = () => {
 
       case 'user-analysis':
         // 加载用户分析数据
-        if (!userStratificationData) {
-          const controller = root.get(UserStratificationController);
-          const data = await controller.getStratification(eventId);
-          setUserStratificationData(data);
-        }
+        await Promise.all([
+          (async () => {
+            if (!userStratificationData) {
+              const controller = root.get(UserStratificationController);
+              const data = await controller.getStratification(eventId);
+              setUserStratificationData(data);
+            }
+          })(),
+          (async () => {
+            if (!userRelationNetwork) {
+              const controller = root.get(UserRelationController);
+              const data = await controller.getNetwork(undefined, undefined, eventId);
+              setUserRelationNetwork(data);
+            }
+          })(),
+        ]);
         break;
 
       case 'content-analysis':
@@ -1348,6 +1361,14 @@ const EventDetail: React.FC = () => {
                   height={400}
                 />
               </div>
+
+              {/* 用户关系词云 */}
+              <UserRelationWordCloud
+                network={userRelationNetwork}
+                isLoading={!userRelationNetwork}
+                height={400}
+                maxWords={1000}
+              />
             </motion.div>
           )}
         </TabsContent>

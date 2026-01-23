@@ -12,6 +12,7 @@ export const SentimentTransition: React.FC<SentimentTransitionProps> = ({ eventI
   const { data, loading, error } = useSentimentTransition(eventId);
   const sankeyRef = useRef<HTMLDivElement>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
+  const turningPointsRef = useRef<HTMLDivElement>(null);
   const { colors } = useEChartTheme();
 
   // 格式化数字（添加千分位分隔符）
@@ -40,6 +41,12 @@ export const SentimentTransition: React.FC<SentimentTransitionProps> = ({ eventI
   useEffect(() => {
     if (data && timelineRef.current) {
       renderTimelineChart(data, timelineRef.current, colors);
+    }
+  }, [data, colors]);
+
+  useEffect(() => {
+    if (data && turningPointsRef.current && data.turningPoints.length > 0) {
+      renderTurningPointsTimeline(data, turningPointsRef.current, colors);
     }
   }, [data, colors]);
 
@@ -85,74 +92,8 @@ export const SentimentTransition: React.FC<SentimentTransitionProps> = ({ eventI
 
       {data.turningPoints.length > 0 && (
         <div className="mt-5 p-4 bg-card border border-border rounded-lg">
-          <h4 className="m-0 mb-3 text-base font-semibold text-foreground">转折点</h4>
-          <ul className="list-none p-0 m-0">
-            {data.turningPoints.map((point, index) => {
-              return (
-                <li key={index} className="p-4 mb-3 last:mb-0 bg-background border border-border rounded-lg">
-                  <div className="flex justify-between items-center mb-3 pb-2 border-b border-border">
-                    <span className="font-semibold text-foreground text-sm">{formatTime(point.timestamp)}</span>
-                    {point.confidence !== undefined && (
-                      <span className="text-xs text-muted-foreground px-2 py-0.5 bg-muted rounded">
-                        置信度: {formatNumber(Math.round(point.confidence * 100))}%
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex flex-col gap-3">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`px-3 py-1 rounded font-medium text-[13px] ${
-                        point.fromSentiment === 'positive' ? 'bg-green-500/10 text-green-500' :
-                        point.fromSentiment === 'negative' ? 'bg-red-500/10 text-red-500' :
-                        'bg-yellow-500/10 text-yellow-500'
-                      }`}>
-                        {point.fromSentiment}
-                      </span>
-                      <span className="text-base text-muted-foreground">→</span>
-                      <span className={`px-3 py-1 rounded font-medium text-[13px] ${
-                        point.toSentiment === 'positive' ? 'bg-green-500/10 text-green-500' :
-                        point.toSentiment === 'negative' ? 'bg-red-500/10 text-red-500' :
-                        'bg-yellow-500/10 text-yellow-500'
-                      }`}>
-                        {point.toSentiment}
-                      </span>
-                      <span className="ml-auto text-xs text-muted-foreground px-2 py-0.5 bg-muted rounded">
-                        幅度: {formatNumber(Math.round(point.magnitude * 100))}%
-                      </span>
-                    </div>
-
-                    {/* 显示关键词 */}
-                    {point.triggerKeywords && point.triggerKeywords.length > 0 && (
-                      <div className="p-3 bg-muted rounded-md">
-                        <h5 className="m-0 mb-2 text-[13px] font-semibold text-foreground">触发关键词</h5>
-                        <div className="flex flex-wrap gap-1.5">
-                          {point.triggerKeywords.map((keyword, i) => (
-                            <span key={i} className="px-2.5 py-1 bg-background border border-border rounded text-xs text-foreground transition-all hover:bg-primary hover:text-white hover:border-primary">{keyword}</span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 显示触发帖子 */}
-                    {point.triggerPosts && point.triggerPosts.length > 0 && (
-                      <div className="p-3 bg-muted rounded-md">
-                        <h5 className="m-0 mb-2 text-[13px] font-semibold text-foreground">触发帖子</h5>
-                        <ul className="list-none p-0 m-0 flex flex-col gap-1">
-                          {point.triggerPosts.slice(0, 3).map((postId, i) => (
-                            <li key={i} className="p-0 border-none bg-transparent">
-                              <a href={`/posts/${postId}`} target="_blank" rel="noopener noreferrer" className="block px-2.5 py-1.5 bg-background rounded text-primary no-underline text-xs transition-all hover:bg-primary hover:text-white">
-                                帖子 {postId.substring(0, 8)}...
-                              </a>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+          <h4 className="m-0 mb-3 text-base font-semibold text-foreground">转折点时间轴</h4>
+          <div ref={turningPointsRef} className="w-full h-[300px]"></div>
         </div>
       )}
 
@@ -292,6 +233,227 @@ function renderSankeyChart(
           curveness: 0.5,
           opacity: 0.5,
         },
+      },
+    ],
+  };
+
+  chart.setOption(option);
+
+  const resizeObserver = new ResizeObserver(() => {
+    chart.resize();
+  });
+  resizeObserver.observe(container);
+}
+
+function renderTurningPointsTimeline(
+  data: SentimentTransitionAnalysis,
+  container: HTMLElement,
+  colors: ReturnType<typeof useEChartTheme>['colors']
+) {
+  const chart = echarts.init(container);
+
+  // 使用更柔和、专业的配色方案，支持主题适配
+  const getSentimentColor = (sentiment: string, opacity = 1) => {
+    const colorMap: Record<string, { base: string; light: string }> = {
+      positive: { base: `rgba(34, 197, 94, ${opacity})`, light: 'rgba(34, 197, 94, 0.15)' },
+      negative: { base: `rgba(239, 68, 68, ${opacity})`, light: 'rgba(239, 68, 68, 0.15)' },
+      neutral: { base: `rgba(156, 163, 175, ${opacity})`, light: 'rgba(156, 163, 175, 0.15)' },
+    };
+    return colorMap[sentiment] || { base: `rgba(156, 163, 175, ${opacity})`, light: 'rgba(156, 163, 175, 0.15)' };
+  };
+
+  const sentimentLabels: Record<string, string> = {
+    positive: '正面',
+    negative: '负面',
+    neutral: '中性',
+  };
+
+  // 准备时间轴数据
+  const timelineData = data.turningPoints.map((point, index) => {
+    const date = new Date(point.timestamp);
+    const timeStr = date.toLocaleString('zh-CN', {
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    const toColor = getSentimentColor(point.toSentiment);
+
+    return {
+      name: timeStr,
+      value: [index, point.magnitude * 100],
+      itemStyle: {
+        color: toColor.base,
+        borderColor: toColor.base.replace(/[\d.]+\)$/, '0.8)'),
+        borderWidth: 2,
+        shadowBlur: 8,
+        shadowColor: toColor.light,
+      },
+      fromSentiment: point.fromSentiment,
+      toSentiment: point.toSentiment,
+      magnitude: point.magnitude,
+      confidence: point.confidence,
+      timestamp: point.timestamp,
+    };
+  });
+
+  const option = {
+    tooltip: {
+      trigger: 'item',
+      backgroundColor: colors.tooltipBg,
+      borderColor: colors.tooltipBorder,
+      borderRadius: 8,
+      padding: [12, 16],
+      textStyle: {
+        color: colors.text,
+        fontSize: 12,
+      },
+      extraCssText: 'box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);',
+      formatter: (params: any) => {
+        const d = params.data;
+        const from = sentimentLabels[d.fromSentiment] || d.fromSentiment;
+        const to = sentimentLabels[d.toSentiment] || d.toSentiment;
+        const fromColor = getSentimentColor(d.fromSentiment).base;
+        const toColor = getSentimentColor(d.toSentiment).base;
+        const date = new Date(d.timestamp);
+        const timeStr = date.toLocaleString('zh-CN', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+        let html = `<div style="font-weight:600;margin-bottom:10px;font-size:13px">${timeStr}</div>`;
+        html += `<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;padding:6px 10px;background:rgba(0,0,0,0.05);border-radius:6px">`;
+        html += `<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:${fromColor}"></span>${from}</span>`;
+        html += `<span style="color:${colors.textMuted}">→</span>`;
+        html += `<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:${toColor}"></span>${to}</span>`;
+        html += `</div>`;
+        html += `<div style="display:flex;justify-content:space-between;gap:16px;font-size:12px">`;
+        html += `<span style="color:${colors.textMuted}">幅度</span><span style="font-weight:500">${Math.round(d.magnitude * 100)}%</span>`;
+        html += `</div>`;
+        if (d.confidence !== undefined) {
+          html += `<div style="display:flex;justify-content:space-between;gap:16px;font-size:12px;margin-top:4px">`;
+          html += `<span style="color:${colors.textMuted}">置信度</span><span style="font-weight:500">${Math.round(d.confidence * 100)}%</span>`;
+          html += `</div>`;
+        }
+        return html;
+      },
+    },
+    grid: {
+      left: '3%',
+      right: '3%',
+      top: '18%',
+      bottom: '12%',
+      containLabel: true,
+    },
+    xAxis: {
+      type: 'category',
+      data: timelineData.map((d) => d.name),
+      axisLine: {
+        show: true,
+        lineStyle: {
+          color: colors.border,
+          width: 1,
+        },
+      },
+      axisLabel: {
+        color: colors.textMuted,
+        rotate: 0,
+        fontSize: 11,
+        margin: 12,
+      },
+      axisTick: {
+        show: false,
+      },
+      splitLine: {
+        show: false,
+      },
+    },
+    yAxis: {
+      type: 'value',
+      name: '转变幅度',
+      nameTextStyle: {
+        color: colors.textMuted,
+        fontSize: 11,
+        padding: [0, 0, 8, 0],
+      },
+      axisLine: {
+        show: false,
+      },
+      axisLabel: {
+        color: colors.textMuted,
+        fontSize: 11,
+        formatter: '{value}%',
+      },
+      splitLine: {
+        lineStyle: {
+          color: colors.splitLine,
+          type: 'dashed',
+          opacity: 0.6,
+        },
+      },
+    },
+    series: [
+      {
+        type: 'line',
+        data: timelineData.map((d) => d.value[1]),
+        smooth: 0.3,
+        showSymbol: false,
+        lineStyle: {
+          color: colors.border,
+          width: 1.5,
+          type: 'dashed',
+          opacity: 0.5,
+        },
+        z: 0,
+      },
+      {
+        type: 'scatter',
+        symbolSize: (val: number[]) => {
+          // 更小、更精致的圆点，基于幅度动态调整
+          const base = 10;
+          const scale = Math.min(val[1] / 100, 1) * 6;
+          return base + scale;
+        },
+        data: timelineData,
+        label: {
+          show: true,
+          position: 'top',
+          distance: 8,
+          formatter: (params: any) => {
+            const d = params.data;
+            const from = sentimentLabels[d.fromSentiment]?.[0] || '?';
+            const to = sentimentLabels[d.toSentiment]?.[0] || '?';
+            return `{from|${from}}{arrow|→}{to|${to}}`;
+          },
+          rich: {
+            from: {
+              fontSize: 10,
+              color: colors.textMuted,
+              padding: [0, 2, 0, 0],
+            },
+            arrow: {
+              fontSize: 10,
+              color: colors.textMuted,
+              padding: [0, 2],
+            },
+            to: {
+              fontSize: 10,
+              fontWeight: 500,
+              color: colors.text,
+              padding: [0, 0, 0, 2],
+            },
+          },
+        },
+        emphasis: {
+          scale: 1.3,
+          itemStyle: {
+            shadowBlur: 12,
+          },
+        },
+        z: 1,
       },
     ],
   };
