@@ -19,7 +19,7 @@ import { withRetryOnNetworkError } from '../utils/retry-on-network-error'
  */
 @Injectable()
 export class WorkflowExecutionService {
-  constructor() {}
+  constructor() { }
 
   /**
    * 执行调度任务
@@ -71,14 +71,14 @@ export class WorkflowExecutionService {
         ...workflow.defaultInputs,
         ...schedule.inputs
       }
-
+      logger.info(`execute workflow ${workflow.name} with inputs:`, inputs)
       // 执行工作流
       const result = await executeAst(ast, inputs, ast as WorkflowGraphAst).toPromise()
 
       if (result) {
         const state = result.type === 'node_success' ? 'success'
           : result.type === 'node_fail' ? 'fail'
-          : undefined;
+            : undefined;
         logger.info('工作流执行完成', {
           workflowName: workflow.name,
           scheduleId: schedule.id,
