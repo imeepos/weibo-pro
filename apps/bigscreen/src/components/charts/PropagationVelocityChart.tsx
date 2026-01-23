@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { cn } from '@/utils';
 import { ChartState } from '@sker/ui/components/ui/chart-state';
+import { EChart, type EChartsOption } from '@sker/ui/components/ui/echart';
 import type { PropagationVelocityAnalysis } from '@sker/sdk';
 
 interface PropagationVelocityChartProps {
@@ -62,6 +63,100 @@ const PropagationVelocityChart: React.FC<PropagationVelocityChartProps> = ({
 
   const phaseText = PHASE_MAP[data.currentPhase] || data.currentPhase;
   const accelerationTrendText = ACCELERATION_TREND_MAP[data.accelerationTrend] || data.accelerationTrend;
+
+  // 生成速度曲线图表配置
+  const chartOption: EChartsOption = useMemo(() => {
+    const timeline = data.velocityTimeline || [];
+    const timestamps = timeline.map(point => {
+      const date = new Date(point.timestamp);
+      return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:00`;
+    });
+    const velocities = timeline.map(point => point.velocity);
+    const accelerations = timeline.map(point => point.acceleration);
+
+    return {
+      tooltip: {
+        trigger: 'axis',
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        borderColor: '#333',
+        textStyle: { color: '#fff' },
+        axisPointer: {
+          type: 'cross',
+          crossStyle: { color: '#999' },
+        },
+      },
+      legend: {
+        data: ['传播速度', '加速度'],
+        textStyle: { color: '#9ca3af' },
+        top: 0,
+      },
+      grid: {
+        left: '3%',
+        right: '4%',
+        bottom: '3%',
+        top: '15%',
+        containLabel: true,
+      },
+      xAxis: {
+        type: 'category',
+        data: timestamps,
+        axisLine: { lineStyle: { color: '#4b5563' } },
+        axisLabel: { color: '#9ca3af', fontSize: 10 },
+        boundaryGap: false,
+      },
+      yAxis: [
+        {
+          type: 'value',
+          name: '速度',
+          nameTextStyle: { color: '#9ca3af' },
+          axisLine: { lineStyle: { color: '#4b5563' } },
+          axisLabel: { color: '#9ca3af' },
+          splitLine: { lineStyle: { color: '#374151', type: 'dashed' } },
+        },
+        {
+          type: 'value',
+          name: '加速度',
+          nameTextStyle: { color: '#9ca3af' },
+          axisLine: { lineStyle: { color: '#4b5563' } },
+          axisLabel: { color: '#9ca3af' },
+          splitLine: { show: false },
+        },
+      ],
+      series: [
+        {
+          name: '传播速度',
+          type: 'line',
+          data: velocities,
+          smooth: true,
+          symbol: 'circle',
+          symbolSize: 6,
+          lineStyle: { color: '#3b82f6', width: 2 },
+          itemStyle: { color: '#3b82f6' },
+          areaStyle: {
+            color: {
+              type: 'linear',
+              x: 0, y: 0, x2: 0, y2: 1,
+              colorStops: [
+                { offset: 0, color: 'rgba(59, 130, 246, 0.3)' },
+                { offset: 1, color: 'rgba(59, 130, 246, 0.05)' },
+              ],
+            },
+          },
+        },
+        {
+          name: '加速度',
+          type: 'line',
+          yAxisIndex: 1,
+          data: accelerations,
+          smooth: true,
+          symbol: 'diamond',
+          symbolSize: 6,
+          lineStyle: { color: '#f59e0b', width: 2, type: 'dashed' },
+          itemStyle: { color: '#f59e0b' },
+        },
+      ],
+    };
+  }, [data.velocityTimeline]);
 
   return (
     <div className={cn('bg-gray-900/50 backdrop-blur-sm rounded-lg p-6', className)}>
@@ -126,15 +221,23 @@ const PropagationVelocityChart: React.FC<PropagationVelocityChartProps> = ({
           )}
         </div>
 
-        {/* 图表占位符 */}
+        {/* 速度曲线图表 */}
         <div className="bg-gray-800/50 rounded-lg p-4">
           <div className="text-sm text-gray-400 mb-2">速度曲线</div>
-          <div
-            className="rounded bg-muted/30 border border-border flex items-center justify-center text-xs text-muted-foreground"
-            style={{ height: `${height - 100}px` }}
-          >
-            ECharts 速度曲线图表
-          </div>
+          {data.velocityTimeline && data.velocityTimeline.length > 0 ? (
+            <EChart
+              option={chartOption}
+              height={height - 100}
+              className="w-full"
+            />
+          ) : (
+            <div
+              className="rounded bg-muted/30 border border-border flex items-center justify-center text-xs text-muted-foreground"
+              style={{ height: `${height - 100}px` }}
+            >
+              暂无时间序列数据
+            </div>
+          )}
         </div>
       </div>
     </div>

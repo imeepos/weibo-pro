@@ -10,11 +10,27 @@ vi.mock('@/utils', () => ({
 
 // Mock ChartState 组件
 vi.mock('@sker/ui/components/ui/chart-state', () => ({
-  ChartState: {
-    Loading: () => <div className="chart-state-loading">加载中...</div>,
-    Error: ({ message }: { message: string }) => <div className="chart-state-error">{message}</div>,
-    Empty: ({ message }: { message: string }) => <div className="chart-state-empty">{message}</div>,
+  ChartState: ({ loading, error, empty, loadingText, emptyText }: {
+    loading?: boolean;
+    error?: string;
+    empty?: boolean;
+    loadingText?: string;
+    emptyText?: string;
+  }) => {
+    if (loading) return <div data-testid="chart-loading">{loadingText || '加载中...'}</div>;
+    if (error) return <div data-testid="chart-error">{error}</div>;
+    if (empty) return <div data-testid="chart-empty">{emptyText || '暂无数据'}</div>;
+    return null;
   },
+}));
+
+// Mock EChart 组件
+vi.mock('@sker/ui/components/ui/echart', () => ({
+  EChart: ({ option, height, className }: { option: any; height: number; className?: string }) => (
+    <div data-testid="echart" className={className} style={{ height }}>
+      EChart Mock
+    </div>
+  ),
 }));
 
 const mockVelocityTimePoints: VelocityTimePoint[] = [
@@ -44,14 +60,9 @@ const mockData: PropagationVelocityAnalysis = {
   avgVelocity: 150,
   acceleration: 30,
   accelerationTrend: 'increasing',
-  timeSeries: mockVelocityTimePoints,
-  burstPoints: [
-    {
-      timestamp: '2026-01-23T11:30:00Z',
-      velocity: 180,
-      reason: 'KOL转发',
-    },
-  ],
+  velocityTimeline: mockVelocityTimePoints,
+  predictedBurstTime: '2026-01-23T14:00:00Z',
+  burstProbability: 0.75,
   currentPhase: 'growth',
   phaseStartTime: '2026-01-23T10:00:00Z',
   eventId: 'test-event-1',

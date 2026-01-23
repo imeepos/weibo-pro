@@ -26,28 +26,28 @@ export const SentimentTransition: React.FC<SentimentTransitionProps> = ({ eventI
   }, [data]);
 
   if (loading) {
-    return <div className="sentiment-transition loading">Loading...</div>;
+    return <div className="sentiment-transition loading">加载中...</div>;
   }
 
   if (error) {
-    return <div className="sentiment-transition error">Error: {error.message}</div>;
+    return <div className="sentiment-transition error">错误: {error.message}</div>;
   }
 
   if (!data || data.timeline.length === 0) {
-    return <div className="sentiment-transition empty">No data available</div>;
+    return <div className="sentiment-transition empty">暂无数据</div>;
   }
 
   return (
     <div className="sentiment-transition">
       <div className="sentiment-transition-header">
-        <h3>Sentiment Transition Analysis</h3>
+        <h3>情感转变分析</h3>
         <div className="metrics">
           <div className="metric">
-            <span className="label">Stability Index:</span>
+            <span className="label">稳定性指数:</span>
             <span className="value">{(data.stabilityIndex * 100).toFixed(1)}%</span>
           </div>
           <div className="metric">
-            <span className="label">Polarization Index:</span>
+            <span className="label">极化指数:</span>
             <span className="value">{(data.polarizationIndex * 100).toFixed(1)}%</span>
           </div>
         </div>
@@ -55,24 +55,24 @@ export const SentimentTransition: React.FC<SentimentTransitionProps> = ({ eventI
 
       <div className="sentiment-transition-body">
         <div className="chart-container">
-          <h4>Transition Flow (Sankey)</h4>
+          <h4>转变流向 (桑基图)</h4>
           <div ref={sankeyRef} className="sankey-chart" style={{ width: '100%', height: '400px' }}></div>
         </div>
 
         <div className="chart-container">
-          <h4>Sentiment Timeline</h4>
+          <h4>情感时间线</h4>
           <div ref={timelineRef} className="timeline-chart" style={{ width: '100%', height: '400px' }}></div>
         </div>
       </div>
 
       {data.turningPoints.length > 0 && (
         <div className="turning-points">
-          <h4>Turning Points</h4>
+          <h4>转折点</h4>
           <ul>
             {data.turningPoints.map((point, index) => (
               <li key={index}>
                 {point.timestamp}: {point.fromSentiment} → {point.toSentiment}
-                (magnitude: {point.magnitude.toFixed(2)})
+                (幅度: {point.magnitude.toFixed(2)})
               </li>
             ))}
           </ul>
@@ -118,8 +118,8 @@ function renderSankeyChart(data: SentimentTransitionAnalysis, container: HTMLEle
   if (validLinks.length === 0) {
     chart.setOption({
       title: {
-        text: 'Sentiment Transition Flow',
-        subtext: 'No transitions detected',
+        text: '情感转变流向',
+        subtext: '未检测到转变',
         left: 'center',
         top: 'center',
       },
@@ -129,7 +129,7 @@ function renderSankeyChart(data: SentimentTransitionAnalysis, container: HTMLEle
 
   const option = {
     title: {
-      text: 'Sentiment Transition Flow',
+      text: '情感转变流向',
       left: 'center',
     },
     tooltip: {
@@ -193,7 +193,7 @@ function renderTimelineChart(data: SentimentTransitionAnalysis, container: HTMLE
       trigger: 'axis',
     },
     legend: {
-      data: ['Positive', 'Negative', 'Neutral'],
+      data: ['正面', '负面', '中性'],
     },
     xAxis: {
       type: 'category',
@@ -204,21 +204,21 @@ function renderTimelineChart(data: SentimentTransitionAnalysis, container: HTMLE
     },
     series: [
       {
-        name: 'Positive',
+        name: '正面',
         type: 'line',
         data: positive,
         smooth: true,
         itemStyle: { color: '#52c41a' },
       },
       {
-        name: 'Negative',
+        name: '负面',
         type: 'line',
         data: negative,
         smooth: true,
         itemStyle: { color: '#ff4d4f' },
       },
       {
-        name: 'Neutral',
+        name: '中性',
         type: 'line',
         data: neutral,
         smooth: true,

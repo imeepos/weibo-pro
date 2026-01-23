@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import type { CommunityEvolutionAnalysis, EvolutionEvent } from '@sker/sdk';
 import { ChevronRight, ChevronLeft, TrendingUp, Clock, Activity, Users, BarChart3, AlertCircle } from 'lucide-react';
+import { EChart, type EChartsOption } from '@sker/ui/components/ui/echart';
 
 // 事件类型中文映射
 const EVENT_TYPE_MAP: Record<string, string> = {
@@ -257,6 +258,127 @@ export const CommunityEvolutionTimeline: React.FC<CommunityEvolutionTimelineProp
     );
   };
 
+  // 社区数量变化图表配置
+  const communityCountChartOption: EChartsOption = useMemo(() => {
+    const timestamps = data.timeSlices.map(slice => {
+      const date = new Date(slice.timestamp);
+      return `${date.getMonth() + 1}/${date.getDate()}`;
+    });
+    const communityCounts = data.timeSlices.map(slice => slice.communities.length);
+    const memberCounts = data.timeSlices.map(slice => slice.totalMembers);
+
+    return {
+      tooltip: {
+        trigger: 'axis',
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        borderColor: '#333',
+        textStyle: { color: '#fff', fontSize: 10 },
+      },
+      grid: {
+        left: '8%',
+        right: '8%',
+        bottom: '15%',
+        top: '10%',
+      },
+      xAxis: {
+        type: 'category',
+        data: timestamps,
+        axisLine: { lineStyle: { color: '#4b5563' } },
+        axisLabel: { color: '#9ca3af', fontSize: 9 },
+      },
+      yAxis: {
+        type: 'value',
+        axisLine: { lineStyle: { color: '#4b5563' } },
+        axisLabel: { color: '#9ca3af', fontSize: 9 },
+        splitLine: { lineStyle: { color: '#374151', type: 'dashed' } },
+      },
+      series: [
+        {
+          name: '社区数量',
+          type: 'bar',
+          data: communityCounts,
+          itemStyle: {
+            color: {
+              type: 'linear',
+              x: 0, y: 0, x2: 0, y2: 1,
+              colorStops: [
+                { offset: 0, color: '#3b82f6' },
+                { offset: 1, color: '#1d4ed8' },
+              ],
+            },
+            borderRadius: [4, 4, 0, 0],
+          },
+          barWidth: '60%',
+        },
+      ],
+    };
+  }, [data.timeSlices]);
+
+  // 模块度变化图表配置
+  const modularityChartOption: EChartsOption = useMemo(() => {
+    const timestamps = data.timeSlices.map(slice => {
+      const date = new Date(slice.timestamp);
+      return `${date.getMonth() + 1}/${date.getDate()}`;
+    });
+    const modularities = data.timeSlices.map(slice => slice.modularity);
+
+    return {
+      tooltip: {
+        trigger: 'axis',
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        borderColor: '#333',
+        textStyle: { color: '#fff', fontSize: 10 },
+        formatter: (params: any) => {
+          const point = params[0];
+          return `${point.name}<br/>模块度: ${point.value.toFixed(3)}`;
+        },
+      },
+      grid: {
+        left: '8%',
+        right: '8%',
+        bottom: '15%',
+        top: '10%',
+      },
+      xAxis: {
+        type: 'category',
+        data: timestamps,
+        axisLine: { lineStyle: { color: '#4b5563' } },
+        axisLabel: { color: '#9ca3af', fontSize: 9 },
+        boundaryGap: false,
+      },
+      yAxis: {
+        type: 'value',
+        min: 0,
+        max: 1,
+        axisLine: { lineStyle: { color: '#4b5563' } },
+        axisLabel: { color: '#9ca3af', fontSize: 9 },
+        splitLine: { lineStyle: { color: '#374151', type: 'dashed' } },
+      },
+      series: [
+        {
+          name: '模块度',
+          type: 'line',
+          data: modularities,
+          smooth: true,
+          symbol: 'circle',
+          symbolSize: 6,
+          lineStyle: { color: '#10b981', width: 2 },
+          itemStyle: { color: '#10b981' },
+          areaStyle: {
+            color: {
+              type: 'linear',
+              x: 0, y: 0, x2: 0, y2: 1,
+              colorStops: [
+                { offset: 0, color: 'rgba(16, 185, 129, 0.3)' },
+                { offset: 1, color: 'rgba(16, 185, 129, 0.05)' },
+              ],
+            },
+          },
+        },
+      ],
+    };
+  }, [data.timeSlices]);
+
   return (
     <div
       className={`bg-background/95 backdrop-blur-sm border border-border rounded-lg shadow-lg ${className}`}
@@ -348,27 +470,46 @@ export const CommunityEvolutionTimeline: React.FC<CommunityEvolutionTimelineProp
           {/* 关键变化 */}
           {renderKeyChanges()}
 
-          {/* 图表占位符 */}
+          {/* 社区数量变化图表 */}
           <div className="pt-2 border-t border-border">
             <div className="text-xs font-semibold text-muted-foreground mb-2">社区数量变化</div>
-            <div
-              className="h-24 rounded bg-muted/30 border border-border flex items-center justify-center text-xs text-muted-foreground"
-              data-testid="community-count-chart"
-            >
-              <BarChart3 className="w-8 h-8 mr-2" />
-              社区数量变化图表
-            </div>
+            {data.timeSlices.length > 1 ? (
+              <EChart
+                option={communityCountChartOption}
+                height={96}
+                className="w-full"
+                data-testid="community-count-chart"
+              />
+            ) : (
+              <div
+                className="h-24 rounded bg-muted/30 border border-border flex items-center justify-center text-xs text-muted-foreground"
+                data-testid="community-count-chart"
+              >
+                <BarChart3 className="w-4 h-4 mr-2" />
+                数据点不足
+              </div>
+            )}
           </div>
 
+          {/* 模块度变化图表 */}
           <div className="pt-2 border-t border-border">
             <div className="text-xs font-semibold text-muted-foreground mb-2">模块度变化</div>
-            <div
-              className="h-24 rounded bg-muted/30 border border-border flex items-center justify-center text-xs text-muted-foreground"
-              data-testid="modularity-chart"
-            >
-              <TrendingUp className="w-8 h-8 mr-2" />
-              模块度变化图表
-            </div>
+            {data.timeSlices.length > 1 ? (
+              <EChart
+                option={modularityChartOption}
+                height={96}
+                className="w-full"
+                data-testid="modularity-chart"
+              />
+            ) : (
+              <div
+                className="h-24 rounded bg-muted/30 border border-border flex items-center justify-center text-xs text-muted-foreground"
+                data-testid="modularity-chart"
+              >
+                <TrendingUp className="w-4 h-4 mr-2" />
+                数据点不足
+              </div>
+            )}
           </div>
         </div>
       )}

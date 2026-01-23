@@ -53,8 +53,8 @@ describe('SpreadBreadthService', () => {
 
   describe('空数据处理', () => {
     it('应该返回默认结构当事件没有转发数据', async () => {
-      mockQueryBuilder.getMany.mockResolvedValueOnce([]);
-      mockQueryBuilder.getRawMany.mockResolvedValueOnce([]);
+      mockQueryBuilder.getRawMany.mockResolvedValueOnce([]); // posts
+      mockQueryBuilder.getRawMany.mockResolvedValueOnce([]); // reposts
 
       const result = await service.getBreadthAnalysis('event-123');
 
@@ -73,7 +73,7 @@ describe('SpreadBreadthService', () => {
     });
 
     it('应该处理数据库查询异常并返回默认结构', async () => {
-      mockQueryBuilder.getMany.mockRejectedValueOnce(new Error('Database error'));
+      mockQueryBuilder.getRawMany.mockRejectedValueOnce(new Error('Database error'));
 
       const result = await service.getBreadthAnalysis('event-123');
 
@@ -96,8 +96,8 @@ describe('SpreadBreadthService', () => {
         createdAt: new Date('2024-01-01T10:00:00Z'),
       }];
 
-      mockQueryBuilder.getMany.mockResolvedValueOnce(mockPostsData);
-      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockReposts);
+      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockPostsData); // posts
+      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockReposts); // reposts
 
       const result = await service.getBreadthAnalysis('event-123');
 
@@ -114,8 +114,8 @@ describe('SpreadBreadthService', () => {
         { postId: 'repost2', repostId: 'repost3', userId: '100003', screenName: 'User C', userClass: null, verified: false, createdAt: new Date('2024-01-01T12:00:00Z') },
       ];
 
-      mockQueryBuilder.getMany.mockResolvedValueOnce(mockPostsData);
-      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockReposts);
+      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockPostsData); // posts
+      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockReposts); // reposts
 
       const result = await service.getBreadthAnalysis('event-123');
 
@@ -140,8 +140,8 @@ describe('SpreadBreadthService', () => {
         { postId: 'repost3', repostId: 'repost9', userId: '100009', screenName: 'User I', userClass: null, verified: false, createdAt: new Date('2024-01-01T11:25:00Z') },
       ];
 
-      mockQueryBuilder.getMany.mockResolvedValueOnce(mockPostsData);
-      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockReposts);
+      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockPostsData); // posts
+      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockReposts); // reposts
 
       const result = await service.getBreadthAnalysis('event-123');
 
@@ -157,8 +157,8 @@ describe('SpreadBreadthService', () => {
         { postId: 'post1', repostId: 'repost2', userId: '100002', screenName: 'User B', userClass: null, verified: false, createdAt: new Date('2024-01-01T10:05:00Z') },
       ];
 
-      mockQueryBuilder.getMany.mockResolvedValueOnce(mockPostsData);
-      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockReposts);
+      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockPostsData); // posts
+      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockReposts); // reposts
 
       const result = await service.getBreadthAnalysis('event-123');
 
@@ -182,8 +182,8 @@ describe('SpreadBreadthService', () => {
         { postId: 'repost4', repostId: 'repost10', userId: '100010', screenName: 'User 10', userClass: null, verified: false, createdAt: new Date('2024-01-01T12:00:00Z') },
       ];
 
-      mockQueryBuilder.getMany.mockResolvedValueOnce(mockPostsData);
-      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockReposts);
+      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockPostsData); // posts
+      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockReposts); // reposts
 
       const result = await service.getBreadthAnalysis('event-123');
 
@@ -197,8 +197,8 @@ describe('SpreadBreadthService', () => {
         { postId: 'post1', repostId: 'repost1', userId: '100001', screenName: 'User A', userClass: null, verified: false, createdAt: new Date('2024-01-01T10:00:00Z') },
       ];
 
-      mockQueryBuilder.getMany.mockResolvedValueOnce(mockPostsData);
-      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockReposts);
+      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockPostsData); // posts
+      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockReposts); // reposts
 
       const result = await service.getBreadthAnalysis('event-123');
 
@@ -215,8 +215,8 @@ describe('SpreadBreadthService', () => {
         { postId: 'repost1', repostId: 'repost2', userId: '100002', screenName: 'User B', userClass: null, verified: false, createdAt: new Date('2024-01-01T11:00:00Z') },
       ];
 
-      mockQueryBuilder.getMany.mockResolvedValueOnce(mockPostsData);
-      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockReposts);
+      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockPostsData); // posts
+      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockReposts); // reposts
 
       const result = await service.getBreadthAnalysis('event-123');
 
@@ -241,8 +241,8 @@ describe('SpreadBreadthService', () => {
         createdAt: new Date(`2024-01-01T${10 + i}:00:00Z`),
       }));
 
-      mockQueryBuilder.getMany.mockResolvedValueOnce(mockPostsData);
-      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockReposts);
+      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockPostsData); // posts
+      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockReposts); // reposts
 
       const result = await service.getBreadthAnalysis('event-123');
 
@@ -259,8 +259,8 @@ describe('SpreadBreadthService', () => {
         { postId: 'post1', repostId: 'repost3', userId: '100003', screenName: 'User C', userClass: null, verified: false, createdAt: new Date('2024-01-01T11:00:00Z') },
       ];
 
-      mockQueryBuilder.getMany.mockResolvedValueOnce(mockPostsData);
-      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockReposts);
+      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockPostsData); // posts
+      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockReposts); // reposts
 
       const result = await service.getBreadthAnalysis('event-123');
 
@@ -286,8 +286,8 @@ describe('SpreadBreadthService', () => {
         { postId: 'post1', repostId: 'repost2', userId: '100002', screenName: 'User B', userClass: null, verified: false, createdAt: new Date('2024-01-01T11:00:00Z') },
       ];
 
-      mockQueryBuilder.getMany.mockResolvedValueOnce(mockPostsData);
-      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockReposts);
+      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockPostsData); // posts
+      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockReposts); // reposts
 
       const result = await service.getBreadthAnalysis('event-123');
 
@@ -307,8 +307,8 @@ describe('SpreadBreadthService', () => {
         { postId: 'post1', repostId: 'repost4', userId: '100004', screenName: 'VIP User 2', userClass: 2, verified: false, createdAt: new Date('2024-01-01T10:15:00Z') },
       ];
 
-      mockQueryBuilder.getMany.mockResolvedValueOnce(mockPostsData);
-      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockReposts);
+      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockPostsData); // posts
+      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockReposts); // reposts
 
       const result = await service.getBreadthAnalysis('event-123');
 
@@ -334,8 +334,8 @@ describe('SpreadBreadthService', () => {
         { postId: 'post1', repostId: 'repost2', userId: '100002', screenName: 'User B', userClass: 1, verified: false, createdAt: new Date('2024-01-01T10:05:00Z') },
       ];
 
-      mockQueryBuilder.getMany.mockResolvedValueOnce(mockPostsData);
-      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockReposts);
+      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockPostsData); // posts
+      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockReposts); // reposts
 
       const result = await service.getBreadthAnalysis('event-123');
 
@@ -379,8 +379,8 @@ describe('SpreadBreadthService', () => {
       const mockPostsData = mockPosts(['post1']);
       const mockReposts = [{ postId: 'post1', repostId: 'repost1', userId: '100001', screenName: 'User A', userClass: null, verified: false, createdAt: new Date('2024-01-01T10:00:00Z') }];
 
-      mockQueryBuilder.getMany.mockResolvedValueOnce(mockPostsData);
-      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockReposts);
+      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockPostsData); // posts
+      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockReposts); // reposts
 
       await service.getBreadthAnalysis('event-123');
       await service.getBreadthAnalysis('event-123');
@@ -397,8 +397,8 @@ describe('SpreadBreadthService', () => {
         { postId: 'post1', repostId: 'repost2', userId: '100001', screenName: 'User A', userClass: null, verified: false, createdAt: new Date('2024-01-01T10:05:00Z') },
       ];
 
-      mockQueryBuilder.getMany.mockResolvedValueOnce(mockPostsData);
-      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockReposts);
+      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockPostsData); // posts
+      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockReposts); // reposts
 
       const result = await service.getBreadthAnalysis('event-123');
 
@@ -414,8 +414,8 @@ describe('SpreadBreadthService', () => {
         { postId: 'repost2', repostId: 'repost3', userId: '100001', screenName: 'User A', userClass: null, verified: false, createdAt: new Date('2024-01-01T12:00:00Z') },
       ];
 
-      mockQueryBuilder.getMany.mockResolvedValueOnce(mockPostsData);
-      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockReposts);
+      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockPostsData); // posts
+      mockQueryBuilder.getRawMany.mockResolvedValueOnce(mockReposts); // reposts
 
       const result = await service.getBreadthAnalysis('event-123');
 
