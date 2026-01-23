@@ -137,3 +137,8 @@ export { default as UserRelationOverview } from './UserRelationOverview';
 export { default as HotEventsList } from './HotEventsList';
 export { default as EventDevelopmentChart } from './EventDevelopmentChart';
 export { default as EventTimelineChart } from './EventTimelineChart';
+
+// P3 高级分析组件
+export { PropagationVelocityChart, default as PropagationVelocityChartDefault } from './PropagationVelocityChart';
+export { default as InfluencePredictionCard } from './InfluencePredictionCard';
+export { CommunityEvolutionTimeline } from './CommunityEvolutionTimeline';

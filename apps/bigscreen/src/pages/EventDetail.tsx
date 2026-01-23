@@ -70,6 +70,14 @@ import { SentimentTransition } from '@/components/charts/SentimentTransition';
 import { useSpreadBreadth } from '@/hooks/useSpreadBreadth';
 import { useMediaTypeDistribution } from '@/hooks/useMediaTypeDistribution';
 import { useCommunityDetection } from '@/hooks/useCommunityDetection';
+// P3 组件导入
+import { PropagationVelocityChart } from '@/components/charts/PropagationVelocityChart';
+import InfluencePredictionCard from '@/components/charts/InfluencePredictionCard';
+import { CommunityEvolutionTimeline } from '@/components/charts/CommunityEvolutionTimeline';
+// P3 hooks 导入
+import { usePropagationVelocity } from '@/hooks/usePropagationVelocity';
+import { useInfluencePrediction } from '@/hooks/useInfluencePrediction';
+import { useCommunityEvolution } from '@/hooks/useCommunityEvolution';
 
 interface TimeSeriesDataPoint {
   timestamp: string;
@@ -134,6 +142,10 @@ const EventDetail: React.FC = () => {
   const [spreadBreadthData, setSpreadBreadthData] = useState<any>(null);
   const [mediaTypeData, setMediaTypeData] = useState<any>(null);
   const [communityData, setCommunityData] = useState<any>(null);
+  // P3 组件数据 state
+  const [propagationVelocityData, setPropagationVelocityData] = useState<any>(null);
+  const [influencePredictionData, setInfluencePredictionData] = useState<any>(null);
+  const [communityEvolutionData, setCommunityEvolutionData] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isRefreshingCache, setIsRefreshingCache] = useState(false);
@@ -230,6 +242,22 @@ const EventDetail: React.FC = () => {
           setCommunityData(await c.getCommunityAnalysis(eventId));
         }
       } catch (e) { logger.warn('Failed to fetch community analysis:', e); }
+      // P3 组件数据获取
+      try {
+        if (c.getPropagationVelocityAnalysis) {
+          setPropagationVelocityData(await c.getPropagationVelocityAnalysis(eventId));
+        }
+      } catch (e) { logger.warn('Failed to fetch propagation velocity:', e); }
+      try {
+        if (c.getInfluencePrediction) {
+          setInfluencePredictionData(await c.getInfluencePrediction(eventId));
+        }
+      } catch (e) { logger.warn('Failed to fetch influence prediction:', e); }
+      try {
+        if (c.getCommunityEvolution) {
+          setCommunityEvolutionData(await c.getCommunityEvolution(eventId));
+        }
+      } catch (e) { logger.warn('Failed to fetch community evolution:', e); }
     } catch (error) {
       logger.error('Failed to fetch event data:', error);
     } finally {
@@ -684,7 +712,7 @@ const EventDetail: React.FC = () => {
 
       {/* Tab 导航 */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5 bg-muted/20 p-1">
+        <TabsList className="grid w-full grid-cols-6 bg-muted/20 p-1">
           <TabsTrigger value="overview" className="data-[state=active]:bg-primary/20 gap-2">
             <Layers className="w-4 h-4" />
             <span className="hidden sm:inline">总览</span>
@@ -704,6 +732,10 @@ const EventDetail: React.FC = () => {
           <TabsTrigger value="sentiment" className="data-[state=active]:bg-primary/20 gap-2">
             <Heart className="w-4 h-4" />
             <span className="hidden sm:inline">情感分析</span>
+          </TabsTrigger>
+          <TabsTrigger value="advanced" className="data-[state=active]:bg-primary/20 gap-2">
+            <Target className="w-4 h-4" />
+            <span className="hidden sm:inline">高级分析</span>
           </TabsTrigger>
         </TabsList>
 
@@ -868,6 +900,50 @@ const EventDetail: React.FC = () => {
                   情感强度谱
                 </h3>
                 <SentimentIntensityChart title="" height={350} data={sentimentIntensityData} />
+              </div>
+            </div>
+          </motion.div>
+        </TabsContent>
+
+        {/* 高级分析 Tab */}
+        <TabsContent value="advanced" className="mt-6">
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+            {/* P3: 传播速度分析 */}
+            <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
+              <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
+                <Zap className="w-4 h-4" />
+                传播速度分析
+              </h3>
+              <PropagationVelocityChart
+                data={propagationVelocityData}
+                isLoading={!propagationVelocityData}
+                height={400}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* P3: 影响力预测 */}
+              <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
+                <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4" />
+                  影响力预测
+                </h3>
+                <InfluencePredictionCard
+                  data={influencePredictionData}
+                  isLoading={!influencePredictionData}
+                />
+              </div>
+
+              {/* P3: 社区演化追踪 */}
+              <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
+                <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  社区演化追踪
+                </h3>
+                <CommunityEvolutionTimeline
+                  data={communityEvolutionData}
+                  isLoading={!communityEvolutionData}
+                />
               </div>
             </div>
           </motion.div>
