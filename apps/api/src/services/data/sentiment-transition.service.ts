@@ -53,7 +53,7 @@ export class SentimentTransitionService {
         const volatility = total > 0 ? Math.max(positive, negative, neutral) / total : 0;
 
         return {
-          timestamp: hour.hour,
+          timestamp: hour.hour instanceof Date ? hour.hour.toISOString() : String(hour.hour),
           positive,
           negative,
           neutral,
@@ -154,7 +154,7 @@ export class SentimentTransitionService {
 
         if (fromSentiment !== toSentiment) {
           turningPoints.push({
-            timestamp: current.timestamp,
+            timestamp: typeof current.timestamp === 'string' ? current.timestamp : String(current.timestamp),
             fromSentiment,
             toSentiment,
             magnitude: changeRate,
