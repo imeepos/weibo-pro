@@ -61,6 +61,15 @@ import EngagementTrendChart from '@/components/charts/EngagementTrendChart';
 import MultiMetricTrendChart from '@/components/charts/MultiMetricTrendChart';
 import AnomalyTimelineChart from '@/components/charts/AnomalyTimelineChart';
 import GeographicDistributionChart, { type GeographicDataItem } from '@/components/charts/GeographicDistributionChart';
+// P2 组件导入
+import { SpreadBreadthChart } from '@/components/charts/SpreadBreadthChart';
+import MediaTypeDistribution from '@/components/charts/MediaTypeDistribution';
+import CommunityGraph from '@/components/charts/CommunityGraph';
+import { SentimentTransition } from '@/components/charts/SentimentTransition';
+// P2 hooks 导入
+import { useSpreadBreadth } from '@/hooks/useSpreadBreadth';
+import { useMediaTypeDistribution } from '@/hooks/useMediaTypeDistribution';
+import { useCommunityDetection } from '@/hooks/useCommunityDetection';
 
 interface TimeSeriesDataPoint {
   timestamp: string;
@@ -121,6 +130,10 @@ const EventDetail: React.FC = () => {
   const [sentimentIntensityData, setSentimentIntensityData] = useState<Array<{ intensity: number; count: number }>>([]);
   const [engagementTrendData, setEngagementTrendData] = useState<Array<{ timestamp: string; post_count: number; comment_count: number; repost_count: number; like_count: number; user_count: number; hotness: number; engagement_rate: number; }>>([]);
   const [anomaliesData, setAnomaliesData] = useState<Array<{ timestamp: string; type: 'spike' | 'drop' | 'sentiment_shift'; metric: string; value: number; expected: number; confidence: number; }>>([]);
+  // P2 组件数据 state
+  const [spreadBreadthData, setSpreadBreadthData] = useState<any>(null);
+  const [mediaTypeData, setMediaTypeData] = useState<any>(null);
+  const [communityData, setCommunityData] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isRefreshingCache, setIsRefreshingCache] = useState(false);
@@ -201,6 +214,22 @@ const EventDetail: React.FC = () => {
       try { setSentimentIntensityData(await c.getSentimentIntensity(eventId) || []); } catch (e) { logger.warn('Failed to fetch sentiment intensity:', e); }
       try { setEngagementTrendData(await c.getEngagementTrend(eventId) || []); } catch (e) { logger.warn('Failed to fetch engagement trend:', e); }
       try { setAnomaliesData(await c.getAnomalies(eventId) || []); } catch (e) { logger.warn('Failed to fetch anomalies:', e); }
+      // P2 组件数据获取
+      try {
+        if (c.getSpreadBreadthAnalysis) {
+          setSpreadBreadthData(await c.getSpreadBreadthAnalysis(eventId));
+        }
+      } catch (e) { logger.warn('Failed to fetch spread breadth:', e); }
+      try {
+        if (c.getMediaTypeDistribution) {
+          setMediaTypeData(await c.getMediaTypeDistribution(eventId));
+        }
+      } catch (e) { logger.warn('Failed to fetch media type distribution:', e); }
+      try {
+        if (c.getCommunityAnalysis) {
+          setCommunityData(await c.getCommunityAnalysis(eventId));
+        }
+      } catch (e) { logger.warn('Failed to fetch community analysis:', e); }
     } catch (error) {
       logger.error('Failed to fetch event data:', error);
     } finally {
@@ -712,7 +741,7 @@ const EventDetail: React.FC = () => {
 
         {/* 关系网络 Tab */}
         <TabsContent value="network" className="mt-6">
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
             <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
               <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
                 <Users className="w-4 h-4" />
@@ -727,6 +756,18 @@ const EventDetail: React.FC = () => {
                   暂无用户关系数据
                 </div>
               )}
+            </div>
+            {/* P2: 社区发现 */}
+            <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
+              <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
+                <Network className="w-4 h-4" />
+                社区发现分析
+              </h3>
+              <CommunityGraph
+                data={communityData}
+                isLoading={!communityData}
+                height={500}
+              />
             </div>
           </motion.div>
         </TabsContent>
@@ -752,6 +793,18 @@ const EventDetail: React.FC = () => {
         {/* 趋势分析 Tab */}
         <TabsContent value="trend" className="mt-6">
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+            {/* P2: 传播广度分析 */}
+            <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
+              <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
+                <Activity className="w-4 h-4" />
+                传播广度分析
+              </h3>
+              <SpreadBreadthChart
+                data={spreadBreadthData}
+                isLoading={!spreadBreadthData}
+                height={400}
+              />
+            </div>
             <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
               <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
                 <Activity className="w-4 h-4" />
@@ -760,19 +813,24 @@ const EventDetail: React.FC = () => {
               <MultiMetricTrendChart data={engagementTrendData} height={380} />
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* P2: 媒体类型分布 */}
               <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
                 <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
                   <BarChart3 className="w-4 h-4" />
-                  互动指标分解
+                  媒体类型分布
                 </h3>
-                <EngagementTrendChart data={engagementTrendData} height={300} />
+                <MediaTypeDistribution
+                  data={mediaTypeData}
+                  isLoading={!mediaTypeData}
+                  height={350}
+                />
               </div>
               <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
                 <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4" />
                   异常检测时间线
                 </h3>
-                <AnomalyTimelineChart data={anomaliesData} height={300} />
+                <AnomalyTimelineChart data={anomaliesData} height={350} />
               </div>
             </div>
           </motion.div>
@@ -781,6 +839,14 @@ const EventDetail: React.FC = () => {
         {/* 情感分析 Tab */}
         <TabsContent value="sentiment" className="mt-6">
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+            {/* P2: 情感转变追踪 */}
+            <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
+              <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
+                <Heart className="w-4 h-4" />
+                情感转变追踪
+              </h3>
+              {eventId && <SentimentTransition eventId={eventId} />}
+            </div>
             <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
               <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
                 <Heart className="w-4 h-4" />

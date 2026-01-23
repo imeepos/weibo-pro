@@ -3,6 +3,7 @@ export * from './controllers/chat.controller'
 export * from './controllers/claude.controller'
 export * from './controllers/comment-depth.controller'
 export * from './controllers/community-detection.controller'
+export * from './controllers/community-evolution.controller'
 export * from './controllers/config.controller'
 export * from './controllers/crawler.controller'
 export * from './controllers/derived-node.controller'
@@ -39,6 +40,7 @@ export * from './controllers/media-type.controller'
 export * from './controllers/network-centrality.controller'
 export * from './controllers/sentiment-transition.controller'
 export * from './controllers/spread-breadth.controller'
+export * from './controllers/influence-prediction.controller'
 export * from './types';
 export * from './tokens';
 export * from './client-plugin';

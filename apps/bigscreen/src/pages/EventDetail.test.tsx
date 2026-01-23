@@ -90,6 +90,39 @@ vi.mock('@/components/charts/AnomalyTimelineChart', () => ({
   default: () => <div data-testid="anomaly-timeline-chart">AnomalyTimelineChart</div>,
 }));
 
+// Mock P2 components
+vi.mock('@/components/charts/SpreadBreadthChart', () => ({
+  SpreadBreadthChart: ({ data, isLoading }: { data: unknown; isLoading: boolean }) => (
+    <div data-testid="spread-breadth-chart" data-loading={isLoading}>
+      SpreadBreadthChart {data ? 'with data' : 'no data'}
+    </div>
+  ),
+}));
+
+vi.mock('@/components/charts/MediaTypeDistribution', () => ({
+  default: ({ data, isLoading }: { data: unknown; isLoading: boolean }) => (
+    <div data-testid="media-type-distribution" data-loading={isLoading}>
+      MediaTypeDistribution {data ? 'with data' : 'no data'}
+    </div>
+  ),
+}));
+
+vi.mock('@/components/charts/CommunityGraph', () => ({
+  default: ({ data, isLoading }: { data: unknown; isLoading: boolean }) => (
+    <div data-testid="community-graph" data-loading={isLoading}>
+      CommunityGraph {data ? 'with data' : 'no data'}
+    </div>
+  ),
+}));
+
+vi.mock('@/components/charts/SentimentTransition', () => ({
+  SentimentTransition: ({ eventId }: { eventId: string }) => (
+    <div data-testid="sentiment-transition" data-event-id={eventId}>
+      SentimentTransition
+    </div>
+  ),
+}));
+
 // Mock UI components from @sker/ui
 vi.mock('@sker/ui/components/ui/metric-card', () => ({
   MetricCard: ({ title, value, icon }: { title: string; value: string; icon: string }) => (
@@ -210,6 +243,9 @@ describe('EventDetail', () => {
     getEngagementTrend: ReturnType<typeof vi.fn>;
     getAnomalies: ReturnType<typeof vi.fn>;
     updateEventKeywords: ReturnType<typeof vi.fn>;
+    getSpreadBreadthAnalysis?: ReturnType<typeof vi.fn>;
+    getMediaTypeDistribution?: ReturnType<typeof vi.fn>;
+    getCommunityAnalysis?: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
@@ -239,6 +275,28 @@ describe('EventDetail', () => {
       getEngagementTrend: vi.fn().mockResolvedValue(mockEngagementTrendData),
       getAnomalies: vi.fn().mockResolvedValue(mockAnomaliesData),
       updateEventKeywords: vi.fn().mockResolvedValue({ success: true }),
+      // P2 API methods
+      getSpreadBreadthAnalysis: vi.fn().mockResolvedValue({
+        totalReposts: 100,
+        uniqueReposters: 80,
+        spreadDepth: 5,
+        spreadWidth: 4.5,
+        breadthIndex: 0.75,
+        propagationPaths: [],
+        spreadTimeline: [],
+        repostByUserType: [],
+      }),
+      getMediaTypeDistribution: vi.fn().mockResolvedValue({
+        totalPosts: 1000,
+        distribution: [],
+      }),
+      getCommunityAnalysis: vi.fn().mockResolvedValue({
+        totalCommunities: 3,
+        modularity: 0.75,
+        communities: [],
+        bridgeUsers: [],
+        interCommunityLinks: [],
+      }),
     };
 
     // Always return the mock controller when EventsController is requested
@@ -1079,6 +1137,300 @@ describe('EventDetail', () => {
       // 页面应该仍然正常渲染
       await waitFor(() => {
         expect(screen.getByText('测试事件标题')).toBeInTheDocument();
+      });
+    });
+  });
+
+  /**
+   * P2 组件集成测试
+   */
+  describe('P2 组件集成', () => {
+    // Mock P2 data
+    const mockSpreadBreadthData = {
+      totalReposts: 100,
+      uniqueReposters: 80,
+      spreadDepth: 5,
+      spreadWidth: 4.5,
+      breadthIndex: 0.75,
+      propagationPaths: [
+        { source: 'post1', target: 'user1', weight: 1, level: 1 },
+        { source: 'user1', target: 'user2', weight: 1, level: 2 },
+      ],
+      spreadTimeline: [],
+      repostByUserType: [],
+    };
+
+    const mockMediaTypeData = {
+      totalPosts: 1000,
+      distribution: [
+        { type: 'text', count: 400, percentage: 40, avgEngagement: 50 },
+        { type: 'image', count: 300, percentage: 30, avgEngagement: 80 },
+        { type: 'video', count: 200, percentage: 20, avgEngagement: 120 },
+        { type: 'mixed', count: 100, percentage: 10, avgEngagement: 100 },
+      ],
+    };
+
+    const mockCommunityData = {
+      totalCommunities: 3,
+      modularity: 0.75,
+      communities: [
+        {
+          id: 'community-1',
+          name: '社区1',
+          memberCount: 50,
+          avgInfluence: 0.8,
+          members: [],
+        },
+      ],
+      bridgeUsers: [],
+      interCommunityLinks: [],
+    };
+
+    beforeEach(() => {
+      // Mock P2 API calls
+      vi.mocked(root.get).mockImplementation((token: any) => {
+        if (token === EventsController) {
+          return {
+            ...mockEventsController,
+            getSpreadBreadthAnalysis: vi.fn().mockResolvedValue(mockSpreadBreadthData),
+            getMediaTypeDistribution: vi.fn().mockResolvedValue(mockMediaTypeData),
+            getCommunityAnalysis: vi.fn().mockResolvedValue(mockCommunityData),
+          } as any;
+        }
+        return {} as any;
+      });
+    });
+
+    describe('趋势分析 Tab - P2 组件', () => {
+      it('应该渲染 SpreadBreadthChart 组件', async () => {
+        render(
+          <MemoryRouter initialEntries={[`/event/${mockEventId}`]}>
+            <EventDetail />
+          </MemoryRouter>
+        );
+
+        await waitFor(() => {
+          expect(screen.getByText('测试事件标题')).toBeInTheDocument();
+        });
+
+        // 切换到趋势分析 Tab
+        const trendTab = screen.getByText('趋势分析');
+        fireEvent.click(trendTab);
+
+        await waitFor(() => {
+          expect(screen.getByTestId('spread-breadth-chart')).toBeInTheDocument();
+        });
+      });
+
+      it('应该渲染 MediaTypeDistribution 组件', async () => {
+        render(
+          <MemoryRouter initialEntries={[`/event/${mockEventId}`]}>
+            <EventDetail />
+          </MemoryRouter>
+        );
+
+        await waitFor(() => {
+          expect(screen.getByText('测试事件标题')).toBeInTheDocument();
+        });
+
+        // 切换到趋势分析 Tab
+        const trendTab = screen.getByText('趋势分析');
+        fireEvent.click(trendTab);
+
+        await waitFor(() => {
+          expect(screen.getByTestId('media-type-distribution')).toBeInTheDocument();
+        });
+      });
+
+      it('应该在趋势分析 Tab 中正确显示 P2 组件布局', async () => {
+        render(
+          <MemoryRouter initialEntries={[`/event/${mockEventId}`]}>
+            <EventDetail />
+          </MemoryRouter>
+        );
+
+        await waitFor(() => {
+          expect(screen.getByText('测试事件标题')).toBeInTheDocument();
+        });
+
+        const trendTab = screen.getByText('趋势分析');
+        fireEvent.click(trendTab);
+
+        await waitFor(() => {
+          expect(screen.getByTestId('spread-breadth-chart')).toBeInTheDocument();
+          expect(screen.getByTestId('media-type-distribution')).toBeInTheDocument();
+          expect(screen.getByTestId('anomaly-timeline-chart')).toBeInTheDocument();
+        });
+      });
+    });
+
+    describe('情感分析 Tab - P2 组件', () => {
+      it('应该渲染 SentimentTransition 组件', async () => {
+        render(
+          <MemoryRouter initialEntries={[`/event/${mockEventId}`]}>
+            <EventDetail />
+          </MemoryRouter>
+        );
+
+        await waitFor(() => {
+          expect(screen.getByText('测试事件标题')).toBeInTheDocument();
+        });
+
+        // 切换到情感分析 Tab
+        const sentimentTab = screen.getByText('情感分析');
+        fireEvent.click(sentimentTab);
+
+        await waitFor(() => {
+          expect(screen.getByTestId('sentiment-transition')).toBeInTheDocument();
+        });
+
+        // 验证 eventId 传递正确
+        const sentimentTransition = screen.getByTestId('sentiment-transition');
+        expect(sentimentTransition).toHaveAttribute('data-event-id', mockEventId);
+      });
+
+      it('应该在情感分析 Tab 中正确显示所有组件', async () => {
+        render(
+          <MemoryRouter initialEntries={[`/event/${mockEventId}`]}>
+            <EventDetail />
+          </MemoryRouter>
+        );
+
+        await waitFor(() => {
+          expect(screen.getByText('测试事件标题')).toBeInTheDocument();
+        });
+
+        const sentimentTab = screen.getByText('情感分析');
+        fireEvent.click(sentimentTab);
+
+        await waitFor(() => {
+          expect(screen.getByTestId('sentiment-transition')).toBeInTheDocument();
+          expect(screen.getByTestId('sentiment-hotness-chart')).toBeInTheDocument();
+          expect(screen.getByTestId('sentiment-intensity-chart')).toBeInTheDocument();
+        });
+      });
+    });
+
+    describe('关系网络 Tab - P2 组件', () => {
+      it('应该渲染 CommunityGraph 组件', async () => {
+        render(
+          <MemoryRouter initialEntries={[`/event/${mockEventId}`]}>
+            <EventDetail />
+          </MemoryRouter>
+        );
+
+        await waitFor(() => {
+          expect(screen.getByText('测试事件标题')).toBeInTheDocument();
+        });
+
+        // 切换到关系网络 Tab
+        const networkTab = screen.getByText('关系网络');
+        fireEvent.click(networkTab);
+
+        await waitFor(() => {
+          expect(screen.getByTestId('community-graph')).toBeInTheDocument();
+        });
+      });
+
+      it('应该在关系网络 Tab 中正确显示所有组件', async () => {
+        render(
+          <MemoryRouter initialEntries={[`/event/${mockEventId}`]}>
+            <EventDetail />
+          </MemoryRouter>
+        );
+
+        await waitFor(() => {
+          expect(screen.getByText('测试事件标题')).toBeInTheDocument();
+        });
+
+        const networkTab = screen.getByText('关系网络');
+        fireEvent.click(networkTab);
+
+        await waitFor(() => {
+          expect(screen.getByTestId('user-relation-graph')).toBeInTheDocument();
+          expect(screen.getByTestId('community-graph')).toBeInTheDocument();
+        });
+      });
+    });
+
+    describe('P2 组件数据加载状态', () => {
+      it('应该在数据加载时显示加载状态', async () => {
+        // 使 API 调用延迟
+        vi.mocked(root.get).mockImplementation((token: any) => {
+          if (token === EventsController) {
+            return {
+              ...mockEventsController,
+              getSpreadBreadthAnalysis: vi.fn().mockImplementation(
+                () => new Promise((resolve) => setTimeout(() => resolve(mockSpreadBreadthData), 100))
+              ),
+            } as any;
+          }
+          return {} as any;
+        });
+
+        render(
+          <MemoryRouter initialEntries={[`/event/${mockEventId}`]}>
+            <EventDetail />
+          </MemoryRouter>
+        );
+
+        await waitFor(() => {
+          expect(screen.getByText('测试事件标题')).toBeInTheDocument();
+        });
+
+        const trendTab = screen.getByText('趋势分析');
+        fireEvent.click(trendTab);
+
+        await waitFor(() => {
+          const spreadBreadthChart = screen.getByTestId('spread-breadth-chart');
+          expect(spreadBreadthChart).toHaveAttribute('data-loading', 'true');
+        });
+      });
+
+      it('应该在数据加载完成后显示数据', async () => {
+        render(
+          <MemoryRouter initialEntries={[`/event/${mockEventId}`]}>
+            <EventDetail />
+          </MemoryRouter>
+        );
+
+        await waitFor(() => {
+          expect(screen.getByText('测试事件标题')).toBeInTheDocument();
+        });
+
+        const trendTab = screen.getByText('趋势分析');
+        fireEvent.click(trendTab);
+
+        await waitFor(() => {
+          const spreadBreadthChart = screen.getByTestId('spread-breadth-chart');
+          expect(spreadBreadthChart).toHaveAttribute('data-loading', 'false');
+          expect(spreadBreadthChart.textContent).toContain('with data');
+        });
+      });
+    });
+
+    describe('P2 组件响应式布局', () => {
+      it('应该在桌面端使用两列布局', async () => {
+        // 模拟桌面端视口
+        global.innerWidth = 1024;
+
+        render(
+          <MemoryRouter initialEntries={[`/event/${mockEventId}`]}>
+            <EventDetail />
+          </MemoryRouter>
+        );
+
+        await waitFor(() => {
+          expect(screen.getByText('测试事件标题')).toBeInTheDocument();
+        });
+
+        const trendTab = screen.getByText('趋势分析');
+        fireEvent.click(trendTab);
+
+        await waitFor(() => {
+          expect(screen.getByTestId('media-type-distribution')).toBeInTheDocument();
+          expect(screen.getByTestId('anomaly-timeline-chart')).toBeInTheDocument();
+        });
       });
     });
   });

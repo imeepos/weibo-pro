@@ -1340,3 +1340,76 @@ export interface CommunityAnalysis {
   interCommunityLinks: CommunityLink[]
   bridgeUsers: BridgeUser[]
 }
+
+// 社区演化追踪相关类型
+export interface CommunityTimeSlice {
+  timestamp: string
+  communities: Community[]
+  modularity: number
+  totalMembers: number
+}
+
+export interface EvolutionEvent {
+  type: 'birth' | 'death' | 'split' | 'merge' | 'growth' | 'shrink'
+  timestamp: string
+  involvedCommunities: string[]
+  magnitude: number
+  description: string
+}
+
+export interface KeyChange {
+  communityId: string
+  changeType: string
+  beforeSize: number
+  afterSize: number
+  keyMembers: string[]
+}
+
+export interface TrendPrediction {
+  predictedCommunityCount: number
+  predictedModularity: number
+  confidence: number
+}
+
+export interface CommunityEvolutionAnalysis {
+  timeSlices: CommunityTimeSlice[]
+  evolutionEvents: EvolutionEvent[]
+  overallStability: number
+  keyChanges: KeyChange[]
+  trendPrediction: TrendPrediction
+}
+
+// 影响力预测相关类型
+export interface InfluenceFactor {
+  name: string
+  weight: number
+  value: number
+  impact: 'positive' | 'negative' | 'neutral'
+  description: string
+}
+
+export interface PredictionRange {
+  min: number
+  max: number
+  expected: number
+}
+
+export interface SimilarCase {
+  postId: string
+  similarity: number
+  actualReach: number
+  actualReposts: number
+  actualEngagement: number
+}
+
+export interface InfluencePredictionAnalysis {
+  predictedReach: number
+  predictedReposts: number
+  predictedEngagement: number
+  confidence: number
+  confidenceLevel: 'high' | 'medium' | 'low'
+  factors: InfluenceFactor[]
+  predictionRange: PredictionRange
+  similarCases: SimilarCase[]
+  recommendations: string[]
+}

@@ -93,9 +93,9 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
           ${userTypeMap[userRelationNode.userType]} ${userRelationNode.location ? '· ' + userRelationNode.location : ''}
         </div>
         <div style="display: flex; flex-direction: column; gap: 4px; font-size: 13px;">
-          <div><span style="color: #999;">粉丝数:</span> <span style="color: #333; font-weight: 500;">${userRelationNode.followers.toLocaleString()}</span></div>
-          <div><span style="color: #999;">影响力:</span> <span style="color: #333; font-weight: 500;">${userRelationNode.influence.toFixed(2)}</span></div>
-          <div><span style="color: #999;">发帖数:</span> <span style="color: #333; font-weight: 500;">${userRelationNode.postCount.toLocaleString()}</span></div>
+          ${userRelationNode.followers != null ? `<div><span style="color: #999;">粉丝数:</span> <span style="color: #333; font-weight: 500;">${userRelationNode.followers.toLocaleString()}</span></div>` : ''}
+          ${userRelationNode.influence != null ? `<div><span style="color: #999;">影响力:</span> <span style="color: #333; font-weight: 500;">${userRelationNode.influence.toFixed(2)}</span></div>` : ''}
+          ${userRelationNode.postCount != null ? `<div><span style="color: #999;">发帖数:</span> <span style="color: #333; font-weight: 500;">${userRelationNode.postCount.toLocaleString()}</span></div>` : ''}
         </div>
         <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid #eee; font-size: 11px; color: #666;">
           点击跳转到微博主页 →
