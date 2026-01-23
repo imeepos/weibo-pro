@@ -1010,19 +1010,6 @@ const EventDetail: React.FC = () => {
                 height={400}
               />
             </div>
-
-            {/* P1: 网络中心性分析 */}
-            <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
-              <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
-                <Network className="w-4 h-4" />
-                网络中心性分析
-              </h3>
-              <NetworkCentralityGraph
-                data={networkCentralityData}
-                isLoading={!networkCentralityData}
-                height={500}
-              />
-            </div>
           </motion.div>
         </TabsContent>
 
