@@ -80,7 +80,7 @@ const SpreadBreadthChart: React.FC<SpreadBreadthChartProps> = ({
       level: node.level,
       itemStyle: { color: getAggregatedNodeColor(node) },
       label: {
-        show: node.type === 'aggregated' || node.type === 'source' || node.type === 'top_user',
+        show: false, // 默认隐藏，悬停时显示
         formatter: node.name,
       },
     }));
@@ -170,7 +170,7 @@ const SpreadBreadthChart: React.FC<SpreadBreadthChartProps> = ({
             curveness: 0.5,
           },
           label: {
-            show: true,
+            show: false, // 默认不显示标签
             position: 'right',
             color: colors.text,
             fontSize: 12,
