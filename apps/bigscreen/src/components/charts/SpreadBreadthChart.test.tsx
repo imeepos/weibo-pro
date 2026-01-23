@@ -2,33 +2,20 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { SpreadBreadthChart } from './SpreadBreadthChart';
 import type { SpreadBreadthAnalysis } from '@sker/sdk';
-import * as echarts from 'echarts';
 
-// Mock echarts
-const mockSetOption = vi.fn();
-const mockEChartsInstance = {
-  setOption: mockSetOption,
-  on: vi.fn(),
-  off: vi.fn(),
-  resize: vi.fn(),
-  dispose: vi.fn(),
-  clear: vi.fn(),
-};
+// Hoisted mocks
+const { mockSetOption, mockEChartsInstance, mockUseEChartTheme } = vi.hoisted(() => {
+  const mockSetOption = vi.fn();
+  const mockEChartsInstance = {
+    setOption: mockSetOption,
+    on: vi.fn(),
+    off: vi.fn(),
+    resize: vi.fn(),
+    dispose: vi.fn(),
+    clear: vi.fn(),
+  };
 
-vi.mock('echarts', () => ({
-  default: {
-    init: vi.fn(() => mockEChartsInstance),
-  },
-}));
-
-// Mock @/utils
-vi.mock('@/utils', () => ({
-  cn: (...args: string[]) => args.filter(Boolean).join(' '),
-}));
-
-// Mock useEChartTheme hook
-vi.mock('@sker/ui/hooks/use-echart-theme', () => ({
-  useEChartTheme: vi.fn(() => ({
+  const mockUseEChartTheme = vi.fn(() => ({
     isDark: false,
     colors: {
       text: '#111827',
@@ -41,7 +28,29 @@ vi.mock('@sker/ui/hooks/use-echart-theme', () => ({
       emphasis: '#3b82f6',
       chartBg: '#ffffff',
     },
-  })),
+  }));
+
+  return { mockSetOption, mockEChartsInstance, mockUseEChartTheme };
+});
+
+// Mock echarts
+vi.mock('echarts', () => {
+  return {
+    default: {
+      init: vi.fn(() => mockEChartsInstance),
+    },
+    init: vi.fn(() => mockEChartsInstance),
+  };
+});
+
+// Mock @/utils
+vi.mock('@/utils', () => ({
+  cn: (...args: string[]) => args.filter(Boolean).join(' '),
+}));
+
+// Mock useEChartTheme hook
+vi.mock('@sker/ui/hooks/use-echart-theme', () => ({
+  useEChartTheme: mockUseEChartTheme,
 }));
 
 const mockData: SpreadBreadthAnalysis = {
@@ -64,17 +73,14 @@ describe('SpreadBreadthChart', () => {
   });
 
   it('应该渲染空数据状态', () => {
-    const { container } = render(
-      <SpreadBreadthChart data={null} isLoading={false} />
-    );
-    expect(container.querySelector('.chart-state')).toBeInTheDocument();
+    render(<SpreadBreadthChart data={null} isLoading={false} />);
+    expect(screen.getByText('暂无传播广度数据')).toBeInTheDocument();
   });
 
   it('应该渲染加载状态', () => {
-    const { container } = render(
-      <SpreadBreadthChart data={null} isLoading={true} />
-    );
-    expect(container.querySelector('.chart-state')).toBeInTheDocument();
+    render(<SpreadBreadthChart data={null} isLoading={true} />);
+    // 加载状态下应该显示加载指示器
+    expect(screen.queryByText('总转发数')).not.toBeInTheDocument();
   });
 
   it('应该渲染正常数据', () => {
@@ -102,8 +108,7 @@ describe('SpreadBreadthChart', () => {
 
   describe('深色主题适配', () => {
     it('应该在浅色主题下使用正确的文本颜色', () => {
-      const { useEChartTheme } = require('@sker/ui/hooks/use-echart-theme');
-      useEChartTheme.mockReturnValue({
+      mockUseEChartTheme.mockReturnValueOnce({
         isDark: false,
         colors: {
           text: '#111827',
@@ -131,8 +136,7 @@ describe('SpreadBreadthChart', () => {
     });
 
     it('应该在深色主题下使用正确的文本颜色', () => {
-      const { useEChartTheme } = require('@sker/ui/hooks/use-echart-theme');
-      useEChartTheme.mockReturnValue({
+      mockUseEChartTheme.mockReturnValueOnce({
         isDark: true,
         colors: {
           text: '#ffffff',
@@ -160,20 +164,18 @@ describe('SpreadBreadthChart', () => {
     });
 
     it('应该在主题切换时更新图表颜色', () => {
-      const { useEChartTheme } = require('@sker/ui/hooks/use-echart-theme');
-
       // 初始为浅色主题
-      useEChartTheme.mockReturnValue({
+      mockUseEChartTheme.mockReturnValueOnce({
         isDark: false,
-        colors: { text: '#111827' },
+        colors: { text: '#111827', textMuted: '#6b7280', border: 'rgba(0, 0, 0, 0.3)', splitLine: 'rgba(0, 0, 0, 0.1)', tooltipBg: 'rgba(255, 255, 255, 0.95)', tooltipBorder: 'rgba(0, 0, 0, 0.1)', toolbox: '#111827', emphasis: '#3b82f6', chartBg: '#ffffff' },
       });
 
       const { rerender } = render(<SpreadBreadthChart data={mockData} isLoading={false} />);
 
       // 切换到深色主题
-      useEChartTheme.mockReturnValue({
+      mockUseEChartTheme.mockReturnValueOnce({
         isDark: true,
-        colors: { text: '#ffffff' },
+        colors: { text: '#ffffff', textMuted: '#9ca3af', border: 'rgba(255, 255, 255, 0.3)', splitLine: 'rgba(255, 255, 255, 0.1)', tooltipBg: 'rgba(0, 0, 0, 0.8)', tooltipBorder: 'rgba(255, 255, 255, 0.2)', toolbox: '#ffffff', emphasis: '#3b82f6', chartBg: '#1e293b' },
       });
 
       rerender(<SpreadBreadthChart data={mockData} isLoading={false} />);

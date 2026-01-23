@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useMemo } from 'react';
 import { cn } from '@/utils';
 import { ChartState } from '@sker/ui/components/ui/chart-state';
+import { useEChartTheme } from '@sker/ui/hooks/use-echart-theme';
 import * as echarts from 'echarts';
 import type { EChartsOption } from 'echarts';
 import type { SpreadBreadthAnalysis } from '@sker/sdk';
@@ -30,6 +31,12 @@ const SpreadBreadthChart: React.FC<SpreadBreadthChartProps> = ({
 }) => {
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstance = useRef<echarts.ECharts | null>(null);
+  const { colors } = useEChartTheme();
+
+  // 格式化数字（添加千分位分隔符）
+  const formatNumber = (num: number): string => {
+    return num.toLocaleString('zh-CN');
+  };
 
   // 构建 ECharts sankey 配置
   const chartOption = useMemo<EChartsOption>(() => {
@@ -39,10 +46,10 @@ const SpreadBreadthChart: React.FC<SpreadBreadthChartProps> = ({
     const nodes = new Map<string, { name: string; itemStyle: { color: string } }>();
     const links: Array<{ source: string; target: string; value: number; lineStyle: { color: string } }> = [];
 
-    // 根据层级分配颜色
+    // 根据层级分配颜色（使用主题感知的颜色）
     const getLevelColor = (level: number): string => {
-      const colors = ['#fbbf24', '#60a5fa', '#34d399', '#f472b6', '#a78bfa'];
-      return colors[level % colors.length];
+      const themeColors = ['#fbbf24', '#60a5fa', '#34d399', '#f472b6', '#a78bfa'];
+      return themeColors[level % themeColors.length];
     };
 
     for (const path of data.propagationPaths) {
@@ -73,7 +80,7 @@ const SpreadBreadthChart: React.FC<SpreadBreadthChartProps> = ({
         text: title,
         left: 'center',
         textStyle: {
-          color: '#ffffff',
+          color: colors.text,
           fontSize: 16,
         },
       },
@@ -99,7 +106,7 @@ const SpreadBreadthChart: React.FC<SpreadBreadthChartProps> = ({
             show: true,
             position: 'right',
             formatter: '{b}',
-            color: '#ffffff',
+            color: colors.text,
           },
           emphasis: {
             focus: 'adjacency',
@@ -107,7 +114,7 @@ const SpreadBreadthChart: React.FC<SpreadBreadthChartProps> = ({
         },
       ],
     };
-  }, [data, title]);
+  }, [data, title, colors]);
 
   // 初始化图表
   useEffect(() => {
@@ -176,8 +183,32 @@ const SpreadBreadthChart: React.FC<SpreadBreadthChartProps> = ({
   }
 
   return (
-    <div className={cn('w-full', className)} style={{ height }}>
-      <div ref={chartRef} style={{ width: '100%', height: '100%' }} />
+    <div className={cn('w-full flex flex-col', className)} style={{ height }}>
+      {/* 统计指标卡片 */}
+      <div className="grid grid-cols-5 gap-4 mb-4">
+        <div className="bg-card border rounded-lg p-4">
+          <div className="text-sm text-muted-foreground mb-1">总转发数</div>
+          <div className="text-2xl font-semibold">{formatNumber(data.totalReposts)}</div>
+        </div>
+        <div className="bg-card border rounded-lg p-4">
+          <div className="text-sm text-muted-foreground mb-1">独立转发者</div>
+          <div className="text-2xl font-semibold">{formatNumber(data.uniqueReposters)}</div>
+        </div>
+        <div className="bg-card border rounded-lg p-4">
+          <div className="text-sm text-muted-foreground mb-1">传播深度</div>
+          <div className="text-2xl font-semibold">{data.spreadDepth}层</div>
+        </div>
+        <div className="bg-card border rounded-lg p-4">
+          <div className="text-sm text-muted-foreground mb-1">传播宽度</div>
+          <div className="text-2xl font-semibold">{data.spreadWidth.toFixed(1)}</div>
+        </div>
+        <div className="bg-card border rounded-lg p-4">
+          <div className="text-sm text-muted-foreground mb-1">广度指数</div>
+          <div className="text-2xl font-semibold">{data.breadthIndex.toFixed(2)}</div>
+        </div>
+      </div>
+      {/* 图表 */}
+      <div ref={chartRef} style={{ width: '100%', flex: 1 }} />
     </div>
   );
 };
