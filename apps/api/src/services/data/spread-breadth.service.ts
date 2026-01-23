@@ -166,7 +166,6 @@ export class SpreadBreadthService {
     }
 
     let maxDepth = 0;
-    const rootPostId = reposts[0]?.postId || 'unknown';
 
     while (queue.length > 0) {
       const { postId, level } = queue.shift()!;
@@ -177,7 +176,8 @@ export class SpreadBreadthService {
         leveledReposts.push({
           ...repost,
           level,
-          rootPostId,
+          // 保留每个转发的实际来源帖子 ID
+          rootPostId: String(repost.postId),
         });
       }
 
@@ -416,24 +416,36 @@ export class SpreadBreadthService {
     const links: PropagationPath[] = [];
     const levelStats: LevelStats[] = [];
 
-    // 获取源节点（帖子作者）
-    const rootPostId = leveledReposts[0]?.rootPostId;
-    const sourceAuthor = postAuthorMap.get(rootPostId) || `帖子${rootPostId}`;
-    const sourceNodeId = `source_${rootPostId}`;
+    // 获取所有唯一的源帖子（第一层转发的来源）
+    const firstLevelReposts = levelGroups.get(1) || [];
+    const uniqueSourcePosts = new Set<string>();
+    for (const repost of firstLevelReposts) {
+      uniqueSourcePosts.add(String(repost.rootPostId));
+    }
 
-    // 添加源节点
-    nodes.push({
-      id: sourceNodeId,
-      name: sourceAuthor,
-      type: 'source',
-      level: 0,
-      count: 1,
-      totalWeight: leveledReposts.length,
-    });
+    // 为每个源帖子创建源节点
+    const sourceNodeIds: string[] = [];
+    for (const postId of uniqueSourcePosts) {
+      const sourceAuthor = postAuthorMap.get(postId) || `帖子${postId}`;
+      const sourceNodeId = `source_${postId}`;
+      sourceNodeIds.push(sourceNodeId);
+
+      // 计算该帖子的转发数
+      const postReposts = leveledReposts.filter((r) => String(r.rootPostId) === postId);
+
+      nodes.push({
+        id: sourceNodeId,
+        name: sourceAuthor,
+        type: 'source',
+        level: 0,
+        count: 1,
+        totalWeight: postReposts.length,
+      });
+    }
 
     // 2. 处理每个层级
     const sortedLevels = Array.from(levelGroups.keys()).sort((a, b) => a - b);
-    let totalNodesCount = 1; // 源节点已经算1个
+    let totalNodesCount = nodes.length; // 源节点数量
     const maxNodes = 50;
     const maxTopUsersPerLevel = 3;
     const maxTopUsersInNode = 5;
@@ -510,13 +522,15 @@ export class SpreadBreadthService {
 
         // 创建连线
         if (level === 1) {
-          // 第一层连接到源节点
-          links.push({
-            source: sourceNodeId,
-            target: nodeId,
-            weight: reposts.length,
-            level,
-          });
+          // 第一层：连接到所有源节点
+          for (const sourceNodeId of sourceNodeIds) {
+            links.push({
+              source: sourceNodeId,
+              target: nodeId,
+              weight: Math.ceil(reposts.length / sourceNodeIds.length),
+              level,
+            });
+          }
         } else {
           // 其他层连接到上一层的同类型聚合节点
           const prevNodeId = `aggregated_L${level - 1}_${userType}`;

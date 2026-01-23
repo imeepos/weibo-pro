@@ -75,14 +75,22 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
     return `https://weibo.com/${node.id}?refer_flag=1001030103_`;
   }, []);
 
+  // 格式化数字显示
+  const formatNumber = useCallback((num: number | null | undefined): string => {
+    if (num == null) return '-';
+    if (num >= 10000) {
+      return (num / 10000).toFixed(1) + '万';
+    }
+    return num.toLocaleString();
+  }, []);
+
   // 生成节点悬停提示信息
   const getNodeLabel = useCallback((node: any) => {
     const userRelationNode = node as UserRelationNode;
-    const verifiedBadge = userRelationNode.verified ? ' ✓' : '';
     const userTypeMap: Record<string, string> = {
-      official: '官方',
-      media: '媒体',
-      kol: 'KOL',
+      official: '官方认证',
+      media: '媒体账号',
+      kol: 'KOL大V',
       normal: '普通用户'
     };
 
@@ -95,36 +103,100 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
 
     // 安全获取用户类型显示名称
     const userTypeName = userRelationNode.userType ? (userTypeMap[userRelationNode.userType] || '用户') : '用户';
-    const locationText = userRelationNode.location ? `· ${userRelationNode.location}` : '';
-    const userInfoLine = [userTypeName, locationText].filter(Boolean).join(' ');
+
+    // 获取节点的连接数（degree）
+    const nodeLinks = graphData?.links?.filter(
+      (link: any) => link.source?.id === node.id || link.target?.id === node.id ||
+                     link.source === node.id || link.target === node.id
+    ) || [];
+    const degree = nodeLinks.length;
+
+    // 计算总互动权重
+    const totalWeight = nodeLinks.reduce((sum: number, link: any) => sum + (link.value || link.weight || 1), 0);
+
+    // 认证标识
+    const verifiedHtml = userRelationNode.verified
+      ? `<span style="display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; background: #3b82f6; border-radius: 50%; margin-left: 4px;">
+           <span style="color: white; font-size: 10px; font-weight: bold;">✓</span>
+         </span>`
+      : '';
+
+    // 用户类型标签颜色
+    const typeColors: Record<string, string> = {
+      official: '#f59e0b',
+      media: '#8b5cf6',
+      kol: '#ec4899',
+      normal: '#6b7280'
+    };
+    const typeColor = typeColors[userRelationNode.userType] || '#6b7280';
 
     return `
-      <div style="padding: 14px 16px; min-width: 220px; max-width: 280px;">
-        <div style="font-size: 15px; font-weight: 600; margin-bottom: 6px; color: ${highlightColor}; display: flex; align-items: center; gap: 4px;">
-          <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${userRelationNode.name || '未知用户'}</span>
-          ${verifiedBadge ? `<span style="color: #3b82f6; font-size: 12px;">${verifiedBadge}</span>` : ''}
+      <div style="padding: 16px; min-width: 260px; max-width: 320px;">
+        <!-- 头部：用户名和认证 -->
+        <div style="display: flex; align-items: center; margin-bottom: 8px;">
+          <span style="font-size: 16px; font-weight: 600; color: ${highlightColor}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;">
+            ${userRelationNode.name || '未知用户'}
+          </span>
+          ${verifiedHtml}
         </div>
-        ${userInfoLine ? `<div style="font-size: 12px; color: ${secondaryTextColor}; margin-bottom: 10px;">${userInfoLine}</div>` : ''}
-        <div style="display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 13px;">
-          ${userRelationNode.followers != null ? `
-            <span style="color: ${secondaryTextColor};">粉丝</span>
-            <span style="color: ${primaryTextColor}; font-weight: 500; text-align: right;">${userRelationNode.followers.toLocaleString()}</span>
-          ` : ''}
-          ${userRelationNode.postCount != null ? `
-            <span style="color: ${secondaryTextColor};">发帖</span>
-            <span style="color: ${primaryTextColor}; font-weight: 500; text-align: right;">${userRelationNode.postCount.toLocaleString()}</span>
-          ` : ''}
-          ${userRelationNode.influence != null ? `
-            <span style="color: ${secondaryTextColor};">影响力</span>
-            <span style="color: ${primaryTextColor}; font-weight: 500; text-align: right;">${userRelationNode.influence.toFixed(2)}</span>
+
+        <!-- 用户类型和地区标签 -->
+        <div style="display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap;">
+          <span style="display: inline-block; padding: 2px 8px; background: ${typeColor}20; color: ${typeColor}; border-radius: 4px; font-size: 11px; font-weight: 500;">
+            ${userTypeName}
+          </span>
+          ${userRelationNode.location ? `
+            <span style="display: inline-block; padding: 2px 8px; background: ${secondaryTextColor}15; color: ${secondaryTextColor}; border-radius: 4px; font-size: 11px;">
+              📍 ${userRelationNode.location}
+            </span>
           ` : ''}
         </div>
-        <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid ${borderColor}; font-size: 11px; color: ${secondaryTextColor}; text-align: center;">
-          点击跳转到微博主页 →
+
+        <!-- 核心数据 -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+          <div style="background: ${secondaryTextColor}08; padding: 8px 10px; border-radius: 6px;">
+            <div style="font-size: 10px; color: ${secondaryTextColor}; margin-bottom: 2px;">粉丝数</div>
+            <div style="font-size: 14px; font-weight: 600; color: ${primaryTextColor};">${formatNumber(userRelationNode.followers)}</div>
+          </div>
+          <div style="background: ${secondaryTextColor}08; padding: 8px 10px; border-radius: 6px;">
+            <div style="font-size: 10px; color: ${secondaryTextColor}; margin-bottom: 2px;">发帖数</div>
+            <div style="font-size: 14px; font-weight: 600; color: ${primaryTextColor};">${formatNumber(userRelationNode.postCount)}</div>
+          </div>
+        </div>
+
+        <!-- 影响力和网络数据 -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+          <div style="background: ${highlightColor}10; padding: 8px 10px; border-radius: 6px; border-left: 3px solid ${highlightColor};">
+            <div style="font-size: 10px; color: ${secondaryTextColor}; margin-bottom: 2px;">影响力指数</div>
+            <div style="font-size: 14px; font-weight: 600; color: ${highlightColor};">
+              ${userRelationNode.influence != null ? userRelationNode.influence.toFixed(2) : '-'}
+            </div>
+          </div>
+          <div style="background: #10b98110; padding: 8px 10px; border-radius: 6px; border-left: 3px solid #10b981;">
+            <div style="font-size: 10px; color: ${secondaryTextColor}; margin-bottom: 2px;">网络连接</div>
+            <div style="font-size: 14px; font-weight: 600; color: #10b981;">${degree} 人</div>
+          </div>
+        </div>
+
+        <!-- 互动权重 -->
+        ${totalWeight > 0 ? `
+          <div style="background: ${secondaryTextColor}05; padding: 8px 10px; border-radius: 6px; margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 11px; color: ${secondaryTextColor};">互动强度</span>
+              <span style="font-size: 12px; font-weight: 500; color: ${primaryTextColor};">${totalWeight.toFixed(0)} 次互动</span>
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- 底部操作提示 -->
+        <div style="padding-top: 10px; border-top: 1px solid ${borderColor}; text-align: center;">
+          <span style="font-size: 11px; color: ${highlightColor}; cursor: pointer;">
+            点击跳转到微博主页 →
+          </span>
         </div>
       </div>
     `;
-  }, [chartTheme]);
+  }, [chartTheme, graphData, formatNumber]);
 
   // 处理节点点击 - 跳转到微博主页
   const handleNodeClick = useCallback((node: any) => {
