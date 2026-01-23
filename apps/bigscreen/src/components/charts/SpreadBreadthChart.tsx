@@ -43,7 +43,7 @@ const SpreadBreadthChart: React.FC<SpreadBreadthChartProps> = ({
     if (!data || data.propagationPaths.length === 0) return {};
 
     // 构建节点和边
-    const nodes = new Map<string, { name: string; itemStyle: { color: string }; originalName: string }>();
+    const nodes = new Map<string, { name: string; itemStyle: { color: string } }>();
     const links: Array<{ source: string; target: string; value: number; lineStyle: { color: string } }> = [];
 
     // 根据层级分配颜色（使用主题感知的颜色）
@@ -52,34 +52,23 @@ const SpreadBreadthChart: React.FC<SpreadBreadthChartProps> = ({
       return themeColors[level % themeColors.length];
     };
 
-    // 辅助函数：截断长文本用于显示
-    const truncateText = (text: string, maxLength: number = 12): string => {
-      if (text.length <= maxLength) return text;
-      return text.substring(0, maxLength) + '...';
-    };
-
     for (const path of data.propagationPaths) {
-      // source 是帖子ID，target 是用户名
-      const sourceDisplay = truncateText(path.source, 8); // 帖子ID显示前8位
-      const targetDisplay = truncateText(path.target, 12); // 用户名显示前12位
-
+      // 使用原始值作为节点名称，确保唯一性（ECharts Sankey 要求节点名称唯一）
       if (!nodes.has(path.source)) {
         nodes.set(path.source, {
-          name: sourceDisplay,
+          name: path.source,
           itemStyle: { color: getLevelColor(path.level) },
-          originalName: path.source,
         });
       }
       if (!nodes.has(path.target)) {
         nodes.set(path.target, {
-          name: targetDisplay,
+          name: path.target,
           itemStyle: { color: getLevelColor(path.level + 1) },
-          originalName: path.target,
         });
       }
       links.push({
-        source: sourceDisplay,
-        target: targetDisplay,
+        source: path.source,
+        target: path.target,
         value: path.weight,
         lineStyle: { color: getLevelColor(path.level) },
       });
