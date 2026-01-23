@@ -409,15 +409,24 @@ export class EventQueryService {
       cacheKey,
       async () => {
         return await useEntityManager(async (entityManager) => {
-          // 第一步：查询真实的总帖子数（直接从 WeiboPostEntity 查询，简单高效）
+          // 第一步：查询真实的总帖子数、总用户数、总地区数
           const totalStats = await entityManager
             .createQueryBuilder(WeiboPostEntity, 'post')
+            .innerJoin('post.user', 'user')
             .select('COUNT(post.id)', 'totalpostcount')
+            .addSelect('COUNT(DISTINCT user.id)', 'totalusercount')
+            .addSelect(`COUNT(DISTINCT COALESCE(
+              NULLIF(post.region_name, ''),
+              NULLIF(user.location, ''),
+              '未知'
+            ))`, 'totalregioncount')
             .where('post.event_id = :eventId', { eventId })
             .andWhere('post.deleted_at IS NULL')
             .getRawOne();
 
           const realTotalPosts = parseInt(totalStats?.totalpostcount || '0', 10);
+          const realTotalUsers = parseInt(totalStats?.totalusercount || '0', 10);
+          const realTotalRegions = parseInt(totalStats?.totalregioncount || '0', 10);
 
           // 第二步：查询前20个地区的详细数据
           const locationData = await entityManager
@@ -478,9 +487,11 @@ export class EventQueryService {
             };
           });
 
-          // 第三步：在结果数组上附加真实总帖子数（与顶部统计保持一致）
+          // 第三步：在结果数组上附加真实统计数据（与顶部统计保持一致）
           if (result.length > 0) {
             (result as any).totalPosts = realTotalPosts;
+            (result as any).totalUsers = realTotalUsers;
+            (result as any).totalRegions = realTotalRegions;
           }
 
           return result;

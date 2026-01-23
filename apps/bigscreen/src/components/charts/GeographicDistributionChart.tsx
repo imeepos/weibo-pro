@@ -15,6 +15,9 @@ export interface GeographicDataItem {
 
 interface GeographicDistributionChartProps {
   data: GeographicDataItem[];
+  totalPosts?: number;    // 真实总帖子数，与顶部统计保持一致
+  totalUsers?: number;    // 真实总用户数
+  totalRegions?: number;  // 真实总地区数
   height?: number;
   className?: string;
   showTable?: boolean;
@@ -41,6 +44,9 @@ const getSentimentLabel = (sentiment: number): string => {
 
 const GeographicDistributionChart: React.FC<GeographicDistributionChartProps> = ({
   data,
+  totalPosts: propTotalPosts,
+  totalUsers: propTotalUsers,
+  totalRegions: propTotalRegions,
   height = 400,
   className = '',
   showTable = true,
@@ -166,16 +172,17 @@ const GeographicDistributionChart: React.FC<GeographicDistributionChartProps> = 
   // 统计摘要
   const summary = useMemo(() => {
     if (processedData.length === 0) return null;
-    const totalUsers = processedData.reduce((sum, d) => sum + d.count, 0);
 
-    // 优先使用后端返回的真实总帖子数（与顶部统计保持一致）
-    const totalPosts = (processedData as any).totalPosts ||
-                       processedData.reduce((sum, d) => sum + d.posts, 0);
+    // 优先使用 prop 传入的真实统计数据（与顶部统计保持一致）
+    const totalUsers = propTotalUsers ?? processedData.reduce((sum, d) => sum + d.count, 0);
+    const totalPosts = propTotalPosts ?? processedData.reduce((sum, d) => sum + d.posts, 0);
+    const regionCount = propTotalRegions ?? processedData.length;
 
-    const avgSentiment = processedData.reduce((sum, d) => sum + d.sentiment * d.count, 0) / totalUsers;
+    const localTotalUsers = processedData.reduce((sum, d) => sum + d.count, 0);
+    const avgSentiment = processedData.reduce((sum, d) => sum + d.sentiment * d.count, 0) / localTotalUsers;
     const topRegion = processedData[0];
-    return { totalUsers, totalPosts, avgSentiment, topRegion, regionCount: processedData.length };
-  }, [processedData]);
+    return { totalUsers, totalPosts, avgSentiment, topRegion, regionCount };
+  }, [processedData, propTotalPosts, propTotalUsers, propTotalRegions]);
 
   if (!data || data.length === 0) {
     return (

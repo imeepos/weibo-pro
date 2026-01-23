@@ -158,6 +158,7 @@ const EventDetail: React.FC = () => {
   const [trendData, setTrendData] = useState<TrendChartData | null>(null);
   const [userRelationNetwork, setUserRelationNetwork] = useState<UserRelationNetwork | null>(null);
   const [geographicData, setGeographicData] = useState<GeographicDataPoint[]>([]);
+  const [geographicStats, setGeographicStats] = useState<{ totalPosts?: number; totalUsers?: number; totalRegions?: number }>({});
   const [keywordData, setKeywordData] = useState<Array<{ keyword: string; weight: number; sentiment: 'positive' | 'negative' | 'neutral' }>>([]);
   const [sentimentHotnessData, setSentimentHotnessData] = useState<Array<{ postId: string; sentimentScore: number; hotness: number; timestamp: string }>>([]);
   const [sentimentIntensityData, setSentimentIntensityData] = useState<Array<{ intensity: number; count: number }>>([]);
@@ -327,6 +328,12 @@ const EventDetail: React.FC = () => {
         // 加载地理分布数据
         if (!geographicData.length) {
           const data = await c.getEventGeographic(eventId);
+          // 保存后端附加的统计数据
+          setGeographicStats({
+            totalPosts: (data as any).totalPosts,
+            totalUsers: (data as any).totalUsers,
+            totalRegions: (data as any).totalRegions,
+          });
           setGeographicData(data.map(item => ({
             region: item.region,
             count: item.count,
@@ -1120,6 +1127,9 @@ const EventDetail: React.FC = () => {
                 </h3>
                 <GeographicDistributionChart
                   data={geographicData}
+                  totalPosts={geographicStats.totalPosts ?? stats?.totalPosts ?? eventData.postCount}
+                  totalUsers={geographicStats.totalUsers}
+                  totalRegions={geographicStats.totalRegions}
                   height={400}
                   showTable={true}
                   maxItems={20}
