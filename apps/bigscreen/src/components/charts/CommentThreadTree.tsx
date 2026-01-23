@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useMemo, useState } from 'react';
 import { cn } from '@/utils';
 import { ChartState } from '@sker/ui/components/ui/chart-state';
+import { useEChartTheme } from '@sker/ui/hooks/use-echart-theme';
 import * as echarts from 'echarts';
 import type { CommentDepthAnalysis } from '@sker/sdk';
 import type { EChartsOption } from 'echarts';
@@ -27,6 +28,7 @@ const CommentThreadTree: React.FC<CommentThreadTreeProps> = ({
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstance = useRef<echarts.ECharts | null>(null);
   const [expandedHotspots, setExpandedHotspots] = useState<Set<string>>(new Set());
+  const { colors } = useEChartTheme();
 
   // 构建树状图配置
   const chartOption = useMemo<EChartsOption>(() => {
@@ -50,7 +52,7 @@ const CommentThreadTree: React.FC<CommentThreadTreeProps> = ({
         left: 'center',
         top: 10,
         textStyle: {
-          color: '#e5e7eb',
+          color: colors.text,
           fontSize: 16,
           fontWeight: 'bold',
         },
@@ -81,12 +83,12 @@ const CommentThreadTree: React.FC<CommentThreadTreeProps> = ({
         type: 'category',
         data: depthData.map(d => d.name),
         axisLabel: {
-          color: '#9ca3af',
+          color: colors.textMuted,
           fontSize: 12,
         },
         axisLine: {
           lineStyle: {
-            color: '#374151',
+            color: colors.border,
           },
         },
       },
@@ -94,20 +96,20 @@ const CommentThreadTree: React.FC<CommentThreadTreeProps> = ({
         type: 'value',
         name: '讨论数量',
         nameTextStyle: {
-          color: '#9ca3af',
+          color: colors.textMuted,
         },
         axisLabel: {
-          color: '#9ca3af',
+          color: colors.textMuted,
           fontSize: 12,
         },
         axisLine: {
           lineStyle: {
-            color: '#374151',
+            color: colors.border,
           },
         },
         splitLine: {
           lineStyle: {
-            color: '#374151',
+            color: colors.splitLine,
             type: 'dashed',
           },
         },
@@ -129,7 +131,7 @@ const CommentThreadTree: React.FC<CommentThreadTreeProps> = ({
           label: {
             show: true,
             position: 'top',
-            color: '#e5e7eb',
+            color: colors.text,
             fontSize: 12,
             formatter: (params: any) => {
               return `${params.value}`;
@@ -138,7 +140,7 @@ const CommentThreadTree: React.FC<CommentThreadTreeProps> = ({
         },
       ],
     };
-  }, [data, title]);
+  }, [data, title, colors]);
 
   // 初始化和更新图表
   useEffect(() => {
@@ -194,26 +196,26 @@ const CommentThreadTree: React.FC<CommentThreadTreeProps> = ({
 
     return (
       <div className="grid grid-cols-4 gap-4 mb-6">
-        <div className="bg-gray-800 rounded-lg p-4">
-          <div className="text-gray-400 text-sm mb-1">平均讨论深度</div>
+        <div className="bg-card rounded-lg p-4">
+          <div className="text-muted-foreground text-sm mb-1">平均讨论深度</div>
           <div className="text-2xl font-bold text-yellow-400">
             {data.avgThreadDepth.toFixed(2)}
           </div>
         </div>
-        <div className="bg-gray-800 rounded-lg p-4">
-          <div className="text-gray-400 text-sm mb-1">最大讨论深度</div>
+        <div className="bg-card rounded-lg p-4">
+          <div className="text-muted-foreground text-sm mb-1">最大讨论深度</div>
           <div className="text-2xl font-bold text-blue-400">
             {data.maxThreadDepth}
           </div>
         </div>
-        <div className="bg-gray-800 rounded-lg p-4">
-          <div className="text-gray-400 text-sm mb-1">回复率</div>
+        <div className="bg-card rounded-lg p-4">
+          <div className="text-muted-foreground text-sm mb-1">回复率</div>
           <div className="text-2xl font-bold text-green-400">
             {(data.replyRatio * 100).toFixed(1)}%
           </div>
         </div>
-        <div className="bg-gray-800 rounded-lg p-4">
-          <div className="text-gray-400 text-sm mb-1">总评论数</div>
+        <div className="bg-card rounded-lg p-4">
+          <div className="text-muted-foreground text-sm mb-1">总评论数</div>
           <div className="text-2xl font-bold text-purple-400">
             {data.totalRootComments + data.totalReplies}
           </div>
@@ -228,27 +230,27 @@ const CommentThreadTree: React.FC<CommentThreadTreeProps> = ({
 
     return (
       <div className="mt-6">
-        <h3 className="text-lg font-bold text-gray-200 mb-4">热门讨论</h3>
+        <h3 className="text-lg font-bold text-foreground mb-4">热门讨论</h3>
         <div className="space-y-2">
           {data.discussionHotspots.map((hotspot) => (
             <div
               key={hotspot.rootCommentId}
-              className="bg-gray-800 rounded-lg p-4 cursor-pointer hover:bg-gray-700 transition-colors"
+              className="bg-card rounded-lg p-4 cursor-pointer hover:bg-accent transition-colors"
               onClick={() => handleHotspotClick(hotspot)}
             >
               <div className="flex justify-between items-start">
                 <div className="flex-1">
-                  <div className="text-sm text-gray-300 mb-2">
+                  <div className="text-sm text-foreground mb-2">
                     {hotspot.rootCommentText}
                   </div>
-                  <div className="flex gap-4 text-xs text-gray-400">
+                  <div className="flex gap-4 text-xs text-muted-foreground">
                     <span>回复数: <span className="text-yellow-400">{hotspot.replyCount}</span></span>
                     <span>最大深度: <span className="text-blue-400">{hotspot.maxDepth}</span></span>
                     <span>参与者: <span className="text-green-400">{hotspot.participants}</span></span>
                   </div>
                 </div>
                 <button
-                  className={`text-gray-400 hover:text-gray-200 transition-transform ${
+                  className={`text-muted-foreground hover:text-foreground transition-transform ${
                     expandedHotspots.has(hotspot.rootCommentId) ? 'rotate-180' : ''
                   }`}
                 >

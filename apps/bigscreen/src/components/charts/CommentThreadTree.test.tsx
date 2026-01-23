@@ -1,3 +1,5 @@
+/// <reference types="@testing-library/jest-dom" />
+
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { CommentThreadTree } from './CommentThreadTree';
@@ -33,14 +35,17 @@ const mockChartInstance = {
   off: vi.fn(),
 };
 
-vi.mock('echarts', () => ({
-  default: {
+vi.mock('echarts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('echarts')>();
+  return {
+    ...actual,
+    default: {
+      ...actual,
+      init: vi.fn(() => mockChartInstance),
+    },
     init: vi.fn(() => mockChartInstance),
-  },
-  graphic: {
-    LinearGradient: vi.fn(),
-  },
-}));
+  };
+});
 
 // Mock data
 const mockCommentDepthData: CommentDepthAnalysis = {
