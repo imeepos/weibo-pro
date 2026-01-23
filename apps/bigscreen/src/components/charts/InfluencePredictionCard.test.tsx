@@ -8,6 +8,22 @@ vi.mock('@/utils', () => ({
   cn: (...args: string[]) => args.filter(Boolean).join(' '),
 }));
 
+// Mock ChartState 组件
+vi.mock('@sker/ui/components/ui/chart-state', () => ({
+  ChartState: ({ loading, error, empty, loadingText, emptyText }: {
+    loading?: boolean;
+    error?: string;
+    empty?: boolean;
+    loadingText?: string;
+    emptyText?: string;
+  }) => {
+    if (loading) return <div data-testid="chart-loading">{loadingText || '加载中...'}</div>;
+    if (error) return <div data-testid="chart-error">{error}</div>;
+    if (empty) return <div data-testid="chart-empty">{emptyText || '暂无数据'}</div>;
+    return null;
+  },
+}));
+
 const mockData: InfluencePredictionAnalysis = {
   predictedReach: 10000,
   predictedReposts: 500,
@@ -49,17 +65,18 @@ const mockData: InfluencePredictionAnalysis = {
 
 describe('InfluencePredictionCard', () => {
   it('应该渲染空数据状态', () => {
-    const { container } = render(
+    render(
       <InfluencePredictionCard data={null} isLoading={false} />
     );
+    expect(screen.getByTestId('chart-empty')).toBeInTheDocument();
     expect(screen.getByText('暂无影响力预测数据')).toBeInTheDocument();
   });
 
   it('应该渲染加载状态', () => {
-    const { container } = render(
+    render(
       <InfluencePredictionCard data={null} isLoading={true} />
     );
-    expect(container.querySelector('.chart-state-loading')).toBeInTheDocument();
+    expect(screen.getByTestId('chart-loading')).toBeInTheDocument();
   });
 
   it('应该渲染错误状态', () => {
@@ -67,6 +84,7 @@ describe('InfluencePredictionCard', () => {
     render(
       <InfluencePredictionCard data={null} isLoading={false} error={error} />
     );
+    expect(screen.getByTestId('chart-error')).toBeInTheDocument();
     expect(screen.getByText('测试错误')).toBeInTheDocument();
   });
 
@@ -75,8 +93,8 @@ describe('InfluencePredictionCard', () => {
       <InfluencePredictionCard data={mockData} isLoading={false} />
     );
 
-    // 检查预测结果
-    expect(screen.getByText('10,000')).toBeInTheDocument(); // 预测触达
+    // 检查预测结果 - 使用 getAllByText 因为可能有多个匹配
+    expect(screen.getAllByText('10,000').length).toBeGreaterThan(0); // 预测触达
     expect(screen.getByText('500')).toBeInTheDocument(); // 预测转发
     expect(screen.getByText('1,500')).toBeInTheDocument(); // 预测互动
 

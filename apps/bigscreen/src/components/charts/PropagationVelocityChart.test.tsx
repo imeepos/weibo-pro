@@ -74,14 +74,15 @@ describe('PropagationVelocityChart', () => {
     render(
       <PropagationVelocityChart data={null} isLoading={false} />
     );
+    expect(screen.getByTestId('chart-empty')).toBeInTheDocument();
     expect(screen.getByText('暂无传播速度数据')).toBeInTheDocument();
   });
 
   it('应该渲染加载状态', () => {
-    const { container } = render(
+    render(
       <PropagationVelocityChart data={null} isLoading={true} />
     );
-    expect(container.querySelector('.chart-state-loading')).toBeInTheDocument();
+    expect(screen.getByTestId('chart-loading')).toBeInTheDocument();
   });
 
   it('应该渲染错误状态', () => {
@@ -89,6 +90,7 @@ describe('PropagationVelocityChart', () => {
     render(
       <PropagationVelocityChart data={null} isLoading={false} error={error} />
     );
+    expect(screen.getByTestId('chart-error')).toBeInTheDocument();
     expect(screen.getByText('测试错误')).toBeInTheDocument();
   });
 
@@ -108,8 +110,11 @@ describe('PropagationVelocityChart', () => {
     // 检查传播阶段
     expect(screen.getByText(/增长期/)).toBeInTheDocument();
 
-    // 检查爆发点
-    expect(screen.getByText('KOL转发')).toBeInTheDocument();
+    // 检查爆发概率
+    expect(screen.getByText('75.0%')).toBeInTheDocument();
+
+    // 检查图表渲染
+    expect(screen.getByTestId('echart')).toBeInTheDocument();
   });
 
   it('应该正确显示传播阶段', () => {
@@ -170,41 +175,26 @@ describe('PropagationVelocityChart', () => {
     expect(screen.getByText(/下降中/)).toBeInTheDocument();
   });
 
-  it('应该渲染多个爆发点', () => {
-    const multipleBurstsData = {
-      ...mockData,
-      burstPoints: [
-        {
-          timestamp: '2026-01-23T11:30:00Z',
-          velocity: 180,
-          reason: 'KOL转发',
-        },
-        {
-          timestamp: '2026-01-23T12:30:00Z',
-          velocity: 220,
-          reason: '媒体报道',
-        },
-      ],
-    };
-
+  it('应该渲染有预测爆发时间的情况', () => {
     render(
-      <PropagationVelocityChart data={multipleBurstsData} isLoading={false} />
+      <PropagationVelocityChart data={mockData} isLoading={false} />
     );
 
-    expect(screen.getByText('KOL转发')).toBeInTheDocument();
-    expect(screen.getByText('媒体报道')).toBeInTheDocument();
+    // 检查预测爆发时间显示
+    expect(screen.getByText('预测爆发时间')).toBeInTheDocument();
   });
 
-  it('应该处理没有爆发点的情况', () => {
-    const noBurstsData = {
+  it('应该处理没有预测爆发时间的情况', () => {
+    const noBurstTimeData = {
       ...mockData,
-      burstPoints: [],
+      predictedBurstTime: undefined,
     };
 
     render(
-      <PropagationVelocityChart data={noBurstsData} isLoading={false} />
+      <PropagationVelocityChart data={noBurstTimeData} isLoading={false} />
     );
 
-    expect(screen.getByText(/暂无爆发点/)).toBeInTheDocument();
+    // 应该不显示预测爆发时间
+    expect(screen.queryByText('预测爆发时间')).not.toBeInTheDocument();
   });
 });
