@@ -234,12 +234,11 @@ export class EventAnalyticsService {
             );
           });
 
-          // 查询真实的总帖子数（直接从 WeiboPostEntity 查询，确保与地理分布统计一致）
+          // 查询真实的总帖子数（直接从 WeiboPostEntity 查询，简单高效）
           const totalPostsResult = await entityManager
-            .createQueryBuilder(PostNLPResultEntity, 'nlp')
-            .innerJoin('nlp.post', 'post')
-            .select('COUNT(DISTINCT post.id)', 'totalpostcount')
-            .where('nlp.event_id = :eventId', { eventId })
+            .createQueryBuilder(WeiboPostEntity, 'post')
+            .select('COUNT(post.id)', 'totalpostcount')
+            .where('post.event_id = :eventId', { eventId })
             .andWhere('post.deleted_at IS NULL')
             .getRawOne();
 

@@ -432,7 +432,7 @@ export class WeiboPostEntity {
   event!: EventEntity | null;
 
   @OneToMany('PostNLPResultEntity', 'post')
-  nlpResults!: unknown[];
+  nlpResult!: unknown[];
 
   @Column({ type: 'jsonb', name: 'visible', nullable: true })
   visible!: Visible;

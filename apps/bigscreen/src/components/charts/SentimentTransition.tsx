@@ -3,7 +3,6 @@ import * as echarts from 'echarts';
 import { useSentimentTransition } from '../../hooks/useSentimentTransition';
 import { useEChartTheme } from '@sker/ui/hooks/use-echart-theme';
 import type { SentimentTransitionAnalysis } from '@sker/sdk';
-import './SentimentTransition.css';
 
 interface SentimentTransitionProps {
   eventId: string;
@@ -45,112 +44,117 @@ export const SentimentTransition: React.FC<SentimentTransitionProps> = ({ eventI
   }, [data, colors]);
 
   if (loading) {
-    return <div className="sentiment-transition loading">加载中...</div>;
+    return <div className="p-10 text-center text-muted-foreground">加载中...</div>;
   }
 
   if (error) {
-    return <div className="sentiment-transition error">错误: {error.message}</div>;
+    return <div className="p-10 text-center text-destructive">错误: {error.message}</div>;
   }
 
   if (!data || data.timeline.length === 0) {
-    return <div className="sentiment-transition empty">暂无数据</div>;
+    return <div className="p-10 text-center text-muted-foreground">暂无数据</div>;
   }
 
   return (
-    <div className="sentiment-transition">
-      <div className="sentiment-transition-header">
-        <h3>情感转变分析</h3>
-        <div className="metrics">
-          <div className="metric">
-            <span className="label">稳定性指数:</span>
-            <span className="value">{formatNumber(Math.round(data.stabilityIndex * 100))}%</span>
+    <div className="p-5 bg-background rounded-lg border border-border">
+      <div className="mb-5">
+        <h3 className="m-0 mb-2.5 text-xl font-semibold text-foreground">情感转变分析</h3>
+        <div className="flex gap-5 flex-wrap">
+          <div className="flex gap-2 items-center px-4 py-2 bg-muted rounded-md">
+            <span className="font-medium text-muted-foreground">稳定性指数:</span>
+            <span className="text-primary font-semibold text-base">{formatNumber(Math.round(data.stabilityIndex * 100))}%</span>
           </div>
-          <div className="metric">
-            <span className="label">极化指数:</span>
-            <span className="value">{formatNumber(Math.round(data.polarizationIndex * 100))}%</span>
+          <div className="flex gap-2 items-center px-4 py-2 bg-muted rounded-md">
+            <span className="font-medium text-muted-foreground">极化指数:</span>
+            <span className="text-primary font-semibold text-base">{formatNumber(Math.round(data.polarizationIndex * 100))}%</span>
           </div>
         </div>
       </div>
 
-      <div className="sentiment-transition-body">
-        <div className="chart-container">
-          <h4>转变流向桑基图</h4>
-          <div ref={sankeyRef} className="sankey-chart" style={{ width: '100%', height: '400px' }}></div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
+        <div className="border border-border rounded-lg p-4 bg-card">
+          <h4 className="m-0 mb-3 text-sm font-semibold text-foreground">转变流向桑基图</h4>
+          <div ref={sankeyRef} className="w-full h-[400px]"></div>
         </div>
 
-        <div className="chart-container">
-          <h4>情感时间线</h4>
-          <div ref={timelineRef} className="timeline-chart" style={{ width: '100%', height: '400px' }}></div>
+        <div className="border border-border rounded-lg p-4 bg-card">
+          <h4 className="m-0 mb-3 text-sm font-semibold text-foreground">情感时间线</h4>
+          <div ref={timelineRef} className="w-full h-[400px]"></div>
         </div>
       </div>
 
       {data.turningPoints.length > 0 && (
-        <div className="turning-points">
-          <h4>转折点</h4>
-          <ul>
+        <div className="mt-5 p-4 bg-card border border-border rounded-lg">
+          <h4 className="m-0 mb-3 text-base font-semibold text-foreground">转折点</h4>
+          <ul className="list-none p-0 m-0">
             {data.turningPoints.map((point, index) => {
-              const timestamp = point.timestamp instanceof Date
-                ? point.timestamp
-                : String(point.timestamp);
               return (
-                <li key={index} className="turning-point-item">
-                  <div className="turning-point-header">
-                    <span className="timestamp">{formatTime(timestamp)}</span>
+                <li key={index} className="p-4 mb-3 last:mb-0 bg-background border border-border rounded-lg">
+                  <div className="flex justify-between items-center mb-3 pb-2 border-b border-border">
+                    <span className="font-semibold text-foreground text-sm">{formatTime(point.timestamp)}</span>
                     {point.confidence !== undefined && (
-                      <span className="confidence">
-                        置信度: {Math.round(point.confidence * 100)}%
+                      <span className="text-xs text-muted-foreground px-2 py-0.5 bg-muted rounded">
+                        置信度: {formatNumber(Math.round(point.confidence * 100))}%
                       </span>
                     )}
                   </div>
 
-                  <div className="turning-point-body">
-                    <div className="sentiment-change">
-                      <span className={`sentiment from-${point.fromSentiment}`}>
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`px-3 py-1 rounded font-medium text-[13px] ${
+                        point.fromSentiment === 'positive' ? 'bg-green-500/10 text-green-500' :
+                        point.fromSentiment === 'negative' ? 'bg-red-500/10 text-red-500' :
+                        'bg-yellow-500/10 text-yellow-500'
+                      }`}>
                         {point.fromSentiment}
                       </span>
-                      <span className="arrow">→</span>
-                      <span className={`sentiment to-${point.toSentiment}`}>
+                      <span className="text-base text-muted-foreground">→</span>
+                      <span className={`px-3 py-1 rounded font-medium text-[13px] ${
+                        point.toSentiment === 'positive' ? 'bg-green-500/10 text-green-500' :
+                        point.toSentiment === 'negative' ? 'bg-red-500/10 text-red-500' :
+                        'bg-yellow-500/10 text-yellow-500'
+                      }`}>
                         {point.toSentiment}
                       </span>
-                      <span className="magnitude">
-                        变化率: {Math.round(point.magnitude * 100)}%
+                      <span className="ml-auto text-xs text-muted-foreground px-2 py-0.5 bg-muted rounded">
+                        幅度: {formatNumber(Math.round(point.magnitude * 100))}%
                       </span>
                     </div>
 
                     {/* 显示情感分布 */}
                     {point.sentimentDistribution && (
-                      <div className="sentiment-distribution">
-                        <div className="distribution-column">
-                          <h5>转折前</h5>
-                          <div className="distribution-values">
-                            <div className="value-item positive">
-                              <span className="label">正面:</span>
-                              <span className="value">{formatNumber(Math.round(point.sentimentDistribution.before.positive))}</span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-3 bg-muted rounded-md">
+                        <div>
+                          <h5 className="m-0 mb-2 text-[13px] font-semibold text-foreground">转折前</h5>
+                          <div className="flex flex-col gap-1.5">
+                            <div className="flex justify-between items-center px-2.5 py-1.5 bg-background rounded text-xs">
+                              <span className="text-muted-foreground">正面:</span>
+                              <span className="font-semibold text-green-500">{formatNumber(Math.round(point.sentimentDistribution.before.positive))}</span>
                             </div>
-                            <div className="value-item negative">
-                              <span className="label">负面:</span>
-                              <span className="value">{formatNumber(Math.round(point.sentimentDistribution.before.negative))}</span>
+                            <div className="flex justify-between items-center px-2.5 py-1.5 bg-background rounded text-xs">
+                              <span className="text-muted-foreground">负面:</span>
+                              <span className="font-semibold text-red-500">{formatNumber(Math.round(point.sentimentDistribution.before.negative))}</span>
                             </div>
-                            <div className="value-item neutral">
-                              <span className="label">中性:</span>
-                              <span className="value">{formatNumber(Math.round(point.sentimentDistribution.before.neutral))}</span>
+                            <div className="flex justify-between items-center px-2.5 py-1.5 bg-background rounded text-xs">
+                              <span className="text-muted-foreground">中性:</span>
+                              <span className="font-semibold text-yellow-500">{formatNumber(Math.round(point.sentimentDistribution.before.neutral))}</span>
                             </div>
                           </div>
                         </div>
-                        <div className="distribution-column">
-                          <h5>转折后</h5>
-                          <div className="distribution-values">
-                            <div className="value-item positive">
-                              <span className="label">正面:</span>
-                              <span className="value">{formatNumber(Math.round(point.sentimentDistribution.after.positive))}</span>
+                        <div>
+                          <h5 className="m-0 mb-2 text-[13px] font-semibold text-foreground">转折后</h5>
+                          <div className="flex flex-col gap-1.5">
+                            <div className="flex justify-between items-center px-2.5 py-1.5 bg-background rounded text-xs">
+                              <span className="text-muted-foreground">正面:</span>
+                              <span className="font-semibold text-green-500">{formatNumber(Math.round(point.sentimentDistribution.after.positive))}</span>
                             </div>
-                            <div className="value-item negative">
-                              <span className="label">负面:</span>
-                              <span className="value">{formatNumber(Math.round(point.sentimentDistribution.after.negative))}</span>
+                            <div className="flex justify-between items-center px-2.5 py-1.5 bg-background rounded text-xs">
+                              <span className="text-muted-foreground">负面:</span>
+                              <span className="font-semibold text-red-500">{formatNumber(Math.round(point.sentimentDistribution.after.negative))}</span>
                             </div>
-                            <div className="value-item neutral">
-                              <span className="label">中性:</span>
-                              <span className="value">{formatNumber(Math.round(point.sentimentDistribution.after.neutral))}</span>
+                            <div className="flex justify-between items-center px-2.5 py-1.5 bg-background rounded text-xs">
+                              <span className="text-muted-foreground">中性:</span>
+                              <span className="font-semibold text-yellow-500">{formatNumber(Math.round(point.sentimentDistribution.after.neutral))}</span>
                             </div>
                           </div>
                         </div>
@@ -159,11 +163,11 @@ export const SentimentTransition: React.FC<SentimentTransitionProps> = ({ eventI
 
                     {/* 显示关键词 */}
                     {point.triggerKeywords && point.triggerKeywords.length > 0 && (
-                      <div className="trigger-keywords">
-                        <h5>关键词</h5>
-                        <div className="keywords">
+                      <div className="p-3 bg-muted rounded-md">
+                        <h5 className="m-0 mb-2 text-[13px] font-semibold text-foreground">触发关键词</h5>
+                        <div className="flex flex-wrap gap-1.5">
                           {point.triggerKeywords.map((keyword, i) => (
-                            <span key={i} className="keyword-tag">{keyword}</span>
+                            <span key={i} className="px-2.5 py-1 bg-background border border-border rounded text-xs text-foreground transition-all hover:bg-primary hover:text-white hover:border-primary">{keyword}</span>
                           ))}
                         </div>
                       </div>
@@ -171,13 +175,13 @@ export const SentimentTransition: React.FC<SentimentTransitionProps> = ({ eventI
 
                     {/* 显示触发帖子 */}
                     {point.triggerPosts && point.triggerPosts.length > 0 && (
-                      <div className="trigger-posts">
-                        <h5>触发帖子</h5>
-                        <ul className="post-list">
-                          {point.triggerPosts.map((postId, i) => (
-                            <li key={i}>
-                              <a href={`/posts/${postId}`} target="_blank" rel="noopener noreferrer">
-                                查看帖子 {postId.substring(0, 8)}...
+                      <div className="p-3 bg-muted rounded-md">
+                        <h5 className="m-0 mb-2 text-[13px] font-semibold text-foreground">触发帖子</h5>
+                        <ul className="list-none p-0 m-0 flex flex-col gap-1">
+                          {point.triggerPosts.slice(0, 3).map((postId, i) => (
+                            <li key={i} className="p-0 border-none bg-transparent">
+                              <a href={`/posts/${postId}`} target="_blank" rel="noopener noreferrer" className="block px-2.5 py-1.5 bg-background rounded text-primary no-underline text-xs transition-all hover:bg-primary hover:text-white">
+                                帖子 {postId.substring(0, 8)}...
                               </a>
                             </li>
                           ))}
@@ -194,24 +198,24 @@ export const SentimentTransition: React.FC<SentimentTransitionProps> = ({ eventI
 
       {/* 显示元数据 */}
       {data.metadata && (
-        <div className="analysis-metadata">
-          <h4>分析统计</h4>
-          <div className="metadata-grid">
-            <div className="metadata-item">
-              <span className="label">总时间点:</span>
-              <span className="value">{data.metadata.totalTimePoints}</span>
+        <div className="mt-5 p-4 bg-card border border-border rounded-lg">
+          <h4 className="m-0 mb-3 text-base font-semibold text-foreground">分析统计</h4>
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-3">
+            <div className="flex justify-between items-center px-3.5 py-2.5 bg-muted rounded-md">
+              <span className="text-[13px] text-muted-foreground font-medium">总时间点:</span>
+              <span className="text-sm text-foreground font-semibold">{formatNumber(data.metadata.totalTimePoints)}</span>
             </div>
-            <div className="metadata-item">
-              <span className="label">分析时间点:</span>
-              <span className="value">{data.metadata.analyzedTimePoints}</span>
+            <div className="flex justify-between items-center px-3.5 py-2.5 bg-muted rounded-md">
+              <span className="text-[13px] text-muted-foreground font-medium">分析时间点:</span>
+              <span className="text-sm text-foreground font-semibold">{formatNumber(data.metadata.analyzedTimePoints)}</span>
             </div>
-            <div className="metadata-item">
-              <span className="label">跳过边界点:</span>
-              <span className="value">{data.metadata.skippedBoundaryPoints}</span>
+            <div className="flex justify-between items-center px-3.5 py-2.5 bg-muted rounded-md">
+              <span className="text-[13px] text-muted-foreground font-medium">跳过边界点:</span>
+              <span className="text-sm text-foreground font-semibold">{formatNumber(data.metadata.skippedBoundaryPoints)}</span>
             </div>
-            <div className="metadata-item">
-              <span className="label">计算方法:</span>
-              <span className="value">{data.metadata.calculationMethod}</span>
+            <div className="flex justify-between items-center px-3.5 py-2.5 bg-muted rounded-md">
+              <span className="text-[13px] text-muted-foreground font-medium">计算方法:</span>
+              <span className="text-sm text-foreground font-semibold">{data.metadata.calculationMethod}</span>
             </div>
           </div>
         </div>
@@ -349,7 +353,7 @@ function renderTimelineChart(
 
   // 格式化时间戳
   const timestamps = data.timeline.map((t) => {
-    const date = t.timestamp instanceof Date ? t.timestamp : new Date(t.timestamp);
+    const date = new Date(t.timestamp);
     return date.toLocaleString('zh-CN', {
       month: '2-digit',
       day: '2-digit',

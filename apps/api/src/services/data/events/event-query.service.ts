@@ -409,12 +409,11 @@ export class EventQueryService {
       cacheKey,
       async () => {
         return await useEntityManager(async (entityManager) => {
-          // 第一步：查询真实的总帖子数（直接从 WeiboPostEntity 查询，确保数据准确）
+          // 第一步：查询真实的总帖子数（直接从 WeiboPostEntity 查询，简单高效）
           const totalStats = await entityManager
             .createQueryBuilder(WeiboPostEntity, 'post')
-            .innerJoin(PostNLPResultEntity, 'nlp', 'nlp.post_id = post.id')
             .select('COUNT(post.id)', 'totalpostcount')
-            .where('nlp.event_id = :eventId', { eventId })
+            .where('post.event_id = :eventId', { eventId })
             .andWhere('post.deleted_at IS NULL')
             .getRawOne();
 
