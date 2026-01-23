@@ -4,7 +4,26 @@ import { ChartState } from '@sker/ui/components/ui/chart-state';
 import { useEChartTheme } from '@sker/ui/hooks/use-echart-theme';
 import * as echarts from 'echarts';
 import type { EChartsOption } from 'echarts';
-import type { SpreadBreadthAnalysis } from '@sker/sdk';
+import type { SpreadBreadthAnalysis, AggregatedNode, TopUser, LevelStats } from '@sker/sdk';
+
+// 聚合节点颜色配置
+const NODE_COLORS = {
+  source: '#fbbf24',      // 金色 - 源节点
+  top_user: '#f472b6',    // 粉色 - Top 用户
+  vip: '#a78bfa',         // 紫色 - VIP 用户
+  ordinary: '#60a5fa',    // 蓝色 - 普通用户
+  verified: '#34d399',    // 绿色 - 认证用户
+} as const;
+
+// 获取聚合节点颜色
+const getAggregatedNodeColor = (node: AggregatedNode): string => {
+  if (node.type === 'source') return NODE_COLORS.source;
+  if (node.type === 'top_user') return NODE_COLORS.top_user;
+  if (node.type === 'aggregated' && node.userType) {
+    return NODE_COLORS[node.userType] || NODE_COLORS.ordinary;
+  }
+  return NODE_COLORS.ordinary;
+};
 
 interface SpreadBreadthChartProps {
   title?: string;
@@ -38,8 +57,139 @@ const SpreadBreadthChart: React.FC<SpreadBreadthChartProps> = ({
     return num.toLocaleString('zh-CN');
   };
 
-  // 构建 ECharts sankey 配置
-  const chartOption = useMemo<EChartsOption>(() => {
+  // 检查是否有聚合数据
+  const hasAggregatedData = useMemo(() => {
+    return data?.aggregatedPropagation && data.aggregatedPropagation.nodes.length > 0;
+  }, [data]);
+
+  // 构建聚合数据的图表配置
+  const buildAggregatedChartOption = useMemo<EChartsOption>(() => {
+    if (!data?.aggregatedPropagation) return {};
+
+    const { nodes, links } = data.aggregatedPropagation;
+
+    // 构建节点数据，包含额外的元数据用于 tooltip
+    const nodeArray = nodes.map((node) => ({
+      name: node.id,
+      displayName: node.name,
+      nodeType: node.type,
+      userType: node.userType,
+      count: node.count,
+      totalWeight: node.totalWeight,
+      topUsers: node.topUsers,
+      level: node.level,
+      itemStyle: { color: getAggregatedNodeColor(node) },
+      label: {
+        show: node.type === 'aggregated' || node.type === 'source' || node.type === 'top_user',
+        formatter: node.name,
+      },
+    }));
+
+    // 构建连线数据
+    const linkArray = links.map((link) => ({
+      source: link.source,
+      target: link.target,
+      value: link.weight,
+      level: link.level,
+      lineStyle: { color: 'gradient' },
+    }));
+
+    return {
+      title: {
+        text: title,
+        left: 'center',
+        textStyle: {
+          color: colors.text,
+          fontSize: 16,
+        },
+      },
+      tooltip: {
+        trigger: 'item',
+        triggerOn: 'mousemove',
+        backgroundColor: colors.tooltipBg,
+        borderColor: colors.tooltipBorder,
+        textStyle: {
+          color: colors.text,
+        },
+        formatter: (params: any) => {
+          if (params.dataType === 'node') {
+            const node = params.data;
+            if (node.nodeType === 'aggregated') {
+              let html = `<strong>${node.displayName}</strong><br/>`;
+              html += `用户数: ${node.count}<br/>`;
+              html += `总转发: ${node.totalWeight}`;
+              if (node.topUsers && node.topUsers.length > 0) {
+                html += '<br/><br/>Top 用户:';
+                node.topUsers.slice(0, 5).forEach((u: TopUser) => {
+                  html += `<br/>- ${u.screenName} (${u.weight}次)`;
+                });
+              }
+              return html;
+            }
+            return node.displayName || node.name;
+          } else if (params.dataType === 'edge') {
+            return `传播路径<br/>权重: ${params.value}`;
+          }
+          return params.name;
+        },
+      },
+      toolbox: {
+        feature: {
+          saveAsImage: {
+            title: '保存为图片',
+            name: '传播广度分析',
+            backgroundColor: colors.chartBg,
+          },
+        },
+        iconStyle: {
+          borderColor: colors.toolbox,
+        },
+        emphasis: {
+          iconStyle: {
+            borderColor: colors.emphasis,
+          },
+        },
+      },
+      series: [
+        {
+          type: 'sankey',
+          layout: 'none',
+          data: nodeArray,
+          links: linkArray,
+          top: '5%',
+          bottom: '5%',
+          left: '5%',
+          right: '5%',
+          nodeWidth: 20,
+          nodeGap: 12,
+          itemStyle: {
+            borderColor: 'transparent',
+          },
+          lineStyle: {
+            color: 'gradient',
+            curveness: 0.5,
+          },
+          label: {
+            show: true,
+            position: 'right',
+            color: colors.text,
+            fontSize: 12,
+          },
+          emphasis: {
+            focus: 'adjacency',
+            label: {
+              show: true,
+              fontSize: 14,
+              fontWeight: 'bold',
+            },
+          },
+        },
+      ],
+    };
+  }, [data, title, colors]);
+
+  // 构建原有数据的图表配置（回退逻辑）
+  const buildOriginalChartOption = useMemo<EChartsOption>(() => {
     if (!data || data.propagationPaths.length === 0) return {};
 
     // 构建节点和边
@@ -161,6 +311,14 @@ const SpreadBreadthChart: React.FC<SpreadBreadthChartProps> = ({
     };
   }, [data, title, colors]);
 
+  // 选择使用哪个图表配置：优先使用聚合数据
+  const chartOption = useMemo<EChartsOption>(() => {
+    if (hasAggregatedData) {
+      return buildAggregatedChartOption;
+    }
+    return buildOriginalChartOption;
+  }, [hasAggregatedData, buildAggregatedChartOption, buildOriginalChartOption]);
+
   // 初始化图表
   useEffect(() => {
     if (!chartRef.current) return;
@@ -214,13 +372,20 @@ const SpreadBreadthChart: React.FC<SpreadBreadthChartProps> = ({
     };
   }, [onClick]);
 
-  if (isLoading || error || !data || data.propagationPaths.length === 0) {
+  // 检查是否有可显示的数据
+  const hasDisplayableData = useMemo(() => {
+    if (!data) return false;
+    if (hasAggregatedData) return true;
+    return data.propagationPaths.length > 0;
+  }, [data, hasAggregatedData]);
+
+  if (isLoading || error || !hasDisplayableData) {
     return (
       <div className={cn('w-full', className)} style={{ height }}>
         <ChartState
           loading={isLoading}
           error={error?.message}
-          empty={!data || data.propagationPaths.length === 0}
+          empty={!hasDisplayableData}
           emptyText="暂无传播广度数据"
         />
       </div>
@@ -254,6 +419,44 @@ const SpreadBreadthChart: React.FC<SpreadBreadthChartProps> = ({
       </div>
       {/* 图表 */}
       <div ref={chartRef} style={{ width: '100%', flex: 1 }} />
+      {/* 层级统计展示 - 仅在有聚合数据时显示 */}
+      {hasAggregatedData && data?.aggregatedPropagation?.levelStats && (
+        <div className="mt-4 bg-card border rounded-lg p-4">
+          <div className="text-sm font-medium mb-3">层级分布</div>
+          <div className="flex flex-wrap gap-4">
+            {data.aggregatedPropagation.levelStats
+              .filter((stat) => stat.level > 0)
+              .map((stat) => (
+                <div key={stat.level} className="flex-1 min-w-[200px]">
+                  <div className="text-sm font-medium mb-2">第{stat.level}层</div>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: NODE_COLORS.vip }}
+                      />
+                      <span>VIP: {stat.byUserType.vip.count}人</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: NODE_COLORS.ordinary }}
+                      />
+                      <span>普通: {stat.byUserType.ordinary.count}人</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: NODE_COLORS.verified }}
+                      />
+                      <span>认证: {stat.byUserType.verified.count}人</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -79,7 +79,7 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
   const getNodeLabel = useCallback((node: any) => {
     const userRelationNode = node as UserRelationNode;
     const verifiedBadge = userRelationNode.verified ? ' ✓' : '';
-    const userTypeMap = {
+    const userTypeMap: Record<string, string> = {
       official: '官方',
       media: '媒体',
       kol: 'KOL',
@@ -88,25 +88,38 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
 
     // 使用主题感知的颜色
     const { tooltipStyle, axisStyle, seriesColors } = chartTheme;
-    const highlightColor = seriesColors.total; // 高亮色
-    const secondaryTextColor = axisStyle.labelColor; // 次要文字色
-    const primaryTextColor = tooltipStyle.textColor; // 主要文字色
-    const borderColor = tooltipStyle.borderColor; // 边框色
+    const highlightColor = seriesColors.total;
+    const secondaryTextColor = axisStyle.labelColor;
+    const primaryTextColor = tooltipStyle.textColor;
+    const borderColor = tooltipStyle.borderColor;
+
+    // 安全获取用户类型显示名称
+    const userTypeName = userRelationNode.userType ? (userTypeMap[userRelationNode.userType] || '用户') : '用户';
+    const locationText = userRelationNode.location ? `· ${userRelationNode.location}` : '';
+    const userInfoLine = [userTypeName, locationText].filter(Boolean).join(' ');
 
     return `
-      <div style="padding: 12px; min-width: 200px;">
-        <div style="font-size: 16px; font-weight: bold; margin-bottom: 8px; color: ${highlightColor};">
-          ${userRelationNode.name}${verifiedBadge}
+      <div style="padding: 14px 16px; min-width: 220px; max-width: 280px;">
+        <div style="font-size: 15px; font-weight: 600; margin-bottom: 6px; color: ${highlightColor}; display: flex; align-items: center; gap: 4px;">
+          <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${userRelationNode.name || '未知用户'}</span>
+          ${verifiedBadge ? `<span style="color: #3b82f6; font-size: 12px;">${verifiedBadge}</span>` : ''}
         </div>
-        <div style="font-size: 12px; color: ${secondaryTextColor}; margin-bottom: 8px;">
-          ${userTypeMap[userRelationNode.userType]} ${userRelationNode.location ? '· ' + userRelationNode.location : ''}
+        ${userInfoLine ? `<div style="font-size: 12px; color: ${secondaryTextColor}; margin-bottom: 10px;">${userInfoLine}</div>` : ''}
+        <div style="display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 13px;">
+          ${userRelationNode.followers != null ? `
+            <span style="color: ${secondaryTextColor};">粉丝</span>
+            <span style="color: ${primaryTextColor}; font-weight: 500; text-align: right;">${userRelationNode.followers.toLocaleString()}</span>
+          ` : ''}
+          ${userRelationNode.postCount != null ? `
+            <span style="color: ${secondaryTextColor};">发帖</span>
+            <span style="color: ${primaryTextColor}; font-weight: 500; text-align: right;">${userRelationNode.postCount.toLocaleString()}</span>
+          ` : ''}
+          ${userRelationNode.influence != null ? `
+            <span style="color: ${secondaryTextColor};">影响力</span>
+            <span style="color: ${primaryTextColor}; font-weight: 500; text-align: right;">${userRelationNode.influence.toFixed(2)}</span>
+          ` : ''}
         </div>
-        <div style="display: flex; flex-direction: column; gap: 4px; font-size: 13px;">
-          ${userRelationNode.followers != null ? `<div><span style="color: ${secondaryTextColor};">粉丝数:</span> <span style="color: ${primaryTextColor}; font-weight: 500;">${userRelationNode.followers.toLocaleString()}</span></div>` : ''}
-          ${userRelationNode.influence != null ? `<div><span style="color: ${secondaryTextColor};">影响力:</span> <span style="color: ${primaryTextColor}; font-weight: 500;">${userRelationNode.influence.toFixed(2)}</span></div>` : ''}
-          ${userRelationNode.postCount != null ? `<div><span style="color: ${secondaryTextColor};">发帖数:</span> <span style="color: ${primaryTextColor}; font-weight: 500;">${userRelationNode.postCount.toLocaleString()}</span></div>` : ''}
-        </div>
-        <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid ${borderColor}; font-size: 11px; color: ${secondaryTextColor};">
+        <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid ${borderColor}; font-size: 11px; color: ${secondaryTextColor}; text-align: center;">
           点击跳转到微博主页 →
         </div>
       </div>
