@@ -6,7 +6,11 @@
     "registry": "http://43.240.223.138:4873"
   },
   "description": "Dependency injection core utilities for Sker applications.",
-  "keywords": ["dependency-injection", "di", "sker"],
+  "keywords": [
+    "dependency-injection",
+    "di",
+    "sker"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -37,6 +41,7 @@
     "vitest": "^4.0.16"
   },
   "dependencies": {
+    "dayjs": "^1.11.19",
     "reflect-metadata": "^0.2.2"
   }
 }

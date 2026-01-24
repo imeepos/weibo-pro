@@ -1026,6 +1026,9 @@ importers:
 
   packages/core:
     dependencies:
+      dayjs:
+        specifier: ^1.11.19
+        version: 1.11.19
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -2142,6 +2145,9 @@ importers:
       cheerio:
         specifier: ^1.1.2
         version: 1.1.2
+      cron-parser:
+        specifier: ^5.4.0
+        version: 5.5.0
       dayjs:
         specifier: ^1.11.13
         version: 1.11.19
@@ -16773,7 +16779,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 3.0.3
-      vitest: 4.0.17(@opentelemetry/api@1.9.0)(@types/node@20.19.30)(@vitest/ui@4.0.17)(jiti@2.6.1)(jsdom@27.4.0(@noble/hashes@2.0.1))(lightningcss@1.30.2)(sass@1.51.0)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2)
+      vitest: 4.0.17(@opentelemetry/api@1.9.0)(@types/node@22.19.7)(@vitest/ui@4.0.17)(jiti@2.6.1)(jsdom@27.4.0(@noble/hashes@2.0.1))(lightningcss@1.30.2)(sass@1.51.0)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2)
 
   '@vitest/utils@4.0.17':
     dependencies:

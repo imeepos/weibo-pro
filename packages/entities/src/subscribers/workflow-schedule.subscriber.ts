@@ -56,8 +56,9 @@ export class WorkflowScheduleSubscriber implements EntitySubscriberInterface<Wor
       return;
     }
 
-    // 合并实体信息用于日志（可能不完整，仅用于调试）
-    const entity = event.databaseEntity || event.entity;
+    // 合并实体信息用于日志
+    // 优先使用 entity（更新后的数据），其次使用 databaseEntity（更新前的数据）
+    const entity = event.entity || event.databaseEntity;
 
     console.log('[WorkflowScheduleSubscriber] 发布调度更新通知', {
       scheduleId,

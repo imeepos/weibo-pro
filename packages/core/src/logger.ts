@@ -1,6 +1,14 @@
 import { Inject } from "./inject";
 import { Injectable } from "./injectable";
 import { InjectionToken } from "./injection-token";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc.js";
+import timezone from "dayjs/plugin/timezone.js";
+
+// 配置 dayjs 时区插件
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
 export enum LoggerLevel {
     trace = 0,
     debug = 1,
@@ -16,9 +24,8 @@ export class Logger {
     name: string = `default`
     constructor(@Inject(LOGGER_LEVEL, { optional: true }) private level: LoggerLevel = LoggerLevel.info) { }
     private timestamp(): string {
-        const now = new Date()
-        const iso = now.toISOString()
-        return iso.replace('T', ' ').slice(0, 19)
+        // 使用北京时间 (Asia/Shanghai)
+        return dayjs().tz('Asia/Shanghai').format('YYYY-MM-DD HH:mm:ss')
     }
 
     _log(level: LoggerLevel, ...args: any[]) {

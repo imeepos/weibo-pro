@@ -2,6 +2,7 @@ import { Injectable, Inject, logger } from '@sker/core'
 import { useEntityManager, WorkflowScheduleEntity, WorkflowEntity, ScheduleStatus, ScheduleType } from '@sker/entities'
 import { executeAst, WorkflowGraphAst } from '@sker/workflow'
 import { withRetryOnNetworkError } from '../utils/retry-on-network-error'
+import { CronExpressionParser } from 'cron-parser'
 
 /**
  * 工作流执行服务
@@ -242,9 +243,12 @@ export class WorkflowExecutionService {
           return null
         }
         try {
-          // node-schedule 会自动处理下次执行时间
-          // 这里只是用于记录，实际调度由 node-schedule 控制
-          return new Date(now.getTime() + 60000) // 临时返回1分钟后
+          // 使用 cron-parser 解析 cron 表达式并计算下次执行时间
+          const expression = CronExpressionParser.parse(schedule.cronExpression, {
+            currentDate: now,
+            tz: 'UTC'
+          })
+          return expression.next().toDate()
         } catch (error) {
           logger.error('Cron 表达式解析失败', {
             scheduleId: schedule.id,

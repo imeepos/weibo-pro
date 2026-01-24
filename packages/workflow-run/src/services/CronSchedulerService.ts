@@ -4,6 +4,21 @@ import { useEntityManager, WorkflowScheduleEntity, ScheduleStatus, ScheduleType 
 import { WorkflowExecutionService } from './WorkflowExecutionService'
 import { withRetryOnNetworkError } from '../utils/retry-on-network-error'
 import nodeSchedule from 'node-schedule'
+import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc.js'
+import timezone from 'dayjs/plugin/timezone.js'
+
+// 配置 dayjs 时区插件
+dayjs.extend(utc)
+dayjs.extend(timezone)
+
+/**
+ * 格式化时间为北京时间字符串
+ */
+function formatBeijingTime(date: Date | null | undefined): string {
+  if (!date) return '无'
+  return dayjs(date).tz('Asia/Shanghai').format('YYYY-MM-DD HH:mm:ss')
+}
 
 type ScheduleChangeType = 'insert' | 'update' | 'delete'
 
@@ -72,7 +87,7 @@ export class CronSchedulerService {
           scheduleName: schedule.name,
           cronExpression: schedule.cronExpression,
           workflowId: schedule.workflowId,
-          nextRunAt: nextInvocation ? nextInvocation.toLocaleString('zh-CN') : '无'
+          nextRunAt: formatBeijingTime(nextInvocation)
         })
         break
 
@@ -94,7 +109,7 @@ export class CronSchedulerService {
           intervalSeconds: schedule.intervalSeconds,
           intervalMs,
           workflowId: schedule.workflowId,
-          nextRunAt: nextIntervalRun.toLocaleString('zh-CN')
+          nextRunAt: formatBeijingTime(nextIntervalRun)
         })
         return
 
@@ -112,7 +127,7 @@ export class CronSchedulerService {
           scheduleId: schedule.id,
           scheduleName: schedule.name,
           startTime: schedule.startTime,
-          executeAt: executeDate.toLocaleString('zh-CN'),
+          executeAt: formatBeijingTime(executeDate),
           workflowId: schedule.workflowId
         })
         break
