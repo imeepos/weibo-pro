@@ -56,11 +56,29 @@ export class WeiboKeywordSearchAstVisitor {
                     ast.emitCount += 1;
                     obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } });
 
+                    // 记录接收到的输入数据
+                    logger.info('[WeiboKeywordSearch] 接收到输入数据:', {
+                        inputDataKeys: inputData ? Object.keys(inputData) : [],
+                        inputData: inputData,
+                        astKeywordBefore: ast.keyword,
+                        astEventIdBefore: ast.event_id,
+                        astStartDateBefore: ast.startDate,
+                        astEndDateBefore: ast.endDate
+                    });
+
                     if (inputData) {
                         Object.keys(inputData).forEach(key => {
                             (ast as unknown as Record<string, unknown>)[key] = inputData[key];
                         });
                     }
+
+                    // 记录更新后的 AST 状态
+                    logger.info('[WeiboKeywordSearch] 更新后的 AST 状态:', {
+                        keyword: ast.keyword,
+                        event_id: ast.event_id,
+                        startDate: ast.startDate,
+                        endDate: ast.endDate
+                    });
 
                     await this.executeSearch(ast, wrappedCtx, obs);
                     return [];
@@ -111,7 +129,7 @@ export class WeiboKeywordSearchAstVisitor {
         ctx: { abortSignal?: AbortSignal },
         obs: Subscriber<NodeEvent>
     ): Promise<void> {
-        console.log('[WeiboKeywordSearch] 开始执行搜索，参数:', {
+        logger.info('[WeiboKeywordSearch] 开始执行搜索，参数:', {
             keyword: ast.keyword,
             startDate: ast.startDate,
             endDate: ast.endDate,
@@ -149,12 +167,12 @@ export class WeiboKeywordSearchAstVisitor {
             throw new Error('工作流已取消');
         }
 
-        console.log('[WeiboKeywordSearch] 开始获取 HTML，URL:', url);
+        logger.info('[WeiboKeywordSearch] 开始获取 HTML，URL:', url);
         let html = await this.getHtmlWithFallback(url, selection.cookieHeader, `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36`);
-        console.log('[WeiboKeywordSearch] HTML 获取成功，长度:', html.length);
+        logger.info('[WeiboKeywordSearch] HTML 获取成功，长度:', html.length);
 
         let result = this.parser.parseSearchResultHtml(html);
-        console.log('[WeiboKeywordSearch] 解析结果:', {
+        logger.info('[WeiboKeywordSearch] 解析结果:', {
             postsCount: result.posts.length,
             hasNextPage: result.hasNextPage,
             isEmptyResult: result.isEmptyResult,
@@ -164,7 +182,7 @@ export class WeiboKeywordSearchAstVisitor {
 
         // 如果无结果（"抱歉，未找到相关结果"），直接发射空结果并结束
         if (result.isEmptyResult) {
-            console.log(`[WeiboKeywordSearchAst] 关键词 "${keyword}" 在时间区间 ${formatDate(start)} - ${formatDate(end)} 内无帖子`);
+            logger.info(`[WeiboKeywordSearchAst] 关键词 "${keyword}" 在时间区间 ${formatDate(start)} - ${formatDate(end)} 内无帖子`);
 
             // 设置 crawl_end_reason
             await useEntityManager(async (manager) => {
@@ -185,19 +203,19 @@ export class WeiboKeywordSearchAstVisitor {
             return;
         }
 
-        console.log('[WeiboKeywordSearch] 开始处理帖子列表，帖子数量:', result.posts.length);
+        logger.info('[WeiboKeywordSearch] 开始处理帖子列表，帖子数量:', result.posts.length);
         for (const post of result.posts) {
             if (ctx.abortSignal?.aborted) {
                 throw new Error('工作流已取消');
             }
 
-            console.log('[WeiboKeywordSearch] 检查帖子:', { mid: post.mid, uid: post.uid });
+            logger.debug('[WeiboKeywordSearch] 检查帖子:', { mid: post.mid, uid: post.uid });
 
             // 检查帖子是否在12小时内已有快照
             const shouldSkip = await useEntityManager(async (m: EntityManager) => {
                 // 根据帖子ID查找帖子记录
                 const isLongId = /^\d{16,}$/.test(post.mid);
-                console.log('[WeiboKeywordSearch] 12小时快照检查:', {
+                logger.debug('[WeiboKeywordSearch] 12小时快照检查:', {
                     mid: post.mid,
                     isLongId,
                     queryField: isLongId ? 'id' : 'mblogid'
@@ -208,7 +226,7 @@ export class WeiboKeywordSearchAstVisitor {
                 });
 
                 if (!postEntity) {
-                    console.log('[WeiboKeywordSearch] 帖子不存在，正常发射');
+                    logger.debug('[WeiboKeywordSearch] 帖子不存在，正常发射');
                     return false;
                 }
                 return true;
@@ -216,12 +234,12 @@ export class WeiboKeywordSearchAstVisitor {
 
             // 如果需要跳过，则跳过
             if (shouldSkip) {
-                console.log('[WeiboKeywordSearch] 跳过帖子（12小时内有快照）:', post.mid);
+                logger.debug('[WeiboKeywordSearch] 跳过帖子（12小时内有快照）:', post.mid);
                 continue;
             }
 
             // 正常发射帖子事件
-            console.log('[WeiboKeywordSearch] 发射帖子数据:', { mblogid: post.mid, uid: post.uid });
+            logger.debug('[WeiboKeywordSearch] 发射帖子数据:', { mblogid: post.mid, uid: post.uid });
             ast.mblogid = post.mid;
             ast.uid = post.uid;
             obs.next({
@@ -235,7 +253,7 @@ export class WeiboKeywordSearchAstVisitor {
         let currentPageNum = 1;
         const maxPageRetries = 2;
 
-        console.log('[WeiboKeywordSearch] 开始分页处理，hasNextPage:', result.hasNextPage, 'nextPageLink:', result.nextPageLink);
+        logger.info('[WeiboKeywordSearch] 开始分页处理，hasNextPage:', result.hasNextPage, 'nextPageLink:', result.nextPageLink);
 
         while (result.hasNextPage && result.nextPageLink) {
             if (ctx.abortSignal?.aborted) {
@@ -266,10 +284,10 @@ export class WeiboKeywordSearchAstVisitor {
                         throw new Error('下一页链接为空');
                     }
 
-                    console.log('[WeiboKeywordSearch] 获取第', currentPageNum, '页，URL:', result.nextPageLink);
+                    logger.info('[WeiboKeywordSearch] 获取第', currentPageNum, '页，URL:', result.nextPageLink);
                     html = await this.getHtmlWithFallback(result.nextPageLink, selection.cookieHeader, `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36`);
                     result = this.parser.parseSearchResultHtml(html);
-                    console.log('[WeiboKeywordSearch] 第', currentPageNum, '页解析结果，帖子数量:', result.posts.length);
+                    logger.info('[WeiboKeywordSearch] 第', currentPageNum, '页解析结果，帖子数量:', result.posts.length);
 
                     ast.currentPage = currentPageNum;
                     for (const post of result.posts) {
@@ -315,10 +333,10 @@ export class WeiboKeywordSearchAstVisitor {
                     await this.delayService.randomDelay(ast.pageDelayMin || 3, ast.pageDelayMax || 5);
                 } catch (error) {
                     pageRetryCount++;
-                    console.warn(`[WeiboKeywordSearchAstVisitor] 分页搜索失败，第${pageRetryCount}次重试: ${result.nextPageLink}`, error);
+                    logger.warn(`[WeiboKeywordSearchAstVisitor] 分页搜索失败，第${pageRetryCount}次重试: ${result.nextPageLink}`, error);
 
                     if (pageRetryCount >= maxPageRetries) {
-                        console.warn(`[WeiboKeywordSearchAstVisitor] 分页搜索失败，跳过当前页: ${result.nextPageLink}`);
+                        logger.warn(`[WeiboKeywordSearchAstVisitor] 分页搜索失败，跳过当前页: ${result.nextPageLink}`);
                         break;
                     }
 
@@ -334,12 +352,12 @@ export class WeiboKeywordSearchAstVisitor {
         if (result.totalCount && result.currentPage === result.totalPage && result.totalPage === 50) {
             if (result.lastPostTime) {
                 ast.endDate = result.lastPostTime;
-                console.log(`[WeiboKeywordSearchAst] 达到50页上限，调整时间范围后继续采集... 新 endDate:`, result.lastPostTime);
+                logger.info(`[WeiboKeywordSearchAst] 达到50页上限，调整时间范围后继续采集... 新 endDate:`, result.lastPostTime);
                 return await this.executeSearch(ast, ctx, obs);
             }
         }
 
-        console.log('[WeiboKeywordSearch] 搜索完成，准备更新事件爬取结束原因');
+        logger.info('[WeiboKeywordSearch] 搜索完成，准备更新事件爬取结束原因');
 
         // 正常退出时更新事件爬取结束原因
         await useEntityManager(async (manager) => {

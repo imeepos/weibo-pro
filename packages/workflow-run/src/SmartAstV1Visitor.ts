@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@sker/core'
+import { Inject, Injectable, createLogger } from '@sker/core'
 import { Handler, NodeEvent, setAstError, WorkflowGraphAst, getEdgesByNode } from '@sker/workflow'
 import { SmartAstV1 } from '@sker/workflow-ast'
 import { Observable, from, of } from 'rxjs'
@@ -7,6 +7,8 @@ import { useLlmModel } from './llm-client'
 import { StreamingLlmInvoker, StreamChunk } from './services/StreamingLlmInvoker'
 import { SmartToolsFactory } from './services/SmartToolsFactory'
 import { StructuredToolInterface } from '@langchain/core/tools'
+
+const logger = createLogger('SmartAstV1Visitor');
 
 interface MessageContent {
   role: 'system' | 'user' | 'assistant' | 'tool'
@@ -67,6 +69,16 @@ export class SmartAstV1Visitor {
           const inputContexts = this.buildInputContexts(ast, inputData, ctx)
           const outputContexts = this.buildOutputContexts(ast, ctx)
 
+          // 记录输入和输出上下文
+          logger.info('[SmartAstV1] 输入上下文:', {
+            inputDataKeys: inputData ? Object.keys(inputData) : [],
+            inputData: inputData,
+            inputContexts: inputContexts.map(c => ({ property: c.property, title: c.title, content: c.content }))
+          })
+          logger.info('[SmartAstV1] 输出上下文:', {
+            outputContexts: outputContexts.map(c => ({ property: c.property, title: c.title, type: c.type }))
+          })
+
           this.smartToolsFactory.setDispatchCallback((outputPort: string | null, data: unknown) => {
             // 批量模式：outputPort 为 null，data 是 { port1: data1, port2: data2 } 的映射
             if (outputPort === null && typeof data === 'object' && data !== null) {
@@ -76,7 +88,8 @@ export class SmartAstV1Visitor {
                 data: data as Record<string, unknown>
               })
               const ports = Object.keys(data)
-              console.log(`[SmartAstV1] 批量分发到 ${ports.length} 个端口:`, ports.join(', '))
+              logger.info(`[SmartAstV1] 批量分发到 ${ports.length} 个端口:`, ports.join(', '))
+              logger.info(`[SmartAstV1] 批量分发数据:`, JSON.stringify(data).slice(0, 500))
             } else if (outputPort) {
               // 单端口模式
               obs.next({
@@ -84,7 +97,7 @@ export class SmartAstV1Visitor {
                 id: ast.id,
                 data: { [outputPort]: data }
               })
-              console.log(`[SmartAstV1] 分发到 ${outputPort}:`, typeof data === 'object' ? JSON.stringify(data).slice(0, 100) : data)
+              logger.info(`[SmartAstV1] 分发到 ${outputPort}:`, typeof data === 'object' ? JSON.stringify(data).slice(0, 100) : data)
             }
           })
 
@@ -124,7 +137,7 @@ export class SmartAstV1Visitor {
       ).subscribe({
         next: (event: NodeEvent) => obs.next(event),
         error: (error: Error) => {
-          console.error('[SmartAstV1] 执行失败:', error)
+          logger.error('[SmartAstV1] 执行失败:', error)
         }
       })
 
@@ -287,11 +300,11 @@ ${outputHints || '(无)'}
           if (chunk.type === 'complete') {
             ast.dispatchComplete = true
             events.push({ type: 'node_emit', id: ast.id, data: { dispatchComplete: true } })
-            console.log(`[SmartAstV1] 分发完成`)
+            logger.info(`[SmartAstV1] 分发完成`)
           }
         }),
         catchError((error) => {
-          console.error('[SmartAstV1] 执行失败:', error)
+          logger.error('[SmartAstV1] 执行失败:', error)
           return of()
         }),
         finalize(() => {

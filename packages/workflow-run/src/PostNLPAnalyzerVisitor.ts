@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@sker/core';
+import { Inject, Injectable, createLogger } from '@sker/core';
 import { Handler, NodeEvent, setAstError } from '@sker/workflow';
 import { PostNLPAnalyzerAst } from '@sker/workflow-ast';
 import {
@@ -13,6 +13,8 @@ import type { PostContext, CompleteAnalysisResult } from '@sker/nlp';
 import { Observable, from } from 'rxjs';
 import { concatMap, mergeMap, tap } from 'rxjs/operators';
 
+const logger = createLogger('PostNLPAnalyzerVisitor');
+
 @Injectable()
 export class PostNLPAnalyzerVisitor {
 
@@ -20,7 +22,7 @@ export class PostNLPAnalyzerVisitor {
 
   @Handler(PostNLPAnalyzerAst)
   visit(ast: PostNLPAnalyzerAst, input$: Observable<Record<string, unknown>>, ctx: Record<string, unknown>): Observable<NodeEvent> {
-    console.log('[PostNLPAnalyzerVisitor] visit 被调用，节点ID:', ast.id);
+    logger.info('[PostNLPAnalyzerVisitor] visit 被调用，节点ID:', ast.id);
 
     return new Observable<NodeEvent>(obs => {
       const abortController = new AbortController();
@@ -39,16 +41,16 @@ export class PostNLPAnalyzerVisitor {
       ast.errors = [];
       obs.next({ type: 'node_runing', id: ast.id });
 
-      console.log('[PostNLPAnalyzerVisitor] 开始订阅 input$，节点ID:', ast.id);
+      logger.info('[PostNLPAnalyzerVisitor] 开始订阅 input$，节点ID:', ast.id);
 
       const subscription = input$.pipe(
         tap({
-          next: (data) => console.log('[PostNLPAnalyzerVisitor] input$ 发射数据:', Object.keys(data)),
-          complete: () => console.log('[PostNLPAnalyzerVisitor] input$ 完成')
+          next: (data) => logger.debug('[PostNLPAnalyzerVisitor] input$ 发射数据:', Object.keys(data)),
+          complete: () => logger.debug('[PostNLPAnalyzerVisitor] input$ 完成')
         }),
         concatMap(async (inputData) => {
           ast.emitCount += 1;
-          console.log('[PostNLPAnalyzerVisitor] concatMap 接收到数据，第', ast.emitCount, '次，postId:', (inputData as any)?.post?.id);
+          logger.debug('[PostNLPAnalyzerVisitor] concatMap 接收到数据，第', ast.emitCount, '次，postId:', (inputData as any)?.post?.id);
           obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } })
 
           try {
@@ -86,11 +88,11 @@ export class PostNLPAnalyzerVisitor {
             ast.nlpResult = await this.analyzer.analyze(
               context,
             );
-            console.log('[PostNLPAnalyzerVisitor] NLP 分析成功，第', ast.emitCount, '次，postId:', ast.post?.id);
+            logger.info('[PostNLPAnalyzerVisitor] NLP 分析成功，第', ast.emitCount, '次，postId:', ast.post?.id);
             if (typeof ast.nlpResult !== 'string') {
-              console.log('[PostNLPAnalyzerVisitor] 开始保存 NLP 结果，event_id:', ast.event_id, 'postId:', ast.post?.id);
+              logger.debug('[PostNLPAnalyzerVisitor] 开始保存 NLP 结果，event_id:', ast.event_id, 'postId:', ast.post?.id);
               await this.saveNLPResult(ast, ast.nlpResult);
-              console.log('[PostNLPAnalyzerVisitor] NLP 结果保存成功');
+              logger.debug('[PostNLPAnalyzerVisitor] NLP 结果保存成功');
             }
 
             return [
@@ -105,11 +107,11 @@ export class PostNLPAnalyzerVisitor {
             ];
           } catch (error: any) {
             // 记录失败但不抛出，让流继续
-            console.error('[PostNLPAnalyzerVisitor] ❌ NLP 分析失败，第', ast.emitCount, '次');
-            console.error('  postId:', ast.post?.id);
-            console.error('  错误类型:', error?.constructor?.name);
-            console.error('  错误消息:', error?.message);
-            console.error('  错误堆栈:', error?.stack);
+            logger.error('[PostNLPAnalyzerVisitor] ❌ NLP 分析失败，第', ast.emitCount, '次');
+            logger.error('  postId:', ast.post?.id);
+            logger.error('  错误类型:', error?.constructor?.name);
+            logger.error('  错误消息:', error?.message);
+            logger.error('  错误堆栈:', error?.stack);
             ast.failedCount = (ast.failedCount || 0) + 1;
             ast.errors = ast.errors || [];
             ast.errors.push({
@@ -134,17 +136,17 @@ export class PostNLPAnalyzerVisitor {
         mergeMap((events: NodeEvent[]) => from(events))
       ).subscribe({
         next: (event: NodeEvent) => {
-          console.log('[PostNLPAnalyzerVisitor] subscribe.next 接收到事件:', event.type, '数据:', JSON.stringify((event as any).data || {}).substring(0, 100));
+          logger.debug('[PostNLPAnalyzerVisitor] subscribe.next 接收到事件:', event.type, '数据:', JSON.stringify((event as any).data || {}).substring(0, 100));
           obs.next(event);
         },
         error: (error) => {
-          console.log('[PostNLPAnalyzerVisitor] subscribe.error 捕获到错误:', error?.message || error);
+          logger.error('[PostNLPAnalyzerVisitor] subscribe.error 捕获到错误:', error?.message || error);
           ast.state = 'fail';
           setAstError(ast, error);
           obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
         },
         complete: () => {
-          console.log('[PostNLPAnalyzerVisitor] subscribe.complete 被调用，failedCount:', ast.failedCount, 'emitCount:', ast.emitCount);
+          logger.info('[PostNLPAnalyzerVisitor] subscribe.complete 被调用，failedCount:', ast.failedCount, 'emitCount:', ast.emitCount);
           const failureRate = ast.emitCount > 0 ? (ast.failedCount || 0) / ast.emitCount : 0;
           if (failureRate > 0.5) {
             ast.state = 'fail';
@@ -242,11 +244,11 @@ export class PostNLPAnalyzerVisitor {
         ast.event_associated = !!eventId;
       });
     } catch (error: any) {
-      console.error('[PostNLPAnalyzerVisitor] ❌ 保存 NLP 结果失败');
-      console.error('  event_id:', ast.event_id);
-      console.error('  post_id:', ast.post.id);
-      console.error('  错误:', error?.message);
-      console.error('  堆栈:', error?.stack);
+      logger.error('[PostNLPAnalyzerVisitor] ❌ 保存 NLP 结果失败');
+      logger.error('  event_id:', ast.event_id);
+      logger.error('  post_id:', ast.post.id);
+      logger.error('  错误:', error?.message);
+      logger.error('  堆栈:', error?.stack);
       throw error;
     }
   }

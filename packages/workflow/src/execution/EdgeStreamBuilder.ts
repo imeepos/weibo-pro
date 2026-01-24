@@ -3,8 +3,10 @@ import { filter, map, tap, toArray } from 'rxjs/operators';
 import { IEdge, INode, ROUTE_SKIPPED } from '../types';
 import { NodeEmitEvent, NodeEvent } from './events';
 import { evaluateTransform } from '../edge-transform';
-import { Injectable } from '@sker/core';
+import { Injectable, createLogger } from '@sker/core';
 import { hasBufferMode } from '../decorator';
+
+const logger = createLogger('EdgeStreamBuilder');
 
 /**
  * 边流构建器
@@ -40,6 +42,16 @@ export class EdgeStreamBuilder {
                 filter((event): event is NodeEmitEvent =>
                     event.type === 'node_emit' && edge.fromProperty! in (event.data || {})
                 ),
+                tap(event => {
+                    logger.debug('[EdgeStreamBuilder] 边数据流:', {
+                        edgeId: edge.id,
+                        from: edge.from,
+                        fromProperty: edge.fromProperty,
+                        to: edge.to,
+                        toProperty: edge.toProperty,
+                        eventData: event.data
+                    });
+                }),
                 map(event => this.extractAndTransformValue(event, edge))
             );
 

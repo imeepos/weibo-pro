@@ -4,7 +4,9 @@ import { WorkflowGraphAst } from '../ast';
 import { IEdge, ROUTE_SKIPPED } from '../types';
 import { NodeEvent } from './events';
 import { hasMultiMode } from '../decorator';
-import { Injectable } from '@sker/core';
+import { Injectable, createLogger } from '@sker/core';
+
+const logger = createLogger('NodeInputBuilder');
 
 /**
  * 节点输入构建器
@@ -86,19 +88,36 @@ export class NodeInputBuilder {
         const nodeInput: Record<string, any> = {};
         const inputs = node.metadata?.inputs || [];
 
+        logger.debug('[buildNodeInput] 构建节点输入:', {
+            nodeId: node.id,
+            nodeType: node.type,
+            inputKeys: Object.keys(input || {}),
+            inputMetaProperties: inputs.map((i: any) => i.property)
+        });
+
         inputs.forEach((inputMeta: any) => {
             const property = String(inputMeta.property);
             const propertyKey = `${node.id}.${property}`;
 
             if (input[propertyKey] !== undefined) {
                 nodeInput[property] = input[propertyKey];
+                logger.debug(`[buildNodeInput] ${node.type}.${property} <- input[${propertyKey}]`);
             } else if (input[node.id]?.[property] !== undefined) {
                 nodeInput[property] = input[node.id][property];
+                logger.debug(`[buildNodeInput] ${node.type}.${property} <- input[${node.id}][${property}]`);
             } else if (node[property] !== undefined) {
                 nodeInput[property] = node[property];
+                logger.debug(`[buildNodeInput] ${node.type}.${property} <- node[${property}] (节点自身属性)`);
             } else if (inputMeta.defaultValue !== undefined) {
                 nodeInput[property] = inputMeta.defaultValue;
+                logger.debug(`[buildNodeInput] ${node.type}.${property} <- defaultValue`);
             }
+        });
+
+        logger.debug('[buildNodeInput] 最终节点输入:', {
+            nodeId: node.id,
+            nodeType: node.type,
+            nodeInput: nodeInput
         });
 
         return nodeInput;
