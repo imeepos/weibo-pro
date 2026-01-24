@@ -36,28 +36,38 @@ export class WorkflowScheduleSubscriber implements EntitySubscriberInterface<Wor
 
   /**
    * UPDATE 事件
+   *
+   * 注意：TypeORM 的 update() 方法不会加载完整实体
+   * - event.entity 只包含传入的更新字段
+   * - event.databaseEntity 可能为空
+   * - 需要从 databaseEntity.id 或 entity.id 获取 ID
    */
   async afterUpdate(event: UpdateEvent<WorkflowScheduleEntity>): Promise<void> {
-    // 修复：使用 databaseEntity 作为备选
-    // event.entity 可能为空，但 databaseEntity 包含更新后的数据
-    const entity = event.entity || event.databaseEntity;
-    if (!entity) {
-      // UpdateEvent 中没有 entityId，使用 metadata 记录
-      console.warn('[WorkflowScheduleSubscriber] afterUpdate: entity is null,无法发布更新通知', {
-        metadata: event.metadata?.tableName
+    // 优先从 databaseEntity 获取 ID（update() 方法会设置）
+    // 其次从 entity 获取（save() 方法会设置）
+    const scheduleId = event.databaseEntity?.id || (event.entity as WorkflowScheduleEntity)?.id;
+
+    if (!scheduleId) {
+      console.warn('[WorkflowScheduleSubscriber] afterUpdate: 无法获取 scheduleId，跳过发布', {
+        hasEntity: !!event.entity,
+        hasDatabaseEntity: !!event.databaseEntity,
+        tableName: event.metadata?.tableName
       });
       return;
     }
 
+    // 合并实体信息用于日志（可能不完整，仅用于调试）
+    const entity = event.databaseEntity || event.entity;
+
     console.log('[WorkflowScheduleSubscriber] 发布调度更新通知', {
-      scheduleId: entity.id,
-      scheduleName: entity.name,
-      lastRunAt: entity.lastRunAt?.toISOString(),
-      nextRunAt: entity.nextRunAt?.toISOString(),
-      status: entity.status
+      scheduleId,
+      scheduleName: entity?.name ?? '(未知)',
+      lastRunAt: entity?.lastRunAt instanceof Date ? entity.lastRunAt.toISOString() : entity?.lastRunAt,
+      nextRunAt: entity?.nextRunAt instanceof Date ? entity.nextRunAt.toISOString() : entity?.nextRunAt,
+      status: entity?.status
     });
 
-    await this.publishChange('update', entity.id);
+    await this.publishChange('update', scheduleId);
   }
 
   /**

@@ -164,24 +164,38 @@ export class WorkflowExecutionService {
     await withRetryOnNetworkError(
       async () => {
         // 使用事务确保数据持久化
-        // useTransaction 内部使用 manager.transaction()，会自动提交
+        // 使用 save() 而不是 update()，以便 TypeORM Subscriber 能获取完整实体信息
         await useEntityManager(async (manager) => {
           // 在事务中执行更新
-          const updateResult = await manager.transaction(async (txManager) => {
-            return await txManager.update(WorkflowScheduleEntity, schedule.id, {
-              lastRunAt: now,
-              nextRunAt:
-                status === ScheduleStatus.DISABLED || status === ScheduleStatus.EXPIRED
-                  ? undefined
-                  : nextRunAt ?? undefined,
-              status
+          await manager.transaction(async (txManager) => {
+            // 先加载实体，然后使用 save() 更新
+            // 这样 Subscriber 的 databaseEntity 会包含完整信息
+            const entity = await txManager.findOne(WorkflowScheduleEntity, {
+              where: { id: schedule.id }
             })
+
+            if (!entity) {
+              logger.error('[WorkflowExecutionService] 找不到调度实体', {
+                scheduleId: schedule.id
+              })
+              return
+            }
+
+            // 更新字段
+            entity.lastRunAt = now
+            entity.nextRunAt =
+              status === ScheduleStatus.DISABLED || status === ScheduleStatus.EXPIRED
+                ? undefined
+                : nextRunAt ?? undefined
+            entity.status = status
+
+            // 使用 save() 保存，触发 Subscriber 并传递完整实体
+            await txManager.save(entity)
           })
 
           // 详细日志：更新操作结果
-          logger.info('[WorkflowExecutionService] 数据库 update 操作完成', {
-            scheduleId: schedule.id,
-            affected: updateResult.affected || updateResult.generatedMaps?.length || 'unknown'
+          logger.info('[WorkflowExecutionService] 数据库 save 操作完成', {
+            scheduleId: schedule.id
           })
 
           // 验证查询：确认数据已写入（使用新的 manager 确保读取到已提交的数据）
