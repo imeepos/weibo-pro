@@ -42,6 +42,7 @@
   },
   "dependencies": {
     "dayjs": "^1.11.19",
-    "reflect-metadata": "^0.2.2"
+    "reflect-metadata": "^0.2.2",
+    "zod": "^4.2.1"
   }
 }

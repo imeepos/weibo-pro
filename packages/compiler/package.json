@@ -46,6 +46,7 @@
     "@anthropic-ai/sdk": "^0.71.2",
     "@sker/core": "workspace:*",
     "openai": "^6.16.0",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "zod": "^4.2.1"
   }
 }
