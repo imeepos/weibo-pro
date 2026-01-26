@@ -31,7 +31,10 @@
     "claude": "claude --dangerously-skip-permissions",
     "lint": "eslint . --max-warnings 0",
     "check-types": "tsc --noEmit",
-    "stats": "tsx scripts/run-user-relation-stats.ts"
+    "stats": "tsx scripts/run-user-relation-stats.ts",
+    "timezone-fix:preview": "tsx scripts/run-timezone-fix.ts preview",
+    "timezone-fix": "tsx scripts/run-timezone-fix.ts fix",
+    "import-sql-backup": "tsx scripts/import-sql-backup.ts"
   },
   "dependencies": {
     "@sker/core": "workspace:*",

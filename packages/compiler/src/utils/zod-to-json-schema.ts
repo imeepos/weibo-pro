@@ -5,7 +5,6 @@
  */
 
 import { z } from 'zod'
-
 /**
  * 检查参数是否可选
  */
@@ -19,19 +18,13 @@ export function isOptionalParam(zodSchema: z.ZodTypeAny): boolean {
  */
 export function zodToJsonSchema(zodSchema: z.ZodTypeAny): any {
     // Zod v4 原生支持 toJSONSchema
-    if (typeof (zodSchema as any).toJSONSchema === 'function') {
-        const schema = (zodSchema as any).toJSONSchema()
-        // 移除 $schema 字段以保持向后兼容
-        if (schema && typeof schema === 'object' && '$schema' in schema) {
-            const { $schema, ...rest } = schema
-            return rest
-        }
-        return schema
+    const schema = zodSchema.toJSONSchema()
+    // 移除 $schema 字段以保持向后兼容
+    if (schema && typeof schema === 'object' && '$schema' in schema) {
+        const { $schema, ...rest } = schema
+        return rest
     }
-
-    // 降级处理：如果 toJSONSchema 不可用，返回空对象
-    console.warn('zodSchema.toJSONSchema() is not available, please ensure Zod v4+ is installed')
-    return {}
+    return schema
 }
 
 /**
@@ -41,7 +34,7 @@ export function zodToJsonSchemaWithDescription(zodSchema: z.ZodTypeAny): any {
     const base = zodToJsonSchema(zodSchema)
 
     // 尝试获取 description
-    const meta = (zodSchema as any)?.meta?.()
+    const meta = zodSchema?.meta?.()
     if (meta?.description) {
         base.description = meta.description
     }
