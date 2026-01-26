@@ -15,10 +15,11 @@ export class HourlyStatisticsHelper {
    * 获取时间维度（中国时区 UTC+8）
    */
   static getTimeDimensions(date: Date) {
-    // 转换为中国时区 (UTC+8)
+    // 中国时区 (UTC+8)
     const utcTime = date.getTime();
+    // 转化为 UTC时间
     const chinaOffset = 8 * 60 * 60 * 1000; // 8小时的毫秒数
-    const chinaTime = new Date(utcTime + chinaOffset);
+    const chinaTime = new Date(utcTime - chinaOffset);
 
     return {
       year: chinaTime.getUTCFullYear(),

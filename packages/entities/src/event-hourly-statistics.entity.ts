@@ -39,7 +39,7 @@ export class EventHourlyStatisticsEntity {
   @Column({ type: 'smallint', name: 'month' })
   month!: number;
 
-  @Column({ type: 'smallint', name: 'day' })
+  @Column({ type: 'smallint', name: 'day', comment: '注意这里存储的是 UTC时间，北京时间需要+8' })
   day!: number;
 
   @Column({ type: 'smallint', name: 'hour' })
