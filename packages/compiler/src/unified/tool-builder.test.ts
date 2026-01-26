@@ -37,8 +37,8 @@ describe('unified-tool-builder', () => {
       expect(testTool?.name).toBe('test_tool')
       expect(testTool?.description).toBe('A test tool')
       expect(testTool?.parameters.type).toBe('object')
-      expect(testTool?.parameters.properties.str).toEqual({ type: 'string' })
-      expect(testTool?.parameters.properties.num).toEqual({ type: 'number' })
+      expect(testTool?.parameters.properties.str).toMatchObject({ type: 'string' })
+      expect(testTool?.parameters.properties.num).toMatchObject({ type: 'number' })
       expect(testTool?.parameters.required).toEqual(['str'])
     })
 

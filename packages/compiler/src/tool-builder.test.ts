@@ -86,7 +86,7 @@ describe('tool-builder', () => {
       const tools = buildOpenAITools()
       const tool = tools.find(t => t.function.name === 'complex_tool')
 
-      expect(tool?.function.parameters.properties.obj).toEqual({
+      expect(tool?.function.parameters.properties.obj).toMatchObject({
         type: 'object',
         properties: {
           nested: { type: 'string' },

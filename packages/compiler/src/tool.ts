@@ -1,15 +1,11 @@
 import { root, ToolMetadataKey, ToolArgMetadataKey, ToolMetadata, ToolArgMetadata } from '@sker/core'
-import { z } from 'zod'
 import { AnthropicContentBlockDeltaAst, AnthropicContentBlockStartAst, AnthropicContentBlockStopAst, AnthropicMessageDeltaAst, AnthropicMessageStartAst, AnthropicMessageStopAst, AnthropicRequestAst, AnthropicResponseAst, Ast, GoogleRequestAst, GoogleResponseAst, OpenAIRequestAst, OpenAiResponseAst, Visitor, AnthropicToolUseBlock } from "./ast";
+import { isOptionalParam } from './utils/zod-to-json-schema'
 
 export interface ToolResult {
     tool_use_id: string
     content: string
     is_error?: boolean
-}
-
-function isOptionalParam(zodSchema: any): boolean {
-    return zodSchema instanceof z.ZodOptional || zodSchema instanceof z.ZodDefault
 }
 
 export class ToolExecutorVisitor implements Visitor {

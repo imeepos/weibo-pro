@@ -6,56 +6,8 @@
 
 import { root, ToolMetadataKey, ToolArgMetadataKey, Type } from '@sker/core'
 import { ToolMetadata, ToolArgMetadata } from '@sker/core'
-import { z } from 'zod'
 import { AnthropicTool, OpenAITool, GoogleTool, GoogleToolFunctionDeclaration, UnifiedTool, UnifiedToolParameters } from '../ast'
-
-// ==================== 辅助函数（复用现有逻辑） ====================
-
-function zodToJsonSchema(zodSchema: any): any {
-    if (zodSchema instanceof z.ZodString) {
-        return { type: 'string' }
-    }
-    if (zodSchema instanceof z.ZodNumber) {
-        return { type: 'number' }
-    }
-    if (zodSchema instanceof z.ZodBoolean) {
-        return { type: 'boolean' }
-    }
-    if (zodSchema instanceof z.ZodArray) {
-        return { type: 'array', items: zodToJsonSchema(zodSchema.element) }
-    }
-    if (zodSchema instanceof z.ZodObject) {
-        const properties: Record<string, any> = {}
-        const required: string[] = []
-        for (const [key, value] of Object.entries(zodSchema.shape)) {
-            properties[key] = zodToJsonSchema(value)
-            if (!(value as any).isOptional()) {
-                required.push(key)
-            }
-        }
-        return { type: 'object', properties, required: required.length > 0 ? required : undefined }
-    }
-    if (zodSchema instanceof z.ZodOptional) {
-        return zodToJsonSchema(zodSchema.unwrap())
-    }
-    if (zodSchema instanceof z.ZodDefault) {
-        return zodToJsonSchema(zodSchema.removeDefault())
-    }
-    return {}
-}
-
-function zodToJsonSchemaWithDescription(zodSchema: any): any {
-    const base = zodToJsonSchema(zodSchema)
-    const meta = zodSchema?.meta?.()
-    if (meta?.description) {
-        base.description = meta.description
-    }
-    return base
-}
-
-function isOptionalParam(zodSchema: any): boolean {
-    return zodSchema instanceof z.ZodOptional || zodSchema instanceof z.ZodDefault
-}
+import { zodToJsonSchema, isOptionalParam } from '../utils/zod-to-json-schema'
 
 // ==================== 核心构建函数 ====================
 
