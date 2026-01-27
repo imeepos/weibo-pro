@@ -6,6 +6,7 @@ import { Observable, from } from 'rxjs';
 import { concatMap, mergeMap } from 'rxjs/operators';
 import { parse as parseWithHarmony } from '@sker/json-harmony';
 import { useLlmModel } from './llm-client';
+import { ErrorHandlerOperators } from './utils/error-handler.util';
 
 function buildDefaultPrompt(events: EventEntity[]): string {
   const eventList = events.map((e, idx) => {
@@ -114,9 +115,10 @@ export class EventDispatcherAstVisitor {
 
           // 解析 JSON
           const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, content];
-          const parseResult = parseWithHarmony(jsonMatch[1]!.trim());
+          const jsonContent = jsonMatch[1]?.trim() || content.trim();
+          const parseResult = parseWithHarmony(jsonContent);
 
-          if (typeof parseResult.data !== 'object' || parseResult.data === null) {
+          if (!parseResult.success || typeof parseResult.data !== 'object' || parseResult.data === null) {
             throw new Error('LLM 返回的 JSON 格式无效');
           }
 
@@ -152,6 +154,8 @@ export class EventDispatcherAstVisitor {
             }
           ];
         }),
+        ErrorHandlerOperators.createRetryOperator(ast, { logPrefix: '[EventDispatcherAstVisitor]' }),
+        ErrorHandlerOperators.createCatchErrorOperator(ast, { logPrefix: '[EventDispatcherAstVisitor]' }),
         mergeMap((events: NodeEvent[]) => from(events))
       ).subscribe({
         next: (event: NodeEvent) => obs.next(event),
