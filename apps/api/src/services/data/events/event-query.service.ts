@@ -274,17 +274,21 @@ export class EventQueryService {
   }
 
   /**
-   * 根据ID数组获取事件详情
+   * 根据ID数组获取事件详情（保持输入顺序）
    */
   private async getEventsByIds(ids: string[]): Promise<EventWithCategory[]> {
     if (ids.length === 0) return [];
 
     return await useEntityManager(async (entityManager) => {
-      return await entityManager
+      const events = await entityManager
         .createQueryBuilder(EventEntity, 'event')
         .leftJoinAndSelect('event.category', 'category')
         .where('event.id IN (:...ids)', { ids })
         .getMany();
+
+      // 按输入 IDs 的顺序重新排列，确保排序后的顺序不被打乱
+      const eventMap = new Map(events.map(e => [e.id, e]));
+      return ids.map(id => eventMap.get(id)).filter((e): e is EventWithCategory => e !== undefined);
     });
   }
 
