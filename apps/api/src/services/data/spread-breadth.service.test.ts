@@ -221,9 +221,10 @@ describe('SpreadBreadthService', () => {
       const result = await service.getBreadthAnalysis('event-123');
 
       expect(result.propagationPaths).not.toHaveLength(0);
+      // 当 postAuthorName 未设置时，默认使用 "帖子{postId}" 格式
       expect(result.propagationPaths[0]).toMatchObject({
-        source: 'post1',
-        target: '100001',
+        source: '帖子post1',
+        target: 'User A',
         level: 1,
         weight: expect.any(Number),
       });

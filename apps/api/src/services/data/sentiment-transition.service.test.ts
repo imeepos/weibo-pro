@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { SentimentTransitionService } from './sentiment-transition.service';
 import { CacheService } from '../cache.service';
 import { useEntityManager, PostNLPResultEntity } from '@sker/entities';
+import { SentimentTransitionLLMAnalyzerService } from './sentiment-transition-llm-analyzer.service';
 
 vi.mock('@sker/entities', async () => {
   const actual = await vi.importActual('@sker/entities');
@@ -11,15 +12,32 @@ vi.mock('@sker/entities', async () => {
   };
 });
 
+// Mock LLM analyzer service
+vi.mock('./sentiment-transition-llm-analyzer.service', () => ({
+  SentimentTransitionLLMAnalyzerService: vi.fn().mockImplementation(() => ({
+    analyzeTurningPoint: vi.fn().mockResolvedValue({
+      triggerKeywords: ['测试', '关键词'],
+      triggerPosts: ['post1', 'post2'],
+    }),
+  })),
+}));
+
 describe('SentimentTransitionService', () => {
   let service: SentimentTransitionService;
   let mockCacheService: any;
+  let mockLLMAnalyzer: any;
 
   beforeEach(() => {
     mockCacheService = {
       getOrSet: vi.fn(),
     };
-    service = new SentimentTransitionService(mockCacheService);
+    mockLLMAnalyzer = {
+      analyzeTurningPoint: vi.fn().mockResolvedValue({
+        triggerKeywords: ['测试', '关键词'],
+        triggerPosts: ['post1', 'post2'],
+      }),
+    };
+    service = new SentimentTransitionService(mockCacheService, mockLLMAnalyzer);
   });
 
   describe('getSentimentTransitionAnalysis', () => {
