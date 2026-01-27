@@ -183,3 +183,52 @@ describe('WorkflowScheduleService - updateSchedule', () => {
         // 目前已验证核心修复：toDate 正确处理无效日期
     });
 });
+
+describe('WorkflowScheduleService - calculateNextRunTime', () => {
+    let service: WorkflowScheduleService;
+
+    beforeEach(() => {
+        service = new WorkflowScheduleService();
+        vi.clearAllMocks();
+    });
+
+    describe('CONTINUOUS 类型', () => {
+        it('应该返回当前时间作为下次执行时间（持续模式执行完毕后立即重新执行）', () => {
+            const before = new Date();
+            const result = service.calculateNextRunTime(ScheduleType.CONTINUOUS, {});
+            const after = new Date();
+
+            expect(result).toBeInstanceOf(Date);
+            expect(result!.getTime()).toBeGreaterThanOrEqual(before.getTime());
+            expect(result!.getTime()).toBeLessThanOrEqual(after.getTime() + 100); // 允许100ms误差
+        });
+
+        it('持续模式忽略 cronExpression 和 intervalSeconds 参数', () => {
+            const result = service.calculateNextRunTime(ScheduleType.CONTINUOUS, {
+                cronExpression: '0 * * * *',
+                intervalSeconds: 3600
+            });
+
+            expect(result).toBeInstanceOf(Date);
+        });
+
+        it('持续模式忽略 startTime 参数，使用当前时间', () => {
+            const futureTime = new Date();
+            futureTime.setFullYear(futureTime.getFullYear() + 1); // 一年后
+            const result = service.calculateNextRunTime(ScheduleType.CONTINUOUS, {
+                startTime: futureTime
+            });
+
+            expect(result).toBeInstanceOf(Date);
+            // 应该返回当前时间附近的时间，而不是未来时间
+            expect(result!.getTime()).toBeLessThan(futureTime.getTime());
+        });
+    });
+
+    describe('MANUAL 类型', () => {
+        it('手动触发应该返回 null', () => {
+            const result = service.calculateNextRunTime(ScheduleType.MANUAL, {});
+            expect(result).toBeNull();
+        });
+    });
+});

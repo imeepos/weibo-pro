@@ -353,6 +353,9 @@ export class WorkflowScheduleService {
           throw new Error('Interval seconds required')
         }
         return new Date(now.getTime() + params.intervalSeconds * 1000)
+      case ScheduleType.CONTINUOUS:
+        // 持续模式：执行完毕后立即重新执行，返回当前时间
+        return new Date()
       case ScheduleType.MANUAL:
         // 手动触发不需要下次执行时间
         return null
