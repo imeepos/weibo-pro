@@ -180,6 +180,16 @@ export class EventQueryService {
           return hotnessB - hotnessA; // 降序
         });
 
+        // 调试日志：记录排序后的前10个事件的热度
+        getStructuredLogger().debug('Event hotness sorting result', {
+          type: 'hotness_sort_debug',
+          eventCount: sortedEventIds.length,
+          top10: sortedEventIds.slice(0, 10).map(id => ({
+            eventId: id,
+            hotness: Math.round((displayHotnessMap.get(id) ?? 0) * 100) / 100
+          }))
+        });
+
         // 【修改】第四步：手动分页
         const paginatedIds = sortedEventIds.slice((page - 1) * pageSize, page * pageSize);
 
