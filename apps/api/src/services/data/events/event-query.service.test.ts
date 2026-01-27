@@ -36,11 +36,15 @@ describe('EventQueryService - 热度排序问题已修复', () => {
         serviceCode = fs.readFileSync(serviceFilePath, 'utf-8');
     });
 
+    // 辅助函数：获取完整的方法代码
+    function getGetEventListMethod(): string {
+        const methodStart = serviceCode.indexOf('async getEventList(');
+        const methodEnd = serviceCode.indexOf('\n  async', methodStart + 1);
+        return serviceCode.substring(methodStart, methodEnd > 0 ? methodEnd : serviceCode.length);
+    }
+
     it('应该先获取所有符合条件的ID（不分页）', () => {
-        const getEventListMethod = serviceCode.substring(
-            serviceCode.indexOf('async getEventList'),
-            serviceCode.indexOf('async getEventList') + 4000
-        );
+        const getEventListMethod = getGetEventListMethod();
 
         // 验证调用了 getEventIds 获取所有ID
         expect(getEventListMethod).toContain('getEventIds');
@@ -59,10 +63,7 @@ describe('EventQueryService - 热度排序问题已修复', () => {
     });
 
     it('应该在获取ID后计算所有事件的衰减热度', () => {
-        const getEventListMethod = serviceCode.substring(
-            serviceCode.indexOf('async getEventList'),
-            serviceCode.indexOf('async getEventList') + 4000
-        );
+        const getEventListMethod = getGetEventListMethod();
 
         // 验证计算热度的调用在获取ID之后（在正常流程中）
         const normalFlowStart = getEventListMethod.indexOf('// 【正常流程】');
@@ -82,10 +83,7 @@ describe('EventQueryService - 热度排序问题已修复', () => {
     });
 
     it('应该按新热度排序后再分页', () => {
-        const getEventListMethod = serviceCode.substring(
-            serviceCode.indexOf('async getEventList'),
-            serviceCode.indexOf('async getEventList') + 4000
-        );
+        const getEventListMethod = getGetEventListMethod();
 
         // 验证存在排序逻辑（在正常流程中）
         expect(getEventListMethod).toContain('sortedEventIds');
@@ -108,10 +106,7 @@ describe('EventQueryService - 热度排序问题已修复', () => {
     });
 
     it('应该持久化所有事件的新热度（异步）', () => {
-        const getEventListMethod = serviceCode.substring(
-            serviceCode.indexOf('async getEventList'),
-            serviceCode.indexOf('async getEventList') + 4000
-        );
+        const getEventListMethod = getGetEventListMethod();
 
         // 验证使用 setImmediate 异步持久化（在正常流程中）
         expect(getEventListMethod).toContain('setImmediate');
