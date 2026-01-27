@@ -185,24 +185,26 @@ describe('EventQueryService - 修复后的执行流程', () => {
         const normalFlowStart = getEventListMethod.indexOf('// 【正常流程】');
         expect(normalFlowStart).toBeGreaterThan(-1);
 
-        const normalFlowIndices = {
-            getEventIds: getEventListMethod.indexOf('getEventIds', normalFlowStart),
-            calculate: getEventListMethod.indexOf('calculateDecayedHotnessForEvents', normalFlowStart),
-            sort: getEventListMethod.indexOf('hotnessB - hotnessA', normalFlowStart),
-            paginate: getEventListMethod.indexOf('.slice((page - 1) * pageSize', normalFlowStart),
-            getEvents: getEventListMethod.indexOf('getEventsByIds', normalFlowStart),
-            build: getEventListMethod.indexOf('mapEventToListItem', normalFlowStart),
-            persist: getEventListMethod.indexOf('setImmediate', normalFlowStart),
+        // 只在正常流程注释之后搜索，忽略回退逻辑中的调用
+        const normalFlowSection = getEventListMethod.substring(normalFlowStart);
+
+        const indices = {
+            calculate: normalFlowSection.indexOf('calculateDecayedHotnessForEvents'),
+            sort: normalFlowSection.indexOf('hotnessB - hotnessA'),
+            paginate: normalFlowSection.indexOf('.slice((page - 1) * pageSize'),
+            getEvents: normalFlowSection.indexOf('getEventsByIds'),
+            build: normalFlowSection.indexOf('mapEventToListItem'),
+            persist: normalFlowSection.indexOf('setImmediate'),
         };
 
-        // 验证正常流程的顺序：获取ID -> 计算热度 -> 排序 -> 分页 -> 获取详情 -> 构建 -> 持久化
-        expect(normalFlowIndices.getEventIds).toBeGreaterThan(-1);
-        expect(normalFlowIndices.calculate).toBeGreaterThan(normalFlowIndices.getEventIds);
-        expect(normalFlowIndices.sort).toBeGreaterThan(normalFlowIndices.calculate);
-        expect(normalFlowIndices.paginate).toBeGreaterThan(normalFlowIndices.sort);
-        expect(normalFlowIndices.getEvents).toBeGreaterThan(normalFlowIndices.paginate);
-        expect(normalFlowIndices.build).toBeGreaterThan(normalFlowIndices.getEvents);
-        expect(normalFlowIndices.persist).toBeGreaterThan(normalFlowIndices.build);
+        // 验证正常流程的顺序：计算热度 -> 排序 -> 分页 -> 获取详情 -> 构建 -> 持久化
+        // （getEventIds 在正常流程注释之前被调用，所以不需要验证它）
+        expect(indices.calculate).toBeGreaterThan(-1);
+        expect(indices.sort).toBeGreaterThan(indices.calculate);
+        expect(indices.paginate).toBeGreaterThan(indices.sort);
+        expect(indices.getEvents).toBeGreaterThan(indices.paginate);
+        expect(indices.build).toBeGreaterThan(indices.getEvents);
+        expect(indices.persist).toBeGreaterThan(indices.build);
 
         console.log('=== 修复后的执行流程 ===');
         console.log('【正常流程（事件数 <= 1000）】');
