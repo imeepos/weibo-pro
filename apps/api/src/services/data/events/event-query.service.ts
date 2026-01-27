@@ -10,6 +10,7 @@ import {
   getEventCategoryStats,
   getDateRangeByTimeRange,
   HourlyStatisticsHelper,
+  findEventList,
 } from '@sker/entities';
 import { CacheService, CACHE_KEYS, CACHE_TTL } from '../../cache.service';
 import type {
@@ -36,6 +37,9 @@ import type {
 } from './types';
 import { TREND_THRESHOLD, INFLUENCE_WEIGHTS } from './constants';
 import { UserRelationNetwork } from '@sker/sdk';
+
+/** 最大热度计算事件数量限制 */
+const MAX_HOTNESS_CALCULATION_EVENTS = 1000;
 
 @Injectable({ providedIn: 'root' })
 export class EventQueryService {
@@ -82,8 +86,8 @@ export class EventQueryService {
     return await this.cacheService.getOrSet(
       cacheKey,
       async () => {
-        // 【修改】第一步：获取符合条件的所有事件ID（不分页）
-        const allEventIds = await this.getEventIds(timeRange, { search, category });
+        // 【修改】第一步：获取符合条件的所有事件ID和分页标记
+        const { ids: allEventIds, needsPaging } = await this.getEventIds(timeRange, { search, category });
         const total = allEventIds.length;
 
         if (total === 0) {
@@ -96,8 +100,43 @@ export class EventQueryService {
           };
         }
 
-        // 【修改】第二步：计算所有事件的衰减热度
         const statsTimeRange = timeRange || '24h';
+
+        // 【性能优化】当事件数量超过阈值时，回退到数据库排序
+        if (needsPaging) {
+          // 使用原有的 findEventList 逻辑（按数据库 hotness 排序）
+          const events = await findEventList(statsTimeRange, {
+            limit: pageSize,
+            offset: (page - 1) * pageSize,
+            search,
+            category
+          });
+
+          // 获取当前页事件ID的统计数据
+          const paginatedIds = events.map(e => e.id);
+          const allStatistics = await this.getStatisticsBatch(paginatedIds, statsTimeRange);
+
+          // 构建返回数据
+          const data = events.map((event) => {
+            const stats = allStatistics.find(s => s.event_id === event.id);
+            const displayHotness = parseFloat(event.hotness.toString());
+            return this.mapEventToListItem(
+              event,
+              stats ? [stats] : [],
+              displayHotness
+            );
+          });
+
+          return {
+            data,
+            total,
+            page,
+            pageSize,
+            totalPages: Math.ceil(total / pageSize)
+          };
+        }
+
+        // 【正常流程】第二步：计算所有事件的衰减热度
         const displayHotnessMap = await this.calculateDecayedHotnessForEvents(
           allEventIds,
           statsTimeRange,
@@ -156,7 +195,7 @@ export class EventQueryService {
   private async getEventIds(
     timeRange?: TimeRange,
     filters?: { search?: string; category?: string }
-  ): Promise<string[]> {
+  ): Promise<{ ids: string[]; needsPaging: boolean }> {
     return await useEntityManager(async (entityManager) => {
       const query = entityManager
         .createQueryBuilder('events', 'event')
@@ -183,7 +222,10 @@ export class EventQueryService {
       }
 
       const result = await query.getRawMany();
-      return result.map(r => r.id);
+      const ids = result.map(r => r.id);
+      const needsPaging = ids.length > MAX_HOTNESS_CALCULATION_EVENTS;
+
+      return { ids, needsPaging };
     });
   }
 
