@@ -118,7 +118,7 @@ export class EventDispatcherAstVisitor {
           const jsonContent = jsonMatch[1]?.trim() || content.trim();
           const parseResult = parseWithHarmony(jsonContent);
 
-          if (!parseResult.success || typeof parseResult.data !== 'object' || parseResult.data === null) {
+          if (typeof parseResult.data !== 'object' || parseResult.data === null) {
             throw new Error('LLM 返回的 JSON 格式无效');
           }
 
