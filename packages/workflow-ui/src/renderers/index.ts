@@ -134,3 +134,4 @@ export * from './LastAstRender'
 
 // 爬虫节点
 export * from './EventAuthGenerateAstRender'
+export * from './EventDispatcherAstRender'
