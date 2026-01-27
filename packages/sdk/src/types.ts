@@ -941,6 +941,7 @@ export enum ScheduleType {
   ONCE = 'once',
   CRON = 'cron',
   INTERVAL = 'interval',
+  CONTINUOUS = 'continuous', // 持续模式：执行完毕后立即重新执行
   MANUAL = 'manual',
 }
 

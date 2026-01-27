@@ -55,6 +55,7 @@ interface ScheduleWatcher {
 export class CronSchedulerService {
   private scheduleJobs = new Map<string, nodeSchedule.Job>()
   private intervalTimers = new Map<string, NodeJS.Timeout>()
+  private continuousRunning = new Set<string>() // 正在运行的持续调度任务ID
   private readonly lockTTL = 300 // 锁过期时间（秒），根据任务最长执行时间调整
 
   constructor(
@@ -137,6 +138,12 @@ export class CronSchedulerService {
         logger.debug('🖐️ 手动触发类型，跳过调度', { scheduleId: schedule.id })
         return
 
+      case ScheduleType.CONTINUOUS:
+        // 持续模式：立即启动第一次执行
+        // 后续执行在 executeContinuous 中处理（执行完毕后立即重新执行）
+        this.startContinuousSchedule(schedule)
+        return
+
       default:
         logger.error('❌ 不支持的调度类型', {
           scheduleId: schedule.id,
@@ -169,6 +176,140 @@ export class CronSchedulerService {
       this.intervalTimers.delete(scheduleId)
       logger.debug('移除间隔定时器', { scheduleId })
     }
+
+    // 清理 continuous 类型的运行标记
+    if (this.continuousRunning.has(scheduleId)) {
+      this.continuousRunning.delete(scheduleId)
+      logger.debug('移除持续调度运行标记', { scheduleId })
+    }
+  }
+
+  /**
+   * 启动持续调度模式
+   * 持续模式会在工作流执行完毕后立即重新执行，形成无限循环
+   */
+  private startContinuousSchedule(schedule: WorkflowScheduleEntity): void {
+    // 防止重复启动
+    if (this.continuousRunning.has(schedule.id)) {
+      logger.debug('持续调度已在运行中，跳过重复启动', { scheduleId: schedule.id })
+      return
+    }
+
+    this.continuousRunning.add(schedule.id)
+    logger.info('🔄 持续调度已启动', {
+      scheduleId: schedule.id,
+      scheduleName: schedule.name,
+      workflowId: schedule.workflowId
+    })
+
+    // 使用 setImmediate 立即启动第一次执行，避免阻塞当前调用栈
+    setImmediate(() => this.executeContinuous(schedule))
+  }
+
+  /**
+   * 持续调度执行循环
+   * 在工作流执行完毕后立即重新执行
+   */
+  private async executeContinuous(schedule: WorkflowScheduleEntity): Promise<void> {
+    const scheduleId = schedule.id
+
+    // 检查是否仍在运行中（可能已被外部移除）
+    if (!this.continuousRunning.has(scheduleId)) {
+      logger.debug('持续调度已停止，退出循环', { scheduleId })
+      return
+    }
+
+    const lockKey = `schedule:lock:${scheduleId}`
+    const startTime = Date.now()
+
+    try {
+      // 🔍 在执行前检查调度状态（从数据库获取最新状态）
+      const latestSchedule = await this.validateScheduleStatus(scheduleId, schedule.name)
+      if (!latestSchedule) {
+        this.continuousRunning.delete(scheduleId)
+        return
+      }
+
+      // 🔒 尝试获取分布式锁
+      const locked = await withRetryOnNetworkError(
+        () => this.tryLock(lockKey, this.lockTTL),
+        3,
+        1000,
+        `获取分布式锁 [持续调度 ${schedule.name}]`
+      )
+
+      if (!locked) {
+        logger.debug('⏭️ 持续调度任务被其他实例执行中，跳过本次执行', {
+          scheduleId,
+          scheduleName: schedule.name
+        })
+        // 等待一段时间后重试
+        await this.delayBeforeNextRun(5000)
+        if (this.continuousRunning.has(scheduleId)) {
+          setImmediate(() => this.executeContinuous(schedule))
+        }
+        return
+      }
+
+      logger.debug('🔒 持续调度获取分布式锁成功，开始执行', {
+        scheduleId,
+        scheduleName: schedule.name
+      })
+
+      // 执行任务
+      try {
+        await withRetryOnNetworkError(
+          () => this.executionService.execute(latestSchedule),
+          3,
+          1000,
+          `执行持续调度任务 [${schedule.name}]`
+        )
+
+        const duration = Date.now() - startTime
+        logger.info('✅ 持续调度任务执行成功，准备立即执行下一次', {
+          scheduleId,
+          scheduleName: schedule.name,
+          duration: `${duration}ms`
+        })
+      } finally {
+        // 释放锁
+        await withRetryOnNetworkError(
+          () => this.redis.del(lockKey),
+          3,
+          1000,
+          `释放分布式锁 [持续调度 ${schedule.name}]`
+        )
+      }
+
+      // 执行完毕后立即调度下一次执行（使用 setImmediate 避免堆栈溢出）
+      if (this.continuousRunning.has(scheduleId)) {
+        setImmediate(() => this.executeContinuous(schedule))
+      }
+    } catch (error) {
+      const duration = Date.now() - startTime
+      logger.error('❌ 持续调度任务执行异常，等待后重试', {
+        scheduleId,
+        scheduleName: schedule.name,
+        duration: `${duration}ms`,
+        error: (error as Error).message,
+        stack: (error as Error).stack
+      })
+
+      // 发生错误时等待一段时间后重试
+      if (this.continuousRunning.has(scheduleId)) {
+        await this.delayBeforeNextRun(10000) // 错误后等待10秒
+        if (this.continuousRunning.has(scheduleId)) {
+          setImmediate(() => this.executeContinuous(schedule))
+        }
+      }
+    }
+  }
+
+  /**
+   * 下次执行前的延迟
+   */
+  private async delayBeforeNextRun(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms))
   }
 
   /**
@@ -356,11 +497,12 @@ export class CronSchedulerService {
    * 停止所有调度任务
    */
   async stopAll(): Promise<void> {
-    const totalCount = this.scheduleJobs.size + this.intervalTimers.size
+    const totalCount = this.scheduleJobs.size + this.intervalTimers.size + this.continuousRunning.size
     logger.info('🛑 停止所有调度任务', {
       count: totalCount,
       cronJobs: this.scheduleJobs.size,
-      intervalTimers: this.intervalTimers.size
+      intervalTimers: this.intervalTimers.size,
+      continuousSchedules: this.continuousRunning.size
     })
 
     // 清理 node-schedule 任务
@@ -377,6 +519,12 @@ export class CronSchedulerService {
     }
     this.intervalTimers.clear()
 
+    // 清理持续调度运行标记（这会停止持续调度的循环）
+    for (const scheduleId of this.continuousRunning) {
+      logger.debug('停止持续调度', { scheduleId })
+    }
+    this.continuousRunning.clear()
+
     logger.info('✅ 所有调度任务已停止')
   }
 
@@ -384,14 +532,14 @@ export class CronSchedulerService {
    * 获取当前运行的调度任务数量
    */
   getJobCount(): number {
-    return this.scheduleJobs.size + this.intervalTimers.size
+    return this.scheduleJobs.size + this.intervalTimers.size + this.continuousRunning.size
   }
 
   /**
    * 获取所有调度任务ID
    */
   getScheduleIds(): string[] {
-    return Array.from(new Set([...this.scheduleJobs.keys(), ...this.intervalTimers.keys()]))
+    return Array.from(new Set([...this.scheduleJobs.keys(), ...this.intervalTimers.keys(), ...this.continuousRunning]))
   }
 
   /**
