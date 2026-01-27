@@ -181,11 +181,12 @@ export class EventQueryService {
         });
 
         // 调试日志：记录排序后的前10个事件的热度
-        getStructuredLogger().debug('Event hotness sorting result', {
+        getStructuredLogger().info('Event hotness sorting result', {
           type: 'hotness_sort_debug',
           eventCount: sortedEventIds.length,
+          eventsWithStats: displayHotnessMap.size,
           top10: sortedEventIds.slice(0, 10).map(id => ({
-            eventId: id,
+            eventId: id.substring(0, 8),
             hotness: Math.round((displayHotnessMap.get(id) ?? 0) * 100) / 100
           }))
         });
