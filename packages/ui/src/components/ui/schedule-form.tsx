@@ -124,6 +124,7 @@ function ScheduleForm({
             <SelectItem value="cron">Cron 表达式</SelectItem>
             <SelectItem value="interval">固定间隔</SelectItem>
             <SelectItem value="once">一次性</SelectItem>
+            <SelectItem value="continuous">持续运行</SelectItem>
             <SelectItem value="manual">手动触发</SelectItem>
           </SelectContent>
         </Select>
@@ -243,11 +244,29 @@ function ScheduleForm({
         </Card>
       )}
 
-      {data.scheduleType !== 'manual' && data.nextRunTime && (
+      {data.scheduleType === 'continuous' && (
+        <Alert>
+          <Info className="text-primary size-4" strokeWidth={1.8} />
+          <AlertDescription>
+            持续运行模式：工作流执行完毕后会立即重新执行，形成无限循环。适用于需要持续处理任务的场景。
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {data.scheduleType !== 'manual' && data.scheduleType !== 'continuous' && data.nextRunTime && (
         <Alert>
           <Info className="text-primary size-4" strokeWidth={1.8} />
           <AlertDescription className="text-primary">
             预计下次执行时间:{toDisplayTime(data.nextRunTime)}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {data.scheduleType === 'continuous' && (
+        <Alert>
+          <Info className="text-primary size-4" strokeWidth={1.8} />
+          <AlertDescription className="text-primary">
+            启用后将立即开始执行，并在每次执行完毕后自动开始下一次
           </AlertDescription>
         </Alert>
       )}

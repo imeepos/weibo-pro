@@ -59,7 +59,7 @@ export interface ScheduleListProps {
 }
 
 type ScheduleStatus = 'enabled' | 'disabled' | 'expired'
-type ScheduleType = 'cron' | 'interval' | 'once' | 'manual'
+type ScheduleType = 'cron' | 'interval' | 'once' | 'continuous' | 'manual'
 type SortField = 'name' | 'createdAt' | 'nextRunAt' | 'status'
 type SortOrder = 'asc' | 'desc'
 
@@ -108,6 +108,11 @@ const TYPE_CONFIG: Record<ScheduleType, TypeConfig> = {
     label: '一次性',
     color: 'text-chart-5',
     icon: Calendar
+  },
+  continuous: {
+    label: '持续运行',
+    color: 'text-chart-1',
+    icon: Zap
   },
   manual: {
     label: '手动',
@@ -289,6 +294,8 @@ export function ScheduleList({ workflowName, className = '', onClose, apiBaseUrl
         return `每 ${seconds} 秒`
       case 'once':
         return '一次性执行'
+      case 'continuous':
+        return '执行完毕后立即重新执行'
       case 'manual':
         return '手动触发'
       default:

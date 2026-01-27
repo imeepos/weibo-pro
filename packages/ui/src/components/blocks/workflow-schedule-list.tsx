@@ -6,6 +6,7 @@ import {
   Clock,
   Repeat,
   Hand,
+  Infinity,
   Play,
   Power,
   PowerOff,
@@ -29,6 +30,7 @@ const scheduleTypeLabels: Record<ScheduleType, string> = {
   once: '一次性',
   cron: 'Cron',
   interval: '间隔',
+  continuous: '持续运行',
   manual: '手动'
 }
 
@@ -36,6 +38,7 @@ const scheduleTypeIcons: Record<ScheduleType, React.ComponentType<{ className?: 
   once: Calendar,
   cron: Clock,
   interval: Repeat,
+  continuous: Infinity,
   manual: Hand
 }
 
@@ -93,6 +96,7 @@ export function WorkflowScheduleList({
               <TableCell>
                 {schedule.scheduleType === 'cron' && schedule.cronExpression}
                 {schedule.scheduleType === 'interval' && `${schedule.intervalSeconds}秒`}
+                {schedule.scheduleType === 'continuous' && '执行完毕后立即重新执行'}
                 {(schedule.scheduleType === 'once' || schedule.scheduleType === 'manual') && '-'}
               </TableCell>
               <TableCell>
