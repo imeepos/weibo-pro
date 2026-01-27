@@ -67,39 +67,62 @@ function buildDefaultPrompt(
     // 计算更新时间（事件最后更新时间距今）
     const updatedDaysAgo = calculateDaysDiff(e.updated_at, currentTime);
 
-    return `${idx + 1}. ID: ${e.id}
-   标题: ${e.title}
-   分类: ${e.category?.name || '未分类'}
-   状态: ${crawlStatus}
-   总时间跨度: ${formatDays(totalDays)} (${eventStartTime.toISOString().split('T')[0]} ~ ${currentTime.toISOString().split('T')[0]})
-   已爬取: ${timeRangeInfo ? `${formatDays(crawledDays)} (${coveragePercent}%) [${timeRangeInfo.min.split('T')[0]} ~ ${timeRangeInfo.max.split('T')[0]}]` : '无数据'}
-   时间差值: ${formatDays(gapDays)} (${timeRangeInfo ? `${coveragePercent}%已覆盖` : '0%已覆盖'})
-   最后更新: ${formatDays(updatedDaysAgo)}前 (${e.updated_at.toISOString().split('T')[0]})`;
+    return `[${idx + 1}] ID: ${e.id}
+标题: ${e.title}
+分类: ${e.category?.name || '未分类'}
+状态: ${crawlStatus}
+总时间跨度: ${formatDays(totalDays)} (${eventStartTime.toISOString().split('T')[0]} ~ ${currentTime.toISOString().split('T')[0]})
+已爬取: ${timeRangeInfo ? `${formatDays(crawledDays)} (${coveragePercent}%) [${timeRangeInfo.min.split('T')[0]} ~ ${timeRangeInfo.max.split('T')[0]}]` : '无数据'}
+时间差值: ${formatDays(gapDays)} (${timeRangeInfo ? `${coveragePercent}%已覆盖` : '0%已覆盖'})
+最后更新: ${formatDays(updatedDaysAgo)}前 (${e.updated_at.toISOString().split('T')[0]})`;
   }).join('\n\n');
 
-  return `你是一个事件分派专家，需要从以下事件列表中选择一个事件进行爬取。
+  return `# 事件分派任务
 
-事件列表：
+YOU MUST 从以下事件列表中选择【且仅选择一个】事件进行爬取。返回空选择或跳过选择是严格禁止的。
+
+## 可选事件列表
+
 ${eventList}
 
-选择原则（按优先级排序）：
-1. 【强制】优先选择未爬取完成的事件（状态为"未爬取"）
-2. 【核心】时间差值大者优先 - 时间差值 = 总时间跨度 - 已爬取时间范围，差值越大说明数据缺口越大
-3. 【防重】更新时间早者优先 - 优先选择最后更新时间较早的事件，防止重复爬取
-4. 【连续】已有时间范围的事件 - 对于已有帖子数据的事件，从最大时间继续爬取，保持数据连续性
+## 选择逻辑（按此顺序逐步评估）
 
-注意：
-- 时间差值相同的情况下，选择更新时间更早的事件
-- 忽略事件热度，专注数据完整性
-- 忽略分类平均分配，选择数据缺口最大的事件
+第一步：过滤未完成事件
+- 优先选择状态为"未爬取"的事件
+- 如果所有事件都已爬取，选择时间差值最大的事件进行补充爬取
 
-请严格按以下 JSON 格式返回你的选择：
+第二步：计算优先级分数
+- 未爬取事件：基础分 100 + 时间差值天数
+- 已爬取事件：基础分 50 + 时间差值天数
+- 更新时间早者额外加 10 分（防重）
+
+第三步：选择得分最高的事件
+- 如果得分相同，选择列表中排在前面的事件
+
+## 输出格式（必须严格遵守）
+
 \`\`\`json
 {
-  "selectedEventId": "事件ID",
-  "reason": "选择原因（需说明时间差值、更新时间等关键因素）"
+  "selectedEventId": "事件ID（必须从上述列表中选择）",
+  "reason": "选择原因（必须说明得分计算过程）"
 }
-\`\`\``;
+\`\`\`
+
+## 示例
+
+输入事件：
+[1] ID: evt-001, 状态: 未爬取, 时间差值: 30天
+[2] ID: evt-002, 状态: 已爬取, 时间差值: 5天
+
+正确输出：
+{"selectedEventId": "evt-001", "reason": "未爬取事件，优先级最高，得分100+30=130"}
+
+## 强制要求
+
+1. selectedEventId 字段必须存在且不为空
+2. selectedEventId 必须是上述事件列表中的有效 ID
+3. reason 字段必须说明选择理由
+4. 禁止返回 null、undefined 或空字符串`;
 }
 
 @Injectable()
@@ -146,8 +169,8 @@ export class EventDispatcherAstVisitor {
               .createQueryBuilder(EventEntity, 'event')
               .leftJoinAndSelect('event.category', 'category')
               .where('event.status = :status', { status: 'active' })
-              .orderBy('event.crawl_end_reason', 'ASC')
-              .addOrderBy('event.hotness', 'DESC')
+              .orderBy('event.updated_at', 'ASC')
+              .addOrderBy('event.created_at', 'DESC')
               .getMany();
           });
 
