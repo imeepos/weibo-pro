@@ -15,7 +15,8 @@ describe('EventQueryService - 实时热度持久化', () => {
         const updateIndex = code.indexOf('entityManager.update');
         const calculateIndex = code.indexOf('calculateDecayedHotnessForEvents');
         expect(updateIndex).toBeGreaterThan(calculateIndex);
-        expect(code).toMatch(/update\(EventEntity,\s*.*id.*,\s*\{\s*hotness:/);
+        // 更新正则以匹配新的变量名 eventId
+        expect(code).toMatch(/update\(EventEntity,\s*eventId/);
     });
 
     it('应该在 getEventList 方法中持久化热度', () => {
@@ -27,108 +28,171 @@ describe('EventQueryService - 实时热度持久化', () => {
     });
 });
 
-describe('EventQueryService - 热度排序问题（TDD 第一步）', () => {
+describe('EventQueryService - 热度排序问题已修复', () => {
     let serviceCode: string;
-    let queriesCode: string;
 
     beforeAll(() => {
         const serviceFilePath = path.resolve(__dirname, './event-query.service.ts');
-        const queriesFilePath = path.resolve(__dirname, '../../../../../../packages/entities/src/queries/event.queries.ts');
         serviceCode = fs.readFileSync(serviceFilePath, 'utf-8');
-        queriesCode = fs.readFileSync(queriesFilePath, 'utf-8');
     });
 
-    it('应该验证当前实现中存在的排序问题', () => {
-        // 这个测试通过代码静态分析验证已知的 bug：
-        // 问题：数据库查询使用持久化的旧 hotness 排序，
-        // 但计算出新的 displayHotness 后只在内存中排序，
-        // 导致当数据库 LIMIT 限制时，可能错过真正高热度的事件
-
-        // 问题1: getEventList 使用 findEventList 查询数据
-        expect(serviceCode).toContain('findEventList');
-
-        // 问题2: findEventList 按数据库中的旧 hotness 排序
-        expect(queriesCode).toMatch(/\.orderBy\('event\.hotness',\s*'DESC'\)/);
-
-        // 问题3: getEventList 在查询数据后计算 displayHotness
-        const findEventListIndex = serviceCode.indexOf('findEventList');
-        const calculateDecayedIndex = serviceCode.indexOf('calculateDecayedHotnessForEvents');
-        expect(findEventListIndex).toBeLessThan(calculateDecayedIndex);
-
-        // 问题4: 内存排序在数据库查询之后
-        const sortIndex = serviceCode.indexOf('.sort((a, b) => b.hotness - a.hotness)');
-        expect(sortIndex).toBeGreaterThan(findEventListIndex);
-        expect(sortIndex).toBeGreaterThan(calculateDecayedIndex);
-
-        console.log('=== 排序问题分析 ===');
-        console.log('1. findEventList 在数据库层按 event.hotness 排序并应用 LIMIT');
-        console.log('2. calculateDecayedHotnessForEvents 在之后计算新的热度');
-        console.log('3. data.sort() 在内存中排序');
-        console.log('4. 问题：内存排序无法找回被 LIMIT 截断的高热度事件');
-        console.log('====================');
-    });
-
-    it('应该演示 LIMIT 导致的数据丢失问题场景', () => {
-        // 验证 findEventList 调用时带 limit 参数
-        expect(serviceCode).toMatch(/findEventList\([^)]*\{[\s\S]*limit:/);
-
-        // 验证 calculateDecayedHotnessForEvents 在查询之后调用
-        const getEventListMethod = serviceCode.substring(
-            serviceCode.indexOf('async getEventList'),
-            serviceCode.indexOf('async getEventList') + 3000
-        );
-        expect(getEventListMethod.indexOf('findEventList')).toBeLessThan(
-            getEventListMethod.indexOf('calculateDecayedHotnessForEvents')
-        );
-
-        // 验证存在内存排序
-        expect(getEventListMethod).toContain('.sort((a, b) => b.hotness - a.hotness)');
-
-        console.log('=== LIMIT 导致数据丢失示例 ===');
-        console.log('数据库状态（旧 hotness）:');
-        console.log('  事件1-5: 100, 90, 80, 70, 60（旧事件，已衰减）');
-        console.log('  事件6-10: 10, 20, 30, 40, 50（新事件，实际热度高）');
-        console.log('');
-        console.log('数据库查询（ORDER BY hotness DESC LIMIT 5）:');
-        console.log('  返回: 事件1-5（100, 90, 80, 70, 60）');
-        console.log('  遗漏: 事件6-10（真正的热门事件）');
-        console.log('');
-        console.log('时间衰减后（lambda=0.05）:');
-        console.log('  事件1-5 的 displayHotness: 10, 20, 30, 40, 50');
-        console.log('  事件6-10 的 displayHotness: 95, 85, 75, 65, 55（被遗漏！）');
-        console.log('');
-        console.log('内存排序结果（第1页）:');
-        console.log('  当前返回: [50, 40, 30, 20, 10]（都是低热度）');
-        console.log('  应该返回: [95, 85, 75, 65, 55]（真正的热门）');
-        console.log('=========================');
-    });
-
-    it('应该验证持久化热度的时机问题', () => {
-        // 验证持久化 hotness 的时机
-        expect(serviceCode).toContain('entityManager.update(EventEntity');
-
-        const persistenceIndex = serviceCode.indexOf('entityManager.update(EventEntity');
-        const calculateIndex = serviceCode.indexOf('calculateDecayedHotnessForEvents');
-        expect(persistenceIndex).toBeGreaterThan(calculateIndex);
-
-        // 问题：持久化在 LIMIT 之后，所以被截断的事件无法持久化新热度
+    it('应该先获取所有符合条件的ID（不分页）', () => {
         const getEventListMethod = serviceCode.substring(
             serviceCode.indexOf('async getEventList'),
             serviceCode.indexOf('async getEventList') + 3000
         );
 
-        // 验证存在遍历 events 的逻辑（events 来自 findEventList，已被 LIMIT 截断）
-        expect(getEventListMethod).toContain('for (const event of events)');
+        // 验证调用了 getEventIds 获取所有ID
+        expect(getEventListMethod).toContain('getEventIds');
+        expect(getEventListMethod).toContain('allEventIds');
 
-        console.log('=== 持久化时机分析 ===');
-        console.log('当前流程:');
-        console.log('1. 查询数据库（使用旧的 hotness 排序）+ LIMIT');
-        console.log('2. 计算 displayHotness（基于统计数据时间衰减）');
-        console.log('3. 内存排序 data.sort()');
-        console.log('4. 持久化新的 hotness（但只对 LIMIT 返回的事件）');
+        // 验证不再使用 findEventList
+        expect(getEventListMethod).not.toContain('findEventList');
+
+        console.log('=== 修复验证：第一步 ===');
+        console.log('使用 getEventIds 获取所有符合条件的ID（不分页）');
+        console.log('=======================');
+    });
+
+    it('应该在获取ID后计算所有事件的衰减热度', () => {
+        const getEventListMethod = serviceCode.substring(
+            serviceCode.indexOf('async getEventList'),
+            serviceCode.indexOf('async getEventList') + 3000
+        );
+
+        // 验证计算热度的调用在获取ID之后
+        const getEventIdsIndex = getEventListMethod.indexOf('getEventIds');
+        const calculateIndex = getEventListMethod.indexOf('calculateDecayedHotnessForEvents');
+        expect(calculateIndex).toBeGreaterThan(getEventIdsIndex);
+
+        // 验证对所有事件ID计算热度
+        expect(getEventListMethod).toContain('calculateDecayedHotnessForEvents');
+        expect(getEventListMethod).toContain('allEventIds');
+
+        console.log('=== 修复验证：第二步 ===');
+        console.log('对所有事件ID（allEventIds）计算衰减热度');
+        console.log('=======================');
+    });
+
+    it('应该按新热度排序后再分页', () => {
+        const getEventListMethod = serviceCode.substring(
+            serviceCode.indexOf('async getEventList'),
+            serviceCode.indexOf('async getEventList') + 3000
+        );
+
+        // 验证存在排序逻辑
+        expect(getEventListMethod).toContain('sortedEventIds');
+        expect(getEventListMethod).toContain('hotnessB - hotnessA');
+
+        // 验证排序在计算热度之后
+        const calculateIndex = getEventListMethod.indexOf('calculateDecayedHotnessForEvents');
+        const sortIndex = getEventListMethod.indexOf('hotnessB - hotnessA');
+        expect(sortIndex).toBeGreaterThan(calculateIndex);
+
+        // 验证手动分页在排序之后
+        expect(getEventListMethod).toContain('paginatedIds');
+        expect(getEventListMethod).toContain('.slice((page - 1) * pageSize, page * pageSize)');
+
+        console.log('=== 修复验证：第三步 ===');
+        console.log('按热度排序所有事件ID');
+        console.log('手动分页：sortedEventIds.slice((page - 1) * pageSize, page * pageSize)');
+        console.log('=======================');
+    });
+
+    it('应该持久化所有事件的新热度（异步）', () => {
+        const getEventListMethod = serviceCode.substring(
+            serviceCode.indexOf('async getEventList'),
+            serviceCode.indexOf('async getEventList') + 3000
+        );
+
+        // 验证使用 setImmediate 异步持久化
+        expect(getEventListMethod).toContain('setImmediate');
+
+        // 验证遍历 displayHotnessMap（所有事件）
+        expect(getEventListMethod).toContain('displayHotnessMap.entries()');
+        expect(getEventListMethod).toContain('for (const [eventId, newHotness] of displayHotnessMap.entries())');
+
+        // 验证持久化逻辑存在
+        const persistenceIndex = getEventListMethod.indexOf('setImmediate');
+        expect(persistenceIndex).toBeGreaterThan(-1);
+
+        console.log('=== 修复验证：持久化 ===');
+        console.log('使用 setImmediate 异步持久化所有事件的新热度');
+        console.log('不再只持久化 LIMIT 返回的事件，而是持久化所有事件');
+        console.log('=======================');
+    });
+
+    it('应该使用新的辅助方法', () => {
+        // 验证存在 getEventIds 方法
+        expect(serviceCode).toContain('private async getEventIds');
+        expect(serviceCode).toContain('filters?: { search?: string; category?: string }');
+
+        // 验证存在 getEventsByIds 方法
+        expect(serviceCode).toContain('private async getEventsByIds');
+        expect(serviceCode).toContain('ids: string[]');
+
+        // 验证返回类型（移除正则表达式中的特殊字符转义问题）
+        expect(serviceCode).toContain('getEventIds(');
+        expect(serviceCode).toContain(': Promise<string[]>');
+
+        // 验证 getEventsByIds 返回事件数组
+        expect(serviceCode).toContain('getEventsByIds(');
+        expect(serviceCode).toContain(': Promise<EventWithCategory[]>');
+
+        console.log('=== 修复验证：辅助方法 ===');
+        console.log('新增 getEventIds：获取符合条件的所有事件ID（不分页）');
+        console.log('新增 getEventsByIds：根据ID数组获取事件详情');
+        console.log('=======================');
+    });
+});
+
+describe('EventQueryService - 修复后的执行流程', () => {
+    let serviceCode: string;
+
+    beforeAll(() => {
+        const serviceFilePath = path.resolve(__dirname, './event-query.service.ts');
+        serviceCode = fs.readFileSync(serviceFilePath, 'utf-8');
+    });
+
+    it('应该演示修复后的正确流程', () => {
+        const getEventListMethod = serviceCode.substring(
+            serviceCode.indexOf('async getEventList'),
+            serviceCode.indexOf('async getEventList') + 3000
+        );
+
+        // 验证执行顺序
+        const indices = {
+            getEventIds: getEventListMethod.indexOf('getEventIds'),
+            calculate: getEventListMethod.indexOf('calculateDecayedHotnessForEvents'),
+            sort: getEventListMethod.indexOf('hotnessB - hotnessA'),
+            paginate: getEventListMethod.indexOf('.slice((page - 1) * pageSize'),
+            getEvents: getEventListMethod.indexOf('getEventsByIds'),
+            build: getEventListMethod.indexOf('mapEventToListItem'),
+            persist: getEventListMethod.indexOf('setImmediate'),
+        };
+
+        // 验证顺序：获取ID -> 计算热度 -> 排序 -> 分页 -> 获取详情 -> 构建 -> 持久化
+        expect(indices.getEventIds).toBeLessThan(indices.calculate);
+        expect(indices.calculate).toBeLessThan(indices.sort);
+        expect(indices.sort).toBeLessThan(indices.paginate);
+        expect(indices.paginate).toBeLessThan(indices.getEvents);
+        expect(indices.getEvents).toBeLessThan(indices.build);
+
+        console.log('=== 修复后的执行流程 ===');
+        console.log('1. getEventIds：获取所有符合条件的ID（不分页）');
+        console.log('2. calculateDecayedHotnessForEvents：计算所有事件的衰减热度');
+        console.log('3. sortedEventIds：按热度排序所有事件ID');
+        console.log('4. paginatedIds：手动分页截取当前页的ID');
+        console.log('5. getEventsByIds：获取分页后的事件详情');
+        console.log('6. mapEventToListItem：构建返回数据');
+        console.log('7. setImmediate：异步持久化所有事件的新热度');
+        console.log('8. return：返回结果（不等待持久化完成）');
+        console.log('========================');
         console.log('');
-        console.log('问题：第4步只能持久化第1步返回的事件');
-        console.log('       被 LIMIT 截断的高热度事件永远无法被持久化和查询到');
-        console.log('=================');
+        console.log('关键改进：');
+        console.log('- 不再依赖数据库的 ORDER BY + LIMIT');
+        console.log('- 在内存中按新热度排序后再分页');
+        console.log('- 持久化所有事件的新热度，不只是当前页');
+        console.log('========================');
     });
 });

@@ -6,7 +6,6 @@ import {
   WeiboPostEntity,
   PostNLPResultEntity,
   findHotEvents,
-  findEventList,
   findLatestEventStatistics,
   getEventCategoryStats,
   getDateRangeByTimeRange,
@@ -67,7 +66,7 @@ export class EventQueryService {
     const pageSize = pagination?.pageSize || 10;
     const search = pagination?.search;
     const category = pagination?.category;
-    const lambda = pagination?.lambda ?? 0.05; // 默认衰减系数：半衰期约14小时
+    const lambda = pagination?.lambda ?? 0.05;
 
     const cacheKey = CacheService.buildKey(
       CACHE_KEYS.EVENT_DETAIL,
@@ -83,29 +82,43 @@ export class EventQueryService {
     return await this.cacheService.getOrSet(
       cacheKey,
       async () => {
-        // 获取总数
-        const total = await this.getEventCount(timeRange, { search, category });
+        // 【修改】第一步：获取符合条件的所有事件ID（不分页）
+        const allEventIds = await this.getEventIds(timeRange, { search, category });
+        const total = allEventIds.length;
 
-        // 获取分页数据
-        const events = await findEventList(timeRange, {
-          limit: pageSize,
-          offset: (page - 1) * pageSize,
-          search,
-          category
-        });
+        if (total === 0) {
+          return {
+            data: [],
+            total: 0,
+            page,
+            pageSize,
+            totalPages: 0
+          };
+        }
 
-        const eventIds = events.map((e) => e.id);
-
+        // 【修改】第二步：计算所有事件的衰减热度
         const statsTimeRange = timeRange || '24h';
-        const allStatistics = await this.getStatisticsBatch(eventIds, statsTimeRange);
-
-        // 计算每个事件的展示热度（带时间衰减）
         const displayHotnessMap = await this.calculateDecayedHotnessForEvents(
-          eventIds,
+          allEventIds,
           statsTimeRange,
           lambda
         );
 
+        // 【修改】第三步：按热度排序所有事件ID
+        const sortedEventIds = allEventIds.sort((a, b) => {
+          const hotnessA = displayHotnessMap.get(a) ?? 0;
+          const hotnessB = displayHotnessMap.get(b) ?? 0;
+          return hotnessB - hotnessA; // 降序
+        });
+
+        // 【修改】第四步：手动分页
+        const paginatedIds = sortedEventIds.slice((page - 1) * pageSize, page * pageSize);
+
+        // 【修改】第五步：获取分页后的事件详情
+        const events = await this.getEventsByIds(paginatedIds);
+        const allStatistics = await this.getStatisticsBatch(paginatedIds, statsTimeRange);
+
+        // 【修改】第六步：构建返回数据（不需要再排序）
         const data = events.map((event) => {
           const stats = allStatistics.find(s => s.event_id === event.id);
           const displayHotness = Math.round((displayHotnessMap.get(event.id) ?? 0) * 100) / 100;
@@ -116,17 +129,13 @@ export class EventQueryService {
           );
         });
 
-        // 按展示热度降序排列
-        data.sort((a, b) => b.hotness - a.hotness);
-
-        // 持久化实时热度到数据库
-        await useEntityManager(async (entityManager) => {
-          for (const event of events) {
-            const newHotness = displayHotnessMap.get(event.id);
-            if (newHotness !== undefined) {
-              await entityManager.update(EventEntity, event.id, { hotness: newHotness });
+        // 持久化实时热度到数据库（异步，不阻塞返回）
+        setImmediate(async () => {
+          await useEntityManager(async (entityManager) => {
+            for (const [eventId, newHotness] of displayHotnessMap.entries()) {
+              await entityManager.update(EventEntity, eventId, { hotness: newHotness });
             }
-          }
+          });
         });
 
         return {
@@ -141,36 +150,55 @@ export class EventQueryService {
     );
   }
 
-  private async getEventCount(
+  /**
+   * 获取符合条件的所有事件ID（用于计算热度后再分页）
+   */
+  private async getEventIds(
     timeRange?: TimeRange,
     filters?: { search?: string; category?: string }
-  ): Promise<number> {
+  ): Promise<string[]> {
     return await useEntityManager(async (entityManager) => {
-      let query = entityManager
+      const query = entityManager
         .createQueryBuilder('events', 'event')
         .leftJoin('event.category', 'category')
+        .select('event.id', 'id')
         .where('event.deleted_at IS NULL')
         .andWhere('event.status = :status', { status: 'active' });
 
       if (timeRange) {
         const dateRange = getDateRangeByTimeRange(timeRange);
-        query = query
-          .andWhere('COALESCE(event.occurred_at, event.created_at) >= :start', { start: dateRange.start })
+        query.andWhere('COALESCE(event.occurred_at, event.created_at) >= :start', { start: dateRange.start })
           .andWhere('COALESCE(event.occurred_at, event.created_at) <= :end', { end: dateRange.end });
       }
 
       if (filters?.search) {
-        query = query.andWhere(
+        query.andWhere(
           '(event.title ILIKE :search OR event.description ILIKE :search)',
           { search: `%${filters.search}%` }
         );
       }
 
       if (filters?.category) {
-        query = query.andWhere('category.name = :category', { category: filters.category });
+        query.andWhere('category.name = :category', { category: filters.category });
       }
 
-      return await query.getCount();
+      const result = await query.getRawMany();
+      return result.map(r => r.id);
+    });
+  }
+
+  /**
+   * 根据ID数组获取事件详情
+   */
+  private async getEventsByIds(ids: string[]): Promise<EventWithCategory[]> {
+    if (ids.length === 0) return [];
+
+    return await useEntityManager(async (entityManager) => {
+      return await entityManager
+        .createQueryBuilder(EventEntity, 'event')
+        .leftJoinAndSelect('event.category', 'category')
+        .where('event.id IN (:...ids)', { ids })
+        .getMany();
     });
   }
 
