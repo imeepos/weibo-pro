@@ -37,8 +37,18 @@ import type {
 } from './types';
 import { TREND_THRESHOLD, INFLUENCE_WEIGHTS } from './constants';
 import { UserRelationNetwork } from '@sker/sdk';
+import { getStructuredLogger } from '../../../utils/logger';
 
-/** 最大热度计算事件数量限制 */
+/**
+ * 最大热度计算事件数量限制
+ *
+ * 当事件数量超过此阈值时，系统会回退到使用数据库的 hotness 字段排序，
+ * 避免在内存中计算所有事件的衰减热度导致性能问题。
+ *
+ * 注意：该值是硬编码的常量。如果需要动态配置，可以考虑：
+ * 1. 将其移至环境变量或配置文件
+ * 2. 根据系统资源动态调整
+ */
 const MAX_HOTNESS_CALCULATION_EVENTS = 1000;
 
 @Injectable({ providedIn: 'root' })
@@ -103,7 +113,27 @@ export class EventQueryService {
         const statsTimeRange = timeRange || '24h';
 
         // 【性能优化】当事件数量超过阈值时，回退到数据库排序
+        //
+        // 回退逻辑说明：
+        // 1. 当事件数量 > MAX_HOTNESS_CALCULATION_EVENTS 时，计算所有事件的衰减热度会导致性能问题
+        // 2. 回退使用数据库的 hotness 字段排序（该字段由正常流程定时更新）
+        // 3. 回退模式不使用 lambda 参数进行时间衰减计算，使用数据库持久化的 hotness 值
+        // 4. total 使用 allEventIds.length，这是符合条件的总事件数，与排序方式无关
+        //
+        // 局限性：
+        // - 回退模式不应用实时时间衰减，热度值可能不够"新鲜"
+        // - 建议通过后台任务定期更新 hotness 字段以保持数据新鲜度
         if (needsPaging) {
+          // 记录回退触发情况，便于监控
+          getStructuredLogger().warn('Event query fallback to database sorting due to large event count', {
+            type: 'performance_fallback',
+            eventCount: total,
+            threshold: MAX_HOTNESS_CALCULATION_EVENTS,
+            timeRange: statsTimeRange,
+            page,
+            pageSize
+          });
+
           // 使用原有的 findEventList 逻辑（按数据库 hotness 排序）
           const events = await findEventList(statsTimeRange, {
             limit: pageSize,
@@ -116,7 +146,7 @@ export class EventQueryService {
           const paginatedIds = events.map(e => e.id);
           const allStatistics = await this.getStatisticsBatch(paginatedIds, statsTimeRange);
 
-          // 构建返回数据
+          // 构建返回数据（使用数据库持久化的 hotness 值）
           const data = events.map((event) => {
             const stats = allStatistics.find(s => s.event_id === event.id);
             const displayHotness = parseFloat(event.hotness.toString());
