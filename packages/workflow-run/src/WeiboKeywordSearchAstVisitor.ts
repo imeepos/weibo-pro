@@ -234,7 +234,7 @@ export class WeiboKeywordSearchAstVisitor {
 
             // 如果需要跳过，则跳过
             if (shouldSkip) {
-                logger.debug('[WeiboKeywordSearch] 跳过帖子（12小时内有快照）:', post.mid);
+                logger.info('[WeiboKeywordSearch] 跳过帖子（已存在），不发射数据:', post.mid);
                 continue;
             }
 
@@ -311,6 +311,7 @@ export class WeiboKeywordSearchAstVisitor {
 
                         // 如果需要跳过，则跳过
                         if (shouldSkip) {
+                            logger.info('[WeiboKeywordSearch] 跳过帖子（已存在），不发射数据:', post.mid);
                             continue;
                         }
 
