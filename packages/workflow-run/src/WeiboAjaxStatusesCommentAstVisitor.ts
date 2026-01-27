@@ -291,13 +291,16 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
                         const sourceUserId = comment.user_id?.toString();
                         const targetUserId = comment.reply_to_user_id?.toString();
 
-                        if (sourceUserId && targetUserId && sourceUserId !== targetUserId) {
+                        if (sourceUserId && targetUserId && sourceUserId !== targetUserId && comment.created_at) {
+                            const createdAt = typeof comment.created_at === 'string'
+                                ? new Date(comment.created_at)
+                                : comment.created_at;
                             await UserRelationStatisticsHelper.upsertRelation(
                                 m,
                                 sourceUserId,
                                 targetUserId,
                                 UserRelationType.COMMENT,
-                                new Date(comment.created_at),
+                                createdAt,
                                 post.event_id
                             );
                         }
@@ -306,7 +309,10 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
                     // 小时统计 - 只对新评论
                     for (const comment of newComments) {
                         if (comment.created_at) {
-                            const timeDimensions = HourlyStatisticsHelper.getTimeDimensions(new Date(comment.created_at));
+                            const createdAt = typeof comment.created_at === 'string'
+                                ? new Date(comment.created_at)
+                                : comment.created_at;
+                            const timeDimensions = HourlyStatisticsHelper.getTimeDimensions(createdAt);
                             await HourlyStatisticsHelper.upsertStatistics(
                                 m,
                                 post.event_id,

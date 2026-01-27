@@ -129,13 +129,16 @@ export class WeiboAjaxStatusesRepostTimelineAstVisitor extends WeiboApiClient {
                                             const targetUser = (repost.retweeted_status as Record<string, unknown> | null)?.user as Record<string, unknown> | undefined;
                                             const targetUserId = targetUser?.id?.toString();
 
-                                            if (sourceUserId && targetUserId && sourceUserId !== targetUserId) {
+                                            if (sourceUserId && targetUserId && sourceUserId !== targetUserId && repost.created_at) {
+                                                const createdAt = typeof repost.created_at === 'string'
+                                                    ? new Date(repost.created_at)
+                                                    : repost.created_at;
                                                 await UserRelationStatisticsHelper.upsertRelation(
                                                     m,
                                                     sourceUserId,
                                                     targetUserId,
                                                     UserRelationType.REPOST,
-                                                    new Date(repost.created_at),
+                                                    createdAt,
                                                     post.event_id
                                                 );
                                             }
@@ -144,7 +147,10 @@ export class WeiboAjaxStatusesRepostTimelineAstVisitor extends WeiboApiClient {
                                         // 小时统计 - 只对新数据
                                         for (const repost of newReposts) {
                                             if (repost.created_at) {
-                                                const timeDimensions = HourlyStatisticsHelper.getTimeDimensions(repost.created_at);
+                                                const createdAt = typeof repost.created_at === 'string'
+                                                    ? new Date(repost.created_at)
+                                                    : repost.created_at;
+                                                const timeDimensions = HourlyStatisticsHelper.getTimeDimensions(createdAt);
                                                 await HourlyStatisticsHelper.upsertStatistics(
                                                     m,
                                                     post.event_id,
