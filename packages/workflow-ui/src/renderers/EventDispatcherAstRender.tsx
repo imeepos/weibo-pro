@@ -67,16 +67,6 @@ const EventDispatcherRender: React.FC<{ ast: EventDispatcherAst }> = ({ ast }) =
             <div className="text-sm font-medium text-foreground">
               {ast.selectedEvent?.title || ast.selectedEventId}
             </div>
-            {ast.selectedEvent?.category && (
-              <div className="text-xs text-muted-foreground mt-1">
-                分类：{ast.selectedEvent.category}
-              </div>
-            )}
-            {ast.selectedEvent?.hotness !== undefined && (
-              <div className="text-xs text-muted-foreground">
-                热度：{ast.selectedEvent.hotness}
-              </div>
-            )}
           </div>
         </div>
       )}
@@ -93,11 +83,6 @@ const EventDispatcherRender: React.FC<{ ast: EventDispatcherAst }> = ({ ast }) =
                 className="p-2 rounded bg-accent/30 border border-border text-xs"
               >
                 <div className="font-medium text-foreground">{event.title}</div>
-                {event.category && (
-                  <div className="text-muted-foreground mt-0.5">
-                    {event.category}
-                  </div>
-                )}
               </div>
             ))}
           </div>
