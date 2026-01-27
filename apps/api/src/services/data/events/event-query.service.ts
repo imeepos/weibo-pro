@@ -200,11 +200,25 @@ export class EventQueryService {
 
         // 持久化实时热度到数据库（异步，不阻塞返回）
         setImmediate(async () => {
-          await useEntityManager(async (entityManager) => {
-            for (const [eventId, newHotness] of displayHotnessMap.entries()) {
-              await entityManager.update(EventEntity, eventId, { hotness: newHotness });
-            }
-          });
+          try {
+            await useEntityManager(async (entityManager) => {
+              for (const [eventId, newHotness] of displayHotnessMap.entries()) {
+                await entityManager.update(EventEntity, eventId, { hotness: newHotness });
+              }
+            });
+            getStructuredLogger().info('Successfully persisted event hotness to database', {
+              type: 'hotness_persisted',
+              eventCount: displayHotnessMap.size,
+              timeRange: statsTimeRange,
+              lambda
+            });
+          } catch (error) {
+            getStructuredLogger().error('Failed to persist event hotness to database', {
+              type: 'hotness_persist_error',
+              eventCount: displayHotnessMap.size,
+              error: error instanceof Error ? error.message : String(error)
+            });
+          }
         });
 
         return {
