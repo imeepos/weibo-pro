@@ -89,11 +89,19 @@ export class WeiboAjaxStatusesLikeShowAstVisitor extends WeiboApiClient {
                                     console.log(`[${page}]处理${userEntities.length}个用户`);
                                     await m.upsert(WeiboUserEntity, userEntities as any, ['id']);
 
+                                    // 获取帖子时间作为点赞时间的近似值
+                                    const post = await m.findOne(WeiboPostEntity, {
+                                        where: { id: ast.mid },
+                                        select: ['created_at', 'event_id']
+                                    });
+                                    const approximateLikeTime = post?.created_at || new Date();
+
                                     const likeEntities = body.data.map(item =>
                                         m.create(WeiboLikeEntity, {
                                             userWeiboId: String(item.user.id),
                                             targetWeiboId: ast.mid,
-                                            targetUserWeiboId: ast.uid
+                                            targetUserWeiboId: ast.uid,
+                                            createdAt: approximateLikeTime
                                         } as any)
                                     );
 
@@ -123,11 +131,6 @@ export class WeiboAjaxStatusesLikeShowAstVisitor extends WeiboApiClient {
                                     await m.upsert(WeiboLikeEntity, likeEntities as any, ['userWeiboId', 'targetWeiboId']);
 
                                     // 入库后触发统计（只对新数据）
-                                    const post = await m.findOne(WeiboPostEntity, {
-                                        where: { id: ast.mid },
-                                        select: ['event_id']
-                                    });
-
                                     // 过滤出新数据（利用已有的 existingKeys）
                                     const newLikes = likeEntities.filter(e =>
                                         !existingKeys.has(`${e.userWeiboId}:${e.targetWeiboId}`)
@@ -136,7 +139,7 @@ export class WeiboAjaxStatusesLikeShowAstVisitor extends WeiboApiClient {
                                     if (post?.event_id && newLikes.length > 0) {
                                         // 用户关系统计 - 只对新数据
                                         for (const like of newLikes) {
-                                            if (like.userWeiboId !== like.targetUserWeiboId) {
+                                            if (like.userWeiboId !== like.targetUserWeiboId && like.createdAt) {
                                                 await UserRelationStatisticsHelper.upsertRelation(
                                                     m,
                                                     like.userWeiboId,

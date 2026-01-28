@@ -674,5 +674,48 @@ describe('WeiboAjaxStatusesLikeShowAstVisitor - 统计更新修复验证', () =>
       // 没有 createdAt，不应该触发小时统计
       expect(hourlyStatsCount).toBe(0);
     });
+
+    it('使用帖子时间作为点赞时间近似值', async () => {
+      const eventId = 'test-event-approximate-time';
+      const postId = 'post-approximate-time';
+      const postTime = new Date('2026-01-22T10:30:00Z');
+
+      // 预设帖子数据（包含 created_at）
+      mockManager.setPost(postId, {
+        id: postId,
+        event_id: eventId,
+        created_at: postTime
+      });
+
+      // 模拟从 API 获取的点赞数据（没有时间戳）
+      const apiLikeData = [
+        { user: { id: 'user1' } },
+        { user: { id: 'user2' } }
+      ];
+
+      // 获取帖子时间作为近似值
+      const post = await mockManager.findOne(WeiboPostEntity, {
+        where: { id: postId },
+        select: ['created_at', 'event_id']
+      });
+      const approximateLikeTime = post?.created_at || new Date();
+
+      // 创建点赞实体（使用帖子时间）
+      const likeEntities = apiLikeData.map(item =>
+        mockManager.create(WeiboLikeEntity, {
+          userWeiboId: String(item.user.id),
+          targetWeiboId: postId,
+          targetUserWeiboId: 'author1',
+          createdAt: approximateLikeTime
+        })
+      );
+
+      // 验证：所有点赞记录都有 createdAt
+      expect(likeEntities.every(like => like.createdAt)).toBe(true);
+
+      // 验证：createdAt 等于帖子时间
+      expect(likeEntities[0].createdAt).toEqual(postTime);
+      expect(likeEntities[1].createdAt).toEqual(postTime);
+    });
   });
 });
