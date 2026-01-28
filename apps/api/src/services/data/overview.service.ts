@@ -4,6 +4,7 @@ import {
   PostNLPResultEntity,
   useEntityManager,
   EventHourlyStatisticsEntity,
+  EventEntity,
 } from '@sker/entities';
 import { toInt } from '../../utils/type-converter';
 import {
@@ -67,16 +68,19 @@ export class OverviewService {
     // 从 event_hourly_statistics 表查询数据，确保数据源一致性
     // 注意：stats.year/month/day/hour 存储的是北京时间维度 (UTC+8)
     // 使用 make_timestamp 生成时间戳后，需要减去8小时转换为 UTC 时间进行比较
+    // 添加 JOIN events 表以过滤已删除事件，确保与 EventAnalysis 页面数据一致
     const stats = await manager
       .getRepository(EventHourlyStatisticsEntity)
       .createQueryBuilder('stats')
+      .innerJoin(EventEntity, 'event', 'event.id = stats.event_id')
       .select('COALESCE(SUM(stats.post_count), 0)', 'postCount')
       .addSelect('COALESCE(SUM(stats.user_count), 0)', 'userCount')
       .addSelect('COALESCE(SUM(stats.comment_count), 0)', 'commentCount')
       .addSelect('COALESCE(SUM(stats.like_count), 0)', 'likeCount')
       .addSelect('COALESCE(SUM(stats.repost_count), 0)', 'repostCount')
       .addSelect('COALESCE(COUNT(DISTINCT stats.event_id), 0)', 'eventCount')
-      .where(
+      .where('event.deleted_at IS NULL')
+      .andWhere(
         `(make_timestamp(stats.year, stats.month, stats.day, stats.hour, 0, 0) - INTERVAL '8 hours') >= :start`,
         { start }
       )
@@ -179,14 +183,17 @@ export class OverviewService {
   private async fetchSentimentFromStatistics(manager: any, start: Date, end: Date): Promise<{ positive: number; negative: number; neutral: number }> {
     // 从 EventHourlyStatisticsEntity 聚合情感数据
     // 注意：stats.year/month/day/hour 存储的是北京时间维度 (UTC+8)
+    // 添加 JOIN events 表以过滤已删除事件，确保数据一致性
     const stats = await manager
       .getRepository(EventHourlyStatisticsEntity)
       .createQueryBuilder('stats')
+      .innerJoin(EventEntity, 'event', 'event.id = stats.event_id')
       .select('COALESCE(SUM(stats.nlp_count), 0)', 'total')
       .addSelect('COALESCE(SUM(stats.sentiment_positive), 0)', 'positive')
       .addSelect('COALESCE(SUM(stats.sentiment_negative), 0)', 'negative')
       .addSelect('COALESCE(SUM(stats.sentiment_neutral), 0)', 'neutral')
-      .where(
+      .where('event.deleted_at IS NULL')
+      .andWhere(
         `(make_timestamp(stats.year, stats.month, stats.day, stats.hour, 0, 0) - INTERVAL '8 hours') >= :start`,
         { start }
       )
