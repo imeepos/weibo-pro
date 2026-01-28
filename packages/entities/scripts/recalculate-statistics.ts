@@ -10,6 +10,7 @@ require('dotenv').config({ path: envPath });
 async function recalculateStatistics() {
   console.log('='.repeat(80));
   console.log('重新计算 event_hourly_statistics 统计数据');
+  console.log('注意: 仅重新计算帖子数据,评论/转发/点赞需要单独处理');
   console.log('='.repeat(80));
 
   const ds = await useDataSource();
@@ -22,7 +23,7 @@ async function recalculateStatistics() {
 
     // 2. 从 weibo_posts 重新统计帖子数据
     console.log('\n步骤 2: 从 weibo_posts 重新统计帖子数据...');
-    const result = await ds.query(`
+    await ds.query(`
       INSERT INTO event_hourly_statistics (
         event_id, year, month, day, hour,
         post_count, user_count, hotness,
@@ -30,13 +31,13 @@ async function recalculateStatistics() {
       )
       SELECT
         event_id,
-        EXTRACT(YEAR FROM created_at AT TIME ZONE 'UTC')::int AS year,
-        EXTRACT(MONTH FROM created_at AT TIME ZONE 'UTC')::int AS month,
-        EXTRACT(DAY FROM created_at AT TIME ZONE 'UTC')::int AS day,
-        EXTRACT(HOUR FROM created_at AT TIME ZONE 'UTC')::int AS hour,
+        EXTRACT(YEAR FROM created_at)::int AS year,
+        EXTRACT(MONTH FROM created_at)::int AS month,
+        EXTRACT(DAY FROM created_at)::int AS day,
+        EXTRACT(HOUR FROM created_at)::int AS hour,
         COUNT(*)::int AS post_count,
         COUNT(DISTINCT user_id)::int AS user_count,
-        0 AS hotness,
+        COUNT(*)::int AS hotness,
         0 AS nlp_count,
         0 AS sentiment_positive,
         0 AS sentiment_negative,
@@ -48,16 +49,7 @@ async function recalculateStatistics() {
       GROUP BY event_id, year, month, day, hour
       ORDER BY event_id, year, month, day, hour
     `);
-
-    console.log(`✓ 已插入 ${result[1]} 条统计记录`);
-
-    // 3. 更新热度值
-    console.log('\n步骤 3: 更新热度值...');
-    await ds.query(`
-      UPDATE event_hourly_statistics
-      SET hotness = post_count * 1
-    `);
-    console.log('✓ 已更新热度值');
+    console.log('✓ 已插入帖子统计记录');
 
     console.log('\n' + '='.repeat(80));
     console.log('✓ 统计数据重新计算完成');
