@@ -300,11 +300,13 @@ export class RecalculateStatisticsVisitor {
       const batch = stats.slice(i, i + batchSize);
 
       for (const stat of batch) {
+        const hotness = (stat.post_count || 0) * 1 + (stat.comment_count || 0) * 2 + (stat.repost_count || 0) * 3 + (stat.like_count || 0) * 0.5;
+
         await manager.query(`
           INSERT INTO event_hourly_statistics (
             event_id, year, month, day, hour,
-            post_count, comment_count, like_count, repost_count, user_count
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            post_count, comment_count, like_count, repost_count, user_count, hotness
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
           ON CONFLICT (event_id, year, month, day, hour)
           DO UPDATE SET
             post_count = EXCLUDED.post_count,
@@ -312,6 +314,7 @@ export class RecalculateStatisticsVisitor {
             like_count = EXCLUDED.like_count,
             repost_count = EXCLUDED.repost_count,
             user_count = EXCLUDED.user_count,
+            hotness = EXCLUDED.hotness,
             updated_at = CURRENT_TIMESTAMP
         `, [
           stat.event_id,
@@ -323,7 +326,8 @@ export class RecalculateStatisticsVisitor {
           stat.comment_count || 0,
           stat.like_count || 0,
           stat.repost_count || 0,
-          stat.user_count || 0
+          stat.user_count || 0,
+          hotness
         ]);
       }
     }
