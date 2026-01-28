@@ -20,8 +20,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "dev": "tsx src/index.ts",
-    "test": "vitest",
+    "dev": "tsx src/cli.ts",
+    "test": "vitest run",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
     "check-types": "tsc --noEmit",
