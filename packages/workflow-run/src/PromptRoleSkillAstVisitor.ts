@@ -7,6 +7,7 @@ import { concatMap } from 'rxjs/operators';
 import { z } from 'zod';
 import { DynamicStructuredTool } from '@langchain/core/tools';
 import { useLlmModel } from './llm-client';
+import { parse } from '@sker/json-harmony';
 
 const SkillSelectionSchema = z.object({
   selected_skill_ids: z.array(z.string()).describe('选中的技能ID列表'),
@@ -103,15 +104,27 @@ export class PromptRoleSkillAstVisitor {
                 .join('\n');
 
               const systemPrompt = `你是一个智能助手，负责为当前角色选择合适的技能。
-根据用户需求，从以下可用技能中选择最合适的技能：
 
+## 可用技能列表
 ${skillsDescription}
 
-重要提示：
+## 任务要求
 1. 使用 get_skill_content 工具查看技能的详细内容
-2. 技能ID必须是完整的UUID格式（例如：a1b2c3d4-e5f6-7890-abcd-ef1234567890）
-3. 只能从上述可用技能列表中选择，不要编造或修改技能ID
-4. 最后返回最相关的技能ID列表供角色使用`;
+2. 根据用户需求，选择最相关的技能
+3. **重要**：必须以 JSON 格式返回结果
+
+## 输出格式（必须严格遵守）
+\`\`\`json
+{
+  "selected_skill_ids": ["skill-1", "skill-2"],
+  "reasoning": "选择这些技能的原因"
+}
+\`\`\`
+
+## 约束条件
+- 技能ID必须是完整的UUID格式（从上述列表中选择）
+- 不要编造或修改技能ID
+- reasoning 字段用中文说明选择理由`;
 
               const userPrompt = Array.isArray(ast.requirements)
                 ? ast.requirements.filter(Boolean).join('\n')
@@ -144,11 +157,27 @@ ${skillsDescription}
                 }
               }
 
-              const structuredModel = model.withStructuredOutput(SkillSelectionSchema);
-              const selectionResult = await structuredModel.invoke([
+              // 使用普通模型调用（不使用 withStructuredOutput）
+              const response = await model.invoke([
                 { role: 'system', content: systemPrompt },
                 { role: 'human', content: userPrompt }
               ]);
+
+              // 使用 json-harmony 容错解析 LLM 输出
+              const llmOutput = response.content as string;
+              const parseResult = parse(llmOutput);
+
+              if (!parseResult.success || !parseResult.data) {
+                throw new Error(`LLM 输出解析失败: ${llmOutput}`);
+              }
+
+              // 使用 zod schema 验证解析后的数据
+              const validationResult = SkillSelectionSchema.safeParse(parseResult.data);
+              if (!validationResult.success) {
+                throw new Error(`LLM 输出不符合预期格式: ${JSON.stringify(parseResult.data)}。验证错误: ${validationResult.error.message}`);
+              }
+
+              const selectionResult = validationResult.data;
 
               const validSkillIds = new Set(skills.map(s => s.id));
 
