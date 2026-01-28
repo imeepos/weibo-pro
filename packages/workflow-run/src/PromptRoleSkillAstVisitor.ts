@@ -131,13 +131,13 @@ ${skillsDescription}
                 : ast.requirements;
 
               const toolModel = model.bindTools([getSkillTool]);
-              const response = await toolModel.invoke([
+              const toolResponse = await toolModel.invoke([
                 { role: 'system', content: systemPrompt },
                 { role: 'human', content: userPrompt }
               ]);
 
-              if (response.tool_calls && response.tool_calls.length > 0) {
-                for (const toolCall of response.tool_calls) {
+              if (toolResponse.tool_calls && toolResponse.tool_calls.length > 0) {
+                for (const toolCall of toolResponse.tool_calls) {
                   if (toolCall.name === 'get_skill_content') {
                     const skillId = toolCall.args.skill_id;
 
@@ -158,16 +158,17 @@ ${skillsDescription}
               }
 
               // 使用普通模型调用（不使用 withStructuredOutput）
-              const response = await model.invoke([
+              const llmResponse = await model.invoke([
                 { role: 'system', content: systemPrompt },
                 { role: 'human', content: userPrompt }
               ]);
 
               // 使用 json-harmony 容错解析 LLM 输出
-              const llmOutput = response.content as string;
+              const llmOutput = llmResponse.content as string;
               const parseResult = parse(llmOutput);
 
-              if (!parseResult.success || !parseResult.data) {
+              // 检查解析是否成功（data 不为 null/undefined）
+              if (!parseResult.data) {
                 throw new Error(`LLM 输出解析失败: ${llmOutput}`);
               }
 

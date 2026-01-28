@@ -226,7 +226,6 @@ describe('PromptRoleSkillAst - JsonHarmony Integration', () => {
 
       const result = parse(validJSON);
 
-      expect(result.success).toBe(true);
       expect(result.data).toHaveProperty('selected_skill_ids');
       expect(result.data).toHaveProperty('reasoning');
       expect(result.data.selected_skill_ids).toEqual(['skill-1', 'skill-2']);
