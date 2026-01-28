@@ -84,6 +84,7 @@ export * from './ProxyAutoSelectAstRender';
 // SQL 执行节点
 export * from './SqlExecuteAstRender';
 export * from './RecalculateStatisticsAstRender';
+export * from './EventEmitterAstRender';
 
 // Markdown 上传节点
 export * from './MarkdownUploadAstRender';

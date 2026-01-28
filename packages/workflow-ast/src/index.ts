@@ -56,7 +56,7 @@ export { PostNLPLooperAst } from './crawler/PostNLPLooperAst';
 export { EventAuthGenerateAst } from './crawler/EventAuthGenerateAst';
 export { EventDispatcherAst } from './crawler/EventDispatcherAst';
 
-// BASIC 节点 (11个)
+// BASIC 节点 (12个)
 export { SqlExecuteAst } from './basic/SqlExecuteAst';
 export { ExcelUploadAst } from './basic/ExcelUploadAst';
 export { MarkdownUploadAst } from './basic/MarkdownUploadAst';
@@ -68,6 +68,7 @@ export { LastAst } from './basic/LastAst';
 export { ClaudeCodeAst, type ClaudeStreamEvent } from './basic/ClaudeCodeAst';
 export { SmartAstV1 } from './basic/SmartAstV1';
 export { RecalculateStatisticsAst } from './basic/RecalculateStatisticsAst';
+export { EventEmitterAst } from './basic/EventEmitterAst';
 
 // CONTROL 节点 (1个)
 export { StoryQualityLoopAst } from './control/StoryQualityLoopAst';

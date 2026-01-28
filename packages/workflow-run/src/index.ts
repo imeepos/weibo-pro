@@ -112,6 +112,9 @@ export { SqlExecuteAstVisitor } from './SqlExecuteAstVisitor'
 // 统计重算节点
 export { RecalculateStatisticsVisitor } from './RecalculateStatisticsVisitor'
 
+// 事件发射器节点
+export { EventEmitterVisitor } from './EventEmitterVisitor'
+
 // 进程执行节点
 export { ClaudeCodeAstVisitor } from './ClaudeCodeAstVisitor'
 
