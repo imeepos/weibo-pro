@@ -12,20 +12,19 @@ import { WeiboPostEntity } from '../weibo-post.entity';
  */
 export class HourlyStatisticsHelper {
   /**
-   * 获取时间维度（中国时区 UTC+8）
+   * 获取时间维度（UTC 时区）
+   *
+   * 微博 API 返回的 created_at 格式: "Tue Jan 27 18:01:37 +0800 2026"
+   * Node.js Date 对象会正确解析时区，内部存储为 UTC 时间
+   * PostgreSQL timestamptz 字段也存储 UTC 时间
+   * 因此直接使用 UTC 时间维度即可
    */
   static getTimeDimensions(date: Date) {
-    // 中国时区 (UTC+8)
-    const utcTime = date.getTime();
-    // 转化为 UTC时间
-    const chinaOffset = 8 * 60 * 60 * 1000; // 8小时的毫秒数
-    const chinaTime = new Date(utcTime - chinaOffset);
-
     return {
-      year: chinaTime.getUTCFullYear(),
-      month: chinaTime.getUTCMonth() + 1,
-      day: chinaTime.getUTCDate(),
-      hour: chinaTime.getUTCHours()
+      year: date.getUTCFullYear(),
+      month: date.getUTCMonth() + 1,
+      day: date.getUTCDate(),
+      hour: date.getUTCHours()
     };
   }
 

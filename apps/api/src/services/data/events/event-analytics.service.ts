@@ -168,7 +168,7 @@ export class EventAnalyticsService {
             .getMany();
 
           const categories = stats.map((s) =>
-            new Date(s.year, s.month - 1, s.day, s.hour).toISOString()
+            new Date(Date.UTC(s.year, s.month - 1, s.day, s.hour)).toISOString()
           );
 
           const postData = stats.map((s) => s.post_count || 0);

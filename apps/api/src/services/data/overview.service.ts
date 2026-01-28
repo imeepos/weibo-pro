@@ -1,6 +1,5 @@
 import { Injectable, Inject, createLogger, Logger, Optional } from '@sker/core';
 import {
-  EventEntity,
   WeiboPostEntity,
   PostNLPResultEntity,
   useEntityManager,
@@ -65,7 +64,9 @@ export class OverviewService {
   }
 
   private async fetchStatisticsFromTable(manager: any, start: Date, end: Date) {
-    // 从 event_hourly_statistics 表查询数据
+    // 从 event_hourly_statistics 表查询数据，确保数据源一致性
+    // 注意：stats.year/month/day/hour 存储的是北京时间维度 (UTC+8)
+    // 使用 make_timestamp 生成时间戳后，需要减去8小时转换为 UTC 时间进行比较
     const stats = await manager
       .getRepository(EventHourlyStatisticsEntity)
       .createQueryBuilder('stats')
@@ -74,12 +75,13 @@ export class OverviewService {
       .addSelect('COALESCE(SUM(stats.comment_count), 0)', 'commentCount')
       .addSelect('COALESCE(SUM(stats.like_count), 0)', 'likeCount')
       .addSelect('COALESCE(SUM(stats.repost_count), 0)', 'repostCount')
+      .addSelect('COALESCE(COUNT(DISTINCT stats.event_id), 0)', 'eventCount')
       .where(
-        `make_timestamp(stats.year, stats.month, stats.day, stats.hour, 0, 0) >= :start`,
+        `(make_timestamp(stats.year, stats.month, stats.day, stats.hour, 0, 0) - INTERVAL '8 hours') >= :start`,
         { start }
       )
       .andWhere(
-        `make_timestamp(stats.year, stats.month, stats.day, stats.hour, 0, 0) < :end`,
+        `(make_timestamp(stats.year, stats.month, stats.day, stats.hour, 0, 0) - INTERVAL '8 hours') < :end`,
         { end }
       )
       .getRawOne();
@@ -90,16 +92,7 @@ export class OverviewService {
     const likeCount = toInt(stats?.likeCount);
     const repostCount = toInt(stats?.repostCount);
     const interactionCount = commentCount + likeCount + repostCount;
-
-    // event_count 需要从 events 表单独查询
-    const eventCount = await manager
-      .getRepository(EventEntity)
-      .createQueryBuilder('event')
-      .where('COALESCE(event.occurred_at, event.created_at) >= :start', { start })
-      .andWhere('COALESCE(event.occurred_at, event.created_at) <= :end', { end })
-      .andWhere('event.deleted_at IS NULL')
-      .andWhere('event.status = :status', { status: 'active' })
-      .getCount();
+    const eventCount = toInt(stats?.eventCount);
 
     return {
       eventCount,
@@ -185,6 +178,7 @@ export class OverviewService {
 
   private async fetchSentimentFromStatistics(manager: any, start: Date, end: Date): Promise<{ positive: number; negative: number; neutral: number }> {
     // 从 EventHourlyStatisticsEntity 聚合情感数据
+    // 注意：stats.year/month/day/hour 存储的是北京时间维度 (UTC+8)
     const stats = await manager
       .getRepository(EventHourlyStatisticsEntity)
       .createQueryBuilder('stats')
@@ -193,11 +187,11 @@ export class OverviewService {
       .addSelect('COALESCE(SUM(stats.sentiment_negative), 0)', 'negative')
       .addSelect('COALESCE(SUM(stats.sentiment_neutral), 0)', 'neutral')
       .where(
-        `make_timestamp(stats.year, stats.month, stats.day, stats.hour, 0, 0) >= :start`,
+        `(make_timestamp(stats.year, stats.month, stats.day, stats.hour, 0, 0) - INTERVAL '8 hours') >= :start`,
         { start }
       )
       .andWhere(
-        `make_timestamp(stats.year, stats.month, stats.day, stats.hour, 0, 0) < :end`,
+        `(make_timestamp(stats.year, stats.month, stats.day, stats.hour, 0, 0) - INTERVAL '8 hours') < :end`,
         { end }
       )
       .andWhere('stats.nlp_count > 0')
