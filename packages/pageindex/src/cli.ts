@@ -160,7 +160,7 @@ export { program };
 
 // 只在直接运行时解析命令行参数
 // 检查是否是主模块（被直接运行而非被导入）
-const isMainModule = process.argv[1] && process.argv[1].endsWith('/cli.js') || process.argv[1].endsWith('\\cli.js');
+const isMainModule = /\/cli\.js$|\\cli\.js$/.test(process.argv[1] || '');
 if (isMainModule) {
   program.parse();
 }
