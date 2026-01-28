@@ -179,7 +179,7 @@ export class RecalculateStatisticsVisitor {
           COUNT(*)::int as comment_count,
           COUNT(DISTINCT c.user_id)::int as user_count
         FROM weibo_comments c
-        JOIN weibo_posts p ON c.post_id = p.id
+        JOIN weibo_posts p ON c.post_id::bigint = p.id
         WHERE p.event_id = $1
           AND c.created_at >= $2
           AND c.created_at < $3
@@ -204,7 +204,7 @@ export class RecalculateStatisticsVisitor {
           COUNT(*)::int as like_count,
           COUNT(DISTINCT l.user_weibo_id)::int as user_count
         FROM weibo_likes l
-        JOIN weibo_posts p ON l.target_weibo_id = p.id
+        JOIN weibo_posts p ON l.target_weibo_id::bigint = p.id
         WHERE p.event_id = $1
           AND p.created_at >= $2
           AND p.created_at < $3
@@ -229,7 +229,7 @@ export class RecalculateStatisticsVisitor {
           COUNT(*)::int as repost_count,
           COUNT(DISTINCT r.user_id)::int as user_count
         FROM weibo_reposts r
-        JOIN weibo_posts p ON r.post_id = p.id
+        JOIN weibo_posts p ON r.post_id::bigint = p.id
         WHERE p.event_id = $1
           AND r.created_at >= $2
           AND r.created_at < $3
