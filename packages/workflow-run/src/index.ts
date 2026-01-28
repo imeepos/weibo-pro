@@ -109,6 +109,9 @@ export { HttpRequestAstVisitor } from './HttpRequestAstVisitor'
 // SQL 执行节点
 export { SqlExecuteAstVisitor } from './SqlExecuteAstVisitor'
 
+// 统计重算节点
+export { RecalculateStatisticsVisitor } from './RecalculateStatisticsVisitor'
+
 // 进程执行节点
 export { ClaudeCodeAstVisitor } from './ClaudeCodeAstVisitor'
 

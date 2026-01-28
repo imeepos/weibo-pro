@@ -56,7 +56,7 @@ export { PostNLPLooperAst } from './crawler/PostNLPLooperAst';
 export { EventAuthGenerateAst } from './crawler/EventAuthGenerateAst';
 export { EventDispatcherAst } from './crawler/EventDispatcherAst';
 
-// BASIC 节点 (10个)
+// BASIC 节点 (11个)
 export { SqlExecuteAst } from './basic/SqlExecuteAst';
 export { ExcelUploadAst } from './basic/ExcelUploadAst';
 export { MarkdownUploadAst } from './basic/MarkdownUploadAst';
@@ -67,6 +67,7 @@ export { PropertySelectorAst } from './basic/PropertySelectorAst';
 export { LastAst } from './basic/LastAst';
 export { ClaudeCodeAst, type ClaudeStreamEvent } from './basic/ClaudeCodeAst';
 export { SmartAstV1 } from './basic/SmartAstV1';
+export { RecalculateStatisticsAst } from './basic/RecalculateStatisticsAst';
 
 // CONTROL 节点 (1个)
 export { StoryQualityLoopAst } from './control/StoryQualityLoopAst';
@@ -105,4 +106,5 @@ export type { EvaluationResult, EvaluationType } from './llm/AnswerEvaluatorAst'
 export type { MarkdownHeading } from './basic/MarkdownUploadAst';
 export type { RetrievedMemory } from './llm/PersonaAst';
 export type { SqlParameter, SqlColumn } from './basic/SqlExecuteAst';
+export type { StatisticsResult } from './basic/RecalculateStatisticsAst';
 export type { AggregateOperation } from './meta/AggregateAst';
