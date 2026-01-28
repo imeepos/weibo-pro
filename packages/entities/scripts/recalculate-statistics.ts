@@ -10,7 +10,17 @@ require('dotenv').config({ path: envPath });
 async function recalculateStatistics() {
   console.log('='.repeat(80));
   console.log('重新计算 event_hourly_statistics 统计数据');
-  console.log('注意: 仅重新计算帖子数据,评论/转发/点赞需要单独处理');
+  console.log('注意: 仅重新计算帖子数据');
+  console.log('');
+  console.log('评论/转发/点赞说明:');
+  console.log('- 转发(weibo_reposts): created_at 是 timestamptz,可以重新计算');
+  console.log('- 点赞(weibo_likes): created_at 是 timestamptz,可以重新计算');
+  console.log('- 评论(weibo_comments): created_at 是 varchar,需要特殊处理');
+  console.log('  格式: "Wed Jan 28 00:17:41 +0800 2026"');
+  console.log('  需要使用: TO_TIMESTAMP(created_at, \'Dy Mon DD HH24:MI:SS TZHTZH YYYY\')');
+  console.log('');
+  console.log('新数据已自动修复: 所有表都使用 getTimeDimensions() 方法,');
+  console.log('会自动使用正确的 UTC 时间维度');
   console.log('='.repeat(80));
 
   const ds = await useDataSource();

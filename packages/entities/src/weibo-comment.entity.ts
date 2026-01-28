@@ -31,6 +31,22 @@ import { WeiboUserEntity } from './weibo-user.entity';
 @Index(['user_id', 'reply_to_user_id'])
 export class WeiboCommentEntity {
 
+  /**
+   * 微博评论时间（来源数据，字符串格式）
+   *
+   * API 返回格式: "Wed Jan 28 00:17:41 +0800 2026"
+   *
+   * 注意事项:
+   * 1. 字段类型为 varchar，存储原始字符串，不是 timestamptz
+   * 2. 字符串包含时区信息 (+0800 表示北京时间)
+   * 3. 在统计时需要先转换为 timestamp: new Date(created_at)
+   * 4. Node.js 会正确解析时区，内部存储为 UTC
+   * 5. 使用 HourlyStatisticsHelper.getTimeDimensions() 时会自动使用 UTC 时间维度
+   *
+   * 历史数据处理:
+   * - 由于是 varchar 类型，重新计算统计数据时需要使用 TO_TIMESTAMP 或类似函数
+   * - 新数据会自动使用正确的 UTC 时间维度（通过 getTimeDimensions 方法）
+   */
   @Column({ type: 'varchar', length: 64, nullable: true, comment: '微博评论时间（来源数据，字符串格式）' })
   created_at!: string;
 
