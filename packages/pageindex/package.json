@@ -1,0 +1,56 @@
+{
+  "name": "@sker/pageindex",
+  "version": "1.0.0",
+  "description": "TypeScript 1:1 复刻 PageIndex 文档索引工具",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "pageindex": "./bin/pageindex.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./utils": {
+      "types": "./dist/utils/index.d.ts",
+      "import": "./dist/utils/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix"
+  },
+  "dependencies": {
+    "openai": "^4.77.3",
+    "gpt-tokenizer": "^2.1.2",
+    "pdfjs-dist": "^4.0.379",
+    "commander": "^12.1.0",
+    "yaml": "^2.5.1",
+    "dotenv": "^16.4.7",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@sker/typescript-config": "workspace:*",
+    "@sker/eslint-config": "workspace:*",
+    "@types/node": "^22.15.3",
+    "typescript": "5.9.3",
+    "vitest": "^4.0.16",
+    "@vitest/ui": "^4.0.16",
+    "@vitest/coverage-v8": "^4.0.16",
+    "tsx": "^4.21.0"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "README.md",
+    "CLAUDE.md"
+  ]
+}
