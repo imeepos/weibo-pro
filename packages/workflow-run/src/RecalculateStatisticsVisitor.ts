@@ -172,17 +172,17 @@ export class RecalculateStatisticsVisitor {
       const commentStats = await manager.query(`
         SELECT
           p.event_id,
-          EXTRACT(YEAR FROM c.created_at)::int as year,
-          EXTRACT(MONTH FROM c.created_at)::int as month,
-          EXTRACT(DAY FROM c.created_at)::int as day,
-          EXTRACT(HOUR FROM c.created_at)::int as hour,
+          EXTRACT(YEAR FROM c.created_at::timestamp)::int as year,
+          EXTRACT(MONTH FROM c.created_at::timestamp)::int as month,
+          EXTRACT(DAY FROM c.created_at::timestamp)::int as day,
+          EXTRACT(HOUR FROM c.created_at::timestamp)::int as hour,
           COUNT(*)::int as comment_count,
           COUNT(DISTINCT c.user_id)::int as user_count
         FROM weibo_comments c
         JOIN weibo_posts p ON c.post_id::bigint = p.id
         WHERE p.event_id = $1
-          AND c.created_at >= $2
-          AND c.created_at < $3
+          AND c.created_at::timestamp >= $2
+          AND c.created_at::timestamp < $3
         GROUP BY p.event_id, year, month, day, hour
       `, [ast.eventId, startDate, endDate]);
 
