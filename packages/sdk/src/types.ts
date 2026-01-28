@@ -82,6 +82,12 @@ export interface TrendDataSeries {
     name: string
     data: number[]
   }>
+  totals: {
+    totalEvents: number
+    totalPosts: number
+    totalUsers: number
+    avgHotness: number
+  }
 }
 
 export interface TrendAnalysis {

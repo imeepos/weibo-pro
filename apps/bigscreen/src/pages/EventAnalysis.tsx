@@ -141,20 +141,20 @@ const EventAnalysis: React.FC = () => {
     return Math.round(((current - previous) / previous) * 1000) / 10;
   };
 
-  // 统计数据
+  // 统计数据 - 使用后端返回的累计总数，而不是趋势数据的最后一个点
   const stats = useMemo(() => {
     const { events: e = [], posts: p = [], users: u = [], hotness: h = [] } = trendSeries;
     return {
-      totalEvents: e.length > 0 ? e[e.length - 1] : 0,
-      totalPosts: p.length > 0 ? p[p.length - 1] : 0,
-      totalUsers: u.length > 0 ? u[u.length - 1] : 0,
-      avgHotness: h.length > 0 ? Math.round(h.reduce((sum, v) => sum + v, 0) / h.length) : 0,
+      totalEvents: trendData?.totals?.totalEvents ?? (e.length > 0 ? e[e.length - 1] : 0),
+      totalPosts: trendData?.totals?.totalPosts ?? (p.length > 0 ? p[p.length - 1] : 0),
+      totalUsers: trendData?.totals?.totalUsers ?? (u.length > 0 ? u[u.length - 1] : 0),
+      avgHotness: trendData?.totals?.avgHotness ?? (h.length > 0 ? Math.round(h.reduce((sum, v) => sum + v, 0) / h.length) : 0),
       eventChange: calcChange(e),
       postChange: calcChange(p),
       userChange: calcChange(u),
       hotnessChange: calcChange(h),
     };
-  }, [trendSeries]);
+  }, [trendSeries, trendData]);
 
   const getSentimentConfig = (sentiment: EventItem['sentiment']) => {
     if (sentiment.positive > sentiment.negative && sentiment.positive > sentiment.neutral) {
