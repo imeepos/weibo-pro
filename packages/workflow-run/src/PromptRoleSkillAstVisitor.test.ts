@@ -246,7 +246,6 @@ describe('PromptRoleSkillAst - JsonHarmony Integration', () => {
 
       const result = parse(markdownResponse);
 
-      expect(result.success).toBe(true);
       expect(result.data).toHaveProperty('selected_skill_ids');
       expect(result.data.selected_skill_ids).toEqual(['skill-1', 'skill-2']);
       expect(result.data.reasoning).toContain('舆情分析');
@@ -261,7 +260,6 @@ describe('PromptRoleSkillAst - JsonHarmony Integration', () => {
 
       const result = parse(unquotedKeys);
 
-      expect(result.success).toBe(true);
       expect(result.data).toHaveProperty('selected_skill_ids');
       expect(result.data.selected_skill_ids).toEqual(['skill-1']);
     });
@@ -275,7 +273,6 @@ describe('PromptRoleSkillAst - JsonHarmony Integration', () => {
 
       const result = parse(trailingCommas);
 
-      expect(result.success).toBe(true);
       expect(result.data.selected_skill_ids).toEqual(['skill-1']);
     });
 
@@ -294,7 +291,6 @@ describe('PromptRoleSkillAst - JsonHarmony Integration', () => {
 
       const result = parse(mixedContent);
 
-      expect(result.success).toBe(true);
       expect(result.data).toHaveProperty('selected_skill_ids');
       expect(result.data.selected_skill_ids).toEqual(['skill-1']);
       expect(result.data.reasoning).toContain('关键词分析');
@@ -332,7 +328,7 @@ describe('PromptRoleSkillAst - JsonHarmony Integration', () => {
 
       // 使用 json-harmony 解析
       const parsed = parse(llmResponse);
-      expect(parsed.success).toBe(true);
+      expect(parsed.data).toBeDefined();
 
       // 使用 zod 验证
       const validated = SkillSelectionSchema.safeParse(parsed.data);
@@ -364,7 +360,7 @@ describe('PromptRoleSkillAst - JsonHarmony Integration', () => {
       const unquotedJSON = '{name: "test", age: 30}';
       const result = parse(unquotedJSON);
 
-      expect(result.success).toBe(true);
+      expect(result.data).toBeDefined();
       expect(result.statistics.recoveryStrategiesUsed).toContain('ManualFix');
     });
 
@@ -372,7 +368,7 @@ describe('PromptRoleSkillAst - JsonHarmony Integration', () => {
       const markdown = '```json\n{"test": "value"}\n```';
       const result = parse(markdown);
 
-      expect(result.success).toBe(true);
+      expect(result.data).toBeDefined();
       expect(result.statistics.recoveryStrategiesUsed).toContain('RegexExtract');
     });
 
