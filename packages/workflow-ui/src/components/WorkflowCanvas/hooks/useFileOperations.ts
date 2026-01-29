@@ -201,8 +201,8 @@ export const useFileOperations = (workflow: any, options: FileOperationsOptions 
       // 智能检测：画布为空直接导入，否则显示确认对话框
       if (isCanvasEmpty) {
         // 直接替换当前工作流
-        Object.assign(workflow.workflowAst, importedWorkflow)
-        workflow.syncFromAst()
+        // 使用 initWorkflow 而不是 Object.assign,确保正确触发 Immer 响应式更新
+        workflow.initWorkflow(importedWorkflow)
 
         // 自动适应视图
         if (onFitView) {
@@ -256,8 +256,8 @@ export const useFileOperations = (workflow: any, options: FileOperationsOptions 
           )
 
           if (confirmReplace) {
-            Object.assign(workflow.workflowAst, result.importedWorkflow)
-            workflow.syncFromAst()
+            // 使用 initWorkflow 而不是 Object.assign,确保正确触发 Immer 响应式更新
+            workflow.initWorkflow(result.importedWorkflow)
 
             if (onFitView) {
               setTimeout(() => {

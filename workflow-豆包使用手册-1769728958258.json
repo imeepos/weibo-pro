@@ -1,0 +1,494 @@
+{
+  "workflow": {
+    "count": 0,
+    "emitCount": 0,
+    "id": "6b66e62a-302e-4ca0-b6fa-c2701b03d5ac",
+    "name": "豆包使用手册",
+    "description": null,
+    "color": null,
+    "collapsed": false,
+    "width": null,
+    "state": "pending",
+    "type": "WorkflowGraphAst",
+    "position": {
+      "x": 0,
+      "y": 0
+    },
+    "nodes": [
+      {
+        "id": "cdd666c9-9616-450c-b4c1-ab628bc1de02",
+        "type": "PromptRoleSkillAst",
+        "count": 0,
+        "model": "deepseek-ai/DeepSeek-V3.2",
+        "state": "success",
+        "width": 261,
+        "height": 360,
+        "roleId": "e88bed79-5c4e-4f51-8add-83ceedf2a0d4",
+        "metadata": {
+          "type": "PromptRoleSkillAst",
+          "class": {
+            "type": "llm",
+            "title": "角色技能",
+            "hasTool": false,
+            "maxRetries": 3,
+            "retryDelay": 1000,
+            "retryBackoff": 2,
+            "errorStrategy": "retry"
+          },
+          "inputs": [
+            {
+              "mode": 1,
+              "title": "角色需求",
+              "isMulti": true,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "requirements",
+              "defaultValue": []
+            },
+            {
+              "title": "温度",
+              "isMulti": false,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "temperature",
+              "defaultValue": 0.7
+            },
+            {
+              "title": "模型",
+              "isMulti": false,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "model",
+              "defaultValue": "deepseek-ai/DeepSeek-V3.2"
+            }
+          ],
+          "states": [
+            {
+              "title": "角色ID",
+              "propertyKey": "roleId"
+            },
+            {
+              "title": "可用技能列表",
+              "propertyKey": "availableSkills"
+            },
+            {
+              "title": "选中的技能",
+              "propertyKey": "selectedSkills"
+            },
+            {
+              "title": "技能内容缓存",
+              "propertyKey": "skillContents"
+            }
+          ],
+          "outputs": [
+            {
+              "title": "选中技能列表",
+              "isStatic": true,
+              "property": "selectedSkillsList",
+              "isSubject": false
+            },
+            {
+              "title": "技能内容",
+              "isStatic": true,
+              "property": "skillContent",
+              "isSubject": false
+            },
+            {
+              "title": "技能内容文本",
+              "isStatic": true,
+              "property": "skillContentText",
+              "isSubject": false
+            }
+          ]
+        },
+        "position": {
+          "x": 615.279146639242,
+          "y": 73.5858658368851
+        },
+        "emitCount": 1,
+        "portLabels": {},
+        "temperature": 0.7,
+        "requirements": [],
+        "skillContent": {
+          "8afe6d4d-53b1-4d9e-9cc4-316cade675e7": "## 舆情分析标准流程\n\n### Step 1: 数据采集与清洗\n- 获取原始微博数据（发布时间、用户信息、内容）\n- 收集评论和转发数据\n- 移除机器人、广告、重复内容\n\n### Step 2: 基础数据分析\n- 热度分析：声量、传播速度、覆盖面\n- 地域分布：按省份、城市聚合\n- 人群特征：发布者属性、活跃度\n\n### Step 3: 情感分析\n- NLP分析：正负中立分类\n- 关键词提取：高频词、新词、对立词\n- 情感倾向：正面率、负面率、信息量\n\n### Step 4: 事件分析\n- 时间线：事件发生、升级、转折、缓解\n- 参与方：官方、企业、大V、普通用户\n- 主要矛盾：核心争议点、解决路径\n\n### Step 5: 趋势预判\n- 当前阶段：上升期/高峰期/衰落期\n- 发展方向：可能走向（正面解决/负面升级/无疾而终）\n- 风险识别：可能引发的连锁反应\n\n### Step 6: 报告生成\n- 数据总结：关键数据、变化趋势\n- 深度分析：主要矛盾、舆情结构\n- 建议方案：应对策略、处置建议",
+          "b0fdfed7-87b4-4ab9-90b5-d303aed0dd95": "## 舆情事件的四个阶段\n\n### 1. 潜伏期（0-6小时）\n- 特征：声量小，信息不完整\n- 表现：少数人讨论，主要是亲历者\n- 风险：信息空白，谣言易传播\n\n### 2. 爆发期（6小时-3天）\n- 特征：声量快速上升，媒体介入\n- 表现：各类媒体开始报道，评论激增\n- 风险：情感倾向快速形成，舆论极化\n\n### 3. 高峰期（3-7天）\n- 特征：声量达到顶峰，观点固化\n- 表现：各方意见充分表达，争议点明确\n- 机会：最佳回应窗口，能改变舆论走向\n\n### 4. 衰落期（7天以后）\n- 特征：声量快速下降，新热点出现\n- 表现：讨论集中在解决方案或总结\n- 恢复：需要监控反复波动的可能",
+          "c551115d-4644-442b-9f2f-0a5915c0dc13": "## 从数据出发\n\n### 信息获取层次\n- 一手数据：原始微博内容、评论数据\n- 二手数据：新闻报道、专业分析\n- 三手数据：理论模型、对标案例\n\n### 验证原则\n- 不相信单一来源\n- 交叉验证多个数据点\n- 追溯数据产生的过程"
+        },
+        "skillContents": {},
+        "selectedSkills": [],
+        "availableSkills": [],
+        "skillContentText": "## 从数据出发\n\n### 信息获取层次\n- 一手数据：原始微博内容、评论数据\n- 二手数据：新闻报道、专业分析\n- 三手数据：理论模型、对标案例\n\n### 验证原则\n- 不相信单一来源\n- 交叉验证多个数据点\n- 追溯数据产生的过程\n\n## 舆情分析标准流程\n\n### Step 1: 数据采集与清洗\n- 获取原始微博数据（发布时间、用户信息、内容）\n- 收集评论和转发数据\n- 移除机器人、广告、重复内容\n\n### Step 2: 基础数据分析\n- 热度分析：声量、传播速度、覆盖面\n- 地域分布：按省份、城市聚合\n- 人群特征：发布者属性、活跃度\n\n### Step 3: 情感分析\n- NLP分析：正负中立分类\n- 关键词提取：高频词、新词、对立词\n- 情感倾向：正面率、负面率、信息量\n\n### Step 4: 事件分析\n- 时间线：事件发生、升级、转折、缓解\n- 参与方：官方、企业、大V、普通用户\n- 主要矛盾：核心争议点、解决路径\n\n### Step 5: 趋势预判\n- 当前阶段：上升期/高峰期/衰落期\n- 发展方向：可能走向（正面解决/负面升级/无疾而终）\n- 风险识别：可能引发的连锁反应\n\n### Step 6: 报告生成\n- 数据总结：关键数据、变化趋势\n- 深度分析：主要矛盾、舆情结构\n- 建议方案：应对策略、处置建议\n\n## 舆情事件的四个阶段\n\n### 1. 潜伏期（0-6小时）\n- 特征：声量小，信息不完整\n- 表现：少数人讨论，主要是亲历者\n- 风险：信息空白，谣言易传播\n\n### 2. 爆发期（6小时-3天）\n- 特征：声量快速上升，媒体介入\n- 表现：各类媒体开始报道，评论激增\n- 风险：情感倾向快速形成，舆论极化\n\n### 3. 高峰期（3-7天）\n- 特征：声量达到顶峰，观点固化\n- 表现：各方意见充分表达，争议点明确\n- 机会：最佳回应窗口，能改变舆论走向\n\n### 4. 衰落期（7天以后）\n- 特征：声量快速下降，新热点出现\n- 表现：讨论集中在解决方案或总结\n- 恢复：需要监控反复波动的可能",
+        "selectedSkillsList": [
+          {
+            "id": "c551115d-4644-442b-9f2f-0a5915c0dc13",
+            "type": "thought",
+            "title": "研究优先",
+            "description": "深入数据研究，建立事实基础"
+          },
+          {
+            "id": "8afe6d4d-53b1-4d9e-9cc4-316cade675e7",
+            "type": "execution",
+            "title": "舆情分析工作流",
+            "description": "标准舆情分析流程"
+          },
+          {
+            "id": "b0fdfed7-87b4-4ab9-90b5-d303aed0dd95",
+            "type": "knowledge",
+            "title": "事件生命周期",
+            "description": "舆情事件的演进规律"
+          }
+        ]
+      },
+      {
+        "id": "8dd7c959-8c65-4e2a-b687-54f45bcf2754",
+        "type": "TextAreaAst",
+        "count": 0,
+        "input": "分析舆情事件的来龙去脉",
+        "state": "success",
+        "width": 240,
+        "height": 119,
+        "output": "分析舆情事件的来龙去脉",
+        "metadata": {
+          "type": "TextAreaAst",
+          "class": {
+            "type": "basic",
+            "title": "文本节点",
+            "hasTool": true
+          },
+          "inputs": [
+            {
+              "mode": 1,
+              "type": "textarea",
+              "title": "输入",
+              "isMulti": true,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "input",
+              "defaultValue": []
+            }
+          ],
+          "states": [],
+          "outputs": [
+            {
+              "type": "textarea",
+              "title": "输出",
+              "isStatic": true,
+              "property": "output",
+              "isSubject": false
+            }
+          ]
+        },
+        "position": {
+          "x": 22.820094702213012,
+          "y": 246.44140214813416
+        },
+        "emitCount": 1,
+        "portLabels": {}
+      },
+      {
+        "id": "10aec209-52d9-408b-85b4-2ee29ac8a732",
+        "type": "TextAreaAst",
+        "count": 0,
+        "input": [],
+        "state": "success",
+        "width": 320,
+        "height": 355,
+        "output": "{\n  \"id\": \"c551115d-4644-442b-9f2f-0a5915c0dc13\",\n  \"title\": \"研究优先\",\n  \"type\": \"thought\",\n  \"description\": \"深入数据研究，建立事实基础\"\n}\n\n{\n  \"id\": \"8afe6d4d-53b1-4d9e-9cc4-316cade675e7\",\n  \"title\": \"舆情分析工作流\",\n  \"type\": \"execution\",\n  \"description\": \"标准舆情分析流程\"\n}\n\n{\n  \"id\": \"b0fdfed7-87b4-4ab9-90b5-d303aed0dd95\",\n  \"title\": \"事件生命周期\",\n  \"type\": \"knowledge\",\n  \"description\": \"舆情事件的演进规律\"\n}",
+        "metadata": {
+          "type": "TextAreaAst",
+          "class": {
+            "type": "basic",
+            "title": "文本节点",
+            "hasTool": true
+          },
+          "inputs": [
+            {
+              "mode": 1,
+              "type": "textarea",
+              "title": "输入",
+              "isMulti": true,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "input"
+            }
+          ],
+          "states": [],
+          "outputs": [
+            {
+              "type": "textarea",
+              "title": "输出",
+              "isStatic": true,
+              "property": "output",
+              "isSubject": false
+            }
+          ]
+        },
+        "position": {
+          "x": 1078.4264233205276,
+          "y": -265.03285176520853
+        },
+        "emitCount": 1
+      },
+      {
+        "id": "042f5b45-58c1-4459-bca7-e8c948f5106a",
+        "type": "TextAreaAst",
+        "count": 0,
+        "input": [],
+        "state": "success",
+        "width": 320,
+        "height": 355,
+        "output": "{\n  \"c551115d-4644-442b-9f2f-0a5915c0dc13\": \"## 从数据出发\\n\\n### 信息获取层次\\n- 一手数据：原始微博内容、评论数据\\n- 二手数据：新闻报道、专业分析\\n- 三手数据：理论模型、对标案例\\n\\n### 验证原则\\n- 不相信单一来源\\n- 交叉验证多个数据点\\n- 追溯数据产生的过程\",\n  \"8afe6d4d-53b1-4d9e-9cc4-316cade675e7\": \"## 舆情分析标准流程\\n\\n### Step 1: 数据采集与清洗\\n- 获取原始微博数据（发布时间、用户信息、内容）\\n- 收集评论和转发数据\\n- 移除机器人、广告、重复内容\\n\\n### Step 2: 基础数据分析\\n- 热度分析：声量、传播速度、覆盖面\\n- 地域分布：按省份、城市聚合\\n- 人群特征：发布者属性、活跃度\\n\\n### Step 3: 情感分析\\n- NLP分析：正负中立分类\\n- 关键词提取：高频词、新词、对立词\\n- 情感倾向：正面率、负面率、信息量\\n\\n### Step 4: 事件分析\\n- 时间线：事件发生、升级、转折、缓解\\n- 参与方：官方、企业、大V、普通用户\\n- 主要矛盾：核心争议点、解决路径\\n\\n### Step 5: 趋势预判\\n- 当前阶段：上升期/高峰期/衰落期\\n- 发展方向：可能走向（正面解决/负面升级/无疾而终）\\n- 风险识别：可能引发的连锁反应\\n\\n### Step 6: 报告生成\\n- 数据总结：关键数据、变化趋势\\n- 深度分析：主要矛盾、舆情结构\\n- 建议方案：应对策略、处置建议\",\n  \"b0fdfed7-87b4-4ab9-90b5-d303aed0dd95\": \"## 舆情事件的四个阶段\\n\\n### 1. 潜伏期（0-6小时）\\n- 特征：声量小，信息不完整\\n- 表现：少数人讨论，主要是亲历者\\n- 风险：信息空白，谣言易传播\\n\\n### 2. 爆发期（6小时-3天）\\n- 特征：声量快速上升，媒体介入\\n- 表现：各类媒体开始报道，评论激增\\n- 风险：情感倾向快速形成，舆论极化\\n\\n### 3. 高峰期（3-7天）\\n- 特征：声量达到顶峰，观点固化\\n- 表现：各方意见充分表达，争议点明确\\n- 机会：最佳回应窗口，能改变舆论走向\\n\\n### 4. 衰落期（7天以后）\\n- 特征：声量快速下降，新热点出现\\n- 表现：讨论集中在解决方案或总结\\n- 恢复：需要监控反复波动的可能\"\n}",
+        "metadata": {
+          "type": "TextAreaAst",
+          "class": {
+            "type": "basic",
+            "title": "文本节点",
+            "hasTool": true
+          },
+          "inputs": [
+            {
+              "mode": 1,
+              "type": "textarea",
+              "title": "输入",
+              "isMulti": true,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "input"
+            }
+          ],
+          "states": [],
+          "outputs": [
+            {
+              "type": "textarea",
+              "title": "输出",
+              "isStatic": true,
+              "property": "output",
+              "isSubject": false
+            }
+          ]
+        },
+        "position": {
+          "x": 1446.5691304261645,
+          "y": -259.0950661667306
+        },
+        "emitCount": 1
+      },
+      {
+        "id": "6d3b3d97-dd1b-4f75-9d1b-976b9f1981f6",
+        "type": "TextAreaAst",
+        "count": 0,
+        "input": [],
+        "state": "success",
+        "width": 320,
+        "height": 355,
+        "output": "## 从数据出发\n\n### 信息获取层次\n- 一手数据：原始微博内容、评论数据\n- 二手数据：新闻报道、专业分析\n- 三手数据：理论模型、对标案例\n\n### 验证原则\n- 不相信单一来源\n- 交叉验证多个数据点\n- 追溯数据产生的过程\n\n## 舆情分析标准流程\n\n### Step 1: 数据采集与清洗\n- 获取原始微博数据（发布时间、用户信息、内容）\n- 收集评论和转发数据\n- 移除机器人、广告、重复内容\n\n### Step 2: 基础数据分析\n- 热度分析：声量、传播速度、覆盖面\n- 地域分布：按省份、城市聚合\n- 人群特征：发布者属性、活跃度\n\n### Step 3: 情感分析\n- NLP分析：正负中立分类\n- 关键词提取：高频词、新词、对立词\n- 情感倾向：正面率、负面率、信息量\n\n### Step 4: 事件分析\n- 时间线：事件发生、升级、转折、缓解\n- 参与方：官方、企业、大V、普通用户\n- 主要矛盾：核心争议点、解决路径\n\n### Step 5: 趋势预判\n- 当前阶段：上升期/高峰期/衰落期\n- 发展方向：可能走向（正面解决/负面升级/无疾而终）\n- 风险识别：可能引发的连锁反应\n\n### Step 6: 报告生成\n- 数据总结：关键数据、变化趋势\n- 深度分析：主要矛盾、舆情结构\n- 建议方案：应对策略、处置建议\n\n## 舆情事件的四个阶段\n\n### 1. 潜伏期（0-6小时）\n- 特征：声量小，信息不完整\n- 表现：少数人讨论，主要是亲历者\n- 风险：信息空白，谣言易传播\n\n### 2. 爆发期（6小时-3天）\n- 特征：声量快速上升，媒体介入\n- 表现：各类媒体开始报道，评论激增\n- 风险：情感倾向快速形成，舆论极化\n\n### 3. 高峰期（3-7天）\n- 特征：声量达到顶峰，观点固化\n- 表现：各方意见充分表达，争议点明确\n- 机会：最佳回应窗口，能改变舆论走向\n\n### 4. 衰落期（7天以后）\n- 特征：声量快速下降，新热点出现\n- 表现：讨论集中在解决方案或总结\n- 恢复：需要监控反复波动的可能",
+        "metadata": {
+          "type": "TextAreaAst",
+          "class": {
+            "type": "basic",
+            "title": "文本节点",
+            "hasTool": true
+          },
+          "inputs": [
+            {
+              "mode": 1,
+              "type": "textarea",
+              "title": "输入",
+              "isMulti": true,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "input"
+            }
+          ],
+          "states": [],
+          "outputs": [
+            {
+              "type": "textarea",
+              "title": "输出",
+              "isStatic": true,
+              "property": "output",
+              "isSubject": false
+            }
+          ]
+        },
+        "position": {
+          "x": 1116.6921527329414,
+          "y": 152.7563404832587
+        },
+        "emitCount": 1
+      },
+      {
+        "id": "a76b0988-11cb-45f7-a574-35ad0f977123",
+        "type": "EventAst",
+        "count": 0,
+        "event": null,
+        "state": "pending",
+        "width": 244,
+        "height": 429,
+        "eventId": "e8293cc7-b2d1-4cc7-8fa4-788f58934295",
+        "trigger": true,
+        "event_id": "",
+        "keywords": [],
+        "metadata": {
+          "type": "EventAst",
+          "class": {
+            "type": "basic",
+            "title": "事件选择器",
+            "hasTool": false,
+            "errorStrategy": "fail"
+          },
+          "inputs": [
+            {
+              "title": "事件ID",
+              "isMulti": false,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "eventId"
+            },
+            {
+              "title": "触发",
+              "isMulti": false,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "trigger",
+              "defaultValue": true
+            }
+          ],
+          "states": [
+            {
+              "title": "事件标题",
+              "propertyKey": "eventTitle"
+            },
+            {
+              "title": "事件分类",
+              "propertyKey": "eventCategory"
+            }
+          ],
+          "outputs": [
+            {
+              "title": "事件",
+              "isStatic": true,
+              "property": "event",
+              "isSubject": false
+            },
+            {
+              "title": "事件ID",
+              "isStatic": true,
+              "property": "event_id",
+              "isSubject": false
+            },
+            {
+              "title": "事件标题",
+              "isStatic": true,
+              "property": "event_title",
+              "isSubject": false
+            },
+            {
+              "title": "开始时间",
+              "isStatic": true,
+              "property": "startTime",
+              "isSubject": false
+            },
+            {
+              "title": "关键字列表",
+              "isStatic": true,
+              "property": "keywords",
+              "isSubject": false
+            },
+            {
+              "title": "关键字字符串",
+              "isStatic": true,
+              "property": "keywords_str",
+              "isSubject": false
+            },
+            {
+              "title": "帖子最早时间",
+              "isStatic": true,
+              "property": "post_min_time",
+              "isSubject": false
+            },
+            {
+              "title": "帖子最晚时间",
+              "isStatic": true,
+              "property": "post_max_time",
+              "isSubject": false
+            },
+            {
+              "title": "爬取完成",
+              "isStatic": true,
+              "property": "is_crawl_complete",
+              "isSubject": false
+            },
+            {
+              "title": "停止原因",
+              "isStatic": true,
+              "property": "crawl_end_reason",
+              "isSubject": false
+            }
+          ]
+        },
+        "position": {
+          "x": 620.5571782823336,
+          "y": 478.3449174664702
+        },
+        "emitCount": 0,
+        "startTime": "",
+        "eventTitle": "甘肃迭部发生5.5级地震",
+        "portLabels": {},
+        "event_title": "",
+        "keywords_str": "",
+        "eventCategory": "其他",
+        "post_max_time": "",
+        "post_min_time": "",
+        "crawl_end_reason": null,
+        "is_crawl_complete": false
+      }
+    ],
+    "entryNodeIds": [
+      "8dd7c959-8c65-4e2a-b687-54f45bcf2754"
+    ],
+    "endNodeIds": [],
+    "edges": [
+      {
+        "id": "edge-d691a0f7-2f03-4e5b-9baa-264367fc657d",
+        "to": "cdd666c9-9616-450c-b4c1-ab628bc1de02",
+        "from": "8dd7c959-8c65-4e2a-b687-54f45bcf2754",
+        "type": "data",
+        "toProperty": "requirements",
+        "fromProperty": "output"
+      },
+      {
+        "id": "edge-47a24b2e-78d5-49f3-8a23-892458ed2b25",
+        "to": "10aec209-52d9-408b-85b4-2ee29ac8a732",
+        "from": "cdd666c9-9616-450c-b4c1-ab628bc1de02",
+        "type": "data",
+        "toProperty": "input",
+        "fromProperty": "selectedSkillsList"
+      },
+      {
+        "id": "edge-50176f6a-4a8f-40f7-872e-3f153ad483a2",
+        "to": "042f5b45-58c1-4459-bca7-e8c948f5106a",
+        "from": "cdd666c9-9616-450c-b4c1-ab628bc1de02",
+        "type": "data",
+        "toProperty": "input",
+        "fromProperty": "skillContent"
+      },
+      {
+        "id": "edge-c967f321-e961-41f6-a110-a09e3f3a6524",
+        "to": "6d3b3d97-dd1b-4f75-9d1b-976b9f1981f6",
+        "from": "cdd666c9-9616-450c-b4c1-ab628bc1de02",
+        "type": "data",
+        "toProperty": "input",
+        "fromProperty": "skillContentText"
+      }
+    ],
+    "toolNodeIds": [],
+    "viewport": {
+      "x": 264.70560220525977,
+      "y": 269.4823420450108,
+      "zoom": 0.7578582832551997
+    },
+    "tags": [],
+    "isGroupNode": false
+  }
+}
