@@ -122,7 +122,7 @@ const GeographicDistributionChart: React.FC<GeographicDistributionChartProps> = 
       },
       yAxis: {
         type: 'category',
-        data: regions.reverse(),
+        data: regions,
         axisLine: { lineStyle: { color: isDark ? '#374151' : '#e5e7eb' } },
         axisLabel: {
           color: isDark ? '#9ca3af' : '#6b7280',
@@ -134,7 +134,7 @@ const GeographicDistributionChart: React.FC<GeographicDistributionChartProps> = 
         {
           name: '用户数',
           type: 'bar',
-          data: userCounts.reverse(),
+          data: userCounts,
           itemStyle: {
             color: '#3b82f6',
             borderRadius: [0, 4, 4, 0]
@@ -148,15 +148,14 @@ const GeographicDistributionChart: React.FC<GeographicDistributionChartProps> = 
             color: isDark ? '#9ca3af' : '#6b7280',
             fontSize: 10,
             formatter: (params: any) => {
-              const idx = processedData.length - 1 - params.dataIndex;
-              return `${params.value} (${processedData[idx]?.percentage.toFixed(1)}%)`;
+              return `${params.value} (${processedData[params.dataIndex]?.percentage.toFixed(1)}%)`;
             }
           }
         },
         {
           name: '帖子数',
           type: 'bar',
-          data: postCounts.reverse(),
+          data: postCounts,
           itemStyle: {
             color: '#8b5cf6',
             borderRadius: [0, 4, 4, 0]
