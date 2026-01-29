@@ -28,7 +28,7 @@ export class PostContextCollectorVisitor {
       obs.next({ type: 'node_runing', id: ast.id });
 
       const subscription = input$.pipe(
-        concatMap(async (inputData) => {
+        mergeMap(async (inputData) => {
           ast.emitCount += 1;
           obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } })
 

@@ -48,7 +48,7 @@ export class PostNLPAnalyzerVisitor {
           next: (data) => logger.debug('[PostNLPAnalyzerVisitor] input$ 发射数据:', Object.keys(data)),
           complete: () => logger.debug('[PostNLPAnalyzerVisitor] input$ 完成')
         }),
-        concatMap(async (inputData) => {
+        mergeMap(async (inputData) => {
           ast.emitCount += 1;
           logger.debug('[PostNLPAnalyzerVisitor] concatMap 接收到数据，第', ast.emitCount, '次，postId:', (inputData as any)?.post?.id);
           obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } })
