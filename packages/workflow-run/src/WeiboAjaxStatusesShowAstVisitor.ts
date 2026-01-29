@@ -70,6 +70,15 @@ export class WeiboAjaxStatusesShowAstVisitor extends WeiboApiClient {
                         throw new Error('工作流已取消');
                     }
 
+                    // 检查是否为博主设置不可见（正常业务场景）
+                    if (body && (body as any).error_code === 20170) {
+                        console.log(`[WeiboAjaxStatusesShowAstVisitor] 博主设置内容不可见，跳过 mblogid=${ast.mblogid}`)
+                        // 发射 null 数据让下游节点可以继续处理
+                        return [
+                            { type: 'node_emit' as const, id: ast.id, data: { uid: null, postId: null, mid: null, eventId: ast.eventId } }
+                        ];
+                    }
+
                     await useEntityManager(async m => {
                         const userData = (body as any).user;
                         const user = m.create(WeiboUserEntity, userData as any);

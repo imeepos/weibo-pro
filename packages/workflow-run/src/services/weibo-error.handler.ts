@@ -129,6 +129,10 @@ export class WeiboErrorHandler {
                 );
             }
             if ('ok' in data && data.ok !== 1 && data.ok !== undefined) {
+                // error_code=20170 表示"由于博主设置，目前内容暂不可见"，这是正常业务场景
+                if ((data as Record<string, unknown>).error_code === 20170) {
+                    return null;
+                }
                 return new WeiboError(
                     WeiboErrorType.API_ERROR,
                     `API 返回错误: ok=${data.ok}`,

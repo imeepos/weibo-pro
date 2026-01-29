@@ -2,6 +2,62 @@ import { describe, it, expect, vi } from 'vitest'
 import { WeiboErrorHandler, WeiboError, WeiboErrorType } from './weibo-error.handler'
 
 describe('WeiboErrorHandler', () => {
+  describe('checkResponse - error_code 特殊处理', () => {
+    it('应该将 error_code=20170 视为正常业务场景（不抛出错误）', async () => {
+      const mockResponse = {
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        url: 'https://weibo.com/ajax/statuses/show',
+        headers: {
+          get: vi.fn((name: string) => {
+            if (name === 'content-type') return 'application/json'
+            return null
+          })
+        },
+        json: vi.fn().mockResolvedValue({
+          ok: 0,
+          message: '由于博主设置，目前内容暂不可见。',
+          error_code: 20170
+        })
+      } as unknown as Response
+
+      const data = await mockResponse.json()
+      const error = await WeiboErrorHandler.checkResponse(mockResponse, data)
+
+      // error_code=20170 是正常业务场景，不应返回错误
+      expect(error).toBeNull()
+    })
+
+    it('应该将其他 error_code 视为 API 错误', async () => {
+      const mockResponse = {
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        url: 'https://weibo.com/ajax/statuses/show',
+        headers: {
+          get: vi.fn((name: string) => {
+            if (name === 'content-type') return 'application/json'
+            return null
+          })
+        },
+        json: vi.fn().mockResolvedValue({
+          ok: 0,
+          message: '参数错误',
+          error_code: 10001
+        })
+      } as unknown as Response
+
+      const data = await mockResponse.json()
+      const error = await WeiboErrorHandler.checkResponse(mockResponse, data)
+
+      // 其他 error_code 应该返回错误
+      expect(error).not.toBeNull()
+      expect(error?.type).toBe(WeiboErrorType.API_ERROR)
+      expect(error?.message).toContain('API 返回错误: ok=0')
+    })
+  })
+
   describe('HTTP 418 反爬虫错误处理', () => {
     it('应该将 HTTP 418 错误识别为可重试', () => {
       const error = new WeiboError(

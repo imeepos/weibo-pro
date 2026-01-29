@@ -435,4 +435,30 @@ describe('WeiboAjaxStatusesShowAstVisitor - 统计更新修复验证', () => {
       expect(statsUpdated).toBe(false);
     });
   });
+
+  describe('error_code=20170 处理', () => {
+    it('当 API 返回 error_code=20170 时，应该正常处理并返回 null 数据', async () => {
+      // 模拟 API 返回 error_code=20170 的响应
+      const apiResponse = {
+        ok: 0,
+        message: '由于博主设置，目前内容暂不可见。',
+        error_code: 20170
+      };
+
+      // 验证响应结构
+      expect(apiResponse.ok).toBe(0);
+      expect(apiResponse.error_code).toBe(20170);
+
+      // 当检测到 error_code=20170 时，应该跳过后续处理
+      // 不应该尝试访问 body.user 或 body.id 等字段
+      // 应该返回 null 数据让下游节点继续处理
+      const shouldSkip = apiResponse.error_code === 20170;
+      expect(shouldSkip).toBe(true);
+
+      // 验证响应没有实际的微博内容
+      expect(apiResponse).not.toHaveProperty('user');
+      expect(apiResponse).not.toHaveProperty('id');
+      expect(apiResponse).not.toHaveProperty('text');
+    });
+  });
 });

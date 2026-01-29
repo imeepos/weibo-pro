@@ -67,8 +67,9 @@ function buildDefaultPrompt(
     // 计算更新时间（事件最后更新时间距今）
     const updatedDaysAgo = calculateDaysDiff(e.updated_at, currentTime);
 
-    return `[${idx + 1}] ID: ${e.id}
+    return `[序号${idx + 1}] ID: ${e.id}
 标题: ${e.title}
+关键词: ${e.keywords && e.keywords.length > 0 ? e.keywords.join(', ') : '(无)'}
 分类: ${e.category?.name || '未分类'}
 状态: ${crawlStatus}
 总时间跨度: ${formatDays(totalDays)} (${eventStartTime.toISOString().split('T')[0]} ~ ${currentTime.toISOString().split('T')[0]})
@@ -82,6 +83,8 @@ function buildDefaultPrompt(
 YOU MUST 从以下事件列表中选择【且仅选择一个】事件进行爬取。返回空选择或跳过选择是严格禁止的。
 
 ## 可选事件列表
+
+**注意**：以下事件已自动过滤掉 keyword 为空的错误/假事件，所有事件都是有效的。
 
 ${eventList}
 
@@ -103,26 +106,46 @@ ${eventList}
 
 \`\`\`json
 {
-  "selectedEventId": "事件ID（必须从上述列表中选择）",
+  "selectedEventId": "事件的真实ID（UUID格式，如：550e8400-e29b-41d4-a716-446655440000）",
   "reason": "选择原因（必须说明得分计算过程）"
 }
 \`\`\`
 
+## 关键约束（强制执行）
+
+1. **必须返回真实的事件 ID**，不是列表中的序号 [1]、[2]
+2. 事件 ID 通常是 UUID 格式（36位字符串，包含字母和数字）
+3. selectedEventId 字段必须存在且不为空
+4. 禁止返回 null、undefined 或空字符串
+5. 禁止返回序号（如 "1"、"2"、"65"）
+
 ## 示例
 
+### 示例1：正确格式
 输入事件：
-[1] ID: evt-001, 状态: 未爬取, 时间差值: 30天
-[2] ID: evt-002, 状态: 已爬取, 时间差值: 5天
+[序号1] ID: 550e8400-e29b-41d4-a716-446655440000, 状态: 未爬取, 时间差值: 30天
+[序号2] ID: 6ba7b810-9dad-11d1-80b4-00c04fd430c8, 状态: 已爬取, 时间差值: 5天
 
 正确输出：
-{"selectedEventId": "evt-001", "reason": "未爬取事件，优先级最高，得分100+30=130"}
+\`\`\`json
+{
+  "selectedEventId": "550e8400-e29b-41d4-a716-446655440000",
+  "reason": "未爬取事件，优先级最高，得分100+30=130"
+}
+\`\`\`
 
-## 强制要求
+### 示例2：错误格式（禁止）
+❌ 错误：{"selectedEventId": "1", "reason": "选择了第一个"}  // 这是序号，不是 ID
+❌ 错误：{"selectedEventId": "65", "reason": "选择了第65个"}  // 绝对禁止返回序号
+✅ 正确：{"selectedEventId": "550e8400-e29b-41d4-a716-446655440000", "reason": "..."}  // 返回完整 UUID
 
-1. selectedEventId 字段必须存在且不为空
-2. selectedEventId 必须是上述事件列表中的有效 ID
-3. reason 字段必须说明选择理由
-4. 禁止返回 null、undefined 或空字符串`;
+## 重要提醒
+
+**序号 vs ID 的区别**：
+- 序号：[1]、[2]、[3] ... 只是列表的编号，**不能用于选择**
+- ID：550e8400-e29b-41d4-a716-446655440000 ... 事件的真实标识符，**必须返回这个**
+
+**记住**：你必须在 selectedEventId 字段中填写 ID 列后面的完整 UUID 字符串！`;
 }
 
 @Injectable()
@@ -163,12 +186,13 @@ export class EventDispatcherAstVisitor {
             throw new Error('工作流已取消');
           }
 
-          // 查询所有事件
+          // 查询所有事件（过滤掉 keyword 为空的假事件）
           const events = await useEntityManager(async (manager) => {
             return await manager
               .createQueryBuilder(EventEntity, 'event')
               .leftJoinAndSelect('event.category', 'category')
               .where('event.status = :status', { status: 'active' })
+              .andWhere('array_length(event.keywords, 1) IS NOT NULL')
               .orderBy('event.updated_at', 'ASC')
               .addOrderBy('event.created_at', 'DESC')
               .getMany();
@@ -179,7 +203,7 @@ export class EventDispatcherAstVisitor {
           }
 
           if (events.length === 0) {
-            throw new Error('没有可用的事件');
+            throw new Error('没有可用的事件：所有事件的 keyword 都为空，或者没有 active 状态的事件');
           }
 
           // 应用 limit
