@@ -60,7 +60,7 @@ export class WeiboAccountPickAstVisitor {
                                 id: account.id,
                                 nickname: account.weiboNickname,
                                 avatar: account.weiboAvatar,
-                                healthScore: score !== null ? score : 100,
+                                healthScore: score !== null ? score : 10000,
                                 status: account.status
                             };
                         })

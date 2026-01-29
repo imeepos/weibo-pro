@@ -155,13 +155,13 @@ export class WeiboAccountService {
             }
 
             // 为从数据库查询到的账号初始化健康评分
-            await this.redis.zadd(this.healthKey, 100, account.id.toString());
+            await this.redis.zadd(this.healthKey, 10000, account.id.toString());
 
             return {
                 id: account.id,
                 weiboUid: account.weiboUid,
                 nickname: account.weiboNickname,
-                healthScore: 100,
+                healthScore: 10000,
                 cookieHeader,
             };
         }
@@ -264,7 +264,7 @@ export class WeiboAccountService {
         if (account) {
             const currentScore = await this.redis.zscore(this.healthKey, account.id.toString());
             if (currentScore === null) {
-                await this.redis.zadd(this.healthKey, 100, account.id.toString());
+                await this.redis.zadd(this.healthKey, 10000, account.id.toString());
             }
         }
 
