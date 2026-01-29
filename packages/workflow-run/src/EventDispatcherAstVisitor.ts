@@ -192,7 +192,7 @@ export class EventDispatcherAstVisitor {
               .createQueryBuilder(EventEntity, 'event')
               .leftJoinAndSelect('event.category', 'category')
               .where('event.status = :status', { status: 'active' })
-              .andWhere('array_length(event.keywords, 1) IS NOT NULL')
+              .andWhere('jsonb_array_length(event.keywords) IS NOT NULL')
               .orderBy('event.updated_at', 'ASC')
               .addOrderBy('event.created_at', 'DESC')
               .getMany();
