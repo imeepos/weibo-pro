@@ -46,7 +46,7 @@ export class WeiboAjaxStatusesLikeShowAstVisitor extends WeiboApiClient {
             obs.next({ type: 'node_runing', id: ast.id });
 
             const subscription = input$.pipe(
-                concatMap(async (inputData) => {
+                mergeMap(async (inputData) => {
                     ast.emitCount += 1;
                     obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } });
 
@@ -182,7 +182,7 @@ export class WeiboAjaxStatusesLikeShowAstVisitor extends WeiboApiClient {
                     }
 
                     return events;
-                }),
+                }, 3),
                 mergeMap((events: NodeEvent[]) => from(events))
             ).subscribe({
                 next: (event: NodeEvent) => obs.next(event),
