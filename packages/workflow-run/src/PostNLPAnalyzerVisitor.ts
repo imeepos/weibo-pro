@@ -132,7 +132,7 @@ export class PostNLPAnalyzerVisitor {
               }
             ];
           }
-        }),
+        }, 3),
         mergeMap((events: NodeEvent[]) => from(events))
       ).subscribe({
         next: (event: NodeEvent) => {
