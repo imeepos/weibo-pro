@@ -304,7 +304,11 @@ ${ast.customPrompt.trim()}
           ast.eventsList = limitedEvents;
 
           console.log(`[EventDispatcherAstVisitor] 选中事件: ${selectedEvent.title} (${selectedEventId})`);
-
+          await useEntityManager(async m=>{
+            await m.update(EventEntity, selectedEventId, {
+              last_crawl_at: new Date()
+            })
+          })
           return [
             {
               type: 'node_emit' as const,
