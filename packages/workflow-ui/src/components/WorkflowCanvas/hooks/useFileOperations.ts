@@ -1,7 +1,8 @@
 import { useCallback } from 'react'
-import { toJson, fromJson, WorkflowGraphAst, INode, IEdge } from '@sker/workflow'
+import { toJson, fromJson, WorkflowGraphAst, INode, IEdge, generateId } from '@sker/workflow'
 import { getAllNodeTypes } from '../../../adapters'
 import { validateEdgesDetailed } from '../../../utils/edgeValidator'
+import { astToFlowEdges } from '../../../adapters/ast-to-flow'
 
 export interface FileOperationsOptions {
   onShowToast?: (type: 'success' | 'error' | 'info', title: string, message?: string) => void
@@ -11,6 +12,75 @@ export interface FileOperationsOptions {
 
 export const useFileOperations = (workflow: any, options: FileOperationsOptions = {}) => {
   const { onShowToast, onGetViewport, onFitView } = options
+
+  /**
+   * 重新生成节点和边的 ID（但保持工作流 ID 不变）
+   *
+   * 这确保导入的节点不会与现有节点产生 ID 冲突，
+   * 但工作流本身的 code 保持不变，避免覆盖原工作流
+   */
+  const regenerateIds = useCallback((ast: WorkflowGraphAst): WorkflowGraphAst => {
+    // 创建一个 ID 映射表，用于更新边的引用
+    const idMap = new Map<string, string>()
+
+    // ⚠️ 不重新生成工作流 ID，保持当前工作流的 code
+    // ast.id = generateId() // 删除这行
+    idMap.clear()
+
+    // 递归处理节点（包括分组内的节点）
+    const processNodes = (nodes: INode[]): INode[] => {
+      return nodes.map(node => {
+        // 生成新的节点 ID
+        const oldId = node.id
+        const newId = generateId()
+        idMap.set(oldId, newId)
+
+        // 更新节点 ID
+        node.id = newId
+
+        // 如果是分组节点，递归处理子节点
+        if ((node as any).isGroupNode && (node as any).nodes?.length > 0) {
+          ;(node as any).nodes = processNodes((node as any).nodes)
+        }
+
+        return node
+      })
+    }
+
+    // 处理所有节点
+    ast.nodes = processNodes(ast.nodes)
+
+    // 更新边的 ID 和节点引用
+    const processEdges = (edges: IEdge[]): IEdge[] => {
+      return edges.map(edge => {
+        // 生成新的边 ID
+        edge.id = generateId()
+
+        // 更新边的源节点和目标节点引用
+        if (edge.from && idMap.has(edge.from)) {
+          edge.from = idMap.get(edge.from)!
+        }
+        if (edge.to && idMap.has(edge.to)) {
+          edge.to = idMap.get(edge.to)!
+        }
+
+        return edge
+      })
+    }
+
+    // 处理所有边
+    ast.edges = processEdges(ast.edges)
+
+    // 更新入口和结束节点引用
+    if (ast.entryNodeIds) {
+      ast.entryNodeIds = ast.entryNodeIds.map(id => idMap.get(id) || id)
+    }
+    if (ast.endNodeIds) {
+      ast.endNodeIds = ast.endNodeIds.map(id => idMap.get(id) || id)
+    }
+
+    return ast
+  }, [])
 
   /**
    * 验证工作流数据的完整性
@@ -169,15 +239,17 @@ export const useFileOperations = (workflow: any, options: FileOperationsOptions 
       }
 
       // 反序列化工作流
-      const importedWorkflow = fromJson<WorkflowGraphAst>(data.workflow)
+      let importedWorkflow = fromJson<WorkflowGraphAst>(data.workflow)
+
+      // 重新生成所有 ID，避免与现有工作流冲突
+      importedWorkflow = regenerateIds(importedWorkflow)
 
       // 验证和清理边
-      const edgesArray = Array.isArray(importedWorkflow.edges) ? importedWorkflow.edges : []
-      const nodesArray = Array.isArray(importedWorkflow.nodes) ? importedWorkflow.nodes : []
-
+      // 注意：需要先将 IEdge 转换为 React Flow Edge 格式才能验证
+      const flowEdges = astToFlowEdges(importedWorkflow)
       const edgeValidation = validateEdgesDetailed(
-        edgesArray as any[],
-        nodesArray
+        flowEdges as any[],
+        importedWorkflow.nodes
       )
 
       if (edgeValidation.invalidEdges.length > 0) {
@@ -195,39 +267,37 @@ export const useFileOperations = (workflow: any, options: FileOperationsOptions 
           invalidCount <= 3 ? errorDetails : `${errorDetails}\n...还有 ${invalidCount - 3} 条`
         )
 
-        importedWorkflow.edges = edgeValidation.validEdges as any
+        // 将有效的边转换回 IEdge 格式
+        const validIEdges = (edgeValidation.validEdges as any[]).map(flowEdge => ({
+          id: flowEdge.id,
+          from: flowEdge.source,
+          to: flowEdge.target,
+          fromProperty: flowEdge.sourceHandle,
+          toProperty: flowEdge.targetHandle,
+          weight: flowEdge.data?.weight,
+          condition: flowEdge.data?.condition
+        }))
+        importedWorkflow.edges = validIEdges
       }
 
-      // 智能检测：画布为空直接导入，否则显示确认对话框
-      if (isCanvasEmpty) {
-        // 直接替换当前工作流
-        Object.assign(workflow.workflowAst, importedWorkflow)
-        workflow.syncFromAst()
+      // 导入工作流（已重新生成 ID，不会覆盖现有工作流）
+      workflow.replaceWorkflow(importedWorkflow)
 
-        // 自动适应视图
-        if (onFitView) {
-          setTimeout(() => {
-            onFitView()
-          }, 100)
-        }
-
-        onShowToast?.('success', '导入成功', `已导入工作流 "${importedWorkflow.name || '未命名'}"`)
-        return { success: true, replaced: false }
-      } else {
-        // 画布有内容，返回需要确认的信息
-        return {
-          success: false,
-          replaced: false,
-          needsConfirmation: true,
-          importedWorkflow
-        }
+      // 自动适应视图
+      if (onFitView) {
+        setTimeout(() => {
+          onFitView()
+        }, 100)
       }
+
+      onShowToast?.('success', '导入成功', `已导入工作流 "${importedWorkflow.name || '未命名'}"`)
+      return { success: true, replaced: false }
     } catch (error) {
       console.error('导入工作流失败:', error)
       onShowToast?.('error', '导入失败', error instanceof Error ? error.message : '文件格式不正确')
       return { success: false, replaced: false, error }
     }
-  }, [workflow, onFitView, onShowToast, validateWorkflowData])
+  }, [workflow, onFitView, onShowToast, validateWorkflowData, regenerateIds])
 
   /**
    * 导入工作流从 JSON 文件（按钮触发）
@@ -244,35 +314,13 @@ export const useFileOperations = (workflow: any, options: FileOperationsOptions 
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0]
       if (file) {
-        const isCanvasEmpty = workflow.nodes.length === 0
-        const result = await processImportFile(file, isCanvasEmpty)
-
-        if (result.needsConfirmation && result.importedWorkflow) {
-          // 画布有内容，显示确认对话框
-          const confirmReplace = window.confirm(
-            '当前画布已有内容。\n\n' +
-            '• 确定：覆盖当前工作流\n' +
-            '• 取消：取消导入'
-          )
-
-          if (confirmReplace) {
-            Object.assign(workflow.workflowAst, result.importedWorkflow)
-            workflow.syncFromAst()
-
-            if (onFitView) {
-              setTimeout(() => {
-                onFitView()
-              }, 100)
-            }
-
-            onShowToast?.('success', '导入成功', `已导入工作流 "${result.importedWorkflow.name || '未命名'}"`)
-          }
-        }
+        // 直接导入，无需检查画布是否为空（因为会重新生成 ID）
+        await processImportFile(file, false)
       }
     }
 
     input.click()
-  }, [workflow, processImportFile, onFitView, onShowToast])
+  }, [workflow, processImportFile])
 
   return {
     validateWorkflowData,

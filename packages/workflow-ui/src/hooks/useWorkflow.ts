@@ -24,6 +24,7 @@ export interface UseWorkflowReturn {
   connectNodes: (connection: Connection) => void
   removeEdge: (edgeOrId: string | WorkflowEdge) => void
   clearWorkflow: () => void
+  replaceWorkflow: (newWorkflowAst: WorkflowGraphAst) => void
   syncFromAst: () => void
   createGroup: (selectedNodeIds: string[], title?: string) => string | undefined
   ungroupNodes: (groupId: string) => void
@@ -73,7 +74,7 @@ export function useWorkflow(
     onWorkflowChangeRef.current = onWorkflowChange
   }, [onWorkflowChange])
 
-  const [workflowAst] = useState<WorkflowGraphAst>(() => {
+  const [workflowAst, setWorkflowAst] = useState<WorkflowGraphAst>(() => {
     if (initialAst) return initialAst
 
     const ast = new WorkflowGraphAst()
@@ -610,6 +611,36 @@ export function useWorkflow(
   }, [workflowAst, setNodes, setEdges])
 
   /**
+   * 完全替换工作流内容（用于导入功能）
+   *
+   * 导入时只导入工作流的结构数据（节点、边等），不导入标识信息：
+   * - 保持：id, name, description（当前工作流的标识和名称）
+   * - 替换：nodes, edges, entryNodeIds, endNodeIds（导入的工作流内容）
+   */
+  const replaceWorkflow = useCallback((newWorkflowAst: WorkflowGraphAst) => {
+    // ⚠️ 关键：保持当前工作流的标识信息不变
+    const currentId = workflowAst.id
+    const currentName = workflowAst.name
+    const currentDescription = workflowAst.description
+
+    // 只替换内容数据，不替换标识信息
+    setWorkflowAst(newWorkflowAst)
+
+    // 恢复标识信息
+    newWorkflowAst.id = currentId
+    newWorkflowAst.name = currentName
+    newWorkflowAst.description = currentDescription
+
+    const flowNodes = astToFlowNodes(newWorkflowAst)
+    const flowEdges = astToFlowEdges(newWorkflowAst)
+    setNodes(flowNodes)
+    setEdges(flowEdges)
+    storeSyncNodes(flowNodes, false)
+    storeSyncEdges(flowEdges, false)
+    onWorkflowChangeRef.current?.()
+  }, [workflowAst, setNodes, setEdges, storeSyncNodes, storeSyncEdges])
+
+  /**
    * 创建分组（使用 React Flow parentId 机制）
    */
   const createGroup = useCallback(
@@ -983,6 +1014,7 @@ export function useWorkflow(
     connectNodes,
     removeEdge,
     clearWorkflow,
+    replaceWorkflow,
     syncFromAst,
     createGroup,
     ungroupNodes,
