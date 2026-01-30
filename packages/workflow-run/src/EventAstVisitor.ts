@@ -65,8 +65,8 @@ export class EventAstVisitor {
             // 计算帖子时间区间
             const post_min_time = timeRange?.min ? timeRange.min.toISOString() : '';
             const post_max_time = timeRange?.max ? timeRange.max.toISOString() : '';
-            event.crawl_end_reason = event.crawl_end_reason || 'null'
-            let is_crawl_complete = event.crawl_end_reason === 'null' ? false : true;
+            const crawl_end_reason = event.crawl_end_reason || '';
+            const is_crawl_complete = !!crawl_end_reason;
 
             ast.event = event;
             ast.event_id = event.id;
@@ -75,7 +75,7 @@ export class EventAstVisitor {
             ast.eventCategory = event.category?.name;
             ast.keywords = keywords;
             ast.keywords_str = keywords_str;
-            ast.crawl_end_reason = event.crawl_end_reason
+            ast.crawl_end_reason = crawl_end_reason;
             // 优先使用 occurred_at，为 null 时使用 created_at
             const eventTime = event.occurred_at || event.created_at;
             if (eventTime) {
@@ -101,7 +101,8 @@ export class EventAstVisitor {
                 startTime: ast.startTime,
                 post_min_time: ast.post_min_time,
                 post_max_time: ast.post_max_time,
-                is_crawl_complete: ast.is_crawl_complete
+                is_crawl_complete: ast.is_crawl_complete,
+                crawl_end_reason: ast.crawl_end_reason
               }
             }
           ];
