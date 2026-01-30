@@ -23,7 +23,7 @@
         "state": "success",
         "width": 244,
         "height": 291,
-        "endDate": "2026-01-30T00:18:43.284Z",
+        "endDate": "2026-01-30T01:15:38.988Z",
         "metadata": {
           "type": "SmartAstV1",
           "class": {
@@ -136,10 +136,10 @@
           "x": -1002.2766091962578,
           "y": 334.3865630844807
         },
-        "emitCount": 1,
+        "emitCount": 0,
         "portLabels": {},
         "temperature": 0.3,
-        "searchStartDate": "2026-01-26T15:54:43.000Z",
+        "searchStartDate": "2026-01-29T23:32:16.000Z",
         "dispatchComplete": true
       },
       {
@@ -147,53 +147,53 @@
         "type": "EventAst",
         "count": 0,
         "event": {
-          "id": "d67a84c9-2217-4ab2-a0e1-0560f99d333e",
-          "title": "陈震偷税案",
-          "description": "央视新闻报道陈震存在偷税漏税行为，引发全网关注。",
-          "category_id": "db330f09-6b3d-4bc9-a124-ac0c6296225b",
+          "id": "0dacacc1-4c36-4d50-94a9-8ae56543d424",
+          "title": "中方反对美国甩锅疫情",
+          "description": "外交部回应美国退出世卫组织及指责中国瞒报疫情，中方坚决反对借疫情搞政治操弄和甩锅推责，表示抗疫行动事实清楚。",
+          "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
           "category": {
-            "id": "db330f09-6b3d-4bc9-a124-ac0c6296225b",
-            "code": "culture_sports",
-            "name": "文化体育娱乐",
-            "name_en": "culture_sports",
+            "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+            "code": "other",
+            "name": "其他",
+            "name_en": "other",
             "description": null,
             "icon": null,
             "color": null,
             "sort": 100,
             "status": "active",
-            "created_at": "2026-01-14T12:55:21.942Z",
-            "updated_at": "2026-01-14T12:55:21.942Z",
+            "created_at": "2026-01-14T12:55:07.919Z",
+            "updated_at": "2026-01-14T12:55:07.919Z",
             "deleted_at": null
           },
           "sentiment": {
-            "neutral": 0.1,
-            "negative": 0.8,
+            "neutral": 0.2,
+            "negative": 0.7,
             "positive": 0.1
           },
-          "hotness": "0.71",
+          "hotness": "249.18",
           "status": "active",
           "seed_url": null,
-          "occurred_at": "2025-12-04T16:00:00.000Z",
-          "peak_at": "2025-12-05T00:00:00.000Z",
+          "occurred_at": "2026-01-26T07:34:00.000Z",
+          "peak_at": "2026-01-26T10:00:00.000Z",
           "keywords": [
-            "陈震",
-            "偷税",
-            "漏税"
+            "外交部",
+            "美国",
+            "甩锅"
           ],
-          "created_at": "2026-01-14T12:55:42.128Z",
-          "updated_at": "2026-01-29T23:11:15.428Z",
+          "created_at": "2026-01-28T03:31:39.017Z",
+          "updated_at": "2026-01-30T01:09:10.380Z",
           "deleted_at": null,
-          "crawl_end_reason": "2026-01-26T15:54:43.000Z-2026-01-29T23:11:06.348Z: 无更多数据，微博已返回全部数据。关键词：陈震 偷税 漏税，当前页：1/0"
+          "crawl_end_reason": "2026-01-29T23:32:16.000Z-2026-01-30T01:08:55.504Z: 无更多数据，微博已返回全部数据。关键词：外交部 美国 甩锅，当前页：1/0"
         },
         "state": "success",
         "width": 244,
         "height": 391,
         "trigger": true,
-        "event_id": "d67a84c9-2217-4ab2-a0e1-0560f99d333e",
+        "event_id": "0dacacc1-4c36-4d50-94a9-8ae56543d424",
         "keywords": [
-          "陈震",
-          "偷税",
-          "漏税"
+          "外交部",
+          "美国",
+          "甩锅"
         ],
         "metadata": {
           "type": "EventAst",
@@ -297,16 +297,16 @@
           "x": -1512.5959513168063,
           "y": 80.60512900580835
         },
-        "emitCount": 1,
-        "startTime": "2025-12-04T16:00:00.000Z",
+        "emitCount": 0,
+        "startTime": "2026-01-26T07:34:00.000Z",
         "eventTitle": "女子在胖东来花百万买金条",
         "portLabels": {},
-        "event_title": "陈震偷税案",
-        "keywords_str": "陈震 偷税 漏税",
+        "event_title": "中方反对美国甩锅疫情",
+        "keywords_str": "外交部 美国 甩锅",
         "eventCategory": "其他",
-        "post_max_time": "2026-01-26T15:54:43.000Z",
-        "post_min_time": "2025-12-10T15:13:23.000Z",
-        "crawl_end_reason": null,
+        "post_max_time": "2026-01-29T23:32:16.000Z",
+        "post_min_time": "2026-01-26T05:46:18.000Z",
+        "crawl_end_reason": "2026-01-29T23:32:16.000Z-2026-01-30T01:08:55.504Z: 无更多数据，微博已返回全部数据。关键词：外交部 美国 甩锅，当前页：1/0",
         "is_crawl_complete": true
       },
       {
@@ -315,9 +315,9 @@
         "count": 0,
         "input": [],
         "state": "success",
-        "width": 240,
-        "height": 95,
-        "output": "",
+        "width": 320,
+        "height": 191,
+        "output": "2026-01-29T23:32:16.000Z-2026-01-30T01:08:55.504Z: 无更多数据，微博已返回全部数据。关键词：外交部 美国 甩锅，当前页：1/0",
         "metadata": {
           "type": "TextAreaAst",
           "class": {
@@ -393,10 +393,10 @@
           ]
         },
         "position": {
-          "x": -910.4753531686996,
-          "y": 858.7779349839624
+          "x": -882.6841056050307,
+          "y": 948.8889498116162
         },
-        "emitCount": 1
+        "emitCount": 0
       },
       {
         "id": "b376c5d6-d126-437a-a00b-5f220fe4de1c",
@@ -406,7 +406,7 @@
         "state": "success",
         "width": 240,
         "height": 119,
-        "output": "2025-12-10T15:13:23.000Z",
+        "output": "2026-01-26T05:46:18.000Z",
         "metadata": {
           "type": "TextAreaAst",
           "class": {
@@ -438,10 +438,10 @@
           ]
         },
         "position": {
-          "x": -880.4284177925229,
-          "y": -86.44857372493016
+          "x": -889.6921669804125,
+          "y": -77.18482453704051
         },
-        "emitCount": 1
+        "emitCount": 0
       },
       {
         "id": "76c5d6d1-2643-4a20-8b5f-220fe4de1c5c",
@@ -451,7 +451,7 @@
         "state": "success",
         "width": 240,
         "height": 119,
-        "output": "2026-01-26T15:54:43.000Z",
+        "output": "2026-01-29T23:32:16.000Z",
         "metadata": {
           "type": "TextAreaAst",
           "class": {
@@ -482,10 +482,10 @@
           ]
         },
         "position": {
-          "x": -887.9401516365671,
-          "y": 46.258724186517014
+          "x": -892.1509467219714,
+          "y": 58.04895042564931
         },
-        "emitCount": 1
+        "emitCount": 0
       },
       {
         "id": "c5d6d126-437a-400b-9f22-0fe4de1c5c8b",
@@ -495,7 +495,7 @@
         "state": "success",
         "width": 240,
         "height": 119,
-        "output": "2025-12-04T16:00:00.000Z",
+        "output": "2026-01-26T07:34:00.000Z",
         "metadata": {
           "type": "TextAreaAst",
           "class": {
@@ -526,10 +526,10 @@
           ]
         },
         "position": {
-          "x": -889.1921072772411,
-          "y": -196.62067010424477
+          "x": -908.5617646701013,
+          "y": -265.6777095048767
         },
-        "emitCount": 1
+        "emitCount": 0
       },
       {
         "id": "d6d12643-7a20-4b5f-a20f-e4de1c5c8b1c",
@@ -539,9 +539,7 @@
         "state": "success",
         "width": 240,
         "height": 95,
-        "result": [
-          "2026-01-30T00:18:43.284Z"
-        ],
+        "result": [],
         "metadata": {
           "type": "CollectorAst",
           "class": {
@@ -573,7 +571,7 @@
           "x": -537.3925722478386,
           "y": 627.1661414592669
         },
-        "emitCount": 0
+        "emitCount": 1
       },
       {
         "id": "d126437a-200b-4f22-8fe4-de1c5c8b1cfb",
@@ -583,9 +581,7 @@
         "state": "success",
         "width": 240,
         "height": 95,
-        "result": [
-          "2026-01-26T15:54:43.000Z"
-        ],
+        "result": [],
         "metadata": {
           "type": "CollectorAst",
           "class": {
@@ -617,7 +613,7 @@
           "x": -548.6601730139049,
           "y": 752.3617055266698
         },
-        "emitCount": 0
+        "emitCount": 1
       },
       {
         "id": "26437a20-0b5f-420f-a4de-1c5c8b1cfbc8",
@@ -626,8 +622,8 @@
         "input": [],
         "state": "success",
         "width": 240,
-        "height": 119,
-        "output": "2026-01-30T00:18:43.284Z",
+        "height": 95,
+        "output": "",
         "metadata": {
           "type": "TextAreaAst",
           "class": {
@@ -659,8 +655,8 @@
           ]
         },
         "position": {
-          "x": 66.05004655704369,
-          "y": 751.1097498859956
+          "x": 75.31379574493334,
+          "y": 762.057817108047
         },
         "emitCount": 1
       },
@@ -671,8 +667,8 @@
         "input": [],
         "state": "success",
         "width": 240,
-        "height": 119,
-        "output": "2026-01-26T15:54:43.000Z",
+        "height": 95,
+        "output": "",
         "metadata": {
           "type": "TextAreaAst",
           "class": {
@@ -716,7 +712,7 @@
         "state": "success",
         "width": 240,
         "height": 119,
-        "output": "陈震 偷税 漏税",
+        "output": "外交部 美国 甩锅",
         "metadata": {
           "type": "TextAreaAst",
           "class": {
@@ -751,7 +747,7 @@
           "x": -574.0324026383669,
           "y": -1.5768781446830502
         },
-        "emitCount": 1
+        "emitCount": 0
       },
       {
         "id": "200b5f22-0fe4-4e1c-9c8b-1cfbc8506799",
@@ -1071,44 +1067,6 @@
             "crawl_end_reason": "2026-01-29T14:33:46.000Z-2026-01-29T18:33:52.393Z: 无更多数据，微博已返回全部数据。关键词：尼帕病毒 纳入检测 印度疫情，当前页：1/0"
           },
           {
-            "id": "e9a21cb2-e3e0-447a-897c-ad12269af9c6",
-            "title": "走私孕妇血样黑产链",
-            "description": "央视网曝光存在走私孕妇血样进行非法性别鉴定等医疗检测的黑产链条，引发公众对医疗伦理及法律监管的关注。",
-            "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
-            "category": {
-              "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
-              "code": "other",
-              "name": "其他",
-              "name_en": "other",
-              "description": null,
-              "icon": null,
-              "color": null,
-              "sort": 100,
-              "status": "active",
-              "created_at": "2026-01-14T12:55:07.919Z",
-              "updated_at": "2026-01-14T12:55:07.919Z",
-              "deleted_at": null
-            },
-            "sentiment": {
-              "neutral": 0.2,
-              "negative": 0.8,
-              "positive": 0
-            },
-            "hotness": "0.24",
-            "status": "active",
-            "seed_url": null,
-            "occurred_at": "2025-12-16T11:23:00.000Z",
-            "peak_at": "2025-12-16T13:00:00.000Z",
-            "keywords": [
-              "孕妇血样",
-              "黑产链"
-            ],
-            "created_at": "2026-01-14T12:55:54.567Z",
-            "updated_at": "2026-01-29T22:57:02.768Z",
-            "deleted_at": null,
-            "crawl_end_reason": "2026-01-27T23:17:38.000Z-2026-01-29T18:32:22.606Z: 无更多数据，微博已返回全部数据。关键词：孕妇血样 黑产链，当前页：1/0"
-          },
-          {
             "id": "dc062cfd-ea16-4ab5-a4ae-73417e21da76",
             "title": "春秋航空招聘已婚已育空嫂",
             "description": "春秋航空放宽空乘招聘限制，面向已婚已育女性招聘空嫂，引发社会对职场年龄歧视与就业公平的讨论。",
@@ -1377,45 +1335,6 @@
             "updated_at": "2026-01-29T22:57:02.783Z",
             "deleted_at": null,
             "crawl_end_reason": "2026-01-29T10:13:05.000Z-2026-01-29T18:54:12.854Z: 无更多数据，微博已返回全部数据。关键词：全运会 开幕式，当前页：1/0"
-          },
-          {
-            "id": "61e1fbd9-9901-4668-99c9-34b178ce9a0b",
-            "title": "云南发生地震",
-            "description": "云南地区发生地震，震级及伤亡情况待官方进一步通报。",
-            "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
-            "category": {
-              "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
-              "code": "other",
-              "name": "其他",
-              "name_en": "other",
-              "description": null,
-              "icon": null,
-              "color": null,
-              "sort": 100,
-              "status": "active",
-              "created_at": "2026-01-14T12:55:07.919Z",
-              "updated_at": "2026-01-14T12:55:07.919Z",
-              "deleted_at": null
-            },
-            "sentiment": {
-              "neutral": 0.3,
-              "negative": 0.7,
-              "positive": 0
-            },
-            "hotness": "1.09",
-            "status": "active",
-            "seed_url": null,
-            "occurred_at": "2026-01-07T16:00:00.000Z",
-            "peak_at": "2026-01-07T16:00:00.000Z",
-            "keywords": [
-              "云南",
-              "地震",
-              "震级"
-            ],
-            "created_at": "2026-01-20T05:13:42.193Z",
-            "updated_at": "2026-01-29T22:57:02.788Z",
-            "deleted_at": null,
-            "crawl_end_reason": "2026-01-29T12:51:39.000Z-2026-01-29T20:55:31.951Z: 无更多数据，微博已返回全部数据。关键词：云南 地震 震级，当前页：1/0"
           },
           {
             "id": "b2edce8e-e5a1-4eb4-b3bd-225abd203513",
@@ -2272,45 +2191,6 @@
             "updated_at": "2026-01-29T22:57:02.837Z",
             "deleted_at": null,
             "crawl_end_reason": "无搜索结果。关键词：中方 菲律宾 仙宾礁，时间范围：2026-01-26-11-2026-01-26-13"
-          },
-          {
-            "id": "e03f9be1-24e3-41b5-9b7f-db258d2e7009",
-            "title": "党员烧香违纪官方释疑",
-            "description": "针对“党员进寺庙烧香是否违纪”的疑问，官方媒体发布政策解释，明确区分民俗活动与迷信活动界限，指出党员参观游览不违规，但烧香跪拜不行。",
-            "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
-            "category": {
-              "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
-              "code": "other",
-              "name": "其他",
-              "name_en": "other",
-              "description": null,
-              "icon": null,
-              "color": null,
-              "sort": 100,
-              "status": "active",
-              "created_at": "2026-01-14T12:55:07.919Z",
-              "updated_at": "2026-01-14T12:55:07.919Z",
-              "deleted_at": null
-            },
-            "sentiment": {
-              "neutral": 0.7,
-              "negative": 0.2,
-              "positive": 0.1
-            },
-            "hotness": "0.68",
-            "status": "active",
-            "seed_url": null,
-            "occurred_at": "2026-01-06T16:00:00.000Z",
-            "peak_at": "2026-01-08T08:00:00.000Z",
-            "keywords": [
-              "党员烧香",
-              "违纪",
-              "官方释疑"
-            ],
-            "created_at": "2026-01-20T05:13:50.410Z",
-            "updated_at": "2026-01-29T22:57:02.839Z",
-            "deleted_at": null,
-            "crawl_end_reason": "2026-01-23T20:00:00.000Z-2026-01-29T22:56:04.923Z: 无更多数据，微博已返回全部数据。关键词：党员烧香 违纪 官方释疑，当前页：1/0"
           },
           {
             "id": "46e22b4e-b03a-4d68-bb6b-79f50ddcd2e1",
@@ -3203,161 +3083,6 @@
             "crawl_end_reason": "2026-01-28T03:03:47.000Z-2026-01-29T22:56:16.493Z: 无更多数据，微博已返回全部数据。关键词：中国公民 日本 避免前往，当前页：5/5"
           },
           {
-            "id": "e8915e69-1817-46b7-a573-51aaaa63fe4e",
-            "title": "火车站5万现金挎包被错拿",
-            "description": "吉林延吉西站一旅客装有5.5万元现金的挎包在安检时被他人错拿，因外观相似导致误拿。经民警1小时寻找，现金已完好归还。",
-            "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
-            "category": {
-              "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
-              "code": "other",
-              "name": "其他",
-              "name_en": "other",
-              "description": null,
-              "icon": null,
-              "color": null,
-              "sort": 100,
-              "status": "active",
-              "created_at": "2026-01-14T12:55:07.919Z",
-              "updated_at": "2026-01-14T12:55:07.919Z",
-              "deleted_at": null
-            },
-            "sentiment": {
-              "neutral": 0.3,
-              "negative": 0.1,
-              "positive": 0.6
-            },
-            "hotness": "45.00",
-            "status": "active",
-            "seed_url": null,
-            "occurred_at": "2026-01-24T12:00:00.000Z",
-            "peak_at": "2026-01-24T13:00:00.000Z",
-            "keywords": [
-              "火车站",
-              "拿错包",
-              "5万现金"
-            ],
-            "created_at": "2026-01-25T07:22:06.137Z",
-            "updated_at": "2026-01-29T23:09:03.027Z",
-            "deleted_at": null,
-            "crawl_end_reason": "无搜索结果。关键词：火车站 拿错包 5万现金，时间范围：2026-01-24-20-2026-01-30-07"
-          },
-          {
-            "id": "d67a84c9-2217-4ab2-a0e1-0560f99d333e",
-            "title": "陈震偷税案",
-            "description": "央视新闻报道陈震存在偷税漏税行为，引发全网关注。",
-            "category_id": "db330f09-6b3d-4bc9-a124-ac0c6296225b",
-            "category": {
-              "id": "db330f09-6b3d-4bc9-a124-ac0c6296225b",
-              "code": "culture_sports",
-              "name": "文化体育娱乐",
-              "name_en": "culture_sports",
-              "description": null,
-              "icon": null,
-              "color": null,
-              "sort": 100,
-              "status": "active",
-              "created_at": "2026-01-14T12:55:21.942Z",
-              "updated_at": "2026-01-14T12:55:21.942Z",
-              "deleted_at": null
-            },
-            "sentiment": {
-              "neutral": 0.1,
-              "negative": 0.8,
-              "positive": 0.1
-            },
-            "hotness": "0.71",
-            "status": "active",
-            "seed_url": null,
-            "occurred_at": "2025-12-04T16:00:00.000Z",
-            "peak_at": "2025-12-05T00:00:00.000Z",
-            "keywords": [
-              "陈震",
-              "偷税",
-              "漏税"
-            ],
-            "created_at": "2026-01-14T12:55:42.128Z",
-            "updated_at": "2026-01-29T23:11:15.428Z",
-            "deleted_at": null,
-            "crawl_end_reason": "2026-01-26T15:54:43.000Z-2026-01-29T23:11:06.348Z: 无更多数据，微博已返回全部数据。关键词：陈震 偷税 漏税，当前页：1/0"
-          },
-          {
-            "id": "e4dbe23f-7c31-4631-9aa2-e386cc2bc04d",
-            "title": "全运会闭幕式",
-            "description": "第十五届全国运动会闭幕式举行，标志着本届全运会圆满结束。",
-            "category_id": "db330f09-6b3d-4bc9-a124-ac0c6296225b",
-            "category": {
-              "id": "db330f09-6b3d-4bc9-a124-ac0c6296225b",
-              "code": "culture_sports",
-              "name": "文化体育娱乐",
-              "name_en": "culture_sports",
-              "description": null,
-              "icon": null,
-              "color": null,
-              "sort": 100,
-              "status": "active",
-              "created_at": "2026-01-14T12:55:21.942Z",
-              "updated_at": "2026-01-14T12:55:21.942Z",
-              "deleted_at": null
-            },
-            "sentiment": {
-              "neutral": 0.2,
-              "negative": 0.1,
-              "positive": 0.7
-            },
-            "hotness": "0.81",
-            "status": "active",
-            "seed_url": null,
-            "occurred_at": "2025-11-21T11:04:00.000Z",
-            "peak_at": "2025-11-21T12:00:00.000Z",
-            "keywords": [
-              "全运会",
-              "闭幕式"
-            ],
-            "created_at": "2026-01-14T12:55:26.439Z",
-            "updated_at": "2026-01-29T23:11:48.986Z",
-            "deleted_at": null,
-            "crawl_end_reason": "2026-01-24T11:46:52.000Z-2026-01-29T23:11:35.812Z: 无更多数据，微博已返回全部数据。关键词：全运会 闭幕式，当前页：1/0"
-          },
-          {
-            "id": "0dacacc1-4c36-4d50-94a9-8ae56543d424",
-            "title": "中方反对美国甩锅疫情",
-            "description": "外交部回应美国退出世卫组织及指责中国瞒报疫情，中方坚决反对借疫情搞政治操弄和甩锅推责，表示抗疫行动事实清楚。",
-            "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
-            "category": {
-              "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
-              "code": "other",
-              "name": "其他",
-              "name_en": "other",
-              "description": null,
-              "icon": null,
-              "color": null,
-              "sort": 100,
-              "status": "active",
-              "created_at": "2026-01-14T12:55:07.919Z",
-              "updated_at": "2026-01-14T12:55:07.919Z",
-              "deleted_at": null
-            },
-            "sentiment": {
-              "neutral": 0.2,
-              "negative": 0.7,
-              "positive": 0.1
-            },
-            "hotness": "249.18",
-            "status": "active",
-            "seed_url": null,
-            "occurred_at": "2026-01-26T07:34:00.000Z",
-            "peak_at": "2026-01-26T10:00:00.000Z",
-            "keywords": [
-              "外交部",
-              "美国",
-              "甩锅"
-            ],
-            "created_at": "2026-01-28T03:31:39.017Z",
-            "updated_at": "2026-01-29T23:12:04.955Z",
-            "deleted_at": null,
-            "crawl_end_reason": "2026-01-29T09:33:56.000Z-2026-01-29T23:11:52.158Z: 无更多数据，微博已返回全部数据。关键词：外交部 美国 甩锅，当前页：1/0"
-          },
-          {
             "id": "e8293cc7-b2d1-4cc7-8fa4-788f58934295",
             "title": "甘肃迭部发生5.5级地震",
             "description": "中国地震台网测定，1月26日14时56分甘肃甘南州迭部县发生5.5级地震，震源深度10千米。",
@@ -3395,62 +3120,334 @@
             "updated_at": "2026-01-29T23:12:19.423Z",
             "deleted_at": null,
             "crawl_end_reason": "2026-01-29T16:42:26.000Z-2026-01-29T23:12:07.885Z: 无更多数据，微博已返回全部数据。关键词：甘肃迭部 地震 5.5级，当前页：1/0"
+          },
+          {
+            "id": "e4dbe23f-7c31-4631-9aa2-e386cc2bc04d",
+            "title": "全运会闭幕式",
+            "description": "第十五届全国运动会闭幕式举行，标志着本届全运会圆满结束。",
+            "category_id": "db330f09-6b3d-4bc9-a124-ac0c6296225b",
+            "category": {
+              "id": "db330f09-6b3d-4bc9-a124-ac0c6296225b",
+              "code": "culture_sports",
+              "name": "文化体育娱乐",
+              "name_en": "culture_sports",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:21.942Z",
+              "updated_at": "2026-01-14T12:55:21.942Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.2,
+              "negative": 0.1,
+              "positive": 0.7
+            },
+            "hotness": "0.81",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2025-11-21T11:04:00.000Z",
+            "peak_at": "2025-11-21T12:00:00.000Z",
+            "keywords": [
+              "全运会",
+              "闭幕式"
+            ],
+            "created_at": "2026-01-14T12:55:26.439Z",
+            "updated_at": "2026-01-30T01:04:42.540Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-24T11:46:52.000Z-2026-01-30T01:04:29.373Z: 无更多数据，微博已返回全部数据。关键词：全运会 闭幕式，当前页：1/0"
+          },
+          {
+            "id": "61e1fbd9-9901-4668-99c9-34b178ce9a0b",
+            "title": "云南发生地震",
+            "description": "云南地区发生地震，震级及伤亡情况待官方进一步通报。",
+            "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+            "category": {
+              "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+              "code": "other",
+              "name": "其他",
+              "name_en": "other",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:07.919Z",
+              "updated_at": "2026-01-14T12:55:07.919Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.3,
+              "negative": 0.7,
+              "positive": 0
+            },
+            "hotness": "1.09",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2026-01-07T16:00:00.000Z",
+            "peak_at": "2026-01-07T16:00:00.000Z",
+            "keywords": [
+              "云南",
+              "地震",
+              "震级"
+            ],
+            "created_at": "2026-01-20T05:13:42.193Z",
+            "updated_at": "2026-01-30T01:04:54.006Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-29T12:51:39.000Z-2026-01-30T01:04:45.304Z: 无更多数据，微博已返回全部数据。关键词：云南 地震 震级，当前页：1/0"
+          },
+          {
+            "id": "d67a84c9-2217-4ab2-a0e1-0560f99d333e",
+            "title": "陈震偷税案",
+            "description": "央视新闻报道陈震存在偷税漏税行为，引发全网关注。",
+            "category_id": "db330f09-6b3d-4bc9-a124-ac0c6296225b",
+            "category": {
+              "id": "db330f09-6b3d-4bc9-a124-ac0c6296225b",
+              "code": "culture_sports",
+              "name": "文化体育娱乐",
+              "name_en": "culture_sports",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:21.942Z",
+              "updated_at": "2026-01-14T12:55:21.942Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.1,
+              "negative": 0.8,
+              "positive": 0.1
+            },
+            "hotness": "0.71",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2025-12-04T16:00:00.000Z",
+            "peak_at": "2025-12-05T00:00:00.000Z",
+            "keywords": [
+              "陈震",
+              "偷税",
+              "漏税"
+            ],
+            "created_at": "2026-01-14T12:55:42.128Z",
+            "updated_at": "2026-01-30T01:05:03.357Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-26T15:54:43.000Z-2026-01-30T01:04:56.294Z: 无更多数据，微博已返回全部数据。关键词：陈震 偷税 漏税，当前页：1/0"
+          },
+          {
+            "id": "e03f9be1-24e3-41b5-9b7f-db258d2e7009",
+            "title": "党员烧香违纪官方释疑",
+            "description": "针对“党员进寺庙烧香是否违纪”的疑问，官方媒体发布政策解释，明确区分民俗活动与迷信活动界限，指出党员参观游览不违规，但烧香跪拜不行。",
+            "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+            "category": {
+              "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+              "code": "other",
+              "name": "其他",
+              "name_en": "other",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:07.919Z",
+              "updated_at": "2026-01-14T12:55:07.919Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.7,
+              "negative": 0.2,
+              "positive": 0.1
+            },
+            "hotness": "0.68",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2026-01-06T16:00:00.000Z",
+            "peak_at": "2026-01-08T08:00:00.000Z",
+            "keywords": [
+              "党员烧香",
+              "违纪",
+              "官方释疑"
+            ],
+            "created_at": "2026-01-20T05:13:50.410Z",
+            "updated_at": "2026-01-30T01:05:28.499Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-29T14:48:56.000Z-2026-01-30T01:05:14.779Z: 无更多数据，微博已返回全部数据。关键词：党员烧香 违纪 官方释疑，当前页：1/0"
+          },
+          {
+            "id": "e9a21cb2-e3e0-447a-897c-ad12269af9c6",
+            "title": "走私孕妇血样黑产链",
+            "description": "央视网曝光存在走私孕妇血样进行非法性别鉴定等医疗检测的黑产链条，引发公众对医疗伦理及法律监管的关注。",
+            "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+            "category": {
+              "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+              "code": "other",
+              "name": "其他",
+              "name_en": "other",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:07.919Z",
+              "updated_at": "2026-01-14T12:55:07.919Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.2,
+              "negative": 0.8,
+              "positive": 0
+            },
+            "hotness": "0.24",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2025-12-16T11:23:00.000Z",
+            "peak_at": "2025-12-16T13:00:00.000Z",
+            "keywords": [
+              "孕妇血样",
+              "黑产链"
+            ],
+            "created_at": "2026-01-14T12:55:54.567Z",
+            "updated_at": "2026-01-30T01:05:42.915Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-28T09:30:06.000Z-2026-01-30T01:05:32.170Z: 无更多数据，微博已返回全部数据。关键词：孕妇血样 黑产链，当前页：1/0"
+          },
+          {
+            "id": "e8915e69-1817-46b7-a573-51aaaa63fe4e",
+            "title": "火车站5万现金挎包被错拿",
+            "description": "吉林延吉西站一旅客装有5.5万元现金的挎包在安检时被他人错拿，因外观相似导致误拿。经民警1小时寻找，现金已完好归还。",
+            "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+            "category": {
+              "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+              "code": "other",
+              "name": "其他",
+              "name_en": "other",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:07.919Z",
+              "updated_at": "2026-01-14T12:55:07.919Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.3,
+              "negative": 0.1,
+              "positive": 0.6
+            },
+            "hotness": "45.00",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2026-01-24T12:00:00.000Z",
+            "peak_at": "2026-01-24T13:00:00.000Z",
+            "keywords": [
+              "火车站",
+              "拿错包",
+              "5万现金"
+            ],
+            "created_at": "2026-01-25T07:22:06.137Z",
+            "updated_at": "2026-01-30T01:06:00.067Z",
+            "deleted_at": null,
+            "crawl_end_reason": "无搜索结果。关键词：火车站 拿错包 5万现金，时间范围：2026-01-24-20-2026-01-30-09"
+          },
+          {
+            "id": "0dacacc1-4c36-4d50-94a9-8ae56543d424",
+            "title": "中方反对美国甩锅疫情",
+            "description": "外交部回应美国退出世卫组织及指责中国瞒报疫情，中方坚决反对借疫情搞政治操弄和甩锅推责，表示抗疫行动事实清楚。",
+            "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+            "category": {
+              "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+              "code": "other",
+              "name": "其他",
+              "name_en": "other",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:07.919Z",
+              "updated_at": "2026-01-14T12:55:07.919Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.2,
+              "negative": 0.7,
+              "positive": 0.1
+            },
+            "hotness": "249.18",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2026-01-26T07:34:00.000Z",
+            "peak_at": "2026-01-26T10:00:00.000Z",
+            "keywords": [
+              "外交部",
+              "美国",
+              "甩锅"
+            ],
+            "created_at": "2026-01-28T03:31:39.017Z",
+            "updated_at": "2026-01-30T01:09:10.380Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-29T23:32:16.000Z-2026-01-30T01:08:55.504Z: 无更多数据，微博已返回全部数据。关键词：外交部 美国 甩锅，当前页：1/0"
           }
         ],
         "totalEvents": 0,
         "customPrompt": "",
         "selectedEvent": {
-          "id": "d67a84c9-2217-4ab2-a0e1-0560f99d333e",
-          "title": "陈震偷税案",
-          "description": "央视新闻报道陈震存在偷税漏税行为，引发全网关注。",
-          "category_id": "db330f09-6b3d-4bc9-a124-ac0c6296225b",
+          "id": "0dacacc1-4c36-4d50-94a9-8ae56543d424",
+          "title": "中方反对美国甩锅疫情",
+          "description": "外交部回应美国退出世卫组织及指责中国瞒报疫情，中方坚决反对借疫情搞政治操弄和甩锅推责，表示抗疫行动事实清楚。",
+          "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
           "category": {
-            "id": "db330f09-6b3d-4bc9-a124-ac0c6296225b",
-            "code": "culture_sports",
-            "name": "文化体育娱乐",
-            "name_en": "culture_sports",
+            "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+            "code": "other",
+            "name": "其他",
+            "name_en": "other",
             "description": null,
             "icon": null,
             "color": null,
             "sort": 100,
             "status": "active",
-            "created_at": "2026-01-14T12:55:21.942Z",
-            "updated_at": "2026-01-14T12:55:21.942Z",
+            "created_at": "2026-01-14T12:55:07.919Z",
+            "updated_at": "2026-01-14T12:55:07.919Z",
             "deleted_at": null
           },
           "sentiment": {
-            "neutral": 0.1,
-            "negative": 0.8,
+            "neutral": 0.2,
+            "negative": 0.7,
             "positive": 0.1
           },
-          "hotness": "0.71",
+          "hotness": "249.18",
           "status": "active",
           "seed_url": null,
-          "occurred_at": "2025-12-04T16:00:00.000Z",
-          "peak_at": "2025-12-05T00:00:00.000Z",
+          "occurred_at": "2026-01-26T07:34:00.000Z",
+          "peak_at": "2026-01-26T10:00:00.000Z",
           "keywords": [
-            "陈震",
-            "偷税",
-            "漏税"
+            "外交部",
+            "美国",
+            "甩锅"
           ],
-          "created_at": "2026-01-14T12:55:42.128Z",
-          "updated_at": "2026-01-29T23:11:15.428Z",
+          "created_at": "2026-01-28T03:31:39.017Z",
+          "updated_at": "2026-01-30T01:09:10.380Z",
           "deleted_at": null,
-          "crawl_end_reason": "2026-01-26T15:54:43.000Z-2026-01-29T23:11:06.348Z: 无更多数据，微博已返回全部数据。关键词：陈震 偷税 漏税，当前页：1/0"
+          "crawl_end_reason": "2026-01-29T23:32:16.000Z-2026-01-30T01:08:55.504Z: 无更多数据，微博已返回全部数据。关键词：外交部 美国 甩锅，当前页：1/0"
         },
         "uncrawledCount": 0,
-        "selectedEventId": "d67a84c9-2217-4ab2-a0e1-0560f99d333e"
+        "selectedEventId": "0dacacc1-4c36-4d50-94a9-8ae56543d424",
+        "error": "操作失败：LLM 返回的 JSON 格式无效"
       },
       {
         "id": "5f220fe4-de1c-4c8b-9cfb-c85067997572",
         "name": "事件分派提示词",
         "type": "TextAreaAst",
         "count": 0,
-        "input": "忽略错误的事件，如：无法创建事件等，很明显就不是正确的事件",
+        "input": "",
         "state": "success",
-        "width": 320,
-        "height": 143,
-        "output": "忽略错误的事件，如：无法创建事件等，很明显就不是正确的事件",
+        "width": 272,
+        "height": 95,
+        "output": "",
         "metadata": {
           "type": "TextAreaAst",
           "class": {
@@ -3542,7 +3539,7 @@
         "state": "success",
         "width": 240,
         "height": 199,
-        "output": "陈震\n\n偷税\n\n漏税",
+        "output": "外交部\n\n美国\n\n甩锅",
         "metadata": {
           "type": "TextAreaAst",
           "class": {
@@ -3577,7 +3574,7 @@
           "x": -1348.7325562257724,
           "y": 675.6205715672342
         },
-        "emitCount": 1
+        "emitCount": 0
       },
       {
         "id": "e4de1c5c-8b1c-4bc8-9067-997572327952",
@@ -3624,6 +3621,51 @@
         },
         "emitCount": 1,
         "portLabels": {}
+      },
+      {
+        "id": "79c3403c-3a5a-4ae9-b0ff-11962419361f",
+        "type": "TextAreaAst",
+        "count": 0,
+        "input": [],
+        "state": "success",
+        "width": 320,
+        "height": 119,
+        "output": "0dacacc1-4c36-4d50-94a9-8ae56543d424",
+        "metadata": {
+          "type": "TextAreaAst",
+          "class": {
+            "type": "basic",
+            "title": "文本节点",
+            "hasTool": true
+          },
+          "inputs": [
+            {
+              "mode": 1,
+              "type": "textarea",
+              "title": "输入",
+              "isMulti": true,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "input",
+              "defaultValue": []
+            }
+          ],
+          "states": [],
+          "outputs": [
+            {
+              "type": "textarea",
+              "title": "输出",
+              "isStatic": true,
+              "property": "output",
+              "isSubject": false
+            }
+          ]
+        },
+        "position": {
+          "x": -1396.0357500502644,
+          "y": -93.23312283434893
+        },
+        "emitCount": 0
       }
     ],
     "entryNodeIds": [
@@ -3782,12 +3824,30 @@
         "type": "data",
         "toProperty": "input",
         "fromProperty": "keywords"
+      },
+      {
+        "id": "edge-7222afbe-00e3-4fe1-9305-efc86033c1c3",
+        "to": "79c3403c-3a5a-4ae9-b0ff-11962419361f",
+        "from": "0b5f220f-e4de-4c5c-8b1c-fbc850679975",
+        "type": "data",
+        "toProperty": "input",
+        "fromProperty": "selectedEventId"
+      },
+      {
+        "id": "edge-d7f157e1-7a8b-4c1d-8bd0-a34126e6934a",
+        "type": "data",
+        "from": "4207cc2a-b376-45d6-9126-437a200b5f22",
+        "to": "374207cc-2ab3-46c5-96d1-26437a200b5f",
+        "fromProperty": "crawl_end_reason",
+        "toProperty": "end_reason",
+        "mode": "zip",
+        "weight": 1
       }
     ],
     "toolNodeIds": [],
     "viewport": {
-      "x": 2026.1866384323184,
-      "y": -370.2927333871968,
+      "x": 2893.6866384323184,
+      "y": 142.7072666128032,
       "zoom": 1.1874242034078522
     },
     "tags": [

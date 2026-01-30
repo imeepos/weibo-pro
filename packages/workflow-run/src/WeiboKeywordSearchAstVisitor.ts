@@ -358,9 +358,9 @@ export class WeiboKeywordSearchAstVisitor {
             }
         }
 
-        logger.info('[WeiboKeywordSearch] 搜索完成，准备更新事件爬取结束原因');
+        logger.info('[WeiboKeywordSearch] 搜索完成，准备更新事件爬取结束原因和最后爬取时间');
 
-        // 正常退出时更新事件爬取结束原因
+        // 正常退出时更新事件爬取结束原因和最后爬取时间
         await useEntityManager(async (manager) => {
             if (ast.event_id) {
                 const event = await manager.findOne(EventEntity, { where: { id: ast.event_id } });
@@ -384,7 +384,9 @@ export class WeiboKeywordSearchAstVisitor {
                     }
 
                     event.crawl_end_reason = `${reasons.join('，')}。关键词：${ast.keyword}，当前页：${result.currentPage}/${result.totalPage}`;
+                    event.last_crawl_at = new Date(); // 更新最后爬取时间
                     await manager.save(EventEntity, event);
+                    logger.info(`[WeiboKeywordSearch] 已更新事件 last_crawl_at: ${event.last_crawl_at.toISOString()}`);
                 }
             }
         });

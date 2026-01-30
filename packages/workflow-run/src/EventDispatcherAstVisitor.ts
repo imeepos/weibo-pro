@@ -67,6 +67,11 @@ function buildDefaultPrompt(
     // 计算更新时间（事件最后更新时间距今）
     const updatedDaysAgo = calculateDaysDiff(e.updated_at, currentTime);
 
+    // 计算上一次爬取时间距今
+    const lastCrawlInfo = e.last_crawl_at
+      ? `${formatDays(calculateDaysDiff(e.last_crawl_at, currentTime))}前 (${e.last_crawl_at.toISOString().split('T')[0]})`
+      : '从未爬取';
+
     return `[序号${idx + 1}] ID: ${e.id}
 标题: ${e.title}
 关键词: ${e.keywords && e.keywords.length > 0 ? e.keywords.join(', ') : '(无)'}
@@ -75,7 +80,8 @@ function buildDefaultPrompt(
 总时间跨度: ${formatDays(totalDays)} (${eventStartTime.toISOString().split('T')[0]} ~ ${currentTime.toISOString().split('T')[0]})
 已爬取: ${timeRangeInfo ? `${formatDays(crawledDays)} (${coveragePercent}%) [${timeRangeInfo.min.split('T')[0]} ~ ${timeRangeInfo.max.split('T')[0]}]` : '无数据'}
 时间差值: ${formatDays(gapDays)} (${timeRangeInfo ? `${coveragePercent}%已覆盖` : '0%已覆盖'})
-最后更新: ${formatDays(updatedDaysAgo)}前 (${e.updated_at.toISOString().split('T')[0]})`;
+最后更新: ${formatDays(updatedDaysAgo)}前 (${e.updated_at.toISOString().split('T')[0]})
+上一次爬取: ${lastCrawlInfo}`;
   }).join('\n\n');
 
   return `# 事件分派任务
@@ -85,22 +91,27 @@ YOU MUST 从以下事件列表中选择【且仅选择一个】事件进行爬�
 ## 可选事件列表
 
 **注意**：以下事件已自动过滤掉 keyword 为空的错误/假事件，所有事件都是有效的。
+**排序规则**：列表按"上一次爬取时间"升序排列，从未爬取的事件排在最前面。
 
 ${eventList}
 
 ## 选择逻辑（按此顺序逐步评估）
 
-第一步：过滤未完成事件
-- 优先选择状态为"未爬取"的事件
-- 如果所有事件都已爬取，选择时间差值最大的事件进行补充爬取
+第一步：优先选择从未爬取的事件
+- 优先选择"上一次爬取"为"从未爬取"的事件
+- 列表已自动排序，从未爬取的事件在最前面
 
-第二步：计算优先级分数
-- 未爬取事件：基础分 100 + 时间差值天数
+第二步：避免短时间内重复爬取
+- 如果所有事件都已爬取过，选择"上一次爬取"时间最早的事件
+- 这样可以自动实现轮询效果，避免重复选择同一事件
+
+第三步：计算优先级分数
+- 从未爬取事件：基础分 100 + 时间差值天数
 - 已爬取事件：基础分 50 + 时间差值天数
 - 更新时间早者额外加 10 分（防重）
 
-第三步：选择得分最高的事件
-- 如果得分相同，选择列表中排在前面的事件
+第四步：选择得分最高的事件
+- 如果得分相同，选择列表中排在前面的事件（列表已按最佳顺序排序）
 
 ## 输出格式（必须严格遵守）
 
@@ -193,8 +204,9 @@ export class EventDispatcherAstVisitor {
               .leftJoinAndSelect('event.category', 'category')
               .where('event.status = :status', { status: 'active' })
               .andWhere('jsonb_array_length(event.keywords) IS NOT NULL')
-              .orderBy('event.updated_at', 'ASC')
-              .addOrderBy('event.created_at', 'DESC')
+              .orderBy('event.last_crawl_at', 'ASC')       // 从未爬取的排最前（null），然后是最早爬取的
+              .addOrderBy('event.updated_at', 'ASC')       // 辅助排序：更新时间早的优先
+              .addOrderBy('event.created_at', 'DESC')      // 辅助排序：创建时间晚的优先
               .getMany();
           });
 

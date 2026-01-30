@@ -17,6 +17,7 @@ import { type SentimentScore } from './types/sentiment';
 @Index(['hotness'])
 @Index(['created_at'])
 @Index(['status'])
+@Index(['last_crawl_at']) // 添加索引优化排序查询
 export class EventEntity {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
@@ -86,4 +87,11 @@ export class EventEntity {
     name: 'crawl_end_reason'
   })
   crawl_end_reason!: string | null;
+
+  @Column({
+    type: 'timestamptz',
+    nullable: true,
+    name: 'last_crawl_at'
+  })
+  last_crawl_at!: Date | null;
 }
