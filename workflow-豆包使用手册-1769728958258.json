@@ -2,10 +2,10 @@
   "workflow": {
     "count": 0,
     "emitCount": 0,
-    "id": "6b66e62a-302e-4ca0-b6fa-c2701b03d5ac",
-    "name": "豆包使用手册",
+    "id": "4d1a8262-7446-4c32-a0df-f390d5a7493c",
+    "name": "111",
     "description": null,
-    "color": null,
+    "color": "#ef4444",
     "collapsed": false,
     "width": null,
     "state": "pending",
@@ -16,319 +16,185 @@
     },
     "nodes": [
       {
-        "id": "cdd666c9-9616-450c-b4c1-ab628bc1de02",
-        "type": "PromptRoleSkillAst",
+        "id": "374207cc-2ab3-46c5-96d1-26437a200b5f",
+        "type": "SmartAstV1",
         "count": 0,
         "model": "deepseek-ai/DeepSeek-V3.2",
         "state": "success",
-        "width": 261,
-        "height": 360,
-        "roleId": "e88bed79-5c4e-4f51-8add-83ceedf2a0d4",
+        "width": 244,
+        "height": 291,
+        "endDate": "2026-01-30T00:18:43.284Z",
         "metadata": {
-          "type": "PromptRoleSkillAst",
+          "type": "SmartAstV1",
           "class": {
-            "type": "llm",
-            "title": "角色技能",
+            "type": "control",
+            "title": "智能分发器",
             "hasTool": false,
-            "maxRetries": 3,
+            "maxRetries": 2,
             "retryDelay": 1000,
             "retryBackoff": 2,
-            "errorStrategy": "retry"
+            "dynamicInputs": true,
+            "errorStrategy": "retry",
+            "dynamicOutputs": true
           },
           "inputs": [
             {
-              "mode": 1,
-              "title": "角色需求",
-              "isMulti": true,
-              "isBuffer": false,
-              "isStatic": true,
-              "property": "requirements",
-              "defaultValue": []
-            },
-            {
-              "title": "温度",
-              "isMulti": false,
-              "isBuffer": false,
-              "isStatic": true,
-              "property": "temperature",
-              "defaultValue": 0.7
-            },
-            {
-              "title": "模型",
+              "title": "LLM 模型",
               "isMulti": false,
               "isBuffer": false,
               "isStatic": true,
               "property": "model",
               "defaultValue": "deepseek-ai/DeepSeek-V3.2"
+            },
+            {
+              "type": "number",
+              "title": "温度参数",
+              "isMulti": false,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "temperature",
+              "defaultValue": 0.3
+            },
+            {
+              "type": "string",
+              "title": "事件开始时间",
+              "isStatic": false,
+              "property": "startDate",
+              "required": true,
+              "description": "事件的开始时间，如果有出现在这个时间点的帖子，意味着这个事件历史数据已经爬取完毕了"
+            },
+            {
+              "type": "string",
+              "title": "最早的帖子时间",
+              "isStatic": false,
+              "property": "postMinDate",
+              "required": false,
+              "description": "已爬取数据中最早的帖子时间"
+            },
+            {
+              "type": "string",
+              "title": "最晚的帖子时间",
+              "isStatic": false,
+              "property": "postMaxDate",
+              "required": false,
+              "description": "数据库中发帖时间最大值"
+            },
+            {
+              "type": "string",
+              "title": "分配规则",
+              "isStatic": false,
+              "property": "prompt",
+              "required": false,
+              "description": ""
+            },
+            {
+              "type": "boolean",
+              "title": "历史数据是否爬取完成",
+              "isStatic": false,
+              "property": "isEnd",
+              "required": false,
+              "description": "历史数据爬取完成后，应该增量爬取数据"
+            },
+            {
+              "type": "string",
+              "title": "爬取停止原因",
+              "isStatic": false,
+              "property": "end_reason",
+              "required": false,
+              "description": "爬取停止的原因，记录每一次爬取停止的原因"
             }
           ],
-          "states": [
-            {
-              "title": "角色ID",
-              "propertyKey": "roleId"
-            },
-            {
-              "title": "可用技能列表",
-              "propertyKey": "availableSkills"
-            },
-            {
-              "title": "选中的技能",
-              "propertyKey": "selectedSkills"
-            },
-            {
-              "title": "技能内容缓存",
-              "propertyKey": "skillContents"
-            }
-          ],
+          "states": [],
           "outputs": [
             {
-              "title": "选中技能列表",
+              "type": "boolean",
+              "title": "分发完成",
+              "isRouter": true,
               "isStatic": true,
-              "property": "selectedSkillsList",
+              "property": "dispatchComplete",
               "isSubject": false
             },
             {
-              "title": "技能内容",
-              "isStatic": true,
-              "property": "skillContent",
-              "isSubject": false
+              "type": "string",
+              "title": "关键字爬取结束时间",
+              "isRouter": false,
+              "isStatic": false,
+              "property": "endDate",
+              "description": "关键字爬取结束时间"
             },
             {
-              "title": "技能内容文本",
-              "isStatic": true,
-              "property": "skillContentText",
-              "isSubject": false
+              "type": "string",
+              "title": "关键字爬取开始时间",
+              "isRouter": false,
+              "isStatic": false,
+              "property": "searchStartDate",
+              "description": "关键字爬取开始时间"
             }
           ]
         },
         "position": {
-          "x": 615.279146639242,
-          "y": 73.5858658368851
+          "x": -1002.2766091962578,
+          "y": 334.3865630844807
         },
         "emitCount": 1,
         "portLabels": {},
-        "temperature": 0.7,
-        "requirements": [],
-        "skillContent": {
-          "8afe6d4d-53b1-4d9e-9cc4-316cade675e7": "## 舆情分析标准流程\n\n### Step 1: 数据采集与清洗\n- 获取原始微博数据（发布时间、用户信息、内容）\n- 收集评论和转发数据\n- 移除机器人、广告、重复内容\n\n### Step 2: 基础数据分析\n- 热度分析：声量、传播速度、覆盖面\n- 地域分布：按省份、城市聚合\n- 人群特征：发布者属性、活跃度\n\n### Step 3: 情感分析\n- NLP分析：正负中立分类\n- 关键词提取：高频词、新词、对立词\n- 情感倾向：正面率、负面率、信息量\n\n### Step 4: 事件分析\n- 时间线：事件发生、升级、转折、缓解\n- 参与方：官方、企业、大V、普通用户\n- 主要矛盾：核心争议点、解决路径\n\n### Step 5: 趋势预判\n- 当前阶段：上升期/高峰期/衰落期\n- 发展方向：可能走向（正面解决/负面升级/无疾而终）\n- 风险识别：可能引发的连锁反应\n\n### Step 6: 报告生成\n- 数据总结：关键数据、变化趋势\n- 深度分析：主要矛盾、舆情结构\n- 建议方案：应对策略、处置建议",
-          "b0fdfed7-87b4-4ab9-90b5-d303aed0dd95": "## 舆情事件的四个阶段\n\n### 1. 潜伏期（0-6小时）\n- 特征：声量小，信息不完整\n- 表现：少数人讨论，主要是亲历者\n- 风险：信息空白，谣言易传播\n\n### 2. 爆发期（6小时-3天）\n- 特征：声量快速上升，媒体介入\n- 表现：各类媒体开始报道，评论激增\n- 风险：情感倾向快速形成，舆论极化\n\n### 3. 高峰期（3-7天）\n- 特征：声量达到顶峰，观点固化\n- 表现：各方意见充分表达，争议点明确\n- 机会：最佳回应窗口，能改变舆论走向\n\n### 4. 衰落期（7天以后）\n- 特征：声量快速下降，新热点出现\n- 表现：讨论集中在解决方案或总结\n- 恢复：需要监控反复波动的可能",
-          "c551115d-4644-442b-9f2f-0a5915c0dc13": "## 从数据出发\n\n### 信息获取层次\n- 一手数据：原始微博内容、评论数据\n- 二手数据：新闻报道、专业分析\n- 三手数据：理论模型、对标案例\n\n### 验证原则\n- 不相信单一来源\n- 交叉验证多个数据点\n- 追溯数据产生的过程"
-        },
-        "skillContents": {},
-        "selectedSkills": [],
-        "availableSkills": [],
-        "skillContentText": "## 从数据出发\n\n### 信息获取层次\n- 一手数据：原始微博内容、评论数据\n- 二手数据：新闻报道、专业分析\n- 三手数据：理论模型、对标案例\n\n### 验证原则\n- 不相信单一来源\n- 交叉验证多个数据点\n- 追溯数据产生的过程\n\n## 舆情分析标准流程\n\n### Step 1: 数据采集与清洗\n- 获取原始微博数据（发布时间、用户信息、内容）\n- 收集评论和转发数据\n- 移除机器人、广告、重复内容\n\n### Step 2: 基础数据分析\n- 热度分析：声量、传播速度、覆盖面\n- 地域分布：按省份、城市聚合\n- 人群特征：发布者属性、活跃度\n\n### Step 3: 情感分析\n- NLP分析：正负中立分类\n- 关键词提取：高频词、新词、对立词\n- 情感倾向：正面率、负面率、信息量\n\n### Step 4: 事件分析\n- 时间线：事件发生、升级、转折、缓解\n- 参与方：官方、企业、大V、普通用户\n- 主要矛盾：核心争议点、解决路径\n\n### Step 5: 趋势预判\n- 当前阶段：上升期/高峰期/衰落期\n- 发展方向：可能走向（正面解决/负面升级/无疾而终）\n- 风险识别：可能引发的连锁反应\n\n### Step 6: 报告生成\n- 数据总结：关键数据、变化趋势\n- 深度分析：主要矛盾、舆情结构\n- 建议方案：应对策略、处置建议\n\n## 舆情事件的四个阶段\n\n### 1. 潜伏期（0-6小时）\n- 特征：声量小，信息不完整\n- 表现：少数人讨论，主要是亲历者\n- 风险：信息空白，谣言易传播\n\n### 2. 爆发期（6小时-3天）\n- 特征：声量快速上升，媒体介入\n- 表现：各类媒体开始报道，评论激增\n- 风险：情感倾向快速形成，舆论极化\n\n### 3. 高峰期（3-7天）\n- 特征：声量达到顶峰，观点固化\n- 表现：各方意见充分表达，争议点明确\n- 机会：最佳回应窗口，能改变舆论走向\n\n### 4. 衰落期（7天以后）\n- 特征：声量快速下降，新热点出现\n- 表现：讨论集中在解决方案或总结\n- 恢复：需要监控反复波动的可能",
-        "selectedSkillsList": [
-          {
-            "id": "c551115d-4644-442b-9f2f-0a5915c0dc13",
-            "type": "thought",
-            "title": "研究优先",
-            "description": "深入数据研究，建立事实基础"
-          },
-          {
-            "id": "8afe6d4d-53b1-4d9e-9cc4-316cade675e7",
-            "type": "execution",
-            "title": "舆情分析工作流",
-            "description": "标准舆情分析流程"
-          },
-          {
-            "id": "b0fdfed7-87b4-4ab9-90b5-d303aed0dd95",
-            "type": "knowledge",
-            "title": "事件生命周期",
-            "description": "舆情事件的演进规律"
-          }
-        ]
+        "temperature": 0.3,
+        "searchStartDate": "2026-01-26T15:54:43.000Z",
+        "dispatchComplete": true
       },
       {
-        "id": "8dd7c959-8c65-4e2a-b687-54f45bcf2754",
-        "type": "TextAreaAst",
-        "count": 0,
-        "input": "分析舆情事件的来龙去脉",
-        "state": "success",
-        "width": 240,
-        "height": 119,
-        "output": "分析舆情事件的来龙去脉",
-        "metadata": {
-          "type": "TextAreaAst",
-          "class": {
-            "type": "basic",
-            "title": "文本节点",
-            "hasTool": true
-          },
-          "inputs": [
-            {
-              "mode": 1,
-              "type": "textarea",
-              "title": "输入",
-              "isMulti": true,
-              "isBuffer": false,
-              "isStatic": true,
-              "property": "input",
-              "defaultValue": []
-            }
-          ],
-          "states": [],
-          "outputs": [
-            {
-              "type": "textarea",
-              "title": "输出",
-              "isStatic": true,
-              "property": "output",
-              "isSubject": false
-            }
-          ]
-        },
-        "position": {
-          "x": 22.820094702213012,
-          "y": 246.44140214813416
-        },
-        "emitCount": 1,
-        "portLabels": {}
-      },
-      {
-        "id": "10aec209-52d9-408b-85b4-2ee29ac8a732",
-        "type": "TextAreaAst",
-        "count": 0,
-        "input": [],
-        "state": "success",
-        "width": 320,
-        "height": 355,
-        "output": "{\n  \"id\": \"c551115d-4644-442b-9f2f-0a5915c0dc13\",\n  \"title\": \"研究优先\",\n  \"type\": \"thought\",\n  \"description\": \"深入数据研究，建立事实基础\"\n}\n\n{\n  \"id\": \"8afe6d4d-53b1-4d9e-9cc4-316cade675e7\",\n  \"title\": \"舆情分析工作流\",\n  \"type\": \"execution\",\n  \"description\": \"标准舆情分析流程\"\n}\n\n{\n  \"id\": \"b0fdfed7-87b4-4ab9-90b5-d303aed0dd95\",\n  \"title\": \"事件生命周期\",\n  \"type\": \"knowledge\",\n  \"description\": \"舆情事件的演进规律\"\n}",
-        "metadata": {
-          "type": "TextAreaAst",
-          "class": {
-            "type": "basic",
-            "title": "文本节点",
-            "hasTool": true
-          },
-          "inputs": [
-            {
-              "mode": 1,
-              "type": "textarea",
-              "title": "输入",
-              "isMulti": true,
-              "isBuffer": false,
-              "isStatic": true,
-              "property": "input"
-            }
-          ],
-          "states": [],
-          "outputs": [
-            {
-              "type": "textarea",
-              "title": "输出",
-              "isStatic": true,
-              "property": "output",
-              "isSubject": false
-            }
-          ]
-        },
-        "position": {
-          "x": 1078.4264233205276,
-          "y": -265.03285176520853
-        },
-        "emitCount": 1
-      },
-      {
-        "id": "042f5b45-58c1-4459-bca7-e8c948f5106a",
-        "type": "TextAreaAst",
-        "count": 0,
-        "input": [],
-        "state": "success",
-        "width": 320,
-        "height": 355,
-        "output": "{\n  \"c551115d-4644-442b-9f2f-0a5915c0dc13\": \"## 从数据出发\\n\\n### 信息获取层次\\n- 一手数据：原始微博内容、评论数据\\n- 二手数据：新闻报道、专业分析\\n- 三手数据：理论模型、对标案例\\n\\n### 验证原则\\n- 不相信单一来源\\n- 交叉验证多个数据点\\n- 追溯数据产生的过程\",\n  \"8afe6d4d-53b1-4d9e-9cc4-316cade675e7\": \"## 舆情分析标准流程\\n\\n### Step 1: 数据采集与清洗\\n- 获取原始微博数据（发布时间、用户信息、内容）\\n- 收集评论和转发数据\\n- 移除机器人、广告、重复内容\\n\\n### Step 2: 基础数据分析\\n- 热度分析：声量、传播速度、覆盖面\\n- 地域分布：按省份、城市聚合\\n- 人群特征：发布者属性、活跃度\\n\\n### Step 3: 情感分析\\n- NLP分析：正负中立分类\\n- 关键词提取：高频词、新词、对立词\\n- 情感倾向：正面率、负面率、信息量\\n\\n### Step 4: 事件分析\\n- 时间线：事件发生、升级、转折、缓解\\n- 参与方：官方、企业、大V、普通用户\\n- 主要矛盾：核心争议点、解决路径\\n\\n### Step 5: 趋势预判\\n- 当前阶段：上升期/高峰期/衰落期\\n- 发展方向：可能走向（正面解决/负面升级/无疾而终）\\n- 风险识别：可能引发的连锁反应\\n\\n### Step 6: 报告生成\\n- 数据总结：关键数据、变化趋势\\n- 深度分析：主要矛盾、舆情结构\\n- 建议方案：应对策略、处置建议\",\n  \"b0fdfed7-87b4-4ab9-90b5-d303aed0dd95\": \"## 舆情事件的四个阶段\\n\\n### 1. 潜伏期（0-6小时）\\n- 特征：声量小，信息不完整\\n- 表现：少数人讨论，主要是亲历者\\n- 风险：信息空白，谣言易传播\\n\\n### 2. 爆发期（6小时-3天）\\n- 特征：声量快速上升，媒体介入\\n- 表现：各类媒体开始报道，评论激增\\n- 风险：情感倾向快速形成，舆论极化\\n\\n### 3. 高峰期（3-7天）\\n- 特征：声量达到顶峰，观点固化\\n- 表现：各方意见充分表达，争议点明确\\n- 机会：最佳回应窗口，能改变舆论走向\\n\\n### 4. 衰落期（7天以后）\\n- 特征：声量快速下降，新热点出现\\n- 表现：讨论集中在解决方案或总结\\n- 恢复：需要监控反复波动的可能\"\n}",
-        "metadata": {
-          "type": "TextAreaAst",
-          "class": {
-            "type": "basic",
-            "title": "文本节点",
-            "hasTool": true
-          },
-          "inputs": [
-            {
-              "mode": 1,
-              "type": "textarea",
-              "title": "输入",
-              "isMulti": true,
-              "isBuffer": false,
-              "isStatic": true,
-              "property": "input"
-            }
-          ],
-          "states": [],
-          "outputs": [
-            {
-              "type": "textarea",
-              "title": "输出",
-              "isStatic": true,
-              "property": "output",
-              "isSubject": false
-            }
-          ]
-        },
-        "position": {
-          "x": 1446.5691304261645,
-          "y": -259.0950661667306
-        },
-        "emitCount": 1
-      },
-      {
-        "id": "6d3b3d97-dd1b-4f75-9d1b-976b9f1981f6",
-        "type": "TextAreaAst",
-        "count": 0,
-        "input": [],
-        "state": "success",
-        "width": 320,
-        "height": 355,
-        "output": "## 从数据出发\n\n### 信息获取层次\n- 一手数据：原始微博内容、评论数据\n- 二手数据：新闻报道、专业分析\n- 三手数据：理论模型、对标案例\n\n### 验证原则\n- 不相信单一来源\n- 交叉验证多个数据点\n- 追溯数据产生的过程\n\n## 舆情分析标准流程\n\n### Step 1: 数据采集与清洗\n- 获取原始微博数据（发布时间、用户信息、内容）\n- 收集评论和转发数据\n- 移除机器人、广告、重复内容\n\n### Step 2: 基础数据分析\n- 热度分析：声量、传播速度、覆盖面\n- 地域分布：按省份、城市聚合\n- 人群特征：发布者属性、活跃度\n\n### Step 3: 情感分析\n- NLP分析：正负中立分类\n- 关键词提取：高频词、新词、对立词\n- 情感倾向：正面率、负面率、信息量\n\n### Step 4: 事件分析\n- 时间线：事件发生、升级、转折、缓解\n- 参与方：官方、企业、大V、普通用户\n- 主要矛盾：核心争议点、解决路径\n\n### Step 5: 趋势预判\n- 当前阶段：上升期/高峰期/衰落期\n- 发展方向：可能走向（正面解决/负面升级/无疾而终）\n- 风险识别：可能引发的连锁反应\n\n### Step 6: 报告生成\n- 数据总结：关键数据、变化趋势\n- 深度分析：主要矛盾、舆情结构\n- 建议方案：应对策略、处置建议\n\n## 舆情事件的四个阶段\n\n### 1. 潜伏期（0-6小时）\n- 特征：声量小，信息不完整\n- 表现：少数人讨论，主要是亲历者\n- 风险：信息空白，谣言易传播\n\n### 2. 爆发期（6小时-3天）\n- 特征：声量快速上升，媒体介入\n- 表现：各类媒体开始报道，评论激增\n- 风险：情感倾向快速形成，舆论极化\n\n### 3. 高峰期（3-7天）\n- 特征：声量达到顶峰，观点固化\n- 表现：各方意见充分表达，争议点明确\n- 机会：最佳回应窗口，能改变舆论走向\n\n### 4. 衰落期（7天以后）\n- 特征：声量快速下降，新热点出现\n- 表现：讨论集中在解决方案或总结\n- 恢复：需要监控反复波动的可能",
-        "metadata": {
-          "type": "TextAreaAst",
-          "class": {
-            "type": "basic",
-            "title": "文本节点",
-            "hasTool": true
-          },
-          "inputs": [
-            {
-              "mode": 1,
-              "type": "textarea",
-              "title": "输入",
-              "isMulti": true,
-              "isBuffer": false,
-              "isStatic": true,
-              "property": "input"
-            }
-          ],
-          "states": [],
-          "outputs": [
-            {
-              "type": "textarea",
-              "title": "输出",
-              "isStatic": true,
-              "property": "output",
-              "isSubject": false
-            }
-          ]
-        },
-        "position": {
-          "x": 1116.6921527329414,
-          "y": 152.7563404832587
-        },
-        "emitCount": 1
-      },
-      {
-        "id": "a76b0988-11cb-45f7-a574-35ad0f977123",
+        "id": "4207cc2a-b376-45d6-9126-437a200b5f22",
         "type": "EventAst",
         "count": 0,
-        "event": null,
-        "state": "pending",
+        "event": {
+          "id": "d67a84c9-2217-4ab2-a0e1-0560f99d333e",
+          "title": "陈震偷税案",
+          "description": "央视新闻报道陈震存在偷税漏税行为，引发全网关注。",
+          "category_id": "db330f09-6b3d-4bc9-a124-ac0c6296225b",
+          "category": {
+            "id": "db330f09-6b3d-4bc9-a124-ac0c6296225b",
+            "code": "culture_sports",
+            "name": "文化体育娱乐",
+            "name_en": "culture_sports",
+            "description": null,
+            "icon": null,
+            "color": null,
+            "sort": 100,
+            "status": "active",
+            "created_at": "2026-01-14T12:55:21.942Z",
+            "updated_at": "2026-01-14T12:55:21.942Z",
+            "deleted_at": null
+          },
+          "sentiment": {
+            "neutral": 0.1,
+            "negative": 0.8,
+            "positive": 0.1
+          },
+          "hotness": "0.71",
+          "status": "active",
+          "seed_url": null,
+          "occurred_at": "2025-12-04T16:00:00.000Z",
+          "peak_at": "2025-12-05T00:00:00.000Z",
+          "keywords": [
+            "陈震",
+            "偷税",
+            "漏税"
+          ],
+          "created_at": "2026-01-14T12:55:42.128Z",
+          "updated_at": "2026-01-29T23:11:15.428Z",
+          "deleted_at": null,
+          "crawl_end_reason": "2026-01-26T15:54:43.000Z-2026-01-29T23:11:06.348Z: 无更多数据，微博已返回全部数据。关键词：陈震 偷税 漏税，当前页：1/0"
+        },
+        "state": "success",
         "width": 244,
-        "height": 429,
-        "eventId": "e8293cc7-b2d1-4cc7-8fa4-788f58934295",
+        "height": 391,
         "trigger": true,
-        "event_id": "",
-        "keywords": [],
+        "event_id": "d67a84c9-2217-4ab2-a0e1-0560f99d333e",
+        "keywords": [
+          "陈震",
+          "偷税",
+          "漏税"
+        ],
         "metadata": {
           "type": "EventAst",
           "class": {
@@ -428,67 +294,3509 @@
           ]
         },
         "position": {
-          "x": 620.5571782823336,
-          "y": 478.3449174664702
+          "x": -1512.5959513168063,
+          "y": 80.60512900580835
         },
-        "emitCount": 0,
-        "startTime": "",
-        "eventTitle": "甘肃迭部发生5.5级地震",
+        "emitCount": 1,
+        "startTime": "2025-12-04T16:00:00.000Z",
+        "eventTitle": "女子在胖东来花百万买金条",
         "portLabels": {},
-        "event_title": "",
-        "keywords_str": "",
+        "event_title": "陈震偷税案",
+        "keywords_str": "陈震 偷税 漏税",
         "eventCategory": "其他",
-        "post_max_time": "",
-        "post_min_time": "",
+        "post_max_time": "2026-01-26T15:54:43.000Z",
+        "post_min_time": "2025-12-10T15:13:23.000Z",
         "crawl_end_reason": null,
-        "is_crawl_complete": false
+        "is_crawl_complete": true
+      },
+      {
+        "id": "cc2ab376-c5d6-4126-837a-200b5f220fe4",
+        "type": "TextAreaAst",
+        "count": 0,
+        "input": [],
+        "state": "success",
+        "width": 240,
+        "height": 95,
+        "output": "",
+        "metadata": {
+          "type": "TextAreaAst",
+          "class": {
+            "type": "basic",
+            "title": "文本节点",
+            "hasTool": true
+          },
+          "inputs": [
+            {
+              "mode": 1,
+              "type": "textarea",
+              "title": "输入",
+              "isMulti": true,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "input"
+            }
+          ],
+          "states": [],
+          "outputs": [
+            {
+              "type": "textarea",
+              "title": "输出",
+              "isStatic": true,
+              "property": "output",
+              "isSubject": false
+            }
+          ]
+        },
+        "position": {
+          "x": -900.4597080433073,
+          "y": 729.8265039945371
+        },
+        "emitCount": 0
+      },
+      {
+        "id": "2ab376c5-d6d1-4643-ba20-0b5f220fe4de",
+        "type": "TextAreaAst",
+        "count": 0,
+        "input": [],
+        "state": "success",
+        "width": 240,
+        "height": 119,
+        "output": "true",
+        "metadata": {
+          "type": "TextAreaAst",
+          "class": {
+            "type": "basic",
+            "title": "文本节点",
+            "hasTool": true
+          },
+          "inputs": [
+            {
+              "mode": 1,
+              "type": "textarea",
+              "title": "输入",
+              "isMulti": true,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "input",
+              "defaultValue": []
+            }
+          ],
+          "states": [],
+          "outputs": [
+            {
+              "type": "textarea",
+              "title": "输出",
+              "isStatic": true,
+              "property": "output",
+              "isSubject": false
+            }
+          ]
+        },
+        "position": {
+          "x": -910.4753531686996,
+          "y": 858.7779349839624
+        },
+        "emitCount": 1
+      },
+      {
+        "id": "b376c5d6-d126-437a-a00b-5f220fe4de1c",
+        "type": "TextAreaAst",
+        "count": 0,
+        "input": [],
+        "state": "success",
+        "width": 240,
+        "height": 119,
+        "output": "2025-12-10T15:13:23.000Z",
+        "metadata": {
+          "type": "TextAreaAst",
+          "class": {
+            "type": "basic",
+            "title": "文本节点",
+            "hasTool": true
+          },
+          "inputs": [
+            {
+              "mode": 1,
+              "type": "textarea",
+              "title": "输入",
+              "isMulti": true,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "input",
+              "defaultValue": []
+            }
+          ],
+          "states": [],
+          "outputs": [
+            {
+              "type": "textarea",
+              "title": "输出",
+              "isStatic": true,
+              "property": "output",
+              "isSubject": false
+            }
+          ]
+        },
+        "position": {
+          "x": -880.4284177925229,
+          "y": -86.44857372493016
+        },
+        "emitCount": 1
+      },
+      {
+        "id": "76c5d6d1-2643-4a20-8b5f-220fe4de1c5c",
+        "type": "TextAreaAst",
+        "count": 0,
+        "input": [],
+        "state": "success",
+        "width": 240,
+        "height": 119,
+        "output": "2026-01-26T15:54:43.000Z",
+        "metadata": {
+          "type": "TextAreaAst",
+          "class": {
+            "type": "basic",
+            "title": "文本节点",
+            "hasTool": true
+          },
+          "inputs": [
+            {
+              "mode": 1,
+              "type": "textarea",
+              "title": "输入",
+              "isMulti": true,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "input"
+            }
+          ],
+          "states": [],
+          "outputs": [
+            {
+              "type": "textarea",
+              "title": "输出",
+              "isStatic": true,
+              "property": "output",
+              "isSubject": false
+            }
+          ]
+        },
+        "position": {
+          "x": -887.9401516365671,
+          "y": 46.258724186517014
+        },
+        "emitCount": 1
+      },
+      {
+        "id": "c5d6d126-437a-400b-9f22-0fe4de1c5c8b",
+        "type": "TextAreaAst",
+        "count": 0,
+        "input": [],
+        "state": "success",
+        "width": 240,
+        "height": 119,
+        "output": "2025-12-04T16:00:00.000Z",
+        "metadata": {
+          "type": "TextAreaAst",
+          "class": {
+            "type": "basic",
+            "title": "文本节点",
+            "hasTool": true
+          },
+          "inputs": [
+            {
+              "mode": 1,
+              "type": "textarea",
+              "title": "输入",
+              "isMulti": true,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "input"
+            }
+          ],
+          "states": [],
+          "outputs": [
+            {
+              "type": "textarea",
+              "title": "输出",
+              "isStatic": true,
+              "property": "output",
+              "isSubject": false
+            }
+          ]
+        },
+        "position": {
+          "x": -889.1921072772411,
+          "y": -196.62067010424477
+        },
+        "emitCount": 1
+      },
+      {
+        "id": "d6d12643-7a20-4b5f-a20f-e4de1c5c8b1c",
+        "type": "CollectorAst",
+        "count": 0,
+        "items": [],
+        "state": "success",
+        "width": 240,
+        "height": 95,
+        "result": [
+          "2026-01-30T00:18:43.284Z"
+        ],
+        "metadata": {
+          "type": "CollectorAst",
+          "class": {
+            "type": "basic",
+            "title": "收集器",
+            "hasTool": false
+          },
+          "inputs": [
+            {
+              "mode": 17,
+              "title": "数据流",
+              "isMulti": true,
+              "isBuffer": true,
+              "isStatic": true,
+              "property": "items"
+            }
+          ],
+          "states": [],
+          "outputs": [
+            {
+              "title": "收集结果",
+              "isStatic": true,
+              "property": "result",
+              "isSubject": false
+            }
+          ]
+        },
+        "position": {
+          "x": -537.3925722478386,
+          "y": 627.1661414592669
+        },
+        "emitCount": 0
+      },
+      {
+        "id": "d126437a-200b-4f22-8fe4-de1c5c8b1cfb",
+        "type": "CollectorAst",
+        "count": 0,
+        "items": [],
+        "state": "success",
+        "width": 240,
+        "height": 95,
+        "result": [
+          "2026-01-26T15:54:43.000Z"
+        ],
+        "metadata": {
+          "type": "CollectorAst",
+          "class": {
+            "type": "basic",
+            "title": "收集器",
+            "hasTool": false
+          },
+          "inputs": [
+            {
+              "mode": 17,
+              "title": "数据流",
+              "isMulti": true,
+              "isBuffer": true,
+              "isStatic": true,
+              "property": "items"
+            }
+          ],
+          "states": [],
+          "outputs": [
+            {
+              "title": "收集结果",
+              "isStatic": true,
+              "property": "result",
+              "isSubject": false
+            }
+          ]
+        },
+        "position": {
+          "x": -548.6601730139049,
+          "y": 752.3617055266698
+        },
+        "emitCount": 0
+      },
+      {
+        "id": "26437a20-0b5f-420f-a4de-1c5c8b1cfbc8",
+        "type": "TextAreaAst",
+        "count": 0,
+        "input": [],
+        "state": "success",
+        "width": 240,
+        "height": 119,
+        "output": "2026-01-30T00:18:43.284Z",
+        "metadata": {
+          "type": "TextAreaAst",
+          "class": {
+            "type": "basic",
+            "title": "文本节点",
+            "hasTool": true
+          },
+          "inputs": [
+            {
+              "mode": 1,
+              "type": "textarea",
+              "title": "输入",
+              "isMulti": true,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "input",
+              "defaultValue": []
+            }
+          ],
+          "states": [],
+          "outputs": [
+            {
+              "type": "textarea",
+              "title": "输出",
+              "isStatic": true,
+              "property": "output",
+              "isSubject": false
+            }
+          ]
+        },
+        "position": {
+          "x": 66.05004655704369,
+          "y": 751.1097498859956
+        },
+        "emitCount": 1
+      },
+      {
+        "id": "437a200b-5f22-4fe4-9e1c-5c8b1cfbc850",
+        "type": "TextAreaAst",
+        "count": 0,
+        "input": [],
+        "state": "success",
+        "width": 240,
+        "height": 119,
+        "output": "2026-01-26T15:54:43.000Z",
+        "metadata": {
+          "type": "TextAreaAst",
+          "class": {
+            "type": "basic",
+            "title": "文本节点",
+            "hasTool": true
+          },
+          "inputs": [
+            {
+              "mode": 1,
+              "type": "textarea",
+              "title": "输入",
+              "isMulti": true,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "input"
+            }
+          ],
+          "states": [],
+          "outputs": [
+            {
+              "type": "textarea",
+              "title": "输出",
+              "isStatic": true,
+              "property": "output",
+              "isSubject": false
+            }
+          ]
+        },
+        "position": {
+          "x": -219.39583951663508,
+          "y": 758.6214837300402
+        },
+        "emitCount": 1
+      },
+      {
+        "id": "7a200b5f-220f-44de-9c5c-8b1cfbc85067",
+        "type": "TextAreaAst",
+        "count": 0,
+        "input": [],
+        "state": "success",
+        "width": 240,
+        "height": 119,
+        "output": "陈震 偷税 漏税",
+        "metadata": {
+          "type": "TextAreaAst",
+          "class": {
+            "type": "basic",
+            "title": "文本节点",
+            "hasTool": true
+          },
+          "inputs": [
+            {
+              "mode": 1,
+              "type": "textarea",
+              "title": "输入",
+              "isMulti": true,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "input",
+              "defaultValue": []
+            }
+          ],
+          "states": [],
+          "outputs": [
+            {
+              "type": "textarea",
+              "title": "输出",
+              "isStatic": true,
+              "property": "output",
+              "isSubject": false
+            }
+          ]
+        },
+        "position": {
+          "x": -574.0324026383669,
+          "y": -1.5768781446830502
+        },
+        "emitCount": 1
+      },
+      {
+        "id": "200b5f22-0fe4-4e1c-9c8b-1cfbc8506799",
+        "name": "爬取时间分发提示词",
+        "type": "TextAreaAst",
+        "count": 0,
+        "input": "# 任务：计算微博关键字爬取的时间区间\n\n## 输入\n- **startDate**：事件开始时间（ISO 8601 格式）\n- **postMinDate**：已爬取最早帖子时间（空字符串 `\"\"` 或 `null` 表示无数据）\n- **postMaxDate**：已爬取最晚帖子时间（空字符串 `\"\"` 或 `null` 表示无数据）\n- **isEnd**：历史数据是否爬取完成\n\n## 数据验证步骤\n\n**步骤1**：将空字符串视为 null\n```\nIF postMinDate === \"\" THEN postMinDate = null\nIF postMaxDate === \"\" THEN postMaxDate = null\n```\n\n**步骤2**：判断场景类型\n\n## 决策树\n\n```\n# 首次爬取：无任何数据\nIF postMinDate IS NULL OR postMaxDate IS NULL OR postMinDate === \"\":\n    searchStartDate = startDate\n    endDate = 当前时间\n\n# 续传爬取：有数据但未爬完\nELSE IF postMinDate > startDate:\n    searchStartDate = postMinDate\n    endDate = 当前时间\n\n# 增量爬取：历史已爬完\nELSE:\n    searchStartDate = postMaxDate\n    endDate = 当前时间\n```\n\n## 输出格式\n\n**必须使用工具调用**：\n```\ndispatch({ outputs: { searchStartDate: \"...\", endDate: \"...\" } })\n```\n\n**时间格式**：ISO 8601（`YYYY-MM-DDTHH:mm:ss.SSSZ`）\n\n## Few-Shot 示例\n\n### 示例1：首次爬取（postMinDate 为空字符串）\n**输入**：\n```\nstartDate: \"2026-01-23T20:00:00.000Z\"\npostMinDate: \"\"\npostMaxDate: \"\"\nisEnd: false\n```\n\n**场景判断**：空字符串 = 无数据 → 首次爬取\n\n**输出**：\n```json\n{\n  \"searchStartDate\": \"2026-01-23T20:00:00.000Z\",\n  \"endDate\": \"2026-01-29T23:59:59.000Z\"\n}\n```\n\n---\n\n### 示例2：首次爬取（postMinDate 为 null）\n**输入**：\n```\nstartDate: \"2025-01-01T00:00:00Z\"\npostMinDate: null\npostMaxDate: null\n```\n\n**输出**：\n```json\n{\n  \"searchStartDate\": \"2025-01-01T00:00:00Z\",\n  \"endDate\": \"2025-01-29T23:59:59.000Z\"\n}\n```\n\n---\n\n### 示例3：续传爬取（未爬完）\n**输入**：\n```\nstartDate: \"2025-01-01T00:00:00Z\"\npostMinDate: \"2025-01-15T00:00:00Z\"\npostMaxDate: \"2025-01-25T12:00:00Z\"\nisEnd: false\n```\n\n**场景判断**：`postMinDate (15号) > startDate (1号)` → 续传爬取\n\n**输出**：\n```json\n{\n  \"searchStartDate\": \"2025-01-15T00:00:00Z\",\n  \"endDate\": \"2025-01-29T23:59:59.000Z\"\n}\n```\n\n---\n\n### 示例4：增量爬取（已完成）\n**输入**：\n```\nstartDate: \"2025-01-01T00:00:00Z\"\npostMinDate: \"2025-01-01T00:00:00Z\"\npostMaxDate: \"2025-01-27T15:30:00Z\"\nisEnd: true\n```\n\n**场景判断**：`isEnd === true` → 增量爬取\n\n**输出**：\n```json\n{\n  \"searchStartDate\": \"2025-01-27T15:30:00Z\",\n  \"endDate\": \"2025-01-29T23:59:59.000Z\"\n}\n```\n\n---\n\n## 执行步骤\n\n1. **数据清洗**：将空字符串 `\"\"` 转换为 `null`\n2. **场景判断**：根据决策树确定场景类型\n3. **计算时间**：根据场景计算 searchStartDate 和 endDate\n4. **格式验证**：确保时间是有效的 ISO 8601 格式\n5. **输出结果**：使用 dispatch 工具输出两个字段\n\n## 重要约束\n\n✅ **必须输出两个字段**：`searchStartDate` 和 `endDate`\n✅ **空字符串等价于 null**：`\"\"` 和 `null` 都表示无数据\n✅ **时间格式**：ISO 8601（`YYYY-MM-DDTHH:mm:ss.SSSZ`）\n✅ **当前时间**：使用系统提示中的当前时间\n✅ **避免重复**：时间区间必须与已有数据不重叠\n\n---\n\n## 快速参考表\n\n| 场景 | 判断条件 | searchStartDate | endDate |\n|------|----------|-----------------|---------|\n| 首次爬取 | postMinDate 为空/null | startDate | 当前时间 |\n| 续传爬取 | postMinDate > startDate | postMinDate | 当前时间 |\n| 增量爬取 | postMinDate ≤ startDate 或 isEnd=true | postMaxDate | 当前时间 |\n",
+        "state": "success",
+        "width": 320,
+        "height": 355,
+        "output": "# 任务：计算微博关键字爬取的时间区间\n\n## 输入\n- **startDate**：事件开始时间（ISO 8601 格式）\n- **postMinDate**：已爬取最早帖子时间（空字符串 `\"\"` 或 `null` 表示无数据）\n- **postMaxDate**：已爬取最晚帖子时间（空字符串 `\"\"` 或 `null` 表示无数据）\n- **isEnd**：历史数据是否爬取完成\n\n## 数据验证步骤\n\n**步骤1**：将空字符串视为 null\n```\nIF postMinDate === \"\" THEN postMinDate = null\nIF postMaxDate === \"\" THEN postMaxDate = null\n```\n\n**步骤2**：判断场景类型\n\n## 决策树\n\n```\n# 首次爬取：无任何数据\nIF postMinDate IS NULL OR postMaxDate IS NULL OR postMinDate === \"\":\n    searchStartDate = startDate\n    endDate = 当前时间\n\n# 续传爬取：有数据但未爬完\nELSE IF postMinDate > startDate:\n    searchStartDate = postMinDate\n    endDate = 当前时间\n\n# 增量爬取：历史已爬完\nELSE:\n    searchStartDate = postMaxDate\n    endDate = 当前时间\n```\n\n## 输出格式\n\n**必须使用工具调用**：\n```\ndispatch({ outputs: { searchStartDate: \"...\", endDate: \"...\" } })\n```\n\n**时间格式**：ISO 8601（`YYYY-MM-DDTHH:mm:ss.SSSZ`）\n\n## Few-Shot 示例\n\n### 示例1：首次爬取（postMinDate 为空字符串）\n**输入**：\n```\nstartDate: \"2026-01-23T20:00:00.000Z\"\npostMinDate: \"\"\npostMaxDate: \"\"\nisEnd: false\n```\n\n**场景判断**：空字符串 = 无数据 → 首次爬取\n\n**输出**：\n```json\n{\n  \"searchStartDate\": \"2026-01-23T20:00:00.000Z\",\n  \"endDate\": \"2026-01-29T23:59:59.000Z\"\n}\n```\n\n---\n\n### 示例2：首次爬取（postMinDate 为 null）\n**输入**：\n```\nstartDate: \"2025-01-01T00:00:00Z\"\npostMinDate: null\npostMaxDate: null\n```\n\n**输出**：\n```json\n{\n  \"searchStartDate\": \"2025-01-01T00:00:00Z\",\n  \"endDate\": \"2025-01-29T23:59:59.000Z\"\n}\n```\n\n---\n\n### 示例3：续传爬取（未爬完）\n**输入**：\n```\nstartDate: \"2025-01-01T00:00:00Z\"\npostMinDate: \"2025-01-15T00:00:00Z\"\npostMaxDate: \"2025-01-25T12:00:00Z\"\nisEnd: false\n```\n\n**场景判断**：`postMinDate (15号) > startDate (1号)` → 续传爬取\n\n**输出**：\n```json\n{\n  \"searchStartDate\": \"2025-01-15T00:00:00Z\",\n  \"endDate\": \"2025-01-29T23:59:59.000Z\"\n}\n```\n\n---\n\n### 示例4：增量爬取（已完成）\n**输入**：\n```\nstartDate: \"2025-01-01T00:00:00Z\"\npostMinDate: \"2025-01-01T00:00:00Z\"\npostMaxDate: \"2025-01-27T15:30:00Z\"\nisEnd: true\n```\n\n**场景判断**：`isEnd === true` → 增量爬取\n\n**输出**：\n```json\n{\n  \"searchStartDate\": \"2025-01-27T15:30:00Z\",\n  \"endDate\": \"2025-01-29T23:59:59.000Z\"\n}\n```\n\n---\n\n## 执行步骤\n\n1. **数据清洗**：将空字符串 `\"\"` 转换为 `null`\n2. **场景判断**：根据决策树确定场景类型\n3. **计算时间**：根据场景计算 searchStartDate 和 endDate\n4. **格式验证**：确保时间是有效的 ISO 8601 格式\n5. **输出结果**：使用 dispatch 工具输出两个字段\n\n## 重要约束\n\n✅ **必须输出两个字段**：`searchStartDate` 和 `endDate`\n✅ **空字符串等价于 null**：`\"\"` 和 `null` 都表示无数据\n✅ **时间格式**：ISO 8601（`YYYY-MM-DDTHH:mm:ss.SSSZ`）\n✅ **当前时间**：使用系统提示中的当前时间\n✅ **避免重复**：时间区间必须与已有数据不重叠\n\n---\n\n## 快速参考表\n\n| 场景 | 判断条件 | searchStartDate | endDate |\n|------|----------|-----------------|---------|\n| 首次爬取 | postMinDate 为空/null | startDate | 当前时间 |\n| 续传爬取 | postMinDate > startDate | postMinDate | 当前时间 |\n| 增量爬取 | postMinDate ≤ startDate 或 isEnd=true | postMaxDate | 当前时间 |\n",
+        "metadata": {
+          "type": "TextAreaAst",
+          "class": {
+            "type": "basic",
+            "title": "文本节点",
+            "hasTool": true
+          },
+          "inputs": [
+            {
+              "mode": 1,
+              "type": "textarea",
+              "title": "输入",
+              "isMulti": true,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "input",
+              "defaultValue": []
+            }
+          ],
+          "states": [],
+          "outputs": [
+            {
+              "type": "textarea",
+              "title": "输出",
+              "isStatic": true,
+              "property": "output",
+              "isSubject": false
+            }
+          ]
+        },
+        "position": {
+          "x": -2678.3095497795503,
+          "y": 229.61135183221378
+        },
+        "emitCount": 1,
+        "portLabels": {}
+      },
+      {
+        "id": "0b5f220f-e4de-4c5c-8b1c-fbc850679975",
+        "type": "EventDispatcherAst",
+        "count": 0,
+        "limit": 0,
+        "state": "success",
+        "width": 244,
+        "height": 411,
+        "metadata": {
+          "type": "EventDispatcherAst",
+          "class": {
+            "type": "crawler",
+            "title": "事件分派器",
+            "hasTool": false,
+            "maxRetries": 3,
+            "retryDelay": 2000,
+            "retryBackoff": 2,
+            "errorStrategy": "retry"
+          },
+          "inputs": [
+            {
+              "type": "textarea",
+              "title": "自定义提示词",
+              "isMulti": false,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "customPrompt",
+              "defaultValue": ""
+            },
+            {
+              "type": "number",
+              "title": "限制返回数量",
+              "isMulti": false,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "limit",
+              "defaultValue": 0
+            }
+          ],
+          "states": [
+            {
+              "type": "number",
+              "title": "事件总数",
+              "propertyKey": "totalEvents",
+              "defaultValue": 0
+            },
+            {
+              "type": "number",
+              "title": "未爬取数量",
+              "propertyKey": "uncrawledCount",
+              "defaultValue": 0
+            }
+          ],
+          "outputs": [
+            {
+              "title": "选中的事件ID",
+              "isStatic": true,
+              "property": "selectedEventId",
+              "isSubject": false
+            },
+            {
+              "title": "选中的事件",
+              "isStatic": true,
+              "property": "selectedEvent",
+              "isSubject": false
+            },
+            {
+              "title": "事件列表",
+              "isStatic": true,
+              "property": "eventsList",
+              "isSubject": false
+            }
+          ]
+        },
+        "position": {
+          "x": -1930.8920322971546,
+          "y": 6.763247792236285
+        },
+        "emitCount": 1,
+        "eventsList": [
+          {
+            "id": "f6cdca84-e0e5-42b3-88be-b3084734c480",
+            "title": "无法生成事件",
+            "description": "用户输入仅包含序号19，缺少具体的事件内容、时间、描述等关键信息，无法推断生成有效的事件记录。",
+            "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+            "category": {
+              "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+              "code": "other",
+              "name": "其他",
+              "name_en": "other",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:07.919Z",
+              "updated_at": "2026-01-14T12:55:07.919Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 1,
+              "negative": 0,
+              "positive": 0
+            },
+            "hotness": "0.00",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2026-01-23T20:00:00.000Z",
+            "peak_at": "2026-01-23T20:00:00.000Z",
+            "keywords": [],
+            "created_at": "2026-01-24T03:57:59.141Z",
+            "updated_at": "2026-01-24T03:58:06.712Z",
+            "deleted_at": null,
+            "crawl_end_reason": null
+          },
+          {
+            "id": "967acce4-ae07-43fa-b820-16acff923c20",
+            "title": "十五五规划建议发布",
+            "description": "官方发布关于制定国民经济和社会发展第十五个五年规划的建议，明确未来五年国家发展的主要目标、任务及重大举措。",
+            "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+            "category": {
+              "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+              "code": "other",
+              "name": "其他",
+              "name_en": "other",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:07.919Z",
+              "updated_at": "2026-01-14T12:55:07.919Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.25,
+              "negative": 0.05,
+              "positive": 0.7
+            },
+            "hotness": "136.36",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2025-10-28T08:35:00.000Z",
+            "peak_at": "2025-10-28T10:00:00.000Z",
+            "keywords": [
+              "十五五规划",
+              "建议",
+              "发布"
+            ],
+            "created_at": "2026-01-14T12:55:07.927Z",
+            "updated_at": "2026-01-29T22:57:02.673Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2025-10-28T08:35:00.000Z-2025-03-04T11:52:40.000Z: 无更多数据。关键词：十五五规划 建议 发布，当前页：1/0"
+          },
+          {
+            "id": "a1f8ba8f-99fb-43ad-adfa-c06dbae76862",
+            "title": "中美元首釜山会晤",
+            "description": "中国国家主席与美国总统在釜山举行会晤，就双边关系及共同关心的国际地区问题交换意见。",
+            "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+            "category": {
+              "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+              "code": "other",
+              "name": "其他",
+              "name_en": "other",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:07.919Z",
+              "updated_at": "2026-01-14T12:55:07.919Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.6,
+              "negative": 0.1,
+              "positive": 0.3
+            },
+            "hotness": "65.56",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2025-10-29T07:02:00.000Z",
+            "peak_at": "2025-10-29T10:00:00.000Z",
+            "keywords": [
+              "中美元首",
+              "釜山",
+              "会晤"
+            ],
+            "created_at": "2026-01-14T12:55:16.635Z",
+            "updated_at": "2026-01-29T22:57:02.682Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-28T05:53:42.000Z-2026-01-29T17:02:43.412Z: 无更多数据，微博已返回全部数据。关键词：中美元首 釜山 会晤，当前页：44/44"
+          },
+          {
+            "id": "915fd4b2-2e2a-452e-a612-700fde2de24d",
+            "title": "腾讯回应元宝AI辱骂用户",
+            "description": "腾讯元宝AI被曝辱骂用户，官方回应称相关情况系技术异常导致，已进行修复处理。",
+            "category_id": "6cceb638-1685-4272-b586-a91d38ee9ceb",
+            "category": {
+              "id": "6cceb638-1685-4272-b586-a91d38ee9ceb",
+              "code": "tech_internet",
+              "name": "科技互联网",
+              "name_en": "tech_internet",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:53:04.687Z",
+              "updated_at": "2026-01-14T12:53:04.687Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.2,
+              "negative": 0.7,
+              "positive": 0.1
+            },
+            "hotness": "2.00",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2026-01-04T08:54:00.000Z",
+            "peak_at": "2026-01-04T10:00:00.000Z",
+            "keywords": [
+              "元宝AI",
+              "辱骂"
+            ],
+            "created_at": "2026-01-14T12:56:05.820Z",
+            "updated_at": "2026-01-29T22:57:02.725Z",
+            "deleted_at": null,
+            "crawl_end_reason": "无搜索结果。关键词：元宝AI 辱骂，时间范围：2026-01-04-20-2026-01-04-16"
+          },
+          {
+            "id": "2ab22e36-d127-44fe-a27e-2b3d5594dc28",
+            "title": "我国将尼帕病毒纳入检测",
+            "description": "印度暴发尼帕病毒疫情，致死率高达75%。我国尚未报告病例，但新修订的国境卫生检疫法已将该病毒纳入检测范围以加强防范。",
+            "category_id": "43b50a26-00f2-4a49-8958-5813a6852c79",
+            "category": {
+              "id": "43b50a26-00f2-4a49-8958-5813a6852c79",
+              "code": "education",
+              "name": "教育",
+              "name_en": "education",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:52:31.764Z",
+              "updated_at": "2026-01-14T12:52:31.764Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.2,
+              "negative": 0.7,
+              "positive": 0.1
+            },
+            "hotness": "512.33",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2026-01-26T05:06:00.000Z",
+            "peak_at": "2026-01-26T07:00:00.000Z",
+            "keywords": [
+              "尼帕病毒",
+              "纳入检测",
+              "印度疫情"
+            ],
+            "created_at": "2026-01-28T03:30:12.376Z",
+            "updated_at": "2026-01-29T22:57:02.731Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-29T14:33:46.000Z-2026-01-29T18:33:52.393Z: 无更多数据，微博已返回全部数据。关键词：尼帕病毒 纳入检测 印度疫情，当前页：1/0"
+          },
+          {
+            "id": "e9a21cb2-e3e0-447a-897c-ad12269af9c6",
+            "title": "走私孕妇血样黑产链",
+            "description": "央视网曝光存在走私孕妇血样进行非法性别鉴定等医疗检测的黑产链条，引发公众对医疗伦理及法律监管的关注。",
+            "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+            "category": {
+              "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+              "code": "other",
+              "name": "其他",
+              "name_en": "other",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:07.919Z",
+              "updated_at": "2026-01-14T12:55:07.919Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.2,
+              "negative": 0.8,
+              "positive": 0
+            },
+            "hotness": "0.24",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2025-12-16T11:23:00.000Z",
+            "peak_at": "2025-12-16T13:00:00.000Z",
+            "keywords": [
+              "孕妇血样",
+              "黑产链"
+            ],
+            "created_at": "2026-01-14T12:55:54.567Z",
+            "updated_at": "2026-01-29T22:57:02.768Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-27T23:17:38.000Z-2026-01-29T18:32:22.606Z: 无更多数据，微博已返回全部数据。关键词：孕妇血样 黑产链，当前页：1/0"
+          },
+          {
+            "id": "dc062cfd-ea16-4ab5-a4ae-73417e21da76",
+            "title": "春秋航空招聘已婚已育空嫂",
+            "description": "春秋航空放宽空乘招聘限制，面向已婚已育女性招聘空嫂，引发社会对职场年龄歧视与就业公平的讨论。",
+            "category_id": "6cceb638-1685-4272-b586-a91d38ee9ceb",
+            "category": {
+              "id": "6cceb638-1685-4272-b586-a91d38ee9ceb",
+              "code": "tech_internet",
+              "name": "科技互联网",
+              "name_en": "tech_internet",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:53:04.687Z",
+              "updated_at": "2026-01-14T12:53:04.687Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.5,
+              "negative": 0.2,
+              "positive": 0.3
+            },
+            "hotness": "0.00",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2025-10-27T04:35:00.000Z",
+            "peak_at": "2025-10-27T06:00:00.000Z",
+            "keywords": [
+              "春秋航空",
+              "空嫂",
+              "已婚已育"
+            ],
+            "created_at": "2026-01-14T12:55:00.731Z",
+            "updated_at": "2026-01-29T22:57:02.773Z",
+            "deleted_at": null,
+            "crawl_end_reason": "无搜索结果。关键词：春秋航空 空嫂 已婚已育，时间范围：2025-10-28-09-2025-10-27-12"
+          },
+          {
+            "id": "c4b021b7-146e-4722-a0e7-7361aec58df5",
+            "title": "海南自贸港全岛封关",
+            "description": "人民日报发布海南自贸港全岛封关运作准备就绪消息，并通过时空对比照回顾改革开放历程。",
+            "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+            "category": {
+              "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+              "code": "other",
+              "name": "其他",
+              "name_en": "other",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:07.919Z",
+              "updated_at": "2026-01-14T12:55:07.919Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.3,
+              "negative": 0,
+              "positive": 0.7
+            },
+            "hotness": "7.36",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2025-12-18T02:36:00.000Z",
+            "peak_at": "2025-12-18T04:00:00.000Z",
+            "keywords": [
+              "海南封关",
+              "改革开放",
+              "自贸港"
+            ],
+            "created_at": "2026-01-14T12:56:00.896Z",
+            "updated_at": "2026-01-29T22:57:02.775Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-29T09:56:02.000Z-2026-01-29T18:52:07.438Z: 无更多数据，微博已返回全部数据。关键词：海南封关 改革开放 自贸港，当前页：1/0"
+          },
+          {
+            "id": "1bb7702f-11c2-45dd-8710-fe33cf16d124",
+            "title": "两宠物狗咬死酒店黑天鹅",
+            "description": "浙江莫干山一酒店内，两名游客未牵绳导致宠物狗咬死酒店养殖的黑天鹅。警方已对狗主人进行批评教育，目前双方已达成和解。",
+            "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+            "category": {
+              "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+              "code": "other",
+              "name": "其他",
+              "name_en": "other",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:07.919Z",
+              "updated_at": "2026-01-14T12:55:07.919Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.2,
+              "negative": 0.7,
+              "positive": 0.1
+            },
+            "hotness": "0.75",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2026-01-23T11:00:00.000Z",
+            "peak_at": "2026-01-23T12:00:00.000Z",
+            "keywords": [
+              "黑天鹅",
+              "宠物狗",
+              "未牵绳"
+            ],
+            "created_at": "2026-01-24T03:57:33.730Z",
+            "updated_at": "2026-01-29T22:57:02.776Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-26T07:30:52.000Z-2026-01-29T22:56:29.072Z: 无更多数据，微博已返回全部数据。关键词：黑天鹅 宠物狗 未牵绳，当前页：1/0"
+          },
+          {
+            "id": "57aa4366-1057-4812-81f8-ed17ed966c1a",
+            "title": "50万亿存款到期用户寻找贵替",
+            "description": "2026年将有50万亿定期存款到期，因利率下行至1%时代，2%以上存款几乎绝迹，储户正转向银行理财、保险等“存款贵替”产品。",
+            "category_id": "6cceb638-1685-4272-b586-a91d38ee9ceb",
+            "category": {
+              "id": "6cceb638-1685-4272-b586-a91d38ee9ceb",
+              "code": "tech_internet",
+              "name": "科技互联网",
+              "name_en": "tech_internet",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:53:04.687Z",
+              "updated_at": "2026-01-14T12:53:04.687Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.2,
+              "negative": 0.7,
+              "positive": 0.1
+            },
+            "hotness": "88.39",
+            "status": "active",
+            "seed_url": "http://t.cn/AXqV7qf8",
+            "occurred_at": "2026-01-26T14:26:00.000Z",
+            "peak_at": "2026-01-26T15:00:00.000Z",
+            "keywords": [
+              "存款到期",
+              "存款贵替",
+              "银行利率"
+            ],
+            "created_at": "2026-01-28T03:35:39.115Z",
+            "updated_at": "2026-01-29T22:57:02.778Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-23T20:00:00.000Z-2026-01-29T20:52:57.214Z: 无更多数据，微博已返回全部数据。关键词：存款到期 存款贵替 银行利率，当前页：4/4"
+          },
+          {
+            "id": "95fbf501-9164-4cf3-8910-dca07a95b3e3",
+            "title": "中国将寻找第二颗地球",
+            "description": "央视新闻报道中国计划启动寻找第二颗地球的太空探索任务，引发公众对航天科技的关注。",
+            "category_id": "6cceb638-1685-4272-b586-a91d38ee9ceb",
+            "category": {
+              "id": "6cceb638-1685-4272-b586-a91d38ee9ceb",
+              "code": "tech_internet",
+              "name": "科技互联网",
+              "name_en": "tech_internet",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:53:04.687Z",
+              "updated_at": "2026-01-14T12:53:04.687Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.25,
+              "negative": 0.05,
+              "positive": 0.7
+            },
+            "hotness": "19.28",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2025-11-24T08:30:00.000Z",
+            "peak_at": "2025-11-24T10:00:00.000Z",
+            "keywords": [
+              "中国",
+              "第二颗地球"
+            ],
+            "created_at": "2026-01-14T12:55:37.580Z",
+            "updated_at": "2026-01-29T22:57:02.779Z",
+            "deleted_at": null,
+            "crawl_end_reason": "无搜索结果。关键词：中国 第二颗地球，时间范围：2025-11-26-07-2025-11-24-16"
+          },
+          {
+            "id": "72d1a6dc-4eff-492d-b51e-742bdc1fdf1e",
+            "title": "家长跪地被学生轮流踩踏",
+            "description": "网传视频显示家长跪地遭学生轮流踩踏，教育局回应相关情况，引发公众对教育方式及校园管理的关注。",
+            "category_id": "43b50a26-00f2-4a49-8958-5813a6852c79",
+            "category": {
+              "id": "43b50a26-00f2-4a49-8958-5813a6852c79",
+              "code": "education",
+              "name": "教育",
+              "name_en": "education",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:52:31.764Z",
+              "updated_at": "2026-01-14T12:52:31.764Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.1,
+              "negative": 0.8,
+              "positive": 0.1
+            },
+            "hotness": "0.00",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2025-10-06T10:13:00.000Z",
+            "peak_at": "2025-10-06T12:00:00.000Z",
+            "keywords": [
+              "家长跪地",
+              "踩踏"
+            ],
+            "created_at": "2026-01-14T12:53:57.910Z",
+            "updated_at": "2026-01-29T22:57:02.781Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2025-12-01T02:11:14.000Z-2026-01-29T21:02:45.611Z: 无更多数据，微博已返回全部数据。关键词：家长跪地 踩踏，当前页：1/0"
+          },
+          {
+            "id": "2638f0b2-eff0-4557-ae60-901a28b19b4b",
+            "title": "全运会开幕式",
+            "description": "第十五届全国运动会开幕式举行，展现体育精神与文化魅力。",
+            "category_id": "db330f09-6b3d-4bc9-a124-ac0c6296225b",
+            "category": {
+              "id": "db330f09-6b3d-4bc9-a124-ac0c6296225b",
+              "code": "culture_sports",
+              "name": "文化体育娱乐",
+              "name_en": "culture_sports",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:21.942Z",
+              "updated_at": "2026-01-14T12:55:21.942Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.2,
+              "negative": 0,
+              "positive": 0.8
+            },
+            "hotness": "120.83",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2025-11-08T16:00:00.000Z",
+            "peak_at": "2025-11-09T12:00:00.000Z",
+            "keywords": [
+              "全运会",
+              "开幕式"
+            ],
+            "created_at": "2026-01-14T12:55:21.948Z",
+            "updated_at": "2026-01-29T22:57:02.783Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-29T10:13:05.000Z-2026-01-29T18:54:12.854Z: 无更多数据，微博已返回全部数据。关键词：全运会 开幕式，当前页：1/0"
+          },
+          {
+            "id": "61e1fbd9-9901-4668-99c9-34b178ce9a0b",
+            "title": "云南发生地震",
+            "description": "云南地区发生地震，震级及伤亡情况待官方进一步通报。",
+            "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+            "category": {
+              "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+              "code": "other",
+              "name": "其他",
+              "name_en": "other",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:07.919Z",
+              "updated_at": "2026-01-14T12:55:07.919Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.3,
+              "negative": 0.7,
+              "positive": 0
+            },
+            "hotness": "1.09",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2026-01-07T16:00:00.000Z",
+            "peak_at": "2026-01-07T16:00:00.000Z",
+            "keywords": [
+              "云南",
+              "地震",
+              "震级"
+            ],
+            "created_at": "2026-01-20T05:13:42.193Z",
+            "updated_at": "2026-01-29T22:57:02.788Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-29T12:51:39.000Z-2026-01-29T20:55:31.951Z: 无更多数据，微博已返回全部数据。关键词：云南 地震 震级，当前页：1/0"
+          },
+          {
+            "id": "b2edce8e-e5a1-4eb4-b3bd-225abd203513",
+            "title": "小伙救人按断女子6根肋骨",
+            "description": "江苏苏州一超市老板娘晕倒，顾客张晓国在调度员指导下实施心肺复苏。按压致老板娘6根肋骨骨折，但成功救回其性命，家属对此表示感谢。",
+            "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+            "category": {
+              "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+              "code": "other",
+              "name": "其他",
+              "name_en": "other",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:07.919Z",
+              "updated_at": "2026-01-14T12:55:07.919Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.2,
+              "negative": 0.1,
+              "positive": 0.7
+            },
+            "hotness": "476.54",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2026-01-27T05:28:00.000Z",
+            "peak_at": "2026-01-27T07:00:00.000Z",
+            "keywords": [
+              "心肺复苏",
+              "按断肋骨",
+              "救人"
+            ],
+            "created_at": "2026-01-28T03:37:02.368Z",
+            "updated_at": "2026-01-29T22:57:02.790Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-28T08:00:00.000Z-2026-01-29T20:37:10.921Z: 无更多数据，微博已返回全部数据。关键词：心肺复苏 按断肋骨 救人，当前页：4/4"
+          },
+          {
+            "id": "7c82594a-78ac-4553-a6ba-19f4adc31222",
+            "title": "靖国神社石狮被指掠自中国",
+            "description": "学者新书证实靖国神社门前石狮系中国辽宁海城被掠文物，日方以国家财产为由拒绝归还。目前日本尚未返还任何掠夺文物。",
+            "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+            "category": {
+              "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+              "code": "other",
+              "name": "其他",
+              "name_en": "other",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:07.919Z",
+              "updated_at": "2026-01-14T12:55:07.919Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.1,
+              "negative": 0.8,
+              "positive": 0.1
+            },
+            "hotness": "247.46",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2026-01-26T07:40:00.000Z",
+            "peak_at": "2026-01-26T10:00:00.000Z",
+            "keywords": [
+              "靖国神社",
+              "石狮",
+              "文物"
+            ],
+            "created_at": "2026-01-28T03:30:19.632Z",
+            "updated_at": "2026-01-29T22:57:02.793Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-26T07:40:00.000Z-2026-01-27T23:59:40.000Z: 无更多数据，微博已返回全部数据。关键词：靖国神社 石狮 文物，当前页：40/40"
+          },
+          {
+            "id": "5512e0c5-dc8a-4f2e-940b-9594830a8916",
+            "title": "小偷入室盗窃不识黄金反偷水龙头",
+            "description": "四川达州一农村民房遭入室盗窃，小偷撬窗进入后未拿走约10克重的金项链，反而偷走了屋内的水龙头。当事人称小偷“一点都不专业”，目前警方已立案调查。",
+            "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+            "category": {
+              "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+              "code": "other",
+              "name": "其他",
+              "name_en": "other",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:07.919Z",
+              "updated_at": "2026-01-14T12:55:07.919Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.6,
+              "negative": 0.3,
+              "positive": 0.1
+            },
+            "hotness": "6.10",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2026-01-25T02:00:00.000Z",
+            "peak_at": "2026-01-25T04:00:00.000Z",
+            "keywords": [
+              "小偷",
+              "水龙头",
+              "金项链"
+            ],
+            "created_at": "2026-01-26T08:41:47.063Z",
+            "updated_at": "2026-01-29T22:57:02.797Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-26T09:30:54.000Z-2026-01-29T21:01:47.025Z: 无更多数据，微博已返回全部数据。关键词：小偷 水龙头 金项链，当前页：1/0"
+          },
+          {
+            "id": "df78c143-e5ee-49f4-af33-792b35ce8977",
+            "title": "游客衡山景区丢80克金吊坠",
+            "description": "游客反映在湖南南岳衡山景区丢失重80.99克金饰吊坠，警方已接警并调取监控协助寻找，目前暂未找到。",
+            "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+            "category": {
+              "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+              "code": "other",
+              "name": "其他",
+              "name_en": "other",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:07.919Z",
+              "updated_at": "2026-01-14T12:55:07.919Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.2,
+              "negative": 0.7,
+              "positive": 0.1
+            },
+            "hotness": "7.96",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2026-01-25T04:00:00.000Z",
+            "peak_at": "2026-01-25T04:00:00.000Z",
+            "keywords": [
+              "衡山景区",
+              "金吊坠",
+              "游客"
+            ],
+            "created_at": "2026-01-26T08:40:18.366Z",
+            "updated_at": "2026-01-29T22:57:02.798Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-29T13:16:06.000Z-2026-01-29T20:54:10.018Z: 无更多数据，微博已返回全部数据。关键词：衡山景区 金吊坠 游客，当前页：1/0"
+          },
+          {
+            "id": "0c10882d-a686-4e45-9377-cb4543beb458",
+            "title": "女子在胖东来花百万买金条",
+            "description": "河南许昌胖东来因金价优惠引顾客排队，一女子从南阳赶来购金，称在此累计消费超100万元囤金条。",
+            "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+            "category": {
+              "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+              "code": "other",
+              "name": "其他",
+              "name_en": "other",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:07.919Z",
+              "updated_at": "2026-01-14T12:55:07.919Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.3,
+              "negative": 0.1,
+              "positive": 0.6
+            },
+            "hotness": "83.79",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2026-01-24T11:00:00.000Z",
+            "peak_at": "2026-01-24T12:00:00.000Z",
+            "keywords": [
+              "胖东来",
+              "金条"
+            ],
+            "created_at": "2026-01-25T07:22:13.537Z",
+            "updated_at": "2026-01-29T22:57:02.805Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-27T03:21:43.000Z-2026-01-27T14:35:00.071Z: 无更多数据，微博已返回全部数据。关键词：胖东来 金条，当前页：1/0"
+          },
+          {
+            "id": "85e7c9e1-f6a6-492d-b2c0-1d09de2f0aa0",
+            "title": "女子卖劳力士治病账户被冻结",
+            "description": "西安雷某某为筹钱治病在二手平台售卖劳力士手表，因脱离平台线下交易，收到的16万元货款被认定为涉诈资金，账户遭湖南益阳警方冻结至今。",
+            "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+            "category": {
+              "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+              "code": "other",
+              "name": "其他",
+              "name_en": "other",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:07.919Z",
+              "updated_at": "2026-01-14T12:55:07.919Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.2,
+              "negative": 0.7,
+              "positive": 0.1
+            },
+            "hotness": "26.63",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2026-01-24T18:00:00.000Z",
+            "peak_at": "2026-01-24T18:00:00.000Z",
+            "keywords": [
+              "女子",
+              "劳力士",
+              "账户冻结"
+            ],
+            "created_at": "2026-01-25T07:21:45.225Z",
+            "updated_at": "2026-01-29T22:57:02.806Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-28T14:31:17.000Z-2026-01-29T20:29:46.077Z: 无更多数据，微博已返回全部数据。关键词：女子 劳力士 账户冻结，当前页：1/0"
+          },
+          {
+            "id": "5368b4f4-9c52-4e08-af7a-8f76a672d354",
+            "title": "新疆雪豹咬伤滑雪游客",
+            "description": "1月23日19时许，新疆富蕴县一滑雪游客在路边林带被雪豹咬伤，目前在医院救治，伤情平稳。专家称雪豹处于应激状态。",
+            "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+            "category": {
+              "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+              "code": "other",
+              "name": "其他",
+              "name_en": "other",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:07.919Z",
+              "updated_at": "2026-01-14T12:55:07.919Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.3,
+              "negative": 0.6,
+              "positive": 0.1
+            },
+            "hotness": "26.53",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2026-01-23T11:00:00.000Z",
+            "peak_at": "2026-01-24T11:00:00.000Z",
+            "keywords": [
+              "新疆雪豹",
+              "咬伤",
+              "滑雪游客"
+            ],
+            "created_at": "2026-01-25T07:21:40.329Z",
+            "updated_at": "2026-01-29T22:57:02.809Z",
+            "deleted_at": null,
+            "crawl_end_reason": "无搜索结果。关键词：新疆雪豹 咬伤 滑雪游客，时间范围：2026-01-25-00-2026-01-23-19"
+          },
+          {
+            "id": "53b2b492-49d5-4d09-9759-16886671446f",
+            "title": "新手宝妈洗手过度致面部变形",
+            "description": "江苏一新手宝妈为防流感频繁洗手消毒，导致皮肤屏障受损引发过敏性皮炎，面部红肿变形，目前在南京住院治疗。",
+            "category_id": "43b50a26-00f2-4a49-8958-5813a6852c79",
+            "category": {
+              "id": "43b50a26-00f2-4a49-8958-5813a6852c79",
+              "code": "education",
+              "name": "教育",
+              "name_en": "education",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:52:31.764Z",
+              "updated_at": "2026-01-14T12:52:31.764Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.3,
+              "negative": 0.6,
+              "positive": 0.1
+            },
+            "hotness": "4.91",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2026-01-24T12:00:00.000Z",
+            "peak_at": "2026-01-24T13:00:00.000Z",
+            "keywords": [
+              "洗手进医院",
+              "宝妈",
+              "面部变形"
+            ],
+            "created_at": "2026-01-25T07:21:11.679Z",
+            "updated_at": "2026-01-29T22:57:02.811Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-25T11:04:00.000Z-2026-01-29T20:52:08.243Z: 无更多数据，微博已返回全部数据。关键词：洗手进医院 宝妈 面部变形，当前页：1/0"
+          },
+          {
+            "id": "a3e4ee75-6ddd-4c9b-96bc-238385d448f5",
+            "title": "女子网购500单仅退款",
+            "description": "浙江一女子网购500单后利用平台规则申请仅退款并转卖货品，商家称半年损失4.4万元，跨省维权后在警方协助下追回货款。",
+            "category_id": "6cceb638-1685-4272-b586-a91d38ee9ceb",
+            "category": {
+              "id": "6cceb638-1685-4272-b586-a91d38ee9ceb",
+              "code": "tech_internet",
+              "name": "科技互联网",
+              "name_en": "tech_internet",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:53:04.687Z",
+              "updated_at": "2026-01-14T12:53:04.687Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.2,
+              "negative": 0.7,
+              "positive": 0.1
+            },
+            "hotness": "586.12",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2026-01-23T18:00:00.000Z",
+            "peak_at": "2026-01-24T10:00:00.000Z",
+            "keywords": [
+              "仅退款",
+              "女子",
+              "商家"
+            ],
+            "created_at": "2026-01-24T03:57:54.492Z",
+            "updated_at": "2026-01-29T22:57:02.813Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-29T16:44:29.000Z-2026-01-29T20:28:07.276Z: 无更多数据，微博已返回全部数据。关键词：仅退款 女子 商家，当前页：1/0"
+          },
+          {
+            "id": "6f56a475-4dc9-48a7-ae95-6289fc508445",
+            "title": "动物园员工被指用金属锁敲打小象",
+            "description": "西双版纳野生动物园一员工被拍到用金属锁多次敲打将鼻子伸出栅栏的小象并大声呵斥。园方回应称已关注，正在核实具体情况。",
+            "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+            "category": {
+              "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+              "code": "other",
+              "name": "其他",
+              "name_en": "other",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:07.919Z",
+              "updated_at": "2026-01-14T12:55:07.919Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.2,
+              "negative": 0.8,
+              "positive": 0
+            },
+            "hotness": "0.02",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2026-01-23T04:00:00.000Z",
+            "peak_at": "2026-01-23T06:00:00.000Z",
+            "keywords": [
+              "西双版纳动物园",
+              "打小象",
+              "虐待动物"
+            ],
+            "created_at": "2026-01-24T03:57:43.118Z",
+            "updated_at": "2026-01-29T22:57:02.815Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-24T15:15:13.000Z-2026-01-29T18:55:47.495Z: 无更多数据，微博已返回全部数据。关键词：西双版纳动物园 打小象 虐待动物，当前页：1/0"
+          },
+          {
+            "id": "4786dc8b-9401-43dd-9b5f-d61060c2f99e",
+            "title": "夫妻吵架将俩年幼孩子留酒店后失联",
+            "description": "北京朝阳一对夫妻因感情纠纷，将7岁和5岁的两个孩子独自留在酒店后双双失联。警方介入后，民警将孩子带回派出所照料，并劝说母亲接回孩子。",
+            "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+            "category": {
+              "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+              "code": "other",
+              "name": "其他",
+              "name_en": "other",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:07.919Z",
+              "updated_at": "2026-01-14T12:55:07.919Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.1,
+              "negative": 0.8,
+              "positive": 0.1
+            },
+            "hotness": "2.92",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2026-01-23T05:00:00.000Z",
+            "peak_at": "2026-01-23T07:00:00.000Z",
+            "keywords": [
+              "夫妻吵架",
+              "留酒店",
+              "失联"
+            ],
+            "created_at": "2026-01-24T03:57:38.345Z",
+            "updated_at": "2026-01-29T22:57:02.818Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-26T07:44:49.000Z-2026-01-29T20:37:00.246Z: 无更多数据，微博已返回全部数据。关键词：夫妻吵架 留酒店 失联，当前页：1/0"
+          },
+          {
+            "id": "ed1ce7bb-8761-40f6-aab9-304d0d71d8c0",
+            "title": "直播间千人仅一真观众",
+            "description": "昆明警方揭露新型诈骗：受害人观看的所谓千人直播间，实际仅有其一名真人观众，其余均为托儿。骗子通过红包诱惑和虚假内幕消息诱导受害人购买黄金进行投资。",
+            "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+            "category": {
+              "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+              "code": "other",
+              "name": "其他",
+              "name_en": "other",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:07.919Z",
+              "updated_at": "2026-01-14T12:55:07.919Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.2,
+              "negative": 0.8,
+              "positive": 0
+            },
+            "hotness": "0.11",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2026-01-23T05:00:00.000Z",
+            "peak_at": "2026-01-23T07:00:00.000Z",
+            "keywords": [
+              "直播间",
+              "千人托儿",
+              "黄金诈骗"
+            ],
+            "created_at": "2026-01-24T03:57:28.149Z",
+            "updated_at": "2026-01-29T22:57:02.820Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-23T05:00:00.000Z-2026-01-26T11:49:40.235Z: 无更多数据，微博已返回全部数据。关键词：直播间 千人托儿 黄金诈骗，当前页：2/2"
+          },
+          {
+            "id": "a1e3a106-37a7-4b0a-abbe-6166369505d4",
+            "title": "情侣辞职回村种水果翻盘",
+            "description": "95后情侣考研失败后辞职回村种水果，管理300亩果园，因诚信经营获网友支持。",
+            "category_id": "db330f09-6b3d-4bc9-a124-ac0c6296225b",
+            "category": {
+              "id": "db330f09-6b3d-4bc9-a124-ac0c6296225b",
+              "code": "culture_sports",
+              "name": "文化体育娱乐",
+              "name_en": "culture_sports",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:21.942Z",
+              "updated_at": "2026-01-14T12:55:21.942Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.1,
+              "negative": 0.1,
+              "positive": 0.8
+            },
+            "hotness": "0.71",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2026-01-22T00:00:00.000Z",
+            "peak_at": "2026-01-22T02:00:00.000Z",
+            "keywords": [
+              "考研失败",
+              "情侣辞职",
+              "种水果"
+            ],
+            "created_at": "2026-01-22T04:40:16.067Z",
+            "updated_at": "2026-01-29T22:57:02.821Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-25T21:19:00.000Z-2026-01-29T21:04:20.784Z: 无更多数据，微博已返回全部数据。关键词：考研失败 情侣辞职 种水果，当前页：1/0"
+          },
+          {
+            "id": "1b2bf560-8fa1-4a2b-9aea-e850a7306ada",
+            "title": "湖南女主播收到炸弹包裹被炸伤",
+            "description": "湖南一名女主播收到寄送的包裹，拆开时发生爆炸导致受伤，目前警方已介入调查。",
+            "category_id": "43b50a26-00f2-4a49-8958-5813a6852c79",
+            "category": {
+              "id": "43b50a26-00f2-4a49-8958-5813a6852c79",
+              "code": "education",
+              "name": "教育",
+              "name_en": "education",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:52:31.764Z",
+              "updated_at": "2026-01-14T12:52:31.764Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.1,
+              "negative": 0.9,
+              "positive": 0
+            },
+            "hotness": "0.00",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2025-10-16T12:21:00.000Z",
+            "peak_at": "2025-10-16T13:00:00.000Z",
+            "keywords": [
+              "女主播",
+              "炸弹包裹"
+            ],
+            "created_at": "2026-01-14T12:54:18.481Z",
+            "updated_at": "2026-01-29T22:57:02.823Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2025-12-13T08:13:53.000Z-2026-01-29T20:53:23.263Z: 无更多数据，微博已返回全部数据。关键词：女主播 炸弹包裹，当前页：1/0"
+          },
+          {
+            "id": "f53bfaaa-41a6-4b90-b465-4888fc2c9bfa",
+            "title": "永辉超市预亏21亿",
+            "description": "永辉超市发布预亏公告，预计2025年归母净亏损21.4亿元。亏损主要因门店调改及关停产生损失超12亿元，公司已连续5年亏损。",
+            "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+            "category": {
+              "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+              "code": "other",
+              "name": "其他",
+              "name_en": "other",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:07.919Z",
+              "updated_at": "2026-01-14T12:55:07.919Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.1,
+              "negative": 0.8,
+              "positive": 0.1
+            },
+            "hotness": "8.29",
+            "status": "active",
+            "seed_url": "http://t.cn/AXGg2RLd",
+            "occurred_at": "2026-01-19T16:00:00.000Z",
+            "peak_at": "2026-01-21T04:00:00.000Z",
+            "keywords": [
+              "永辉超市",
+              "预亏21亿",
+              "胖改"
+            ],
+            "created_at": "2026-01-22T04:39:45.772Z",
+            "updated_at": "2026-01-29T22:57:02.825Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-25T07:30:04.000Z-2026-01-29T20:43:57.028Z: 无更多数据，微博已返回全部数据。关键词：永辉超市 预亏21亿 胖改，当前页：2/2"
+          },
+          {
+            "id": "95480133-6d2e-4b38-9c2c-0582443d11ca",
+            "title": "10月大男婴被母亲扎数百针",
+            "description": "云南墨江一名10个月大男婴遭母亲用针扎数百次，因断针滞留颈椎需手术。医生称母亲可能精神异常，当地回应称核实清楚将发调查报告。",
+            "category_id": "43b50a26-00f2-4a49-8958-5813a6852c79",
+            "category": {
+              "id": "43b50a26-00f2-4a49-8958-5813a6852c79",
+              "code": "education",
+              "name": "教育",
+              "name_en": "education",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:52:31.764Z",
+              "updated_at": "2026-01-14T12:52:31.764Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.1,
+              "negative": 0.9,
+              "positive": 0
+            },
+            "hotness": "0.23",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2026-01-20T16:00:00.000Z",
+            "peak_at": "2026-01-21T12:00:00.000Z",
+            "keywords": [
+              "男婴",
+              "扎针",
+              "云南墨江"
+            ],
+            "created_at": "2026-01-22T04:39:41.761Z",
+            "updated_at": "2026-01-29T22:57:02.827Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-24T01:41:22.000Z-2026-01-25T02:41:28.235Z: 无更多数据，微博已返回全部数据。关键词：男婴 扎针 云南墨江，当前页：1/0"
+          },
+          {
+            "id": "1b8c7f2c-f82e-4c71-b31a-d402ae694de9",
+            "title": "程序员猝死妻子曾催下班",
+            "description": "32岁程序员周六在家猝死，当天曾5次访问公司OA系统处理任务，死后仍收到工作消息。家属称其长期加班，公司已申请工伤认定。",
+            "category_id": "6cceb638-1685-4272-b586-a91d38ee9ceb",
+            "category": {
+              "id": "6cceb638-1685-4272-b586-a91d38ee9ceb",
+              "code": "tech_internet",
+              "name": "科技互联网",
+              "name_en": "tech_internet",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:53:04.687Z",
+              "updated_at": "2026-01-14T12:53:04.687Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.2,
+              "negative": 0.8,
+              "positive": 0
+            },
+            "hotness": "1.42",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2026-01-21T14:18:00.000Z",
+            "peak_at": "2026-01-21T14:18:00.000Z",
+            "keywords": [
+              "程序员猝死",
+              "妻子催下班",
+              "工伤认定"
+            ],
+            "created_at": "2026-01-22T04:39:29.688Z",
+            "updated_at": "2026-01-29T22:57:02.829Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-24T02:43:43.000Z-2026-01-29T21:04:38.965Z: 无更多数据，微博已返回全部数据。关键词：程序员猝死 妻子催下班 工伤认定，当前页：1/0"
+          },
+          {
+            "id": "6736aa9d-84a3-4a1c-a45b-c6db8778b6c6",
+            "title": "拼多多因未报送涉税信息被罚",
+            "description": "拼多多运营主体未按规报送平台内经营者涉税信息，且在责令改正期限内未完成整改，被上海长宁区税务局处以10万元罚款。",
+            "category_id": "6cceb638-1685-4272-b586-a91d38ee9ceb",
+            "category": {
+              "id": "6cceb638-1685-4272-b586-a91d38ee9ceb",
+              "code": "tech_internet",
+              "name": "科技互联网",
+              "name_en": "tech_internet",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:53:04.687Z",
+              "updated_at": "2026-01-14T12:53:04.687Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.2,
+              "negative": 0.7,
+              "positive": 0.1
+            },
+            "hotness": "0.71",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2026-01-21T04:00:00.000Z",
+            "peak_at": "2026-01-21T10:00:00.000Z",
+            "keywords": [
+              "拼多多",
+              "被罚",
+              "涉税信息"
+            ],
+            "created_at": "2026-01-21T13:10:00.028Z",
+            "updated_at": "2026-01-29T22:57:02.831Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-21T04:00:00.000Z-2026-01-25T09:56:54.230Z: 无更多数据，微博已返回全部数据。关键词：拼多多 被罚 涉税信息，当前页：44/44"
+          },
+          {
+            "id": "f05358d4-7942-4dfe-8c58-b60718466c09",
+            "title": "聂卫平逝世",
+            "description": "围棋职业九段、中国围棋协会名誉主席聂卫平因病医治无效，于2026年1月14日在北京逝世，享年74岁。",
+            "category_id": "db330f09-6b3d-4bc9-a124-ac0c6296225b",
+            "category": {
+              "id": "db330f09-6b3d-4bc9-a124-ac0c6296225b",
+              "code": "culture_sports",
+              "name": "文化体育娱乐",
+              "name_en": "culture_sports",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:21.942Z",
+              "updated_at": "2026-01-14T12:55:21.942Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.1,
+              "negative": 0.8,
+              "positive": 0.1
+            },
+            "hotness": "0.22",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2026-01-12T16:00:00.000Z",
+            "peak_at": "2026-01-14T22:00:00.000Z",
+            "keywords": [
+              "聂卫平",
+              "逝世",
+              "围棋"
+            ],
+            "created_at": "2026-01-21T03:44:39.706Z",
+            "updated_at": "2026-01-29T22:57:02.833Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-23T07:38:00.000Z-2026-01-26T11:30:24.294Z: 无更多数据，微博已返回全部数据。关键词：聂卫平 逝世 围棋，当前页：1/0"
+          },
+          {
+            "id": "c755a741-fc71-4d6c-a608-c6b02d3e99f1",
+            "title": "携程涉嫌垄断被立案调查",
+            "description": "市场监管总局依据《反垄断法》，对携程集团涉嫌滥用市场支配地位实施垄断行为正式立案调查。",
+            "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+            "category": {
+              "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+              "code": "other",
+              "name": "其他",
+              "name_en": "other",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:07.919Z",
+              "updated_at": "2026-01-14T12:55:07.919Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.1,
+              "negative": 0.8,
+              "positive": 0.1
+            },
+            "hotness": "0.09",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2026-01-14T12:00:00.000Z",
+            "peak_at": "2026-01-14T13:00:00.000Z",
+            "keywords": [
+              "携程",
+              "垄断",
+              "立案调查"
+            ],
+            "created_at": "2026-01-21T03:44:31.251Z",
+            "updated_at": "2026-01-29T22:57:02.834Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-25T01:17:10.000Z-2026-01-25T02:55:10.120Z: 无更多数据，微博已返回全部数据。关键词：携程 垄断 立案调查，当前页：1/0"
+          },
+          {
+            "id": "332960eb-4dfc-4675-9c07-368550f593c8",
+            "title": "云南巧家县5.1级地震",
+            "description": "中国地震台网正式测定：01月19日19时32分在云南昭通市巧家县发生5.1级地震，震源深度10千米。",
+            "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+            "category": {
+              "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+              "code": "other",
+              "name": "其他",
+              "name_en": "other",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:07.919Z",
+              "updated_at": "2026-01-14T12:55:07.919Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.3,
+              "negative": 0.7,
+              "positive": 0
+            },
+            "hotness": "2.13",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2026-01-19T11:32:00.000Z",
+            "peak_at": "2026-01-19T12:00:00.000Z",
+            "keywords": [
+              "巧家县",
+              "地震",
+              "5.1级"
+            ],
+            "created_at": "2026-01-21T03:43:03.314Z",
+            "updated_at": "2026-01-29T22:57:02.836Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-26T13:02:44.000Z-2026-01-29T21:03:20.389Z: 无更多数据，微博已返回全部数据。关键词：巧家县 地震 5.1级，当前页：1/0"
+          },
+          {
+            "id": "116f30d7-7564-4246-b705-1ae786e3dec5",
+            "title": "中方驳斥菲律宾声明",
+            "description": "中国驻菲使馆回应菲律宾国家海事委员会声明，驳斥菲方无视事实的言论，指出菲方在仁爱礁、仙宾礁等地挑衅滋事，强调中方保持克制。",
+            "category_id": "1628dedc-dd79-429c-8445-9f3d616a2029",
+            "category": {
+              "id": "1628dedc-dd79-429c-8445-9f3d616a2029",
+              "code": "military",
+              "name": "军事",
+              "name_en": "military",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:54:30.214Z",
+              "updated_at": "2026-01-14T12:54:30.214Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.2,
+              "negative": 0.7,
+              "positive": 0.1
+            },
+            "hotness": "0.01",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2026-01-11T16:00:00.000Z",
+            "peak_at": "2026-01-13T04:00:00.000Z",
+            "keywords": [
+              "中方",
+              "菲律宾",
+              "仙宾礁"
+            ],
+            "created_at": "2026-01-20T05:13:56.084Z",
+            "updated_at": "2026-01-29T22:57:02.837Z",
+            "deleted_at": null,
+            "crawl_end_reason": "无搜索结果。关键词：中方 菲律宾 仙宾礁，时间范围：2026-01-26-11-2026-01-26-13"
+          },
+          {
+            "id": "e03f9be1-24e3-41b5-9b7f-db258d2e7009",
+            "title": "党员烧香违纪官方释疑",
+            "description": "针对“党员进寺庙烧香是否违纪”的疑问，官方媒体发布政策解释，明确区分民俗活动与迷信活动界限，指出党员参观游览不违规，但烧香跪拜不行。",
+            "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+            "category": {
+              "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+              "code": "other",
+              "name": "其他",
+              "name_en": "other",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:07.919Z",
+              "updated_at": "2026-01-14T12:55:07.919Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.7,
+              "negative": 0.2,
+              "positive": 0.1
+            },
+            "hotness": "0.68",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2026-01-06T16:00:00.000Z",
+            "peak_at": "2026-01-08T08:00:00.000Z",
+            "keywords": [
+              "党员烧香",
+              "违纪",
+              "官方释疑"
+            ],
+            "created_at": "2026-01-20T05:13:50.410Z",
+            "updated_at": "2026-01-29T22:57:02.839Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-23T20:00:00.000Z-2026-01-29T22:56:04.923Z: 无更多数据，微博已返回全部数据。关键词：党员烧香 违纪 官方释疑，当前页：1/0"
+          },
+          {
+            "id": "46e22b4e-b03a-4d68-bb6b-79f50ddcd2e1",
+            "title": "联合国认定以色列犯种族灭绝罪",
+            "description": "联合国相关报告认定以色列在加沙地带的军事行动构成种族灭绝罪，引发国际社会广泛关注。",
+            "category_id": "43b50a26-00f2-4a49-8958-5813a6852c79",
+            "category": {
+              "id": "43b50a26-00f2-4a49-8958-5813a6852c79",
+              "code": "education",
+              "name": "教育",
+              "name_en": "education",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:52:31.764Z",
+              "updated_at": "2026-01-14T12:52:31.764Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.2,
+              "negative": 0.7,
+              "positive": 0.1
+            },
+            "hotness": "31.16",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2025-09-16T07:17:00.000Z",
+            "peak_at": "2025-09-16T10:00:00.000Z",
+            "keywords": [
+              "联合国",
+              "以色列",
+              "种族灭绝"
+            ],
+            "created_at": "2026-01-14T12:53:20.792Z",
+            "updated_at": "2026-01-29T22:57:02.841Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2025-12-07T08:57:09.000Z-2026-01-29T21:00:21.187Z: 无更多数据，微博已返回全部数据。关键词：联合国 以色列 种族灭绝，当前页：11/11"
+          },
+          {
+            "id": "5a1df16c-3329-4ff0-9b1f-bc38dc0c1a4b",
+            "title": "全国一年关停2.11万所幼儿园",
+            "description": "教育部数据显示，2023年全国幼儿园数量减少2.11万所，在园幼儿人数减少534.7万人。",
+            "category_id": "43b50a26-00f2-4a49-8958-5813a6852c79",
+            "category": {
+              "id": "43b50a26-00f2-4a49-8958-5813a6852c79",
+              "code": "education",
+              "name": "教育",
+              "name_en": "education",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:52:31.764Z",
+              "updated_at": "2026-01-14T12:52:31.764Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.3,
+              "negative": 0.6,
+              "positive": 0.1
+            },
+            "hotness": "0.00",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2025-08-28T02:13:00.000Z",
+            "peak_at": "2025-08-28T04:00:00.000Z",
+            "keywords": [
+              "幼儿园",
+              "关停",
+              "2.11万所"
+            ],
+            "created_at": "2026-01-14T12:52:31.775Z",
+            "updated_at": "2026-01-29T22:57:02.842Z",
+            "deleted_at": null,
+            "crawl_end_reason": "无搜索结果。关键词：幼儿园 关停 2.11万所，时间范围：2025-08-28-18-2025-08-28-10"
+          },
+          {
+            "id": "38e3e263-8fd1-4929-a5f8-6de4debdab37",
+            "title": "生育津贴遭冒领套取",
+            "description": "国家医保局调查揭露空壳公司虚构劳动关系，将月薪4000元产妇登记为月薪2万员工，申领10.2万元生育津贴，产妇实际仅得3.2万元。",
+            "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+            "category": {
+              "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+              "code": "other",
+              "name": "其他",
+              "name_en": "other",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:07.919Z",
+              "updated_at": "2026-01-14T12:55:07.919Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.2,
+              "negative": 0.8,
+              "positive": 0
+            },
+            "hotness": "1876.49",
+            "status": "active",
+            "seed_url": "http://t.cn/AXqSM19n",
+            "occurred_at": "2026-01-28T04:00:00.000Z",
+            "peak_at": "2026-01-28T10:00:00.000Z",
+            "keywords": [
+              "生育津贴",
+              "骗保",
+              "空壳公司"
+            ],
+            "created_at": "2026-01-29T04:07:44.803Z",
+            "updated_at": "2026-01-29T22:57:02.844Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-29T18:39:00.000Z-2026-01-29T19:09:33.260Z: 无更多数据，微博已返回全部数据。关键词：生育津贴 骗保 空壳公司，当前页：1/0"
+          },
+          {
+            "id": "3e9f8552-8046-4f82-9bbb-a74ef610b786",
+            "title": "女子吃辣条吃出金条",
+            "description": "四川杨女士购买30元辣条大礼包，拆封后发现中奖获得一根价值约3000元的金条。品牌方证实活动属实，限量300份。",
+            "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+            "category": {
+              "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+              "code": "other",
+              "name": "其他",
+              "name_en": "other",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:07.919Z",
+              "updated_at": "2026-01-14T12:55:07.919Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.2,
+              "negative": 0,
+              "positive": 0.8
+            },
+            "hotness": "531.91",
+            "status": "active",
+            "seed_url": "http://t.cn/AXqKUsBK",
+            "occurred_at": "2026-01-28T09:29:00.000Z",
+            "peak_at": "2026-01-28T10:00:00.000Z",
+            "keywords": [
+              "辣条",
+              "金条",
+              "中奖"
+            ],
+            "created_at": "2026-01-29T04:07:36.471Z",
+            "updated_at": "2026-01-29T22:57:02.846Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-29T03:41:36.000Z-2026-01-28T08:29:54.000Z: 无更多数据，微博已返回全部数据。关键词：辣条 金条 中奖，当前页：27/27"
+          },
+          {
+            "id": "af0c5ac0-01c9-4ac5-8ded-c85d83d00696",
+            "title": "中国游客贝加尔湖翻车1死4伤",
+            "description": "一辆载有中国游客的汽车在俄罗斯贝加尔湖冰面翻车，致1名中国游客死亡，4人受伤。中国驻伊尔库茨克总领馆已启动应急机制协助善后。",
+            "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+            "category": {
+              "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+              "code": "other",
+              "name": "其他",
+              "name_en": "other",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:07.919Z",
+              "updated_at": "2026-01-14T12:55:07.919Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.2,
+              "negative": 0.8,
+              "positive": 0
+            },
+            "hotness": "278.83",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2026-01-28T16:33:00.000Z",
+            "peak_at": "2026-01-28T18:00:00.000Z",
+            "keywords": [
+              "贝加尔湖",
+              "中国游客",
+              "翻车"
+            ],
+            "created_at": "2026-01-29T04:07:58.313Z",
+            "updated_at": "2026-01-29T22:57:02.848Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-28T16:33:00.000Z-2026-01-29T00:59:34.000Z: 无更多数据，微博已返回全部数据。关键词：贝加尔湖 中国游客 翻车，当前页：3/3"
+          },
+          {
+            "id": "96891252-3cdd-4c8f-bcea-a8eb273eb5f8",
+            "title": "盒马错发水仙女子索赔",
+            "description": "北京邹女士在盒马App订购鲜百合，平台误送有毒水仙致其家人误食中毒。邹女士索赔从375万降至48万，盒马仅愿赔7万，双方协商未果，邹女士拟起诉。",
+            "category_id": "6cceb638-1685-4272-b586-a91d38ee9ceb",
+            "category": {
+              "id": "6cceb638-1685-4272-b586-a91d38ee9ceb",
+              "code": "tech_internet",
+              "name": "科技互联网",
+              "name_en": "tech_internet",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:53:04.687Z",
+              "updated_at": "2026-01-14T12:53:04.687Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.2,
+              "negative": 0.7,
+              "positive": 0.1
+            },
+            "hotness": "1282.89",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2026-01-28T07:30:00.000Z",
+            "peak_at": "2026-01-28T10:00:00.000Z",
+            "keywords": [
+              "盒马",
+              "水仙",
+              "索赔"
+            ],
+            "created_at": "2026-01-29T04:07:40.630Z",
+            "updated_at": "2026-01-29T22:57:02.852Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-29T04:56:23.000Z-2026-01-28T12:07:50.000Z: 无更多数据，微博已返回全部数据。关键词：盒马 水仙 索赔，当前页：47/47"
+          },
+          {
+            "id": "da909f3d-4972-4aa8-90ac-a95c0f13d354",
+            "title": "烤鱼店老板投喂流浪猫躲过坠物",
+            "description": "1月27日贵州一烤鱼店老板因投喂流浪猫离开摊位，意外躲过随后坠落的花盆，老板称流浪猫救了自己一命。",
+            "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+            "category": {
+              "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+              "code": "other",
+              "name": "其他",
+              "name_en": "other",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:07.919Z",
+              "updated_at": "2026-01-14T12:55:07.919Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.2,
+              "negative": 0.1,
+              "positive": 0.7
+            },
+            "hotness": "246.97",
+            "status": "active",
+            "seed_url": "http://t.cn/AXqSAjtC",
+            "occurred_at": "2026-01-28T03:11:00.000Z",
+            "peak_at": "2026-01-28T04:00:00.000Z",
+            "keywords": [
+              "烤鱼店老板",
+              "流浪猫",
+              "花盆坠落"
+            ],
+            "created_at": "2026-01-29T04:08:03.374Z",
+            "updated_at": "2026-01-29T22:57:02.854Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-28T03:11:00.000Z-2026-01-28T20:58:53.000Z: 无更多数据，微博已返回全部数据。关键词：烤鱼店老板 流浪猫 花盆坠落，当前页：39/39"
+          },
+          {
+            "id": "1e3b254a-7ae9-432a-9471-63d203de5bcd",
+            "title": "新疆沙漠发现盐水丰年虾",
+            "description": "科研人员在塔克拉玛干沙漠水域首次发现盐水丰年虾，证实该沙漠存在生命迹象。",
+            "category_id": "43b50a26-00f2-4a49-8958-5813a6852c79",
+            "category": {
+              "id": "43b50a26-00f2-4a49-8958-5813a6852c79",
+              "code": "education",
+              "name": "教育",
+              "name_en": "education",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:52:31.764Z",
+              "updated_at": "2026-01-14T12:52:31.764Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.3,
+              "negative": 0,
+              "positive": 0.7
+            },
+            "hotness": "0.00",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2025-08-31T10:10:00.000Z",
+            "peak_at": "2025-08-31T12:00:00.000Z",
+            "keywords": [
+              "新疆沙漠",
+              "盐水丰年虾",
+              "塔克拉玛干"
+            ],
+            "created_at": "2026-01-14T12:52:40.371Z",
+            "updated_at": "2026-01-29T22:57:02.856Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2025-09-11T06:41:46.000Z-2026-01-29T20:55:48.673Z: 无更多数据，微博已返回全部数据。关键词：新疆沙漠 盐水丰年虾 塔克拉玛干，当前页：1/0"
+          },
+          {
+            "id": "b76c401f-99cd-4464-ab25-817b5972173f",
+            "title": "央视曝光肉毒素注射乱象",
+            "description": "央视新闻报道揭露医美领域肉毒素注射存在的违规操作及市场乱象，引发公众对医疗美容安全的担忧。",
+            "category_id": "43b50a26-00f2-4a49-8958-5813a6852c79",
+            "category": {
+              "id": "43b50a26-00f2-4a49-8958-5813a6852c79",
+              "code": "education",
+              "name": "教育",
+              "name_en": "education",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:52:31.764Z",
+              "updated_at": "2026-01-14T12:52:31.764Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.1,
+              "negative": 0.8,
+              "positive": 0.1
+            },
+            "hotness": "0.00",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2025-09-14T09:31:00.000Z",
+            "peak_at": "2025-09-14T10:00:00.000Z",
+            "keywords": [
+              "肉毒素",
+              "注射乱象",
+              "央视"
+            ],
+            "created_at": "2026-01-14T12:53:12.310Z",
+            "updated_at": "2026-01-29T22:57:02.858Z",
+            "deleted_at": null,
+            "crawl_end_reason": "无搜索结果。关键词：肉毒素 注射乱象 央视，时间范围：2026-01-26-17-2026-01-30-03"
+          },
+          {
+            "id": "e33d7ba9-d23a-40e2-88c9-67e1bb12234c",
+            "title": "小红书被立案调查",
+            "description": "小红书因涉嫌违反法律法规被监管部门立案调查，引发社会关注。",
+            "category_id": "6cceb638-1685-4272-b586-a91d38ee9ceb",
+            "category": {
+              "id": "6cceb638-1685-4272-b586-a91d38ee9ceb",
+              "code": "tech_internet",
+              "name": "科技互联网",
+              "name_en": "tech_internet",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:53:04.687Z",
+              "updated_at": "2026-01-14T12:53:04.687Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.1,
+              "negative": 0.8,
+              "positive": 0.1
+            },
+            "hotness": "43.23",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2025-09-11T03:51:00.000Z",
+            "peak_at": "2025-09-11T05:00:00.000Z",
+            "keywords": [
+              "小红书",
+              "立案调查"
+            ],
+            "created_at": "2026-01-14T12:53:04.698Z",
+            "updated_at": "2026-01-29T22:57:02.860Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-27T04:41:44.000Z-2026-01-29T20:33:47.473Z: 无更多数据，微博已返回全部数据。关键词：小红书 立案调查，当前页：1/0"
+          },
+          {
+            "id": "f68daec7-ebd9-49ca-abf0-5b1fb0d8dc29",
+            "title": "四万万中国人共同的名字",
+            "description": "新华社发起话题回顾历史时期四万万中国人的共同名字，引发网友对民族认同与历史的讨论。",
+            "category_id": "43b50a26-00f2-4a49-8958-5813a6852c79",
+            "category": {
+              "id": "43b50a26-00f2-4a49-8958-5813a6852c79",
+              "code": "education",
+              "name": "教育",
+              "name_en": "education",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:52:31.764Z",
+              "updated_at": "2026-01-14T12:52:31.764Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.2,
+              "negative": 0.1,
+              "positive": 0.7
+            },
+            "hotness": "0.34",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2025-09-02T01:03:00.000Z",
+            "peak_at": "2025-09-02T01:03:00.000Z",
+            "keywords": [
+              "四万万",
+              "中国人"
+            ],
+            "created_at": "2026-01-14T12:52:47.274Z",
+            "updated_at": "2026-01-29T22:57:02.862Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-24T00:28:56.000Z-2026-01-29T20:45:57.432Z: 无更多数据，微博已返回全部数据。关键词：四万万 中国人，当前页：1/0"
+          },
+          {
+            "id": "6ad3c3a0-cc70-4427-81fd-7541b83697a9",
+            "title": "泰国孕妇坠崖案离婚宣判",
+            "description": "法院对泰国孕妇坠崖案受害人王暖暖的离婚案进行宣判，判决二人离婚。",
+            "category_id": "43b50a26-00f2-4a49-8958-5813a6852c79",
+            "category": {
+              "id": "43b50a26-00f2-4a49-8958-5813a6852c79",
+              "code": "education",
+              "name": "教育",
+              "name_en": "education",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:52:31.764Z",
+              "updated_at": "2026-01-14T12:52:31.764Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.6,
+              "negative": 0.1,
+              "positive": 0.3
+            },
+            "hotness": "0.59",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2025-10-10T07:05:00.000Z",
+            "peak_at": "2025-10-10T10:00:00.000Z",
+            "keywords": [
+              "王暖暖",
+              "坠崖",
+              "离婚"
+            ],
+            "created_at": "2026-01-14T12:54:03.689Z",
+            "updated_at": "2026-01-29T22:57:02.865Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-26T13:02:44.000Z-2026-01-29T21:03:11.889Z: 无更多数据，微博已返回全部数据。关键词：王暖暖 坠崖 离婚，当前页：1/0"
+          },
+          {
+            "id": "6bb4fd45-9187-41c6-825d-d742b0482453",
+            "title": "中国已确立11颗金钉子",
+            "description": "中国科学家在地质年代划分研究中取得进展，目前已成功确立11颗“金钉子”，标志着我国在地层学研究领域达到国际领先水平。",
+            "category_id": "43b50a26-00f2-4a49-8958-5813a6852c79",
+            "category": {
+              "id": "43b50a26-00f2-4a49-8958-5813a6852c79",
+              "code": "education",
+              "name": "教育",
+              "name_en": "education",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:52:31.764Z",
+              "updated_at": "2026-01-14T12:52:31.764Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.2,
+              "negative": 0,
+              "positive": 0.8
+            },
+            "hotness": "28.36",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2025-10-12T05:25:00.000Z",
+            "peak_at": "2025-10-12T10:00:00.000Z",
+            "keywords": [
+              "中国",
+              "金钉子"
+            ],
+            "created_at": "2026-01-14T12:54:08.468Z",
+            "updated_at": "2026-01-29T22:57:02.867Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-29T01:32:31.000Z-2026-01-29T20:55:17.062Z: 无更多数据，微博已返回全部数据。关键词：中国 金钉子，当前页：1/0"
+          },
+          {
+            "id": "374b57b4-6151-43fe-ac90-6b94e242b968",
+            "title": "澳军机侵闯西沙领空",
+            "description": "澳大利亚军用飞机擅自闯入中国西沙领空，南部战区组织战机进行跟踪监视、警告驱离。",
+            "category_id": "1628dedc-dd79-429c-8445-9f3d616a2029",
+            "category": {
+              "id": "1628dedc-dd79-429c-8445-9f3d616a2029",
+              "code": "military",
+              "name": "军事",
+              "name_en": "military",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:54:30.214Z",
+              "updated_at": "2026-01-14T12:54:30.214Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.2,
+              "negative": 0.7,
+              "positive": 0.1
+            },
+            "hotness": "0.00",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2025-10-20T08:48:00.000Z",
+            "peak_at": "2025-10-20T10:00:00.000Z",
+            "keywords": [
+              "澳军机",
+              "西沙领空",
+              "南部战区"
+            ],
+            "created_at": "2026-01-14T12:54:30.223Z",
+            "updated_at": "2026-01-29T22:57:02.870Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2025-12-07T08:57:09.000Z-2026-01-29T21:02:52.950Z: 无更多数据，微博已返回全部数据。关键词：澳军机 西沙领空 南部战区，当前页：1/0"
+          },
+          {
+            "id": "fb55e212-6508-4da9-b5e9-a74bfba9298c",
+            "title": "蔡国强烟花秀调查情况",
+            "description": "相关部门发布蔡国强烟花秀事故调查通报，说明事故原因及后续处理结果。",
+            "category_id": "43b50a26-00f2-4a49-8958-5813a6852c79",
+            "category": {
+              "id": "43b50a26-00f2-4a49-8958-5813a6852c79",
+              "code": "education",
+              "name": "教育",
+              "name_en": "education",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:52:31.764Z",
+              "updated_at": "2026-01-14T12:52:31.764Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.3,
+              "negative": 0.6,
+              "positive": 0.1
+            },
+            "hotness": "0.13",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2025-10-15T08:00:00.000Z",
+            "peak_at": "2025-10-15T10:00:00.000Z",
+            "keywords": [
+              "蔡国强",
+              "烟花秀"
+            ],
+            "created_at": "2026-01-14T12:54:15.112Z",
+            "updated_at": "2026-01-29T22:57:02.872Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-26T07:44:49.000Z-2026-01-29T20:50:09.319Z: 无更多数据，微博已返回全部数据。关键词：蔡国强 烟花秀，当前页：1/0"
+          },
+          {
+            "id": "ea95c6df-cd2c-40a6-8e0a-a45de64d15ff",
+            "title": "杨振宁逝世",
+            "description": "网络流传著名物理学家杨振宁逝世的消息，引发全网关注与热议。",
+            "category_id": "43b50a26-00f2-4a49-8958-5813a6852c79",
+            "category": {
+              "id": "43b50a26-00f2-4a49-8958-5813a6852c79",
+              "code": "education",
+              "name": "教育",
+              "name_en": "education",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:52:31.764Z",
+              "updated_at": "2026-01-14T12:52:31.764Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.2,
+              "negative": 0.7,
+              "positive": 0.1
+            },
+            "hotness": "1.76",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2025-10-18T04:17:00.000Z",
+            "peak_at": "2025-10-18T06:00:00.000Z",
+            "keywords": [
+              "杨振宁",
+              "逝世"
+            ],
+            "created_at": "2026-01-14T12:54:24.011Z",
+            "updated_at": "2026-01-29T22:57:02.875Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-25T01:37:42.000Z-2026-01-29T20:53:12.667Z: 无更多数据，微博已返回全部数据。关键词：杨振宁 逝世，当前页：1/0"
+          },
+          {
+            "id": "95ab9011-6888-49d2-8411-d57563bff1cb",
+            "title": "推进祖国统一",
+            "description": "央视新闻发布话题强调推进祖国统一大业，结合四中全会精神及“十五五”规划展望国家发展蓝图。",
+            "category_id": "1628dedc-dd79-429c-8445-9f3d616a2029",
+            "category": {
+              "id": "1628dedc-dd79-429c-8445-9f3d616a2029",
+              "code": "military",
+              "name": "军事",
+              "name_en": "military",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:54:30.214Z",
+              "updated_at": "2026-01-14T12:54:30.214Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.2,
+              "negative": 0.1,
+              "positive": 0.7
+            },
+            "hotness": "0.07",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2025-10-23T09:09:00.000Z",
+            "peak_at": "2025-10-23T10:00:00.000Z",
+            "keywords": [
+              "祖国统一",
+              "四中全会",
+              "十五五规划"
+            ],
+            "created_at": "2026-01-14T12:54:55.788Z",
+            "updated_at": "2026-01-29T22:57:02.878Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-25T02:45:00.000Z-2025-10-23T08:09:35.000Z: 无更多数据，微博已返回全部数据。关键词：祖国统一 四中全会 十五五规划，当前页：21/21"
+          },
+          {
+            "id": "d49c5c4a-343d-46c4-b21f-ced11889687f",
+            "title": "被学生抢鸡排的校长离世",
+            "description": "曾因被学生抢鸡排视频走红的河南某中学校长离世，引发社会悼念。",
+            "category_id": "43b50a26-00f2-4a49-8958-5813a6852c79",
+            "category": {
+              "id": "43b50a26-00f2-4a49-8958-5813a6852c79",
+              "code": "education",
+              "name": "教育",
+              "name_en": "education",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:52:31.764Z",
+              "updated_at": "2026-01-14T12:52:31.764Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.6,
+              "negative": 0.1,
+              "positive": 0.3
+            },
+            "hotness": "0.00",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2025-10-21T07:19:00.000Z",
+            "peak_at": "2025-10-21T10:00:00.000Z",
+            "keywords": [
+              "被学生抢鸡排的校长",
+              "离世",
+              "社会悼念"
+            ],
+            "created_at": "2026-01-14T12:54:48.479Z",
+            "updated_at": "2026-01-29T22:57:02.880Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2025-10-22T13:55:57.000Z-2026-01-29T20:41:10.034Z: 无更多数据，微博已返回全部数据。关键词：被学生抢鸡排的校长 离世 社会悼念，当前页：1/0"
+          },
+          {
+            "id": "8072c687-9cb6-4d94-8a3a-446aa9e5bd8c",
+            "title": "武汉大学图书馆案二审宣判",
+            "description": "法院对武汉大学图书馆案进行二审宣判，被告人杨某媛被判处刑罚。",
+            "category_id": "43b50a26-00f2-4a49-8958-5813a6852c79",
+            "category": {
+              "id": "43b50a26-00f2-4a49-8958-5813a6852c79",
+              "code": "education",
+              "name": "教育",
+              "name_en": "education",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:52:31.764Z",
+              "updated_at": "2026-01-14T12:52:31.764Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.2,
+              "negative": 0.7,
+              "positive": 0.1
+            },
+            "hotness": "0.00",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2025-09-20T01:31:00.000Z",
+            "peak_at": "2025-09-20T04:00:00.000Z",
+            "keywords": [
+              "杨某媛",
+              "图书馆案",
+              "武汉大学"
+            ],
+            "created_at": "2026-01-14T12:53:56.816Z",
+            "updated_at": "2026-01-29T22:57:02.883Z",
+            "deleted_at": null,
+            "crawl_end_reason": "无搜索结果。关键词：杨某媛 图书馆案 武汉大学，时间范围：2025-09-20-10-2025-09-20-09"
+          },
+          {
+            "id": "3b626b71-0fc5-4dcf-a789-e07242310ad5",
+            "title": "特朗普承认观看中国阅兵",
+            "description": "特朗普公开承认观看了中国阅兵仪式，引发舆论关注。",
+            "category_id": "43b50a26-00f2-4a49-8958-5813a6852c79",
+            "category": {
+              "id": "43b50a26-00f2-4a49-8958-5813a6852c79",
+              "code": "education",
+              "name": "教育",
+              "name_en": "education",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:52:31.764Z",
+              "updated_at": "2026-01-14T12:52:31.764Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.7,
+              "negative": 0.2,
+              "positive": 0.1
+            },
+            "hotness": "0.22",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2025-09-04T01:24:00.000Z",
+            "peak_at": "2025-09-04T04:00:00.000Z",
+            "keywords": [
+              "特朗普",
+              "阅兵"
+            ],
+            "created_at": "2026-01-14T12:53:01.450Z",
+            "updated_at": "2026-01-29T22:57:02.888Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-26T07:25:12.000Z-2026-01-26T10:40:00.128Z: 无更多数据，微博已返回全部数据。关键词：特朗普 阅兵，当前页：1/0"
+          },
+          {
+            "id": "df2c15a0-10a1-4790-a18e-86d953d78ce5",
+            "title": "九三盛大阅兵",
+            "description": "纪念抗战胜利70周年阅兵式举行，展示中国武装力量建设成就。",
+            "category_id": "43b50a26-00f2-4a49-8958-5813a6852c79",
+            "category": {
+              "id": "43b50a26-00f2-4a49-8958-5813a6852c79",
+              "code": "education",
+              "name": "教育",
+              "name_en": "education",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:52:31.764Z",
+              "updated_at": "2026-01-14T12:52:31.764Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.1,
+              "negative": 0,
+              "positive": 0.9
+            },
+            "hotness": "0.00",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2025-09-02T16:00:00.000Z",
+            "peak_at": "2025-09-03T04:00:00.000Z",
+            "keywords": [
+              "九三阅兵",
+              "抗战胜利"
+            ],
+            "created_at": "2026-01-14T12:52:55.588Z",
+            "updated_at": "2026-01-29T22:57:02.890Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-24T07:03:36.000Z-2026-01-25T02:50:00.182Z: 无更多数据，微博已返回全部数据。关键词：九三阅兵 抗战胜利，当前页：1/0"
+          },
+          {
+            "id": "1c74c63e-32e7-4317-8085-dcd63bec5650",
+            "title": "携程被立案调查",
+            "description": "市场监管总局对携程旅行网涉嫌违法违规行为正式立案调查。",
+            "category_id": "6cceb638-1685-4272-b586-a91d38ee9ceb",
+            "category": {
+              "id": "6cceb638-1685-4272-b586-a91d38ee9ceb",
+              "code": "tech_internet",
+              "name": "科技互联网",
+              "name_en": "tech_internet",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:53:04.687Z",
+              "updated_at": "2026-01-14T12:53:04.687Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.2,
+              "negative": 0.7,
+              "positive": 0.1
+            },
+            "hotness": "10.04",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2026-01-12T16:00:00.000Z",
+            "peak_at": "2026-01-14T10:00:00.000Z",
+            "keywords": [
+              "携程",
+              "立案调查",
+              "市场监管"
+            ],
+            "created_at": "2026-01-20T05:14:00.287Z",
+            "updated_at": "2026-01-29T22:57:24.481Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-28T23:41:38.000Z-2026-01-29T22:57:14.340Z: 无更多数据，微博已返回全部数据。关键词：携程 立案调查 市场监管，当前页：1/0"
+          },
+          {
+            "id": "2d9170a8-04da-4b47-a10e-2e2e0f604be4",
+            "title": "中国公民春节避免前往日本",
+            "description": "外交部及驻日使领馆提醒，因日本治安案件多发及地震灾害风险，中国公民应避免近期前往日本，在日公民需加强防范。",
+            "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+            "category": {
+              "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+              "code": "other",
+              "name": "其他",
+              "name_en": "other",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:07.919Z",
+              "updated_at": "2026-01-14T12:55:07.919Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.3,
+              "negative": 0.7,
+              "positive": 0
+            },
+            "hotness": "69.43",
+            "status": "active",
+            "seed_url": "http://t.cn/AXqtzasA",
+            "occurred_at": "2026-01-26T17:08:00.000Z",
+            "peak_at": "2026-01-26T17:08:00.000Z",
+            "keywords": [
+              "中国公民",
+              "日本",
+              "避免前往"
+            ],
+            "created_at": "2026-01-28T03:30:05.425Z",
+            "updated_at": "2026-01-29T22:58:35.821Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-28T03:03:47.000Z-2026-01-29T22:56:16.493Z: 无更多数据，微博已返回全部数据。关键词：中国公民 日本 避免前往，当前页：5/5"
+          },
+          {
+            "id": "e8915e69-1817-46b7-a573-51aaaa63fe4e",
+            "title": "火车站5万现金挎包被错拿",
+            "description": "吉林延吉西站一旅客装有5.5万元现金的挎包在安检时被他人错拿，因外观相似导致误拿。经民警1小时寻找，现金已完好归还。",
+            "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+            "category": {
+              "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+              "code": "other",
+              "name": "其他",
+              "name_en": "other",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:07.919Z",
+              "updated_at": "2026-01-14T12:55:07.919Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.3,
+              "negative": 0.1,
+              "positive": 0.6
+            },
+            "hotness": "45.00",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2026-01-24T12:00:00.000Z",
+            "peak_at": "2026-01-24T13:00:00.000Z",
+            "keywords": [
+              "火车站",
+              "拿错包",
+              "5万现金"
+            ],
+            "created_at": "2026-01-25T07:22:06.137Z",
+            "updated_at": "2026-01-29T23:09:03.027Z",
+            "deleted_at": null,
+            "crawl_end_reason": "无搜索结果。关键词：火车站 拿错包 5万现金，时间范围：2026-01-24-20-2026-01-30-07"
+          },
+          {
+            "id": "d67a84c9-2217-4ab2-a0e1-0560f99d333e",
+            "title": "陈震偷税案",
+            "description": "央视新闻报道陈震存在偷税漏税行为，引发全网关注。",
+            "category_id": "db330f09-6b3d-4bc9-a124-ac0c6296225b",
+            "category": {
+              "id": "db330f09-6b3d-4bc9-a124-ac0c6296225b",
+              "code": "culture_sports",
+              "name": "文化体育娱乐",
+              "name_en": "culture_sports",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:21.942Z",
+              "updated_at": "2026-01-14T12:55:21.942Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.1,
+              "negative": 0.8,
+              "positive": 0.1
+            },
+            "hotness": "0.71",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2025-12-04T16:00:00.000Z",
+            "peak_at": "2025-12-05T00:00:00.000Z",
+            "keywords": [
+              "陈震",
+              "偷税",
+              "漏税"
+            ],
+            "created_at": "2026-01-14T12:55:42.128Z",
+            "updated_at": "2026-01-29T23:11:15.428Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-26T15:54:43.000Z-2026-01-29T23:11:06.348Z: 无更多数据，微博已返回全部数据。关键词：陈震 偷税 漏税，当前页：1/0"
+          },
+          {
+            "id": "e4dbe23f-7c31-4631-9aa2-e386cc2bc04d",
+            "title": "全运会闭幕式",
+            "description": "第十五届全国运动会闭幕式举行，标志着本届全运会圆满结束。",
+            "category_id": "db330f09-6b3d-4bc9-a124-ac0c6296225b",
+            "category": {
+              "id": "db330f09-6b3d-4bc9-a124-ac0c6296225b",
+              "code": "culture_sports",
+              "name": "文化体育娱乐",
+              "name_en": "culture_sports",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:21.942Z",
+              "updated_at": "2026-01-14T12:55:21.942Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.2,
+              "negative": 0.1,
+              "positive": 0.7
+            },
+            "hotness": "0.81",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2025-11-21T11:04:00.000Z",
+            "peak_at": "2025-11-21T12:00:00.000Z",
+            "keywords": [
+              "全运会",
+              "闭幕式"
+            ],
+            "created_at": "2026-01-14T12:55:26.439Z",
+            "updated_at": "2026-01-29T23:11:48.986Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-24T11:46:52.000Z-2026-01-29T23:11:35.812Z: 无更多数据，微博已返回全部数据。关键词：全运会 闭幕式，当前页：1/0"
+          },
+          {
+            "id": "0dacacc1-4c36-4d50-94a9-8ae56543d424",
+            "title": "中方反对美国甩锅疫情",
+            "description": "外交部回应美国退出世卫组织及指责中国瞒报疫情，中方坚决反对借疫情搞政治操弄和甩锅推责，表示抗疫行动事实清楚。",
+            "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+            "category": {
+              "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+              "code": "other",
+              "name": "其他",
+              "name_en": "other",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:07.919Z",
+              "updated_at": "2026-01-14T12:55:07.919Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.2,
+              "negative": 0.7,
+              "positive": 0.1
+            },
+            "hotness": "249.18",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2026-01-26T07:34:00.000Z",
+            "peak_at": "2026-01-26T10:00:00.000Z",
+            "keywords": [
+              "外交部",
+              "美国",
+              "甩锅"
+            ],
+            "created_at": "2026-01-28T03:31:39.017Z",
+            "updated_at": "2026-01-29T23:12:04.955Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-29T09:33:56.000Z-2026-01-29T23:11:52.158Z: 无更多数据，微博已返回全部数据。关键词：外交部 美国 甩锅，当前页：1/0"
+          },
+          {
+            "id": "e8293cc7-b2d1-4cc7-8fa4-788f58934295",
+            "title": "甘肃迭部发生5.5级地震",
+            "description": "中国地震台网测定，1月26日14时56分甘肃甘南州迭部县发生5.5级地震，震源深度10千米。",
+            "category_id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+            "category": {
+              "id": "15edb5cb-6744-46a9-9f8c-d1b6e19d3a43",
+              "code": "other",
+              "name": "其他",
+              "name_en": "other",
+              "description": null,
+              "icon": null,
+              "color": null,
+              "sort": 100,
+              "status": "active",
+              "created_at": "2026-01-14T12:55:07.919Z",
+              "updated_at": "2026-01-14T12:55:07.919Z",
+              "deleted_at": null
+            },
+            "sentiment": {
+              "neutral": 0.3,
+              "negative": 0.7,
+              "positive": 0
+            },
+            "hotness": "1790.85",
+            "status": "active",
+            "seed_url": null,
+            "occurred_at": "2026-01-26T06:56:00.000Z",
+            "peak_at": "2026-01-26T07:08:00.000Z",
+            "keywords": [
+              "甘肃迭部",
+              "地震",
+              "5.5级"
+            ],
+            "created_at": "2026-01-28T03:30:40.952Z",
+            "updated_at": "2026-01-29T23:12:19.423Z",
+            "deleted_at": null,
+            "crawl_end_reason": "2026-01-29T16:42:26.000Z-2026-01-29T23:12:07.885Z: 无更多数据，微博已返回全部数据。关键词：甘肃迭部 地震 5.5级，当前页：1/0"
+          }
+        ],
+        "totalEvents": 0,
+        "customPrompt": "",
+        "selectedEvent": {
+          "id": "d67a84c9-2217-4ab2-a0e1-0560f99d333e",
+          "title": "陈震偷税案",
+          "description": "央视新闻报道陈震存在偷税漏税行为，引发全网关注。",
+          "category_id": "db330f09-6b3d-4bc9-a124-ac0c6296225b",
+          "category": {
+            "id": "db330f09-6b3d-4bc9-a124-ac0c6296225b",
+            "code": "culture_sports",
+            "name": "文化体育娱乐",
+            "name_en": "culture_sports",
+            "description": null,
+            "icon": null,
+            "color": null,
+            "sort": 100,
+            "status": "active",
+            "created_at": "2026-01-14T12:55:21.942Z",
+            "updated_at": "2026-01-14T12:55:21.942Z",
+            "deleted_at": null
+          },
+          "sentiment": {
+            "neutral": 0.1,
+            "negative": 0.8,
+            "positive": 0.1
+          },
+          "hotness": "0.71",
+          "status": "active",
+          "seed_url": null,
+          "occurred_at": "2025-12-04T16:00:00.000Z",
+          "peak_at": "2025-12-05T00:00:00.000Z",
+          "keywords": [
+            "陈震",
+            "偷税",
+            "漏税"
+          ],
+          "created_at": "2026-01-14T12:55:42.128Z",
+          "updated_at": "2026-01-29T23:11:15.428Z",
+          "deleted_at": null,
+          "crawl_end_reason": "2026-01-26T15:54:43.000Z-2026-01-29T23:11:06.348Z: 无更多数据，微博已返回全部数据。关键词：陈震 偷税 漏税，当前页：1/0"
+        },
+        "uncrawledCount": 0,
+        "selectedEventId": "d67a84c9-2217-4ab2-a0e1-0560f99d333e"
+      },
+      {
+        "id": "5f220fe4-de1c-4c8b-9cfb-c85067997572",
+        "name": "事件分派提示词",
+        "type": "TextAreaAst",
+        "count": 0,
+        "input": "忽略错误的事件，如：无法创建事件等，很明显就不是正确的事件",
+        "state": "success",
+        "width": 320,
+        "height": 143,
+        "output": "忽略错误的事件，如：无法创建事件等，很明显就不是正确的事件",
+        "metadata": {
+          "type": "TextAreaAst",
+          "class": {
+            "type": "basic",
+            "title": "文本节点",
+            "hasTool": true
+          },
+          "inputs": [
+            {
+              "mode": 1,
+              "type": "textarea",
+              "title": "输入",
+              "isMulti": true,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "input",
+              "defaultValue": []
+            }
+          ],
+          "states": [],
+          "outputs": [
+            {
+              "type": "textarea",
+              "title": "输出",
+              "isStatic": true,
+              "property": "output",
+              "isSubject": false
+            }
+          ]
+        },
+        "position": {
+          "x": -2585.664832369672,
+          "y": -77.11778013292364
+        },
+        "emitCount": 1,
+        "portLabels": {}
+      },
+      {
+        "id": "220fe4de-1c5c-4b1c-bbc8-506799757232",
+        "type": "TextAreaAst",
+        "count": 0,
+        "input": "# 任务：计算微博关键字爬取的时间区间\n\n## 输入\n- **startDate**：事件开始时间（ISO 8601 格式）\n- **postMinDate**：已爬取最早帖子时间（空字符串 `\"\"` 或 `null` 表示无数据）\n- **postMaxDate**：已爬取最晚帖子时间（空字符串 `\"\"` 或 `null` 表示无数据）\n- **isEnd**：历史数据是否爬取完成\n\n## 数据验证步骤\n\n**步骤1**：将空字符串视为 null\n```\nIF postMinDate === \"\" THEN postMinDate = null\nIF postMaxDate === \"\" THEN postMaxDate = null\n```\n\n**步骤2**：判断场景类型\n\n## 决策树\n\n```\n# 首次爬取：无任何数据\nIF postMinDate IS NULL OR postMaxDate IS NULL OR postMinDate === \"\":\n    searchStartDate = startDate\n    endDate = 当前时间\n\n# 续传爬取：有数据但未爬完\nELSE IF postMinDate > startDate:\n    searchStartDate = postMinDate\n    endDate = 当前时间\n\n# 增量爬取：历史已爬完\nELSE:\n    searchStartDate = postMaxDate\n    endDate = 当前时间\n```\n\n## 输出格式\n\n**必须使用工具调用**：\n```\ndispatch({ outputs: { searchStartDate: \"...\", endDate: \"...\" } })\n```\n\n**时间格式**：ISO 8601（`YYYY-MM-DDTHH:mm:ss.SSSZ`）\n\n## Few-Shot 示例\n\n### 示例1：首次爬取（postMinDate 为空字符串）\n**输入**：\n```\nstartDate: \"2026-01-23T20:00:00.000Z\"\npostMinDate: \"\"\npostMaxDate: \"\"\nisEnd: false\n```\n\n**场景判断**：空字符串 = 无数据 → 首次爬取\n\n**输出**：\n```json\n{\n  \"searchStartDate\": \"2026-01-23T20:00:00.000Z\",\n  \"endDate\": \"2026-01-29T23:59:59.000Z\"\n}\n```\n\n---\n\n### 示例2：首次爬取（postMinDate 为 null）\n**输入**：\n```\nstartDate: \"2025-01-01T00:00:00Z\"\npostMinDate: null\npostMaxDate: null\n```\n\n**输出**：\n```json\n{\n  \"searchStartDate\": \"2025-01-01T00:00:00Z\",\n  \"endDate\": \"2025-01-29T23:59:59.000Z\"\n}\n```\n\n---\n\n### 示例3：续传爬取（未爬完）\n**输入**：\n```\nstartDate: \"2025-01-01T00:00:00Z\"\npostMinDate: \"2025-01-15T00:00:00Z\"\npostMaxDate: \"2025-01-25T12:00:00Z\"\nisEnd: false\n```\n\n**场景判断**：`postMinDate (15号) > startDate (1号)` → 续传爬取\n\n**输出**：\n```json\n{\n  \"searchStartDate\": \"2025-01-15T00:00:00Z\",\n  \"endDate\": \"2025-01-29T23:59:59.000Z\"\n}\n```\n\n---\n\n### 示例4：增量爬取（已完成）\n**输入**：\n```\nstartDate: \"2025-01-01T00:00:00Z\"\npostMinDate: \"2025-01-01T00:00:00Z\"\npostMaxDate: \"2025-01-27T15:30:00Z\"\nisEnd: true\n```\n\n**场景判断**：`isEnd === true` → 增量爬取\n\n**输出**：\n```json\n{\n  \"searchStartDate\": \"2025-01-27T15:30:00Z\",\n  \"endDate\": \"2025-01-29T23:59:59.000Z\"\n}\n```\n\n---\n\n## 执行步骤\n\n1. **数据清洗**：将空字符串 `\"\"` 转换为 `null`\n2. **场景判断**：根据决策树确定场景类型\n3. **计算时间**：根据场景计算 searchStartDate 和 endDate\n4. **格式验证**：确保时间是有效的 ISO 8601 格式\n5. **输出结果**：使用 dispatch 工具输出两个字段\n\n## 重要约束\n\n✅ **必须输出两个字段**：`searchStartDate` 和 `endDate`\n✅ **空字符串等价于 null**：`\"\"` 和 `null` 都表示无数据\n✅ **时间格式**：ISO 8601（`YYYY-MM-DDTHH:mm:ss.SSSZ`）\n✅ **当前时间**：使用系统提示中的当前时间\n✅ **避免重复**：时间区间必须与已有数据不重叠\n\n---\n\n## 快速参考表\n\n| 场景 | 判断条件 | searchStartDate | endDate |\n|------|----------|-----------------|---------|\n| 首次爬取 | postMinDate 为空/null | startDate | 当前时间 |\n| 续传爬取 | postMinDate > startDate | postMinDate | 当前时间 |\n| 增量爬取 | postMinDate ≤ startDate 或 isEnd=true | postMaxDate | 当前时间 |\n",
+        "state": "success",
+        "width": 320,
+        "height": 355,
+        "output": "# 任务：计算微博关键字爬取的时间区间\n\n## 输入\n- **startDate**：事件开始时间（ISO 8601 格式）\n- **postMinDate**：已爬取最早帖子时间（空字符串 `\"\"` 或 `null` 表示无数据）\n- **postMaxDate**：已爬取最晚帖子时间（空字符串 `\"\"` 或 `null` 表示无数据）\n- **isEnd**：历史数据是否爬取完成\n\n## 数据验证步骤\n\n**步骤1**：将空字符串视为 null\n```\nIF postMinDate === \"\" THEN postMinDate = null\nIF postMaxDate === \"\" THEN postMaxDate = null\n```\n\n**步骤2**：判断场景类型\n\n## 决策树\n\n```\n# 首次爬取：无任何数据\nIF postMinDate IS NULL OR postMaxDate IS NULL OR postMinDate === \"\":\n    searchStartDate = startDate\n    endDate = 当前时间\n\n# 续传爬取：有数据但未爬完\nELSE IF postMinDate > startDate:\n    searchStartDate = postMinDate\n    endDate = 当前时间\n\n# 增量爬取：历史已爬完\nELSE:\n    searchStartDate = postMaxDate\n    endDate = 当前时间\n```\n\n## 输出格式\n\n**必须使用工具调用**：\n```\ndispatch({ outputs: { searchStartDate: \"...\", endDate: \"...\" } })\n```\n\n**时间格式**：ISO 8601（`YYYY-MM-DDTHH:mm:ss.SSSZ`）\n\n## Few-Shot 示例\n\n### 示例1：首次爬取（postMinDate 为空字符串）\n**输入**：\n```\nstartDate: \"2026-01-23T20:00:00.000Z\"\npostMinDate: \"\"\npostMaxDate: \"\"\nisEnd: false\n```\n\n**场景判断**：空字符串 = 无数据 → 首次爬取\n\n**输出**：\n```json\n{\n  \"searchStartDate\": \"2026-01-23T20:00:00.000Z\",\n  \"endDate\": \"2026-01-29T23:59:59.000Z\"\n}\n```\n\n---\n\n### 示例2：首次爬取（postMinDate 为 null）\n**输入**：\n```\nstartDate: \"2025-01-01T00:00:00Z\"\npostMinDate: null\npostMaxDate: null\n```\n\n**输出**：\n```json\n{\n  \"searchStartDate\": \"2025-01-01T00:00:00Z\",\n  \"endDate\": \"2025-01-29T23:59:59.000Z\"\n}\n```\n\n---\n\n### 示例3：续传爬取（未爬完）\n**输入**：\n```\nstartDate: \"2025-01-01T00:00:00Z\"\npostMinDate: \"2025-01-15T00:00:00Z\"\npostMaxDate: \"2025-01-25T12:00:00Z\"\nisEnd: false\n```\n\n**场景判断**：`postMinDate (15号) > startDate (1号)` → 续传爬取\n\n**输出**：\n```json\n{\n  \"searchStartDate\": \"2025-01-15T00:00:00Z\",\n  \"endDate\": \"2025-01-29T23:59:59.000Z\"\n}\n```\n\n---\n\n### 示例4：增量爬取（已完成）\n**输入**：\n```\nstartDate: \"2025-01-01T00:00:00Z\"\npostMinDate: \"2025-01-01T00:00:00Z\"\npostMaxDate: \"2025-01-27T15:30:00Z\"\nisEnd: true\n```\n\n**场景判断**：`isEnd === true` → 增量爬取\n\n**输出**：\n```json\n{\n  \"searchStartDate\": \"2025-01-27T15:30:00Z\",\n  \"endDate\": \"2025-01-29T23:59:59.000Z\"\n}\n```\n\n---\n\n## 执行步骤\n\n1. **数据清洗**：将空字符串 `\"\"` 转换为 `null`\n2. **场景判断**：根据决策树确定场景类型\n3. **计算时间**：根据场景计算 searchStartDate 和 endDate\n4. **格式验证**：确保时间是有效的 ISO 8601 格式\n5. **输出结果**：使用 dispatch 工具输出两个字段\n\n## 重要约束\n\n✅ **必须输出两个字段**：`searchStartDate` 和 `endDate`\n✅ **空字符串等价于 null**：`\"\"` 和 `null` 都表示无数据\n✅ **时间格式**：ISO 8601（`YYYY-MM-DDTHH:mm:ss.SSSZ`）\n✅ **当前时间**：使用系统提示中的当前时间\n✅ **避免重复**：时间区间必须与已有数据不重叠\n\n---\n\n## 快速参考表\n\n| 场景 | 判断条件 | searchStartDate | endDate |\n|------|----------|-----------------|---------|\n| 首次爬取 | postMinDate 为空/null | startDate | 当前时间 |\n| 续传爬取 | postMinDate > startDate | postMinDate | 当前时间 |\n| 增量爬取 | postMinDate ≤ startDate 或 isEnd=true | postMaxDate | 当前时间 |\n",
+        "metadata": {
+          "type": "TextAreaAst",
+          "class": {
+            "type": "basic",
+            "title": "文本节点",
+            "hasTool": true
+          },
+          "inputs": [
+            {
+              "mode": 1,
+              "type": "textarea",
+              "title": "输入",
+              "isMulti": true,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "input",
+              "defaultValue": []
+            }
+          ],
+          "states": [],
+          "outputs": [
+            {
+              "type": "textarea",
+              "title": "输出",
+              "isStatic": true,
+              "property": "output",
+              "isSubject": false
+            }
+          ]
+        },
+        "position": {
+          "x": -2698.3407368723765,
+          "y": 658.4061815079662
+        },
+        "emitCount": 1,
+        "portLabels": {}
+      },
+      {
+        "id": "0fe4de1c-5c8b-4cfb-8850-679975723279",
+        "type": "TextAreaAst",
+        "count": 0,
+        "input": [],
+        "state": "success",
+        "width": 240,
+        "height": 199,
+        "output": "陈震\n\n偷税\n\n漏税",
+        "metadata": {
+          "type": "TextAreaAst",
+          "class": {
+            "type": "basic",
+            "title": "文本节点",
+            "hasTool": true
+          },
+          "inputs": [
+            {
+              "mode": 1,
+              "type": "textarea",
+              "title": "输入",
+              "isMulti": true,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "input",
+              "defaultValue": []
+            }
+          ],
+          "states": [],
+          "outputs": [
+            {
+              "type": "textarea",
+              "title": "输出",
+              "isStatic": true,
+              "property": "output",
+              "isSubject": false
+            }
+          ]
+        },
+        "position": {
+          "x": -1348.7325562257724,
+          "y": 675.6205715672342
+        },
+        "emitCount": 1
+      },
+      {
+        "id": "e4de1c5c-8b1c-4bc8-9067-997572327952",
+        "type": "TextAreaAst",
+        "count": 0,
+        "input": "忽略错误的事件，如：无法创建事件等，很明显就不是正确的事件",
+        "state": "success",
+        "width": 320,
+        "height": 143,
+        "output": "忽略错误的事件，如：无法创建事件等，很明显就不是正确的事件",
+        "metadata": {
+          "type": "TextAreaAst",
+          "class": {
+            "type": "basic",
+            "title": "文本节点",
+            "hasTool": true
+          },
+          "inputs": [
+            {
+              "mode": 1,
+              "type": "textarea",
+              "title": "输入",
+              "isMulti": true,
+              "isBuffer": false,
+              "isStatic": true,
+              "property": "input",
+              "defaultValue": []
+            }
+          ],
+          "states": [],
+          "outputs": [
+            {
+              "type": "textarea",
+              "title": "输出",
+              "isStatic": true,
+              "property": "output",
+              "isSubject": false
+            }
+          ]
+        },
+        "position": {
+          "x": -2302.722754419383,
+          "y": 722.986227136884
+        },
+        "emitCount": 1,
+        "portLabels": {}
       }
     ],
     "entryNodeIds": [
-      "8dd7c959-8c65-4e2a-b687-54f45bcf2754"
+      "5f220fe4-de1c-4c8b-9cfb-c85067997572"
     ],
     "endNodeIds": [],
     "edges": [
       {
-        "id": "edge-d691a0f7-2f03-4e5b-9baa-264367fc657d",
-        "to": "cdd666c9-9616-450c-b4c1-ab628bc1de02",
-        "from": "8dd7c959-8c65-4e2a-b687-54f45bcf2754",
+        "id": "bd032615-04b0-45d9-83db-ab03d98f7022",
+        "to": "374207cc-2ab3-46c5-96d1-26437a200b5f",
+        "from": "4207cc2a-b376-45d6-9126-437a200b5f22",
+        "mode": "zip",
         "type": "data",
-        "toProperty": "requirements",
+        "weight": 1,
+        "toProperty": "isEnd",
+        "fromProperty": "is_crawl_complete"
+      },
+      {
+        "id": "1504b0c5-d983-4bab-83d9-8f70228939ea",
+        "to": "374207cc-2ab3-46c5-96d1-26437a200b5f",
+        "from": "4207cc2a-b376-45d6-9126-437a200b5f22",
+        "mode": "zip",
+        "type": "data",
+        "weight": 1,
+        "toProperty": "postMaxDate",
+        "fromProperty": "post_max_time"
+      },
+      {
+        "id": "04b0c5d9-83db-4b03-998f-70228939eaf2",
+        "to": "374207cc-2ab3-46c5-96d1-26437a200b5f",
+        "from": "4207cc2a-b376-45d6-9126-437a200b5f22",
+        "mode": "zip",
+        "type": "data",
+        "weight": 1,
+        "toProperty": "postMinDate",
+        "fromProperty": "post_min_time"
+      },
+      {
+        "id": "b0c5d983-dbab-43d9-8f70-228939eaf220",
+        "to": "374207cc-2ab3-46c5-96d1-26437a200b5f",
+        "from": "4207cc2a-b376-45d6-9126-437a200b5f22",
+        "mode": "zip",
+        "type": "data",
+        "weight": 1,
+        "toProperty": "startDate",
+        "fromProperty": "startTime"
+      },
+      {
+        "id": "83dbab03-d98f-4022-8939-eaf220284d32",
+        "to": "cc2ab376-c5d6-4126-837a-200b5f220fe4",
+        "from": "4207cc2a-b376-45d6-9126-437a200b5f22",
+        "type": "data",
+        "toProperty": "input",
+        "fromProperty": "crawl_end_reason"
+      },
+      {
+        "id": "d98f7022-8939-4af2-a028-4d3258d0c4b1",
+        "to": "2ab376c5-d6d1-4643-ba20-0b5f220fe4de",
+        "from": "4207cc2a-b376-45d6-9126-437a200b5f22",
+        "type": "data",
+        "toProperty": "input",
+        "fromProperty": "is_crawl_complete"
+      },
+      {
+        "id": "8f702289-39ea-4220-a84d-3258d0c4b1db",
+        "to": "b376c5d6-d126-437a-a00b-5f220fe4de1c",
+        "from": "4207cc2a-b376-45d6-9126-437a200b5f22",
+        "type": "data",
+        "toProperty": "input",
+        "fromProperty": "post_min_time"
+      },
+      {
+        "id": "70228939-eaf2-4028-8d32-58d0c4b1db18",
+        "to": "76c5d6d1-2643-4a20-8b5f-220fe4de1c5c",
+        "from": "4207cc2a-b376-45d6-9126-437a200b5f22",
+        "type": "data",
+        "toProperty": "input",
+        "fromProperty": "post_max_time"
+      },
+      {
+        "id": "228939ea-f220-484d-b258-d0c4b1db18a7",
+        "to": "c5d6d126-437a-400b-9f22-0fe4de1c5c8b",
+        "from": "4207cc2a-b376-45d6-9126-437a200b5f22",
+        "type": "data",
+        "toProperty": "input",
+        "fromProperty": "startTime"
+      },
+      {
+        "id": "8939eaf2-2028-4d32-98d0-c4b1db18a757",
+        "to": "d6d12643-7a20-4b5f-a20f-e4de1c5c8b1c",
+        "from": "374207cc-2ab3-46c5-96d1-26437a200b5f",
+        "type": "data",
+        "toProperty": "items",
+        "fromProperty": "endDate"
+      },
+      {
+        "id": "39eaf220-284d-4258-90c4-b1db18a757cb",
+        "to": "d126437a-200b-4f22-8fe4-de1c5c8b1cfb",
+        "from": "374207cc-2ab3-46c5-96d1-26437a200b5f",
+        "type": "data",
+        "toProperty": "items",
+        "fromProperty": "searchStartDate"
+      },
+      {
+        "id": "eaf22028-4d32-48d0-84b1-db18a757cb9a",
+        "to": "26437a20-0b5f-420f-a4de-1c5c8b1cfbc8",
+        "from": "d6d12643-7a20-4b5f-a20f-e4de1c5c8b1c",
+        "type": "data",
+        "toProperty": "input",
+        "fromProperty": "result"
+      },
+      {
+        "id": "f220284d-3258-40c4-b1db-18a757cb9a56",
+        "to": "437a200b-5f22-4fe4-9e1c-5c8b1cfbc850",
+        "from": "d126437a-200b-4f22-8fe4-de1c5c8b1cfb",
+        "type": "data",
+        "toProperty": "input",
+        "fromProperty": "result"
+      },
+      {
+        "id": "20284d32-58d0-44b1-9b18-a757cb9a56e8",
+        "to": "7a200b5f-220f-44de-9c5c-8b1cfbc85067",
+        "from": "4207cc2a-b376-45d6-9126-437a200b5f22",
+        "type": "data",
+        "toProperty": "input",
+        "fromProperty": "keywords_str"
+      },
+      {
+        "id": "284d3258-d0c4-41db-98a7-57cb9a56e860",
+        "to": "374207cc-2ab3-46c5-96d1-26437a200b5f",
+        "from": "200b5f22-0fe4-4e1c-9c8b-1cfbc8506799",
+        "type": "data",
+        "toProperty": "prompt",
         "fromProperty": "output"
       },
       {
-        "id": "edge-47a24b2e-78d5-49f3-8a23-892458ed2b25",
-        "to": "10aec209-52d9-408b-85b4-2ee29ac8a732",
-        "from": "cdd666c9-9616-450c-b4c1-ab628bc1de02",
+        "id": "4d3258d0-c4b1-4b18-a757-cb9a56e86003",
+        "to": "4207cc2a-b376-45d6-9126-437a200b5f22",
+        "from": "0b5f220f-e4de-4c5c-8b1c-fbc850679975",
         "type": "data",
-        "toProperty": "input",
-        "fromProperty": "selectedSkillsList"
+        "toProperty": "eventId",
+        "fromProperty": "selectedEventId"
       },
       {
-        "id": "edge-50176f6a-4a8f-40f7-872e-3f153ad483a2",
-        "to": "042f5b45-58c1-4459-bca7-e8c948f5106a",
-        "from": "cdd666c9-9616-450c-b4c1-ab628bc1de02",
+        "id": "3258d0c4-b1db-48a7-97cb-9a56e86003d2",
+        "to": "0b5f220f-e4de-4c5c-8b1c-fbc850679975",
+        "from": "5f220fe4-de1c-4c8b-9cfb-c85067997572",
         "type": "data",
-        "toProperty": "input",
-        "fromProperty": "skillContent"
+        "toProperty": "customPrompt",
+        "fromProperty": "output"
       },
       {
-        "id": "edge-c967f321-e961-41f6-a110-a09e3f3a6524",
-        "to": "6d3b3d97-dd1b-4f75-9d1b-976b9f1981f6",
-        "from": "cdd666c9-9616-450c-b4c1-ab628bc1de02",
+        "id": "58d0c4b1-db18-4757-8b9a-56e86003d206",
+        "to": "0fe4de1c-5c8b-4cfb-8850-679975723279",
+        "from": "4207cc2a-b376-45d6-9126-437a200b5f22",
         "type": "data",
         "toProperty": "input",
-        "fromProperty": "skillContentText"
+        "fromProperty": "keywords"
       }
     ],
     "toolNodeIds": [],
     "viewport": {
-      "x": 264.70560220525977,
-      "y": 269.4823420450108,
-      "zoom": 0.7578582832551997
+      "x": 2026.1866384323184,
+      "y": -370.2927333871968,
+      "zoom": 1.1874242034078522
     },
-    "tags": [],
+    "tags": [
+      "社交媒体",
+      "事件追踪",
+      "数据采集",
+      "NLP分析",
+      "舆情监控"
+    ],
     "isGroupNode": false
   }
 }
