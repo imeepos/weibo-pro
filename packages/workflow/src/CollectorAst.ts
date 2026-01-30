@@ -28,8 +28,9 @@ export class CollectorVisitor {
                 toArray(),
                 map(asts => asts.flatMap(a => a.items || []).flat()),
                 tap(items => {
+                    ast.emitCount += 1;
                     ast.result = items;
-                    obs.next({ type: 'node_emit', id: ast.id, data: { result: items } });
+                    obs.next({ type: 'node_emit', id: ast.id, data: { result: items, emitCount: ast.emitCount } });
                     ast.state = 'success';
                     obs.next({ type: 'node_success', id: ast.id });
                 })
