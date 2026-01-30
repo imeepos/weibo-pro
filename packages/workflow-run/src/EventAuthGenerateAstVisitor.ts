@@ -153,21 +153,28 @@ export class EventAuthGenerateAstVisitor {
 - **seed_url**：事件源链接（如有）
 - **occurred_at**：事件发生时间，**必须从用户输入中提取**（如 onboard_time、time、created_at 等字段），格式：YYYY-MM-DD HH:mm:ss
 - **peak_at**：热度峰值时间，格式同上，可与 occurred_at 相同
-- **keywords**：微博搜索关键词（精确3个）
+- **keywords**：微博搜索关键词（2-3个）
 
 <keyword-rules>
-  <principle>想象你是普通网友，你会用什么词搜索这个事件？</principle>
+  <principle>提取最精准的微博搜索关键词，优先使用话题格式</principle>
+
+  <topic-format>
+    <rule>如果用户输入包含 #话题# 格式，必须保留完整格式（包括 # 符号）</rule>
+    <reason>微博话题使用 #话题# 包裹，这是最精准的检索方式</reason>
+    <example input="#携程涉嫌垄断# @市说新语 携程作为...">["#携程涉嫌垄断#"]</example>
+    <example input="#杨振宁逝世# 著名物理学家...">["#杨振宁逝世#"]</example>
+  </topic-format>
 
   <structure>
-    <slot name="主体">人名/品牌/产品（如：杨某媛、腾讯、元宝AI）</slot>
-    <slot name="动作">发生了什么（如：骂人、坠崖、偷税、被查）</slot>
-    <slot name="场景">地点或背景（如：武汉大学、新疆）</slot>
+    <slot name="话题">优先提取 #话题#（如：#携程涉嫌垄断#、#杨振宁逝世#）</slot>
+    <slot name="主体">人名/品牌/产品（如：携程、杨振宁、元宝AI）</slot>
+    <slot name="动作">发生了什么（如：垄断、逝世、骂人、被查）</slot>
   </structure>
 
   <good-examples>
-    <example event="腾讯AI骂人">["元宝AI", "骂人"]</example>
-    <example event="泰国坠崖案">["王暖暖", "坠崖"]</example>
-    <example event="幼儿园关停">["幼儿园", "关停"]</example>
+    <example event="携程涉嫌垄断" input="#携程涉嫌垄断# @市说新语...">["#携程涉嫌垄断#", "携程"]</example>
+    <example event="腾讯AI骂人" input="腾讯元宝AI骂人事件">["元宝AI", "骂人"]</example>
+    <example event="泰国坠崖案" input="#王暖暖坠崖案# 宣判">["#王暖暖坠崖案#", "王暖暖"]</example>
   </good-examples>
 
   <forbidden>
