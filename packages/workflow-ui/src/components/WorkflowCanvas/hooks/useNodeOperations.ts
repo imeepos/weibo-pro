@@ -41,14 +41,15 @@ export const useNodeOperations = (workflow: UseWorkflowReturn, options: NodeOper
     })
 
     if (selectedNodes.length > 0) {
-      clipboard.copyNodes(selectedNodes, selectedEdges)
+      // 传递工作流 ID 和名称到剪贴板（支持跨工作流粘贴）
+      clipboard.copyNodes(selectedNodes, selectedEdges, workflow.workflowAst.id, workflow.workflowAst.name)
       console.log(`已复制 ${selectedNodes.length} 个节点和 ${selectedEdges.length} 条边`)
       onShowToast?.('info', '复制成功', `已复制 ${selectedNodes.length} 个节点`)
     } else {
       console.log('[copyNodes] 没有选中的节点')
       onShowToast?.('info', '没有选中节点', '请先选择要复制的节点')
     }
-  }, [getSelectedNodes, getSelectedNodesEdges, clipboard, onShowToast])
+  }, [getSelectedNodes, getSelectedNodesEdges, clipboard, onShowToast, workflow.workflowAst.id, workflow.workflowAst.name])
 
   // 剪切选中的节点
   const cutNodes = useCallback(() => {
@@ -66,16 +67,13 @@ export const useNodeOperations = (workflow: UseWorkflowReturn, options: NodeOper
   // 粘贴节点
   const pasteNodes = useCallback((targetPosition?: { x: number; y: number }) => {
     console.log('[pasteNodes] 开始粘贴', {
-      hasClipboard: clipboard.hasClipboard,
+      hasMemoryClipboard: clipboard.hasClipboard,
       clipboardCount: clipboard.clipboardCount,
       targetPosition
     })
 
-    if (!clipboard.hasClipboard) {
-      console.log('[pasteNodes] 剪贴板为空，跳过粘贴')
-      onShowToast?.('info', '剪贴板为空', '请先复制或剪切节点')
-      return
-    }
+    // 移除过早的剪贴板检查，让 pasteNodes 函数自己处理
+    // 它会先尝试系统剪贴板（支持跨工作流粘贴），失败后回退到内存剪贴板
 
     // 如果没有指定位置，使用默认位置（略微偏移避免完全重叠）
     const flowPosition = targetPosition || { x: 100, y: 100 }
@@ -87,6 +85,12 @@ export const useNodeOperations = (workflow: UseWorkflowReturn, options: NodeOper
         nodes: newNodes.map(n => ({ id: n.id, type: n.data?.type })),
         edges: newEdges.map(e => ({ id: e.id, source: e.source, target: e.target }))
       })
+
+      // 如果没有节点和边，说明剪贴板真的为空
+      if (newNodes.length === 0) {
+        onShowToast?.('info', '剪贴板为空', '请先复制或剪切节点')
+        return
+      }
 
       // 直接将节点添加到 AST（node.data 即 AST 对象）
       newNodes.forEach((node) => {

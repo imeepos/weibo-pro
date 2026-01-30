@@ -20,8 +20,18 @@ interface ClipboardState {
   }
 }
 
+// 系统剪贴板数据格式
+interface SystemClipboardData {
+  version: '1.0'
+  type: 'workflow-nodes'
+  nodes: any[]
+  edges: any[]
+  sourceWorkflowId?: string
+  sourceWorkflowName?: string
+}
+
 export interface UseClipboardReturn {
-  copyNodes: (nodes: WorkflowNode[], edges: WorkflowEdge[]) => void
+  copyNodes: (nodes: WorkflowNode[], edges: WorkflowEdge[], workflowId?: string, workflowName?: string) => void
   cutNodes: (nodes: WorkflowNode[], edges: WorkflowEdge[]) => void
   pasteNodes: (
     position: XYPosition,
@@ -40,7 +50,7 @@ export function useClipboard(): UseClipboardReturn {
     operation: null,
   })
 
-  const copyNodes = useCallback((nodes: WorkflowNode[], edges: WorkflowEdge[]) => {
+  const copyNodes = useCallback(async (nodes: WorkflowNode[], edges: WorkflowEdge[], workflowId?: string, workflowName?: string) => {
     if (nodes.length === 0) return
 
     // 只保留选中节点之间的边
@@ -66,6 +76,25 @@ export function useClipboard(): UseClipboardReturn {
       edges: structuredClone(relevantEdges),
       operation: 'copy',
     })
+
+    // 写入系统剪贴板（支持跨工作流粘贴）
+    try {
+      const clipboardData: SystemClipboardData = {
+        version: '1.0',
+        type: 'workflow-nodes',
+        nodes: nodesWithSize,
+        edges: relevantEdges,
+        sourceWorkflowId: workflowId,
+        sourceWorkflowName: workflowName,
+      }
+      const json = JSON.stringify(clipboardData)
+      console.log('[useClipboard.copyNodes] 写入系统剪贴板，JSON长度:', json.length)
+      console.log('[useClipboard.copyNodes] JSON内容前100字符:', json.substring(0, 100))
+      await navigator.clipboard.writeText(json)
+      console.log('[useClipboard.copyNodes] 已写入系统剪贴板')
+    } catch (error) {
+      console.warn('[useClipboard.copyNodes] 写入系统剪贴板失败:', error)
+    }
   }, [])
 
   const cutNodes = useCallback((nodes: WorkflowNode[], edges: WorkflowEdge[]) => {
@@ -91,13 +120,136 @@ export function useClipboard(): UseClipboardReturn {
   }, [])
 
   const pasteNodes = useCallback(
-    (
+    async (
       position: XYPosition,
       onPaste: (nodes: WorkflowNode[], edges: WorkflowEdge[]) => void
     ) => {
+      // 优先尝试从系统剪贴板读取（支持跨工作流粘贴）
+      try {
+        console.log('[useClipboard.pasteNodes] 尝试从系统剪贴板读取...')
+        const text = await navigator.clipboard.readText()
+        console.log('[useClipboard.pasteNodes] 系统剪贴板内容长度:', text.length)
+        console.log('[useClipboard.pasteNodes] 原始内容前100字符:', text.substring(0, 100))
+        console.log('[useClipboard.pasteNodes] 原始内容:', text)
+
+        const data = JSON.parse(text) as SystemClipboardData
+        console.log('[useClipboard.pasteNodes] 解析后的数据:', data)
+
+        // 验证是否是工作流节点数据
+        if (data?.version === '1.0' && data?.type === 'workflow-nodes' && Array.isArray(data.nodes)) {
+          console.log('[useClipboard.pasteNodes] 从系统剪贴板粘贴')
+          if (data.sourceWorkflowName) {
+            console.log('  来源工作流:', data.sourceWorkflowName)
+          }
+
+          // 计算包围盒
+          const positions = data.nodes.map((node: any) => ({
+            x: node.position.x,
+            y: node.position.y,
+            width: node._width || 280,
+            height: node._height || 120,
+          }))
+
+          const minX = Math.min(...positions.map(p => p.x))
+          const maxX = Math.max(...positions.map(p => p.x + p.width))
+          const minY = Math.min(...positions.map(p => p.y))
+          const maxY = Math.max(...positions.map(p => p.y + p.height))
+
+          const boundingBoxCenter = {
+            x: (minX + maxX) / 2,
+            y: (minY + maxY) / 2,
+          }
+
+          // 创建旧ID到新ID的映射
+          const idMap = new Map<string, string>()
+          data.nodes.forEach((node) => {
+            idMap.set(node.id, generateId())
+          })
+
+          // 克隆节点，生成新ID，调整位置
+          const compiler = root.get(Compiler)
+          const newNodes: WorkflowNode[] = data.nodes.map((node: any) => {
+            const newId = idMap.get(node.id)!
+            const offsetX = node.position.x - boundingBoxCenter.x
+            const offsetY = node.position.y - boundingBoxCenter.y
+            const newPosition = {
+              x: position.x + offsetX,
+              y: position.y + offsetY,
+            }
+
+            // 深拷贝 AST 对象并更新 ID
+            const clonedData = structuredClone(node.data || node)
+            clonedData.id = newId
+            clonedData.position = newPosition
+
+            // 重新编译以恢复 metadata 字段
+            const compiledData = compiler.compile(clonedData)
+
+            // 清除临时尺寸属性
+            const { _width, _height, ...cleanNode } = node
+
+            return {
+              ...cleanNode,
+              id: newId,
+              position: newPosition,
+              data: compiledData,
+              selected: false,
+            }
+          })
+
+          // 克隆边，更新节点引用
+          const newEdges: WorkflowEdge[] = (data.edges || []).map((edge) => {
+            const newSource = idMap.get(edge.source) || edge.source
+            const newTarget = idMap.get(edge.target) || edge.target
+            const newEdgeId = `edge-${generateId()}`
+
+            const newEdge: WorkflowEdge = {
+              ...edge,
+              id: newEdgeId,
+              source: newSource,
+              target: newTarget,
+              selected: false,
+            }
+
+            // 更新 AST 边对象的节点引用
+            if (newEdge.data?.edge) {
+              newEdge.data.edge = {
+                ...newEdge.data.edge,
+                id: newEdgeId,
+                from: newSource,
+                to: newTarget,
+              }
+            }
+
+            return newEdge
+          })
+
+          console.log('[useClipboard.pasteNodes] 粘贴完成')
+          console.log('  新节点数量:', newNodes.length)
+          console.log('  新边数量:', newEdges.length)
+
+          // 更新内存剪贴板
+          setClipboard({
+            nodes: structuredClone(data.nodes) as any,
+            edges: structuredClone(data.edges || []) as any,
+            operation: 'copy',
+          })
+
+          onPaste(newNodes, newEdges)
+          return
+        } else {
+          console.log('[useClipboard.pasteNodes] 系统剪贴板数据格式无效，不是工作流节点数据')
+        }
+      } catch (error) {
+        // 系统剪贴板读取失败或数据无效，回退到内存剪贴板
+        console.log('[useClipboard.pasteNodes] 系统剪贴板读取失败，错误:', error)
+        console.log('[useClipboard.pasteNodes] 回退到内存剪贴板')
+      }
+
+      // 回退到内存剪贴板
       if (clipboard.nodes.length === 0) return
 
-      console.log('[useClipboard.pasteNodes] 开始粘贴')
+      console.log('[useClipboard.pasteNodes] 从内存剪贴板粘贴')
       console.log('  节点数量:', clipboard.nodes.length)
       console.log('  边数量:', clipboard.edges.length)
       console.log('  鼠标位置 X:', position.x)
