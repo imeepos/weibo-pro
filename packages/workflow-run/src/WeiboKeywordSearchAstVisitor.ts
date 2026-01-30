@@ -235,6 +235,7 @@ export class WeiboKeywordSearchAstVisitor {
             // 如果需要跳过，则跳过
             if (shouldSkip) {
                 logger.info('[WeiboKeywordSearch] 跳过帖子（已存在），不发射数据:', post.mid);
+                await this.delayService.randomDelay(ast.pageDelayMin || 3, ast.pageDelayMax || 5);
                 continue;
             }
 
@@ -312,6 +313,7 @@ export class WeiboKeywordSearchAstVisitor {
                         // 如果需要跳过，则跳过
                         if (shouldSkip) {
                             logger.info('[WeiboKeywordSearch] 跳过帖子（已存在），不发射数据:', post.mid);
+                            await this.delayService.randomDelay(ast.pageDelayMin || 3, ast.pageDelayMax || 5);
                             continue;
                         }
 
