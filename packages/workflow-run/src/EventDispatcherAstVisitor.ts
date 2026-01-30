@@ -203,8 +203,7 @@ export class EventDispatcherAstVisitor {
               .createQueryBuilder(EventEntity, 'event')
               .leftJoinAndSelect('event.category', 'category')
               .where('event.status = :status', { status: 'active' })
-              .andWhere('jsonb_array_length(event.keywords) IS NOT NULL')
-              .orderBy('event.last_crawl_at', 'ASC')       // 从未爬取的排最前（null），然后是最早爬取的
+              .orderBy('event.last_crawl_at', 'ASC', 'NULLS FIRST')  // 从未爬取的排最前（null），然后是最早爬取的
               .addOrderBy('event.updated_at', 'ASC')       // 辅助排序：更新时间早的优先
               .addOrderBy('event.created_at', 'DESC')      // 辅助排序：创建时间晚的优先
               .limit(10)
