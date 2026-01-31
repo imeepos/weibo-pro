@@ -200,6 +200,7 @@ export class WeiboKeywordSearchAstVisitor {
                 id: ast.id,
                 data: { mblogid: null, uid: null, isEmptyResult: true }
             });
+            await this.delayService.randomDelay(ast.emitDelayMin || 1, ast.emitDelayMax || 3);
             return;
         }
 
@@ -277,6 +278,7 @@ export class WeiboKeywordSearchAstVisitor {
                                 }
                             }
                         });
+                        await this.delayService.randomDelay(ast.emitDelayMin || 1, ast.emitDelayMax || 3);
                         return;
                     }
                     currentPageNum++;
@@ -331,6 +333,7 @@ export class WeiboKeywordSearchAstVisitor {
                     pageSuccess = true;
 
                     if (result.totalCount) {
+                        await this.delayService.randomDelay(ast.emitDelayMin || 1, ast.emitDelayMax || 3);
                         break;
                     }
                     await this.delayService.randomDelay(ast.pageDelayMin || 3, ast.pageDelayMax || 5);
@@ -348,6 +351,7 @@ export class WeiboKeywordSearchAstVisitor {
             }
 
             if (!pageSuccess) {
+                await this.delayService.randomDelay(ast.emitDelayMin || 1, ast.emitDelayMax || 3);
                 break;
             }
         }
@@ -356,6 +360,7 @@ export class WeiboKeywordSearchAstVisitor {
             if (result.lastPostTime) {
                 ast.endDate = result.lastPostTime;
                 logger.info(`[WeiboKeywordSearchAst] 达到50页上限，调整时间范围后继续采集... 新 endDate:`, result.lastPostTime);
+                await this.delayService.randomDelay(ast.emitDelayMin || 1, ast.emitDelayMax || 3);
                 return await this.executeSearch(ast, ctx, obs);
             }
         }
