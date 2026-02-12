@@ -44,14 +44,14 @@ export class EventDispatcherAstVisitor {
             throw new Error('工作流已取消');
           }
 
-          // 查询所有事件（只查询 last_crawl_at 为 null 或超过2小时的）
+          // 查询所有事件（只查询 last_crawl_at 为 null 或超过1小时的）
           const oneHoursAgo = new Date(Date.now() - 1 * 60 * 60 * 1000);
           const events = await useEntityManager(async (manager) => {
             return await manager
               .createQueryBuilder(EventEntity, 'event')
               .leftJoinAndSelect('event.category', 'category')
               .where('event.status = :status', { status: 'active' })
-              .andWhere('(event.last_crawl_at IS NULL OR event.last_crawl_at < :twoHoursAgo)', { oneHoursAgo })
+              .andWhere('(event.last_crawl_at IS NULL OR event.last_crawl_at < :oneHoursAgo)', { oneHoursAgo })
               .orderBy('event.last_crawl_at', 'ASC', 'NULLS FIRST')  // 从未爬取的排最前（null），然后是最早爬取的
               .addOrderBy('event.updated_at', 'ASC')       // 辅助排序：更新时间早的优先
               .addOrderBy('event.created_at', 'DESC')      // 辅助排序：创建时间晚的优先
