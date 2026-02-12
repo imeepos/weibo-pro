@@ -57,6 +57,8 @@ export class CronSchedulerService {
   private intervalTimers = new Map<string, NodeJS.Timeout>()
   private continuousRunning = new Set<string>() // 正在运行的持续调度任务ID
   private readonly lockTTL = 300 // 锁过期时间（秒），根据任务最长执行时间调整
+  private executionCount = 0 // 执行计数器
+  private readonly MAX_EXECUTIONS_BEFORE_CLEANUP = 50 // 每50次执行后清理
 
   constructor(
     @Inject(WorkflowExecutionService) private executionService: WorkflowExecutionService,
@@ -271,6 +273,13 @@ export class CronSchedulerService {
           scheduleName: schedule.name,
           duration: `${duration}ms`
         })
+
+        // 定期触发清理
+        this.executionCount++
+        if (this.executionCount >= this.MAX_EXECUTIONS_BEFORE_CLEANUP) {
+          await this.triggerCleanup()
+          this.executionCount = 0
+        }
       } finally {
         // 释放锁
         await withRetryOnNetworkError(
@@ -281,9 +290,9 @@ export class CronSchedulerService {
         )
       }
 
-      // 执行完毕后立即调度下一次执行（使用 setImmediate 避免堆栈溢出）
+      // 执行完毕后调度下一次执行（增加延迟给 GC 更多时间）
       if (this.continuousRunning.has(scheduleId)) {
-        await this.delayBeforeNextRun(5000)
+        await this.delayBeforeNextRun(30000) // 从 5000ms 增加到 30000ms
         setImmediate(() => this.executeContinuous(schedule))
       }
     } catch (error) {
@@ -298,12 +307,50 @@ export class CronSchedulerService {
 
       // 发生错误时等待一段时间后重试
       if (this.continuousRunning.has(scheduleId)) {
-        await this.delayBeforeNextRun(10000) // 错误后等待10秒
+        await this.delayBeforeNextRun(30000) // 错误后等待30秒
         if (this.continuousRunning.has(scheduleId)) {
           setImmediate(() => this.executeContinuous(schedule))
         }
       }
     }
+  }
+
+  /**
+   * 触发定期清理（浏览器实例 + GC）
+   */
+  private async triggerCleanup(): Promise<void> {
+    logger.info('🧹 触发定期清理')
+
+    try {
+      // 清理 Playwright 浏览器实例
+      const { PlaywrightService } = await import('./PlaywrightService.js')
+      await PlaywrightService.cleanup()
+      logger.info('✅ Playwright 浏览器实例已清理')
+    } catch (error) {
+      logger.error('清理 Playwright 失败', { error: (error as Error).message })
+    }
+
+    // 触发 GC（如果可用）
+    if (global.gc) {
+      global.gc()
+      logger.info('✅ 手动触发 GC 完成')
+    }
+
+    // 记录内存使用情况
+    this.logMemoryUsage()
+  }
+
+  /**
+   * 记录内存使用情况
+   */
+  private logMemoryUsage(): void {
+    const used = process.memoryUsage()
+    logger.info('📊 内存使用情况', {
+      rss: `${Math.round(used.rss / 1024 / 1024)}MB`,
+      heapTotal: `${Math.round(used.heapTotal / 1024 / 1024)}MB`,
+      heapUsed: `${Math.round(used.heapUsed / 1024 / 1024)}MB`,
+      external: `${Math.round(used.external / 1024 / 1024)}MB`
+    })
   }
 
   /**

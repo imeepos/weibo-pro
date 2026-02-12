@@ -18,8 +18,29 @@ export class PlaywrightService {
     private static sharedBrowser: Browser | null = null;
     private static sharedContext: BrowserContext | null = null;
     private static initializationPromise: Promise<void> | null = null;
+    private static requestCount = 0;
+    private static readonly MAX_REQUESTS_BEFORE_RESTART = 100;
+    private static lastRestartTime = Date.now();
+    private static readonly MAX_BROWSER_LIFETIME_MS = 60 * 60 * 1000; // 1小时
 
     async getHtml(url: string, cookies: string, ua: string): Promise<string> {
+        // 检查是否需要重启浏览器
+        PlaywrightService.requestCount++;
+        const timeSinceRestart = Date.now() - PlaywrightService.lastRestartTime;
+
+        if (
+            PlaywrightService.requestCount >= PlaywrightService.MAX_REQUESTS_BEFORE_RESTART ||
+            timeSinceRestart >= PlaywrightService.MAX_BROWSER_LIFETIME_MS
+        ) {
+            console.log('[PlaywrightService] 达到清理阈值，重启浏览器', {
+                requestCount: PlaywrightService.requestCount,
+                timeSinceRestart: `${Math.round(timeSinceRestart / 1000)}s`
+            });
+            await this.cleanupSharedBrowser();
+            PlaywrightService.requestCount = 0;
+            PlaywrightService.lastRestartTime = Date.now();
+        }
+
         const page = await this.createPageForRequest(url, cookies, ua);
         try {
             // 等待关键元素出现，确保页面真正加载完成 - 带重试机制
@@ -80,6 +101,12 @@ export class PlaywrightService {
         await this.ensureBrowserReady(ua);
         const context = PlaywrightService.sharedContext;
         if (!context) throw new Error('Browser context not initialized');
+
+        // 清理旧的 cookies（保留最近的50个）
+        const existingCookies = await context.cookies();
+        if (existingCookies.length > 50) {
+            await context.clearCookies();
+        }
 
         const page = await context.newPage();
         page.setDefaultTimeout(60000);
