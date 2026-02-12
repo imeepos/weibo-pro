@@ -61,7 +61,7 @@ export class CronSchedulerService {
   constructor(
     @Inject(WorkflowExecutionService) private executionService: WorkflowExecutionService,
     @Inject(RedisClient) private redis: RedisClient
-  ) {}
+  ) { }
 
   /**
    * 添加调度任务
@@ -283,6 +283,7 @@ export class CronSchedulerService {
 
       // 执行完毕后立即调度下一次执行（使用 setImmediate 避免堆栈溢出）
       if (this.continuousRunning.has(scheduleId)) {
+        await this.delayBeforeNextRun(5000)
         setImmediate(() => this.executeContinuous(schedule))
       }
     } catch (error) {
