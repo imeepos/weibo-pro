@@ -109,14 +109,16 @@ export class SentimentTransitionLLMAnalyzerService {
         .limit(20) // 获取前20个高影响力帖子
         .getMany();
 
-      return posts.map(post => ({
-        id: post.id,
-        text: post.text,
-        created_at: post.created_at,
-        reposts_count: post.reposts_count,
-        comments_count: post.comments_count,
-        attitudes_count: post.attitudes_count,
-      }));
+      return posts
+        .filter(post => post.created_at !== null)
+        .map(post => ({
+          id: post.id,
+          text: post.text,
+          created_at: post.created_at!,
+          reposts_count: post.reposts_count,
+          comments_count: post.comments_count,
+          attitudes_count: post.attitudes_count,
+        }));
     });
   }
 
