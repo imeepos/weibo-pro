@@ -484,7 +484,8 @@ export class CronSchedulerService {
         total: schedules.length,
         loaded: this.getJobCount(),
         cronJobs: this.scheduleJobs.size,
-        intervalTimers: this.intervalTimers.size
+        intervalTimers: this.intervalTimers.size,
+        continuousRunning: this.continuousRunning.size
       })
     } catch (error) {
       logger.error('加载调度任务失败', {
