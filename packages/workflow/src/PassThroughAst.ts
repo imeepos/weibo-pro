@@ -40,7 +40,8 @@ import { Injectable } from '@sker/core';
 import { Handler } from './decorator';
 import { NodeEvent } from './execution/events';
 import { setAstError } from './ast-utils';
-import { Observable } from 'rxjs';
+import { Observable, from } from 'rxjs';
+import { concatMap, mergeMap } from 'rxjs/operators';
 
 /**
  * 透传节点执行器 - 接收输入立即原样输出
@@ -88,8 +89,8 @@ export class PassThroughAstVisitor {
       ast.state = 'running';
       obs.next({ type: 'node_runing', id: ast.id });
 
-      const subscription = input$.subscribe({
-        next: (inputData) => {
+      const subscription = input$.pipe(
+        concatMap(async (inputData) => {
           // 根据 mode 决定条件判断逻辑
           const enableConditions = Array.isArray(inputData.enable) ? inputData.enable : [inputData.enable];
           const mode = inputData.mode || 'some';
@@ -180,13 +181,22 @@ export class PassThroughAstVisitor {
             } else {
               ast.output = inputData.input;
             }
-            obs.next({ type: 'node_emit', id: ast.id, data: { output: ast.output, emitCount: ast.emitCount } });
+            return [
+              { type: 'node_emit' as const, id: ast.id, data: { output: ast.output, emitCount: ast.emitCount } }
+            ];
           }
-        },
+          return [];
+        }),
+        mergeMap((events: NodeEvent[]) => from(events))
+      ).subscribe({
+        next: (event: NodeEvent) => obs.next(event),
         error: (error) => {
           ast.state = 'fail';
           setAstError(ast, error);
           obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
+          // 发射空数据让下游继续
+          obs.next({ type: 'node_emit', id: ast.id, data: {} });
+          obs.complete();
         },
         complete: () => {
           ast.state = 'success';

@@ -1,8 +1,9 @@
 import { Ast, setAstError, WorkflowGraphAst } from "./ast";
 import { Input, Node, Output, Handler, IS_MULTI, Tool } from "./decorator";
 import { Injectable } from "@sker/core";
-import { isObservable, Observable } from "rxjs";
+import { isObservable, Observable, from } from "rxjs";
 import { NodeEvent } from "./execution/events";
+import { concatMap, mergeMap } from "rxjs/operators";
 
 /**
  * 将任意类型序列化为字符串
@@ -54,18 +55,27 @@ export class TextAreaAstVisitor {
         return new Observable<NodeEvent>(obs => {
             ast.state = 'running';
             obs.next({ type: 'node_runing', id: ast.id });
-            input$.subscribe({
-                next: (input) => {
+
+            const subscription = input$.pipe(
+                concatMap(async (input) => {
                     ast.emitCount += 1;
                     // 序列化输入: 支持任意类型
                     const output = serializeToString(input.input);
                     ast.output = output;
-                    obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount, output } });
-                },
+                    return [
+                        { type: 'node_emit' as const, id: ast.id, data: { emitCount: ast.emitCount, output } }
+                    ];
+                }),
+                mergeMap((events: NodeEvent[]) => from(events))
+            ).subscribe({
+                next: (event: NodeEvent) => obs.next(event),
                 error: (error) => {
                     ast.state = 'fail';
                     setAstError(ast, error);
                     obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
+                    // 发射空数据让下游继续
+                    obs.next({ type: 'node_emit', id: ast.id, data: {} });
+                    obs.complete();
                 },
                 complete: () => {
                     ast.state = 'success';
@@ -73,6 +83,8 @@ export class TextAreaAstVisitor {
                     obs.complete();
                 }
             });
+
+            return () => subscription.unsubscribe();
         });
     }
 }

@@ -44,11 +44,7 @@ export class PostNLPAnalyzerVisitor {
       logger.info('[PostNLPAnalyzerVisitor] 开始订阅 input$，节点ID:', ast.id);
 
       const subscription = input$.pipe(
-        tap({
-          next: (data) => logger.debug('[PostNLPAnalyzerVisitor] input$ 发射数据:', Object.keys(data)),
-          complete: () => logger.debug('[PostNLPAnalyzerVisitor] input$ 完成')
-        }),
-        mergeMap(async (inputData) => {
+        concatMap(async (inputData) => {
           ast.emitCount += 1;
           logger.debug('[PostNLPAnalyzerVisitor] concatMap 接收到数据，第', ast.emitCount, '次，postId:', (inputData as any)?.post?.id);
           obs.next({ type: 'node_emit', id: ast.id, data: { emitCount: ast.emitCount } })
@@ -132,7 +128,7 @@ export class PostNLPAnalyzerVisitor {
               }
             ];
           }
-        }, 3),
+        }),
         mergeMap((events: NodeEvent[]) => from(events))
       ).subscribe({
         next: (event: NodeEvent) => {
