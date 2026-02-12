@@ -13,7 +13,7 @@ export class SentimentTransitionService {
   constructor(
     @Inject(CacheService) private readonly cacheService: CacheService,
     @Inject(SentimentTransitionLLMAnalyzerService) private readonly llmAnalyzer: SentimentTransitionLLMAnalyzerService
-  ) {}
+  ) { }
 
   async getSentimentTransitionAnalysis(eventId: string): Promise<SentimentTransitionAnalysis> {
     const cacheKey = CacheService.buildKey('sentiment:transition', eventId);
@@ -248,7 +248,7 @@ export class SentimentTransitionService {
       const { before, after, shouldSkip } = this.getWindow(timeline, i, windowSize);
       if (shouldSkip) continue;
 
-      const current = timeline[i];
+      const current = timeline[i]!;
       const avgBefore = this.calculateWindowAverage(before);
       const avgAfter = this.calculateWindowAverage(after);
 
@@ -347,8 +347,8 @@ export class SentimentTransitionService {
     const transitions: Map<string, number> = new Map();
 
     for (let i = 1; i < timeline.length; i++) {
-      const from = timeline[i - 1].dominantSentiment;
-      const to = timeline[i].dominantSentiment;
+      const from = timeline[i - 1]!.dominantSentiment;
+      const to = timeline[i]!.dominantSentiment;
       const key = `${from}To${to.charAt(0).toUpperCase() + to.slice(1)}`;
       transitions.set(key, (transitions.get(key) || 0) + 1);
     }
@@ -356,12 +356,12 @@ export class SentimentTransitionService {
     // 归一化
     const fromMap = new Map<SentimentType, number>();
     for (const [key, count] of transitions) {
-      const from = key.split('To')[0].toLowerCase() as SentimentType;
+      const from = key.split('To')[0]!.toLowerCase() as SentimentType;
       fromMap.set(from, (fromMap.get(from) || 0) + count);
     }
 
     for (const [key, count] of transitions) {
-      const from = key.split('To')[0].toLowerCase() as SentimentType;
+      const from = key.split('To')[0]!.toLowerCase() as SentimentType;
       const total = fromMap.get(from) || 1;
       matrix[key as keyof TransitionMatrix] = count / total;
     }
@@ -376,7 +376,7 @@ export class SentimentTransitionService {
     const windowSize = 3;
 
     for (let i = windowSize; i < timeline.length - windowSize; i++) {
-      const current = timeline[i];
+      const current = timeline[i]!;
       const before = timeline.slice(i - windowSize, i);
       const after = timeline.slice(i + 1, i + 1 + windowSize);
 
@@ -413,7 +413,7 @@ export class SentimentTransitionService {
 
     let totalChanges = 0;
     for (let i = 1; i < timeline.length; i++) {
-      if (timeline[i].dominantSentiment !== timeline[i - 1].dominantSentiment) {
+      if (timeline[i]!.dominantSentiment !== timeline[i - 1]!.dominantSentiment) {
         totalChanges++;
       }
     }

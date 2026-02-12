@@ -4,6 +4,7 @@ import { CacheService, CACHE_TTL } from '../cache.service';
 import { WeiboPostEntity } from '@sker/entities';
 import { SENTIMENT_TRANSITION_CONFIG } from './events/sentiment-transition-constants';
 import type { TurningPoint } from '@sker/sdk';
+import { useLlmModel } from '@sker/workflow-run';
 
 /**
  * LLM 分析器服务
@@ -13,7 +14,7 @@ import type { TurningPoint } from '@sker/sdk';
 export class SentimentTransitionLLMAnalyzerService {
   constructor(
     @Inject(CacheService) private readonly cacheService: CacheService
-  ) {}
+  ) { }
 
   /**
    * 使用 LLM 分析转折点，提取关键词和触发帖子
@@ -161,44 +162,11 @@ ${posts.map((p, i) => `${i + 1}. [${p.created_at.toISOString()}] ${p.text.substr
    * 调用 LLM API
    */
   private async callLLM(prompt: string): Promise<string> {
-    // TODO: 集成实际的 LLM API
-    // 这里需要根据项目中使用的 LLM 服务进行集成
-    // 例如：Claude API, OpenAI API, 或自建 LLM 服务
-
-    // 临时实现：返回模拟数据
-    // 在实际部署时，需要替换为真实的 LLM 调用
-    console.warn('LLM API 未配置，使用模拟数据');
-
-    // 模拟 LLM 响应
-    return JSON.stringify({
-      triggerKeywords: ['示例关键词1', '示例关键词2'],
-      triggerPostIndices: [1, 2],
-    });
-
-    /*
-    // 实际实现示例（使用 Anthropic Claude）:
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY || '',
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: SENTIMENT_TRANSITION_CONFIG.LLM_MODEL,
-        max_tokens: SENTIMENT_TRANSITION_CONFIG.LLM_MAX_TOKENS,
-        messages: [
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-      }),
-    });
-
-    const data = await response.json();
-    return data.content[0].text;
-    */
+    const model = useLlmModel();
+    const response = await model.invoke([
+      { role: 'user', content: prompt }
+    ]);
+    return response.content as string;
   }
 
   /**
@@ -218,18 +186,18 @@ ${posts.map((p, i) => `${i + 1}. [${p.created_at.toISOString()}] ${p.text.substr
       // 提取关键词
       const triggerKeywords = Array.isArray(parsed.triggerKeywords)
         ? parsed.triggerKeywords
-            .slice(0, SENTIMENT_TRANSITION_CONFIG.MAX_TRIGGER_KEYWORDS)
-            .filter((k: unknown): k is string => typeof k === 'string')
+          .slice(0, SENTIMENT_TRANSITION_CONFIG.MAX_TRIGGER_KEYWORDS)
+          .filter((k: unknown): k is string => typeof k === 'string')
         : [];
 
       // 提取触发帖子
       const triggerPostIndices = Array.isArray(parsed.triggerPostIndices)
         ? parsed.triggerPostIndices
-            .slice(0, SENTIMENT_TRANSITION_CONFIG.MAX_TRIGGER_POSTS)
-            .filter((i: unknown): i is number => typeof i === 'number' && i >= 1 && i <= posts.length)
+          .slice(0, SENTIMENT_TRANSITION_CONFIG.MAX_TRIGGER_POSTS)
+          .filter((i: unknown): i is number => typeof i === 'number' && i >= 1 && i <= posts.length)
         : [];
 
-      const triggerPosts = triggerPostIndices.map((index: number) => posts[index - 1].id);
+      const triggerPosts = triggerPostIndices.map((index: number) => posts[index - 1]!.id);
 
       return {
         triggerKeywords,
