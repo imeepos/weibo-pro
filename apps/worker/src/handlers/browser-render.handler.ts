@@ -32,7 +32,7 @@ export class BrowserRenderHandler {
       this.logger.info('browser-render.start', { url: req.url });
 
       // 使用 Cloudflare Browser Rendering API 启动浏览器
-      const browser = await puppeteer.launch(env.BROWSER);
+      const browser = await puppeteer.launch(env.BROWSER, { keep_alive: 10 * 1000 });
 
       const page = await browser.newPage();
 

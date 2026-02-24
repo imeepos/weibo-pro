@@ -36,7 +36,7 @@ export abstract class WeiboApiClient {
         @Inject(DelayService) protected readonly delayService: DelayService,
         @Inject(RateLimiterService) protected readonly rateLimiter: RateLimiterService,
         @Inject(WeiboWorkerProxyService) protected readonly workerProxy: WeiboWorkerProxyService,
-    ) {}
+    ) { }
 
     /**
      * Cookie 摘要（脱敏）
