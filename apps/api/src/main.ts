@@ -121,7 +121,10 @@ async function bootstrap() {
   // Better Auth 初始化
   const auth = betterAuth({
     database: new Pool({
-      connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/weibo'
+      connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/weibo',
+      max: 10,  // 限制连接池大小，避免耗尽数据库连接
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
     }),
     // 禁用全局限流
     rateLimit: {
