@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@sker/core'
-import { DataSource } from '@sker/entities'
+import { useEntityManager } from '@sker/entities'
 import { WorkflowScheduleEntity, ScheduleStatus, WorkflowEntity } from '@sker/entities'
 import { WorkflowScheduleService } from './workflow-schedule.service'
 import { WorkflowRunService } from './workflow-run.service'
@@ -14,7 +14,6 @@ export class WorkflowSchedulerWorker {
   private readonly maxConcurrentRuns = 10 // 最大并发执行数
 
   constructor(
-    @Inject(DataSource) private dataSource: DataSource,
     @Inject(WorkflowScheduleService) private scheduleService: WorkflowScheduleService,
     @Inject(WorkflowRunService) private runService: WorkflowRunService
   ) {}
@@ -83,46 +82,41 @@ export class WorkflowSchedulerWorker {
     logger.info(`Executing schedule: ${schedule.id} (${schedule.name})`)
 
     try {
-      // 获取工作流
-      const workflow = await this.dataSource
-        .getRepository(WorkflowEntity)
-        .findOne({ where: { id: schedule.workflowId } })
+      await useEntityManager(async (manager) => {
+        // 获取工作流
+        const workflow = await manager.findOne(WorkflowEntity, {
+          where: { id: schedule.workflowId }
+        })
 
-      if (!workflow) {
-        logger.error(`Workflow ${schedule.workflowId} not found for schedule ${schedule.id}`)
-        return
-      }
+        if (!workflow) {
+          logger.error(`Workflow ${schedule.workflowId} not found for schedule ${schedule.id}`)
+          return
+        }
 
-      // 创建工作流运行实例
-      const run = await this.runService.createRun(
-        schedule.workflowId,
-        {
-          ...workflow.defaultInputs,
-          ...schedule.inputs
-        },
-        schedule.id
-      )
+        // 创建工作流运行实例
+        const run = await this.runService.createRun(
+          schedule.workflowId,
+          {
+            ...workflow.defaultInputs,
+            ...schedule.inputs
+          },
+          schedule.id
+        )
 
-      logger.info(`Created run ${run.id} for schedule ${schedule.id}`)
+        logger.info(`Created run ${run.id} for schedule ${schedule.id}`)
 
-      // 更新调度状态（在事务中）
-      const nextRunAt = this.calculateNextRunTime(schedule)
-      await this.dataSource.transaction(async manager => {
-        // 更新调度的执行时间
+        // 更新调度状态
+        const nextRunAt = this.calculateNextRunTime(schedule)
         await manager.update(WorkflowScheduleEntity, schedule.id, {
           lastRunAt: new Date(),
           nextRunAt: nextRunAt ?? undefined
         })
+
+        logger.info(`Scheduled run ${run.id} for execution`)
       })
-
-      // 通过 MQ 异步触发执行（不等待结果）
-      // 这里假设现有架构支持异步执行
-      logger.info(`Scheduled run ${run.id} for execution`)
-
     } catch (error) {
       logger.error(`Failed to execute schedule ${schedule.id}:`, error)
 
-      // 更新调度状态，避免无限重试
       try {
         await this.scheduleService.updateScheduleAfterRun(schedule)
       } catch (updateError) {
@@ -133,29 +127,31 @@ export class WorkflowSchedulerWorker {
 
   private async handleExpiredSchedules(): Promise<void> {
     try {
-      // 查找已过期的调度
-      const expiredSchedules = await this.dataSource
-        .getRepository(WorkflowScheduleEntity)
-        .createQueryBuilder('schedule')
-        .where('schedule.status = :enabled', { enabled: ScheduleStatus.ENABLED })
-        .andWhere('schedule.endTime IS NOT NULL')
-        .andWhere('schedule.endTime <= :now', { now: new Date() })
-        .getMany()
-
-      if (expiredSchedules.length > 0) {
-        logger.info(`Found ${expiredSchedules.length} expired schedules`)
-
-        // 批量更新过期状态
-        const ids = expiredSchedules.map(s => s.id)
-        await this.dataSource
+      await useEntityManager(async (manager) => {
+        // 查找已过期的调度
+        const expiredSchedules = await manager
           .getRepository(WorkflowScheduleEntity)
-          .update(ids, {
-            status: ScheduleStatus.EXPIRED,
-            nextRunAt: undefined
-          })
+          .createQueryBuilder('schedule')
+          .where('schedule.status = :enabled', { enabled: ScheduleStatus.ENABLED })
+          .andWhere('schedule.endTime IS NOT NULL')
+          .andWhere('schedule.endTime <= :now', { now: new Date() })
+          .getMany()
 
-        logger.info(`Updated ${ids.length} schedules to expired status`)
-      }
+        if (expiredSchedules.length > 0) {
+          logger.info(`Found ${expiredSchedules.length} expired schedules`)
+
+          // 批量更新过期状态
+          const ids = expiredSchedules.map(s => s.id)
+          await manager
+            .getRepository(WorkflowScheduleEntity)
+            .update(ids, {
+              status: ScheduleStatus.EXPIRED,
+              nextRunAt: undefined
+            })
+
+          logger.info(`Updated ${ids.length} schedules to expired status`)
+        }
+      })
     } catch (error) {
       logger.error('Error handling expired schedules:', error)
     }
