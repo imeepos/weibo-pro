@@ -21,18 +21,21 @@ export const createDatabaseConfig = (): DataSourceOptions => {
       subscribers: [WorkflowScheduleSubscriber],
       synchronize: shouldSync,
       logging: false,
-      poolSize: 15,
+      poolSize: 20, // 增加连接池大小，防止连接池耗尽
       connectTimeoutMS: 10000,
       extra: {
         timezone: 'UTC',
-        max: 15,
-        min: 2,
-        idleTimeoutMillis: 30 * 1000,
-        connectionTimeoutMillis: 30 * 1000,
+        max: 20, // 最大连接数增加到 20
+        min: 2, // 最小连接数增加到 2，保持热连接
+        idleTimeoutMillis: 30 * 1000, // 空闲超时增加到 30 秒，减少频繁创建连接
+        connectionTimeoutMillis: 10 * 1000,
         statement_timeout: 10 * 60 * 1000,
         query_timeout: 30 * 60 * 1000,
         keepAlive: true,
         keepAliveInitialDelayMillis: 10 * 1000,
+        // 连接回收，防止连接泄漏
+        evictionRunIntervalMillis: 5 * 1000,
+        softIdleTimeoutMillis: 5 * 1000,
       },
     };
   }
@@ -115,6 +118,17 @@ export const useEntityManager = async <T>(h: (m: EntityManager) => Promise<T>): 
         error?.message?.includes('Connection terminated') ||
         error?.message?.includes('Connection lost') ||
         error?.code === 'ECONNRESET';
+
+      // 连接池耗尽错误不进行重试，直接抛出
+      const isPoolExhausted =
+        error?.code === '53300' ||
+        error?.message?.includes('too many clients') ||
+        error?.message?.includes('remaining connection slots are reserved');
+
+      if (isPoolExhausted) {
+        console.error(`[EntityManager] connection pool exhausted, not retrying. Code: ${error?.code}`);
+        throw error;
+      }
 
       if (isConnectionError && attempt < maxRetries) {
         console.warn(`[EntityManager] connection error on attempt ${attempt + 1}, retrying...`);

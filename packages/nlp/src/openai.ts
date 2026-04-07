@@ -35,7 +35,7 @@ export async function getOpenAiConfig(): Promise<ClientOptions> {
     baseURL: LLM_PROXY_BASE_URL,
     apiKey: 'xxx',
     timeout: 60000,
-    maxRetries: 3,
+    maxRetries: 2, // 降低重试次数，由上层 NLPAnalyzer 控制重试逻辑
     httpAgent,
   };
 }

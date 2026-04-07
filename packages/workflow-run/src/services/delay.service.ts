@@ -29,10 +29,16 @@ export class DelayService {
     this.backoffStates.delete(key);
   }
 
-  async backoffDelay(key: string, baseSeconds: number = 1, maxSeconds: number = 300): Promise<void> {
+  async backoffDelay(key: string, baseSeconds: number = 1, maxSeconds: number = 60): Promise<void> {
     const state = this.backoffStates.get(key);
     if (!state) {
       return;
+    }
+
+    // 限制最大退避时间为 60 秒，防止过度延迟
+    // 当错误计数过高时，应该放弃而不是继续重试
+    if (state.errorCount > 10) {
+      throw new Error(`账号 ${key} 连续失败 ${state.errorCount} 次，超过最大重试次数`);
     }
 
     const backoffSeconds = Math.min(baseSeconds * Math.pow(2, state.errorCount - 1), maxSeconds);

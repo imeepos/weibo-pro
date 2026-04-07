@@ -161,8 +161,9 @@ export class WeiboWorkerProxyService {
             'econnreset',
             'enotfound',
             'eai_again',
-            'fetch failed',
-            'network',
+            // 移除 'fetch failed' 和 'network'，防止持续网络故障时无限重试
+            // 'fetch failed' 通常表示更严重的网络问题，应该依赖熔断器
+            // 'network',
             'timeout',
         ];
 

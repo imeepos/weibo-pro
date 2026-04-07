@@ -3,7 +3,7 @@ import { useOpenAi } from './openai';
 import { Injectable } from '@sker/core';
 import { parse } from '@sker/json-harmony';
 
-const BASE_RETRY_DELAY_MS = 30000; // 基础重试延迟 30 秒
+const BASE_RETRY_DELAY_MS = 5000; // 基础重试延迟 5 秒
 const MAX_RETRIES = 3;
 /**
  * NLP 分析器：一次调用获取情感分析、关键词提取、事件分类
@@ -50,7 +50,10 @@ export class NLPAnalyzer {
           errorMsg.includes('rate limit') ||
           errorMsg.includes('ECONNREFUSED') ||
           errorMsg.includes('ETIMEDOUT') ||
-          errorMsg.includes('TimeoutError');
+          errorMsg.includes('TimeoutError') ||
+          errorMsg.includes('Connection error') ||
+          errorMsg.includes('ECONNRESET') ||
+          errorMsg.includes('ENOTFOUND');
 
         if (isRetriableError && attempt < MAX_RETRIES - 1) {
           const waitTime = BASE_RETRY_DELAY_MS * Math.pow(2, attempt);

@@ -22,8 +22,7 @@ import { createSkerAuthPlugin, BETTER_AUTH } from '@sker/auth';
 import { Server as SocketIOServer } from 'socket.io';
 import { createServer } from 'http';
 import type { IncomingMessage, ServerResponse } from 'http';
-import { bearer, admin, username, openAPI } from 'better-auth/plugins';
-import { Pool } from 'pg';
+import { bearer, openAPI } from 'better-auth/plugins';
 import { UploadService } from './services/upload.service';
 import { ClaudeGateway } from './claude';
 import { DerivedNodeService } from './services/workflow/derived-node.service';
@@ -119,13 +118,9 @@ async function bootstrap() {
   app.use('/uploads/*', serveStatic({ root: './' }));
 
   // Better Auth 初始化
+  // 注意：本项目使用 Better Auth 仅作为 API 路由转发器，不使用其认证功能
+  // 因此不配置 database，移除不必要的认证插件
   const auth = betterAuth({
-    database: new Pool({
-      connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/weibo',
-      max: 10,  // 限制连接池大小，避免耗尽数据库连接
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 10000,
-    }),
     // 禁用全局限流
     rateLimit: {
       enabled: false,
@@ -148,10 +143,8 @@ async function bootstrap() {
     },
     plugins: [
       createSkerAuthPlugin([]),
-      bearer(),
-      admin(),
-      username(),
-      openAPI()
+      bearer(),    // 保留 bearer token 支持（可能需要）
+      openAPI()    // 保留 OpenAPI 支持
     ]
   });
 

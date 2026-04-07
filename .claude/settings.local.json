@@ -3,7 +3,23 @@
     "allow": [
       "mcp__acp__Bash",
       "mcp__acp__Edit",
-      "Bash(pm2 list:*)"
+      "Bash(pm2 list:*)",
+      "Bash(pm2 logs:*)",
+      "Bash(PGPASSWORD=postgres psql -h localhost -U postgres -d weibo -c \"SHOW max_connections;\")",
+      "Bash(PGPASSWORD=postgres psql -h localhost -U postgres -d weibo -c \"SELECT count\\(*\\) as active_connections FROM pg_stat_activity WHERE datname = 'weibo';\")",
+      "Bash(PGPASSWORD=postgres psql -h localhost -U postgres -d weibo -c \"SELECT pid, usename, application_name, state, query_start, state_change FROM pg_stat_activity WHERE datname = 'weibo' ORDER BY state_change DESC LIMIT 20;\")",
+      "Bash(docker exec:*)",
+      "Bash(pm2 restart:*)",
+      "Bash(echo $DATABASE_URL)",
+      "Bash(pm2 env:*)",
+      "Bash(curl -s http://localhost:8089/api/health)",
+      "Bash(pnpm --filter=@sker/entities build)",
+      "Bash(pnpm --filter=@sker/api build)",
+      "Bash(pm2 status:*)",
+      "Bash(psql -U postgres -c \"SHOW max_connections;\")",
+      "Bash(grep -r DATABASE_URL . --include=*.env* --include=*.ts)",
+      "Bash(psql -U postgres -h localhost -c \"SELECT max_connections, current_setting\\(''max_connections''\\) as current, count\\(*\\) as active FROM pg_stat_activity GROUP BY max_connections, current_setting\\(''max_connections''\\);\")",
+      "Bash(bun run:*)"
     ]
   }
 }

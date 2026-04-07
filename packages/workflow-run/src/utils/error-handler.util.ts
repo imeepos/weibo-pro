@@ -97,8 +97,9 @@ export class ErrorClassifier {
             return ErrorCategory.SERVER_ERROR;
         }
 
-        // 网络错误
-        const networkErrors = ['econnreset', 'econnrefused', 'etimedout', 'enetunreach', 'enotfound', 'network error', 'socket hang up', 'fetch failed'];
+        // 网络错误 - 移除 'fetch failed' 防止持续网络故障时无限重试
+        // 'fetch failed' 通常表示更严重的网络问题，应该依赖熔断器
+        const networkErrors = ['econnreset', 'econnrefused', 'etimedout', 'enetunreach', 'enotfound', 'network error', 'socket hang up'];
         if (networkErrors.some(err => errorMessage.includes(err) || errorCode.includes(err))) {
             return ErrorCategory.NETWORK;
         }
