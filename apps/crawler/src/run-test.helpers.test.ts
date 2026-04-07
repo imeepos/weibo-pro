@@ -8,11 +8,22 @@ import {
 
 describe('run-test helpers', () => {
   it('解析 --schedule-id=xxx 形式参数', () => {
-    expect(parseRunTestArgs(['--schedule-id=abc'])).toEqual({ scheduleId: 'abc' })
+    expect(parseRunTestArgs(['--schedule-id=abc'])).toEqual({ scheduleId: 'abc', maxMs: undefined })
   })
 
   it('解析 --schedule-id xxx 形式参数', () => {
-    expect(parseRunTestArgs(['--schedule-id', 'def'])).toEqual({ scheduleId: 'def' })
+    expect(parseRunTestArgs(['--schedule-id', 'def'])).toEqual({ scheduleId: 'def', maxMs: undefined })
+  })
+
+  it('解析 --max-ms 参数', () => {
+    expect(parseRunTestArgs(['--schedule-id', 'def', '--max-ms', '15000'])).toEqual({
+      scheduleId: 'def',
+      maxMs: 15000
+    })
+  })
+
+  it('非法 --max-ms 时抛错', () => {
+    expect(() => parseRunTestArgs(['--schedule-id', 'def', '--max-ms', 'x'])).toThrow('Invalid --max-ms value')
   })
 
   it('缺少 scheduleId 时抛错', () => {

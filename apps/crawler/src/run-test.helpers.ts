@@ -1,5 +1,6 @@
 export interface RunTestOptions {
   scheduleId: string
+  maxMs?: number
 }
 
 export interface ParsedLogEntry {
@@ -19,7 +20,22 @@ export function parseRunTestArgs(args: string[]): RunTestOptions {
     throw new Error('Missing required argument: --schedule-id <id>')
   }
 
-  return { scheduleId }
+  const maxMsValue = args
+    .map(arg => arg.trim())
+    .find(arg => arg.startsWith('--max-ms='))?.split('=')[1]
+    ?? args
+      .map(arg => arg.trim())
+      .find((arg, index) => args[index - 1] === '--max-ms')
+
+  const parsedMaxMs = maxMsValue ? Number(maxMsValue) : undefined
+  if (
+    maxMsValue &&
+    (typeof parsedMaxMs !== 'number' || !Number.isFinite(parsedMaxMs) || parsedMaxMs <= 0)
+  ) {
+    throw new Error('Invalid --max-ms value')
+  }
+
+  return { scheduleId, maxMs: parsedMaxMs }
 }
 
 export function parseLoggerArgs(args: unknown[]): ParsedLogEntry {

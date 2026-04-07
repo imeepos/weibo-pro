@@ -146,7 +146,7 @@ export class WeiboHtmlParser {
       const $card = $(element);
 
       // 正确的选择器：div.from > a（不是 p.from a）
-      const detailLink = $card.find('div.from > a[href*="/weibo.com/"]').first();
+      const detailLink = $card.find('div.from > a[href]').first();
       const href = detailLink.attr('href');
 
       if (_index === 0) {
@@ -156,7 +156,7 @@ export class WeiboHtmlParser {
       if (href) {
         // 匹配格式：//weibo.com/:uid/:mid
         // 示例：//weibo.com/7838912856/Qb83goWjj?refer_flag=1001030103_
-        const match = href.match(/\/\/weibo\.com\/(\d+)\/([A-Za-z0-9]+)/);
+        const match = href.match(/(?:\/\/weibo\.com)?\/(\d+)\/([A-Za-z0-9]+)/);
 
         if (match && match[1] && match[2]) {
           const uid = match[1];

@@ -22,12 +22,17 @@ import {
 type LogLevel = 'info' | 'warn' | 'error' | 'debug'
 
 async function main() {
-  const { scheduleId } = parseRunTestArgs(process.argv.slice(2))
+  const { scheduleId, maxMs } = parseRunTestArgs(process.argv.slice(2))
 
+  console.log(`[run-test] bootstrapping for scheduleId=${scheduleId}`)
   root.set([...entitiesProviders, ...EdgeModeStrategyProviders])
+  console.log('[run-test] root providers registered')
   await root.init()
+  console.log('[run-test] root initialized')
 
   const scheduler = root.get(CronSchedulerService)
+  console.log('[run-test] CronSchedulerService resolved')
+  console.log('[run-test] loading target schedule from database')
   const targetSchedule = await loadSchedule(scheduleId)
 
   if (!targetSchedule) {
@@ -82,7 +87,16 @@ async function main() {
   process.on('SIGTERM', () => void shutdown(0))
   process.on('SIGINT', () => void shutdown(0))
 
+  if (maxMs) {
+    setTimeout(() => {
+      console.log(`[run-test] max runtime reached (${maxMs}ms), exiting`)
+      void shutdown(0)
+    }, maxMs)
+  }
+
+  console.log('[run-test] registering target schedule into CronSchedulerService')
   await scheduler.addSchedule(targetSchedule)
+  console.log('[run-test] target schedule registered')
 }
 
 async function loadSchedule(scheduleId: string): Promise<WorkflowScheduleEntity | null> {
