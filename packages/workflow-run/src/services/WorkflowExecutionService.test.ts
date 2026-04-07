@@ -1,6 +1,46 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { WorkflowExecutionService } from './WorkflowExecutionService'
 import { ScheduleType, ScheduleStatus, WorkflowScheduleEntity } from '@sker/entities'
+import { of } from 'rxjs'
+
+const {
+  executeAstMock,
+  useEntityManagerMock,
+  loggerInfoMock,
+  loggerWarnMock,
+  loggerErrorMock
+} = vi.hoisted(() => ({
+  executeAstMock: vi.fn(),
+  useEntityManagerMock: vi.fn(),
+  loggerInfoMock: vi.fn(),
+  loggerWarnMock: vi.fn(),
+  loggerErrorMock: vi.fn()
+}))
+
+vi.mock('@sker/workflow', () => ({
+  WorkflowGraphAst: class WorkflowGraphAst {},
+  executeAst: executeAstMock
+}))
+
+vi.mock('@sker/entities', async () => {
+  const actual = await vi.importActual<typeof import('@sker/entities')>('@sker/entities')
+  return {
+    ...actual,
+    useEntityManager: useEntityManagerMock
+  }
+})
+
+vi.mock('@sker/core', async () => {
+  const actual = await vi.importActual<typeof import('@sker/core')>('@sker/core')
+  return {
+    ...actual,
+    logger: {
+      info: loggerInfoMock,
+      warn: loggerWarnMock,
+      error: loggerErrorMock
+    }
+  }
+})
 
 describe('WorkflowExecutionService - calculateNextRunTime', () => {
   let service: WorkflowExecutionService
@@ -12,6 +52,67 @@ describe('WorkflowExecutionService - calculateNextRunTime', () => {
   afterEach(() => {
     vi.clearAllMocks()
     vi.useRealTimers()
+  })
+
+  describe('execute', () => {
+    it('应等待 workflow 自身的成功事件，而不是把最后一个普通节点事件当作完成', async () => {
+      const service = new WorkflowExecutionService()
+      const schedule: WorkflowScheduleEntity = {
+        id: 'schedule-1',
+        name: '永远运行',
+        workflowId: 'workflow-1',
+        scheduleType: ScheduleType.CONTINUOUS,
+        status: ScheduleStatus.ENABLED,
+        inputs: {},
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+
+      const workflowEntity = {
+        id: 'workflow-1',
+        name: '测试工作流',
+        description: '',
+        nodes: [],
+        edges: [],
+        entryNodeIds: [],
+        viewport: undefined,
+        collapsed: false,
+        tags: [],
+        defaultInputs: {}
+      }
+
+      useEntityManagerMock.mockImplementation(async (handler: (manager: any) => Promise<unknown>) => {
+        const manager = {
+          findOne: vi.fn().mockResolvedValue(workflowEntity),
+          transaction: vi.fn().mockImplementation(async (cb: (txManager: any) => Promise<unknown>) => cb({
+            findOne: vi.fn().mockResolvedValue({
+              ...schedule,
+              lastRunAt: undefined,
+              nextRunAt: undefined
+            }),
+            save: vi.fn().mockResolvedValue(undefined)
+          }))
+        }
+        return handler(manager)
+      })
+
+      executeAstMock.mockReturnValue(of(
+        { type: 'node_runing', id: 'workflow-1' },
+        { type: 'node_success', id: 'node-a' }
+      ))
+
+      await service.execute(schedule)
+
+      expect(loggerWarnMock).toHaveBeenCalledWith(
+        '工作流执行未收到 workflow 终态事件',
+        expect.objectContaining({
+          scheduleId: schedule.id,
+          workflowId: workflowEntity.id,
+          lastEventType: 'node_success',
+          lastEventId: 'node-a'
+        })
+      )
+    })
   })
 
   describe('CRON 类型调度', () => {

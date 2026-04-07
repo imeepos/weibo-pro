@@ -1,136 +1,136 @@
-import 'dotenv/config';
-import "reflect-metadata";
-import "@sker/workflow";
-import "@sker/workflow-ast";
-import "@sker/workflow-run";
-import { WorkflowGraphAst, executeWorkflow, fromJson } from '@sker/workflow'
-import { catchError, EMPTY } from 'rxjs'
-import { readFileSync } from 'fs'
-import { join } from 'path'
-import { root } from '@sker/core'
-import { entitiesProviders } from '@sker/entities'
+import 'dotenv/config'
+import 'reflect-metadata'
+import '@sker/workflow'
+import '@sker/workflow-ast'
+import '@sker/workflow-run'
+import { root, logger } from '@sker/core'
+import {
+  entitiesProviders,
+  ScheduleType,
+  WorkflowScheduleEntity,
+  useEntityManager
+} from '@sker/entities'
 import { EdgeModeStrategyProviders } from '@sker/workflow'
+import { CronSchedulerService } from '@sker/workflow-run'
+import {
+  isTargetScheduleLog,
+  isWorkflowTerminalMismatch,
+  parseLoggerArgs,
+  parseRunTestArgs
+} from './run-test.helpers'
+
+type LogLevel = 'info' | 'warn' | 'error' | 'debug'
 
 async function main() {
-  // 初始化 DI 容器
-  root.set([...entitiesProviders, ...EdgeModeStrategyProviders]);
-  await root.init();
+  const { scheduleId } = parseRunTestArgs(process.argv.slice(2))
 
-  const filePath = join(__dirname, 'test.json')
-  const fileContent = readFileSync(filePath, 'utf-8')
-  const workflowData = JSON.parse(fileContent)
+  root.set([...entitiesProviders, ...EdgeModeStrategyProviders])
+  await root.init()
 
-  // 重置工作流状态
-  workflowData.workflow.state = 'pending'
-  workflowData.workflow.nodes.forEach((node: any) => {
-    node.state = 'pending'
-    node.count = 0
-    node.emitCount = 0
-  })
+  const scheduler = root.get(CronSchedulerService)
+  const targetSchedule = await loadSchedule(scheduleId)
 
-  const ast = fromJson(workflowData.workflow) as WorkflowGraphAst
+  if (!targetSchedule) {
+    throw new Error(`Schedule not found: ${scheduleId}`)
+  }
 
-  console.log(`\n=== 开始执行工作流 ===`)
-  console.log(`节点数量: ${ast.nodes.length}`)
+  console.log(`[run-test] target schedule: ${targetSchedule.name} (${targetSchedule.id})`)
+  console.log(`[run-test] scheduleType: ${targetSchedule.scheduleType}`)
+  console.log(`[run-test] workflowId: ${targetSchedule.workflowId}`)
+  console.log('[run-test] monitoring started, waiting for terminal mismatch...')
 
-  // 统计每个节点的执行次数（通过事件收集）
-  const nodeStats = new Map<string, {
-    type: string;
-    inputCount: number;      // 节点被调用的次数（ast.emitCount）
-    dataEmitCount: number;   // 真实数据发射次数（排除计数事件）
-    totalEmitCount: number;  // 所有 node_emit 事件次数（包括计数事件）
-  }>()
-
-  // 初始化统计
-  ast.nodes.forEach(node => {
-    nodeStats.set(node.id, { type: node.type, inputCount: 0, dataEmitCount: 0, totalEmitCount: 0 })
-  })
-
-  const startTime = Date.now()
-
-  // 打印统计信息的函数（无论成功还是失败都要调用）
-  const printStats = () => {
-    console.log(`\n=== 📊 节点执行统计 ===`)
-    nodeStats.forEach((stats, nodeId) => {
-      if (stats.totalEmitCount > 0 || stats.inputCount > 0) {
-        console.log(`\n[${stats.type}]:`)
-        console.log(`  ✅ ast.emitCount (节点运行次数): ${stats.inputCount}`)
-        console.log(`  📤 数据发射次数: ${stats.dataEmitCount}`)
-        console.log(`  🔢 总发射次数: ${stats.totalEmitCount}`)
+  let round = 0
+  let watcherStopped = false
+  const restoreLogger = installLoggerHooks({
+    scheduleId,
+    onTargetLog: (level, entry) => {
+      if (entry.meta?.workflowId && entry.meta?.scheduleId === scheduleId) {
+        round++
+        console.log(
+          `[run-test][round=${round}][${level}] ${entry.message ?? '<no-message>'} ${JSON.stringify(entry.meta)}`
+        )
+        return
       }
-    })
 
-    const nlpStats = Array.from(nodeStats.values()).find(s => s.type === 'PostNLPAnalyzerAst')
-    if (nlpStats) {
-      console.log(`\n🎯 NLP 节点汇总:`)
-      console.log(`   ast.emitCount: ${nlpStats.inputCount}`)
-      console.log(`   数据发射次数: ${nlpStats.dataEmitCount}`)
-      console.log(`   总发射次数: ${nlpStats.totalEmitCount}`)
-      console.log(`   失败率: ${nlpStats.inputCount > 0 ? ((nlpStats.inputCount - nlpStats.dataEmitCount) / nlpStats.inputCount * 100).toFixed(1) : 0}%`)
-    }
-  }
-
-  try {
-    await new Promise<void>((resolve, reject) => {
-      executeWorkflow(ast, {}).pipe(
-        catchError((error) => {
-          const duration = Date.now() - startTime
-          console.error(`\n❌ 工作流执行失败，耗时: ${duration}ms`)
-          console.error(`[Error] ${error}`)
-          printStats()
-          // 不中断，返回 EMPTY 继续执行
-          return EMPTY
-        })
-      ).subscribe({
-        next: (event) => {
-          const stats = nodeStats.get(event.id)
-          if (!stats) return
-
-          // 统计 node_emit 事件
-          if (event.type === 'node_emit') {
-            stats.totalEmitCount++
-
-            const eventData = (event as any).data
-
-            // 更新 inputCount：如果事件数据包含 emitCount，提取并更新
-            if (eventData?.emitCount !== undefined) {
-              stats.inputCount = eventData.emitCount
-            }
-
-            // 如果事件数据中只包含 emitCount，说明这是纯计数事件（不包含真实数据）
-            const isCountOnlyEvent = eventData?.emitCount !== undefined && Object.keys(eventData).length === 1
-
-            if (!isCountOnlyEvent) {
-              // 这是包含真实数据的事件
-              stats.dataEmitCount++
-            }
-
-            // 打印 NLP 节点的执行日志
-            if (stats.type === 'PostNLPAnalyzerAst') {
-              console.log(`[NLP] 第 ${stats.totalEmitCount} 次 emit 事件 (ast.emitCount: ${stats.inputCount}, ${isCountOnlyEvent ? '纯计数事件' : '数据事件'})`)
-            }
-          }
-        },
-        complete: () => {
-          const duration = Date.now() - startTime
-          console.log(`\n✅ 工作流执行完成，耗时: ${duration}ms`)
-          printStats()
-          resolve()
-        }
+      console.log(
+        `[run-test][${level}] ${entry.message ?? '<no-message>'} ${JSON.stringify(entry.meta ?? {})}`
+      )
+    },
+    onMismatch: (entry) => {
+      console.error('[run-test] detected workflow terminal mismatch')
+      console.error(`[run-test] message: ${entry.message}`)
+      console.error(`[run-test] meta: ${JSON.stringify(entry.meta ?? {}, null, 2)}`)
+      shutdown(2).catch((error) => {
+        console.error('[run-test] shutdown failed', error)
+        process.exit(2)
       })
-    })
-  } catch (error) {
-    // 确保即使有异常也能输出统计
-    if (!nodeStats.get(ast.id)?.totalEmitCount) {
-      printStats()
     }
-    throw error
+  })
+
+  const shutdown = async (code = 0) => {
+    if (watcherStopped) {
+      process.exit(code)
+      return
+    }
+
+    watcherStopped = true
+    restoreLogger()
+    await scheduler.stopAll()
+    process.exit(code)
   }
 
-  process.exit(0)
+  process.on('SIGTERM', () => void shutdown(0))
+  process.on('SIGINT', () => void shutdown(0))
+
+  await scheduler.addSchedule(targetSchedule)
 }
 
-main().catch(err => {
-  console.error('执行失败:', err)
+async function loadSchedule(scheduleId: string): Promise<WorkflowScheduleEntity | null> {
+  return useEntityManager(async (manager) => {
+    return manager.findOne(WorkflowScheduleEntity, { where: { id: scheduleId } })
+  })
+}
+
+function installLoggerHooks(params: {
+  scheduleId: string
+  onTargetLog: (level: LogLevel, entry: ReturnType<typeof parseLoggerArgs>) => void
+  onMismatch: (entry: ReturnType<typeof parseLoggerArgs>) => void
+}): () => void {
+  const original = {
+    info: logger.info.bind(logger),
+    warn: logger.warn.bind(logger),
+    error: logger.error.bind(logger),
+    debug: logger.debug.bind(logger)
+  }
+
+  const wrap = (level: LogLevel) => (...args: unknown[]) => {
+    const entry = parseLoggerArgs(args)
+
+    if (isTargetScheduleLog(entry, params.scheduleId)) {
+      params.onTargetLog(level, entry)
+    }
+
+    if (level === 'warn' && isWorkflowTerminalMismatch(entry, params.scheduleId)) {
+      params.onMismatch(entry)
+    }
+
+    original[level](...args)
+  }
+
+  logger.info = wrap('info')
+  logger.warn = wrap('warn')
+  logger.error = wrap('error')
+  logger.debug = wrap('debug')
+
+  return () => {
+    logger.info = original.info
+    logger.warn = original.warn
+    logger.error = original.error
+    logger.debug = original.debug
+  }
+}
+
+main().catch((error) => {
+  console.error('[run-test] failed', error)
   process.exit(1)
 })

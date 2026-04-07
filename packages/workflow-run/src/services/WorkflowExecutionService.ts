@@ -3,6 +3,8 @@ import { useEntityManager, WorkflowScheduleEntity, WorkflowEntity, ScheduleStatu
 import { executeAst, WorkflowGraphAst } from '@sker/workflow'
 import { withRetryOnNetworkError } from '../utils/retry-on-network-error'
 import { CronExpressionParser } from 'cron-parser'
+import { lastValueFrom } from 'rxjs'
+import { filter, take, tap } from 'rxjs/operators'
 
 /**
  * 工作流执行服务
@@ -74,7 +76,37 @@ export class WorkflowExecutionService {
       }
       logger.info(`execute workflow ${workflow.name} with inputs:`, inputs)
       // 执行工作流
-      const result = await executeAst(ast, inputs, ast as WorkflowGraphAst).toPromise()
+      const recentEvents: Array<{ type: string; id: string }> = []
+      const execution$ = executeAst(ast, inputs, ast as WorkflowGraphAst).pipe(
+        tap(event => {
+          recentEvents.push({ type: event.type, id: event.id })
+          if (recentEvents.length > 10) {
+            recentEvents.shift()
+          }
+        })
+      )
+      const result = await lastValueFrom(
+        execution$.pipe(
+          filter(event =>
+            event.id === workflow.id &&
+            (event.type === 'node_success' || event.type === 'node_fail')
+          ),
+          take(1)
+        ),
+        { defaultValue: null }
+      )
+
+      if (!result) {
+        logger.warn('工作流执行未收到 workflow 终态事件', {
+          scheduleId: schedule.id,
+          scheduleName: schedule.name,
+          workflowId: workflow.id,
+          recentEvents,
+          lastEventType: recentEvents[recentEvents.length - 1]?.type,
+          lastEventId: recentEvents[recentEvents.length - 1]?.id
+        })
+        throw new Error(`Workflow ${workflow.id} completed without terminal event`)
+      }
 
       if (result) {
         const state = result.type === 'node_success' ? 'success'
