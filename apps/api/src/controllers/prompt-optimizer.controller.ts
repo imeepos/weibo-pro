@@ -9,14 +9,14 @@ import {
   NotFoundException,
 } from '@sker/core';
 import { Observable } from 'rxjs';
-import { logger, root } from '@sker/core';
-import { EntityManager } from 'typeorm';
-import { fromJson, executeAst, NodeEvent, WorkflowGraphAst } from '@sker/workflow';
+import { logger } from '@sker/core';
+import { executeAst, NodeEvent } from '@sker/workflow';
 import { PromptOptimizerAst } from '@sker/workflow-ast';
 import {
   PromptOptimizationTaskEntity,
   PromptVersionEntity,
   OptimizationTaskStatus,
+  useEntityManager,
 } from '@sker/entities';
 import * as sdk from '@sker/sdk';
 import type {
@@ -32,13 +32,13 @@ import type {
  * - 提供提示词自动优化的 HTTP 接口
  * - 管理优化任务的全生命周期
  * - 支持 SSE 实时推送优化进度
+ *
+ * ⚠️ 重要：使用 useEntityManager 确保连接正确释放
  */
 @Controller(sdk.PromptOptimizerController)
 export class PromptOptimizerController implements sdk.PromptOptimizerController {
-  private readonly em: EntityManager;
 
   constructor() {
-    this.em = root.get(EntityManager);
   }
 
   /**
@@ -57,38 +57,40 @@ export class PromptOptimizerController implements sdk.PromptOptimizerController 
       throw new BadRequestException('目标输出不能为空');
     }
 
-    const task = new PromptOptimizationTaskEntity();
-    task.name = body.name;
-    task.targetOutput = body.targetOutput;
-    task.targetContext = body.targetContext;
-    task.evaluationCriteria = body.evaluationCriteria || {
-      '语义相似度': 0.4,
-      '格式匹配': 0.3,
-      '关键词覆盖': 0.3,
-    };
-    task.optimizationConfig = {
-      maxIterations: body.optimizationConfig?.maxIterations || 5,
-      targetScore: body.optimizationConfig?.targetScore || 85,
-      model: body.optimizationConfig?.model || 'deepseek-ai/DeepSeek-V3.2',
-      temperature: body.optimizationConfig?.temperature || 0.7,
-      testRuns: body.optimizationConfig?.testRuns || 3,
-    };
+    return await useEntityManager(async (manager) => {
+      const task = new PromptOptimizationTaskEntity();
+      task.name = body.name;
+      task.targetOutput = body.targetOutput;
+      task.targetContext = body.targetContext;
+      task.evaluationCriteria = body.evaluationCriteria || {
+        '语义相似度': 0.4,
+        '格式匹配': 0.3,
+        '关键词覆盖': 0.3,
+      };
+      task.optimizationConfig = {
+        maxIterations: body.optimizationConfig?.maxIterations || 5,
+        targetScore: body.optimizationConfig?.targetScore || 85,
+        model: body.optimizationConfig?.model || 'deepseek-ai/DeepSeek-V3.2',
+        temperature: body.optimizationConfig?.temperature || 0.7,
+        testRuns: body.optimizationConfig?.testRuns || 3,
+      };
 
-    // 如果提供了初始提示词，创建第一个版本
-    if (body.initialPrompt) {
-      const savedTask = await this.em.save(PromptOptimizationTaskEntity, task);
+      // 如果提供了初始提示词，创建第一个版本
+      if (body.initialPrompt) {
+        const savedTask = await manager.save(PromptOptimizationTaskEntity, task);
 
-      const version = new PromptVersionEntity();
-      version.taskId = savedTask.id;
-      version.versionNumber = 0;
-      version.prompt = body.initialPrompt;
-      version.optimizationRationale = '用户提供的初始提示词';
-      await this.em.save(PromptVersionEntity, version);
+        const version = new PromptVersionEntity();
+        version.taskId = savedTask.id;
+        version.versionNumber = 0;
+        version.prompt = body.initialPrompt;
+        version.optimizationRationale = '用户提供的初始提示词';
+        await manager.save(PromptVersionEntity, version);
 
-      return savedTask;
-    }
+        return savedTask;
+      }
 
-    return await this.em.save(PromptOptimizationTaskEntity, task);
+      return await manager.save(PromptOptimizationTaskEntity, task);
+    });
   }
 
   /**
@@ -96,15 +98,17 @@ export class PromptOptimizerController implements sdk.PromptOptimizerController 
    */
   @Get('/tasks/:taskId')
   async getTask(@Param('taskId') taskId: string): Promise<PromptOptimizationTaskEntity> {
-    const task = await this.em.findOne(PromptOptimizationTaskEntity, {
-      where: { id: taskId },
+    return await useEntityManager(async (manager) => {
+      const task = await manager.findOne(PromptOptimizationTaskEntity, {
+        where: { id: taskId },
+      });
+
+      if (!task) {
+        throw new NotFoundException(`任务不存在: ${taskId}`);
+      }
+
+      return task;
     });
-
-    if (!task) {
-      throw new NotFoundException(`任务不存在: ${taskId}`);
-    }
-
-    return task;
   }
 
   /**
@@ -114,23 +118,25 @@ export class PromptOptimizerController implements sdk.PromptOptimizerController 
   async listTasks(
     @Query() query: { status?: OptimizationTaskStatus; page?: number; pageSize?: number }
   ): Promise<ListTasksResult> {
-    const { status, page = 1, pageSize = 20 } = query;
+    return await useEntityManager(async (manager) => {
+      const { status, page = 1, pageSize = 20 } = query;
 
-    const queryBuilder = this.em
-      .createQueryBuilder(PromptOptimizationTaskEntity, 'task')
-      .orderBy('task.createdAt', 'DESC');
+      const queryBuilder = manager
+        .createQueryBuilder(PromptOptimizationTaskEntity, 'task')
+        .orderBy('task.createdAt', 'DESC');
 
-    if (status) {
-      queryBuilder.where('task.status = :status', { status });
-    }
+      if (status) {
+        queryBuilder.where('task.status = :status', { status });
+      }
 
-    const total = await queryBuilder.getCount();
-    const tasks = await queryBuilder
-      .skip((page - 1) * pageSize)
-      .take(pageSize)
-      .getMany();
+      const total = await queryBuilder.getCount();
+      const tasks = await queryBuilder
+        .skip((page - 1) * pageSize)
+        .take(pageSize)
+        .getMany();
 
-    return { tasks, total };
+      return { tasks, total };
+    });
   }
 
   /**
@@ -144,56 +150,57 @@ export class PromptOptimizerController implements sdk.PromptOptimizerController 
   @Post({ path: '/tasks/:taskId/execute', sse: true })
   executeTask(@Param('taskId') taskId: string): Observable<NodeEvent> {
     return new Observable((observer) => {
-      this.em
-        .findOne(PromptOptimizationTaskEntity, { where: { id: taskId } })
-        .then(async (task) => {
-          if (!task) {
-            const error = new NotFoundException(`任务不存在: ${taskId}`);
-            observer.error(error);
-            return;
-          }
+      useEntityManager(async (manager) => {
+        const task = await manager.findOne(PromptOptimizationTaskEntity, { where: { id: taskId } });
 
-          // 更新任务状态
-          task.status = OptimizationTaskStatus.RUNNING;
-          task.startedAt = new Date();
-          await this.em.save(PromptOptimizationTaskEntity, task);
-
-          // 构建 PromptOptimizerAst 节点
-          const ast = new PromptOptimizerAst();
-          ast.targetOutput = task.targetOutput;
-          ast.targetContext = task.targetContext || '';
-          ast.maxIterations = task.optimizationConfig.maxIterations;
-          ast.targetScore = task.optimizationConfig.targetScore;
-          ast.testRuns = task.optimizationConfig.testRuns;
-          ast.generatorModel = task.optimizationConfig.model;
-          ast.testerModel = task.optimizationConfig.model;
-          ast.evaluatorModel = task.optimizationConfig.model;
-          ast.generatorTemperature = task.optimizationConfig.temperature;
-
-          // 转换评估标准为评估维度
-          const dimensions = Object.entries(task.evaluationCriteria).map(
-            ([name, weight]) => ({
-              name,
-              weight: weight as number,
-              description: `${name}评估`,
-            })
-          );
-          ast.evaluationDimensions = dimensions;
-
-          // 检查是否有初始提示词
-          const initialVersion = await this.em.findOne(PromptVersionEntity, {
-            where: { taskId: task.id, versionNumber: 0 },
-          });
-          if (initialVersion) {
-            ast.initialPrompt = initialVersion.prompt;
-          }
-          // 执行优化
-          return executeAst(ast, {}).subscribe(observer);
-        })
-        .catch((error) => {
-          logger.error('获取任务失败', { taskId, error: error.message });
+        if (!task) {
+          const error = new NotFoundException(`任务不存在: ${taskId}`);
           observer.error(error);
+          return;
+        }
+
+        // 更新任务状态
+        task.status = OptimizationTaskStatus.RUNNING;
+        task.startedAt = new Date();
+        await manager.save(PromptOptimizationTaskEntity, task);
+
+        // 构建 PromptOptimizerAst 节点
+        const ast = new PromptOptimizerAst();
+        ast.targetOutput = task.targetOutput;
+        ast.targetContext = task.targetContext || '';
+        ast.maxIterations = task.optimizationConfig.maxIterations;
+        ast.targetScore = task.optimizationConfig.targetScore;
+        ast.testRuns = task.optimizationConfig.testRuns;
+        ast.generatorModel = task.optimizationConfig.model;
+        ast.testerModel = task.optimizationConfig.model;
+        ast.evaluatorModel = task.optimizationConfig.model;
+        ast.generatorTemperature = task.optimizationConfig.temperature;
+
+        // 转换评估标准为评估维度
+        const dimensions = Object.entries(task.evaluationCriteria).map(
+          ([name, weight]) => ({
+            name,
+            weight: weight as number,
+            description: `${name}评估`,
+          })
+        );
+        ast.evaluationDimensions = dimensions;
+
+        // 检查是否有初始提示词
+        const initialVersion = await manager.findOne(PromptVersionEntity, {
+          where: { taskId: task.id, versionNumber: 0 },
         });
+        if (initialVersion) {
+          ast.initialPrompt = initialVersion.prompt;
+        }
+
+        // 执行优化
+        return executeAst(ast, {}).subscribe(observer);
+      })
+      .catch((error) => {
+        logger.error('获取任务失败', { taskId, error: error.message });
+        observer.error(error);
+      });
     });
   }
 
@@ -204,12 +211,12 @@ export class PromptOptimizerController implements sdk.PromptOptimizerController 
   async getVersions(
     @Param('taskId') taskId: string
   ): Promise<PromptVersionEntity[]> {
-    const versions = await this.em.find(PromptVersionEntity, {
-      where: { taskId },
-      order: { versionNumber: 'ASC' },
+    return await useEntityManager(async (manager) => {
+      return await manager.find(PromptVersionEntity, {
+        where: { taskId },
+        order: { versionNumber: 'ASC' },
+      });
     });
-
-    return versions;
   }
 
   /**
@@ -220,15 +227,17 @@ export class PromptOptimizerController implements sdk.PromptOptimizerController 
     @Param('taskId') taskId: string,
     @Param('versionId') versionId: string
   ): Promise<PromptVersionEntity> {
-    const version = await this.em.findOne(PromptVersionEntity, {
-      where: { id: versionId, taskId },
+    return await useEntityManager(async (manager) => {
+      const version = await manager.findOne(PromptVersionEntity, {
+        where: { id: versionId, taskId },
+      });
+
+      if (!version) {
+        throw new NotFoundException(`版本不存在: ${versionId}`);
+      }
+
+      return version;
     });
-
-    if (!version) {
-      throw new NotFoundException(`版本不存在: ${versionId}`);
-    }
-
-    return version;
   }
 
   /**
@@ -236,11 +245,11 @@ export class PromptOptimizerController implements sdk.PromptOptimizerController 
    */
   @Get('/tasks/:taskId/best')
   async getBestVersion(@Param('taskId') taskId: string): Promise<PromptVersionEntity | null> {
-    const version = await this.em.findOne(PromptVersionEntity, {
-      where: { taskId, isBest: true },
+    return await useEntityManager(async (manager) => {
+      return await manager.findOne(PromptVersionEntity, {
+        where: { taskId, isBest: true },
+      });
     });
-
-    return version;
   }
 
   /**

@@ -1,7 +1,6 @@
-import { Injectable, Inject } from '@sker/core'
-import { DataSource } from 'typeorm'
+import { Injectable, logger } from '@sker/core'
 import { EventHourlyStatisticsEntity } from '../event-hourly-statistics.entity'
-import { logger } from '@sker/core'
+import { useEntityManager } from '../utils'
 
 /**
  * 传播速度指数接口
@@ -35,7 +34,7 @@ export interface HourlyGrowthRateResult {
  */
 @Injectable()
 export class PropagationVelocityService {
-  constructor(@Inject(DataSource) private dataSource: DataSource) {}
+  constructor() {}
 
   /**
    * 计算病毒系数
@@ -185,29 +184,40 @@ export class PropagationVelocityService {
     endTime?: Date
   ): Promise<PropagationVelocity | null> {
     try {
-      const query = this.dataSource
-        .createQueryBuilder(EventHourlyStatisticsEntity, 'stats')
-        .where('stats.event_id = :eventId', { eventId })
-        .orderBy(
-          "make_timestamp(stats.year, stats.month, stats.day, stats.hour, 0, 0)",
-          'ASC'
-        )
+      return await useEntityManager(async (manager) => {
+        const repository = manager.getRepository(EventHourlyStatisticsEntity)
 
-      if (startTime) {
-        query.andWhere("make_timestamp(stats.year, stats.month, stats.day, stats.hour, 0, 0) >= :startTime", { startTime })
-      }
+        // 构建基础查询条件
+        const whereConditions: any = { eventId }
 
-      if (endTime) {
-        query.andWhere("make_timestamp(stats.year, stats.month, stats.day, stats.hour, 0, 0) < :endTime", { endTime })
-      }
+        // 获取统计数据
+        const statistics = await repository.find({
+          where: whereConditions,
+          order: {
+            year: 'ASC',
+            month: 'ASC',
+            day: 'ASC',
+            hour: 'ASC',
+          },
+        })
 
-      const statistics = await query.getMany()
+        // 手动过滤时间范围（因为需要使用 make_timestamp 函数）
+        let filteredStatistics = statistics
+        if (startTime || endTime) {
+          filteredStatistics = statistics.filter(stat => {
+            const statTime = new Date(stat.year, stat.month - 1, stat.day, stat.hour, 0, 0)
+            if (startTime && statTime < startTime) return false
+            if (endTime && statTime >= endTime) return false
+            return true
+          })
+        }
 
-      if (statistics.length === 0) {
-        return null
-      }
+        if (filteredStatistics.length === 0) {
+          return null
+        }
 
-      return this.calculatePropagationVelocity(eventId, statistics)
+        return this.calculatePropagationVelocity(eventId, filteredStatistics)
+      })
     } catch (error) {
       logger.error('Failed to calculate propagation velocity:', error)
       throw error
