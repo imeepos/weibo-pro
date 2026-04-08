@@ -1,5 +1,5 @@
-import { DataSource, Repository } from 'typeorm'
 import { Injectable } from '@sker/core'
+import { DataSource, EntityManager } from 'typeorm'
 import type { IStore } from '../store.interface'
 import type { ContentItem, CommentItem, CreatorItem } from '../types'
 
@@ -9,34 +9,79 @@ interface EntityMapping {
   creator: any
 }
 
+/**
+ * 数据库存储实现 - 使用useEntityManager自动管理连接
+ *
+ * 重要特性：
+ * - 自动释放数据库连接，防止连接泄露
+ * - 支持测试环境传入自定义DataSource
+ * - 每次操作都使用新的EntityManager
+ */
 @Injectable()
 export class DatabaseStore<T extends EntityMapping = any> implements IStore {
-  private contentRepo: Repository<T['content']>
-  private commentRepo: Repository<T['comment']>
-  private creatorRepo: Repository<T['creator']>
+  private testDataSource?: DataSource
 
   constructor(
-    private dataSource: DataSource,
-    private entities: T
+    private entities: T,
+    dataSource?: DataSource
   ) {
-    this.contentRepo = dataSource.getRepository(entities.content)
-    this.commentRepo = dataSource.getRepository(entities.comment)
-    this.creatorRepo = dataSource.getRepository(entities.creator)
+    // 如果传入了DataSource，保存为测试用DataSource
+    if (dataSource) {
+      this.testDataSource = dataSource
+    }
+  }
+
+  /**
+   * 使用EntityManager执行操作
+   *
+   * 生产环境：使用全局DataSource和useEntityManager
+   * 测试环境：使用传入的测试DataSource
+   */
+  private async withEntityManager<T>(
+    callback: (manager: EntityManager) => Promise<T>
+  ): Promise<T> {
+    if (this.testDataSource) {
+      // 测试环境：直接使用测试DataSource
+      const manager = this.testDataSource.createEntityManager()
+      try {
+        return await callback(manager)
+      } finally {
+        // 释放EntityManager持有的连接
+        const queryRunner = (manager as any).queryRunner
+        if (queryRunner && typeof queryRunner.release === 'function') {
+          await queryRunner.release()
+        }
+      }
+    } else {
+      // 生产环境：延迟导入useEntityManager避免循环依赖
+      // @ts-ignore - 动态导入在运行时可以解析
+      const { useEntityManager } = await import('@sker/entities')
+      return await useEntityManager(callback)
+    }
   }
 
   async storeContent(item: ContentItem): Promise<void> {
-    const entity = this.contentRepo.create(this.mapContent(item))
-    await this.contentRepo.save(entity)
+    await this.withEntityManager(async (manager) => {
+      const repo = manager.getRepository(this.entities.content)
+      const entity = repo.create(this.mapContent(item))
+      await repo.save(entity)
+    })
   }
 
   async storeComment(item: CommentItem): Promise<void> {
-    const entity = this.commentRepo.create(this.mapComment(item))
-    await this.commentRepo.save(entity)
+    await this.withEntityManager(async (manager) => {
+      const repo = manager.getRepository(this.entities.comment)
+      const entity = repo.create(this.mapComment(item))
+      await repo.save(entity)
+    })
   }
 
   async storeCreator(item: CreatorItem): Promise<void> {
-    const entity = this.creatorRepo.create(this.mapCreator(item))
-    await this.creatorRepo.save(entity)
+    await this.withEntityManager(async (manager) => {
+      const repo = manager.getRepository(this.entities.creator)
+      const entity = repo.create(this.mapCreator(item))
+      await repo.save(entity)
+    })
   }
 
   private mapContent(item: ContentItem): any {

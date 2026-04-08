@@ -24,6 +24,8 @@
     "build": "tsup",
     "lint": "eslint . --max-warnings 0",
     "check-types": "tsc --noEmit",
+    "test": "vitest",
+    "test:run": "vitest run",
     "migration:generate": "typeorm migration:generate -d ormconfig.ts",
     "migration:run": "typeorm migration:run -d ormconfig.ts",
     "migration:revert": "typeorm migration:revert -d ormconfig.ts"
@@ -39,6 +41,7 @@
   },
   "dependencies": {
     "@sker/core": "workspace:*",
+    "@sker/entities": "workspace:*",
     "@sker/mq": "workspace:*",
     "@sker/nlp": "workspace:*",
     "@sker/workflow": "workspace:*",
