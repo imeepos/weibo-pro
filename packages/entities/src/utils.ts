@@ -21,21 +21,41 @@ export const createDatabaseConfig = (): DataSourceOptions => {
       subscribers: [WorkflowScheduleSubscriber],
       synchronize: shouldSync,
       logging: false,
-      poolSize: 20, // 增加连接池大小，防止连接池耗尽
-      connectTimeoutMS: 10000,
+
+      // TypeORM 连接池配置
+      poolSize: 50, // 增加连接池大小以应对高并发
+
+      // PostgreSQL 驱动额外配置
       extra: {
         timezone: 'UTC',
-        max: 20, // 最大连接数增加到 20
-        min: 2, // 最小连接数增加到 2，保持热连接
-        idleTimeoutMillis: 30 * 1000, // 空闲超时增加到 30 秒，减少频繁创建连接
-        connectionTimeoutMillis: 10 * 1000,
-        statement_timeout: 10 * 60 * 1000,
-        query_timeout: 30 * 60 * 1000,
+
+        // 连接池大小（与 poolSize 保持一致）
+        max: 50,
+
+        // 最小连接数：保持一些热连接
+        min: 5,
+
+        // 连接超时设置
+        connectionTimeoutMillis: 10 * 1000, // 获取连接超时 10 秒
+
+        // 空闲连接管理（关键：减少 idle 连接累积）
+        idleTimeoutMillis: 10 * 1000, // 空闲 10 秒后回收（从 30 秒减少）
+
+        // 查询超时设置
+        statement_timeout: 5 * 60 * 1000, // 单语句超时 5 分钟
+        query_timeout: 10 * 60 * 1000, // 查询总超时 10 分钟
+
+        // TCP Keep-Alive（防止连接被防火墙关闭）
         keepAlive: true,
         keepAliveInitialDelayMillis: 10 * 1000,
-        // 连接回收，防止连接泄漏
-        evictionRunIntervalMillis: 5 * 1000,
-        softIdleTimeoutMillis: 5 * 1000,
+
+        // 连接回收策略（防止连接泄漏）
+        evictionRunIntervalMillis: 2 * 1000, // 每 2 秒检查一次空闲连接（从 5 秒减少）
+        softIdleTimeoutMillis: 5 * 1000, // 软空闲超时 5 秒（从 5 秒保持）
+        numTestsPerEvictionRun: 10, // 每次回收检查的连接数
+
+        // 连接验证（确保从池中获取的连接是有效的）
+        testOnBorrow: true, // 从池中获取时验证连接
       },
     };
   }
@@ -56,13 +76,18 @@ const isConnectionAlive = async (dataSource: DataSource): Promise<boolean> => {
   }
 };
 
-const reconnectDataSource = async (dataSource: DataSource): Promise<void> => {
+const reconnectDataSource = async (): Promise<DataSource> => {
   try {
-    if (dataSource.isInitialized) {
-      await dataSource.destroy();
+    // 销毁旧的连接
+    if (ds && ds.isInitialized) {
+      await ds.destroy();
+      console.log('[DataSource] old connection destroyed');
     }
-    await dataSource.initialize();
-    console.log('[DataSource] reconnected successfully');
+    // 创建新的 DataSource 实例
+    ds = createDataSource();
+    await ds.initialize();
+    console.log('[DataSource] reconnected successfully with new instance');
+    return ds;
   } catch (error) {
     console.error('[DataSource] reconnection failed:', error);
     throw error;
@@ -77,8 +102,7 @@ export const useDataSource = async () => {
         return ds;
       }
       console.warn('[DataSource] connection lost, attempting to reconnect...');
-      await reconnectDataSource(ds);
-      return ds;
+      return await reconnectDataSource();
     }
     try {
       await ds.initialize();
@@ -102,15 +126,29 @@ export const useDataSource = async () => {
   }
 };
 
+/**
+ * 使用 EntityManager 执行操作（自动释放连接）
+ *
+ * ⚠️ 重要：每次使用完毕后会自动释放 EntityManager，避免连接泄漏
+ * 如需事务，请使用 useTransaction
+ */
 export const useEntityManager = async <T>(h: (m: EntityManager) => Promise<T>): Promise<T> => {
   const maxRetries = 2;
   let lastError: Error | null = null;
+  let manager: EntityManager | null = null;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       const ds = await useDataSource();
-      const m = ds.createEntityManager();
-      return await h(m);
+      manager = ds.createEntityManager();
+
+      const result = await h(manager);
+
+      // 操作成功后立即释放 EntityManager
+      await releaseEntityManager(manager);
+      manager = null;
+
+      return result;
     } catch (error: any) {
       lastError = error;
       const isConnectionError =
@@ -123,7 +161,8 @@ export const useEntityManager = async <T>(h: (m: EntityManager) => Promise<T>): 
       const isPoolExhausted =
         error?.code === '53300' ||
         error?.message?.includes('too many clients') ||
-        error?.message?.includes('remaining connection slots are reserved');
+        error?.message?.includes('remaining connection slots are reserved') ||
+        error?.message?.includes('connection pool exhausted');
 
       if (isPoolExhausted) {
         console.error(`[EntityManager] connection pool exhausted, not retrying. Code: ${error?.code}`);
@@ -136,17 +175,65 @@ export const useEntityManager = async <T>(h: (m: EntityManager) => Promise<T>): 
         continue;
       }
       throw error;
+    } finally {
+      // 确保在任何情况下都释放 EntityManager
+      if (manager) {
+        try {
+          await releaseEntityManager(manager);
+        } catch (releaseError) {
+          console.error('[EntityManager] failed to release:', releaseError);
+        }
+      }
     }
   }
 
   throw lastError;
 };
 
-export const useTranslation = async <T>(h: (m: EntityManager) => Promise<T>) => {
-  return await useEntityManager(async m => {
-    return m.transaction(h)
-  })
+/**
+ * 释放 EntityManager 及其持有的连接
+ */
+async function releaseEntityManager(manager: EntityManager): Promise<void> {
+  // TypeORM 的 EntityManager 需要通过 QueryRunner 释放连接
+  // 如果有 queryRunner，先释放它
+  const queryRunner = (manager as any).queryRunner;
+  if (queryRunner && typeof queryRunner.release === 'function') {
+    await queryRunner.release();
+  }
 }
+
+/**
+ * 使用事务执行操作（自动释放连接）
+ *
+ * ⚠️ 重要：事务完成后会自动释放连接，避免连接泄漏
+ */
+export const useTransaction = async <T>(h: (m: EntityManager) => Promise<T>) => {
+  const ds = await useDataSource();
+  const queryRunner = ds.createQueryRunner();
+
+  try {
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    const manager = queryRunner.manager;
+    const result = await h(manager);
+
+    await queryRunner.commitTransaction();
+    return result;
+  } catch (error) {
+    await queryRunner.rollbackTransaction();
+    throw error;
+  } finally {
+    // 确保释放 QueryRunner
+    await queryRunner.release();
+  }
+}
+
+/**
+ * @deprecated 请使用 useTransaction 代替
+ * useTranslation 命名有误，保留用于向后兼容
+ */
+export const useTranslation = useTransaction;
 
 /**
  * 获取已初始化的 DataSource（同步）
@@ -158,6 +245,104 @@ const getInitializedDataSource = (): DataSource => {
   }
   return ds
 }
+
+/**
+ * 使用 QueryRunner 执行操作（最安全的模式）
+ *
+ * 提供最细粒度的连接控制，适合复杂操作
+ * 自动管理连接生命周期，避免连接泄漏
+ */
+export const useQueryRunner = async <T>(h: (qr: import('typeorm').QueryRunner) => Promise<T>): Promise<T> => {
+  const ds = await useDataSource();
+  const queryRunner = ds.createQueryRunner();
+
+  try {
+    await queryRunner.connect();
+    return await h(queryRunner);
+  } finally {
+    // 确保释放 QueryRunner
+    await queryRunner.release();
+  }
+}
+
+/**
+ * 清理空闲的数据库连接
+ *
+ * 该函数用于终止空闲时间超过指定阈值的PostgreSQL连接，
+ * 以防止连接池耗尽和连接泄露问题。
+ *
+ * @param idleThresholdMs - 空闲时间阈值（毫秒），默认30秒
+ * @param minConnections - 最小保留连接数，默认5个
+ * @returns 终止的连接数量
+ */
+export const cleanupIdleConnections = async (
+  idleThresholdMs: number = 30000,
+  minConnections: number = 5
+): Promise<number> => {
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    console.warn('[cleanupIdleConnections] DATABASE_URL not found');
+    return 0;
+  }
+
+  // 只支持PostgreSQL
+  if (!databaseUrl.startsWith('postgres')) {
+    console.warn('[cleanupIdleConnections] Only PostgreSQL is supported');
+    return 0;
+  }
+
+  try {
+    const ds = await useDataSource();
+
+    // 从DATABASE_URL提取数据库名
+    const dbNameMatch = databaseUrl.match(/\/([^/?]+)(\?|$)/);
+    const dbName = dbNameMatch ? dbNameMatch[1] : 'postgres';
+
+    // 查询空闲连接
+    const idleTimeThreshold = Math.floor(idleThresholdMs / 1000); // 转换为秒
+    const query = `
+      SELECT pid
+      FROM pg_stat_activity
+      WHERE datname = $1
+        AND state = 'idle'
+        AND state_change < NOW() - INTERVAL '${idleTimeThreshold} seconds'
+        AND pid != pg_backend_pid()
+      ORDER BY state_change ASC
+    `;
+
+    const idleConnections = await ds.query(query, [dbName]);
+
+    // 保留最小连接数
+    const connectionsToTerminate = idleConnections.slice(0, -minConnections || undefined);
+    const terminateCount = connectionsToTerminate.length;
+
+    if (terminateCount === 0) {
+      console.log('[cleanupIdleConnections] No idle connections to terminate');
+      return 0;
+    }
+
+    console.log(`[cleanupIdleConnections] Found ${idleConnections.length} idle connections, terminating ${terminateCount}`);
+
+    // 终止空闲连接
+    let terminatedCount = 0;
+    for (const conn of connectionsToTerminate) {
+      try {
+        await ds.query('SELECT pg_terminate_backend($1)', [conn.pid]);
+        terminatedCount++;
+        console.log(`[cleanupIdleConnections] Terminated connection ${conn.pid}`);
+      } catch (error: any) {
+        // 连接可能已经关闭，忽略错误
+        console.warn(`[cleanupIdleConnections] Failed to terminate connection ${conn.pid}:`, error.message);
+      }
+    }
+
+    console.log(`[cleanupIdleConnections] Successfully terminated ${terminatedCount}/${terminateCount} connections`);
+    return terminatedCount;
+  } catch (error: any) {
+    console.error('[cleanupIdleConnections] Error:', error);
+    return 0;
+  }
+};
 
 export const entitiesProviders: Provider[] = [
   {
@@ -177,12 +362,8 @@ export const entitiesProviders: Provider[] = [
       return getInitializedDataSource()
     },
     deps: []
-  },
-  {
-    provide: EntityManager,
-    useFactory: (ds: DataSource) => {
-      return ds.createEntityManager()
-    },
-    deps: [DataSource]
   }
+  // ❌ 移除 EntityManager 单例 Provider
+  // EntityManager 每次使用都应该创建新实例，用完后释放
+  // 请使用 useEntityManager、useTransaction 或 useQueryRunner 代替
 ]
