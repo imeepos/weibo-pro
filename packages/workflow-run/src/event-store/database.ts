@@ -1,83 +1,92 @@
-import { Injectable, Inject } from '@sker/core';
-import { EntityManager } from 'typeorm';
-import { WorkflowRunLogEntity, NodeEventType } from '@sker/entities';
+import { Injectable } from '@sker/core';
+import { WorkflowRunLogEntity, NodeEventType, useEntityManager } from '@sker/entities';
 import type { IEventStore, RunState } from '@sker/workflow';
 import type { NodeEvent } from '@sker/workflow';
 
 /**
  * 数据库事件存储（后端）
+ *
+ * ⚠️ 重要：不再注入 EntityManager，改用 useEntityManager 确保连接正确释放
  */
 @Injectable()
 export class DatabaseEventStore implements IEventStore {
-    constructor(@Inject(EntityManager) private db: EntityManager) {}
-
     async append(runId: string, event: NodeEvent): Promise<void> {
         const numericRunId = Number(runId);
         if (!Number.isFinite(numericRunId)) {
             console.warn(`[DatabaseEventStore] 跳过无效 runId: ${runId}`);
             return;
         }
-        await this.db.insert(WorkflowRunLogEntity, {
-            runId: numericRunId,
-            nodeId: event.id ?? '',
-            eventType: this.toEventType(event.type),
-            property: undefined,
-            data: event.type === 'node_emit' ? (event as { data?: Record<string, unknown> }).data : undefined,
+        await useEntityManager(async (db) => {
+            await db.insert(WorkflowRunLogEntity, {
+                runId: numericRunId,
+                nodeId: event.id ?? '',
+                eventType: this.toEventType(event.type),
+                property: undefined,
+                data: event.type === 'node_emit' ? (event as { data?: Record<string, unknown> }).data : undefined,
+            });
         });
     }
 
     async getEvents(runId: string): Promise<NodeEvent[]> {
-        const logs = await this.db.find(WorkflowRunLogEntity, {
-            where: { runId: Number(runId) },
-            order: { id: 'ASC' },
+        return await useEntityManager(async (db) => {
+            const logs = await db.find(WorkflowRunLogEntity, {
+                where: { runId: Number(runId) },
+                order: { id: 'ASC' },
+            });
+            return logs.map(log => this.toNodeEvent(log));
         });
-        return logs.map(log => this.toNodeEvent(log));
     }
 
     async getSuccessNodeIds(runId: string): Promise<Set<string>> {
-        const logs = await this.db.find(WorkflowRunLogEntity, {
-            where: { runId: Number(runId), eventType: NodeEventType.SUCCESS },
-            select: ['nodeId'],
+        return await useEntityManager(async (db) => {
+            const logs = await db.find(WorkflowRunLogEntity, {
+                where: { runId: Number(runId), eventType: NodeEventType.SUCCESS },
+                select: ['nodeId'],
+            });
+            return new Set(logs.map(l => l.nodeId));
         });
-        return new Set(logs.map(l => l.nodeId));
     }
 
     async getRunState(runId: string): Promise<RunState> {
-        const logs = await this.db.find(WorkflowRunLogEntity, {
-            where: { runId: Number(runId) },
-            order: { id: 'ASC' },
+        return await useEntityManager(async (db) => {
+            const logs = await db.find(WorkflowRunLogEntity, {
+                where: { runId: Number(runId) },
+                order: { id: 'ASC' },
+            });
+
+            const nodeLastEvent = new Map<string, WorkflowRunLogEntity>();
+            for (const log of logs) {
+                if (log.nodeId && log.eventType !== NodeEventType.EMIT) {
+                    nodeLastEvent.set(log.nodeId, log);
+                }
+            }
+
+            const successNodeIds = new Set<string>();
+            const failedNodeIds = new Set<string>();
+            const runningNodeIds = new Set<string>();
+
+            for (const [nodeId, log] of nodeLastEvent) {
+                switch (log.eventType) {
+                    case NodeEventType.SUCCESS:
+                        successNodeIds.add(nodeId);
+                        break;
+                    case NodeEventType.FAIL:
+                        failedNodeIds.add(nodeId);
+                        break;
+                    case NodeEventType.RUNNING:
+                        runningNodeIds.add(nodeId);
+                        break;
+                }
+            }
+
+            return { runId, successNodeIds, failedNodeIds, runningNodeIds };
         });
-
-        const nodeLastEvent = new Map<string, WorkflowRunLogEntity>();
-        for (const log of logs) {
-            if (log.nodeId && log.eventType !== NodeEventType.EMIT) {
-                nodeLastEvent.set(log.nodeId, log);
-            }
-        }
-
-        const successNodeIds = new Set<string>();
-        const failedNodeIds = new Set<string>();
-        const runningNodeIds = new Set<string>();
-
-        for (const [nodeId, log] of nodeLastEvent) {
-            switch (log.eventType) {
-                case NodeEventType.SUCCESS:
-                    successNodeIds.add(nodeId);
-                    break;
-                case NodeEventType.FAIL:
-                    failedNodeIds.add(nodeId);
-                    break;
-                case NodeEventType.RUNNING:
-                    runningNodeIds.add(nodeId);
-                    break;
-            }
-        }
-
-        return { runId, successNodeIds, failedNodeIds, runningNodeIds };
     }
 
     async clear(runId: string): Promise<void> {
-        await this.db.delete(WorkflowRunLogEntity, { runId: Number(runId) });
+        await useEntityManager(async (db) => {
+            await db.delete(WorkflowRunLogEntity, { runId: Number(runId) });
+        });
     }
 
     private toEventType(type: string): NodeEventType {

@@ -187,8 +187,8 @@ export class PropagationVelocityService {
       return await useEntityManager(async (manager) => {
         const repository = manager.getRepository(EventHourlyStatisticsEntity)
 
-        // 构建基础查询条件
-        const whereConditions: any = { eventId }
+        // 构建基础查询条件（使用 event_id，与实体定义保持一致）
+        const whereConditions: any = { event_id: eventId }
 
         // 获取统计数据
         const statistics = await repository.find({
