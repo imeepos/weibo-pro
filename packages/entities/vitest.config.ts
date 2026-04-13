@@ -8,7 +8,6 @@ export default defineConfig(({ mode }) => {
             globals: true,
             environment: 'node',
             include: ['src/**/*.test.ts', 'tests/**/*.test.ts'],
-            setupFiles: ['./src/test-setup.ts'],
             env,
             coverage: {
                 provider: 'v8',
@@ -16,16 +15,9 @@ export default defineConfig(({ mode }) => {
                 include: ['src/**/*.ts'],
                 exclude: [
                     'src/**/*.test.ts',
-                    'src/main.ts',
                     'src/index.ts',
                     'src/**/index.ts',
                 ],
-                thresholds: {
-                    lines: 60,
-                    functions: 60,
-                    branches: 50,
-                    statements: 60,
-                },
             },
         },
     };

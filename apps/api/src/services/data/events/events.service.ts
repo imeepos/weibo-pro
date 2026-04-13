@@ -27,7 +27,7 @@ import type {
 import { EventQueryService } from './event-query.service';
 import { EventAnalyticsService } from './event-analytics.service';
 import { EventTimelineBuilder } from './event-timeline.builder';
-import { DataSource, EventEntity } from '@sker/entities';
+import { useEntityManager, EventEntity } from '@sker/entities';
 import { KOLAnalysisService } from '../kol-analysis.service';
 import type { KOLAnalysisResult } from './types';
 
@@ -42,7 +42,6 @@ export class EventsService {
     private readonly analyticsService: EventAnalyticsService,
     @Inject(EventTimelineBuilder)
     private readonly timelineBuilder: EventTimelineBuilder,
-    @Inject(DataSource) private dataSource: DataSource,
     @Inject(KOLAnalysisService) private readonly kolAnalysisService: KOLAnalysisService
   ) { }
 
@@ -194,14 +193,18 @@ export class EventsService {
   }
 
   async updateEventKeywords(id: string, keywords: string[]): Promise<{ success: boolean }> {
-    const repo = this.dataSource.getRepository(EventEntity);
-    await repo.update({ id }, { keywords });
+    await useEntityManager(async (manager) => {
+      const repo = manager.getRepository(EventEntity);
+      await repo.update({ id }, { keywords });
+    });
     return { success: true };
   }
 
   async updateEventOccurredAt(id: string, occurredAt: string | null): Promise<{ success: boolean }> {
-    const repo = this.dataSource.getRepository(EventEntity);
-    await repo.update({ id }, { occurred_at: occurredAt ? new Date(occurredAt) : null });
+    await useEntityManager(async (manager) => {
+      const repo = manager.getRepository(EventEntity);
+      await repo.update({ id }, { occurred_at: occurredAt ? new Date(occurredAt) : null });
+    });
     return { success: true };
   }
 

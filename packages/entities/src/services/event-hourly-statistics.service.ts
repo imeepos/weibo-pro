@@ -1,7 +1,7 @@
-import { Injectable, Inject } from '@sker/core'
-import { DataSource, SelectQueryBuilder } from 'typeorm'
+import { Injectable } from '@sker/core'
+import { SelectQueryBuilder } from 'typeorm'
 import { EventHourlyStatisticsEntity } from '../event-hourly-statistics.entity'
-import { logger } from '@sker/core'
+import { useEntityManager } from '../utils'
 import type { SentimentScore } from '../types/sentiment'
 
 export interface StatisticsResult {
@@ -24,55 +24,69 @@ type Granularity = 'hourly' | 'daily' | 'weekly' | 'monthly'
 
 @Injectable()
 export class EventHourlyStatisticsService {
-  constructor(@Inject(DataSource) private dataSource: DataSource) {}
-
   async queryStatistics(
     eventId: string,
     granularity: Granularity,
     startTime: Date,
     endTime: Date
   ): Promise<StatisticsResult[]> {
-    const query = this.buildStatisticsQuery(eventId, granularity, startTime, endTime)
-    const rawResults = await query.getRawMany()
+    return await useEntityManager(async (manager) => {
+      const query = this.buildStatisticsQuery(
+        manager,
+        eventId,
+        granularity,
+        startTime,
+        endTime
+      )
+      const rawResults = await query.getRawMany()
 
-    return rawResults.map(this.mapRawToStatistics)
+      return rawResults.map(this.mapRawToStatistics)
+    })
   }
 
   async getLatestStatistics(eventId: string): Promise<StatisticsResult | null> {
-    const result = await this.dataSource
-      .createQueryBuilder(EventHourlyStatisticsEntity, 'stats')
-      .where('stats.event_id = :eventId', { eventId })
-      .orderBy(
-        "make_timestamp(stats.year, stats.month, stats.day, stats.hour, 0, 0)",
-        'DESC'
-      )
-      .limit(1)
-      .getRawOne()
+    return await useEntityManager(async (manager) => {
+      const result = await manager
+        .getRepository(EventHourlyStatisticsEntity)
+        .createQueryBuilder('stats')
+        .where('stats.event_id = :eventId', { eventId })
+        .orderBy(
+          "make_timestamp(stats.year, stats.month, stats.day, stats.hour, 0, 0)",
+          'DESC'
+        )
+        .limit(1)
+        .getRawOne()
 
-    return result ? this.mapRawToStatistics(result) : null
+      return result ? this.mapRawToStatistics(result) : null
+    })
   }
 
   async getAllEventStatistics(eventId: string): Promise<StatisticsResult[]> {
-    const results = await this.dataSource
-      .createQueryBuilder(EventHourlyStatisticsEntity, 'stats')
-      .where('stats.event_id = :eventId', { eventId })
-      .orderBy(
-        "make_timestamp(stats.year, stats.month, stats.day, stats.hour, 0, 0)",
-        'ASC'
-      )
-      .getRawMany()
+    return await useEntityManager(async (manager) => {
+      const results = await manager
+        .getRepository(EventHourlyStatisticsEntity)
+        .createQueryBuilder('stats')
+        .where('stats.event_id = :eventId', { eventId })
+        .orderBy(
+          "make_timestamp(stats.year, stats.month, stats.day, stats.hour, 0, 0)",
+          'ASC'
+        )
+        .getRawMany()
 
-    return results.map(this.mapRawToStatistics)
+      return results.map(this.mapRawToStatistics)
+    })
   }
 
   private buildStatisticsQuery(
+    manager: any,
     eventId: string,
     granularity: Granularity,
     startTime: Date,
     endTime: Date
   ): SelectQueryBuilder<EventHourlyStatisticsEntity> {
-    const qb = this.dataSource
-      .createQueryBuilder(EventHourlyStatisticsEntity, 'stats')
+    const qb = manager
+      .getRepository(EventHourlyStatisticsEntity)
+      .createQueryBuilder('stats')
 
     const timeExpression = `make_timestamp(stats.year, stats.month, stats.day, stats.hour, 0, 0)`
 

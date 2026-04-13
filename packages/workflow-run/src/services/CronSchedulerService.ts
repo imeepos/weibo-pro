@@ -1,6 +1,6 @@
 import { Injectable, Inject, logger } from '@sker/core'
 import { RedisClient } from '@sker/redis'
-import { useEntityManager, WorkflowScheduleEntity, ScheduleStatus, ScheduleType } from '@sker/entities'
+import { useEntityManager, WorkflowScheduleEntity, ScheduleStatus, ScheduleType, cleanupIdleConnections } from '@sker/entities'
 import { WorkflowExecutionService } from './WorkflowExecutionService'
 import { withRetryOnNetworkError } from '../utils/retry-on-network-error'
 import nodeSchedule from 'node-schedule'
@@ -316,7 +316,7 @@ export class CronSchedulerService {
   }
 
   /**
-   * 触发定期清理（浏览器实例 + GC）
+   * 触发定期清理（浏览器实例 + 数据库连接 + GC）
    */
   private async triggerCleanup(): Promise<void> {
     logger.info('🧹 触发定期清理')
@@ -328,6 +328,16 @@ export class CronSchedulerService {
       logger.info('✅ Playwright 浏览器实例已清理')
     } catch (error) {
       logger.error('清理 Playwright 失败', { error: (error as Error).message })
+    }
+
+    try {
+      // 清理空闲数据库连接（空闲超过 60 秒，保留最少 5 个）
+      const cleanedCount = await cleanupIdleConnections(60000, 5)
+      if (cleanedCount > 0) {
+        logger.info(`✅ 数据库空闲连接已清理`, { count: cleanedCount })
+      }
+    } catch (error) {
+      logger.error('清理数据库连接失败', { error: (error as Error).message })
     }
 
     // 触发 GC（如果可用）
