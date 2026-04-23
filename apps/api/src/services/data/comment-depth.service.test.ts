@@ -23,6 +23,7 @@ describe('CommentDepthService', () => {
     mockQueryBuilder = {
       select: vi.fn().mockReturnThis(),
       addSelect: vi.fn().mockReturnThis(),
+      innerJoin: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
       andWhere: vi.fn().mockReturnThis(),
       groupBy: vi.fn().mockReturnThis(),

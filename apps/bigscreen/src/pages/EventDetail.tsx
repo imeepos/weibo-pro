@@ -15,10 +15,21 @@ import {
   NetworkCentralityController,
   UserRelationController
 } from '@sker/sdk'
-import type { UserRelationNetwork } from '@sker/sdk'
+import type {
+  EventAnomaly,
+  MediaTypeAnalysis,
+  SpreadBreadthAnalysis,
+  UserRelationNetwork
+} from '@sker/sdk'
 import { root } from '@sker/core'
 import type { TabId, TabsDataManager } from '@/types/tab-loading';
 import { createInitialTabsState } from '@/types/tab-loading';
+import {
+  createAnalysisWidgetState,
+  resolveAnalysisWidgetState,
+  type AnalysisWidgetState,
+} from '@/types/analysis-widget';
+import { getMetricExplanation } from '@/constants/metric-explanations';
 import {
   ArrowLeft,
   MessageSquare,
@@ -104,6 +115,7 @@ import { useUserStratification } from '@/hooks/useUserStratification';
 import { useCommentDepth } from '@/hooks/useCommentDepth';
 import { usePostingTimeHeatmap } from '@/hooks/usePostingTimeHeatmap';
 import { useNetworkCentrality } from '@/hooks/useNetworkCentrality';
+import { AnalysisWidgetCard } from '@/components/ui';
 
 interface TimeSeriesDataPoint {
   timestamp: string;
@@ -150,6 +162,18 @@ interface EventDetailData {
   successFactors?: Array<{ title: string; description: string; }>;
 }
 
+type TrendWidgets = {
+  spreadBreadth: AnalysisWidgetState<SpreadBreadthAnalysis>;
+  mediaType: AnalysisWidgetState<MediaTypeAnalysis>;
+  anomalies: AnalysisWidgetState<EventAnomaly[]>;
+};
+
+type SentimentWidgets = {
+  transition: AnalysisWidgetState<{ eventId: string }>;
+  scatter: AnalysisWidgetState<Array<{ postId: string; sentimentScore: number; hotness: number; timestamp: string }>>;
+  intensity: AnalysisWidgetState<Array<{ intensity: number; count: number }>>;
+};
+
 const logger = createLogger('EventDetail');
 
 const EventDetail: React.FC = () => {
@@ -162,13 +186,7 @@ const EventDetail: React.FC = () => {
   const [geographicData, setGeographicData] = useState<GeographicDataPoint[]>([]);
   const [geographicStats, setGeographicStats] = useState<{ totalPosts?: number; totalUsers?: number; totalRegions?: number }>({});
   const [keywordData, setKeywordData] = useState<Array<{ keyword: string; weight: number; sentiment: 'positive' | 'negative' | 'neutral' }>>([]);
-  const [sentimentHotnessData, setSentimentHotnessData] = useState<Array<{ postId: string; sentimentScore: number; hotness: number; timestamp: string }>>([]);
-  const [sentimentIntensityData, setSentimentIntensityData] = useState<Array<{ intensity: number; count: number }>>([]);
   const [engagementTrendData, setEngagementTrendData] = useState<Array<{ timestamp: string; post_count: number; comment_count: number; repost_count: number; like_count: number; user_count: number; hotness: number; engagement_rate: number; }>>([]);
-  const [anomaliesData, setAnomaliesData] = useState<Array<{ timestamp: string; type: 'spike' | 'drop' | 'sentiment_shift'; metric: string; value: number; expected: number; confidence: number; }>>([]);
-  // P2 组件数据 state
-  const [spreadBreadthData, setSpreadBreadthData] = useState<any>(null);
-  const [mediaTypeData, setMediaTypeData] = useState<any>(null);
   const [communityData, setCommunityData] = useState<any>(null);
   // P3 组件数据 state
   const [propagationVelocityData, setPropagationVelocityData] = useState<any>(null);
@@ -188,6 +206,16 @@ const EventDetail: React.FC = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   // Tab 懒加载状态管理
   const [tabsState, setTabsState] = useState<TabsDataManager>(createInitialTabsState());
+  const [trendWidgets, setTrendWidgets] = useState<TrendWidgets>({
+    spreadBreadth: createAnalysisWidgetState(),
+    mediaType: createAnalysisWidgetState(),
+    anomalies: createAnalysisWidgetState(),
+  });
+  const [sentimentWidgets, setSentimentWidgets] = useState<SentimentWidgets>({
+    transition: createAnalysisWidgetState(),
+    scatter: createAnalysisWidgetState(),
+    intensity: createAnalysisWidgetState(),
+  });
 
   const fetchEventData = async (showRefresh = false) => {
     if (!eventId) {
@@ -297,6 +325,73 @@ const EventDetail: React.FC = () => {
     }
   };
 
+  const loadTrendWidgets = useCallback(async () => {
+    if (!eventId) return;
+
+    setTrendWidgets({
+      spreadBreadth: createAnalysisWidgetState({ status: 'loading' }),
+      mediaType: createAnalysisWidgetState({ status: 'loading' }),
+      anomalies: createAnalysisWidgetState({ status: 'loading' }),
+    });
+
+    const eventsController = root.get(EventsController);
+    const spreadBreadthController = root.get(SpreadBreadthController);
+    const mediaTypeController = root.get(MediaTypeController);
+
+    const settled = await Promise.allSettled([
+      spreadBreadthController.getAnalysis(eventId),
+      mediaTypeController.getDistribution(eventId),
+      eventsController.getAnomalies(eventId),
+    ]);
+
+    setTrendWidgets({
+      spreadBreadth: resolveAnalysisWidgetState(
+        settled[0] as PromiseSettledResult<SpreadBreadthAnalysis>,
+        (value) => value.totalReposts === 0 && !value.propagationPaths?.length,
+      ),
+      mediaType: resolveAnalysisWidgetState(
+        settled[1] as PromiseSettledResult<MediaTypeAnalysis>,
+        (value) => value.distribution.length === 0,
+      ),
+      anomalies: resolveAnalysisWidgetState(
+        settled[2] as PromiseSettledResult<EventAnomaly[]>,
+        (value) => value.length === 0,
+      ),
+    });
+  }, [eventId]);
+
+  const loadSentimentWidgets = useCallback(async () => {
+    if (!eventId) return;
+
+    setSentimentWidgets({
+      transition: createAnalysisWidgetState({ status: 'loading' }),
+      scatter: createAnalysisWidgetState({ status: 'loading' }),
+      intensity: createAnalysisWidgetState({ status: 'loading' }),
+    });
+
+    const eventsController = root.get(EventsController);
+    const settled = await Promise.allSettled([
+      Promise.resolve({ eventId }),
+      eventsController.getSentimentHotness(eventId),
+      eventsController.getSentimentIntensity(eventId),
+    ]);
+
+    setSentimentWidgets({
+      transition: resolveAnalysisWidgetState(
+        settled[0] as PromiseSettledResult<{ eventId: string }>,
+        () => false,
+      ),
+      scatter: resolveAnalysisWidgetState(
+        settled[1] as PromiseSettledResult<Array<{ postId: string; sentimentScore: number; hotness: number; timestamp: string }>>,
+        (value) => value.length === 0,
+      ),
+      intensity: resolveAnalysisWidgetState(
+        settled[2] as PromiseSettledResult<Array<{ intensity: number; count: number }>>,
+        (value) => value.length === 0,
+      ),
+    });
+  }, [eventId]);
+
   // 按 Tab 加载数据
   const loadDataForTab = useCallback(async (tabId: TabId) => {
     if (!eventId) return;
@@ -348,47 +443,11 @@ const EventDetail: React.FC = () => {
         break;
 
       case 'trend':
-        // 加载趋势分析数据
-        await Promise.all([
-          (async () => {
-            if (!spreadBreadthData) {
-              const controller = root.get(SpreadBreadthController);
-              const data = await controller.getAnalysis(eventId);
-              setSpreadBreadthData(data);
-            }
-          })(),
-          (async () => {
-            if (!mediaTypeData) {
-              const controller = root.get(MediaTypeController);
-              const data = await controller.getDistribution(eventId);
-              setMediaTypeData(data);
-            }
-          })(),
-          (async () => {
-            if (!anomaliesData.length) {
-              const data = await c.getAnomalies(eventId);
-              setAnomaliesData(data || []);
-            }
-          })(),
-        ]);
+        await loadTrendWidgets();
         break;
 
       case 'sentiment':
-        // 加载情感分析数据
-        await Promise.all([
-          (async () => {
-            if (!sentimentHotnessData.length) {
-              const data = await c.getSentimentHotness(eventId);
-              setSentimentHotnessData(data || []);
-            }
-          })(),
-          (async () => {
-            if (!sentimentIntensityData.length) {
-              const data = await c.getSentimentIntensity(eventId);
-              setSentimentIntensityData(data || []);
-            }
-          })(),
-        ]);
+        await loadSentimentWidgets();
         break;
 
       case 'advanced':
@@ -458,7 +517,7 @@ const EventDetail: React.FC = () => {
         ]);
         break;
     }
-  }, [eventId, userRelationNetwork, communityData, geographicData, spreadBreadthData, mediaTypeData, anomaliesData, sentimentHotnessData, sentimentIntensityData, propagationVelocityData, influencePredictionData, communityEvolutionData, userStratificationData, postingTimeData, commentDepthData]);
+  }, [eventId, userRelationNetwork, communityData, geographicData, loadTrendWidgets, loadSentimentWidgets, propagationVelocityData, influencePredictionData, communityEvolutionData, userStratificationData, postingTimeData, commentDepthData]);
 
   // Tab 懒加载核心逻辑
   const loadTabData = useCallback(async (tabId: TabId, force = false) => {
@@ -582,12 +641,17 @@ const EventDetail: React.FC = () => {
       // 清除所有数据状态
       setUserRelationNetwork(null);
       setGeographicData([]);
-      setSpreadBreadthData(null);
-      setMediaTypeData(null);
       setCommunityData(null);
-      setAnomaliesData([]);
-      setSentimentHotnessData([]);
-      setSentimentIntensityData([]);
+      setTrendWidgets({
+        spreadBreadth: createAnalysisWidgetState(),
+        mediaType: createAnalysisWidgetState(),
+        anomalies: createAnalysisWidgetState(),
+      });
+      setSentimentWidgets({
+        transition: createAnalysisWidgetState(),
+        scatter: createAnalysisWidgetState(),
+        intensity: createAnalysisWidgetState(),
+      });
       setPropagationVelocityData(null);
       setInfluencePredictionData(null);
       setCommunityEvolutionData(null);
@@ -1168,18 +1232,16 @@ const EventDetail: React.FC = () => {
             </div>
           ) : (
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-              {/* P2: 传播广度分析 */}
-              <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
-                <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
-                  <Activity className="w-4 h-4" />
-                  传播广度分析
-                </h3>
-                <SpreadBreadthChart
-                  data={spreadBreadthData}
-                  isLoading={!spreadBreadthData}
-                  height={500}
-                />
-              </div>
+              <AnalysisWidgetCard
+                title="传播广度分析"
+                icon={<Activity className="h-4 w-4" />}
+                explanation={getMetricExplanation('spread-breadth')}
+                state={trendWidgets.spreadBreadth}
+                emptyText="暂无传播广度数据"
+                onRetry={loadTrendWidgets}
+              >
+                <SpreadBreadthChart data={trendWidgets.spreadBreadth.data} height={500} />
+              </AnalysisWidgetCard>
               <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
                 <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
                   <Activity className="w-4 h-4" />
@@ -1188,25 +1250,25 @@ const EventDetail: React.FC = () => {
                 <MultiMetricTrendChart data={engagementTrendData} height={380} />
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* P2: 媒体类型分布 */}
-                <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
-                  <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
-                    <BarChart3 className="w-4 h-4" />
-                    媒体类型分布
-                  </h3>
-                  <MediaTypeDistribution
-                    data={mediaTypeData}
-                    isLoading={!mediaTypeData}
-                    height={350}
-                  />
-                </div>
-                <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
-                  <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
-                    <AlertTriangle className="w-4 h-4" />
-                    异常检测时间线
-                  </h3>
-                  <AnomalyTimelineChart data={anomaliesData} height={350} />
-                </div>
+                <AnalysisWidgetCard
+                  title="媒体类型分布"
+                  icon={<BarChart3 className="h-4 w-4" />}
+                  state={trendWidgets.mediaType}
+                  emptyText="暂无媒体类型数据"
+                  onRetry={loadTrendWidgets}
+                >
+                  <MediaTypeDistribution data={trendWidgets.mediaType.data} height={350} />
+                </AnalysisWidgetCard>
+                <AnalysisWidgetCard
+                  title="异常检测时间线"
+                  icon={<AlertTriangle className="h-4 w-4" />}
+                  explanation={getMetricExplanation('anomaly-timeline')}
+                  state={trendWidgets.anomalies}
+                  emptyText="暂无异常检测数据"
+                  onRetry={loadTrendWidgets}
+                >
+                  <AnomalyTimelineChart data={trendWidgets.anomalies.data ?? []} height={350} />
+                </AnalysisWidgetCard>
               </div>
             </motion.div>
           )}
@@ -1231,14 +1293,16 @@ const EventDetail: React.FC = () => {
             </div>
           ) : (
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-              {/* P2: 情感转变追踪 */}
-              <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
-                <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
-                  <Heart className="w-4 h-4" />
-                  情感转变追踪
-                </h3>
+              <AnalysisWidgetCard
+                title="情感转变追踪"
+                icon={<Heart className="h-4 w-4" />}
+                explanation={getMetricExplanation('sentiment-transition')}
+                state={sentimentWidgets.transition}
+                emptyText="暂无情感转变数据"
+                onRetry={loadSentimentWidgets}
+              >
                 {eventId && <SentimentTransition eventId={eventId} />}
-              </div>
+              </AnalysisWidgetCard>
               <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
                 <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
                   <Heart className="w-4 h-4" />
@@ -1247,20 +1311,24 @@ const EventDetail: React.FC = () => {
                 <TimeSeriesChart data={timeSeriesData} title="" height={320} />
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
-                  <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
-                    <Target className="w-4 h-4" />
-                    情感-热度关联
-                  </h3>
-                  <SentimentHotnessScatterChart title="" height={350} data={sentimentHotnessData} />
-                </div>
-                <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
-                  <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
-                    <Zap className="w-4 h-4" />
-                    情感强度谱
-                  </h3>
-                  <SentimentIntensityChart title="" height={350} data={sentimentIntensityData} />
-                </div>
+                <AnalysisWidgetCard
+                  title="情感-热度关联"
+                  icon={<Target className="h-4 w-4" />}
+                  state={sentimentWidgets.scatter}
+                  emptyText="暂无情感热度数据"
+                  onRetry={loadSentimentWidgets}
+                >
+                  <SentimentHotnessScatterChart title="" height={350} data={sentimentWidgets.scatter.data ?? []} />
+                </AnalysisWidgetCard>
+                <AnalysisWidgetCard
+                  title="情感强度谱"
+                  icon={<Zap className="h-4 w-4" />}
+                  state={sentimentWidgets.intensity}
+                  emptyText="暂无情感强度数据"
+                  onRetry={loadSentimentWidgets}
+                >
+                  <SentimentIntensityChart title="" height={350} data={sentimentWidgets.intensity.data ?? []} />
+                </AnalysisWidgetCard>
               </div>
             </motion.div>
           )}

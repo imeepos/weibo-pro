@@ -38,41 +38,27 @@ describe('真实文件导入测试 - 豆包使用手册', () => {
       }))
     })
 
-    // 验证基本信息
-    expect(importedWorkflow.id).toBe('6b66e62a-302e-4ca0-b6fa-c2701b03d5ac')
-    expect(importedWorkflow.name).toBe('豆包使用手册')
+    expect(importedWorkflow.id).toBe(data.workflow.id)
+    expect(importedWorkflow.name).toBe(data.workflow.name)
+    expect(importedWorkflow.nodes.length).toBe(data.workflow.nodes.length)
+    expect(importedWorkflow.edges.length).toBe(data.workflow.edges.length)
 
-    // 验证节点数量
-    expect(importedWorkflow.nodes.length).toBe(6)
+    const expectedEdges = data.workflow.edges.map((edge: any) => ({
+      id: edge.id,
+      from: edge.from,
+      to: edge.to,
+      fromProperty: edge.fromProperty,
+      toProperty: edge.toProperty,
+    }))
 
-    // 验证连线数量 - 这是关键的断言!
-    expect(importedWorkflow.edges.length).toBe(4)
+    const importedEdges = importedWorkflow.edges.map((edge: any) => ({
+      id: edge.id,
+      from: edge.from,
+      to: edge.to,
+      fromProperty: edge.fromProperty,
+      toProperty: edge.toProperty,
+    }))
 
-    // 验证每条连线的详细信息
-    const edges = importedWorkflow.edges as any[]
-
-    // 验证第一条连线: TextAreaAst -> PromptRoleSkillAst
-    expect(edges[0].from).toBe('8dd7c959-8c65-4e2a-b687-54f45bcf2754')
-    expect(edges[0].to).toBe('cdd666c9-9616-450c-b4c1-ab628bc1de02')
-    expect(edges[0].fromProperty).toBe('output')
-    expect(edges[0].toProperty).toBe('requirements')
-
-    // 验证第二条连线: PromptRoleSkillAst -> TextAreaAst (selectedSkillsList)
-    expect(edges[1].from).toBe('cdd666c9-9616-450c-b4c1-ab628bc1de02')
-    expect(edges[1].to).toBe('10aec209-52d9-408b-85b4-2ee29ac8a732')
-    expect(edges[1].fromProperty).toBe('selectedSkillsList')
-    expect(edges[1].toProperty).toBe('input')
-
-    // 验证第三条连线: PromptRoleSkillAst -> TextAreaAst (skillContent)
-    expect(edges[2].from).toBe('cdd666c9-9616-450c-b4c1-ab628bc1de02')
-    expect(edges[2].to).toBe('042f5b45-58c1-4459-bca7-e8c948f5106a')
-    expect(edges[2].fromProperty).toBe('skillContent')
-    expect(edges[2].toProperty).toBe('input')
-
-    // 验证第四条连线: PromptRoleSkillAst -> TextAreaAst (skillContentText)
-    expect(edges[3].from).toBe('cdd666c9-9616-450c-b4c1-ab628bc1de02')
-    expect(edges[3].to).toBe('6d3b3d97-dd1b-4f75-9d1b-976b9f1981f6')
-    expect(edges[3].fromProperty).toBe('skillContentText')
-    expect(edges[3].toProperty).toBe('input')
+    expect(importedEdges).toEqual(expectedEdges)
   })
 })

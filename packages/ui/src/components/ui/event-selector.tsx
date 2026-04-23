@@ -63,7 +63,7 @@ function EventSelector({
     setIsLoading(true)
     try {
       const results = await onSearch(keyword, page)
-      setSearchResults(results)
+      setSearchResults(Array.isArray(results) ? results : [])
     } finally {
       setIsLoading(false)
     }

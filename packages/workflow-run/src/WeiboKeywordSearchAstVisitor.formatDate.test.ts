@@ -1,4 +1,7 @@
 import { describe, it, expect } from 'vitest';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc.js';
+import timezone from 'dayjs/plugin/timezone.js';
 
 /**
  * 提取 formatDate 函数进行测试
@@ -13,65 +16,28 @@ const logger = {
   debug: (...args: any[]) => console.debug(...args),
 };
 
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
 const formatDate = (date: Date | string | number | object | undefined | null) => {
-  // 处理空对象、null、undefined 的情况 - 静默使用当前时间
-  if (date == null || (typeof date === 'object' && Object.keys(date as object).length === 0)) {
-    const now = new Date();
-    return [
-      now.getFullYear(),
-      String(now.getMonth() + 1).padStart(2, '0'),
-      String(now.getDate()).padStart(2, '0'),
-      String(now.getHours()).padStart(2, '0'),
-    ].join('-');
+  if (date == null || (typeof date === 'object' && !(date instanceof Date) && Object.keys(date as object).length === 0)) {
+    return dayjs().tz('Asia/Shanghai').format('YYYY-MM-DD-HH');
   }
 
-  // 确保转换为有效的 Date 对象
-  const time = new Date(date as string | number | Date);
-
-  // 检查日期是否有效
-  if (isNaN(time.getTime())) {
-    logger.error(`[formatDate] 无效的日期值: ${typeof date === 'object' ? JSON.stringify(date) : date}`);
-    // 返回当前日期作为后备
-    const now = new Date();
-    return [
-      now.getFullYear(),
-      String(now.getMonth() + 1).padStart(2, '0'),
-      String(now.getDate()).padStart(2, '0'),
-      String(now.getHours()).padStart(2, '0'),
-    ].join('-');
-  }
-
-  // 解析输入时间字符串中的时区偏移（支持格式：+0800, -0500, +08:00 等）
-  let targetOffsetMinutes = 0;
   const dateStr = String(date);
-  const offsetMatch = dateStr.match(/([+-])(\d{2}):?(\d{2})$/);
-  if (offsetMatch) {
-    const sign = offsetMatch[1] === '+' ? 1 : -1;
-    const hours = parseInt(offsetMatch[2], 10);
-    const minutes = parseInt(offsetMatch[3], 10);
-    targetOffsetMinutes = sign * (hours * 60 + minutes);
+  const match = dateStr.match(/(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})\.\d{3}\s+([+-]\d{4})/);
+  if (match) {
+    const [, year, month, day, hour] = match;
+    return `${year}-${month}-${day}-${hour}`;
   }
 
-  // 获取目标时区的小时数
-  let targetHour: number;
-  if (targetOffsetMinutes !== 0) {
-    // 如果输入包含时区偏移，使用 UTC 时间 + 偏移量计算
-    const utcHour = time.getUTCHours();
-    const utcMinutes = time.getUTCMinutes();
-    const utcTotalMinutes = utcHour * 60 + utcMinutes;
-    const targetTotalMinutes = (utcTotalMinutes + targetOffsetMinutes) % (24 * 60);
-    targetHour = Math.floor(targetTotalMinutes / 60);
-  } else {
-    // 如果输入不包含时区偏移，使用本地时间
-    targetHour = time.getHours();
+  const time = dayjs(date as string | number | Date);
+  if (!time.isValid()) {
+    logger.error(`[formatDate] 无效的日期值: ${typeof date === 'object' ? JSON.stringify(date) : date}`);
+    return dayjs().tz('Asia/Shanghai').format('YYYY-MM-DD-HH');
   }
 
-  return [
-    time.getFullYear(),
-    String(time.getMonth() + 1).padStart(2, '0'),
-    String(time.getDate()).padStart(2, '0'),
-    String(targetHour).padStart(2, '0'),
-  ].join('-');
+  return time.tz('Asia/Shanghai').format('YYYY-MM-DD-HH');
 };
 
 describe('formatDate 时区处理', () => {

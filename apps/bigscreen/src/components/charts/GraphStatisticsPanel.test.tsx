@@ -76,7 +76,8 @@ describe('GraphStatisticsPanel', () => {
       fireEvent.click(screen.getByText('用户'));
 
       expect(screen.getByText('用户A')).toBeInTheDocument();
-      expect(screen.getByText('10 连线')).toBeInTheDocument();
+      expect(screen.getByText('10')).toBeInTheDocument();
+      expect(screen.getAllByText('连线').length).toBeGreaterThan(0);
     });
 
     it('点击区域 Tab 应该显示区域统计', () => {
@@ -135,9 +136,9 @@ describe('GraphStatisticsPanel', () => {
 
       fireEvent.click(screen.getByText('用户'));
 
-      expect(screen.getByText('#1')).toBeInTheDocument();
-      expect(screen.getByText('#2')).toBeInTheDocument();
-      expect(screen.getByText('#3')).toBeInTheDocument();
+      expect(screen.getByText(/^1$/)).toBeInTheDocument();
+      expect(screen.getByText(/^2$/)).toBeInTheDocument();
+      expect(screen.getByText(/^3$/)).toBeInTheDocument();
     });
 
     it('应该显示认证标识', () => {

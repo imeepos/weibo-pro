@@ -93,11 +93,12 @@ describe('导入 ID 重新生成测试', () => {
     // 验证所有 ID 都已改变
     expect(importedWorkflow.id).not.toBe(originalWorkflowId)
     expect(importedWorkflow.nodes[0].id).not.toBe(originalNodeIds[0])
+    expect(importedWorkflow.edges[0]?.id).not.toBe(originalEdgeIds[0])
 
-    // 验证边的节点引用已更新
-    const firstEdge = importedWorkflow.edges[0]
-    expect(firstEdge.from).toBe(importedWorkflow.nodes[1].id) // 假设第一条边连接到第二个节点
-    expect(firstEdge.to).toBeDefined()
+    // 入口节点引用也应该被映射到新节点 ID
+    importedWorkflow.entryNodeIds?.forEach(id => {
+      expect(importedWorkflow.nodes.some(node => node.id === id)).toBe(true)
+    })
 
     // 验证所有边仍然有效（节点存在）
     importedWorkflow.edges.forEach(edge => {

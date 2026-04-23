@@ -30,12 +30,31 @@ export const UserRelationOverview: React.FC<UserRelationOverviewProps> = ({
     limit: 5000,
   });
 
+  const summaryItems = useMemo(() => {
+    const stats = network?.statistics;
+    if (!stats) return [];
+
+    return [
+      {
+        label: '网络节点',
+        value: stats.totalUsers.toLocaleString('zh-CN'),
+      },
+      {
+        label: '关系边',
+        value: stats.totalRelations.toLocaleString('zh-CN'),
+      },
+      {
+        label: '社区数',
+        value: (stats.communities ?? 0).toLocaleString('zh-CN'),
+      },
+    ];
+  }, [network?.statistics]);
+
   const handleFullscreen = () => {
     navigate('/user-relation-topology');
   };
 
-  const handleNodeClick = useCallback((node: UserRelationNode) => {
-    console.log('大屏幕节点点击:', node);
+  const handleNodeClick = useCallback((_node: UserRelationNode) => {
   }, []);
 
   const handleNodeHover = useCallback((node: UserRelationNode | null) => {
@@ -98,7 +117,20 @@ export const UserRelationOverview: React.FC<UserRelationOverviewProps> = ({
   return (
     <div className={`h-full w-full overflow-hidden relative ${className}`}>
       {fullscreenButton}
-      <div className="w-full h-full">
+      {summaryItems.length > 0 ? (
+        <div className="absolute inset-x-3 top-3 z-10 grid grid-cols-3 gap-2">
+          {summaryItems.map((item) => (
+            <div
+              key={item.label}
+              className="rounded-md border border-border/60 bg-background/85 px-3 py-2 backdrop-blur-sm"
+            >
+              <div className="text-[11px] text-muted-foreground">{item.label}</div>
+              <div className="text-sm font-semibold text-foreground">{item.value}</div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+      <div className="w-full h-full pt-16">
         <UserRelationGraph3DOffscreen
           network={network}
           className="w-full h-full"

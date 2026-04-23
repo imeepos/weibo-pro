@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useWorkflowStore } from './workflow.store'
-import { fromJson, toJson, Compiler } from '@sker/workflow'
+import { fromJson, Compiler } from '@sker/workflow'
 import { WorkflowEventBus } from './test-utils'
 import { root } from '@sker/core'
 import { readFileSync } from 'fs'
@@ -52,24 +52,24 @@ describe('E2E - 真实文件导入流程', () => {
       flowEdgesCount: flowEdges.length
     })
 
-    // 模拟导入流程: initWorkflow (这是我修复的关键部分)
+    // 模拟导入流程: initWorkflow
     store.initWorkflow(importedWorkflow)
 
+    const latestStore = useWorkflowStore.getState()
+
     console.log('[E2E测试] initWorkflow 后的 store 状态:', {
-      hasWorkflowAst: !!store.workflowAst,
-      nodeCount: store.nodes.length,
-      edgeCount: store.edges.length,
-      workflowAstEdgeCount: store.workflowAst?.edges?.length
+      hasWorkflowAst: !!latestStore.workflowAst,
+      nodeCount: latestStore.nodes.length,
+      edgeCount: latestStore.edges.length,
+      workflowAstEdgeCount: latestStore.workflowAst?.edges?.length
     })
 
     // 验证结果
-    expect(store.workflowAst).toBeDefined()
-    expect(store.workflowAst?.id).toBe('6b66e62a-302e-4ca0-b6fa-c2701b03d5ac')
-    expect(store.workflowAst?.name).toBe('豆包使用手册')
-
-    // 关键断言: 节点和连线都应该被正确导入
-    expect(store.nodes.length).toBe(6)
-    expect(store.edges.length).toBe(4) // 这是关键!
-    expect(store.workflowAst?.edges.length).toBe(4)
+    expect(latestStore.workflowAst).toBeDefined()
+    expect(latestStore.workflowAst?.id).toBe(data.workflow.id)
+    expect(latestStore.workflowAst?.name).toBe(data.workflow.name)
+    expect(latestStore.nodes.length).toBe(flowNodes.length)
+    expect(latestStore.edges.length).toBe(flowEdges.length)
+    expect(latestStore.workflowAst?.edges.length).toBe(importedWorkflow.edges.length)
   })
 })

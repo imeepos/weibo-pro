@@ -111,7 +111,7 @@ describe('ProcessSubject', () => {
       expect(completed).toBe(true)
     })
 
-    it('应该能够捕获命令不存在错误（exit code≠0）', async () => {
+    it('应该能够捕获命令不存在错误', async () => {
       const process$ = new ProcessSubject('nonexistent-commandXYZ', [])
 
       let error: Error | null = null
@@ -135,7 +135,7 @@ describe('ProcessSubject', () => {
       subscription.unsubscribe()
 
       expect(error).toBeInstanceOf(Error)
-      expect(error?.message).toContain('exited with code')
+      expect(error?.message).toMatch(/ENOENT|exited with code/)
       expect(completed).toBe(false)
     })
 

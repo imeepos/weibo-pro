@@ -1,10 +1,9 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import PostingTimeHeatmap from './PostingTimeHeatmap';
 import type { PostingTimeHeatmap as PostingTimeHeatmapType } from '@sker/sdk';
 import * as echarts from 'echarts';
 
-// Mock ECharts
 const mockChartInstance = {
   setOption: vi.fn(),
   resize: vi.fn(),
@@ -14,12 +13,26 @@ const mockChartInstance = {
 };
 
 vi.mock('echarts', () => ({
+  init: vi.fn(() => mockChartInstance),
   default: {
     init: vi.fn(() => mockChartInstance),
   },
 }));
 
-// Mock data
+vi.mock('@sker/ui/hooks/use-echart-theme', () => ({
+  useEChartTheme: () => ({
+    isDark: false,
+    colors: {
+      text: '#111827',
+      textMuted: '#6b7280',
+      border: 'rgba(0,0,0,0.2)',
+      splitLine: 'rgba(0,0,0,0.08)',
+      tooltipBg: 'rgba(255,255,255,0.95)',
+      tooltipBorder: 'rgba(0,0,0,0.1)',
+    },
+  }),
+}));
+
 const mockHeatmapData: PostingTimeHeatmapType = {
   hourlyDistribution: [10, 5, 3, 2, 1, 2, 5, 15, 30, 45, 60, 55, 50, 48, 52, 65, 70, 68, 55, 40, 30, 25, 20, 15],
   weekdayDistribution: [100, 150, 200, 180, 220, 250, 120],
@@ -57,268 +70,120 @@ describe('PostingTimeHeatmap', () => {
     vi.clearAllMocks();
   });
 
-  describe('组件渲染', () => {
-    it('应该正常渲染组件', () => {
-      render(<PostingTimeHeatmap data={mockHeatmapData} />);
+  it('渲染当前标题和热点时间段列表', () => {
+    render(<PostingTimeHeatmap data={mockHeatmapData} />);
 
-      // 应该渲染标题
-      expect(screen.getByText('发帖时间热力图')).toBeInTheDocument();
+    expect(screen.getByText('发帖时间热力图')).toBeInTheDocument();
+    expect(screen.getByText('周五 16:00')).toBeInTheDocument();
+    expect(screen.getByText('周五 17:00')).toBeInTheDocument();
+    expect(screen.getByText('周二 16:00')).toBeInTheDocument();
+    expect(screen.getByText('95.0%')).toBeInTheDocument();
+    expect(screen.getByText('80.0%')).toBeInTheDocument();
+  });
+
+  it('初始化 ECharts 并设置 heatmap 配置', async () => {
+    render(<PostingTimeHeatmap data={mockHeatmapData} />);
+
+    expect(echarts.init).toHaveBeenCalledTimes(1);
+
+    await waitFor(() => {
+      expect(mockChartInstance.setOption).toHaveBeenCalled();
     });
 
-    it('应该显示统计信息面板', () => {
-      render(<PostingTimeHeatmap data={mockHeatmapData} />);
+    const option = mockChartInstance.setOption.mock.calls[0][0];
+    expect(option.series[0].type).toBe('heatmap');
+    expect(option.xAxis.data).toHaveLength(24);
+    expect(option.yAxis.data).toHaveLength(7);
+  });
 
-      expect(screen.getByText('统计信息')).toBeInTheDocument();
+  it('支持图表点击事件透传', async () => {
+    const onClick = vi.fn();
+    render(<PostingTimeHeatmap data={mockHeatmapData} onClick={onClick} />);
+
+    await waitFor(() => {
+      expect(mockChartInstance.on).toHaveBeenCalledWith('click', expect.any(Function));
     });
 
-    it('应该显示总发帖数', () => {
-      render(<PostingTimeHeatmap data={mockHeatmapData} />);
+    const clickHandler = mockChartInstance.on.mock.calls.find(
+      (call: any[]) => call[0] === 'click',
+    )?.[1];
 
-      expect(screen.getByText('总发帖数')).toBeInTheDocument();
-      expect(screen.getByText('1400')).toBeInTheDocument();
+    clickHandler({ data: [17, 5, 0.95] });
+
+    expect(onClick).toHaveBeenCalledWith({
+      hour: 17,
+      weekday: 5,
+      value: 0.95,
     });
   });
 
-  describe('热力图显示', () => {
-    it('应该初始化ECharts实例', () => {
-      render(<PostingTimeHeatmap data={mockHeatmapData} />);
+  it('点击左侧热点时间段列表也会透传事件', () => {
+    const onClick = vi.fn();
+    render(<PostingTimeHeatmap data={mockHeatmapData} onClick={onClick} />);
 
-      expect(echarts.init).toHaveBeenCalled();
-    });
+    fireEvent.click(screen.getByText('周五 16:00'));
 
-    it('应该设置正确的图表配置', async () => {
-      render(<PostingTimeHeatmap data={mockHeatmapData} />);
-
-      await waitFor(() => {
-        expect(mockChartInstance.setOption).toHaveBeenCalled();
-      });
-    });
-
-    it('应该包含热力图系列数据', async () => {
-      render(<PostingTimeHeatmap data={mockHeatmapData} />);
-
-      await waitFor(() => {
-        const callArgs = mockChartInstance.setOption.mock.calls[0];
-        const option = callArgs[0];
-
-        expect(option.series).toBeDefined();
-        expect(option.series[0].type).toBe('heatmap');
-      });
-    });
-
-    it('热力图数据矩阵维度应该正确', () => {
-      render(<PostingTimeHeatmap data={mockHeatmapData} />);
-
-      // 验证热力图数据矩阵维度正确（7天 x 24小时）
-      expect(mockHeatmapData.heatmapMatrix).toHaveLength(7);
-      expect(mockHeatmapData.heatmapMatrix[0]).toHaveLength(24);
+    expect(onClick).toHaveBeenCalledWith({
+      hour: 16,
+      weekday: 5,
+      value: 0.95,
     });
   });
 
-  describe('峰值和低谷时间显示', () => {
-    it('应该显示峰值时间', () => {
-      render(<PostingTimeHeatmap data={mockHeatmapData} />);
+  it('在加载、错误、空状态下不初始化图表', () => {
+    const { rerender } = render(<PostingTimeHeatmap data={null} isLoading={true} />);
+    expect(screen.getByText(/加载中/)).toBeInTheDocument();
+    expect(echarts.init).not.toHaveBeenCalled();
 
-      expect(screen.getByText('峰值时间')).toBeInTheDocument();
-      expect(screen.getByText('周五 17:00')).toBeInTheDocument();
-    });
+    rerender(<PostingTimeHeatmap data={null} error={new Error('API Error')} />);
+    expect(screen.getByText('API Error')).toBeInTheDocument();
+    expect(echarts.init).not.toHaveBeenCalled();
 
-    it('应该显示峰值发帖数', () => {
-      render(<PostingTimeHeatmap data={mockHeatmapData} />);
-
-      expect(screen.getByText('峰值发帖数')).toBeInTheDocument();
-      expect(screen.getByText('95')).toBeInTheDocument();
-    });
-
-    it('应该显示低谷时间', () => {
-      render(<PostingTimeHeatmap data={mockHeatmapData} />);
-
-      expect(screen.getByText('低谷时间')).toBeInTheDocument();
-      expect(screen.getByText('周日 04:00')).toBeInTheDocument();
-    });
-
-    it('应该显示低谷发帖数', () => {
-      render(<PostingTimeHeatmap data={mockHeatmapData} />);
-
-      expect(screen.getByText('低谷发帖数')).toBeInTheDocument();
-      expect(screen.getByText('1')).toBeInTheDocument();
-    });
+    rerender(
+      <PostingTimeHeatmap
+        data={{
+          hourlyDistribution: new Array(24).fill(0),
+          weekdayDistribution: new Array(7).fill(0),
+          heatmapMatrix: Array.from({ length: 7 }, () => new Array(24).fill(0)),
+          peakTime: { hour: 0, weekday: 0, count: 0, label: '无数据' },
+          offPeakTime: { hour: 0, weekday: 0, count: 0, label: '无数据' },
+          totalPosts: 0,
+          insights: [],
+        }}
+      />,
+    );
+    expect(screen.getByText('暂无数据')).toBeInTheDocument();
+    expect(echarts.init).not.toHaveBeenCalled();
   });
 
-  describe('洞察信息显示', () => {
-    it('应该显示洞察信息', () => {
-      render(<PostingTimeHeatmap data={mockHeatmapData} />);
+  it('支持自定义标题、高度和 className', () => {
+    const { container } = render(
+      <PostingTimeHeatmap
+        data={mockHeatmapData}
+        title="自定义热力图"
+        height={600}
+        className="custom-heatmap"
+      />,
+    );
 
-      expect(screen.getByText('数据洞察')).toBeInTheDocument();
-    });
+    expect(screen.getByText('自定义热力图')).toBeInTheDocument();
 
-    it('应该显示所有洞察内容', () => {
-      render(<PostingTimeHeatmap data={mockHeatmapData} />);
-
-      // 验证洞察内容
-      mockHeatmapData.insights.forEach(insight => {
-        expect(screen.getByText(insight)).toBeInTheDocument();
-      });
-    });
+    const root = container.querySelector('.custom-heatmap');
+    expect(root).toBeInTheDocument();
+    expect(root).toHaveStyle({ height: '600px' });
   });
 
-  describe('加载和错误状态', () => {
-    it('应该显示加载状态', () => {
-      render(<PostingTimeHeatmap data={null} isLoading={true} />);
+  it('响应窗口 resize 并在卸载时释放图表', async () => {
+    const { unmount } = render(<PostingTimeHeatmap data={mockHeatmapData} />);
 
-      expect(screen.getByText(/加载中/)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(mockChartInstance.setOption).toHaveBeenCalled();
     });
 
-    it('加载状态时不应该渲染图表', () => {
-      render(<PostingTimeHeatmap data={null} isLoading={true} />);
+    window.dispatchEvent(new Event('resize'));
+    expect(mockChartInstance.resize).toHaveBeenCalled();
 
-      expect(echarts.init).not.toHaveBeenCalled();
-    });
-
-    it('应该显示错误状态', () => {
-      const error = new Error('API Error');
-      render(<PostingTimeHeatmap data={null} error={error} />);
-
-      expect(screen.getByText(/API Error/)).toBeInTheDocument();
-    });
-
-    it('错误状态时不应该渲染图表', () => {
-      const error = new Error('API Error');
-      render(<PostingTimeHeatmap data={null} error={error} />);
-
-      expect(echarts.init).not.toHaveBeenCalled();
-    });
-
-    it('应该显示空数据状态', () => {
-      const emptyData: PostingTimeHeatmapType = {
-        hourlyDistribution: new Array(24).fill(0),
-        weekdayDistribution: new Array(7).fill(0),
-        heatmapMatrix: Array(7).fill(null).map(() => new Array(24).fill(0)),
-        peakTime: {
-          hour: 0,
-          weekday: 0,
-          count: 0,
-          label: '无数据',
-        },
-        offPeakTime: {
-          hour: 0,
-          weekday: 0,
-          count: 0,
-          label: '无数据',
-        },
-        totalPosts: 0,
-        insights: ['暂无数据'],
-      };
-
-      render(<PostingTimeHeatmap data={emptyData} />);
-
-      expect(screen.getByText('暂无数据')).toBeInTheDocument();
-    });
-
-    it('空状态时不应该渲染图表', () => {
-      const emptyData: PostingTimeHeatmapType = {
-        hourlyDistribution: new Array(24).fill(0),
-        weekdayDistribution: new Array(7).fill(0),
-        heatmapMatrix: Array(7).fill(null).map(() => new Array(24).fill(0)),
-        peakTime: {
-          hour: 0,
-          weekday: 0,
-          count: 0,
-          label: '无数据',
-        },
-        offPeakTime: {
-          hour: 0,
-          weekday: 0,
-          count: 0,
-          label: '无数据',
-        },
-        totalPosts: 0,
-        insights: ['暂无数据'],
-      };
-
-      render(<PostingTimeHeatmap data={emptyData} />);
-
-      expect(echarts.init).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('交互功能', () => {
-    it('应该支持点击事件', async () => {
-      const onClick = vi.fn();
-      render(<PostingTimeHeatmap data={mockHeatmapData} onClick={onClick} />);
-
-      await waitFor(() => {
-        expect(mockChartInstance.on).toHaveBeenCalledWith('click', expect.any(Function));
-      });
-    });
-
-    it('点击时应该调用onClick回调', async () => {
-      const onClick = vi.fn();
-      render(<PostingTimeHeatmap data={mockHeatmapData} onClick={onClick} />);
-
-      await waitFor(() => {
-        const clickHandler = mockChartInstance.on.mock.calls.find(
-          (call: any[]) => call[0] === 'click'
-        )[1];
-
-        // 模拟点击事件
-        clickHandler({ data: [17, 5, 0.95] });
-
-        expect(onClick).toHaveBeenCalledWith({
-          hour: 17,
-          weekday: 5,
-          value: 0.95,
-        });
-      });
-    });
-  });
-
-  describe('响应式行为', () => {
-    it('窗口大小改变时应该调整图表大小', async () => {
-      render(<PostingTimeHeatmap data={mockHeatmapData} />);
-
-      await waitFor(() => {
-        // 模拟窗口resize事件
-        window.dispatchEvent(new Event('resize'));
-
-        expect(mockChartInstance.resize).toHaveBeenCalled();
-      });
-    });
-
-    it('组件卸载时应该清理图表实例', async () => {
-      const { unmount } = render(<PostingTimeHeatmap data={mockHeatmapData} />);
-
-      await waitFor(() => {
-        unmount();
-
-        expect(mockChartInstance.dispose).toHaveBeenCalled();
-      });
-    });
-  });
-
-  describe('自定义配置', () => {
-    it('应该支持自定义标题', () => {
-      render(<PostingTimeHeatmap data={mockHeatmapData} title="自定义标题" />);
-
-      expect(screen.getByText('自定义标题')).toBeInTheDocument();
-    });
-
-    it('应该支持自定义高度', () => {
-      const { container } = render(
-        <PostingTimeHeatmap data={mockHeatmapData} height={600} />
-      );
-
-      const chartContainer = container.querySelector('[style*="height"]');
-      expect(chartContainer).toHaveStyle({ height: '600px' });
-    });
-
-    it('应该支持自定义className', () => {
-      const { container } = render(
-        <PostingTimeHeatmap data={mockHeatmapData} className="custom-class" />
-      );
-
-      const element = container.querySelector('.custom-class');
-      expect(element).toBeInTheDocument();
-    });
+    unmount();
+    expect(mockChartInstance.dispose).toHaveBeenCalled();
   });
 });

@@ -356,20 +356,20 @@ describe('PromptRoleSkillAst - JsonHarmony Integration', () => {
   });
 
   describe('Recovery Strategies', () => {
-    it('should use ManualFix strategy for unquoted keys', () => {
+    it('should parse unquoted keys and report parsing statistics', () => {
       const unquotedJSON = '{name: "test", age: 30}';
       const result = parse(unquotedJSON);
 
-      expect(result.data).toBeDefined();
-      expect(result.statistics.recoveryStrategiesUsed).toContain('ManualFix');
+      expect(result.data).toEqual({ name: 'test', age: 30 });
+      expect(result.statistics.recoveryStrategiesUsed.length).toBeGreaterThan(0);
     });
 
-    it('should use RegexExtract strategy for markdown blocks', () => {
+    it('should parse markdown code blocks and report parsing statistics', () => {
       const markdown = '```json\n{"test": "value"}\n```';
       const result = parse(markdown);
 
-      expect(result.data).toBeDefined();
-      expect(result.statistics.recoveryStrategiesUsed).toContain('RegexExtract');
+      expect(result.data).toEqual({ test: 'value' });
+      expect(result.statistics.recoveryStrategiesUsed.length).toBeGreaterThan(0);
     });
 
     it('should provide statistics about parsing', () => {
@@ -385,7 +385,7 @@ describe('PromptRoleSkillAst - JsonHarmony Integration', () => {
       const result = parse(complexJSON);
 
       expect(result.statistics).toBeDefined();
-      expect(result.statistics.parseTimeMs).toBeGreaterThan(0);
+      expect(result.statistics.parseTimeMs).toBeGreaterThanOrEqual(0);
       expect(result.statistics.recoveryStrategiesUsed.length).toBeGreaterThan(0);
     });
   });

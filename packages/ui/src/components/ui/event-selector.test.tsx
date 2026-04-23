@@ -25,7 +25,7 @@ describe('EventSelector 远程搜索', () => {
     },
   ]
 
-  const mockOnSearch = vi.fn()
+  const mockOnSearch = vi.fn().mockResolvedValue(mockEvents)
   const mockOnChange = vi.fn()
 
   beforeEach(() => {
@@ -33,7 +33,7 @@ describe('EventSelector 远程搜索', () => {
   })
 
   describe('远程搜索模式', () => {
-    it('应该提供 onSearch 回调用于远程搜索', async () => {
+    it('应该以第一页参数调用 onSearch', async () => {
       const user = userEvent.setup()
       render(
         <EventSelector
@@ -46,10 +46,12 @@ describe('EventSelector 远程搜索', () => {
       const searchInput = screen.getByPlaceholderText('搜索事件...')
       await user.type(searchInput, '产品')
 
-      expect(mockOnSearch).toHaveBeenCalledWith('产品')
+      await waitFor(() => {
+        expect(mockOnSearch).toHaveBeenLastCalledWith('产品', 1)
+      })
     })
 
-    it('输入搜索关键词时应调用 onSearch', async () => {
+    it('输入搜索关键词时应使用最终关键词调用 onSearch', async () => {
       const user = userEvent.setup()
       render(
         <EventSelector
@@ -61,7 +63,9 @@ describe('EventSelector 远程搜索', () => {
       const searchInput = screen.getByPlaceholderText('搜索事件...')
       await user.type(searchInput, '品牌')
 
-      expect(mockOnSearch).toHaveBeenCalledWith('品牌')
+      await waitFor(() => {
+        expect(mockOnSearch).toHaveBeenLastCalledWith('品牌', 1)
+      })
     })
 
     it('应该使用 onSearch 返回的事件列表渲染结果', async () => {
@@ -112,6 +116,25 @@ describe('EventSelector 远程搜索', () => {
       await waitFor(() => {
         expect(screen.getByText('某品牌产品发布会')).toBeInTheDocument()
         expect(screen.getByText('娱乐圈热门事件')).toBeInTheDocument()
+      })
+    })
+
+    it('远程搜索返回空值时应显示空状态而不是抛错', async () => {
+      const user = userEvent.setup()
+      const mockSearchFn = vi.fn().mockResolvedValue(undefined as unknown as EventItem[])
+
+      render(
+        <EventSelector
+          events={mockEvents}
+          onSearch={mockSearchFn}
+        />
+      )
+
+      const searchInput = screen.getByPlaceholderText('搜索事件...')
+      await user.type(searchInput, '空结果')
+
+      await waitFor(() => {
+        expect(screen.getByText('无匹配事件')).toBeInTheDocument()
       })
     })
   })
@@ -165,17 +188,29 @@ describe('EventSelector 远程搜索', () => {
 
     it('本地搜索不区分大小写', async () => {
       const user = userEvent.setup()
+      const englishEvents: EventItem[] = [
+        {
+          id: '3',
+          title: 'Brand Launch Event',
+          description: 'New Product Release',
+          category: { name: 'Technology' },
+          hotness: 600,
+          occurred_at: '2025-01-13',
+          created_at: '2025-01-13',
+        },
+      ]
+
       render(
         <EventSelector
-          events={mockEvents}
+          events={englishEvents}
         />
       )
 
       const searchInput = screen.getByPlaceholderText('搜索事件...')
-      await user.type(searchInput, 'CHAN PIN')
+      await user.type(searchInput, 'brand')
 
       await waitFor(() => {
-        expect(screen.getByText('某品牌产品发布会')).toBeInTheDocument()
+        expect(screen.getByText('Brand Launch Event')).toBeInTheDocument()
       })
     })
   })
