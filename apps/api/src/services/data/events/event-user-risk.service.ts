@@ -76,7 +76,7 @@ export class EventUserRiskService {
         const userId = String(row.post?.user_id);
         const current = grouped.get(userId) || {
           userId,
-          screenName: row.post?.screen_name || '未知用户',
+          screenName: row.post?.user?.screen_name || '未知用户',
           followers: Number(row.post?.user?.followers_count || 0),
           verified: Boolean(row.post?.user?.verified),
           location: row.post?.region_name || row.post?.user?.location || '未知',

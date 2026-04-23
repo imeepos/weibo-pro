@@ -14,9 +14,11 @@ describe('EventInstitutionService', () => {
   it('aggregates institution accounts by influence and interaction', async () => {
     const query = {
       select: vi.fn().mockReturnThis(),
+      leftJoin: vi.fn().mockReturnThis(),
       addSelect: vi.fn().mockReturnThis(),
       innerJoin: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
+      andWhere: vi.fn().mockReturnThis(),
       groupBy: vi.fn().mockReturnThis(),
       addGroupBy: vi.fn().mockReturnThis(),
       orderBy: vi.fn().mockReturnThis(),

@@ -30,7 +30,7 @@ describe('EventSentimentDetailService', () => {
           },
           post: {
             user_id: 'user-1',
-            screen_name: '用户A',
+            user: { screen_name: '用户A' },
           },
         },
         {
@@ -44,7 +44,7 @@ describe('EventSentimentDetailService', () => {
           },
           post: {
             user_id: 'user-1',
-            screen_name: '用户A',
+            user: { screen_name: '用户A' },
           },
         },
         {
@@ -58,7 +58,7 @@ describe('EventSentimentDetailService', () => {
           },
           post: {
             user_id: 'user-2',
-            screen_name: '用户B',
+            user: { screen_name: '用户B' },
           },
         },
       ]),

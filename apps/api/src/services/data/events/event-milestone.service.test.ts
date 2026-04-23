@@ -46,6 +46,7 @@ describe('EventMilestoneService', () => {
     };
 
     const postsQuery = {
+      leftJoinAndSelect: vi.fn().mockReturnThis(),
       select: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
       andWhere: vi.fn().mockReturnThis(),
@@ -54,11 +55,13 @@ describe('EventMilestoneService', () => {
       getMany: vi.fn().mockResolvedValue([
         {
           id: 'post-1',
-          screen_name: '官媒账号',
           text_raw: '事件在 9 点出现热度峰值',
           comments_count: 30,
           reposts_count: 50,
           attitudes_count: 40,
+          user: {
+            screen_name: '官媒账号',
+          },
         },
       ]),
     };

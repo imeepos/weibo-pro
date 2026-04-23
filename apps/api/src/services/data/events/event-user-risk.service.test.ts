@@ -23,7 +23,6 @@ describe('EventUserRiskService', () => {
           post: {
             id: 'post-1',
             user_id: 'user-1',
-            screen_name: '用户A',
             region_name: '北京',
             created_at: '2026-04-23T01:00:00.000Z',
             text_raw: '统一口径转发，请立即扩散',
@@ -31,7 +30,7 @@ describe('EventUserRiskService', () => {
             reposts_count: 0,
             comments_count: 0,
             attitudes_count: 0,
-            user: { followers_count: 24, verified: false },
+            user: { screen_name: '用户A', followers_count: 24, verified: false },
           },
         },
         {
@@ -39,7 +38,6 @@ describe('EventUserRiskService', () => {
           post: {
             id: 'post-2',
             user_id: 'user-1',
-            screen_name: '用户A',
             region_name: '北京',
             created_at: '2026-04-23T01:10:00.000Z',
             text_raw: '统一口径转发，请立即扩散',
@@ -47,7 +45,7 @@ describe('EventUserRiskService', () => {
             reposts_count: 0,
             comments_count: 0,
             attitudes_count: 0,
-            user: { followers_count: 24, verified: false },
+            user: { screen_name: '用户A', followers_count: 24, verified: false },
           },
         },
         {
@@ -55,7 +53,6 @@ describe('EventUserRiskService', () => {
           post: {
             id: 'post-3',
             user_id: 'user-1',
-            screen_name: '用户A',
             region_name: '北京',
             created_at: '2026-04-23T01:20:00.000Z',
             text_raw: '统一口径转发，请立即扩散',
@@ -63,7 +60,7 @@ describe('EventUserRiskService', () => {
             reposts_count: 0,
             comments_count: 0,
             attitudes_count: 0,
-            user: { followers_count: 24, verified: false },
+            user: { screen_name: '用户A', followers_count: 24, verified: false },
           },
         },
         {
@@ -71,7 +68,6 @@ describe('EventUserRiskService', () => {
           post: {
             id: 'post-4',
             user_id: 'user-2',
-            screen_name: '普通用户',
             region_name: '上海',
             created_at: '2026-04-23T09:00:00.000Z',
             text_raw: '正常讨论内容',
@@ -79,7 +75,7 @@ describe('EventUserRiskService', () => {
             reposts_count: 3,
             comments_count: 2,
             attitudes_count: 10,
-            user: { followers_count: 1200, verified: true },
+            user: { screen_name: '普通用户', followers_count: 1200, verified: true },
           },
         },
       ]),

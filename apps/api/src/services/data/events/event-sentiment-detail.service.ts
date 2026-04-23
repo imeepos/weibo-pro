@@ -13,7 +13,9 @@ import type {
 type NlpRow = PostNLPResultEntity & {
   post?: {
     user_id?: string | number | null;
-    screen_name?: string | null;
+    user?: {
+      screen_name?: string | null;
+    } | null;
   } | null;
 };
 
@@ -63,7 +65,7 @@ export class EventSentimentDetailService {
       const key = String(userId);
       const current = userMap.get(key) || {
         userId: key,
-        screenName: row.post?.screen_name || '未知用户',
+        screenName: row.post?.user?.screen_name || '未知用户',
         postCount: 0,
         positive: 0,
         negative: 0,
@@ -129,6 +131,7 @@ export class EventSentimentDetailService {
         .getRepository(PostNLPResultEntity)
         .createQueryBuilder('nlp')
         .leftJoinAndSelect('nlp.post', 'post')
+        .leftJoinAndSelect('post.user', 'user')
         .where('nlp.event_id = :eventId', { eventId })
         .andWhere('post.id IS NOT NULL')
         .orderBy('nlp.created_at', 'DESC')

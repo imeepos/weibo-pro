@@ -29,11 +29,13 @@ describe('EventOpinionService', () => {
           keywords: [{ keyword: '追责', weight: 0.8, sentiment: 'negative' }],
           post: {
             id: 'post-1',
-            screen_name: '用户A',
             text_raw: '应该追责相关责任方',
             comments_count: 30,
             reposts_count: 20,
             attitudes_count: 15,
+            user: {
+              screen_name: '用户A',
+            },
           },
         },
         {
@@ -42,11 +44,13 @@ describe('EventOpinionService', () => {
           keywords: [{ keyword: '透明', weight: 0.7, sentiment: 'negative' }],
           post: {
             id: 'post-2',
-            screen_name: '用户B',
             text_raw: '事件需要公开透明地回应',
             comments_count: 10,
             reposts_count: 6,
             attitudes_count: 8,
+            user: {
+              screen_name: '用户B',
+            },
           },
         },
       ]),

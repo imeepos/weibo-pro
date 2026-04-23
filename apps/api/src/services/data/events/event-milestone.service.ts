@@ -52,16 +52,19 @@ export class EventMilestoneService {
           const posts = await manager
             .getRepository(WeiboPostEntity)
             .createQueryBuilder('post')
+            .leftJoinAndSelect('post.user', 'user')
             .select([
               'post.id',
-              'post.screen_name',
               'post.text_raw',
               'post.comments_count',
               'post.reposts_count',
               'post.attitudes_count',
+              'user.id',
+              'user.screen_name',
             ])
             .where('post.event_id = :eventId', { eventId })
             .andWhere('post.created_at >= :start', { start: timestamp })
+            .andWhere('post.deleted_at IS NULL')
             .orderBy(
               '(post.comments_count + post.reposts_count + post.attitudes_count)',
               'DESC',
@@ -85,7 +88,7 @@ export class EventMilestoneService {
             },
             representativePosts: posts.map((post: any) => ({
               postId: post.id,
-              author: post.screen_name || '未知作者',
+              author: post.user?.screen_name || '未知作者',
               excerpt: String(post.text_raw || '').slice(0, 120),
               engagement:
                 Number(post.comments_count || 0) +

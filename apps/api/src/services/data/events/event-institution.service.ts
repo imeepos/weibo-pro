@@ -1,5 +1,5 @@
 import { Injectable } from '@sker/core';
-import { WeiboPostEntity, useEntityManager } from '@sker/entities';
+import { PostNLPResultEntity, WeiboPostEntity, useEntityManager } from '@sker/entities';
 import type { EventInstitutionAccount } from './types';
 
 function classifyInstitutionType(
@@ -18,19 +18,28 @@ export class EventInstitutionService {
       const rows = await manager
         .getRepository(WeiboPostEntity)
         .createQueryBuilder('post')
+        .leftJoin('post.user', 'user')
+        .leftJoin(PostNLPResultEntity, 'nlp', 'nlp.post_id = post.id')
         .select('post.user_id', 'userId')
-        .addSelect('MAX(post.screen_name)', 'screenName')
-        .addSelect('MAX(post.avatar_large)', 'avatar')
-        .addSelect('MAX(post.verified_type)', 'verifiedType')
+        .addSelect('MAX(user.screen_name)', 'screenName')
+        .addSelect('MAX(user.avatar_large)', 'avatar')
+        .addSelect('MAX(user.verified_type)', 'verifiedType')
         .addSelect('COUNT(*)', 'postCount')
         .addSelect(
           'SUM(COALESCE(post.comments_count, 0) + COALESCE(post.reposts_count, 0) + COALESCE(post.attitudes_count, 0))',
           'interactionCount',
         )
-        .addSelect('MAX(COALESCE(post.followers_count, 0))', 'influenceScore')
-        .addSelect('AVG(COALESCE(post.positive, 0))', 'sentimentPositive')
-        .addSelect('AVG(COALESCE(post.negative, 0))', 'sentimentNegative')
+        .addSelect('MAX(COALESCE(user.followers_count, 0))', 'influenceScore')
+        .addSelect(
+          'AVG(COALESCE((nlp.sentiment->>\'positive_prob\')::numeric, 0))',
+          'sentimentPositive',
+        )
+        .addSelect(
+          'AVG(COALESCE((nlp.sentiment->>\'negative_prob\')::numeric, 0))',
+          'sentimentNegative',
+        )
         .where('post.event_id = :eventId', { eventId })
+        .andWhere('post.deleted_at IS NULL')
         .groupBy('post.user_id')
         .orderBy('interactionCount', 'DESC')
         .limit(20)

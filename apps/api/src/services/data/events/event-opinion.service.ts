@@ -12,6 +12,7 @@ export class EventOpinionService {
         .getRepository(PostNLPResultEntity)
         .createQueryBuilder('nlp')
         .leftJoinAndSelect('nlp.post', 'post')
+        .leftJoinAndSelect('post.user', 'user')
         .where('nlp.event_id = :eventId', { eventId })
         .andWhere('post.text_raw IS NOT NULL')
         .orderBy(
@@ -46,7 +47,7 @@ export class EventOpinionService {
           keywords: this.collectKeywords(items),
           representativePosts: items.slice(0, 3).map((item) => ({
             postId: item.post?.id ?? item.post_id,
-            author: item.post?.screen_name || '未知作者',
+            author: item.post?.user?.screen_name || '未知作者',
             excerpt: String(item.post?.text_raw || '').slice(0, 120),
             sentiment: item.sentiment?.overall || 'neutral',
             engagement:
