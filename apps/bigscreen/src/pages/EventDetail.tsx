@@ -17,6 +17,10 @@ import {
 } from '@sker/sdk'
 import type {
   EventAnomaly,
+  EventEmotionMapItem,
+  EventOpinionCluster,
+  EventSentimentTrendDetailedPoint,
+  EventUserEmotionInsight,
   MediaTypeAnalysis,
   SpreadBreadthAnalysis,
   UserRelationNetwork
@@ -113,6 +117,10 @@ import NetworkCentralityGraph from '@/components/charts/NetworkCentralityGraph';
 import { UserRelationWordCloud } from '@/components/charts/UserRelationWordCloud';
 import { EventMilestoneWidget } from '@/components/charts/EventMilestoneWidget';
 import { InstitutionParticipationPanel } from '@/components/charts/InstitutionParticipationPanel';
+import { OpinionClusterPanel } from '@/components/charts/OpinionClusterPanel';
+import { EmotionMapPanel } from '@/components/charts/EmotionMapPanel';
+import { UserEmotionInsightPanel } from '@/components/charts/UserEmotionInsightPanel';
+import { DetailedSentimentTrendPanel } from '@/components/charts/DetailedSentimentTrendPanel';
 // P1 hooks 导入
 import { useUserStratification } from '@/hooks/useUserStratification';
 import { useCommentDepth } from '@/hooks/useCommentDepth';
@@ -175,6 +183,13 @@ type SentimentWidgets = {
   transition: AnalysisWidgetState<{ eventId: string }>;
   scatter: AnalysisWidgetState<Array<{ postId: string; sentimentScore: number; hotness: number; timestamp: string }>>;
   intensity: AnalysisWidgetState<Array<{ intensity: number; count: number }>>;
+  emotionMap: AnalysisWidgetState<EventEmotionMapItem[]>;
+  userInsights: AnalysisWidgetState<EventUserEmotionInsight[]>;
+  detailedTrend: AnalysisWidgetState<EventSentimentTrendDetailedPoint[]>;
+};
+
+type OpinionWidgets = {
+  clusters: AnalysisWidgetState<EventOpinionCluster[]>;
 };
 
 type OverviewWidgets = {
@@ -238,6 +253,13 @@ type EventsControllerPhase2 = {
   getEventInstitutions: (id: string) => Promise<EventInstitutionAccount[]>;
 };
 
+type EventsControllerPhase3 = {
+  getEventOpinionClusters: (id: string) => Promise<EventOpinionCluster[]>;
+  getEventEmotionMap: (id: string) => Promise<EventEmotionMapItem[]>;
+  getEventUserEmotionInsights: (id: string) => Promise<EventUserEmotionInsight[]>;
+  getEventSentimentTrendDetailed: (id: string) => Promise<EventSentimentTrendDetailedPoint[]>;
+};
+
 const logger = createLogger('EventDetail');
 
 const EventDetail: React.FC = () => {
@@ -280,10 +302,16 @@ const EventDetail: React.FC = () => {
     mediaType: createAnalysisWidgetState(),
     anomalies: createAnalysisWidgetState(),
   });
+  const [opinionWidgets, setOpinionWidgets] = useState<OpinionWidgets>({
+    clusters: createAnalysisWidgetState(),
+  });
   const [sentimentWidgets, setSentimentWidgets] = useState<SentimentWidgets>({
     transition: createAnalysisWidgetState(),
     scatter: createAnalysisWidgetState(),
     intensity: createAnalysisWidgetState(),
+    emotionMap: createAnalysisWidgetState(),
+    userInsights: createAnalysisWidgetState(),
+    detailedTrend: createAnalysisWidgetState(),
   });
 
   const fetchEventData = async (showRefresh = false) => {
@@ -463,6 +491,26 @@ const EventDetail: React.FC = () => {
     });
   }, [eventId]);
 
+  const loadOpinionWidgets = useCallback(async () => {
+    if (!eventId) return;
+
+    setOpinionWidgets({
+      clusters: createAnalysisWidgetState({ status: 'loading' }),
+    });
+
+    const controller = root.get(EventsController) as EventsController & EventsControllerPhase3;
+    const settled = await Promise.allSettled([
+      controller.getEventOpinionClusters(eventId),
+    ]);
+
+    setOpinionWidgets({
+      clusters: resolveAnalysisWidgetState(
+        settled[0] as PromiseSettledResult<EventOpinionCluster[]>,
+        (value) => value.length === 0,
+      ),
+    });
+  }, [eventId]);
+
   const loadSentimentWidgets = useCallback(async () => {
     if (!eventId) return;
 
@@ -470,13 +518,19 @@ const EventDetail: React.FC = () => {
       transition: createAnalysisWidgetState({ status: 'loading' }),
       scatter: createAnalysisWidgetState({ status: 'loading' }),
       intensity: createAnalysisWidgetState({ status: 'loading' }),
+      emotionMap: createAnalysisWidgetState({ status: 'loading' }),
+      userInsights: createAnalysisWidgetState({ status: 'loading' }),
+      detailedTrend: createAnalysisWidgetState({ status: 'loading' }),
     });
 
-    const eventsController = root.get(EventsController);
+    const eventsController = root.get(EventsController) as EventsController & EventsControllerPhase3;
     const settled = await Promise.allSettled([
       Promise.resolve({ eventId }),
       eventsController.getSentimentHotness(eventId),
       eventsController.getSentimentIntensity(eventId),
+      eventsController.getEventEmotionMap(eventId),
+      eventsController.getEventUserEmotionInsights(eventId),
+      eventsController.getEventSentimentTrendDetailed(eventId),
     ]);
 
     setSentimentWidgets({
@@ -490,6 +544,18 @@ const EventDetail: React.FC = () => {
       ),
       intensity: resolveAnalysisWidgetState(
         settled[2] as PromiseSettledResult<Array<{ intensity: number; count: number }>>,
+        (value) => value.length === 0,
+      ),
+      emotionMap: resolveAnalysisWidgetState(
+        settled[3] as PromiseSettledResult<EventEmotionMapItem[]>,
+        (value) => value.length === 0,
+      ),
+      userInsights: resolveAnalysisWidgetState(
+        settled[4] as PromiseSettledResult<EventUserEmotionInsight[]>,
+        (value) => value.length === 0,
+      ),
+      detailedTrend: resolveAnalysisWidgetState(
+        settled[5] as PromiseSettledResult<EventSentimentTrendDetailedPoint[]>,
         (value) => value.length === 0,
       ),
     });
@@ -547,6 +613,10 @@ const EventDetail: React.FC = () => {
 
       case 'trend':
         await loadTrendWidgets();
+        break;
+
+      case 'opinions':
+        await loadOpinionWidgets();
         break;
 
       case 'sentiment':
@@ -620,7 +690,7 @@ const EventDetail: React.FC = () => {
         ]);
         break;
     }
-  }, [eventId, userRelationNetwork, communityData, geographicData, loadTrendWidgets, loadSentimentWidgets, propagationVelocityData, influencePredictionData, communityEvolutionData, userStratificationData, postingTimeData, commentDepthData]);
+  }, [eventId, userRelationNetwork, communityData, geographicData, loadTrendWidgets, loadOpinionWidgets, loadSentimentWidgets, propagationVelocityData, influencePredictionData, communityEvolutionData, userStratificationData, postingTimeData, commentDepthData]);
 
   // Tab 懒加载核心逻辑
   const loadTabData = useCallback(async (tabId: TabId, force = false) => {
@@ -755,10 +825,16 @@ const EventDetail: React.FC = () => {
         mediaType: createAnalysisWidgetState(),
         anomalies: createAnalysisWidgetState(),
       });
+      setOpinionWidgets({
+        clusters: createAnalysisWidgetState(),
+      });
       setSentimentWidgets({
         transition: createAnalysisWidgetState(),
         scatter: createAnalysisWidgetState(),
         intensity: createAnalysisWidgetState(),
+        emotionMap: createAnalysisWidgetState(),
+        userInsights: createAnalysisWidgetState(),
+        detailedTrend: createAnalysisWidgetState(),
       });
       setPropagationVelocityData(null);
       setInfluencePredictionData(null);
@@ -1084,7 +1160,7 @@ const EventDetail: React.FC = () => {
 
       {/* Tab 导航 */}
       <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <TabsList className="grid w-full grid-cols-8 bg-muted/20 p-1">
+        <TabsList className="grid w-full grid-cols-9 bg-muted/20 p-1">
           <TabsTrigger value="overview" className="data-[state=active]:bg-primary/20 gap-2">
             <Layers className="w-4 h-4" />
             <span className="hidden sm:inline">总览</span>
@@ -1107,6 +1183,13 @@ const EventDetail: React.FC = () => {
             <LineChart className="w-4 h-4" />
             <span className="hidden sm:inline">趋势分析</span>
             {tabsState.trend.loadingState === 'loading' && (
+              <RefreshCw className="w-3 h-3 animate-spin" />
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="opinions" className="data-[state=active]:bg-primary/20 gap-2">
+            <MessageSquare className="w-4 h-4" />
+            <span className="hidden sm:inline">观点汇集</span>
+            {tabsState.opinions.loadingState === 'loading' && (
               <RefreshCw className="w-3 h-3 animate-spin" />
             )}
           </TabsTrigger>
@@ -1428,6 +1511,37 @@ const EventDetail: React.FC = () => {
           )}
         </TabsContent>
 
+        <TabsContent value="opinions" className="mt-6">
+          {tabsState.opinions.loadingState === 'loading' ? (
+            <div className="flex items-center justify-center h-[600px]">
+              <div className="text-center space-y-4">
+                <RefreshCw className="w-8 h-8 animate-spin mx-auto text-primary" />
+                <p className="text-sm text-muted-foreground">加载观点汇集数据中...</p>
+              </div>
+            </div>
+          ) : tabsState.opinions.loadingState === 'error' ? (
+            <div className="flex items-center justify-center h-[600px]">
+              <div className="text-center space-y-4">
+                <AlertTriangle className="w-8 h-8 mx-auto text-destructive" />
+                <p className="text-sm text-destructive">加载失败</p>
+                <Button onClick={() => loadTabData('opinions', true)}>重试</Button>
+              </div>
+            </div>
+          ) : (
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+              <AnalysisWidgetCard
+                title="观点簇概览"
+                icon={<MessageSquare className="h-4 w-4" />}
+                state={opinionWidgets.clusters}
+                emptyText="暂无观点簇数据"
+                onRetry={loadOpinionWidgets}
+              >
+                <OpinionClusterPanel data={opinionWidgets.clusters.data ?? []} />
+              </AnalysisWidgetCard>
+            </motion.div>
+          )}
+        </TabsContent>
+
         {/* 情感分析 Tab */}
         <TabsContent value="sentiment" className="mt-6">
           {tabsState.sentiment.loadingState === 'loading' ? (
@@ -1484,6 +1598,35 @@ const EventDetail: React.FC = () => {
                   <SentimentIntensityChart title="" height={350} data={sentimentWidgets.intensity.data ?? []} />
                 </AnalysisWidgetCard>
               </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <AnalysisWidgetCard
+                  title="情绪地图"
+                  icon={<Sprout className="h-4 w-4" />}
+                  state={sentimentWidgets.emotionMap}
+                  emptyText="暂无情绪地图数据"
+                  onRetry={loadSentimentWidgets}
+                >
+                  <EmotionMapPanel data={sentimentWidgets.emotionMap.data ?? []} />
+                </AnalysisWidgetCard>
+                <AnalysisWidgetCard
+                  title="用户情绪洞察"
+                  icon={<Users className="h-4 w-4" />}
+                  state={sentimentWidgets.userInsights}
+                  emptyText="暂无用户情绪洞察"
+                  onRetry={loadSentimentWidgets}
+                >
+                  <UserEmotionInsightPanel data={sentimentWidgets.userInsights.data ?? []} />
+                </AnalysisWidgetCard>
+              </div>
+              <AnalysisWidgetCard
+                title="详细情感趋势"
+                icon={<TrendingUp className="h-4 w-4" />}
+                state={sentimentWidgets.detailedTrend}
+                emptyText="暂无详细情感趋势数据"
+                onRetry={loadSentimentWidgets}
+              >
+                <DetailedSentimentTrendPanel data={sentimentWidgets.detailedTrend.data ?? []} />
+              </AnalysisWidgetCard>
             </motion.div>
           )}
         </TabsContent>

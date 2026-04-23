@@ -26,12 +26,18 @@ import type {
   EventMilestone,
   EventInstitutionAccount,
   EventTopicOverview,
+  EventOpinionCluster,
+  EventEmotionMapItem,
+  EventUserEmotionInsight,
+  EventSentimentTrendDetailedPoint,
 } from './types';
 import { EventQueryService } from './event-query.service';
 import { EventAnalyticsService } from './event-analytics.service';
 import { EventTimelineBuilder } from './event-timeline.builder';
 import { EventMilestoneService } from './event-milestone.service';
 import { EventInstitutionService } from './event-institution.service';
+import { EventOpinionService } from './event-opinion.service';
+import { EventSentimentDetailService } from './event-sentiment-detail.service';
 import { useEntityManager, EventEntity } from '@sker/entities';
 import { KOLAnalysisService } from '../kol-analysis.service';
 import type { KOLAnalysisResult } from './types';
@@ -51,7 +57,11 @@ export class EventsService {
     @Inject(EventMilestoneService)
     private readonly milestoneService: EventMilestoneService,
     @Inject(EventInstitutionService)
-    private readonly institutionService: EventInstitutionService
+    private readonly institutionService: EventInstitutionService,
+    @Inject(EventOpinionService)
+    private readonly opinionService: EventOpinionService,
+    @Inject(EventSentimentDetailService)
+    private readonly sentimentDetailService: EventSentimentDetailService,
   ) { }
 
   async getEventList(
@@ -224,6 +234,22 @@ export class EventsService {
       })),
       timeSeries: keywordSeries,
     };
+  }
+
+  async getEventOpinionClusters(id: string): Promise<EventOpinionCluster[]> {
+    return this.opinionService.getEventOpinionClusters(id);
+  }
+
+  async getEventEmotionMap(id: string): Promise<EventEmotionMapItem[]> {
+    return this.sentimentDetailService.getEventEmotionMap(id);
+  }
+
+  async getEventUserEmotionInsights(id: string): Promise<EventUserEmotionInsight[]> {
+    return this.sentimentDetailService.getEventUserEmotionInsights(id);
+  }
+
+  async getEventSentimentTrendDetailed(id: string): Promise<EventSentimentTrendDetailedPoint[]> {
+    return this.sentimentDetailService.getEventSentimentTrendDetailed(id);
   }
 
   async updateEventKeywords(id: string, keywords: string[]): Promise<{ success: boolean }> {

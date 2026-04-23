@@ -25,6 +25,10 @@ import type {
   EventMilestone,
   EventInstitutionAccount,
   EventTopicOverview,
+  EventOpinionCluster,
+  EventEmotionMapItem,
+  EventUserEmotionInsight,
+  EventSentimentTrendDetailedPoint,
   EventHourlySummary,
   MultiMetricTrendData,
   EngagementBreakdown,
@@ -164,6 +168,26 @@ export class EventsController {
   @Get('topic-overview')
   getEventTopicOverview(@Query('id') id: string): Promise<EventTopicOverview> {
     throw new Error('method getEventTopicOverview not implements')
+  }
+
+  @Get('opinion-clusters')
+  getEventOpinionClusters(@Query('id') id: string): Promise<EventOpinionCluster[]> {
+    throw new Error('method getEventOpinionClusters not implements')
+  }
+
+  @Get('emotion-map')
+  getEventEmotionMap(@Query('id') id: string): Promise<EventEmotionMapItem[]> {
+    throw new Error('method getEventEmotionMap not implements')
+  }
+
+  @Get('user-emotion-insights')
+  getEventUserEmotionInsights(@Query('id') id: string): Promise<EventUserEmotionInsight[]> {
+    throw new Error('method getEventUserEmotionInsights not implements')
+  }
+
+  @Get('sentiment-trend-detailed')
+  getEventSentimentTrendDetailed(@Query('id') id: string): Promise<EventSentimentTrendDetailedPoint[]> {
+    throw new Error('method getEventSentimentTrendDetailed not implements')
   }
 
   @Get('kol-analysis')

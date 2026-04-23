@@ -138,6 +138,22 @@ export class EventsController implements sdk.EventsController {
     return this.eventsService.getEventTopicOverview(id);
   }
 
+  async getEventOpinionClusters(@Query('id') id: string) {
+    return this.eventsService.getEventOpinionClusters(id);
+  }
+
+  async getEventEmotionMap(@Query('id') id: string) {
+    return this.eventsService.getEventEmotionMap(id);
+  }
+
+  async getEventUserEmotionInsights(@Query('id') id: string) {
+    return this.eventsService.getEventUserEmotionInsights(id);
+  }
+
+  async getEventSentimentTrendDetailed(@Query('id') id: string) {
+    return this.eventsService.getEventSentimentTrendDetailed(id);
+  }
+
   async getKOLAnalysis(@Query('id') id: string) {
     return this.eventsService.getKOLAnalysis(id);
   }

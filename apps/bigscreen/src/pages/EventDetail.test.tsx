@@ -260,6 +260,10 @@ describe('EventDetail', () => {
     getEventMilestones: vi.fn(),
     getEventTopicOverview: vi.fn(),
     getEventInstitutions: vi.fn(),
+    getEventOpinionClusters: vi.fn(),
+    getEventEmotionMap: vi.fn(),
+    getEventUserEmotionInsights: vi.fn(),
+    getEventSentimentTrendDetailed: vi.fn(),
     getEngagementTrend: vi.fn(),
     getEventUserRelations: vi.fn(),
     getEventGeographic: vi.fn(),
@@ -336,6 +340,38 @@ describe('EventDetail', () => {
         interactionCount: 120,
         influenceScore: 9800,
         sentimentTilt: 'neutral',
+      },
+    ]);
+    mockEventsController.getEventOpinionClusters.mockResolvedValue([
+      {
+        id: 'cluster-1',
+        label: '批评观点',
+        stance: 'critical',
+        summary: '围绕追责和透明回应形成的观点簇',
+        postCount: 12,
+        userCount: 8,
+        keywords: ['追责', '透明'],
+        representativePosts: [],
+      },
+    ]);
+    mockEventsController.getEventEmotionMap.mockResolvedValue([
+      { label: '愤怒', weight: 4 },
+    ]);
+    mockEventsController.getEventUserEmotionInsights.mockResolvedValue([
+      {
+        userId: 'user-1',
+        screenName: '用户A',
+        postCount: 3,
+        emotionTilt: 'negative',
+        summary: '高频负向发帖',
+      },
+    ]);
+    mockEventsController.getEventSentimentTrendDetailed.mockResolvedValue([
+      {
+        timestamp: '2026-04-20T09:00:00.000Z',
+        positive: 0.2,
+        negative: 0.6,
+        neutral: 0.2,
       },
     ]);
     mockEventsController.getEngagementTrend.mockResolvedValue([]);
@@ -465,6 +501,10 @@ describe('EventDetail', () => {
     expect(mockEventsController.getSentimentHotness).not.toHaveBeenCalled();
     expect(mockEventsController.getSentimentIntensity).not.toHaveBeenCalled();
     expect(mockEventsController.getAnomalies).not.toHaveBeenCalled();
+    expect(mockEventsController.getEventOpinionClusters).not.toHaveBeenCalled();
+    expect(mockEventsController.getEventEmotionMap).not.toHaveBeenCalled();
+    expect(mockEventsController.getEventUserEmotionInsights).not.toHaveBeenCalled();
+    expect(mockEventsController.getEventSentimentTrendDetailed).not.toHaveBeenCalled();
   });
 
   it('切换到关系网络 tab 时才加载网络数据', async () => {
@@ -501,6 +541,26 @@ describe('EventDetail', () => {
     expect(screen.getByTestId('sentiment-intensity-chart')).toBeInTheDocument();
     expect(mockEventsController.getSentimentHotness).toHaveBeenCalledWith(mockEventId);
     expect(mockEventsController.getSentimentIntensity).toHaveBeenCalledWith(mockEventId);
+    expect(mockEventsController.getEventEmotionMap).toHaveBeenCalledWith(mockEventId);
+    expect(mockEventsController.getEventUserEmotionInsights).toHaveBeenCalledWith(mockEventId);
+    expect(mockEventsController.getEventSentimentTrendDetailed).toHaveBeenCalledWith(mockEventId);
+    expect(screen.getByText('情绪地图')).toBeInTheDocument();
+    expect(screen.getByText('用户情绪洞察')).toBeInTheDocument();
+    expect(screen.getByText('详细情感趋势')).toBeInTheDocument();
+  });
+
+  it('切换到观点汇集 tab 时才加载观点簇数据', async () => {
+    renderEventDetail();
+    await screen.findByText('测试事件标题');
+
+    fireEvent.click(screen.getByRole('tab', { name: /观点汇集/ }));
+
+    await waitFor(() => {
+      expect(mockEventsController.getEventOpinionClusters).toHaveBeenCalledWith(mockEventId);
+    });
+
+    expect(screen.getByText('观点簇概览')).toBeInTheDocument();
+    expect(screen.getByText('批评观点')).toBeInTheDocument();
   });
 
   it('点击更新缓存时调用 refreshCache 并刷新基础数据', async () => {
