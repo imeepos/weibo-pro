@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { Spinner } from "@sker/ui/components/ui/spinner";
 import EventTypeBarChart from "@/components/charts/EventTypeBarChart";
 import WordCloudChart from "@/components/charts/WordCloudChart";
@@ -28,7 +28,6 @@ const DataOverview: React.FC = () => {
     sentimentData,
     loading,
     error,
-    isStale,
     refetch
   } = useOverviewData();
 
@@ -117,8 +116,16 @@ const DataOverview: React.FC = () => {
               />
             )}
           </div>
-          <div className="flex-1 bg-card border rounded-xl shadow-sm overflow-hidden p-4">
-            <UserRelationOverview />
+          <div className="flex-1 rounded-xl border bg-card shadow-sm overflow-hidden">
+            <div className="border-b border-border/60 px-4 py-3">
+              <h2 className="text-sm font-semibold text-foreground">用户网络摘要</h2>
+              <p className="text-xs text-muted-foreground">
+                关系强度与社区规模快速概览
+              </p>
+            </div>
+            <div className="h-[calc(100%-61px)] p-4 pt-3">
+              <UserRelationOverview className="h-full" />
+            </div>
           </div>
         </div>
 

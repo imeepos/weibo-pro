@@ -457,4 +457,65 @@ describe('EventDetail', () => {
       expect(mockEventsController.refreshCache).toHaveBeenCalledWith(mockEventId);
     });
   });
+
+  it('keeps successful trend widgets visible when one trend request fails', async () => {
+    const spreadController = {
+      getAnalysis: vi.fn().mockResolvedValue({
+        totalReposts: 100,
+        uniqueReposters: 80,
+        spreadDepth: 5,
+        spreadWidth: 4.5,
+        breadthIndex: 0.75,
+        propagationPaths: [],
+        spreadTimeline: [],
+        repostByUserType: [],
+      }),
+    };
+
+    const mediaController = {
+      getDistribution: vi.fn().mockRejectedValue(new Error('media failed')),
+    };
+
+    vi.mocked(root.get).mockImplementation((token: any) => {
+      if (token === EventsController) return mockEventsController as any;
+      if (token.name === 'SpreadBreadthController') return spreadController as any;
+      if (token.name === 'MediaTypeController') return mediaController as any;
+      if (token.name === 'CommunityDetectionController') {
+        return { getAnalysis: vi.fn().mockResolvedValue({ communities: [] }) } as any;
+      }
+      return {} as any;
+    });
+
+    render(
+      <MemoryRouter initialEntries={[`/event/${mockEventId}`]}>
+        <EventDetail />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('tab', { name: '趋势分析' }));
+
+    expect(await screen.findByTestId('spread-breadth-chart')).toBeInTheDocument();
+    expect(await screen.findByText('media failed')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: '重试媒体类型分布' }),
+    ).toBeInTheDocument();
+  });
+
+  it('renders metric explanation triggers for trend and sentiment widgets', async () => {
+    render(
+      <MemoryRouter initialEntries={[`/event/${mockEventId}`]}>
+        <EventDetail />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('tab', { name: '趋势分析' }));
+    expect(
+      await screen.findByRole('button', { name: '传播广度分析指标说明' }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('tab', { name: '情感分析' }));
+    expect(
+      await screen.findByRole('button', { name: '情感转变追踪指标说明' }),
+    ).toBeInTheDocument();
+  });
 });
