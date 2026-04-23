@@ -154,6 +154,14 @@ export class EventsController implements sdk.EventsController {
     return this.eventsService.getEventSentimentTrendDetailed(id);
   }
 
+  async getEventRiskProfile(@Query('id') id: string) {
+    return this.eventsService.getEventRiskProfile(id);
+  }
+
+  async getEventAbnormalUsers(@Query('id') id: string) {
+    return this.eventsService.getEventAbnormalUsers(id);
+  }
+
   async getKOLAnalysis(@Query('id') id: string) {
     return this.eventsService.getKOLAnalysis(id);
   }

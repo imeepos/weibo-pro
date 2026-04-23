@@ -30,6 +30,8 @@ import type {
   EventEmotionMapItem,
   EventUserEmotionInsight,
   EventSentimentTrendDetailedPoint,
+  EventAbnormalUser,
+  EventUserRiskProfile,
 } from './types';
 import { EventQueryService } from './event-query.service';
 import { EventAnalyticsService } from './event-analytics.service';
@@ -38,6 +40,7 @@ import { EventMilestoneService } from './event-milestone.service';
 import { EventInstitutionService } from './event-institution.service';
 import { EventOpinionService } from './event-opinion.service';
 import { EventSentimentDetailService } from './event-sentiment-detail.service';
+import { EventUserRiskService } from './event-user-risk.service';
 import { useEntityManager, EventEntity } from '@sker/entities';
 import { KOLAnalysisService } from '../kol-analysis.service';
 import type { KOLAnalysisResult } from './types';
@@ -62,6 +65,8 @@ export class EventsService {
     private readonly opinionService: EventOpinionService,
     @Inject(EventSentimentDetailService)
     private readonly sentimentDetailService: EventSentimentDetailService,
+    @Inject(EventUserRiskService)
+    private readonly userRiskService: EventUserRiskService,
   ) { }
 
   async getEventList(
@@ -250,6 +255,14 @@ export class EventsService {
 
   async getEventSentimentTrendDetailed(id: string): Promise<EventSentimentTrendDetailedPoint[]> {
     return this.sentimentDetailService.getEventSentimentTrendDetailed(id);
+  }
+
+  async getEventRiskProfile(id: string): Promise<EventUserRiskProfile> {
+    return this.userRiskService.getEventRiskProfile(id);
+  }
+
+  async getEventAbnormalUsers(id: string): Promise<EventAbnormalUser[]> {
+    return this.userRiskService.getEventAbnormalUsers(id);
   }
 
   async updateEventKeywords(id: string, keywords: string[]): Promise<{ success: boolean }> {

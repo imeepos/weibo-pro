@@ -29,6 +29,8 @@ import type {
   EventEmotionMapItem,
   EventUserEmotionInsight,
   EventSentimentTrendDetailedPoint,
+  EventAbnormalUser,
+  EventUserRiskProfile,
   EventHourlySummary,
   MultiMetricTrendData,
   EngagementBreakdown,
@@ -188,6 +190,16 @@ export class EventsController {
   @Get('sentiment-trend-detailed')
   getEventSentimentTrendDetailed(@Query('id') id: string): Promise<EventSentimentTrendDetailedPoint[]> {
     throw new Error('method getEventSentimentTrendDetailed not implements')
+  }
+
+  @Get('risk-profile')
+  getEventRiskProfile(@Query('id') id: string): Promise<EventUserRiskProfile> {
+    throw new Error('method getEventRiskProfile not implements')
+  }
+
+  @Get('abnormal-users')
+  getEventAbnormalUsers(@Query('id') id: string): Promise<EventAbnormalUser[]> {
+    throw new Error('method getEventAbnormalUsers not implements')
   }
 
   @Get('kol-analysis')
