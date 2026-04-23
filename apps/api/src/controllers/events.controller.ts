@@ -126,6 +126,18 @@ export class EventsController implements sdk.EventsController {
     return this.eventsService.getEventUserRelations(id);
   }
 
+  async getEventMilestones(@Query('id') id: string) {
+    return this.eventsService.getEventMilestones(id);
+  }
+
+  async getEventInstitutions(@Query('id') id: string) {
+    return this.eventsService.getEventInstitutions(id);
+  }
+
+  async getEventTopicOverview(@Query('id') id: string) {
+    return this.eventsService.getEventTopicOverview(id);
+  }
+
   async getKOLAnalysis(@Query('id') id: string) {
     return this.eventsService.getKOLAnalysis(id);
   }

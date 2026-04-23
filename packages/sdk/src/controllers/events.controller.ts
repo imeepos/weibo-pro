@@ -22,6 +22,9 @@ import type {
   EventEngagementTrend,
   EventAnomaly,
   EventPeak,
+  EventMilestone,
+  EventInstitutionAccount,
+  EventTopicOverview,
   EventHourlySummary,
   MultiMetricTrendData,
   EngagementBreakdown,
@@ -146,6 +149,21 @@ export class EventsController {
   @Get('user-relations')
   getEventUserRelations(@Query('id') id: string): Promise<UserRelationNetwork> {
     throw new Error('method getEventUserRelations not implements')
+  }
+
+  @Get('milestones')
+  getEventMilestones(@Query('id') id: string): Promise<EventMilestone[]> {
+    throw new Error('method getEventMilestones not implements')
+  }
+
+  @Get('institutions')
+  getEventInstitutions(@Query('id') id: string): Promise<EventInstitutionAccount[]> {
+    throw new Error('method getEventInstitutions not implements')
+  }
+
+  @Get('topic-overview')
+  getEventTopicOverview(@Query('id') id: string): Promise<EventTopicOverview> {
+    throw new Error('method getEventTopicOverview not implements')
   }
 
   @Get('kol-analysis')

@@ -299,6 +299,49 @@ export interface EventPeak {
   }
 }
 
+export interface EventMilestone {
+  timestamp: string
+  type: 'heat_spike' | 'sentiment_turn' | 'propagation_peak' | 'official_response' | 'discussion_shift'
+  title: string
+  summary: string
+  confidence: number
+  metrics: {
+    hotness?: number
+    postCount?: number
+    userCount?: number
+    sentimentShift?: number
+  }
+  representativePosts: Array<{
+    postId: string
+    author: string
+    excerpt: string
+    engagement: number
+  }>
+}
+
+export interface EventInstitutionAccount {
+  userId: string
+  screenName: string
+  avatar?: string
+  institutionType: 'government' | 'state_media' | 'enterprise_org' | 'official_other'
+  verified: boolean
+  verifiedType?: string
+  postCount: number
+  interactionCount: number
+  influenceScore: number
+  sentimentTilt: 'positive' | 'negative' | 'neutral'
+}
+
+export interface EventTopicOverview {
+  topTopics: Array<{
+    title: string
+    count: number
+    sentiment: string
+    trend: 'up' | 'down' | 'stable'
+  }>
+  timeSeries: EventKeywordTimeSeries[]
+}
+
 export interface InfluenceUser {
   userId: string;
   username: string;

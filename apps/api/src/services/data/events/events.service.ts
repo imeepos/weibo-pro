@@ -23,10 +23,15 @@ import type {
   EventAnomaly,
   EventPeak,
   UserRelationNetwork,
+  EventMilestone,
+  EventInstitutionAccount,
+  EventTopicOverview,
 } from './types';
 import { EventQueryService } from './event-query.service';
 import { EventAnalyticsService } from './event-analytics.service';
 import { EventTimelineBuilder } from './event-timeline.builder';
+import { EventMilestoneService } from './event-milestone.service';
+import { EventInstitutionService } from './event-institution.service';
 import { useEntityManager, EventEntity } from '@sker/entities';
 import { KOLAnalysisService } from '../kol-analysis.service';
 import type { KOLAnalysisResult } from './types';
@@ -42,7 +47,11 @@ export class EventsService {
     private readonly analyticsService: EventAnalyticsService,
     @Inject(EventTimelineBuilder)
     private readonly timelineBuilder: EventTimelineBuilder,
-    @Inject(KOLAnalysisService) private readonly kolAnalysisService: KOLAnalysisService
+    @Inject(KOLAnalysisService) private readonly kolAnalysisService: KOLAnalysisService,
+    @Inject(EventMilestoneService)
+    private readonly milestoneService: EventMilestoneService,
+    @Inject(EventInstitutionService)
+    private readonly institutionService: EventInstitutionService
   ) { }
 
   async getEventList(
@@ -190,6 +199,31 @@ export class EventsService {
 
   async getEventUserRelations(id: string): Promise<UserRelationNetwork> {
     return await this.queryService.getEventUserRelations(id);
+  }
+
+  async getEventMilestones(id: string): Promise<EventMilestone[]> {
+    return this.milestoneService.getEventMilestones(id);
+  }
+
+  async getEventInstitutions(id: string): Promise<EventInstitutionAccount[]> {
+    return this.institutionService.getEventInstitutions(id);
+  }
+
+  async getEventTopicOverview(id: string): Promise<EventTopicOverview> {
+    const [keywords, keywordSeries] = await Promise.all([
+      this.queryService.getEventKeywords(id, 12),
+      this.queryService.getKeywordsTimeSeries(id, 8),
+    ]);
+
+    return {
+      topTopics: keywords.map((item) => ({
+        title: item.keyword,
+        count: Math.round(item.weight),
+        sentiment: item.sentiment,
+        trend: 'stable',
+      })),
+      timeSeries: keywordSeries,
+    };
   }
 
   async updateEventKeywords(id: string, keywords: string[]): Promise<{ success: boolean }> {
