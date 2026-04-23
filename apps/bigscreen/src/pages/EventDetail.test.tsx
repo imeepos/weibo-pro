@@ -61,6 +61,30 @@ vi.mock('@/components/charts/WordCloudChart', () => ({
   ),
 }));
 
+vi.mock('@/components/charts/HotTopicsChart', () => ({
+  default: ({ data }: { data: Array<{ title: string }> }) => (
+    <div data-testid="hot-topics-chart">
+      {data.map((item) => item.title).join(',')}
+    </div>
+  ),
+}));
+
+vi.mock('@/components/charts/EventMilestoneWidget', () => ({
+  EventMilestoneWidget: ({ data }: { data: Array<{ title: string }> }) => (
+    <div data-testid="event-milestone-widget">
+      {data.map((item) => item.title).join(',')}
+    </div>
+  ),
+}));
+
+vi.mock('@/components/charts/InstitutionParticipationPanel', () => ({
+  InstitutionParticipationPanel: ({ data }: { data: Array<{ screenName: string }> }) => (
+    <div data-testid="institution-participation-panel">
+      {data.map((item) => item.screenName).join(',')}
+    </div>
+  ),
+}));
+
 vi.mock('@/components/charts/UserRelationGraph3DOffscreen', () => ({
   default: () => <div data-testid="user-relation-graph">UserRelationGraph3DOffscreen</div>,
 }));
@@ -233,6 +257,15 @@ describe('EventDetail', () => {
     getEventTimeSeries: vi.fn(),
     getEventTrends: vi.fn(),
     getEventKeywords: vi.fn(),
+    getEventMilestones: vi.fn(),
+    getEventTopicOverview: vi.fn(),
+    getEventInstitutions: vi.fn(),
+    getEventOpinionClusters: vi.fn(),
+    getEventEmotionMap: vi.fn(),
+    getEventUserEmotionInsights: vi.fn(),
+    getEventSentimentTrendDetailed: vi.fn(),
+    getEventRiskProfile: vi.fn(),
+    getEventAbnormalUsers: vi.fn(),
     getEngagementTrend: vi.fn(),
     getEventUserRelations: vi.fn(),
     getEventGeographic: vi.fn(),
@@ -281,6 +314,96 @@ describe('EventDetail', () => {
     mockEventsController.getEventKeywords.mockResolvedValue([
       { keyword: 'AI', weight: 0.9, sentiment: 'positive' },
       { keyword: '人工智能', weight: 0.8, sentiment: 'positive' },
+    ]);
+    mockEventsController.getEventMilestones.mockResolvedValue([
+      {
+        timestamp: '2026-04-20T09:00:00.000Z',
+        type: 'heat_spike',
+        title: '热度峰值',
+        summary: '热度在该时间窗快速升高',
+        confidence: 0.8,
+        metrics: { hotness: 120, postCount: 60, userCount: 40 },
+        representativePosts: [],
+      },
+    ]);
+    mockEventsController.getEventTopicOverview.mockResolvedValue({
+      topTopics: [
+        { title: '外交部', count: 42, sentiment: 'neutral', trend: 'stable' },
+      ],
+      timeSeries: [],
+    });
+    mockEventsController.getEventInstitutions.mockResolvedValue([
+      {
+        userId: 'user-1',
+        screenName: '新华社',
+        institutionType: 'state_media',
+        verified: true,
+        postCount: 5,
+        interactionCount: 120,
+        influenceScore: 9800,
+        sentimentTilt: 'neutral',
+      },
+    ]);
+    mockEventsController.getEventOpinionClusters.mockResolvedValue([
+      {
+        id: 'cluster-1',
+        label: '批评观点',
+        stance: 'critical',
+        summary: '围绕追责和透明回应形成的观点簇',
+        postCount: 12,
+        userCount: 8,
+        keywords: ['追责', '透明'],
+        representativePosts: [],
+      },
+    ]);
+    mockEventsController.getEventEmotionMap.mockResolvedValue([
+      { label: '愤怒', weight: 4 },
+    ]);
+    mockEventsController.getEventUserEmotionInsights.mockResolvedValue([
+      {
+        userId: 'user-1',
+        screenName: '用户A',
+        postCount: 3,
+        emotionTilt: 'negative',
+        summary: '高频负向发帖',
+      },
+    ]);
+    mockEventsController.getEventSentimentTrendDetailed.mockResolvedValue([
+      {
+        timestamp: '2026-04-20T09:00:00.000Z',
+        positive: 0.2,
+        negative: 0.6,
+        neutral: 0.2,
+      },
+    ]);
+    mockEventsController.getEventRiskProfile.mockResolvedValue({
+      totalUsers: 120,
+      activeUsers: 67,
+      abnormalUserCount: 8,
+      averageRiskScore: 36.5,
+      riskDistribution: { low: 90, medium: 22, high: 8 },
+      topSignals: [{ type: 'night_activity', label: '夜间活跃', count: 6 }],
+      topRiskUsers: [{ userId: 'user-1', screenName: '用户A', riskLevel: 'high', riskScore: 84 }],
+    });
+    mockEventsController.getEventAbnormalUsers.mockResolvedValue([
+      {
+        userId: 'user-1',
+        screenName: '用户A',
+        followers: 24,
+        verified: false,
+        location: '北京',
+        postCount: 12,
+        riskLevel: 'high',
+        riskScore: 84,
+        confidence: 0.84,
+        isAbnormal: true,
+        accountType: 'bot',
+        lastActive: '2026-04-23T01:00:00.000Z',
+        summary: '检测到 3 个异常信号',
+        abnormalSignals: [
+          { type: 'night_activity', severity: 'medium', description: '凌晨发帖占比高', value: 0.5 },
+        ],
+      },
     ]);
     mockEventsController.getEngagementTrend.mockResolvedValue([]);
     mockEventsController.getEventUserRelations.mockResolvedValue({
@@ -409,6 +532,12 @@ describe('EventDetail', () => {
     expect(mockEventsController.getSentimentHotness).not.toHaveBeenCalled();
     expect(mockEventsController.getSentimentIntensity).not.toHaveBeenCalled();
     expect(mockEventsController.getAnomalies).not.toHaveBeenCalled();
+    expect(mockEventsController.getEventOpinionClusters).not.toHaveBeenCalled();
+    expect(mockEventsController.getEventEmotionMap).not.toHaveBeenCalled();
+    expect(mockEventsController.getEventUserEmotionInsights).not.toHaveBeenCalled();
+    expect(mockEventsController.getEventSentimentTrendDetailed).not.toHaveBeenCalled();
+    expect(mockEventsController.getEventRiskProfile).not.toHaveBeenCalled();
+    expect(mockEventsController.getEventAbnormalUsers).not.toHaveBeenCalled();
   });
 
   it('切换到关系网络 tab 时才加载网络数据', async () => {
@@ -445,6 +574,43 @@ describe('EventDetail', () => {
     expect(screen.getByTestId('sentiment-intensity-chart')).toBeInTheDocument();
     expect(mockEventsController.getSentimentHotness).toHaveBeenCalledWith(mockEventId);
     expect(mockEventsController.getSentimentIntensity).toHaveBeenCalledWith(mockEventId);
+    expect(mockEventsController.getEventEmotionMap).toHaveBeenCalledWith(mockEventId);
+    expect(mockEventsController.getEventUserEmotionInsights).toHaveBeenCalledWith(mockEventId);
+    expect(mockEventsController.getEventSentimentTrendDetailed).toHaveBeenCalledWith(mockEventId);
+    expect(screen.getByText('情绪地图')).toBeInTheDocument();
+    expect(screen.getByText('用户情绪洞察')).toBeInTheDocument();
+    expect(screen.getByText('详细情感趋势')).toBeInTheDocument();
+  });
+
+  it('切换到观点汇集 tab 时才加载观点簇数据', async () => {
+    renderEventDetail();
+    await screen.findByText('测试事件标题');
+
+    fireEvent.click(screen.getByRole('tab', { name: /观点汇集/ }));
+
+    await waitFor(() => {
+      expect(mockEventsController.getEventOpinionClusters).toHaveBeenCalledWith(mockEventId);
+    });
+
+    expect(screen.getByText('观点簇概览')).toBeInTheDocument();
+    expect(screen.getByText('批评观点')).toBeInTheDocument();
+  });
+
+  it('切换到用户分析 tab 时加载风险画像与异常用户面板', async () => {
+    renderEventDetail();
+    await screen.findByText('测试事件标题');
+
+    fireEvent.click(screen.getByRole('tab', { name: /用户分析/ }));
+
+    await waitFor(() => {
+      expect(mockEventsController.getEventRiskProfile).toHaveBeenCalledWith(mockEventId);
+      expect(mockEventsController.getEventAbnormalUsers).toHaveBeenCalledWith(mockEventId);
+    });
+
+    expect(screen.getByText('用户风险画像')).toBeInTheDocument();
+    expect(screen.getByText('异常用户面板')).toBeInTheDocument();
+    expect(screen.getByText('用户A')).toBeInTheDocument();
+    expect(screen.getByText('夜间活跃 6')).toBeInTheDocument();
   });
 
   it('点击更新缓存时调用 refreshCache 并刷新基础数据', async () => {
@@ -456,6 +622,21 @@ describe('EventDetail', () => {
     await waitFor(() => {
       expect(mockEventsController.refreshCache).toHaveBeenCalledWith(mockEventId);
     });
+  });
+
+  it('renders milestones, topic summary, and institution participation in overview', async () => {
+    render(
+      <MemoryRouter initialEntries={[`/event/${mockEventId}`]}>
+        <EventDetail />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('事件里程碑')).toBeInTheDocument();
+    expect(screen.getByText('高频话题分布')).toBeInTheDocument();
+    expect(screen.getByText('机构账号参与')).toBeInTheDocument();
+    expect(screen.getByTestId('event-milestone-widget')).toHaveTextContent('热度峰值');
+    expect(screen.getByTestId('hot-topics-chart')).toHaveTextContent('外交部');
+    expect(screen.getByTestId('institution-participation-panel')).toHaveTextContent('新华社');
   });
 
   it('keeps successful trend widgets visible when one trend request fails', async () => {

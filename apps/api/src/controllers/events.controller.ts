@@ -126,6 +126,42 @@ export class EventsController implements sdk.EventsController {
     return this.eventsService.getEventUserRelations(id);
   }
 
+  async getEventMilestones(@Query('id') id: string) {
+    return this.eventsService.getEventMilestones(id);
+  }
+
+  async getEventInstitutions(@Query('id') id: string) {
+    return this.eventsService.getEventInstitutions(id);
+  }
+
+  async getEventTopicOverview(@Query('id') id: string) {
+    return this.eventsService.getEventTopicOverview(id);
+  }
+
+  async getEventOpinionClusters(@Query('id') id: string) {
+    return this.eventsService.getEventOpinionClusters(id);
+  }
+
+  async getEventEmotionMap(@Query('id') id: string) {
+    return this.eventsService.getEventEmotionMap(id);
+  }
+
+  async getEventUserEmotionInsights(@Query('id') id: string) {
+    return this.eventsService.getEventUserEmotionInsights(id);
+  }
+
+  async getEventSentimentTrendDetailed(@Query('id') id: string) {
+    return this.eventsService.getEventSentimentTrendDetailed(id);
+  }
+
+  async getEventRiskProfile(@Query('id') id: string) {
+    return this.eventsService.getEventRiskProfile(id);
+  }
+
+  async getEventAbnormalUsers(@Query('id') id: string) {
+    return this.eventsService.getEventAbnormalUsers(id);
+  }
+
   async getKOLAnalysis(@Query('id') id: string) {
     return this.eventsService.getKOLAnalysis(id);
   }

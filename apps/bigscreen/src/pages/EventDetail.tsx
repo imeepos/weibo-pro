@@ -16,7 +16,13 @@ import {
   UserRelationController
 } from '@sker/sdk'
 import type {
+  EventAbnormalUser,
   EventAnomaly,
+  EventEmotionMapItem,
+  EventOpinionCluster,
+  EventSentimentTrendDetailedPoint,
+  EventUserRiskProfile,
+  EventUserEmotionInsight,
   MediaTypeAnalysis,
   SpreadBreadthAnalysis,
   UserRelationNetwork
@@ -56,6 +62,7 @@ import {
   X,
   MessageCircle,
   Share2,
+  Shield,
   ThumbsUp,
   TrendingUp
 } from 'lucide-react';
@@ -78,6 +85,7 @@ import {
 } from '@sker/ui/components/ui/dialog';
 
 import MiniTrendChart from '@/components/charts/MiniTrendChart';
+import HotTopicsChart from '@/components/charts/HotTopicsChart';
 import TimeSeriesChart from '@/components/charts/TimeSeriesChart';
 import WordCloudChart from '@/components/charts/WordCloudChart';
 import UserRelationGraph3DOffscreen from '@/components/charts/UserRelationGraph3DOffscreen';
@@ -110,6 +118,14 @@ import { CommentThreadTree } from '@/components/charts/CommentThreadTree';
 import PostingTimeHeatmap from '@/components/charts/PostingTimeHeatmap';
 import NetworkCentralityGraph from '@/components/charts/NetworkCentralityGraph';
 import { UserRelationWordCloud } from '@/components/charts/UserRelationWordCloud';
+import { EventMilestoneWidget } from '@/components/charts/EventMilestoneWidget';
+import { InstitutionParticipationPanel } from '@/components/charts/InstitutionParticipationPanel';
+import { OpinionClusterPanel } from '@/components/charts/OpinionClusterPanel';
+import { EmotionMapPanel } from '@/components/charts/EmotionMapPanel';
+import { UserEmotionInsightPanel } from '@/components/charts/UserEmotionInsightPanel';
+import { DetailedSentimentTrendPanel } from '@/components/charts/DetailedSentimentTrendPanel';
+import { UserRiskProfilePanel } from '@/components/charts/UserRiskProfilePanel';
+import { AbnormalUserPanel } from '@/components/charts/AbnormalUserPanel';
 // P1 hooks 导入
 import { useUserStratification } from '@/hooks/useUserStratification';
 import { useCommentDepth } from '@/hooks/useCommentDepth';
@@ -172,6 +188,91 @@ type SentimentWidgets = {
   transition: AnalysisWidgetState<{ eventId: string }>;
   scatter: AnalysisWidgetState<Array<{ postId: string; sentimentScore: number; hotness: number; timestamp: string }>>;
   intensity: AnalysisWidgetState<Array<{ intensity: number; count: number }>>;
+  emotionMap: AnalysisWidgetState<EventEmotionMapItem[]>;
+  userInsights: AnalysisWidgetState<EventUserEmotionInsight[]>;
+  detailedTrend: AnalysisWidgetState<EventSentimentTrendDetailedPoint[]>;
+};
+
+type OpinionWidgets = {
+  clusters: AnalysisWidgetState<EventOpinionCluster[]>;
+};
+
+type UserAnalysisWidgets = {
+  riskProfile: AnalysisWidgetState<EventUserRiskProfile>;
+  abnormalUsers: AnalysisWidgetState<EventAbnormalUser[]>;
+};
+
+type OverviewWidgets = {
+  milestones: AnalysisWidgetState<EventMilestone[]>;
+  topicOverview: AnalysisWidgetState<EventTopicOverview>;
+  institutions: AnalysisWidgetState<EventInstitutionAccount[]>;
+};
+
+interface EventMilestone {
+  timestamp: string;
+  type: 'heat_spike' | 'sentiment_turn' | 'propagation_peak' | 'official_response' | 'discussion_shift';
+  title: string;
+  summary: string;
+  confidence: number;
+  metrics: {
+    hotness?: number;
+    postCount?: number;
+    userCount?: number;
+    sentimentShift?: number;
+  };
+  representativePosts: Array<{
+    postId: string;
+    author: string;
+    excerpt: string;
+    engagement: number;
+  }>;
+}
+
+interface EventInstitutionAccount {
+  userId: string;
+  screenName: string;
+  avatar?: string;
+  institutionType: 'government' | 'state_media' | 'enterprise_org' | 'official_other';
+  verified: boolean;
+  verifiedType?: string;
+  postCount: number;
+  interactionCount: number;
+  influenceScore: number;
+  sentimentTilt: 'positive' | 'negative' | 'neutral';
+}
+
+interface EventTopicOverview {
+  topTopics: Array<{
+    title: string;
+    count: number;
+    sentiment: string;
+    trend: 'up' | 'down' | 'stable';
+  }>;
+  timeSeries: Array<{
+    keyword: string;
+    timeData: Array<{
+      timestamp: string;
+      weight: number;
+    }>;
+  }>;
+}
+
+type EventsControllerPhase2 = {
+  getEventMilestones: (id: string) => Promise<EventMilestone[]>;
+  getEventTopicOverview: (id: string) => Promise<EventTopicOverview>;
+  getEventInstitutions: (id: string) => Promise<EventInstitutionAccount[]>;
+};
+
+type EventsControllerPhase3 = {
+  getEventOpinionClusters: (id: string) => Promise<EventOpinionCluster[]>;
+  getEventEmotionMap: (id: string) => Promise<EventEmotionMapItem[]>;
+  getEventUserEmotionInsights: (id: string) => Promise<EventUserEmotionInsight[]>;
+  getEventSentimentTrendDetailed: (id: string) => Promise<EventSentimentTrendDetailedPoint[]>;
+};
+
+type EventsControllerPhase4 = {
+  getEventRiskProfile: (id: string) => Promise<EventUserRiskProfile>;
+  getEventAbnormalUsers: (id: string) => Promise<EventAbnormalUser[]>;
 };
 
 const logger = createLogger('EventDetail');
@@ -206,15 +307,30 @@ const EventDetail: React.FC = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   // Tab 懒加载状态管理
   const [tabsState, setTabsState] = useState<TabsDataManager>(createInitialTabsState());
+  const [overviewWidgets, setOverviewWidgets] = useState<OverviewWidgets>({
+    milestones: createAnalysisWidgetState(),
+    topicOverview: createAnalysisWidgetState(),
+    institutions: createAnalysisWidgetState(),
+  });
   const [trendWidgets, setTrendWidgets] = useState<TrendWidgets>({
     spreadBreadth: createAnalysisWidgetState(),
     mediaType: createAnalysisWidgetState(),
     anomalies: createAnalysisWidgetState(),
   });
+  const [opinionWidgets, setOpinionWidgets] = useState<OpinionWidgets>({
+    clusters: createAnalysisWidgetState(),
+  });
+  const [userAnalysisWidgets, setUserAnalysisWidgets] = useState<UserAnalysisWidgets>({
+    riskProfile: createAnalysisWidgetState(),
+    abnormalUsers: createAnalysisWidgetState(),
+  });
   const [sentimentWidgets, setSentimentWidgets] = useState<SentimentWidgets>({
     transition: createAnalysisWidgetState(),
     scatter: createAnalysisWidgetState(),
     intensity: createAnalysisWidgetState(),
+    emotionMap: createAnalysisWidgetState(),
+    userInsights: createAnalysisWidgetState(),
+    detailedTrend: createAnalysisWidgetState(),
   });
 
   const fetchEventData = async (showRefresh = false) => {
@@ -304,6 +420,8 @@ const EventDetail: React.FC = () => {
         logger.warn('Failed to fetch engagement trend:', e);
       }
 
+      await loadOverviewPhase2Widgets();
+
       // 标记 overview 为已加载
       setTabsState(prev => ({
         ...prev,
@@ -324,6 +442,38 @@ const EventDetail: React.FC = () => {
       setIsRefreshing(false);
     }
   };
+
+  const loadOverviewPhase2Widgets = useCallback(async () => {
+    if (!eventId) return;
+
+    setOverviewWidgets({
+      milestones: createAnalysisWidgetState({ status: 'loading' }),
+      topicOverview: createAnalysisWidgetState({ status: 'loading' }),
+      institutions: createAnalysisWidgetState({ status: 'loading' }),
+    });
+
+    const controller = root.get(EventsController) as EventsController & EventsControllerPhase2;
+    const settled = await Promise.allSettled([
+      controller.getEventMilestones(eventId),
+      controller.getEventTopicOverview(eventId),
+      controller.getEventInstitutions(eventId),
+    ]);
+
+    setOverviewWidgets({
+      milestones: resolveAnalysisWidgetState(
+        settled[0] as PromiseSettledResult<EventMilestone[]>,
+        (value) => value.length === 0,
+      ),
+      topicOverview: resolveAnalysisWidgetState(
+        settled[1] as PromiseSettledResult<EventTopicOverview>,
+        (value) => value.topTopics.length === 0,
+      ),
+      institutions: resolveAnalysisWidgetState(
+        settled[2] as PromiseSettledResult<EventInstitutionAccount[]>,
+        (value) => value.length === 0,
+      ),
+    });
+  }, [eventId]);
 
   const loadTrendWidgets = useCallback(async () => {
     if (!eventId) return;
@@ -360,6 +510,52 @@ const EventDetail: React.FC = () => {
     });
   }, [eventId]);
 
+  const loadOpinionWidgets = useCallback(async () => {
+    if (!eventId) return;
+
+    setOpinionWidgets({
+      clusters: createAnalysisWidgetState({ status: 'loading' }),
+    });
+
+    const controller = root.get(EventsController) as EventsController & EventsControllerPhase3;
+    const settled = await Promise.allSettled([
+      controller.getEventOpinionClusters(eventId),
+    ]);
+
+    setOpinionWidgets({
+      clusters: resolveAnalysisWidgetState(
+        settled[0] as PromiseSettledResult<EventOpinionCluster[]>,
+        (value) => value.length === 0,
+      ),
+    });
+  }, [eventId]);
+
+  const loadUserAnalysisWidgets = useCallback(async () => {
+    if (!eventId) return;
+
+    setUserAnalysisWidgets({
+      riskProfile: createAnalysisWidgetState({ status: 'loading' }),
+      abnormalUsers: createAnalysisWidgetState({ status: 'loading' }),
+    });
+
+    const controller = root.get(EventsController) as EventsController & EventsControllerPhase4;
+    const settled = await Promise.allSettled([
+      controller.getEventRiskProfile(eventId),
+      controller.getEventAbnormalUsers(eventId),
+    ]);
+
+    setUserAnalysisWidgets({
+      riskProfile: resolveAnalysisWidgetState(
+        settled[0] as PromiseSettledResult<EventUserRiskProfile>,
+        (value) => value.totalUsers === 0,
+      ),
+      abnormalUsers: resolveAnalysisWidgetState(
+        settled[1] as PromiseSettledResult<EventAbnormalUser[]>,
+        (value) => value.length === 0,
+      ),
+    });
+  }, [eventId]);
+
   const loadSentimentWidgets = useCallback(async () => {
     if (!eventId) return;
 
@@ -367,13 +563,19 @@ const EventDetail: React.FC = () => {
       transition: createAnalysisWidgetState({ status: 'loading' }),
       scatter: createAnalysisWidgetState({ status: 'loading' }),
       intensity: createAnalysisWidgetState({ status: 'loading' }),
+      emotionMap: createAnalysisWidgetState({ status: 'loading' }),
+      userInsights: createAnalysisWidgetState({ status: 'loading' }),
+      detailedTrend: createAnalysisWidgetState({ status: 'loading' }),
     });
 
-    const eventsController = root.get(EventsController);
+    const eventsController = root.get(EventsController) as EventsController & EventsControllerPhase3;
     const settled = await Promise.allSettled([
       Promise.resolve({ eventId }),
       eventsController.getSentimentHotness(eventId),
       eventsController.getSentimentIntensity(eventId),
+      eventsController.getEventEmotionMap(eventId),
+      eventsController.getEventUserEmotionInsights(eventId),
+      eventsController.getEventSentimentTrendDetailed(eventId),
     ]);
 
     setSentimentWidgets({
@@ -387,6 +589,18 @@ const EventDetail: React.FC = () => {
       ),
       intensity: resolveAnalysisWidgetState(
         settled[2] as PromiseSettledResult<Array<{ intensity: number; count: number }>>,
+        (value) => value.length === 0,
+      ),
+      emotionMap: resolveAnalysisWidgetState(
+        settled[3] as PromiseSettledResult<EventEmotionMapItem[]>,
+        (value) => value.length === 0,
+      ),
+      userInsights: resolveAnalysisWidgetState(
+        settled[4] as PromiseSettledResult<EventUserEmotionInsight[]>,
+        (value) => value.length === 0,
+      ),
+      detailedTrend: resolveAnalysisWidgetState(
+        settled[5] as PromiseSettledResult<EventSentimentTrendDetailedPoint[]>,
         (value) => value.length === 0,
       ),
     });
@@ -446,6 +660,10 @@ const EventDetail: React.FC = () => {
         await loadTrendWidgets();
         break;
 
+      case 'opinions':
+        await loadOpinionWidgets();
+        break;
+
       case 'sentiment':
         await loadSentimentWidgets();
         break;
@@ -480,6 +698,7 @@ const EventDetail: React.FC = () => {
       case 'user-analysis':
         // 加载用户分析数据
         await Promise.all([
+          loadUserAnalysisWidgets(),
           (async () => {
             if (!userStratificationData) {
               const controller = root.get(UserStratificationController);
@@ -517,7 +736,7 @@ const EventDetail: React.FC = () => {
         ]);
         break;
     }
-  }, [eventId, userRelationNetwork, communityData, geographicData, loadTrendWidgets, loadSentimentWidgets, propagationVelocityData, influencePredictionData, communityEvolutionData, userStratificationData, postingTimeData, commentDepthData]);
+  }, [eventId, userRelationNetwork, communityData, geographicData, loadTrendWidgets, loadOpinionWidgets, loadUserAnalysisWidgets, loadSentimentWidgets, propagationVelocityData, influencePredictionData, communityEvolutionData, userStratificationData, postingTimeData, commentDepthData]);
 
   // Tab 懒加载核心逻辑
   const loadTabData = useCallback(async (tabId: TabId, force = false) => {
@@ -642,15 +861,30 @@ const EventDetail: React.FC = () => {
       setUserRelationNetwork(null);
       setGeographicData([]);
       setCommunityData(null);
+      setOverviewWidgets({
+        milestones: createAnalysisWidgetState(),
+        topicOverview: createAnalysisWidgetState(),
+        institutions: createAnalysisWidgetState(),
+      });
       setTrendWidgets({
         spreadBreadth: createAnalysisWidgetState(),
         mediaType: createAnalysisWidgetState(),
         anomalies: createAnalysisWidgetState(),
       });
+      setOpinionWidgets({
+        clusters: createAnalysisWidgetState(),
+      });
+      setUserAnalysisWidgets({
+        riskProfile: createAnalysisWidgetState(),
+        abnormalUsers: createAnalysisWidgetState(),
+      });
       setSentimentWidgets({
         transition: createAnalysisWidgetState(),
         scatter: createAnalysisWidgetState(),
         intensity: createAnalysisWidgetState(),
+        emotionMap: createAnalysisWidgetState(),
+        userInsights: createAnalysisWidgetState(),
+        detailedTrend: createAnalysisWidgetState(),
       });
       setPropagationVelocityData(null);
       setInfluencePredictionData(null);
@@ -976,7 +1210,7 @@ const EventDetail: React.FC = () => {
 
       {/* Tab 导航 */}
       <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <TabsList className="grid w-full grid-cols-8 bg-muted/20 p-1">
+        <TabsList className="grid w-full grid-cols-9 bg-muted/20 p-1">
           <TabsTrigger value="overview" className="data-[state=active]:bg-primary/20 gap-2">
             <Layers className="w-4 h-4" />
             <span className="hidden sm:inline">总览</span>
@@ -999,6 +1233,13 @@ const EventDetail: React.FC = () => {
             <LineChart className="w-4 h-4" />
             <span className="hidden sm:inline">趋势分析</span>
             {tabsState.trend.loadingState === 'loading' && (
+              <RefreshCw className="w-3 h-3 animate-spin" />
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="opinions" className="data-[state=active]:bg-primary/20 gap-2">
+            <MessageSquare className="w-4 h-4" />
+            <span className="hidden sm:inline">观点汇集</span>
+            {tabsState.opinions.loadingState === 'loading' && (
               <RefreshCw className="w-3 h-3 animate-spin" />
             )}
           </TabsTrigger>
@@ -1107,6 +1348,52 @@ const EventDetail: React.FC = () => {
                 </div>
               </div>
             )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <AnalysisWidgetCard
+                title="事件里程碑"
+                icon={<Clock className="h-4 w-4" />}
+                state={overviewWidgets.milestones}
+                emptyText="暂无里程碑数据"
+                onRetry={loadOverviewPhase2Widgets}
+              >
+                <EventMilestoneWidget data={overviewWidgets.milestones.data ?? []} />
+              </AnalysisWidgetCard>
+
+              <AnalysisWidgetCard
+                title="高频话题分布"
+                icon={<Sprout className="h-4 w-4" />}
+                state={overviewWidgets.topicOverview}
+                emptyText="暂无话题分布数据"
+                onRetry={loadOverviewPhase2Widgets}
+              >
+                <HotTopicsChart
+                  title=""
+                  data={(overviewWidgets.topicOverview.data?.topTopics ?? []).map((item, index) => ({
+                    id: `${item.title}-${index}`,
+                    createdAt: '',
+                    updatedAt: '',
+                    title: item.title,
+                    count: item.count,
+                    sentiment: item.sentiment as 'positive' | 'negative' | 'neutral',
+                    keywords: [],
+                    trend: item.trend,
+                    trendValue: 0,
+                  }))}
+                  maxTopics={8}
+                />
+              </AnalysisWidgetCard>
+            </div>
+
+            <AnalysisWidgetCard
+              title="机构账号参与"
+              icon={<Users className="h-4 w-4" />}
+              state={overviewWidgets.institutions}
+              emptyText="暂无机构参与数据"
+              onRetry={loadOverviewPhase2Widgets}
+            >
+              <InstitutionParticipationPanel data={overviewWidgets.institutions.data ?? []} />
+            </AnalysisWidgetCard>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* 情感趋势 */}
@@ -1274,6 +1561,37 @@ const EventDetail: React.FC = () => {
           )}
         </TabsContent>
 
+        <TabsContent value="opinions" className="mt-6">
+          {tabsState.opinions.loadingState === 'loading' ? (
+            <div className="flex items-center justify-center h-[600px]">
+              <div className="text-center space-y-4">
+                <RefreshCw className="w-8 h-8 animate-spin mx-auto text-primary" />
+                <p className="text-sm text-muted-foreground">加载观点汇集数据中...</p>
+              </div>
+            </div>
+          ) : tabsState.opinions.loadingState === 'error' ? (
+            <div className="flex items-center justify-center h-[600px]">
+              <div className="text-center space-y-4">
+                <AlertTriangle className="w-8 h-8 mx-auto text-destructive" />
+                <p className="text-sm text-destructive">加载失败</p>
+                <Button onClick={() => loadTabData('opinions', true)}>重试</Button>
+              </div>
+            </div>
+          ) : (
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+              <AnalysisWidgetCard
+                title="观点簇概览"
+                icon={<MessageSquare className="h-4 w-4" />}
+                state={opinionWidgets.clusters}
+                emptyText="暂无观点簇数据"
+                onRetry={loadOpinionWidgets}
+              >
+                <OpinionClusterPanel data={opinionWidgets.clusters.data ?? []} />
+              </AnalysisWidgetCard>
+            </motion.div>
+          )}
+        </TabsContent>
+
         {/* 情感分析 Tab */}
         <TabsContent value="sentiment" className="mt-6">
           {tabsState.sentiment.loadingState === 'loading' ? (
@@ -1330,6 +1648,35 @@ const EventDetail: React.FC = () => {
                   <SentimentIntensityChart title="" height={350} data={sentimentWidgets.intensity.data ?? []} />
                 </AnalysisWidgetCard>
               </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <AnalysisWidgetCard
+                  title="情绪地图"
+                  icon={<Sprout className="h-4 w-4" />}
+                  state={sentimentWidgets.emotionMap}
+                  emptyText="暂无情绪地图数据"
+                  onRetry={loadSentimentWidgets}
+                >
+                  <EmotionMapPanel data={sentimentWidgets.emotionMap.data ?? []} />
+                </AnalysisWidgetCard>
+                <AnalysisWidgetCard
+                  title="用户情绪洞察"
+                  icon={<Users className="h-4 w-4" />}
+                  state={sentimentWidgets.userInsights}
+                  emptyText="暂无用户情绪洞察"
+                  onRetry={loadSentimentWidgets}
+                >
+                  <UserEmotionInsightPanel data={sentimentWidgets.userInsights.data ?? []} />
+                </AnalysisWidgetCard>
+              </div>
+              <AnalysisWidgetCard
+                title="详细情感趋势"
+                icon={<TrendingUp className="h-4 w-4" />}
+                state={sentimentWidgets.detailedTrend}
+                emptyText="暂无详细情感趋势数据"
+                onRetry={loadSentimentWidgets}
+              >
+                <DetailedSentimentTrendPanel data={sentimentWidgets.detailedTrend.data ?? []} />
+              </AnalysisWidgetCard>
             </motion.div>
           )}
         </TabsContent>
@@ -1414,6 +1761,28 @@ const EventDetail: React.FC = () => {
             </div>
           ) : (
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+              <AnalysisWidgetCard
+                title="用户风险画像"
+                icon={<Shield className="h-4 w-4" />}
+                state={userAnalysisWidgets.riskProfile}
+                emptyText="暂无用户风险画像"
+                onRetry={loadUserAnalysisWidgets}
+              >
+                {userAnalysisWidgets.riskProfile.data ? (
+                  <UserRiskProfilePanel data={userAnalysisWidgets.riskProfile.data} />
+                ) : null}
+              </AnalysisWidgetCard>
+
+              <AnalysisWidgetCard
+                title="异常用户面板"
+                icon={<AlertTriangle className="h-4 w-4" />}
+                state={userAnalysisWidgets.abnormalUsers}
+                emptyText="暂无异常用户"
+                onRetry={loadUserAnalysisWidgets}
+              >
+                <AbnormalUserPanel data={userAnalysisWidgets.abnormalUsers.data ?? []} />
+              </AnalysisWidgetCard>
+
               {/* P1: 用户参与度分层 */}
               <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
                 <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">

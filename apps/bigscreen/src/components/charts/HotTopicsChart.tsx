@@ -9,6 +9,8 @@ import { cn, formatNumber } from "@/utils";
 interface HotTopicsChartProps {
   data: HotTopic[];
   title?: string;
+  subtitle?: string;
+  footnote?: string;
   height?: number;
   className?: string;
   maxTopics?: number;
@@ -18,6 +20,8 @@ interface HotTopicsChartProps {
 const HotTopicsChart: React.FC<HotTopicsChartProps> = React.memo(({
   data,
   title = "热点话题排行",
+  subtitle,
+  footnote,
   height = 0,
   className,
   maxTopics = 10,
@@ -272,6 +276,16 @@ const HotTopicsChart: React.FC<HotTopicsChartProps> = React.memo(({
       transition={{ duration: 0.5, delay: 0.1 }}
       className={cn("chart-container", className)}
     >
+      {(subtitle || footnote) ? (
+        <div className="mb-3 space-y-1">
+          {subtitle ? (
+            <p className="text-xs text-muted-foreground">{subtitle}</p>
+          ) : null}
+          {footnote ? (
+            <p className="text-[11px] text-muted-foreground/80">{footnote}</p>
+          ) : null}
+        </div>
+      ) : null}
       {option ? (
         <EChart
           option={option}

@@ -10,6 +10,7 @@ export type TabId =
   | 'network'
   | 'geographic'
   | 'trend'
+  | 'opinions'
   | 'sentiment'
   | 'advanced'
   | 'user-analysis'
@@ -54,6 +55,7 @@ export const createInitialTabsState = (): TabsDataManager => ({
   network: createInitialTabState(),
   geographic: createInitialTabState(),
   trend: createInitialTabState(),
+  opinions: createInitialTabState(),
   sentiment: createInitialTabState(),
   advanced: createInitialTabState(),
   'user-analysis': createInitialTabState(),

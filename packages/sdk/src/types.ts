@@ -299,6 +299,142 @@ export interface EventPeak {
   }
 }
 
+export interface EventMilestone {
+  timestamp: string
+  type: 'heat_spike' | 'sentiment_turn' | 'propagation_peak' | 'official_response' | 'discussion_shift'
+  title: string
+  summary: string
+  confidence: number
+  metrics: {
+    hotness?: number
+    postCount?: number
+    userCount?: number
+    sentimentShift?: number
+  }
+  representativePosts: Array<{
+    postId: string
+    author: string
+    excerpt: string
+    engagement: number
+  }>
+}
+
+export interface EventInstitutionAccount {
+  userId: string
+  screenName: string
+  avatar?: string
+  institutionType: 'government' | 'state_media' | 'enterprise_org' | 'official_other'
+  verified: boolean
+  verifiedType?: string
+  postCount: number
+  interactionCount: number
+  influenceScore: number
+  sentimentTilt: 'positive' | 'negative' | 'neutral'
+}
+
+export interface EventTopicOverview {
+  topTopics: Array<{
+    title: string
+    count: number
+    sentiment: string
+    trend: 'up' | 'down' | 'stable'
+  }>
+  timeSeries: EventKeywordTimeSeries[]
+}
+
+export interface EventOpinionRepresentativePost {
+  postId: string
+  author: string
+  excerpt: string
+  sentiment: 'positive' | 'negative' | 'neutral'
+  engagement: number
+}
+
+export interface EventOpinionCluster {
+  id: string
+  label: string
+  stance: 'supportive' | 'critical' | 'neutral'
+  summary: string
+  postCount: number
+  userCount: number
+  keywords: string[]
+  representativePosts: EventOpinionRepresentativePost[]
+}
+
+export interface EventEmotionMapItem {
+  label: string
+  weight: number
+}
+
+export interface EventUserEmotionInsight {
+  userId: string
+  screenName: string
+  postCount: number
+  emotionTilt: 'positive' | 'negative' | 'neutral'
+  summary: string
+}
+
+export interface EventSentimentTrendDetailedPoint {
+  timestamp: string
+  positive: number
+  negative: number
+  neutral: number
+}
+
+export interface EventUserAbnormalSignal {
+  type:
+    | 'night_activity'
+    | 'regular_interval'
+    | 'burst_posting'
+    | 'high_similarity'
+    | 'extreme_sentiment'
+    | 'low_interaction'
+    | 'single_device'
+  severity: 'low' | 'medium' | 'high'
+  description: string
+  value: number | string | Record<string, unknown>
+}
+
+export interface EventAbnormalUser {
+  userId: string
+  screenName: string
+  followers: number
+  verified: boolean
+  location: string
+  postCount: number
+  riskLevel: 'low' | 'medium' | 'high'
+  riskScore: number
+  confidence: number
+  isAbnormal: boolean
+  accountType: 'bot' | 'troll' | 'zombie' | 'suspicious' | 'normal'
+  lastActive: string
+  summary: string
+  abnormalSignals: EventUserAbnormalSignal[]
+}
+
+export interface EventUserRiskProfile {
+  totalUsers: number
+  activeUsers: number
+  abnormalUserCount: number
+  averageRiskScore: number
+  riskDistribution: {
+    low: number
+    medium: number
+    high: number
+  }
+  topSignals: Array<{
+    type: EventUserAbnormalSignal['type']
+    label: string
+    count: number
+  }>
+  topRiskUsers: Array<{
+    userId: string
+    screenName: string
+    riskLevel: 'low' | 'medium' | 'high'
+    riskScore: number
+  }>
+}
+
 export interface InfluenceUser {
   userId: string;
   username: string;
@@ -1482,6 +1618,7 @@ export interface InfluencePredictionAnalysis {
   factors: InfluenceFactor[]
   predictionRange: PredictionRange
   similarCases: SimilarCase[]
+  recommendations: string[]
 }
 
 // 账号监控相关类型

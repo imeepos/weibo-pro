@@ -22,6 +22,15 @@ import type {
   EventEngagementTrend,
   EventAnomaly,
   EventPeak,
+  EventMilestone,
+  EventInstitutionAccount,
+  EventTopicOverview,
+  EventOpinionCluster,
+  EventEmotionMapItem,
+  EventUserEmotionInsight,
+  EventSentimentTrendDetailedPoint,
+  EventAbnormalUser,
+  EventUserRiskProfile,
   EventHourlySummary,
   MultiMetricTrendData,
   EngagementBreakdown,
@@ -146,6 +155,51 @@ export class EventsController {
   @Get('user-relations')
   getEventUserRelations(@Query('id') id: string): Promise<UserRelationNetwork> {
     throw new Error('method getEventUserRelations not implements')
+  }
+
+  @Get('milestones')
+  getEventMilestones(@Query('id') id: string): Promise<EventMilestone[]> {
+    throw new Error('method getEventMilestones not implements')
+  }
+
+  @Get('institutions')
+  getEventInstitutions(@Query('id') id: string): Promise<EventInstitutionAccount[]> {
+    throw new Error('method getEventInstitutions not implements')
+  }
+
+  @Get('topic-overview')
+  getEventTopicOverview(@Query('id') id: string): Promise<EventTopicOverview> {
+    throw new Error('method getEventTopicOverview not implements')
+  }
+
+  @Get('opinion-clusters')
+  getEventOpinionClusters(@Query('id') id: string): Promise<EventOpinionCluster[]> {
+    throw new Error('method getEventOpinionClusters not implements')
+  }
+
+  @Get('emotion-map')
+  getEventEmotionMap(@Query('id') id: string): Promise<EventEmotionMapItem[]> {
+    throw new Error('method getEventEmotionMap not implements')
+  }
+
+  @Get('user-emotion-insights')
+  getEventUserEmotionInsights(@Query('id') id: string): Promise<EventUserEmotionInsight[]> {
+    throw new Error('method getEventUserEmotionInsights not implements')
+  }
+
+  @Get('sentiment-trend-detailed')
+  getEventSentimentTrendDetailed(@Query('id') id: string): Promise<EventSentimentTrendDetailedPoint[]> {
+    throw new Error('method getEventSentimentTrendDetailed not implements')
+  }
+
+  @Get('risk-profile')
+  getEventRiskProfile(@Query('id') id: string): Promise<EventUserRiskProfile> {
+    throw new Error('method getEventRiskProfile not implements')
+  }
+
+  @Get('abnormal-users')
+  getEventAbnormalUsers(@Query('id') id: string): Promise<EventAbnormalUser[]> {
+    throw new Error('method getEventAbnormalUsers not implements')
   }
 
   @Get('kol-analysis')

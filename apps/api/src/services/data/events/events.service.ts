@@ -23,10 +23,24 @@ import type {
   EventAnomaly,
   EventPeak,
   UserRelationNetwork,
+  EventMilestone,
+  EventInstitutionAccount,
+  EventTopicOverview,
+  EventOpinionCluster,
+  EventEmotionMapItem,
+  EventUserEmotionInsight,
+  EventSentimentTrendDetailedPoint,
+  EventAbnormalUser,
+  EventUserRiskProfile,
 } from './types';
 import { EventQueryService } from './event-query.service';
 import { EventAnalyticsService } from './event-analytics.service';
 import { EventTimelineBuilder } from './event-timeline.builder';
+import { EventMilestoneService } from './event-milestone.service';
+import { EventInstitutionService } from './event-institution.service';
+import { EventOpinionService } from './event-opinion.service';
+import { EventSentimentDetailService } from './event-sentiment-detail.service';
+import { EventUserRiskService } from './event-user-risk.service';
 import { useEntityManager, EventEntity } from '@sker/entities';
 import { KOLAnalysisService } from '../kol-analysis.service';
 import type { KOLAnalysisResult } from './types';
@@ -42,7 +56,17 @@ export class EventsService {
     private readonly analyticsService: EventAnalyticsService,
     @Inject(EventTimelineBuilder)
     private readonly timelineBuilder: EventTimelineBuilder,
-    @Inject(KOLAnalysisService) private readonly kolAnalysisService: KOLAnalysisService
+    @Inject(KOLAnalysisService) private readonly kolAnalysisService: KOLAnalysisService,
+    @Inject(EventMilestoneService)
+    private readonly milestoneService: EventMilestoneService,
+    @Inject(EventInstitutionService)
+    private readonly institutionService: EventInstitutionService,
+    @Inject(EventOpinionService)
+    private readonly opinionService: EventOpinionService,
+    @Inject(EventSentimentDetailService)
+    private readonly sentimentDetailService: EventSentimentDetailService,
+    @Inject(EventUserRiskService)
+    private readonly userRiskService: EventUserRiskService,
   ) { }
 
   async getEventList(
@@ -190,6 +214,55 @@ export class EventsService {
 
   async getEventUserRelations(id: string): Promise<UserRelationNetwork> {
     return await this.queryService.getEventUserRelations(id);
+  }
+
+  async getEventMilestones(id: string): Promise<EventMilestone[]> {
+    return this.milestoneService.getEventMilestones(id);
+  }
+
+  async getEventInstitutions(id: string): Promise<EventInstitutionAccount[]> {
+    return this.institutionService.getEventInstitutions(id);
+  }
+
+  async getEventTopicOverview(id: string): Promise<EventTopicOverview> {
+    const [keywords, keywordSeries] = await Promise.all([
+      this.queryService.getEventKeywords(id, 12),
+      this.queryService.getKeywordsTimeSeries(id, 8),
+    ]);
+
+    return {
+      topTopics: keywords.map((item) => ({
+        title: item.keyword,
+        count: Math.round(item.weight),
+        sentiment: item.sentiment,
+        trend: 'stable',
+      })),
+      timeSeries: keywordSeries,
+    };
+  }
+
+  async getEventOpinionClusters(id: string): Promise<EventOpinionCluster[]> {
+    return this.opinionService.getEventOpinionClusters(id);
+  }
+
+  async getEventEmotionMap(id: string): Promise<EventEmotionMapItem[]> {
+    return this.sentimentDetailService.getEventEmotionMap(id);
+  }
+
+  async getEventUserEmotionInsights(id: string): Promise<EventUserEmotionInsight[]> {
+    return this.sentimentDetailService.getEventUserEmotionInsights(id);
+  }
+
+  async getEventSentimentTrendDetailed(id: string): Promise<EventSentimentTrendDetailedPoint[]> {
+    return this.sentimentDetailService.getEventSentimentTrendDetailed(id);
+  }
+
+  async getEventRiskProfile(id: string): Promise<EventUserRiskProfile> {
+    return this.userRiskService.getEventRiskProfile(id);
+  }
+
+  async getEventAbnormalUsers(id: string): Promise<EventAbnormalUser[]> {
+    return this.userRiskService.getEventAbnormalUsers(id);
   }
 
   async updateEventKeywords(id: string, keywords: string[]): Promise<{ success: boolean }> {
