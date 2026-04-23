@@ -2,6 +2,8 @@ import { Controller, Get, Param, Post, Body } from '@sker/core'
 import type {
   PersonaListItem,
   PersonaMemoryGraph,
+  PersonaEvidenceItem,
+  PersonaNetworkGraph,
   RetrieveMemoriesRequest,
   RetrieveMemoriesResponse,
   CreateMemoryRequest,
@@ -19,6 +21,21 @@ export class PersonaController {
   @Get(':id/memory-graph')
   getMemoryGraph(@Param('id') id: string): Promise<PersonaMemoryGraph> {
     throw new Error('method getMemoryGraph not implements')
+  }
+
+  @Get('by-weibo-user/:weiboUserId')
+  getPersonaByWeiboUserId(@Param('weiboUserId') weiboUserId: string): Promise<PersonaListItem | null> {
+    throw new Error('method getPersonaByWeiboUserId not implements')
+  }
+
+  @Get('graph-overview')
+  getGraphOverview(): Promise<PersonaNetworkGraph> {
+    throw new Error('method getGraphOverview not implements')
+  }
+
+  @Get(':id/evidence')
+  getPersonaEvidence(@Param('id') id: string): Promise<PersonaEvidenceItem[]> {
+    throw new Error('method getPersonaEvidence not implements')
   }
 
   @Post('retrieve-memories')

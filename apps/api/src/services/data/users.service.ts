@@ -3,6 +3,14 @@ import { useEntityManager } from '@sker/entities';
 import { CacheService, CACHE_KEYS, CACHE_TTL } from '../cache.service';
 import { getTimeRangeBoundaries, getPreviousTimeRangeBoundaries } from './time-range.utils';
 import type { TimeRange } from './types';
+import type {
+  CreateDistillationTaskRequest,
+  DistillationTaskSummary,
+  UserInvestigationDossier,
+  UserInvestigationQueueResponse,
+} from '@sker/sdk';
+import { InvestigationQueueService } from './investigation/investigation-queue.service';
+import { UserDossierService } from './investigation/user-dossier.service';
 
 export type RiskLevel = 'low' | 'medium' | 'high';
 
@@ -87,7 +95,11 @@ export interface UserStatistics {
 @Injectable({ providedIn: 'root' })
 export class UsersService {
   constructor(
-    @Inject(CacheService) private readonly cacheService: CacheService
+    @Inject(CacheService) private readonly cacheService: CacheService,
+    @Inject(InvestigationQueueService)
+    private readonly investigationQueueService: InvestigationQueueService,
+    @Inject(UserDossierService)
+    private readonly userDossierService: UserDossierService,
   ) {}
 
   async getUserList(timeRange: TimeRange = '7d', page: number = 1, pageSize: number = 20) {
@@ -97,6 +109,61 @@ export class UsersService {
       () => this.fetchUserList(timeRange, page, pageSize),
       CACHE_TTL.LONG
     );
+  }
+
+  async getInvestigationQueue(query: {
+    eventId?: string;
+    riskLevel?: string;
+    status?: string;
+    page?: number;
+    pageSize?: number;
+  }): Promise<UserInvestigationQueueResponse> {
+    return this.investigationQueueService.getQueue({
+      eventId: query.eventId,
+      riskLevel: query.riskLevel,
+      status: query.status,
+      page: query.page ?? 1,
+      pageSize: query.pageSize ?? 20,
+    });
+  }
+
+  async getUserDossier(
+    id: string,
+    eventId?: string,
+    windowDays: number = 90,
+  ): Promise<UserInvestigationDossier> {
+    return this.userDossierService.getDossier(id, { eventId, windowDays });
+  }
+
+  async createDistillationTask(
+    id: string,
+    request?: CreateDistillationTaskRequest,
+  ): Promise<DistillationTaskSummary> {
+    const now = new Date().toISOString();
+    return {
+      id: `task-${id}`,
+      weiboUserId: id,
+      eventId: request?.eventId ?? null,
+      status: 'queued',
+      historyWindowDays: request?.historyWindowDays ?? 90,
+      sourcePostCount: 0,
+      sourceCommentCount: 0,
+      sourceRepostCount: 0,
+      evidenceSampleCount: 0,
+      model: null,
+      promptVersion: null,
+      distilledSummary: null,
+      reviewStatus: null,
+      errorMessage: null,
+      startedAt: null,
+      completedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+  }
+
+  async getDistillationTasks(_id: string): Promise<DistillationTaskSummary[]> {
+    return [];
   }
 
   private async fetchUserList(timeRange: TimeRange, page: number = 1, pageSize: number = 20) {

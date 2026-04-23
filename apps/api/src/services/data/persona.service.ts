@@ -8,6 +8,8 @@ import {
 } from '@sker/entities';
 import type {
   PersonaListItem,
+  PersonaEvidenceItem,
+  PersonaNetworkGraph,
   PersonaMemoryGraph,
   MemoryNode,
   MemoryEdge,
@@ -20,6 +22,20 @@ import { In } from 'typeorm';
 
 @Injectable({ providedIn: 'root' })
 export class PersonaService {
+  async getPersonaByWeiboUserId(_weiboUserId: string): Promise<PersonaListItem | null> {
+    return null;
+  }
+
+  async getGraphOverview(): Promise<PersonaNetworkGraph> {
+    return {
+      personas: [],
+      edges: [],
+    };
+  }
+
+  async getPersonaEvidence(_personaId: string): Promise<PersonaEvidenceItem[]> {
+    return [];
+  }
 
   async getPersonaList(): Promise<PersonaListItem[]> {
     return useEntityManager(async (manager) => {

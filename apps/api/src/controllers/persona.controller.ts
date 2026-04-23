@@ -19,6 +19,18 @@ export class PersonaController implements sdk.PersonaController {
     return this.personaService.getMemoryGraph(id);
   }
 
+  async getPersonaByWeiboUserId(@Param('weiboUserId') weiboUserId: string) {
+    return this.personaService.getPersonaByWeiboUserId(weiboUserId);
+  }
+
+  async getGraphOverview() {
+    return this.personaService.getGraphOverview();
+  }
+
+  async getPersonaEvidence(@Param('id') id: string) {
+    return this.personaService.getPersonaEvidence(id);
+  }
+
   async retrieveMemories(@Body() request: sdk.RetrieveMemoriesRequest) {
     return this.personaService.retrieveMemories(request);
   }
