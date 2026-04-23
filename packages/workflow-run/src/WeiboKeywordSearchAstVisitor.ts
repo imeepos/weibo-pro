@@ -171,7 +171,17 @@ export class WeiboKeywordSearchAstVisitor {
         let html = await this.getHtmlWithFallback(url, selection.cookieHeader, `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36`);
         logger.info('[WeiboKeywordSearch] HTML 获取成功，长度:', html.length);
 
-        let result = this.parser.parseSearchResultHtml(html);
+        let result;
+        try {
+            result = this.parser.parseSearchResultHtml(html);
+        } catch (error) {
+            // 检测登录失效错误
+            if (error instanceof Error && error.message === 'LOGIN_EXPIRED') {
+                logger.warn(`[WeiboKeywordSearch] 检测到账号 ${selection.id} 登录失效，标记为过期状态`);
+                await this.account.markAccountAsExpired(selection.id);
+            }
+            throw error;
+        }
         logger.info('[WeiboKeywordSearch] 解析结果:', {
             postsCount: result.posts.length,
             hasNextPage: result.hasNextPage,
@@ -289,7 +299,17 @@ export class WeiboKeywordSearchAstVisitor {
 
                     logger.info('[WeiboKeywordSearch] 获取第', currentPageNum, '页，URL:', result.nextPageLink);
                     html = await this.getHtmlWithFallback(result.nextPageLink, selection.cookieHeader, `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36`);
-                    result = this.parser.parseSearchResultHtml(html);
+
+                    try {
+                        result = this.parser.parseSearchResultHtml(html);
+                    } catch (error) {
+                        // 检测登录失效错误
+                        if (error instanceof Error && error.message === 'LOGIN_EXPIRED') {
+                            logger.warn(`[WeiboKeywordSearch] 检测到账号 ${selection.id} 登录失效，标记为过期状态`);
+                            await this.account.markAccountAsExpired(selection.id);
+                        }
+                        throw error;
+                    }
                     logger.info('[WeiboKeywordSearch] 第', currentPageNum, '页解析结果，帖子数量:', result.posts.length);
 
                     ast.currentPage = currentPageNum;

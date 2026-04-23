@@ -1,0 +1,52 @@
+{
+  "doc_name": "sample",
+  "structure": [
+    {
+      "title": "测试文档",
+      "line_num": 1,
+      "level": 1,
+      "nodes": [
+        {
+          "title": "第一章",
+          "line_num": 5,
+          "level": 2,
+          "nodes": [
+            {
+              "title": "1.1 小节",
+              "line_num": 9,
+              "level": 3,
+              "nodes": [],
+              "text_token_count": 5,
+              "summary": "\n小节内容。\n",
+              "node_id": "0003"
+            }
+          ],
+          "text_token_count": 12,
+          "prefix_summary": "\n小节内容。\n",
+          "node_id": "0002"
+        },
+        {
+          "title": "第二章",
+          "line_num": 13,
+          "level": 2,
+          "nodes": [
+            {
+              "title": "2.1 另一个小节",
+              "line_num": 17,
+              "level": 3,
+              "nodes": [],
+              "text_token_count": 5,
+              "summary": "\n更多内容。\n",
+              "node_id": "0005"
+            }
+          ],
+          "text_token_count": 12,
+          "prefix_summary": "\n更多内容。\n",
+          "node_id": "0004"
+        }
+      ],
+      "text_token_count": 36,
+      "node_id": "0001"
+    }
+  ]
+}

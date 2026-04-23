@@ -2,6 +2,7 @@ import { Injectable, Inject, logger } from '@sker/core'
 import { RedisClient } from '@sker/redis'
 import { useEntityManager, WorkflowScheduleEntity, ScheduleStatus, ScheduleType, cleanupIdleConnections } from '@sker/entities'
 import { WorkflowExecutionService } from './WorkflowExecutionService'
+import { WeiboAccountSyncService } from './weibo-account-sync.service'
 import { withRetryOnNetworkError } from '../utils/retry-on-network-error'
 import nodeSchedule from 'node-schedule'
 import dayjs from 'dayjs'
@@ -59,10 +60,12 @@ export class CronSchedulerService {
   private readonly lockTTL = 300 // 锁过期时间（秒），根据任务最长执行时间调整
   private executionCount = 0 // 执行计数器
   private readonly MAX_EXECUTIONS_BEFORE_CLEANUP = 50 // 每50次执行后清理
+  private accountSyncJob: nodeSchedule.Job | null = null // 账号同步定时任务
 
   constructor(
     @Inject(WorkflowExecutionService) private executionService: WorkflowExecutionService,
-    @Inject(RedisClient) private redis: RedisClient
+    @Inject(RedisClient) private redis: RedisClient,
+    @Inject(WeiboAccountSyncService) private accountSyncService: WeiboAccountSyncService
   ) { }
 
   /**
@@ -85,6 +88,12 @@ export class CronSchedulerService {
           async () => await this.executeWithLock(schedule)
         )
         const nextInvocation = job?.nextInvocation()
+
+        // 📅 立即更新数据库中的 nextRunAt，确保与内存中的调度时间同步
+        if (nextInvocation) {
+          await this.updateNextRunAtInDatabase(schedule.id, nextInvocation)
+        }
+
         logger.info('📅 Cron 调度已启动', {
           scheduleId: schedule.id,
           scheduleName: schedule.name,
@@ -106,6 +115,10 @@ export class CronSchedulerService {
         }, intervalMs)
         this.intervalTimers.set(schedule.id, timer)
         const nextIntervalRun = new Date(Date.now() + intervalMs)
+
+        // 📅 立即更新数据库中的 nextRunAt，确保与内存中的调度时间同步
+        await this.updateNextRunAtInDatabase(schedule.id, nextIntervalRun)
+
         logger.info('⏱️ 间隔调度已启动', {
           scheduleId: schedule.id,
           scheduleName: schedule.name,
@@ -126,6 +139,10 @@ export class CronSchedulerService {
           async () => await this.executeWithLock(schedule)
         )
         const executeDate = new Date(schedule.startTime)
+
+        // 📅 一次性调度的 nextRunAt 应该等于执行时间
+        await this.updateNextRunAtInDatabase(schedule.id, executeDate)
+
         logger.info('🎯 一次性调度已设置', {
           scheduleId: schedule.id,
           scheduleName: schedule.name,
@@ -518,6 +535,46 @@ export class CronSchedulerService {
    */
   async initializeSchedules(): Promise<void> {
     try {
+      // 1. 启动时执行一次账号同步
+      logger.info('🔄 启动时同步账号健康数据')
+      try {
+        const syncResult = await this.accountSyncService.syncAccountsToRedis()
+        logger.info('✅ 账号同步完成', {
+          added: syncResult.added,
+          updated: syncResult.updated,
+          errors: syncResult.errors.length
+        })
+      } catch (error) {
+        logger.error('❌ 账号同步失败', {
+          error: (error as Error).message
+        })
+      }
+
+      // 2. 设置每小时执行一次的定期同步任务
+      this.accountSyncJob = nodeSchedule.scheduleJob('0 * * * *', async () => {
+        logger.info('🔄 定期同步账号健康数据')
+        try {
+          const syncResult = await this.accountSyncService.syncAccountsToRedis()
+          logger.info('✅ 定期账号同步完成', {
+            added: syncResult.added,
+            updated: syncResult.updated,
+            errors: syncResult.errors.length
+          })
+        } catch (error) {
+          logger.error('❌ 定期账号同步失败', {
+            error: (error as Error).message
+          })
+        }
+      })
+
+      if (this.accountSyncJob) {
+        const nextSyncTime = this.accountSyncJob.nextInvocation()
+        logger.info('📅 账号同步定时任务已设置', {
+          nextSyncTime: formatBeijingTime(nextSyncTime)
+        })
+      }
+
+      // 3. 加载调度任务
       const schedules = await withRetryOnNetworkError(
         async () => {
           return await useEntityManager(async (manager) => {
@@ -563,6 +620,13 @@ export class CronSchedulerService {
       intervalTimers: this.intervalTimers.size,
       continuousSchedules: this.continuousRunning.size
     })
+
+    // 清理账号同步定时任务
+    if (this.accountSyncJob) {
+      this.accountSyncJob.cancel()
+      this.accountSyncJob = null
+      logger.debug('取消账号同步定时任务')
+    }
 
     // 清理 node-schedule 任务
     for (const [scheduleId, job] of this.scheduleJobs) {
@@ -690,6 +754,44 @@ export class CronSchedulerService {
 
       default:
         logger.warn('未知的调度变更类型', { type, scheduleId })
+    }
+  }
+
+  /**
+   * 更新数据库中的 nextRunAt 字段
+   *
+   * 这个方法确保内存中的调度时间与数据库保持同步
+   * 防止 nextRunAt 停留在过期时间
+   */
+  private async updateNextRunAtInDatabase(scheduleId: string, nextRunAt: Date): Promise<void> {
+    try {
+      await withRetryOnNetworkError(
+        async () => {
+          await useEntityManager(async (manager) => {
+            // 使用 update() 直接更新 nextRunAt 字段
+            const updateResult = await manager.update(
+              WorkflowScheduleEntity,
+              { id: scheduleId },
+              { nextRunAt }
+            )
+
+            logger.debug('[CronSchedulerService] 更新数据库 nextRunAt', {
+              scheduleId,
+              nextRunAt: formatBeijingTime(nextRunAt),
+              affectedRows: updateResult.affected
+            })
+          })
+        },
+        3,
+        1000,
+        `更新 nextRunAt [${scheduleId}]`
+      )
+    } catch (error) {
+      logger.error('[CronSchedulerService] 更新 nextRunAt 失败', {
+        scheduleId,
+        nextRunAt: formatBeijingTime(nextRunAt),
+        error: (error as Error).message
+      })
     }
   }
 }

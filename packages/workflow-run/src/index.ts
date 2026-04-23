@@ -1,6 +1,8 @@
 export { WeiboAccountService } from './services/weibo-account.service'
 export { WeiboWorkerProxyService } from './services/weibo-worker-proxy.service'
 export { WorkerBrowserService } from './services/WorkerBrowserService'
+export { WeiboAccountMonitorService } from './services/weibo-account-monitor.service'
+export type { AccountMetrics, Alert, AlertLevel, HourlySnapshot } from './services/weibo-account-monitor.service'
 
 // 舆情节点
 export { KeywordAgentAstVisitor } from './KeywordAgentAstVisitor'

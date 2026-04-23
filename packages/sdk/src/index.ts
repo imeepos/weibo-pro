@@ -1,3 +1,4 @@
+export * from './controllers/account-monitor.controller'
 export * from './controllers/charts.controller'
 export * from './controllers/chat.controller'
 export * from './controllers/claude.controller'

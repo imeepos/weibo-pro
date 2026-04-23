@@ -256,6 +256,14 @@ export class RedisClient {
         return await this.client.lpush(key, ...elements);
     }
 
+    async lrange(key: string, start: number, stop: number): Promise<string[]> {
+        return await this.client.lrange(key, start, stop);
+    }
+
+    async ltrim(key: string, start: number, stop: number): Promise<string> {
+        return await this.client.ltrim(key, start, stop);
+    }
+
     // Key operations
     async keys(pattern: string): Promise<string[]> {
         return await this.client.keys(pattern);
