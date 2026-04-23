@@ -80,7 +80,7 @@ const SpreadBreadthChart: React.FC<SpreadBreadthChartProps> = ({
       level: node.level,
       itemStyle: { color: getAggregatedNodeColor(node) },
       label: {
-        show: false, // 默认隐藏，悬停时显示
+        show: node.type === 'aggregated' || node.type === 'top_user',
         formatter: node.name,
       },
     }));
@@ -379,6 +379,8 @@ const SpreadBreadthChart: React.FC<SpreadBreadthChartProps> = ({
     return data.propagationPaths.length > 0;
   }, [data, hasAggregatedData]);
 
+  const levelStats = data?.aggregatedPropagation?.levelStats || [];
+
   if (isLoading || error || !hasDisplayableData) {
     return (
       <div className={cn('w-full', className)} style={{ height }}>
@@ -417,6 +419,45 @@ const SpreadBreadthChart: React.FC<SpreadBreadthChartProps> = ({
           <div className="text-2xl font-semibold">{data.breadthIndex.toFixed(2)}</div>
         </div>
       </div>
+
+      {levelStats.length > 0 && (
+        <div className="mb-4 rounded-lg border bg-card p-4">
+          <h4 className="mb-3 text-sm font-medium text-foreground">层级分布</h4>
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            {levelStats.map((stat) => (
+              <div key={stat.level} className="rounded-md border border-border/60 p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-sm font-semibold">第{stat.level}层</span>
+                  <span className="text-xs text-muted-foreground">
+                    {formatNumber(stat.totalUsers)} 用户 / {formatNumber(stat.totalReposts)} 转发
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <div className="rounded bg-muted/50 px-2 py-1.5">
+                    <div className="text-muted-foreground">VIP</div>
+                    <div className="font-medium">
+                      VIP {formatNumber(stat.byUserType.vip.count)}人 / {formatNumber(stat.byUserType.vip.reposts)}转发
+                    </div>
+                  </div>
+                  <div className="rounded bg-muted/50 px-2 py-1.5">
+                    <div className="text-muted-foreground">普通</div>
+                    <div className="font-medium">
+                      普通 {formatNumber(stat.byUserType.ordinary.count)}人 / {formatNumber(stat.byUserType.ordinary.reposts)}转发
+                    </div>
+                  </div>
+                  <div className="rounded bg-muted/50 px-2 py-1.5">
+                    <div className="text-muted-foreground">认证</div>
+                    <div className="font-medium">
+                      认证 {formatNumber(stat.byUserType.verified.count)}人 / {formatNumber(stat.byUserType.verified.reposts)}转发
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* 图表 */}
       <div ref={chartRef} style={{ width: '100%', flex: 1 }} />
     </div>
