@@ -1,5 +1,8 @@
 import { Injectable, Inject } from '@sker/core';
-import { useEntityManager } from '@sker/entities';
+import {
+  UserProfileDistillationTaskEntity,
+  useEntityManager,
+} from '@sker/entities';
 import { CacheService, CACHE_KEYS, CACHE_TTL } from '../cache.service';
 import { getTimeRangeBoundaries, getPreviousTimeRangeBoundaries } from './time-range.utils';
 import type { TimeRange } from './types';
@@ -139,31 +142,72 @@ export class UsersService {
     id: string,
     request?: CreateDistillationTaskRequest,
   ): Promise<DistillationTaskSummary> {
-    const now = new Date().toISOString();
-    return {
-      id: `task-${id}`,
-      weiboUserId: id,
-      eventId: request?.eventId ?? null,
-      status: 'queued',
-      historyWindowDays: request?.historyWindowDays ?? 90,
-      sourcePostCount: 0,
-      sourceCommentCount: 0,
-      sourceRepostCount: 0,
-      evidenceSampleCount: 0,
-      model: null,
-      promptVersion: null,
-      distilledSummary: null,
-      reviewStatus: null,
-      errorMessage: null,
-      startedAt: null,
-      completedAt: null,
-      createdAt: now,
-      updatedAt: now,
-    };
+    return useEntityManager(async (manager) => {
+      const repo = manager.getRepository(UserProfileDistillationTaskEntity);
+      const task = repo.create({
+        weibo_user_id: id,
+        event_id: request?.eventId ?? null,
+        status: 'queued',
+        history_window_days: request?.historyWindowDays ?? 90,
+        source_post_count: 0,
+        source_comment_count: 0,
+        source_repost_count: 0,
+        evidence_sample_count: 0,
+      });
+      const saved = await repo.save(task);
+
+      return {
+        id: saved.id,
+        weiboUserId: saved.weibo_user_id,
+        eventId: saved.event_id,
+        status: saved.status,
+        historyWindowDays: saved.history_window_days,
+        sourcePostCount: saved.source_post_count,
+        sourceCommentCount: saved.source_comment_count,
+        sourceRepostCount: saved.source_repost_count,
+        evidenceSampleCount: saved.evidence_sample_count,
+        model: saved.model,
+        promptVersion: saved.prompt_version,
+        distilledSummary: saved.distilled_summary,
+        reviewStatus: saved.review_status,
+        errorMessage: saved.error_message,
+        startedAt: saved.started_at ? saved.started_at.toISOString() : null,
+        completedAt: saved.completed_at ? saved.completed_at.toISOString() : null,
+        createdAt: saved.created_at.toISOString(),
+        updatedAt: saved.updated_at.toISOString(),
+      };
+    });
   }
 
-  async getDistillationTasks(_id: string): Promise<DistillationTaskSummary[]> {
-    return [];
+  async getDistillationTasks(id: string): Promise<DistillationTaskSummary[]> {
+    return useEntityManager(async (manager) => {
+      const repo = manager.getRepository(UserProfileDistillationTaskEntity);
+      const tasks = await repo.find({
+        where: { weibo_user_id: id },
+        order: { created_at: 'DESC' },
+      });
+
+      return tasks.map((task) => ({
+        id: task.id,
+        weiboUserId: task.weibo_user_id,
+        eventId: task.event_id,
+        status: task.status,
+        historyWindowDays: task.history_window_days,
+        sourcePostCount: task.source_post_count,
+        sourceCommentCount: task.source_comment_count,
+        sourceRepostCount: task.source_repost_count,
+        evidenceSampleCount: task.evidence_sample_count,
+        model: task.model,
+        promptVersion: task.prompt_version,
+        distilledSummary: task.distilled_summary,
+        reviewStatus: task.review_status,
+        errorMessage: task.error_message,
+        startedAt: task.started_at ? task.started_at.toISOString() : null,
+        completedAt: task.completed_at ? task.completed_at.toISOString() : null,
+        createdAt: task.created_at.toISOString(),
+        updatedAt: task.updated_at.toISOString(),
+      }));
+    });
   }
 
   private async fetchUserList(timeRange: TimeRange, page: number = 1, pageSize: number = 20) {
