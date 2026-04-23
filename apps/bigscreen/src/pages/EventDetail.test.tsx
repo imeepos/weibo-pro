@@ -264,6 +264,8 @@ describe('EventDetail', () => {
     getEventEmotionMap: vi.fn(),
     getEventUserEmotionInsights: vi.fn(),
     getEventSentimentTrendDetailed: vi.fn(),
+    getEventRiskProfile: vi.fn(),
+    getEventAbnormalUsers: vi.fn(),
     getEngagementTrend: vi.fn(),
     getEventUserRelations: vi.fn(),
     getEventGeographic: vi.fn(),
@@ -372,6 +374,35 @@ describe('EventDetail', () => {
         positive: 0.2,
         negative: 0.6,
         neutral: 0.2,
+      },
+    ]);
+    mockEventsController.getEventRiskProfile.mockResolvedValue({
+      totalUsers: 120,
+      activeUsers: 67,
+      abnormalUserCount: 8,
+      averageRiskScore: 36.5,
+      riskDistribution: { low: 90, medium: 22, high: 8 },
+      topSignals: [{ type: 'night_activity', label: '夜间活跃', count: 6 }],
+      topRiskUsers: [{ userId: 'user-1', screenName: '用户A', riskLevel: 'high', riskScore: 84 }],
+    });
+    mockEventsController.getEventAbnormalUsers.mockResolvedValue([
+      {
+        userId: 'user-1',
+        screenName: '用户A',
+        followers: 24,
+        verified: false,
+        location: '北京',
+        postCount: 12,
+        riskLevel: 'high',
+        riskScore: 84,
+        confidence: 0.84,
+        isAbnormal: true,
+        accountType: 'bot',
+        lastActive: '2026-04-23T01:00:00.000Z',
+        summary: '检测到 3 个异常信号',
+        abnormalSignals: [
+          { type: 'night_activity', severity: 'medium', description: '凌晨发帖占比高', value: 0.5 },
+        ],
       },
     ]);
     mockEventsController.getEngagementTrend.mockResolvedValue([]);
@@ -505,6 +536,8 @@ describe('EventDetail', () => {
     expect(mockEventsController.getEventEmotionMap).not.toHaveBeenCalled();
     expect(mockEventsController.getEventUserEmotionInsights).not.toHaveBeenCalled();
     expect(mockEventsController.getEventSentimentTrendDetailed).not.toHaveBeenCalled();
+    expect(mockEventsController.getEventRiskProfile).not.toHaveBeenCalled();
+    expect(mockEventsController.getEventAbnormalUsers).not.toHaveBeenCalled();
   });
 
   it('切换到关系网络 tab 时才加载网络数据', async () => {
@@ -561,6 +594,23 @@ describe('EventDetail', () => {
 
     expect(screen.getByText('观点簇概览')).toBeInTheDocument();
     expect(screen.getByText('批评观点')).toBeInTheDocument();
+  });
+
+  it('切换到用户分析 tab 时加载风险画像与异常用户面板', async () => {
+    renderEventDetail();
+    await screen.findByText('测试事件标题');
+
+    fireEvent.click(screen.getByRole('tab', { name: /用户分析/ }));
+
+    await waitFor(() => {
+      expect(mockEventsController.getEventRiskProfile).toHaveBeenCalledWith(mockEventId);
+      expect(mockEventsController.getEventAbnormalUsers).toHaveBeenCalledWith(mockEventId);
+    });
+
+    expect(screen.getByText('用户风险画像')).toBeInTheDocument();
+    expect(screen.getByText('异常用户面板')).toBeInTheDocument();
+    expect(screen.getByText('用户A')).toBeInTheDocument();
+    expect(screen.getByText('夜间活跃 6')).toBeInTheDocument();
   });
 
   it('点击更新缓存时调用 refreshCache 并刷新基础数据', async () => {

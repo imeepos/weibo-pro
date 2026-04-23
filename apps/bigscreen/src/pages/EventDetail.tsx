@@ -16,10 +16,12 @@ import {
   UserRelationController
 } from '@sker/sdk'
 import type {
+  EventAbnormalUser,
   EventAnomaly,
   EventEmotionMapItem,
   EventOpinionCluster,
   EventSentimentTrendDetailedPoint,
+  EventUserRiskProfile,
   EventUserEmotionInsight,
   MediaTypeAnalysis,
   SpreadBreadthAnalysis,
@@ -60,6 +62,7 @@ import {
   X,
   MessageCircle,
   Share2,
+  Shield,
   ThumbsUp,
   TrendingUp
 } from 'lucide-react';
@@ -121,6 +124,8 @@ import { OpinionClusterPanel } from '@/components/charts/OpinionClusterPanel';
 import { EmotionMapPanel } from '@/components/charts/EmotionMapPanel';
 import { UserEmotionInsightPanel } from '@/components/charts/UserEmotionInsightPanel';
 import { DetailedSentimentTrendPanel } from '@/components/charts/DetailedSentimentTrendPanel';
+import { UserRiskProfilePanel } from '@/components/charts/UserRiskProfilePanel';
+import { AbnormalUserPanel } from '@/components/charts/AbnormalUserPanel';
 // P1 hooks 导入
 import { useUserStratification } from '@/hooks/useUserStratification';
 import { useCommentDepth } from '@/hooks/useCommentDepth';
@@ -192,6 +197,11 @@ type OpinionWidgets = {
   clusters: AnalysisWidgetState<EventOpinionCluster[]>;
 };
 
+type UserAnalysisWidgets = {
+  riskProfile: AnalysisWidgetState<EventUserRiskProfile>;
+  abnormalUsers: AnalysisWidgetState<EventAbnormalUser[]>;
+};
+
 type OverviewWidgets = {
   milestones: AnalysisWidgetState<EventMilestone[]>;
   topicOverview: AnalysisWidgetState<EventTopicOverview>;
@@ -260,6 +270,11 @@ type EventsControllerPhase3 = {
   getEventSentimentTrendDetailed: (id: string) => Promise<EventSentimentTrendDetailedPoint[]>;
 };
 
+type EventsControllerPhase4 = {
+  getEventRiskProfile: (id: string) => Promise<EventUserRiskProfile>;
+  getEventAbnormalUsers: (id: string) => Promise<EventAbnormalUser[]>;
+};
+
 const logger = createLogger('EventDetail');
 
 const EventDetail: React.FC = () => {
@@ -304,6 +319,10 @@ const EventDetail: React.FC = () => {
   });
   const [opinionWidgets, setOpinionWidgets] = useState<OpinionWidgets>({
     clusters: createAnalysisWidgetState(),
+  });
+  const [userAnalysisWidgets, setUserAnalysisWidgets] = useState<UserAnalysisWidgets>({
+    riskProfile: createAnalysisWidgetState(),
+    abnormalUsers: createAnalysisWidgetState(),
   });
   const [sentimentWidgets, setSentimentWidgets] = useState<SentimentWidgets>({
     transition: createAnalysisWidgetState(),
@@ -511,6 +530,32 @@ const EventDetail: React.FC = () => {
     });
   }, [eventId]);
 
+  const loadUserAnalysisWidgets = useCallback(async () => {
+    if (!eventId) return;
+
+    setUserAnalysisWidgets({
+      riskProfile: createAnalysisWidgetState({ status: 'loading' }),
+      abnormalUsers: createAnalysisWidgetState({ status: 'loading' }),
+    });
+
+    const controller = root.get(EventsController) as EventsController & EventsControllerPhase4;
+    const settled = await Promise.allSettled([
+      controller.getEventRiskProfile(eventId),
+      controller.getEventAbnormalUsers(eventId),
+    ]);
+
+    setUserAnalysisWidgets({
+      riskProfile: resolveAnalysisWidgetState(
+        settled[0] as PromiseSettledResult<EventUserRiskProfile>,
+        (value) => value.totalUsers === 0,
+      ),
+      abnormalUsers: resolveAnalysisWidgetState(
+        settled[1] as PromiseSettledResult<EventAbnormalUser[]>,
+        (value) => value.length === 0,
+      ),
+    });
+  }, [eventId]);
+
   const loadSentimentWidgets = useCallback(async () => {
     if (!eventId) return;
 
@@ -653,6 +698,7 @@ const EventDetail: React.FC = () => {
       case 'user-analysis':
         // 加载用户分析数据
         await Promise.all([
+          loadUserAnalysisWidgets(),
           (async () => {
             if (!userStratificationData) {
               const controller = root.get(UserStratificationController);
@@ -690,7 +736,7 @@ const EventDetail: React.FC = () => {
         ]);
         break;
     }
-  }, [eventId, userRelationNetwork, communityData, geographicData, loadTrendWidgets, loadOpinionWidgets, loadSentimentWidgets, propagationVelocityData, influencePredictionData, communityEvolutionData, userStratificationData, postingTimeData, commentDepthData]);
+  }, [eventId, userRelationNetwork, communityData, geographicData, loadTrendWidgets, loadOpinionWidgets, loadUserAnalysisWidgets, loadSentimentWidgets, propagationVelocityData, influencePredictionData, communityEvolutionData, userStratificationData, postingTimeData, commentDepthData]);
 
   // Tab 懒加载核心逻辑
   const loadTabData = useCallback(async (tabId: TabId, force = false) => {
@@ -827,6 +873,10 @@ const EventDetail: React.FC = () => {
       });
       setOpinionWidgets({
         clusters: createAnalysisWidgetState(),
+      });
+      setUserAnalysisWidgets({
+        riskProfile: createAnalysisWidgetState(),
+        abnormalUsers: createAnalysisWidgetState(),
       });
       setSentimentWidgets({
         transition: createAnalysisWidgetState(),
@@ -1711,6 +1761,28 @@ const EventDetail: React.FC = () => {
             </div>
           ) : (
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+              <AnalysisWidgetCard
+                title="用户风险画像"
+                icon={<Shield className="h-4 w-4" />}
+                state={userAnalysisWidgets.riskProfile}
+                emptyText="暂无用户风险画像"
+                onRetry={loadUserAnalysisWidgets}
+              >
+                {userAnalysisWidgets.riskProfile.data ? (
+                  <UserRiskProfilePanel data={userAnalysisWidgets.riskProfile.data} />
+                ) : null}
+              </AnalysisWidgetCard>
+
+              <AnalysisWidgetCard
+                title="异常用户面板"
+                icon={<AlertTriangle className="h-4 w-4" />}
+                state={userAnalysisWidgets.abnormalUsers}
+                emptyText="暂无异常用户"
+                onRetry={loadUserAnalysisWidgets}
+              >
+                <AbnormalUserPanel data={userAnalysisWidgets.abnormalUsers.data ?? []} />
+              </AnalysisWidgetCard>
+
               {/* P1: 用户参与度分层 */}
               <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
                 <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
