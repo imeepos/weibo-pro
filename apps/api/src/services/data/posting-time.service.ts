@@ -5,6 +5,7 @@ import { CacheService, CACHE_TTL } from '../cache.service';
 
 // 星期名称映射
 const WEEKDAY_NAMES = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+const CHINA_TIME_OFFSET_MS = 8 * 60 * 60 * 1000;
 
 export interface PostingTimeHeatmap {
   hourlyDistribution: number[];   // 24小时分布 [0-23]
@@ -70,8 +71,9 @@ export class PostingTimeService {
         if (!post.created_at) continue;
 
         const date = new Date(post.created_at);
-        const hour = date.getHours();        // 0-23
-        const weekday = date.getDay();       // 0-6 (0=周日)
+        const chinaDate = new Date(date.getTime() + CHINA_TIME_OFFSET_MS);
+        const hour = chinaDate.getUTCHours();   // 0-23, 固定按北京时间统计
+        const weekday = chinaDate.getUTCDay();  // 0-6 (0=周日), 固定按北京时间统计
 
         hourlyDistribution[hour]++;
         weekdayDistribution[weekday]++;

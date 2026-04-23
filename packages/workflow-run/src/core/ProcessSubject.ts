@@ -11,6 +11,7 @@ export class ProcessSubject<T = string> extends Subject<string> {
     readonly child: ChildProcessWithoutNullStreams
     private readonly controller: AbortController
     private exitCode: number | null = null
+    private spawnError: Error | null = null
 
     constructor(
         cmd: string,
@@ -34,6 +35,7 @@ export class ProcessSubject<T = string> extends Subject<string> {
         })
 
         this.child.on('error', (err) => {
+            this.spawnError = err
             logger.error(`[ProcessSubject] 子进程错误: ${cmd} ${args.join(' ')}`, err)
         })
 
@@ -96,6 +98,11 @@ export class ProcessSubject<T = string> extends Subject<string> {
     }
 
     protected _subscribe(subscriber: Subscriber<T>): TeardownLogic {
+        if (this.spawnError) {
+            subscriber.error(this.spawnError)
+            return () => {}
+        }
+
         const exitHandler = () => {
             setTimeout(() => {
                 if (this.exitCode !== 0 && this.exitCode !== null) {
@@ -106,7 +113,13 @@ export class ProcessSubject<T = string> extends Subject<string> {
             }, 0)
         }
 
+        const errorHandler = (err: Error) => {
+            this.spawnError = err
+            subscriber.error(err)
+        }
+
         this.child.once('exit', exitHandler)
+        this.child.once('error', errorHandler)
 
         const outputSubscription = this.output$.subscribe({
             next: (data: T) => subscriber.next(data),
@@ -116,6 +129,7 @@ export class ProcessSubject<T = string> extends Subject<string> {
 
         return () => {
             this.child.off('exit', exitHandler)
+            this.child.off('error', errorHandler)
             outputSubscription.unsubscribe()
         }
     }

@@ -89,9 +89,9 @@ describe('导入时保持工作流 ID 不变', () => {
     expect(importedWorkflow.id).toBe(currentWorkflowId)
     expect(importedWorkflow.id).not.toBe(originalWorkflowId)
 
-    // 节点和边应该被导入
-    expect(importedWorkflow.nodes.length).toBe(6)
-    expect(importedWorkflow.edges.length).toBe(4)
+    // 节点和边应该被完整保留
+    expect(importedWorkflow.nodes.length).toBe(data.workflow.nodes.length)
+    expect(importedWorkflow.edges.length).toBe(data.workflow.edges.length)
 
     // 节点 ID 应该被重新生成
     expect(importedWorkflow.nodes[0].id).not.toBe(originalNodeIds[0])
@@ -108,7 +108,7 @@ describe('导入时保持工作流 ID 不变', () => {
   it('保存时应该使用原始工作流的 code', () => {
     // 模拟场景
     const currentWorkflowCode = 'workflow-editor-222'
-    const importedWorkflowCode = '6b66e62a-302e-4ca0-b6fa-c2701b03d5ac'
+    const importedWorkflowCode = 'imported-workflow-id'
 
     // 导入时保持当前 code
     const finalCode = currentWorkflowCode

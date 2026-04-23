@@ -50,15 +50,17 @@ describe('边验证逻辑修复测试', () => {
       invalidCount: correctValidation.invalidEdges.length
     })
 
+    const edgeCount = importedWorkflow.edges.length
+
     // 关键断言
-    expect(importedWorkflow.edges.length).toBe(4)
+    expect(edgeCount).toBe(data.workflow.edges.length)
 
     // 直接验证 IEdge 会失败（所有边被误判为非法）
     expect(directValidation.validEdges.length).toBe(0)
-    expect(directValidation.invalidEdges.length).toBe(4)
+    expect(directValidation.invalidEdges.length).toBe(edgeCount)
 
     // 转换后验证 Edge 应该成功
-    expect(correctValidation.validEdges.length).toBe(4)
+    expect(correctValidation.validEdges.length).toBe(edgeCount)
     expect(correctValidation.invalidEdges.length).toBe(0)
   })
 })
