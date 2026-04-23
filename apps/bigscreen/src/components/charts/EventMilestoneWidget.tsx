@@ -1,3 +1,4 @@
+import React from 'react';
 import EventTimelineChart from './EventTimelineChart';
 
 interface EventMilestoneData {

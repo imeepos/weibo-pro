@@ -1,3 +1,4 @@
+import React from 'react';
 import type { EventEmotionMapItem } from '@sker/sdk';
 
 export function EmotionMapPanel({ data }: { data: EventEmotionMapItem[] }) {

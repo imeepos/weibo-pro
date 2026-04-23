@@ -1,3 +1,4 @@
+import React from 'react';
 /**
  * Chart utility functions to prevent Canvas gradient errors
  */

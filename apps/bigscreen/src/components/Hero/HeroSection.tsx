@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { memo, ReactNode } from 'react';
+import React, { memo, ReactNode } from 'react';
 import { BackgroundLayers } from './BackgroundLayers';
 import { GradientOverlay } from './GradientOverlay';
 import { AnimatedCanvas } from './AnimatedCanvas';

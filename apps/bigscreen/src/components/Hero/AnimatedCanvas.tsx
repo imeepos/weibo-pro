@@ -1,4 +1,4 @@
-import { useEffect, useRef, memo, useMemo } from 'react';
+import React, { useEffect, useRef, memo, useMemo } from 'react';
 
 interface Point {
   x: number;

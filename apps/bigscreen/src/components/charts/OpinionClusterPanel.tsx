@@ -1,3 +1,4 @@
+import React from 'react';
 import { Badge } from '@sker/ui/components/ui/badge';
 import type { EventOpinionCluster } from '@sker/sdk';
 

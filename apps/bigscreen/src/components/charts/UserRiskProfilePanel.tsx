@@ -1,3 +1,4 @@
+import React from 'react';
 import type { EventUserRiskProfile } from '@sker/sdk';
 
 export function UserRiskProfilePanel({ data }: { data: EventUserRiskProfile }) {

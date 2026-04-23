@@ -1,3 +1,4 @@
+import React from 'react';
 import { Info } from 'lucide-react';
 import { Button } from '@sker/ui/components/ui/button';
 import {

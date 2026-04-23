@@ -1,3 +1,4 @@
+import React from 'react';
 import type { EventSentimentTrendDetailedPoint } from '@sker/sdk';
 import type { TimeSeriesData } from '@/types';
 import TimeSeriesChart from './TimeSeriesChart';
