@@ -1,5 +1,10 @@
 import { Injectable } from '@sker/core';
-import { PostNLPResultEntity, WeiboPostEntity, useEntityManager } from '@sker/entities';
+import {
+  PostNLPResultEntity,
+  WeiboPostEntity,
+  WeiboUserEntity,
+  useEntityManager,
+} from '@sker/entities';
 import type { EventInstitutionAccount } from './types';
 
 function classifyInstitutionType(
@@ -18,7 +23,7 @@ export class EventInstitutionService {
       const rows = await manager
         .getRepository(WeiboPostEntity)
         .createQueryBuilder('post')
-        .leftJoin('post.user', 'user')
+        .leftJoin(WeiboUserEntity, 'user', 'user.id = post.user_id')
         .leftJoin(PostNLPResultEntity, 'nlp', 'nlp.post_id = post.id')
         .select('post.user_id', 'userId')
         .addSelect('MAX(user.screen_name)', 'screenName')

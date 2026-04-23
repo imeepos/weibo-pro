@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { EventInstitutionService } from './event-institution.service';
 import { mockEntityManager } from '../../../test-setup';
+import { WeiboUserEntity } from '@sker/entities';
 
 vi.mock('@sker/entities', async () => {
   const actual = await vi.importActual('@sker/entities');
@@ -53,5 +54,32 @@ describe('EventInstitutionService', () => {
         interactionCount: 120,
       }),
     ]);
+  });
+
+  it('joins the user table explicitly when loading institution accounts', async () => {
+    const query = {
+      select: vi.fn().mockReturnThis(),
+      leftJoin: vi.fn().mockReturnThis(),
+      addSelect: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      andWhere: vi.fn().mockReturnThis(),
+      groupBy: vi.fn().mockReturnThis(),
+      orderBy: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      getRawMany: vi.fn().mockResolvedValue([]),
+    };
+
+    vi.spyOn(mockEntityManager, 'getRepository').mockReturnValue({
+      createQueryBuilder: vi.fn(() => query),
+    } as any);
+
+    const service = new EventInstitutionService();
+    await service.getEventInstitutions('event-1');
+
+    expect(query.leftJoin).toHaveBeenCalledWith(
+      WeiboUserEntity,
+      'user',
+      'user.id = post.user_id',
+    );
   });
 });
