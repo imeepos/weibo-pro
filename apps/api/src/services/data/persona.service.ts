@@ -1,4 +1,4 @@
-import { Injectable } from '@sker/core';
+import { Inject, Injectable } from '@sker/core';
 import {
   useEntityManager,
   PersonaEntity,
@@ -19,22 +19,28 @@ import type {
   CreateMemoryRequest,
 } from '@sker/sdk';
 import { In } from 'typeorm';
+import { PersonaProjectionService } from './investigation/persona-projection.service';
+import { PersonaNetworkService } from './investigation/persona-network.service';
 
 @Injectable({ providedIn: 'root' })
 export class PersonaService {
+  constructor(
+    @Inject(PersonaProjectionService)
+    private readonly personaProjectionService: PersonaProjectionService,
+    @Inject(PersonaNetworkService)
+    private readonly personaNetworkService: PersonaNetworkService,
+  ) {}
+
   async getPersonaByWeiboUserId(_weiboUserId: string): Promise<PersonaListItem | null> {
     return null;
   }
 
   async getGraphOverview(): Promise<PersonaNetworkGraph> {
-    return {
-      personas: [],
-      edges: [],
-    };
+    return this.personaNetworkService.getGraphOverview();
   }
 
-  async getPersonaEvidence(_personaId: string): Promise<PersonaEvidenceItem[]> {
-    return [];
+  async getPersonaEvidence(personaId: string): Promise<PersonaEvidenceItem[]> {
+    return this.personaProjectionService.getEvidenceForPersona(personaId);
   }
 
   async getPersonaList(): Promise<PersonaListItem[]> {

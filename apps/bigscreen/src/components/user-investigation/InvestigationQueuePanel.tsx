@@ -1,0 +1,55 @@
+import type { UserInvestigationQueueItem } from '@sker/sdk';
+
+interface InvestigationQueuePanelProps {
+  queue: UserInvestigationQueueItem[];
+  selectedUserId: string | null;
+  onSelectUser: (userId: string) => void;
+}
+
+export function InvestigationQueuePanel({
+  queue,
+  selectedUserId,
+  onSelectUser,
+}: InvestigationQueuePanelProps) {
+  return (
+    <section className="rounded-xl border bg-card p-4">
+      <div className="mb-4">
+        <h2 className="text-lg font-semibold text-foreground">高危候选队列</h2>
+        <p className="mt-1 text-sm text-muted-foreground">事件风险、蒸馏状态与 Persona 覆盖情况</p>
+      </div>
+
+      <div className="space-y-3">
+        {queue.length === 0 ? (
+          <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+            当前没有高危候选。
+          </div>
+        ) : (
+          queue.map((item) => (
+            <button
+              key={item.weiboUserId}
+              type="button"
+              onClick={() => onSelectUser(item.weiboUserId)}
+              className={`w-full rounded-lg border p-3 text-left transition-colors ${
+                selectedUserId === item.weiboUserId
+                  ? 'border-primary bg-primary/5'
+                  : 'border-border hover:bg-muted/30'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="font-medium text-foreground">{item.screenName}</div>
+                  <div className="text-xs text-muted-foreground">
+                    风险分 {item.eventRiskScore} · 状态 {item.status}
+                  </div>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {item.hasPersona ? '已入图谱' : '未入图谱'}
+                </div>
+              </div>
+            </button>
+          ))
+        )}
+      </div>
+    </section>
+  );
+}

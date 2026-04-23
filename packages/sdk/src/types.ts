@@ -906,6 +906,89 @@ export interface CreateDistillationTaskRequest {
   historyWindowDays?: number
 }
 
+export interface DistilledRiskDriver {
+  label: string
+  reason: string
+  confidence: number
+}
+
+export interface DistilledRelationConnection {
+  targetUserId: string
+  relationType: string
+  strength: number
+  note: string
+}
+
+export interface DistilledMemoryEvidenceRef {
+  sourceTable: string
+  sourceId: string
+  excerpt?: string
+  score: number
+}
+
+export interface DistilledMemoryRelationDraft {
+  relationType: RelationType
+  targetKind: 'memory' | 'persona'
+  targetRef: string
+  note?: string
+}
+
+export interface DistilledMemoryDraft {
+  type: MemoryType
+  name: string
+  description: string | null
+  content: string
+  evidenceRefs: DistilledMemoryEvidenceRef[]
+  relationDrafts: DistilledMemoryRelationDraft[]
+}
+
+export interface DistilledUserProfile {
+  summary: {
+    short: string
+    long: string
+    confidence: number
+  }
+  identity: {
+    inferredRole: string
+    roleConfidence: number
+    accountNature: string[]
+    stableTraits: string[]
+  }
+  behavior: {
+    activityPattern: string[]
+    postingRhythm: string
+    escalationPattern: string[]
+    historicalStability: string
+  }
+  content: {
+    primaryTopics: string[]
+    narrativeStyles: string[]
+    emotionalTendency: string[]
+    stancePattern: string[]
+  }
+  risk: {
+    overallLevel: RiskLevel | 'critical'
+    overallScore: number
+    riskDrivers: DistilledRiskDriver[]
+    reviewRecommendation: 'auto_pass' | 'human_review'
+  }
+  relations: {
+    keyConnections: DistilledRelationConnection[]
+    clusterRole: string | null
+    coordinationSignals: string[]
+  }
+  memoryDrafts: DistilledMemoryDraft[]
+  metadata: {
+    sampledPosts: number
+    sampledComments: number
+    sampledReposts: number
+    windowDays: number
+    model: string
+    promptVersion: string
+    generatedAt: string
+  }
+}
+
 // 工作流相关类型
 export interface WorkflowStatus {
   nlpQueue: string
