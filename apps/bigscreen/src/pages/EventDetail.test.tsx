@@ -61,6 +61,30 @@ vi.mock('@/components/charts/WordCloudChart', () => ({
   ),
 }));
 
+vi.mock('@/components/charts/HotTopicsChart', () => ({
+  default: ({ data }: { data: Array<{ title: string }> }) => (
+    <div data-testid="hot-topics-chart">
+      {data.map((item) => item.title).join(',')}
+    </div>
+  ),
+}));
+
+vi.mock('@/components/charts/EventMilestoneWidget', () => ({
+  EventMilestoneWidget: ({ data }: { data: Array<{ title: string }> }) => (
+    <div data-testid="event-milestone-widget">
+      {data.map((item) => item.title).join(',')}
+    </div>
+  ),
+}));
+
+vi.mock('@/components/charts/InstitutionParticipationPanel', () => ({
+  InstitutionParticipationPanel: ({ data }: { data: Array<{ screenName: string }> }) => (
+    <div data-testid="institution-participation-panel">
+      {data.map((item) => item.screenName).join(',')}
+    </div>
+  ),
+}));
+
 vi.mock('@/components/charts/UserRelationGraph3DOffscreen', () => ({
   default: () => <div data-testid="user-relation-graph">UserRelationGraph3DOffscreen</div>,
 }));
@@ -233,6 +257,9 @@ describe('EventDetail', () => {
     getEventTimeSeries: vi.fn(),
     getEventTrends: vi.fn(),
     getEventKeywords: vi.fn(),
+    getEventMilestones: vi.fn(),
+    getEventTopicOverview: vi.fn(),
+    getEventInstitutions: vi.fn(),
     getEngagementTrend: vi.fn(),
     getEventUserRelations: vi.fn(),
     getEventGeographic: vi.fn(),
@@ -281,6 +308,35 @@ describe('EventDetail', () => {
     mockEventsController.getEventKeywords.mockResolvedValue([
       { keyword: 'AI', weight: 0.9, sentiment: 'positive' },
       { keyword: '人工智能', weight: 0.8, sentiment: 'positive' },
+    ]);
+    mockEventsController.getEventMilestones.mockResolvedValue([
+      {
+        timestamp: '2026-04-20T09:00:00.000Z',
+        type: 'heat_spike',
+        title: '热度峰值',
+        summary: '热度在该时间窗快速升高',
+        confidence: 0.8,
+        metrics: { hotness: 120, postCount: 60, userCount: 40 },
+        representativePosts: [],
+      },
+    ]);
+    mockEventsController.getEventTopicOverview.mockResolvedValue({
+      topTopics: [
+        { title: '外交部', count: 42, sentiment: 'neutral', trend: 'stable' },
+      ],
+      timeSeries: [],
+    });
+    mockEventsController.getEventInstitutions.mockResolvedValue([
+      {
+        userId: 'user-1',
+        screenName: '新华社',
+        institutionType: 'state_media',
+        verified: true,
+        postCount: 5,
+        interactionCount: 120,
+        influenceScore: 9800,
+        sentimentTilt: 'neutral',
+      },
     ]);
     mockEventsController.getEngagementTrend.mockResolvedValue([]);
     mockEventsController.getEventUserRelations.mockResolvedValue({
@@ -456,6 +512,21 @@ describe('EventDetail', () => {
     await waitFor(() => {
       expect(mockEventsController.refreshCache).toHaveBeenCalledWith(mockEventId);
     });
+  });
+
+  it('renders milestones, topic summary, and institution participation in overview', async () => {
+    render(
+      <MemoryRouter initialEntries={[`/event/${mockEventId}`]}>
+        <EventDetail />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('事件里程碑')).toBeInTheDocument();
+    expect(screen.getByText('高频话题分布')).toBeInTheDocument();
+    expect(screen.getByText('机构账号参与')).toBeInTheDocument();
+    expect(screen.getByTestId('event-milestone-widget')).toHaveTextContent('热度峰值');
+    expect(screen.getByTestId('hot-topics-chart')).toHaveTextContent('外交部');
+    expect(screen.getByTestId('institution-participation-panel')).toHaveTextContent('新华社');
   });
 
   it('keeps successful trend widgets visible when one trend request fails', async () => {

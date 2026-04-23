@@ -78,6 +78,7 @@ import {
 } from '@sker/ui/components/ui/dialog';
 
 import MiniTrendChart from '@/components/charts/MiniTrendChart';
+import HotTopicsChart from '@/components/charts/HotTopicsChart';
 import TimeSeriesChart from '@/components/charts/TimeSeriesChart';
 import WordCloudChart from '@/components/charts/WordCloudChart';
 import UserRelationGraph3DOffscreen from '@/components/charts/UserRelationGraph3DOffscreen';
@@ -110,6 +111,8 @@ import { CommentThreadTree } from '@/components/charts/CommentThreadTree';
 import PostingTimeHeatmap from '@/components/charts/PostingTimeHeatmap';
 import NetworkCentralityGraph from '@/components/charts/NetworkCentralityGraph';
 import { UserRelationWordCloud } from '@/components/charts/UserRelationWordCloud';
+import { EventMilestoneWidget } from '@/components/charts/EventMilestoneWidget';
+import { InstitutionParticipationPanel } from '@/components/charts/InstitutionParticipationPanel';
 // P1 hooks 导入
 import { useUserStratification } from '@/hooks/useUserStratification';
 import { useCommentDepth } from '@/hooks/useCommentDepth';
@@ -174,6 +177,67 @@ type SentimentWidgets = {
   intensity: AnalysisWidgetState<Array<{ intensity: number; count: number }>>;
 };
 
+type OverviewWidgets = {
+  milestones: AnalysisWidgetState<EventMilestone[]>;
+  topicOverview: AnalysisWidgetState<EventTopicOverview>;
+  institutions: AnalysisWidgetState<EventInstitutionAccount[]>;
+};
+
+interface EventMilestone {
+  timestamp: string;
+  type: 'heat_spike' | 'sentiment_turn' | 'propagation_peak' | 'official_response' | 'discussion_shift';
+  title: string;
+  summary: string;
+  confidence: number;
+  metrics: {
+    hotness?: number;
+    postCount?: number;
+    userCount?: number;
+    sentimentShift?: number;
+  };
+  representativePosts: Array<{
+    postId: string;
+    author: string;
+    excerpt: string;
+    engagement: number;
+  }>;
+}
+
+interface EventInstitutionAccount {
+  userId: string;
+  screenName: string;
+  avatar?: string;
+  institutionType: 'government' | 'state_media' | 'enterprise_org' | 'official_other';
+  verified: boolean;
+  verifiedType?: string;
+  postCount: number;
+  interactionCount: number;
+  influenceScore: number;
+  sentimentTilt: 'positive' | 'negative' | 'neutral';
+}
+
+interface EventTopicOverview {
+  topTopics: Array<{
+    title: string;
+    count: number;
+    sentiment: string;
+    trend: 'up' | 'down' | 'stable';
+  }>;
+  timeSeries: Array<{
+    keyword: string;
+    timeData: Array<{
+      timestamp: string;
+      weight: number;
+    }>;
+  }>;
+}
+
+type EventsControllerPhase2 = {
+  getEventMilestones: (id: string) => Promise<EventMilestone[]>;
+  getEventTopicOverview: (id: string) => Promise<EventTopicOverview>;
+  getEventInstitutions: (id: string) => Promise<EventInstitutionAccount[]>;
+};
+
 const logger = createLogger('EventDetail');
 
 const EventDetail: React.FC = () => {
@@ -206,6 +270,11 @@ const EventDetail: React.FC = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   // Tab 懒加载状态管理
   const [tabsState, setTabsState] = useState<TabsDataManager>(createInitialTabsState());
+  const [overviewWidgets, setOverviewWidgets] = useState<OverviewWidgets>({
+    milestones: createAnalysisWidgetState(),
+    topicOverview: createAnalysisWidgetState(),
+    institutions: createAnalysisWidgetState(),
+  });
   const [trendWidgets, setTrendWidgets] = useState<TrendWidgets>({
     spreadBreadth: createAnalysisWidgetState(),
     mediaType: createAnalysisWidgetState(),
@@ -304,6 +373,8 @@ const EventDetail: React.FC = () => {
         logger.warn('Failed to fetch engagement trend:', e);
       }
 
+      await loadOverviewPhase2Widgets();
+
       // 标记 overview 为已加载
       setTabsState(prev => ({
         ...prev,
@@ -324,6 +395,38 @@ const EventDetail: React.FC = () => {
       setIsRefreshing(false);
     }
   };
+
+  const loadOverviewPhase2Widgets = useCallback(async () => {
+    if (!eventId) return;
+
+    setOverviewWidgets({
+      milestones: createAnalysisWidgetState({ status: 'loading' }),
+      topicOverview: createAnalysisWidgetState({ status: 'loading' }),
+      institutions: createAnalysisWidgetState({ status: 'loading' }),
+    });
+
+    const controller = root.get(EventsController) as EventsController & EventsControllerPhase2;
+    const settled = await Promise.allSettled([
+      controller.getEventMilestones(eventId),
+      controller.getEventTopicOverview(eventId),
+      controller.getEventInstitutions(eventId),
+    ]);
+
+    setOverviewWidgets({
+      milestones: resolveAnalysisWidgetState(
+        settled[0] as PromiseSettledResult<EventMilestone[]>,
+        (value) => value.length === 0,
+      ),
+      topicOverview: resolveAnalysisWidgetState(
+        settled[1] as PromiseSettledResult<EventTopicOverview>,
+        (value) => value.topTopics.length === 0,
+      ),
+      institutions: resolveAnalysisWidgetState(
+        settled[2] as PromiseSettledResult<EventInstitutionAccount[]>,
+        (value) => value.length === 0,
+      ),
+    });
+  }, [eventId]);
 
   const loadTrendWidgets = useCallback(async () => {
     if (!eventId) return;
@@ -642,6 +745,11 @@ const EventDetail: React.FC = () => {
       setUserRelationNetwork(null);
       setGeographicData([]);
       setCommunityData(null);
+      setOverviewWidgets({
+        milestones: createAnalysisWidgetState(),
+        topicOverview: createAnalysisWidgetState(),
+        institutions: createAnalysisWidgetState(),
+      });
       setTrendWidgets({
         spreadBreadth: createAnalysisWidgetState(),
         mediaType: createAnalysisWidgetState(),
@@ -1107,6 +1215,52 @@ const EventDetail: React.FC = () => {
                 </div>
               </div>
             )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <AnalysisWidgetCard
+                title="事件里程碑"
+                icon={<Clock className="h-4 w-4" />}
+                state={overviewWidgets.milestones}
+                emptyText="暂无里程碑数据"
+                onRetry={loadOverviewPhase2Widgets}
+              >
+                <EventMilestoneWidget data={overviewWidgets.milestones.data ?? []} />
+              </AnalysisWidgetCard>
+
+              <AnalysisWidgetCard
+                title="高频话题分布"
+                icon={<Sprout className="h-4 w-4" />}
+                state={overviewWidgets.topicOverview}
+                emptyText="暂无话题分布数据"
+                onRetry={loadOverviewPhase2Widgets}
+              >
+                <HotTopicsChart
+                  title=""
+                  data={(overviewWidgets.topicOverview.data?.topTopics ?? []).map((item, index) => ({
+                    id: `${item.title}-${index}`,
+                    createdAt: '',
+                    updatedAt: '',
+                    title: item.title,
+                    count: item.count,
+                    sentiment: item.sentiment as 'positive' | 'negative' | 'neutral',
+                    keywords: [],
+                    trend: item.trend,
+                    trendValue: 0,
+                  }))}
+                  maxTopics={8}
+                />
+              </AnalysisWidgetCard>
+            </div>
+
+            <AnalysisWidgetCard
+              title="机构账号参与"
+              icon={<Users className="h-4 w-4" />}
+              state={overviewWidgets.institutions}
+              emptyText="暂无机构参与数据"
+              onRetry={loadOverviewPhase2Widgets}
+            >
+              <InstitutionParticipationPanel data={overviewWidgets.institutions.data ?? []} />
+            </AnalysisWidgetCard>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* 情感趋势 */}
