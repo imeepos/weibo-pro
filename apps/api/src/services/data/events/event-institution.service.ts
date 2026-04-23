@@ -20,6 +20,9 @@ function classifyInstitutionType(
 export class EventInstitutionService {
   async getEventInstitutions(eventId: string): Promise<EventInstitutionAccount[]> {
     return useEntityManager(async (manager) => {
+      const interactionCountExpr =
+        'SUM(COALESCE(post.comments_count, 0) + COALESCE(post.reposts_count, 0) + COALESCE(post.attitudes_count, 0))';
+
       const rows = await manager
         .getRepository(WeiboPostEntity)
         .createQueryBuilder('post')
@@ -30,10 +33,7 @@ export class EventInstitutionService {
         .addSelect('MAX(user.avatar_large)', 'avatar')
         .addSelect('MAX(user.verified_type)', 'verifiedType')
         .addSelect('COUNT(*)', 'postCount')
-        .addSelect(
-          'SUM(COALESCE(post.comments_count, 0) + COALESCE(post.reposts_count, 0) + COALESCE(post.attitudes_count, 0))',
-          'interactionCount',
-        )
+        .addSelect(interactionCountExpr, 'interactionCount')
         .addSelect('MAX(COALESCE(user.followers_count, 0))', 'influenceScore')
         .addSelect(
           'AVG(COALESCE((nlp.sentiment->>\'positive_prob\')::numeric, 0))',
@@ -46,7 +46,7 @@ export class EventInstitutionService {
         .where('post.event_id = :eventId', { eventId })
         .andWhere('post.deleted_at IS NULL')
         .groupBy('post.user_id')
-        .orderBy('interactionCount', 'DESC')
+        .orderBy(interactionCountExpr, 'DESC')
         .limit(20)
         .getRawMany();
 

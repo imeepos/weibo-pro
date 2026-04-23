@@ -82,4 +82,30 @@ describe('EventInstitutionService', () => {
       'user.id = post.user_id',
     );
   });
+
+  it('orders institution accounts by the interaction aggregate instead of a camelCase alias', async () => {
+    const query = {
+      select: vi.fn().mockReturnThis(),
+      leftJoin: vi.fn().mockReturnThis(),
+      addSelect: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      andWhere: vi.fn().mockReturnThis(),
+      groupBy: vi.fn().mockReturnThis(),
+      orderBy: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      getRawMany: vi.fn().mockResolvedValue([]),
+    };
+
+    vi.spyOn(mockEntityManager, 'getRepository').mockReturnValue({
+      createQueryBuilder: vi.fn(() => query),
+    } as any);
+
+    const service = new EventInstitutionService();
+    await service.getEventInstitutions('event-1');
+
+    expect(query.orderBy).toHaveBeenCalledWith(
+      'SUM(COALESCE(post.comments_count, 0) + COALESCE(post.reposts_count, 0) + COALESCE(post.attitudes_count, 0))',
+      'DESC',
+    );
+  });
 });
