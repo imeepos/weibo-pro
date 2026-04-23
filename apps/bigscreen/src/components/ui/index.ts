@@ -6,5 +6,7 @@ export { default as NavigationMenu } from './NavigationMenu';
 export { ToastProvider, useToast } from './Toast';
 export { ErrorState } from './ErrorState';
 export { EmptyState } from './EmptyState';
+export { AnalysisWidgetCard } from './AnalysisWidgetCard';
+export { MetricExplainPopover } from './MetricExplainPopover';
 export { default as TimeRangeDisplay } from './TimeRangeDisplay';
 export { default as RefreshIndicator } from './RefreshIndicator';
