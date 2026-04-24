@@ -1,6 +1,7 @@
 import type { PersonaEvidenceItem, PersonaListItem, PersonaMemoryGraph } from '@sker/sdk';
 import { Button } from '@sker/ui/components/ui/button';
 import type { DistillationTaskSummary } from '@sker/sdk';
+import { useState } from 'react';
 
 interface DistillationWorkspacePanelProps {
   selectedUserId: string | null;
@@ -26,6 +27,7 @@ export function DistillationWorkspacePanel({
   onOpenGraphMode,
 }: DistillationWorkspacePanelProps) {
   const latestTask = tasks[0] ?? null;
+  const [selectedEvidence, setSelectedEvidence] = useState<PersonaEvidenceItem | null>(null);
 
   return (
     <section className="rounded-xl border bg-card p-4">
@@ -89,9 +91,14 @@ export function DistillationWorkspacePanel({
               {evidenceItems.length > 0 && (
                 <div className="mt-2 space-y-1">
                   {evidenceItems.slice(0, 3).map((item) => (
-                    <div key={item.id} className="rounded-md bg-muted/40 p-2 text-xs text-muted-foreground">
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setSelectedEvidence(item)}
+                      className="block w-full rounded-md bg-muted/40 p-2 text-left text-xs text-muted-foreground transition-colors hover:bg-muted"
+                    >
                       {item.excerpt ?? `${item.sourceTable}:${item.sourceId}`}
-                    </div>
+                    </button>
                   ))}
                 </div>
               )}
@@ -100,6 +107,23 @@ export function DistillationWorkspacePanel({
             <div className="mt-2 text-sm text-muted-foreground">当前用户尚未发布 Persona</div>
           )}
         </div>
+
+        {selectedEvidence && (
+          <div className="rounded-lg border p-3">
+            <div className="text-xs text-muted-foreground">证据明细</div>
+            <div className="mt-2 space-y-2 text-sm">
+              <div className="font-medium text-foreground">
+                来源 {selectedEvidence.sourceTable} · {selectedEvidence.sourceId}
+              </div>
+              {selectedEvidence.excerpt && (
+                <div className="text-muted-foreground">{selectedEvidence.excerpt}</div>
+              )}
+              <div className="text-xs text-muted-foreground">
+                类型 {selectedEvidence.evidenceType} · 置信度 {selectedEvidence.score}
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="rounded-lg border p-3">
           <div className="text-xs text-muted-foreground">图谱预览</div>

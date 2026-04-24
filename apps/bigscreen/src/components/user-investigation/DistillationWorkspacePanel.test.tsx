@@ -177,4 +177,41 @@ describe('DistillationWorkspacePanel', () => {
     expect(onReviewTask).toHaveBeenNthCalledWith(1, 'task-1', 'approve');
     expect(onReviewTask).toHaveBeenNthCalledWith(2, 'task-1', 'reject');
   });
+
+  it('shows evidence detail when an evidence item is selected', () => {
+    render(
+      <DistillationWorkspacePanel
+        selectedUserId="100"
+        tasks={[]}
+        personaSummary={{
+          id: 'persona-1',
+          name: '用户A Persona',
+          avatar: null,
+          description: '人物画像',
+          memoryCount: 4,
+          createdAt: '2026-04-23T00:00:00.000Z',
+        }}
+        evidenceCount={1}
+        evidenceItems={[{
+          id: 'e1',
+          memoryId: 'm1',
+          sourceTable: 'weibo_posts',
+          sourceId: 'p1',
+          excerpt: '代表性帖子证据',
+          evidenceType: 'direct_quote',
+          score: 0.9,
+          createdAt: '2026-04-23T00:00:00.000Z',
+        }]}
+        memoryGraph={null}
+        onCreateTask={vi.fn()}
+        onOpenGraphMode={vi.fn()}
+        onReviewTask={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByText('代表性帖子证据'));
+
+    expect(screen.getByText('证据明细')).toBeInTheDocument();
+    expect(screen.getByText('来源 weibo_posts · p1')).toBeInTheDocument();
+  });
 });
