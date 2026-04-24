@@ -6,6 +6,7 @@ import { useUserDossier } from '@/hooks/useUserDossier';
 import { useDistillationTasks } from '@/hooks/useDistillationTasks';
 import { usePersonaByWeiboUser } from '@/hooks/usePersonaByWeiboUser';
 import { usePersonaEvidence } from '@/hooks/usePersonaEvidence';
+import { usePersonaMemoryGraph } from '@/hooks/usePersonaMemoryGraph';
 import { InvestigationQueuePanel } from '@/components/user-investigation/InvestigationQueuePanel';
 import { UserDossierPanel } from '@/components/user-investigation/UserDossierPanel';
 import { DistillationWorkspacePanel } from '@/components/user-investigation/DistillationWorkspacePanel';
@@ -58,6 +59,21 @@ const UserDetection: React.FC = () => {
 
   const personaSummaryState = usePersonaByWeiboUser(selectedUserId);
   const personaEvidenceState = usePersonaEvidence(personaSummaryState.persona?.id ?? null);
+  const personaMemoryGraphState = usePersonaMemoryGraph(personaSummaryState.persona?.id ?? null);
+
+  const handleCreateTask = async () => {
+    await tasksState.createTask({ historyWindowDays: 90 });
+    await personaSummaryState.refetch();
+    await personaEvidenceState.refetch();
+    await personaMemoryGraphState.refetch();
+  };
+
+  const handleReviewTask = async (taskId: string, decision: 'approve' | 'reject') => {
+    await tasksState.reviewTask(taskId, { decision });
+    await personaSummaryState.refetch();
+    await personaEvidenceState.refetch();
+    await personaMemoryGraphState.refetch();
+  };
 
   const content = mode === 'graph' ? (
     <PersonaNetworkPanel onBackToInvestigation={() => setMode('investigation')} />
@@ -74,11 +90,13 @@ const UserDetection: React.FC = () => {
         tasks={tasksState.tasks}
         personaSummary={personaSummaryState.persona}
         evidenceCount={personaEvidenceState.evidence.length}
+        evidenceItems={personaEvidenceState.evidence}
+        memoryGraph={personaMemoryGraphState.graph}
         onCreateTask={() => {
-          void tasksState.createTask({ historyWindowDays: 90 });
+          void handleCreateTask();
         }}
         onReviewTask={(taskId, decision) => {
-          void tasksState.reviewTask(taskId, { decision });
+          void handleReviewTask(taskId, decision);
         }}
         onOpenGraphMode={() => setMode('graph')}
       />

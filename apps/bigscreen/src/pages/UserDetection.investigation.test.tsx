@@ -1,6 +1,12 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import UserDetection from './UserDetection';
+
+const createTaskSpy = vi.fn().mockResolvedValue(null);
+const reviewTaskSpy = vi.fn().mockResolvedValue(null);
+const personaRefetchSpy = vi.fn().mockResolvedValue(undefined);
+const evidenceRefetchSpy = vi.fn().mockResolvedValue(undefined);
+const memoryGraphRefetchSpy = vi.fn().mockResolvedValue(undefined);
 
 vi.mock('@/hooks/useInvestigationQueue', () => ({
   useInvestigationQueue: () => ({
@@ -108,7 +114,8 @@ vi.mock('@/hooks/useDistillationTasks', () => ({
     isLoading: false,
     error: null,
     refetch: vi.fn(),
-    createTask: vi.fn(),
+    createTask: createTaskSpy,
+    reviewTask: reviewTaskSpy,
   }),
 }));
 
@@ -121,6 +128,33 @@ vi.mock('@/hooks/usePersonaNetworkGraph', () => ({
     isLoading: false,
     error: null,
     refetch: vi.fn(),
+  }),
+}));
+
+vi.mock('@/hooks/usePersonaByWeiboUser', () => ({
+  usePersonaByWeiboUser: () => ({
+    persona: null,
+    isLoading: false,
+    error: null,
+    refetch: personaRefetchSpy,
+  }),
+}));
+
+vi.mock('@/hooks/usePersonaEvidence', () => ({
+  usePersonaEvidence: () => ({
+    evidence: [],
+    isLoading: false,
+    error: null,
+    refetch: evidenceRefetchSpy,
+  }),
+}));
+
+vi.mock('@/hooks/usePersonaMemoryGraph', () => ({
+  usePersonaMemoryGraph: () => ({
+    graph: null,
+    isLoading: false,
+    error: null,
+    refetch: memoryGraphRefetchSpy,
   }),
 }));
 
@@ -141,5 +175,24 @@ describe('UserDetection investigation mode', () => {
 
     fireEvent.click(screen.getByText('返回调查模式'));
     expect(screen.getByText('高危候选队列')).toBeInTheDocument();
+  });
+
+  it('refreshes persona summary and evidence after creating a task', async () => {
+    createTaskSpy.mockClear();
+    personaRefetchSpy.mockClear();
+    evidenceRefetchSpy.mockClear();
+    memoryGraphRefetchSpy.mockClear();
+
+    render(<UserDetection />);
+
+    fireEvent.click(screen.getAllByText('用户A')[0]!);
+    fireEvent.click(screen.getByText('发起蒸馏'));
+
+    await waitFor(() => {
+      expect(createTaskSpy).toHaveBeenCalled();
+      expect(personaRefetchSpy).toHaveBeenCalled();
+      expect(evidenceRefetchSpy).toHaveBeenCalled();
+      expect(memoryGraphRefetchSpy).toHaveBeenCalled();
+    });
   });
 });

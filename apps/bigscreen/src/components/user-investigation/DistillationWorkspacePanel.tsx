@@ -1,4 +1,4 @@
-import type { PersonaListItem } from '@sker/sdk';
+import type { PersonaEvidenceItem, PersonaListItem, PersonaMemoryGraph } from '@sker/sdk';
 import { Button } from '@sker/ui/components/ui/button';
 import type { DistillationTaskSummary } from '@sker/sdk';
 
@@ -7,6 +7,8 @@ interface DistillationWorkspacePanelProps {
   tasks: DistillationTaskSummary[];
   personaSummary: PersonaListItem | null;
   evidenceCount: number;
+  evidenceItems: PersonaEvidenceItem[];
+  memoryGraph: PersonaMemoryGraph | null;
   onCreateTask: () => void;
   onReviewTask: (taskId: string, decision: 'approve' | 'reject') => void;
   onOpenGraphMode: () => void;
@@ -17,6 +19,8 @@ export function DistillationWorkspacePanel({
   tasks,
   personaSummary,
   evidenceCount,
+  evidenceItems,
+  memoryGraph,
   onCreateTask,
   onReviewTask,
   onOpenGraphMode,
@@ -82,9 +86,41 @@ export function DistillationWorkspacePanel({
               <div className="text-xs text-muted-foreground">
                 证据 {evidenceCount} 条
               </div>
+              {evidenceItems.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {evidenceItems.slice(0, 3).map((item) => (
+                    <div key={item.id} className="rounded-md bg-muted/40 p-2 text-xs text-muted-foreground">
+                      {item.excerpt ?? `${item.sourceTable}:${item.sourceId}`}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
             <div className="mt-2 text-sm text-muted-foreground">当前用户尚未发布 Persona</div>
+          )}
+        </div>
+
+        <div className="rounded-lg border p-3">
+          <div className="text-xs text-muted-foreground">图谱预览</div>
+          {memoryGraph ? (
+            <div className="mt-2 space-y-2 text-sm">
+              <div className="text-muted-foreground">
+                节点 {memoryGraph.memories.length} 个 · 关系 {memoryGraph.relations.length} 条
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {memoryGraph.memories.slice(0, 3).map((memory) => (
+                  <span
+                    key={memory.id}
+                    className="rounded-full bg-muted px-2.5 py-1 text-xs text-foreground"
+                  >
+                    {memory.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="mt-2 text-sm text-muted-foreground">当前用户尚未生成单用户图谱预览</div>
           )}
         </div>
 
