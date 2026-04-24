@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { PersonaNetworkPanel } from './PersonaNetworkPanel';
 
@@ -58,5 +58,20 @@ describe('PersonaNetworkPanel', () => {
     expect(screen.getByText('用户B Persona')).toBeInTheDocument();
     expect(screen.getByText('用户互动关系')).toBeInTheDocument();
     expect(screen.getByText('interaction · 权重 12')).toBeInTheDocument();
+  });
+
+  it('filters personas by risk level and edges by edge type', async () => {
+    render(<PersonaNetworkPanel onBackToInvestigation={vi.fn()} />);
+
+    expect(screen.getByText('用户A Persona')).toBeInTheDocument();
+    expect(screen.getByText('用户B Persona')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '仅高风险' }));
+    expect(screen.getByText('用户A Persona')).toBeInTheDocument();
+    expect(screen.queryByText('用户B Persona')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '全部风险' }));
+    fireEvent.click(screen.getByRole('button', { name: '仅互动边' }));
+    expect(screen.getByText('用户互动关系')).toBeInTheDocument();
   });
 });
