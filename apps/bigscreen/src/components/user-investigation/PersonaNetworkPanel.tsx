@@ -43,6 +43,31 @@ export function PersonaNetworkPanel({ onBackToInvestigation }: PersonaNetworkPan
               </div>
             ))}
           </div>
+          <div className="rounded-lg border p-4">
+            <div className="text-sm font-medium text-foreground">关系边摘要</div>
+            {graph.edges.length > 0 ? (
+              <div className="mt-3 space-y-2">
+                {graph.edges.slice(0, 6).map((edge) => {
+                  const source = graph.personas.find((item) => item.personaId === edge.sourcePersonaId);
+                  const target = graph.personas.find((item) => item.personaId === edge.targetPersonaId);
+
+                  return (
+                    <div key={edge.id} className="rounded-md bg-muted/40 p-3 text-sm">
+                      <div className="font-medium text-foreground">
+                        {source?.name ?? edge.sourcePersonaId} → {target?.name ?? edge.targetPersonaId}
+                      </div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {edge.edgeType} · 权重 {edge.weight}
+                      </div>
+                      <div className="mt-1 text-xs text-muted-foreground">{edge.reason}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="mt-2 text-sm text-muted-foreground">当前没有可展示的 Persona 关系边。</div>
+            )}
+          </div>
         </div>
       )}
     </section>
