@@ -167,9 +167,33 @@ export class PersonaProjectionService {
         if (!sourceId) continue;
 
         for (const relation of draft.relationDrafts) {
-          if (relation.targetKind !== 'memory') continue;
+          let targetId: string | undefined;
 
-          const targetId = memoryIdByName.get(relation.targetRef);
+          if (relation.targetKind === 'memory') {
+            targetId = memoryIdByName.get(relation.targetRef);
+          } else if (relation.targetKind === 'persona') {
+            targetId = memoryIdByName.get(relation.targetRef);
+            if (!targetId) {
+              const personMemory = await memoryRepo.save(memoryRepo.create({
+                persona_id: savedPersona.id,
+                name: relation.targetRef,
+                description: '关联 Persona',
+                content: `关联 Persona: ${relation.targetRef}`,
+                type: 'person',
+              }));
+
+              memoryIdByName.set(relation.targetRef, personMemory.id);
+              targetId = personMemory.id;
+
+              await closureRepo.save(closureRepo.create({
+                ancestor_id: personMemory.id,
+                descendant_id: personMemory.id,
+                path: [personMemory.id],
+                depth: 0,
+              }));
+            }
+          }
+
           if (!targetId || targetId === sourceId) continue;
 
           await relationRepo.save(relationRepo.create({

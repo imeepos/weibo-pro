@@ -148,4 +148,78 @@ describe('PersonaProjectionService', () => {
     });
     expect(savedEntities.MemoryClosureEntity?.length).toBeGreaterThanOrEqual(3);
   });
+
+  it('creates a synthetic person memory when relationDraft targets a persona', async () => {
+    const savedEntities: Record<string, any[]> = {};
+    let sequence = 0;
+
+    vi.mocked(useEntityManager).mockImplementation(async (handler: any) => {
+      const createRepo = (entityName: string) => ({
+        async findOne() {
+          return null;
+        },
+        async find(options?: any) {
+          if (entityName === 'MemoryEntity') {
+            return [];
+          }
+          if (entityName === 'MemoryClosureEntity' && options?.where?.descendant_id) {
+            return [{
+              ancestor_id: options.where.descendant_id,
+              descendant_id: options.where.descendant_id,
+              path: [options.where.descendant_id],
+              depth: 0,
+            }];
+          }
+          return [];
+        },
+        create(input: any) {
+          return { ...input };
+        },
+        async save(input: any) {
+          const entity = {
+            id: input.id ?? `${entityName}-${++sequence}`,
+            ...input,
+            created_at: input.created_at ?? new Date('2026-04-23T00:00:00.000Z'),
+            updated_at: input.updated_at ?? new Date('2026-04-23T00:00:00.000Z'),
+          };
+          savedEntities[entityName] ??= [];
+          savedEntities[entityName].push(entity);
+          return entity;
+        },
+        async delete() {
+          return;
+        },
+      });
+
+      return handler({
+        getRepository(entity: any) {
+          return createRepo(entity.name);
+        },
+      });
+    });
+
+    const service = new PersonaProjectionService();
+    await service.publishProfile({
+      ...baseInput,
+      memoryDrafts: [
+        {
+          type: 'insight',
+          name: '热点追逐型',
+          description: null,
+          content: '长期追逐热点并放大情绪',
+          evidenceRefs: [{ sourceTable: 'weibo_posts', sourceId: '1', score: 0.8 }],
+          relationDrafts: [
+            {
+              relationType: 'related',
+              targetKind: 'persona',
+              targetRef: '用户B Persona',
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(savedEntities.MemoryEntity?.some((item) => item.name === '用户B Persona' && item.type === 'person')).toBe(true);
+    expect(savedEntities.MemoryRelationEntity?.length).toBe(1);
+  });
 });
