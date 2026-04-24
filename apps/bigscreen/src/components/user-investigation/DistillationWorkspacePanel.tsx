@@ -1,17 +1,24 @@
+import type { PersonaListItem } from '@sker/sdk';
 import { Button } from '@sker/ui/components/ui/button';
 import type { DistillationTaskSummary } from '@sker/sdk';
 
 interface DistillationWorkspacePanelProps {
   selectedUserId: string | null;
   tasks: DistillationTaskSummary[];
+  personaSummary: PersonaListItem | null;
+  evidenceCount: number;
   onCreateTask: () => void;
+  onReviewTask: (taskId: string, decision: 'approve' | 'reject') => void;
   onOpenGraphMode: () => void;
 }
 
 export function DistillationWorkspacePanel({
   selectedUserId,
   tasks,
+  personaSummary,
+  evidenceCount,
   onCreateTask,
+  onReviewTask,
   onOpenGraphMode,
 }: DistillationWorkspacePanelProps) {
   const latestTask = tasks[0] ?? null;
@@ -49,6 +56,36 @@ export function DistillationWorkspacePanel({
           <Button variant="outline" onClick={onOpenGraphMode}>
             查看全量图谱
           </Button>
+          {latestTask?.reviewStatus === 'human_pending' && (
+            <>
+              <Button variant="secondary" onClick={() => onReviewTask(latestTask.id, 'approve')}>
+                人工通过
+              </Button>
+              <Button variant="destructive" onClick={() => onReviewTask(latestTask.id, 'reject')}>
+                人工拒绝
+              </Button>
+            </>
+          )}
+        </div>
+
+        <div className="rounded-lg border p-3">
+          <div className="text-xs text-muted-foreground">Persona 摘要</div>
+          {personaSummary ? (
+            <div className="mt-2 space-y-1 text-sm">
+              <div className="font-medium text-foreground">{personaSummary.name}</div>
+              {personaSummary.description && (
+                <div className="text-muted-foreground">{personaSummary.description}</div>
+              )}
+              <div className="text-xs text-muted-foreground">
+                记忆 {personaSummary.memoryCount} 条
+              </div>
+              <div className="text-xs text-muted-foreground">
+                证据 {evidenceCount} 条
+              </div>
+            </div>
+          ) : (
+            <div className="mt-2 text-sm text-muted-foreground">当前用户尚未发布 Persona</div>
+          )}
         </div>
 
         <div className="rounded-lg border p-3">

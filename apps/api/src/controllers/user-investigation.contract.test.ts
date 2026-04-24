@@ -10,6 +10,7 @@ describe('user investigation contracts', () => {
     expect(typeof SdkUsersController.prototype.getUserDossier).toBe('function');
     expect(typeof SdkUsersController.prototype.createDistillationTask).toBe('function');
     expect(typeof SdkUsersController.prototype.getDistillationTasks).toBe('function');
+    expect(typeof SdkUsersController.prototype.reviewDistillationTask).toBe('function');
 
     expect(typeof SdkPersonaController.prototype.getPersonaByWeiboUserId).toBe('function');
     expect(typeof SdkPersonaController.prototype.getGraphOverview).toBe('function');
@@ -17,6 +18,7 @@ describe('user investigation contracts', () => {
 
     expect(typeof UsersController.prototype.getInvestigationQueue).toBe('function');
     expect(typeof UsersController.prototype.getUserDossier).toBe('function');
+    expect(typeof UsersController.prototype.reviewDistillationTask).toBe('function');
     expect(typeof PersonaController.prototype.getGraphOverview).toBe('function');
   });
 });

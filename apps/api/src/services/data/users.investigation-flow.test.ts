@@ -119,6 +119,12 @@ describe('UsersService distillation flow', () => {
 
     vi.mocked(useEntityManager).mockImplementation(async (handler: any) => {
       const repo = {
+        async findOne(options: any) {
+          if (options?.where?.id) {
+            return savedTasks.find((item) => item.id === options.where.id) ?? null;
+          }
+          return null;
+        },
         create(input: any) {
           return {
             id: input.id ?? `task-${++taskCounter}`,
@@ -158,7 +164,19 @@ describe('UsersService distillation flow', () => {
       const manager = {
         getRepository(entity: any) {
           if (entity === UserProfileDistillationTaskEntity) return repo;
-          return repo;
+          return {
+            ...repo,
+            async findOne() {
+              return {
+                id: 100n,
+                screen_name: '用户A',
+                name: '用户A',
+                avatar_hd: null,
+                avatar_large: null,
+                profile_image_url: null,
+              };
+            },
+          };
         },
       };
 
@@ -187,5 +205,61 @@ describe('UsersService distillation flow', () => {
     expect(personaProjectionService.publishProfile).toHaveBeenCalled();
     expect(result.status).toBe('published');
     expect(result.distilledSummary).toBe('短摘要');
+  });
+
+  it('publishes a review-pending task when human approves it', async () => {
+    savedTasks.push({
+      id: 'task-review',
+      weibo_user_id: '100',
+      event_id: 'event-1',
+      status: 'review_pending',
+      history_window_days: 90,
+      source_post_count: 20,
+      source_comment_count: 0,
+      source_repost_count: 3,
+      evidence_sample_count: 1,
+      model: 'gpt-5',
+      prompt_version: 'v1',
+      distilled_summary: '短摘要',
+      distilled_json: userProfileDistillationService.distill.mock.results[0]?.value ?? {
+        summary: { short: '短摘要', long: '长摘要', confidence: 0.9 },
+        identity: { inferredRole: '热点自媒体', roleConfidence: 0.8, accountNature: ['media'], stableTraits: ['热点追逐'] },
+        behavior: { activityPattern: ['夜间活跃'], postingRhythm: 'bursty', escalationPattern: ['突发追热点'], historicalStability: 'medium' },
+        content: { primaryTopics: ['体育'], narrativeStyles: ['情绪放大'], emotionalTendency: ['negative'], stancePattern: ['对立'] },
+        risk: { overallLevel: 'high', overallScore: 87, riskDrivers: [{ label: '情绪极化', reason: '负向占比高', confidence: 0.8 }], reviewRecommendation: 'human_review' },
+        relations: { keyConnections: [], clusterRole: null, coordinationSignals: [] },
+        memoryDrafts: [{
+          type: 'insight',
+          name: '热点追逐型',
+          description: null,
+          content: '长期追逐热点并放大情绪',
+          evidenceRefs: [{ sourceTable: 'weibo_posts', sourceId: '1', score: 0.8 }],
+          relationDrafts: [],
+        }],
+        metadata: {
+          sampledPosts: 20,
+          sampledComments: 0,
+          sampledReposts: 3,
+          windowDays: 90,
+          model: 'gpt-5',
+          promptVersion: 'v1',
+          generatedAt: '2026-04-23T00:00:00.000Z',
+        },
+      },
+      review_status: 'human_pending',
+      error_message: null,
+      started_at: null,
+      completed_at: null,
+      created_at: new Date('2026-04-23T00:00:00.000Z'),
+      updated_at: new Date('2026-04-23T00:00:00.000Z'),
+    });
+
+    const result = await service.reviewDistillationTask('task-review', {
+      decision: 'approve',
+    });
+
+    expect(personaProjectionService.publishProfile).toHaveBeenCalled();
+    expect(result.status).toBe('published');
+    expect(result.reviewStatus).toBe('human_approved');
   });
 });

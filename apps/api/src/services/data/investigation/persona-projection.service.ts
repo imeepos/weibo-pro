@@ -1,6 +1,7 @@
 import { Injectable } from '@sker/core';
 import {
   MemoryEntity,
+  MemoryClosureEntity,
   MemoryEvidenceEntity,
   MemoryRelationEntity,
   PersonaEntity,
@@ -78,6 +79,7 @@ export class PersonaProjectionService {
       const linkRepo = manager.getRepository(WeiboUserPersonaLinkEntity);
       const personaRepo = manager.getRepository(PersonaEntity);
       const memoryRepo = manager.getRepository(MemoryEntity);
+      const closureRepo = manager.getRepository(MemoryClosureEntity);
       const relationRepo = manager.getRepository(MemoryRelationEntity);
       const evidenceRepo = manager.getRepository(MemoryEvidenceEntity);
 
@@ -122,10 +124,15 @@ export class PersonaProjectionService {
           ...existingMemories.map((item) => ({ source_id: item.id })),
           ...existingMemories.map((item) => ({ target_id: item.id })),
         ] as any);
+        await closureRepo.delete([
+          ...existingMemories.map((item) => ({ ancestor_id: item.id })),
+          ...existingMemories.map((item) => ({ descendant_id: item.id })),
+        ] as any);
         await evidenceRepo.delete(existingMemories.map((item) => ({ memory_id: item.id })) as any);
         await memoryRepo.delete(existingMemories.map((item) => item.id));
       }
 
+      const memoryIdByName = new Map<string, string>();
       for (const draft of projection.memories) {
         const savedMemory = await memoryRepo.save(memoryRepo.create({
           persona_id: savedPersona.id,
@@ -133,6 +140,14 @@ export class PersonaProjectionService {
           description: draft.description,
           content: draft.content,
           type: draft.type,
+        }));
+        memoryIdByName.set(draft.name, savedMemory.id);
+
+        await closureRepo.save(closureRepo.create({
+          ancestor_id: savedMemory.id,
+          descendant_id: savedMemory.id,
+          path: [savedMemory.id],
+          depth: 0,
         }));
 
         for (const evidence of draft.evidenceRefs) {
@@ -146,6 +161,46 @@ export class PersonaProjectionService {
           }));
         }
       }
+
+      for (const draft of projection.memories) {
+        const sourceId = memoryIdByName.get(draft.name);
+        if (!sourceId) continue;
+
+        for (const relation of draft.relationDrafts) {
+          if (relation.targetKind !== 'memory') continue;
+
+          const targetId = memoryIdByName.get(relation.targetRef);
+          if (!targetId || targetId === sourceId) continue;
+
+          await relationRepo.save(relationRepo.create({
+            source_id: sourceId,
+            target_id: targetId,
+            relation_type: relation.relationType,
+          }));
+
+          await this.updateClosure(manager, sourceId, targetId);
+        }
+      }
     });
+  }
+
+  private async updateClosure(
+    manager: any,
+    sourceId: string,
+    targetId: string,
+  ): Promise<void> {
+    const closureRepo = manager.getRepository(MemoryClosureEntity);
+    const ancestorClosures = await closureRepo.find({
+      where: { descendant_id: sourceId },
+    });
+
+    for (const ancestor of ancestorClosures) {
+      await closureRepo.save(closureRepo.create({
+        ancestor_id: ancestor.ancestor_id,
+        descendant_id: targetId,
+        path: [...ancestor.path, targetId],
+        depth: ancestor.depth + 1,
+      }));
+    }
   }
 }

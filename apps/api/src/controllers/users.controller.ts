@@ -60,4 +60,12 @@ export class UsersController implements sdk.UsersController {
   async getDistillationTasks(@Param('id') id: string) {
     return this.usersService.getDistillationTasks(id);
   }
+
+  @Post('distillation-tasks/:taskId/review')
+  async reviewDistillationTask(
+    @Param('taskId') taskId: string,
+    @Body() request: sdk.ReviewDistillationTaskRequest,
+  ) {
+    return this.usersService.reviewDistillationTask(taskId, request);
+  }
 }

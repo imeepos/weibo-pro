@@ -4,6 +4,8 @@ import { UserDetectionHeader } from '@/components/common/UserDetectionHeader';
 import { useInvestigationQueue } from '@/hooks/useInvestigationQueue';
 import { useUserDossier } from '@/hooks/useUserDossier';
 import { useDistillationTasks } from '@/hooks/useDistillationTasks';
+import { usePersonaByWeiboUser } from '@/hooks/usePersonaByWeiboUser';
+import { usePersonaEvidence } from '@/hooks/usePersonaEvidence';
 import { InvestigationQueuePanel } from '@/components/user-investigation/InvestigationQueuePanel';
 import { UserDossierPanel } from '@/components/user-investigation/UserDossierPanel';
 import { DistillationWorkspacePanel } from '@/components/user-investigation/DistillationWorkspacePanel';
@@ -54,6 +56,9 @@ const UserDetection: React.FC = () => {
     userId: selectedUserId,
   });
 
+  const personaSummaryState = usePersonaByWeiboUser(selectedUserId);
+  const personaEvidenceState = usePersonaEvidence(personaSummaryState.persona?.id ?? null);
+
   const content = mode === 'graph' ? (
     <PersonaNetworkPanel onBackToInvestigation={() => setMode('investigation')} />
   ) : (
@@ -67,8 +72,13 @@ const UserDetection: React.FC = () => {
       <DistillationWorkspacePanel
         selectedUserId={selectedUserId}
         tasks={tasksState.tasks}
+        personaSummary={personaSummaryState.persona}
+        evidenceCount={personaEvidenceState.evidence.length}
         onCreateTask={() => {
           void tasksState.createTask({ historyWindowDays: 90 });
+        }}
+        onReviewTask={(taskId, decision) => {
+          void tasksState.reviewTask(taskId, { decision });
         }}
         onOpenGraphMode={() => setMode('graph')}
       />

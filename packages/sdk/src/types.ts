@@ -906,6 +906,11 @@ export interface CreateDistillationTaskRequest {
   historyWindowDays?: number
 }
 
+export interface ReviewDistillationTaskRequest {
+  decision: 'approve' | 'reject'
+  note?: string
+}
+
 export interface DistilledRiskDriver {
   label: string
   reason: string

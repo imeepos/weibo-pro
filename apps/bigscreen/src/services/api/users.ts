@@ -9,6 +9,7 @@ import type { BaseQueryParams, TimeRange } from './types';
 import type {
   CreateDistillationTaskRequest,
   DistillationTaskSummary,
+  ReviewDistillationTaskRequest,
   UserInvestigationDossier,
   UserInvestigationQueueResponse,
 } from '@sker/sdk';
@@ -138,5 +139,13 @@ export const UsersAPI = {
   getDistillationTasks: async (userId: string): Promise<DistillationTaskSummary[]> => {
     const controller = root.get(UsersController);
     return await controller.getDistillationTasks(userId);
+  },
+
+  reviewDistillationTask: async (
+    taskId: string,
+    request: ReviewDistillationTaskRequest,
+  ): Promise<DistillationTaskSummary> => {
+    const controller = root.get(UsersController);
+    return await controller.reviewDistillationTask(taskId, request);
   },
 };

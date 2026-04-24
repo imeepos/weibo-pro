@@ -1,5 +1,6 @@
 import { Injectable, Inject } from '@sker/core';
 import {
+  WeiboUserEntity,
   UserProfileDistillationTaskEntity,
   useEntityManager,
 } from '@sker/entities';
@@ -9,6 +10,7 @@ import type { TimeRange } from './types';
 import type {
   CreateDistillationTaskRequest,
   DistillationTaskSummary,
+  ReviewDistillationTaskRequest,
   UserInvestigationDossier,
   UserInvestigationQueueResponse,
 } from '@sker/sdk';
@@ -277,6 +279,69 @@ export class UsersService {
         createdAt: task.created_at.toISOString(),
         updatedAt: task.updated_at.toISOString(),
       }));
+    });
+  }
+
+  async reviewDistillationTask(
+    taskId: string,
+    request: ReviewDistillationTaskRequest,
+  ): Promise<DistillationTaskSummary> {
+    return useEntityManager(async (manager) => {
+      const taskRepo = manager.getRepository(UserProfileDistillationTaskEntity);
+      const userRepo = manager.getRepository(WeiboUserEntity);
+      const task = await taskRepo.findOne({ where: { id: taskId } });
+
+      if (!task) {
+        throw new Error(`Distillation task ${taskId} not found`);
+      }
+
+      if (request.decision === 'approve') {
+        const user = await userRepo.findOne({
+          where: { id: BigInt(task.weibo_user_id) as any },
+        });
+
+        if (!task.distilled_json) {
+          throw new Error('Task has no distilled profile');
+        }
+
+        await this.personaProjectionService.publishProfile({
+          ...(task.distilled_json as any),
+          weiboUserId: task.weibo_user_id,
+          screenName: user?.screen_name ?? user?.name ?? task.weibo_user_id,
+          avatar: user?.avatar_hd ?? user?.avatar_large ?? user?.profile_image_url ?? null,
+        });
+
+        task.status = 'published';
+        task.review_status = 'human_approved';
+      } else {
+        task.status = 'failed';
+        task.review_status = 'human_rejected';
+        task.error_message = request.note ?? '人工拒绝发布';
+      }
+
+      task.completed_at = new Date();
+      const saved = await taskRepo.save(task);
+
+      return {
+        id: saved.id,
+        weiboUserId: saved.weibo_user_id,
+        eventId: saved.event_id,
+        status: saved.status,
+        historyWindowDays: saved.history_window_days,
+        sourcePostCount: saved.source_post_count,
+        sourceCommentCount: saved.source_comment_count,
+        sourceRepostCount: saved.source_repost_count,
+        evidenceSampleCount: saved.evidence_sample_count,
+        model: saved.model,
+        promptVersion: saved.prompt_version,
+        distilledSummary: saved.distilled_summary,
+        reviewStatus: saved.review_status,
+        errorMessage: saved.error_message,
+        startedAt: saved.started_at ? saved.started_at.toISOString() : null,
+        completedAt: saved.completed_at ? saved.completed_at.toISOString() : null,
+        createdAt: saved.created_at.toISOString(),
+        updatedAt: saved.updated_at.toISOString(),
+      };
     });
   }
 

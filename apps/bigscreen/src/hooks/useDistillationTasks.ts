@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { UsersAPI } from '@/services/api/users';
-import type { CreateDistillationTaskRequest, DistillationTaskSummary } from '@sker/sdk';
+import type {
+  CreateDistillationTaskRequest,
+  DistillationTaskSummary,
+  ReviewDistillationTaskRequest,
+} from '@sker/sdk';
 
 interface UseDistillationTasksParams {
   userId: string | null;
@@ -12,6 +16,10 @@ interface UseDistillationTasksResult {
   error: Error | null;
   refetch: () => Promise<void>;
   createTask: (request?: CreateDistillationTaskRequest) => Promise<DistillationTaskSummary | null>;
+  reviewTask: (
+    taskId: string,
+    request: ReviewDistillationTaskRequest,
+  ) => Promise<DistillationTaskSummary | null>;
 }
 
 export function useDistillationTasks(
@@ -53,11 +61,21 @@ export function useDistillationTasks(
     return created;
   }, [params.userId]);
 
+  const reviewTask = useCallback(async (
+    taskId: string,
+    request: ReviewDistillationTaskRequest,
+  ) => {
+    const reviewed = await UsersAPI.reviewDistillationTask(taskId, request);
+    setTasks((prev) => [reviewed, ...prev.filter((item) => item.id !== reviewed.id)]);
+    return reviewed;
+  }, []);
+
   return {
     tasks,
     isLoading,
     error,
     refetch: fetchTasks,
     createTask,
+    reviewTask,
   };
 }

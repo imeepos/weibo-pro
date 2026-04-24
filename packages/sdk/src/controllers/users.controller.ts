@@ -3,6 +3,7 @@ import type { TimeRange } from '@sker/entities';
 import type {
   CreateDistillationTaskRequest,
   DistillationTaskSummary,
+  ReviewDistillationTaskRequest,
   UserListResponse,
   UserInvestigationDossier,
   UserInvestigationQueueResponse,
@@ -63,5 +64,13 @@ export class UsersController {
   @Get(':id/distillation-tasks')
   getDistillationTasks(@Param('id') id: string): Promise<DistillationTaskSummary[]> {
     throw new Error('method getDistillationTasks not implements')
+  }
+
+  @Post('distillation-tasks/:taskId/review')
+  reviewDistillationTask(
+    @Param('taskId') taskId: string,
+    @Body() request: ReviewDistillationTaskRequest,
+  ): Promise<DistillationTaskSummary> {
+    throw new Error('method reviewDistillationTask not implements')
   }
 }
