@@ -41,6 +41,18 @@ export function InvestigationQueuePanel({
                   <div className="text-xs text-muted-foreground">
                     风险分 {item.eventRiskScore} · 状态 {item.status}
                   </div>
+                  {item.riskSignals.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {item.riskSignals.map((signal) => (
+                        <span
+                          key={`${item.weiboUserId}-${signal}`}
+                          className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] text-primary"
+                        >
+                          {signal}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className="text-xs text-muted-foreground">
                   {item.hasPersona ? '已入图谱' : '未入图谱'}

@@ -29,8 +29,20 @@ export function PersonaNetworkPanel({ onBackToInvestigation }: PersonaNetworkPan
           Persona 图谱加载失败
         </div>
       ) : (
-        <div className="rounded-lg border p-4 text-sm text-foreground">
-          Persona 节点 {graph.personas.length} 个，关系边 {graph.edges.length} 条
+        <div className="space-y-4">
+          <div className="rounded-lg border p-4 text-sm text-foreground">
+            Persona 节点 {graph.personas.length} 个，关系边 {graph.edges.length} 条
+          </div>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {graph.personas.slice(0, 6).map((persona) => (
+              <div key={persona.personaId} className="rounded-lg border p-3">
+                <div className="font-medium text-foreground">{persona.name}</div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  风险 {persona.riskLevel} · 分数 {persona.riskScore} · 记忆 {persona.memoryCount}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </section>

@@ -34,6 +34,12 @@ export function DistillationWorkspacePanel({
           <div className="mt-1 text-sm text-foreground">
             {latestTask ? `${latestTask.status} · ${latestTask.historyWindowDays} 天` : '暂无蒸馏任务'}
           </div>
+          {latestTask?.distilledSummary && (
+            <div className="mt-2 text-sm text-muted-foreground">{latestTask.distilledSummary}</div>
+          )}
+          {latestTask?.errorMessage && (
+            <div className="mt-2 text-sm text-destructive">{latestTask.errorMessage}</div>
+          )}
         </div>
 
         <div className="flex flex-col gap-2">
@@ -43,6 +49,26 @@ export function DistillationWorkspacePanel({
           <Button variant="outline" onClick={onOpenGraphMode}>
             查看全量图谱
           </Button>
+        </div>
+
+        <div className="rounded-lg border p-3">
+          <div className="text-xs text-muted-foreground">任务历史</div>
+          {tasks.length > 0 ? (
+            <div className="mt-2 space-y-2">
+              {tasks.slice(0, 3).map((task) => (
+                <div key={task.id} className="rounded-md bg-muted/40 p-2 text-xs">
+                  <div className="font-medium text-foreground">
+                    {task.status} · {task.historyWindowDays} 天
+                  </div>
+                  <div className="mt-1 text-muted-foreground">
+                    样本 帖子 {task.sourcePostCount} / 评论 {task.sourceCommentCount} / 转发 {task.sourceRepostCount}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-2 text-sm text-muted-foreground">暂无历史任务</div>
+          )}
         </div>
       </div>
     </section>

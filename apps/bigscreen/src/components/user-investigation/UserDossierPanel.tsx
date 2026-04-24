@@ -25,6 +25,9 @@ export function UserDossierPanel({ dossier }: UserDossierPanelProps) {
             <div className="mt-1 text-sm text-muted-foreground">
               {dossier.accountSnapshot.location ?? '未知地区'} · 粉丝 {dossier.accountSnapshot.followersCount}
             </div>
+            <div className="mt-2 text-xs text-muted-foreground">
+              认证 {dossier.accountSnapshot.verified ? '是' : '否'} · 平台风险 {dossier.accountSnapshot.urisk ?? '未知'}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -40,13 +43,59 @@ export function UserDossierPanel({ dossier }: UserDossierPanelProps) {
                 {dossier.historyCoverage.collectedPostCount}
               </div>
             </div>
+            <div className="rounded-lg border p-3">
+              <div className="text-xs text-muted-foreground">事件风险分</div>
+              <div className="mt-1 font-medium text-foreground">
+                {dossier.eventRiskContext.eventRiskScore}
+              </div>
+            </div>
+            <div className="rounded-lg border p-3">
+              <div className="text-xs text-muted-foreground">事件内互动</div>
+              <div className="mt-1 font-medium text-foreground">
+                {dossier.eventRiskContext.eventInteractionCount}
+              </div>
+            </div>
           </div>
 
           <div className="rounded-lg border p-3">
-            <div className="text-xs text-muted-foreground">证据样本</div>
+            <div className="text-xs text-muted-foreground">证据样本覆盖</div>
             <div className="mt-1 text-sm text-foreground">
               事件样本 {dossier.evidenceSamples.eventSamples.length} 条，历史样本 {dossier.evidenceSamples.historySamples.length} 条
             </div>
+          </div>
+
+          <div className="rounded-lg border p-3">
+            <div className="text-xs text-muted-foreground">关键词摘要</div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {dossier.topicAndSentimentProfile.primaryKeywords.length > 0 ? (
+                dossier.topicAndSentimentProfile.primaryKeywords.map((keyword) => (
+                  <span
+                    key={keyword}
+                    className="rounded-full bg-secondary px-2.5 py-1 text-xs text-secondary-foreground"
+                  >
+                    {keyword}
+                  </span>
+                ))
+              ) : (
+                <span className="text-sm text-muted-foreground">暂无关键词摘要</span>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-lg border p-3">
+            <div className="text-xs text-muted-foreground">关系摘要</div>
+            {dossier.relationSummary.topConnectedUsers.length > 0 ? (
+              <div className="mt-2 space-y-2">
+                {dossier.relationSummary.topConnectedUsers.slice(0, 3).map((item) => (
+                  <div key={item.userId} className="flex items-center justify-between text-sm">
+                    <span className="text-foreground">{item.userId}</span>
+                    <span className="text-muted-foreground">权重 {item.weight}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-2 text-sm text-muted-foreground">暂无高频互动关系</div>
+            )}
           </div>
         </div>
       )}
