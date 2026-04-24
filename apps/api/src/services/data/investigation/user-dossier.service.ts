@@ -140,6 +140,41 @@ export class UserDossierService {
           )
         : [];
 
+      const relationRows = await manager.query(
+        `
+          SELECT
+            CASE
+              WHEN source_user_id::text = $1 THEN target_user_id::text
+              ELSE source_user_id::text
+            END AS source_id,
+            relation_type,
+            SUM(weight) AS total_weight
+          FROM user_relation_statistics
+          WHERE source_user_id::text = $1
+             OR target_user_id::text = $1
+          GROUP BY source_id, relation_type
+          ORDER BY total_weight DESC
+          LIMIT 5
+        `,
+        [weiboUserId],
+      );
+
+      const nlpRows = await manager.query(
+        `
+          SELECT
+            p.id::text AS source_id,
+            COALESCE(p.text_raw, p.text, '') AS excerpt,
+            nlp.sentiment->>'overall' AS overall
+          FROM post_nlp_results nlp
+          JOIN weibo_posts p ON p.id = nlp.post_id
+          WHERE p.user_id::text = $1
+            AND p.deleted_at IS NULL
+          ORDER BY p.created_at DESC NULLS LAST
+          LIMIT 5
+        `,
+        [weiboUserId],
+      );
+
       return {
         eventSamples: eventRows.map((row: any) => ({
           sourceId: row.source_id,
@@ -151,8 +186,16 @@ export class UserDossierService {
           excerpt: String(row.excerpt || '').slice(0, 140),
           reason: '主页历史样本',
         })),
-        relationSamples: [],
-        nlpSamples: [],
+        relationSamples: relationRows.map((row: any) => ({
+          sourceId: row.source_id,
+          excerpt: `${row.relation_type} · 权重 ${row.total_weight}`,
+          reason: '关系强连接样本',
+        })),
+        nlpSamples: nlpRows.map((row: any) => ({
+          sourceId: row.source_id,
+          excerpt: `${String(row.excerpt || '').slice(0, 100)} · 情绪 ${row.overall ?? 'unknown'}`,
+          reason: 'NLP 语义样本',
+        })),
       };
     });
   }
@@ -245,16 +288,86 @@ export class UserDossierService {
   }
 
   protected async loadBehaviorTimeline(
-    _weiboUserId: string,
+    weiboUserId: string,
     _options: UserDossierOptions,
   ): Promise<UserInvestigationDossier['behaviorTimeline']> {
-    return {
-      postingByDay: [],
-      postingByHour: [],
-      interactionByDay: [],
-      spikeMoments: [],
-      activePeriods: [],
-    };
+    return useEntityManager(async (manager) => {
+      const postingByDay = await manager.query(
+        `
+          SELECT
+            DATE_TRUNC('day', created_at) AS day,
+            COUNT(*) AS count
+          FROM weibo_posts
+          WHERE user_id::text = $1
+            AND deleted_at IS NULL
+          GROUP BY DATE_TRUNC('day', created_at)
+          ORDER BY day DESC
+          LIMIT 14
+        `,
+        [weiboUserId],
+      );
+
+      const postingByHour = await manager.query(
+        `
+          SELECT
+            EXTRACT(HOUR FROM created_at) AS hour,
+            COUNT(*) AS count
+          FROM weibo_posts
+          WHERE user_id::text = $1
+            AND deleted_at IS NULL
+          GROUP BY EXTRACT(HOUR FROM created_at)
+          ORDER BY hour ASC
+        `,
+        [weiboUserId],
+      );
+
+      const interactionByDay = await manager.query(
+        `
+          SELECT
+            DATE_TRUNC('day', created_at) AS day,
+            SUM(COALESCE(comments_count, 0) + COALESCE(reposts_count, 0) + COALESCE(attitudes_count, 0)) AS count
+          FROM weibo_posts
+          WHERE user_id::text = $1
+            AND deleted_at IS NULL
+          GROUP BY DATE_TRUNC('day', created_at)
+          ORDER BY day DESC
+          LIMIT 14
+        `,
+        [weiboUserId],
+      );
+
+      const spikes = [...interactionByDay]
+        .sort((a: any, b: any) => Number(b.count || 0) - Number(a.count || 0))
+        .slice(0, 3)
+        .map((row: any) => ({
+          timestamp: row.day ? new Date(row.day).toISOString() : '',
+          reason: `日互动峰值 ${row.count}`,
+        }));
+
+      const activePeriods = this.deriveActivePeriods(
+        postingByHour.map((row: any) => ({
+          hour: Number(row.hour),
+          count: Number(row.count || 0),
+        })),
+      );
+
+      return {
+        postingByDay: postingByDay.map((row: any) => ({
+          day: row.day ? new Date(row.day).toISOString() : '',
+          count: Number(row.count || 0),
+        })),
+        postingByHour: postingByHour.map((row: any) => ({
+          hour: Number(row.hour),
+          count: Number(row.count || 0),
+        })),
+        interactionByDay: interactionByDay.map((row: any) => ({
+          day: row.day ? new Date(row.day).toISOString() : '',
+          count: Number(row.count || 0),
+        })),
+        spikeMoments: spikes,
+        activePeriods,
+      };
+    });
   }
 
   protected async loadTopicAndSentimentProfile(
@@ -277,16 +390,68 @@ export class UserDossierService {
         [weiboUserId],
       );
 
+      const eventTypeRows = await manager.query(
+        `
+          SELECT
+            nlp.event_type->>'type' AS type,
+            COUNT(*) AS weight
+          FROM post_nlp_results nlp
+          JOIN weibo_posts p ON p.id = nlp.post_id
+          WHERE p.user_id::text = $1
+            AND p.deleted_at IS NULL
+            AND nlp.event_type->>'type' IS NOT NULL
+          GROUP BY nlp.event_type->>'type'
+          ORDER BY weight DESC
+          LIMIT 5
+        `,
+        [weiboUserId],
+      );
+
+      const sentimentRows = await manager.query(
+        `
+          SELECT
+            DATE_TRUNC('day', p.created_at) AS timestamp,
+            COUNT(CASE WHEN nlp.sentiment->>'overall' = 'positive' THEN 1 END) AS positive,
+            COUNT(CASE WHEN nlp.sentiment->>'overall' = 'negative' THEN 1 END) AS negative,
+            COUNT(CASE WHEN nlp.sentiment->>'overall' = 'neutral' THEN 1 END) AS neutral
+          FROM post_nlp_results nlp
+          JOIN weibo_posts p ON p.id = nlp.post_id
+          WHERE p.user_id::text = $1
+            AND p.deleted_at IS NULL
+          GROUP BY DATE_TRUNC('day', p.created_at)
+          ORDER BY timestamp DESC
+          LIMIT 14
+        `,
+        [weiboUserId],
+      );
+
+      const sentimentDistribution = sentimentRows.reduce(
+        (acc: { positive: number; negative: number; neutral: number }, row: any) => ({
+          positive: acc.positive + Number(row.positive || 0),
+          negative: acc.negative + Number(row.negative || 0),
+          neutral: acc.neutral + Number(row.neutral || 0),
+        }),
+        { positive: 0, negative: 0, neutral: 0 },
+      );
+
       return {
-        topicClusters: [],
+        topicClusters: rows.slice(0, 3).map((row: any) => ({
+          label: row.keyword,
+          weight: Number(row.total_weight || 0),
+          keywords: [row.keyword],
+        })),
         primaryKeywords: rows.map((row: any) => row.keyword),
-        eventTypes: [],
-        sentimentTrend: [],
-        sentimentDistribution: {
-          positive: 0,
-          negative: 0,
-          neutral: 0,
-        },
+        eventTypes: eventTypeRows.map((row: any) => ({
+          type: row.type,
+          weight: Number(row.weight || 0),
+        })),
+        sentimentTrend: sentimentRows.map((row: any) => ({
+          timestamp: row.timestamp ? new Date(row.timestamp).toISOString() : '',
+          positive: Number(row.positive || 0),
+          negative: Number(row.negative || 0),
+          neutral: Number(row.neutral || 0),
+        })),
+        sentimentDistribution,
         topicShiftMoments: [],
       };
     });
@@ -322,10 +487,18 @@ export class UserDossierService {
           weight: Number(row.total_weight || 0),
           relationTypes: [row.relation_type],
         })),
-        relationTypes: [],
+        relationTypes: rows.reduce((acc: Array<{ type: string; count: number }>, row: any) => {
+          const found = acc.find((item) => item.type === row.relation_type);
+          if (found) found.count += 1;
+          else acc.push({ type: row.relation_type, count: 1 });
+          return acc;
+        }, []),
         sharedEvents: [],
-        relationClusters: [],
-        suspiciousCoordinationHints: [],
+        relationClusters: rows.length > 0 ? [{
+          label: '高频互动群',
+          members: rows.slice(0, 3).map((row: any) => row.related_user_id),
+        }] : [],
+        suspiciousCoordinationHints: rows.length >= 3 ? ['与多个用户存在高频互动，需检查协同传播'] : [],
       };
     });
   }
@@ -340,8 +513,35 @@ export class UserDossierService {
     return {
       candidateLabels: input.topicAndSentimentProfile.primaryKeywords.slice(0, 3),
       anomalyHints: input.eventRiskContext.eventRiskScore >= 60 ? ['事件内高风险'] : [],
-      coverageWarnings: input.historyCoverage.collectedPostCount === 0 ? ['历史帖子样本为空'] : [],
-      humanReviewNeeded: input.evidenceSamples.eventSamples.length === 0,
+      coverageWarnings: [
+        ...(input.historyCoverage.collectedPostCount === 0 ? ['历史帖子样本为空'] : []),
+        ...(input.evidenceSamples.eventSamples.length === 0 ? ['事件样本不足，建议人工复核'] : []),
+        ...(input.relationSummary.suspiciousCoordinationHints.length > 0 ? ['存在协同传播迹象'] : []),
+      ],
+      humanReviewNeeded:
+        input.evidenceSamples.eventSamples.length === 0 ||
+        input.relationSummary.suspiciousCoordinationHints.length > 0,
     };
+  }
+
+  private deriveActivePeriods(hourly: Array<{ hour: number; count: number }>): string[] {
+    const buckets = [
+      { label: '凌晨活跃', start: 0, end: 5 },
+      { label: '上午活跃', start: 6, end: 11 },
+      { label: '下午活跃', start: 12, end: 17 },
+      { label: '夜间活跃', start: 18, end: 23 },
+    ];
+
+    return buckets
+      .map((bucket) => ({
+        label: bucket.label,
+        count: hourly
+          .filter((item) => item.hour >= bucket.start && item.hour <= bucket.end)
+          .reduce((sum, item) => sum + item.count, 0),
+      }))
+      .filter((item) => item.count > 0)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 2)
+      .map((item) => item.label);
   }
 }

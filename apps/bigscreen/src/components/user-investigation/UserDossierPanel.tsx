@@ -83,6 +83,45 @@ export function UserDossierPanel({ dossier }: UserDossierPanelProps) {
           </div>
 
           <div className="rounded-lg border p-3">
+            <div className="text-xs text-muted-foreground">行为时间线</div>
+            {dossier.behaviorTimeline.activePeriods.length > 0 ? (
+              <div className="mt-2 space-y-2">
+                <div className="flex flex-wrap gap-2">
+                  {dossier.behaviorTimeline.activePeriods.map((period) => (
+                    <span
+                      key={period}
+                      className="rounded-full bg-primary/10 px-2.5 py-1 text-xs text-primary"
+                    >
+                      {period}
+                    </span>
+                  ))}
+                </div>
+                {dossier.behaviorTimeline.spikeMoments.length > 0 && (
+                  <div className="text-sm text-muted-foreground">
+                    {dossier.behaviorTimeline.spikeMoments[0]?.reason}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="mt-2 text-sm text-muted-foreground">暂无行为时间线摘要</div>
+            )}
+          </div>
+
+          <div className="rounded-lg border p-3">
+            <div className="text-xs text-muted-foreground">情绪分布</div>
+            <div className="mt-2 flex flex-wrap gap-3 text-sm">
+              <span className="text-foreground">正向 {dossier.topicAndSentimentProfile.sentimentDistribution.positive}</span>
+              <span className="text-foreground">负向 {dossier.topicAndSentimentProfile.sentimentDistribution.negative}</span>
+              <span className="text-foreground">中性 {dossier.topicAndSentimentProfile.sentimentDistribution.neutral}</span>
+            </div>
+            {dossier.topicAndSentimentProfile.topicClusters.length > 0 && (
+              <div className="mt-2 text-xs text-muted-foreground">
+                主题簇：{dossier.topicAndSentimentProfile.topicClusters.map((cluster) => cluster.label).join('、')}
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-lg border p-3">
             <div className="text-xs text-muted-foreground">关系摘要</div>
             {dossier.relationSummary.topConnectedUsers.length > 0 ? (
               <div className="mt-2 space-y-2">
@@ -95,6 +134,30 @@ export function UserDossierPanel({ dossier }: UserDossierPanelProps) {
               </div>
             ) : (
               <div className="mt-2 text-sm text-muted-foreground">暂无高频互动关系</div>
+            )}
+            {dossier.relationSummary.suspiciousCoordinationHints.length > 0 && (
+              <div className="mt-3 space-y-1">
+                {dossier.relationSummary.suspiciousCoordinationHints.map((hint) => (
+                  <div key={hint} className="text-sm text-amber-600">
+                    {hint}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-lg border p-3">
+            <div className="text-xs text-muted-foreground">预蒸馏告警</div>
+            {dossier.preDistillationSummary.coverageWarnings.length > 0 ? (
+              <div className="mt-2 space-y-1">
+                {dossier.preDistillationSummary.coverageWarnings.map((warning) => (
+                  <div key={warning} className="text-sm text-destructive">
+                    {warning}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-2 text-sm text-muted-foreground">暂无告警</div>
             )}
           </div>
         </div>

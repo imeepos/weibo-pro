@@ -83,4 +83,57 @@ describe('UserDossierService', () => {
     expect(result.topicAndSentimentProfile.primaryKeywords).toEqual(['体育']);
     expect(result.eventRiskContext.eventRiskScore).toBe(92);
   });
+
+  it('derives candidate labels, anomaly hints, and review warnings from dossier signals', async () => {
+    const service = new UserDossierService();
+
+    const result = await service['buildPreDistillationSummary']({
+      eventRiskContext: {
+        eventId: 'event-1',
+        eventRiskLevel: 'high',
+        eventRiskScore: 78,
+        riskSignals: [{ type: 'negative_ratio', label: '高负向占比', score: 78 }],
+        firstSeenAt: null,
+        lastSeenAt: null,
+        eventPostCount: 2,
+        eventInteractionCount: 12,
+      },
+      historyCoverage: {
+        windowDays: 90,
+        collectedPostCount: 0,
+        collectedCommentCount: 0,
+        collectedRepostCount: 0,
+        timeRangeStart: null,
+        timeRangeEnd: null,
+        samplingStrategy: 'recent+spikes',
+      },
+      topicAndSentimentProfile: {
+        topicClusters: [],
+        primaryKeywords: ['体育', '争议'],
+        eventTypes: [],
+        sentimentTrend: [],
+        sentimentDistribution: { positive: 20, negative: 70, neutral: 10 },
+        topicShiftMoments: [],
+      },
+      relationSummary: {
+        topConnectedUsers: [{ userId: '200', weight: 15, relationTypes: ['repost'] }],
+        relationTypes: [],
+        sharedEvents: [],
+        relationClusters: [],
+        suspiciousCoordinationHints: ['与高频互动用户形成小团体'],
+      },
+      evidenceSamples: {
+        eventSamples: [],
+        historySamples: [],
+        relationSamples: [],
+        nlpSamples: [],
+      },
+    });
+
+    expect(result.candidateLabels).toEqual(['体育', '争议']);
+    expect(result.anomalyHints).toContain('事件内高风险');
+    expect(result.coverageWarnings).toContain('历史帖子样本为空');
+    expect(result.coverageWarnings).toContain('事件样本不足，建议人工复核');
+    expect(result.humanReviewNeeded).toBe(true);
+  });
 });
