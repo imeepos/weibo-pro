@@ -6,6 +6,11 @@ vi.mock('@sker/ui/components/ui/button', () => ({
   Button: ({ children, ...props }: any) => <button {...props}>{children}</button>,
 }));
 
+vi.mock('@/components/charts/MemoryGraph', () => ({
+  MemoryGraph: () => <div data-testid="memory-graph-preview">MemoryGraph Preview</div>,
+  default: () => <div data-testid="memory-graph-preview">MemoryGraph Preview</div>,
+}));
+
 describe('DistillationWorkspacePanel', () => {
   it('renders latest task summary and persona evidence details', () => {
     render(
@@ -95,6 +100,7 @@ describe('DistillationWorkspacePanel', () => {
     expect(screen.getByText('代表性帖子证据')).toBeInTheDocument();
     expect(screen.getByText('节点 2 个 · 关系 1 条')).toBeInTheDocument();
     expect(screen.getByText('热点追逐型')).toBeInTheDocument();
+    expect(screen.getByTestId('memory-graph-preview')).toBeInTheDocument();
   });
 
   it('shows review actions for human pending tasks', () => {

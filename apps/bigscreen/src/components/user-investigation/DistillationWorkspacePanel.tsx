@@ -2,6 +2,7 @@ import type { PersonaEvidenceItem, PersonaListItem, PersonaMemoryGraph } from '@
 import { Button } from '@sker/ui/components/ui/button';
 import type { DistillationTaskSummary } from '@sker/sdk';
 import { useState } from 'react';
+import MemoryGraph from '@/components/charts/MemoryGraph';
 
 interface DistillationWorkspacePanelProps {
   selectedUserId: string | null;
@@ -131,6 +132,9 @@ export function DistillationWorkspacePanel({
             <div className="mt-2 space-y-2 text-sm">
               <div className="text-muted-foreground">
                 节点 {memoryGraph.memories.length} 个 · 关系 {memoryGraph.relations.length} 条
+              </div>
+              <div className="h-64 overflow-hidden rounded-lg border bg-background">
+                <MemoryGraph data={memoryGraph} className="h-full w-full" />
               </div>
               <div className="flex flex-wrap gap-2">
                 {memoryGraph.memories.slice(0, 3).map((memory) => (

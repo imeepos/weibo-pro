@@ -4,9 +4,10 @@ import { useMemo, useState } from 'react';
 
 interface PersonaNetworkPanelProps {
   onBackToInvestigation: () => void;
+  onSelectPersona?: (weiboUserId: string) => void;
 }
 
-export function PersonaNetworkPanel({ onBackToInvestigation }: PersonaNetworkPanelProps) {
+export function PersonaNetworkPanel({ onBackToInvestigation, onSelectPersona }: PersonaNetworkPanelProps) {
   const { graph, isLoading, error } = usePersonaNetworkGraph();
   const [riskFilter, setRiskFilter] = useState<'all' | 'high' | 'medium'>('all');
   const [edgeTypeFilter, setEdgeTypeFilter] = useState<'all' | 'interaction' | 'co_event' | 'profile_similarity'>('all');
@@ -81,12 +82,17 @@ export function PersonaNetworkPanel({ onBackToInvestigation }: PersonaNetworkPan
           </div>
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {filteredPersonas.slice(0, 6).map((persona) => (
-              <div key={persona.personaId} className="rounded-lg border p-3">
+              <button
+                key={persona.personaId}
+                type="button"
+                onClick={() => onSelectPersona?.(persona.weiboUserId)}
+                className="rounded-lg border p-3 text-left transition-colors hover:bg-muted/30"
+              >
                 <div className="font-medium text-foreground">{persona.name}</div>
                 <div className="mt-1 text-xs text-muted-foreground">
                   风险 {persona.riskLevel} · 分数 {persona.riskScore} · 记忆 {persona.memoryCount}
                 </div>
-              </div>
+              </button>
             ))}
           </div>
           <div className="rounded-lg border p-4">

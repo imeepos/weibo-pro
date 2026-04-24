@@ -76,7 +76,13 @@ const UserDetection: React.FC = () => {
   };
 
   const content = mode === 'graph' ? (
-    <PersonaNetworkPanel onBackToInvestigation={() => setMode('investigation')} />
+    <PersonaNetworkPanel
+      onBackToInvestigation={() => setMode('investigation')}
+      onSelectPersona={(weiboUserId) => {
+        setSelectedUserId(weiboUserId);
+        setMode('investigation');
+      }}
+    />
   ) : (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-[320px_minmax(420px,1.4fr)_minmax(320px,1fr)]">
       <InvestigationQueuePanel

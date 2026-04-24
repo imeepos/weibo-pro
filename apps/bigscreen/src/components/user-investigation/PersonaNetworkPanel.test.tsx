@@ -74,4 +74,19 @@ describe('PersonaNetworkPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: '仅互动边' }));
     expect(screen.getByText('用户互动关系')).toBeInTheDocument();
   });
+
+  it('calls select callback when a persona card is clicked', () => {
+    const onSelectPersona = vi.fn();
+
+    render(
+      <PersonaNetworkPanel
+        onBackToInvestigation={vi.fn()}
+        onSelectPersona={onSelectPersona}
+      />,
+    );
+
+    fireEvent.click(screen.getByText('用户A Persona'));
+
+    expect(onSelectPersona).toHaveBeenCalledWith('100');
+  });
 });
