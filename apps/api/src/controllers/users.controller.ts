@@ -28,6 +28,7 @@ export class UsersController implements sdk.UsersController {
     return this.usersService.getStatistics(timeRange);
   }
 
+  @Get('investigation-queue')
   async getInvestigationQueue(
     @Query('eventId') eventId?: string,
     @Query('riskLevel') riskLevel?: string,
@@ -38,6 +39,7 @@ export class UsersController implements sdk.UsersController {
     return this.usersService.getInvestigationQueue({ eventId, riskLevel, status, page, pageSize });
   }
 
+  @Get(':id/dossier')
   async getUserDossier(
     @Param('id') id: string,
     @Query('eventId') eventId?: string,
@@ -46,6 +48,7 @@ export class UsersController implements sdk.UsersController {
     return this.usersService.getUserDossier(id, eventId, windowDays);
   }
 
+  @Post(':id/distillation-tasks')
   async createDistillationTask(
     @Param('id') id: string,
     @Body() request?: sdk.CreateDistillationTaskRequest,
@@ -53,6 +56,7 @@ export class UsersController implements sdk.UsersController {
     return this.usersService.createDistillationTask(id, request);
   }
 
+  @Get(':id/distillation-tasks')
   async getDistillationTasks(@Param('id') id: string) {
     return this.usersService.getDistillationTasks(id);
   }

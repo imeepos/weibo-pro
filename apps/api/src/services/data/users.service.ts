@@ -14,6 +14,9 @@ import type {
 } from '@sker/sdk';
 import { InvestigationQueueService } from './investigation/investigation-queue.service';
 import { UserDossierService } from './investigation/user-dossier.service';
+import { UserHistoryCollectionService } from './investigation/user-history-collection.service';
+import { UserProfileDistillationService } from './investigation/user-profile-distillation.service';
+import { PersonaProjectionService } from './investigation/persona-projection.service';
 
 export type RiskLevel = 'low' | 'medium' | 'high';
 
@@ -103,6 +106,12 @@ export class UsersService {
     private readonly investigationQueueService: InvestigationQueueService,
     @Inject(UserDossierService)
     private readonly userDossierService: UserDossierService,
+    @Inject(UserHistoryCollectionService)
+    private readonly userHistoryCollectionService: UserHistoryCollectionService,
+    @Inject(UserProfileDistillationService)
+    private readonly userProfileDistillationService: UserProfileDistillationService,
+    @Inject(PersonaProjectionService)
+    private readonly personaProjectionService: PersonaProjectionService,
   ) {}
 
   async getUserList(timeRange: TimeRange = '7d', page: number = 1, pageSize: number = 20) {
@@ -156,25 +165,86 @@ export class UsersService {
       });
       const saved = await repo.save(task);
 
+      try {
+        saved.status = 'crawling';
+        saved.started_at = new Date();
+        await repo.save(saved);
+
+        await this.userHistoryCollectionService.collect({
+          weiboUserId: id,
+          uid: id,
+          windowDays: saved.history_window_days,
+          taskId: saved.id,
+        });
+
+        saved.status = 'analyzing';
+        await repo.save(saved);
+
+        const dossier = await this.userDossierService.getDossier(id, {
+          eventId: saved.event_id ?? undefined,
+          windowDays: saved.history_window_days,
+        });
+
+        const profile = await this.userProfileDistillationService.distill(dossier);
+
+        saved.model = profile.metadata.model;
+        saved.prompt_version = profile.metadata.promptVersion;
+        saved.distilled_summary = profile.summary.short;
+        saved.distilled_json = profile;
+        saved.review_status = profile.risk.reviewRecommendation === 'auto_pass' ? 'auto_pass' : 'human_pending';
+        saved.source_post_count = profile.metadata.sampledPosts;
+        saved.source_comment_count = profile.metadata.sampledComments;
+        saved.source_repost_count = profile.metadata.sampledReposts;
+        saved.evidence_sample_count = profile.memoryDrafts.reduce(
+          (sum, item) => sum + item.evidenceRefs.length,
+          0,
+        );
+
+        if (profile.risk.reviewRecommendation === 'auto_pass') {
+          await this.personaProjectionService.publishProfile({
+            ...profile,
+            weiboUserId: dossier.accountSnapshot.weiboUserId,
+            screenName:
+              dossier.accountSnapshot.screenName ??
+              dossier.accountSnapshot.displayName ??
+              dossier.accountSnapshot.weiboUserId,
+            avatar: dossier.accountSnapshot.avatar,
+          });
+          saved.status = 'published';
+          saved.review_status = 'auto_pass';
+        } else {
+          saved.status = 'review_pending';
+          saved.review_status = 'human_pending';
+        }
+
+        saved.completed_at = new Date();
+      } catch (error) {
+        saved.status = 'failed';
+        saved.error_message = error instanceof Error ? error.message : String(error);
+        saved.completed_at = new Date();
+      }
+
+      const finalTask = await repo.save(saved);
+
       return {
-        id: saved.id,
-        weiboUserId: saved.weibo_user_id,
-        eventId: saved.event_id,
-        status: saved.status,
-        historyWindowDays: saved.history_window_days,
-        sourcePostCount: saved.source_post_count,
-        sourceCommentCount: saved.source_comment_count,
-        sourceRepostCount: saved.source_repost_count,
-        evidenceSampleCount: saved.evidence_sample_count,
-        model: saved.model,
-        promptVersion: saved.prompt_version,
-        distilledSummary: saved.distilled_summary,
-        reviewStatus: saved.review_status,
-        errorMessage: saved.error_message,
-        startedAt: saved.started_at ? saved.started_at.toISOString() : null,
-        completedAt: saved.completed_at ? saved.completed_at.toISOString() : null,
-        createdAt: saved.created_at.toISOString(),
-        updatedAt: saved.updated_at.toISOString(),
+        id: finalTask.id,
+        weiboUserId: finalTask.weibo_user_id,
+        eventId: finalTask.event_id,
+        status: finalTask.status,
+        historyWindowDays: finalTask.history_window_days,
+        sourcePostCount: finalTask.source_post_count,
+        sourceCommentCount: finalTask.source_comment_count,
+        sourceRepostCount: finalTask.source_repost_count,
+        evidenceSampleCount: finalTask.evidence_sample_count,
+        model: finalTask.model,
+        promptVersion: finalTask.prompt_version,
+        distilledSummary: finalTask.distilled_summary,
+        reviewStatus: finalTask.review_status,
+        errorMessage: finalTask.error_message,
+        startedAt: finalTask.started_at ? finalTask.started_at.toISOString() : null,
+        completedAt: finalTask.completed_at ? finalTask.completed_at.toISOString() : null,
+        createdAt: finalTask.created_at.toISOString(),
+        updatedAt: finalTask.updated_at.toISOString(),
       };
     });
   }
