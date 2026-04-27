@@ -28,11 +28,13 @@ const permissionModeConfig: Record<PermissionMode, { label: string; icon: typeof
 
 export function ChatSettings() {
   const [isOpen, setIsOpen] = useState(false);
-  const { permissionMode, setPermissionMode } = useChatStore();
+  const { activeTaskId, permissionMode, setPermissionMode, clearMessages } = useChatStore();
 
   const handleClearContext = () => {
     if (confirm('确定要清空上下文并开始新会话吗？')) {
-      // TODO: Implement clearContext
+      if (activeTaskId) {
+        clearMessages(activeTaskId);
+      }
       setIsOpen(false);
     }
   };
