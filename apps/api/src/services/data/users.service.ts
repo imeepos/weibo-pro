@@ -153,7 +153,7 @@ export class UsersService {
     id: string,
     request?: CreateDistillationTaskRequest,
   ): Promise<DistillationTaskSummary> {
-    return useEntityManager(async (manager) => {
+    const queuedTask = await useEntityManager(async (manager) => {
       const repo = manager.getRepository(UserProfileDistillationTaskEntity);
       const task = repo.create({
         weibo_user_id: id,
@@ -165,90 +165,14 @@ export class UsersService {
         source_repost_count: 0,
         evidence_sample_count: 0,
       });
-      const saved = await repo.save(task);
-
-      try {
-        saved.status = 'crawling';
-        saved.started_at = new Date();
-        await repo.save(saved);
-
-        await this.userHistoryCollectionService.collect({
-          weiboUserId: id,
-          uid: id,
-          windowDays: saved.history_window_days,
-          taskId: saved.id,
-        });
-
-        saved.status = 'analyzing';
-        await repo.save(saved);
-
-        const dossier = await this.userDossierService.getDossier(id, {
-          eventId: saved.event_id ?? undefined,
-          windowDays: saved.history_window_days,
-        });
-
-        const profile = await this.userProfileDistillationService.distill(dossier);
-
-        saved.model = profile.metadata.model;
-        saved.prompt_version = profile.metadata.promptVersion;
-        saved.distilled_summary = profile.summary.short;
-        saved.distilled_json = profile;
-        saved.review_status = profile.risk.reviewRecommendation === 'auto_pass' ? 'auto_pass' : 'human_pending';
-        saved.source_post_count = profile.metadata.sampledPosts;
-        saved.source_comment_count = profile.metadata.sampledComments;
-        saved.source_repost_count = profile.metadata.sampledReposts;
-        saved.evidence_sample_count = profile.memoryDrafts.reduce(
-          (sum, item) => sum + item.evidenceRefs.length,
-          0,
-        );
-
-        if (profile.risk.reviewRecommendation === 'auto_pass') {
-          await this.personaProjectionService.publishProfile({
-            ...profile,
-            weiboUserId: dossier.accountSnapshot.weiboUserId,
-            screenName:
-              dossier.accountSnapshot.screenName ??
-              dossier.accountSnapshot.displayName ??
-              dossier.accountSnapshot.weiboUserId,
-            avatar: dossier.accountSnapshot.avatar,
-          });
-          saved.status = 'published';
-          saved.review_status = 'auto_pass';
-        } else {
-          saved.status = 'review_pending';
-          saved.review_status = 'human_pending';
-        }
-
-        saved.completed_at = new Date();
-      } catch (error) {
-        saved.status = 'failed';
-        saved.error_message = error instanceof Error ? error.message : String(error);
-        saved.completed_at = new Date();
-      }
-
-      const finalTask = await repo.save(saved);
-
-      return {
-        id: finalTask.id,
-        weiboUserId: finalTask.weibo_user_id,
-        eventId: finalTask.event_id,
-        status: finalTask.status,
-        historyWindowDays: finalTask.history_window_days,
-        sourcePostCount: finalTask.source_post_count,
-        sourceCommentCount: finalTask.source_comment_count,
-        sourceRepostCount: finalTask.source_repost_count,
-        evidenceSampleCount: finalTask.evidence_sample_count,
-        model: finalTask.model,
-        promptVersion: finalTask.prompt_version,
-        distilledSummary: finalTask.distilled_summary,
-        reviewStatus: finalTask.review_status,
-        errorMessage: finalTask.error_message,
-        startedAt: finalTask.started_at ? finalTask.started_at.toISOString() : null,
-        completedAt: finalTask.completed_at ? finalTask.completed_at.toISOString() : null,
-        createdAt: finalTask.created_at.toISOString(),
-        updatedAt: finalTask.updated_at.toISOString(),
-      };
+      return repo.save(task);
     });
+
+    void this.executeDistillationTask(queuedTask.id).catch((error) => {
+      console.error(`[UsersService] distillation task ${queuedTask.id} 执行失败:`, error);
+    });
+
+    return this.toDistillationTaskSummary(queuedTask);
   }
 
   async getDistillationTasks(id: string): Promise<DistillationTaskSummary[]> {
@@ -259,26 +183,7 @@ export class UsersService {
         order: { created_at: 'DESC' },
       });
 
-      return tasks.map((task) => ({
-        id: task.id,
-        weiboUserId: task.weibo_user_id,
-        eventId: task.event_id,
-        status: task.status,
-        historyWindowDays: task.history_window_days,
-        sourcePostCount: task.source_post_count,
-        sourceCommentCount: task.source_comment_count,
-        sourceRepostCount: task.source_repost_count,
-        evidenceSampleCount: task.evidence_sample_count,
-        model: task.model,
-        promptVersion: task.prompt_version,
-        distilledSummary: task.distilled_summary,
-        reviewStatus: task.review_status,
-        errorMessage: task.error_message,
-        startedAt: task.started_at ? task.started_at.toISOString() : null,
-        completedAt: task.completed_at ? task.completed_at.toISOString() : null,
-        createdAt: task.created_at.toISOString(),
-        updatedAt: task.updated_at.toISOString(),
-      }));
+      return tasks.map((task) => this.toDistillationTaskSummary(task));
     });
   }
 
@@ -322,27 +227,114 @@ export class UsersService {
       task.completed_at = new Date();
       const saved = await taskRepo.save(task);
 
-      return {
-        id: saved.id,
-        weiboUserId: saved.weibo_user_id,
-        eventId: saved.event_id,
-        status: saved.status,
-        historyWindowDays: saved.history_window_days,
-        sourcePostCount: saved.source_post_count,
-        sourceCommentCount: saved.source_comment_count,
-        sourceRepostCount: saved.source_repost_count,
-        evidenceSampleCount: saved.evidence_sample_count,
-        model: saved.model,
-        promptVersion: saved.prompt_version,
-        distilledSummary: saved.distilled_summary,
-        reviewStatus: saved.review_status,
-        errorMessage: saved.error_message,
-        startedAt: saved.started_at ? saved.started_at.toISOString() : null,
-        completedAt: saved.completed_at ? saved.completed_at.toISOString() : null,
-        createdAt: saved.created_at.toISOString(),
-        updatedAt: saved.updated_at.toISOString(),
-      };
+      return this.toDistillationTaskSummary(saved);
     });
+  }
+
+  private async executeDistillationTask(taskId: string): Promise<void> {
+    let task = await this.updateDistillationTask(taskId, (currentTask) => {
+      currentTask.status = 'crawling';
+      currentTask.started_at = new Date();
+      currentTask.completed_at = null;
+      currentTask.error_message = null;
+    });
+
+    try {
+      await this.userHistoryCollectionService.collect({
+        weiboUserId: task.weibo_user_id,
+        uid: task.weibo_user_id,
+        windowDays: task.history_window_days,
+        taskId: task.id,
+      });
+
+      task = await this.updateDistillationTask(taskId, (currentTask) => {
+        currentTask.status = 'analyzing';
+      });
+
+      const dossier = await this.userDossierService.getDossier(task.weibo_user_id, {
+        eventId: task.event_id ?? undefined,
+        windowDays: task.history_window_days,
+      });
+      const profile = await this.userProfileDistillationService.distill(dossier);
+      const reviewStatus =
+        profile.risk.reviewRecommendation === 'auto_pass' ? 'auto_pass' : 'human_pending';
+
+      if (reviewStatus === 'auto_pass') {
+        await this.personaProjectionService.publishProfile({
+          ...profile,
+          weiboUserId: dossier.accountSnapshot.weiboUserId,
+          screenName:
+            dossier.accountSnapshot.screenName ??
+            dossier.accountSnapshot.displayName ??
+            dossier.accountSnapshot.weiboUserId,
+          avatar: dossier.accountSnapshot.avatar,
+        });
+      }
+
+      await this.updateDistillationTask(taskId, (currentTask) => {
+        currentTask.model = profile.metadata.model;
+        currentTask.prompt_version = profile.metadata.promptVersion;
+        currentTask.distilled_summary = profile.summary.short;
+        currentTask.distilled_json = profile;
+        currentTask.review_status = reviewStatus;
+        currentTask.source_post_count = profile.metadata.sampledPosts;
+        currentTask.source_comment_count = profile.metadata.sampledComments;
+        currentTask.source_repost_count = profile.metadata.sampledReposts;
+        currentTask.evidence_sample_count = profile.memoryDrafts.reduce(
+          (sum, item) => sum + item.evidenceRefs.length,
+          0,
+        );
+        currentTask.status = reviewStatus === 'auto_pass' ? 'published' : 'review_pending';
+        currentTask.completed_at = new Date();
+        currentTask.error_message = null;
+      });
+    } catch (error) {
+      await this.updateDistillationTask(taskId, (currentTask) => {
+        currentTask.status = 'failed';
+        currentTask.error_message = error instanceof Error ? error.message : String(error);
+        currentTask.completed_at = new Date();
+      });
+    }
+  }
+
+  private async updateDistillationTask(
+    taskId: string,
+    mutate: (task: UserProfileDistillationTaskEntity) => void,
+  ): Promise<UserProfileDistillationTaskEntity> {
+    return useEntityManager(async (manager) => {
+      const repo = manager.getRepository(UserProfileDistillationTaskEntity);
+      const task = await repo.findOne({ where: { id: taskId } });
+
+      if (!task) {
+        throw new Error(`Distillation task ${taskId} not found`);
+      }
+
+      mutate(task);
+      return repo.save(task);
+    });
+  }
+
+  private toDistillationTaskSummary(task: UserProfileDistillationTaskEntity): DistillationTaskSummary {
+    return {
+      id: task.id,
+      weiboUserId: task.weibo_user_id,
+      eventId: task.event_id,
+      status: task.status,
+      historyWindowDays: task.history_window_days,
+      sourcePostCount: task.source_post_count,
+      sourceCommentCount: task.source_comment_count,
+      sourceRepostCount: task.source_repost_count,
+      evidenceSampleCount: task.evidence_sample_count,
+      model: task.model,
+      promptVersion: task.prompt_version,
+      distilledSummary: task.distilled_summary,
+      reviewStatus: task.review_status,
+      errorMessage: task.error_message,
+      startedAt: task.started_at ? task.started_at.toISOString() : null,
+      completedAt: task.completed_at ? task.completed_at.toISOString() : null,
+      createdAt: task.created_at.toISOString(),
+      updatedAt: task.updated_at.toISOString(),
+    };
   }
 
   private async fetchUserList(timeRange: TimeRange, page: number = 1, pageSize: number = 20) {

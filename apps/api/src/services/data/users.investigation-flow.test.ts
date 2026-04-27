@@ -199,12 +199,54 @@ describe('UsersService distillation flow', () => {
       historyWindowDays: 90,
     });
 
-    expect(historyCollectionService.collect).toHaveBeenCalled();
-    expect(userDossierService.getDossier).toHaveBeenCalled();
-    expect(userProfileDistillationService.distill).toHaveBeenCalled();
-    expect(personaProjectionService.publishProfile).toHaveBeenCalled();
-    expect(result.status).toBe('published');
-    expect(result.distilledSummary).toBe('短摘要');
+    expect(result.status).toBe('queued');
+    expect(result.distilledSummary).toBeNull();
+
+    await vi.waitFor(() => {
+      expect(historyCollectionService.collect).toHaveBeenCalled();
+      expect(userDossierService.getDossier).toHaveBeenCalled();
+      expect(userProfileDistillationService.distill).toHaveBeenCalled();
+      expect(personaProjectionService.publishProfile).toHaveBeenCalled();
+      expect(savedTasks.find((item) => item.id === result.id)?.status).toBe('published');
+    });
+  });
+
+  it('returns the queued task before long-running collection completes', async () => {
+    let resolveCollection: (() => void) | null = null;
+    historyCollectionService.collect.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveCollection = resolve;
+        }),
+    );
+
+    const raced = await Promise.race([
+      service.createDistillationTask('100', {
+        eventId: 'event-1',
+        historyWindowDays: 90,
+      }).then((task) => ({ type: 'task' as const, task })),
+      new Promise<{ type: 'timeout' }>((resolve) =>
+        setTimeout(() => resolve({ type: 'timeout' }), 50),
+      ),
+    ]);
+
+    expect(raced.type).toBe('task');
+    if (raced.type !== 'task') {
+      return;
+    }
+
+    expect(raced.task.status).toBe('queued');
+
+    await vi.waitFor(() => {
+      expect(historyCollectionService.collect).toHaveBeenCalled();
+      expect(resolveCollection).not.toBeNull();
+    });
+
+    resolveCollection?.();
+
+    await vi.waitFor(() => {
+      expect(savedTasks.find((item) => item.id === raced.task.id)?.status).toBe('published');
+    });
   });
 
   it('publishes a review-pending task when human approves it', async () => {
