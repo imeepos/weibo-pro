@@ -230,7 +230,7 @@ export function controllerFactory(ControllerClass: ControllerConstructor): Recor
       createEndpointHandler(ControllerClass, methodName, argsMetadata) as any
     );
 
-    const endpointKey = pathToCamelCase(fullPath);
+    const endpointKey = pathToCamelCase(`${endpointConfig.method.toLowerCase()}/${fullPath}`);
     endpoints[endpointKey] = endpoint;
   }
 

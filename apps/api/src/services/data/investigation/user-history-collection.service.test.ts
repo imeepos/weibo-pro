@@ -27,4 +27,28 @@ describe('UserHistoryCollectionService', () => {
 
     expect(visitor.visit).toHaveBeenCalled();
   });
+
+  it('rejects when the visitor emits a node_fail event before completion', async () => {
+    const visitor = {
+      visit: vi.fn().mockReturnValue({
+        subscribe: ({
+          next,
+          complete,
+        }: {
+          next?: (event: { type: string; error?: string }) => void;
+          complete: () => void;
+        }) => {
+          next?.({ type: 'node_fail', error: '没有可用的微博账号' });
+          complete();
+          return { unsubscribe: vi.fn() };
+        },
+      }),
+    };
+
+    const service = new UserHistoryCollectionService(visitor as any);
+
+    await expect(
+      service.collect({ weiboUserId: '123', uid: '123', windowDays: 90, taskId: 'task-1' }),
+    ).rejects.toThrow('没有可用的微博账号');
+  });
 });

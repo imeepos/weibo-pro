@@ -26,9 +26,22 @@ export class UserHistoryCollectionService {
         { taskId: input.taskId, weiboUserId: input.weiboUserId, windowDays: input.windowDays },
       );
 
+      let settled = false;
+
+      const finish = (handler: () => void) => {
+        if (settled) return;
+        settled = true;
+        handler();
+      };
+
       stream.subscribe({
-        complete: resolve,
-        error: reject,
+        next: (event: { type?: string; error?: string }) => {
+          if (event?.type === 'node_fail') {
+            finish(() => reject(new Error(event.error || '用户历史回填失败')));
+          }
+        },
+        complete: () => finish(resolve),
+        error: (error) => finish(() => reject(error)),
       });
     });
   }
