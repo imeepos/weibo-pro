@@ -150,7 +150,29 @@ export class WeiboWorkerProxyService {
     }
 
     private async fetchDirect(url: string, headers: Record<string, string>): Promise<Response> {
-        return fetch(url, { headers });
+        let lastError: Error | null = null;
+
+        for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
+            try {
+                return await fetch(url, {
+                    headers,
+                    signal: AbortSignal.timeout(30000),
+                });
+            } catch (error) {
+                lastError = error as Error;
+                const isRetryable = this.isRetryableError(lastError);
+
+                if (!isRetryable || attempt === this.maxRetries) {
+                    throw lastError;
+                }
+
+                const delay = this.initialRetryDelay * Math.pow(2, attempt);
+                this.logger.warn(`本地请求失败，${delay}ms 后重试 (${attempt + 1}/${this.maxRetries}): ${lastError.message}`);
+                await this.sleep(delay);
+            }
+        }
+
+        throw lastError;
     }
 
     private isRetryableError(error: Error): boolean {
