@@ -6,6 +6,13 @@ import { root } from '@sker/core';
 import { UsersController } from '@sker/sdk';
 import type { UserProfile } from '../../types';
 import type { BaseQueryParams, TimeRange } from './types';
+import type {
+  CreateDistillationTaskRequest,
+  DistillationTaskSummary,
+  ReviewDistillationTaskRequest,
+  UserInvestigationDossier,
+  UserInvestigationQueueResponse,
+} from '@sker/sdk';
 
 // 用户列表查询参数
 export interface UsersListParams extends BaseQueryParams {
@@ -94,5 +101,51 @@ export const UsersAPI = {
     const controller = root.get(UsersController);
     const response = await controller.getStatistics(params?.timeRange);
     return response as UserStatistics;
+  },
+
+  getInvestigationQueue: async (params?: {
+    eventId?: string;
+    riskLevel?: string;
+    status?: string;
+    page?: number;
+    pageSize?: number;
+  }): Promise<UserInvestigationQueueResponse> => {
+    const controller = root.get(UsersController);
+    return await controller.getInvestigationQueue(
+      params?.eventId,
+      params?.riskLevel,
+      params?.status,
+      params?.page,
+      params?.pageSize,
+    );
+  },
+
+  getUserDossier: async (
+    userId: string,
+    params?: { eventId?: string; windowDays?: number },
+  ): Promise<UserInvestigationDossier> => {
+    const controller = root.get(UsersController);
+    return await controller.getUserDossier(userId, params?.eventId, params?.windowDays);
+  },
+
+  createDistillationTask: async (
+    userId: string,
+    request?: CreateDistillationTaskRequest,
+  ): Promise<DistillationTaskSummary> => {
+    const controller = root.get(UsersController);
+    return await controller.createDistillationTask(userId, request);
+  },
+
+  getDistillationTasks: async (userId: string): Promise<DistillationTaskSummary[]> => {
+    const controller = root.get(UsersController);
+    return await controller.getDistillationTasks(userId);
+  },
+
+  reviewDistillationTask: async (
+    taskId: string,
+    request: ReviewDistillationTaskRequest,
+  ): Promise<DistillationTaskSummary> => {
+    const controller = root.get(UsersController);
+    return await controller.reviewDistillationTask(taskId, request);
   },
 };

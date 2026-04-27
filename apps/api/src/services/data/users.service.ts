@@ -1,8 +1,24 @@
 import { Injectable, Inject } from '@sker/core';
-import { useEntityManager } from '@sker/entities';
+import {
+  WeiboUserEntity,
+  UserProfileDistillationTaskEntity,
+  useEntityManager,
+} from '@sker/entities';
 import { CacheService, CACHE_KEYS, CACHE_TTL } from '../cache.service';
 import { getTimeRangeBoundaries, getPreviousTimeRangeBoundaries } from './time-range.utils';
 import type { TimeRange } from './types';
+import type {
+  CreateDistillationTaskRequest,
+  DistillationTaskSummary,
+  ReviewDistillationTaskRequest,
+  UserInvestigationDossier,
+  UserInvestigationQueueResponse,
+} from '@sker/sdk';
+import { InvestigationQueueService } from './investigation/investigation-queue.service';
+import { UserDossierService } from './investigation/user-dossier.service';
+import { UserHistoryCollectionService } from './investigation/user-history-collection.service';
+import { UserProfileDistillationService } from './investigation/user-profile-distillation.service';
+import { PersonaProjectionService } from './investigation/persona-projection.service';
 
 export type RiskLevel = 'low' | 'medium' | 'high';
 
@@ -87,7 +103,17 @@ export interface UserStatistics {
 @Injectable({ providedIn: 'root' })
 export class UsersService {
   constructor(
-    @Inject(CacheService) private readonly cacheService: CacheService
+    @Inject(CacheService) private readonly cacheService: CacheService,
+    @Inject(InvestigationQueueService)
+    private readonly investigationQueueService: InvestigationQueueService,
+    @Inject(UserDossierService)
+    private readonly userDossierService: UserDossierService,
+    @Inject(UserHistoryCollectionService)
+    private readonly userHistoryCollectionService: UserHistoryCollectionService,
+    @Inject(UserProfileDistillationService)
+    private readonly userProfileDistillationService: UserProfileDistillationService,
+    @Inject(PersonaProjectionService)
+    private readonly personaProjectionService: PersonaProjectionService,
   ) {}
 
   async getUserList(timeRange: TimeRange = '7d', page: number = 1, pageSize: number = 20) {
@@ -97,6 +123,226 @@ export class UsersService {
       () => this.fetchUserList(timeRange, page, pageSize),
       CACHE_TTL.LONG
     );
+  }
+
+  async getInvestigationQueue(query: {
+    eventId?: string;
+    riskLevel?: string;
+    status?: string;
+    page?: number;
+    pageSize?: number;
+  }): Promise<UserInvestigationQueueResponse> {
+    return this.investigationQueueService.getQueue({
+      eventId: query.eventId,
+      riskLevel: query.riskLevel,
+      status: query.status,
+      page: query.page ?? 1,
+      pageSize: query.pageSize ?? 20,
+    });
+  }
+
+  async getUserDossier(
+    id: string,
+    eventId?: string,
+    windowDays: number = 90,
+  ): Promise<UserInvestigationDossier> {
+    return this.userDossierService.getDossier(id, { eventId, windowDays });
+  }
+
+  async createDistillationTask(
+    id: string,
+    request?: CreateDistillationTaskRequest,
+  ): Promise<DistillationTaskSummary> {
+    return useEntityManager(async (manager) => {
+      const repo = manager.getRepository(UserProfileDistillationTaskEntity);
+      const task = repo.create({
+        weibo_user_id: id,
+        event_id: request?.eventId ?? null,
+        status: 'queued',
+        history_window_days: request?.historyWindowDays ?? 90,
+        source_post_count: 0,
+        source_comment_count: 0,
+        source_repost_count: 0,
+        evidence_sample_count: 0,
+      });
+      const saved = await repo.save(task);
+
+      try {
+        saved.status = 'crawling';
+        saved.started_at = new Date();
+        await repo.save(saved);
+
+        await this.userHistoryCollectionService.collect({
+          weiboUserId: id,
+          uid: id,
+          windowDays: saved.history_window_days,
+          taskId: saved.id,
+        });
+
+        saved.status = 'analyzing';
+        await repo.save(saved);
+
+        const dossier = await this.userDossierService.getDossier(id, {
+          eventId: saved.event_id ?? undefined,
+          windowDays: saved.history_window_days,
+        });
+
+        const profile = await this.userProfileDistillationService.distill(dossier);
+
+        saved.model = profile.metadata.model;
+        saved.prompt_version = profile.metadata.promptVersion;
+        saved.distilled_summary = profile.summary.short;
+        saved.distilled_json = profile;
+        saved.review_status = profile.risk.reviewRecommendation === 'auto_pass' ? 'auto_pass' : 'human_pending';
+        saved.source_post_count = profile.metadata.sampledPosts;
+        saved.source_comment_count = profile.metadata.sampledComments;
+        saved.source_repost_count = profile.metadata.sampledReposts;
+        saved.evidence_sample_count = profile.memoryDrafts.reduce(
+          (sum, item) => sum + item.evidenceRefs.length,
+          0,
+        );
+
+        if (profile.risk.reviewRecommendation === 'auto_pass') {
+          await this.personaProjectionService.publishProfile({
+            ...profile,
+            weiboUserId: dossier.accountSnapshot.weiboUserId,
+            screenName:
+              dossier.accountSnapshot.screenName ??
+              dossier.accountSnapshot.displayName ??
+              dossier.accountSnapshot.weiboUserId,
+            avatar: dossier.accountSnapshot.avatar,
+          });
+          saved.status = 'published';
+          saved.review_status = 'auto_pass';
+        } else {
+          saved.status = 'review_pending';
+          saved.review_status = 'human_pending';
+        }
+
+        saved.completed_at = new Date();
+      } catch (error) {
+        saved.status = 'failed';
+        saved.error_message = error instanceof Error ? error.message : String(error);
+        saved.completed_at = new Date();
+      }
+
+      const finalTask = await repo.save(saved);
+
+      return {
+        id: finalTask.id,
+        weiboUserId: finalTask.weibo_user_id,
+        eventId: finalTask.event_id,
+        status: finalTask.status,
+        historyWindowDays: finalTask.history_window_days,
+        sourcePostCount: finalTask.source_post_count,
+        sourceCommentCount: finalTask.source_comment_count,
+        sourceRepostCount: finalTask.source_repost_count,
+        evidenceSampleCount: finalTask.evidence_sample_count,
+        model: finalTask.model,
+        promptVersion: finalTask.prompt_version,
+        distilledSummary: finalTask.distilled_summary,
+        reviewStatus: finalTask.review_status,
+        errorMessage: finalTask.error_message,
+        startedAt: finalTask.started_at ? finalTask.started_at.toISOString() : null,
+        completedAt: finalTask.completed_at ? finalTask.completed_at.toISOString() : null,
+        createdAt: finalTask.created_at.toISOString(),
+        updatedAt: finalTask.updated_at.toISOString(),
+      };
+    });
+  }
+
+  async getDistillationTasks(id: string): Promise<DistillationTaskSummary[]> {
+    return useEntityManager(async (manager) => {
+      const repo = manager.getRepository(UserProfileDistillationTaskEntity);
+      const tasks = await repo.find({
+        where: { weibo_user_id: id },
+        order: { created_at: 'DESC' },
+      });
+
+      return tasks.map((task) => ({
+        id: task.id,
+        weiboUserId: task.weibo_user_id,
+        eventId: task.event_id,
+        status: task.status,
+        historyWindowDays: task.history_window_days,
+        sourcePostCount: task.source_post_count,
+        sourceCommentCount: task.source_comment_count,
+        sourceRepostCount: task.source_repost_count,
+        evidenceSampleCount: task.evidence_sample_count,
+        model: task.model,
+        promptVersion: task.prompt_version,
+        distilledSummary: task.distilled_summary,
+        reviewStatus: task.review_status,
+        errorMessage: task.error_message,
+        startedAt: task.started_at ? task.started_at.toISOString() : null,
+        completedAt: task.completed_at ? task.completed_at.toISOString() : null,
+        createdAt: task.created_at.toISOString(),
+        updatedAt: task.updated_at.toISOString(),
+      }));
+    });
+  }
+
+  async reviewDistillationTask(
+    taskId: string,
+    request: ReviewDistillationTaskRequest,
+  ): Promise<DistillationTaskSummary> {
+    return useEntityManager(async (manager) => {
+      const taskRepo = manager.getRepository(UserProfileDistillationTaskEntity);
+      const userRepo = manager.getRepository(WeiboUserEntity);
+      const task = await taskRepo.findOne({ where: { id: taskId } });
+
+      if (!task) {
+        throw new Error(`Distillation task ${taskId} not found`);
+      }
+
+      if (request.decision === 'approve') {
+        const user = await userRepo.findOne({
+          where: { id: BigInt(task.weibo_user_id) as any },
+        });
+
+        if (!task.distilled_json) {
+          throw new Error('Task has no distilled profile');
+        }
+
+        await this.personaProjectionService.publishProfile({
+          ...(task.distilled_json as any),
+          weiboUserId: task.weibo_user_id,
+          screenName: user?.screen_name ?? user?.name ?? task.weibo_user_id,
+          avatar: user?.avatar_hd ?? user?.avatar_large ?? user?.profile_image_url ?? null,
+        });
+
+        task.status = 'published';
+        task.review_status = 'human_approved';
+      } else {
+        task.status = 'failed';
+        task.review_status = 'human_rejected';
+        task.error_message = request.note ?? '人工拒绝发布';
+      }
+
+      task.completed_at = new Date();
+      const saved = await taskRepo.save(task);
+
+      return {
+        id: saved.id,
+        weiboUserId: saved.weibo_user_id,
+        eventId: saved.event_id,
+        status: saved.status,
+        historyWindowDays: saved.history_window_days,
+        sourcePostCount: saved.source_post_count,
+        sourceCommentCount: saved.source_comment_count,
+        sourceRepostCount: saved.source_repost_count,
+        evidenceSampleCount: saved.evidence_sample_count,
+        model: saved.model,
+        promptVersion: saved.prompt_version,
+        distilledSummary: saved.distilled_summary,
+        reviewStatus: saved.review_status,
+        errorMessage: saved.error_message,
+        startedAt: saved.started_at ? saved.started_at.toISOString() : null,
+        completedAt: saved.completed_at ? saved.completed_at.toISOString() : null,
+        createdAt: saved.created_at.toISOString(),
+        updatedAt: saved.updated_at.toISOString(),
+      };
+    });
   }
 
   private async fetchUserList(timeRange: TimeRange, page: number = 1, pageSize: number = 20) {

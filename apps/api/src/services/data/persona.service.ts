@@ -1,13 +1,18 @@
-import { Injectable } from '@sker/core';
+import { Inject, Injectable } from '@sker/core';
 import {
+  MemoryEvidenceEntity,
   useEntityManager,
   PersonaEntity,
   MemoryEntity,
   MemoryRelationEntity,
   MemoryClosureEntity,
+  UserProfileDistillationTaskEntity,
+  WeiboUserPersonaLinkEntity,
 } from '@sker/entities';
 import type {
   PersonaListItem,
+  PersonaEvidenceItem,
+  PersonaNetworkGraph,
   PersonaMemoryGraph,
   MemoryNode,
   MemoryEdge,
@@ -17,9 +22,84 @@ import type {
   CreateMemoryRequest,
 } from '@sker/sdk';
 import { In } from 'typeorm';
+import { PersonaProjectionService } from './investigation/persona-projection.service';
+import { PersonaNetworkService } from './investigation/persona-network.service';
 
 @Injectable({ providedIn: 'root' })
 export class PersonaService {
+  constructor(
+    @Inject(PersonaProjectionService)
+    private readonly personaProjectionService: PersonaProjectionService,
+    @Inject(PersonaNetworkService)
+    private readonly personaNetworkService: PersonaNetworkService,
+  ) {}
+
+  async getPersonaByWeiboUserId(weiboUserId: string): Promise<PersonaListItem | null> {
+    return useEntityManager(async (manager) => {
+      const link = await manager.findOne(WeiboUserPersonaLinkEntity, {
+        where: {
+          weibo_user_id: weiboUserId,
+          status: 'active',
+          is_primary: true,
+        },
+      });
+
+      if (!link) return null;
+
+      const persona = await manager.findOne(PersonaEntity, {
+        where: { id: link.persona_id },
+      });
+
+      if (!persona) return null;
+
+      const memoryCount = await manager
+        .createQueryBuilder(MemoryEntity, 'm')
+        .where('m.persona_id = :personaId', { personaId: persona.id })
+        .getCount();
+
+      return {
+        id: persona.id,
+        name: persona.name,
+        avatar: persona.avatar,
+        description: persona.description,
+        memoryCount,
+        createdAt: persona.created_at.toISOString(),
+      };
+    });
+  }
+
+  async getGraphOverview(): Promise<PersonaNetworkGraph> {
+    return this.personaNetworkService.getGraphOverview();
+  }
+
+  async getPersonaEvidence(personaId: string): Promise<PersonaEvidenceItem[]> {
+    return useEntityManager(async (manager) => {
+      const memories = await manager.find(MemoryEntity, {
+        where: { persona_id: personaId },
+      });
+
+      if (!memories.length) {
+        return this.personaProjectionService.getEvidenceForPersona(personaId);
+      }
+
+      const memoryIds = memories.map((memory) => memory.id);
+      const evidence = await manager.find(MemoryEvidenceEntity, {
+        where: { memory_id: In(memoryIds) },
+      });
+
+      return evidence.map((item) => ({
+        id: item.id,
+        memoryId: item.memory_id,
+        sourceTable: item.source_table,
+        sourceId: item.source_id,
+        excerpt: item.excerpt,
+        evidenceType: item.evidence_type,
+        score: Number(item.score),
+        metadata: item.metadata,
+        createdAt: item.created_at.toISOString(),
+      }));
+    });
+  }
 
   async getPersonaList(): Promise<PersonaListItem[]> {
     return useEntityManager(async (manager) => {
