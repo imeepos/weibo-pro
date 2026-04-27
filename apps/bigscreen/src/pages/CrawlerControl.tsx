@@ -5,11 +5,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { WorkflowAPI, WorkflowStatusResponse } from '@/services/api/workflow';
+import { CrawlerAPI, type CrawlerControlStatusSummary } from '@/services/api/crawler';
 import { createLogger } from '@/utils';
 import { Spinner } from '@sker/ui/components/ui/spinner';
 
 const logger = createLogger('CrawlerControl');
+const NLP_UNSUPPORTED_MESSAGE = '当前主分支未接入 NLP 手动触发接口，暂只支持状态查看、详情爬取和关键词搜索。';
 
 // 任务类型枚举
 type TaskType = 'crawl' | 'nlp' | 'crawl-and-analyze' | 'batch-nlp' | 'search';
@@ -26,7 +27,7 @@ interface TaskExecution {
 
 const CrawlerControl: React.FC = () => {
   // ========== 状态管理 ==========
-  const [workflowStatus, setWorkflowStatus] = useState<WorkflowStatusResponse | null>(null);
+  const [workflowStatus, setWorkflowStatus] = useState<CrawlerControlStatusSummary | null>(null);
   const [executions, setExecutions] = useState<TaskExecution[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -55,7 +56,7 @@ const CrawlerControl: React.FC = () => {
   // ========== API 调用 ==========
   const loadWorkflowStatus = async () => {
     try {
-      const status = await WorkflowAPI.getStatus();
+      const status = await CrawlerAPI.getStatusSummary();
       setWorkflowStatus(status);
     } catch (error) {
       logger.error('Failed to load workflow status', error);
@@ -85,10 +86,8 @@ const CrawlerControl: React.FC = () => {
     addExecution('crawl', { postId: nlpPostId }, 'pending');
 
     try {
-      const response = await WorkflowAPI.crawlPost({ postId: nlpPostId.trim() });
-      const crawlData = response?.data;
-      const message = `爬取成功 - 评论:${crawlData?.commentsCount || 0} 转发:${crawlData?.repostsCount || 0}`;
-      addExecution('crawl', { postId: nlpPostId }, 'success', message);
+      const response = await CrawlerAPI.crawlPost({ postId: nlpPostId.trim() });
+      addExecution('crawl', { postId: nlpPostId }, 'success', response?.message || '详情爬取任务已启动');
       logger.info('Post crawled', response);
     } catch (error: any) {
       addExecution('crawl', { postId: nlpPostId }, 'error', error?.message || '爬取失败');
@@ -99,97 +98,20 @@ const CrawlerControl: React.FC = () => {
   };
 
   const handleTriggerNLP = async () => {
-    if (!nlpPostId.trim()) {
-      alert('请输入帖子 ID');
-      return;
-    }
-
-    setNlpLoading(true);
-    addExecution('nlp', { postId: nlpPostId }, 'pending');
-
-    try {
-      const response = await WorkflowAPI.triggerNLP({ postId: nlpPostId.trim() });
-      addExecution('nlp', { postId: nlpPostId }, 'success', response?.message || 'NLP 任务已触发');
-      logger.info('NLP task triggered', response);
-    } catch (error: any) {
-      addExecution('nlp', { postId: nlpPostId }, 'error', error?.message || '触发失败');
-      logger.error('Failed to trigger NLP task', error);
-    } finally {
-      setNlpLoading(false);
-    }
+    addExecution('nlp', { postId: nlpPostId }, 'error', NLP_UNSUPPORTED_MESSAGE);
   };
 
   const handleCrawlAndAnalyze = async () => {
-    if (!nlpPostId.trim()) {
-      alert('请输入帖子 ID');
-      return;
-    }
-
-    setNlpLoading(true);
-    addExecution('crawl-and-analyze', { postId: nlpPostId }, 'pending');
-
-    try {
-      // 第一阶段：爬取
-      logger.info('Step 1: Crawling post', { postId: nlpPostId });
-      const crawlResponse = await WorkflowAPI.crawlPost({ postId: nlpPostId.trim() });
-
-      if (!crawlResponse?.success) {
-        throw new Error(crawlResponse?.message || '爬取失败');
-      }
-
-      const crawlData = crawlResponse?.data;
-      logger.info('Step 1 completed: Post crawled', crawlData);
-
-      // 第二阶段：NLP分析
-      logger.info('Step 2: Triggering NLP analysis', { postId: nlpPostId });
-      const nlpResponse = await WorkflowAPI.triggerNLP({ postId: nlpPostId.trim() });
-
-      if (!nlpResponse?.success) {
-        throw new Error(nlpResponse?.message || 'NLP触发失败');
-      }
-
-      const message = `完整流程成功 - 评论:${crawlData?.commentsCount || 0} 转发:${crawlData?.repostsCount || 0} - NLP已触发`;
-      addExecution('crawl-and-analyze', { postId: nlpPostId }, 'success', message);
-      setNlpPostId('');
-      logger.info('Complete workflow finished', { crawlData, nlpResponse });
-    } catch (error: any) {
-      addExecution('crawl-and-analyze', { postId: nlpPostId }, 'error', error?.message || '流程失败');
-      logger.error('Failed to execute crawl-and-analyze workflow', error);
-    } finally {
-      setNlpLoading(false);
-    }
+    addExecution('crawl-and-analyze', { postId: nlpPostId }, 'error', NLP_UNSUPPORTED_MESSAGE);
   };
 
   const handleBatchNLP = async () => {
-    const postIds = batchPostIds
-      .split(/[,\n]/)
-      .map((id) => id.trim())
-      .filter(Boolean);
-
-    if (postIds.length === 0) {
-      alert('请输入至少一个帖子 ID（用逗号或换行分隔）');
-      return;
-    }
-
-    setBatchLoading(true);
-    addExecution('batch-nlp', { postIds }, 'pending');
-
-    try {
-      const response = await WorkflowAPI.batchNLP({ postIds });
-      addExecution('batch-nlp', { postIds }, 'success', response?.message || '批量 NLP 任务已触发');
-      setBatchPostIds('');
-      logger.info('Batch NLP task triggered', response);
-    } catch (error: any) {
-      addExecution('batch-nlp', { postIds }, 'error', error?.message || '批量触发失败');
-      logger.error('Failed to trigger batch NLP task', error);
-    } finally {
-      setBatchLoading(false);
-    }
+    addExecution('batch-nlp', { raw: batchPostIds }, 'error', NLP_UNSUPPORTED_MESSAGE);
   };
 
   const handleSearchWeibo = async () => {
-    if (!searchKeyword.trim() || !searchStartDate || !searchEndDate) {
-      alert('请填写所有搜索字段');
+    if (!searchKeyword.trim()) {
+      alert('请填写关键词');
       return;
     }
 
@@ -204,8 +126,8 @@ const CrawlerControl: React.FC = () => {
     addExecution('search', params, 'pending');
 
     try {
-      const response = await WorkflowAPI.searchWeibo(params);
-      addExecution('search', params, 'success', response?.message || '微博搜索已完成');
+      const response = await CrawlerAPI.searchWeibo(params);
+      addExecution('search', params, 'success', response?.message || '关键词搜索任务已启动');
       logger.info('Weibo search completed', response);
     } catch (error: any) {
       addExecution('search', params, 'error', error?.message || '搜索失败');
@@ -346,10 +268,10 @@ const CrawlerControl: React.FC = () => {
                   {/* 主要操作：爬取+分析 */}
                   <button
                     onClick={handleCrawlAndAnalyze}
-                    disabled={nlpLoading}
-                    className="w-full px-4 py-2 bg-primary text-primary-foreground rounded font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    disabled
+                    className="w-full px-4 py-2 bg-muted text-muted-foreground rounded font-medium disabled:opacity-80 disabled:cursor-not-allowed transition-colors"
                   >
-                    {nlpLoading ? '执行中...' : '🚀 爬取并分析（推荐）'}
+                    🚫 爬取并分析（未接通）
                   </button>
 
                   {/* 分步操作 */}
@@ -359,19 +281,19 @@ const CrawlerControl: React.FC = () => {
                       disabled={nlpLoading}
                       className="px-3 py-2 bg-muted hover:bg-muted/80 text-foreground rounded text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
-                      {nlpLoading ? '...' : '📥 仅爬取'}
+                      {nlpLoading ? '...' : '📥 启动详情爬取'}
                     </button>
                     <button
                       onClick={handleTriggerNLP}
-                      disabled={nlpLoading}
+                      disabled
                       className="px-3 py-2 bg-muted hover:bg-muted/80 text-foreground rounded text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
-                      {nlpLoading ? '...' : '🧠 仅分析'}
+                      🧠 仅分析
                     </button>
                   </div>
 
                   <p className="text-xs text-muted-foreground">
-                    💡 提示："爬取并分析"会先从微博爬取帖子详情（含评论、转发），然后自动触发 NLP 分析
+                    {NLP_UNSUPPORTED_MESSAGE}
                   </p>
                 </div>
               </motion.div>
@@ -400,11 +322,14 @@ const CrawlerControl: React.FC = () => {
                   </div>
                   <button
                     onClick={handleBatchNLP}
-                    disabled={batchLoading}
+                    disabled
                     className="w-full px-4 py-2 bg-primary text-primary-foreground rounded font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
-                    {batchLoading ? '触发中...' : '批量触发 NLP 分析'}
+                    批量触发 NLP 分析
                   </button>
+                  <p className="text-xs text-muted-foreground">
+                    {NLP_UNSUPPORTED_MESSAGE}
+                  </p>
                 </div>
               </motion.div>
 
@@ -467,10 +392,10 @@ const CrawlerControl: React.FC = () => {
                     disabled={searchLoading}
                     className="w-full px-4 py-2 bg-primary text-primary-foreground rounded font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
-                    {searchLoading ? '搜索中...' : '开始搜索'}
+                    {searchLoading ? '搜索中...' : '开始搜索爬取'}
                   </button>
                   <p className="text-xs text-muted-foreground">
-                    注意：微博搜索会自动将找到的帖子推送到 NLP 队列进行分析
+                    当前搜索会启动微博关键词爬取；日期范围暂仅作为记录项，后端 crawler 尚未按日期过滤。
                   </p>
                 </div>
               </motion.div>
