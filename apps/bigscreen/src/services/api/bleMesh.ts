@@ -9,13 +9,29 @@
  * 当前暂时禁用所有方法，因为 apiClient 已被移除
  */
 
+export const BLE_MESH_API_AVAILABLE = false;
+export const BLE_MESH_UNAVAILABLE_MESSAGE = 'BLE Mesh 页面尚未接入真实后端，当前只保留占位视图。';
+export const BLE_MESH_UNAVAILABLE_GUIDANCE = '要启用该页面，需要补齐 BleMeshController 与 /ble-mesh/* 后端契约。';
+
+class BleMeshUnavailableError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'BleMeshUnavailableError';
+  }
+}
+
+const createBleMeshUnavailableError = (method: 'GET' | 'POST', url: string) =>
+  new BleMeshUnavailableError(
+    `${BLE_MESH_UNAVAILABLE_MESSAGE} ${BLE_MESH_UNAVAILABLE_GUIDANCE} (${method} ${url})`
+  );
+
 // apiClient 已被移除，临时提供占位实现
 const apiClient = {
   get: async (url: string, config?: any): Promise<any> => {
-    throw new Error(`BLE Mesh API 需要重构: GET ${url} - 请先创建 BleMeshController`)
+    throw createBleMeshUnavailableError('GET', url)
   },
   post: async (url: string, data?: any): Promise<any> => {
-    throw new Error(`BLE Mesh API 需要重构: POST ${url} - 请先创建 BleMeshController`)
+    throw createBleMeshUnavailableError('POST', url)
   }
 };
 import {
