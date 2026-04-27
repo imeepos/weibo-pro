@@ -262,6 +262,8 @@ describe('UsersService distillation flow', () => {
   });
 
   it('returns the existing active distillation task instead of enqueueing a duplicate', async () => {
+    (service as any).processStartedAt = new Date('2026-04-23T00:00:00.000Z');
+
     savedTasks.push({
       id: 'task-active',
       weibo_user_id: '100',
@@ -292,6 +294,56 @@ describe('UsersService distillation flow', () => {
     expect(result.status).toBe('crawling');
     expect(historyCollectionService.collect).not.toHaveBeenCalled();
     expect(savedTasks.filter((item) => item.weibo_user_id === '100')).toHaveLength(1);
+  });
+
+  it('reclaims orphaned active tasks before duplicate detection and starts a new task', async () => {
+    let resolveCollection: (() => void) | null = null;
+    historyCollectionService.collect.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveCollection = resolve;
+        }),
+    );
+
+    savedTasks.push({
+      id: 'task-orphaned-before-create',
+      weibo_user_id: '100',
+      event_id: null,
+      status: 'crawling',
+      history_window_days: 90,
+      source_post_count: 0,
+      source_comment_count: 0,
+      source_repost_count: 0,
+      evidence_sample_count: 0,
+      model: null,
+      prompt_version: null,
+      distilled_summary: null,
+      distilled_json: null,
+      review_status: null,
+      error_message: null,
+      started_at: new Date('2026-04-23T00:05:00.000Z'),
+      completed_at: null,
+      created_at: new Date('2026-04-23T00:00:00.000Z'),
+      updated_at: new Date('2026-04-23T00:05:00.000Z'),
+    });
+
+    (service as any).processStartedAt = new Date('2026-04-23T00:15:00.000Z');
+
+    const result = await service.createDistillationTask('100', {
+      historyWindowDays: 90,
+    });
+
+    expect(result.id).not.toBe('task-orphaned-before-create');
+    expect(result.status).toBe('queued');
+    expect(savedTasks.find((item) => item.id === 'task-orphaned-before-create')?.status).toBe('failed');
+    expect(savedTasks.find((item) => item.id === 'task-orphaned-before-create')?.error_message).toContain('服务重启');
+
+    await vi.waitFor(() => {
+      expect(historyCollectionService.collect).toHaveBeenCalled();
+      expect(resolveCollection).not.toBeNull();
+    });
+
+    resolveCollection?.();
   });
 
   it('marks active tasks from a previous api process as failed during startup', async () => {

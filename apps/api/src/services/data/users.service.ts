@@ -188,9 +188,7 @@ export class UsersService implements OnInit {
         where: { weibo_user_id: id },
         order: { created_at: 'DESC' },
       });
-      const activeTask = existingTasks.find((item) =>
-        ACTIVE_DISTILLATION_TASK_STATUSES.has(item.status),
-      );
+      const activeTask = await this.reclaimOrphanedTasksAndFindActiveTask(repo, existingTasks);
 
       if (activeTask) {
         return {
@@ -278,6 +276,31 @@ export class UsersService implements OnInit {
 
       return this.toDistillationTaskSummary(saved);
     });
+  }
+
+  private async reclaimOrphanedTasksAndFindActiveTask(
+    repo: {
+      save(task: UserProfileDistillationTaskEntity): Promise<UserProfileDistillationTaskEntity>;
+    },
+    tasks: UserProfileDistillationTaskEntity[],
+  ): Promise<UserProfileDistillationTaskEntity | undefined> {
+    for (const task of tasks) {
+      if (!ACTIVE_DISTILLATION_TASK_STATUSES.has(task.status)) {
+        continue;
+      }
+
+      if (this.isOrphanedDistillationTask(task)) {
+        task.status = 'failed';
+        task.completed_at = new Date();
+        task.error_message = '任务因服务重启失去执行上下文，请重新发起';
+        await repo.save(task);
+        continue;
+      }
+
+      return task;
+    }
+
+    return undefined;
   }
 
   private async executeDistillationTask(taskId: string): Promise<void> {
