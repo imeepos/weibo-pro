@@ -160,6 +160,71 @@ export function UserDossierPanel({ dossier }: UserDossierPanelProps) {
               <div className="mt-2 text-sm text-muted-foreground">暂无告警</div>
             )}
           </div>
+
+          <div className="rounded-lg border p-3">
+            <div className="text-xs text-muted-foreground">证据样本</div>
+            <div className="mt-3 grid gap-3 md:grid-cols-2">
+              <div className="rounded-md bg-muted/30 p-3">
+                <div className="text-xs text-muted-foreground">事件内样本</div>
+                <div className="mt-2 space-y-2">
+                  {dossier.evidenceSamples.eventSamples.length > 0 ? (
+                    dossier.evidenceSamples.eventSamples.slice(0, 2).map((item) => (
+                      <div key={item.sourceId} className="text-sm text-foreground">
+                        {item.excerpt}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-sm text-muted-foreground">暂无</div>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-md bg-muted/30 p-3">
+                <div className="text-xs text-muted-foreground">历史样本</div>
+                <div className="mt-2 space-y-2">
+                  {dossier.evidenceSamples.historySamples.length > 0 ? (
+                    dossier.evidenceSamples.historySamples.slice(0, 2).map((item) => (
+                      <div key={item.sourceId} className="text-sm text-foreground">
+                        {item.excerpt}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-sm text-muted-foreground">暂无</div>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-md bg-muted/30 p-3">
+                <div className="text-xs text-muted-foreground">关系样本</div>
+                <div className="mt-2 space-y-2">
+                  {dossier.evidenceSamples.relationSamples.length > 0 ? (
+                    dossier.evidenceSamples.relationSamples.slice(0, 2).map((item) => (
+                      <div key={item.sourceId} className="text-sm text-foreground">
+                        {item.excerpt}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-sm text-muted-foreground">暂无</div>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-md bg-muted/30 p-3">
+                <div className="text-xs text-muted-foreground">NLP 样本</div>
+                <div className="mt-2 space-y-2">
+                  {dossier.evidenceSamples.nlpSamples.length > 0 ? (
+                    dossier.evidenceSamples.nlpSamples.slice(0, 2).map((item) => (
+                      <div key={item.sourceId} className="text-sm text-foreground">
+                        {item.excerpt}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-sm text-muted-foreground">暂无</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </section>

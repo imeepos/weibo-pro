@@ -84,5 +84,9 @@ describe('UserDossierPanel', () => {
     expect(screen.getByText('夜间活跃')).toBeInTheDocument();
     expect(screen.getByText('负向 70')).toBeInTheDocument();
     expect(screen.getByText('与多个用户存在高频互动，需检查协同传播')).toBeInTheDocument();
+    expect(screen.getAllByText('事件内样本').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('历史样本').length).toBeGreaterThan(0);
+    expect(screen.getByText('repost · 权重 15')).toBeInTheDocument();
+    expect(screen.getByText('文本片段 · 情绪 negative')).toBeInTheDocument();
   });
 });

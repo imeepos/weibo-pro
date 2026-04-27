@@ -122,7 +122,17 @@ vi.mock('@/hooks/useDistillationTasks', () => ({
 vi.mock('@/hooks/usePersonaNetworkGraph', () => ({
   usePersonaNetworkGraph: () => ({
     graph: {
-      personas: [],
+      personas: [{
+        personaId: 'p1',
+        weiboUserId: '100',
+        name: '用户A Persona',
+        avatar: null,
+        riskLevel: 'high',
+        riskScore: 87,
+        traits: ['热点追逐'],
+        memoryCount: 4,
+        lastDistilledAt: null,
+      }],
       edges: [],
     },
     isLoading: false,
@@ -175,6 +185,17 @@ describe('UserDetection investigation mode', () => {
 
     fireEvent.click(screen.getByText('返回调查模式'));
     expect(screen.getByText('高危候选队列')).toBeInTheDocument();
+  });
+
+  it('drills from persona graph back into investigation mode with selected user', async () => {
+    render(<UserDetection />);
+
+    fireEvent.click(screen.getByText('查看全量图谱'));
+    fireEvent.click(screen.getByText('用户A Persona'));
+
+    expect(screen.getByText('高危候选队列')).toBeInTheDocument();
+    expect(screen.getByText('当前选中用户')).toBeInTheDocument();
+    expect(screen.getByText('100')).toBeInTheDocument();
   });
 
   it('refreshes persona summary and evidence after creating a task', async () => {
