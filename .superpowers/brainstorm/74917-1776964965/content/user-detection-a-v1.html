@@ -1,0 +1,342 @@
+<style>
+  .page {
+    display: grid;
+    gap: 18px;
+  }
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 16px;
+  }
+  .header h2 {
+    margin: 0 0 8px;
+    font-size: 30px;
+    line-height: 1.1;
+  }
+  .header p {
+    margin: 0;
+    max-width: 820px;
+    color: #9295a1;
+    line-height: 1.6;
+    font-size: 14px;
+  }
+  .header-tools {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .tool-pill {
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.06);
+    color: #dadbe1;
+    font-size: 12px;
+  }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+  }
+  .stat {
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .stat strong {
+    display: block;
+    font-size: 20px;
+    margin-bottom: 4px;
+    color: #f6f7fb;
+  }
+  .stat span {
+    color: #9497a3;
+    font-size: 12px;
+  }
+  .workbench {
+    display: grid;
+    grid-template-columns: 320px minmax(420px, 1.4fr) minmax(360px, 1fr);
+    gap: 14px;
+    min-height: 620px;
+  }
+  .shell {
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0)),
+      #0d1117;
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 20px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .shell h3 {
+    margin: 0;
+    font-size: 15px;
+    color: #f3f4f7;
+  }
+  .shell-sub {
+    color: #8c909b;
+    font-size: 12px;
+    line-height: 1.45;
+  }
+  .section-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #f2f4f7;
+    font-size: 12px;
+    letter-spacing: 0.02em;
+  }
+  .badge {
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.07);
+    color: #9ea3af;
+    font-size: 10px;
+  }
+  .queue-item, .card, .timeline-item {
+    border-radius: 14px;
+    background: rgba(255,255,255,0.035);
+    border: 1px solid rgba(255,255,255,0.05);
+    padding: 10px;
+  }
+  .queue-item.active {
+    border-color: rgba(249,112,82,0.5);
+    box-shadow: inset 0 0 0 1px rgba(249,112,82,0.18);
+    background: rgba(249,112,82,0.08);
+  }
+  .queue-item strong, .card strong, .timeline-item strong {
+    display: block;
+    color: #f4f5f9;
+    font-size: 13px;
+    margin-bottom: 5px;
+  }
+  .queue-item span, .card span, .timeline-item span {
+    color: #9498a3;
+    font-size: 11px;
+    line-height: 1.5;
+  }
+  .risk-bar {
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.08);
+    overflow: hidden;
+    margin-top: 8px;
+  }
+  .risk-bar > div {
+    height: 100%;
+    background: linear-gradient(90deg, #ffb84d, #f97052);
+    width: 82%;
+  }
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .timeline {
+    display: grid;
+    gap: 8px;
+  }
+  .evidence-grid {
+    display: grid;
+    gap: 8px;
+  }
+  .graph {
+    height: 220px;
+    border-radius: 16px;
+    background:
+      radial-gradient(circle at 22% 24%, rgba(249,112,82,0.3), transparent 20%),
+      radial-gradient(circle at 68% 18%, rgba(110,120,255,0.26), transparent 22%),
+      radial-gradient(circle at 40% 72%, rgba(56,189,149,0.22), transparent 21%),
+      radial-gradient(circle at 78% 68%, rgba(244,208,63,0.18), transparent 20%),
+      rgba(255,255,255,0.03);
+    border: 1px dashed rgba(255,255,255,0.1);
+    position: relative;
+    overflow: hidden;
+  }
+  .graph::before {
+    content: "";
+    position: absolute;
+    left: 18%;
+    top: 24%;
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: #f97052;
+    box-shadow:
+      120px -16px 0 #6e78ff,
+      62px 96px 0 #38bd95,
+      190px 98px 0 #f4d03f,
+      228px 18px 0 #f38ba8;
+  }
+  .graph::after {
+    content: "";
+    position: absolute;
+    inset: 26% auto auto 20%;
+    width: 235px;
+    height: 110px;
+    border-top: 1px solid rgba(255,255,255,0.18);
+    border-right: 1px solid rgba(255,255,255,0.12);
+    transform: rotate(8deg);
+  }
+  .summary-table {
+    display: grid;
+    gap: 6px;
+  }
+  .summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    font-size: 12px;
+  }
+  .summary-row span:first-child {
+    color: #8e929d;
+  }
+  .summary-row span:last-child {
+    color: #e2e4ea;
+    text-align: right;
+  }
+  .footer-note {
+    color: #a4a8b3;
+    font-size: 13px;
+    line-height: 1.65;
+    max-width: 980px;
+  }
+</style>
+
+<div class="page">
+  <div class="header">
+    <div>
+      <h2>方案 A 细化：高危用户调查工作台</h2>
+      <p>
+        这个版本把页面定义成一个“单用户深入研判工作台”。核心闭环是：
+        <strong>事件内发现高危候选 → 回溯主页历史发帖 → AI 蒸馏多维画像 → 写入 Persona / Memory → 在右侧即时可视化图谱</strong>。
+      </p>
+    </div>
+    <div class="header-tools">
+      <div class="tool-pill">批量抓取主页</div>
+      <div class="tool-pill">触发 AI 蒸馏</div>
+      <div class="tool-pill">写入记忆图谱</div>
+      <div class="tool-pill">切到全量图谱视图</div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><strong>18</strong><span>高危候选</span></div>
+    <div class="stat"><strong>6</strong><span>待抓取主页</span></div>
+    <div class="stat"><strong>4</strong><span>蒸馏中</span></div>
+    <div class="stat"><strong>42</strong><span>已沉淀 Persona</span></div>
+    <div class="stat"><strong>148</strong><span>记忆节点</span></div>
+  </div>
+
+  <div class="workbench">
+    <div class="shell">
+      <div>
+        <h3>左列：高危用户队列</h3>
+        <div class="shell-sub">入口不是普通用户列表，而是“事件内风险排序 + 蒸馏任务状态”。分析员在这里决定先查谁。</div>
+      </div>
+      <div class="section-label"><span>筛选</span><span class="badge">事件 / 风险 / 状态</span></div>
+      <div class="queue-item active">
+        <strong>用户 A · 风险 92 · 待蒸馏</strong>
+        <span>高频负向发帖、跨事件重复出现、主页近 30 天参与 7 个热点事件</span>
+        <div class="risk-bar"><div></div></div>
+      </div>
+      <div class="queue-item">
+        <strong>用户 B · 风险 88 · 主页已抓取</strong>
+        <span>疑似议题搬运型账号，活跃时间异常集中，粉丝结构异常</span>
+      </div>
+      <div class="queue-item">
+        <strong>用户 C · 风险 83 · 待复核</strong>
+        <span>蒸馏结果提示“营销 / 自媒体 / 煽动”多标签冲突，需要人工核定</span>
+      </div>
+      <div class="queue-item">
+        <strong>用户 D · 风险 79 · 已入图谱</strong>
+        <span>与 4 个高危账号存在长期共振关系，已纳入记忆图谱</span>
+      </div>
+    </div>
+
+    <div class="shell">
+      <div>
+        <h3>中列：用户 dossier</h3>
+        <div class="shell-sub">这里不是“详情弹窗”，而是一个案件档案页：账号基本面、主页历史发帖、行为时间线、代表性证据全部汇聚在中间。</div>
+      </div>
+
+      <div class="two-col">
+        <div class="card">
+          <strong>账号基本面</strong>
+          <span>昵称 / 认证 / 粉丝 / 关注 / 地域 / 主页简介 / 注册时长 / 近期活跃时段</span>
+        </div>
+        <div class="card">
+          <strong>风险来源拆解</strong>
+          <span>事件内风险分、负向倾向、异常活跃、传播放大、跨事件参与、关系异常</span>
+        </div>
+      </div>
+
+      <div class="section-label"><span>主页历史发帖回溯</span><span class="badge">近 30 / 90 天</span></div>
+      <div class="timeline">
+        <div class="timeline-item">
+          <strong>行为时间线</strong>
+          <span>按天或按事件看：发帖峰值、议题切换、情绪反转、互动异常峰值。</span>
+        </div>
+        <div class="timeline-item">
+          <strong>主题簇分布</strong>
+          <span>体育、社会热点、地域议题、情绪化评论、营销型内容占比。</span>
+        </div>
+        <div class="timeline-item">
+          <strong>叙事风格剖面</strong>
+          <span>煽动性、讽刺性、搬运性、对立构造、立场漂移、常用措辞模板。</span>
+        </div>
+      </div>
+
+      <div class="section-label"><span>证据样本</span><span class="badge">AI 前必须可追溯</span></div>
+      <div class="evidence-grid">
+        <div class="card">
+          <strong>事件内高风险样本</strong>
+          <span>为什么这个账号会被拉进高危队列，至少要有 3-5 条事件内代表贴文。</span>
+        </div>
+        <div class="card">
+          <strong>主页历史代表贴文</strong>
+          <span>按议题和时间分层抽样，不是简单抓一堆最近帖子直接喂给模型。</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="shell">
+      <div>
+        <h3>右列：AI 蒸馏画像 + 记忆图谱</h3>
+        <div class="shell-sub">这列要把“模型结论”和“知识沉淀”拆开：先给蒸馏画像，再把蒸馏结果映射成 Persona / Memory 节点关系。</div>
+      </div>
+
+      <div class="section-label"><span>蒸馏画像</span><span class="badge">结构化输出</span></div>
+      <div class="summary-table">
+        <div class="summary-row"><span>账号角色</span><span>体育自媒体 / 热点追逐型账号</span></div>
+        <div class="summary-row"><span>核心特征</span><span>高频追热点、情绪极化、互动驱动明显</span></div>
+        <div class="summary-row"><span>议题偏好</span><span>体育热点 > 社会争议 > 区域事件</span></div>
+        <div class="summary-row"><span>叙事风格</span><span>标题党、情绪放大、二元对立</span></div>
+        <div class="summary-row"><span>风险判断</span><span>高风险但非机器人，更像“高波动自媒体”</span></div>
+      </div>
+
+      <div class="section-label"><span>图谱映射</span><span class="badge">Persona / Memory</span></div>
+      <div class="graph"></div>
+      <div class="card">
+        <strong>图谱节点示例</strong>
+        <span>Persona: 用户 A；Memory: 身份标签、议题偏好、情绪特征、行为模式、关键事件、关系账号。</span>
+      </div>
+      <div class="card">
+        <strong>全量图谱入口</strong>
+        <span>支持切到“所有已蒸馏用户图谱视图”，看哪些用户共用议题、风格、关系链、风险模式。</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-note">
+    这版的关键判断是：<strong>用户检测页面的主任务不再是“浏览用户”，而是“把一个高危候选转化成可复用的角色画像资产”</strong>。
+    也就是说，中列要承载调查过程，右列要承载 AI 蒸馏结果和知识沉淀，最后还要能跳到全量图谱总览。
+  </div>
+</div>

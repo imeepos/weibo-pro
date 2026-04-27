@@ -1,0 +1,332 @@
+<style>
+  .hero {
+    margin-bottom: 20px;
+  }
+  .hero h2 {
+    margin: 0 0 8px 0;
+    font-size: 30px;
+    line-height: 1.15;
+  }
+  .hero p {
+    margin: 0;
+    max-width: 900px;
+    color: #8f8f99;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+  .tag-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 14px 0 0;
+  }
+  .tag {
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(214, 82, 55, 0.12);
+    color: #f2b6a7;
+    font-size: 12px;
+    letter-spacing: 0.02em;
+  }
+  .mini-shell {
+    display: grid;
+    gap: 10px;
+    min-height: 290px;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0)),
+      #0f1217;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 18px;
+    padding: 14px;
+  }
+  .mini-bar {
+    height: 34px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.04);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    color: #d5d6dc;
+    font-size: 12px;
+  }
+  .mini-stat-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  .mini-stat {
+    border-radius: 12px;
+    padding: 10px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+  .mini-stat strong {
+    display: block;
+    color: #f5f5f7;
+    font-size: 16px;
+    margin-bottom: 4px;
+  }
+  .mini-stat span {
+    font-size: 11px;
+    color: #90929c;
+  }
+  .layout-a {
+    display: grid;
+    grid-template-columns: 1.1fr 1.4fr 1.05fr;
+    gap: 10px;
+    min-height: 210px;
+  }
+  .layout-b {
+    display: grid;
+    grid-template-rows: auto 1fr 1fr;
+    gap: 10px;
+    min-height: 210px;
+  }
+  .layout-b-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 10px;
+  }
+  .layout-c {
+    display: grid;
+    grid-template-columns: 1.35fr 0.95fr;
+    gap: 10px;
+    min-height: 210px;
+  }
+  .panel {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 14px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .panel-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #f2f3f5;
+    font-size: 12px;
+    letter-spacing: 0.02em;
+  }
+  .pill {
+    padding: 3px 7px;
+    border-radius: 999px;
+    font-size: 10px;
+    background: rgba(255,255,255,0.07);
+    color: #9fa2ad;
+  }
+  .user-item, .memory-item {
+    border-radius: 10px;
+    background: rgba(255,255,255,0.035);
+    border: 1px solid rgba(255,255,255,0.04);
+    padding: 8px;
+  }
+  .user-item strong, .memory-item strong {
+    display: block;
+    color: #f4f5f8;
+    font-size: 12px;
+    margin-bottom: 4px;
+  }
+  .user-item span, .memory-item span {
+    color: #92949e;
+    font-size: 11px;
+    line-height: 1.45;
+  }
+  .graph-box {
+    flex: 1;
+    border-radius: 12px;
+    background:
+      radial-gradient(circle at 20% 20%, rgba(214,82,55,0.24), transparent 25%),
+      radial-gradient(circle at 70% 30%, rgba(98,133,255,0.2), transparent 28%),
+      radial-gradient(circle at 55% 75%, rgba(50,196,143,0.18), transparent 24%),
+      rgba(255,255,255,0.03);
+    border: 1px dashed rgba(255,255,255,0.08);
+    position: relative;
+    overflow: hidden;
+  }
+  .graph-box:before, .graph-box:after {
+    content: "";
+    position: absolute;
+    inset: 16% auto auto 18%;
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: #f97052;
+    box-shadow:
+      90px 40px 0 #6f86ff,
+      40px 110px 0 #34c48f,
+      150px 105px 0 #ffd166,
+      190px 46px 0 #f38ba8;
+  }
+  .graph-box:after {
+    width: 180px;
+    height: 120px;
+    inset: 26% auto auto 22%;
+    background: none;
+    border-top: 1px solid rgba(255,255,255,0.18);
+    border-right: 1px solid rgba(255,255,255,0.12);
+    transform: rotate(12deg);
+    box-shadow: none;
+  }
+  .meta-list {
+    display: grid;
+    gap: 6px;
+  }
+  .meta-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: #c8cad1;
+    padding-bottom: 5px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .card-note {
+    margin-top: 10px;
+    color: #a3a6b1;
+    font-size: 12px;
+    line-height: 1.55;
+  }
+  .recommended {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 8px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: rgba(80, 200, 120, 0.13);
+    color: #92df9f;
+    font-size: 11px;
+  }
+</style>
+
+<div class="hero">
+  <h2>用户检测面板升级方向</h2>
+  <p>
+    目标不是把“用户列表”做得更花，而是把它升级成一个真正的 <strong>高危用户研判工作台</strong>：
+    能从事件用户池里锁定高危对象，拉取主页历史发帖，做 AI 蒸馏画像，把结果沉淀进记忆图谱，并支持查看“所有已蒸馏用户”的关系网络。
+  </p>
+  <div class="tag-row">
+    <div class="tag">事件高危用户发现</div>
+    <div class="tag">主页历史发帖回溯</div>
+    <div class="tag">LLM 蒸馏画像</div>
+    <div class="tag">记忆图谱沉淀</div>
+    <div class="tag">全量已蒸馏用户总览</div>
+  </div>
+</div>
+
+<div class="cards">
+  <div class="card" data-choice="A" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <h3>方案 A：调查工作台 <span class="recommended">推荐</span></h3>
+      <p>左侧风险队列，中间用户 dossier，右侧 AI 蒸馏画像与记忆图谱。适合真实分析员逐个研判。</p>
+    </div>
+    <div class="card-image">
+      <div class="mini-shell">
+        <div class="mini-bar"><span>用户检测工作台</span><span>筛选 / 批量蒸馏 / 任务状态</span></div>
+        <div class="mini-stat-row">
+          <div class="mini-stat"><strong>128</strong><span>待研判用户</span></div>
+          <div class="mini-stat"><strong>18</strong><span>高危候选</span></div>
+          <div class="mini-stat"><strong>42</strong><span>已蒸馏</span></div>
+          <div class="mini-stat"><strong>6</strong><span>人工复核</span></div>
+        </div>
+        <div class="layout-a">
+          <div class="panel">
+            <div class="panel-title"><span>高危队列</span><span class="pill">事件内</span></div>
+            <div class="user-item"><strong>用户 A · 风险 92</strong><span>异常发帖密度 / 负向倾向 / 群体放大痕迹</span></div>
+            <div class="user-item"><strong>用户 B · 风险 88</strong><span>跨事件重复出现 / 粉丝结构异常 / 传播快</span></div>
+            <div class="user-item"><strong>用户 C · 风险 80</strong><span>短时高频互动 / 可疑身份标签 / 地域异常</span></div>
+          </div>
+          <div class="panel">
+            <div class="panel-title"><span>用户 dossier</span><span class="pill">主页回溯</span></div>
+            <div class="user-item"><strong>近 90 天发帖时间线</strong><span>主题切换、情绪波动、互动异常峰值、事件交叉参与</span></div>
+            <div class="user-item"><strong>行为摘要</strong><span>发帖节律、常用叙事、关注议题、账号成长轨迹</span></div>
+            <div class="user-item"><strong>证据片段</strong><span>高风险原帖、代表性历史帖子、身份线索、关系账号</span></div>
+          </div>
+          <div class="panel">
+            <div class="panel-title"><span>蒸馏画像 / 记忆图谱</span><span class="pill">AI 输出</span></div>
+            <div class="meta-list">
+              <div class="meta-row"><span>身份标签</span><span>体育自媒体 / 热点追逐型</span></div>
+              <div class="meta-row"><span>叙事风格</span><span>煽动 / 情绪极化</span></div>
+              <div class="meta-row"><span>关系特征</span><span>与 4 个账号高度共振</span></div>
+            </div>
+            <div class="graph-box"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-note">优点：最贴近你的目标，能把“发现 → 深挖 → 蒸馏 → 图谱”放在一个闭环里。缺点：后端链路和任务状态会更复杂。</div>
+  </div>
+
+  <div class="card" data-choice="B" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <h3>方案 B：指挥中心</h3>
+      <p>更偏大屏：上层看整体风险分布和蒸馏进度，下层看选中用户和图谱。适合演示与态势总览。</p>
+    </div>
+    <div class="card-image">
+      <div class="mini-shell">
+        <div class="mini-bar"><span>高危用户指挥中心</span><span>全局态势 / 任务监控 / 重点用户</span></div>
+        <div class="layout-b">
+          <div class="mini-stat-row">
+            <div class="mini-stat"><strong>18</strong><span>高危用户</span></div>
+            <div class="mini-stat"><strong>67%</strong><span>已蒸馏覆盖率</span></div>
+            <div class="mini-stat"><strong>9</strong><span>风险簇</span></div>
+            <div class="mini-stat"><strong>4</strong><span>需处置链路</span></div>
+          </div>
+          <div class="layout-b-grid">
+            <div class="panel">
+              <div class="panel-title"><span>全局风险热区</span><span class="pill">群体视角</span></div>
+              <div class="graph-box"></div>
+            </div>
+            <div class="panel">
+              <div class="panel-title"><span>蒸馏任务流</span><span class="pill">批量</span></div>
+              <div class="memory-item"><strong>抓取中</strong><span>6 个用户主页历史发帖</span></div>
+              <div class="memory-item"><strong>蒸馏中</strong><span>3 个用户 LLM 多维提炼</span></div>
+              <div class="memory-item"><strong>待复核</strong><span>2 个画像存在冲突特征</span></div>
+            </div>
+          </div>
+          <div class="layout-b-grid">
+            <div class="panel">
+              <div class="panel-title"><span>重点用户快照</span><span class="pill">单用户</span></div>
+              <div class="user-item"><strong>用户 A</strong><span>风险来源、事件参与史、行为证据、建议动作</span></div>
+            </div>
+            <div class="panel">
+              <div class="panel-title"><span>图谱摘要</span><span class="pill">关系群</span></div>
+              <div class="memory-item"><strong>记忆节点 148</strong><span>身份、议题、关系、行为、情绪、事件连接</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-note">优点：适合汇报和大屏展示。缺点：单个用户的研判深度不如方案 A，容易变成“看板很多、调查不足”。</div>
+  </div>
+
+  <div class="card" data-choice="C" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <h3>方案 C：图谱优先</h3>
+      <p>默认先看所有已蒸馏用户的记忆图谱，再从图谱点击进入单用户。适合做关系发现和角色网络探索。</p>
+    </div>
+    <div class="card-image">
+      <div class="mini-shell">
+        <div class="mini-bar"><span>用户记忆图谱中心</span><span>图谱检索 / 用户聚类 / 特征对比</span></div>
+        <div class="layout-c">
+          <div class="panel">
+            <div class="panel-title"><span>全量蒸馏用户图谱</span><span class="pill">默认视图</span></div>
+            <div class="graph-box"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-title"><span>节点详情</span><span class="pill">点击后</span></div>
+            <div class="memory-item"><strong>标签簇</strong><span>身份、观点、风格、风险源、常见关系</span></div>
+            <div class="memory-item"><strong>行为蒸馏</strong><span>节律、议题漂移、情绪轮廓、放大路径</span></div>
+            <div class="memory-item"><strong>历史证据</strong><span>主页发帖代表样本 / 最近交互记录</span></div>
+            <div class="memory-item"><strong>相似用户</strong><span>共享叙事与关系模式的已蒸馏用户</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-note">优点：最能放大“记忆图谱”的价值。缺点：高危用户筛查入口会被弱化，不适合作为日常研判主入口。</div>
+  </div>
+</div>
