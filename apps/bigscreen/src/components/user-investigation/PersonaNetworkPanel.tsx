@@ -1,6 +1,6 @@
 import { Button } from '@sker/ui/components/ui/button';
 import { usePersonaNetworkGraph } from '@/hooks/usePersonaNetworkGraph';
-import { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 
 interface PersonaNetworkPanelProps {
   onBackToInvestigation: () => void;

@@ -1,3 +1,4 @@
+import React from 'react';
 import type { UserInvestigationQueueItem } from '@sker/sdk';
 
 interface InvestigationQueuePanelProps {

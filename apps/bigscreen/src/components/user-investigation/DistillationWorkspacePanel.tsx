@@ -1,7 +1,7 @@
 import type { PersonaEvidenceItem, PersonaListItem, PersonaMemoryGraph } from '@sker/sdk';
 import { Button } from '@sker/ui/components/ui/button';
 import type { DistillationTaskSummary } from '@sker/sdk';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import MemoryGraph from '@/components/charts/MemoryGraph';
 
 interface DistillationWorkspacePanelProps {
