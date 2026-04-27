@@ -34,10 +34,14 @@ export class WeiboAjaxStatusesMymblogAstVisitor extends WeiboApiClient {
         return new Observable<NodeEvent>(obs => {
             const abortController = new AbortController();
 
-            const wrappedCtx = {
+            const wrappedCtx: Record<string, unknown> & {
+                abortSignal: AbortSignal;
+                windowDays?: unknown;
+            } = {
                 ...ctx,
-                abortSignal: abortController.signal
+                abortSignal: abortController.signal,
             };
+            const historyCutoff = this.resolveHistoryCutoff(wrappedCtx.windowDays);
 
             ast.state = 'running';
             obs.next({ type: 'node_runing', id: ast.id });
@@ -66,10 +70,29 @@ export class WeiboAjaxStatusesMymblogAstVisitor extends WeiboApiClient {
                             throw new Error('工作流已取消');
                         }
 
+                        let reachedHistoryBoundary = false;
+                        const timelineItems = body.data.list.filter((item: any) => {
+                            if (!historyCutoff) {
+                                return true;
+                            }
+
+                            const createdAt = this.parseStatusCreatedAt(item?.created_at);
+                            if (!createdAt) {
+                                return true;
+                            }
+
+                            const withinWindow = createdAt >= historyCutoff;
+                            if (!withinWindow) {
+                                reachedHistoryBoundary = true;
+                            }
+
+                            return withinWindow;
+                        });
+
                         await useEntityManager(async m => {
                             const uniqueUsers = Array.from(
                                 new Map(
-                                    body.data.list
+                                    timelineItems
                                         .filter((item: any) => item?.user?.id)
                                         .map((item: any) => [item.user.id, item.user])
                                 ).values()
@@ -80,18 +103,24 @@ export class WeiboAjaxStatusesMymblogAstVisitor extends WeiboApiClient {
                                 await m.upsert(WeiboUserEntity, users as any, ['id']);
                             }
 
-                            const posts = body.data.list.map(item => {
+                            const posts = timelineItems.map(item => {
                                 const { user, ...rest } = item as any;
                                 return m.create(WeiboPostEntity, {
                                     ...rest,
                                     user_id: user?.id ?? null,
                                 });
                             });
-                            await m.upsert(WeiboPostEntity, posts as any, ['id']);
+                            if (posts.length > 0) {
+                                await m.upsert(WeiboPostEntity, posts as any, ['id']);
 
-                            // 入库后创建快照
-                            await PostSnapshotHelper.createSnapshots(m, posts);
+                                // 入库后创建快照
+                                await PostSnapshotHelper.createSnapshots(m, posts);
+                            }
                         });
+
+                        if (reachedHistoryBoundary) {
+                            break;
+                        }
                     }
 
                     ast.isEnd = true;
@@ -121,5 +150,23 @@ export class WeiboAjaxStatusesMymblogAstVisitor extends WeiboApiClient {
                 obs.complete();
             };
         });
+    }
+
+    private resolveHistoryCutoff(windowDays: unknown): Date | null {
+        const days = Number(windowDays);
+        if (!Number.isFinite(days) || days <= 0) {
+            return null;
+        }
+
+        return new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    }
+
+    private parseStatusCreatedAt(value: unknown): Date | null {
+        if (!value) {
+            return null;
+        }
+
+        const parsed = new Date(value as string);
+        return Number.isNaN(parsed.getTime()) ? null : parsed;
     }
 }

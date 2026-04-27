@@ -20,9 +20,11 @@ vi.mock('@sker/entities', () => {
 
 describe('WeiboAjaxStatusesMymblogAstVisitor', () => {
   const upsertSequence: string[] = [];
+  const upsertPayloads = new Map<string, any[]>();
 
   beforeEach(() => {
     upsertSequence.length = 0;
+    upsertPayloads.clear();
 
     vi.mocked(useEntityManager).mockImplementation(async (handler: any) => {
       const manager = {
@@ -32,8 +34,9 @@ describe('WeiboAjaxStatusesMymblogAstVisitor', () => {
             __entity: entity.name,
           };
         },
-        async upsert(entity: { name: string }) {
+        async upsert(entity: { name: string }, data: any[]) {
           upsertSequence.push(entity.name);
+          upsertPayloads.set(entity.name, data);
         },
       };
 
@@ -85,5 +88,87 @@ describe('WeiboAjaxStatusesMymblogAstVisitor', () => {
 
     expect(upsertSequence).toEqual(['WeiboUserEntity', 'WeiboPostEntity']);
     expect(PostSnapshotHelper.createSnapshots).toHaveBeenCalledOnce();
+  });
+
+  it('stops ingesting when posts fall outside the requested history window', async () => {
+    const visitor = new WeiboAjaxStatusesMymblogAstVisitor(
+      {} as any,
+      { randomDelay: vi.fn(), backoffDelay: vi.fn(), recordSuccess: vi.fn(), recordError: vi.fn() } as any,
+      { acquire: vi.fn() } as any,
+      { fetch: vi.fn() } as any,
+    );
+
+    let visitedPages = 0;
+    vi.spyOn(visitor as any, 'fetchWithPagination').mockImplementation(async function* () {
+      visitedPages += 1;
+      yield {
+        data: {
+          list: [
+            {
+              id: 'recent-post',
+              idstr: 'recent-post',
+              mid: 'recent-post',
+              mblogid: 'recent-post',
+              created_at: new Date().toUTCString(),
+              user: {
+                id: 1001,
+                idstr: '1001',
+                screen_name: '最近作者',
+              },
+            },
+            {
+              id: 'old-post',
+              idstr: 'old-post',
+              mid: 'old-post',
+              mblogid: 'old-post',
+              created_at: new Date(Date.now() - 120 * 24 * 60 * 60 * 1000).toUTCString(),
+              user: {
+                id: 1002,
+                idstr: '1002',
+                screen_name: '旧作者',
+              },
+            },
+          ],
+        },
+      };
+      visitedPages += 1;
+      yield {
+        data: {
+          list: [
+            {
+              id: 'older-post',
+              idstr: 'older-post',
+              mid: 'older-post',
+              mblogid: 'older-post',
+              created_at: new Date(Date.now() - 150 * 24 * 60 * 60 * 1000).toUTCString(),
+              user: {
+                id: 1003,
+                idstr: '1003',
+                screen_name: '更旧作者',
+              },
+            },
+          ],
+        },
+      };
+    });
+
+    const ast = new WeiboAjaxStatusesMymblogAst();
+    ast.uid = '1571999832';
+
+    await new Promise<void>((resolve, reject) => {
+      visitor.visit(
+        ast,
+        of({ uid: '1571999832' }) as any,
+        { windowDays: 90 },
+      ).subscribe({
+        complete: resolve,
+        error: reject,
+      });
+    });
+
+    expect(visitedPages).toBe(1);
+    expect(upsertPayloads.get('WeiboUserEntity')).toHaveLength(1);
+    expect(upsertPayloads.get('WeiboPostEntity')).toHaveLength(1);
+    expect(upsertPayloads.get('WeiboPostEntity')?.[0]?.id).toBe('recent-post');
   });
 });
