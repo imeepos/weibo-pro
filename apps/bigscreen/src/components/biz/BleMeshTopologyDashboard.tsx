@@ -1,5 +1,11 @@
 import React, { useState, useCallback } from 'react';
+import { AlertTriangle } from 'lucide-react';
 import BleMeshNetworkChart from './BleMeshNetworkChart';
+import {
+  BLE_MESH_API_AVAILABLE,
+  BLE_MESH_UNAVAILABLE_GUIDANCE,
+  BLE_MESH_UNAVAILABLE_MESSAGE
+} from '../../services/api/bleMesh';
 
 interface BleMeshTopologyDashboardProps {
   className?: string;
@@ -11,6 +17,10 @@ const BleMeshTopologyDashboard: React.FC<BleMeshTopologyDashboardProps> = ({
   const [isLoading, setIsLoading] = useState(false);
 
   const handleRefresh = useCallback(async () => {
+    if (!BLE_MESH_API_AVAILABLE) {
+      return;
+    }
+
     setIsLoading(true);
     try {
       // 模拟刷新数据
@@ -35,6 +45,20 @@ const BleMeshTopologyDashboard: React.FC<BleMeshTopologyDashboardProps> = ({
                   蓝牙网格可达性
                 </h2>
               </div>
+
+              {!BLE_MESH_API_AVAILABLE && (
+                <div className="mx-4 mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-900">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0" />
+                    <div className="space-y-1">
+                      <div className="text-sm font-semibold">功能暂未接入</div>
+                      <p className="text-sm">{BLE_MESH_UNAVAILABLE_MESSAGE}</p>
+                      <p className="text-sm">{BLE_MESH_UNAVAILABLE_GUIDANCE}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="p-4" style={{ height: '600px' }}>
                 <BleMeshNetworkChart
                   type="reachability"

@@ -4,7 +4,12 @@ import { NetworkGraph, NetworkGraphData } from '@sker/ui/components/ui/network-g
 import { ChartState } from '@sker/ui/components/ui/chart-state';
 import { Button } from '@sker/ui/components/ui/button';
 import { BleMeshTopologyData, DeviceInfo } from '../../types/bleMesh';
-import { getBleMeshTopologyData, getDeviceDetails } from '../../services/api/bleMesh';
+import {
+  BLE_MESH_API_AVAILABLE,
+  BLE_MESH_UNAVAILABLE_MESSAGE,
+  getBleMeshTopologyData,
+  getDeviceDetails
+} from '../../services/api/bleMesh';
 
 interface BleMeshNetworkChartProps {
   type: 'reachability' | 'assignment';
@@ -101,6 +106,12 @@ const BleMeshNetworkChart: React.FC<BleMeshNetworkChartProps> = ({
 
   // 加载数据
   const loadData = useCallback(async () => {
+    if (!BLE_MESH_API_AVAILABLE) {
+      setError(BLE_MESH_UNAVAILABLE_MESSAGE);
+      setNetworkData(null);
+      return;
+    }
+
     try {
       setError(null);
       const response = await getBleMeshTopologyData({
@@ -159,7 +170,7 @@ const BleMeshNetworkChart: React.FC<BleMeshNetworkChartProps> = ({
   }), []);
 
   const handleNodeClick = useCallback(async (nodeId: string | number) => {
-    if (!onDeviceSelect) return;
+    if (!onDeviceSelect || !BLE_MESH_API_AVAILABLE) return;
     try {
       const deviceResponse = await getDeviceDetails(`${nodeId}`);
       if (deviceResponse.success) {
