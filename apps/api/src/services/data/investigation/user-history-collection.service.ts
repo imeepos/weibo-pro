@@ -1,4 +1,4 @@
-import { Injectable } from '@sker/core';
+import { Inject, Injectable } from '@sker/core';
 import { Observable, of } from 'rxjs';
 import { WeiboAjaxStatusesMymblogAst } from '@sker/workflow-ast';
 import { WeiboAjaxStatusesMymblogAstVisitor } from '@sker/workflow-run';
@@ -6,7 +6,8 @@ import { WeiboAjaxStatusesMymblogAstVisitor } from '@sker/workflow-run';
 @Injectable({ providedIn: 'root' })
 export class UserHistoryCollectionService {
   constructor(
-    private readonly visitor: Pick<WeiboAjaxStatusesMymblogAstVisitor, 'visit'>,
+    @Inject(WeiboAjaxStatusesMymblogAstVisitor)
+    private readonly visitor: WeiboAjaxStatusesMymblogAstVisitor,
   ) {}
 
   async collect(input: {
