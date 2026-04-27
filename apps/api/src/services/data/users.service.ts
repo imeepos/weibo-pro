@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@sker/core';
+import { Injectable, Inject, OnInit } from '@sker/core';
 import {
   WeiboUserEntity,
   UserProfileDistillationTaskEntity,
@@ -12,6 +12,7 @@ import type {
   DistillationTaskSummary,
   ReviewDistillationTaskRequest,
   UserInvestigationDossier,
+  UserInvestigationQueueQuery,
   UserInvestigationQueueResponse,
 } from '@sker/sdk';
 import { InvestigationQueueService } from './investigation/investigation-queue.service';
@@ -103,7 +104,10 @@ export interface UserStatistics {
 }
 
 @Injectable({ providedIn: 'root' })
-export class UsersService {
+@OnInit()
+export class UsersService implements OnInit {
+  private processStartedAt = new Date();
+
   constructor(
     @Inject(CacheService) private readonly cacheService: CacheService,
     @Inject(InvestigationQueueService)
@@ -118,6 +122,33 @@ export class UsersService {
     private readonly personaProjectionService: PersonaProjectionService,
   ) {}
 
+  async onInit(): Promise<void> {
+    const reclaimedTaskCount = await useEntityManager(async (manager) => {
+      const repo = manager.getRepository(UserProfileDistillationTaskEntity);
+      const activeTasks = await repo.find({
+        where: Array.from(ACTIVE_DISTILLATION_TASK_STATUSES, (status) => ({ status })),
+        order: { created_at: 'DESC' },
+      } as any);
+
+      const orphanedTasks = activeTasks.filter((task) => this.isOrphanedDistillationTask(task));
+
+      for (const task of orphanedTasks) {
+        task.status = 'failed';
+        task.completed_at = new Date();
+        task.error_message = '任务因服务重启失去执行上下文，请重新发起';
+        await repo.save(task);
+      }
+
+      return orphanedTasks.length;
+    });
+
+    if (reclaimedTaskCount > 0) {
+      console.warn(
+        `[UsersService] 已回收 ${reclaimedTaskCount} 个因服务重启而遗留的蒸馏任务`,
+      );
+    }
+  }
+
   async getUserList(timeRange: TimeRange = '7d', page: number = 1, pageSize: number = 20) {
     const cacheKey = CacheService.buildKey(CACHE_KEYS.USERS_LIST, timeRange, page, pageSize);
     return await this.cacheService.getOrSet(
@@ -127,13 +158,9 @@ export class UsersService {
     );
   }
 
-  async getInvestigationQueue(query: {
-    eventId?: string;
-    riskLevel?: string;
-    status?: string;
-    page?: number;
-    pageSize?: number;
-  }): Promise<UserInvestigationQueueResponse> {
+  async getInvestigationQueue(
+    query: UserInvestigationQueueQuery,
+  ): Promise<UserInvestigationQueueResponse> {
     return this.investigationQueueService.getQueue({
       eventId: query.eventId,
       riskLevel: query.riskLevel,
@@ -297,7 +324,7 @@ export class UsersService {
         currentTask.model = profile.metadata.model;
         currentTask.prompt_version = profile.metadata.promptVersion;
         currentTask.distilled_summary = profile.summary.short;
-        currentTask.distilled_json = profile;
+        currentTask.distilled_json = profile as unknown as Record<string, unknown>;
         currentTask.review_status = reviewStatus;
         currentTask.source_post_count = profile.metadata.sampledPosts;
         currentTask.source_comment_count = profile.metadata.sampledComments;
@@ -334,6 +361,15 @@ export class UsersService {
       mutate(task);
       return repo.save(task);
     });
+  }
+
+  private isOrphanedDistillationTask(task: UserProfileDistillationTaskEntity): boolean {
+    if (!ACTIVE_DISTILLATION_TASK_STATUSES.has(task.status)) {
+      return false;
+    }
+
+    const taskReferenceTime = task.started_at ?? task.created_at;
+    return taskReferenceTime.getTime() < this.processStartedAt.getTime();
   }
 
   private toDistillationTaskSummary(task: UserProfileDistillationTaskEntity): DistillationTaskSummary {

@@ -118,6 +118,18 @@ describe('UsersService distillation flow', () => {
     personaProjectionService = { publishProfile: vi.fn().mockResolvedValue(undefined) };
 
     vi.mocked(useEntityManager).mockImplementation(async (handler: any) => {
+      const matchesWhere = (item: any, where: any): boolean => {
+        if (!where) {
+          return true;
+        }
+
+        if (Array.isArray(where)) {
+          return where.some((entry) => matchesWhere(item, entry));
+        }
+
+        return Object.entries(where).every(([key, value]) => item[key] === value);
+      };
+
       const repo = {
         async findOne(options: any) {
           if (options?.where?.id) {
@@ -156,7 +168,7 @@ describe('UsersService distillation flow', () => {
         },
         async find(options: any) {
           return savedTasks
-            .filter((item) => item.weibo_user_id === options.where.weibo_user_id)
+            .filter((item) => matchesWhere(item, options?.where))
             .sort((a, b) => +b.created_at - +a.created_at);
         },
       };
@@ -280,6 +292,38 @@ describe('UsersService distillation flow', () => {
     expect(result.status).toBe('crawling');
     expect(historyCollectionService.collect).not.toHaveBeenCalled();
     expect(savedTasks.filter((item) => item.weibo_user_id === '100')).toHaveLength(1);
+  });
+
+  it('marks active tasks from a previous api process as failed during startup', async () => {
+    savedTasks.push({
+      id: 'task-orphaned',
+      weibo_user_id: '100',
+      event_id: null,
+      status: 'crawling',
+      history_window_days: 90,
+      source_post_count: 0,
+      source_comment_count: 0,
+      source_repost_count: 0,
+      evidence_sample_count: 0,
+      model: null,
+      prompt_version: null,
+      distilled_summary: null,
+      distilled_json: null,
+      review_status: null,
+      error_message: null,
+      started_at: new Date('2026-04-23T00:05:00.000Z'),
+      completed_at: null,
+      created_at: new Date('2026-04-23T00:00:00.000Z'),
+      updated_at: new Date('2026-04-23T00:05:00.000Z'),
+    });
+
+    (service as any).processStartedAt = new Date('2026-04-23T00:15:00.000Z');
+
+    await (service as any).onInit();
+
+    expect(savedTasks[0]?.status).toBe('failed');
+    expect(savedTasks[0]?.completed_at).toBeInstanceOf(Date);
+    expect(savedTasks[0]?.error_message).toContain('服务重启');
   });
 
   it('publishes a review-pending task when human approves it', async () => {

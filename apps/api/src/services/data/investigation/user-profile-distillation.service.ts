@@ -19,7 +19,7 @@ export class UserProfileDistillationService {
       temperature: options.temperature ?? 0.2,
     });
 
-    const response = await model.invoke([
+    const messages = [
       {
         role: 'system',
         content: [
@@ -33,7 +33,15 @@ export class UserProfileDistillationService {
         role: 'human',
         content: this.buildPrompt(dossier),
       },
-    ]);
+    ];
+
+    if (typeof (model as any).withStructuredOutput === 'function') {
+      const structuredModel = (model as any).withStructuredOutput(distilledUserProfileSchema);
+      const response = await structuredModel.invoke(messages);
+      return this.validateProfile(response);
+    }
+
+    const response = await model.invoke(messages);
 
     return this.parseProfileResponse(response.content as string);
   }

@@ -32,7 +32,7 @@ export class UsersController implements sdk.UsersController {
   async getInvestigationQueue(
     @Query('eventId') eventId?: string,
     @Query('riskLevel') riskLevel?: string,
-    @Query('status') status?: string,
+    @Query('status') status?: sdk.InvestigationTaskStatus,
     @Query('page') page: number = 1,
     @Query('pageSize') pageSize: number = 20,
   ) {
