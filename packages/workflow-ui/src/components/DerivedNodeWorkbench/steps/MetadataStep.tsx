@@ -1,11 +1,25 @@
 import React from 'react'
 import { useDerivedNodeWorkbench } from '../../../store/derived-node-workbench.store'
+import { buildDerivedNodeCreatePayload } from '../save-payload'
 
 export function MetadataStep() {
-  const { getPreviewMetadata, toSavePayload } = useDerivedNodeWorkbench()
+  const {
+    baseNode,
+    frozenInputs,
+    exposedInputs,
+    customOutputs,
+    nodeMetadata,
+    getPreviewMetadata
+  } = useDerivedNodeWorkbench()
 
   const preview = getPreviewMetadata()
-  const payload = toSavePayload()
+  const payload = buildDerivedNodeCreatePayload({
+    baseNode,
+    frozenInputs,
+    exposedInputs,
+    customOutputs,
+    nodeMetadata
+  })
 
   return (
     <div className="space-y-4">
