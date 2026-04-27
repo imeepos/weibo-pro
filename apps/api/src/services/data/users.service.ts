@@ -20,6 +20,8 @@ import { UserHistoryCollectionService } from './investigation/user-history-colle
 import { UserProfileDistillationService } from './investigation/user-profile-distillation.service';
 import { PersonaProjectionService } from './investigation/persona-projection.service';
 
+const ACTIVE_DISTILLATION_TASK_STATUSES = new Set(['queued', 'crawling', 'analyzing']);
+
 export type RiskLevel = 'low' | 'medium' | 'high';
 
 export interface UserListItem {
@@ -153,8 +155,23 @@ export class UsersService {
     id: string,
     request?: CreateDistillationTaskRequest,
   ): Promise<DistillationTaskSummary> {
-    const queuedTask = await useEntityManager(async (manager) => {
+    const { task, shouldExecute } = await useEntityManager(async (manager) => {
       const repo = manager.getRepository(UserProfileDistillationTaskEntity);
+      const existingTasks = await repo.find({
+        where: { weibo_user_id: id },
+        order: { created_at: 'DESC' },
+      });
+      const activeTask = existingTasks.find((item) =>
+        ACTIVE_DISTILLATION_TASK_STATUSES.has(item.status),
+      );
+
+      if (activeTask) {
+        return {
+          task: activeTask,
+          shouldExecute: false,
+        };
+      }
+
       const task = repo.create({
         weibo_user_id: id,
         event_id: request?.eventId ?? null,
@@ -165,14 +182,19 @@ export class UsersService {
         source_repost_count: 0,
         evidence_sample_count: 0,
       });
-      return repo.save(task);
+      return {
+        task: await repo.save(task),
+        shouldExecute: true,
+      };
     });
 
-    void this.executeDistillationTask(queuedTask.id).catch((error) => {
-      console.error(`[UsersService] distillation task ${queuedTask.id} 执行失败:`, error);
-    });
+    if (shouldExecute) {
+      void this.executeDistillationTask(task.id).catch((error) => {
+        console.error(`[UsersService] distillation task ${task.id} 执行失败:`, error);
+      });
+    }
 
-    return this.toDistillationTaskSummary(queuedTask);
+    return this.toDistillationTaskSummary(task);
   }
 
   async getDistillationTasks(id: string): Promise<DistillationTaskSummary[]> {

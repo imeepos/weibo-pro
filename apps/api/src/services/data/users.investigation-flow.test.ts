@@ -249,6 +249,39 @@ describe('UsersService distillation flow', () => {
     });
   });
 
+  it('returns the existing active distillation task instead of enqueueing a duplicate', async () => {
+    savedTasks.push({
+      id: 'task-active',
+      weibo_user_id: '100',
+      event_id: null,
+      status: 'crawling',
+      history_window_days: 90,
+      source_post_count: 0,
+      source_comment_count: 0,
+      source_repost_count: 0,
+      evidence_sample_count: 0,
+      model: null,
+      prompt_version: null,
+      distilled_summary: null,
+      distilled_json: null,
+      review_status: null,
+      error_message: null,
+      started_at: new Date('2026-04-23T00:10:00.000Z'),
+      completed_at: null,
+      created_at: new Date('2026-04-23T00:00:00.000Z'),
+      updated_at: new Date('2026-04-23T00:10:00.000Z'),
+    });
+
+    const result = await service.createDistillationTask('100', {
+      historyWindowDays: 90,
+    });
+
+    expect(result.id).toBe('task-active');
+    expect(result.status).toBe('crawling');
+    expect(historyCollectionService.collect).not.toHaveBeenCalled();
+    expect(savedTasks.filter((item) => item.weibo_user_id === '100')).toHaveLength(1);
+  });
+
   it('publishes a review-pending task when human approves it', async () => {
     savedTasks.push({
       id: 'task-review',

@@ -141,6 +141,44 @@ describe('DistillationWorkspacePanel', () => {
     expect(screen.getByText('人工拒绝')).toBeInTheDocument();
   });
 
+  it('shows in-progress hint and disables creating another task while one is running', () => {
+    render(
+      <DistillationWorkspacePanel
+        selectedUserId="100"
+        tasks={[{
+          id: 'task-1',
+          weiboUserId: '100',
+          eventId: null,
+          status: 'crawling',
+          historyWindowDays: 90,
+          sourcePostCount: 0,
+          sourceCommentCount: 0,
+          sourceRepostCount: 0,
+          evidenceSampleCount: 0,
+          model: null,
+          promptVersion: null,
+          distilledSummary: null,
+          reviewStatus: null,
+          errorMessage: null,
+          startedAt: '2026-04-23T00:00:00.000Z',
+          completedAt: null,
+          createdAt: '2026-04-23T00:00:00.000Z',
+          updatedAt: '2026-04-23T00:00:00.000Z',
+        }]}
+        personaSummary={null}
+        evidenceCount={0}
+        evidenceItems={[]}
+        memoryGraph={null}
+        onCreateTask={vi.fn()}
+        onOpenGraphMode={vi.fn()}
+        onReviewTask={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('任务进行中，后台正在抓取与蒸馏，请稍候刷新结果')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '蒸馏进行中...' })).toBeDisabled();
+  });
+
   it('triggers review callbacks when reviewer clicks action buttons', () => {
     const onReviewTask = vi.fn();
 

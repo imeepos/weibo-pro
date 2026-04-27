@@ -4,6 +4,8 @@ import type { DistillationTaskSummary } from '@sker/sdk';
 import React, { useState } from 'react';
 import MemoryGraph from '@/components/charts/MemoryGraph';
 
+const ACTIVE_DISTILLATION_TASK_STATUSES = new Set(['queued', 'crawling', 'analyzing']);
+
 interface DistillationWorkspacePanelProps {
   selectedUserId: string | null;
   tasks: DistillationTaskSummary[];
@@ -11,6 +13,7 @@ interface DistillationWorkspacePanelProps {
   evidenceCount: number;
   evidenceItems: PersonaEvidenceItem[];
   memoryGraph: PersonaMemoryGraph | null;
+  isCreatingTask?: boolean;
   onCreateTask: () => void;
   onReviewTask: (taskId: string, decision: 'approve' | 'reject') => void;
   onOpenGraphMode: () => void;
@@ -23,11 +26,27 @@ export function DistillationWorkspacePanel({
   evidenceCount,
   evidenceItems,
   memoryGraph,
+  isCreatingTask = false,
   onCreateTask,
   onReviewTask,
   onOpenGraphMode,
 }: DistillationWorkspacePanelProps) {
   const latestTask = tasks[0] ?? null;
+  const activeTask =
+    tasks.find((task) => ACTIVE_DISTILLATION_TASK_STATUSES.has(task.status)) ?? null;
+  const taskForSummary = activeTask ?? latestTask;
+  const isTaskActive = activeTask !== null;
+  const isCreateDisabled = !selectedUserId || isCreatingTask || isTaskActive;
+  const progressHint = isCreatingTask && !isTaskActive
+    ? '蒸馏任务已提交，正在进入后台队列，请稍候'
+    : isTaskActive
+      ? '任务进行中，后台正在抓取与蒸馏，请稍候刷新结果'
+      : null;
+  const createButtonLabel = isCreatingTask && !isTaskActive
+    ? '提交蒸馏中...'
+    : isTaskActive
+      ? '蒸馏进行中...'
+      : '发起蒸馏';
   const [selectedEvidence, setSelectedEvidence] = useState<PersonaEvidenceItem | null>(null);
 
   return (
@@ -44,21 +63,27 @@ export function DistillationWorkspacePanel({
         </div>
 
         <div className="rounded-lg border p-3">
-          <div className="text-xs text-muted-foreground">最新任务</div>
+          <div className="text-xs text-muted-foreground">{activeTask ? '当前任务' : '最新任务'}</div>
           <div className="mt-1 text-sm text-foreground">
-            {latestTask ? `${latestTask.status} · ${latestTask.historyWindowDays} 天` : '暂无蒸馏任务'}
+            {taskForSummary ? `${taskForSummary.status} · ${taskForSummary.historyWindowDays} 天` : '暂无蒸馏任务'}
           </div>
-          {latestTask?.distilledSummary && (
-            <div className="mt-2 text-sm text-muted-foreground">{latestTask.distilledSummary}</div>
+          {taskForSummary?.distilledSummary && (
+            <div className="mt-2 text-sm text-muted-foreground">{taskForSummary.distilledSummary}</div>
           )}
-          {latestTask?.errorMessage && (
-            <div className="mt-2 text-sm text-destructive">{latestTask.errorMessage}</div>
+          {taskForSummary?.errorMessage && (
+            <div className="mt-2 text-sm text-destructive">{taskForSummary.errorMessage}</div>
           )}
         </div>
 
+        {progressHint && (
+          <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm text-foreground">
+            {progressHint}
+          </div>
+        )}
+
         <div className="flex flex-col gap-2">
-          <Button onClick={onCreateTask} disabled={!selectedUserId}>
-            发起蒸馏
+          <Button onClick={onCreateTask} disabled={isCreateDisabled}>
+            {createButtonLabel}
           </Button>
           <Button variant="outline" onClick={onOpenGraphMode}>
             查看全量图谱

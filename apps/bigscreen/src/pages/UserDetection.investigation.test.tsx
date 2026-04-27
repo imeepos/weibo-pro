@@ -1,12 +1,14 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import UserDetection from './UserDetection';
 
 const createTaskSpy = vi.fn().mockResolvedValue(null);
 const reviewTaskSpy = vi.fn().mockResolvedValue(null);
+const tasksRefetchSpy = vi.fn().mockResolvedValue(undefined);
 const personaRefetchSpy = vi.fn().mockResolvedValue(undefined);
 const evidenceRefetchSpy = vi.fn().mockResolvedValue(undefined);
 const memoryGraphRefetchSpy = vi.fn().mockResolvedValue(undefined);
+let mockTasksState: any;
 
 vi.mock('@/hooks/useInvestigationQueue', () => ({
   useInvestigationQueue: () => ({
@@ -109,14 +111,7 @@ vi.mock('@/hooks/useUserDossier', () => ({
 }));
 
 vi.mock('@/hooks/useDistillationTasks', () => ({
-  useDistillationTasks: () => ({
-    tasks: [],
-    isLoading: false,
-    error: null,
-    refetch: vi.fn(),
-    createTask: createTaskSpy,
-    reviewTask: reviewTaskSpy,
-  }),
+  useDistillationTasks: () => mockTasksState,
 }));
 
 vi.mock('@/hooks/usePersonaNetworkGraph', () => ({
@@ -169,6 +164,28 @@ vi.mock('@/hooks/usePersonaMemoryGraph', () => ({
 }));
 
 describe('UserDetection investigation mode', () => {
+  beforeEach(() => {
+    createTaskSpy.mockClear();
+    reviewTaskSpy.mockClear();
+    tasksRefetchSpy.mockClear();
+    personaRefetchSpy.mockClear();
+    evidenceRefetchSpy.mockClear();
+    memoryGraphRefetchSpy.mockClear();
+
+    mockTasksState = {
+      tasks: [],
+      latestTask: null,
+      activeTask: null,
+      hasActiveTask: false,
+      isLoading: false,
+      isCreatingTask: false,
+      error: null,
+      refetch: tasksRefetchSpy,
+      createTask: createTaskSpy,
+      reviewTask: reviewTaskSpy,
+    };
+  });
+
   it('renders queue, dossier, and distillation workspace in one page', () => {
     render(<UserDetection />);
 
@@ -198,12 +215,7 @@ describe('UserDetection investigation mode', () => {
     expect(screen.getByText('100')).toBeInTheDocument();
   });
 
-  it('refreshes persona summary and evidence after creating a task', async () => {
-    createTaskSpy.mockClear();
-    personaRefetchSpy.mockClear();
-    evidenceRefetchSpy.mockClear();
-    memoryGraphRefetchSpy.mockClear();
-
+  it('does not refetch persona data immediately after creating a queued task', async () => {
     render(<UserDetection />);
 
     fireEvent.click(screen.getAllByText('用户A')[0]!);
@@ -211,6 +223,75 @@ describe('UserDetection investigation mode', () => {
 
     await waitFor(() => {
       expect(createTaskSpy).toHaveBeenCalled();
+    });
+
+    expect(personaRefetchSpy).not.toHaveBeenCalled();
+    expect(evidenceRefetchSpy).not.toHaveBeenCalled();
+    expect(memoryGraphRefetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('refreshes persona data after the last running task completes', async () => {
+    const activeTask = {
+      id: 'task-1',
+      weiboUserId: '100',
+      eventId: null,
+      status: 'queued',
+      historyWindowDays: 90,
+      sourcePostCount: 0,
+      sourceCommentCount: 0,
+      sourceRepostCount: 0,
+      evidenceSampleCount: 0,
+      model: null,
+      promptVersion: null,
+      distilledSummary: null,
+      reviewStatus: null,
+      errorMessage: null,
+      startedAt: null,
+      completedAt: null,
+      createdAt: '2026-04-23T00:00:00.000Z',
+      updatedAt: '2026-04-23T00:00:00.000Z',
+    };
+
+    mockTasksState = {
+      ...mockTasksState,
+      tasks: [activeTask],
+      latestTask: activeTask,
+      activeTask,
+      hasActiveTask: true,
+    };
+
+    const view = render(<UserDetection />);
+
+    fireEvent.click(screen.getAllByText('用户A')[0]!);
+
+    personaRefetchSpy.mockClear();
+    evidenceRefetchSpy.mockClear();
+    memoryGraphRefetchSpy.mockClear();
+
+    const completedTask = {
+      ...activeTask,
+      status: 'published',
+      sourcePostCount: 20,
+      sourceCommentCount: 2,
+      sourceRepostCount: 3,
+      evidenceSampleCount: 5,
+      distilledSummary: '画像已生成',
+      reviewStatus: 'auto_pass',
+      completedAt: '2026-04-23T00:01:00.000Z',
+      updatedAt: '2026-04-23T00:01:00.000Z',
+    };
+
+    mockTasksState = {
+      ...mockTasksState,
+      tasks: [completedTask],
+      latestTask: completedTask,
+      activeTask: null,
+      hasActiveTask: false,
+    };
+
+    view.rerender(<UserDetection />);
+
+    await waitFor(() => {
       expect(personaRefetchSpy).toHaveBeenCalled();
       expect(evidenceRefetchSpy).toHaveBeenCalled();
       expect(memoryGraphRefetchSpy).toHaveBeenCalled();

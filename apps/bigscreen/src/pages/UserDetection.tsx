@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useAppStore } from '@/stores/useAppStore';
 import { UserDetectionHeader } from '@/components/common/UserDetectionHeader';
 import { useInvestigationQueue } from '@/hooks/useInvestigationQueue';
@@ -60,19 +60,52 @@ const UserDetection: React.FC = () => {
   const personaSummaryState = usePersonaByWeiboUser(selectedUserId);
   const personaEvidenceState = usePersonaEvidence(personaSummaryState.persona?.id ?? null);
   const personaMemoryGraphState = usePersonaMemoryGraph(personaSummaryState.persona?.id ?? null);
+  const previousTaskStateRef = useRef<{
+    userId: string | null;
+    activeTaskId: string | null;
+  }>({
+    userId: null,
+    activeTaskId: null,
+  });
+
+  useEffect(() => {
+    const activeTaskId = tasksState.activeTask?.id ?? null;
+    const previous = previousTaskStateRef.current;
+    previousTaskStateRef.current = {
+      userId: selectedUserId,
+      activeTaskId,
+    };
+
+    if (!selectedUserId || previous.userId !== selectedUserId) {
+      return;
+    }
+
+    if (previous.activeTaskId && !activeTaskId) {
+      void Promise.all([
+        personaSummaryState.refetch(),
+        personaEvidenceState.refetch(),
+        personaMemoryGraphState.refetch(),
+      ]);
+    }
+  }, [
+    selectedUserId,
+    tasksState.activeTask?.id,
+    personaSummaryState.refetch,
+    personaEvidenceState.refetch,
+    personaMemoryGraphState.refetch,
+  ]);
 
   const handleCreateTask = async () => {
     await tasksState.createTask({ historyWindowDays: 90 });
-    await personaSummaryState.refetch();
-    await personaEvidenceState.refetch();
-    await personaMemoryGraphState.refetch();
   };
 
   const handleReviewTask = async (taskId: string, decision: 'approve' | 'reject') => {
     await tasksState.reviewTask(taskId, { decision });
-    await personaSummaryState.refetch();
-    await personaEvidenceState.refetch();
-    await personaMemoryGraphState.refetch();
+    await Promise.all([
+      personaSummaryState.refetch(),
+      personaEvidenceState.refetch(),
+      personaMemoryGraphState.refetch(),
+    ]);
   };
 
   const content = mode === 'graph' ? (
@@ -98,6 +131,7 @@ const UserDetection: React.FC = () => {
         evidenceCount={personaEvidenceState.evidence.length}
         evidenceItems={personaEvidenceState.evidence}
         memoryGraph={personaMemoryGraphState.graph}
+        isCreatingTask={tasksState.isCreatingTask}
         onCreateTask={() => {
           void handleCreateTask();
         }}
