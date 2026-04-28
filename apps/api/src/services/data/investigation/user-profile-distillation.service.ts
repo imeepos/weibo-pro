@@ -179,7 +179,14 @@ export class UserProfileDistillationService {
     const record = payload as Record<string, unknown>;
     const risk = this.asRecord(record.risk);
     const metadata = this.asRecord(record.metadata);
-    const summaryText = this.firstNonEmptyString(record.summary, record.content);
+    const summaryRecord = this.asRecord(record.summary);
+    const summaryText = this.firstNonEmptyString(
+      summaryRecord?.long,
+      summaryRecord?.short,
+      summaryRecord?.verdict,
+      summaryRecord?.primaryThreat,
+      record.summary,
+    );
     const evidencePool = this.buildEvidencePool(context);
 
     const coercedProfile = {
@@ -223,9 +230,10 @@ export class UserProfileDistillationService {
         ),
         model: this.firstNonEmptyString(metadata?.model, context.requestedModel) ?? context.requestedModel,
         promptVersion:
-          this.firstNonEmptyString(metadata?.promptVersion, context.promptVersion) ?? context.promptVersion,
+          this.firstNonEmptyString(metadata?.promptVersion, metadata?.modelVersion, context.promptVersion) ??
+          context.promptVersion,
         generatedAt:
-          this.firstNonEmptyString(metadata?.generatedAt, metadata?.analysisTime) ??
+          this.firstNonEmptyString(metadata?.generatedAt, metadata?.analysisTime, metadata?.analyzedAt) ??
           new Date().toISOString(),
       },
     };
@@ -534,7 +542,7 @@ export class UserProfileDistillationService {
       ]),
       narrativeStyles: this.compactStrings([
         ...this.toStringArray(content?.narrativeStyles),
-        this.firstNonEmptyString(content?.style),
+        this.firstNonEmptyString(content?.style, content?.narrative),
       ]),
       emotionalTendency: this.compactStrings([
         ...this.toStringArray(content?.emotionalTendency),
@@ -543,6 +551,7 @@ export class UserProfileDistillationService {
       stancePattern: this.compactStrings([
         ...this.toStringArray(content?.stancePattern),
         ...this.toStringArray(content?.keywords).slice(0, 3),
+        ...this.toStringArray(content?.sensitiveKeywords).slice(0, 3),
       ]),
     };
   }
@@ -566,7 +575,10 @@ export class UserProfileDistillationService {
       return normalizedDirectDrivers;
     }
 
-    const reasons = this.toStringArray(risk.reasons);
+    const reasons = this.compactStrings([
+      ...this.toStringArray(risk.reasons),
+      ...this.toStringArray(risk.riskSignals),
+    ]);
     if (reasons.length > 0) {
       return reasons.map((reason) => ({
         label: this.shorten(reason, 16),
@@ -594,19 +606,34 @@ export class UserProfileDistillationService {
         note: this.firstNonEmptyString(item.note, assessment, interactionType) ?? interactionType,
       }));
 
+    const stringKeyConnections = this.toStringArray(relations?.keyConnections).map((targetUserId) => ({
+      targetUserId,
+      relationType: interactionType,
+      strength: 1,
+      note: assessment ?? this.firstNonEmptyString(relations?.coordinationIndicators, interactionType) ?? interactionType,
+    }));
+
     const closeCircleConnections = this.toStringArray(relations?.closeCircle).map((targetUserId) => ({
       targetUserId,
       relationType: interactionType,
       strength: 1,
-      note: assessment ?? interactionType,
+      note:
+        assessment ??
+        this.firstNonEmptyString(relations?.coordinationIndicators, interactionType) ??
+        interactionType,
     }));
 
     return {
       keyConnections:
-        normalizedDirectConnections.length > 0 ? normalizedDirectConnections : closeCircleConnections,
+        normalizedDirectConnections.length > 0
+          ? normalizedDirectConnections
+          : stringKeyConnections.length > 0
+            ? stringKeyConnections
+            : closeCircleConnections,
       clusterRole: this.firstNonEmptyString(relations?.clusterRole, assessment) ?? null,
       coordinationSignals: this.compactStrings([
         ...this.toStringArray(relations?.coordinationSignals),
+        this.firstNonEmptyString(relations?.coordinationIndicators),
         assessment,
       ]),
     };
@@ -620,6 +647,8 @@ export class UserProfileDistillationService {
     const draftEntries = this.compactStrings([
       this.firstNonEmptyString(memoryDrafts?.keyObservations),
       this.firstNonEmptyString(memoryDrafts?.pendingTasks),
+      this.firstNonEmptyString(memoryDrafts?.pendingInvestigation),
+      ...this.toStringArray(memoryDrafts?.recentMilestones),
     ]);
     const entries =
       draftEntries.length > 0

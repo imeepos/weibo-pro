@@ -176,6 +176,65 @@ const alternativeProviderProfile = {
   },
 } as const;
 
+const secondAlternativeProviderProfile = {
+  summary: {
+    riskLevel: 'medium',
+    riskScore: 42,
+    primaryThreat: '涉政敏感话题评论',
+    confidence: 'medium',
+    verdict:
+      '该用户为拥有近千万粉丝的加V大V，近期活跃度极高，且存在明显的涉政敏感话题讨论倾向。',
+  },
+  identity: {
+    userId: '1571999832',
+    screenName: '释不归',
+    tags: ['大V', '加V用户', '高频发博', '北京'],
+    influenceScore: 9378839,
+    profileAnomalies: [],
+  },
+  behavior: {
+    postingFrequency: 'high',
+    activityPattern: '全天候活跃，高峰期在上午及凌晨',
+    automationProbability: 0.15,
+    interactionStyle: '高产出型，具备极强的舆论引爆能力。',
+  },
+  content: {
+    primaryTopics: ['音乐分享', '生活感悟', '时政评论'],
+    sentiment: 'mixed',
+    sensitiveKeywords: ['川子', '违纪', '烧香', '党员', '委内瑞拉'],
+    narrative: '日常以音乐、生活类内容维持高活跃度，间歇性插入时政热点评论。',
+  },
+  risk: {
+    politicalRisk: 'medium',
+    disinformationRisk: 'low',
+    coordinationRisk: 'medium',
+    riskSignals: [
+      '涉政敏感词（违纪/烧香/川子）',
+      '特定日期互动量异常激增',
+      '存在疑似协同互动的小圈子',
+    ],
+  },
+  relations: {
+    networkType: 'hub',
+    keyConnections: ['7930521683', '2094640577', '1919959601'],
+    coordinationIndicators:
+      '与特定用户存在高频互动，且关系类型集中在评论和转发。',
+  },
+  memoryDrafts: {
+    recentMilestones: [
+      '2026-04-17: 单日互动量达到峰值 45542',
+      '2026-04-15: 互动量激增至 1958',
+    ],
+    pendingInvestigation: '需重点监控其在涉政话题上的立场转变及协同行为。',
+  },
+  metadata: {
+    analyzedAt: '2026-04-28T00:00:00.000Z',
+    dataWindow: '90 days',
+    sampleSize: 903,
+    modelVersion: 'v1.0',
+  },
+} as const;
+
 describe('distilled user profile schema', () => {
   beforeEach(() => {
     fallbackInvokeMock.mockReset();
@@ -456,6 +515,28 @@ ${JSON.stringify(alternativeProviderProfile, null, 2)}
     expect(profile.memoryDrafts[0]?.evidenceRefs.length).toBeGreaterThan(0);
     expect(profile.metadata.sampledPosts).toBe(774);
     expect(profile.metadata.windowDays).toBe(90);
+  });
+
+  it('coerces nested provider summary and milestone schemas into the investigation profile schema', async () => {
+    structuredInvokeMock.mockRejectedValue(
+      new SyntaxError('Unexpected token `, "```json\\n{\\n"... is not valid JSON'),
+    );
+    fallbackInvokeMock.mockResolvedValue({
+      content: `\`\`\`json
+${JSON.stringify(secondAlternativeProviderProfile, null, 2)}
+\`\`\``,
+    });
+
+    const service = new UserProfileDistillationService();
+
+    const profile = await service.distill(validDossier as any);
+
+    expect(profile.summary.long).toContain('涉政敏感话题讨论倾向');
+    expect(profile.risk.overallLevel).toBe('medium');
+    expect(profile.memoryDrafts.length).toBeGreaterThan(0);
+    expect(profile.memoryDrafts.some((item) => item.content.includes('2026-04-17'))).toBe(true);
+    expect(profile.relations.keyConnections[0]?.targetUserId).toBe('7930521683');
+    expect(profile.metadata.sampledPosts).toBe(903);
   });
 
   it('parses fenced json content returned by structured output adapters', async () => {
