@@ -130,6 +130,52 @@ const validDossier = {
   },
 } as const;
 
+const alternativeProviderProfile = {
+  summary: '该用户为高影响力认证账号，近期高频讨论国际政治和军事话题，具有明显的议题引导能力。',
+  identity: {
+    handle: '张颐武',
+    userId: '1194868525',
+    verifiedInfo: '北京大学中文系教授，博士生导师',
+    influenceLevel: '高影响力',
+    tags: ['学者', '时评人'],
+  },
+  behavior: {
+    postingFrequency: '高频',
+    activeHours: '凌晨至上午',
+    interactionPattern: '以转发和简短评论为主',
+    anomaly: '深夜活跃度异常偏高',
+  },
+  content: {
+    primaryThemes: ['国际政治', '军事动态'],
+    style: '转载媒体文章并附简短评论',
+    sentiment: '负面/批判性为主',
+    keywords: ['特朗普', '核试验'],
+  },
+  risk: {
+    level: '中',
+    score: 65,
+    reasons: [
+      '高频发布敏感国际政治话题',
+      '作为大V具备较强议题放大能力',
+    ],
+  },
+  relations: {
+    closeCircle: ['1974576991', '1703371307'],
+    interactionType: '高频转发与评论',
+    assessment: '存在固定的信息传播网络',
+  },
+  memoryDrafts: {
+    keyObservations: '近期重点聚焦国际政治和核武议题，情绪倾向较强。',
+    pendingTasks: '持续监控其相关议题的表达方向与传播链路。',
+  },
+  metadata: {
+    analysisTime: '2026-04-28T12:00:00Z',
+    dataWindow: '90 days',
+    sampleSize: 774,
+    reviewStatus: '需人工复核',
+  },
+} as const;
+
 describe('distilled user profile schema', () => {
   beforeEach(() => {
     fallbackInvokeMock.mockReset();
@@ -235,6 +281,25 @@ describe('distilled user profile schema', () => {
     expect(profile.summary.short).toBe('短摘要');
     expect(profile.memoryDrafts[0]?.type).toBe('insight');
     expect(fallbackInvokeMock).not.toHaveBeenCalled();
+  });
+
+  it('falls back to plain invoke when structured output parsing throws before reaching the service parser', async () => {
+    structuredInvokeMock.mockRejectedValue(
+      new SyntaxError('Unexpected token `, "```json\\n{\\n"... is not valid JSON'),
+    );
+    fallbackInvokeMock.mockResolvedValue({
+      content: `\`\`\`json
+${JSON.stringify(validProfile, null, 2)}
+\`\`\``,
+    });
+
+    const service = new UserProfileDistillationService();
+
+    const profile = await service.distill(validDossier as any);
+
+    expect(profile.summary.short).toBe('短摘要');
+    expect(structuredInvokeMock).toHaveBeenCalledTimes(1);
+    expect(fallbackInvokeMock).toHaveBeenCalledTimes(1);
   });
 
   it('falls back to fenced json parsing when structured output is unavailable', async () => {
@@ -367,6 +432,30 @@ describe('distilled user profile schema', () => {
 
     expect(profile.summary.short).toBe('短摘要');
     expect(profile.memoryDrafts[0]?.type).toBe('insight');
+  });
+
+  it('coerces common plain-invoke provider schemas into the investigation profile schema', async () => {
+    structuredInvokeMock.mockRejectedValue(
+      new SyntaxError('Unexpected token `, "```json\\n{\\n"... is not valid JSON'),
+    );
+    fallbackInvokeMock.mockResolvedValue({
+      content: `\`\`\`json
+${JSON.stringify(alternativeProviderProfile, null, 2)}
+\`\`\``,
+    });
+
+    const service = new UserProfileDistillationService();
+
+    const profile = await service.distill(validDossier as any);
+
+    expect(profile.summary.short).toContain('高影响力认证账号');
+    expect(profile.identity.inferredRole).toContain('北京大学中文系教授');
+    expect(profile.risk.overallLevel).toBe('medium');
+    expect(profile.risk.reviewRecommendation).toBe('human_review');
+    expect(profile.memoryDrafts).toHaveLength(2);
+    expect(profile.memoryDrafts[0]?.evidenceRefs.length).toBeGreaterThan(0);
+    expect(profile.metadata.sampledPosts).toBe(774);
+    expect(profile.metadata.windowDays).toBe(90);
   });
 
   it('parses fenced json content returned by structured output adapters', async () => {

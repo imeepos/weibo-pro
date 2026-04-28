@@ -4,6 +4,12 @@ import { distilledUserProfileSchema } from './user-profile-distillation.schema';
 import type { UserInvestigationDossier } from '@sker/sdk';
 import { useLlmModel } from '@sker/workflow-run';
 
+interface ProfileNormalizationContext {
+  dossier: UserInvestigationDossier;
+  promptVersion: string;
+  requestedModel: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class UserProfileDistillationService {
   validateProfile(payload: unknown): DistilledUserProfile {
@@ -14,8 +20,14 @@ export class UserProfileDistillationService {
     dossier: UserInvestigationDossier,
     options: { model?: string; temperature?: number } = {},
   ): Promise<DistilledUserProfile> {
+    const requestedModel = options.model ?? 'deepseek-ai/DeepSeek-V3.2';
+    const normalizationContext: ProfileNormalizationContext = {
+      dossier,
+      promptVersion: 'v1',
+      requestedModel,
+    };
     const model = useLlmModel({
-      model: options.model ?? 'deepseek-ai/DeepSeek-V3.2',
+      model: requestedModel,
       temperature: options.temperature ?? 0.2,
     });
 
@@ -37,13 +49,19 @@ export class UserProfileDistillationService {
 
     if (typeof (model as any).withStructuredOutput === 'function') {
       const structuredModel = (model as any).withStructuredOutput(distilledUserProfileSchema);
-      const response = await structuredModel.invoke(messages);
-      return this.normalizeProfileResponse(response);
+      try {
+        const response = await structuredModel.invoke(messages);
+        return this.normalizeProfileResponse(response, normalizationContext);
+      } catch (error) {
+        if (!this.isStructuredOutputParseFailure(error)) {
+          throw error;
+        }
+      }
     }
 
     const response = await model.invoke(messages);
 
-    return this.normalizeProfileResponse(response);
+    return this.normalizeProfileResponse(response, normalizationContext);
   }
 
   private buildPrompt(dossier: UserInvestigationDossier): string {
@@ -63,22 +81,25 @@ export class UserProfileDistillationService {
     );
   }
 
-  private normalizeProfileResponse(response: unknown): DistilledUserProfile {
-    const directProfile = this.tryValidateProfile(response);
+  private normalizeProfileResponse(
+    response: unknown,
+    context: ProfileNormalizationContext,
+  ): DistilledUserProfile {
+    const directProfile = this.tryValidateProfile(response, context);
     if (directProfile) {
       return directProfile;
     }
 
     for (const candidate of this.collectProfileCandidates(response)) {
       if (typeof candidate === 'string') {
-        const parsedProfile = this.tryParseProfileResponse(candidate);
+        const parsedProfile = this.tryParseProfileResponse(candidate, context);
         if (parsedProfile) {
           return parsedProfile;
         }
         continue;
       }
 
-      const nestedProfile = this.tryValidateProfile(candidate);
+      const nestedProfile = this.tryValidateProfile(candidate, context);
       if (nestedProfile) {
         return nestedProfile;
       }
@@ -87,9 +108,35 @@ export class UserProfileDistillationService {
     return this.validateProfile(response);
   }
 
-  private tryValidateProfile(payload: unknown): DistilledUserProfile | null {
+  private tryValidateProfile(
+    payload: unknown,
+    context?: ProfileNormalizationContext,
+  ): DistilledUserProfile | null {
     const result = distilledUserProfileSchema.safeParse(payload);
-    return result.success ? (result.data as DistilledUserProfile) : null;
+    if (result.success) {
+      return result.data as DistilledUserProfile;
+    }
+
+    if (!context) {
+      return null;
+    }
+
+    return this.tryCoerceProfilePayload(payload, context);
+  }
+
+  private isStructuredOutputParseFailure(error: unknown): boolean {
+    if (!(error instanceof Error)) {
+      return false;
+    }
+
+    const message = error.message || '';
+    const stack = error.stack || '';
+
+    return (
+      error instanceof SyntaxError ||
+      /Unexpected token .* is not valid JSON/i.test(message) ||
+      stack.includes('@langchain/openai/dist/utils/output.js')
+    );
   }
 
   private parseProfileResponse(response: string): DistilledUserProfile {
@@ -102,11 +149,14 @@ export class UserProfileDistillationService {
     return this.validateProfile(JSON.parse(rawCandidate ?? response.trim()));
   }
 
-  private tryParseProfileResponse(response: string): DistilledUserProfile | null {
+  private tryParseProfileResponse(
+    response: string,
+    context?: ProfileNormalizationContext,
+  ): DistilledUserProfile | null {
     for (const raw of this.extractJsonPayloads(response)) {
       try {
         const payload = JSON.parse(raw);
-        const profile = this.tryValidateProfile(payload);
+        const profile = this.tryValidateProfile(payload, context);
         if (profile) {
           return profile;
         }
@@ -116,6 +166,72 @@ export class UserProfileDistillationService {
     }
 
     return null;
+  }
+
+  private tryCoerceProfilePayload(
+    payload: unknown,
+    context: ProfileNormalizationContext,
+  ): DistilledUserProfile | null {
+    if (!this.looksLikeAlternativeProfilePayload(payload)) {
+      return null;
+    }
+
+    const record = payload as Record<string, unknown>;
+    const risk = this.asRecord(record.risk);
+    const metadata = this.asRecord(record.metadata);
+    const summaryText = this.firstNonEmptyString(record.summary, record.content);
+    const evidencePool = this.buildEvidencePool(context);
+
+    const coercedProfile = {
+      summary: {
+        short: this.shorten(summaryText || '画像生成结果需要人工复核'),
+        long: summaryText || '画像生成结果需要人工复核',
+        confidence: this.clampConfidence(
+          this.firstNumber(this.asRecord(record.summary)?.confidence, risk?.confidence) ?? 0.6,
+        ),
+      },
+      identity: this.buildCoercedIdentity(record),
+      behavior: this.buildCoercedBehavior(record),
+      content: this.buildCoercedContent(record),
+      risk: {
+        overallLevel: this.normalizeRiskLevel(risk?.overallLevel ?? risk?.level, risk?.score),
+        overallScore: this.normalizeRiskScore(risk?.overallScore ?? risk?.score),
+        riskDrivers: this.buildRiskDrivers(risk),
+        reviewRecommendation: this.normalizeReviewRecommendation(
+          risk?.reviewRecommendation,
+          risk?.score,
+        ),
+      },
+      relations: this.buildCoercedRelations(record),
+      memoryDrafts: this.buildCoercedMemoryDrafts(record, evidencePool),
+      metadata: {
+        sampledPosts: this.normalizeCount(
+          metadata?.sampledPosts ?? metadata?.sampleSize,
+          context.dossier.historyCoverage.collectedPostCount,
+        ),
+        sampledComments: this.normalizeCount(
+          metadata?.sampledComments,
+          context.dossier.historyCoverage.collectedCommentCount,
+        ),
+        sampledReposts: this.normalizeCount(
+          metadata?.sampledReposts,
+          context.dossier.historyCoverage.collectedRepostCount,
+        ),
+        windowDays: this.normalizeWindowDays(
+          metadata?.windowDays ?? metadata?.dataWindow,
+          context.dossier.historyCoverage.windowDays,
+        ),
+        model: this.firstNonEmptyString(metadata?.model, context.requestedModel) ?? context.requestedModel,
+        promptVersion:
+          this.firstNonEmptyString(metadata?.promptVersion, context.promptVersion) ?? context.promptVersion,
+        generatedAt:
+          this.firstNonEmptyString(metadata?.generatedAt, metadata?.analysisTime) ??
+          new Date().toISOString(),
+      },
+    };
+
+    const result = distilledUserProfileSchema.safeParse(coercedProfile);
+    return result.success ? (result.data as DistilledUserProfile) : null;
   }
 
   private collectProfileCandidates(response: unknown): unknown[] {
@@ -339,5 +455,355 @@ export class UserProfileDistillationService {
     }
 
     return null;
+  }
+
+  private looksLikeAlternativeProfilePayload(payload: unknown): payload is Record<string, unknown> {
+    const record = this.asRecord(payload);
+    if (!record) {
+      return false;
+    }
+
+    const identity = this.asRecord(record.identity);
+    const behavior = this.asRecord(record.behavior);
+    const risk = this.asRecord(record.risk);
+    const metadata = this.asRecord(record.metadata);
+
+    return Boolean(
+      typeof record.summary === 'string' ||
+        identity?.handle ||
+        identity?.verifiedInfo ||
+        behavior?.postingFrequency ||
+        behavior?.activeHours ||
+        risk?.level ||
+        risk?.reasons ||
+        metadata?.sampleSize ||
+        metadata?.dataWindow,
+    );
+  }
+
+  private buildCoercedIdentity(record: Record<string, unknown>) {
+    const identity = this.asRecord(record.identity);
+    const tags = this.toStringArray(identity?.accountNature ?? identity?.tags);
+    const stableTraits = this.toStringArray(identity?.stableTraits);
+    const inferredRole =
+      this.firstNonEmptyString(
+        identity?.inferredRole,
+        identity?.verifiedInfo,
+        identity?.influenceLevel,
+        identity?.handle,
+      ) ?? '待人工研判';
+
+    return {
+      inferredRole,
+      roleConfidence: this.clampConfidence(
+        this.firstNumber(identity?.roleConfidence) ?? 0.6,
+      ),
+      accountNature: tags,
+      stableTraits: stableTraits.length > 0 ? stableTraits : this.toStringArray(identity?.influenceLevel),
+    };
+  }
+
+  private buildCoercedBehavior(record: Record<string, unknown>) {
+    const behavior = this.asRecord(record.behavior);
+
+    return {
+      activityPattern: this.compactStrings([
+        ...this.toStringArray(behavior?.activityPattern),
+        this.firstNonEmptyString(behavior?.postingFrequency),
+        this.firstNonEmptyString(behavior?.activeHours),
+      ]),
+      postingRhythm:
+        this.firstNonEmptyString(behavior?.postingRhythm, behavior?.postingFrequency) ?? 'unknown',
+      escalationPattern: this.compactStrings([
+        ...this.toStringArray(behavior?.escalationPattern),
+        this.firstNonEmptyString(behavior?.interactionPattern),
+        this.firstNonEmptyString(behavior?.anomaly),
+      ]),
+      historicalStability:
+        this.firstNonEmptyString(behavior?.historicalStability, 'medium') ?? 'medium',
+    };
+  }
+
+  private buildCoercedContent(record: Record<string, unknown>) {
+    const content = this.asRecord(record.content);
+
+    return {
+      primaryTopics: this.compactStrings([
+        ...this.toStringArray(content?.primaryTopics),
+        ...this.toStringArray(content?.primaryThemes),
+      ]),
+      narrativeStyles: this.compactStrings([
+        ...this.toStringArray(content?.narrativeStyles),
+        this.firstNonEmptyString(content?.style),
+      ]),
+      emotionalTendency: this.compactStrings([
+        ...this.toStringArray(content?.emotionalTendency),
+        this.firstNonEmptyString(content?.sentiment),
+      ]),
+      stancePattern: this.compactStrings([
+        ...this.toStringArray(content?.stancePattern),
+        ...this.toStringArray(content?.keywords).slice(0, 3),
+      ]),
+    };
+  }
+
+  private buildRiskDrivers(risk: Record<string, unknown> | null) {
+    if (!risk) {
+      return [{ label: '待人工复核', reason: '模型返回结构异常，已降级兜底', confidence: 0.5 }];
+    }
+
+    const directDrivers = Array.isArray(risk.riskDrivers) ? risk.riskDrivers : [];
+    const normalizedDirectDrivers = directDrivers
+      .map((driver) => this.asRecord(driver))
+      .filter((driver): driver is Record<string, unknown> => Boolean(driver))
+      .map((driver) => ({
+        label: this.firstNonEmptyString(driver.label, driver.reason) ?? '风险信号',
+        reason: this.firstNonEmptyString(driver.reason, driver.label) ?? '待人工复核',
+        confidence: this.clampConfidence(this.firstNumber(driver.confidence) ?? 0.6),
+      }));
+
+    if (normalizedDirectDrivers.length > 0) {
+      return normalizedDirectDrivers;
+    }
+
+    const reasons = this.toStringArray(risk.reasons);
+    if (reasons.length > 0) {
+      return reasons.map((reason) => ({
+        label: this.shorten(reason, 16),
+        reason,
+        confidence: 0.6,
+      }));
+    }
+
+    return [{ label: '待人工复核', reason: '模型未返回标准风险驱动字段', confidence: 0.5 }];
+  }
+
+  private buildCoercedRelations(record: Record<string, unknown>) {
+    const relations = this.asRecord(record.relations);
+    const interactionType =
+      this.firstNonEmptyString(relations?.interactionType, 'interaction') ?? 'interaction';
+    const assessment = this.firstNonEmptyString(relations?.assessment);
+    const directKeyConnections = Array.isArray(relations?.keyConnections) ? relations.keyConnections : [];
+    const normalizedDirectConnections = directKeyConnections
+      .map((item) => this.asRecord(item))
+      .filter((item): item is Record<string, unknown> => Boolean(item))
+      .map((item) => ({
+        targetUserId: this.firstNonEmptyString(item.targetUserId) ?? 'unknown',
+        relationType: this.firstNonEmptyString(item.relationType, interactionType) ?? interactionType,
+        strength: Math.max(0, this.firstNumber(item.strength) ?? 1),
+        note: this.firstNonEmptyString(item.note, assessment, interactionType) ?? interactionType,
+      }));
+
+    const closeCircleConnections = this.toStringArray(relations?.closeCircle).map((targetUserId) => ({
+      targetUserId,
+      relationType: interactionType,
+      strength: 1,
+      note: assessment ?? interactionType,
+    }));
+
+    return {
+      keyConnections:
+        normalizedDirectConnections.length > 0 ? normalizedDirectConnections : closeCircleConnections,
+      clusterRole: this.firstNonEmptyString(relations?.clusterRole, assessment) ?? null,
+      coordinationSignals: this.compactStrings([
+        ...this.toStringArray(relations?.coordinationSignals),
+        assessment,
+      ]),
+    };
+  }
+
+  private buildCoercedMemoryDrafts(
+    record: Record<string, unknown>,
+    evidencePool: Array<{ sourceTable: string; sourceId: string; excerpt?: string; score: number }>,
+  ) {
+    const memoryDrafts = this.asRecord(record.memoryDrafts);
+    const draftEntries = this.compactStrings([
+      this.firstNonEmptyString(memoryDrafts?.keyObservations),
+      this.firstNonEmptyString(memoryDrafts?.pendingTasks),
+    ]);
+    const entries =
+      draftEntries.length > 0
+        ? draftEntries
+        : this.compactStrings([this.firstNonEmptyString(record.summary)]);
+    const uniqueEntries = Array.from(new Set(entries)).slice(0, 3);
+    const fallbackEvidenceRef = evidencePool[0] ?? {
+      sourceTable: 'weibo_posts',
+      sourceId: 'unknown',
+      score: 0.4,
+    };
+
+    return uniqueEntries.map((content, index) => ({
+      type: 'insight' as const,
+      name: index === 0 ? '关键观察' : `补充观察 ${index}`,
+      description: null,
+      content,
+      evidenceRefs: [evidencePool[index] ?? fallbackEvidenceRef],
+      relationDrafts: [],
+    }));
+  }
+
+  private buildEvidencePool(context: ProfileNormalizationContext) {
+    const samples = [
+      ...context.dossier.evidenceSamples.historySamples.map((sample) => ({
+        sourceTable: 'weibo_posts',
+        sourceId: sample.sourceId,
+        excerpt: sample.excerpt,
+        score: 0.8,
+      })),
+      ...context.dossier.evidenceSamples.eventSamples.map((sample) => ({
+        sourceTable: 'weibo_posts',
+        sourceId: sample.sourceId,
+        excerpt: sample.excerpt,
+        score: 0.78,
+      })),
+      ...context.dossier.evidenceSamples.nlpSamples.map((sample) => ({
+        sourceTable: 'weibo_posts',
+        sourceId: sample.sourceId,
+        excerpt: sample.excerpt,
+        score: 0.72,
+      })),
+      ...context.dossier.evidenceSamples.relationSamples.map((sample) => ({
+        sourceTable: 'user_relation_statistics',
+        sourceId: sample.sourceId,
+        excerpt: sample.excerpt,
+        score: 0.65,
+      })),
+    ];
+
+    return samples.slice(0, 5);
+  }
+
+  private normalizeRiskLevel(level: unknown, score: unknown): 'low' | 'medium' | 'high' | 'critical' {
+    const normalizedLevel = this.firstNonEmptyString(level)?.toLowerCase();
+    if (normalizedLevel) {
+      if (normalizedLevel.includes('critical') || normalizedLevel.includes('极高')) {
+        return 'critical';
+      }
+      if (normalizedLevel.includes('high') || normalizedLevel.includes('高')) {
+        return 'high';
+      }
+      if (normalizedLevel.includes('medium') || normalizedLevel.includes('中')) {
+        return 'medium';
+      }
+      if (normalizedLevel.includes('low') || normalizedLevel.includes('低')) {
+        return 'low';
+      }
+    }
+
+    const numericScore = this.normalizeRiskScore(score);
+    if (numericScore >= 85) {
+      return 'critical';
+    }
+    if (numericScore >= 70) {
+      return 'high';
+    }
+    if (numericScore >= 40) {
+      return 'medium';
+    }
+    return 'low';
+  }
+
+  private normalizeRiskScore(score: unknown): number {
+    const numericScore = this.firstNumber(score);
+    if (numericScore === null) {
+      return 50;
+    }
+
+    return Math.max(0, Math.min(100, Math.round(numericScore)));
+  }
+
+  private normalizeReviewRecommendation(
+    recommendation: unknown,
+    score: unknown,
+  ): 'auto_pass' | 'human_review' {
+    const normalizedRecommendation = this.firstNonEmptyString(recommendation)?.toLowerCase();
+    if (normalizedRecommendation === 'auto_pass') {
+      return 'auto_pass';
+    }
+    if (normalizedRecommendation === 'human_review') {
+      return 'human_review';
+    }
+
+    return this.normalizeRiskScore(score) >= 30 ? 'human_review' : 'auto_pass';
+  }
+
+  private normalizeCount(value: unknown, fallback: number): number {
+    const numericValue = this.firstNumber(value);
+    if (numericValue === null) {
+      return Math.max(0, Math.round(fallback));
+    }
+
+    return Math.max(0, Math.round(numericValue));
+  }
+
+  private normalizeWindowDays(value: unknown, fallback: number): number {
+    const numericValue = this.firstNumber(value);
+    if (numericValue !== null && numericValue > 0) {
+      return Math.round(numericValue);
+    }
+
+    const raw = this.firstNonEmptyString(value);
+    const matchedDays = raw?.match(/(\d+)/);
+    if (matchedDays?.[1]) {
+      return Math.max(1, Number(matchedDays[1]));
+    }
+
+    return Math.max(1, Math.round(fallback));
+  }
+
+  private shorten(value: string, maxLength: number = 120): string {
+    if (value.length <= maxLength) {
+      return value;
+    }
+
+    return `${value.slice(0, maxLength - 1).trim()}…`;
+  }
+
+  private clampConfidence(value: number): number {
+    return Math.max(0, Math.min(1, value));
+  }
+
+  private firstNonEmptyString(...values: unknown[]): string | null {
+    for (const value of values) {
+      if (typeof value === 'string' && value.trim()) {
+        return value.trim();
+      }
+    }
+
+    return null;
+  }
+
+  private firstNumber(...values: unknown[]): number | null {
+    for (const value of values) {
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        return value;
+      }
+      if (typeof value === 'string' && value.trim() && !Number.isNaN(Number(value))) {
+        return Number(value);
+      }
+    }
+
+    return null;
+  }
+
+  private toStringArray(value: unknown): string[] {
+    if (Array.isArray(value)) {
+      return this.compactStrings(
+        value.map((item) => (typeof item === 'string' ? item : this.firstNonEmptyString(item))),
+      );
+    }
+
+    const singleValue = this.firstNonEmptyString(value);
+    return singleValue ? [singleValue] : [];
+  }
+
+  private compactStrings(values: Array<string | null | undefined>): string[] {
+    return values.filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
+  }
+
+  private asRecord(value: unknown): Record<string, unknown> | null {
+    return value && typeof value === 'object' && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : null;
   }
 }
