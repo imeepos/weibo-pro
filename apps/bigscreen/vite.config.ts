@@ -4,7 +4,8 @@ import tailwindcss from '@tailwindcss/vite'
 import swc from 'vite-plugin-swc-transform'
 import path, { join, resolve } from 'path'
 import { homedir } from 'os'
-import { cpSync, existsSync, mkdirSync, rmSync } from 'fs'
+import { existsSync } from 'fs'
+import { cleanupBuildOutput, publishBuildOutput } from './scripts/build-output-publisher'
 
 // 修复 three.js 解析问题的插件
 function fixThreeJsPlugin(): Plugin {
@@ -21,6 +22,7 @@ function fixThreeJsPlugin(): Plugin {
 
 // https://vitejs.dev/config/
 export default defineConfig(({ command }) => {
+  const stagingOutDir = resolve(__dirname, '.dist-build')
   const projectOutDir = resolve(__dirname, 'dist')
   const deployOutDir = join(homedir(), 'sker/nginx/html')
   const isBuild = command === 'build'
@@ -28,14 +30,11 @@ export default defineConfig(({ command }) => {
   const mirrorOutputPlugin = {
     name: 'mirror-output-to-nginx',
     closeBundle() {
-      if (!existsSync(projectOutDir)) return
+      if (!existsSync(stagingOutDir)) return
 
-      if (existsSync(deployOutDir)) {
-        rmSync(deployOutDir, { recursive: true, force: true })
-      }
-
-      mkdirSync(deployOutDir, { recursive: true })
-      cpSync(projectOutDir, deployOutDir, { recursive: true })
+      // `dist` 目录直接挂载到线上 nginx，不能在构建开始时被清空。
+      publishBuildOutput(stagingOutDir, [projectOutDir, deployOutDir])
+      cleanupBuildOutput(stagingOutDir)
     },
   }
 
@@ -115,7 +114,8 @@ export default defineConfig(({ command }) => {
       }
     },
     build: {
-      outDir: projectOutDir,
+      outDir: stagingOutDir,
+      emptyOutDir: true,
       target: 'es2020',
       sourcemap: true, // 启用 sourcemap 用于调试
       cssCodeSplit: true, // 启用CSS代码分割
