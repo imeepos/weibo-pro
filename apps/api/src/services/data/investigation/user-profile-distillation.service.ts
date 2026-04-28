@@ -38,12 +38,12 @@ export class UserProfileDistillationService {
     if (typeof (model as any).withStructuredOutput === 'function') {
       const structuredModel = (model as any).withStructuredOutput(distilledUserProfileSchema);
       const response = await structuredModel.invoke(messages);
-      return this.validateProfile(response);
+      return this.normalizeProfileResponse(response);
     }
 
     const response = await model.invoke(messages);
 
-    return this.parseProfileResponse(response.content as string);
+    return this.normalizeProfileResponse(response);
   }
 
   private buildPrompt(dossier: UserInvestigationDossier): string {
@@ -63,9 +63,61 @@ export class UserProfileDistillationService {
     );
   }
 
+  private normalizeProfileResponse(response: unknown): DistilledUserProfile {
+    if (typeof response === 'string') {
+      return this.parseProfileResponse(response);
+    }
+
+    const textContent = this.extractTextContent((response as { content?: unknown })?.content);
+    if (textContent) {
+      return this.parseProfileResponse(textContent);
+    }
+
+    return this.validateProfile(response);
+  }
+
+  private extractTextContent(content: unknown): string | null {
+    if (typeof content === 'string') {
+      return content;
+    }
+
+    if (Array.isArray(content)) {
+      const text = content
+        .map((item) =>
+          item && typeof item === 'object' && 'text' in item && typeof item.text === 'string'
+            ? item.text
+            : '',
+        )
+        .filter(Boolean)
+        .join('\n');
+
+      return text || null;
+    }
+
+    return null;
+  }
+
   private parseProfileResponse(response: string): DistilledUserProfile {
-    const fenced = response.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
-    const raw = fenced?.[1] ?? response;
+    const raw = this.extractJsonPayload(response);
     return this.validateProfile(JSON.parse(raw));
+  }
+
+  private extractJsonPayload(response: string): string {
+    const trimmed = response.trim();
+    const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+    if (fenced?.[1]) {
+      return fenced[1].trim();
+    }
+
+    const withoutOpeningFence = trimmed.replace(/^```(?:json)?\s*/i, '');
+    const withoutClosingFence = withoutOpeningFence.replace(/\s*```$/, '');
+    const jsonStart = withoutClosingFence.indexOf('{');
+    const jsonEnd = withoutClosingFence.lastIndexOf('}');
+
+    if (jsonStart >= 0 && jsonEnd > jsonStart) {
+      return withoutClosingFence.slice(jsonStart, jsonEnd + 1).trim();
+    }
+
+    return withoutClosingFence.trim();
   }
 }
