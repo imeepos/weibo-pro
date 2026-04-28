@@ -358,6 +358,27 @@ describe('UsersService distillation flow', () => {
     });
   });
 
+  it('falls back to dossier distillation when aggregated profile generation fails', async () => {
+    userProfileDistillationService.distillFromAggregatedInput.mockRejectedValue(
+      new Error('Invalid input: expected object, received undefined'),
+    );
+
+    const result = await service.createDistillationTask('100', {
+      eventId: 'event-1',
+      historyWindowDays: 90,
+    });
+
+    await vi.waitFor(() => {
+      const saved = savedTasks.find((item) => item.id === result.id);
+      expect(userProfileDistillationService.distillFromAggregatedInput).toHaveBeenCalledTimes(1);
+      expect(userProfileDistillationService.distill).toHaveBeenCalledTimes(1);
+      expect(saved?.status).toBe('published');
+      expect(saved?.warnings_json).toContain(
+        '聚合画像生成失败，已回退到原始 dossier 蒸馏：Invalid input: expected object, received undefined',
+      );
+    });
+  });
+
   it('tracks crawling extracting aggregating progress and keeps partial warnings', async () => {
     const distilledProfile = {
       summary: { short: '短摘要', long: '长摘要', confidence: 0.9 },

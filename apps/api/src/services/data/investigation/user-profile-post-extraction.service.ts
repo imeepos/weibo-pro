@@ -11,6 +11,9 @@ import {
 
 const DEFAULT_EXTRACTOR_VERSION = 'post-v1';
 const DEFAULT_EXTRACTOR_MODEL = 'deepseek-ai/DeepSeek-V3.2';
+const DEFAULT_EXTRACTOR_TIMEOUT_MS = 30_000;
+const DEFAULT_EXTRACTOR_RETRY_LIMIT = 1;
+const DEFAULT_EXTRACTOR_PROGRESS_HEARTBEAT_MS = 10_000;
 
 type ExtractionRepo = {
   findOne: (input: unknown) => Promise<any>;
@@ -20,7 +23,7 @@ type ExtractionRepo = {
 
 @Injectable({ providedIn: 'root' })
 export class UserProfilePostExtractionService {
-  constructor(private readonly extractionRepo?: ExtractionRepo) {}
+  private extractionRepo?: ExtractionRepo;
 
   async resolveExtraction(input: {
     sourcePostId: string;
@@ -111,9 +114,13 @@ export class UserProfilePostExtractionService {
       extractedCount: number;
       failedCount: number;
       latestSourcePostId: string;
-      latestStatus: 'succeeded' | 'failed';
+      latestStatus: 'active' | 'retrying' | 'succeeded' | 'failed';
       latestWarning: string | null;
       warnings: string[];
+      phase: 'active' | 'retrying' | 'completed';
+      message: string;
+      attempt: number;
+      maxAttempts: number;
     }) => void | Promise<void>;
   }): Promise<{
     extractorVersion: string;
@@ -129,17 +136,118 @@ export class UserProfilePostExtractionService {
     let reusedCount = 0;
     let extractedCount = 0;
     let failedCount = 0;
+    const retryLimit = this.resolveExtractorRetryLimit();
+    const total = input.sourcePosts.length;
 
-    for (const sourcePost of input.sourcePosts) {
-      const result = await this.resolveExtraction({
-        sourcePostId: sourcePost.id,
-        weiboUserId: input.weiboUserId,
-        extractorVersion: input.extractorVersion,
-        fingerprint: sourcePost.content_fingerprint,
-        normalizedText: sourcePost.normalized_text,
-        sourceSnapshot: sourcePost.source_snapshot,
-        taskId: input.taskId,
+    const emitProgress = async (progress: {
+      processedCount: number;
+      reusedCount: number;
+      extractedCount: number;
+      failedCount: number;
+      latestSourcePostId: string;
+      latestStatus: 'active' | 'retrying' | 'succeeded' | 'failed';
+      latestWarning: string | null;
+      warnings: string[];
+      phase: 'active' | 'retrying' | 'completed';
+      message: string;
+      attempt: number;
+      maxAttempts: number;
+    }) => {
+      await Promise.resolve(
+        input.onProgress?.({
+          ...progress,
+          total,
+        }),
+      ).catch((error) => {
+        console.error('[UserProfilePostExtractionService] progress callback failed:', error);
       });
+    };
+
+    for (const [index, sourcePost] of input.sourcePosts.entries()) {
+      const maxAttempts = retryLimit + 1;
+      let attempt = 0;
+      let result: { reused: boolean; record: any } | null = null;
+
+      while (attempt < maxAttempts) {
+        attempt += 1;
+        const baseProcessedCount = reusedCount + extractedCount + failedCount;
+        await emitProgress({
+          processedCount: baseProcessedCount,
+          reusedCount,
+          extractedCount,
+          failedCount,
+          latestSourcePostId: sourcePost.id,
+          latestStatus: 'active',
+          latestWarning: warnings.at(-1) ?? null,
+          warnings: [...warnings],
+          phase: 'active',
+          message: `正在抽取第 ${index + 1}/${total} 条帖子（第 ${attempt}/${maxAttempts} 次尝试）`,
+          attempt,
+          maxAttempts,
+        });
+
+        const stopHeartbeat = this.startProgressHeartbeat({
+          heartbeatMs: this.resolveExtractorProgressHeartbeatMs(),
+          onTick: async (elapsedMs) => {
+            await emitProgress({
+              processedCount: baseProcessedCount,
+              reusedCount,
+              extractedCount,
+              failedCount,
+              latestSourcePostId: sourcePost.id,
+              latestStatus: 'active',
+              latestWarning: warnings.at(-1) ?? null,
+              warnings: [...warnings],
+              phase: 'active',
+              message: `正在抽取第 ${index + 1}/${total} 条帖子（第 ${attempt}/${maxAttempts} 次尝试），已等待 ${this.formatElapsedSeconds(elapsedMs)}`,
+              attempt,
+              maxAttempts,
+            });
+          },
+        });
+
+        try {
+          result = await this.resolveExtraction({
+            sourcePostId: sourcePost.id,
+            weiboUserId: input.weiboUserId,
+            extractorVersion: input.extractorVersion,
+            fingerprint: sourcePost.content_fingerprint,
+            normalizedText: sourcePost.normalized_text,
+            sourceSnapshot: sourcePost.source_snapshot,
+            taskId: input.taskId,
+          });
+        } finally {
+          stopHeartbeat();
+        }
+
+        if (
+          result.reused ||
+          result.record.status === 'succeeded' ||
+          attempt >= maxAttempts ||
+          !this.isRetryableExtractionFailure(result.record.error_message)
+        ) {
+          break;
+        }
+
+        await emitProgress({
+          processedCount: baseProcessedCount,
+          reusedCount,
+          extractedCount,
+          failedCount,
+          latestSourcePostId: sourcePost.id,
+          latestStatus: 'retrying',
+          latestWarning: warnings.at(-1) ?? null,
+          warnings: [...warnings],
+          phase: 'retrying',
+          message: `帖子 ${sourcePost.id} 抽取失败，准备第 ${attempt + 1}/${maxAttempts} 次重试`,
+          attempt,
+          maxAttempts,
+        });
+      }
+
+      if (!result) {
+        continue;
+      }
 
       items.push(result.record);
       if (result.reused) {
@@ -152,10 +260,8 @@ export class UserProfilePostExtractionService {
       }
 
       const latestWarning = warnings.at(-1) ?? null;
-      await Promise.resolve(
-        input.onProgress?.({
+      await emitProgress({
           processedCount: reusedCount + extractedCount + failedCount,
-          total: input.sourcePosts.length,
           reusedCount,
           extractedCount,
           failedCount,
@@ -163,9 +269,10 @@ export class UserProfilePostExtractionService {
           latestStatus: result.record.status === 'failed' ? 'failed' : 'succeeded',
           latestWarning,
           warnings: [...warnings],
-        }),
-      ).catch((error) => {
-        console.error('[UserProfilePostExtractionService] progress callback failed:', error);
+          phase: 'completed',
+          message: `正在逐帖抽取，已处理 ${reusedCount + extractedCount + failedCount}/${total} 条帖子`,
+          attempt,
+          maxAttempts,
       });
     }
 
@@ -200,6 +307,7 @@ export class UserProfilePostExtractionService {
       model: DEFAULT_EXTRACTOR_MODEL,
       temperature: 0.1,
     });
+    const timeoutMs = this.resolveExtractorTimeoutMs();
 
     const messages = [
       {
@@ -217,30 +325,176 @@ export class UserProfilePostExtractionService {
       },
     ];
 
-    if (typeof (model as any).withStructuredOutput === 'function') {
-      const structuredModel = (model as any).withStructuredOutput(postExtractionSchema);
-      const response = await structuredModel.invoke(messages);
-      return postExtractionSchema.parse(response);
+    try {
+      const response = await this.withTimeout(
+        () => model.invoke(messages),
+        timeoutMs,
+        `帖子抽取超时（>${Math.ceil(timeoutMs / 1000)}s）`,
+      );
+      return this.parseExtractorResponse(response);
+    } catch (error) {
+      if (
+        !this.isRecoverablePlainExtractorFailure(error) ||
+        typeof (model as any).withStructuredOutput !== 'function'
+      ) {
+        throw error;
+      }
     }
 
-    const response = await model.invoke(messages);
-    return this.parseExtractorResponse(response);
+    const structuredModel = (model as any).withStructuredOutput(postExtractionSchema);
+    const response = await this.withTimeout(
+      () => structuredModel.invoke(messages),
+      timeoutMs,
+      `帖子结构化抽取超时（>${Math.ceil(timeoutMs / 1000)}s）`,
+    );
+    return postExtractionSchema.parse(response);
   }
 
   private parseExtractorResponse(response: unknown): PostExtraction {
     if (typeof response === 'string') {
-      return postExtractionSchema.parse(JSON.parse(response));
+      return this.parseExtractorJsonText(response);
     }
 
     if (response && typeof response === 'object') {
       const content = (response as { content?: unknown }).content;
       if (typeof content === 'string') {
-        return postExtractionSchema.parse(JSON.parse(content));
+        return this.parseExtractorJsonText(content);
+      }
+
+      if (Array.isArray(content)) {
+        const text = content
+          .map((item) => {
+            if (typeof item === 'string') {
+              return item;
+            }
+            if (item && typeof item === 'object' && 'text' in item) {
+              return String((item as { text?: unknown }).text ?? '');
+            }
+            return '';
+          })
+          .join('\n')
+          .trim();
+
+        if (text) {
+          return this.parseExtractorJsonText(text);
+        }
       }
 
       return postExtractionSchema.parse(response);
     }
 
     return postExtractionSchema.parse(response);
+  }
+
+  private parseExtractorJsonText(text: string): PostExtraction {
+    const normalized = this.normalizeJsonText(text);
+    return postExtractionSchema.parse(JSON.parse(normalized));
+  }
+
+  private normalizeJsonText(text: string): string {
+    const trimmed = text.trim();
+    const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+    if (fenced?.[1]) {
+      return fenced[1].trim();
+    }
+
+    return trimmed
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```$/i, '')
+      .trim();
+  }
+
+  private isRecoverablePlainExtractorFailure(error: unknown): boolean {
+    if (!(error instanceof Error)) {
+      return false;
+    }
+
+    const message = error.message || '';
+    const stack = error.stack || '';
+
+    return (
+      error instanceof SyntaxError ||
+      (error as { name?: string }).name === 'ZodError' ||
+      /Unexpected token .* is not valid JSON/i.test(message) ||
+      /Invalid input:/i.test(message) ||
+      stack.includes('@langchain/openai/dist/utils/output.js')
+    );
+  }
+
+  private isRetryableExtractionFailure(message: unknown): boolean {
+    const normalized = String(message ?? '').toLowerCase();
+    return [
+      '超时',
+      'timeout',
+      'timed out',
+      'fetch failed',
+      'socket hang up',
+      'econnreset',
+      'econnrefused',
+      '502',
+      '503',
+      '504',
+      'bad gateway',
+      'gateway timeout',
+      'service unavailable',
+    ].some((pattern) => normalized.includes(pattern));
+  }
+
+  private resolveExtractorTimeoutMs(): number {
+    const timeoutMs = Number(process.env.USER_PROFILE_POST_EXTRACTION_TIMEOUT_MS);
+    return Number.isFinite(timeoutMs) && timeoutMs > 0
+      ? timeoutMs
+      : DEFAULT_EXTRACTOR_TIMEOUT_MS;
+  }
+
+  private resolveExtractorRetryLimit(): number {
+    const retryLimit = Number(process.env.USER_PROFILE_POST_EXTRACTION_RETRY_LIMIT);
+    return Number.isInteger(retryLimit) && retryLimit >= 0
+      ? retryLimit
+      : DEFAULT_EXTRACTOR_RETRY_LIMIT;
+  }
+
+  private resolveExtractorProgressHeartbeatMs(): number {
+    const heartbeatMs = Number(process.env.USER_PROFILE_POST_EXTRACTION_PROGRESS_HEARTBEAT_MS);
+    return Number.isFinite(heartbeatMs) && heartbeatMs > 0
+      ? heartbeatMs
+      : DEFAULT_EXTRACTOR_PROGRESS_HEARTBEAT_MS;
+  }
+
+  private startProgressHeartbeat(input: {
+    heartbeatMs: number;
+    onTick: (elapsedMs: number) => Promise<void>;
+  }): () => void {
+    const startedAt = Date.now();
+    const timer = setInterval(() => {
+      void input.onTick(Date.now() - startedAt).catch((error) => {
+        console.error('[UserProfilePostExtractionService] progress heartbeat failed:', error);
+      });
+    }, input.heartbeatMs);
+
+    return () => clearInterval(timer);
+  }
+
+  private formatElapsedSeconds(elapsedMs: number): string {
+    return `${Math.max(1, Math.round(elapsedMs / 1000))} 秒`;
+  }
+
+  private async withTimeout<T>(
+    run: () => Promise<T>,
+    timeoutMs: number,
+    timeoutMessage: string,
+  ): Promise<T> {
+    let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutHandle = setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
+    });
+
+    try {
+      return await Promise.race([run(), timeoutPromise]);
+    } finally {
+      if (timeoutHandle) {
+        clearTimeout(timeoutHandle);
+      }
+    }
   }
 }

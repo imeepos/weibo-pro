@@ -440,7 +440,8 @@ export class UsersService implements OnInit {
         onProgress: async (progress) => {
           const extractionWarnings = this.mergeWarnings(collectionWarnings, progress.warnings);
           const processedCount = Math.min(progress.processedCount, progress.total);
-          const latestMessage = `正在逐帖抽取，已处理 ${processedCount}/${progress.total} 条帖子`;
+          const latestMessage =
+            progress.message || `正在逐帖抽取，已处理 ${processedCount}/${progress.total} 条帖子`;
 
           await this.updateDistillationTask(taskId, (currentTask) => {
             currentTask.status = 'extracting';
@@ -468,6 +469,7 @@ export class UsersService implements OnInit {
         },
       });
       const combinedWarnings = this.mergeWarnings(collectionWarnings, extraction.warnings);
+      let distillationWarnings = combinedWarnings;
 
       const aggregationInput = extraction.items
         .filter((item) => item?.status === 'succeeded' && item?.extracted_json)
@@ -524,14 +526,28 @@ export class UsersService implements OnInit {
           }
         ).distillFromAggregatedInput;
 
+        if (aggregationInput.length === 0) {
+          distillationWarnings = this.mergeWarnings(distillationWarnings, [
+            '逐帖抽取未产出成功样本，已回退到原始 dossier 蒸馏',
+          ]);
+          return this.userProfileDistillationService.distill(dossier);
+        }
+
         if (typeof distillFromAggregatedInput === 'function') {
-          return distillFromAggregatedInput.call(this.userProfileDistillationService, {
-            dossier,
-            tree: aggregation.tree,
-            timeline: aggregation.timeline,
-            coordinationSignals: aggregation.coordinationSignals,
-            extractions: aggregationInput.map((item) => item.extracted),
-          });
+          try {
+            return await distillFromAggregatedInput.call(this.userProfileDistillationService, {
+              dossier,
+              tree: aggregation.tree,
+              timeline: aggregation.timeline,
+              coordinationSignals: aggregation.coordinationSignals,
+              extractions: aggregationInput.map((item) => item.extracted),
+            });
+          } catch (error) {
+            distillationWarnings = this.mergeWarnings(distillationWarnings, [
+              `聚合画像生成失败，已回退到原始 dossier 蒸馏：${error instanceof Error ? error.message : String(error)}`,
+            ]);
+            return this.userProfileDistillationService.distill(dossier);
+          }
         }
 
         return this.userProfileDistillationService.distill(dossier);
@@ -541,7 +557,7 @@ export class UsersService implements OnInit {
       profile.metadata.eventWindowCount ??= aggregation.stats?.totalEvents ?? aggregation.tree?.length ?? 0;
       profile.metadata.coordinationSignalCount ??=
         aggregation.coordinationSignals?.length ?? 0;
-      profile.metadata.warnings ??= combinedWarnings;
+      profile.metadata.warnings ??= distillationWarnings;
       const profileMetadataRecord = profile.metadata as Record<string, unknown>;
       profileMetadataRecord.graphTree = aggregation.tree;
       profileMetadataRecord.timeline = aggregation.timeline;
@@ -551,7 +567,7 @@ export class UsersService implements OnInit {
 
       await this.updateDistillationTask(taskId, (currentTask) => {
         currentTask.status = 'publishing';
-        currentTask.warnings_json = combinedWarnings;
+        currentTask.warnings_json = distillationWarnings;
         currentTask.distilled_summary =
           reviewStatus === 'auto_pass' ? '正在发布画像与知识图谱' : '画像生成完成，等待人工复核';
         this.mergeTaskProgress(currentTask, {
@@ -566,13 +582,13 @@ export class UsersService implements OnInit {
             failedPosts: extraction.failedCount,
             eventClusterCount: profile.metadata.eventWindowCount ?? 0,
             coordinationSignalCount: profile.metadata.coordinationSignalCount ?? 0,
-            warningCount: combinedWarnings.length,
+            warningCount: distillationWarnings.length,
           },
           coverage: {
             latestPostAt: collection.latestPostAt,
             oldestPostAt: collection.oldestPostAt,
           },
-          recentWarnings: combinedWarnings.slice(-3),
+          recentWarnings: distillationWarnings.slice(-3),
         });
       });
 
@@ -593,7 +609,7 @@ export class UsersService implements OnInit {
         currentTask.prompt_version = profile.metadata.promptVersion;
         currentTask.distilled_summary = profile.summary.short;
         currentTask.distilled_json = profile as unknown as Record<string, unknown>;
-        currentTask.warnings_json = combinedWarnings;
+        currentTask.warnings_json = distillationWarnings;
         currentTask.review_status = reviewStatus;
         currentTask.source_post_count = profile.metadata.sampledPosts;
         currentTask.source_comment_count = profile.metadata.sampledComments;
