@@ -797,7 +797,7 @@ ${JSON.stringify(secondAlternativeProviderProfile, null, 2)}
     });
 
     expect(profile.summary.short).toBe('短摘要');
-    expect(profile.metadata.promptVersion).toBe('v1');
+    expect(profile.metadata.promptVersion).toBe('v2');
   });
 
   it('parses fenced json from raw structured output wrappers', async () => {
@@ -848,6 +848,60 @@ ${JSON.stringify(validProfile, null, 2)}
     const profile = await service.distill(validDossier as any);
 
     expect(profile.summary.short).toBe('短摘要');
-    expect(profile.metadata.promptVersion).toBe('v1');
+    expect(profile.metadata.promptVersion).toBe('v2');
+  });
+
+  it('uses llm wiki prompt conventions in v2 distillation', async () => {
+    structuredInvokeMock.mockResolvedValue({
+      ...validProfile,
+      memoryDrafts: [{
+        ...validProfile.memoryDrafts[0],
+        section: 'identity',
+        isSectionHub: false,
+        stability: 'stable',
+      }],
+    });
+
+    const service = new UserProfileDistillationService();
+
+    await service.distill(validDossier as any);
+
+    const [messages] = structuredInvokeMock.mock.calls.at(-1)!;
+    expect(messages[0].content).toContain('raw source layer');
+    expect(messages[0].content).toContain('wiki layer');
+    expect(messages[0].content).toContain('evidence-first');
+  });
+
+  it('keeps valid memory drafts when one llm wiki draft is malformed', async () => {
+    structuredInvokeMock.mockRejectedValue(
+      new SyntaxError('Unexpected token `, "```json\\n{\\n"... is not valid JSON'),
+    );
+    fallbackInvokeMock.mockResolvedValue({
+      ...validProfile,
+      memoryDrafts: [
+        {
+          ...validProfile.memoryDrafts[0],
+          section: 'identity',
+          isSectionHub: false,
+          stability: 'stable',
+        },
+        {
+          type: 'insight',
+          name: '',
+          description: null,
+          content: '',
+          evidenceRefs: [],
+          relationDrafts: [],
+          section: 'risk',
+        },
+      ],
+    });
+
+    const service = new UserProfileDistillationService();
+
+    const profile = await service.distill(validDossier as any);
+
+    expect(profile.memoryDrafts).toHaveLength(1);
+    expect((profile.memoryDrafts[0] as any)?.section).toBe('identity');
   });
 });

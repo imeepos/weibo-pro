@@ -24,6 +24,11 @@ import type {
 import { In } from 'typeorm';
 import { PersonaProjectionService } from './investigation/persona-projection.service';
 import { PersonaNetworkService } from './investigation/persona-network.service';
+import {
+  inferMemorySection,
+  isLlmWikiSectionHubName,
+  LLM_WIKI_SECTION_HUB_NAMES,
+} from './investigation/llm-wiki-memory-organization';
 
 @Injectable({ providedIn: 'root' })
 export class PersonaService {
@@ -148,14 +153,56 @@ export class PersonaService {
             .getMany()
         : [];
 
-      const memoryNodes: MemoryNode[] = memories.map(m => ({
-        id: m.id,
-        name: m.name,
-        description: m.description,
-        content: m.content,
-        type: m.type,
-        createdAt: m.created_at.toISOString(),
-      }));
+      const sectionByHubId = new Map<string, keyof typeof LLM_WIKI_SECTION_HUB_NAMES>();
+      for (const memory of memories) {
+        if (memory.type !== 'concept' || !isLlmWikiSectionHubName(memory.name)) {
+          continue;
+        }
+
+        const section = (Object.entries(LLM_WIKI_SECTION_HUB_NAMES).find(
+          ([, hubName]) => hubName === memory.name,
+        )?.[0] ?? null) as keyof typeof LLM_WIKI_SECTION_HUB_NAMES | null;
+
+        if (section) {
+          sectionByHubId.set(memory.id, section);
+        }
+      }
+
+      const sectionByMemoryId = new Map<string, keyof typeof LLM_WIKI_SECTION_HUB_NAMES>();
+      for (const relation of relations) {
+        if (relation.relation_type !== 'contains') {
+          continue;
+        }
+
+        const section = sectionByHubId.get(relation.source_id);
+        if (section) {
+          sectionByMemoryId.set(relation.target_id, section);
+        }
+      }
+
+      const memoryNodes: MemoryNode[] = memories.map((m) => {
+        const hubSection = sectionByHubId.get(m.id);
+        const section =
+          hubSection ??
+          sectionByMemoryId.get(m.id) ??
+          inferMemorySection({
+            type: m.type,
+            name: m.name,
+            content: m.content,
+          });
+
+        return {
+          id: m.id,
+          name: m.name,
+          description: m.description,
+          content: m.content,
+          type: m.type,
+          createdAt: m.created_at.toISOString(),
+          section,
+          isSectionHub: Boolean(hubSection),
+          stability: 'stable',
+        };
+      });
 
       const memoryEdges: MemoryEdge[] = relations.map(r => ({
         id: r.id,

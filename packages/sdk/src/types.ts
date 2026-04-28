@@ -938,6 +938,9 @@ export interface DistilledMemoryRelationDraft {
   note?: string
 }
 
+export type DistilledMemorySection = 'identity' | 'behavior' | 'content' | 'risk' | 'relations'
+export type DistilledMemoryStability = 'stable' | 'tentative' | 'conflicted'
+
 export interface DistilledMemoryDraft {
   type: MemoryType
   name: string
@@ -945,6 +948,9 @@ export interface DistilledMemoryDraft {
   content: string
   evidenceRefs: DistilledMemoryEvidenceRef[]
   relationDrafts: DistilledMemoryRelationDraft[]
+  section?: DistilledMemorySection
+  isSectionHub?: boolean
+  stability?: DistilledMemoryStability
 }
 
 export interface DistilledUserProfile {
@@ -1254,6 +1260,9 @@ export interface MemoryNode {
   content: string
   type: MemoryType
   createdAt: string
+  section?: DistilledMemorySection
+  isSectionHub?: boolean
+  stability?: DistilledMemoryStability
 }
 
 export interface MemoryEdge {

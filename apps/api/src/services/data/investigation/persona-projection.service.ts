@@ -12,6 +12,12 @@ import type {
   DistilledUserProfile,
   PersonaEvidenceItem,
 } from '@sker/sdk';
+import {
+  inferMemorySection,
+  LLM_WIKI_SECTION_HUB_NAMES,
+  LLM_WIKI_SECTIONS,
+  normalizeLlmWikiStability,
+} from './llm-wiki-memory-organization';
 
 @Injectable({ providedIn: 'root' })
 export class PersonaProjectionService {
@@ -38,6 +44,21 @@ export class PersonaProjectionService {
       score: number;
     }>;
   }> {
+    const memories = input.memoryDrafts
+      .filter((draft) => !draft.isSectionHub)
+      .map((draft) => ({
+        ...draft,
+        section:
+          draft.section ??
+          inferMemorySection({
+            type: draft.type,
+            name: draft.name,
+            content: draft.content,
+          }),
+        isSectionHub: false,
+        stability: normalizeLlmWikiStability(draft.stability),
+      }));
+
     return {
       persona: {
         name: input.screenName,
@@ -56,11 +77,13 @@ export class PersonaProjectionService {
             riskScore: input.risk.overallScore,
             primaryTopics: input.content.primaryTopics,
           },
+          organizationMethod: 'llm_wiki_v1',
+          sectionOrder: [...LLM_WIKI_SECTIONS],
           metadata: input.metadata,
         },
       },
-      memories: input.memoryDrafts,
-      evidence: input.memoryDrafts.flatMap((draft) => draft.evidenceRefs),
+      memories,
+      evidence: memories.flatMap((draft) => draft.evidenceRefs),
     };
   }
 
@@ -132,6 +155,33 @@ export class PersonaProjectionService {
         await memoryRepo.delete(existingMemories.map((item) => item.id));
       }
 
+      const sectionHubIdBySection = new Map<string, string>();
+      const usedSections = Array.from(
+        new Set(
+          projection.memories
+            .map((draft) => draft.section)
+            .filter((section): section is NonNullable<typeof section> => Boolean(section)),
+        ),
+      );
+
+      for (const section of usedSections) {
+        const savedHub = await memoryRepo.save(memoryRepo.create({
+          persona_id: savedPersona.id,
+          name: LLM_WIKI_SECTION_HUB_NAMES[section],
+          description: `${section} section hub`,
+          content: `${section} section hub`,
+          type: 'concept',
+        }));
+        sectionHubIdBySection.set(section, savedHub.id);
+
+        await closureRepo.save(closureRepo.create({
+          ancestor_id: savedHub.id,
+          descendant_id: savedHub.id,
+          path: [savedHub.id],
+          depth: 0,
+        }));
+      }
+
       const memoryIdByName = new Map<string, string>();
       for (const draft of projection.memories) {
         const savedMemory = await memoryRepo.save(memoryRepo.create({
@@ -149,6 +199,16 @@ export class PersonaProjectionService {
           path: [savedMemory.id],
           depth: 0,
         }));
+
+        const hubId = draft.section ? sectionHubIdBySection.get(draft.section) : undefined;
+        if (hubId) {
+          await relationRepo.save(relationRepo.create({
+            source_id: hubId,
+            target_id: savedMemory.id,
+            relation_type: 'contains',
+          }));
+          await this.updateClosure(manager, hubId, savedMemory.id);
+        }
 
         for (const evidence of draft.evidenceRefs) {
           await evidenceRepo.save(evidenceRepo.create({

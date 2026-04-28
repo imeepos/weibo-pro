@@ -1,8 +1,13 @@
 import { Injectable } from '@sker/core';
 import type { DistilledUserProfile } from '@sker/sdk';
-import { distilledUserProfileSchema } from './user-profile-distillation.schema';
+import { distilledMemoryDraftSchema, distilledUserProfileSchema } from './user-profile-distillation.schema';
 import type { UserInvestigationDossier } from '@sker/sdk';
 import { useLlmModel } from '@sker/workflow-run';
+import {
+  inferMemorySection,
+  isLlmWikiSection,
+  normalizeLlmWikiStability,
+} from './llm-wiki-memory-organization';
 
 interface ProfileNormalizationContext {
   dossier: UserInvestigationDossier;
@@ -21,9 +26,10 @@ export class UserProfileDistillationService {
     options: { model?: string; temperature?: number } = {},
   ): Promise<DistilledUserProfile> {
     const requestedModel = options.model ?? 'deepseek-ai/DeepSeek-V3.2';
+    const promptVersion = 'v2';
     const normalizationContext: ProfileNormalizationContext = {
       dossier,
-      promptVersion: 'v1',
+      promptVersion,
       requestedModel,
     };
     const model = useLlmModel({
@@ -35,8 +41,10 @@ export class UserProfileDistillationService {
       {
         role: 'system',
         content: [
-          '你是微博高危用户研判专家。',
-          '请根据输入的结构化 dossier 输出一个 JSON。',
+          '你是微博高危用户研判专家，同时负责按 LLM Wiki 方法整理用户知识画像。',
+          '输入 dossier 是 raw source layer，输出 JSON 是 wiki layer。',
+          '每条 memory 必须 evidence-first、尽量去重，并归入 identity/behavior/content/risk/relations 之一。',
+          '若证据不足，使用 tentative；若证据冲突，使用 conflicted；不要编造。',
           '只能返回 JSON，不要添加解释、标题或 Markdown 之外的文本。',
           '输出必须包含 summary、identity、behavior、content、risk、relations、memoryDrafts、metadata。',
         ].join('\n'),
@@ -114,11 +122,16 @@ export class UserProfileDistillationService {
   ): DistilledUserProfile | null {
     const result = distilledUserProfileSchema.safeParse(payload);
     if (result.success) {
-      return result.data as DistilledUserProfile;
+      return context ? this.applyProfileDefaults(result.data as DistilledUserProfile, context) : (result.data as DistilledUserProfile);
     }
 
     if (!context) {
       return null;
+    }
+
+    const sanitizedProfile = this.tryNormalizeSchemaCompatibleProfile(payload, context);
+    if (sanitizedProfile) {
+      return sanitizedProfile;
     }
 
     return this.tryCoerceProfilePayload(payload, context);
@@ -239,7 +252,79 @@ export class UserProfileDistillationService {
     };
 
     const result = distilledUserProfileSchema.safeParse(coercedProfile);
-    return result.success ? (result.data as DistilledUserProfile) : null;
+    return result.success ? this.applyProfileDefaults(result.data as DistilledUserProfile, context) : null;
+  }
+
+  private tryNormalizeSchemaCompatibleProfile(
+    payload: unknown,
+    context: ProfileNormalizationContext,
+  ): DistilledUserProfile | null {
+    const record = this.asRecord(payload);
+    if (!record || !Array.isArray(record.memoryDrafts)) {
+      return null;
+    }
+
+    const normalizedMemoryDrafts = this.normalizeMemoryDrafts(record.memoryDrafts);
+    if (normalizedMemoryDrafts.length === 0) {
+      return null;
+    }
+
+    const candidate = {
+      ...record,
+      memoryDrafts: normalizedMemoryDrafts,
+    };
+
+    const result = distilledUserProfileSchema.safeParse(candidate);
+    return result.success ? this.applyProfileDefaults(result.data as DistilledUserProfile, context) : null;
+  }
+
+  private applyProfileDefaults(
+    profile: DistilledUserProfile,
+    context: ProfileNormalizationContext,
+  ): DistilledUserProfile {
+    return {
+      ...profile,
+      memoryDrafts: this.normalizeMemoryDrafts(profile.memoryDrafts),
+      metadata: {
+        ...profile.metadata,
+        model: profile.metadata.model || context.requestedModel,
+        promptVersion: context.promptVersion,
+        generatedAt: profile.metadata.generatedAt || new Date().toISOString(),
+      },
+    };
+  }
+
+  private normalizeMemoryDrafts(
+    drafts: unknown[],
+  ): DistilledUserProfile['memoryDrafts'] {
+    return drafts.flatMap((draft) => {
+      const record = this.asRecord(draft);
+      if (!record) {
+        return [];
+      }
+
+      const candidate = {
+        ...record,
+        section: this.normalizeSection(record.section, record),
+        isSectionHub: Boolean(record.isSectionHub),
+        stability: normalizeLlmWikiStability(record.stability),
+      };
+
+      const result = distilledMemoryDraftSchema.safeParse(candidate);
+      return result.success ? [result.data] : [];
+    }) as DistilledUserProfile['memoryDrafts'];
+  }
+
+  private normalizeSection(section: unknown, draft: Record<string, unknown>): 'identity' | 'behavior' | 'content' | 'risk' | 'relations' {
+    if (isLlmWikiSection(section)) {
+      return section;
+    }
+
+    return inferMemorySection({
+      type: this.firstNonEmptyString(draft.type, 'insight') ?? 'insight',
+      name: this.firstNonEmptyString(draft.name, '') ?? '',
+      content: this.firstNonEmptyString(draft.content, '') ?? '',
+    });
   }
 
   private collectProfileCandidates(response: unknown): unknown[] {

@@ -142,10 +142,7 @@ describe('PersonaProjectionService', () => {
     const service = new PersonaProjectionService();
     await service.publishProfile(baseInput);
 
-    expect(savedEntities.MemoryRelationEntity).toHaveLength(1);
-    expect(savedEntities.MemoryRelationEntity?.[0]).toMatchObject({
-      relation_type: 'related',
-    });
+    expect(savedEntities.MemoryRelationEntity?.some((item) => item.relation_type === 'related')).toBe(true);
     expect(savedEntities.MemoryClosureEntity?.length).toBeGreaterThanOrEqual(3);
   });
 
@@ -220,6 +217,142 @@ describe('PersonaProjectionService', () => {
     });
 
     expect(savedEntities.MemoryEntity?.some((item) => item.name === '用户B Persona' && item.type === 'person')).toBe(true);
-    expect(savedEntities.MemoryRelationEntity?.length).toBe(1);
+    expect(savedEntities.MemoryRelationEntity?.some((item) => item.relation_type === 'related')).toBe(true);
+  });
+
+  it('creates section hubs and contains relations for llm wiki memories', async () => {
+    const savedEntities: Record<string, any[]> = {};
+    let sequence = 0;
+
+    vi.mocked(useEntityManager).mockImplementation(async (handler: any) => {
+      const createRepo = (entityName: string) => ({
+        async findOne() {
+          return null;
+        },
+        async find(options?: any) {
+          if (entityName === 'MemoryEntity') {
+            return [];
+          }
+          if (entityName === 'MemoryClosureEntity' && options?.where?.descendant_id) {
+            return [{
+              ancestor_id: options.where.descendant_id,
+              descendant_id: options.where.descendant_id,
+              path: [options.where.descendant_id],
+              depth: 0,
+            }];
+          }
+          return [];
+        },
+        create(input: any) {
+          return { ...input };
+        },
+        async save(input: any) {
+          const entity = {
+            id: input.id ?? `${entityName}-${++sequence}`,
+            ...input,
+            created_at: input.created_at ?? new Date('2026-04-23T00:00:00.000Z'),
+            updated_at: input.updated_at ?? new Date('2026-04-23T00:00:00.000Z'),
+          };
+          savedEntities[entityName] ??= [];
+          savedEntities[entityName].push(entity);
+          return entity;
+        },
+        async delete() {
+          return;
+        },
+      });
+
+      return handler({
+        getRepository(entity: any) {
+          return createRepo(entity.name);
+        },
+      });
+    });
+
+    const service = new PersonaProjectionService();
+    await service.publishProfile({
+      ...baseInput,
+      memoryDrafts: [
+        {
+          ...baseInput.memoryDrafts[0],
+          section: 'behavior',
+          stability: 'stable',
+        },
+        {
+          ...baseInput.memoryDrafts[1],
+          section: 'content',
+          stability: 'tentative',
+        },
+      ],
+    });
+
+    expect(savedEntities.MemoryEntity?.some((item) => item.name === '行为模式')).toBe(true);
+    expect(savedEntities.MemoryEntity?.some((item) => item.name === '内容倾向')).toBe(true);
+    expect(savedEntities.MemoryRelationEntity?.some((item) => item.relation_type === 'contains')).toBe(true);
+    expect(savedEntities.PersonaEntity?.[0]?.metadata?.organizationMethod).toBe('llm_wiki_v1');
+  });
+
+  it('falls back to inferred section when legacy memory drafts omit section', async () => {
+    const savedEntities: Record<string, any[]> = {};
+    let sequence = 0;
+
+    vi.mocked(useEntityManager).mockImplementation(async (handler: any) => {
+      const createRepo = (entityName: string) => ({
+        async findOne() {
+          return null;
+        },
+        async find(options?: any) {
+          if (entityName === 'MemoryEntity') {
+            return [];
+          }
+          if (entityName === 'MemoryClosureEntity' && options?.where?.descendant_id) {
+            return [{
+              ancestor_id: options.where.descendant_id,
+              descendant_id: options.where.descendant_id,
+              path: [options.where.descendant_id],
+              depth: 0,
+            }];
+          }
+          return [];
+        },
+        create(input: any) {
+          return { ...input };
+        },
+        async save(input: any) {
+          const entity = {
+            id: input.id ?? `${entityName}-${++sequence}`,
+            ...input,
+            created_at: input.created_at ?? new Date('2026-04-23T00:00:00.000Z'),
+            updated_at: input.updated_at ?? new Date('2026-04-23T00:00:00.000Z'),
+          };
+          savedEntities[entityName] ??= [];
+          savedEntities[entityName].push(entity);
+          return entity;
+        },
+        async delete() {
+          return;
+        },
+      });
+
+      return handler({
+        getRepository(entity: any) {
+          return createRepo(entity.name);
+        },
+      });
+    });
+
+    const service = new PersonaProjectionService();
+    await service.publishProfile({
+      ...baseInput,
+      memoryDrafts: [{
+        ...baseInput.memoryDrafts[0],
+        name: '认证账号画像',
+        content: '账号为认证媒体账号',
+        section: undefined,
+        stability: undefined,
+      }],
+    });
+
+    expect(savedEntities.MemoryEntity?.some((item) => item.name === '身份画像')).toBe(true);
   });
 });

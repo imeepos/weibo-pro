@@ -2,7 +2,6 @@ import React, { useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import ReactFlow, {
   Node,
-  Edge,
   useNodesState,
   useEdgesState,
   Controls,
@@ -13,7 +12,8 @@ import ReactFlow, {
   MiniMap,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import type { PersonaMemoryGraph, MemoryNode as MemoryNodeType, MemoryType, RelationType } from '@sker/sdk';
+import type { PersonaMemoryGraph, MemoryNode as MemoryNodeType, MemoryType } from '@sker/sdk';
+import { buildMemoryGraphLayout, MEMORY_MINIMAP_COLORS } from './memory-graph-layout';
 
 const MEMORY_TYPE_COLORS: Record<MemoryType, { bg: string; border: string; text: string }> = {
   fact: { bg: 'bg-blue-100', border: 'border-blue-400', text: 'text-blue-700' },
@@ -21,13 +21,6 @@ const MEMORY_TYPE_COLORS: Record<MemoryType, { bg: string; border: string; text:
   event: { bg: 'bg-amber-100', border: 'border-amber-400', text: 'text-amber-700' },
   person: { bg: 'bg-rose-100', border: 'border-rose-400', text: 'text-rose-700' },
   insight: { bg: 'bg-emerald-100', border: 'border-emerald-400', text: 'text-emerald-700' },
-};
-
-const RELATION_STYLES: Record<RelationType, { stroke: string; animated: boolean; label: string }> = {
-  related: { stroke: '#94a3b8', animated: false, label: '关联' },
-  causes: { stroke: '#f97316', animated: true, label: '导致' },
-  follows: { stroke: '#3b82f6', animated: true, label: '跟随' },
-  contains: { stroke: '#8b5cf6', animated: false, label: '包含' },
 };
 
 const PersonaNode = ({ data }: { data: { persona: PersonaMemoryGraph['persona'] } }) => {
@@ -60,7 +53,13 @@ const PersonaNode = ({ data }: { data: { persona: PersonaMemoryGraph['persona'] 
 
 const MemoryNodeComponent = ({ data }: { data: { memory: MemoryNodeType } }) => {
   const { memory } = data;
-  const colors = MEMORY_TYPE_COLORS[memory.type];
+  const isHub = Boolean(memory.isSectionHub);
+  const colors = isHub
+    ? { bg: 'bg-slate-200', border: 'border-slate-500', text: 'text-slate-900' }
+    : MEMORY_TYPE_COLORS[memory.type];
+  const metaLabel = isHub
+    ? 'section hub'
+    : [memory.section, memory.stability, memory.type].filter(Boolean).join(' · ');
 
   return (
     <motion.div
@@ -71,9 +70,9 @@ const MemoryNodeComponent = ({ data }: { data: { memory: MemoryNodeType } }) => 
       <Handle type="target" position={Position.Left} className="!bg-gray-400 !w-2 !h-2" />
       <Handle type="source" position={Position.Right} className="!bg-gray-400 !w-2 !h-2" />
 
-      <div className={`px-3 py-2 rounded-lg border-2 ${colors.bg} ${colors.border} shadow-md min-w-[100px] max-w-[160px]`}>
+      <div className={`px-3 py-2 rounded-lg border-2 ${colors.bg} ${colors.border} shadow-md ${isHub ? 'min-w-[132px]' : 'min-w-[100px]'} max-w-[180px]`}>
         <div className={`text-xs font-medium ${colors.text} truncate`}>{memory.name}</div>
-        <div className="text-[10px] text-gray-500 mt-0.5 capitalize">{memory.type}</div>
+        <div className="text-[10px] text-gray-500 mt-0.5 capitalize">{metaLabel}</div>
       </div>
 
       <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-none">
@@ -100,56 +99,11 @@ interface MemoryGraphProps {
 
 export const MemoryGraph: React.FC<MemoryGraphProps> = ({ data, className = '' }) => {
   const { initialNodes, initialEdges } = useMemo(() => {
-    const nodes: Node[] = [];
-    const edges: Edge[] = [];
-
-    nodes.push({
-      id: 'persona',
-      type: 'persona',
-      position: { x: 0, y: 0 },
-      data: { persona: data.persona },
-      draggable: false,
-    });
-
-    const memoryCount = data.memories.length;
-    const radius = Math.max(200, memoryCount * 25);
-
-    data.memories.forEach((memory, index) => {
-      const angle = (index * 2 * Math.PI) / memoryCount - Math.PI / 2;
-      const x = Math.cos(angle) * radius;
-      const y = Math.sin(angle) * radius;
-
-      nodes.push({
-        id: memory.id,
-        type: 'memory',
-        position: { x, y },
-        data: { memory },
-      });
-
-      edges.push({
-        id: `persona-${memory.id}`,
-        source: 'persona',
-        target: memory.id,
-        type: 'smoothstep',
-        style: { stroke: '#cbd5e1', strokeWidth: 1.5 },
-      });
-    });
-
-    data.relations.forEach((relation) => {
-      const style = RELATION_STYLES[relation.relationType];
-      edges.push({
-        id: relation.id,
-        source: relation.sourceId,
-        target: relation.targetId,
-        type: 'smoothstep',
-        animated: style.animated,
-        style: { stroke: style.stroke, strokeWidth: 2 },
-        label: style.label,
-        labelStyle: { fontSize: 10, fill: style.stroke },
-      });
-    });
-
-    return { initialNodes: nodes, initialEdges: edges };
+    const layout = buildMemoryGraphLayout(data);
+    return {
+      initialNodes: layout.nodes,
+      initialEdges: layout.edges,
+    };
   }, [data]);
 
   const [nodes, , onNodesChange] = useNodesState(initialNodes);
@@ -158,14 +112,8 @@ export const MemoryGraph: React.FC<MemoryGraphProps> = ({ data, className = '' }
   const nodeColor = useCallback((node: Node) => {
     if (node.type === 'persona') return '#6366f1';
     const memory = node.data?.memory as MemoryNodeType;
-    const colorMap: Record<MemoryType, string> = {
-      fact: '#3b82f6',
-      concept: '#8b5cf6',
-      event: '#f59e0b',
-      person: '#f43f5e',
-      insight: '#10b981',
-    };
-    return colorMap[memory?.type] || '#94a3b8';
+    if (memory?.isSectionHub) return '#475569';
+    return MEMORY_MINIMAP_COLORS[memory?.type as MemoryType] || '#94a3b8';
   }, []);
 
   return (

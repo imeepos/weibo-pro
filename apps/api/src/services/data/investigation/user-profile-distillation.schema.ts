@@ -1,5 +1,27 @@
 import { z } from 'zod';
 
+export const distilledMemoryDraftSchema = z.object({
+  type: z.enum(['fact', 'concept', 'event', 'person', 'insight']),
+  name: z.string().min(1),
+  description: z.string().nullable(),
+  content: z.string().min(1),
+  evidenceRefs: z.array(z.object({
+    sourceTable: z.string().min(1),
+    sourceId: z.string().min(1),
+    excerpt: z.string().optional(),
+    score: z.number().min(0).max(1),
+  })).min(1),
+  relationDrafts: z.array(z.object({
+    relationType: z.enum(['related', 'causes', 'follows', 'contains']),
+    targetKind: z.enum(['memory', 'persona']),
+    targetRef: z.string().min(1),
+    note: z.string().optional(),
+  })),
+  section: z.enum(['identity', 'behavior', 'content', 'risk', 'relations']).optional(),
+  isSectionHub: z.boolean().optional(),
+  stability: z.enum(['stable', 'tentative', 'conflicted']).optional(),
+});
+
 export const distilledUserProfileSchema = z.object({
   summary: z.object({
     short: z.string().min(1),
@@ -44,24 +66,7 @@ export const distilledUserProfileSchema = z.object({
     clusterRole: z.string().nullable(),
     coordinationSignals: z.array(z.string()),
   }),
-  memoryDrafts: z.array(z.object({
-    type: z.enum(['fact', 'concept', 'event', 'person', 'insight']),
-    name: z.string().min(1),
-    description: z.string().nullable(),
-    content: z.string().min(1),
-    evidenceRefs: z.array(z.object({
-      sourceTable: z.string().min(1),
-      sourceId: z.string().min(1),
-      excerpt: z.string().optional(),
-      score: z.number().min(0).max(1),
-    })).min(1),
-    relationDrafts: z.array(z.object({
-      relationType: z.enum(['related', 'causes', 'follows', 'contains']),
-      targetKind: z.enum(['memory', 'persona']),
-      targetRef: z.string().min(1),
-      note: z.string().optional(),
-    })),
-  })).min(1),
+  memoryDrafts: z.array(distilledMemoryDraftSchema).min(1),
   metadata: z.object({
     sampledPosts: z.number().int().min(0),
     sampledComments: z.number().int().min(0),
