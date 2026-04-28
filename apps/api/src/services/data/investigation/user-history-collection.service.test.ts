@@ -60,6 +60,7 @@ describe('UserHistoryCollectionService', () => {
   it('returns a partial result and unsubscribes when timeline collection stops producing progress', async () => {
     vi.useFakeTimers();
     vi.stubEnv('USER_HISTORY_COLLECTION_NO_PROGRESS_TIMEOUT_MS', '1000');
+    vi.stubEnv('USER_HISTORY_COLLECTION_NO_PROGRESS_RETRY_LIMIT', '0');
 
     const unsubscribe = vi.fn();
     const visitor = {
@@ -83,5 +84,34 @@ describe('UserHistoryCollectionService', () => {
       status: 'partial',
     });
     expect(unsubscribe).toHaveBeenCalled();
+  });
+
+  it('retries stalled collection before returning partial', async () => {
+    vi.useFakeTimers();
+    vi.stubEnv('USER_HISTORY_COLLECTION_NO_PROGRESS_TIMEOUT_MS', '1000');
+    vi.stubEnv('USER_HISTORY_COLLECTION_NO_PROGRESS_RETRY_LIMIT', '2');
+
+    const visit = vi
+      .fn()
+      .mockReturnValueOnce({ subscribe: () => ({ unsubscribe: vi.fn() }) })
+      .mockReturnValueOnce({ subscribe: () => ({ unsubscribe: vi.fn() }) })
+      .mockReturnValueOnce({ subscribe: () => ({ unsubscribe: vi.fn() }) });
+
+    const service = new UserHistoryCollectionService({ visit } as any);
+    const pending = service.collect({
+      weiboUserId: '123',
+      uid: '123',
+      windowDays: 90,
+      taskId: 'task-1',
+    });
+
+    await vi.advanceTimersByTimeAsync(3000);
+
+    await expect(pending).resolves.toMatchObject({
+      status: 'partial',
+      warnings: expect.arrayContaining([
+        '历史发帖抓取长时间无进展，第 2 次重试后结束抓取并继续分析',
+      ]),
+    });
   });
 });

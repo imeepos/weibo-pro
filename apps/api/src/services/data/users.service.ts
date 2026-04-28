@@ -1,14 +1,17 @@
 import { Injectable, Inject, OnInit } from '@sker/core';
 import {
+  UserProfileSourcePostEntity,
   WeiboUserEntity,
   UserProfileDistillationTaskEntity,
   useEntityManager,
 } from '@sker/entities';
+import { createHash } from 'node:crypto';
 import { CacheService, CACHE_KEYS, CACHE_TTL } from '../cache.service';
 import { getTimeRangeBoundaries, getPreviousTimeRangeBoundaries } from './time-range.utils';
 import type { TimeRange } from './types';
 import type {
   CreateDistillationTaskRequest,
+  DistillationTaskProgress,
   DistillationTaskSummary,
   ReviewDistillationTaskRequest,
   UserInvestigationDossier,
@@ -18,12 +21,49 @@ import type {
 import { InvestigationQueueService } from './investigation/investigation-queue.service';
 import { UserDossierService } from './investigation/user-dossier.service';
 import { UserHistoryCollectionService } from './investigation/user-history-collection.service';
+import { UserProfileAggregationService } from './investigation/user-profile-aggregation.service';
 import { UserProfileDistillationService } from './investigation/user-profile-distillation.service';
+import { UserProfilePostExtractionService } from './investigation/user-profile-post-extraction.service';
 import { PersonaProjectionService } from './investigation/persona-projection.service';
 
-const ACTIVE_DISTILLATION_TASK_STATUSES = new Set(['queued', 'crawling', 'analyzing']);
+const ACTIVE_DISTILLATION_TASK_STATUSES = new Set([
+  'queued',
+  'crawling',
+  'extracting',
+  'aggregating',
+  'publishing',
+  'analyzing',
+]);
 const DEFAULT_DISTILLATION_TIMEOUT_MS = 10 * 60 * 1000;
 const DEFAULT_DISTILLATION_HEARTBEAT_MS = 15 * 1000;
+const DEFAULT_POST_EXTRACTION_VERSION = 'post-v1';
+
+type DistillationTaskProgressPatch =
+  Omit<Partial<DistillationTaskProgress>, 'counters' | 'coverage'> & {
+    counters?: Partial<DistillationTaskProgress['counters']>;
+    coverage?: Partial<DistillationTaskProgress['coverage']>;
+  };
+
+const createEmptyDistillationProgress = (): DistillationTaskProgress => ({
+  stage: 'queued',
+  partial: false,
+  latestMessage: '任务已入队，等待开始抓取历史发帖',
+  lastProgressAt: new Date().toISOString(),
+  counters: {
+    crawledPosts: 0,
+    reusedExtractions: 0,
+    extractedPosts: 0,
+    failedPosts: 0,
+    eventClusterCount: 0,
+    coordinationSignalCount: 0,
+    warningCount: 0,
+  },
+  coverage: {
+    latestPostAt: null,
+    oldestPostAt: null,
+  },
+  recentWarnings: [],
+});
 
 export type RiskLevel = 'low' | 'medium' | 'high';
 
@@ -122,6 +162,10 @@ export class UsersService implements OnInit {
     private readonly userProfileDistillationService: UserProfileDistillationService,
     @Inject(PersonaProjectionService)
     private readonly personaProjectionService: PersonaProjectionService,
+    @Inject(UserProfilePostExtractionService)
+    private readonly postExtractionService: UserProfilePostExtractionService = new UserProfilePostExtractionService(),
+    @Inject(UserProfileAggregationService)
+    private readonly aggregationService: UserProfileAggregationService = new UserProfileAggregationService(),
   ) {}
 
   async onInit(): Promise<void> {
@@ -205,13 +249,15 @@ export class UsersService implements OnInit {
         status: 'queued',
         history_window_days: request?.historyWindowDays ?? 90,
         distilled_summary: '任务已入队，等待开始抓取历史发帖',
+        progress_json: createEmptyDistillationProgress(),
+        warnings_json: [],
         source_post_count: 0,
         source_comment_count: 0,
         source_repost_count: 0,
         evidence_sample_count: 0,
-      });
+      } as any) as unknown as UserProfileDistillationTaskEntity;
       return {
-        task: await repo.save(task),
+        task: (await repo.save(task as any)) as UserProfileDistillationTaskEntity,
         shouldExecute: true,
       };
     });
@@ -312,8 +358,13 @@ export class UsersService implements OnInit {
       currentTask.started_at = new Date();
       currentTask.completed_at = null;
       currentTask.error_message = null;
+      currentTask.warnings_json = [];
       currentTask.distilled_summary = '正在抓取历史发帖...';
       currentTask.source_post_count = 0;
+      this.mergeTaskProgress(currentTask, {
+        stage: 'crawling',
+        latestMessage: '正在抓取历史发帖...',
+      });
     });
 
     try {
@@ -327,6 +378,21 @@ export class UsersService implements OnInit {
             currentTask.source_post_count = progress.collectedPostCount;
             currentTask.distilled_summary = progress.message;
             currentTask.error_message = null;
+            currentTask.warnings_json = this.mergeWarnings(currentTask.warnings_json, progress.warnings);
+            this.mergeTaskProgress(currentTask, {
+              stage: 'crawling',
+              partial: progress.partial,
+              latestMessage: progress.message,
+              counters: {
+                crawledPosts: progress.collectedPostCount,
+                warningCount: (currentTask.warnings_json ?? []).length,
+              },
+              coverage: {
+                latestPostAt: progress.latestPostAt,
+                oldestPostAt: progress.oldestPostAt,
+              },
+              recentWarnings: (currentTask.warnings_json ?? []).slice(-3),
+            });
           });
         },
       });
@@ -335,20 +401,151 @@ export class UsersService implements OnInit {
         eventId: task.event_id ?? undefined,
         windowDays: task.history_window_days,
       });
+      const sourcePosts = await this.registerSourcePostsForTask({
+        taskId,
+        weiboUserId: task.weibo_user_id,
+        eventId: task.event_id ?? undefined,
+        windowDays: task.history_window_days,
+      });
+      const collectionWarnings = this.mergeWarnings([], collection.warnings);
 
       task = await this.updateDistillationTask(taskId, (currentTask) => {
-        currentTask.status = 'analyzing';
-        currentTask.source_post_count = dossier.historyCoverage.collectedPostCount;
+        currentTask.status = 'extracting';
+        currentTask.source_post_count = sourcePosts.length;
         currentTask.source_comment_count = dossier.historyCoverage.collectedCommentCount;
         currentTask.source_repost_count = dossier.historyCoverage.collectedRepostCount;
-        currentTask.distilled_summary = collection.partial
-          ? `${collection.message}，窗口内累计可用帖子 ${dossier.historyCoverage.collectedPostCount} 条，正在基于已抓取数据生成画像`
-          : `历史发帖抓取完成，窗口内累计可用帖子 ${dossier.historyCoverage.collectedPostCount} 条，正在生成画像`;
+        currentTask.warnings_json = collectionWarnings;
+        currentTask.distilled_summary = `正在逐帖抽取，准备处理 ${sourcePosts.length} 条帖子`;
+        this.mergeTaskProgress(currentTask, {
+          stage: 'extracting',
+          partial: collection.partial,
+          latestMessage: `正在逐帖抽取，准备处理 ${sourcePosts.length} 条帖子`,
+          counters: {
+            crawledPosts: collection.collectedPostCount,
+            warningCount: collectionWarnings.length,
+          },
+          coverage: {
+            latestPostAt: collection.latestPostAt,
+            oldestPostAt: collection.oldestPostAt,
+          },
+          recentWarnings: collectionWarnings.slice(-3),
+        });
       });
 
-      const profile = await this.runDistillationWithTaskHeartbeat(taskId, dossier);
+      const extraction = await this.postExtractionService.extractForUser({
+        taskId,
+        weiboUserId: task.weibo_user_id,
+        extractorVersion: DEFAULT_POST_EXTRACTION_VERSION,
+        sourcePosts,
+      });
+      const combinedWarnings = this.mergeWarnings(collectionWarnings, extraction.warnings);
+
+      const aggregationInput = extraction.items
+        .filter((item) => item?.status === 'succeeded' && item?.extracted_json)
+        .map((item) => ({
+          postId: item.source_post_id,
+          createdAt: item.extracted_json?.temporalHints?.postCreatedAt ?? null,
+          normalizedText: item.extracted_json?.excerpt ?? '',
+          extracted: item.extracted_json,
+        }));
+      const aggregation = await this.aggregationService.aggregate({
+        dossier,
+        extractions: aggregationInput,
+      });
+
+      task = await this.updateDistillationTask(taskId, (currentTask) => {
+        currentTask.status = 'aggregating';
+        currentTask.source_post_count = Math.max(
+          dossier.historyCoverage.collectedPostCount,
+          sourcePosts.length,
+        );
+        currentTask.warnings_json = combinedWarnings;
+        currentTask.distilled_summary = `正在聚合 ${extraction.total} 条帖子提取结果`;
+        this.mergeTaskProgress(currentTask, {
+          stage: 'aggregating',
+          partial: collection.partial || extraction.failedCount > 0,
+          latestMessage: `正在聚合 ${extraction.total} 条帖子提取结果`,
+          counters: {
+            crawledPosts: collection.collectedPostCount,
+            reusedExtractions: extraction.reusedCount,
+            extractedPosts: extraction.extractedCount,
+            failedPosts: extraction.failedCount,
+            eventClusterCount: aggregation.stats?.totalEvents ?? aggregation.tree?.length ?? 0,
+            coordinationSignalCount: aggregation.coordinationSignals?.length ?? 0,
+            warningCount: combinedWarnings.length,
+          },
+          coverage: {
+            latestPostAt: collection.latestPostAt,
+            oldestPostAt: collection.oldestPostAt,
+          },
+          recentWarnings: combinedWarnings.slice(-3),
+        });
+      });
+
+      const profile = await this.runDistillationWithTaskHeartbeat(taskId, async () => {
+        const distillFromAggregatedInput = (
+          this.userProfileDistillationService as UserProfileDistillationService & {
+            distillFromAggregatedInput?: (input: {
+              dossier: UserInvestigationDossier;
+              tree: any[];
+              timeline: any[];
+              coordinationSignals: any[];
+              extractions: Array<Record<string, unknown>>;
+            }) => Promise<any>;
+          }
+        ).distillFromAggregatedInput;
+
+        if (typeof distillFromAggregatedInput === 'function') {
+          return distillFromAggregatedInput.call(this.userProfileDistillationService, {
+            dossier,
+            tree: aggregation.tree,
+            timeline: aggregation.timeline,
+            coordinationSignals: aggregation.coordinationSignals,
+            extractions: aggregationInput.map((item) => item.extracted),
+          });
+        }
+
+        return this.userProfileDistillationService.distill(dossier);
+      });
+      profile.metadata.extractorVersion ??= extraction.extractorVersion;
+      profile.metadata.aggregationVersion ??= 'agg-v1';
+      profile.metadata.eventWindowCount ??= aggregation.stats?.totalEvents ?? aggregation.tree?.length ?? 0;
+      profile.metadata.coordinationSignalCount ??=
+        aggregation.coordinationSignals?.length ?? 0;
+      profile.metadata.warnings ??= combinedWarnings;
+      const profileMetadataRecord = profile.metadata as Record<string, unknown>;
+      profileMetadataRecord.graphTree = aggregation.tree;
+      profileMetadataRecord.timeline = aggregation.timeline;
+      profileMetadataRecord.coordinationSignals = aggregation.coordinationSignals;
       const reviewStatus =
         profile.risk.reviewRecommendation === 'auto_pass' ? 'auto_pass' : 'human_pending';
+
+      await this.updateDistillationTask(taskId, (currentTask) => {
+        currentTask.status = 'publishing';
+        currentTask.warnings_json = combinedWarnings;
+        currentTask.distilled_summary =
+          reviewStatus === 'auto_pass' ? '正在发布画像与知识图谱' : '画像生成完成，等待人工复核';
+        this.mergeTaskProgress(currentTask, {
+          stage: 'publishing',
+          partial: collection.partial || extraction.failedCount > 0,
+          latestMessage:
+            reviewStatus === 'auto_pass' ? '正在发布画像与知识图谱' : '画像生成完成，等待人工复核',
+          counters: {
+            crawledPosts: collection.collectedPostCount,
+            reusedExtractions: extraction.reusedCount,
+            extractedPosts: extraction.extractedCount,
+            failedPosts: extraction.failedCount,
+            eventClusterCount: profile.metadata.eventWindowCount ?? 0,
+            coordinationSignalCount: profile.metadata.coordinationSignalCount ?? 0,
+            warningCount: combinedWarnings.length,
+          },
+          coverage: {
+            latestPostAt: collection.latestPostAt,
+            oldestPostAt: collection.oldestPostAt,
+          },
+          recentWarnings: combinedWarnings.slice(-3),
+        });
+      });
 
       if (reviewStatus === 'auto_pass') {
         await this.personaProjectionService.publishProfile({
@@ -367,12 +564,13 @@ export class UsersService implements OnInit {
         currentTask.prompt_version = profile.metadata.promptVersion;
         currentTask.distilled_summary = profile.summary.short;
         currentTask.distilled_json = profile as unknown as Record<string, unknown>;
+        currentTask.warnings_json = combinedWarnings;
         currentTask.review_status = reviewStatus;
         currentTask.source_post_count = profile.metadata.sampledPosts;
         currentTask.source_comment_count = profile.metadata.sampledComments;
         currentTask.source_repost_count = profile.metadata.sampledReposts;
         currentTask.evidence_sample_count = profile.memoryDrafts.reduce(
-          (sum, item) => sum + item.evidenceRefs.length,
+          (sum: number, item: any) => sum + item.evidenceRefs.length,
           0,
         );
         currentTask.status = reviewStatus === 'auto_pass' ? 'published' : 'review_pending';
@@ -405,10 +603,10 @@ export class UsersService implements OnInit {
     });
   }
 
-  private async runDistillationWithTaskHeartbeat(
+  private async runDistillationWithTaskHeartbeat<T>(
     taskId: string,
-    dossier: UserInvestigationDossier,
-  ) {
+    run: () => Promise<T>,
+  ): Promise<T> {
     const timeoutMs = this.resolvePositiveIntegerEnv(
       process.env.USER_PROFILE_DISTILLATION_TIMEOUT_MS,
       DEFAULT_DISTILLATION_TIMEOUT_MS,
@@ -437,9 +635,13 @@ export class UsersService implements OnInit {
     const pushHeartbeat = async () => {
       const elapsedMs = Date.now() - startedAt;
       await this.updateDistillationTask(taskId, (currentTask) => {
-        currentTask.status = 'analyzing';
+        currentTask.status = 'aggregating';
         currentTask.error_message = null;
         currentTask.distilled_summary = `正在生成画像，已等待 ${this.formatElapsedDuration(elapsedMs)}，当前样本帖子 ${currentTask.source_post_count} 条`;
+        this.mergeTaskProgress(currentTask, {
+          stage: 'aggregating',
+          latestMessage: `正在生成画像，已等待 ${this.formatElapsedDuration(elapsedMs)}，当前样本帖子 ${currentTask.source_post_count} 条`,
+        });
       });
     };
 
@@ -460,10 +662,7 @@ export class UsersService implements OnInit {
     });
 
     try {
-      return await Promise.race([
-        this.userProfileDistillationService.distill(dossier),
-        timeoutPromise,
-      ]);
+      return await Promise.race([run(), timeoutPromise]);
     } finally {
       stopTimers();
     }
@@ -498,7 +697,148 @@ export class UsersService implements OnInit {
       completedAt: task.completed_at ? task.completed_at.toISOString() : null,
       createdAt: task.created_at.toISOString(),
       updatedAt: task.updated_at.toISOString(),
+      progress: (task.progress_json as DistillationTaskProgress | null) ?? undefined,
     };
+  }
+
+  private mergeTaskProgress(
+    task: UserProfileDistillationTaskEntity,
+    patch: DistillationTaskProgressPatch,
+  ): void {
+    const current = (task.progress_json as DistillationTaskProgress | null) ??
+      createEmptyDistillationProgress();
+
+    task.progress_json = {
+      ...current,
+      ...patch,
+      counters: {
+        ...current.counters,
+        ...(patch.counters ?? {}),
+      },
+      coverage: {
+        ...current.coverage,
+        ...(patch.coverage ?? {}),
+      },
+      recentWarnings: patch.recentWarnings ?? current.recentWarnings,
+      lastProgressAt: new Date().toISOString(),
+    };
+  }
+
+  private mergeWarnings(
+    current: string[] | null | undefined,
+    incoming: string[] | null | undefined,
+  ): string[] {
+    return Array.from(new Set([...(current ?? []), ...(incoming ?? [])]));
+  }
+
+  private async registerSourcePostsForTask(input: {
+    taskId: string;
+    weiboUserId: string;
+    eventId?: string;
+    windowDays: number;
+  }): Promise<Array<{
+    id: string;
+    content_fingerprint: string;
+    normalized_text: string;
+    source_snapshot: Record<string, unknown>;
+  }>> {
+    return useEntityManager(async (manager) => {
+      const sourceRepo = manager.getRepository(UserProfileSourcePostEntity);
+      const windowStart = this.resolveWindowStart(input.windowDays);
+      const rows = await manager.query(
+        `
+          SELECT
+            p.id::text AS post_id,
+            p.event_id,
+            p.created_at,
+            COALESCE(p.text_raw, p.text, '') AS text,
+            COALESCE(p.comments_count, 0) AS comments_count,
+            COALESCE(p.reposts_count, 0) AS reposts_count,
+            COALESCE(p.attitudes_count, 0) AS attitudes_count
+          FROM weibo_posts p
+          WHERE p.user_id::text = $1
+            AND p.deleted_at IS NULL
+            AND ($2::uuid IS NULL OR p.event_id = $2::uuid)
+            AND ($3::timestamptz IS NULL OR p.created_at >= $3::timestamptz)
+          ORDER BY p.created_at DESC NULLS LAST
+        `,
+        [input.weiboUserId, input.eventId ?? null, windowStart],
+      );
+      const now = new Date();
+      const saved: Array<{
+        id: string;
+        content_fingerprint: string;
+        normalized_text: string;
+        source_snapshot: Record<string, unknown>;
+      }> = [];
+
+      for (const row of rows) {
+        const normalizedText = this.normalizeSourcePostText(row.text);
+        if (!normalizedText) {
+          continue;
+        }
+
+        const fingerprint = this.hashContent(normalizedText);
+        const existing = await sourceRepo.findOne({
+          where: {
+            weibo_user_id: input.weiboUserId,
+            post_id: row.post_id,
+          },
+        });
+        const sourceSnapshot = {
+          postId: row.post_id,
+          eventId: row.event_id ?? null,
+          text: row.text,
+          normalizedText,
+          createdAt: row.created_at ? new Date(row.created_at).toISOString() : null,
+          commentsCount: Number(row.comments_count || 0),
+          repostsCount: Number(row.reposts_count || 0),
+          attitudesCount: Number(row.attitudes_count || 0),
+        };
+
+        const entity = sourceRepo.create({
+          id: existing?.id,
+          weibo_user_id: input.weiboUserId,
+          post_id: row.post_id,
+          source_kind: 'post',
+          post_created_at: row.created_at ? new Date(row.created_at) : null,
+          content_fingerprint: fingerprint,
+          normalized_text: normalizedText,
+          source_snapshot: sourceSnapshot,
+          first_seen_at: existing?.first_seen_at ?? now,
+          last_seen_at: now,
+          latest_task_id: input.taskId,
+        });
+        const persisted = await sourceRepo.save(entity);
+
+        saved.push({
+          id: persisted.id,
+          content_fingerprint: persisted.content_fingerprint,
+          normalized_text: persisted.normalized_text,
+          source_snapshot: persisted.source_snapshot,
+        });
+      }
+
+      return saved;
+    });
+  }
+
+  private normalizeSourcePostText(input: unknown): string {
+    return String(input ?? '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  private hashContent(input: string): string {
+    return createHash('sha256').update(input, 'utf8').digest('hex');
+  }
+
+  private resolveWindowStart(windowDays: number): Date | null {
+    if (!Number.isFinite(windowDays) || windowDays <= 0) {
+      return null;
+    }
+
+    return new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000);
   }
 
   private resolvePositiveIntegerEnv(

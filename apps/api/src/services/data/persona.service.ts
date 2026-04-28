@@ -210,6 +210,12 @@ export class PersonaService {
         targetId: r.target_id,
         relationType: r.relation_type,
       }));
+      const evidence = memoryIds.length > 0
+        ? await manager.find(MemoryEvidenceEntity, {
+            where: { memory_id: In(memoryIds) },
+          } as any)
+        : [];
+      const personaMetadata = (persona as PersonaEntity & { metadata?: Record<string, unknown> }).metadata ?? {};
 
       return {
         persona: {
@@ -221,6 +227,15 @@ export class PersonaService {
         },
         memories: memoryNodes,
         relations: memoryEdges,
+        tree: (personaMetadata.graphTree as any[]) ?? [],
+        timeline: (personaMetadata.timeline as any[]) ?? [],
+        coordinationSignals: (personaMetadata.coordinationSignals as any[]) ?? [],
+        stats: {
+          totalMemories: memoryNodes.length,
+          totalEvents: ((personaMetadata.timeline as any[]) ?? []).length,
+          totalEvidencePosts: new Set(evidence.map((item) => item.source_id)).size,
+          totalWarnings: ((personaMetadata.warnings as string[]) ?? []).length,
+        },
       };
     });
   }

@@ -768,6 +768,9 @@ export interface UserListResponse {
 export type InvestigationTaskStatus =
   | 'queued'
   | 'crawling'
+  | 'extracting'
+  | 'aggregating'
+  | 'publishing'
   | 'analyzing'
   | 'review_pending'
   | 'published'
@@ -899,6 +902,7 @@ export interface DistillationTaskSummary {
   completedAt: string | null
   createdAt: string
   updatedAt: string
+  progress?: DistillationTaskProgress
 }
 
 export interface CreateDistillationTaskRequest {
@@ -997,7 +1001,33 @@ export interface DistilledUserProfile {
     model: string
     promptVersion: string
     generatedAt: string
+    extractorVersion?: string
+    aggregationVersion?: string
+    eventWindowCount?: number
+    coordinationSignalCount?: number
+    warnings?: string[]
   }
+}
+
+export interface DistillationTaskProgress {
+  stage: 'queued' | 'crawling' | 'extracting' | 'aggregating' | 'publishing'
+  partial: boolean
+  latestMessage: string
+  lastProgressAt: string | null
+  counters: {
+    crawledPosts: number
+    reusedExtractions: number
+    extractedPosts: number
+    failedPosts: number
+    eventClusterCount: number
+    coordinationSignalCount: number
+    warningCount: number
+  }
+  coverage: {
+    latestPostAt: string | null
+    oldestPostAt: string | null
+  }
+  recentWarnings: string[]
 }
 
 // 工作流相关类型
@@ -1263,6 +1293,12 @@ export interface MemoryNode {
   section?: DistilledMemorySection
   isSectionHub?: boolean
   stability?: DistilledMemoryStability
+  badge?: string | null
+  treeKind?: MemoryTreeNodeKind
+  timeRange?: {
+    startAt: string | null
+    endAt: string | null
+  } | null
 }
 
 export interface MemoryEdge {
@@ -1270,6 +1306,32 @@ export interface MemoryEdge {
   sourceId: string
   targetId: string
   relationType: RelationType
+}
+
+export type MemoryTreeNodeKind =
+  | 'section'
+  | 'event_cluster'
+  | 'topic_cluster'
+  | 'viewpoint_cluster'
+  | 'behavior_signal'
+  | 'memory'
+  | 'post_evidence'
+
+export interface MemoryTreeNode {
+  id: string
+  kind: MemoryTreeNodeKind
+  label: string
+  description: string | null
+  count: number
+  badge?: string | null
+  timeRange?: {
+    startAt: string | null
+    endAt: string | null
+  } | null
+  childrenCount: number
+  children?: MemoryTreeNode[]
+  memoryIds?: string[]
+  postIds?: string[]
 }
 
 export interface PersonaMemoryGraph {
@@ -1282,6 +1344,32 @@ export interface PersonaMemoryGraph {
   }
   memories: MemoryNode[]
   relations: MemoryEdge[]
+  tree: MemoryTreeNode[]
+  timeline: Array<{
+    bucketStart: string | null
+    bucketEnd: string | null
+    postCount: number
+    sameContentCount: number
+    eventCount: number
+  }>
+  coordinationSignals: Array<{
+    id: string
+    label: string
+    level: 'low' | 'medium' | 'high'
+    eventKey: string | null
+    timeRange: {
+      startAt: string | null
+      endAt: string | null
+    }
+    relatedPostCount: number
+    description: string
+  }>
+  stats: {
+    totalMemories: number
+    totalEvents: number
+    totalEvidencePosts: number
+    totalWarnings: number
+  }
 }
 
 export interface PersonaEvidenceItem {

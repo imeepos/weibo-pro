@@ -41,8 +41,8 @@ describe('EventEntity - last_crawl_at 字段', () => {
       event3.last_crawl_at = new Date('2026-01-30T10:00:00Z');
 
       expect(event1.last_crawl_at).toBeNull();
-      expect(event2.last_crawl_at).toISOString()).toBe('2026-01-29T10:00:00.000Z');
-      expect(event3.last_crawl_at).toISOString()).toBe('2026-01-30T10:00:00.000Z');
+      expect(event2.last_crawl_at?.toISOString()).toBe('2026-01-29T10:00:00.000Z');
+      expect(event3.last_crawl_at?.toISOString()).toBe('2026-01-30T10:00:00.000Z');
     });
   });
 

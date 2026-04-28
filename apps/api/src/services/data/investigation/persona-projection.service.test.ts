@@ -90,6 +90,43 @@ describe('PersonaProjectionService', () => {
     expect(result.evidence[0]?.sourceTable).toBe('weibo_posts');
   });
 
+  it('includes aggregation metadata and graph payloads in persona projection metadata', async () => {
+    const service = new PersonaProjectionService();
+
+    const result = await service.buildProjection({
+      ...baseInput,
+      metadata: {
+        ...baseInput.metadata,
+        extractorVersion: 'post-v1',
+        aggregationVersion: 'agg-v1',
+        eventWindowCount: 1,
+        coordinationSignalCount: 1,
+        warnings: ['帖子 998 提取失败：timeout'],
+        graphTree: [{ id: 'event-1', kind: 'event_cluster', label: '事件A' }],
+        timeline: [
+          {
+            bucketStart: '2026-04-28T01:00:00.000Z',
+            bucketEnd: '2026-04-28T01:05:00.000Z',
+            postCount: 2,
+            sameContentCount: 2,
+            eventCount: 1,
+          },
+        ],
+        coordinationSignals: [
+          {
+            id: 'signal-1',
+            label: '疑似协同传播',
+          },
+        ],
+      } as any,
+    });
+
+    expect((result.persona.metadata as any).aggregation.extractorVersion).toBe('post-v1');
+    expect(Array.isArray((result.persona.metadata as any).graphTree)).toBe(true);
+    expect(Array.isArray((result.persona.metadata as any).timeline)).toBe(true);
+    expect(Array.isArray((result.persona.metadata as any).coordinationSignals)).toBe(true);
+  });
+
   it('creates memory relations when relationDrafts point to sibling memory names', async () => {
     const savedEntities: Record<string, any[]> = {};
     let sequence = 0;

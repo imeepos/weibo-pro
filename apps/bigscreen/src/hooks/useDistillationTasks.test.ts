@@ -85,4 +85,67 @@ describe('useDistillationTasks', () => {
 
     expect(UsersAPI.getDistillationTasks).toHaveBeenCalledTimes(2);
   });
+
+  it('keeps polling while task is extracting or aggregating', async () => {
+    const taskBase = {
+      id: 'task-1',
+      weiboUserId: '100',
+      eventId: null,
+      historyWindowDays: 90,
+      sourcePostCount: 20,
+      sourceCommentCount: 0,
+      sourceRepostCount: 0,
+      evidenceSampleCount: 0,
+      model: null,
+      promptVersion: null,
+      distilledSummary: null,
+      reviewStatus: null,
+      errorMessage: null,
+      startedAt: '2026-04-28T01:00:00.000Z',
+      completedAt: null,
+      createdAt: '2026-04-28T01:00:00.000Z',
+      updatedAt: '2026-04-28T01:00:00.000Z',
+    };
+
+    vi.mocked(UsersAPI.getDistillationTasks)
+      .mockResolvedValueOnce([
+        {
+          ...taskBase,
+          status: 'extracting' as const,
+          progress: {
+            stage: 'extracting',
+            partial: false,
+            latestMessage: '正在逐帖抽取，准备处理 20 条帖子',
+            lastProgressAt: '2026-04-28T01:00:00.000Z',
+            counters: {
+              crawledPosts: 20,
+              reusedExtractions: 4,
+              extractedPosts: 3,
+              failedPosts: 0,
+              eventClusterCount: 0,
+              coordinationSignalCount: 0,
+              warningCount: 0,
+            },
+            coverage: { latestPostAt: null, oldestPostAt: null },
+            recentWarnings: [],
+          },
+        },
+      ])
+      .mockResolvedValueOnce([{ ...taskBase, status: 'published' as const, progress: undefined }]);
+
+    const { result } = renderHook(() => useDistillationTasks({ userId: '100' }));
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(result.current.tasks[0]?.status).toBe('published');
+    expect(UsersAPI.getDistillationTasks).toHaveBeenCalledTimes(2);
+  });
 });

@@ -13,12 +13,19 @@ vi.mock('@sker/entities', async () => {
 
 describe('UsersService distillation flow', () => {
   const savedTasks: any[] = [];
+  const savedSourcePosts: any[] = [];
   let taskCounter = 0;
+  let sourcePostCounter = 0;
   let service: UsersService;
   let historyCollectionService: { collect: ReturnType<typeof vi.fn> };
   let userDossierService: { getDossier: ReturnType<typeof vi.fn> };
-  let userProfileDistillationService: { distill: ReturnType<typeof vi.fn> };
+  let userProfileDistillationService: {
+    distill: ReturnType<typeof vi.fn>;
+    distillFromAggregatedInput: ReturnType<typeof vi.fn>;
+  };
   let personaProjectionService: { publishProfile: ReturnType<typeof vi.fn> };
+  let postExtractionService: { extractForUser: ReturnType<typeof vi.fn> };
+  let aggregationService: { aggregate: ReturnType<typeof vi.fn> };
 
   afterEach(() => {
     vi.useRealTimers();
@@ -27,7 +34,9 @@ describe('UsersService distillation flow', () => {
 
   beforeEach(() => {
     savedTasks.length = 0;
+    savedSourcePosts.length = 0;
     taskCounter = 0;
+    sourcePostCounter = 0;
 
     historyCollectionService = {
       collect: vi.fn().mockResolvedValue({
@@ -102,39 +111,82 @@ describe('UsersService distillation flow', () => {
         preDistillationSummary: { candidateLabels: [], anomalyHints: [], coverageWarnings: [], humanReviewNeeded: false },
       }),
     };
+    const distilledProfile = {
+      summary: { short: '短摘要', long: '长摘要', confidence: 0.9 },
+      identity: { inferredRole: '热点自媒体', roleConfidence: 0.8, accountNature: ['media'], stableTraits: ['热点追逐'] },
+      behavior: { activityPattern: ['夜间活跃'], postingRhythm: 'bursty', escalationPattern: ['突发追热点'], historicalStability: 'medium' },
+      content: { primaryTopics: ['体育'], narrativeStyles: ['情绪放大'], emotionalTendency: ['negative'], stancePattern: ['对立'] },
+      risk: {
+        overallLevel: 'high',
+        overallScore: 87,
+        riskDrivers: [{ label: '情绪极化', reason: '负向占比高', confidence: 0.8 }],
+        reviewRecommendation: 'auto_pass',
+      },
+      relations: { keyConnections: [], clusterRole: null, coordinationSignals: [] },
+      memoryDrafts: [{
+        type: 'insight',
+        name: '热点追逐型',
+        description: null,
+        content: '长期追逐热点并放大情绪',
+        evidenceRefs: [{ sourceTable: 'weibo_posts', sourceId: '1', score: 0.8 }],
+        relationDrafts: [],
+      }],
+      metadata: {
+        sampledPosts: 20,
+        sampledComments: 0,
+        sampledReposts: 3,
+        windowDays: 90,
+        model: 'gpt-5',
+        promptVersion: 'v1',
+        generatedAt: '2026-04-23T00:00:00.000Z',
+      },
+    };
     userProfileDistillationService = {
-      distill: vi.fn().mockResolvedValue({
-        summary: { short: '短摘要', long: '长摘要', confidence: 0.9 },
-        identity: { inferredRole: '热点自媒体', roleConfidence: 0.8, accountNature: ['media'], stableTraits: ['热点追逐'] },
-        behavior: { activityPattern: ['夜间活跃'], postingRhythm: 'bursty', escalationPattern: ['突发追热点'], historicalStability: 'medium' },
-        content: { primaryTopics: ['体育'], narrativeStyles: ['情绪放大'], emotionalTendency: ['negative'], stancePattern: ['对立'] },
-        risk: {
-          overallLevel: 'high',
-          overallScore: 87,
-          riskDrivers: [{ label: '情绪极化', reason: '负向占比高', confidence: 0.8 }],
-          reviewRecommendation: 'auto_pass',
-        },
-        relations: { keyConnections: [], clusterRole: null, coordinationSignals: [] },
-        memoryDrafts: [{
-          type: 'insight',
-          name: '热点追逐型',
-          description: null,
-          content: '长期追逐热点并放大情绪',
-          evidenceRefs: [{ sourceTable: 'weibo_posts', sourceId: '1', score: 0.8 }],
-          relationDrafts: [],
-        }],
-        metadata: {
-          sampledPosts: 20,
-          sampledComments: 0,
-          sampledReposts: 3,
-          windowDays: 90,
-          model: 'gpt-5',
-          promptVersion: 'v1',
-          generatedAt: '2026-04-23T00:00:00.000Z',
-        },
-      }),
+      distill: vi.fn().mockResolvedValue(distilledProfile),
+      distillFromAggregatedInput: vi.fn().mockResolvedValue(distilledProfile),
     };
     personaProjectionService = { publishProfile: vi.fn().mockResolvedValue(undefined) };
+    postExtractionService = {
+      extractForUser: vi.fn().mockResolvedValue({
+        extractorVersion: 'post-v1',
+        total: 20,
+        reusedCount: 0,
+        extractedCount: 20,
+        failedCount: 0,
+        warnings: [],
+        items: Array.from({ length: 20 }, (_, index) => ({
+          id: `extract-${index + 1}`,
+          source_post_id: `source-${index + 1}`,
+          status: 'succeeded',
+          extracted_json: {
+            topicLabels: ['体育'],
+            eventLabel: '事件A',
+            eventKey: 'event-a',
+            viewpointLabels: ['支持'],
+            stance: '支持',
+            sentiment: 'positive',
+            emotionLabels: [],
+            entities: [],
+            riskSignals: [],
+            coordinationMarkers: [],
+            temporalHints: {
+              postCreatedAt: '2026-04-23T00:00:00.000Z',
+              inferredPhase: 'unknown',
+            },
+            contentFingerprint: `fp-${index + 1}`,
+            excerpt: `帖子 ${index + 1}`,
+          },
+        })),
+      }),
+    };
+    aggregationService = {
+      aggregate: vi.fn().mockResolvedValue({
+        tree: [],
+        timeline: [],
+        coordinationSignals: [],
+        stats: { totalEvents: 0, totalWarnings: 0 },
+      }),
+    };
 
     vi.mocked(useEntityManager).mockImplementation(async (handler: any) => {
       const matchesWhere = (item: any, where: any): boolean => {
@@ -149,7 +201,7 @@ describe('UsersService distillation flow', () => {
         return Object.entries(where).every(([key, value]) => item[key] === value);
       };
 
-      const repo = {
+      const taskRepo = {
         async findOne(options: any) {
           if (options?.where?.id) {
             return savedTasks.find((item) => item.id === options.where.id) ?? null;
@@ -171,6 +223,8 @@ describe('UsersService distillation flow', () => {
             prompt_version: input.prompt_version ?? null,
             distilled_summary: input.distilled_summary ?? null,
             distilled_json: input.distilled_json ?? null,
+            progress_json: input.progress_json ?? null,
+            warnings_json: input.warnings_json ?? null,
             review_status: input.review_status ?? null,
             error_message: input.error_message ?? null,
             started_at: input.started_at ?? null,
@@ -192,11 +246,71 @@ describe('UsersService distillation flow', () => {
         },
       };
 
-      const manager = {
-        getRepository(entity: any) {
-          if (entity === UserProfileDistillationTaskEntity) return repo;
+      const sourcePostRepo = {
+        async findOne(options: any) {
+          const where = options?.where ?? {};
+          return (
+            savedSourcePosts.find(
+              (item) =>
+                matchesWhere(item, where) ||
+                (where.weibo_user_id === item.weibo_user_id && where.post_id === item.post_id),
+            ) ?? null
+          );
+        },
+        create(input: any) {
           return {
-            ...repo,
+            id: input.id ?? `source-${++sourcePostCounter}`,
+            weibo_user_id: input.weibo_user_id,
+            post_id: input.post_id,
+            source_kind: input.source_kind ?? 'post',
+            post_created_at: input.post_created_at ?? null,
+            content_fingerprint: input.content_fingerprint,
+            normalized_text: input.normalized_text,
+            source_snapshot: input.source_snapshot ?? {},
+            first_seen_at: input.first_seen_at ?? new Date('2026-04-23T00:00:00.000Z'),
+            last_seen_at: input.last_seen_at ?? new Date('2026-04-23T00:00:00.000Z'),
+            latest_task_id: input.latest_task_id ?? null,
+            created_at: input.created_at ?? new Date('2026-04-23T00:00:00.000Z'),
+            updated_at: input.updated_at ?? new Date('2026-04-23T00:00:00.000Z'),
+          };
+        },
+        async save(entity: any) {
+          const index = savedSourcePosts.findIndex((item) => item.id === entity.id);
+          if (index >= 0) {
+            savedSourcePosts[index] = {
+              ...savedSourcePosts[index],
+              ...entity,
+              updated_at: new Date('2026-04-23T00:00:00.000Z'),
+            };
+          } else {
+            savedSourcePosts.push({ ...entity });
+          }
+          return savedSourcePosts.find((item) => item.id === entity.id);
+        },
+        async find(options: any) {
+          return savedSourcePosts.filter((item) => matchesWhere(item, options?.where));
+        },
+      };
+
+      const sourcePostRows = Array.from({ length: 20 }, (_, index) => ({
+        post_id: `${index + 1}`,
+        created_at: `2026-04-23T${String(index).padStart(2, '0')}:00:00.000Z`,
+        text: `测试帖子 ${index + 1}`,
+        comments_count: 0,
+        reposts_count: 0,
+        attitudes_count: 0,
+        event_id: 'event-1',
+      }));
+
+      const manager = {
+        async query() {
+          return sourcePostRows;
+        },
+        getRepository(entity: any) {
+          if (entity === UserProfileDistillationTaskEntity) return taskRepo;
+          if (entity?.name === 'UserProfileSourcePostEntity') return sourcePostRepo;
+          return {
+            ...taskRepo,
             async findOne() {
               return {
                 id: 100n,
@@ -221,6 +335,8 @@ describe('UsersService distillation flow', () => {
       historyCollectionService as any,
       userProfileDistillationService as any,
       personaProjectionService as any,
+      postExtractionService as any,
+      aggregationService as any,
     );
   });
 
@@ -236,13 +352,109 @@ describe('UsersService distillation flow', () => {
     await vi.waitFor(() => {
       expect(historyCollectionService.collect).toHaveBeenCalled();
       expect(userDossierService.getDossier).toHaveBeenCalled();
-      expect(userProfileDistillationService.distill).toHaveBeenCalled();
+      expect(userProfileDistillationService.distillFromAggregatedInput).toHaveBeenCalled();
       expect(personaProjectionService.publishProfile).toHaveBeenCalled();
       expect(savedTasks.find((item) => item.id === result.id)?.status).toBe('published');
     });
   });
 
-  it('refreshes task summary while distillation stays in analyzing', async () => {
+  it('tracks crawling extracting aggregating progress and keeps partial warnings', async () => {
+    const distilledProfile = {
+      summary: { short: '短摘要', long: '长摘要', confidence: 0.9 },
+      identity: {
+        inferredRole: '热点自媒体',
+        roleConfidence: 0.8,
+        accountNature: ['media'],
+        stableTraits: ['热点追逐'],
+      },
+      behavior: {
+        activityPattern: ['夜间活跃'],
+        postingRhythm: 'bursty',
+        escalationPattern: ['突发追热点'],
+        historicalStability: 'medium',
+      },
+      content: {
+        primaryTopics: ['体育'],
+        narrativeStyles: ['情绪放大'],
+        emotionalTendency: ['negative'],
+        stancePattern: ['对立'],
+      },
+      risk: {
+        overallLevel: 'high',
+        overallScore: 87,
+        riskDrivers: [],
+        reviewRecommendation: 'auto_pass',
+      },
+      relations: { keyConnections: [], clusterRole: null, coordinationSignals: [] },
+      memoryDrafts: [{
+        type: 'insight',
+        name: '热点追逐型',
+        description: null,
+        content: '长期追逐热点并放大情绪',
+        evidenceRefs: [{ sourceTable: 'weibo_posts', sourceId: '1', score: 0.8 }],
+        relationDrafts: [],
+      }],
+      metadata: {
+        sampledPosts: 12,
+        sampledComments: 0,
+        sampledReposts: 0,
+        windowDays: 90,
+        model: 'gpt-5',
+        promptVersion: 'v3',
+        generatedAt: '2026-04-28T01:10:00.000Z',
+        extractorVersion: 'post-v1',
+        aggregationVersion: 'agg-v1',
+        eventWindowCount: 1,
+        coordinationSignalCount: 0,
+      },
+    };
+
+    historyCollectionService.collect.mockResolvedValue({
+      status: 'partial',
+      page: 2,
+      collectedPostCount: 12,
+      newPostCount: 12,
+      duplicatePostCount: 0,
+      failedPageCount: 1,
+      latestPostAt: '2026-04-28T01:00:00.000Z',
+      oldestPostAt: '2026-04-21T01:00:00.000Z',
+      partial: true,
+      warnings: ['第 3 页长时间无进展，已继续分析'],
+      message: '历史发帖抓取出现停滞，已基于 12 条帖子继续分析',
+    });
+
+    postExtractionService.extractForUser.mockResolvedValue({
+      extractorVersion: 'post-v1',
+      total: 12,
+      reusedCount: 8,
+      extractedCount: 3,
+      failedCount: 1,
+      warnings: ['帖子 998 提取失败：timeout'],
+      items: [],
+    });
+
+    aggregationService.aggregate.mockResolvedValue({
+      tree: [],
+      timeline: [],
+      coordinationSignals: [],
+      stats: { totalEvents: 1, totalWarnings: 2 },
+    });
+
+    userProfileDistillationService.distillFromAggregatedInput.mockResolvedValue(distilledProfile);
+
+    const result = await service.createDistillationTask('100', { historyWindowDays: 90 });
+
+    await vi.waitFor(() => {
+      const saved = savedTasks.find((item) => item.id === result.id);
+      expect(saved?.status).toBe('published');
+      expect(saved?.progress_json?.stage).toBe('publishing');
+      expect(saved?.progress_json?.partial).toBe(true);
+      expect(saved?.progress_json?.counters.reusedExtractions).toBe(8);
+      expect(saved?.warnings_json).toContain('帖子 998 提取失败：timeout');
+    });
+  });
+
+  it('refreshes task summary while distillation stays in aggregating', async () => {
     vi.useFakeTimers();
     vi.stubEnv('USER_PROFILE_DISTILLATION_PROGRESS_HEARTBEAT_MS', '1000');
 
@@ -304,7 +516,7 @@ describe('UsersService distillation flow', () => {
     });
 
     let resolveDistill: ((value: any) => void) | null = null;
-    userProfileDistillationService.distill.mockImplementation(
+    userProfileDistillationService.distillFromAggregatedInput.mockImplementation(
       () =>
         new Promise((resolve) => {
           resolveDistill = resolve;
@@ -317,7 +529,7 @@ describe('UsersService distillation flow', () => {
     });
 
     await vi.waitFor(() => {
-      expect(savedTasks.find((item) => item.id === result.id)?.status).toBe('analyzing');
+      expect(savedTasks.find((item) => item.id === result.id)?.status).toBe('aggregating');
     });
     expect(savedTasks.find((item) => item.id === result.id)?.source_post_count).toBe(903);
 
@@ -369,7 +581,7 @@ describe('UsersService distillation flow', () => {
     vi.stubEnv('USER_PROFILE_DISTILLATION_TIMEOUT_MS', '1000');
     vi.stubEnv('USER_PROFILE_DISTILLATION_PROGRESS_HEARTBEAT_MS', '1000');
 
-    userProfileDistillationService.distill.mockImplementation(
+    userProfileDistillationService.distillFromAggregatedInput.mockImplementation(
       () => new Promise(() => undefined),
     );
 
@@ -379,7 +591,7 @@ describe('UsersService distillation flow', () => {
     });
 
     await vi.waitFor(() => {
-      expect(savedTasks.find((item) => item.id === result.id)?.status).toBe('analyzing');
+      expect(savedTasks.find((item) => item.id === result.id)?.status).toBe('aggregating');
     });
 
     await vi.advanceTimersByTimeAsync(1000);

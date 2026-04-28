@@ -2,56 +2,53 @@ import { describe, expect, it } from 'vitest';
 import { buildMemoryGraphLayout } from './memory-graph-layout';
 
 describe('buildMemoryGraphLayout', () => {
-  it('does not create persona-to-leaf edges when graph contains section hubs', () => {
+  it('renders a tree layout when graph.tree is present', () => {
     const layout = buildMemoryGraphLayout({
-      persona: { id: 'p1', name: '用户A', avatar: null, description: '画像', traits: ['热点追逐'] },
-      memories: [
-        {
-          id: 'hub-1',
-          name: '行为模式',
-          description: 'behavior section hub',
-          content: 'behavior section hub',
-          type: 'concept',
-          createdAt: '2026-04-23T00:00:00.000Z',
-          section: 'behavior',
-          isSectionHub: true,
-          stability: 'stable',
-        },
-        {
-          id: 'leaf-1',
-          name: '夜间活跃',
-          description: null,
-          content: '夜间活跃',
-          type: 'fact',
-          createdAt: '2026-04-23T00:00:00.000Z',
-          section: 'behavior',
-          isSectionHub: false,
-          stability: 'stable',
-        },
-      ],
-      relations: [{ id: 'r1', sourceId: 'hub-1', targetId: 'leaf-1', relationType: 'contains' }],
-    });
-
-    expect(layout.edges.some((edge) => edge.id === 'persona-leaf-1')).toBe(false);
-    expect(layout.edges.some((edge) => edge.id === 'persona-hub-1')).toBe(true);
-  });
-
-  it('keeps legacy persona-to-memory edges when there are no hubs', () => {
-    const layout = buildMemoryGraphLayout({
-      persona: { id: 'p1', name: '用户A', avatar: null, description: '画像', traits: ['热点追逐'] },
-      memories: [
-        {
-          id: 'leaf-1',
-          name: '热点追逐型',
-          description: null,
-          content: '长期追逐热点',
-          type: 'insight',
-          createdAt: '2026-04-23T00:00:00.000Z',
-        },
-      ],
+      persona: { id: 'p1', name: '画像A', avatar: null, description: null, traits: [] },
+      memories: [],
       relations: [],
+      tree: [
+        {
+          id: 'section-1',
+          kind: 'section',
+          label: '行为模式',
+          description: null,
+          count: 2,
+          badge: null,
+          timeRange: null,
+          childrenCount: 1,
+          children: [
+            {
+              id: 'event-1',
+              kind: 'event_cluster',
+              label: '事件A',
+              description: '2 条帖子',
+              count: 2,
+              badge: '疑似协同',
+              timeRange: {
+                startAt: '2026-04-28T01:00:00.000Z',
+                endAt: '2026-04-28T01:05:00.000Z',
+              },
+              childrenCount: 0,
+              children: [],
+            },
+          ],
+        },
+      ],
+      timeline: [],
+      coordinationSignals: [],
+      stats: {
+        totalMemories: 0,
+        totalEvents: 1,
+        totalEvidencePosts: 2,
+        totalWarnings: 0,
+      },
     });
 
-    expect(layout.edges.some((edge) => edge.id === 'persona-leaf-1')).toBe(true);
+    expect(layout.nodes.some((node) => node.id === 'section-1')).toBe(true);
+    expect(layout.nodes.some((node) => node.id === 'event-1')).toBe(true);
+    expect(
+      layout.edges.some((edge) => edge.source === 'section-1' && edge.target === 'event-1'),
+    ).toBe(true);
   });
 });

@@ -32,7 +32,71 @@ function buildRadialMemoryPositions(memories: PersonaMemoryGraph['memories']): N
   });
 }
 
+function appendTreeNodes(
+  parentId: string,
+  nodes: Node[],
+  edges: Edge[],
+  items: NonNullable<PersonaMemoryGraph['tree']>,
+  depth: number,
+  offsetY: { current: number },
+) {
+  for (const item of items) {
+    const nodeId = item.id;
+    const y = offsetY.current;
+    offsetY.current += 120;
+
+    nodes.push({
+      id: nodeId,
+      type: 'memory',
+      position: { x: depth * 260, y },
+      data: {
+        memory: {
+          id: item.id,
+          name: item.label,
+          description: item.description,
+          content: item.description ?? item.label,
+          type: item.kind === 'behavior_signal' ? 'insight' : 'concept',
+          createdAt: item.timeRange?.startAt ?? new Date().toISOString(),
+          badge: item.badge,
+          timeRange: item.timeRange,
+          treeKind: item.kind,
+        },
+      },
+      draggable: false,
+    });
+
+    edges.push({
+      id: `${parentId}-${nodeId}`,
+      source: parentId,
+      target: nodeId,
+      type: 'smoothstep',
+      style: { stroke: '#cbd5e1', strokeWidth: 1.5 },
+    });
+
+    if (item.children?.length) {
+      appendTreeNodes(nodeId, nodes, edges, item.children, depth + 1, offsetY);
+    }
+  }
+}
+
 export function buildMemoryGraphLayout(data: PersonaMemoryGraph): { nodes: Node[]; edges: Edge[] } {
+  if (data.tree?.length) {
+    const nodes: Node[] = [
+      {
+        id: PERSONA_NODE_ID,
+        type: 'persona',
+        position: { x: 0, y: 0 },
+        data: { persona: data.persona },
+        draggable: false,
+      },
+    ];
+    const edges: Edge[] = [];
+
+    appendTreeNodes(PERSONA_NODE_ID, nodes, edges, data.tree, 1, { current: -40 });
+
+    return { nodes, edges };
+  }
+
   const hubMemories = data.memories.filter((memory) => memory.isSectionHub);
   const hubIds = new Set(hubMemories.map((memory) => memory.id));
   const hasHubs = hubIds.size > 0;

@@ -6,7 +6,14 @@ import type {
   ReviewDistillationTaskRequest,
 } from '@sker/sdk';
 
-const ACTIVE_DISTILLATION_TASK_STATUSES = new Set(['queued', 'crawling', 'analyzing']);
+const ACTIVE_DISTILLATION_TASK_STATUSES = new Set([
+  'queued',
+  'crawling',
+  'extracting',
+  'aggregating',
+  'publishing',
+  'analyzing',
+]);
 const DISTILLATION_TASK_POLL_INTERVAL_MS = 3000;
 
 interface UseDistillationTasksParams {

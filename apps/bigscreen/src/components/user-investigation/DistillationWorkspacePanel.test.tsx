@@ -96,6 +96,15 @@ describe('DistillationWorkspacePanel', () => {
             targetId: 'm2',
             relationType: 'related',
           }],
+          tree: [],
+          timeline: [],
+          coordinationSignals: [],
+          stats: {
+            totalMemories: 2,
+            totalEvents: 0,
+            totalEvidencePosts: 1,
+            totalWarnings: 0,
+          },
         }}
         onCreateTask={vi.fn()}
         onOpenGraphMode={vi.fn()}
@@ -224,6 +233,69 @@ describe('DistillationWorkspacePanel', () => {
 
     expect(screen.getAllByText('已抓取帖子 62 条 · 正在生成画像 · 最近进展 刚刚')).toHaveLength(2);
     expect(screen.getByText('正在生成画像，已等待 15 秒，当前样本帖子 62 条')).toBeInTheDocument();
+  });
+
+  it('shows detailed extraction counters and warnings while task is active', () => {
+    const taskBase = {
+      id: 'task-1',
+      weiboUserId: '100',
+      eventId: null,
+      historyWindowDays: 90,
+      sourcePostCount: 20,
+      sourceCommentCount: 0,
+      sourceRepostCount: 0,
+      evidenceSampleCount: 0,
+      model: null,
+      promptVersion: null,
+      reviewStatus: null,
+      errorMessage: null,
+      startedAt: '2026-04-28T01:00:00.000Z',
+      completedAt: null,
+      createdAt: '2026-04-28T01:00:00.000Z',
+      updatedAt: '2026-04-28T01:05:00.000Z',
+    };
+
+    render(
+      <DistillationWorkspacePanel
+        selectedUserId="100"
+        tasks={[{
+          ...taskBase,
+          status: 'aggregating',
+          distilledSummary: '正在聚合 20 条帖子提取结果',
+          progress: {
+            stage: 'aggregating',
+            partial: true,
+            latestMessage: '正在聚合 20 条帖子提取结果',
+            lastProgressAt: '2026-04-28T01:05:00.000Z',
+            counters: {
+              crawledPosts: 20,
+              reusedExtractions: 12,
+              extractedPosts: 7,
+              failedPosts: 1,
+              eventClusterCount: 3,
+              coordinationSignalCount: 1,
+              warningCount: 2,
+            },
+            coverage: {
+              latestPostAt: '2026-04-28T01:00:00.000Z',
+              oldestPostAt: '2026-04-21T01:00:00.000Z',
+            },
+            recentWarnings: ['帖子 998 提取失败：timeout'],
+          },
+        }]}
+        personaSummary={null}
+        evidenceCount={0}
+        evidenceItems={[]}
+        memoryGraph={null}
+        onCreateTask={vi.fn()}
+        onOpenGraphMode={vi.fn()}
+        onReviewTask={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('已抓取 20 · 复用 12 · 新抽取 7 · 失败 1')).toBeInTheDocument();
+    expect(screen.getByText('帖子 998 提取失败：timeout')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '蒸馏进行中...' })).toBeDisabled();
   });
 
   it('triggers review callbacks when reviewer clicks action buttons', () => {

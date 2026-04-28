@@ -44,6 +44,7 @@ export class PersonaProjectionService {
       score: number;
     }>;
   }> {
+    const rawMetadata = input.metadata as Record<string, unknown>;
     const memories = input.memoryDrafts
       .filter((draft) => !draft.isSectionHub)
       .map((draft) => ({
@@ -77,8 +78,20 @@ export class PersonaProjectionService {
             riskScore: input.risk.overallScore,
             primaryTopics: input.content.primaryTopics,
           },
+          aggregation: {
+            extractorVersion: input.metadata.extractorVersion ?? null,
+            aggregationVersion: input.metadata.aggregationVersion ?? null,
+            eventWindowCount: input.metadata.eventWindowCount ?? 0,
+            coordinationSignalCount: input.metadata.coordinationSignalCount ?? 0,
+          },
           organizationMethod: 'llm_wiki_v1',
           sectionOrder: [...LLM_WIKI_SECTIONS],
+          graphTree: Array.isArray(rawMetadata.graphTree) ? rawMetadata.graphTree : [],
+          timeline: Array.isArray(rawMetadata.timeline) ? rawMetadata.timeline : [],
+          coordinationSignals: Array.isArray(rawMetadata.coordinationSignals)
+            ? rawMetadata.coordinationSignals
+            : [],
+          warnings: Array.isArray(input.metadata.warnings) ? input.metadata.warnings : [],
           metadata: input.metadata,
         },
       },
@@ -218,7 +231,7 @@ export class PersonaProjectionService {
             excerpt: evidence.excerpt ?? null,
             evidence_type: 'direct_quote',
             score: evidence.score,
-          }));
+          } as any));
         }
       }
 

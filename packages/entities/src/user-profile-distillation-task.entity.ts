@@ -14,6 +14,9 @@ import { WeiboUserEntity } from './weibo-user.entity';
 export type UserProfileDistillationTaskStatus =
   | 'queued'
   | 'crawling'
+  | 'extracting'
+  | 'aggregating'
+  | 'publishing'
   | 'analyzing'
   | 'review_pending'
   | 'published'
@@ -78,6 +81,12 @@ export class UserProfileDistillationTaskEntity {
 
   @Column({ type: 'jsonb', name: 'distilled_json', nullable: true })
   distilled_json!: Record<string, unknown> | null;
+
+  @Column({ type: 'jsonb', name: 'progress_json', nullable: true })
+  progress_json!: Record<string, unknown> | null;
+
+  @Column({ type: 'jsonb', name: 'warnings_json', nullable: true })
+  warnings_json!: string[] | null;
 
   @Column({ type: 'varchar', length: 32, name: 'review_status', nullable: true })
   review_status!: UserProfileDistillationReviewStatus | null;

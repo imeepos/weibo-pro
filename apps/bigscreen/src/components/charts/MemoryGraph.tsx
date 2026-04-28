@@ -59,7 +59,9 @@ const MemoryNodeComponent = ({ data }: { data: { memory: MemoryNodeType } }) => 
     : MEMORY_TYPE_COLORS[memory.type];
   const metaLabel = isHub
     ? 'section hub'
-    : [memory.section, memory.stability, memory.type].filter(Boolean).join(' · ');
+    : [memory.treeKind, memory.badge, memory.timeRange?.startAt ? '含时间轴' : null]
+        .filter(Boolean)
+        .join(' · ') || [memory.section, memory.stability, memory.type].filter(Boolean).join(' · ');
 
   return (
     <motion.div

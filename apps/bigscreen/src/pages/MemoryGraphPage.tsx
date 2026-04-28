@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Brain, Users, ChevronDown, ArrowLeft, Home } from 'lucide-react';
+import { Brain, Users, ChevronDown, Home } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import MemoryGraph from '../components/charts/MemoryGraph';
 import { PersonaAPI } from '../services/api/persona';
@@ -14,13 +14,21 @@ const MEMORY_TYPE_LEGEND: { type: MemoryType; label: string; color: string }[] =
   { type: 'insight', label: '洞察', color: 'bg-emerald-400' },
 ];
 
+const TIME_FILTERS = [
+  { value: 7, label: '7 天' },
+  { value: 30, label: '30 天' },
+  { value: 90, label: '90 天' },
+  { value: 'all', label: '全部' },
+] as const;
+
 const MemoryGraphPage: React.FC = () => {
   const navigate = useNavigate();
   const [personas, setPersonas] = useState<PersonaListItem[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [graphData, setGraphData] = useState<PersonaMemoryGraph | null>(null);
   const [loading, setLoading] = useState(false);
-  const [listOpen, setListOpen] = useState(false);
+  const [listOpen, setListOpen] = useState(true);
+  const [timeFilter, setTimeFilter] = useState<number | 'all'>(90);
 
   useEffect(() => {
     PersonaAPI.getList().then(setPersonas).catch(console.error);
@@ -36,6 +44,48 @@ const MemoryGraphPage: React.FC = () => {
   }, [selectedId]);
 
   const selectedPersona = personas.find(p => p.id === selectedId);
+  const filteredGraphData = useMemo(() => {
+    if (!graphData || timeFilter === 'all') {
+      return graphData;
+    }
+
+    const cutoff = Date.now() - timeFilter * 24 * 60 * 60 * 1000;
+    const inRange = (value: string | null | undefined) => {
+      if (!value) {
+        return false;
+      }
+
+      const time = new Date(value).getTime();
+      return !Number.isNaN(time) && time >= cutoff;
+    };
+
+    const filterTree = (items: PersonaMemoryGraph['tree']): PersonaMemoryGraph['tree'] =>
+      items.flatMap((item) => {
+        const children = item.children?.length ? filterTree(item.children) : [];
+        const keepSelf =
+          !item.timeRange ||
+          inRange(item.timeRange.endAt) ||
+          inRange(item.timeRange.startAt) ||
+          children.length > 0;
+
+        return keepSelf ? [{ ...item, children, childrenCount: children.length || item.childrenCount }] : [];
+      });
+
+    const tree = filterTree(graphData.tree ?? []);
+    const timeline = (graphData.timeline ?? []).filter(
+      (item) => inRange(item.bucketEnd) || inRange(item.bucketStart),
+    );
+    const coordinationSignals = (graphData.coordinationSignals ?? []).filter(
+      (item) => inRange(item.timeRange?.endAt) || inRange(item.timeRange?.startAt),
+    );
+
+    return {
+      ...graphData,
+      tree,
+      timeline,
+      coordinationSignals,
+    };
+  }, [graphData, timeFilter]);
 
   return (
     <div className="h-screen bg-background text-foreground relative overflow-hidden flex flex-col">
@@ -66,15 +116,30 @@ const MemoryGraphPage: React.FC = () => {
               <p className="text-muted-foreground text-sm">角色记忆关系可视化</p>
             </div>
           </div>
-          {graphData && (
-            <div className="flex items-center gap-6">
+          {filteredGraphData && (
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                {TIME_FILTERS.map((item) => (
+                  <button
+                    key={item.label}
+                    onClick={() => setTimeFilter(item.value)}
+                    className={`rounded-full px-3 py-1 text-xs transition-colors ${
+                      timeFilter === item.value
+                        ? 'bg-primary text-white'
+                        : 'bg-muted text-foreground'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
               <div className="text-right">
-                <div className="text-xl font-bold text-primary">{graphData.memories.length}</div>
+                <div className="text-xl font-bold text-primary">{filteredGraphData.stats.totalMemories}</div>
                 <div className="text-xs text-muted-foreground">记忆节点</div>
               </div>
               <div className="text-right">
-                <div className="text-xl font-bold text-emerald-500">{graphData.relations.length}</div>
-                <div className="text-xs text-muted-foreground">关系连接</div>
+                <div className="text-xl font-bold text-emerald-500">{filteredGraphData.stats.totalEvents}</div>
+                <div className="text-xs text-muted-foreground">事件窗口</div>
               </div>
             </div>
           )}
@@ -82,9 +147,9 @@ const MemoryGraphPage: React.FC = () => {
       </div>
 
       <div className="relative flex-1 overflow-hidden">
-        {graphData && !loading && (
+        {filteredGraphData && !loading && (
           <div className="absolute inset-0">
-            <MemoryGraph data={graphData} />
+            <MemoryGraph data={filteredGraphData} />
           </div>
         )}
 
@@ -169,6 +234,20 @@ const MemoryGraphPage: React.FC = () => {
             </div>
           </div>
         </motion.div>
+
+        {filteredGraphData?.coordinationSignals?.length ? (
+          <div className="absolute top-24 right-6 w-80 space-y-2">
+            {filteredGraphData.coordinationSignals.slice(0, 3).map((signal) => (
+              <div
+                key={signal.id}
+                className="rounded-lg border border-amber-300/40 bg-card/95 p-3 shadow-lg"
+              >
+                <div className="text-sm font-medium text-foreground">{signal.label}</div>
+                <div className="mt-1 text-xs text-muted-foreground">{signal.description}</div>
+              </div>
+            ))}
+          </div>
+        ) : null}
       </div>
     </div>
   );

@@ -4,7 +4,14 @@ import type { DistillationTaskSummary } from '@sker/sdk';
 import React, { useState } from 'react';
 import MemoryGraph from '@/components/charts/MemoryGraph';
 
-const ACTIVE_DISTILLATION_TASK_STATUSES = new Set(['queued', 'crawling', 'analyzing']);
+const ACTIVE_DISTILLATION_TASK_STATUSES = new Set([
+  'queued',
+  'crawling',
+  'extracting',
+  'aggregating',
+  'publishing',
+  'analyzing',
+]);
 
 function formatProgressTime(value: string | null | undefined): string {
   if (!value) {
@@ -64,17 +71,25 @@ export function DistillationWorkspacePanel({
   const taskForSummary = activeTask ?? latestTask;
   const isTaskActive = activeTask !== null;
   const isCreateDisabled = !selectedUserId || isCreatingTask || isTaskActive;
+  const progress = taskForSummary?.progress ?? null;
+  const progressCountersLabel = progress
+    ? `已抓取 ${progress.counters.crawledPosts} · 复用 ${progress.counters.reusedExtractions} · 新抽取 ${progress.counters.extractedPosts} · 失败 ${progress.counters.failedPosts}`
+    : null;
   const activeTaskProgressLabel = isTaskActive && taskForSummary
-    ? taskForSummary.status === 'queued'
-      ? `任务已进入队列 · 最近进展 ${formatProgressTime(taskForSummary.updatedAt)}`
-      : taskForSummary.status === 'analyzing'
-        ? `已抓取帖子 ${taskForSummary.sourcePostCount} 条 · 正在生成画像 · 最近进展 ${formatProgressTime(taskForSummary.updatedAt)}`
-        : `已抓取帖子 ${taskForSummary.sourcePostCount} 条 · 最近进展 ${formatProgressTime(taskForSummary.updatedAt)}`
+    ? progress
+      ? `${progress.latestMessage} · 最近进展 ${formatProgressTime(progress.lastProgressAt)}`
+      : taskForSummary.status === 'queued'
+        ? `任务已进入队列 · 最近进展 ${formatProgressTime(taskForSummary.updatedAt)}`
+        : taskForSummary.status === 'analyzing'
+          ? `已抓取帖子 ${taskForSummary.sourcePostCount} 条 · 正在生成画像 · 最近进展 ${formatProgressTime(taskForSummary.updatedAt)}`
+          : `已抓取帖子 ${taskForSummary.sourcePostCount} 条 · 最近进展 ${formatProgressTime(taskForSummary.updatedAt)}`
     : null;
   const progressHint = isCreatingTask && !isTaskActive
     ? '蒸馏任务已提交，正在进入后台队列，请稍候'
-    : isTaskActive
-      ? activeTaskProgressLabel ?? '任务进行中，后台正在抓取与蒸馏，请稍候刷新结果'
+    : isTaskActive && progress
+      ? `${progress.latestMessage} · 最近进展 ${formatProgressTime(progress.lastProgressAt)}`
+      : isTaskActive
+        ? activeTaskProgressLabel ?? '任务进行中，后台正在抓取与蒸馏，请稍候刷新结果'
       : null;
   const createButtonLabel = isCreatingTask && !isTaskActive
     ? '提交蒸馏中...'
@@ -104,12 +119,22 @@ export function DistillationWorkspacePanel({
           {activeTaskProgressLabel && (
             <div className="mt-2 text-xs text-muted-foreground">{activeTaskProgressLabel}</div>
           )}
+          {progressCountersLabel && (
+            <div className="mt-2 text-xs text-muted-foreground">{progressCountersLabel}</div>
+          )}
           {taskForSummary?.distilledSummary && (
             <div className="mt-2 text-sm text-muted-foreground">{taskForSummary.distilledSummary}</div>
           )}
           {taskForSummary?.errorMessage && (
             <div className="mt-2 text-sm text-destructive">{taskForSummary.errorMessage}</div>
           )}
+          {progress?.recentWarnings?.length ? (
+            <div className="mt-3 rounded-md border border-amber-300/40 bg-amber-50 p-2 text-xs text-amber-800">
+              {progress.recentWarnings.map((warning) => (
+                <div key={warning}>{warning}</div>
+              ))}
+            </div>
+          ) : null}
         </div>
 
         {progressHint && (
@@ -208,6 +233,10 @@ export function DistillationWorkspacePanel({
                   </span>
                 ))}
               </div>
+            </div>
+          ) : isTaskActive ? (
+            <div className="mt-2 text-sm text-muted-foreground">
+              当前图谱仍在生成中，蒸馏完成后会展示知识树预览
             </div>
           ) : (
             <div className="mt-2 text-sm text-muted-foreground">当前用户尚未生成单用户图谱预览</div>

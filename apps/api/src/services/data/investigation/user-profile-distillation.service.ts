@@ -75,6 +75,44 @@ export class UserProfileDistillationService {
     }
   }
 
+  async distillFromAggregatedInput(input: {
+    dossier: UserInvestigationDossier;
+    tree: any[];
+    timeline: any[];
+    coordinationSignals: any[];
+    extractions: Array<Record<string, unknown>>;
+  }): Promise<DistilledUserProfile> {
+    const requestedModel = 'deepseek-ai/DeepSeek-V3.2';
+    const promptVersion = 'v3';
+    const normalizationContext: ProfileNormalizationContext = {
+      dossier: input.dossier,
+      promptVersion,
+      requestedModel,
+    };
+    const model = useLlmModel({
+      model: requestedModel,
+      temperature: 0.2,
+    });
+
+    const response = await model.invoke([
+      {
+        role: 'system',
+        content: [
+          '你负责基于逐帖抽取结果和时间行为聚合结果生成用户画像。',
+          '输入中的 extractions 是逐帖 wiki layer，tree/timeline/signals 是聚合后的知识结构。',
+          '你必须把时间脉冲、同质内容簇、疑似协同传播信号纳入 behavior/risk/relations。',
+          '只能返回 JSON。',
+        ].join('\n'),
+      },
+      {
+        role: 'human',
+        content: JSON.stringify(input),
+      },
+    ]);
+
+    return this.normalizeProfileResponse(response, normalizationContext);
+  }
+
   private buildPrompt(dossier: UserInvestigationDossier): string {
     return JSON.stringify(
       {
