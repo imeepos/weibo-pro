@@ -113,16 +113,18 @@ export class UserDossierService {
     options: UserDossierOptions,
   ): Promise<UserDossierEvidenceSamples> {
     return useEntityManager(async (manager) => {
+      const windowStart = this.resolveWindowStart(options.windowDays);
       const historyRows = await manager.query(
         `
           SELECT p.id::text AS source_id, COALESCE(p.text_raw, p.text, '') AS excerpt
           FROM weibo_posts p
           WHERE p.user_id::text = $1
             AND p.deleted_at IS NULL
+            AND ($2::timestamptz IS NULL OR p.created_at >= $2::timestamptz)
           ORDER BY p.created_at DESC NULLS LAST
           LIMIT 5
         `,
-        [weiboUserId],
+        [weiboUserId, windowStart],
       );
 
       const eventRows = options.eventId
@@ -133,10 +135,11 @@ export class UserDossierService {
               WHERE p.user_id::text = $1
                 AND p.event_id = $2
                 AND p.deleted_at IS NULL
+                AND ($3::timestamptz IS NULL OR p.created_at >= $3::timestamptz)
               ORDER BY p.created_at DESC NULLS LAST
               LIMIT 5
             `,
-            [weiboUserId, options.eventId],
+            [weiboUserId, options.eventId, windowStart],
           )
         : [];
 
@@ -150,13 +153,14 @@ export class UserDossierService {
             relation_type,
             SUM(weight) AS total_weight
           FROM user_relation_statistics
-          WHERE source_user_id::text = $1
-             OR target_user_id::text = $1
+          WHERE (source_user_id::text = $1
+             OR target_user_id::text = $1)
+            AND ($2::timestamptz IS NULL OR COALESCE(last_interaction_at, updated_at, created_at) >= $2::timestamptz)
           GROUP BY source_id, relation_type
           ORDER BY total_weight DESC
           LIMIT 5
         `,
-        [weiboUserId],
+        [weiboUserId, windowStart],
       );
 
       const nlpRows = await manager.query(
@@ -169,10 +173,11 @@ export class UserDossierService {
           JOIN weibo_posts p ON p.id = nlp.post_id
           WHERE p.user_id::text = $1
             AND p.deleted_at IS NULL
+            AND ($2::timestamptz IS NULL OR p.created_at >= $2::timestamptz)
           ORDER BY p.created_at DESC NULLS LAST
           LIMIT 5
         `,
-        [weiboUserId],
+        [weiboUserId, windowStart],
       );
 
       return {
@@ -261,6 +266,7 @@ export class UserDossierService {
     options: UserDossierOptions,
   ): Promise<UserInvestigationDossier['historyCoverage']> {
     return useEntityManager(async (manager) => {
+      const windowStart = this.resolveWindowStart(options.windowDays);
       const rows = await manager.query(
         `
           SELECT
@@ -270,8 +276,9 @@ export class UserDossierService {
           FROM weibo_posts
           WHERE user_id::text = $1
             AND deleted_at IS NULL
+            AND ($2::timestamptz IS NULL OR created_at >= $2::timestamptz)
         `,
-        [weiboUserId],
+        [weiboUserId, windowStart],
       );
 
       const row = rows[0] ?? {};
@@ -289,9 +296,10 @@ export class UserDossierService {
 
   protected async loadBehaviorTimeline(
     weiboUserId: string,
-    _options: UserDossierOptions,
+    options: UserDossierOptions,
   ): Promise<UserInvestigationDossier['behaviorTimeline']> {
     return useEntityManager(async (manager) => {
+      const windowStart = this.resolveWindowStart(options.windowDays);
       const postingByDay = await manager.query(
         `
           SELECT
@@ -300,11 +308,12 @@ export class UserDossierService {
           FROM weibo_posts
           WHERE user_id::text = $1
             AND deleted_at IS NULL
+            AND ($2::timestamptz IS NULL OR created_at >= $2::timestamptz)
           GROUP BY DATE_TRUNC('day', created_at)
           ORDER BY day DESC
           LIMIT 14
         `,
-        [weiboUserId],
+        [weiboUserId, windowStart],
       );
 
       const postingByHour = await manager.query(
@@ -315,10 +324,11 @@ export class UserDossierService {
           FROM weibo_posts
           WHERE user_id::text = $1
             AND deleted_at IS NULL
+            AND ($2::timestamptz IS NULL OR created_at >= $2::timestamptz)
           GROUP BY EXTRACT(HOUR FROM created_at)
           ORDER BY hour ASC
         `,
-        [weiboUserId],
+        [weiboUserId, windowStart],
       );
 
       const interactionByDay = await manager.query(
@@ -329,11 +339,12 @@ export class UserDossierService {
           FROM weibo_posts
           WHERE user_id::text = $1
             AND deleted_at IS NULL
+            AND ($2::timestamptz IS NULL OR created_at >= $2::timestamptz)
           GROUP BY DATE_TRUNC('day', created_at)
           ORDER BY day DESC
           LIMIT 14
         `,
-        [weiboUserId],
+        [weiboUserId, windowStart],
       );
 
       const spikes = [...interactionByDay]
@@ -372,9 +383,10 @@ export class UserDossierService {
 
   protected async loadTopicAndSentimentProfile(
     weiboUserId: string,
-    _options: UserDossierOptions,
+    options: UserDossierOptions,
   ): Promise<UserInvestigationDossier['topicAndSentimentProfile']> {
     return useEntityManager(async (manager) => {
+      const windowStart = this.resolveWindowStart(options.windowDays);
       const rows = await manager.query(
         `
           SELECT keyword.keyword AS keyword, SUM((keyword.weight)::numeric) AS total_weight
@@ -383,11 +395,12 @@ export class UserDossierService {
           CROSS JOIN LATERAL jsonb_to_recordset(nlp.keywords) AS keyword(keyword text, weight numeric, sentiment text, pos text, count integer)
           WHERE p.user_id::text = $1
             AND p.deleted_at IS NULL
+            AND ($2::timestamptz IS NULL OR p.created_at >= $2::timestamptz)
           GROUP BY keyword.keyword
           ORDER BY total_weight DESC
           LIMIT 8
         `,
-        [weiboUserId],
+        [weiboUserId, windowStart],
       );
 
       const eventTypeRows = await manager.query(
@@ -400,11 +413,12 @@ export class UserDossierService {
           WHERE p.user_id::text = $1
             AND p.deleted_at IS NULL
             AND nlp.event_type->>'type' IS NOT NULL
+            AND ($2::timestamptz IS NULL OR p.created_at >= $2::timestamptz)
           GROUP BY nlp.event_type->>'type'
           ORDER BY weight DESC
           LIMIT 5
         `,
-        [weiboUserId],
+        [weiboUserId, windowStart],
       );
 
       const sentimentRows = await manager.query(
@@ -418,11 +432,12 @@ export class UserDossierService {
           JOIN weibo_posts p ON p.id = nlp.post_id
           WHERE p.user_id::text = $1
             AND p.deleted_at IS NULL
+            AND ($2::timestamptz IS NULL OR p.created_at >= $2::timestamptz)
           GROUP BY DATE_TRUNC('day', p.created_at)
           ORDER BY timestamp DESC
           LIMIT 14
         `,
-        [weiboUserId],
+        [weiboUserId, windowStart],
       );
 
       const sentimentDistribution = sentimentRows.reduce(
@@ -459,9 +474,10 @@ export class UserDossierService {
 
   protected async loadRelationSummary(
     weiboUserId: string,
-    _options: UserDossierOptions,
+    options: UserDossierOptions,
   ): Promise<UserInvestigationDossier['relationSummary']> {
     return useEntityManager(async (manager) => {
+      const windowStart = this.resolveWindowStart(options.windowDays);
       const rows = await manager.query(
         `
           SELECT
@@ -472,13 +488,14 @@ export class UserDossierService {
             relation_type,
             SUM(weight) AS total_weight
           FROM user_relation_statistics
-          WHERE source_user_id::text = $1
-             OR target_user_id::text = $1
+          WHERE (source_user_id::text = $1
+             OR target_user_id::text = $1)
+            AND ($2::timestamptz IS NULL OR COALESCE(last_interaction_at, updated_at, created_at) >= $2::timestamptz)
           GROUP BY related_user_id, relation_type
           ORDER BY total_weight DESC
           LIMIT 5
         `,
-        [weiboUserId],
+        [weiboUserId, windowStart],
       );
 
       return {
@@ -543,5 +560,13 @@ export class UserDossierService {
       .sort((a, b) => b.count - a.count)
       .slice(0, 2)
       .map((item) => item.label);
+  }
+
+  private resolveWindowStart(windowDays: number): Date | null {
+    if (!Number.isFinite(windowDays) || windowDays <= 0) {
+      return null;
+    }
+
+    return new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000);
   }
 }

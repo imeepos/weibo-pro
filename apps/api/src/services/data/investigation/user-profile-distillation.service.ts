@@ -62,14 +62,17 @@ export class UserProfileDistillationService {
         return this.normalizeProfileResponse(response, normalizationContext);
       } catch (error) {
         if (!this.isStructuredOutputParseFailure(error)) {
-          throw error;
+          return this.buildInvocationFallbackProfile(normalizationContext, error);
         }
       }
     }
 
-    const response = await model.invoke(messages);
-
-    return this.normalizeProfileResponse(response, normalizationContext);
+    try {
+      const response = await model.invoke(messages);
+      return this.normalizeProfileResponse(response, normalizationContext);
+    } catch (error) {
+      return this.buildInvocationFallbackProfile(normalizationContext, error);
+    }
   }
 
   private buildPrompt(dossier: UserInvestigationDossier): string {
@@ -787,6 +790,129 @@ export class UserProfileDistillationService {
     return samples.slice(0, 5);
   }
 
+  private buildInvocationFallbackProfile(
+    context: ProfileNormalizationContext,
+    error: unknown,
+  ): DistilledUserProfile {
+    const { dossier } = context;
+    const displayName =
+      dossier.accountSnapshot.screenName ??
+      dossier.accountSnapshot.displayName ??
+      dossier.accountSnapshot.weiboUserId;
+    const evidencePool = this.buildEvidencePool(context);
+    const riskReasons = this.compactStrings([
+      ...dossier.eventRiskContext.riskSignals.map((signal) => signal.label),
+      ...dossier.preDistillationSummary.anomalyHints,
+      ...dossier.preDistillationSummary.coverageWarnings,
+    ]);
+    const primaryTopics = dossier.topicAndSentimentProfile.primaryKeywords.slice(0, 5);
+    const fallbackLongSummary = [
+      `${displayName} 的用户画像由 dossier 保底生成。`,
+      `窗口内累计样本帖子 ${dossier.historyCoverage.collectedPostCount} 条。`,
+      `模型调用异常：${this.shorten(error instanceof Error ? error.message : String(error), 80)}。`,
+      '本次结果仅供人工复核，不自动发布。',
+    ].join(' ');
+    const memoryDrafts = this.buildCoercedMemoryDrafts(
+      {
+        summary: fallbackLongSummary,
+        memoryDrafts: {
+          keyObservations: this.compactStrings([
+            riskReasons[0],
+            primaryTopics[0],
+            dossier.behaviorTimeline.activePeriods[0],
+          ]).join('；'),
+          recentMilestones: riskReasons.slice(1, 3),
+        },
+      },
+      evidencePool,
+    );
+
+    return this.validateProfile({
+      summary: {
+        short: this.shorten(`${displayName} 的自动蒸馏降级画像，需人工复核`, 36),
+        long: fallbackLongSummary,
+        confidence: 0.35,
+      },
+      identity: {
+        inferredRole:
+          dossier.accountSnapshot.verifiedReason ??
+          (dossier.accountSnapshot.verified ? '认证账号' : '待人工复核账号'),
+        roleConfidence: 0.35,
+        accountNature: this.compactStrings([
+          dossier.accountSnapshot.verified ? 'verified' : null,
+          dossier.accountSnapshot.followersCount >= 100000 ? 'influencer' : null,
+          dossier.accountSnapshot.location,
+        ]),
+        stableTraits: this.compactStrings([
+          ...dossier.preDistillationSummary.candidateLabels.slice(0, 2),
+          dossier.behaviorTimeline.activePeriods[0],
+        ]),
+      },
+      behavior: {
+        activityPattern:
+          dossier.behaviorTimeline.activePeriods.length > 0
+            ? dossier.behaviorTimeline.activePeriods
+            : ['待人工复核'],
+        postingRhythm:
+          dossier.behaviorTimeline.spikeMoments.length > 0
+            ? 'bursty'
+            : dossier.historyCoverage.collectedPostCount >= 100
+              ? 'active'
+              : 'steady',
+        escalationPattern:
+          riskReasons.length > 0 ? riskReasons.slice(0, 3) : ['待人工复核'],
+        historicalStability:
+          dossier.preDistillationSummary.coverageWarnings.length > 0 ? 'tentative' : 'stable',
+      },
+      content: {
+        primaryTopics,
+        narrativeStyles:
+          dossier.preDistillationSummary.candidateLabels.length > 0
+            ? dossier.preDistillationSummary.candidateLabels.slice(0, 3)
+            : ['待人工复核'],
+        emotionalTendency: [this.deriveDominantSentiment(dossier)],
+        stancePattern:
+          riskReasons.length > 0 ? riskReasons.slice(0, 3) : ['待人工复核'],
+      },
+      risk: {
+        overallLevel: dossier.eventRiskContext.eventRiskLevel,
+        overallScore: dossier.eventRiskContext.eventRiskScore,
+        riskDrivers:
+          riskReasons.length > 0
+            ? riskReasons.slice(0, 3).map((reason) => ({
+                label: this.shorten(reason, 16),
+                reason,
+                confidence: 0.55,
+              }))
+            : [{ label: '待人工复核', reason: '模型调用失败，已降级为 dossier 保底画像', confidence: 0.45 }],
+        reviewRecommendation: 'human_review',
+      },
+      relations: {
+        keyConnections: dossier.relationSummary.topConnectedUsers.slice(0, 5).map((connection) => ({
+          targetUserId: connection.userId,
+          relationType: connection.relationTypes[0] ?? 'interaction',
+          strength: Math.max(0, connection.weight),
+          note:
+            dossier.relationSummary.suspiciousCoordinationHints[0] ??
+            connection.relationTypes[0] ??
+            '待人工复核',
+        })),
+        clusterRole: dossier.relationSummary.relationClusters[0]?.label ?? null,
+        coordinationSignals: dossier.relationSummary.suspiciousCoordinationHints,
+      },
+      memoryDrafts,
+      metadata: {
+        sampledPosts: dossier.historyCoverage.collectedPostCount,
+        sampledComments: dossier.historyCoverage.collectedCommentCount,
+        sampledReposts: dossier.historyCoverage.collectedRepostCount,
+        windowDays: dossier.historyCoverage.windowDays,
+        model: context.requestedModel,
+        promptVersion: `${context.promptVersion}-fallback`,
+        generatedAt: new Date().toISOString(),
+      },
+    });
+  }
+
   private normalizeRiskLevel(level: unknown, score: unknown): 'low' | 'medium' | 'high' | 'critical' {
     const normalizedLevel = this.firstNonEmptyString(level)?.toLowerCase();
     if (normalizedLevel) {
@@ -824,6 +950,17 @@ export class UserProfileDistillationService {
     }
 
     return Math.max(0, Math.min(100, Math.round(numericScore)));
+  }
+
+  private deriveDominantSentiment(dossier: UserInvestigationDossier): string {
+    const distribution = dossier.topicAndSentimentProfile.sentimentDistribution;
+    const ranking: Array<[string, number]> = [
+      ['positive', Number(distribution.positive || 0)],
+      ['negative', Number(distribution.negative || 0)],
+      ['neutral', Number(distribution.neutral || 0)],
+    ];
+    ranking.sort((left, right) => right[1] - left[1]);
+    return ranking[0]?.[0] ?? 'neutral';
   }
 
   private normalizeReviewRecommendation(

@@ -1,7 +1,25 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { useEntityManager } from '@sker/entities';
 import { UserDossierService } from './user-dossier.service';
 
+vi.mock('@sker/entities', async () => {
+  const actual = await vi.importActual('@sker/entities');
+  return {
+    ...actual,
+    useEntityManager: vi.fn(),
+  };
+});
+
 describe('UserDossierService', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllEnvs();
+  });
+
   it('builds a structured dossier with account snapshot, coverage, samples, and relation summary', async () => {
     const service = new UserDossierService();
     service['loadAccountSnapshot'] = vi.fn().mockResolvedValue({
@@ -135,5 +153,41 @@ describe('UserDossierService', () => {
     expect(result.coverageWarnings).toContain('历史帖子样本为空');
     expect(result.coverageWarnings).toContain('事件样本不足，建议人工复核');
     expect(result.humanReviewNeeded).toBe(true);
+  });
+
+  it('limits history coverage to the requested window instead of all historical posts', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-04-28T08:00:00.000Z'));
+
+    vi.mocked(useEntityManager).mockImplementation(async (handler: any) =>
+      handler({
+        query: vi.fn().mockImplementation((_sql: string, params: unknown[]) => {
+          const cutoff = params[1];
+          if (cutoff instanceof Date) {
+            return [
+              {
+                post_count: 61,
+                start_at: cutoff,
+                end_at: new Date('2026-04-28T07:00:00.000Z'),
+              },
+            ];
+          }
+
+          return [
+            {
+              post_count: 904,
+              start_at: new Date('2025-01-01T00:00:00.000Z'),
+              end_at: new Date('2026-04-28T07:00:00.000Z'),
+            },
+          ];
+        }),
+      }),
+    );
+
+    const service = new UserDossierService();
+    const result = await service['loadHistoryCoverage']('1571999832', { windowDays: 90 });
+
+    expect(result.collectedPostCount).toBe(61);
+    expect(result.timeRangeStart).toBe('2026-01-28T08:00:00.000Z');
   });
 });

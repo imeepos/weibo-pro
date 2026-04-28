@@ -246,6 +246,63 @@ describe('UsersService distillation flow', () => {
     vi.useFakeTimers();
     vi.stubEnv('USER_PROFILE_DISTILLATION_PROGRESS_HEARTBEAT_MS', '1000');
 
+    userDossierService.getDossier.mockResolvedValue({
+      accountSnapshot: {
+        weiboUserId: '100',
+        screenName: '用户A',
+        displayName: '用户A',
+        avatar: null,
+        description: '简介',
+        location: '陕西',
+        followersCount: 1200,
+        friendsCount: 80,
+        statusesCount: 320,
+        verified: true,
+        verifiedType: 0,
+        verifiedReason: null,
+        creditScore: 80,
+        urisk: 60,
+        createdAt: null,
+      },
+      eventRiskContext: {
+        eventId: 'event-1',
+        eventRiskLevel: 'high',
+        eventRiskScore: 92,
+        riskSignals: [],
+        firstSeenAt: null,
+        lastSeenAt: null,
+        eventPostCount: 2,
+        eventInteractionCount: 12,
+      },
+      historyCoverage: {
+        windowDays: 90,
+        collectedPostCount: 903,
+        collectedCommentCount: 0,
+        collectedRepostCount: 3,
+        timeRangeStart: null,
+        timeRangeEnd: null,
+        samplingStrategy: 'recent+spikes',
+      },
+      behaviorTimeline: { postingByDay: [], postingByHour: [], interactionByDay: [], spikeMoments: [], activePeriods: [] },
+      topicAndSentimentProfile: {
+        topicClusters: [],
+        primaryKeywords: [],
+        eventTypes: [],
+        sentimentTrend: [],
+        sentimentDistribution: { positive: 0, negative: 0, neutral: 0 },
+        topicShiftMoments: [],
+      },
+      relationSummary: {
+        topConnectedUsers: [],
+        relationTypes: [],
+        sharedEvents: [],
+        relationClusters: [],
+        suspiciousCoordinationHints: [],
+      },
+      evidenceSamples: { eventSamples: [], historySamples: [], relationSamples: [], nlpSamples: [] },
+      preDistillationSummary: { candidateLabels: [], anomalyHints: [], coverageWarnings: [], humanReviewNeeded: false },
+    });
+
     let resolveDistill: ((value: any) => void) | null = null;
     userProfileDistillationService.distill.mockImplementation(
       () =>
@@ -262,6 +319,7 @@ describe('UsersService distillation flow', () => {
     await vi.waitFor(() => {
       expect(savedTasks.find((item) => item.id === result.id)?.status).toBe('analyzing');
     });
+    expect(savedTasks.find((item) => item.id === result.id)?.source_post_count).toBe(903);
 
     await vi.advanceTimersByTimeAsync(1000);
 

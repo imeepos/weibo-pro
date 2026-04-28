@@ -361,6 +361,25 @@ ${JSON.stringify(validProfile, null, 2)}
     expect(fallbackInvokeMock).toHaveBeenCalledTimes(1);
   });
 
+  it('returns a dossier-based fallback profile when provider invocation still fails', async () => {
+    structuredInvokeMock.mockRejectedValue(
+      new SyntaxError('Unexpected token `, "```json\\n{\\n"... is not valid JSON'),
+    );
+    fallbackInvokeMock.mockRejectedValue(
+      new Error("Cannot read properties of undefined (reading 'map')"),
+    );
+
+    const service = new UserProfileDistillationService();
+
+    const profile = await service.distill(validDossier as any);
+
+    expect(profile.summary.short).toContain('自动蒸馏降级画像');
+    expect(profile.risk.reviewRecommendation).toBe('human_review');
+    expect(profile.metadata.sampledPosts).toBe(20);
+    expect(profile.metadata.promptVersion).toContain('fallback');
+    expect(profile.memoryDrafts.length).toBeGreaterThan(0);
+  });
+
   it('falls back to fenced json parsing when structured output is unavailable', async () => {
     vi.mocked(useLlmModel).mockReturnValueOnce({
       invoke: fallbackInvokeMock.mockResolvedValue({

@@ -331,18 +331,21 @@ export class UsersService implements OnInit {
         },
       });
 
-      task = await this.updateDistillationTask(taskId, (currentTask) => {
-        currentTask.status = 'analyzing';
-        currentTask.source_post_count = collection.collectedPostCount;
-        currentTask.distilled_summary = collection.partial
-          ? `${collection.message}，正在基于已抓取数据生成画像`
-          : '历史发帖抓取完成，正在生成画像';
-      });
-
       const dossier = await this.userDossierService.getDossier(task.weibo_user_id, {
         eventId: task.event_id ?? undefined,
         windowDays: task.history_window_days,
       });
+
+      task = await this.updateDistillationTask(taskId, (currentTask) => {
+        currentTask.status = 'analyzing';
+        currentTask.source_post_count = dossier.historyCoverage.collectedPostCount;
+        currentTask.source_comment_count = dossier.historyCoverage.collectedCommentCount;
+        currentTask.source_repost_count = dossier.historyCoverage.collectedRepostCount;
+        currentTask.distilled_summary = collection.partial
+          ? `${collection.message}，窗口内累计可用帖子 ${dossier.historyCoverage.collectedPostCount} 条，正在基于已抓取数据生成画像`
+          : `历史发帖抓取完成，窗口内累计可用帖子 ${dossier.historyCoverage.collectedPostCount} 条，正在生成画像`;
+      });
+
       const profile = await this.runDistillationWithTaskHeartbeat(taskId, dossier);
       const reviewStatus =
         profile.risk.reviewRecommendation === 'auto_pass' ? 'auto_pass' : 'human_pending';
