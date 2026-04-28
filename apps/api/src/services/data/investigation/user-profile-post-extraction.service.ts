@@ -415,6 +415,7 @@ export class UserProfilePostExtractionService {
     return (
       error instanceof SyntaxError ||
       (error as { name?: string }).name === 'ZodError' ||
+      /Cannot read properties of undefined \(reading 'message'\)/i.test(message) ||
       /Unexpected token .* is not valid JSON/i.test(message) ||
       /Invalid input:/i.test(message) ||
       stack.includes('@langchain/openai/dist/utils/output.js')
@@ -431,6 +432,7 @@ export class UserProfilePostExtractionService {
       'socket hang up',
       'econnreset',
       'econnrefused',
+      'cannot read properties of undefined',
       '502',
       '503',
       '504',

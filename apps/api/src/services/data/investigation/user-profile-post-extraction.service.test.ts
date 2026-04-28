@@ -307,4 +307,40 @@ ${JSON.stringify({
     expect(plainInvokeMock).toHaveBeenCalledTimes(1);
     expect(withStructuredOutputMock).not.toHaveBeenCalled();
   });
+
+  it('falls back to structured output when the plain model client throws a transient type error', async () => {
+    plainInvokeMock.mockRejectedValue(
+      new TypeError("Cannot read properties of undefined (reading 'message')"),
+    );
+    structuredInvokeMock.mockResolvedValue({
+      topicLabels: ['体育'],
+      eventLabel: '赛事A',
+      eventKey: 'event-a',
+      viewpointLabels: ['支持'],
+      stance: '支持',
+      sentiment: 'positive',
+      emotionLabels: ['激动'],
+      entities: [],
+      riskSignals: [],
+      coordinationMarkers: [],
+      temporalHints: {
+        postCreatedAt: '2026-04-28T01:00:00.000Z',
+        inferredPhase: 'burst',
+      },
+      contentFingerprint: 'fp-1',
+      excerpt: '统一口径帖文',
+    });
+
+    const service = new UserProfilePostExtractionService();
+    const result = await (service as any).invokeExtractor({
+      normalizedText: '统一口径帖文',
+      fingerprint: 'fp-1',
+      sourceSnapshot: { text: '统一口径帖文' },
+    });
+
+    expect(result.eventKey).toBe('event-a');
+    expect(plainInvokeMock).toHaveBeenCalledTimes(1);
+    expect(withStructuredOutputMock).toHaveBeenCalledTimes(1);
+    expect(structuredInvokeMock).toHaveBeenCalledTimes(1);
+  });
 });
