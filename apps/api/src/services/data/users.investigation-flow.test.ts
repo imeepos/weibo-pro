@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { UsersService } from './users.service';
 import { useEntityManager, UserProfileDistillationTaskEntity } from '@sker/entities';
 
@@ -19,6 +19,11 @@ describe('UsersService distillation flow', () => {
   let userDossierService: { getDossier: ReturnType<typeof vi.fn> };
   let userProfileDistillationService: { distill: ReturnType<typeof vi.fn> };
   let personaProjectionService: { publishProfile: ReturnType<typeof vi.fn> };
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllEnvs();
+  });
 
   beforeEach(() => {
     savedTasks.length = 0;
@@ -235,6 +240,96 @@ describe('UsersService distillation flow', () => {
       expect(personaProjectionService.publishProfile).toHaveBeenCalled();
       expect(savedTasks.find((item) => item.id === result.id)?.status).toBe('published');
     });
+  });
+
+  it('refreshes task summary while distillation stays in analyzing', async () => {
+    vi.useFakeTimers();
+    vi.stubEnv('USER_PROFILE_DISTILLATION_PROGRESS_HEARTBEAT_MS', '1000');
+
+    let resolveDistill: ((value: any) => void) | null = null;
+    userProfileDistillationService.distill.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveDistill = resolve;
+        }),
+    );
+
+    const result = await service.createDistillationTask('100', {
+      eventId: 'event-1',
+      historyWindowDays: 90,
+    });
+
+    await vi.waitFor(() => {
+      expect(savedTasks.find((item) => item.id === result.id)?.status).toBe('analyzing');
+    });
+
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(savedTasks.find((item) => item.id === result.id)?.distilled_summary).toContain('正在生成画像');
+    expect(savedTasks.find((item) => item.id === result.id)?.distilled_summary).toContain('已等待');
+
+    resolveDistill?.({
+      summary: { short: '短摘要', long: '长摘要', confidence: 0.9 },
+      identity: { inferredRole: '热点自媒体', roleConfidence: 0.8, accountNature: ['media'], stableTraits: ['热点追逐'] },
+      behavior: { activityPattern: ['夜间活跃'], postingRhythm: 'bursty', escalationPattern: ['突发追热点'], historicalStability: 'medium' },
+      content: { primaryTopics: ['体育'], narrativeStyles: ['情绪放大'], emotionalTendency: ['negative'], stancePattern: ['对立'] },
+      risk: {
+        overallLevel: 'high',
+        overallScore: 87,
+        riskDrivers: [{ label: '情绪极化', reason: '负向占比高', confidence: 0.8 }],
+        reviewRecommendation: 'auto_pass',
+      },
+      relations: { keyConnections: [], clusterRole: null, coordinationSignals: [] },
+      memoryDrafts: [{
+        type: 'insight',
+        name: '热点追逐型',
+        description: null,
+        content: '长期追逐热点并放大情绪',
+        evidenceRefs: [{ sourceTable: 'weibo_posts', sourceId: '1', score: 0.8 }],
+        relationDrafts: [],
+      }],
+      metadata: {
+        sampledPosts: 20,
+        sampledComments: 0,
+        sampledReposts: 3,
+        windowDays: 90,
+        model: 'gpt-5',
+        promptVersion: 'v2',
+        generatedAt: '2026-04-23T00:00:00.000Z',
+      },
+    });
+
+    await vi.runAllTimersAsync();
+
+    await vi.waitFor(() => {
+      expect(savedTasks.find((item) => item.id === result.id)?.status).toBe('published');
+    });
+  });
+
+  it('fails distillation tasks that exceed the analyze timeout', async () => {
+    vi.useFakeTimers();
+    vi.stubEnv('USER_PROFILE_DISTILLATION_TIMEOUT_MS', '1000');
+    vi.stubEnv('USER_PROFILE_DISTILLATION_PROGRESS_HEARTBEAT_MS', '1000');
+
+    userProfileDistillationService.distill.mockImplementation(
+      () => new Promise(() => undefined),
+    );
+
+    const result = await service.createDistillationTask('100', {
+      eventId: 'event-1',
+      historyWindowDays: 90,
+    });
+
+    await vi.waitFor(() => {
+      expect(savedTasks.find((item) => item.id === result.id)?.status).toBe('analyzing');
+    });
+
+    await vi.advanceTimersByTimeAsync(1000);
+
+    await vi.waitFor(() => {
+      expect(savedTasks.find((item) => item.id === result.id)?.status).toBe('failed');
+    });
+    expect(savedTasks.find((item) => item.id === result.id)?.error_message).toContain('超时');
   });
 
   it('returns the queued task before long-running collection completes', async () => {

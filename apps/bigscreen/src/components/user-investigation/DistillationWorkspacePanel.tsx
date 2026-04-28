@@ -65,7 +65,11 @@ export function DistillationWorkspacePanel({
   const isTaskActive = activeTask !== null;
   const isCreateDisabled = !selectedUserId || isCreatingTask || isTaskActive;
   const activeTaskProgressLabel = isTaskActive && taskForSummary
-    ? `已抓取帖子 ${taskForSummary.sourcePostCount} 条 · 最近进展 ${formatProgressTime(taskForSummary.updatedAt)}`
+    ? taskForSummary.status === 'queued'
+      ? `任务已进入队列 · 最近进展 ${formatProgressTime(taskForSummary.updatedAt)}`
+      : taskForSummary.status === 'analyzing'
+        ? `已抓取帖子 ${taskForSummary.sourcePostCount} 条 · 正在生成画像 · 最近进展 ${formatProgressTime(taskForSummary.updatedAt)}`
+        : `已抓取帖子 ${taskForSummary.sourcePostCount} 条 · 最近进展 ${formatProgressTime(taskForSummary.updatedAt)}`
     : null;
   const progressHint = isCreatingTask && !isTaskActive
     ? '蒸馏任务已提交，正在进入后台队列，请稍候'

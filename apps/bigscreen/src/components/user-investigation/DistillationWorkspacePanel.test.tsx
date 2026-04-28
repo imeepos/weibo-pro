@@ -188,6 +188,44 @@ describe('DistillationWorkspacePanel', () => {
     expect(screen.getByRole('button', { name: '蒸馏进行中...' })).toBeDisabled();
   });
 
+  it('shows an explicit analyzing hint while profile generation is in progress', () => {
+    render(
+      <DistillationWorkspacePanel
+        selectedUserId="100"
+        tasks={[{
+          id: 'task-1',
+          weiboUserId: '100',
+          eventId: null,
+          status: 'analyzing',
+          historyWindowDays: 90,
+          sourcePostCount: 62,
+          sourceCommentCount: 0,
+          sourceRepostCount: 0,
+          evidenceSampleCount: 0,
+          model: null,
+          promptVersion: null,
+          distilledSummary: '正在生成画像，已等待 15 秒，当前样本帖子 62 条',
+          reviewStatus: null,
+          errorMessage: null,
+          startedAt: '2026-04-23T00:00:00.000Z',
+          completedAt: null,
+          createdAt: '2026-04-23T00:00:00.000Z',
+          updatedAt: '2026-04-23T00:04:30.000Z',
+        }]}
+        personaSummary={null}
+        evidenceCount={0}
+        evidenceItems={[]}
+        memoryGraph={null}
+        onCreateTask={vi.fn()}
+        onOpenGraphMode={vi.fn()}
+        onReviewTask={vi.fn()}
+      />,
+    );
+
+    expect(screen.getAllByText('已抓取帖子 62 条 · 正在生成画像 · 最近进展 刚刚')).toHaveLength(2);
+    expect(screen.getByText('正在生成画像，已等待 15 秒，当前样本帖子 62 条')).toBeInTheDocument();
+  });
+
   it('triggers review callbacks when reviewer clicks action buttons', () => {
     const onReviewTask = vi.fn();
 

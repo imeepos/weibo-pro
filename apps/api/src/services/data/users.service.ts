@@ -22,6 +22,8 @@ import { UserProfileDistillationService } from './investigation/user-profile-dis
 import { PersonaProjectionService } from './investigation/persona-projection.service';
 
 const ACTIVE_DISTILLATION_TASK_STATUSES = new Set(['queued', 'crawling', 'analyzing']);
+const DEFAULT_DISTILLATION_TIMEOUT_MS = 10 * 60 * 1000;
+const DEFAULT_DISTILLATION_HEARTBEAT_MS = 15 * 1000;
 
 export type RiskLevel = 'low' | 'medium' | 'high';
 
@@ -341,7 +343,7 @@ export class UsersService implements OnInit {
         eventId: task.event_id ?? undefined,
         windowDays: task.history_window_days,
       });
-      const profile = await this.userProfileDistillationService.distill(dossier);
+      const profile = await this.runDistillationWithTaskHeartbeat(taskId, dossier);
       const reviewStatus =
         profile.risk.reviewRecommendation === 'auto_pass' ? 'auto_pass' : 'human_pending';
 
@@ -400,6 +402,70 @@ export class UsersService implements OnInit {
     });
   }
 
+  private async runDistillationWithTaskHeartbeat(
+    taskId: string,
+    dossier: UserInvestigationDossier,
+  ) {
+    const timeoutMs = this.resolvePositiveIntegerEnv(
+      process.env.USER_PROFILE_DISTILLATION_TIMEOUT_MS,
+      DEFAULT_DISTILLATION_TIMEOUT_MS,
+    );
+    const heartbeatMs = this.resolvePositiveIntegerEnv(
+      process.env.USER_PROFILE_DISTILLATION_PROGRESS_HEARTBEAT_MS,
+      DEFAULT_DISTILLATION_HEARTBEAT_MS,
+    );
+    const startedAt = Date.now();
+    let settled = false;
+    let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+    let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+
+    const stopTimers = () => {
+      settled = true;
+      if (heartbeatTimer) {
+        clearInterval(heartbeatTimer);
+        heartbeatTimer = null;
+      }
+      if (timeoutHandle) {
+        clearTimeout(timeoutHandle);
+        timeoutHandle = null;
+      }
+    };
+
+    const pushHeartbeat = async () => {
+      const elapsedMs = Date.now() - startedAt;
+      await this.updateDistillationTask(taskId, (currentTask) => {
+        currentTask.status = 'analyzing';
+        currentTask.error_message = null;
+        currentTask.distilled_summary = `正在生成画像，已等待 ${this.formatElapsedDuration(elapsedMs)}，当前样本帖子 ${currentTask.source_post_count} 条`;
+      });
+    };
+
+    heartbeatTimer = setInterval(() => {
+      if (settled) {
+        return;
+      }
+
+      void pushHeartbeat().catch((error) => {
+        console.error(`[UsersService] distillation task ${taskId} 心跳更新失败:`, error);
+      });
+    }, heartbeatMs);
+
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutHandle = setTimeout(() => {
+        reject(new Error(`用户画像蒸馏超时（>${Math.ceil(timeoutMs / 1000)}s）`));
+      }, timeoutMs);
+    });
+
+    try {
+      return await Promise.race([
+        this.userProfileDistillationService.distill(dossier),
+        timeoutPromise,
+      ]);
+    } finally {
+      stopTimers();
+    }
+  }
+
   private isOrphanedDistillationTask(task: UserProfileDistillationTaskEntity): boolean {
     if (!ACTIVE_DISTILLATION_TASK_STATUSES.has(task.status)) {
       return false;
@@ -430,6 +496,25 @@ export class UsersService implements OnInit {
       createdAt: task.created_at.toISOString(),
       updatedAt: task.updated_at.toISOString(),
     };
+  }
+
+  private resolvePositiveIntegerEnv(
+    value: string | undefined,
+    fallback: number,
+  ): number {
+    const parsed = Number(value);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+  }
+
+  private formatElapsedDuration(valueMs: number): string {
+    const totalSeconds = Math.max(1, Math.floor(valueMs / 1000));
+    if (totalSeconds < 60) {
+      return `${totalSeconds} 秒`;
+    }
+
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return seconds > 0 ? `${minutes} 分 ${seconds} 秒` : `${minutes} 分钟`;
   }
 
   private async fetchUserList(timeRange: TimeRange, page: number = 1, pageSize: number = 20) {
