@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DistillationWorkspacePanel } from './DistillationWorkspacePanel';
 
 vi.mock('@sker/ui/components/ui/button', () => ({
@@ -12,6 +12,15 @@ vi.mock('@/components/charts/MemoryGraph', () => ({
 }));
 
 describe('DistillationWorkspacePanel', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-04-23T00:05:00.000Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('renders latest task summary and persona evidence details', () => {
     render(
       <DistillationWorkspacePanel
@@ -175,7 +184,7 @@ describe('DistillationWorkspacePanel', () => {
       />,
     );
 
-    expect(screen.getByText('任务进行中，后台正在抓取与蒸馏，请稍候刷新结果')).toBeInTheDocument();
+    expect(screen.getAllByText('已抓取帖子 0 条 · 最近进展 5 分钟前')).toHaveLength(2);
     expect(screen.getByRole('button', { name: '蒸馏进行中...' })).toBeDisabled();
   });
 

@@ -57,9 +57,9 @@ describe('UserHistoryCollectionService', () => {
     ).rejects.toThrow('没有可用的微博账号');
   });
 
-  it('rejects and unsubscribes when timeline collection exceeds the timeout', async () => {
+  it('returns a partial result and unsubscribes when timeline collection stops producing progress', async () => {
     vi.useFakeTimers();
-    vi.stubEnv('USER_HISTORY_COLLECTION_TIMEOUT_MS', '1000');
+    vi.stubEnv('USER_HISTORY_COLLECTION_NO_PROGRESS_TIMEOUT_MS', '1000');
 
     const unsubscribe = vi.fn();
     const visitor = {
@@ -76,11 +76,12 @@ describe('UserHistoryCollectionService', () => {
       windowDays: 90,
       taskId: 'task-1',
     });
-    const rejection = expect(pending).rejects.toThrow('用户历史回填超时');
 
     await vi.advanceTimersByTimeAsync(1000);
 
-    await rejection;
+    await expect(pending).resolves.toMatchObject({
+      status: 'partial',
+    });
     expect(unsubscribe).toHaveBeenCalled();
   });
 });

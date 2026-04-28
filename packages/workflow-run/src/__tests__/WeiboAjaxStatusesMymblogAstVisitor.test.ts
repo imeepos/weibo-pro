@@ -38,6 +38,9 @@ describe('WeiboAjaxStatusesMymblogAstVisitor', () => {
           upsertSequence.push(entity.name);
           upsertPayloads.set(entity.name, data);
         },
+        async find() {
+          return [];
+        },
       };
 
       return handler(manager);
@@ -52,8 +55,8 @@ describe('WeiboAjaxStatusesMymblogAstVisitor', () => {
       { fetch: vi.fn() } as any,
     );
 
-    vi.spyOn(visitor as any, 'fetchWithPagination').mockImplementation(async function* () {
-      yield {
+    vi.spyOn(visitor as any, 'fetchApi')
+      .mockResolvedValueOnce({
         data: {
           list: [
             {
@@ -69,8 +72,8 @@ describe('WeiboAjaxStatusesMymblogAstVisitor', () => {
             },
           ],
         },
-      };
-    });
+      })
+      .mockResolvedValueOnce({ data: { list: [] } });
 
     const ast = new WeiboAjaxStatusesMymblogAst();
     ast.uid = '1571999832';
@@ -98,10 +101,8 @@ describe('WeiboAjaxStatusesMymblogAstVisitor', () => {
       { fetch: vi.fn() } as any,
     );
 
-    let visitedPages = 0;
-    vi.spyOn(visitor as any, 'fetchWithPagination').mockImplementation(async function* () {
-      visitedPages += 1;
-      yield {
+    const fetchApiSpy = vi.spyOn(visitor as any, 'fetchApi')
+      .mockResolvedValueOnce({
         data: {
           list: [
             {
@@ -130,9 +131,8 @@ describe('WeiboAjaxStatusesMymblogAstVisitor', () => {
             },
           ],
         },
-      };
-      visitedPages += 1;
-      yield {
+      })
+      .mockResolvedValueOnce({
         data: {
           list: [
             {
@@ -149,8 +149,7 @@ describe('WeiboAjaxStatusesMymblogAstVisitor', () => {
             },
           ],
         },
-      };
-    });
+      });
 
     const ast = new WeiboAjaxStatusesMymblogAst();
     ast.uid = '1571999832';
@@ -166,9 +165,116 @@ describe('WeiboAjaxStatusesMymblogAstVisitor', () => {
       });
     });
 
-    expect(visitedPages).toBe(1);
+    expect(fetchApiSpy).toHaveBeenCalledTimes(1);
     expect(upsertPayloads.get('WeiboUserEntity')).toHaveLength(1);
     expect(upsertPayloads.get('WeiboPostEntity')).toHaveLength(1);
     expect(upsertPayloads.get('WeiboPostEntity')?.[0]?.id).toBe('recent-post');
+  });
+
+  it('drops unresolved author ids before upserting posts', async () => {
+    const visitor = new WeiboAjaxStatusesMymblogAstVisitor(
+      {} as any,
+      { randomDelay: vi.fn(), backoffDelay: vi.fn(), recordSuccess: vi.fn(), recordError: vi.fn() } as any,
+      { acquire: vi.fn() } as any,
+      { fetch: vi.fn() } as any,
+    );
+
+    vi.spyOn(visitor as any, 'fetchApi')
+      .mockResolvedValueOnce({
+        data: {
+          list: [
+            {
+              id: 'post-1',
+              idstr: 'post-1',
+              mid: 'post-1',
+              mblogid: 'post-1',
+              created_at: new Date().toUTCString(),
+              user: {
+                id: 1807436544,
+                idstr: '1807436544',
+                screen_name: '作者A',
+              },
+            },
+          ],
+        },
+      })
+      .mockResolvedValueOnce({ data: { list: [] } });
+
+    const ast = new WeiboAjaxStatusesMymblogAst();
+    ast.uid = '1571999832';
+
+    await new Promise<void>((resolve, reject) => {
+      visitor.visit(
+        ast,
+        of({ uid: '1571999832' }) as any,
+        {},
+      ).subscribe({
+        complete: resolve,
+        error: reject,
+      });
+    });
+
+    expect(upsertPayloads.get('WeiboPostEntity')?.[0]?.user_id).toBeNull();
+  });
+
+  it('keeps the workflow successful and emits progress when a later page exhausts retries', async () => {
+    vi.stubEnv('USER_HISTORY_PAGE_MAX_RETRIES', '0');
+
+    const visitor = new WeiboAjaxStatusesMymblogAstVisitor(
+      {} as any,
+      { randomDelay: vi.fn(), backoffDelay: vi.fn(), recordSuccess: vi.fn(), recordError: vi.fn() } as any,
+      { acquire: vi.fn() } as any,
+      { fetch: vi.fn() } as any,
+    );
+
+    const retryableError = new TypeError('fetch failed');
+    Object.assign(retryableError, {
+      cause: {
+        code: 'UND_ERR_CONNECT_TIMEOUT',
+        message: 'Connect Timeout Error',
+      },
+    });
+
+    vi.spyOn(visitor as any, 'fetchApi')
+      .mockResolvedValueOnce({
+        data: {
+          list: [
+            {
+              id: 'post-1',
+              idstr: 'post-1',
+              mid: 'post-1',
+              mblogid: 'post-1',
+              created_at: new Date().toUTCString(),
+              user: {
+                id: 1001,
+                idstr: '1001',
+                screen_name: '作者A',
+              },
+            },
+          ],
+        },
+      })
+      .mockRejectedValueOnce(retryableError);
+
+    const ast = new WeiboAjaxStatusesMymblogAst();
+    ast.uid = '1571999832';
+
+    const events: Array<{ type: string; data?: Record<string, unknown>; error?: string }> = [];
+
+    await new Promise<void>((resolve, reject) => {
+      visitor.visit(
+        ast,
+        of({ uid: '1571999832' }) as any,
+        {},
+      ).subscribe({
+        next: (event) => events.push(event as any),
+        complete: resolve,
+        error: reject,
+      });
+    });
+
+    expect(events.some((event) => event.type === 'node_progress')).toBe(true);
+    expect(events.some((event) => event.type === 'node_fail')).toBe(false);
+    expect(events.some((event) => event.type === 'node_success')).toBe(true);
   });
 });

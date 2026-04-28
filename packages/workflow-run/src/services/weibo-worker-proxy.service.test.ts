@@ -42,4 +42,31 @@ describe('WeiboWorkerProxyService', () => {
     expect(response.status).toBe(200);
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
+
+  it('retries direct requests when undici stores the timeout code on error cause', async () => {
+    const timeoutError = new TypeError('fetch failed');
+    Object.assign(timeoutError, {
+      cause: {
+        code: 'UND_ERR_CONNECT_TIMEOUT',
+        message: 'Connect Timeout Error',
+      },
+    });
+
+    const fetchMock = vi.fn()
+      .mockRejectedValueOnce(timeoutError)
+      .mockResolvedValueOnce(new Response('ok', { status: 200 }));
+    global.fetch = fetchMock as typeof fetch;
+
+    const service = new WeiboWorkerProxyService();
+    vi.spyOn(service as any, 'sleep').mockResolvedValue(undefined);
+
+    const response = await service.fetch('https://weibo.com/ajax/statuses/mymblog?uid=1&page=1&feature=0', {
+      cookie: 'SUB=token',
+      referer: 'https://weibo.com/u/1',
+      'user-agent': 'Mozilla/5.0',
+    });
+
+    expect(response.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 });

@@ -24,7 +24,21 @@ describe('UsersService distillation flow', () => {
     savedTasks.length = 0;
     taskCounter = 0;
 
-    historyCollectionService = { collect: vi.fn().mockResolvedValue(undefined) };
+    historyCollectionService = {
+      collect: vi.fn().mockResolvedValue({
+        status: 'completed',
+        page: 1,
+        collectedPostCount: 20,
+        newPostCount: 20,
+        duplicatePostCount: 0,
+        failedPageCount: 0,
+        latestPostAt: '2026-04-23T00:00:00.000Z',
+        oldestPostAt: '2026-04-22T00:00:00.000Z',
+        partial: false,
+        warnings: [],
+        message: '历史发帖抓取完成，共处理 20 条帖子',
+      }),
+    };
     userDossierService = {
       getDossier: vi.fn().mockResolvedValue({
         accountSnapshot: {
@@ -212,7 +226,7 @@ describe('UsersService distillation flow', () => {
     });
 
     expect(result.status).toBe('queued');
-    expect(result.distilledSummary).toBeNull();
+    expect(result.distilledSummary).toBe('任务已入队，等待开始抓取历史发帖');
 
     await vi.waitFor(() => {
       expect(historyCollectionService.collect).toHaveBeenCalled();
@@ -227,8 +241,20 @@ describe('UsersService distillation flow', () => {
     let resolveCollection: (() => void) | null = null;
     historyCollectionService.collect.mockImplementation(
       () =>
-        new Promise<void>((resolve) => {
-          resolveCollection = resolve;
+        new Promise<any>((resolve) => {
+          resolveCollection = () => resolve({
+            status: 'completed',
+            page: 1,
+            collectedPostCount: 20,
+            newPostCount: 20,
+            duplicatePostCount: 0,
+            failedPageCount: 0,
+            latestPostAt: '2026-04-23T00:00:00.000Z',
+            oldestPostAt: '2026-04-22T00:00:00.000Z',
+            partial: false,
+            warnings: [],
+            message: '历史发帖抓取完成，共处理 20 条帖子',
+          });
         }),
     );
 

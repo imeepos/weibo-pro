@@ -1,7 +1,14 @@
 import { Inject, Injectable } from '@sker/core';
 import { Observable, of } from 'rxjs';
 import { WeiboAjaxStatusesMymblogAst } from '@sker/workflow-ast';
-import { WeiboAjaxStatusesMymblogAstVisitor } from '@sker/workflow-run';
+import {
+  WeiboAjaxStatusesMymblogAstVisitor,
+  type WeiboTimelineCollectionProgress,
+} from '@sker/workflow-run';
+
+export interface UserHistoryCollectionResult extends WeiboTimelineCollectionProgress {
+  status: 'completed' | 'partial';
+}
 
 @Injectable({ providedIn: 'root' })
 export class UserHistoryCollectionService {
@@ -15,12 +22,16 @@ export class UserHistoryCollectionService {
     uid: string;
     windowDays: number;
     taskId: string;
-  }): Promise<void> {
+    onProgress?: (progress: WeiboTimelineCollectionProgress) => void | Promise<void>;
+  }): Promise<UserHistoryCollectionResult> {
     const ast = new WeiboAjaxStatusesMymblogAst();
     ast.uid = input.uid;
-    const timeoutMs = Number(process.env.USER_HISTORY_COLLECTION_TIMEOUT_MS) || 120000;
+    const timeoutMs =
+      Number(process.env.USER_HISTORY_COLLECTION_NO_PROGRESS_TIMEOUT_MS) ||
+      Number(process.env.USER_HISTORY_COLLECTION_TIMEOUT_MS) ||
+      300000;
 
-    await new Promise<void>((resolve, reject) => {
+    return await new Promise<UserHistoryCollectionResult>((resolve, reject) => {
       const stream = this.visitor.visit(
         ast,
         of({ uid: input.uid }) as Observable<Record<string, unknown>>,
@@ -29,12 +40,42 @@ export class UserHistoryCollectionService {
 
       let settled = false;
       let subscription: { unsubscribe: () => void } | undefined;
-      const timer = setTimeout(() => {
-        finish(() => {
-          subscription?.unsubscribe();
-          reject(new Error(`用户历史回填超时（>${Math.ceil(timeoutMs / 1000)}s）`));
-        });
-      }, timeoutMs);
+      let latestResult: UserHistoryCollectionResult = {
+        status: 'completed',
+        page: 0,
+        collectedPostCount: 0,
+        newPostCount: 0,
+        duplicatePostCount: 0,
+        failedPageCount: 0,
+        latestPostAt: null,
+        oldestPostAt: null,
+        partial: false,
+        warnings: [],
+        message: '历史发帖抓取完成',
+      };
+      let timer: ReturnType<typeof setTimeout>;
+
+      const resetTimer = () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          finish(() => {
+            subscription?.unsubscribe();
+            resolve({
+              ...latestResult,
+              status: 'partial',
+              partial: true,
+              warnings: [
+                ...latestResult.warnings,
+                `历史发帖抓取长时间无进展（>${Math.ceil(timeoutMs / 1000)}s），已结束抓取并继续分析`,
+              ],
+              message:
+                latestResult.collectedPostCount > 0
+                  ? `历史发帖抓取长时间无进展，已基于已处理的 ${latestResult.collectedPostCount} 条帖子继续分析`
+                  : '历史发帖抓取长时间无进展，已跳过抓取并继续分析',
+            });
+          });
+        }, timeoutMs);
+      };
 
       const finish = (handler: () => void) => {
         if (settled) return;
@@ -43,13 +84,35 @@ export class UserHistoryCollectionService {
         handler();
       };
 
+      resetTimer();
+
       subscription = stream.subscribe({
-        next: (event: { type?: string; error?: string }) => {
+        next: (event: any) => {
+          if (event?.type === 'node_progress' && event.data) {
+            latestResult = {
+              status: event.data.partial ? 'partial' : 'completed',
+              page: event.data.page ?? latestResult.page,
+              collectedPostCount: event.data.collectedPostCount ?? latestResult.collectedPostCount,
+              newPostCount: event.data.newPostCount ?? latestResult.newPostCount,
+              duplicatePostCount: event.data.duplicatePostCount ?? latestResult.duplicatePostCount,
+              failedPageCount: event.data.failedPageCount ?? latestResult.failedPageCount,
+              latestPostAt: event.data.latestPostAt ?? latestResult.latestPostAt,
+              oldestPostAt: event.data.oldestPostAt ?? latestResult.oldestPostAt,
+              partial: event.data.partial ?? latestResult.partial,
+              warnings: event.data.warnings ?? latestResult.warnings,
+              message: event.data.message ?? latestResult.message,
+            };
+            resetTimer();
+            void Promise.resolve(input.onProgress?.(latestResult)).catch((error) => {
+              console.error('[UserHistoryCollectionService] progress callback failed:', error);
+            });
+          }
+
           if (event?.type === 'node_fail') {
             finish(() => reject(new Error(event.error || '用户历史回填失败')));
           }
         },
-        complete: () => finish(resolve),
+        complete: () => finish(() => resolve(latestResult)),
         error: (error) => finish(() => reject(error)),
       });
     });

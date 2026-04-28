@@ -42,6 +42,29 @@ export interface ErrorHandlerConfig {
  * 错误分类器
  */
 export class ErrorClassifier {
+    private static collectErrorDetails(error: any): {
+        message: string;
+        code: string;
+        status: number | null;
+    } {
+        const messageParts = [
+            error?.message,
+            error?.name,
+            error?.cause?.message,
+            error?.cause?.name,
+        ].filter((value): value is string => typeof value === 'string' && value.length > 0);
+        const codeParts = [
+            error?.code,
+            error?.cause?.code,
+        ].filter((value): value is string => typeof value === 'string' && value.length > 0);
+
+        return {
+            message: messageParts.join(' ').toLowerCase(),
+            code: codeParts.join(' ').toLowerCase(),
+            status: error?.status ? Number(error.status) : null,
+        };
+    }
+
     /**
      * 判断错误是否可重试
      */
@@ -60,9 +83,7 @@ export class ErrorClassifier {
     static classify(error: any): ErrorCategory {
         if (!error) return ErrorCategory.UNKNOWN;
 
-        const errorMessage = error.message?.toLowerCase() || '';
-        const errorCode = error.code?.toLowerCase() || '';
-        const status = error.status ? Number(error.status) : null;
+        const { message: errorMessage, code: errorCode, status } = this.collectErrorDetails(error);
 
         // 工作流取消
         if (errorMessage.includes('工作流已取消') || errorMessage.includes('workflow cancelled')) {
@@ -99,7 +120,16 @@ export class ErrorClassifier {
 
         // 网络错误 - 移除 'fetch failed' 防止持续网络故障时无限重试
         // 'fetch failed' 通常表示更严重的网络问题，应该依赖熔断器
-        const networkErrors = ['econnreset', 'econnrefused', 'etimedout', 'enetunreach', 'enotfound', 'network error', 'socket hang up'];
+        const networkErrors = [
+            'econnreset',
+            'econnrefused',
+            'etimedout',
+            'enetunreach',
+            'enotfound',
+            'network error',
+            'socket hang up',
+            'und_err_connect_timeout',
+        ];
         if (networkErrors.some(err => errorMessage.includes(err) || errorCode.includes(err))) {
             return ErrorCategory.NETWORK;
         }

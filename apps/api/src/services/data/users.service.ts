@@ -202,6 +202,7 @@ export class UsersService implements OnInit {
         event_id: request?.eventId ?? null,
         status: 'queued',
         history_window_days: request?.historyWindowDays ?? 90,
+        distilled_summary: '任务已入队，等待开始抓取历史发帖',
         source_post_count: 0,
         source_comment_count: 0,
         source_repost_count: 0,
@@ -309,18 +310,31 @@ export class UsersService implements OnInit {
       currentTask.started_at = new Date();
       currentTask.completed_at = null;
       currentTask.error_message = null;
+      currentTask.distilled_summary = '正在抓取历史发帖...';
+      currentTask.source_post_count = 0;
     });
 
     try {
-      await this.userHistoryCollectionService.collect({
+      const collection = await this.userHistoryCollectionService.collect({
         weiboUserId: task.weibo_user_id,
         uid: task.weibo_user_id,
         windowDays: task.history_window_days,
         taskId: task.id,
+        onProgress: async (progress) => {
+          await this.updateDistillationTask(taskId, (currentTask) => {
+            currentTask.source_post_count = progress.collectedPostCount;
+            currentTask.distilled_summary = progress.message;
+            currentTask.error_message = null;
+          });
+        },
       });
 
       task = await this.updateDistillationTask(taskId, (currentTask) => {
         currentTask.status = 'analyzing';
+        currentTask.source_post_count = collection.collectedPostCount;
+        currentTask.distilled_summary = collection.partial
+          ? `${collection.message}，正在基于已抓取数据生成画像`
+          : '历史发帖抓取完成，正在生成画像';
       });
 
       const dossier = await this.userDossierService.getDossier(task.weibo_user_id, {

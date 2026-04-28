@@ -17,7 +17,10 @@ export { WeiboAjaxFriendshipsAstVisitor } from './WeiboAjaxFriendshipsAstVisitor
 export { WeiboAjaxProfileInfoAstVisitor } from './WeiboAjaxProfileInfoAstVisitor'
 export { WeiboAjaxStatusesCommentAstVisitor } from './WeiboAjaxStatusesCommentAstVisitor'
 export { WeiboAjaxStatusesLikeShowAstVisitor } from './WeiboAjaxStatusesLikeShowAstVisitor'
-export { WeiboAjaxStatusesMymblogAstVisitor } from './WeiboAjaxStatusesMymblogAstVisitor'
+export {
+  WeiboAjaxStatusesMymblogAstVisitor,
+  type WeiboTimelineCollectionProgress,
+} from './WeiboAjaxStatusesMymblogAstVisitor'
 export { WeiboAjaxStatusesRepostTimelineAstVisitor } from './WeiboAjaxStatusesRepostTimelineAstVisitor'
 export { WeiboAjaxStatusesShowAstVisitor } from './WeiboAjaxStatusesShowAstVisitor'
 export { WeiboKeywordSearchAstVisitor } from './WeiboKeywordSearchAstVisitor'

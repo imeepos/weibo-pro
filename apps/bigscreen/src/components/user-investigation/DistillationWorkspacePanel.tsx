@@ -6,6 +6,33 @@ import MemoryGraph from '@/components/charts/MemoryGraph';
 
 const ACTIVE_DISTILLATION_TASK_STATUSES = new Set(['queued', 'crawling', 'analyzing']);
 
+function formatProgressTime(value: string | null | undefined): string {
+  if (!value) {
+    return '刚刚';
+  }
+
+  const time = new Date(value).getTime();
+  if (Number.isNaN(time)) {
+    return value;
+  }
+
+  const diffMinutes = Math.max(0, Math.floor((Date.now() - time) / 60000));
+  if (diffMinutes < 1) {
+    return '刚刚';
+  }
+  if (diffMinutes < 60) {
+    return `${diffMinutes} 分钟前`;
+  }
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) {
+    return `${diffHours} 小时前`;
+  }
+
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays} 天前`;
+}
+
 interface DistillationWorkspacePanelProps {
   selectedUserId: string | null;
   tasks: DistillationTaskSummary[];
@@ -37,10 +64,13 @@ export function DistillationWorkspacePanel({
   const taskForSummary = activeTask ?? latestTask;
   const isTaskActive = activeTask !== null;
   const isCreateDisabled = !selectedUserId || isCreatingTask || isTaskActive;
+  const activeTaskProgressLabel = isTaskActive && taskForSummary
+    ? `已抓取帖子 ${taskForSummary.sourcePostCount} 条 · 最近进展 ${formatProgressTime(taskForSummary.updatedAt)}`
+    : null;
   const progressHint = isCreatingTask && !isTaskActive
     ? '蒸馏任务已提交，正在进入后台队列，请稍候'
     : isTaskActive
-      ? '任务进行中，后台正在抓取与蒸馏，请稍候刷新结果'
+      ? activeTaskProgressLabel ?? '任务进行中，后台正在抓取与蒸馏，请稍候刷新结果'
       : null;
   const createButtonLabel = isCreatingTask && !isTaskActive
     ? '提交蒸馏中...'
@@ -67,6 +97,9 @@ export function DistillationWorkspacePanel({
           <div className="mt-1 text-sm text-foreground">
             {taskForSummary ? `${taskForSummary.status} · ${taskForSummary.historyWindowDays} 天` : '暂无蒸馏任务'}
           </div>
+          {activeTaskProgressLabel && (
+            <div className="mt-2 text-xs text-muted-foreground">{activeTaskProgressLabel}</div>
+          )}
           {taskForSummary?.distilledSummary && (
             <div className="mt-2 text-sm text-muted-foreground">{taskForSummary.distilledSummary}</div>
           )}

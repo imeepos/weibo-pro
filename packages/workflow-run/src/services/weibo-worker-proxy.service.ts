@@ -176,20 +176,31 @@ export class WeiboWorkerProxyService {
     }
 
     private isRetryableError(error: Error): boolean {
-        const message = error.message.toLowerCase();
+        const message = this.collectErrorDetails(error);
         const retryablePatterns = [
             'etimedout',
             'econnrefused',
             'econnreset',
             'enotfound',
             'eai_again',
-            // 移除 'fetch failed' 和 'network'，防止持续网络故障时无限重试
-            // 'fetch failed' 通常表示更严重的网络问题，应该依赖熔断器
-            // 'network',
+            'und_err_connect_timeout',
             'timeout',
         ];
 
         return retryablePatterns.some(pattern => message.includes(pattern));
+    }
+
+    private collectErrorDetails(error: unknown): string {
+        const parts = [
+            error instanceof Error ? error.message : String(error),
+            (error as { code?: string } | undefined)?.code,
+            (error as { name?: string } | undefined)?.name,
+            (error as { cause?: { message?: string; code?: string; name?: string } } | undefined)?.cause?.message,
+            (error as { cause?: { message?: string; code?: string; name?: string } } | undefined)?.cause?.code,
+            (error as { cause?: { message?: string; code?: string; name?: string } } | undefined)?.cause?.name,
+        ].filter((value): value is string => typeof value === 'string' && value.length > 0);
+
+        return parts.join(' ').toLowerCase();
     }
 
     private sleep(ms: number): Promise<void> {
