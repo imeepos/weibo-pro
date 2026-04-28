@@ -104,6 +104,17 @@ export class UserProfilePostExtractionService {
       normalized_text: string;
       source_snapshot: Record<string, unknown>;
     }>;
+    onProgress?: (progress: {
+      processedCount: number;
+      total: number;
+      reusedCount: number;
+      extractedCount: number;
+      failedCount: number;
+      latestSourcePostId: string;
+      latestStatus: 'succeeded' | 'failed';
+      latestWarning: string | null;
+      warnings: string[];
+    }) => void | Promise<void>;
   }): Promise<{
     extractorVersion: string;
     total: number;
@@ -139,6 +150,23 @@ export class UserProfilePostExtractionService {
         failedCount += 1;
         warnings.push(`帖子 ${sourcePost.id} 提取失败：${result.record.error_message}`);
       }
+
+      const latestWarning = warnings.at(-1) ?? null;
+      await Promise.resolve(
+        input.onProgress?.({
+          processedCount: reusedCount + extractedCount + failedCount,
+          total: input.sourcePosts.length,
+          reusedCount,
+          extractedCount,
+          failedCount,
+          latestSourcePostId: sourcePost.id,
+          latestStatus: result.record.status === 'failed' ? 'failed' : 'succeeded',
+          latestWarning,
+          warnings: [...warnings],
+        }),
+      ).catch((error) => {
+        console.error('[UserProfilePostExtractionService] progress callback failed:', error);
+      });
     }
 
     return {

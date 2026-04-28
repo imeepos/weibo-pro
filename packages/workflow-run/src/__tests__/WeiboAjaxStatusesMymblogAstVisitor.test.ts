@@ -277,4 +277,63 @@ describe('WeiboAjaxStatusesMymblogAstVisitor', () => {
     expect(events.some((event) => event.type === 'node_fail')).toBe(false);
     expect(events.some((event) => event.type === 'node_success')).toBe(true);
   });
+
+  it('treats bare fetch failed as retryable and returns partial progress instead of failing', async () => {
+    vi.stubEnv('USER_HISTORY_PAGE_MAX_RETRIES', '0');
+
+    const visitor = new WeiboAjaxStatusesMymblogAstVisitor(
+      {} as any,
+      { randomDelay: vi.fn(), backoffDelay: vi.fn(), recordSuccess: vi.fn(), recordError: vi.fn() } as any,
+      { acquire: vi.fn() } as any,
+      { fetch: vi.fn() } as any,
+    );
+
+    vi.spyOn(visitor as any, 'fetchApi')
+      .mockResolvedValueOnce({
+        data: {
+          list: [
+            {
+              id: 'post-1',
+              idstr: 'post-1',
+              mid: 'post-1',
+              mblogid: 'post-1',
+              created_at: new Date().toUTCString(),
+              user: {
+                id: 1001,
+                idstr: '1001',
+                screen_name: '作者A',
+              },
+            },
+          ],
+        },
+      })
+      .mockRejectedValueOnce(new TypeError('fetch failed'));
+
+    const ast = new WeiboAjaxStatusesMymblogAst();
+    ast.uid = '1571999832';
+
+    const events: Array<{ type: string; data?: Record<string, unknown>; error?: string }> = [];
+
+    await new Promise<void>((resolve, reject) => {
+      visitor.visit(
+        ast,
+        of({ uid: '1571999832' }) as any,
+        {},
+      ).subscribe({
+        next: (event) => events.push(event as any),
+        complete: resolve,
+        error: reject,
+      });
+    });
+
+    expect(events.some((event) => event.type === 'node_fail')).toBe(false);
+    expect(events.some((event) => event.type === 'node_success')).toBe(true);
+    expect(
+      events.some(
+        (event) =>
+          event.type === 'node_progress' &&
+          String(event.data?.message ?? '').includes('已结束抓取并继续分析'),
+      ),
+    ).toBe(true);
+  });
 });

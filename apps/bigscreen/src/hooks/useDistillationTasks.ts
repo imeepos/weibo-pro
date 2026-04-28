@@ -26,6 +26,7 @@ interface UseDistillationTasksResult {
   activeTask: DistillationTaskSummary | null;
   hasActiveTask: boolean;
   isLoading: boolean;
+  isRefreshing: boolean;
   isCreatingTask: boolean;
   error: Error | null;
   refetch: () => Promise<void>;
@@ -41,6 +42,7 @@ export function useDistillationTasks(
 ): UseDistillationTasksResult {
   const [tasks, setTasks] = useState<DistillationTaskSummary[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isCreatingTask, setIsCreatingTask] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -48,6 +50,7 @@ export function useDistillationTasks(
     if (!params.userId) {
       setTasks([]);
       setIsLoading(false);
+      setIsRefreshing(false);
       setError(null);
       return;
     }
@@ -55,6 +58,8 @@ export function useDistillationTasks(
     const background = options?.background ?? false;
     if (!background) {
       setIsLoading(true);
+    } else {
+      setIsRefreshing(true);
     }
     setError(null);
     try {
@@ -65,6 +70,8 @@ export function useDistillationTasks(
     } finally {
       if (!background) {
         setIsLoading(false);
+      } else {
+        setIsRefreshing(false);
       }
     }
   }, [params.userId]);
@@ -122,6 +129,7 @@ export function useDistillationTasks(
     activeTask,
     hasActiveTask,
     isLoading,
+    isRefreshing,
     isCreatingTask,
     error,
     refetch: () => fetchTasks(),

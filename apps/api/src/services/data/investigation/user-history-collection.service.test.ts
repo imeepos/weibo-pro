@@ -57,6 +57,34 @@ describe('UserHistoryCollectionService', () => {
     ).rejects.toThrow('没有可用的微博账号');
   });
 
+  it('returns a partial result when the visitor emits a retryable fetch failure', async () => {
+    const visitor = {
+      visit: vi.fn().mockReturnValue({
+        subscribe: ({
+          next,
+          complete,
+        }: {
+          next?: (event: { type: string; error?: string }) => void;
+          complete: () => void;
+        }) => {
+          next?.({ type: 'node_fail', error: 'fetch failed' });
+          complete();
+          return { unsubscribe: vi.fn() };
+        },
+      }),
+    };
+
+    const service = new UserHistoryCollectionService(visitor as any);
+
+    await expect(
+      service.collect({ weiboUserId: '123', uid: '123', windowDays: 90, taskId: 'task-1' }),
+    ).resolves.toMatchObject({
+      status: 'partial',
+      partial: true,
+      warnings: expect.arrayContaining(['历史发帖抓取遇到可恢复错误：fetch failed，已继续分析']),
+    });
+  });
+
   it('returns a partial result and unsubscribes when timeline collection stops producing progress', async () => {
     vi.useFakeTimers();
     vi.stubEnv('USER_HISTORY_COLLECTION_NO_PROGRESS_TIMEOUT_MS', '1000');

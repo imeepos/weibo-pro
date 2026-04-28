@@ -178,6 +178,7 @@ describe('UserDetection investigation mode', () => {
       activeTask: null,
       hasActiveTask: false,
       isLoading: false,
+      isRefreshing: false,
       isCreatingTask: false,
       error: null,
       refetch: tasksRefetchSpy,

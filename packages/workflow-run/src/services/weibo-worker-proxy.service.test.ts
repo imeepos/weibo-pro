@@ -69,4 +69,23 @@ describe('WeiboWorkerProxyService', () => {
     expect(response.status).toBe(200);
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
+
+  it('retries direct requests when fetch only reports fetch failed', async () => {
+    const fetchMock = vi.fn()
+      .mockRejectedValueOnce(new TypeError('fetch failed'))
+      .mockResolvedValueOnce(new Response('ok', { status: 200 }));
+    global.fetch = fetchMock as typeof fetch;
+
+    const service = new WeiboWorkerProxyService();
+    vi.spyOn(service as any, 'sleep').mockResolvedValue(undefined);
+
+    const response = await service.fetch('https://weibo.com/ajax/statuses/mymblog?uid=1&page=1&feature=0', {
+      cookie: 'SUB=token',
+      referer: 'https://weibo.com/u/1',
+      'user-agent': 'Mozilla/5.0',
+    });
+
+    expect(response.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 });

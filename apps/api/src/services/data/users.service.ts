@@ -437,6 +437,35 @@ export class UsersService implements OnInit {
         weiboUserId: task.weibo_user_id,
         extractorVersion: DEFAULT_POST_EXTRACTION_VERSION,
         sourcePosts,
+        onProgress: async (progress) => {
+          const extractionWarnings = this.mergeWarnings(collectionWarnings, progress.warnings);
+          const processedCount = Math.min(progress.processedCount, progress.total);
+          const latestMessage = `正在逐帖抽取，已处理 ${processedCount}/${progress.total} 条帖子`;
+
+          await this.updateDistillationTask(taskId, (currentTask) => {
+            currentTask.status = 'extracting';
+            currentTask.source_post_count = sourcePosts.length;
+            currentTask.warnings_json = extractionWarnings;
+            currentTask.distilled_summary = latestMessage;
+            this.mergeTaskProgress(currentTask, {
+              stage: 'extracting',
+              partial: collection.partial || progress.failedCount > 0,
+              latestMessage,
+              counters: {
+                crawledPosts: collection.collectedPostCount,
+                reusedExtractions: progress.reusedCount,
+                extractedPosts: progress.extractedCount,
+                failedPosts: progress.failedCount,
+                warningCount: extractionWarnings.length,
+              },
+              coverage: {
+                latestPostAt: collection.latestPostAt,
+                oldestPostAt: collection.oldestPostAt,
+              },
+              recentWarnings: extractionWarnings.slice(-3),
+            });
+          });
+        },
       });
       const combinedWarnings = this.mergeWarnings(collectionWarnings, extraction.warnings);
 

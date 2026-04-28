@@ -136,12 +136,62 @@ export class UserHistoryCollectionService {
         }
 
         if (event?.type === 'node_fail') {
-          finish(() => reject(new Error(event.error || '用户历史回填失败')));
+          const failureMessage =
+            typeof event.error === 'string' && event.error.trim().length > 0
+              ? event.error.trim()
+              : '用户历史回填失败';
+
+          if (this.isRecoverableCollectionFailure(failureMessage)) {
+            const warning = `历史发帖抓取遇到可恢复错误：${failureMessage}，已继续分析`;
+            latestResult = {
+              ...latestResult,
+              status: 'partial',
+              partial: true,
+              warnings: this.mergeWarnings(latestResult.warnings, [warning]),
+              message:
+                latestResult.collectedPostCount > 0
+                  ? `历史发帖抓取遇到可恢复错误，已基于已处理的 ${latestResult.collectedPostCount} 条帖子继续分析`
+                  : '历史发帖抓取遇到可恢复错误，未获得新增帖子，已继续分析',
+            };
+            void Promise.resolve(input.onProgress?.(latestResult)).catch((error) => {
+              console.error('[UserHistoryCollectionService] progress callback failed:', error);
+            });
+            finish(() => resolve(latestResult));
+            return;
+          }
+
+          finish(() => reject(new Error(failureMessage)));
         }
       };
 
       startSubscription();
       resetTimer();
     });
+  }
+
+  private isRecoverableCollectionFailure(message: string): boolean {
+    const normalized = message.toLowerCase();
+    return [
+      'fetch failed',
+      'timeout',
+      'timed out',
+      'econnreset',
+      'econnrefused',
+      'enotfound',
+      'eai_again',
+      'und_err_connect_timeout',
+      '502',
+      '503',
+      '504',
+      'bad gateway',
+      'gateway timeout',
+      'service unavailable',
+      'network error',
+      'socket hang up',
+    ].some((pattern) => normalized.includes(pattern));
+  }
+
+  private mergeWarnings(current: string[], incoming: string[]): string[] {
+    return Array.from(new Set([...current, ...incoming]));
   }
 }

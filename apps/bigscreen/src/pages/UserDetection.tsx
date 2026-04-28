@@ -131,6 +131,8 @@ const UserDetection: React.FC = () => {
         evidenceCount={personaEvidenceState.evidence.length}
         evidenceItems={personaEvidenceState.evidence}
         memoryGraph={personaMemoryGraphState.graph}
+        isTaskLoading={tasksState.isLoading}
+        isTaskRefreshing={tasksState.isRefreshing}
         isCreatingTask={tasksState.isCreatingTask}
         onCreateTask={() => {
           void handleCreateTask();

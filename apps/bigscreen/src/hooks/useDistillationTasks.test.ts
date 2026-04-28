@@ -148,4 +148,82 @@ describe('useDistillationTasks', () => {
     expect(result.current.tasks[0]?.status).toBe('published');
     expect(UsersAPI.getDistillationTasks).toHaveBeenCalledTimes(2);
   });
+
+  it('exposes a background refreshing state while polling active tasks', async () => {
+    let releaseSecondFetch: (() => void) | null = null;
+
+    vi.mocked(UsersAPI.getDistillationTasks)
+      .mockResolvedValueOnce([{
+        id: 'task-1',
+        weiboUserId: '100',
+        eventId: null,
+        status: 'crawling',
+        historyWindowDays: 90,
+        sourcePostCount: 12,
+        sourceCommentCount: 0,
+        sourceRepostCount: 0,
+        evidenceSampleCount: 0,
+        model: null,
+        promptVersion: null,
+        distilledSummary: '正在抓取历史发帖...',
+        reviewStatus: null,
+        errorMessage: null,
+        startedAt: '2026-04-28T01:00:00.000Z',
+        completedAt: null,
+        createdAt: '2026-04-28T01:00:00.000Z',
+        updatedAt: '2026-04-28T01:00:00.000Z',
+      }])
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            releaseSecondFetch = () =>
+              resolve([{
+                id: 'task-1',
+                weiboUserId: '100',
+                eventId: null,
+                status: 'published',
+                historyWindowDays: 90,
+                sourcePostCount: 20,
+                sourceCommentCount: 0,
+                sourceRepostCount: 0,
+                evidenceSampleCount: 0,
+                model: null,
+                promptVersion: null,
+                distilledSummary: '画像已生成',
+                reviewStatus: 'auto_pass',
+                errorMessage: null,
+                startedAt: '2026-04-28T01:00:00.000Z',
+                completedAt: '2026-04-28T01:01:00.000Z',
+                createdAt: '2026-04-28T01:00:00.000Z',
+                updatedAt: '2026-04-28T01:01:00.000Z',
+              }]);
+          }),
+      );
+
+    const { result } = renderHook(() => useDistillationTasks({ userId: '100' }));
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(result.current.isRefreshing).toBe(false);
+
+    await act(async () => {
+      const timerPromise = vi.advanceTimersByTimeAsync(3000);
+      await Promise.resolve();
+      await Promise.resolve();
+      await timerPromise;
+    });
+
+    expect(result.current.isRefreshing).toBe(true);
+
+    await act(async () => {
+      releaseSecondFetch?.();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(result.current.isRefreshing).toBe(false);
+    expect(result.current.tasks[0]?.status).toBe('published');
+  });
 });

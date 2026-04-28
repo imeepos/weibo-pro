@@ -40,6 +40,43 @@ function formatProgressTime(value: string | null | undefined): string {
   return `${diffDays} 天前`;
 }
 
+function formatCoverageTime(value: string | null | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const normalized = value.trim();
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(normalized)) {
+    return normalized.slice(0, 16).replace('T', ' ');
+  }
+
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) {
+    return normalized;
+  }
+
+  return parsed.toISOString().slice(0, 16).replace('T', ' ');
+}
+
+function getStageLabel(stage: string | null | undefined): string {
+  switch (stage) {
+    case 'queued':
+      return '排队中';
+    case 'crawling':
+      return '历史抓取';
+    case 'extracting':
+      return '逐帖抽取';
+    case 'aggregating':
+      return '聚合分析';
+    case 'publishing':
+      return '发布画像';
+    case 'analyzing':
+      return '生成画像';
+    default:
+      return stage ?? '未知阶段';
+  }
+}
+
 interface DistillationWorkspacePanelProps {
   selectedUserId: string | null;
   tasks: DistillationTaskSummary[];
@@ -47,6 +84,8 @@ interface DistillationWorkspacePanelProps {
   evidenceCount: number;
   evidenceItems: PersonaEvidenceItem[];
   memoryGraph: PersonaMemoryGraph | null;
+  isTaskLoading?: boolean;
+  isTaskRefreshing?: boolean;
   isCreatingTask?: boolean;
   onCreateTask: () => void;
   onReviewTask: (taskId: string, decision: 'approve' | 'reject') => void;
@@ -60,6 +99,8 @@ export function DistillationWorkspacePanel({
   evidenceCount,
   evidenceItems,
   memoryGraph,
+  isTaskLoading = false,
+  isTaskRefreshing = false,
   isCreatingTask = false,
   onCreateTask,
   onReviewTask,
@@ -72,6 +113,28 @@ export function DistillationWorkspacePanel({
   const isTaskActive = activeTask !== null;
   const isCreateDisabled = !selectedUserId || isCreatingTask || isTaskActive;
   const progress = taskForSummary?.progress ?? null;
+  const stageLabel = getStageLabel(progress?.stage ?? taskForSummary?.status ?? null);
+  const latestCoverage = formatCoverageTime(progress?.coverage.latestPostAt);
+  const oldestCoverage = formatCoverageTime(progress?.coverage.oldestPostAt);
+  const coverageLabel =
+    latestCoverage || oldestCoverage
+      ? `覆盖时间：${latestCoverage ?? '--'} 至 ${oldestCoverage ?? '--'}`
+      : null;
+  const processedExtractionCount = progress
+    ? progress.counters.reusedExtractions +
+      progress.counters.extractedPosts +
+      progress.counters.failedPosts
+    : 0;
+  const extractionProgressLabel =
+    progress &&
+    taskForSummary &&
+    taskForSummary.sourcePostCount > 0 &&
+    ['extracting', 'aggregating', 'publishing'].includes(progress.stage)
+      ? `已处理 ${Math.min(processedExtractionCount, taskForSummary.sourcePostCount)} / ${taskForSummary.sourcePostCount} 条帖子`
+      : null;
+  const partialHint = progress?.partial
+    ? '当前任务包含部分失败，系统会继续后续蒸馏。'
+    : null;
   const progressCountersLabel = progress
     ? `已抓取 ${progress.counters.crawledPosts} · 复用 ${progress.counters.reusedExtractions} · 新抽取 ${progress.counters.extractedPosts} · 失败 ${progress.counters.failedPosts}`
     : null;
@@ -116,11 +179,29 @@ export function DistillationWorkspacePanel({
           <div className="mt-1 text-sm text-foreground">
             {taskForSummary ? `${taskForSummary.status} · ${taskForSummary.historyWindowDays} 天` : '暂无蒸馏任务'}
           </div>
+          {isTaskLoading && (
+            <div className="mt-2 text-xs text-muted-foreground">正在加载蒸馏任务状态...</div>
+          )}
+          {isTaskRefreshing && (
+            <div className="mt-2 text-xs text-muted-foreground">后台刷新中...</div>
+          )}
+          {taskForSummary && (
+            <div className="mt-2 text-xs text-muted-foreground">阶段：{stageLabel}</div>
+          )}
+          {coverageLabel && (
+            <div className="mt-2 text-xs text-muted-foreground">{coverageLabel}</div>
+          )}
+          {extractionProgressLabel && (
+            <div className="mt-2 text-xs text-muted-foreground">{extractionProgressLabel}</div>
+          )}
           {activeTaskProgressLabel && (
             <div className="mt-2 text-xs text-muted-foreground">{activeTaskProgressLabel}</div>
           )}
           {progressCountersLabel && (
             <div className="mt-2 text-xs text-muted-foreground">{progressCountersLabel}</div>
+          )}
+          {partialHint && (
+            <div className="mt-2 text-xs text-amber-700">{partialHint}</div>
           )}
           {taskForSummary?.distilledSummary && (
             <div className="mt-2 text-sm text-muted-foreground">{taskForSummary.distilledSummary}</div>

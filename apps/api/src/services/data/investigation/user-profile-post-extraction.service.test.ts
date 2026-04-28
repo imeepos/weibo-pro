@@ -121,4 +121,61 @@ describe('UserProfilePostExtractionService', () => {
     expect(result.failedCount).toBe(1);
     expect(result.warnings).toContain('帖子 source-3 提取失败：timeout');
   });
+
+  it('reports incremental progress after each extracted post', async () => {
+    const service = new UserProfilePostExtractionService(extractionRepo as any);
+    const onProgress = vi.fn().mockResolvedValue(undefined);
+
+    vi.spyOn(service, 'resolveExtraction').mockResolvedValueOnce({
+      reused: true,
+      record: { status: 'succeeded', extracted_json: { topicLabels: ['旧结果'] } },
+    } as any);
+    vi.spyOn(service, 'resolveExtraction').mockResolvedValueOnce({
+      reused: false,
+      record: { status: 'failed', extracted_json: null, error_message: 'timeout' },
+    } as any);
+
+    await service.extractForUser({
+      taskId: 'task-1',
+      weiboUserId: '100',
+      sourcePosts: [
+        {
+          id: 'source-1',
+          content_fingerprint: 'fp-1',
+          normalized_text: '旧帖',
+          source_snapshot: {},
+        },
+        {
+          id: 'source-2',
+          content_fingerprint: 'fp-2',
+          normalized_text: '失败帖',
+          source_snapshot: {},
+        },
+      ],
+      onProgress,
+    } as any);
+
+    expect(onProgress).toHaveBeenCalledTimes(2);
+    expect(onProgress).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        processedCount: 1,
+        total: 2,
+        reusedCount: 1,
+        extractedCount: 0,
+        failedCount: 0,
+      }),
+    );
+    expect(onProgress).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        processedCount: 2,
+        total: 2,
+        reusedCount: 1,
+        extractedCount: 0,
+        failedCount: 1,
+        latestWarning: '帖子 source-2 提取失败：timeout',
+      }),
+    );
+  });
 });

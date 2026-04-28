@@ -178,6 +178,7 @@ export class WeiboWorkerProxyService {
     private isRetryableError(error: Error): boolean {
         const message = this.collectErrorDetails(error);
         const retryablePatterns = [
+            'fetch failed',
             'etimedout',
             'econnrefused',
             'econnreset',

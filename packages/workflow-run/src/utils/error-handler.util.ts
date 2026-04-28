@@ -118,9 +118,11 @@ export class ErrorClassifier {
             return ErrorCategory.SERVER_ERROR;
         }
 
-        // 网络错误 - 移除 'fetch failed' 防止持续网络故障时无限重试
-        // 'fetch failed' 通常表示更严重的网络问题，应该依赖熔断器
+        // 网络错误
+        // `fetch failed` 本身信息较弱，但在页级重试与熔断器都有限次的前提下，
+        // 仍应把它视为可恢复网络错误，避免单次瞬时故障直接打断整条蒸馏链路。
         const networkErrors = [
+            'fetch failed',
             'econnreset',
             'econnrefused',
             'etimedout',
