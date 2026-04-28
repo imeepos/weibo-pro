@@ -64,60 +64,280 @@ export class UserProfileDistillationService {
   }
 
   private normalizeProfileResponse(response: unknown): DistilledUserProfile {
-    if (typeof response === 'string') {
-      return this.parseProfileResponse(response);
+    const directProfile = this.tryValidateProfile(response);
+    if (directProfile) {
+      return directProfile;
     }
 
-    const textContent = this.extractTextContent((response as { content?: unknown })?.content);
-    if (textContent) {
-      return this.parseProfileResponse(textContent);
+    for (const candidate of this.collectProfileCandidates(response)) {
+      if (typeof candidate === 'string') {
+        const parsedProfile = this.tryParseProfileResponse(candidate);
+        if (parsedProfile) {
+          return parsedProfile;
+        }
+        continue;
+      }
+
+      const nestedProfile = this.tryValidateProfile(candidate);
+      if (nestedProfile) {
+        return nestedProfile;
+      }
     }
 
     return this.validateProfile(response);
   }
 
-  private extractTextContent(content: unknown): string | null {
-    if (typeof content === 'string') {
-      return content;
+  private tryValidateProfile(payload: unknown): DistilledUserProfile | null {
+    const result = distilledUserProfileSchema.safeParse(payload);
+    return result.success ? (result.data as DistilledUserProfile) : null;
+  }
+
+  private parseProfileResponse(response: string): DistilledUserProfile {
+    const parsedProfile = this.tryParseProfileResponse(response);
+    if (parsedProfile) {
+      return parsedProfile;
     }
 
-    if (Array.isArray(content)) {
-      const text = content
-        .map((item) =>
-          item && typeof item === 'object' && 'text' in item && typeof item.text === 'string'
-            ? item.text
-            : '',
-        )
-        .filter(Boolean)
-        .join('\n');
+    const [rawCandidate] = this.extractJsonPayloads(response);
+    return this.validateProfile(JSON.parse(rawCandidate ?? response.trim()));
+  }
 
-      return text || null;
+  private tryParseProfileResponse(response: string): DistilledUserProfile | null {
+    for (const raw of this.extractJsonPayloads(response)) {
+      try {
+        const payload = JSON.parse(raw);
+        const profile = this.tryValidateProfile(payload);
+        if (profile) {
+          return profile;
+        }
+      } catch {
+        continue;
+      }
     }
 
     return null;
   }
 
-  private parseProfileResponse(response: string): DistilledUserProfile {
-    const raw = this.extractJsonPayload(response);
-    return this.validateProfile(JSON.parse(raw));
+  private collectProfileCandidates(response: unknown): unknown[] {
+    const candidates: unknown[] = [];
+    this.appendProfileCandidates(response, candidates, new WeakSet<object>(), 0);
+    return candidates;
   }
 
-  private extractJsonPayload(response: string): string {
-    const trimmed = response.trim();
-    const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
-    if (fenced?.[1]) {
-      return fenced[1].trim();
+  private appendProfileCandidates(
+    value: unknown,
+    candidates: unknown[],
+    seen: WeakSet<object>,
+    depth: number,
+  ): void {
+    if (value == null || depth > 4 || candidates.length >= 24) {
+      return;
     }
 
-    const withoutOpeningFence = trimmed.replace(/^```(?:json)?\s*/i, '');
-    const withoutClosingFence = withoutOpeningFence.replace(/\s*```$/, '');
-    const jsonStart = withoutClosingFence.indexOf('{');
-    const jsonEnd = withoutClosingFence.lastIndexOf('}');
-
-    if (jsonStart >= 0 && jsonEnd > jsonStart) {
-      return withoutClosingFence.slice(jsonStart, jsonEnd + 1).trim();
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (trimmed) {
+        candidates.push(trimmed);
+      }
+      return;
     }
 
-    return withoutClosingFence.trim();
+    if (Array.isArray(value)) {
+      const joinedText = this.extractTextFragments(value).join('\n').trim();
+      if (joinedText) {
+        candidates.push(joinedText);
+      }
+
+      for (const item of value) {
+        this.appendProfileCandidates(item, candidates, seen, depth + 1);
+        if (candidates.length >= 24) {
+          return;
+        }
+      }
+
+      return;
+    }
+
+    if (typeof value !== 'object') {
+      return;
+    }
+
+    if (seen.has(value)) {
+      return;
+    }
+    seen.add(value);
+
+    const record = value as Record<string, unknown>;
+    const prioritizedKeys = [
+      'parsed',
+      'raw',
+      'content',
+      'text',
+      'message',
+      'output',
+      'response',
+      'completion',
+      'data',
+      'value',
+    ];
+    const visitedKeys = new Set<string>();
+
+    for (const key of prioritizedKeys) {
+      if (!(key in record)) {
+        continue;
+      }
+
+      visitedKeys.add(key);
+      this.appendProfileCandidates(record[key], candidates, seen, depth + 1);
+      if (candidates.length >= 24) {
+        return;
+      }
+    }
+
+    const joinedText = this.extractTextFragments(record).join('\n').trim();
+    if (joinedText) {
+      candidates.push(joinedText);
+    }
+
+    for (const [key, nestedValue] of Object.entries(record)) {
+      if (visitedKeys.has(key)) {
+        continue;
+      }
+
+      this.appendProfileCandidates(nestedValue, candidates, seen, depth + 1);
+      if (candidates.length >= 24) {
+        return;
+      }
+    }
+  }
+
+  private extractTextFragments(value: unknown): string[] {
+    if (typeof value === 'string') {
+      return value.trim() ? [value] : [];
+    }
+
+    if (Array.isArray(value)) {
+      return value.flatMap((item) => this.extractTextFragments(item));
+    }
+
+    if (!value || typeof value !== 'object') {
+      return [];
+    }
+
+    const record = value as Record<string, unknown>;
+    const fragments: string[] = [];
+
+    if (typeof record.text === 'string' && record.text.trim()) {
+      fragments.push(record.text);
+    }
+    if (typeof record.value === 'string' && record.value.trim()) {
+      fragments.push(record.value);
+    }
+    if (typeof record.content === 'string' && record.content.trim()) {
+      fragments.push(record.content);
+    }
+
+    return fragments;
+  }
+
+  private extractJsonPayloads(response: string): string[] {
+    const normalized = response.replace(/^\uFEFF/, '').trim();
+    if (!normalized) {
+      return [];
+    }
+
+    const candidates: string[] = [normalized];
+    const fenceRegex = /`{3,}\s*(?:[a-zA-Z0-9_-]+)?\s*([\s\S]*?)\s*`{3,}/gi;
+
+    for (const match of normalized.matchAll(fenceRegex)) {
+      const content = match[1]?.trim();
+      if (content) {
+        candidates.push(content);
+      }
+    }
+
+    const withoutFence = normalized
+      .replace(/^`{3,}\s*(?:[a-zA-Z0-9_-]+)?\s*/i, '')
+      .replace(/\s*`{3,}$/i, '')
+      .trim();
+    if (withoutFence) {
+      candidates.push(withoutFence);
+    }
+
+    const balancedFromOriginal = this.extractBalancedJsonCandidate(normalized);
+    if (balancedFromOriginal) {
+      candidates.push(balancedFromOriginal);
+    }
+
+    if (withoutFence !== normalized) {
+      const balancedWithoutFence = this.extractBalancedJsonCandidate(withoutFence);
+      if (balancedWithoutFence) {
+        candidates.push(balancedWithoutFence);
+      }
+    }
+
+    return Array.from(
+      new Set(
+        candidates
+          .map((candidate) => candidate.trim())
+          .filter(Boolean),
+      ),
+    );
+  }
+
+  private extractBalancedJsonCandidate(text: string): string | null {
+    const braceIndex = text.indexOf('{');
+    const bracketIndex = text.indexOf('[');
+
+    if (braceIndex === -1 && bracketIndex === -1) {
+      return null;
+    }
+
+    const startsWithArray =
+      bracketIndex !== -1 && (braceIndex === -1 || bracketIndex < braceIndex);
+    const startIndex = startsWithArray ? bracketIndex : braceIndex;
+    const openChar = startsWithArray ? '[' : '{';
+    const closeChar = startsWithArray ? ']' : '}';
+
+    let depth = 0;
+    let inString = false;
+    let escaping = false;
+
+    for (let index = startIndex; index < text.length; index += 1) {
+      const char = text[index];
+
+      if (escaping) {
+        escaping = false;
+        continue;
+      }
+
+      if (char === '\\' && inString) {
+        escaping = true;
+        continue;
+      }
+
+      if (char === '"') {
+        inString = !inString;
+        continue;
+      }
+
+      if (inString) {
+        continue;
+      }
+
+      if (char === openChar) {
+        depth += 1;
+        continue;
+      }
+
+      if (char === closeChar) {
+        depth -= 1;
+        if (depth === 0) {
+          return text.slice(startIndex, index + 1).trim();
+        }
+      }
+    }
+
+    return null;
   }
 }

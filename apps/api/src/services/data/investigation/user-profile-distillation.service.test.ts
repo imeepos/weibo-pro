@@ -57,6 +57,79 @@ const validProfile = {
   },
 } as const;
 
+const validDossier = {
+  accountSnapshot: {
+    weiboUserId: '100',
+    screenName: '用户A',
+    displayName: '用户A',
+    avatar: null,
+    description: '简介',
+    location: '陕西',
+    followersCount: 1200,
+    friendsCount: 80,
+    statusesCount: 320,
+    verified: true,
+    verifiedType: 0,
+    verifiedReason: null,
+    creditScore: 80,
+    urisk: 60,
+    createdAt: null,
+  },
+  eventRiskContext: {
+    eventId: 'event-1',
+    eventRiskLevel: 'high',
+    eventRiskScore: 92,
+    riskSignals: [],
+    firstSeenAt: null,
+    lastSeenAt: null,
+    eventPostCount: 2,
+    eventInteractionCount: 12,
+  },
+  historyCoverage: {
+    windowDays: 90,
+    collectedPostCount: 20,
+    collectedCommentCount: 0,
+    collectedRepostCount: 3,
+    timeRangeStart: null,
+    timeRangeEnd: null,
+    samplingStrategy: 'recent+spikes',
+  },
+  behaviorTimeline: {
+    postingByDay: [],
+    postingByHour: [],
+    interactionByDay: [],
+    spikeMoments: [],
+    activePeriods: [],
+  },
+  topicAndSentimentProfile: {
+    topicClusters: [],
+    primaryKeywords: [],
+    eventTypes: [],
+    sentimentTrend: [],
+    sentimentDistribution: { positive: 0, negative: 0, neutral: 0 },
+    topicShiftMoments: [],
+  },
+  relationSummary: {
+    topConnectedUsers: [],
+    relationTypes: [],
+    sharedEvents: [],
+    relationClusters: [],
+    suspiciousCoordinationHints: [],
+  },
+  evidenceSamples: {
+    eventSamples: [],
+    historySamples: [],
+    relationSamples: [],
+    nlpSamples: [],
+  },
+  preDistillationSummary: {
+    candidateLabels: [],
+    anomalyHints: [],
+    coverageWarnings: [],
+    humanReviewNeeded: false,
+  },
+} as const;
+
 describe('distilled user profile schema', () => {
   beforeEach(() => {
     fallbackInvokeMock.mockReset();
@@ -552,6 +625,57 @@ describe('distilled user profile schema', () => {
         humanReviewNeeded: false,
       },
     });
+
+    expect(profile.summary.short).toBe('短摘要');
+    expect(profile.metadata.promptVersion).toBe('v1');
+  });
+
+  it('parses fenced json from raw structured output wrappers', async () => {
+    structuredInvokeMock.mockResolvedValue({
+      parsed: null,
+      raw: {
+        content: `\`\`\`json
+${JSON.stringify(validProfile, null, 2)}
+\`\`\``,
+      },
+    });
+
+    const service = new UserProfileDistillationService();
+
+    const profile = await service.distill(validDossier as any);
+
+    expect(profile.summary.short).toBe('短摘要');
+    expect(profile.metadata.model).toBe('gpt-5');
+  });
+
+  it('parses mixed content arrays that contain string fence blocks', async () => {
+    structuredInvokeMock.mockResolvedValue({
+      content: [
+        { type: 'text', text: '以下是结构化结果：' },
+        '```json',
+        JSON.stringify(validProfile, null, 2),
+        '```',
+      ],
+    });
+
+    const service = new UserProfileDistillationService();
+
+    const profile = await service.distill(validDossier as any);
+
+    expect(profile.summary.short).toBe('短摘要');
+    expect(profile.risk.overallLevel).toBe('high');
+  });
+
+  it('parses fenced json when the model emits more than three opening backticks', async () => {
+    structuredInvokeMock.mockResolvedValue({
+      content: `\`\`\`\`json
+${JSON.stringify(validProfile, null, 2)}
+\`\`\``,
+    });
+
+    const service = new UserProfileDistillationService();
+
+    const profile = await service.distill(validDossier as any);
 
     expect(profile.summary.short).toBe('短摘要');
     expect(profile.metadata.promptVersion).toBe('v1');
