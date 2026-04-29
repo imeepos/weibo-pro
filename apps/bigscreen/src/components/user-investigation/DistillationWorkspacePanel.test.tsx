@@ -362,6 +362,63 @@ describe('DistillationWorkspacePanel', () => {
     expect(screen.getByText('当前任务包含部分失败，系统会继续后续蒸馏。')).toBeInTheDocument();
   });
 
+  it('tolerates non-string coverage timestamps in active task progress', () => {
+    render(
+      <DistillationWorkspacePanel
+        selectedUserId="100"
+        tasks={[{
+          id: 'task-1',
+          weiboUserId: '100',
+          eventId: null,
+          status: 'extracting',
+          historyWindowDays: 90,
+          sourcePostCount: 20,
+          sourceCommentCount: 0,
+          sourceRepostCount: 0,
+          evidenceSampleCount: 0,
+          model: null,
+          promptVersion: null,
+          distilledSummary: '正在逐帖抽取，已处理 8/20 条帖子',
+          reviewStatus: null,
+          errorMessage: null,
+          startedAt: '2026-04-28T01:00:00.000Z',
+          completedAt: null,
+          createdAt: '2026-04-28T01:00:00.000Z',
+          updatedAt: '2026-04-28T01:05:00.000Z',
+          progress: {
+            stage: 'extracting',
+            partial: false,
+            latestMessage: '正在逐帖抽取，已处理 8/20 条帖子',
+            lastProgressAt: '2026-04-28T01:03:30.000Z',
+            counters: {
+              crawledPosts: 20,
+              reusedExtractions: 4,
+              extractedPosts: 3,
+              failedPosts: 1,
+              eventClusterCount: 0,
+              coordinationSignalCount: 0,
+              warningCount: 0,
+            },
+            coverage: {
+              latestPostAt: new Date('2026-04-28T01:00:00.000Z'),
+              oldestPostAt: '2026-04-21T01:00:00.000Z',
+            },
+            recentWarnings: [],
+          } as any,
+        }]}
+        personaSummary={null}
+        evidenceCount={0}
+        evidenceItems={[]}
+        memoryGraph={null}
+        onCreateTask={vi.fn()}
+        onOpenGraphMode={vi.fn()}
+        onReviewTask={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('覆盖时间：2026-04-28 01:00 至 2026-04-21 01:00')).toBeInTheDocument();
+  });
+
   it('triggers review callbacks when reviewer clicks action buttons', () => {
     const onReviewTask = vi.fn();
 
