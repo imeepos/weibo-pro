@@ -8,10 +8,14 @@ import { cn } from "@sker/ui/lib/utils"
 
 function ResizablePanelGroup({
   className,
+  direction,
   ...props
-}: React.ComponentProps<typeof ResizablePrimitive.Group>) {
+}: React.ComponentProps<typeof ResizablePrimitive.Group> & {
+  direction?: React.ComponentProps<typeof ResizablePrimitive.Group>["orientation"]
+}) {
   return (
     <ResizablePrimitive.Group
+      orientation={direction}
       data-slot="resizable-panel-group"
       className={cn(
         "flex h-full w-full data-[panel-group-direction=vertical]:flex-col",

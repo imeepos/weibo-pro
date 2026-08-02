@@ -1,3 +1,5 @@
+import type { Query } from '@anthropic-ai/claude-agent-sdk';
+
 /**
  * Claude Types - 类型定义
  *
@@ -203,7 +205,7 @@ export interface ClaudeSdkOptions {
  */
 export interface ActiveSession {
   /** SDK 查询实例 */
-  instance: AsyncIterable<unknown> & { interrupt: () => Promise<void> };
+  instance: Query;
   /** 开始时间 */
   startTime: number;
   /** 会话状态 */

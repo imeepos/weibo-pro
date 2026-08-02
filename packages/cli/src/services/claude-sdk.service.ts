@@ -13,7 +13,7 @@
  */
 
 import { Injectable } from '@sker/core';
-import { query, type Options as SdkOptions, type PermissionResult } from '@anthropic-ai/claude-agent-sdk';
+import { query, type Options as SdkOptions, type PermissionResult, type Query } from '@anthropic-ai/claude-agent-sdk';
 import type {
   ClaudeCommand,
   ClaudeResponse,
@@ -373,7 +373,7 @@ export class ClaudeSdkService {
    */
   private addSession(
     sessionId: string,
-    instance: AsyncIterable<unknown> & { interrupt: () => Promise<void> },
+    instance: Query,
     taskId: string,
     clientId: string
   ): void {

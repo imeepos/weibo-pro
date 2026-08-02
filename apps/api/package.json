@@ -75,7 +75,7 @@
     "tsconfig-paths": "^4.2.0",
     "tsup": "^8.4.0",
     "tsx": "^4.20.6",
-    "typescript": "5.9.2",
+    "typescript": "^7.0.2",
     "vite": "^8.2.0",
     "vitest": "^4.0.16",
     "zod-openapi": "^6.0.0"

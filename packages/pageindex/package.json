@@ -41,7 +41,7 @@
     "@sker/typescript-config": "workspace:*",
     "@sker/eslint-config": "workspace:*",
     "@types/node": "^26.1.2",
-    "typescript": "5.9.3",
+    "typescript": "^7.0.2",
     "vitest": "^4.0.16",
     "@vitest/ui": "^4.0.16",
     "@vitest/coverage-v8": "^4.0.16",

@@ -37,7 +37,7 @@
     "@types/tough-cookie": "^4.0.5",
     "eslint": "^9.38.0",
     "tsup": "^8.4.0",
-    "typescript": "5.9.2"
+    "typescript": "^7.0.2"
   },
   "dependencies": {
     "@sker/core": "workspace:*",

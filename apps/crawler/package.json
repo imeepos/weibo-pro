@@ -33,6 +33,6 @@
     "@types/node": "^26.1.2",
     "@types/node-schedule": "^2.1.8",
     "tsx": "^4.20.6",
-    "typescript": "5.9.2"
+    "typescript": "^7.0.2"
   }
 }

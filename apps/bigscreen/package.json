@@ -75,7 +75,7 @@
     "prettier": "^3.4.2",
     "tailwindcss": "^4.1.5",
     "terser": "^5.44.0",
-    "typescript": "~5.8.0",
+    "typescript": "^7.0.2",
     "vite": "^8.2.0",
     "vite-plugin-swc-transform": "^1.1.1",
     "vitest": "^4.0.16",

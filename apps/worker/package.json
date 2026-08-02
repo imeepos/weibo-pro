@@ -17,7 +17,7 @@
   "devDependencies": {
     "@cloudflare/puppeteer": "^1.0.4",
     "@cloudflare/workers-types": "^5.20260801.1",
-    "typescript": "^5.3.3",
+    "typescript": "^7.0.2",
     "vitest": "^2.1.8",
     "wrangler": "^4.118.0",
     "zod": "^4.2.1"
