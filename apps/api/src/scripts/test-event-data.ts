@@ -75,7 +75,9 @@ async function testPostNLPResults(eventId: string): Promise<TestResult> {
       return await em.find(PostNLPResultEntity, {
         where: { event_id: eventId },
         take: 3,
-        relations: ['post']
+        relations: {
+post: true
+      }
       })
     })
 

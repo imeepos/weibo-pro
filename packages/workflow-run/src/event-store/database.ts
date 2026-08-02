@@ -41,7 +41,9 @@ export class DatabaseEventStore implements IEventStore {
         return await useEntityManager(async (db) => {
             const logs = await db.find(WorkflowRunLogEntity, {
                 where: { runId: Number(runId), eventType: NodeEventType.SUCCESS },
-                select: ['nodeId'],
+                select: {
+nodeId: true
+      },
             });
             return new Set(logs.map(l => l.nodeId));
         });

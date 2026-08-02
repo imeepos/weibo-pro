@@ -447,7 +447,9 @@ export class WeiboAjaxStatusesMymblogAstVisitor extends WeiboApiClient {
         }
 
         const existingRows = await manager.find(entity, {
-            select: ['id'],
+            select: {
+id: true
+      },
             where: normalizedIds.map((id) => ({ id })),
         } as any);
 

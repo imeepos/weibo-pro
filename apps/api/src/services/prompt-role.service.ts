@@ -7,7 +7,11 @@ export class PromptRoleService {
   async findAll() {
     return useEntityManager(async m => {
       return m.find(PromptRoleEntity, {
-        relations: ['skill_refs', 'skill_refs.skill'],
+        relations: {
+skill_refs: {
+skill: true
+      }
+      },
         order: { created_at: 'DESC' }
       });
     });
@@ -17,7 +21,11 @@ export class PromptRoleService {
     return useEntityManager(async m => {
       return m.findOne(PromptRoleEntity, {
         where: { id },
-        relations: ['skill_refs', 'skill_refs.skill']
+        relations: {
+skill_refs: {
+skill: true
+      }
+      }
       });
     });
   }
@@ -67,7 +75,9 @@ export class PromptRoleService {
     return useEntityManager(async m => {
       const skillRefs = await m.find(PromptRoleSkillRefEntity, {
         where: { role_id: roleId },
-        relations: ['skill'],
+        relations: {
+skill: true
+      },
         order: { sort_order: 'ASC' }
       });
 

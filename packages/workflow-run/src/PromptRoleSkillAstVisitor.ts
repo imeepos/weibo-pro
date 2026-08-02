@@ -49,7 +49,9 @@ export class PromptRoleSkillAstVisitor {
             await useEntityManager(async (manager) => {
               const skillRefs = await manager.find(PromptRoleSkillRefEntity, {
                 where: { role_id: ast.roleId },
-                relations: ['skill'],
+                relations: {
+skill: true
+      },
                 order: { sort_order: 'ASC' }
               });
 

@@ -39,7 +39,9 @@ export class EventAstVisitor {
           await useEntityManager(async (manager) => {
             const event = await manager.findOne(EventEntity, {
               where: { id: ast.eventId },
-              relations: ['category'],
+              relations: {
+category: true
+      },
             });
 
             if (!event) {

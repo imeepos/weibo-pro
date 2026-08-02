@@ -7,7 +7,10 @@ export class LlmModelProviderService {
   async findAll() {
     return useEntityManager(m =>
       m.find(LlmModelProvider, {
-        relations: ['model', 'provider'],
+        relations: {
+model: true,
+      provider: true
+      },
         order: { created_at: 'DESC' }
       })
     );
@@ -17,7 +20,10 @@ export class LlmModelProviderService {
     return useEntityManager(m =>
       m.find(LlmModelProvider, {
         where: { modelId },
-        relations: ['model', 'provider']
+        relations: {
+model: true,
+      provider: true
+      }
       })
     );
   }
@@ -26,7 +32,10 @@ export class LlmModelProviderService {
     return useEntityManager(m =>
       m.find(LlmModelProvider, {
         where: { providerId },
-        relations: ['model', 'provider']
+        relations: {
+model: true,
+      provider: true
+      }
       })
     );
   }
@@ -35,7 +44,10 @@ export class LlmModelProviderService {
     return useEntityManager(m =>
       m.findOne(LlmModelProvider, {
         where: { id },
-        relations: ['model', 'provider']
+        relations: {
+model: true,
+      provider: true
+      }
       })
     );
   }

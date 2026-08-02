@@ -578,7 +578,9 @@ describe('WeiboAjaxStatusesLikeShowAstVisitor - 统计更新修复验证', () =>
       // 查询帖子
       const post = await mockManager.findOne(WeiboPostEntity, {
         where: { id: postId },
-        select: ['event_id']
+        select: {
+event_id: true
+      }
       });
 
       // 没有新数据或没有 event_id，不应该触发统计
@@ -696,7 +698,10 @@ describe('WeiboAjaxStatusesLikeShowAstVisitor - 统计更新修复验证', () =>
       // 获取帖子时间作为近似值
       const post = await mockManager.findOne(WeiboPostEntity, {
         where: { id: postId },
-        select: ['created_at', 'event_id']
+        select: {
+created_at: true,
+      event_id: true
+      }
       });
       const approximateLikeTime = post?.created_at || new Date();
 

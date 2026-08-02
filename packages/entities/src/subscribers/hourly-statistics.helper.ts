@@ -100,7 +100,7 @@ export class HourlyStatisticsHelper {
   ): Promise<string | null> {
     const post = await manager.findOne(WeiboPostEntity, {
       where: { mid },
-      select: ['event_id']
+      select: { event_id: true }
     });
     return post?.event_id || null;
   }

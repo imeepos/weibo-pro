@@ -92,7 +92,10 @@ export class WeiboAjaxStatusesLikeShowAstVisitor extends WeiboApiClient {
                                     // 获取帖子时间作为点赞时间的近似值
                                     const post = await m.findOne(WeiboPostEntity, {
                                         where: { id: ast.mid },
-                                        select: ['created_at', 'event_id']
+                                        select: {
+created_at: true,
+      event_id: true
+      }
                                     });
                                     const approximateLikeTime = post?.created_at || new Date();
 

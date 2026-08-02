@@ -279,7 +279,9 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
             if (postId) {
                 const post = await m.findOne(WeiboPostEntity, {
                     where: { id: postId },
-                    select: ['event_id']
+                    select: {
+event_id: true
+      }
                 });
 
                 if (post?.event_id) {

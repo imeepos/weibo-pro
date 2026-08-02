@@ -534,7 +534,12 @@ ${formattedInput}
         where: { status: 'active' },
         order: { created_at: 'DESC' },
         take: 30, // 取最近 30 个事件
-        select: ['id', 'title', 'description', 'created_at']
+        select: {
+id: true,
+      title: true,
+      description: true,
+      created_at: true
+      }
       });
     });
   }

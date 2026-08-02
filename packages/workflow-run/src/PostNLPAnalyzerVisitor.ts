@@ -179,7 +179,9 @@ export class PostNLPAnalyzerVisitor {
         if (!eventId) {
           const post = await manager.findOne(WeiboPostEntity, {
             where: { id: postId },
-            select: ['event_id']
+            select: {
+event_id: true
+      }
           });
           eventId = post?.event_id;
         }
@@ -212,7 +214,9 @@ export class PostNLPAnalyzerVisitor {
         if (eventId && nlpResult.sentiment) {
           const post = await manager.findOne(WeiboPostEntity, {
             where: { id: postId },
-            select: ['created_at']
+            select: {
+created_at: true
+      }
           });
 
           if (post?.created_at) {

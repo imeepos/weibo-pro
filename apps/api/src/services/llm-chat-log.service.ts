@@ -162,12 +162,19 @@ export class LlmChatLogService {
 
       // 优化：只查询需要的字段，避免查询大的 request JSON 字段
       const [logs, total] = await m.findAndCount(LlmChatLog, {
-        select: [
-          'id', 'providerId', 'modelName', 'durationMs',
-          'isSuccess', 'statusCode', 'error',
-          'promptTokens', 'completionTokens', 'totalTokens',
-          'createdAt'
-        ],
+        select: {
+id: true,
+      providerId: true,
+      modelName: true,
+      durationMs: true,
+      isSuccess: true,
+      statusCode: true,
+      error: true,
+      promptTokens: true,
+      completionTokens: true,
+      totalTokens: true,
+      createdAt: true
+      },
         where,
         order: { createdAt: 'DESC' },
         skip: (page - 1) * pageSize,
@@ -217,7 +224,9 @@ export class LlmChatLogService {
 
       while (hasMore) {
         const logs = await m.find(LlmChatLog, {
-          select: ['request'],
+          select: {
+request: true
+      },
           where,
           order: { createdAt: 'ASC' },
           skip: offset,

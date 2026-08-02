@@ -518,7 +518,9 @@ describe('WeiboAjaxStatusesRepostTimelineAstVisitor - 统计更新修复验证',
       // 查询帖子
       const post = await mockManager.findOne(WeiboPostEntity, {
         where: { id: postId },
-        select: ['event_id']
+        select: {
+event_id: true
+      }
       });
 
       // 没有新数据或没有 event_id，不应该触发统计

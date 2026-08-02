@@ -116,7 +116,9 @@ export class WeiboAjaxStatusesRepostTimelineAstVisitor extends WeiboApiClient {
                                     // 入库后触发统计
                                     const post = await m.findOne(WeiboPostEntity, {
                                         where: { id: ast.mid },
-                                        select: ['event_id']
+                                        select: {
+event_id: true
+      }
                                     });
 
                                     // 过滤出新数据（利用已有的 existingIds）
