@@ -60,7 +60,7 @@
     "dagre": "^0.8.5",
     "framer-motion": "^12.0.0",
     "immer": "^11.0.1",
-    "lucide-react": "^0.555.0",
+    "lucide-react": "^1.28.0",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
     "rxjs": "^7.8.1",

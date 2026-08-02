@@ -140,7 +140,7 @@ const WordCloud = React.forwardRef<WordCloudRef, WordCloudProps>(({
       },
       series: [
         {
-          type: "wordCloud" as const,
+          type: "wordCloud",
           gridSize: 4,
           sizeRange,
           rotationRange,
@@ -159,9 +159,9 @@ const WordCloud = React.forwardRef<WordCloudRef, WordCloudProps>(({
           },
           emphasis: {
             focus: "self" as const,
-          } as any,
+          },
           data: processedData,
-        },
+        } as any,
       ],
       animation: animated,
       animationDuration: animated ? 300 : 0,

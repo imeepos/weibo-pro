@@ -18,6 +18,7 @@ import {
   useTableCellElementResizable,
   useTableElement,
   useTableMergeState,
+  useTableStore,
 } from '@platejs/table/react';
 import { PopoverAnchor } from '@radix-ui/react-popover';
 import { cva } from 'class-variance-authority';
@@ -105,11 +106,9 @@ export const TableElement = withHOC(
       'isSelectionAreaVisible'
     );
     const hasControls = !readOnly && !isSelectionAreaVisible;
-    const {
-      isSelectingCell,
-      marginLeft,
-      props: tableProps,
-    } = useTableElement();
+    const { marginLeft, props: tableProps } = useTableElement();
+    const isSelectingCell =
+      useTableStore((state) => state.isSelectingCell?.() ?? false);
 
     const isSelectingTable = useBlockSelected(props.element.id as string);
 
