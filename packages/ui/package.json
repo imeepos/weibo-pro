@@ -154,7 +154,7 @@
     "@types/three": "^0.185.3",
     "@vitest/ui": "^4.0.16",
     "eslint": "^10.8.0",
-    "jsdom": "^24.0.0",
+    "jsdom": "^30.0.1",
     "tailwindcss": "^4.1.11",
     "typescript": "^6.0.3",
     "vitest": "^4.0.16"

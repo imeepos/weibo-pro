@@ -59,7 +59,6 @@
     "@swc/core": "^1.9.3",
     "@types/amqplib": "^0.10.5",
     "@types/busboy": "^1.5.4",
-    "@types/mongodb": "^4.0.7",
     "@types/node": "^26.1.2",
     "@types/pg": "^8.11.0",
     "@vitest/ui": "^4.0.16",
