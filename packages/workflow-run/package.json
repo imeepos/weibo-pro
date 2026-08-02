@@ -65,7 +65,7 @@
   "devDependencies": {
     "@sker/eslint-config": "workspace:*",
     "@sker/typescript-config": "workspace:*",
-    "@types/node": "^22.15.3",
+    "@types/node": "^26.1.2",
     "@types/node-schedule": "^2.1.7",
     "@types/pg": "^8.11.0",
     "@vitest/coverage-v8": "^4.0.16",

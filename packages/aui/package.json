@@ -3,7 +3,13 @@
   "version": "0.0.0",
   "private": true,
   "description": "AI-first UI system where UI itself is AI context",
-  "keywords": ["aui", "ai-ui", "context", "serialization", "sker"],
+  "keywords": [
+    "aui",
+    "ai-ui",
+    "context",
+    "serialization",
+    "sker"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -33,7 +39,7 @@
     "@sker/eslint-config": "workspace:*",
     "@sker/typescript-config": "workspace:*",
     "@types/minimatch": "^6.0.0",
-    "@types/node": "^22.15.3",
+    "@types/node": "^26.1.2",
     "@types/react": "^19.0.0",
     "eslint": "^9.38.0",
     "minimatch": "^10.1.1",

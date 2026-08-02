@@ -69,7 +69,7 @@ function DatePicker({
             if (maxDate && date > maxDate) return true
             return false
           }}
-          initialFocus
+          autoFocus
         />
       </PopoverContent>
     </Popover>
@@ -139,7 +139,7 @@ function DateRangePicker({
             return false
           }}
           numberOfMonths={2}
-          initialFocus
+          autoFocus
         />
       </PopoverContent>
     </Popover>

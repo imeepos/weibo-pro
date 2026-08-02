@@ -3,7 +3,14 @@
   "version": "0.0.0",
   "type": "module",
   "description": "Browser runtime execution for workflow nodes.",
-  "keywords": ["workflow", "runtime", "browser", "frontend", "execution", "sker"],
+  "keywords": [
+    "workflow",
+    "runtime",
+    "browser",
+    "frontend",
+    "execution",
+    "sker"
+  ],
   "exports": {
     ".": "./src/index.ts"
   },
@@ -22,7 +29,7 @@
   "devDependencies": {
     "@sker/eslint-config": "workspace:*",
     "@sker/typescript-config": "workspace:*",
-    "@types/node": "^22.15.3",
+    "@types/node": "^26.1.2",
     "eslint": "^9.38.0",
     "tsup": "^8.4.0",
     "typescript": "5.9.2"
