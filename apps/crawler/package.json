@@ -24,7 +24,7 @@
     "@sker/workflow-ast": "workspace:*",
     "@sker/workflow-run": "workspace:*",
     "cron-parser": "^5.4.0",
-    "dotenv": "^16.4.7",
+    "dotenv": "^17.4.2",
     "node-schedule": "^2.1.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"

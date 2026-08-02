@@ -3,7 +3,14 @@
   "version": "0.0.0",
   "private": true,
   "description": "RabbitMQ message queue client with connection pooling, retry strategies, and RxJS support.",
-  "keywords": ["rabbitmq", "mq", "message-queue", "amqp", "rxjs", "sker"],
+  "keywords": [
+    "rabbitmq",
+    "mq",
+    "message-queue",
+    "amqp",
+    "rxjs",
+    "sker"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -26,7 +33,7 @@
   "dependencies": {
     "@sker/core": "workspace:*",
     "amqplib": "^0.10.5",
-    "dotenv": "^16.4.7",
+    "dotenv": "^17.4.2",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },

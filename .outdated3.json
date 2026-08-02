@@ -1,0 +1,1190 @@
+{
+  "@types/minimatch": {
+    "current": "5.1.2",
+    "latest": "6.0.0",
+    "wanted": "5.1.2",
+    "isDeprecated": true,
+    "dependencyType": "devDependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/storybook",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\apps\\storybook"
+      }
+    ]
+  },
+  "@types/mongodb": {
+    "current": "4.0.7",
+    "latest": "4.0.7",
+    "wanted": "4.0.7",
+    "isDeprecated": true,
+    "dependencyType": "devDependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/api",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\apps\\api"
+      }
+    ]
+  },
+  "@types/recharts": {
+    "current": "2.0.1",
+    "latest": "2.0.1",
+    "wanted": "2.0.1",
+    "isDeprecated": true,
+    "dependencyType": "devDependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/storybook",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\apps\\storybook"
+      }
+    ]
+  },
+  "@better-auth/passkey": {
+    "current": "1.4.13",
+    "latest": "1.6.25",
+    "wanted": "1.4.13",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "@better-auth/sso": {
+    "current": "1.4.13",
+    "latest": "1.6.25",
+    "wanted": "1.4.13",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "axios": {
+    "current": "1.7.9",
+    "latest": "1.19.0",
+    "wanted": "1.7.9",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/api",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\apps\\api"
+      },
+      {
+        "name": "@sker/bigscreen",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\apps\\bigscreen"
+      },
+      {
+        "name": "@sker/crawler-core",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\crawler-core"
+      },
+      {
+        "name": "@sker/ip-proxy",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ip-proxy"
+      }
+    ]
+  },
+  "dedent": {
+    "current": "1.0.0",
+    "latest": "1.7.2",
+    "wanted": "1.0.0",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "@ai-sdk/react": {
+    "current": "2.0.28",
+    "latest": "4.0.51",
+    "wanted": "2.0.28",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "@cloudflare/workers-types": {
+    "current": "4.20260702.1",
+    "latest": "5.20260801.1",
+    "wanted": "4.20260702.1",
+    "isDeprecated": false,
+    "dependencyType": "devDependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/email-d1",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\apps\\email-d1"
+      },
+      {
+        "name": "@sker/worker",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\apps\\worker"
+      }
+    ]
+  },
+  "@eslint/js": {
+    "current": "9.39.5",
+    "latest": "10.0.1",
+    "wanted": "9.39.5",
+    "isDeprecated": false,
+    "dependencyType": "devDependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/eslint-config",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\eslint-config"
+      }
+    ]
+  },
+  "@next/eslint-plugin-next": {
+    "current": "15.5.22",
+    "latest": "16.2.12",
+    "wanted": "15.5.22",
+    "isDeprecated": false,
+    "dependencyType": "devDependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/eslint-config",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\eslint-config"
+      }
+    ]
+  },
+  "@platejs/ai": {
+    "current": "52.3.22",
+    "latest": "53.3.0",
+    "wanted": "52.3.22",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "@platejs/autoformat": {
+    "current": "52.3.10",
+    "latest": "53.0.0",
+    "wanted": "52.3.10",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "@platejs/basic-nodes": {
+    "current": "52.3.10",
+    "latest": "53.0.0",
+    "wanted": "52.3.10",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "@platejs/basic-styles": {
+    "current": "52.3.10",
+    "latest": "53.0.0",
+    "wanted": "52.3.10",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "@platejs/callout": {
+    "current": "52.3.10",
+    "latest": "53.0.0",
+    "wanted": "52.3.10",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "@platejs/caption": {
+    "current": "52.3.10",
+    "latest": "53.0.0",
+    "wanted": "52.3.10",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "@platejs/code-block": {
+    "current": "52.3.16",
+    "latest": "53.0.0",
+    "wanted": "52.3.16",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "@platejs/combobox": {
+    "current": "52.3.10",
+    "latest": "53.0.0",
+    "wanted": "52.3.10",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "@platejs/comment": {
+    "current": "52.3.10",
+    "latest": "53.0.0",
+    "wanted": "52.3.10",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "@platejs/date": {
+    "current": "52.3.10",
+    "latest": "53.0.0",
+    "wanted": "52.3.10",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "@platejs/dnd": {
+    "current": "52.3.16",
+    "latest": "53.1.0",
+    "wanted": "52.3.16",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "@platejs/docx": {
+    "current": "52.3.10",
+    "latest": "53.0.0",
+    "wanted": "52.3.10",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "@platejs/emoji": {
+    "current": "52.3.10",
+    "latest": "53.1.7",
+    "wanted": "52.3.10",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "@platejs/excalidraw": {
+    "current": "52.3.10",
+    "latest": "53.0.0",
+    "wanted": "52.3.10",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "@platejs/floating": {
+    "current": "52.3.10",
+    "latest": "53.0.0",
+    "wanted": "52.3.10",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "@platejs/indent": {
+    "current": "52.3.10",
+    "latest": "53.0.0",
+    "wanted": "52.3.10",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "@platejs/juice": {
+    "current": "52.3.10",
+    "latest": "53.0.0",
+    "wanted": "52.3.10",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "@platejs/layout": {
+    "current": "52.3.10",
+    "latest": "53.0.0",
+    "wanted": "52.3.10",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "@platejs/link": {
+    "current": "52.3.17",
+    "latest": "53.3.1",
+    "wanted": "52.3.17",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "@platejs/list": {
+    "current": "52.3.10",
+    "latest": "53.1.3",
+    "wanted": "52.3.10",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "@platejs/markdown": {
+    "current": "52.3.22",
+    "latest": "53.2.2",
+    "wanted": "52.3.22",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "@platejs/math": {
+    "current": "52.3.10",
+    "latest": "53.0.0",
+    "wanted": "52.3.10",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "@platejs/media": {
+    "current": "52.3.10",
+    "latest": "53.1.4",
+    "wanted": "52.3.10",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "@platejs/mention": {
+    "current": "52.3.10",
+    "latest": "53.0.0",
+    "wanted": "52.3.10",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "@platejs/resizable": {
+    "current": "52.3.10",
+    "latest": "53.0.0",
+    "wanted": "52.3.10",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "@platejs/selection": {
+    "current": "52.3.10",
+    "latest": "53.1.6",
+    "wanted": "52.3.10",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "@platejs/slash-command": {
+    "current": "52.3.10",
+    "latest": "53.0.0",
+    "wanted": "52.3.10",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "@platejs/suggestion": {
+    "current": "52.3.10",
+    "latest": "53.2.3",
+    "wanted": "52.3.10",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "@platejs/table": {
+    "current": "52.3.20",
+    "latest": "53.0.9",
+    "wanted": "52.3.20",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "@platejs/toc": {
+    "current": "52.3.10",
+    "latest": "53.0.0",
+    "wanted": "52.3.10",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "@platejs/toggle": {
+    "current": "52.3.10",
+    "latest": "53.0.0",
+    "wanted": "52.3.10",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "@storybook/addon-onboarding": {
+    "current": "8.6.18",
+    "latest": "10.5.5",
+    "wanted": "8.6.18",
+    "isDeprecated": false,
+    "dependencyType": "devDependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/storybook",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\apps\\storybook"
+      }
+    ]
+  },
+  "@storybook/react": {
+    "current": "8.6.18",
+    "latest": "10.5.5",
+    "wanted": "8.6.18",
+    "isDeprecated": false,
+    "dependencyType": "devDependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/storybook",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\apps\\storybook"
+      }
+    ]
+  },
+  "@storybook/react-vite": {
+    "current": "8.6.18",
+    "latest": "10.5.5",
+    "wanted": "8.6.18",
+    "isDeprecated": false,
+    "dependencyType": "devDependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/storybook",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\apps\\storybook"
+      }
+    ]
+  },
+  "@types/node": {
+    "current": "25.9.5",
+    "latest": "26.1.2",
+    "wanted": "25.9.5",
+    "isDeprecated": false,
+    "dependencyType": "devDependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/auth",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\auth"
+      },
+      {
+        "name": "@sker/compiler",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\compiler"
+      }
+    ]
+  },
+  "ai": {
+    "current": "5.0.28",
+    "latest": "7.0.48",
+    "wanted": "5.0.28",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "better-call": {
+    "current": "1.1.8",
+    "latest": "2.0.5",
+    "wanted": "1.1.8",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/auth",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\auth"
+      }
+    ]
+  },
+  "dotenv": {
+    "current": "16.6.1",
+    "latest": "17.4.2",
+    "wanted": "16.6.1",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/api",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\apps\\api"
+      },
+      {
+        "name": "@sker/cli",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\apps\\cli"
+      },
+      {
+        "name": "@sker/crawler",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\apps\\crawler"
+      },
+      {
+        "name": "@sker/mq",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\mq"
+      },
+      {
+        "name": "@sker/pageindex",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\pageindex"
+      }
+    ]
+  },
+  "eslint": {
+    "current": "9.39.5",
+    "latest": "10.8.0",
+    "wanted": "9.39.5",
+    "isDeprecated": false,
+    "dependencyType": "devDependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/api",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\apps\\api"
+      },
+      {
+        "name": "@sker/app",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\apps\\app"
+      },
+      {
+        "name": "@sker/bigscreen",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\apps\\bigscreen"
+      },
+      {
+        "name": "@sker/aui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\aui"
+      },
+      {
+        "name": "@sker/cli-v2",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\cli"
+      },
+      {
+        "name": "@sker/compiler",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\compiler"
+      },
+      {
+        "name": "@sker/core",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\core"
+      },
+      {
+        "name": "@sker/crawler-core",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\crawler-core"
+      },
+      {
+        "name": "@sker/email",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\email"
+      },
+      {
+        "name": "@sker/entities",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\entities"
+      },
+      {
+        "name": "@sker/eslint-config",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\eslint-config"
+      },
+      {
+        "name": "@sker/json-harmony",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\json-harmony"
+      },
+      {
+        "name": "@sker/llm-protocol",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\llm-protocol"
+      },
+      {
+        "name": "@sker/mq",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\mq"
+      },
+      {
+        "name": "@sker/nlp",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\nlp"
+      },
+      {
+        "name": "@sker/redis",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\redis"
+      },
+      {
+        "name": "@sker/store",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\store"
+      },
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      },
+      {
+        "name": "@sker/utils",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\utils"
+      },
+      {
+        "name": "@sker/workflow",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\workflow"
+      },
+      {
+        "name": "@sker/workflow-ast",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\workflow-ast"
+      },
+      {
+        "name": "@sker/workflow-browser",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\workflow-browser"
+      },
+      {
+        "name": "@sker/workflow-compiler",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\workflow-compiler"
+      },
+      {
+        "name": "@sker/workflow-run",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\workflow-run"
+      },
+      {
+        "name": "@sker/workflow-ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\workflow-ui"
+      }
+    ]
+  },
+  "eslint-plugin-react-hooks": {
+    "current": "5.2.0",
+    "latest": "7.1.1",
+    "wanted": "5.2.0",
+    "isDeprecated": false,
+    "dependencyType": "devDependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/bigscreen",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\apps\\bigscreen"
+      },
+      {
+        "name": "@sker/eslint-config",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\eslint-config"
+      }
+    ]
+  },
+  "globals": {
+    "current": "16.5.0",
+    "latest": "17.9.0",
+    "wanted": "16.5.0",
+    "isDeprecated": false,
+    "dependencyType": "devDependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/eslint-config",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\eslint-config"
+      }
+    ]
+  },
+  "html2canvas-pro": {
+    "current": "1.6.7",
+    "latest": "2.3.3",
+    "wanted": "1.6.7",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "jsdom": {
+    "current": "27.4.0",
+    "latest": "30.0.1",
+    "wanted": "27.4.0",
+    "isDeprecated": false,
+    "dependencyType": "devDependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/bigscreen",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\apps\\bigscreen"
+      },
+      {
+        "name": "@sker/workflow-ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\workflow-ui"
+      }
+    ]
+  },
+  "lint-staged": {
+    "current": "16.4.0",
+    "latest": "17.3.0",
+    "wanted": "16.4.0",
+    "isDeprecated": false,
+    "dependencyType": "devDependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/bigscreen",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\apps\\bigscreen"
+      }
+    ]
+  },
+  "openai": {
+    "current": "4.104.0",
+    "latest": "7.3.0",
+    "wanted": "4.104.0",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/nlp",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\nlp"
+      },
+      {
+        "name": "@sker/pageindex",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\pageindex"
+      }
+    ]
+  },
+  "platejs": {
+    "current": "52.3.21",
+    "latest": "53.2.4",
+    "wanted": "52.3.21",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/storybook",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\apps\\storybook"
+      },
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "react-day-picker": {
+    "current": "9.14.0",
+    "latest": "10.0.1",
+    "wanted": "9.14.0",
+    "isDeprecated": false,
+    "dependencyType": "devDependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/storybook",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\apps\\storybook"
+      }
+    ]
+  },
+  "react-resizable-panels": {
+    "current": "3.0.6",
+    "latest": "4.12.2",
+    "wanted": "3.0.6",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "recharts": {
+    "current": "2.15.4",
+    "latest": "3.10.1",
+    "wanted": "2.15.4",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/bigscreen",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\apps\\bigscreen"
+      }
+    ]
+  },
+  "storybook": {
+    "current": "8.6.18",
+    "latest": "10.5.5",
+    "wanted": "8.6.18",
+    "isDeprecated": false,
+    "dependencyType": "devDependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/storybook",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\apps\\storybook"
+      }
+    ]
+  },
+  "storybook-dark-mode": {
+    "current": "4.0.2",
+    "latest": "5.0.0",
+    "wanted": "4.0.2",
+    "isDeprecated": false,
+    "dependencyType": "devDependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/storybook",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\apps\\storybook"
+      }
+    ]
+  },
+  "stripe": {
+    "current": "20.4.1",
+    "latest": "22.4.0",
+    "wanted": "20.4.1",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "typescript": {
+    "current": "5.9.3",
+    "latest": "7.0.2",
+    "wanted": "5.9.3",
+    "isDeprecated": false,
+    "dependencyType": "devDependencies",
+    "dependentPackages": [
+      {
+        "name": "sker",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro"
+      },
+      {
+        "name": "@sker/app",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\apps\\app"
+      },
+      {
+        "name": "@sker/tests",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\apps\\tests"
+      },
+      {
+        "name": "@sker/worker",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\apps\\worker"
+      },
+      {
+        "name": "@sker/compiler",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\compiler"
+      },
+      {
+        "name": "@sker/eslint-config",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\eslint-config"
+      },
+      {
+        "name": "@sker/pageindex",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\pageindex"
+      },
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "vite": {
+    "current": "6.4.3",
+    "latest": "8.2.0",
+    "wanted": "6.4.3",
+    "isDeprecated": false,
+    "dependencyType": "devDependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/storybook",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\apps\\storybook"
+      }
+    ]
+  },
+  "wrangler": {
+    "current": "3.78.12",
+    "latest": "4.118.0",
+    "wanted": "3.78.12",
+    "isDeprecated": false,
+    "dependencyType": "devDependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/email-d1",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\apps\\email-d1"
+      }
+    ]
+  },
+  "@lexical/react": {
+    "current": "0.38.2",
+    "latest": "0.49.0",
+    "wanted": "0.38.2",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "@lexical/rich-text": {
+    "current": "0.38.2",
+    "latest": "0.49.0",
+    "wanted": "0.38.2",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "@lexical/selection": {
+    "current": "0.38.2",
+    "latest": "0.49.0",
+    "wanted": "0.38.2",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "@swc/cli": {
+    "current": "0.4.0",
+    "latest": "0.8.1",
+    "wanted": "0.4.0",
+    "isDeprecated": false,
+    "dependencyType": "devDependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/api",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\apps\\api"
+      }
+    ]
+  },
+  "amqplib": {
+    "current": "0.10.9",
+    "latest": "2.0.1",
+    "wanted": "0.10.9",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/tests",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\apps\\tests"
+      },
+      {
+        "name": "@sker/mq",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\mq"
+      }
+    ]
+  },
+  "eslint-plugin-react-refresh": {
+    "current": "0.4.26",
+    "latest": "0.5.3",
+    "wanted": "0.4.26",
+    "isDeprecated": false,
+    "dependencyType": "devDependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/bigscreen",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\apps\\bigscreen"
+      }
+    ]
+  },
+  "kysely": {
+    "current": "0.28.17",
+    "latest": "0.29.4",
+    "wanted": "0.28.17",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/auth",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\auth"
+      }
+    ]
+  },
+  "lexical": {
+    "current": "0.38.2",
+    "latest": "0.49.0",
+    "wanted": "0.38.2",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/storybook",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\apps\\storybook"
+      },
+      {
+        "name": "@sker/ui",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\ui"
+      }
+    ]
+  },
+  "lucide-react": {
+    "current": "0.469.0",
+    "latest": "1.28.0",
+    "wanted": "0.469.0",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/app",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\apps\\app"
+      }
+    ]
+  },
+  "typeorm": {
+    "current": "0.3.31",
+    "latest": "1.1.0",
+    "wanted": "0.3.31",
+    "isDeprecated": false,
+    "dependencyType": "dependencies",
+    "dependentPackages": [
+      {
+        "name": "@sker/api",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\apps\\api"
+      },
+      {
+        "name": "@sker/agent",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\agent"
+      },
+      {
+        "name": "@sker/crawler-core",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\crawler-core"
+      },
+      {
+        "name": "@sker/entities",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\entities"
+      },
+      {
+        "name": "@sker/workflow-run",
+        "location": "C:\\Users\\imeep\\Desktop\\shopify\\weibo-pro\\packages\\workflow-run"
+      }
+    ]
+  }
+}

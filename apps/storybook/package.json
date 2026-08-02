@@ -41,7 +41,7 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@types/recharts": "^2.0.1",
-    "react-day-picker": "^9.11.2",
+    "react-day-picker": "^10.0.1",
     "recharts": "^3.5.0",
     "remark-gfm": "^4.0.1",
     "storybook": "^8.6.14",

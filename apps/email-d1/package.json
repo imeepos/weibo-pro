@@ -15,7 +15,7 @@
     "db:list": "pnpx wrangler@latest d1 execute email-db --remote --command \"SELECT * FROM emails ORDER BY received_at DESC LIMIT 10\""
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20241127.0",
-    "wrangler": "3.78.12"
+    "@cloudflare/workers-types": "^5.20260801.1",
+    "wrangler": "^4.118.0"
   }
 }
