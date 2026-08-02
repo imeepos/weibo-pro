@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import React, { useCallback } from 'react';
 import * as THREE from 'three';
 import { getEdgeColor } from './UserRelationGraph3D.utils';
 

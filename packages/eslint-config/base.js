@@ -22,7 +22,7 @@ export const relaxedRules = {
     "warn",
     {
       argsIgnorePattern: "^_",
-      varsIgnorePattern: "^_",
+      varsIgnorePattern: "^_|^React$",
       caughtErrorsIgnorePattern: "^_",
     },
   ],
