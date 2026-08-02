@@ -19,7 +19,12 @@
       "Bash(psql -U postgres -c \"SHOW max_connections;\")",
       "Bash(grep -r DATABASE_URL . --include=*.env* --include=*.ts)",
       "Bash(psql -U postgres -h localhost -c \"SELECT max_connections, current_setting\\(''max_connections''\\) as current, count\\(*\\) as active FROM pg_stat_activity GROUP BY max_connections, current_setting\\(''max_connections''\\);\")",
-      "Bash(bun run:*)"
+      "Bash(bun run:*)",
+      "Bash(git rev-list *)",
+      "Bash(git ls-remote *)",
+      "Bash(git pull *)",
+      "Bash(git remote *)",
+      "Bash(git push *)"
     ]
   }
 }
