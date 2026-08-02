@@ -7,21 +7,11 @@ const config: StorybookConfig = {
     '../src/**/*.mdx',
   ],
   addons: [
+    '@storybook/addon-docs',
     '@storybook/addon-onboarding',
-    '@storybook/addon-essentials',
     'storybook-dark-mode',
-    {
-      name: "@storybook/addon-react-native-web",
-      options: {
-        modulesToTranspile: [],
-        projectRoot: "../",
-      },
-    },
   ],
   framework: "@storybook/react-vite",
-  docs: {
-    autodocs: "tag",
-  },
   viteFinal: async (config) => {
     config.plugins = config.plugins || []
     config.plugins.push(tailwindcss() as any)
