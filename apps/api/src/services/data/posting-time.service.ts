@@ -75,9 +75,9 @@ export class PostingTimeService {
         const hour = chinaDate.getUTCHours();   // 0-23, 固定按北京时间统计
         const weekday = chinaDate.getUTCDay();  // 0-6 (0=周日), 固定按北京时间统计
 
-        hourlyDistribution[hour]++;
-        weekdayDistribution[weekday]++;
-        rawMatrix[weekday][hour]++;
+        hourlyDistribution[hour] = (hourlyDistribution[hour] ?? 0) + 1;
+        weekdayDistribution[weekday] = (weekdayDistribution[weekday] ?? 0) + 1;
+        rawMatrix[weekday]![hour] = (rawMatrix[weekday]![hour] ?? 0) + 1;
       }
 
       // 归一化热力矩阵
@@ -138,7 +138,7 @@ export class PostingTimeService {
 
     for (let weekday = 0; weekday < 7; weekday++) {
       for (let hour = 0; hour < 24; hour++) {
-        const count = matrix[weekday][hour];
+        const count = matrix[weekday]?.[hour] ?? 0;
 
         if (count > maxCount) {
           maxCount = count;
@@ -189,7 +189,7 @@ export class PostingTimeService {
     }
 
     // 检查周末活跃度
-    const weekendPosts = weekdayDistribution[0] + weekdayDistribution[6];
+    const weekendPosts = (weekdayDistribution[0] ?? 0) + (weekdayDistribution[6] ?? 0);
     if (weekendPosts > totalPosts * 0.4) {
       insights.push('周末发帖活跃度较高');
     }

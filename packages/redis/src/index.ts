@@ -149,9 +149,9 @@ export class RedisClient {
     async zrange(key: string, start: number, stop: number, withScores?: boolean): Promise<string[]> {
         try {
             if (withScores) {
-                return await this.client.zrange(key, start, stop, 'WITHSCORES');
+                return await this.client.zrange(key, String(start), String(stop), 'WITHSCORES');
             } else {
-                return await this.client.zrange(key, start, stop);
+                return await this.client.zrange(key, String(start), String(stop));
             }
         } catch (error) {
             return [];

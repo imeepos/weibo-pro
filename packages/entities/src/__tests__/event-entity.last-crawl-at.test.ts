@@ -65,9 +65,9 @@ describe('EventEntity - last_crawl_at 字段', () => {
       });
 
       // 验证排序结果
-      expect(events[0].id).toBe('event-1'); // null 排最前
-      expect(events[1].id).toBe('event-2'); // 最早时间
-      expect(events[2].id).toBe('event-3'); // 最晚时间
+      expect(events[0]!.id).toBe('event-1'); // null 排最前
+      expect(events[1]!.id).toBe('event-2'); // 最早时间
+      expect(events[2]!.id).toBe('event-3'); // 最晚时间
     });
 
     it('应该实现轮询效果：刚爬取的事件排到最后', () => {
@@ -79,7 +79,7 @@ describe('EventEntity - last_crawl_at 字段', () => {
       ];
 
       // 第一次选择：假设选择事件1
-      events[0].last_crawl_at = new Date('2026-01-30T10:00:00Z');
+      events[0]!.last_crawl_at = new Date('2026-01-30T10:00:00Z');
 
       // 第二次运行排序后
       events.sort((a, b) => {
@@ -90,8 +90,8 @@ describe('EventEntity - last_crawl_at 字段', () => {
       });
 
       // 验证：事件1（刚爬取）排到最后
-      expect(events[0].id).not.toBe('event-1');
-      expect(events[2].id).toBe('event-1');
+      expect(events[0]!.id).not.toBe('event-1');
+      expect(events[2]!.id).toBe('event-1');
     });
 
     it('应该正确处理所有事件都爬取过的情况', () => {
@@ -109,9 +109,9 @@ describe('EventEntity - last_crawl_at 字段', () => {
       });
 
       // 验证：按时间升序排列
-      expect(events[0].id).toBe('event-2'); // 最早
-      expect(events[1].id).toBe('event-1');
-      expect(events[2].id).toBe('event-3'); // 最晚
+      expect(events[0]!.id).toBe('event-2'); // 最早
+      expect(events[1]!.id).toBe('event-1');
+      expect(events[2]!.id).toBe('event-3'); // 最晚
     });
   });
 });
@@ -130,7 +130,7 @@ function createEventWithLastCrawl(
   event.status = 'active';
   event.keywords = [];
   event.sentiment = { neutral: 1, negative: 0, positive: 0 };
-  event.hotness = '0.00';
+  event.hotness = 0;
   event.category_id = 'test-category';
   event.created_at = new Date('2026-01-01T00:00:00Z');
   event.updated_at = new Date('2026-01-01T00:00:00Z');

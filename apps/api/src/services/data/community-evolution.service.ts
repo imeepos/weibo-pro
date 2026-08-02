@@ -155,7 +155,7 @@ export class CommunityEvolutionService {
     const communityGroups = new Map<number, string[]>();
 
     graph.forEachNode((node) => {
-      const communityId = assignments[node];
+      const communityId = assignments[node]!;
       if (!communityGroups.has(communityId)) {
         communityGroups.set(communityId, []);
       }
@@ -298,8 +298,8 @@ export class CommunityEvolutionService {
     const events: EvolutionEvent[] = [];
 
     for (let i = 1; i < timeSlices.length; i++) {
-      const prevSlice = timeSlices[i - 1];
-      const currSlice = timeSlices[i];
+      const prevSlice = timeSlices[i - 1]!;
+      const currSlice = timeSlices[i]!;
       const matches = this.matchCommunities(prevSlice, currSlice);
 
       // Birth: 新社区出现
@@ -406,8 +406,8 @@ export class CommunityEvolutionService {
     let totalPairs = 0;
 
     for (let i = 1; i < timeSlices.length; i++) {
-      const prevSlice = timeSlices[i - 1];
-      const currSlice = timeSlices[i];
+      const prevSlice = timeSlices[i - 1]!;
+      const currSlice = timeSlices[i]!;
       const matches = this.matchCommunities(prevSlice, currSlice);
 
       const stability = matches.size / prevSlice.communities.length;
@@ -423,7 +423,7 @@ export class CommunityEvolutionService {
 
     for (const event of events) {
       if (event.type === 'growth' || event.type === 'shrink') {
-        const [prevId, currId] = event.involvedCommunities;
+        const [prevId = '', currId = ''] = event.involvedCommunities;
         const prevSlice = timeSlices.find((s) =>
           s.communities.some((c) => c.id === prevId)
         );
@@ -474,13 +474,11 @@ export class CommunityEvolutionService {
     const avgCommunityCount =
       communityCounts.reduce((sum, count) => sum + count, 0) / communityCounts.length;
 
-    // 简单线性预测
-    const trend =
-      communityCounts[communityCounts.length - 1] - communityCounts[communityCounts.length - 2];
-    const predictedCommunityCount = Math.max(
-      0,
-      Math.round(communityCounts[communityCounts.length - 1] + trend)
-    );
+    // 简单线性预测（此处 timeSlices.length >= 2，索引安全）
+    const lastCount = communityCounts[communityCounts.length - 1]!;
+    const prevCount = communityCounts[communityCounts.length - 2]!;
+    const trend = lastCount - prevCount;
+    const predictedCommunityCount = Math.max(0, Math.round(lastCount + trend));
 
     // 计算模块度趋势
     const modularities = timeSlices.map((s) => s.modularity);

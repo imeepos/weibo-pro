@@ -5,11 +5,11 @@
  */
 
 import { WeiboAccountMonitorService } from './weibo-account-monitor.service'
-import { Container } from '@sker/core'
+import { root } from '@sker/core'
 
 async function main() {
   // 1. 获取监控服务实例
-  const monitorService = Container.get(WeiboAccountMonitorService)
+  const monitorService = root.get(WeiboAccountMonitorService)
 
   console.log('=== 微博账号监控示例 ===\n')
 
@@ -51,7 +51,7 @@ async function main() {
 
 // 示例：定时监控任务
 async function monitoringJob() {
-  const monitorService = Container.get(WeiboAccountMonitorService)
+  const monitorService = root.get(WeiboAccountMonitorService)
 
   // 每5分钟执行一次监控
   setInterval(async () => {
@@ -78,7 +78,7 @@ async function monitoringJob() {
 
 // 示例：每小时快照任务
 async function snapshotJob() {
-  const monitorService = Container.get(WeiboAccountMonitorService)
+  const monitorService = root.get(WeiboAccountMonitorService)
 
   // 每小时执行一次快照
   setInterval(async () => {

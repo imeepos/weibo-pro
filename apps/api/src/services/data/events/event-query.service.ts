@@ -299,7 +299,9 @@ export class EventQueryService {
 
       // 按输入 IDs 的顺序重新排列，确保排序后的顺序不被打乱
       const eventMap = new Map(events.map(e => [e.id, e]));
-      return ids.map(id => eventMap.get(id)).filter((e): e is EventWithCategory => e !== undefined);
+      return ids
+        .map(id => eventMap.get(id))
+        .filter((e): e is EventEntity => e !== undefined);
     });
   }
 

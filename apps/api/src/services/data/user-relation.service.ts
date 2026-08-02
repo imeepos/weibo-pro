@@ -11,13 +11,19 @@ import type {
   UserRelationQueryParams,
 } from '@sker/sdk';
 
+// @sker/sdk 的 UserRelationQueryParams 缺少 eventId 字段（SDK 控制器与业务查询都用到），
+// 这里扩展类型，保持运行时行为不变。
+export type UserRelationQueryParamsWithEventId = UserRelationQueryParams & {
+  eventId?: string;
+};
+
 @Injectable({ providedIn: 'root' })
 export class UserRelationService {
   constructor(
     @Inject(CacheService) private readonly cacheService: CacheService
   ) {}
 
-  async getNetwork(params: UserRelationQueryParams = {}): Promise<UserRelationNetwork> {
+  async getNetwork(params: UserRelationQueryParamsWithEventId = {}): Promise<UserRelationNetwork> {
     const {
       type = 'comprehensive',
       timeRange = '7d',

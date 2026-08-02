@@ -3,7 +3,12 @@
   "version": "0.0.0",
   "private": true,
   "description": "Redis client wrapper with dependency injection support for Sker applications.",
-  "keywords": ["redis", "ioredis", "cache", "sker"],
+  "keywords": [
+    "redis",
+    "ioredis",
+    "cache",
+    "sker"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -25,7 +30,7 @@
   },
   "dependencies": {
     "@sker/core": "workspace:*",
-    "ioredis": "^5.8.1"
+    "ioredis": "^6.0.0"
   },
   "devDependencies": {
     "@sker/eslint-config": "workspace:*",

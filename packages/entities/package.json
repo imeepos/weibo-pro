@@ -47,7 +47,7 @@
     "@sker/typescript-config": "workspace:*",
     "@types/node": "^22.15.3",
     "@types/pg": "^8.11.0",
-    "dotenv": "^16.4.7",
+    "dotenv": "^17.4.2",
     "eslint": "^9.38.0",
     "tsup": "^8.4.0",
     "tsx": "^4.21.0",

@@ -108,7 +108,7 @@ export const TableElement = withHOC(
     const hasControls = !readOnly && !isSelectionAreaVisible;
     const { marginLeft, props: tableProps } = useTableElement();
     const isSelectingCell =
-      useTableStore((state) => state.isSelectingCell?.() ?? false);
+      useTableStore((state: any) => state?.isSelectingCell?.() ?? false);
 
     const isSelectingTable = useBlockSelected(props.element.id as string);
 

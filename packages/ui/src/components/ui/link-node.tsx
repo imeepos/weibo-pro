@@ -30,7 +30,7 @@ export function LinkElement(props: PlateElementProps<TLinkElement>) {
             attributes={{
                 ...props.attributes,
                 ...getLinkAttributes(props.editor, props.element),
-                onMouseOver: (e) => {
+                onMouseOver: (e: React.MouseEvent<HTMLElement>) => {
                     e.stopPropagation();
                 },
             }}

@@ -26,8 +26,8 @@ describe('cleanupIdleConnections', () => {
     // 保留最后5个连接，终止前面的
     const connectionsToTerminate = idleConnections.slice(0, -minConnections || undefined);
     expect(connectionsToTerminate.length).toBe(5);
-    expect(connectionsToTerminate[0].pid).toBe(1000);
-    expect(connectionsToTerminate[4].pid).toBe(1004);
+    expect(connectionsToTerminate[0]!.pid).toBe(1000);
+    expect(connectionsToTerminate[4]!.pid).toBe(1004);
   });
 
   it('当空闲连接数小于等于最小连接数时不应该终止任何连接', () => {

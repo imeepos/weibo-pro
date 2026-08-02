@@ -255,8 +255,8 @@ async function testAllAPIEndpoints(eventId: string): Promise<TestResult> {
     const endpoints = [
       { name: 'getSentimentHotness', fn: () => queryService.getSentimentHotness(eventId) },
       { name: 'getSentimentIntensity', fn: () => queryService.getSentimentIntensity(eventId) },
-      { name: 'getEngagementTrend', fn: () => queryService.getEngagementTrend(eventId, 168) },
-      { name: 'getAnomalies', fn: () => queryService.getAnomalies(eventId, 168) },
+      { name: 'getEngagementTrend', fn: () => queryService.getEngagementTrend(eventId) },
+      { name: 'getAnomalies', fn: () => queryService.getAnomalies(eventId) },
       { name: 'getPeaks', fn: () => queryService.getPeaks(eventId, 168) },
     ]
 

@@ -45,7 +45,7 @@ export async function getPageTokens(
   pdfPath: string,
   model: string = 'gpt-4o-2024-11-20'
 ): Promise<PageToken[]> {
-  const loadingTask = getDocument(pdfPath);
+  const loadingTask = getDocument({ url: pdfPath });
   const pdf = await loadingTask.promise;
 
   const pages: PageToken[] = [];
@@ -82,7 +82,7 @@ export async function extractPageText(
   pdfPath: string,
   pageNum: number
 ): Promise<string> {
-  const loadingTask = getDocument(pdfPath);
+  const loadingTask = getDocument({ url: pdfPath });
   const pdf = await loadingTask.promise;
   const page = await pdf.getPage(pageNum);
   const textContent = await page.getTextContent() as TextContent;
@@ -105,7 +105,7 @@ export async function extractPageText(
  * ```
  */
 export async function getNumberOfPages(pdfPath: string): Promise<number> {
-  const loadingTask = getDocument(pdfPath);
+  const loadingTask = getDocument({ url: pdfPath });
   const pdf = await loadingTask.promise;
   return pdf.numPages;
 }

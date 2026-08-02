@@ -80,8 +80,9 @@ export class EventUserRiskService {
           followers: Number(row.post?.user?.followers_count || 0),
           verified: Boolean(row.post?.user?.verified),
           location: row.post?.region_name || row.post?.user?.location || '未知',
-          posts: [],
-          sentiments: [],
+          // 显式标注空数组类型，避免被推断为 never[] 导致后续 push 报错
+          posts: [] as RiskAggregationInput['posts'],
+          sentiments: [] as RiskAggregationInput['sentiments'],
         };
 
         current.posts.push({

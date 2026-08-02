@@ -86,7 +86,7 @@ describe('PropagationVelocityService - 连接泄露测试', () => {
 
   describe('查询构建器创建和释放测试', () => {
     it('应该正确创建 QueryBuilder', async () => {
-      const service = new PropagationVelocityService(mockDataSource)
+      const service = new PropagationVelocityService()
 
       // 模拟返回数据
       const mockStatistics = [
@@ -114,7 +114,7 @@ describe('PropagationVelocityService - 连接泄露测试', () => {
     })
 
     it('应该正确处理查询参数', async () => {
-      const service = new PropagationVelocityService(mockDataSource)
+      const service = new PropagationVelocityService()
 
       const mockStatistics = [
         {
@@ -143,7 +143,7 @@ describe('PropagationVelocityService - 连接泄露测试', () => {
 
   describe('连接泄露检测测试', () => {
     it('多次调用后不应该累积未释放的 QueryBuilder', async () => {
-      const service = new PropagationVelocityService(mockDataSource)
+      const service = new PropagationVelocityService()
 
       const mockStatistics = [
         {
@@ -179,7 +179,7 @@ describe('PropagationVelocityService - 连接泄露测试', () => {
     })
 
     it('快速连续调用50次不应该导致连接池耗尽', async () => {
-      const service = new PropagationVelocityService(mockDataSource)
+      const service = new PropagationVelocityService()
 
       const mockStatistics = [
         {
@@ -220,7 +220,7 @@ describe('PropagationVelocityService - 连接泄露测试', () => {
 
   describe('并发调用测试', () => {
     it('并发调用不应该导致连接泄露', async () => {
-      const service = new PropagationVelocityService(mockDataSource)
+      const service = new PropagationVelocityService()
 
       const mockStatistics = [
         {
@@ -255,7 +255,7 @@ describe('PropagationVelocityService - 连接泄露测试', () => {
     })
 
     it('高并发场景下应该正确处理连接', async () => {
-      const service = new PropagationVelocityService(mockDataSource)
+      const service = new PropagationVelocityService()
 
       const mockStatistics = [
         {
@@ -298,7 +298,7 @@ describe('PropagationVelocityService - 连接泄露测试', () => {
 
   describe('查询结果处理测试', () => {
     it('当查询结果为空时应该返回 null', async () => {
-      const service = new PropagationVelocityService(mockDataSource)
+      const service = new PropagationVelocityService()
 
       // 模拟空结果
       mockGetManySpy.mockResolvedValueOnce([])
@@ -311,7 +311,7 @@ describe('PropagationVelocityService - 连接泄露测试', () => {
     })
 
     it('应该正确处理查询错误', async () => {
-      const service = new PropagationVelocityService(mockDataSource)
+      const service = new PropagationVelocityService()
 
       // 模拟查询错误
       mockGetManySpy.mockRejectedValueOnce(new Error('Database connection failed'))
@@ -327,7 +327,7 @@ describe('PropagationVelocityService - 连接泄露测试', () => {
 
   describe('资源管理测试', () => {
     it('应该正确模拟 QueryBuilder 的生命周期', async () => {
-      const service = new PropagationVelocityService(mockDataSource)
+      const service = new PropagationVelocityService()
 
       const mockStatistics = [
         {
@@ -359,7 +359,7 @@ describe('PropagationVelocityService - 连接泄露测试', () => {
     })
 
     it('应该检测潜在的连接累积问题', async () => {
-      const service = new PropagationVelocityService(mockDataSource)
+      const service = new PropagationVelocityService()
 
       const mockStatistics = [
         {
@@ -402,7 +402,7 @@ describe('PropagationVelocityService - 连接泄露测试', () => {
 
   describe('性能和压力测试', () => {
     it('应该能够处理大量连续请求', async () => {
-      const service = new PropagationVelocityService(mockDataSource)
+      const service = new PropagationVelocityService()
 
       const mockStatistics = [
         {
@@ -441,7 +441,7 @@ describe('PropagationVelocityService - 连接泄露测试', () => {
     })
 
     it('应该正确处理混合场景（连续+并发）', async () => {
-      const service = new PropagationVelocityService(mockDataSource)
+      const service = new PropagationVelocityService()
 
       const mockStatistics = [
         {

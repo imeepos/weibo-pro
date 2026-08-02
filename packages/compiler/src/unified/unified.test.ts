@@ -40,42 +40,42 @@ import { Ast } from '../ast'
 describe('统一抽象层测试套件', () => {
   // 辅助函数：创建 OpenAI 响应 AST 实例
   const createOpenAiResponseAst = (data: any) => {
-    const ast = Object.create((class extends Ast {}).prototype)
+    const ast = Object.create((class extends Ast { visit(): any {} }).prototype)
     Object.assign(ast, data)
     return ast
   }
 
   // 辅助函数：创建 Anthropic 消息开始 AST 实例
   const createAnthropicMessageStartAst = (data: any) => {
-    const ast = Object.create((class extends Ast {}).prototype)
+    const ast = Object.create((class extends Ast { visit(): any {} }).prototype)
     Object.assign(ast, data)
     return ast
   }
 
   // 辅助函数：创建 Anthropic 内容块开始 AST 实例
   const createAnthropicContentBlockStartAst = (data: any) => {
-    const ast = Object.create((class extends Ast {}).prototype)
+    const ast = Object.create((class extends Ast { visit(): any {} }).prototype)
     Object.assign(ast, data)
     return ast
   }
 
   // 辅助函数：创建 Anthropic 内容块增量 AST 实例
   const createAnthropicContentBlockDeltaAst = (data: any) => {
-    const ast = Object.create((class extends Ast {}).prototype)
+    const ast = Object.create((class extends Ast { visit(): any {} }).prototype)
     Object.assign(ast, data)
     return ast
   }
 
   // 辅助函数：创建 Anthropic 消息增量 AST 实例
   const createAnthropicMessageDeltaAst = (data: any) => {
-    const ast = Object.create((class extends Ast {}).prototype)
+    const ast = Object.create((class extends Ast { visit(): any {} }).prototype)
     Object.assign(ast, data)
     return ast
   }
 
   // 辅助函数：创建 Google 响应 AST 实例
   const createGoogleResponseAst = (data: any) => {
-    const ast = Object.create((class extends Ast {}).prototype)
+    const ast = Object.create((class extends Ast { visit(): any {} }).prototype)
     Object.assign(ast, data)
     return ast
   }
@@ -208,7 +208,7 @@ describe('统一抽象层测试套件', () => {
           required: ['city']
         }
         expect(params.type).toBe('object')
-        expect(params.properties.city.type).toBe('string')
+        expect(params.properties.city!.type).toBe('string')
         expect(params.required).toEqual(['city'])
       })
     })
@@ -672,7 +672,7 @@ describe('统一抽象层测试套件', () => {
       })
 
       it('应正确转换 content blocks', () => {
-        const result = transformer.transform(anthropicResponse)
+        const result = transformer.transform(anthropicResponse as any)
 
         expect(result.content.length).toBe(3)
         expect(result.content[0]).toEqual({ type: 'text', text: 'Hello' })
@@ -690,7 +690,7 @@ describe('统一抽象层测试套件', () => {
       })
 
       it('应正确转换 usage', () => {
-        const result = transformer.transform(anthropicResponse)
+        const result = transformer.transform(anthropicResponse as any)
 
         expect(result.usage).toBeDefined()
         expect(result.usage?.inputTokens).toBe(100)
@@ -699,14 +699,14 @@ describe('统一抽象层测试套件', () => {
       })
 
       it('应保留 _provider 和 _original', () => {
-        const result = transformer.transform(anthropicResponse)
+        const result = transformer.transform(anthropicResponse as any)
 
         expect(result._provider).toBe('anthropic')
         expect(result._original).toBe(anthropicResponse)
       })
 
       it('应保留 _anthropic 特有字段', () => {
-        const result = transformer.transform(anthropicResponse)
+        const result = transformer.transform(anthropicResponse as any)
 
         expect(result._anthropic).toBeDefined()
         expect(result._anthropic?.stop_sequence).toBe(null)
@@ -715,7 +715,7 @@ describe('统一抽象层测试套件', () => {
 
       it('应正确映射停止原因', () => {
         anthropicResponse.stop_reason = 'tool_use'
-        const result = transformer.transform(anthropicResponse)
+        const result = transformer.transform(anthropicResponse as any)
         expect(result.stopReason).toBe('tool_use')
 
         anthropicResponse.stop_reason = 'max_tokens'
@@ -732,14 +732,14 @@ describe('统一抽象层测试套件', () => {
       })
 
       it('应正确处理 choices[0].delta', () => {
-        const result = transformer.transform(openaiResponse)
+        const result = transformer.transform(openaiResponse as any)
 
         expect(result.content.length).toBeGreaterThan(0)
-        expect(result.content[0].type).toBe('text')
+        expect(result.content[0]!.type).toBe('text')
       })
 
       it('应正确解析 tool_calls arguments', () => {
-        const result = transformer.transform(openaiResponse)
+        const result = transformer.transform(openaiResponse as any)
 
         const toolUse = result.content.find(c => c.type === 'tool_use') as any
         expect(toolUse).toBeDefined()
@@ -748,7 +748,7 @@ describe('统一抽象层测试套件', () => {
       })
 
       it('应正确转换 reasoning_content 为 thinking', () => {
-        const result = transformer.transform(openaiResponse)
+        const result = transformer.transform(openaiResponse as any)
 
         const thinking = result.content.find(c => c.type === 'thinking')
         expect(thinking).toBeDefined()
@@ -756,7 +756,7 @@ describe('统一抽象层测试套件', () => {
       })
 
       it('应保留 _openai 特有字段', () => {
-        const result = transformer.transform(openaiResponse)
+        const result = transformer.transform(openaiResponse as any)
 
         expect(result._openai).toBeDefined()
         expect(result._openai?.object).toBe('chat.completion')
@@ -766,7 +766,7 @@ describe('统一抽象层测试套件', () => {
 
       it('应处理无效的 JSON arguments', () => {
         openaiResponse.choices[0].delta.tool_calls[0].function.arguments = '{invalid json}'
-        const result = transformer.transform(openaiResponse)
+        const result = transformer.transform(openaiResponse as any)
 
         const toolUse = result.content.find(c => c.type === 'tool_use') as any
         expect(toolUse.input).toEqual({})
@@ -781,7 +781,7 @@ describe('统一抽象层测试套件', () => {
       })
 
       it('应正确处理 candidates[0].content.parts', () => {
-        const result = transformer.transform(googleResponse)
+        const result = transformer.transform(googleResponse as any)
 
         expect(result.content.length).toBe(2)
         expect(result.content[0]).toEqual({ type: 'text', text: 'Hello' })
@@ -794,21 +794,21 @@ describe('统一抽象层测试套件', () => {
       })
 
       it('应自动生成 tool_use ID', () => {
-        const result = transformer.transform(googleResponse)
+        const result = transformer.transform(googleResponse as any)
 
         const toolUse = result.content.find(c => c.type === 'tool_use') as any
         expect(toolUse.id).toMatch(/^google_fc_\d+_\d+$/)
       })
 
       it('应保留 _google 特有字段', () => {
-        const result = transformer.transform(googleResponse)
+        const result = transformer.transform(googleResponse as any)
 
         expect(result._google).toBeDefined()
         expect(result._google?.modelVersion).toBe('gemini-pro')
       })
 
       it('应正确转换 usage metadata', () => {
-        const result = transformer.transform(googleResponse)
+        const result = transformer.transform(googleResponse as any)
 
         expect(result.usage).toBeDefined()
         expect(result.usage?.inputTokens).toBe(100)
@@ -884,7 +884,7 @@ describe('统一抽象层测试套件', () => {
         unifiedWithOriginal._original = originalAnthropicResponse
         unifiedWithOriginal._provider = 'anthropic'
 
-        const result = reverseTransformer.toOriginal(unifiedWithOriginal)
+        const result = reverseTransformer.toOriginal(unifiedWithOriginal) as any
 
         expect(result).toBe(originalAnthropicResponse)
         expect(result.id).toBe('original_msg')
@@ -1074,7 +1074,7 @@ describe('统一抽象层测试套件', () => {
         }
 
         expect(result.content.length).toBeGreaterThan(0)
-        expect(result.content[0].type).toBe('text')
+        expect(result.content[0]!.type).toBe('text')
         expect((result.content[0] as any).text).toBe('Hello World')
       })
 
@@ -1166,7 +1166,7 @@ describe('统一抽象层测试套件', () => {
 
         // 厂商 → Unified
         const anthropicTransformer = new AnthropicToUnifiedTransformer()
-        const unified = anthropicTransformer.transform(originalAnthropicResponse)
+        const unified = anthropicTransformer.transform(originalAnthropicResponse as any)
 
         // Unified → 厂商
         const reverseTransformer = new UnifiedToOriginalTransformer()
@@ -1215,7 +1215,7 @@ describe('统一抽象层测试套件', () => {
         }
 
         const openaiTransformer = new OpenAIToUnifiedTransformer()
-        const unified = openaiTransformer.transform(originalOpenAIResponse)
+        const unified = openaiTransformer.transform(originalOpenAIResponse as any)
 
         const reverseTransformer = new UnifiedToOriginalTransformer()
         const restored = reverseTransformer.toOriginal(unified) as any
@@ -1249,13 +1249,13 @@ describe('统一抽象层测试套件', () => {
         }
 
         const googleTransformer = new GoogleToUnifiedTransformer()
-        const unified = googleTransformer.transform(originalGoogleResponse)
+        const unified = googleTransformer.transform(originalGoogleResponse as any)
 
         const reverseTransformer = new UnifiedToOriginalTransformer()
         const restored = reverseTransformer.toOriginal(unified) as any
 
         expect(restored.modelVersion).toBe(originalGoogleResponse.modelVersion)
-        expect(restored.candidates[0].finishReason).toBe(originalGoogleResponse.candidates[0].finishReason)
+        expect(restored.candidates[0].finishReason).toBe(originalGoogleResponse.candidates[0]!.finishReason)
         expect(restored.usageMetadata.trafficType).toBe(originalGoogleResponse.usageMetadata.trafficType)
         expect(restored.usageMetadata.thoughtsTokenCount).toBe(originalGoogleResponse.usageMetadata.thoughtsTokenCount)
       })
@@ -1366,7 +1366,7 @@ describe('统一抽象层测试套件', () => {
         }
 
         const transformer = new GoogleToUnifiedTransformer()
-        const result = transformer.transform(googleResponse)
+        const result = transformer.transform(googleResponse as any)
 
         const toolUse = result.content.find(c => c.type === 'tool_use') as any
         expect(toolUse.id).toBeDefined()
@@ -1399,7 +1399,7 @@ describe('统一抽象层测试套件', () => {
         }
 
         const transformer = new GoogleToUnifiedTransformer()
-        const result = transformer.transform(googleResponse)
+        const result = transformer.transform(googleResponse as any)
 
         const toolUse = result.content.find(c => c.type === 'tool_use') as any
         const toolResult = result.content.find(c => c.type === 'tool_result') as any
@@ -1426,7 +1426,7 @@ describe('统一抽象层测试套件', () => {
         }
 
         const transformer = new AnthropicToUnifiedTransformer()
-        const result = transformer.transform(anthropicResponse)
+        const result = transformer.transform(anthropicResponse as any)
 
         expect(result._provider).toBe('anthropic')
         expect(result._anthropic).toBeDefined()
@@ -1450,7 +1450,7 @@ describe('统一抽象层测试套件', () => {
         }
 
         const transformer = new OpenAIToUnifiedTransformer()
-        const result = transformer.transform(openaiResponse)
+        const result = transformer.transform(openaiResponse as any)
 
         expect(result._provider).toBe('openai')
         expect(result._openai).toBeDefined()
@@ -1477,7 +1477,7 @@ describe('统一抽象层测试套件', () => {
         }
 
         const transformer = new GoogleToUnifiedTransformer()
-        const result = transformer.transform(googleResponse)
+        const result = transformer.transform(googleResponse as any)
 
         expect(result._provider).toBe('google')
         expect(result._google).toBeDefined()

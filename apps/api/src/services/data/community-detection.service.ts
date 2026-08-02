@@ -66,22 +66,16 @@ export class CommunityDetectionService {
       }
 
       // 使用 Louvain 算法检测社区
-      const communityAssignments = louvain(graph);
+      // graphology-communities-louvain 2.0.2 不再提供 `louvain.modularity()`，
+      // 改为通过 `louvain.detailed()` 一次性返回社区划分与模块度。
+      const detailed = louvain.detailed(graph);
+      const communityAssignments = detailed.communities;
       const communities = this.buildCommunities(graph, communityAssignments);
       const interCommunityLinks = this.findInterCommunityLinks(graph, communityAssignments);
       const bridgeUsers = this.identifyBridgeUsers(graph, communityAssignments);
 
       // 计算模块度
-      let modularity = 0;
-      try {
-        modularity = louvain.modularity(graph, {
-          nodeCommunityAttribute: 'community',
-          getCommunities: () => communityAssignments,
-        } as any);
-      } catch (e) {
-        // 如果 modularity 计算失败，使用默认值
-        modularity = 0;
-      }
+      const modularity = detailed.modularity;
 
       return {
         communities,
@@ -98,7 +92,7 @@ export class CommunityDetectionService {
     const communityGroups = new Map<number, string[]>();
 
     graph.forEachNode((node) => {
-      const communityId = assignments[node];
+      const communityId = assignments[node]!;
       if (!communityGroups.has(communityId)) {
         communityGroups.set(communityId, []);
       }
@@ -212,7 +206,7 @@ export class CommunityDetectionService {
     });
 
     return Array.from(linksMap.entries()).map(([key, weight]) => {
-      const [sourceCommunity, targetCommunity] = key.split('-');
+      const [sourceCommunity = '', targetCommunity = ''] = key.split('-');
       return { sourceCommunity, targetCommunity, weight };
     });
   }
@@ -230,13 +224,13 @@ export class CommunityDetectionService {
 
     // 为每个用户计算跨社区连接
     graph.forEachNode((node) => {
-      const connectedCommunities = new Set<number>([assignments[node]]);
+      const connectedCommunities = new Set<number>([assignments[node]!]);
       let totalEdges = 0;
       let crossCommunityEdges = 0;
 
       graph.forEachNeighbor(node, (neighbor) => {
         totalEdges++;
-        const neighborCommunity = assignments[neighbor];
+        const neighborCommunity = assignments[neighbor]!;
         if (neighborCommunity !== assignments[node]) {
           crossCommunityEdges++;
           connectedCommunities.add(neighborCommunity);

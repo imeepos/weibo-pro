@@ -263,7 +263,7 @@ export class InfluencePredictionService {
     });
 
     // 基础触达人数（假设每个粉丝有 10% 的概率看到）
-    const baseReach = factors[0].value * 0.1;
+    const baseReach = (factors[0]?.value ?? 0) * 0.1;
 
     // 预测触达 = 基础触达 × 加权特征和
     return Math.round(baseReach * weightedSum * 10);

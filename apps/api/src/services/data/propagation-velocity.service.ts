@@ -179,7 +179,7 @@ export class PropagationVelocityService {
    */
   private calculateAcceleration(timeline: VelocityTimePoint[]): number {
     if (timeline.length === 0) return 0;
-    return timeline[timeline.length - 1].acceleration;
+    return timeline[timeline.length - 1]!.acceleration;
   }
 
   /**
@@ -208,8 +208,8 @@ export class PropagationVelocityService {
     let decreasingCount = 0;
 
     for (let i = 1; i < accelerations.length; i++) {
-      const currentAccel = accelerations[i];
-      const prevAccel = accelerations[i - 1];
+      const currentAccel = accelerations[i]!;
+      const prevAccel = accelerations[i - 1]!;
       const diff = currentAccel - prevAccel;
 
       if (diff > 5) {
@@ -267,7 +267,7 @@ export class PropagationVelocityService {
     // 检测持续上升
     let increasingCount = 0;
     for (let i = 1; i < recentAccelerations.length; i++) {
-      if (recentAccelerations[i] > recentAccelerations[i - 1]) {
+      if (recentAccelerations[i]! > recentAccelerations[i - 1]!) {
         increasingCount++;
       }
     }
@@ -283,14 +283,14 @@ export class PropagationVelocityService {
     if (burstProbability > 0.5) {
       const velocities = timeline.map((p) => p.velocity);
       const peakVelocity = Math.max(...velocities);
-      const currentVelocity = velocities[velocities.length - 1];
+      const currentVelocity = velocities[velocities.length - 1]!;
 
       // 使用当前加速度（不包括0）来预测
       const validAcceleration = currentAcceleration > 0 ? currentAcceleration : avgAcceleration;
 
       if (validAcceleration > 0 && peakVelocity > currentVelocity) {
         const hoursToPeak = (peakVelocity - currentVelocity) / validAcceleration;
-        const burstTime = new Date(timeline[timeline.length - 1].timestamp);
+        const burstTime = new Date(timeline[timeline.length - 1]!.timestamp);
         burstTime.setHours(burstTime.getHours() + hoursToPeak);
         predictedBurstTime = burstTime.toISOString();
       }
@@ -343,7 +343,7 @@ export class PropagationVelocityService {
 
     // 从后往前找第一个不符合当前阶段的时间点
     for (let i = timeline.length - 1; i >= 0; i--) {
-      const point = timeline[i];
+      const point = timeline[i]!;
       const accelerations = timeline.slice(0, i + 1).map((p) => p.acceleration);
       const avgAcceleration =
         accelerations.length > 0
@@ -355,14 +355,14 @@ export class PropagationVelocityService {
       if (phase !== currentPhase) {
         // 返回下一个时间点作为阶段开始时间
         if (i + 1 < timeline.length) {
-          return timeline[i + 1].timestamp;
+          return timeline[i + 1]!.timestamp;
         }
         break;
       }
     }
 
     // 如果没找到，返回第一个时间点
-    return timeline[0].timestamp;
+    return timeline[0]!.timestamp;
   }
 
   /**

@@ -30,9 +30,9 @@
   },
   "dependencies": {
     "openai": "^4.77.3",
-    "gpt-tokenizer": "^2.1.2",
-    "pdfjs-dist": "^4.0.379",
-    "commander": "^12.1.0",
+    "gpt-tokenizer": "^3.4.0",
+    "pdfjs-dist": "^6.2.108",
+    "commander": "^15.0.0",
     "yaml": "^2.5.1",
     "dotenv": "^16.4.7",
     "zod": "^3.24.1"

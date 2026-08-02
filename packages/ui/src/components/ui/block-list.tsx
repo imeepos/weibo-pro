@@ -32,7 +32,8 @@ const config: Record<
 };
 
 export const BlockList: RenderNodeWrapper = (props) => {
-    if (!props.element.listStyleType) return;
+    const element = (props as any).element as TListElement | undefined;
+    if (!element?.listStyleType) return;
 
     return (props) => <List {...props} />;
 };

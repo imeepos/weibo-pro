@@ -43,9 +43,9 @@
     "vitest": "^4.0.17"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.71.2",
+    "@anthropic-ai/sdk": "^0.115.0",
     "@sker/core": "workspace:*",
-    "openai": "^6.16.0",
+    "openai": "^7.3.0",
     "rxjs": "^7.8.1",
     "zod": "^4.2.1"
   }

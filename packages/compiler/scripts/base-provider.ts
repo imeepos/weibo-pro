@@ -5,9 +5,9 @@ export interface Message {
 }
 
 export interface AgentMessage {
-  content?: string
+  content?: string | any[]
   tool_calls?: any[]
-  finish_reason?: string
+  finish_reason?: string | null
   stop_reason?: string | null
   [key: string]: any
 }

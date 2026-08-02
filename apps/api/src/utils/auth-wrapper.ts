@@ -13,7 +13,10 @@ export interface BetterAuthWrapperOptions {
  */
 export class BetterAuthWrapper {
   constructor(
-    private auth: Auth,
+    // better-auth 1.6 的 `betterAuth()` 返回 `Auth<Options>`（Options 为具体配置字面量），
+    // 而默认的 `Auth` 是 `Auth<BetterAuthOptions>`，因 `$context` 泛型不变性导致不兼容。
+    // 此处仅使用 `auth.handler`，用 `Auth<any>` 接收任意配置的 auth 实例。
+    private auth: Auth<any>,
     private options: BetterAuthWrapperOptions
   ) {}
 
