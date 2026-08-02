@@ -21,7 +21,7 @@
     "clsx": "^2.1.1",
     "lexical": "^0.38.2",
     "lucide-react": "^1.28.0",
-    "platejs": "^52.0.1",
+    "platejs": "^53.2.4",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-hook-form": "^7.66.1",
@@ -43,12 +43,12 @@
     "@types/recharts": "^2.0.1",
     "react-day-picker": "^10.0.1",
     "recharts": "^3.5.0",
+    "reflect-metadata": "^0.2.2",
     "remark-gfm": "^4.0.1",
     "storybook": "^8.6.14",
     "storybook-dark-mode": "^4.0.2",
     "tailwindcss": "^4.1.5",
     "typescript": "^6.0.3",
-    "vite": "^6.0.7",
-    "reflect-metadata": "^0.2.2"
+    "vite": "^6.0.7"
   }
 }

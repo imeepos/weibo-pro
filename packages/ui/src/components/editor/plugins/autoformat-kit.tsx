@@ -1,19 +1,20 @@
 'use client';
 
-import type { AutoformatRule } from '@platejs/autoformat';
-
-import {
-  autoformatArrow,
-  autoformatLegal,
-  autoformatLegalHtml,
-  autoformatMath,
-  AutoformatPlugin,
-  autoformatPunctuation,
-  autoformatSmartQuotes,
-} from '@platejs/autoformat';
+import { AutoformatPlugin } from '@platejs/autoformat';
 import { insertEmptyCodeBlock } from '@platejs/code-block';
 import { toggleList } from '@platejs/list';
-import { KEYS } from 'platejs';
+import { KEYS, type SlateEditor } from 'platejs';
+
+// platejs 53 移除了 AutoformatRule 类型与预置规则（AutoformatPlugin 已废弃为 inert），
+// 规则迁移到各 feature 插件的 inputRules；此处保留自定义规则以兼容旧结构
+interface AutoformatRule {
+  match: string | string[];
+  matchByRegex?: boolean;
+  mode: 'mark' | 'block';
+  type: string | string[];
+  format?: (editor: SlateEditor, options?: { matchString?: string }) => void;
+  query?: (editor: SlateEditor) => boolean;
+}
 
 const autoformatMarks: AutoformatRule[] = [
   {
@@ -171,7 +172,8 @@ const autoformatLists: AutoformatRule[] = [
     matchByRegex: true,
     mode: 'block',
     type: 'list',
-    format: (editor, { matchString }) => {
+    format: (editor, options) => {
+      const matchString = options?.matchString ?? '';
       toggleList(editor, {
         listRestartPolite: Number(matchString) || 1,
         listStyleType: KEYS.ol,
@@ -215,12 +217,6 @@ export const AutoformatKit = [
       rules: [
         ...autoformatBlocks,
         ...autoformatMarks,
-        ...autoformatSmartQuotes,
-        ...autoformatPunctuation,
-        ...autoformatLegal,
-        ...autoformatLegalHtml,
-        ...autoformatArrow,
-        ...autoformatMath,
         ...autoformatLists,
       ].map(
         (rule): AutoformatRule => ({
