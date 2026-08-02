@@ -29,7 +29,7 @@
     "lint:fix": "eslint src --fix"
   },
   "dependencies": {
-    "openai": "^4.77.3",
+    "openai": "^7.3.0",
     "gpt-tokenizer": "^3.4.0",
     "pdfjs-dist": "^6.2.108",
     "commander": "^15.0.0",

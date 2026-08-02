@@ -42,7 +42,7 @@
     "react-force-graph-3d": "^1.29.0",
     "react-router-dom": "^7.18.2",
     "reactflow": "^11.11.4",
-    "recharts": "^2.8.0",
+    "recharts": "^3.10.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "socket.io-client": "^4.8.1",

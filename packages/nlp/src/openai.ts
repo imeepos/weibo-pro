@@ -1,6 +1,4 @@
 import OpenAI, { ClientOptions } from 'openai';
-import { HttpsProxyAgent } from 'https-proxy-agent';
-import { useProxy } from '@sker/ip-proxy';
 
 /**
  * LLM 代理服务地址
@@ -20,22 +18,11 @@ export async function useOpenAi(): Promise<OpenAI> {
 }
 
 export async function getOpenAiConfig(): Promise<ClientOptions> {
-  let httpAgent;
-
-  try {
-    const proxy = useProxy();
-    const proxyInfo = await proxy.getProxy();
-    httpAgent = new HttpsProxyAgent(proxyInfo.url);
-  } catch (error) {
-    // 代理获取失败，使用无代理模式
-    httpAgent = undefined;
-  }
-
+  // openai 7 移除了 httpAgent 选项；LLM 走本地代理服务（HTTP），无需 https agent
   return {
     baseURL: LLM_PROXY_BASE_URL,
     apiKey: 'xxx',
     timeout: 60000,
     maxRetries: 2, // 降低重试次数，由上层 NLPAnalyzer 控制重试逻辑
-    httpAgent,
   };
 }

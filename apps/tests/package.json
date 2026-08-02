@@ -13,7 +13,7 @@
     "@sker/core": "workspace:*",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "amqplib": "^0.10.5",
+    "amqplib": "^2.0.1",
     "zod": "^4.2.1",
     "better-auth": "^1.4.8"
   },

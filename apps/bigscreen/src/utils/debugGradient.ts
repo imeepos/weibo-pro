@@ -3,6 +3,12 @@
  */
 import { useEffect } from 'react';
 
+declare global {
+  interface Window {
+    echarts: typeof import('echarts');
+  }
+}
+
 // Store original console methods
 const originalError = console.error;
 const originalWarn = console.warn;

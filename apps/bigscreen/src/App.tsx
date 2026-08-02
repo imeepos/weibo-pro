@@ -101,12 +101,7 @@ const App: React.FC = () => {
 
   return (
     <ToastProvider>
-      <Router
-        future={{
-          v7_startTransition: true,
-          v7_relativeSplatPath: true,
-        }}
-      >
+      <Router>
         <div className={cn(
           'min-h-screen transition-colors duration-300',
           theme === 'dark' ? 'dark' : ''

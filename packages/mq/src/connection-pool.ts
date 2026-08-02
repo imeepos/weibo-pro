@@ -50,9 +50,13 @@ export class ConnectionPool {
 
     this.connectionPromise = (async () => {
       try {
-        this.connection = await amqp.connect(this.config.url, {
-          heartbeat: this.config.heartbeat ?? 30,
-        });
+        // amqplib 2: heartbeat 移到 URL 查询参数（socketOptions 不再支持）
+        const baseUrl = this.config.url;
+        const heartbeat = this.config.heartbeat ?? 30;
+        const connectUrl = baseUrl.includes('heartbeat=')
+          ? baseUrl
+          : `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}heartbeat=${heartbeat}`;
+        this.connection = await amqp.connect(connectUrl);
 
         this.setupConnectionHandlers();
 
