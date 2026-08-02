@@ -61,7 +61,8 @@
       "@better-auth/sso": "1.4.13",
       "@svta/cml-utils": "1.1.0",
       "@svta/cml-cta": "1.0.2",
-      "@svta/cml-structured-field-values": "1.0.2"
+      "@svta/cml-structured-field-values": "1.0.2",
+      "sass": "^1.70.0"
     },
     "peerDependencyRules": {
       "ignoreMissing": [
